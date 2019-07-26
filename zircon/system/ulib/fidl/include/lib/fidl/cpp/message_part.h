@@ -27,8 +27,7 @@ class MessagePart {
   using const_iterator = const T*;
 
   // A message part with no storage.
-  MessagePart()
-     : data_(nullptr), capacity_(0u), actual_(0u) {}
+  MessagePart() : data_(nullptr), capacity_(0u), actual_(0u) {}
 
   // A message part that uses the given storage.
   //

@@ -22,9 +22,7 @@ class MockCallbackClass {
 
 using TestFn = OnceFn<void(), 256>;
 
-class OnceFnTestCase
-    : public testing::TestWithParam<std::function<TestFn(MockCallbackClass*)>> {
-};
+class OnceFnTestCase : public testing::TestWithParam<std::function<TestFn(MockCallbackClass*)>> {};
 
 TEST(OnceFn, CallingEmptyCallbackCrashes) {
   OnceFn<void()> empty;
@@ -59,10 +57,9 @@ TEST(OnceFn, NotCalledCleansUp) {
     mock.Called();
   };
 
-  OnceFn<void(), 256> cb(
-      [ptr = std::unique_ptr<int, decltype(cleanup)>(&i, cleanup)]() {
-        FAIL() << "Should never reach here";
-      });
+  OnceFn<void(), 256> cb([ptr = std::unique_ptr<int, decltype(cleanup)>(&i, cleanup)]() {
+    FAIL() << "Should never reach here";
+  });
 
   EXPECT_CALL(mock, Called());
 }
@@ -108,11 +105,10 @@ INSTANTIATE_TEST_SUITE_P(
     OnceFnTests, OnceFnTestCase,
     testing::Values([](auto* mock) { return [mock]() { mock->Called(); }; },
                     [](auto* mock) {
-                      OnceFn<void(int), 128> fn(
-                          [mock, expect = std::make_unique<int>(1)](int i) {
-                            EXPECT_EQ(*expect, i);
-                            mock->Called();
-                          });
+                      OnceFn<void(int), 128> fn([mock, expect = std::make_unique<int>(1)](int i) {
+                        EXPECT_EQ(*expect, i);
+                        mock->Called();
+                      });
                       fn.AddMutator([](auto fn, int i) { fn(i + 1); });
                       return [fn = std::move(fn)]() mutable { fn(0); };
                     },
@@ -131,21 +127,18 @@ INSTANTIATE_TEST_SUITE_P(
                         return mock;
                       });
                       fn.AddMutator([](auto fn, int i) { return fn(i + 1); });
-                      return
-                          [fn = std::move(fn)]() mutable { fn(0)->Called(); };
+                      return [fn = std::move(fn)]() mutable { fn(0)->Called(); };
                     },
                     [](auto* mock) {
                       OnceFn<MockCallbackClass*(int), 128> fn([mock](int i) {
                         EXPECT_EQ(2, i);
                         return mock;
                       });
-                      fn.AddMutator(
-                          [add = std::make_unique<int>(1)](auto fn, int i) {
-                            return fn(i + *add);
-                          });
+                      fn.AddMutator([add = std::make_unique<int>(1)](auto fn, int i) {
+                        return fn(i + *add);
+                      });
                       fn.AddMutator([](auto fn, int i) { return fn(i + 1); });
-                      return
-                          [fn = std::move(fn)]() mutable { fn(0)->Called(); };
+                      return [fn = std::move(fn)]() mutable { fn(0)->Called(); };
                     }));
 
 }  // namespace once_fn_test

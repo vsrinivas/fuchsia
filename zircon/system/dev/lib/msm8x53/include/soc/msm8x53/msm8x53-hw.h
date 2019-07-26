@@ -21,4 +21,4 @@ constexpr uint32_t kIrqDirect2 = 246;
 constexpr uint32_t kIrqDirect1 = 247;
 constexpr uint32_t kIrqDirect0 = 248;
 
-} // namespace msm8x53
+}  // namespace msm8x53

@@ -18,8 +18,8 @@ namespace {
 
 void CheckParseResult(rapidjson::ParseResult parse_result) {
   EXPECT_TRUE(parse_result) << "JSON parse error: "
-                            << rapidjson::GetParseError_En(parse_result.Code())
-                            << " (offset " << parse_result.Offset() << ")";
+                            << rapidjson::GetParseError_En(parse_result.Code()) << " (offset "
+                            << parse_result.Offset() << ")";
 }
 
 void TestConverter(const char* json_input_string, rapidjson::Document* output) {
@@ -55,8 +55,7 @@ void TestConverter(const char* json_input_string, rapidjson::Document* output) {
 // The last significant digit of a number will sometimes change across a
 // read+write round-trip, even for JSON data that rapidjson previously
 // wrote.
-void AssertApproxEqual(rapidjson::Document* document, rapidjson::Value* actual,
-                       double expected) {
+void AssertApproxEqual(rapidjson::Document* document, rapidjson::Value* actual, double expected) {
   ASSERT_TRUE(actual->IsNumber());
   double actual_val = actual->GetDouble();
   double tolerance = 1.0001;
@@ -67,19 +66,16 @@ void AssertApproxEqual(rapidjson::Document* document, rapidjson::Value* actual,
     std::swap(expected_min, expected_max);
   }
   EXPECT_TRUE(expected_min <= actual_val && actual_val <= expected_max)
-      << "Got value " << actual_val << ", but expected value close to "
-      << expected << " (between " << expected_min << " and " << expected_max
-      << ")";
+      << "Got value " << actual_val << ", but expected value close to " << expected << " (between "
+      << expected_min << " and " << expected_max << ")";
   actual->SetString("compared_elsewhere", document->GetAllocator());
 }
 
 std::vector<std::string> SplitLines(const char* str) {
-  return fxl::SplitStringCopy(fxl::StringView(str), "\n", fxl::kKeepWhitespace,
-                              fxl::kSplitWantAll);
+  return fxl::SplitStringCopy(fxl::StringView(str), "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll);
 }
 
-void PrintLines(const std::vector<std::string>& lines, size_t start, size_t end,
-                char prefix) {
+void PrintLines(const std::vector<std::string>& lines, size_t start, size_t end, char prefix) {
   for (size_t i = start; i < end; ++i) {
     printf("%c%s\n", prefix, lines[i].c_str());
   }
@@ -108,8 +104,7 @@ void PrintDiff(const char* str1, const char* str2) {
   PrintLines(lines1, lines1.size() - j, lines1.size(), ' ');
 }
 
-void AssertJsonEqual(const rapidjson::Document& doc1,
-                     const rapidjson::Document& doc2) {
+void AssertJsonEqual(const rapidjson::Document& doc1, const rapidjson::Document& doc2) {
   rapidjson::StringBuffer buf1;
   rapidjson::PrettyWriter<rapidjson::StringBuffer> writer1(buf1);
   doc1.Accept(writer1);
@@ -778,13 +773,10 @@ TEST(CatapultConverter, ConverterMain) {
 // Code copied from "//src/lib/uuid/uuid.cc", which does not currently
 // successfully compile as a host side tool.
 inline bool IsHexDigit(char c) {
-  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') ||
-         (c >= 'a' && c <= 'f');
+  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }
 
-inline bool IsLowerHexDigit(char c) {
-  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
-}
+inline bool IsLowerHexDigit(char c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'); }
 
 bool IsValidUuidInternal(const std::string& guid, bool strict) {
   constexpr size_t kUUIDLength = 36U;
@@ -808,9 +800,7 @@ bool IsValidUuidInternal(const std::string& guid, bool strict) {
 // are in lower case characters, as Version 4 RFC says they're
 // case insensitive. (Use IsValidOutputString for checking if the
 // given string is valid output string)
-bool IsValidUuid(const std::string& guid) {
-  return IsValidUuidInternal(guid, false /* strict */);
-}
+bool IsValidUuid(const std::string& guid) { return IsValidUuidInternal(guid, false /* strict */); }
 
 // Returns true if the input string is valid version 4 UUID output string.
 // This also checks if the hexadecimal values "a" through "f" are in lower

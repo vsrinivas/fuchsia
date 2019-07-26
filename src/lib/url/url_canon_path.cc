@@ -177,8 +177,8 @@ void BackUpToPreviousSlash(size_t path_begin_in_output, CanonOutput* output) {
 // We do not collapse multiple slashes in a row to a single slash. It seems
 // no web browsers do this, and we don't want incompatibilities, even though
 // it would be correct for most systems.
-bool CanonicalizePartialPath(const char* spec, const Component& path,
-                             size_t path_begin_in_output, CanonOutput* output) {
+bool CanonicalizePartialPath(const char* spec, const Component& path, size_t path_begin_in_output,
+                             CanonOutput* output) {
   size_t end = path.end();
 
   bool success = true;
@@ -209,8 +209,7 @@ bool CanonicalizePartialPath(const char* spec, const Component& path,
           // dots, this actually increases performance measurably (though
           // slightly).
           FXL_DCHECK(output->length() > path_begin_in_output);
-          if (output->length() > path_begin_in_output &&
-              output->at(output->length() - 1) == '/') {
+          if (output->length() > path_begin_in_output && output->at(output->length() - 1) == '/') {
             // Slash followed by a dot, check to see if this is means relative
             size_t consumed_len;
             switch (ClassifyAfterDot(spec, i + dotlen, end, &consumed_len)) {
@@ -291,8 +290,8 @@ bool CanonicalizePartialPath(const char* spec, const Component& path,
   return success;
 }
 
-bool CanonicalizePath(const char* spec, const Component& path,
-                      CanonOutput* output, Component* out_path) {
+bool CanonicalizePath(const char* spec, const Component& path, CanonOutput* output,
+                      Component* out_path) {
   bool success = true;
   out_path->begin = output->length();
   if (path.is_nonempty()) {

@@ -13,33 +13,32 @@ namespace pci {
 // to cleanly tear down the FakeBusDriver, so no dtors on anything
 // will be called anyway.
 class FakeAllocation : public PciAllocation {
-public:
-    FakeAllocation(zx_paddr_t base, size_t size)
-        : PciAllocation(zx::resource(ZX_HANDLE_INVALID)), base_(base), size_(size) {}
-    zx_paddr_t base() const final { return base_; }
-    size_t size() const final { return size_; }
-    zx_status_t CreateVmObject(zx::vmo* out_vmo) const final {
-        return zx::vmo::create(size_, 0, out_vmo);
-    }
+ public:
+  FakeAllocation(zx_paddr_t base, size_t size)
+      : PciAllocation(zx::resource(ZX_HANDLE_INVALID)), base_(base), size_(size) {}
+  zx_paddr_t base() const final { return base_; }
+  size_t size() const final { return size_; }
+  zx_status_t CreateVmObject(zx::vmo* out_vmo) const final {
+    return zx::vmo::create(size_, 0, out_vmo);
+  }
 
-private:
-    zx_paddr_t base_;
-    size_t size_;
+ private:
+  zx_paddr_t base_;
+  size_t size_;
 };
 
 class FakeAllocator : public PciAllocator {
-public:
-    zx_status_t AllocateWindow(zx_paddr_t base, size_t size,
-                               fbl::unique_ptr<PciAllocation>* out_alloc) final {
+ public:
+  zx_status_t AllocateWindow(zx_paddr_t base, size_t size,
+                             fbl::unique_ptr<PciAllocation>* out_alloc) final {
+    *out_alloc = std::unique_ptr<PciAllocation>(new FakeAllocation(base, size));
+    return ZX_OK;
+  }
 
-        *out_alloc = std::unique_ptr<PciAllocation>(new FakeAllocation(base, size));
-        return ZX_OK;
-    }
-
-    zx_status_t GrantAddressSpace(fbl::unique_ptr<PciAllocation> alloc) final {
-        alloc.release();
-        return ZX_OK;
-    }
+  zx_status_t GrantAddressSpace(fbl::unique_ptr<PciAllocation> alloc) final {
+    alloc.release();
+    return ZX_OK;
+  }
 };
 
-} // namespace pci
+}  // namespace pci

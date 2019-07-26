@@ -12,9 +12,7 @@ fidl::InterfaceRequestHandler<rtc::Device> FakeRtcDevice::GetHandler() {
   return bindings_.GetHandler(this);
 }
 
-void FakeRtcDevice::Set(const rtc::Time rtc_time) {
-  current_rtc_time_ = rtc_time;
-}
+void FakeRtcDevice::Set(const rtc::Time rtc_time) { current_rtc_time_ = rtc_time; }
 
 const rtc::Time FakeRtcDevice::Get() const { return current_rtc_time_; }
 
@@ -23,8 +21,6 @@ void FakeRtcDevice::Set(rtc::Time rtc, rtc::Device::SetCallback callback) {
   callback(ZX_OK);
 }
 
-void FakeRtcDevice::Get(rtc::Device::GetCallback callback) {
-  callback(current_rtc_time_);
-}
+void FakeRtcDevice::Get(rtc::Device::GetCallback callback) { callback(current_rtc_time_); }
 
 }  // namespace time_server

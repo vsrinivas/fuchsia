@@ -28,14 +28,10 @@ class TestInfo {
   std::unique_ptr<Test> Instantiate(internal::TestDriver* driver) const;
 
   // Returns the name used to register the test.
-  const fbl::String& name() const {
-    return name_;
-  }
+  const fbl::String& name() const { return name_; }
 
   // Returns the code location where the test was registered.
-  const SourceLocation& location() const {
-    return location_;
-  }
+  const SourceLocation& location() const { return location_; }
 
  private:
   internal::TestFactory factory_ = nullptr;

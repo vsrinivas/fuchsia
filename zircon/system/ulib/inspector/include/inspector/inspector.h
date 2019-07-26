@@ -25,7 +25,7 @@ typedef struct inspector_dsoinfo inspector_dsoinfo_t;
 typedef zx_x86_64_exc_data_t inspector_excp_data_t;
 #elif defined(__aarch64__)
 typedef zx_arm64_exc_data_t inspector_excp_data_t;
-#else // unsupported arch
+#else  // unsupported arch
 typedef int inspector_excp_data_t;
 #endif
 
@@ -36,22 +36,17 @@ extern void inspector_set_verbosity(int level);
 // |thread| must currently be stopped: either suspended or in an exception.
 // The format of the output is verify specific: It outputs the format
 // documented at zircon/docs/symbolizer_markup.md
-extern void inspector_print_backtrace_markup(FILE* f,
-                                             zx_handle_t process,
-                                             zx_handle_t thread,
-                                             inspector_dsoinfo_t* dso_list,
-                                             uintptr_t pc, uintptr_t sp,
-                                             uintptr_t fp, bool use_libunwind);
+extern void inspector_print_backtrace_markup(FILE* f, zx_handle_t process, zx_handle_t thread,
+                                             inspector_dsoinfo_t* dso_list, uintptr_t pc,
+                                             uintptr_t sp, uintptr_t fp, bool use_libunwind);
 
 // Print a backtrace of |thread| to |f|.
 // |thread| must currently be stopped: either suspended or in an exception.
 // The format of the output is verify specific: It is read by
 // zircon/scripts/symbolize in order to add source location to the output.
-extern void inspector_print_backtrace(FILE* f,
-                                      zx_handle_t process, zx_handle_t thread,
-                                      inspector_dsoinfo_t* dso_list,
-                                      uintptr_t pc, uintptr_t sp, uintptr_t fp,
-                                      bool use_libunwind);
+extern void inspector_print_backtrace(FILE* f, zx_handle_t process, zx_handle_t thread,
+                                      inspector_dsoinfo_t* dso_list, uintptr_t pc, uintptr_t sp,
+                                      uintptr_t fp, bool use_libunwind);
 
 // Fetch the list of the DSOs of |process|.
 // |name| is the name of the application binary.
@@ -62,8 +57,7 @@ extern void inspector_dso_free_list(inspector_dsoinfo_t*);
 
 // Return the DSO that contains |pc|.
 // Returns NULL if not found.
-extern inspector_dsoinfo_t* inspector_dso_lookup(inspector_dsoinfo_t* dso_list,
-                                                 zx_vaddr_t pc);
+extern inspector_dsoinfo_t* inspector_dso_lookup(inspector_dsoinfo_t* dso_list, zx_vaddr_t pc);
 
 // Print markup context to |f|. This includes every module and every mapped
 // region of memory derived from those modules.
@@ -81,19 +75,16 @@ extern zx_status_t inspector_dso_find_debug_file(inspector_dsoinfo_t* dso,
                                                  const char** out_debug_file);
 
 // Fetch the general registers of |thread|.
-zx_status_t inspector_read_general_regs(zx_handle_t thread,
-                                        zx_thread_state_general_regs_t* regs);
+zx_status_t inspector_read_general_regs(zx_handle_t thread, zx_thread_state_general_regs_t* regs);
 
 // Print general registers |regs| to |f|.
 // If |excp_data| is non-NULL then print useful related exception data
 // along with the registers.
-void inspector_print_general_regs(FILE* f,
-                                  const zx_thread_state_general_regs_t* regs,
+void inspector_print_general_regs(FILE* f, const zx_thread_state_general_regs_t* regs,
                                   const inspector_excp_data_t* excp_data);
 
 // Print the contents of memory, typically the bottom of a thread's stack.
-void inspector_print_memory(FILE* f, zx_handle_t process, zx_vaddr_t addr,
-                            size_t length);
+void inspector_print_memory(FILE* f, zx_handle_t process, zx_vaddr_t addr, size_t length);
 
 // Prints to stdout the debug info (registers, bottom of user stack, dso list,
 // backtrace, etc.) of the given |thread| in |process|. The caller must be

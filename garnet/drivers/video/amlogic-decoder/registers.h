@@ -13,10 +13,8 @@ template <class RegType>
 class TypedRegisterAddr;
 
 // Typed registers can be used only with a specific type of RegisterIo.
-template <class MmioType, class DerivedType, class IntType,
-          class PrinterState = void>
-class TypedRegisterBase
-    : public hwreg::RegisterBase<DerivedType, IntType, PrinterState> {
+template <class MmioType, class DerivedType, class IntType, class PrinterState = void>
+class TypedRegisterBase : public hwreg::RegisterBase<DerivedType, IntType, PrinterState> {
  public:
   using SelfType = DerivedType;
   using ValueType = IntType;
@@ -35,8 +33,7 @@ class TypedRegisterBase
 template <class RegType>
 class TypedRegisterAddr : public hwreg::RegisterAddr<RegType> {
  public:
-  TypedRegisterAddr(uint32_t reg_addr)
-      : hwreg::RegisterAddr<RegType>(reg_addr) {}
+  TypedRegisterAddr(uint32_t reg_addr) : hwreg::RegisterAddr<RegType>(reg_addr) {}
 
   RegType ReadFrom(typename RegType::Mmio* reg_io) {
     RegType reg;
@@ -79,20 +76,17 @@ class DmcRegisterIo : public ddk::MmioBuffer {
 
 class ResetRegisterIo : public ddk::MmioView {
  public:
-  ResetRegisterIo(const mmio_buffer_t& mmio, zx_off_t off)
-      : ddk::MmioView(mmio, off) {}
+  ResetRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
 };
 
 class ParserRegisterIo : public ddk::MmioView {
  public:
-  ParserRegisterIo(const mmio_buffer_t& mmio, zx_off_t off)
-      : ddk::MmioView(mmio, off) {}
+  ParserRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
 };
 
 class DemuxRegisterIo : public ddk::MmioView {
  public:
-  DemuxRegisterIo(const mmio_buffer_t& mmio, zx_off_t off)
-      : ddk::MmioView(mmio, off) {}
+  DemuxRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
 };
 
 #define DEFINE_REGISTER(name, type, address)                           \

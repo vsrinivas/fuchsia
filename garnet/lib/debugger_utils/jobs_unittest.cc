@@ -17,8 +17,7 @@ TEST(JobsTest, SkipTopJob) {
   auto job = GetDefaultJob();
   auto jid = GetKoid(job.get());
 
-  JobTreeJobCallback job_callback = [&](zx::job* job, zx_koid_t koid,
-                                        zx_koid_t parent_koid,
+  JobTreeJobCallback job_callback = [&](zx::job* job, zx_koid_t koid, zx_koid_t parent_koid,
                                         int depth) -> zx_status_t {
     if (koid == jid) {
       return ZX_ERR_STOP;
@@ -33,25 +32,22 @@ TEST(JobsTest, ThisProcessAndStop) {
   auto job = GetDefaultJob();
   auto pid = GetKoid(zx_process_self());
 
-  JobTreeProcessCallback process_callback =
-      [&](zx::process* process, zx_koid_t koid, zx_koid_t parent_koid,
-          int depth) -> zx_status_t {
+  JobTreeProcessCallback process_callback = [&](zx::process* process, zx_koid_t koid,
+                                                zx_koid_t parent_koid, int depth) -> zx_status_t {
     if (koid == pid) {
       return ZX_ERR_STOP;
     }
     return ZX_OK;
   };
-  EXPECT_EQ(WalkJobTree(job, nullptr, &process_callback, nullptr),
-            ZX_ERR_STOP);
+  EXPECT_EQ(WalkJobTree(job, nullptr, &process_callback, nullptr), ZX_ERR_STOP);
 }
 
 TEST(JobsTest, ThisThreadAndStop) {
   auto job = GetDefaultJob();
   auto tid = GetKoid(zx_thread_self());
 
-  JobTreeThreadCallback thread_callback =
-      [&](zx::thread* thread, zx_koid_t koid, zx_koid_t parent_koid,
-          int depth) -> zx_status_t {
+  JobTreeThreadCallback thread_callback = [&](zx::thread* thread, zx_koid_t koid,
+                                              zx_koid_t parent_koid, int depth) -> zx_status_t {
     if (koid == tid) {
       return ZX_ERR_STOP;
     }
@@ -60,10 +56,8 @@ TEST(JobsTest, ThisThreadAndStop) {
   EXPECT_EQ(WalkJobTree(job, nullptr, nullptr, &thread_callback), ZX_ERR_STOP);
 }
 
-static zx_status_t GetHandleInfo(zx_handle_t handle,
-                                 zx_info_handle_basic_t* info) {
-  return zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, info, sizeof(*info),
-                            nullptr, nullptr);
+static zx_status_t GetHandleInfo(zx_handle_t handle, zx_info_handle_basic_t* info) {
+  return zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, info, sizeof(*info), nullptr, nullptr);
 }
 
 static void TestKoids(zx_handle_t task, zx_koid_t koid, zx_koid_t parent_koid) {
@@ -73,8 +67,8 @@ static void TestKoids(zx_handle_t task, zx_koid_t koid, zx_koid_t parent_koid) {
   EXPECT_EQ(parent_koid, info.related_koid);
 }
 
-static void TestDepth(const zx::job& search_job, zx_handle_t target_job,
-                      zx_handle_t target_process, zx_handle_t target_thread) {
+static void TestDepth(const zx::job& search_job, zx_handle_t target_job, zx_handle_t target_process,
+                      zx_handle_t target_thread) {
   auto jid = GetKoid(target_job);
   auto pid = GetKoid(target_process);
   auto tid = GetKoid(target_thread);
@@ -89,9 +83,8 @@ static void TestDepth(const zx::job& search_job, zx_handle_t target_job,
   int process_depth = -1;
   int thread_depth = -1;
 
-  JobTreeJobCallback job_callback =
-    [&](zx::job* task, zx_koid_t koid, zx_koid_t parent_koid,
-        int depth) -> zx_status_t {
+  JobTreeJobCallback job_callback = [&](zx::job* task, zx_koid_t koid, zx_koid_t parent_koid,
+                                        int depth) -> zx_status_t {
     TestKoids(task->get(), koid, parent_koid);
     EXPECT_GE(depth, 0);
     if (koid == jid) {
@@ -99,9 +92,8 @@ static void TestDepth(const zx::job& search_job, zx_handle_t target_job,
     }
     return ZX_OK;
   };
-  JobTreeProcessCallback process_callback =
-      [&](zx::process* task, zx_koid_t koid, zx_koid_t parent_koid,
-          int depth) -> zx_status_t {
+  JobTreeProcessCallback process_callback = [&](zx::process* task, zx_koid_t koid,
+                                                zx_koid_t parent_koid, int depth) -> zx_status_t {
     TestKoids(task->get(), koid, parent_koid);
     EXPECT_GT(depth, 0);
     if (koid == pid) {
@@ -109,9 +101,8 @@ static void TestDepth(const zx::job& search_job, zx_handle_t target_job,
     }
     return ZX_OK;
   };
-  JobTreeThreadCallback thread_callback =
-    [&](zx::thread* task, zx_koid_t koid, zx_koid_t parent_koid,
-        int depth) -> zx_status_t {
+  JobTreeThreadCallback thread_callback = [&](zx::thread* task, zx_koid_t koid,
+                                              zx_koid_t parent_koid, int depth) -> zx_status_t {
     TestKoids(task->get(), koid, parent_koid);
     EXPECT_GT(depth, 1);
     if (koid == tid) {
@@ -120,9 +111,7 @@ static void TestDepth(const zx::job& search_job, zx_handle_t target_job,
     return ZX_OK;
   };
 
-  EXPECT_EQ(WalkJobTree(search_job, &job_callback, &process_callback,
-                        &thread_callback),
-            ZX_OK);
+  EXPECT_EQ(WalkJobTree(search_job, &job_callback, &process_callback, &thread_callback), ZX_OK);
   EXPECT_EQ(job_depth + 1, process_depth);
   EXPECT_EQ(process_depth + 1, thread_depth);
 }
@@ -189,8 +178,7 @@ TEST(JobsTest, TakeChildJobOwnership) {
   auto child_job_koid = GetKoid(child_job.get());
   zx::job my_job;
 
-  JobTreeJobCallback job_callback = [&](zx::job* job, zx_koid_t koid,
-                                        zx_koid_t parent_koid,
+  JobTreeJobCallback job_callback = [&](zx::job* job, zx_koid_t koid, zx_koid_t parent_koid,
                                         int depth) -> zx_status_t {
     if (koid == child_job_koid) {
       EXPECT_EQ(depth, 2);
@@ -199,8 +187,7 @@ TEST(JobsTest, TakeChildJobOwnership) {
     }
     return ZX_OK;
   };
-  EXPECT_EQ(WalkJobTree(top_job, &job_callback, nullptr, nullptr),
-            ZX_ERR_STOP);
+  EXPECT_EQ(WalkJobTree(top_job, &job_callback, nullptr, nullptr), ZX_ERR_STOP);
   EXPECT_TRUE(top_job.is_valid());
   EXPECT_TRUE(my_job.is_valid());
   EXPECT_EQ(GetKoid(my_job.get()), child_job_koid);

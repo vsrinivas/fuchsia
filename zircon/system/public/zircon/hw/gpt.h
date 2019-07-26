@@ -10,7 +10,7 @@
 
 #include <zircon/compiler.h>
 
-#define GPT_MAGIC (0x5452415020494645ull) // 'EFI PART'
+#define GPT_MAGIC (0x5452415020494645ull)  // 'EFI PART'
 #define GPT_HEADER_SIZE 0x5c
 #define GPT_ENTRY_SIZE 0x80
 #define GPT_GUID_LEN 16
@@ -18,29 +18,29 @@
 #define GPT_NAME_LEN 72
 
 typedef struct gpt_header {
-    uint64_t magic;
-    uint32_t revision;
-    uint32_t size;
-    uint32_t crc32;
-    uint32_t reserved0;
-    uint64_t current;
-    uint64_t backup;
-    uint64_t first;
-    uint64_t last;
-    uint8_t guid[GPT_GUID_LEN];
-    uint64_t entries;
-    uint32_t entries_count;
-    uint32_t entries_size;
-    uint32_t entries_crc;
+  uint64_t magic;
+  uint32_t revision;
+  uint32_t size;
+  uint32_t crc32;
+  uint32_t reserved0;
+  uint64_t current;
+  uint64_t backup;
+  uint64_t first;
+  uint64_t last;
+  uint8_t guid[GPT_GUID_LEN];
+  uint64_t entries;
+  uint32_t entries_count;
+  uint32_t entries_size;
+  uint32_t entries_crc;
 } __PACKED gpt_header_t;
 
 typedef struct gpt_entry {
-    uint8_t type[GPT_GUID_LEN];
-    uint8_t guid[GPT_GUID_LEN];
-    uint64_t first;
-    uint64_t last;
-    uint64_t flags;
-    uint8_t name[GPT_NAME_LEN]; // UTF-16 on disk
+  uint8_t type[GPT_GUID_LEN];
+  uint8_t guid[GPT_GUID_LEN];
+  uint64_t first;
+  uint64_t last;
+  uint64_t flags;
+  uint8_t name[GPT_NAME_LEN];  // UTF-16 on disk
 } __PACKED gpt_entry_t;
 
 // clang-format off

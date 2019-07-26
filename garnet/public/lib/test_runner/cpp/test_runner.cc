@@ -73,20 +73,13 @@ TestRunnerImpl::TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
   });
 }
 
-const std::string& TestRunnerImpl::program_name() const {
-  return program_name_;
-}
+const std::string& TestRunnerImpl::program_name() const { return program_name_; }
 
-bool TestRunnerImpl::waiting_for_termination() const {
-  return termination_task_.is_pending();
-}
+bool TestRunnerImpl::waiting_for_termination() const { return termination_task_.is_pending(); }
 
-void TestRunnerImpl::TeardownAfterTermination() {
-  teardown_after_termination_ = true;
-}
+void TestRunnerImpl::TeardownAfterTermination() { teardown_after_termination_ = true; }
 
-void TestRunnerImpl::Identify(std::string program_name,
-                              IdentifyCallback callback) {
+void TestRunnerImpl::Identify(std::string program_name, IdentifyCallback callback) {
   program_name_ = program_name;
   callback();
 }
@@ -95,9 +88,7 @@ void TestRunnerImpl::ReportResult(TestResult result) {
   test_run_context_->ReportResult(std::move(result));
 }
 
-void TestRunnerImpl::Fail(std::string log_message) {
-  test_run_context_->Fail(log_message);
-}
+void TestRunnerImpl::Fail(std::string log_message) { test_run_context_->Fail(log_message); }
 
 void TestRunnerImpl::Done(DoneCallback callback) {
   // Acknowledge that we got the Done() call.
@@ -116,20 +107,17 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
     Fail(program_name_ + " called WillTerminate more than once.");
     return;
   }
-  termination_task_.set_handler([this, withinSeconds](async_dispatcher_t*,
-                                                      async::Task*,
-                                                      zx_status_t status) {
-    FXL_LOG(ERROR) << program_name_ << " termination timed out after "
-                   << withinSeconds << "s.";
-    binding_.set_error_handler(nullptr);
-    Fail("Termination timed out.");
-    if (teardown_after_termination_) {
-      Teardown([] {});
-    }
-    test_run_context_->StopTrackingClient(this, false);
-  });
-  termination_task_.PostDelayed(async_get_default_dispatcher(),
-                                zx::sec(withinSeconds));
+  termination_task_.set_handler(
+      [this, withinSeconds](async_dispatcher_t*, async::Task*, zx_status_t status) {
+        FXL_LOG(ERROR) << program_name_ << " termination timed out after " << withinSeconds << "s.";
+        binding_.set_error_handler(nullptr);
+        Fail("Termination timed out.");
+        if (teardown_after_termination_) {
+          Teardown([] {});
+        }
+        test_run_context_->StopTrackingClient(this, false);
+      });
+  termination_task_.PostDelayed(async_get_default_dispatcher(), zx::sec(withinSeconds));
 }
 
 void TestRunnerImpl::SetTestPointCount(int64_t count) {
@@ -154,26 +142,22 @@ void TestRunnerImpl::PassTestPoint() {
   remaining_test_points_--;
 }
 
-TestRunContext::TestRunContext(
-    std::shared_ptr<component::StartupContext> app_context,
-    TestRunObserver* connection, const std::string& test_id,
-    const std::string& url, const std::vector<std::string>& args)
+TestRunContext::TestRunContext(std::shared_ptr<component::StartupContext> app_context,
+                               TestRunObserver* connection, const std::string& test_id,
+                               const std::string& url, const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {
   // 1.1 Set up child environment services
   auto services = std::make_unique<ScopeServices>();
-  services->AddService<TestRunner>(
-      [this](fidl::InterfaceRequest<TestRunner> request) {
-        test_runner_clients_.push_back(
-            std::make_unique<TestRunnerImpl>(std::move(request), this));
-      });
-  services->AddService<TestRunnerStore>(
-      [this](fidl::InterfaceRequest<TestRunnerStore> request) {
-        test_runner_store_.AddBinding(std::move(request));
-      });
+  services->AddService<TestRunner>([this](fidl::InterfaceRequest<TestRunner> request) {
+    test_runner_clients_.push_back(std::make_unique<TestRunnerImpl>(std::move(request), this));
+  });
+  services->AddService<TestRunnerStore>([this](fidl::InterfaceRequest<TestRunnerStore> request) {
+    test_runner_store_.AddBinding(std::move(request));
+  });
 
   // 1.2 Make a child environment to run the command.
-  child_env_scope_ = std::make_unique<Scope>(
-      app_context->environment(), "test_runner_env", std::move(services));
+  child_env_scope_ =
+      std::make_unique<Scope>(app_context->environment(), "test_runner_env", std::move(services));
 
   // 2. Launch the test command.
   fuchsia::sys::LauncherPtr launcher;
@@ -230,17 +214,15 @@ void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   }
 
   if (client->TestPointsRemaining()) {
-    FXL_LOG(WARNING) << client->program_name()
-                     << " finished without passing all test points.";
+    FXL_LOG(WARNING) << client->program_name() << " finished without passing all test points.";
     test_runner_connection_->Teardown(test_id_, false);
     return;
   }
 
-  auto find_it =
-      std::find_if(test_runner_clients_.begin(), test_runner_clients_.end(),
-                   [client](const std::unique_ptr<TestRunnerImpl>& client_it) {
-                     return client_it.get() == client;
-                   });
+  auto find_it = std::find_if(test_runner_clients_.begin(), test_runner_clients_.end(),
+                              [client](const std::unique_ptr<TestRunnerImpl>& client_it) {
+                                return client_it.get() == client;
+                              });
 
   FXL_DCHECK(find_it != test_runner_clients_.end());
   test_runner_clients_.erase(find_it);
@@ -259,8 +241,7 @@ void TestRunContext::Teardown(TestRunnerImpl* teardown_client) {
       waiting_for_termination = true;
       continue;
     }
-    FXL_LOG(ERROR) << "Test " << client->program_name()
-                   << " not done before Teardown().";
+    FXL_LOG(ERROR) << "Test " << client->program_name() << " not done before Teardown().";
     success_ = false;
   }
   if (waiting_for_termination) {

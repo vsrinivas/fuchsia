@@ -53,8 +53,7 @@ TEST(ManagedContainer, HeterogenousObject) {
 }
 
 TEST(ManagedContainer, DoNotCrashIfManagerDeleted) {
-  std::unique_ptr<ManagedContainer> managed_container =
-      std::make_unique<ManagedContainer>();
+  std::unique_ptr<ManagedContainer> managed_container = std::make_unique<ManagedContainer>();
   size_t called = 0;
   auto result = managed_container->Manage(fit::defer([&called] { ++called; }));
   EXPECT_EQ(0u, called);

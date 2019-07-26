@@ -71,10 +71,10 @@ __BEGIN_CDECLS
 // At present we just encode the cpu number here.
 // We only support 32 cpus at the moment, the extra bit is for magic values.
 #define MTRACE_PERFMON_OPTIONS_CPU_MASK 0x3f
-#define MTRACE_PERFMON_OPTIONS(cpu) ((cpu) & MTRACE_PERFMON_OPTIONS_CPU_MASK)
+#define MTRACE_PERFMON_OPTIONS(cpu) ((cpu)&MTRACE_PERFMON_OPTIONS_CPU_MASK)
 
 #define MTRACE_PERFMON_ALL_CPUS 32
 
-#define MTRACE_PERFMON_OPTIONS_CPU(options) ((options) & MTRACE_PERFMON_OPTIONS_CPU_MASK)
+#define MTRACE_PERFMON_OPTIONS_CPU(options) ((options)&MTRACE_PERFMON_OPTIONS_CPU_MASK)
 
 __END_CDECLS

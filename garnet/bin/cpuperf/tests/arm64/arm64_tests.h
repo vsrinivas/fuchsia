@@ -11,4 +11,4 @@
 // testcase verifier.
 extern const TestSpec kTallySpec;
 
-#endif // GARNET_BIN_CPUPERF_TESTS_ARM64_TESTS_H_
+#endif  // GARNET_BIN_CPUPERF_TESTS_ARM64_TESTS_H_

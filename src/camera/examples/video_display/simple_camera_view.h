@@ -27,13 +27,10 @@ class SimpleCameraView : public scenic::BaseView {
   // Called when the scene is "invalidated". Invalidation happens when surface
   // dimensions or metrics change, but not necessarily when surface contents
   // change.
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   scenic::ShapeNode node_;
 

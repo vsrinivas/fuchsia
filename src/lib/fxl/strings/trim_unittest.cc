@@ -17,8 +17,7 @@ TEST(StringUtil, TrimString) {
 
   EXPECT_EQ(std::string(sw.begin() + 1, sw.end() - 1), TrimString(sw, "abc "));
 
-  EXPECT_EQ(std::string(sw.begin() + 2, sw.end() - 2),
-            TrimString(sw, "abc \t"));
+  EXPECT_EQ(std::string(sw.begin() + 2, sw.end() - 2), TrimString(sw, "abc \t"));
 
   EXPECT_EQ(std::string(), TrimString(sw, "HWorlde \t"));
 }

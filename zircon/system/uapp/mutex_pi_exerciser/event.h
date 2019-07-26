@@ -10,15 +10,14 @@
 #include <zircon/types.h>
 
 class Event {
-public:
-    Event() = default;
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Event);
+ public:
+  Event() = default;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Event);
 
-    zx_status_t Wait(zx::duration timeout = zx::duration::infinite());
-    void Signal();
-    void Reset();
+  zx_status_t Wait(zx::duration timeout = zx::duration::infinite());
+  void Signal();
+  void Reset();
 
-private:
-    fbl::futex_t signaled_ = {0};
+ private:
+  fbl::futex_t signaled_ = {0};
 };
-

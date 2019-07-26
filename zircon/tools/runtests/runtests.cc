@@ -15,31 +15,29 @@
 namespace {
 
 class PosixStopwatch final : public runtests::Stopwatch {
-public:
-    PosixStopwatch() { Start(); }
-    void Start() override { start_time_ns_ = NowInNsecs(); }
-    int64_t DurationInMsecs() override {
-        return (NowInNsecs() - start_time_ns_) / kNsecsPerMsec;
-    }
+ public:
+  PosixStopwatch() { Start(); }
+  void Start() override { start_time_ns_ = NowInNsecs(); }
+  int64_t DurationInMsecs() override { return (NowInNsecs() - start_time_ns_) / kNsecsPerMsec; }
 
-private:
-    // Returns monotonic time in nanoseconds.
-    uint64_t NowInNsecs() const {
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        return ts.tv_sec * kNsecsPerSec + ts.tv_nsec;
-    }
+ private:
+  // Returns monotonic time in nanoseconds.
+  uint64_t NowInNsecs() const {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * kNsecsPerSec + ts.tv_nsec;
+  }
 
-    uint64_t start_time_ns_;
-    static constexpr uint64_t kNsecsPerMsec = 1000 * 1000;
-    static constexpr uint64_t kNsecsPerSec = 1000 * 1000 * 1000;
+  uint64_t start_time_ns_;
+  static constexpr uint64_t kNsecsPerMsec = 1000 * 1000;
+  static constexpr uint64_t kNsecsPerSec = 1000 * 1000 * 1000;
 };
 
-} // namespace
+}  // namespace
 
 int main(int argc, char** argv) {
-    PosixStopwatch stopwatch;
-    return runtests::DiscoverAndRunTests(&runtests::PosixRunTest, argc, argv,
-                                         /*default_test_dirs=*/{}, &stopwatch,
-                                         /*syslog_file_name=*/"");
+  PosixStopwatch stopwatch;
+  return runtests::DiscoverAndRunTests(&runtests::PosixRunTest, argc, argv,
+                                       /*default_test_dirs=*/{}, &stopwatch,
+                                       /*syslog_file_name=*/"");
 }

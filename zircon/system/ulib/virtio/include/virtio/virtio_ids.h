@@ -29,20 +29,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE. */
 
-#define VIRTIO_ID_NET           1 /* virtio net */
-#define VIRTIO_ID_BLOCK         2 /* virtio block */
-#define VIRTIO_ID_CONSOLE       3 /* virtio console */
-#define VIRTIO_ID_RNG           4 /* virtio rng */
-#define VIRTIO_ID_BALLOON       5 /* virtio balloon */
-#define VIRTIO_ID_RPMSG         7 /* virtio remote processor messaging */
-#define VIRTIO_ID_SCSI          8 /* virtio scsi */
-#define VIRTIO_ID_9P            9 /* 9p virtio console */
+#define VIRTIO_ID_NET 1           /* virtio net */
+#define VIRTIO_ID_BLOCK 2         /* virtio block */
+#define VIRTIO_ID_CONSOLE 3       /* virtio console */
+#define VIRTIO_ID_RNG 4           /* virtio rng */
+#define VIRTIO_ID_BALLOON 5       /* virtio balloon */
+#define VIRTIO_ID_RPMSG 7         /* virtio remote processor messaging */
+#define VIRTIO_ID_SCSI 8          /* virtio scsi */
+#define VIRTIO_ID_9P 9            /* 9p virtio console */
 #define VIRTIO_ID_RPROC_SERIAL 11 /* virtio remoteproc serial link */
-#define VIRTIO_ID_CAIF         12 /* Virtio caif */
-#define VIRTIO_ID_GPU          16 /* virtio GPU */
-#define VIRTIO_ID_INPUT        18 /* virtio input */
-#define VIRTIO_ID_VSOCK        19 /* virtio vsock transport */
-#define VIRTIO_ID_WL           30 /* virtio wayland */
-#define VIRTIO_ID_MAGMA        50 /* virtio magma */
+#define VIRTIO_ID_CAIF 12         /* Virtio caif */
+#define VIRTIO_ID_GPU 16          /* virtio GPU */
+#define VIRTIO_ID_INPUT 18        /* virtio input */
+#define VIRTIO_ID_VSOCK 19        /* virtio vsock transport */
+#define VIRTIO_ID_WL 30           /* virtio wayland */
+#define VIRTIO_ID_MAGMA 50        /* virtio magma */
 
 #endif /* _LINUX_VIRTIO_IDS_H */

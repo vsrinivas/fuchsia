@@ -23,4 +23,4 @@ constexpr uint32_t kI2c0Scl = 35;
 constexpr uint32_t kI2c1Sda = 34;
 constexpr uint32_t kI2c1Scl = 33;
 
-} // namespace as370
+}  // namespace as370

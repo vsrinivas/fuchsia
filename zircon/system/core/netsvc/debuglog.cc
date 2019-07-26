@@ -41,101 +41,100 @@ static unsigned num_unacked = 0;
 static zx_duration_t send_delay = SEND_DELAY_SHORT;
 
 static size_t get_log_line(char* out) {
-    char buf[ZX_LOG_RECORD_MAX + 1];
-    zx_log_record_t* rec = reinterpret_cast<zx_log_record_t*>(buf);
-    for (;;) {
-        if (zx_debuglog_read(loghandle, 0, rec, ZX_LOG_RECORD_MAX) > 0) {
-            if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
-                rec->datalen--;
-            }
-            // records flagged for local display are ignored
-            if (rec->flags & ZX_LOG_LOCAL) {
-                continue;
-            }
-            rec->data[rec->datalen] = 0;
-            snprintf(out, MAX_LOG_LINE, "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-                     static_cast<int>(rec->timestamp / 1000000000ULL),
-                     static_cast<int>((rec->timestamp / 1000000ULL) % 1000ULL), rec->pid, rec->tid,
-                     rec->data);
-            return strlen(out);
-        } else {
-            return 0;
-        }
+  char buf[ZX_LOG_RECORD_MAX + 1];
+  zx_log_record_t* rec = reinterpret_cast<zx_log_record_t*>(buf);
+  for (;;) {
+    if (zx_debuglog_read(loghandle, 0, rec, ZX_LOG_RECORD_MAX) > 0) {
+      if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
+        rec->datalen--;
+      }
+      // records flagged for local display are ignored
+      if (rec->flags & ZX_LOG_LOCAL) {
+        continue;
+      }
+      rec->data[rec->datalen] = 0;
+      snprintf(out, MAX_LOG_LINE, "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
+               static_cast<int>(rec->timestamp / 1000000000ULL),
+               static_cast<int>((rec->timestamp / 1000000ULL) % 1000ULL), rec->pid, rec->tid,
+               rec->data);
+      return strlen(out);
+    } else {
+      return 0;
     }
+  }
 }
 
 int debuglog_init() {
-    if (zx_debuglog_create(ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, &loghandle) < 0) {
-        return -1;
-    }
+  if (zx_debuglog_create(ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, &loghandle) < 0) {
+    return -1;
+  }
 
-    // Set up our timeout to expire immediately, so that we check for pending log messages
-    g_debuglog_next_timeout = zx_clock_get_monotonic();
+  // Set up our timeout to expire immediately, so that we check for pending log messages
+  g_debuglog_next_timeout = zx_clock_get_monotonic();
 
-    seqno = 1;
-    pending = 0;
+  seqno = 1;
+  pending = 0;
 
-    return 0;
+  return 0;
 }
 
 // If we have an outstanding (unacknowledged) log, resend it. Otherwise, send new logs, if we
 // have any.
 static void debuglog_send() {
-    if (pending == 0) {
-        pkt.magic = NB_DEBUGLOG_MAGIC;
-        pkt.seqno = seqno;
-        strncpy(pkt.nodename, nodename(), sizeof(pkt.nodename) - 1);
-        pkt_len = 0;
-        while (pkt_len < (MAX_LOG_DATA - MAX_LOG_LINE)) {
-            size_t r = get_log_line(pkt.data + pkt_len);
-            if (r > 0) {
-                pkt_len += r;
-            } else {
-                break;
-            }
-        }
-        if (pkt_len) {
-            // include header and nodename in length
-            pkt_len += MAX_NODENAME_LENGTH + sizeof(uint32_t) * 2;
-            pending = 1;
-        } else {
-            goto done;
-        }
+  if (pending == 0) {
+    pkt.magic = NB_DEBUGLOG_MAGIC;
+    pkt.seqno = seqno;
+    strncpy(pkt.nodename, nodename(), sizeof(pkt.nodename) - 1);
+    pkt_len = 0;
+    while (pkt_len < (MAX_LOG_DATA - MAX_LOG_LINE)) {
+      size_t r = get_log_line(pkt.data + pkt_len);
+      if (r > 0) {
+        pkt_len += r;
+      } else {
+        break;
+      }
     }
-    udp6_send(&pkt, pkt_len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT, false);
+    if (pkt_len) {
+      // include header and nodename in length
+      pkt_len += MAX_NODENAME_LENGTH + sizeof(uint32_t) * 2;
+      pending = 1;
+    } else {
+      goto done;
+    }
+  }
+  udp6_send(&pkt, pkt_len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT, false);
 done:
-    g_debuglog_next_timeout = zx_deadline_after(send_delay);
+  g_debuglog_next_timeout = zx_deadline_after(send_delay);
 }
 
 void debuglog_recv(void* data, size_t len, bool is_mcast) {
-    // The only message we should be receiving is acknowledgement of our last transmission
-    if (!pending) {
-        return;
-    }
-    if ((len != 8) || is_mcast) {
-        return;
-    }
-    logpacket_t* pkt = reinterpret_cast<logpacket_t*>(data);
-    if ((pkt->magic != NB_DEBUGLOG_MAGIC) || (pkt->seqno != seqno)) {
-        return;
-    }
+  // The only message we should be receiving is acknowledgement of our last transmission
+  if (!pending) {
+    return;
+  }
+  if ((len != 8) || is_mcast) {
+    return;
+  }
+  logpacket_t* pkt = reinterpret_cast<logpacket_t*>(data);
+  if ((pkt->magic != NB_DEBUGLOG_MAGIC) || (pkt->seqno != seqno)) {
+    return;
+  }
 
-    // Received an ack. We have an active listener. Don't delay.
-    num_unacked = 0;
-    send_delay = SEND_DELAY_SHORT;
+  // Received an ack. We have an active listener. Don't delay.
+  num_unacked = 0;
+  send_delay = SEND_DELAY_SHORT;
 
-    seqno++;
-    pending = 0;
-    debuglog_send();
+  seqno++;
+  pending = 0;
+  debuglog_send();
 }
 
 void debuglog_timeout_expired() {
-    if (pending) {
-        // No reply. If noone is listening, reduce send rate.
-        if (++num_unacked >= kUnackedThreshold) {
-            send_delay = SEND_DELAY_LONG;
-        }
+  if (pending) {
+    // No reply. If noone is listening, reduce send rate.
+    if (++num_unacked >= kUnackedThreshold) {
+      send_delay = SEND_DELAY_LONG;
     }
-    debuglog_send();
+  }
+  debuglog_send();
 }
-

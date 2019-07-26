@@ -19,61 +19,61 @@ namespace usb {
 
 // A small helper class for managing a device's descriptor list memory.
 class DescriptorListMemory : public fbl::RefCounted<DescriptorListMemory> {
-  public:
-    class Iterator {
-      public:
-        explicit Iterator(fbl::RefPtr<DescriptorListMemory> mem);
+ public:
+  class Iterator {
+   public:
+    explicit Iterator(fbl::RefPtr<DescriptorListMemory> mem);
 
-        // Advance the iterator to the next valid header and return true.  If
-        // there are no more valid headers, simply return false.
-        bool Next();
+    // Advance the iterator to the next valid header and return true.  If
+    // there are no more valid headers, simply return false.
+    bool Next();
 
-        bool valid() const { return (offset_ < mem_->size()); }
-        size_t offset() const { return offset_; }
-        const fbl::RefPtr<DescriptorListMemory>& desc_list() const { return mem_; }
+    bool valid() const { return (offset_ < mem_->size()); }
+    size_t offset() const { return offset_; }
+    const fbl::RefPtr<DescriptorListMemory>& desc_list() const { return mem_; }
 
-        const usb_descriptor_header_t* hdr() const {
-            if (!valid()) {
-                return nullptr;
-            }
+    const usb_descriptor_header_t* hdr() const {
+      if (!valid()) {
+        return nullptr;
+      }
 
-            auto tmp = reinterpret_cast<uintptr_t>(mem_->data());
-            return reinterpret_cast<const usb_descriptor_header_t*>(tmp + offset_);
-        }
+      auto tmp = reinterpret_cast<uintptr_t>(mem_->data());
+      return reinterpret_cast<const usb_descriptor_header_t*>(tmp + offset_);
+    }
 
-        template <typename T>
-        const T* hdr_as() const {
-            auto h = hdr();
-            ZX_DEBUG_ASSERT(offset_ <=  mem_->size());
-            return ((h != nullptr) && (h->bLength <= (mem_->size() - offset_)))
-                ? reinterpret_cast<const T*>(h)
-                : nullptr;
-        }
+    template <typename T>
+    const T* hdr_as() const {
+      auto h = hdr();
+      ZX_DEBUG_ASSERT(offset_ <= mem_->size());
+      return ((h != nullptr) && (h->bLength <= (mem_->size() - offset_)))
+                 ? reinterpret_cast<const T*>(h)
+                 : nullptr;
+    }
 
-      private:
-        DISALLOW_COPY_ASSIGN_AND_MOVE(Iterator);
+   private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Iterator);
 
-        // Validate that the current offset points at something which could be a
-        // valid descriptor which fits within the descriptor memory and return
-        // true.  Otherwise, invalidate the offset and return false.
-        bool ValidateOffset();
+    // Validate that the current offset points at something which could be a
+    // valid descriptor which fits within the descriptor memory and return
+    // true.  Otherwise, invalidate the offset and return false.
+    bool ValidateOffset();
 
-        fbl::RefPtr<DescriptorListMemory> mem_;
-        size_t offset_ = 0;
-    };
+    fbl::RefPtr<DescriptorListMemory> mem_;
+    size_t offset_ = 0;
+  };
 
-    static fbl::RefPtr<DescriptorListMemory> Create(usb_protocol_t* proto);
-    const void* data() const { return data_; }
-    size_t      size() const { return size_; }
+  static fbl::RefPtr<DescriptorListMemory> Create(usb_protocol_t* proto);
+  const void* data() const { return data_; }
+  size_t size() const { return size_; }
 
-  private:
-    friend class fbl::RefPtr<DescriptorListMemory>;
+ private:
+  friend class fbl::RefPtr<DescriptorListMemory>;
 
-    DescriptorListMemory() = default;
-    ~DescriptorListMemory();
+  DescriptorListMemory() = default;
+  ~DescriptorListMemory();
 
-    void*  data_ = nullptr;
-    size_t size_ = 0;
+  void* data_ = nullptr;
+  size_t size_ = 0;
 };
 
 }  // namespace usb

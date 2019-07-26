@@ -34,10 +34,10 @@ struct brcmf_cfg80211_info;
  * @P2PAPI_BSSCFG_MAX: used for range checking.
  */
 enum p2p_bss_type {
-    P2PAPI_BSSCFG_PRIMARY,    /* maps to driver's primary bsscfg */
-    P2PAPI_BSSCFG_DEVICE,     /* maps to driver's P2P device discovery bsscfg */
-    P2PAPI_BSSCFG_CONNECTION, /* maps to driver's P2P connection bsscfg */
-    P2PAPI_BSSCFG_MAX
+  P2PAPI_BSSCFG_PRIMARY,    /* maps to driver's primary bsscfg */
+  P2PAPI_BSSCFG_DEVICE,     /* maps to driver's P2P device discovery bsscfg */
+  P2PAPI_BSSCFG_CONNECTION, /* maps to driver's P2P connection bsscfg */
+  P2PAPI_BSSCFG_MAX
 };
 
 /**
@@ -47,8 +47,8 @@ enum p2p_bss_type {
  * @private_data: TBD
  */
 struct p2p_bss {
-    struct brcmf_cfg80211_vif* vif;
-    void* private_data;
+  struct brcmf_cfg80211_vif* vif;
+  void* private_data;
 };
 
 /**
@@ -69,20 +69,20 @@ struct p2p_bss {
  * @BRCMF_P2P_STATUS_FINDING_COMMON_CHANNEL: search channel for AF active.
  */
 enum brcmf_p2p_status {
-    BRCMF_P2P_STATUS_ENABLED,
-    BRCMF_P2P_STATUS_IF_ADD,
-    BRCMF_P2P_STATUS_IF_DEL,
-    BRCMF_P2P_STATUS_IF_DELETING,
-    BRCMF_P2P_STATUS_IF_CHANGING,
-    BRCMF_P2P_STATUS_IF_CHANGED,
-    BRCMF_P2P_STATUS_ACTION_TX_COMPLETED,
-    BRCMF_P2P_STATUS_ACTION_TX_NOACK,
-    BRCMF_P2P_STATUS_GO_NEG_PHASE,
-    BRCMF_P2P_STATUS_DISCOVER_LISTEN,
-    BRCMF_P2P_STATUS_SENDING_ACT_FRAME,
-    BRCMF_P2P_STATUS_WAITING_NEXT_AF_LISTEN,
-    BRCMF_P2P_STATUS_WAITING_NEXT_ACT_FRAME,
-    BRCMF_P2P_STATUS_FINDING_COMMON_CHANNEL
+  BRCMF_P2P_STATUS_ENABLED,
+  BRCMF_P2P_STATUS_IF_ADD,
+  BRCMF_P2P_STATUS_IF_DEL,
+  BRCMF_P2P_STATUS_IF_DELETING,
+  BRCMF_P2P_STATUS_IF_CHANGING,
+  BRCMF_P2P_STATUS_IF_CHANGED,
+  BRCMF_P2P_STATUS_ACTION_TX_COMPLETED,
+  BRCMF_P2P_STATUS_ACTION_TX_NOACK,
+  BRCMF_P2P_STATUS_GO_NEG_PHASE,
+  BRCMF_P2P_STATUS_DISCOVER_LISTEN,
+  BRCMF_P2P_STATUS_SENDING_ACT_FRAME,
+  BRCMF_P2P_STATUS_WAITING_NEXT_AF_LISTEN,
+  BRCMF_P2P_STATUS_WAITING_NEXT_ACT_FRAME,
+  BRCMF_P2P_STATUS_FINDING_COMMON_CHANNEL
 };
 
 /**
@@ -98,14 +98,14 @@ enum brcmf_p2p_status {
  * @tx_dst_addr: mac address where tx af should be sent to.
  */
 struct afx_hdl {
-    struct work_struct afx_work;
-    sync_completion_t act_frm_scan;
-    bool is_active;
-    int32_t peer_chan;
-    bool is_listen;
-    uint16_t my_listen_chan;
-    uint16_t peer_listen_chan;
-    uint8_t tx_dst_addr[ETH_ALEN];
+  struct work_struct afx_work;
+  sync_completion_t act_frm_scan;
+  bool is_active;
+  int32_t peer_chan;
+  bool is_listen;
+  uint16_t my_listen_chan;
+  uint16_t peer_listen_chan;
+  uint8_t tx_dst_addr[ETH_ALEN];
 };
 
 /**
@@ -130,23 +130,23 @@ struct afx_hdl {
  * @p2pdev_dynamically: is p2p device if created by module param or supplicant.
  */
 struct brcmf_p2p_info {
-    struct brcmf_cfg80211_info* cfg;
-    std::atomic<unsigned long> status;
-    uint8_t dev_addr[ETH_ALEN];
-    uint8_t int_addr[ETH_ALEN];
-    struct p2p_bss bss_idx[P2PAPI_BSSCFG_MAX];
-    uint8_t listen_channel;
-    struct ieee80211_channel remain_on_channel;
-    uint32_t remain_on_channel_cookie;
-    uint8_t next_af_subtype;
-    sync_completion_t send_af_done;
-    struct afx_hdl afx_hdl;
-    uint32_t af_sent_channel;
-    zx_time_t af_tx_sent_time;
-    sync_completion_t wait_next_af;
-    bool gon_req_action;
-    bool block_gon_req_tx;
-    bool p2pdev_dynamically;
+  struct brcmf_cfg80211_info* cfg;
+  std::atomic<unsigned long> status;
+  uint8_t dev_addr[ETH_ALEN];
+  uint8_t int_addr[ETH_ALEN];
+  struct p2p_bss bss_idx[P2PAPI_BSSCFG_MAX];
+  uint8_t listen_channel;
+  struct ieee80211_channel remain_on_channel;
+  uint32_t remain_on_channel_cookie;
+  uint8_t next_af_subtype;
+  sync_completion_t send_af_done;
+  struct afx_hdl afx_hdl;
+  uint32_t af_sent_channel;
+  zx_time_t af_tx_sent_time;
+  sync_completion_t wait_next_af;
+  bool gon_req_action;
+  bool block_gon_req_tx;
+  bool p2pdev_dynamically;
 };
 
 zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,

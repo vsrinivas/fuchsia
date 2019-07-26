@@ -20,8 +20,7 @@ bool logging = false;
 
 class InputStream {
  public:
-  InputStream(const uint8_t* data, size_t size)
-      : cur_(data), end_(data + size) {}
+  InputStream(const uint8_t* data, size_t size) : cur_(data), end_(data + size) {}
 
   uint8_t NextByte() {
     if (cur_ == end_)
@@ -119,9 +118,7 @@ class Fuzzer : private StreamStateListener {
     auto status = state.GetSendStatus();
     can_ack = true;
 
-    if (status.code() != last_sent_close.Map([](const Status& status) {
-          return status.code();
-        })) {
+    if (status.code() != last_sent_close.Map([](const Status& status) { return status.code(); })) {
       close_retries = 0;
       last_sent_close = status;
     } else {

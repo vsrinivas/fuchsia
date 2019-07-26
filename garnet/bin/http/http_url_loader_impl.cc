@@ -24,8 +24,7 @@ namespace {
 const size_t kMaxRedirects = 20;
 }  // namespace
 
-URLLoaderImpl::URLLoaderImpl(Coordinator* coordinator)
-    : coordinator_(coordinator) {}
+URLLoaderImpl::URLLoaderImpl(Coordinator* coordinator) : coordinator_(coordinator) {}
 
 URLLoaderImpl::~URLLoaderImpl() {}
 
@@ -83,8 +82,8 @@ void URLLoaderImpl::StartInternal(oldhttp::URLRequest request) {
   if (request.body) {
     // TODO(kulakowski) Implement responses into a shared_buffer
     if (request.body->is_stream()) {
-      request_body_reader = std::make_unique<http::SocketUploadElementReader>(
-          std::move(request.body->stream()));
+      request_body_reader =
+          std::make_unique<http::SocketUploadElementReader>(std::move(request.body->stream()));
     } else {
       FXL_DCHECK(request.body->is_buffer());
       request_body_reader = std::make_unique<http::VmoUploadElementReader>(
@@ -113,15 +112,13 @@ void URLLoaderImpl::StartInternal(oldhttp::URLRequest request) {
       HTTPClient<asio::ssl::stream<tcp::socket>> c(this, io_service, ctx);
       zx_status_t result = c.CreateRequest(
           current_url_.host(),
-          current_url_.path() +
-              (current_url_.has_query() ? "?" + current_url_.query() : ""),
+          current_url_.path() + (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, std::move(request_body_reader));
       if (result != ZX_OK) {
         SendError(HTTP_ERR_INVALID_ARGUMENT);
         return;
       }
-      c.Start(current_url_.host(),
-              current_url_.has_port() ? current_url_.port() : "https");
+      c.Start(current_url_.host(), current_url_.has_port() ? current_url_.port() : "https");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
@@ -144,15 +141,13 @@ void URLLoaderImpl::StartInternal(oldhttp::URLRequest request) {
       HTTPClient<tcp::socket> c(this, io_service);
       zx_status_t result = c.CreateRequest(
           current_url_.host(),
-          current_url_.path() +
-              (current_url_.has_query() ? "?" + current_url_.query() : ""),
+          current_url_.path() + (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, std::move(request_body_reader));
       if (result != ZX_OK) {
         SendError(HTTP_ERR_INVALID_ARGUMENT);
         return;
       }
-      c.Start(current_url_.host(),
-              current_url_.has_port() ? current_url_.port() : "http");
+      c.Start(current_url_.host(), current_url_.has_port() ? current_url_.port() : "http");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {

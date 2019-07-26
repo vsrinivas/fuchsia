@@ -11,14 +11,12 @@ namespace cpuperf_provider {
 
 const CategorySpec kCommonCategories[] = {
     // Options
-    {"cpu:os", CategoryGroup::kOption,
-     static_cast<CategoryValue>(TraceOption::kOs), 0, nullptr},
-    {"cpu:user", CategoryGroup::kOption,
-     static_cast<CategoryValue>(TraceOption::kUser), 0, nullptr},
-    {"cpu:pc", CategoryGroup::kOption,
-     static_cast<CategoryValue>(TraceOption::kPc), 0, nullptr},
+    {"cpu:os", CategoryGroup::kOption, static_cast<CategoryValue>(TraceOption::kOs), 0, nullptr},
+    {"cpu:user", CategoryGroup::kOption, static_cast<CategoryValue>(TraceOption::kUser), 0,
+     nullptr},
+    {"cpu:pc", CategoryGroup::kOption, static_cast<CategoryValue>(TraceOption::kPc), 0, nullptr},
 #ifdef __x86_64__
-    {"cpu:last_branch",   CategoryGroup::kOption,
+    {"cpu:last_branch", CategoryGroup::kOption,
      static_cast<CategoryValue>(TraceOption::kLastBranch), 0, nullptr},
 #endif
 

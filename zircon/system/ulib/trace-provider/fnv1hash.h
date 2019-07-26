@@ -18,12 +18,12 @@
 #define FNV64_OFFSET_BASIS (14695981039346656037ULL)
 
 static inline uint64_t fnv1a64(const void* ptr, size_t len) {
-    uint64_t n = FNV64_OFFSET_BASIS;
-    const uint8_t* data = (const uint8_t*) ptr;
-    while (len-- > 0) {
-        n = (n ^ (*data++)) * FNV64_PRIME;
-    }
-    return n;
+  uint64_t n = FNV64_OFFSET_BASIS;
+  const uint8_t* data = (const uint8_t*)ptr;
+  while (len-- > 0) {
+    n = (n ^ (*data++)) * FNV64_PRIME;
+  }
+  return n;
 }
 
 #define fnv1a64str(str) fnv1a64(str, strlen(str))

@@ -93,8 +93,7 @@ class CodecAdapter {
   //
   // TODO(dustingreen): Re-visit the lifetime rule and required copy here, once
   // more is nailed down re. exactly how the core codec relates to CodecImpl.
-  virtual void CoreCodecInit(
-      const fuchsia::media::FormatDetails& initial_input_format_details) = 0;
+  virtual void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) = 0;
 
   // All codecs must implement this for both ports.  The returned structure will
   // be sent to sysmem in a SetConstraints() call.  This method can be called
@@ -147,10 +146,8 @@ class CodecAdapter {
   // out (all still 0), the caller will fill them out based on
   // IsCoreCodecMappedBufferNeeded() and IsCoreCodecHwBased().  The core codec
   // must either leave usage set to all 0, or completely fill them out.
-  virtual fuchsia::sysmem::BufferCollectionConstraints
-  CoreCodecGetBufferCollectionConstraints(
-      CodecPort port,
-      const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+  virtual fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
+      CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
       const fuchsia::media::StreamBufferPartialSettings& partial_settings) = 0;
 
   // There are no VMO handles in the buffer_collection_info.  Those are instead
@@ -165,8 +162,7 @@ class CodecAdapter {
   // set (regardless of whether the client is using sysmem), after the client
   // sets input or output settings, and before the first buffer is added.
   virtual void CoreCodecSetBufferCollectionInfo(
-      CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2&
-                          buffer_collection_info) = 0;
+      CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) = 0;
 
   // Stream lifetime:
   //
@@ -213,8 +209,7 @@ class CodecAdapter {
   //
   // Only permitted between CoreCodecStartStream() and CoreCodecStopStream().
   virtual void CoreCodecQueueInputFormatDetails(
-      const fuchsia::media::FormatDetails&
-          per_stream_override_format_details) = 0;
+      const fuchsia::media::FormatDetails& per_stream_override_format_details) = 0;
 
   // Only permitted between CoreCodecStartStream() and CoreCodecStopStream().
   virtual void CoreCodecQueueInputPacket(CodecPacket* packet) = 0;
@@ -237,8 +232,7 @@ class CodecAdapter {
   // A core codec may be able to fully configure a buffer during this call and
   // later ignore CoreCodecConfigureBuffers(), or a core codec may use
   // CoreCodecConfigureBuffers() to finish configuring buffers.
-  virtual void CoreCodecAddBuffer(CodecPort port,
-                                  const CodecBuffer* buffer) = 0;
+  virtual void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) = 0;
 
   // Finish setting up input or output buffer(s).
   //
@@ -251,8 +245,7 @@ class CodecAdapter {
   // happening, we could switch to not sharing any FIDL threads across Codec
   // instances.
   virtual void CoreCodecConfigureBuffers(
-      CodecPort port,
-      const std::vector<std::unique_ptr<CodecPacket>>& packets) = 0;
+      CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) = 0;
 
   // This method can be called at any time while output buffers are (fully)
   // configured, including while there's no active stream.
@@ -306,10 +299,9 @@ class CodecAdapter {
   // onCoreCodecMidStreamOutputConstraintsChange() (and with same stream still
   // active).
   virtual std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
-  CoreCodecBuildNewOutputConstraints(
-      uint64_t stream_lifetime_ordinal,
-      uint64_t new_output_buffer_constraints_version_ordinal,
-      bool buffer_constraints_action_required) = 0;
+  CoreCodecBuildNewOutputConstraints(uint64_t stream_lifetime_ordinal,
+                                     uint64_t new_output_buffer_constraints_version_ordinal,
+                                     bool buffer_constraints_action_required) = 0;
 
   // This will be called on the InputData domain, during the core codec's call
   // to onCoreCodecOutputPacket(), so that the format will be delivered at most
@@ -321,8 +313,7 @@ class CodecAdapter {
   // unless the format change is mid-stream (but calling before the first packet
   // is allowed and not harmful).
   virtual fuchsia::media::StreamOutputFormat CoreCodecGetOutputFormat(
-      uint64_t stream_lifetime_ordinal,
-      uint64_t new_output_format_details_version_ordinal) = 0;
+      uint64_t stream_lifetime_ordinal, uint64_t new_output_format_details_version_ordinal) = 0;
 
   // CoreCodecMidStreamOutputBufferReConfigPrepare()
   //

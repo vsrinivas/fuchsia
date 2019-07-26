@@ -35,8 +35,7 @@ class TestGlob : public testing::Test {
       FXL_CHECK(WriteFile(fxl::Substitute("$0/$1", dir_.path(), name), "a", 1));
     }
     FXL_CHECK(CreateDirectory(fxl::Substitute("$0/subdir", dir_.path())));
-    FXL_CHECK(
-        WriteFile(fxl::Substitute("$0/subdir/abcd", dir_.path()), "a", 1));
+    FXL_CHECK(WriteFile(fxl::Substitute("$0/subdir/abcd", dir_.path()), "a", 1));
   }
 
   std::vector<std::string> PrependPath(const std::vector<std::string>& files) {
@@ -48,8 +47,8 @@ class TestGlob : public testing::Test {
   }
 
   ScopedTempDir dir_;
-  const std::vector<std::string> sorted_names_in_dir_ = {
-      "a", "aa", "b", "c", "d", "e", "subdir", "z"};
+  const std::vector<std::string> sorted_names_in_dir_ = {"a", "aa", "b",      "c",
+                                                         "d", "e",  "subdir", "z"};
 };  // namespace
 
 TEST_F(TestGlob, Empty) {
@@ -73,8 +72,7 @@ TEST_F(TestGlob, AllFiles) {
   Glob glob(path);
   EXPECT_EQ(glob.size(), sorted_names_in_dir_.size());
   std::vector<std::string> globbed = {glob.begin(), glob.end()};
-  EXPECT_THAT(globbed,
-              ::testing::ElementsAreArray(PrependPath(sorted_names_in_dir_)));
+  EXPECT_THAT(globbed, ::testing::ElementsAreArray(PrependPath(sorted_names_in_dir_)));
 };
 
 TEST_F(TestGlob, FilePrefix) {
@@ -126,8 +124,7 @@ TEST_F(TestGlob, NoSortOption) {
   auto path = fxl::Substitute("$0/*", dir_.path());
   Glob glob(path, {.no_sort = true});
   std::vector<std::string> globbed = {glob.begin(), glob.end()};
-  EXPECT_THAT(globbed, ::testing::UnorderedElementsAreArray(
-                           PrependPath(sorted_names_in_dir_)));
+  EXPECT_THAT(globbed, ::testing::UnorderedElementsAreArray(PrependPath(sorted_names_in_dir_)));
 }
 
 TEST_F(TestGlob, Iterator) {

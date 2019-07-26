@@ -58,9 +58,8 @@
 
 // For access to standard POSIXish features, use OS_POSIX instead of a
 // more specific macro.
-#if defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_FREEBSD) ||    \
-    defined(OS_OPENBSD) || defined(OS_SOLARIS) || defined(OS_ANDROID) || \
-    defined(OS_NACL) || defined(OS_QNX)
+#if defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_FREEBSD) || defined(OS_OPENBSD) || \
+    defined(OS_SOLARIS) || defined(OS_ANDROID) || defined(OS_NACL) || defined(OS_QNX)
 #define OS_POSIX 1
 #endif
 

@@ -52,12 +52,12 @@
 
 /* len = cmd + addr + length */
 #define BMI_MAX_CMDBUF_SIZE \
-    (BMI_MAX_DATA_SIZE + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t))
+  (BMI_MAX_DATA_SIZE + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t))
 
 /* BMI Commands */
 
 enum bmi_cmd_id {
-    // clang-format off
+  // clang-format off
     BMI_NO_COMMAND          = 0,
     BMI_DONE                = 1,
     BMI_READ_MEMORY         = 2,
@@ -77,7 +77,7 @@ enum bmi_cmd_id {
     BMI_LZ_STREAM_START     = 13, /* should be followed by LZ_DATA */
     BMI_LZ_DATA             = 14,
     BMI_NVRAM_PROCESS       = 15,
-    // clang-format on
+  // clang-format on
 };
 
 // clang-format off
@@ -97,99 +97,99 @@ enum bmi_cmd_id {
 // clang-format on
 
 struct bmi_cmd {
-    uint32_t id; /* enum bmi_cmd_id */
-    union {
-        struct {
-        } done;
-        struct {
-            uint32_t addr;
-            uint32_t len;
-        } read_mem;
-        struct {
-            uint32_t addr;
-            uint32_t len;
-            uint8_t payload[0];
-        } write_mem;
-        struct {
-            uint32_t addr;
-            uint32_t param;
-        } execute;
-        struct {
-            uint32_t addr;
-        } set_app_start;
-        struct {
-            uint32_t addr;
-        } read_soc_reg;
-        struct {
-            uint32_t addr;
-            uint32_t value;
-        } write_soc_reg;
-        struct {
-        } get_target_info;
-        struct {
-            uint32_t rom_addr;
-            uint32_t ram_addr; /* or value */
-            uint32_t size;
-            uint32_t activate; /* 0=install, but dont activate */
-        } rompatch_install;
-        struct {
-            uint32_t patch_id;
-        } rompatch_uninstall;
-        struct {
-            uint32_t count;
-            uint32_t patch_ids[0]; /* length of @count */
-        } rompatch_activate;
-        struct {
-            uint32_t count;
-            uint32_t patch_ids[0]; /* length of @count */
-        } rompatch_deactivate;
-        struct {
-            uint32_t addr;
-        } lz_start;
-        struct {
-            uint32_t len;       /* max BMI_MAX_DATA_SIZE */
-            uint8_t payload[0]; /* length of @len */
-        } lz_data;
-        struct {
-            uint8_t name[BMI_NVRAM_SEG_NAME_SZ];
-        } nvram_process;
-        uint8_t payload[BMI_MAX_CMDBUF_SIZE];
-    };
+  uint32_t id; /* enum bmi_cmd_id */
+  union {
+    struct {
+    } done;
+    struct {
+      uint32_t addr;
+      uint32_t len;
+    } read_mem;
+    struct {
+      uint32_t addr;
+      uint32_t len;
+      uint8_t payload[0];
+    } write_mem;
+    struct {
+      uint32_t addr;
+      uint32_t param;
+    } execute;
+    struct {
+      uint32_t addr;
+    } set_app_start;
+    struct {
+      uint32_t addr;
+    } read_soc_reg;
+    struct {
+      uint32_t addr;
+      uint32_t value;
+    } write_soc_reg;
+    struct {
+    } get_target_info;
+    struct {
+      uint32_t rom_addr;
+      uint32_t ram_addr; /* or value */
+      uint32_t size;
+      uint32_t activate; /* 0=install, but dont activate */
+    } rompatch_install;
+    struct {
+      uint32_t patch_id;
+    } rompatch_uninstall;
+    struct {
+      uint32_t count;
+      uint32_t patch_ids[0]; /* length of @count */
+    } rompatch_activate;
+    struct {
+      uint32_t count;
+      uint32_t patch_ids[0]; /* length of @count */
+    } rompatch_deactivate;
+    struct {
+      uint32_t addr;
+    } lz_start;
+    struct {
+      uint32_t len;       /* max BMI_MAX_DATA_SIZE */
+      uint8_t payload[0]; /* length of @len */
+    } lz_data;
+    struct {
+      uint8_t name[BMI_NVRAM_SEG_NAME_SZ];
+    } nvram_process;
+    uint8_t payload[BMI_MAX_CMDBUF_SIZE];
+  };
 } __PACKED;
 
 union bmi_resp {
-    struct {
-        uint8_t payload[0];
-    } read_mem;
-    struct {
-        uint32_t result;
-    } execute;
-    struct {
-        uint32_t value;
-    } read_soc_reg;
-    struct {
-        uint32_t len;
-        uint32_t version;
-        uint32_t type;
-    } get_target_info;
-    struct {
-        uint32_t patch_id;
-    } rompatch_install;
-    struct {
-        uint32_t patch_id;
-    } rompatch_uninstall;
-    struct {
-        /* 0 = nothing executed
-         * otherwise = NVRAM segment return value
-         */
-        uint32_t result;
-    } nvram_process;
-    uint8_t payload[BMI_MAX_CMDBUF_SIZE];
+  struct {
+    uint8_t payload[0];
+  } read_mem;
+  struct {
+    uint32_t result;
+  } execute;
+  struct {
+    uint32_t value;
+  } read_soc_reg;
+  struct {
+    uint32_t len;
+    uint32_t version;
+    uint32_t type;
+  } get_target_info;
+  struct {
+    uint32_t patch_id;
+  } rompatch_install;
+  struct {
+    uint32_t patch_id;
+  } rompatch_uninstall;
+  struct {
+    /* 0 = nothing executed
+     * otherwise = NVRAM segment return value
+     */
+    uint32_t result;
+  } nvram_process;
+  uint8_t payload[BMI_MAX_CMDBUF_SIZE];
 } __PACKED;
 
 struct bmi_target_info {
-    uint32_t version;
-    uint32_t type;
+  uint32_t version;
+  uint32_t type;
 };
 
 #define BMI_COMMUNICATION_TIMEOUT ZX_SEC(3)
@@ -206,28 +206,29 @@ zx_status_t ath10k_bmi_read_memory(struct ath10k* ar, uint32_t address, void* bu
 zx_status_t ath10k_bmi_write_memory(struct ath10k* ar, uint32_t address, const void* buffer,
                                     uint32_t length);
 
-#define ath10k_bmi_read32(ar, item, val)                           \
-    ({                                                             \
-        zx_status_t ret;                                           \
-        uint32_t addr;                                             \
-        uint32_t tmp;                                              \
-                                                                   \
-        addr = host_interest_item_address(HI_ITEM(item));          \
-        ret = ath10k_bmi_read_memory(ar, addr, (uint8_t*)&tmp, 4); \
-        if (ret == ZX_OK) *val = tmp;                              \
-        ret;                                                       \
-    })
+#define ath10k_bmi_read32(ar, item, val)                       \
+  ({                                                           \
+    zx_status_t ret;                                           \
+    uint32_t addr;                                             \
+    uint32_t tmp;                                              \
+                                                               \
+    addr = host_interest_item_address(HI_ITEM(item));          \
+    ret = ath10k_bmi_read_memory(ar, addr, (uint8_t*)&tmp, 4); \
+    if (ret == ZX_OK)                                          \
+      *val = tmp;                                              \
+    ret;                                                       \
+  })
 
-#define ath10k_bmi_write32(ar, item, val)                                    \
-    ({                                                                       \
-        zx_status_t ret;                                                     \
-        uint32_t address;                                                    \
-        uint32_t v = val;                                                    \
-                                                                             \
-        address = host_interest_item_address(HI_ITEM(item));                 \
-        ret = ath10k_bmi_write_memory(ar, address, (uint8_t*)&v, sizeof(v)); \
-        ret;                                                                 \
-    })
+#define ath10k_bmi_write32(ar, item, val)                                \
+  ({                                                                     \
+    zx_status_t ret;                                                     \
+    uint32_t address;                                                    \
+    uint32_t v = val;                                                    \
+                                                                         \
+    address = host_interest_item_address(HI_ITEM(item));                 \
+    ret = ath10k_bmi_write_memory(ar, address, (uint8_t*)&v, sizeof(v)); \
+    ret;                                                                 \
+  })
 
 zx_status_t ath10k_bmi_execute(struct ath10k* ar, uint32_t address, uint32_t param,
                                uint32_t* result);

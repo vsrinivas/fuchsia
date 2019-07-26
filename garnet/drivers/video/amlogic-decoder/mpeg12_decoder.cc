@@ -47,9 +47,7 @@ void Mpeg12Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
 
 void Mpeg12Decoder::ResetHardware() {
   auto old_vld = PowerCtlVld::Get().ReadFrom(owner_->dosbus());
-  DosSwReset0::Get()
-      .FromValue((1 << 7) | (1 << 6) | (1 << 4))
-      .WriteTo(owner_->dosbus());
+  DosSwReset0::Get().FromValue((1 << 7) | (1 << 6) | (1 << 4)).WriteTo(owner_->dosbus());
   DosSwReset0::Get().FromValue(0).WriteTo(owner_->dosbus());
 
   // Reads are used to give the hardware time to finish the operation.
@@ -57,9 +55,7 @@ void Mpeg12Decoder::ResetHardware() {
     DosSwReset0::Get().ReadFrom(owner_->dosbus());
   }
 
-  DosSwReset0::Get()
-      .FromValue((1 << 7) | (1 << 6) | (1 << 4))
-      .WriteTo(owner_->dosbus());
+  DosSwReset0::Get().FromValue((1 << 7) | (1 << 6) | (1 << 4)).WriteTo(owner_->dosbus());
   DosSwReset0::Get().FromValue(0).WriteTo(owner_->dosbus());
 
   DosSwReset0::Get().FromValue((1 << 9) | (1 << 8)).WriteTo(owner_->dosbus());
@@ -76,19 +72,18 @@ void Mpeg12Decoder::ResetHardware() {
   old_vld.WriteTo(owner_->dosbus());
 }
 
-void Mpeg12Decoder::InitializedFrames(std::vector<CodecFrame> frames,
-                                      uint32_t width, uint32_t height,
-                                      uint32_t stride) {}
+void Mpeg12Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
+                                      uint32_t height, uint32_t stride) {}
 zx_status_t Mpeg12Decoder::Initialize() {
   uint8_t* data;
   uint32_t firmware_size;
-  zx_status_t status = owner_->SetProtected(
-      VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, false);
+  zx_status_t status =
+      owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, false);
   if (status != ZX_OK)
     return status;
 
-  status = owner_->firmware_blob()->GetFirmwareData(
-      FirmwareBlob::FirmwareType::kMPEG12, &data, &firmware_size);
+  status = owner_->firmware_blob()->GetFirmwareData(FirmwareBlob::FirmwareType::kMPEG12, &data,
+                                                    &firmware_size);
   if (status != ZX_OK)
     return status;
   status = owner_->core()->LoadFirmware(data, firmware_size);
@@ -117,8 +112,7 @@ zx_status_t Mpeg12Decoder::Initialize() {
   // stores metadata that was encoded in the stream.
   enum { kCcBufSize = 5 * 1024 };
   MregCoMvStart::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&workspace_buffer_)) +
-                 kCcBufSize)
+      .FromValue(truncate_to_32(io_buffer_phys(&workspace_buffer_)) + kCcBufSize)
       .WriteTo(owner_->dosbus());
 
   Mpeg12Reg::Get().FromValue(0).WriteTo(owner_->dosbus());
@@ -134,10 +128,7 @@ zx_status_t Mpeg12Decoder::Initialize() {
   MregErrorCount::Get().FromValue(0).WriteTo(owner_->dosbus());
   MregFatalError::Get().FromValue(0).WriteTo(owner_->dosbus());
   MregWaitBuffer::Get().FromValue(0).WriteTo(owner_->dosbus());
-  MdecPicDcCtrl::Get()
-      .ReadFrom(owner_->dosbus())
-      .set_nv12_output(true)
-      .WriteTo(owner_->dosbus());
+  MdecPicDcCtrl::Get().ReadFrom(owner_->dosbus()).set_nv12_output(true).WriteTo(owner_->dosbus());
 
   owner_->core()->StartDecoding();
 
@@ -162,9 +153,8 @@ void Mpeg12Decoder::HandleInterrupt() {
 
   uint32_t width = MregPicWidth::Get().ReadFrom(owner_->dosbus()).reg_value();
   uint32_t height = MregPicHeight::Get().ReadFrom(owner_->dosbus()).reg_value();
-  DLOG(
-      "Received buffer index: %d info: %x, offset: %x, width: %d, height: %d\n",
-      index, info.reg_value(), offset.reg_value(), width, height);
+  DLOG("Received buffer index: %d info: %x, offset: %x, width: %d, height: %d\n", index,
+       info.reg_value(), offset.reg_value(), width, height);
 
   auto& frame = video_frames_[index].frame;
   frame->width = std::min(width, kMaxWidth);
@@ -212,8 +202,7 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
     size_t buffer_size = kMaxWidth * kMaxHeight * 3 / 2;
     auto frame = std::make_unique<VideoFrame>();
     zx_status_t status =
-        io_buffer_init(&frame->buffer, owner_->bti(), buffer_size,
-                       IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        io_buffer_init(&frame->buffer, owner_->bti(), buffer_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to make frame: %d\n", status);
       return status;
@@ -224,21 +213,17 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
     frame->index = i;
     io_buffer_cache_flush(&frame->buffer, 0, buffer_size);
 
-    auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,
-                                            kMaxHeight, 0, 0);
-    auto uv_canvas =
-        owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset,
-                                frame->stride, kMaxHeight / 2, 0, 0);
+    auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride, kMaxHeight, 0, 0);
+    auto uv_canvas = owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset, frame->stride,
+                                             kMaxHeight / 2, 0, 0);
     if (!y_canvas || !uv_canvas) {
       DECODE_ERROR("Failed to allocate canvases\n");
       return ZX_ERR_NO_MEMORY;
     }
     AvScratch::Get(i)
-        .FromValue(y_canvas->index() | (uv_canvas->index() << 8) |
-                   (uv_canvas->index() << 16))
+        .FromValue(y_canvas->index() | (uv_canvas->index() << 8) | (uv_canvas->index() << 16))
         .WriteTo(owner_->dosbus());
-    video_frames_.push_back(
-        {std::move(frame), std::move(y_canvas), std::move(uv_canvas)});
+    video_frames_.push_back({std::move(frame), std::move(y_canvas), std::move(uv_canvas)});
   }
   BarrierAfterFlush();
   return ZX_OK;

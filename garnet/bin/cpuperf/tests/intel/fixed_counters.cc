@@ -10,17 +10,14 @@
 
 class FixedCounterVerifier : public Verifier {
  public:
-  static std::unique_ptr<Verifier> Create(
-      const cpuperf::SessionResultSpec* spec) {
+  static std::unique_ptr<Verifier> Create(const cpuperf::SessionResultSpec* spec) {
     return std::make_unique<FixedCounterVerifier>(spec);
   }
 
-  FixedCounterVerifier(const cpuperf::SessionResultSpec* spec)
-      : Verifier(spec) {
+  FixedCounterVerifier(const cpuperf::SessionResultSpec* spec) : Verifier(spec) {
     const perfmon::EventDetails* details;
 
-    bool rc __UNUSED =
-      LookupEventByName("fixed", "instructions_retired", &details);
+    bool rc __UNUSED = LookupEventByName("fixed", "instructions_retired", &details);
     FXL_DCHECK(rc);
     instructions_retired_id_ = details->id;
 
@@ -74,6 +71,6 @@ class FixedCounterVerifier : public Verifier {
 };
 
 const TestSpec kFixedCounterSpec = {
-  "fixed-counters",
-  &FixedCounterVerifier::Create,
+    "fixed-counters",
+    &FixedCounterVerifier::Create,
 };

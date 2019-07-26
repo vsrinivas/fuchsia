@@ -19,21 +19,17 @@ class Sensor {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Sensor);
   Sensor(ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
          ddk::CameraSensorProtocolClient camera_sensor)
-      : isp_mmio_(isp_mmio),
-        isp_mmio_local_(isp_mmio_local),
-        camera_sensor_(camera_sensor) {}
+      : isp_mmio_(isp_mmio), isp_mmio_local_(isp_mmio_local), camera_sensor_(camera_sensor) {}
 
-  static fbl::unique_ptr<Sensor> Create(
-      ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
-      ddk::CameraSensorProtocolClient camera_sensor);
+  static fbl::unique_ptr<Sensor> Create(ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
+                                        ddk::CameraSensorProtocolClient camera_sensor);
   zx_status_t Init();
 
   // Sensor APIs for Camera manager to use
   zx_status_t Update();
   zx_status_t SetMode(uint8_t mode);
   zx_status_t GetInfo(sensor_info_t* out_info);
-  zx_status_t GetSupportedModes(sensor_mode_t* out_modes_list,
-                                size_t modes_count);
+  zx_status_t GetSupportedModes(sensor_mode_t* out_modes_list, size_t modes_count);
   int32_t SetAnalogGain(int32_t gain);
   int32_t SetDigitalGain(int32_t gain);
   zx_status_t StartStreaming();

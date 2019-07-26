@@ -21,9 +21,8 @@ struct ValidatedArgs {
 
 class Link final : public StreamLink {
  public:
-  Link(BasicOvernetEmbedded* app, const ValidatedArgs& args,
-       uint64_t local_label, std::unique_ptr<StreamFramer> framer,
-       Socket socket, Callback<void> destroyed)
+  Link(BasicOvernetEmbedded* app, const ValidatedArgs& args, uint64_t local_label,
+       std::unique_ptr<StreamFramer> framer, Socket socket, Callback<void> destroyed)
       : StreamLink(app->endpoint(), args.peer, std::move(framer), local_label),
         reactor_(app->reactor()),
         socket_(std::move(socket)),
@@ -47,15 +46,14 @@ class Link final : public StreamLink {
     if (status->length() > 0) {
       reactor_->OnWrite(
           socket_.get(),
-          StatusCallback(ALLOCATED_CALLBACK,
-                         [this, slice = std::move(slice),
-                          done = std::move(done)](Status status) mutable {
-                           if (status.is_error()) {
-                             done(std::move(status));
-                             return;
-                           }
-                           Emit(std::move(slice), std::move(done));
-                         }));
+          StatusCallback(ALLOCATED_CALLBACK, [this, slice = std::move(slice),
+                                              done = std::move(done)](Status status) mutable {
+            if (status.is_error()) {
+              done(std::move(status));
+              return;
+            }
+            Emit(std::move(slice), std::move(done));
+          }));
       return;
     }
     done(Status::Ok());
@@ -89,9 +87,8 @@ class Handshake {
  public:
   static inline const std::string kGreetingString = "Fuchsia Socket Stream";
 
-  Handshake(BasicOvernetEmbedded* app, Socket socket,
-            std::unique_ptr<StreamFramer> framer, bool eager_announce,
-            TimeDelta read_timeout, Callback<void> destroyed)
+  Handshake(BasicOvernetEmbedded* app, Socket socket, std::unique_ptr<StreamFramer> framer,
+            bool eager_announce, TimeDelta read_timeout, Callback<void> destroyed)
       : app_(app),
         socket_(std::move(socket)),
         framer_(std::move(framer)),
@@ -131,9 +128,9 @@ class Handshake {
       if (socket_.IsValid()) {
         app_->reactor()->CancelIO(socket_.get());
         app_->endpoint()->RegisterPeer(validated_args_->peer);
-        app_->endpoint()->RegisterLink(MakeLink<Link>(
-            app_, *validated_args_, link_label_, std::move(framer_),
-            std::move(socket_), std::move(destroyed_)));
+        app_->endpoint()->RegisterLink(MakeLink<Link>(app_, *validated_args_, link_label_,
+                                                      std::move(framer_), std::move(socket_),
+                                                      std::move(destroyed_)));
       }
 
       delete this;
@@ -155,26 +152,25 @@ class Handshake {
   }
 
   void SendBytes(Slice bytes) {
-    app_->reactor()->OnWrite(
-        socket_.get(),
-        StatusCallback(ALLOCATED_CALLBACK, [this, bytes = std::move(bytes)](
-                                               const Status& status) mutable {
-          if (status.is_error()) {
-            DoneWriting(status);
-            return;
-          }
+    app_->reactor()->OnWrite(socket_.get(),
+                             StatusCallback(ALLOCATED_CALLBACK, [this, bytes = std::move(bytes)](
+                                                                    const Status& status) mutable {
+                               if (status.is_error()) {
+                                 DoneWriting(status);
+                                 return;
+                               }
 
-          auto write_status = socket_.Write(bytes);
-          if (write_status.is_error()) {
-            DoneWriting(write_status.AsStatus());
-            return;
-          }
-          if (write_status->length() > 0) {
-            SendBytes(std::move(*write_status));
-            return;
-          }
-          DoneWriting(Status::Ok());
-        }));
+                               auto write_status = socket_.Write(bytes);
+                               if (write_status.is_error()) {
+                                 DoneWriting(write_status.AsStatus());
+                                 return;
+                               }
+                               if (write_status->length() > 0) {
+                                 SendBytes(std::move(*write_status));
+                                 return;
+                               }
+                               DoneWriting(Status::Ok());
+                             }));
   }
 
   void AwaitGreeting() {
@@ -217,16 +213,14 @@ class Handshake {
                                 return;
                               }
                               auto noise = framer_->SkipNoise();
-                              OVERNET_TRACE(DEBUG)
-                                  << "Skip input noise: " << noise;
+                              OVERNET_TRACE(DEBUG) << "Skip input noise: " << noise;
                               ContinueReading();
                             });
       }
       return false;
     }
 
-    auto decoded = Decode<fuchsia::overnet::protocol::StreamSocketGreeting>(
-        std::move(**frame));
+    auto decoded = Decode<fuchsia::overnet::protocol::StreamSocketGreeting>(std::move(**frame));
     if (decoded.is_error()) {
       DoneReading(decoded.AsStatus());
       return true;
@@ -248,8 +242,7 @@ class Handshake {
       DoneReading(Status::InvalidArgument("No local link id"));
       return true;
     }
-    validated_args_.Reset(
-        ValidatedArgs{decoded->node_id(), decoded->local_link_id()});
+    validated_args_.Reset(ValidatedArgs{decoded->node_id(), decoded->local_link_id()});
     DoneReading(Status::Ok());
     return true;
   }
@@ -268,16 +261,14 @@ class Handshake {
 }  // namespace
 
 void RegisterStreamSocketLink(BasicOvernetEmbedded* app, Socket socket,
-                              std::unique_ptr<StreamFramer> framer,
-                              bool eager_announce, TimeDelta read_timeout,
-                              Callback<void> destroyed) {
+                              std::unique_ptr<StreamFramer> framer, bool eager_announce,
+                              TimeDelta read_timeout, Callback<void> destroyed) {
   if (auto status = socket.SetNonBlocking(true); status.is_error()) {
-    OVERNET_TRACE(WARNING)
-        << "Failed to set non-blocking for stream link socket: " << status;
+    OVERNET_TRACE(WARNING) << "Failed to set non-blocking for stream link socket: " << status;
     return;
   }
-  new Handshake(app, std::move(socket), std::move(framer), eager_announce,
-                read_timeout, std::move(destroyed));
+  new Handshake(app, std::move(socket), std::move(framer), eager_announce, read_timeout,
+                std::move(destroyed));
 }
 
 }  // namespace overnet

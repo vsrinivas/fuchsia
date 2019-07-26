@@ -24,8 +24,7 @@ const char kOutputFile[] = "/tmp/test.trace";
 // And we also need irq events because syscalls are mapped to the "irq" group
 // in the kernel.
 // TODO(dje): This could use some cleanup.
-const char kCategoriesArg[] =
-    "--categories=kernel:syscall,kernel:sched,kernel:irq";
+const char kCategoriesArg[] = "--categories=kernel:syscall,kernel:sched,kernel:irq";
 
 // Just print help text and exit.
 const char kChildArg[] = "--help";
@@ -35,19 +34,19 @@ TEST(Ktrace, IntegrationTest) {
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
   zx::process child;
-  std::vector<std::string> argv{
-      kTracePath, "record", "--spawn", "--binary", kCategoriesArg,
-      std::string("--output-file=") + kOutputFile, kChildPath, kChildArg};
+  std::vector<std::string> argv{kTracePath,     "record",
+                                "--spawn",      "--binary",
+                                kCategoriesArg, std::string("--output-file=") + kOutputFile,
+                                kChildPath,     kChildArg};
   ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
   int return_code;
-  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code),
-            ZX_OK);
+  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);
   EXPECT_EQ(return_code, 0);
 
   size_t record_count = 0;
   size_t syscall_count = 0;
-  auto record_consumer = [&record_count, &syscall_count](trace::Record record){
+  auto record_consumer = [&record_count, &syscall_count](trace::Record record) {
     ++record_count;
 
     // We're looking for ktrace records here, just enough to verify
@@ -68,14 +67,12 @@ TEST(Ktrace, IntegrationTest) {
   };
 
   std::unique_ptr<trace::FileReader> reader;
-  ASSERT_TRUE(trace::FileReader::Create(kOutputFile,
-                                        std::move(record_consumer),
+  ASSERT_TRUE(trace::FileReader::Create(kOutputFile, std::move(record_consumer),
                                         std::move(error_handler), &reader));
   reader->ReadFile();
   ASSERT_FALSE(got_error);
 
-  FXL_LOG(INFO) << "Got " << record_count << " records, " << syscall_count
-                << " syscalls";
+  FXL_LOG(INFO) << "Got " << record_count << " records, " << syscall_count << " syscalls";
 
   ASSERT_GT(syscall_count, 0u);
 }

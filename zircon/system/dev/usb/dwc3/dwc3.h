@@ -26,117 +26,115 @@
 #include "dwc3-types.h"
 
 // physical endpoint numbers for ep0
-#define EP0_OUT             0
-#define EP0_IN              1
-#define EP0_FIFO            EP0_OUT
+#define EP0_OUT 0
+#define EP0_IN 1
+#define EP0_FIFO EP0_OUT
 
-#define EP_OUT(ep_num)      (((ep_num) & 1) == 0)
-#define EP_IN(ep_num)       (((ep_num) & 1) == 1)
+#define EP_OUT(ep_num) (((ep_num)&1) == 0)
+#define EP_IN(ep_num) (((ep_num)&1) == 1)
 
-#define EVENT_BUFFER_SIZE   PAGE_SIZE
+#define EVENT_BUFFER_SIZE PAGE_SIZE
 #define EP0_MAX_PACKET_SIZE 512
-#define DWC3_MAX_EPS    32
+#define DWC3_MAX_EPS 32
 
 // converts a USB endpoint address to 0 - 31 index
-#define dwc3_ep_num(addr) ((((addr) & 0xF) << 1) | !!((addr) & USB_DIR_IN))
+#define dwc3_ep_num(addr) ((((addr)&0xF) << 1) | !!((addr)&USB_DIR_IN))
 
 typedef enum {
-    EP0_STATE_NONE,
-    EP0_STATE_SETUP,            // Queued setup phase
-    EP0_STATE_DATA_OUT,         // Queued data on EP0_OUT
-    EP0_STATE_DATA_IN,          // Queued data on EP0_IN
-    EP0_STATE_WAIT_NRDY_OUT,    // Waiting for not-ready on EP0_OUT
-    EP0_STATE_WAIT_NRDY_IN,     // Waiting for not-ready on EP0_IN
-    EP0_STATE_STATUS,           // Waiting for status to complete
+  EP0_STATE_NONE,
+  EP0_STATE_SETUP,          // Queued setup phase
+  EP0_STATE_DATA_OUT,       // Queued data on EP0_OUT
+  EP0_STATE_DATA_IN,        // Queued data on EP0_IN
+  EP0_STATE_WAIT_NRDY_OUT,  // Waiting for not-ready on EP0_OUT
+  EP0_STATE_WAIT_NRDY_IN,   // Waiting for not-ready on EP0_IN
+  EP0_STATE_STATUS,         // Waiting for status to complete
 } dwc3_ep0_state;
 
 typedef struct {
-    io_buffer_t buffer;
-    dwc3_trb_t* first;      // first TRB in the fifo
-    dwc3_trb_t* next;       // next free TRB in the fifo
-    dwc3_trb_t* current;    // TRB for currently pending transaction
-    dwc3_trb_t* last;       // last TRB in the fifo (link TRB)
+  io_buffer_t buffer;
+  dwc3_trb_t* first;    // first TRB in the fifo
+  dwc3_trb_t* next;     // next free TRB in the fifo
+  dwc3_trb_t* current;  // TRB for currently pending transaction
+  dwc3_trb_t* last;     // last TRB in the fifo (link TRB)
 } dwc3_fifo_t;
 
 typedef struct {
-    dwc3_fifo_t fifo;
-    list_node_t queued_reqs;    // requests waiting to be processed
-    usb_request_t* current_req; // request currently being processed
-    unsigned rsrc_id;           // resource ID for current_req
+  dwc3_fifo_t fifo;
+  list_node_t queued_reqs;     // requests waiting to be processed
+  usb_request_t* current_req;  // request currently being processed
+  unsigned rsrc_id;            // resource ID for current_req
 
-    // Used for synchronizing endpoint state
-    // and ep specific hardware registers
-    // This should be acquired before dwc3_t.lock
-    // if acquiring both locks.
-    fbl::Mutex lock;
+  // Used for synchronizing endpoint state
+  // and ep specific hardware registers
+  // This should be acquired before dwc3_t.lock
+  // if acquiring both locks.
+  fbl::Mutex lock;
 
-    uint16_t max_packet_size;
-    uint8_t ep_num;
-    bool enabled;
-    uint8_t type;           // control, bulk, interrupt or isochronous
-    uint8_t interval;
-    // TODO(voydanoff) USB 3 specific stuff here
+  uint16_t max_packet_size;
+  uint8_t ep_num;
+  bool enabled;
+  uint8_t type;  // control, bulk, interrupt or isochronous
+  uint8_t interval;
+  // TODO(voydanoff) USB 3 specific stuff here
 
-    bool got_not_ready;
-    bool stalled;
+  bool got_not_ready;
+  bool stalled;
 } dwc3_endpoint_t;
 
 typedef struct {
-    zx_device_t* zxdev = nullptr;
-    zx_device_t* pdev_dev = nullptr;
-    zx_device_t* xhci_dev = nullptr;
-    zx_device_t* parent = nullptr;
-    pdev_protocol_t pdev;
-    usb_mode_switch_protocol_t ums;
-    usb_dci_interface_protocol_t dci_intf;
-    std::optional<ddk::MmioBuffer> mmio;
-    zx::handle bti_handle;
+  zx_device_t* zxdev = nullptr;
+  zx_device_t* pdev_dev = nullptr;
+  zx_device_t* xhci_dev = nullptr;
+  zx_device_t* parent = nullptr;
+  pdev_protocol_t pdev;
+  usb_mode_switch_protocol_t ums;
+  usb_dci_interface_protocol_t dci_intf;
+  std::optional<ddk::MmioBuffer> mmio;
+  zx::handle bti_handle;
 
-    usb_mode_t usb_mode = USB_MODE_NONE;
-    bool start_device_on_xhci_release;
-    fbl::Mutex usb_mode_lock; // protects usb_mode and start_device_on_xhci_release
+  usb_mode_t usb_mode = USB_MODE_NONE;
+  bool start_device_on_xhci_release;
+  fbl::Mutex usb_mode_lock;  // protects usb_mode and start_device_on_xhci_release
 
-    // event stuff
-    io_buffer_t event_buffer;
-    zx::interrupt irq_handle;
-    thrd_t irq_thread;
+  // event stuff
+  io_buffer_t event_buffer;
+  zx::interrupt irq_handle;
+  thrd_t irq_thread;
 
-    dwc3_endpoint_t eps[DWC3_MAX_EPS];
+  dwc3_endpoint_t eps[DWC3_MAX_EPS];
 
-    // connection state
-    usb_speed_t speed = USB_SPEED_UNDEFINED;
+  // connection state
+  usb_speed_t speed = USB_SPEED_UNDEFINED;
 
-    // ep0 stuff
-    usb_setup_t cur_setup;      // current setup request
-    io_buffer_t ep0_buffer;
-    dwc3_ep0_state ep0_state;
+  // ep0 stuff
+  usb_setup_t cur_setup;  // current setup request
+  io_buffer_t ep0_buffer;
+  dwc3_ep0_state ep0_state;
 
-    // Used for synchronizing global state
-    // and non ep specific hardware registers.
-    // dwc3_endpoint_t.lock should be acquired first
-    // if acquiring both locks.
-    fbl::Mutex lock;
-    bool configured = false;
-    fbl::Mutex pending_completions_lock;
-    list_node_t pending_completions __TA_GUARDED(pending_completions_lock);
+  // Used for synchronizing global state
+  // and non ep specific hardware registers.
+  // dwc3_endpoint_t.lock should be acquired first
+  // if acquiring both locks.
+  fbl::Mutex lock;
+  bool configured = false;
+  fbl::Mutex pending_completions_lock;
+  list_node_t pending_completions __TA_GUARDED(pending_completions_lock);
 } dwc3_t;
 
 // Internal context for USB requests
 typedef struct {
-     // callback to the upper layer
-     usb_request_complete_t complete_cb;
-     // for queueing requests internally
-     list_node_t node;
-     list_node_t pending_node;
+  // callback to the upper layer
+  usb_request_complete_t complete_cb;
+  // for queueing requests internally
+  list_node_t node;
+  list_node_t pending_node;
 } dwc_usb_req_internal_t;
 
-#define USB_REQ_TO_INTERNAL(req)                                                                   \
-    ((dwc_usb_req_internal_t*)((uintptr_t)(req) + sizeof(usb_request_t)))
-#define INTERNAL_TO_USB_REQ(ctx) ((usb_request_t *)((uintptr_t)(ctx) - sizeof(usb_request_t)))
+#define USB_REQ_TO_INTERNAL(req) \
+  ((dwc_usb_req_internal_t*)((uintptr_t)(req) + sizeof(usb_request_t)))
+#define INTERNAL_TO_USB_REQ(ctx) ((usb_request_t*)((uintptr_t)(ctx) - sizeof(usb_request_t)))
 
-static inline ddk::MmioBuffer* dwc3_mmio(dwc3_t* dwc) {
-    return &*dwc->mmio;
-}
+static inline ddk::MmioBuffer* dwc3_mmio(dwc3_t* dwc) { return &*dwc->mmio; }
 
 void dwc3_usb_reset(dwc3_t* dwc);
 void dwc3_disconnected(dwc3_t* dwc);

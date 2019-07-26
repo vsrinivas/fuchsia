@@ -16,9 +16,7 @@ constexpr uint32_t kInitialSize = 32;
 
 MessageWriter::MessageWriter() : MessageWriter(kInitialSize) {}
 
-MessageWriter::MessageWriter(size_t initial_size) {
-  buffer_.reserve(initial_size);
-}
+MessageWriter::MessageWriter(size_t initial_size) { buffer_.reserve(initial_size); }
 
 MessageWriter::~MessageWriter() {}
 
@@ -29,13 +27,9 @@ void MessageWriter::WriteBytes(const void* data, uint32_t len) {
 }
 
 void MessageWriter::WriteInt32(int32_t i) { WriteBytes(&i, sizeof(int32_t)); }
-void MessageWriter::WriteUint32(uint32_t i) {
-  WriteBytes(&i, sizeof(uint32_t));
-}
+void MessageWriter::WriteUint32(uint32_t i) { WriteBytes(&i, sizeof(uint32_t)); }
 void MessageWriter::WriteInt64(int64_t i) { WriteBytes(&i, sizeof(int64_t)); }
-void MessageWriter::WriteUint64(uint64_t i) {
-  WriteBytes(&i, sizeof(uint64_t));
-}
+void MessageWriter::WriteUint64(uint64_t i) { WriteBytes(&i, sizeof(uint64_t)); }
 
 void MessageWriter::WriteString(const std::string& str) {
   // 32-bit size first, followed by bytes.

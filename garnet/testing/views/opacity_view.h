@@ -19,14 +19,12 @@ namespace scenic {
 // is a simplified |BaseView| that exposes the present callback.
 //
 // See also lib/ui/base_view.
-class OpacityView : public TestView,
-                    private fuchsia::ui::scenic::SessionListener {
+class OpacityView : public TestView, private fuchsia::ui::scenic::SessionListener {
  public:
   static constexpr float kBackgroundElevation = 0.f;
   static constexpr float kForegroundElevation = 10.f;
 
-  explicit OpacityView(ViewContext context,
-                       const std::string& debug_name = "OpacityView");
+  explicit OpacityView(ViewContext context, const std::string& debug_name = "OpacityView");
 
   // |TestView|
   void set_present_callback(Session::PresentCallback present_callback) override;

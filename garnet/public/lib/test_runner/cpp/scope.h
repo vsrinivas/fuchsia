@@ -34,11 +34,10 @@ class ScopeServices {
     svc_names_.push_back(service_name);
     return svc_->AddEntry(
         service_name.c_str(),
-        fbl::AdoptRef(new fs::Service(
-            [handler = std::move(handler)](zx::channel channel) {
-              handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
-              return ZX_OK;
-            })));
+        fbl::AdoptRef(new fs::Service([handler = std::move(handler)](zx::channel channel) {
+          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+          return ZX_OK;
+        })));
   }
 
  private:
@@ -55,8 +54,8 @@ class ScopeServices {
 // backing this environment is deleted when this instance goes out of scope.
 class Scope {
  public:
-  Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
-        const std::string& label, std::unique_ptr<ScopeServices> services);
+  Scope(const fuchsia::sys::EnvironmentPtr& parent_env, const std::string& label,
+        std::unique_ptr<ScopeServices> services);
 
   fuchsia::sys::Launcher* GetLauncher();
 

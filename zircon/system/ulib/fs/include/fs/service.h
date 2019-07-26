@@ -17,32 +17,32 @@ namespace fs {
 //
 // This class is thread-safe.
 class Service : public Vnode {
-public:
-    // Handler called to bind the provided channel to an implementation
-    // of the service.
-    using Connector = fbl::Function<zx_status_t(zx::channel channel)>;
+ public:
+  // Handler called to bind the provided channel to an implementation
+  // of the service.
+  using Connector = fbl::Function<zx_status_t(zx::channel channel)>;
 
-    // Creates a service with the specified connector.
-    //
-    // If the |connector| is null, then incoming connection requests will be dropped.
-    Service(Connector connector);
+  // Creates a service with the specified connector.
+  //
+  // If the |connector| is null, then incoming connection requests will be dropped.
+  Service(Connector connector);
 
-    // Destroys the services and releases its connector.
-    ~Service() override;
+  // Destroys the services and releases its connector.
+  ~Service() override;
 
-    // |Vnode| implementation:
-    zx_status_t ValidateFlags(uint32_t flags) final;
-    zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
-    bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  // |Vnode| implementation:
+  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t Getattr(vnattr_t* a) final;
+  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
+  bool IsDirectory() const final;
+  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
-private:
-    Connector connector_;
+ private:
+  Connector connector_;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Service);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Service);
 };
 
-} // namespace fs
+}  // namespace fs
 
-#endif // FS_SERVICE_H_
+#endif  // FS_SERVICE_H_

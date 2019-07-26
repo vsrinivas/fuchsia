@@ -37,10 +37,8 @@ static void PrintHelp(FILE* f) {
   fprintf(f, "  --delay=SECONDS    Delay SECONDS before starting\n");
   fprintf(f, "                     The default is %d.\n", kDefaultDelaySeconds);
   fprintf(f, "  --duration=SECONDS Specify time to run, in seconds\n");
-  fprintf(f, "                     The default is %d.\n",
-          kDefaultDurationSeconds);
-  fprintf(f,
-          "  --quiet[=LEVEL]    Set quietness level (opposite of verbose)\n");
+  fprintf(f, "                     The default is %d.\n", kDefaultDurationSeconds);
+  fprintf(f, "  --quiet[=LEVEL]    Set quietness level (opposite of verbose)\n");
   fprintf(f, "  --verbose[=LEVEL]  Set debug verbosity level\n");
 }
 
@@ -67,8 +65,7 @@ static void RunStressTestIteration(int count) {
         break;
       case 2:
         event_name = kWithTwoArgs;
-        TRACE_DURATION_BEGIN(kSomethingCategory, event_name, "k1", 1, "k2",
-                             2.0);
+        TRACE_DURATION_BEGIN(kSomethingCategory, event_name, "k1", 1, "k2", 2.0);
         break;
       default:
         __UNREACHABLE;
@@ -154,9 +151,8 @@ int main(int argc, char** argv) {
   provider_loop.StartThread("TraceProvider");
   std::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
-  if (!trace::TraceProviderWithFdio::CreateSynchronously(
-      provider_loop.dispatcher(), "trace_stress", &provider,
-      &already_started)) {
+  if (!trace::TraceProviderWithFdio::CreateSynchronously(provider_loop.dispatcher(), "trace_stress",
+                                                         &provider, &already_started)) {
     FXL_LOG(ERROR) << "Trace provider registration failed";
     return EXIT_FAILURE;
   }
@@ -178,8 +174,7 @@ int main(int argc, char** argv) {
   zx::time start_time = async::Now(loop.dispatcher());
   zx::time quit_time = start_time + zx::sec(duration);
 
-  FXL_LOG(INFO) << "Trace stressor doing work for " << duration
-                << " seconds ...";
+  FXL_LOG(INFO) << "Trace stressor doing work for " << duration << " seconds ...";
 
   int iteration = 0;
   async::TaskClosure task([&loop, &task, &iteration, count, quit_time] {

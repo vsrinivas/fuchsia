@@ -99,8 +99,7 @@ TEST(BlockingMpscQueueTest, Clear) {
   under_test.WaitForElement();
   under_test.Push(0);
   under_test.Reset();
-  std::queue<int> extracted =
-      BlockingMpscQueue<int>::Extract(std::move(under_test));
+  std::queue<int> extracted = BlockingMpscQueue<int>::Extract(std::move(under_test));
   EXPECT_EQ(extracted.size(), 0u);
 }
 
@@ -114,8 +113,7 @@ TEST(BlockingMpscQueueTest, Extract) {
     under_test.Push(i);
   }
 
-  std::queue<int> extracted =
-      BlockingMpscQueue<int>::Extract(std::move(under_test));
+  std::queue<int> extracted = BlockingMpscQueue<int>::Extract(std::move(under_test));
   int element_count = 0;
   while (element_count < kElements && !extracted.empty()) {
     ++element_count;
@@ -136,8 +134,7 @@ TEST(BlockingMpscQueueTest, ManyThreads) {
   // here that the implementation is stable and all elements are yielded.
   std::unique_ptr<async::Loop> producer_loops[kThreads];
   for (auto& producer_loop : producer_loops) {
-    producer_loop =
-        std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    producer_loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     async::PostTask(producer_loop->dispatcher(), [&under_test] {
       for (int j = 0; j < kElements; ++j) {
         under_test.Push(j);

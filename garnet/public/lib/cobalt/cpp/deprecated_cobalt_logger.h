@@ -35,8 +35,7 @@ namespace cobalt {
 std::unique_ptr<CobaltLogger> DeprecatedNewCobaltLogger(
     async_dispatcher_t* dispatcher, component::StartupContext* context,
     const std::string& config_path,
-    fuchsia::cobalt::ReleaseStage release_stage =
-        fuchsia::cobalt::ReleaseStage::GA);
+    fuchsia::cobalt::ReleaseStage release_stage = fuchsia::cobalt::ReleaseStage::GA);
 
 // Returns a CobaltLogger initialized with the provided parameters.
 //
@@ -48,9 +47,9 @@ std::unique_ptr<CobaltLogger> DeprecatedNewCobaltLogger(
 //
 // |profile| The ProjectProfile struct that contains the configuration for this
 // CobaltLogger.
-std::unique_ptr<CobaltLogger> DeprecatedNewCobaltLogger(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
-    fuchsia::cobalt::ProjectProfile profile);
+std::unique_ptr<CobaltLogger> DeprecatedNewCobaltLogger(async_dispatcher_t* dispatcher,
+                                                        component::StartupContext* context,
+                                                        fuchsia::cobalt::ProjectProfile profile);
 
 }  // namespace cobalt
 

@@ -70,10 +70,7 @@ __BEGIN_CDECLS
 // ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
 //
 // Returns the result of |fdio_spawn_vmo| in all other cases.
-zx_status_t fdio_spawn(zx_handle_t job,
-                       uint32_t flags,
-                       const char* path,
-                       const char* const* argv,
+zx_status_t fdio_spawn(zx_handle_t job, uint32_t flags, const char* path, const char* const* argv,
                        zx_handle_t* process_out);
 
 // The |fdio_spawn_etc| function allows the running process to control the file
@@ -146,47 +143,47 @@ zx_status_t fdio_spawn(zx_handle_t job,
 // Instructs |fdio_spawn_etc| which actions to take.
 typedef struct fdio_spawn_action fdio_spawn_action_t;
 struct fdio_spawn_action {
-    // The action to take.
-    //
-    // See |FDIO_SPAWN_ACTION_*| above. If |action| is invalid, the action will
-    // be ignored (rather than generate an error).
-    uint32_t action;
-    union {
-        struct {
-            // The file descriptor in this process to clone or transfer.
-            int local_fd;
+  // The action to take.
+  //
+  // See |FDIO_SPAWN_ACTION_*| above. If |action| is invalid, the action will
+  // be ignored (rather than generate an error).
+  uint32_t action;
+  union {
+    struct {
+      // The file descriptor in this process to clone or transfer.
+      int local_fd;
 
-            // The file descriptor in the spawned process that will receive the
-            // clone or transfer.
-            int target_fd;
-        } fd;
-        struct {
-            // The prefix in which to install the given handle in the namespace
-            // of the spawned process.
-            const char* prefix;
+      // The file descriptor in the spawned process that will receive the
+      // clone or transfer.
+      int target_fd;
+    } fd;
+    struct {
+      // The prefix in which to install the given handle in the namespace
+      // of the spawned process.
+      const char* prefix;
 
-            // The handle to install with the given prefix in the namespace of
-            // the spawned process.
-            zx_handle_t handle;
-        } ns;
-        struct {
-            // The process argument identifier of the handle to pass to the
-            // spawned process.
-            uint32_t id;
+      // The handle to install with the given prefix in the namespace of
+      // the spawned process.
+      zx_handle_t handle;
+    } ns;
+    struct {
+      // The process argument identifier of the handle to pass to the
+      // spawned process.
+      uint32_t id;
 
-            // The handle to pass to the process on startup.
-            zx_handle_t handle;
-        } h;
-        struct {
-            // The name to assign to the spawned process.
-            const char* data;
-        } name;
-        struct {
-            // The directory to share with the spawned process. |prefix| may match zero or more
-            // entries in the callers flat namespace.
-            const char* prefix;
-        } dir;
-    };
+      // The handle to pass to the process on startup.
+      zx_handle_t handle;
+    } h;
+    struct {
+      // The name to assign to the spawned process.
+      const char* data;
+    } name;
+    struct {
+      // The directory to share with the spawned process. |prefix| may match zero or more
+      // entries in the callers flat namespace.
+      const char* prefix;
+    } dir;
+  };
 };
 
 // The maximum size for error messages from |fdio_spawn_etc|.
@@ -230,14 +227,9 @@ struct fdio_spawn_action {
 // ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
 //
 // Returns the result of |fdio_spawn_vmo| in all other cases.
-zx_status_t fdio_spawn_etc(zx_handle_t job,
-                           uint32_t flags,
-                           const char* path,
-                           const char* const* argv,
-                           const char* const* environ,
-                           size_t action_count,
-                           const fdio_spawn_action_t* actions,
-                           zx_handle_t* process_out,
+zx_status_t fdio_spawn_etc(zx_handle_t job, uint32_t flags, const char* path,
+                           const char* const* argv, const char* const* environ, size_t action_count,
+                           const fdio_spawn_action_t* actions, zx_handle_t* process_out,
                            char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
 
 // Spawn a process using the given executable in the given job.
@@ -265,14 +257,9 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
 // ZX_ERR_INTERNAL: Cannot connect to process launcher.
 //
 // May return other errors.
-zx_status_t fdio_spawn_vmo(zx_handle_t job,
-                           uint32_t flags,
-                           zx_handle_t executable_vmo,
-                           const char* const* argv,
-                           const char* const* environ,
-                           size_t action_count,
-                           const fdio_spawn_action_t* actions,
-                           zx_handle_t* process_out,
+zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executable_vmo,
+                           const char* const* argv, const char* const* environ, size_t action_count,
+                           const fdio_spawn_action_t* actions, zx_handle_t* process_out,
                            char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
 
 __END_CDECLS

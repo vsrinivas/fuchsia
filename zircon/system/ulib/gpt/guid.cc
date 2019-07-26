@@ -11,7 +11,7 @@ namespace gpt {
 // cannot be brace-enclosed initializer. So here we convert VALUE to a
 // constexpr
 #define GUID_MAKE_ARRAY(name) \
-    constexpr uint8_t GUID_##name##_ARRAY[GPT_GUID_LEN] = GUID_##name##_VALUE
+  constexpr uint8_t GUID_##name##_ARRAY[GPT_GUID_LEN] = GUID_##name##_VALUE
 
 GUID_MAKE_ARRAY(EMPTY);
 GUID_MAKE_ARRAY(EFI);
@@ -36,8 +36,8 @@ GUID_MAKE_ARRAY(CROS_FIRMWARE);
 GUID_MAKE_ARRAY(CROS_DATA);
 GUID_MAKE_ARRAY(BIOS);
 
-#define GUID_NAMETAB(name)                                                                         \
-    GuidProperties(GUID_##name##_NAME, GUID_##name##_STRING, GUID_##name##_ARRAY)
+#define GUID_NAMETAB(name) \
+  GuidProperties(GUID_##name##_NAME, GUID_##name##_STRING, GUID_##name##_ARRAY)
 
 // clang-format off
 std::array<GuidProperties, kKnownGuidEntries> const KnownGuid::nametab_ = {{
@@ -70,44 +70,44 @@ std::array<GuidProperties, kKnownGuidEntries> const KnownGuid::nametab_ = {{
 // corresponding byte sequences. 'out' should point to a GPT_GUID_LEN array.
 // Return false if no match if found.
 bool KnownGuid::NameToGuid(const char* name, uint8_t* out) {
-    if (name == NULL) {
-        return false;
-    }
-
-    for (auto const& guidp : nametab_) {
-        if (!strcmp(name, guidp.name())) {
-            memcpy(out, guidp.guid(), GPT_GUID_LEN);
-            return true;
-        }
-    }
-
+  if (name == NULL) {
     return false;
+  }
+
+  for (auto const& guidp : nametab_) {
+    if (!strcmp(name, guidp.name())) {
+      memcpy(out, guidp.guid(), GPT_GUID_LEN);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 const char* KnownGuid::GuidToName(const uint8_t* guid) {
-    if (guid == NULL) {
-        return nullptr;
-    }
-
-    for (auto const& guidp : nametab_) {
-        if (memcmp(guidp.guid(), guid, sizeof(guid_t)) == 0) {
-            return guidp.name();
-        }
-    }
+  if (guid == NULL) {
     return nullptr;
+  }
+
+  for (auto const& guidp : nametab_) {
+    if (memcmp(guidp.guid(), guid, sizeof(guid_t)) == 0) {
+      return guidp.name();
+    }
+  }
+  return nullptr;
 }
 
 const char* KnownGuid::GuidStrToName(const char* str) {
-    if (str == NULL) {
-        return nullptr;
-    }
-
-    for (auto const& guidp : nametab_) {
-        if (strcmp(guidp.str(), str) == 0) {
-            return guidp.name();
-        }
-    }
+  if (str == NULL) {
     return nullptr;
+  }
+
+  for (auto const& guidp : nametab_) {
+    if (strcmp(guidp.str(), str) == 0) {
+      return guidp.name();
+    }
+  }
+  return nullptr;
 }
 
-} // namespace gpt
+}  // namespace gpt

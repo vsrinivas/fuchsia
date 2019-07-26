@@ -44,14 +44,13 @@ class Tracee {
   // The size of the initialization record.
   static constexpr size_t kInitRecordSizeBytes = 16;
 
-  explicit Tracee(const TraceSession* session,
-                  const TraceProviderBundle* bundle);
+  explicit Tracee(const TraceSession* session, const TraceProviderBundle* bundle);
   ~Tracee();
 
   bool operator==(TraceProviderBundle* bundle) const;
   bool Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
-             provider::BufferingMode buffering_mode,
-             fit::closure started_callback, fit::closure stopped_callback);
+             provider::BufferingMode buffering_mode, fit::closure started_callback,
+             fit::closure stopped_callback);
   void Stop();
 
   // Called once at the end of the trace to transfer all collected records
@@ -61,8 +60,7 @@ class Tracee {
   // Save the buffer specified by |wrapped_count|.
   // This is a callback from the TraceSession loop.
   // That's why the result is void and not Tracee::TransferStatus.
-  void TransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
-                      uint64_t durable_data_end);
+  void TransferBuffer(const zx::socket& socket, uint32_t wrapped_count, uint64_t durable_data_end);
 
   // Helper for |TransferBuffer()|, returns true on success.
   bool DoTransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
@@ -77,21 +75,18 @@ class Tracee {
   static constexpr size_t kFifoSizeInPackets = 4u;
 
   // Given |wrapped_count|, return the corresponding buffer number.
-  static int get_buffer_number(uint32_t wrapped_count) {
-    return wrapped_count & 1;
-  }
+  static int get_buffer_number(uint32_t wrapped_count) { return wrapped_count & 1; }
 
   // TODO(dje): Until fidl prints names.
   static const char* ModeName(provider::BufferingMode mode);
 
   void TransitionToState(State new_state);
-  void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                     zx_status_t status, const zx_packet_signal_t* signal);
+  void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                     const zx_packet_signal_t* signal);
   void OnFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait);
   void OnHandleError(zx_status_t status);
 
-  bool VerifyBufferHeader(
-      const trace::internal::BufferHeaderReader* header) const;
+  bool VerifyBufferHeader(const trace::internal::BufferHeaderReader* header) const;
 
   // Write the records in the buffer at |vmo_offset| to |socket|.
   // |size| is the size in bytes of the chunk to examine, which may be more
@@ -104,18 +99,15 @@ class Tracee {
   // This function handles both cases. If |by_size| is false then run through
   // the buffer computing the size of each record until we find no more
   // records. If |by_size| is true then |size| is the number of bytes to write.
-  TransferStatus DoWriteChunk(const zx::socket& socket, size_t vmo_offset,
-                              size_t size, const char* name,
-                              bool by_size) const;
+  TransferStatus DoWriteChunk(const zx::socket& socket, size_t vmo_offset, size_t size,
+                              const char* name, bool by_size) const;
 
-  TransferStatus WriteChunkByRecords(const zx::socket& socket,
-                                     uint64_t vmo_offset, uint64_t size,
+  TransferStatus WriteChunkByRecords(const zx::socket& socket, uint64_t vmo_offset, uint64_t size,
                                      const char* name) const;
-  TransferStatus WriteChunkBySize(const zx::socket& socket, uint64_t vmo_offset,
-                                  uint64_t size, const char* name) const;
-  TransferStatus WriteChunk(const zx::socket& socket, uint64_t offset,
-                            uint64_t last, uint64_t end, uint64_t buffer_size,
-                            const char* name) const;
+  TransferStatus WriteChunkBySize(const zx::socket& socket, uint64_t vmo_offset, uint64_t size,
+                                  const char* name) const;
+  TransferStatus WriteChunk(const zx::socket& socket, uint64_t offset, uint64_t last, uint64_t end,
+                            uint64_t buffer_size, const char* name) const;
 
   // Write a ProviderInfo record the first time this is called.
   // For subsequent calls write a ProviderSection record.
@@ -125,8 +117,7 @@ class Tracee {
 
   TransferStatus WriteProviderInfoRecord(const zx::socket& socket) const;
   TransferStatus WriteProviderSectionRecord(const zx::socket& socket) const;
-  TransferStatus WriteProviderBufferOverflowEvent(
-      const zx::socket& socket) const;
+  TransferStatus WriteProviderBufferOverflowEvent(const zx::socket& socket) const;
 
   void NotifyBufferSaved(uint32_t wrapped_count, uint64_t durable_data_end);
 

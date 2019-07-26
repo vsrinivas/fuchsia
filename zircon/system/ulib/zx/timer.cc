@@ -9,7 +9,7 @@
 namespace zx {
 
 zx_status_t timer::create(uint32_t options, zx_clock_t clock_id, timer* result) {
-    return zx_timer_create(options, clock_id, result->reset_and_get_address());
+  return zx_timer_create(options, clock_id, result->reset_and_get_address());
 }
 
-} // namespace zx
+}  // namespace zx

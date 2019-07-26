@@ -170,8 +170,7 @@ TEST(StatusOr, Arbitrary) {
   EXPECT_EQ("The bits got old", blah.reason());
   EXPECT_EQ(nullptr, blah.get());
 
-  StatusOr<BoxedInt> other_blah =
-      StatusOr<BoxedInt>(StatusCode::FAILED_PRECONDITION, "Something");
+  StatusOr<BoxedInt> other_blah = StatusOr<BoxedInt>(StatusCode::FAILED_PRECONDITION, "Something");
   EXPECT_TRUE(other_blah.is_error());
   EXPECT_FALSE(other_blah.is_ok());
   EXPECT_EQ(StatusCode::FAILED_PRECONDITION, other_blah.code());

@@ -10,8 +10,7 @@
 namespace tracing {
 namespace measure {
 
-bool EventMatchesSpec(const trace::Record::Event& event,
-                      const EventSpec& spec) {
+bool EventMatchesSpec(const trace::Record::Event& event, const EventSpec& spec) {
   return event.name == spec.name && event.category == spec.category;
 }
 

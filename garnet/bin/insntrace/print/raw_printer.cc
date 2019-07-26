@@ -26,25 +26,21 @@
 
 namespace intel_processor_trace {
 
-std::unique_ptr<RawPrinter> RawPrinter::Create(DecoderState* state,
-                                               const Config& config) {
+std::unique_ptr<RawPrinter> RawPrinter::Create(DecoderState* state, const Config& config) {
   FILE* out_file = stdout;
   if (config.output_file_name != "") {
     out_file = fopen(config.output_file_name.c_str(), "w");
     if (!out_file) {
-      FXL_LOG(ERROR) << "Unable to open file for writing: "
-                     << config.output_file_name;
+      FXL_LOG(ERROR) << "Unable to open file for writing: " << config.output_file_name;
       return nullptr;
     }
   }
 
-  auto printer =
-      std::unique_ptr<RawPrinter>(new RawPrinter(out_file, state, config));
+  auto printer = std::unique_ptr<RawPrinter>(new RawPrinter(out_file, state, config));
   return printer;
 }
 
-RawPrinter::RawPrinter(FILE* out_file, DecoderState* state,
-                       const Config& config)
+RawPrinter::RawPrinter(FILE* out_file, DecoderState* state, const Config& config)
     : out_file_(out_file), state_(state), config_(config) {}
 
 RawPrinter::~RawPrinter() {
@@ -59,8 +55,7 @@ void RawPrinter::Printf(const char* format, ...) {
   va_end(args);
 }
 
-RawPrinter::Space RawPrinter::GetSpace(uint64_t cr3,
-                                       const SymbolTable* symtab) {
+RawPrinter::Space RawPrinter::GetSpace(uint64_t cr3, const SymbolTable* symtab) {
   if (symtab) {
     if (symtab->is_kernel())
       return Space::kKernel;
@@ -85,8 +80,7 @@ void RawPrinter::PrintInsn(const pt_insn* insn, PrintState* ps) {
   Printf("\n");
 }
 
-int RawPrinter::ProcessNextInsn(struct pt_insn_decoder* pt_decoder,
-                                PrintState* ps) {
+int RawPrinter::ProcessNextInsn(struct pt_insn_decoder* pt_decoder, PrintState* ps) {
   // This is the data we obtain from libipt.
   struct pt_insn insn;
 
@@ -130,8 +124,7 @@ int RawPrinter::ProcessNextInsn(struct pt_insn_decoder* pt_decoder,
     ps->current_cr3 = cr3;
   }
 
-  const SymbolTable* symtab =
-      state_->FindSymbolTable(ps->current_cr3, ps->current_pc);
+  const SymbolTable* symtab = state_->FindSymbolTable(ps->current_cr3, ps->current_pc);
   const Symbol* sym = symtab ? symtab->FindSymbol(ps->current_pc) : nullptr;
 
   Space space = GetSpace(ps->current_cr3, symtab);
@@ -175,8 +168,7 @@ uint64_t RawPrinter::PrintOneFile(const PtFile& pt_file) {
     return 0;
   }
 
-  Printf("Dump of PT file %s, id 0x%" PRIx64 "\n", pt_file.file.c_str(),
-         pt_file.id);
+  Printf("Dump of PT file %s, id 0x%" PRIx64 "\n", pt_file.file.c_str(), pt_file.id);
 
   PrintState ps;
 
@@ -189,9 +181,8 @@ uint64_t RawPrinter::PrintOneFile(const PtFile& pt_file) {
     int err = pt_insn_sync_forward(pt_decoder);
     pt_insn_get_offset(pt_decoder, &ps.current_pos);
     if (err < 0) {
-      std::string message =
-          fxl::StringPrintf("0x%" PRIx64 ": sync forward: %s\n", ps.current_pos,
-                            pt_errstr(pt_errcode(err)));
+      std::string message = fxl::StringPrintf("0x%" PRIx64 ": sync forward: %s\n", ps.current_pos,
+                                              pt_errstr(pt_errcode(err)));
       if (err == -pte_eos) {
         FXL_LOG(INFO) << message;
       } else {
@@ -212,9 +203,8 @@ uint64_t RawPrinter::PrintOneFile(const PtFile& pt_file) {
     }
 
     FXL_LOG(ERROR) << fxl::StringPrintf(
-        "[%8" PRIu64 "] @0x%" PRIx64 ": %" PRIx64 ":%" PRIx64 ": error %s",
-        ps.total_insncnt, ps.current_pos, ps.current_cr3, ps.current_pc,
-        pt_errstr(pt_errcode(err)));
+        "[%8" PRIu64 "] @0x%" PRIx64 ": %" PRIx64 ":%" PRIx64 ": error %s", ps.total_insncnt,
+        ps.current_pos, ps.current_cr3, ps.current_pc, pt_errstr(pt_errcode(err)));
   }
 
   state_->FreeDecoder();

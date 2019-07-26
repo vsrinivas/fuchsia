@@ -81,8 +81,7 @@ class CommandLine final {
   // Constructs a |CommandLine| from its "components". This is especially useful
   // for creating a new |CommandLine| based on an existing |CommandLine| (e.g.,
   // adding options or arguments).
-  explicit CommandLine(const std::string& argv0,
-                       const std::vector<Option>& options,
+  explicit CommandLine(const std::string& argv0, const std::vector<Option>& options,
                        const std::vector<std::string>& positional_args);
 
   ~CommandLine();
@@ -94,14 +93,11 @@ class CommandLine final {
   bool has_argv0() const { return has_argv0_; }
   const std::string& argv0() const { return argv0_; }
   const std::vector<Option>& options() const { return options_; }
-  const std::vector<std::string>& positional_args() const {
-    return positional_args_;
-  }
+  const std::vector<std::string>& positional_args() const { return positional_args_; }
 
   bool operator==(const CommandLine& other) const {
     // No need to compare |option_index_|.
-    return has_argv0_ == other.has_argv0_ && argv0_ == other.argv0_ &&
-           options_ == other.options_ &&
+    return has_argv0_ == other.has_argv0_ && argv0_ == other.argv0_ && options_ == other.options_ &&
            positional_args_ == other.positional_args_;
   }
   bool operator!=(const CommandLine& other) const { return !operator==(other); }
@@ -122,8 +118,7 @@ class CommandLine final {
   // Gets the value of the option |name|, with a default if the option is not
   // specified. (Note: This doesn't return a const reference, since this would
   // make the |default_value| argument inconvenient/dangerous.)
-  std::string GetOptionValueWithDefault(StringView name,
-                                        StringView default_value) const;
+  std::string GetOptionValueWithDefault(StringView name, StringView default_value) const;
 
  private:
   bool has_argv0_ = false;
@@ -181,8 +176,7 @@ class CommandLineBuilder final {
 // |last| if none are seen). This is useful for processing "subcommands".
 template <typename InputIterator>
 inline CommandLine CommandLineFromIteratorsFindFirstPositionalArg(
-    InputIterator first, InputIterator last,
-    InputIterator* first_positional_arg) {
+    InputIterator first, InputIterator last, InputIterator* first_positional_arg) {
   if (first_positional_arg)
     *first_positional_arg = last;
   internal::CommandLineBuilder builder;
@@ -199,18 +193,15 @@ inline CommandLine CommandLineFromIteratorsFindFirstPositionalArg(
 // one-past-the-last, as usual) to |std::string|s or things that implicitly
 // convert to |std::string|.
 template <typename InputIterator>
-inline CommandLine CommandLineFromIterators(InputIterator first,
-                                            InputIterator last) {
-  return CommandLineFromIteratorsFindFirstPositionalArg<InputIterator>(
-      first, last, nullptr);
+inline CommandLine CommandLineFromIterators(InputIterator first, InputIterator last) {
+  return CommandLineFromIteratorsFindFirstPositionalArg<InputIterator>(first, last, nullptr);
 }
 
 // Builds a |CommandLine| from first/last iterators (where |last| is really
 // one-past-the-last, as usual) to |std::string|s or things that implicitly
 // convert to |std::string|, where argv[0] is provided separately.
 template <typename InputIterator>
-inline CommandLine CommandLineFromIteratorsWithArgv0(const std::string& argv0,
-                                                     InputIterator first,
+inline CommandLine CommandLineFromIteratorsWithArgv0(const std::string& argv0, InputIterator first,
                                                      InputIterator last) {
   internal::CommandLineBuilder builder;
   builder.ProcessArg(argv0);
@@ -227,8 +218,7 @@ inline CommandLine CommandLineFromArgcArgv(int argc, const char* const* argv) {
 // Builds a |CommandLine| from an initializer list of |std::string|s or things
 // that implicitly convert to |std::string|.
 template <typename StringType>
-inline CommandLine CommandLineFromInitializerList(
-    std::initializer_list<StringType> argv) {
+inline CommandLine CommandLineFromInitializerList(std::initializer_list<StringType> argv) {
   return CommandLineFromIterators(argv.begin(), argv.end());
 }
 

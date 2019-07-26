@@ -8,8 +8,7 @@
 namespace test_runner {
 
 ScopeServices::ScopeServices()
-    : vfs_(
-          std::make_unique<fs::SynchronousVfs>(async_get_default_dispatcher())),
+    : vfs_(std::make_unique<fs::SynchronousVfs>(async_get_default_dispatcher())),
       svc_(fbl::AdoptRef(new fs::PseudoDir)) {}
 
 zx::channel ScopeServices::OpenAsDirectory() {
@@ -21,15 +20,14 @@ zx::channel ScopeServices::OpenAsDirectory() {
   return h2;
 }
 
-Scope::Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
-             const std::string& label, std::unique_ptr<ScopeServices> services)
+Scope::Scope(const fuchsia::sys::EnvironmentPtr& parent_env, const std::string& label,
+             std::unique_ptr<ScopeServices> services)
     : services_(std::move(services)) {
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   service_list->names = std::move(services_->svc_names_);
   service_list->host_directory = services_->OpenAsDirectory();
   parent_env->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), label,
-      std::move(service_list),
+      env_.NewRequest(), env_controller_.NewRequest(), label, std::move(service_list),
       {.inherit_parent_services = true, .delete_storage_on_death = true});
 }
 

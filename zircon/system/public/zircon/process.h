@@ -32,4 +32,4 @@ zx_handle_t zx_job_default(void);
 
 __END_CDECLS
 
-#endif // SYSROOT_ZIRCON_PROCESS_H_
+#endif  // SYSROOT_ZIRCON_PROCESS_H_

@@ -42,16 +42,11 @@ const char* Pluralize(T value, bool capitalize = false) {
 
 namespace internal {
 
-Timer::Timer() : start_(now()) {
-}
+Timer::Timer() : start_(now()) {}
 
-void Timer::Reset() {
-  start_ = now();
-}
+void Timer::Reset() { start_ = now(); }
 
-int64_t Timer::GetElapsedTime() const {
-  return (now() - start_) / 1000000;
-}
+int64_t Timer::GetElapsedTime() const { return (now() - start_) / 1000000; }
 
 void IterationSummary::Reset() {
   failed = 0;
@@ -215,8 +210,6 @@ void Reporter::OnIterationEnd(const Runner& runner, int iteration) {
   log_sink_->Flush();
 }
 
-void Reporter::OnProgramEnd(const Runner& runner) {
-  timers_.program.Reset();
-}
+void Reporter::OnProgramEnd(const Runner& runner) { timers_.program.Reset(); }
 
 }  // namespace zxtest

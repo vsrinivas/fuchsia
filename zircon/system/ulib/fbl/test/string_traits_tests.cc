@@ -15,38 +15,38 @@ constexpr char kFakeStringData[] = "hello";
 constexpr size_t kFakeStringLength = fbl::count_of(kFakeStringData);
 
 struct SimpleFakeString {
-    const char* data() const { return kFakeStringData; }
-    size_t length() const { return kFakeStringLength; }
+  const char* data() const { return kFakeStringData; }
+  size_t length() const { return kFakeStringLength; }
 };
 
 struct OverloadedFakeString {
-    const char* data() const { return kFakeStringData; }
-    size_t length() const { return kFakeStringLength; }
+  const char* data() const { return kFakeStringData; }
+  size_t length() const { return kFakeStringLength; }
 
-    // These are decoys to verify that the conversion operator only considers
-    // the const overloads of these members.
-    void data();
-    void length();
+  // These are decoys to verify that the conversion operator only considers
+  // the const overloads of these members.
+  void data();
+  void length();
 };
 
 struct EmptyStructBadString {};
 
 struct DataOnlyBadString {
-    const char* data();
+  const char* data();
 };
 
 struct LengthOnlyBadString {
-    size_t length();
+  size_t length();
 };
 
 struct WrongDataTypeBadString {
-    char* data() const;
-    size_t length() const;
+  char* data() const;
+  size_t length() const;
 };
 
 struct WrongLengthTypeBadString {
-    const char* data() const;
-    int32_t length() const;
+  const char* data() const;
+  int32_t length() const;
 };
 
 static_assert(fbl::is_string_like_v<fbl::String>, "ok - string");
@@ -62,24 +62,24 @@ static_assert(!fbl::is_string_like_v<WrongDataTypeBadString>, "bad - wrong data 
 static_assert(!fbl::is_string_like_v<WrongLengthTypeBadString>, "bad - wrong length type");
 
 bool string_accessors_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    {
-        SimpleFakeString str;
-        EXPECT_EQ(kFakeStringData, fbl::GetStringData(str));
-        EXPECT_EQ(kFakeStringLength, fbl::GetStringLength(str));
-    }
+  {
+    SimpleFakeString str;
+    EXPECT_EQ(kFakeStringData, fbl::GetStringData(str));
+    EXPECT_EQ(kFakeStringLength, fbl::GetStringLength(str));
+  }
 
-    {
-        OverloadedFakeString str;
-        EXPECT_EQ(kFakeStringData, fbl::GetStringData(str));
-        EXPECT_EQ(kFakeStringLength, fbl::GetStringLength(str));
-    }
+  {
+    OverloadedFakeString str;
+    EXPECT_EQ(kFakeStringData, fbl::GetStringData(str));
+    EXPECT_EQ(kFakeStringLength, fbl::GetStringLength(str));
+  }
 
-    END_TEST;
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(string_traits_tests)
 RUN_TEST(string_accessors_test)

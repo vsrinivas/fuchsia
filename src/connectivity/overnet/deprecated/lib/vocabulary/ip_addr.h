@@ -44,8 +44,8 @@ union IpAddr {
   }
 
   IpAddr() {}
-  constexpr IpAddr(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e,
-                   uint16_t f, uint16_t g, uint16_t h, uint16_t port)
+  constexpr IpAddr(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e, uint16_t f,
+                   uint16_t g, uint16_t h, uint16_t port)
       : ipv6{.sin6_family = AF_INET6,
              .sin6_addr = {{{
                  static_cast<unsigned char>(a >> 8),
@@ -68,8 +68,8 @@ union IpAddr {
              .sin6_port = uint16_t((port >> 8) | (port << 8))} {}
   constexpr IpAddr(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint16_t port)
       : ipv4{.sin_family = AF_INET,
-             .sin_addr = {(uint32_t(d) << 24) | (uint32_t(c) << 16) |
-                          (uint32_t(b) << 8) | uint32_t(a)},
+             .sin_addr = {(uint32_t(d) << 24) | (uint32_t(c) << 16) | (uint32_t(b) << 8) |
+                          uint32_t(a)},
              .sin_port = uint16_t((port >> 8) | (port << 8))} {}
 };
 
@@ -85,8 +85,6 @@ class EqIpAddr {
   bool operator()(const IpAddr& a, const IpAddr& b) const;
 };
 
-inline bool operator==(const IpAddr& a, const IpAddr& b) {
-  return EqIpAddr()(a, b);
-}
+inline bool operator==(const IpAddr& a, const IpAddr& b) { return EqIpAddr()(a, b); }
 
 }  // namespace overnet

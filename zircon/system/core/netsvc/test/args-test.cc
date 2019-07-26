@@ -20,9 +20,7 @@ TEST(ArgsTest, NetsvcNoneProvided) {
   const char* error = nullptr;
   ASSERT_EQ(
       parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &advertise, &interface),
-      0,
-      "%s",
-      error);
+      0, "%s", error);
   ASSERT_FALSE(netboot);
   ASSERT_FALSE(advertise);
   ASSERT_EQ(interface, nullptr);
@@ -41,9 +39,7 @@ TEST(ArgsTest, NetsvcAllProvided) {
   const char* error = nullptr;
   ASSERT_EQ(
       parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &advertise, &interface),
-      0,
-      "%s",
-      error);
+      0, "%s", error);
   ASSERT_TRUE(netboot);
   ASSERT_TRUE(advertise);
   ASSERT_EQ(interface, kInterface);
@@ -76,9 +72,7 @@ TEST(ArgsTest, DeviceNameProviderNoneProvided) {
   const char* error = nullptr;
   ASSERT_EQ(parse_device_name_provider_args(argc, const_cast<char**>(argv), &error, &interface,
                                             &nodename, &ethdir),
-            0,
-            "%s",
-            error);
+            0, "%s", error);
   ASSERT_EQ(interface, nullptr);
   ASSERT_EQ(nodename, nullptr);
   ASSERT_EQ(ethdir, nullptr);
@@ -100,9 +94,7 @@ TEST(ArgsTest, DeviceNameProviderAllProvided) {
   const char* error = nullptr;
   ASSERT_EQ(parse_device_name_provider_args(argc, const_cast<char**>(argv), &error, &interface,
                                             &nodename, &ethdir),
-            0,
-            "%s",
-            error);
+            0, "%s", error);
   ASSERT_EQ(interface, kInterface);
   ASSERT_EQ(nodename, kNodename);
   ASSERT_EQ(ethdir, kEthDir);

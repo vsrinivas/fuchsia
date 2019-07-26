@@ -207,9 +207,8 @@ void VirtioWl::GetImporter(
 
 void VirtioWl::Import(zx::vmo vmo, ImportCallback callback) {
   TRACE_DURATION("machina", "VirtioWl::Import");
-  auto deferred = fit::defer([&]() {
-    callback(fuchsia::virtualization::hardware::kVirtioWaylandInvalidVfdId);
-  });
+  auto deferred = fit::defer(
+      [&]() { callback(fuchsia::virtualization::hardware::kVirtioWaylandInvalidVfdId); });
   zx_info_handle_basic_t handle_basic_info{};
   zx_status_t status = zx_object_get_info(vmo.get(), ZX_INFO_HANDLE_BASIC, &handle_basic_info,
                                           sizeof(handle_basic_info), nullptr, nullptr);

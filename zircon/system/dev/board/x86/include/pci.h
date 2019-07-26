@@ -21,21 +21,22 @@ __BEGIN_CDECLS
 
 // Base Address Allocation Structure, defined in PCI firmware spec v3.2 chapter 4.1.2
 typedef struct pci_ecam_baas {
-    uint64_t base_address;
-    uint16_t segment_group;
-    uint8_t start_bus_num;
-    uint8_t end_bus_num;
-    uint32_t reserved0;
+  uint64_t base_address;
+  uint16_t segment_group;
+  uint8_t start_bus_num;
+  uint8_t end_bus_num;
+  uint32_t reserved0;
 } pci_mcfg_allocation_t;
 
 typedef struct pciroot_ctx {
-    char name[5];
-    ACPI_HANDLE acpi_object;
-    ACPI_DEVICE_INFO acpi_device_info;
-    struct pci_platform_info info;
+  char name[5];
+  ACPI_HANDLE acpi_object;
+  ACPI_DEVICE_INFO acpi_device_info;
+  struct pci_platform_info info;
 } pciroot_ctx_t;
 
-zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info, publish_acpi_device_ctx_t* ctx);
+zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
+                     publish_acpi_device_ctx_t* ctx);
 void register_pci_root(ACPI_HANDLE dev_obj);
 bool pci_platform_has_mcfg(void);
 
@@ -44,4 +45,4 @@ zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle);
 
 __END_CDECLS
 
-#endif // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_
+#endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_

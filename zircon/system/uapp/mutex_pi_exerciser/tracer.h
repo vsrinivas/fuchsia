@@ -12,16 +12,16 @@
 #include <trace-provider/provider.h>
 
 class Tracer {
-public:
-    Tracer() = default;
-    ~Tracer() = default;
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Tracer);
+ public:
+  Tracer() = default;
+  ~Tracer() = default;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Tracer);
 
-    static void Trace(trace_scope_t scope, const char* fmt, ...) __printflike(2, 3);
+  static void Trace(trace_scope_t scope, const char* fmt, ...) __printflike(2, 3);
 
-    zx_status_t Start();
+  zx_status_t Start();
 
-private:
-    std::unique_ptr<async::Loop> loop_;
-    std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
+ private:
+  std::unique_ptr<async::Loop> loop_;
+  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
 };

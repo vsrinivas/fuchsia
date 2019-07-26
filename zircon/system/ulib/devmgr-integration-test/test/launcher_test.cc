@@ -52,4 +52,4 @@ TEST(LauncherTest, Namespace) {
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &fd));
 }
 
-}
+}  // namespace devmgr_integration_test

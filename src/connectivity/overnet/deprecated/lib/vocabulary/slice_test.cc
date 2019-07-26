@@ -86,8 +86,7 @@ TEST(Slice, Join) {
 
 TEST(Slice, Static_WithPrefix) {
   auto slice = Slice::FromStaticString("ABC");
-  auto slice2 =
-      slice.WithPrefix(3, [](uint8_t* bytes) { memcpy(bytes, "123", 3); });
+  auto slice2 = slice.WithPrefix(3, [](uint8_t* bytes) { memcpy(bytes, "123", 3); });
   EXPECT_EQ(slice.AsStdString(), "ABC");
   EXPECT_EQ(slice2.AsStdString(), "123ABC");
 }

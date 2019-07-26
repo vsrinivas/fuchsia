@@ -22,4 +22,4 @@ bool is_backtrace_request(zx_excp_type_t excp_type, const zx_thread_state_genera
 // |regs| may be modified by this function.
 zx_status_t cleanup_backtrace_request(zx_handle_t thread, zx_thread_state_general_regs_t* regs);
 
-#endif // BACKTRACE_REQUEST_BACKTRACE_REQUEST_UTILS_H_
+#endif  // BACKTRACE_REQUEST_BACKTRACE_REQUEST_UTILS_H_

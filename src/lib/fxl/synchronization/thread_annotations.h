@@ -29,20 +29,15 @@
 
 #define FXL_PT_GUARDED_BY(x) FXL_THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(x))
 
-#define FXL_ACQUIRE(...) \
-  FXL_THREAD_ANNOTATION_ATTRIBUTE__(acquire_capability(__VA_ARGS__))
+#define FXL_ACQUIRE(...) FXL_THREAD_ANNOTATION_ATTRIBUTE__(acquire_capability(__VA_ARGS__))
 
-#define FXL_RELEASE(...) \
-  FXL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(__VA_ARGS__))
+#define FXL_RELEASE(...) FXL_THREAD_ANNOTATION_ATTRIBUTE__(release_capability(__VA_ARGS__))
 
-#define FXL_REQUIRE(...) \
-  FXL_THREAD_ANNOTATION_ATTRIBUTE__(requires_capability(__VA_ARGS__))
+#define FXL_REQUIRE(...) FXL_THREAD_ANNOTATION_ATTRIBUTE__(requires_capability(__VA_ARGS__))
 
-#define FXL_ACQUIRED_AFTER(...) \
-  FXL_THREAD_ANNOTATION_ATTRIBUTE__(acquired_after(__VA_ARGS__))
+#define FXL_ACQUIRED_AFTER(...) FXL_THREAD_ANNOTATION_ATTRIBUTE__(acquired_after(__VA_ARGS__))
 
-#define FXL_ACQUIRED_BEFORE(...) \
-  FXL_THREAD_ANNOTATION_ATTRIBUTE__(acquired_before(__VA_ARGS__))
+#define FXL_ACQUIRED_BEFORE(...) FXL_THREAD_ANNOTATION_ATTRIBUTE__(acquired_before(__VA_ARGS__))
 
 #define FXL_EXCLUSIVE_LOCKS_REQUIRED(...) \
   FXL_THREAD_ANNOTATION_ATTRIBUTE__(exclusive_locks_required(__VA_ARGS__))
@@ -50,8 +45,7 @@
 #define FXL_SHARED_LOCKS_REQUIRED(...) \
   FXL_THREAD_ANNOTATION_ATTRIBUTE__(shared_locks_required(__VA_ARGS__))
 
-#define FXL_LOCKS_EXCLUDED(...) \
-  FXL_THREAD_ANNOTATION_ATTRIBUTE__(locks_excluded(__VA_ARGS__))
+#define FXL_LOCKS_EXCLUDED(...) FXL_THREAD_ANNOTATION_ATTRIBUTE__(locks_excluded(__VA_ARGS__))
 
 #define FXL_LOCK_RETURNED(x) FXL_THREAD_ANNOTATION_ATTRIBUTE__(lock_returned(x))
 
@@ -77,11 +71,9 @@
 #define FXL_SHARED_TRYLOCK_FUNCTION(...) \
   FXL_THREAD_ANNOTATION_ATTRIBUTE__(shared_trylock_function(__VA_ARGS__))
 
-#define FXL_UNLOCK_FUNCTION(...) \
-  FXL_THREAD_ANNOTATION_ATTRIBUTE__(unlock_function(__VA_ARGS__))
+#define FXL_UNLOCK_FUNCTION(...) FXL_THREAD_ANNOTATION_ATTRIBUTE__(unlock_function(__VA_ARGS__))
 
-#define FXL_NO_THREAD_SAFETY_ANALYSIS \
-  FXL_THREAD_ANNOTATION_ATTRIBUTE__(no_thread_safety_analysis)
+#define FXL_NO_THREAD_SAFETY_ANALYSIS FXL_THREAD_ANNOTATION_ATTRIBUTE__(no_thread_safety_analysis)
 
 // Use this in the header to annotate a function/method as not being
 // thread-safe. This is equivalent to |FXL_NO_THREAD_SAFETY_ANALYSIS|, but

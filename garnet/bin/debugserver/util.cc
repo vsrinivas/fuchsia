@@ -19,15 +19,14 @@
 namespace debugserver {
 
 std::string BuildErrorPacket(ErrorCode error_code) {
-  std::string errstr =
-      fxl::NumberToString<unsigned int>(static_cast<unsigned int>(error_code));
+  std::string errstr = fxl::NumberToString<unsigned int>(static_cast<unsigned int>(error_code));
   if (errstr.length() == 1)
     errstr = "0" + errstr;
   return "E" + errstr;
 }
 
-bool ParseThreadId(const fxl::StringView& bytes, bool* out_has_pid,
-                   int64_t* out_pid, int64_t* out_tid) {
+bool ParseThreadId(const fxl::StringView& bytes, bool* out_has_pid, int64_t* out_pid,
+                   int64_t* out_tid) {
   FXL_DCHECK(out_tid);
   FXL_DCHECK(out_has_pid);
   FXL_DCHECK(out_pid);
@@ -37,8 +36,7 @@ bool ParseThreadId(const fxl::StringView& bytes, bool* out_has_pid,
 
   if (bytes[0] != 'p') {
     *out_has_pid = false;
-    return fxl::StringToNumberWithError<int64_t>(bytes, out_tid,
-                                                 fxl::Base::k16);
+    return fxl::StringToNumberWithError<int64_t>(bytes, out_tid, fxl::Base::k16);
   }
 
   *out_has_pid = true;
@@ -57,16 +55,13 @@ bool ParseThreadId(const fxl::StringView& bytes, bool* out_has_pid,
   // If there's no dot then tid is set to -1 (meaning all threads).
   if (!found_dot) {
     *out_tid = -1;
-    return fxl::StringToNumberWithError<int64_t>(bytes.substr(1, dot - 1),
-                                                 out_pid, fxl::Base::k16);
+    return fxl::StringToNumberWithError<int64_t>(bytes.substr(1, dot - 1), out_pid, fxl::Base::k16);
   }
 
-  if (!fxl::StringToNumberWithError<int64_t>(bytes.substr(1, dot - 1), out_pid,
-                                             fxl::Base::k16))
+  if (!fxl::StringToNumberWithError<int64_t>(bytes.substr(1, dot - 1), out_pid, fxl::Base::k16))
     return false;
 
-  return fxl::StringToNumberWithError<int64_t>(bytes.substr(dot + 1), out_tid,
-                                               fxl::Base::k16);
+  return fxl::StringToNumberWithError<int64_t>(bytes.substr(dot + 1), out_tid, fxl::Base::k16);
 }
 
 std::string EncodeThreadId(zx_koid_t pid, zx_koid_t tid) {
@@ -76,8 +71,7 @@ std::string EncodeThreadId(zx_koid_t pid, zx_koid_t tid) {
   return fxl::StringPrintf("p%s.%s", pid_string.c_str(), tid_string.c_str());
 }
 
-bool FindUnescapedChar(const char val, const fxl::StringView& packet,
-                       size_t* out_index) {
+bool FindUnescapedChar(const char val, const fxl::StringView& packet, size_t* out_index) {
   FXL_DCHECK(out_index);
 
   size_t i;
@@ -159,8 +153,7 @@ bool VerifyPacket(fxl::StringView packet, fxl::StringView* out_packet_data) {
   // TODO(armansito): Ignore the checksum if we're in no-acknowledgment mode.
 
   uint8_t received_checksum;
-  if (!debugger_utils::DecodeByteString(packet.data() + pound + 1,
-                                        &received_checksum)) {
+  if (!debugger_utils::DecodeByteString(packet.data() + pound + 1, &received_checksum)) {
     FXL_LOG(ERROR) << "Malformed packet checksum received";
     return false;
   }
@@ -172,8 +165,7 @@ bool VerifyPacket(fxl::StringView packet, fxl::StringView* out_packet_data) {
 
   if (local_checksum != received_checksum) {
     FXL_LOG(ERROR) << "Bad checksum: computed = " << (unsigned)local_checksum
-                   << ", received = " << (unsigned)received_checksum
-                   << ", packet: " << packet;
+                   << ", received = " << (unsigned)received_checksum << ", packet: " << packet;
     return false;
   }
 
@@ -182,8 +174,7 @@ bool VerifyPacket(fxl::StringView packet, fxl::StringView* out_packet_data) {
   return true;
 }
 
-void ExtractParameters(const fxl::StringView& packet,
-                       fxl::StringView* out_prefix,
+void ExtractParameters(const fxl::StringView& packet, fxl::StringView* out_prefix,
                        fxl::StringView* out_params) {
   FXL_DCHECK(!packet.empty());
   FXL_DCHECK(out_prefix);
@@ -201,8 +192,7 @@ void ExtractParameters(const fxl::StringView& packet,
   // then there are no parameters. If |colon| == (|packet_size| - 1) then
   // there is a ':' but no parameters following it.
   *out_prefix = packet.substr(0, colon);
-  *out_params = packet.substr(
-      colon + 1, packet.size() == colon ? 0 : packet.size() - colon - 1);
+  *out_params = packet.substr(colon + 1, packet.size() == colon ? 0 : packet.size() - colon - 1);
 }
 
 }  // namespace debugserver

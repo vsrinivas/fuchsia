@@ -9,8 +9,7 @@ namespace test {
 
 MockInputDevice::MockInputDevice(
     uint32_t device_id, fuchsia::ui::input::DeviceDescriptor descriptor,
-    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-        input_device_request,
+    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request,
     OnReportCallback on_report_callback)
     : id_(device_id),
       descriptor_(std::move(descriptor)),

@@ -7,8 +7,7 @@
 
 #define FXL_DISALLOW_COPY(TypeName) TypeName(const TypeName&) = delete
 
-#define FXL_DISALLOW_ASSIGN(TypeName) \
-  TypeName& operator=(const TypeName&) = delete
+#define FXL_DISALLOW_ASSIGN(TypeName) TypeName& operator=(const TypeName&) = delete
 
 #define FXL_DISALLOW_MOVE(TypeName) \
   TypeName(TypeName&&) = delete;    \

@@ -14,23 +14,22 @@ namespace internal {
 // that the perf test runner can be tested by unit tests.
 
 struct NamedTest {
-    fbl::String name;
-    fbl::Function<TestFunc> test_func;
+  fbl::String name;
+  fbl::Function<TestFunc> test_func;
 };
 
 typedef fbl::Vector<NamedTest> TestList;
 
-bool RunTests(const char* test_suite, TestList* test_list,
-              uint32_t run_count, const char* regex_string,
-              FILE* log_stream, ResultsSet* results_set);
+bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
+              const char* regex_string, FILE* log_stream, ResultsSet* results_set);
 
 struct CommandArgs {
-    const char* output_filename = nullptr;
-    // Note that this default matches any string.
-    const char* filter_regex = "";
-    uint32_t run_count = 1000;
-    bool enable_tracing = false;
-    double startup_delay_seconds = 0;
+  const char* output_filename = nullptr;
+  // Note that this default matches any string.
+  const char* filter_regex = "";
+  uint32_t run_count = 1000;
+  bool enable_tracing = false;
+  double startup_delay_seconds = 0;
 };
 
 void ParseCommandArgs(int argc, char** argv, CommandArgs* dest);

@@ -29,17 +29,16 @@ class SessionSpecTest : public ::testing::Test {
     // Only do this once though, the effect is otherwise cumulative.
     if (!models_registered_) {
       static const perfmon::EventDetails TestEvents[] = {
-        { perfmon::MakeEventId(perfmon::kGroupFixed, 1), "test-event",
-          "test-event", "test-event description" },
+          {perfmon::MakeEventId(perfmon::kGroupFixed, 1), "test-event", "test-event",
+           "test-event description"},
       };
-      perfmon::ModelEventManager::RegisterEvents(
-          "test", "misc", &TestEvents[0], arraysize(TestEvents));
+      perfmon::ModelEventManager::RegisterEvents("test", "misc", &TestEvents[0],
+                                                 arraysize(TestEvents));
       // Also register events for the default model: Some tests don't specify
       // one (on purpose) and we want to control what events are present. Do
       // this by registering them first.
-      perfmon::ModelEventManager::RegisterEvents(
-          perfmon::GetDefaultModelName().c_str(), "misc", &TestEvents[0],
-          arraysize(TestEvents));
+      perfmon::ModelEventManager::RegisterEvents(perfmon::GetDefaultModelName().c_str(), "misc",
+                                                 &TestEvents[0], arraysize(TestEvents));
       models_registered_ = true;
     }
   }
@@ -127,20 +126,17 @@ TEST_F(SessionSpecTest, DecodeEvents) {
   ASSERT_TRUE(DecodeSessionSpec(json, &result));
 
   const perfmon::EventDetails* details;
-  ASSERT_TRUE(result.model_event_manager->LookupEventByName(
-                "misc", "test-event", &details));
+  ASSERT_TRUE(result.model_event_manager->LookupEventByName("misc", "test-event", &details));
   perfmon::EventId test_event_id = details->id;
 
   EXPECT_EQ(result.perfmon_config.GetEventCount(), 1u);
-  result.perfmon_config.IterateOverEvents([&test_event_id] (
-        const perfmon::Config::EventConfig& event) {
-    EXPECT_EQ(event.event, test_event_id);
-    EXPECT_EQ(event.rate, 42u);
-    EXPECT_EQ(event.flags, (perfmon::Config::kFlagOs |
-                            perfmon::Config::kFlagUser |
-                            perfmon::Config::kFlagPc |
-                            perfmon::Config::kFlagTimebase));
-  });
+  result.perfmon_config.IterateOverEvents(
+      [&test_event_id](const perfmon::Config::EventConfig& event) {
+        EXPECT_EQ(event.event, test_event_id);
+        EXPECT_EQ(event.rate, 42u);
+        EXPECT_EQ(event.flags, (perfmon::Config::kFlagOs | perfmon::Config::kFlagUser |
+                                perfmon::Config::kFlagPc | perfmon::Config::kFlagTimebase));
+      });
 }
 
 TEST_F(SessionSpecTest, DecodeBufferSizeInMb) {
@@ -156,8 +152,7 @@ TEST_F(SessionSpecTest, DecodeDuration) {
 
   SessionSpec result;
   ASSERT_TRUE(DecodeSessionSpec(json, &result));
-  EXPECT_EQ(fxl::TimeDelta::FromSeconds(42).ToNanoseconds(),
-            result.duration.ToNanoseconds());
+  EXPECT_EQ(fxl::TimeDelta::FromSeconds(42).ToNanoseconds(), result.duration.ToNanoseconds());
 }
 
 TEST_F(SessionSpecTest, DecodeNumIterations) {

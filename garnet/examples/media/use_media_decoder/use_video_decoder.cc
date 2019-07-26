@@ -49,8 +49,7 @@ constexpr uint8_t kShortStartCodeArray[] = {0x00, 0x00, 0x01};
 // *start_code_size_bytes will have length of the start code in bytes when the
 // function returns true - unchanged otherwise.  Normally this would be 3 or 4,
 // but a 0 is possible if readable_bytes is 0.
-bool is_start_code(uint8_t* ptr, size_t readable_bytes,
-                   size_t* start_code_size_bytes_out) {
+bool is_start_code(uint8_t* ptr, size_t readable_bytes, size_t* start_code_size_bytes_out) {
   if (readable_bytes == 0) {
     *start_code_size_bytes_out = 0;
     return true;
@@ -75,8 +74,7 @@ bool is_start_code(uint8_t* ptr, size_t readable_bytes,
 uint8_t GetNalUnitType(const uint8_t* nal_unit) {
   // Also works with 4-byte startcodes.
   static const uint8_t start_code[3] = {0, 0, 1};
-  uint8_t* next_start = static_cast<uint8_t*>(memmem(nal_unit, 5, start_code,
-                                                     sizeof(start_code))) +
+  uint8_t* next_start = static_cast<uint8_t*>(memmem(nal_unit, 5, start_code, sizeof(start_code))) +
                         sizeof(start_code);
   return *next_start & 0xf;
 }
@@ -106,22 +104,20 @@ enum class Format {
 
 }  // namespace
 
-void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
-                     size_t input_size) {
+void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes, size_t input_size) {
   // We assign fake PTS values starting at 0 partly to verify that 0 is
   // treated as a valid PTS.
   uint64_t input_frame_pts_counter = 0;
   // Raw .h264 has start code 00 00 01 or 00 00 00 01 before each NAL, and
   // the start codes don't alias in the middle of NALs, so we just scan
   // for NALs and send them in to the decoder.
-  auto queue_access_unit = [&codec_client, &input_frame_pts_counter](
-                               uint8_t* bytes, size_t byte_count) {
+  auto queue_access_unit = [&codec_client, &input_frame_pts_counter](uint8_t* bytes,
+                                                                     size_t byte_count) {
     size_t bytes_so_far = 0;
     // printf("queuing offset: %ld byte_count: %zu\n", bytes -
     // input_bytes.get(), byte_count);
     while (bytes_so_far != byte_count) {
-      std::unique_ptr<fuchsia::media::Packet> packet =
-          codec_client->BlockingGetFreeInputPacket();
+      std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
 
       if (!packet->has_header()) {
         Exit("broken server sent packet without header");
@@ -134,8 +130,7 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
       // For input we do buffer_index == packet_index.
       const CodecBuffer& buffer =
           codec_client->GetInputBufferByIndex(packet->header().packet_index());
-      size_t bytes_to_copy =
-          std::min(byte_count - bytes_so_far, buffer.size_bytes());
+      size_t bytes_to_copy = std::min(byte_count - bytes_so_far, buffer.size_bytes());
       packet->set_stream_lifetime_ordinal(kStreamLifetimeOrdinal);
       packet->set_start_offset(0);
       packet->set_valid_length_bytes(bytes_to_copy);
@@ -148,8 +143,7 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
       }
 
       packet->set_start_access_unit(bytes_so_far == 0);
-      packet->set_known_end_access_unit(bytes_so_far + bytes_to_copy ==
-                                        byte_count);
+      packet->set_known_end_access_unit(bytes_so_far + bytes_to_copy == byte_count);
       memcpy(buffer.base(), bytes + bytes_so_far, bytes_to_copy);
       codec_client->QueueInputPacket(std::move(packet));
       bytes_so_far += bytes_to_copy;
@@ -158,8 +152,7 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
   for (size_t i = 0; i < input_size;) {
     // Until clang-tidy correctly interprets Exit(), this "= 0" satisfies it.
     size_t start_code_size_bytes = 0;
-    if (!is_start_code(&input_bytes[i], input_size - i,
-                       &start_code_size_bytes)) {
+    if (!is_start_code(&input_bytes[i], input_size - i, &start_code_size_bytes)) {
       if (i == 0) {
         Exit(
             "Didn't find a start code at the start of the file, and this "
@@ -179,8 +172,7 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
     size_t find_end_iter = nal_start_offset;
     size_t ignore_start_code_size_bytes;
     while (find_end_iter <= input_size &&
-           !is_start_code(&input_bytes[find_end_iter],
-                          input_size - find_end_iter,
+           !is_start_code(&input_bytes[find_end_iter], input_size - find_end_iter,
                           &ignore_start_code_size_bytes)) {
       find_end_iter++;
     }
@@ -202,13 +194,11 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
   codec_client->FlushEndOfStreamAndCloseStream(kStreamLifetimeOrdinal);
   // input thread done
 }
-void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
-                    size_t input_size) {
+void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes, size_t input_size) {
   uint64_t input_frame_pts_counter = 0;
-  auto queue_access_unit = [&codec_client, &input_frame_pts_counter](
-                               uint8_t* bytes, size_t byte_count) {
-    std::unique_ptr<fuchsia::media::Packet> packet =
-        codec_client->BlockingGetFreeInputPacket();
+  auto queue_access_unit = [&codec_client, &input_frame_pts_counter](uint8_t* bytes,
+                                                                     size_t byte_count) {
+    std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
     ZX_ASSERT(packet->has_header());
     ZX_ASSERT(packet->header().has_packet_index());
     // For input we do buffer_index == packet_index.
@@ -239,8 +229,7 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
     // send through frame index in timestamp_ish field instead, for consistency
     // with .h264 files which don't have timestamps in them, and so tests can
     // assume frame index as timestamp_ish on output.
-    queue_access_unit(&input_bytes[i + sizeof(IvfFrameHeader)],
-                      frame_header->size_bytes);
+    queue_access_unit(&input_bytes[i + sizeof(IvfFrameHeader)], frame_header->size_bytes);
     i += sizeof(IvfFrameHeader) + frame_header->size_bytes;
   }
 
@@ -252,13 +241,13 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
   // input thread done
 }
 
-static void use_video_decoder(
-    async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem, Format format,
-    const std::string& input_file, const std::string& output_file,
-    uint8_t md_out[SHA256_DIGEST_LENGTH],
-    std::vector<std::pair<bool, uint64_t>>* timestamps_out, uint32_t* fourcc,
-    FrameSink* frame_sink) {
+static void use_video_decoder(async::Loop* main_loop,
+                              fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                              fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
+                              Format format, const std::string& input_file,
+                              const std::string& output_file, uint8_t md_out[SHA256_DIGEST_LENGTH],
+                              std::vector<std::pair<bool, uint64_t>>* timestamps_out,
+                              uint32_t* fourcc, FrameSink* frame_sink) {
   VLOGF("use_h264_decoder()\n");
   FXL_DCHECK(!timestamps_out || timestamps_out->empty());
   memset(md_out, 0, SHA256_DIGEST_LENGTH);
@@ -270,8 +259,7 @@ static void use_video_decoder(
   // the start code, since the Codec packet
   VLOGF("reading h264 file...\n");
   size_t input_size;
-  std::unique_ptr<uint8_t[]> input_bytes =
-      read_whole_file(input_file.c_str(), &input_size);
+  std::unique_ptr<uint8_t[]> input_bytes = read_whole_file(input_file.c_str(), &input_size);
   VLOGF("done reading h264 file.\n");
 
   // Since the .h264 file has SPS + PPS NALs in addition to frame NALs, we don't
@@ -295,22 +283,20 @@ static void use_video_decoder(
       break;
   }
 
-  async::PostTask(
-      main_loop->dispatcher(),
-      [&codec_factory, codec_client_request = codec_client.GetTheRequestOnce(),
-       mime_type]() mutable {
-        VLOGF("before codec_factory->CreateDecoder() (async)\n");
-        fuchsia::media::FormatDetails input_details;
-        input_details.set_format_details_version_ordinal(0);
-        input_details.set_mime_type(mime_type);
-        fuchsia::mediacodec::CreateDecoder_Params params;
-        params.set_input_details(std::move(input_details));
-        // This is required for timestamp_ish values to transit the
-        // Codec.
-        params.set_promise_separate_access_units_on_input(true);
-        codec_factory->CreateDecoder(std::move(params),
-                                     std::move(codec_client_request));
-      });
+  async::PostTask(main_loop->dispatcher(), [&codec_factory,
+                                            codec_client_request = codec_client.GetTheRequestOnce(),
+                                            mime_type]() mutable {
+    VLOGF("before codec_factory->CreateDecoder() (async)\n");
+    fuchsia::media::FormatDetails input_details;
+    input_details.set_format_details_version_ordinal(0);
+    input_details.set_mime_type(mime_type);
+    fuchsia::mediacodec::CreateDecoder_Params params;
+    params.set_input_details(std::move(input_details));
+    // This is required for timestamp_ish values to transit the
+    // Codec.
+    params.set_promise_separate_access_units_on_input(true);
+    codec_factory->CreateDecoder(std::move(params), std::move(codec_client_request));
+  });
 
   VLOGF("before codec_client.Start()...\n");
   // This does a Sync(), so after this we can drop the CodecFactory without it
@@ -327,18 +313,17 @@ static void use_video_decoder(
   std::mutex unbind_mutex;
   std::condition_variable unbind_done_condition;
   bool unbind_done = false;
-  async::PostTask(
-      main_loop->dispatcher(),
-      [&codec_factory, &unbind_mutex, &unbind_done, &unbind_done_condition] {
-        codec_factory.Unbind();
-        {  // scope lock
-          std::lock_guard<std::mutex> lock(unbind_mutex);
-          unbind_done = true;
-        }  // ~lock
-        unbind_done_condition.notify_all();
-        // All of codec_factory, unbind_mutex, unbind_done,
-        // unbind_done_condition are potentially gone by this point.
-      });
+  async::PostTask(main_loop->dispatcher(),
+                  [&codec_factory, &unbind_mutex, &unbind_done, &unbind_done_condition] {
+                    codec_factory.Unbind();
+                    {  // scope lock
+                      std::lock_guard<std::mutex> lock(unbind_mutex);
+                      unbind_done = true;
+                    }  // ~lock
+                    unbind_done_condition.notify_all();
+                    // All of codec_factory, unbind_mutex, unbind_done,
+                    // unbind_done_condition are potentially gone by this point.
+                  });
   {  // scope lock
     std::unique_lock<std::mutex> lock(unbind_mutex);
     while (!unbind_done) {
@@ -348,8 +333,8 @@ static void use_video_decoder(
   FXL_DCHECK(unbind_done);
 
   VLOGF("before starting in_thread...\n");
-  std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
-      [&codec_client, &input_bytes, input_size, format]() {
+  std::unique_ptr<std::thread> in_thread =
+      std::make_unique<std::thread>([&codec_client, &input_bytes, input_size, format]() {
         switch (format) {
           case Format::kH264:
             QueueH264Frames(&codec_client, input_bytes.get(), input_size);
@@ -365,14 +350,14 @@ static void use_video_decoder(
   //
   // codec_client outlives the thread (and for separate reasons below, all the
   // frame_sink activity started by out_thread).
-  std::unique_ptr<std::thread> out_thread = std::make_unique<
-      std::thread>([main_loop, &codec_client, output_file, md_out,
-                    &timestamps_out, &fourcc, frame_sink]() {
+  std::unique_ptr<std::thread> out_thread = std::make_unique<std::thread>([main_loop, &codec_client,
+                                                                           output_file, md_out,
+                                                                           &timestamps_out, &fourcc,
+                                                                           frame_sink]() {
     // The codec_client lock_ is not held for long durations in here, which is
     // good since we're using this thread to do things like write to an output
     // file.
-    media::RawVideoWriter<kRawVideoWriterEnabled> raw_video_writer(
-        output_file.c_str());
+    media::RawVideoWriter<kRawVideoWriterEnabled> raw_video_writer(output_file.c_str());
     SHA256_CTX sha256_ctx;
     SHA256_Init(&sha256_ctx);
     // We allow the server to send multiple output constraint updates if it
@@ -387,8 +372,7 @@ static void use_video_decoder(
     std::shared_ptr<const fuchsia::media::StreamOutputFormat> stream_format;
     const fuchsia::media::VideoUncompressedFormat* raw = nullptr;
     while (true) {
-      std::unique_ptr<CodecOutput> output =
-          codec_client.BlockingGetEmittedOutput();
+      std::unique_ptr<CodecOutput> output = codec_client.BlockingGetEmittedOutput();
       if (output->stream_lifetime_ordinal() != kStreamLifetimeOrdinal) {
         Exit(
             "server emitted a stream_lifetime_ordinal that client didn't set "
@@ -412,14 +396,12 @@ static void use_video_decoder(
       // gone, since we don't block return from use_h264_decoder() on Scenic
       // actually freeing up all previously-queued frames.
       auto cleanup =
-          fit::defer([&codec_client,
-                      packet_header = fidl::Clone(packet.header())]() mutable {
+          fit::defer([&codec_client, packet_header = fidl::Clone(packet.header())]() mutable {
             // Using an auto call for this helps avoid losing track of the
             // output_buffer.
             codec_client.RecycleOutputPacket(std::move(packet_header));
           });
-      std::shared_ptr<const fuchsia::media::StreamOutputFormat> format =
-          output->format();
+      std::shared_ptr<const fuchsia::media::StreamOutputFormat> format = output->format();
 
       if (!packet.has_buffer_index()) {
         // The server should not generate any empty packets.
@@ -428,26 +410,21 @@ static void use_video_decoder(
 
       // This will remain live long enough because this thread is the only
       // thread that re-allocates output buffers.
-      const CodecBuffer& buffer =
-          codec_client.GetOutputBufferByIndex(packet.buffer_index());
+      const CodecBuffer& buffer = codec_client.GetOutputBufferByIndex(packet.buffer_index());
 
-      ZX_ASSERT(
-          !stream_format ||
-          (stream_format->has_format_details() &&
-           stream_format->format_details().format_details_version_ordinal()));
-      if (stream_format &&
-          (!format->has_format_details() ||
-           !format->format_details().has_format_details_version_ordinal() ||
-           format->format_details().format_details_version_ordinal() !=
-               stream_format->format_details()
-                   .format_details_version_ordinal())) {
+      ZX_ASSERT(!stream_format ||
+                (stream_format->has_format_details() &&
+                 stream_format->format_details().format_details_version_ordinal()));
+      if (stream_format && (!format->has_format_details() ||
+                            !format->format_details().has_format_details_version_ordinal() ||
+                            format->format_details().format_details_version_ordinal() !=
+                                stream_format->format_details().format_details_version_ordinal())) {
         Exit(
             "codec server unexpectedly changed output format mid-stream - "
             "unexpected for this stream");
       }
 
-      if (!packet.has_valid_length_bytes() ||
-          packet.valid_length_bytes() == 0) {
+      if (!packet.has_valid_length_bytes() || packet.valid_length_bytes() == 0) {
         // The server should not generate any empty packets.
         Exit("broken server sent empty packet");
       }
@@ -469,8 +446,7 @@ static void use_video_decoder(
           Exit("!format_details");
         }
 
-        const fuchsia::media::FormatDetails& format_details =
-            stream_format->format_details();
+        const fuchsia::media::FormatDetails& format_details = stream_format->format_details();
         if (!format_details.has_domain()) {
           Exit("!format.domain");
         }
@@ -478,8 +454,7 @@ static void use_video_decoder(
         if (!format_details.domain().is_video()) {
           Exit("!format.domain.is_video()");
         }
-        const fuchsia::media::VideoFormat& video_format =
-            format_details.domain().video();
+        const fuchsia::media::VideoFormat& video_format = format_details.domain().video();
         if (!video_format.is_uncompressed()) {
           Exit("!video.is_uncompressed()");
         }
@@ -490,25 +465,21 @@ static void use_video_decoder(
         }
         switch (raw->fourcc) {
           case make_fourcc('N', 'V', '1', '2'): {
-            size_t y_size =
-                raw->primary_height_pixels * raw->primary_line_stride_bytes;
+            size_t y_size = raw->primary_height_pixels * raw->primary_line_stride_bytes;
             if (raw->secondary_start_offset < y_size) {
               Exit("raw.secondary_start_offset < y_size");
             }
             // NV12 requires UV be same line stride as Y.
-            size_t total_size =
-                raw->secondary_start_offset +
-                raw->primary_height_pixels / 2 * raw->primary_line_stride_bytes;
+            size_t total_size = raw->secondary_start_offset +
+                                raw->primary_height_pixels / 2 * raw->primary_line_stride_bytes;
             if (packet.valid_length_bytes() < total_size) {
               Exit("packet.valid_length_bytes < total_size");
             }
             break;
           }
           case make_fourcc('Y', 'V', '1', '2'): {
-            size_t y_size =
-                raw->primary_height_pixels * raw->primary_line_stride_bytes;
-            size_t v_size =
-                raw->secondary_height_pixels * raw->secondary_line_stride_bytes;
+            size_t y_size = raw->primary_height_pixels * raw->primary_line_stride_bytes;
+            size_t v_size = raw->secondary_height_pixels * raw->secondary_line_stride_bytes;
             size_t u_size = v_size;
             size_t total_size = y_size + u_size + v_size;
 
@@ -539,8 +510,7 @@ static void use_video_decoder(
             raw_video_writer.WriteNv12(
                 raw->primary_width_pixels, raw->primary_height_pixels,
                 raw->primary_line_stride_bytes,
-                buffer.base() + packet.start_offset() +
-                    raw->primary_start_offset,
+                buffer.base() + packet.start_offset() + raw->primary_start_offset,
                 raw->secondary_start_offset - raw->primary_start_offset);
             break;
           default:
@@ -554,26 +524,21 @@ static void use_video_decoder(
       // broken run that can't easily be reproduced.
       if (timestamps_out) {
         timestamps_out->emplace_back(std::make_pair(
-            packet.has_timestamp_ish(),
-            packet.has_timestamp_ish() ? packet.timestamp_ish() : 0));
+            packet.has_timestamp_ish(), packet.has_timestamp_ish() ? packet.timestamp_ish() : 0));
       }
 
       if (!frame_sink) {
         switch (raw->fourcc) {
           case make_fourcc('N', 'V', '1', '2'): {
             // Y
-            uint8_t* y_src = buffer.base() + packet.start_offset() +
-                             raw->primary_start_offset;
-            for (uint32_t y_iter = 0; y_iter < raw->primary_height_pixels;
-                 y_iter++) {
+            uint8_t* y_src = buffer.base() + packet.start_offset() + raw->primary_start_offset;
+            for (uint32_t y_iter = 0; y_iter < raw->primary_height_pixels; y_iter++) {
               SHA256_Update(&sha256_ctx, y_src, raw->primary_width_pixels);
               y_src += raw->primary_line_stride_bytes;
             }
             // UV
-            uint8_t* uv_src = buffer.base() + packet.start_offset() +
-                              raw->secondary_start_offset;
-            for (uint32_t uv_iter = 0; uv_iter < raw->primary_height_pixels / 2;
-                 uv_iter++) {
+            uint8_t* uv_src = buffer.base() + packet.start_offset() + raw->secondary_start_offset;
+            for (uint32_t uv_iter = 0; uv_iter < raw->primary_height_pixels / 2; uv_iter++) {
               // NV12 requires eacy UV line be same width as a Y line, and
               // same stride as a Y line.
               SHA256_Update(&sha256_ctx, uv_src, raw->primary_width_pixels);
@@ -585,24 +550,21 @@ static void use_video_decoder(
             // Y
             SHA256_Update_VideoPlane(
                 &sha256_ctx,
-                /*start=*/buffer.base() + packet.start_offset() +
-                    raw->primary_start_offset,
+                /*start=*/buffer.base() + packet.start_offset() + raw->primary_start_offset,
                 raw->primary_width_pixels, raw->primary_line_stride_bytes,
                 raw->primary_height_pixels);
 
             // V
             SHA256_Update_VideoPlane(
                 &sha256_ctx,
-                /*start=*/buffer.base() + packet.start_offset() +
-                    raw->secondary_start_offset,
+                /*start=*/buffer.base() + packet.start_offset() + raw->secondary_start_offset,
                 raw->secondary_width_pixels, raw->secondary_line_stride_bytes,
                 raw->secondary_height_pixels);
 
             // U
             SHA256_Update_VideoPlane(
                 &sha256_ctx,
-                /*start=*/buffer.base() + packet.start_offset() +
-                    raw->tertiary_start_offset,
+                /*start=*/buffer.base() + packet.start_offset() + raw->tertiary_start_offset,
                 raw->secondary_width_pixels, raw->secondary_line_stride_bytes,
                 raw->secondary_height_pixels);
 
@@ -616,11 +578,9 @@ static void use_video_decoder(
       if (frame_sink) {
         async::PostTask(
             main_loop->dispatcher(),
-            [frame_sink,
-             image_id = packet.header().packet_index() + kFirstValidImageId,
+            [frame_sink, image_id = packet.header().packet_index() + kFirstValidImageId,
              &vmo = buffer.vmo(),
-             vmo_offset = buffer.vmo_offset() + packet.start_offset() +
-                          raw->primary_start_offset,
+             vmo_offset = buffer.vmo_offset() + packet.start_offset() + raw->primary_start_offset,
              format, cleanup = std::move(cleanup)]() mutable {
               frame_sink->PutFrame(image_id, vmo, vmo_offset, format,
                                    [cleanup = std::move(cleanup)] {
@@ -683,8 +643,7 @@ static void use_video_decoder(
     std::mutex frames_done_lock;
     bool frames_done = false;
     std::condition_variable frames_done_condition;
-    fit::closure on_frames_returned = [&frames_done_lock, &frames_done,
-                                       &frames_done_condition] {
+    fit::closure on_frames_returned = [&frames_done_lock, &frames_done, &frames_done_condition] {
       {  // scope lock
         std::lock_guard<std::mutex> lock(frames_done_lock);
         frames_done = true;
@@ -694,12 +653,11 @@ static void use_video_decoder(
         // Don't touch the captures beyond this point.
       }  // ~lock
     };
-    async::PostTask(main_loop->dispatcher(),
-                    [frame_sink, on_frames_returned =
-                                     std::move(on_frames_returned)]() mutable {
-                      frame_sink->PutEndOfStreamThenWaitForFramesReturnedAsync(
-                          std::move(on_frames_returned));
-                    });
+    async::PostTask(
+        main_loop->dispatcher(),
+        [frame_sink, on_frames_returned = std::move(on_frames_returned)]() mutable {
+          frame_sink->PutEndOfStreamThenWaitForFramesReturnedAsync(std::move(on_frames_returned));
+        });
     // The just-posted wait will set frames_done using the main_loop_'s thread,
     // which is not this thread.
     FXL_LOG(INFO) << "waiting for all frames to be returned from Scenic...";
@@ -770,28 +728,22 @@ static void use_video_decoder(
   return;
 }
 
-void use_h264_decoder(async::Loop* main_loop,
-                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+void use_h264_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                      const std::string& input_file,
-                      const std::string& output_file,
+                      const std::string& input_file, const std::string& output_file,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
-                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
-                      uint32_t* fourcc, FrameSink* frame_sink) {
-  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem),
-                    Format::kH264, input_file, output_file, md_out,
-                    timestamps_out, fourcc, frame_sink);
+                      std::vector<std::pair<bool, uint64_t>>* timestamps_out, uint32_t* fourcc,
+                      FrameSink* frame_sink) {
+  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem), Format::kH264,
+                    input_file, output_file, md_out, timestamps_out, fourcc, frame_sink);
 }
 
-void use_vp9_decoder(async::Loop* main_loop,
-                     fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+void use_vp9_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                     const std::string& input_file,
-                     const std::string& output_file,
+                     const std::string& input_file, const std::string& output_file,
                      uint8_t md_out[SHA256_DIGEST_LENGTH],
-                     std::vector<std::pair<bool, uint64_t>>* timestamps_out,
-                     uint32_t* fourcc, FrameSink* frame_sink) {
-  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem),
-                    Format::kVp9, input_file, output_file, md_out,
-                    timestamps_out, fourcc, frame_sink);
+                     std::vector<std::pair<bool, uint64_t>>* timestamps_out, uint32_t* fourcc,
+                     FrameSink* frame_sink) {
+  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem), Format::kVp9,
+                    input_file, output_file, md_out, timestamps_out, fourcc, frame_sink);
 }

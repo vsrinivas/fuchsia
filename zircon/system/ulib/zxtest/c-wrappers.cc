@@ -21,8 +21,7 @@ namespace {
 class CTestWrapper : public zxtest::Test {
  public:
   CTestWrapper() = default;
-  ~CTestWrapper() final {
-  }
+  ~CTestWrapper() final {}
 
   void SetCFunction(zxtest_test_fn_t test_fn) {
     ZX_ASSERT_MSG(test_fn_ == nullptr, "Once set test_fn_ should never change.");
@@ -30,18 +29,14 @@ class CTestWrapper : public zxtest::Test {
   }
 
  private:
-  void TestBody() final {
-    test_fn_();
-  }
+  void TestBody() final { test_fn_(); }
 
   zxtest_test_fn_t test_fn_ = nullptr;
 };
 
 }  // namespace
 
-int zxtest_run_all_tests(int argc, char** argv) {
-  return zxtest::RunAllTests(argc, argv);
-}
+int zxtest_run_all_tests(int argc, char** argv) { return zxtest::RunAllTests(argc, argv); }
 
 zxtest_test_ref_t zxtest_runner_register_test(const char* testcase_name, const char* test_name,
                                               const char* file, int line_number,
@@ -122,9 +117,7 @@ size_t _zxtest_print_hex(const void* val, size_t size, char* buffer, size_t buff
   return 0;
 }
 
-void zxtest_c_clean_buffer(char** buffer) {
-  free(*buffer);
-}
+void zxtest_c_clean_buffer(char** buffer) { free(*buffer); }
 
 void zxtest_runner_fail_current_test(bool is_fatal, const char* file, int line,
                                      const char* message) {

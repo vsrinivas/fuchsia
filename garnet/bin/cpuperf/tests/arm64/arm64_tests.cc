@@ -9,7 +9,7 @@
 // List of tests.
 // A test automatically fails if it's not listed here.
 extern const TestSpec* const kTestSpecs[] = {
-  &kTallySpec,
+    &kTallySpec,
 };
 
 extern const size_t kTestSpecCount = arraysize(kTestSpecs);

@@ -39,4 +39,4 @@ const char* CapabilityIdToName(Capability::Id id) {
 }
 // clang-format on
 
-} // namespace pci
+}  // namespace pci

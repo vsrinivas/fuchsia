@@ -53,4 +53,4 @@ const char* gpt_guid_to_type(const char* guid);
 void gpt_sort_partitions(gpt_partition_t** partitions, size_t count);
 
 __END_CDECLS
-#endif // LIB_GPT_GPT_H_
+#endif  // LIB_GPT_GPT_H_

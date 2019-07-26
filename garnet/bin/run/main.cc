@@ -29,10 +29,8 @@ static void consume_arg(int* argc, const char*** argv) {
   ++(*argv);
 }
 
-void launch(fuchsia::sys::LauncherSyncPtr launcher,
-            fuchsia::sys::ComponentControllerPtr controller,
-            fuchsia::sys::LaunchInfo launch_info, async::Loop* loop,
-            bool daemonize) {
+void launch(fuchsia::sys::LauncherSyncPtr launcher, fuchsia::sys::ComponentControllerPtr controller,
+            fuchsia::sys::LaunchInfo launch_info, async::Loop* loop, bool daemonize) {
   if (daemonize) {
     launcher->CreateComponent(std::move(launch_info), {});
     zx_process_exit(0);
@@ -41,9 +39,8 @@ void launch(fuchsia::sys::LauncherSyncPtr launcher,
   std::string url = launch_info.url;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
-  controller.events().OnTerminated = [&url](
-                                         int64_t return_code,
-                                         TerminationReason termination_reason) {
+  controller.events().OnTerminated = [&url](int64_t return_code,
+                                            TerminationReason termination_reason) {
     if (termination_reason != TerminationReason::EXITED) {
       fprintf(stderr, "%s: %s\n", url.c_str(),
               sys::HumanReadableTerminationReason(termination_reason).c_str());
@@ -97,61 +94,53 @@ int main(int argc, const char** argv) {
   if (fuzzy_search) {
     fidl::InterfaceHandle<fuchsia::io::Directory> directory;
     fuchsia::sys::LaunchInfo index_launch_info;
-    index_launch_info.url =
-        "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
+    index_launch_info.url = "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
     index_launch_info.directory_request = directory.NewRequest().TakeChannel();
-    launcher->CreateComponent(std::move(index_launch_info),
-                              controller.NewRequest());
+    launcher->CreateComponent(std::move(index_launch_info), controller.NewRequest());
 
     ComponentIndexPtr index;
     sys::ServiceDirectory index_provider(std::move(directory));
     index_provider.Connect(index.NewRequest());
     index.set_error_handler([&program_name](zx_status_t status) {
-      fprintf(
-          stderr,
-          "Error: \"%s\" is not a valid URL. Attempted to match to a URL with "
-          "fuchsia.sys.index.FuzzySearch, but the service is not available\n",
-          program_name.c_str());
+      fprintf(stderr,
+              "Error: \"%s\" is not a valid URL. Attempted to match to a URL with "
+              "fuchsia.sys.index.FuzzySearch, but the service is not available\n",
+              program_name.c_str());
       zx_process_exit(1);
     });
 
-    index->FuzzySearch(
-        program_name,
-        [&launcher, &controller, &launch_info, &loop, &program_name,
-         &daemonize](ComponentIndex_FuzzySearch_Result result) {
-          if (result.is_err()) {
-            fprintf(stderr,
-                    "Error: \"%s\" contains unsupported characters for fuzzy "
-                    "matching. Valid characters are [A-Z a-z 0-9 / _ - .].\n",
-                    program_name.c_str());
-            zx_process_exit(1);
-          } else {
-            ComponentIndex_FuzzySearch_Response response = result.response();
-            std::vector<std::string> uris = response.uris;
-            if (uris.size() == 0) {
-              fprintf(stderr, "Error: \"%s\" did not match any components.\n",
-                      program_name.c_str());
-              zx_process_exit(1);
-            } else if (uris.size() != 1) {
-              for (auto& uri : uris) {
-                fprintf(stderr, "%s\n", uri.c_str());
-              }
-              fprintf(stderr, "Error: \"%s\" matched multiple components.\n",
-                      program_name.c_str());
-              zx_process_exit(1);
-            } else {
-              std::string matched_name = uris[0];
-              fprintf(stdout, "Found %s, executing.\n", matched_name.c_str());
-              launch_info.url = matched_name;
-              launch(std::move(launcher), std::move(controller),
-                     std::move(launch_info), &loop, daemonize);
-            }
+    index->FuzzySearch(program_name, [&launcher, &controller, &launch_info, &loop, &program_name,
+                                      &daemonize](ComponentIndex_FuzzySearch_Result result) {
+      if (result.is_err()) {
+        fprintf(stderr,
+                "Error: \"%s\" contains unsupported characters for fuzzy "
+                "matching. Valid characters are [A-Z a-z 0-9 / _ - .].\n",
+                program_name.c_str());
+        zx_process_exit(1);
+      } else {
+        ComponentIndex_FuzzySearch_Response response = result.response();
+        std::vector<std::string> uris = response.uris;
+        if (uris.size() == 0) {
+          fprintf(stderr, "Error: \"%s\" did not match any components.\n", program_name.c_str());
+          zx_process_exit(1);
+        } else if (uris.size() != 1) {
+          for (auto& uri : uris) {
+            fprintf(stderr, "%s\n", uri.c_str());
           }
-        });
+          fprintf(stderr, "Error: \"%s\" matched multiple components.\n", program_name.c_str());
+          zx_process_exit(1);
+        } else {
+          std::string matched_name = uris[0];
+          fprintf(stdout, "Found %s, executing.\n", matched_name.c_str());
+          launch_info.url = matched_name;
+          launch(std::move(launcher), std::move(controller), std::move(launch_info), &loop,
+                 daemonize);
+        }
+      }
+    });
     loop.Run();
   } else {
-    launch(std::move(launcher), std::move(controller), std::move(launch_info),
-           &loop, daemonize);
+    launch(std::move(launcher), std::move(controller), std::move(launch_info), &loop, daemonize);
   }
 
   return 0;

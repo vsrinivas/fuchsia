@@ -25,11 +25,9 @@ std::string Util::GetLabelFromURL(const std::string& url) {
 
 ExportedDirChannels Util::BindDirectory(fuchsia::sys::LaunchInfo* launch_info) {
   zx::channel exported_dir_server, exported_dir_client;
-  zx_status_t status =
-      zx::channel::create(0u, &exported_dir_server, &exported_dir_client);
+  zx_status_t status = zx::channel::create(0u, &exported_dir_server, &exported_dir_client);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create channel for service directory: status="
-                   << status;
+    FXL_LOG(ERROR) << "Failed to create channel for service directory: status=" << status;
     return {zx::channel(), zx::channel()};
   }
 
@@ -38,8 +36,7 @@ ExportedDirChannels Util::BindDirectory(fuchsia::sys::LaunchInfo* launch_info) {
   return {std::move(exported_dir_client), std::move(client_request)};
 }
 
-std::string Util::GetArgsString(
-    const ::fidl::VectorPtr<::std::string>& arguments) {
+std::string Util::GetArgsString(const ::fidl::VectorPtr<::std::string>& arguments) {
   std::string args = "";
   if (!arguments->empty()) {
     std::ostringstream buf;
@@ -61,8 +58,7 @@ zx::channel Util::OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node) {
   return h2;
 }
 
-RestartBackOff::RestartBackOff(zx::duration min_backoff,
-                               zx::duration max_backoff,
+RestartBackOff::RestartBackOff(zx::duration min_backoff, zx::duration max_backoff,
                                zx::duration alive_reset_limit)
     : backoff_(min_backoff, 2u, max_backoff),
       alive_reset_limit_(alive_reset_limit),
@@ -77,8 +73,6 @@ zx::duration RestartBackOff::GetNext() {
 
 void RestartBackOff::Start() { start_time_ = GetCurrentTime(); }
 
-zx::time RestartBackOff::GetCurrentTime() const {
-  return zx::clock::get_monotonic();
-}
+zx::time RestartBackOff::GetCurrentTime() const { return zx::clock::get_monotonic(); }
 
 }  // namespace component

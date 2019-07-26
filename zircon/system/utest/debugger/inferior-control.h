@@ -15,29 +15,28 @@
 #include <lib/zx/exception.h>
 
 struct thread_data_t {
-    zx_koid_t tid;
-    zx_handle_t handle;
+  zx_koid_t tid;
+  zx_handle_t handle;
 };
 
 // Result of |attach_inferior()|.
 struct inferior_data_t {
-    // Koid of the inferior process.
-    zx_koid_t pid;
-    // Borrowed handle of the inferior process.
-    zx_handle_t inferior;
-    // Borrowed handle of the port listening for signals.
-    zx_handle_t port;
-    // Owned handle of the exception channel.
-    zx_handle_t exception_channel;
-    // #entries in |threads|.
-    size_t max_num_threads;
-    // The array is unsorted, and there can be holes (tid,handle = invalid).
-    thread_data_t* threads;
+  // Koid of the inferior process.
+  zx_koid_t pid;
+  // Borrowed handle of the inferior process.
+  zx_handle_t inferior;
+  // Borrowed handle of the port listening for signals.
+  zx_handle_t port;
+  // Owned handle of the exception channel.
+  zx_handle_t exception_channel;
+  // #entries in |threads|.
+  size_t max_num_threads;
+  // The array is unsorted, and there can be holes (tid,handle = invalid).
+  thread_data_t* threads;
 };
 
 typedef bool(wait_inferior_exception_handler_t)(inferior_data_t* data,
-                                                const zx_port_packet_t* packet,
-                                                void* handler_arg);
+                                                const zx_port_packet_t* packet, void* handler_arg);
 
 void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t* regs);
 
@@ -95,7 +94,6 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info
                            zx::exception exception);
 
 thrd_t start_wait_inf_thread(inferior_data_t* inferior_data,
-                             wait_inferior_exception_handler_t* handler,
-                             void* handler_arg);
+                             wait_inferior_exception_handler_t* handler, void* handler_arg);
 
 bool join_wait_inf_thread(thrd_t wait_inf_thread);

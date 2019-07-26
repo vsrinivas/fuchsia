@@ -33,8 +33,7 @@ struct ArmIspRegisterDump {
 class ArmIspDevice;
 
 class ArmIspDeviceTester;
-using IspDeviceTesterType =
-    ddk::Device<ArmIspDeviceTester, ddk::Unbindable, ddk::Messageable>;
+using IspDeviceTesterType = ddk::Device<ArmIspDeviceTester, ddk::Unbindable, ddk::Messageable>;
 
 class ArmIspDeviceTester : public IspDeviceTesterType,
                            public ddk::EmptyProtocol<ZX_PROTOCOL_ISP_TEST> {
@@ -47,8 +46,7 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
   // On successful creation, |on_isp_unbind| is filled with a pointer to the
   // Disconnect function, so that the ArmIspDevice can notify the
   // ArmIspDeviceTester that it is going away.
-  static zx_status_t Create(ArmIspDevice* isp,
-                            fit::callback<void()>* on_isp_unbind);
+  static zx_status_t Create(ArmIspDevice* isp, fit::callback<void()>* on_isp_unbind);
 
   // Methods required by the ddk.
   void DdkRelease();
@@ -65,8 +63,7 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
   void Disconnect();
 
   static constexpr fuchsia_camera_test_IspTester_ops isp_tester_ops = {
-      .RunTests = fidl::Binder<ArmIspDeviceTester>::BindMember<
-          &ArmIspDeviceTester::RunTests>,
+      .RunTests = fidl::Binder<ArmIspDeviceTester>::BindMember<&ArmIspDeviceTester::RunTests>,
   };
 
   // ISP Tests:

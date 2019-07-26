@@ -83,135 +83,135 @@ class UsbPeripheral : public UsbPeripheralType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
                       public ddk::UsbDciInterfaceProtocol<UsbPeripheral>,
                       public ::llcpp::fuchsia::hardware::usb::peripheral::Device::Interface {
-public:
-    UsbPeripheral(zx_device_t* parent) : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
+ public:
+  UsbPeripheral(zx_device_t* parent) : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
 
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    // Device protocol implementation.
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-    void DdkUnbind();
-    void DdkRelease();
+  // Device protocol implementation.
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  void DdkUnbind();
+  void DdkRelease();
 
-    // UsbDciInterface implementation.
-    zx_status_t UsbDciInterfaceControl(const usb_setup_t* setup, const void* write_buffer,
-                                       size_t write_size, void* out_read_buffer, size_t read_size,
-                                       size_t* out_read_actual);
-    void UsbDciInterfaceSetConnected(bool connected);
-    void UsbDciInterfaceSetSpeed(usb_speed_t speed);
+  // UsbDciInterface implementation.
+  zx_status_t UsbDciInterfaceControl(const usb_setup_t* setup, const void* write_buffer,
+                                     size_t write_size, void* out_read_buffer, size_t read_size,
+                                     size_t* out_read_actual);
+  void UsbDciInterfaceSetConnected(bool connected);
+  void UsbDciInterfaceSetSpeed(usb_speed_t speed);
 
-    // FIDL messages
-    void SetDeviceDescriptor(DeviceDescriptor desc,
-                             SetDeviceDescriptorCompleter::Sync completer) override;
-    void AllocStringDesc(fidl::StringView name, AllocStringDescCompleter::Sync completer) override;
-    void AddFunction(FunctionDescriptor desc, AddFunctionCompleter::Sync completer) override;
-    void BindFunctions(BindFunctionsCompleter::Sync completer) override;
-    void ClearFunctions(ClearFunctionsCompleter::Sync completer) override;
-    void GetMode(GetModeCompleter::Sync completer) override;
-    void SetMode(uint32_t mode, SetModeCompleter::Sync completer) override;
-    void SetStateChangeListener(zx::channel listener,
-                                SetStateChangeListenerCompleter::Sync completer) override;
+  // FIDL messages
+  void SetDeviceDescriptor(DeviceDescriptor desc,
+                           SetDeviceDescriptorCompleter::Sync completer) override;
+  void AllocStringDesc(fidl::StringView name, AllocStringDescCompleter::Sync completer) override;
+  void AddFunction(FunctionDescriptor desc, AddFunctionCompleter::Sync completer) override;
+  void BindFunctions(BindFunctionsCompleter::Sync completer) override;
+  void ClearFunctions(ClearFunctionsCompleter::Sync completer) override;
+  void GetMode(GetModeCompleter::Sync completer) override;
+  void SetMode(uint32_t mode, SetModeCompleter::Sync completer) override;
+  void SetStateChangeListener(zx::channel listener,
+                              SetStateChangeListenerCompleter::Sync completer) override;
 
-    zx_status_t SetFunctionInterface(fbl::RefPtr<UsbFunction> function,
-                                     const usb_function_interface_protocol_t* interface);
-    zx_status_t AllocInterface(fbl::RefPtr<UsbFunction> function, uint8_t* out_intf_num);
-    zx_status_t AllocEndpoint(fbl::RefPtr<UsbFunction> function, uint8_t direction,
-                              uint8_t* out_address);
-    zx_status_t AllocStringDesc(fbl::String desc, uint8_t* out_index);
-    zx_status_t ValidateFunction(fbl::RefPtr<UsbFunction> function, void* descriptors, size_t length,
-                                 uint8_t* out_num_interfaces);
-    zx_status_t FunctionRegistered();
+  zx_status_t SetFunctionInterface(fbl::RefPtr<UsbFunction> function,
+                                   const usb_function_interface_protocol_t* interface);
+  zx_status_t AllocInterface(fbl::RefPtr<UsbFunction> function, uint8_t* out_intf_num);
+  zx_status_t AllocEndpoint(fbl::RefPtr<UsbFunction> function, uint8_t direction,
+                            uint8_t* out_address);
+  zx_status_t AllocStringDesc(fbl::String desc, uint8_t* out_index);
+  zx_status_t ValidateFunction(fbl::RefPtr<UsbFunction> function, void* descriptors, size_t length,
+                               uint8_t* out_num_interfaces);
+  zx_status_t FunctionRegistered();
 
-    inline const ddk::UsbDciProtocolClient& dci() const { return dci_; }
-    inline size_t ParentRequestSize() const { return parent_request_size_; }
-    void UsbPeripheralRequestQueue(usb_request_t* usb_request,
-                                   const usb_request_complete_t* complete_cb);
+  inline const ddk::UsbDciProtocolClient& dci() const { return dci_; }
+  inline size_t ParentRequestSize() const { return parent_request_size_; }
+  void UsbPeripheralRequestQueue(usb_request_t* usb_request,
+                                 const usb_request_complete_t* complete_cb);
 
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(UsbPeripheral);
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(UsbPeripheral);
 
-    static constexpr uint8_t MAX_INTERFACES = 32;
-    static constexpr uint8_t MAX_STRINGS = 255;
+  static constexpr uint8_t MAX_INTERFACES = 32;
+  static constexpr uint8_t MAX_STRINGS = 255;
 
-    // OUT endpoints are in range 1 - 15, IN endpoints are in range 17 - 31.
-    static constexpr uint8_t OUT_EP_START = 1;
-    static constexpr uint8_t OUT_EP_END = 15;
-    static constexpr uint8_t IN_EP_START = 17;
-    static constexpr uint8_t IN_EP_END = 31;
+  // OUT endpoints are in range 1 - 15, IN endpoints are in range 17 - 31.
+  static constexpr uint8_t OUT_EP_START = 1;
+  static constexpr uint8_t OUT_EP_END = 15;
+  static constexpr uint8_t IN_EP_START = 17;
+  static constexpr uint8_t IN_EP_END = 31;
 
-    // For mapping bEndpointAddress value to/from index in range 0 - 31.
-    static inline uint8_t EpAddressToIndex(uint8_t addr) {
-        return static_cast<uint8_t>(((addr) & 0xF) | (((addr) & 0x80) >> 3));
-    }
-    static inline uint8_t EpIndexToAddress(uint8_t index) {
-        return static_cast<uint8_t>(((index) & 0xF) | (((index) & 0x10) << 3));
-    }
+  // For mapping bEndpointAddress value to/from index in range 0 - 31.
+  static inline uint8_t EpAddressToIndex(uint8_t addr) {
+    return static_cast<uint8_t>(((addr)&0xF) | (((addr)&0x80) >> 3));
+  }
+  static inline uint8_t EpIndexToAddress(uint8_t index) {
+    return static_cast<uint8_t>(((index)&0xF) | (((index)&0x10) << 3));
+  }
 
-    zx_status_t Init();
-    zx_status_t AddFunction(FunctionDescriptor desc);
-    zx_status_t BindFunctions();
-    zx_status_t ClearFunctions();
-    zx_status_t DeviceStateChanged() __TA_REQUIRES(lock_);
-    zx_status_t AddFunctionDevices() __TA_REQUIRES(lock_);
-    void RemoveFunctionDevices() __TA_REQUIRES(lock_);
-    zx_status_t GetDescriptor(uint8_t request_type, uint16_t value, uint16_t index, void* buffer,
-                              size_t length, size_t* out_actual);
-    zx_status_t SetConfiguration(uint8_t configuration);
-    zx_status_t SetInterface(uint8_t interface, uint8_t alt_setting);
-    zx_status_t SetDefaultConfig(FunctionDescriptor* descriptors, size_t length);
-    int ListenerCleanupThread();
-    void RequestComplete(usb_request_t* req);
+  zx_status_t Init();
+  zx_status_t AddFunction(FunctionDescriptor desc);
+  zx_status_t BindFunctions();
+  zx_status_t ClearFunctions();
+  zx_status_t DeviceStateChanged() __TA_REQUIRES(lock_);
+  zx_status_t AddFunctionDevices() __TA_REQUIRES(lock_);
+  void RemoveFunctionDevices() __TA_REQUIRES(lock_);
+  zx_status_t GetDescriptor(uint8_t request_type, uint16_t value, uint16_t index, void* buffer,
+                            size_t length, size_t* out_actual);
+  zx_status_t SetConfiguration(uint8_t configuration);
+  zx_status_t SetInterface(uint8_t interface, uint8_t alt_setting);
+  zx_status_t SetDefaultConfig(FunctionDescriptor* descriptors, size_t length);
+  int ListenerCleanupThread();
+  void RequestComplete(usb_request_t* req);
 
-    // Our parent's DCI protocol.
-    const ddk::UsbDciProtocolClient dci_;
-    // Our parent's optional USB switch protocol.
-    const ddk::UsbModeSwitchProtocolClient ums_;
-    // USB device descriptor set via ioctl_usb_peripheral_set_device_desc()
-    usb_device_descriptor_t device_desc_ = {};
-    // USB configuration descriptor, synthesized from our functions' descriptors.
-    fbl::Array<uint8_t> config_desc_;
-    // Map from interface number to function.
-    fbl::RefPtr<UsbFunction> interface_map_[MAX_INTERFACES];
-    // Map from endpoint index to function.
-    fbl::RefPtr<UsbFunction> endpoint_map_[USB_MAX_EPS];
-    // Strings for USB string descriptors.
-    fbl::Vector<fbl::String> strings_ __TA_GUARDED(lock_);
-    // List of usb_function_t.
-    fbl::Vector<fbl::RefPtr<UsbFunction>> functions_;
-    // mutex for protecting our state
-    fbl::Mutex lock_;
-    // Current USB mode set via ioctl_usb_peripheral_set_mode()
-    usb_mode_t usb_mode_ __TA_GUARDED(lock_) = USB_MODE_NONE;
-    // Our parent's USB mode.
-    usb_mode_t dci_usb_mode_ __TA_GUARDED(lock_) = USB_MODE_NONE;
-    // Set if ioctl_usb_peripheral_bind_functions() has been called
-    // and we have a complete list of our function.
-    bool functions_bound_ __TA_GUARDED(lock_) = false;
-    // True if all our functions have registered their usb_function_interface_protocol_t.
-    bool functions_registered_ __TA_GUARDED(lock_) = false;
-    // True if we have added child devices for our functions.
-    bool function_devs_added_ __TA_GUARDED(lock_) = false;
-    // True if we are connected to a host,
-    bool connected_ __TA_GUARDED(lock_) = false;
-    // True if we are shutting down/clearing functions
-    bool shutting_down_ = false;
-    // Current configuration number selected via USB_REQ_SET_CONFIGURATION
-    // (will be 0 or 1 since we currently do not support multiple configurations).
-    uint8_t configuration_;
-    // USB connection speed.
-    usb_speed_t speed_;
-    // Size of our parent's usb_request_t.
-    size_t parent_request_size_;
-    // Registered listener
-    zx::channel listener_;
+  // Our parent's DCI protocol.
+  const ddk::UsbDciProtocolClient dci_;
+  // Our parent's optional USB switch protocol.
+  const ddk::UsbModeSwitchProtocolClient ums_;
+  // USB device descriptor set via ioctl_usb_peripheral_set_device_desc()
+  usb_device_descriptor_t device_desc_ = {};
+  // USB configuration descriptor, synthesized from our functions' descriptors.
+  fbl::Array<uint8_t> config_desc_;
+  // Map from interface number to function.
+  fbl::RefPtr<UsbFunction> interface_map_[MAX_INTERFACES];
+  // Map from endpoint index to function.
+  fbl::RefPtr<UsbFunction> endpoint_map_[USB_MAX_EPS];
+  // Strings for USB string descriptors.
+  fbl::Vector<fbl::String> strings_ __TA_GUARDED(lock_);
+  // List of usb_function_t.
+  fbl::Vector<fbl::RefPtr<UsbFunction>> functions_;
+  // mutex for protecting our state
+  fbl::Mutex lock_;
+  // Current USB mode set via ioctl_usb_peripheral_set_mode()
+  usb_mode_t usb_mode_ __TA_GUARDED(lock_) = USB_MODE_NONE;
+  // Our parent's USB mode.
+  usb_mode_t dci_usb_mode_ __TA_GUARDED(lock_) = USB_MODE_NONE;
+  // Set if ioctl_usb_peripheral_bind_functions() has been called
+  // and we have a complete list of our function.
+  bool functions_bound_ __TA_GUARDED(lock_) = false;
+  // True if all our functions have registered their usb_function_interface_protocol_t.
+  bool functions_registered_ __TA_GUARDED(lock_) = false;
+  // True if we have added child devices for our functions.
+  bool function_devs_added_ __TA_GUARDED(lock_) = false;
+  // True if we are connected to a host,
+  bool connected_ __TA_GUARDED(lock_) = false;
+  // True if we are shutting down/clearing functions
+  bool shutting_down_ = false;
+  // Current configuration number selected via USB_REQ_SET_CONFIGURATION
+  // (will be 0 or 1 since we currently do not support multiple configurations).
+  uint8_t configuration_;
+  // USB connection speed.
+  usb_speed_t speed_;
+  // Size of our parent's usb_request_t.
+  size_t parent_request_size_;
+  // Registered listener
+  zx::channel listener_;
 
-    thrd_t thread_ = 0;
+  thrd_t thread_ = 0;
 
-    bool cache_enabled_ = true;
-    bool cache_report_enabled_ = true;
+  bool cache_enabled_ = true;
+  bool cache_report_enabled_ = true;
 
-    fbl::Mutex pending_requests_lock_;
-    usb::BorrowedRequestList<void> pending_requests_ __TA_GUARDED(pending_requests_lock_);
+  fbl::Mutex pending_requests_lock_;
+  usb::BorrowedRequestList<void> pending_requests_ __TA_GUARDED(pending_requests_lock_);
 };
 
-} // namespace usb_peripheral
+}  // namespace usb_peripheral

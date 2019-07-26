@@ -38,7 +38,7 @@
  * @firmware_path: Alternative firmware path.
  */
 struct brcmf_mp_global_t {
-    char firmware_path[BRCMF_FW_ALTPATH_LEN];
+  char firmware_path[BRCMF_FW_ALTPATH_LEN];
 };
 
 extern struct brcmf_mp_global_t brcmf_mp_global;
@@ -47,10 +47,10 @@ extern struct brcmf_mp_global_t brcmf_mp_global;
  * struct brcmfmac_sdio_pd - SDIO-specific device module parameters
  */
 struct brcmfmac_sdio_pd {
-    int sd_sgentry_align;
-    int sd_head_align;
-    int drive_strength;
-    int oob_irq_supported;
+  int sd_sgentry_align;
+  int sd_head_align;
+  int drive_strength;
+  int oob_irq_supported;
 };
 
 /**
@@ -65,22 +65,22 @@ struct brcmfmac_sdio_pd {
  * @bus: Bus specific platform data. Only SDIO at the mmoment.
  */
 struct brcmf_mp_device {
-    bool p2p_enable;
-    unsigned int feature_disable;
-    int fcmode;
-    bool roamoff;
-    bool ignore_probe_fail;
-    struct brcmfmac_pd_cc* country_codes;
-    struct {
-        struct brcmfmac_sdio_pd sdio;
-    } bus;
+  bool p2p_enable;
+  unsigned int feature_disable;
+  int fcmode;
+  bool roamoff;
+  bool ignore_probe_fail;
+  struct brcmfmac_pd_cc* country_codes;
+  struct {
+    struct brcmfmac_sdio_pd sdio;
+  } bus;
 };
 
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp);
 
 struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
-                                               enum brcmf_bus_type bus_type,
-                                               uint32_t chip, uint32_t chiprev);
+                                               enum brcmf_bus_type bus_type, uint32_t chip,
+                                               uint32_t chiprev);
 void brcmf_release_module_param(struct brcmf_mp_device* module_param);
 
 /* Sets dongle media info (drv_version, mac address). */

@@ -17,16 +17,15 @@ struct thread_entry {
 };
 }  // namespace
 
-fbl::String DebugInfoRetriever::GetInfo(const zx::process* process,
-                                        zx_koid_t* thread_ids, size_t num) {
+fbl::String DebugInfoRetriever::GetInfo(const zx::process* process, zx_koid_t* thread_ids,
+                                        size_t num) {
   assert(process);
   zx_koid_t thread_ids_storage[kMaxThreads];
 
   if (thread_ids == nullptr || num == 0) {
     return "ERROR (CF-812): Full thread dump disabled";
     if (process->get_info(ZX_INFO_PROCESS_THREADS, &thread_ids_storage,
-                          kMaxThreads * sizeof(zx_koid_t), &num,
-                          nullptr) != ZX_OK) {
+                          kMaxThreads * sizeof(zx_koid_t), &num, nullptr) != ZX_OK) {
       return "ERROR: failed to get threads for process";
     };
     thread_ids = thread_ids_storage;
@@ -37,16 +36,14 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process,
 
   for (size_t i = 0; i < num; i++) {
     zx::thread thread;
-    if (process->get_child(thread_ids[i], ZX_RIGHT_SAME_RIGHTS, &thread) ==
-        ZX_OK) {
+    if (process->get_child(thread_ids[i], ZX_RIGHT_SAME_RIGHTS, &thread) == ZX_OK) {
       threads.push_back({.id = thread_ids[i], .thread = std::move(thread)});
     };
   }
 
   for (auto it = threads.begin(); it != threads.end();) {
     zx_info_thread_t thread_info;
-    it->thread.get_info(ZX_INFO_THREAD, &thread_info, sizeof(thread_info),
-                        nullptr, nullptr);
+    it->thread.get_info(ZX_INFO_THREAD, &thread_info, sizeof(thread_info), nullptr, nullptr);
 
     auto prev = it++;
     // All threads will resume when their suspend token goes out of scope.
@@ -62,9 +59,8 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process,
     zx_signals_t signals = 0;
 
     auto prev = it++;
-    if ((status = prev->thread.wait_one(
-             ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED,
-             zx::deadline_after(zx::msec(100)), &signals)) != ZX_OK ||
+    if ((status = prev->thread.wait_one(ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED,
+                                        zx::deadline_after(zx::msec(100)), &signals)) != ZX_OK ||
         (signals & ZX_THREAD_TERMINATED)) {
       FXL_LOG(INFO) << "Thread failed to suspend in time. Status: " << status
                     << ", signals: " << signals;
@@ -89,8 +85,7 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process,
     fprintf(output, "%s (%lu):\n", entry.name.c_str(), entry.id);
 
     zx_thread_state_general_regs_t regs;
-    if ((status = inspector_read_general_regs(entry.thread.get(), &regs)) !=
-        ZX_OK) {
+    if ((status = inspector_read_general_regs(entry.thread.get(), &regs)) != ZX_OK) {
       fprintf(output, "ERROR: failed to read regs, code=%d", status);
       continue;
     };
@@ -116,8 +111,8 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process,
 
     inspector_dso_print_list(output, dso.info);
     fprintf(output, "arch: %s\n", arch);
-    inspector_print_backtrace(output, process->get(), entry.thread.get(),
-                              dso.info, pc, sp, fp, true);
+    inspector_print_backtrace(output, process->get(), entry.thread.get(), dso.info, pc, sp, fp,
+                              true);
 
     fprintf(output, "\n");
   }

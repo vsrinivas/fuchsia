@@ -20,36 +20,36 @@ namespace blobfs {
 // This class is movable and copyable.
 // This class is thread-compatible.
 class VmoBufferView {
-public:
-    VmoBufferView() = default;
-    VmoBufferView(VmoBuffer* buffer, size_t start, size_t length) :
-        buffer_(buffer), start_(start % buffer->capacity()), length_(length) {
-        ZX_DEBUG_ASSERT(length <= buffer->capacity());
-    }
-    VmoBufferView(const VmoBufferView&) = default;
-    VmoBufferView& operator=(const VmoBufferView&) = default;
-    VmoBufferView(VmoBufferView&& other) = default;
-    VmoBufferView& operator=(VmoBufferView&& other) = default;
-    ~VmoBufferView() = default;
+ public:
+  VmoBufferView() = default;
+  VmoBufferView(VmoBuffer* buffer, size_t start, size_t length)
+      : buffer_(buffer), start_(start % buffer->capacity()), length_(length) {
+    ZX_DEBUG_ASSERT(length <= buffer->capacity());
+  }
+  VmoBufferView(const VmoBufferView&) = default;
+  VmoBufferView& operator=(const VmoBufferView&) = default;
+  VmoBufferView(VmoBufferView&& other) = default;
+  VmoBufferView& operator=(VmoBufferView&& other) = default;
+  ~VmoBufferView() = default;
 
-    size_t start() const { return start_; }
-    size_t length() const { return length_; }
-    vmoid_t vmoid() const { return buffer_ ? buffer_->vmoid() : VMOID_INVALID; }
+  size_t start() const { return start_; }
+  size_t length() const { return length_; }
+  vmoid_t vmoid() const { return buffer_ ? buffer_->vmoid() : VMOID_INVALID; }
 
-    // Returns one block of data starting at block |index| within this view.
-    void* Data(size_t index) {
-        return const_cast<void*>(const_cast<const VmoBufferView*>(this)->Data(index));
-    }
+  // Returns one block of data starting at block |index| within this view.
+  void* Data(size_t index) {
+    return const_cast<void*>(const_cast<const VmoBufferView*>(this)->Data(index));
+  }
 
-    const void* Data(size_t index) const {
-        ZX_DEBUG_ASSERT_MSG(index < length_, "Accessing data outside the length of the view");
-        return buffer_->Data((start_ + index) % buffer_->capacity());
-    }
+  const void* Data(size_t index) const {
+    ZX_DEBUG_ASSERT_MSG(index < length_, "Accessing data outside the length of the view");
+    return buffer_->Data((start_ + index) % buffer_->capacity());
+  }
 
-private:
-    VmoBuffer* buffer_ = nullptr;
-    size_t start_ = 0;
-    size_t length_ = 0;
+ private:
+  VmoBuffer* buffer_ = nullptr;
+  size_t start_ = 0;
+  size_t length_ = 0;
 };
 
-} // namespace blobfs
+}  // namespace blobfs

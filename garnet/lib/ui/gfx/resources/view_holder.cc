@@ -77,7 +77,8 @@ escher::BoundingBox ViewHolder::GetWorldBoundingBox() const {
   return GetGlobalTransform() * GetLocalBoundingBox();
 }
 
-void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props, ErrorReporter* error_reporter) {
+void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props,
+                                   ErrorReporter* error_reporter) {
   if (!fidl::Equals(props, view_properties_)) {
     view_properties_ = std::move(props);
     // This code transforms the bounding box given to the view holder

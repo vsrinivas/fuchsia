@@ -19,8 +19,8 @@ TEST_F(SystemMonitorRootResourceTest, GatherData) {
   // Arbitrary choice of system calls to try out the handle.
   zx_info_cpu_stats_t stats;
   size_t actual, avail;
-  status = zx_object_get_info(root_resource, ZX_INFO_CPU_STATS, &stats,
-                              sizeof(stats), &actual, &avail);
+  status =
+      zx_object_get_info(root_resource, ZX_INFO_CPU_STATS, &stats, sizeof(stats), &actual, &avail);
   EXPECT_EQ(status, ZX_OK);
   // This test is not about this data, so only a few sanity checks are
   // performed.

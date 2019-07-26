@@ -24,8 +24,7 @@
 // TODO(turnage): Allow a range of packet count for the client instead of
 // forcing a particular number.
 static constexpr uint32_t kPacketCountForClientForced = 5;
-static constexpr uint32_t kDefaultPacketCountForClient =
-    kPacketCountForClientForced;
+static constexpr uint32_t kDefaultPacketCountForClient = kPacketCountForClientForced;
 
 // We want at least 16 packets codec side because that's the worst case scenario
 // for h264 keeping frames around (if the media has set its reference frame
@@ -48,16 +47,13 @@ class CodecAdapterSW : public CodecAdapter {
 
   ~CodecAdapterSW() = default;
 
-  bool IsCoreCodecRequiringOutputConfigForFormatDetection() override {
-    return false;
-  }
+  bool IsCoreCodecRequiringOutputConfigForFormatDetection() override { return false; }
 
   bool IsCoreCodecMappedBufferNeeded(CodecPort port) override { return true; }
 
   bool IsCoreCodecHwBased() override { return false; }
 
-  void CoreCodecInit(const fuchsia::media::FormatDetails&
-                         initial_input_format_details) override {
+  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override {
     if (!initial_input_format_details.has_format_details_version_ordinal()) {
       events_->onCoreCodecFailCodec(
           "CoreCodecInit(): Initial input format details missing version "
@@ -67,8 +63,8 @@ class CodecAdapterSW : public CodecAdapter {
     // Will always be 0 for now.
     input_format_details_version_ordinal_ =
         initial_input_format_details.format_details_version_ordinal();
-    zx_status_t result = input_processing_loop_.StartThread(
-        "input_processing_thread_", &input_processing_thread_);
+    zx_status_t result =
+        input_processing_loop_.StartThread("input_processing_thread_", &input_processing_thread_);
     if (result != ZX_OK) {
       events_->onCoreCodecFailCodec(
           "CodecCodecInit(): Failed to start input processing thread with "
@@ -87,8 +83,7 @@ class CodecAdapterSW : public CodecAdapter {
   }
 
   void CoreCodecConfigureBuffers(
-      CodecPort port,
-      const std::vector<std::unique_ptr<CodecPacket>>& packets) override {
+      CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) override {
     if (port != kOutputPort) {
       return;
     }
@@ -96,8 +91,7 @@ class CodecAdapterSW : public CodecAdapter {
     for (auto& packet : packets) {
       all_packets.push_back(packet.get());
     }
-    std::shuffle(all_packets.begin(), all_packets.end(),
-                 not_for_security_prng_);
+    std::shuffle(all_packets.begin(), all_packets.end(), not_for_security_prng_);
     for (CodecPacket* packet : all_packets) {
       free_output_packets_.Push(packet);
     }
@@ -112,27 +106,22 @@ class CodecAdapterSW : public CodecAdapter {
     output_buffer_pool_.Reset(/*keep_data=*/true);
     LoadStagedOutputBuffers();
 
-    zx_status_t post_result = async::PostTask(
-        input_processing_loop_.dispatcher(), [this] { ProcessInputLoop(); });
-    ZX_ASSERT_MSG(
-        post_result == ZX_OK,
-        "async::PostTask() failed to post input processing loop - result: %d\n",
-        post_result);
+    zx_status_t post_result =
+        async::PostTask(input_processing_loop_.dispatcher(), [this] { ProcessInputLoop(); });
+    ZX_ASSERT_MSG(post_result == ZX_OK,
+                  "async::PostTask() failed to post input processing loop - result: %d\n",
+                  post_result);
   }
 
   void CoreCodecQueueInputFormatDetails(
-      const fuchsia::media::FormatDetails& per_stream_override_format_details)
-      override {
+      const fuchsia::media::FormatDetails& per_stream_override_format_details) override {
     // TODO(turnage): Accept midstream and interstream input format changes.
     // For now these should always be 0, so assert to notice if anything
     // changes.
-    ZX_ASSERT(
-        per_stream_override_format_details
-            .has_format_details_version_ordinal() &&
-        per_stream_override_format_details.format_details_version_ordinal() ==
-            input_format_details_version_ordinal_);
-    input_queue_.Push(
-        CodecInputItem::FormatDetails(per_stream_override_format_details));
+    ZX_ASSERT(per_stream_override_format_details.has_format_details_version_ordinal() &&
+              per_stream_override_format_details.format_details_version_ordinal() ==
+                  input_format_details_version_ordinal_);
+    input_queue_.Push(CodecInputItem::FormatDetails(per_stream_override_format_details));
   }
 
   void CoreCodecQueueInputPacket(CodecPacket* packet) override {
@@ -151,8 +140,7 @@ class CodecAdapterSW : public CodecAdapter {
     WaitForInputProcessingLoopToEnd();
     CleanUpAfterStream();
 
-    auto queued_input_items =
-        BlockingMpscQueue<CodecInputItem>::Extract(std::move(input_queue_));
+    auto queued_input_items = BlockingMpscQueue<CodecInputItem>::Extract(std::move(input_queue_));
     while (!queued_input_items.empty()) {
       CodecInputItem input_item = std::move(queued_input_items.front());
       queued_input_items.pop();
@@ -174,8 +162,7 @@ class CodecAdapterSW : public CodecAdapter {
       LocalOutput local_output;
       {
         std::lock_guard<std::mutex> lock(lock_);
-        ZX_DEBUG_ASSERT(in_use_by_client_.find(packet) !=
-                        in_use_by_client_.end());
+        ZX_DEBUG_ASSERT(in_use_by_client_.find(packet) != in_use_by_client_.end());
         local_output = std::move(in_use_by_client_[packet]);
         in_use_by_client_.erase(packet);
       }
@@ -212,14 +199,10 @@ class CodecAdapterSW : public CodecAdapter {
     // Nothing to do here.
   }
 
-  void CoreCodecMidStreamOutputBufferReConfigFinish() override {
-    LoadStagedOutputBuffers();
-  }
+  void CoreCodecMidStreamOutputBufferReConfigFinish() override { LoadStagedOutputBuffers(); }
 
-  std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
-  CoreCodecBuildNewOutputConstraints(
-      uint64_t stream_lifetime_ordinal,
-      uint64_t new_output_buffer_constraints_version_ordinal,
+  std::unique_ptr<const fuchsia::media::StreamOutputConstraints> CoreCodecBuildNewOutputConstraints(
+      uint64_t stream_lifetime_ordinal, uint64_t new_output_buffer_constraints_version_ordinal,
       bool buffer_constraints_action_required) override {
     auto [format_details, per_packet_buffer_bytes] = OutputFormatDetails();
 
@@ -230,27 +213,23 @@ class CodecAdapterSW : public CodecAdapter {
     // For the moment, there will be only one StreamOutputConstraints, and it'll
     // need output buffers configured for it.
     ZX_DEBUG_ASSERT(buffer_constraints_action_required);
-    config->set_buffer_constraints_action_required(
-        buffer_constraints_action_required);
+    config->set_buffer_constraints_action_required(buffer_constraints_action_required);
     auto* constraints = config->mutable_buffer_constraints();
     constraints->set_buffer_constraints_version_ordinal(
         new_output_buffer_constraints_version_ordinal);
     // For the moment, let's just force the client to allocate this exact size.
     constraints->set_per_packet_buffer_bytes_min(per_packet_buffer_bytes);
-    constraints->set_per_packet_buffer_bytes_recommended(
-        per_packet_buffer_bytes);
+    constraints->set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes);
     constraints->set_per_packet_buffer_bytes_max(per_packet_buffer_bytes);
 
     // For the moment, let's just force the client to set this exact number of
     // frames for the codec.
-    constraints->set_packet_count_for_server_min(kPacketCount -
-                                                 kPacketCountForClientForced);
-    constraints->set_packet_count_for_server_recommended(
-        kPacketCount - kPacketCountForClientForced);
-    constraints->set_packet_count_for_server_recommended_max(
-        kPacketCount - kPacketCountForClientForced);
-    constraints->set_packet_count_for_server_max(kPacketCount -
-                                                 kPacketCountForClientForced);
+    constraints->set_packet_count_for_server_min(kPacketCount - kPacketCountForClientForced);
+    constraints->set_packet_count_for_server_recommended(kPacketCount -
+                                                         kPacketCountForClientForced);
+    constraints->set_packet_count_for_server_recommended_max(kPacketCount -
+                                                             kPacketCountForClientForced);
+    constraints->set_packet_count_for_server_max(kPacketCount - kPacketCountForClientForced);
 
     constraints->set_packet_count_for_client_min(kPacketCountForClientForced);
     constraints->set_packet_count_for_client_max(kPacketCountForClientForced);
@@ -263,8 +242,7 @@ class CodecAdapterSW : public CodecAdapter {
     default_settings->set_buffer_lifetime_ordinal(0);
     default_settings->set_buffer_constraints_version_ordinal(
         new_output_buffer_constraints_version_ordinal);
-    default_settings->set_packet_count_for_server(kPacketCount -
-                                                  kPacketCountForClientForced);
+    default_settings->set_packet_count_for_server(kPacketCount - kPacketCountForClientForced);
     default_settings->set_packet_count_for_client(kDefaultPacketCountForClient);
     default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
     default_settings->set_single_buffer_mode(false);
@@ -291,23 +269,20 @@ class CodecAdapterSW : public CodecAdapter {
 
     std::condition_variable stream_stopped_condition;
     bool stream_stopped = false;
-    zx_status_t post_result =
-        async::PostTask(input_processing_loop_.dispatcher(),
-                        [this, &stream_stopped, &stream_stopped_condition] {
-                          {
-                            std::lock_guard<std::mutex> lock(lock_);
-                            stream_stopped = true;
-                          }
-                          stream_stopped_condition.notify_all();
-                        });
-    ZX_ASSERT_MSG(
-        post_result == ZX_OK,
-        "async::PostTask() failed to post input processing loop - result: %d\n",
-        post_result);
+    zx_status_t post_result = async::PostTask(input_processing_loop_.dispatcher(),
+                                              [this, &stream_stopped, &stream_stopped_condition] {
+                                                {
+                                                  std::lock_guard<std::mutex> lock(lock_);
+                                                  stream_stopped = true;
+                                                }
+                                                stream_stopped_condition.notify_all();
+                                              });
+    ZX_ASSERT_MSG(post_result == ZX_OK,
+                  "async::PostTask() failed to post input processing loop - result: %d\n",
+                  post_result);
 
     std::unique_lock<std::mutex> lock(lock_);
-    stream_stopped_condition.wait(lock,
-                                  [&stream_stopped] { return stream_stopped; });
+    stream_stopped_condition.wait(lock, [&stream_stopped] { return stream_stopped; });
   }
 
   // We don't give the codec any buffers in its output pool until
@@ -330,8 +305,7 @@ class CodecAdapterSW : public CodecAdapter {
 
   // Returns the format details of the output and the bytes needed to store each
   // output packet.
-  virtual std::pair<fuchsia::media::FormatDetails, size_t>
-  OutputFormatDetails() = 0;
+  virtual std::pair<fuchsia::media::FormatDetails, size_t> OutputFormatDetails() = 0;
 
   BlockingMpscQueue<CodecInputItem> input_queue_;
   BlockingMpscQueue<CodecPacket*> free_output_packets_;

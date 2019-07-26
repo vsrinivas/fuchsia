@@ -39,15 +39,13 @@ namespace run {
 static constexpr char kFuchsiaTest[] = "fuchsia.test";
 
 class TestMetadata {
-  using Services =
-      std::vector<std::pair<std::string, fuchsia::sys::LaunchInfo>>;
+  using Services = std::vector<std::pair<std::string, fuchsia::sys::LaunchInfo>>;
 
  public:
   TestMetadata();
   ~TestMetadata();
 
-  bool ParseFromString(const std::string& cmx_data,
-                       const std::string& filename);
+  bool ParseFromString(const std::string& cmx_data, const std::string& filename);
 
   bool HasError() const { return json_parser_.HasError(); }
   std::string error_str() const { return json_parser_.error_str(); }
@@ -56,13 +54,11 @@ class TestMetadata {
 
   bool HasServices() const { return !service_url_pair_.empty(); }
   Services TakeServices() { return std::move(service_url_pair_); }
-  const std::vector<std::string>& system_services() const {
-    return system_services_;
-  }
+  const std::vector<std::string>& system_services() const { return system_services_; }
 
  private:
-  fuchsia::sys::LaunchInfo GetLaunchInfo(
-      const rapidjson::Document::ValueType& value, const std::string& name);
+  fuchsia::sys::LaunchInfo GetLaunchInfo(const rapidjson::Document::ValueType& value,
+                                         const std::string& name);
 
   json::JSONParser json_parser_;
   bool null_ = true;

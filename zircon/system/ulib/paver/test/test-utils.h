@@ -21,41 +21,38 @@ constexpr uint32_t kSkipBlockSize = kPageSize * kPagesPerBlock;
 constexpr uint32_t kNumBlocks = 20;
 
 class BlockDevice {
-public:
-    static void Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
-                       fbl::unique_ptr<BlockDevice>* device);
+ public:
+  static void Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
+                     fbl::unique_ptr<BlockDevice>* device);
 
-    ~BlockDevice() {
-        ramdisk_destroy(client_);
-    }
+  ~BlockDevice() { ramdisk_destroy(client_); }
 
-    // Does not transfer ownership of the file descriptor.
-    int fd() { return ramdisk_get_block_fd(client_); }
+  // Does not transfer ownership of the file descriptor.
+  int fd() { return ramdisk_get_block_fd(client_); }
 
-private:
-    BlockDevice(ramdisk_client_t* client)
-        : client_(client) {}
+ private:
+  BlockDevice(ramdisk_client_t* client) : client_(client) {}
 
-    ramdisk_client_t* client_;
+  ramdisk_client_t* client_;
 };
 
 class SkipBlockDevice {
-public:
-    static void Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
-                       fbl::unique_ptr<SkipBlockDevice>* device);
+ public:
+  static void Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
+                     fbl::unique_ptr<SkipBlockDevice>* device);
 
-    fbl::unique_fd devfs_root() { return ctl_->devfs_root().duplicate(); }
+  fbl::unique_fd devfs_root() { return ctl_->devfs_root().duplicate(); }
 
-    fzl::VmoMapper& mapper() { return mapper_; }
+  fzl::VmoMapper& mapper() { return mapper_; }
 
-    ~SkipBlockDevice() = default;
+  ~SkipBlockDevice() = default;
 
-private:
-    SkipBlockDevice(fbl::RefPtr<ramdevice_client::RamNandCtl> ctl,
-                    ramdevice_client::RamNand ram_nand, fzl::VmoMapper mapper)
-        : ctl_(std::move(ctl)), ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
+ private:
+  SkipBlockDevice(fbl::RefPtr<ramdevice_client::RamNandCtl> ctl, ramdevice_client::RamNand ram_nand,
+                  fzl::VmoMapper mapper)
+      : ctl_(std::move(ctl)), ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
 
-    fbl::RefPtr<ramdevice_client::RamNandCtl> ctl_;
-    ramdevice_client::RamNand ram_nand_;
-    fzl::VmoMapper mapper_;
+  fbl::RefPtr<ramdevice_client::RamNandCtl> ctl_;
+  ramdevice_client::RamNand ram_nand_;
+  fzl::VmoMapper mapper_;
 };

@@ -24,9 +24,8 @@ class Runner;
 class ImageImpl {
  public:
   static constexpr zx_pixel_format_t kFormat = ZX_PIXEL_FORMAT_ARGB_8888;
-  ImageImpl(Runner* runner, uint32_t width, uint32_t height,
-            bool scalable = false, uint8_t alpha = 0xff,
-            bool premultiplied = false);
+  ImageImpl(Runner* runner, uint32_t width, uint32_t height, bool scalable = false,
+            uint8_t alpha = 0xff, bool premultiplied = false);
 
   uint64_t id() const { return id_; }
   bool is_scalable() const { return scalable_; }
@@ -38,8 +37,7 @@ class ImageImpl {
   static const ImageImpl* GetImageImpl(const Image* image);
 
  private:
-  static constexpr zx_pixel_format_t kBytesPerPixel =
-      ZX_PIXEL_FORMAT_BYTES(kFormat);
+  static constexpr zx_pixel_format_t kBytesPerPixel = ZX_PIXEL_FORMAT_BYTES(kFormat);
 
   bool is_fg_pixel(uint32_t x, uint32_t y) const;
 
@@ -68,13 +66,11 @@ class Image : internal::ImageImpl {
   uint32_t height() const { return internal::ImageImpl::height(); }
 
  private:
-  Image(internal::Runner* runner, uint32_t width, uint32_t height,
-        bool scalable = false)
+  Image(internal::Runner* runner, uint32_t width, uint32_t height, bool scalable = false)
       : internal::ImageImpl(runner, width, height, scalable, 0xff, false) {}
-  Image(internal::Runner* runner, uint32_t width, uint32_t height,
-        uint8_t alpha, bool premultiplied)
-      : internal::ImageImpl(runner, width, height, false, alpha,
-                            premultiplied) {}
+  Image(internal::Runner* runner, uint32_t width, uint32_t height, uint8_t alpha,
+        bool premultiplied)
+      : internal::ImageImpl(runner, width, height, false, alpha, premultiplied) {}
   friend Context;
   friend internal::ImageImpl;
 };

@@ -25,8 +25,8 @@ struct UnbindTaskOpts {
 // on the device that |ScheduleRemove| was called on.
 class UnbindTask final : public Task {
  public:
-  static fbl::RefPtr<UnbindTask> Create(
-      fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion = nullptr);
+  static fbl::RefPtr<UnbindTask> Create(fbl::RefPtr<Device> device, UnbindTaskOpts opts,
+                                        Completion completion = nullptr);
 
   // Don't invoke this, use Create
   UnbindTask(fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion);
@@ -50,6 +50,6 @@ class UnbindTask final : public Task {
   bool devhost_requested_;
 };
 
-} // namespace devmgr
+}  // namespace devmgr
 
 #endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_UNBIND_TASK_H_

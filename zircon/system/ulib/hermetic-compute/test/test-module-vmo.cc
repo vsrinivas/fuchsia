@@ -6,9 +6,8 @@
 
 #include <numeric>
 
-struct TestEngine : public HermeticComputeEngine<
-    TestEngine, std::basic_string_view<uint8_t>> {
-    int64_t operator()(const std::basic_string_view<uint8_t>& data) {
-        return std::accumulate(data.begin(), data.end(), 0);
-    }
+struct TestEngine : public HermeticComputeEngine<TestEngine, std::basic_string_view<uint8_t>> {
+  int64_t operator()(const std::basic_string_view<uint8_t>& data) {
+    return std::accumulate(data.begin(), data.end(), 0);
+  }
 };

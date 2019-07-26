@@ -11,12 +11,12 @@
 __BEGIN_CDECLS
 
 typedef struct {
-    uint32_t keymask[8];
+  uint32_t keymask[8];
 } hid_keys_t;
 
 typedef struct keychar {
-    uint8_t c;
-    uint8_t shift_c;
+  uint8_t c;
+  uint8_t shift_c;
 } keychar_t;
 
 #define KEYMAP_SIZE 0x64
@@ -32,5 +32,5 @@ uint8_t hid_map_key(uint32_t usage, bool shift, const keychar_t* keymap);
 // iterates over keys in in the hid_keys_t structure.
 // keys should be hid_keys_t*, keycode should be uint8_t
 #define hid_for_every_key(keys, keycode) \
-    for (keycode = hid_kbd_next_key(keys); keycode; keycode = hid_kbd_next_key(keys))
+  for (keycode = hid_kbd_next_key(keys); keycode; keycode = hid_kbd_next_key(keys))
 __END_CDECLS

@@ -7,11 +7,11 @@
 #include "ftl_test_observer.h"
 
 int main(int argc, char** argv) {
-    FtlTestObserver observer;
-    observer.OnProgramStart();
-    if (!observer) {
-      return -1;
-    }
+  FtlTestObserver observer;
+  observer.OnProgramStart();
+  if (!observer) {
+    return -1;
+  }
 
-    return RUN_ALL_TESTS(argc, argv);
+  return RUN_ALL_TESTS(argc, argv);
 }

@@ -26,8 +26,7 @@ int main(int argc, const char** argv) {
 
   scenic::ViewProviderComponent component(
       [](scenic::ViewContext view_context) {
-        return std::make_unique<video_display::SimpleCameraView>(
-            std::move(view_context));
+        return std::make_unique<video_display::SimpleCameraView>(std::move(view_context));
       },
       &loop);
 

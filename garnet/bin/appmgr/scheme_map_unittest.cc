@@ -26,8 +26,7 @@ class SchemeMapTest : public ::testing::Test {
     ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
     const std::string json_file = NewJSONFile(dir, json);
     EXPECT_FALSE(scheme_map.ParseFromDirectory(dir));
-    EXPECT_THAT(scheme_map.error_str(),
-                ::testing::HasSubstr(expected_error));
+    EXPECT_THAT(scheme_map.error_str(), ::testing::HasSubstr(expected_error));
   }
 
   std::string NewJSONFile(const std::string& dir, const std::string& json) {
@@ -92,8 +91,7 @@ TEST_F(SchemeMapTest, ParseMultiple) {
 
 TEST_F(SchemeMapTest, ParseWithErrors) {
   ExpectFailedParse(R"JSON({})JSON", "Missing 'launchers'.");
-  ExpectFailedParse(R"JSON({ "launchers": 42 })JSON",
-                    "'launchers' is not a valid object.");
+  ExpectFailedParse(R"JSON({ "launchers": 42 })JSON", "'launchers' is not a valid object.");
   ExpectFailedParse(
       R"JSON({
         "launchers": {
@@ -108,7 +106,7 @@ TEST_F(SchemeMapTest, ParseWithErrors) {
           "web_runner": [ "http", 42 ]
         }
       })JSON",
-      "Scheme for 'web_runner' is not a string.");
+          "Scheme for 'web_runner' is not a string.");
 }
 
 TEST_F(SchemeMapTest, ParseMultipleWithErrors) {
@@ -127,8 +125,7 @@ TEST_F(SchemeMapTest, ParseMultipleWithErrors) {
   EXPECT_FALSE(scheme_map.ParseFromDirectory(dir));
   EXPECT_TRUE(scheme_map.HasError());
   EXPECT_THAT(scheme_map.error_str(),
-              ::testing::HasSubstr(
-                   "Scheme 'http' is assigned to two launchers."));
+              ::testing::HasSubstr("Scheme 'http' is assigned to two launchers."));
 }
 
 }  // namespace

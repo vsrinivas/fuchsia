@@ -16,8 +16,7 @@ namespace fidl {
 
 class ErrorReporter {
  public:
-  ErrorReporter(bool warnings_as_errors = false)
-      : warnings_as_errors_(warnings_as_errors) {}
+  ErrorReporter(bool warnings_as_errors = false) : warnings_as_errors_(warnings_as_errors) {}
 
   // Enables temporarily muting reporting.
   enum class ReportingMode {

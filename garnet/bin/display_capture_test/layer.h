@@ -24,8 +24,8 @@ class LayerImpl {
   virtual const void* ApplyState() = 0;
   virtual void SendState(const void* state) const = 0;
   virtual void DeleteState(const void* state) const = 0;
-  virtual bool GetPixel(const void* state, uint32_t x, uint32_t y,
-                        uint32_t* value_out, bool* skip) const = 0;
+  virtual bool GetPixel(const void* state, uint32_t x, uint32_t y, uint32_t* value_out,
+                        bool* skip) const = 0;
   uint64_t id() const { return id_; }
 
   virtual uint64_t image_id(const void* state) const = 0;
@@ -62,8 +62,7 @@ class PrimaryLayer : public Layer {
   ~PrimaryLayer() {}
 
   void SetPosition(fuchsia::hardware::display::Transform transform,
-                   fuchsia::hardware::display::Frame src,
-                   fuchsia::hardware::display::Frame dest);
+                   fuchsia::hardware::display::Frame src, fuchsia::hardware::display::Frame dest);
   void SetAlpha(fuchsia::hardware::display::AlphaMode mode, float val);
   void SetImage(const Image* image);
 

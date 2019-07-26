@@ -81,12 +81,10 @@ class SmallFunctor<F, void, Arg...> {
 };
 
 template <class F, class R, class... Arg>
-const VTable<R, Arg...> SmallFunctor<F, R, Arg...>::vtable = {Move, Call,
-                                                              NotCalled};
+const VTable<R, Arg...> SmallFunctor<F, R, Arg...>::vtable = {Move, Call, NotCalled};
 
 template <class F, class... Arg>
-const VTable<void, Arg...> SmallFunctor<F, void, Arg...>::vtable = {Move, Call,
-                                                                    NotCalled};
+const VTable<void, Arg...> SmallFunctor<F, void, Arg...>::vtable = {Move, Call, NotCalled};
 
 template <class F, class A, class R, class... Arg>
 class SmallMustCall {
@@ -150,12 +148,10 @@ class SmallMustCall<F, A, void, Arg...> {
 };
 
 template <class F, class A, class R, class... Arg>
-const VTable<R, Arg...> SmallMustCall<F, A, R, Arg...>::vtable = {Move, Call,
-                                                                  NotCalled};
+const VTable<R, Arg...> SmallMustCall<F, A, R, Arg...>::vtable = {Move, Call, NotCalled};
 
 template <class F, class A, class... Arg>
-const VTable<void, Arg...> SmallMustCall<F, A, void, Arg...>::vtable = {
-    Move, Call, NotCalled};
+const VTable<void, Arg...> SmallMustCall<F, A, void, Arg...>::vtable = {Move, Call, NotCalled};
 
 template <class R, class... Arg>
 struct NullVTable {
@@ -181,27 +177,23 @@ class OnceFn<R(Arg...), kStorage> {
   OnceFn() : vtable_(&once_fn_detail::NullVTable<R, Arg...>::vtable) {}
   ~OnceFn() { vtable_->not_called(&env_); }
 
-  template <class F,
-            typename = typename std::enable_if<sizeof(F) <= kStorage>::type>
+  template <class F, typename = typename std::enable_if<sizeof(F) <= kStorage>::type>
   OnceFn(F&& f) {
     vtable_ = &once_fn_detail::SmallFunctor<F, R, Arg...>::vtable;
-    once_fn_detail::SmallFunctor<F, R, Arg...>::InitEnv(&env_,
-                                                        std::forward<F>(f));
+    once_fn_detail::SmallFunctor<F, R, Arg...>::InitEnv(&env_, std::forward<F>(f));
   }
 
   template <class F, class A,
-            typename = typename std::enable_if<sizeof(std::tuple<F, A>) <=
-                                               kStorage>::type>
+            typename = typename std::enable_if<sizeof(std::tuple<F, A>) <= kStorage>::type>
   OnceFn(MustCall, F&& f, A&& a) {
     vtable_ = &once_fn_detail::SmallMustCall<F, A, R, Arg...>::vtable;
-    once_fn_detail::SmallMustCall<F, A, R, Arg...>::InitEnv(
-        &env_, std::forward<F>(f), std::forward<A>(a));
+    once_fn_detail::SmallMustCall<F, A, R, Arg...>::InitEnv(&env_, std::forward<F>(f),
+                                                            std::forward<A>(a));
   }
 
   template <class F>
   OnceFn(MustCall, F&& f)
-      : OnceFn(MUST_CALL, std::forward<F>(f),
-               []() { return std::tuple<Arg...>(); }) {}
+      : OnceFn(MUST_CALL, std::forward<F>(f), []() { return std::tuple<Arg...>(); }) {}
 
   OnceFn(const OnceFn&) = delete;
   OnceFn& operator=(const OnceFn&) = delete;
@@ -226,9 +218,7 @@ class OnceFn<R(Arg...), kStorage> {
     return vtable->call(&env_, std::forward<Arg>(arg)...);
   }
 
-  bool empty() const {
-    return vtable_ == &once_fn_detail::NullVTable<R, Arg...>::vtable;
-  }
+  bool empty() const { return vtable_ == &once_fn_detail::NullVTable<R, Arg...>::vtable; }
 
   // A mutator is a functor of the form:
   // mutator(fn, args...) -> result
@@ -264,8 +254,8 @@ struct MutatedEnv {
     MutatedEnv* d = static_cast<MutatedEnv*>(dst);
     new (&d->hdr) Header(std::move(s->hdr));
     s->hdr.~Header();
-    return sizeof(Header) + s->hdr.wrapped_vtable->move(
-                                &d->storage, &s->storage, sizeof(s->storage));
+    return sizeof(Header) +
+           s->hdr.wrapped_vtable->move(&d->storage, &s->storage, sizeof(s->storage));
   }
 
   static R Call(void* env, Arg&&... arg) {
@@ -291,8 +281,7 @@ struct MutatedEnv {
 };
 
 template <size_t kStorage, class F, class R, class... Arg>
-const VTable<R, Arg...> MutatedEnv<kStorage, F, R, Arg...>::vtable = {
-    Move, Call, NotCalled};
+const VTable<R, Arg...> MutatedEnv<kStorage, F, R, Arg...>::vtable = {Move, Call, NotCalled};
 
 template <size_t kStorage, class F, class... Arg>
 struct MutatedEnv<kStorage, F, void, Arg...> {
@@ -313,8 +302,8 @@ struct MutatedEnv<kStorage, F, void, Arg...> {
     MutatedEnv* d = static_cast<MutatedEnv*>(dst);
     new (&d->hdr) Header(std::move(s->hdr));
     s->hdr.~Header();
-    return sizeof(Header) + s->hdr.wrapped_vtable->move(
-                                &d->storage, &s->storage, sizeof(s->storage));
+    return sizeof(Header) +
+           s->hdr.wrapped_vtable->move(&d->storage, &s->storage, sizeof(s->storage));
   }
 
   static void Call(void* env, Arg&&... arg) {
@@ -339,8 +328,7 @@ struct MutatedEnv<kStorage, F, void, Arg...> {
 };
 
 template <size_t kStorage, class F, class... Arg>
-const VTable<void, Arg...> MutatedEnv<kStorage, F, void, Arg...>::vtable = {
-    Move, Call, NotCalled};
+const VTable<void, Arg...> MutatedEnv<kStorage, F, void, Arg...>::vtable = {Move, Call, NotCalled};
 
 }  // namespace once_fn_detail
 

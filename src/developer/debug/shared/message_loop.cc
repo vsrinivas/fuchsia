@@ -114,7 +114,7 @@ void MessageLoop::resolve_ticket(fit::suspended_task::ticket ticket, bool resume
   // promise, we could post it to the back of the task_queue_ with no problem (other than a slight
   // performance penalty by going through the loop again).
 
-  Task task;  // The task (to run or delete outside of the lock).
+  Task task;                // The task (to run or delete outside of the lock).
   bool should_run = false;  // Whether to run the above task (otherwise just delete it).
 
   {
@@ -195,7 +195,7 @@ fit::suspended_task MessageLoop::SuspendCurrentTask() {
   return fit::suspended_task(this, current_task_ticket_);
 }
 
-template<typename TaskType>
+template <typename TaskType>
 void MessageLoop::PostTaskInternal(FileLineFunction file_line, TaskType task) {
   bool needs_awaken;
   {

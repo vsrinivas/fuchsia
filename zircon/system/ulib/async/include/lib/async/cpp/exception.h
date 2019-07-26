@@ -21,55 +21,54 @@ namespace async {
 // Concrete implementations: |async::Exception|, |async::ExceptionMethod|.
 // Please do not create subclasses of ExceptionBase outside of this library.
 class ExceptionBase {
-protected:
-    ExceptionBase(zx_handle_t task, uint32_t options,
-                  async_exception_handler_t* handler);
-    ~ExceptionBase();
+ protected:
+  ExceptionBase(zx_handle_t task, uint32_t options, async_exception_handler_t* handler);
+  ~ExceptionBase();
 
-    ExceptionBase(const ExceptionBase&) = delete;
-    ExceptionBase(ExceptionBase&&) = delete;
-    ExceptionBase& operator=(const ExceptionBase&) = delete;
-    ExceptionBase& operator=(ExceptionBase&&) = delete;
+  ExceptionBase(const ExceptionBase&) = delete;
+  ExceptionBase(ExceptionBase&&) = delete;
+  ExceptionBase& operator=(const ExceptionBase&) = delete;
+  ExceptionBase& operator=(ExceptionBase&&) = delete;
 
-    template <typename T>
-    static T* Dispatch(async_exception_t* exception) {
-        static_assert(offsetof(ExceptionBase, exception_) == 0, "");
-        auto self = reinterpret_cast<ExceptionBase*>(exception);
-        return static_cast<T*>(self);
-    }
+  template <typename T>
+  static T* Dispatch(async_exception_t* exception) {
+    static_assert(offsetof(ExceptionBase, exception_) == 0, "");
+    auto self = reinterpret_cast<ExceptionBase*>(exception);
+    return static_cast<T*>(self);
+  }
 
-public:
-    // Return true if task's exception port has been bound to.
-    bool is_bound() const { return !!dispatcher_; }
+ public:
+  // Return true if task's exception port has been bound to.
+  bool is_bound() const { return !!dispatcher_; }
 
-    // Bind the async port to the task's exception port.
-    //
-    // Returns |ZX_OK| if the task's exception port is successfully bound to.
-    // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
-    // Returns |ZX_ERR_ALREADY_EXISTS| if port is already bound.
-    // See |zx_task_bind_exception_port()| for other possible errors.
-    zx_status_t Bind(async_dispatcher_t* dispatcher);
+  // Bind the async port to the task's exception port.
+  //
+  // Returns |ZX_OK| if the task's exception port is successfully bound to.
+  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+  // Returns |ZX_ERR_ALREADY_EXISTS| if port is already bound.
+  // See |zx_task_bind_exception_port()| for other possible errors.
+  zx_status_t Bind(async_dispatcher_t* dispatcher);
 
-    // Unbind the async port from the task's exception port.
-    //
-    // Returns |ZX_OK| if the task's exception port is successfully unbound.
-    // Returns ZX_ERR_NOT_FOUND if the port is not bound.
-    // See |zx_task_bind_exception_port()| for other possible errors.
-    zx_status_t Unbind();
+  // Unbind the async port from the task's exception port.
+  //
+  // Returns |ZX_OK| if the task's exception port is successfully unbound.
+  // Returns ZX_ERR_NOT_FOUND if the port is not bound.
+  // See |zx_task_bind_exception_port()| for other possible errors.
+  zx_status_t Unbind();
 
-    // Resume |task| after having processed an exception for it.
-    // |options| is passed to |zx_task_resume_from_exception()|.
-    //
-    // Returns |ZX_OK| if the task was resumed.
-    // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
-    // Returns ZX_ERR_NOT_FOUND if the port is not bound.
-    // Other error values are possible. See the documentation for
-    // |zx_task_resume_from_exception()|.
-    zx_status_t Resume(zx_handle_t task, uint32_t options);
+  // Resume |task| after having processed an exception for it.
+  // |options| is passed to |zx_task_resume_from_exception()|.
+  //
+  // Returns |ZX_OK| if the task was resumed.
+  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+  // Returns ZX_ERR_NOT_FOUND if the port is not bound.
+  // Other error values are possible. See the documentation for
+  // |zx_task_resume_from_exception()|.
+  zx_status_t Resume(zx_handle_t task, uint32_t options);
 
-private:
-    async_exception_t exception_;
-    async_dispatcher_t* dispatcher_ = nullptr;
+ private:
+  async_exception_t exception_;
+  async_dispatcher_t* dispatcher_ = nullptr;
 };
 
 // A receiver whose handler is bound to a |async::Task::Handler| function.
@@ -77,25 +76,22 @@ private:
 // Prefer using |async::ExceptioniReceiverMethod| instead for binding to a fixed class member
 // function since it is more efficient to dispatch.
 class Exception final : public ExceptionBase {
-public:
-    // Handles receipt of packets containing exception reports.
-    //
-    // The |status| is |ZX_OK| if the packet was successfully delivered and |data|
-    // contains the information from the packet, otherwise |data| is null.
-    using Handler = fit::function<void(async_dispatcher_t* dispatcher,
-                                       async::Exception* exception,
-                                       zx_status_t status,
-                                       const zx_port_packet_t* report)>;
+ public:
+  // Handles receipt of packets containing exception reports.
+  //
+  // The |status| is |ZX_OK| if the packet was successfully delivered and |data|
+  // contains the information from the packet, otherwise |data| is null.
+  using Handler = fit::function<void(async_dispatcher_t* dispatcher, async::Exception* exception,
+                                     zx_status_t status, const zx_port_packet_t* report)>;
 
-    Exception(zx_handle_t task, uint32_t options, Handler handler);
-    ~Exception();
+  Exception(zx_handle_t task, uint32_t options, Handler handler);
+  ~Exception();
 
-private:
-    static void CallHandler(async_dispatcher_t* dispatcher,
-                            async_exception_t* exception,
-                            zx_status_t status, const zx_port_packet_t* report);
+ private:
+  static void CallHandler(async_dispatcher_t* dispatcher, async_exception_t* exception,
+                          zx_status_t status, const zx_port_packet_t* report);
 
-    Handler handler_;
+  Handler handler_;
 };
 
 // A receiver whose handler is bound to a fixed class member function.
@@ -103,7 +99,8 @@ private:
 // Usage:
 //
 // class Foo {
-//     void Handle(async_dispatcher_t* dispatcher, async::ExceptionBase* receiver, zx_status_t status,
+//     void Handle(async_dispatcher_t* dispatcher, async::ExceptionBase* receiver, zx_status_t
+//     status,
 //                 const zx_port_packet_t* report) { ... }
 //     async::ExceptionReceiverMethod<Foo, &Foo::Handle> receiver_{this};
 // };
@@ -111,23 +108,20 @@ template <class Class,
           void (Class::*method)(async_dispatcher_t* dispatcher, async::ExceptionBase* receiver,
                                 zx_status_t status, const zx_port_packet_t* report)>
 class ExceptionMethod final : public ExceptionBase {
-public:
-    ExceptionMethod(Class* instance,
-                    zx_handle_t task, uint32_t options)
-        : ExceptionBase(task, options, &ExceptionMethod::CallHandler),
-          instance_(instance) {}
+ public:
+  ExceptionMethod(Class* instance, zx_handle_t task, uint32_t options)
+      : ExceptionBase(task, options, &ExceptionMethod::CallHandler), instance_(instance) {}
 
-private:
-    static void CallHandler(async_dispatcher_t* dispatcher,
-                            async_exception_t* exception,
-                            zx_status_t status, const zx_port_packet_t* report) {
-        auto self = Dispatch<ExceptionMethod>(exception);
-        (self->instance_->*method)(dispatcher, self, status, report);
-    }
+ private:
+  static void CallHandler(async_dispatcher_t* dispatcher, async_exception_t* exception,
+                          zx_status_t status, const zx_port_packet_t* report) {
+    auto self = Dispatch<ExceptionMethod>(exception);
+    (self->instance_->*method)(dispatcher, self, status, report);
+  }
 
-    Class* const instance_;
+  Class* const instance_;
 };
 
-} // namespace async
+}  // namespace async
 
 #endif  // LIB_ASYNC_CPP_EXCEPTION_H_

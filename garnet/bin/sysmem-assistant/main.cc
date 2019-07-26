@@ -27,10 +27,7 @@
 
 // Randomly-generated UUID for the TA.
 constexpr TEEC_UUID kSecmemUuid = {
-    0x2c1a33c0,
-    0x44cc,
-    0x11e5,
-    {0xbc, 0x3b, 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}};
+    0x2c1a33c0, 0x44cc, 0x11e5, {0xbc, 0x3b, 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}};
 
 enum TeeParamType {
   kTeeParamTypeBuffer,
@@ -101,8 +98,8 @@ zx_status_t SecmemSession::Init() {
   }
 
   session_ = std::make_unique<TEEC_Session>();
-  result = TEEC_OpenSession(context_.get(), session_.get(), &kSecmemUuid,
-                            TEEC_LOGIN_PUBLIC, NULL, NULL, &return_origin);
+  result = TEEC_OpenSession(context_.get(), session_.get(), &kSecmemUuid, TEEC_LOGIN_PUBLIC, NULL,
+                            NULL, &return_origin);
   if (result != TEEC_SUCCESS) {
     session_.reset();
     return ZX_ERR_INVALID_ARGS;
@@ -136,15 +133,13 @@ bool SecmemSession::PackUint32Parameter(uint32_t value, size_t* offset_in_out) {
 int SecmemSession::InvokeSecmemCommand(uint32_t command, size_t length) {
   TEEC_Operation operation = {};
 
-  operation.paramTypes =
-      TEEC_PARAM_TYPES(TEEC_MEMREF_PARTIAL_INOUT,  // Shared memory buffer
-                       TEEC_NONE, TEEC_NONE,
-                       TEEC_VALUE_OUTPUT);  // Command result
+  operation.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_PARTIAL_INOUT,  // Shared memory buffer
+                                          TEEC_NONE, TEEC_NONE,
+                                          TEEC_VALUE_OUTPUT);  // Command result
   operation.params[0].memref.parent = parameter_buffer_.get();
   operation.params[0].memref.offset = 0;
   operation.params[0].memref.size = length + kParameterBufferPadding;
-  TEEC_Result res =
-      TEEC_InvokeCommand(session_.get(), command, &operation, nullptr);
+  TEEC_Result res = TEEC_InvokeCommand(session_.get(), command, &operation, nullptr);
   if (res != TEEC_SUCCESS) {
     return res;
   }
@@ -181,8 +176,7 @@ zx_status_t WaitForDriver(const char* path) {
     }
   };
   fbl::unique_fd dir_fd(open(path, O_DIRECTORY | O_RDONLY));
-  zx_status_t status = fdio_watch_directory(dir_fd.get(), DeviceAdded,
-                                            ZX_TIME_INFINITE, nullptr);
+  zx_status_t status = fdio_watch_directory(dir_fd.get(), DeviceAdded, ZX_TIME_INFINITE, nullptr);
   if (status == ZX_ERR_STOP) {
     return ZX_OK;
   } else {
@@ -201,12 +195,10 @@ int main(int argc, const char* const* argv) {
   }
 
   zx::channel sysmem_driver_connector_server, sysmem_driver_connector_client;
-  status = zx::channel::create(0, &sysmem_driver_connector_server,
-                               &sysmem_driver_connector_client);
+  status = zx::channel::create(0, &sysmem_driver_connector_server, &sysmem_driver_connector_client);
   ZX_ASSERT(status == ZX_OK);
 
-  status = fdio_service_connect("/dev/class/sysmem/000",
-                                sysmem_driver_connector_server.release());
+  status = fdio_service_connect("/dev/class/sysmem/000", sysmem_driver_connector_server.release());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "fdio_service_connect failed: " << status;
     return -1;
@@ -243,15 +235,13 @@ int main(int argc, const char* const* argv) {
     FXL_LOG(ERROR) << "Failed to initialize secmem session";
     return -1;
   }
-  int command_result = session->ProtectMemoryRange(static_cast<uint32_t>(base),
-                                                   static_cast<uint32_t>(size));
+  int command_result =
+      session->ProtectMemoryRange(static_cast<uint32_t>(base), static_cast<uint32_t>(size));
   if (command_result < 0) {
-    FXL_LOG(ERROR) << "Failed to protect memory range, result "
-                   << command_result;
+    FXL_LOG(ERROR) << "Failed to protect memory range, result " << command_result;
     return command_result;
   }
-  FXL_LOG(INFO) << "Sysmem-assistant initialized protected memory, size: "
-                << size;
+  FXL_LOG(INFO) << "Sysmem-assistant initialized protected memory, size: " << size;
 
   // The memory will stay protected as long as the system is running.
   return 0;

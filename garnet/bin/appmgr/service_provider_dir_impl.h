@@ -25,11 +25,9 @@ namespace component {
 // for any file lookup. It also exposes service provider interface.
 //
 // It supports enumeration for only first level of services.
-class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
-                               public fs::Vnode {
+class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::Vnode {
  public:
-  explicit ServiceProviderDirImpl(
-      const std::vector<std::string>* services = nullptr);
+  explicit ServiceProviderDirImpl(const std::vector<std::string>* services = nullptr);
   ~ServiceProviderDirImpl() override;
 
   // Sets the parent of this. Parent should be fully initialized.
@@ -37,11 +35,9 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
 
   void set_component_url(const std::string& url) { component_url_ = url; }
 
-  void AddService(const std::string& service_name,
-                  fbl::RefPtr<fs::Service> service);
+  void AddService(const std::string& service_name, fbl::RefPtr<fs::Service> service);
 
-  void AddBinding(
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
 
   //
   // Overridden from |fs::Vnode|:
@@ -66,8 +62,7 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
 
  private:
   bool IsServiceWhitelisted(const std::string& service_name) {
-    return (!has_services_whitelist_ ||
-            services_whitelist_.count(service_name) > 0);
+    return (!has_services_whitelist_ || services_whitelist_.count(service_name) > 0);
   }
 
   fidl::BindingSet<fuchsia::sys::ServiceProvider> bindings_;

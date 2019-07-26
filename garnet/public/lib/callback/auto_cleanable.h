@@ -29,9 +29,7 @@ class AutoCleanableSet {
 
   class ReferenceHash {
    public:
-    uintptr_t operator()(const V& v) const {
-      return reinterpret_cast<uintptr_t>(&v);
-    }
+    uintptr_t operator()(const V& v) const { return reinterpret_cast<uintptr_t>(&v); }
   };
 
   using Set_ = typename std::unordered_set<V, ReferenceHash, ReferenceEquality>;

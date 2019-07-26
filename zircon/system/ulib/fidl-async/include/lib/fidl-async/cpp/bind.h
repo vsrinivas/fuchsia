@@ -16,36 +16,30 @@ namespace fidl {
 
 namespace internal {
 
-using TypeErasedDispatchFn = bool (*) (void*, fidl_msg_t*, ::fidl::Transaction*);
+using TypeErasedDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
 
-zx_status_t TypeErasedBind(async_dispatcher_t* dispatcher,
-                           zx::channel channel,
-                           void* impl,
+zx_status_t TypeErasedBind(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
                            TypeErasedDispatchFn dispatch_fn);
 
 class SimpleBinding : private async_wait_t {
-public:
-    SimpleBinding(async_dispatcher_t* dispatcher,
-                  zx::channel channel,
-                  void* impl,
-                  TypeErasedDispatchFn dispatch_fn);
+ public:
+  SimpleBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
+                TypeErasedDispatchFn dispatch_fn);
 
-    ~SimpleBinding();
+  ~SimpleBinding();
 
-    static void MessageHandler(async_dispatcher_t* dispatcher,
-                               async_wait_t* wait,
-                               zx_status_t status,
-                               const zx_packet_signal_t* signal);
+  static void MessageHandler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                             const zx_packet_signal_t* signal);
 
-private:
-    friend fidl::internal::ChannelTransaction;
-    friend zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding);
+ private:
+  friend fidl::internal::ChannelTransaction;
+  friend zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding);
 
-    zx::unowned_channel channel() const { return zx::unowned_channel(async_wait_t::object); }
+  zx::unowned_channel channel() const { return zx::unowned_channel(async_wait_t::object); }
 
-    async_dispatcher_t* dispatcher_;
-    void* interface_;
-    TypeErasedDispatchFn dispatch_fn_;
+  async_dispatcher_t* dispatcher_;
+  void* interface_;
+  TypeErasedDispatchFn dispatch_fn_;
 };
 
 // Attempts to attach the binding onto the async dispatcher.
@@ -54,7 +48,7 @@ private:
 // Returns the status of |async_begin_wait|.
 zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding);
 
-} // namespace internal
+}  // namespace internal
 
 // Binds an implementation of a low-level C++ server interface to |channel| using |dispatcher|.
 //
@@ -82,15 +76,11 @@ zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding);
 // It is unsafe to destroy the dispatcher from within a dispatch function.
 // It is unsafe to destroy the dispatcher while any fidl::Transaction objects are alive.
 template <typename Interface>
-zx_status_t Bind(async_dispatcher_t* dispatcher,
-                 zx::channel channel,
-                 Interface* impl) {
-    return internal::TypeErasedBind(dispatcher,
-                                    std::move(channel),
-                                    impl,
-                                    &Interface::_Outer::TypeErasedDispatch);
+zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl) {
+  return internal::TypeErasedBind(dispatcher, std::move(channel), impl,
+                                  &Interface::_Outer::TypeErasedDispatch);
 }
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // LIB_FIDL_ASYNC_CPP_BIND_H_
+#endif  // LIB_FIDL_ASYNC_CPP_BIND_H_

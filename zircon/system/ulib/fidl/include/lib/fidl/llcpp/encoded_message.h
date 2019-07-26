@@ -115,8 +115,7 @@ class EncodedMessage final : public internal::EncodedMessageHandleHolder<FidlTyp
   // Instantiates an EncodedMessage which points to a buffer region with caller-managed memory.
   // It does not take ownership of that buffer region.
   // Also initializes an empty handles part.
-  explicit EncodedMessage(BytePart bytes)
-      : bytes_(std::move(bytes)) {}
+  explicit EncodedMessage(BytePart bytes) : bytes_(std::move(bytes)) {}
 
   ~EncodedMessage() { CloseHandles(); }
 

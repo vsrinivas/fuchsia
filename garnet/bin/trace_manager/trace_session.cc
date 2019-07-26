@@ -15,12 +15,10 @@
 
 namespace tracing {
 
-TraceSession::TraceSession(zx::socket destination,
-                           std::vector<std::string> categories,
+TraceSession::TraceSession(zx::socket destination, std::vector<std::string> categories,
                            size_t trace_buffer_size_megabytes,
                            provider::BufferingMode buffering_mode,
-                           TraceProviderSpecMap&& provider_specs,
-                           fit::closure abort_handler)
+                           TraceProviderSpecMap&& provider_specs, fit::closure abort_handler)
     : destination_(std::move(destination)),
       categories_(std::move(categories)),
       trace_buffer_size_megabytes_(trace_buffer_size_megabytes),
@@ -35,8 +33,7 @@ TraceSession::~TraceSession() {
   destination_.reset();
 }
 
-void TraceSession::WaitForProvidersToStart(fit::closure callback,
-                                           zx::duration timeout) {
+void TraceSession::WaitForProvidersToStart(fit::closure callback, zx::duration timeout) {
   start_callback_ = std::move(callback);
   session_start_timeout_.PostDelayed(async_get_default_dispatcher(), timeout);
 }
@@ -53,8 +50,7 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   }
   uint64_t buffer_size = buffer_size_megabytes * 1024 * 1024;
 
-  FXL_VLOG(1) << "Adding provider " << *bundle << ", buffer size "
-              << buffer_size_megabytes << "MB";
+  FXL_VLOG(1) << "Adding provider " << *bundle << ", buffer size " << buffer_size_megabytes << "MB";
 
   tracees_.emplace_back(std::make_unique<Tracee>(this, bundle));
   fidl::VectorPtr<std::string> categories_clone;
@@ -99,8 +95,7 @@ void TraceSession::Stop(fit::closure done_callback, zx::duration timeout) {
   for (const auto& tracee : tracees_)
     tracee->Stop();
 
-  session_finalize_timeout_.PostDelayed(async_get_default_dispatcher(),
-                                        timeout);
+  session_finalize_timeout_.PostDelayed(async_get_default_dispatcher(), timeout);
   FinishSessionIfEmpty();
 }
 
@@ -127,9 +122,8 @@ void TraceSession::OnProviderStarted(TraceProviderBundle* bundle) {
     CheckAllProvidersStarted();
   } else {
     // Tracing stopped in the interim.
-    auto it = std::find_if(
-        tracees_.begin(), tracees_.end(),
-        [bundle](const auto& tracee) { return *tracee == bundle; });
+    auto it = std::find_if(tracees_.begin(), tracees_.end(),
+                           [bundle](const auto& tracee) { return *tracee == bundle; });
 
     if (it != tracees_.end()) {
       (*it)->Stop();
@@ -141,16 +135,14 @@ void TraceSession::OnProviderStarted(TraceProviderBundle* bundle) {
 // This includes "failed" as well as "started".
 
 void TraceSession::CheckAllProvidersStarted() {
-  bool all_started = std::accumulate(
-      tracees_.begin(), tracees_.end(), true,
-      [](bool value, const auto& tracee) {
+  bool all_started =
+      std::accumulate(tracees_.begin(), tracees_.end(), true, [](bool value, const auto& tracee) {
         bool ready = (tracee->state() == Tracee::State::kStarted ||
                       // If a provider fails to start continue tracing.
                       // TODO(TO-530): We should still record what providers
                       // failed to start.
                       tracee->state() == Tracee::State::kStopped);
-        FXL_VLOG(2) << "tracee " << *tracee->bundle() << (ready ? "" : " not")
-                    << " ready";
+        FXL_VLOG(2) << "tracee " << *tracee->bundle() << (ready ? "" : " not") << " ready";
         return value && ready;
       });
 
@@ -161,9 +153,8 @@ void TraceSession::CheckAllProvidersStarted() {
 }
 
 void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
-  auto it =
-      std::find_if(tracees_.begin(), tracees_.end(),
-                   [bundle](const auto& tracee) { return *tracee == bundle; });
+  auto it = std::find_if(tracees_.begin(), tracees_.end(),
+                         [bundle](const auto& tracee) { return *tracee == bundle; });
 
   if (it != tracees_.end()) {
     if (destination_) {
@@ -212,13 +203,12 @@ void TraceSession::FinishSessionDueToTimeout() {
   // We do not consider pending_start_tracees_ here as we only
   // stop them as a best effort.
   if (state_ == State::kStopping && !tracees_.empty()) {
-    FXL_VLOG(1)
-        << "Marking session as stopped, timed out waiting for tracee(s)";
+    FXL_VLOG(1) << "Marking session as stopped, timed out waiting for tracee(s)";
     TransitionToState(State::kStopped);
     for (auto& tracee : tracees_) {
       if (tracee->state() != Tracee::State::kStopped)
-        FXL_LOG(WARNING) << "Timed out waiting for trace provider "
-                         << *tracee->bundle() << " to finish";
+        FXL_LOG(WARNING) << "Timed out waiting for trace provider " << *tracee->bundle()
+                         << " to finish";
     }
     done_callback_();
   }
@@ -244,8 +234,7 @@ TransferStatus TraceSession::WriteMagicNumberRecord() {
               trace::MagicNumberRecordFields::TraceInfoType::Make(
                   trace::ToUnderlyingType(trace::TraceInfoType::kMagicNumber)) |
               trace::MagicNumberRecordFields::Magic::Make(trace::kMagicValue);
-  return WriteBufferToSocket(destination_,
-                             reinterpret_cast<uint8_t*>(record.data()),
+  return WriteBufferToSocket(destination_, reinterpret_cast<uint8_t*>(record.data()),
                              trace::WordsToBytes(num_words));
 }
 
@@ -254,15 +243,13 @@ void TraceSession::TransitionToState(State new_state) {
   state_ = new_state;
 }
 
-void TraceSession::SessionStartTimeout(async_dispatcher_t* dispatcher,
-                                       async::TaskBase* task,
+void TraceSession::SessionStartTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
                                        zx_status_t status) {
   FXL_LOG(WARNING) << "Waiting for start timed out.";
   NotifyStarted();
 }
 
-void TraceSession::SessionFinalizeTimeout(async_dispatcher_t* dispatcher,
-                                          async::TaskBase* task,
+void TraceSession::SessionFinalizeTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
                                           zx_status_t status) {
   FinishSessionDueToTimeout();
 }

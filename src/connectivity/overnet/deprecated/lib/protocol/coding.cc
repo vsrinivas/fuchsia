@@ -29,14 +29,12 @@ StatusOr<Slice> Encode(Coding coding, Slice slice) {
   if (slice.length() == 0) {
     return slice;
   }
-  auto status =
-      kCodecVtable[static_cast<uint8_t>(coding)]->encode(std::move(slice));
+  auto status = kCodecVtable[static_cast<uint8_t>(coding)]->encode(std::move(slice));
   if (status.is_error()) {
     return status;
   }
   assert(status->length() != 0);
-  return status->WithPrefix(
-      1, [coding](uint8_t* p) { *p = static_cast<uint8_t>(coding); });
+  return status->WithPrefix(1, [coding](uint8_t* p) { *p = static_cast<uint8_t>(coding); });
 }
 
 StatusOr<Slice> Decode(Slice slice) {
@@ -71,9 +69,8 @@ StatusOr<Slice> SnappyEncode(Slice slice) {
   size_t alloc_len = snappy::MaxCompressedLength(slice.length());
   size_t final_len;
   Slice out = Slice::WithInitializer(alloc_len, [&](uint8_t* buffer) {
-    snappy::RawCompress(reinterpret_cast<const char*>(slice.begin()),
-                        slice.length(), reinterpret_cast<char*>(buffer),
-                        &final_len);
+    snappy::RawCompress(reinterpret_cast<const char*>(slice.begin()), slice.length(),
+                        reinterpret_cast<char*>(buffer), &final_len);
   });
   out.TrimEnd(alloc_len - final_len);
   return out;
@@ -81,28 +78,23 @@ StatusOr<Slice> SnappyEncode(Slice slice) {
 
 StatusOr<Slice> SnappyDecode(Slice slice) {
   size_t uncompressed_length;
-  if (!snappy::GetUncompressedLength(
-          reinterpret_cast<const char*>(slice.begin()), slice.length(),
-          &uncompressed_length)) {
-    return Status::InvalidArgument(
-        "Cannot determine uncompressed length from Snappy buffer");
+  if (!snappy::GetUncompressedLength(reinterpret_cast<const char*>(slice.begin()), slice.length(),
+                                     &uncompressed_length)) {
+    return Status::InvalidArgument("Cannot determine uncompressed length from Snappy buffer");
   }
   // If expansion is large, verify that it's a valid buffer before trying to
   // uncompress.
-  if (uncompressed_length > 1024 * 1024 ||
-      uncompressed_length > 10 * slice.length()) {
-    if (!snappy::IsValidCompressedBuffer(
-            reinterpret_cast<const char*>(slice.begin()), slice.length())) {
+  if (uncompressed_length > 1024 * 1024 || uncompressed_length > 10 * slice.length()) {
+    if (!snappy::IsValidCompressedBuffer(reinterpret_cast<const char*>(slice.begin()),
+                                         slice.length())) {
       return Status::InvalidArgument("Invalid Snappy data");
     }
   }
   bool ok;
-  Slice output =
-      Slice::WithInitializer(uncompressed_length, [&](uint8_t* buffer) {
-        ok = snappy::RawUncompress(reinterpret_cast<const char*>(slice.begin()),
-                                   slice.length(),
-                                   reinterpret_cast<char*>(buffer));
-      });
+  Slice output = Slice::WithInitializer(uncompressed_length, [&](uint8_t* buffer) {
+    ok = snappy::RawUncompress(reinterpret_cast<const char*>(slice.begin()), slice.length(),
+                               reinterpret_cast<char*>(buffer));
+  });
   if (!ok) {
     return Status::InvalidArgument("Failed to decompress Snappy data");
   }
@@ -112,101 +104,77 @@ StatusOr<Slice> SnappyDecode(Slice slice) {
 ////////////////////////////////////////////////////////////////////////////////
 // Codec tables
 
-const CodecVTable kUnsupportedCodec = {"Unknown", NoBorder, BadCoding,
-                                       BadCoding};
+const CodecVTable kUnsupportedCodec = {"Unknown", NoBorder, BadCoding, BadCoding};
 const CodecVTable kNilCodec = {"Identity", NoBorder, IdCoding, IdCoding};
-const CodecVTable kSnappyCodec = {"Snappy", NoBorder, SnappyEncode,
-                                  SnappyDecode};
+const CodecVTable kSnappyCodec = {"Snappy", NoBorder, SnappyEncode, SnappyDecode};
 
 }  // namespace
 
 const CodecVTable* const kCodecVtable[256] = {
-    &kNilCodec,         &kSnappyCodec,      &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
-    &kUnsupportedCodec,
+    &kNilCodec,         &kSnappyCodec,      &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
+    &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec, &kUnsupportedCodec,
 };
 
 }  // namespace overnet

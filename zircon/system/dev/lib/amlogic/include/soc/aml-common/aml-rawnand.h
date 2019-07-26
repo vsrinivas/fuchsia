@@ -17,44 +17,43 @@ static constexpr uint32_t P_NAND_SADR = (0x2c);
 static constexpr uint32_t P_NAND_PINS = (0x30);
 static constexpr uint32_t P_NAND_VER = (0x38);
 
-static constexpr uint32_t AML_CMD_DRD = (0x8<<14);
-static constexpr uint32_t AML_CMD_IDLE = (0xc<<14);
-static constexpr uint32_t AML_CMD_DWR = (0x4<<14);
-static constexpr uint32_t AML_CMD_CLE = (0x5<<14);
-static constexpr uint32_t AML_CMD_ALE = (0x6<<14);
-static constexpr uint32_t AML_CMD_ADL = ((0<<16) | (3<<20));
-static constexpr uint32_t AML_CMD_ADH = ((1<<16) | (3<<20));
-static constexpr uint32_t AML_CMD_AIL = ((2<<16) | (3<<20));
-static constexpr uint32_t AML_CMD_AIH = ((3<<16) | (3<<20));
-static constexpr uint32_t AML_CMD_SEED = ((8<<16) | (3<<20));
-static constexpr uint32_t AML_CMD_M2N = ((0<<17) | (2<<20));
-static constexpr uint32_t AML_CMD_N2M = ((1<<17) | (2<<20));
-static constexpr uint32_t AML_CMD_RB = (1<<20);
-static constexpr uint32_t AML_CMD_IO6 = ((0xb<<10)|(1<<18));
+static constexpr uint32_t AML_CMD_DRD = (0x8 << 14);
+static constexpr uint32_t AML_CMD_IDLE = (0xc << 14);
+static constexpr uint32_t AML_CMD_DWR = (0x4 << 14);
+static constexpr uint32_t AML_CMD_CLE = (0x5 << 14);
+static constexpr uint32_t AML_CMD_ALE = (0x6 << 14);
+static constexpr uint32_t AML_CMD_ADL = ((0 << 16) | (3 << 20));
+static constexpr uint32_t AML_CMD_ADH = ((1 << 16) | (3 << 20));
+static constexpr uint32_t AML_CMD_AIL = ((2 << 16) | (3 << 20));
+static constexpr uint32_t AML_CMD_AIH = ((3 << 16) | (3 << 20));
+static constexpr uint32_t AML_CMD_SEED = ((8 << 16) | (3 << 20));
+static constexpr uint32_t AML_CMD_M2N = ((0 << 17) | (2 << 20));
+static constexpr uint32_t AML_CMD_N2M = ((1 << 17) | (2 << 20));
+static constexpr uint32_t AML_CMD_RB = (1 << 20);
+static constexpr uint32_t AML_CMD_IO6 = ((0xb << 10) | (1 << 18));
 
 static constexpr uint32_t NAND_TWB_TIME_CYCLE = 10;
 
-static constexpr uint32_t CMDRWGEN(uint32_t cmd_dir, int ran, int bch,
-                                   uint32_t value, uint32_t pagesize,
-                                   uint32_t pages) {
-    return ((cmd_dir) | (ran) << 19 | (bch) << 14 |
-            (value) << 13 | ((pagesize)&0x7f) << 6 | ((pages)&0x3f));
+static constexpr uint32_t CMDRWGEN(uint32_t cmd_dir, int ran, int bch, uint32_t value,
+                                   uint32_t pagesize, uint32_t pages) {
+  return ((cmd_dir) | (ran) << 19 | (bch) << 14 | (value) << 13 | ((pagesize)&0x7f) << 6 |
+          ((pages)&0x3f));
 }
 
 static constexpr uint32_t GENCMDDADDRL(uint32_t adl, zx_paddr_t addr) {
-    return static_cast<uint32_t>((adl) | ((addr) & 0xffff));
+  return static_cast<uint32_t>((adl) | ((addr)&0xffff));
 }
 
 static constexpr uint32_t GENCMDDADDRH(uint32_t adh, zx_paddr_t addr) {
-    return static_cast<uint32_t>((adh) | (((addr) >> 16) & 0xffff));
+  return static_cast<uint32_t>((adh) | (((addr) >> 16) & 0xffff));
 }
 
 static constexpr uint32_t GENCMDIADDRL(uint32_t ail, zx_paddr_t addr) {
-    return static_cast<uint32_t>((ail) | ((addr) & 0xffff));
+  return static_cast<uint32_t>((ail) | ((addr)&0xffff));
 }
 
 static constexpr uint32_t GENCMDIADDRH(uint32_t aih, zx_paddr_t addr) {
-    return static_cast<uint32_t>((aih) | (((addr) >> 16) & 0xffff));
+  return static_cast<uint32_t>((aih) | (((addr) >> 16) & 0xffff));
 }
 
 static constexpr uint32_t AML_ECC_UNCORRECTABLE_CNT = 0x3f;
@@ -65,7 +64,7 @@ static constexpr uint32_t CMD_FINISH_TIMEOUT_MS = 1000;
 
 static constexpr uint32_t AML_ECC_NONE = 0;
 // bch8 with ecc page size of 512B.
-static constexpr uint32_t  AML_ECC_BCH8 = 1;
+static constexpr uint32_t AML_ECC_BCH8 = 1;
 // bch8 with ecc page size of 1024B.
 static constexpr uint32_t AML_ECC_BCH8_1K = 2;
 static constexpr uint32_t AML_ECC_BCH24_1K = 3;

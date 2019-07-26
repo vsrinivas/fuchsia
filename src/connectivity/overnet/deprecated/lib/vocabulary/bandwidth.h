@@ -24,8 +24,7 @@ class Bandwidth {
     return FromBitsPerSecond(8000000 * bytes / delta.as_us());
   }
 
-  constexpr static Bandwidth FromKilobitsPerSecond(
-      uint64_t kilobits_per_second) {
+  constexpr static Bandwidth FromKilobitsPerSecond(uint64_t kilobits_per_second) {
     return FromBitsPerSecond(kilobits_per_second * 1000);
   }
 
@@ -40,8 +39,7 @@ class Bandwidth {
   constexpr uint64_t bits_per_second() const { return bits_per_second_; }
 
  private:
-  constexpr Bandwidth(uint64_t bits_per_second)
-      : bits_per_second_(bits_per_second) {}
+  constexpr Bandwidth(uint64_t bits_per_second) : bits_per_second_(bits_per_second) {}
 
   uint64_t bits_per_second_;
 };

@@ -22,15 +22,11 @@ namespace {
 // plausibly support, expressing in terms of bits-per-sample and RGB vs. YUV is
 // perhaps easier to grok.
 
-enum ColorType {
-    kColorType_NONE,
-    kColorType_RGB,
-    kColorType_YUV
-};
+enum ColorType { kColorType_NONE, kColorType_RGB, kColorType_YUV };
 
 struct SamplingInfo {
-    std::set<uint32_t> possible_bits_per_sample;
-    ColorType color_type;
+  std::set<uint32_t> possible_bits_per_sample;
+  ColorType color_type;
 };
 
 const std::map<fuchsia_sysmem_ColorSpaceType, SamplingInfo> kColorSpaceSamplingInfo = {
@@ -57,162 +53,159 @@ const std::map<fuchsia_sysmem_PixelFormatType, SamplingInfo> kPixelFormatSamplin
 };
 
 class ImageFormatSet {
-public:
-    virtual bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const = 0;
-    virtual uint64_t
-    ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const = 0;
+ public:
+  virtual bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const = 0;
+  virtual uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const = 0;
 };
 
 class IntelTiledFormats : public ImageFormatSet {
-public:
-    bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const override {
-        if (!pixel_format->has_format_modifier)
-            return false;
-        if (pixel_format->type != fuchsia_sysmem_PixelFormatType_R8G8B8A8 &&
-            pixel_format->type != fuchsia_sysmem_PixelFormatType_BGRA32) {
-            return false;
-        }
-        switch (pixel_format->format_modifier.value) {
-        case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED:
-        case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED:
-        case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED:
-            return true;
-        default:
-            return false;
-        }
+ public:
+  bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const override {
+    if (!pixel_format->has_format_modifier)
+      return false;
+    if (pixel_format->type != fuchsia_sysmem_PixelFormatType_R8G8B8A8 &&
+        pixel_format->type != fuchsia_sysmem_PixelFormatType_BGRA32) {
+      return false;
     }
-    uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
-        // See
-        // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf
-        constexpr uint32_t kIntelTileByteSize = 4096;
-        constexpr uint32_t kIntelYTilePixelWidth = 32;
-        constexpr uint32_t kIntelYTileHeight = 4096 / (kIntelYTilePixelWidth * 4);
-        constexpr uint32_t kIntelXTilePixelWidth = 128;
-        constexpr uint32_t kIntelXTileHeight = 4096 / (kIntelXTilePixelWidth * 4);
-        constexpr uint32_t kIntelYFTilePixelWidth = 32; // For a 4 byte per component format
-        constexpr uint32_t kIntelYFTileHeight = 4096 / (kIntelYFTilePixelWidth * 4);
-        ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
-        switch (image_format->pixel_format.format_modifier.value) {
-        case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED:
-            return fbl::round_up(image_format->coded_width, kIntelXTilePixelWidth) /
-                   kIntelXTilePixelWidth *
-                   fbl::round_up(image_format->coded_height, kIntelXTileHeight) /
-                   kIntelXTileHeight * kIntelTileByteSize;
-
-        case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED:
-            return fbl::round_up(image_format->coded_width, kIntelYTilePixelWidth) /
-                   kIntelYTilePixelWidth *
-                   fbl::round_up(image_format->coded_height, kIntelYTileHeight) /
-                   kIntelYTileHeight * kIntelTileByteSize;
-
-        case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED:
-            return fbl::round_up(image_format->coded_width, kIntelYFTilePixelWidth) /
-                   kIntelYFTilePixelWidth *
-                   fbl::round_up(image_format->coded_height, kIntelYFTileHeight) /
-                   kIntelYFTileHeight * kIntelTileByteSize;
-        default:
-            return 0u;
-        }
+    switch (pixel_format->format_modifier.value) {
+      case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED:
+      case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+      case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+        return true;
+      default:
+        return false;
     }
+  }
+  uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
+    // See
+    // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf
+    constexpr uint32_t kIntelTileByteSize = 4096;
+    constexpr uint32_t kIntelYTilePixelWidth = 32;
+    constexpr uint32_t kIntelYTileHeight = 4096 / (kIntelYTilePixelWidth * 4);
+    constexpr uint32_t kIntelXTilePixelWidth = 128;
+    constexpr uint32_t kIntelXTileHeight = 4096 / (kIntelXTilePixelWidth * 4);
+    constexpr uint32_t kIntelYFTilePixelWidth = 32;  // For a 4 byte per component format
+    constexpr uint32_t kIntelYFTileHeight = 4096 / (kIntelYFTilePixelWidth * 4);
+    ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
+    switch (image_format->pixel_format.format_modifier.value) {
+      case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED:
+        return fbl::round_up(image_format->coded_width, kIntelXTilePixelWidth) /
+               kIntelXTilePixelWidth *
+               fbl::round_up(image_format->coded_height, kIntelXTileHeight) / kIntelXTileHeight *
+               kIntelTileByteSize;
+
+      case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+        return fbl::round_up(image_format->coded_width, kIntelYTilePixelWidth) /
+               kIntelYTilePixelWidth *
+               fbl::round_up(image_format->coded_height, kIntelYTileHeight) / kIntelYTileHeight *
+               kIntelTileByteSize;
+
+      case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+        return fbl::round_up(image_format->coded_width, kIntelYFTilePixelWidth) /
+               kIntelYFTilePixelWidth *
+               fbl::round_up(image_format->coded_height, kIntelYFTileHeight) / kIntelYFTileHeight *
+               kIntelTileByteSize;
+      default:
+        return 0u;
+    }
+  }
 };
 
 class AfbcFormats : public ImageFormatSet {
-public:
-    bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const override {
-        if (!pixel_format->has_format_modifier)
-            return false;
-        if (pixel_format->type != fuchsia_sysmem_PixelFormatType_R8G8B8A8 &&
-            pixel_format->type != fuchsia_sysmem_PixelFormatType_BGRA32) {
-            return false;
-        }
-        switch (pixel_format->format_modifier.value) {
-        case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16:
-        case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8:
-            return true;
-        default:
-            return false;
-        }
+ public:
+  bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const override {
+    if (!pixel_format->has_format_modifier)
+      return false;
+    if (pixel_format->type != fuchsia_sysmem_PixelFormatType_R8G8B8A8 &&
+        pixel_format->type != fuchsia_sysmem_PixelFormatType_BGRA32) {
+      return false;
     }
-    uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
-        // See
-        // https://android.googlesource.com/device/linaro/hikey/+/android-o-preview-3/gralloc960/alloc_device.cpp
-        constexpr uint32_t kAfbcBodyAlignment = 1024u;
-
-        ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
-        uint32_t block_width;
-        uint32_t block_height;
-        switch (image_format->pixel_format.format_modifier.value) {
-        case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16:
-            block_width = 16;
-            block_height = 16;
-            break;
-
-        case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8:
-            block_width = 32;
-            block_height = 8;
-            break;
-        default:
-            return 0;
-        }
-
-        ZX_DEBUG_ASSERT(image_format->pixel_format.type ==
-                            fuchsia_sysmem_PixelFormatType_R8G8B8A8 ||
-                        image_format->pixel_format.type == fuchsia_sysmem_PixelFormatType_BGRA32);
-        constexpr uint32_t kBytesPerPixel = 4;
-        constexpr uint32_t kBytesPerBlockHeader = 16;
-
-        uint64_t block_count = fbl::round_up(image_format->coded_width, block_width) / block_width *
-                               fbl::round_up(image_format->coded_height, block_height) /
-                               block_height;
-        return block_count * block_width * block_height * kBytesPerPixel +
-               fbl::round_up(block_count * kBytesPerBlockHeader, kAfbcBodyAlignment);
+    switch (pixel_format->format_modifier.value) {
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8:
+        return true;
+      default:
+        return false;
     }
+  }
+  uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
+    // See
+    // https://android.googlesource.com/device/linaro/hikey/+/android-o-preview-3/gralloc960/alloc_device.cpp
+    constexpr uint32_t kAfbcBodyAlignment = 1024u;
+
+    ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
+    uint32_t block_width;
+    uint32_t block_height;
+    switch (image_format->pixel_format.format_modifier.value) {
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16:
+        block_width = 16;
+        block_height = 16;
+        break;
+
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8:
+        block_width = 32;
+        block_height = 8;
+        break;
+      default:
+        return 0;
+    }
+
+    ZX_DEBUG_ASSERT(image_format->pixel_format.type == fuchsia_sysmem_PixelFormatType_R8G8B8A8 ||
+                    image_format->pixel_format.type == fuchsia_sysmem_PixelFormatType_BGRA32);
+    constexpr uint32_t kBytesPerPixel = 4;
+    constexpr uint32_t kBytesPerBlockHeader = 16;
+
+    uint64_t block_count = fbl::round_up(image_format->coded_width, block_width) / block_width *
+                           fbl::round_up(image_format->coded_height, block_height) / block_height;
+    return block_count * block_width * block_height * kBytesPerPixel +
+           fbl::round_up(block_count * kBytesPerBlockHeader, kAfbcBodyAlignment);
+  }
 };
 
 class LinearFormats : public ImageFormatSet {
-    bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const override {
-        if (pixel_format->has_format_modifier &&
-            pixel_format->format_modifier.value != fuchsia_sysmem_FORMAT_MODIFIER_LINEAR) {
-            return false;
-        }
-        switch (pixel_format->type) {
-        case fuchsia_sysmem_PixelFormatType_INVALID:
-        case fuchsia_sysmem_PixelFormatType_MJPEG:
-            return false;
-        case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
-        case fuchsia_sysmem_PixelFormatType_BGRA32:
-        case fuchsia_sysmem_PixelFormatType_I420:
-        case fuchsia_sysmem_PixelFormatType_M420:
-        case fuchsia_sysmem_PixelFormatType_NV12:
-        case fuchsia_sysmem_PixelFormatType_YUY2:
-        case fuchsia_sysmem_PixelFormatType_YV12:
-            return true;
-        }
+  bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const override {
+    if (pixel_format->has_format_modifier &&
+        pixel_format->format_modifier.value != fuchsia_sysmem_FORMAT_MODIFIER_LINEAR) {
+      return false;
+    }
+    switch (pixel_format->type) {
+      case fuchsia_sysmem_PixelFormatType_INVALID:
+      case fuchsia_sysmem_PixelFormatType_MJPEG:
         return false;
+      case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+      case fuchsia_sysmem_PixelFormatType_BGRA32:
+      case fuchsia_sysmem_PixelFormatType_I420:
+      case fuchsia_sysmem_PixelFormatType_M420:
+      case fuchsia_sysmem_PixelFormatType_NV12:
+      case fuchsia_sysmem_PixelFormatType_YUY2:
+      case fuchsia_sysmem_PixelFormatType_YV12:
+        return true;
     }
-    uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
-        ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
+    return false;
+  }
+  uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
+    ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
 
-        uint64_t coded_height = image_format->coded_height;
-        uint64_t bytes_per_row = image_format->bytes_per_row;
-        switch (image_format->pixel_format.type) {
-        case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
-        case fuchsia_sysmem_PixelFormatType_BGRA32:
-            return coded_height * bytes_per_row;
-        case fuchsia_sysmem_PixelFormatType_I420:
-            return coded_height * bytes_per_row * 3 / 2;
-        case fuchsia_sysmem_PixelFormatType_M420:
-            return coded_height * bytes_per_row * 3 / 2;
-        case fuchsia_sysmem_PixelFormatType_NV12:
-            return coded_height * bytes_per_row * 3 / 2;
-        case fuchsia_sysmem_PixelFormatType_YUY2:
-            return coded_height * bytes_per_row;
-        case fuchsia_sysmem_PixelFormatType_YV12:
-            return coded_height * bytes_per_row * 3 / 2;
-        default:
-            return 0u;
-        }
+    uint64_t coded_height = image_format->coded_height;
+    uint64_t bytes_per_row = image_format->bytes_per_row;
+    switch (image_format->pixel_format.type) {
+      case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+      case fuchsia_sysmem_PixelFormatType_BGRA32:
+        return coded_height * bytes_per_row;
+      case fuchsia_sysmem_PixelFormatType_I420:
+        return coded_height * bytes_per_row * 3 / 2;
+      case fuchsia_sysmem_PixelFormatType_M420:
+        return coded_height * bytes_per_row * 3 / 2;
+      case fuchsia_sysmem_PixelFormatType_NV12:
+        return coded_height * bytes_per_row * 3 / 2;
+      case fuchsia_sysmem_PixelFormatType_YUY2:
+        return coded_height * bytes_per_row;
+      case fuchsia_sysmem_PixelFormatType_YV12:
+        return coded_height * bytes_per_row * 3 / 2;
+      default:
+        return 0u;
     }
+  }
 };
 
 constexpr LinearFormats kLinearFormats;
@@ -220,218 +213,219 @@ constexpr IntelTiledFormats kIntelFormats;
 constexpr AfbcFormats kAfbcFormats;
 
 constexpr const ImageFormatSet* kImageFormats[] = {
-    &kLinearFormats, &kIntelFormats, &kAfbcFormats,
+    &kLinearFormats,
+    &kIntelFormats,
+    &kAfbcFormats,
 };
 
 }  // namespace
 
-bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a, const fuchsia_sysmem_PixelFormat& b) {
-    return
-        a.type == b.type &&
-        // !has_format_modifier is for consistency with making format_modifier
-        // optional in future.
-        a.has_format_modifier == b.has_format_modifier &&
-        // Must be 0 if !has_format_modifier.
-        a.format_modifier.value == b.format_modifier.value;
+bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a,
+                                   const fuchsia_sysmem_PixelFormat& b) {
+  return a.type == b.type &&
+         // !has_format_modifier is for consistency with making format_modifier
+         // optional in future.
+         a.has_format_modifier == b.has_format_modifier &&
+         // Must be 0 if !has_format_modifier.
+         a.format_modifier.value == b.format_modifier.value;
 }
 
-bool ImageFormatIsSupportedColorSpaceForPixelFormat(const fuchsia_sysmem_ColorSpace& color_space, const fuchsia_sysmem_PixelFormat& pixel_format) {
-    // Ignore pixel format modifier - assume it has already been checked.
-    auto color_space_sampling_info_iter = kColorSpaceSamplingInfo.find(color_space.type);
-    if (color_space_sampling_info_iter == kColorSpaceSamplingInfo.end()) {
-        return false;
+bool ImageFormatIsSupportedColorSpaceForPixelFormat(
+    const fuchsia_sysmem_ColorSpace& color_space, const fuchsia_sysmem_PixelFormat& pixel_format) {
+  // Ignore pixel format modifier - assume it has already been checked.
+  auto color_space_sampling_info_iter = kColorSpaceSamplingInfo.find(color_space.type);
+  if (color_space_sampling_info_iter == kColorSpaceSamplingInfo.end()) {
+    return false;
+  }
+  auto pixel_format_sampling_info_iter = kPixelFormatSamplingInfo.find(pixel_format.type);
+  if (pixel_format_sampling_info_iter == kPixelFormatSamplingInfo.end()) {
+    return false;
+  }
+  const SamplingInfo& color_space_sampling_info = color_space_sampling_info_iter->second;
+  const SamplingInfo& pixel_format_sampling_info = pixel_format_sampling_info_iter->second;
+  if (color_space_sampling_info.color_type != pixel_format_sampling_info.color_type) {
+    return false;
+  }
+  bool is_bits_per_sample_match_found = false;
+  for (uint32_t bits_per_sample : color_space_sampling_info.possible_bits_per_sample) {
+    auto pixel_format_bits_per_sample_iter =
+        pixel_format_sampling_info.possible_bits_per_sample.find(bits_per_sample);
+    if (pixel_format_bits_per_sample_iter !=
+        pixel_format_sampling_info.possible_bits_per_sample.end()) {
+      is_bits_per_sample_match_found = true;
+      break;
     }
-    auto pixel_format_sampling_info_iter = kPixelFormatSamplingInfo.find(pixel_format.type);
-    if (pixel_format_sampling_info_iter == kPixelFormatSamplingInfo.end()) {
-        return false;
-    }
-    const SamplingInfo& color_space_sampling_info = color_space_sampling_info_iter->second;
-    const SamplingInfo& pixel_format_sampling_info = pixel_format_sampling_info_iter->second;
-    if (color_space_sampling_info.color_type != pixel_format_sampling_info.color_type) {
-        return false;
-    }
-    bool is_bits_per_sample_match_found = false;
-    for (uint32_t bits_per_sample : color_space_sampling_info.possible_bits_per_sample) {
-        auto pixel_format_bits_per_sample_iter = pixel_format_sampling_info.possible_bits_per_sample.find(bits_per_sample);
-        if (pixel_format_bits_per_sample_iter != pixel_format_sampling_info.possible_bits_per_sample.end()) {
-            is_bits_per_sample_match_found = true;
-            break;
-        }
-    }
-    if (!is_bits_per_sample_match_found) {
-        return false;
-    }
-    return true;
+  }
+  if (!is_bits_per_sample_match_found) {
+    return false;
+  }
+  return true;
 }
 
 bool ImageFormatIsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) {
-    for (auto& format_set : kImageFormats) {
-        if (format_set->IsSupported(pixel_format))
-            return true;
-    }
-    return false;
+  for (auto& format_set : kImageFormats) {
+    if (format_set->IsSupported(pixel_format))
+      return true;
+  }
+  return false;
 }
 
 // Overall bits per pixel, across all pixel data in the whole image.
 uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* pixel_format) {
-    ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
-    switch (pixel_format->type) {
-        case fuchsia_sysmem_PixelFormatType_INVALID:
-        case fuchsia_sysmem_PixelFormatType_MJPEG:
-            // impossible; checked previously.
-            ZX_DEBUG_ASSERT(false);
-            return 0u;
-        case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
-            return 4u * 8u;
-        case fuchsia_sysmem_PixelFormatType_BGRA32:
-            return 4u * 8u;
-        case fuchsia_sysmem_PixelFormatType_I420:
-            return 12u;
-        case fuchsia_sysmem_PixelFormatType_M420:
-            return 12u;
-        case fuchsia_sysmem_PixelFormatType_NV12:
-            return 12u;
-        case fuchsia_sysmem_PixelFormatType_YUY2:
-            return 2u * 8u;
-        case fuchsia_sysmem_PixelFormatType_YV12:
-            return 12u;
-    }
-    ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
-    return 0u;
+  ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
+  switch (pixel_format->type) {
+    case fuchsia_sysmem_PixelFormatType_INVALID:
+    case fuchsia_sysmem_PixelFormatType_MJPEG:
+      // impossible; checked previously.
+      ZX_DEBUG_ASSERT(false);
+      return 0u;
+    case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+      return 4u * 8u;
+    case fuchsia_sysmem_PixelFormatType_BGRA32:
+      return 4u * 8u;
+    case fuchsia_sysmem_PixelFormatType_I420:
+      return 12u;
+    case fuchsia_sysmem_PixelFormatType_M420:
+      return 12u;
+    case fuchsia_sysmem_PixelFormatType_NV12:
+      return 12u;
+    case fuchsia_sysmem_PixelFormatType_YUY2:
+      return 2u * 8u;
+    case fuchsia_sysmem_PixelFormatType_YV12:
+      return 12u;
+  }
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
+  return 0u;
 }
 
-uint32_t ImageFormatStrideBytesPerWidthPixel(
-    const fuchsia_sysmem_PixelFormat* pixel_format) {
-    ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
-    switch (pixel_format->type) {
-        case fuchsia_sysmem_PixelFormatType_INVALID:
-        case fuchsia_sysmem_PixelFormatType_MJPEG:
-            // impossible; checked previously.
-            ZX_DEBUG_ASSERT(false);
-            return 0u;
-        case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
-            return 4u;
-        case fuchsia_sysmem_PixelFormatType_BGRA32:
-            return 4u;
-        case fuchsia_sysmem_PixelFormatType_I420:
-            return 1u;
-        case fuchsia_sysmem_PixelFormatType_M420:
-            return 1u;
-        case fuchsia_sysmem_PixelFormatType_NV12:
-            return 1u;
-        case fuchsia_sysmem_PixelFormatType_YUY2:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_YV12:
-            return 1u;
-    }
-    ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
-    return 0u;
+uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem_PixelFormat* pixel_format) {
+  ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
+  switch (pixel_format->type) {
+    case fuchsia_sysmem_PixelFormatType_INVALID:
+    case fuchsia_sysmem_PixelFormatType_MJPEG:
+      // impossible; checked previously.
+      ZX_DEBUG_ASSERT(false);
+      return 0u;
+    case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+      return 4u;
+    case fuchsia_sysmem_PixelFormatType_BGRA32:
+      return 4u;
+    case fuchsia_sysmem_PixelFormatType_I420:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_M420:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_NV12:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_YUY2:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_YV12:
+      return 1u;
+  }
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
+  return 0u;
 }
 
 uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) {
-    for (auto& format_set : kImageFormats) {
-        if (format_set->IsSupported(&image_format->pixel_format))
-            return format_set->ImageFormatImageSize(image_format);
-    }
-    ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(image_format->pixel_format.type));
-    return 0;
+  for (auto& format_set : kImageFormats) {
+    if (format_set->IsSupported(&image_format->pixel_format))
+      return format_set->ImageFormatImageSize(image_format);
+  }
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(image_format->pixel_format.type));
+  return 0;
 }
 
-uint32_t ImageFormatCodedWidthMinDivisor(
-    const fuchsia_sysmem_PixelFormat* pixel_format) {
-    ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
-    switch (pixel_format->type) {
-        case fuchsia_sysmem_PixelFormatType_INVALID:
-        case fuchsia_sysmem_PixelFormatType_MJPEG:
-            // impossible; checked previously.
-            ZX_DEBUG_ASSERT(false);
-            return 0u;
-        case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
-            return 1u;
-        case fuchsia_sysmem_PixelFormatType_BGRA32:
-            return 1u;
-        case fuchsia_sysmem_PixelFormatType_I420:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_M420:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_NV12:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_YUY2:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_YV12:
-            return 2u;
-    }
-    ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
-    return 0u;
+uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem_PixelFormat* pixel_format) {
+  ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
+  switch (pixel_format->type) {
+    case fuchsia_sysmem_PixelFormatType_INVALID:
+    case fuchsia_sysmem_PixelFormatType_MJPEG:
+      // impossible; checked previously.
+      ZX_DEBUG_ASSERT(false);
+      return 0u;
+    case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_BGRA32:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_I420:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_M420:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_NV12:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_YUY2:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_YV12:
+      return 2u;
+  }
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
+  return 0u;
 }
 
-uint32_t ImageFormatCodedHeightMinDivisor(
-    const fuchsia_sysmem_PixelFormat* pixel_format) {
-    ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
-    switch (pixel_format->type) {
-        case fuchsia_sysmem_PixelFormatType_INVALID:
-        case fuchsia_sysmem_PixelFormatType_MJPEG:
-            // impossible; checked previously.
-            ZX_DEBUG_ASSERT(false);
-            return 0u;
-        case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
-            return 1u;
-        case fuchsia_sysmem_PixelFormatType_BGRA32:
-            return 1u;
-        case fuchsia_sysmem_PixelFormatType_I420:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_M420:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_NV12:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_YUY2:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_YV12:
-            return 2u;
-    }
-    ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
-    return 0u;
+uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem_PixelFormat* pixel_format) {
+  ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
+  switch (pixel_format->type) {
+    case fuchsia_sysmem_PixelFormatType_INVALID:
+    case fuchsia_sysmem_PixelFormatType_MJPEG:
+      // impossible; checked previously.
+      ZX_DEBUG_ASSERT(false);
+      return 0u;
+    case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_BGRA32:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_I420:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_M420:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_NV12:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_YUY2:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_YV12:
+      return 2u;
+  }
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
+  return 0u;
 }
 
-uint32_t ImageFormatSampleAlignment(
-    const fuchsia_sysmem_PixelFormat* pixel_format) {
-    ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
-    switch (pixel_format->type) {
-        case fuchsia_sysmem_PixelFormatType_INVALID:
-        case fuchsia_sysmem_PixelFormatType_MJPEG:
-            // impossible; checked previously.
-            ZX_DEBUG_ASSERT(false);
-            return 0u;
-        case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
-            return 4u;
-        case fuchsia_sysmem_PixelFormatType_BGRA32:
-            return 4u;
-        case fuchsia_sysmem_PixelFormatType_I420:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_M420:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_NV12:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_YUY2:
-            return 2u;
-        case fuchsia_sysmem_PixelFormatType_YV12:
-            return 2u;
-    }
-    ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
-    return 0u;
+uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_format) {
+  ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
+  switch (pixel_format->type) {
+    case fuchsia_sysmem_PixelFormatType_INVALID:
+    case fuchsia_sysmem_PixelFormatType_MJPEG:
+      // impossible; checked previously.
+      ZX_DEBUG_ASSERT(false);
+      return 0u;
+    case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+      return 4u;
+    case fuchsia_sysmem_PixelFormatType_BGRA32:
+      return 4u;
+    case fuchsia_sysmem_PixelFormatType_I420:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_M420:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_NV12:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_YUY2:
+      return 2u;
+    case fuchsia_sysmem_PixelFormatType_YV12:
+      return 2u;
+  }
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
+  return 0u;
 }
 
 bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* constraints,
                                 uint32_t width, uint32_t* minimum_row_bytes_out) {
-    // Bytes per row is not well-defined for tiled types.
-    ZX_DEBUG_ASSERT(!constraints->pixel_format.has_format_modifier);
-    if (width < constraints->min_coded_width || width > constraints->max_coded_width) {
-        return false;
-    }
-    *minimum_row_bytes_out = fbl::round_up(
-        fbl::max(ImageFormatStrideBytesPerWidthPixel(&constraints->pixel_format) * width,
-                 constraints->min_bytes_per_row),
-        constraints->bytes_per_row_divisor);
-    ZX_ASSERT(*minimum_row_bytes_out <= constraints->max_bytes_per_row);
-    return true;
+  // Bytes per row is not well-defined for tiled types.
+  ZX_DEBUG_ASSERT(!constraints->pixel_format.has_format_modifier);
+  if (width < constraints->min_coded_width || width > constraints->max_coded_width) {
+    return false;
+  }
+  *minimum_row_bytes_out = fbl::round_up(
+      fbl::max(ImageFormatStrideBytesPerWidthPixel(&constraints->pixel_format) * width,
+               constraints->min_bytes_per_row),
+      constraints->bytes_per_row_divisor);
+  ZX_ASSERT(*minimum_row_bytes_out <= constraints->max_bytes_per_row);
+  return true;
 }

@@ -44,50 +44,47 @@ namespace fbl {
 //
 template <typename T>
 class TypeInfo {
-public:
-    // Returns the string name for type T.
-    static const char* Name() {
-        static constexpr TypeInfo type_info;
-        return type_info.name;
-    }
+ public:
+  // Returns the string name for type T.
+  static const char* Name() {
+    static constexpr TypeInfo type_info;
+    return type_info.name;
+  }
 
-private:
-    struct Info {
-        const char* const kName;
-        const size_t kOffset;
-        const size_t kSize;
-    };
+ private:
+  struct Info {
+    const char* const kName;
+    const size_t kOffset;
+    const size_t kSize;
+  };
 
-    static constexpr Info Get() {
-        const char* type_name = __PRETTY_FUNCTION__;
-        const size_t size = sizeof(__PRETTY_FUNCTION__);
-        size_t start = Find(type_name, '=', 0, Forward) + 2;
-        size_t end = Find(type_name, ']', size - 1, Reverse) + 1;
-        return {type_name, start, end - start};
-    }
+  static constexpr Info Get() {
+    const char* type_name = __PRETTY_FUNCTION__;
+    const size_t size = sizeof(__PRETTY_FUNCTION__);
+    size_t start = Find(type_name, '=', 0, Forward) + 2;
+    size_t end = Find(type_name, ']', size - 1, Reverse) + 1;
+    return {type_name, start, end - start};
+  }
 
-    enum Direction { Forward,
-                     Reverse };
-    static constexpr size_t Find(const char* subject, char value, size_t index,
-                                 Direction direction) {
-        while (subject[index] != value)
-            index += direction == Forward ? 1 : -1;
-        return index;
-    }
+  enum Direction { Forward, Reverse };
+  static constexpr size_t Find(const char* subject, char value, size_t index, Direction direction) {
+    while (subject[index] != value)
+      index += direction == Forward ? 1 : -1;
+    return index;
+  }
 
-    static constexpr size_t Size = Get().kSize;
-    static constexpr size_t Offset = Get().kOffset;
-    static constexpr const char* BaseName = Get().kName;
+  static constexpr size_t Size = Get().kSize;
+  static constexpr size_t Offset = Get().kOffset;
+  static constexpr const char* BaseName = Get().kName;
 
-    constexpr TypeInfo()
-        : TypeInfo(std::make_index_sequence<Size>{}) {}
-    template <size_t... Is>
-    constexpr TypeInfo(std::index_sequence<Is...>)
-        : name{(Is < Size - 1 ? BaseName[Offset + Is] : '\0')...} {}
+  constexpr TypeInfo() : TypeInfo(std::make_index_sequence<Size>{}) {}
+  template <size_t... Is>
+  constexpr TypeInfo(std::index_sequence<Is...>)
+      : name{(Is < Size - 1 ? BaseName[Offset + Is] : '\0')...} {}
 
-    const char name[Size];
+  const char name[Size];
 };
 
-} // namespace fbl
+}  // namespace fbl
 
 #endif  // FBL_TYPE_INFO_H_

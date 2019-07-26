@@ -15,16 +15,14 @@ namespace measure {
 namespace {
 
 TEST(MeasureArgumentValueTest, ArgumentValue) {
-  std::vector<ArgumentValueSpec> specs = {ArgumentValueSpec(
-      {42u, {"event_foo", "category_bar"}, "arg_foo", "unit_bar"})};
+  std::vector<ArgumentValueSpec> specs = {
+      ArgumentValueSpec({42u, {"event_foo", "category_bar"}, "arg_foo", "unit_bar"})};
 
   MeasureArgumentValue measure(std::move(specs));
 
   fbl::Vector<trace::Argument> arguments;
-  arguments.push_back(
-      trace::Argument("arg_foo", trace::ArgumentValue::MakeUint64(149)));
-  measure.Process(
-      test::Instant("event_foo", "category_bar", 10u, std::move(arguments)));
+  arguments.push_back(trace::Argument("arg_foo", trace::ArgumentValue::MakeUint64(149)));
+  measure.Process(test::Instant("event_foo", "category_bar", 10u, std::move(arguments)));
 
   auto results = measure.results();
   EXPECT_EQ(1u, results.size());
@@ -32,16 +30,14 @@ TEST(MeasureArgumentValueTest, ArgumentValue) {
 }
 
 TEST(MeasureArgumentValueTest, ArgumentValueDoesNotMatchSpec) {
-  std::vector<ArgumentValueSpec> specs = {ArgumentValueSpec(
-      {42u, {"event_foo", "category_bar"}, "arg_foo", "unit_bar"})};
+  std::vector<ArgumentValueSpec> specs = {
+      ArgumentValueSpec({42u, {"event_foo", "category_bar"}, "arg_foo", "unit_bar"})};
 
   MeasureArgumentValue measure(std::move(specs));
 
   fbl::Vector<trace::Argument> arguments;
-  arguments.push_back(
-      trace::Argument("bytes", trace::ArgumentValue::MakeUint64(149)));
-  measure.Process(
-      test::Instant("event_baz", "category_bar", 10u, std::move(arguments)));
+  arguments.push_back(trace::Argument("bytes", trace::ArgumentValue::MakeUint64(149)));
+  measure.Process(test::Instant("event_baz", "category_bar", 10u, std::move(arguments)));
 
   auto results = measure.results();
   EXPECT_EQ(0u, results.size());
@@ -55,13 +51,10 @@ TEST(MeasureArgumentValueTest, ArgumentValueArgumentNotFound) {
 
   fbl::Vector<trace::Argument> arguments;
   // Right argument type, wrong argument name.
-  arguments.push_back(
-      trace::Argument("foo", trace::ArgumentValue::MakeUint64(149)));
+  arguments.push_back(trace::Argument("foo", trace::ArgumentValue::MakeUint64(149)));
   // Right argument name, wrong argument type.
-  arguments.push_back(
-      trace::Argument("arg", trace::ArgumentValue::MakeDouble(149)));
-  measure.Process(
-      test::Instant("event_foo", "category_bar", 10u, std::move(arguments)));
+  arguments.push_back(trace::Argument("arg", trace::ArgumentValue::MakeDouble(149)));
+  measure.Process(test::Instant("event_foo", "category_bar", 10u, std::move(arguments)));
 
   auto results = measure.results();
   EXPECT_EQ(0u, results.size());

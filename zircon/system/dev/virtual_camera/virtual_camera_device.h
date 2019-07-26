@@ -19,57 +19,49 @@
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-pool.h>
 
-
 namespace virtual_camera {
 
 class VirtualCameraDevice;
-using VirtualCameraDeviceType =
-    ddk::Device<VirtualCameraDevice, ddk::Unbindable, ddk::Messageable>;
+using VirtualCameraDeviceType = ddk::Device<VirtualCameraDevice, ddk::Unbindable, ddk::Messageable>;
 
 class VirtualCameraDevice : public VirtualCameraDeviceType,
                             public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VirtualCameraDevice);
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(VirtualCameraDevice);
 
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    VirtualCameraDevice(zx_device_t* parent)
-        : VirtualCameraDeviceType(parent), count_(0) {
-    }
+  VirtualCameraDevice(zx_device_t* parent) : VirtualCameraDeviceType(parent), count_(0) {}
 
-    ~VirtualCameraDevice() {}
+  ~VirtualCameraDevice() {}
 
-    // DDK device implementation
-    void DdkRelease();
-    void DdkUnbind();
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  // DDK device implementation
+  void DdkRelease();
+  void DdkUnbind();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-    void RemoveStream(uint64_t);
+  void RemoveStream(uint64_t);
 
+ private:
+  // DDK Helper Functions.
+  zx_status_t GetFormats(uint32_t index, fidl_txn_t* txn);
+  zx_status_t CreateStream(const fuchsia_sysmem_BufferCollectionInfo* buffer_collection_info,
+                           const fuchsia_camera_common_FrameRate* rate, zx_handle_t stream,
+                           zx_handle_t stream_token);
+  zx_status_t GetDeviceInfo(fidl_txn_t* txn);
 
-private:
-    // DDK Helper Functions.
-    zx_status_t GetFormats(uint32_t index, fidl_txn_t* txn);
-    zx_status_t CreateStream(
-        const fuchsia_sysmem_BufferCollectionInfo* buffer_collection_info,
-        const fuchsia_camera_common_FrameRate* rate, zx_handle_t stream,
-        zx_handle_t stream_token);
-    zx_status_t GetDeviceInfo(fidl_txn_t* txn);
+  static constexpr fuchsia_hardware_camera_ControlV2_ops_t control_ops = {
+      .GetFormats = fidl::Binder<VirtualCameraDevice>::BindMember<&VirtualCameraDevice::GetFormats>,
+      .CreateStream =
+          fidl::Binder<VirtualCameraDevice>::BindMember<&VirtualCameraDevice::CreateStream>,
+      .GetDeviceInfo =
+          fidl::Binder<VirtualCameraDevice>::BindMember<&VirtualCameraDevice::GetDeviceInfo>,
+  };
 
-    static constexpr fuchsia_hardware_camera_ControlV2_ops_t control_ops = {
-        .GetFormats = fidl::Binder<VirtualCameraDevice>::BindMember<
-            &VirtualCameraDevice::GetFormats>,
-        .CreateStream = fidl::Binder<VirtualCameraDevice>::BindMember<
-            &VirtualCameraDevice::CreateStream>,
-        .GetDeviceInfo = fidl::Binder<VirtualCameraDevice>::BindMember<
-            &VirtualCameraDevice::GetDeviceInfo>,
-    };
+  std::map<uint64_t, fbl::unique_ptr<VirtualCameraStream>> streams_;
 
-    std::map<uint64_t, fbl::unique_ptr<VirtualCameraStream>> streams_;
-
-    // Variable to keep track of the number of streams created.
-    uint64_t count_;
-
+  // Variable to keep track of the number of streams created.
+  uint64_t count_;
 };
 
-} // namespace virtual_camera
+}  // namespace virtual_camera

@@ -85,4 +85,4 @@ zx_status_t SparseUsedSize(fbl::unique_fd fd, off_t start, off_t end,
                            const fbl::Vector<size_t>& extent_lengths, uint64_t* out_size);
 
 #endif
-} // namespace minfs
+}  // namespace minfs

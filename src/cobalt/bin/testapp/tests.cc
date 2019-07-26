@@ -27,12 +27,10 @@ using fuchsia::cobalt::Status;
 
 namespace {
 uint32_t CurrentDayIndex(ClockInterface* clock) {
-  return TimeToDayIndex(std::chrono::system_clock::to_time_t(clock->now()),
-                        MetricDefinition::UTC);
+  return TimeToDayIndex(std::chrono::system_clock::to_time_t(clock->now()), MetricDefinition::UTC);
 }
 
-bool SendAndCheckSuccess(const std::string& test_name,
-                         CobaltTestAppLogger* logger) {
+bool SendAndCheckSuccess(const std::string& test_name, CobaltTestAppLogger* logger) {
   if (!logger->CheckForSuccessfulSend()) {
     FX_LOGS(INFO) << "CheckForSuccessfulSend() returned false";
     FX_LOGS(INFO) << test_name << ": FAIL";
@@ -62,17 +60,14 @@ bool CheckMetricIds() {
 
   std::map<uint32_t, std::string> prober_metrics;
 
-  for (const auto& prober_metric :
-       prober_registry.customers(0).projects(0).metrics()) {
+  for (const auto& prober_metric : prober_registry.customers(0).projects(0).metrics()) {
     prober_metrics[prober_metric.id()] = prober_metric.metric_name();
   }
 
-  for (const auto& testapp_metric :
-       testapp_registry.customers(0).projects(0).metrics()) {
+  for (const auto& testapp_metric : testapp_registry.customers(0).projects(0).metrics()) {
     auto i = prober_metrics.find(testapp_metric.id());
     if (i == prober_metrics.end()) {
-      FX_LOGS(ERROR) << "Metric ID " << testapp_metric.id()
-                     << " not found in prober project.";
+      FX_LOGS(ERROR) << "Metric ID " << testapp_metric.id() << " not found in prober project.";
       return false;
     } else if (i->second != testapp_metric.metric_name()) {
       FX_LOGS(ERROR) << "Name of metric " << testapp_metric.id()
@@ -92,8 +87,7 @@ bool TestLogEvent(CobaltTestAppLogger* logger) {
       return false;
     }
   }
-  if (logger->LogEvent(cobalt_registry::kErrorOccurredMetricId,
-                       kErrorOccurredInvalidIndex)) {
+  if (logger->LogEvent(cobalt_registry::kErrorOccurredMetricId, kErrorOccurredInvalidIndex)) {
     FX_LOGS(INFO) << "TestLogEvent: FAIL";
     return false;
   }
@@ -110,13 +104,11 @@ bool TestLogEventCount(CobaltTestAppLogger* logger) {
   FX_LOGS(INFO) << "TestLogEventCount";
   for (uint32_t index : kFileSystemCacheMissesIndices) {
     for (std::string name : kFileSystemCacheMissesComponentNames) {
-      if (!logger->LogEventCount(
-              cobalt_registry::kFileSystemCacheMissesMetricId, index, name,
-              kFileSystemCacheMissesCountMax - index)) {
-        FX_LOGS(INFO) << "LogEventCount("
-                      << cobalt_registry::kFileSystemCacheMissesMetricId << ", "
-                      << index << ", " << name << ", "
-                      << kFileSystemCacheMissesCountMax - index << ")";
+      if (!logger->LogEventCount(cobalt_registry::kFileSystemCacheMissesMetricId, index, name,
+                                 kFileSystemCacheMissesCountMax - index)) {
+        FX_LOGS(INFO) << "LogEventCount(" << cobalt_registry::kFileSystemCacheMissesMetricId << ", "
+                      << index << ", " << name << ", " << kFileSystemCacheMissesCountMax - index
+                      << ")";
         FX_LOGS(INFO) << "TestLogEventCount: FAIL";
         return false;
       }
@@ -136,10 +128,8 @@ bool TestLogElapsedTime(CobaltTestAppLogger* logger) {
   for (uint32_t index : kUpdateDurationIndices) {
     for (std::string name : kUpdateDurationComponentNames) {
       for (int64_t value : kUpdateDurationValues) {
-        if (!logger->LogElapsedTime(cobalt_registry::kUpdateDurationMetricId,
-                                    index, name, value)) {
-          FX_LOGS(INFO) << "LogElapsedTime("
-                        << cobalt_registry::kUpdateDurationMetricId << ", "
+        if (!logger->LogElapsedTime(cobalt_registry::kUpdateDurationMetricId, index, name, value)) {
+          FX_LOGS(INFO) << "LogElapsedTime(" << cobalt_registry::kUpdateDurationMetricId << ", "
                         << index << ", " << name << ", " << value << ")";
           FX_LOGS(INFO) << "TestLogElapsedTime: FAIL";
           return false;
@@ -161,10 +151,8 @@ bool TestLogFrameRate(CobaltTestAppLogger* logger) {
   for (uint32_t index : kGameFrameRateIndices) {
     for (std::string name : kGameFrameRateComponentNames) {
       for (float value : kGameFrameRateValues) {
-        if (!logger->LogFrameRate(cobalt_registry::kGameFrameRateMetricId,
-                                  index, name, value)) {
-          FX_LOGS(INFO) << "LogFrameRate("
-                        << cobalt_registry::kGameFrameRateMetricId << ", "
+        if (!logger->LogFrameRate(cobalt_registry::kGameFrameRateMetricId, index, name, value)) {
+          FX_LOGS(INFO) << "LogFrameRate(" << cobalt_registry::kGameFrameRateMetricId << ", "
                         << index << ", " << name << ", " << value << ")";
           FX_LOGS(INFO) << "TestLogFrameRate: FAIL";
           return false;
@@ -186,10 +174,9 @@ bool TestLogMemoryUsage(CobaltTestAppLogger* logger) {
   for (uint32_t index : kApplicationMemoryIndices) {
     for (std::string name : kApplicationComponentNames) {
       for (int64_t value : kApplicationMemoryValues) {
-        if (!logger->LogMemoryUsage(cobalt_registry::kApplicationMemoryMetricId,
-                                    index, name, value)) {
-          FX_LOGS(INFO) << "LogMemoryUsage("
-                        << cobalt_registry::kApplicationMemoryMetricId << ", "
+        if (!logger->LogMemoryUsage(cobalt_registry::kApplicationMemoryMetricId, index, name,
+                                    value)) {
+          FX_LOGS(INFO) << "LogMemoryUsage(" << cobalt_registry::kApplicationMemoryMetricId << ", "
                         << index << ", " << name << ", " << value << ")";
           FX_LOGS(INFO) << "TestLogMemoryUsage: FAIL";
           return false;
@@ -216,8 +203,7 @@ bool TestLogIntHistogram(CobaltTestAppLogger* logger) {
   }
   for (uint32_t index : kPowerUsageIndices) {
     for (std::string name : kApplicationComponentNames) {
-      if (!logger->LogIntHistogram(cobalt_registry::kPowerUsageMetricId, index,
-                                   name, histogram)) {
+      if (!logger->LogIntHistogram(cobalt_registry::kPowerUsageMetricId, index, name, histogram)) {
         FX_LOGS(INFO) << "TestLogIntHistogram : FAIL";
         return false;
       }
@@ -232,8 +218,8 @@ bool TestLogIntHistogram(CobaltTestAppLogger* logger) {
   }
   for (uint32_t index : kBandwidthUsageIndices) {
     for (std::string name : kApplicationComponentNames) {
-      if (!logger->LogIntHistogram(cobalt_registry::kBandwidthUsageMetricId,
-                                   index, name, histogram)) {
+      if (!logger->LogIntHistogram(cobalt_registry::kBandwidthUsageMetricId, index, name,
+                                   histogram)) {
         FX_LOGS(INFO) << "TestLogIntHistogram : FAIL";
         return false;
       }
@@ -246,8 +232,8 @@ bool TestLogIntHistogram(CobaltTestAppLogger* logger) {
 bool TestLogCustomEvent(CobaltTestAppLogger* logger) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogCustomEvent";
-  bool success = logger->LogCustomMetricsTestProto(
-      cobalt_registry::kQueryResponseMetricId, "test", 100, 1);
+  bool success =
+      logger->LogCustomMetricsTestProto(cobalt_registry::kQueryResponseMetricId, "test", 100, 1);
 
   FX_LOGS(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
 
@@ -259,28 +245,25 @@ bool TestLogCobaltEvent(CobaltTestAppLogger* logger) {
   FX_LOGS(INFO) << "TestLogCobaltEvent";
 
   if (logger->LogCobaltEvent(
-          CobaltEventBuilder(cobalt_registry::kErrorOccurredMetricId)
-              .as_event())) {
+          CobaltEventBuilder(cobalt_registry::kErrorOccurredMetricId).as_event())) {
     // A LogEvent with no event codes is invalid.
     FX_LOGS(INFO) << "TestLogCobaltEvent: FAIL";
     return false;
   }
 
-  if (logger->LogCobaltEvent(
-          CobaltEventBuilder(cobalt_registry::kErrorOccurredMetricId)
-              .with_event_code(0)
-              .with_event_code(0)
-              .as_event())) {
+  if (logger->LogCobaltEvent(CobaltEventBuilder(cobalt_registry::kErrorOccurredMetricId)
+                                 .with_event_code(0)
+                                 .with_event_code(0)
+                                 .as_event())) {
     // A LogEvent with more than 1 event code is invalid.
     FX_LOGS(INFO) << "TestLogCobaltEvent: FAIL";
     return false;
   }
 
   for (uint32_t index : kErrorOccurredIndicesToUse) {
-    if (!logger->LogCobaltEvent(
-            CobaltEventBuilder(cobalt_registry::kErrorOccurredMetricId)
-                .with_event_code(index)
-                .as_event())) {
+    if (!logger->LogCobaltEvent(CobaltEventBuilder(cobalt_registry::kErrorOccurredMetricId)
+                                    .with_event_code(index)
+                                    .as_event())) {
       FX_LOGS(INFO) << "TestLogCobaltEvent: FAIL";
       return false;
     }
@@ -293,8 +276,7 @@ bool TestLogCobaltEvent(CobaltTestAppLogger* logger) {
   for (uint32_t index : kFileSystemCacheMissesIndices) {
     for (std::string name : kFileSystemCacheMissesComponentNames) {
       if (!logger->LogCobaltEvent(
-              CobaltEventBuilder(
-                  cobalt_registry::kFileSystemCacheMissesMetricId)
+              CobaltEventBuilder(cobalt_registry::kFileSystemCacheMissesMetricId)
                   .with_event_code(index)
                   .with_component(name)
                   .as_count_event(0, kFileSystemCacheMissesCountMax - index))) {
@@ -311,13 +293,11 @@ bool TestLogCobaltEvent(CobaltTestAppLogger* logger) {
   for (uint32_t index : kUpdateDurationIndices) {
     for (std::string name : kUpdateDurationComponentNames) {
       for (int64_t value : kUpdateDurationValues) {
-        if (!logger->LogCobaltEvent(
-                CobaltEventBuilder(cobalt_registry::kUpdateDurationMetricId)
-                    .with_event_code(index)
-                    .with_component(name)
-                    .as_elapsed_time(value))) {
-          FX_LOGS(INFO) << "LogElapsedTime("
-                        << cobalt_registry::kUpdateDurationMetricId << ", "
+        if (!logger->LogCobaltEvent(CobaltEventBuilder(cobalt_registry::kUpdateDurationMetricId)
+                                        .with_event_code(index)
+                                        .with_component(name)
+                                        .as_elapsed_time(value))) {
+          FX_LOGS(INFO) << "LogElapsedTime(" << cobalt_registry::kUpdateDurationMetricId << ", "
                         << index << ", " << name << ", " << value << ")";
           FX_LOGS(INFO) << "TestLogCobaltEvent: FAIL";
           return false;
@@ -329,23 +309,21 @@ bool TestLogCobaltEvent(CobaltTestAppLogger* logger) {
   return SendAndCheckSuccess("TestLogCobaltEvent", logger);
 }
 
-bool TestChannelFiltering(CobaltTestAppLogger* logger,
-                          uint32_t expect_more_than,
+bool TestChannelFiltering(CobaltTestAppLogger* logger, uint32_t expect_more_than,
                           fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                           uint32_t* num_added) {
   uint64_t num_obs_at_start = 0;
   (*cobalt_controller)->GetNumObservationsAdded(&num_obs_at_start);
   FX_LOGS(INFO) << "========================";
-  FX_LOGS(INFO) << "TestChannelFiltering (expecting more than "
-                << expect_more_than << " observations)";
+  FX_LOGS(INFO) << "TestChannelFiltering (expecting more than " << expect_more_than
+                << " observations)";
   for (uint32_t index : kErrorOccurredIndicesToUse) {
     if (!logger->LogEvent(cobalt_registry::kErrorOccurredMetricId, index)) {
       FX_LOGS(INFO) << "TestChannelFiltering: FAIL";
       return false;
     }
   }
-  if (logger->LogEvent(cobalt_registry::kErrorOccurredMetricId,
-                       kErrorOccurredInvalidIndex)) {
+  if (logger->LogEvent(cobalt_registry::kErrorOccurredMetricId, kErrorOccurredInvalidIndex)) {
     FX_LOGS(INFO) << "TestChannelFiltering: FAIL";
     return false;
   }
@@ -363,8 +341,7 @@ bool TestChannelFiltering(CobaltTestAppLogger* logger,
   }
 
   if (num_obs <= expect_more_than) {
-    FX_LOGS(INFO) << "Expected more than " << expect_more_than << " saw "
-                  << num_obs;
+    FX_LOGS(INFO) << "Expected more than " << expect_more_than << " saw " << num_obs;
     FX_LOGS(INFO) << "TestChannelFiltering: FAIL";
     return false;
   }
@@ -378,32 +355,28 @@ bool TestChannelFiltering(CobaltTestAppLogger* logger,
 // |day_index| and checks that the number of generated observations is equal to
 // the expected number for each locally aggregated report ID. The keys of
 // |expected_num_obs| should be the elements of |kAggregatedReportIds|.
-bool GenerateObsAndCheckCount(
-    uint32_t day_index, fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-    std::map<uint32_t, uint64_t> expected_num_obs) {
-  FX_LOGS(INFO) << "Generating locally aggregated observations for day index "
-                << day_index;
+bool GenerateObsAndCheckCount(uint32_t day_index,
+                              fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                              std::map<uint32_t, uint64_t> expected_num_obs) {
+  FX_LOGS(INFO) << "Generating locally aggregated observations for day index " << day_index;
   std::vector<uint64_t> num_obs;
-  (*cobalt_controller)
-      ->GenerateAggregatedObservations(day_index, kAggregatedReportIds,
-                                       &num_obs);
+  (*cobalt_controller)->GenerateAggregatedObservations(day_index, kAggregatedReportIds, &num_obs);
   for (size_t i = 0; i < kAggregatedReportIds.size(); i++) {
     auto report_id = kAggregatedReportIds[i];
     auto expected = expected_num_obs[report_id];
     auto found = num_obs[i];
     if (found != expected) {
-      FX_LOGS(INFO) << "Expected " << expected << " observations for report ID "
-                    << report_id << ", found " << found;
+      FX_LOGS(INFO) << "Expected " << expected << " observations for report ID " << report_id
+                    << ", found " << found;
       return false;
     }
   }
   return true;
 }
 
-bool TestLogEventWithAggregation(
-    CobaltTestAppLogger* logger, ClockInterface* clock,
-    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-    const size_t backfill_days) {
+bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, ClockInterface* clock,
+                                 fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                                 const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogEventWithAggregation";
   for (uint32_t index : kFeaturesActiveIndices) {
@@ -413,10 +386,9 @@ bool TestLogEventWithAggregation(
       return false;
     }
   }
-  if (logger->LogEvent(cobalt_registry::kFeaturesActiveMetricId,
-                       kFeaturesActiveInvalidIndex)) {
-    FX_LOGS(INFO) << "Failed to reject event with invalid index "
-                  << kFeaturesActiveInvalidIndex << ".";
+  if (logger->LogEvent(cobalt_registry::kFeaturesActiveMetricId, kFeaturesActiveInvalidIndex)) {
+    FX_LOGS(INFO) << "Failed to reject event with invalid index " << kFeaturesActiveInvalidIndex
+                  << ".";
     FX_LOGS(INFO) << "TestLogEventWithAggregation : FAIL";
     return false;
   }
@@ -430,23 +402,20 @@ bool TestLogEventWithAggregation(
     expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
     expect_no_obs[pair.first] = 0;
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller,
-                                expected_num_obs)) {
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogEventWithAggregation : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller,
-                                expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogEventWithAggregation : FAIL";
     return false;
   }
   return SendAndCheckSuccess("TestLogEventWithAggregation", logger);
 }
 
-bool TestLogEventCountWithAggregation(
-    CobaltTestAppLogger* logger, ClockInterface* clock,
-    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-    const size_t backfill_days) {
+bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, ClockInterface* clock,
+                                      fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                                      const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogEventCountWithAggregation";
   std::map<uint32_t, uint64_t> expected_num_obs;
@@ -460,36 +429,32 @@ bool TestLogEventCountWithAggregation(
       if (index != 0) {
         // Log a count depending on the index.
         int64_t count = index * 5;
-        if (!logger->LogEventCount(cobalt_registry::kConnectionAttemptsMetricId,
-                                   index, component, count)) {
-          FX_LOGS(INFO) << "Failed to log event count for index " << index
-                        << " and component " << component << ".";
+        if (!logger->LogEventCount(cobalt_registry::kConnectionAttemptsMetricId, index, component,
+                                   count)) {
+          FX_LOGS(INFO) << "Failed to log event count for index " << index << " and component "
+                        << component << ".";
           FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
           return false;
         }
-        expected_num_obs
-            [cobalt_registry::kConnectionAttemptsPerDeviceCountReportId] +=
+        expected_num_obs[cobalt_registry::kConnectionAttemptsPerDeviceCountReportId] +=
             kConnectionAttemptsNumWindowSizes;
       }
     }
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller,
-                                expected_num_obs)) {
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller,
-                                expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
     return false;
   }
   return SendAndCheckSuccess("TestLogEventCountWithAggregation", logger);
 }
 
-bool TestLogElapsedTimeWithAggregation(
-    CobaltTestAppLogger* logger, ClockInterface* clock,
-    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-    const size_t backfill_days) {
+bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, ClockInterface* clock,
+                                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                                       const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation";
   // Expect to generate |kNumAggregatedObservations| for each day in the
@@ -506,26 +471,23 @@ bool TestLogElapsedTimeWithAggregation(
       // Log a duration depending on the index.
       if (index != 0) {
         int64_t duration = index * 100;
-        if (!logger->LogElapsedTime(cobalt_registry::kStreamingTimeMetricId,
-                                    index, component, duration)) {
-          FX_LOGS(INFO) << "Failed to log elapsed time for index " << index
-                        << " and component " << component << ".";
+        if (!logger->LogElapsedTime(cobalt_registry::kStreamingTimeMetricId, index, component,
+                                    duration)) {
+          FX_LOGS(INFO) << "Failed to log elapsed time for index " << index << " and component "
+                        << component << ".";
           FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
           return false;
         }
-        expected_num_obs
-            [cobalt_registry::kStreamingTimePerDeviceTotalReportId] +=
+        expected_num_obs[cobalt_registry::kStreamingTimePerDeviceTotalReportId] +=
             kStreamingTimeNumWindowSizes;
       }
     }
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller,
-                                expected_num_obs)) {
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller,
-                                expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
     return false;
   }

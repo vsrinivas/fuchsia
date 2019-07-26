@@ -22,12 +22,10 @@ Assertion::Assertion(const fbl::String& desc, const fbl::String& expected,
       actual_eval_(actual_eval),
       location_(location),
       is_fatal_(is_fatal),
-      has_values_(true) {
-}
+      has_values_(true) {}
 
 Assertion::Assertion(const fbl::String& desc, const SourceLocation& location, bool is_fatal)
-    : description_(desc), location_(location), is_fatal_(is_fatal), has_values_(false) {
-}
+    : description_(desc), location_(location), is_fatal_(is_fatal), has_values_(false) {}
 
 Assertion::Assertion(Assertion&& other) = default;
 Assertion::~Assertion() = default;
@@ -111,9 +109,7 @@ fbl::String PrintStatus(zx_status_t status) {
 #endif
 }
 
-bool StrCmp(const fbl::String& actual, const fbl::String& expected) {
-  return actual == expected;
-}
+bool StrCmp(const fbl::String& actual, const fbl::String& expected) { return actual == expected; }
 
 bool StrCmp(const fbl::String& actual, const char* expected) {
   return strcmp(actual.c_str(), expected) == 0;
@@ -123,8 +119,6 @@ bool StrCmp(const char* actual, const fbl::String& expected) {
   return strcmp(actual, expected.c_str()) == 0;
 }
 
-bool StrCmp(const char* actual, const char* expected) {
-  return strcmp(actual, expected) == 0;
-}
+bool StrCmp(const char* actual, const char* expected) { return strcmp(actual, expected) == 0; }
 
 }  // namespace zxtest

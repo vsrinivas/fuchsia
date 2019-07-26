@@ -11,25 +11,25 @@
 
 static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                            zx_handle_t request) {
-    if (!strcmp(service_name, fuchsia_process_Launcher_Name)) {
-        auto launcher = new launcher::LauncherImpl(zx::channel(request));
+  if (!strcmp(service_name, fuchsia_process_Launcher_Name)) {
+    auto launcher = new launcher::LauncherImpl(zx::channel(request));
 
-        zx_status_t status = launcher->Begin(dispatcher);
-        if (status != ZX_OK) {
-            delete launcher;
-            return status;
-        }
-
-        launcher->set_error_handler([launcher](zx_status_t status) {
-            // If we encounter an error, we tear down the launcher.
-            delete launcher;
-        });
-
-        return ZX_OK;
+    zx_status_t status = launcher->Begin(dispatcher);
+    if (status != ZX_OK) {
+      delete launcher;
+      return status;
     }
 
-    zx_handle_close(request);
-    return ZX_ERR_NOT_SUPPORTED;
+    launcher->set_error_handler([launcher](zx_status_t status) {
+      // If we encounter an error, we tear down the launcher.
+      delete launcher;
+    });
+
+    return ZX_OK;
+  }
+
+  zx_handle_close(request);
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 static constexpr const char* launcher_services[] = {
@@ -49,6 +49,4 @@ static constexpr zx_service_provider_t launcher_service_provider = {
     .ops = &launcher_ops,
 };
 
-const zx_service_provider_t* launcher_get_service_provider() {
-    return &launcher_service_provider;
-}
+const zx_service_provider_t* launcher_get_service_provider() { return &launcher_service_provider; }

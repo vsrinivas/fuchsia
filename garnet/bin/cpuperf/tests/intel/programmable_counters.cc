@@ -10,13 +10,11 @@
 
 class ProgrammableCounterVerifier : public Verifier {
  public:
-  static std::unique_ptr<Verifier> Create(
-      const cpuperf::SessionResultSpec* spec) {
+  static std::unique_ptr<Verifier> Create(const cpuperf::SessionResultSpec* spec) {
     return std::make_unique<ProgrammableCounterVerifier>(spec);
   }
 
-  ProgrammableCounterVerifier(const cpuperf::SessionResultSpec* spec)
-      : Verifier(spec) {
+  ProgrammableCounterVerifier(const cpuperf::SessionResultSpec* spec) : Verifier(spec) {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED = LookupEventByName("arch", "llc_references", &details);
@@ -85,6 +83,6 @@ class ProgrammableCounterVerifier : public Verifier {
 };
 
 const TestSpec kProgrammableCounterSpec = {
-  "programmable-counters",
-  &ProgrammableCounterVerifier::Create,
+    "programmable-counters",
+    &ProgrammableCounterVerifier::Create,
 };

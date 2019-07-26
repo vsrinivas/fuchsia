@@ -7,7 +7,7 @@
 namespace zx {
 
 zx_status_t pager::create(uint32_t options, pager* result) {
-    return zx_pager_create(options, result->reset_and_get_address());
+  return zx_pager_create(options, result->reset_and_get_address());
 }
 
-} // namespace zx
+}  // namespace zx

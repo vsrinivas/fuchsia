@@ -11,43 +11,41 @@
 #include <lib/mmio/mmio.h>
 
 class MtAudioOutDevice {
+ public:
+  enum MtI2sCh {
+    I2S2,  // Primary.
+    I2S4,  // Secondary.
+  };
 
-public:
-    enum MtI2sCh {
-        I2S2, // Primary.
-        I2S4, // Secondary.
-    };
+  DISALLOW_COPY_ASSIGN_AND_MOVE(MtAudioOutDevice);
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(MtAudioOutDevice);
+  static std::unique_ptr<MtAudioOutDevice> Create(ddk::MmioBuffer mmio, MtI2sCh ch);
 
-    static std::unique_ptr<MtAudioOutDevice> Create(ddk::MmioBuffer mmio, MtI2sCh ch);
+  // Sets the buffer/length pointers for the DMA engine,
+  // must reside in the lower 32-bits of the address space.
+  zx_status_t SetBuffer(zx_paddr_t buf, size_t len);
 
-    // Sets the buffer/length pointers for the DMA engine,
-    // must reside in the lower 32-bits of the address space.
-    zx_status_t SetBuffer(zx_paddr_t buf, size_t len);
+  // Returns offset of dma pointer in the ring buffer.
+  uint32_t GetRingPosition();
 
-    // Returns offset of dma pointer in the ring buffer.
-    uint32_t GetRingPosition();
+  // Starts clocking data with data fetched from the beginning of the buffer.
+  uint64_t Start();
 
-    // Starts clocking data with data fetched from the beginning of the buffer.
-    uint64_t Start();
+  // Stops clocking data out (physical bus signals remain active).
+  void Stop();
 
-    // Stops clocking data out (physical bus signals remain active).
-    void Stop();
+  // Stops clocking data and quiets output signals.
+  void Shutdown();
 
-    // Stops clocking data and quiets output signals.
-    void Shutdown();
+  uint32_t fifo_depth() const { return fifo_depth_; }
 
-    uint32_t fifo_depth() const { return fifo_depth_; }
+ private:
+  const uint32_t fifo_depth_;  // in bytes.
+  ddk::MmioBuffer mmio_;
 
-private:
-    const uint32_t fifo_depth_; // in bytes.
-    ddk::MmioBuffer mmio_;
+  // TODO(andresoportus): Add more configuration options.
+  MtAudioOutDevice(ddk::MmioBuffer mmio, uint32_t fifo_depth)
+      : fifo_depth_(fifo_depth), mmio_(std::move(mmio)) {}
 
-    // TODO(andresoportus): Add more configuration options.
-    MtAudioOutDevice(ddk::MmioBuffer mmio, uint32_t fifo_depth)
-        : fifo_depth_(fifo_depth),
-          mmio_(std::move(mmio)){}
-
-    void InitRegs();
+  void InitRegs();
 };

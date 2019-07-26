@@ -36,8 +36,7 @@ class OAuthRequestBuilder {
 
   // Url encodes the query params which are appended to the url string while
   // building the request.
-  OAuthRequestBuilder& SetQueryParams(
-      std::map<std::string, std::string> query_params);
+  OAuthRequestBuilder& SetQueryParams(std::map<std::string, std::string> query_params);
 
   // Returns an HTTP |URLRequest| handle for the OAuth endpoint.
   ::fuchsia::net::oldhttp::URLRequest Build() const;

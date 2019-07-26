@@ -16,39 +16,39 @@ BlockingRingBufferImpl::BlockingRingBufferImpl(std::unique_ptr<RingBuffer> buffe
     : buffer_(std::move(buffer)) {}
 
 zx_status_t BlockingRingBufferImpl::Reserve(uint64_t blocks, BlockingRingBufferReservation* out) {
-    // First, ensure that it is possible for us to eventually get space.
-    if (blocks > buffer_->capacity()) {
-        return ZX_ERR_NO_SPACE;
-    }
+  // First, ensure that it is possible for us to eventually get space.
+  if (blocks > buffer_->capacity()) {
+    return ZX_ERR_NO_SPACE;
+  }
 
-    RingBufferReservation reservation;
+  RingBufferReservation reservation;
 
-    {
-        zx_status_t status = ZX_ERR_NO_SPACE;
-        fbl::AutoLock lock(&lock_);
-        do {
-            status = buffer_->Reserve(blocks, &reservation);
-            if (status == ZX_ERR_NO_SPACE) {
-                // Case 1: We cannot reserve space. Block until it is available.
-                cvar_.Wait(&lock_);
-            } else if (status != ZX_OK) {
-                // Case 2: We cannot reserve space, but don't expect it to become available.
-                return status;
-            }
-            // Case 3: We reserved space successfully. Fallthrough.
-        } while (status == ZX_ERR_NO_SPACE);
-    }
+  {
+    zx_status_t status = ZX_ERR_NO_SPACE;
+    fbl::AutoLock lock(&lock_);
+    do {
+      status = buffer_->Reserve(blocks, &reservation);
+      if (status == ZX_ERR_NO_SPACE) {
+        // Case 1: We cannot reserve space. Block until it is available.
+        cvar_.Wait(&lock_);
+      } else if (status != ZX_OK) {
+        // Case 2: We cannot reserve space, but don't expect it to become available.
+        return status;
+      }
+      // Case 3: We reserved space successfully. Fallthrough.
+    } while (status == ZX_ERR_NO_SPACE);
+  }
 
-    *out = BlockingRingBufferReservation(this, std::move(reservation));
-    return ZX_OK;
+  *out = BlockingRingBufferReservation(this, std::move(reservation));
+  return ZX_OK;
 }
 
 void BlockingRingBufferImpl::Wake() {
-    fbl::AutoLock lock(&lock_);
-    cvar_.Broadcast();
+  fbl::AutoLock lock(&lock_);
+  cvar_.Broadcast();
 }
 
-} // namespace internal
+}  // namespace internal
 
 BlockingRingBuffer::BlockingRingBuffer(std::unique_ptr<RingBuffer> buffer)
     : buffer_(internal::BlockingRingBufferImpl(std::move(buffer))) {}
@@ -56,21 +56,21 @@ BlockingRingBuffer::BlockingRingBuffer(std::unique_ptr<RingBuffer> buffer)
 zx_status_t BlockingRingBuffer::Create(VmoidRegistry* vmoid_registry, const size_t blocks,
                                        const char* label,
                                        std::unique_ptr<BlockingRingBuffer>* out) {
-    std::unique_ptr<RingBuffer> buffer;
-    zx_status_t status = RingBuffer::Create(vmoid_registry, blocks, label, &buffer);
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out = std::unique_ptr<BlockingRingBuffer>(new BlockingRingBuffer(std::move(buffer)));
-    return ZX_OK;
+  std::unique_ptr<RingBuffer> buffer;
+  zx_status_t status = RingBuffer::Create(vmoid_registry, blocks, label, &buffer);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out = std::unique_ptr<BlockingRingBuffer>(new BlockingRingBuffer(std::move(buffer)));
+  return ZX_OK;
 }
 
 BlockingRingBufferReservation::~BlockingRingBufferReservation() {
-    if (!Reserved()) {
-        return;
-    }
-    Reset();
-    buffer_->Wake();
+  if (!Reserved()) {
+    return;
+  }
+  Reset();
+  buffer_->Wake();
 }
 
-} // namespace blobfs
+}  // namespace blobfs

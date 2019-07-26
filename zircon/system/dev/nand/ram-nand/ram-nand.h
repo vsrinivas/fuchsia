@@ -22,30 +22,26 @@
 
 // Wrapper for fuchsia_hardware_nand_Info. It simplifies initialization of NandDevice.
 struct NandParams : public fuchsia_hardware_nand_Info {
-    NandParams() : NandParams(0, 0, 0, 0, 0) {}
+  NandParams() : NandParams(0, 0, 0, 0, 0) {}
 
-    NandParams(uint32_t page_size, uint32_t pages_per_block, uint32_t num_blocks, uint32_t ecc_bits,
-               uint32_t oob_size)
-        : NandParams(fuchsia_hardware_nand_Info{page_size,
-                                                pages_per_block,
-                                                num_blocks,
-                                                ecc_bits,
-                                                oob_size,
-                                                fuchsia_hardware_nand_Class_FTL,
-                                                {}}) {}
+  NandParams(uint32_t page_size, uint32_t pages_per_block, uint32_t num_blocks, uint32_t ecc_bits,
+             uint32_t oob_size)
+      : NandParams(fuchsia_hardware_nand_Info{page_size,
+                                              pages_per_block,
+                                              num_blocks,
+                                              ecc_bits,
+                                              oob_size,
+                                              fuchsia_hardware_nand_Class_FTL,
+                                              {}}) {}
 
-    NandParams(const fuchsia_hardware_nand_Info& base) {
-        // NandParams has no data members.
-        *this = *reinterpret_cast<const NandParams*>(&base);
-    }
+  NandParams(const fuchsia_hardware_nand_Info& base) {
+    // NandParams has no data members.
+    *this = *reinterpret_cast<const NandParams*>(&base);
+  }
 
-    uint64_t GetSize() const {
-        return static_cast<uint64_t>(page_size + oob_size) * NumPages();
-    }
+  uint64_t GetSize() const { return static_cast<uint64_t>(page_size + oob_size) * NumPages(); }
 
-    uint32_t NumPages() const {
-        return pages_per_block * num_blocks;
-    }
+  uint32_t NumPages() const { return pages_per_block * num_blocks; }
 };
 
 class NandDevice;
@@ -53,60 +49,58 @@ using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Unbindable, ddk
 
 // Provides the bulk of the functionality for a ram-backed NAND device.
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
-  public:
-    explicit NandDevice(const NandParams& params, zx_device_t* parent = nullptr);
-    ~NandDevice();
+ public:
+  explicit NandDevice(const NandParams& params, zx_device_t* parent = nullptr);
+  ~NandDevice();
 
-    zx_status_t Bind(const fuchsia_hardware_nand_RamNandInfo& info);
-    void DdkRelease() { delete this; }
+  zx_status_t Bind(const fuchsia_hardware_nand_RamNandInfo& info);
+  void DdkRelease() { delete this; }
 
-    // Performs the object initialization, returning the required data to create
-    // an actual device (to call device_add()). The provided callback will be
-    // called when this device must be removed from the system.
-    zx_status_t Init(char name[NAME_MAX], zx::vmo vmo);
+  // Performs the object initialization, returning the required data to create
+  // an actual device (to call device_add()). The provided callback will be
+  // called when this device must be removed from the system.
+  zx_status_t Init(char name[NAME_MAX], zx::vmo vmo);
 
-    // Device protocol implementation.
-    zx_off_t DdkGetSize() { return params_.GetSize(); }
-    void DdkUnbind();
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  // Device protocol implementation.
+  zx_off_t DdkGetSize() { return params_.GetSize(); }
+  void DdkUnbind();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-    // Fidl RamNand implementation.
-    zx_status_t Unlink();
+  // Fidl RamNand implementation.
+  zx_status_t Unlink();
 
-    // NAND protocol implementation.
-    void NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out);
-    void NandQueue(nand_operation_t* operation, nand_queue_callback completion_cb,
-                   void* cookie);
-    zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
-                                       size_t* num_bad_blocks);
+  // NAND protocol implementation.
+  void NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out);
+  void NandQueue(nand_operation_t* operation, nand_queue_callback completion_cb, void* cookie);
+  zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
+                                         size_t* num_bad_blocks);
 
-  private:
-    void Kill();
-    bool AddToList(nand_operation_t* operation, nand_queue_callback completion_cb,
-                   void* cookie);
-    bool RemoveFromList(nand_operation_t** operation);
-    int WorkerThread();
-    static int WorkerThreadStub(void* arg);
-    uint32_t MainDataSize() const { return params_.NumPages() * params_.page_size; }
+ private:
+  void Kill();
+  bool AddToList(nand_operation_t* operation, nand_queue_callback completion_cb, void* cookie);
+  bool RemoveFromList(nand_operation_t** operation);
+  int WorkerThread();
+  static int WorkerThreadStub(void* arg);
+  uint32_t MainDataSize() const { return params_.NumPages() * params_.page_size; }
 
-    // Implementation of the actual commands.
-    zx_status_t ReadWriteData(nand_operation_t* operation);
-    zx_status_t ReadWriteOob(nand_operation_t* operation);
-    zx_status_t Erase(nand_operation_t* operation);
+  // Implementation of the actual commands.
+  zx_status_t ReadWriteData(nand_operation_t* operation);
+  zx_status_t ReadWriteOob(nand_operation_t* operation);
+  zx_status_t Erase(nand_operation_t* operation);
 
-    uintptr_t mapped_addr_ = 0;
-    zx::vmo vmo_;
+  uintptr_t mapped_addr_ = 0;
+  zx::vmo vmo_;
 
-    NandParams params_;
+  NandParams params_;
 
-    fbl::Mutex lock_;
-    list_node_t txn_list_ TA_GUARDED(lock_) = {};
-    bool dead_ TA_GUARDED(lock_) = false;
+  fbl::Mutex lock_;
+  list_node_t txn_list_ TA_GUARDED(lock_) = {};
+  bool dead_ TA_GUARDED(lock_) = false;
 
-    bool thread_created_ = false;
+  bool thread_created_ = false;
 
-    sync_completion_t wake_signal_;
-    thrd_t worker_;
+  sync_completion_t wake_signal_;
+  thrd_t worker_;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };

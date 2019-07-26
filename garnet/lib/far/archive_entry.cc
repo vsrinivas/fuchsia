@@ -16,8 +16,7 @@ ArchiveEntry::ArchiveEntry(std::string src_path, std::string dst_path)
 ArchiveEntry::~ArchiveEntry() = default;
 
 ArchiveEntry::ArchiveEntry(ArchiveEntry&& other)
-    : src_path(std::move(other.src_path)),
-      dst_path(std::move(other.dst_path)) {}
+    : src_path(std::move(other.src_path)), dst_path(std::move(other.dst_path)) {}
 
 ArchiveEntry& ArchiveEntry::operator=(ArchiveEntry&& other) {
   swap(other);

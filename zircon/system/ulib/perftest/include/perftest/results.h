@@ -26,37 +26,32 @@ namespace perftest {
 void WriteJSONString(FILE* out_file, const char* string);
 
 struct SummaryStatistics {
-    double min;
-    double max;
-    double mean;
-    double std_dev;
-    double median;
+  double min;
+  double max;
+  double mean;
+  double std_dev;
+  double median;
 };
 
 // This represents the results for a particular test case.  It contains a
 // sequence of values, which are typically the times taken by each run of
 // the test case, in order.
 struct TestCaseResults {
-    TestCaseResults(const fbl::String& test_suite, const fbl::String& label,
-                    const fbl::String& unit)
-        : test_suite(test_suite),
-          label(label),
-          unit(unit) {}
+  TestCaseResults(const fbl::String& test_suite, const fbl::String& label, const fbl::String& unit)
+      : test_suite(test_suite), label(label), unit(unit) {}
 
-    void AppendValue(double value) {
-        values.push_back(value);
-    }
+  void AppendValue(double value) { values.push_back(value); }
 
-    // A caller may check for errors using ferror().
-    void WriteJSON(FILE* out_file) const;
+  // A caller may check for errors using ferror().
+  void WriteJSON(FILE* out_file) const;
 
-    SummaryStatistics GetSummaryStatistics() const;
+  SummaryStatistics GetSummaryStatistics() const;
 
-    fbl::String test_suite;
-    fbl::String label;
-    fbl::String unit;
-    fbl::Vector<double> values;
-    uint64_t bytes_processed_per_run = 0;
+  fbl::String test_suite;
+  fbl::String label;
+  fbl::String unit;
+  fbl::Vector<double> values;
+  uint64_t bytes_processed_per_run = 0;
 };
 
 // This represents the results for a set of test cases.
@@ -65,24 +60,23 @@ struct TestCaseResults {
 // ordering is significant.  (For example, it might turn out that one test
 // case affects a later test case.)
 class ResultsSet {
-public:
-    fbl::Vector<TestCaseResults>* results() { return &results_; }
+ public:
+  fbl::Vector<TestCaseResults>* results() { return &results_; }
 
-    TestCaseResults* AddTestCase(const fbl::String& test_suite,
-                                 const fbl::String& label,
-                                 const fbl::String& unit);
+  TestCaseResults* AddTestCase(const fbl::String& test_suite, const fbl::String& label,
+                               const fbl::String& unit);
 
-    // A caller may check for errors using ferror().
-    void WriteJSON(FILE* out_file) const;
+  // A caller may check for errors using ferror().
+  void WriteJSON(FILE* out_file) const;
 
-    // Writes the data to a file, in JSON format.  Returns whether this was
-    // successful; prints an error to stderr if this was not successful.
-    bool WriteJSONFile(const char* output_filename) const;
+  // Writes the data to a file, in JSON format.  Returns whether this was
+  // successful; prints an error to stderr if this was not successful.
+  bool WriteJSONFile(const char* output_filename) const;
 
-    void PrintSummaryStatistics(FILE* out_file) const;
+  void PrintSummaryStatistics(FILE* out_file) const;
 
-private:
-    fbl::Vector<TestCaseResults> results_;
+ private:
+  fbl::Vector<TestCaseResults> results_;
 };
 
-} // namespace perftest
+}  // namespace perftest

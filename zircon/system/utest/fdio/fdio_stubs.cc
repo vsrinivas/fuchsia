@@ -14,27 +14,27 @@
 #include <zxtest/zxtest.h>
 
 TEST(StubsTest, ChmodIgnoredPermissions) {
-    const char * path = "/";
-    int fd = open(path, O_DIRECTORY | O_RDONLY);
-    ASSERT_NE(-1, fd);
+  const char* path = "/";
+  int fd = open(path, O_DIRECTORY | O_RDONLY);
+  ASSERT_NE(-1, fd);
 
-    mode_t mode = S_IFREG | S_IRWXU | S_IRWXG | S_IRWXO;
-    ASSERT_EQ(0, chmod(path, mode));
-    ASSERT_EQ(0, fchmod(fd, mode));
+  mode_t mode = S_IFREG | S_IRWXU | S_IRWXG | S_IRWXO;
+  ASSERT_EQ(0, chmod(path, mode));
+  ASSERT_EQ(0, fchmod(fd, mode));
 
-    close(fd);
+  close(fd);
 }
 
 TEST(StubsTest, ChmodNotImplemented) {
-    const char * path = "/";
-    int fd = open(path, O_DIRECTORY | O_RDONLY);
-    ASSERT_NE(-1, fd);
+  const char* path = "/";
+  int fd = open(path, O_DIRECTORY | O_RDONLY);
+  ASSERT_NE(-1, fd);
 
-    mode_t mode = S_ISUID;
-    ASSERT_EQ(-1, chmod(path, mode));
-    ASSERT_EQ(ENOSYS, errno);
-    ASSERT_EQ(-1, fchmod(fd, mode));
-    ASSERT_EQ(ENOSYS, errno);
+  mode_t mode = S_ISUID;
+  ASSERT_EQ(-1, chmod(path, mode));
+  ASSERT_EQ(ENOSYS, errno);
+  ASSERT_EQ(-1, fchmod(fd, mode));
+  ASSERT_EQ(ENOSYS, errno);
 
-    close(fd);
+  close(fd);
 }

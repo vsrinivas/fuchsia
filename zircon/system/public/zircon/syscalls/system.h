@@ -20,19 +20,19 @@ __BEGIN_CDECLS
 #define ZX_SYSTEM_POWERCTL_SHUTDOWN 8u
 
 typedef struct zx_system_powerctl_arg {
-    union {
-        struct {
-            uint8_t target_s_state; // Value between 1 and 5 indicating which S-state
-            uint8_t sleep_type_a;   // Value from ACPI VM (SLP_TYPa)
-            uint8_t sleep_type_b;   // Value from ACPI VM (SLP_TYPb)
-        } acpi_transition_s_state;
-        struct {
-            uint32_t power_limit; // PL1 value in milliwatts
-            uint32_t time_window; // PL1 time window in microseconds
-            uint8_t clamp;        // PL1 clamping enable
-            uint8_t enable;       // PL1 enable
-        } x86_power_limit;
-    };
+  union {
+    struct {
+      uint8_t target_s_state;  // Value between 1 and 5 indicating which S-state
+      uint8_t sleep_type_a;    // Value from ACPI VM (SLP_TYPa)
+      uint8_t sleep_type_b;    // Value from ACPI VM (SLP_TYPb)
+    } acpi_transition_s_state;
+    struct {
+      uint32_t power_limit;  // PL1 value in milliwatts
+      uint32_t time_window;  // PL1 time window in microseconds
+      uint8_t clamp;         // PL1 clamping enable
+      uint8_t enable;        // PL1 enable
+    } x86_power_limit;
+  };
 } zx_system_powerctl_arg_t;
 
 __END_CDECLS

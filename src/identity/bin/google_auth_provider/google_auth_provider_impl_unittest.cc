@@ -24,8 +24,8 @@ class GoogleAuthProviderImplTest : public gtest::TestLoopFixture {
   GoogleAuthProviderImplTest()
       : network_wrapper_(dispatcher()),
         context_(sys::ComponentContext::Create().get()),
-        google_auth_provider_impl_(dispatcher(), context_, &network_wrapper_,
-                                   {}, auth_provider_.NewRequest()) {}
+        google_auth_provider_impl_(dispatcher(), context_, &network_wrapper_, {},
+                                   auth_provider_.NewRequest()) {}
 
   ~GoogleAuthProviderImplTest() override {}
 
@@ -59,15 +59,12 @@ TEST_F(GoogleAuthProviderImplTest, GetAppAccessTokenSuccess) {
   scopes.push_back("https://www.googleapis.com/auth/userinfo.email");
 
   rapidjson::Document ok_response;
-  ok_response.Parse(
-      "{\"access_token\":\"test_at_token\", \"expires_in\":3600}");
-  network_wrapper_.SetStringResponse(
-      modular::JsonValueToPrettyString(ok_response), 200);
+  ok_response.Parse("{\"access_token\":\"test_at_token\", \"expires_in\":3600}");
+  network_wrapper_.SetStringResponse(modular::JsonValueToPrettyString(ok_response), 200);
 
   auth_provider_->GetAppAccessToken(
       "credential", "test_client_id", std::move(scopes),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &access_token));
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &access_token));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -87,8 +84,7 @@ TEST_F(GoogleAuthProviderImplTest, GetAppAccessTokenBadRequestError) {
 
   auth_provider_->GetAppAccessToken(
       "", "", std::move(scopes),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &access_token));
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &access_token));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -106,13 +102,11 @@ TEST_F(GoogleAuthProviderImplTest, GetAppAccessTokenInvalidClientError) {
 
   rapidjson::Document ok_response;
   ok_response.Parse("{\"error\":\"invalid_client\"}");
-  network_wrapper_.SetStringResponse(
-      modular::JsonValueToPrettyString(ok_response), 401);
+  network_wrapper_.SetStringResponse(modular::JsonValueToPrettyString(ok_response), 401);
 
   auth_provider_->GetAppAccessToken(
       "credential", "invalid_client_id", std::move(scopes),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &access_token));
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &access_token));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -130,13 +124,11 @@ TEST_F(GoogleAuthProviderImplTest, GetAppAccessTokenInvalidUserError) {
 
   rapidjson::Document ok_response;
   ok_response.Parse("{\"error\":\"invalid_credential\"}");
-  network_wrapper_.SetStringResponse(
-      modular::JsonValueToPrettyString(ok_response), 401);
+  network_wrapper_.SetStringResponse(modular::JsonValueToPrettyString(ok_response), 401);
 
   auth_provider_->GetAppAccessToken(
       "invalid_credential", "test_client_id", std::move(scopes),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &access_token));
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &access_token));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -151,13 +143,11 @@ TEST_F(GoogleAuthProviderImplTest, GetAppIdTokenSuccess) {
 
   rapidjson::Document ok_response;
   ok_response.Parse("{\"id_token\":\"test_id_token\", \"expires_in\":3600}");
-  network_wrapper_.SetStringResponse(
-      modular::JsonValueToPrettyString(ok_response), 200);
+  network_wrapper_.SetStringResponse(modular::JsonValueToPrettyString(ok_response), 200);
 
   auth_provider_->GetAppIdToken(
       "credential", "test_audience",
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &id_token));
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &id_token));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -175,8 +165,7 @@ TEST_F(GoogleAuthProviderImplTest, GetAppIdTokenBadRequestError) {
 
   auth_provider_->GetAppIdToken(
       "", "test_audience",
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &id_token));
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &id_token));
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(status, AuthProviderStatus::BAD_REQUEST);
@@ -190,13 +179,11 @@ TEST_F(GoogleAuthProviderImplTest, GetAppIdTokenInvalidAudienceError) {
 
   rapidjson::Document ok_response;
   ok_response.Parse("{\"error\":\"invalid_client\"}");
-  network_wrapper_.SetStringResponse(
-      modular::JsonValueToPrettyString(ok_response), 401);
+  network_wrapper_.SetStringResponse(modular::JsonValueToPrettyString(ok_response), 401);
 
   auth_provider_->GetAppIdToken(
       "credential", "invalid_audience",
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &id_token));
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &id_token));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -211,13 +198,11 @@ TEST_F(GoogleAuthProviderImplTest, GetAppIdTokenInvalidUserError) {
 
   rapidjson::Document ok_response;
   ok_response.Parse("{\"error\":\"invalid_credential\"}");
-  network_wrapper_.SetStringResponse(
-      modular::JsonValueToPrettyString(ok_response), 401);
+  network_wrapper_.SetStringResponse(modular::JsonValueToPrettyString(ok_response), 401);
 
   auth_provider_->GetAppIdToken(
       "invalid_credential", "audience",
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &id_token));
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &id_token));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -234,13 +219,11 @@ TEST_F(GoogleAuthProviderImplTest, GetAppFirebaseTokenSuccess) {
   ok_response.Parse(
       "{\"idToken\":\"test_fb_token\", \"localId\":\"test123\",\
                       \"email\":\"foo@example.com\", \"expiresIn\":\"3600\"}");
-  network_wrapper_.SetStringResponse(
-      modular::JsonValueToPrettyString(ok_response), 200);
+  network_wrapper_.SetStringResponse(modular::JsonValueToPrettyString(ok_response), 200);
 
   auth_provider_->GetAppFirebaseToken(
       "test_id_token", "test_firebase_api_key",
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &fb_token));
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &fb_token));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -258,9 +241,7 @@ TEST_F(GoogleAuthProviderImplTest, GetAppFirebaseTokenBadRequestError) {
   fuchsia::auth::FirebaseTokenPtr fb_token;
 
   auth_provider_->GetAppFirebaseToken(
-      "", "",
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
-                        &fb_token));
+      "", "", callback::Capture(callback::SetWhenCalled(&callback_called), &status, &fb_token));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -273,8 +254,7 @@ TEST_F(GoogleAuthProviderImplTest, RevokeAppOrPersistentCredentialUnsupported) {
   auto status = AuthProviderStatus::INTERNAL_ERROR;
 
   auth_provider_->RevokeAppOrPersistentCredential(
-      "",
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+      "", callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);

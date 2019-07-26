@@ -24,26 +24,24 @@ const char kScriptShebang[32] = "#!/bin/sh\n\n";
 const RunTestFn PlatformRunTest = &PosixRunTest;
 
 const char* TestFsRoot() {
-    if (TmpDirRoot == nullptr) {
-        char test_fs_template[256];
-        sprintf(test_fs_template, "%s/XXXXXX",
-                getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
-        TmpDirRoot = new fbl::String(mkdtemp(test_fs_template));
-    }
-    return TmpDirRoot->c_str();
+  if (TmpDirRoot == nullptr) {
+    char test_fs_template[256];
+    sprintf(test_fs_template, "%s/XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
+    TmpDirRoot = new fbl::String(mkdtemp(test_fs_template));
+  }
+  return TmpDirRoot->c_str();
 }
 
-} // namespace runtests
+}  // namespace runtests
 
 int main(int argc, char** argv) {
-    printf("\nRoot directory of the filesystem used for testing: %s\n",
-           runtests::TestFsRoot());
+  printf("\nRoot directory of the filesystem used for testing: %s\n", runtests::TestFsRoot());
 
-    auto auto_test_fs_clean_up = fbl::MakeAutoCall([&] {
-        // Since all subdirectories created will be scoped, at the end of the
-        // test TestFsRoot() should be empty.
-        remove(runtests::TestFsRoot());
-        delete runtests::TmpDirRoot;
-    });
-    return unittest_run_all_tests(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE;
+  auto auto_test_fs_clean_up = fbl::MakeAutoCall([&] {
+    // Since all subdirectories created will be scoped, at the end of the
+    // test TestFsRoot() should be empty.
+    remove(runtests::TestFsRoot());
+    delete runtests::TmpDirRoot;
+  });
+  return unittest_run_all_tests(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -38,15 +38,14 @@ const char kEventNameMemberName[] = "name";
 // header-word(8) + ticks(8) + 3 arguments (= 3 * (8 + 8)) = 64
 constexpr size_t kRecordSize = 64;
 
-bool CreateProviderSynchronously(
-    async::Loop& loop, const char* name,
-    fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider) {
+bool CreateProviderSynchronously(async::Loop& loop, const char* name,
+                                 fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
   fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
   if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, name, &provider,
-                                                 &already_started)) {
+                                                         &already_started)) {
     FXL_LOG(ERROR) << "Failed to create provider " << name;
     return false;
   }
@@ -56,8 +55,7 @@ bool CreateProviderSynchronously(
     // has started. But we haven't received the Start() request yet, which
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     if (!WaitForTracingToStart(loop, kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << name
-                     << " failed waiting for tracing to start";
+      FXL_LOG(ERROR) << "Provider " << name << " failed waiting for tracing to start";
       return false;
     }
   }
@@ -68,13 +66,12 @@ bool CreateProviderSynchronously(
 
 void WriteTestEvents(size_t num_records) {
   for (size_t i = 0; i < num_records; ++i) {
-    TRACE_INSTANT(CATEGORY_NAME, INSTANT_EVENT_NAME, TRACE_SCOPE_PROCESS,
-                  "arg1", 1, "arg2", 2, "arg3", 3);
+    TRACE_INSTANT(CATEGORY_NAME, INSTANT_EVENT_NAME, TRACE_SCOPE_PROCESS, "arg1", 1, "arg2", 2,
+                  "arg3", 3);
   }
 }
 
-bool VerifyTestEvents(const std::string& test_output_file,
-                      size_t* out_num_events) {
+bool VerifyTestEvents(const std::string& test_output_file, size_t* out_num_events) {
   // We don't know how many records got dropped, but we can count them,
   // and verify they are what we expect.
   std::ifstream in(test_output_file);
@@ -84,8 +81,7 @@ bool VerifyTestEvents(const std::string& test_output_file,
   if (!document.ParseStream(isw).IsObject()) {
     FXL_LOG(ERROR) << "Failed to parse JSON object from: " << test_output_file;
     if (document.HasParseError()) {
-      FXL_LOG(ERROR) << "Parse error "
-                     << GetParseError_En(document.GetParseError()) << " ("
+      FXL_LOG(ERROR) << "Parse error " << GetParseError_En(document.GetParseError()) << " ("
                      << document.GetErrorOffset() << ")";
     }
     return false;
@@ -137,8 +133,7 @@ bool VerifyTestEvents(const std::string& test_output_file,
       return false;
     }
     if (strcmp(event_name.GetString(), INSTANT_EVENT_NAME) != 0) {
-      FXL_LOG(ERROR) << "Expected event not present in event, got: "
-                     << event_name.GetString();
+      FXL_LOG(ERROR) << "Expected event not present in event, got: " << event_name.GetString();
       return false;
     }
   }
@@ -201,19 +196,17 @@ static size_t GetMinimumNumberOfEvents(tracing::BufferingMode buffering_mode,
   return (buffer_size / kRecordSize) * percentage_buffer_filled;
 }
 
-bool VerifyFullBuffer(const std::string& test_output_file,
-                      tracing::BufferingMode buffering_mode,
+bool VerifyFullBuffer(const std::string& test_output_file, tracing::BufferingMode buffering_mode,
                       size_t buffer_size_in_mb) {
   size_t num_events;
   if (!VerifyTestEvents(test_output_file, &num_events)) {
     return false;
   }
 
-  size_t min_num_events =
-      GetMinimumNumberOfEvents(buffering_mode, buffer_size_in_mb);
+  size_t min_num_events = GetMinimumNumberOfEvents(buffering_mode, buffer_size_in_mb);
   if (num_events < min_num_events) {
-    FXL_LOG(ERROR) << "Insufficient number of events present, got "
-                   << num_events << ", expected at least " << min_num_events;
+    FXL_LOG(ERROR) << "Insufficient number of events present, got " << num_events
+                   << ", expected at least " << min_num_events;
     return false;
   }
 

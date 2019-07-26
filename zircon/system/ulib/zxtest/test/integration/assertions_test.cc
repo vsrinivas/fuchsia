@@ -536,9 +536,7 @@ TEST(ZxTestAssertionTest, AssertBytesSingleCall) {
   ZX_ASSERT_MSG(getter_called == 1, "Assertion evaluating multiple times.");
 }
 
-void HelperFnFatal(bool fail) {
-  ASSERT_FALSE(fail, "Expected to fail.");
-}
+void HelperFnFatal(bool fail) { ASSERT_FALSE(fail, "Expected to fail."); }
 
 TEST(ZxTestAssertionTest, AssertNoFatalFailureWithFatalFailure) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
@@ -555,9 +553,7 @@ TEST(ZxTestAssertionTest, AssertNoFatalFailureWithoutFailure) {
   TEST_CHECKPOINT();
 }
 
-void HelperFn(bool fail) {
-  EXPECT_FALSE(fail, "Expected to fail.");
-}
+void HelperFn(bool fail) { EXPECT_FALSE(fail, "Expected to fail."); }
 
 TEST(ZxTestAssertionTest, AssertNoFatalFailureWithFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Aborted test execution on helper failure.");
@@ -596,15 +592,10 @@ TEST(ZxTestAssertionTest, AssertFalseCoerceTypeToBoolFailure) {
 // Class to be coerced to bool.
 class ConverToBool {
  public:
-  ConverToBool(bool value) {
-    value_ = value;
-  }
-  virtual ~ConverToBool() {
-  }
+  ConverToBool(bool value) { value_ = value; }
+  virtual ~ConverToBool() {}
 
-  operator bool() const {
-    return value_;
-  }
+  operator bool() const { return value_; }
 
  private:
   bool value_;
@@ -612,15 +603,13 @@ class ConverToBool {
 
 class ConverToBoolNotCopyable : public ConverToBool {
  public:
-  ConverToBoolNotCopyable(bool value) : ConverToBool(value) {
-  }
+  ConverToBoolNotCopyable(bool value) : ConverToBool(value) {}
   ConverToBoolNotCopyable(const ConverToBoolNotCopyable&) = delete;
 };
 
 class ConverToBoolNotMoveable : public ConverToBool {
  public:
-  ConverToBoolNotMoveable(bool value) : ConverToBool(value) {
-  }
+  ConverToBoolNotMoveable(bool value) : ConverToBool(value) {}
   ConverToBoolNotMoveable(const ConverToBoolNotMoveable&) = delete;
   ConverToBoolNotMoveable(ConverToBoolNotMoveable&&) = delete;
 };
@@ -660,9 +649,7 @@ TEST(ZxTestAssertionTest, CoerceTypeToBoolNonMoveable) {
   TEST_CHECKPOINT();
 }
 
-int SomeFn() {
-  return 0;
-}
+int SomeFn() { return 0; }
 
 TEST(ZxTestAssertionTest, FunctionPointerNotNull) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
@@ -700,9 +687,7 @@ TEST(ZxTestAssertionTest, FunctionPointerNullFail) {
 
 class MyClassWithMethods {
  public:
-  int MyMethod() const {
-    return 0;
-  }
+  int MyMethod() const { return 0; }
 };
 
 TEST(ZxTestAssertionTest, MemberMethodFunctionNull) {
@@ -727,15 +712,10 @@ TEST(ZxTestAssertionTest, MemberMethodFunctionNullFail) {
 
 class ConverToBoolExplicit {
  public:
-  ConverToBoolExplicit(bool value) {
-    value_ = value;
-  }
-  virtual ~ConverToBoolExplicit() {
-  }
+  ConverToBoolExplicit(bool value) { value_ = value; }
+  virtual ~ConverToBoolExplicit() {}
 
-  explicit operator bool() const {
-    return value_;
-  }
+  explicit operator bool() const { return value_; }
 
  private:
   bool value_;
@@ -743,15 +723,13 @@ class ConverToBoolExplicit {
 
 class ConverToBoolExplicitNotCopyable : public ConverToBoolExplicit {
  public:
-  ConverToBoolExplicitNotCopyable(bool value) : ConverToBoolExplicit(value) {
-  }
+  ConverToBoolExplicitNotCopyable(bool value) : ConverToBoolExplicit(value) {}
   ConverToBoolExplicitNotCopyable(const ConverToBoolExplicitNotCopyable&) = delete;
 };
 
 class ConverToBoolExplicitNotMoveable : public ConverToBoolExplicit {
  public:
-  ConverToBoolExplicitNotMoveable(bool value) : ConverToBoolExplicit(value) {
-  }
+  ConverToBoolExplicitNotMoveable(bool value) : ConverToBoolExplicit(value) {}
   ConverToBoolExplicitNotMoveable(const ConverToBoolExplicitNotMoveable&) = delete;
   ConverToBoolExplicitNotMoveable(ConverToBoolExplicitNotMoveable&&) = delete;
 };
@@ -911,13 +889,9 @@ TEST(ZxTestAssertionTest, CurrentTestHasFatalFailuresDetectsFatalFailures) {
 }
 
 #ifdef __Fuchsia__
-void Crash() {
-  ZX_ASSERT(false);
-}
+void Crash() { ZX_ASSERT(false); }
 
-void Success() {
-  ZX_ASSERT(true);
-}
+void Success() { ZX_ASSERT(true); }
 
 TEST(ZxTestAssertionTest, AssertDeathWithCrashingLambdaStatement) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to detect crash");

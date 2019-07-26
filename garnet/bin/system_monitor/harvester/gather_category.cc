@@ -23,8 +23,8 @@ void GatherCategory::PostUpdate(async_dispatcher_t* dispatcher, zx::time start,
   task_method_.PostForTime(dispatcher, next_update_);
 }
 
-void GatherCategory::TaskHandler(async_dispatcher_t* dispatcher,
-                                 async::TaskBase* task, zx_status_t status) {
+void GatherCategory::TaskHandler(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                                 zx_status_t status) {
   Gather();
   PostUpdate(dispatcher, async::Now(dispatcher), update_period_);
 };

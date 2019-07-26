@@ -12,23 +12,23 @@ namespace fs_metrics {
 
 // Collection of all events being recorded by local storage.
 enum class Event : uint32_t {
-    // Vnode Level operations.
-    kClose = 2,
-    kRead = 3,
-    kWrite = 4,
-    kAppend = 5,
-    kTruncate = 6,
-    kSetAttr = 7,
-    kGetAttr = 8,
-    kReadDir = 10,
-    kSync = 9,
-    kLookUp = 11,
-    kCreate = 12,
-    kLink = 1,
-    kUnlink = 13,
+  // Vnode Level operations.
+  kClose = 2,
+  kRead = 3,
+  kWrite = 4,
+  kAppend = 5,
+  kTruncate = 6,
+  kSetAttr = 7,
+  kGetAttr = 8,
+  kReadDir = 10,
+  kSync = 9,
+  kLookUp = 11,
+  kCreate = 12,
+  kLink = 1,
+  kUnlink = 13,
 
-    // Fs Manager Level operation.
-    kDataCorruption = 14,
+  // Fs Manager Level operation.
+  kDataCorruption = 14,
 };
 
 // Collection of Vnode Events.
@@ -50,4 +50,4 @@ constexpr uint64_t kFsManagerEventCount = fbl::count_of(kFsManagerEvents);
 // Total number of events in the registry.
 constexpr uint64_t kEventCount = kVnodeEventCount + kFsManagerEventCount;
 
-} // namespace fs_metrics
+}  // namespace fs_metrics

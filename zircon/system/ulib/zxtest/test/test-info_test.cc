@@ -27,9 +27,7 @@ class FakeTest : public zxtest::Test {
   bool* called_;
 
  private:
-  void TestBody() final {
-    *called_ = true;
-  }
+  void TestBody() final { *called_ = true; }
 };
 
 }  // namespace

@@ -10,18 +10,18 @@
 namespace {
 
 bool example1() {
-    BEGIN_TEST;
-    promise_example1::run();
-    END_TEST;
+  BEGIN_TEST;
+  promise_example1::run();
+  END_TEST;
 }
 
 bool example2() {
-    BEGIN_TEST;
-    promise_example2::run();
-    END_TEST;
+  BEGIN_TEST;
+  promise_example2::run();
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(promise_examples)
 RUN_TEST(example1)

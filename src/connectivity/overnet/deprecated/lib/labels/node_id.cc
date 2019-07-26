@@ -9,9 +9,7 @@
 
 namespace overnet {
 
-std::ostream& operator<<(std::ostream& out, NodeId node_id) {
-  return out << node_id.ToString();
-}
+std::ostream& operator<<(std::ostream& out, NodeId node_id) { return out << node_id.ToString(); }
 
 std::string NodeId::ToString() const {
   std::ostringstream tmp;
@@ -35,9 +33,7 @@ StatusOr<NodeId> NodeId::FromString(const std::string& s) {
   auto ch = s.begin();
   const auto end = s.end();
   uint64_t node_value = 0;
-  auto short_string = []() {
-    return Status::InvalidArgument("String too short for node");
-  };
+  auto short_string = []() { return Status::InvalidArgument("String too short for node"); };
   auto expected = [](char c, char got) {
     std::ostringstream tmp;
     tmp << "Expected '" << c << "' but got '" << got << "'";
@@ -60,20 +56,17 @@ StatusOr<NodeId> NodeId::FromString(const std::string& s) {
     if (ch == end)
       return short_string();
     if (*ch >= '0' && *ch <= '9') {
-      node_value |= static_cast<uint64_t>(static_cast<uint8_t>(*ch - '0'))
-                    << offset;
+      node_value |= static_cast<uint64_t>(static_cast<uint8_t>(*ch - '0')) << offset;
       ++ch;
       return Status::Ok();
     }
     if (*ch >= 'a' && *ch <= 'f') {
-      node_value |= static_cast<uint64_t>(static_cast<uint8_t>(*ch - 'a') + 10)
-                    << offset;
+      node_value |= static_cast<uint64_t>(static_cast<uint8_t>(*ch - 'a') + 10) << offset;
       ++ch;
       return Status::Ok();
     }
     if (*ch >= 'A' && *ch <= 'F') {
-      node_value |= static_cast<uint64_t>(static_cast<uint8_t>(*ch - 'A') + 10)
-                    << offset;
+      node_value |= static_cast<uint64_t>(static_cast<uint8_t>(*ch - 'A') + 10) << offset;
       ++ch;
       return Status::Ok();
     }

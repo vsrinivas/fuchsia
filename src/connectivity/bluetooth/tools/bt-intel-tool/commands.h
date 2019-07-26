@@ -11,8 +11,7 @@
 
 namespace bt_intel {
 
-void RegisterCommands(CommandChannel* data,
-                      ::bluetooth_tools::CommandDispatcher* dispatcher);
+void RegisterCommands(CommandChannel* data, ::bluetooth_tools::CommandDispatcher* dispatcher);
 
 }  // namespace bt_intel
 

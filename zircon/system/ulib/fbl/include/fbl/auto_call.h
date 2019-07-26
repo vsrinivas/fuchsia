@@ -30,57 +30,49 @@ namespace fbl {
 
 template <typename T>
 class AutoCall {
-public:
-    constexpr explicit AutoCall(T c)
-        : call_(std::move(c)) {}
-    ~AutoCall() {
-        call();
-    }
+ public:
+  constexpr explicit AutoCall(T c) : call_(std::move(c)) {}
+  ~AutoCall() { call(); }
 
-    // move semantics
-    AutoCall(AutoCall&& c)
-        : call_(std::move(c.call_)), active_(c.active_) {
-        c.cancel();
-    }
+  // move semantics
+  AutoCall(AutoCall&& c) : call_(std::move(c.call_)), active_(c.active_) { c.cancel(); }
 
-    AutoCall& operator=(AutoCall&& c) {
-        call();
-        call_ = std::move(c.call_);
-        active_ = c.active_;
-        c.cancel();
-        return *this;
-    }
+  AutoCall& operator=(AutoCall&& c) {
+    call();
+    call_ = std::move(c.call_);
+    active_ = c.active_;
+    c.cancel();
+    return *this;
+  }
 
-    // no copy
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AutoCall);
+  // no copy
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AutoCall);
 
-    // cancel the eventual call
-    void cancel() {
-        active_ = false;
-    }
+  // cancel the eventual call
+  void cancel() { active_ = false; }
 
-    // call it immediately
-    void call() {
-        // Reset |active_| first to handle recursion (in the unlikely case it
-        // should happen).
-        bool active = active_;
-        cancel();
-        if (active)
-            (call_)();
-    }
+  // call it immediately
+  void call() {
+    // Reset |active_| first to handle recursion (in the unlikely case it
+    // should happen).
+    bool active = active_;
+    cancel();
+    if (active)
+      (call_)();
+  }
 
-private:
-    T call_;
-    bool active_ = true;
+ private:
+  T call_;
+  bool active_ = true;
 };
 
 // helper routine to create an autocall object without needing template
 // specialization
 template <typename T>
 inline AutoCall<T> MakeAutoCall(T c) {
-    return AutoCall<T>(std::move(c));
+  return AutoCall<T>(std::move(c));
 }
 
-} // namespace fbl
+}  // namespace fbl
 
 #endif  // FBL_AUTO_CALL_H_

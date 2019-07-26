@@ -23,8 +23,7 @@ static std::unique_ptr<sys::ComponentContext> g_context;
 // |relative_tspec_path| is a relative path, from /pkg.
 static void RunAndVerify(const char* relative_tspec_path) {
   ASSERT_TRUE(RunTspec(g_context.get(), relative_tspec_path, kOutputFilePath));
-  ASSERT_TRUE(
-      VerifyTspec(g_context.get(), relative_tspec_path, kOutputFilePath));
+  ASSERT_TRUE(VerifyTspec(g_context.get(), relative_tspec_path, kOutputFilePath));
 }
 
 TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot.tspec"); }
@@ -34,8 +33,7 @@ TEST(Circular, FillBuffer) { RunAndVerify("data/circular.tspec"); }
 TEST(Streaming, FillBuffer) { RunAndVerify("data/streaming.tspec"); }
 
 TEST(NestedTestEnvironment, Test) {
-  ASSERT_TRUE(RunTspec(g_context.get(), "data/nested_environment_test.tspec",
-                       kOutputFilePath));
+  ASSERT_TRUE(RunTspec(g_context.get(), "data/nested_environment_test.tspec", kOutputFilePath));
 }
 
 // A class for adding an extra provider to the test.
@@ -54,12 +52,10 @@ class ExtraProvider : public ::testing::Test {
     zx::eventpair their_event;
     auto status = zx::eventpair::create(0u, &our_event_, &their_event);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error creating event pair: "
-                     << zx_status_get_string(status);
+      FXL_LOG(ERROR) << "Error creating event pair: " << zx_status_get_string(status);
       return;
     }
-    status =
-        SpawnProgram(job, argv_, their_event.release(), &provider_process_);
+    status = SpawnProgram(job, argv_, their_event.release(), &provider_process_);
     if (status != ZX_OK) {
       TearDown();
       return;
@@ -113,9 +109,7 @@ class ExtraProvider : public ::testing::Test {
 // is a non-starter.
 class TwoProvidersOneEngine : public ExtraProvider {
  public:
-  const char* GetProgramPath() override {
-    return "/pkg/bin/two_providers_one_engine";
-  }
+  const char* GetProgramPath() override { return "/pkg/bin/two_providers_one_engine"; }
 };
 
 TEST_F(TwoProvidersOneEngine, ErrorHandling) {

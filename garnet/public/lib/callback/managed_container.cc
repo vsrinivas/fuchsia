@@ -23,9 +23,8 @@ fit::closure ManagedContainer::ManageElement(std::unique_ptr<Element> element) {
   // We use a scoped callback to ManagedContainer to allow the manager to
   // be deleted.
   return MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this, ptr]() {
-    auto it = std::find_if(
-        managed_elements_.begin(), managed_elements_.end(),
-        [ptr](const std::unique_ptr<Element>& c) { return c.get() == ptr; });
+    auto it = std::find_if(managed_elements_.begin(), managed_elements_.end(),
+                           [ptr](const std::unique_ptr<Element>& c) { return c.get() == ptr; });
     FXL_DCHECK(it != managed_elements_.end());
     managed_elements_.erase(it);
     CheckEmpty();

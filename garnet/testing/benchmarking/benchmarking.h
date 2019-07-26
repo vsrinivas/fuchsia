@@ -47,15 +47,13 @@ class BenchmarksRunner {
   // This corresponds to running something like:
   //   $ <libperf_binary> -p --out=/tmp/example.json
   //
-  void AddLibPerfTestBenchmark(const std::string& name,
-                               const std::string& libperftest_binary,
+  void AddLibPerfTestBenchmark(const std::string& name, const std::string& libperftest_binary,
                                const std::vector<std::string>& extra_args = {});
 
   // Add a custom benchmark of name |name| that is an arbitrary command. After
   // running, |command| is expected to output a Fuchsia benchmarking output
   // file at path |results_file|.
-  void AddCustomBenchmark(const std::string& name,
-                          const std::vector<std::string>& command,
+  void AddCustomBenchmark(const std::string& name, const std::vector<std::string>& command,
                           const std::string& results_file);
 
   // Add a custom, non-benchmark task to be executed by the
@@ -90,8 +88,7 @@ class BenchmarksRunner {
   // |name|: The name of the benchmark.
   // |result_file|: Path to the results file, relative to |out_dir_|.
   // |result|: Whether the benchmark succeeded or failed.
-  void WriteSummaryEntry(const std::string& name,
-                         const std::string& results_file,
+  void WriteSummaryEntry(const std::string& name, const std::string& results_file,
                          SummaryEntryResult result);
 
   std::deque<std::function<void()>> tasks_;

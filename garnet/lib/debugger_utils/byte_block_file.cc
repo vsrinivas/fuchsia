@@ -18,8 +18,7 @@ FileByteBlock::FileByteBlock(int fd) : fd_(fd) { FXL_DCHECK(fd >= 0); }
 
 FileByteBlock::~FileByteBlock() { close(fd_); }
 
-bool FileByteBlock::Read(uintptr_t address, void* out_buffer,
-                         size_t length) const {
+bool FileByteBlock::Read(uintptr_t address, void* out_buffer, size_t length) const {
   FXL_DCHECK(out_buffer);
 
   off_t where = lseek(fd_, address, SEEK_SET);
@@ -31,15 +30,14 @@ bool FileByteBlock::Read(uintptr_t address, void* out_buffer,
 
   ssize_t bytes_read = read(fd_, out_buffer, length);
   if (bytes_read < 0) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-                          "Failed to read memory at addr: 0x%" PRIxPTR, address)
+    FXL_LOG(ERROR) << fxl::StringPrintf("Failed to read memory at addr: 0x%" PRIxPTR, address)
                    << ", " << ErrnoString(errno);
     return false;
   }
 
   if (length != static_cast<size_t>(bytes_read)) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-        "Short read, got %zu bytes, expected %zu", bytes_read, length);
+    FXL_LOG(ERROR) << fxl::StringPrintf("Short read, got %zu bytes, expected %zu", bytes_read,
+                                        length);
     return false;
   }
 
@@ -48,8 +46,7 @@ bool FileByteBlock::Read(uintptr_t address, void* out_buffer,
   return true;
 }
 
-bool FileByteBlock::Write(uintptr_t address, const void* buffer,
-                          size_t length) const {
+bool FileByteBlock::Write(uintptr_t address, const void* buffer, size_t length) const {
   FXL_DCHECK(buffer);
 
   if (length == 0) {
@@ -66,15 +63,14 @@ bool FileByteBlock::Write(uintptr_t address, const void* buffer,
 
   ssize_t bytes_written = write(fd_, buffer, length);
   if (bytes_written < 0) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-                          "Failed to read memory at addr: 0x%" PRIxPTR, address)
+    FXL_LOG(ERROR) << fxl::StringPrintf("Failed to read memory at addr: 0x%" PRIxPTR, address)
                    << ", " << ErrnoString(errno);
     return false;
   }
 
   if (length != static_cast<size_t>(bytes_written)) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-        "Short write, wrote %zu bytes, expected %zu", bytes_written, length);
+    FXL_LOG(ERROR) << fxl::StringPrintf("Short write, wrote %zu bytes, expected %zu", bytes_written,
+                                        length);
     return false;
   }
 

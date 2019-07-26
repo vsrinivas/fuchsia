@@ -49,30 +49,23 @@ class CommandHandler final {
                 ResponseCallback callback);
   bool Handle_T(const fxl::StringView& packet, ResponseCallback callback);
   bool Handle_v(const fxl::StringView& packet, ResponseCallback callback);
-  bool Handle_zZ(bool insert, const fxl::StringView& packet,
-                 ResponseCallback callback);
+  bool Handle_zZ(bool insert, const fxl::StringView& packet, ResponseCallback callback);
 
   // q/Q packets:
   // qAttached
-  bool HandleQueryAttached(const fxl::StringView& params,
-                           ResponseCallback callback);
+  bool HandleQueryAttached(const fxl::StringView& params, ResponseCallback callback);
   // qC
-  bool HandleQueryCurrentThreadId(const fxl::StringView& params,
-                                  ResponseCallback callback);
+  bool HandleQueryCurrentThreadId(const fxl::StringView& params, ResponseCallback callback);
   // qRcmd
-  bool HandleQueryRcmd(const fxl::StringView& command,
-                       ResponseCallback callback);
+  bool HandleQueryRcmd(const fxl::StringView& command, ResponseCallback callback);
   // qSupported
-  bool HandleQuerySupported(const fxl::StringView& params,
-                            ResponseCallback callback);
+  bool HandleQuerySupported(const fxl::StringView& params, ResponseCallback callback);
   // qfThreadInfo and qsThreadInfo
   bool HandleQueryThreadInfo(bool is_first, ResponseCallback callback);
   // qXfer
-  bool HandleQueryXfer(const fxl::StringView& params,
-                       ResponseCallback callback);
+  bool HandleQueryXfer(const fxl::StringView& params, ResponseCallback callback);
   // QNonStop
-  bool HandleSetNonStop(const fxl::StringView& params,
-                        ResponseCallback callback);
+  bool HandleSetNonStop(const fxl::StringView& params, ResponseCallback callback);
 
   // v packets:
   bool Handle_vAttach(const fxl::StringView& packet, ResponseCallback callback);
@@ -81,8 +74,7 @@ class CommandHandler final {
   bool Handle_vRun(const fxl::StringView& packet, ResponseCallback callback);
 
   // Breakpoints
-  bool InsertSoftwareBreakpoint(uintptr_t addr,
-                                const fxl::StringView& optional_params,
+  bool InsertSoftwareBreakpoint(uintptr_t addr, const fxl::StringView& optional_params,
                                 ResponseCallback callback);
   bool RemoveSoftwareBreakpoint(uintptr_t addr, ResponseCallback callback);
 

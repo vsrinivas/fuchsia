@@ -72,8 +72,7 @@ struct StructField {
 };
 
 struct UnionField {
-  UnionField(const Type* type, uint32_t padding)
-      : type(type), padding(padding) {}
+  UnionField(const Type* type, uint32_t padding) : type(type), padding(padding) {}
 
   const Type* type;
   const uint32_t padding;
@@ -85,8 +84,7 @@ struct UnionField {
 // if necessary. (Gotta do something at least three times before we abstract it
 // out, right?)
 struct TableField {
-  TableField(const Type* type, uint32_t ordinal)
-      : type(type), ordinal(ordinal) {}
+  TableField(const Type* type, uint32_t ordinal) : type(type), ordinal(ordinal) {}
 
   const Type* type;
   const uint32_t ordinal;
@@ -97,8 +95,7 @@ struct TableField {
 // use-case in code, and also to make it easier to change later if necessary.
 // (Gotta do something at least three times before we abstract it out, right?)
 struct XUnionField {
-  XUnionField(const Type* type, uint32_t ordinal)
-      : type(type), ordinal(ordinal) {}
+  XUnionField(const Type* type, uint32_t ordinal) : type(type), ordinal(ordinal) {}
 
   const Type* type;
   const uint32_t ordinal;

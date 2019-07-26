@@ -15,8 +15,7 @@ namespace scenic {
 
 // Return true if |point| is contained by |box|, including when it is on the
 // box boundary, and false otherwise.
-bool ContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,
-                   const fuchsia::ui::gfx::vec3& point);
+bool ContainsPoint(const fuchsia::ui::gfx::BoundingBox& box, const fuchsia::ui::gfx::vec3& point);
 
 // Similar to fuchsia::ui::gfx::ViewProperties: adds the inset to box.min, and
 // subtracts it from box.max.
@@ -25,10 +24,9 @@ fuchsia::ui::gfx::BoundingBox InsetBy(const fuchsia::ui::gfx::BoundingBox& box,
 
 // Similar to fuchsia::ui::gfx::ViewProperties: adds the inset to box.min, and
 // subtracts it from box.max.
-fuchsia::ui::gfx::BoundingBox InsetBy(
-    const fuchsia::ui::gfx::BoundingBox& box,
-    const fuchsia::ui::gfx::vec3& inset_from_min,
-    const fuchsia::ui::gfx::vec3& inset_from_max);
+fuchsia::ui::gfx::BoundingBox InsetBy(const fuchsia::ui::gfx::BoundingBox& box,
+                                      const fuchsia::ui::gfx::vec3& inset_from_min,
+                                      const fuchsia::ui::gfx::vec3& inset_from_max);
 
 // Inset the view properties' outer box by its insets.
 fuchsia::ui::gfx::BoundingBox ViewPropertiesLayoutBox(
@@ -37,43 +35,30 @@ fuchsia::ui::gfx::BoundingBox ViewPropertiesLayoutBox(
 // Return a vec3 consisting of the maximum x/y/z from the two arguments.
 inline fuchsia::ui::gfx::vec3 Max(const fuchsia::ui::gfx::vec3& a,
                                   const fuchsia::ui::gfx::vec3& b) {
-  return {.x = std::max(a.x, b.x),
-          .y = std::max(a.y, b.y),
-          .z = std::max(a.z, b.z)};
+  return {.x = std::max(a.x, b.x), .y = std::max(a.y, b.y), .z = std::max(a.z, b.z)};
 }
 
 // Return a vec3 consisting of the maximum of the x/y/z components of |v|,
 // compared with |min_val|.
-inline fuchsia::ui::gfx::vec3 Max(const fuchsia::ui::gfx::vec3& v,
-                                  float min_val) {
-  return {.x = std::max(v.x, min_val),
-          .y = std::max(v.y, min_val),
-          .z = std::max(v.z, min_val)};
+inline fuchsia::ui::gfx::vec3 Max(const fuchsia::ui::gfx::vec3& v, float min_val) {
+  return {.x = std::max(v.x, min_val), .y = std::max(v.y, min_val), .z = std::max(v.z, min_val)};
 }
 
 // Return a vec3 consisting of the minimum x/y/z from the two arguments.
 inline fuchsia::ui::gfx::vec3 Min(const fuchsia::ui::gfx::vec3& a,
                                   const fuchsia::ui::gfx::vec3& b) {
-  return {.x = std::min(a.x, b.x),
-          .y = std::min(a.y, b.y),
-          .z = std::min(a.z, b.z)};
+  return {.x = std::min(a.x, b.x), .y = std::min(a.y, b.y), .z = std::min(a.z, b.z)};
 }
 
 // Return a vec3 consisting of the minimum of the x/y/z components of |v|,
 // compared with |max_val|.
-inline fuchsia::ui::gfx::vec3 Min(const fuchsia::ui::gfx::vec3& v,
-                                  float max_val) {
-  return {.x = std::min(v.x, max_val),
-          .y = std::min(v.y, max_val),
-          .z = std::min(v.z, max_val)};
+inline fuchsia::ui::gfx::vec3 Min(const fuchsia::ui::gfx::vec3& v, float max_val) {
+  return {.x = std::min(v.x, max_val), .y = std::min(v.y, max_val), .z = std::min(v.z, max_val)};
 }
 
-inline float Length(const fuchsia::ui::gfx::vec2& v) {
-  return sqrt(v.x * v.x + v.y * v.y);
-}
+inline float Length(const fuchsia::ui::gfx::vec2& v) { return sqrt(v.x * v.x + v.y * v.y); }
 
-inline float Distance2(const fuchsia::ui::gfx::vec2& a,
-                       const fuchsia::ui::gfx::vec2& b) {
+inline float Distance2(const fuchsia::ui::gfx::vec2& a, const fuchsia::ui::gfx::vec2& b) {
   const float dx = a.x - b.x, dy = a.y - b.y;
   return dx * dx + dy * dy;
 }
@@ -93,18 +78,12 @@ inline vec2& operator+=(vec2& a, const vec2& b) {
 }
 
 // Return a vec2 consisting of the component-wise sum of the two arguments.
-inline vec2 operator+(const vec2& a, const vec2& b) {
-  return {.x = a.x + b.x, .y = a.y + b.y};
-}
+inline vec2 operator+(const vec2& a, const vec2& b) { return {.x = a.x + b.x, .y = a.y + b.y}; }
 
 // Return a vec2 consisting of the component-wise difference of the two args.
-inline vec2 operator-(const vec2& a, const vec2& b) {
-  return {.x = a.x - b.x, .y = a.y - b.y};
-}
+inline vec2 operator-(const vec2& a, const vec2& b) { return {.x = a.x - b.x, .y = a.y - b.y}; }
 
-inline vec2 operator*(const vec2& v, float s) {
-  return {.x = v.x * s, .y = v.y * s};
-}
+inline vec2 operator*(const vec2& v, float s) { return {.x = v.x * s, .y = v.y * s}; }
 
 inline vec2& operator/=(vec2& v, float s) {
   v.x /= s;
@@ -112,9 +91,7 @@ inline vec2& operator/=(vec2& v, float s) {
   return v;
 }
 
-inline vec2 operator/(const vec2& v, float s) {
-  return {.x = v.x / s, .y = v.y / s};
-}
+inline vec2 operator/(const vec2& v, float s) { return {.x = v.x / s, .y = v.y / s}; }
 
 // Return a vec3 consisting of the component-wise sum of the two arguments.
 inline vec3 operator+(const vec3& a, const vec3& b) {

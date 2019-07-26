@@ -295,19 +295,20 @@ int console_starter(void* arg) {
   for (;;) {
     zx_status_t status = wait_for_file(device, zx::time::infinite());
     if (status != ZX_OK) {
-        printf("devcoordinator: failed to wait for console '%s' (%s)\n", device, zx_status_get_string(status));
-        return 1;
+      printf("devcoordinator: failed to wait for console '%s' (%s)\n", device,
+             zx_status_get_string(status));
+      return 1;
     }
     fbl::unique_fd fd(open(device, O_RDWR));
     if (!fd.is_valid()) {
-        printf("devcoordinator: failed to open console '%s'\n", device);
-        return 1;
+      printf("devcoordinator: failed to open console '%s'\n", device);
+      return 1;
     }
 
     const char* argv_sh[] = {"/boot/bin/sh", nullptr};
     zx::process proc;
-    status = devmgr::devmgr_launch(g_handles.svc_job, "sh:console", argv_sh, envp, fd.release(), nullptr,
-                              nullptr, 0, &proc, FS_ALL);
+    status = devmgr::devmgr_launch(g_handles.svc_job, "sh:console", argv_sh, envp, fd.release(),
+                                   nullptr, nullptr, 0, &proc, FS_ALL);
     if (status != ZX_OK) {
       printf("devcoordinator: failed to launch console shell (%s)\n", zx_status_get_string(status));
       return 1;
@@ -535,9 +536,8 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
       return status;
     }
 
-    status =
-      fdio_service_connect_at(g_handles.device_name_provider_client.get(), "svc",
-                  device_name_provider_svc_req.release());
+    status = fdio_service_connect_at(g_handles.device_name_provider_client.get(), "svc",
+                                     device_name_provider_svc_req.release());
     if (status != ZX_OK) {
       return status;
     }
@@ -812,8 +812,7 @@ int service_starter(void* arg) {
     const uint32_t types[] = {PA_DIRECTORY_REQUEST};
     const char* nodename = coordinator->boot_args().Get("zircon.nodename");
     const char* args[] = {
-      "/boot/bin/device-name-provider",
-      nullptr, nullptr, nullptr, nullptr, nullptr};
+        "/boot/bin/device-name-provider", nullptr, nullptr, nullptr, nullptr, nullptr};
     int argc = 1;
 
     if (interface != nullptr) {
@@ -826,9 +825,8 @@ int service_starter(void* arg) {
       args[argc++] = nodename;
     }
 
-    devmgr::devmgr_launch(
-      g_handles.svc_job, "device-name-provider", args, nullptr, -1, handles, types,
-      countof(handles), nullptr, FS_DEV);
+    devmgr::devmgr_launch(g_handles.svc_job, "device-name-provider", args, nullptr, -1, handles,
+                          types, countof(handles), nullptr, FS_DEV);
   }
 
   if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
@@ -1008,7 +1006,7 @@ zx::channel fs_clone(const char* path) {
   zx_status_t status = fdio_open_at(fs->get(), path, flags, h1.release());
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: fdio_open_at failed for path %s: %s\n", path,
-               zx_status_get_string(status));
+        zx_status_get_string(status));
     return zx::channel();
   }
   return h0;
@@ -1129,7 +1127,8 @@ int main(int argc, char** argv) {
   zx::channel::create(0, &fshost_client, &fshost_server);
   zx::channel::create(0, &g_handles.appmgr_client, &g_handles.appmgr_server);
   zx::channel::create(0, &g_handles.miscsvc_client, &g_handles.miscsvc_server);
-  zx::channel::create(0, &g_handles.device_name_provider_client, &g_handles.device_name_provider_server);
+  zx::channel::create(0, &g_handles.device_name_provider_client,
+                      &g_handles.device_name_provider_server);
 
   if (devmgr_args.use_system_svchost) {
     zx::channel dir_request;
@@ -1146,7 +1145,8 @@ int main(int argc, char** argv) {
   } else {
     status = StartSvchost(root_job, require_system, &coordinator, std::move(fshost_client));
     if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to start svchost: %s\n", zx_status_get_string(status));
+      fprintf(stderr, "devcoordinator: failed to start svchost: %s\n",
+              zx_status_get_string(status));
       return 1;
     }
   }

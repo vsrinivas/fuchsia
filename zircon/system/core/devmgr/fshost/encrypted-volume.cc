@@ -11,25 +11,21 @@
 namespace devmgr {
 
 EncryptedVolume::EncryptedVolume(fbl::unique_fd fd, fbl::unique_fd devfs_root)
-    : fd_(std::move(fd)),
-      devfs_root_(std::move(devfs_root)) {}
+    : fd_(std::move(fd)), devfs_root_(std::move(devfs_root)) {}
 
 zx_status_t EncryptedVolume::Unseal() {
   zx_status_t rc;
   std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
-  rc = zxcrypt::FdioVolume::Init(fd_.duplicate(), devfs_root_.duplicate(),
-                                 &zxcrypt_volume);
+  rc = zxcrypt::FdioVolume::Init(fd_.duplicate(), devfs_root_.duplicate(), &zxcrypt_volume);
   if (rc != ZX_OK) {
     fprintf(stderr, "fshost: couldn't open zxcrypt fdio volume: %s\n", zx_status_get_string(rc));
     return rc;
   }
 
   zx::channel zxcrypt_volume_manager_chan;
-  rc = zxcrypt_volume->OpenManager(zx::sec(2),
-                                   zxcrypt_volume_manager_chan.reset_and_get_address());
+  rc = zxcrypt_volume->OpenManager(zx::sec(2), zxcrypt_volume_manager_chan.reset_and_get_address());
   if (rc != ZX_OK) {
-    fprintf(stderr, "fshost: couldn't open zxcrypt manager device: %s\n",
-            zx_status_get_string(rc));
+    fprintf(stderr, "fshost: couldn't open zxcrypt manager device: %s\n", zx_status_get_string(rc));
     return rc;
   }
 
@@ -47,9 +43,7 @@ zx_status_t EncryptedVolume::Unseal() {
 
 zx_status_t EncryptedVolume::Format() {
   zx_status_t rc;
-  rc = zxcrypt::FdioVolume::CreateWithDeviceKey(fd_.duplicate(),
-                                                devfs_root_.duplicate(),
-                                                nullptr);
+  rc = zxcrypt::FdioVolume::CreateWithDeviceKey(fd_.duplicate(), devfs_root_.duplicate(), nullptr);
   if (rc != ZX_OK) {
     fprintf(stderr, "fshost: couldn't format zxcrypt volume with device key: %s\n",
             zx_status_get_string(rc));
@@ -80,13 +74,13 @@ zx_status_t EncryptedVolumeInterface::EnsureUnsealedAndFormatIfNeeded() {
   // have.  Otherwise, just return the error we got from the last Unseal()
   // attempt.
   if (rc == ZX_ERR_ACCESS_DENIED) {
-    fprintf(stderr, "fshost: Failed repeatedly to unseal zxcrypt device with all available keys.  "
+    fprintf(stderr,
+            "fshost: Failed repeatedly to unseal zxcrypt device with all available keys.  "
             "Destructively reformatting with new key to attempt to bring up an empty block volume "
             "rather than none at all.  Expect factory-reset-like behavior.\n");
     rc = Format();
     if (rc != ZX_OK) {
-      fprintf(stderr, "fshost: couldn't format encrypted volume: %s\n",
-              zx_status_get_string(rc));
+      fprintf(stderr, "fshost: couldn't format encrypted volume: %s\n", zx_status_get_string(rc));
       return rc;
     }
 
@@ -107,5 +101,4 @@ zx_status_t EncryptedVolumeInterface::EnsureUnsealedAndFormatIfNeeded() {
   }
 }
 
-} // namespace devmgr
-
+}  // namespace devmgr

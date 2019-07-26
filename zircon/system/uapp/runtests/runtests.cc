@@ -34,62 +34,61 @@ const char* kDefaultTestDirs[] = {
 };
 
 class FuchsiaStopwatch final : public runtests::Stopwatch {
-public:
-    FuchsiaStopwatch() { Start(); }
-    void Start() override { start_time_ = Now(); }
-    int64_t DurationInMsecs() override { return (Now() - start_time_).to_msecs(); }
+ public:
+  FuchsiaStopwatch() { Start(); }
+  void Start() override { start_time_ = Now(); }
+  int64_t DurationInMsecs() override { return (Now() - start_time_).to_msecs(); }
 
-private:
-    zx::time Now() const { return zx::clock::get_monotonic(); }
+ private:
+  zx::time Now() const { return zx::clock::get_monotonic(); }
 
-    zx::time start_time_;
+  zx::time start_time_;
 };
 
 // Parse |argv| for an output directory argument.
 const char* GetOutputDir(int argc, const char* const* argv) {
-    int i = 1;
-    while (i < argc - 1 && strcmp(argv[i], "-o") != 0) {
-        ++i;
-    }
-    if (i >= argc - 1) {
-        return nullptr;
-    }
-    return argv[i + 1];
+  int i = 1;
+  while (i < argc - 1 && strcmp(argv[i], "-o") != 0) {
+    ++i;
+  }
+  if (i >= argc - 1) {
+    return nullptr;
+  }
+  return argv[i + 1];
 }
 
-} // namespace
+}  // namespace
 
 int main(int argc, char** argv) {
-    const char* output_dir = GetOutputDir(argc, argv);
+  const char* output_dir = GetOutputDir(argc, argv);
 
-    // Start Log Listener.
-    std::unique_ptr<runtests::LogExporter> log_exporter_ptr;
-    if (output_dir != nullptr) {
-        int error = runtests::MkDirAll(output_dir);
-        if (error) {
-            printf("Error: Could not create output directory: %s, %s\n", output_dir,
-                   strerror(error));
-            return -1;
-        }
-
-        runtests::ExporterLaunchError exporter_error;
-        log_exporter_ptr = runtests::LaunchLogExporter(
-            runtests::JoinPath(output_dir, kSyslogFileName), &exporter_error);
-        // Don't fail if logger service is not available because it is only
-        // available in garnet layer and above.
-        if (!log_exporter_ptr && exporter_error != runtests::CONNECT_TO_LOGGER_SERVICE) {
-            printf("Error: Failed to launch log listener: %d", exporter_error);
-            return -1;
-        }
+  // Start Log Listener.
+  std::unique_ptr<runtests::LogExporter> log_exporter_ptr;
+  if (output_dir != nullptr) {
+    int error = runtests::MkDirAll(output_dir);
+    if (error) {
+      printf("Error: Could not create output directory: %s, %s\n", output_dir, strerror(error));
+      return -1;
     }
 
-    fbl::Vector<fbl::String> default_test_dirs;
-    const int num_default_test_dirs = sizeof(kDefaultTestDirs) / sizeof(char*);
-    for (int i = 0; i < num_default_test_dirs; ++i) {
-        default_test_dirs.push_back(kDefaultTestDirs[i]);
+    runtests::ExporterLaunchError exporter_error;
+    log_exporter_ptr = runtests::LaunchLogExporter(runtests::JoinPath(output_dir, kSyslogFileName),
+                                                   &exporter_error);
+    // Don't fail if logger service is not available because it is only
+    // available in garnet layer and above.
+    if (!log_exporter_ptr && exporter_error != runtests::CONNECT_TO_LOGGER_SERVICE) {
+      printf("Error: Failed to launch log listener: %d", exporter_error);
+      return -1;
     }
+  }
 
-    FuchsiaStopwatch stopwatch;
-    return runtests::DiscoverAndRunTests(&runtests::FuchsiaRunTest, argc, argv, default_test_dirs,
-                                         &stopwatch, kSyslogFileName);
+  fbl::Vector<fbl::String> default_test_dirs;
+  const int num_default_test_dirs = sizeof(kDefaultTestDirs) / sizeof(char*);
+  for (int i = 0; i < num_default_test_dirs; ++i) {
+    default_test_dirs.push_back(kDefaultTestDirs[i]);
+  }
+
+  FuchsiaStopwatch stopwatch;
+  return runtests::DiscoverAndRunTests(&runtests::FuchsiaRunTest, argc, argv, default_test_dirs,
+                                       &stopwatch, kSyslogFileName);
 }

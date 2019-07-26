@@ -19,21 +19,20 @@ static const pbus_mmio_t clk_mmios[] = {
 };
 
 zx_status_t Vim::ClkInit() {
+  pbus_dev_t clk_dev = {};
+  clk_dev.name = "vim-clk";
+  clk_dev.vid = PDEV_VID_AMLOGIC;
+  clk_dev.pid = PDEV_PID_AMLOGIC_S912;
+  clk_dev.did = PDEV_DID_AMLOGIC_AXG_CLK;
+  clk_dev.mmio_list = clk_mmios;
+  clk_dev.mmio_count = countof(clk_mmios);
 
-    pbus_dev_t clk_dev = {};
-    clk_dev.name = "vim-clk";
-    clk_dev.vid = PDEV_VID_AMLOGIC;
-    clk_dev.pid = PDEV_PID_AMLOGIC_S912;
-    clk_dev.did = PDEV_DID_AMLOGIC_AXG_CLK;
-    clk_dev.mmio_list = clk_mmios;
-    clk_dev.mmio_count = countof(clk_mmios);
+  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ClkInit: pbus_protocol_device_add failed, st = %d\n", status);
+    return status;
+  }
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ClkInit: pbus_protocol_device_add failed, st = %d\n", status);
-        return status;
-    }
-
-    return ZX_OK;
+  return ZX_OK;
 }
-} //namespace vim
+}  // namespace vim

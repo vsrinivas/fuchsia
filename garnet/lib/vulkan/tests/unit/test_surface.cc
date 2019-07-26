@@ -7,14 +7,12 @@
 
 class TestImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
  public:
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                zx::vmo buffer) override {}
+  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo buffer) override {
+  }
   void RemoveImage(uint32_t image_id) override {}
-  void PresentImage(uint32_t image_id,
-                    fidl::VectorPtr<zx::event> acquire_fences,
+  void PresentImage(uint32_t image_id, fidl::VectorPtr<zx::event> acquire_fences,
                     fidl::VectorPtr<zx::event> release_fences) override {
-    presented_.push_back(
-        {image_id, std::move(acquire_fences), std::move(release_fences)});
+    presented_.push_back({image_id, std::move(acquire_fences), std::move(release_fences)});
   }
 
   struct Presented {
@@ -36,8 +34,7 @@ class TestSwapchain {
   }
 
   TestSwapchain() {
-    std::vector<const char*> instance_layers{
-        "VK_LAYER_GOOGLE_image_pipe_swapchain"};
+    std::vector<const char*> instance_layers{"VK_LAYER_GOOGLE_image_pipe_swapchain"};
     std::vector<const char*> instance_ext{VK_KHR_SURFACE_EXTENSION_NAME,
                                           VK_KHR_MAGMA_SURFACE_EXTENSION_NAME};
     std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
@@ -57,8 +54,7 @@ class TestSwapchain {
 
     uint32_t gpu_count = 1;
     std::vector<VkPhysicalDevice> physical_devices(gpu_count);
-    if (VK_SUCCESS != vkEnumeratePhysicalDevices(vk_instance_, &gpu_count,
-                                                 physical_devices.data()))
+    if (VK_SUCCESS != vkEnumeratePhysicalDevices(vk_instance_, &gpu_count, physical_devices.data()))
       return;
 
     float queue_priorities[1] = {0.0};
@@ -70,8 +66,7 @@ class TestSwapchain {
         .pQueuePriorities = queue_priorities,
         .flags = 0};
 
-    std::vector<const char*> enabled_layers{
-        "VK_LAYER_GOOGLE_image_pipe_swapchain"};
+    std::vector<const char*> enabled_layers{"VK_LAYER_GOOGLE_image_pipe_swapchain"};
 
     VkDeviceCreateInfo device_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -84,13 +79,12 @@ class TestSwapchain {
         .ppEnabledExtensionNames = device_ext.data(),
         .pEnabledFeatures = nullptr};
 
-    if (VK_SUCCESS != vkCreateDevice(physical_devices[0], &device_create_info,
-                                     nullptr, &vk_device_))
+    if (VK_SUCCESS !=
+        vkCreateDevice(physical_devices[0], &device_create_info, nullptr, &vk_device_))
       return;
 
-    PFN_vkGetDeviceProcAddr get_device_proc_addr =
-        reinterpret_cast<PFN_vkGetDeviceProcAddr>(
-            vkGetInstanceProcAddr(vk_instance_, "vkGetDeviceProcAddr"));
+    PFN_vkGetDeviceProcAddr get_device_proc_addr = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
+        vkGetInstanceProcAddr(vk_instance_, "vkGetDeviceProcAddr"));
     if (!get_device_proc_addr) {
       fprintf(stderr, "Failed to find vkGetDeviceProcAddr\n");
       return;
@@ -105,8 +99,7 @@ class TestSwapchain {
     init_ = true;
   }
 
-  VkResult CreateSwapchain(VkSurfaceKHR surface,
-                           VkSwapchainKHR* swapchain_out) {
+  VkResult CreateSwapchain(VkSurfaceKHR surface, VkSwapchainKHR* swapchain_out) {
     VkSwapchainCreateInfoKHR create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = nullptr,
@@ -128,8 +121,7 @@ class TestSwapchain {
         .oldSwapchain = VK_NULL_HANDLE,
     };
 
-    return create_swapchain_khr_(vk_device_, &create_info, nullptr,
-                                 swapchain_out);
+    return create_swapchain_khr_(vk_device_, &create_info, nullptr, swapchain_out);
   }
 
   void AcquireNoSemaphore() {
@@ -137,26 +129,20 @@ class TestSwapchain {
 
     TestImagePipeSurface surface;
     VkSwapchainKHR swapchain;
-    ASSERT_EQ(
-        VK_SUCCESS,
-        CreateSwapchain(reinterpret_cast<VkSurfaceKHR>(&surface), &swapchain));
+    ASSERT_EQ(VK_SUCCESS, CreateSwapchain(reinterpret_cast<VkSurfaceKHR>(&surface), &swapchain));
 
     uint32_t image_index;
-    EXPECT_EQ(VK_SUCCESS,
-              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_SUCCESS, acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                                  VK_NULL_HANDLE, &image_index));
     EXPECT_EQ(0u, image_index);
-    EXPECT_EQ(VK_SUCCESS,
-              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_SUCCESS, acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                                  VK_NULL_HANDLE, &image_index));
     EXPECT_EQ(1u, image_index);
-    EXPECT_EQ(VK_SUCCESS,
-              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_SUCCESS, acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                                  VK_NULL_HANDLE, &image_index));
     EXPECT_EQ(2u, image_index);
-    EXPECT_EQ(VK_NOT_READY,
-              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_NOT_READY, acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                                    VK_NULL_HANDLE, &image_index));
 
     VkQueue queue;
     vkGetDeviceQueue(vk_device_, 0, 0, &queue);
@@ -180,13 +166,11 @@ class TestSwapchain {
     (*surface.presented_[0].release_fences)[0].signal(0, ZX_EVENT_SIGNALED);
     surface.presented_.erase(surface.presented_.begin());
 
-    EXPECT_EQ(VK_SUCCESS,
-              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_SUCCESS, acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                                  VK_NULL_HANDLE, &image_index));
     EXPECT_EQ(0u, image_index);
-    EXPECT_EQ(VK_NOT_READY,
-              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_NOT_READY, acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                                    VK_NULL_HANDLE, &image_index));
   }
 
   VkInstance vk_instance_;

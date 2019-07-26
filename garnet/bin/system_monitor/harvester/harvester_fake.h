@@ -24,15 +24,12 @@ class Harvester;
 
 class HarvesterFake : public Harvester {
  public:
-  HarvesterFake(zx_handle_t root_resource,
-                std::unique_ptr<DockyardProxy> dockyard_proxy)
-      : Harvester(root_resource, /*dispatcher=*/nullptr,
-                  std::move(dockyard_proxy)) {}
+  HarvesterFake(zx_handle_t root_resource, std::unique_ptr<DockyardProxy> dockyard_proxy)
+      : Harvester(root_resource, /*dispatcher=*/nullptr, std::move(dockyard_proxy)) {}
 
   void GatherData() {}
 
-  void SetUpdatePeriod(dockyard::DockyardId dockyard_id,
-                       zx::duration update_period);
+  void SetUpdatePeriod(dockyard::DockyardId dockyard_id, zx::duration update_period);
 };
 
 }  // namespace harvester

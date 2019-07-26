@@ -23,15 +23,12 @@ namespace cobalt {
 
 class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
-  LoggerFactoryImpl(std::shared_ptr<cobalt::logger::ProjectContextFactory>
-                        global_project_context_factory,
-                    encoder::ClientSecret client_secret,
-                    TimerManager* timer_manager,
-                    logger::Encoder* logger_encoder,
-                    logger::ObservationWriter* observation_writer,
-                    logger::EventAggregator* event_aggregator,
-                    logger::Logger* internal_logger,
-                    encoder::SystemDataInterface* system_data);
+  LoggerFactoryImpl(
+      std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
+      encoder::ClientSecret client_secret, TimerManager* timer_manager,
+      logger::Encoder* logger_encoder, logger::ObservationWriter* observation_writer,
+      logger::EventAggregator* event_aggregator, logger::Logger* internal_logger,
+      encoder::SystemDataInterface* system_data);
 
  private:
   // Constructs a new LoggerImpl based on |project_context|, binds it to
@@ -41,8 +38,7 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void BindNewLogger(
       std::unique_ptr<logger::ProjectContext> project_context,
       fidl::InterfaceRequest<LoggerInterface> request,
-      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
-          binding_set);
+      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
 
   // Attempts to extract a CobaltRegistry containing a single project from
   // |profile| and uses this to construct a LoggerImpl. Binds this to |request|
@@ -51,10 +47,9 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   // Logger or LoggerSimple.
   template <typename LoggerInterface, typename Callback>
   void CreateAndBindLogger(
-      fuchsia::cobalt::ProjectProfile profile,
-      fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
-      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
-          binding_set);
+      fuchsia::cobalt::ProjectProfile profile, fidl::InterfaceRequest<LoggerInterface> request,
+      Callback callback,
+      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
 
   // Extracts the Cobalt 1.0 project with the given |project_name| from the
   // global CobaltRegistry, if there is such a project in the registry, and
@@ -66,22 +61,19 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateAndBindLoggerFromProjectName(
       std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
       fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
-      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
-          binding_set);
+      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
 
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
                     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                     CreateLoggerCallback callback);
 
-  void CreateLoggerSimple(
-      fuchsia::cobalt::ProjectProfile profile,
-      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerSimpleCallback callback);
+  void CreateLoggerSimple(fuchsia::cobalt::ProjectProfile profile,
+                          fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
+                          CreateLoggerSimpleCallback callback);
 
-  void CreateLoggerFromProjectName(
-      std::string project_name, fuchsia::cobalt::ReleaseStage stage,
-      fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-      CreateLoggerFromProjectNameCallback callback);
+  void CreateLoggerFromProjectName(std::string project_name, fuchsia::cobalt::ReleaseStage stage,
+                                   fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
+                                   CreateLoggerFromProjectNameCallback callback);
 
   void CreateLoggerSimpleFromProjectName(
       std::string project_name, fuchsia::cobalt::ReleaseStage stage,
@@ -89,15 +81,12 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       CreateLoggerSimpleFromProjectNameCallback callback);
 
   encoder::ClientSecret client_secret_;
-  fidl::BindingSet<fuchsia::cobalt::Logger,
-                   std::unique_ptr<fuchsia::cobalt::Logger>>
+  fidl::BindingSet<fuchsia::cobalt::Logger, std::unique_ptr<fuchsia::cobalt::Logger>>
       logger_bindings_;
-  fidl::BindingSet<fuchsia::cobalt::LoggerSimple,
-                   std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
+  fidl::BindingSet<fuchsia::cobalt::LoggerSimple, std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
       logger_simple_bindings_;
 
-  std::shared_ptr<cobalt::logger::ProjectContextFactory>
-      global_project_context_factory_;
+  std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory_;
   TimerManager* timer_manager_;                    // not owned
   logger::Encoder* logger_encoder_;                // not owned
   logger::ObservationWriter* observation_writer_;  // not owned

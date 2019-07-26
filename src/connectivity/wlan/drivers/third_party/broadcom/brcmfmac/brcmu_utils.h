@@ -26,14 +26,14 @@
  * Caller should explicitly test 'exp' when this completes
  * and take appropriate error action if 'exp' is still true.
  */
-#define SPINWAIT(exp, us)                                  \
-    {                                                      \
-        uint countdown = (us) + 9;                         \
-        while ((exp) && (countdown >= 10)) {               \
-            zx_nanosleep(zx_deadline_after(ZX_USEC(10)));  \
-            countdown -= 10;                               \
-        }                                                  \
-    }
+#define SPINWAIT(exp, us)                           \
+  {                                                 \
+    uint countdown = (us) + 9;                      \
+    while ((exp) && (countdown >= 10)) {            \
+      zx_nanosleep(zx_deadline_after(ZX_USEC(10))); \
+      countdown -= 10;                              \
+    }                                               \
+  }
 
 /* osl multi-precedence packet queue */
 #define PKTQ_LEN_DEFAULT 128 /* Max 128 packets */
@@ -68,47 +68,47 @@
 #define ETHER_ADDR_STR_LEN 18
 
 struct pktq_prec {
-    struct brcmf_netbuf_list netbuf_list;
-    uint16_t max; /* maximum number of queued packets */
+  struct brcmf_netbuf_list netbuf_list;
+  uint16_t max; /* maximum number of queued packets */
 };
 
 /* multi-priority pkt queue */
 struct pktq {
-    uint16_t num_prec; /* number of precedences in use */
-    uint16_t hi_prec;  /* rapid dequeue hint (>= highest non-empty prec) */
-    uint16_t max;      /* total max packets */
-    uint16_t len;      /* total number of packets */
-    /*
-     * q array must be last since # of elements can be either
-     * PKTQ_MAX_PREC or 1
-     */
-    struct pktq_prec q[PKTQ_MAX_PREC];
+  uint16_t num_prec; /* number of precedences in use */
+  uint16_t hi_prec;  /* rapid dequeue hint (>= highest non-empty prec) */
+  uint16_t max;      /* total max packets */
+  uint16_t len;      /* total number of packets */
+  /*
+   * q array must be last since # of elements can be either
+   * PKTQ_MAX_PREC or 1
+   */
+  struct pktq_prec q[PKTQ_MAX_PREC];
 };
 
 /* operations on a specific precedence in packet queue */
 
 static inline int pktq_plen(struct pktq* pq, int prec) {
-    return brcmf_netbuf_list_length(&pq->q[prec].netbuf_list);
+  return brcmf_netbuf_list_length(&pq->q[prec].netbuf_list);
 }
 
 static inline int pktq_pavail(struct pktq* pq, int prec) {
-    return pq->q[prec].max - pktq_plen(pq, prec);
+  return pq->q[prec].max - pktq_plen(pq, prec);
 }
 
 static inline bool pktq_pfull(struct pktq* pq, int prec) {
-    return pktq_plen(pq, prec) >= pq->q[prec].max;
+  return pktq_plen(pq, prec) >= pq->q[prec].max;
 }
 
 static inline bool pktq_pempty(struct pktq* pq, int prec) {
-    return brcmf_netbuf_list_is_empty(&pq->q[prec].netbuf_list);
+  return brcmf_netbuf_list_is_empty(&pq->q[prec].netbuf_list);
 }
 
 static inline struct brcmf_netbuf* pktq_ppeek(struct pktq* pq, int prec) {
-    return brcmf_netbuf_list_peek_head(&pq->q[prec].netbuf_list);
+  return brcmf_netbuf_list_peek_head(&pq->q[prec].netbuf_list);
 }
 
 static inline struct brcmf_netbuf* pktq_ppeek_tail(struct pktq* pq, int prec) {
-    return brcmf_netbuf_list_peek_tail(&pq->q[prec].netbuf_list);
+  return brcmf_netbuf_list_peek_tail(&pq->q[prec].netbuf_list);
 }
 
 struct brcmf_netbuf* brcmu_pktq_penq(struct pktq* pq, int prec, struct brcmf_netbuf* p);
@@ -135,25 +135,15 @@ struct brcmf_netbuf* brcmu_pktq_mdeq(struct pktq* pq, uint prec_bmp, int* prec_o
 
 /* operations on packet queue as a whole */
 
-static inline int pktq_len(struct pktq* pq) {
-    return (int)pq->len;
-}
+static inline int pktq_len(struct pktq* pq) { return (int)pq->len; }
 
-static inline int pktq_max(struct pktq* pq) {
-    return (int)pq->max;
-}
+static inline int pktq_max(struct pktq* pq) { return (int)pq->max; }
 
-static inline int pktq_avail(struct pktq* pq) {
-    return (int)(pq->max - pq->len);
-}
+static inline int pktq_avail(struct pktq* pq) { return (int)(pq->max - pq->len); }
 
-static inline bool pktq_full(struct pktq* pq) {
-    return pq->len >= pq->max;
-}
+static inline bool pktq_full(struct pktq* pq) { return pq->len >= pq->max; }
 
-static inline bool pktq_empty(struct pktq* pq) {
-    return pq->len == 0;
-}
+static inline bool pktq_empty(struct pktq* pq) { return pq->len == 0; }
 
 void brcmu_pktq_init(struct pktq* pq, int num_prec, int max_len);
 /* prec_out may be NULL if caller is not interested in return value */
@@ -171,33 +161,33 @@ struct ipv4_addr;
  * remark: the mask parameter should be a shifted mask.
  */
 static inline void brcmu_maskset32(uint32_t* var, uint32_t mask, uint8_t shift, uint32_t value) {
-    value = (value << shift) & mask;
-    *var = (*var & ~mask) | value;
+  value = (value << shift) & mask;
+  *var = (*var & ~mask) | value;
 }
 static inline uint32_t brcmu_maskget32(uint32_t var, uint32_t mask, uint8_t shift) {
-    return (var & mask) >> shift;
+  return (var & mask) >> shift;
 }
 static inline void brcmu_maskset16(uint16_t* var, uint16_t mask, uint8_t shift, uint16_t value) {
-    value = (value << shift) & mask;
-    *var = (*var & ~mask) | value;
+  value = (value << shift) & mask;
+  *var = (*var & ~mask) | value;
 }
 static inline uint16_t brcmu_maskget16(uint16_t var, uint16_t mask, uint8_t shift) {
-    return (var & mask) >> shift;
+  return (var & mask) >> shift;
 }
 
 static inline void* brcmu_alloc_and_copy(const void* buf, size_t size) {
-    void* copy = malloc(size);
-    if (copy != NULL) {
-        memcpy(copy, buf, size);
-    }
-    return copy;
+  void* copy = malloc(size);
+  if (copy != NULL) {
+    memcpy(copy, buf, size);
+  }
+  return copy;
 }
 
 /* externs */
 /* format/print */
 #if !defined(NDEBUG)
 __PRINTFLIKE(3, 4) void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...);
-#else  // !defined(NDEBUG)
+#else   // !defined(NDEBUG)
 __PRINTFLIKE(3, 4)
 static inline void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...) {}
 #endif  // !defined(NDEBUG)

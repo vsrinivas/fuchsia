@@ -28,10 +28,8 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
     listener_ = std::move(listener);
   }
 
-  MOCK_METHOD4(Present, void(uint64_t presentation_time,
-                             std::vector<::zx::event> acquire_fences,
-                             std::vector<::zx::event> release_fences,
-                             PresentCallback callback));
+  MOCK_METHOD4(Present, void(uint64_t presentation_time, std::vector<::zx::event> acquire_fences,
+                             std::vector<::zx::event> release_fences, PresentCallback callback));
 
  private:
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;
@@ -42,15 +40,13 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  public:
   void NotImplemented_(const std::string& name) final {}
 
-  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic>
-  GetRequestHandler() {
+  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetRequestHandler() {
     return bindings_.GetHandler(this);
   }
 
   void CreateSession(
       fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
-      override {
+      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override {
     mock_session_.Bind(std::move(session), listener.Bind());
   }
 
@@ -90,8 +86,7 @@ class BaseViewTest : public component::testing::TestWithContext {
     };
     view_holder_token_ = std::move(view_holder_token);
     startup_context_ = std::move(startup_context);
-    base_view_ =
-        std::make_unique<BaseViewImpl>(std::move(view_context), std::string());
+    base_view_ = std::make_unique<BaseViewImpl>(std::move(view_context), std::string());
   }
 
   std::unique_ptr<BaseViewImpl> base_view_;
@@ -105,12 +100,10 @@ class BaseViewTest : public component::testing::TestWithContext {
 TEST_F(BaseViewTest, HandlesMultiplePresentCalls) {
   // Expect Present() calls in initialization.
   EXPECT_CALL(*fake_scenic_.mock_session(), Present(_, _, _, _))
-      .WillRepeatedly([](uint64_t presentation_time,
-                         std::vector<::zx::event> acquire_fences,
-                         std::vector<::zx::event> release_fences,
-                         Session::PresentCallback callback) {
-        callback(fuchsia::images::PresentationInfo());
-      });
+      .WillRepeatedly(
+          [](uint64_t presentation_time, std::vector<::zx::event> acquire_fences,
+             std::vector<::zx::event> release_fences,
+             Session::PresentCallback callback) { callback(fuchsia::images::PresentationInfo()); });
   RunLoopUntilIdle();
   ASSERT_TRUE(testing::Mock::VerifyAndClear(fake_scenic_.mock_session()));
 

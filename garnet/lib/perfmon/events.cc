@@ -35,16 +35,13 @@ std::string GetDefaultModelName() {
   return model_name;
 }
 
-void ModelEventManager::RegisterEvents(const char* model_name,
-                                       const char* group_name,
-                                       const EventDetails* events,
-                                       size_t count) {
+void ModelEventManager::RegisterEvents(const char* model_name, const char* group_name,
+                                       const EventDetails* events, size_t count) {
   internal::EventRegistry* registry = internal::GetGlobalEventRegistry();
   registry->RegisterEvents(model_name, group_name, events, count);
 }
 
-std::unique_ptr<ModelEventManager> ModelEventManager::Create(
-    const std::string& model_name) {
+std::unique_ptr<ModelEventManager> ModelEventManager::Create(const std::string& model_name) {
   // For convenience, if no events have been registered yet, ensure the
   // current arch's events are registered.
   if (g_model_events == nullptr) {
@@ -56,30 +53,25 @@ std::unique_ptr<ModelEventManager> ModelEventManager::Create(
     return nullptr;
   }
 
-  auto model_event_manager =
-    std::make_unique<ModelEventManager>(ModelEventManager{
-        model_name, &iter->second.arch_events, &iter->second.fixed_events,
-        &iter->second.model_events, &iter->second.misc_events});
+  auto model_event_manager = std::make_unique<ModelEventManager>(
+      ModelEventManager{model_name, &iter->second.arch_events, &iter->second.fixed_events,
+                        &iter->second.model_events, &iter->second.misc_events});
   if (FXL_VLOG_IS_ON(4)) {
     model_event_manager->Dump();
   }
   return model_event_manager;
 }
 
-ModelEventManager::ModelEventManager(const std::string& model_name,
-                                     const EventTable* arch_events,
-                                     const EventTable* fixed_events,
-                                     const EventTable* model_events,
+ModelEventManager::ModelEventManager(const std::string& model_name, const EventTable* arch_events,
+                                     const EventTable* fixed_events, const EventTable* model_events,
                                      const EventTable* misc_events)
-  : model_name_(model_name),
-    arch_events_(arch_events),
-    fixed_events_(fixed_events),
-    model_events_(model_events),
-    misc_events_(misc_events) {
-}
+    : model_name_(model_name),
+      arch_events_(arch_events),
+      fixed_events_(fixed_events),
+      model_events_(model_events),
+      misc_events_(misc_events) {}
 
-bool ModelEventManager::EventIdToEventDetails(
-    EventId id, const EventDetails** out_details) const {
+bool ModelEventManager::EventIdToEventDetails(EventId id, const EventDetails** out_details) const {
   unsigned event = GetEventIdEvent(id);
   const EventTable* events;
 
@@ -112,9 +104,8 @@ bool ModelEventManager::EventIdToEventDetails(
 }
 
 // This just uses a linear search for now.
-bool ModelEventManager::LookupEventByName(
-    const char* group_name, const char* event_name,
-    const EventDetails** out_details) const {
+bool ModelEventManager::LookupEventByName(const char* group_name, const char* event_name,
+                                          const EventDetails** out_details) const {
   const EventTable* events;
 
   if (strcmp(group_name, internal::kArchGroupName) == 0) {
@@ -141,8 +132,7 @@ bool ModelEventManager::LookupEventByName(
   return false;
 }
 
-static void FillGroupTable(const char* name,
-                           const ModelEventManager::EventTable* events,
+static void FillGroupTable(const char* name, const ModelEventManager::EventTable* events,
                            ModelEventManager::GroupTable* groups) {
   groups->emplace_back(ModelEventManager::GroupEvents{name, {}});
   ModelEventManager::GroupEvents& group_events = groups->back();
@@ -175,8 +165,7 @@ void ModelEventManager::Dump() const {
   DumpGroup(internal::kMiscGroupName, misc_events_);
 }
 
-void ModelEventManager::DumpGroup(const char* name,
-                                  const EventTable* events) const {
+void ModelEventManager::DumpGroup(const char* name, const EventTable* events) const {
   printf("Group %s\n", name);
   for (const auto& event : *events) {
     if (event->id != 0) {

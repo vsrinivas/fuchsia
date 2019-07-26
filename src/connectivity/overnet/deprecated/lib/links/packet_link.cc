@@ -9,8 +9,7 @@
 
 namespace overnet {
 
-PacketLink::PacketLink(Router* router, NodeId peer, uint32_t mss,
-                       uint64_t label)
+PacketLink::PacketLink(Router* router, NodeId peer, uint32_t mss, uint64_t label)
     : router_(router),
       timer_(router->timer()),
       peer_(peer),
@@ -32,10 +31,8 @@ void PacketLink::Close(Callback<void> quiesced) {
 
 void PacketLink::Forward(Message message) {
   ScopedModule<PacketLink> scoped_module(this);
-  const bool send_immediately =
-      packet_stuffer_.Forward(std::move(message)) && !sending_;
-  OVERNET_TRACE(DEBUG) << "Forward sending=" << sending_
-                       << " imm=" << send_immediately;
+  const bool send_immediately = packet_stuffer_.Forward(std::move(message)) && !sending_;
+  OVERNET_TRACE(DEBUG) << "Forward sending=" << sending_ << " imm=" << send_immediately;
   if (send_immediately) {
     SchedulePacket();
   }
@@ -48,25 +45,21 @@ void PacketLink::Tombstone() {
 fuchsia::overnet::protocol::LinkStatus PacketLink::GetLinkStatus() {
   ScopedModule<PacketLink> scoped_module(this);
 
-  if (metrics_version_ ==
-      fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE) {
-    return fuchsia::overnet::protocol::LinkStatus{router_->node_id().as_fidl(),
-                                                  peer_.as_fidl(), label_,
-                                                  metrics_version_};
+  if (metrics_version_ == fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE) {
+    return fuchsia::overnet::protocol::LinkStatus{router_->node_id().as_fidl(), peer_.as_fidl(),
+                                                  label_, metrics_version_};
   }
 
   // Advertise MSS as smaller than it is to account for some bugs that exist
   // right now.
   // TODO(ctiller): eliminate this - we should be precise.
   constexpr uint32_t kUnderadvertiseMaximumSendSize = 32;
-  fuchsia::overnet::protocol::LinkStatus m{router_->node_id().as_fidl(),
-                                           peer_.as_fidl(), label_,
+  fuchsia::overnet::protocol::LinkStatus m{router_->node_id().as_fidl(), peer_.as_fidl(), label_,
                                            metrics_version_++};
   m.metrics.set_bw_link(protocol_.bottleneck_bandwidth().bits_per_second());
   m.metrics.set_rtt(protocol_.round_trip_time().as_us());
-  m.metrics.set_mss(
-      std::max(kUnderadvertiseMaximumSendSize, protocol_.maximum_send_size()) -
-      kUnderadvertiseMaximumSendSize);
+  m.metrics.set_mss(std::max(kUnderadvertiseMaximumSendSize, protocol_.maximum_send_size()) -
+                    kUnderadvertiseMaximumSendSize);
   return m;
 }
 
@@ -109,8 +102,7 @@ Slice PacketLink::LinkSendRequest::GenerateBytes(LazySliceArgs args) {
 void PacketLink::LinkSendRequest::Ack(const Status& status) {
   ScopedModule<PacketLink> scoped_module(link_);
   ScopedOp scoped_op(op_);
-  OVERNET_TRACE(DEBUG) << "LinkSendRequest[" << this
-                       << "]: Ack status=" << status
+  OVERNET_TRACE(DEBUG) << "LinkSendRequest[" << this << "]: Ack status=" << status
                        << " blocking_sends=" << blocking_sends_;
   if (blocking_sends_) {
     assert(status.is_error());
@@ -136,9 +128,8 @@ void PacketLink::SendPacket(SeqNum seq, LazySlice data) {
 
   for (;;) {
     const auto prefix_length = 1 + seq.wire_length();
-    auto data_slice = data(
-        LazySliceArgs{Border::Prefix(prefix_length),
-                      protocol_.maximum_send_size() - prefix_length, false});
+    auto data_slice = data(LazySliceArgs{Border::Prefix(prefix_length),
+                                         protocol_.maximum_send_size() - prefix_length, false});
     auto send_slice = data_slice.WithPrefix(prefix_length, [seq](uint8_t* p) {
       *p++ = 0;
       seq.Write(p);
@@ -189,27 +180,23 @@ void PacketLink::Process(TimeStamp received, Slice packet) {
 
   auto seq_status = SeqNum::Parse(&p, end);
   if (seq_status.is_error()) {
-    OVERNET_TRACE(WARNING) << "Packet seqnum parse failure: "
-                           << seq_status.AsStatus();
+    OVERNET_TRACE(WARNING) << "Packet seqnum parse failure: " << seq_status.AsStatus();
     return;
   }
   packet.TrimBegin(p - begin);
   // begin, p, end are no longer valid.
   protocol_.Process(
-      received, *seq_status.get(), std::move(packet),
-      [this, received](auto packet_status) {
+      received, *seq_status.get(), std::move(packet), [this, received](auto packet_status) {
         if (packet_status.is_error()) {
           if (packet_status.code() != StatusCode::CANCELLED) {
-            OVERNET_TRACE(WARNING)
-                << "Packet header parse failure: " << packet_status.AsStatus();
+            OVERNET_TRACE(WARNING) << "Packet header parse failure: " << packet_status.AsStatus();
           }
           return;
         }
         if (auto* msg = *packet_status) {
           auto body_status = ProcessBody(received, std::move(msg->payload));
           if (body_status.is_error()) {
-            OVERNET_TRACE(WARNING)
-                << "Packet body parse failure: " << body_status;
+            OVERNET_TRACE(WARNING) << "Packet body parse failure: " << body_status;
             return;
           }
         }
@@ -217,8 +204,7 @@ void PacketLink::Process(TimeStamp received, Slice packet) {
 }
 
 Status PacketLink::ProcessBody(TimeStamp received, Slice packet) {
-  return packet_stuffer_.ParseAndForwardTo(received, std::move(packet),
-                                           router_);
+  return packet_stuffer_.ParseAndForwardTo(received, std::move(packet), router_);
 }
 
 }  // namespace overnet

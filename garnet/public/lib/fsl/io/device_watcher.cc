@@ -21,33 +21,28 @@
 namespace fsl {
 
 DeviceWatcher::DeviceWatcher(fxl::UniqueFD dir_fd, zx::channel dir_watch,
-                             ExistsCallback exists_callback,
-                             IdleCallback idle_callback)
+                             ExistsCallback exists_callback, IdleCallback idle_callback)
     : dir_fd_(std::move(dir_fd)),
       dir_watch_(std::move(dir_watch)),
       exists_callback_(std::move(exists_callback)),
       idle_callback_(std::move(idle_callback)),
-      wait_(this, dir_watch_.get(),
-            ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
+      wait_(this, dir_watch_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
       weak_ptr_factory_(this) {
   auto status = wait_.Begin(async_get_default_dispatcher());
   FXL_DCHECK(status == ZX_OK);
 }
 
-std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(
-    const std::string& directory_path, ExistsCallback exists_callback) {
-  return CreateWithIdleCallback(directory_path, std::move(exists_callback),
-                                [] {});
+std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(const std::string& directory_path,
+                                                     ExistsCallback exists_callback) {
+  return CreateWithIdleCallback(directory_path, std::move(exists_callback), [] {});
 }
 
 std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
-    const std::string& directory_path, ExistsCallback exists_callback,
-    IdleCallback idle_callback) {
+    const std::string& directory_path, ExistsCallback exists_callback, IdleCallback idle_callback) {
   // Open the directory.
   int open_result = open(directory_path.c_str(), O_DIRECTORY | O_RDONLY);
   if (open_result < 0) {
-    FXL_LOG(ERROR) << "Failed to open " << directory_path
-                   << ", errno=" << errno;
+    FXL_LOG(ERROR) << "Failed to open " << directory_path << ", errno=" << errno;
     return nullptr;
   }
   fbl::unique_fd dir_fd(open_result);
@@ -56,11 +51,11 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
     return nullptr;
   }
   fzl::FdioCaller caller{std::move(dir_fd)};
-  uint32_t mask = fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING |
-                  fuchsia_io_WATCH_MASK_IDLE;
+  uint32_t mask =
+      fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE;
   zx_status_t status;
-  zx_status_t io_status = fuchsia_io_DirectoryWatch(
-      caller.borrow_channel(), mask, 0, server.release(), &status);
+  zx_status_t io_status =
+      fuchsia_io_DirectoryWatch(caller.borrow_channel(), mask, 0, server.release(), &status);
   if (io_status != ZX_OK || status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create device watcher for " << directory_path
                    << ", status=" << status;
@@ -70,22 +65,20 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
   // This weird handshake is necessary because fxl::UniqueFD != fbl::unique_fd.
   fxl::UniqueFD dir_fd_alt(caller.release().release());
 
-  return std::unique_ptr<DeviceWatcher>(
-      new DeviceWatcher(std::move(dir_fd_alt), std::move(client),
-                        std::move(exists_callback), std::move(idle_callback)));
+  return std::unique_ptr<DeviceWatcher>(new DeviceWatcher(std::move(dir_fd_alt), std::move(client),
+                                                          std::move(exists_callback),
+                                                          std::move(idle_callback)));
 }
 
-void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
-                            async::WaitBase* wait, zx_status_t status,
-                            const zx_packet_signal* signal) {
+void DeviceWatcher::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                            zx_status_t status, const zx_packet_signal* signal) {
   if (status != ZX_OK)
     return;
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     uint32_t size;
     uint8_t buf[fuchsia_io_MAX_BUF];
-    zx_status_t status =
-        dir_watch_.read(0, buf, nullptr, sizeof(buf), 0, &size, nullptr);
+    zx_status_t status = dir_watch_.read(0, buf, nullptr, sizeof(buf), 0, &size, nullptr);
     FXL_CHECK(status == ZX_OK) << "Failed to read from directory watch channel";
 
     auto weak = weak_ptr_factory_.GetWeakPtr();
@@ -96,10 +89,8 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher,
       if (size < (namelen + 2u)) {
         break;
       }
-      if ((event == fuchsia_io_WATCH_EVENT_ADDED) ||
-          (event == fuchsia_io_WATCH_EVENT_EXISTING)) {
-        exists_callback_(dir_fd_.get(),
-                         std::string(reinterpret_cast<char*>(msg), namelen));
+      if ((event == fuchsia_io_WATCH_EVENT_ADDED) || (event == fuchsia_io_WATCH_EVENT_EXISTING)) {
+        exists_callback_(dir_fd_.get(), std::string(reinterpret_cast<char*>(msg), namelen));
       } else if (event == fuchsia_io_WATCH_EVENT_IDLE) {
         idle_callback_();
         // Only call the idle callback once.  In case there is some captured

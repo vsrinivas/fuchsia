@@ -16,40 +16,38 @@ namespace function_example1 {
 using fold_function = fit::function<int(int value, int item)>;
 
 int fold(const std::vector<int>& in, int value, const fold_function& f) {
-    for (auto& item : in) {
-        value = f(value, item);
-    }
-    return value;
+  for (auto& item : in) {
+    value = f(value, item);
+  }
+  return value;
 }
 
-int sum_item(int value, int item) {
-    return value + item;
-}
+int sum_item(int value, int item) { return value + item; }
 
 int sum(const std::vector<int>& in) {
-    // bind to a function pointer
-    fold_function fn(&sum_item);
-    return fold(in, 0, fn);
+  // bind to a function pointer
+  fold_function fn(&sum_item);
+  return fold(in, 0, fn);
 }
 
 int alternating_sum(const std::vector<int>& in) {
-    // bind to a lambda
-    int sign = 1;
-    fold_function fn([&sign](int value, int item) {
-        value += sign * item;
-        sign *= -1;
-        return value;
-    });
-    return fold(in, 0, fn);
+  // bind to a lambda
+  int sign = 1;
+  fold_function fn([&sign](int value, int item) {
+    value += sign * item;
+    sign *= -1;
+    return value;
+  });
+  return fold(in, 0, fn);
 }
 
 void run() {
-    std::vector<int> in;
-    for (int i = 0; i < 10; i++) {
-        in.push_back(i);
-    }
-    assert(sum(in) == 45);
-    assert(alternating_sum(in) == -5);
+  std::vector<int> in;
+  for (int i = 0; i < 10; i++) {
+    in.push_back(i);
+  }
+  assert(sum(in) == 45);
+  assert(alternating_sum(in) == -5);
 }
 
-} // namespace function_example1
+}  // namespace function_example1

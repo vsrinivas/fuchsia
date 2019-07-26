@@ -48,130 +48,124 @@ class ThreadPool;
 // deactivated when the current in-flight dispatch operation unwinds.
 //
 class ExecutionDomain : public fbl::RefCounted<ExecutionDomain> {
-public:
-    // Token and ScopedToken are small (empty) objects which are intended to be
-    // used with the clang static thread analysis framework in order to express
-    // concurrency guarantees which arise from the serialized-dispatch behavior
-    // provided by ExecutionsDomains.  By obtaining the capability represented
-    // by an execution domain's token in an event source's processing handler,
-    // users may assert at compile time that they are executing in handlers in a
-    // serialized fashion imposed by a particular execution domain.  For
-    // example...
-    //
-    // class Thingy {
-    //   ...
-    //   // Require that we be running in my_domain_ in order to call handle
-    //   // channel.
-    //   void HandleChannel(Channel* ch) __TA_REQUIRES(my_domain_.token());
-    //   ...
-    //
-    //   // This variable can only be changes while running in my_domain_
-    //   uint32_t my_state_ __TA_GUARDED(my_domain_.token());
-    // }
-    //
-    // void Thingy::Activate() {
-    //     Channel::ProcessHandler phandler(
-    //     [thingy = fbl::WrapRefPtr(this)](Channel* ch) {
-    //       // Establish the fact that this callback is running in my_domain_
-    //       ExecutionDomain::ScopedToken token(my_domain_->token());
-    //       thingy->HandleChannel(ch);
-    //     });
-    //
-    //     my_channel_.Activate(..., std::move(phandler), ...);
-    //
-    //     my_state_++;  // This fails, we are not running in the domain.
-    // }
-    //
-    // void Thingy::HandleChannel(Channel* ch) {
-    //     my_state_++;  // This succeeds, we are running in the domain.
-    //     DeactivateFromWithinDomain(); // So does this.
-    //
-    //     // This fails, we should call not Deactivate from within the domain.
-    //     Deactivate();
-    // }
-    //
-    //
-    struct __TA_CAPABILITY("role") Token { };
-    class __TA_SCOPED_CAPABILITY ScopedToken {
-    public:
-        explicit ScopedToken(const Token& token) __TA_ACQUIRE(token) { }
-        ~ScopedToken() __TA_RELEASE() { }
-    };
+ public:
+  // Token and ScopedToken are small (empty) objects which are intended to be
+  // used with the clang static thread analysis framework in order to express
+  // concurrency guarantees which arise from the serialized-dispatch behavior
+  // provided by ExecutionsDomains.  By obtaining the capability represented
+  // by an execution domain's token in an event source's processing handler,
+  // users may assert at compile time that they are executing in handlers in a
+  // serialized fashion imposed by a particular execution domain.  For
+  // example...
+  //
+  // class Thingy {
+  //   ...
+  //   // Require that we be running in my_domain_ in order to call handle
+  //   // channel.
+  //   void HandleChannel(Channel* ch) __TA_REQUIRES(my_domain_.token());
+  //   ...
+  //
+  //   // This variable can only be changes while running in my_domain_
+  //   uint32_t my_state_ __TA_GUARDED(my_domain_.token());
+  // }
+  //
+  // void Thingy::Activate() {
+  //     Channel::ProcessHandler phandler(
+  //     [thingy = fbl::WrapRefPtr(this)](Channel* ch) {
+  //       // Establish the fact that this callback is running in my_domain_
+  //       ExecutionDomain::ScopedToken token(my_domain_->token());
+  //       thingy->HandleChannel(ch);
+  //     });
+  //
+  //     my_channel_.Activate(..., std::move(phandler), ...);
+  //
+  //     my_state_++;  // This fails, we are not running in the domain.
+  // }
+  //
+  // void Thingy::HandleChannel(Channel* ch) {
+  //     my_state_++;  // This succeeds, we are running in the domain.
+  //     DeactivateFromWithinDomain(); // So does this.
+  //
+  //     // This fails, we should call not Deactivate from within the domain.
+  //     Deactivate();
+  // }
+  //
+  //
+  struct __TA_CAPABILITY("role") Token {};
+  class __TA_SCOPED_CAPABILITY ScopedToken {
+   public:
+    explicit ScopedToken(const Token& token) __TA_ACQUIRE(token) {}
+    ~ScopedToken() __TA_RELEASE() {}
+  };
 
-    static fbl::RefPtr<ExecutionDomain> Create(zx::profile profile = {});
+  static fbl::RefPtr<ExecutionDomain> Create(zx::profile profile = {});
 
-    void Deactivate() __TA_EXCLUDES(domain_token_) { Deactivate(true); }
-    void DeactivateFromWithinDomain() __TA_REQUIRES(domain_token_) { Deactivate(false); }
+  void Deactivate() __TA_EXCLUDES(domain_token_) { Deactivate(true); }
+  void DeactivateFromWithinDomain() __TA_REQUIRES(domain_token_) { Deactivate(false); }
 
-    bool deactivated() const __TA_NO_THREAD_SAFETY_ANALYSIS {
-        return (deactivated_.load() != 0);
+  bool deactivated() const __TA_NO_THREAD_SAFETY_ANALYSIS { return (deactivated_.load() != 0); }
+
+  const Token& token() __TA_RETURN_CAPABILITY(domain_token_) { return domain_token_; }
+
+ private:
+  friend class fbl::RefPtr<ExecutionDomain>;
+  friend class Channel;
+  friend class EventSource;
+  friend class Thread;
+  friend class ThreadPool;
+  friend class Timer;
+  friend class WakeupEvent;
+  using DispatchState = EventSource::DispatchState;
+
+  struct ThreadPoolListTraits {
+    static fbl::DoublyLinkedListNodeState<fbl::RefPtr<ExecutionDomain>>& node_state(
+        ExecutionDomain& domain) {
+      return domain.thread_pool_node_state_;
     }
+  };
 
-    const Token& token() __TA_RETURN_CAPABILITY(domain_token_) { return domain_token_; }
+  ExecutionDomain(fbl::RefPtr<ThreadPool> thread_pool, zx::event dispatch_idle_evt);
+  virtual ~ExecutionDomain();
 
-private:
-    friend class fbl::RefPtr<ExecutionDomain>;
-    friend class Channel;
-    friend class EventSource;
-    friend class Thread;
-    friend class ThreadPool;
-    friend class Timer;
-    friend class WakeupEvent;
-    using DispatchState = EventSource::DispatchState;
+  void Deactivate(bool sync_dispatch);
 
-    struct ThreadPoolListTraits {
-        static fbl::DoublyLinkedListNodeState<fbl::RefPtr<ExecutionDomain>>&
-            node_state(ExecutionDomain& domain) {
-            return domain.thread_pool_node_state_;
-        }
-    };
+  fbl::RefPtr<ThreadPool> GetThreadPool() __TA_EXCLUDES(sources_lock_);
+  zx_status_t AddEventSource(fbl::RefPtr<EventSource>&& source) __TA_EXCLUDES(sources_lock_);
+  void RemoveEventSource(EventSource* source) __TA_EXCLUDES(sources_lock_);
 
-    ExecutionDomain(fbl::RefPtr<ThreadPool> thread_pool, zx::event dispatch_idle_evt);
-    virtual ~ExecutionDomain();
+  // Add an event source which has pending work to the queue of pending
+  // work for this owner.  Returns true if this was the first pending job
+  // added to the queue, and therefor the calling thread is responsible
+  // for processing the contents of the queue now.
+  bool AddPendingWork(EventSource* source) __TA_REQUIRES(source->obj_lock_)
+      __TA_EXCLUDES(sources_lock_);
 
-    void Deactivate(bool sync_dispatch);
+  // Attempt to remove an event source from this owner's pending work
+  // list.  Returns true if the source was a member of the list and was
+  // removed, false otherwise.
+  bool RemovePendingWork(EventSource* source) __TA_REQUIRES(source->obj_lock_)
+      __TA_EXCLUDES(sources_lock_);
 
-    fbl::RefPtr<ThreadPool> GetThreadPool() __TA_EXCLUDES(sources_lock_);
-    zx_status_t AddEventSource(fbl::RefPtr<EventSource>&& source)
-        __TA_EXCLUDES(sources_lock_);
-    void RemoveEventSource(EventSource* source)
-        __TA_EXCLUDES(sources_lock_);
+  // Process the pending work queue.
+  void DispatchPendingWork();
 
-    // Add an event source which has pending work to the queue of pending
-    // work for this owner.  Returns true if this was the first pending job
-    // added to the queue, and therefor the calling thread is responsible
-    // for processing the contents of the queue now.
-    bool AddPendingWork(EventSource* source)
-        __TA_REQUIRES(source->obj_lock_) __TA_EXCLUDES(sources_lock_);
+  fbl::Mutex sources_lock_;
+  Token domain_token_;
+  std::atomic<uint32_t> deactivated_ __TA_GUARDED(sources_lock_);
+  bool dispatch_in_progress_ __TA_GUARDED(sources_lock_) = false;
+  bool dispatch_sync_in_progress_ __TA_GUARDED(sources_lock_) = false;
+  fbl::RefPtr<ThreadPool> thread_pool_ __TA_GUARDED(sources_lock_);
+  zx::event dispatch_idle_evt_;
 
-    // Attempt to remove an event source from this owner's pending work
-    // list.  Returns true if the source was a member of the list and was
-    // removed, false otherwise.
-    bool RemovePendingWork(EventSource* source)
-        __TA_REQUIRES(source->obj_lock_) __TA_EXCLUDES(sources_lock_);
+  // The list of all sources bound to us, as well as the sources which are
+  // currently waiting to be dispatched.
+  fbl::DoublyLinkedList<fbl::RefPtr<EventSource>, EventSource::SourcesListTraits> sources_
+      __TA_GUARDED(sources_lock_);
+  fbl::DoublyLinkedList<fbl::RefPtr<EventSource>, EventSource::PendingWorkListTraits> pending_work_
+      __TA_GUARDED(sources_lock_);
 
-    // Process the pending work queue.
-    void DispatchPendingWork();
-
-    fbl::Mutex sources_lock_;
-    Token domain_token_;
-    std::atomic<uint32_t> deactivated_ __TA_GUARDED(sources_lock_);
-    bool dispatch_in_progress_ __TA_GUARDED(sources_lock_) = false;
-    bool dispatch_sync_in_progress_ __TA_GUARDED(sources_lock_) = false;
-    fbl::RefPtr<ThreadPool> thread_pool_ __TA_GUARDED(sources_lock_);
-    zx::event dispatch_idle_evt_;
-
-    // The list of all sources bound to us, as well as the sources which are
-    // currently waiting to be dispatched.
-    fbl::DoublyLinkedList<fbl::RefPtr<EventSource>,
-                           EventSource::SourcesListTraits> sources_
-                               __TA_GUARDED(sources_lock_);
-    fbl::DoublyLinkedList<fbl::RefPtr<EventSource>,
-                           EventSource::PendingWorkListTraits> pending_work_
-                               __TA_GUARDED(sources_lock_);
-
-    // Node state for existing in our thread pool's execution domain list.
-    fbl::DoublyLinkedListNodeState<fbl::RefPtr<ExecutionDomain>> thread_pool_node_state_;
+  // Node state for existing in our thread pool's execution domain list.
+  fbl::DoublyLinkedListNodeState<fbl::RefPtr<ExecutionDomain>> thread_pool_node_state_;
 };
 
 // A helper macro which can ease some of the namespace pain of establishing the
@@ -185,6 +179,6 @@ private:
 // OBTAIN_EXECUTION_DOMAIN_TOKEN(token, my_domain_);
 //
 #define OBTAIN_EXECUTION_DOMAIN_TOKEN(_sym_name, _exe_domain) \
-    ::dispatcher::ExecutionDomain::ScopedToken _sym_name((_exe_domain)->token())
+  ::dispatcher::ExecutionDomain::ScopedToken _sym_name((_exe_domain)->token())
 
 }  // namespace dispatcher

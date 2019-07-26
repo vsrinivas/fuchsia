@@ -32,149 +32,149 @@ constexpr uint8_t kCsdStructV2 = 0x1;
 namespace sdmmc {
 
 zx_status_t SdmmcBlockDevice::ProbeSd() {
-    // Issue the SEND_IF_COND command, this will tell us that we can talk to
-    // the card correctly and it will also tell us if the voltage range that we
-    // have supplied has been accepted.
-    zx_status_t st = sdmmc_.SdSendIfCond();
-    if (st != ZX_OK) {
-        return st;
-    }
+  // Issue the SEND_IF_COND command, this will tell us that we can talk to
+  // the card correctly and it will also tell us if the voltage range that we
+  // have supplied has been accepted.
+  zx_status_t st = sdmmc_.SdSendIfCond();
+  if (st != ZX_OK) {
+    return st;
+  }
 
-    // Get the operating conditions from the card.
+  // Get the operating conditions from the card.
+  uint32_t ocr;
+  if ((st = sdmmc_.SdSendOpCond(0, &ocr)) != ZX_OK) {
+    zxlogf(ERROR, "sd: SDMMC_SD_SEND_OP_COND failed, retcode = %d\n", st);
+    return st;
+  }
+
+  int attempt = 0;
+  const int max_attempts = 10;
+  bool card_supports_18v_signalling = false;
+  while (true) {
+    const uint32_t flags = kAcmd41FlagSdhcSdxcSupport | kAcmd41FlagVoltageWindowAll;
     uint32_t ocr;
-    if ((st = sdmmc_.SdSendOpCond(0, &ocr)) != ZX_OK) {
-        zxlogf(ERROR, "sd: SDMMC_SD_SEND_OP_COND failed, retcode = %d\n", st);
-        return st;
+    if ((st = sdmmc_.SdSendOpCond(flags, &ocr)) != ZX_OK) {
+      zxlogf(ERROR, "sd: SD_SEND_OP_COND failed with retcode = %d\n", st);
+      return st;
     }
 
-    int attempt = 0;
-    const int max_attempts = 10;
-    bool card_supports_18v_signalling = false;
-    while (true) {
-        const uint32_t flags = kAcmd41FlagSdhcSdxcSupport | kAcmd41FlagVoltageWindowAll;
-        uint32_t ocr;
-        if ((st = sdmmc_.SdSendOpCond(flags, &ocr)) != ZX_OK) {
-            zxlogf(ERROR, "sd: SD_SEND_OP_COND failed with retcode = %d\n", st);
-            return st;
-        }
-
-        if (ocr & (1 << 31)) {
-            if (!(ocr & kOcrSdhc)) {
-                // Card is not an SDHC card. We currently don't support this.
-                zxlogf(ERROR, "sd: unsupported card type, must use sdhc card\n");
-                return ZX_ERR_NOT_SUPPORTED;
-            }
-            card_supports_18v_signalling = !!((ocr >> 24) & 0x1);
-            break;
-        }
-
-        if (++attempt == max_attempts) {
-            zxlogf(ERROR, "sd: too many attempt trying to negotiate card OCR\n");
-            return ZX_ERR_TIMED_OUT;
-        }
-
-        zx::nanosleep(zx::deadline_after(zx::msec(5)));
+    if (ocr & (1 << 31)) {
+      if (!(ocr & kOcrSdhc)) {
+        // Card is not an SDHC card. We currently don't support this.
+        zxlogf(ERROR, "sd: unsupported card type, must use sdhc card\n");
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      card_supports_18v_signalling = !!((ocr >> 24) & 0x1);
+      break;
     }
 
-    st = sdmmc_.host().SetBusFreq(25000000);
-    if (st != ZX_OK) {
-        // This is non-fatal but the card will run slowly.
-        zxlogf(ERROR, "sd: failed to increase bus frequency.\n");
+    if (++attempt == max_attempts) {
+      zxlogf(ERROR, "sd: too many attempt trying to negotiate card OCR\n");
+      return ZX_ERR_TIMED_OUT;
     }
 
-    // TODO(bradenkell): Re-enable support for UHS-I mode once the Mediatek driver supports
-    //                   switching to 1.8V.
+    zx::nanosleep(zx::deadline_after(zx::msec(5)));
+  }
 
-    (void)card_supports_18v_signalling;
-    // Try to switch the bus voltage to 1.8v
-    // if (card_supports_18v_signalling) {
-    //     st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_VOLTAGE_SWITCH, 0, setup_txn);
-    //     if (st != ZX_OK) {
-    //         zxlogf(ERROR, "sd: failed to send switch voltage command to card, "
-    //                 "retcode = %d\n", st);
-    //         goto err;
-    //     }
-    //
-    //     st = sdmmc_set_signal_voltage(&sdmmc->host, SDMMC_VOLTAGE_180);
-    //     if (st != ZX_OK) {
-    //         zxlogf(ERROR, "sd: Card supports 1.8v signalling but was unable to "
-    //                 "switch to 1.8v mode, retcode = %d\n", st);
-    //         goto err;
-    //     }
-    // }
+  st = sdmmc_.host().SetBusFreq(25000000);
+  if (st != ZX_OK) {
+    // This is non-fatal but the card will run slowly.
+    zxlogf(ERROR, "sd: failed to increase bus frequency.\n");
+  }
 
-    if ((st = sdmmc_.MmcAllSendCid(raw_cid_)) != ZX_OK) {
-        zxlogf(ERROR, "sd: ALL_SEND_CID failed with retcode = %d\n", st);
-        return st;
-    }
+  // TODO(bradenkell): Re-enable support for UHS-I mode once the Mediatek driver supports
+  //                   switching to 1.8V.
 
-    uint16_t card_status;
-    if ((st = sdmmc_.SdSendRelativeAddr(&card_status)) != ZX_OK) {
-        zxlogf(ERROR, "sd: SEND_RELATIVE_ADDR failed with retcode = %d\n", st);
-        return st;
-    }
+  (void)card_supports_18v_signalling;
+  // Try to switch the bus voltage to 1.8v
+  // if (card_supports_18v_signalling) {
+  //     st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_VOLTAGE_SWITCH, 0, setup_txn);
+  //     if (st != ZX_OK) {
+  //         zxlogf(ERROR, "sd: failed to send switch voltage command to card, "
+  //                 "retcode = %d\n", st);
+  //         goto err;
+  //     }
+  //
+  //     st = sdmmc_set_signal_voltage(&sdmmc->host, SDMMC_VOLTAGE_180);
+  //     if (st != ZX_OK) {
+  //         zxlogf(ERROR, "sd: Card supports 1.8v signalling but was unable to "
+  //                 "switch to 1.8v mode, retcode = %d\n", st);
+  //         goto err;
+  //     }
+  // }
 
-    if (card_status & 0xe000) {
-        zxlogf(ERROR, "sd: SEND_RELATIVE_ADDR failed with resp = %d\n", (card_status & 0xe000));
-        return ZX_ERR_INTERNAL;
-    }
-    if ((card_status & (1u << 8)) == 0) {
-        zxlogf(ERROR, "sd: SEND_RELATIVE_ADDR failed. Card not ready.\n");
-        return ZX_ERR_INTERNAL;
-    }
+  if ((st = sdmmc_.MmcAllSendCid(raw_cid_)) != ZX_OK) {
+    zxlogf(ERROR, "sd: ALL_SEND_CID failed with retcode = %d\n", st);
+    return st;
+  }
 
-    // Determine the size of the card.
-    if ((st = sdmmc_.MmcSendCsd(raw_csd_)) != ZX_OK) {
-        zxlogf(ERROR, "sd: failed to send app cmd, retcode = %d\n", st);
-        return st;
-    }
+  uint16_t card_status;
+  if ((st = sdmmc_.SdSendRelativeAddr(&card_status)) != ZX_OK) {
+    zxlogf(ERROR, "sd: SEND_RELATIVE_ADDR failed with retcode = %d\n", st);
+    return st;
+  }
 
-    // For now we only support SDHC cards. These cards must have a CSD type = 1,
-    // since CSD type 0 is unable to support SDHC sized cards.
-    uint8_t csd_structure = static_cast<uint8_t>((raw_csd_[3] >> 30) & 0x3);
-    if (csd_structure != kCsdStructV2) {
-        zxlogf(ERROR,
-               "sd: unsupported card type, expected CSD version = %d, "
-               "got version %d\n",
-               kCsdStructV2, csd_structure);
-        return ZX_ERR_INTERNAL;
-    }
+  if (card_status & 0xe000) {
+    zxlogf(ERROR, "sd: SEND_RELATIVE_ADDR failed with resp = %d\n", (card_status & 0xe000));
+    return ZX_ERR_INTERNAL;
+  }
+  if ((card_status & (1u << 8)) == 0) {
+    zxlogf(ERROR, "sd: SEND_RELATIVE_ADDR failed. Card not ready.\n");
+    return ZX_ERR_INTERNAL;
+  }
 
-    const uint32_t c_size = ((raw_csd_[1] >> 16) | (raw_csd_[2] << 16)) & 0x3fffff;
-    block_info_.block_count = (c_size + 1ul) * 1024ul;
-    block_info_.block_size = 512ul;
-    zxlogf(INFO, "sd: found card with capacity = %" PRIu64 "B\n",
-           block_info_.block_count * block_info_.block_size);
+  // Determine the size of the card.
+  if ((st = sdmmc_.MmcSendCsd(raw_csd_)) != ZX_OK) {
+    zxlogf(ERROR, "sd: failed to send app cmd, retcode = %d\n", st);
+    return st;
+  }
 
-    if ((st = sdmmc_.SdSelectCard()) != ZX_OK) {
-        zxlogf(ERROR, "sd: SELECT_CARD failed with retcode = %d\n", st);
-        return st;
-    }
+  // For now we only support SDHC cards. These cards must have a CSD type = 1,
+  // since CSD type 0 is unable to support SDHC sized cards.
+  uint8_t csd_structure = static_cast<uint8_t>((raw_csd_[3] >> 30) & 0x3);
+  if (csd_structure != kCsdStructV2) {
+    zxlogf(ERROR,
+           "sd: unsupported card type, expected CSD version = %d, "
+           "got version %d\n",
+           kCsdStructV2, csd_structure);
+    return ZX_ERR_INTERNAL;
+  }
 
-    uint8_t scr[8];
-    if ((st = sdmmc_.SdSendScr(scr)) != ZX_OK) {
-        zxlogf(ERROR, "sd: SEND_SCR failed with retcode = %d\n", st);
-        return st;
-    }
+  const uint32_t c_size = ((raw_csd_[1] >> 16) | (raw_csd_[2] << 16)) & 0x3fffff;
+  block_info_.block_count = (c_size + 1ul) * 1024ul;
+  block_info_.block_size = 512ul;
+  zxlogf(INFO, "sd: found card with capacity = %" PRIu64 "B\n",
+         block_info_.block_count * block_info_.block_size);
 
-    // If this card supports 4 bit mode, then put it into 4 bit mode.
-    const uint32_t supported_bus_widths = scr[1] & 0xf;
-    if (supported_bus_widths & 0x4) {
-        do {
-            // First tell the card to go into four bit mode:
-            if ((st = sdmmc_.SdSetBusWidth(SDMMC_BUS_WIDTH_FOUR)) != ZX_OK) {
-                zxlogf(ERROR, "sd: failed to set card bus width, retcode = %d\n", st);
-                break;
-            }
-            st = sdmmc_.host().SetBusWidth(SDMMC_BUS_WIDTH_FOUR);
-            if (st != ZX_OK) {
-                zxlogf(ERROR, "sd: failed to set host bus width, retcode = %d\n", st);
-            }
-        } while (false);
-    }
+  if ((st = sdmmc_.SdSelectCard()) != ZX_OK) {
+    zxlogf(ERROR, "sd: SELECT_CARD failed with retcode = %d\n", st);
+    return st;
+  }
 
-    is_sd_ = true;
-    return ZX_OK;
+  uint8_t scr[8];
+  if ((st = sdmmc_.SdSendScr(scr)) != ZX_OK) {
+    zxlogf(ERROR, "sd: SEND_SCR failed with retcode = %d\n", st);
+    return st;
+  }
+
+  // If this card supports 4 bit mode, then put it into 4 bit mode.
+  const uint32_t supported_bus_widths = scr[1] & 0xf;
+  if (supported_bus_widths & 0x4) {
+    do {
+      // First tell the card to go into four bit mode:
+      if ((st = sdmmc_.SdSetBusWidth(SDMMC_BUS_WIDTH_FOUR)) != ZX_OK) {
+        zxlogf(ERROR, "sd: failed to set card bus width, retcode = %d\n", st);
+        break;
+      }
+      st = sdmmc_.host().SetBusWidth(SDMMC_BUS_WIDTH_FOUR);
+      if (st != ZX_OK) {
+        zxlogf(ERROR, "sd: failed to set host bus width, retcode = %d\n", st);
+      }
+    } while (false);
+  }
+
+  is_sd_ = true;
+  return ZX_OK;
 }
 
 }  // namespace sdmmc

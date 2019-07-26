@@ -22,33 +22,26 @@
 class FrameSink;
 class FrameSinkView : public scenic::BaseView {
  public:
-  static std::unique_ptr<FrameSinkView> Create(scenic::ViewContext context,
-                                               FrameSink* parent,
+  static std::unique_ptr<FrameSinkView> Create(scenic::ViewContext context, FrameSink* parent,
                                                async::Loop* main_loop);
 
   ~FrameSinkView() override;
 
   // This is very similar to FrameSink's PutFrame, which fans out to all the
   // alive FrameSinkView(s).  This method is the leaf of that fan-out.
-  void PutFrame(uint32_t image_id, zx_time_t present_time, const zx::vmo& vmo,
-                uint64_t vmo_offset,
-                const fuchsia::media::VideoUncompressedFormat& video_format,
-                fit::closure on_done);
+  void PutFrame(uint32_t image_id, zx_time_t present_time, const zx::vmo& vmo, uint64_t vmo_offset,
+                const fuchsia::media::VideoUncompressedFormat& video_format, fit::closure on_done);
 
  private:
-  FrameSinkView(scenic::ViewContext context, FrameSink* parent,
-                async::Loop* main_loop);
+  FrameSinkView(scenic::ViewContext context, FrameSink* parent, async::Loop* main_loop);
 
   // |scenic::BaseView|
   // Called when the scene is invalidated, meaning its metrics or dimensions
   // have changed.
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   FrameSink* parent_;
 

@@ -49,8 +49,7 @@ class UniqueObject {
 
   UniqueObject(const T& value, const Traits& traits) : data_(value, traits) {}
 
-  UniqueObject(UniqueObject&& other)
-      : data_(other.release(), other.get_traits()) {}
+  UniqueObject(UniqueObject&& other) : data_(other.release(), other.get_traits()) {}
 
   ~UniqueObject() { FreeIfNecessary(); }
 
@@ -60,8 +59,7 @@ class UniqueObject {
   }
 
   void reset(const T& value = Traits::InvalidValue()) {
-    FXL_CHECK(data_.generic == Traits::InvalidValue() ||
-              data_.generic != value);
+    FXL_CHECK(data_.generic == Traits::InvalidValue() || data_.generic != value);
     FreeIfNecessary();
     data_.generic = value;
   }

@@ -18,8 +18,7 @@ namespace test {
 
 // Base class that can be specialized to configure a Scenic with the systems
 // required for a set of tests.
-class ScenicTest : public ::gtest::TestLoopFixture,
-                   public EventReporter {
+class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
  public:
   std::unique_ptr<::scenic::Session> CreateSession();
 

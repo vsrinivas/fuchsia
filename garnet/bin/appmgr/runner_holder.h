@@ -29,18 +29,15 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
                fit::function<void()> error_handler = nullptr);
   ~RunnerHolder();
 
-  void StartComponent(
-      fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
-      fxl::RefPtr<Namespace> ns,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-      TerminationCallback termination_callback);
+  void StartComponent(fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
+                      fxl::RefPtr<Namespace> ns,
+                      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
+                      TerminationCallback termination_callback);
 
-  std::shared_ptr<ComponentBridge> ExtractComponent(
-      ComponentBridge* controller) override;
+  std::shared_ptr<ComponentBridge> ExtractComponent(ComponentBridge* controller) override;
 
  private:
-  void CreateComponentCallback(
-      std::weak_ptr<ComponentControllerImpl> component);
+  void CreateComponentCallback(std::weak_ptr<ComponentControllerImpl> component);
   void Cleanup();
 
   std::shared_ptr<sys::ServiceDirectory> services_;
@@ -48,8 +45,7 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
   fuchsia::sys::RunnerPtr runner_;
   std::weak_ptr<ComponentControllerImpl> impl_object_;
   fit::function<void()> error_handler_;
-  std::unordered_map<ComponentBridge*, std::shared_ptr<ComponentBridge>>
-      components_;
+  std::unordered_map<ComponentBridge*, std::shared_ptr<ComponentBridge>> components_;
   uint64_t component_id_counter_;
   std::string koid_;
 

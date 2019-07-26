@@ -19,8 +19,7 @@ class URLLoaderImpl : public ::fuchsia::net::oldhttp::URLLoader {
   class Coordinator {
    public:
     virtual ~Coordinator() {}
-    virtual void RequestNetworkSlot(
-        fit::function<void(fit::closure)> slot_request) = 0;
+    virtual void RequestNetworkSlot(fit::function<void(fit::closure)> slot_request) = 0;
   };
 
   URLLoaderImpl(Coordinator* coordinator);
@@ -33,8 +32,7 @@ class URLLoaderImpl : public ::fuchsia::net::oldhttp::URLLoader {
   using Callback = fit::function<void(::fuchsia::net::oldhttp::URLResponse)>;
 
   // URLLoader methods:
-  void Start(::fuchsia::net::oldhttp::URLRequest request,
-             StartCallback callback) override;
+  void Start(::fuchsia::net::oldhttp::URLRequest request, StartCallback callback) override;
   void FollowRedirect(FollowRedirectCallback callback) override;
   void QueryStatus(QueryStatusCallback callback) override;
 

@@ -28,8 +28,8 @@ void LinearizerFuzzer::Close(uint8_t status_code) {
 
 // Push a new block onto the linearizer at offset 'offset', with length
 // 'length', an end_of_message flag, and data bytes in 'data'.
-void LinearizerFuzzer::Push(uint16_t offset, uint8_t length,
-                            bool end_of_message, const uint8_t* data) {
+void LinearizerFuzzer::Push(uint16_t offset, uint8_t length, bool end_of_message,
+                            const uint8_t* data) {
   uint64_t last_byte = static_cast<uint64_t>(offset) + length;
   const bool resource_exhausted = last_byte > offset_ + kBuffer;
   if (!resource_exhausted) {
@@ -64,8 +64,7 @@ void LinearizerFuzzer::Push(uint16_t offset, uint8_t length,
     }
   }
   auto ignore = [](bool) {};
-  ignore(linearizer_.Push(
-      Chunk{offset, end_of_message, Slice::FromCopiedBuffer(data, length)}));
+  ignore(linearizer_.Push(Chunk{offset, end_of_message, Slice::FromCopiedBuffer(data, length)}));
 }
 
 // Execute a pull op on the linearizer, and verify that it's as expected.
@@ -73,8 +72,8 @@ void LinearizerFuzzer::Pull() {
   if (waiting_for_pull_)
     return;
   waiting_for_pull_ = true;
-  linearizer_.Pull(StatusOrCallback<Optional<Slice>>(
-      [this](const StatusOr<Optional<Slice>>& status) {
+  linearizer_.Pull(
+      StatusOrCallback<Optional<Slice>>([this](const StatusOr<Optional<Slice>>& status) {
         assert(waiting_for_pull_);
         waiting_for_pull_ = false;
 #ifndef NDEBUG

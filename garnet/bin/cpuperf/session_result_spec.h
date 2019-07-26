@@ -11,8 +11,7 @@
 namespace cpuperf {
 
 struct SessionResultSpec {
-  SessionResultSpec(const std::string& config_name,
-                    const std::string& model_name,
+  SessionResultSpec(const std::string& config_name, const std::string& model_name,
                     size_t num_iterations, size_t num_traces,
                     const std::string& output_path_prefix);
   SessionResultSpec() = default;
@@ -30,11 +29,9 @@ struct SessionResultSpec {
   std::string output_path_prefix;
 };
 
-bool DecodeSessionResultSpec(const std::string& json,
-                             SessionResultSpec* out_spec);
+bool DecodeSessionResultSpec(const std::string& json, SessionResultSpec* out_spec);
 
-bool WriteSessionResultSpec(const std::string& output_file_path,
-                            const SessionResultSpec& spec);
+bool WriteSessionResultSpec(const std::string& output_file_path, const SessionResultSpec& spec);
 
 }  // namespace cpuperf
 

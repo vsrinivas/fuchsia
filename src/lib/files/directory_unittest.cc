@@ -64,11 +64,9 @@ TEST(Directory, ReadDirContents) {
   std::vector<std::string> contents;
   EXPECT_TRUE(ReadDirContents(dir.path(), &contents));
 #if defined(OS_FUCHSIA)
-  EXPECT_THAT(contents,
-              ::testing::UnorderedElementsAre(".", "foo", "bar", "baz"));
+  EXPECT_THAT(contents, ::testing::UnorderedElementsAre(".", "foo", "bar", "baz"));
 #else
-  EXPECT_THAT(contents,
-              ::testing::UnorderedElementsAre(".", "..", "foo", "bar", "baz"));
+  EXPECT_THAT(contents, ::testing::UnorderedElementsAre(".", "..", "foo", "bar", "baz"));
 #endif
   EXPECT_FALSE(ReadDirContents("bogus", &contents));
   EXPECT_EQ(errno, ENOENT);

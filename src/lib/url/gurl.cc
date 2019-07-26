@@ -47,11 +47,9 @@ GURL::GURL(const std::string& url_string, RetainWhiteSpaceSelector) {
   InitCanonical(url_string, false);
 }
 
-GURL::GURL(const char* canonical_spec, size_t canonical_spec_len,
-           const url::Parsed& parsed, bool is_valid)
-    : spec_(canonical_spec, canonical_spec_len),
-      is_valid_(is_valid),
-      parsed_(parsed) {
+GURL::GURL(const char* canonical_spec, size_t canonical_spec_len, const url::Parsed& parsed,
+           bool is_valid)
+    : spec_(canonical_spec, canonical_spec_len), is_valid_(is_valid), parsed_(parsed) {
   InitializeFromCanonicalSpec();
 }
 
@@ -66,9 +64,8 @@ void GURL::InitCanonical(fxl::StringView input_spec, bool trim_path_end) {
   // we have room if we have to escape a few things without reallocating.
   spec_.reserve(input_spec.size() + 32);
   url::StdStringCanonOutput output(&spec_);
-  is_valid_ =
-      url::Canonicalize(input_spec.data(), static_cast<int>(input_spec.size()),
-                        trim_path_end, NULL, &output, &parsed_);
+  is_valid_ = url::Canonicalize(input_spec.data(), static_cast<int>(input_spec.size()),
+                                trim_path_end, NULL, &output, &parsed_);
 
   output.Complete();  // Must be done before using string.
 }
@@ -136,10 +133,8 @@ GURL GURL::Resolve(const std::string& relative) const {
   result.spec_.reserve(spec_.size() + 32);
   url::StdStringCanonOutput output(&result.spec_);
 
-  if (!url::ResolveRelative(spec_.data(), static_cast<int>(spec_.size()),
-                            parsed_, relative.data(),
-                            static_cast<int>(relative.size()), nullptr, &output,
-                            &result.parsed_)) {
+  if (!url::ResolveRelative(spec_.data(), static_cast<int>(spec_.size()), parsed_, relative.data(),
+                            static_cast<int>(relative.size()), nullptr, &output, &result.parsed_)) {
     // Error resolving, return an empty URL.
     return GURL();
   }
@@ -173,16 +168,13 @@ GURL GURL::GetWithEmptyPath() const {
   return other;
 }
 
-bool GURL::IsStandard() const {
-  return url::IsStandard(spec_.data(), parsed_.scheme);
-}
+bool GURL::IsStandard() const { return url::IsStandard(spec_.data(), parsed_.scheme); }
 
 bool GURL::SchemeIs(const char* lower_ascii_scheme) const {
   if (parsed_.scheme.is_invalid_or_empty())
     return lower_ascii_scheme == NULL;
   return url::LowerCaseEqualsASCII(
-      fxl::StringView(spec_.data() + parsed_.scheme.begin,
-                      parsed_.scheme.len()),
+      fxl::StringView(spec_.data() + parsed_.scheme.begin, parsed_.scheme.len()),
       fxl::StringView(lower_ascii_scheme));
 }
 
@@ -190,9 +182,7 @@ bool GURL::SchemeIsHTTPOrHTTPS() const {
   return SchemeIs(url::kHttpScheme) || SchemeIs(url::kHttpsScheme);
 }
 
-bool GURL::SchemeIsWSOrWSS() const {
-  return SchemeIs(url::kWsScheme) || SchemeIs(url::kWssScheme);
-}
+bool GURL::SchemeIsWSOrWSS() const { return SchemeIs(url::kWsScheme) || SchemeIs(url::kWssScheme); }
 
 int GURL::IntPort() const {
   if (parsed_.port.is_nonempty())
@@ -203,8 +193,7 @@ int GURL::IntPort() const {
 int GURL::EffectiveIntPort() const {
   int int_port = IntPort();
   if (int_port == url::PORT_UNSPECIFIED && IsStandard())
-    return url::DefaultPortForScheme(spec_.data() + parsed_.scheme.begin,
-                                     parsed_.scheme.len());
+    return url::DefaultPortForScheme(spec_.data() + parsed_.scheme.begin, parsed_.scheme.len());
   return int_port;
 }
 
@@ -215,13 +204,11 @@ std::string GURL::ExtractFileName() const {
 }
 
 std::string GURL::PathForRequest() const {
-  FXL_DCHECK(parsed_.path.is_nonempty())
-      << "Canonical path for requests should be non-empty";
+  FXL_DCHECK(parsed_.path.is_nonempty()) << "Canonical path for requests should be non-empty";
   if (parsed_.ref.is_valid()) {
     // Clip off the reference when it exists. The reference starts after the
     // #-sign, so we have to subtract one to also remove it.
-    return std::string(spec_, parsed_.path.begin,
-                       parsed_.ref.begin - parsed_.path.begin - 1);
+    return std::string(spec_, parsed_.path.begin, parsed_.ref.begin - parsed_.path.begin - 1);
   }
   // Compute the actual path length, rather than depending on the spec's
   // terminator. If we're an inner_url, our spec continues on into our outer
@@ -236,8 +223,7 @@ std::string GURL::PathForRequest() const {
 std::string GURL::HostNoBrackets() const {
   // If host looks like an IPv6 literal, strip the square brackets.
   url::Component h(parsed_.host);
-  if (h.is_valid() && h.len() >= 2 && spec_[h.begin] == '[' &&
-      spec_[h.end() - 1] == ']') {
+  if (h.is_valid() && h.len() >= 2 && spec_[h.begin] == '[' && spec_[h.end() - 1] == ']') {
     h.begin++;
     h.set_len(h.len() - 2);
   }
@@ -254,8 +240,7 @@ bool GURL::HostIsIPAddress() const {
 
   url::RawCanonOutputT<char, 128> ignored_output;
   url::CanonHostInfo host_info;
-  url::CanonicalizeIPAddress(spec_.c_str(), parsed_.host, &ignored_output,
-                             &host_info);
+  url::CanonicalizeIPAddress(spec_.c_str(), parsed_.host, &ignored_output, &host_info);
   return host_info.IsIPAddress();
 }
 
@@ -289,19 +274,16 @@ bool GURL::DomainIs(fxl::StringView lower_ascii_domain) const {
 
   // |host_first_pos| is the start of the compared part of the host name, not
   // start of the whole host name.
-  const char* host_first_pos =
-      spec_.data() + parsed_.host.begin + host_len - domain_len;
+  const char* host_first_pos = spec_.data() + parsed_.host.begin + host_len - domain_len;
 
-  if (!url::LowerCaseEqualsASCII(fxl::StringView(host_first_pos, domain_len),
-                                 lower_ascii_domain))
+  if (!url::LowerCaseEqualsASCII(fxl::StringView(host_first_pos, domain_len), lower_ascii_domain))
     return false;
 
   // Make sure there aren't extra characters in host before the compared part;
   // if the host name is longer than the input domain name, then the character
   // immediately before the compared part should be a dot. For example,
   // www.google.com has domain "google.com", but www.iamnotgoogle.com does not.
-  if ('.' != lower_ascii_domain[0] && host_len > domain_len &&
-      '.' != *(host_first_pos - 1))
+  if ('.' != lower_ascii_domain[0] && host_len > domain_len && '.' != *(host_first_pos - 1))
     return false;
 
   return true;

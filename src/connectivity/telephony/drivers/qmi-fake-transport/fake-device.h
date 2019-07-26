@@ -24,8 +24,7 @@
 
 namespace qmi_fake {
 
-class Device
-    : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface {
+class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface {
  public:
   Device(zx_device_t* device);
 
@@ -40,8 +39,7 @@ class Device
   zx_status_t SetNetworkStatusToDevice(bool connected);
   zx_status_t SetSnoopChannelToDevice(zx_handle_t channel);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void ReplyQmiMsg(uint8_t* req, uint32_t req_size, uint8_t* resp,
-                   uint32_t resp_size);
+  void ReplyQmiMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint32_t resp_size);
   void SnoopQmiMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
                    ::llcpp::fuchsia::telephony::snoop::Direction direction);
   zx_status_t CloseQmiChannel();
@@ -53,11 +51,9 @@ class Device
   zx_handle_t qmi_channel_port_;
 
  private:
-  void SetChannel(::zx::channel transport,
-                  SetChannelCompleter::Sync completer) override;
+  void SetChannel(::zx::channel transport, SetChannelCompleter::Sync completer) override;
   void SetNetwork(bool connected, SetNetworkCompleter::Sync completer) override;
-  void SetSnoopChannel(::zx::channel interface,
-                       SetSnoopChannelCompleter::Sync completer) override;
+  void SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync completer) override;
 
   zx_handle_t snoop_channel_port_;
   zx_handle_t snoop_channel_;

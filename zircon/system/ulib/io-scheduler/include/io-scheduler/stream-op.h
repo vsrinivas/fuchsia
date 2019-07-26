@@ -14,44 +14,44 @@ namespace ioscheduler {
 // Operation type.
 // These are used to determine respective ordering restrictions of the ops in a stream.
 enum class OpType : uint32_t {
-    // Operations that can optionally be reordered.
+  // Operations that can optionally be reordered.
 
-    kOpTypeUnknown = 0, // Always reordered.
-    kOpTypeRead    = 1, // Read ordering.
-    kOpTypeWrite   = 2, // Write order.
-    kOpTypeDiscard = 3, // Write order.
-    kOpTypeRename  = 4, // Read and Write order.
-    kOpTypeSync    = 5, // Write order.
-    kOpTypeCommand = 6, // Read and Write order.
+  kOpTypeUnknown = 0,  // Always reordered.
+  kOpTypeRead = 1,     // Read ordering.
+  kOpTypeWrite = 2,    // Write order.
+  kOpTypeDiscard = 3,  // Write order.
+  kOpTypeRename = 4,   // Read and Write order.
+  kOpTypeSync = 5,     // Write order.
+  kOpTypeCommand = 6,  // Read and Write order.
 
-    // Operations that cannot be reordered.
+  // Operations that cannot be reordered.
 
-    kOpTypeOrderedUnknown = 32, // Always ordered.
+  kOpTypeOrderedUnknown = 32,  // Always ordered.
 
-    // Barrier operations.
+  // Barrier operations.
 
-    // Prevent reads from being reordered ahead of this barrier op. No read
-    // after this barrier can be issued until this operation has completed.
-    kOpTypeReadBarrier          = 64,
+  // Prevent reads from being reordered ahead of this barrier op. No read
+  // after this barrier can be issued until this operation has completed.
+  kOpTypeReadBarrier = 64,
 
-    // Prevent writes from being reordered after this barrier op. This
-    // operation completes after all previous writes in the stream have been
-    // issued.
-    kOpTypeWriteBarrier         = 65,
+  // Prevent writes from being reordered after this barrier op. This
+  // operation completes after all previous writes in the stream have been
+  // issued.
+  kOpTypeWriteBarrier = 65,
 
-    // Prevent writes from being reordered after this barrier op. This
-    // instruction completes after all previous writes in the stream have been
-    // completed.
-    kOpTypeWriteCompleteBarrier = 66,
+  // Prevent writes from being reordered after this barrier op. This
+  // instruction completes after all previous writes in the stream have been
+  // completed.
+  kOpTypeWriteCompleteBarrier = 66,
 
-    // Combined effects of kOpTypeReadBarrier and kOpTypeWriteBarrier.
-    kOpTypeFullBarrier          = 67,
+  // Combined effects of kOpTypeReadBarrier and kOpTypeWriteBarrier.
+  kOpTypeFullBarrier = 67,
 
-    // Combined effects of kOpTypeReadBarrier and kOpTypeWriteCompleteBarrier.
-    kOpTypeFullCompleteBarrier  = 68,
+  // Combined effects of kOpTypeReadBarrier and kOpTypeWriteCompleteBarrier.
+  kOpTypeFullCompleteBarrier = 68,
 };
 
-constexpr uint32_t kOpFlagComplete =    (1u << 0);
+constexpr uint32_t kOpFlagComplete = (1u << 0);
 constexpr uint32_t kOpFlagGroupLeader = (1u << 8);
 
 constexpr uint32_t kOpGroupNone = 0;
@@ -64,54 +64,52 @@ class StreamOp;
 // Since StreamOp is allocated by the client, it cannot be deleted by this wrapper. Notably,
 // UniqueOp's destructor DOES NOT delete and will assert if its container is non-null.
 class UniqueOp {
-public:
-    // Constructors
-    constexpr UniqueOp() : op_(nullptr) {}
-    constexpr UniqueOp(decltype(nullptr)) : UniqueOp() {}
-    explicit UniqueOp(StreamOp* op) : op_(op) {}
+ public:
+  // Constructors
+  constexpr UniqueOp() : op_(nullptr) {}
+  constexpr UniqueOp(decltype(nullptr)) : UniqueOp() {}
+  explicit UniqueOp(StreamOp* op) : op_(op) {}
 
-    // Copy construction.
-    UniqueOp(const UniqueOp& r) = delete;
-    // Assignment
-    UniqueOp& operator=(const UniqueOp& r) = delete;
+  // Copy construction.
+  UniqueOp(const UniqueOp& r) = delete;
+  // Assignment
+  UniqueOp& operator=(const UniqueOp& r) = delete;
 
-    // Move construction.
-    UniqueOp(UniqueOp&& r) : op_(r.op_) { r.op_ = nullptr; }
+  // Move construction.
+  UniqueOp(UniqueOp&& r) : op_(r.op_) { r.op_ = nullptr; }
 
-    ~UniqueOp() {
-        ZX_DEBUG_ASSERT(op_ == nullptr);
-    }
+  ~UniqueOp() { ZX_DEBUG_ASSERT(op_ == nullptr); }
 
-    // Move assignment.
-    UniqueOp& operator=(UniqueOp&& r) {
-        ZX_DEBUG_ASSERT(op_ == nullptr);
-        op_ = r.op_;
-        r.op_ = nullptr;
-        return *this;
-    }
+  // Move assignment.
+  UniqueOp& operator=(UniqueOp&& r) {
+    ZX_DEBUG_ASSERT(op_ == nullptr);
+    op_ = r.op_;
+    r.op_ = nullptr;
+    return *this;
+  }
 
-    void set(StreamOp* op) {
-        ZX_DEBUG_ASSERT(op_ == nullptr);
-        op_ = op;
-    }
+  void set(StreamOp* op) {
+    ZX_DEBUG_ASSERT(op_ == nullptr);
+    op_ = op;
+  }
 
-    StreamOp* release() {
-        StreamOp* old = op_;
-        op_ = nullptr;
-        return old;
-    }
+  StreamOp* release() {
+    StreamOp* old = op_;
+    op_ = nullptr;
+    return old;
+  }
 
-    StreamOp* get() const { return op_; }
-    StreamOp& operator*() const { return *op_; }
-    StreamOp* operator->() const { return op_; }
-    explicit operator bool() const { return !!op_; }
-    bool operator==(decltype(nullptr)) const  { return (op_ == nullptr); }
-    bool operator!=(decltype(nullptr)) const  { return (op_ != nullptr); }
-    bool operator==(const UniqueOp& other) const { return (op_ == other.op_); }
-    bool operator!=(const UniqueOp& other) const { return (op_ != other.op_); }
+  StreamOp* get() const { return op_; }
+  StreamOp& operator*() const { return *op_; }
+  StreamOp* operator->() const { return op_; }
+  explicit operator bool() const { return !!op_; }
+  bool operator==(decltype(nullptr)) const { return (op_ == nullptr); }
+  bool operator!=(decltype(nullptr)) const { return (op_ != nullptr); }
+  bool operator==(const UniqueOp& other) const { return (op_ == other.op_); }
+  bool operator!=(const UniqueOp& other) const { return (op_ != other.op_); }
 
-private:
-    StreamOp* op_ = nullptr;
+ private:
+  StreamOp* op_ = nullptr;
 };
 
 // class StreamOp.
@@ -120,73 +118,73 @@ private:
 // The Scheduler interacts with these via the SchedulerClient interface. A reference to each op
 // acquired through this interface is retained until the Release() method is called.
 class StreamOp {
-public:
-    StreamOp() {
-        StreamOp(OpType::kOpTypeUnknown, 0, kOpGroupNone, 0, nullptr);
-    }
+ public:
+  StreamOp() { StreamOp(OpType::kOpTypeUnknown, 0, kOpGroupNone, 0, nullptr); }
 
-    StreamOp(OpType type, uint32_t stream_id, uint32_t group_id, uint32_t group_members,
-             void* cookie)
-             : type_(type), stream_id_(stream_id), group_id_(group_id),
-               group_members_(group_members), result_(ZX_OK), cookie_(cookie),
-               stream_(nullptr) {}
+  StreamOp(OpType type, uint32_t stream_id, uint32_t group_id, uint32_t group_members, void* cookie)
+      : type_(type),
+        stream_id_(stream_id),
+        group_id_(group_id),
+        group_members_(group_members),
+        result_(ZX_OK),
+        cookie_(cookie),
+        stream_(nullptr) {}
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(StreamOp);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(StreamOp);
 
-    OpType type() { return type_; }
-    void set_ype(OpType type) { type_ = type; }
+  OpType type() { return type_; }
+  void set_ype(OpType type) { type_ = type; }
 
-    uint32_t stream_id() { return stream_id_; }
-    void set_stream_id(uint32_t stream_id) { stream_id_ = stream_id; }
+  uint32_t stream_id() { return stream_id_; }
+  void set_stream_id(uint32_t stream_id) { stream_id_ = stream_id; }
 
-    uint32_t group() { return group_id_; }
-    void set_group(uint32_t gid) { group_id_ = gid; }
+  uint32_t group() { return group_id_; }
+  void set_group(uint32_t gid) { group_id_ = gid; }
 
-    uint32_t members() { return group_members_; }
-    void set_members(uint32_t group_members) { group_members_ = group_members; }
+  uint32_t members() { return group_members_; }
+  void set_members(uint32_t group_members) { group_members_ = group_members; }
 
-    zx_status_t result() { return result_; }
-    void set_result(zx_status_t result) { result_ = result; }
+  zx_status_t result() { return result_; }
+  void set_result(zx_status_t result) { result_ = result; }
 
-    void* cookie() { return cookie_; }
-    void set_cookie(void* cookie) { cookie_ = cookie; }
+  void* cookie() { return cookie_; }
+  void set_cookie(void* cookie) { cookie_ = cookie; }
 
-    uint32_t flags() { return flags_; }
-    void set_flags(uint32_t flags) { flags_ = flags; }
+  uint32_t flags() { return flags_; }
+  void set_flags(uint32_t flags) { flags_ = flags; }
 
-    Stream* stream() { return stream_; }
-    void set_stream(Stream* stream) { stream_ = stream; }
+  Stream* stream() { return stream_; }
+  void set_stream(Stream* stream) { stream_ = stream; }
 
+  // List support.
+  using ActiveListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
+  struct ActiveListTraits {
+    static ActiveListNodeState& node_state(StreamOp& s) { return s.active_node_; }
+  };
+  using ActiveList = fbl::DoublyLinkedList<StreamOp*, ActiveListTraits>;
 
-    // List support.
-    using ActiveListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
-    struct ActiveListTraits {
-        static ActiveListNodeState& node_state(StreamOp& s) { return s.active_node_; }
-    };
-    using ActiveList = fbl::DoublyLinkedList<StreamOp*, ActiveListTraits>;
+  using RetainedListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
+  struct RetainedListTraits {
+    static RetainedListNodeState& node_state(StreamOp& s) { return s.retained_node_; }
+  };
+  using RetainedList = fbl::DoublyLinkedList<StreamOp*, RetainedListTraits>;
 
-    using RetainedListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
-    struct RetainedListTraits {
-        static RetainedListNodeState& node_state(StreamOp& s) { return s.retained_node_; }
-    };
-    using RetainedList = fbl::DoublyLinkedList<StreamOp*, RetainedListTraits>;
+ private:
+  ActiveListNodeState active_node_;
+  RetainedListNodeState retained_node_;
 
-private:
-    ActiveListNodeState active_node_;
-    RetainedListNodeState retained_node_;
+  OpType type_;             // Type of operation.
+  uint32_t stream_id_;      // Stream into which this op is queued.
+  uint32_t group_id_;       // Group of operations.
+  uint32_t group_members_;  // Number of members in the group.
+  zx_status_t result_;      // Status code of the released operation.
+  void* cookie_;            // User-defined per-op cookie.
 
-    OpType type_;               // Type of operation.
-    uint32_t stream_id_;        // Stream into which this op is queued.
-    uint32_t group_id_;         // Group of operations.
-    uint32_t group_members_;    // Number of members in the group.
-    zx_status_t result_;        // Status code of the released operation.
-    void* cookie_;              // User-defined per-op cookie.
-
-    uint32_t flags_;
-    // Pointer to stream containing this op.
-    // This pointer is valid as long as the op is retained by the stream, from insertion to release.
-    // Effectively this is the lifetime of the op inside the io scheduler.
-    Stream* stream_;
+  uint32_t flags_;
+  // Pointer to stream containing this op.
+  // This pointer is valid as long as the op is retained by the stream, from insertion to release.
+  // Effectively this is the lifetime of the op inside the io scheduler.
+  Stream* stream_;
 };
 
-} // namespace ioscheduler
+}  // namespace ioscheduler

@@ -44,57 +44,54 @@ namespace dispatcher {
 // context of the ExecutionDomain the timer was bound to.
 //
 class Timer : public EventSource {
-public:
-    static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
-    using ProcessHandler =
-        fbl::InlineFunction<zx_status_t(Timer*), MAX_HANDLER_CAPTURE_SIZE>;
+ public:
+  static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
+  using ProcessHandler = fbl::InlineFunction<zx_status_t(Timer*), MAX_HANDLER_CAPTURE_SIZE>;
 
-    static fbl::RefPtr<Timer> Create(zx_duration_t early_slop_nsec = 0);
+  static fbl::RefPtr<Timer> Create(zx_duration_t early_slop_nsec = 0);
 
-    // Activate a timer object, creating the kernel timer and binding the Timer
-    // object to an execution domain and a processing handler.
-    //
-    // The operation will fail if the Timer has already been bound, or either
-    // the domain reference or processing handler is invalid.
-    //
-    // |slack_type| specifies the type of slack that may be applied to the
-    // deadline.
-    //
-    // TODO(ZX-3311): Remove the default for slack_type and pass the correct
-    // value based on the needs of the callers.
-    zx_status_t Activate(fbl::RefPtr<ExecutionDomain> domain,
-                         ProcessHandler process_handler,
-                         uint32_t slack_type = ZX_TIMER_SLACK_LATE);
-    virtual void Deactivate() __TA_EXCLUDES(obj_lock_) override;
+  // Activate a timer object, creating the kernel timer and binding the Timer
+  // object to an execution domain and a processing handler.
+  //
+  // The operation will fail if the Timer has already been bound, or either
+  // the domain reference or processing handler is invalid.
+  //
+  // |slack_type| specifies the type of slack that may be applied to the
+  // deadline.
+  //
+  // TODO(ZX-3311): Remove the default for slack_type and pass the correct
+  // value based on the needs of the callers.
+  zx_status_t Activate(fbl::RefPtr<ExecutionDomain> domain, ProcessHandler process_handler,
+                       uint32_t slack_type = ZX_TIMER_SLACK_LATE);
+  virtual void Deactivate() __TA_EXCLUDES(obj_lock_) override;
 
-    // Arm a timer object to fire at the |deadline| adjusted by the
-    // |slack_amount| and the |slack_type| used to Activate.
-    //
-    // TODO(ZX-3311): Remove the default for slack_amount and pass the correct
-    // value based on the needs of the callers.
-    zx_status_t Arm(zx_time_t deadline, zx_duration_t slack_amount = 0);
-    void Cancel();
+  // Arm a timer object to fire at the |deadline| adjusted by the
+  // |slack_amount| and the |slack_type| used to Activate.
+  //
+  // TODO(ZX-3311): Remove the default for slack_amount and pass the correct
+  // value based on the needs of the callers.
+  zx_status_t Arm(zx_time_t deadline, zx_duration_t slack_amount = 0);
+  void Cancel();
 
-protected:
-    void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) override;
+ protected:
+  void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) override;
 
-private:
-    friend class fbl::RefPtr<Timer>;
+ private:
+  friend class fbl::RefPtr<Timer>;
 
-    Timer(zx_duration_t early_slop_nsec)
-        : EventSource(ZX_TIMER_SIGNALED),
-          early_slop_nsec_(early_slop_nsec) { }
+  Timer(zx_duration_t early_slop_nsec)
+      : EventSource(ZX_TIMER_SIGNALED), early_slop_nsec_(early_slop_nsec) {}
 
-    void DisarmLocked() __TA_REQUIRES(obj_lock_);
-    zx_status_t SetTimerAndWaitLocked() __TA_REQUIRES(obj_lock_);
+  void DisarmLocked() __TA_REQUIRES(obj_lock_);
+  zx_status_t SetTimerAndWaitLocked() __TA_REQUIRES(obj_lock_);
 
-    const zx_duration_t early_slop_nsec_;
-    bool armed_ __TA_GUARDED(obj_lock_) = false;
-    bool timer_set_ __TA_GUARDED(obj_lock_) = false;
-    zx_time_t deadline_ __TA_GUARDED(obj_lock_) = 0;
-    zx_duration_t slack_amount_ __TA_GUARDED(obj_lock_) = 0;
+  const zx_duration_t early_slop_nsec_;
+  bool armed_ __TA_GUARDED(obj_lock_) = false;
+  bool timer_set_ __TA_GUARDED(obj_lock_) = false;
+  zx_time_t deadline_ __TA_GUARDED(obj_lock_) = 0;
+  zx_duration_t slack_amount_ __TA_GUARDED(obj_lock_) = 0;
 
-    ProcessHandler process_handler_;
+  ProcessHandler process_handler_;
 };
 
 }  // namespace dispatcher

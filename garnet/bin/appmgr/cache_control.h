@@ -17,8 +17,7 @@ class CacheControl : public fuchsia::sys::test::CacheControl {
   CacheControl();
   ~CacheControl() override;
 
-  void AddBinding(
-      fidl::InterfaceRequest<fuchsia::sys::test::CacheControl> request);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::sys::test::CacheControl> request);
 
   //
   // fuchsia::sys::test::CacheControl implementation:

@@ -12,26 +12,22 @@
 namespace fuchsia {
 namespace math {
 
-static const float kIdentityMatrix[]{
-    1.f, 0.f, 0.f, 0.f,  // comments to prevent
-    0.f, 1.f, 0.f, 0.f,  // auto formatter reflow
-    0.f, 0.f, 1.f, 0.f,  //
-    0.f, 0.f, 0.f, 1.f};
+static const float kIdentityMatrix[]{1.f, 0.f, 0.f, 0.f,  // comments to prevent
+                                     0.f, 1.f, 0.f, 0.f,  // auto formatter reflow
+                                     0.f, 0.f, 1.f, 0.f,  //
+                                     0.f, 0.f, 0.f, 1.f};
 
 void SetIdentityTransform(fuchsia::math::Transform* transform) {
   ZX_DEBUG_ASSERT(transform->matrix.size() == 16);
-  memcpy(static_cast<void*>(transform->matrix.data()), kIdentityMatrix,
-         sizeof(kIdentityMatrix));
+  memcpy(static_cast<void*>(transform->matrix.data()), kIdentityMatrix, sizeof(kIdentityMatrix));
 }
 
-void SetTranslationTransform(fuchsia::math::Transform* transform, float x,
-                             float y, float z) {
+void SetTranslationTransform(fuchsia::math::Transform* transform, float x, float y, float z) {
   SetIdentityTransform(transform);
   Translate(transform, x, y, z);
 }
 
-void SetScaleTransform(fuchsia::math::Transform* transform, float x, float y,
-                       float z) {
+void SetScaleTransform(fuchsia::math::Transform* transform, float x, float y, float z) {
   SetIdentityTransform(transform);
   Scale(transform, x, y, z);
 }
@@ -55,8 +51,7 @@ fuchsia::math::TransformPtr CreateIdentityTransform() {
   return result;
 }
 
-fuchsia::math::TransformPtr CreateTranslationTransform(float x, float y,
-                                                       float z) {
+fuchsia::math::TransformPtr CreateTranslationTransform(float x, float y, float z) {
   return Translate(CreateIdentityTransform(), x, y, z);
 }
 
@@ -64,14 +59,14 @@ fuchsia::math::TransformPtr CreateScaleTransform(float x, float y, float z) {
   return Scale(CreateIdentityTransform(), x, y, z);
 }
 
-fuchsia::math::TransformPtr Translate(fuchsia::math::TransformPtr transform,
-                                      float x, float y, float z) {
+fuchsia::math::TransformPtr Translate(fuchsia::math::TransformPtr transform, float x, float y,
+                                      float z) {
   Translate(transform.get(), x, y, z);
   return transform;
 }
 
-fuchsia::math::TransformPtr Scale(fuchsia::math::TransformPtr transform,
-                                  float x, float y, float z) {
+fuchsia::math::TransformPtr Scale(fuchsia::math::TransformPtr transform, float x, float y,
+                                  float z) {
   Scale(transform.get(), x, y, z);
   return transform;
 }

@@ -8,9 +8,9 @@
 // outside of publicly exposed headers. See system/public/zircon/compiler.h for
 // the publicly exported macros.
 
-// The thread safety analysis system is documented at http://clang.llvm.org/docs/ThreadSafetyAnalysis.html
-// and its use in Zircon is documented at docs/thread_annotations.md.  The macros we
-// use are:
+// The thread safety analysis system is documented at
+// http://clang.llvm.org/docs/ThreadSafetyAnalysis.html and its use in Zircon is documented at
+// docs/thread_annotations.md.  The macros we use are:
 //
 // TA_CAP(x)                    |x| is the capability this type represents, e.g. "mutex".
 // TA_GUARDED(x)                the annotated variable is guarded by the capability (e.g. lock) |x|
@@ -26,11 +26,11 @@
 // TA_ASSERT(x)                 function asserts that |x| is held
 // TA_ASSERT_SHARED(x)          function asserts that |x| is held for shared reading
 // TA_REQ(x)                    function requires that the caller hold the mutex |x|
-// TA_REQ_SHARED(x)             function requires that the caller hold the mutex |x| for shared reading
-// TA_EXCL(x)                   function requires that the caller not be holding the mutex |x|
-// TA_RET_CAP(x)                function returns a reference to the mutex |x|
-// TA_SCOPED_CAP                type represents a scoped or RAII-style wrapper around a capability
-// TA_NO_THREAD_SAFETY_ANALYSIS function is excluded entirely from thread safety analysis
+// TA_REQ_SHARED(x)             function requires that the caller hold the mutex |x| for shared
+// reading TA_EXCL(x)                   function requires that the caller not be holding the mutex
+// |x| TA_RET_CAP(x)                function returns a reference to the mutex |x| TA_SCOPED_CAP type
+// represents a scoped or RAII-style wrapper around a capability TA_NO_THREAD_SAFETY_ANALYSIS
+// function is excluded entirely from thread safety analysis
 
 #ifdef __clang__
 #define THREAD_ANNOTATION(x) __attribute__((x))

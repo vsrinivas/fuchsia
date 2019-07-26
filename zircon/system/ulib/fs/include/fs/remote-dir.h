@@ -23,27 +23,27 @@ namespace fs {
 //
 // This class is thread-safe.
 class RemoteDir : public Vnode {
-public:
-    // Binds to a remotely hosted directory using the specified FIDL client
-    // channel endpoint.  The channel must be valid.
-    RemoteDir(zx::channel remote_dir_client);
+ public:
+  // Binds to a remotely hosted directory using the specified FIDL client
+  // channel endpoint.  The channel must be valid.
+  RemoteDir(zx::channel remote_dir_client);
 
-    // Releases the remotely hosted directory.
-    ~RemoteDir() override;
+  // Releases the remotely hosted directory.
+  ~RemoteDir() override;
 
-    // |Vnode| implementation:
-    zx_status_t Getattr(vnattr_t* a) final;
-    bool IsRemote() const final;
-    zx_handle_t GetRemote() const final;
-    bool IsDirectory() const final { return true; }
-    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  // |Vnode| implementation:
+  zx_status_t Getattr(vnattr_t* a) final;
+  bool IsRemote() const final;
+  zx_handle_t GetRemote() const final;
+  bool IsDirectory() const final { return true; }
+  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
-private:
-    zx::channel const remote_dir_client_;
+ private:
+  zx::channel const remote_dir_client_;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(RemoteDir);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(RemoteDir);
 };
 
-} // namespace fs
+}  // namespace fs
 
-#endif // FS_REMOTE_DIR_H_
+#endif  // FS_REMOTE_DIR_H_

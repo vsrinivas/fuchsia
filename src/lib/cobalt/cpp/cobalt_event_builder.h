@@ -45,13 +45,12 @@ class CobaltEventBuilder {
 
   CobaltEventBuilder &with_event_code(const uint32_t event_code);
   CobaltEventBuilder &with_event_codes(std::vector<uint32_t> event_codes);
-  CobaltEventBuilder &with_event_code_at(const uint32_t index,
-                                         const uint32_t event_code);
+  CobaltEventBuilder &with_event_code_at(const uint32_t index, const uint32_t event_code);
   CobaltEventBuilder &with_component(std::string component);
   CobaltEventBuilder Clone() const;
 
-  fuchsia::cobalt::CobaltEvent as_count_event(
-      const int64_t period_duration_micros, const int64_t count);
+  fuchsia::cobalt::CobaltEvent as_count_event(const int64_t period_duration_micros,
+                                              const int64_t count);
   fuchsia::cobalt::CobaltEvent as_elapsed_time(const int64_t elapsed_micros);
   fuchsia::cobalt::CobaltEvent as_frame_rate(const float fps);
   fuchsia::cobalt::CobaltEvent as_memory_usage(const int64_t memory_bytes_used);

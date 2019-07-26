@@ -31,15 +31,12 @@ class StubLogListener : public fuchsia::logger::LogListener {
   void Log(fuchsia::logger::LogMessage Log) override;
   void Done() override;
 
-  const std::vector<fuchsia::logger::LogMessage>& GetLogs() {
-    return log_messages_;
-  }
+  const std::vector<fuchsia::logger::LogMessage>& GetLogs() { return log_messages_; }
 
-  bool ListenFiltered(const std::shared_ptr<sys::ServiceDirectory>& svc,
-                      zx_koid_t pid, const std::string& tag);
+  bool ListenFiltered(const std::shared_ptr<sys::ServiceDirectory>& svc, zx_koid_t pid,
+                      const std::string& tag);
 
-  bool DumpLogs(fuchsia::logger::LogPtr log_service,
-                DoneCallback done_callback);
+  bool DumpLogs(fuchsia::logger::LogPtr log_service, DoneCallback done_callback);
 
   bool Listen(fuchsia::logger::LogPtr log_service);
 
@@ -50,9 +47,7 @@ class StubLogListener : public fuchsia::logger::LogListener {
   DoneCallback done_callback_;
 };
 
-StubLogListener::StubLogListener() : binding_(this) {
-  binding_.Bind(log_listener_.NewRequest());
-}
+StubLogListener::StubLogListener() : binding_(this) { binding_.Bind(log_listener_.NewRequest()); }
 
 StubLogListener::~StubLogListener() {}
 
@@ -78,9 +73,8 @@ bool StubLogListener::Listen(fuchsia::logger::LogPtr log_service) {
   return true;
 }
 
-bool StubLogListener::ListenFiltered(
-    const std::shared_ptr<sys::ServiceDirectory>& svc, zx_koid_t pid,
-    const std::string& tag) {
+bool StubLogListener::ListenFiltered(const std::shared_ptr<sys::ServiceDirectory>& svc,
+                                     zx_koid_t pid, const std::string& tag) {
   if (!log_listener_) {
     return false;
   }
@@ -93,8 +87,7 @@ bool StubLogListener::ListenFiltered(
   return true;
 }
 
-bool StubLogListener::DumpLogs(fuchsia::logger::LogPtr log_service,
-                               DoneCallback done_callback) {
+bool StubLogListener::DumpLogs(fuchsia::logger::LogPtr log_service, DoneCallback done_callback) {
   if (!log_listener_) {
     return false;
   }
@@ -149,8 +142,7 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
   // Start the log listener and the logger, and wait for the log message to
   // arrive.
   StubLogListener log_listener;
-  ASSERT_TRUE(log_listener.ListenFiltered(
-      sys::ServiceDirectory::CreateFromNamespace(), pid, tag));
+  ASSERT_TRUE(log_listener.ListenFiltered(sys::ServiceDirectory::CreateFromNamespace(), pid, tag));
   auto& logs = log_listener.GetLogs();
   RunLoopUntil([&logs] { return logs.size() >= 1u; });
 
@@ -173,8 +165,7 @@ TEST_F(LoggerIntegrationTest, DumpLogs) {
 
   StubLogListener log_listener;
   bool done = false;
-  ASSERT_TRUE(log_listener.DumpLogs(std::move(logger_service),
-                                    [&done]() { done = true; }));
+  ASSERT_TRUE(log_listener.DumpLogs(std::move(logger_service), [&done]() { done = true; }));
 
   RunLoopUntil([&done] { return done; });
   auto& logs = log_listener.GetLogs();
@@ -190,15 +181,13 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   fuchsia::sys::LaunchInfo linfo_dup;
   ASSERT_EQ(ZX_OK, linfo.Clone(&linfo_dup));
   svcs->AddServiceWithLaunchInfo(std::move(linfo), fuchsia::logger::Log::Name_);
-  svcs->AddServiceWithLaunchInfo(std::move(linfo_dup),
-                                 fuchsia::logger::LogSink::Name_);
+  svcs->AddServiceWithLaunchInfo(std::move(linfo_dup), fuchsia::logger::LogSink::Name_);
   auto env = CreateNewEnclosingEnvironment("no_klogs", std::move(svcs));
   WaitForEnclosingEnvToStart(env.get());
 
   auto logger_sink = env->ConnectToService<fuchsia::logger::LogSink>();
   zx::socket logger_sock, server_end;
-  ASSERT_EQ(ZX_OK,
-            zx::socket::create(ZX_SOCKET_DATAGRAM, &logger_sock, &server_end));
+  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &logger_sock, &server_end));
   logger_sink->Connect(std::move(server_end));
 
   const char* tag = "my-tag";
@@ -215,8 +204,7 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   ASSERT_EQ(ZX_OK, fx_logger_log(logger, FX_LOG_INFO, nullptr, "hello world"));
 
   StubLogListener log_listener;
-  ASSERT_TRUE(
-      log_listener.Listen(env->ConnectToService<fuchsia::logger::Log>()));
+  ASSERT_TRUE(log_listener.Listen(env->ConnectToService<fuchsia::logger::Log>()));
 
   RunLoopUntil([&log_listener]() { return !log_listener.GetLogs().empty(); });
   auto& logs = log_listener.GetLogs();

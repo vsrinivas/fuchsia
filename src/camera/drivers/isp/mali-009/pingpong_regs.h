@@ -17,10 +17,8 @@ constexpr uint32_t kPingConfigSize = 0x17FC0;
 constexpr uint32_t kAexpHistStatsOffset = 0x24A8;
 constexpr uint32_t kHistSize = 0x2000;
 constexpr uint32_t kPingMeteringStatsOffset = 0x44B0;
-constexpr uint32_t kPongMeteringStatsOffset =
-    kPingMeteringStatsOffset + kPingConfigSize;
-constexpr uint32_t kDecompander0PongOffset =
-    kDecompander0PingOffset + kPingConfigSize;
+constexpr uint32_t kPongMeteringStatsOffset = kPingMeteringStatsOffset + kPingConfigSize;
+constexpr uint32_t kDecompander0PongOffset = kDecompander0PingOffset + kPingConfigSize;
 constexpr uint32_t kMeteringSize = 0x8000;
 constexpr uint32_t kLocalBufferSize = (0x18e88 + 0x4000);
 constexpr uint32_t kConfigSize = 0x1231C;
@@ -33,14 +31,12 @@ constexpr uint32_t kContextConfigSize = 0x1000;  // in 32 bit words
 // |classname|: register class to inherit from.
 // |namespc|: namespace for new class.
 // |address|: register address.
-#define DEF_NAMESPACE_REG(classname, namespc, address)        \
-  namespace namespc {                                         \
-  class classname : public camera::classname {                \
-   public:                                                    \
-    static auto Get() {                                       \
-      return hwreg::RegisterAddr<camera::classname>(address); \
-    }                                                         \
-  };                                                          \
+#define DEF_NAMESPACE_REG(classname, namespc, address)                            \
+  namespace namespc {                                                             \
+  class classname : public camera::classname {                                    \
+   public:                                                                        \
+    static auto Get() { return hwreg::RegisterAddr<camera::classname>(address); } \
+  };                                                                              \
   }
 
 class Top_ActiveDim : public hwreg::RegisterBase<Top_ActiveDim, uint32_t> {
@@ -278,8 +274,7 @@ class Top_Disable : public hwreg::RegisterBase<Top_Disable, uint32_t> {
 DEF_NAMESPACE_REG(Top_Disable, ping, 0x18ed0)
 DEF_NAMESPACE_REG(Top_Disable, pong, 0x30e90)
 
-class Crossbar_Channel
-    : public hwreg::RegisterBase<Crossbar_Channel, uint32_t> {
+class Crossbar_Channel : public hwreg::RegisterBase<Crossbar_Channel, uint32_t> {
  public:
   // channel0 selection from the input 4 channels
   DEF_FIELD(1, 0, channel1_select);
@@ -294,8 +289,7 @@ class Crossbar_Channel
 DEF_NAMESPACE_REG(Crossbar_Channel, ping, 0x18ed4)
 DEF_NAMESPACE_REG(Crossbar_Channel, pong, 0x30e94)
 
-class VideoTestGenCh0_Select
-    : public hwreg::RegisterBase<VideoTestGenCh0_Select, uint32_t> {
+class VideoTestGenCh0_Select : public hwreg::RegisterBase<VideoTestGenCh0_Select, uint32_t> {
  public:
   // Test pattern off-on: 0=off, 1=on
   DEF_BIT(0, test_pattern_off_on);
@@ -325,8 +319,7 @@ class VideoTestGenCh0_PatternType
 DEF_NAMESPACE_REG(VideoTestGenCh0_PatternType, ping, 0x18edc)
 DEF_NAMESPACE_REG(VideoTestGenCh0_PatternType, pong, 0x30e9c)
 
-class VideoTestGenCh0_RBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh0_RBackgnd, uint32_t> {
+class VideoTestGenCh0_RBackgnd : public hwreg::RegisterBase<VideoTestGenCh0_RBackgnd, uint32_t> {
  public:
   // Red background  value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -335,8 +328,7 @@ class VideoTestGenCh0_RBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh0_RBackgnd, ping, 0x18ee0)
 DEF_NAMESPACE_REG(VideoTestGenCh0_RBackgnd, pong, 0x30ea0)
 
-class VideoTestGenCh0_GBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh0_GBackgnd, uint32_t> {
+class VideoTestGenCh0_GBackgnd : public hwreg::RegisterBase<VideoTestGenCh0_GBackgnd, uint32_t> {
  public:
   // Green background value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -345,8 +337,7 @@ class VideoTestGenCh0_GBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh0_GBackgnd, ping, 0x18ee4)
 DEF_NAMESPACE_REG(VideoTestGenCh0_GBackgnd, pong, 0x30ea4)
 
-class VideoTestGenCh0_BBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh0_BBackgnd, uint32_t> {
+class VideoTestGenCh0_BBackgnd : public hwreg::RegisterBase<VideoTestGenCh0_BBackgnd, uint32_t> {
  public:
   // Blue background value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -355,8 +346,7 @@ class VideoTestGenCh0_BBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh0_BBackgnd, ping, 0x18ee8)
 DEF_NAMESPACE_REG(VideoTestGenCh0_BBackgnd, pong, 0x30ea8)
 
-class VideoTestGenCh0_RForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh0_RForegnd, uint32_t> {
+class VideoTestGenCh0_RForegnd : public hwreg::RegisterBase<VideoTestGenCh0_RForegnd, uint32_t> {
  public:
   // Red foreground  value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -365,8 +355,7 @@ class VideoTestGenCh0_RForegnd
 DEF_NAMESPACE_REG(VideoTestGenCh0_RForegnd, ping, 0x18eec)
 DEF_NAMESPACE_REG(VideoTestGenCh0_RForegnd, pong, 0x30eac)
 
-class VideoTestGenCh0_GForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh0_GForegnd, uint32_t> {
+class VideoTestGenCh0_GForegnd : public hwreg::RegisterBase<VideoTestGenCh0_GForegnd, uint32_t> {
  public:
   // Green foreground value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -375,8 +364,7 @@ class VideoTestGenCh0_GForegnd
 DEF_NAMESPACE_REG(VideoTestGenCh0_GForegnd, ping, 0x18ef0)
 DEF_NAMESPACE_REG(VideoTestGenCh0_GForegnd, pong, 0x30eb0)
 
-class VideoTestGenCh0_BForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh0_BForegnd, uint32_t> {
+class VideoTestGenCh0_BForegnd : public hwreg::RegisterBase<VideoTestGenCh0_BForegnd, uint32_t> {
  public:
   // Blue foreground value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -406,8 +394,7 @@ class VideoTestGenCh0_RgbGradientStart
 DEF_NAMESPACE_REG(VideoTestGenCh0_RgbGradientStart, ping, 0x18efc)
 DEF_NAMESPACE_REG(VideoTestGenCh0_RgbGradientStart, pong, 0x30ebc)
 
-class VideoTestGenCh0_RectTB
-    : public hwreg::RegisterBase<VideoTestGenCh0_RectTB, uint32_t> {
+class VideoTestGenCh0_RectTB : public hwreg::RegisterBase<VideoTestGenCh0_RectTB, uint32_t> {
  public:
   // Rectangle top line number 1-n
   DEF_FIELD(13, 0, rect_top);
@@ -418,8 +405,7 @@ class VideoTestGenCh0_RectTB
 DEF_NAMESPACE_REG(VideoTestGenCh0_RectTB, ping, 0x18f00)
 DEF_NAMESPACE_REG(VideoTestGenCh0_RectTB, pong, 0x30ec0)
 
-class VideoTestGenCh0_RectRL
-    : public hwreg::RegisterBase<VideoTestGenCh0_RectRL, uint32_t> {
+class VideoTestGenCh0_RectRL : public hwreg::RegisterBase<VideoTestGenCh0_RectRL, uint32_t> {
  public:
   // Rectangle left pixel number 1-n
   DEF_FIELD(13, 0, rect_left);
@@ -430,8 +416,7 @@ class VideoTestGenCh0_RectRL
 DEF_NAMESPACE_REG(VideoTestGenCh0_RectRL, ping, 0x18f04)
 DEF_NAMESPACE_REG(VideoTestGenCh0_RectRL, pong, 0x30ec4)
 
-class VideoTestGenCh1_Select
-    : public hwreg::RegisterBase<VideoTestGenCh1_Select, uint32_t> {
+class VideoTestGenCh1_Select : public hwreg::RegisterBase<VideoTestGenCh1_Select, uint32_t> {
  public:
   // Test pattern off-on: 0=off, 1=on
   DEF_BIT(0, test_pattern_off_on);
@@ -461,8 +446,7 @@ class VideoTestGenCh1_PatternType
 DEF_NAMESPACE_REG(VideoTestGenCh1_PatternType, ping, 0x18f0c)
 DEF_NAMESPACE_REG(VideoTestGenCh1_PatternType, pong, 0x30ecc)
 
-class VideoTestGenCh1_RBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh1_RBackgnd, uint32_t> {
+class VideoTestGenCh1_RBackgnd : public hwreg::RegisterBase<VideoTestGenCh1_RBackgnd, uint32_t> {
  public:
   // Red background  value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -471,8 +455,7 @@ class VideoTestGenCh1_RBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh1_RBackgnd, ping, 0x18f10)
 DEF_NAMESPACE_REG(VideoTestGenCh1_RBackgnd, pong, 0x30ed0)
 
-class VideoTestGenCh1_GBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh1_GBackgnd, uint32_t> {
+class VideoTestGenCh1_GBackgnd : public hwreg::RegisterBase<VideoTestGenCh1_GBackgnd, uint32_t> {
  public:
   // Green background value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -481,8 +464,7 @@ class VideoTestGenCh1_GBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh1_GBackgnd, ping, 0x18f14)
 DEF_NAMESPACE_REG(VideoTestGenCh1_GBackgnd, pong, 0x30ed4)
 
-class VideoTestGenCh1_BBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh1_BBackgnd, uint32_t> {
+class VideoTestGenCh1_BBackgnd : public hwreg::RegisterBase<VideoTestGenCh1_BBackgnd, uint32_t> {
  public:
   // Blue background value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -491,8 +473,7 @@ class VideoTestGenCh1_BBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh1_BBackgnd, ping, 0x18f18)
 DEF_NAMESPACE_REG(VideoTestGenCh1_BBackgnd, pong, 0x30ed8)
 
-class VideoTestGenCh1_RForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh1_RForegnd, uint32_t> {
+class VideoTestGenCh1_RForegnd : public hwreg::RegisterBase<VideoTestGenCh1_RForegnd, uint32_t> {
  public:
   // Red foreground  value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -501,8 +482,7 @@ class VideoTestGenCh1_RForegnd
 DEF_NAMESPACE_REG(VideoTestGenCh1_RForegnd, ping, 0x18f1c)
 DEF_NAMESPACE_REG(VideoTestGenCh1_RForegnd, pong, 0x30edc)
 
-class VideoTestGenCh1_GForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh1_GForegnd, uint32_t> {
+class VideoTestGenCh1_GForegnd : public hwreg::RegisterBase<VideoTestGenCh1_GForegnd, uint32_t> {
  public:
   // Green foreground value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -511,8 +491,7 @@ class VideoTestGenCh1_GForegnd
 DEF_NAMESPACE_REG(VideoTestGenCh1_GForegnd, ping, 0x18f20)
 DEF_NAMESPACE_REG(VideoTestGenCh1_GForegnd, pong, 0x30ee0)
 
-class VideoTestGenCh1_BForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh1_BForegnd, uint32_t> {
+class VideoTestGenCh1_BForegnd : public hwreg::RegisterBase<VideoTestGenCh1_BForegnd, uint32_t> {
  public:
   // Blue foreground value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -542,8 +521,7 @@ class VideoTestGenCh1_RgbGradientStart
 DEF_NAMESPACE_REG(VideoTestGenCh1_RgbGradientStart, ping, 0x18f2c)
 DEF_NAMESPACE_REG(VideoTestGenCh1_RgbGradientStart, pong, 0x30eec)
 
-class VideoTestGenCh1_RectTB
-    : public hwreg::RegisterBase<VideoTestGenCh1_RectTB, uint32_t> {
+class VideoTestGenCh1_RectTB : public hwreg::RegisterBase<VideoTestGenCh1_RectTB, uint32_t> {
  public:
   // Rectangle top line number 1-n
   DEF_FIELD(13, 0, rect_top);
@@ -554,8 +532,7 @@ class VideoTestGenCh1_RectTB
 DEF_NAMESPACE_REG(VideoTestGenCh1_RectTB, ping, 0x18f30)
 DEF_NAMESPACE_REG(VideoTestGenCh1_RectTB, pong, 0x30ef0)
 
-class VideoTestGenCh1_RectRL
-    : public hwreg::RegisterBase<VideoTestGenCh1_RectRL, uint32_t> {
+class VideoTestGenCh1_RectRL : public hwreg::RegisterBase<VideoTestGenCh1_RectRL, uint32_t> {
  public:
   // Rectangle left pixel number 1-n
   DEF_FIELD(13, 0, rect_left);
@@ -566,8 +543,7 @@ class VideoTestGenCh1_RectRL
 DEF_NAMESPACE_REG(VideoTestGenCh1_RectRL, ping, 0x18f34)
 DEF_NAMESPACE_REG(VideoTestGenCh1_RectRL, pong, 0x30ef4)
 
-class VideoTestGenCh2_Select
-    : public hwreg::RegisterBase<VideoTestGenCh2_Select, uint32_t> {
+class VideoTestGenCh2_Select : public hwreg::RegisterBase<VideoTestGenCh2_Select, uint32_t> {
  public:
   // Test pattern off-on: 0=off, 1=on
   DEF_BIT(0, test_pattern_off_on);
@@ -597,8 +573,7 @@ class VideoTestGenCh2_PatternType
 DEF_NAMESPACE_REG(VideoTestGenCh2_PatternType, ping, 0x18f3c)
 DEF_NAMESPACE_REG(VideoTestGenCh2_PatternType, pong, 0x30efc)
 
-class VideoTestGenCh2_RBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh2_RBackgnd, uint32_t> {
+class VideoTestGenCh2_RBackgnd : public hwreg::RegisterBase<VideoTestGenCh2_RBackgnd, uint32_t> {
  public:
   // Red background  value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -607,8 +582,7 @@ class VideoTestGenCh2_RBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh2_RBackgnd, ping, 0x18f40)
 DEF_NAMESPACE_REG(VideoTestGenCh2_RBackgnd, pong, 0x30f00)
 
-class VideoTestGenCh2_GBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh2_GBackgnd, uint32_t> {
+class VideoTestGenCh2_GBackgnd : public hwreg::RegisterBase<VideoTestGenCh2_GBackgnd, uint32_t> {
  public:
   // Green background value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -617,8 +591,7 @@ class VideoTestGenCh2_GBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh2_GBackgnd, ping, 0x18f44)
 DEF_NAMESPACE_REG(VideoTestGenCh2_GBackgnd, pong, 0x30f04)
 
-class VideoTestGenCh2_BBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh2_BBackgnd, uint32_t> {
+class VideoTestGenCh2_BBackgnd : public hwreg::RegisterBase<VideoTestGenCh2_BBackgnd, uint32_t> {
  public:
   // Blue background value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -627,8 +600,7 @@ class VideoTestGenCh2_BBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh2_BBackgnd, ping, 0x18f48)
 DEF_NAMESPACE_REG(VideoTestGenCh2_BBackgnd, pong, 0x30f08)
 
-class VideoTestGenCh2_RForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh2_RForegnd, uint32_t> {
+class VideoTestGenCh2_RForegnd : public hwreg::RegisterBase<VideoTestGenCh2_RForegnd, uint32_t> {
  public:
   // Red foreground  value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -637,8 +609,7 @@ class VideoTestGenCh2_RForegnd
 DEF_NAMESPACE_REG(VideoTestGenCh2_RForegnd, ping, 0x18f4c)
 DEF_NAMESPACE_REG(VideoTestGenCh2_RForegnd, pong, 0x30f0c)
 
-class VideoTestGenCh2_GForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh2_GForegnd, uint32_t> {
+class VideoTestGenCh2_GForegnd : public hwreg::RegisterBase<VideoTestGenCh2_GForegnd, uint32_t> {
  public:
   // Green foreground value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -647,8 +618,7 @@ class VideoTestGenCh2_GForegnd
 DEF_NAMESPACE_REG(VideoTestGenCh2_GForegnd, ping, 0x18f50)
 DEF_NAMESPACE_REG(VideoTestGenCh2_GForegnd, pong, 0x30f10)
 
-class VideoTestGenCh2_BForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh2_BForegnd, uint32_t> {
+class VideoTestGenCh2_BForegnd : public hwreg::RegisterBase<VideoTestGenCh2_BForegnd, uint32_t> {
  public:
   // Blue foreground value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -678,8 +648,7 @@ class VideoTestGenCh2_RgbGradientStart
 DEF_NAMESPACE_REG(VideoTestGenCh2_RgbGradientStart, ping, 0x18f5c)
 DEF_NAMESPACE_REG(VideoTestGenCh2_RgbGradientStart, pong, 0x30f1c)
 
-class VideoTestGenCh2_RectTB
-    : public hwreg::RegisterBase<VideoTestGenCh2_RectTB, uint32_t> {
+class VideoTestGenCh2_RectTB : public hwreg::RegisterBase<VideoTestGenCh2_RectTB, uint32_t> {
  public:
   // Rectangle top line number 1-n
   DEF_FIELD(13, 0, rect_top);
@@ -690,8 +659,7 @@ class VideoTestGenCh2_RectTB
 DEF_NAMESPACE_REG(VideoTestGenCh2_RectTB, ping, 0x18f60)
 DEF_NAMESPACE_REG(VideoTestGenCh2_RectTB, pong, 0x30f20)
 
-class VideoTestGenCh2_RectRL
-    : public hwreg::RegisterBase<VideoTestGenCh2_RectRL, uint32_t> {
+class VideoTestGenCh2_RectRL : public hwreg::RegisterBase<VideoTestGenCh2_RectRL, uint32_t> {
  public:
   // Rectangle left pixel number 1-n
   DEF_FIELD(13, 0, rect_left);
@@ -702,8 +670,7 @@ class VideoTestGenCh2_RectRL
 DEF_NAMESPACE_REG(VideoTestGenCh2_RectRL, ping, 0x18f64)
 DEF_NAMESPACE_REG(VideoTestGenCh2_RectRL, pong, 0x30f24)
 
-class VideoTestGenCh3_Select
-    : public hwreg::RegisterBase<VideoTestGenCh3_Select, uint32_t> {
+class VideoTestGenCh3_Select : public hwreg::RegisterBase<VideoTestGenCh3_Select, uint32_t> {
  public:
   // Test pattern off-on: 0=off, 1=on
   DEF_BIT(0, test_pattern_off_on);
@@ -733,8 +700,7 @@ class VideoTestGenCh3_PatternType
 DEF_NAMESPACE_REG(VideoTestGenCh3_PatternType, ping, 0x18f6c)
 DEF_NAMESPACE_REG(VideoTestGenCh3_PatternType, pong, 0x30f2c)
 
-class VideoTestGenCh3_RBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh3_RBackgnd, uint32_t> {
+class VideoTestGenCh3_RBackgnd : public hwreg::RegisterBase<VideoTestGenCh3_RBackgnd, uint32_t> {
  public:
   // Red background  value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -743,8 +709,7 @@ class VideoTestGenCh3_RBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh3_RBackgnd, ping, 0x18f70)
 DEF_NAMESPACE_REG(VideoTestGenCh3_RBackgnd, pong, 0x30f30)
 
-class VideoTestGenCh3_GBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh3_GBackgnd, uint32_t> {
+class VideoTestGenCh3_GBackgnd : public hwreg::RegisterBase<VideoTestGenCh3_GBackgnd, uint32_t> {
  public:
   // Green background value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -753,8 +718,7 @@ class VideoTestGenCh3_GBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh3_GBackgnd, ping, 0x18f74)
 DEF_NAMESPACE_REG(VideoTestGenCh3_GBackgnd, pong, 0x30f34)
 
-class VideoTestGenCh3_BBackgnd
-    : public hwreg::RegisterBase<VideoTestGenCh3_BBackgnd, uint32_t> {
+class VideoTestGenCh3_BBackgnd : public hwreg::RegisterBase<VideoTestGenCh3_BBackgnd, uint32_t> {
  public:
   // Blue background value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -763,8 +727,7 @@ class VideoTestGenCh3_BBackgnd
 DEF_NAMESPACE_REG(VideoTestGenCh3_BBackgnd, ping, 0x18f78)
 DEF_NAMESPACE_REG(VideoTestGenCh3_BBackgnd, pong, 0x30f38)
 
-class VideoTestGenCh3_RForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh3_RForegnd, uint32_t> {
+class VideoTestGenCh3_RForegnd : public hwreg::RegisterBase<VideoTestGenCh3_RForegnd, uint32_t> {
  public:
   // Red foreground  value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -773,8 +736,7 @@ class VideoTestGenCh3_RForegnd
 DEF_NAMESPACE_REG(VideoTestGenCh3_RForegnd, ping, 0x18f7c)
 DEF_NAMESPACE_REG(VideoTestGenCh3_RForegnd, pong, 0x30f3c)
 
-class VideoTestGenCh3_GForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh3_GForegnd, uint32_t> {
+class VideoTestGenCh3_GForegnd : public hwreg::RegisterBase<VideoTestGenCh3_GForegnd, uint32_t> {
  public:
   // Green foreground value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -783,8 +745,7 @@ class VideoTestGenCh3_GForegnd
 DEF_NAMESPACE_REG(VideoTestGenCh3_GForegnd, ping, 0x18f80)
 DEF_NAMESPACE_REG(VideoTestGenCh3_GForegnd, pong, 0x30f40)
 
-class VideoTestGenCh3_BForegnd
-    : public hwreg::RegisterBase<VideoTestGenCh3_BForegnd, uint32_t> {
+class VideoTestGenCh3_BForegnd : public hwreg::RegisterBase<VideoTestGenCh3_BForegnd, uint32_t> {
  public:
   // Blue foreground value 16bit, MSB aligned to used width
   DEF_FIELD(19, 0, value);
@@ -814,8 +775,7 @@ class VideoTestGenCh3_RgbGradientStart
 DEF_NAMESPACE_REG(VideoTestGenCh3_RgbGradientStart, ping, 0x18f8c)
 DEF_NAMESPACE_REG(VideoTestGenCh3_RgbGradientStart, pong, 0x30f4c)
 
-class VideoTestGenCh3_RectTB
-    : public hwreg::RegisterBase<VideoTestGenCh3_RectTB, uint32_t> {
+class VideoTestGenCh3_RectTB : public hwreg::RegisterBase<VideoTestGenCh3_RectTB, uint32_t> {
  public:
   // Rectangle top line number 1-n
   DEF_FIELD(13, 0, rect_top);
@@ -826,8 +786,7 @@ class VideoTestGenCh3_RectTB
 DEF_NAMESPACE_REG(VideoTestGenCh3_RectTB, ping, 0x18f90)
 DEF_NAMESPACE_REG(VideoTestGenCh3_RectTB, pong, 0x30f50)
 
-class VideoTestGenCh3_RectRL
-    : public hwreg::RegisterBase<VideoTestGenCh3_RectRL, uint32_t> {
+class VideoTestGenCh3_RectRL : public hwreg::RegisterBase<VideoTestGenCh3_RectRL, uint32_t> {
  public:
   // Rectangle left pixel number 1-n
   DEF_FIELD(13, 0, rect_left);
@@ -838,8 +797,7 @@ class VideoTestGenCh3_RectRL
 DEF_NAMESPACE_REG(VideoTestGenCh3_RectRL, ping, 0x18f94)
 DEF_NAMESPACE_REG(VideoTestGenCh3_RectRL, pong, 0x30f54)
 
-class InputFormatter_Mode
-    : public hwreg::RegisterBase<InputFormatter_Mode, uint32_t> {
+class InputFormatter_Mode : public hwreg::RegisterBase<InputFormatter_Mode, uint32_t> {
  public:
   //  Input mode (0=Linear data, 1=2:3 multiple exposure multiplexing,
   //   2=Logarithmic encoding, 3=Companding curve with knee points,
@@ -854,8 +812,7 @@ class InputFormatter_Mode
 DEF_NAMESPACE_REG(InputFormatter_Mode, ping, 0x18f98)
 DEF_NAMESPACE_REG(InputFormatter_Mode, pong, 0x30f58)
 
-class InputFormatter_FactorMl
-    : public hwreg::RegisterBase<InputFormatter_FactorMl, uint32_t> {
+class InputFormatter_FactorMl : public hwreg::RegisterBase<InputFormatter_FactorMl, uint32_t> {
  public:
   //  18 bit, 6.12 fix point - ratio between long and medium exposure
   //      for 2:3 multiplexed mode
@@ -865,8 +822,7 @@ class InputFormatter_FactorMl
 DEF_NAMESPACE_REG(InputFormatter_FactorMl, ping, 0x18f9c)
 DEF_NAMESPACE_REG(InputFormatter_FactorMl, pong, 0x30f5c)
 
-class InputFormatter_FactorMs
-    : public hwreg::RegisterBase<InputFormatter_FactorMs, uint32_t> {
+class InputFormatter_FactorMs : public hwreg::RegisterBase<InputFormatter_FactorMs, uint32_t> {
  public:
   //  13 bit, 1.12 fix point - ratio between short and medium exposure
   //      for 2:3 multiplexed mode
@@ -876,8 +832,7 @@ class InputFormatter_FactorMs
 DEF_NAMESPACE_REG(InputFormatter_FactorMs, ping, 0x18fa0)
 DEF_NAMESPACE_REG(InputFormatter_FactorMs, pong, 0x30f60)
 
-class InputFormatter_BlackLevel
-    : public hwreg::RegisterBase<InputFormatter_BlackLevel, uint32_t> {
+class InputFormatter_BlackLevel : public hwreg::RegisterBase<InputFormatter_BlackLevel, uint32_t> {
  public:
   // Black level of sensor data for 2:3 multiplexed mode
   DEF_FIELD(11, 0, value);
@@ -886,8 +841,7 @@ class InputFormatter_BlackLevel
 DEF_NAMESPACE_REG(InputFormatter_BlackLevel, ping, 0x18fa4)
 DEF_NAMESPACE_REG(InputFormatter_BlackLevel, pong, 0x30f64)
 
-class InputFormatter_KneePoint
-    : public hwreg::RegisterBase<InputFormatter_KneePoint, uint32_t> {
+class InputFormatter_KneePoint : public hwreg::RegisterBase<InputFormatter_KneePoint, uint32_t> {
  public:
   // First knee point
   DEF_FIELD(15, 0, knee_point0);
@@ -898,8 +852,7 @@ class InputFormatter_KneePoint
 DEF_NAMESPACE_REG(InputFormatter_KneePoint, ping, 0x18fa8)
 DEF_NAMESPACE_REG(InputFormatter_KneePoint, pong, 0x30f68)
 
-class InputFormatter_KneePoint2
-    : public hwreg::RegisterBase<InputFormatter_KneePoint2, uint32_t> {
+class InputFormatter_KneePoint2 : public hwreg::RegisterBase<InputFormatter_KneePoint2, uint32_t> {
  public:
   // Third knee point
   DEF_FIELD(15, 0, value);
@@ -908,8 +861,7 @@ class InputFormatter_KneePoint2
 DEF_NAMESPACE_REG(InputFormatter_KneePoint2, ping, 0x18fac)
 DEF_NAMESPACE_REG(InputFormatter_KneePoint2, pong, 0x30f6c)
 
-class InputFormatter_Slope
-    : public hwreg::RegisterBase<InputFormatter_Slope, uint32_t> {
+class InputFormatter_Slope : public hwreg::RegisterBase<InputFormatter_Slope, uint32_t> {
  public:
   //  First slope for companding table segments (0=1x, 1=2x, 2=4x,
   //   3=8x, 4=16x, 5=32x, 6=64x, 7=128x, 8=256x, 9=512x, 10=1024x,
@@ -929,8 +881,7 @@ class InputFormatter_Slope
 DEF_NAMESPACE_REG(InputFormatter_Slope, ping, 0x18fb0)
 DEF_NAMESPACE_REG(InputFormatter_Slope, pong, 0x30f70)
 
-class SensorOffsetWdrL_Offset0
-    : public hwreg::RegisterBase<SensorOffsetWdrL_Offset0, uint32_t> {
+class SensorOffsetWdrL_Offset0 : public hwreg::RegisterBase<SensorOffsetWdrL_Offset0, uint32_t> {
  public:
   // offset offset for color channel 00 (R)
   DEF_FIELD(11, 0, offset_00);
@@ -941,8 +892,7 @@ class SensorOffsetWdrL_Offset0
 DEF_NAMESPACE_REG(SensorOffsetWdrL_Offset0, ping, 0x18fb4)
 DEF_NAMESPACE_REG(SensorOffsetWdrL_Offset0, pong, 0x30f74)
 
-class SensorOffsetWdrL_Offset1
-    : public hwreg::RegisterBase<SensorOffsetWdrL_Offset1, uint32_t> {
+class SensorOffsetWdrL_Offset1 : public hwreg::RegisterBase<SensorOffsetWdrL_Offset1, uint32_t> {
  public:
   // offset offset for color channel 10 (Gb)
   DEF_FIELD(11, 0, offset_10);
@@ -953,8 +903,7 @@ class SensorOffsetWdrL_Offset1
 DEF_NAMESPACE_REG(SensorOffsetWdrL_Offset1, ping, 0x18fb8)
 DEF_NAMESPACE_REG(SensorOffsetWdrL_Offset1, pong, 0x30f78)
 
-class SensorOffsetWdrM_Offset0
-    : public hwreg::RegisterBase<SensorOffsetWdrM_Offset0, uint32_t> {
+class SensorOffsetWdrM_Offset0 : public hwreg::RegisterBase<SensorOffsetWdrM_Offset0, uint32_t> {
  public:
   // offset offset for color channel 00 (R)
   DEF_FIELD(11, 0, offset_00);
@@ -965,8 +914,7 @@ class SensorOffsetWdrM_Offset0
 DEF_NAMESPACE_REG(SensorOffsetWdrM_Offset0, ping, 0x18fbc)
 DEF_NAMESPACE_REG(SensorOffsetWdrM_Offset0, pong, 0x30f7c)
 
-class SensorOffsetWdrM_Offset1
-    : public hwreg::RegisterBase<SensorOffsetWdrM_Offset1, uint32_t> {
+class SensorOffsetWdrM_Offset1 : public hwreg::RegisterBase<SensorOffsetWdrM_Offset1, uint32_t> {
  public:
   // offset offset for color channel 10 (Gb)
   DEF_FIELD(11, 0, offset_10);
@@ -977,8 +925,7 @@ class SensorOffsetWdrM_Offset1
 DEF_NAMESPACE_REG(SensorOffsetWdrM_Offset1, ping, 0x18fc0)
 DEF_NAMESPACE_REG(SensorOffsetWdrM_Offset1, pong, 0x30f80)
 
-class SensorOffsetWdrS_Offset0
-    : public hwreg::RegisterBase<SensorOffsetWdrS_Offset0, uint32_t> {
+class SensorOffsetWdrS_Offset0 : public hwreg::RegisterBase<SensorOffsetWdrS_Offset0, uint32_t> {
  public:
   // offset offset for color channel 00 (R)
   DEF_FIELD(11, 0, offset_00);
@@ -989,8 +936,7 @@ class SensorOffsetWdrS_Offset0
 DEF_NAMESPACE_REG(SensorOffsetWdrS_Offset0, ping, 0x18fc4)
 DEF_NAMESPACE_REG(SensorOffsetWdrS_Offset0, pong, 0x30f84)
 
-class SensorOffsetWdrS_Offset1
-    : public hwreg::RegisterBase<SensorOffsetWdrS_Offset1, uint32_t> {
+class SensorOffsetWdrS_Offset1 : public hwreg::RegisterBase<SensorOffsetWdrS_Offset1, uint32_t> {
  public:
   // offset offset for color channel 10 (Gb)
   DEF_FIELD(11, 0, offset_10);
@@ -1001,8 +947,7 @@ class SensorOffsetWdrS_Offset1
 DEF_NAMESPACE_REG(SensorOffsetWdrS_Offset1, ping, 0x18fc8)
 DEF_NAMESPACE_REG(SensorOffsetWdrS_Offset1, pong, 0x30f88)
 
-class SensorOffsetWdrVs_Offset0
-    : public hwreg::RegisterBase<SensorOffsetWdrVs_Offset0, uint32_t> {
+class SensorOffsetWdrVs_Offset0 : public hwreg::RegisterBase<SensorOffsetWdrVs_Offset0, uint32_t> {
  public:
   // offset offset for color channel 00 (R)
   DEF_FIELD(11, 0, offset_00);
@@ -1013,8 +958,7 @@ class SensorOffsetWdrVs_Offset0
 DEF_NAMESPACE_REG(SensorOffsetWdrVs_Offset0, ping, 0x18fcc)
 DEF_NAMESPACE_REG(SensorOffsetWdrVs_Offset0, pong, 0x30f8c)
 
-class SensorOffsetWdrVs_Offset1
-    : public hwreg::RegisterBase<SensorOffsetWdrVs_Offset1, uint32_t> {
+class SensorOffsetWdrVs_Offset1 : public hwreg::RegisterBase<SensorOffsetWdrVs_Offset1, uint32_t> {
  public:
   // offset offset for color channel 10 (Gb)
   DEF_FIELD(11, 0, offset_10);
@@ -1073,8 +1017,7 @@ class WideDynamicRangeGain_BlackLevel1
 DEF_NAMESPACE_REG(WideDynamicRangeGain_BlackLevel1, ping, 0x18fe0)
 DEF_NAMESPACE_REG(WideDynamicRangeGain_BlackLevel1, pong, 0x30fa0)
 
-class FrameStitch_Mode
-    : public hwreg::RegisterBase<FrameStitch_Mode, uint32_t> {
+class FrameStitch_Mode : public hwreg::RegisterBase<FrameStitch_Mode, uint32_t> {
  public:
   // 0 : 4-exposure
   // 1 : 2-exposure
@@ -1098,8 +1041,7 @@ class FrameStitch_Mode
 DEF_NAMESPACE_REG(FrameStitch_Mode, ping, 0x18fe4)
 DEF_NAMESPACE_REG(FrameStitch_Mode, pong, 0x30fa4)
 
-class FrameStitch_ExposureRatio
-    : public hwreg::RegisterBase<FrameStitch_ExposureRatio, uint32_t> {
+class FrameStitch_ExposureRatio : public hwreg::RegisterBase<FrameStitch_ExposureRatio, uint32_t> {
  public:
   //  Sets ratio between long and medium exposures - this must match
   //   the actual exposure ratio on the sensor
@@ -1165,8 +1107,7 @@ class FrameStitch_ShortVeryShortThresh
 DEF_NAMESPACE_REG(FrameStitch_ShortVeryShortThresh, ping, 0x18ff8)
 DEF_NAMESPACE_REG(FrameStitch_ShortVeryShortThresh, pong, 0x30fb8)
 
-class FrameStitch_BlackLevel0
-    : public hwreg::RegisterBase<FrameStitch_BlackLevel0, uint32_t> {
+class FrameStitch_BlackLevel0 : public hwreg::RegisterBase<FrameStitch_BlackLevel0, uint32_t> {
  public:
   // Black level for long exposure input
   DEF_FIELD(11, 0, black_level_long);
@@ -1181,8 +1122,7 @@ class FrameStitch_BlackLevel0
 DEF_NAMESPACE_REG(FrameStitch_BlackLevel0, ping, 0x18ffc)
 DEF_NAMESPACE_REG(FrameStitch_BlackLevel0, pong, 0x30fbc)
 
-class FrameStitch_BlackLevel1
-    : public hwreg::RegisterBase<FrameStitch_BlackLevel1, uint32_t> {
+class FrameStitch_BlackLevel1 : public hwreg::RegisterBase<FrameStitch_BlackLevel1, uint32_t> {
  public:
   // Black level for short exposure input
   DEF_FIELD(11, 0, black_level_short);
@@ -1193,8 +1133,7 @@ class FrameStitch_BlackLevel1
 DEF_NAMESPACE_REG(FrameStitch_BlackLevel1, ping, 0x19000)
 DEF_NAMESPACE_REG(FrameStitch_BlackLevel1, pong, 0x30fc0)
 
-class FrameStitch_BlackLevelOut
-    : public hwreg::RegisterBase<FrameStitch_BlackLevelOut, uint32_t> {
+class FrameStitch_BlackLevelOut : public hwreg::RegisterBase<FrameStitch_BlackLevelOut, uint32_t> {
  public:
   // Black level for module output
   DEF_FIELD(19, 0, value);
@@ -1203,8 +1142,7 @@ class FrameStitch_BlackLevelOut
 DEF_NAMESPACE_REG(FrameStitch_BlackLevelOut, ping, 0x19004)
 DEF_NAMESPACE_REG(FrameStitch_BlackLevelOut, pong, 0x30fc4)
 
-class FrameStitch_Config0
-    : public hwreg::RegisterBase<FrameStitch_Config0, uint32_t> {
+class FrameStitch_Config0 : public hwreg::RegisterBase<FrameStitch_Config0, uint32_t> {
  public:
   //  The noise profile weights are multiplied by this value to give
   //   expected noise amplitude.
@@ -1217,8 +1155,7 @@ class FrameStitch_Config0
 DEF_NAMESPACE_REG(FrameStitch_Config0, ping, 0x19008)
 DEF_NAMESPACE_REG(FrameStitch_Config0, pong, 0x30fc8)
 
-class FrameStitch_Config1
-    : public hwreg::RegisterBase<FrameStitch_Config1, uint32_t> {
+class FrameStitch_Config1 : public hwreg::RegisterBase<FrameStitch_Config1, uint32_t> {
  public:
   //  The noise profile weights are multiplied by this value to give
   //   expected noise amplitude.
@@ -1232,8 +1169,7 @@ class FrameStitch_Config1
 DEF_NAMESPACE_REG(FrameStitch_Config1, ping, 0x1900c)
 DEF_NAMESPACE_REG(FrameStitch_Config1, pong, 0x30fcc)
 
-class FrameStitch_Config2
-    : public hwreg::RegisterBase<FrameStitch_Config2, uint32_t> {
+class FrameStitch_Config2 : public hwreg::RegisterBase<FrameStitch_Config2, uint32_t> {
  public:
   //  his defines the gradient of the motion alpha ramp. Higher values
   //   mean a steeper ramp and so a more rapid transition between
@@ -1248,8 +1184,7 @@ class FrameStitch_Config2
 DEF_NAMESPACE_REG(FrameStitch_Config2, ping, 0x19010)
 DEF_NAMESPACE_REG(FrameStitch_Config2, pong, 0x30fd0)
 
-class FrameStitch_GainRB
-    : public hwreg::RegisterBase<FrameStitch_GainRB, uint32_t> {
+class FrameStitch_GainRB : public hwreg::RegisterBase<FrameStitch_GainRB, uint32_t> {
  public:
   // Multiplier for color channel R
   DEF_FIELD(11, 0, gain_r);
@@ -1299,8 +1234,7 @@ class FrameStitch_Lm : public hwreg::RegisterBase<FrameStitch_Lm, uint32_t> {
 DEF_NAMESPACE_REG(FrameStitch_Lm, ping, 0x19020)
 DEF_NAMESPACE_REG(FrameStitch_Lm, pong, 0x30fe0)
 
-class FrameStitch_LmMedNoise
-    : public hwreg::RegisterBase<FrameStitch_LmMedNoise, uint32_t> {
+class FrameStitch_LmMedNoise : public hwreg::RegisterBase<FrameStitch_LmMedNoise, uint32_t> {
  public:
   DEF_FIELD(11, 0, lm_med_noise_alpha_thresh);
   DEF_FIELD(27, 16, lm_med_noise_intensity_thresh);
@@ -1318,8 +1252,7 @@ class FrameStitch_LmMcBlendSlope
 DEF_NAMESPACE_REG(FrameStitch_LmMcBlendSlope, ping, 0x19028)
 DEF_NAMESPACE_REG(FrameStitch_LmMcBlendSlope, pong, 0x30fe8)
 
-class FrameStitch_LmMcBlend
-    : public hwreg::RegisterBase<FrameStitch_LmMcBlend, uint32_t> {
+class FrameStitch_LmMcBlend : public hwreg::RegisterBase<FrameStitch_LmMcBlend, uint32_t> {
  public:
   DEF_FIELD(7, 0, lm_mc_blend_thresh);
   DEF_FIELD(27, 16, lm_mc_blend_offset);
@@ -1373,8 +1306,7 @@ class FrameStitch_LmMcMagThreshThresh
 DEF_NAMESPACE_REG(FrameStitch_LmMcMagThreshThresh, ping, 0x19040)
 DEF_NAMESPACE_REG(FrameStitch_LmMcMagThreshThresh, pong, 0x31000)
 
-class FrameStitch_LmMcMag
-    : public hwreg::RegisterBase<FrameStitch_LmMcMag, uint32_t> {
+class FrameStitch_LmMcMag : public hwreg::RegisterBase<FrameStitch_LmMcMag, uint32_t> {
  public:
   DEF_FIELD(11, 0, lm_mc_mag_thresh_offset);
   DEF_FIELD(27, 16, lm_mc_mag_lblend_thresh);
@@ -1383,8 +1315,7 @@ class FrameStitch_LmMcMag
 DEF_NAMESPACE_REG(FrameStitch_LmMcMag, ping, 0x19044)
 DEF_NAMESPACE_REG(FrameStitch_LmMcMag, pong, 0x31004)
 
-class FrameStitch_Config3
-    : public hwreg::RegisterBase<FrameStitch_Config3, uint32_t> {
+class FrameStitch_Config3 : public hwreg::RegisterBase<FrameStitch_Config3, uint32_t> {
  public:
   DEF_FIELD(11, 0, mcoff_wb_offset);
   // Threshold for selection of exposure mask in blending regions.
@@ -1396,8 +1327,7 @@ class FrameStitch_Config3
 DEF_NAMESPACE_REG(FrameStitch_Config3, ping, 0x19048)
 DEF_NAMESPACE_REG(FrameStitch_Config3, pong, 0x31008)
 
-class FrameStitch_Config4
-    : public hwreg::RegisterBase<FrameStitch_Config4, uint32_t> {
+class FrameStitch_Config4 : public hwreg::RegisterBase<FrameStitch_Config4, uint32_t> {
  public:
   DEF_BIT(0, bwb_select);
   DEF_BIT(1, use_3x3_max);
@@ -1410,8 +1340,7 @@ class FrameStitch_Config4
 DEF_NAMESPACE_REG(FrameStitch_Config4, ping, 0x1904c)
 DEF_NAMESPACE_REG(FrameStitch_Config4, pong, 0x3100c)
 
-class FrameStitch_McoffMax0
-    : public hwreg::RegisterBase<FrameStitch_McoffMax0, uint32_t> {
+class FrameStitch_McoffMax0 : public hwreg::RegisterBase<FrameStitch_McoffMax0, uint32_t> {
  public:
   DEF_FIELD(11, 0, mcoff_l_max);
   DEF_FIELD(27, 16, mcoff_m_max);
@@ -1420,8 +1349,7 @@ class FrameStitch_McoffMax0
 DEF_NAMESPACE_REG(FrameStitch_McoffMax0, ping, 0x19050)
 DEF_NAMESPACE_REG(FrameStitch_McoffMax0, pong, 0x31010)
 
-class FrameStitch_McoffMax1
-    : public hwreg::RegisterBase<FrameStitch_McoffMax1, uint32_t> {
+class FrameStitch_McoffMax1 : public hwreg::RegisterBase<FrameStitch_McoffMax1, uint32_t> {
  public:
   DEF_FIELD(11, 0, mcoff_s_max);
   DEF_FIELD(27, 16, mcoff_vs_max);
@@ -1430,8 +1358,7 @@ class FrameStitch_McoffMax1
 DEF_NAMESPACE_REG(FrameStitch_McoffMax1, ping, 0x19054)
 DEF_NAMESPACE_REG(FrameStitch_McoffMax1, pong, 0x31014)
 
-class FrameStitch_McoffScaler0
-    : public hwreg::RegisterBase<FrameStitch_McoffScaler0, uint32_t> {
+class FrameStitch_McoffScaler0 : public hwreg::RegisterBase<FrameStitch_McoffScaler0, uint32_t> {
  public:
   DEF_FIELD(11, 0, mcoff_l_scaler);
   DEF_FIELD(27, 16, mcoff_lm_scaler);
@@ -1440,8 +1367,7 @@ class FrameStitch_McoffScaler0
 DEF_NAMESPACE_REG(FrameStitch_McoffScaler0, ping, 0x19058)
 DEF_NAMESPACE_REG(FrameStitch_McoffScaler0, pong, 0x31018)
 
-class FrameStitch_McoffScaler1
-    : public hwreg::RegisterBase<FrameStitch_McoffScaler1, uint32_t> {
+class FrameStitch_McoffScaler1 : public hwreg::RegisterBase<FrameStitch_McoffScaler1, uint32_t> {
  public:
   DEF_FIELD(11, 0, mcoff_lms_scaler);
   DEF_FIELD(27, 16, mcoff_nc_thresh_low);
@@ -1450,8 +1376,7 @@ class FrameStitch_McoffScaler1
 DEF_NAMESPACE_REG(FrameStitch_McoffScaler1, ping, 0x1905c)
 DEF_NAMESPACE_REG(FrameStitch_McoffScaler1, pong, 0x3101c)
 
-class FrameStitch_McoffNc
-    : public hwreg::RegisterBase<FrameStitch_McoffNc, uint32_t> {
+class FrameStitch_McoffNc : public hwreg::RegisterBase<FrameStitch_McoffNc, uint32_t> {
  public:
   DEF_FIELD(11, 0, mcoff_nc_thresh_high);
   DEF_FIELD(27, 16, mcoff_nc_scale);
@@ -1486,8 +1411,7 @@ class Decompander1 : public hwreg::RegisterBase<Decompander1, uint32_t> {
 DEF_NAMESPACE_REG(Decompander1, ping, 0x19268)
 DEF_NAMESPACE_REG(Decompander1, pong, 0x31228)
 
-class DigitalGain_Gain
-    : public hwreg::RegisterBase<DigitalGain_Gain, uint32_t> {
+class DigitalGain_Gain : public hwreg::RegisterBase<DigitalGain_Gain, uint32_t> {
  public:
   // Gain applied to data in 5.8 format
   DEF_FIELD(12, 0, value);
@@ -1496,8 +1420,7 @@ class DigitalGain_Gain
 DEF_NAMESPACE_REG(DigitalGain_Gain, ping, 0x1926c)
 DEF_NAMESPACE_REG(DigitalGain_Gain, pong, 0x3122c)
 
-class DigitalGain_Offset
-    : public hwreg::RegisterBase<DigitalGain_Offset, uint32_t> {
+class DigitalGain_Offset : public hwreg::RegisterBase<DigitalGain_Offset, uint32_t> {
  public:
   // Data black level
   DEF_FIELD(19, 0, value);
@@ -1506,8 +1429,7 @@ class DigitalGain_Offset
 DEF_NAMESPACE_REG(DigitalGain_Offset, ping, 0x19270)
 DEF_NAMESPACE_REG(DigitalGain_Offset, pong, 0x31230)
 
-class SensorOffsetFe_Offset00
-    : public hwreg::RegisterBase<SensorOffsetFe_Offset00, uint32_t> {
+class SensorOffsetFe_Offset00 : public hwreg::RegisterBase<SensorOffsetFe_Offset00, uint32_t> {
  public:
   // offset offset for color channel 00 (R)
   DEF_FIELD(19, 0, value);
@@ -1516,8 +1438,7 @@ class SensorOffsetFe_Offset00
 DEF_NAMESPACE_REG(SensorOffsetFe_Offset00, ping, 0x19274)
 DEF_NAMESPACE_REG(SensorOffsetFe_Offset00, pong, 0x31234)
 
-class SensorOffsetFe_Offset01
-    : public hwreg::RegisterBase<SensorOffsetFe_Offset01, uint32_t> {
+class SensorOffsetFe_Offset01 : public hwreg::RegisterBase<SensorOffsetFe_Offset01, uint32_t> {
  public:
   // offset offset for color channel 01 (Gr)
   DEF_FIELD(19, 0, value);
@@ -1526,8 +1447,7 @@ class SensorOffsetFe_Offset01
 DEF_NAMESPACE_REG(SensorOffsetFe_Offset01, ping, 0x19278)
 DEF_NAMESPACE_REG(SensorOffsetFe_Offset01, pong, 0x31238)
 
-class SensorOffsetFe_Offset10
-    : public hwreg::RegisterBase<SensorOffsetFe_Offset10, uint32_t> {
+class SensorOffsetFe_Offset10 : public hwreg::RegisterBase<SensorOffsetFe_Offset10, uint32_t> {
  public:
   // offset offset for color channel 10 (Gb)
   DEF_FIELD(19, 0, value);
@@ -1536,8 +1456,7 @@ class SensorOffsetFe_Offset10
 DEF_NAMESPACE_REG(SensorOffsetFe_Offset10, ping, 0x1927c)
 DEF_NAMESPACE_REG(SensorOffsetFe_Offset10, pong, 0x3123c)
 
-class SensorOffsetFe_Offset11
-    : public hwreg::RegisterBase<SensorOffsetFe_Offset11, uint32_t> {
+class SensorOffsetFe_Offset11 : public hwreg::RegisterBase<SensorOffsetFe_Offset11, uint32_t> {
  public:
   // offset offset for color channel 11 (B)
   DEF_FIELD(19, 0, value);
@@ -1546,8 +1465,7 @@ class SensorOffsetFe_Offset11
 DEF_NAMESPACE_REG(SensorOffsetFe_Offset11, ping, 0x19280)
 DEF_NAMESPACE_REG(SensorOffsetFe_Offset11, pong, 0x31240)
 
-class Sqrt_BlackLevelIn
-    : public hwreg::RegisterBase<Sqrt_BlackLevelIn, uint32_t> {
+class Sqrt_BlackLevelIn : public hwreg::RegisterBase<Sqrt_BlackLevelIn, uint32_t> {
  public:
   // input Data black level
   DEF_FIELD(19, 0, value);
@@ -1556,8 +1474,7 @@ class Sqrt_BlackLevelIn
 DEF_NAMESPACE_REG(Sqrt_BlackLevelIn, ping, 0x19284)
 DEF_NAMESPACE_REG(Sqrt_BlackLevelIn, pong, 0x31244)
 
-class Sqrt_BlackLevelOut
-    : public hwreg::RegisterBase<Sqrt_BlackLevelOut, uint32_t> {
+class Sqrt_BlackLevelOut : public hwreg::RegisterBase<Sqrt_BlackLevelOut, uint32_t> {
  public:
   // output Data black level
   DEF_FIELD(15, 0, value);
@@ -1566,8 +1483,7 @@ class Sqrt_BlackLevelOut
 DEF_NAMESPACE_REG(Sqrt_BlackLevelOut, ping, 0x19288)
 DEF_NAMESPACE_REG(Sqrt_BlackLevelOut, pong, 0x31248)
 
-class RawFrontend_Enable
-    : public hwreg::RegisterBase<RawFrontend_Enable, uint32_t> {
+class RawFrontend_Enable : public hwreg::RegisterBase<RawFrontend_Enable, uint32_t> {
  public:
   // Green equalization enable: 0=off, 1=on
   DEF_BIT(0, ge_enable);
@@ -1584,8 +1500,7 @@ class RawFrontend_Enable
 DEF_NAMESPACE_REG(RawFrontend_Enable, ping, 0x1928c)
 DEF_NAMESPACE_REG(RawFrontend_Enable, pong, 0x3124c)
 
-class RawFrontend_DebugSel
-    : public hwreg::RegisterBase<RawFrontend_DebugSel, uint32_t> {
+class RawFrontend_DebugSel : public hwreg::RegisterBase<RawFrontend_DebugSel, uint32_t> {
  public:
   // Debug selection port
   DEF_FIELD(15, 0, value);
@@ -1646,8 +1561,7 @@ class RawFrontend_GreenEqualization1
 DEF_NAMESPACE_REG(RawFrontend_GreenEqualization1, ping, 0x192a0)
 DEF_NAMESPACE_REG(RawFrontend_GreenEqualization1, pong, 0x31260)
 
-class RawFrontend_Misc
-    : public hwreg::RegisterBase<RawFrontend_Misc, uint32_t> {
+class RawFrontend_Misc : public hwreg::RegisterBase<RawFrontend_Misc, uint32_t> {
  public:
   //  Controls the directional nature of the dynamic defect pixel
   //   correction near edges..
@@ -1659,8 +1573,7 @@ class RawFrontend_Misc
 DEF_NAMESPACE_REG(RawFrontend_Misc, ping, 0x192a4)
 DEF_NAMESPACE_REG(RawFrontend_Misc, pong, 0x31264)
 
-class RawFrontend_Thresh
-    : public hwreg::RegisterBase<RawFrontend_Thresh, uint32_t> {
+class RawFrontend_Thresh : public hwreg::RegisterBase<RawFrontend_Thresh, uint32_t> {
  public:
   // Noise threshold for short exposure data
   DEF_FIELD(7, 0, thresh_short);
@@ -1671,8 +1584,7 @@ class RawFrontend_Thresh
 DEF_NAMESPACE_REG(RawFrontend_Thresh, ping, 0x192a8)
 DEF_NAMESPACE_REG(RawFrontend_Thresh, pong, 0x31268)
 
-class RawFrontendNp_ExpThresh
-    : public hwreg::RegisterBase<RawFrontendNp_ExpThresh, uint32_t> {
+class RawFrontendNp_ExpThresh : public hwreg::RegisterBase<RawFrontendNp_ExpThresh, uint32_t> {
  public:
   // Threshold for determining long/short exposure data
   DEF_FIELD(15, 0, value);
@@ -1681,8 +1593,7 @@ class RawFrontendNp_ExpThresh
 DEF_NAMESPACE_REG(RawFrontendNp_ExpThresh, ping, 0x192ac)
 DEF_NAMESPACE_REG(RawFrontendNp_ExpThresh, pong, 0x3126c)
 
-class RawFrontendNp_Ratio
-    : public hwreg::RegisterBase<RawFrontendNp_Ratio, uint32_t> {
+class RawFrontendNp_Ratio : public hwreg::RegisterBase<RawFrontendNp_Ratio, uint32_t> {
  public:
   // Multiplier applied to short exposure data for noise profile calculation
   DEF_FIELD(7, 0, short_ratio);
@@ -1693,8 +1604,7 @@ class RawFrontendNp_Ratio
 DEF_NAMESPACE_REG(RawFrontendNp_Ratio, ping, 0x192b0)
 DEF_NAMESPACE_REG(RawFrontendNp_Ratio, pong, 0x31270)
 
-class RawFrontendNp_NpOff
-    : public hwreg::RegisterBase<RawFrontendNp_NpOff, uint32_t> {
+class RawFrontendNp_NpOff : public hwreg::RegisterBase<RawFrontendNp_NpOff, uint32_t> {
  public:
   // Noise profile black level offset
   DEF_FIELD(6, 0, np_off);
@@ -1707,8 +1617,7 @@ class RawFrontendNp_NpOff
 DEF_NAMESPACE_REG(RawFrontendNp_NpOff, ping, 0x192b4)
 DEF_NAMESPACE_REG(RawFrontendNp_NpOff, pong, 0x31274)
 
-class DefectPixel_PointerReset
-    : public hwreg::RegisterBase<DefectPixel_PointerReset, uint32_t> {
+class DefectPixel_PointerReset : public hwreg::RegisterBase<DefectPixel_PointerReset, uint32_t> {
  public:
   //  Reset static defect-pixel table pointer each frame - set this
   //   when defect-pixel table has been written from mcu
@@ -1718,8 +1627,7 @@ class DefectPixel_PointerReset
 DEF_NAMESPACE_REG(DefectPixel_PointerReset, ping, 0x19338)
 DEF_NAMESPACE_REG(DefectPixel_PointerReset, pong, 0x312f8)
 
-class DefectPixel_Config0
-    : public hwreg::RegisterBase<DefectPixel_Config0, uint32_t> {
+class DefectPixel_Config0 : public hwreg::RegisterBase<DefectPixel_Config0, uint32_t> {
  public:
   //  For debug purposes.  Show reference values which are compared
   //   with actual values to detect bad pixels
@@ -1735,8 +1643,7 @@ class DefectPixel_Config0
 DEF_NAMESPACE_REG(DefectPixel_Config0, ping, 0x1933c)
 DEF_NAMESPACE_REG(DefectPixel_Config0, pong, 0x312fc)
 
-class DefectPixel_Config1
-    : public hwreg::RegisterBase<DefectPixel_Config1, uint32_t> {
+class DefectPixel_Config1 : public hwreg::RegisterBase<DefectPixel_Config1, uint32_t> {
  public:
   // Number of defect-pixels detected
   DEF_FIELD(12, 1, defect_pixel_count);
@@ -1797,8 +1704,7 @@ class Sinter_Config : public hwreg::RegisterBase<Sinter_Config, uint32_t> {
 DEF_NAMESPACE_REG(Sinter_Config, ping, 0x1934c)
 DEF_NAMESPACE_REG(Sinter_Config, pong, 0x3130c)
 
-class Sinter_SadFiltThresh
-    : public hwreg::RegisterBase<Sinter_SadFiltThresh, uint32_t> {
+class Sinter_SadFiltThresh : public hwreg::RegisterBase<Sinter_SadFiltThresh, uint32_t> {
  public:
   // Block match difference filtering threshold
   DEF_FIELD(7, 0, value);
@@ -1818,8 +1724,7 @@ class Sinter_RmCenter : public hwreg::RegisterBase<Sinter_RmCenter, uint32_t> {
 DEF_NAMESPACE_REG(Sinter_RmCenter, ping, 0x19354)
 DEF_NAMESPACE_REG(Sinter_RmCenter, pong, 0x31314)
 
-class Sinter_RmOffCenterMult
-    : public hwreg::RegisterBase<Sinter_RmOffCenterMult, uint32_t> {
+class Sinter_RmOffCenterMult : public hwreg::RegisterBase<Sinter_RmOffCenterMult, uint32_t> {
  public:
   //  Normalizing factor which scales the radial table to the edge of
   //   the image.
@@ -1831,8 +1736,7 @@ class Sinter_RmOffCenterMult
 DEF_NAMESPACE_REG(Sinter_RmOffCenterMult, ping, 0x19358)
 DEF_NAMESPACE_REG(Sinter_RmOffCenterMult, pong, 0x31318)
 
-class Sinter_HorizontalThresh
-    : public hwreg::RegisterBase<Sinter_HorizontalThresh, uint32_t> {
+class Sinter_HorizontalThresh : public hwreg::RegisterBase<Sinter_HorizontalThresh, uint32_t> {
  public:
   // Noise threshold for high horizontal spatial frequencies
   DEF_FIELD(7, 0, thresh_0h);
@@ -1847,8 +1751,7 @@ class Sinter_HorizontalThresh
 DEF_NAMESPACE_REG(Sinter_HorizontalThresh, ping, 0x1935c)
 DEF_NAMESPACE_REG(Sinter_HorizontalThresh, pong, 0x3131c)
 
-class Sinter_VerticalThresh
-    : public hwreg::RegisterBase<Sinter_VerticalThresh, uint32_t> {
+class Sinter_VerticalThresh : public hwreg::RegisterBase<Sinter_VerticalThresh, uint32_t> {
  public:
   // Noise threshold for high vertical spatial frequencies
   DEF_FIELD(7, 0, thresh_0v);
@@ -1878,8 +1781,7 @@ class Sinter_Strength : public hwreg::RegisterBase<Sinter_Strength, uint32_t> {
 DEF_NAMESPACE_REG(Sinter_Strength, ping, 0x19364)
 DEF_NAMESPACE_REG(Sinter_Strength, pong, 0x31324)
 
-class SinterNoiseProfile_Config
-    : public hwreg::RegisterBase<SinterNoiseProfile_Config, uint32_t> {
+class SinterNoiseProfile_Config : public hwreg::RegisterBase<SinterNoiseProfile_Config, uint32_t> {
  public:
   // A global offset that will be added to each of the hlog... values above..
   DEF_FIELD(15, 8, global_offset);
@@ -2002,8 +1904,7 @@ class Temper_Config2 : public hwreg::RegisterBase<Temper_Config2, uint32_t> {
 DEF_NAMESPACE_REG(Temper_Config2, ping, 0x1aa24)
 DEF_NAMESPACE_REG(Temper_Config2, pong, 0x329e4)
 
-class TemperNoiseProfile_
-    : public hwreg::RegisterBase<TemperNoiseProfile_, uint32_t> {
+class TemperNoiseProfile_ : public hwreg::RegisterBase<TemperNoiseProfile_, uint32_t> {
  public:
   // A global offset that will be added to each of the hlog... values above..
   DEF_FIELD(15, 8, global_offset);
@@ -2086,8 +1987,7 @@ class TemperNoiseProfile_NoiseLevel
 DEF_NAMESPACE_REG(TemperNoiseProfile_NoiseLevel, ping, 0x1aa3c)
 DEF_NAMESPACE_REG(TemperNoiseProfile_NoiseLevel, pong, 0x329fc)
 
-class TemperDma_FrameDma
-    : public hwreg::RegisterBase<TemperDma_FrameDma, uint32_t> {
+class TemperDma_FrameDma : public hwreg::RegisterBase<TemperDma_FrameDma, uint32_t> {
  public:
   // This must be set to 1 only in Temper-3 mode
   DEF_BIT(0, frame_write_on_msb_dma);
@@ -2105,8 +2005,7 @@ class TemperDma_FrameDma
 DEF_NAMESPACE_REG(TemperDma_FrameDma, ping, 0x1ab78)
 DEF_NAMESPACE_REG(TemperDma_FrameDma, pong, 0x32b38)
 
-class TemperDma_Format
-    : public hwreg::RegisterBase<TemperDma_Format, uint32_t> {
+class TemperDma_Format : public hwreg::RegisterBase<TemperDma_Format, uint32_t> {
  public:
   // 20: for 16bit data both in T3 and T2 modes
   // 6 : for 12bit data both in T3 and T2 modes
@@ -2116,8 +2015,7 @@ class TemperDma_Format
 DEF_NAMESPACE_REG(TemperDma_Format, ping, 0x1ab7c)
 DEF_NAMESPACE_REG(TemperDma_Format, pong, 0x32b3c)
 
-class TemperDma_BlkStatus
-    : public hwreg::RegisterBase<TemperDma_BlkStatus, uint32_t> {
+class TemperDma_BlkStatus : public hwreg::RegisterBase<TemperDma_BlkStatus, uint32_t> {
  public:
   // The bits are defined as follows:
   //   0     Write FIFO Fail (Full)
@@ -2218,8 +2116,7 @@ class TemperDma_LsbBankBaseReader
 DEF_NAMESPACE_REG(TemperDma_LsbBankBaseReader, ping, 0x1ab90)
 DEF_NAMESPACE_REG(TemperDma_LsbBankBaseReader, pong, 0x32b50)
 
-class TemperDma_LineOffset
-    : public hwreg::RegisterBase<TemperDma_LineOffset, uint32_t> {
+class TemperDma_LineOffset : public hwreg::RegisterBase<TemperDma_LineOffset, uint32_t> {
  public:
   //  Indicates the offset in bytes from the start of one line to the
   //   next line.
@@ -2231,8 +2128,7 @@ class TemperDma_LineOffset
 DEF_NAMESPACE_REG(TemperDma_LineOffset, ping, 0x1ab94)
 DEF_NAMESPACE_REG(TemperDma_LineOffset, pong, 0x32b54)
 
-class TemperDma_LinetickEol
-    : public hwreg::RegisterBase<TemperDma_LinetickEol, uint32_t> {
+class TemperDma_LinetickEol : public hwreg::RegisterBase<TemperDma_LinetickEol, uint32_t> {
  public:
   //  linetick start/end of line control. 0 = use start of line, 1 =
   //   use end of line
@@ -2242,8 +2138,7 @@ class TemperDma_LinetickEol
 DEF_NAMESPACE_REG(TemperDma_LinetickEol, ping, 0x1ab98)
 DEF_NAMESPACE_REG(TemperDma_LinetickEol, pong, 0x32b58)
 
-class TemperDma_Config
-    : public hwreg::RegisterBase<TemperDma_Config, uint32_t> {
+class TemperDma_Config : public hwreg::RegisterBase<TemperDma_Config, uint32_t> {
  public:
   //  number of lines to write from base address before wrapping back
   //   to base address
@@ -2255,8 +2150,7 @@ class TemperDma_Config
 DEF_NAMESPACE_REG(TemperDma_Config, ping, 0x1ab9c)
 DEF_NAMESPACE_REG(TemperDma_Config, pong, 0x32b5c)
 
-class TemperDma_Linetick
-    : public hwreg::RegisterBase<TemperDma_Linetick, uint32_t> {
+class TemperDma_Linetick : public hwreg::RegisterBase<TemperDma_Linetick, uint32_t> {
  public:
   // line number of first linetick. 0  = no linetick
   DEF_FIELD(15, 0, linetick_first);
@@ -2267,8 +2161,7 @@ class TemperDma_Linetick
 DEF_NAMESPACE_REG(TemperDma_Linetick, ping, 0x1aba0)
 DEF_NAMESPACE_REG(TemperDma_Linetick, pong, 0x32b60)
 
-class TemperDma_LinetickDelay
-    : public hwreg::RegisterBase<TemperDma_LinetickDelay, uint32_t> {
+class TemperDma_LinetickDelay : public hwreg::RegisterBase<TemperDma_LinetickDelay, uint32_t> {
  public:
   // linetick delay in vcke cycles to add
   DEF_FIELD(15, 0, value);
@@ -2277,8 +2170,7 @@ class TemperDma_LinetickDelay
 DEF_NAMESPACE_REG(TemperDma_LinetickDelay, ping, 0x1aba4)
 DEF_NAMESPACE_REG(TemperDma_LinetickDelay, pong, 0x32b64)
 
-class TemperDma_AxiWriter
-    : public hwreg::RegisterBase<TemperDma_AxiWriter, uint32_t> {
+class TemperDma_AxiWriter : public hwreg::RegisterBase<TemperDma_AxiWriter, uint32_t> {
  public:
   // value to send for awid, wid and expected on bid.
   DEF_FIELD(3, 0, msb_writer_axi_id_value);
@@ -2310,8 +2202,7 @@ class TemperDma_AxiWriter
 DEF_NAMESPACE_REG(TemperDma_AxiWriter, ping, 0x1aba8)
 DEF_NAMESPACE_REG(TemperDma_AxiWriter, pong, 0x32b68)
 
-class TemperDma_AxiReader
-    : public hwreg::RegisterBase<TemperDma_AxiReader, uint32_t> {
+class TemperDma_AxiReader : public hwreg::RegisterBase<TemperDma_AxiReader, uint32_t> {
  public:
   // value to send for awid, wid and expected on bid. Good default = 0000
   DEF_FIELD(3, 0, msb_reader_axi_id_value);
@@ -2340,8 +2231,7 @@ DEF_NAMESPACE_REG(TemperDma_AxiReader, ping, 0x1abac)
 DEF_NAMESPACE_REG(TemperDma_AxiReader, pong, 0x32b6c)
 
 class ChromaticAberrationCorrection_Config
-    : public hwreg::RegisterBase<ChromaticAberrationCorrection_Config,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ChromaticAberrationCorrection_Config, uint32_t> {
  public:
   //  extra shift of mesh data: 00- no shift, 01- shift left by 1, ...,
   //   11- shift left by 3, used to increase the range at cost of
@@ -2369,8 +2259,7 @@ DEF_NAMESPACE_REG(ChromaticAberrationCorrection_Mesh, ping, 0x1abb4)
 DEF_NAMESPACE_REG(ChromaticAberrationCorrection_Mesh, pong, 0x32b74)
 
 class ChromaticAberrationCorrection_Offset
-    : public hwreg::RegisterBase<ChromaticAberrationCorrection_Offset,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ChromaticAberrationCorrection_Offset, uint32_t> {
  public:
   //  offset between lines of tiles, can differ from mesh_width, but
   //   its safe to keep same as mesh width
@@ -2383,8 +2272,7 @@ DEF_NAMESPACE_REG(ChromaticAberrationCorrection_Offset, ping, 0x1abb8)
 DEF_NAMESPACE_REG(ChromaticAberrationCorrection_Offset, pong, 0x32b78)
 
 class ChromaticAberrationCorrection_MeshReload
-    : public hwreg::RegisterBase<ChromaticAberrationCorrection_MeshReload,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ChromaticAberrationCorrection_MeshReload, uint32_t> {
  public:
   //  0-1 triggers mesh and filter coefficient reload in the internal
   //       cache. Used after RAM is updated by CPU Chromatic Aberration
@@ -2395,8 +2283,7 @@ class ChromaticAberrationCorrection_MeshReload
 DEF_NAMESPACE_REG(ChromaticAberrationCorrection_MeshReload, ping, 0x1abbc)
 DEF_NAMESPACE_REG(ChromaticAberrationCorrection_MeshReload, pong, 0x32b7c)
 
-class SquareBe_BlackLevelIn
-    : public hwreg::RegisterBase<SquareBe_BlackLevelIn, uint32_t> {
+class SquareBe_BlackLevelIn : public hwreg::RegisterBase<SquareBe_BlackLevelIn, uint32_t> {
  public:
   // input Data black level
   DEF_FIELD(15, 0, value);
@@ -2405,8 +2292,7 @@ class SquareBe_BlackLevelIn
 DEF_NAMESPACE_REG(SquareBe_BlackLevelIn, ping, 0x1abc0)
 DEF_NAMESPACE_REG(SquareBe_BlackLevelIn, pong, 0x32b80)
 
-class SquareBe_BlackLevelOut
-    : public hwreg::RegisterBase<SquareBe_BlackLevelOut, uint32_t> {
+class SquareBe_BlackLevelOut : public hwreg::RegisterBase<SquareBe_BlackLevelOut, uint32_t> {
  public:
   // output Data black level
   DEF_FIELD(19, 0, value);
@@ -2455,8 +2341,7 @@ class SensorOffsetPreShading_Offset11
 DEF_NAMESPACE_REG(SensorOffsetPreShading_Offset11, ping, 0x1abd4)
 DEF_NAMESPACE_REG(SensorOffsetPreShading_Offset11, pong, 0x32b94)
 
-class RadialShading_Enable
-    : public hwreg::RegisterBase<RadialShading_Enable, uint32_t> {
+class RadialShading_Enable : public hwreg::RegisterBase<RadialShading_Enable, uint32_t> {
  public:
   // Lens shading correction enable: 0=off, 1=on
   DEF_BIT(0, value);
@@ -2465,8 +2350,7 @@ class RadialShading_Enable
 DEF_NAMESPACE_REG(RadialShading_Enable, ping, 0x1abd8)
 DEF_NAMESPACE_REG(RadialShading_Enable, pong, 0x32b98)
 
-class RadialShading_CenterR
-    : public hwreg::RegisterBase<RadialShading_CenterR, uint32_t> {
+class RadialShading_CenterR : public hwreg::RegisterBase<RadialShading_CenterR, uint32_t> {
  public:
   // Center x coordinate of the red shading map
   DEF_FIELD(15, 0, centerr_x);
@@ -2477,8 +2361,7 @@ class RadialShading_CenterR
 DEF_NAMESPACE_REG(RadialShading_CenterR, ping, 0x1abdc)
 DEF_NAMESPACE_REG(RadialShading_CenterR, pong, 0x32b9c)
 
-class RadialShading_CenterG
-    : public hwreg::RegisterBase<RadialShading_CenterG, uint32_t> {
+class RadialShading_CenterG : public hwreg::RegisterBase<RadialShading_CenterG, uint32_t> {
  public:
   // Center x coordinate of the green shading map
   DEF_FIELD(15, 0, centerg_x);
@@ -2489,8 +2372,7 @@ class RadialShading_CenterG
 DEF_NAMESPACE_REG(RadialShading_CenterG, ping, 0x1abe0)
 DEF_NAMESPACE_REG(RadialShading_CenterG, pong, 0x32ba0)
 
-class RadialShading_CenterB
-    : public hwreg::RegisterBase<RadialShading_CenterB, uint32_t> {
+class RadialShading_CenterB : public hwreg::RegisterBase<RadialShading_CenterB, uint32_t> {
  public:
   // Center x coordinate of the blue shading map
   DEF_FIELD(15, 0, centerb_x);
@@ -2501,8 +2383,7 @@ class RadialShading_CenterB
 DEF_NAMESPACE_REG(RadialShading_CenterB, ping, 0x1abe4)
 DEF_NAMESPACE_REG(RadialShading_CenterB, pong, 0x32ba4)
 
-class RadialShading_CenterIr
-    : public hwreg::RegisterBase<RadialShading_CenterIr, uint32_t> {
+class RadialShading_CenterIr : public hwreg::RegisterBase<RadialShading_CenterIr, uint32_t> {
  public:
   // Center x coordinate of the IR shading map
   DEF_FIELD(15, 0, centerir_x);
@@ -2585,8 +2466,7 @@ class RadialShading_OffCenterMultir
 DEF_NAMESPACE_REG(RadialShading_OffCenterMultir, ping, 0x1abf8)
 DEF_NAMESPACE_REG(RadialShading_OffCenterMultir, pong, 0x32bb8)
 
-class MeshShading_Config
-    : public hwreg::RegisterBase<MeshShading_Config, uint32_t> {
+class MeshShading_Config : public hwreg::RegisterBase<MeshShading_Config, uint32_t> {
  public:
   // Selects the precision and maximal gain range of mesh shading correction
   //  Gain range:    00- 0..2; 01- 0..4; 02- 0..8; 03- 0..16; 04- 1..2;
@@ -2622,8 +2502,7 @@ class MeshShading_Config
 DEF_NAMESPACE_REG(MeshShading_Config, ping, 0x1abfc)
 DEF_NAMESPACE_REG(MeshShading_Config, pong, 0x32bbc)
 
-class MeshShading_MeshReload
-    : public hwreg::RegisterBase<MeshShading_MeshReload, uint32_t> {
+class MeshShading_MeshReload : public hwreg::RegisterBase<MeshShading_MeshReload, uint32_t> {
  public:
   // 0-1 triggers cache reload
   DEF_BIT(0, value);
@@ -2632,8 +2511,7 @@ class MeshShading_MeshReload
 DEF_NAMESPACE_REG(MeshShading_MeshReload, ping, 0x1ac00)
 DEF_NAMESPACE_REG(MeshShading_MeshReload, pong, 0x32bc0)
 
-class MeshShading_MeshAlphaBank
-    : public hwreg::RegisterBase<MeshShading_MeshAlphaBank, uint32_t> {
+class MeshShading_MeshAlphaBank : public hwreg::RegisterBase<MeshShading_MeshAlphaBank, uint32_t> {
  public:
   //  Bank selection for R blend: 0: 0+1; 1: 1+2; 2: 2:3; 3: 3+0;
   //   4:0+2; 5: 1+3; 6,7: reserved
@@ -2652,8 +2530,7 @@ class MeshShading_MeshAlphaBank
 DEF_NAMESPACE_REG(MeshShading_MeshAlphaBank, ping, 0x1ac04)
 DEF_NAMESPACE_REG(MeshShading_MeshAlphaBank, pong, 0x32bc4)
 
-class MeshShading_MeshAlpha
-    : public hwreg::RegisterBase<MeshShading_MeshAlpha, uint32_t> {
+class MeshShading_MeshAlpha : public hwreg::RegisterBase<MeshShading_MeshAlpha, uint32_t> {
  public:
   // Alpha blend coeff for R
   DEF_FIELD(7, 0, mesh_alpha_r);
@@ -2668,8 +2545,7 @@ class MeshShading_MeshAlpha
 DEF_NAMESPACE_REG(MeshShading_MeshAlpha, ping, 0x1ac08)
 DEF_NAMESPACE_REG(MeshShading_MeshAlpha, pong, 0x32bc8)
 
-class MeshShading_MeshStrength
-    : public hwreg::RegisterBase<MeshShading_MeshStrength, uint32_t> {
+class MeshShading_MeshStrength : public hwreg::RegisterBase<MeshShading_MeshStrength, uint32_t> {
  public:
   //  Mesh strength in 4.12 format, e.g. 0 - no correction, 4096 -
   //   correction to match mesh data. Can be used to reduce shading
@@ -2680,8 +2556,7 @@ class MeshShading_MeshStrength
 DEF_NAMESPACE_REG(MeshShading_MeshStrength, ping, 0x1ac0c)
 DEF_NAMESPACE_REG(MeshShading_MeshStrength, pong, 0x32bcc)
 
-class WhiteBalance_Gain0
-    : public hwreg::RegisterBase<WhiteBalance_Gain0, uint32_t> {
+class WhiteBalance_Gain0 : public hwreg::RegisterBase<WhiteBalance_Gain0, uint32_t> {
  public:
   // Multiplier for color channel 00 (R)
   DEF_FIELD(11, 0, gain_00);
@@ -2692,8 +2567,7 @@ class WhiteBalance_Gain0
 DEF_NAMESPACE_REG(WhiteBalance_Gain0, ping, 0x1ac10)
 DEF_NAMESPACE_REG(WhiteBalance_Gain0, pong, 0x32bd0)
 
-class WhiteBalance_Gain1
-    : public hwreg::RegisterBase<WhiteBalance_Gain1, uint32_t> {
+class WhiteBalance_Gain1 : public hwreg::RegisterBase<WhiteBalance_Gain1, uint32_t> {
  public:
   // Multiplier for color channel 10 (Gb)
   DEF_FIELD(11, 0, gain_10);
@@ -2704,8 +2578,7 @@ class WhiteBalance_Gain1
 DEF_NAMESPACE_REG(WhiteBalance_Gain1, ping, 0x1ac14)
 DEF_NAMESPACE_REG(WhiteBalance_Gain1, pong, 0x32bd4)
 
-class WhiteBalanceAexp_Gain0
-    : public hwreg::RegisterBase<WhiteBalanceAexp_Gain0, uint32_t> {
+class WhiteBalanceAexp_Gain0 : public hwreg::RegisterBase<WhiteBalanceAexp_Gain0, uint32_t> {
  public:
   // Multiplier for color channel 00 (R)
   DEF_FIELD(11, 0, gain_00);
@@ -2716,8 +2589,7 @@ class WhiteBalanceAexp_Gain0
 DEF_NAMESPACE_REG(WhiteBalanceAexp_Gain0, ping, 0x1ac18)
 DEF_NAMESPACE_REG(WhiteBalanceAexp_Gain0, pong, 0x32bd8)
 
-class WhiteBalanceAexp_Gain1
-    : public hwreg::RegisterBase<WhiteBalanceAexp_Gain1, uint32_t> {
+class WhiteBalanceAexp_Gain1 : public hwreg::RegisterBase<WhiteBalanceAexp_Gain1, uint32_t> {
  public:
   // Multiplier for color channel 10 (Gb)
   DEF_FIELD(11, 0, gain_10);
@@ -2737,8 +2609,7 @@ class IridixGain_Gain : public hwreg::RegisterBase<IridixGain_Gain, uint32_t> {
 DEF_NAMESPACE_REG(IridixGain_Gain, ping, 0x1ac20)
 DEF_NAMESPACE_REG(IridixGain_Gain, pong, 0x32be0)
 
-class IridixGain_Offset
-    : public hwreg::RegisterBase<IridixGain_Offset, uint32_t> {
+class IridixGain_Offset : public hwreg::RegisterBase<IridixGain_Offset, uint32_t> {
  public:
   // Data black level
   DEF_FIELD(19, 0, value);
@@ -2784,8 +2655,7 @@ class Iridix_Config0 : public hwreg::RegisterBase<Iridix_Config0, uint32_t> {
 DEF_NAMESPACE_REG(Iridix_Config0, ping, 0x1ac2c)
 DEF_NAMESPACE_REG(Iridix_Config0, pong, 0x32bec)
 
-class Iridix_BlackLevel
-    : public hwreg::RegisterBase<Iridix_BlackLevel, uint32_t> {
+class Iridix_BlackLevel : public hwreg::RegisterBase<Iridix_BlackLevel, uint32_t> {
  public:
   // Iridix black level. Values below this will not be affected by Iridix.
   DEF_FIELD(19, 0, value);
@@ -2794,8 +2664,7 @@ class Iridix_BlackLevel
 DEF_NAMESPACE_REG(Iridix_BlackLevel, ping, 0x1ac30)
 DEF_NAMESPACE_REG(Iridix_BlackLevel, pong, 0x32bf0)
 
-class Iridix_WhiteLevel
-    : public hwreg::RegisterBase<Iridix_WhiteLevel, uint32_t> {
+class Iridix_WhiteLevel : public hwreg::RegisterBase<Iridix_WhiteLevel, uint32_t> {
  public:
   // Iridix white level. Values above this will not be affected by Iridix.
   DEF_FIELD(19, 0, value);
@@ -2813,8 +2682,7 @@ class Iridix_CollectionCorrection
 DEF_NAMESPACE_REG(Iridix_CollectionCorrection, ping, 0x1ac38)
 DEF_NAMESPACE_REG(Iridix_CollectionCorrection, pong, 0x32bf8)
 
-class Iridix_PerceptControl
-    : public hwreg::RegisterBase<Iridix_PerceptControl, uint32_t> {
+class Iridix_PerceptControl : public hwreg::RegisterBase<Iridix_PerceptControl, uint32_t> {
  public:
   //  Iridix gamma processing select: 0=pass through 1=gamma_dl 2=sqrt
   //   3=gamma_lut.
@@ -2829,8 +2697,7 @@ class Iridix_PerceptControl
 DEF_NAMESPACE_REG(Iridix_PerceptControl, ping, 0x1ac3c)
 DEF_NAMESPACE_REG(Iridix_PerceptControl, pong, 0x32bfc)
 
-class Iridix_StrengthOutroi
-    : public hwreg::RegisterBase<Iridix_StrengthOutroi, uint32_t> {
+class Iridix_StrengthOutroi : public hwreg::RegisterBase<Iridix_StrengthOutroi, uint32_t> {
  public:
   // Manual Strength value for outside of ROI
   DEF_FIELD(9, 0, value);
@@ -2839,8 +2706,7 @@ class Iridix_StrengthOutroi
 DEF_NAMESPACE_REG(Iridix_StrengthOutroi, ping, 0x1ac40)
 DEF_NAMESPACE_REG(Iridix_StrengthOutroi, pong, 0x32c00)
 
-class Iridix_HorizontalRoi
-    : public hwreg::RegisterBase<Iridix_HorizontalRoi, uint32_t> {
+class Iridix_HorizontalRoi : public hwreg::RegisterBase<Iridix_HorizontalRoi, uint32_t> {
  public:
   // Horizontal starting point of ROI
   DEF_FIELD(15, 0, roi_hor_start);
@@ -2851,8 +2717,7 @@ class Iridix_HorizontalRoi
 DEF_NAMESPACE_REG(Iridix_HorizontalRoi, ping, 0x1ac44)
 DEF_NAMESPACE_REG(Iridix_HorizontalRoi, pong, 0x32c04)
 
-class Iridix_VerticalRoi
-    : public hwreg::RegisterBase<Iridix_VerticalRoi, uint32_t> {
+class Iridix_VerticalRoi : public hwreg::RegisterBase<Iridix_VerticalRoi, uint32_t> {
  public:
   // Vertical starting point of ROI
   DEF_FIELD(15, 0, roi_ver_start);
@@ -2905,8 +2770,7 @@ class Iridix_RevAlpha : public hwreg::RegisterBase<Iridix_RevAlpha, uint32_t> {
 DEF_NAMESPACE_REG(Iridix_RevAlpha, ping, 0x1ac58)
 DEF_NAMESPACE_REG(Iridix_RevAlpha, pong, 0x32c18)
 
-class Iridix_ContextNo
-    : public hwreg::RegisterBase<Iridix_ContextNo, uint32_t> {
+class Iridix_ContextNo : public hwreg::RegisterBase<Iridix_ContextNo, uint32_t> {
  public:
   // Context id of a input Frame
   DEF_FIELD(1, 0, value);
@@ -2946,8 +2810,7 @@ class Iridix_Gain2 : public hwreg::RegisterBase<Iridix_Gain2, uint32_t> {
 DEF_NAMESPACE_REG(Iridix_Gain2, ping, 0x1ac68)
 DEF_NAMESPACE_REG(Iridix_Gain2, pong, 0x32c28)
 
-class Iridix_GtmSelect
-    : public hwreg::RegisterBase<Iridix_GtmSelect, uint32_t> {
+class Iridix_GtmSelect : public hwreg::RegisterBase<Iridix_GtmSelect, uint32_t> {
  public:
   // Global Tone map select : 0 : Local TM 1: Full Global TM
   DEF_BIT(0, value);
@@ -2956,8 +2819,7 @@ class Iridix_GtmSelect
 DEF_NAMESPACE_REG(Iridix_GtmSelect, ping, 0x1ac6c)
 DEF_NAMESPACE_REG(Iridix_GtmSelect, pong, 0x32c2c)
 
-class DemosaicRgb_Slope
-    : public hwreg::RegisterBase<DemosaicRgb_Slope, uint32_t> {
+class DemosaicRgb_Slope : public hwreg::RegisterBase<DemosaicRgb_Slope, uint32_t> {
  public:
   //  Slope of vertical/horizontal blending threshold in 4.4
   //   logarithmic format.
@@ -2982,8 +2844,7 @@ class DemosaicRgb_Slope
 DEF_NAMESPACE_REG(DemosaicRgb_Slope, ping, 0x1ae7c)
 DEF_NAMESPACE_REG(DemosaicRgb_Slope, pong, 0x32e3c)
 
-class DemosaicRgb_SatSlope
-    : public hwreg::RegisterBase<DemosaicRgb_SatSlope, uint32_t> {
+class DemosaicRgb_SatSlope : public hwreg::RegisterBase<DemosaicRgb_SatSlope, uint32_t> {
  public:
   // Slope of saturation blending threshold in linear format 2.6
   DEF_FIELD(7, 0, value);
@@ -2992,8 +2853,7 @@ class DemosaicRgb_SatSlope
 DEF_NAMESPACE_REG(DemosaicRgb_SatSlope, ping, 0x1ae80)
 DEF_NAMESPACE_REG(DemosaicRgb_SatSlope, pong, 0x32e40)
 
-class DemosaicRgb_Threshold0
-    : public hwreg::RegisterBase<DemosaicRgb_Threshold0, uint32_t> {
+class DemosaicRgb_Threshold0 : public hwreg::RegisterBase<DemosaicRgb_Threshold0, uint32_t> {
  public:
   // Threshold for the range of vertical/horizontal blending
   //      The threshold defines the difference of vertical and
@@ -3020,8 +2880,7 @@ class DemosaicRgb_Threshold0
 DEF_NAMESPACE_REG(DemosaicRgb_Threshold0, ping, 0x1ae84)
 DEF_NAMESPACE_REG(DemosaicRgb_Threshold0, pong, 0x32e44)
 
-class DemosaicRgb_Threshold1
-    : public hwreg::RegisterBase<DemosaicRgb_Threshold1, uint32_t> {
+class DemosaicRgb_Threshold1 : public hwreg::RegisterBase<DemosaicRgb_Threshold1, uint32_t> {
  public:
   // Threshold for the range of VH-AA blending.
   //   The threshold defines the difference of VH and AA gradients at
@@ -3039,8 +2898,7 @@ class DemosaicRgb_Threshold1
 DEF_NAMESPACE_REG(DemosaicRgb_Threshold1, ping, 0x1ae88)
 DEF_NAMESPACE_REG(DemosaicRgb_Threshold1, pong, 0x32e48)
 
-class DemosaicRgb_Threshold2
-    : public hwreg::RegisterBase<DemosaicRgb_Threshold2, uint32_t> {
+class DemosaicRgb_Threshold2 : public hwreg::RegisterBase<DemosaicRgb_Threshold2, uint32_t> {
  public:
   // Threshold for the range of saturation blending  in signed 2.9 format
   DEF_FIELD(11, 0, sat_thresh);
@@ -3051,8 +2909,7 @@ class DemosaicRgb_Threshold2
 DEF_NAMESPACE_REG(DemosaicRgb_Threshold2, ping, 0x1ae8c)
 DEF_NAMESPACE_REG(DemosaicRgb_Threshold2, pong, 0x32e4c)
 
-class DemosaicRgb_Offset0
-    : public hwreg::RegisterBase<DemosaicRgb_Offset0, uint32_t> {
+class DemosaicRgb_Offset0 : public hwreg::RegisterBase<DemosaicRgb_Offset0, uint32_t> {
  public:
   // Offset for vertical/horizontal blending threshold
   DEF_FIELD(11, 0, vh_offset);
@@ -3069,8 +2926,7 @@ class DemosaicRgb_Offset0
 DEF_NAMESPACE_REG(DemosaicRgb_Offset0, ping, 0x1ae90)
 DEF_NAMESPACE_REG(DemosaicRgb_Offset0, pong, 0x32e50)
 
-class DemosaicRgb_Offset1
-    : public hwreg::RegisterBase<DemosaicRgb_Offset1, uint32_t> {
+class DemosaicRgb_Offset1 : public hwreg::RegisterBase<DemosaicRgb_Offset1, uint32_t> {
  public:
   //  Offset for VH-AA blending threshold. This register has great
   //   impact on how VA Thresh is used.
@@ -3087,8 +2943,7 @@ class DemosaicRgb_Offset1
 DEF_NAMESPACE_REG(DemosaicRgb_Offset1, ping, 0x1ae94)
 DEF_NAMESPACE_REG(DemosaicRgb_Offset1, pong, 0x32e54)
 
-class DemosaicRgb_Offset2
-    : public hwreg::RegisterBase<DemosaicRgb_Offset2, uint32_t> {
+class DemosaicRgb_Offset2 : public hwreg::RegisterBase<DemosaicRgb_Offset2, uint32_t> {
  public:
   // Offset for saturation blending threshold in signed 2.9 format
   DEF_FIELD(11, 0, sat_offset);
@@ -3113,8 +2968,7 @@ class DemosaicRgb_SharpenAlternate
 DEF_NAMESPACE_REG(DemosaicRgb_SharpenAlternate, ping, 0x1ae9c)
 DEF_NAMESPACE_REG(DemosaicRgb_SharpenAlternate, pong, 0x32e5c)
 
-class DemosaicRgb_DmscConfig
-    : public hwreg::RegisterBase<DemosaicRgb_DmscConfig, uint32_t> {
+class DemosaicRgb_DmscConfig : public hwreg::RegisterBase<DemosaicRgb_DmscConfig, uint32_t> {
  public:
   // Debug output select. Set to 0x00 for normal operation.
   DEF_FIELD(7, 0, value);
@@ -3123,8 +2977,7 @@ class DemosaicRgb_DmscConfig
 DEF_NAMESPACE_REG(DemosaicRgb_DmscConfig, ping, 0x1aea0)
 DEF_NAMESPACE_REG(DemosaicRgb_DmscConfig, pong, 0x32e60)
 
-class DemosaicRgb_AlphaChannel
-    : public hwreg::RegisterBase<DemosaicRgb_AlphaChannel, uint32_t> {
+class DemosaicRgb_AlphaChannel : public hwreg::RegisterBase<DemosaicRgb_AlphaChannel, uint32_t> {
  public:
   // Threshold for the range of AC blending in signed 2.9 format
   DEF_FIELD(11, 0, ac_thresh);
@@ -3135,8 +2988,7 @@ class DemosaicRgb_AlphaChannel
 DEF_NAMESPACE_REG(DemosaicRgb_AlphaChannel, ping, 0x1aea4)
 DEF_NAMESPACE_REG(DemosaicRgb_AlphaChannel, pong, 0x32e64)
 
-class DemosaicRgb_FalseColor
-    : public hwreg::RegisterBase<DemosaicRgb_FalseColor, uint32_t> {
+class DemosaicRgb_FalseColor : public hwreg::RegisterBase<DemosaicRgb_FalseColor, uint32_t> {
  public:
   // Slope (strength) of false color correction
   DEF_FIELD(7, 0, fc_slope);
@@ -3151,8 +3003,7 @@ class DemosaicRgb_FalseColor
 DEF_NAMESPACE_REG(DemosaicRgb_FalseColor, ping, 0x1aea8)
 DEF_NAMESPACE_REG(DemosaicRgb_FalseColor, pong, 0x32e68)
 
-class DemosaicRgb_NpOff
-    : public hwreg::RegisterBase<DemosaicRgb_NpOff, uint32_t> {
+class DemosaicRgb_NpOff : public hwreg::RegisterBase<DemosaicRgb_NpOff, uint32_t> {
  public:
   // Noise profile black level offset
   DEF_FIELD(6, 0, np_off);
@@ -3165,8 +3016,7 @@ class DemosaicRgb_NpOff
 DEF_NAMESPACE_REG(DemosaicRgb_NpOff, ping, 0x1aeac)
 DEF_NAMESPACE_REG(DemosaicRgb_NpOff, pong, 0x32e6c)
 
-class DemosaicRgb_Config11
-    : public hwreg::RegisterBase<DemosaicRgb_Config11, uint32_t> {
+class DemosaicRgb_Config11 : public hwreg::RegisterBase<DemosaicRgb_Config11, uint32_t> {
  public:
   // Sharpen strength for L_Ld in unsigned 4.4 format
   DEF_FIELD(7, 0, sharp_alt_ld);
@@ -3181,8 +3031,7 @@ class DemosaicRgb_Config11
 DEF_NAMESPACE_REG(DemosaicRgb_Config11, ping, 0x1aeb0)
 DEF_NAMESPACE_REG(DemosaicRgb_Config11, pong, 0x32e70)
 
-class DemosaicRgb_MinDStrength
-    : public hwreg::RegisterBase<DemosaicRgb_MinDStrength, uint32_t> {
+class DemosaicRgb_MinDStrength : public hwreg::RegisterBase<DemosaicRgb_MinDStrength, uint32_t> {
  public:
   //  Min threshold for the directional L_L in signed 2's complement
   //   s.12 format
@@ -3192,8 +3041,7 @@ class DemosaicRgb_MinDStrength
 DEF_NAMESPACE_REG(DemosaicRgb_MinDStrength, ping, 0x1aeb4)
 DEF_NAMESPACE_REG(DemosaicRgb_MinDStrength, pong, 0x32e74)
 
-class DemosaicRgb_MinUdStrength
-    : public hwreg::RegisterBase<DemosaicRgb_MinUdStrength, uint32_t> {
+class DemosaicRgb_MinUdStrength : public hwreg::RegisterBase<DemosaicRgb_MinUdStrength, uint32_t> {
  public:
   //  Min threshold for the un-directional L_Lu in signed 2's
   //   complement s.12 format
@@ -3213,8 +3061,7 @@ class DemosaicRgb_SharpenAlgSelect
 DEF_NAMESPACE_REG(DemosaicRgb_SharpenAlgSelect, ping, 0x1aebc)
 DEF_NAMESPACE_REG(DemosaicRgb_SharpenAlgSelect, pong, 0x32e7c)
 
-class DemosaicRgb_Config12
-    : public hwreg::RegisterBase<DemosaicRgb_Config12, uint32_t> {
+class DemosaicRgb_Config12 : public hwreg::RegisterBase<DemosaicRgb_Config12, uint32_t> {
  public:
   // Slope of undefined blending threshold in 4.4 logarithmic format
   DEF_FIELD(7, 0, uu_sh_slope);
@@ -3229,8 +3076,7 @@ class DemosaicRgb_Config12
 DEF_NAMESPACE_REG(DemosaicRgb_Config12, ping, 0x1aec0)
 DEF_NAMESPACE_REG(DemosaicRgb_Config12, pong, 0x32e80)
 
-class DemosaicRgb_UuSh
-    : public hwreg::RegisterBase<DemosaicRgb_UuSh, uint32_t> {
+class DemosaicRgb_UuSh : public hwreg::RegisterBase<DemosaicRgb_UuSh, uint32_t> {
  public:
   // Threshold for the range of undefined blending
   DEF_FIELD(11, 0, uu_sh_thresh);
@@ -3241,8 +3087,7 @@ class DemosaicRgb_UuSh
 DEF_NAMESPACE_REG(DemosaicRgb_UuSh, ping, 0x1aec4)
 DEF_NAMESPACE_REG(DemosaicRgb_UuSh, pong, 0x32e84)
 
-class DemosaicRgb_DetSlope
-    : public hwreg::RegisterBase<DemosaicRgb_DetSlope, uint32_t> {
+class DemosaicRgb_DetSlope : public hwreg::RegisterBase<DemosaicRgb_DetSlope, uint32_t> {
  public:
   // Control the ramp of the linear thresholding for the low green detector
   DEF_FIELD(15, 0, lg_det_slope);
@@ -3253,8 +3098,7 @@ class DemosaicRgb_DetSlope
 DEF_NAMESPACE_REG(DemosaicRgb_DetSlope, ping, 0x1aec8)
 DEF_NAMESPACE_REG(DemosaicRgb_DetSlope, pong, 0x32e88)
 
-class DemosaicRgb_MaxD
-    : public hwreg::RegisterBase<DemosaicRgb_MaxD, uint32_t> {
+class DemosaicRgb_MaxD : public hwreg::RegisterBase<DemosaicRgb_MaxD, uint32_t> {
  public:
   //  Max threshold for the directional L_L in signed 2's complement
   //   s1+0.12 format
@@ -3267,8 +3111,7 @@ class DemosaicRgb_MaxD
 DEF_NAMESPACE_REG(DemosaicRgb_MaxD, ping, 0x1aecc)
 DEF_NAMESPACE_REG(DemosaicRgb_MaxD, pong, 0x32e8c)
 
-class DemosaicRgb_LumaLowD
-    : public hwreg::RegisterBase<DemosaicRgb_LumaLowD, uint32_t> {
+class DemosaicRgb_LumaLowD : public hwreg::RegisterBase<DemosaicRgb_LumaLowD, uint32_t> {
  public:
   // Intensity values above this value will be sharpen
   DEF_FIELD(11, 0, luma_thresh_low_d);
@@ -3279,8 +3122,7 @@ class DemosaicRgb_LumaLowD
 DEF_NAMESPACE_REG(DemosaicRgb_LumaLowD, ping, 0x1aed0)
 DEF_NAMESPACE_REG(DemosaicRgb_LumaLowD, pong, 0x32e90)
 
-class DemosaicRgb_LumaSlopeLowD
-    : public hwreg::RegisterBase<DemosaicRgb_LumaSlopeLowD, uint32_t> {
+class DemosaicRgb_LumaSlopeLowD : public hwreg::RegisterBase<DemosaicRgb_LumaSlopeLowD, uint32_t> {
  public:
   // Linear threshold slope corresponding to luma_thresh_low_d
   DEF_FIELD(19, 0, value);
@@ -3309,8 +3151,7 @@ class DemosaicRgb_LumaSlopeHighD
 DEF_NAMESPACE_REG(DemosaicRgb_LumaSlopeHighD, ping, 0x1aedc)
 DEF_NAMESPACE_REG(DemosaicRgb_LumaSlopeHighD, pong, 0x32e9c)
 
-class DemosaicRgb_LumaLowUd
-    : public hwreg::RegisterBase<DemosaicRgb_LumaLowUd, uint32_t> {
+class DemosaicRgb_LumaLowUd : public hwreg::RegisterBase<DemosaicRgb_LumaLowUd, uint32_t> {
  public:
   // Intensity values above this value will be sharpen
   DEF_FIELD(11, 0, luma_thresh_low_ud);
@@ -3351,8 +3192,7 @@ class DemosaicRgb_LumaSlopeHighUd
 DEF_NAMESPACE_REG(DemosaicRgb_LumaSlopeHighUd, ping, 0x1aeec)
 DEF_NAMESPACE_REG(DemosaicRgb_LumaSlopeHighUd, pong, 0x32eac)
 
-class DemosaicRgbir_RgbirConfig
-    : public hwreg::RegisterBase<DemosaicRgbir_RgbirConfig, uint32_t> {
+class DemosaicRgbir_RgbirConfig : public hwreg::RegisterBase<DemosaicRgbir_RgbirConfig, uint32_t> {
  public:
   //  Debug related configurations to select out different internal
   //   signals, and normal RGBIR will be outputted by default
@@ -3362,8 +3202,7 @@ class DemosaicRgbir_RgbirConfig
 DEF_NAMESPACE_REG(DemosaicRgbir_RgbirConfig, ping, 0x1af70)
 DEF_NAMESPACE_REG(DemosaicRgbir_RgbirConfig, pong, 0x32f30)
 
-class DemosaicRgbir_ClipLevel
-    : public hwreg::RegisterBase<DemosaicRgbir_ClipLevel, uint32_t> {
+class DemosaicRgbir_ClipLevel : public hwreg::RegisterBase<DemosaicRgbir_ClipLevel, uint32_t> {
  public:
   // clip level
   DEF_FIELD(11, 0, value);
@@ -3372,8 +3211,7 @@ class DemosaicRgbir_ClipLevel
 DEF_NAMESPACE_REG(DemosaicRgbir_ClipLevel, ping, 0x1af74)
 DEF_NAMESPACE_REG(DemosaicRgbir_ClipLevel, pong, 0x32f34)
 
-class DemosaicRgbir_ClipDebloom
-    : public hwreg::RegisterBase<DemosaicRgbir_ClipDebloom, uint32_t> {
+class DemosaicRgbir_ClipDebloom : public hwreg::RegisterBase<DemosaicRgbir_ClipDebloom, uint32_t> {
  public:
   // clip level for debloom
   DEF_FIELD(11, 0, value);
@@ -3382,8 +3220,7 @@ class DemosaicRgbir_ClipDebloom
 DEF_NAMESPACE_REG(DemosaicRgbir_ClipDebloom, ping, 0x1af78)
 DEF_NAMESPACE_REG(DemosaicRgbir_ClipDebloom, pong, 0x32f38)
 
-class DemosaicRgbir_IrOnBlueRow
-    : public hwreg::RegisterBase<DemosaicRgbir_IrOnBlueRow, uint32_t> {
+class DemosaicRgbir_IrOnBlueRow : public hwreg::RegisterBase<DemosaicRgbir_IrOnBlueRow, uint32_t> {
  public:
   // to indicate that the IR is on the same line of Blue
   DEF_BIT(0, value);
@@ -3392,8 +3229,7 @@ class DemosaicRgbir_IrOnBlueRow
 DEF_NAMESPACE_REG(DemosaicRgbir_IrOnBlueRow, ping, 0x1af7c)
 DEF_NAMESPACE_REG(DemosaicRgbir_IrOnBlueRow, pong, 0x32f3c)
 
-class DemosaicRgbir_DeclipMode
-    : public hwreg::RegisterBase<DemosaicRgbir_DeclipMode, uint32_t> {
+class DemosaicRgbir_DeclipMode : public hwreg::RegisterBase<DemosaicRgbir_DeclipMode, uint32_t> {
  public:
   // Declip mode
   DEF_BIT(0, value);
@@ -3402,8 +3238,7 @@ class DemosaicRgbir_DeclipMode
 DEF_NAMESPACE_REG(DemosaicRgbir_DeclipMode, ping, 0x1af80)
 DEF_NAMESPACE_REG(DemosaicRgbir_DeclipMode, pong, 0x32f40)
 
-class DemosaicRgbir_Gain
-    : public hwreg::RegisterBase<DemosaicRgbir_Gain, uint32_t> {
+class DemosaicRgbir_Gain : public hwreg::RegisterBase<DemosaicRgbir_Gain, uint32_t> {
  public:
   // gain for red
   DEF_FIELD(11, 0, gain_r);
@@ -3414,8 +3249,7 @@ class DemosaicRgbir_Gain
 DEF_NAMESPACE_REG(DemosaicRgbir_Gain, ping, 0x1af84)
 DEF_NAMESPACE_REG(DemosaicRgbir_Gain, pong, 0x32f44)
 
-class DemosaicRgbir_StaticGain
-    : public hwreg::RegisterBase<DemosaicRgbir_StaticGain, uint32_t> {
+class DemosaicRgbir_StaticGain : public hwreg::RegisterBase<DemosaicRgbir_StaticGain, uint32_t> {
  public:
   // static gain for red
   DEF_FIELD(11, 0, static_gain_r);
@@ -3426,8 +3260,7 @@ class DemosaicRgbir_StaticGain
 DEF_NAMESPACE_REG(DemosaicRgbir_StaticGain, ping, 0x1af88)
 DEF_NAMESPACE_REG(DemosaicRgbir_StaticGain, pong, 0x32f48)
 
-class DemosaicRgbir_StaticGainI
-    : public hwreg::RegisterBase<DemosaicRgbir_StaticGainI, uint32_t> {
+class DemosaicRgbir_StaticGainI : public hwreg::RegisterBase<DemosaicRgbir_StaticGainI, uint32_t> {
  public:
   // static gain for ir
   DEF_FIELD(11, 0, value);
@@ -3437,8 +3270,7 @@ DEF_NAMESPACE_REG(DemosaicRgbir_StaticGainI, ping, 0x1af8c)
 DEF_NAMESPACE_REG(DemosaicRgbir_StaticGainI, pong, 0x32f4c)
 
 class DemosaicRgbir_InterpolationDirectionality
-    : public hwreg::RegisterBase<DemosaicRgbir_InterpolationDirectionality,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<DemosaicRgbir_InterpolationDirectionality, uint32_t> {
  public:
   // Interpolation Directionality
   DEF_FIELD(11, 0, value);
@@ -3447,8 +3279,7 @@ class DemosaicRgbir_InterpolationDirectionality
 DEF_NAMESPACE_REG(DemosaicRgbir_InterpolationDirectionality, ping, 0x1af90)
 DEF_NAMESPACE_REG(DemosaicRgbir_InterpolationDirectionality, pong, 0x32f50)
 
-class DemosaicRgbir_SharpLimit
-    : public hwreg::RegisterBase<DemosaicRgbir_SharpLimit, uint32_t> {
+class DemosaicRgbir_SharpLimit : public hwreg::RegisterBase<DemosaicRgbir_SharpLimit, uint32_t> {
  public:
   // sharp limit
   DEF_FIELD(11, 0, value);
@@ -3457,8 +3288,7 @@ class DemosaicRgbir_SharpLimit
 DEF_NAMESPACE_REG(DemosaicRgbir_SharpLimit, ping, 0x1af94)
 DEF_NAMESPACE_REG(DemosaicRgbir_SharpLimit, pong, 0x32f54)
 
-class DemosaicRgbir_SharpHigh
-    : public hwreg::RegisterBase<DemosaicRgbir_SharpHigh, uint32_t> {
+class DemosaicRgbir_SharpHigh : public hwreg::RegisterBase<DemosaicRgbir_SharpHigh, uint32_t> {
  public:
   // sharp high
   DEF_FIELD(11, 0, value);
@@ -3467,8 +3297,7 @@ class DemosaicRgbir_SharpHigh
 DEF_NAMESPACE_REG(DemosaicRgbir_SharpHigh, ping, 0x1af98)
 DEF_NAMESPACE_REG(DemosaicRgbir_SharpHigh, pong, 0x32f58)
 
-class DemosaicRgbir_SharpLow
-    : public hwreg::RegisterBase<DemosaicRgbir_SharpLow, uint32_t> {
+class DemosaicRgbir_SharpLow : public hwreg::RegisterBase<DemosaicRgbir_SharpLow, uint32_t> {
  public:
   // sharp low
   DEF_FIELD(11, 0, value);
@@ -3477,8 +3306,7 @@ class DemosaicRgbir_SharpLow
 DEF_NAMESPACE_REG(DemosaicRgbir_SharpLow, ping, 0x1af9c)
 DEF_NAMESPACE_REG(DemosaicRgbir_SharpLow, pong, 0x32f5c)
 
-class DemosaicRgbir_FcLow
-    : public hwreg::RegisterBase<DemosaicRgbir_FcLow, uint32_t> {
+class DemosaicRgbir_FcLow : public hwreg::RegisterBase<DemosaicRgbir_FcLow, uint32_t> {
  public:
   // fc low
   DEF_FIELD(11, 0, value);
@@ -3487,8 +3315,7 @@ class DemosaicRgbir_FcLow
 DEF_NAMESPACE_REG(DemosaicRgbir_FcLow, ping, 0x1afa0)
 DEF_NAMESPACE_REG(DemosaicRgbir_FcLow, pong, 0x32f60)
 
-class DemosaicRgbir_FcGrad
-    : public hwreg::RegisterBase<DemosaicRgbir_FcGrad, uint32_t> {
+class DemosaicRgbir_FcGrad : public hwreg::RegisterBase<DemosaicRgbir_FcGrad, uint32_t> {
  public:
   // fc grad
   DEF_FIELD(11, 0, value);
@@ -3594,8 +3421,7 @@ DEF_NAMESPACE_REG(DemosaicRgbir_IrCorrectMat3233, ping, 0x1afc4)
 DEF_NAMESPACE_REG(DemosaicRgbir_IrCorrectMat3233, pong, 0x32f84)
 
 class PurpleFringeCorrection_UseColorCorrectedRgb
-    : public hwreg::RegisterBase<PurpleFringeCorrection_UseColorCorrectedRgb,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_UseColorCorrectedRgb, uint32_t> {
  public:
   DEF_BIT(0, value);
 };
@@ -3633,8 +3459,7 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_Strength2, ping, 0x1afd4)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_Strength2, pong, 0x32f94)
 
 class PurpleFringeCorrection_OffCenterMult
-    : public hwreg::RegisterBase<PurpleFringeCorrection_OffCenterMult,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_OffCenterMult, uint32_t> {
  public:
   DEF_FIELD(15, 0, value);
 };
@@ -3653,112 +3478,85 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_Center, ping, 0x1afdc)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_Center, pong, 0x32f9c)
 
 class PurpleFringeCorrection_ColorConversionMatrixCoeffRr
-    : public hwreg::RegisterBase<
-          PurpleFringeCorrection_ColorConversionMatrixCoeffRr, uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_ColorConversionMatrixCoeffRr, uint32_t> {
  public:
   DEF_FIELD(12, 0, value);
 };
 
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRr, ping,
-                  0x1afe0)
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRr, pong,
-                  0x32fa0)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRr, ping, 0x1afe0)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRr, pong, 0x32fa0)
 
 class PurpleFringeCorrection_ColorConversionMatrixCoeffRg
-    : public hwreg::RegisterBase<
-          PurpleFringeCorrection_ColorConversionMatrixCoeffRg, uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_ColorConversionMatrixCoeffRg, uint32_t> {
  public:
   DEF_FIELD(12, 0, value);
 };
 
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRg, ping,
-                  0x1afe4)
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRg, pong,
-                  0x32fa4)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRg, ping, 0x1afe4)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRg, pong, 0x32fa4)
 
 class PurpleFringeCorrection_ColorConversionMatrixCoeffRb
-    : public hwreg::RegisterBase<
-          PurpleFringeCorrection_ColorConversionMatrixCoeffRb, uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_ColorConversionMatrixCoeffRb, uint32_t> {
  public:
   DEF_FIELD(12, 0, value);
 };
 
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRb, ping,
-                  0x1afe8)
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRb, pong,
-                  0x32fa8)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRb, ping, 0x1afe8)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffRb, pong, 0x32fa8)
 
 class PurpleFringeCorrection_ColorConversionMatrixCoeffGr
-    : public hwreg::RegisterBase<
-          PurpleFringeCorrection_ColorConversionMatrixCoeffGr, uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_ColorConversionMatrixCoeffGr, uint32_t> {
  public:
   DEF_FIELD(12, 0, value);
 };
 
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGr, ping,
-                  0x1afec)
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGr, pong,
-                  0x32fac)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGr, ping, 0x1afec)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGr, pong, 0x32fac)
 
 class PurpleFringeCorrection_ColorConversionMatrixCoeffGg
-    : public hwreg::RegisterBase<
-          PurpleFringeCorrection_ColorConversionMatrixCoeffGg, uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_ColorConversionMatrixCoeffGg, uint32_t> {
  public:
   DEF_FIELD(12, 0, value);
 };
 
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGg, ping,
-                  0x1aff0)
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGg, pong,
-                  0x32fb0)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGg, ping, 0x1aff0)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGg, pong, 0x32fb0)
 
 class PurpleFringeCorrection_ColorConversionMatrixCoeffGb
-    : public hwreg::RegisterBase<
-          PurpleFringeCorrection_ColorConversionMatrixCoeffGb, uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_ColorConversionMatrixCoeffGb, uint32_t> {
  public:
   DEF_FIELD(12, 0, value);
 };
 
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGb, ping,
-                  0x1aff4)
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGb, pong,
-                  0x32fb4)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGb, ping, 0x1aff4)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffGb, pong, 0x32fb4)
 
 class PurpleFringeCorrection_ColorConversionMatrixCoeffBr
-    : public hwreg::RegisterBase<
-          PurpleFringeCorrection_ColorConversionMatrixCoeffBr, uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_ColorConversionMatrixCoeffBr, uint32_t> {
  public:
   DEF_FIELD(12, 0, value);
 };
 
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBr, ping,
-                  0x1aff8)
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBr, pong,
-                  0x32fb8)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBr, ping, 0x1aff8)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBr, pong, 0x32fb8)
 
 class PurpleFringeCorrection_ColorConversionMatrixCoeffBg
-    : public hwreg::RegisterBase<
-          PurpleFringeCorrection_ColorConversionMatrixCoeffBg, uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_ColorConversionMatrixCoeffBg, uint32_t> {
  public:
   DEF_FIELD(12, 0, value);
 };
 
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBg, ping,
-                  0x1affc)
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBg, pong,
-                  0x32fbc)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBg, ping, 0x1affc)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBg, pong, 0x32fbc)
 
 class PurpleFringeCorrection_ColorConversionMatrixCoeffBb
-    : public hwreg::RegisterBase<
-          PurpleFringeCorrection_ColorConversionMatrixCoeffBb, uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_ColorConversionMatrixCoeffBb, uint32_t> {
  public:
   DEF_FIELD(12, 0, value);
 };
 
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBb, ping,
-                  0x1b000)
-DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBb, pong,
-                  0x32fc0)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBb, ping, 0x1b000)
+DEF_NAMESPACE_REG(PurpleFringeCorrection_ColorConversionMatrixCoeffBb, pong, 0x32fc0)
 
 class PurpleFringeCorrection_Sad
     : public hwreg::RegisterBase<PurpleFringeCorrection_Sad, uint32_t> {
@@ -3790,8 +3588,7 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_HueLow, ping, 0x1b00c)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_HueLow, pong, 0x32fcc)
 
 class PurpleFringeCorrection_HueLowThresh
-    : public hwreg::RegisterBase<PurpleFringeCorrection_HueLowThresh,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_HueLowThresh, uint32_t> {
  public:
   DEF_FIELD(11, 0, value);
 };
@@ -3810,8 +3607,7 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_HueHigh, ping, 0x1b014)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_HueHigh, pong, 0x32fd4)
 
 class PurpleFringeCorrection_HueHighThresh
-    : public hwreg::RegisterBase<PurpleFringeCorrection_HueHighThresh,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_HueHighThresh, uint32_t> {
  public:
   DEF_FIELD(11, 0, value);
 };
@@ -3830,8 +3626,7 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_SatLow, ping, 0x1b01c)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_SatLow, pong, 0x32fdc)
 
 class PurpleFringeCorrection_SatLowThresh
-    : public hwreg::RegisterBase<PurpleFringeCorrection_SatLowThresh,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_SatLowThresh, uint32_t> {
  public:
   DEF_FIELD(11, 0, value);
 };
@@ -3850,8 +3645,7 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_SatHigh, ping, 0x1b024)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_SatHigh, pong, 0x32fe4)
 
 class PurpleFringeCorrection_SatHighThresh
-    : public hwreg::RegisterBase<PurpleFringeCorrection_SatHighThresh,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_SatHighThresh, uint32_t> {
  public:
   DEF_FIELD(11, 0, value);
 };
@@ -3870,8 +3664,7 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_Luma1Low, ping, 0x1b02c)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_Luma1Low, pong, 0x32fec)
 
 class PurpleFringeCorrection_Luma1LowThresh
-    : public hwreg::RegisterBase<PurpleFringeCorrection_Luma1LowThresh,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_Luma1LowThresh, uint32_t> {
  public:
   DEF_FIELD(11, 0, value);
 };
@@ -3890,8 +3683,7 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_Luma1High, ping, 0x1b034)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_Luma1High, pong, 0x32ff4)
 
 class PurpleFringeCorrection_Luma1HighThresh
-    : public hwreg::RegisterBase<PurpleFringeCorrection_Luma1HighThresh,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_Luma1HighThresh, uint32_t> {
  public:
   DEF_FIELD(11, 0, value);
 };
@@ -3910,8 +3702,7 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_Luma2Low, ping, 0x1b03c)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_Luma2Low, pong, 0x32ffc)
 
 class PurpleFringeCorrection_Luma2LowThresh
-    : public hwreg::RegisterBase<PurpleFringeCorrection_Luma2LowThresh,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_Luma2LowThresh, uint32_t> {
  public:
   DEF_FIELD(11, 0, value);
 };
@@ -3930,8 +3721,7 @@ DEF_NAMESPACE_REG(PurpleFringeCorrection_Luma2High, ping, 0x1b044)
 DEF_NAMESPACE_REG(PurpleFringeCorrection_Luma2High, pong, 0x33004)
 
 class PurpleFringeCorrection_Luma2HighThresh
-    : public hwreg::RegisterBase<PurpleFringeCorrection_Luma2HighThresh,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<PurpleFringeCorrection_Luma2HighThresh, uint32_t> {
  public:
   DEF_FIELD(11, 0, value);
 };
@@ -4145,8 +3935,7 @@ DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftWbIr, ping, 0x1b0bc)
 DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftWbIr, pong, 0x3307c)
 
 class ColorConversionMatrix_CoefftFogOffsetR
-    : public hwreg::RegisterBase<ColorConversionMatrix_CoefftFogOffsetR,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorConversionMatrix_CoefftFogOffsetR, uint32_t> {
  public:
   // Offset R for antifog function
   DEF_FIELD(11, 0, value);
@@ -4156,8 +3945,7 @@ DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftFogOffsetR, ping, 0x1b0c0)
 DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftFogOffsetR, pong, 0x33080)
 
 class ColorConversionMatrix_CoefftFogOffsetG
-    : public hwreg::RegisterBase<ColorConversionMatrix_CoefftFogOffsetG,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorConversionMatrix_CoefftFogOffsetG, uint32_t> {
  public:
   // Offset G for antifog function
   DEF_FIELD(11, 0, value);
@@ -4167,8 +3955,7 @@ DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftFogOffsetG, ping, 0x1b0c4)
 DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftFogOffsetG, pong, 0x33084)
 
 class ColorConversionMatrix_CoefftFogOffsetB
-    : public hwreg::RegisterBase<ColorConversionMatrix_CoefftFogOffsetB,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorConversionMatrix_CoefftFogOffsetB, uint32_t> {
  public:
   // Offset B for antifog function
   DEF_FIELD(11, 0, value);
@@ -4178,8 +3965,7 @@ DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftFogOffsetB, ping, 0x1b0c8)
 DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftFogOffsetB, pong, 0x33088)
 
 class ColorConversionMatrix_CoefftFogOffsetIr
-    : public hwreg::RegisterBase<ColorConversionMatrix_CoefftFogOffsetIr,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorConversionMatrix_CoefftFogOffsetIr, uint32_t> {
  public:
   // Offset Ir for antifog function
   DEF_FIELD(11, 0, value);
@@ -4189,8 +3975,7 @@ DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftFogOffsetIr, ping, 0x1b0cc)
 DEF_NAMESPACE_REG(ColorConversionMatrix_CoefftFogOffsetIr, pong, 0x3308c)
 
 class ColorNoiseReduction_SquareRootEnable
-    : public hwreg::RegisterBase<ColorNoiseReduction_SquareRootEnable,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_SquareRootEnable, uint32_t> {
  public:
   // pre-CNR square root and the post-CNR square modules enable condition
   //      enable: 0=off 1=on
@@ -4220,8 +4005,7 @@ class ColorNoiseReduction_DebugReg
 DEF_NAMESPACE_REG(ColorNoiseReduction_DebugReg, ping, 0x1b0d8)
 DEF_NAMESPACE_REG(ColorNoiseReduction_DebugReg, pong, 0x33098)
 
-class ColorNoiseReduction_Mode
-    : public hwreg::RegisterBase<ColorNoiseReduction_Mode, uint32_t> {
+class ColorNoiseReduction_Mode : public hwreg::RegisterBase<ColorNoiseReduction_Mode, uint32_t> {
  public:
   // CNR enable: 0=off 1=on
   DEF_FIELD(7, 0, value);
@@ -4241,8 +4025,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_DeltaFactor, ping, 0x1b0e0)
 DEF_NAMESPACE_REG(ColorNoiseReduction_DeltaFactor, pong, 0x330a0)
 
 class ColorNoiseReduction_EffectiveKernel
-    : public hwreg::RegisterBase<ColorNoiseReduction_EffectiveKernel,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_EffectiveKernel, uint32_t> {
  public:
   // Effective kernel
   DEF_FIELD(6, 0, value);
@@ -4292,8 +4075,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_GlobalSlope, ping, 0x1b0f4)
 DEF_NAMESPACE_REG(ColorNoiseReduction_GlobalSlope, pong, 0x330b4)
 
 class ColorNoiseReduction_UvSeg1Threshold
-    : public hwreg::RegisterBase<ColorNoiseReduction_UvSeg1Threshold,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_UvSeg1Threshold, uint32_t> {
  public:
   // uv_seg1 threshold
   DEF_FIELD(11, 0, value);
@@ -4323,8 +4105,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_UvSeg1Slope, ping, 0x1b100)
 DEF_NAMESPACE_REG(ColorNoiseReduction_UvSeg1Slope, pong, 0x330c0)
 
 class ColorNoiseReduction_Umean1Threshold
-    : public hwreg::RegisterBase<ColorNoiseReduction_Umean1Threshold,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_Umean1Threshold, uint32_t> {
  public:
   // umean1 threshold
   DEF_FIELD(11, 0, value);
@@ -4354,8 +4135,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_Umean1Slope, ping, 0x1b10c)
 DEF_NAMESPACE_REG(ColorNoiseReduction_Umean1Slope, pong, 0x330cc)
 
 class ColorNoiseReduction_Umean2Threshold
-    : public hwreg::RegisterBase<ColorNoiseReduction_Umean2Threshold,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_Umean2Threshold, uint32_t> {
  public:
   // umean2 threshold
   DEF_FIELD(11, 0, value);
@@ -4385,8 +4165,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_Umean2Slope, ping, 0x1b118)
 DEF_NAMESPACE_REG(ColorNoiseReduction_Umean2Slope, pong, 0x330d8)
 
 class ColorNoiseReduction_Vmean1Threshold
-    : public hwreg::RegisterBase<ColorNoiseReduction_Vmean1Threshold,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_Vmean1Threshold, uint32_t> {
  public:
   // vmean1 threshold
   DEF_FIELD(11, 0, value);
@@ -4416,8 +4195,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_Vmean1Slope, ping, 0x1b124)
 DEF_NAMESPACE_REG(ColorNoiseReduction_Vmean1Slope, pong, 0x330e4)
 
 class ColorNoiseReduction_Vmean2Threshold
-    : public hwreg::RegisterBase<ColorNoiseReduction_Vmean2Threshold,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_Vmean2Threshold, uint32_t> {
  public:
   // vmean2 threshold
   DEF_FIELD(11, 0, value);
@@ -4447,8 +4225,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_Vmean2Slope, ping, 0x1b130)
 DEF_NAMESPACE_REG(ColorNoiseReduction_Vmean2Slope, pong, 0x330f0)
 
 class ColorNoiseReduction_UvVar1Threshold
-    : public hwreg::RegisterBase<ColorNoiseReduction_UvVar1Threshold,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_UvVar1Threshold, uint32_t> {
  public:
   // uv_var1 threshold
   DEF_FIELD(11, 0, value);
@@ -4478,8 +4255,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_UvVar1Slope, ping, 0x1b13c)
 DEF_NAMESPACE_REG(ColorNoiseReduction_UvVar1Slope, pong, 0x330fc)
 
 class ColorNoiseReduction_UvVar2Threshold
-    : public hwreg::RegisterBase<ColorNoiseReduction_UvVar2Threshold,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_UvVar2Threshold, uint32_t> {
  public:
   // uv_var2 threshold
   DEF_FIELD(11, 0, value);
@@ -4508,8 +4284,7 @@ class ColorNoiseReduction_UvVar2Slope
 DEF_NAMESPACE_REG(ColorNoiseReduction_UvVar2Slope, ping, 0x1b148)
 DEF_NAMESPACE_REG(ColorNoiseReduction_UvVar2Slope, pong, 0x33108)
 
-class ColorNoiseReduction_Scale
-    : public hwreg::RegisterBase<ColorNoiseReduction_Scale, uint32_t> {
+class ColorNoiseReduction_Scale : public hwreg::RegisterBase<ColorNoiseReduction_Scale, uint32_t> {
  public:
   // uv_var1 scale
   DEF_FIELD(5, 0, uv_var1_scale);
@@ -4521,8 +4296,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_Scale, ping, 0x1b14c)
 DEF_NAMESPACE_REG(ColorNoiseReduction_Scale, pong, 0x3310c)
 
 class ColorNoiseReduction_UvDelta1Threshold
-    : public hwreg::RegisterBase<ColorNoiseReduction_UvDelta1Threshold,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_UvDelta1Threshold, uint32_t> {
  public:
   // uv_delta1 threshold
   DEF_FIELD(11, 0, value);
@@ -4552,8 +4326,7 @@ DEF_NAMESPACE_REG(ColorNoiseReduction_UvDelta1Slope, ping, 0x1b158)
 DEF_NAMESPACE_REG(ColorNoiseReduction_UvDelta1Slope, pong, 0x33118)
 
 class ColorNoiseReduction_UvDelta2Threshold
-    : public hwreg::RegisterBase<ColorNoiseReduction_UvDelta2Threshold,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<ColorNoiseReduction_UvDelta2Threshold, uint32_t> {
  public:
   // uv_delta2 threshold
   DEF_FIELD(11, 0, value);
@@ -4604,8 +4377,7 @@ class NonequidistantGamma_SrgbLutEnable
 DEF_NAMESPACE_REG(NonequidistantGamma_SrgbLutEnable, ping, 0x1b16c)
 DEF_NAMESPACE_REG(NonequidistantGamma_SrgbLutEnable, pong, 0x3312c)
 
-class Lumvar_ActiveDim
-    : public hwreg::RegisterBase<Lumvar_ActiveDim, uint32_t> {
+class Lumvar_ActiveDim : public hwreg::RegisterBase<Lumvar_ActiveDim, uint32_t> {
  public:
   //  Active width. This depends on the position of the luma variance
   //   module. if this module is connected to the
@@ -4626,8 +4398,7 @@ class Lumvar_ActiveDim
 DEF_NAMESPACE_REG(Lumvar_ActiveDim, ping, 0x1b274)
 DEF_NAMESPACE_REG(Lumvar_ActiveDim, pong, 0x33234)
 
-class MeteringAexp_HistThresh01
-    : public hwreg::RegisterBase<MeteringAexp_HistThresh01, uint32_t> {
+class MeteringAexp_HistThresh01 : public hwreg::RegisterBase<MeteringAexp_HistThresh01, uint32_t> {
  public:
   // Histogram threshold for bin 0/1 boundary
   DEF_FIELD(11, 0, value);
@@ -4636,8 +4407,7 @@ class MeteringAexp_HistThresh01
 DEF_NAMESPACE_REG(MeteringAexp_HistThresh01, ping, 0x1b278)
 DEF_NAMESPACE_REG(MeteringAexp_HistThresh01, pong, 0x33238)
 
-class MeteringAexp_HistThresh12
-    : public hwreg::RegisterBase<MeteringAexp_HistThresh12, uint32_t> {
+class MeteringAexp_HistThresh12 : public hwreg::RegisterBase<MeteringAexp_HistThresh12, uint32_t> {
  public:
   // Histogram threshold for bin 1/2 boundary
   DEF_FIELD(11, 0, value);
@@ -4646,8 +4416,7 @@ class MeteringAexp_HistThresh12
 DEF_NAMESPACE_REG(MeteringAexp_HistThresh12, ping, 0x1b27c)
 DEF_NAMESPACE_REG(MeteringAexp_HistThresh12, pong, 0x3323c)
 
-class MeteringAexp_HistThresh34
-    : public hwreg::RegisterBase<MeteringAexp_HistThresh34, uint32_t> {
+class MeteringAexp_HistThresh34 : public hwreg::RegisterBase<MeteringAexp_HistThresh34, uint32_t> {
  public:
   // Histogram threshold for bin 2/3 boundary
   DEF_FIELD(11, 0, value);
@@ -4656,8 +4425,7 @@ class MeteringAexp_HistThresh34
 DEF_NAMESPACE_REG(MeteringAexp_HistThresh34, ping, 0x1b280)
 DEF_NAMESPACE_REG(MeteringAexp_HistThresh34, pong, 0x33240)
 
-class MeteringAexp_HistThresh45
-    : public hwreg::RegisterBase<MeteringAexp_HistThresh45, uint32_t> {
+class MeteringAexp_HistThresh45 : public hwreg::RegisterBase<MeteringAexp_HistThresh45, uint32_t> {
  public:
   // Histogram threshold for bin 3/4 boundary
   DEF_FIELD(11, 0, value);
@@ -4666,8 +4434,7 @@ class MeteringAexp_HistThresh45
 DEF_NAMESPACE_REG(MeteringAexp_HistThresh45, ping, 0x1b284)
 DEF_NAMESPACE_REG(MeteringAexp_HistThresh45, pong, 0x33244)
 
-class MeteringAexp_Hist0
-    : public hwreg::RegisterBase<MeteringAexp_Hist0, uint32_t> {
+class MeteringAexp_Hist0 : public hwreg::RegisterBase<MeteringAexp_Hist0, uint32_t> {
  public:
   // Normalized histogram results for bin 0
   DEF_FIELD(15, 0, value);
@@ -4676,8 +4443,7 @@ class MeteringAexp_Hist0
 DEF_NAMESPACE_REG(MeteringAexp_Hist0, ping, 0x1b288)
 DEF_NAMESPACE_REG(MeteringAexp_Hist0, pong, 0x33248)
 
-class MeteringAexp_Hist1
-    : public hwreg::RegisterBase<MeteringAexp_Hist1, uint32_t> {
+class MeteringAexp_Hist1 : public hwreg::RegisterBase<MeteringAexp_Hist1, uint32_t> {
  public:
   // Normalized histogram results for bin 1
   DEF_FIELD(15, 0, value);
@@ -4686,8 +4452,7 @@ class MeteringAexp_Hist1
 DEF_NAMESPACE_REG(MeteringAexp_Hist1, ping, 0x1b28c)
 DEF_NAMESPACE_REG(MeteringAexp_Hist1, pong, 0x3324c)
 
-class MeteringAexp_Hist3
-    : public hwreg::RegisterBase<MeteringAexp_Hist3, uint32_t> {
+class MeteringAexp_Hist3 : public hwreg::RegisterBase<MeteringAexp_Hist3, uint32_t> {
  public:
   // Normalized histogram results for bin 3
   DEF_FIELD(15, 0, value);
@@ -4696,8 +4461,7 @@ class MeteringAexp_Hist3
 DEF_NAMESPACE_REG(MeteringAexp_Hist3, ping, 0x1b290)
 DEF_NAMESPACE_REG(MeteringAexp_Hist3, pong, 0x33250)
 
-class MeteringAexp_Hist4
-    : public hwreg::RegisterBase<MeteringAexp_Hist4, uint32_t> {
+class MeteringAexp_Hist4 : public hwreg::RegisterBase<MeteringAexp_Hist4, uint32_t> {
  public:
   // Normalized histogram results for bin 4
   DEF_FIELD(15, 0, value);
@@ -4706,8 +4470,7 @@ class MeteringAexp_Hist4
 DEF_NAMESPACE_REG(MeteringAexp_Hist4, ping, 0x1b294)
 DEF_NAMESPACE_REG(MeteringAexp_Hist4, pong, 0x33254)
 
-class MeteringAexp_NodesUsed
-    : public hwreg::RegisterBase<MeteringAexp_NodesUsed, uint32_t> {
+class MeteringAexp_NodesUsed : public hwreg::RegisterBase<MeteringAexp_NodesUsed, uint32_t> {
  public:
   // Number of active zones horizontally for AE stats collection
   DEF_FIELD(7, 0, nodes_used_horiz);
@@ -4718,8 +4481,7 @@ class MeteringAexp_NodesUsed
 DEF_NAMESPACE_REG(MeteringAexp_NodesUsed, ping, 0x1b298)
 DEF_NAMESPACE_REG(MeteringAexp_NodesUsed, pong, 0x33258)
 
-class MeteringAwb_StatsMode
-    : public hwreg::RegisterBase<MeteringAwb_StatsMode, uint32_t> {
+class MeteringAwb_StatsMode : public hwreg::RegisterBase<MeteringAwb_StatsMode, uint32_t> {
  public:
   // Statistics mode: 0 - legacy(G/R,B/R), 1 - current (R/G, B/G)
   DEF_BIT(0, value);
@@ -4728,8 +4490,7 @@ class MeteringAwb_StatsMode
 DEF_NAMESPACE_REG(MeteringAwb_StatsMode, ping, 0x1b29c)
 DEF_NAMESPACE_REG(MeteringAwb_StatsMode, pong, 0x3325c)
 
-class MeteringAwb_WhiteLevelAwb
-    : public hwreg::RegisterBase<MeteringAwb_WhiteLevelAwb, uint32_t> {
+class MeteringAwb_WhiteLevelAwb : public hwreg::RegisterBase<MeteringAwb_WhiteLevelAwb, uint32_t> {
  public:
   // Upper limit of valid data for AWB
   DEF_FIELD(9, 0, value);
@@ -4738,8 +4499,7 @@ class MeteringAwb_WhiteLevelAwb
 DEF_NAMESPACE_REG(MeteringAwb_WhiteLevelAwb, ping, 0x1b2a0)
 DEF_NAMESPACE_REG(MeteringAwb_WhiteLevelAwb, pong, 0x33260)
 
-class MeteringAwb_BlackLevelAwb
-    : public hwreg::RegisterBase<MeteringAwb_BlackLevelAwb, uint32_t> {
+class MeteringAwb_BlackLevelAwb : public hwreg::RegisterBase<MeteringAwb_BlackLevelAwb, uint32_t> {
  public:
   // Lower limit of valid data for AWB
   DEF_FIELD(9, 0, value);
@@ -4748,8 +4508,7 @@ class MeteringAwb_BlackLevelAwb
 DEF_NAMESPACE_REG(MeteringAwb_BlackLevelAwb, ping, 0x1b2a4)
 DEF_NAMESPACE_REG(MeteringAwb_BlackLevelAwb, pong, 0x33264)
 
-class MeteringAwb_CrRefMaxAwb
-    : public hwreg::RegisterBase<MeteringAwb_CrRefMaxAwb, uint32_t> {
+class MeteringAwb_CrRefMaxAwb : public hwreg::RegisterBase<MeteringAwb_CrRefMaxAwb, uint32_t> {
  public:
   // Maximum value of R/G for white region
   DEF_FIELD(11, 0, value);
@@ -4758,8 +4517,7 @@ class MeteringAwb_CrRefMaxAwb
 DEF_NAMESPACE_REG(MeteringAwb_CrRefMaxAwb, ping, 0x1b2a8)
 DEF_NAMESPACE_REG(MeteringAwb_CrRefMaxAwb, pong, 0x33268)
 
-class MeteringAwb_CrRefMinAwb
-    : public hwreg::RegisterBase<MeteringAwb_CrRefMinAwb, uint32_t> {
+class MeteringAwb_CrRefMinAwb : public hwreg::RegisterBase<MeteringAwb_CrRefMinAwb, uint32_t> {
  public:
   // Minimum value of R/G for white region
   DEF_FIELD(11, 0, value);
@@ -4768,8 +4526,7 @@ class MeteringAwb_CrRefMinAwb
 DEF_NAMESPACE_REG(MeteringAwb_CrRefMinAwb, ping, 0x1b2ac)
 DEF_NAMESPACE_REG(MeteringAwb_CrRefMinAwb, pong, 0x3326c)
 
-class MeteringAwb_CbRefMaxAwb
-    : public hwreg::RegisterBase<MeteringAwb_CbRefMaxAwb, uint32_t> {
+class MeteringAwb_CbRefMaxAwb : public hwreg::RegisterBase<MeteringAwb_CbRefMaxAwb, uint32_t> {
  public:
   // Maximum value of B/G for white region
   DEF_FIELD(11, 0, value);
@@ -4778,8 +4535,7 @@ class MeteringAwb_CbRefMaxAwb
 DEF_NAMESPACE_REG(MeteringAwb_CbRefMaxAwb, ping, 0x1b2b0)
 DEF_NAMESPACE_REG(MeteringAwb_CbRefMaxAwb, pong, 0x33270)
 
-class MeteringAwb_CbRefMinAwb
-    : public hwreg::RegisterBase<MeteringAwb_CbRefMinAwb, uint32_t> {
+class MeteringAwb_CbRefMinAwb : public hwreg::RegisterBase<MeteringAwb_CbRefMinAwb, uint32_t> {
  public:
   // Minimum value of B/G for white region
   DEF_FIELD(11, 0, value);
@@ -4815,8 +4571,7 @@ class MeteringAwb_Sum : public hwreg::RegisterBase<MeteringAwb_Sum, uint32_t> {
 DEF_NAMESPACE_REG(MeteringAwb_Sum, ping, 0x1b2c0)
 DEF_NAMESPACE_REG(MeteringAwb_Sum, pong, 0x33280)
 
-class MeteringAwb_NodesUsed
-    : public hwreg::RegisterBase<MeteringAwb_NodesUsed, uint32_t> {
+class MeteringAwb_NodesUsed : public hwreg::RegisterBase<MeteringAwb_NodesUsed, uint32_t> {
  public:
   // Number of active zones horizontally for AWB stats
   DEF_FIELD(7, 0, nodes_used_horiz);
@@ -4827,8 +4582,7 @@ class MeteringAwb_NodesUsed
 DEF_NAMESPACE_REG(MeteringAwb_NodesUsed, ping, 0x1b2c4)
 DEF_NAMESPACE_REG(MeteringAwb_NodesUsed, pong, 0x33284)
 
-class MeteringAwb_CrRefHighAwb
-    : public hwreg::RegisterBase<MeteringAwb_CrRefHighAwb, uint32_t> {
+class MeteringAwb_CrRefHighAwb : public hwreg::RegisterBase<MeteringAwb_CrRefHighAwb, uint32_t> {
  public:
   // Maximum value of R/G for white region
   DEF_FIELD(11, 0, value);
@@ -4837,8 +4591,7 @@ class MeteringAwb_CrRefHighAwb
 DEF_NAMESPACE_REG(MeteringAwb_CrRefHighAwb, ping, 0x1b2c8)
 DEF_NAMESPACE_REG(MeteringAwb_CrRefHighAwb, pong, 0x33288)
 
-class MeteringAwb_CrRefLowAwb
-    : public hwreg::RegisterBase<MeteringAwb_CrRefLowAwb, uint32_t> {
+class MeteringAwb_CrRefLowAwb : public hwreg::RegisterBase<MeteringAwb_CrRefLowAwb, uint32_t> {
  public:
   // Minimum value of R/G for white region
   DEF_FIELD(11, 0, value);
@@ -4847,8 +4600,7 @@ class MeteringAwb_CrRefLowAwb
 DEF_NAMESPACE_REG(MeteringAwb_CrRefLowAwb, ping, 0x1b2cc)
 DEF_NAMESPACE_REG(MeteringAwb_CrRefLowAwb, pong, 0x3328c)
 
-class MeteringAwb_CbRefHighAwb
-    : public hwreg::RegisterBase<MeteringAwb_CbRefHighAwb, uint32_t> {
+class MeteringAwb_CbRefHighAwb : public hwreg::RegisterBase<MeteringAwb_CbRefHighAwb, uint32_t> {
  public:
   // Maximum value of B/G for white region
   DEF_FIELD(11, 0, value);
@@ -4857,8 +4609,7 @@ class MeteringAwb_CbRefHighAwb
 DEF_NAMESPACE_REG(MeteringAwb_CbRefHighAwb, ping, 0x1b2d0)
 DEF_NAMESPACE_REG(MeteringAwb_CbRefHighAwb, pong, 0x33290)
 
-class MeteringAwb_CbRefLowAwb
-    : public hwreg::RegisterBase<MeteringAwb_CbRefLowAwb, uint32_t> {
+class MeteringAwb_CbRefLowAwb : public hwreg::RegisterBase<MeteringAwb_CbRefLowAwb, uint32_t> {
  public:
   // Minimum value of B/G for white region
   DEF_FIELD(11, 0, value);
@@ -4867,8 +4618,7 @@ class MeteringAwb_CbRefLowAwb
 DEF_NAMESPACE_REG(MeteringAwb_CbRefLowAwb, ping, 0x1b2d4)
 DEF_NAMESPACE_REG(MeteringAwb_CbRefLowAwb, pong, 0x33294)
 
-class MeteringAf_NodesUsed
-    : public hwreg::RegisterBase<MeteringAf_NodesUsed, uint32_t> {
+class MeteringAf_NodesUsed : public hwreg::RegisterBase<MeteringAf_NodesUsed, uint32_t> {
  public:
   // Number of active zones horizontally for AF stats
   DEF_FIELD(7, 0, nodes_used_horiz);
@@ -4879,8 +4629,7 @@ class MeteringAf_NodesUsed
 DEF_NAMESPACE_REG(MeteringAf_NodesUsed, ping, 0x1b720)
 DEF_NAMESPACE_REG(MeteringAf_NodesUsed, pong, 0x336e0)
 
-class MeteringAf_Metrics
-    : public hwreg::RegisterBase<MeteringAf_Metrics, uint32_t> {
+class MeteringAf_Metrics : public hwreg::RegisterBase<MeteringAf_Metrics, uint32_t> {
  public:
   // The integrated and normalized measure of contrast for AF
   DEF_FIELD(31, 0, value);
@@ -4889,8 +4638,7 @@ class MeteringAf_Metrics
 DEF_NAMESPACE_REG(MeteringAf_Metrics, ping, 0x1b724)
 DEF_NAMESPACE_REG(MeteringAf_Metrics, pong, 0x336e4)
 
-class MeteringAf_Active
-    : public hwreg::RegisterBase<MeteringAf_Active, uint32_t> {
+class MeteringAf_Active : public hwreg::RegisterBase<MeteringAf_Active, uint32_t> {
  public:
   // Active video width for AF module
   DEF_FIELD(15, 0, active_width);
@@ -4901,8 +4649,7 @@ class MeteringAf_Active
 DEF_NAMESPACE_REG(MeteringAf_Active, ping, 0x1b728)
 DEF_NAMESPACE_REG(MeteringAf_Active, pong, 0x336e8)
 
-class MeteringAf_KernelSelect
-    : public hwreg::RegisterBase<MeteringAf_KernelSelect, uint32_t> {
+class MeteringAf_KernelSelect : public hwreg::RegisterBase<MeteringAf_KernelSelect, uint32_t> {
  public:
   // Size of Narrow AF Kernel
   //   0 =   3x3
@@ -4915,8 +4662,7 @@ class MeteringAf_KernelSelect
 DEF_NAMESPACE_REG(MeteringAf_KernelSelect, ping, 0x1b72c)
 DEF_NAMESPACE_REG(MeteringAf_KernelSelect, pong, 0x336ec)
 
-class MeteringHistAexp_Config
-    : public hwreg::RegisterBase<MeteringHistAexp_Config, uint32_t> {
+class MeteringHistAexp_Config : public hwreg::RegisterBase<MeteringHistAexp_Config, uint32_t> {
  public:
   //  Histogram decimation in horizontal direction: 0=every 2nd pixel;
   //   1=every 3rd pixel; 2=every 4th pixel; 3=every 5th pixel; 4=every
@@ -4935,8 +4681,7 @@ class MeteringHistAexp_Config
 DEF_NAMESPACE_REG(MeteringHistAexp_Config, ping, 0x1b730)
 DEF_NAMESPACE_REG(MeteringHistAexp_Config, pong, 0x336f0)
 
-class MeteringHistAexp_Scale
-    : public hwreg::RegisterBase<MeteringHistAexp_Scale, uint32_t> {
+class MeteringHistAexp_Scale : public hwreg::RegisterBase<MeteringHistAexp_Scale, uint32_t> {
  public:
   // scale of bottom half of the range: 0=1x ,1=2x, 2=4x, 4=8x, 4=16x
   DEF_FIELD(3, 0, scale_bottom);
@@ -5075,8 +4820,7 @@ class MeteringHistAexp_NodesUsed
 DEF_NAMESPACE_REG(MeteringHistAexp_NodesUsed, ping, 0x1b764)
 DEF_NAMESPACE_REG(MeteringHistAexp_NodesUsed, pong, 0x33724)
 
-class MeteringIhist_Config
-    : public hwreg::RegisterBase<MeteringIhist_Config, uint32_t> {
+class MeteringIhist_Config : public hwreg::RegisterBase<MeteringIhist_Config, uint32_t> {
  public:
   //  Histogram decimation in horizontal direction: 0=every 2nd pixel;
   //   1=every 3rd pixel; 2=every 4th pixel; 3=every 5th pixel; 4=every
@@ -5095,8 +4839,7 @@ class MeteringIhist_Config
 DEF_NAMESPACE_REG(MeteringIhist_Config, ping, 0x1bbac)
 DEF_NAMESPACE_REG(MeteringIhist_Config, pong, 0x33b6c)
 
-class MeteringIhist_Scale
-    : public hwreg::RegisterBase<MeteringIhist_Scale, uint32_t> {
+class MeteringIhist_Scale : public hwreg::RegisterBase<MeteringIhist_Scale, uint32_t> {
  public:
   // scale of bottom half of the range: 0=1x ,1=2x, 2=4x, 4=8x, 4=16x
   DEF_FIELD(3, 0, scale_bottom);
@@ -5107,8 +4850,7 @@ class MeteringIhist_Scale
 DEF_NAMESPACE_REG(MeteringIhist_Scale, ping, 0x1bbb0)
 DEF_NAMESPACE_REG(MeteringIhist_Scale, pong, 0x33b70)
 
-class MeteringIhist_TotalPixels
-    : public hwreg::RegisterBase<MeteringIhist_TotalPixels, uint32_t> {
+class MeteringIhist_TotalPixels : public hwreg::RegisterBase<MeteringIhist_TotalPixels, uint32_t> {
  public:
   //  Total number of pixels processed (skip x and skip y are taken
   //   into account)
@@ -5128,8 +4870,7 @@ class MeteringIhist_CountedPixels
 DEF_NAMESPACE_REG(MeteringIhist_CountedPixels, ping, 0x1bbb8)
 DEF_NAMESPACE_REG(MeteringIhist_CountedPixels, pong, 0x33b78)
 
-class MeteringIhist_PlaneMode
-    : public hwreg::RegisterBase<MeteringIhist_PlaneMode, uint32_t> {
+class MeteringIhist_PlaneMode : public hwreg::RegisterBase<MeteringIhist_PlaneMode, uint32_t> {
  public:
   //  Plane separation mode (0=Collect all the planes in one histogram,
   //   1=Collect 4 Bayer planes into 4 separate banks, 2=Reserved 2,
@@ -5143,8 +4884,7 @@ class MeteringIhist_PlaneMode
 DEF_NAMESPACE_REG(MeteringIhist_PlaneMode, ping, 0x1bbbc)
 DEF_NAMESPACE_REG(MeteringIhist_PlaneMode, pong, 0x33b7c)
 
-class MeteringIhist_PlaneTotal0
-    : public hwreg::RegisterBase<MeteringIhist_PlaneTotal0, uint32_t> {
+class MeteringIhist_PlaneTotal0 : public hwreg::RegisterBase<MeteringIhist_PlaneTotal0, uint32_t> {
  public:
   // Total pixels processed for plane 0
   DEF_FIELD(31, 0, value);
@@ -5153,8 +4893,7 @@ class MeteringIhist_PlaneTotal0
 DEF_NAMESPACE_REG(MeteringIhist_PlaneTotal0, ping, 0x1bbc0)
 DEF_NAMESPACE_REG(MeteringIhist_PlaneTotal0, pong, 0x33b80)
 
-class MeteringIhist_PlaneTotal1
-    : public hwreg::RegisterBase<MeteringIhist_PlaneTotal1, uint32_t> {
+class MeteringIhist_PlaneTotal1 : public hwreg::RegisterBase<MeteringIhist_PlaneTotal1, uint32_t> {
  public:
   // Total pixels processed for plane 1
   DEF_FIELD(31, 0, value);
@@ -5163,8 +4902,7 @@ class MeteringIhist_PlaneTotal1
 DEF_NAMESPACE_REG(MeteringIhist_PlaneTotal1, ping, 0x1bbc4)
 DEF_NAMESPACE_REG(MeteringIhist_PlaneTotal1, pong, 0x33b84)
 
-class MeteringIhist_PlaneTotal2
-    : public hwreg::RegisterBase<MeteringIhist_PlaneTotal2, uint32_t> {
+class MeteringIhist_PlaneTotal2 : public hwreg::RegisterBase<MeteringIhist_PlaneTotal2, uint32_t> {
  public:
   // Total pixels processed for plane 2
   DEF_FIELD(31, 0, value);
@@ -5173,8 +4911,7 @@ class MeteringIhist_PlaneTotal2
 DEF_NAMESPACE_REG(MeteringIhist_PlaneTotal2, ping, 0x1bbc8)
 DEF_NAMESPACE_REG(MeteringIhist_PlaneTotal2, pong, 0x33b88)
 
-class MeteringIhist_PlaneTotal3
-    : public hwreg::RegisterBase<MeteringIhist_PlaneTotal3, uint32_t> {
+class MeteringIhist_PlaneTotal3 : public hwreg::RegisterBase<MeteringIhist_PlaneTotal3, uint32_t> {
  public:
   // Total pixels processed for plane 3
   DEF_FIELD(31, 0, value);
@@ -5223,8 +4960,7 @@ class MeteringIhist_PlaneCounted3
 DEF_NAMESPACE_REG(MeteringIhist_PlaneCounted3, ping, 0x1bbdc)
 DEF_NAMESPACE_REG(MeteringIhist_PlaneCounted3, pong, 0x33b9c)
 
-class MeteringIhist_NodesUsed
-    : public hwreg::RegisterBase<MeteringIhist_NodesUsed, uint32_t> {
+class MeteringIhist_NodesUsed : public hwreg::RegisterBase<MeteringIhist_NodesUsed, uint32_t> {
  public:
   // Number of active zones horizontally for Histogram
   DEF_FIELD(7, 0, nodes_used_horiz);
@@ -5374,8 +5110,7 @@ DEF_NAMESPACE_REG(Scaler_Oheight, ping::FullResolution, 0x1c050)
 DEF_NAMESPACE_REG(Scaler_Oheight, pong::DownScaled, 0x34184)
 DEF_NAMESPACE_REG(Scaler_Oheight, pong::FullResolution, 0x34010)
 
-class Scaler_HfiltTinc
-    : public hwreg::RegisterBase<Scaler_HfiltTinc, uint32_t> {
+class Scaler_HfiltTinc : public hwreg::RegisterBase<Scaler_HfiltTinc, uint32_t> {
  public:
   // Horizontal scaling factor equal to the
   DEF_FIELD(23, 0, value);
@@ -5386,8 +5121,7 @@ DEF_NAMESPACE_REG(Scaler_HfiltTinc, ping::FullResolution, 0x1c054)
 DEF_NAMESPACE_REG(Scaler_HfiltTinc, pong::DownScaled, 0x34188)
 DEF_NAMESPACE_REG(Scaler_HfiltTinc, pong::FullResolution, 0x34014)
 
-class Scaler_HfiltCoefset
-    : public hwreg::RegisterBase<Scaler_HfiltCoefset, uint32_t> {
+class Scaler_HfiltCoefset : public hwreg::RegisterBase<Scaler_HfiltCoefset, uint32_t> {
  public:
   // HFILT Coeff. control.
   //   HFILT_COEFSET[3:0] - Selects horizontal Coef set for scaler.
@@ -5403,8 +5137,7 @@ DEF_NAMESPACE_REG(Scaler_HfiltCoefset, ping::FullResolution, 0x1c058)
 DEF_NAMESPACE_REG(Scaler_HfiltCoefset, pong::DownScaled, 0x3418c)
 DEF_NAMESPACE_REG(Scaler_HfiltCoefset, pong::FullResolution, 0x34018)
 
-class Scaler_VfiltTinc
-    : public hwreg::RegisterBase<Scaler_VfiltTinc, uint32_t> {
+class Scaler_VfiltTinc : public hwreg::RegisterBase<Scaler_VfiltTinc, uint32_t> {
  public:
   // VFILT TINC
   DEF_FIELD(23, 0, value);
@@ -5415,8 +5148,7 @@ DEF_NAMESPACE_REG(Scaler_VfiltTinc, ping::FullResolution, 0x1c05c)
 DEF_NAMESPACE_REG(Scaler_VfiltTinc, pong::DownScaled, 0x34190)
 DEF_NAMESPACE_REG(Scaler_VfiltTinc, pong::FullResolution, 0x3401c)
 
-class Scaler_VfiltCoefset
-    : public hwreg::RegisterBase<Scaler_VfiltCoefset, uint32_t> {
+class Scaler_VfiltCoefset : public hwreg::RegisterBase<Scaler_VfiltCoefset, uint32_t> {
  public:
   // VFILT Coeff. control
   // FILT_COEFSET[3:0] - Selects vertical Coef set for scaler
@@ -5433,55 +5165,47 @@ DEF_NAMESPACE_REG(Scaler_VfiltCoefset, pong::DownScaled, 0x34194)
 DEF_NAMESPACE_REG(Scaler_VfiltCoefset, pong::FullResolution, 0x34020)
 
 class GammaRgb_Enable : public hwreg::RegisterBase<GammaRgb_Enable, uint32_t> {
-public:
-    // Gamma enable: 0=off 1=on
-    DEF_BIT(0, value);
+ public:
+  // Gamma enable: 0=off 1=on
+  DEF_BIT(0, value);
 
-    static auto Get(uint32_t addr) {
-      return hwreg::RegisterAddr<GammaRgb_Enable>(addr);
-    }
+  static auto Get(uint32_t addr) { return hwreg::RegisterAddr<GammaRgb_Enable>(addr); }
 };
 
 class GammaRgb_Gain : public hwreg::RegisterBase<GammaRgb_Gain, uint32_t> {
-public:
-    // gain applied to the R chanel in 4.8 format
-    DEF_FIELD(11, 0, gain_r);
-    // gain applied to the G chanel in 4.8 format
-    DEF_FIELD(27, 16, gain_g);
+ public:
+  // gain applied to the R chanel in 4.8 format
+  DEF_FIELD(11, 0, gain_r);
+  // gain applied to the G chanel in 4.8 format
+  DEF_FIELD(27, 16, gain_g);
 
-    static auto Get(uint32_t addr) {
-      return hwreg::RegisterAddr<GammaRgb_Gain>(addr);
-    }
+  static auto Get(uint32_t addr) { return hwreg::RegisterAddr<GammaRgb_Gain>(addr); }
 };
 
 class GammaRgb_GainB : public hwreg::RegisterBase<GammaRgb_GainB, uint32_t> {
-public:
-    // gain applied to the B chanel in 4.8 format
-    DEF_FIELD(11, 0, value);
+ public:
+  // gain applied to the B chanel in 4.8 format
+  DEF_FIELD(11, 0, value);
 
-    static auto Get(uint32_t addr) {
-      return hwreg::RegisterAddr<GammaRgb_GainB>(addr);
-    }
+  static auto Get(uint32_t addr) { return hwreg::RegisterAddr<GammaRgb_GainB>(addr); }
 };
 
 class GammaRgb_Offset : public hwreg::RegisterBase<GammaRgb_Offset, uint32_t> {
-public:
-    // Offset subtracted from the R chanel
-    DEF_FIELD(11, 0, offset_r);
-    // Offset subtracted from the G chanel
-    DEF_FIELD(27, 16, offset_g);
+ public:
+  // Offset subtracted from the R chanel
+  DEF_FIELD(11, 0, offset_r);
+  // Offset subtracted from the G chanel
+  DEF_FIELD(27, 16, offset_g);
 
-    static auto Get(uint32_t addr) {
-      return hwreg::RegisterAddr<GammaRgb_Offset>(addr);
-    }
+  static auto Get(uint32_t addr) { return hwreg::RegisterAddr<GammaRgb_Offset>(addr); }
 };
 
 class GammaRgb_OffsetB : public hwreg::RegisterBase<GammaRgb_OffsetB, uint32_t> {
-public:
-    // Offset subtracted from the B chanel
-    DEF_FIELD(11, 0, value);
+ public:
+  // Offset subtracted from the B chanel
+  DEF_FIELD(11, 0, value);
 
-    static auto Get(uint32_t addr) { return hwreg::RegisterAddr<GammaRgb_OffsetB>(addr); }
+  static auto Get(uint32_t addr) { return hwreg::RegisterAddr<GammaRgb_OffsetB>(addr); }
 };
 
 class Sharpen_Enable : public hwreg::RegisterBase<Sharpen_Enable, uint32_t> {
@@ -5495,8 +5219,7 @@ DEF_NAMESPACE_REG(Sharpen_Enable, ping::FullResolution, 0x1c078)
 DEF_NAMESPACE_REG(Sharpen_Enable, pong::DownScaled, 0x341ac)
 DEF_NAMESPACE_REG(Sharpen_Enable, pong::FullResolution, 0x34038)
 
-class Sharpen_Strength
-    : public hwreg::RegisterBase<Sharpen_Strength, uint32_t> {
+class Sharpen_Strength : public hwreg::RegisterBase<Sharpen_Strength, uint32_t> {
  public:
   // Controls strength of sharpening effect. u5.4
   DEF_FIELD(8, 0, value);
@@ -5758,8 +5481,7 @@ DEF_NAMESPACE_REG(CsConv_ClipMaxY, ping::FullResolution, 0x1c0d0)
 DEF_NAMESPACE_REG(CsConv_ClipMaxY, pong::DownScaled, 0x34204)
 DEF_NAMESPACE_REG(CsConv_ClipMaxY, pong::FullResolution, 0x34090)
 
-class CsConv_ClipMinUv
-    : public hwreg::RegisterBase<CsConv_ClipMinUv, uint32_t> {
+class CsConv_ClipMinUv : public hwreg::RegisterBase<CsConv_ClipMinUv, uint32_t> {
  public:
   // Minimal value for Cb, Cr.  Values below this are clipped.
   DEF_FIELD(9, 0, value);
@@ -5770,8 +5492,7 @@ DEF_NAMESPACE_REG(CsConv_ClipMinUv, ping::FullResolution, 0x1c0d4)
 DEF_NAMESPACE_REG(CsConv_ClipMinUv, pong::DownScaled, 0x34208)
 DEF_NAMESPACE_REG(CsConv_ClipMinUv, pong::FullResolution, 0x34094)
 
-class CsConv_ClipMaxUv
-    : public hwreg::RegisterBase<CsConv_ClipMaxUv, uint32_t> {
+class CsConv_ClipMaxUv : public hwreg::RegisterBase<CsConv_ClipMaxUv, uint32_t> {
  public:
   // Maximal value for Cb, Cr.  Values above this are clipped.
   DEF_FIELD(9, 0, value);
@@ -5782,8 +5503,7 @@ DEF_NAMESPACE_REG(CsConv_ClipMaxUv, ping::FullResolution, 0x1c0d8)
 DEF_NAMESPACE_REG(CsConv_ClipMaxUv, pong::DownScaled, 0x3420c)
 DEF_NAMESPACE_REG(CsConv_ClipMaxUv, pong::FullResolution, 0x34098)
 
-class CsConv_DataMaskRy
-    : public hwreg::RegisterBase<CsConv_DataMaskRy, uint32_t> {
+class CsConv_DataMaskRy : public hwreg::RegisterBase<CsConv_DataMaskRy, uint32_t> {
  public:
   //  Data mask for channel 1 (R or Y).  Bit-wise and of this value and
   //   video data.
@@ -5795,8 +5515,7 @@ DEF_NAMESPACE_REG(CsConv_DataMaskRy, ping::FullResolution, 0x1c0dc)
 DEF_NAMESPACE_REG(CsConv_DataMaskRy, pong::DownScaled, 0x34210)
 DEF_NAMESPACE_REG(CsConv_DataMaskRy, pong::FullResolution, 0x3409c)
 
-class CsConv_DataMaskGu
-    : public hwreg::RegisterBase<CsConv_DataMaskGu, uint32_t> {
+class CsConv_DataMaskGu : public hwreg::RegisterBase<CsConv_DataMaskGu, uint32_t> {
  public:
   //  Data mask for channel 2 (G or U).  Bit-wise and of this value and
   //   video data.
@@ -5808,8 +5527,7 @@ DEF_NAMESPACE_REG(CsConv_DataMaskGu, ping::FullResolution, 0x1c0e0)
 DEF_NAMESPACE_REG(CsConv_DataMaskGu, pong::DownScaled, 0x34214)
 DEF_NAMESPACE_REG(CsConv_DataMaskGu, pong::FullResolution, 0x340a0)
 
-class CsConv_DataMaskBv
-    : public hwreg::RegisterBase<CsConv_DataMaskBv, uint32_t> {
+class CsConv_DataMaskBv : public hwreg::RegisterBase<CsConv_DataMaskBv, uint32_t> {
  public:
   //  Data mask for channel 3 (B or V).  Bit-wise and of this value and
   //   video data.
@@ -5821,8 +5539,7 @@ DEF_NAMESPACE_REG(CsConv_DataMaskBv, ping::FullResolution, 0x1c0e4)
 DEF_NAMESPACE_REG(CsConv_DataMaskBv, pong::DownScaled, 0x34218)
 DEF_NAMESPACE_REG(CsConv_DataMaskBv, pong::FullResolution, 0x340a4)
 
-class CsConvDither_Config
-    : public hwreg::RegisterBase<CsConvDither_Config, uint32_t> {
+class CsConvDither_Config : public hwreg::RegisterBase<CsConvDither_Config, uint32_t> {
  public:
   //  0= dither to 9 bits; 1=dither to 8 bits; 2=dither to 7 bits;
   //      3=dither to 6 bits
@@ -5867,8 +5584,7 @@ DEF_NAMESPACE_REG(DmaWriter_Misc, pong::DownScaled::Uv, 0x34278)
 DEF_NAMESPACE_REG(DmaWriter_Misc, pong::FullResolution::Primary, 0x340ac)
 DEF_NAMESPACE_REG(DmaWriter_Misc, pong::FullResolution::Uv, 0x34104)
 
-class DmaWriter_ActiveDim
-    : public hwreg::RegisterBase<DmaWriter_ActiveDim, uint32_t> {
+class DmaWriter_ActiveDim : public hwreg::RegisterBase<DmaWriter_ActiveDim, uint32_t> {
  public:
   // Active video width in pixels 128-8000
   DEF_FIELD(15, 0, active_width);
@@ -5885,8 +5601,7 @@ DEF_NAMESPACE_REG(DmaWriter_ActiveDim, pong::DownScaled::Uv, 0x3427c)
 DEF_NAMESPACE_REG(DmaWriter_ActiveDim, pong::FullResolution::Primary, 0x340b0)
 DEF_NAMESPACE_REG(DmaWriter_ActiveDim, pong::FullResolution::Uv, 0x34108)
 
-class DmaWriter_Bank0Base
-    : public hwreg::RegisterBase<DmaWriter_Bank0Base, uint32_t> {
+class DmaWriter_Bank0Base : public hwreg::RegisterBase<DmaWriter_Bank0Base, uint32_t> {
  public:
   // bank 0 base address for frame buffer, should be word-aligned
   DEF_FIELD(31, 0, value);
@@ -5901,8 +5616,7 @@ DEF_NAMESPACE_REG(DmaWriter_Bank0Base, pong::DownScaled::Uv, 0x34280)
 DEF_NAMESPACE_REG(DmaWriter_Bank0Base, pong::FullResolution::Primary, 0x340b4)
 DEF_NAMESPACE_REG(DmaWriter_Bank0Base, pong::FullResolution::Uv, 0x3410c)
 
-class DmaWriter_Bank1Base
-    : public hwreg::RegisterBase<DmaWriter_Bank1Base, uint32_t> {
+class DmaWriter_Bank1Base : public hwreg::RegisterBase<DmaWriter_Bank1Base, uint32_t> {
  public:
   // bank 1 base address for frame buffer, should be word-aligned
   DEF_FIELD(31, 0, value);
@@ -5917,8 +5631,7 @@ DEF_NAMESPACE_REG(DmaWriter_Bank1Base, pong::DownScaled::Uv, 0x34284)
 DEF_NAMESPACE_REG(DmaWriter_Bank1Base, pong::FullResolution::Primary, 0x340b8)
 DEF_NAMESPACE_REG(DmaWriter_Bank1Base, pong::FullResolution::Uv, 0x34110)
 
-class DmaWriter_Bank2Base
-    : public hwreg::RegisterBase<DmaWriter_Bank2Base, uint32_t> {
+class DmaWriter_Bank2Base : public hwreg::RegisterBase<DmaWriter_Bank2Base, uint32_t> {
  public:
   // bank 2 base address for frame buffer, should be word-aligned
   DEF_FIELD(31, 0, value);
@@ -5933,8 +5646,7 @@ DEF_NAMESPACE_REG(DmaWriter_Bank2Base, pong::DownScaled::Uv, 0x34288)
 DEF_NAMESPACE_REG(DmaWriter_Bank2Base, pong::FullResolution::Primary, 0x340bc)
 DEF_NAMESPACE_REG(DmaWriter_Bank2Base, pong::FullResolution::Uv, 0x34114)
 
-class DmaWriter_Bank3Base
-    : public hwreg::RegisterBase<DmaWriter_Bank3Base, uint32_t> {
+class DmaWriter_Bank3Base : public hwreg::RegisterBase<DmaWriter_Bank3Base, uint32_t> {
  public:
   // bank 3 base address for frame buffer, should be word-aligned
   DEF_FIELD(31, 0, value);
@@ -5949,8 +5661,7 @@ DEF_NAMESPACE_REG(DmaWriter_Bank3Base, pong::DownScaled::Uv, 0x3428c)
 DEF_NAMESPACE_REG(DmaWriter_Bank3Base, pong::FullResolution::Primary, 0x340c0)
 DEF_NAMESPACE_REG(DmaWriter_Bank3Base, pong::FullResolution::Uv, 0x34118)
 
-class DmaWriter_Bank4Base
-    : public hwreg::RegisterBase<DmaWriter_Bank4Base, uint32_t> {
+class DmaWriter_Bank4Base : public hwreg::RegisterBase<DmaWriter_Bank4Base, uint32_t> {
  public:
   // bank 4 base address for frame buffer, should be word-aligned
   DEF_FIELD(31, 0, value);
@@ -5984,8 +5695,7 @@ DEF_NAMESPACE_REG(DmaWriter_Bank, pong::DownScaled::Uv, 0x34294)
 DEF_NAMESPACE_REG(DmaWriter_Bank, pong::FullResolution::Primary, 0x340c8)
 DEF_NAMESPACE_REG(DmaWriter_Bank, pong::FullResolution::Uv, 0x34120)
 
-class DmaWriter_LineOffset
-    : public hwreg::RegisterBase<DmaWriter_LineOffset, uint32_t> {
+class DmaWriter_LineOffset : public hwreg::RegisterBase<DmaWriter_LineOffset, uint32_t> {
  public:
   //  Indicates the offset in bytes from the start of one line to the
   //   next line.
@@ -6023,8 +5733,7 @@ DEF_NAMESPACE_REG(DmaWriter_WBank, pong::FullResolution::Primary, 0x340d0)
 DEF_NAMESPACE_REG(DmaWriter_WBank, pong::FullResolution::Uv, 0x34128)
 
 class DmaWriter_FrameCount
-    : public hwreg::RegisterBase<DmaWriter_FrameCount, uint32_t,
-                                 hwreg::EnablePrinter> {
+    : public hwreg::RegisterBase<DmaWriter_FrameCount, uint32_t, hwreg::EnablePrinter> {
  public:
   //  count of incomming frames (starts) to vdma_writer on video input,
   //   non resetable, rolls over, updates at pixel 1 of new frame on
@@ -6046,8 +5755,7 @@ DEF_NAMESPACE_REG(DmaWriter_FrameCount, pong::FullResolution::Primary, 0x340dc)
 DEF_NAMESPACE_REG(DmaWriter_FrameCount, pong::FullResolution::Uv, 0x34134)
 
 class DmaWriter_Failures
-    : public hwreg::RegisterBase<DmaWriter_Failures, uint32_t,
-                                 hwreg::EnablePrinter> {
+    : public hwreg::RegisterBase<DmaWriter_Failures, uint32_t, hwreg::EnablePrinter> {
  public:
   // clearable alarm, high to indicate bad  bresp captured
   DEF_BIT(0, axi_fail_bresp);
@@ -6080,8 +5788,7 @@ DEF_NAMESPACE_REG(DmaWriter_Failures, pong::DownScaled::Uv, 0x342b0)
 DEF_NAMESPACE_REG(DmaWriter_Failures, pong::FullResolution::Primary, 0x340e4)
 DEF_NAMESPACE_REG(DmaWriter_Failures, pong::FullResolution::Uv, 0x3413c)
 
-class DmaWriter_BlkStatus
-    : public hwreg::RegisterBase<DmaWriter_BlkStatus, uint32_t> {
+class DmaWriter_BlkStatus : public hwreg::RegisterBase<DmaWriter_BlkStatus, uint32_t> {
  public:
   // block status output (reserved)
   // -- blk_status(0) = wfifo_fail_full
@@ -6101,8 +5808,7 @@ DEF_NAMESPACE_REG(DmaWriter_BlkStatus, pong::DownScaled::Uv, 0x342b4)
 DEF_NAMESPACE_REG(DmaWriter_BlkStatus, pong::FullResolution::Primary, 0x340e8)
 DEF_NAMESPACE_REG(DmaWriter_BlkStatus, pong::FullResolution::Uv, 0x34140)
 
-class DmaWriter_LinesWrapped
-    : public hwreg::RegisterBase<DmaWriter_LinesWrapped, uint32_t> {
+class DmaWriter_LinesWrapped : public hwreg::RegisterBase<DmaWriter_LinesWrapped, uint32_t> {
  public:
   //  Number of lines to write from base address before wrapping back
   //   to base address. 0 = no wrapping, >0 = last line written before
@@ -6112,17 +5818,14 @@ class DmaWriter_LinesWrapped
 
 DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, ping::DownScaled::Primary, 0x1c2a0)
 DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, ping::DownScaled::Uv, 0x1c2f8)
-DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, ping::FullResolution::Primary,
-                  0x1c12c)
+DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, ping::FullResolution::Primary, 0x1c12c)
 DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, ping::FullResolution::Uv, 0x1c184)
 DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, pong::DownScaled::Primary, 0x34260)
 DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, pong::DownScaled::Uv, 0x342b8)
-DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, pong::FullResolution::Primary,
-                  0x340ec)
+DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, pong::FullResolution::Primary, 0x340ec)
 DEF_NAMESPACE_REG(DmaWriter_LinesWrapped, pong::FullResolution::Uv, 0x34144)
 
-class DmaWriter_LinetickFirst
-    : public hwreg::RegisterBase<DmaWriter_LinetickFirst, uint32_t> {
+class DmaWriter_LinetickFirst : public hwreg::RegisterBase<DmaWriter_LinetickFirst, uint32_t> {
  public:
   //  Line number of first linetick. 0  = no linetick, >0 = line number
   //   to generate linetick
@@ -6131,17 +5834,14 @@ class DmaWriter_LinetickFirst
 
 DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, ping::DownScaled::Primary, 0x1c2a4)
 DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, ping::DownScaled::Uv, 0x1c2fc)
-DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, ping::FullResolution::Primary,
-                  0x1c130)
+DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, ping::FullResolution::Primary, 0x1c130)
 DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, ping::FullResolution::Uv, 0x1c188)
 DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, pong::DownScaled::Primary, 0x34264)
 DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, pong::DownScaled::Uv, 0x342bc)
-DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, pong::FullResolution::Primary,
-                  0x340f0)
+DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, pong::FullResolution::Primary, 0x340f0)
 DEF_NAMESPACE_REG(DmaWriter_LinetickFirst, pong::FullResolution::Uv, 0x34148)
 
-class DmaWriter_LinetickRepeat
-    : public hwreg::RegisterBase<DmaWriter_LinetickRepeat, uint32_t> {
+class DmaWriter_LinetickRepeat : public hwreg::RegisterBase<DmaWriter_LinetickRepeat, uint32_t> {
  public:
   //  Line repeat interval of linetick. 0 = no repeat, >0 = repeat
   //   interval in lines
@@ -6150,17 +5850,14 @@ class DmaWriter_LinetickRepeat
 
 DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, ping::DownScaled::Primary, 0x1c2a8)
 DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, ping::DownScaled::Uv, 0x1c300)
-DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, ping::FullResolution::Primary,
-                  0x1c134)
+DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, ping::FullResolution::Primary, 0x1c134)
 DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, ping::FullResolution::Uv, 0x1c18c)
 DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, pong::DownScaled::Primary, 0x34268)
 DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, pong::DownScaled::Uv, 0x342c0)
-DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, pong::FullResolution::Primary,
-                  0x340f4)
+DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, pong::FullResolution::Primary, 0x340f4)
 DEF_NAMESPACE_REG(DmaWriter_LinetickRepeat, pong::FullResolution::Uv, 0x3414c)
 
-class DmaWriter_LineTick
-    : public hwreg::RegisterBase<DmaWriter_LineTick, uint32_t> {
+class DmaWriter_LineTick : public hwreg::RegisterBase<DmaWriter_LineTick, uint32_t> {
  public:
   //  Linetick delay in vcke cycles to add to min 3 cycle latency from
   //   acl_vi. 0-65535.
@@ -6220,8 +5917,7 @@ DEF_NAMESPACE_REG(DmaWriter_Axi, pong::DownScaled::Uv, 0x342c8)
 DEF_NAMESPACE_REG(DmaWriter_Axi, pong::FullResolution::Primary, 0x340fc)
 DEF_NAMESPACE_REG(DmaWriter_Axi, pong::FullResolution::Uv, 0x34154)
 
-class DmaWriter_AxiIdValue
-    : public hwreg::RegisterBase<DmaWriter_AxiIdValue, uint32_t> {
+class DmaWriter_AxiIdValue : public hwreg::RegisterBase<DmaWriter_AxiIdValue, uint32_t> {
  public:
   // value to send for awid, wid and expected on bid. Good default = 0000
   DEF_FIELD(3, 0, value);
@@ -6236,8 +5932,7 @@ DEF_NAMESPACE_REG(DmaWriter_AxiIdValue, pong::DownScaled::Uv, 0x342cc)
 DEF_NAMESPACE_REG(DmaWriter_AxiIdValue, pong::FullResolution::Primary, 0x34100)
 DEF_NAMESPACE_REG(DmaWriter_AxiIdValue, pong::FullResolution::Uv, 0x34158)
 
-class MultiCtx_ConfigDone
-    : public hwreg::RegisterBase<MultiCtx_ConfigDone, uint32_t> {
+class MultiCtx_ConfigDone : public hwreg::RegisterBase<MultiCtx_ConfigDone, uint32_t> {
  public:
   // This signal is only required in multi-context mode
   //      Once configuration for ping/pong address space is done, MCU

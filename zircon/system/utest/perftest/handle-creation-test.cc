@@ -27,101 +27,100 @@ namespace {
 // when the test is run over SSH.
 
 bool ChannelCreateTest(perftest::RepeatState* state) {
-    state->DeclareStep("create");
-    state->DeclareStep("close");
-    while (state->KeepRunning()) {
-        zx::channel handle1;
-        zx::channel handle2;
-        ZX_ASSERT(zx::channel::create(0, &handle1, &handle2) == ZX_OK);
-        state->NextStep();
-    }
-    return true;
+  state->DeclareStep("create");
+  state->DeclareStep("close");
+  while (state->KeepRunning()) {
+    zx::channel handle1;
+    zx::channel handle2;
+    ZX_ASSERT(zx::channel::create(0, &handle1, &handle2) == ZX_OK);
+    state->NextStep();
+  }
+  return true;
 }
 
 bool EventCreateTest(perftest::RepeatState* state) {
-    state->DeclareStep("create");
-    state->DeclareStep("close");
-    while (state->KeepRunning()) {
-        zx::event handle;
-        ZX_ASSERT(zx::event::create(0, &handle) == ZX_OK);
-        state->NextStep();
-    }
-    return true;
+  state->DeclareStep("create");
+  state->DeclareStep("close");
+  while (state->KeepRunning()) {
+    zx::event handle;
+    ZX_ASSERT(zx::event::create(0, &handle) == ZX_OK);
+    state->NextStep();
+  }
+  return true;
 }
 
 bool EventPairCreateTest(perftest::RepeatState* state) {
-    state->DeclareStep("create");
-    state->DeclareStep("close");
-    while (state->KeepRunning()) {
-        zx::eventpair handle1;
-        zx::eventpair handle2;
-        ZX_ASSERT(zx::eventpair::create(0, &handle1, &handle2) == ZX_OK);
-        state->NextStep();
-    }
-    return true;
+  state->DeclareStep("create");
+  state->DeclareStep("close");
+  while (state->KeepRunning()) {
+    zx::eventpair handle1;
+    zx::eventpair handle2;
+    ZX_ASSERT(zx::eventpair::create(0, &handle1, &handle2) == ZX_OK);
+    state->NextStep();
+  }
+  return true;
 }
 
 bool FifoCreateTest(perftest::RepeatState* state) {
-    state->DeclareStep("create");
-    state->DeclareStep("close");
-    while (state->KeepRunning()) {
-        zx::fifo handle1;
-        zx::fifo handle2;
-        const uint32_t kElementCount = 2;
-        const uint32_t kElementSize = 2048;
-        ZX_ASSERT(zx::fifo::create(kElementCount, kElementSize, 0, &handle1,
-                                   &handle2) == ZX_OK);
-        state->NextStep();
-    }
-    return true;
+  state->DeclareStep("create");
+  state->DeclareStep("close");
+  while (state->KeepRunning()) {
+    zx::fifo handle1;
+    zx::fifo handle2;
+    const uint32_t kElementCount = 2;
+    const uint32_t kElementSize = 2048;
+    ZX_ASSERT(zx::fifo::create(kElementCount, kElementSize, 0, &handle1, &handle2) == ZX_OK);
+    state->NextStep();
+  }
+  return true;
 }
 
 bool PortCreateTest(perftest::RepeatState* state) {
-    state->DeclareStep("create");
-    state->DeclareStep("close");
-    while (state->KeepRunning()) {
-        zx::port handle;
-        ZX_ASSERT(zx::port::create(0, &handle) == ZX_OK);
-        state->NextStep();
-    }
-    return true;
+  state->DeclareStep("create");
+  state->DeclareStep("close");
+  while (state->KeepRunning()) {
+    zx::port handle;
+    ZX_ASSERT(zx::port::create(0, &handle) == ZX_OK);
+    state->NextStep();
+  }
+  return true;
 }
 
 // Note that this only creates a Zircon thread object.  It does not start
 // the thread.
 bool ThreadCreateTest(perftest::RepeatState* state) {
-    state->DeclareStep("create");
-    state->DeclareStep("close");
-    while (state->KeepRunning()) {
-        zx::thread handle;
-        static const char kName[] = "perftest-thread";
-        ZX_ASSERT(zx::thread::create(*zx::process::self(), kName,
-                                     sizeof(kName) - 1, 0, &handle) == ZX_OK);
-        state->NextStep();
-    }
-    return true;
+  state->DeclareStep("create");
+  state->DeclareStep("close");
+  while (state->KeepRunning()) {
+    zx::thread handle;
+    static const char kName[] = "perftest-thread";
+    ZX_ASSERT(zx::thread::create(*zx::process::self(), kName, sizeof(kName) - 1, 0, &handle) ==
+              ZX_OK);
+    state->NextStep();
+  }
+  return true;
 }
 
 bool VmoCreateTest(perftest::RepeatState* state) {
-    state->DeclareStep("create");
-    state->DeclareStep("close");
-    while (state->KeepRunning()) {
-        zx::vmo handle;
-        const size_t kSizeInBytes = 64 * 1024;
-        ZX_ASSERT(zx::vmo::create(kSizeInBytes, 0, &handle) == ZX_OK);
-        state->NextStep();
-    }
-    return true;
+  state->DeclareStep("create");
+  state->DeclareStep("close");
+  while (state->KeepRunning()) {
+    zx::vmo handle;
+    const size_t kSizeInBytes = 64 * 1024;
+    ZX_ASSERT(zx::vmo::create(kSizeInBytes, 0, &handle) == ZX_OK);
+    state->NextStep();
+  }
+  return true;
 }
 
 void RegisterTests() {
-    perftest::RegisterTest("HandleCreate_Channel", ChannelCreateTest);
-    perftest::RegisterTest("HandleCreate_Event", EventCreateTest);
-    perftest::RegisterTest("HandleCreate_EventPair", EventPairCreateTest);
-    perftest::RegisterTest("HandleCreate_Fifo", FifoCreateTest);
-    perftest::RegisterTest("HandleCreate_Port", PortCreateTest);
-    perftest::RegisterTest("HandleCreate_Thread", ThreadCreateTest);
-    perftest::RegisterTest("HandleCreate_Vmo", VmoCreateTest);
+  perftest::RegisterTest("HandleCreate_Channel", ChannelCreateTest);
+  perftest::RegisterTest("HandleCreate_Event", EventCreateTest);
+  perftest::RegisterTest("HandleCreate_EventPair", EventPairCreateTest);
+  perftest::RegisterTest("HandleCreate_Fifo", FifoCreateTest);
+  perftest::RegisterTest("HandleCreate_Port", PortCreateTest);
+  perftest::RegisterTest("HandleCreate_Thread", ThreadCreateTest);
+  perftest::RegisterTest("HandleCreate_Vmo", VmoCreateTest);
 }
 PERFTEST_CTOR(RegisterTests)
 

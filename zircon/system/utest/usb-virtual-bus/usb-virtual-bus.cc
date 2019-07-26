@@ -55,11 +55,11 @@ void USBVirtualBus::InitUMS(fbl::String* devpath) {
   };
 
   ASSERT_OK(FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction, peripheral_.get(),
-                            &ums_function_desc));
+                     &ums_function_desc));
   zx::channel handles[2];
   ASSERT_OK(zx::channel::create(0, handles, handles + 1));
   ASSERT_OK(fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(peripheral_.get(),
-                                                                                handles[1].get()));
+                                                                         handles[1].get()));
   ASSERT_EQ(ZX_OK,
             FidlCall(fuchsia_hardware_usb_peripheral_DeviceBindFunctions, peripheral_.get()));
   async_loop_config_t config = {};
@@ -98,11 +98,11 @@ void USBVirtualBus::InitUsbHid(fbl::String* devpath) {
   };
 
   ASSERT_OK(FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction, peripheral_.get(),
-                            &usb_hid_function_desc));
+                     &usb_hid_function_desc));
   zx::channel handles[2];
   ASSERT_OK(zx::channel::create(0, handles, handles + 1));
   ASSERT_OK(fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(peripheral_.get(),
-                                                                                handles[1].get()));
+                                                                         handles[1].get()));
   ASSERT_EQ(ZX_OK,
             FidlCall(fuchsia_hardware_usb_peripheral_DeviceBindFunctions, peripheral_.get()));
   async_loop_config_t config = {};
@@ -146,11 +146,11 @@ void USBVirtualBus::InitFtdi(fbl::String* devpath) {
   };
 
   ASSERT_OK(FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction, peripheral_.get(),
-                            &ums_function_desc));
+                     &ums_function_desc));
   zx::channel handles[2];
   ASSERT_OK(zx::channel::create(0, handles, handles + 1));
   ASSERT_OK(fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(peripheral_.get(),
-                                                                                handles[1].get()));
+                                                                         handles[1].get()));
   ASSERT_EQ(ZX_OK,
             FidlCall(fuchsia_hardware_usb_peripheral_DeviceBindFunctions, peripheral_.get()));
   async_loop_config_t config = {};

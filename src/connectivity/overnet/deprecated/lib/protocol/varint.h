@@ -18,9 +18,7 @@ uint8_t WireSizeFor(uint64_t x);
 uint8_t* Write(uint64_t x, uint8_t wire_length, uint8_t* dst);
 
 // Variant of Write that does not need the pre-computed length
-inline uint8_t* Write(uint64_t x, uint8_t* dst) {
-  return Write(x, WireSizeFor(x), dst);
-}
+inline uint8_t* Write(uint64_t x, uint8_t* dst) { return Write(x, WireSizeFor(x), dst); }
 
 namespace impl {
 bool ReadFallback(const uint8_t** bytes, const uint8_t* end, uint64_t* result);

@@ -9,4 +9,4 @@
 
 #include <lib/trace/event.h>
 
-#endif // ZIRCON_SYSTEM_ULIB_TRACE_EVENT_H_
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_EVENT_H_

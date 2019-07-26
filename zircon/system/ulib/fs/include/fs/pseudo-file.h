@@ -39,29 +39,29 @@ namespace fs {
 // This is an abstract class.  The concrete implementations are
 // |BufferedPseudoFile| and |UnbufferedPseudoFile|.
 class PseudoFile : public Vnode {
-public:
-    // Handler called to read from the pseudo-file.
-    using ReadHandler = fbl::Function<zx_status_t(fbl::String* output)>;
+ public:
+  // Handler called to read from the pseudo-file.
+  using ReadHandler = fbl::Function<zx_status_t(fbl::String* output)>;
 
-    // Handler called to write into the pseudo-file.
-    using WriteHandler = fbl::Function<zx_status_t(fbl::StringPiece input)>;
+  // Handler called to write into the pseudo-file.
+  using WriteHandler = fbl::Function<zx_status_t(fbl::StringPiece input)>;
 
-    ~PseudoFile() override;
+  ~PseudoFile() override;
 
-    // |Vnode| implementation:
-    zx_status_t ValidateFlags(uint32_t flags) override;
-    zx_status_t Getattr(vnattr_t* a) final;
+  // |Vnode| implementation:
+  zx_status_t ValidateFlags(uint32_t flags) override;
+  zx_status_t Getattr(vnattr_t* a) final;
 
-    bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  bool IsDirectory() const final;
+  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
-protected:
-    PseudoFile(ReadHandler read_handler, WriteHandler write_handler);
+ protected:
+  PseudoFile(ReadHandler read_handler, WriteHandler write_handler);
 
-    ReadHandler const read_handler_;
-    WriteHandler const write_handler_;
+  ReadHandler const read_handler_;
+  WriteHandler const write_handler_;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(PseudoFile);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(PseudoFile);
 };
 
 // Buffered pseudo-file.
@@ -85,53 +85,53 @@ protected:
 //
 // This class is thread-safe.
 class BufferedPseudoFile : public PseudoFile {
-public:
-    // Creates a buffered pseudo-file.
-    //
-    // If the |read_handler| is null, then the pseudo-file is considered not readable.
-    // If the |write_handler| is null, then the pseudo-file is considered not writable.
-    // The |input_buffer_capacity| determines the maximum number of bytes which can be
-    // written to the pseudo-file's input buffer when it it opened for writing.
-    BufferedPseudoFile(ReadHandler read_handler = ReadHandler(),
-                       WriteHandler write_handler = WriteHandler(),
-                       size_t input_buffer_capacity = 1024);
+ public:
+  // Creates a buffered pseudo-file.
+  //
+  // If the |read_handler| is null, then the pseudo-file is considered not readable.
+  // If the |write_handler| is null, then the pseudo-file is considered not writable.
+  // The |input_buffer_capacity| determines the maximum number of bytes which can be
+  // written to the pseudo-file's input buffer when it it opened for writing.
+  BufferedPseudoFile(ReadHandler read_handler = ReadHandler(),
+                     WriteHandler write_handler = WriteHandler(),
+                     size_t input_buffer_capacity = 1024);
 
-    ~BufferedPseudoFile() override;
+  ~BufferedPseudoFile() override;
+
+  // |Vnode| implementation:
+  zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+
+ private:
+  class Content final : public Vnode {
+   public:
+    Content(fbl::RefPtr<BufferedPseudoFile> file, uint32_t flags, fbl::String output);
+    ~Content() override;
 
     // |Vnode| implementation:
-    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t ValidateFlags(uint32_t flags) final;
+    zx_status_t Close() final;
+    zx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
+    zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
+    zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
+    zx_status_t Truncate(size_t length) final;
+    bool IsDirectory() const final;
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
-private:
-    class Content final : public Vnode {
-    public:
-        Content(fbl::RefPtr<BufferedPseudoFile> file, uint32_t flags, fbl::String output);
-        ~Content() override;
+   private:
+    void SetInputLength(size_t length);
 
-        // |Vnode| implementation:
-        zx_status_t ValidateFlags(uint32_t flags) final;
-        zx_status_t Close() final;
-        zx_status_t Getattr(vnattr_t* a) final;
-        zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
-        zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
-        zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
-        zx_status_t Truncate(size_t length) final;
-        bool IsDirectory() const final;
-        zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    fbl::RefPtr<BufferedPseudoFile> const file_;
+    uint32_t const flags_;
+    fbl::String const output_;
 
-    private:
-        void SetInputLength(size_t length);
+    char* input_data_ = nullptr;
+    size_t input_length_ = 0u;
+  };
 
-        fbl::RefPtr<BufferedPseudoFile> const file_;
-        uint32_t const flags_;
-        fbl::String const output_;
+  size_t const input_buffer_capacity_;
 
-        char* input_data_ = nullptr;
-        size_t input_length_ = 0u;
-    };
-
-    size_t const input_buffer_capacity_;
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(BufferedPseudoFile);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(BufferedPseudoFile);
 };
 
 // Unbuffered pseudo-file.
@@ -173,46 +173,46 @@ private:
 //
 // This class is thread-safe.
 class UnbufferedPseudoFile : public PseudoFile {
-public:
-    // Creates an unbuffered pseudo-file.
-    //
-    // If the |read_handler| is null, then the pseudo-file is considered not readable.
-    // If the |write_handler| is null, then the pseudo-file is considered not writable.
-    UnbufferedPseudoFile(ReadHandler read_handler = ReadHandler(),
-                         WriteHandler write_handler = WriteHandler());
+ public:
+  // Creates an unbuffered pseudo-file.
+  //
+  // If the |read_handler| is null, then the pseudo-file is considered not readable.
+  // If the |write_handler| is null, then the pseudo-file is considered not writable.
+  UnbufferedPseudoFile(ReadHandler read_handler = ReadHandler(),
+                       WriteHandler write_handler = WriteHandler());
 
-    ~UnbufferedPseudoFile() override;
+  ~UnbufferedPseudoFile() override;
+
+  // |Vnode| implementation:
+  zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+
+ private:
+  class Content final : public Vnode {
+   public:
+    Content(fbl::RefPtr<UnbufferedPseudoFile> file, uint32_t flags);
+    ~Content() override;
 
     // |Vnode| implementation:
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t Close() final;
+    zx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
+    zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
+    zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
+    zx_status_t Truncate(size_t length) final;
+    bool IsDirectory() const final;
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
-private:
-    class Content final : public Vnode {
-    public:
-        Content(fbl::RefPtr<UnbufferedPseudoFile> file, uint32_t flags);
-        ~Content() override;
+   private:
+    fbl::RefPtr<UnbufferedPseudoFile> const file_;
+    uint32_t const flags_;
 
-        // |Vnode| implementation:
-        zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
-        zx_status_t Close() final;
-        zx_status_t Getattr(vnattr_t* a) final;
-        zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
-        zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
-        zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
-        zx_status_t Truncate(size_t length) final;
-        bool IsDirectory() const final;
-        zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    bool truncated_since_last_successful_write_;
+  };
 
-    private:
-        fbl::RefPtr<UnbufferedPseudoFile> const file_;
-        uint32_t const flags_;
-
-        bool truncated_since_last_successful_write_;
-    };
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(UnbufferedPseudoFile);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(UnbufferedPseudoFile);
 };
 
-} // namespace fs
+}  // namespace fs
 
-#endif // FS_PSEUDO_FILE_H_
+#endif  // FS_PSEUDO_FILE_H_

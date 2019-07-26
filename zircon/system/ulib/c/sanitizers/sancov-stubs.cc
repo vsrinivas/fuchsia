@@ -20,8 +20,7 @@
 
 // This should never be called, because the runtime should have been
 // loaded before any module initializers get called.
-[[gnu::weak]] extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t*,
-                                                                  uint32_t*) {
+[[gnu::weak]] extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t*, uint32_t*) {
   __builtin_trap();
 }
 

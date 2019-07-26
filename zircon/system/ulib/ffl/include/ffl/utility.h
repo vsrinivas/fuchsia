@@ -64,4 +64,4 @@ struct IntermediateType<int64_t> {
   using Type = int64_t;
 };
 
-} // namespace ffl
+}  // namespace ffl

@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-
 class VulkanShader {
  public:
   static vk::ResultValue<vk::UniqueShaderModule> CreateShaderModule(vk::Device device,

@@ -16,15 +16,13 @@ namespace image_pipe_swapchain {
 // An implementation of ImagePipeSurface based on an async fidl ImagePipe.
 class ImagePipeSurfaceAsync : public ImagePipeSurface {
  public:
-  ImagePipeSurfaceAsync(zx_handle_t image_pipe_handle)
-      : loop_(&kAsyncLoopConfigNoAttachToThread) {
+  ImagePipeSurfaceAsync(zx_handle_t image_pipe_handle) : loop_(&kAsyncLoopConfigNoAttachToThread) {
     image_pipe_.Bind(zx::channel(image_pipe_handle), loop_.dispatcher());
     loop_.StartThread();
   }
 
-  bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
-                   VkFormat format, VkImageUsageFlags usage,
-                   VkSwapchainCreateFlagsKHR swapchain_flags,
+  bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
+                   VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
                    fuchsia::images::ImageInfo image_info, uint32_t image_count,
                    const VkAllocationCallbacks* pAllocator,
                    std::vector<ImageInfo>* image_info_out) override;

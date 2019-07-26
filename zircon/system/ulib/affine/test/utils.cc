@@ -13,11 +13,11 @@ constexpr int64_t MAX = std::numeric_limits<int64_t>::max();
 constexpr int64_t MIN = std::numeric_limits<int64_t>::min();
 
 struct TestVector {
-    int64_t a, b, expected;
+  int64_t a, b, expected;
 };
 
 TEST(UtilsTestCase, ClampAdd) {
-    // clang-format off
+  // clang-format off
     constexpr std::array TEST_VECTORS {
         TestVector{       15,       25,      40 },
         TestVector{       15,      -25,     -10 },
@@ -42,16 +42,16 @@ TEST(UtilsTestCase, ClampAdd) {
         TestVector{  MAX - 1,      MAX,     MAX },
         TestVector{      MAX,      MAX,     MAX },
     };
-    // clang-format on
+  // clang-format on
 
-    for (const auto& v : TEST_VECTORS) {
-        int64_t result = affine::utils::ClampAdd(v.a, v.b);
-        EXPECT_EQ(v.expected, result, "test case: 0x%lx + 0x%lx", v.a, v.b);
-    }
+  for (const auto& v : TEST_VECTORS) {
+    int64_t result = affine::utils::ClampAdd(v.a, v.b);
+    EXPECT_EQ(v.expected, result, "test case: 0x%lx + 0x%lx", v.a, v.b);
+  }
 }
 
 TEST(UtilsTestCase, ClampSub) {
-    // clang-format off
+  // clang-format off
     constexpr std::array TEST_VECTORS {
         TestVector{       15,       25,     -10 },
         TestVector{       15,      -25,      40 },
@@ -81,12 +81,12 @@ TEST(UtilsTestCase, ClampSub) {
         TestVector{      MIN,      MIN,       0 },
 
     };
-    // clang-format on
+  // clang-format on
 
-    for (const auto& v : TEST_VECTORS) {
-        int64_t result = affine::utils::ClampSub(v.a, v.b);
-        EXPECT_EQ(v.expected, result, "test case: 0x%lx - 0x%lx", v.a, v.b);
-    }
+  for (const auto& v : TEST_VECTORS) {
+    int64_t result = affine::utils::ClampSub(v.a, v.b);
+    EXPECT_EQ(v.expected, result, "test case: 0x%lx - 0x%lx", v.a, v.b);
+  }
 }
 
-}
+}  // namespace

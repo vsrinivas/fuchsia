@@ -41,7 +41,6 @@ enum class DeserializationError {
 
 std::vector<uint8_t> SerializeFrame(FrameView frame);
 
-fit::result<Frame, DeserializationError> DeserializeFrame(
-    fbl::Span<const uint8_t> raw_frame);
+fit::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_t> raw_frame);
 
 }  // namespace ppp

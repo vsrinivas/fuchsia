@@ -117,8 +117,7 @@ class Walker final {
   static_assert(CheckVisitorInterface<VisitorSuper, VisitorImpl>(), "");
 
  public:
-  Walker(const fidl_type_t* type, StartingPoint start)
-      : type_(type), start_(start) {}
+  Walker(const fidl_type_t* type, StartingPoint start) : type_(type), start_(start) {}
 
   // Walk the object/buffer located at |start_|.
   void Walk(VisitorImpl& visitor);
@@ -137,8 +136,7 @@ class Walker final {
 
   // Functions that manipulate the coding stack frames.
   struct Frame {
-    Frame(const fidl_type_t* fidl_type, Position position)
-        : position(position) {
+    Frame(const fidl_type_t* fidl_type, Position position) : position(position) {
       switch (fidl_type->type_tag) {
         case fidl::kFidlTypeEnum:
           state = kStateEnum;
@@ -217,8 +215,7 @@ class Walker final {
       }
     }
 
-    Frame(const fidl::FidlCodedStruct* coded_struct, Position position)
-        : position(position) {
+    Frame(const fidl::FidlCodedStruct* coded_struct, Position position) : position(position) {
       state = kStateStruct;
       struct_state.fields = coded_struct->fields;
       struct_state.field_count = coded_struct->field_count;
@@ -226,8 +223,7 @@ class Walker final {
       struct_state.struct_size = coded_struct->size;
     }
 
-    Frame(const fidl::FidlCodedTable* coded_table, Position position)
-        : position(position) {
+    Frame(const fidl::FidlCodedTable* coded_table, Position position) : position(position) {
       state = kStateStruct;
       table_state.field = coded_table->fields;
       table_state.remaining_fields = coded_table->field_count;
@@ -235,8 +231,7 @@ class Walker final {
       table_state.ordinal = 0;
     }
 
-    Frame(const fidl::FidlCodedUnion* coded_union, Position position)
-        : position(position) {
+    Frame(const fidl::FidlCodedUnion* coded_union, Position position) : position(position) {
       state = kStateUnion;
       union_state.fields = coded_union->fields;
       union_state.field_count = coded_union->field_count;

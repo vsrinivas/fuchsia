@@ -20,8 +20,8 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   // In the future, some special alignment might happen here, or special
   // memory allocated...
   // Simple GetBufferSize.  Only valid for simple formats:
-  size_t buffer_size = ROUNDUP(
-      format.format.height * format.format.planes[0].bytes_per_row, PAGE_SIZE);
+  size_t buffer_size =
+      ROUNDUP(format.format.height * format.format.planes[0].bytes_per_row, PAGE_SIZE);
   buffer_collection->buffer_count = num_buffers;
   buffer_collection->vmo_size = buffer_size;
   buffer_collection->format.set_image(format.format);
@@ -60,8 +60,7 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
 
   static constexpr uint16_t kNumberOfBuffers = 8;
   fuchsia::sysmem::BufferCollectionInfo buffer_collection;
-  zx_status_t status =
-      Gralloc(client.formats()[0], kNumberOfBuffers, &buffer_collection);
+  zx_status_t status = Gralloc(client.formats()[0], kNumberOfBuffers, &buffer_collection);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
     return status;
@@ -79,16 +78,13 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
   }
 
   if (use_camera_manager) {
-    fuchsia::camera::VideoStream request = {.camera_id = 0,
-                                            .format = client.formats()[0]};
+    fuchsia::camera::VideoStream request = {.camera_id = 0, .format = client.formats()[0]};
 
-    status = client.manager()->CreateStream(
-        request, std::move(buffer_collection), stream.NewRequest(),
-        std::move(driver_token));
+    status = client.manager()->CreateStream(request, std::move(buffer_collection),
+                                            stream.NewRequest(), std::move(driver_token));
   } else {
-    status = client.camera()->CreateStream(
-        std::move(buffer_collection), client.formats()[0].rate,
-        stream.NewRequest(), std::move(driver_token));
+    status = client.camera()->CreateStream(std::move(buffer_collection), client.formats()[0].rate,
+                                           stream.NewRequest(), std::move(driver_token));
   }
 
   if (status != ZX_OK) {
@@ -96,11 +92,9 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
     return status;
   }
 
-  stream.events()
-      .OnFrameAvailable = [&stream, &loop, &frame_counter](
-                              fuchsia::camera::FrameAvailableEvent frame) {
-    printf("Received FrameNotify Event %d at index: %u\n", frame_counter,
-           frame.buffer_id);
+  stream.events().OnFrameAvailable = [&stream, &loop,
+                                      &frame_counter](fuchsia::camera::FrameAvailableEvent frame) {
+    printf("Received FrameNotify Event %d at index: %u\n", frame_counter, frame.buffer_id);
 
     if (frame.frame_status == fuchsia::camera::FrameStatus::OK) {
       stream->ReleaseFrame(frame.buffer_id);

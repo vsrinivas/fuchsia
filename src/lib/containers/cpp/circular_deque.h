@@ -176,9 +176,8 @@ class circular_deque_const_iterator {
   }
 
   // Random access mutation.
-  friend circular_deque_const_iterator operator+(
-      const circular_deque_const_iterator& iter,
-      difference_type offset) {
+  friend circular_deque_const_iterator operator+(const circular_deque_const_iterator& iter,
+                                                 difference_type offset) {
     circular_deque_const_iterator ret = iter;
     ret.Add(offset);
     return ret;
@@ -187,9 +186,8 @@ class circular_deque_const_iterator {
     Add(offset);
     return *this;
   }
-  friend circular_deque_const_iterator operator-(
-      const circular_deque_const_iterator& iter,
-      difference_type offset) {
+  friend circular_deque_const_iterator operator-(const circular_deque_const_iterator& iter,
+                                                 difference_type offset) {
     circular_deque_const_iterator ret = iter;
     ret.Add(-offset);
     return ret;
@@ -284,10 +282,8 @@ class circular_deque_const_iterator {
       return;
 
     difference_type new_offset = OffsetFromBegin() + delta;
-    assert(new_offset >= 0 &&
-           new_offset <= static_cast<difference_type>(parent_deque_->size()));
-    index_ = (new_offset + parent_deque_->begin_) %
-             parent_deque_->buffer_.capacity();
+    assert(new_offset >= 0 && new_offset <= static_cast<difference_type>(parent_deque_->size()));
+    index_ = (new_offset + parent_deque_->begin_) % parent_deque_->buffer_.capacity();
   }
 
 #ifndef NDEBUG
@@ -339,9 +335,7 @@ class circular_deque_iterator : public circular_deque_const_iterator<T> {
   // Dereferencing.
   T& operator*() const { return const_cast<T&>(containers::operator*()); }
   T* operator->() const { return const_cast<T*>(containers::operator->()); }
-  T& operator[](difference_type i) {
-    return const_cast<T&>(containers::operator[](i));
-  }
+  T& operator[](difference_type i) { return const_cast<T&>(containers::operator[](i)); }
 
   // Random access mutation.
   friend circular_deque_iterator operator+(const circular_deque_iterator& iter,
@@ -431,9 +425,7 @@ class circular_deque {
     assign(other.begin(), other.end());
   }
   circular_deque(circular_deque&& other) noexcept
-      : buffer_(std::move(other.buffer_)),
-        begin_(other.begin_),
-        end_(other.end_) {
+      : buffer_(std::move(other.buffer_)), begin_(other.begin_), end_(other.end_) {
     other.begin_ = 0;
     other.end_ = 0;
   }
@@ -488,8 +480,7 @@ class circular_deque {
 
   // This variant should be enabled only when InputIterator is an iterator.
   template <typename InputIterator>
-  typename std::enable_if<::containers::internal::is_iterator<InputIterator>::value,
-                          void>::type
+  typename std::enable_if<::containers::internal::is_iterator<InputIterator>::value, void>::type
   assign(InputIterator first, InputIterator last) {
     // Possible future enhancement, dispatch on iterator tag type. For forward
     // iterators we can use std::difference to preallocate the space required
@@ -518,8 +509,7 @@ class circular_deque {
     return buffer_[i - right_size];
   }
   value_type& at(size_type i) {
-    return const_cast<value_type&>(
-        const_cast<const circular_deque*>(this)->at(i));
+    return const_cast<value_type&>(const_cast<const circular_deque*>(this)->at(i));
   }
 
   value_type& operator[](size_type i) { return at(i); }
@@ -557,15 +547,11 @@ class circular_deque {
   const_iterator cend() const { return const_iterator(this, end_); }
 
   reverse_iterator rbegin() { return reverse_iterator(end()); }
-  const_reverse_iterator rbegin() const {
-    return const_reverse_iterator(end());
-  }
+  const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
   const_reverse_iterator crbegin() const { return rbegin(); }
 
   reverse_iterator rend() { return reverse_iterator(begin()); }
-  const_reverse_iterator rend() const {
-    return const_reverse_iterator(begin());
-  }
+  const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
   const_reverse_iterator crend() const { return rend(); }
 
   // ---------------------------------------------------------------------------
@@ -704,8 +690,7 @@ class circular_deque {
   // This enable_if keeps this call from getting confused with the (pos, count,
   // value) version when value is an integer.
   template <class InputIterator>
-  typename std::enable_if<::containers::internal::is_iterator<InputIterator>::value,
-                          void>::type
+  typename std::enable_if<::containers::internal::is_iterator<InputIterator>::value, void>::type
   insert(const_iterator pos, InputIterator first, InputIterator last) {
     ValidateIterator(pos);
 
@@ -721,8 +706,7 @@ class circular_deque {
       // hole is the |inserted_items| block immediately before |begin_|.
       ExpandCapacityIfNecessary(inserted_items);
       insert_end = begin();
-      begin_ =
-          (begin_ + buffer_.capacity() - inserted_items) % buffer_.capacity();
+      begin_ = (begin_ + buffer_.capacity() - inserted_items) % buffer_.capacity();
       insert_cur = begin();
     } else {
       insert_cur = iterator(this, pos.index_);
@@ -741,12 +725,8 @@ class circular_deque {
 
   // These all return an iterator to the inserted item. Existing iterators will
   // be invalidated.
-  iterator insert(const_iterator pos, const T& value) {
-    return emplace(pos, value);
-  }
-  iterator insert(const_iterator pos, T&& value) {
-    return emplace(pos, std::move(value));
-  }
+  iterator insert(const_iterator pos, const T& value) { return emplace(pos, value); }
+  iterator insert(const_iterator pos, T&& value) { return emplace(pos, std::move(value)); }
   template <class... Args>
   iterator emplace(const_iterator pos, Args&&... args) {
     ValidateIterator(pos);
@@ -791,8 +771,7 @@ class circular_deque {
       buffer_.DestructRange(&buffer_[first.index_], &buffer_[last.index_]);
     } else {
       // Deleted range wraps around.
-      buffer_.DestructRange(&buffer_[first.index_],
-                            &buffer_[buffer_.capacity()]);
+      buffer_.DestructRange(&buffer_[first.index_], &buffer_[buffer_.capacity()]);
       buffer_.DestructRange(&buffer_[0], &buffer_[last.index_]);
     }
 
@@ -809,8 +788,7 @@ class circular_deque {
     iterator move_src_end = end();
     iterator move_dest(this, first.index_);
     for (; move_src < move_src_end; move_src++, move_dest++) {
-      buffer_.MoveRange(&buffer_[move_src.index_],
-                        &buffer_[move_src.index_ + 1],
+      buffer_.MoveRange(&buffer_[move_src.index_], &buffer_[move_src.index_ + 1],
                         &buffer_[move_dest.index_]);
     }
 
@@ -903,28 +881,21 @@ class circular_deque {
   // Moves the items in the given circular buffer to the current one. The
   // source is moved from so will become invalid. The destination buffer must
   // have already been allocated with enough size.
-  static void MoveBuffer(VectorBuffer& from_buf,
-                         size_t from_begin,
-                         size_t from_end,
-                         VectorBuffer* to_buf,
-                         size_t* to_begin,
-                         size_t* to_end) {
+  static void MoveBuffer(VectorBuffer& from_buf, size_t from_begin, size_t from_end,
+                         VectorBuffer* to_buf, size_t* to_begin, size_t* to_end) {
     size_t from_capacity = from_buf.capacity();
 
     *to_begin = 0;
     if (from_begin < from_end) {
       // Contiguous.
-      from_buf.MoveRange(&from_buf[from_begin], &from_buf[from_end],
-                         to_buf->begin());
+      from_buf.MoveRange(&from_buf[from_begin], &from_buf[from_end], to_buf->begin());
       *to_end = from_end - from_begin;
     } else if (from_begin > from_end) {
       // Discontiguous, copy the right side to the beginning of the new buffer.
-      from_buf.MoveRange(&from_buf[from_begin], &from_buf[from_capacity],
-                         to_buf->begin());
+      from_buf.MoveRange(&from_buf[from_begin], &from_buf[from_capacity], to_buf->begin());
       size_t right_size = from_capacity - from_begin;
       // Append the left side.
-      from_buf.MoveRange(&from_buf[0], &from_buf[from_end],
-                         &(*to_buf)[right_size]);
+      from_buf.MoveRange(&from_buf[0], &from_buf[from_end], &(*to_buf)[right_size]);
       *to_end = right_size + from_end;
     } else {
       // No items.
@@ -946,14 +917,12 @@ class circular_deque {
     if (capacity() >= min_new_capacity)
       return;  // Already enough room.
 
-    min_new_capacity =
-        std::max(min_new_capacity, internal::kCircularBufferInitialCapacity);
+    min_new_capacity = std::max(min_new_capacity, internal::kCircularBufferInitialCapacity);
 
     // std::vector always grows by at least 50%. WTF::Deque grows by at least
     // 25%. We expect queue workloads to generally stay at a similar size and
     // grow less than a vector might, so use 25%.
-    size_t new_capacity =
-        std::max(min_new_capacity, capacity() + capacity() / 4);
+    size_t new_capacity = std::max(min_new_capacity, capacity() + capacity() / 4);
     SetCapacityTo(new_capacity);
   }
 
@@ -970,8 +939,7 @@ class circular_deque {
 
     // Leave 1/4 the size as free capacity, not going below the initial
     // capacity.
-    size_t new_capacity =
-        std::max(internal::kCircularBufferInitialCapacity, sz + sz / 4);
+    size_t new_capacity = std::max(internal::kCircularBufferInitialCapacity, sz + sz / 4);
     if (new_capacity < capacity()) {
       // Count extra item to convert to internal capacity.
       SetCapacityTo(new_capacity);
@@ -1017,8 +985,7 @@ class circular_deque {
     ExpandCapacityIfNecessary(count);
 
     insert_begin->index_ = (begin_ + begin_offset) % buffer_.capacity();
-    *insert_end =
-        iterator(this, (insert_begin->index_ + count) % buffer_.capacity());
+    *insert_end = iterator(this, (insert_begin->index_ + count) % buffer_.capacity());
 
     // Update the new end and prepare the iterators for copying.
     iterator src = end();
@@ -1032,8 +999,7 @@ class circular_deque {
         break;
       --src;
       --dest;
-      buffer_.MoveRange(&buffer_[src.index_], &buffer_[src.index_ + 1],
-                        &buffer_[dest.index_]);
+      buffer_.MoveRange(&buffer_[src.index_], &buffer_[src.index_ + 1], &buffer_[dest.index_]);
     }
   }
 
@@ -1093,14 +1059,12 @@ class circular_deque {
 // Implementations of containers::Erase[If] (see containers/stl_util.h).
 template <class T, class Value>
 void Erase(circular_deque<T>& container, const Value& value) {
-  container.erase(std::remove(container.begin(), container.end(), value),
-                  container.end());
+  container.erase(std::remove(container.begin(), container.end(), value), container.end());
 }
 
 template <class T, class Predicate>
 void EraseIf(circular_deque<T>& container, Predicate pred) {
-  container.erase(std::remove_if(container.begin(), container.end(), pred),
-                  container.end());
+  container.erase(std::remove_if(container.begin(), container.end(), pred), container.end());
 }
 
 }  // namespace containers

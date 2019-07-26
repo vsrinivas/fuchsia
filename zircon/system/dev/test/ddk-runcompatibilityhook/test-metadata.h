@@ -4,8 +4,8 @@
 #pragma once
 
 struct compatibility_test_metadata {
-    bool add_in_bind;
-    bool remove_in_unbind;
-    bool remove_twice_in_unbind;
-    bool remove_in_suspend;
+  bool add_in_bind;
+  bool remove_in_unbind;
+  bool remove_twice_in_unbind;
+  bool remove_in_suspend;
 };

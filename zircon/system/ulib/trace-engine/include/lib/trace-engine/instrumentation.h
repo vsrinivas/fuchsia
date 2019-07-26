@@ -45,15 +45,15 @@ uint64_t trace_generate_nonce(void);
 
 // Describes the state of the trace engine.
 typedef enum {
-    // Trace instrumentation is inactive.
-    // Any data attempted to be written will be discarded.
-    // This enum doesn't distinguish between "stopped" and "terminated".
-    TRACE_STOPPED = 0,
-    // Trace instrumentation is active.
-    TRACE_STARTED = 1,
-    // Trace instrumentation is active but is in the process of shutting down.
-    // Tracing will stop once all references to the trace buffer have been released.
-    TRACE_STOPPING = 2,
+  // Trace instrumentation is inactive.
+  // Any data attempted to be written will be discarded.
+  // This enum doesn't distinguish between "stopped" and "terminated".
+  TRACE_STOPPED = 0,
+  // Trace instrumentation is active.
+  TRACE_STARTED = 1,
+  // Trace instrumentation is active but is in the process of shutting down.
+  // Tracing will stop once all references to the trace buffer have been released.
+  TRACE_STOPPING = 2,
 } trace_state_t;
 
 // Gets the current state of the trace engine.
@@ -64,9 +64,7 @@ trace_state_t trace_state(void);
 // Returns true if tracing is enabled (started or stopping but not stopped).
 //
 // This function is thread-safe and lock-free.
-static inline bool trace_is_enabled(void) {
-    return trace_state() != TRACE_STOPPED;
-}
+static inline bool trace_is_enabled(void) { return trace_state() != TRACE_STOPPED; }
 
 // Returns true if tracing of the specified category has been enabled (which
 // implies that |trace_is_enabled()| is also true).
@@ -134,8 +132,8 @@ trace_context_t* trace_acquire_context_for_category(const char* category_literal
 // is generally used to record category state at TRACE_<event>() call sites.
 typedef uintptr_t trace_site_state_t;
 typedef struct {
-    // "state" is intentionally non-descript
-    trace_site_state_t state;
+  // "state" is intentionally non-descript
+  trace_site_state_t state;
 } trace_site_t;
 
 // Same as |trace_acquire_context_for_category()| except includes an extra
@@ -152,9 +150,9 @@ typedef struct {
 // Returns NULL otherwise.
 //
 // This function is thread-safe and lock-free.
-trace_context_t* trace_acquire_context_for_category_cached(
-    const char* category_literal, trace_site_t* site_ptr,
-    trace_string_ref_t* out_ref);
+trace_context_t* trace_acquire_context_for_category_cached(const char* category_literal,
+                                                           trace_site_t* site_ptr,
+                                                           trace_string_ref_t* out_ref);
 
 // Flush the cache built up by calls to
 // |trace_acquire_context_for_category_cached()|.
@@ -265,117 +263,102 @@ namespace trace {
 // Holds and retains ownership of a trace context.
 // Releases the context automatically when destroyed.
 class TraceContext final {
-public:
-    TraceContext()
-        : context_(nullptr) {}
+ public:
+  TraceContext() : context_(nullptr) {}
 
-    TraceContext(trace_context_t* context)
-        : context_(context) {}
+  TraceContext(trace_context_t* context) : context_(context) {}
 
-    TraceContext(TraceContext&& other)
-        : context_(other.context_) {
-        other.context_ = nullptr;
+  TraceContext(TraceContext&& other) : context_(other.context_) { other.context_ = nullptr; }
+
+  ~TraceContext() { Release(); }
+
+  // Gets the trace context, or null if there is none.
+  trace_context_t* get() const { return context_; }
+
+  // Returns true if the holder contains a valid context.
+  explicit operator bool() const { return context_ != nullptr; }
+
+  // Acquires a reference to the trace engine's context.
+  static TraceContext Acquire() { return TraceContext(trace_acquire_context()); }
+
+  // Acquires a reference to the trace engine's context, only if the specified
+  // category is enabled.
+  static TraceContext AcquireForCategory(const char* category_literal,
+                                         trace_string_ref_t* out_ref) {
+    return TraceContext(trace_acquire_context_for_category(category_literal, out_ref));
+  }
+
+  // Releases the trace context.
+  void Release() {
+    if (context_) {
+      trace_release_context(context_);
+      context_ = nullptr;
     }
+  }
 
-    ~TraceContext() {
-        Release();
-    }
+  TraceContext& operator=(TraceContext&& other) {
+    Release();
+    context_ = other.context_;
+    other.context_ = nullptr;
+    return *this;
+  }
 
-    // Gets the trace context, or null if there is none.
-    trace_context_t* get() const { return context_; }
+ private:
+  trace_context_t* context_;
 
-    // Returns true if the holder contains a valid context.
-    explicit operator bool() const { return context_ != nullptr; }
-
-    // Acquires a reference to the trace engine's context.
-    static TraceContext Acquire() {
-        return TraceContext(trace_acquire_context());
-    }
-
-    // Acquires a reference to the trace engine's context, only if the specified
-    // category is enabled.
-    static TraceContext AcquireForCategory(const char* category_literal,
-                                           trace_string_ref_t* out_ref) {
-        return TraceContext(trace_acquire_context_for_category(
-            category_literal, out_ref));
-    }
-
-    // Releases the trace context.
-    void Release() {
-        if (context_) {
-            trace_release_context(context_);
-            context_ = nullptr;
-        }
-    }
-
-    TraceContext& operator=(TraceContext&& other) {
-        Release();
-        context_ = other.context_;
-        other.context_ = nullptr;
-        return *this;
-    }
-
-private:
-    trace_context_t* context_;
-
-    TraceContext(const TraceContext&) = delete;
-    TraceContext& operator=(const TraceContext&) = delete;
+  TraceContext(const TraceContext&) = delete;
+  TraceContext& operator=(const TraceContext&) = delete;
 };
 
 // Holds and retains ownership of a prolonged trace context.
 // Releases the context automatically when destroyed.
 class TraceProlongedContext final {
-public:
-    TraceProlongedContext()
-        : context_(nullptr) {}
+ public:
+  TraceProlongedContext() : context_(nullptr) {}
 
-    TraceProlongedContext(trace_prolonged_context_t* context)
-        : context_(context) {}
+  TraceProlongedContext(trace_prolonged_context_t* context) : context_(context) {}
 
-    TraceProlongedContext(TraceProlongedContext&& other)
-        : context_(other.context_) {
-        other.context_ = nullptr;
+  TraceProlongedContext(TraceProlongedContext&& other) : context_(other.context_) {
+    other.context_ = nullptr;
+  }
+
+  ~TraceProlongedContext() { Release(); }
+
+  // Gets the trace context, or null if there is none.
+  trace_prolonged_context_t* get() const { return context_; }
+
+  // Returns true if the holder contains a valid context.
+  explicit operator bool() const { return context_ != nullptr; }
+
+  // Acquires a reference to the trace engine's context.
+  static TraceProlongedContext Acquire() {
+    return TraceProlongedContext(trace_acquire_prolonged_context());
+  }
+
+  // Releases the trace context.
+  void Release() {
+    if (context_) {
+      trace_release_prolonged_context(context_);
+      context_ = nullptr;
     }
+  }
 
-    ~TraceProlongedContext() {
-        Release();
-    }
+  TraceProlongedContext& operator=(TraceProlongedContext&& other) {
+    Release();
+    context_ = other.context_;
+    other.context_ = nullptr;
+    return *this;
+  }
 
-    // Gets the trace context, or null if there is none.
-    trace_prolonged_context_t* get() const { return context_; }
+ private:
+  trace_prolonged_context_t* context_;
 
-    // Returns true if the holder contains a valid context.
-    explicit operator bool() const { return context_ != nullptr; }
-
-    // Acquires a reference to the trace engine's context.
-    static TraceProlongedContext Acquire() {
-        return TraceProlongedContext(trace_acquire_prolonged_context());
-    }
-
-    // Releases the trace context.
-    void Release() {
-        if (context_) {
-            trace_release_prolonged_context(context_);
-            context_ = nullptr;
-        }
-    }
-
-    TraceProlongedContext& operator=(TraceProlongedContext&& other) {
-        Release();
-        context_ = other.context_;
-        other.context_ = nullptr;
-        return *this;
-    }
-
-private:
-    trace_prolonged_context_t* context_;
-
-    TraceProlongedContext(const TraceProlongedContext&) = delete;
-    TraceProlongedContext& operator=(const TraceProlongedContext&) = delete;
+  TraceProlongedContext(const TraceProlongedContext&) = delete;
+  TraceProlongedContext& operator=(const TraceProlongedContext&) = delete;
 };
 
-} // namespace trace
+}  // namespace trace
 
-#endif // __cplusplus
+#endif  // __cplusplus
 
 #endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_ENGINE_INSTRUMENTATION_H_

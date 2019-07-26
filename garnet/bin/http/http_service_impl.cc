@@ -29,8 +29,7 @@ constexpr size_t kNumFDReserved = 3;
 // This is some random margin.
 constexpr size_t kMargin = 4;
 // Maximum number of slots used to run http requests concurrently.
-constexpr size_t kMaxSlots =
-    ((FDIO_MAX_FD - kNumFDReserved) / kNumFDPerConnection) - kMargin;
+constexpr size_t kMaxSlots = ((FDIO_MAX_FD - kNumFDReserved) / kNumFDPerConnection) - kMargin;
 
 // Container for the url loader implementation. The loader is run on his own
 // thread.
@@ -60,43 +59,39 @@ class HttpServiceImpl::UrlLoaderContainer : public URLLoaderImpl::Coordinator {
 
  private:
   // URLLoaderImpl::Coordinator:
-  void RequestNetworkSlot(
-      fit::function<void(fit::closure)> slot_request) override {
+  void RequestNetworkSlot(fit::function<void(fit::closure)> slot_request) override {
     // On IO Thread.
-    async::PostTask(
-        main_dispatcher_, [weak_this = weak_ptr_,
-                           slot_request = std::move(slot_request)]() mutable {
-          // On Main Thread.
-          if (!weak_this)
-            return;
+    async::PostTask(main_dispatcher_, [weak_this = weak_ptr_,
+                                       slot_request = std::move(slot_request)]() mutable {
+      // On Main Thread.
+      if (!weak_this)
+        return;
 
-          weak_this->top_coordinator_->RequestNetworkSlot(
-              [weak_this, slot_request = std::move(slot_request)](
-                  fit::closure on_inactive) mutable {
-                if (!weak_this) {
-                  on_inactive();
-                  return;
-                }
-                weak_this->on_inactive_ = std::move(on_inactive);
-                async::PostTask(
-                    weak_this->io_loop_.dispatcher(),
-                    [weak_this, main_dispatcher = weak_this->main_dispatcher_,
-                     slot_request = std::move(slot_request)] {
-                      // On IO Thread.
-                      slot_request([weak_this, main_dispatcher]() {
-                        async::PostTask(main_dispatcher, [weak_this]() {
-                          // On Main Thread.
-                          if (!weak_this)
-                            return;
+      weak_this->top_coordinator_->RequestNetworkSlot(
+          [weak_this, slot_request = std::move(slot_request)](fit::closure on_inactive) mutable {
+            if (!weak_this) {
+              on_inactive();
+              return;
+            }
+            weak_this->on_inactive_ = std::move(on_inactive);
+            async::PostTask(weak_this->io_loop_.dispatcher(),
+                            [weak_this, main_dispatcher = weak_this->main_dispatcher_,
+                             slot_request = std::move(slot_request)] {
+                              // On IO Thread.
+                              slot_request([weak_this, main_dispatcher]() {
+                                async::PostTask(main_dispatcher, [weak_this]() {
+                                  // On Main Thread.
+                                  if (!weak_this)
+                                    return;
 
-                          auto on_inactive = std::move(weak_this->on_inactive_);
-                          weak_this->on_inactive_ = nullptr;
-                          on_inactive();
-                        });
-                      });
-                    });
-              });
-        });
+                                  auto on_inactive = std::move(weak_this->on_inactive_);
+                                  weak_this->on_inactive_ = nullptr;
+                                  on_inactive();
+                                });
+                              });
+                            });
+          });
+    });
   }
 
   void JoinAndNotify() {
@@ -119,10 +114,9 @@ class HttpServiceImpl::UrlLoaderContainer : public URLLoaderImpl::Coordinator {
 
   void StartOnIOThread() {
     url_loader_ = std::make_unique<URLLoaderImpl>(this);
-    binding_ = std::make_unique<fidl::Binding<oldhttp::URLLoader>>(
-        url_loader_.get(), std::move(request_));
-    binding_->set_error_handler(
-        [this](zx_status_t status) { StopOnIOThread(); });
+    binding_ =
+        std::make_unique<fidl::Binding<oldhttp::URLLoader>>(url_loader_.get(), std::move(request_));
+    binding_->set_error_handler([this](zx_status_t status) { StopOnIOThread(); });
   }
 
   void StopOnIOThread() {
@@ -165,26 +159,22 @@ HttpServiceImpl::HttpServiceImpl(async_dispatcher_t* dispatcher)
 
 HttpServiceImpl::~HttpServiceImpl() = default;
 
-void HttpServiceImpl::AddBinding(
-    fidl::InterfaceRequest<oldhttp::HttpService> request) {
+void HttpServiceImpl::AddBinding(fidl::InterfaceRequest<oldhttp::HttpService> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void HttpServiceImpl::CreateURLLoader(
-    fidl::InterfaceRequest<oldhttp::URLLoader> request) {
+void HttpServiceImpl::CreateURLLoader(fidl::InterfaceRequest<oldhttp::URLLoader> request) {
   loaders_.emplace_back(this, dispatcher_, std::move(request));
   UrlLoaderContainer* container = &loaders_.back();
   container->set_on_done([this, container] {
-    loaders_.erase(std::find_if(loaders_.begin(), loaders_.end(),
-                                [container](const UrlLoaderContainer& value) {
-                                  return container == &value;
-                                }));
+    loaders_.erase(
+        std::find_if(loaders_.begin(), loaders_.end(),
+                     [container](const UrlLoaderContainer& value) { return container == &value; }));
   });
   container->Start();
 }
 
-void HttpServiceImpl::RequestNetworkSlot(
-    fit::function<void(fit::closure)> slot_request) {
+void HttpServiceImpl::RequestNetworkSlot(fit::function<void(fit::closure)> slot_request) {
   if (available_slots_ == 0) {
     slot_requests_.push(std::move(slot_request));
     return;

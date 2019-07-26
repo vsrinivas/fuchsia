@@ -33,16 +33,14 @@ class FakeComponent {
   //
   //   AddPublicService(foobar_bindings_.GetHandler(this));
   template <typename Interface>
-  zx_status_t AddPublicService(
-      fidl::InterfaceRequestHandler<Interface> handler,
-      const std::string& service_name = Interface::Name_) const {
+  zx_status_t AddPublicService(fidl::InterfaceRequestHandler<Interface> handler,
+                               const std::string& service_name = Interface::Name_) const {
     return directory_->AddEntry(
         service_name.c_str(),
-        fbl::AdoptRef(new fs::Service(
-            [handler = std::move(handler)](zx::channel channel) {
-              handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
-              return ZX_OK;
-            })));
+        fbl::AdoptRef(new fs::Service([handler = std::move(handler)](zx::channel channel) {
+          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+          return ZX_OK;
+        })));
   }
 
   // Register this component with a FakeLauncher.

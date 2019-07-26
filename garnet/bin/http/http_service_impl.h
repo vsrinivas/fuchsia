@@ -25,20 +25,16 @@ class HttpServiceImpl : public ::fuchsia::net::oldhttp::HttpService,
   HttpServiceImpl(async_dispatcher_t* dispatcher);
   ~HttpServiceImpl() override;
 
-  void AddBinding(
-      fidl::InterfaceRequest<::fuchsia::net::oldhttp::HttpService> request);
+  void AddBinding(fidl::InterfaceRequest<::fuchsia::net::oldhttp::HttpService> request);
 
   // HttpService methods:
-  void CreateURLLoader(
-      fidl::InterfaceRequest<::fuchsia::net::oldhttp::URLLoader> request)
-      override;
+  void CreateURLLoader(fidl::InterfaceRequest<::fuchsia::net::oldhttp::URLLoader> request) override;
 
  private:
   class UrlLoaderContainer;
 
   // URLLoaderImpl::Coordinator:
-  void RequestNetworkSlot(
-      fit::function<void(fit::closure)> slot_request) override;
+  void RequestNetworkSlot(fit::function<void(fit::closure)> slot_request) override;
 
   void OnSlotReturned();
 

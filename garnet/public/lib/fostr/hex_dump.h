@@ -51,11 +51,9 @@ std::ostream& operator<<(std::ostream& os, const HexDump& value);
 }  // namespace internal
 
 template <typename T>
-internal::HexDump HexDump(
-    const T* data, size_t size,
-    intptr_t initial_address = std::numeric_limits<intptr_t>::max()) {
-  return internal::HexDump(reinterpret_cast<const uint8_t*>(data), size,
-                           initial_address);
+internal::HexDump HexDump(const T* data, size_t size,
+                          intptr_t initial_address = std::numeric_limits<intptr_t>::max()) {
+  return internal::HexDump(reinterpret_cast<const uint8_t*>(data), size, initial_address);
 }
 
 inline internal::HexDump HexDump(const std::vector<uint8_t>& vector) {

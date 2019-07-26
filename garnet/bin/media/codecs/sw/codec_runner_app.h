@@ -24,8 +24,7 @@ class CodecRunnerApp {
   CodecRunnerApp()
       : loop_(&kAsyncLoopConfigAttachToThread),
         startup_context_(component::StartupContext::CreateFromStartupInfo()),
-        codec_admission_control_(
-          std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
+        codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   void Run() {
     zx_status_t status = syslog::InitLogger();
@@ -34,45 +33,41 @@ class CodecRunnerApp {
     startup_context_->outgoing().deprecated_services()->AddService(
         fidl::InterfaceRequestHandler<fuchsia::mediacodec::CodecFactory>(
             [this, codec_admission_control = codec_admission_control_.get()](
-                fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory>
-                    request) {
+                fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
               // We RemoveService() near the end of the present lambda, so it
               // should be impossible to receive a second CodecFactory request.
               FXL_DCHECK(!codec_factory_);
 
               fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
-              startup_context_->ConnectToEnvironmentService(
-                  sysmem.NewRequest());
-              codec_factory_ =
-                  std::make_unique<LocalSingleCodecFactory<Decoder, Encoder>>(
-                      loop_.dispatcher(), std::move(sysmem), std::move(request),
-                      [this](
-                          std::unique_ptr<CodecImpl> created_codec_instance) {
-                        // Own codec implementation and bind it.
-                        codec_instance_ = std::move(created_codec_instance);
-                        codec_instance_->BindAsync([this] {
-                          // Drop codec implementation and close channel on
-                          // error.
-                          codec_instance_.reset();
-                          // The codec_instance_ channel is the only reason for
-                          // the isolate to exist.
-                          loop_.Quit();
-                        });
-                        // Drop factory and close factory channel.
-                        codec_factory_.reset();
-                      },
-                      codec_admission_control,
-                      [this](zx_status_t error) {
-                        // Drop factory and close factory channel on error.
-                        codec_factory_.reset();
-                        // The codec_instance_ channel is the only reason for
-                        // the isolate to exist.  If codec_instance_ wasn't
-                        // created via the codec_factory_ before this point,
-                        // it'll never be created via codec_factory_.
-                        if (!codec_instance_) {
-                          loop_.Quit();
-                        }
-                      });
+              startup_context_->ConnectToEnvironmentService(sysmem.NewRequest());
+              codec_factory_ = std::make_unique<LocalSingleCodecFactory<Decoder, Encoder>>(
+                  loop_.dispatcher(), std::move(sysmem), std::move(request),
+                  [this](std::unique_ptr<CodecImpl> created_codec_instance) {
+                    // Own codec implementation and bind it.
+                    codec_instance_ = std::move(created_codec_instance);
+                    codec_instance_->BindAsync([this] {
+                      // Drop codec implementation and close channel on
+                      // error.
+                      codec_instance_.reset();
+                      // The codec_instance_ channel is the only reason for
+                      // the isolate to exist.
+                      loop_.Quit();
+                    });
+                    // Drop factory and close factory channel.
+                    codec_factory_.reset();
+                  },
+                  codec_admission_control,
+                  [this](zx_status_t error) {
+                    // Drop factory and close factory channel on error.
+                    codec_factory_.reset();
+                    // The codec_instance_ channel is the only reason for
+                    // the isolate to exist.  If codec_instance_ wasn't
+                    // created via the codec_factory_ before this point,
+                    // it'll never be created via codec_factory_.
+                    if (!codec_instance_) {
+                      loop_.Quit();
+                    }
+                  });
               // This runner only expects a single Local Codec Factory to ever
               // be requested.
               //

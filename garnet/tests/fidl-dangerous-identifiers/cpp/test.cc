@@ -48,6 +48,4 @@
 #include <fidl/test/dangerous/method/response/arguments/camel/cpp/fidl.h>
 #include <fidl/test/dangerous/method/event/arguments/camel/cpp/fidl.h>
 
-int main() {
-  return 0;
-}
+int main() { return 0; }

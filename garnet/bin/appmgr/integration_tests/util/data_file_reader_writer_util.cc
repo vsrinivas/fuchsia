@@ -9,8 +9,8 @@ namespace testing {
 
 using test::appmgr::integration::DataFileReaderWriterPtr;
 
-fidl::StringPtr DataFileReaderWriterUtil::ReadFileSync(
-    const DataFileReaderWriterPtr& util, std::string path) {
+fidl::StringPtr DataFileReaderWriterUtil::ReadFileSync(const DataFileReaderWriterPtr& util,
+                                                       std::string path) {
   bool done = false;
   fidl::StringPtr result;
   util->ReadFile(path, [&](fidl::StringPtr contents) {
@@ -21,9 +21,8 @@ fidl::StringPtr DataFileReaderWriterUtil::ReadFileSync(
   return result;
 }
 
-zx_status_t DataFileReaderWriterUtil::WriteFileSync(
-    const DataFileReaderWriterPtr& util, std::string path,
-    std::string contents) {
+zx_status_t DataFileReaderWriterUtil::WriteFileSync(const DataFileReaderWriterPtr& util,
+                                                    std::string path, std::string contents) {
   bool done = false;
   zx_status_t result;
   util->WriteFile(path, contents, [&](zx_status_t write_result) {

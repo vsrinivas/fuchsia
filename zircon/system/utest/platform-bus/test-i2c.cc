@@ -50,32 +50,30 @@ static const i2c_channel_t i2c_channels[] = {
     },
 };
 
-static const pbus_metadata_t i2c_metadata[] = {
-    {
-        .type = DEVICE_METADATA_I2C_CHANNELS,
-        .data_buffer = &i2c_channels,
-        .data_size = sizeof(i2c_channels),
-    }
-};
+static const pbus_metadata_t i2c_metadata[] = {{
+    .type = DEVICE_METADATA_I2C_CHANNELS,
+    .data_buffer = &i2c_channels,
+    .data_size = sizeof(i2c_channels),
+}};
 
-}
+}  // namespace
 
 zx_status_t TestBoard::I2cInit() {
-    pbus_dev_t i2c_dev = {};
-    i2c_dev.name = "i2c";
-    i2c_dev.vid = PDEV_VID_TEST;
-    i2c_dev.pid = PDEV_PID_PBUS_TEST;
-    i2c_dev.did = PDEV_DID_TEST_I2C;
-    i2c_dev.metadata_list = i2c_metadata;
-    i2c_dev.metadata_count = countof(i2c_metadata);
+  pbus_dev_t i2c_dev = {};
+  i2c_dev.name = "i2c";
+  i2c_dev.vid = PDEV_VID_TEST;
+  i2c_dev.pid = PDEV_PID_PBUS_TEST;
+  i2c_dev.did = PDEV_DID_TEST_I2C;
+  i2c_dev.metadata_list = i2c_metadata;
+  i2c_dev.metadata_count = countof(i2c_metadata);
 
-    zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
-        return status;
-    }
+  zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-} // namespace board_test
+}  // namespace board_test

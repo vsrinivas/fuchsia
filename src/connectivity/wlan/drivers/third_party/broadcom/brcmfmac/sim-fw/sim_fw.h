@@ -26,7 +26,6 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 
 class SimFirmware {
-
   class BcdcResponse {
    public:
     void Clear();

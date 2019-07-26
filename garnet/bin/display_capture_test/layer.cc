@@ -36,8 +36,7 @@ fuchsia::hardware::display::ControllerPtr& LayerImpl::controller() const {
 
 }  // namespace internal
 
-PrimaryLayer::PrimaryLayer(internal::Runner* runner, uint32_t width,
-                           uint32_t height)
+PrimaryLayer::PrimaryLayer(internal::Runner* runner, uint32_t width, uint32_t height)
     : Layer(runner) {
   config_ = {};
   config_.width = width;
@@ -78,15 +77,14 @@ void PrimaryLayer::SetPosition(fuchsia::hardware::display::Transform transform,
   pending_state_.set_position = true;
 }
 
-void PrimaryLayer::SetAlpha(fuchsia::hardware::display::AlphaMode mode,
-                            float val) {
+void PrimaryLayer::SetAlpha(fuchsia::hardware::display::AlphaMode mode, float val) {
   pending_state_.alpha_mode = mode;
   pending_state_.alpha_val = val;
   pending_state_.set_alpha = true;
 }
 
-bool PrimaryLayer::GetPixel(const void* state, uint32_t x, uint32_t y,
-                            uint32_t* value_out, bool* skip_out) const {
+bool PrimaryLayer::GetPixel(const void* state, uint32_t x, uint32_t y, uint32_t* value_out,
+                            bool* skip_out) const {
   auto s = static_cast<const struct state*>(state);
 
   // Transform the global x,y coordinate to a dest-frame coordinate
@@ -134,8 +132,7 @@ bool PrimaryLayer::GetPixel(const void* state, uint32_t x, uint32_t y,
   // If we're scaling, skip over pixels that depend on hardware interpolation
   if (dest_width != s->src.width || dest_height != s->src.height) {
     constexpr uint32_t bounds = kMinScalableImageSize / 4;
-    if ((x < bounds || dest_width - bounds <= x) &&
-        (y < bounds || dest_height - bounds <= y)) {
+    if ((x < bounds || dest_width - bounds <= x) && (y < bounds || dest_height - bounds <= y)) {
       *skip_out = false;
     } else {
       *skip_out = true;
@@ -164,8 +161,7 @@ bool PrimaryLayer::GetPixel(const void* state, uint32_t x, uint32_t y,
   if (s->alpha_mode == fuchsia::hardware::display::AlphaMode::DISABLE) {
     // Clobber the alpha value if it's disabled
     val |= 0xff000000;
-  } else if (s->alpha_mode ==
-             fuchsia::hardware::display::AlphaMode::HW_MULTIPLY) {
+  } else if (s->alpha_mode == fuchsia::hardware::display::AlphaMode::HW_MULTIPLY) {
     // If blending is hwmultiply, then do the the channel multiplication
     // here so the caller of GetPixel can treat everything is premultiplied.
     val = internal::premultiply_color_channels(val, val >> 24);
@@ -183,8 +179,7 @@ const void* PrimaryLayer::ApplyState() {
   pending_state_.set_alpha = false;
   pending_state_.flip_image = false;
 
-  if (state->src.height != state->dest.height ||
-      state->src.width != state->dest.width) {
+  if (state->src.height != state->dest.height || state->src.width != state->dest.width) {
     ZX_ASSERT(state->image->is_scalable());
   }
   return state;

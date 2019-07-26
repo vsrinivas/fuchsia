@@ -42,9 +42,7 @@ bool IsPeerValid(const zx::unowned_eventpair& handle) {
   }
 }
 
-bool IsPeerValid(zx_handle_t handle) {
-  return IsPeerValid(zx::unowned_eventpair(handle));
-}
+bool IsPeerValid(zx_handle_t handle) { return IsPeerValid(zx::unowned_eventpair(handle)); }
 
 template <typename T, size_t N>
 constexpr uint32_t ArrayCount(T const (&array)[N]) {
@@ -57,8 +55,7 @@ constexpr uint32_t ArrayCount(T const (&array)[N]) {
 // C server implementation
 namespace internal_c {
 
-zx_status_t ConsumeSimpleStruct(void* ctx,
-                                const fidl_test_llcpp_basictypes_SimpleStruct* arg,
+zx_status_t ConsumeSimpleStruct(void* ctx, const fidl_test_llcpp_basictypes_SimpleStruct* arg,
                                 fidl_txn_t* txn) {
   // Verify that all the handles are valid channels
   if (!IsPeerValid(arg->ep)) {
@@ -84,8 +81,7 @@ zx_status_t ConsumeSimpleStruct(void* ctx,
   return fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStruct_reply(txn, ZX_OK, arg->field);
 }
 
-zx_status_t ConsumeSimpleUnion(void* ctx,
-                               const fidl_test_llcpp_basictypes_SimpleUnion* arg,
+zx_status_t ConsumeSimpleUnion(void* ctx, const fidl_test_llcpp_basictypes_SimpleUnion* arg,
                                fidl_txn_t* txn) {
   if (arg->tag == fidl_test_llcpp_basictypes_SimpleUnionTag_field_a) {
     return fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnion_reply(txn, 0, arg->field_a);
@@ -101,9 +97,7 @@ const fidl_test_llcpp_basictypes_TestInterface_ops_t kOps = {
     .ConsumeSimpleUnion = ConsumeSimpleUnion,
 };
 
-zx_status_t ServerDispatch(void* ctx,
-                           fidl_txn_t* txn,
-                           fidl_msg_t* msg,
+zx_status_t ServerDispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg,
                            const fidl_test_llcpp_basictypes_TestInterface_ops_t* ops) {
   zx_status_t status = fidl_test_llcpp_basictypes_TestInterface_try_dispatch(ctx, txn, msg, ops);
   if (status == ZX_ERR_NOT_SUPPORTED) {
@@ -128,9 +122,7 @@ void SpinUpAsyncCServerHelper(zx::channel server, async_loop_t** out_loop) {
   *out_loop = loop;
 }
 
-void TearDownAsyncCServerHelper(async_loop_t* loop) {
-  async_loop_destroy(loop);
-}
+void TearDownAsyncCServerHelper(async_loop_t* loop) { async_loop_destroy(loop); }
 
 }  // namespace
 
@@ -305,9 +297,9 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
   // perform call
   FIDL_ALIGNDECL uint8_t request_buf[512] = {};
   FIDL_ALIGNDECL uint8_t response_buf[512] = {};
-  auto result = test.ConsumeSimpleStruct(
-      fidl::BytePart(request_buf, sizeof(request_buf)), std::move(simple_struct),
-      fidl::BytePart(response_buf, sizeof(response_buf)));
+  auto result = test.ConsumeSimpleStruct(fidl::BytePart(request_buf, sizeof(request_buf)),
+                                         std::move(simple_struct),
+                                         fidl::BytePart(response_buf, sizeof(response_buf)));
   ASSERT_OK(result.status());
   ASSERT_NULL(result.error(), "%s", result.error());
   ASSERT_OK(result.Unwrap()->status);
@@ -354,9 +346,9 @@ TEST(BasicTypesTest, SyncCallerAllocateCallUnion) {
   // perform call
   FIDL_ALIGNDECL uint8_t request_buf[512] = {};
   FIDL_ALIGNDECL uint8_t response_buf[512] = {};
-  auto result = test.ConsumeSimpleUnion(
-      fidl::BytePart(request_buf, sizeof(request_buf)), std::move(simple_union),
-      fidl::BytePart(response_buf, sizeof(response_buf)));
+  auto result = test.ConsumeSimpleUnion(fidl::BytePart(request_buf, sizeof(request_buf)),
+                                        std::move(simple_union),
+                                        fidl::BytePart(response_buf, sizeof(response_buf)));
   ASSERT_OK(result.status());
   ASSERT_NULL(result.error(), "%s", result.error());
   ASSERT_EQ(result.Unwrap()->index, 1);

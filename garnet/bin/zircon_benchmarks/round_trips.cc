@@ -56,16 +56,14 @@ namespace {
 // Returns false if the channel's peer was closed.
 bool ChannelRead(zx_handle_t channel, std::vector<uint8_t>* msg) {
   zx_signals_t observed;
-  zx_status_t status =
-      zx_object_wait_one(channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                         ZX_TIME_INFINITE, &observed);
+  zx_status_t status = zx_object_wait_one(channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                          ZX_TIME_INFINITE, &observed);
   FXL_CHECK(status == ZX_OK);
   if (observed & ZX_CHANNEL_PEER_CLOSED)
     return false;
 
   uint32_t bytes_read;
-  status = zx_channel_read(channel, 0, msg->data(), nullptr, msg->size(), 0,
-                           &bytes_read, nullptr);
+  status = zx_channel_read(channel, 0, msg->data(), nullptr, msg->size(), 0, &bytes_read, nullptr);
   FXL_CHECK(status == ZX_OK);
   FXL_CHECK(bytes_read == msg->size());
   return true;
@@ -73,8 +71,7 @@ bool ChannelRead(zx_handle_t channel, std::vector<uint8_t>* msg) {
 
 // Block and read |count| messages of size |msg->size()| into |msg| from a
 // channel.  Returns false if the channel's peer was closed.
-bool ChannelReadMultiple(zx_handle_t channel, uint32_t count,
-                         std::vector<uint8_t>* msg) {
+bool ChannelReadMultiple(zx_handle_t channel, uint32_t count, std::vector<uint8_t>* msg) {
   for (uint32_t i = 0; i < count; ++i) {
     if (!ChannelRead(channel, msg))
       return false;
@@ -90,8 +87,7 @@ void ChannelServe(zx_handle_t channel, uint32_t count, uint32_t size) {
     if (!ChannelReadMultiple(channel, count, &msg))
       break;
     for (uint32_t i = 0; i < count; ++i) {
-      zx_status_t status =
-          zx_channel_write(channel, 0, msg.data(), msg.size(), nullptr, 0);
+      zx_status_t status = zx_channel_write(channel, 0, msg.data(), msg.size(), nullptr, 0);
       FXL_CHECK(status == ZX_OK);
     }
   }
@@ -113,19 +109,17 @@ class ThreadOrProcess {
       thread_.join();
     if (subprocess_ != ZX_HANDLE_INVALID) {
       // Join the process.
-      FXL_CHECK(zx_object_wait_one(subprocess_, ZX_PROCESS_TERMINATED,
-                                   ZX_TIME_INFINITE, nullptr) == ZX_OK);
+      FXL_CHECK(zx_object_wait_one(subprocess_, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, nullptr) ==
+                ZX_OK);
       zx_handle_close(subprocess_);
     }
   }
 
-  void Launch(const char* func_name, zx_handle_t* handles,
-              uint32_t handle_count, MultiProc multiproc) {
+  void Launch(const char* func_name, zx_handle_t* handles, uint32_t handle_count,
+              MultiProc multiproc) {
     if (multiproc == MultiProcess) {
-      const char* executable_path =
-          "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks";
-      const char* args[] = {executable_path, "--subprocess", func_name,
-                            nullptr};
+      const char* executable_path = "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks";
+      const char* args[] = {executable_path, "--subprocess", func_name, nullptr};
       fdio_spawn_action_t actions[handle_count + 1];
       for (uint32_t i = 0; i < handle_count; ++i) {
         actions[i].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
@@ -136,9 +130,8 @@ class ThreadOrProcess {
       actions[handle_count].name.data = "test-process";
 
       char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-      if (fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                         executable_path, args, nullptr, handle_count + 1,
-                         actions, &subprocess_, err_msg) != ZX_OK) {
+      if (fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, executable_path, args, nullptr,
+                         handle_count + 1, actions, &subprocess_, err_msg) != ZX_OK) {
         FXL_LOG(FATAL) << "Subprocess launch failed: " << err_msg;
       }
     } else {
@@ -156,17 +149,14 @@ class ThreadOrProcess {
 // and server both use zx_object_wait_one() to wait.
 class BasicChannelTest {
  public:
-  explicit BasicChannelTest(MultiProc multiproc, uint32_t msg_count,
-                            uint32_t msg_size)
+  explicit BasicChannelTest(MultiProc multiproc, uint32_t msg_count, uint32_t msg_size)
       : args_({msg_count, msg_size}), msg_(args_.msg_size) {
     zx_handle_t server;
     FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
-    thread_or_process_.Launch("BasicChannelTest::ThreadFunc", &server, 1,
-                              multiproc);
+    thread_or_process_.Launch("BasicChannelTest::ThreadFunc", &server, 1, multiproc);
 
     // Pass the test arguments to the other thread.
-    zx_status_t status =
-        zx_channel_write(client_, 0, &args_, sizeof(args_), nullptr, 0);
+    zx_status_t status = zx_channel_write(client_, 0, &args_, sizeof(args_), nullptr, 0);
     FXL_CHECK(status == ZX_OK);
   }
 
@@ -183,8 +173,7 @@ class BasicChannelTest {
 
   void Run() {
     for (unsigned i = 0; i < args_.msg_count; ++i) {
-      FXL_CHECK(zx_channel_write(client_, 0, msg_.data(), msg_.size(), nullptr,
-                                 0) == ZX_OK);
+      FXL_CHECK(zx_channel_write(client_, 0, msg_.data(), msg_.size(), nullptr, 0) == ZX_OK);
     }
     FXL_CHECK(ChannelReadMultiple(client_, args_.msg_count, &msg_));
   }
@@ -216,8 +205,7 @@ class ChannelPortTest {
   explicit ChannelPortTest(MultiProc multiproc) {
     zx_handle_t server;
     FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
-    thread_or_process_.Launch("ChannelPortTest::ThreadFunc", &server, 1,
-                              multiproc);
+    thread_or_process_.Launch("ChannelPortTest::ThreadFunc", &server, 1, multiproc);
     FXL_CHECK(zx_port_create(0, &client_port_) == ZX_OK);
   }
 
@@ -226,10 +214,8 @@ class ChannelPortTest {
     zx_handle_close(client_port_);
   }
 
-  static bool ChannelPortRead(zx_handle_t channel, zx_handle_t port,
-                              uint32_t* msg) {
-    FXL_CHECK(zx_object_wait_async(channel, port, 0,
-                                   ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+  static bool ChannelPortRead(zx_handle_t channel, zx_handle_t port, uint32_t* msg) {
+    FXL_CHECK(zx_object_wait_async(channel, port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                    ZX_WAIT_ASYNC_ONCE) == ZX_OK);
 
     zx_port_packet_t packet;
@@ -238,8 +224,8 @@ class ChannelPortTest {
       return false;
 
     uint32_t bytes_read;
-    FXL_CHECK(zx_channel_read(channel, 0, msg, nullptr, sizeof(*msg), 0,
-                              &bytes_read, nullptr) == ZX_OK);
+    FXL_CHECK(zx_channel_read(channel, 0, msg, nullptr, sizeof(*msg), 0, &bytes_read, nullptr) ==
+              ZX_OK);
     FXL_CHECK(bytes_read == sizeof(*msg));
     return true;
   }
@@ -255,8 +241,7 @@ class ChannelPortTest {
       uint32_t msg;
       if (!ChannelPortRead(channel, port, &msg))
         break;
-      FXL_CHECK(zx_channel_write(channel, 0, &msg, sizeof(msg), nullptr, 0) ==
-                ZX_OK);
+      FXL_CHECK(zx_channel_write(channel, 0, &msg, sizeof(msg), nullptr, 0) == ZX_OK);
     }
 
     zx_handle_close(channel);
@@ -265,8 +250,7 @@ class ChannelPortTest {
 
   void Run() {
     uint32_t msg = 123;
-    FXL_CHECK(zx_channel_write(client_, 0, &msg, sizeof(msg), nullptr, 0) ==
-              ZX_OK);
+    FXL_CHECK(zx_channel_write(client_, 0, &msg, sizeof(msg), nullptr, 0) == ZX_OK);
     FXL_CHECK(ChannelPortRead(client_, client_port_, &msg));
   }
 
@@ -284,8 +268,7 @@ class ChannelCallTest {
   explicit ChannelCallTest(MultiProc multiproc) {
     zx_handle_t server;
     FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
-    thread_or_process_.Launch("ChannelCallTest::ThreadFunc", &server, 1,
-                              multiproc);
+    thread_or_process_.Launch("ChannelCallTest::ThreadFunc", &server, 1, multiproc);
 
     msg_ = 0;
     args_.wr_bytes = reinterpret_cast<void*>(&msg_);
@@ -310,8 +293,8 @@ class ChannelCallTest {
   void Run() {
     uint32_t bytes_read;
     uint32_t handles_read;
-    zx_status_t status = zx_channel_call(client_, 0, ZX_TIME_INFINITE, &args_,
-                                         &bytes_read, &handles_read);
+    zx_status_t status =
+        zx_channel_call(client_, 0, ZX_TIME_INFINITE, &args_, &bytes_read, &handles_read);
     FXL_CHECK(status == ZX_OK);
   }
 
@@ -334,11 +317,9 @@ class PortTest {
 
     zx_handle_t ports_dup[2];
     for (int i = 0; i < 2; ++i) {
-      FXL_CHECK(zx_handle_duplicate(ports_[i], ZX_RIGHT_SAME_RIGHTS,
-                                    &ports_dup[i]) == ZX_OK);
+      FXL_CHECK(zx_handle_duplicate(ports_[i], ZX_RIGHT_SAME_RIGHTS, &ports_dup[i]) == ZX_OK);
     }
-    thread_or_process_.Launch("PortTest::ThreadFunc", ports_dup,
-                              arraysize(ports_dup), multiproc);
+    thread_or_process_.Launch("PortTest::ThreadFunc", ports_dup, arraysize(ports_dup), multiproc);
   }
 
   ~PortTest() {
@@ -389,8 +370,7 @@ class EventPortSignaler {
   // Waits for the event to be signaled.  Returns true if it was signaled
   // by Signal() and false if the peer event object was closed.
   bool Wait() {
-    FXL_CHECK(event_.wait_async(port_, 0,
-                                ZX_USER_SIGNAL_0 | ZX_EVENTPAIR_PEER_CLOSED,
+    FXL_CHECK(event_.wait_async(port_, 0, ZX_USER_SIGNAL_0 | ZX_EVENTPAIR_PEER_CLOSED,
                                 ZX_WAIT_ASYNC_ONCE) == ZX_OK);
     zx_port_packet_t packet;
     FXL_CHECK(port_.wait(zx::time::infinite(), &packet) == ZX_OK);
@@ -423,8 +403,7 @@ class EventPortTest {
     signaler_.set_event(std::move(event1));
 
     zx_handle_t event_arg = event2.release();
-    thread_or_process_.Launch("EventPortTest::ThreadFunc", &event_arg, 1,
-                              multiproc);
+    thread_or_process_.Launch("EventPortTest::ThreadFunc", &event_arg, 1, multiproc);
   }
 
   static void ThreadFunc(std::vector<zx_handle_t> handles) {
@@ -459,8 +438,7 @@ class SocketPortSignaler {
   // Returns true if it was signaled by Signal() and false if it was
   // signaled by SignalExit().
   bool Wait() {
-    FXL_CHECK(socket_.wait_async(port_, 0,
-                                 ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+    FXL_CHECK(socket_.wait_async(port_, 0, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
                                  ZX_WAIT_ASYNC_ONCE) == ZX_OK);
     zx_port_packet_t packet;
     FXL_CHECK(port_.wait(zx::time::infinite(), &packet) == ZX_OK);
@@ -499,8 +477,7 @@ class SocketPortTest {
     signaler_.set_socket(std::move(socket1));
 
     zx_handle_t socket_arg = socket2.release();
-    thread_or_process_.Launch("SocketPortTest::ThreadFunc", &socket_arg, 1,
-                              multiproc);
+    thread_or_process_.Launch("SocketPortTest::ThreadFunc", &socket_arg, 1, multiproc);
   }
 
   static void ThreadFunc(std::vector<zx_handle_t> handles) {
@@ -524,8 +501,7 @@ class SocketPortTest {
 };
 
 // Implementation of FIDL interface for testing round trip IPCs.
-class RoundTripServiceImpl
-    : public fuchsia::zircon::benchmarks::RoundTripService {
+class RoundTripServiceImpl : public fuchsia::zircon::benchmarks::RoundTripService {
  public:
   void RoundTripTest(uint32_t arg, RoundTripTestCallback callback) override {
     FXL_CHECK(arg == 123);
@@ -548,8 +524,8 @@ class FidlTest {
 
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
     RoundTripServiceImpl service_impl;
-    fidl::Binding<fuchsia::zircon::benchmarks::RoundTripService> binding(
-        &service_impl, std::move(channel));
+    fidl::Binding<fuchsia::zircon::benchmarks::RoundTripService> binding(&service_impl,
+                                                                         std::move(channel));
     binding.set_error_handler([&loop](zx_status_t status) { loop.Quit(); });
     loop.Run();
   }
@@ -608,8 +584,8 @@ class FutexTest {
         // Return whether we got a request to shut down.
         return val == 2;
       }
-      zx_status_t status = zx_futex_wait(const_cast<int*>(ptr), val,
-                                         ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+      zx_status_t status =
+          zx_futex_wait(const_cast<int*>(ptr), val, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
       FXL_CHECK(status == ZX_OK || status == ZX_ERR_BAD_STATE);
     }
   }
@@ -710,30 +686,25 @@ ThreadFunc GetThreadFunc(const char* name) {
 // Register a test that has two variants, single-process and multi-process.
 template <class TestClass, typename... Args>
 void RegisterTestMultiProc(const char* base_name, Args... args) {
-  fbenchmark::RegisterTest<TestClass>(
-      (std::string(base_name) + "_SingleProcess").c_str(), SingleProcess,
-      std::forward<Args>(args)...);
-  fbenchmark::RegisterTest<TestClass>(
-      (std::string(base_name) + "_MultiProcess").c_str(), MultiProcess,
-      std::forward<Args>(args)...);
+  fbenchmark::RegisterTest<TestClass>((std::string(base_name) + "_SingleProcess").c_str(),
+                                      SingleProcess, std::forward<Args>(args)...);
+  fbenchmark::RegisterTest<TestClass>((std::string(base_name) + "_MultiProcess").c_str(),
+                                      MultiProcess, std::forward<Args>(args)...);
 }
 
 __attribute__((constructor)) void RegisterTests() {
   RegisterTestMultiProc<BasicChannelTest>("RoundTrip_BasicChannel",
                                           /* count= */ 1, /* size= */ 4);
-  RegisterTestMultiProc<BasicChannelTest>(
-      "IpcThroughput_BasicChannel_1_64kbytes",
-      /* msg_count= */ 1, /* msg_size= */ 64 * 1024);
+  RegisterTestMultiProc<BasicChannelTest>("IpcThroughput_BasicChannel_1_64kbytes",
+                                          /* msg_count= */ 1, /* msg_size= */ 64 * 1024);
 
   // These next two benchmarks allocate and free a significant amount of
   // memory so their performance can be heavily dependent on kernel allocator
   // performance.
-  RegisterTestMultiProc<BasicChannelTest>(
-      "IpcThroughput_BasicChannel_1024_4bytes",
-      /* msg_count= */ 1024, /* msg_size= */ 4);
-  RegisterTestMultiProc<BasicChannelTest>(
-      "IpcThroughput_BasicChannel_1024_64kbytes",
-      /* msg_count= */ 1024, /* msg_size= */ 64 * 1024);
+  RegisterTestMultiProc<BasicChannelTest>("IpcThroughput_BasicChannel_1024_4bytes",
+                                          /* msg_count= */ 1024, /* msg_size= */ 4);
+  RegisterTestMultiProc<BasicChannelTest>("IpcThroughput_BasicChannel_1024_64kbytes",
+                                          /* msg_count= */ 1024, /* msg_size= */ 64 * 1024);
 
   RegisterTestMultiProc<ChannelPortTest>("RoundTrip_ChannelPort");
   RegisterTestMultiProc<ChannelCallTest>("RoundTrip_ChannelCall");
@@ -742,8 +713,7 @@ __attribute__((constructor)) void RegisterTests() {
   RegisterTestMultiProc<SocketPortTest>("RoundTrip_SocketPort");
   RegisterTestMultiProc<FidlTest>("RoundTrip_Fidl");
   fbenchmark::RegisterTest<FutexTest>("RoundTrip_Futex_SingleProcess");
-  fbenchmark::RegisterTest<PthreadCondvarTest>(
-      "RoundTrip_PthreadCondvar_SingleProcess");
+  fbenchmark::RegisterTest<PthreadCondvarTest>("RoundTrip_PthreadCondvar_SingleProcess");
 }
 
 }  // namespace
@@ -753,8 +723,7 @@ void RunSubprocess(const char* func_name) {
   // Retrieve the handles.
   std::vector<zx_handle_t> handles;
   for (;;) {
-    zx_handle_t handle =
-        zx_take_startup_handle(PA_HND(PA_USER0, handles.size()));
+    zx_handle_t handle = zx_take_startup_handle(PA_HND(PA_USER0, handles.size()));
     if (handle == ZX_HANDLE_INVALID)
       break;
     handles.push_back(handle);

@@ -33,8 +33,7 @@ class Swapchain {
     vk::CommandBuffer post_raster_command_buffer;
   } SwapchainImageResources;
 
-  bool Initialize(zx::channel image_pipe_endpoint,
-                  std::optional<vk::Extent2D> surface_size);
+  bool Initialize(zx::channel image_pipe_endpoint, std::optional<vk::Extent2D> surface_size);
   uint32_t GetNumberOfSwapchainImages();
   vk::Extent2D GetImageSize();
   GrContext* GetGrContext();
@@ -44,8 +43,7 @@ class Swapchain {
 
  private:
   bool GetPhysicalDevice();
-  bool CreateSurface(zx::channel image_pipe_endpoint,
-                     std::optional<vk::Extent2D> surface_size);
+  bool CreateSurface(zx::channel image_pipe_endpoint, std::optional<vk::Extent2D> surface_size);
   bool CreateDeviceAndQueue();
   bool InitializeSwapchain();
   bool PrepareBuffers();

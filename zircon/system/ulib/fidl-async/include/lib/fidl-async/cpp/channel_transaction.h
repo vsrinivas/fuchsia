@@ -22,51 +22,51 @@ class SimpleBinding;
 // The channel is owned by |SimpleBinding|.
 // |SimpleBinding| ownership ping-pongs between this transaction and the async dispatcher.
 class ChannelTransaction final : public Transaction {
-public:
-    ChannelTransaction(zx_txid_t txid, std::unique_ptr<SimpleBinding> binding)
-        : Transaction(), txid_(txid), binding_(std::move(binding)) {}
+ public:
+  ChannelTransaction(zx_txid_t txid, std::unique_ptr<SimpleBinding> binding)
+      : Transaction(), txid_(txid), binding_(std::move(binding)) {}
 
-    ~ChannelTransaction() final;
+  ~ChannelTransaction() final;
 
-    ChannelTransaction(ChannelTransaction&& other) noexcept : Transaction(std::move(other)) {
-        if (this != &other) {
-            MoveImpl(std::move(other));
-        }
+  ChannelTransaction(ChannelTransaction&& other) noexcept : Transaction(std::move(other)) {
+    if (this != &other) {
+      MoveImpl(std::move(other));
     }
+  }
 
-    ChannelTransaction& operator=(ChannelTransaction&& other) noexcept {
-        if (this != &other) {
-            MoveImpl(std::move(other));
-        }
-        return *this;
+  ChannelTransaction& operator=(ChannelTransaction&& other) noexcept {
+    if (this != &other) {
+      MoveImpl(std::move(other));
     }
+    return *this;
+  }
 
-protected:
-    void Reply(fidl::Message msg) final;
+ protected:
+  void Reply(fidl::Message msg) final;
 
-    void Close(zx_status_t epitaph) final;
+  void Close(zx_status_t epitaph) final;
 
-    std::unique_ptr<Transaction> TakeOwnership() final;
+  std::unique_ptr<Transaction> TakeOwnership() final;
 
-private:
-    friend fidl::internal::SimpleBinding;
+ private:
+  friend fidl::internal::SimpleBinding;
 
-    void Dispatch(fidl_msg_t msg);
+  void Dispatch(fidl_msg_t msg);
 
-    std::unique_ptr<SimpleBinding> TakeBinding() { return std::move(binding_); }
+  std::unique_ptr<SimpleBinding> TakeBinding() { return std::move(binding_); }
 
-    void MoveImpl(ChannelTransaction&& other) noexcept {
-        txid_ = other.txid_;
-        other.txid_ = 0;
-        binding_ = std::move(other.binding_);
-    }
+  void MoveImpl(ChannelTransaction&& other) noexcept {
+    txid_ = other.txid_;
+    other.txid_ = 0;
+    binding_ = std::move(other.binding_);
+  }
 
-    zx_txid_t txid_ = 0;
-    std::unique_ptr<SimpleBinding> binding_ = {};
+  zx_txid_t txid_ = 0;
+  std::unique_ptr<SimpleBinding> binding_ = {};
 };
 
-} // namespace internal
+}  // namespace internal
 
-} // namespace fidl
+}  // namespace fidl
 
-#endif // LIB_FIDL_ASYNC_CPP_CHANNEL_TRANSACTION_H_
+#endif  // LIB_FIDL_ASYNC_CPP_CHANNEL_TRANSACTION_H_

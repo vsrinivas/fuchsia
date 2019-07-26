@@ -29,8 +29,7 @@ class VideoDeviceClient : public fbl::RefCounted<VideoDeviceClient> {
 
   // Create a VideoDeviceClient from a folder and filename.  This should be
   // by the CameraManagerImpl when it detects a new or existing device.
-  static std::unique_ptr<VideoDeviceClient> Create(int dir_fd,
-                                                   const std::string &name);
+  static std::unique_ptr<VideoDeviceClient> Create(int dir_fd, const std::string &name);
 
   // Load all information to identify the device, as well as available formats.
   // Will call |callback| when everything is loaded.

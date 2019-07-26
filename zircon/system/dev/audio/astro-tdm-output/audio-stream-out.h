@@ -28,51 +28,48 @@ namespace audio {
 namespace astro {
 
 class AstroAudioStreamOut : public SimpleAudioStream {
+ public:
+  AstroAudioStreamOut(zx_device_t* parent);
 
-public:
-    AstroAudioStreamOut(zx_device_t* parent);
+ protected:
+  zx_status_t Init() __TA_REQUIRES(domain_->token()) override;
+  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
+      __TA_REQUIRES(domain_->token()) override;
+  zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
+                        zx::vmo* out_buffer) __TA_REQUIRES(domain_->token()) override;
+  zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_->token()) override;
+  zx_status_t Stop() __TA_REQUIRES(domain_->token()) override;
+  zx_status_t SetGain(const audio_proto::SetGainReq& req) __TA_REQUIRES(domain_->token()) override;
+  void ShutdownHook() __TA_REQUIRES(domain_->token()) override;
+  zx_status_t InitPost() override;
 
-protected:
-    zx_status_t Init() __TA_REQUIRES(domain_->token()) override;
-    zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
-        __TA_REQUIRES(domain_->token()) override;
-    zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req,
-                          uint32_t* out_num_rb_frames,
-                          zx::vmo* out_buffer) __TA_REQUIRES(domain_->token()) override;
-    zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_->token()) override;
-    zx_status_t Stop() __TA_REQUIRES(domain_->token()) override;
-    zx_status_t SetGain(const audio_proto::SetGainReq& req)
-        __TA_REQUIRES(domain_->token()) override;
-    void ShutdownHook() __TA_REQUIRES(domain_->token()) override;
-    zx_status_t InitPost() override;
+ private:
+  friend class fbl::RefPtr<AstroAudioStreamOut>;
 
-private:
-    friend class fbl::RefPtr<AstroAudioStreamOut>;
+  static constexpr uint8_t kFifoDepth = 0x20;
 
-    static constexpr uint8_t kFifoDepth = 0x20;
+  zx_status_t AddFormats() __TA_REQUIRES(domain_->token());
+  zx_status_t InitBuffer(size_t size);
+  zx_status_t InitPDev();
+  zx_status_t ProcessRingNotification();
 
-    zx_status_t AddFormats() __TA_REQUIRES(domain_->token());
-    zx_status_t InitBuffer(size_t size);
-    zx_status_t InitPDev();
-    zx_status_t ProcessRingNotification();
+  uint32_t us_per_notification_ = 0;
 
-    uint32_t us_per_notification_ = 0;
+  fbl::RefPtr<dispatcher::Timer> notify_timer_;
 
-    fbl::RefPtr<dispatcher::Timer> notify_timer_;
+  ddk::PDev pdev_;
 
-    ddk::PDev pdev_;
+  fbl::unique_ptr<Tas27xx> codec_;
 
-    fbl::unique_ptr<Tas27xx> codec_;
+  zx::vmo ring_buffer_vmo_;
+  fzl::PinnedVmo pinned_ring_buffer_;
 
-    zx::vmo ring_buffer_vmo_;
-    fzl::PinnedVmo pinned_ring_buffer_;
+  fbl::unique_ptr<AmlTdmDevice> aml_audio_;
+  ddk::GpioProtocolClient audio_en_;
+  ddk::GpioProtocolClient audio_fault_;
 
-    fbl::unique_ptr<AmlTdmDevice> aml_audio_;
-    ddk::GpioProtocolClient audio_en_;
-    ddk::GpioProtocolClient audio_fault_;
-
-    zx::bti bti_;
+  zx::bti bti_;
 };
 
-} // namespace astro
-} // namespace audio
+}  // namespace astro
+}  // namespace audio

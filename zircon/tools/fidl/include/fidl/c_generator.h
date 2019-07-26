@@ -26,8 +26,7 @@ namespace fidl {
 
 class CGenerator {
  public:
-  explicit CGenerator(const flat::Library* library)
-      : library_(library) {}
+  explicit CGenerator(const flat::Library* library) : library_(library) {}
 
   ~CGenerator() = default;
 

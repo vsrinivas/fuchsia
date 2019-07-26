@@ -18,12 +18,10 @@ TEST(Run, Daemonize) {
   // fuchsia.process.Resolver is proxied to the child process.
   const char* run_d_command_argv[] = {
       "/pkgfs/packages/run/0/bin/run", "-d",
-      "fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx",
-      nullptr};
+      "fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx", nullptr};
 
   zx::job job;
-  uint32_t flags =
-      FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_STDIO;
+  uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_STDIO;
 
   int launcher_create_calls = 0;
   fuchsia::sys::LaunchInfo received_launch_info;
@@ -34,8 +32,7 @@ TEST(Run, Daemonize) {
       "fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx",
       [&launcher_create_calls, &received_launch_info, &received_controller](
           fuchsia::sys::LaunchInfo info,
-          fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-              controller) {
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
         launcher_create_calls++;
         received_launch_info = std::move(info);
         received_controller = std::move(controller);
@@ -49,10 +46,7 @@ TEST(Run, Daemonize) {
       {.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
        .ns = {
            "/svc",
-           service_provider.service_directory()
-               ->CloneChannel()
-               .TakeChannel()
-               .release(),
+           service_provider.service_directory()->CloneChannel().TakeChannel().release(),
        }}};
 
   zx::process run_process;
@@ -68,14 +62,13 @@ TEST(Run, Daemonize) {
       << err_msg;
 
   // Wait for the "run" program to exit.
-  EXPECT_EQ(ZX_OK, zx_object_wait_one(run_process.get(), ZX_TASK_TERMINATED,
-                                      ZX_TIME_INFINITE, nullptr));
+  EXPECT_EQ(ZX_OK,
+            zx_object_wait_one(run_process.get(), ZX_TASK_TERMINATED, ZX_TIME_INFINITE, nullptr));
 
   // Check that it succeeded.
   zx_info_process_t proc_info;
-  EXPECT_EQ(ZX_OK,
-            zx_object_get_info(run_process.get(), ZX_INFO_PROCESS, &proc_info,
-                               sizeof(proc_info), nullptr, nullptr));
+  EXPECT_EQ(ZX_OK, zx_object_get_info(run_process.get(), ZX_INFO_PROCESS, &proc_info,
+                                      sizeof(proc_info), nullptr, nullptr));
 
   EXPECT_EQ(0, proc_info.return_code);
 
@@ -87,9 +80,8 @@ TEST(Run, Daemonize) {
   // line argument and a null controller.
   EXPECT_EQ(1, launcher_create_calls);
 
-  EXPECT_EQ(
-      "fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx",
-      received_launch_info.url);
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx",
+            received_launch_info.url);
 
   EXPECT_FALSE(received_controller.is_valid());
 }

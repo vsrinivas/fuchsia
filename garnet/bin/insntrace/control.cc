@@ -59,11 +59,10 @@ static constexpr uint32_t kKtraceGroupMask = KTRACE_GRP_ARCH | KTRACE_GRP_TASKS;
 
 static ControllerSyncPtr OpenDevice() {
   ControllerSyncPtr controller_ptr;
-  zx_status_t status = fdio_service_connect(
-      ipt_device_path, controller_ptr.NewRequest().TakeChannel().release());
+  zx_status_t status =
+      fdio_service_connect(ipt_device_path, controller_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << ipt_device_path << ": "
-                   << status;
+    FXL_LOG(ERROR) << "Error connecting to " << ipt_device_path << ": " << status;
     return ControllerSyncPtr();
   }
   return controller_ptr;
@@ -72,11 +71,9 @@ static ControllerSyncPtr OpenDevice() {
 static void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status,
                            zx_status_t rqst_status = ZX_OK) {
   if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "IPT FIDL " << rqst_name
-                   << " failed: status=" << fidl_status;
+    FXL_LOG(ERROR) << "IPT FIDL " << rqst_name << " failed: status=" << fidl_status;
   } else if (rqst_status != ZX_OK) {
-    FXL_LOG(ERROR) << "IPT " << rqst_name
-                   << " failed: error=" << rqst_status;
+    FXL_LOG(ERROR) << "IPT " << rqst_name << " failed: error=" << rqst_status;
   }
 }
 
@@ -90,12 +87,9 @@ bool AllocTrace(const IptConfig& config) {
 
   Allocation allocation;
   allocation.mode = config.mode;
-  allocation.num_traces = (config.mode == Mode::CPU
-                           ? config.num_cpus
-                           : config.max_threads);
+  allocation.num_traces = (config.mode == Mode::CPU ? config.num_cpus : config.max_threads);
   FXL_VLOG(2) << fxl::StringPrintf("mode=%u, num_traces=0x%x",
-                                   static_cast<unsigned>(allocation.mode),
-                                   allocation.num_traces);
+                                   static_cast<unsigned>(allocation.mode), allocation.num_traces);
 
   ::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result result;
   zx_status_t status = ipt->Initialize(allocation, &result);
@@ -107,8 +101,7 @@ bool AllocTrace(const IptConfig& config) {
   return true;
 }
 
-static void InitIptBufferConfig(BufferConfig* ipt_config,
-                                const IptConfig& config) {
+static void InitIptBufferConfig(BufferConfig* ipt_config, const IptConfig& config) {
   memset(ipt_config, 0, sizeof(*ipt_config));
   ipt_config->num_chunks = config.num_chunks;
   ipt_config->chunk_order = config.chunk_order;
@@ -181,13 +174,13 @@ bool InitProcessTrace(const IptConfig& config) {
     return false;
   }
 
-    // If tracing cpus we may want all the records for processes that were
-    // started during boot, so don't reset ktrace here. If tracing threads it
-    // doesn't much matter other than hopefully the necessary records don't get
-    // over run, which is handled below by only enabling the collection groups
-    // we need. So for now leave existing records alone.
-    // A better solution would be to collect the data we need at the time we
-    // need it.
+  // If tracing cpus we may want all the records for processes that were
+  // started during boot, so don't reset ktrace here. If tracing threads it
+  // doesn't much matter other than hopefully the necessary records don't get
+  // over run, which is handled below by only enabling the collection groups
+  // we need. So for now leave existing records alone.
+  // A better solution would be to collect the data we need at the time we
+  // need it.
 #if 0  // TODO(dje)
   if (config.mode == Mode::THREAD) {
     RequestKtraceStop(ktrace);
@@ -233,22 +226,19 @@ bool StartTrace(const IptConfig& config) {
   return true;
 }
 
-bool StartThreadTrace(inferior_control::Thread* thread,
-                     const IptConfig& config) {
+bool StartThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
   FXL_LOG(INFO) << "StartThreadTrace called";
   FXL_DCHECK(config.mode == Mode::THREAD);
 
   if (thread->ipt_buffer() < 0) {
-    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
-                                       thread->id());
+    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer", thread->id());
     // TODO(dje): For now. This isn't an error in the normal sense.
     return true;
   }
 
   zx::thread thread_handle;
-  zx_status_t status =
-    zx_handle_duplicate(thread->handle(), ZX_RIGHT_SAME_RIGHTS,
-                        thread_handle.reset_and_get_address());
+  zx_status_t status = zx_handle_duplicate(thread->handle(), ZX_RIGHT_SAME_RIGHTS,
+                                           thread_handle.reset_and_get_address());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to duplicate thread handle: "
                    << debugger_utils::ZxErrorString(status);
@@ -288,15 +278,13 @@ void StopThreadTrace(inferior_control::Thread* thread, const IptConfig& config) 
   FXL_DCHECK(config.mode == Mode::THREAD);
 
   if (thread->ipt_buffer() < 0) {
-    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
-                                       thread->id());
+    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer", thread->id());
     return;
   }
 
   zx::thread thread_handle;
-  zx_status_t status =
-    zx_handle_duplicate(thread->handle(), ZX_RIGHT_SAME_RIGHTS,
-                        thread_handle.reset_and_get_address());
+  zx_status_t status = zx_handle_duplicate(thread->handle(), ZX_RIGHT_SAME_RIGHTS,
+                                           thread_handle.reset_and_get_address());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to duplicate thread handle: "
                    << debugger_utils::ZxErrorString(status);
@@ -328,25 +316,22 @@ void StopSidebandDataCollection(const IptConfig& config) {
   RequestKtraceStop(ktrace);
 }
 
-static std::string GetCpuPtFileName(const std::string& output_path_prefix,
-                                    uint64_t id) {
+static std::string GetCpuPtFileName(const std::string& output_path_prefix, uint64_t id) {
   const char* name_prefix = "cpu";
-  return fxl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
-                           name_prefix, id, buffer_output_path_suffix);
+  return fxl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(), name_prefix, id,
+                           buffer_output_path_suffix);
 }
 
-static std::string GetThreadPtFileName(const std::string& output_path_prefix,
-                                       uint64_t id) {
+static std::string GetThreadPtFileName(const std::string& output_path_prefix, uint64_t id) {
   const char* name_prefix = "thr";
-  return fxl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
-                           name_prefix, id, buffer_output_path_suffix);
+  return fxl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(), name_prefix, id,
+                           buffer_output_path_suffix);
 }
 
 // Write the contents of buffer |descriptor| to a file.
 // The file's name is $output_path_prefix.$name_prefix$id.pt.
 
-static zx_status_t WriteBufferData(const IptConfig& config,
-                                   const ControllerSyncPtr& ipt,
+static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSyncPtr& ipt,
                                    uint32_t descriptor, uint64_t id) {
   std::string output_path;
   if (config.mode == Mode::CPU)
@@ -382,8 +367,8 @@ static zx_status_t WriteBufferData(const IptConfig& config,
 
   fxl::UniqueFD fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (!fd.is_valid()) {
-    FXL_LOG(ERROR) << fxl::StringPrintf("Failed writing file: %s", c_path)
-                   << ", " << debugger_utils::ErrnoString(errno);
+    FXL_LOG(ERROR) << fxl::StringPrintf("Failed writing file: %s", c_path) << ", "
+                   << debugger_utils::ErrnoString(errno);
     return ZX_ERR_BAD_PATH;
   }
 
@@ -400,8 +385,7 @@ static zx_status_t WriteBufferData(const IptConfig& config,
   else
     bytes_left = buffer_state->capture_end;
 
-  FXL_LOG(INFO) << fxl::StringPrintf("Writing %zu bytes to %s", bytes_left,
-                                     c_path);
+  FXL_LOG(INFO) << fxl::StringPrintf("Writing %zu bytes to %s", bytes_left, c_path);
 
   char buf[4096];
 
@@ -426,9 +410,8 @@ static zx_status_t WriteBufferData(const IptConfig& config,
       // left for another day.
       status = vmo.read(buf, offset, to_write);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << fxl::StringPrintf(
-                              "zx_vmo_read: buffer %u, buffer %u, offset %zu: ",
-                              descriptor, i, offset)
+        FXL_LOG(ERROR) << fxl::StringPrintf("zx_vmo_read: buffer %u, buffer %u, offset %zu: ",
+                                            descriptor, i, offset)
                        << debugger_utils::ZxErrorString(status);
         goto Fail;
       }
@@ -486,8 +469,7 @@ void DumpThreadTrace(inferior_control::Thread* thread, const IptConfig& config) 
   zx_koid_t id = thread->id();
 
   if (thread->ipt_buffer() < 0) {
-    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
-                                       id);
+    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer", id);
     return;
   }
 
@@ -510,8 +492,8 @@ void DumpSidebandData(const IptConfig& config) {
 
   // TODO(dje): UniqueFILE?
   {
-    std::string cpuid_output_path = fxl::StringPrintf(
-        "%s.%s", config.output_path_prefix.c_str(), cpuid_output_path_suffix);
+    std::string cpuid_output_path =
+        fxl::StringPrintf("%s.%s", config.output_path_prefix.c_str(), cpuid_output_path_suffix);
     const char* cpuid_c_path = cpuid_output_path.c_str();
 
     FILE* f = fopen(cpuid_c_path, "w");
@@ -533,8 +515,8 @@ void DumpSidebandData(const IptConfig& config) {
   // TODO(dje): UniqueFILE?
   // TODO(dje): Handle Mode::THREAD
   if (config.mode == Mode::CPU) {
-    std::string pt_list_output_path = fxl::StringPrintf(
-        "%s.%s", config.output_path_prefix.c_str(), pt_list_output_path_suffix);
+    std::string pt_list_output_path =
+        fxl::StringPrintf("%s.%s", config.output_path_prefix.c_str(), pt_list_output_path_suffix);
     const char* pt_list_c_path = pt_list_output_path.c_str();
 
     FILE* f = fopen(pt_list_c_path, "w");
@@ -559,14 +541,12 @@ void ResetTrace(const IptConfig& config) {
   // function around for a bit.
 }
 
-void ResetThreadTrace(inferior_control::Thread* thread,
-                     const IptConfig& config) {
+void ResetThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
   FXL_LOG(INFO) << "ResetThreadTrace called";
   FXL_DCHECK(config.mode == Mode::THREAD);
 
   if (thread->ipt_buffer() < 0) {
-    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
-                                       thread->id());
+    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer", thread->id());
     return;
   }
 

@@ -8,12 +8,10 @@
 
 namespace zx {
 
-zx_status_t vcpu::create(const guest& guest, uint32_t options,
-                         zx_gpaddr_t entry, vcpu* vcpu) {
-    // Assume |guest| and |vcpu| must refer to different containers, due to
-    // strict aliasing.
-    return zx_vcpu_create(guest.get(), options, entry,
-                          vcpu->reset_and_get_address());
+zx_status_t vcpu::create(const guest& guest, uint32_t options, zx_gpaddr_t entry, vcpu* vcpu) {
+  // Assume |guest| and |vcpu| must refer to different containers, due to
+  // strict aliasing.
+  return zx_vcpu_create(guest.get(), options, entry, vcpu->reset_and_get_address());
 }
 
-} // namespace zx
+}  // namespace zx

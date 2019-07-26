@@ -64,19 +64,16 @@ const auto kTestCases = [] {
            EVP_aead_aes_128_gcm_siv(),
            EVP_aead_aes_256_gcm_siv(),
        }) {
-    out.push_back(TestArgs{aead,
-                           {1, 2, 3, 5, 8, 13, 21, 34},
-                           Slice::FromContainer({1, 2, 3, 4, 5, 6, 7, 8})});
-    out.push_back(TestArgs{aead,
-                           {0x123456789abcdefull, 123, 321},
-                           Slice::RepeatedChar(1024 * 1024, 'a')});
+    out.push_back(TestArgs{
+        aead, {1, 2, 3, 5, 8, 13, 21, 34}, Slice::FromContainer({1, 2, 3, 4, 5, 6, 7, 8})});
+    out.push_back(
+        TestArgs{aead, {0x123456789abcdefull, 123, 321}, Slice::RepeatedChar(1024 * 1024, 'a')});
   }
   return out;
 }();
 
 INSTANTIATE_TEST_SUITE_P(AEADCodecTest, AEADCodec,
-                         ::testing::ValuesIn(kTestCases.begin(),
-                                             kTestCases.end()));
+                         ::testing::ValuesIn(kTestCases.begin(), kTestCases.end()));
 
 }  // namespace aead_codec_test
 }  // namespace overnet

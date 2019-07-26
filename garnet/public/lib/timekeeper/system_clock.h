@@ -16,9 +16,7 @@ class SystemClock : public Clock {
   zx_status_t GetTime(zx_clock_t clock_id, zx_time_t* time) const override {
     return zx_clock_get(clock_id, time);
   }
-  zx_time_t GetMonotonicTime() const override {
-    return zx_clock_get_monotonic();
-  }
+  zx_time_t GetMonotonicTime() const override { return zx_clock_get_monotonic(); }
 };
 
 }  // namespace timekeeper

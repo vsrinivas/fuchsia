@@ -29,17 +29,16 @@ void GatherCpu::Gather() {
   // TODO(smbug.com/34): Determine the array size at runtime (32 is arbitrary).
   zx_info_cpu_stats_t stats[32];
   size_t actual, avail;
-  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_CPU_STATS,
-                                       &stats, sizeof(stats), &actual, &avail);
+  zx_status_t err =
+      zx_object_get_info(RootResource(), ZX_INFO_CPU_STATS, &stats, sizeof(stats), &actual, &avail);
   if (err != ZX_OK) {
-    FXL_LOG(ERROR) << "ZX_INFO_CPU_STATS returned " << err << "("
-                   << zx_status_get_string(err) << ")";
+    FXL_LOG(ERROR) << "ZX_INFO_CPU_STATS returned " << err << "(" << zx_status_get_string(err)
+                   << ")";
     return;
   }
   auto now = std::chrono::high_resolution_clock::now();
-  auto cpu_time = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                      now.time_since_epoch())
-                      .count();
+  auto cpu_time =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
   SampleList list;
   for (size_t i = 0; i < actual; ++i) {
     // Note: stats[i].flags are not currently recorded.
@@ -52,8 +51,7 @@ void GatherCpu::Gather() {
     AddCpuValue(&list, i, "yields", stats[i].yields);
 
     // CPU level interrupts and exceptions.
-    uint64_t busy_time =
-        cpu_time > stats[i].idle_time ? cpu_time - stats[i].idle_time : 0ull;
+    uint64_t busy_time = cpu_time > stats[i].idle_time ? cpu_time - stats[i].idle_time : 0ull;
     AddCpuValue(&list, i, "busy_time", busy_time);
     AddCpuValue(&list, i, "idle_time", stats[i].idle_time);
     AddCpuValue(&list, i, "external_hardware_interrupts", stats[i].ints);

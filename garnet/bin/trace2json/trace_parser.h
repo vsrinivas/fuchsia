@@ -25,8 +25,7 @@ class FuchsiaTraceParser {
   bool ParseComplete(std::istream*);
 
  private:
-  static constexpr size_t kReadBufferSize =
-      trace::RecordFields::kMaxRecordSizeBytes * 4;
+  static constexpr size_t kReadBufferSize = trace::RecordFields::kMaxRecordSizeBytes * 4;
   ChromiumExporter exporter_;
   std::array<char, kReadBufferSize> buffer_;
   // The number of bytes of |buffer_| in use.

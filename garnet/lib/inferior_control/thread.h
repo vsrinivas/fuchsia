@@ -73,8 +73,7 @@ class Thread final {
   GdbSignal GetGdbSignal() const;
 
   // Called when the thread gets an exception.
-  void OnException(const zx_excp_type_t type,
-                   const zx_exception_context_t& context);
+  void OnException(const zx_excp_type_t type, const zx_exception_context_t& context);
 
   // Called when the thread gets a signal.
   void OnSignal(zx_signals_t signal);
@@ -129,8 +128,7 @@ class Thread final {
   // Convert an exception to a user-friendly description.
   // This is for log messages and interactive programs that wish to report
   // the exception.
-  std::string ExceptionToString(zx_excp_type_t type,
-                                const zx_exception_context_t& context) const;
+  std::string ExceptionToString(zx_excp_type_t type, const zx_exception_context_t& context) const;
 
   // Convert a thread signal (or signals) to a user-friendly description.
   // This is for log messages and interactive programs that wish to report

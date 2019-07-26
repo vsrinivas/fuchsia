@@ -33,31 +33,21 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
         std::make_unique<harvester::DockyardProxyFake>();
 
     EXPECT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
-    test_harvester = std::make_unique<harvester::Harvester>(
-        root_resource, &dispatcher, std::move(dockyard_proxy));
+    test_harvester = std::make_unique<harvester::Harvester>(root_resource, &dispatcher,
+                                                            std::move(dockyard_proxy));
   }
 
-  async_dispatcher_t* GetHarvesterDispatcher() {
-    return test_harvester->dispatcher_;
-  }
-  zx_handle_t GetHarvesterRootResource() {
-    return test_harvester->root_resource_;
-  }
-  zx::duration GetGatherCpuPeriod() {
-    return test_harvester->gather_cpu_.update_period_;
-  }
+  async_dispatcher_t* GetHarvesterDispatcher() { return test_harvester->dispatcher_; }
+  zx_handle_t GetHarvesterRootResource() { return test_harvester->root_resource_; }
+  zx::duration GetGatherCpuPeriod() { return test_harvester->gather_cpu_.update_period_; }
   zx::duration GetGatherInspectablePeriod() {
     return test_harvester->gather_inspectable_.update_period_;
   }
   zx::duration GetGatherIntrospectionPeriod() {
     return test_harvester->gather_introspection_.update_period_;
   }
-  zx::duration GetGatherMemoryPeriod() {
-    return test_harvester->gather_memory_.update_period_;
-  }
-  zx::duration GetGatherTasksPeriod() {
-    return test_harvester->gather_tasks_.update_period_;
-  }
+  zx::duration GetGatherMemoryPeriod() { return test_harvester->gather_memory_.update_period_; }
+  zx::duration GetGatherTasksPeriod() { return test_harvester->gather_tasks_.update_period_; }
 
   std::unique_ptr<harvester::Harvester> test_harvester;
   AsyncDispatcherFake dispatcher;

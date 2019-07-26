@@ -18,8 +18,7 @@ Dockyard::~Dockyard() {}
 
 void Dockyard::AddSample(DockyardId dockyard_id, Sample sample) {}
 
-void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {
-}
+void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {}
 
 SampleTimeNs Dockyard::DeviceDeltaTimeNs() const { return 0; }
 
@@ -27,11 +26,8 @@ void Dockyard::SetDeviceTimeDeltaNs(SampleTimeNs delta_ns) {}
 
 SampleTimeNs Dockyard::LatestSampleTimeNs() const { return 0; }
 
-DockyardId Dockyard::GetDockyardId(const std::string& dockyard_path) {
-  return 0;
-}
-bool Dockyard::GetDockyardPath(DockyardId dockyard_id,
-                               std::string* dockyard_path) const {
+DockyardId Dockyard::GetDockyardId(const std::string& dockyard_path) { return 0; }
+bool Dockyard::GetDockyardPath(DockyardId dockyard_id, std::string* dockyard_path) const {
   return false;
 }
 DockyardPathToIdMap Dockyard::MatchPaths(const std::string& starting,
@@ -39,8 +35,7 @@ DockyardPathToIdMap Dockyard::MatchPaths(const std::string& starting,
   DockyardPathToIdMap result;
   return result;
 }
-bool Dockyard::HasDockyardPath(const std::string& dockyard_path,
-                               DockyardId* dockyard_id) const {
+bool Dockyard::HasDockyardPath(const std::string& dockyard_path, DockyardId* dockyard_id) const {
   std::lock_guard<std::mutex> guard(mutex_);
   auto search = dockyard_path_to_id_.find(dockyard_path);
   if (search != dockyard_path_to_id_.end()) {
@@ -80,8 +75,7 @@ void Dockyard::StartCollectingFrom(const std::string& device) {}
 
 void Dockyard::StopCollectingFromDevice() {}
 
-OnConnectionCallback Dockyard::SetConnectionHandler(
-    OnConnectionCallback callback) {
+OnConnectionCallback Dockyard::SetConnectionHandler(OnConnectionCallback callback) {
   on_connection_handler_ = callback;
   return nullptr;
 }
@@ -91,8 +85,7 @@ OnPathsCallback Dockyard::SetDockyardPathsHandler(OnPathsCallback callback) {
   return nullptr;
 }
 
-OnStreamSetsCallback Dockyard::SetStreamSetsHandler(
-    OnStreamSetsCallback callback) {
+OnStreamSetsCallback Dockyard::SetStreamSetsHandler(OnStreamSetsCallback callback) {
   on_stream_sets_handler_ = callback;
   return nullptr;
 }
@@ -105,17 +98,11 @@ std::ostringstream Dockyard::DebugDump() const {
   return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) {
-  return out;
-}
+std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) { return out; }
 
-std::ostream& operator<<(std::ostream& out,
-                         const StreamSetsResponse& response) {
-  return out;
-}
+std::ostream& operator<<(std::ostream& out, const StreamSetsResponse& response) { return out; }
 
-std::ostringstream DebugPrintQuery(const Dockyard& dockyard,
-                                   const StreamSetsRequest& request,
+std::ostringstream DebugPrintQuery(const Dockyard& dockyard, const StreamSetsRequest& request,
                                    const StreamSetsResponse& response) {
   std::ostringstream out;
   return out;

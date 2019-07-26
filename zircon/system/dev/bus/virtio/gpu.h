@@ -21,88 +21,90 @@ namespace virtio {
 class Ring;
 
 class GpuDevice : public Device {
-public:
-    GpuDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
-    virtual ~GpuDevice();
+ public:
+  GpuDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
+  virtual ~GpuDevice();
 
-    zx_status_t Init() override;
+  zx_status_t Init() override;
 
-    void IrqRingUpdate() override;
-    void IrqConfigChange() override;
+  void IrqRingUpdate() override;
+  void IrqConfigChange() override;
 
-    const virtio_gpu_resp_display_info::virtio_gpu_display_one* pmode() const { return &pmode_; }
+  const virtio_gpu_resp_display_info::virtio_gpu_display_one* pmode() const { return &pmode_; }
 
-    void Flush();
+  void Flush();
 
-    const char* tag() const override { return "virtio-gpu"; }
+  const char* tag() const override { return "virtio-gpu"; }
 
-private:
-    // DDK driver hooks
-    static void virtio_gpu_set_display_controller_interface(
-            void* ctx, const display_controller_interface_protocol_t* intf);
-    static zx_status_t virtio_gpu_import_vmo_image(
-            void* ctx, image_t* image, zx_handle_t vmo, size_t offset);
-    static void virtio_gpu_release_image(void* ctx, image_t* image);
-    static uint32_t virtio_gpu_check_configuration(
-        void* ctx, const display_config_t** display_configs, size_t display_count,
-        uint32_t** layer_cfg_results, size_t* layer_cfg_result_count);
-    static void virtio_gpu_apply_configuration(
-            void* ctx, const display_config_t** display_configs, size_t display_count);
-    static uint32_t virtio_gpu_compute_linear_stride(
-            void* ctx, uint32_t width, zx_pixel_format_t format);
-    static zx_status_t virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out);
-    static zx_status_t virtio_get_sysmem_connection(void* ctx, zx_handle_t handle);
-    static zx_status_t virtio_set_buffer_collection_constraints(void* ctx, const image_t* config,
-                                                                zx_unowned_handle_t collection);
-    static zx_status_t virtio_get_single_buffer_framebuffer(void* ctx, zx_handle_t* out_vmo,
-                                                            uint32_t* out_stride);
+ private:
+  // DDK driver hooks
+  static void virtio_gpu_set_display_controller_interface(
+      void* ctx, const display_controller_interface_protocol_t* intf);
+  static zx_status_t virtio_gpu_import_vmo_image(void* ctx, image_t* image, zx_handle_t vmo,
+                                                 size_t offset);
+  static void virtio_gpu_release_image(void* ctx, image_t* image);
+  static uint32_t virtio_gpu_check_configuration(void* ctx,
+                                                 const display_config_t** display_configs,
+                                                 size_t display_count, uint32_t** layer_cfg_results,
+                                                 size_t* layer_cfg_result_count);
+  static void virtio_gpu_apply_configuration(void* ctx, const display_config_t** display_configs,
+                                             size_t display_count);
+  static uint32_t virtio_gpu_compute_linear_stride(void* ctx, uint32_t width,
+                                                   zx_pixel_format_t format);
+  static zx_status_t virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out);
+  static zx_status_t virtio_get_sysmem_connection(void* ctx, zx_handle_t handle);
+  static zx_status_t virtio_set_buffer_collection_constraints(void* ctx, const image_t* config,
+                                                              zx_unowned_handle_t collection);
+  static zx_status_t virtio_get_single_buffer_framebuffer(void* ctx, zx_handle_t* out_vmo,
+                                                          uint32_t* out_stride);
 
-    // Internal routines
-    template <typename RequestType, typename ResponseType>
-    void send_command_response(const RequestType* cmd, ResponseType** res);
+  // Internal routines
+  template <typename RequestType, typename ResponseType>
+  void send_command_response(const RequestType* cmd, ResponseType** res);
 
-    zx_status_t get_display_info();
-    zx_status_t allocate_2d_resource(uint32_t* resource_id, uint32_t width, uint32_t height);
-    zx_status_t attach_backing(uint32_t resource_id, zx_paddr_t ptr, size_t buf_len);
-    zx_status_t set_scanout(uint32_t scanout_id, uint32_t resource_id, uint32_t width, uint32_t height);
-    zx_status_t flush_resource(uint32_t resource_id, uint32_t width, uint32_t height);
-    zx_status_t transfer_to_host_2d(uint32_t resource_id, uint32_t width, uint32_t height);
+  zx_status_t get_display_info();
+  zx_status_t allocate_2d_resource(uint32_t* resource_id, uint32_t width, uint32_t height);
+  zx_status_t attach_backing(uint32_t resource_id, zx_paddr_t ptr, size_t buf_len);
+  zx_status_t set_scanout(uint32_t scanout_id, uint32_t resource_id, uint32_t width,
+                          uint32_t height);
+  zx_status_t flush_resource(uint32_t resource_id, uint32_t width, uint32_t height);
+  zx_status_t transfer_to_host_2d(uint32_t resource_id, uint32_t width, uint32_t height);
 
-    zx_status_t virtio_gpu_start();
-    thrd_t start_thread_ = {};
+  zx_status_t virtio_gpu_start();
+  thrd_t start_thread_ = {};
 
-    // the main virtio ring
-    Ring vring_ = {this};
+  // the main virtio ring
+  Ring vring_ = {this};
 
-    // display protocol ops
-    display_controller_impl_protocol_ops_t display_proto_ops_ = {};
+  // display protocol ops
+  display_controller_impl_protocol_ops_t display_proto_ops_ = {};
 
-    // gpu op
-    io_buffer_t gpu_req_;
+  // gpu op
+  io_buffer_t gpu_req_;
 
-    // A saved copy of the display
-    virtio_gpu_resp_display_info::virtio_gpu_display_one pmode_ = {};
-    int pmode_id_ = -1;
+  // A saved copy of the display
+  virtio_gpu_resp_display_info::virtio_gpu_display_one pmode_ = {};
+  int pmode_id_ = -1;
 
-    uint32_t next_resource_id_ = 1;
+  uint32_t next_resource_id_ = 1;
 
-    fbl::Mutex request_lock_;
-    sem_t request_sem_;
-    sem_t response_sem_;
+  fbl::Mutex request_lock_;
+  sem_t request_sem_;
+  sem_t response_sem_;
 
-    // Flush thread
-    void virtio_gpu_flusher();
-    thrd_t flush_thread_ = {};
-    fbl::Mutex flush_lock_;
-    cnd_t flush_cond_ = {};
-    bool flush_pending_ = false;
+  // Flush thread
+  void virtio_gpu_flusher();
+  thrd_t flush_thread_ = {};
+  fbl::Mutex flush_lock_;
+  cnd_t flush_cond_ = {};
+  bool flush_pending_ = false;
 
-    display_controller_interface_protocol_t dc_intf_;
+  display_controller_interface_protocol_t dc_intf_;
 
-    struct imported_image* current_fb_;
-    struct imported_image* displayed_fb_;
+  struct imported_image* current_fb_;
+  struct imported_image* displayed_fb_;
 
-    zx_pixel_format_t supported_formats_ = ZX_PIXEL_FORMAT_RGB_x888;
+  zx_pixel_format_t supported_formats_ = ZX_PIXEL_FORMAT_RGB_x888;
 };
 
-} // namespace virtio
+}  // namespace virtio

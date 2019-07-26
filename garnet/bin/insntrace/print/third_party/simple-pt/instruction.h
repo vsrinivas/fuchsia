@@ -66,8 +66,8 @@ struct Instruction {
   uint32_t core_bus_ratio;
 
   // See intel-pt.h.
-  unsigned speculative : 1, aborted : 1, committed : 1, disabled : 1,
-      enabled : 1, resumed : 1, interrupted : 1, resynced : 1, stopped : 1;
+  unsigned speculative : 1, aborted : 1, committed : 1, disabled : 1, enabled : 1, resumed : 1,
+      interrupted : 1, resynced : 1, stopped : 1;
 };
 
 void TransferEvents(Instruction* insn, const struct pt_insn* raw_insn);

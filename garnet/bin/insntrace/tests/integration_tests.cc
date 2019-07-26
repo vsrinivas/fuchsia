@@ -27,9 +27,9 @@ const char kInsntracePath[] = "/bin/insntrace";
 
 // These files should be created when running insntrace.
 const char* const kResultFileList[] = {
-  "/tmp/ptout.cpuid",
-  "/tmp/ptout.ktrace",
-  "/tmp/ptout.ptlist",
+    "/tmp/ptout.cpuid",
+    "/tmp/ptout.ktrace",
+    "/tmp/ptout.ptlist",
 };
 
 TEST(Insntrace, TraceProgram) {
@@ -41,8 +41,7 @@ TEST(Insntrace, TraceProgram) {
   // which is fine. There is also the ktrace buffer which is 32MB by default.
 
   zx::process child;
-  std::vector<std::string> argv{
-      kInsntracePath, kInsntracePath, "--help"};
+  std::vector<std::string> argv{kInsntracePath, kInsntracePath, "--help"};
   ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
   int return_code;
@@ -71,11 +70,10 @@ TEST(Insntrace, TraceProgram) {
 
 ControllerSyncPtr OpenDevice() {
   ControllerSyncPtr controller_ptr;
-  zx_status_t status = fdio_service_connect(
-      kInsntraceDevicePath, controller_ptr.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_service_connect(kInsntraceDevicePath,
+                                            controller_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << kInsntraceDevicePath << ": "
-                   << status;
+    FXL_LOG(ERROR) << "Error connecting to " << kInsntraceDevicePath << ": " << status;
     return ControllerSyncPtr();
   }
   return controller_ptr;

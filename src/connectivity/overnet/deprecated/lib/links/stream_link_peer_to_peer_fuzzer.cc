@@ -22,16 +22,13 @@ const auto kDummyMutation = [](auto, auto) -> Slice { return Slice(); };
 
 class StreamMutator {
  public:
-  StreamMutator(std::vector<fuchsia::overnet::streamlinkfuzzer::StreamMutation>
-                    mutations) {
+  StreamMutator(std::vector<fuchsia::overnet::streamlinkfuzzer::StreamMutation> mutations) {
     for (const auto& mut : mutations) {
       switch (mut.Which()) {
         case fuchsia::overnet::streamlinkfuzzer::StreamMutation::Tag::kFlipBit:
           mops_.emplace_back(
-              mut.flip_bit() / 8,
-              [bit = 1 << (mut.flip_bit() % 8)](uint8_t offset, Slice slice) {
-                return slice.MutateUnique(
-                    [offset, bit](uint8_t* p) { p[offset] ^= bit; });
+              mut.flip_bit() / 8, [bit = 1 << (mut.flip_bit() % 8)](uint8_t offset, Slice slice) {
+                return slice.MutateUnique([offset, bit](uint8_t* p) { p[offset] ^= bit; });
               });
           break;
         case fuchsia::overnet::streamlinkfuzzer::StreamMutation::Tag::kUnknown:
@@ -42,8 +39,8 @@ class StreamMutator {
   }
 
   Slice Mutate(uint64_t offset, Slice incoming) {
-    for (auto it = std::lower_bound(mops_.begin(), mops_.end(),
-                                    MOp(offset, kDummyMutation), CompareMOpPos);
+    for (auto it = std::lower_bound(mops_.begin(), mops_.end(), MOp(offset, kDummyMutation),
+                                    CompareMOpPos);
          it != mops_.end() && it->first < offset + incoming.length(); ++it) {
       incoming = it->second(it->first - offset, incoming);
     }
@@ -54,15 +51,13 @@ class StreamMutator {
   using MOp = std::pair<uint64_t, std::function<Slice(uint64_t, Slice)>>;
   std::vector<MOp> mops_;
 
-  static bool CompareMOpPos(const MOp& a, const MOp& b) {
-    return a.first < b.first;
-  }
+  static bool CompareMOpPos(const MOp& a, const MOp& b) { return a.first < b.first; }
 };
 
 class FuzzedStreamLink final : public StreamLink {
  public:
-  FuzzedStreamLink(Router* router, NodeId peer,
-                   std::unique_ptr<StreamFramer> framer, StreamMutator mutator)
+  FuzzedStreamLink(Router* router, NodeId peer, std::unique_ptr<StreamFramer> framer,
+                   StreamMutator mutator)
       : StreamLink(router, peer, std::move(framer), 1),
         timer_(router->timer()),
         mutator_(std::move(mutator)) {}
@@ -89,8 +84,7 @@ class FuzzedStreamLink final : public StreamLink {
       return;
     }
     Slice process = mutator_.Mutate(
-        offset_, bytes >= pending_length ? std::move(pending_)
-                                         : pending_.TakeUntilOffset(bytes));
+        offset_, bytes >= pending_length ? std::move(pending_) : pending_.TakeUntilOffset(bytes));
     offset_ += process.length();
     partner_->Process(timer_->Now(), std::move(process));
   }
@@ -134,16 +128,16 @@ class FuzzedHandler final : public Router::StreamHandler {
 
 class StreamLinkFuzzer {
  public:
-  StreamLinkFuzzer(bool log_stuff, std::unique_ptr<StreamFramer> framer,
-                   StreamMutator mut_1_to_2, StreamMutator mut_2_to_1)
+  StreamLinkFuzzer(bool log_stuff, std::unique_ptr<StreamFramer> framer, StreamMutator mut_1_to_2,
+                   StreamMutator mut_2_to_1)
       : logging_(log_stuff ? new Logging(&timer_) : nullptr) {
-    auto link = MakeLink<FuzzedStreamLink>(
-        &router_1_, NodeId(2), std::move(framer), std::move(mut_1_to_2));
+    auto link =
+        MakeLink<FuzzedStreamLink>(&router_1_, NodeId(2), std::move(framer), std::move(mut_1_to_2));
     link_12_ = link.get();
     router_1_.RegisterLink(std::move(link));
 
-    link = MakeLink<FuzzedStreamLink>(&router_2_, NodeId(1), std::move(framer),
-                                      std::move(mut_2_to_1));
+    link =
+        MakeLink<FuzzedStreamLink>(&router_2_, NodeId(1), std::move(framer), std::move(mut_2_to_1));
     link_21_ = link.get();
     router_2_.RegisterLink(std::move(link));
 
@@ -160,10 +154,8 @@ class StreamLinkFuzzer {
     link_12_->Done();
     link_21_->Done();
 
-    router_2_.UnregisterStream(NodeId(1), StreamId(1), &handler_1_)
-        .MustSucceed();
-    router_1_.UnregisterStream(NodeId(2), StreamId(1), &handler_2_)
-        .MustSucceed();
+    router_2_.UnregisterStream(NodeId(1), StreamId(1), &handler_1_).MustSucceed();
+    router_1_.UnregisterStream(NodeId(2), StreamId(1), &handler_2_).MustSucceed();
 
     int waiting = 2;
     router_1_.Close([&] { waiting--; });
@@ -189,11 +181,11 @@ class StreamLinkFuzzer {
             handler(action.node)->Expect(packet);
           }
           auto cur_seq = seq_;
-          lnk->Forward(Message::SimpleForwarder(
-              std::move(RoutableMessage(src(action.node))
-                            .AddDestination(dst(action.node), StreamId(1),
-                                            SeqNum(seq_++, cur_seq))),
-              std::move(packet), timer_.Now()));
+          lnk->Forward(
+              Message::SimpleForwarder(std::move(RoutableMessage(src(action.node))
+                                                     .AddDestination(dst(action.node), StreamId(1),
+                                                                     SeqNum(seq_++, cur_seq))),
+                                       std::move(packet), timer_.Now()));
         } break;
         case PeerToPeerActionType::Tag::kSentPacket:
           link(action.node)->Done();
@@ -279,22 +271,16 @@ struct Helpers {
   StreamMutator mut_2_to_1;
 };
 
-Helpers MakeHelpers(
-    fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription* desc) {
+Helpers MakeHelpers(fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription* desc) {
   switch (desc->Which()) {
-    case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::
-        kUnknown:
+    case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::kUnknown:
       return Helpers{nullptr, StreamMutator({}), StreamMutator({})};
-    case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::
-        kReliable:
-      return Helpers{std::make_unique<ReliableFramer>(), StreamMutator({}),
-                     StreamMutator({})};
-    case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::
-        kUnreliable:
-      return Helpers{
-          std::make_unique<UnreliableFramer>(),
-          StreamMutator(std::move(desc->unreliable().mutation_plan_1_to_2)),
-          StreamMutator(std::move(desc->unreliable().mutation_plan_2_to_1))};
+    case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::kReliable:
+      return Helpers{std::make_unique<ReliableFramer>(), StreamMutator({}), StreamMutator({})};
+    case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::kUnreliable:
+      return Helpers{std::make_unique<UnreliableFramer>(),
+                     StreamMutator(std::move(desc->unreliable().mutation_plan_1_to_2)),
+                     StreamMutator(std::move(desc->unreliable().mutation_plan_2_to_1))};
   }
 }
 
@@ -305,8 +291,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
           Slice::FromCopiedBuffer(data, size));
       buffer.is_ok()) {
     if (auto helpers = MakeHelpers(&buffer->link_description); helpers.framer) {
-      StreamLinkFuzzer(false, std::move(helpers.framer),
-                       std::move(helpers.mut_1_to_2),
+      StreamLinkFuzzer(false, std::move(helpers.framer), std::move(helpers.mut_1_to_2),
                        std::move(helpers.mut_2_to_1))
           .Run(std::move(*buffer));
     }

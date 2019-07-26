@@ -6,14 +6,13 @@
 
 #include <algorithm>
 
-ChunkInputStream::ChunkInputStream(
-    size_t chunk_size, TimestampExtrapolator&& timestamp_extrapolator,
-    InputBlockProcessor&& input_block_processor)
+ChunkInputStream::ChunkInputStream(size_t chunk_size,
+                                   TimestampExtrapolator&& timestamp_extrapolator,
+                                   InputBlockProcessor&& input_block_processor)
     : chunk_size_(chunk_size),
       timestamp_extrapolator_(std::move(timestamp_extrapolator)),
       input_block_processor_(std::move(input_block_processor)) {
-  ZX_DEBUG_ASSERT_MSG(chunk_size_ != 0,
-                      "A chunk size of zero will never make progress.");
+  ZX_DEBUG_ASSERT_MSG(chunk_size_ != 0, "A chunk size of zero will never make progress.");
   ZX_DEBUG_ASSERT(input_block_processor_);
   scratch_block_.data.resize(chunk_size_);
 }
@@ -21,12 +20,10 @@ ChunkInputStream::ChunkInputStream(
 ChunkInputStream::Status ChunkInputStream::ProcessInputPacket(
     const CodecPacket* input_codec_packet) {
   ZX_DEBUG_ASSERT(input_codec_packet);
-  ZX_DEBUG_ASSERT_MSG(!early_terminated_,
-                      "This stream was terminated by the user.");
+  ZX_DEBUG_ASSERT_MSG(!early_terminated_, "This stream was terminated by the user.");
 
   if (input_codec_packet->has_timestamp_ish()) {
-    timestamp_extrapolator_.Inform(BytesSeen(),
-                                   input_codec_packet->timestamp_ish());
+    timestamp_extrapolator_.Inform(BytesSeen(), input_codec_packet->timestamp_ish());
   }
 
   InputPacket input_packet = {.packet = input_codec_packet};
@@ -57,8 +54,7 @@ ChunkInputStream::Status ChunkInputStream::ProcessInputPacket(
 
   while (input_packet.bytes_unread() >= chunk_size_) {
     Status status;
-    if ((status = EmitBlock(input_packet.data_at_offset(), chunk_size_)) !=
-        kOk) {
+    if ((status = EmitBlock(input_packet.data_at_offset(), chunk_size_)) != kOk) {
       return status;
     }
 
@@ -73,8 +69,7 @@ ChunkInputStream::Status ChunkInputStream::ProcessInputPacket(
 }
 
 ChunkInputStream::Status ChunkInputStream::Flush() {
-  ZX_DEBUG_ASSERT_MSG(!early_terminated_,
-                      "This stream was terminated by the user.");
+  ZX_DEBUG_ASSERT_MSG(!early_terminated_, "This stream was terminated by the user.");
 
   if (scratch_block_.empty_bytes_left() > 0) {
     memset(scratch_block_.empty_start(), 0, scratch_block_.empty_bytes_left());
@@ -88,8 +83,7 @@ ChunkInputStream::Status ChunkInputStream::Flush() {
 
 void ChunkInputStream::AppendToScratchBlock(InputPacket* input_packet) {
   ZX_DEBUG_ASSERT(input_packet);
-  const size_t n =
-      std::min(input_packet->bytes_unread(), scratch_block_.empty_bytes_left());
+  const size_t n = std::min(input_packet->bytes_unread(), scratch_block_.empty_bytes_left());
   if (n == 0) {
     return;
   }
@@ -99,9 +93,9 @@ void ChunkInputStream::AppendToScratchBlock(InputPacket* input_packet) {
   scratch_block_.len += n;
 }
 
-ChunkInputStream::Status ChunkInputStream::EmitBlock(
-    const uint8_t* data, const size_t non_padding_len,
-    const bool is_end_of_stream) {
+ChunkInputStream::Status ChunkInputStream::EmitBlock(const uint8_t* data,
+                                                     const size_t non_padding_len,
+                                                     const bool is_end_of_stream) {
   stream_index_ += chunk_size_;
   std::optional<uint64_t> timestamp_ish;
   std::swap(timestamp_ish, next_output_timestamp_);
@@ -141,6 +135,4 @@ ChunkInputStream::ExtrapolateTimestamp() {
   return {timestamp, kOk};
 }
 
-size_t ChunkInputStream::BytesSeen() const {
-  return stream_index_ + scratch_block_.len;
-}
+size_t ChunkInputStream::BytesSeen() const { return stream_index_ + scratch_block_.len; }

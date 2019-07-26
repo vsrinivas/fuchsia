@@ -23,8 +23,7 @@ inline bool ShouldTrimFromURL(char ch) { return ch > 0 && ch <= ' '; }
 // indicate the length of untrimmed data from |*begin|, but rather the position
 // in the input string (so the string starts at character |*begin| in the spec,
 // and goes until |*len|).
-inline void TrimURL(const char* spec, size_t* begin, size_t* len,
-                    bool trim_path_end = true) {
+inline void TrimURL(const char* spec, size_t* begin, size_t* len, bool trim_path_end = true) {
   // Strip leading whitespace and control characters.
   while (*begin < *len && ShouldTrimFromURL(spec[*begin]))
     (*begin)++;
@@ -40,11 +39,9 @@ inline void TrimURL(const char* spec, size_t* begin, size_t* len,
 
 // Counts the number of consecutive slashes starting at the given offset
 // in the given string of the given length.
-inline size_t CountConsecutiveSlashes(const char* str, size_t begin_offset,
-                                      size_t str_len) {
+inline size_t CountConsecutiveSlashes(const char* str, size_t begin_offset, size_t str_len) {
   size_t count = 0;
-  while (begin_offset + count < str_len &&
-         IsURLSlash(str[begin_offset + count]))
+  while (begin_offset + count < str_len && IsURLSlash(str[begin_offset + count]))
     ++count;
   return count;
 }
@@ -56,14 +53,13 @@ inline size_t CountConsecutiveSlashes(const char* str, size_t begin_offset,
 // This is designed for the file URL parser or other consumers who may do
 // special stuff at the beginning, but want regular path parsing, it just
 // maps to the internal parsing function for paths.
-void ParsePathInternal(const char* spec, const Component& path,
-                       Component* filepath, Component* query, Component* ref);
+void ParsePathInternal(const char* spec, const Component& path, Component* filepath,
+                       Component* query, Component* ref);
 
 // Given a spec and a pointer to the character after the colon following the
 // scheme, this parses it and fills in the structure, Every item in the parsed
 // structure is filled EXCEPT for the scheme, which is untouched.
-void ParseAfterScheme(const char* spec, size_t spec_len, size_t after_scheme,
-                      Parsed* parsed);
+void ParseAfterScheme(const char* spec, size_t spec_len, size_t after_scheme, Parsed* parsed);
 }  // namespace url
 
 #endif  // SRC_LIB_URL_URL_PARSE_INTERNAL_H_

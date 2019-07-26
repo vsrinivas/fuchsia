@@ -59,9 +59,9 @@ TEST(ServiceProxyDirTest, Simple) {
   Echo echo(kEchoString);
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   dir->AddEntry(kEchoString, fbl::MakeRefCounted<fs::Service>(
-                               [&echo, dispatcher = loop.dispatcher()](zx::channel request) {
-                                 return echo.Bind(dispatcher, std::move(request));
-                               }));
+                                 [&echo, dispatcher = loop.dispatcher()](zx::channel request) {
+                                   return echo.Bind(dispatcher, std::move(request));
+                                 }));
   ASSERT_OK(loop.StartThread());
 
   zx::channel dir_client, dir_server;
@@ -91,9 +91,10 @@ TEST(ServiceProxyDirTest, Simple) {
     ASSERT_OK(zx::channel::create(0, &h1, &h2));
 
     ASSERT_OK(fio::Directory::Call::Open(
-        zx::unowned_channel(proxy_dir_client),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE, 0755,
-        fidl::StringView(strlen(kProxyEchoString), kProxyEchoString), std::move(h1)).status());
+                  zx::unowned_channel(proxy_dir_client),
+                  fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE,
+                  0755, fidl::StringView(strlen(kProxyEchoString), kProxyEchoString), std::move(h1))
+                  .status());
     ASSERT_OK(fio::Directory::Call::HandleEvents(
         zx::unowned_channel(h2),
         fio::Directory::EventHandlers{
@@ -116,9 +117,10 @@ TEST(ServiceProxyDirTest, Simple) {
     ASSERT_OK(zx::channel::create(0, &h1, &h2));
 
     ASSERT_OK(fio::Directory::Call::Open(
-        zx::unowned_channel(proxy_dir_client),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE, 0755,
-        fidl::StringView(strlen(kEchoString), kEchoString), std::move(h1)).status());
+                  zx::unowned_channel(proxy_dir_client),
+                  fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE,
+                  0755, fidl::StringView(strlen(kEchoString), kEchoString), std::move(h1))
+                  .status());
     ASSERT_OK(fio::Directory::Call::HandleEvents(
         zx::unowned_channel(h2),
         fio::Directory::EventHandlers{

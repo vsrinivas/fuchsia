@@ -52,20 +52,14 @@ namespace simple_pt {
 // |offset| is the different between where the file was actually
 // loaded (|base|) and address recorded in the file.
 
-static bool ReadSymtabs(debugger_utils::ElfReader* elf,
-                        uint64_t cr3,
-                        uint64_t base,
-                        uint64_t len,
-                        uint64_t offset,
-                        bool is_kernel,
-                        std::unique_ptr<SymbolTable>* out_symtab,
+static bool ReadSymtabs(debugger_utils::ElfReader* elf, uint64_t cr3, uint64_t base, uint64_t len,
+                        uint64_t offset, bool is_kernel, std::unique_ptr<SymbolTable>* out_symtab,
                         std::unique_ptr<SymbolTable>* out_dynsym) {
   size_t num_sections = elf->GetNumSections();
 
   debugger_utils::ElfError rc = elf->ReadSectionHeaders();
   if (rc != debugger_utils::ElfError::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF section headers: "
-                   << ElfErrorName(rc);
+    FXL_LOG(ERROR) << "Error reading ELF section headers: " << ElfErrorName(rc);
     return false;
   }
 
@@ -77,13 +71,11 @@ static bool ReadSymtabs(debugger_utils::ElfReader* elf,
     SymbolTable* st;
     switch (shdr.sh_type) {
       case SHT_SYMTAB:
-        symtab.reset(
-            new SymbolTable(elf, "symtab", cr3, base, offset, is_kernel));
+        symtab.reset(new SymbolTable(elf, "symtab", cr3, base, offset, is_kernel));
         st = symtab.get();
         break;
       case SHT_DYNSYM:
-        dynsym.reset(
-            new SymbolTable(elf, "dynsym", cr3, base, offset, is_kernel));
+        dynsym.reset(new SymbolTable(elf, "dynsym", cr3, base, offset, is_kernel));
         st = dynsym.get();
         break;
       default:
@@ -123,9 +115,7 @@ static bool ReadSymtabs(debugger_utils::ElfReader* elf,
 // Find the base address, length, and file offset of the text segment
 // of a non-PIC ELF.
 
-static void FindBaseLenFileoff(debugger_utils::ElfReader* elf,
-                               uint64_t* base,
-                               uint64_t* len,
+static void FindBaseLenFileoff(debugger_utils::ElfReader* elf, uint64_t* base, uint64_t* len,
                                uint64_t* fileoff) {
   size_t num_segments = elf->GetNumSegments();
   for (size_t i = 0; i < num_segments; ++i) {
@@ -167,20 +157,14 @@ static void FindOffset(debugger_utils::ElfReader* elf, uint64_t base, uint64_t* 
   *offset = base - minaddr;
 }
 
-static void AddProgbits(debugger_utils::ElfReader* elf,
-                        struct pt_image* image,
-                        const char* file_name,
-                        uint64_t base,
-                        uint64_t cr3,
-                        uint64_t offset,
-                        uint64_t file_off,
-                        uint64_t map_len) {
+static void AddProgbits(debugger_utils::ElfReader* elf, struct pt_image* image,
+                        const char* file_name, uint64_t base, uint64_t cr3, uint64_t offset,
+                        uint64_t file_off, uint64_t map_len) {
   size_t num_segments = elf->GetNumSegments();
   for (size_t i = 0; i < num_segments; ++i) {
     const debugger_utils::ElfSegmentHeader& phdr = elf->GetSegmentHeader(i);
 
-    if ((phdr.p_type == PT_LOAD) && (phdr.p_flags & PF_X) &&
-        phdr.p_offset >= file_off &&
+    if ((phdr.p_type == PT_LOAD) && (phdr.p_flags & PF_X) && phdr.p_offset >= file_off &&
         (!map_len || phdr.p_offset + phdr.p_filesz <= file_off + map_len)) {
       struct pt_asid asid;
       int err;
@@ -195,23 +179,22 @@ static void AddProgbits(debugger_utils::ElfReader* elf,
       asid.cr3 = cr3;
       errno = 0;
 
-      err = pt_image_add_file(image, file_name, phdr.p_offset, phdr.p_filesz,
-                              &asid, phdr.p_vaddr + offset);
+      err = pt_image_add_file(image, file_name, phdr.p_offset, phdr.p_filesz, &asid,
+                              phdr.p_vaddr + offset);
       /* Duplicate. Just ignore. */
       if (err == -pte_bad_image)
         continue;
       if (err < 0) {
         fprintf(stderr, "reading prog code at %" PRIx64 ":%" PRIx64 " from %s: %s (%s): %d\n",
-                phdr.p_vaddr, phdr.p_filesz, file_name,
-                pt_errstr(pt_errcode(err)), errno ? strerror(errno) : "", err);
+                phdr.p_vaddr, phdr.p_filesz, file_name, pt_errstr(pt_errcode(err)),
+                errno ? strerror(errno) : "", err);
         return;
       }
     }
   }
 }
 
-static bool ElfOpen(const char* file_name,
-                    std::unique_ptr<debugger_utils::ElfReader>* out_elf) {
+static bool ElfOpen(const char* file_name, std::unique_ptr<debugger_utils::ElfReader>* out_elf) {
   int fd = open(file_name, O_RDONLY);
   if (fd < 0) {
     FXL_LOG(ERROR) << file_name << ", " << debugger_utils::ErrnoString(errno);
@@ -229,8 +212,7 @@ static bool ElfOpen(const char* file_name,
 
   rc = elf->ReadSegmentHeaders();
   if (rc != debugger_utils::ElfError::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF segment headers: "
-                   << ElfErrorName(rc);
+    FXL_LOG(ERROR) << "Error reading ELF segment headers: " << ElfErrorName(rc);
     return false;
   }
 
@@ -238,10 +220,8 @@ static bool ElfOpen(const char* file_name,
   return true;
 }
 
-bool ReadElf(const char* file_name, struct pt_image* image,
-             uint64_t base, uint64_t cr3,
-             uint64_t file_off, uint64_t map_len,
-             std::unique_ptr<SymbolTable>* out_symtab,
+bool ReadElf(const char* file_name, struct pt_image* image, uint64_t base, uint64_t cr3,
+             uint64_t file_off, uint64_t map_len, std::unique_ptr<SymbolTable>* out_symtab,
              std::unique_ptr<SymbolTable>* out_dynsym) {
   std::unique_ptr<debugger_utils::ElfReader> elf;
   if (!ElfOpen(file_name, &elf))
@@ -259,18 +239,15 @@ bool ReadElf(const char* file_name, struct pt_image* image,
   if (pic)
     FindOffset(elf.get(), base, &offset);
 
-  if (!ReadSymtabs(elf.get(), cr3, base, map_len, offset, false,
-                   out_symtab, out_dynsym))
+  if (!ReadSymtabs(elf.get(), cr3, base, map_len, offset, false, out_symtab, out_dynsym))
     return false;
 
-  AddProgbits(elf.get(), image, file_name, base, cr3, offset, file_off,
-              map_len);
+  AddProgbits(elf.get(), image, file_name, base, cr3, offset, file_off, map_len);
 
   return true;
 }
 
-bool ReadNonPicElf(const char* file_name, pt_image* image,
-                   uint64_t cr3, bool is_kernel,
+bool ReadNonPicElf(const char* file_name, pt_image* image, uint64_t cr3, bool is_kernel,
                    std::unique_ptr<SymbolTable>* out_symtab,
                    std::unique_ptr<SymbolTable>* out_dynsym) {
   std::unique_ptr<debugger_utils::ElfReader> elf;
@@ -287,12 +264,11 @@ bool ReadNonPicElf(const char* file_name, pt_image* image,
   uint64_t offset = 0, file_off = 0;
   FindBaseLenFileoff(elf.get(), &base, &len, &file_off);
 
-  if (!ReadSymtabs(elf.get(), kernel_cr3_for_symtab, base, len, offset,
-                   is_kernel, out_symtab, out_dynsym))
+  if (!ReadSymtabs(elf.get(), kernel_cr3_for_symtab, base, len, offset, is_kernel, out_symtab,
+                   out_dynsym))
     return false;
 
-  AddProgbits(elf.get(), image, file_name, base, cr3 ? cr3 : pt_asid_no_cr3,
-              offset, file_off, len);
+  AddProgbits(elf.get(), image, file_name, base, cr3 ? cr3 : pt_asid_no_cr3, offset, file_off, len);
 
   return true;
 }

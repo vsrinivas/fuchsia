@@ -16,8 +16,8 @@
 namespace tracing {
 
 struct TraceProviderBundle {
-  TraceProviderBundle(fuchsia::tracing::provider::ProviderPtr provider,
-                      uint32_t id, zx_koid_t pid, const std::string& name);
+  TraceProviderBundle(fuchsia::tracing::provider::ProviderPtr provider, uint32_t id, zx_koid_t pid,
+                      const std::string& name);
   ~TraceProviderBundle() = default;
 
   TraceProviderBundle(const TraceProviderBundle& value) = delete;

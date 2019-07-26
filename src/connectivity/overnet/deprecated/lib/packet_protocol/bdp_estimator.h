@@ -21,9 +21,7 @@ class BdpEstimator {
 
   void ReceivedBytes(uint64_t count) { bytes_received_ += count; }
 
-  PerPacketData SentPacket(uint64_t seq) {
-    return PerPacketData{seq, bytes_received_};
-  }
+  PerPacketData SentPacket(uint64_t seq) { return PerPacketData{seq, bytes_received_}; }
 
   void AckPacket(PerPacketData data) {
     filter_.Update(data.seq, bytes_received_ - data.bytes_received_at_send);

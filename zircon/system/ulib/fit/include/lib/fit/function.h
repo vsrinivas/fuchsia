@@ -9,12 +9,10 @@
 
 namespace fit {
 
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
 class function_impl;
 
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
 class callback_impl;
 
 // The default size allowance for storing a target inline within a function
@@ -55,11 +53,12 @@ constexpr size_t default_inline_target_size = sizeof(void*) * 2;
 //
 // EXAMPLES
 //
-// - https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/utest/fit/examples/function_example1.cpp
-// - https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/utest/fit/examples/function_example2.cpp
+// -
+// https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/utest/fit/examples/function_example1.cpp
+// -
+// https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/utest/fit/examples/function_example2.cpp
 //
-template <typename T,
-          size_t inline_target_size = default_inline_target_size>
+template <typename T, size_t inline_target_size = default_inline_target_size>
 using function = function_impl<inline_target_size,
                                /*require_inline=*/false, T>;
 
@@ -144,8 +143,7 @@ using closure = function<void()>;
 //
 // Class members are documented in |fit::callback_impl|, below.
 //
-template <typename T,
-          size_t inline_target_size = default_inline_target_size>
+template <typename T, size_t inline_target_size = default_inline_target_size>
 using callback = callback_impl<inline_target_size, /*require_inline=*/false, T>;
 
 // A move-only, run-once, callable object wrapper that forces callables to be
@@ -154,391 +152,313 @@ using callback = callback_impl<inline_target_size, /*require_inline=*/false, T>;
 // Behaves just like |fit::callback<T, inline_target_size>| except that
 // attempting to store a target larger than |inline_target_size| will fail to
 // compile.
-template <typename T,
-          size_t inline_target_size = default_inline_target_size>
+template <typename T, size_t inline_target_size = default_inline_target_size>
 using inline_callback = callback_impl<inline_target_size,
                                       /*require_inline=*/true, T>;
 
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-class function_impl<inline_target_size, require_inline, Result(Args...)>
-    final : private ::fit::internal::function_base<inline_target_size,
-                                                   require_inline,
-                                                   Result(Args...)> {
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+class function_impl<inline_target_size, require_inline, Result(Args...)> final
+    : private ::fit::internal::function_base<inline_target_size, require_inline, Result(Args...)> {
+  using base = ::fit::internal::function_base<inline_target_size, require_inline, Result(Args...)>;
 
-    using base = ::fit::internal::function_base<inline_target_size,
-                                                require_inline,
-                                                Result(Args...)>;
+  // function_base requires private access during share()
+  friend class ::fit::internal::function_base<inline_target_size, require_inline, Result(Args...)>;
 
-    // function_base requires private access during share()
-    friend class ::fit::internal::function_base<inline_target_size,
-                                                require_inline,
-                                                Result(Args...)>;
+  // supports target() for shared functions
+  friend const void* ::fit::internal::get_target_type_id<>(
+      const function_impl<inline_target_size, require_inline, Result(Args...)>&);
 
-    // supports target() for shared functions
-    friend const void* ::fit::internal::get_target_type_id<>(
-        const function_impl<inline_target_size, require_inline,
-                            Result(Args...)>&);
+ public:
+  // The function's result type.
+  using typename base::result_type;
 
-public:
-    // The function's result type.
-    using typename base::result_type;
+  // Initializes an empty (null) function. Attempting to call an empty
+  // function will abort the program.
+  function_impl() = default;
 
-    // Initializes an empty (null) function. Attempting to call an empty
-    // function will abort the program.
-    function_impl() = default;
+  // Creates a function with an empty target (same outcome as the default
+  // constructor).
+  function_impl(decltype(nullptr)) : base(nullptr) {}
 
-    // Creates a function with an empty target (same outcome as the default
-    // constructor).
-    function_impl(decltype(nullptr))
-        : base(nullptr) {}
+  // Creates a function bound to the specified function pointer.
+  // If target == nullptr, assigns an empty target.
+  function_impl(Result (*target)(Args...)) : base(target) {}
 
-    // Creates a function bound to the specified function pointer.
-    // If target == nullptr, assigns an empty target.
-    function_impl(Result (*target)(Args...))
-        : base(target) {}
+  // Creates a function bound to the specified callable object.
+  // If target == nullptr, assigns an empty target.
+  //
+  // For functors, we need to capture the raw type but also restrict on the
+  // existence of an appropriate operator () to resolve overloads and implicit
+  // casts properly.
+  //
+  // Note that specializations of this template method that take fit::callback
+  // objects as the target Callable are deleted (see below).
+  template <typename Callable,
+            typename = std::enable_if_t<std::is_convertible<
+                decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
+  function_impl(Callable target) : base(std::move(target)) {}
 
-    // Creates a function bound to the specified callable object.
-    // If target == nullptr, assigns an empty target.
-    //
-    // For functors, we need to capture the raw type but also restrict on the
-    // existence of an appropriate operator () to resolve overloads and implicit
-    // casts properly.
-    //
-    // Note that specializations of this template method that take fit::callback
-    // objects as the target Callable are deleted (see below).
-    template <typename Callable,
-              typename = std::enable_if_t<
-                  std::is_convertible<
-                      decltype(std::declval<Callable&>()(
-                          std::declval<Args>()...)),
-                      result_type>::value>>
-    function_impl(Callable target)
-        : base(std::move(target)) {}
+  // Deletes the specializations of function_impl(Callable) that would allow
+  // a |fit::function| to be constructed from a |fit::callback|. This prevents
+  // unexpected behavior of a |fit::function| that would otherwise fail after
+  // one call. To explicitly allow this, simply wrap the |fit::callback| in a
+  // pass-through lambda before passing it to the |fit::function|.
+  template <size_t other_inline_target_size, bool other_require_inline>
+  function_impl(
+      ::fit::callback_impl<other_inline_target_size, other_require_inline, Result(Args...)>) =
+      delete;
 
-    // Deletes the specializations of function_impl(Callable) that would allow
-    // a |fit::function| to be constructed from a |fit::callback|. This prevents
-    // unexpected behavior of a |fit::function| that would otherwise fail after
-    // one call. To explicitly allow this, simply wrap the |fit::callback| in a
-    // pass-through lambda before passing it to the |fit::function|.
-    template <size_t other_inline_target_size, bool other_require_inline>
-    function_impl(::fit::callback_impl<other_inline_target_size,
-                                       other_require_inline,
-                                       Result(Args...)>) = delete;
+  // Creates a function with a target moved from another function,
+  // leaving the other function with an empty target.
+  function_impl(function_impl&& other) : base(static_cast<base&&>(other)) {}
 
-    // Creates a function with a target moved from another function,
-    // leaving the other function with an empty target.
-    function_impl(function_impl&& other)
-        : base(static_cast<base&&>(other)) {}
+  // Destroys the function, releasing its target.
+  ~function_impl() = default;
 
-    // Destroys the function, releasing its target.
-    ~function_impl() = default;
+  // Assigns the function to an empty target. Attempting to invoke the
+  // function will abort the program.
+  function_impl& operator=(decltype(nullptr)) {
+    base::assign(nullptr);
+    return *this;
+  }
 
-    // Assigns the function to an empty target. Attempting to invoke the
-    // function will abort the program.
-    function_impl& operator=(decltype(nullptr)) {
-        base::assign(nullptr);
-        return *this;
-    }
+  // Assigns the function to the specified callable object. If target ==
+  // nullptr, assigns an empty target.
+  //
+  // For functors, we need to capture the raw type but also restrict on the
+  // existence of an appropriate operator () to resolve overloads and implicit
+  // casts properly.
+  //
+  // Note that specializations of this template method that take fit::callback
+  // objects as the target Callable are deleted (see below).
+  template <typename Callable,
+            typename = std::enable_if_t<std::is_convertible<
+                decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
+  function_impl& operator=(Callable target) {
+    base::assign(std::move(target));
+    return *this;
+  }
 
-    // Assigns the function to the specified callable object. If target ==
-    // nullptr, assigns an empty target.
-    //
-    // For functors, we need to capture the raw type but also restrict on the
-    // existence of an appropriate operator () to resolve overloads and implicit
-    // casts properly.
-    //
-    // Note that specializations of this template method that take fit::callback
-    // objects as the target Callable are deleted (see below).
-    template <typename Callable,
-              typename = std::enable_if_t<
-                  std::is_convertible<
-                      decltype(std::declval<Callable&>()(
-                          std::declval<Args>()...)),
-                      result_type>::value>>
-    function_impl& operator=(Callable target) {
-        base::assign(std::move(target));
-        return *this;
-    }
+  // Deletes the specializations of operator=(Callable) that would allow
+  // a |fit::function| to be assigned from a |fit::callback|. This
+  // prevents unexpected behavior of a |fit::function| that would otherwise
+  // fail after one call. To explicitly allow this, simply wrap the
+  // |fit::callback| in a pass-through lambda before assigning it to the
+  // |fit::function|.
+  template <size_t other_inline_target_size, bool other_require_inline>
+  function_impl& operator=(
+      ::fit::callback_impl<other_inline_target_size, other_require_inline, Result(Args...)>) =
+      delete;
 
-    // Deletes the specializations of operator=(Callable) that would allow
-    // a |fit::function| to be assigned from a |fit::callback|. This
-    // prevents unexpected behavior of a |fit::function| that would otherwise
-    // fail after one call. To explicitly allow this, simply wrap the
-    // |fit::callback| in a pass-through lambda before assigning it to the
-    // |fit::function|.
-    template <size_t other_inline_target_size, bool other_require_inline>
-    function_impl& operator=(::fit::callback_impl<other_inline_target_size,
-                                                  other_require_inline,
-                                                  Result(Args...)>) = delete;
+  // Move assignment
+  function_impl& operator=(function_impl&& other) {
+    if (&other == this)
+      return *this;
+    base::assign(static_cast<base&&>(other));
+    return *this;
+  }
 
-    // Move assignment
-    function_impl& operator=(function_impl&& other) {
-        if (&other == this)
-            return *this;
-        base::assign(static_cast<base&&>(other));
-        return *this;
-    }
+  // Swaps the functions' targets.
+  void swap(function_impl& other) { base::swap(other); }
 
-    // Swaps the functions' targets.
-    void swap(function_impl& other) {
-        base::swap(other);
-    }
+  // Returns a pointer to the function's target.
+  using base::target;
 
-    // Returns a pointer to the function's target.
-    using base::target;
+  // Returns true if the function has a non-empty target.
+  using base::operator bool;
 
-    // Returns true if the function has a non-empty target.
-    using base::operator bool;
+  // Invokes the function's target.
+  // Aborts if the function's target is empty.
+  Result operator()(Args... args) const { return base::invoke(std::forward<Args>(args)...); }
 
-    // Invokes the function's target.
-    // Aborts if the function's target is empty.
-    Result operator()(Args... args) const {
-        return base::invoke(std::forward<Args>(args)...);
-    }
-
-    // Returns a new function object that invokes the same target.
-    // The target itself is not copied; it is moved to the heap and its
-    // lifetime is extended until all references have been released.
-    //
-    // Note: This method is not supported on |fit::inline_function<>|
-    //       because it may incur a heap allocation which is contrary to
-    //       the stated purpose of |fit::inline_function<>|.
-    function_impl share() {
-        function_impl copy;
-        base::template share_with<function_impl>(copy);
-        return copy;
-    }
+  // Returns a new function object that invokes the same target.
+  // The target itself is not copied; it is moved to the heap and its
+  // lifetime is extended until all references have been released.
+  //
+  // Note: This method is not supported on |fit::inline_function<>|
+  //       because it may incur a heap allocation which is contrary to
+  //       the stated purpose of |fit::inline_function<>|.
+  function_impl share() {
+    function_impl copy;
+    base::template share_with<function_impl>(copy);
+    return copy;
+  }
 };
 
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-void swap(function_impl<inline_target_size, require_inline,
-                        Result, Args...>& a,
-          function_impl<inline_target_size, require_inline,
-                        Result, Args...>& b) {
-    a.swap(b);
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+void swap(function_impl<inline_target_size, require_inline, Result, Args...>& a,
+          function_impl<inline_target_size, require_inline, Result, Args...>& b) {
+  a.swap(b);
 }
 
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-bool operator==(
-    const function_impl<inline_target_size, require_inline,
-                        Result, Args...>& f,
-    decltype(nullptr)) {
-    return !f;
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+bool operator==(const function_impl<inline_target_size, require_inline, Result, Args...>& f,
+                decltype(nullptr)) {
+  return !f;
 }
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-bool operator==(
-    decltype(nullptr),
-    const function_impl<inline_target_size, require_inline,
-                        Result, Args...>& f) {
-    return !f;
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+bool operator==(decltype(nullptr),
+                const function_impl<inline_target_size, require_inline, Result, Args...>& f) {
+  return !f;
 }
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-bool operator!=(
-    const function_impl<inline_target_size, require_inline,
-                        Result, Args...>& f,
-    decltype(nullptr)) {
-    return !!f;
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+bool operator!=(const function_impl<inline_target_size, require_inline, Result, Args...>& f,
+                decltype(nullptr)) {
+  return !!f;
 }
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-bool operator!=(
-    decltype(nullptr),
-    const function_impl<inline_target_size, require_inline,
-                        Result, Args...>& f) {
-    return !!f;
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+bool operator!=(decltype(nullptr),
+                const function_impl<inline_target_size, require_inline, Result, Args...>& f) {
+  return !!f;
 }
 
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-class callback_impl<inline_target_size, require_inline,
-                    Result(Args...)>
-    final : private ::fit::internal::function_base<inline_target_size,
-                                                   require_inline,
-                                                   Result(Args...)> {
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+class callback_impl<inline_target_size, require_inline, Result(Args...)> final
+    : private ::fit::internal::function_base<inline_target_size, require_inline, Result(Args...)> {
+  using base = ::fit::internal::function_base<inline_target_size, require_inline, Result(Args...)>;
 
-    using base = ::fit::internal::function_base<inline_target_size,
-                                                require_inline,
-                                                Result(Args...)>;
+  // function_base requires private access during share()
+  friend class ::fit::internal::function_base<inline_target_size, require_inline, Result(Args...)>;
 
-    // function_base requires private access during share()
-    friend class ::fit::internal::function_base<inline_target_size,
-                                                require_inline,
-                                                Result(Args...)>;
+  // supports target() for shared functions
+  friend const void* ::fit::internal::get_target_type_id<>(
+      const callback_impl<inline_target_size, require_inline, Result(Args...)>&);
 
-    // supports target() for shared functions
-    friend const void* ::fit::internal::get_target_type_id<>(
-        const callback_impl<inline_target_size, require_inline,
-                            Result(Args...)>&);
+ public:
+  // The callback function's result type.
+  using typename base::result_type;
 
-public:
-    // The callback function's result type.
-    using typename base::result_type;
+  // Initializes an empty (null) callback. Attempting to call an empty
+  // callback will abort the program.
+  callback_impl() = default;
 
-    // Initializes an empty (null) callback. Attempting to call an empty
-    // callback will abort the program.
-    callback_impl() = default;
+  // Creates a callback with an empty target (same outcome as the default
+  // constructor).
+  callback_impl(decltype(nullptr)) : base(nullptr) {}
 
-    // Creates a callback with an empty target (same outcome as the default
-    // constructor).
-    callback_impl(decltype(nullptr))
-        : base(nullptr) {}
+  // Creates a callback bound to the specified function pointer.
+  // If target == nullptr, assigns an empty target.
+  callback_impl(Result (*target)(Args...)) : base(target) {}
 
-    // Creates a callback bound to the specified function pointer.
-    // If target == nullptr, assigns an empty target.
-    callback_impl(Result (*target)(Args...))
-        : base(target) {}
+  // Creates a callback bound to the specified callable object.
+  // If target == nullptr, assigns an empty target.
+  //
+  // For functors, we need to capture the raw type but also restrict on the
+  // existence of an appropriate operator () to resolve overloads and implicit
+  // casts properly.
+  template <typename Callable,
+            typename = std::enable_if_t<std::is_convertible<
+                decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
+  callback_impl(Callable target) : base(std::move(target)) {}
 
-    // Creates a callback bound to the specified callable object.
-    // If target == nullptr, assigns an empty target.
-    //
-    // For functors, we need to capture the raw type but also restrict on the
-    // existence of an appropriate operator () to resolve overloads and implicit
-    // casts properly.
-    template <typename Callable,
-              typename = std::enable_if_t<
-                  std::is_convertible<
-                      decltype(std::declval<Callable&>()(
-                          std::declval<Args>()...)),
-                      result_type>::value>>
-    callback_impl(Callable target)
-        : base(std::move(target)) {}
+  // Creates a callback with a target moved from another callback,
+  // leaving the other callback with an empty target.
+  callback_impl(callback_impl&& other) : base(static_cast<base&&>(other)) {}
 
-    // Creates a callback with a target moved from another callback,
-    // leaving the other callback with an empty target.
-    callback_impl(callback_impl&& other)
-        : base(static_cast<base&&>(other)) {}
+  // Destroys the callback, releasing its target.
+  ~callback_impl() = default;
 
-    // Destroys the callback, releasing its target.
-    ~callback_impl() = default;
+  // Assigns the callback to an empty target. Attempting to invoke the
+  // callback will abort the program.
+  callback_impl& operator=(decltype(nullptr)) {
+    base::assign(nullptr);
+    return *this;
+  }
 
-    // Assigns the callback to an empty target. Attempting to invoke the
-    // callback will abort the program.
-    callback_impl& operator=(decltype(nullptr)) {
-        base::assign(nullptr);
-        return *this;
-    }
+  // Assigns the callback to the specified callable object. If target ==
+  // nullptr, assigns an empty target.
+  //
+  // For functors, we need to capture the raw type but also restrict on the
+  // existence of an appropriate operator () to resolve overloads and implicit
+  // casts properly.
+  template <typename Callable,
+            typename = std::enable_if_t<std::is_convertible<
+                decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
+  callback_impl& operator=(Callable target) {
+    base::assign(std::move(target));
+    return *this;
+  }
 
-    // Assigns the callback to the specified callable object. If target ==
-    // nullptr, assigns an empty target.
-    //
-    // For functors, we need to capture the raw type but also restrict on the
-    // existence of an appropriate operator () to resolve overloads and implicit
-    // casts properly.
-    template <typename Callable,
-              typename = std::enable_if_t<
-                  std::is_convertible<
-                      decltype(std::declval<Callable&>()(
-                          std::declval<Args>()...)),
-                      result_type>::value>>
-    callback_impl& operator=(Callable target) {
-        base::assign(std::move(target));
-        return *this;
-    }
+  // Move assignment
+  callback_impl& operator=(callback_impl&& other) {
+    if (&other == this)
+      return *this;
+    base::assign(static_cast<base&&>(other));
+    return *this;
+  }
 
-    // Move assignment
-    callback_impl& operator=(callback_impl&& other) {
-        if (&other == this)
-            return *this;
-        base::assign(static_cast<base&&>(other));
-        return *this;
-    }
+  // Swaps the callbacks' targets.
+  void swap(callback_impl& other) { base::swap(other); }
 
-    // Swaps the callbacks' targets.
-    void swap(callback_impl& other) {
-        base::swap(other);
-    }
+  // Returns a pointer to the callback's target.
+  using base::target;
 
-    // Returns a pointer to the callback's target.
-    using base::target;
+  // Returns true if the callback has a non-empty target.
+  using base::operator bool;
 
-    // Returns true if the callback has a non-empty target.
-    using base::operator bool;
+  // Invokes the callback's target.
+  // Aborts if the callback's target is empty.
+  // |fit::callback| must be non-const to invoke. Before the target function
+  // is actually called, the fit::callback will be set to the default empty
+  // state (== nullptr, and operator bool() will subsequently return |false|).
+  // The target function will then be released after the function is called.
+  // If the callback was shared, any remaining copies will also be cleared.
+  Result operator()(Args... args) {
+    auto temp = std::move(*this);
+    return temp.invoke(std::forward<Args>(args)...);
+  }
 
-    // Invokes the callback's target.
-    // Aborts if the callback's target is empty.
-    // |fit::callback| must be non-const to invoke. Before the target function
-    // is actually called, the fit::callback will be set to the default empty
-    // state (== nullptr, and operator bool() will subsequently return |false|).
-    // The target function will then be released after the function is called.
-    // If the callback was shared, any remaining copies will also be cleared.
-    Result operator()(Args... args) {
-        auto temp = std::move(*this);
-        return temp.invoke(std::forward<Args>(args)...);
-    }
-
-    // Returns a new callback object that invokes the same target.
-    // The target itself is not copied; it is moved to the heap and its
-    // lifetime is extended until all references have been released.
-    // For |fit::callback| (unlike fit::function), the first invocation of the
-    // callback will release all references to the target. All callbacks
-    // derived from the same original callback (via share()) will be cleared,
-    // as if set to |nullptr|, and "operator bool()" will return false.
-    //
-    // Note: This method is not supported on |fit::inline_function<>|
-    //       because it may incur a heap allocation which is contrary to
-    //       the stated purpose of |fit::inline_function<>|.
-    callback_impl share() {
-        callback_impl copy;
-        base::template share_with<callback_impl>(copy);
-        return copy;
-    }
+  // Returns a new callback object that invokes the same target.
+  // The target itself is not copied; it is moved to the heap and its
+  // lifetime is extended until all references have been released.
+  // For |fit::callback| (unlike fit::function), the first invocation of the
+  // callback will release all references to the target. All callbacks
+  // derived from the same original callback (via share()) will be cleared,
+  // as if set to |nullptr|, and "operator bool()" will return false.
+  //
+  // Note: This method is not supported on |fit::inline_function<>|
+  //       because it may incur a heap allocation which is contrary to
+  //       the stated purpose of |fit::inline_function<>|.
+  callback_impl share() {
+    callback_impl copy;
+    base::template share_with<callback_impl>(copy);
+    return copy;
+  }
 };
 
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-void swap(callback_impl<inline_target_size, require_inline,
-                        Result, Args...>& a,
-          callback_impl<inline_target_size, require_inline,
-                        Result, Args...>& b) {
-    a.swap(b);
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+void swap(callback_impl<inline_target_size, require_inline, Result, Args...>& a,
+          callback_impl<inline_target_size, require_inline, Result, Args...>& b) {
+  a.swap(b);
 }
 
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-bool operator==(
-    const callback_impl<inline_target_size, require_inline,
-                        Result, Args...>& f,
-    decltype(nullptr)) {
-    return !f;
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+bool operator==(const callback_impl<inline_target_size, require_inline, Result, Args...>& f,
+                decltype(nullptr)) {
+  return !f;
 }
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-bool operator==(
-    decltype(nullptr),
-    const callback_impl<inline_target_size, require_inline,
-                        Result, Args...>& f) {
-    return !f;
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+bool operator==(decltype(nullptr),
+                const callback_impl<inline_target_size, require_inline, Result, Args...>& f) {
+  return !f;
 }
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-bool operator!=(
-    const callback_impl<inline_target_size, require_inline,
-                        Result, Args...>& f,
-    decltype(nullptr)) {
-    return !!f;
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+bool operator!=(const callback_impl<inline_target_size, require_inline, Result, Args...>& f,
+                decltype(nullptr)) {
+  return !!f;
 }
-template <size_t inline_target_size, bool require_inline,
-          typename Result, typename... Args>
-bool operator!=(
-    decltype(nullptr),
-    const callback_impl<inline_target_size, require_inline,
-                        Result, Args...>& f) {
-    return !!f;
+template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
+bool operator!=(decltype(nullptr),
+                const callback_impl<inline_target_size, require_inline, Result, Args...>& f) {
+  return !!f;
 }
 
 // Returns a Callable object that invokes a member function of an object.
 template <typename R, typename T, typename... Args>
 auto bind_member(T* instance, R (T::*fn)(Args...)) {
-    return [instance, fn](Args... args) {
-        return (instance->*fn)(std::forward<Args>(args)...);
-    };
+  return [instance, fn](Args... args) { return (instance->*fn)(std::forward<Args>(args)...); };
 }
 
-} // namespace fit
+}  // namespace fit
 
-#endif // LIB_FIT_FUNCTION_H_
+#endif  // LIB_FIT_FUNCTION_H_

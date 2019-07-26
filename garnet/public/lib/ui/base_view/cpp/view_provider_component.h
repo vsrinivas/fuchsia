@@ -43,8 +43,7 @@ class ViewProviderComponent {
     //   scenic: Instance of Scenic to which the |BaseView| will be attached.
     //   startup_context: Component environment.
     ViewImpl(ViewFactory factory, fidl::InterfaceRequest<View> view_request,
-             fuchsia::ui::scenic::Scenic* scenic,
-             component::StartupContext* startup_context);
+             fuchsia::ui::scenic::Scenic* scenic, component::StartupContext* startup_context);
     ~ViewImpl() override = default;
 
     // |fuchsia::ui::views::View|

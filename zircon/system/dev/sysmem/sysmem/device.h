@@ -28,74 +28,72 @@ class Driver;
 class BufferCollectionToken;
 
 class Device final : public MemoryAllocator::Owner {
-public:
-    Device(zx_device_t* parent_device, Driver* parent_driver);
+ public:
+  Device(zx_device_t* parent_device, Driver* parent_driver);
 
-    zx_status_t Bind();
+  zx_status_t Bind();
 
-    //
-    // The rest of the methods are only valid to call after Bind().
-    //
+  //
+  // The rest of the methods are only valid to call after Bind().
+  //
 
-    zx_status_t Connect(zx_handle_t allocator_request);
-    zx_status_t RegisterHeap(uint64_t heap, zx_handle_t heap_connection);
+  zx_status_t Connect(zx_handle_t allocator_request);
+  zx_status_t RegisterHeap(uint64_t heap, zx_handle_t heap_connection);
 
-    zx_status_t GetProtectedMemoryInfo(fidl_txn* txn);
+  zx_status_t GetProtectedMemoryInfo(fidl_txn* txn);
 
-    // MemoryAllocator::Owner implementation.
-    const zx::bti& bti() override;
-    zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override;
+  // MemoryAllocator::Owner implementation.
+  const zx::bti& bti() override;
+  zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override;
 
-    uint32_t pdev_device_info_vid();
+  uint32_t pdev_device_info_vid();
 
-    uint32_t pdev_device_info_pid();
+  uint32_t pdev_device_info_pid();
 
-    // Track/untrack the token by the koid of the server end of its FIDL
-    // channel.  TrackToken() is only allowed after token->SerServerKoid().
-    // UntrackToken() is allowed even if there was never a
-    // token->SetServerKoid() (in which case it's a nop).
-    //
-    // While tracked, a token can be found with FindTokenByServerChannelKoid().
-    void TrackToken(BufferCollectionToken* token);
-    void UntrackToken(BufferCollectionToken* token);
+  // Track/untrack the token by the koid of the server end of its FIDL
+  // channel.  TrackToken() is only allowed after token->SerServerKoid().
+  // UntrackToken() is allowed even if there was never a
+  // token->SetServerKoid() (in which case it's a nop).
+  //
+  // While tracked, a token can be found with FindTokenByServerChannelKoid().
+  void TrackToken(BufferCollectionToken* token);
+  void UntrackToken(BufferCollectionToken* token);
 
-    // Find the BufferCollectionToken (if any) by the koid of the server end of
-    // its FIDL channel.
-    BufferCollectionToken* FindTokenByServerChannelKoid(
-        zx_koid_t token_server_koid);
+  // Find the BufferCollectionToken (if any) by the koid of the server end of
+  // its FIDL channel.
+  BufferCollectionToken* FindTokenByServerChannelKoid(zx_koid_t token_server_koid);
 
-    // Get allocator for |settings|. Returns NULL if allocator is not
-    // registered for settings.
-    MemoryAllocator* GetAllocator(
-        const fuchsia_sysmem_BufferMemorySettings* settings);
+  // Get allocator for |settings|. Returns NULL if allocator is not
+  // registered for settings.
+  MemoryAllocator* GetAllocator(const fuchsia_sysmem_BufferMemorySettings* settings);
 
-private:
-    zx_device_t* parent_device_ = nullptr;
-    Driver* parent_driver_ = nullptr;
+ private:
+  zx_device_t* parent_device_ = nullptr;
+  Driver* parent_driver_ = nullptr;
 
-    pdev_protocol_t pdev_{};
-    zx::bti bti_;
+  pdev_protocol_t pdev_{};
+  zx::bti bti_;
 
-    zx_device_t* device_ = nullptr;
+  zx_device_t* device_ = nullptr;
 
-    // Initialize these to a value that won't be mistaken for a real vid or pid.
-    uint32_t pdev_device_info_vid_ = std::numeric_limits<uint32_t>::max();
-    uint32_t pdev_device_info_pid_ = std::numeric_limits<uint32_t>::max();
+  // Initialize these to a value that won't be mistaken for a real vid or pid.
+  uint32_t pdev_device_info_vid_ = std::numeric_limits<uint32_t>::max();
+  uint32_t pdev_device_info_pid_ = std::numeric_limits<uint32_t>::max();
 
-    // In-proc sysmem interface.  Essentially an in-proc version of
-    // fuchsia.sysmem.DriverConnector.
-    sysmem_protocol_t in_proc_sysmem_protocol_;
+  // In-proc sysmem interface.  Essentially an in-proc version of
+  // fuchsia.sysmem.DriverConnector.
+  sysmem_protocol_t in_proc_sysmem_protocol_;
 
-    // This map allows us to look up the BufferCollectionToken by the koid of
-    // the server end of a BufferCollectionToken channel.
-    std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_;
+  // This map allows us to look up the BufferCollectionToken by the koid of
+  // the server end of a BufferCollectionToken channel.
+  std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_;
 
-    // This map contains all registered memory allocators.
-    std::map<fuchsia_sysmem_HeapType, fbl::unique_ptr<MemoryAllocator>> allocators_;
+  // This map contains all registered memory allocators.
+  std::map<fuchsia_sysmem_HeapType, fbl::unique_ptr<MemoryAllocator>> allocators_;
 
-    fbl::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
+  fbl::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
 
-    MemoryAllocator* protected_allocator_ = nullptr;
+  MemoryAllocator* protected_allocator_ = nullptr;
 };
 
-#endif // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DEVICE_H_
+#endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DEVICE_H_

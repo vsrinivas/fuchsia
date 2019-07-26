@@ -26,8 +26,7 @@
 #include "garnet/bin/trace/spec.h"
 
 // The "path" of the trace program from outside the trace package.
-const char kTraceProgramUrl[] =
-    "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
+const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
 // The path of the trace program from within the trace package.
 // const char kTracePackageProgramPath[] = "/pkg/bin/trace";
 
@@ -42,17 +41,15 @@ void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix) {
   std::string log_file_arg;
   std::string verbose_or_quiet_arg;
   if (log_settings.log_file != "") {
-    log_file_arg = fxl::StringPrintf("%s--log-file=%s", prefix,
-                                     log_settings.log_file.c_str());
+    log_file_arg = fxl::StringPrintf("%s--log-file=%s", prefix, log_settings.log_file.c_str());
     argv->push_back(log_file_arg);
   }
   if (log_settings.min_log_level != 0) {
     if (log_settings.min_log_level < 0) {
-      verbose_or_quiet_arg = fxl::StringPrintf("%s--verbose=%d", prefix,
-                                               -log_settings.min_log_level);
-    } else {
       verbose_or_quiet_arg =
-          fxl::StringPrintf("%s--quiet=%d", prefix, log_settings.min_log_level);
+          fxl::StringPrintf("%s--verbose=%d", prefix, -log_settings.min_log_level);
+    } else {
+      verbose_or_quiet_arg = fxl::StringPrintf("%s--quiet=%d", prefix, log_settings.min_log_level);
     }
     argv->push_back(verbose_or_quiet_arg);
   }
@@ -90,19 +87,16 @@ static void BuildTraceProgramArgv(const std::string& relative_tspec_path,
   argv->push_back(kTraceProgramUrl);
   AppendLoggingArgs(argv, "");
   argv->push_back("record");
-  argv->push_back(fxl::StringPrintf(
-      "--spec-file=%s",
-      (kSystemPackageTestPrefix + relative_tspec_path).c_str()));
-  argv->push_back(
-      fxl::StringPrintf("--output-file=%s", output_file_path.c_str()));
+  argv->push_back(fxl::StringPrintf("--spec-file=%s",
+                                    (kSystemPackageTestPrefix + relative_tspec_path).c_str()));
+  argv->push_back(fxl::StringPrintf("--output-file=%s", output_file_path.c_str()));
 
   AppendLoggingArgs(argv, "--append-args=");
 
   // Note that |relative_tspec_path| cannot have a comma.
   argv->push_back(fxl::StringPrintf(
       "--append-args=run,%s",
-      ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) +
-       relative_tspec_path)
+      ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) + relative_tspec_path)
           .c_str()));
 }
 
@@ -119,8 +113,7 @@ static void BuildVerificationProgramArgv(const std::string& program_path,
   argv->push_back(output_file_path);
 }
 
-zx_status_t SpawnProgram(const zx::job& job,
-                         const std::vector<std::string>& argv,
+zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& argv,
                          zx_handle_t arg_handle, zx::process* out_process) {
   std::vector<const char*> c_argv;
   StringArgvToCArgv(argv, &c_argv);
@@ -137,25 +130,22 @@ zx_status_t SpawnProgram(const zx::job& job,
   }
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  auto status =
-      fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, c_argv[0], c_argv.data(),
-                     nullptr, action_count, &spawn_actions[0],
-                     out_process->reset_and_get_address(), err_msg);
+  auto status = fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, c_argv[0], c_argv.data(), nullptr,
+                               action_count, &spawn_actions[0],
+                               out_process->reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg << ", "
-                   << status;
+    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg << ", " << status;
     return status;
   }
 
   return ZX_OK;
 }
 
-zx_status_t WaitAndGetExitCode(const std::string& program_name,
-                               const zx::process& process, int* out_exit_code) {
+zx_status_t WaitAndGetExitCode(const std::string& program_name, const zx::process& process,
+                               int* out_exit_code) {
   // Leave it to the test harness to provide a timeout. If it doesn't that's
   // its bug.
-  auto status =
-      process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+  auto status = process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed waiting for program " << program_name
                    << " to exit: " << zx_status_get_string(status);
@@ -163,17 +153,16 @@ zx_status_t WaitAndGetExitCode(const std::string& program_name,
   }
 
   zx_info_process_t proc_info;
-  status = zx_object_get_info(process.get(), ZX_INFO_PROCESS, &proc_info,
-                              sizeof(proc_info), nullptr, nullptr);
+  status = zx_object_get_info(process.get(), ZX_INFO_PROCESS, &proc_info, sizeof(proc_info),
+                              nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error getting return code for program " << program_name
-                   << ": " << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Error getting return code for program " << program_name << ": "
+                   << zx_status_get_string(status);
     return status;
   }
 
   if (proc_info.return_code != 0) {
-    FXL_LOG(ERROR) << program_name << " exited with exit code "
-                   << proc_info.return_code;
+    FXL_LOG(ERROR) << program_name << " exited with exit code " << proc_info.return_code;
   }
   *out_exit_code = proc_info.return_code;
   return ZX_OK;
@@ -207,8 +196,7 @@ static bool LaunchApp(sys::ComponentContext* context, const std::string& app,
   launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(args);
 
   if (FXL_VLOG_IS_ON(1)) {
-    FXL_VLOG(1) << "Launching: " << launch_info.url << " "
-                << fxl::JoinStrings(args, " ");
+    FXL_VLOG(1) << "Launching: " << launch_info.url << " " << fxl::JoinStrings(args, " ");
   } else {
     FXL_LOG(INFO) << "Launching: " << launch_info.url;
   }
@@ -222,20 +210,17 @@ static bool LaunchApp(sys::ComponentContext* context, const std::string& app,
 
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
-  launcher->CreateComponent(std::move(launch_info),
-                            component_controller.NewRequest());
-  component_controller.set_error_handler(
-      [&loop, &return_code](zx_status_t error) {
-        // This can get run even after the app has exited, in the destructor.
-        if (return_code == INT64_MIN) {
-          FXL_LOG(INFO) << "Application terminated, status " << error;
-          return_code = error;
-          loop.Quit();
-        }
-      });
+  launcher->CreateComponent(std::move(launch_info), component_controller.NewRequest());
+  component_controller.set_error_handler([&loop, &return_code](zx_status_t error) {
+    // This can get run even after the app has exited, in the destructor.
+    if (return_code == INT64_MIN) {
+      FXL_LOG(INFO) << "Application terminated, status " << error;
+      return_code = error;
+      loop.Quit();
+    }
+  });
   component_controller.events().OnTerminated =
-      [&loop, &return_code](
-          int64_t rc, fuchsia::sys::TerminationReason termination_reason) {
+      [&loop, &return_code](int64_t rc, fuchsia::sys::TerminationReason termination_reason) {
         FXL_LOG(INFO) << "Application exited with return reason/code "
                       << static_cast<int>(termination_reason) << "/" << rc;
         switch (termination_reason) {
@@ -262,21 +247,17 @@ static bool LaunchApp(sys::ComponentContext* context, const std::string& app,
   return return_code == 0;
 }
 
-bool RunTspec(sys::ComponentContext* context,
-              const std::string& relative_tspec_path,
+bool RunTspec(sys::ComponentContext* context, const std::string& relative_tspec_path,
               const std::string& output_file_path) {
   std::vector<std::string> argv;
   BuildTraceProgramArgv(relative_tspec_path, output_file_path, &argv);
 
-  FXL_LOG(INFO) << "Running tspec " << relative_tspec_path << ", output file "
-                << output_file_path;
+  FXL_LOG(INFO) << "Running tspec " << relative_tspec_path << ", output file " << output_file_path;
 
-  return LaunchApp(context, argv[0],
-                   std::vector<std::string>(argv.begin() + 1, argv.end()));
+  return LaunchApp(context, argv[0], std::vector<std::string>(argv.begin() + 1, argv.end()));
 }
 
-bool VerifyTspec(sys::ComponentContext* context,
-                 const std::string& relative_tspec_path,
+bool VerifyTspec(sys::ComponentContext* context, const std::string& relative_tspec_path,
                  const std::string& output_file_path) {
   tracing::Spec spec;
   if (!ReadTspec(kPackageTestPrefix + relative_tspec_path, &spec)) {
@@ -289,8 +270,7 @@ bool VerifyTspec(sys::ComponentContext* context,
   std::vector<std::string> argv;
   BuildVerificationProgramArgv(
       program_path,
-      ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) +
-       relative_tspec_path),
+      ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) + relative_tspec_path),
       output_file_path, &argv);
 
   FXL_LOG(INFO) << "Verifying tspec " << relative_tspec_path << ", output file "
@@ -301,7 +281,6 @@ bool VerifyTspec(sys::ComponentContext* context,
   if (spec.spawn) {
     return LaunchTool(argv);
   } else {
-    return LaunchApp(context, argv[0],
-                     std::vector<std::string>(argv.begin() + 1, argv.end()));
+    return LaunchApp(context, argv[0], std::vector<std::string>(argv.begin() + 1, argv.end()));
   }
 }

@@ -18,25 +18,25 @@ namespace netsvc {
 using ReadCallback = fbl::Function<zx_status_t(void* /*buf*/, size_t /*offset*/, size_t /*size*/,
                                                size_t* /*actual*/)>;
 
-class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface  {
-public:
-    PayloadStreamer(zx::channel chan, ReadCallback callback);
+class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface {
+ public:
+  PayloadStreamer(zx::channel chan, ReadCallback callback);
 
-    PayloadStreamer(const PayloadStreamer&) = delete;
-    PayloadStreamer& operator=(const PayloadStreamer&) = delete;
-    PayloadStreamer(PayloadStreamer&&) = delete;
-    PayloadStreamer& operator=(PayloadStreamer&&) = delete;
+  PayloadStreamer(const PayloadStreamer&) = delete;
+  PayloadStreamer& operator=(const PayloadStreamer&) = delete;
+  PayloadStreamer(PayloadStreamer&&) = delete;
+  PayloadStreamer& operator=(PayloadStreamer&&) = delete;
 
-    void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer);
+  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer);
 
-    void ReadData(ReadDataCompleter::Sync completer);
+  void ReadData(ReadDataCompleter::Sync completer);
 
-private:
-    ReadCallback read_;
-    zx::vmo vmo_;
-    fzl::VmoMapper mapper_;
-    size_t read_offset_ = 0;
-    bool eof_reached_ = false;
+ private:
+  ReadCallback read_;
+  zx::vmo vmo_;
+  fzl::VmoMapper mapper_;
+  size_t read_offset_ = 0;
+  bool eof_reached_ = false;
 };
 
-} // namespace netsvc
+}  // namespace netsvc

@@ -124,9 +124,7 @@ TEST_F(GestureTest, RemovePointer) {
   EXPECT_EQ(gesture_.pointer_count(), 1u);
 
   auto delta = gesture_.UpdatePointer(1, {1, 2});
-  EXPECT_EQ(delta,
-            input::Gesture::Delta(
-                {.translation = vec2({0, 1}), .rotation = 0, .scale = 1}));
+  EXPECT_EQ(delta, input::Gesture::Delta({.translation = vec2({0, 1}), .rotation = 0, .scale = 1}));
   EXPECT_TRUE(gesture_.has_pointers());
   EXPECT_EQ(gesture_.pointer_count(), 1u);
 

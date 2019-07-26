@@ -31,32 +31,36 @@ namespace internal {
 // * A function PtrArgsTuple<T>::Invoke(), which invokes a functor T instance on a TupleType
 //   instance, supplying the address of each corresponding field in the TupleType as the argument to
 //   the functor.
-template <typename T> class PtrArgsTuple {
-   private:
-    // Private implementation classes to extract an argument type list, as a std::tuple, from a
-    // functor.
-    template <typename U> class PtrArgTuple : public PtrArgTuple<decltype(&U::operator())> {};
-    template <typename U, typename R, typename... A> class PtrArgTuple<R (U::*)(A...) const> {
-       public:
-        using PtrArgTupleType = std::tuple<typename std::remove_pointer<A>::type...>;
-    };
-
+template <typename T>
+class PtrArgsTuple {
+ private:
+  // Private implementation classes to extract an argument type list, as a std::tuple, from a
+  // functor.
+  template <typename U>
+  class PtrArgTuple : public PtrArgTuple<decltype(&U::operator())> {};
+  template <typename U, typename R, typename... A>
+  class PtrArgTuple<R (U::*)(A...) const> {
    public:
-    // The std::tuple type used with Invoke().
-    using TupleType = typename PtrArgTuple<T>::PtrArgTupleType;
+    using PtrArgTupleType = std::tuple<typename std::remove_pointer<A>::type...>;
+  };
 
-    // Invoke a functor `f` using address of elements in tuple `t` as arguments.
-    template <typename U> static decltype(auto) Invoke(U&& f, TupleType* t) {
-        constexpr size_t kTupleSize = std::tuple_size<TupleType>::value;
-        return InvokeImpl(std::forward<U>(f), t, std::make_index_sequence<kTupleSize>());
-    }
+ public:
+  // The std::tuple type used with Invoke().
+  using TupleType = typename PtrArgTuple<T>::PtrArgTupleType;
 
-   private:
-    // Private implementation template for Invoke().
-    template <typename U, size_t... S>
-    static decltype(auto) InvokeImpl(U&& f, TupleType* t, std::index_sequence<S...>) {
-        return std::forward<U>(f)(&std::get<S>(*t)...);
-    }
+  // Invoke a functor `f` using address of elements in tuple `t` as arguments.
+  template <typename U>
+  static decltype(auto) Invoke(U&& f, TupleType* t) {
+    constexpr size_t kTupleSize = std::tuple_size<TupleType>::value;
+    return InvokeImpl(std::forward<U>(f), t, std::make_index_sequence<kTupleSize>());
+  }
+
+ private:
+  // Private implementation template for Invoke().
+  template <typename U, size_t... S>
+  static decltype(auto) InvokeImpl(U&& f, TupleType* t, std::index_sequence<S...>) {
+    return std::forward<U>(f)(&std::get<S>(*t)...);
+  }
 };
 
 }  // namespace internal
@@ -74,39 +78,40 @@ template <typename T> class PtrArgsTuple {
 //        })) != ZX_OK) {
 //        return status;
 //   }
-template <typename UpdateFunc> zx_status_t UpdateRegisters(Bus* bus, UpdateFunc&& func) {
-    using PtrArgsTupleType = internal::PtrArgsTuple<typename std::decay<decltype(func)>::type>;
-    typename PtrArgsTupleType::TupleType registers;
-    zx_status_t status = ZX_OK;
+template <typename UpdateFunc>
+zx_status_t UpdateRegisters(Bus* bus, UpdateFunc&& func) {
+  using PtrArgsTupleType = internal::PtrArgsTuple<typename std::decay<decltype(func)>::type>;
+  typename PtrArgsTupleType::TupleType registers;
+  zx_status_t status = ZX_OK;
 
-    // Perform the initial read from the bus.
-    if ((status = PtrArgsTupleType::Invoke(
-             [bus](auto... regs) {
-                 zx_status_t status = ZX_OK;
-                 const bool result [[gnu::unused]] =
-                     (((status = bus->ReadRegister(regs)) == ZX_OK) && ...);
-                 return status;
-             },
-             &registers)) != ZX_OK) {
-        return status;
-    }
+  // Perform the initial read from the bus.
+  if ((status = PtrArgsTupleType::Invoke(
+           [bus](auto... regs) {
+             zx_status_t status = ZX_OK;
+             const bool result [[gnu::unused]] =
+                 (((status = bus->ReadRegister(regs)) == ZX_OK) && ...);
+             return status;
+           },
+           &registers)) != ZX_OK) {
+    return status;
+  }
 
-    // Invoke the modification functor on the registers.
-    PtrArgsTupleType::Invoke(std::forward<UpdateFunc>(func), &registers);
+  // Invoke the modification functor on the registers.
+  PtrArgsTupleType::Invoke(std::forward<UpdateFunc>(func), &registers);
 
-    // Write the values back to the bus.
-    if ((status = PtrArgsTupleType::Invoke(
-             [bus](auto... regs) {
-                 zx_status_t status = ZX_OK;
-                 const bool result [[gnu::unused]] =
-                     (((status = bus->WriteRegister(*regs)) == ZX_OK) && ...);
-                 return status;
-             },
-             &registers)) != ZX_OK) {
-        return status;
-    }
+  // Write the values back to the bus.
+  if ((status = PtrArgsTupleType::Invoke(
+           [bus](auto... regs) {
+             zx_status_t status = ZX_OK;
+             const bool result [[gnu::unused]] =
+                 (((status = bus->WriteRegister(*regs)) == ZX_OK) && ...);
+             return status;
+           },
+           &registers)) != ZX_OK) {
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 }  // namespace rtl88xx

@@ -16,42 +16,41 @@ namespace max98927 {
 class Max98927Device;
 using DeviceType = ddk::Device<Max98927Device, ddk::Messageable, ddk::Unbindable>;
 
-class Max98927Device : public DeviceType,
-                       public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
-public:
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+class Max98927Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
+ public:
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    Max98927Device(zx_device_t* parent) : DeviceType(parent) { }
-    ~Max98927Device() { }
+  Max98927Device(zx_device_t* parent) : DeviceType(parent) {}
+  ~Max98927Device() {}
 
-    zx_status_t Bind();
-    zx_status_t Initialize();
+  zx_status_t Bind();
+  zx_status_t Initialize();
 
-    // Methods required by the ddk mixins
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-    void DdkUnbind();
-    void DdkRelease();
+  // Methods required by the ddk mixins
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  void DdkUnbind();
+  void DdkRelease();
 
-private:
-    zx_status_t FidlSetEnabled(bool enable);
+ private:
+  zx_status_t FidlSetEnabled(bool enable);
 
-    // Play a test tone
-    void Test();
+  // Play a test tone
+  void Test();
 
-    // Enable the device
-    void Enable();
+  // Enable the device
+  void Enable();
 
-    // Disable the device
-    void Disable();
+  // Disable the device
+  void Disable();
 
-    // Methods to read/write registers
-    uint8_t ReadReg(uint16_t addr);
-    void WriteReg(uint16_t addr, uint8_t val);
+  // Methods to read/write registers
+  uint8_t ReadReg(uint16_t addr);
+  void WriteReg(uint16_t addr, uint8_t val);
 
-    // Debug
-    void DumpRegs();
+  // Debug
+  void DumpRegs();
 
-    i2c_protocol_t i2c_;
+  i2c_protocol_t i2c_;
 };
 
 }  // namespace max98927

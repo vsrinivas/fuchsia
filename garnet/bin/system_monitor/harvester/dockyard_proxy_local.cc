@@ -13,14 +13,13 @@ DockyardProxyStatus DockyardProxyLocal::Init() {
   return DockyardProxyStatus::OK;
 }
 
-DockyardProxyStatus DockyardProxyLocal::SendInspectJson(
-    const std::string& stream_name, const std::string& json) {
+DockyardProxyStatus DockyardProxyLocal::SendInspectJson(const std::string& stream_name,
+                                                        const std::string& json) {
   FXL_LOG(INFO) << "DockyardProxyLocal::SendInspectJson";
   return DockyardProxyStatus::OK;
 }
 
-DockyardProxyStatus DockyardProxyLocal::SendSample(
-    const std::string& stream_name, uint64_t value) {
+DockyardProxyStatus DockyardProxyLocal::SendSample(const std::string& stream_name, uint64_t value) {
   FXL_LOG(INFO) << "DockyardProxyLocal::SendSample";
   return DockyardProxyStatus::OK;
 }
@@ -30,8 +29,7 @@ DockyardProxyStatus DockyardProxyLocal::SendSampleList(const SampleList list) {
   return DockyardProxyStatus::OK;
 }
 
-DockyardProxyStatus DockyardProxyLocal::SendStringSampleList(
-    const StringSampleList list) {
+DockyardProxyStatus DockyardProxyLocal::SendStringSampleList(const StringSampleList list) {
   FXL_LOG(INFO) << "DockyardProxyLocal::StringSampleList";
   return DockyardProxyStatus::OK;
 }

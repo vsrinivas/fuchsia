@@ -16,14 +16,11 @@ namespace network_wrapper {
 
 namespace http = ::fuchsia::net::oldhttp;
 
-FakeNetworkWrapper::FakeNetworkWrapper(async_dispatcher_t* dispatcher)
-    : dispatcher_(dispatcher) {}
+FakeNetworkWrapper::FakeNetworkWrapper(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 FakeNetworkWrapper::~FakeNetworkWrapper() {}
 
-http::URLRequest* FakeNetworkWrapper::GetRequest() {
-  return request_received_.get();
-}
+http::URLRequest* FakeNetworkWrapper::GetRequest() { return request_received_.get(); }
 
 void FakeNetworkWrapper::ResetRequest() { request_received_.reset(); }
 
@@ -31,8 +28,7 @@ void FakeNetworkWrapper::SetResponse(http::URLResponse response) {
   response_to_return_ = fidl::MakeOptional(std::move(response));
 }
 
-void FakeNetworkWrapper::SetSocketResponse(zx::socket body,
-                                           uint32_t status_code) {
+void FakeNetworkWrapper::SetSocketResponse(zx::socket body, uint32_t status_code) {
   http::URLResponse server_response;
   server_response.body = http::URLBody::New();
   server_response.body->set_stream(std::move(body));
@@ -40,8 +36,7 @@ void FakeNetworkWrapper::SetSocketResponse(zx::socket body,
   SetResponse(std::move(server_response));
 }
 
-void FakeNetworkWrapper::SetStringResponse(const std::string& body,
-                                           uint32_t status_code) {
+void FakeNetworkWrapper::SetStringResponse(const std::string& body, uint32_t status_code) {
   SetSocketResponse(fsl::WriteStringToSocket(body), status_code);
 }
 
@@ -53,14 +48,12 @@ fxl::RefPtr<callback::Cancellable> FakeNetworkWrapper::Request(
     return cancellable;
   }
 
-  async::PostTask(
-      dispatcher_,
-      [this, callback = cancellable->WrapCallback(std::move(callback)),
-       request_factory = std::move(request_factory)] {
-        request_received_ = fidl::MakeOptional(request_factory());
-        callback(std::move(*response_to_return_));
-        response_to_return_.reset();
-      });
+  async::PostTask(dispatcher_, [this, callback = cancellable->WrapCallback(std::move(callback)),
+                                request_factory = std::move(request_factory)] {
+    request_received_ = fidl::MakeOptional(request_factory());
+    callback(std::move(*response_to_return_));
+    response_to_return_.reset();
+  });
   return cancellable;
 }
 

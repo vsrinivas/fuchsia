@@ -25,336 +25,327 @@ fuchsia_hardware_nand_Info kInfo = {kPageSize, kNumPages, kNumBlocks, kEccBits, 
 
 // We inject a special context as parent so that we can store the device.
 struct Context {
-    nand::SkipBlockDevice* dev = nullptr;
+  nand::SkipBlockDevice* dev = nullptr;
 };
 
 class Binder : public fake_ddk::Bind {
-public:
-    zx_status_t DeviceRemove(zx_device_t* dev) override {
-        Context* context = reinterpret_cast<Context*>(dev);
-        if (context->dev) {
-            context->dev->DdkRelease();
-        }
-        context->dev = nullptr;
-        return ZX_OK;
+ public:
+  zx_status_t DeviceRemove(zx_device_t* dev) override {
+    Context* context = reinterpret_cast<Context*>(dev);
+    if (context->dev) {
+      context->dev->DdkRelease();
     }
-    zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                          zx_device_t** out) override {
-        *out = parent;
-        Context* context = reinterpret_cast<Context*>(parent);
-        context->dev = reinterpret_cast<nand::SkipBlockDevice*>(args->ctx);
+    context->dev = nullptr;
+    return ZX_OK;
+  }
+  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                        zx_device_t** out) override {
+    *out = parent;
+    Context* context = reinterpret_cast<Context*>(parent);
+    context->dev = reinterpret_cast<nand::SkipBlockDevice*>(args->ctx);
 
-        if (args && args->ops) {
-            if (args->ops->message) {
-                zx_status_t status;
-                if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
-                    return status;
-                }
-            }
+    if (args && args->ops) {
+      if (args->ops->message) {
+        zx_status_t status;
+        if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
+          return status;
         }
+      }
+    }
+    return ZX_OK;
+  }
+  zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
+                                void* protocol) override {
+    auto out = reinterpret_cast<fake_ddk::Protocol*>(protocol);
+    for (const auto& proto : protocols_) {
+      if (proto_id == proto.id) {
+        out->ops = proto.proto.ops;
+        out->ctx = proto.proto.ctx;
         return ZX_OK;
+      }
     }
-    zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id, void* protocol) override {
-        auto out = reinterpret_cast<fake_ddk::Protocol*>(protocol);
-        for (const auto& proto : protocols_) {
-            if (proto_id == proto.id) {
-                out->ops = proto.proto.ops;
-                out->ctx = proto.proto.ctx;
-                return ZX_OK;
-            }
-        }
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 };
 
 // Fake for the nand protocol.
 class FakeNand : public ddk::NandProtocol<FakeNand> {
-public:
-    FakeNand()
-        : proto_({&nand_protocol_ops_, this}) {}
+ public:
+  FakeNand() : proto_({&nand_protocol_ops_, this}) {}
 
-    const nand_protocol_t* proto() const { return &proto_; }
+  const nand_protocol_t* proto() const { return &proto_; }
 
-    void set_result(zx_status_t result) { result_.push_back(result); }
+  void set_result(zx_status_t result) { result_.push_back(result); }
 
-    // Nand protocol:
-    void NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
-        *info_out = nand_info_;
-        *nand_op_size_out = sizeof(nand_operation_t);
+  // Nand protocol:
+  void NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
+    *info_out = nand_info_;
+    *nand_op_size_out = sizeof(nand_operation_t);
+  }
+
+  void NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
+    last_op_ = op->command;
+
+    auto result = result_[call_++];
+
+    if (result != ZX_OK) {
+      completion_cb(cookie, result, op);
+      return;
     }
 
-    void NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
-        last_op_ = op->command;
-
-        auto result = result_[call_++];
-
-        if (result != ZX_OK) {
-            completion_cb(cookie, result, op);
-            return;
+    switch (op->command) {
+      case NAND_OP_READ: {
+        zx::vmo data_vmo(op->rw.data_vmo);
+        zx::vmo oob_vmo(op->rw.oob_vmo);
+        if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
+            (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
+          result = ZX_ERR_OUT_OF_RANGE;
+          break;
         }
-
-        switch (op->command) {
-        case NAND_OP_READ: {
-            zx::vmo data_vmo(op->rw.data_vmo);
-            zx::vmo oob_vmo(op->rw.oob_vmo);
-            if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
-                (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
-                result = ZX_ERR_OUT_OF_RANGE;
-                break;
-            }
-            if (op->rw.data_vmo == ZX_HANDLE_INVALID &&
-                op->rw.oob_vmo == ZX_HANDLE_INVALID) {
-                result = ZX_ERR_BAD_HANDLE;
-                break;
-            }
-            break;
+        if (op->rw.data_vmo == ZX_HANDLE_INVALID && op->rw.oob_vmo == ZX_HANDLE_INVALID) {
+          result = ZX_ERR_BAD_HANDLE;
+          break;
         }
-        case NAND_OP_WRITE: {
-            zx::vmo data_vmo(op->rw.data_vmo);
-            zx::vmo oob_vmo(op->rw.oob_vmo);
-            if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
-                (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
-                result = ZX_ERR_OUT_OF_RANGE;
-                break;
-            }
-            if (op->rw.data_vmo == ZX_HANDLE_INVALID &&
-                op->rw.oob_vmo == ZX_HANDLE_INVALID) {
-                result = ZX_ERR_BAD_HANDLE;
-                break;
-            }
-            break;
+        break;
+      }
+      case NAND_OP_WRITE: {
+        zx::vmo data_vmo(op->rw.data_vmo);
+        zx::vmo oob_vmo(op->rw.oob_vmo);
+        if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
+            (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
+          result = ZX_ERR_OUT_OF_RANGE;
+          break;
         }
-        case NAND_OP_ERASE:
-            if (!op->erase.num_blocks ||
-                op->erase.first_block >= nand_info_.num_blocks ||
-                (op->erase.num_blocks > (nand_info_.num_blocks - op->erase.first_block))) {
-                result = ZX_ERR_OUT_OF_RANGE;
-            }
-            break;
-
-        default:
-            result = ZX_ERR_NOT_SUPPORTED;
-            break;
+        if (op->rw.data_vmo == ZX_HANDLE_INVALID && op->rw.oob_vmo == ZX_HANDLE_INVALID) {
+          result = ZX_ERR_BAD_HANDLE;
+          break;
         }
+        break;
+      }
+      case NAND_OP_ERASE:
+        if (!op->erase.num_blocks || op->erase.first_block >= nand_info_.num_blocks ||
+            (op->erase.num_blocks > (nand_info_.num_blocks - op->erase.first_block))) {
+          result = ZX_ERR_OUT_OF_RANGE;
+        }
+        break;
 
-        completion_cb(cookie, result, op);
-        return;
+      default:
+        result = ZX_ERR_NOT_SUPPORTED;
+        break;
     }
 
-    zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
-                                           size_t* num_bad_blocks) {
-        *num_bad_blocks = 0;
-        return ZX_OK;
-    }
+    completion_cb(cookie, result, op);
+    return;
+  }
 
-    const nand_op_t& last_op() { return last_op_; }
+  zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
+                                         size_t* num_bad_blocks) {
+    *num_bad_blocks = 0;
+    return ZX_OK;
+  }
 
-private:
-    size_t call_ = 0;
-    nand_protocol_t proto_;
-    fuchsia_hardware_nand_Info nand_info_ = kInfo;
-    fbl::Vector<zx_status_t> result_;
-    size_t num_nand_pages_ = kNumPages * kNumBlocks;
+  const nand_op_t& last_op() { return last_op_; }
 
-    nand_op_t last_op_ = {};
+ private:
+  size_t call_ = 0;
+  nand_protocol_t proto_;
+  fuchsia_hardware_nand_Info nand_info_ = kInfo;
+  fbl::Vector<zx_status_t> result_;
+  size_t num_nand_pages_ = kNumPages * kNumBlocks;
+
+  nand_op_t last_op_ = {};
 };
 
 // Fake for the bad block protocol.
 class FakeBadBlock : public ddk::BadBlockProtocol<FakeBadBlock> {
-public:
-    FakeBadBlock()
-        : proto_({&bad_block_protocol_ops_, this}) {}
+ public:
+  FakeBadBlock() : proto_({&bad_block_protocol_ops_, this}) {}
 
-    const bad_block_protocol_t* proto() const { return &proto_; }
+  const bad_block_protocol_t* proto() const { return &proto_; }
 
-    void set_result(zx_status_t result) { result_ = result; }
+  void set_result(zx_status_t result) { result_ = result; }
 
-    // Bad Block protocol:
-    zx_status_t BadBlockGetBadBlockList(uint32_t* bad_block_list, size_t bad_block_list_len,
-                                        size_t* bad_block_count) {
-        *bad_block_count = grown_bad_blocks_.size();
-        if (bad_block_list_len < *bad_block_count) {
-            return bad_block_list == nullptr ? ZX_OK : ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        memcpy(bad_block_list, grown_bad_blocks_.get(), grown_bad_blocks_.size());
-        return result_;
+  // Bad Block protocol:
+  zx_status_t BadBlockGetBadBlockList(uint32_t* bad_block_list, size_t bad_block_list_len,
+                                      size_t* bad_block_count) {
+    *bad_block_count = grown_bad_blocks_.size();
+    if (bad_block_list_len < *bad_block_count) {
+      return bad_block_list == nullptr ? ZX_OK : ZX_ERR_BUFFER_TOO_SMALL;
     }
-    zx_status_t BadBlockMarkBlockBad(uint32_t block) {
-        if (result_ == ZX_OK) {
-            grown_bad_blocks_.push_back(block);
-        }
-        return result_;
+    memcpy(bad_block_list, grown_bad_blocks_.get(), grown_bad_blocks_.size());
+    return result_;
+  }
+  zx_status_t BadBlockMarkBlockBad(uint32_t block) {
+    if (result_ == ZX_OK) {
+      grown_bad_blocks_.push_back(block);
     }
+    return result_;
+  }
 
-    const fbl::Vector<uint32_t>& grown_bad_blocks() { return grown_bad_blocks_; }
+  const fbl::Vector<uint32_t>& grown_bad_blocks() { return grown_bad_blocks_; }
 
-private:
-    fbl::Vector<uint32_t> grown_bad_blocks_;
-    bad_block_protocol_t proto_;
-    zx_status_t result_ = ZX_OK;
+ private:
+  fbl::Vector<uint32_t> grown_bad_blocks_;
+  bad_block_protocol_t proto_;
+  zx_status_t result_ = ZX_OK;
 };
 
 class SkipBlockTest : public zxtest::Test {
-protected:
-    SkipBlockTest() {
-        fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
-        protocols[0] = {ZX_PROTOCOL_NAND,
-                        *reinterpret_cast<const fake_ddk::Protocol*>(nand_.proto())};
-        protocols[1] = {ZX_PROTOCOL_BAD_BLOCK,
-                        *reinterpret_cast<const fake_ddk::Protocol*>(bad_block_.proto())};
-        ddk_.SetProtocols(std::move(protocols));
-        ddk_.SetSize(kPageSize * kNumPages * kNumBlocks);
-        ddk_.SetMetadata(&count_, sizeof(count_));
+ protected:
+  SkipBlockTest() {
+    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
+    protocols[0] = {ZX_PROTOCOL_NAND, *reinterpret_cast<const fake_ddk::Protocol*>(nand_.proto())};
+    protocols[1] = {ZX_PROTOCOL_BAD_BLOCK,
+                    *reinterpret_cast<const fake_ddk::Protocol*>(bad_block_.proto())};
+    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetSize(kPageSize * kNumPages * kNumBlocks);
+    ddk_.SetMetadata(&count_, sizeof(count_));
+  }
+
+  ~SkipBlockTest() { ddk_.DeviceRemove(parent()); }
+
+  void Write(nand::ReadWriteOperation op, bool* bad_block_grown, zx_status_t expected = ZX_OK) {
+    if (!client_) {
+      client_.emplace(std::move(ddk().FidlClient()));
     }
+    zx_status_t status;
+    ASSERT_OK(client_->Write_Deprecated(std::move(op), &status, bad_block_grown));
+    ASSERT_EQ(status, expected);
+  }
 
-    ~SkipBlockTest() {
-        ddk_.DeviceRemove(parent());
+  void Read(nand::ReadWriteOperation op, zx_status_t expected = ZX_OK) {
+    if (!client_) {
+      client_.emplace(std::move(ddk().FidlClient()));
     }
+    zx_status_t status;
+    ASSERT_OK(client_->Read_Deprecated(std::move(op), &status));
+    ASSERT_EQ(status, expected);
+  }
 
-    void Write(nand::ReadWriteOperation op, bool* bad_block_grown, zx_status_t expected = ZX_OK) {
-        if (!client_) {
-            client_.emplace(std::move(ddk().FidlClient()));
-        }
-        zx_status_t status;
-        ASSERT_OK(client_->Write_Deprecated(std::move(op), &status, bad_block_grown));
-        ASSERT_EQ(status, expected);
-    }
+  zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
+  nand::SkipBlockDevice& dev() { return *ctx_.dev; }
+  Binder& ddk() { return ddk_; }
+  FakeNand& nand() { return nand_; }
+  FakeBadBlock& bad_block() { return bad_block_; }
 
-    void Read(nand::ReadWriteOperation op, zx_status_t expected = ZX_OK) {
-        if (!client_) {
-            client_.emplace(std::move(ddk().FidlClient()));
-        }
-        zx_status_t status;
-        ASSERT_OK(client_->Read_Deprecated(std::move(op), &status));
-        ASSERT_EQ(status, expected);
-    }
-
-    zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
-    nand::SkipBlockDevice& dev() { return *ctx_.dev; }
-    Binder& ddk() { return ddk_; }
-    FakeNand& nand() { return nand_; }
-    FakeBadBlock& bad_block() { return bad_block_; }
-
-private:
-    const uint32_t count_ = 1;
-    Context ctx_ = {};
-    Binder ddk_;
-    FakeNand nand_;
-    FakeBadBlock bad_block_;
-    std::optional<::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient> client_;
+ private:
+  const uint32_t count_ = 1;
+  Context ctx_ = {};
+  Binder ddk_;
+  FakeNand nand_;
+  FakeBadBlock bad_block_;
+  std::optional<::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient> client_;
 };
 
-TEST_F(SkipBlockTest, Create) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
-}
+TEST_F(SkipBlockTest, Create) { ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent())); }
 
 TEST_F(SkipBlockTest, GrowBadBlock) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+  ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
-    nand().set_result(ZX_OK);
-    nand().set_result(ZX_ERR_IO);
-    nand().set_result(ZX_OK);
-    nand().set_result(ZX_OK);
+  nand().set_result(ZX_OK);
+  nand().set_result(ZX_ERR_IO);
+  nand().set_result(ZX_OK);
+  nand().set_result(ZX_OK);
 
-    zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
-    nand::ReadWriteOperation op = {};
-    op.vmo = std::move(vmo);
-    op.block = 5;
-    op.block_count = 1;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
+  nand::ReadWriteOperation op = {};
+  op.vmo = std::move(vmo);
+  op.block = 5;
+  op.block_count = 1;
 
-    bool bad_block_grown;
-    ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
-    ASSERT_TRUE(bad_block_grown);
-    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 1);
-    ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
-    ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+  bool bad_block_grown;
+  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
+  ASSERT_TRUE(bad_block_grown);
+  ASSERT_EQ(bad_block().grown_bad_blocks().size(), 1);
+  ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
+  ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
 }
 
 TEST_F(SkipBlockTest, GrowMultipleBadBlock) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+  ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
-    // Erase Block 5
-    nand().set_result(ZX_OK);
-    // Write Block 5
-    nand().set_result(ZX_ERR_IO);
-    // Erase Block 6
-    nand().set_result(ZX_ERR_IO);
-    // Erase Block 7
-    nand().set_result(ZX_OK);
-    // Write Block 7
-    nand().set_result(ZX_OK);
+  // Erase Block 5
+  nand().set_result(ZX_OK);
+  // Write Block 5
+  nand().set_result(ZX_ERR_IO);
+  // Erase Block 6
+  nand().set_result(ZX_ERR_IO);
+  // Erase Block 7
+  nand().set_result(ZX_OK);
+  // Write Block 7
+  nand().set_result(ZX_OK);
 
-    zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
-    nand::ReadWriteOperation op = {};
-    op.vmo = std::move(vmo);
-    op.block = 5;
-    op.block_count = 1;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
+  nand::ReadWriteOperation op = {};
+  op.vmo = std::move(vmo);
+  op.block = 5;
+  op.block_count = 1;
 
-    bool bad_block_grown;
-    ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
-    ASSERT_TRUE(bad_block_grown);
-    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 2);
-    ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
-    ASSERT_EQ(bad_block().grown_bad_blocks()[1], 6);
-    ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+  bool bad_block_grown;
+  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
+  ASSERT_TRUE(bad_block_grown);
+  ASSERT_EQ(bad_block().grown_bad_blocks().size(), 2);
+  ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
+  ASSERT_EQ(bad_block().grown_bad_blocks()[1], 6);
+  ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
 }
 
 TEST_F(SkipBlockTest, MappingFailure) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+  ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
-    // Erase Block 5
-    nand().set_result(ZX_OK);
-    // Write Block 5
-    nand().set_result(ZX_ERR_INVALID_ARGS);
+  // Erase Block 5
+  nand().set_result(ZX_OK);
+  // Write Block 5
+  nand().set_result(ZX_ERR_INVALID_ARGS);
 
-    zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
-    nand::ReadWriteOperation op = {};
-    op.vmo = std::move(vmo);
-    op.block = 5;
-    op.block_count = 1;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
+  nand::ReadWriteOperation op = {};
+  op.vmo = std::move(vmo);
+  op.block = 5;
+  op.block_count = 1;
 
-    bool bad_block_grown;
-    ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown, ZX_ERR_INVALID_ARGS));
-    ASSERT_FALSE(bad_block_grown);
-    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
-    ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+  bool bad_block_grown;
+  ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown, ZX_ERR_INVALID_ARGS));
+  ASSERT_FALSE(bad_block_grown);
+  ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+  ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
 }
 
 TEST_F(SkipBlockTest, ReadSuccess) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+  ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
-    // Read Block 5.
-    nand().set_result(ZX_OK);
+  // Read Block 5.
+  nand().set_result(ZX_OK);
 
-    zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
-    nand::ReadWriteOperation op = {};
-    op.vmo = std::move(vmo);
-    op.block = 5;
-    op.block_count = 1;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
+  nand::ReadWriteOperation op = {};
+  op.vmo = std::move(vmo);
+  op.block = 5;
+  op.block_count = 1;
 
-    ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_OK));
-    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
-    ASSERT_EQ(nand().last_op(), NAND_OP_READ);
+  ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_OK));
+  ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+  ASSERT_EQ(nand().last_op(), NAND_OP_READ);
 }
 
 TEST_F(SkipBlockTest, ReadFailure) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+  ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
-    // Read Block 7.
-    nand().set_result(ZX_ERR_INVALID_ARGS);
+  // Read Block 7.
+  nand().set_result(ZX_ERR_INVALID_ARGS);
 
-    zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
-    nand::ReadWriteOperation op = {};
-    op.vmo = std::move(vmo);
-    op.block = 7;
-    op.block_count = 1;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
+  nand::ReadWriteOperation op = {};
+  op.vmo = std::move(vmo);
+  op.block = 7;
+  op.block_count = 1;
 
-    ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_ERR_INVALID_ARGS));
-    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
-    ASSERT_EQ(nand().last_op(), NAND_OP_READ);
+  ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_ERR_INVALID_ARGS));
+  ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+  ASSERT_EQ(nand().last_op(), NAND_OP_READ);
 }

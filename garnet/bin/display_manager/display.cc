@@ -39,8 +39,7 @@ Display* Display::GetDisplay() {
 
 bool Display::GetBrightness(double* brightness) {
   fuchsia_hardware_backlight_State state;
-  zx_status_t status =
-      fuchsia_hardware_backlight_DeviceGetState(channel_.get(), &state);
+  zx_status_t status = fuchsia_hardware_backlight_DeviceGetState(channel_.get(), &state);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Getting backlight state failed";
@@ -53,10 +52,9 @@ bool Display::GetBrightness(double* brightness) {
 
 bool Display::SetBrightness(double brightness) {
   const uint32_t adjustBrightness = brightness * BRIGHTNESS_BASE;
-  fuchsia_hardware_backlight_State state = {
-      .on = brightness > 0, .brightness = (uint8_t)adjustBrightness};
-  zx_status_t status =
-      fuchsia_hardware_backlight_DeviceSetState(channel_.get(), &state);
+  fuchsia_hardware_backlight_State state = {.on = brightness > 0,
+                                            .brightness = (uint8_t)adjustBrightness};
+  zx_status_t status = fuchsia_hardware_backlight_DeviceSetState(channel_.get(), &state);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Setting backlight state failed";

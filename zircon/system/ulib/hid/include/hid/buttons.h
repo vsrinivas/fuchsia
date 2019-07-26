@@ -14,24 +14,24 @@ __BEGIN_CDECLS
 
 // TODO(andresoportus): Remove bitfields.
 typedef struct buttons_input_rpt {
-    uint8_t rpt_id;
+  uint8_t rpt_id;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-    uint8_t volume_up : 1;
-    uint8_t volume_down : 1;
-    uint8_t reset : 1;
-    uint8_t padding : 5;
+  uint8_t volume_up : 1;
+  uint8_t volume_down : 1;
+  uint8_t reset : 1;
+  uint8_t padding : 5;
 #else
-    uint8_t padding : 5;
-    uint8_t volume_up : 1;
-    uint8_t volume_down : 1;
-    uint8_t reset : 1;
+  uint8_t padding : 5;
+  uint8_t volume_up : 1;
+  uint8_t volume_down : 1;
+  uint8_t reset : 1;
 #endif
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-    uint8_t mute : 1;
-    uint8_t padding2 : 7;
+  uint8_t mute : 1;
+  uint8_t padding2 : 7;
 #else
-    uint8_t padding2 : 7;
-    uint8_t mute : 1;
+  uint8_t padding2 : 7;
+  uint8_t mute : 1;
 #endif
 } __PACKED buttons_input_rpt_t;
 

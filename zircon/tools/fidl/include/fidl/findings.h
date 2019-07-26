@@ -29,8 +29,7 @@ namespace fidl {
 // values for referenced parts of the source.
 struct Suggestion {
  public:
-  explicit Suggestion(std::string description)
-      : description_(description) {}
+  explicit Suggestion(std::string description) : description_(description) {}
 
   Suggestion(std::string description, std::string replacement)
       : description_(description), replacement_(replacement) {}

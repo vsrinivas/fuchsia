@@ -25,8 +25,7 @@ class Controller {
   static constexpr uint32_t kLog2PageSize = 12;
   static constexpr uint32_t kPageSize = 1 << kLog2PageSize;
   // The protocol restricts buffer sizes to 256MB.
-  static constexpr uint32_t kMaxBufferSizeInPages =
-      (256 * 1024 * 1024) / kPageSize;
+  static constexpr uint32_t kMaxBufferSizeInPages = (256 * 1024 * 1024) / kPageSize;
 
   // Return true if perfmon is supported on this device.
   static bool IsSupported();
@@ -53,8 +52,7 @@ class Controller {
 
   virtual const Config& config() const = 0;
 
-  virtual bool GetBufferHandle(const std::string& name, uint32_t trace_num,
-                               zx::vmo* out_vmo) = 0;
+  virtual bool GetBufferHandle(const std::string& name, uint32_t trace_num, zx::vmo* out_vmo) = 0;
 
   virtual std::unique_ptr<Reader> GetReader() = 0;
 

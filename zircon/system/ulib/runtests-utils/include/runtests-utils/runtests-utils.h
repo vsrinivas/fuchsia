@@ -22,53 +22,52 @@ namespace runtests {
 
 // Status of launching a test subprocess.
 enum LaunchStatus {
-    SUCCESS,
-    FAILED_TO_LAUNCH,
-    FAILED_TO_WAIT,
-    FAILED_DURING_IO,
-    FAILED_TO_RETURN_CODE,
-    FAILED_NONZERO_RETURN_CODE,
-    FAILED_COLLECTING_SINK_DATA,
-    FAILED_UNKNOWN,
+  SUCCESS,
+  FAILED_TO_LAUNCH,
+  FAILED_TO_WAIT,
+  FAILED_DURING_IO,
+  FAILED_TO_RETURN_CODE,
+  FAILED_NONZERO_RETURN_CODE,
+  FAILED_COLLECTING_SINK_DATA,
+  FAILED_UNKNOWN,
 };
 
 // Represents a single dumpfile element.
 struct DumpFile {
-    fbl::String name; // Name of the dumpfile.
-    fbl::String file; // File name for the content.
+  fbl::String name;  // Name of the dumpfile.
+  fbl::String file;  // File name for the content.
 };
 
 // Represents data published through data sink.
 struct DataSink : public fbl::SinglyLinkedListable<std::unique_ptr<DataSink>> {
-    fbl::String name;            // Name of the data sink.
-    fbl::Vector<DumpFile> files; // All the sink dumpfiles.
+  fbl::String name;             // Name of the data sink.
+  fbl::Vector<DumpFile> files;  // All the sink dumpfiles.
 
-    explicit DataSink(fbl::String name)
-        : name(name) {}
+  explicit DataSink(fbl::String name) : name(name) {}
 
-    // Runtimes may publish more than one file with the same data sink name. We use hash table
-    // that's mapping data sink name to the list of file names to store these efficiently.
-    fbl::String GetKey() const { return name; }
-    static size_t GetHash(fbl::String key) { return fnv1a64str(key.c_str()); }
+  // Runtimes may publish more than one file with the same data sink name. We use hash table
+  // that's mapping data sink name to the list of file names to store these efficiently.
+  fbl::String GetKey() const { return name; }
+  static size_t GetHash(fbl::String key) { return fnv1a64str(key.c_str()); }
 };
 
 // Represents the result of a single test run.
 struct Result {
-    fbl::String name;
-    LaunchStatus launch_status;
-    int64_t return_code; // Only valid if launch_status == SUCCESS or FAILED_NONZERO_RETURN_CODE.
-    using HashTable = fbl::HashTable<fbl::String, std::unique_ptr<DataSink>>;
-    HashTable data_sinks; // Mapping from data sink name to list of files.
-    int64_t duration_milliseconds;
+  fbl::String name;
+  LaunchStatus launch_status;
+  int64_t return_code;  // Only valid if launch_status == SUCCESS or FAILED_NONZERO_RETURN_CODE.
+  using HashTable = fbl::HashTable<fbl::String, std::unique_ptr<DataSink>>;
+  HashTable data_sinks;  // Mapping from data sink name to list of files.
+  int64_t duration_milliseconds;
 
-    // Constructor really only needed until we have C++14, which will allow call-sites to use
-    // aggregate initializer syntax.
-    Result(const char* name_arg, LaunchStatus launch_status_arg, int64_t return_code_arg,
-           int64_t duration_milliseconds_arg)
-        : name(name_arg),
-          launch_status(launch_status_arg),
-          return_code(return_code_arg),
-          duration_milliseconds(duration_milliseconds_arg) {}
+  // Constructor really only needed until we have C++14, which will allow call-sites to use
+  // aggregate initializer syntax.
+  Result(const char* name_arg, LaunchStatus launch_status_arg, int64_t return_code_arg,
+         int64_t duration_milliseconds_arg)
+      : name(name_arg),
+        launch_status(launch_status_arg),
+        return_code(return_code_arg),
+        duration_milliseconds(duration_milliseconds_arg) {}
 };
 
 // Function that invokes a test binary and writes its output to a file.
@@ -81,22 +80,20 @@ struct Result {
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
 // |test_name| is the name of the test.
-typedef std::unique_ptr<Result> (*RunTestFn)(const char* argv[],
-                                             const char* output_dir,
-                                             const char* output_filename,
-                                             const char* test_name);
+typedef std::unique_ptr<Result> (*RunTestFn)(const char* argv[], const char* output_dir,
+                                             const char* output_filename, const char* test_name);
 
 // A means of measuring how long it takes to run tests.
 class Stopwatch {
-public:
-    virtual ~Stopwatch() = default;
+ public:
+  virtual ~Stopwatch() = default;
 
-    // Starts timing.
-    virtual void Start() = 0;
+  // Starts timing.
+  virtual void Start() = 0;
 
-    // Returns the elapsed time in milliseconds since invoking Start(), or else
-    // since initialization if Start() has not yet been called.
-    virtual int64_t DurationInMsecs() = 0;
+  // Returns the elapsed time in milliseconds since invoking Start(), or else
+  // since initialization if Start() has not yet been called.
+  virtual int64_t DurationInMsecs() = 0;
 };
 
 // Splits |input| by ',' and appends the results onto |output|.
@@ -125,8 +122,7 @@ fbl::String JoinPath(fbl::StringPiece parent, fbl::StringPiece child);
 //
 // Returns 0 on success, else an error code compatible with errno.
 int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
-                     fbl::StringPiece output_file_basename,
-                     fbl::StringPiece syslog_path,
+                     fbl::StringPiece output_file_basename, fbl::StringPiece syslog_path,
                      FILE* summary_json);
 
 // Resolves a set of globs.
@@ -135,8 +131,7 @@ int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
 // |resolved| will hold the results of resolving |globs|.
 //
 // Returns 0 on success, else an error code from glob.h.
-int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
-                 fbl::Vector<fbl::String>* resolved);
+int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>* resolved);
 
 // Executes all specified binaries.
 //
@@ -162,9 +157,8 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
 //
 // Returns false if any test binary failed, true otherwise.
 bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_paths,
-              const fbl::Vector<fbl::String>& test_args, int repeat,
-              const char* output_dir, const fbl::StringPiece output_file_basename,
-              signed char verbosity, int* failed_count,
+              const fbl::Vector<fbl::String>& test_args, int repeat, const char* output_dir,
+              const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results);
 
 // Expands |dir_globs| and searches those directories for files.
@@ -199,9 +193,9 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
 //
 // Returns EXIT_SUCCESS if all tests passed; else, returns EXIT_FAILURE.
 int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* argv,
-                        const fbl::Vector<fbl::String>& default_test_dirs,
-                        Stopwatch* stopwatch, const fbl::StringPiece syslog_file_name);
+                        const fbl::Vector<fbl::String>& default_test_dirs, Stopwatch* stopwatch,
+                        const fbl::StringPiece syslog_file_name);
 
-} // namespace runtests
+}  // namespace runtests
 
-#endif // RUNTESTS_UTILS_RUNTESTS_UTILS_H_
+#endif  // RUNTESTS_UTILS_RUNTESTS_UTILS_H_

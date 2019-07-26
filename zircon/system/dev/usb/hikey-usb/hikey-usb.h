@@ -18,40 +18,39 @@ using HikeyUsbType = ddk::Device<HikeyUsb>;
 // This is the main class for the platform bus driver.
 class HikeyUsb : public HikeyUsbType,
                  public ddk::UsbModeSwitchProtocol<HikeyUsb, ddk::base_protocol> {
-public:
-    explicit HikeyUsb(zx_device_t* parent)
-        : HikeyUsbType(parent), usb_mode_(USB_MODE_NONE) {}
+ public:
+  explicit HikeyUsb(zx_device_t* parent) : HikeyUsbType(parent), usb_mode_(USB_MODE_NONE) {}
 
-    static zx_status_t Create(zx_device_t* parent);
+  static zx_status_t Create(zx_device_t* parent);
 
-    // Device protocol implementation.
-    void DdkRelease();
+  // Device protocol implementation.
+  void DdkRelease();
 
-    // USB mode switch protocol implementation.
-    zx_status_t UsbModeSwitchSetMode(usb_mode_t mode);
+  // USB mode switch protocol implementation.
+  zx_status_t UsbModeSwitchSetMode(usb_mode_t mode);
 
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(HikeyUsb);
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(HikeyUsb);
 
-    enum {
-        COMPONENT_PDEV,
-        COMPONENT_GPIO_GPIO_HUB_VDD33_EN,
-        COMPONENT_GPIO_VBUS_TYPEC,
-        COMPONENT_GPIO_USBSW_SW_SEL,
-        COMPONENT_COUNT,
-    };
+  enum {
+    COMPONENT_PDEV,
+    COMPONENT_GPIO_GPIO_HUB_VDD33_EN,
+    COMPONENT_GPIO_VBUS_TYPEC,
+    COMPONENT_GPIO_USBSW_SW_SEL,
+    COMPONENT_COUNT,
+  };
 
-    enum {
-        HUB_VDD33_EN,
-        VBUS_TYPEC,
-        USBSW_SW_SEL,
-        GPIO_COUNT,
-    };
+  enum {
+    HUB_VDD33_EN,
+    VBUS_TYPEC,
+    USBSW_SW_SEL,
+    GPIO_COUNT,
+  };
 
-    zx_status_t Init();
+  zx_status_t Init();
 
-    gpio_protocol_t gpios_[GPIO_COUNT];
-    usb_mode_t usb_mode_;
+  gpio_protocol_t gpios_[GPIO_COUNT];
+  usb_mode_t usb_mode_;
 };
 
-} // namespace hikey_usb
+}  // namespace hikey_usb

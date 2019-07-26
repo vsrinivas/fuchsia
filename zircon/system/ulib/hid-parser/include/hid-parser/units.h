@@ -14,19 +14,19 @@ namespace unit {
 // Each system defines the units for the following measurements:
 // length, mass, time, temperature, current, luminous intensity.
 enum class System : int8_t {
-    // SI Linear has the following units:
-    // centimeter, gram, seconds, kelvin, ampere, candela.
-    si_linear = 0x1,
-    // SI Rotation has the following units:
-    // radians, gram, seconds, kelvin, ampere, candela.
-    si_rotation = 0x2,
-    // English Linear has the following units:
-    // inch, slug, seconds, fahrenheit, ampere, candela.
-    eng_linear = 0x3,
-    // English Rotation has the following units:
-    // degrees, slug, seconds, fahrenheit, ampere, candela.
-    eng_rotation = 0x4,
-    reserved = 0x5,
+  // SI Linear has the following units:
+  // centimeter, gram, seconds, kelvin, ampere, candela.
+  si_linear = 0x1,
+  // SI Rotation has the following units:
+  // radians, gram, seconds, kelvin, ampere, candela.
+  si_rotation = 0x2,
+  // English Linear has the following units:
+  // inch, slug, seconds, fahrenheit, ampere, candela.
+  eng_linear = 0x3,
+  // English Rotation has the following units:
+  // degrees, slug, seconds, fahrenheit, ampere, candela.
+  eng_rotation = 0x4,
+  reserved = 0x5,
 };
 
 // Sets a Unit's system. A unit can only belong to a single system.
@@ -62,7 +62,7 @@ int GetLuminousExp(const Unit& unit);
 // Returns False if it is impossible to do the conversion.
 bool ConvertUnits(const Unit& unit_in, double val_in, const Unit& unit_out, double* val_out);
 
-} // namespace unit
-} // namespace hid
+}  // namespace unit
+}  // namespace hid
 
-#endif // HID_PARSER_UNITS_H_
+#endif  // HID_PARSER_UNITS_H_

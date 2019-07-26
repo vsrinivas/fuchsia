@@ -5,12 +5,11 @@
 #pragma once
 
 typedef struct {
-    uint32_t rate;
-    uint16_t premux;
-    uint16_t postmux;
-    uint16_t mux_div;
+  uint32_t rate;
+  uint16_t premux;
+  uint16_t postmux;
+  uint16_t mux_div;
 } aml_fclk_rate_table_t;
-
 
 __BEGIN_CDECLS
 

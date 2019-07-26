@@ -591,7 +591,7 @@ struct LibraryComparator {
 std::set<const flat::Library*, LibraryComparator> TransitiveDependencies(
     const flat::Library* library) {
   std::set<const flat::Library*, LibraryComparator> dependencies;
-  auto add_dependency = [&] (const flat::Library* dep_library) {
+  auto add_dependency = [&](const flat::Library* dep_library) {
     if (!dep_library->HasAttribute("Internal")) {
       dependencies.insert(dep_library);
     }

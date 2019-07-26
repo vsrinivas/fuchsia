@@ -19,8 +19,7 @@ class LinearizerFuzzer {
  public:
   static constexpr inline uint64_t kBuffer = 1024;
 
-  LinearizerFuzzer(bool log_stuff)
-      : logging_(log_stuff ? new Logging(&timer_) : nullptr) {}
+  LinearizerFuzzer(bool log_stuff) : logging_(log_stuff ? new Logging(&timer_) : nullptr) {}
 
   ~LinearizerFuzzer() { SetClosed(StatusCode::CANCELLED); }
 
@@ -29,8 +28,7 @@ class LinearizerFuzzer {
 
   // Push a new block onto the linearizer at offset 'offset', with length
   // 'length', an end_of_message flag, and data bytes in 'data'.
-  void Push(uint16_t offset, uint8_t length, bool end_of_message,
-            const uint8_t* data);
+  void Push(uint16_t offset, uint8_t length, bool end_of_message, const uint8_t* data);
 
   // Execute a pull op on the linearizer, and verify that it's as expected.
   void Pull();

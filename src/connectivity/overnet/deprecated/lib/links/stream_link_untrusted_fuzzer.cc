@@ -54,14 +54,11 @@ class StreamLinkFuzzer {
 std::unique_ptr<StreamFramer> MakeFramer(
     const fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription& desc) {
   switch (desc.Which()) {
-    case fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription::Tag::
-        kUnknown:
+    case fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription::Tag::kUnknown:
       return nullptr;
-    case fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription::Tag::
-        kReliable:
+    case fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription::Tag::kReliable:
       return std::make_unique<ReliableFramer>();
-    case fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription::Tag::
-        kUnreliable:
+    case fuchsia::overnet::streamlinkfuzzer::UntrustedLinkDescription::Tag::kUnreliable:
       return std::make_unique<UnreliableFramer>();
   }
 }
@@ -69,9 +66,8 @@ std::unique_ptr<StreamFramer> MakeFramer(
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  if (auto buffer =
-          Decode<fuchsia::overnet::streamlinkfuzzer::UntrustedInputPlan>(
-              Slice::FromCopiedBuffer(data, size));
+  if (auto buffer = Decode<fuchsia::overnet::streamlinkfuzzer::UntrustedInputPlan>(
+          Slice::FromCopiedBuffer(data, size));
       buffer.is_ok()) {
     if (auto framer = MakeFramer(buffer->link_description)) {
       StreamLinkFuzzer(false, std::move(framer)).Run(std::move(buffer->input));

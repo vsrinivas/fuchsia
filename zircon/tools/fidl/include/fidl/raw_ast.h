@@ -437,8 +437,7 @@ class ProtocolDeclaration final : public SourceElement {
 class ServiceMember final : public SourceElement {
  public:
   ServiceMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
-                std::unique_ptr<Identifier> identifier,
-                std::unique_ptr<AttributeList> attributes)
+                std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
         type_ctor(std::move(type_ctor)),
         identifier(std::move(identifier)),

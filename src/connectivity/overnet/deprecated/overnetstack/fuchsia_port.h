@@ -16,8 +16,7 @@ inline overnet::TimeStamp ToTimeStamp(zx::time t) {
   if (t == zx::time::infinite()) {
     return overnet::TimeStamp::AfterEpoch(overnet::TimeDelta::PositiveInf());
   }
-  return overnet::TimeStamp::AfterEpoch(
-      overnet::TimeDelta::FromMicroseconds(t.get() / 1000));
+  return overnet::TimeStamp::AfterEpoch(overnet::TimeDelta::FromMicroseconds(t.get() / 1000));
 }
 
 inline zx::time FromTimeStamp(overnet::TimeStamp t) {

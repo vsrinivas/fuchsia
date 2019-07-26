@@ -25,12 +25,10 @@ constexpr double kDefaultFramesPerSecond = 24;
 }  // namespace
 
 std::unique_ptr<FrameSink> FrameSink::Create(
-    component::StartupContext* startup_context, async::Loop* main_loop,
-    double frames_per_second,
+    component::StartupContext* startup_context, async::Loop* main_loop, double frames_per_second,
     fit::function<void(FrameSink*)> view_connected_callback) {
-  return std::unique_ptr<FrameSink>(
-      new FrameSink(startup_context, main_loop, frames_per_second,
-                    std::move(view_connected_callback)));
+  return std::unique_ptr<FrameSink>(new FrameSink(startup_context, main_loop, frames_per_second,
+                                                  std::move(view_connected_callback)));
 }
 
 FrameSink::~FrameSink() {
@@ -41,10 +39,9 @@ FrameSink::~FrameSink() {
 }
 
 // Must be called on main_loop_'s thread.
-void FrameSink::PutFrame(
-    uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_offset,
-    std::shared_ptr<const fuchsia::media::StreamOutputFormat> output_format,
-    fit::closure on_done) {
+void FrameSink::PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_offset,
+                         std::shared_ptr<const fuchsia::media::StreamOutputFormat> output_format,
+                         fit::closure on_done) {
   // This method fans out to the views_, and runs on_done async when all the
   // views_ are done with the frame.
 
@@ -64,14 +61,12 @@ void FrameSink::PutFrame(
     frames_outstanding_--;
     CheckIfAllFramesReturned();
   });
-  auto shared_done_runner =
-      std::make_shared<decltype(done_runner)>(std::move(done_runner));
+  auto shared_done_runner = std::make_shared<decltype(done_runner)>(std::move(done_runner));
 
   FXL_DCHECK(output_format->has_format_details());
   FXL_DCHECK(output_format->format_details().has_domain());
   FXL_DCHECK(output_format->format_details().domain().is_video());
-  FXL_DCHECK(
-      output_format->format_details().domain().video().is_uncompressed());
+  FXL_DCHECK(output_format->format_details().domain().video().is_uncompressed());
   const fuchsia::media::VideoUncompressedFormat& video_format =
       output_format->format_details().domain().video().uncompressed();
 
@@ -86,20 +81,17 @@ void FrameSink::PutFrame(
   }
   last_requested_present_time_ = present_time;
 
-  FXL_VLOG(3) << "putting frame - present_time: " << present_time
-              << " image_id: " << image_id;
+  FXL_VLOG(3) << "putting frame - present_time: " << present_time << " image_id: " << image_id;
 
   for (FrameSinkView* view : views_) {
-    view->PutFrame(image_id, present_time, vmo, vmo_offset, video_format,
-                   [shared_done_runner] {
-                     // ~shared_done_runner will run on_done when shared_ptr<>
-                     // refcount drops to 0
-                   });
+    view->PutFrame(image_id, present_time, vmo, vmo_offset, video_format, [shared_done_runner] {
+      // ~shared_done_runner will run on_done when shared_ptr<>
+      // refcount drops to 0
+    });
   }
 }
 
-void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(
-    fit::closure on_frames_returned) {
+void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_frames_returned) {
   // We make a blank frame and send that in to be displayed 5 seconds after the
   // last real frame, to give us a chance to see the last frame of a short .h264
   // file.  The blank frame is necessary to get Scenic to release the last real
@@ -126,8 +118,7 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(
       last_requested_present_time_ + ZX_SEC(kDelayBeforeBlankFrameSeconds);
   ::zx::vmo blank_frame_vmo;
   zx_status_t status = ::zx::vmo::create(kBlankFrameBytes, 0, &blank_frame_vmo);
-  FXL_CHECK(status == ZX_OK)
-      << "::zx::vmo::create() failed - status: " << status;
+  FXL_CHECK(status == ZX_OK) << "::zx::vmo::create() failed - status: " << status;
 
   // We intentionally change the format, including pixel format, for the blank
   // frame, because it's easier to generate a black frame in RGB, and because
@@ -145,9 +136,8 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(
 
   for (FrameSinkView* view : views_) {
     // This frame is not necessarily ever returned, which is fine.
-    view->PutFrame(kBlankFrameImageId, blank_frame_present_time,
-                   blank_frame_vmo, kBlankFrameVmoOffset,
-                   blank_frame_video_format, nullptr);
+    view->PutFrame(kBlankFrameImageId, blank_frame_present_time, blank_frame_vmo,
+                   kBlankFrameVmoOffset, blank_frame_video_format, nullptr);
   }
 
   FXL_DCHECK(!on_frames_returned_);
@@ -166,14 +156,13 @@ void FrameSink::AddFrameSinkView(FrameSinkView* view) {
 
 void FrameSink::RemoveFrameSinkView(FrameSinkView* view) { views_.erase(view); }
 
-FrameSink::FrameSink(component::StartupContext* startup_context,
-                     async::Loop* main_loop, double frames_per_second,
+FrameSink::FrameSink(component::StartupContext* startup_context, async::Loop* main_loop,
+                     double frames_per_second,
                      fit::function<void(FrameSink*)> view_connected_callback)
     : startup_context_(startup_context),
       main_loop_(main_loop),
       // IEEE 754 floating point can represent 0.0 exactly.
-      frames_per_second_(frames_per_second != 0.0 ? frames_per_second
-                                                  : kDefaultFramesPerSecond),
+      frames_per_second_(frames_per_second != 0.0 ? frames_per_second : kDefaultFramesPerSecond),
       view_connected_callback_(std::move(view_connected_callback)) {
   view_provider_component_ = std::make_unique<scenic::ViewProviderComponent>(
       [this](scenic::ViewContext view_context) {
@@ -187,10 +176,9 @@ void FrameSink::CheckIfAllFramesReturned() {
     // Always post, because calling back on same stack as setup of the async
     // wait is a completely different thing that we can just avoid doing in the
     // first place.
-    async::PostTask(main_loop_->dispatcher(),
-                    [on_frames_returned = std::move(on_frames_returned_)] {
-                      on_frames_returned();
-                    });
+    async::PostTask(
+        main_loop_->dispatcher(),
+        [on_frames_returned = std::move(on_frames_returned_)] { on_frames_returned(); });
     FXL_DCHECK(!on_frames_returned_);
   }
 }

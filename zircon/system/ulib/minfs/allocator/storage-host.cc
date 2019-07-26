@@ -8,14 +8,13 @@
 
 namespace minfs {
 
-PersistentStorage::PersistentStorage(SuperblockManager* sb, size_t unit_size,
-                                     GrowHandler grow_cb, AllocatorMetadata metadata)
-        : sb_(sb),  grow_cb_(std::move(grow_cb)), metadata_(std::move(metadata)) {
-}
+PersistentStorage::PersistentStorage(SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
+                                     AllocatorMetadata metadata)
+    : sb_(sb), grow_cb_(std::move(grow_cb)), metadata_(std::move(metadata)) {}
 
 zx_status_t PersistentStorage::Extend(WriteTxn* write_transaction, WriteData data,
                                       GrowMapCallback grow_map) {
-    return ZX_ERR_NO_SPACE;
+  return ZX_ERR_NO_SPACE;
 }
 
-} // namespace minfs
+}  // namespace minfs

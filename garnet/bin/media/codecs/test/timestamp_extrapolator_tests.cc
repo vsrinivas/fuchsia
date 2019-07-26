@@ -6,8 +6,7 @@
 #include "gtest/gtest.h"
 
 constexpr uint64_t k48000HzDualPCMBytesPerSecond = 48000 * sizeof(uint16_t) * 2;
-constexpr uint64_t k48000HzDualPCMByteDuration =
-    ZX_SEC(1) / 48000 / sizeof(uint16_t) / 2;
+constexpr uint64_t k48000HzDualPCMByteDuration = ZX_SEC(1) / 48000 / sizeof(uint16_t) / 2;
 
 TEST(TimestampExtrapolator, InformIsSuperceded) {
   TimestampExtrapolator extrapolator(ZX_SEC(1), k48000HzDualPCMBytesPerSecond);
@@ -41,8 +40,7 @@ TEST(TimestampExtrapolator, FastTime) {
 }
 
 TEST(TimestampExtrapolator, SlowTime) {
-  TimestampExtrapolator extrapolator(ZX_SEC(1) / 2,
-                                     k48000HzDualPCMBytesPerSecond);
+  TimestampExtrapolator extrapolator(ZX_SEC(1) / 2, k48000HzDualPCMBytesPerSecond);
 
   extrapolator.Inform(0, 0);
   EXPECT_EQ(*extrapolator.Extrapolate(2), k48000HzDualPCMByteDuration);

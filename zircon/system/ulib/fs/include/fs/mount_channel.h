@@ -9,7 +9,7 @@
 #ifdef __Fuchsia__
 #include <lib/zx/channel.h>
 #include <fs/client.h>
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 
 #include <utility>
 
@@ -25,27 +25,24 @@ namespace fs {
 // is released (which cleans up the underlying connection to the block
 // device).
 class MountChannel {
-public:
-    constexpr MountChannel() = default;
-    explicit MountChannel(zx_handle_t handle)
-        : channel_(handle) {}
-    explicit MountChannel(zx::channel channel)
-        : channel_(std::move(channel)) {}
-    MountChannel(MountChannel&& other)
-        : channel_(std::move(other.channel_)) {}
+ public:
+  constexpr MountChannel() = default;
+  explicit MountChannel(zx_handle_t handle) : channel_(handle) {}
+  explicit MountChannel(zx::channel channel) : channel_(std::move(channel)) {}
+  MountChannel(MountChannel&& other) : channel_(std::move(other.channel_)) {}
 
-    zx::channel TakeChannel() { return std::move(channel_); }
+  zx::channel TakeChannel() { return std::move(channel_); }
 
-    ~MountChannel() {
-        if (channel_.is_valid()) {
-            vfs_unmount_handle(channel_.release(), 0);
-        }
+  ~MountChannel() {
+    if (channel_.is_valid()) {
+      vfs_unmount_handle(channel_.release(), 0);
     }
+  }
 
-private:
-    zx::channel channel_;
+ private:
+  zx::channel channel_;
 };
 
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 
-} // namespace fs
+}  // namespace fs

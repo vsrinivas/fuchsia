@@ -25,40 +25,35 @@ namespace {
 TEST(SysloggerSettings, ParseValidOptions) {
   syslog::LogSettings settings = {FX_LOG_ERROR, -1};
 
-  EXPECT_STR_EMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0"}), &settings));
+  EXPECT_STR_EMPTY(ParseLoggerSettings(fxl::CommandLineFromInitializerList({"argv0"}), &settings));
   EXPECT_EQ(FX_LOG_ERROR, settings.severity);
 
-  EXPECT_STR_EMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--verbose"}), &settings));
+  EXPECT_STR_EMPTY(
+      ParseLoggerSettings(fxl::CommandLineFromInitializerList({"argv0", "--verbose"}), &settings));
   EXPECT_EQ(-1, settings.severity);
 
   EXPECT_STR_EMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--verbose=0"}),
-      &settings));
+      fxl::CommandLineFromInitializerList({"argv0", "--verbose=0"}), &settings));
   EXPECT_EQ(0, settings.severity);
 
   EXPECT_STR_EMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--verbose=3"}),
-      &settings));
+      fxl::CommandLineFromInitializerList({"argv0", "--verbose=3"}), &settings));
   EXPECT_EQ(-3, settings.severity);
 
-  EXPECT_STR_EMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--quiet=0"}), &settings));
+  EXPECT_STR_EMPTY(
+      ParseLoggerSettings(fxl::CommandLineFromInitializerList({"argv0", "--quiet=0"}), &settings));
   EXPECT_EQ(0, settings.severity);
-
-  EXPECT_STR_EMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--quiet"}), &settings));
-  EXPECT_EQ(0, settings.severity);
-
-  EXPECT_STR_EMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--quiet=3"}), &settings));
-  EXPECT_EQ(3, settings.severity);
 
   EXPECT_STR_EMPTY(
-      ParseLoggerSettings(fxl::CommandLineFromInitializerList(
-                              {"argv0", "--log-file=/tmp/custom.log"}),
-                          &settings));
+      ParseLoggerSettings(fxl::CommandLineFromInitializerList({"argv0", "--quiet"}), &settings));
+  EXPECT_EQ(0, settings.severity);
+
+  EXPECT_STR_EMPTY(
+      ParseLoggerSettings(fxl::CommandLineFromInitializerList({"argv0", "--quiet=3"}), &settings));
+  EXPECT_EQ(3, settings.severity);
+
+  EXPECT_STR_EMPTY(ParseLoggerSettings(
+      fxl::CommandLineFromInitializerList({"argv0", "--log-file=/tmp/custom.log"}), &settings));
   EXPECT_GT(settings.fd, 0);
   close(settings.fd);
 }
@@ -68,28 +63,23 @@ TEST(SysloggerSettings, ParseInvalidOptions) {
   syslog::LogSettings settings = {FX_LOG_ERROR, -1};
 
   EXPECT_STR_NEMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--verbose=-1"}),
-      &settings));
+      fxl::CommandLineFromInitializerList({"argv0", "--verbose=-1"}), &settings));
   EXPECT_EQ(FX_LOG_ERROR, settings.severity);
 
   EXPECT_STR_NEMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--verbose=123garbage"}),
-      &settings));
-  EXPECT_EQ(FX_LOG_ERROR, settings.severity);
-
-  EXPECT_STR_NEMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--quiet=-1"}), &settings));
-  EXPECT_EQ(FX_LOG_ERROR, settings.severity);
-
-  EXPECT_STR_NEMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--quiet=123garbage"}),
-      &settings));
+      fxl::CommandLineFromInitializerList({"argv0", "--verbose=123garbage"}), &settings));
   EXPECT_EQ(FX_LOG_ERROR, settings.severity);
 
   EXPECT_STR_NEMPTY(
-      ParseLoggerSettings(fxl::CommandLineFromInitializerList(
-                              {"argv0", "--log-file=\\\\//invalid-path"}),
-                          &settings));
+      ParseLoggerSettings(fxl::CommandLineFromInitializerList({"argv0", "--quiet=-1"}), &settings));
+  EXPECT_EQ(FX_LOG_ERROR, settings.severity);
+
+  EXPECT_STR_NEMPTY(ParseLoggerSettings(
+      fxl::CommandLineFromInitializerList({"argv0", "--quiet=123garbage"}), &settings));
+  EXPECT_EQ(FX_LOG_ERROR, settings.severity);
+
+  EXPECT_STR_NEMPTY(ParseLoggerSettings(
+      fxl::CommandLineFromInitializerList({"argv0", "--log-file=\\\\//invalid-path"}), &settings));
   EXPECT_EQ(FX_LOG_ERROR, settings.severity);
   EXPECT_EQ(-1, settings.fd);
 }
@@ -97,13 +87,11 @@ TEST(SysloggerSettings, ParseInvalidOptions) {
 TEST(SysLoggerInit, Init) {
   fx_log_reset_global_for_testing();
   ASSERT_EQ(ZX_OK,
-            InitLoggerFromCommandLine(
-                fxl::CommandLineFromInitializerList({"argv0", "--verbose=0"}),
-                {"tag1", "tag2"}));
+            InitLoggerFromCommandLine(fxl::CommandLineFromInitializerList({"argv0", "--verbose=0"}),
+                                      {"tag1", "tag2"}));
   fx_log_reset_global_for_testing();
-  ASSERT_EQ(ZX_OK,
-            InitLoggerFromCommandLine(
-                fxl::CommandLineFromInitializerList({"argv0", "--verbose=0"})));
+  ASSERT_EQ(ZX_OK, InitLoggerFromCommandLine(
+                       fxl::CommandLineFromInitializerList({"argv0", "--verbose=0"})));
   fx_log_reset_global_for_testing();
 }
 

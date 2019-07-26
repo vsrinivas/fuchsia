@@ -10,20 +10,15 @@
 // TODO(FLK-160): Re-enable when flakiness is fixed.
 #if !defined(__arm__) && !defined(__aarch64__)
 TEST(FtlTest, BlockTest) {
-    const char* argv[] = {"/boot/bin/blktest", "-d", kTestDevice};
+  const char* argv[] = {"/boot/bin/blktest", "-d", kTestDevice};
 
-    ASSERT_EQ(0, Execute(countof(argv), argv));
+  ASSERT_EQ(0, Execute(countof(argv), argv));
 }
 
 TEST(FtlTest, IoCheck) {
-    const char* argv[] = {
-        "/boot/bin/iochk",
-        "-bs", "32k",
-        "--live-dangerously",
-        "-t", "2",
-        kTestDevice
-    };
+  const char* argv[] = {"/boot/bin/iochk", "-bs", "32k", "--live-dangerously", "-t", "2",
+                        kTestDevice};
 
-    ASSERT_EQ(0, Execute(countof(argv), argv));
+  ASSERT_EQ(0, Execute(countof(argv), argv));
 }
 #endif

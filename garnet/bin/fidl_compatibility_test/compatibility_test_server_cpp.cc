@@ -34,21 +34,18 @@ class EchoServerApp : public Echo {
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
-      app.echo().set_error_handler(
-          [this, &forward_to_server, &failed](zx_status_t status) {
-            failed = true;
-            loop_->Quit();
-            FXL_LOG(ERROR) << "error communicating with " << forward_to_server
-                           << ": " << status;
-          });
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
       app.Start(forward_to_server);
       bool called_back = false;
-      app.echo()->EchoStruct(std::move(value), "",
-                             [this, &called_back, &callback](Struct resp) {
-                               called_back = true;
-                               callback(std::move(resp));
-                               loop_->Quit();
-                             });
+      app.echo()->EchoStruct(std::move(value), "", [this, &called_back, &callback](Struct resp) {
+        called_back = true;
+        callback(std::move(resp));
+        loop_->Quit();
+      });
       while (!called_back && !failed) {
         loop_->Run();
       }
@@ -58,16 +55,13 @@ class EchoServerApp : public Echo {
     }
   }
 
-  void EchoStructNoRetVal(Struct value,
-                          std::string forward_to_server) override {
+  void EchoStructNoRetVal(Struct value, std::string forward_to_server) override {
     if (!forward_to_server.empty()) {
       std::unique_ptr<EchoClientApp> app(new EchoClientApp);
-      app->echo().set_error_handler(
-          [this, &forward_to_server](zx_status_t status) {
-            loop_->Quit();
-            FXL_LOG(ERROR) << "error communicating with " << forward_to_server
-                           << ": " << status;
-          });
+      app->echo().set_error_handler([this, &forward_to_server](zx_status_t status) {
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
       app->Start(forward_to_server);
       app->echo().events().EchoEvent = [this](Struct resp) {
         this->HandleEchoEvent(std::move(resp));
@@ -88,22 +82,19 @@ class EchoServerApp : public Echo {
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
-      app.echo().set_error_handler(
-          [this, &forward_to_server, &failed](zx_status_t status) {
-            failed = true;
-            loop_->Quit();
-            FXL_LOG(ERROR) << "error communicating with " << forward_to_server
-                           << ": " << status;
-          });
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
       app.Start(forward_to_server);
       bool called_back = false;
-      app.echo()->EchoArrays(
-          std::move(value), "",
-          [this, &called_back, &callback](ArraysStruct resp) {
-            called_back = true;
-            callback(std::move(resp));
-            loop_->Quit();
-          });
+      app.echo()->EchoArrays(std::move(value), "",
+                             [this, &called_back, &callback](ArraysStruct resp) {
+                               called_back = true;
+                               callback(std::move(resp));
+                               loop_->Quit();
+                             });
       while (!called_back && !failed) {
         loop_->Run();
       }
@@ -118,22 +109,19 @@ class EchoServerApp : public Echo {
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
-      app.echo().set_error_handler(
-          [this, &forward_to_server, &failed](zx_status_t status) {
-            failed = true;
-            loop_->Quit();
-            FXL_LOG(ERROR) << "error communicating with " << forward_to_server
-                           << ": " << status;
-          });
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
       app.Start(forward_to_server);
       bool called_back = false;
-      app.echo()->EchoVectors(
-          std::move(value), "",
-          [this, &called_back, &callback](VectorsStruct resp) {
-            called_back = true;
-            callback(std::move(resp));
-            loop_->Quit();
-          });
+      app.echo()->EchoVectors(std::move(value), "",
+                              [this, &called_back, &callback](VectorsStruct resp) {
+                                called_back = true;
+                                callback(std::move(resp));
+                                loop_->Quit();
+                              });
       while (!called_back && !failed) {
         loop_->Run();
       }
@@ -148,22 +136,19 @@ class EchoServerApp : public Echo {
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
-      app.echo().set_error_handler(
-          [this, &forward_to_server, &failed](zx_status_t status) {
-            failed = true;
-            loop_->Quit();
-            FXL_LOG(ERROR) << "error communicating with " << forward_to_server
-                           << ": " << status;
-          });
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
       app.Start(forward_to_server);
       bool called_back = false;
-      app.echo()->EchoTable(
-          std::move(value), "",
-          [this, &called_back, &callback](AllTypesTable resp) {
-            called_back = true;
-            callback(std::move(resp));
-            loop_->Quit();
-          });
+      app.echo()->EchoTable(std::move(value), "",
+                            [this, &called_back, &callback](AllTypesTable resp) {
+                              called_back = true;
+                              callback(std::move(resp));
+                              loop_->Quit();
+                            });
       while (!called_back && !failed) {
         loop_->Run();
       }
@@ -173,28 +158,24 @@ class EchoServerApp : public Echo {
     }
   }
 
-  void EchoXunions(std::vector<AllTypesXunion> value,
-                   std::string forward_to_server,
+  void EchoXunions(std::vector<AllTypesXunion> value, std::string forward_to_server,
                    EchoXunionsCallback callback) override {
     if (!forward_to_server.empty()) {
       EchoClientApp app;
       bool failed = false;
-      app.echo().set_error_handler(
-          [this, &forward_to_server, &failed](zx_status_t status) {
-            failed = true;
-            loop_->Quit();
-            FXL_LOG(ERROR) << "error communicating with " << forward_to_server
-                           << ": " << status;
-          });
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
       app.Start(forward_to_server);
       bool called_back = false;
-      app.echo()->EchoXunions(
-          std::move(value), "",
-          [this, &called_back, &callback](std::vector<AllTypesXunion> resp) {
-            called_back = true;
-            callback(std::move(resp));
-            loop_->Quit();
-          });
+      app.echo()->EchoXunions(std::move(value), "",
+                              [this, &called_back, &callback](std::vector<AllTypesXunion> resp) {
+                                called_back = true;
+                                callback(std::move(resp));
+                                loop_->Quit();
+                              });
       while (!called_back && !failed) {
         loop_->Run();
       }

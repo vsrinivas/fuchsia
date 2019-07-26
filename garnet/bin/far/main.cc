@@ -24,8 +24,7 @@ constexpr fxl::StringView kList = "list";
 constexpr fxl::StringView kExtract = "extract";
 constexpr fxl::StringView kExtractFile = "extract-file";
 
-constexpr fxl::StringView kKnownCommands =
-    "create, list, cat, extract, or extract-file";
+constexpr fxl::StringView kKnownCommands = "create, list, cat, extract, or extract-file";
 
 // Options
 constexpr fxl::StringView kArchive = "archive";
@@ -34,17 +33,14 @@ constexpr fxl::StringView kFile = "file";
 constexpr fxl::StringView kOutput = "output";
 
 constexpr fxl::StringView kCatUsage = "cat --archive=<archive> --file=<path> ";
-constexpr fxl::StringView kCreateUsage =
-    "create --archive=<archive> --manifest=<manifest>";
+constexpr fxl::StringView kCreateUsage = "create --archive=<archive> --manifest=<manifest>";
 constexpr fxl::StringView kListUsage = "list --archive=<archive>";
-constexpr fxl::StringView kExtractUsage =
-    "extract --archive=<archive> --output=<path>";
+constexpr fxl::StringView kExtractUsage = "extract --archive=<archive> --output=<path>";
 constexpr fxl::StringView kExtractFileUsage =
     "extract-file --archive=<archive> --file=<path> --output=<path>";
 
-bool GetOptionValue(const fxl::CommandLine& command_line,
-                    fxl::StringView option, fxl::StringView usage,
-                    std::string* value) {
+bool GetOptionValue(const fxl::CommandLine& command_line, fxl::StringView option,
+                    fxl::StringView usage, std::string* value) {
   if (!command_line.GetOptionValue(option, value)) {
     fprintf(stderr,
             "error: Missing --%s argument.\n"
@@ -60,8 +56,7 @@ int Create(const fxl::CommandLine& command_line) {
   if (!GetOptionValue(command_line, kArchive, kCreateUsage, &archive_path))
     return -1;
 
-  std::vector<fxl::StringView> manifest_paths =
-      command_line.GetOptionValues(kManifest);
+  std::vector<fxl::StringView> manifest_paths = command_line.GetOptionValues(kManifest);
   if (manifest_paths.empty())
     return -1;
 
@@ -190,6 +185,5 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  return archive::RunCommand(argv[1],
-                             fxl::CommandLineFromArgcArgv(argc - 1, argv + 1));
+  return archive::RunCommand(argv[1], fxl::CommandLineFromArgcArgv(argc - 1, argv + 1));
 }

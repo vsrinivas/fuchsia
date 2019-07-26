@@ -34,34 +34,34 @@ namespace rtl88xx {
 // Realtek driver. It owns the Device that implements chipset-specific logic, as well as managing
 // the WlanMac instances that present the MAC interface.
 class WlanPhy {
-   public:
-    // Factory function for WlanPhy instances. This factory returns an error code, rather than the
-    // instance itself, since the instance is owned by the zx_device_t it creates and thus its
-    // lifetime is managed by the devhost.
-    static zx_status_t Create(zx_device_t* bus_device);
-    ~WlanPhy();
+ public:
+  // Factory function for WlanPhy instances. This factory returns an error code, rather than the
+  // instance itself, since the instance is owned by the zx_device_t it creates and thus its
+  // lifetime is managed by the devhost.
+  static zx_status_t Create(zx_device_t* bus_device);
+  ~WlanPhy();
 
-   private:
-    WlanPhy();
-    WlanPhy(const WlanPhy& other) = delete;
-    WlanPhy(WlanPhy&& other) = delete;
-    WlanPhy& operator=(WlanPhy other) = delete;
+ private:
+  WlanPhy();
+  WlanPhy(const WlanPhy& other) = delete;
+  WlanPhy(WlanPhy&& other) = delete;
+  WlanPhy& operator=(WlanPhy other) = delete;
 
-    // zx_protocol_device_t implementation.
-    void Unbind();
-    void Release();
+  // zx_protocol_device_t implementation.
+  void Unbind();
+  void Release();
 
-    // wlanphy_impl_protocol_ops implementation.
-    zx_status_t Query(wlanphy_impl_info_t* info);
-    zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id);
-    zx_status_t DestroyIface(uint16_t id);
-    zx_status_t SetCountry(const wlanphy_country_t* country);
+  // wlanphy_impl_protocol_ops implementation.
+  zx_status_t Query(wlanphy_impl_info_t* info);
+  zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id);
+  zx_status_t DestroyIface(uint16_t id);
+  zx_status_t SetCountry(const wlanphy_country_t* country);
 
-    std::unique_ptr<Device> device_;
-    // `zx_device_` owns this WlanPhy instance; thus this pointer is unowned.
-    zx_device_t* zx_device_;
-    // The lifetime of `wlan_mac_` is managed by the devhost; thus this pointer is unowned.
-    WlanMac* wlan_mac_;
+  std::unique_ptr<Device> device_;
+  // `zx_device_` owns this WlanPhy instance; thus this pointer is unowned.
+  zx_device_t* zx_device_;
+  // The lifetime of `wlan_mac_` is managed by the devhost; thus this pointer is unowned.
+  WlanMac* wlan_mac_;
 };
 
 }  // namespace rtl88xx

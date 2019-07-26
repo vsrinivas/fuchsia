@@ -60,20 +60,17 @@ CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
       [this](zx::channel request) {
         // The CodecFactoryImpl is self-owned and will self-delete when the
         // channel closes or an error occurs.
-        CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(),
-                                          std::move(request));
+        CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request));
       },
       fuchsia::mediacodec::CodecFactory::Name_);
 }
 
 const fuchsia::mediacodec::CodecFactoryPtr* CodecFactoryApp::FindHwDecoder(
-    fit::function<bool(const fuchsia::mediacodec::CodecDescription&)>
-        is_match) {
-  auto iter = std::find_if(
-      hw_codecs_.begin(), hw_codecs_.end(),
-      [&is_match](const std::unique_ptr<CodecListEntry>& entry) -> bool {
-        return is_match(entry->description);
-      });
+    fit::function<bool(const fuchsia::mediacodec::CodecDescription&)> is_match) {
+  auto iter = std::find_if(hw_codecs_.begin(), hw_codecs_.end(),
+                           [&is_match](const std::unique_ptr<CodecListEntry>& entry) -> bool {
+                             return is_match(entry->description);
+                           });
   if (iter == hw_codecs_.end()) {
     return nullptr;
   }
@@ -97,26 +94,22 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
       [this](int dir_fd, std::string filename) {
         std::string device_path = std::string(kDeviceClass) + "/" + filename;
         zx::channel device_channel, device_remote;
-        zx_status_t status =
-            zx::channel::create(0, &device_channel, &device_remote);
+        zx_status_t status = zx::channel::create(0, &device_channel, &device_remote);
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to create channel - status: " << status;
           return;
         }
         zx::channel client_factory_channel, client_factory_remote;
-        status = zx::channel::create(0, &client_factory_channel,
-                                     &client_factory_remote);
+        status = zx::channel::create(0, &client_factory_channel, &client_factory_remote);
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to create channel - status: " << status;
           return;
         }
 
-        status =
-            fdio_service_connect(device_path.c_str(), device_remote.release());
+        status = fdio_service_connect(device_path.c_str(), device_remote.release());
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to connect to device by filename -"
-                         << " status: " << status
-                         << " device_path: " << device_path;
+                         << " status: " << status << " device_path: " << device_path;
           return;
         }
 
@@ -124,8 +117,7 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
         status = device_interface.Bind(std::move(device_channel));
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to bind to interface -"
-                         << " status: " << status
-                         << " device_path: " << device_path;
+                         << " status: " << status << " device_path: " << device_path;
           return;
         }
         device_interface->GetCodecFactory(std::move(client_factory_remote));
@@ -137,16 +129,14 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
         auto discovery_entry = std::make_unique<DeviceDiscoveryEntry>();
         discovery_entry->device_path = device_path;
 
-        discovery_entry->codec_factory =
-            std::make_shared<fuchsia::mediacodec::CodecFactoryPtr>();
+        discovery_entry->codec_factory = std::make_shared<fuchsia::mediacodec::CodecFactoryPtr>();
         discovery_entry->codec_factory->set_error_handler(
-            [this, device_path, factory = discovery_entry->codec_factory.get()](
-                zx_status_t status) {
+            [this, device_path,
+             factory = discovery_entry->codec_factory.get()](zx_status_t status) {
               // Any given factory won't be in both lists, but will be in one or
               // the other by the time this error handler runs.
               device_discovery_queue_.remove_if(
-                  [factory](
-                      const std::unique_ptr<DeviceDiscoveryEntry>& entry) {
+                  [factory](const std::unique_ptr<DeviceDiscoveryEntry>& entry) {
                     return factory == entry->codec_factory.get();
                   });
               // Perhaps the removed discovery item was the first item in the
@@ -154,10 +144,9 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
               // processed.
               PostDiscoveryQueueProcessing();
 
-              hw_codecs_.remove_if(
-                  [factory](const std::unique_ptr<CodecListEntry>& entry) {
-                    return factory == entry->factory.get();
-                  });
+              hw_codecs_.remove_if([factory](const std::unique_ptr<CodecListEntry>& entry) {
+                return factory == entry->factory.get();
+              });
             });
 
         discovery_entry->codec_factory->events().OnCodecList =
@@ -185,16 +174,14 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
         // The idle_callback indicates that all pre-existing devices have been
         // seen, and by the time this item reaches the front of the discovery
         // queue, all pre-existing devices have all been processed.
-        device_discovery_queue_.emplace_back(
-            std::make_unique<DeviceDiscoveryEntry>());
+        device_discovery_queue_.emplace_back(std::make_unique<DeviceDiscoveryEntry>());
         PostDiscoveryQueueProcessing();
       });
 }
 
 void CodecFactoryApp::PostDiscoveryQueueProcessing() {
-  async::PostTask(
-      loop_->dispatcher(),
-      fit::bind_member(this, &CodecFactoryApp::ProcessDiscoveryQueue));
+  async::PostTask(loop_->dispatcher(),
+                  fit::bind_member(this, &CodecFactoryApp::ProcessDiscoveryQueue));
 }
 
 void CodecFactoryApp::ProcessDiscoveryQueue() {
@@ -241,8 +228,7 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
   // work despite a devhost not always fully working), even if the Codec failure
   // happens quite early.
   while (!device_discovery_queue_.empty()) {
-    std::unique_ptr<DeviceDiscoveryEntry>& front =
-        device_discovery_queue_.front();
+    std::unique_ptr<DeviceDiscoveryEntry>& front = device_discovery_queue_.front();
     if (!front->codec_factory) {
       // All pre-existing devices have been processed.
       //

@@ -45,22 +45,19 @@ int main(int argc, char** argv) {
   // Certain services in appmgr's /svc, which is served by svchost, are added to
   // the root realm so they can be routed into a nested environment (such as the
   // sys realm in sysmgr) and used in components.
-  fuchsia::sys::ServiceListPtr root_realm_services(
-      new fuchsia::sys::ServiceList);
+  fuchsia::sys::ServiceListPtr root_realm_services(new fuchsia::sys::ServiceList);
   root_realm_services->names = RootRealmServices();
-  root_realm_services->host_directory =
-      environment_services->CloneChannel().TakeChannel();
+  root_realm_services->host_directory = environment_services->CloneChannel().TakeChannel();
 
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  component::AppmgrArgs args{
-      .pa_directory_request = std::move(request),
-      .root_realm_services = std::move(root_realm_services),
-      .environment_services = std::move(environment_services),
-      .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
-      .sysmgr_args = {},
-      .run_virtual_console = true,
-      .retry_sysmgr_crash = true};
+  component::AppmgrArgs args{.pa_directory_request = std::move(request),
+                             .root_realm_services = std::move(root_realm_services),
+                             .environment_services = std::move(environment_services),
+                             .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
+                             .sysmgr_args = {},
+                             .run_virtual_console = true,
+                             .retry_sysmgr_crash = true};
   component::Appmgr appmgr(loop.dispatcher(), std::move(args));
 
   loop.Run();

@@ -15,19 +15,19 @@
 namespace blobfs {
 
 enum class OperationType {
-    kRead,
-    kWrite,
-    kTrim, // Unimplemented.
+  kRead,
+  kWrite,
+  kTrim,  // Unimplemented.
 };
 
 // A mapping of an in-memory buffer to an on-disk location.
 //
 // All units are in Blobfs blocks.
 struct Operation {
-    OperationType type;
-    uint64_t vmo_offset = 0;
-    uint64_t dev_offset = 0;
-    uint64_t length = 0;
+  OperationType type;
+  uint64_t vmo_offset = 0;
+  uint64_t dev_offset = 0;
+  uint64_t length = 0;
 };
 
 // An operation paired with a source vmo.
@@ -36,8 +36,8 @@ struct Operation {
 // or vice versa. To be transmitted to storage, the |vmo| must be later
 // converted to a "vmoid_t" object.
 struct UnbufferedOperation {
-    zx::unowned_vmo vmo;
-    Operation op;
+  zx::unowned_vmo vmo;
+  Operation op;
 };
 
 // An operation paired with a source vmoid.
@@ -45,11 +45,11 @@ struct UnbufferedOperation {
 // This vmoid is a token that represents a buffer that is attached to the
 // underlying storage device.
 struct BufferedOperation {
-    vmoid_t vmoid;
-    Operation op;
+  vmoid_t vmoid;
+  Operation op;
 };
 
 // Sums the |length| of all requests.
 uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& requests);
 
-} // namespace blobfs
+}  // namespace blobfs

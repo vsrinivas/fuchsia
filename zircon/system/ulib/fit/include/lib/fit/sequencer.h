@@ -39,47 +39,46 @@ namespace fit {
 //     }
 //
 class sequencer final {
-public:
-    sequencer();
-    ~sequencer();
+ public:
+  sequencer();
+  ~sequencer();
 
-    // Returns a new promise which will invoke |promise| after all previously
-    // enqueued promises on this sequencer have completed or been abandoned.
-    //
-    // This method is thread-safe.
-    template <typename Promise>
-    decltype(auto) wrap(Promise promise) {
-        assert(promise);
+  // Returns a new promise which will invoke |promise| after all previously
+  // enqueued promises on this sequencer have completed or been abandoned.
+  //
+  // This method is thread-safe.
+  template <typename Promise>
+  decltype(auto) wrap(Promise promise) {
+    assert(promise);
 
-        fit::bridge<> bridge;
-        fit::consumer<> prior = swap_prior(std::move(bridge.consumer));
-        return prior.promise_or(fit::ok())
-            .then([promise = std::move(promise),
-                   completer = std::move(bridge.completer)](
-                      fit::context& context, const fit::result<>&) mutable {
-                // This handler will run once the completer associated
-                // with the |prior| promise is abandoned.  Once the promise
-                // has finished, both the promise and completer will be
-                // destroyed thereby causing the next promise chained onto
-                // the |bridge|'s associated consumer to become runnable.
-                return promise(context);
-            });
-    }
+    fit::bridge<> bridge;
+    fit::consumer<> prior = swap_prior(std::move(bridge.consumer));
+    return prior.promise_or(fit::ok()).then(
+        [promise = std::move(promise), completer = std::move(bridge.completer)](
+            fit::context& context, const fit::result<>&) mutable {
+          // This handler will run once the completer associated
+          // with the |prior| promise is abandoned.  Once the promise
+          // has finished, both the promise and completer will be
+          // destroyed thereby causing the next promise chained onto
+          // the |bridge|'s associated consumer to become runnable.
+          return promise(context);
+        });
+  }
 
-    sequencer(const sequencer&) = delete;
-    sequencer(sequencer&&) = delete;
-    sequencer& operator=(const sequencer&) = delete;
-    sequencer& operator=(sequencer&&) = delete;
+  sequencer(const sequencer&) = delete;
+  sequencer(sequencer&&) = delete;
+  sequencer& operator=(const sequencer&) = delete;
+  sequencer& operator=(sequencer&&) = delete;
 
-private:
-    fit::consumer<> swap_prior(fit::consumer<> new_prior);
+ private:
+  fit::consumer<> swap_prior(fit::consumer<> new_prior);
 
-    std::mutex mutex_;
+  std::mutex mutex_;
 
-    // Holds the consumption capability of the most recently wrapped promise.
-    fit::consumer<> prior_ FIT_GUARDED(mutex_);
+  // Holds the consumption capability of the most recently wrapped promise.
+  fit::consumer<> prior_ FIT_GUARDED(mutex_);
 };
 
-} // namespace fit
+}  // namespace fit
 
-#endif // LIB_FIT_SEQUENCER_H_
+#endif  // LIB_FIT_SEQUENCER_H_

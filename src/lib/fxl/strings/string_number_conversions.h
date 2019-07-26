@@ -34,8 +34,7 @@ std::string NumberToString(NumberType number, Base base = Base::k10);
 // unsigned types, unary '-' is not allowed. For signed types, "-0", "-00", etc.
 // are also allowed.
 template <typename NumberType>
-bool StringToNumberWithError(fxl::StringView string, NumberType* number,
-                             Base base = Base::k10);
+bool StringToNumberWithError(fxl::StringView string, NumberType* number, Base base = Base::k10);
 
 // Converts |string| containing a locale-independent representation of a
 // number to a numeric representation of that number. (On error, this returns
@@ -44,9 +43,7 @@ bool StringToNumberWithError(fxl::StringView string, NumberType* number,
 template <typename NumberType>
 NumberType StringToNumber(fxl::StringView string, Base base = Base::k10) {
   NumberType rv = static_cast<NumberType>(0);
-  return StringToNumberWithError(string, &rv, base)
-             ? rv
-             : static_cast<NumberType>(0);
+  return StringToNumberWithError(string, &rv, base) ? rv : static_cast<NumberType>(0);
 }
 
 }  // namespace fxl

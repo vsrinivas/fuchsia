@@ -21,38 +21,36 @@ namespace internal {
 //
 template <bool EnableAdoptionValidator>
 class RefCountedUpgradeableBase : public RefCountedBase<EnableAdoptionValidator> {
-public:
-    RefCountedUpgradeableBase() = default;
-    ~RefCountedUpgradeableBase() = default;
+ public:
+  RefCountedUpgradeableBase() = default;
+  ~RefCountedUpgradeableBase() = default;
 
-    // RefCountedUpgradeableBase<> instances may not be copied, assigned or moved.
-    DISALLOW_COPY_ASSIGN_AND_MOVE(RefCountedUpgradeableBase);
+  // RefCountedUpgradeableBase<> instances may not be copied, assigned or moved.
+  DISALLOW_COPY_ASSIGN_AND_MOVE(RefCountedUpgradeableBase);
 
-    // This method must only be called from MakeRefPtrUpgradeFromRaw.  See its
-    // comments for details in the proper use of this method. The actual job of
-    // this function is to atomically increment the refcount if the refcount is
-    // greater than zero.
-    //
-    // This method returns false if the object was found with an invalid
-    // refcount (refcount was <= 0), and true if the refcount was not zero and
-    // it was incremented.
-    //
-    // The procedure used is the while-CAS loop with the advantage that
-    // compare_exchange on failure updates |old| on failure (to exchange) so the
-    // loop does not have to do a separate load.
-    //
-    bool AddRefMaybeInDestructor() const __WARN_UNUSED_RESULT {
-        int32_t old = this->ref_count_.load(std::memory_order_acquire);
-        do {
-            if (old <= 0) {
-                return false;
-            }
-        } while (!this->ref_count_.compare_exchange_weak(old,
-                                                         old + 1,
-                                                         std::memory_order_acq_rel,
-                                                         std::memory_order_acquire));
-        return true;
-    }
+  // This method must only be called from MakeRefPtrUpgradeFromRaw.  See its
+  // comments for details in the proper use of this method. The actual job of
+  // this function is to atomically increment the refcount if the refcount is
+  // greater than zero.
+  //
+  // This method returns false if the object was found with an invalid
+  // refcount (refcount was <= 0), and true if the refcount was not zero and
+  // it was incremented.
+  //
+  // The procedure used is the while-CAS loop with the advantage that
+  // compare_exchange on failure updates |old| on failure (to exchange) so the
+  // loop does not have to do a separate load.
+  //
+  bool AddRefMaybeInDestructor() const __WARN_UNUSED_RESULT {
+    int32_t old = this->ref_count_.load(std::memory_order_acquire);
+    do {
+      if (old <= 0) {
+        return false;
+      }
+    } while (!this->ref_count_.compare_exchange_weak(old, old + 1, std::memory_order_acq_rel,
+                                                     std::memory_order_acquire));
+    return true;
+  }
 };
 
 }  // namespace internal
@@ -61,21 +59,20 @@ public:
 // "UpgradeFromRaw" operation which can be used to give weak-pointer like
 // behavior for a very specific use case in the kernel.
 //
-template <typename T,
-          bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
+template <typename T, bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
 class RefCountedUpgradeable : private internal::RefCountedUpgradeableBase<EnableAdoptionValidator> {
-public:
-    RefCountedUpgradeable() = default;
-    ~RefCountedUpgradeable() = default;
+ public:
+  RefCountedUpgradeable() = default;
+  ~RefCountedUpgradeable() = default;
 
-    using internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
-    using internal::RefCountedBase<EnableAdoptionValidator>::Release;
-    using internal::RefCountedBase<EnableAdoptionValidator>::Adopt;
-    using internal::RefCountedBase<EnableAdoptionValidator>::ref_count_debug;
-    using internal::RefCountedUpgradeableBase<EnableAdoptionValidator>::AddRefMaybeInDestructor;
+  using internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
+  using internal::RefCountedBase<EnableAdoptionValidator>::Release;
+  using internal::RefCountedBase<EnableAdoptionValidator>::Adopt;
+  using internal::RefCountedBase<EnableAdoptionValidator>::ref_count_debug;
+  using internal::RefCountedUpgradeableBase<EnableAdoptionValidator>::AddRefMaybeInDestructor;
 
-    // RefCountedUpgradeable<> instances may not be copied, assigned or moved.
-    DISALLOW_COPY_ASSIGN_AND_MOVE(RefCountedUpgradeable);
+  // RefCountedUpgradeable<> instances may not be copied, assigned or moved.
+  DISALLOW_COPY_ASSIGN_AND_MOVE(RefCountedUpgradeable);
 };
 
 // Constructs a RefPtr from a raw T* which is being held alive by RefPtr
@@ -146,11 +143,11 @@ public:
 
 template <typename T, typename LockCapability>
 inline RefPtr<T> MakeRefPtrUpgradeFromRaw(T* ptr, const LockCapability& lock) __TA_REQUIRES(lock) {
-    if (!ptr->AddRefMaybeInDestructor()) {
-        return nullptr;
-    }
+  if (!ptr->AddRefMaybeInDestructor()) {
+    return nullptr;
+  }
 
-    return internal::MakeRefPtrNoAdopt(ptr);
+  return internal::MakeRefPtrNoAdopt(ptr);
 }
 
 }  // namespace fbl

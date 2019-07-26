@@ -40,15 +40,13 @@ class Parser {
   // something that will result in a new AST node.
   class ASTScope {
    public:
-    explicit ASTScope(Parser* parser)
-        : parser_(parser) {
+    explicit ASTScope(Parser* parser) : parser_(parser) {
       suppress_ = parser_->suppress_gap_checks_;
       parser_->suppress_gap_checks_ = false;
       parser_->active_ast_scopes_.push_back(raw::SourceElement(Token(), Token()));
     }
     // The suppress mechanism
-    ASTScope(Parser* parser, bool suppress)
-        : parser_(parser), suppress_(suppress) {
+    ASTScope(Parser* parser, bool suppress) : parser_(parser), suppress_(suppress) {
       parser_->active_ast_scopes_.push_back(raw::SourceElement(Token(), Token()));
       suppress_ = parser_->suppress_gap_checks_;
       parser_->suppress_gap_checks_ = suppress;

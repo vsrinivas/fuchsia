@@ -16,27 +16,30 @@
 #define VERBOSE_LOGGING 0
 #define DEBUG_LOGGING (VERBOSE_LOGGING || 0)
 
-#define LOG_EX(obj, ...) do { \
+#define LOG_EX(obj, ...)      \
+  do {                        \
     (obj).PrintDebugPrefix(); \
     printf(__VA_ARGS__);      \
-} while (false)
+  } while (false)
 
 #define LOG(...) LOG_EX(*this, __VA_ARGS__)
 
-#define DEBUG_LOG_EX(obj, ...) do {     \
-    if (DEBUG_LOGGING) {                \
-        (obj).PrintDebugPrefix();       \
-        printf(__VA_ARGS__);            \
-    }                                   \
-} while (false)
+#define DEBUG_LOG_EX(obj, ...)  \
+  do {                          \
+    if (DEBUG_LOGGING) {        \
+      (obj).PrintDebugPrefix(); \
+      printf(__VA_ARGS__);      \
+    }                           \
+  } while (false)
 
 #define DEBUG_LOG(...) DEBUG_LOG_EX(*this, __VA_ARGS__)
 
-#define VERBOSE_LOG_EX(obj, ...) do {   \
-    if (VERBOSE_LOGGING) {              \
-        (obj).PrintDebugPrefix();       \
-        printf(__VA_ARGS__);            \
-    }                                   \
-} while (false)
+#define VERBOSE_LOG_EX(obj, ...) \
+  do {                           \
+    if (VERBOSE_LOGGING) {       \
+      (obj).PrintDebugPrefix();  \
+      printf(__VA_ARGS__);       \
+    }                            \
+  } while (false)
 
 #define VERBOSE_LOG(...) VERBOSE_LOG_EX(*this, __VA_ARGS__)

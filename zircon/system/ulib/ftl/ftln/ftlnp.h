@@ -20,8 +20,8 @@
 //
 // Configuration.
 //
-#define FTLN_LEGACY TRUE // TRUE to be backward compatible
-#define INC_ELIST TRUE   // if true, write erased blocks list
+#define FTLN_LEGACY TRUE  // TRUE to be backward compatible
+#define INC_ELIST TRUE    // if true, write erased blocks list
 #define DEBUG_ELIST FALSE
 #ifndef FTLN_DEBUG
 #define FTLN_DEBUG TRUE
@@ -30,7 +30,7 @@
 #define FTLN_DEBUG_PTR FALSE
 #endif
 #if !FTLN_LEGACY
-#define FTLN_3B_PN TRUE // if true, use 3B page numbers
+#define FTLN_3B_PN TRUE  // if true, use 3B page numbers
 #endif
 
 //
@@ -91,24 +91,23 @@
 #define INC_USED(bd) ((bd) += (1 << 20))
 #define GET_RC(bd) ((bd)&RC_MASK)
 #define SET_RC(bd, n) ((bd) = ((bd) & ~RC_MASK) | n)
-#define INC_RC(ftl, bdp, c)               \
-    do {                                  \
-        ui32 rc = GET_RC(*bdp) + c;       \
-                                          \
-        if (rc > RC_MASK)                 \
-            rc = RC_MASK;                 \
-        *bdp = rc | (*bdp & ~RC_MASK);    \
-        if (rc >= (ftl)->max_rc)          \
-            (ftl)->max_rc_blk = (ui32)-2; \
-    } /*lint !e717*/ \
-    while (0)
-#define SET_MAX_RC(ftl, bdp)                      \
-    do {                                          \
-        (ftl)->max_rc_blk = (ui32)-2;             \
-        *bdp = (ftl)->max_rc | (*bdp & ~RC_MASK); \
-    } /*lint !e717*/ \
-    while (0)
-
+#define INC_RC(ftl, bdp, c)         \
+  do {                              \
+    ui32 rc = GET_RC(*bdp) + c;     \
+                                    \
+    if (rc > RC_MASK)               \
+      rc = RC_MASK;                 \
+    *bdp = rc | (*bdp & ~RC_MASK);  \
+    if (rc >= (ftl)->max_rc)        \
+      (ftl)->max_rc_blk = (ui32)-2; \
+  } /*lint !e717*/                  \
+  while (0)
+#define SET_MAX_RC(ftl, bdp)                  \
+  do {                                        \
+    (ftl)->max_rc_blk = (ui32)-2;             \
+    *bdp = (ftl)->max_rc | (*bdp & ~RC_MASK); \
+  } /*lint !e717*/                            \
+  while (0)
 
 // Map Page Array Definitions
 //
@@ -153,11 +152,11 @@
 // Get/set block wear count from spare area (bytes 9 - 11 and MSH of 12)
 //
 #define GET_SA_WC(spare) (RD24_LE(&spare[9]) | ((spare[12] & 0xF0) << 20))
-#define SET_SA_WC(wc, spare)                                 \
-    {                                                        \
-        WR24_LE(wc, &spare[9]);                              \
-        spare[12] = (spare[12] & 0xF) | ((wc >> 20) & 0xF0); \
-    }
+#define SET_SA_WC(wc, spare)                             \
+  {                                                      \
+    WR24_LE(wc, &spare[9]);                              \
+    spare[12] = (spare[12] & 0xF) | ((wc >> 20) & 0xF0); \
+  }
 
 //
 // Type Declarations.
@@ -168,57 +167,57 @@
 typedef struct ftln* FTLN;
 typedef const struct ftln* CFTLN;
 struct ftln {
-    CircLink link;          // volume list link
+  CircLink link;  // volume list link
 
-    // Driver Dependent Variables
-    ui32 num_pages;         // total number of pages
-    ui32 pgs_per_blk;       // number of pages in a block
-    ui32 block_size;        // block size in bytes
-    ui32 num_blks;          // number of blocks
-    ui32 page_size;         // page size in bytes
-    ui32 start_pn;          // first page on device for volume
-    void* ndm;              // pointer to NDM this FTL belongs to
+  // Driver Dependent Variables
+  ui32 num_pages;    // total number of pages
+  ui32 pgs_per_blk;  // number of pages in a block
+  ui32 block_size;   // block size in bytes
+  ui32 num_blks;     // number of blocks
+  ui32 page_size;    // page size in bytes
+  ui32 start_pn;     // first page on device for volume
+  void* ndm;         // pointer to NDM this FTL belongs to
 
-    ui32 flags;             // holds various FTL flags
-    ui32* bdata;            // block metadata: flags and counts
-    ui8* blk_wc_lag;        // amount block erase counts lag 'high_wc'
-    ui32* mpns;             // array holding phy page # of map pages
+  ui32 flags;       // holds various FTL flags
+  ui32* bdata;      // block metadata: flags and counts
+  ui8* blk_wc_lag;  // amount block erase counts lag 'high_wc'
+  ui32* mpns;       // array holding phy page # of map pages
 
-    FTLMC* map_cache;       // handle to map page cache
-    ui32 free_vpn;          // next free page for volume page write
-    ui32 free_mpn;          // next free page for map page write
-    ui32 mappings_per_mpg;  // number of phys page numbers per map page
-    ui32 num_vpages;        // number of volume pages
-    ui32 num_free_blks;     // number of free blocks
-    ui32 num_map_pgs;       // number of pages holding map data
-    ui32 high_wc;           // highest block wear count
-    ui32 high_bc;           // highest map block write count
-    ui32 max_rc;            // per block read wear limit
-    ui32 max_rc_blk;        // if not -1, # of block w/high read cnt
-    ui32 high_bc_mblk;      // last map block
-    ui32 high_bc_mblk_po;   // used page offset on last map block
-    ui32 resume_vblk;       // vblk in interrupted recycle recovery
-    ui32 resume_tblk;       // tmp blk for interrupted recycle recovery
-    ui32 resume_po;         // resume vblk's highest used page offset
+  FTLMC* map_cache;       // handle to map page cache
+  ui32 free_vpn;          // next free page for volume page write
+  ui32 free_mpn;          // next free page for map page write
+  ui32 mappings_per_mpg;  // number of phys page numbers per map page
+  ui32 num_vpages;        // number of volume pages
+  ui32 num_free_blks;     // number of free blocks
+  ui32 num_map_pgs;       // number of pages holding map data
+  ui32 high_wc;           // highest block wear count
+  ui32 high_bc;           // highest map block write count
+  ui32 max_rc;            // per block read wear limit
+  ui32 max_rc_blk;        // if not -1, # of block w/high read cnt
+  ui32 high_bc_mblk;      // last map block
+  ui32 high_bc_mblk_po;   // used page offset on last map block
+  ui32 resume_vblk;       // vblk in interrupted recycle recovery
+  ui32 resume_tblk;       // tmp blk for interrupted recycle recovery
+  ui32 resume_po;         // resume vblk's highest used page offset
 #if INC_ELIST
-    ui32 elist_blk;         // if valid, # of block holding erased list
+  ui32 elist_blk;  // if valid, # of block holding erased list
 #endif
-    ftl_ndm_stats stats;    // driver call counts
+  ftl_ndm_stats stats;  // driver call counts
 
-    ui8* main_buf;          // NAND main page buffer
-    ui8* spare_buf;         // spare buffer for single/multi-pg access
+  ui8* main_buf;   // NAND main page buffer
+  ui8* spare_buf;  // spare buffer for single/multi-pg access
 
-    ui8 eb_size;            // spare area size in bytes
-    ui8 copy_end_found;     // vblk resume copy-end mark found
-    ui8 deferment;          // # of recycles before applying wear limit
+  ui8 eb_size;         // spare area size in bytes
+  ui8 copy_end_found;  // vblk resume copy-end mark found
+  ui8 deferment;       // # of recycles before applying wear limit
 #if FTLN_DEBUG
-    ui8 max_wc_lag;         // maximum observed lag below hi wear count
-    ui8 max_wc_over;        // # of times max WC (0xFF) was exceeded
+  ui8 max_wc_lag;   // maximum observed lag below hi wear count
+  ui8 max_wc_over;  // # of times max WC (0xFF) was exceeded
 #endif
 #if FS_ASSERT
-    ui8 assert_no_recycle;  // test no recycle changes physical page #
+  ui8 assert_no_recycle;  // test no recycle changes physical page #
 #endif
-    char vol_name[FILENAME_MAX]; // volume name
+  char vol_name[FILENAME_MAX];  // volume name
 };
 
 __BEGIN_CDECLS

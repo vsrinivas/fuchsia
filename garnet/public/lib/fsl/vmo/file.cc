@@ -34,8 +34,7 @@ bool VmoFromFilename(const std::string& filename, SizedVmo* handle_ptr) {
   return VmoFromFd(fxl::UniqueFD(fd), handle_ptr);
 }
 
-bool VmoFromFilenameAt(int dirfd, const std::string& filename,
-                       SizedVmo* handle_ptr) {
+bool VmoFromFilenameAt(int dirfd, const std::string& filename, SizedVmo* handle_ptr) {
   int fd = openat(dirfd, filename.c_str(), O_RDONLY);
   if (fd == -1)
     return false;

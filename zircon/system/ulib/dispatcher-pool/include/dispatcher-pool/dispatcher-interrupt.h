@@ -34,31 +34,30 @@ namespace dispatcher {
 // of the zx::interrupt object.
 //
 class Interrupt : public EventSource {
-public:
-    static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
-    using ProcessHandler =
-        fbl::InlineFunction<zx_status_t(Interrupt*, zx_time_t), MAX_HANDLER_CAPTURE_SIZE>;
+ public:
+  static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
+  using ProcessHandler =
+      fbl::InlineFunction<zx_status_t(Interrupt*, zx_time_t), MAX_HANDLER_CAPTURE_SIZE>;
 
-    static fbl::RefPtr<Interrupt> Create();
+  static fbl::RefPtr<Interrupt> Create();
 
-    zx_status_t Activate(fbl::RefPtr<ExecutionDomain> domain,
-                         zx::interrupt irq,
-                         ProcessHandler process_handler);
-    virtual void Deactivate() __TA_EXCLUDES(obj_lock_) override;
+  zx_status_t Activate(fbl::RefPtr<ExecutionDomain> domain, zx::interrupt irq,
+                       ProcessHandler process_handler);
+  virtual void Deactivate() __TA_EXCLUDES(obj_lock_) override;
 
-protected:
-    void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) override;
+ protected:
+  void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) override;
 
-    zx_status_t DoPortWaitLocked() __TA_REQUIRES(obj_lock_) override;
-    zx_status_t DoPortCancelLocked() __TA_REQUIRES(obj_lock_) override;
+  zx_status_t DoPortWaitLocked() __TA_REQUIRES(obj_lock_) override;
+  zx_status_t DoPortCancelLocked() __TA_REQUIRES(obj_lock_) override;
 
-private:
-    friend class fbl::RefPtr<Interrupt>;
+ private:
+  friend class fbl::RefPtr<Interrupt>;
 
-    Interrupt() : EventSource(0) { }
+  Interrupt() : EventSource(0) {}
 
-    ProcessHandler process_handler_;
-    bool irq_bound_ __TA_GUARDED(obj_lock_) = false;
+  ProcessHandler process_handler_;
+  bool irq_bound_ __TA_GUARDED(obj_lock_) = false;
 };
 
 }  // namespace dispatcher

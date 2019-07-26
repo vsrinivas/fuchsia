@@ -47,8 +47,7 @@ constexpr zx::duration kTimeout = zx::min(5);
 class ButtonsListenerImpl : public fuchsia::ui::policy::MediaButtonsListener {
  public:
   ButtonsListenerImpl(
-      fidl::InterfaceRequest<fuchsia::ui::policy::MediaButtonsListener>
-          listener_request)
+      fidl::InterfaceRequest<fuchsia::ui::policy::MediaButtonsListener> listener_request)
       : listener_binding_(this, std::move(listener_request)) {}
   ~ButtonsListenerImpl() = default;
 
@@ -63,8 +62,7 @@ class ButtonsListenerImpl : public fuchsia::ui::policy::MediaButtonsListener {
 
  private:
   // |MediaButtonsListener|
-  void OnMediaButtonsEvent(
-      fuchsia::ui::input::MediaButtonsEvent event) override {
+  void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override {
     // Store inputs for checking later.
     observed_.push_back(std::move(event));
 
@@ -85,8 +83,7 @@ class ButtonsListenerImpl : public fuchsia::ui::policy::MediaButtonsListener {
 class MinimalClientView : public scenic::BaseView {
  public:
   MinimalClientView(scenic::ViewContext context, async_dispatcher_t* dispatcher)
-      : scenic::BaseView(std::move(context), "MinimalClientView"),
-        dispatcher_(dispatcher) {
+      : scenic::BaseView(std::move(context), "MinimalClientView"), dispatcher_(dispatcher) {
     FXL_CHECK(dispatcher_);
   }
 
@@ -127,11 +124,9 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
     // Connect to Scenic, create a View.
-    scenic_ =
-        g_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    scenic_ = g_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(FATAL) << "Lost connection to Scenic: "
-                     << zx_status_get_string(status);
+      FXL_LOG(FATAL) << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
     scenic::ViewContext view_context = {
         .session_and_listener_request =
@@ -141,28 +136,21 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
         .outgoing_services = nullptr,
         .startup_context = g_context,
     };
-    view_ = std::make_unique<MinimalClientView>(std::move(view_context),
-                                                dispatcher());
+    view_ = std::make_unique<MinimalClientView>(std::move(view_context), dispatcher());
 
     // Connect to RootPresenter, create a ViewHolder.
-    root_presenter_ =
-        g_context
-            ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+    root_presenter_ = g_context->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
     root_presenter_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(FATAL) << "Lost connection to RootPresenter: "
-                     << zx_status_get_string(status);
+      FXL_LOG(FATAL) << "Lost connection to RootPresenter: " << zx_status_get_string(status);
     });
 
     fidl::InterfaceHandle<fuchsia::ui::policy::Presentation> presentation;
-    root_presenter_->PresentView(std::move(view_holder_token),
-                                 presentation.NewRequest());
+    root_presenter_->PresentView(std::move(view_holder_token), presentation.NewRequest());
 
     // Connect to the MediaButtons listener.
     fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation_ptr;
-    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener>
-        listener_handle;
-    button_listener_impl_ =
-        std::make_unique<ButtonsListenerImpl>(listener_handle.NewRequest());
+    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle;
+    button_listener_impl_ = std::make_unique<ButtonsListenerImpl>(listener_handle.NewRequest());
 
     presentation_ptr = presentation.Bind();
     presentation_ptr->RegisterMediaButtonsListener(std::move(listener_handle));
@@ -173,25 +161,21 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
       display_height_ = display_info.height_in_px;
 
       FXL_CHECK(display_width_ > 0 && display_height_ > 0)
-          << "Display size unsuitable for this test: (" << display_width_
-          << ", " << display_height_ << ").";
+          << "Display size unsuitable for this test: (" << display_width_ << ", " << display_height_
+          << ").";
 
       view_->CreateScene(display_width_, display_height_);
-      view_->session()->Present(
-          zx_clock_get_monotonic(),
-          [this](fuchsia::images::PresentationInfo info) {
-            inject_input_();       // Display up, content ready. Send in input.
-            test_was_run_ = true;  // Actually did work for this test.
-          });
+      view_->session()->Present(zx_clock_get_monotonic(),
+                                [this](fuchsia::images::PresentationInfo info) {
+                                  inject_input_();  // Display up, content ready. Send in input.
+                                  test_was_run_ = true;  // Actually did work for this test.
+                                });
     });
 
     // Post a "just in case" quit task, if the test hangs.
     async::PostDelayedTask(
         dispatcher(),
-        [] {
-          FXL_LOG(FATAL)
-              << "\n\n>> Test did not complete in time, terminating. <<\n\n";
-        },
+        [] { FXL_LOG(FATAL) << "\n\n>> Test did not complete in time, terminating. <<\n\n"; },
         kTimeout);
   }
 
@@ -206,26 +190,20 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
 
     // Start the /bin/input process.
     zx_handle_t proc;
-    zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                                    "/bin/input", args.data(), &proc);
-    FXL_CHECK(status == ZX_OK)
-        << "fdio_spawn: " << zx_status_get_string(status);
+    zx_status_t status =
+        fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/bin/input", args.data(), &proc);
+    FXL_CHECK(status == ZX_OK) << "fdio_spawn: " << zx_status_get_string(status);
 
     // Wait for termination.
     status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED,
-                                (zx::clock::get_monotonic() + kTimeout).get(),
-                                nullptr);
-    FXL_CHECK(status == ZX_OK)
-        << "zx_object_wait_one: " << zx_status_get_string(status);
+                                (zx::clock::get_monotonic() + kTimeout).get(), nullptr);
+    FXL_CHECK(status == ZX_OK) << "zx_object_wait_one: " << zx_status_get_string(status);
 
     // Check termination status.
     zx_info_process_t info;
-    status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info),
-                                nullptr, nullptr);
-    FXL_CHECK(status == ZX_OK)
-        << "zx_object_get_info: " << zx_status_get_string(status);
-    FXL_CHECK(info.return_code == 0)
-        << "info.return_code: " << info.return_code;
+    status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+    FXL_CHECK(status == ZX_OK) << "zx_object_get_info: " << zx_status_get_string(status);
+    FXL_CHECK(info.return_code == 0) << "info.return_code: " << info.return_code;
   }
 
   void SetInjectInputCallback(fit::function<void()> inject_input) {
@@ -235,8 +213,7 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
   void SetOnTerminateCallback(
       fit::function<void(const std::vector<MediaButtonsEvent>&)> on_terminate,
       int num_events_to_terminate) {
-    button_listener_impl_->SetOnTerminateCallback(std::move(on_terminate),
-                                                  num_events_to_terminate);
+    button_listener_impl_->SetOnTerminateCallback(std::move(on_terminate), num_events_to_terminate);
   }
 
   std::unique_ptr<ButtonsListenerImpl> button_listener_impl_;
@@ -256,9 +233,7 @@ TEST_F(MediaButtonsListenerTest, MediaButtons) {
   // Inject a media button input with all buttons but the factory reset button
   // set. If fdr is set, FactoryResetManager will handle the buttons event
   // instead of the MediaButtonListener, which we are testing.
-  SetInjectInputCallback([this] {
-    InjectInput({"media_button", "1", "1", "1", "0", nullptr});
-  });
+  SetInjectInputCallback([this] { InjectInput({"media_button", "1", "1", "1", "0", nullptr}); });
 
   // Set up expectations. Terminate when we see 1 message.
   SetOnTerminateCallback(

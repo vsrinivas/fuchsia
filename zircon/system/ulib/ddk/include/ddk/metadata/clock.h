@@ -6,7 +6,7 @@
 #define DDK_METADATA_CLOCK_H_
 
 typedef struct {
-    uint32_t clock_id;
+  uint32_t clock_id;
 } clock_id_t;
 
 #endif  // DDK_METADATA_CLOCK_H_

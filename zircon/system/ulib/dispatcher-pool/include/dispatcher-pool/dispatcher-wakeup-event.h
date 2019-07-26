@@ -40,27 +40,26 @@ namespace dispatcher {
 // not become Deactivated)
 //
 class WakeupEvent : public EventSource {
-public:
-    static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
-    using ProcessHandler =
-        fbl::InlineFunction<zx_status_t(WakeupEvent*), MAX_HANDLER_CAPTURE_SIZE>;
+ public:
+  static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
+  using ProcessHandler = fbl::InlineFunction<zx_status_t(WakeupEvent*), MAX_HANDLER_CAPTURE_SIZE>;
 
-    static fbl::RefPtr<WakeupEvent> Create();
+  static fbl::RefPtr<WakeupEvent> Create();
 
-    zx_status_t Activate(fbl::RefPtr<ExecutionDomain> domain, ProcessHandler process_handler);
-    virtual void Deactivate() __TA_EXCLUDES(obj_lock_) override;
-    zx_status_t Signal();
+  zx_status_t Activate(fbl::RefPtr<ExecutionDomain> domain, ProcessHandler process_handler);
+  virtual void Deactivate() __TA_EXCLUDES(obj_lock_) override;
+  zx_status_t Signal();
 
-protected:
-    void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) override;
+ protected:
+  void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) override;
 
-private:
-    friend class fbl::RefPtr<WakeupEvent>;
+ private:
+  friend class fbl::RefPtr<WakeupEvent>;
 
-    WakeupEvent() : EventSource(ZX_USER_SIGNAL_0) { }
+  WakeupEvent() : EventSource(ZX_USER_SIGNAL_0) {}
 
-    bool signaled_ __TA_GUARDED(obj_lock_) = false;
-    ProcessHandler process_handler_;
+  bool signaled_ __TA_GUARDED(obj_lock_) = false;
+  ProcessHandler process_handler_;
 };
 
 }  // namespace dispatcher

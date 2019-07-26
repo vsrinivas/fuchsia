@@ -11,28 +11,28 @@
 namespace zx {
 
 class iommu final : public object<iommu> {
-public:
-    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_IOMMU;
+ public:
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_IOMMU;
 
-    constexpr iommu() = default;
+  constexpr iommu() = default;
 
-    explicit iommu(zx_handle_t value) : object(value) {}
+  explicit iommu(zx_handle_t value) : object(value) {}
 
-    explicit iommu(handle&& h) : object(h.release()) {}
+  explicit iommu(handle&& h) : object(h.release()) {}
 
-    iommu(iommu&& other) : object(other.release()) {}
+  iommu(iommu&& other) : object(other.release()) {}
 
-    iommu& operator=(iommu&& other) {
-        reset(other.release());
-        return *this;
-    }
+  iommu& operator=(iommu&& other) {
+    reset(other.release());
+    return *this;
+  }
 
-    static zx_status_t create(const resource& resource, uint32_t type, const void* desc,
-                              size_t desc_size, iommu* result);
+  static zx_status_t create(const resource& resource, uint32_t type, const void* desc,
+                            size_t desc_size, iommu* result);
 };
 
 using unowned_iommu = unowned<iommu>;
 
-} // namespace zx
+}  // namespace zx
 
 #endif  // LIB_ZX_IOMMU_H_

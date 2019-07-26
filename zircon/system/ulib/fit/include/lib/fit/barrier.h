@@ -38,77 +38,69 @@ namespace fit {
 //
 // See documentation of |fit::promise| for more information.
 class barrier final {
-public:
-    barrier();
-    ~barrier();
+ public:
+  barrier();
+  ~barrier();
 
-    barrier(const barrier&) = delete;
-    barrier(barrier&&) = delete;
-    barrier& operator=(const barrier&) = delete;
-    barrier& operator=(barrier&&) = delete;
+  barrier(const barrier&) = delete;
+  barrier(barrier&&) = delete;
+  barrier& operator=(const barrier&) = delete;
+  barrier& operator=(barrier&&) = delete;
 
-    // Returns a new promise which, after invoking the original |promise|, may update sync() callers
-    // if they are waiting for all prior work to complete.
+  // Returns a new promise which, after invoking the original |promise|, may update sync() callers
+  // if they are waiting for all prior work to complete.
+  //
+  // This method is thread-safe.
+  template <typename Promise>
+  decltype(auto) wrap(Promise promise) {
+    assert(promise);
+
+    fit::bridge<> bridge;
+    auto prior = swap_prior(std::move(bridge.consumer));
+
+    // First, execute the originally provided promise.
     //
-    // This method is thread-safe.
-    template <typename Promise>
-    decltype(auto) wrap(Promise promise) {
-        assert(promise);
+    // Note that execution of this original promise is not gated behind any interactions
+    // between other calls to |sync()| or |wrap()|.
+    return promise.then([prior = std::move(prior), completer = std::move(bridge.completer)](
+                            fit::context& context, typename Promise::result_type& result) mutable {
+      // Wait for all prior work to either terminate or be abandoned before terminating the
+      // completer.
+      //
+      // This means that when |sync()| invokes |swap_prior()|, that caller receives a chain
+      // of these promise-bound completer objects from all prior invocations of |wrap()|.
+      // When this chain completes, the sync promise can complete too, since it implies
+      // that all prior access to the barrier has completed.
+      context.executor()->schedule_task(prior.promise_or(fit::ok()).then(
+          [completer = std::move(completer)](const fit::result<>&) mutable { return; }));
 
-        fit::bridge<> bridge;
-        auto prior = swap_prior(std::move(bridge.consumer));
+      return result;
+    });
+  }
 
-        // First, execute the originally provided promise.
-        //
-        // Note that execution of this original promise is not gated behind any interactions
-        // between other calls to |sync()| or |wrap()|.
-        return promise.then([prior = std::move(prior),
-                             completer = std::move(bridge.completer)] (
-                                fit::context& context,
-                                typename Promise::result_type& result) mutable {
-            // Wait for all prior work to either terminate or be abandoned before terminating the
-            // completer.
-            //
-            // This means that when |sync()| invokes |swap_prior()|, that caller receives a chain
-            // of these promise-bound completer objects from all prior invocations of |wrap()|.
-            // When this chain completes, the sync promise can complete too, since it implies
-            // that all prior access to the barrier has completed.
-            context.executor()->schedule_task(
-                prior.promise_or(fit::ok())
-                     .then([completer = std::move(completer)] (const fit::result<>&) mutable {
-                    return;
-                })
-            );
-
-            return result;
+  // Returns a promise which completes after all previously wrapped work has completed.
+  //
+  // This method is thread-safe.
+  fit::promise<void, void> sync() {
+    // Swap the latest pending work with our own consumer; a subsequent request
+    // to sync should wait on this one.
+    fit::bridge<> bridge;
+    fit::consumer<> prior = swap_prior(std::move(bridge.consumer));
+    return prior.promise_or(fit::ok()).then(
+        [completer = std::move(bridge.completer)](const fit::result<>&) mutable {
+          return fit::make_ok_promise();
         });
+  }
 
-    }
+ private:
+  fit::consumer<> swap_prior(fit::consumer<> new_prior);
 
-    // Returns a promise which completes after all previously wrapped work has completed.
-    //
-    // This method is thread-safe.
-    fit::promise<void, void> sync() {
-        // Swap the latest pending work with our own consumer; a subsequent request
-        // to sync should wait on this one.
-        fit::bridge<> bridge;
-        fit::consumer<> prior = swap_prior(std::move(bridge.consumer));
-        return prior.promise_or(fit::ok())
-            .then([completer = std::move(bridge.completer)] (const fit::result<>&) mutable {
-                return fit::make_ok_promise();
-            });
-    }
+  std::mutex mutex_;
 
-
-private:
-    fit::consumer<> swap_prior(fit::consumer<> new_prior);
-
-    std::mutex mutex_;
-
-    // Holds the consumption capability of the most recently wrapped promise.
-    fit::consumer<> prior_ FIT_GUARDED(mutex_);
+  // Holds the consumption capability of the most recently wrapped promise.
+  fit::consumer<> prior_ FIT_GUARDED(mutex_);
 };
 
-} // namespace fit
+}  // namespace fit
 
-#endif // LIB_FIT_BARRIER_H_
+#endif  // LIB_FIT_BARRIER_H_

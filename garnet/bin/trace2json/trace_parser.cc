@@ -18,8 +18,7 @@ FuchsiaTraceParser::~FuchsiaTraceParser() = default;
 bool FuchsiaTraceParser::ParseComplete(std::istream* in) {
   while (!in->eof()) {
     size_t bytes_read =
-        in->read(buffer_.data() + buffer_end_, buffer_.size() - buffer_end_)
-            .gcount();
+        in->read(buffer_.data() + buffer_end_, buffer_.size() - buffer_end_).gcount();
     if (bytes_read == 0) {
       FXL_LOG(ERROR) << "Read returned 0 bytes";
       return false;
@@ -27,8 +26,7 @@ bool FuchsiaTraceParser::ParseComplete(std::istream* in) {
     buffer_end_ += bytes_read;
 
     size_t words = buffer_end_ / sizeof(uint64_t);
-    trace::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
-                       words);
+    trace::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()), words);
 
     if (!reader_.ReadRecords(chunk)) {
       FXL_LOG(ERROR) << "Error parsing trace";

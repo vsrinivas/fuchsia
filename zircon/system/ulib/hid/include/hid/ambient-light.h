@@ -14,21 +14,21 @@ __BEGIN_CDECLS
 // clang-format on
 
 typedef struct ambient_light_input_rpt {
-    uint8_t rpt_id;
-    uint8_t state;
-    uint8_t event;
-    uint16_t illuminance;
-    uint16_t red;
-    uint16_t green;
-    uint16_t blue;
+  uint8_t rpt_id;
+  uint8_t state;
+  uint8_t event;
+  uint16_t illuminance;
+  uint16_t red;
+  uint16_t green;
+  uint16_t blue;
 } __PACKED ambient_light_input_rpt_t;
 
 typedef struct ambient_light_feature_rpt {
-    uint8_t rpt_id;
-    uint8_t state;
-    uint32_t interval_ms; // default (0) means no polling
-    uint16_t threshold_low;
-    uint16_t threshold_high;
+  uint8_t rpt_id;
+  uint8_t state;
+  uint32_t interval_ms;  // default (0) means no polling
+  uint16_t threshold_low;
+  uint16_t threshold_high;
 } __PACKED ambient_light_feature_rpt_t;
 
 size_t get_ambient_light_report_desc(const uint8_t** buf);

@@ -34,8 +34,7 @@ class ColorSource {
 
 class VirtualCameraControlImpl : public fuchsia::camera::Control {
  public:
-  VirtualCameraControlImpl(fidl::InterfaceRequest<Control> control,
-                           async_dispatcher_t* dispatcher,
+  VirtualCameraControlImpl(fidl::InterfaceRequest<Control> control, async_dispatcher_t* dispatcher,
                            fit::closure on_connection_closed);
 
   // Sent by the driver to the client when a frame is available for processing,
@@ -60,9 +59,8 @@ class VirtualCameraControlImpl : public fuchsia::camera::Control {
 
   class VirtualCameraStreamImpl : public fuchsia::camera::Stream {
    public:
-    VirtualCameraStreamImpl(
-        VirtualCameraControlImpl& owner,
-        fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
+    VirtualCameraStreamImpl(VirtualCameraControlImpl& owner,
+                            fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
 
     // Starts the streaming of frames.
     void Start() override;
@@ -104,9 +102,8 @@ class VirtualCameraControlImpl : public fuchsia::camera::Control {
 
   fzl::VmoPool buffers_;
   media::TimelineFunction frame_to_timestamp_;
-  async::TaskClosureMethod<VirtualCameraControlImpl,
-                           &VirtualCameraControlImpl::ProduceFrame>
-      task_{this};
+  async::TaskClosureMethod<VirtualCameraControlImpl, &VirtualCameraControlImpl::ProduceFrame> task_{
+      this};
 };
 
 }  // namespace virtual_camera

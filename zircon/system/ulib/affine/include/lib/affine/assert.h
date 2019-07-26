@@ -18,27 +18,27 @@ namespace affine {
 namespace internal {
 
 inline void Assert(bool predicate) {
-    if (!predicate) {
-        // TODO(johngro): add some guarantee that this will terminate the
-        // process when possible.
-        //
-        // Right now, we want to be able to use this code in...
-        //
-        // 1) Normal places where an assert could have been used anyway.
-        // 2) In special, low-level user mode code places where not all of libc
-        //    may be available.
-        // 3) In the kernel, where syscalls like zx_process_exit, may not be
-        //    available.
-        //
-        // so, simply adding a call to zx_process_exit (like the MUSL
-        // implementation of abort does) is not a simple option.
-        __builtin_trap();
-    }
+  if (!predicate) {
+    // TODO(johngro): add some guarantee that this will terminate the
+    // process when possible.
+    //
+    // Right now, we want to be able to use this code in...
+    //
+    // 1) Normal places where an assert could have been used anyway.
+    // 2) In special, low-level user mode code places where not all of libc
+    //    may be available.
+    // 3) In the kernel, where syscalls like zx_process_exit, may not be
+    //    available.
+    //
+    // so, simply adding a call to zx_process_exit (like the MUSL
+    // implementation of abort does) is not a simple option.
+    __builtin_trap();
+  }
 }
 
 inline void DebugAssert(bool predicate) {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
-    Assert(predicate);
+  Assert(predicate);
 #endif
 }
 

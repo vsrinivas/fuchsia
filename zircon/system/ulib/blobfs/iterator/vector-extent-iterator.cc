@@ -14,21 +14,17 @@ namespace blobfs {
 VectorExtentIterator::VectorExtentIterator(const fbl::Vector<ReservedExtent>& extents)
     : extents_(extents) {}
 
-bool VectorExtentIterator::Done() const {
-    return extent_index_ == extents_.size();
-}
+bool VectorExtentIterator::Done() const { return extent_index_ == extents_.size(); }
 
 zx_status_t VectorExtentIterator::Next(const Extent** out) {
-    ZX_DEBUG_ASSERT(!Done());
-    block_count_ += extents_[extent_index_].extent().Length();
-    *out = &extents_[extent_index_].extent();
+  ZX_DEBUG_ASSERT(!Done());
+  block_count_ += extents_[extent_index_].extent().Length();
+  *out = &extents_[extent_index_].extent();
 
-    extent_index_++;
-    return ZX_OK;
+  extent_index_++;
+  return ZX_OK;
 }
 
-uint64_t VectorExtentIterator::BlockIndex() const {
-    return block_count_;
-}
+uint64_t VectorExtentIterator::BlockIndex() const { return block_count_; }
 
-} // namespace blobfs
+}  // namespace blobfs

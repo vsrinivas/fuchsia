@@ -115,10 +115,8 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.amber.Control", "fuchsia.cobalt.LoggerFactory",
     "fuchsia.devicesettings.DeviceSettingsManager", "fuchsia.logger.Log", "fuchsia.logger.LogSink",
     // Interface to resolve shell commands.
-    "fuchsia.process.Resolver",
-    ::llcpp::fuchsia::net::NameLookup::Name,
-    ::llcpp::fuchsia::net::SocketProvider::Name,
-    ::llcpp::fuchsia::posix::socket::Provider::Name,
+    "fuchsia.process.Resolver", ::llcpp::fuchsia::net::NameLookup::Name,
+    ::llcpp::fuchsia::net::SocketProvider::Name, ::llcpp::fuchsia::posix::socket::Provider::Name,
     // Legacy interface for netstack, defined in //garnet
     "fuchsia.netstack.Netstack",
     // New interface for netstack (WIP), defined in //zircon
@@ -315,7 +313,8 @@ int main(int argc, char** argv) {
   publish_services(outgoing.svc_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
   publish_services(outgoing.svc_dir(), bootsvc_services, zx::unowned_channel(bootsvc_svc));
   publish_services(outgoing.svc_dir(), devmgr_services, zx::unowned_channel(devmgr_proxy_channel));
-  publish_service(outgoing.svc_dir(), fuchsia_device_NameProvider_Name, zx::unowned_channel(device_name_provider_svc));
+  publish_service(outgoing.svc_dir(), fuchsia_device_NameProvider_Name,
+                  zx::unowned_channel(device_name_provider_svc));
 
   if (virtcon_proxy_channel.is_valid()) {
     publish_proxy_service(outgoing.svc_dir(), fuchsia_virtualconsole_SessionManager_Name,

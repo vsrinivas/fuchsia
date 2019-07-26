@@ -43,8 +43,7 @@ ProcessBuilder::ProcessBuilder(std::shared_ptr<sys::ServiceDirectory> services)
   services_->Connect(launcher_.NewRequest());
 }
 
-ProcessBuilder::ProcessBuilder(zx::job job,
-                               std::shared_ptr<sys::ServiceDirectory> services)
+ProcessBuilder::ProcessBuilder(zx::job job, std::shared_ptr<sys::ServiceDirectory> services)
     : ProcessBuilder(services) {
   launch_info_.job = std::move(job);
 }
@@ -62,16 +61,15 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
 
   zx::vmo vmo;
   zx::vmo executable_vmo;
-  zx_status_t status =
-      fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
+  zx_status_t status = fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
   close(fd);
   if (status != ZX_OK) {
-      return status;
+    return status;
   }
 
   status = vmo.replace_as_executable(zx::handle(), &executable_vmo);
   if (status != ZX_OK) {
-      return status;
+    return status;
   }
 
   ::fidl::InterfaceHandle<::fuchsia::ldsvc::Loader> loader_iface;
@@ -79,9 +77,7 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
   // Resolve VMOs containing #!resolve.
   fuchsia::process::ResolverSyncPtr resolver;  // Lazily bound.
   for (int i = 0; true; i++) {
-    std::array<char,
-               fuchsia::process::MAX_RESOLVE_NAME_SIZE + kFdioResolvePrefixLen>
-        head;
+    std::array<char, fuchsia::process::MAX_RESOLVE_NAME_SIZE + kFdioResolvePrefixLen> head;
     head.fill(0);
     status = executable_vmo.read(head.data(), 0, head.size());
     if (status != ZX_OK)
@@ -93,17 +89,15 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
       return ZX_ERR_IO_INVALID;  // Too much nesting.
 
     // The process name is after the prefix until the first newline.
-    std::string_view name(&head[kFdioResolvePrefixLen],
-                          fuchsia::process::MAX_RESOLVE_NAME_SIZE);
-    if (auto newline_index = name.rfind('\n');
-        newline_index != std::string_view::npos)
+    std::string_view name(&head[kFdioResolvePrefixLen], fuchsia::process::MAX_RESOLVE_NAME_SIZE);
+    if (auto newline_index = name.rfind('\n'); newline_index != std::string_view::npos)
       name = name.substr(0, newline_index);
 
     // The resolver will give us a new VMO and loader to use.
     if (!resolver)
       services_->Connect(resolver.NewRequest());
-    resolver->Resolve(fidl::StringPtr(name.data(), name.size()), &status,
-                      &executable_vmo, &loader_iface);
+    resolver->Resolve(fidl::StringPtr(name.data(), name.size()), &status, &executable_vmo,
+                      &loader_iface);
     if (status != ZX_OK)
       return status;
   }
@@ -150,8 +144,7 @@ void ProcessBuilder::AddHandle(uint32_t id, zx::handle handle) {
   });
 }
 
-void ProcessBuilder::AddHandles(
-    std::vector<fuchsia::process::HandleInfo> handles) {
+void ProcessBuilder::AddHandles(std::vector<fuchsia::process::HandleInfo> handles) {
   handles_.insert(handles_.end(), std::make_move_iterator(handles.begin()),
                   std::make_move_iterator(handles.end()));
 }
@@ -163,9 +156,7 @@ void ProcessBuilder::SetDefaultJob(zx::job job) {
   });
 }
 
-void ProcessBuilder::SetName(std::string name) {
-  launch_info_.name = std::move(name);
-}
+void ProcessBuilder::SetName(std::string name) { launch_info_.name = std::move(name); }
 
 void ProcessBuilder::CloneJob() {
   zx::job duplicate_job;
@@ -184,8 +175,7 @@ void ProcessBuilder::CloneNamespace() {
     for (size_t i = 0; i < flat->count; ++i) {
       names.push_back(fuchsia::process::NameInfo{
           flat->path[i],
-          fidl::InterfaceHandle<fuchsia::io::Directory>(
-              zx::channel(flat->handle[i])),
+          fidl::InterfaceHandle<fuchsia::io::Directory>(zx::channel(flat->handle[i])),
       });
     }
     launcher_->AddNames(std::move(names));
@@ -218,8 +208,7 @@ void ProcessBuilder::CloneAll() {
 
 zx_status_t ProcessBuilder::CloneFileDescriptor(int local_fd, int target_fd) {
   zx::handle fd_handle;
-  zx_status_t status =
-      fdio_fd_clone(local_fd, fd_handle.reset_and_get_address());
+  zx_status_t status = fdio_fd_clone(local_fd, fd_handle.reset_and_get_address());
   if (status != ZX_OK)
     return status;
   handles_.push_back(fuchsia::process::HandleInfo{
@@ -233,15 +222,13 @@ zx_status_t ProcessBuilder::Prepare(std::string* error_message) {
   zx_status_t status = ZX_OK;
   launcher_->AddHandles(std::move(handles_));
   if (!launch_info_.job) {
-    status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS,
-                                               &launch_info_.job);
+    status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &launch_info_.job);
     if (status != ZX_OK)
       return status;
   }
   zx_status_t launcher_status = ZX_OK;
   fuchsia::process::ProcessStartDataPtr data;
-  status = launcher_->CreateWithoutStarting(std::move(launch_info_),
-                                            &launcher_status, &data);
+  status = launcher_->CreateWithoutStarting(std::move(launch_info_), &launcher_status, &data);
   if (status != ZX_OK)
     return status;
   if (launcher_status != ZX_OK)
@@ -253,9 +240,8 @@ zx_status_t ProcessBuilder::Prepare(std::string* error_message) {
 }
 
 zx_status_t ProcessBuilder::Start(zx::process* process_out) {
-  zx_status_t status =
-      zx_process_start(data_.process.get(), data_.thread.get(), data_.entry,
-                       data_.stack, data_.bootstrap.release(), data_.vdso_base);
+  zx_status_t status = zx_process_start(data_.process.get(), data_.thread.get(), data_.entry,
+                                        data_.stack, data_.bootstrap.release(), data_.vdso_base);
   if (status == ZX_OK && process_out)
     *process_out = std::move(data_.process);
   return status;

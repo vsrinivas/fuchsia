@@ -37,21 +37,14 @@ class FakeLogSink : public LogSink {
   ~FakeLogSink() final = default;
 
   // Writes |format| to the underlying |stream_|.
-  void Write(const char* format, ...) final __PRINTFLIKE(2, 3) {
-    is_written_ = true;
-  }
+  void Write(const char* format, ...) final __PRINTFLIKE(2, 3) { is_written_ = true; }
 
   // Flushes the contents of the buffered for |stream_|.
-  void Flush() final {
-  }
+  void Flush() final {}
 
-  void Reset() {
-    is_written_ = false;
-  }
+  void Reset() { is_written_ = false; }
 
-  bool IsWritten() const {
-    return is_written_;
-  }
+  bool IsWritten() const { return is_written_; }
 
  private:
   bool is_written_ = false;

@@ -11,17 +11,14 @@
 
 namespace camera {
 
-void ControlImpl::OnFrameAvailable(
-    const fuchsia::camera::FrameAvailableEvent& frame) {
+void ControlImpl::OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame) {
   stream_->OnFrameAvailable(frame);
 }
 
 ControlImpl::ControlImpl(video::usb::UsbVideoStream* usb_video_stream,
-                         fidl::InterfaceRequest<Control> control,
-                         async_dispatcher_t* dispatcher,
+                         fidl::InterfaceRequest<Control> control, async_dispatcher_t* dispatcher,
                          fit::closure on_connection_closed)
-    : binding_(this, std::move(control), dispatcher),
-      usb_video_stream_(usb_video_stream) {
+    : binding_(this, std::move(control), dispatcher), usb_video_stream_(usb_video_stream) {
   binding_.set_error_handler(
       [occ = std::move(on_connection_closed)](zx_status_t status) { occ(); });
 }
@@ -35,14 +32,12 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
     }
   }
 
-  size_t min_index =
-      std::max((size_t)0, std::min((size_t)index, formats_->size() - 1));
+  size_t min_index = std::max((size_t)0, std::min((size_t)index, formats_->size() - 1));
   size_t max_index =
-      std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1,
-               formats_->size() - 1);
+      std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1, formats_->size() - 1);
 
-  callback(std::vector<fuchsia::camera::VideoFormat>(
-               &(*formats_)[min_index], &(*formats_)[max_index + 1]),
+  callback(std::vector<fuchsia::camera::VideoFormat>(&(*formats_)[min_index],
+                                                     &(*formats_)[max_index + 1]),
            formats_->size(), ZX_OK);
 }
 
@@ -58,19 +53,16 @@ void ControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
   camera_device_info.serial_number = usb_device_info.serial_number;
 
   // TODO(CAM-11): add more capabilities based on usb description
-  camera_device_info.output_capabilities =
-      fuchsia::camera::CAMERA_OUTPUT_STREAM;
+  camera_device_info.output_capabilities = fuchsia::camera::CAMERA_OUTPUT_STREAM;
   camera_device_info.max_stream_count = 1;
   callback(std::move(camera_device_info));
 }
 
-void ControlImpl::CreateStream(
-    fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-    fuchsia::camera::FrameRate frame_rate,
-    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
-    zx::eventpair stream_token) {
-  zx_status_t status =
-      usb_video_stream_->CreateStream(std::move(buffer_collection), frame_rate);
+void ControlImpl::CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+                               fuchsia::camera::FrameRate frame_rate,
+                               fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+                               zx::eventpair stream_token) {
+  zx_status_t status = usb_video_stream_->CreateStream(std::move(buffer_collection), frame_rate);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to set format. Closing channel.\n");
@@ -78,12 +70,10 @@ void ControlImpl::CreateStream(
     return;
   }
 
-  stream_ = std::make_unique<StreamImpl>(*this, std::move(stream),
-                                         std::move(stream_token));
+  stream_ = std::make_unique<StreamImpl>(*this, std::move(stream), std::move(stream_token));
 }
 
-void ControlImpl::StreamImpl::OnFrameAvailable(
-    const fuchsia::camera::FrameAvailableEvent& frame) {
+void ControlImpl::StreamImpl::OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame) {
   binding_.events().OnFrameAvailable(frame);
 }
 
@@ -122,35 +112,31 @@ ControlImpl::StreamImpl::~StreamImpl() {
   (void)owner_.usb_video_stream_->StopStreaming();
 }
 
-ControlImpl::StreamImpl::StreamImpl(
-    ControlImpl& owner, fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
-    zx::eventpair stream_token)
+ControlImpl::StreamImpl::StreamImpl(ControlImpl& owner,
+                                    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+                                    zx::eventpair stream_token)
     : owner_(owner),
       binding_(this, std::move(stream)),
       stream_token_(std::move(stream_token)),
       // If not triggered by the token being closed, this waiter will be
       // cancelled by the destruction of this class, so the "this" pointer will
       // be valid as long as the waiter is around.
-      stream_token_waiter_(
-          stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, std::bind([this]() {
-            zxlogf(
-                INFO,
-                "ControlImpl::StreamImpl::StreamImpl - "
-                "ZX_EVENTPAIR_PEER_CLOSED received, shutting down stream.\n");
-            // If the peer is closed, shut down the whole
-            // stream.
-            owner_.ShutDownStream();
-            // We just deleted ourselves. Don't do anything
-            // else.
-          })) {
-  zx_status_t status =
-      stream_token_waiter_.Begin(async_get_default_dispatcher());
+      stream_token_waiter_(stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, std::bind([this]() {
+                             zxlogf(INFO,
+                                    "ControlImpl::StreamImpl::StreamImpl - "
+                                    "ZX_EVENTPAIR_PEER_CLOSED received, shutting down stream.\n");
+                             // If the peer is closed, shut down the whole
+                             // stream.
+                             owner_.ShutDownStream();
+                             // We just deleted ourselves. Don't do anything
+                             // else.
+                           })) {
+  zx_status_t status = stream_token_waiter_.Begin(async_get_default_dispatcher());
   // The waiter, dispatcher and token are known to be valid, so this should
   // never fail.
   FXL_CHECK(status == ZX_OK);
-  binding_.set_error_handler([this](zx_status_t status) {
-    owner_.usb_video_stream_->DeactivateVideoBuffer();
-  });
+  binding_.set_error_handler(
+      [this](zx_status_t status) { owner_.usb_video_stream_->DeactivateVideoBuffer(); });
 }
 
 }  // namespace camera

@@ -40,13 +40,10 @@ uint32_t DmaFormat::GetBytesPerPixel() const {
   return 0;
 }
 
-bool DmaFormat::HasSecondaryChannel() const {
-  return secondary_plane_select_ > 0;
-}
+bool DmaFormat::HasSecondaryChannel() const { return secondary_plane_select_ > 0; }
 
 // TODO(garratt): add more type compatibility to sysmem.
-DmaFormat::PixelType ImageFormatToPixelType(
-    const fuchsia_sysmem_ImageFormat& format) {
+DmaFormat::PixelType ImageFormatToPixelType(const fuchsia_sysmem_ImageFormat& format) {
   switch (format.pixel_format.type) {
     case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
       return DmaFormat::PixelType::RGB32;
@@ -60,11 +57,9 @@ DmaFormat::PixelType ImageFormatToPixelType(
 }
 
 DmaFormat::DmaFormat(const fuchsia_sysmem_ImageFormat& format)
-    : DmaFormat(format.width, format.height, ImageFormatToPixelType(format),
-                false) {}
+    : DmaFormat(format.width, format.height, ImageFormatToPixelType(format), false) {}
 
-DmaFormat::DmaFormat(uint32_t width, uint32_t height, PixelType pixel_format,
-                     bool flip_vertical)
+DmaFormat::DmaFormat(uint32_t width, uint32_t height, PixelType pixel_format, bool flip_vertical)
     : width_(width),
       height_(height),
       flip_vertical_(flip_vertical),
@@ -88,8 +83,7 @@ uint8_t DmaFormat::GetBaseMode() const { return base_mode_; }
 // Note that the register expects a negative value if the frame is vertically
 // flipped.
 uint32_t DmaFormat::GetLineOffset() const {
-  uint32_t line_offset =
-      fbl::round_up(GetBytesPerPixel() * width_, kIspLineAlignment);
+  uint32_t line_offset = fbl::round_up(GetBytesPerPixel() * width_, kIspLineAlignment);
   if (flip_vertical_) {
     return -line_offset;
   }
@@ -99,8 +93,7 @@ uint32_t DmaFormat::GetLineOffset() const {
 // This is added to the address of the memory we are DMAing to.
 uint32_t DmaFormat::GetBank0Offset() const {
   if (flip_vertical_) {
-    uint32_t line_offset =
-        fbl::round_up(GetBytesPerPixel() * width_, kIspLineAlignment);
+    uint32_t line_offset = fbl::round_up(GetBytesPerPixel() * width_, kIspLineAlignment);
     return (height_ - 1) * line_offset;
   }
   return 0;
@@ -108,13 +101,11 @@ uint32_t DmaFormat::GetBank0Offset() const {
 
 uint32_t DmaFormat::GetBank0OffsetUv() const {
   // Y and UV planes are placed in the same buffer.
-  uint32_t line_offset =
-      fbl::round_up(GetBytesPerPixel() * width_, kIspLineAlignment);
+  uint32_t line_offset = fbl::round_up(GetBytesPerPixel() * width_, kIspLineAlignment);
   uint32_t primary_offset = fbl::round_up(line_offset * height_, ZX_PAGE_SIZE);
   if (flip_vertical_) {
     if (base_mode_ & PixelType::NV12) {
-      return primary_offset +
-             (height_ / 2 - 1) * line_offset;  // UV is half the size
+      return primary_offset + (height_ / 2 - 1) * line_offset;  // UV is half the size
     }
     return primary_offset + (height_ - 1) * line_offset;
   }
@@ -122,8 +113,7 @@ uint32_t DmaFormat::GetBank0OffsetUv() const {
 }
 size_t DmaFormat::GetImageSize() const {
   // lines are aligned to kIspLineAlignment bytes
-  uint32_t line_offset =
-      fbl::round_up(GetBytesPerPixel() * width_, kIspLineAlignment);
+  uint32_t line_offset = fbl::round_up(GetBytesPerPixel() * width_, kIspLineAlignment);
   // Start with the size of the primary buffer:
   size_t image_size = fbl::round_up(line_offset * height_, ZX_PAGE_SIZE);
   // If we have a secondary channel:

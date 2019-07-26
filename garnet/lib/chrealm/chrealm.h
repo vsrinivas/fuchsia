@@ -15,8 +15,8 @@
 namespace chrealm {
 
 // Like |RunBinaryInRealmAsync|, but waits for the process to terminate.
-zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv,
-                             int64_t* return_code, std::string* error);
+zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv, int64_t* return_code,
+                             std::string* error);
 
 // Spawns a process running the binary with a namespace reflecting |realm_path|.
 // Does not block for the command to finish.
@@ -33,10 +33,10 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv,
 // addition to the actions to build the namespace. Defaults to empty.
 //
 // |proc| is a handle to the process that was launched.
-zx_status_t SpawnBinaryInRealmAsync(
-    const std::string& realm_path, const char** argv, zx_handle_t job,
-    int32_t flags, const std::vector<fdio_spawn_action_t>& additional_actions,
-    zx_handle_t* proc, std::string* error);
+zx_status_t SpawnBinaryInRealmAsync(const std::string& realm_path, const char** argv,
+                                    zx_handle_t job, int32_t flags,
+                                    const std::vector<fdio_spawn_action_t>& additional_actions,
+                                    zx_handle_t* proc, std::string* error);
 
 }  // namespace chrealm
 

@@ -31,20 +31,16 @@ class Decoder {
 
   template <class StreamIdExtractor>
   Optional<RouterEndpoint::NewStream> ClaimHandle(
-      size_t offset,
-      fuchsia::overnet::protocol::ReliabilityAndOrdering
-          reliability_and_ordering,
+      size_t offset, fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
       StreamIdExtractor stream_id_extractor) {
     auto index = *GetPtr<zx_handle_t>(offset);
     if (index == 0) {
       return Nothing;
     }
     return stream_id_extractor(std::move(message_.handles[index - 1]))
-        .Then([this, reliability_and_ordering](
-                  fuchsia::overnet::protocol::StreamId stream_id)
+        .Then([this, reliability_and_ordering](fuchsia::overnet::protocol::StreamId stream_id)
                   -> Optional<RouterEndpoint::NewStream> {
-          auto status =
-              stream_->ReceiveFork(stream_id, reliability_and_ordering);
+          auto status = stream_->ReceiveFork(stream_id, reliability_and_ordering);
           if (status.is_error()) {
             OVERNET_TRACE(ERROR) << status.AsStatus();
             return Nothing;
@@ -54,8 +50,7 @@ class Decoder {
   }
 
   const fidl_message_header_t& header() const {
-    return *reinterpret_cast<const fidl_message_header_t*>(
-        message_.bytes.data());
+    return *reinterpret_cast<const fidl_message_header_t*>(message_.bytes.data());
   }
   uint64_t ordinal() const { return header().ordinal; }
 

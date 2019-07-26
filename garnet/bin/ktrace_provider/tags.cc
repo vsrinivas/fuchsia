@@ -14,8 +14,7 @@ namespace {
 #define TAG_TYPE_16B TagType::kBasic
 #define TAG_TYPE_32B TagType::kQuad
 #define TAG_TYPE_NAME TagType::kName
-#define KTRACE_DEF(num, type, name, group) \
-  {num, KTRACE_GRP_##group, TAG_TYPE_##type, #name},
+#define KTRACE_DEF(num, type, name, group) {num, KTRACE_GRP_##group, TAG_TYPE_##type, #name},
 
 constexpr TagInfo kTags[] = {
 #include <lib/zircon-internal/ktrace-def.h>

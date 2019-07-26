@@ -28,14 +28,14 @@ constexpr size_t kLiveAllocLimitBytes = 32u * 1024 * 1024;
 template <size_t Size>
 class DataBuf {
  public:
-  DataBuf() {
-    // We provide a user-defined default constructor that does nothing, to
-    // avoid the cost of zeroing out |data|.
-    //
-    // Rationale: in the absence of a user-defined constructor, expressions
-    // such as |DataBuf()| or |new DataBuf()| trigger value-initialization,
-    // which zeros out |data|. For details, see
-    // https://stackoverflow.com/a/2418195
+  DataBuf(){
+      // We provide a user-defined default constructor that does nothing, to
+      // avoid the cost of zeroing out |data|.
+      //
+      // Rationale: in the absence of a user-defined constructor, expressions
+      // such as |DataBuf()| or |new DataBuf()| trigger value-initialization,
+      // which zeros out |data|. For details, see
+      // https://stackoverflow.com/a/2418195
   };
 
  private:
@@ -48,17 +48,16 @@ class SlabDataBuf;
 template <typename AllocatorTraits>
 class SlabDataBuf : public fbl::SlabAllocated<AllocatorTraits>,
                     public fbl::RefCounted<SlabDataBuf<AllocatorTraits>>,
-                    public fbl::SinglyLinkedListable<
-                        fbl::RefPtr<SlabDataBuf<AllocatorTraits>>> {
+                    public fbl::SinglyLinkedListable<fbl::RefPtr<SlabDataBuf<AllocatorTraits>>> {
  public:
-  SlabDataBuf() {
-    // As with DataBuf, we provide a user-defined default constructor that
-    // does nothing, to avoid the cost of zeroing out |data|.
-    //
-    // CAUTION: For reasons that are unclear, inheriting DataBuf (rather than
-    // declaring our own |data|) does not avoid the cost of zeroing out
-    // DataBuf::data, even though DataBuf has a user-defined default
-    // constructor.
+  SlabDataBuf(){
+      // As with DataBuf, we provide a user-defined default constructor that
+      // does nothing, to avoid the cost of zeroing out |data|.
+      //
+      // CAUTION: For reasons that are unclear, inheriting DataBuf (rather than
+      // declaring our own |data|) does not avoid the cost of zeroing out
+      // DataBuf::data, even though DataBuf has a user-defined default
+      // constructor.
   };
 
  private:
@@ -72,18 +71,14 @@ class StaticSlabAllocator;
 template <size_t ObjSize, size_t SlabSize>
 struct StaticSlabAllocatorTraits
     : public fbl::StaticSlabAllocatorTraits<
-          fbl::RefPtr<
-              SlabDataBuf<StaticSlabAllocatorTraits<ObjSize, SlabSize>>>,
-          SlabSize> {
-  using AllocT =
-      StaticSlabAllocator<StaticSlabAllocatorTraits<ObjSize, SlabSize>>;
+          fbl::RefPtr<SlabDataBuf<StaticSlabAllocatorTraits<ObjSize, SlabSize>>>, SlabSize> {
+  using AllocT = StaticSlabAllocator<StaticSlabAllocatorTraits<ObjSize, SlabSize>>;
   static constexpr char kName[] = "SlabStatic";
   static constexpr size_t kUserBufSize = ObjSize;
   static constexpr size_t kSlabSizeKbytes = SlabSize / 1024;
 
   static auto GetConfigAsString() {
-    return fbl::StringPrintf("%zubytes/%zuKbytes", kUserBufSize,
-                             kSlabSizeKbytes);
+    return fbl::StringPrintf("%zubytes/%zuKbytes", kUserBufSize, kSlabSizeKbytes);
   }
 };
 
@@ -95,18 +90,16 @@ class StaticSlabAllocator {
 };
 
 using StaticSmallBlockAllocatorTraits =
-    StaticSlabAllocatorTraits<kSmallBlockSizeBytes,
-                              fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>;
+    StaticSlabAllocatorTraits<kSmallBlockSizeBytes, fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>;
 using StaticLargeBlockAllocatorTraits =
     StaticSlabAllocatorTraits<kLargeBlockSizeBytes, kLargeBlockSizeBytes * 205>;
 
-static_assert(
-    fbl::SlabAllocator<StaticLargeBlockAllocatorTraits>::AllocsPerSlab ==
-        fbl::SlabAllocator<StaticSmallBlockAllocatorTraits>::AllocsPerSlab,
-    "Please adjust the SLAB_SIZE parameter for "
-    "StaticLargeBlockAllocatorTraits, so that the StaticLargeBlockAllocator "
-    "amortizes malloc() calls over as many slab objects as the Static "
-    "SmallBlockAllocator.");
+static_assert(fbl::SlabAllocator<StaticLargeBlockAllocatorTraits>::AllocsPerSlab ==
+                  fbl::SlabAllocator<StaticSmallBlockAllocatorTraits>::AllocsPerSlab,
+              "Please adjust the SLAB_SIZE parameter for "
+              "StaticLargeBlockAllocatorTraits, so that the StaticLargeBlockAllocator "
+              "amortizes malloc() calls over as many slab objects as the Static "
+              "SmallBlockAllocator.");
 
 /*** Instanced slab allocator definitions ***/
 template <typename AllocatorTraits>
@@ -115,18 +108,14 @@ class InstancedSlabAllocator;
 template <size_t ObjSize, size_t SlabSize>
 struct InstancedSlabAllocatorTraits
     : public fbl::SlabAllocatorTraits<
-          fbl::RefPtr<
-              SlabDataBuf<InstancedSlabAllocatorTraits<ObjSize, SlabSize>>>,
-          SlabSize> {
-  using AllocT =
-      InstancedSlabAllocator<InstancedSlabAllocatorTraits<ObjSize, SlabSize>>;
+          fbl::RefPtr<SlabDataBuf<InstancedSlabAllocatorTraits<ObjSize, SlabSize>>>, SlabSize> {
+  using AllocT = InstancedSlabAllocator<InstancedSlabAllocatorTraits<ObjSize, SlabSize>>;
   static constexpr char kName[] = "SlabInstanced";
   static constexpr size_t kUserBufSize = ObjSize;
   static constexpr size_t kSlabSizeKbytes = SlabSize / 1024;
 
   static auto GetConfigAsString() {
-    return fbl::StringPrintf("%zubytes/%zuKbytes", kUserBufSize,
-                             kSlabSizeKbytes);
+    return fbl::StringPrintf("%zubytes/%zuKbytes", kUserBufSize, kSlabSizeKbytes);
   }
 };
 
@@ -141,27 +130,23 @@ class InstancedSlabAllocator {
  private:
   static constexpr size_t kMaxSizeBytes = kLiveAllocLimitBytes;
   static constexpr size_t kMaxSlabs =
-      (kMaxSizeBytes /
-       (fbl::SlabAllocator<AllocatorTraits>::AllocsPerSlab * kUserBufSize)) +
+      (kMaxSizeBytes / (fbl::SlabAllocator<AllocatorTraits>::AllocsPerSlab * kUserBufSize)) +
       1 /* Round up */;
 
   fbl::SlabAllocator<AllocatorTraits> allocator_;
 };
 
 using InstancedSmallBlockAllocatorTraits =
-    InstancedSlabAllocatorTraits<kSmallBlockSizeBytes,
-                                 fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>;
+    InstancedSlabAllocatorTraits<kSmallBlockSizeBytes, fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>;
 using InstancedLargeBlockAllocatorTraits =
-    InstancedSlabAllocatorTraits<kLargeBlockSizeBytes,
-                                 kLargeBlockSizeBytes * 187>;
+    InstancedSlabAllocatorTraits<kLargeBlockSizeBytes, kLargeBlockSizeBytes * 187>;
 
-static_assert(
-    fbl::SlabAllocator<InstancedLargeBlockAllocatorTraits>::AllocsPerSlab ==
-        fbl::SlabAllocator<InstancedSmallBlockAllocatorTraits>::AllocsPerSlab,
-    "Please adjust the SLAB_SIZE parameter for "
-    "InstancedLargeBlockAllocatorTraits, so that the "
-    "InstancedLargeBlockAllocator amortizes malloc() calls over as many slab "
-    "objects as the InstancedSmallBlockAllocator.");
+static_assert(fbl::SlabAllocator<InstancedLargeBlockAllocatorTraits>::AllocsPerSlab ==
+                  fbl::SlabAllocator<InstancedSmallBlockAllocatorTraits>::AllocsPerSlab,
+              "Please adjust the SLAB_SIZE parameter for "
+              "InstancedLargeBlockAllocatorTraits, so that the "
+              "InstancedLargeBlockAllocator amortizes malloc() calls over as many slab "
+              "objects as the InstancedSmallBlockAllocator.");
 
 /*** Heap allocator definitions ***/
 template <typename AllocatorTraits>
@@ -172,9 +157,7 @@ struct HeapAllocatorTraits {
   using AllocT = HeapAllocator<HeapAllocatorTraits<ObjSize>>;
   static constexpr char kName[] = "Malloc";
   static constexpr size_t kUserBufSize = ObjSize;
-  static auto GetConfigAsString() {
-    return fbl::StringPrintf("%zubytes", kUserBufSize);
-  }
+  static auto GetConfigAsString() { return fbl::StringPrintf("%zubytes", kUserBufSize); }
 };
 
 template <typename AllocatorTraits>
@@ -190,8 +173,7 @@ using HeapLargeBlockAllocatorTraits = HeapAllocatorTraits<kLargeBlockSizeBytes>;
 /*** Benchmark code ***/
 // Utility function called from RetainAndFreeOldest() and RetainAndFreeRandom().
 template <typename AllocatorT>
-bool RetainAndFree(const std::vector<size_t>& replacement_sequence,
-                   perftest::RepeatState* state) {
+bool RetainAndFree(const std::vector<size_t>& replacement_sequence, perftest::RepeatState* state) {
   const size_t num_bufs_to_retain = replacement_sequence.size();
 
   if (num_bufs_to_retain < 1) {
@@ -202,12 +184,10 @@ bool RetainAndFree(const std::vector<size_t>& replacement_sequence,
   // Populate an initial collection of buffers.
   AllocatorT allocator;
   std::vector<decltype(allocator.New())> retained_bufs(num_bufs_to_retain);
-  std::generate(retained_bufs.begin(), retained_bufs.end(),
-                [&] { return allocator.New(); });
+  std::generate(retained_bufs.begin(), retained_bufs.end(), [&] { return allocator.New(); });
   for (size_t i = 0; i < retained_bufs.size(); ++i) {
     if (!retained_bufs[i]) {
-      std::cerr << "Failed to allocate buf " << i << " before benchmark loop"
-                << std::endl;
+      std::cerr << "Failed to allocate buf " << i << " before benchmark loop" << std::endl;
       return false;
     }
   }
@@ -250,8 +230,7 @@ bool AllocAndFree(perftest::RepeatState* state) {
 // at the end of this file. This benchmark abstracts a network copy workload,
 // when copying from a fast source, to a slow sink.
 template <typename AllocatorT>
-bool RetainAndFreeOldest(perftest::RepeatState* state,
-                         size_t num_bufs_to_retain) {
+bool RetainAndFreeOldest(perftest::RepeatState* state, size_t num_bufs_to_retain) {
   // Generate the sequence of indexes of buffers to replace.
   std::vector<size_t> buf_to_free(num_bufs_to_retain);
   std::iota(buf_to_free.begin(), buf_to_free.end(), 0);
@@ -264,8 +243,7 @@ bool RetainAndFreeOldest(perftest::RepeatState* state,
 // at the end of this file. This benchmark attempts to quantify the effects of
 // memory fragmentation.
 template <typename AllocatorT>
-bool RetainAndFreeRandom(perftest::RepeatState* state,
-                         size_t num_bufs_to_retain) {
+bool RetainAndFreeRandom(perftest::RepeatState* state, size_t num_bufs_to_retain) {
   // Generate the sequence of indexes of buffers to replace.
   std::vector<size_t> buf_to_free(num_bufs_to_retain);
   std::random_device rand_dev;
@@ -275,8 +253,7 @@ bool RetainAndFreeRandom(perftest::RepeatState* state,
 }
 
 /*** Linkage and instantiation ***/
-using RetainedMemPerfTest = bool (*)(perftest::RepeatState* state,
-                                     size_t num_bufs_to_retain);
+using RetainedMemPerfTest = bool (*)(perftest::RepeatState* state, size_t num_bufs_to_retain);
 template <typename AllocatorTraits, RetainedMemPerfTest PerfTest>
 void RegisterTest(const char* bench_name) {
   // The maximum value of 32768KB below was chosen empirically, as the point at
@@ -284,9 +261,8 @@ void RegisterTest(const char* bench_name) {
   for (size_t total_size_kbytes : {8, 32, 128, 512, 2048, 8192, 32768}) {
     const size_t total_size_bytes = total_size_kbytes * 1024;
     perftest::RegisterTest(
-        fbl::StringPrintf(
-            "MemAlloc/%s/%s/%s/%zuKbytes", AllocatorTraits::kName, bench_name,
-            AllocatorTraits::GetConfigAsString().c_str(), total_size_kbytes)
+        fbl::StringPrintf("MemAlloc/%s/%s/%s/%zuKbytes", AllocatorTraits::kName, bench_name,
+                          AllocatorTraits::GetConfigAsString().c_str(), total_size_kbytes)
             .c_str(),
         PerfTest, total_size_bytes / AllocatorTraits::kUserBufSize);
   }
@@ -295,32 +271,23 @@ void RegisterTest(const char* bench_name) {
 using NoRetainedMemPerfTest = bool (*)(perftest::RepeatState* state);
 template <typename AllocatorTraits, NoRetainedMemPerfTest PerfTest>
 void RegisterTest(const char* bench_name) {
-  perftest::RegisterTest(
-      fbl::StringPrintf("MemAlloc/%s/%s/%s", AllocatorTraits::kName, bench_name,
-                        AllocatorTraits::GetConfigAsString().c_str())
-          .c_str(),
-      PerfTest);
+  perftest::RegisterTest(fbl::StringPrintf("MemAlloc/%s/%s/%s", AllocatorTraits::kName, bench_name,
+                                           AllocatorTraits::GetConfigAsString().c_str())
+                             .c_str(),
+                         PerfTest);
 }
 
 #define REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN, ALLOCATOR_TRAITS) \
-  RegisterTest<ALLOCATOR_TRAITS,                                          \
-               ALLOCATION_PATTERN<ALLOCATOR_TRAITS::AllocT>>(             \
-      #ALLOCATION_PATTERN);
+  RegisterTest<ALLOCATOR_TRAITS, ALLOCATION_PATTERN<ALLOCATOR_TRAITS::AllocT>>(#ALLOCATION_PATTERN);
 
-#define REGISTER_PERF_TEST(ALLOCATION_PATTERN)                       \
-  do {                                                               \
-    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
-                                StaticSmallBlockAllocatorTraits);    \
-    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
-                                StaticLargeBlockAllocatorTraits);    \
-    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
-                                InstancedSmallBlockAllocatorTraits); \
-    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
-                                InstancedLargeBlockAllocatorTraits); \
-    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
-                                HeapSmallBlockAllocatorTraits);      \
-    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
-                                HeapLargeBlockAllocatorTraits);      \
+#define REGISTER_PERF_TEST(ALLOCATION_PATTERN)                                           \
+  do {                                                                                   \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN, StaticSmallBlockAllocatorTraits);    \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN, StaticLargeBlockAllocatorTraits);    \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN, InstancedSmallBlockAllocatorTraits); \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN, InstancedLargeBlockAllocatorTraits); \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN, HeapSmallBlockAllocatorTraits);      \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN, HeapLargeBlockAllocatorTraits);      \
   } while (0)
 
 void RegisterTests() {
@@ -333,11 +300,10 @@ PERFTEST_CTOR(RegisterTests);
 
 }  // namespace
 
-#define DECLARE_STATIC_STORAGE(SLAB_TRAITS)                           \
-  DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(                              \
-      SLAB_TRAITS, (kLiveAllocLimitBytes /                            \
-                    (fbl::SlabAllocator<SLAB_TRAITS>::AllocsPerSlab * \
-                     SLAB_TRAITS::kUserBufSize)) +                    \
+#define DECLARE_STATIC_STORAGE(SLAB_TRAITS)                                                  \
+  DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(                                                     \
+      SLAB_TRAITS, (kLiveAllocLimitBytes / (fbl::SlabAllocator<SLAB_TRAITS>::AllocsPerSlab * \
+                                            SLAB_TRAITS::kUserBufSize)) +                    \
                        1 /* Round up */);
 
 DECLARE_STATIC_STORAGE(StaticSmallBlockAllocatorTraits);

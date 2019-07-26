@@ -13,57 +13,49 @@ namespace fbl {
 namespace tests {
 namespace intrusive_containers {
 
-using OtherKeyType  = uint16_t;
+using OtherKeyType = uint16_t;
 using OtherHashType = uint32_t;
 static constexpr OtherHashType kOtherNumBuckets = 23;
 
 template <typename PtrType>
 struct OtherHashTraits {
-    using ObjType = typename ::fbl::internal::ContainerPtrTraits<PtrType>::ValueType;
-    using BucketStateType = DoublyLinkedListNodeState<PtrType>;
+  using ObjType = typename ::fbl::internal::ContainerPtrTraits<PtrType>::ValueType;
+  using BucketStateType = DoublyLinkedListNodeState<PtrType>;
 
-    // Linked List Traits
-    static BucketStateType& node_state(ObjType& obj) {
-        return obj.other_container_state_.bucket_state_;
-    }
+  // Linked List Traits
+  static BucketStateType& node_state(ObjType& obj) {
+    return obj.other_container_state_.bucket_state_;
+  }
 
-    // Keyed Object Traits
-    static OtherKeyType GetKey(const ObjType& obj) {
-        return obj.other_container_state_.key_;
-    }
+  // Keyed Object Traits
+  static OtherKeyType GetKey(const ObjType& obj) { return obj.other_container_state_.key_; }
 
-    static bool LessThan(const OtherKeyType& key1, const OtherKeyType& key2) {
-        return key1 <  key2;
-    }
+  static bool LessThan(const OtherKeyType& key1, const OtherKeyType& key2) { return key1 < key2; }
 
-    static bool EqualTo(const OtherKeyType& key1, const OtherKeyType& key2) {
-        return key1 == key2;
-    }
+  static bool EqualTo(const OtherKeyType& key1, const OtherKeyType& key2) { return key1 == key2; }
 
-    // Hash Traits
-    static OtherHashType GetHash(const OtherKeyType& key) {
-        return static_cast<OtherHashType>((key * 0xaee58187) % kOtherNumBuckets);
-    }
+  // Hash Traits
+  static OtherHashType GetHash(const OtherKeyType& key) {
+    return static_cast<OtherHashType>((key * 0xaee58187) % kOtherNumBuckets);
+  }
 
-    // Set key is a trait which is only used by the tests, not by the containers
-    // themselves.
-    static void SetKey(ObjType& obj, OtherKeyType key) {
-        obj.other_container_state_.key_ = key;
-    }
+  // Set key is a trait which is only used by the tests, not by the containers
+  // themselves.
+  static void SetKey(ObjType& obj, OtherKeyType key) { obj.other_container_state_.key_ = key; }
 };
 
 template <typename PtrType>
 struct OtherHashState {
-private:
-    friend struct OtherHashTraits<PtrType>;
-    OtherKeyType key_;
-    typename OtherHashTraits<PtrType>::BucketStateType bucket_state_;
+ private:
+  friend struct OtherHashTraits<PtrType>;
+  OtherKeyType key_;
+  typename OtherHashTraits<PtrType>::BucketStateType bucket_state_;
 };
 
 template <typename PtrType>
 class HTDLLTraits {
-public:
-// clang-format off
+ public:
+  // clang-format off
     using ObjType = typename ::fbl::internal::ContainerPtrTraits<PtrType>::ValueType;
 
     using ContainerType           = HashTable<size_t, PtrType, DoublyLinkedList<PtrType>>;
@@ -99,7 +91,7 @@ public:
     using TaggedType1 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag1>>;
     using TaggedType2 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag2>>;
     using TaggedType3 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag3>>;
-// clang-format on
+  // clang-format on
 };
 
 // clang-format off

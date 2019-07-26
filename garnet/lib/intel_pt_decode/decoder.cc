@@ -43,8 +43,7 @@ static void* MmapFile(const char* file, size_t* size) {
 
 static void UnmapFile(void* map, size_t size) { munmap(map, size); }
 
-std::unique_ptr<DecoderState> DecoderState::Create(
-    const DecoderConfig& config) {
+std::unique_ptr<DecoderState> DecoderState::Create(const DecoderConfig& config) {
   auto decoder = std::unique_ptr<DecoderState>(new DecoderState());
 
   FXL_DCHECK(config.pt_file_name != "" || config.pt_list_file_name != "");
@@ -69,8 +68,7 @@ std::unique_ptr<DecoderState> DecoderState::Create(
   }
 
   if (config.pt_file_name != "") {
-    decoder->AddPtFile(files::GetCurrentDirectory(), PtFile::kIdUnset,
-                       config.pt_file_name);
+    decoder->AddPtFile(files::GetCurrentDirectory(), PtFile::kIdUnset, config.pt_file_name);
   } else {
     if (!decoder->ReadPtListFile(config.pt_list_file_name))
       return nullptr;
@@ -91,8 +89,7 @@ std::unique_ptr<DecoderState> DecoderState::Create(
   return decoder;
 }
 
-DecoderState::DecoderState()
-    : image_(nullptr), decoder_(nullptr), kernel_cr3_(pt_asid_no_cr3) {
+DecoderState::DecoderState() : image_(nullptr), decoder_(nullptr), kernel_cr3_(pt_asid_no_cr3) {
   pt_config_init(&config_);
 }
 
@@ -107,13 +104,12 @@ DecoderState::~DecoderState() {
 
 Process::Process(zx_koid_t p, uint64_t c, uint64_t start, uint64_t end)
     : pid(p), cr3(c), start_time(start), end_time(end) {
-  FXL_VLOG(2) << fxl::StringPrintf(
-      "pid %" PRIu64 " cr3 0x%" PRIx64 " start %" PRIu64, pid, cr3, start_time);
+  FXL_VLOG(2) << fxl::StringPrintf("pid %" PRIu64 " cr3 0x%" PRIx64 " start %" PRIu64, pid, cr3,
+                                   start_time);
 }
 
 PtFile::PtFile(uint64_t i, const std::string& f) : id(i), file(f) {
-  FXL_VLOG(2) << fxl::StringPrintf("pt_file %" PRIu64 ", file %s", id,
-                                   file.c_str());
+  FXL_VLOG(2) << fxl::StringPrintf("pt_file %" PRIu64 ", file %s", id, file.c_str());
 }
 
 const Process* DecoderState::LookupProcessByPid(zx_koid_t pid) {
@@ -156,9 +152,8 @@ std::string DecoderState::LookupFile(const std::string& file) {
 }
 
 // static
-int DecoderState::ReadMemCallback(uint8_t* buffer, size_t size,
-                                  const struct pt_asid* asid, uint64_t addr,
-                                  void* context) {
+int DecoderState::ReadMemCallback(uint8_t* buffer, size_t size, const struct pt_asid* asid,
+                                  uint64_t addr, void* context) {
   auto decoder = reinterpret_cast<DecoderState*>(context);
   uint64_t cr3 = asid->cr3;
 
@@ -199,8 +194,7 @@ int DecoderState::ReadMemCallback(uint8_t* buffer, size_t size,
     return -pte_nomap;
   }
 
-  if (!decoder->ReadElf(file.c_str(), map->base_addr, cr3, 0,
-                        map->end_addr - map->load_addr)) {
+  if (!decoder->ReadElf(file.c_str(), map->base_addr, cr3, 0, map->end_addr - map->load_addr)) {
     FXL_VLOG(1) << "Reading ELF file failed: " << file;
     return -pte_nomap;
   }
@@ -221,18 +215,15 @@ bool DecoderState::AllocImage(const std::string& name) {
   return true;
 }
 
-bool DecoderState::AddProcess(zx_koid_t pid, uint64_t cr3,
-                              uint64_t start_time) {
-  FXL_VLOG(2) << fxl::StringPrintf("New process: %" PRIu64 ", cr3 0x%" PRIx64
-                                   " @%" PRIu64,
-                                   pid, cr3, start_time);
+bool DecoderState::AddProcess(zx_koid_t pid, uint64_t cr3, uint64_t start_time) {
+  FXL_VLOG(2) << fxl::StringPrintf("New process: %" PRIu64 ", cr3 0x%" PRIx64 " @%" PRIu64, pid,
+                                   cr3, start_time);
   processes_.push_back(Process(pid, cr3, start_time, 0));
   return true;
 }
 
 bool DecoderState::MarkProcessExited(zx_koid_t pid, uint64_t end_time) {
-  FXL_VLOG(2) << fxl::StringPrintf(
-      "Marking process exit: %" PRIu64 " @%" PRIu64, pid, end_time);
+  FXL_VLOG(2) << fxl::StringPrintf("Marking process exit: %" PRIu64 " @%" PRIu64, pid, end_time);
 
   // We don't remove the process as process start/exit records are read in
   // one pass over the ktrace file. Instead just mark when it exited.
@@ -249,8 +240,7 @@ bool DecoderState::MarkProcessExited(zx_koid_t pid, uint64_t end_time) {
   return true;
 }
 
-void DecoderState::AddPtFile(const std::string& file_dir, uint64_t id,
-                             const std::string& path) {
+void DecoderState::AddPtFile(const std::string& file_dir, uint64_t id, const std::string& path) {
   std::string abs_path;
 
   // Convert relative paths to absolute ones.
@@ -275,11 +265,9 @@ bool DecoderState::AllocDecoder(const std::string& pt_file_name) {
     memset(&config_.errata, 0xff, sizeof(config_.errata));
 
   size_t len;
-  unsigned char* map =
-      reinterpret_cast<unsigned char*>(MmapFile(pt_file_name.c_str(), &len));
+  unsigned char* map = reinterpret_cast<unsigned char*>(MmapFile(pt_file_name.c_str(), &len));
   if (!map) {
-    fprintf(stderr, "Cannot open PT file %s: %s\n", pt_file_name.c_str(),
-            strerror(errno));
+    fprintf(stderr, "Cannot open PT file %s: %s\n", pt_file_name.c_str(), strerror(errno));
     return false;
   }
   config_.begin = map;
@@ -307,8 +295,7 @@ const SymbolTable* DecoderState::FindSymbolTable(uint64_t cr3, uint64_t pc) {
   return simple_pt::FindSymbolTable(symtabs_, cr3, pc);
 }
 
-const Symbol* DecoderState::FindSymbol(uint64_t cr3, uint64_t pc,
-                                       const SymbolTable** out_symtab) {
+const Symbol* DecoderState::FindSymbol(uint64_t cr3, uint64_t pc, const SymbolTable** out_symtab) {
   return simple_pt::FindSymbol(symtabs_, cr3, pc, out_symtab);
 }
 
@@ -316,8 +303,6 @@ const char* DecoderState::FindPcFileName(uint64_t cr3, uint64_t pc) {
   return simple_pt::FindPcFileName(symtabs_, cr3, pc);
 }
 
-bool DecoderState::SeenCr3(uint64_t cr3) {
-  return simple_pt::SeenCr3(symtabs_, cr3);
-}
+bool DecoderState::SeenCr3(uint64_t cr3) { return simple_pt::SeenCr3(symtabs_, cr3); }
 
 }  // namespace intel_processor_trace

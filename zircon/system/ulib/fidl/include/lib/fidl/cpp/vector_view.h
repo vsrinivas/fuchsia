@@ -12,10 +12,8 @@ namespace fidl {
 template <typename T>
 class VectorView : public fidl_vector_t {
  public:
-  VectorView()
-      : fidl_vector_t{} {}
-  VectorView(uint64_t count, T* data)
-      : fidl_vector_t{count, data} {}
+  VectorView() : fidl_vector_t{} {}
+  VectorView(uint64_t count, T* data) : fidl_vector_t{count, data} {}
 
   uint64_t count() const { return fidl_vector_t::count; }
   void set_count(uint64_t count) { fidl_vector_t::count = count; }

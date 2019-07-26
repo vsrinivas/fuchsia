@@ -12,10 +12,10 @@ const char kTestName[] = "test";
 const char kTestData[] = "test";
 
 TEST(RunTestHelper, PublishData) {
-    zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-    vmo.set_property(ZX_PROP_NAME, kTestName, sizeof(kTestName));
-    __sanitizer_publish_data(kTestData, vmo.release());
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  vmo.set_property(ZX_PROP_NAME, kTestName, sizeof(kTestName));
+  __sanitizer_publish_data(kTestData, vmo.release());
 }
 
-} // anonymous namespace
+}  // anonymous namespace

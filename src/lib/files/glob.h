@@ -27,11 +27,9 @@ class Glob {
   };
 
   // Iterator over globbed files.
-  class iterator
-      : public std::iterator<std::input_iterator_tag, const char*, ptrdiff_t> {
+  class iterator : public std::iterator<std::input_iterator_tag, const char*, ptrdiff_t> {
    public:
-    iterator(const Glob* glob, size_t offset = 0)
-        : glob_(glob), offset_(offset) {}
+    iterator(const Glob* glob, size_t offset = 0) : glob_(glob), offset_(offset) {}
 
     operator bool() const { return offset_ < glob_->glob_buf_.gl_pathc; }
     bool operator==(const iterator& other) const {
@@ -55,8 +53,7 @@ class Glob {
   // Construct a new glob for a given path.
   Glob(const std::string& path, const Options& options = {});
   // Construct a new glob over multiple paths at once.
-  Glob(std::initializer_list<std::string> paths,
-                  const Options& options = {});
+  Glob(std::initializer_list<std::string> paths, const Options& options = {});
   ~Glob();
 
   iterator begin() { return iterator(this, 0); }

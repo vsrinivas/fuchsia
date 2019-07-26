@@ -54,32 +54,24 @@ void GammaRgbRegistersTest::ResetDefaults() {
 }
 
 void GammaRgbRegistersTest::SetExpectations() {
-  (*mock_registers_.get())[0x00]
-      .ExpectWrite(true)
-      .ExpectWrite(enable_val_);
+  (*mock_registers_.get())[0x00].ExpectWrite(true).ExpectWrite(enable_val_);
   (*mock_registers_.get())[0x04]
       .ExpectWrite((kDefaultGain << 16) + kDefaultGain)
       .ExpectWrite((gain_g_val_ << 16) + gain_r_val_);
-  (*mock_registers_.get())[0x08]
-      .ExpectWrite(kDefaultGain)
-      .ExpectWrite(gain_b_val_);
+  (*mock_registers_.get())[0x08].ExpectWrite(kDefaultGain).ExpectWrite(gain_b_val_);
   (*mock_registers_.get())[0x0c]
       .ExpectWrite((kDefaultOffset << 16) + kDefaultOffset)
       .ExpectWrite((offset_g_val_ << 16) + offset_r_val_);
-  (*mock_registers_.get())[0x10]
-      .ExpectWrite(kDefaultOffset)
-      .ExpectWrite(offset_b_val_);
+  (*mock_registers_.get())[0x10].ExpectWrite(kDefaultOffset).ExpectWrite(offset_b_val_);
 }
 
-void GammaRgbRegistersTest::SetUp() {
-  ResetDefaults();
-}
+void GammaRgbRegistersTest::SetUp() { ResetDefaults(); }
 
 TEST_F(GammaRgbRegistersTest, TestEnable) {
   fbl::Array<ddk_mock::MockMmioReg> reg_array =
       fbl::Array(new ddk_mock::MockMmioReg[kRegCount], kRegCount);
-  mock_registers_ = std::make_unique<ddk_mock::MockMmioRegRegion>(
-      reg_array.get(), sizeof(uint32_t), kRegCount);
+  mock_registers_ =
+      std::make_unique<ddk_mock::MockMmioRegRegion>(reg_array.get(), sizeof(uint32_t), kRegCount);
   ddk::MmioView local_mmio(mock_registers_->GetMmioBuffer(), 0);
   registers_ = std::make_unique<GammaRgbRegisters>(local_mmio);
   enable_val_ = false;
@@ -93,8 +85,8 @@ TEST_F(GammaRgbRegistersTest, TestEnable) {
 TEST_F(GammaRgbRegistersTest, TestSetGainR) {
   fbl::Array<ddk_mock::MockMmioReg> reg_array =
       fbl::Array(new ddk_mock::MockMmioReg[kRegCount], kRegCount);
-  mock_registers_ = std::make_unique<ddk_mock::MockMmioRegRegion>(
-      reg_array.get(), sizeof(uint32_t), kRegCount);
+  mock_registers_ =
+      std::make_unique<ddk_mock::MockMmioRegRegion>(reg_array.get(), sizeof(uint32_t), kRegCount);
   ddk::MmioView local_mmio(mock_registers_->GetMmioBuffer(), 0);
   registers_ = std::make_unique<GammaRgbRegisters>(local_mmio);
   gain_r_val_ = kTestGain;
@@ -108,8 +100,8 @@ TEST_F(GammaRgbRegistersTest, TestSetGainR) {
 TEST_F(GammaRgbRegistersTest, TestSetGainG) {
   fbl::Array<ddk_mock::MockMmioReg> reg_array =
       fbl::Array(new ddk_mock::MockMmioReg[kRegCount], kRegCount);
-  mock_registers_ = std::make_unique<ddk_mock::MockMmioRegRegion>(
-      reg_array.get(), sizeof(uint32_t), kRegCount);
+  mock_registers_ =
+      std::make_unique<ddk_mock::MockMmioRegRegion>(reg_array.get(), sizeof(uint32_t), kRegCount);
   ddk::MmioView local_mmio(mock_registers_->GetMmioBuffer(), 0);
   registers_ = std::make_unique<GammaRgbRegisters>(local_mmio);
   gain_g_val_ = kTestGain;
@@ -123,8 +115,8 @@ TEST_F(GammaRgbRegistersTest, TestSetGainG) {
 TEST_F(GammaRgbRegistersTest, TestSetGainB) {
   fbl::Array<ddk_mock::MockMmioReg> reg_array =
       fbl::Array(new ddk_mock::MockMmioReg[kRegCount], kRegCount);
-  mock_registers_ = std::make_unique<ddk_mock::MockMmioRegRegion>(
-      reg_array.get(), sizeof(uint32_t), kRegCount);
+  mock_registers_ =
+      std::make_unique<ddk_mock::MockMmioRegRegion>(reg_array.get(), sizeof(uint32_t), kRegCount);
   ddk::MmioView local_mmio(mock_registers_->GetMmioBuffer(), 0);
   registers_ = std::make_unique<GammaRgbRegisters>(local_mmio);
   gain_b_val_ = kTestGain;
@@ -138,8 +130,8 @@ TEST_F(GammaRgbRegistersTest, TestSetGainB) {
 TEST_F(GammaRgbRegistersTest, TestSetOffsetR) {
   fbl::Array<ddk_mock::MockMmioReg> reg_array =
       fbl::Array(new ddk_mock::MockMmioReg[kRegCount], kRegCount);
-  mock_registers_ = std::make_unique<ddk_mock::MockMmioRegRegion>(
-      reg_array.get(), sizeof(uint32_t), kRegCount);
+  mock_registers_ =
+      std::make_unique<ddk_mock::MockMmioRegRegion>(reg_array.get(), sizeof(uint32_t), kRegCount);
   ddk::MmioView local_mmio(mock_registers_->GetMmioBuffer(), 0);
   registers_ = std::make_unique<GammaRgbRegisters>(local_mmio);
   offset_r_val_ = kTestOffset;
@@ -153,8 +145,8 @@ TEST_F(GammaRgbRegistersTest, TestSetOffsetR) {
 TEST_F(GammaRgbRegistersTest, TestSetOffsetG) {
   fbl::Array<ddk_mock::MockMmioReg> reg_array =
       fbl::Array(new ddk_mock::MockMmioReg[kRegCount], kRegCount);
-  mock_registers_ = std::make_unique<ddk_mock::MockMmioRegRegion>(
-      reg_array.get(), sizeof(uint32_t), kRegCount);
+  mock_registers_ =
+      std::make_unique<ddk_mock::MockMmioRegRegion>(reg_array.get(), sizeof(uint32_t), kRegCount);
   ddk::MmioView local_mmio(mock_registers_->GetMmioBuffer(), 0);
   registers_ = std::make_unique<GammaRgbRegisters>(local_mmio);
   offset_g_val_ = kTestOffset;
@@ -168,8 +160,8 @@ TEST_F(GammaRgbRegistersTest, TestSetOffsetG) {
 TEST_F(GammaRgbRegistersTest, TestSetOffsetB) {
   fbl::Array<ddk_mock::MockMmioReg> reg_array =
       fbl::Array(new ddk_mock::MockMmioReg[kRegCount], kRegCount);
-  mock_registers_ = std::make_unique<ddk_mock::MockMmioRegRegion>(
-      reg_array.get(), sizeof(uint32_t), kRegCount);
+  mock_registers_ =
+      std::make_unique<ddk_mock::MockMmioRegRegion>(reg_array.get(), sizeof(uint32_t), kRegCount);
   ddk::MmioView local_mmio(mock_registers_->GetMmioBuffer(), 0);
   registers_ = std::make_unique<GammaRgbRegisters>(local_mmio);
   offset_b_val_ = kTestOffset;

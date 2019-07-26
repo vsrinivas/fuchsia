@@ -26,15 +26,13 @@ class DockyardProxyGrpc : public DockyardProxy {
                                               const std::string& json) override;
 
   // |DockyardProxy|.
-  virtual DockyardProxyStatus SendSample(const std::string& dockyard_path,
-                                         uint64_t value) override;
+  virtual DockyardProxyStatus SendSample(const std::string& dockyard_path, uint64_t value) override;
 
   // |DockyardProxy|.
   virtual DockyardProxyStatus SendSampleList(const SampleList list) override;
 
   // |DockyardProxy|.
-  virtual DockyardProxyStatus SendStringSampleList(
-      const StringSampleList list) override;
+  virtual DockyardProxyStatus SendStringSampleList(const StringSampleList list) override;
 
  private:
   // A local stub for the remote Dockyard instance.
@@ -46,15 +44,13 @@ class DockyardProxyGrpc : public DockyardProxy {
   // Actually send data to the Dockyard.
   // |time| is in nanoseconds.
   // See also: SendInspectJson().
-  grpc::Status SendInspectJsonById(uint64_t time,
-                                   dockyard::DockyardId dockyard_id,
+  grpc::Status SendInspectJsonById(uint64_t time, dockyard::DockyardId dockyard_id,
                                    const std::string& json);
 
   // Actually send a single sample to the Dockyard.
   // |time| is in nanoseconds.
   // See also: SendSample().
-  grpc::Status SendSampleById(uint64_t time, dockyard::DockyardId dockyard_id,
-                              uint64_t value);
+  grpc::Status SendSampleById(uint64_t time, dockyard::DockyardId dockyard_id, uint64_t value);
 
   // Actually send a list of samples with the same timestamp to the Dockyard.
   // |time| is in nanoseconds.
@@ -66,9 +62,8 @@ class DockyardProxyGrpc : public DockyardProxy {
   grpc::Status GetDockyardIdForPath(dockyard::DockyardId* dockyard_id,
                                     const std::string& dockyard_path);
   // As above, for a list of paths and IDs.
-  grpc::Status GetDockyardIdsForPaths(
-      std::vector<dockyard::DockyardId>* dockyard_id,
-      const std::vector<const std::string*>& dockyard_path);
+  grpc::Status GetDockyardIdsForPaths(std::vector<dockyard::DockyardId>* dockyard_id,
+                                      const std::vector<const std::string*>& dockyard_path);
 };
 
 }  // namespace harvester

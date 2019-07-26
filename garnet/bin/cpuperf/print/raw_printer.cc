@@ -22,16 +22,14 @@
 
 namespace cpuperf {
 
-bool RawPrinter::Create(
-    const SessionResultSpec* session_result_spec, const Config& config,
-    std::unique_ptr<RawPrinter>* out_printer) {
+bool RawPrinter::Create(const SessionResultSpec* session_result_spec, const Config& config,
+                        std::unique_ptr<RawPrinter>* out_printer) {
   const std::string& output_file_name = config.output_file_name;
   FILE* out_file = stdout;
   if (output_file_name != "") {
     out_file = fopen(output_file_name.c_str(), "w");
     if (!out_file) {
-      FXL_LOG(ERROR) << "Unable to open file for writing: "
-                     << output_file_name;
+      FXL_LOG(ERROR) << "Unable to open file for writing: " << output_file_name;
       return false;
     }
   }
@@ -40,12 +38,9 @@ bool RawPrinter::Create(
   return true;
 }
 
-RawPrinter::RawPrinter(FILE* out_file,
-                       const SessionResultSpec* session_result_spec,
+RawPrinter::RawPrinter(FILE* out_file, const SessionResultSpec* session_result_spec,
                        const Config& config)
-    : out_file_(out_file),
-      session_result_spec_(session_result_spec),
-      config_(config) {}
+    : out_file_(out_file), session_result_spec_(session_result_spec), config_(config) {}
 
 RawPrinter::~RawPrinter() {
   if (config_.output_file_name != "")
@@ -90,29 +85,26 @@ void RawPrinter::PrintValueRecord(const perfmon::SampleRecord& record) {
 void RawPrinter::PrintPcRecord(const perfmon::SampleRecord& record) {
   Printf("PC: ");
   PrintHeader(record);
-  Printf(", aspace 0x%" PRIx64 ", pc 0x%" PRIx64 "\n",
-         record.pc->aspace, record.pc->pc);
+  Printf(", aspace 0x%" PRIx64 ", pc 0x%" PRIx64 "\n", record.pc->aspace, record.pc->pc);
 }
 
 void RawPrinter::PrintLastBranchRecord(const perfmon::SampleRecord& record) {
   Printf("LastBranch: ");
   PrintHeader(record);
-  Printf(", aspace 0x%" PRIx64 ", %u branches\n",
-         record.last_branch->aspace, record.last_branch->num_branches);
+  Printf(", aspace 0x%" PRIx64 ", %u branches\n", record.last_branch->aspace,
+         record.last_branch->num_branches);
   // TODO(dje): Print each branch, but it's a lot so maybe only if verbose?
 }
 
 uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
   uint64_t total_records = 0;
 
-  auto get_file_name = [this, &iter_num] (uint32_t trace_num) -> std::string {
+  auto get_file_name = [this, &iter_num](uint32_t trace_num) -> std::string {
     return session_result_spec_->GetTraceFilePath(iter_num, trace_num);
   };
 
   std::unique_ptr<perfmon::FileReader> reader;
-  if (!perfmon::FileReader::Create(get_file_name,
-                          session_result_spec_->num_traces,
-                          &reader)) {
+  if (!perfmon::FileReader::Create(get_file_name, session_result_spec_->num_traces, &reader)) {
     return 0;
   }
 
@@ -133,28 +125,28 @@ uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
     Printf("%04zx: ", reader->GetLastRecordOffset());
 
     switch (record.type()) {
-    case perfmon::kRecordTypeTime:
-      PrintTimeRecord(record);
-      break;
-    case perfmon::kRecordTypeTick:
-      PrintTickRecord(record);
-      break;
-    case perfmon::kRecordTypeCount:
-      PrintCountRecord(record);
-      break;
-    case perfmon::kRecordTypeValue:
-      PrintValueRecord(record);
-      break;
-    case perfmon::kRecordTypePc:
-      PrintPcRecord(record);
-      break;
-    case perfmon::kRecordTypeLastBranch:
-      PrintLastBranchRecord(record);
-      break;
-    default:
-      // The reader shouldn't be returning unknown records.
-      FXL_NOTREACHED();
-      break;
+      case perfmon::kRecordTypeTime:
+        PrintTimeRecord(record);
+        break;
+      case perfmon::kRecordTypeTick:
+        PrintTickRecord(record);
+        break;
+      case perfmon::kRecordTypeCount:
+        PrintCountRecord(record);
+        break;
+      case perfmon::kRecordTypeValue:
+        PrintValueRecord(record);
+        break;
+      case perfmon::kRecordTypePc:
+        PrintPcRecord(record);
+        break;
+      case perfmon::kRecordTypeLastBranch:
+        PrintLastBranchRecord(record);
+        break;
+      default:
+        // The reader shouldn't be returning unknown records.
+        FXL_NOTREACHED();
+        break;
     }
   }
 
@@ -164,9 +156,7 @@ uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
 uint64_t RawPrinter::PrintFiles() {
   uint64_t total_records = 0;
 
-  for (uint32_t iter = 0;
-       iter < session_result_spec_->num_iterations;
-       ++iter) {
+  for (uint32_t iter = 0; iter < session_result_spec_->num_iterations; ++iter) {
     Printf("\nIteration %u\n", iter);
     // No, the number of =s doesn't line up, it's close enough.
     Printf("==============\n");

@@ -15,18 +15,14 @@
 
 #define QMI_INIT_REQ \
   { 1, 15, 0, 0, 0, 0, 0, 1, 34, 0, 4, 0, 1, 1, 0, 2 }
-#define QMI_INIT_RESP                                                         \
-  {                                                                           \
-    1, 23, 0, 128, 0, 0, 1, 1, 34, 0, 12, 0, 2, 4, 0, 0, 0, 0, 0, 1, 2, 0, 2, \
-        1                                                                     \
-  }
+#define QMI_INIT_RESP \
+  { 1, 23, 0, 128, 0, 0, 1, 1, 34, 0, 12, 0, 2, 4, 0, 0, 0, 0, 0, 1, 2, 0, 2, 1 }
 #define QMI_IMEI_REQ \
   { 1, 12, 0, 0, 2, 1, 0, 1, 0, 37, 0, 0, 0 }
-#define QMI_IMEI_RESP                                                          \
-  {                                                                            \
-    1, 41, 0, 128, 2, 1, 2, 1, 0, 37, 0, 29, 0, 2, 4, 0, 0, 0, 0, 0, 16, 1, 0, \
-        48, 17, 15, 0, 51, 53, 57, 50, 54, 48, 48, 56, 48, 49, 54, 56, 51, 53, \
-        49                                                                     \
+#define QMI_IMEI_RESP                                                                             \
+  {                                                                                               \
+    1, 41, 0, 128, 2, 1, 2, 1, 0, 37, 0, 29, 0, 2, 4, 0, 0, 0, 0, 0, 16, 1, 0, 48, 17, 15, 0, 51, \
+        53, 57, 50, 54, 48, 48, 56, 48, 49, 54, 56, 51, 53, 49                                    \
   }
 #define QMI_POWER_STA_REQ \
   { 1, 12, 0, 0, 2, 1, 0, 1, 0, 45, 0, 0, 0 }
@@ -54,8 +50,9 @@ Device::Device(zx_device_t* device) : parent_(device) {}
 static zx_protocol_device_t qmi_fake_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
-    .get_protocol = [](void* ctx, uint32_t proto_id, void* out_proto)
-        -> zx_status_t { return DEV(ctx)->GetProtocol(proto_id, out_proto); },
+    .get_protocol = [](void* ctx, uint32_t proto_id, void* out_proto) -> zx_status_t {
+      return DEV(ctx)->GetProtocol(proto_id, out_proto);
+    },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
     .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
       return DEV(ctx)->DdkMessage(msg, txn);
@@ -63,9 +60,8 @@ static zx_protocol_device_t qmi_fake_device_ops = {
 };
 #undef DEV
 
-void Device::SetChannel(
-    ::zx::channel transport,
-    fidl_qmi_transport::Qmi::Interface::SetChannelCompleter::Sync completer) {
+void Device::SetChannel(::zx::channel transport,
+                        fidl_qmi_transport::Qmi::Interface::SetChannelCompleter::Sync completer) {
   zx_status_t status = ZX_OK;
   zx_status_t set_channel_res = SetChannelToDevice(transport.release());
   fidl_qmi_transport::Qmi_SetChannel_Result result;
@@ -88,17 +84,15 @@ done:
   return;
 }
 
-void Device::SetNetwork(
-    bool connected,
-    fidl_qmi_transport::Qmi::Interface::SetNetworkCompleter::Sync completer) {
+void Device::SetNetwork(bool connected,
+                        fidl_qmi_transport::Qmi::Interface::SetNetworkCompleter::Sync completer) {
   SetNetworkStatusToDevice(connected);
   completer.Reply();
 }
 
 void Device::SetSnoopChannel(
     ::zx::channel interface,
-    fidl_qmi_transport::Qmi::Interface::SetSnoopChannelCompleter::Sync
-        completer) {
+    fidl_qmi_transport::Qmi::Interface::SetSnoopChannelCompleter::Sync completer) {
   zx_status_t set_snoop_res = SetSnoopChannelToDevice(interface.release());
   fidl_qmi_transport::Qmi_SetSnoopChannel_Result result;
   if (set_snoop_res == ZX_OK) {
@@ -148,8 +142,8 @@ zx_status_t Device::SetSnoopChannelToDevice(zx_handle_t channel) {
     result = ZX_ERR_BAD_HANDLE;
   } else {
     snoop_channel_ = channel;
-    zx_object_wait_async(snoop_channel_, snoop_channel_port_, 0,
-                         ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+    zx_object_wait_async(snoop_channel_, snoop_channel_port_, 0, ZX_CHANNEL_PEER_CLOSED,
+                         ZX_WAIT_ASYNC_ONCE);
   }
   return result;
 }
@@ -166,19 +160,17 @@ zx_status_t Device::CloseQmiChannel() {
 zx_handle_t Device::GetQmiChannel() { return qmi_channel_; }
 
 zx_status_t Device::SetAsyncWait() {
-  zx_status_t status = zx_object_wait_async(
-      qmi_channel_, qmi_channel_port_, CHANNEL_MSG,
-      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+  zx_status_t status =
+      zx_object_wait_async(qmi_channel_, qmi_channel_port_, CHANNEL_MSG,
+                           ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
   return status;
 }
 
-static void sent_fake_qmi_msg(zx_handle_t channel, uint8_t* resp,
-                              uint32_t resp_size) {
+static void sent_fake_qmi_msg(zx_handle_t channel, uint8_t* resp, uint32_t resp_size) {
   zx_status_t status;
   status = zx_channel_write(channel, 0, resp, resp_size, NULL, 0);
   if (status < 0) {
-    zxlogf(ERROR,
-           "qmi-fake-transport: failed to write message to channel: %s\n",
+    zxlogf(ERROR, "qmi-fake-transport: failed to write message to channel: %s\n",
            zx_status_get_string(status));
   }
 }
@@ -194,13 +186,12 @@ void Device::SnoopQmiMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
     qmi_msg.timestamp = zx_clock_get_monotonic();
     memcpy(qmi_msg.opaque_bytes.data_, snoop_data, current_length);
     snoop_msg.set_qmi_message(qmi_msg);
-    fidl_tel_snoop::Publisher::Call::SendMessage_Deprecated(
-        zx::unowned_channel(snoop_channel_), std::move(snoop_msg));
+    fidl_tel_snoop::Publisher::Call::SendMessage_Deprecated(zx::unowned_channel(snoop_channel_),
+                                                            std::move(snoop_msg));
   }
 }
 
-void Device::ReplyQmiMsg(uint8_t* req, uint32_t req_size, uint8_t* resp,
-                         uint32_t resp_size) {
+void Device::ReplyQmiMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint32_t resp_size) {
   memset(resp, 170, resp_size);
   if (0 == memcmp(req, qmi_init_req, sizeof(qmi_init_req))) {
     memcpy(resp, qmi_perio_event, MIN(sizeof(qmi_perio_event), resp_size));
@@ -228,8 +219,7 @@ static int qmi_fake_transport_thread(void* cookie) {
   assert(cookie != NULL);
   Device* device_ptr = static_cast<Device*>(cookie);
   if (device_ptr->max_packet_size_ > 2048) {
-    zxlogf(ERROR, "qmi-fake-transport: packet too big: %d\n",
-           device_ptr->max_packet_size_);
+    zxlogf(ERROR, "qmi-fake-transport: packet too big: %d\n", device_ptr->max_packet_size_);
     return ZX_ERR_IO_REFUSED;
   }
   uint8_t buffer[device_ptr->max_packet_size_];
@@ -239,11 +229,9 @@ static int qmi_fake_transport_thread(void* cookie) {
   zx_port_packet_t packet;
   zxlogf(INFO, "qmi-fake-transport: event loop initialized\n");
   while (true) {
-    zx_status_t status =
-        zx_port_wait(device_ptr->qmi_channel_port_, ZX_TIME_INFINITE, &packet);
+    zx_status_t status = zx_port_wait(device_ptr->qmi_channel_port_, ZX_TIME_INFINITE, &packet);
     if (status == ZX_ERR_TIMED_OUT) {
-      zxlogf(ERROR, "qmi-fake-transport: timed out: %s\n",
-             zx_status_get_string(status));
+      zxlogf(ERROR, "qmi-fake-transport: timed out: %s\n", zx_status_get_string(status));
     } else {
       if (packet.key == CHANNEL_MSG) {
         if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
@@ -251,15 +239,14 @@ static int qmi_fake_transport_thread(void* cookie) {
           status = device_ptr->CloseQmiChannel();
           continue;
         }
-        status = zx_channel_read(device_ptr->GetQmiChannel(), 0, buffer, NULL,
-                                 sizeof(buffer), 0, &length_read, NULL);
+        status = zx_channel_read(device_ptr->GetQmiChannel(), 0, buffer, NULL, sizeof(buffer), 0,
+                                 &length_read, NULL);
         if (status != ZX_OK) {
           zxlogf(ERROR, "qmi-fake-transport: failed to read channel: %s\n",
                  zx_status_get_string(status));
           return status;
         }
-        device_ptr->SnoopQmiMsg(buffer, sizeof(buffer),
-                                fidl_tel_snoop::Direction::TO_MODEM);
+        device_ptr->SnoopQmiMsg(buffer, sizeof(buffer), fidl_tel_snoop::Direction::TO_MODEM);
         // TODO (jiamingw): parse QMI msg, form reply and write back to channel.
         device_ptr->ReplyQmiMsg(buffer, length_read, repl_buffer, length);
         status = device_ptr->SetAsyncWait();
@@ -297,13 +284,10 @@ zx_status_t Device::Bind() {
   }
 
   // create the handler thread
-  int thread_result =
-      thrd_create_with_name(&fake_qmi_thread_, qmi_fake_transport_thread,
-                            (void*)this, "qmi_fake_transport_thread");
+  int thread_result = thrd_create_with_name(&fake_qmi_thread_, qmi_fake_transport_thread,
+                                            (void*)this, "qmi_fake_transport_thread");
   if (thread_result != thrd_success) {
-    zxlogf(ERROR,
-           "qmi-fake-transport: failed to create transport thread (%d)\n",
-           thread_result);
+    zxlogf(ERROR, "qmi-fake-transport: failed to create transport thread (%d)\n", thread_result);
     status = ZX_ERR_INTERNAL;
   }
 

@@ -33,11 +33,9 @@ class GoogleAuthProviderApp {
         trace_provider_(loop_.dispatcher()),
         network_wrapper_(
             loop_.dispatcher(), std::make_unique<backoff::ExponentialBackoff>(),
-            [this] {
-              return component_context_->svc()->Connect<http::HttpService>();
-            }),
-        factory_impl_(loop_.dispatcher(), component_context_.get(),
-                      &network_wrapper_, CreateSettings(command_line)) {
+            [this] { return component_context_->svc()->Connect<http::HttpService>(); }),
+        factory_impl_(loop_.dispatcher(), component_context_.get(), &network_wrapper_,
+                      CreateSettings(command_line)) {
     FXL_DCHECK(component_context_);
   }
 

@@ -31,8 +31,7 @@ class ControllerImpl final : public Controller {
 
   const Config& config() const override { return config_; }
 
-  bool GetBufferHandle(const std::string& name, uint32_t trace_num,
-                       zx::vmo* out_vmo) override;
+  bool GetBufferHandle(const std::string& name, uint32_t trace_num, zx::vmo* out_vmo) override;
 
   std::unique_ptr<Reader> GetReader() override;
 

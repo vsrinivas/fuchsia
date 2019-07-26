@@ -17,8 +17,8 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_WOW_H_
 
 struct ath10k_wow {
-    uint32_t max_num_patterns;
-    sync_completion_t wakeup_completed;
+  uint32_t max_num_patterns;
+  sync_completion_t wakeup_completed;
 #if 0   // NEEDS PORTING
     struct wiphy_wowlan_support wowlan_support;
 #endif  // NEEDS PORTING
@@ -35,9 +35,7 @@ int ath10k_wow_op_resume(struct ieee80211_hw* hw);
 
 #else
 
-static inline int ath10k_wow_init(struct ath10k* ar) {
-    return 0;
-}
+static inline int ath10k_wow_init(struct ath10k* ar) { return 0; }
 
 #endif  /* CONFIG_PM */
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_WOW_H_

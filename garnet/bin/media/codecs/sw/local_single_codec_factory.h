@@ -24,13 +24,12 @@ class NoAdapter {};
 template <typename DecoderAdapter, typename EncoderAdapter>
 class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
  public:
-  LocalSingleCodecFactory(
-      async_dispatcher_t* fidl_dispatcher,
-      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-      fidl::InterfaceRequest<CodecFactory> request,
-      fit::function<void(std::unique_ptr<CodecImpl>)> factory_done_callback,
-      CodecAdmissionControl* codec_admission_control,
-      fit::function<void(zx_status_t)> error_handler)
+  LocalSingleCodecFactory(async_dispatcher_t* fidl_dispatcher,
+                          fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
+                          fidl::InterfaceRequest<CodecFactory> request,
+                          fit::function<void(std::unique_ptr<CodecImpl>)> factory_done_callback,
+                          CodecAdmissionControl* codec_admission_control,
+                          fit::function<void(zx_status_t)> error_handler)
       : fidl_dispatcher_(fidl_dispatcher),
         sysmem_(std::move(sysmem)),
         binding_(this),
@@ -43,29 +42,23 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
 
   virtual void CreateDecoder(
       fuchsia::mediacodec::CreateDecoder_Params decoder_params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request)
-      override {
-    VendCodecAdapter<DecoderAdapter>(std::move(decoder_params),
-                                     std::move(decoder_request));
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request) override {
+    VendCodecAdapter<DecoderAdapter>(std::move(decoder_params), std::move(decoder_request));
   }
 
   virtual void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
-      override {
-    VendCodecAdapter<EncoderAdapter>(std::move(encoder_params),
-                                     std::move(encoder_request));
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) override {
+    VendCodecAdapter<EncoderAdapter>(std::move(encoder_params), std::move(encoder_request));
   }
 
  private:
   template <typename Adapter, typename Params>
-  void VendCodecAdapter(
-      Params params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
+  void VendCodecAdapter(Params params,
+                        fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
     codec_admission_control_->TryAddCodec(
         /*multi_instance=*/true,
-        [this, params = std::move(params),
-         codec_request = std::move(codec_request)](
+        [this, params = std::move(params), codec_request = std::move(codec_request)](
             std::unique_ptr<CodecAdmission> codec_admission) mutable {
           if (!codec_admission) {
             // ~codec_request closes channel.
@@ -73,9 +66,8 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
           }
 
           if (!sysmem_) {
-            FX_LOGS(WARNING)
-                << "VendCodecAdapter() only meant to be used once per "
-                   "LocalSingleCodecFactory\n";
+            FX_LOGS(WARNING) << "VendCodecAdapter() only meant to be used once per "
+                                "LocalSingleCodecFactory\n";
             // ~codec_request closes channel.
             return;
           }

@@ -25,9 +25,9 @@ namespace {
 static zx_device_t* sim_dev = reinterpret_cast<zx_device_t*>(0x123456543210);
 
 TEST(LifecycleTest, StartStop) {
-    zx_status_t status = brcmfmac_module_init(sim_dev);
-    EXPECT_EQ(status, ZX_OK);
-    brcmf_core_exit();
+  zx_status_t status = brcmfmac_module_init(sim_dev);
+  EXPECT_EQ(status, ZX_OK);
+  brcmf_core_exit();
 }
 
 }  // namespace

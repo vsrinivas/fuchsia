@@ -11,8 +11,7 @@
 
 namespace insntrace {
 
-bool OpenKtraceChannel(
-    fuchsia::tracing::kernel::ControllerSyncPtr* out_controller_ptr);
+bool OpenKtraceChannel(fuchsia::tracing::kernel::ControllerSyncPtr* out_controller_ptr);
 
 bool RequestKtraceStart(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace,
                         uint32_t group_mask);
@@ -21,8 +20,7 @@ void RequestKtraceStop(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace
 
 void RequestKtraceRewind(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace);
 
-void DumpKtraceBuffer(const char* output_path_prefix,
-                      const char* output_path_suffix);
+void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_suffix);
 
 }  // namespace insntrace
 

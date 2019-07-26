@@ -14,8 +14,7 @@ namespace overnet {
 class StreamFramer {
  public:
   StreamFramer(Border desired_border, uint32_t maximum_segment_size)
-      : desired_border(desired_border),
-        maximum_segment_size(maximum_segment_size) {}
+      : desired_border(desired_border), maximum_segment_size(maximum_segment_size) {}
   virtual ~StreamFramer() = default;
 
   const Border desired_border;

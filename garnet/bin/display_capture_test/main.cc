@@ -83,8 +83,7 @@ int main(int argc, char** argv) {
 
   runner.Stop();
 
-  printf("Test took %ld ms\n",
-         (zx_clock_get_monotonic() - start_time) / 1000000);
+  printf("Test took %ld ms\n", (zx_clock_get_monotonic() - start_time) / 1000000);
   printf("Pass: %d Skip: %d Fail: %d\n", pass_count, skip_count, fail_count);
   return fail_count;
 }

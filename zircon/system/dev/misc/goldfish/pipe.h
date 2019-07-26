@@ -46,9 +46,8 @@ class Pipe : public FidlServer<Pipe,
                    fidl_txn_t* txn);
 
   zx_status_t TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t state_clr,
-                             zx_paddr_t paddr, size_t count,
-                             zx_paddr_t read_paddr, size_t read_count,
-                             size_t* actual) TA_REQ(lock_);
+                             zx_paddr_t paddr, size_t count, zx_paddr_t read_paddr,
+                             size_t read_count, size_t* actual) TA_REQ(lock_);
   zx_status_t SetBufferSizeLocked(uint64_t size) TA_REQ(lock_);
 
   static void OnSignal(void* ctx, int32_t flags);

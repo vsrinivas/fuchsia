@@ -26,72 +26,71 @@
 
 namespace {
 
-zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options,
-                         LaunchCallback cb, const char* cmd_path) {
-    fbl::unique_fd device_fd;
-    device_fd.reset(open(device_path, O_RDWR));
-    if (!device_fd) {
-        fprintf(stderr, "Failed to open device\n");
-        return ZX_ERR_BAD_STATE;
-    }
-    zx::channel block_device;
-    zx_status_t status = fdio_get_service_handle(device_fd.release(),
-                                                 block_device.reset_and_get_address());
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    fbl::Vector<const char*> argv;
-    argv.push_back(cmd_path);
-    if (options->verbose) {
-        argv.push_back("-v");
-    }
-    if (options->apply_journal) {
-        argv.push_back("-j");
-    }
-    // TODO(smklein): Add support for modify, force flags. Without them,
-    // we have "never_modify=true" and "force=true" effectively on by default.
-    argv.push_back("fsck");
-    argv.push_back(nullptr);
-
-    zx_handle_t hnd = block_device.release();
-    uint32_t id = FS_HANDLE_BLOCK_DEVICE_ID;
-    auto argc = static_cast<int>(argv.size() - 1);
-    status = static_cast<zx_status_t>(cb(argc, argv.get(), &hnd, &id, 1));
+zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options, LaunchCallback cb,
+                         const char* cmd_path) {
+  fbl::unique_fd device_fd;
+  device_fd.reset(open(device_path, O_RDWR));
+  if (!device_fd) {
+    fprintf(stderr, "Failed to open device\n");
+    return ZX_ERR_BAD_STATE;
+  }
+  zx::channel block_device;
+  zx_status_t status =
+      fdio_get_service_handle(device_fd.release(), block_device.reset_and_get_address());
+  if (status != ZX_OK) {
     return status;
+  }
+
+  fbl::Vector<const char*> argv;
+  argv.push_back(cmd_path);
+  if (options->verbose) {
+    argv.push_back("-v");
+  }
+  if (options->apply_journal) {
+    argv.push_back("-j");
+  }
+  // TODO(smklein): Add support for modify, force flags. Without them,
+  // we have "never_modify=true" and "force=true" effectively on by default.
+  argv.push_back("fsck");
+  argv.push_back(nullptr);
+
+  zx_handle_t hnd = block_device.release();
+  uint32_t id = FS_HANDLE_BLOCK_DEVICE_ID;
+  auto argc = static_cast<int>(argv.size() - 1);
+  status = static_cast<zx_status_t>(cb(argc, argv.get(), &hnd, &id, 1));
+  return status;
 }
 
-zx_status_t FsckFat(const char* device_path, const fsck_options_t* options,
-                    LaunchCallback cb) {
-    fbl::Vector<const char*> argv;
-    argv.push_back("/boot/bin/fsck-msdosfs");
-    if (options->never_modify) {
-        argv.push_back("-n");
-    } else if (options->always_modify) {
-        argv.push_back("-y");
-    }
-    if (options->force) {
-        argv.push_back("-f");
-    }
-    argv.push_back(device_path);
-    argv.push_back(nullptr);
-    auto argc = static_cast<int>(argv.size() - 1);
-    zx_status_t status = static_cast<zx_status_t>(cb(argc, argv.get(), nullptr, nullptr, 0));
-    return status;
+zx_status_t FsckFat(const char* device_path, const fsck_options_t* options, LaunchCallback cb) {
+  fbl::Vector<const char*> argv;
+  argv.push_back("/boot/bin/fsck-msdosfs");
+  if (options->never_modify) {
+    argv.push_back("-n");
+  } else if (options->always_modify) {
+    argv.push_back("-y");
+  }
+  if (options->force) {
+    argv.push_back("-f");
+  }
+  argv.push_back(device_path);
+  argv.push_back(nullptr);
+  auto argc = static_cast<int>(argv.size() - 1);
+  zx_status_t status = static_cast<zx_status_t>(cb(argc, argv.get(), nullptr, nullptr, 0));
+  return status;
 }
 
 }  // namespace
 
-zx_status_t fsck(const char* device_path, disk_format_t df,
-                 const fsck_options_t* options, LaunchCallback cb) {
-    switch (df) {
+zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t* options,
+                 LaunchCallback cb) {
+  switch (df) {
     case DISK_FORMAT_MINFS:
-        return FsckNativeFs(device_path, options, cb, "/boot/bin/minfs");
+      return FsckNativeFs(device_path, options, cb, "/boot/bin/minfs");
     case DISK_FORMAT_FAT:
-        return FsckFat(device_path, options, cb);
+      return FsckFat(device_path, options, cb);
     case DISK_FORMAT_BLOBFS:
-        return FsckNativeFs(device_path, options, cb, "/boot/bin/blobfs");
+      return FsckNativeFs(device_path, options, cb, "/boot/bin/blobfs");
     default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 }

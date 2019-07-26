@@ -11,8 +11,7 @@
 #include "src/connectivity/overnet/deprecated/lib/protocol/reliable_framer.h"
 
 DEFINE_bool(udp, false, "Support Overnet over UDP");
-DEFINE_bool(omdp, true,
-            "Support OMDP discovery protocol for UDP communications");
+DEFINE_bool(omdp, true, "Support OMDP discovery protocol for UDP communications");
 DEFINE_string(unix_socket, "/tmp/ascendd.socket",
               "UNIX domain socket path for ascendd Overnet server");
 DEFINE_string(verbosity, "INFO", "Verbosity level");
@@ -24,8 +23,7 @@ DEFINE_validator(
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  overnet::ScopedSeverity trace_severity(
-      *overnet::SeverityFromString(FLAGS_verbosity));
+  overnet::ScopedSeverity trace_severity(*overnet::SeverityFromString(FLAGS_verbosity));
 
   overnet::BasicOvernetEmbedded overnet_embedded;
   overnet::StreamServer<overnet::ReliableFramer> stream_server(

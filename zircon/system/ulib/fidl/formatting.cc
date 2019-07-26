@@ -14,8 +14,7 @@ namespace {
 
 class StringBuilder {
  public:
-  StringBuilder(char* buffer, size_t capacity)
-      : buffer_(buffer), capacity_(capacity) {}
+  StringBuilder(char* buffer, size_t capacity) : buffer_(buffer), capacity_(capacity) {}
 
   size_t length() const { return length_; }
 

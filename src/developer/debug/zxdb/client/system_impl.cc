@@ -683,22 +683,21 @@ void SystemImpl::AddSymbolServer(SymbolServer* server) {
     ServerStartedInitializing();
   }
 
-  server->set_state_change_callback(
-      [weak_this = weak_factory_.GetWeakPtr(), initializing](
-          SymbolServer* server, SymbolServer::State state) mutable {
-        if (!weak_this) {
-          return;
-        }
+  server->set_state_change_callback([weak_this = weak_factory_.GetWeakPtr(), initializing](
+                                        SymbolServer* server, SymbolServer::State state) mutable {
+    if (!weak_this) {
+      return;
+    }
 
-        if (state == SymbolServer::State::kReady)
-          weak_this->OnSymbolServerBecomesReady(server);
+    if (state == SymbolServer::State::kReady)
+      weak_this->OnSymbolServerBecomesReady(server);
 
-        if (initializing && state != SymbolServer::State::kBusy &&
-            state != SymbolServer::State::kInitializing) {
-          initializing = false;
-          weak_this->ServerFinishedInitializing();
-        }
-      });
+    if (initializing && state != SymbolServer::State::kBusy &&
+        state != SymbolServer::State::kInitializing) {
+      initializing = false;
+      weak_this->ServerFinishedInitializing();
+    }
+  });
 
   if (server->state() == SymbolServer::State::kReady) {
     OnSymbolServerBecomesReady(server);

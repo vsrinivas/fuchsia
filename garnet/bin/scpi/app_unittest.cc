@@ -16,9 +16,7 @@ using namespace fuchsia::scpi;
 
 class AppTest : public gtest::TestLoopFixture {
  protected:
-  AppTest() : app_(std::make_unique<App>(context_provider_.TakeContext())) {
-    app_->Start();
-  }
+  AppTest() : app_(std::make_unique<App>(context_provider_.TakeContext())) { app_->Start(); }
 
   SystemControllerPtr GetSystemController() {
     SystemControllerPtr system_controller;

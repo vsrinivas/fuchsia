@@ -27,54 +27,51 @@ namespace mailbox {
 class AmlMailbox;
 using DeviceType = ddk::Device<AmlMailbox, ddk::Unbindable>;
 
-class AmlMailbox : public DeviceType,
-                   public ddk::MailboxProtocol<AmlMailbox, ddk::base_protocol> {
-public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMailbox);
+class AmlMailbox : public DeviceType, public ddk::MailboxProtocol<AmlMailbox, ddk::base_protocol> {
+ public:
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMailbox);
 
-    explicit AmlMailbox(zx_device_t* parent)
-        : DeviceType(parent), pdev_(parent) {}
+  explicit AmlMailbox(zx_device_t* parent) : DeviceType(parent), pdev_(parent) {}
 
-    static zx_status_t Create(zx_device_t* parent);
+  static zx_status_t Create(zx_device_t* parent);
 
-    // DDK Hooks.
-    void DdkRelease();
-    void DdkUnbind();
+  // DDK Hooks.
+  void DdkRelease();
+  void DdkUnbind();
 
-    // ZX_PROTOCOL_MAILBOX protocol.
-    zx_status_t MailboxSendCommand(const mailbox_channel_t* channel,
-                                   const mailbox_data_buf_t* mdata);
+  // ZX_PROTOCOL_MAILBOX protocol.
+  zx_status_t MailboxSendCommand(const mailbox_channel_t* channel, const mailbox_data_buf_t* mdata);
 
-private:
-    static constexpr uint32_t kNumMailboxes = 6;
+ private:
+  static constexpr uint32_t kNumMailboxes = 6;
 
-    // MMIO Indexes
-    enum {
-        MMIO_MAILBOX,
-        MMIO_MAILBOX_PAYLOAD,
-    };
+  // MMIO Indexes
+  enum {
+    MMIO_MAILBOX,
+    MMIO_MAILBOX_PAYLOAD,
+  };
 
-    // IRQ Indexes
-    enum {
-        MAILBOX_IRQ_RECEIV0,
-        MAILBOX_IRQ_RECEIV1,
-        MAILBOX_IRQ_RECEIV2,
-        MAILBOX_IRQ_SEND3,
-        MAILBOX_IRQ_SEND4,
-        MAILBOX_IRQ_SEND5,
-    };
+  // IRQ Indexes
+  enum {
+    MAILBOX_IRQ_RECEIV0,
+    MAILBOX_IRQ_RECEIV1,
+    MAILBOX_IRQ_RECEIV2,
+    MAILBOX_IRQ_SEND3,
+    MAILBOX_IRQ_SEND4,
+    MAILBOX_IRQ_SEND5,
+  };
 
-    zx_status_t InitPdev();
-    zx_status_t Bind();
-    mailbox_type_t GetRxMailbox(mailbox_type_t tx_mailbox);
-    size_t GetNumWords(size_t size);
+  zx_status_t InitPdev();
+  zx_status_t Bind();
+  mailbox_type_t GetRxMailbox(mailbox_type_t tx_mailbox);
+  size_t GetNumWords(size_t size);
 
-    ddk::PDev pdev_;
-    zx::interrupt inth_[kNumMailboxes];
-    mtx_t mailbox_chan_lock_[kNumMailboxes];
+  ddk::PDev pdev_;
+  zx::interrupt inth_[kNumMailboxes];
+  mtx_t mailbox_chan_lock_[kNumMailboxes];
 
-    std::optional<ddk::MmioBuffer> mailbox_mmio_;
-    std::optional<ddk::MmioBuffer> mailbox_payload_mmio_;
+  std::optional<ddk::MmioBuffer> mailbox_mmio_;
+  std::optional<ddk::MmioBuffer> mailbox_payload_mmio_;
 };
 
-} // namespace mailbox
+}  // namespace mailbox

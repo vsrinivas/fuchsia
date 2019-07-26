@@ -27,7 +27,7 @@ RefPtr<T> WrapRefPtr(T* ptr);
 namespace internal {
 template <typename T>
 RefPtr<T> MakeRefPtrNoAdopt(T* ptr);
-} // namespace internal
+}  // namespace internal
 
 // RefPtr<T> holds a reference to an intrusively-refcounted object of type
 // T that deletes the object when the refcount drops to 0.
@@ -47,193 +47,169 @@ RefPtr<T> MakeRefPtrNoAdopt(T* ptr);
 // constructor or assignment operator.
 template <typename T>
 class RefPtr final {
-public:
-    using ObjType = T;
+ public:
+  using ObjType = T;
 
-    // Constructors
-    constexpr RefPtr()
-        : ptr_(nullptr) {}
-    constexpr RefPtr(decltype(nullptr))
-        : RefPtr() {}
-    // Constructs a RefPtr from a pointer that has already been adopted. See
-    // AdoptRef() below for constructing the very first RefPtr to an object.
-    explicit RefPtr(T* p)
-        : ptr_(p) {
-        if (ptr_)
-            ptr_->AddRef();
+  // Constructors
+  constexpr RefPtr() : ptr_(nullptr) {}
+  constexpr RefPtr(decltype(nullptr)) : RefPtr() {}
+  // Constructs a RefPtr from a pointer that has already been adopted. See
+  // AdoptRef() below for constructing the very first RefPtr to an object.
+  explicit RefPtr(T* p) : ptr_(p) {
+    if (ptr_)
+      ptr_->AddRef();
+  }
+
+  // Copy construction.
+  RefPtr(const RefPtr& r) : RefPtr(r.ptr_) {}
+
+  // Implicit upcast via copy construction.
+  //
+  // @see the notes in unique_ptr.h
+  template <typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  RefPtr(const RefPtr<U>& r) : RefPtr(r.ptr_) {
+    static_assert((std::is_class_v<T> == std::is_class_v<U>)&&(!std::is_class_v<T> ||
+                                                               std::has_virtual_destructor_v<T> ||
+                                                               std::is_same_v<T, const U>),
+                  "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
+                  "nor U are class/struct types, or T has a virtual destructor,"
+                  "or T == const U.");
+  }
+
+  // Assignment
+  RefPtr& operator=(const RefPtr& r) {
+    // Ref first so self-assignments work.
+    if (r.ptr_) {
+      r.ptr_->AddRef();
     }
-
-    // Copy construction.
-    RefPtr(const RefPtr& r)
-        : RefPtr(r.ptr_) {}
-
-    // Implicit upcast via copy construction.
-    //
-    // @see the notes in unique_ptr.h
-    template <typename U,
-              typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-    RefPtr(const RefPtr<U>& r) : RefPtr(r.ptr_) {
-        static_assert((std::is_class_v<T> == std::is_class_v<U>) &&
-                      (!std::is_class_v<T> ||
-                       std::has_virtual_destructor_v<T> ||
-                       std::is_same_v<T, const U>),
-                "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
-                "nor U are class/struct types, or T has a virtual destructor,"
-                "or T == const U.");
+    T* old = ptr_;
+    ptr_ = r.ptr_;
+    if (old && old->Release()) {
+      recycle(old);
     }
+    return *this;
+  }
 
-    // Assignment
-    RefPtr& operator=(const RefPtr& r) {
-        // Ref first so self-assignments work.
-        if (r.ptr_) {
-            r.ptr_->AddRef();
-        }
-        T* old = ptr_;
-        ptr_ = r.ptr_;
-        if (old && old->Release()) {
-            recycle(old);
-        }
-        return *this;
+  // Move construction
+  RefPtr(RefPtr&& r) : ptr_(r.ptr_) { r.ptr_ = nullptr; }
+
+  // Implicit upcast via move construction.
+  //
+  // @see the notes in RefPtr.h
+  template <typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  RefPtr(RefPtr<U>&& r) : ptr_(r.ptr_) {
+    static_assert((std::is_class_v<T> == std::is_class_v<U>)&&(!std::is_class_v<T> ||
+                                                               std::has_virtual_destructor_v<T> ||
+                                                               std::is_same_v<T, const U>),
+                  "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
+                  "nor U are class/struct types, or T has a virtual destructor,"
+                  "or T == const U");
+
+    r.ptr_ = nullptr;
+  }
+
+  // Move assignment
+  RefPtr& operator=(RefPtr&& r) {
+    RefPtr(std::move(r)).swap(*this);
+    return *this;
+  }
+
+  // Construct via explicit downcast.
+  // ptr must be the same object as base.ptr_.
+  template <typename BaseType>
+  RefPtr(T* ptr, RefPtr<BaseType>&& base) : ptr_(ptr) {
+    ZX_ASSERT(static_cast<BaseType*>(ptr_) == base.ptr_);
+    base.ptr_ = nullptr;
+  }
+
+  // Downcast via static method invocation.  Depending on use case, the syntax
+  // should look something like...
+  //
+  // fbl::RefPtr<MyBase> foo = MakeBase();
+  // auto bar_copy = fbl::RefPtr<MyDerived>::Downcast(foo);
+  // auto bar_move = fbl::RefPtr<MyDerived>::Downcast(std::move(foo));
+  //
+  template <typename BaseRefPtr>
+  static RefPtr Downcast(BaseRefPtr base) {
+    // Make certain that BaseRefPtr is some form of RefPtr<T>
+    static_assert(std::is_same_v<BaseRefPtr, RefPtr<typename BaseRefPtr::ObjType>>,
+                  "BaseRefPtr must be a RefPtr<T>!");
+
+    if (base != nullptr)
+      return internal::MakeRefPtrNoAdopt<T>(static_cast<T*>(base.leak_ref()));
+
+    return nullptr;
+  }
+
+  ~RefPtr() {
+    if (ptr_ && ptr_->Release()) {
+      recycle(ptr_);
     }
+  }
 
-    // Move construction
-    RefPtr(RefPtr&& r)
-        : ptr_(r.ptr_) {
-        r.ptr_ = nullptr;
+  void reset(T* ptr = nullptr) { RefPtr(ptr).swap(*this); }
+
+  void swap(RefPtr& r) {
+    T* p = ptr_;
+    ptr_ = r.ptr_;
+    r.ptr_ = p;
+  }
+
+  T* leak_ref() __WARN_UNUSED_RESULT {
+    T* p = ptr_;
+    ptr_ = nullptr;
+    return p;
+  }
+
+  T* get() const { return ptr_; }
+  T& operator*() const { return *ptr_; }
+  T* operator->() const { return ptr_; }
+  explicit operator bool() const { return !!ptr_; }
+
+  // Comparison against nullptr operators (of the form, myptr == nullptr).
+  bool operator==(decltype(nullptr)) const { return (ptr_ == nullptr); }
+  bool operator!=(decltype(nullptr)) const { return (ptr_ != nullptr); }
+
+  bool operator==(const RefPtr<T>& other) const { return ptr_ == other.ptr_; }
+  bool operator!=(const RefPtr<T>& other) const { return ptr_ != other.ptr_; }
+
+ private:
+  template <typename U>
+  friend class RefPtr;
+  friend RefPtr<T> AdoptRef<T>(T*);
+  friend RefPtr<T> internal::MakeRefPtrNoAdopt<T>(T*);
+
+  enum AdoptTag { ADOPT };
+  enum NoAdoptTag { NO_ADOPT };
+
+  RefPtr(T* ptr, AdoptTag) : ptr_(ptr) {
+    if (ptr_) {
+      ptr_->Adopt();
     }
+  }
 
-    // Implicit upcast via move construction.
-    //
-    // @see the notes in RefPtr.h
-    template <typename U,
-              typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-    RefPtr(RefPtr<U>&& r) : ptr_(r.ptr_) {
-        static_assert((std::is_class_v<T> == std::is_class_v<U>) &&
-                      (!std::is_class_v<T> ||
-                       std::has_virtual_destructor_v<T> ||
-                       std::is_same_v<T, const U>),
-                "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
-                "nor U are class/struct types, or T has a virtual destructor,"
-                "or T == const U");
+  RefPtr(T* ptr, NoAdoptTag) : ptr_(ptr) {}
 
-        r.ptr_ = nullptr;
+  static void recycle(T* ptr) {
+    if constexpr (::fbl::internal::has_fbl_recycle_v<T>) {
+      ::fbl::internal::recycler<T>::recycle(ptr);
+    } else {
+      delete ptr;
     }
+  }
 
-    // Move assignment
-    RefPtr& operator=(RefPtr&& r) {
-        RefPtr(std::move(r)).swap(*this);
-        return *this;
-    }
-
-    // Construct via explicit downcast.
-    // ptr must be the same object as base.ptr_.
-    template <typename BaseType>
-    RefPtr(T* ptr, RefPtr<BaseType>&& base)
-        : ptr_(ptr) {
-        ZX_ASSERT(static_cast<BaseType*>(ptr_) == base.ptr_);
-        base.ptr_ = nullptr;
-    }
-
-    // Downcast via static method invocation.  Depending on use case, the syntax
-    // should look something like...
-    //
-    // fbl::RefPtr<MyBase> foo = MakeBase();
-    // auto bar_copy = fbl::RefPtr<MyDerived>::Downcast(foo);
-    // auto bar_move = fbl::RefPtr<MyDerived>::Downcast(std::move(foo));
-    //
-    template <typename BaseRefPtr>
-    static RefPtr Downcast(BaseRefPtr base) {
-        // Make certain that BaseRefPtr is some form of RefPtr<T>
-        static_assert(std::is_same_v<BaseRefPtr, RefPtr<typename BaseRefPtr::ObjType>>,
-                      "BaseRefPtr must be a RefPtr<T>!");
-
-        if (base != nullptr)
-            return internal::MakeRefPtrNoAdopt<T>(static_cast<T*>(base.leak_ref()));
-
-        return nullptr;
-    }
-
-    ~RefPtr() {
-        if (ptr_ && ptr_->Release()) {
-            recycle(ptr_);
-        }
-    }
-
-    void reset(T* ptr = nullptr) {
-        RefPtr(ptr).swap(*this);
-    }
-
-    void swap(RefPtr& r) {
-        T* p = ptr_;
-        ptr_ = r.ptr_;
-        r.ptr_ = p;
-    }
-
-    T* leak_ref() __WARN_UNUSED_RESULT {
-        T* p = ptr_;
-        ptr_ = nullptr;
-        return p;
-    }
-
-    T* get() const {
-        return ptr_;
-    }
-    T& operator*() const {
-        return *ptr_;
-    }
-    T* operator->() const {
-        return ptr_;
-    }
-    explicit operator bool() const {
-        return !!ptr_;
-    }
-
-    // Comparison against nullptr operators (of the form, myptr == nullptr).
-    bool operator==(decltype(nullptr)) const { return (ptr_ == nullptr); }
-    bool operator!=(decltype(nullptr)) const { return (ptr_ != nullptr); }
-
-    bool operator==(const RefPtr<T>& other) const { return ptr_ == other.ptr_; }
-    bool operator!=(const RefPtr<T>& other) const { return ptr_ != other.ptr_; }
-
-private:
-    template <typename U>
-    friend class RefPtr;
-    friend RefPtr<T> AdoptRef<T>(T*);
-    friend RefPtr<T> internal::MakeRefPtrNoAdopt<T>(T*);
-
-    enum AdoptTag { ADOPT };
-    enum NoAdoptTag { NO_ADOPT };
-
-    RefPtr(T* ptr, AdoptTag)
-        : ptr_(ptr) {
-        if (ptr_) {
-            ptr_->Adopt();
-        }
-    }
-
-    RefPtr(T* ptr, NoAdoptTag)
-        : ptr_(ptr) {}
-
-    static void recycle(T* ptr) {
-        if constexpr (::fbl::internal::has_fbl_recycle_v<T>) {
-            ::fbl::internal::recycler<T>::recycle(ptr);
-        } else {
-            delete ptr;
-        }
-    }
-
-    T* ptr_;
+  T* ptr_;
 };
 
 // Comparison against nullptr operator (of the form, nullptr == myptr)
 template <typename T>
 static inline bool operator==(decltype(nullptr), const RefPtr<T>& ptr) {
-    return (ptr.get() == nullptr);
+  return (ptr.get() == nullptr);
 }
 
 template <typename T>
 static inline bool operator!=(decltype(nullptr), const RefPtr<T>& ptr) {
-    return (ptr.get() != nullptr);
+  return (ptr.get() != nullptr);
 }
 
 // Constructs a RefPtr from a fresh object that has not been referenced before.
@@ -245,13 +221,13 @@ static inline bool operator!=(decltype(nullptr), const RefPtr<T>& ptr) {
 //   h->DoStuff();
 template <typename T>
 inline RefPtr<T> AdoptRef(T* ptr) {
-    return RefPtr<T>(ptr, RefPtr<T>::ADOPT);
+  return RefPtr<T>(ptr, RefPtr<T>::ADOPT);
 }
 
 // Convenience wrappers to construct a RefPtr with argument type deduction.
 template <typename T>
 inline RefPtr<T> WrapRefPtr(T* ptr) {
-    return RefPtr<T>(ptr);
+  return RefPtr<T>(ptr);
 }
 
 namespace internal {
@@ -260,7 +236,7 @@ namespace internal {
 // sentinels (special invalid pointers) in RefPtr<>s.
 template <typename T>
 inline RefPtr<T> MakeRefPtrNoAdopt(T* ptr) {
-    return RefPtr<T>(ptr, RefPtr<T>::NO_ADOPT);
+  return RefPtr<T>(ptr, RefPtr<T>::NO_ADOPT);
 }
 
 // This is a wrapper class that can be friended for a particular |T|, if you
@@ -280,20 +256,18 @@ class MakeRefCountedHelper final {
   }
 };
 
-} // namespace internal
+}  // namespace internal
 
 template <typename T, typename... Args>
 RefPtr<T> MakeRefCounted(Args&&... args) {
-  return internal::MakeRefCountedHelper<T>::MakeRefCounted(
-      std::forward<Args>(args)...);
+  return internal::MakeRefCountedHelper<T>::MakeRefCounted(std::forward<Args>(args)...);
 }
 
 template <typename T, typename... Args>
 RefPtr<T> MakeRefCountedChecked(AllocChecker* ac, Args&&... args) {
-  return internal::MakeRefCountedHelper<T>::MakeRefCountedChecked(
-      ac, std::forward<Args>(args)...);
+  return internal::MakeRefCountedHelper<T>::MakeRefCountedChecked(ac, std::forward<Args>(args)...);
 }
 
-} // namespace fbl
+}  // namespace fbl
 
 #endif  // FBL_REF_PTR_H_

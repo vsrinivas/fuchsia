@@ -10,40 +10,40 @@ namespace channel {
 // RAII for joining threads on destruction.
 // Useful when an assertion fails.
 class AutoJoinThread {
-public:
-    AutoJoinThread(fit::function<void()> fn) {
-        thread_ = std::thread(std::move(fn));
-        valid_ = true;
-    }
+ public:
+  AutoJoinThread(fit::function<void()> fn) {
+    thread_ = std::thread(std::move(fn));
+    valid_ = true;
+  }
 
-    template <typename Fn, typename... Args>
-    AutoJoinThread(Fn fn, Args&&... args) {
-        thread_ = std::thread(fn, std::forward<Args>(args)...);
-        valid_ = true;
-    }
+  template <typename Fn, typename... Args>
+  AutoJoinThread(Fn fn, Args&&... args) {
+    thread_ = std::thread(fn, std::forward<Args>(args)...);
+    valid_ = true;
+  }
 
-    AutoJoinThread(AutoJoinThread&& other) noexcept {
-        thread_.swap(other.thread_);
-        valid_ = other.valid_;
-        other.valid_ = false;
-    }
+  AutoJoinThread(AutoJoinThread&& other) noexcept {
+    thread_.swap(other.thread_);
+    valid_ = other.valid_;
+    other.valid_ = false;
+  }
 
-    void Join() {
-        if (valid_) {
-            valid_ = false;
-            thread_.join();
-        }
+  void Join() {
+    if (valid_) {
+      valid_ = false;
+      thread_.join();
     }
+  }
 
-    ~AutoJoinThread() {
-        if (valid_) {
-            thread_.join();
-            valid_ = false;
-        }
+  ~AutoJoinThread() {
+    if (valid_) {
+      thread_.join();
+      valid_ = false;
     }
+  }
 
-private:
-    std::thread thread_;
-    bool valid_ = false;
+ private:
+  std::thread thread_;
+  bool valid_ = false;
 };
-} // namespace channel
+}  // namespace channel

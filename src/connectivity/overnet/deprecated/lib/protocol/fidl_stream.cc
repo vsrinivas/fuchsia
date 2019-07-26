@@ -37,8 +37,7 @@ void FidlStream::Send_(uint32_t txid, fidl::Message message) {
   Send_(std::move(message));
 }
 
-zx_txid_t FidlStream::AllocateCallback(
-    fit::function<zx_status_t(fidl::Message)> callback) {
+zx_txid_t FidlStream::AllocateCallback(fit::function<zx_status_t(fidl::Message)> callback) {
   zx_txid_t id;
   do {
     // No need to worry about user space txid spaces - FidlStream messages

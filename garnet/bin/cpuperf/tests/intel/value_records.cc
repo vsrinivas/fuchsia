@@ -10,17 +10,14 @@
 
 class ValueRecordsVerifier : public Verifier {
  public:
-  static std::unique_ptr<Verifier> Create(
-      const cpuperf::SessionResultSpec* spec) {
+  static std::unique_ptr<Verifier> Create(const cpuperf::SessionResultSpec* spec) {
     return std::make_unique<ValueRecordsVerifier>(spec);
   }
 
-  ValueRecordsVerifier(const cpuperf::SessionResultSpec* spec)
-      : Verifier(spec) {
+  ValueRecordsVerifier(const cpuperf::SessionResultSpec* spec) : Verifier(spec) {
     const perfmon::EventDetails* details;
 
-    bool rc __UNUSED =
-      LookupEventByName("misc", "edram_temperature", &details);
+    bool rc __UNUSED = LookupEventByName("misc", "edram_temperature", &details);
     FXL_DCHECK(rc);
     edram_temperature_id_ = details->id;
 
@@ -86,6 +83,6 @@ class ValueRecordsVerifier : public Verifier {
 };
 
 const TestSpec kValueRecordsSpec = {
-  "value-records",
-  &ValueRecordsVerifier::Create,
+    "value-records",
+    &ValueRecordsVerifier::Create,
 };

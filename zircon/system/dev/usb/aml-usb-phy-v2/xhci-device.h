@@ -13,17 +13,14 @@ using XhciDeviceType = ddk::Device<XhciDevice>;
 
 // Device for binding the XHCI driver.
 class XhciDevice : public XhciDeviceType {
-public:
-    explicit XhciDevice(zx_device_t* parent)
-        : XhciDeviceType(parent) {}
+ public:
+  explicit XhciDevice(zx_device_t* parent) : XhciDeviceType(parent) {}
 
-    // Device protocol implementation.
-    void DdkRelease() {
-        delete this;
-    }
+  // Device protocol implementation.
+  void DdkRelease() { delete this; }
 
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(XhciDevice);
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(XhciDevice);
 };
 
-} // namespace aml_usb_phy
+}  // namespace aml_usb_phy

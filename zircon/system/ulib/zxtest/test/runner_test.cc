@@ -32,9 +32,7 @@ constexpr char kTestCaseName2[] = "TestCase2";
 constexpr char kFileName[] = "filename.cc";
 constexpr int kLineNumber = 20;
 
-Reporter MakeSilentReporter() {
-  return Reporter(std::make_unique<FileLogSink>(nullptr));
-}
+Reporter MakeSilentReporter() { return Reporter(std::make_unique<FileLogSink>(nullptr)); }
 
 // Test fixture that runs a given closure.
 class FakeTest : public zxtest::Test {
@@ -48,9 +46,7 @@ class FakeTest : public zxtest::Test {
   }
 
  private:
-  void TestBody() final {
-    ++*counter_;
-  }
+  void TestBody() final { ++*counter_; }
 
   int* counter_;
 };
@@ -213,8 +209,7 @@ class FakeEnv : public zxtest::Environment {
     this->curr_setup_ = curr_setup;
     this->curr_tear_down_ = curr_tear_down;
   }
-  ~FakeEnv() final {
-  }
+  ~FakeEnv() final {}
 
   void SetUp() final {
     set_up_order_ = *curr_setup_;
@@ -226,12 +221,8 @@ class FakeEnv : public zxtest::Environment {
     ++(*curr_tear_down_);
   }
 
-  int set_up_order() const {
-    return set_up_order_;
-  }
-  int tear_down_order() const {
-    return tear_down_order_;
-  }
+  int set_up_order() const { return set_up_order_; }
+  int tear_down_order() const { return tear_down_order_; }
 
  private:
   int set_up_order_ = 0;
@@ -296,10 +287,8 @@ void RunnerRunOnlyFilteredTests() {
   ZX_ASSERT_MSG(test_2_counter == 0, "test_2 was not filtered.\n");
 }
 
-#define OBSERVER_EVENT_HANDLER(Event, Params...)                                                   \
-  void On##Event(Params) final {                                                                   \
-    Event##Cnt++;                                                                                  \
-  }                                                                                                \
+#define OBSERVER_EVENT_HANDLER(Event, Params...) \
+  void On##Event(Params) final { Event##Cnt++; } \
   int Event##Cnt = 0
 
 class FakeObserver1 : public LifecycleObserver {
@@ -477,8 +466,7 @@ void TestDriverImplNonFatalFailureDoesNotEndTest() {
 void TestDriverImplResetOnTestCompletion() {
   class FakeTest : public zxtest::Test {
    private:
-    void TestBody() final {
-    }
+    void TestBody() final {}
   };
 
   TestInfo test_info(kTestName, {.filename = kFileName, .line_number = kLineNumber},
@@ -489,7 +477,7 @@ void TestDriverImplResetOnTestCompletion() {
     void (TestDriverImpl::*complete)(const TestCase&, const TestInfo&);
   };
 // Helper macro to generate appropiate error for each function.
-#define CFN(fn)                                                                                    \
+#define CFN(fn) \
   { .name = #fn, .complete = &fn, }
   static constexpr CompleteFn complete_fns[] = {CFN(TestDriverImpl::OnTestSuccess),
                                                 CFN(TestDriverImpl::OnTestFailure),

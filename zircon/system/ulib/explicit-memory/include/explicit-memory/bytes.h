@@ -38,17 +38,16 @@ namespace explicit_memory {
 // discussion on what this guarantee entails.
 template <typename T, typename = typename std::enable_if<std::is_pod<T>::value>::type>
 class ZeroDtor {
-public:
-    ZeroDtor(T* array, size_t len) : array_(array), len_(len) { }
-    ~ZeroDtor() {
-        mandatory_memset(static_cast<void*>(array_), 0, sizeof(T) * len_);
-    }
-    DISALLOW_COPY_ASSIGN_AND_MOVE(ZeroDtor);
-private:
-     T* const array_;
-     const size_t len_;
+ public:
+  ZeroDtor(T* array, size_t len) : array_(array), len_(len) {}
+  ~ZeroDtor() { mandatory_memset(static_cast<void*>(array_), 0, sizeof(T) * len_); }
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ZeroDtor);
+
+ private:
+  T* const array_;
+  const size_t len_;
 };
 
-} // namespace explicit_memory
+}  // namespace explicit_memory
 
 #endif

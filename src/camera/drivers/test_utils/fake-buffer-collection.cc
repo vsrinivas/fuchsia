@@ -14,37 +14,35 @@
 namespace camera {
 
 zx_status_t CreateContiguousBufferCollectionInfo(
-    fuchsia_sysmem_BufferCollectionInfo* buffer_collection,
-    zx_handle_t bti_handle, uint32_t width, uint32_t height,
-    uint32_t num_buffers) {
+    fuchsia_sysmem_BufferCollectionInfo* buffer_collection, zx_handle_t bti_handle, uint32_t width,
+    uint32_t height, uint32_t num_buffers) {
   // set all the vmo handles to invalid:
   for (uint32_t i = 0; i < countof(buffer_collection->vmos); ++i) {
     buffer_collection->vmos[i] = ZX_HANDLE_INVALID;
   }
-  buffer_collection->format.image = {
-      .width = width,
-      .height = height,
-      .layers = 2u,
-      .pixel_format =
-          {
-              .type = fuchsia_sysmem_PixelFormatType_NV12,
-              .has_format_modifier = false,
-              .format_modifier = {.value = 0},
-          },
-      .color_space =
-          {
-              .type = fuchsia_sysmem_ColorSpaceType_SRGB,
-          },
-      // The planes data is not used currently:
-      .planes = {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};
+  buffer_collection->format.image = {.width = width,
+                                     .height = height,
+                                     .layers = 2u,
+                                     .pixel_format =
+                                         {
+                                             .type = fuchsia_sysmem_PixelFormatType_NV12,
+                                             .has_format_modifier = false,
+                                             .format_modifier = {.value = 0},
+                                         },
+                                     .color_space =
+                                         {
+                                             .type = fuchsia_sysmem_ColorSpaceType_SRGB,
+                                         },
+                                     // The planes data is not used currently:
+                                     .planes = {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};
   buffer_collection->buffer_count = num_buffers;
   // Get the image size for the vmo:
   DmaFormat full_res_format(buffer_collection->format.image);
   buffer_collection->vmo_size = full_res_format.GetImageSize();
   zx_status_t status;
   for (uint32_t i = 0; i < buffer_collection->buffer_count; ++i) {
-    status = zx_vmo_create_contiguous(bti_handle, buffer_collection->vmo_size,
-                                      0, &buffer_collection->vmos[i]);
+    status = zx_vmo_create_contiguous(bti_handle, buffer_collection->vmo_size, 0,
+                                      &buffer_collection->vmos[i]);
     if (status != ZX_OK) {
       FX_LOG(ERROR, "", "Failed to allocate Buffer Collection");
       return status;

@@ -62,8 +62,7 @@ class CodecBuffer {
   friend struct std::default_delete<CodecBuffer>;
   friend class CodecBufferForTest;
 
-  CodecBuffer(CodecImpl* parent, CodecPort port,
-              fuchsia::media::StreamBuffer buffer);
+  CodecBuffer(CodecImpl* parent, CodecPort port, fuchsia::media::StreamBuffer buffer);
   ~CodecBuffer();
   bool Init(bool input_require_write = false);
 

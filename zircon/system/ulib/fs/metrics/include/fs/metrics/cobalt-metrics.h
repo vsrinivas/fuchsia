@@ -13,29 +13,28 @@
 namespace fs_metrics {
 // Vnode related histograms.
 struct VnodeMetrics {
-    // Number of buckets used for the vnode metrics.
-    static constexpr uint32_t kHistogramBuckets = 10;
+  // Number of buckets used for the vnode metrics.
+  static constexpr uint32_t kHistogramBuckets = 10;
 
-    VnodeMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name,
-                 bool local_metrics);
+  VnodeMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name, bool local_metrics);
 
-    cobalt_client::Histogram<kHistogramBuckets> close;
-    cobalt_client::Histogram<kHistogramBuckets> read;
-    cobalt_client::Histogram<kHistogramBuckets> write;
-    cobalt_client::Histogram<kHistogramBuckets> append;
-    cobalt_client::Histogram<kHistogramBuckets> truncate;
-    cobalt_client::Histogram<kHistogramBuckets> set_attr;
-    cobalt_client::Histogram<kHistogramBuckets> get_attr;
-    cobalt_client::Histogram<kHistogramBuckets> sync;
-    cobalt_client::Histogram<kHistogramBuckets> read_dir;
-    cobalt_client::Histogram<kHistogramBuckets> look_up;
-    cobalt_client::Histogram<kHistogramBuckets> create;
-    cobalt_client::Histogram<kHistogramBuckets> unlink;
-    cobalt_client::Histogram<kHistogramBuckets> link;
+  cobalt_client::Histogram<kHistogramBuckets> close;
+  cobalt_client::Histogram<kHistogramBuckets> read;
+  cobalt_client::Histogram<kHistogramBuckets> write;
+  cobalt_client::Histogram<kHistogramBuckets> append;
+  cobalt_client::Histogram<kHistogramBuckets> truncate;
+  cobalt_client::Histogram<kHistogramBuckets> set_attr;
+  cobalt_client::Histogram<kHistogramBuckets> get_attr;
+  cobalt_client::Histogram<kHistogramBuckets> sync;
+  cobalt_client::Histogram<kHistogramBuckets> read_dir;
+  cobalt_client::Histogram<kHistogramBuckets> look_up;
+  cobalt_client::Histogram<kHistogramBuckets> create;
+  cobalt_client::Histogram<kHistogramBuckets> unlink;
+  cobalt_client::Histogram<kHistogramBuckets> link;
 
-    // Mirrors |Metrics::IsEnabled|, such that |VnodeMetrics| is self sufficient
-    // to determine whether metrics should be logged or not.
-    bool metrics_enabled = false;
+  // Mirrors |Metrics::IsEnabled|, such that |VnodeMetrics| is self sufficient
+  // to determine whether metrics should be logged or not.
+  bool metrics_enabled = false;
 };
 
 // Provides a base class for collecting metrics in FS implementations. This is optional, but
@@ -45,37 +44,37 @@ struct VnodeMetrics {
 //
 // TODO(gevalentino): Define the |event_code| per metric. Currently is ignored.
 class Metrics {
-public:
-    Metrics() = delete;
-    Metrics(cobalt_client::CollectorOptions collector_options, bool local_metrics,
-            const fbl::String& fs_name);
-    Metrics(const Metrics&) = delete;
-    Metrics(Metrics&&) = delete;
-    Metrics& operator=(const Metrics&) = delete;
-    Metrics& operator=(Metrics&&) = delete;
-    virtual ~Metrics() = default;
+ public:
+  Metrics() = delete;
+  Metrics(cobalt_client::CollectorOptions collector_options, bool local_metrics,
+          const fbl::String& fs_name);
+  Metrics(const Metrics&) = delete;
+  Metrics(Metrics&&) = delete;
+  Metrics& operator=(const Metrics&) = delete;
+  Metrics& operator=(Metrics&&) = delete;
+  virtual ~Metrics() = default;
 
-    // Sets metric collection status to |should_collect|.
-    void EnableMetrics(bool should_enable);
+  // Sets metric collection status to |should_collect|.
+  void EnableMetrics(bool should_enable);
 
-    // Returns true if the Logger is collecting.
-    bool IsEnabled() const;
+  // Returns true if the Logger is collecting.
+  bool IsEnabled() const;
 
-    // Returns the collector.
-    const cobalt_client::Collector& collector() const { return collector_; }
+  // Returns the collector.
+  const cobalt_client::Collector& collector() const { return collector_; }
 
-    // Returns the collector.
-    cobalt_client::Collector* mutable_collector() { return &collector_; }
+  // Returns the collector.
+  cobalt_client::Collector* mutable_collector() { return &collector_; }
 
-    const VnodeMetrics& vnode_metrics() const;
-    VnodeMetrics* mutable_vnode_metrics();
+  const VnodeMetrics& vnode_metrics() const;
+  VnodeMetrics* mutable_vnode_metrics();
 
-protected:
-    cobalt_client::Collector collector_;
+ protected:
+  cobalt_client::Collector collector_;
 
-    VnodeMetrics vnode_metrics_;
+  VnodeMetrics vnode_metrics_;
 
-    bool is_enabled_ = false;
+  bool is_enabled_ = false;
 };
 
-} // namespace fs_metrics
+}  // namespace fs_metrics

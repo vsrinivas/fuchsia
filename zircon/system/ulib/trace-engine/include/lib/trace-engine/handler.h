@@ -35,58 +35,57 @@ __BEGIN_CDECLS
 typedef struct trace_handler_ops trace_handler_ops_t;
 
 typedef struct trace_handler {
-    const trace_handler_ops_t* ops;
+  const trace_handler_ops_t* ops;
 } trace_handler_t;
 
 struct trace_handler_ops {
-    // Called by the trace engine to ask whether the specified category is enabled.
-    //
-    // This method may be called frequently so it must be efficiently implemented.
-    // Clients may cache the results while a trace is running; dynamic changes
-    // to the enabled categories may go unnoticed until the next trace.
-    //
-    // |handler| is the trace handler object itself.
-    // |category| is the name of the category.
-    //
-    // Called by instrumentation on any thread.  Must be thread-safe.
-    bool (*is_category_enabled)(trace_handler_t* handler, const char* category);
+  // Called by the trace engine to ask whether the specified category is enabled.
+  //
+  // This method may be called frequently so it must be efficiently implemented.
+  // Clients may cache the results while a trace is running; dynamic changes
+  // to the enabled categories may go unnoticed until the next trace.
+  //
+  // |handler| is the trace handler object itself.
+  // |category| is the name of the category.
+  //
+  // Called by instrumentation on any thread.  Must be thread-safe.
+  bool (*is_category_enabled)(trace_handler_t* handler, const char* category);
 
-    // Called by the trace engine to indicate it has completed startup.
-    void (*trace_started)(trace_handler_t* handler);
+  // Called by the trace engine to indicate it has completed startup.
+  void (*trace_started)(trace_handler_t* handler);
 
-    // Called by the trace engine when tracing has stopped.
-    //
-    // The trace collection status is |ZX_OK| if trace collection was successful.
-    // An error indicates that the trace data may be inaccurate or incomplete.
-    //
-    // |handler| is the trace handler object itself.
-    // |disposition| is |ZX_OK| if tracing stopped normally, otherwise indicates
-    // that tracing was aborted due to an error.
-    //
-    // Called on an asynchronous dispatch thread.
-    void (*trace_stopped)(trace_handler_t* handler, zx_status_t disposition);
+  // Called by the trace engine when tracing has stopped.
+  //
+  // The trace collection status is |ZX_OK| if trace collection was successful.
+  // An error indicates that the trace data may be inaccurate or incomplete.
+  //
+  // |handler| is the trace handler object itself.
+  // |disposition| is |ZX_OK| if tracing stopped normally, otherwise indicates
+  // that tracing was aborted due to an error.
+  //
+  // Called on an asynchronous dispatch thread.
+  void (*trace_stopped)(trace_handler_t* handler, zx_status_t disposition);
 
-    // Called by the trace engine to indicate it has terminated.
-    //
-    // Called on an asynchronous dispatch thread.
-    void (*trace_terminated)(trace_handler_t* handler);
+  // Called by the trace engine to indicate it has terminated.
+  //
+  // Called on an asynchronous dispatch thread.
+  void (*trace_terminated)(trace_handler_t* handler);
 
-    // Called by the trace engine after an attempt to allocate space
-    // for a new record has failed because the buffer is full.
-    //
-    // Called by instrumentation on any thread.  Must be thread-safe.
-    void (*notify_buffer_full)(trace_handler_t* handler,
-                               uint32_t wrapped_count,
-                               uint64_t durable_data_end);
+  // Called by the trace engine after an attempt to allocate space
+  // for a new record has failed because the buffer is full.
+  //
+  // Called by instrumentation on any thread.  Must be thread-safe.
+  void (*notify_buffer_full)(trace_handler_t* handler, uint32_t wrapped_count,
+                             uint64_t durable_data_end);
 };
 
 // Whether to clear the trace buffer when starting the engine.
 typedef enum {
-    // The numbering here is chosen to match the |BufferDisposition| enum in
-    // the fuchsia.tracing.provider.Provider FIDL protocol.
-    TRACE_START_CLEAR_ENTIRE_BUFFER = 1,
-    TRACE_START_CLEAR_NONDURABLE_BUFFER = 2,
-    TRACE_START_RETAIN_BUFFER = 3,
+  // The numbering here is chosen to match the |BufferDisposition| enum in
+  // the fuchsia.tracing.provider.Provider FIDL protocol.
+  TRACE_START_CLEAR_ENTIRE_BUFFER = 1,
+  TRACE_START_CLEAR_NONDURABLE_BUFFER = 2,
+  TRACE_START_RETAIN_BUFFER = 3,
 } trace_start_mode_t;
 
 // Initialize the trace engine.
@@ -118,10 +117,8 @@ typedef enum {
 //
 // Better yet, don't shut down the trace engine's asynchronous dispatcher unless
 // the process is already about to exit.
-zx_status_t trace_engine_initialize(async_dispatcher_t* dispatcher,
-                                    trace_handler_t* handler,
-                                    trace_buffering_mode_t buffering_mode,
-                                    void* buffer,
+zx_status_t trace_engine_initialize(async_dispatcher_t* dispatcher, trace_handler_t* handler,
+                                    trace_buffering_mode_t buffering_mode, void* buffer,
                                     size_t buffer_num_bytes);
 
 // Asynchronously starts the trace engine.
@@ -170,8 +167,7 @@ void trace_engine_terminate();
 // Returns |ZX_ERR_BAD_STATE| if current state is |TRACE_STOPPED|.
 //
 // This function is thread-safe.
-zx_status_t trace_engine_mark_buffer_saved(uint32_t wrapped_count,
-                                           uint64_t durable_data_end);
+zx_status_t trace_engine_mark_buffer_saved(uint32_t wrapped_count, uint64_t durable_data_end);
 
 __END_CDECLS
 

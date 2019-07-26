@@ -14,8 +14,7 @@ AckFrame::Writer::Writer(const AckFrame* ack_frame)
     : ack_frame_(ack_frame), wire_length_(ack_frame_->WrittenLength()) {}
 
 uint64_t AckFrame::WrittenLength() const {
-  uint64_t wire_length =
-      varint::WireSizeFor(ack_to_seq_) + varint::WireSizeFor(DelayAndFlags());
+  uint64_t wire_length = varint::WireSizeFor(ack_to_seq_) + varint::WireSizeFor(DelayAndFlags());
   for (const auto block : blocks_) {
     wire_length += varint::WireSizeFor(block.acks);
     wire_length += varint::WireSizeFor(block.nacks);
@@ -36,8 +35,7 @@ uint8_t* AckFrame::Writer::Write(uint8_t* out) const {
 }
 
 uint64_t AckFrame::DelayAndFlags() const {
-  uint64_t delay_part =
-      (ack_delay_us_ >> 63) ? 0xffff'ffff'ffff'fffe : (ack_delay_us_ << 1);
+  uint64_t delay_part = (ack_delay_us_ >> 63) ? 0xffff'ffff'ffff'fffe : (ack_delay_us_ << 1);
   uint64_t partial_part = partial_ ? 1 : 0;
   return delay_part | partial_part;
 }
@@ -51,8 +49,7 @@ StatusOr<AckFrame> AckFrame::Parse(Slice slice) {
                               "Failed to parse ack_to_seq from ack frame");
   }
   if (ack_to_seq == 0) {
-    return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
-                              "Ack frame cannot ack_to_seq 0");
+    return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT, "Ack frame cannot ack_to_seq 0");
   }
   uint64_t delay_and_flags;
   if (!varint::Read(&bytes, end, &delay_and_flags)) {
@@ -83,8 +80,7 @@ StatusOr<AckFrame> AckFrame::Parse(Slice slice) {
                                 "Failed to read nack (too many nacks)");
     }
     if (nacks == 0) {
-      return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
-                                "Nack count cannot be zero");
+      return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT, "Nack count cannot be zero");
     }
     base -= acks;
     base -= nacks;
@@ -95,8 +91,7 @@ StatusOr<AckFrame> AckFrame::Parse(Slice slice) {
 }
 
 std::ostream& operator<<(std::ostream& out, const AckFrame& ack_frame) {
-  out << "ACK{to:" << ack_frame.ack_to_seq()
-      << ", delay:" << ack_frame.ack_delay_us()
+  out << "ACK{to:" << ack_frame.ack_to_seq() << ", delay:" << ack_frame.ack_delay_us()
       << "us, partial:" << (ack_frame.partial() ? "yes" : "no") << ", nack=[";
   for (auto n : ack_frame.nack_seqs()) {
     out << n << ",";

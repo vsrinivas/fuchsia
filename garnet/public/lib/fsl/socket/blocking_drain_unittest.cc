@@ -17,12 +17,11 @@ TEST(BlockingDrain, BlockingDrainFrom) {
   zx::socket socket = WriteStringToSocket("Hello");
   std::vector<char> buffer;
 
-  EXPECT_TRUE(
-      BlockingDrainFrom(std::move(socket), [&](const void* data, uint32_t len) {
-        const char* begin = static_cast<const char*>(data);
-        buffer.insert(buffer.end(), begin, begin + len);
-        return len;
-      }));
+  EXPECT_TRUE(BlockingDrainFrom(std::move(socket), [&](const void* data, uint32_t len) {
+    const char* begin = static_cast<const char*>(data);
+    buffer.insert(buffer.end(), begin, begin + len);
+    return len;
+  }));
 
   std::string message(buffer.data(), buffer.size());
   EXPECT_EQ("Hello", message);

@@ -81,297 +81,265 @@ static bool uint8_to_hex_str(const uint8_t* data, char* hex_str) {
 */
 
 // Go over the parent device logic and test fixture.
-TEST_F(BlobfsTest, Trivial) {
-}
+TEST_F(BlobfsTest, Trivial) {}
 
-TEST_F(BlobfsTestWithFvm, Trivial) {
-}
+TEST_F(BlobfsTestWithFvm, Trivial) {}
 
 void RunBasicsTest() {
-    for (unsigned int i = 10; i < 16; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+  for (unsigned int i = 10; i < 16; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-        ASSERT_EQ(close(fd.release()), 0);
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+    ASSERT_EQ(close(fd.release()), 0);
 
-        // We can re-open and verify the Blob as read-only
-        fd.reset(open(info->path, O_RDONLY));
-        ASSERT_TRUE(fd, "Failed to-reopen blob");
-        ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-        ASSERT_EQ(close(fd.release()), 0);
+    // We can re-open and verify the Blob as read-only
+    fd.reset(open(info->path, O_RDONLY));
+    ASSERT_TRUE(fd, "Failed to-reopen blob");
+    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+    ASSERT_EQ(close(fd.release()), 0);
 
-        // We cannot re-open the blob as writable
-        fd.reset(open(info->path, O_RDWR | O_CREAT));
-        ASSERT_FALSE(fd, "Shouldn't be able to re-create blob that exists");
-        fd.reset(open(info->path, O_RDWR));
-        ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
-        fd.reset(open(info->path, O_WRONLY));
-        ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
+    // We cannot re-open the blob as writable
+    fd.reset(open(info->path, O_RDWR | O_CREAT));
+    ASSERT_FALSE(fd, "Shouldn't be able to re-create blob that exists");
+    fd.reset(open(info->path, O_RDWR));
+    ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
+    fd.reset(open(info->path, O_WRONLY));
+    ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
 
-        ASSERT_EQ(unlink(info->path), 0);
-    }
+    ASSERT_EQ(unlink(info->path), 0);
+  }
 }
 
-TEST_F(BlobfsTest, Basics) {
-    RunBasicsTest();
-}
+TEST_F(BlobfsTest, Basics) { RunBasicsTest(); }
 
-TEST_F(BlobfsTestWithFvm, Basics) {
-    RunBasicsTest();
-}
+TEST_F(BlobfsTestWithFvm, Basics) { RunBasicsTest(); }
 
 void RunUnallocatedBlobTest() {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 10, &info));
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 10, &info));
 
-    // We can create a blob with a name.
-    ASSERT_TRUE(fbl::unique_fd(open(info->path, O_CREAT | O_EXCL | O_RDWR)));
-    // It won't exist if we close it before allocating space.
-    ASSERT_FALSE(fbl::unique_fd(open(info->path, O_RDWR)));
-    ASSERT_FALSE(fbl::unique_fd(open(info->path, O_RDONLY)));
-    // We can "re-use" the name.
-    {
-        fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-        ASSERT_TRUE(fd);
-        ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-    }
+  // We can create a blob with a name.
+  ASSERT_TRUE(fbl::unique_fd(open(info->path, O_CREAT | O_EXCL | O_RDWR)));
+  // It won't exist if we close it before allocating space.
+  ASSERT_FALSE(fbl::unique_fd(open(info->path, O_RDWR)));
+  ASSERT_FALSE(fbl::unique_fd(open(info->path, O_RDONLY)));
+  // We can "re-use" the name.
+  {
+    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+  }
 }
 
-TEST_F(BlobfsTest, UnallocatedBlob) {
-    RunUnallocatedBlobTest();
-}
+TEST_F(BlobfsTest, UnallocatedBlob) { RunUnallocatedBlobTest(); }
 
-TEST_F(BlobfsTestWithFvm, UnallocatedBlob) {
-    RunUnallocatedBlobTest();
-}
+TEST_F(BlobfsTestWithFvm, UnallocatedBlob) { RunUnallocatedBlobTest(); }
 
 void RunNullBlobTest() {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 0, &info));
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 0, &info));
 
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-    ASSERT_TRUE(fd);
-    ASSERT_EQ(ftruncate(fd.get(), 0), 0);
-    char buf[1];
-    ASSERT_EQ(read(fd.get(), &buf[0], 1), 0, "Null Blob should reach EOF immediately");
-    ASSERT_EQ(close(fd.release()), 0);
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(ftruncate(fd.get(), 0), 0);
+  char buf[1];
+  ASSERT_EQ(read(fd.get(), &buf[0], 1), 0, "Null Blob should reach EOF immediately");
+  ASSERT_EQ(close(fd.release()), 0);
 
-    fd.reset(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-    ASSERT_FALSE(fd, "Null Blob should already exist");
-    fd.reset(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_FALSE(fd, "Null Blob should not be openable as writable");
+  fd.reset(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  ASSERT_FALSE(fd, "Null Blob should already exist");
+  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_FALSE(fd, "Null Blob should not be openable as writable");
 
-    fd.reset(open(info->path, O_RDONLY));
-    ASSERT_TRUE(fd);
-    ASSERT_EQ(close(fd.release()), 0);
-    ASSERT_EQ(unlink(info->path), 0, "Null Blob should be unlinkable");
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(close(fd.release()), 0);
+  ASSERT_EQ(unlink(info->path), 0, "Null Blob should be unlinkable");
 }
 
-TEST_F(BlobfsTest, NullBlob) {
-    RunNullBlobTest();
-}
+TEST_F(BlobfsTest, NullBlob) { RunNullBlobTest(); }
 
-TEST_F(BlobfsTestWithFvm, NullBlob) {
-    RunNullBlobTest();
-}
+TEST_F(BlobfsTestWithFvm, NullBlob) { RunNullBlobTest(); }
 
 void RunExclusiveCreateTest() {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
 
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-    ASSERT_TRUE(fd);
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  ASSERT_TRUE(fd);
 
-    fbl::unique_fd fd2(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-    EXPECT_FALSE(fd2, "Should not be able to exclusively create twice");
+  fbl::unique_fd fd2(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  EXPECT_FALSE(fd2, "Should not be able to exclusively create twice");
 
-    // But a second open should work.
-    fd2.reset(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd2);
+  // But a second open should work.
+  fd2.reset(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd2);
 }
 
-TEST_F(BlobfsTest, ExclusiveCreate) {
-    RunExclusiveCreateTest();
-}
+TEST_F(BlobfsTest, ExclusiveCreate) { RunExclusiveCreateTest(); }
 
-TEST_F(BlobfsTestWithFvm, ExclusiveCreate) {
-    RunExclusiveCreateTest();
-}
+TEST_F(BlobfsTestWithFvm, ExclusiveCreate) { RunExclusiveCreateTest(); }
 
 void RunCompressibleBlobTest(BlobfsTest* test) {
-    for (size_t i = 10; i < 22; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
+  for (size_t i = 10; i < 22; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
 
-        // Create blobs which are trivially compressible.
-        ASSERT_TRUE(fs_test_utils::GenerateBlob([](char* data, size_t length) {
-                        size_t i = 0;
-                        while (i < length) {
-                            size_t j = (rand() % (length - i)) + 1;
-                            memset(data, (char) j, j);
-                            data += j;
-                            i += j;
-                        }
-                    }, kMountPath, 1 << i, &info));
+    // Create blobs which are trivially compressible.
+    ASSERT_TRUE(fs_test_utils::GenerateBlob(
+        [](char* data, size_t length) {
+          size_t i = 0;
+          while (i < length) {
+            size_t j = (rand() % (length - i)) + 1;
+            memset(data, (char)j, j);
+            data += j;
+            i += j;
+          }
+        },
+        kMountPath, 1 << i, &info));
 
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
-        // We can re-open and verify the Blob as read-only.
-        fd.reset(open(info->path, O_RDONLY));
-        ASSERT_TRUE(fd, "Failed to-reopen blob");
-        ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+    // We can re-open and verify the Blob as read-only.
+    fd.reset(open(info->path, O_RDONLY));
+    ASSERT_TRUE(fd, "Failed to-reopen blob");
+    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
 
-        // Force decompression by remounting, re-accessing blob.
-        ASSERT_NO_FAILURES(test->Remount());
-        fd.reset(open(info->path, O_RDONLY));
-        ASSERT_TRUE(fd, "Failed to-reopen blob");
-        ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+    // Force decompression by remounting, re-accessing blob.
+    ASSERT_NO_FAILURES(test->Remount());
+    fd.reset(open(info->path, O_RDONLY));
+    ASSERT_TRUE(fd, "Failed to-reopen blob");
+    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
 
-        ASSERT_EQ(0, unlink(info->path));
-    }
+    ASSERT_EQ(0, unlink(info->path));
+  }
 }
 
-TEST_F(BlobfsTest, CompressibleBlob) {
-    RunCompressibleBlobTest(this);
-}
+TEST_F(BlobfsTest, CompressibleBlob) { RunCompressibleBlobTest(this); }
 
-TEST_F(BlobfsTestWithFvm, CompressibleBlob) {
-    RunCompressibleBlobTest(this);
-}
+TEST_F(BlobfsTestWithFvm, CompressibleBlob) { RunCompressibleBlobTest(this); }
 
 void RunMmapTest() {
-    for (size_t i = 10; i < 16; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+  for (size_t i = 10; i < 16; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-        fd.reset(open(info->path, O_RDONLY));
-        ASSERT_TRUE(fd, "Failed to-reopen blob");
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+    fd.reset(open(info->path, O_RDONLY));
+    ASSERT_TRUE(fd, "Failed to-reopen blob");
 
-        void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
-        ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
-        ASSERT_BYTES_EQ(addr, info->data.get(), info->size_data);
-        ASSERT_EQ(0, munmap(addr, info->size_data));
-        ASSERT_EQ(0, unlink(info->path));
-    }
+    void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
+    ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
+    ASSERT_BYTES_EQ(addr, info->data.get(), info->size_data);
+    ASSERT_EQ(0, munmap(addr, info->size_data));
+    ASSERT_EQ(0, unlink(info->path));
+  }
 }
 
-TEST_F(BlobfsTest, Mmap) {
-    RunMmapTest();
-}
+TEST_F(BlobfsTest, Mmap) { RunMmapTest(); }
 
-TEST_F(BlobfsTestWithFvm, Mmap) {
-    RunMmapTest();
-}
+TEST_F(BlobfsTestWithFvm, Mmap) { RunMmapTest(); }
 
 void RunMmapUseAfterCloseTest() {
-    for (size_t i = 10; i < 16; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+  for (size_t i = 10; i < 16; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-        fd.reset(open(info->path, O_RDONLY));
-        ASSERT_TRUE(fd, "Failed to-reopen blob");
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+    fd.reset(open(info->path, O_RDONLY));
+    ASSERT_TRUE(fd, "Failed to-reopen blob");
 
-        void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
-        ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
-        fd.reset();
+    void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
+    ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
+    fd.reset();
 
-        // We should be able to access the mapped data after the file is closed.
-        ASSERT_BYTES_EQ(addr, info->data.get(), info->size_data);
+    // We should be able to access the mapped data after the file is closed.
+    ASSERT_BYTES_EQ(addr, info->data.get(), info->size_data);
 
-        // We should be able to re-open and remap the file.
-        //
-        // Although this isn't being tested explicitly (we lack a mechanism to
-        // check that the second mapping uses the same underlying pages as the
-        // first) the memory usage should avoid duplication in the second
-        // mapping.
-        fd.reset(open(info->path, O_RDONLY));
-        void* addr2 = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
-        ASSERT_NE(addr2, MAP_FAILED, "Could not mmap blob");
-        fd.reset();
-        ASSERT_BYTES_EQ(addr2, info->data.get(), info->size_data);
+    // We should be able to re-open and remap the file.
+    //
+    // Although this isn't being tested explicitly (we lack a mechanism to
+    // check that the second mapping uses the same underlying pages as the
+    // first) the memory usage should avoid duplication in the second
+    // mapping.
+    fd.reset(open(info->path, O_RDONLY));
+    void* addr2 = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
+    ASSERT_NE(addr2, MAP_FAILED, "Could not mmap blob");
+    fd.reset();
+    ASSERT_BYTES_EQ(addr2, info->data.get(), info->size_data);
 
-        ASSERT_EQ(munmap(addr, info->size_data), 0, "Could not unmap blob");
-        ASSERT_EQ(munmap(addr2, info->size_data), 0, "Could not unmap blob");
+    ASSERT_EQ(munmap(addr, info->size_data), 0, "Could not unmap blob");
+    ASSERT_EQ(munmap(addr2, info->size_data), 0, "Could not unmap blob");
 
-        ASSERT_EQ(0, unlink(info->path));
-    }
+    ASSERT_EQ(0, unlink(info->path));
+  }
 }
 
-TEST_F(BlobfsTest, MmapUseAfterClose) {
-    RunMmapUseAfterCloseTest();
-}
+TEST_F(BlobfsTest, MmapUseAfterClose) { RunMmapUseAfterCloseTest(); }
 
-TEST_F(BlobfsTestWithFvm, MmapUseAfterClose) {
-    RunMmapUseAfterCloseTest();
-}
+TEST_F(BlobfsTestWithFvm, MmapUseAfterClose) { RunMmapUseAfterCloseTest(); }
 
 void RunReadDirectoryTest() {
-    constexpr size_t kMaxEntries = 50;
-    constexpr size_t kBlobSize = 1 << 10;
+  constexpr size_t kMaxEntries = 50;
+  constexpr size_t kBlobSize = 1 << 10;
 
-    std::unique_ptr<fs_test_utils::BlobInfo> info[kMaxEntries];
+  std::unique_ptr<fs_test_utils::BlobInfo> info[kMaxEntries];
 
-    // Try to readdir on an empty directory.
-    DIR* dir = opendir(kMountPath);
-    ASSERT_NOT_NULL(dir);
-    auto cleanup = fbl::MakeAutoCall([dir](){ closedir(dir); });
-    ASSERT_NULL(readdir(dir), "Expected blobfs to start empty");
+  // Try to readdir on an empty directory.
+  DIR* dir = opendir(kMountPath);
+  ASSERT_NOT_NULL(dir);
+  auto cleanup = fbl::MakeAutoCall([dir]() { closedir(dir); });
+  ASSERT_NULL(readdir(dir), "Expected blobfs to start empty");
 
-    // Fill a directory with entries.
+  // Fill a directory with entries.
+  for (size_t i = 0; i < kMaxEntries; i++) {
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, kBlobSize, &info[i]));
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info[i].get(), &fd));
+  }
+
+  // Check that we see the expected number of entries
+  size_t entries_seen = 0;
+  struct dirent* dir_entry;
+  while ((dir_entry = readdir(dir)) != nullptr) {
+    entries_seen++;
+  }
+  ASSERT_EQ(kMaxEntries, entries_seen);
+  entries_seen = 0;
+  rewinddir(dir);
+
+  // Readdir on a directory which contains entries, removing them as we go
+  // along.
+  while ((dir_entry = readdir(dir)) != nullptr) {
+    bool found = false;
     for (size_t i = 0; i < kMaxEntries; i++) {
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, kBlobSize, &info[i]));
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info[i].get(), &fd));
+      if ((info[i]->size_data != 0) &&
+          strcmp(strrchr(info[i]->path, '/') + 1, dir_entry->d_name) == 0) {
+        ASSERT_EQ(0, unlink(info[i]->path));
+        // It's a bit hacky, but we set 'size_data' to zero
+        // to identify the entry has been unlinked.
+        info[i]->size_data = 0;
+        found = true;
+        break;
+      }
     }
+    ASSERT_TRUE(found, "Unknown directory entry");
+    entries_seen++;
+  }
+  ASSERT_EQ(kMaxEntries, entries_seen);
 
-    // Check that we see the expected number of entries
-    size_t entries_seen = 0;
-    struct dirent* dir_entry;
-    while ((dir_entry = readdir(dir)) != nullptr) {
-        entries_seen++;
-    }
-    ASSERT_EQ(kMaxEntries, entries_seen);
-    entries_seen = 0;
-    rewinddir(dir);
-
-    // Readdir on a directory which contains entries, removing them as we go
-    // along.
-    while ((dir_entry = readdir(dir)) != nullptr) {
-        bool found = false;
-        for (size_t i = 0; i < kMaxEntries; i++) {
-            if ((info[i]->size_data != 0) &&
-                strcmp(strrchr(info[i]->path, '/') + 1, dir_entry->d_name) == 0) {
-                ASSERT_EQ(0, unlink(info[i]->path));
-                // It's a bit hacky, but we set 'size_data' to zero
-                // to identify the entry has been unlinked.
-                info[i]->size_data = 0;
-                found = true;
-                break;
-            }
-        }
-        ASSERT_TRUE(found, "Unknown directory entry");
-        entries_seen++;
-    }
-    ASSERT_EQ(kMaxEntries, entries_seen);
-
-    ASSERT_NULL(readdir(dir), "Directory should be empty");
-    cleanup.cancel();
-    ASSERT_EQ(0, closedir(dir));
+  ASSERT_NULL(readdir(dir), "Directory should be empty");
+  cleanup.cancel();
+  ASSERT_EQ(0, closedir(dir));
 }
 
-TEST_F(BlobfsTest, ReadDirectory) {
-    RunReadDirectoryTest();
-}
+TEST_F(BlobfsTest, ReadDirectory) { RunReadDirectoryTest(); }
 
-TEST_F(BlobfsTestWithFvm, ReadDirectory) {
-    RunReadDirectoryTest();
-}
+TEST_F(BlobfsTestWithFvm, ReadDirectory) { RunReadDirectoryTest(); }
 
 /*
 
@@ -451,277 +419,252 @@ static bool TestDiskTooSmall(BlobfsTest* blobfsTest) {
 */
 
 void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
-    fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
-    ASSERT_TRUE(fd);
+  fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(fd);
 
-    zx_status_t status;
-    fuchsia_io_FilesystemInfo info;
-    fzl::FdioCaller caller(std::move(fd));
-    ASSERT_OK(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info));
-    ASSERT_OK(status);
+  zx_status_t status;
+  fuchsia_io_FilesystemInfo info;
+  fzl::FdioCaller caller(std::move(fd));
+  ASSERT_OK(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info));
+  ASSERT_OK(status);
 
-    const char kFsName[] = "blobfs";
-    const char* name = reinterpret_cast<const char*>(info.name);
-    ASSERT_STR_EQ(kFsName, name, "Unexpected filesystem mounted");
-    EXPECT_EQ(info.block_size, blobfs::kBlobfsBlockSize);
-    EXPECT_EQ(info.max_filename_size, digest::Digest::kLength * 2);
-    EXPECT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
-    EXPECT_NE(info.fs_id, 0);
+  const char kFsName[] = "blobfs";
+  const char* name = reinterpret_cast<const char*>(info.name);
+  ASSERT_STR_EQ(kFsName, name, "Unexpected filesystem mounted");
+  EXPECT_EQ(info.block_size, blobfs::kBlobfsBlockSize);
+  EXPECT_EQ(info.max_filename_size, digest::Digest::kLength * 2);
+  EXPECT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
+  EXPECT_NE(info.fs_id, 0);
 
-    // Check that used_bytes are within a reasonable range
-    EXPECT_GE(info.used_bytes, expected_bytes);
-    EXPECT_LE(info.used_bytes, info.total_bytes);
+  // Check that used_bytes are within a reasonable range
+  EXPECT_GE(info.used_bytes, expected_bytes);
+  EXPECT_LE(info.used_bytes, info.total_bytes);
 
-    // Check that total_bytes are a multiple of slice_size
-    EXPECT_GE(info.total_bytes, kTestFvmSliceSize);
-    EXPECT_EQ(info.total_bytes % kTestFvmSliceSize, 0);
-    EXPECT_EQ(info.total_nodes, kTestFvmSliceSize / blobfs::kBlobfsInodeSize);
-    EXPECT_EQ(info.used_nodes, expected_nodes);
+  // Check that total_bytes are a multiple of slice_size
+  EXPECT_GE(info.total_bytes, kTestFvmSliceSize);
+  EXPECT_EQ(info.total_bytes % kTestFvmSliceSize, 0);
+  EXPECT_EQ(info.total_nodes, kTestFvmSliceSize / blobfs::kBlobfsInodeSize);
+  EXPECT_EQ(info.used_nodes, expected_nodes);
 }
 
 TEST_F(BlobfsTestWithFvm, QueryInfo) {
-    size_t total_bytes = 0;
-    ASSERT_NO_FAILURES(QueryInfo(0, 0));
-    for (size_t i = 10; i < 16; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+  size_t total_bytes = 0;
+  ASSERT_NO_FAILURES(QueryInfo(0, 0));
+  for (size_t i = 10; i < 16; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-        total_bytes += fbl::round_up(info->size_merkle + info->size_data,
-                                     blobfs::kBlobfsBlockSize);
-    }
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+    total_bytes += fbl::round_up(info->size_merkle + info->size_data, blobfs::kBlobfsBlockSize);
+  }
 
-    ASSERT_NO_FAILURES(QueryInfo(6, total_bytes));
+  ASSERT_NO_FAILURES(QueryInfo(6, total_bytes));
 }
 
 void GetAllocations(zx::vmo* out_vmo, uint64_t* out_count) {
-    fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
-    ASSERT_TRUE(fd);
-    zx_status_t status;
-    zx_handle_t vmo_handle;
-    fzl::FdioCaller caller(std::move(fd));
-    ASSERT_OK(fuchsia_blobfs_BlobfsGetAllocatedRegions(caller.borrow_channel(), &status,
-              &vmo_handle, out_count));
-    ASSERT_OK(status);
-    out_vmo->reset(vmo_handle);
+  fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(fd);
+  zx_status_t status;
+  zx_handle_t vmo_handle;
+  fzl::FdioCaller caller(std::move(fd));
+  ASSERT_OK(fuchsia_blobfs_BlobfsGetAllocatedRegions(caller.borrow_channel(), &status, &vmo_handle,
+                                                     out_count));
+  ASSERT_OK(status);
+  out_vmo->reset(vmo_handle);
 }
 
 void RunGetAllocatedRegionsTest() {
-    zx::vmo vmo;
-    uint64_t count;
-    size_t total_bytes = 0;
-    size_t fidl_bytes = 0;
+  zx::vmo vmo;
+  uint64_t count;
+  size_t total_bytes = 0;
+  size_t fidl_bytes = 0;
 
-    // Although we expect this partition to be empty, we check the results of GetAllocations
-    // in case blobfs chooses to store any metadata of pre-initialized data with the
-    // allocated regions.
-    ASSERT_NO_FAILURES(GetAllocations(&vmo, &count));
+  // Although we expect this partition to be empty, we check the results of GetAllocations
+  // in case blobfs chooses to store any metadata of pre-initialized data with the
+  // allocated regions.
+  ASSERT_NO_FAILURES(GetAllocations(&vmo, &count));
 
-    std::vector<fuchsia_blobfs_BlockRegion> buffer(count);
-    ASSERT_OK(vmo.read(buffer.data(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count));
-    for (size_t i = 0; i < count; i++) {
-        total_bytes += buffer[i].length * blobfs::kBlobfsBlockSize;
-    }
+  std::vector<fuchsia_blobfs_BlockRegion> buffer(count);
+  ASSERT_OK(vmo.read(buffer.data(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count));
+  for (size_t i = 0; i < count; i++) {
+    total_bytes += buffer[i].length * blobfs::kBlobfsBlockSize;
+  }
 
-    for (size_t i = 10; i < 16; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+  for (size_t i = 10; i < 16; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-        total_bytes += fbl::round_up(info->size_merkle + info->size_data,
-                                     blobfs::kBlobfsBlockSize);
-    }
-    ASSERT_NO_FAILURES(GetAllocations(&vmo, &count));
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+    total_bytes += fbl::round_up(info->size_merkle + info->size_data, blobfs::kBlobfsBlockSize);
+  }
+  ASSERT_NO_FAILURES(GetAllocations(&vmo, &count));
 
-    buffer.resize(count);
-    ASSERT_OK(vmo.read(buffer.data(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count));
-    for (size_t i = 0; i < count; i++) {
-        fidl_bytes += buffer[i].length * blobfs::kBlobfsBlockSize;
-    }
-    ASSERT_EQ(fidl_bytes, total_bytes);
+  buffer.resize(count);
+  ASSERT_OK(vmo.read(buffer.data(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count));
+  for (size_t i = 0; i < count; i++) {
+    fidl_bytes += buffer[i].length * blobfs::kBlobfsBlockSize;
+  }
+  ASSERT_EQ(fidl_bytes, total_bytes);
 }
 
-TEST_F(BlobfsTest, GetAllocatedRegions) {
-    RunGetAllocatedRegionsTest();
-}
+TEST_F(BlobfsTest, GetAllocatedRegions) { RunGetAllocatedRegionsTest(); }
 
-TEST_F(BlobfsTestWithFvm, GetAllocatedRegions) {
-    RunGetAllocatedRegionsTest();
-}
+TEST_F(BlobfsTestWithFvm, GetAllocatedRegions) { RunGetAllocatedRegionsTest(); }
 
 void RunUseAfterUnlinkTest() {
-    for (size_t i = 0; i < 16; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+  for (size_t i = 0; i < 16; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
-        // We should be able to unlink the blob.
-        ASSERT_EQ(0, unlink(info->path));
+    // We should be able to unlink the blob.
+    ASSERT_EQ(0, unlink(info->path));
 
-        // We should still be able to read the blob after unlinking.
-        ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+    // We should still be able to read the blob after unlinking.
+    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
 
-        // After closing the file, however, we should not be able to re-open the blob.
-        fd.reset();
-        ASSERT_LT(open(info->path, O_RDONLY), 0, "Expected blob to be deleted");
-    }
+    // After closing the file, however, we should not be able to re-open the blob.
+    fd.reset();
+    ASSERT_LT(open(info->path, O_RDONLY), 0, "Expected blob to be deleted");
+  }
 }
 
-TEST_F(BlobfsTest, UseAfterUnlink) {
-    RunUseAfterUnlinkTest();
-}
+TEST_F(BlobfsTest, UseAfterUnlink) { RunUseAfterUnlinkTest(); }
 
-TEST_F(BlobfsTestWithFvm, UseAfterUnlink) {
-    RunUseAfterUnlinkTest();
-}
+TEST_F(BlobfsTestWithFvm, UseAfterUnlink) { RunUseAfterUnlinkTest(); }
 
 void RunWriteAfterReadtest() {
-    srand(zxtest::Runner::GetInstance()->random_seed());
-    for (size_t i = 0; i < 16; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+  srand(zxtest::Runner::GetInstance()->random_seed());
+  for (size_t i = 0; i < 16; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
-        // After blob generation, writes should be rejected.
-        ASSERT_LT(write(fd.get(), info->data.get(), 1), 0,
-                  "After being written, the blob should refuse writes");
+    // After blob generation, writes should be rejected.
+    ASSERT_LT(write(fd.get(), info->data.get(), 1), 0,
+              "After being written, the blob should refuse writes");
 
-        off_t seek_pos = (rand() % info->size_data);
-        ASSERT_EQ(seek_pos, lseek(fd.get(), seek_pos, SEEK_SET));
-        ASSERT_LT(write(fd.get(), info->data.get(), 1), 0,
-                  "After being written, the blob should refuse writes");
-        ASSERT_LT(ftruncate(fd.get(), rand() % info->size_data), 0,
-                  "The blob should always refuse to be truncated");
+    off_t seek_pos = (rand() % info->size_data);
+    ASSERT_EQ(seek_pos, lseek(fd.get(), seek_pos, SEEK_SET));
+    ASSERT_LT(write(fd.get(), info->data.get(), 1), 0,
+              "After being written, the blob should refuse writes");
+    ASSERT_LT(ftruncate(fd.get(), rand() % info->size_data), 0,
+              "The blob should always refuse to be truncated");
 
-        ASSERT_EQ(0, unlink(info->path));
-    }
+    ASSERT_EQ(0, unlink(info->path));
+  }
 }
 
-TEST_F(BlobfsTest, WriteAfterRead) {
-    RunWriteAfterReadtest();
-}
+TEST_F(BlobfsTest, WriteAfterRead) { RunWriteAfterReadtest(); }
 
-TEST_F(BlobfsTestWithFvm, WriteAfterRead) {
-    RunWriteAfterReadtest();
-}
+TEST_F(BlobfsTestWithFvm, WriteAfterRead) { RunWriteAfterReadtest(); }
 
 void RunWriteAfterUnlinkTest() {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    size_t size = 1 << 20;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, size, &info));
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  size_t size = 1 << 20;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, size, &info));
 
-    // Partially write out first blob.
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
-    ASSERT_EQ(0, ftruncate(fd.get(), size));
-    ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), size / 2),
-              "Failed to write Data");
-    ASSERT_EQ(0, unlink(info->path));
-    ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get() + size / 2,
-                                          size - (size / 2)), "Failed to write Data");
-    fd.reset();
-    ASSERT_LT(open(info->path, O_RDONLY), 0);
+  // Partially write out first blob.
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd, "Failed to create blob");
+  ASSERT_EQ(0, ftruncate(fd.get(), size));
+  ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), size / 2),
+            "Failed to write Data");
+  ASSERT_EQ(0, unlink(info->path));
+  ASSERT_EQ(
+      0, fs_test_utils::StreamAll(write, fd.get(), info->data.get() + size / 2, size - (size / 2)),
+      "Failed to write Data");
+  fd.reset();
+  ASSERT_LT(open(info->path, O_RDONLY), 0);
 }
 
-TEST_F(BlobfsTest, WriteAfterUnlink) {
-    RunWriteAfterUnlinkTest();
-}
+TEST_F(BlobfsTest, WriteAfterUnlink) { RunWriteAfterUnlinkTest(); }
 
-TEST_F(BlobfsTestWithFvm, WriteAfterUnlink) {
-    RunWriteAfterUnlinkTest();
-}
+TEST_F(BlobfsTestWithFvm, WriteAfterUnlink) { RunWriteAfterUnlinkTest(); }
 
 void RunReadTooLargeTest() {
-    for (size_t i = 0; i < 16; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+  for (size_t i = 0; i < 16; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
-        std::unique_ptr<char[]> buffer(new char[info->size_data]);
+    std::unique_ptr<char[]> buffer(new char[info->size_data]);
 
-        // Try read beyond end of blob.
-        off_t end_off = info->size_data;
-        ASSERT_EQ(end_off, lseek(fd.get(), end_off, SEEK_SET));
-        ASSERT_EQ(0, read(fd.get(), &buffer[0], 1), "Expected empty read beyond end of file");
+    // Try read beyond end of blob.
+    off_t end_off = info->size_data;
+    ASSERT_EQ(end_off, lseek(fd.get(), end_off, SEEK_SET));
+    ASSERT_EQ(0, read(fd.get(), &buffer[0], 1), "Expected empty read beyond end of file");
 
-        // Try some reads which straddle the end of the blob.
-        for (ssize_t j = 1; j < static_cast<ssize_t>(info->size_data); j *= 2) {
-            end_off = info->size_data - j;
-            ASSERT_EQ(end_off, lseek(fd.get(), end_off, SEEK_SET));
-            ASSERT_EQ(j, read(fd.get(), &buffer[0], j * 2),
-                      "Expected to only read one byte at end of file");
-            ASSERT_BYTES_EQ(buffer.get(), &info->data[info->size_data - j], j,
-                            "Read data, but it was bad");
-        }
-
-        ASSERT_EQ(0, unlink(info->path));
+    // Try some reads which straddle the end of the blob.
+    for (ssize_t j = 1; j < static_cast<ssize_t>(info->size_data); j *= 2) {
+      end_off = info->size_data - j;
+      ASSERT_EQ(end_off, lseek(fd.get(), end_off, SEEK_SET));
+      ASSERT_EQ(j, read(fd.get(), &buffer[0], j * 2),
+                "Expected to only read one byte at end of file");
+      ASSERT_BYTES_EQ(buffer.get(), &info->data[info->size_data - j], j,
+                      "Read data, but it was bad");
     }
+
+    ASSERT_EQ(0, unlink(info->path));
+  }
 }
 
-TEST_F(BlobfsTest, ReadTooLarge) {
-    RunReadTooLargeTest();
-}
+TEST_F(BlobfsTest, ReadTooLarge) { RunReadTooLargeTest(); }
 
-TEST_F(BlobfsTestWithFvm, ReadTooLarge) {
-    RunReadTooLargeTest();
-}
+TEST_F(BlobfsTestWithFvm, ReadTooLarge) { RunReadTooLargeTest(); }
 
 void RunBadAllocationTest(uint64_t disk_size) {
-    std::string name(kMountPath);
-    name.append("/00112233445566778899AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVV");
-    fbl::unique_fd fd(open(name.c_str(), O_CREAT | O_RDWR));
-    ASSERT_FALSE(fd, "Only acceptable pathnames are hex");
+  std::string name(kMountPath);
+  name.append("/00112233445566778899AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVV");
+  fbl::unique_fd fd(open(name.c_str(), O_CREAT | O_RDWR));
+  ASSERT_FALSE(fd, "Only acceptable pathnames are hex");
 
-    name.assign(kMountPath);
-    name.append("/00112233445566778899AABBCCDDEEFF");
-    fd.reset(open(name.c_str(), O_CREAT | O_RDWR));
-    ASSERT_FALSE(fd, "Only acceptable pathnames are 32 hex-encoded bytes");
+  name.assign(kMountPath);
+  name.append("/00112233445566778899AABBCCDDEEFF");
+  fd.reset(open(name.c_str(), O_CREAT | O_RDWR));
+  ASSERT_FALSE(fd, "Only acceptable pathnames are 32 hex-encoded bytes");
 
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 15, &info));
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 15, &info));
 
-    fd.reset(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
-    ASSERT_EQ(-1, ftruncate(fd.get(), 0), "Blob without data doesn't match null blob");
+  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd, "Failed to create blob");
+  ASSERT_EQ(-1, ftruncate(fd.get(), 0), "Blob without data doesn't match null blob");
 
-    // This is the size of the entire disk; we won't have room.
-    ASSERT_EQ(-1, ftruncate(fd.get(), disk_size), "Huge blob");
+  // This is the size of the entire disk; we won't have room.
+  ASSERT_EQ(-1, ftruncate(fd.get(), disk_size), "Huge blob");
 
-    // Okay, finally, a valid blob!
-    ASSERT_EQ(0, ftruncate(fd.get(), info->size_data), "Failed to allocate blob");
+  // Okay, finally, a valid blob!
+  ASSERT_EQ(0, ftruncate(fd.get(), info->size_data), "Failed to allocate blob");
 
-    // Write nothing, but close the blob. Since the write was incomplete,
-    // it will be inaccessible.
-    fd.reset(open(info->path, O_RDWR));
-    ASSERT_FALSE(fd, "Cannot access partial blob");
-    fd.reset(open(info->path, O_RDONLY));
-    ASSERT_FALSE(fd, "Cannot access partial blob");
+  // Write nothing, but close the blob. Since the write was incomplete,
+  // it will be inaccessible.
+  fd.reset(open(info->path, O_RDWR));
+  ASSERT_FALSE(fd, "Cannot access partial blob");
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_FALSE(fd, "Cannot access partial blob");
 
-    // And once more -- let's write everything but the last byte of a blob's data.
-    fd.reset(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
-    ASSERT_EQ(0, ftruncate(fd.get(), info->size_data), "Failed to allocate blob");
-    ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data - 1),
-              "Failed to write data");
-    fd.reset(open(info->path, O_RDWR));
-    ASSERT_FALSE(fd, "Cannot access partial blob");
+  // And once more -- let's write everything but the last byte of a blob's data.
+  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd, "Failed to create blob");
+  ASSERT_EQ(0, ftruncate(fd.get(), info->size_data), "Failed to allocate blob");
+  ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data - 1),
+            "Failed to write data");
+  fd.reset(open(info->path, O_RDWR));
+  ASSERT_FALSE(fd, "Cannot access partial blob");
 }
 
-TEST_F(BlobfsTest, BadAllocation) {
-    RunBadAllocationTest(environment_->disk_size());
-}
+TEST_F(BlobfsTest, BadAllocation) { RunBadAllocationTest(environment_->disk_size()); }
 
-TEST_F(BlobfsTestWithFvm, BadAllocation) {
-    RunBadAllocationTest(environment_->disk_size());
-}
+TEST_F(BlobfsTestWithFvm, BadAllocation) { RunBadAllocationTest(environment_->disk_size()); }
 
 /*
 
@@ -784,244 +727,216 @@ static bool CorruptedDigest(BlobfsTest* blobfsTest) {
 */
 
 void RunEdgeAllocationTest() {
-    // Powers of two...
-    for (size_t i = 1; i < 16; i++) {
-        // -1, 0, +1 offsets...
-        for (size_t j = -1; j < 2; j++) {
-            std::unique_ptr<fs_test_utils::BlobInfo> info;
-            ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, (1 << i) + j, &info));
-            fbl::unique_fd fd;
-            ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-            ASSERT_EQ(0, unlink(info->path));
-        }
+  // Powers of two...
+  for (size_t i = 1; i < 16; i++) {
+    // -1, 0, +1 offsets...
+    for (size_t j = -1; j < 2; j++) {
+      std::unique_ptr<fs_test_utils::BlobInfo> info;
+      ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, (1 << i) + j, &info));
+      fbl::unique_fd fd;
+      ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+      ASSERT_EQ(0, unlink(info->path));
     }
+  }
 }
 
-TEST_F(BlobfsTest, EdgeAllocation) {
-    RunEdgeAllocationTest();
-}
+TEST_F(BlobfsTest, EdgeAllocation) { RunEdgeAllocationTest(); }
 
-TEST_F(BlobfsTestWithFvm, EdgeAllocation) {
-    RunEdgeAllocationTest();
-}
+TEST_F(BlobfsTestWithFvm, EdgeAllocation) { RunEdgeAllocationTest(); }
 
 void RunUmountWithOpenFileTest(BlobfsTest* test) {
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
+  fbl::unique_fd fd;
+  ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+
+  // Intentionally don't close the file descriptor: Unmount anyway.
+  ASSERT_NO_FAILURES(test->Remount());
+  // Just closing our local handle; the connection should be disconnected.
+  int close_return = close(fd.release());
+  int close_error = errno;
+  ASSERT_EQ(-1, close_return);
+  ASSERT_EQ(EPIPE, close_error);
+
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd, "Failed to open blob");
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+  fd.reset();
+
+  ASSERT_EQ(0, unlink(info->path));
+}
+
+TEST_F(BlobfsTest, UmountWithOpenFile) { RunUmountWithOpenFileTest(this); }
+
+TEST_F(BlobfsTestWithFvm, UmountWithOpenFile) { RunUmountWithOpenFileTest(this); }
+
+void RunUmountWithMappedFileTest(BlobfsTest* test) {
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
+  fbl::unique_fd fd;
+  ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+
+  void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
+  ASSERT_NOT_NULL(addr);
+  fd.reset();
+
+  // Intentionally don't unmap the file descriptor: Unmount anyway.
+  ASSERT_NO_FAILURES(test->Remount());
+  ASSERT_EQ(munmap(addr, info->size_data), 0);
+
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd.get(), "Failed to open blob");
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+  ASSERT_EQ(0, unlink(info->path));
+}
+
+TEST_F(BlobfsTest, UmountWithMappedFile) { RunUmountWithMappedFileTest(this); }
+
+TEST_F(BlobfsTestWithFvm, UmountWithMappedFile) { RunUmountWithMappedFileTest(this); }
+
+void RunUmountWithOpenMappedFileTest(BlobfsTest* test) {
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
+  fbl::unique_fd fd;
+  ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+
+  void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
+  ASSERT_NOT_NULL(addr);
+
+  // Intentionally don't close the file descriptor: Unmount anyway.
+  ASSERT_NO_FAILURES(test->Remount());
+  // Just closing our local handle; the connection should be disconnected.
+  ASSERT_EQ(0, munmap(addr, info->size_data));
+  int close_return = close(fd.release());
+  int close_error = errno;
+  ASSERT_EQ(-1, close_return);
+  ASSERT_EQ(EPIPE, close_error);
+
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd.get(), "Failed to open blob");
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+  ASSERT_EQ(0, unlink(info->path));
+}
+
+TEST_F(BlobfsTest, UmountWithOpenMappedFile) { RunUmountWithOpenMappedFileTest(this); }
+
+TEST_F(BlobfsTestWithFvm, UmountWithOpenMappedFile) { RunUmountWithOpenMappedFileTest(this); }
+
+void RunCreateUmountRemountSmallTest(BlobfsTest* test) {
+  for (size_t i = 10; i < 16; i++) {
     std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+
     fbl::unique_fd fd;
     ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
-    // Intentionally don't close the file descriptor: Unmount anyway.
-    ASSERT_NO_FAILURES(test->Remount());
-    // Just closing our local handle; the connection should be disconnected.
-    int close_return = close(fd.release());
-    int close_error = errno;
-    ASSERT_EQ(-1, close_return);
-    ASSERT_EQ(EPIPE, close_error);
+    fd.reset();
+    ASSERT_NO_FAILURES(test->Remount(), "Could not re-mount blobfs");
 
     fd.reset(open(info->path, O_RDONLY));
     ASSERT_TRUE(fd, "Failed to open blob");
-    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    fd.reset();
 
-    ASSERT_EQ(0, unlink(info->path));
-}
-
-TEST_F(BlobfsTest, UmountWithOpenFile) {
-    RunUmountWithOpenFileTest(this);
-}
-
-TEST_F(BlobfsTestWithFvm, UmountWithOpenFile) {
-    RunUmountWithOpenFileTest(this);
-}
-
-void RunUmountWithMappedFileTest(BlobfsTest* test) {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
-    fbl::unique_fd fd;
-    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-
-    void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
-    ASSERT_NOT_NULL(addr);
-    fd.reset();
-
-    // Intentionally don't unmap the file descriptor: Unmount anyway.
-    ASSERT_NO_FAILURES(test->Remount());
-    ASSERT_EQ(munmap(addr, info->size_data), 0);
-
-    fd.reset(open(info->path, O_RDONLY));
-    ASSERT_TRUE(fd.get(), "Failed to open blob");
     ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
     ASSERT_EQ(0, unlink(info->path));
+  }
 }
 
-TEST_F(BlobfsTest, UmountWithMappedFile) {
-    RunUmountWithMappedFileTest(this);
-}
+TEST_F(BlobfsTest, CreateUmountRemountSmall) { RunCreateUmountRemountSmallTest(this); }
 
-TEST_F(BlobfsTestWithFvm, UmountWithMappedFile) {
-    RunUmountWithMappedFileTest(this);
-}
-
-void RunUmountWithOpenMappedFileTest(BlobfsTest* test) {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
-    fbl::unique_fd fd;
-    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-
-    void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
-    ASSERT_NOT_NULL(addr);
-
-    // Intentionally don't close the file descriptor: Unmount anyway.
-    ASSERT_NO_FAILURES(test->Remount());
-    // Just closing our local handle; the connection should be disconnected.
-    ASSERT_EQ(0, munmap(addr, info->size_data));
-    int close_return = close(fd.release());
-    int close_error = errno;
-    ASSERT_EQ(-1, close_return);
-    ASSERT_EQ(EPIPE, close_error);
-
-    fd.reset(open(info->path, O_RDONLY));
-    ASSERT_TRUE(fd.get(), "Failed to open blob");
-    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(0, unlink(info->path));
-}
-
-TEST_F(BlobfsTest, UmountWithOpenMappedFile) {
-    RunUmountWithOpenMappedFileTest(this);
-}
-
-TEST_F(BlobfsTestWithFvm, UmountWithOpenMappedFile) {
-    RunUmountWithOpenMappedFileTest(this);
-}
-
-void RunCreateUmountRemountSmallTest(BlobfsTest* test) {
-    for (size_t i = 10; i < 16; i++) {
-        std::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
-
-        fbl::unique_fd fd;
-        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-
-        fd.reset();
-        ASSERT_NO_FAILURES(test->Remount(), "Could not re-mount blobfs");
-
-        fd.reset(open(info->path, O_RDONLY));
-        ASSERT_TRUE(fd, "Failed to open blob");
-
-        ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-        ASSERT_EQ(0, unlink(info->path));
-    }
-}
-
-TEST_F(BlobfsTest, CreateUmountRemountSmall) {
-    RunCreateUmountRemountSmallTest(this);
-}
-
-TEST_F(BlobfsTestWithFvm, CreateUmountRemountSmall) {
-    RunCreateUmountRemountSmallTest(this);
-}
+TEST_F(BlobfsTestWithFvm, CreateUmountRemountSmall) { RunCreateUmountRemountSmallTest(this); }
 
 bool IsReadable(int fd) {
-    char buf[1];
-    return pread(fd, buf, sizeof(buf), 0) == sizeof(buf);
+  char buf[1];
+  return pread(fd, buf, sizeof(buf), 0) == sizeof(buf);
 }
 
 // Tests that we cannot read from the Blob until it has been fully written.
 void RunEarlyReadTest() {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
 
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-    ASSERT_TRUE(fd);
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  ASSERT_TRUE(fd);
 
-    // A second fd should also not be readable.
-    fbl::unique_fd fd2(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd2);
+  // A second fd should also not be readable.
+  fbl::unique_fd fd2(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd2);
 
-    ASSERT_FALSE(IsReadable(fd.get()), "Should not be readable after open");
-    ASSERT_FALSE(IsReadable(fd2.get()), "Should not be readable after open");
+  ASSERT_FALSE(IsReadable(fd.get()), "Should not be readable after open");
+  ASSERT_FALSE(IsReadable(fd2.get()), "Should not be readable after open");
 
-    ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
-    ASSERT_FALSE(IsReadable(fd.get()), "Should not be readable after alloc");
-    ASSERT_FALSE(IsReadable(fd2.get()), "Should not be readable after alloc");
+  ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
+  ASSERT_FALSE(IsReadable(fd.get()), "Should not be readable after alloc");
+  ASSERT_FALSE(IsReadable(fd2.get()), "Should not be readable after alloc");
 
-    ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data),
-              "Failed to write Data");
+  ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data),
+            "Failed to write Data");
 
-    // Okay, NOW we can read.
-    // Double check that attempting to read early didn't cause problems...
-    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_TRUE(fs_test_utils::VerifyContents(fd2.get(), info->data.get(), info->size_data));
+  // Okay, NOW we can read.
+  // Double check that attempting to read early didn't cause problems...
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd2.get(), info->data.get(), info->size_data));
 
-    ASSERT_TRUE(IsReadable(fd.get()));
+  ASSERT_TRUE(IsReadable(fd.get()));
 }
 
-TEST_F(BlobfsTest, EarlyRead) {
-    RunEarlyReadTest();
-}
+TEST_F(BlobfsTest, EarlyRead) { RunEarlyReadTest(); }
 
-TEST_F(BlobfsTestWithFvm, EarlyRead) {
-    RunEarlyReadTest();
-}
+TEST_F(BlobfsTestWithFvm, EarlyRead) { RunEarlyReadTest(); }
 
 // Waits for up to 10 seconds until the file is readable. Returns 0 on success.
 void CheckReadable(fbl::unique_fd fd, std::atomic<bool>* result) {
-    struct pollfd fds;
-    fds.fd = fd.get();
-    fds.events = POLLIN;
+  struct pollfd fds;
+  fds.fd = fd.get();
+  fds.events = POLLIN;
 
-    if (poll(&fds, 1, 10000) != 1) {
-        printf("Failed to wait for readable blob\n");
-        *result = false;
-    }
+  if (poll(&fds, 1, 10000) != 1) {
+    printf("Failed to wait for readable blob\n");
+    *result = false;
+  }
 
-    if (fds.revents != POLLIN) {
-        printf("Unexpected event\n");
-        *result = false;
-    }
+  if (fds.revents != POLLIN) {
+    printf("Unexpected event\n");
+    *result = false;
+  }
 
-    if (!IsReadable(fd.get())) {
-        printf("Not readable\n");
-        *result = false;
-    }
+  if (!IsReadable(fd.get())) {
+    printf("Not readable\n");
+    *result = false;
+  }
 
-    *result = true;
+  *result = true;
 }
 
 // Tests that poll() can tell, at some point, when it's ok to read.
 void RunWaitForReadTest() {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
 
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-    ASSERT_TRUE(fd);
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  ASSERT_TRUE(fd);
 
-    {
-        // Launch a background thread to wait for the file to become readable.
-        std::atomic<bool> result;
-        std::thread waiter_thread(CheckReadable, std::move(fd), &result);
+  {
+    // Launch a background thread to wait for the file to become readable.
+    std::atomic<bool> result;
+    std::thread waiter_thread(CheckReadable, std::move(fd), &result);
 
-        MakeBlob(info.get(), &fd);
+    MakeBlob(info.get(), &fd);
 
-        waiter_thread.join();
-        ASSERT_TRUE(result.load(), "Background operation failed");
-    }
+    waiter_thread.join();
+    ASSERT_TRUE(result.load(), "Background operation failed");
+  }
 
-    // Before continuing, make sure that MakeBlob was successful.
-    ASSERT_NO_FAILURES();
+  // Before continuing, make sure that MakeBlob was successful.
+  ASSERT_NO_FAILURES();
 
-    // Double check that attempting to read early didn't cause problems...
-    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+  // Double check that attempting to read early didn't cause problems...
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
 }
 
-TEST_F(BlobfsTest, WaitForRead) {
-    RunWaitForReadTest();
-}
+TEST_F(BlobfsTest, WaitForRead) { RunWaitForReadTest(); }
 
-TEST_F(BlobfsTestWithFvm, WaitForRead) {
-    RunWaitForReadTest();
-}
+TEST_F(BlobfsTestWithFvm, WaitForRead) { RunWaitForReadTest(); }
 
 /*
 
@@ -1149,8 +1064,8 @@ bool TestPartialWrite(BlobfsTest* blobfsTest) {
     fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd_partial, "Failed to create blob");
     ASSERT_EQ(ftruncate(fd_partial.get(), size), 0);
-    ASSERT_EQ(fs_test_utils::StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2), 0,
-              "Failed to write Data");
+    ASSERT_EQ(fs_test_utils::StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2),
+0, "Failed to write Data");
 
     // Completely write out second blob.
     fbl::unique_fd fd_complete;
@@ -1178,8 +1093,8 @@ bool TestPartialWriteSleepRamdisk(BlobfsTest* blobfsTest) {
     fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd_partial, "Failed to create blob");
     ASSERT_EQ(ftruncate(fd_partial.get(), size), 0);
-    ASSERT_EQ(fs_test_utils::StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2), 0,
-              "Failed to write Data");
+    ASSERT_EQ(fs_test_utils::StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2),
+0, "Failed to write Data");
 
     // Completely write out second blob.
     fbl::unique_fd fd_complete;
@@ -1989,109 +1904,109 @@ static bool TestExtendFailure(void) {
 */
 
 void RunFailedWriteTest(const RamDisk* disk) {
-    if (!disk) {
-        return;
-    }
+  if (!disk) {
+    return;
+  }
 
-    uint32_t page_size = disk->page_size();
-    const uint32_t pages_per_block = blobfs::kBlobfsBlockSize / page_size;
+  uint32_t page_size = disk->page_size();
+  const uint32_t pages_per_block = blobfs::kBlobfsBlockSize / page_size;
 
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &info));
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &info));
 
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd, "Failed to create blob");
 
-    // Truncate before sleeping the ramdisk. This is so potential FVM updates
-    // do not interfere with the ramdisk block count.
-    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+  // Truncate before sleeping the ramdisk. This is so potential FVM updates
+  // do not interfere with the ramdisk block count.
+  ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
 
-    // Journal:
-    // - One Superblock block
-    // - One Inode table block
-    // - One Bitmap block
-    //
-    // Non-journal:
-    // - One Inode table block
-    // - One Data block
-    constexpr int kBlockCountToWrite = 5;
+  // Journal:
+  // - One Superblock block
+  // - One Inode table block
+  // - One Bitmap block
+  //
+  // Non-journal:
+  // - One Inode table block
+  // - One Data block
+  constexpr int kBlockCountToWrite = 5;
 
-    // Sleep after |kBlockCountToWrite - 1| blocks. This is 1 less than will be
-    // needed to write out the entire blob. This ensures that writing the blob
-    // will ultimately fail, but the write operation will return a successful
-    // response.
-    ASSERT_OK(disk->SleepAfter(pages_per_block * (kBlockCountToWrite - 1)));
-    ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
-              static_cast<ssize_t>(info->size_data));
+  // Sleep after |kBlockCountToWrite - 1| blocks. This is 1 less than will be
+  // needed to write out the entire blob. This ensures that writing the blob
+  // will ultimately fail, but the write operation will return a successful
+  // response.
+  ASSERT_OK(disk->SleepAfter(pages_per_block * (kBlockCountToWrite - 1)));
+  ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
+            static_cast<ssize_t>(info->size_data));
 
-    // Since the write operation ultimately failed when going out to disk,
-    // syncfs will return a failed response.
-    ASSERT_LT(syncfs(fd.get()), 0);
+  // Since the write operation ultimately failed when going out to disk,
+  // syncfs will return a failed response.
+  ASSERT_LT(syncfs(fd.get()), 0);
 
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &info));
-    fd.reset(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &info));
+  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd, "Failed to create blob");
 
-    // On an FVM, truncate may either succeed or fail. If an FVM extend call is necessary,
-    // it will fail since the ramdisk is asleep; otherwise, it will pass.
-    ftruncate(fd.get(), info->size_data);
+  // On an FVM, truncate may either succeed or fail. If an FVM extend call is necessary,
+  // it will fail since the ramdisk is asleep; otherwise, it will pass.
+  ftruncate(fd.get(), info->size_data);
 
-    // Since the ramdisk is asleep and our blobfs is aware of it due to the sync, write should fail.
-    ASSERT_LT(write(fd.get(), info->data.get(), blobfs::kBlobfsBlockSize), 0);
+  // Since the ramdisk is asleep and our blobfs is aware of it due to the sync, write should fail.
+  ASSERT_LT(write(fd.get(), info->data.get(), blobfs::kBlobfsBlockSize), 0);
 
-    ASSERT_OK(disk->WakeUp());
+  ASSERT_OK(disk->WakeUp());
 }
 
 TEST_F(BlobfsTest, FailedWrite) {
-    ASSERT_NO_FAILURES(RunFailedWriteTest(environment_->ramdisk()));
+  ASSERT_NO_FAILURES(RunFailedWriteTest(environment_->ramdisk()));
 
-    // Force journal replay.
-    Remount();
+  // Force journal replay.
+  Remount();
 }
 
 TEST_F(BlobfsTestWithFvm, FailedWrite) {
-    ASSERT_NO_FAILURES(RunFailedWriteTest(environment_->ramdisk()));
+  ASSERT_NO_FAILURES(RunFailedWriteTest(environment_->ramdisk()));
 
-    // Force journal replay.
-    Remount();
+  // Force journal replay.
+  Remount();
 }
 
 class LargeBlobTest : public BlobfsTest {
-  public:
-    LargeBlobTest() {
-        // Create blobfs with enough data blocks to ensure 2 block bitmap blocks.
-        // Any number above kBlobfsBlockBits should do, and the larger the
-        // number, the bigger the disk (and memory used for the test).
-        superblock_.flags = 0;
-        superblock_.inode_count = blobfs::kBlobfsDefaultInodeCount;
-        superblock_.journal_block_count = blobfs::kDefaultJournalBlocks;
-        superblock_.data_block_count = 12 * blobfs::kBlobfsBlockBits / 10;
+ public:
+  LargeBlobTest() {
+    // Create blobfs with enough data blocks to ensure 2 block bitmap blocks.
+    // Any number above kBlobfsBlockBits should do, and the larger the
+    // number, the bigger the disk (and memory used for the test).
+    superblock_.flags = 0;
+    superblock_.inode_count = blobfs::kBlobfsDefaultInodeCount;
+    superblock_.journal_block_count = blobfs::kDefaultJournalBlocks;
+    superblock_.data_block_count = 12 * blobfs::kBlobfsBlockBits / 10;
 
-        const int kBlockSize = 512;
-        uint64_t blobfs_blocks = blobfs::TotalBlocks(superblock_);
-        uint64_t num_blocks = (blobfs_blocks * blobfs::kBlobfsBlockSize) / kBlockSize;
-        ramdisk_ = std::make_unique<RamDisk>(kBlockSize, num_blocks);
-        device_path_ = ramdisk_->path();
-    }
+    const int kBlockSize = 512;
+    uint64_t blobfs_blocks = blobfs::TotalBlocks(superblock_);
+    uint64_t num_blocks = (blobfs_blocks * blobfs::kBlobfsBlockSize) / kBlockSize;
+    ramdisk_ = std::make_unique<RamDisk>(kBlockSize, num_blocks);
+    device_path_ = ramdisk_->path();
+  }
 
-  protected:
-    blobfs::Superblock superblock_;
+ protected:
+  blobfs::Superblock superblock_;
 
-  private:
-    std::unique_ptr<RamDisk> ramdisk_;
+ private:
+  std::unique_ptr<RamDisk> ramdisk_;
 };
 
 TEST_F(LargeBlobTest, UseSecondBitmap) {
-    // Create (and delete) a blob large enough to overflow into the second bitmap block.
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    size_t blob_size = ((superblock_.data_block_count / 2) + 1) * blobfs::kBlobfsBlockSize;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blob_size, &info));
+  // Create (and delete) a blob large enough to overflow into the second bitmap block.
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  size_t blob_size = ((superblock_.data_block_count / 2) + 1) * blobfs::kBlobfsBlockSize;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blob_size, &info));
 
-    fbl::unique_fd fd;
-    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
-    ASSERT_EQ(syncfs(fd.get()), 0);
-    ASSERT_EQ(close(fd.release()), 0);
-    ASSERT_EQ(unlink(info->path), 0);
+  fbl::unique_fd fd;
+  ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+  ASSERT_EQ(syncfs(fd.get()), 0);
+  ASSERT_EQ(close(fd.release()), 0);
+  ASSERT_EQ(unlink(info->path), 0);
 }
 
 }  // namespace

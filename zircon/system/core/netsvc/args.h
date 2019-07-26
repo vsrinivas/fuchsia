@@ -14,7 +14,8 @@
 // in the corresponding out parameters.
 //
 // If parse_netsvc_args returns < 0, an error string will be returned in |error|.
-int parse_netsvc_args(int argc, char** argv, const char** error, bool* netboot, bool* advertise, const char** interface);
+int parse_netsvc_args(int argc, char** argv, const char** error, bool* netboot, bool* advertise,
+                      const char** interface);
 
 // Parse the command line arguments in |argv|, returning the value of char* flags
 //
@@ -24,4 +25,6 @@ int parse_netsvc_args(int argc, char** argv, const char** error, bool* netboot, 
 // in the corresponding out parameters.
 //
 // If parse_device_name_provider_args returns < 0, an error string will be returned in |error|.
-int parse_device_name_provider_args(int argc, char** argv, const char** error, const char** interface, const char** nodename, const char** ethdir);
+int parse_device_name_provider_args(int argc, char** argv, const char** error,
+                                    const char** interface, const char** nodename,
+                                    const char** ethdir);

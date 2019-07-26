@@ -7,15 +7,13 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 
-static zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
-    return pci::Bus::Create(parent);
-}
+static zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) { return pci::Bus::Create(parent); }
 
 static constexpr zx_driver_ops_t pci_driver_ops = []() {
-    zx_driver_ops_t ops = {};
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = pci_bus_bind;
-    return ops;
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = pci_bus_bind;
+  return ops;
 }();
 
 // clang-format off

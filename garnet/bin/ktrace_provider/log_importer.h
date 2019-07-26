@@ -20,8 +20,8 @@ class LogImporter {
   void Stop();
 
  private:
-  void Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-              zx_status_t status, const zx_packet_signal_t* signal);
+  void Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+              const zx_packet_signal_t* signal);
 
   zx::debuglog log_;
   zx_time_t start_time_;

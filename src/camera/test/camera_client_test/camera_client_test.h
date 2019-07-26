@@ -30,9 +30,8 @@ class Client {
   zx_status_t StartDriver(const char* device);
 
   zx_status_t LoadVideoFormats(
-      fit::function<zx_status_t(
-          uint32_t index, std::vector<fuchsia::camera::VideoFormat>* formats,
-          uint32_t* total_format_count)>
+      fit::function<zx_status_t(uint32_t index, std::vector<fuchsia::camera::VideoFormat>* formats,
+                                uint32_t* total_format_count)>
           get_formats);
 
   std::vector<fuchsia::camera::VideoFormat>& formats() { return formats_; };

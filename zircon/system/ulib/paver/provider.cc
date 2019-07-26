@@ -15,22 +15,20 @@ namespace {
 
 zx_status_t Connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                     zx_handle_t request) {
-    if (!strcmp(service_name, ::llcpp::fuchsia::paver::Paver::Name)) {
-        return fidl::Bind(dispatcher, zx::channel(request), reinterpret_cast<paver::Paver*>(ctx));
-    }
+  if (!strcmp(service_name, ::llcpp::fuchsia::paver::Paver::Name)) {
+    return fidl::Bind(dispatcher, zx::channel(request), reinterpret_cast<paver::Paver*>(ctx));
+  }
 
-    zx_handle_close(request);
-    return ZX_ERR_NOT_SUPPORTED;
+  zx_handle_close(request);
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Init(void** out_ctx) {
-    *out_ctx = new paver::Paver;
-    return ZX_OK;
+  *out_ctx = new paver::Paver;
+  return ZX_OK;
 }
 
-void Release(void* ctx) {
-    delete static_cast<paver::Paver*>(ctx);
-}
+void Release(void* ctx) { delete static_cast<paver::Paver*>(ctx); }
 
 constexpr const char* kPaverServices[] = {
     ::llcpp::fuchsia::paver::Paver::Name,
@@ -49,8 +47,6 @@ constexpr zx_service_provider_t paver_service_provider = {
     .ops = &kPaverOps,
 };
 
-} // namespace
+}  // namespace
 
-const zx_service_provider_t* paver_get_service_provider() {
-    return &paver_service_provider;
-}
+const zx_service_provider_t* paver_get_service_provider() { return &paver_service_provider; }

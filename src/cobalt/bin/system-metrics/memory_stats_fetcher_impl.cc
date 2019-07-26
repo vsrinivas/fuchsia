@@ -17,9 +17,7 @@
 
 namespace cobalt {
 
-MemoryStatsFetcherImpl::MemoryStatsFetcherImpl() {
-  InitializeRootResourceHandle();
-}
+MemoryStatsFetcherImpl::MemoryStatsFetcherImpl() { InitializeRootResourceHandle(); }
 
 bool MemoryStatsFetcherImpl::FetchMemoryStats(zx_info_kmem_stats_t* mem_stats) {
   TRACE_DURATION("system_metrics", "MemoryStatsFetcherImpl::FetchMemoryStats");
@@ -29,13 +27,11 @@ bool MemoryStatsFetcherImpl::FetchMemoryStats(zx_info_kmem_stats_t* mem_stats) {
     InitializeRootResourceHandle();
     return false;
   }
-  zx_status_t err =
-      zx_object_get_info(root_resource_handle_, ZX_INFO_KMEM_STATS, mem_stats,
-                         sizeof(*mem_stats), NULL, NULL);
+  zx_status_t err = zx_object_get_info(root_resource_handle_, ZX_INFO_KMEM_STATS, mem_stats,
+                                       sizeof(*mem_stats), NULL, NULL);
   if (err != ZX_OK) {
     FX_LOGS(ERROR) << "MemoryStatsFetcherImpl: Fetching "
-                   << "ZX_INFO_KMEM_STATS through syscall returns "
-                   << zx_status_get_string(err);
+                   << "ZX_INFO_KMEM_STATS through syscall returns " << zx_status_get_string(err);
     return false;
   }
   return true;
@@ -53,20 +49,17 @@ void MemoryStatsFetcherImpl::InitializeRootResourceHandle() {
   static const char kRootResourceSvc[] = "/svc/fuchsia.boot.RootResource";
   status = fdio_service_connect(kRootResourceSvc, remote.release());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-        << "Cannot open fuchsia.boot.RootResource: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
+                   << "Cannot open fuchsia.boot.RootResource: " << zx_status_get_string(status);
     return;
   }
   zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local.get(), &root_resource_handle_);
   if (fidl_status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-        << zx_status_get_string(fidl_status);
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
+                   << zx_status_get_string(fidl_status);
     return;
   } else if (root_resource_handle_ == ZX_HANDLE_INVALID) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: Failed to get root_resource_handle_.";
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Failed to get root_resource_handle_.";
     return;
   }
 }

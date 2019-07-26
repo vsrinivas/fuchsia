@@ -15,14 +15,13 @@ DockyardProxyStatus DockyardProxyFake::Init() {
   return DockyardProxyStatus::OK;
 }
 
-DockyardProxyStatus DockyardProxyFake::SendInspectJson(
-    const std::string& stream_name, const std::string& json) {
+DockyardProxyStatus DockyardProxyFake::SendInspectJson(const std::string& stream_name,
+                                                       const std::string& json) {
   sent_json_.emplace(stream_name, json);
   return DockyardProxyStatus::OK;
 }
 
-DockyardProxyStatus DockyardProxyFake::SendSample(
-    const std::string& stream_name, uint64_t value) {
+DockyardProxyStatus DockyardProxyFake::SendSample(const std::string& stream_name, uint64_t value) {
   sent_values_.emplace(stream_name, value);
   return DockyardProxyStatus::OK;
 }
@@ -31,29 +30,25 @@ DockyardProxyStatus DockyardProxyFake::SendSampleList(const SampleList list) {
   EXPECT_TRUE(list.size() > 0);
   for (const auto& sample : list) {
 #ifdef VERBOSE_OUTPUT
-    std::cout << "Sending " << sample.first << " " << sample.second
-              << std::endl;
+    std::cout << "Sending " << sample.first << " " << sample.second << std::endl;
 #endif  // VERBOSE_OUTPUT
     sent_values_.emplace(sample.first, sample.second);
   }
   return DockyardProxyStatus::OK;
 }
 
-DockyardProxyStatus DockyardProxyFake::SendStringSampleList(
-    const StringSampleList list) {
+DockyardProxyStatus DockyardProxyFake::SendStringSampleList(const StringSampleList list) {
   EXPECT_TRUE(list.size() > 0);
   for (const auto& sample : list) {
 #ifdef VERBOSE_OUTPUT
-    std::cout << "Sending " << sample.first << " " << sample.second
-              << std::endl;
+    std::cout << "Sending " << sample.first << " " << sample.second << std::endl;
 #endif  // VERBOSE_OUTPUT
     sent_strings_.emplace(sample.first, sample.second);
   }
   return DockyardProxyStatus::OK;
 }
 
-bool DockyardProxyFake::CheckJsonSent(const std::string& dockyard_path,
-                                      std::string* json) const {
+bool DockyardProxyFake::CheckJsonSent(const std::string& dockyard_path, std::string* json) const {
   const auto& iter = sent_json_.find(dockyard_path);
   if (iter == sent_json_.end()) {
     return false;
@@ -82,8 +77,8 @@ bool DockyardProxyFake::CheckStringSent(const std::string& dockyard_path,
   return true;
 }
 
-bool DockyardProxyFake::CheckStringPrefixSent(
-    const std::string& dockyard_path_prefix, std::string* string) const {
+bool DockyardProxyFake::CheckStringPrefixSent(const std::string& dockyard_path_prefix,
+                                              std::string* string) const {
   for (const auto& iter : sent_strings_) {
     if (iter.first.find(dockyard_path_prefix) == 0) {
       *string = iter.second;

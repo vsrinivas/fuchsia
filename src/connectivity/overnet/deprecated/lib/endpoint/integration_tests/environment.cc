@@ -25,8 +25,7 @@ void DumpStats(const char* indent, const T* stats) {
 }
 
 void DumpStats(const char* label, RouterEndpoint* endpoint) {
-  OVERNET_TRACE(INFO) << "STATS DUMP FOR: '" << label << "' -- "
-                      << endpoint->node_id();
+  OVERNET_TRACE(INFO) << "STATS DUMP FOR: '" << label << "' -- " << endpoint->node_id();
   endpoint->ForEachLink([endpoint](NodeId target, const Link* link) {
     OVERNET_TRACE(INFO) << "  LINK: " << endpoint->node_id() << "->" << target;
     DumpStats("    ", link->GetStats());
@@ -35,9 +34,7 @@ void DumpStats(const char* label, RouterEndpoint* endpoint) {
 
 static LinkStats AccumulateLinkStats(RouterEndpoint* endpoint) {
   LinkStats out;
-  endpoint->ForEachLink([&out](NodeId target, const Link* link) {
-    out.Merge(*link->GetStats());
-  });
+  endpoint->ForEachLink([&out](NodeId target, const Link* link) { out.Merge(*link->GetStats()); });
   return out;
 }
 
@@ -56,8 +53,7 @@ uint64_t Env::IncomingPacketsAtDestination() {
 }
 
 void Env::AwaitConnected() {
-  OVERNET_TRACE(INFO) << "Test waiting for connection between "
-                      << endpoint1()->node_id() << " and "
+  OVERNET_TRACE(INFO) << "Test waiting for connection between " << endpoint1()->node_id() << " and "
                       << endpoint2()->node_id();
   while (!endpoint1()->HasRouteTo(endpoint2()->node_id()) ||
          !endpoint2()->HasRouteTo(endpoint1()->node_id())) {
@@ -87,8 +83,8 @@ void Env::FlushTodo(std::function<bool()> until, TimeStamp deadline) {
   ZX_ASSERT(test_timer_.Now() < deadline);
 }
 
-TwoNode::TwoNode(Optional<Severity> logging, const NamedSimulator* simulator,
-                 uint64_t node_id_1, uint64_t node_id_2)
+TwoNode::TwoNode(Optional<Severity> logging, const NamedSimulator* simulator, uint64_t node_id_1,
+                 uint64_t node_id_2)
     : Env(logging), simulator_(simulator->simulator.get()) {
   endpoint1_ = new RouterEndpoint(timer(), NodeId(node_id_1), false);
   endpoint2_ = new RouterEndpoint(timer(), NodeId(node_id_2), false);
@@ -116,10 +112,9 @@ TwoNode::~TwoNode() {
   ZX_ASSERT(done2);
 }
 
-ThreeNode::ThreeNode(Optional<Severity> logging,
-                     const NamedSimulator* simulator_1_h,
-                     const NamedSimulator* simulator_h_2, uint64_t node_id_1,
-                     uint64_t node_id_h, uint64_t node_id_2)
+ThreeNode::ThreeNode(Optional<Severity> logging, const NamedSimulator* simulator_1_h,
+                     const NamedSimulator* simulator_h_2, uint64_t node_id_1, uint64_t node_id_h,
+                     uint64_t node_id_2)
     : Env(logging),
       simulator_1_h_(simulator_1_h->simulator.get()),
       simulator_h_2_(simulator_h_2->simulator.get()) {

@@ -23,10 +23,10 @@ int StatsManager::FrameProcessingThread() {
   return ZX_OK;
 }
 
-fbl::unique_ptr<StatsManager> StatsManager::Create(
-    ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
-    ddk::CameraSensorProtocolClient camera_sensor,
-    sync_completion_t frame_processing_signal) {
+fbl::unique_ptr<StatsManager> StatsManager::Create(ddk::MmioView isp_mmio,
+                                                   ddk::MmioView isp_mmio_local,
+                                                   ddk::CameraSensorProtocolClient camera_sensor,
+                                                   sync_completion_t frame_processing_signal) {
   // First initialize all the modules
   fbl::AllocChecker ac;
   auto sensor = camera::Sensor::Create(isp_mmio, isp_mmio_local, camera_sensor);
@@ -40,16 +40,16 @@ fbl::unique_ptr<StatsManager> StatsManager::Create(
   };
 
   // Once all modules are initialized, create the StatsManger instance
-  auto statsmanager = fbl::make_unique_checked<StatsManager>(
-      &ac, std::move(sensor), frame_processing_signal);
+  auto statsmanager =
+      fbl::make_unique_checked<StatsManager>(&ac, std::move(sensor), frame_processing_signal);
   if (!ac.check()) {
     FX_LOGF(ERROR, "", "%s: Unable to start StatsManager \n", __func__);
     return nullptr;
   }
 
-  int ret = thrd_create_with_name(
-      &statsmanager->frame_processing_thread_, worker_thunk,
-      reinterpret_cast<void*>(statsmanager.get()), "frame_processing thread");
+  int ret =
+      thrd_create_with_name(&statsmanager->frame_processing_thread_, worker_thunk,
+                            reinterpret_cast<void*>(statsmanager.get()), "frame_processing thread");
   ZX_DEBUG_ASSERT(ret == thrd_success);
 
   statsmanager->running_.store(true);

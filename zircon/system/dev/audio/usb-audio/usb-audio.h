@@ -18,13 +18,11 @@ __BEGIN_CDECLS
 
 zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int index,
                                  const usb_interface_descriptor_t* intf,
-                                 const usb_endpoint_descriptor_t* ep,
-                                 const size_t req_size);
+                                 const usb_endpoint_descriptor_t* ep, const size_t req_size);
 
 zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int index,
                                    const usb_interface_descriptor_t* intf,
-                                   const usb_endpoint_descriptor_t* ep,
-                                   const size_t req_size);
+                                   const usb_endpoint_descriptor_t* ep, const size_t req_size);
 
 __END_CDECLS
 
@@ -42,10 +40,8 @@ enum class EndpointSyncType : uint8_t {
 };
 // clang-format on
 
-fbl::Array<uint8_t> FetchStringDescriptor(const usb_protocol_t& usb,
-                                          uint8_t desc_id,
-                                          uint16_t lang_id = 0,
-                                          uint16_t* out_lang_id = nullptr);
+fbl::Array<uint8_t> FetchStringDescriptor(const usb_protocol_t& usb, uint8_t desc_id,
+                                          uint16_t lang_id = 0, uint16_t* out_lang_id = nullptr);
 
 }  // namespace usb
 }  // namespace audio

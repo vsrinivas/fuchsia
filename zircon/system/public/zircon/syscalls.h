@@ -17,7 +17,7 @@ __BEGIN_CDECLS
 #if defined(__clang__)
 #define ZX_SYSCALL_PARAM_ATTR(x) __attribute__((annotate("zx_" #x)))
 #else
-#define ZX_SYSCALL_PARAM_ATTR(x) // no-op
+#define ZX_SYSCALL_PARAM_ATTR(x)  // no-op
 #endif
 
 #include <zircon/syscalls/definitions.h>
@@ -27,4 +27,4 @@ __BEGIN_CDECLS
 
 __END_CDECLS
 
-#endif // SYSROOT_ZIRCON_SYSCALLS_H_
+#endif  // SYSROOT_ZIRCON_SYSCALLS_H_

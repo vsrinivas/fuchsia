@@ -22,8 +22,7 @@ void FakeLauncher::CreateComponent(
   }
 }
 
-void FakeLauncher::RegisterComponent(std::string url,
-                                     ComponentConnector connector) {
+void FakeLauncher::RegisterComponent(std::string url, ComponentConnector connector) {
   connectors_[url] = std::move(connector);
 }
 

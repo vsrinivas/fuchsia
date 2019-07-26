@@ -147,87 +147,87 @@ static const uint8_t kbd_hid_report_desc[] = {
 // clang-format on
 
 zx_status_t HidKeyboard::GetDescriptor(uint8_t desc_type, void** data, size_t* len) {
-    if (data == nullptr || len == nullptr) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+  if (data == nullptr || len == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
-        return ZX_ERR_NOT_FOUND;
-    }
-    const uint8_t* buf = nullptr;
-    size_t buflen = 0;
+  if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  const uint8_t* buf = nullptr;
+  size_t buflen = 0;
 
-    buf = static_cast<const uint8_t*>(kbd_hid_report_desc);
-    buflen = sizeof(kbd_hid_report_desc);
+  buf = static_cast<const uint8_t*>(kbd_hid_report_desc);
+  buflen = sizeof(kbd_hid_report_desc);
 
-    *data = malloc(buflen);
-    if (*data == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    *len = buflen;
-    memcpy(*data, buf, buflen);
-    return ZX_OK;
+  *data = malloc(buflen);
+  if (*data == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  *len = buflen;
+  memcpy(*data, buf, buflen);
+  return ZX_OK;
 }
 
 void HidKeyboard::AddKeypressToReport(uint16_t event_code) {
-    uint8_t hid_code = kEventCodeMap[event_code];
-    for (size_t i = 0; i != 6; ++i) {
-        if (report_.usage[i] == hid_code) {
-            // The key already exists in the report so we ignore it.
-            return;
-        }
-        if (report_.usage[i] == 0) {
-            report_.usage[i] = hid_code;
-            return;
-        }
+  uint8_t hid_code = kEventCodeMap[event_code];
+  for (size_t i = 0; i != 6; ++i) {
+    if (report_.usage[i] == hid_code) {
+      // The key already exists in the report so we ignore it.
+      return;
     }
+    if (report_.usage[i] == 0) {
+      report_.usage[i] = hid_code;
+      return;
+    }
+  }
 
-    // There's no free slot in the report.
-    // TODO: Record a rollover status.
+  // There's no free slot in the report.
+  // TODO: Record a rollover status.
 }
 
 void HidKeyboard::RemoveKeypressFromReport(uint16_t event_code) {
-    uint8_t hid_code = kEventCodeMap[event_code];
-    int id = -1;
-    for (int i = 0; i != 6; ++i) {
-        if (report_.usage[i] == hid_code) {
-            id = i;
-            break;
-        }
+  uint8_t hid_code = kEventCodeMap[event_code];
+  int id = -1;
+  for (int i = 0; i != 6; ++i) {
+    if (report_.usage[i] == hid_code) {
+      id = i;
+      break;
     }
+  }
 
-    if (id == -1) {
-        // They key is not in the report so we ignore it.
-        return;
-    }
+  if (id == -1) {
+    // They key is not in the report so we ignore it.
+    return;
+  }
 
-    for (size_t i = id; i != 5; ++i) {
-        report_.usage[i] = report_.usage[i + 1];
-    }
-    report_.usage[5] = 0;
+  for (size_t i = id; i != 5; ++i) {
+    report_.usage[i] = report_.usage[i + 1];
+  }
+  report_.usage[5] = 0;
 }
 
 void HidKeyboard::ReceiveEvent(virtio_input_event_t* event) {
-    if (event->type != VIRTIO_INPUT_EV_KEY) {
-        return;
-    }
-    if (event->code == 0) {
-        return;
-    }
-    if (event->code >= fbl::count_of(kEventCodeMap)) {
-        LTRACEF("unknown key\n");
-        return;
-    }
-    if (event->value == VIRTIO_INPUT_EV_KEY_PRESSED) {
-        AddKeypressToReport(event->code);
-    } else if (event->value == VIRTIO_INPUT_EV_KEY_RELEASED) {
-        RemoveKeypressFromReport(event->code);
-    }
+  if (event->type != VIRTIO_INPUT_EV_KEY) {
+    return;
+  }
+  if (event->code == 0) {
+    return;
+  }
+  if (event->code >= fbl::count_of(kEventCodeMap)) {
+    LTRACEF("unknown key\n");
+    return;
+  }
+  if (event->value == VIRTIO_INPUT_EV_KEY_PRESSED) {
+    AddKeypressToReport(event->code);
+  } else if (event->value == VIRTIO_INPUT_EV_KEY_RELEASED) {
+    RemoveKeypressFromReport(event->code);
+  }
 }
 
 const uint8_t* HidKeyboard::GetReport(size_t* size) {
-    *size = sizeof(report_);
-    return reinterpret_cast<const uint8_t*>(&report_);
+  *size = sizeof(report_);
+  return reinterpret_cast<const uint8_t*>(&report_);
 }
 
-} // namespace virtio
+}  // namespace virtio

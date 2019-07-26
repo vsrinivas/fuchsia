@@ -54,8 +54,7 @@ constexpr unsigned int map_words = 100'000;
 constexpr unsigned int map_smallest = 2;
 constexpr unsigned int map_largest = 8;
 
-vector<string> made_up_words(unsigned int how_much, unsigned int smallest,
-                             unsigned int largest) {
+vector<string> made_up_words(unsigned int how_much, unsigned int smallest, unsigned int largest) {
   vector<string> words;
   std::mt19937 rng(0);
   std::uniform_int_distribution<unsigned int> word_sizes(smallest, largest);
@@ -71,8 +70,7 @@ vector<string> made_up_words(unsigned int how_much, unsigned int smallest,
 }
 
 void functional_tests() {
-  vector<string> unsorted = {"cat", "pat", "bed", "test", "test but longer",
-                             "test"};
+  vector<string> unsorted = {"cat", "pat", "bed", "test", "test but longer", "test"};
   vector<string> std_sorted(unsorted.begin(), unsorted.end());
   sort(std_sorted.begin(), std_sorted.end());
   Trie::Set<4> trie_set;
@@ -114,10 +112,8 @@ void radix_sort_performance_print(const vector<string>& words) {
   sorted_words.reserve(words.size());
   Trie::Set<RADIX_BITS>::fill_vector_sorted(&trie, sorted_words);
   auto radix_sort_duration =
-      duration_cast<milliseconds>(high_resolution_clock::now() - radix_start)
-          .count();
-  cout << "   radix " << RADIX_BITS << " sort - " << radix_sort_duration
-       << "\n";
+      duration_cast<milliseconds>(high_resolution_clock::now() - radix_start).count();
+  cout << "   radix " << RADIX_BITS << " sort - " << radix_sort_duration << "\n";
 }
 
 void sort_performance_prints(vector<string>& words) {
@@ -127,9 +123,7 @@ void sort_performance_prints(vector<string>& words) {
   auto std_start = high_resolution_clock::now();
   vector<string> std_sorted_words(words.begin(), words.end());
   sort(std_sorted_words.begin(), std_sorted_words.end());
-  auto std_duration =
-      duration_cast<milliseconds>(high_resolution_clock::now() - std_start)
-          .count();
+  auto std_duration = duration_cast<milliseconds>(high_resolution_clock::now() - std_start).count();
   cout << "   std::sort - " << std_duration << "\n";
 
   // radix sort
@@ -153,8 +147,7 @@ void radix_map_performance_print(vector<string>& dic) {
       test_trie.store(dic[i], &dic[i]);
     }
   }
-  auto duration =
-      duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+  auto duration = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
   cout << "   Writing: " << duration << "\n";
 
   start = high_resolution_clock::now();
@@ -166,8 +159,7 @@ void radix_map_performance_print(vector<string>& dic) {
       }
     }
   }
-  duration =
-      duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+  duration = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
   cout << "   Reading: " << duration << "\n";
   cout << "   Size in bytes: " << test_trie.size_in_bytes() << "\n\n";
 }
@@ -192,8 +184,7 @@ void map_performance_prints(vector<string>& dic) {
       test_map[dic[i]] = &dic[i];
     }
   }
-  auto duration =
-      duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+  auto duration = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
   cout << "   Writing: " << duration << "\n";
 
   start = high_resolution_clock::now();
@@ -205,8 +196,7 @@ void map_performance_prints(vector<string>& dic) {
       }
     }
   }
-  duration =
-      duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+  duration = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
   cout << "   Reading: " << duration << "\n\n";
 
   // unordered map as hash-table representative
@@ -220,8 +210,7 @@ void map_performance_prints(vector<string>& dic) {
       test_unordered_map[dic[i]] = &dic[i];
     }
   }
-  duration =
-      duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+  duration = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
   cout << "   Writing: " << duration << "\n";
 
   start = high_resolution_clock::now();
@@ -233,8 +222,7 @@ void map_performance_prints(vector<string>& dic) {
       }
     }
   }
-  duration =
-      duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+  duration = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
   cout << "   Reading: " << duration << "\n\n";
 }
 
@@ -246,7 +234,6 @@ void words_tests() {
 
   auto words_to_store = made_up_words(map_words, map_smallest, map_largest);
   sort(words_to_store.begin(), words_to_store.end());
-  words_to_store.erase(unique(words_to_store.begin(), words_to_store.end()),
-                       words_to_store.end());
+  words_to_store.erase(unique(words_to_store.begin(), words_to_store.end()), words_to_store.end());
   map_performance_prints(words_to_store);
 }

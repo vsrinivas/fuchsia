@@ -43,8 +43,7 @@ TEST(CancellableImpl, WrappedCallbackNotCalledAfterCancel) {
   fxl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
 
   bool called = false;
-  auto wrapped_callback =
-      cancellable->WrapCallback([&called] { called = true; });
+  auto wrapped_callback = cancellable->WrapCallback([&called] { called = true; });
 
   cancellable->Cancel();
   wrapped_callback();
@@ -75,8 +74,8 @@ TEST(CancellableImpl, Wrap) {
 TEST(CancellableImpl, DeleteWrappingCallbackInWrappedCallback) {
   fxl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
   std::unique_ptr<fit::closure> callback;
-  callback = std::make_unique<fit::closure>(
-      cancellable->WrapCallback([&callback] { callback.reset(); }));
+  callback =
+      std::make_unique<fit::closure>(cancellable->WrapCallback([&callback] { callback.reset(); }));
   cancellable = nullptr;
   (*callback)();
   EXPECT_EQ(nullptr, callback);
@@ -94,8 +93,7 @@ TEST(CancellableImpl, CancelInWrappedCallback) {
   fxl::RefPtr<CancellableImpl> cancellable =
       CancellableImpl::Create([&on_cancel_called] { on_cancel_called = true; });
   cancellable->SetOnDone([&on_done_called] { on_done_called = true; });
-  auto callback =
-      cancellable->WrapCallback([cancellable] { cancellable->Cancel(); });
+  auto callback = cancellable->WrapCallback([cancellable] { cancellable->Cancel(); });
   cancellable = nullptr;
   callback();
   EXPECT_FALSE(on_cancel_called);

@@ -57,16 +57,13 @@ TEST(DecoderTest, AacDecoder) {
   main_loop.StartThread("main_loop");
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
-  startup_context->ConnectToEnvironmentService(
-      codec_factory.NewRequest(main_loop.dispatcher()));
+  startup_context->ConnectToEnvironmentService(codec_factory.NewRequest(main_loop.dispatcher()));
 
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
-  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
-      sysmem.NewRequest());
+  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   uint8_t md[SHA256_DIGEST_LENGTH];
-  use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem),
-                  kInputFilePath, "", md);
+  use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), kInputFilePath, "", md);
 
   char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
   char* actual_sha256_ptr = actual_sha256;
@@ -77,9 +74,8 @@ TEST(DecoderTest, AacDecoder) {
   EXPECT_EQ(actual_sha256_ptr, actual_sha256 + SHA256_DIGEST_LENGTH * 2);
   EXPECT_TRUE(!strcmp(actual_sha256, kGoldenSha256_x64) ||
               !strcmp(actual_sha256, kGoldenSha256_arm64))
-      << "The sha256 doesn't match - expected: " << kGoldenSha256_x64
-      << " (x64) or " << kGoldenSha256_arm64
-      << " (arm64) actual: " << actual_sha256;
+      << "The sha256 doesn't match - expected: " << kGoldenSha256_x64 << " (x64) or "
+      << kGoldenSha256_arm64 << " (arm64) actual: " << actual_sha256;
 
   main_loop.Quit();
   main_loop.JoinThreads();

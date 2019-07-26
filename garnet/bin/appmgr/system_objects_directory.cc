@@ -73,12 +73,10 @@ const char* obj_type_get_name(zx_obj_type_t type) {
   }
 }
 
-zx_status_t GetProcessHandleStats(
-    const zx::process* process,
-    zx_info_process_handle_stats_t* process_handle_stats) {
-  zx_status_t status =
-      process->get_info(ZX_INFO_PROCESS_HANDLE_STATS, process_handle_stats,
-                        sizeof(zx_info_process_handle_stats), nullptr, nullptr);
+zx_status_t GetProcessHandleStats(const zx::process* process,
+                                  zx_info_process_handle_stats_t* process_handle_stats) {
+  zx_status_t status = process->get_info(ZX_INFO_PROCESS_HANDLE_STATS, process_handle_stats,
+                                         sizeof(zx_info_process_handle_stats), nullptr, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status;
     return status;
@@ -87,11 +85,9 @@ zx_status_t GetProcessHandleStats(
   return ZX_OK;
 }
 
-zx_status_t GetTaskStats(const zx::process* process,
-                         zx_info_task_stats_t* task_stats) {
-  zx_status_t status =
-      process->get_info(ZX_INFO_TASK_STATS, task_stats,
-                        sizeof(zx_info_task_stats_t), nullptr, nullptr);
+zx_status_t GetTaskStats(const zx::process* process, zx_info_task_stats_t* task_stats) {
+  zx_status_t status = process->get_info(ZX_INFO_TASK_STATS, task_stats,
+                                         sizeof(zx_info_task_stats_t), nullptr, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status;
     return status;
@@ -103,9 +99,8 @@ zx_status_t GetTaskStats(const zx::process* process,
 void GetThreads(const zx::process* process, fbl::Vector<ThreadInfo>* out) {
   zx_koid_t thread_ids[kMaxThreads];
   size_t num_ids;
-  if (process->get_info(ZX_INFO_PROCESS_THREADS, thread_ids,
-                        sizeof(zx_koid_t) * kMaxThreads, &num_ids,
-                        nullptr) != ZX_OK) {
+  if (process->get_info(ZX_INFO_PROCESS_THREADS, thread_ids, sizeof(zx_koid_t) * kMaxThreads,
+                        &num_ids, nullptr) != ZX_OK) {
     return;
   }
 
@@ -123,14 +118,11 @@ void GetThreads(const zx::process* process, fbl::Vector<ThreadInfo>* out) {
   }
 }
 
-zx_status_t GetThreadStats(zx_handle_t thread,
-                           zx_info_thread_stats_t* thread_stats) {
-  zx_status_t status =
-      zx_object_get_info(thread, ZX_INFO_THREAD_STATS, thread_stats,
-                         sizeof(zx_info_thread_stats_t), nullptr, nullptr);
+zx_status_t GetThreadStats(zx_handle_t thread, zx_info_thread_stats_t* thread_stats) {
+  zx_status_t status = zx_object_get_info(thread, ZX_INFO_THREAD_STATS, thread_stats,
+                                          sizeof(zx_info_thread_stats_t), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status
-                   << " thread: " << thread;
+    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status << " thread: " << thread;
     return status;
   }
 
@@ -149,31 +141,27 @@ SystemObjectsDirectory::SystemObjectsDirectory(zx::process process)
   std::weak_ptr<zx::process> weak_process = process_;
   add_child(threads_.get());
   add_child(memory_.get());
-  object_dir().set_children_callback(
-      [weak_process](component::Object::ObjectVector* out_children) {
-        auto process = weak_process.lock();
-        if (!process) {
-          return;
-        }
-        zx_info_process_handle_stats_t process_handle_stats;
-        if (GetProcessHandleStats(process.get(), &process_handle_stats) !=
-            ZX_OK)
-          return;
-        auto handle_count_dir = component::ObjectDir::Make("handle_count");
+  object_dir().set_children_callback([weak_process](component::Object::ObjectVector* out_children) {
+    auto process = weak_process.lock();
+    if (!process) {
+      return;
+    }
+    zx_info_process_handle_stats_t process_handle_stats;
+    if (GetProcessHandleStats(process.get(), &process_handle_stats) != ZX_OK)
+      return;
+    auto handle_count_dir = component::ObjectDir::Make("handle_count");
 
-        for (zx_obj_type_t obj_type = ZX_OBJ_TYPE_NONE;
-             obj_type < ZX_OBJ_TYPE_UPPER_BOUND; ++obj_type) {
-          handle_count_dir.set_metric(
-              obj_type_get_name(obj_type),
-              component::UIntMetric(
-                  process_handle_stats.handle_count[obj_type]));
-        }
-        out_children->push_back(handle_count_dir.object());
-      });
+    for (zx_obj_type_t obj_type = ZX_OBJ_TYPE_NONE; obj_type < ZX_OBJ_TYPE_UPPER_BOUND;
+         ++obj_type) {
+      handle_count_dir.set_metric(
+          obj_type_get_name(obj_type),
+          component::UIntMetric(process_handle_stats.handle_count[obj_type]));
+    }
+    out_children->push_back(handle_count_dir.object());
+  });
 }
 
-SystemObjectsDirectory::ThreadsDirectory::ThreadsDirectory(
-    std::shared_ptr<zx::process> process)
+SystemObjectsDirectory::ThreadsDirectory::ThreadsDirectory(std::shared_ptr<zx::process> process)
     : ExposedObject("threads"), process_(process) {
   std::weak_ptr<zx::process> weak_process = process_;
   auto all_dir = component::ObjectDir::Make("all_thread_stacks");
@@ -182,108 +170,98 @@ SystemObjectsDirectory::ThreadsDirectory::ThreadsDirectory(
     if (!process) {
       return "Error: Process closed";
     }
-    return StringPrintf("\n%s",
-                        DebugInfoRetriever::GetInfo(process.get()).data());
+    return StringPrintf("\n%s", DebugInfoRetriever::GetInfo(process.get()).data());
   });
 
   object_dir().set_child(all_dir.object());
-  object_dir().set_children_callback(
-      [weak_process](component::Object::ObjectVector* out_children) {
+  object_dir().set_children_callback([weak_process](component::Object::ObjectVector* out_children) {
+    auto process = weak_process.lock();
+    if (!process) {
+      return;
+    }
+    fbl::Vector<ThreadInfo> threads;
+    threads.reserve(kMaxThreads);
+    GetThreads(process.get(), &threads);
+
+    for (const auto& thread : threads) {
+      auto koid_string = StringPrintf("%lu", thread.koid);
+      auto thread_obj = component::ObjectDir::Make(koid_string);
+      thread_obj.set_prop("koid", koid_string);
+      thread_obj.set_prop("name", thread.name.data());
+      zx_handle_t handle = thread.thread.get();
+      zx_info_thread_stats_t thread_stats;
+      thread_obj.set_metric(
+          "total_runtime",
+          UIntMetric(GetThreadStats(handle, &thread_stats) == ZX_OK ? thread_stats.total_runtime
+                                                                    : 0u));
+      out_children->push_back(thread_obj.object());
+
+      auto koid = thread.koid;
+      auto stack_obj = component::ObjectDir::Make("stack");
+      stack_obj.set_prop("dump", [weak_process, koid]() -> std::string {
         auto process = weak_process.lock();
         if (!process) {
-          return;
+          return "Error: Process stopped";
         }
-        fbl::Vector<ThreadInfo> threads;
-        threads.reserve(kMaxThreads);
-        GetThreads(process.get(), &threads);
 
-        for (const auto& thread : threads) {
-          auto koid_string = StringPrintf("%lu", thread.koid);
-          auto thread_obj = component::ObjectDir::Make(koid_string);
-          thread_obj.set_prop("koid", koid_string);
-          thread_obj.set_prop("name", thread.name.data());
-          zx_handle_t handle = thread.thread.get();
-          zx_info_thread_stats_t thread_stats;
-          thread_obj.set_metric(
-              "total_runtime",
-              UIntMetric(GetThreadStats(handle, &thread_stats) == ZX_OK
-                             ? thread_stats.total_runtime
-                             : 0u));
-          out_children->push_back(thread_obj.object());
-
-          auto koid = thread.koid;
-          auto stack_obj = component::ObjectDir::Make("stack");
-          stack_obj.set_prop("dump", [weak_process, koid]() -> std::string {
-            auto process = weak_process.lock();
-            if (!process) {
-              return "Error: Process stopped";
-            }
-
-            zx_koid_t koids[] = {koid};
-            return StringPrintf(
-                "\n%s",
-                DebugInfoRetriever::GetInfo(process.get(), koids, 1).data());
-          });
-          thread_obj.set_child(stack_obj.object());
-        }
+        zx_koid_t koids[] = {koid};
+        return StringPrintf("\n%s", DebugInfoRetriever::GetInfo(process.get(), koids, 1).data());
       });
+      thread_obj.set_child(stack_obj.object());
+    }
+  });
 }
 
-SystemObjectsDirectory::MemoryDirectory::MemoryDirectory(
-    std::shared_ptr<zx::process> process)
+SystemObjectsDirectory::MemoryDirectory::MemoryDirectory(std::shared_ptr<zx::process> process)
     : ExposedObject("memory"), process_(process) {
   std::weak_ptr<zx::process> weak_process = process_;
-  object_dir().set_metric(
-      "mapped_bytes",
-      component::CallbackMetric([weak_process](component::Metric* out) {
-        auto process = weak_process.lock();
-        if (!process) {
-          return;
-        }
-        zx_info_task_stats_t task_stats;
-        if (GetTaskStats(process.get(), &task_stats) != ZX_OK)
-          return;
-        out->SetUInt(task_stats.mem_mapped_bytes);
-      }));
+  object_dir().set_metric("mapped_bytes",
+                          component::CallbackMetric([weak_process](component::Metric* out) {
+                            auto process = weak_process.lock();
+                            if (!process) {
+                              return;
+                            }
+                            zx_info_task_stats_t task_stats;
+                            if (GetTaskStats(process.get(), &task_stats) != ZX_OK)
+                              return;
+                            out->SetUInt(task_stats.mem_mapped_bytes);
+                          }));
 
-  object_dir().set_metric(
-      "private_bytes",
-      component::CallbackMetric([weak_process](component::Metric* out) {
-        auto process = weak_process.lock();
-        if (!process) {
-          return;
-        }
-        zx_info_task_stats_t task_stats;
-        if (GetTaskStats(process.get(), &task_stats) != ZX_OK)
-          return;
-        out->SetUInt(task_stats.mem_private_bytes);
-      }));
+  object_dir().set_metric("private_bytes",
+                          component::CallbackMetric([weak_process](component::Metric* out) {
+                            auto process = weak_process.lock();
+                            if (!process) {
+                              return;
+                            }
+                            zx_info_task_stats_t task_stats;
+                            if (GetTaskStats(process.get(), &task_stats) != ZX_OK)
+                              return;
+                            out->SetUInt(task_stats.mem_private_bytes);
+                          }));
 
-  object_dir().set_metric(
-      "shared_bytes",
-      component::CallbackMetric([weak_process](component::Metric* out) {
-        auto process = weak_process.lock();
-        if (!process) {
-          return;
-        }
-        zx_info_task_stats_t task_stats;
-        if (GetTaskStats(process.get(), &task_stats) != ZX_OK)
-          return;
-        out->SetUInt(task_stats.mem_shared_bytes);
-      }));
+  object_dir().set_metric("shared_bytes",
+                          component::CallbackMetric([weak_process](component::Metric* out) {
+                            auto process = weak_process.lock();
+                            if (!process) {
+                              return;
+                            }
+                            zx_info_task_stats_t task_stats;
+                            if (GetTaskStats(process.get(), &task_stats) != ZX_OK)
+                              return;
+                            out->SetUInt(task_stats.mem_shared_bytes);
+                          }));
 
-  object_dir().set_metric(
-      "scaled_shared_bytes",
-      component::CallbackMetric([weak_process](component::Metric* out) {
-        auto process = weak_process.lock();
-        if (!process) {
-          return;
-        }
-        zx_info_task_stats_t task_stats;
-        if (GetTaskStats(process.get(), &task_stats) != ZX_OK)
-          return;
-        out->SetUInt(task_stats.mem_scaled_shared_bytes);
-      }));
+  object_dir().set_metric("scaled_shared_bytes",
+                          component::CallbackMetric([weak_process](component::Metric* out) {
+                            auto process = weak_process.lock();
+                            if (!process) {
+                              return;
+                            }
+                            zx_info_task_stats_t task_stats;
+                            if (GetTaskStats(process.get(), &task_stats) != ZX_OK)
+                              return;
+                            out->SetUInt(task_stats.mem_scaled_shared_bytes);
+                          }));
 }
 
 }  // namespace component

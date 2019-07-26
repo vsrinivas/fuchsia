@@ -276,20 +276,19 @@
 namespace fbl {
 
 enum class SlabAllocatorFlavor {
-    INSTANCED,
-    STATIC,
-    MANUAL_DELETE,
+  INSTANCED,
+  STATIC,
+  MANUAL_DELETE,
 };
 
 // fwd decls
-template <typename T,
-          size_t SLAB_SIZE,
-          typename LockType,
-          SlabAllocatorFlavor AllocatorFlavor,
+template <typename T, size_t SLAB_SIZE, typename LockType, SlabAllocatorFlavor AllocatorFlavor,
           bool ENABLE_OBJ_COUNT>
 struct SlabAllocatorTraits;
-template <typename SATraits, typename = void> class SlabAllocator;
-template <typename SATraits, typename = void> class SlabAllocated;
+template <typename SATraits, typename = void>
+class SlabAllocator;
+template <typename SATraits, typename = void>
+class SlabAllocated;
 
 constexpr size_t DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE = (16 << 10U);
 
@@ -300,342 +299,331 @@ class SAObjCounter;
 
 template <>
 class SAObjCounter<false> {
-public:
-    void Inc(void*) {}
-    void Dec() {}
-    void ResetMaxObjCount() {}
-    size_t obj_count() const { return 0; }
-    size_t max_obj_count() const { return 0; }
+ public:
+  void Inc(void*) {}
+  void Dec() {}
+  void ResetMaxObjCount() {}
+  size_t obj_count() const { return 0; }
+  size_t max_obj_count() const { return 0; }
 };
 
 template <>
 class SAObjCounter<true> {
-public:
-    void Inc(void* allocated_ptr) {
-        if (allocated_ptr == nullptr) {
-          return;
-        }
-        ++obj_count_;
-        max_obj_count_ = max(obj_count_, max_obj_count_);
+ public:
+  void Inc(void* allocated_ptr) {
+    if (allocated_ptr == nullptr) {
+      return;
     }
-    void Dec() { --obj_count_; }
-    void ResetMaxObjCount() { max_obj_count_ = obj_count_; }
-    size_t obj_count() const { return obj_count_; }
-    size_t max_obj_count() const { return max_obj_count_; }
+    ++obj_count_;
+    max_obj_count_ = max(obj_count_, max_obj_count_);
+  }
+  void Dec() { --obj_count_; }
+  void ResetMaxObjCount() { max_obj_count_ = obj_count_; }
+  size_t obj_count() const { return obj_count_; }
+  size_t max_obj_count() const { return max_obj_count_; }
 
-private:
-    size_t obj_count_ = 0;
-    size_t max_obj_count_ = 0;
+ private:
+  size_t obj_count_ = 0;
+  size_t max_obj_count_ = 0;
 };
 
 // internal fwd-decls
-template <typename T> struct SlabAllocatorPtrTraits;
-template <typename SATraits> class SlabAllocator;
+template <typename T>
+struct SlabAllocatorPtrTraits;
+template <typename SATraits>
+class SlabAllocator;
 
 // Support for raw pointers
 template <typename T>
 struct SlabAllocatorPtrTraits<T*> {
-    using ObjType = T;
-    using PtrType = T*;
+  using ObjType = T;
+  using PtrType = T*;
 
-    static constexpr bool IsManaged = false;
-    static constexpr PtrType CreatePtr(ObjType* ptr) { return ptr; }
+  static constexpr bool IsManaged = false;
+  static constexpr PtrType CreatePtr(ObjType* ptr) { return ptr; }
 };
 
 // Support for unique_ptr
 template <typename T>
 struct SlabAllocatorPtrTraits<unique_ptr<T>> {
-    using ObjType = T;
-    using PtrType = unique_ptr<T>;
+  using ObjType = T;
+  using PtrType = unique_ptr<T>;
 
-    static constexpr bool IsManaged = true;
-    static constexpr PtrType CreatePtr(ObjType* ptr) { return PtrType(ptr); }
+  static constexpr bool IsManaged = true;
+  static constexpr PtrType CreatePtr(ObjType* ptr) { return PtrType(ptr); }
 };
 
 // Support for RefPtr
 template <typename T>
 struct SlabAllocatorPtrTraits<RefPtr<T>> {
-    using ObjType = T;
-    using PtrType = RefPtr<T>;
+  using ObjType = T;
+  using PtrType = RefPtr<T>;
 
-    static constexpr bool IsManaged = true;
-    static constexpr PtrType CreatePtr(ObjType* ptr) { return AdoptRef<ObjType>(ptr); }
+  static constexpr bool IsManaged = true;
+  static constexpr PtrType CreatePtr(ObjType* ptr) { return AdoptRef<ObjType>(ptr); }
 };
 
 // Trait class used to set the origin of a slab allocated object, if needed.
 template <typename SATraits, typename = void>
 struct SlabOriginSetter {
-    static inline void SetOrigin(typename SATraits::ObjType* ptr,
-                                 internal::SlabAllocator<SATraits>* origin) {
-        ZX_DEBUG_ASSERT((ptr != nullptr) && (origin != nullptr));
-        ptr->slab_origin_ = origin;
-    }
+  static inline void SetOrigin(typename SATraits::ObjType* ptr,
+                               internal::SlabAllocator<SATraits>* origin) {
+    ZX_DEBUG_ASSERT((ptr != nullptr) && (origin != nullptr));
+    ptr->slab_origin_ = origin;
+  }
 };
 
 // Slab allocated objects from STATIC and MANUAL_DELETE slab allocators do not
 // have (or need) a slab_origin.  Their "origin setter" is a no-op.
 template <typename SATraits>
-struct SlabOriginSetter<SATraits,
-                        std::enable_if_t<
-                            (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC) ||
-                            (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
-                        >> {
-
-    static inline void SetOrigin(typename SATraits::ObjType* ptr,
-                                 internal::SlabAllocator<SATraits>* origin) { }
+struct SlabOriginSetter<
+    SATraits, std::enable_if_t<(SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC) ||
+                               (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)>> {
+  static inline void SetOrigin(typename SATraits::ObjType* ptr,
+                               internal::SlabAllocator<SATraits>* origin) {}
 };
 
 // Non-templated SlabAllocatorBase.  Any code which does not strictly depend on
 // trait/type awareness lives here in order to minimize code size explosion due
 // to template expansion.
 class SlabAllocatorBase {
-protected:
-    struct FreeListEntry : public SinglyLinkedListable<FreeListEntry*> { };
+ protected:
+  struct FreeListEntry : public SinglyLinkedListable<FreeListEntry*> {};
 
-    struct Slab {
-        explicit Slab(size_t initial_bytes_used) : bytes_used_(initial_bytes_used) { }
+  struct Slab {
+    explicit Slab(size_t initial_bytes_used) : bytes_used_(initial_bytes_used) {}
 
-        void* Allocate(size_t alloc_size, size_t slab_storage_limit) {
-            if ((bytes_used_ + alloc_size) > slab_storage_limit)
-                return nullptr;
-
-            void* ret = storage_ + bytes_used_;
-            bytes_used_ += alloc_size;
-            return ret;
-        }
-
-        SinglyLinkedListNodeState<Slab*> sll_node_state_;
-        size_t                           bytes_used_;
-        uint8_t                          storage_[];
-    };
-
-    static constexpr size_t SlabOverhead = offsetof(Slab, storage_);
-
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocatorBase);
-
-    SlabAllocatorBase(size_t slab_size,
-                      size_t alloc_size,
-                      size_t alloc_alignment,
-                      size_t initial_slab_used,
-                      size_t max_slabs,
-                      bool   alloc_initial)
-        : slab_size_(slab_size),
-          slab_alignment_(max(alignof(Slab), alloc_alignment)),
-          slab_storage_limit_(slab_size - SlabOverhead + initial_slab_used),
-          alloc_size_(alloc_size),
-          initial_slab_used_(initial_slab_used),
-          max_slabs_(max_slabs) {
-        // Attempt to ensure that at least one slab has been allocated before
-        // finishing construction if the user has asked us to do so.  In some
-        // situations, this can help to ensure that allocation performance is
-        // always O(1), provided that the slab limit has been configured to be
-        // 1.
-        if (alloc_initial) {
-            // No need to take the lock here, no one can possible know about us
-            // yet.
-            void* first_alloc = AllocateLocked();
-            if (first_alloc != nullptr)
-                ReturnToFreeListLocked(first_alloc);
-        }
-    }
-
-    ~SlabAllocatorBase() {
-#if ZX_DEBUG_ASSERT_IMPLEMENTED
-        size_t allocated_count = 0;
-        size_t free_list_size = this->free_list_.size_slow();
-#endif
-        // null out the free list so that it does not assert that we left
-        // unmanaged pointers on it as we destruct, and so that the free list
-        // does not attempt to auto-destruct the managed objects which were
-        // present on it after the slab memory has been freed
-        this->free_list_.clear_unsafe();
-
-        while (!slab_list_.is_empty()) {
-            Slab* free_me = slab_list_.pop_front();
-#if ZX_DEBUG_ASSERT_IMPLEMENTED
-            size_t bytes_used = free_me->bytes_used_ - initial_slab_used_;
-            ZX_DEBUG_ASSERT(free_me->bytes_used_ >= initial_slab_used_);
-            ZX_DEBUG_ASSERT((bytes_used % alloc_size_) == 0);
-            allocated_count += (bytes_used / alloc_size_);
-#endif
-            SlabMalloc::Free(reinterpret_cast<void*>(free_me));
-        }
-
-        // Make sure that everything which was ever allocated had been returned
-        // to the free list before we were destroyed.
-        ZX_DEBUG_ASSERT_COND(free_list_size == allocated_count);
-    }
-
-    size_t max_slabs() const { return max_slabs_; }
-    size_t slab_count() const { return slab_count_; }
-
-protected:
-    void* AllocateLocked() {
-        // If we can alloc from the free list, do so.
-        if (!free_list_.is_empty()) {
-            return free_list_.pop_front();
-        }
-
-        // If we can allocate from the currently active slab, do so.
-        if (!slab_list_.is_empty()) {
-            auto& active_slab = slab_list_.front();
-            void* mem = active_slab.Allocate(alloc_size_, slab_storage_limit_);
-            if (mem)
-                return mem;
-        }
-
-        // If we are allowed to allocate new slabs, try to do so.
-        if (slab_count_ < max_slabs_) {
-            void* slab_mem = SlabMalloc::Allocate(slab_size_, slab_alignment_);
-            if (slab_mem != nullptr) {
-                Slab* slab = new (slab_mem) Slab(initial_slab_used_);
-
-                slab_count_++;
-                slab_list_.push_front(slab);
-
-                return slab->Allocate(alloc_size_, slab_storage_limit_);
-            }
-        }
-
-        // Looks like we have run out of resources.
+    void* Allocate(size_t alloc_size, size_t slab_storage_limit) {
+      if ((bytes_used_ + alloc_size) > slab_storage_limit)
         return nullptr;
+
+      void* ret = storage_ + bytes_used_;
+      bytes_used_ += alloc_size;
+      return ret;
     }
 
-    void ReturnToFreeListLocked(void* ptr) {
-        FreeListEntry* free_obj = new (ptr) FreeListEntry;
-        free_list_.push_front(free_obj);
+    SinglyLinkedListNodeState<Slab*> sll_node_state_;
+    size_t bytes_used_;
+    uint8_t storage_[];
+  };
+
+  static constexpr size_t SlabOverhead = offsetof(Slab, storage_);
+
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocatorBase);
+
+  SlabAllocatorBase(size_t slab_size, size_t alloc_size, size_t alloc_alignment,
+                    size_t initial_slab_used, size_t max_slabs, bool alloc_initial)
+      : slab_size_(slab_size),
+        slab_alignment_(max(alignof(Slab), alloc_alignment)),
+        slab_storage_limit_(slab_size - SlabOverhead + initial_slab_used),
+        alloc_size_(alloc_size),
+        initial_slab_used_(initial_slab_used),
+        max_slabs_(max_slabs) {
+    // Attempt to ensure that at least one slab has been allocated before
+    // finishing construction if the user has asked us to do so.  In some
+    // situations, this can help to ensure that allocation performance is
+    // always O(1), provided that the slab limit has been configured to be
+    // 1.
+    if (alloc_initial) {
+      // No need to take the lock here, no one can possible know about us
+      // yet.
+      void* first_alloc = AllocateLocked();
+      if (first_alloc != nullptr)
+        ReturnToFreeListLocked(first_alloc);
+    }
+  }
+
+  ~SlabAllocatorBase() {
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+    size_t allocated_count = 0;
+    size_t free_list_size = this->free_list_.size_slow();
+#endif
+    // null out the free list so that it does not assert that we left
+    // unmanaged pointers on it as we destruct, and so that the free list
+    // does not attempt to auto-destruct the managed objects which were
+    // present on it after the slab memory has been freed
+    this->free_list_.clear_unsafe();
+
+    while (!slab_list_.is_empty()) {
+      Slab* free_me = slab_list_.pop_front();
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+      size_t bytes_used = free_me->bytes_used_ - initial_slab_used_;
+      ZX_DEBUG_ASSERT(free_me->bytes_used_ >= initial_slab_used_);
+      ZX_DEBUG_ASSERT((bytes_used % alloc_size_) == 0);
+      allocated_count += (bytes_used / alloc_size_);
+#endif
+      SlabMalloc::Free(reinterpret_cast<void*>(free_me));
     }
 
-private:
-    // Constant properties of the allocator passed to us by our templated
-    // wrapper during construction.
-    const size_t slab_size_;
-    const size_t slab_alignment_;
-    const size_t slab_storage_limit_;
-    const size_t alloc_size_;
-    const size_t initial_slab_used_;
-    const size_t max_slabs_;
+    // Make sure that everything which was ever allocated had been returned
+    // to the free list before we were destroyed.
+    ZX_DEBUG_ASSERT_COND(free_list_size == allocated_count);
+  }
 
-    SinglyLinkedList<FreeListEntry*> free_list_;
-    SinglyLinkedList<Slab*>          slab_list_;
-    size_t                           slab_count_ = 0;
+  size_t max_slabs() const { return max_slabs_; }
+  size_t slab_count() const { return slab_count_; }
+
+ protected:
+  void* AllocateLocked() {
+    // If we can alloc from the free list, do so.
+    if (!free_list_.is_empty()) {
+      return free_list_.pop_front();
+    }
+
+    // If we can allocate from the currently active slab, do so.
+    if (!slab_list_.is_empty()) {
+      auto& active_slab = slab_list_.front();
+      void* mem = active_slab.Allocate(alloc_size_, slab_storage_limit_);
+      if (mem)
+        return mem;
+    }
+
+    // If we are allowed to allocate new slabs, try to do so.
+    if (slab_count_ < max_slabs_) {
+      void* slab_mem = SlabMalloc::Allocate(slab_size_, slab_alignment_);
+      if (slab_mem != nullptr) {
+        Slab* slab = new (slab_mem) Slab(initial_slab_used_);
+
+        slab_count_++;
+        slab_list_.push_front(slab);
+
+        return slab->Allocate(alloc_size_, slab_storage_limit_);
+      }
+    }
+
+    // Looks like we have run out of resources.
+    return nullptr;
+  }
+
+  void ReturnToFreeListLocked(void* ptr) {
+    FreeListEntry* free_obj = new (ptr) FreeListEntry;
+    free_list_.push_front(free_obj);
+  }
+
+ private:
+  // Constant properties of the allocator passed to us by our templated
+  // wrapper during construction.
+  const size_t slab_size_;
+  const size_t slab_alignment_;
+  const size_t slab_storage_limit_;
+  const size_t alloc_size_;
+  const size_t initial_slab_used_;
+  const size_t max_slabs_;
+
+  SinglyLinkedList<FreeListEntry*> free_list_;
+  SinglyLinkedList<Slab*> slab_list_;
+  size_t slab_count_ = 0;
 };
 
 template <typename SATraits>
 class SlabAllocator : public SlabAllocatorBase {
-public:
-    using PtrTraits = typename SATraits::PtrTraits;
-    using PtrType   = typename SATraits::PtrType;
-    using ObjType   = typename SATraits::ObjType;
+ public:
+  using PtrTraits = typename SATraits::PtrTraits;
+  using PtrType = typename SATraits::PtrType;
+  using ObjType = typename SATraits::ObjType;
 
-protected:
-    static constexpr size_t SLAB_SIZE  = SATraits::SLAB_SIZE;
-    static constexpr size_t AllocSize  = max(sizeof(FreeListEntry), sizeof(ObjType));
-    static constexpr size_t AllocAlign = max(alignof(FreeListEntry), alignof(ObjType));
+ protected:
+  static constexpr size_t SLAB_SIZE = SATraits::SLAB_SIZE;
+  static constexpr size_t AllocSize = max(sizeof(FreeListEntry), sizeof(ObjType));
+  static constexpr size_t AllocAlign = max(alignof(FreeListEntry), alignof(ObjType));
 
-    static_assert(AllocAlign > 0, "Alignment requirements cannot be zero!");
-    static_assert(!(AllocSize % AllocAlign),
-                  "Allocation size must be a multiple of allocation alignment!");
+  static_assert(AllocAlign > 0, "Alignment requirements cannot be zero!");
+  static_assert(!(AllocSize % AllocAlign),
+                "Allocation size must be a multiple of allocation alignment!");
 
-    static constexpr size_t SlabStorageMisalignment = SlabAllocatorBase::SlabOverhead % AllocAlign;
-    static constexpr size_t InitialSlabUse = SlabStorageMisalignment
-                                           ? AllocAlign - SlabStorageMisalignment
-                                           : 0;
-    static constexpr size_t TotalSlabOverhead = SlabAllocatorBase::SlabOverhead + InitialSlabUse;
+  static constexpr size_t SlabStorageMisalignment = SlabAllocatorBase::SlabOverhead % AllocAlign;
+  static constexpr size_t InitialSlabUse =
+      SlabStorageMisalignment ? AllocAlign - SlabStorageMisalignment : 0;
+  static constexpr size_t TotalSlabOverhead = SlabAllocatorBase::SlabOverhead + InitialSlabUse;
 
-    static_assert((sizeof(Slab) < SATraits::SLAB_SIZE) || (TotalSlabOverhead < SATraits::SLAB_SIZE),
-                  "SLAB_SIZE too small to hold slab bookkeeping");
+  static_assert((sizeof(Slab) < SATraits::SLAB_SIZE) || (TotalSlabOverhead < SATraits::SLAB_SIZE),
+                "SLAB_SIZE too small to hold slab bookkeeping");
 
-public:
-    static constexpr size_t AllocsPerSlab = (SLAB_SIZE - TotalSlabOverhead) / AllocSize;
+ public:
+  static constexpr size_t AllocsPerSlab = (SLAB_SIZE - TotalSlabOverhead) / AllocSize;
 
-    static_assert(AllocsPerSlab > 0, "SLAB_SIZE too small to hold even 1 allocation");
+  static_assert(AllocsPerSlab > 0, "SLAB_SIZE too small to hold even 1 allocation");
 
-    // Slab allocated objects must derive from SlabAllocated<SATraits>.
-    static_assert(std::is_base_of_v<SlabAllocated<SATraits>, ObjType>,
-                  "Objects which are slab allocated from an allocator of type "
-                  "SlabAllocator<T> must derive from SlabAllocated<T>.");
+  // Slab allocated objects must derive from SlabAllocated<SATraits>.
+  static_assert(std::is_base_of_v<SlabAllocated<SATraits>, ObjType>,
+                "Objects which are slab allocated from an allocator of type "
+                "SlabAllocator<T> must derive from SlabAllocated<T>.");
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocator);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocator);
 
-    explicit SlabAllocator(size_t max_slabs, bool alloc_initial = false)
-        : SlabAllocatorBase(SLAB_SIZE,
-                            AllocSize,
-                            AllocAlign,
-                            InitialSlabUse,
-                            max_slabs,
-                            alloc_initial) { }
+  explicit SlabAllocator(size_t max_slabs, bool alloc_initial = false)
+      : SlabAllocatorBase(SLAB_SIZE, AllocSize, AllocAlign, InitialSlabUse, max_slabs,
+                          alloc_initial) {}
 
-    ~SlabAllocator() { }
+  ~SlabAllocator() {}
 
-    template <typename... ConstructorSignature>
-    PtrType New(ConstructorSignature&&... args) {
-        void* mem = Allocate();
+  template <typename... ConstructorSignature>
+  PtrType New(ConstructorSignature&&... args) {
+    void* mem = Allocate();
 
-        if (mem == nullptr)
-            return nullptr;
+    if (mem == nullptr)
+      return nullptr;
 
-        // Construct the object
-        //
-        // Note: This rather odd forwarding of this construction operation to
-        // the non-internal form of the slab allocator is deliberate.  This
-        // prevents object with private constructors from needing to be friends
-        // of a fbl::internal class (a class which they should not need to know
-        // about).
-        ObjType* obj = ::fbl::SlabAllocator<SATraits>::ConstructObject(
-                mem,
-                std::forward<ConstructorSignature>(args)...);
+    // Construct the object
+    //
+    // Note: This rather odd forwarding of this construction operation to
+    // the non-internal form of the slab allocator is deliberate.  This
+    // prevents object with private constructors from needing to be friends
+    // of a fbl::internal class (a class which they should not need to know
+    // about).
+    ObjType* obj = ::fbl::SlabAllocator<SATraits>::ConstructObject(
+        mem, std::forward<ConstructorSignature>(args)...);
 
-        // Now, record the slab allocator this object came from so it can be
-        // returned later on.
-        //
-        // Note: This is a no-op in the case of an object which came from a
-        // static slab allocator (who's road home is determined purely by type)
-        SlabOriginSetter<SATraits>::SetOrigin(obj, this);
+    // Now, record the slab allocator this object came from so it can be
+    // returned later on.
+    //
+    // Note: This is a no-op in the case of an object which came from a
+    // static slab allocator (who's road home is determined purely by type)
+    SlabOriginSetter<SATraits>::SetOrigin(obj, this);
 
-        return PtrTraits::CreatePtr(obj);
+    return PtrTraits::CreatePtr(obj);
+  }
+
+  size_t obj_count() const {
+    static_assert(SATraits::ENABLE_OBJ_COUNT,
+                  "Error accessing obj_count: Object counter not enabled in SATraits.");
+    return sa_obj_counter_.obj_count();
+  }
+  size_t max_obj_count() const {
+    static_assert(SATraits::ENABLE_OBJ_COUNT,
+                  "Error accessing max_obj_count: Object counter not enabled in SATraits.");
+    return sa_obj_counter_.max_obj_count();
+  }
+  void ResetMaxObjCount() {
+    static_assert(SATraits::ENABLE_OBJ_COUNT,
+                  "Error performing ResetMaxObjCount: Object counter not enabled in SATraits.");
+    AutoLock alloc_lock(&alloc_lock_);
+    sa_obj_counter_.ResetMaxObjCount();
+  }
+
+ protected:
+  friend class ::fbl::SlabAllocator<SATraits>;
+  friend class ::fbl::SlabAllocated<SATraits>;
+
+  void* Allocate() {
+    AutoLock alloc_lock(&this->alloc_lock_);
+    void* ptr = AllocateLocked();
+    sa_obj_counter_.Inc(ptr);
+    return ptr;
+  }
+
+  void ReturnToFreeList(void* ptr) {
+    FreeListEntry* free_obj = new (ptr) FreeListEntry;
+    {
+      AutoLock alloc_lock(&alloc_lock_);
+      ReturnToFreeListLocked(free_obj);
+      sa_obj_counter_.Dec();
     }
+  }
 
-    size_t obj_count() const {
-        static_assert(SATraits::ENABLE_OBJ_COUNT,
-                      "Error accessing obj_count: Object counter not enabled in SATraits.");
-        return sa_obj_counter_.obj_count();
-    }
-    size_t max_obj_count() const {
-        static_assert(SATraits::ENABLE_OBJ_COUNT,
-                      "Error accessing max_obj_count: Object counter not enabled in SATraits.");
-        return sa_obj_counter_.max_obj_count();
-    }
-    void ResetMaxObjCount() {
-        static_assert(SATraits::ENABLE_OBJ_COUNT,
-                      "Error performing ResetMaxObjCount: Object counter not enabled in SATraits.");
-        AutoLock alloc_lock(&alloc_lock_);
-        sa_obj_counter_.ResetMaxObjCount();
-    }
-
-protected:
-    friend class ::fbl::SlabAllocator<SATraits>;
-    friend class ::fbl::SlabAllocated<SATraits>;
-
-    void* Allocate() {
-        AutoLock alloc_lock(&this->alloc_lock_);
-        void* ptr = AllocateLocked();
-        sa_obj_counter_.Inc(ptr);
-        return ptr;
-    }
-
-    void ReturnToFreeList(void* ptr) {
-        FreeListEntry* free_obj = new (ptr) FreeListEntry;
-        {
-            AutoLock alloc_lock(&alloc_lock_);
-            ReturnToFreeListLocked(free_obj);
-            sa_obj_counter_.Dec();
-        }
-    }
-
-    typename SATraits::LockType alloc_lock_;
-    SAObjCounter<SATraits::ENABLE_OBJ_COUNT> sa_obj_counter_;
+  typename SATraits::LockType alloc_lock_;
+  SAObjCounter<SATraits::ENABLE_OBJ_COUNT> sa_obj_counter_;
 };
 }  // namespace internal
 
@@ -678,20 +666,19 @@ protected:
 //     only permitted for unmanaged pointer types.
 //
 ////////////////////////////////////////////////////////////////////////////////
-template <typename T,
-          size_t   _SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename _LockType  = ::fbl::Mutex,
+template <typename T, size_t _SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          typename _LockType = ::fbl::Mutex,
           SlabAllocatorFlavor _AllocatorFlavor = SlabAllocatorFlavor::INSTANCED,
           bool _ENABLE_OBJ_COUNT = false>
 struct SlabAllocatorTraits {
-    using PtrTraits     = internal::SlabAllocatorPtrTraits<T>;
-    using PtrType       = typename PtrTraits::PtrType;
-    using ObjType       = typename PtrTraits::ObjType;
-    using LockType      = _LockType;
+  using PtrTraits = internal::SlabAllocatorPtrTraits<T>;
+  using PtrType = typename PtrTraits::PtrType;
+  using ObjType = typename PtrTraits::ObjType;
+  using LockType = _LockType;
 
-    static constexpr size_t SLAB_SIZE = _SLAB_SIZE;
-    static constexpr SlabAllocatorFlavor AllocatorFlavor = _AllocatorFlavor;
-    static constexpr bool ENABLE_OBJ_COUNT = _ENABLE_OBJ_COUNT;
+  static constexpr size_t SLAB_SIZE = _SLAB_SIZE;
+  static constexpr SlabAllocatorFlavor AllocatorFlavor = _AllocatorFlavor;
+  static constexpr bool ENABLE_OBJ_COUNT = _ENABLE_OBJ_COUNT;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -700,135 +687,122 @@ struct SlabAllocatorTraits {
 //
 ////////////////////////////////////////////////////////////////////////////////
 template <typename SATraits>
-class SlabAllocator<SATraits,
-                    std::enable_if_t<
-                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED) ||
-                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
-                    >>
-      : public internal::SlabAllocator<SATraits> {
-public:
-    using PtrTraits         = typename SATraits::PtrTraits;
-    using PtrType           = typename SATraits::PtrType;
-    using ObjType           = typename SATraits::ObjType;
-    using BaseAllocatorType = internal::SlabAllocator<SATraits>;
+class SlabAllocator<
+    SATraits, std::enable_if_t<(SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED) ||
+                               (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)>>
+    : public internal::SlabAllocator<SATraits> {
+ public:
+  using PtrTraits = typename SATraits::PtrTraits;
+  using PtrType = typename SATraits::PtrType;
+  using ObjType = typename SATraits::ObjType;
+  using BaseAllocatorType = internal::SlabAllocator<SATraits>;
 
-    static constexpr size_t AllocsPerSlab = BaseAllocatorType::AllocsPerSlab;
+  static constexpr size_t AllocsPerSlab = BaseAllocatorType::AllocsPerSlab;
 
-    explicit SlabAllocator(size_t max_slabs, bool alloc_initial = false)
-        : BaseAllocatorType(max_slabs, alloc_initial) { }
+  explicit SlabAllocator(size_t max_slabs, bool alloc_initial = false)
+      : BaseAllocatorType(max_slabs, alloc_initial) {}
 
-    ~SlabAllocator() { }
+  ~SlabAllocator() {}
 
-    void Delete(ObjType* ptr) {
-        static_assert(SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE,
-                      "Only MANUAL_DELETE slab allocators have a Delete method!");
-        ptr->~ObjType();
-        BaseAllocatorType::ReturnToFreeList(ptr);
-    }
+  void Delete(ObjType* ptr) {
+    static_assert(SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE,
+                  "Only MANUAL_DELETE slab allocators have a Delete method!");
+    ptr->~ObjType();
+    BaseAllocatorType::ReturnToFreeList(ptr);
+  }
 
-private:
-    friend class internal::SlabAllocator<SATraits>; // internal::SA<> gets to call ConstructObject
+ private:
+  friend class internal::SlabAllocator<SATraits>;  // internal::SA<> gets to call ConstructObject
 
-    template <typename... ConstructorSignature>
-    static ObjType* ConstructObject(void* mem, ConstructorSignature&&... args) {
-        return new (mem) ObjType(std::forward<ConstructorSignature>(args)...);
-    }
+  template <typename... ConstructorSignature>
+  static ObjType* ConstructObject(void* mem, ConstructorSignature&&... args) {
+    return new (mem) ObjType(std::forward<ConstructorSignature>(args)...);
+  }
 };
 
 template <typename SATraits>
-class SlabAllocated<SATraits,
-                    std::enable_if_t<
-                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED)
-                    >> {
-public:
-    using AllocatorType = internal::SlabAllocator<SATraits>;
-    using ObjType       = typename SATraits::ObjType;
+class SlabAllocated<
+    SATraits, std::enable_if_t<(SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED)>> {
+ public:
+  using AllocatorType = internal::SlabAllocator<SATraits>;
+  using ObjType = typename SATraits::ObjType;
 
-     SlabAllocated() { }
-    ~SlabAllocated() { }
+  SlabAllocated() {}
+  ~SlabAllocated() {}
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
 
-    void operator delete(void* ptr) {
-        // Note: this is a bit sketchy...  We have been destructed at this point
-        // in time, but we are about to access our slab_origin_ member variable.
-        // The *only* reason that this is OK is that we know that our destructor
-        // does not touch slab_origin_, and no one else in our hierarchy should
-        // be able to modify slab_origin_ because it is private.
-        ObjType* obj_ptr = reinterpret_cast<ObjType*>(ptr);
+  void operator delete(void* ptr) {
+    // Note: this is a bit sketchy...  We have been destructed at this point
+    // in time, but we are about to access our slab_origin_ member variable.
+    // The *only* reason that this is OK is that we know that our destructor
+    // does not touch slab_origin_, and no one else in our hierarchy should
+    // be able to modify slab_origin_ because it is private.
+    ObjType* obj_ptr = reinterpret_cast<ObjType*>(ptr);
 
-        ZX_DEBUG_ASSERT(obj_ptr != nullptr);
-        ZX_DEBUG_ASSERT(obj_ptr->slab_origin_ != nullptr);
-        obj_ptr->slab_origin_->ReturnToFreeList(obj_ptr);
-    }
+    ZX_DEBUG_ASSERT(obj_ptr != nullptr);
+    ZX_DEBUG_ASSERT(obj_ptr->slab_origin_ != nullptr);
+    obj_ptr->slab_origin_->ReturnToFreeList(obj_ptr);
+  }
 
-private:
-    friend struct internal::SlabOriginSetter<SATraits>;
-    AllocatorType* slab_origin_ = nullptr;
+ private:
+  friend struct internal::SlabOriginSetter<SATraits>;
+  AllocatorType* slab_origin_ = nullptr;
 };
 
 template <typename SATraits>
-class SlabAllocated<SATraits,
-                    std::enable_if_t<
-                        (SATraits::PtrTraits::IsManaged == false) &&
-                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
-                    >> {
-public:
-     SlabAllocated() { }
-    ~SlabAllocated() { }
+class SlabAllocated<
+    SATraits, std::enable_if_t<(SATraits::PtrTraits::IsManaged == false) &&
+                               (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)>> {
+ public:
+  SlabAllocated() {}
+  ~SlabAllocated() {}
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
 
-protected:
-    // Object which come from a MANUAL_DELETE slab allocator may not be
-    // destroyed using the delete operator.  Instead, users must return the
-    // object to its allocator using the Delete method of the allocator
-    // instance.
-    //
-    // Hide the delete operator, and halt-and-catch-fire if some Bad Person ever
-    // manages to generate a call to this operator.
-    //
-    // Note: it would be nice to either = delete this operator, or at least make
-    // it private, but we cannot.  To do so would prevent the implemementer of
-    // the slab allocated object from defining a destructor.
-    void operator delete(void*) { ZX_DEBUG_ASSERT(false); }
+ protected:
+  // Object which come from a MANUAL_DELETE slab allocator may not be
+  // destroyed using the delete operator.  Instead, users must return the
+  // object to its allocator using the Delete method of the allocator
+  // instance.
+  //
+  // Hide the delete operator, and halt-and-catch-fire if some Bad Person ever
+  // manages to generate a call to this operator.
+  //
+  // Note: it would be nice to either = delete this operator, or at least make
+  // it private, but we cannot.  To do so would prevent the implemementer of
+  // the slab allocated object from defining a destructor.
+  void operator delete(void*) { ZX_DEBUG_ASSERT(false); }
 };
 
 // Shorthand for declaring the properties of an instanced allocator (somewhat
 // superfluous as the default is instanced)
-template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename LockType  = ::fbl::Mutex,
-          bool     ENABLE_OBJ_COUNT = false>
+template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          typename LockType = ::fbl::Mutex, bool ENABLE_OBJ_COUNT = false>
 using InstancedSlabAllocatorTraits =
     SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::INSTANCED, ENABLE_OBJ_COUNT>;
 
-template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          bool     ENABLE_OBJ_COUNT = false>
+template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          bool ENABLE_OBJ_COUNT = false>
 using UnlockedInstancedSlabAllocatorTraits =
     SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::INSTANCED,
                         ENABLE_OBJ_COUNT>;
 
-template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          bool     ENABLE_OBJ_COUNT = false>
+template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          bool ENABLE_OBJ_COUNT = false>
 using UnlockedSlabAllocatorTraits =
     SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::INSTANCED,
                         ENABLE_OBJ_COUNT>;
 
 // Shorthand for declaring the properties of a MANUAL_DELETE slab allocator.
-template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename LockType  = ::fbl::Mutex,
-          bool     ENABLE_OBJ_COUNT = false>
+template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          typename LockType = ::fbl::Mutex, bool ENABLE_OBJ_COUNT = false>
 using ManualDeleteSlabAllocatorTraits =
     SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::MANUAL_DELETE,
                         ENABLE_OBJ_COUNT>;
 
-template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          bool     ENABLE_OBJ_COUNT = false>
+template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          bool ENABLE_OBJ_COUNT = false>
 using UnlockedManualDeleteSlabAllocatorTraits =
     SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::MANUAL_DELETE,
                         ENABLE_OBJ_COUNT>;
@@ -840,89 +814,83 @@ using UnlockedManualDeleteSlabAllocatorTraits =
 ////////////////////////////////////////////////////////////////////////////////
 template <typename SATraits>
 class SlabAllocator<SATraits,
-                    std::enable_if_t<
-                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)
-                    >> {
-public:
-    using PtrTraits             = typename SATraits::PtrTraits;
-    using PtrType               = typename SATraits::PtrType;
-    using ObjType               = typename SATraits::ObjType;
-    using InternalAllocatorType = internal::SlabAllocator<SATraits>;
+                    std::enable_if_t<(SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)>> {
+ public:
+  using PtrTraits = typename SATraits::PtrTraits;
+  using PtrType = typename SATraits::PtrType;
+  using ObjType = typename SATraits::ObjType;
+  using InternalAllocatorType = internal::SlabAllocator<SATraits>;
 
-    static constexpr size_t AllocsPerSlab = InternalAllocatorType::AllocsPerSlab;
+  static constexpr size_t AllocsPerSlab = InternalAllocatorType::AllocsPerSlab;
 
-    // Do not allow instantiation of static slab allocators.
-    SlabAllocator() = delete;
+  // Do not allow instantiation of static slab allocators.
+  SlabAllocator() = delete;
 
-    template <typename... ConstructorSignature>
-    static PtrType New(ConstructorSignature&&... args) {
-        return allocator_.New(std::forward<ConstructorSignature>(args)...);
-    }
+  template <typename... ConstructorSignature>
+  static PtrType New(ConstructorSignature&&... args) {
+    return allocator_.New(std::forward<ConstructorSignature>(args)...);
+  }
 
-    static size_t max_slabs() { return allocator_.max_slabs(); }
-    static size_t obj_count() { return allocator_.obj_count(); }
-    static size_t max_obj_count() { return allocator_.max_obj_count(); }
-    static size_t slab_count() { return allocator_.slab_count(); }
-    static void ResetMaxObjCount() { allocator_.ResetMaxObjCount(); }
+  static size_t max_slabs() { return allocator_.max_slabs(); }
+  static size_t obj_count() { return allocator_.obj_count(); }
+  static size_t max_obj_count() { return allocator_.max_obj_count(); }
+  static size_t slab_count() { return allocator_.slab_count(); }
+  static void ResetMaxObjCount() { allocator_.ResetMaxObjCount(); }
 
-private:
-    friend class SlabAllocated<SATraits>;           // SlabAllocated<> gets to call ReturnToFreeList
-    friend class internal::SlabAllocator<SATraits>; // internal::SA<> gets to call ConstructObject
+ private:
+  friend class SlabAllocated<SATraits>;            // SlabAllocated<> gets to call ReturnToFreeList
+  friend class internal::SlabAllocator<SATraits>;  // internal::SA<> gets to call ConstructObject
 
-    template <typename... ConstructorSignature>
-    static ObjType* ConstructObject(void* mem, ConstructorSignature&&... args) {
-        return new (mem) ObjType(std::forward<ConstructorSignature>(args)...);
-    }
+  template <typename... ConstructorSignature>
+  static ObjType* ConstructObject(void* mem, ConstructorSignature&&... args) {
+    return new (mem) ObjType(std::forward<ConstructorSignature>(args)...);
+  }
 
-    static void ReturnToFreeList(void* ptr) { allocator_.ReturnToFreeList(ptr); }
-    static InternalAllocatorType allocator_;
+  static void ReturnToFreeList(void* ptr) { allocator_.ReturnToFreeList(ptr); }
+  static InternalAllocatorType allocator_;
 };
 
 template <typename SATraits>
 class SlabAllocated<SATraits,
-                    std::enable_if_t<
-                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)
-                    >> {
-public:
-    SlabAllocated() { }
-    DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
+                    std::enable_if_t<(SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)>> {
+ public:
+  SlabAllocated() {}
+  DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
 
-    using AllocatorType = SlabAllocator<SATraits>;
-    using ObjType       = typename SATraits::ObjType;
+  using AllocatorType = SlabAllocator<SATraits>;
+  using ObjType = typename SATraits::ObjType;
 
-    void operator delete(void* ptr) {
-        ZX_DEBUG_ASSERT(ptr != nullptr);
-        AllocatorType::ReturnToFreeList(reinterpret_cast<ObjType*>(ptr));
-    }
+  void operator delete(void* ptr) {
+    ZX_DEBUG_ASSERT(ptr != nullptr);
+    AllocatorType::ReturnToFreeList(reinterpret_cast<ObjType*>(ptr));
+  }
 };
 
 // Shorthand for declaring the properties of a static allocator
-template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename LockType  = ::fbl::Mutex,
-          bool     ENABLE_OBJ_COUNT = false>
+template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          typename LockType = ::fbl::Mutex, bool ENABLE_OBJ_COUNT = false>
 using StaticSlabAllocatorTraits =
     SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::STATIC, ENABLE_OBJ_COUNT>;
 
-template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          bool     ENABLE_OBJ_COUNT = false>
+template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          bool ENABLE_OBJ_COUNT = false>
 using UnlockedStaticSlabAllocatorTraits =
     SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::STATIC,
                         ENABLE_OBJ_COUNT>;
 
 // Shorthand for declaring the global storage required for a static allocator
 #define DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(ALLOC_TRAITS, ...) \
-template<> ::fbl::SlabAllocator<ALLOC_TRAITS>::InternalAllocatorType \
-fbl::SlabAllocator<ALLOC_TRAITS>::allocator_(__VA_ARGS__)
+  template <>                                                    \
+  ::fbl::SlabAllocator<ALLOC_TRAITS>::InternalAllocatorType      \
+      fbl::SlabAllocator<ALLOC_TRAITS>::allocator_(__VA_ARGS__)
 
 // Shorthand for forward declaring the existance of the storage required to use
 // a static slab allocator.  Use this macro in your header file if your static
 // slab allocator is to be used outside of a single translational unit.
-#define FWD_DECL_STATIC_SLAB_ALLOCATOR(ALLOC_TRAITS) \
-template<> ::fbl::SlabAllocator<ALLOC_TRAITS>::InternalAllocatorType \
-fbl::SlabAllocator<ALLOC_TRAITS>::allocator_
-
+#define FWD_DECL_STATIC_SLAB_ALLOCATOR(ALLOC_TRAITS)        \
+  template <>                                               \
+  ::fbl::SlabAllocator<ALLOC_TRAITS>::InternalAllocatorType \
+      fbl::SlabAllocator<ALLOC_TRAITS>::allocator_
 
 }  // namespace fbl
 

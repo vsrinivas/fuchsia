@@ -317,7 +317,7 @@ static zx_duration_t fdio_socket_get_rcvtimeo(fdio_t* io) {
 }
 
 static zx_duration_t fdio_socket_get_sndtimeo(fdio_t* io) {
-    return fdio_get_zxio_socket(io)->socket.sndtimeo.get();
+  return fdio_get_zxio_socket(io)->socket.sndtimeo.get();
 }
 
 static fdio_ops_t fdio_socket_stream_ops = {

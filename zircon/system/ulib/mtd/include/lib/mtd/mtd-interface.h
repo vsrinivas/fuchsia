@@ -31,8 +31,7 @@ class MtdInterface : public NandInterface {
   uint32_t Size();
   zx_status_t ReadOob(uint32_t offset, void* oob_bytes);
   zx_status_t ReadPage(uint32_t offset, void* data_bytes, uint32_t* actual);
-  zx_status_t WritePage(uint32_t offset, const void* data_bytes,
-                        const void* oob_bytes);
+  zx_status_t WritePage(uint32_t offset, const void* data_bytes, const void* oob_bytes);
   zx_status_t EraseBlock(uint32_t offset);
   zx_status_t IsBadBlock(uint32_t offset, bool* is_bad_block);
 

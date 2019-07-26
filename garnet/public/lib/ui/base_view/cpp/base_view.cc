@@ -18,8 +18,7 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
     : startup_context_(context.startup_context),
       incoming_services_(context.outgoing_services.Bind()),
       outgoing_services_(std::move(context.incoming_services)),
-      listener_binding_(this,
-                        std::move(context.session_and_listener_request.second)),
+      listener_binding_(this, std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),
       view_(&session_, std::move(context.view_token), debug_name),
       root_node_(&session_),
@@ -35,12 +34,10 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
     startup_context_->ConnectToEnvironmentService(ime_manager_.NewRequest());
 
     ime_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(ERROR) << "Interface error on: Input Method Editor "
-                     << zx_status_get_string(status);
+      FXL_LOG(ERROR) << "Interface error on: Input Method Editor " << zx_status_get_string(status);
     });
     ime_manager_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(ERROR) << "Interface error on: Text Sync Service "
-                     << zx_status_get_string(status);
+      FXL_LOG(ERROR) << "Interface error on: Text Sync Service " << zx_status_get_string(status);
     });
   }
 
@@ -86,8 +83,7 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
             auto old_props = view_properties_;
             view_properties_ = evt.properties;
 
-            ::fuchsia::ui::gfx::BoundingBox layout_box =
-                ViewPropertiesLayoutBox(view_properties_);
+            ::fuchsia::ui::gfx::BoundingBox layout_box = ViewPropertiesLayoutBox(view_properties_);
 
             logical_size_ = scenic::Max(layout_box.max - layout_box.min, 0.f);
             physical_size_.x = logical_size_.x * metrics_.scale_x;
@@ -117,9 +113,7 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
         }
         break;
       case ::fuchsia::ui::scenic::Event::Tag::kInput: {
-        if (event.input().Which() ==
-                fuchsia::ui::input::InputEvent::Tag::kFocus &&
-            enable_ime_) {
+        if (event.input().Which() == fuchsia::ui::input::InputEvent::Tag::kFocus && enable_ime_) {
           OnHandleFocusEvent(event.input().focus());
         }
         OnInputEvent(std::move(event.input()));
@@ -152,33 +146,30 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   TRACE_FLOW_BEGIN("gfx", "Session::Present", session_present_count_);
   ++session_present_count_;
 
-  session()->Present(
-      presentation_time, [this](fuchsia::images::PresentationInfo info) {
-        TRACE_DURATION("view", "BaseView::PresentationCallback");
-        TRACE_FLOW_END("gfx", "present_callback", info.presentation_time);
+  session()->Present(presentation_time, [this](fuchsia::images::PresentationInfo info) {
+    TRACE_DURATION("view", "BaseView::PresentationCallback");
+    TRACE_FLOW_END("gfx", "present_callback", info.presentation_time);
 
-        FXL_DCHECK(present_pending_);
+    FXL_DCHECK(present_pending_);
 
-        zx_time_t next_presentation_time =
-            info.presentation_time + info.presentation_interval;
+    zx_time_t next_presentation_time = info.presentation_time + info.presentation_interval;
 
-        bool present_needed = false;
-        if (invalidate_pending_) {
-          invalidate_pending_ = false;
-          OnSceneInvalidated(std::move(info));
-          present_needed = true;
-        }
+    bool present_needed = false;
+    if (invalidate_pending_) {
+      invalidate_pending_ = false;
+      OnSceneInvalidated(std::move(info));
+      present_needed = true;
+    }
 
-        present_pending_ = false;
-        if (present_needed)
-          PresentScene(next_presentation_time);
-      });
+    present_pending_ = false;
+    if (present_needed)
+      PresentScene(next_presentation_time);
+  });
 }
 
 // |fuchsia::ui::input::InputMethodEditorClient|
-void BaseView::DidUpdateState(
-    fuchsia::ui::input::TextInputState state,
-    std::unique_ptr<fuchsia::ui::input::InputEvent> input_event) {
+void BaseView::DidUpdateState(fuchsia::ui::input::TextInputState state,
+                              std::unique_ptr<fuchsia::ui::input::InputEvent> input_event) {
   if (input_event) {
     const fuchsia::ui::input::InputEvent& input = *input_event;
     fuchsia::ui::input::InputEvent input_event_copy;

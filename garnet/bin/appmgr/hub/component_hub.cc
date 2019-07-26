@@ -18,8 +18,7 @@ ComponentHub::ComponentHub(fbl::RefPtr<fs::PseudoDir> root) : Hub(root) {}
 
 ComponentHub::~ComponentHub() = default;
 
-zx_status_t ComponentHub::AddIncomingServices(
-    fbl::RefPtr<fs::Vnode> incoming_services) {
+zx_status_t ComponentHub::AddIncomingServices(fbl::RefPtr<fs::Vnode> incoming_services) {
   zx_status_t status = EnsureInDir();
   if (status != ZX_OK) {
     return status;

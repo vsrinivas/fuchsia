@@ -28,8 +28,7 @@ TEST(CobaltEventBuilder, CountEvent) {
   payload.count = count;
   event.payload.set_event_count(std::move(payload));
 
-  ASSERT_TRUE(fidl::Equals(
-      event, CobaltEventBuilder(kMetricId).as_count_event(duration, count)));
+  ASSERT_TRUE(fidl::Equals(event, CobaltEventBuilder(kMetricId).as_count_event(duration, count)));
 }
 
 TEST(CobaltEventBuilder, ElapsedTimeEvent) {
@@ -41,10 +40,9 @@ TEST(CobaltEventBuilder, ElapsedTimeEvent) {
   event.event_codes.push_back(kDimension2);
   event.payload.set_elapsed_micros(elapsed_micros);
 
-  ASSERT_TRUE(
-      fidl::Equals(event, CobaltEventBuilder(kMetricId)
-                              .with_event_codes({kDimension1, kDimension2})
-                              .as_elapsed_time(elapsed_micros)));
+  ASSERT_TRUE(fidl::Equals(event, CobaltEventBuilder(kMetricId)
+                                      .with_event_codes({kDimension1, kDimension2})
+                                      .as_elapsed_time(elapsed_micros)));
 }
 
 TEST(CobaltEventBuilder, FrameRateEvent) {
@@ -57,11 +55,10 @@ TEST(CobaltEventBuilder, FrameRateEvent) {
   event.component = kComponent;
   event.payload.set_fps(fps);
 
-  ASSERT_TRUE(
-      fidl::Equals(event, CobaltEventBuilder(kMetricId)
-                              .with_event_codes({kDimension1, kDimension2})
-                              .with_component(kComponent)
-                              .as_frame_rate(fps)));
+  ASSERT_TRUE(fidl::Equals(event, CobaltEventBuilder(kMetricId)
+                                      .with_event_codes({kDimension1, kDimension2})
+                                      .with_component(kComponent)
+                                      .as_frame_rate(fps)));
 }
 
 TEST(CobaltEventBuilder, MemoryUsage) {
@@ -74,11 +71,10 @@ TEST(CobaltEventBuilder, MemoryUsage) {
   event.component = kComponent;
   event.payload.set_memory_bytes_used(bytes_used);
 
-  ASSERT_TRUE(
-      fidl::Equals(event, CobaltEventBuilder(kMetricId)
-                              .with_event_codes({kDimension1, kDimension2})
-                              .with_component(kComponent)
-                              .as_memory_usage(bytes_used)));
+  ASSERT_TRUE(fidl::Equals(event, CobaltEventBuilder(kMetricId)
+                                      .with_event_codes({kDimension1, kDimension2})
+                                      .with_component(kComponent)
+                                      .as_memory_usage(bytes_used)));
 }
 
 TEST(CobaltEventBuilder, StringEvent) {
@@ -91,11 +87,10 @@ TEST(CobaltEventBuilder, StringEvent) {
   event.component = kComponent;
   event.payload.set_string_event(string_event);
 
-  ASSERT_TRUE(
-      fidl::Equals(event, CobaltEventBuilder(kMetricId)
-                              .with_event_codes({kDimension1, kDimension2})
-                              .with_component(kComponent)
-                              .as_string_event(string_event)));
+  ASSERT_TRUE(fidl::Equals(event, CobaltEventBuilder(kMetricId)
+                                      .with_event_codes({kDimension1, kDimension2})
+                                      .with_component(kComponent)
+                                      .as_string_event(string_event)));
 }
 
 TEST(CobaltEventBuilder, IntHistogram) {
@@ -112,11 +107,10 @@ TEST(CobaltEventBuilder, IntHistogram) {
   event.component = kComponent;
   event.payload.set_int_histogram(int_histogram);
 
-  ASSERT_TRUE(
-      fidl::Equals(event, CobaltEventBuilder(kMetricId)
-                              .with_event_codes({kDimension1, kDimension2})
-                              .with_component(kComponent)
-                              .as_int_histogram(int_histogram)));
+  ASSERT_TRUE(fidl::Equals(event, CobaltEventBuilder(kMetricId)
+                                      .with_event_codes({kDimension1, kDimension2})
+                                      .with_component(kComponent)
+                                      .as_int_histogram(int_histogram)));
 }
 
 TEST(CobaltEventBuilder, Clone) {
@@ -125,15 +119,14 @@ TEST(CobaltEventBuilder, Clone) {
                          .with_event_codes({kDimension1, kDimension2})
                          .with_component(kComponent));
 
-  ASSERT_FALSE(fidl::Equals(b.as_elapsed_time(elapsed_micros),
-                            b.as_elapsed_time(elapsed_micros)));
+  ASSERT_FALSE(fidl::Equals(b.as_elapsed_time(elapsed_micros), b.as_elapsed_time(elapsed_micros)));
 
   auto b2 = std::move(CobaltEventBuilder(kMetricId)
                           .with_event_codes({kDimension1, kDimension2})
                           .with_component(kComponent));
 
-  ASSERT_TRUE(fidl::Equals(b2.Clone().as_elapsed_time(elapsed_micros),
-                           b2.as_elapsed_time(elapsed_micros)));
+  ASSERT_TRUE(
+      fidl::Equals(b2.Clone().as_elapsed_time(elapsed_micros), b2.as_elapsed_time(elapsed_micros)));
 }
 
 TEST(CobaltEventBuilder, event_code_at) {

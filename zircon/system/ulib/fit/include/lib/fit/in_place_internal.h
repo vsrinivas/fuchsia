@@ -9,19 +9,19 @@ namespace fit {
 
 // Tag for requesting in-place initialization.
 struct in_place_t {
-    explicit constexpr in_place_t() = default;
+  explicit constexpr in_place_t() = default;
 };
 
 // Tag for requesting in-place initialization by type.
 template <typename T>
 struct in_place_type_t {
-    explicit constexpr in_place_type_t() = default;
+  explicit constexpr in_place_type_t() = default;
 };
 
 // Tag for requesting in-place initialization by index.
 template <size_t Index>
 struct in_place_index_t final {
-    explicit constexpr in_place_index_t() = default;
+  explicit constexpr in_place_index_t() = default;
 };
 
 #ifdef __cpp_inline_variables
@@ -43,17 +43,17 @@ inline constexpr in_place_index_t<Index> in_place_index{};
 
 template <typename Dummy = void>
 struct in_place_holder {
-    static constexpr in_place_t instance{};
+  static constexpr in_place_t instance{};
 };
 
 template <typename T>
 struct in_place_type_holder {
-    static constexpr in_place_type_t<T> instance{};
+  static constexpr in_place_type_t<T> instance{};
 };
 
 template <size_t Index>
 struct in_place_index_holder {
-    static constexpr in_place_index_t<Index> instance{};
+  static constexpr in_place_index_t<Index> instance{};
 };
 
 template <typename Dummy>
@@ -68,17 +68,14 @@ constexpr in_place_index_t<Index> in_place_index_holder<Index>::instance;
 static constexpr const in_place_t& in_place = in_place_holder<>::instance;
 
 template <typename T>
-static constexpr const in_place_type_t<T>& in_place_type =
-    in_place_type_holder<T>::instance;
+static constexpr const in_place_type_t<T>& in_place_type = in_place_type_holder<T>::instance;
 
 template <size_t Index>
 static constexpr const in_place_index_t<Index>& in_place_index =
     in_place_index_holder<Index>::instance;
 
-#endif // __cpp_inline_variables
+#endif  // __cpp_inline_variables
 
+}  // namespace fit
 
-} // namespace fit
-
-#endif // LIB_FIT_IN_PLACE_INTERNAL_H_
-
+#endif  // LIB_FIT_IN_PLACE_INTERNAL_H_

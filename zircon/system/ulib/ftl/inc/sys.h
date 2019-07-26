@@ -22,8 +22,8 @@ void afree_clear(void* aaloc_ptr_addr);
 /* CRC32 Related Definitions/Declaration                               */
 /***********************************************************************/
 extern const ui32 Crc32Tbl[256];
-#define CRC32_START 0xFFFFFFFF // starting CRC bit string
-#define CRC32_FINAL 0xDEBB20E3 // summed over data and CRC
+#define CRC32_START 0xFFFFFFFF  // starting CRC bit string
+#define CRC32_FINAL 0xDEBB20E3  // summed over data and CRC
 #define CRC32_UPDATE(crc, c) ((crc >> 8) ^ Crc32Tbl[(ui8)(crc ^ c)])
 
 __END_CDECLS

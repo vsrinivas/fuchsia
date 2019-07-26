@@ -4,6 +4,4 @@
 
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 
-TEST_F(NamespaceTest, UsesSystemDeprecatedData) {
-    ExpectExists("/system/data/test_file.txt");
-}
+TEST_F(NamespaceTest, UsesSystemDeprecatedData) { ExpectExists("/system/data/test_file.txt"); }

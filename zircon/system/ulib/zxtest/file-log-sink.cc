@@ -10,12 +10,10 @@
 
 namespace zxtest {
 
-FileLogSink::FileLogSink(FILE* stream) : LogSink(), stream_(stream), stream_closer_(nullptr) {
-}
+FileLogSink::FileLogSink(FILE* stream) : LogSink(), stream_(stream), stream_closer_(nullptr) {}
 
 FileLogSink::FileLogSink(FILE* stream, fit::function<void(FILE*)> stream_closer)
-    : LogSink(), stream_(stream), stream_closer_(std::move(stream_closer)) {
-}
+    : LogSink(), stream_(stream), stream_closer_(std::move(stream_closer)) {}
 
 FileLogSink::~FileLogSink() {
   if (stream_closer_ != nullptr && stream_ != nullptr) {

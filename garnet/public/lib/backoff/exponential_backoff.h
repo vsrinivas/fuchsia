@@ -18,11 +18,9 @@ namespace backoff {
 // with N denoting the number of consecutive GetNext() calls, starting at 0.
 class ExponentialBackoff : public Backoff {
  public:
-  explicit ExponentialBackoff(
-      fit::function<uint64_t()> seed_generator = DefaultSeedGenerator);
-  ExponentialBackoff(
-      zx::duration initial_delay, uint32_t retry_factor, zx::duration max_delay,
-      fit::function<uint64_t()> seed_generator = DefaultSeedGenerator);
+  explicit ExponentialBackoff(fit::function<uint64_t()> seed_generator = DefaultSeedGenerator);
+  ExponentialBackoff(zx::duration initial_delay, uint32_t retry_factor, zx::duration max_delay,
+                     fit::function<uint64_t()> seed_generator = DefaultSeedGenerator);
   ~ExponentialBackoff() override;
 
   zx::duration GetNext() override;

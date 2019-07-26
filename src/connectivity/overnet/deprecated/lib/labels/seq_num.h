@@ -41,8 +41,7 @@ class SeqNum {
   uint64_t ReconstructFromZero_TestOnly() const { return Reconstruct(0); }
 
   bool operator==(const SeqNum& rhs) const {
-    return wire_length() == rhs.wire_length() &&
-           0 == memcmp(rep_, rhs.rep_, wire_length());
+    return wire_length() == rhs.wire_length() && 0 == memcmp(rep_, rhs.rep_, wire_length());
   }
   bool operator!=(const SeqNum& rhs) const { return !operator==(rhs); }
 

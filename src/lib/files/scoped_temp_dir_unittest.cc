@@ -51,8 +51,7 @@ TEST(ScopedTempDir, CustomParent) {
     EXPECT_EQ(path.substr(0, parent.size()), parent);
 
     // Regression test - don't create temp_dir_XXXXXX dir next to the temp one.
-    EXPECT_FALSE(
-        files::IsDirectory(GetDirectoryName(path) + "/temp_dir_XXXXXX"));
+    EXPECT_FALSE(files::IsDirectory(GetDirectoryName(path) + "/temp_dir_XXXXXX"));
   }
 
   // Verify that the tmp directory itself was deleted, but not the parent.

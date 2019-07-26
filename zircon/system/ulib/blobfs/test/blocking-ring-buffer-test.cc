@@ -17,203 +17,191 @@ namespace blobfs {
 namespace {
 
 class MockVmoidRegistry : public VmoidRegistry {
-public:
-    vmoid_t default_vmoid() const {
-        return 1;
-    }
+ public:
+  vmoid_t default_vmoid() const { return 1; }
 
-private:
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
-        *out = default_vmoid();
-        return ZX_OK;
-    }
-    zx_status_t DetachVmo(vmoid_t vmoid) override {
-        EXPECT_EQ(default_vmoid(), vmoid);
-        return ZX_OK;
-    }
+ private:
+  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
+    *out = default_vmoid();
+    return ZX_OK;
+  }
+  zx_status_t DetachVmo(vmoid_t vmoid) override {
+    EXPECT_EQ(default_vmoid(), vmoid);
+    return ZX_OK;
+  }
 };
 
 TEST(BlockingRingBufferEmptyTest, EmptyBuffer) {
-    MockVmoidRegistry vmoid_registry;
-    std::unique_ptr<BlockingRingBuffer> buffer;
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-              BlockingRingBuffer::Create(&vmoid_registry, 0, "test-buffer", &buffer));
+  MockVmoidRegistry vmoid_registry;
+  std::unique_ptr<BlockingRingBuffer> buffer;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            BlockingRingBuffer::Create(&vmoid_registry, 0, "test-buffer", &buffer));
 }
 
 TEST(BlockingRingBufferEmptyTest, EmptyReservation) {
-    BlockingRingBufferReservation reservation;
-    EXPECT_EQ(0, reservation.length());
-    EXPECT_EQ(0, reservation.start());
+  BlockingRingBufferReservation reservation;
+  EXPECT_EQ(0, reservation.length());
+  EXPECT_EQ(0, reservation.start());
 }
 
 // The arbitrarily-chosen size of the BlockingRingBuffer to use under test (in blocks).
 constexpr size_t kBlocks = 5;
 
 class BlockingRingBufferFixture : public zxtest::Test {
-public:
-    void SetUp() override {
-        ASSERT_OK(BlockingRingBuffer::Create(&vmoid_registry_, kBlocks, "test-buffer", &buffer_));
-    }
+ public:
+  void SetUp() override {
+    ASSERT_OK(BlockingRingBuffer::Create(&vmoid_registry_, kBlocks, "test-buffer", &buffer_));
+  }
 
-    BlockingRingBuffer* buffer() { return buffer_.get(); }
-    MockVmoidRegistry& registry() { return vmoid_registry_; }
+  BlockingRingBuffer* buffer() { return buffer_.get(); }
+  MockVmoidRegistry& registry() { return vmoid_registry_; }
 
-private:
-    MockVmoidRegistry vmoid_registry_;
-    std::unique_ptr<BlockingRingBuffer> buffer_;
+ private:
+  MockVmoidRegistry vmoid_registry_;
+  std::unique_ptr<BlockingRingBuffer> buffer_;
 };
 
 using BlockingRingBufferTest = BlockingRingBufferFixture;
 
-TEST_F(BlockingRingBufferTest, CapacityTest) {
-    EXPECT_EQ(kBlocks, buffer()->capacity());
-}
+TEST_F(BlockingRingBufferTest, CapacityTest) { EXPECT_EQ(kBlocks, buffer()->capacity()); }
 
 TEST_F(BlockingRingBufferTest, ReserveOne) {
-    BlockingRingBufferReservation reservation;
-    EXPECT_OK(buffer()->Reserve(1, &reservation));
-    EXPECT_EQ(0, reservation.start());
-    EXPECT_EQ(1, reservation.length());
+  BlockingRingBufferReservation reservation;
+  EXPECT_OK(buffer()->Reserve(1, &reservation));
+  EXPECT_EQ(0, reservation.start());
+  EXPECT_EQ(1, reservation.length());
 }
 
 TEST_F(BlockingRingBufferTest, ReservationMoveConstruction) {
-    BlockingRingBufferReservation reservation_a;
-    EXPECT_OK(buffer()->Reserve(1, &reservation_a));
+  BlockingRingBufferReservation reservation_a;
+  EXPECT_OK(buffer()->Reserve(1, &reservation_a));
 
-    BlockingRingBufferReservation reservation_b(std::move(reservation_a));
-    EXPECT_EQ(0, reservation_a.length());
-    EXPECT_EQ(1, reservation_b.length());
+  BlockingRingBufferReservation reservation_b(std::move(reservation_a));
+  EXPECT_EQ(0, reservation_a.length());
+  EXPECT_EQ(1, reservation_b.length());
 }
 
 TEST_F(BlockingRingBufferTest, ReservationMoveAssignment) {
-    BlockingRingBufferReservation reservation_a;
-    EXPECT_OK(buffer()->Reserve(1, &reservation_a));
+  BlockingRingBufferReservation reservation_a;
+  EXPECT_OK(buffer()->Reserve(1, &reservation_a));
 
-    BlockingRingBufferReservation reservation_b;
-    reservation_b = std::move(reservation_a);
-    EXPECT_EQ(0, reservation_a.length());
-    EXPECT_EQ(1, reservation_b.length());
+  BlockingRingBufferReservation reservation_b;
+  reservation_b = std::move(reservation_a);
+  EXPECT_EQ(0, reservation_a.length());
+  EXPECT_EQ(1, reservation_b.length());
 }
 
 TEST_F(BlockingRingBufferTest, ReservationAtCapacity) {
-    BlockingRingBufferReservation reservation;
-    EXPECT_OK(buffer()->Reserve(kBlocks, &reservation));
-    EXPECT_EQ(kBlocks, reservation.length());
+  BlockingRingBufferReservation reservation;
+  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation));
+  EXPECT_EQ(kBlocks, reservation.length());
 }
 
 // Reserving beyond the capacity of the buffer will always return |ZX_ERR_NO_SPACE|.
 TEST_F(BlockingRingBufferTest, ReservationBeyondCapacity) {
-    BlockingRingBufferReservation reservation;
-    EXPECT_EQ(ZX_ERR_NO_SPACE, buffer()->Reserve(kBlocks + 1, &reservation));
+  BlockingRingBufferReservation reservation;
+  EXPECT_EQ(ZX_ERR_NO_SPACE, buffer()->Reserve(kBlocks + 1, &reservation));
 }
 
 // Reserving beyond the capacity of the buffer will always return |ZX_ERR_NO_SPACE|,
 // even when someone else is holding a reservation.
 TEST_F(BlockingRingBufferTest, ReservationBeyondCapacityDoesNotBlockWithPriorReservation) {
-    BlockingRingBufferReservation reservation_a;
-    EXPECT_OK(buffer()->Reserve(kBlocks, &reservation_a));
-    BlockingRingBufferReservation reservation_b;
-    EXPECT_EQ(ZX_ERR_NO_SPACE, buffer()->Reserve(kBlocks + 1, &reservation_b));
+  BlockingRingBufferReservation reservation_a;
+  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation_a));
+  BlockingRingBufferReservation reservation_b;
+  EXPECT_EQ(ZX_ERR_NO_SPACE, buffer()->Reserve(kBlocks + 1, &reservation_b));
 }
 
 TEST_F(BlockingRingBufferTest, SingleBlockingReservation) {
-    BlockingRingBufferReservation reservation;
-    EXPECT_OK(buffer()->Reserve(kBlocks, &reservation));
+  BlockingRingBufferReservation reservation;
+  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation));
 
-    // Try acquiring a reservation, but in a background thread, since this call will block.
-    std::atomic<bool> made_reservation = false;
-    BlockingRingBufferReservation blocking_reservation;
-    zx_status_t status = ZX_ERR_BAD_STATE;
-    std::thread worker([&] {
-        status = buffer()->Reserve(kBlocks, &blocking_reservation);
-        made_reservation.store(true);
-    });
+  // Try acquiring a reservation, but in a background thread, since this call will block.
+  std::atomic<bool> made_reservation = false;
+  BlockingRingBufferReservation blocking_reservation;
+  zx_status_t status = ZX_ERR_BAD_STATE;
+  std::thread worker([&] {
+    status = buffer()->Reserve(kBlocks, &blocking_reservation);
+    made_reservation.store(true);
+  });
 
-    sched_yield();
-    EXPECT_FALSE(made_reservation.load());
-    {
-        auto unused = std::move(reservation);
-    }
-    worker.join();
-    EXPECT_OK(status, "Reserving buffer in background thread failed");
-    EXPECT_TRUE(made_reservation.load());
-    EXPECT_EQ(kBlocks, blocking_reservation.length());
+  sched_yield();
+  EXPECT_FALSE(made_reservation.load());
+  { auto unused = std::move(reservation); }
+  worker.join();
+  EXPECT_OK(status, "Reserving buffer in background thread failed");
+  EXPECT_TRUE(made_reservation.load());
+  EXPECT_EQ(kBlocks, blocking_reservation.length());
 }
 
 TEST_F(BlockingRingBufferTest, MultipleBlockingReservations) {
-    BlockingRingBufferReservation reservation;
-    EXPECT_OK(buffer()->Reserve(kBlocks, &reservation));
+  BlockingRingBufferReservation reservation;
+  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation));
 
-    // Try acquiring a reservation in multiple blocking background threads.
-    std::atomic<bool> made_reservation[kBlocks] = { false };
-    std::atomic<zx_status_t> reserve_results[kBlocks] = { ZX_ERR_INTERNAL };
-    BlockingRingBufferReservation blocking_reservations[kBlocks];
-    std::thread workers[kBlocks];
-    for (size_t i = 0; i < kBlocks; i++) {
-        workers[i] = std::thread([&](size_t i) {
-            reserve_results[i].store(buffer()->Reserve(1, &blocking_reservations[i]));
-            made_reservation[i].store(true);
-        }, i);
-    }
+  // Try acquiring a reservation in multiple blocking background threads.
+  std::atomic<bool> made_reservation[kBlocks] = {false};
+  std::atomic<zx_status_t> reserve_results[kBlocks] = {ZX_ERR_INTERNAL};
+  BlockingRingBufferReservation blocking_reservations[kBlocks];
+  std::thread workers[kBlocks];
+  for (size_t i = 0; i < kBlocks; i++) {
+    workers[i] = std::thread(
+        [&](size_t i) {
+          reserve_results[i].store(buffer()->Reserve(1, &blocking_reservations[i]));
+          made_reservation[i].store(true);
+        },
+        i);
+  }
 
-    for (size_t i = 0; i < kBlocks; i++) {
-        EXPECT_FALSE(made_reservation[i].load());
-    }
+  for (size_t i = 0; i < kBlocks; i++) {
+    EXPECT_FALSE(made_reservation[i].load());
+  }
 
-    {
-        auto unused = std::move(reservation);
-    }
+  { auto unused = std::move(reservation); }
 
-    for (size_t i = 0; i < kBlocks; i++) {
-        workers[i].join();
-        EXPECT_TRUE(made_reservation[i].load());
-        EXPECT_OK(reserve_results[i].load());
-        EXPECT_EQ(1, blocking_reservations[i].length());
-    }
+  for (size_t i = 0; i < kBlocks; i++) {
+    workers[i].join();
+    EXPECT_TRUE(made_reservation[i].load());
+    EXPECT_OK(reserve_results[i].load());
+    EXPECT_EQ(1, blocking_reservations[i].length());
+  }
 }
 
 TEST_F(BlockingRingBufferTest, MovingWhileBlockingReservation) {
-    BlockingRingBufferReservation reservation_a;
-    EXPECT_OK(buffer()->Reserve(kBlocks, &reservation_a));
+  BlockingRingBufferReservation reservation_a;
+  EXPECT_OK(buffer()->Reserve(kBlocks, &reservation_a));
 
-    // Try acquiring a reservation, but in a background thread, since this call will block.
-    std::atomic<bool> made_reservation = false;
-    std::atomic<zx_status_t> reserve_result = ZX_ERR_INTERNAL;
-    BlockingRingBufferReservation blocking_reservation;
-    std::thread worker([&] {
-        reserve_result.store(buffer()->Reserve(kBlocks, &blocking_reservation));
-        made_reservation.store(true);
-    });
+  // Try acquiring a reservation, but in a background thread, since this call will block.
+  std::atomic<bool> made_reservation = false;
+  std::atomic<zx_status_t> reserve_result = ZX_ERR_INTERNAL;
+  BlockingRingBufferReservation blocking_reservation;
+  std::thread worker([&] {
+    reserve_result.store(buffer()->Reserve(kBlocks, &blocking_reservation));
+    made_reservation.store(true);
+  });
 
-    EXPECT_FALSE(made_reservation.load());
+  EXPECT_FALSE(made_reservation.load());
 
-    // Moving constructing and destruction does not release the reservation.
-    BlockingRingBufferReservation reservation_b(std::move(reservation_a));
-    EXPECT_FALSE(made_reservation.load());
-    {
-        auto unused = std::move(reservation_a);
-    }
-    EXPECT_FALSE(made_reservation.load());
+  // Moving constructing and destruction does not release the reservation.
+  BlockingRingBufferReservation reservation_b(std::move(reservation_a));
+  EXPECT_FALSE(made_reservation.load());
+  { auto unused = std::move(reservation_a); }
+  EXPECT_FALSE(made_reservation.load());
 
-    // Moving assignment and destruction does not release the reservation.
-    BlockingRingBufferReservation reservation_c;
-    reservation_c = std::move(reservation_b);
-    EXPECT_FALSE(made_reservation.load());
-    {
-        auto unused = std::move(reservation_b);
-    }
-    EXPECT_FALSE(made_reservation.load());
+  // Moving assignment and destruction does not release the reservation.
+  BlockingRingBufferReservation reservation_c;
+  reservation_c = std::move(reservation_b);
+  EXPECT_FALSE(made_reservation.load());
+  { auto unused = std::move(reservation_b); }
+  EXPECT_FALSE(made_reservation.load());
 
-    // Destroying the moved-to object does release the reservation.
-    {
-        auto unused = std::move(reservation_c);
-    }
+  // Destroying the moved-to object does release the reservation.
+  { auto unused = std::move(reservation_c); }
 
-    worker.join();
-    EXPECT_TRUE(made_reservation.load());
-    EXPECT_OK(reserve_result.load());
-    EXPECT_EQ(kBlocks, blocking_reservation.length());
+  worker.join();
+  EXPECT_TRUE(made_reservation.load());
+  EXPECT_OK(reserve_result.load());
+  EXPECT_EQ(kBlocks, blocking_reservation.length());
 }
 
-} // namespace
-} // namespace blobfs
+}  // namespace
+}  // namespace blobfs

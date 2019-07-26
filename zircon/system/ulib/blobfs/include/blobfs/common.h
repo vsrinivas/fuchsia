@@ -58,9 +58,9 @@ uint32_t MerkleTreeBlocks(const Inode& blobNode);
 
 // Get a pointer to the nth block of the bitmap.
 inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
-    assert(n * kBlobfsBlockSize < bm.size());             // Accessing beyond end of bitmap
-    assert(kBlobfsBlockSize <= (n + 1) * kBlobfsBlockSize); // Avoid overflow
-    return fs::GetBlock(kBlobfsBlockSize, bm.StorageUnsafe()->GetData(), n);
+  assert(n * kBlobfsBlockSize < bm.size());                // Accessing beyond end of bitmap
+  assert(kBlobfsBlockSize <= (n + 1) * kBlobfsBlockSize);  // Avoid overflow
+  return fs::GetBlock(kBlobfsBlockSize, bm.StorageUnsafe()->GetData(), n);
 }
 
-} // namespace blobfs
+}  // namespace blobfs

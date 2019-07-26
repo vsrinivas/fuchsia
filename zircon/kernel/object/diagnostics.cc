@@ -727,7 +727,7 @@ zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace, user_out_ptr<zx_info_v
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
 zx_status_t GetProcessVmosLocked(ProcessDispatcher* process, user_out_ptr<zx_info_vmo_t> vmos,
-                                     size_t max, size_t* actual_out, size_t* available_out) {
+                                 size_t max, size_t* actual_out, size_t* available_out) {
   DEBUG_ASSERT(process != nullptr);
   DEBUG_ASSERT(actual_out != nullptr);
   DEBUG_ASSERT(available_out != nullptr);

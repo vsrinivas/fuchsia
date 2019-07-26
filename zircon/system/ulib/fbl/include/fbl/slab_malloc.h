@@ -25,27 +25,25 @@ namespace internal {
 #ifdef _KERNEL
 
 struct SlabMalloc {
-    // TODO(johngro): Replace this implementation with a kernel implementation
-    // which does not use the heap.
-    static void* Allocate(size_t amt, size_t align) {
-        void* mem = ::malloc(amt);
-        ZX_DEBUG_ASSERT((reinterpret_cast<uintptr_t>(mem) % align) == 0);
-        return mem;
-    }
+  // TODO(johngro): Replace this implementation with a kernel implementation
+  // which does not use the heap.
+  static void* Allocate(size_t amt, size_t align) {
+    void* mem = ::malloc(amt);
+    ZX_DEBUG_ASSERT((reinterpret_cast<uintptr_t>(mem) % align) == 0);
+    return mem;
+  }
 
-    static void Free(void* ptr) { ::free(ptr); }
+  static void Free(void* ptr) { ::free(ptr); }
 };
 
 #else
 
 struct SlabMalloc {
-    // TODO(johngro): Replace this implementation with a kernel implementation
-    // which does not use the heap.
-    static void* Allocate(size_t amt, size_t align) {
-        return ::aligned_alloc(align, amt);
-    }
+  // TODO(johngro): Replace this implementation with a kernel implementation
+  // which does not use the heap.
+  static void* Allocate(size_t amt, size_t align) { return ::aligned_alloc(align, amt); }
 
-    static void Free(void* ptr) { ::free(ptr); }
+  static void Free(void* ptr) { ::free(ptr); }
 };
 
 #endif

@@ -7,6 +7,4 @@
 
 // A no-op fuzz target function.  This is provided to prove fuzzers can be built.
 // TODO(aarongreen): Also run the fuzzer with an empty input.
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
-    return 0;
-}
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) { return 0; }

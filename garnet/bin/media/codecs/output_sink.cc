@@ -27,8 +27,7 @@ void OutputSink::AddOutputBuffer(const CodecBuffer* output_buffer) {
 
 OutputSink::Status OutputSink::NextOutputBlock(
     size_t write_size, std::optional<uint64_t> timestamp_ish,
-    fit::function<std::pair<size_t, UserStatus>(OutputBlock)>
-        output_block_writer) {
+    fit::function<std::pair<size_t, UserStatus>(OutputBlock)> output_block_writer) {
   ZX_DEBUG_ASSERT(thrd_current() == writer_thread_);
   ZX_DEBUG_ASSERT(write_size > 0);
 
@@ -49,8 +48,7 @@ OutputSink::Status OutputSink::NextOutputBlock(
   }
 
   auto output_block = OutputBlock{
-      .data = current_packet_->buffer()->buffer_base() +
-              current_packet_->valid_length_bytes(),
+      .data = current_packet_->buffer()->buffer_base() + current_packet_->valid_length_bytes(),
       .len = write_size,
   };
 
@@ -59,16 +57,14 @@ OutputSink::Status OutputSink::NextOutputBlock(
     return kUserError;
   }
 
-  current_packet_->SetValidLengthBytes(current_packet_->valid_length_bytes() +
-                                       bytes_written);
+  current_packet_->SetValidLengthBytes(current_packet_->valid_length_bytes() + bytes_written);
   return kOk;
 }
 
 OutputSink::Status OutputSink::Flush() {
   ZX_DEBUG_ASSERT(thrd_current() == writer_thread_);
 
-  if (current_packet_ == nullptr ||
-      current_packet_->valid_length_bytes() == 0) {
+  if (current_packet_ == nullptr || current_packet_->valid_length_bytes() == 0) {
     return kOk;
   }
 
@@ -77,8 +73,7 @@ OutputSink::Status OutputSink::Flush() {
 
 bool OutputSink::CurrentPacketHasRoomFor(size_t write_size) {
   return (current_packet_ != nullptr) &&
-         current_packet_->buffer()->buffer_size() -
-                 current_packet_->valid_length_bytes() >=
+         current_packet_->buffer()->buffer_size() - current_packet_->valid_length_bytes() >=
              write_size;
 }
 

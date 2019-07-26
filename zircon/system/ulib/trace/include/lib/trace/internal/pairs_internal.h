@@ -13,17 +13,13 @@
 // Count the number of pairs of arguments passed to it without evaluating them.
 // When the number of arguments is uneven, rounds down.
 // Works with 0 to 15 pairs.
-#define TRACE_INTERNAL_COUNT_PAIRS(...)                     \
-    TRACE_INTERNAL_COUNT_PAIRS_(__VA_ARGS__,                \
-                                15, 14, 14, 13, 13, 12, 12, \
-                                11, 11, 10, 10, 9, 9, 8, 8, \
-                                7, 7, 6, 6, 5, 5, 4, 4,     \
-                                3, 3, 2, 2, 1, 1, 0, 0)
-#define TRACE_INTERNAL_COUNT_PAIRS_(            \
-    _15, _15X, _14, _14X, _13, _13X, _12, _12X, \
-    _11, _11X, _10, _10X, _9, _9X, _8, _8X,     \
-    _7, _7X, _6, _6X, _5, _5X, _4, _4X,         \
-    _3, _3X, _2, _2X, _1, _1X, N, ...) N
+#define TRACE_INTERNAL_COUNT_PAIRS(...)                                                            \
+  TRACE_INTERNAL_COUNT_PAIRS_(__VA_ARGS__, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, \
+                              7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0)
+#define TRACE_INTERNAL_COUNT_PAIRS_(_15, _15X, _14, _14X, _13, _13X, _12, _12X, _11, _11X, _10, \
+                                    _10X, _9, _9X, _8, _8X, _7, _7X, _6, _6X, _5, _5X, _4, _4X, \
+                                    _3, _3X, _2, _2X, _1, _1X, N, ...)                          \
+  N
 
 // Applies a function or macro to each pair of arguments.
 // Works with 0 to 15 pairs.
@@ -44,9 +40,9 @@
 //     #define MY_FN(vn, idx, a, b)
 //     TRACE_INTERNAL_APPLY_PAIRWISE(MY_FN, my_var, "x", 1, "y", 2)
 
-#define TRACE_INTERNAL_APPLY_PAIRWISE(fn, vn, ...)                          \
-    TRACE_INTERNAL_APPLY_PAIRWISE_(TRACE_INTERNAL_COUNT_PAIRS(__VA_ARGS__)) \
-    (fn, vn, __VA_ARGS__)
+#define TRACE_INTERNAL_APPLY_PAIRWISE(fn, vn, ...)                        \
+  TRACE_INTERNAL_APPLY_PAIRWISE_(TRACE_INTERNAL_COUNT_PAIRS(__VA_ARGS__)) \
+  (fn, vn, __VA_ARGS__)
 #define TRACE_INTERNAL_APPLY_PAIRWISE_(n) TRACE_INTERNAL_APPLY_PAIRWISE__(n)
 #define TRACE_INTERNAL_APPLY_PAIRWISE__(n) TRACE_INTERNAL_APPLY_PAIRWISE##n
 // clang-format off
@@ -131,9 +127,9 @@
 // Example:
 //     #define MY_FN(vn, idx, a, b)
 //     TRACE_INTERNAL_APPLY_PAIRWISE_CSV(MY_FN, my_var, "x", 1, "y", 2)
-#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV(fn, vn, ...)                          \
-    TRACE_INTERNAL_APPLY_PAIRWISE_CSV_(TRACE_INTERNAL_COUNT_PAIRS(__VA_ARGS__)) \
-    (fn, vn, __VA_ARGS__)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV(fn, vn, ...)                        \
+  TRACE_INTERNAL_APPLY_PAIRWISE_CSV_(TRACE_INTERNAL_COUNT_PAIRS(__VA_ARGS__)) \
+  (fn, vn, __VA_ARGS__)
 #define TRACE_INTERNAL_APPLY_PAIRWISE_CSV_(n) TRACE_INTERNAL_APPLY_PAIRWISE_CSV__(n)
 #define TRACE_INTERNAL_APPLY_PAIRWISE_CSV__(n) TRACE_INTERNAL_APPLY_PAIRWISE_CSV##n
 // clang-format off
@@ -212,4 +208,4 @@
     fn(vn, 13, k13, v13), fn(vn, 14, k14, v14), fn(vn, 15, k15, v15)
 // clang-format on
 
-#endif // ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_PAIRS_INTERNAL_H_
+#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_PAIRS_INTERNAL_H_

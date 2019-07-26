@@ -21,8 +21,6 @@ bool IsDebugModeActive() { return kDebugMode; }
 
 void SetDebugMode(bool activate) { kDebugMode = activate; }
 
-double SecondsSinceStart() {
-  return (fxl::TimePoint::Now() - kStartTime).ToSecondsF();
-}
+double SecondsSinceStart() { return (fxl::TimePoint::Now() - kStartTime).ToSecondsF(); }
 
 }  // namespace debug_ipc

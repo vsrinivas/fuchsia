@@ -33,9 +33,7 @@ Resource::~Resource() {
   session_DEPRECATED_->DecrementResourceCount();
 }
 
-EventReporter* Resource::event_reporter() const {
-  return session_DEPRECATED_->event_reporter();
-}
+EventReporter* Resource::event_reporter() const { return session_DEPRECATED_->event_reporter(); }
 
 const ResourceContext& Resource::resource_context() const {
   return session_DEPRECATED_->resource_context();

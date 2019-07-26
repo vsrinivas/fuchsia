@@ -9,13 +9,9 @@
 
 namespace archive {
 
-constexpr inline uint64_t AlignToPage(uint64_t offset) {
-  return (offset + 4095u) & ~4095ull;
-}
+constexpr inline uint64_t AlignToPage(uint64_t offset) { return (offset + 4095u) & ~4095ull; }
 
-constexpr inline uint64_t AlignTo8ByteBoundary(uint64_t offset) {
-  return (offset + 7u) & ~7ull;
-}
+constexpr inline uint64_t AlignTo8ByteBoundary(uint64_t offset) { return (offset + 7u) & ~7ull; }
 
 }  // namespace archive
 

@@ -48,8 +48,7 @@ class TestSettingsFixture : public ::testing::Test {
 // Fuchsia-specific. This propagation test is performed in
 // //garnet/public/lib/gtest/test_loop_fixture_unittest.cc instead.
 TEST_F(TestSettingsFixture, RandomSeed) {
-  EXPECT_TRUE(SetTestSettings(
-      CommandLineFromInitializerList({"argv0", "--test_loop_seed=1"})));
+  EXPECT_TRUE(SetTestSettings(CommandLineFromInitializerList({"argv0", "--test_loop_seed=1"})));
   EXPECT_THAT(getenv("TEST_LOOP_RANDOM_SEED"), StrEq("1"));
   const char *argv[] = {"argv0", "--test_loop_seed=2", nullptr};
   EXPECT_TRUE(SetTestSettings(2, argv));
@@ -57,8 +56,7 @@ TEST_F(TestSettingsFixture, RandomSeed) {
 }
 
 TEST_F(TestSettingsFixture, LogLevel) {
-  EXPECT_TRUE(SetTestSettings(
-      CommandLineFromInitializerList({"argv0", "--verbose=21"})));
+  EXPECT_TRUE(SetTestSettings(CommandLineFromInitializerList({"argv0", "--verbose=21"})));
   EXPECT_EQ(GetMinLogLevel(), -21);
   // The value for --quiet needs to be smaller than LOG_FATAL because
   // min_log_level is capped at LOG_FATAL.

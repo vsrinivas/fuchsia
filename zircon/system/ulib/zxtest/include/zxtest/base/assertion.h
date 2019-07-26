@@ -29,49 +29,33 @@ class Assertion {
   Assertion& operator=(Assertion&&) = delete;
 
   // Returns the position at which the assertion happened.
-  const SourceLocation& location() const {
-    return location_;
-  }
+  const SourceLocation& location() const { return location_; }
 
   // Returns a general description of the asserted condition.
-  const fbl::String& description() const {
-    return description_;
-  }
+  const fbl::String& description() const { return description_; }
 
   // Returns the expected value of an equality. For example in ASSERT_EQ(actual, expected) returns
   // the text representation of expected, as it was captured on compile time.
-  const fbl::String& expected() const {
-    return expected_;
-  }
+  const fbl::String& expected() const { return expected_; }
 
   // Returns the expected value of an equality. For example in ASSERT_EQ(actual, expected) returns
   // the text representation of actual, as it was captured on compile time.
-  const fbl::String& actual() const {
-    return actual_;
-  }
+  const fbl::String& actual() const { return actual_; }
 
   // Returns the expected value of an equality. For example in ASSERT_EQ(actual, expected) returns
   // the text representation of expected as it is evaluated at runtime..
-  const fbl::String& expected_eval() const {
-    return expected_eval_;
-  }
+  const fbl::String& expected_eval() const { return expected_eval_; }
 
   // Returns the expected value of an equality. For example in ASSERT_EQ(actual, expected) returns
   // the text representation of actual, as it was captured on runtime.
-  const fbl::String& actual_eval() const {
-    return actual_eval_;
-  }
+  const fbl::String& actual_eval() const { return actual_eval_; }
 
   // Returns true if this assertion is fatal, and test should stop execution. Essentially if the
   // asserting macro is ASSERT_* or EXPECT_*.
-  bool is_fatal() const {
-    return is_fatal_;
-  }
+  bool is_fatal() const { return is_fatal_; }
 
   // Returns true if this assertions is value based or manually generated.
-  bool has_values() const {
-    return has_values_;
-  }
+  bool has_values() const { return has_values_; }
 
  private:
   // Text indicating the nature of the assertion. Whether it was expected to be equal, not equal,

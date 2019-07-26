@@ -9,7 +9,7 @@
 
 __BEGIN_CDECLS
 
-zx_status_t test_sysdev_create(void* ctx, zx_device_t* parent, const char* name,
-                               const char* args, zx_handle_t rpc_channel);
+zx_status_t test_sysdev_create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+                               zx_handle_t rpc_channel);
 
 __END_CDECLS

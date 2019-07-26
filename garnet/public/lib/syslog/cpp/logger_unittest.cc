@@ -35,8 +35,7 @@ bool ends_with(const char* str, const char* suffix) {
   return strcmp(str, suffix) == 0;
 }
 
-inline zx_status_t init_helper(zx_handle_t handle, const char** tags,
-                               size_t ntags) {
+inline zx_status_t init_helper(zx_handle_t handle, const char** tags, size_t ntags) {
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
                                .log_service_channel = handle,
@@ -48,9 +47,8 @@ inline zx_status_t init_helper(zx_handle_t handle, const char** tags,
 
 // This version of output_compare_helper takes |local| by pointer so that
 // a caller can invoke it more than once on the same socket.
-void output_compare_helper_ptr(zx::socket* local, fx_log_severity_t severity,
-                               const char* msg, const char** tags,
-                               int num_tags) {
+void output_compare_helper_ptr(zx::socket* local, fx_log_severity_t severity, const char* msg,
+                               const char** tags, int num_tags) {
   fx_log_packet_t packet;
   ASSERT_EQ(ZX_OK, local->read(0, &packet, sizeof(packet), nullptr));
   EXPECT_EQ(severity, packet.metadata.severity);
@@ -68,8 +66,8 @@ void output_compare_helper_ptr(zx::socket* local, fx_log_severity_t severity,
   EXPECT_TRUE(ends_with(packet.data + pos, msg)) << (packet.data + pos);
 }
 
-void output_compare_helper(zx::socket local, fx_log_severity_t severity,
-                           const char* msg, const char** tags, int num_tags) {
+void output_compare_helper(zx::socket local, fx_log_severity_t severity, const char* msg,
+                           const char** tags, int num_tags) {
   output_compare_helper_ptr(&local, severity, msg, tags, num_tags);
 }
 
@@ -100,11 +98,9 @@ TEST(Logger, WithSeverityMacro) {
   output_compare_helper(std::move(local), FX_LOG_INFO, msg, nullptr, 0);
 }
 
-static zx_status_t GetAvailableBytes(const zx::socket& socket,
-                                     size_t* out_available) {
+static zx_status_t GetAvailableBytes(const zx::socket& socket, size_t* out_available) {
   zx_info_socket_t info = {};
-  zx_status_t status =
-      socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+  zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     return status;
   }
@@ -124,8 +120,7 @@ TEST(Logger, LogSeverity) {
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_LOGS(WARNING) << "just some msg";
-  output_compare_helper(std::move(local), FX_LOG_WARNING, "just some msg",
-                        nullptr, 0);
+  output_compare_helper(std::move(local), FX_LOG_WARNING, "just some msg", nullptr, 0);
 }
 
 TEST(Logger, LogWithTag) {
@@ -135,8 +130,7 @@ TEST(Logger, LogWithTag) {
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
   FX_LOGST(INFO, "tag") << "just some string";
   const char* tags[] = {"tag"};
-  output_compare_helper(std::move(local), FX_LOG_INFO, "just some string", tags,
-                        1);
+  output_compare_helper(std::move(local), FX_LOG_INFO, "just some string", tags, 1);
 }
 
 TEST(Logger, PLogWithTag) {
@@ -147,8 +141,7 @@ TEST(Logger, PLogWithTag) {
   FX_PLOGST(INFO, "tag", ZX_ERR_ACCESS_DENIED) << "something that failed";
   const char* tags[] = {"tag"};
   output_compare_helper(std::move(local), FX_LOG_INFO,
-                        "something that failed: -30 (ZX_ERR_ACCESS_DENIED)",
-                        tags, 1);
+                        "something that failed: -30 (ZX_ERR_ACCESS_DENIED)", tags, 1);
 }
 
 TEST(Logger, CheckFunction) {

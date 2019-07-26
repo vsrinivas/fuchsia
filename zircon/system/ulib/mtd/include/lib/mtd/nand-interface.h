@@ -34,15 +34,13 @@ class NandInterface {
   // |bytes|. Actual number of bytes read is stored in |actual|. |byte_offset|
   // should be a multiple of |PageSize|. |bytes| should be at least |PageSize|
   // bytes large. Returns ZX_OK on success.
-  virtual zx_status_t ReadPage(uint32_t byte_offset, void* bytes,
-                               uint32_t* actual) = 0;
+  virtual zx_status_t ReadPage(uint32_t byte_offset, void* bytes, uint32_t* actual) = 0;
 
   // Writes the |data| and |oob| buffers to the page specified at |byte_offset|.
   // Both buffers are required and are expected to be |PageSize| and |OobSize|
   // bytes, respectively. |byte_offset| should be a multiple of page size.
   // Returns ZX_OK on success.
-  virtual zx_status_t WritePage(uint32_t byte_offset, const void* data,
-                                const void* oob) = 0;
+  virtual zx_status_t WritePage(uint32_t byte_offset, const void* data, const void* oob) = 0;
 
   // Erases the block at |byte_offset|. |byte_offset| should be a multiple of
   // |BlockSize|. Returns ZX_OK on success.
@@ -54,4 +52,3 @@ class NandInterface {
 };
 
 }  // namespace mtd
-

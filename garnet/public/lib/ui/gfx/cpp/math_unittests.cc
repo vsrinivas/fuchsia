@@ -13,9 +13,7 @@ using fuchsia::ui::gfx::vec2;
 
 TEST(MathTest, Vec2Length) { EXPECT_EQ(scenic::Length({3, 4}), 5); }
 
-TEST(MathTest, Vec2Distance2) {
-  EXPECT_EQ(scenic::Distance2({-1, -2}, {3, 4}), 52);
-}
+TEST(MathTest, Vec2Distance2) { EXPECT_EQ(scenic::Distance2({-1, -2}, {3, 4}), 52); }
 
 TEST(MathTest, Vec2Sub) {
   EXPECT_TRUE(fidl::Equals(vec2({86, 75}) - vec2({30, -9}), vec2({56, 84})));
@@ -28,9 +26,7 @@ TEST(MathTest, Vec2AddAssign) {
   EXPECT_TRUE(fidl::Equals(v, vec2({-.9f, 6})));
 }
 
-TEST(MathTest, Vec2ScalarMul) {
-  EXPECT_TRUE(fidl::Equals(vec2({-3, .5f}) * 3, vec2({-9, 1.5f})));
-}
+TEST(MathTest, Vec2ScalarMul) { EXPECT_TRUE(fidl::Equals(vec2({-3, .5f}) * 3, vec2({-9, 1.5f}))); }
 
 TEST(MathTest, Vec2ScalarDivAssign) {
   vec2 v{5, -1};

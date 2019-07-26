@@ -25,80 +25,81 @@ constexpr uint16_t WAVCommon::FORMAT_MSFT_ALAW;
 constexpr uint16_t WAVCommon::FORMAT_MSFT_MULAW;
 
 zx_status_t WAVCommon::Initialize(const char* filename, InitMode mode) {
-    if (fd_ >= 0) {
-        printf("Failed to initialize WAVCommon for \"%s\", already initialized\n", filename);
-        return ZX_ERR_BAD_STATE;
-    }
+  if (fd_ >= 0) {
+    printf("Failed to initialize WAVCommon for \"%s\", already initialized\n", filename);
+    return ZX_ERR_BAD_STATE;
+  }
 
-    int flags = (mode == InitMode::SOURCE)
-              ? O_RDONLY
-              : O_RDWR | O_CREAT;
-    fd_ = ::open(filename, flags);
-    if (fd_ < 0) {
-        printf("Failed to open \"%s\" (res %d)\n", filename, fd_);
-        return static_cast<zx_status_t>(fd_);
-    }
+  int flags = (mode == InitMode::SOURCE) ? O_RDONLY : O_RDWR | O_CREAT;
+  fd_ = ::open(filename, flags);
+  if (fd_ < 0) {
+    printf("Failed to open \"%s\" (res %d)\n", filename, fd_);
+    return static_cast<zx_status_t>(fd_);
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 void WAVCommon::Close() {
-    if (fd_ >= 0) {
-        ::close(fd_);
-        fd_ = -1;
-    }
+  if (fd_ >= 0) {
+    ::close(fd_);
+    fd_ = -1;
+  }
 }
 
 zx_status_t WAVCommon::Read(void* buf, size_t len) {
-    if (fd_ < 0) return ZX_ERR_BAD_STATE;
+  if (fd_ < 0)
+    return ZX_ERR_BAD_STATE;
 
-    ssize_t res = ::read(fd_, buf, len);
-    if (res < 0) {
-        printf("Read error (errno %d)\n", errno);
-        return static_cast<zx_status_t>(errno);
-    }
+  ssize_t res = ::read(fd_, buf, len);
+  if (res < 0) {
+    printf("Read error (errno %d)\n", errno);
+    return static_cast<zx_status_t>(errno);
+  }
 
-    if (static_cast<size_t>(res) != len) {
-        printf("Short read error (%zd < %zu)\n", res, len);
-        return ZX_ERR_IO;
-    }
+  if (static_cast<size_t>(res) != len) {
+    printf("Short read error (%zd < %zu)\n", res, len);
+    return ZX_ERR_IO;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 zx_status_t WAVCommon::Write(const void* buf, size_t len) {
-    if (fd_ < 0) return ZX_ERR_BAD_STATE;
+  if (fd_ < 0)
+    return ZX_ERR_BAD_STATE;
 
-    ssize_t res = ::write(fd_, buf, len);
-    if (res < 0) {
-        printf("Write error (errno %d)\n", errno);
-        return static_cast<zx_status_t>(errno);
-    }
+  ssize_t res = ::write(fd_, buf, len);
+  if (res < 0) {
+    printf("Write error (errno %d)\n", errno);
+    return static_cast<zx_status_t>(errno);
+  }
 
-    if (static_cast<size_t>(res) != len) {
-        printf("Short write error (%zd < %zu)\n", res, len);
-        return ZX_ERR_IO;
-    }
+  if (static_cast<size_t>(res) != len) {
+    printf("Short write error (%zd < %zu)\n", res, len);
+    return ZX_ERR_IO;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 zx_status_t WAVCommon::Seek(off_t abs_pos) {
-    if (fd_ < 0) return ZX_ERR_BAD_STATE;
-    if (abs_pos < 0) return ZX_ERR_INVALID_ARGS;
+  if (fd_ < 0)
+    return ZX_ERR_BAD_STATE;
+  if (abs_pos < 0)
+    return ZX_ERR_INVALID_ARGS;
 
-    off_t res = ::lseek(fd_, abs_pos, SEEK_SET);
-    if (res < 0) {
-        printf("Seek error (errno %d)\n", errno);
-        return static_cast<zx_status_t>(errno);
-    }
+  off_t res = ::lseek(fd_, abs_pos, SEEK_SET);
+  if (res < 0) {
+    printf("Seek error (errno %d)\n", errno);
+    return static_cast<zx_status_t>(errno);
+  }
 
-    if (res != abs_pos) {
-        printf("Failed to see to target (target %zd, got %zd)\n",
-                static_cast<ssize_t>(abs_pos),
-                static_cast<ssize_t>(res));
-        return ZX_ERR_IO;
-    }
+  if (res != abs_pos) {
+    printf("Failed to see to target (target %zd, got %zd)\n", static_cast<ssize_t>(abs_pos),
+           static_cast<ssize_t>(res));
+    return ZX_ERR_IO;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }

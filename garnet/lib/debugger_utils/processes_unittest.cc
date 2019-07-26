@@ -18,22 +18,18 @@
 namespace debugger_utils {
 namespace {
 
-const char* const kHelloArgv[] = { kTestHelperPath, "hello" };
-const char* const kWaitPeerClosedArgv[] = {
-    kTestHelperPath, "wait-peer-closed"
-};
+const char* const kHelloArgv[] = {kTestHelperPath, "hello"};
+const char* const kWaitPeerClosedArgv[] = {kTestHelperPath, "wait-peer-closed"};
 
 void WaitChannelReadable(const zx::channel& channel) {
   zx_signals_t pending;
-  ASSERT_EQ(channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
-                             &pending), ZX_OK);
+  ASSERT_EQ(channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending), ZX_OK);
 }
 
 void ReadUint64Packet(const zx::channel& channel, uint64_t expected_value) {
   uint64_t packet;
   uint32_t packet_size;
-  ASSERT_EQ(channel.read(0, &packet, nullptr, sizeof(packet), 0,
-                         &packet_size, nullptr), ZX_OK);
+  ASSERT_EQ(channel.read(0, &packet, nullptr, sizeof(packet), 0, &packet_size, nullptr), ZX_OK);
   EXPECT_EQ(packet_size, sizeof(packet));
   EXPECT_EQ(packet, expected_value);
 }
@@ -43,12 +39,7 @@ TEST_F(TestWithHelper, GetProcessThreads) {
   zx::job child_job;
 
   constexpr size_t kNumExtraThreads = 4;
-  static const char* const argv[] = {
-    kTestHelperPath,
-    "start-n-threads",
-    "4",
-    nullptr
-  };
+  static const char* const argv[] = {kTestHelperPath, "start-n-threads", "4", nullptr};
 
   // Don't request additional space for new threads. We want to test there
   // being new threads and there being no space for them.
@@ -66,9 +57,8 @@ TEST_F(TestWithHelper, GetProcessThreads) {
 
   size_t try_count = 1;
   size_t num_initial_threads = 1;
-  EXPECT_EQ(TryGetProcessThreadKoidsForTesting(
-              process(), try_count, num_initial_threads, kNoExtraThreads,
-              &threads, &num_available_threads),
+  EXPECT_EQ(TryGetProcessThreadKoidsForTesting(process(), try_count, num_initial_threads,
+                                               kNoExtraThreads, &threads, &num_available_threads),
             ZX_OK);
 
   // We only requested space for one new thread so that's all we get.
@@ -79,9 +69,8 @@ TEST_F(TestWithHelper, GetProcessThreads) {
 
   // Try a second time, this time requesting space for all threads.
   num_initial_threads = num_available_threads;
-  EXPECT_EQ(TryGetProcessThreadKoidsForTesting(
-              process(), try_count, num_initial_threads, kNoExtraThreads,
-              &threads, &num_available_threads),
+  EXPECT_EQ(TryGetProcessThreadKoidsForTesting(process(), try_count, num_initial_threads,
+                                               kNoExtraThreads, &threads, &num_available_threads),
             ZX_OK);
   EXPECT_EQ(expected_num_threads, threads.size());
   EXPECT_EQ(expected_num_threads, num_available_threads);
@@ -91,9 +80,8 @@ TEST_F(TestWithHelper, GetProcessThreads) {
   try_count = 2;
   num_initial_threads = 1;
   threads.clear();
-  EXPECT_EQ(TryGetProcessThreadKoidsForTesting(
-              process(), try_count, num_initial_threads, kNoExtraThreads,
-              &threads, &num_available_threads),
+  EXPECT_EQ(TryGetProcessThreadKoidsForTesting(process(), try_count, num_initial_threads,
+                                               kNoExtraThreads, &threads, &num_available_threads),
             ZX_OK);
   EXPECT_EQ(expected_num_threads, threads.size());
   EXPECT_EQ(expected_num_threads, num_available_threads);
@@ -101,8 +89,8 @@ TEST_F(TestWithHelper, GetProcessThreads) {
   // And again for a fourth time, this time using the main entry point.
   try_count = 2;
   threads.clear();
-  EXPECT_EQ(GetProcessThreadKoids(process(), try_count, kNoExtraThreads,
-                                  &threads, &num_available_threads),
+  EXPECT_EQ(GetProcessThreadKoids(process(), try_count, kNoExtraThreads, &threads,
+                                  &num_available_threads),
             ZX_OK);
   EXPECT_EQ(expected_num_threads, threads.size());
   EXPECT_EQ(expected_num_threads, num_available_threads);
@@ -110,14 +98,13 @@ TEST_F(TestWithHelper, GetProcessThreads) {
   // Test a non-successful return.
   zx::process process2;
   zx_status_t status =
-      process().duplicate(ZX_DEFAULT_PROCESS_RIGHTS &~ ZX_RIGHT_ENUMERATE,
-                          &process2);
+      process().duplicate(ZX_DEFAULT_PROCESS_RIGHTS & ~ZX_RIGHT_ENUMERATE, &process2);
   EXPECT_EQ(status, ZX_OK);
   try_count = 1;
   threads.clear();
-  EXPECT_EQ(GetProcessThreadKoids(process2, try_count, kNoExtraThreads,
-                                  &threads, &num_available_threads),
-            ZX_ERR_ACCESS_DENIED);
+  EXPECT_EQ(
+      GetProcessThreadKoids(process2, try_count, kNoExtraThreads, &threads, &num_available_threads),
+      ZX_ERR_ACCESS_DENIED);
   EXPECT_EQ(threads.size(), 0u);
   process2.reset();
 }
@@ -126,8 +113,8 @@ TEST(Processes, Argv) {
   std::unique_ptr<process::ProcessBuilder> builder;
   Argv argv = BuildArgv(kHelloArgv, arraysize(kHelloArgv));
   ASSERT_EQ(CreateProcessBuilder(GetDefaultJob(), kTestHelperPath, argv,
-                                 sys::ServiceDirectory::CreateFromNamespace(),
-                                 &builder), ZX_OK);
+                                 sys::ServiceDirectory::CreateFromNamespace(), &builder),
+            ZX_OK);
   builder->CloneAll();
   ASSERT_EQ(builder->Prepare(nullptr), ZX_OK);
   EXPECT_TRUE(builder->data().process.is_valid());
@@ -140,8 +127,7 @@ TEST(Processes, Argv) {
   zx::process process;
   EXPECT_EQ(builder->Start(&process), ZX_OK);
   zx_signals_t observed;
-  EXPECT_EQ(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(),
-                             &observed), ZX_OK);
+  EXPECT_EQ(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), &observed), ZX_OK);
   int rc;
   EXPECT_EQ(GetProcessReturnCode(process.get(), &rc), ZX_OK);
   EXPECT_EQ(rc, 0);
@@ -154,8 +140,8 @@ TEST(Processes, PassHandle) {
   std::unique_ptr<process::ProcessBuilder> builder;
   Argv argv = BuildArgv(kWaitPeerClosedArgv, arraysize(kWaitPeerClosedArgv));
   ASSERT_EQ(CreateProcessBuilder(GetDefaultJob(), kTestHelperPath, argv,
-                                 sys::ServiceDirectory::CreateFromNamespace(),
-                                 &builder), ZX_OK);
+                                 sys::ServiceDirectory::CreateFromNamespace(), &builder),
+            ZX_OK);
   builder->CloneAll();
 
   zx::channel our_channel, their_channel;
@@ -168,21 +154,20 @@ TEST(Processes, PassHandle) {
   EXPECT_EQ(builder->Start(&process), ZX_OK);
 
   zx_signals_t pending;
-  ASSERT_EQ(our_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
-                                 &pending), ZX_OK);
+  ASSERT_EQ(our_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending), ZX_OK);
 
   zx::thread thread;
   uint32_t actual_bytes, actual_handles;
-  ASSERT_EQ(our_channel.read(0u, nullptr, thread.reset_and_get_address(),
-                             0u, 1u, &actual_bytes, &actual_handles), ZX_OK);
+  ASSERT_EQ(our_channel.read(0u, nullptr, thread.reset_and_get_address(), 0u, 1u, &actual_bytes,
+                             &actual_handles),
+            ZX_OK);
   EXPECT_EQ(actual_bytes, 0u);
   EXPECT_EQ(actual_handles, 1u);
 
   // At this point the inferior is waiting for us to close the channel.
   our_channel.reset();
 
-  EXPECT_EQ(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(),
-                             &pending), ZX_OK);
+  EXPECT_EQ(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), &pending), ZX_OK);
   int rc;
   EXPECT_EQ(GetProcessReturnCode(process.get(), &rc), ZX_OK);
   EXPECT_EQ(rc, 0);

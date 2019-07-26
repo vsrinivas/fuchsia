@@ -38,8 +38,7 @@
 namespace Trie {
 template <unsigned int RADIX_BITS>
 struct ConstantsFor {
-  static_assert(RADIX_BITS == 1 || RADIX_BITS == 2 || RADIX_BITS == 4 ||
-                    RADIX_BITS == 8,
+  static_assert(RADIX_BITS == 1 || RADIX_BITS == 2 || RADIX_BITS == 4 || RADIX_BITS == 8,
                 "Radix sizes supported: 1, 2, 4, 8.");
   constexpr static unsigned int mask(unsigned int radix_bits) {
     return (radix_bits == 1) ? 1 : (1 + (mask(radix_bits - 1) << 1));
@@ -55,8 +54,7 @@ struct ConstantsFor {
 // Set-like structure illustrating radix sort.
 template <unsigned int RADIX_BITS>
 struct Set : public ConstantsFor<RADIX_BITS> {
-  std::array<Set*, ConstantsFor<RADIX_BITS>::subtries_size> subtries = {
-      {nullptr}};
+  std::array<Set*, ConstantsFor<RADIX_BITS>::subtries_size> subtries = {{nullptr}};
   unsigned int elements_counter = 0u;
 
   ~Set() {
@@ -101,16 +99,15 @@ struct Set : public ConstantsFor<RADIX_BITS> {
   }
 
  private:
-  static void fill_vector_sorted(Set* trie, std::vector<std::string>& sorted,
-                                 std::string& key, int depth) {
+  static void fill_vector_sorted(Set* trie, std::vector<std::string>& sorted, std::string& key,
+                                 int depth) {
     const auto byte_idx = depth / ConstantsFor<RADIX_BITS>::steps_in_byte;
     const auto radix_idx = depth % ConstantsFor<RADIX_BITS>::steps_in_byte;
     for (auto i = 0u; i < trie->elements_counter; ++i)
       sorted.emplace_back(key.begin(), key.begin() + byte_idx);
     for (auto i = 0u; i < ConstantsFor<RADIX_BITS>::subtries_size; ++i) {
       if (trie->subtries[i] != nullptr) {
-        auto shift = (ConstantsFor<RADIX_BITS>::steps_in_byte - radix_idx - 1) *
-                     RADIX_BITS;
+        auto shift = (ConstantsFor<RADIX_BITS>::steps_in_byte - radix_idx - 1) * RADIX_BITS;
         key[byte_idx] &= ~(ConstantsFor<RADIX_BITS>::radix_mask << shift);
         key[byte_idx] |= i << shift;
         fill_vector_sorted(trie->subtries[i], sorted, key, depth + 1);
@@ -122,8 +119,7 @@ struct Set : public ConstantsFor<RADIX_BITS> {
 // Map-like structure to store and retrieve data.
 template <class T, unsigned int RADIX_BITS>
 struct Map : public ConstantsFor<RADIX_BITS> {
-  std::array<Map*, ConstantsFor<RADIX_BITS>::subtries_size> subtries = {
-      {nullptr}};
+  std::array<Map*, ConstantsFor<RADIX_BITS>::subtries_size> subtries = {{nullptr}};
   T value;
 
   ~Map() {

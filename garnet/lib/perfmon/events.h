@@ -63,8 +63,7 @@ class ModelEventManager {
   // Returns true if |id| is valid, otherwise false.
   // This function is thread-safe.
   // TODO(dje): Rename to LookupEventById.
-  bool EventIdToEventDetails(EventId id,
-                             const EventDetails** out_details) const;
+  bool EventIdToEventDetails(EventId id, const EventDetails** out_details) const;
 
   // Look up the event details for event |event_name| in group |group_name|.
   // Returns true if |id| is valid, otherwise false.
@@ -82,10 +81,8 @@ class ModelEventManager {
   void Dump() const;
 
  private:
-  ModelEventManager(const std::string& model_name,
-                    const EventTable* arch_events,
-                    const EventTable* fixed_events,
-                    const EventTable* model_events,
+  ModelEventManager(const std::string& model_name, const EventTable* arch_events,
+                    const EventTable* fixed_events, const EventTable* model_events,
                     const EventTable* misc_events);
 
   void DumpGroup(const char* name, const EventTable* events) const;

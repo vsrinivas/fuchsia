@@ -14,9 +14,7 @@ namespace receive_mode {
 class Fuzzer {
  public:
   explicit Fuzzer(uint8_t type)
-      : receive_mode_(
-            static_cast<fuchsia::overnet::protocol::ReliabilityAndOrdering>(
-                type)) {}
+      : receive_mode_(static_cast<fuchsia::overnet::protocol::ReliabilityAndOrdering>(type)) {}
 
   void Step() { iteration_++; }
 
@@ -28,21 +26,19 @@ class Fuzzer {
     if (begun_seqs_.count(seq) == 1) {
       bool saw_immediate_error = false;
       receive_mode_.Begin(
-          seq, StatusCallback(ALLOCATED_CALLBACK,
-                              [&saw_immediate_error](const Status& status) {
-                                assert(status.is_error());
-                                saw_immediate_error = true;
-                              }));
+          seq, StatusCallback(ALLOCATED_CALLBACK, [&saw_immediate_error](const Status& status) {
+            assert(status.is_error());
+            saw_immediate_error = true;
+          }));
       assert(saw_immediate_error);
     } else {
-      receive_mode_.Begin(
-          seq,
-          StatusCallback(ALLOCATED_CALLBACK, [seq, this](const Status& status) {
-            if (status.is_ok()) {
-              assert(begun_seqs_.count(seq) == 0);
-              begun_seqs_.insert(seq);
-            }
-          }));
+      receive_mode_.Begin(seq,
+                          StatusCallback(ALLOCATED_CALLBACK, [seq, this](const Status& status) {
+                            if (status.is_ok()) {
+                              assert(begun_seqs_.count(seq) == 0);
+                              begun_seqs_.insert(seq);
+                            }
+                          }));
     }
     return true;
   }

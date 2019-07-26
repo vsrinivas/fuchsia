@@ -52,8 +52,7 @@ const char kOutputPathPrefixKey[] = "output_path_prefix";
 
 }  // namespace
 
-SessionResultSpec::SessionResultSpec(const std::string& config_name,
-                                     const std::string& model_name,
+SessionResultSpec::SessionResultSpec(const std::string& config_name, const std::string& model_name,
                                      size_t num_iterations, size_t num_traces,
                                      const std::string& output_path_prefix)
     : config_name(config_name),
@@ -63,14 +62,11 @@ SessionResultSpec::SessionResultSpec(const std::string& config_name,
       output_path_prefix(output_path_prefix) {}
 
 // Given an iteration number and trace number, return the output file.
-std::string SessionResultSpec::GetTraceFilePath(size_t iter_num,
-                                                size_t trace_num) const {
-  return fxl::StringPrintf("%s.%zu.%zu.cpuperf", output_path_prefix.c_str(),
-                           iter_num, trace_num);
+std::string SessionResultSpec::GetTraceFilePath(size_t iter_num, size_t trace_num) const {
+  return fxl::StringPrintf("%s.%zu.%zu.cpuperf", output_path_prefix.c_str(), iter_num, trace_num);
 }
 
-bool DecodeSessionResultSpec(const std::string& json,
-                             SessionResultSpec* out_spec) {
+bool DecodeSessionResultSpec(const std::string& json, SessionResultSpec* out_spec) {
   // Initialize schemas for JSON validation.
   auto root_schema = rapidjson_utils::InitSchema(kRootSchema);
   if (!root_schema) {
@@ -83,12 +79,11 @@ bool DecodeSessionResultSpec(const std::string& json,
   if (document.HasParseError()) {
     auto offset = document.GetErrorOffset();
     auto code = document.GetParseError();
-    FXL_LOG(ERROR) << "Couldn't parse the session result spec file: offset "
-                   << offset << ", " << GetParseError_En(code);
+    FXL_LOG(ERROR) << "Couldn't parse the session result spec file: offset " << offset << ", "
+                   << GetParseError_En(code);
     return false;
   }
-  if (!rapidjson_utils::ValidateSchema(document, *root_schema,
-                                       "session result spec")) {
+  if (!rapidjson_utils::ValidateSchema(document, *root_schema, "session result spec")) {
     return false;
   }
 
@@ -116,8 +111,7 @@ bool DecodeSessionResultSpec(const std::string& json,
   return true;
 }
 
-bool WriteSessionResultSpec(const std::string& output_file_path,
-                            const SessionResultSpec& spec) {
+bool WriteSessionResultSpec(const std::string& output_file_path, const SessionResultSpec& spec) {
   rapidjson::StringBuffer string_buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
 

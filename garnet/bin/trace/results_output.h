@@ -13,8 +13,7 @@
 
 namespace tracing {
 
-void OutputResults(std::ostream& out,
-                   const std::vector<measure::Result>& results);
+void OutputResults(std::ostream& out, const std::vector<measure::Result>& results);
 
 }  // namespace tracing
 

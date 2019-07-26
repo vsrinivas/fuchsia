@@ -47,9 +47,7 @@ class MeasureTimeBetween {
   // For each pair of a first event occurence followed by a second event
   // occurence (with no other occurences of either event in between), the
   // results contain the duration between the two.
-  const std::unordered_map<uint64_t, std::vector<uint64_t>>& results() {
-    return results_;
-  }
+  const std::unordered_map<uint64_t, std::vector<uint64_t>>& results() { return results_; }
 
  private:
   bool ProcessInstant(const trace::Record::Event& event);

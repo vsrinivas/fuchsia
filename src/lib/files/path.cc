@@ -46,12 +46,10 @@ bool ForEachEntry(int root_fd, const std::string& path,
   if (dir_fd == -1) {
     return false;
   }
-  std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(fdopendir(dir_fd),
-                                                    SafeCloseDir);
+  std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(fdopendir(dir_fd), SafeCloseDir);
   if (!dir.get())
     return false;
-  for (struct dirent* entry = readdir(dir.get()); entry != nullptr;
-       entry = readdir(dir.get())) {
+  for (struct dirent* entry = readdir(dir.get()); entry != nullptr; entry = readdir(dir.get())) {
     char* name = entry->d_name;
     if (name[0]) {
       if (name[0] == '.') {
@@ -127,8 +125,7 @@ std::string SimplifyPath(std::string path) {
     ++next_separator;
     size_t component_size = next_component_start - component_start;
     if (put != component_start && component_size > 0) {
-      path.replace(put, component_size,
-                   path.substr(component_start, component_size));
+      path.replace(put, component_size, path.substr(component_start, component_size));
     }
     put += component_size;
     get = next_component_start;
@@ -153,8 +150,7 @@ std::string SimplifyPath(std::string path) {
   } else {
     // Otherwise, we need to copy over the last component.
     if (put != component_start && last_component_size > 0) {
-      path.replace(put, last_component_size,
-                   path.substr(component_start, last_component_size));
+      path.replace(put, last_component_size, path.substr(component_start, last_component_size));
     }
     put += last_component_size;
   }
@@ -220,16 +216,15 @@ bool DeletePathAt(int root_fd, const std::string& path, bool recursive) {
   std::list<std::string> directories;
   directories.push_back(path);
   for (auto it = directories.begin(); it != directories.end(); ++it) {
-    if (!ForEachEntry(root_fd, *it,
-                      [root_fd, &directories](const std::string& child) {
-                        if (IsDirectoryAt(root_fd, child)) {
-                          directories.push_back(child);
-                        } else {
-                          if (unlinkat(root_fd, child.c_str(), 0) != 0)
-                            return false;
-                        }
-                        return true;
-                      })) {
+    if (!ForEachEntry(root_fd, *it, [root_fd, &directories](const std::string& child) {
+          if (IsDirectoryAt(root_fd, child)) {
+            directories.push_back(child);
+          } else {
+            if (unlinkat(root_fd, child.c_str(), 0) != 0)
+              return false;
+          }
+          return true;
+        })) {
       return false;
     }
   }

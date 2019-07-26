@@ -46,14 +46,12 @@ http::URLResponse FakeSuccess(int32_t code, const std::string& body) {
 
 void VerifyOAuthResponse(OAuthResponse got, OAuthResponse want) {
   EXPECT_EQ(want.status, got.status);
-  EXPECT_TRUE(got.error_description.find(want.error_description) !=
-              std::string::npos);
+  EXPECT_TRUE(got.error_description.find(want.error_description) != std::string::npos);
 
   if (want.json_response.IsObject() && got.json_response.IsObject()) {
     for (auto& m : want.json_response.GetObject()) {
       auto key = m.name.GetString();
-      rapidjson::Value::ConstMemberIterator itr =
-          got.json_response.FindMember(key);
+      rapidjson::Value::ConstMemberIterator itr = got.json_response.FindMember(key);
       EXPECT_TRUE(itr != got.json_response.MemberEnd());
 
       if (m.value.IsString())
@@ -68,8 +66,7 @@ void VerifyOAuthResponse(OAuthResponse got, OAuthResponse want) {
         EXPECT_EQ(got.json_response[key].GetBool(), itr->value.GetBool());
       if (m.value.IsArray()) {
         for (uint i = 0; i < want.json_response[key].GetArray().Size(); i++) {
-          EXPECT_EQ(want.json_response[key].GetArray()[i],
-                    got.json_response[key].GetArray()[i]);
+          EXPECT_EQ(want.json_response[key].GetArray()[i], got.json_response[key].GetArray()[i]);
         }
       }
     }
@@ -87,44 +84,39 @@ class OAuthResponseTest : public ::testing::Test {
 
 TEST_F(OAuthResponseTest, CheckParseOAuthResponse) {
   rapidjson::Document no_json_body;
-  VerifyOAuthResponse(ParseOAuthResponse(FakeError(-2, "Bad request")),
-                      OAuthResponse(AuthProviderStatus::NETWORK_ERROR,
-                                    "Bad request", std::move(no_json_body)));
+  VerifyOAuthResponse(
+      ParseOAuthResponse(FakeError(-2, "Bad request")),
+      OAuthResponse(AuthProviderStatus::NETWORK_ERROR, "Bad request", std::move(no_json_body)));
 
   rapidjson::Document json_200;
   json_200.Parse("{\"token\":\"xyz\"}");
   VerifyOAuthResponse(
-      ParseOAuthResponse(
-          FakeSuccess(200, modular::JsonValueToPrettyString(json_200))),
+      ParseOAuthResponse(FakeSuccess(200, modular::JsonValueToPrettyString(json_200))),
       OAuthResponse(AuthProviderStatus::OK, "", std::move(json_200)));
 
   rapidjson::Document json_400;
   json_400.Parse("{\"error\":\"invalid_grant\"}");
-  VerifyOAuthResponse(ParseOAuthResponse(FakeSuccess(
-                          400, modular::JsonValueToPrettyString(json_400))),
-                      OAuthResponse(AuthProviderStatus::REAUTH_REQUIRED, "400",
-                                    std::move(json_400)));
+  VerifyOAuthResponse(
+      ParseOAuthResponse(FakeSuccess(400, modular::JsonValueToPrettyString(json_400))),
+      OAuthResponse(AuthProviderStatus::REAUTH_REQUIRED, "400", std::move(json_400)));
 
   rapidjson::Document json_400_br;
   json_400_br.Parse("{\"error\":\"invalid_argument\"}");
-  VerifyOAuthResponse(ParseOAuthResponse(FakeSuccess(
-                          400, modular::JsonValueToPrettyString(json_400_br))),
-                      OAuthResponse(AuthProviderStatus::OAUTH_SERVER_ERROR,
-                                    "400", std::move(json_400_br)));
+  VerifyOAuthResponse(
+      ParseOAuthResponse(FakeSuccess(400, modular::JsonValueToPrettyString(json_400_br))),
+      OAuthResponse(AuthProviderStatus::OAUTH_SERVER_ERROR, "400", std::move(json_400_br)));
 
   rapidjson::Document json_401;
   json_401.Parse("{\"error\":\"invalid_client\"}");
-  VerifyOAuthResponse(ParseOAuthResponse(FakeSuccess(
-                          401, modular::JsonValueToPrettyString(json_401))),
-                      OAuthResponse(AuthProviderStatus::OAUTH_SERVER_ERROR,
-                                    "401", std::move(json_401)));
+  VerifyOAuthResponse(
+      ParseOAuthResponse(FakeSuccess(401, modular::JsonValueToPrettyString(json_401))),
+      OAuthResponse(AuthProviderStatus::OAUTH_SERVER_ERROR, "401", std::move(json_401)));
 
   rapidjson::Document json_403;
   json_403.Parse("{\"error\":\"access_denied\"}");
-  VerifyOAuthResponse(ParseOAuthResponse(FakeSuccess(
-                          403, modular::JsonValueToPrettyString(json_403))),
-                      OAuthResponse(AuthProviderStatus::OAUTH_SERVER_ERROR,
-                                    "403", std::move(json_403)));
+  VerifyOAuthResponse(
+      ParseOAuthResponse(FakeSuccess(403, modular::JsonValueToPrettyString(json_403))),
+      OAuthResponse(AuthProviderStatus::OAUTH_SERVER_ERROR, "403", std::move(json_403)));
 }
 
 }  // namespace oauth

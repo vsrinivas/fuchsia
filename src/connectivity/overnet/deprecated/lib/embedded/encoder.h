@@ -24,9 +24,7 @@ class Encoder {
     return reinterpret_cast<T*>(message_.bytes.data() + offset);
   }
 
-  fuchsia::overnet::protocol::ZirconChannelMessage GetMessage() {
-    return std::move(message_);
-  }
+  fuchsia::overnet::protocol::ZirconChannelMessage GetMessage() { return std::move(message_); }
 
   size_t CurrentLength() const { return message_.bytes.size(); }
 
@@ -34,12 +32,9 @@ class Encoder {
 
   template <class Constructor>
   RouterEndpoint::NewStream AppendHandle(
-      size_t offset,
-      fuchsia::overnet::protocol::ReliabilityAndOrdering
-          reliability_and_ordering,
+      size_t offset, fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
       Constructor constructor) {
-    auto new_stream =
-        std::move(*stream_->InitiateFork(reliability_and_ordering));
+    auto new_stream = std::move(*stream_->InitiateFork(reliability_and_ordering));
     constructor(&message_.handles.emplace_back(), new_stream.stream_id());
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_PRESENT;
     return new_stream;

@@ -124,29 +124,29 @@ namespace perftest {
 // This is a pure virtual interface so that one can potentially use a test
 // runner other than the one provided by this library.
 class RepeatState {
-public:
-    // KeepRunning() should be called by test functions using a "while"
-    // loop shown above.  A call to KeepRunning() indicates the start or
-    // end of a test run, or both.  KeepRunning() returns a bool indicating
-    // whether the caller should do another test run.
-    virtual bool KeepRunning() = 0;
+ public:
+  // KeepRunning() should be called by test functions using a "while"
+  // loop shown above.  A call to KeepRunning() indicates the start or
+  // end of a test run, or both.  KeepRunning() returns a bool indicating
+  // whether the caller should do another test run.
+  virtual bool KeepRunning() = 0;
 
-    // If the test processes some number of bytes per run, this amount can
-    // be declared by calling this method.  This allows the perftest
-    // library to calculate the throughput of the test, in bytes per unit
-    // time.
-    virtual void SetBytesProcessedPerRun(uint64_t bytes) = 0;
+  // If the test processes some number of bytes per run, this amount can
+  // be declared by calling this method.  This allows the perftest
+  // library to calculate the throughput of the test, in bytes per unit
+  // time.
+  virtual void SetBytesProcessedPerRun(uint64_t bytes) = 0;
 
-    // Calls to DeclareStep() specify the names of the steps that a test
-    // consists of.  This is used for multi-step tests.  If DeclareStep()
-    // is not called, the test will just have a single step.  DeclareStep()
-    // should not be called after the first call to KeepRunning().
-    virtual void DeclareStep(const char* name) = 0;
+  // Calls to DeclareStep() specify the names of the steps that a test
+  // consists of.  This is used for multi-step tests.  If DeclareStep()
+  // is not called, the test will just have a single step.  DeclareStep()
+  // should not be called after the first call to KeepRunning().
+  virtual void DeclareStep(const char* name) = 0;
 
-    // In multi-step tests, NextStep() should be called between each step
-    // within a test run.  So if a test has N steps, NextStep() should be
-    // called N-1 times between calls to KeepRunning().
-    virtual void NextStep() = 0;
+  // In multi-step tests, NextStep() should be called between each step
+  // within a test run.  So if a test has N steps, NextStep() should be
+  // called N-1 times between calls to KeepRunning().
+  virtual void NextStep() = 0;
 };
 
 typedef bool TestFunc(RepeatState* state);
@@ -157,10 +157,8 @@ void RegisterTest(const char* name, fbl::Function<TestFunc> test_func);
 // Convenience routine for registering parameterized perf tests.
 template <typename Func, typename Arg, typename... Args>
 void RegisterTest(const char* name, Func test_func, Arg arg, Args... args) {
-    auto wrapper_func = [=](RepeatState* state) {
-        return test_func(state, arg, args...);
-    };
-    RegisterTest(name, wrapper_func);
+  auto wrapper_func = [=](RepeatState* state) { return test_func(state, arg, args...); };
+  RegisterTest(name, wrapper_func);
 }
 
 // Convenience routine for registering a perf test that is specified by a
@@ -172,15 +170,15 @@ void RegisterTest(const char* name, Func test_func, Arg arg, Args... args) {
 // call.
 template <SimpleTestFunc test_func>
 void RegisterSimpleTest(const char* test_name) {
-    auto wrapper_func = [](RepeatState* state) {
-        while (state->KeepRunning()) {
-            if (!test_func()) {
-                return false;
-            }
-        }
-        return true;
-    };
-    RegisterTest(test_name, std::move(wrapper_func));
+  auto wrapper_func = [](RepeatState* state) {
+    while (state->KeepRunning()) {
+      if (!test_func()) {
+        return false;
+      }
+    }
+    return true;
+  };
+  RegisterTest(test_name, std::move(wrapper_func));
 }
 
 // Entry point for the perf test runner that a test executable should call
@@ -199,8 +197,7 @@ int PerfTestMain(int argc, char** argv, const char* test_suite);
 // command line arguments, or for test cases that reuse some shared state
 // and must be run in a particular order.
 bool RunTest(const char* test_suite, const char* test_name,
-             const fbl::Function<TestFunc>& test_func,
-             uint32_t run_count, ResultsSet* results_set,
+             const fbl::Function<TestFunc>& test_func, uint32_t run_count, ResultsSet* results_set,
              fbl::String* error_out);
 
 // DoNotOptimize() can be used to prevent the computation of |value| from
@@ -209,9 +206,9 @@ bool RunTest(const char* test_suite, const char* test_name,
 // (if |value| is a pointer).
 template <typename Type>
 inline void DoNotOptimize(const Type& value) {
-    // The "memory" constraint tells the compiler that the inline assembly
-    // must be assumed to access memory that |value| points to.
-    asm volatile("" : : "g"(value) : "memory");
+  // The "memory" constraint tells the compiler that the inline assembly
+  // must be assumed to access memory that |value| points to.
+  asm volatile("" : : "g"(value) : "memory");
 }
 
 }  // namespace perftest
@@ -219,9 +216,9 @@ inline void DoNotOptimize(const Type& value) {
 // This calls func() at startup time as a global constructor.  This is
 // useful for registering perf tests.  This is similar to declaring func()
 // with __attribute__((constructor)), but portable.
-#define PERFTEST_CTOR(func) \
-    namespace { \
-    struct FuncCaller_##func { \
-        FuncCaller_##func() { func(); } \
-    } global; \
-    }
+#define PERFTEST_CTOR(func)         \
+  namespace {                       \
+  struct FuncCaller_##func {        \
+    FuncCaller_##func() { func(); } \
+  } global;                         \
+  }

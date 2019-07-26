@@ -33,18 +33,14 @@ namespace gen = ::llcpp::fidl::test::llcpp::controlflow;
 
 class Server : public gen::ControlFlow::Interface {
  public:
-  void Shutdown(
-      ShutdownCompleter::Sync txn) final {
-    txn.Close(ZX_OK);
-  }
+  void Shutdown(ShutdownCompleter::Sync txn) final { txn.Close(ZX_OK); }
 
   void NoReplyMustSendAccessDeniedEpitaph(
       NoReplyMustSendAccessDeniedEpitaphCompleter::Sync txn) final {
     txn.Close(ZX_ERR_ACCESS_DENIED);
   }
 
-  void MustSendAccessDeniedEpitaph(
-      MustSendAccessDeniedEpitaphCompleter::Sync txn) final {
+  void MustSendAccessDeniedEpitaph(MustSendAccessDeniedEpitaphCompleter::Sync txn) final {
     txn.Close(ZX_ERR_ACCESS_DENIED);
   }
 };
@@ -60,9 +56,8 @@ void SpinUp(zx::channel server, Server* impl, async::Loop* loop) {
 void WaitUntilNextIteration(async_dispatcher_t* dispatcher) {
   zx::eventpair ep0, ep1;
   ASSERT_OK(zx::eventpair::create(0, &ep0, &ep1));
-  async::PostTask(dispatcher, [ep = std::move(ep1)]() {
-    EXPECT_OK(ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
-  });
+  async::PostTask(dispatcher,
+                  [ep = std::move(ep1)]() { EXPECT_OK(ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED)); });
 
   zx_signals_t signals = 0;
   ep0.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);

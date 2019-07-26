@@ -16,8 +16,7 @@ namespace harvester {
 
 typedef std::vector<std::pair<const std::string, uint64_t>> SampleList;
 typedef std::vector<std::pair<uint64_t, uint64_t>> SampleListById;
-typedef std::vector<std::pair<const std::string, const std::string>>
-    StringSampleList;
+typedef std::vector<std::pair<const std::string, const std::string>> StringSampleList;
 
 enum class DockyardProxyStatus : int {
   OK = 0,
@@ -40,14 +39,12 @@ class DockyardProxy {
                                               const std::string& json) = 0;
 
   // Send a single sample to the Dockyard.
-  virtual DockyardProxyStatus SendSample(const std::string& stream_name,
-                                         uint64_t value) = 0;
+  virtual DockyardProxyStatus SendSample(const std::string& stream_name, uint64_t value) = 0;
 
   // Send a list of samples with the same timestamp to the Dockyard.
   virtual DockyardProxyStatus SendSampleList(const SampleList list) = 0;
 
-  virtual DockyardProxyStatus SendStringSampleList(
-      const StringSampleList list) = 0;
+  virtual DockyardProxyStatus SendStringSampleList(const StringSampleList list) = 0;
 };
 
 }  // namespace harvester

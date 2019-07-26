@@ -9,7 +9,7 @@
 namespace zx {
 
 zx_status_t port::create(uint32_t options, port* result) {
-    return zx_port_create(options, result->reset_and_get_address());
+  return zx_port_create(options, result->reset_and_get_address());
 }
 
-} // namespace zx
+}  // namespace zx

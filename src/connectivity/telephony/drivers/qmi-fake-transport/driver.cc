@@ -17,13 +17,11 @@
 #include <thread>
 
 zx_status_t qmi_fake_bind(void* ctx, zx_device_t* device) {
-
   test_protocol_t proto;
   auto status = device_get_protocol(device, ZX_PROTOCOL_TEST, &proto);
 
   if (status != ZX_OK) {
-    std::printf("qmi_fake_bind: failed protocol: %s\n",
-                zx_status_get_string(status));
+    std::printf("qmi_fake_bind: failed protocol: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -40,10 +38,10 @@ zx_status_t qmi_fake_bind(void* ctx, zx_device_t* device) {
 }
 
 static constexpr zx_driver_ops_t qmi_fake_driver_ops = []() {
-    zx_driver_ops_t ops = {};
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = qmi_fake_bind;
-    return ops;
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = qmi_fake_bind;
+  return ops;
 }();
 
 // clang-format off

@@ -16,8 +16,7 @@ using SocketDrainerTest = ::gtest::TestLoopFixture;
 
 class Client : public SocketDrainer::Client {
  public:
-  Client(fit::function<void()> available_callback,
-         fit::function<void()> completion_callback)
+  Client(fit::function<void()> available_callback, fit::function<void()> completion_callback)
       : available_callback_(std::move(available_callback)),
         completion_callback_(std::move(completion_callback)) {}
   ~Client() override {}

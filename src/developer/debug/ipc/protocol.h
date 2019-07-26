@@ -131,13 +131,7 @@ struct KillReply {
   zx_status_t status = 0;
 };
 
-enum class TaskType : uint32_t {
-  kProcess = 0,
-  kJob,
-  kSystemRoot,
-  kComponentRoot,
-  kLast
-};
+enum class TaskType : uint32_t { kProcess = 0, kJob, kSystemRoot, kComponentRoot, kLast };
 const char* TaskTypeToString(TaskType);
 
 // The debug agent will follow a successful AttachReply with notifications for
@@ -149,8 +143,7 @@ struct AttachRequest {
 
 struct AttachReply {
   uint64_t koid = 0;
-  zx_status_t status =
-      0;  // zx_status_t value from attaching. ZX_OK on success.
+  zx_status_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
   std::string name;
 };
 

@@ -31,14 +31,11 @@ class BasicOvernetEmbedded : public fuchsia::overnet::embedded::Overnet {
   BasicOvernetEmbedded(bool allow_non_determinism = true);
   ~BasicOvernetEmbedded();
 
-  void ListPeers(uint64_t last_seen_version,
-                 ListPeersCallback callback) override;
+  void ListPeers(uint64_t last_seen_version, ListPeersCallback callback) override;
   void RegisterService(
       std::string service_name,
-      std::unique_ptr<fuchsia::overnet::embedded::ServiceProvider_Proxy>
-          service_provider) override;
-  void ConnectToService(fuchsia::overnet::protocol::embedded::NodeId node,
-                        std::string service_name,
+      std::unique_ptr<fuchsia::overnet::embedded::ServiceProvider_Proxy> service_provider) override;
+  void ConnectToService(fuchsia::overnet::protocol::embedded::NodeId node, std::string service_name,
                         ClosedPtr<ZxChannel> channel) override;
 
   int Run();
@@ -60,11 +57,9 @@ class BasicOvernetEmbedded : public fuchsia::overnet::embedded::Overnet {
   TraceCout running_log_{&reactor_};
   ScopedRenderer running_renderer_{&running_log_};
   RouterEndpoint endpoint_{&reactor_, GenerateNodeId(), true};
-  std::map<std::string,
-           std::unique_ptr<fuchsia::overnet::embedded::ServiceProvider_Proxy>>
+  std::map<std::string, std::unique_ptr<fuchsia::overnet::embedded::ServiceProvider_Proxy>>
       services_;
-  std::unique_ptr<std::vector<Actor*>> actors_ =
-      std::make_unique<std::vector<Actor*>>();
+  std::unique_ptr<std::vector<Actor*>> actors_ = std::make_unique<std::vector<Actor*>>();
   Callback<void> shutdown_;
 };
 
@@ -73,8 +68,7 @@ std::unique_ptr<typename Service::Proxy_> ConnectToService(
     fuchsia::overnet::embedded::Overnet* overnet,
     const fuchsia::overnet::protocol::embedded::NodeId& peer) {
   auto [client, server] = ZxChannel::MakePair();
-  overnet->ConnectToService(fidl::Clone(peer), Service::Name_,
-                            std::move(server));
+  overnet->ConnectToService(fidl::Clone(peer), Service::Name_, std::move(server));
   return std::make_unique<typename Service::Proxy_>(std::move(client));
 }
 

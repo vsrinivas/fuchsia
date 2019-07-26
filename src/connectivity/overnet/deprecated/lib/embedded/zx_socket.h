@@ -22,8 +22,7 @@ class ZxSocket final : public fuchsia::overnet::protocol::ZirconSocket {
   void Encode(internal::Encoder* encoder, size_t offset);
   static ClosedPtr<ZxSocket> Decode(internal::Decoder* decoder, size_t offset);
 
-  static std::pair<ClosedPtr<ZxSocket>, ClosedPtr<ZxSocket>> MakePair(
-      uint32_t options);
+  static std::pair<ClosedPtr<ZxSocket>, ClosedPtr<ZxSocket>> MakePair(uint32_t options);
 
   RouterEndpoint::Stream* overnet_stream();
 
@@ -86,14 +85,12 @@ template <>
 struct CodingTraits<overnet::ClosedPtr<overnet::ZxSocket>> {
  public:
   static void Encode(overnet::internal::Encoder* encoder,
-                     overnet::ClosedPtr<overnet::ZxSocket>* socket,
-                     size_t offset) {
+                     overnet::ClosedPtr<overnet::ZxSocket>* socket, size_t offset) {
     (*socket)->Encode(encoder, offset);
     socket->reset();
   }
   static void Decode(overnet::internal::Decoder* decoder,
-                     overnet::ClosedPtr<overnet::ZxSocket>* socket,
-                     size_t offset) {
+                     overnet::ClosedPtr<overnet::ZxSocket>* socket, size_t offset) {
     *socket = overnet::ZxSocket::Decode(decoder, offset);
   }
 };

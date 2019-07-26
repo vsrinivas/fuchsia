@@ -35,12 +35,11 @@ Server::Server(zx::job job_for_search, zx::job job_for_launch,
 
 Server::~Server() {}
 
-bool Server::CreateProcessViaBuilder(
-    const std::string& path, const debugger_utils::Argv& argv,
-    std::unique_ptr<process::ProcessBuilder>* out_builder) {
+bool Server::CreateProcessViaBuilder(const std::string& path, const debugger_utils::Argv& argv,
+                                     std::unique_ptr<process::ProcessBuilder>* out_builder) {
   FXL_DCHECK(!argv.empty());
-  zx_status_t status = debugger_utils::CreateProcessBuilder(
-      job_for_launch_, argv[0], argv, services_, out_builder);
+  zx_status_t status =
+      debugger_utils::CreateProcessBuilder(job_for_launch_, argv[0], argv, services_, out_builder);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to initialize process builder: "
                    << debugger_utils::ZxErrorString(status);
@@ -77,14 +76,10 @@ void Server::QuitMessageLoop(bool status) {
 }
 
 void Server::PostQuitMessageLoop(bool status) {
-  async::PostTask(message_loop_.dispatcher(), [this, status] {
-      QuitMessageLoop(status);
-  });
+  async::PostTask(message_loop_.dispatcher(), [this, status] { QuitMessageLoop(status); });
 }
 
-void Server::WaitAsync(Thread* thread) {
-  exception_port_.WaitAsync(thread);
-}
+void Server::WaitAsync(Thread* thread) { exception_port_.WaitAsync(thread); }
 
 void Server::OnProcessException(const zx_port_packet_t& packet) {
   // At the moment we only support one process.
@@ -119,13 +114,11 @@ void Server::OnProcessException(const zx_port_packet_t& packet) {
   // unlikely, but technically possible).
   if (type == ZX_EXCP_SW_BREAKPOINT) {
     if (process->CheckDsosList(thread)) {
-      zx_status_t status =
-        debugger_utils::ResumeAfterSoftwareBreakpointInstruction(
-            thread->handle(), exception_port_.handle());
+      zx_status_t status = debugger_utils::ResumeAfterSoftwareBreakpointInstruction(
+          thread->handle(), exception_port_.handle());
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Unable to resume thread " << thread->GetName()
-                       << ", status: "
-                       << debugger_utils::ZxErrorString(status);
+                       << ", status: " << debugger_utils::ZxErrorString(status);
       }
       // This is a breakpoint we introduced. No point in passing it on to
       // other handlers. If resumption fails there's not much we can do.
@@ -166,8 +159,8 @@ void Server::OnProcessException(const zx_port_packet_t& packet) {
       delegate->OnSyntheticException(process, thread, eport, type, context);
       break;
     default:
-      FXL_LOG(ERROR) << "Ignoring unrecognized synthetic exception for thread "
-                     << tid << ": " << type;
+      FXL_LOG(ERROR) << "Ignoring unrecognized synthetic exception for thread " << tid << ": "
+                     << type;
       break;
   }
 }
@@ -206,8 +199,7 @@ void Server::OnProcessSignal(const zx_port_packet_t& packet) {
 
 ServerWithIO::ServerWithIO(zx::job job_for_search, zx::job job_for_launch,
                            std::shared_ptr<sys::ServiceDirectory> services)
-    : Server(std::move(job_for_search), std::move(job_for_launch),
-             std::move(services)),
+    : Server(std::move(job_for_search), std::move(job_for_launch), std::move(services)),
       client_sock_(-1) {}
 
 ServerWithIO::~ServerWithIO() {

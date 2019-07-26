@@ -23,8 +23,7 @@ bool PThreadCreateAndJoinTest() {
 }
 
 void RegisterTests() {
-  perftest::RegisterSimpleTest<PThreadCreateAndJoinTest>(
-      "PThreadCreateAndJoinTest");
+  perftest::RegisterSimpleTest<PThreadCreateAndJoinTest>("PThreadCreateAndJoinTest");
 }
 PERFTEST_CTOR(RegisterTests);
 

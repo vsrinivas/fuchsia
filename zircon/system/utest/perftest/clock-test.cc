@@ -12,32 +12,32 @@ namespace {
 // implementation of the syscall is non-trivial and can be rather slow on
 // some machines/VMs.
 bool ClockGetMonotonicTest() {
-    zx_clock_get_monotonic();
-    return true;
+  zx_clock_get_monotonic();
+  return true;
 }
 
 bool ClockGetUtcTest() {
-    zx_time_t now = 0;
-    zx_clock_get(ZX_CLOCK_UTC, &now);
-    return true;
+  zx_time_t now = 0;
+  zx_clock_get(ZX_CLOCK_UTC, &now);
+  return true;
 }
 
 bool ClockGetThreadTest() {
-    zx_time_t now = 0;
-    zx_clock_get(ZX_CLOCK_THREAD, &now);
-    return true;
+  zx_time_t now = 0;
+  zx_clock_get(ZX_CLOCK_THREAD, &now);
+  return true;
 }
 
 bool TicksGetTest() {
-    zx_ticks_get();
-    return true;
+  zx_ticks_get();
+  return true;
 }
 
 void RegisterTests() {
-    perftest::RegisterSimpleTest<ClockGetMonotonicTest>("ClockGetMonotonic");
-    perftest::RegisterSimpleTest<ClockGetUtcTest>("ClockGetUtc");
-    perftest::RegisterSimpleTest<ClockGetThreadTest>("ClockGetThread");
-    perftest::RegisterSimpleTest<TicksGetTest>("TicksGet");
+  perftest::RegisterSimpleTest<ClockGetMonotonicTest>("ClockGetMonotonic");
+  perftest::RegisterSimpleTest<ClockGetUtcTest>("ClockGetUtc");
+  perftest::RegisterSimpleTest<ClockGetThreadTest>("ClockGetThread");
+  perftest::RegisterSimpleTest<TicksGetTest>("TicksGet");
 }
 PERFTEST_CTOR(RegisterTests)
 

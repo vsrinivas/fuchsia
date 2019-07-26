@@ -22,8 +22,7 @@ class RawPrinter {
     std::string output_file_name;
   };
 
-  static std::unique_ptr<RawPrinter> Create(DecoderState* decoder,
-                                            const Config& config);
+  static std::unique_ptr<RawPrinter> Create(DecoderState* decoder, const Config& config);
 
   ~RawPrinter();
 

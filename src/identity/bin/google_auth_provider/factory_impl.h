@@ -18,10 +18,8 @@ namespace google_auth_provider {
 
 class FactoryImpl : public fuchsia::auth::AuthProviderFactory {
  public:
-  FactoryImpl(async_dispatcher_t* main_dispatcher,
-              sys::ComponentContext* context,
-              network_wrapper::NetworkWrapper* network_wrapper,
-              Settings settings);
+  FactoryImpl(async_dispatcher_t* main_dispatcher, sys::ComponentContext* context,
+              network_wrapper::NetworkWrapper* network_wrapper, Settings settings);
 
   ~FactoryImpl() override;
 
@@ -29,9 +27,8 @@ class FactoryImpl : public fuchsia::auth::AuthProviderFactory {
 
  private:
   // Factory:
-  void GetAuthProvider(
-      fidl::InterfaceRequest<fuchsia::auth::AuthProvider> auth_provider,
-      GetAuthProviderCallback callback) override;
+  void GetAuthProvider(fidl::InterfaceRequest<fuchsia::auth::AuthProvider> auth_provider,
+                       GetAuthProviderCallback callback) override;
 
   async_dispatcher_t* const main_dispatcher_;
   sys::ComponentContext* const context_;

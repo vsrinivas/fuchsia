@@ -17,6 +17,6 @@ fit::promise<> sleep_for_a_little_while();
 // Used by examples to simulate the passage of time in asynchronous logic.
 void resume_in_a_little_while(fit::suspended_task task);
 
-} // namespace utils
+}  // namespace utils
 
-#endif // ZIRCON_SYSTEM_UTEST_FIT_EXAMPLES_UTILS_H_
+#endif  // ZIRCON_SYSTEM_UTEST_FIT_EXAMPLES_UTILS_H_

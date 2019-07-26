@@ -18,14 +18,14 @@ __BEGIN_CDECLS;
 #ifndef HID_FIFO_SIZE
 #define HID_FIFO_SIZE 4096
 #endif
-#define HID_FIFO_MASK (HID_FIFO_SIZE-1)
+#define HID_FIFO_MASK (HID_FIFO_SIZE - 1)
 
 typedef struct {
-    uint8_t buf[HID_FIFO_SIZE];
-    uint32_t head;
-    uint32_t tail;
-    bool empty;
-    mtx_t lock;
+  uint8_t buf[HID_FIFO_SIZE];
+  uint32_t head;
+  uint32_t tail;
+  bool empty;
+  mtx_t lock;
 } zx_hid_fifo_t;
 
 zx_status_t zx_hid_fifo_create(zx_hid_fifo_t** fifo);

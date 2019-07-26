@@ -6,8 +6,8 @@
 
 namespace overnet {
 
-StreamLink::StreamLink(Router *router, NodeId peer,
-                       std::unique_ptr<StreamFramer> framer, uint64_t label)
+StreamLink::StreamLink(Router *router, NodeId peer, std::unique_ptr<StreamFramer> framer,
+                       uint64_t label)
     : router_(router),
       framer_(std::move(framer)),
       peer_(peer),
@@ -17,9 +17,8 @@ StreamLink::StreamLink(Router *router, NodeId peer,
 void StreamLink::Forward(Message message) {
   ScopedModule<StreamLink> in_link(this);
 
-  OVERNET_TRACE(DEBUG) << "StreamLink::Forward: emitting=" << emitting_
-                       << " closed=" << closed_ << " has_pending="
-                       << packet_stuffer_.HasPendingMessages();
+  OVERNET_TRACE(DEBUG) << "StreamLink::Forward: emitting=" << emitting_ << " closed=" << closed_
+                       << " has_pending=" << packet_stuffer_.HasPendingMessages();
   if (closed_) {
     return;
   }
@@ -38,8 +37,7 @@ void StreamLink::EmitOne() {
   ScopedModule<StreamLink> in_link(this);
   static uint64_t num_forwards = 0;
   auto n = num_forwards++;
-  OVERNET_TRACE(TRACE) << "StreamLink::EmitOne[" << n
-                       << "]: forward with emitting=" << emitting_
+  OVERNET_TRACE(TRACE) << "StreamLink::EmitOne[" << n << "]: forward with emitting=" << emitting_
                        << " closed=" << closed_;
 
   assert(!emitting_);
@@ -97,8 +95,7 @@ void StreamLink::Process(TimeStamp received, Slice bytes) {
 
     stats_.incoming_packet_count++;
 
-    if (auto status = packet_stuffer_.ParseAndForwardTo(
-            received, std::move(**input), router_);
+    if (auto status = packet_stuffer_.ParseAndForwardTo(received, std::move(**input), router_);
         status.is_error()) {
       OVERNET_TRACE(ERROR) << input.AsStatus();
       SetClosed();
@@ -135,9 +132,8 @@ fuchsia::overnet::protocol::LinkStatus StreamLink::GetLinkStatus() {
   fuchsia::overnet::protocol::LinkMetrics m;
   m.set_mss(std::max(kUnderadvertiseMaximumSendSize, maximum_segment_size()) -
             kUnderadvertiseMaximumSendSize);
-  return fuchsia::overnet::protocol::LinkStatus{router_->node_id().as_fidl(),
-                                                peer_.as_fidl(), local_id_, 1,
-                                                std::move(m)};
+  return fuchsia::overnet::protocol::LinkStatus{router_->node_id().as_fidl(), peer_.as_fidl(),
+                                                local_id_, 1, std::move(m)};
 }
 
 }  // namespace overnet

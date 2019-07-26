@@ -10,12 +10,9 @@ namespace component {
 
 JobProviderImpl::JobProviderImpl(Realm* realm) : realm_(realm) {}
 
-void JobProviderImpl::GetJob(GetJobCallback callback) {
-  callback(realm_->DuplicateJobForHub());
-}
+void JobProviderImpl::GetJob(GetJobCallback callback) { callback(realm_->DuplicateJobForHub()); }
 
-void JobProviderImpl::AddBinding(
-    fidl::InterfaceRequest<fuchsia::sys::JobProvider> request) {
+void JobProviderImpl::AddBinding(fidl::InterfaceRequest<fuchsia::sys::JobProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

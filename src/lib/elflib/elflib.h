@@ -62,8 +62,7 @@ class ElfLib {
   MemoryRegion GetSegmentData(size_t segment);
 
   // Get a note from the notes section.
-  std::optional<std::vector<uint8_t>> GetNote(const std::string& name,
-                                              uint64_t type);
+  std::optional<std::vector<uint8_t>> GetNote(const std::string& name, uint64_t type);
 
   // Get the NT_GNU_BUILD_ID note as a hex string. Return empty string if we
   // don't have that note.
@@ -109,9 +108,8 @@ class ElfLib {
   // Create an ElfLib object for reading ELF structures via a read callback.
   // The offsets will assume either an ELF file or an ELF mapped address space
   // depending on the value of the address_mode argument.
-  static std::unique_ptr<ElfLib> Create(
-      std::function<bool(uint64_t, std::vector<uint8_t>*)> fetch,
-      AddressMode address_mode = AddressMode::kProcess);
+  static std::unique_ptr<ElfLib> Create(std::function<bool(uint64_t, std::vector<uint8_t>*)> fetch,
+                                        AddressMode address_mode = AddressMode::kProcess);
 
   // Returns a map from symbol names to the locations of their PLT entries.
   // Returns an empty map if the data is inaccessible.
@@ -133,8 +131,7 @@ class ElfLib {
   }
 
  private:
-  explicit ElfLib(std::unique_ptr<MemoryAccessor>&& memory,
-                  AddressMode address_mode);
+  explicit ElfLib(std::unique_ptr<MemoryAccessor>&& memory, AddressMode address_mode);
 
   // Add a warning to this instance. See GetAndClearWarnings.
   void Warn(const std::string&& m) { warnings_.push_back(m); }
@@ -148,8 +145,8 @@ class ElfLib {
   };
 
   // Create a new ElfLib object.
-  static std::unique_ptr<ElfLib> Create(
-      std::unique_ptr<MemoryAccessor>&& memory, AddressMode address_mode);
+  static std::unique_ptr<ElfLib> Create(std::unique_ptr<MemoryAccessor>&& memory,
+                                        AddressMode address_mode);
 
   // See the definition of this class in elflib.cc for details.
   class PltEntryBuffer;

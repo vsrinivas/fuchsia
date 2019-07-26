@@ -13,21 +13,19 @@
 #include <zxtest/zxtest.h>
 
 TEST(UnsafeTest, BorrowChannel) {
-    fbl::unique_fd fd(open("/svc", O_DIRECTORY | O_RDONLY));
-    ASSERT_LE(0, fd.get());
+  fbl::unique_fd fd(open("/svc", O_DIRECTORY | O_RDONLY));
+  ASSERT_LE(0, fd.get());
 
-    fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
-    ASSERT_NOT_NULL(io);
+  fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+  ASSERT_NOT_NULL(io);
 
-    zx::unowned_channel dir(fdio_unsafe_borrow_channel(io));
-    ASSERT_TRUE(dir->is_valid());
+  zx::unowned_channel dir(fdio_unsafe_borrow_channel(io));
+  ASSERT_TRUE(dir->is_valid());
 
-    zx::channel h1, h2;
-    ASSERT_OK(zx::channel::create(0, &h1, &h2));
-    ASSERT_OK(fuchsia_io_NodeClone(dir->get(),
-                                          fuchsia_io_CLONE_FLAG_SAME_RIGHTS,
-                                          h1.release()));
+  zx::channel h1, h2;
+  ASSERT_OK(zx::channel::create(0, &h1, &h2));
+  ASSERT_OK(fuchsia_io_NodeClone(dir->get(), fuchsia_io_CLONE_FLAG_SAME_RIGHTS, h1.release()));
 
-    fdio_unsafe_release(io);
-    fd.reset();
+  fdio_unsafe_release(io);
+  fd.reset();
 }

@@ -25,56 +25,43 @@ class LifecycleObserver {
   virtual ~LifecycleObserver() = default;
 
   // Reports before any test is executed.
-  virtual void OnProgramStart(const Runner& runner) {
-  }
+  virtual void OnProgramStart(const Runner& runner) {}
 
   // Reports before every iteration starts.
-  virtual void OnIterationStart(const Runner& runner, int iteration) {
-  }
+  virtual void OnIterationStart(const Runner& runner, int iteration) {}
 
   // Reports before any environment is set up.
-  virtual void OnEnvironmentSetUp(const Runner& runner) {
-  }
+  virtual void OnEnvironmentSetUp(const Runner& runner) {}
 
   // Reports before a TestCase is set up.
-  virtual void OnTestCaseStart(const TestCase& test_case) {
-  }
+  virtual void OnTestCaseStart(const TestCase& test_case) {}
 
   // Reports before a test starts.
-  virtual void OnTestStart(const TestCase& test_case, const TestInfo& test) {
-  }
+  virtual void OnTestStart(const TestCase& test_case, const TestInfo& test) {}
 
   // Reports when an assertion on the running tests fails.
-  virtual void OnAssertion(const Assertion& assertion) {
-  }
+  virtual void OnAssertion(const Assertion& assertion) {}
 
   // Reports after a test execution was skipped.
-  virtual void OnTestSkip(const TestCase& test_case, const TestInfo& test) {
-  }
+  virtual void OnTestSkip(const TestCase& test_case, const TestInfo& test) {}
 
   // Reports after test execution completed with failures.
-  virtual void OnTestFailure(const TestCase& test_case, const TestInfo& test) {
-  }
+  virtual void OnTestFailure(const TestCase& test_case, const TestInfo& test) {}
 
   // Reports after test execution completed with no failures.
-  virtual void OnTestSuccess(const TestCase& test_case, const TestInfo& test) {
-  }
+  virtual void OnTestSuccess(const TestCase& test_case, const TestInfo& test) {}
 
   // Reports before a TestCase is torn down.
-  virtual void OnTestCaseEnd(const TestCase& test_case) {
-  }
+  virtual void OnTestCaseEnd(const TestCase& test_case) {}
 
   // Reports before any environment is torn down.
-  virtual void OnEnvironmentTearDown(const Runner& runner) {
-  }
+  virtual void OnEnvironmentTearDown(const Runner& runner) {}
 
   // Reports before every iteration starts.
-  virtual void OnIterationEnd(const Runner& runner, int iteration) {
-  }
+  virtual void OnIterationEnd(const Runner& runner, int iteration) {}
 
   // Reports after all test executed.
-  virtual void OnProgramEnd(const Runner& runner) {
-  }
+  virtual void OnProgramEnd(const Runner& runner) {}
 };
 
 }  // namespace zxtest

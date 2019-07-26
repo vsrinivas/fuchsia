@@ -21,8 +21,7 @@ int main(int argc, const char** argv) {
   const bool protected_output = command_line.HasOption("protected_output");
   scenic::ViewProviderComponent component(
       [protected_output](scenic::ViewContext view_context) {
-        return std::make_unique<examples::ImagePipeView>(
-            std::move(view_context), protected_output);
+        return std::make_unique<examples::ImagePipeView>(std::move(view_context), protected_output);
       },
       &loop);
   loop.Run();

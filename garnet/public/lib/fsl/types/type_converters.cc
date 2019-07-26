@@ -6,8 +6,7 @@
 
 namespace fidl {
 
-std::string TypeConverter<std::string, fidl::StringPtr>::Convert(
-    const fidl::StringPtr& value) {
+std::string TypeConverter<std::string, fidl::StringPtr>::Convert(const fidl::StringPtr& value) {
   std::string result;
   if (!value.is_null()) {
     result = *value;
@@ -15,8 +14,7 @@ std::string TypeConverter<std::string, fidl::StringPtr>::Convert(
   return result;
 }
 
-fidl::StringPtr TypeConverter<fidl::StringPtr, std::string>::Convert(
-    const std::string& value) {
+fidl::StringPtr TypeConverter<fidl::StringPtr, std::string>::Convert(const std::string& value) {
   return fidl::StringPtr(value.c_str(), value.size());
 }
 

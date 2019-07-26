@@ -19,74 +19,72 @@ namespace blobfs {
 //
 // These extents may be observed by derived classes of ExtentReserver
 class ExtentReserver {
-public:
-    // Reserves space for blocks in memory. Does not update disk.
-    //
-    // |extent.Length()| must be > 0.
-    void Reserve(const Extent& extent);
+ public:
+  // Reserves space for blocks in memory. Does not update disk.
+  //
+  // |extent.Length()| must be > 0.
+  void Reserve(const Extent& extent);
 
-    // Unreserves space for blocks in memory. Does not update disk.
-    void Unreserve(const Extent& extent);
+  // Unreserves space for blocks in memory. Does not update disk.
+  void Unreserve(const Extent& extent);
 
-    // Returns the total number of reserved blocks.
-    uint64_t ReservedBlockCount() const;
+  // Returns the total number of reserved blocks.
+  uint64_t ReservedBlockCount() const;
 
-protected:
-    // Returns an iterator to the underlying reserved blocks.
-    //
-    // This iterator becomes invalid on the next call to either |ReserveExtent| or
-    // |UnreserveExtent|.
-    bitmap::RleBitmap::const_iterator ReservedBlocksCbegin() const {
-        return reserved_blocks_.cbegin();
-    }
+ protected:
+  // Returns an iterator to the underlying reserved blocks.
+  //
+  // This iterator becomes invalid on the next call to either |ReserveExtent| or
+  // |UnreserveExtent|.
+  bitmap::RleBitmap::const_iterator ReservedBlocksCbegin() const {
+    return reserved_blocks_.cbegin();
+  }
 
-    bitmap::RleBitmap::const_iterator ReservedBlocksCend() const {
-        return reserved_blocks_.end();
-    }
+  bitmap::RleBitmap::const_iterator ReservedBlocksCend() const { return reserved_blocks_.end(); }
 
-private:
-    bitmap::RleBitmap reserved_blocks_ = {};
+ private:
+  bitmap::RleBitmap reserved_blocks_ = {};
 };
 
 // Wraps an extent reservation in RAII to hold the reservation active, and release it when it goes
 // out of scope.
 class ReservedExtent {
-public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ReservedExtent);
+ public:
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ReservedExtent);
 
-    // Creates a reserved extent.
-    //
-    // |extent.Length()| must be > 0.
-    ReservedExtent(ExtentReserver* reserver, Extent extent);
-    ReservedExtent(ReservedExtent&& o);
-    ReservedExtent& operator=(ReservedExtent&& o);
-    ~ReservedExtent();
+  // Creates a reserved extent.
+  //
+  // |extent.Length()| must be > 0.
+  ReservedExtent(ExtentReserver* reserver, Extent extent);
+  ReservedExtent(ReservedExtent&& o);
+  ReservedExtent& operator=(ReservedExtent&& o);
+  ~ReservedExtent();
 
-    // Access the underlying extent which has been reserved.
-    //
-    // Unsafe to call if this extent has not actually been reserved.
-    const Extent& extent() const;
+  // Access the underlying extent which has been reserved.
+  //
+  // Unsafe to call if this extent has not actually been reserved.
+  const Extent& extent() const;
 
-    // Split a reserved extent from [start, start + length) such that:
-    // This retains [start, start + block_split),
-    //  and returns [start + block_split, start + length)
-    //
-    // This function requires that |block_split| < |extent.block_count|.
-    ReservedExtent SplitAt(BlockCountType block_split);
+  // Split a reserved extent from [start, start + length) such that:
+  // This retains [start, start + block_split),
+  //  and returns [start + block_split, start + length)
+  //
+  // This function requires that |block_split| < |extent.block_count|.
+  ReservedExtent SplitAt(BlockCountType block_split);
 
-    // Releases the underlying reservation, unreserving the extent and preventing continued access
-    // to |extent()|.
-    void Reset();
+  // Releases the underlying reservation, unreserving the extent and preventing continued access
+  // to |extent()|.
+  void Reset();
 
-private:
-    // Update internal state such that future calls to |Reserved| return false.
-    void Release();
+ private:
+  // Update internal state such that future calls to |Reserved| return false.
+  void Release();
 
-    // Identify if the underlying extent is reserved, and able to be accessed.
-    bool Reserved() const;
+  // Identify if the underlying extent is reserved, and able to be accessed.
+  bool Reserved() const;
 
-    ExtentReserver* reserver_;
-    Extent extent_;
+  ExtentReserver* reserver_;
+  Extent extent_;
 };
 
-} // namespace blobfs
+}  // namespace blobfs

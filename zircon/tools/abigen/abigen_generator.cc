@@ -34,63 +34,48 @@ static TestWrapper test_wrapper;
 static BlockingRetryWrapper blocking_wrapper;
 static vector<CallWrapper*> wrappers = {&test_wrapper, &blocking_wrapper};
 
-static VdsoWrapperGenerator vdso_wrapper_generator(
-    "_zx_",        // wrapper function name
-    "SYSCALL_zx_", // syscall implementation name
-    wrappers);
+static VdsoWrapperGenerator vdso_wrapper_generator("_zx_",         // wrapper function name
+                                                   "SYSCALL_zx_",  // syscall implementation name
+                                                   wrappers);
 
 static KernelBranchGenerator kernel_branch;
 
-static KernelWrapperGenerator kernel_wrappers(
-    "sys_",     // function prefix
-    "wrapper_", // wrapper prefix
-    "ZX_SYS_"); // syscall numbers constant prefix
+static KernelWrapperGenerator kernel_wrappers("sys_",      // function prefix
+                                              "wrapper_",  // wrapper prefix
+                                              "ZX_SYS_");  // syscall numbers constant prefix
 
-static bool skip_nothing(const Syscall&) {
-    return false;
-}
+static bool skip_nothing(const Syscall&) { return false; }
 
-static bool skip_internal(const Syscall& sc) {
-    return sc.is_internal();
-}
+static bool skip_internal(const Syscall& sc) { return sc.is_internal(); }
 
-static bool skip_vdso(const Syscall& sc) {
-    return sc.is_vdso();
-}
+static bool skip_vdso(const Syscall& sc) { return sc.is_vdso(); }
 
-static HeaderGenerator user_header(
-    "extern ", // function prefix
-    {
-        {"zx_", skip_internal},
-        {"_zx_", skip_internal},
-    },
-    "void", // no-args special type
-    false,  // wrap pointers
-    user_attrs);
+static HeaderGenerator user_header("extern ",  // function prefix
+                                   {
+                                       {"zx_", skip_internal},
+                                       {"_zx_", skip_internal},
+                                   },
+                                   "void",  // no-args special type
+                                   false,   // wrap pointers
+                                   user_attrs);
 
-static HeaderGenerator vdso_header(
-    "__LOCAL extern ", // function prefix
-    {
-        {"VDSO_zx_", skip_nothing},
-        {"SYSCALL_zx_", skip_vdso},
-    },
-    "void", // no-args special type
-    false,
-    user_attrs);
+static HeaderGenerator vdso_header("__LOCAL extern ",  // function prefix
+                                   {
+                                       {"VDSO_zx_", skip_nothing},
+                                       {"SYSCALL_zx_", skip_vdso},
+                                   },
+                                   "void",  // no-args special type
+                                   false, user_attrs);
 
-static HeaderGenerator kernel_header(
-    "",
-    {
-        {"sys_", skip_vdso},
-    },
-    "",
-    true,
-    kernel_attrs);
+static HeaderGenerator kernel_header("",
+                                     {
+                                         {"sys_", skip_vdso},
+                                     },
+                                     "", true, kernel_attrs);
 
-static VDsoAsmGenerator vdso_asm_generator(
-    "m_syscall", // syscall macro name
-    "zx_",       // syscall name prefix
-    wrappers);
+static VDsoAsmGenerator vdso_asm_generator("m_syscall",  // syscall macro name
+                                           "zx_",        // syscall name prefix
+                                           wrappers);
 
 static SyscallNumbersGenerator syscall_num_generator("#define ZX_SYS_");
 
@@ -156,75 +141,68 @@ const map<string, string> type_to_default_suffix = {
     {"json", ".json"},
 };
 
-const map<string, string>& get_type_to_default_suffix() {
-    return type_to_default_suffix;
-}
+const map<string, string>& get_type_to_default_suffix() { return type_to_default_suffix; }
 
-const map<string, Generator&>& get_type_to_generator() {
-    return type_to_generator;
-}
+const map<string, Generator&>& get_type_to_generator() { return type_to_generator; }
 
 bool AbigenGenerator::AddSyscall(Syscall&& syscall) {
-    if (!syscall.validate())
-        return false;
+  if (!syscall.validate())
+    return false;
 
-    syscall.requirements = pending_requirements_;
-    pending_requirements_.clear();
+  syscall.requirements = pending_requirements_;
+  pending_requirements_.clear();
 
-    syscall.top_description = pending_top_description_;
-    pending_top_description_ = TopDescription();
+  syscall.top_description = pending_top_description_;
+  pending_top_description_ = TopDescription();
 
-    syscall.assign_index(&next_index_);
-    calls_.emplace_back(std::move(syscall));
-    return true;
+  syscall.assign_index(&next_index_);
+  calls_.emplace_back(std::move(syscall));
+  return true;
 }
 
 bool AbigenGenerator::Generate(const map<string, string>& type_to_filename) {
-    for (auto& entry : type_to_filename) {
-        if (!generate_one(entry.second, type_to_generator.at(entry.first), entry.first))
-            return false;
-    }
-    return true;
+  for (auto& entry : type_to_filename) {
+    if (!generate_one(entry.second, type_to_generator.at(entry.first), entry.first))
+      return false;
+  }
+  return true;
 }
 
-bool AbigenGenerator::verbose() const {
-    return verbose_;
-}
+bool AbigenGenerator::verbose() const { return verbose_; }
 
 void AbigenGenerator::AppendRequirement(Requirement&& req) {
-    pending_requirements_.emplace_back(req);
+  pending_requirements_.emplace_back(req);
 }
 
 void AbigenGenerator::SetTopDescription(TopDescription&& td) {
-    pending_top_description_ = std::move(td);
+  pending_top_description_ = std::move(td);
 }
 
-bool AbigenGenerator::generate_one(
-    const string& output_file, Generator& generator, const string& type) {
-    std::ofstream ofile;
-    ofile.open(output_file.c_str(), std::ofstream::out);
+bool AbigenGenerator::generate_one(const string& output_file, Generator& generator,
+                                   const string& type) {
+  std::ofstream ofile;
+  ofile.open(output_file.c_str(), std::ofstream::out);
 
-    if (!generator.header(ofile)) {
-        print_error("i/o error", output_file);
-        return false;
-    }
+  if (!generator.header(ofile)) {
+    print_error("i/o error", output_file);
+    return false;
+  }
 
-    if (!std::all_of(calls_.begin(), calls_.end(),
-                     [&generator, &ofile](const Syscall& sc) {
-                         return generator.syscall(ofile, sc);
-                     })) {
-        print_error("generation failed", output_file);
-        return false;
-    }
+  if (!std::all_of(calls_.begin(), calls_.end(), [&generator, &ofile](const Syscall& sc) {
+        return generator.syscall(ofile, sc);
+      })) {
+    print_error("generation failed", output_file);
+    return false;
+  }
 
-    if (!generator.footer(ofile)) {
-        print_error("i/o error", output_file);
-        return false;
-    }
+  if (!generator.footer(ofile)) {
+    print_error("i/o error", output_file);
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
 void AbigenGenerator::print_error(const char* what, const string& file) {
-    fprintf(stderr, "error: %s for %s\n", what, file.c_str());
+  fprintf(stderr, "error: %s for %s\n", what, file.c_str());
 }

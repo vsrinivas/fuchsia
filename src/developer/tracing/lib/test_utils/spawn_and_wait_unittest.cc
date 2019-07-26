@@ -41,9 +41,7 @@ TEST(TraceTestUtils, SpawnAndWaitSignalPeer) {
   ASSERT_EQ(SpawnProgram(job, argv, their_event.release(), &child), ZX_OK);
 
   zx_signals_t pending;
-  EXPECT_EQ(our_event.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(),
-                               &pending),
-            ZX_OK);
+  EXPECT_EQ(our_event.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
 
   int return_code;
   ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);

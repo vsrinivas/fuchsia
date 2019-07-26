@@ -30,8 +30,7 @@ class CpuStatsFetcherImpl : public CpuStatsFetcher {
   zx_handle_t root_resource_handle_ = ZX_HANDLE_INVALID;
   size_t num_cpu_cores_ = 0;
   std::chrono::time_point<std::chrono::high_resolution_clock> cpu_fetch_time_;
-  std::chrono::time_point<std::chrono::high_resolution_clock>
-      last_cpu_fetch_time_;
+  std::chrono::time_point<std::chrono::high_resolution_clock> last_cpu_fetch_time_;
   // TODO: Determine the vector size at runtime (32 is arbitrary).
   std::vector<zx_info_cpu_stats_t> cpu_stats_{32};
   std::vector<zx_info_cpu_stats_t> last_cpu_stats_{32};

@@ -28,41 +28,41 @@
 #include "utils.h"
 
 void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t* regs) {
-    unittest_printf("Registers for thread %d\n", thread_handle);
+  unittest_printf("Registers for thread %d\n", thread_handle);
 
-#define DUMP_NAMED_REG(name)                                                                       \
-    unittest_printf("  %8s      %24ld  0x%lx\n", #name, (long)regs->name, (long)regs->name)
+#define DUMP_NAMED_REG(name) \
+  unittest_printf("  %8s      %24ld  0x%lx\n", #name, (long)regs->name, (long)regs->name)
 
 #if defined(__x86_64__)
 
-    DUMP_NAMED_REG(rax);
-    DUMP_NAMED_REG(rbx);
-    DUMP_NAMED_REG(rcx);
-    DUMP_NAMED_REG(rdx);
-    DUMP_NAMED_REG(rsi);
-    DUMP_NAMED_REG(rdi);
-    DUMP_NAMED_REG(rbp);
-    DUMP_NAMED_REG(rsp);
-    DUMP_NAMED_REG(r8);
-    DUMP_NAMED_REG(r9);
-    DUMP_NAMED_REG(r10);
-    DUMP_NAMED_REG(r11);
-    DUMP_NAMED_REG(r12);
-    DUMP_NAMED_REG(r13);
-    DUMP_NAMED_REG(r14);
-    DUMP_NAMED_REG(r15);
-    DUMP_NAMED_REG(rip);
-    DUMP_NAMED_REG(rflags);
+  DUMP_NAMED_REG(rax);
+  DUMP_NAMED_REG(rbx);
+  DUMP_NAMED_REG(rcx);
+  DUMP_NAMED_REG(rdx);
+  DUMP_NAMED_REG(rsi);
+  DUMP_NAMED_REG(rdi);
+  DUMP_NAMED_REG(rbp);
+  DUMP_NAMED_REG(rsp);
+  DUMP_NAMED_REG(r8);
+  DUMP_NAMED_REG(r9);
+  DUMP_NAMED_REG(r10);
+  DUMP_NAMED_REG(r11);
+  DUMP_NAMED_REG(r12);
+  DUMP_NAMED_REG(r13);
+  DUMP_NAMED_REG(r14);
+  DUMP_NAMED_REG(r15);
+  DUMP_NAMED_REG(rip);
+  DUMP_NAMED_REG(rflags);
 
 #elif defined(__aarch64__)
 
-    for (int i = 0; i < 30; i++) {
-        unittest_printf("  r[%2d]     %24ld  0x%lx\n", i, (long)regs->r[i], (long)regs->r[i]);
-    }
-    DUMP_NAMED_REG(lr);
-    DUMP_NAMED_REG(sp);
-    DUMP_NAMED_REG(pc);
-    DUMP_NAMED_REG(cpsr);
+  for (int i = 0; i < 30; i++) {
+    unittest_printf("  r[%2d]     %24ld  0x%lx\n", i, (long)regs->r[i], (long)regs->r[i]);
+  }
+  DUMP_NAMED_REG(lr);
+  DUMP_NAMED_REG(sp);
+  DUMP_NAMED_REG(pc);
+  DUMP_NAMED_REG(cpsr);
 
 #endif
 
@@ -70,41 +70,41 @@ void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t*
 }
 
 void dump_inferior_regs(zx_handle_t thread) {
-    zx_thread_state_general_regs_t regs;
-    read_inferior_gregs(thread, &regs);
-    dump_gregs(thread, &regs);
+  zx_thread_state_general_regs_t regs;
+  read_inferior_gregs(thread, &regs);
+  dump_gregs(thread, &regs);
 }
 
 // N.B. It is assumed |buf_size| is large enough.
 
 void read_inferior_gregs(zx_handle_t thread, zx_thread_state_general_regs_t* in) {
-    zx_status_t status = zx_thread_read_state(
-        thread, ZX_THREAD_STATE_GENERAL_REGS, in, sizeof(zx_thread_state_general_regs_t));
-    // It's easier to just terminate if this fails.
-    if (status != ZX_OK)
-        tu_fatal("read_inferior_gregs: zx_thread_read_state", status);
+  zx_status_t status = zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, in,
+                                            sizeof(zx_thread_state_general_regs_t));
+  // It's easier to just terminate if this fails.
+  if (status != ZX_OK)
+    tu_fatal("read_inferior_gregs: zx_thread_read_state", status);
 }
 
 void write_inferior_gregs(zx_handle_t thread, const zx_thread_state_general_regs_t* out) {
-    zx_status_t status = zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, out,
-                                               sizeof(zx_thread_state_general_regs_t));
-    // It's easier to just terminate if this fails.
-    if (status != ZX_OK)
-        tu_fatal("write_inferior_gregs: zx_thread_write_state", status);
+  zx_status_t status = zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, out,
+                                             sizeof(zx_thread_state_general_regs_t));
+  // It's easier to just terminate if this fails.
+  if (status != ZX_OK)
+    tu_fatal("write_inferior_gregs: zx_thread_write_state", status);
 }
 
 size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf, size_t len) {
-    zx_status_t status = zx_process_read_memory(proc, vaddr, buf, len, &len);
-    if (status < 0)
-        tu_fatal("read_inferior_memory", status);
-    return len;
+  zx_status_t status = zx_process_read_memory(proc, vaddr, buf, len, &len);
+  if (status < 0)
+    tu_fatal("read_inferior_memory", status);
+  return len;
 }
 
 size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len) {
-    zx_status_t status = zx_process_write_memory(proc, vaddr, buf, len, &len);
-    if (status < 0)
-        tu_fatal("write_inferior_memory", status);
-    return len;
+  zx_status_t status = zx_process_write_memory(proc, vaddr, buf, len, &len);
+  if (status < 0)
+    tu_fatal("write_inferior_memory", status);
+  return len;
 }
 
 // This does everything that launchpad_launch_fdio_etc does except
@@ -116,70 +116,69 @@ size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf,
 zx_status_t create_inferior(const char* name, int argc, const char* const* argv,
                             const char* const* envp, size_t hnds_count, zx_handle_t* handles,
                             uint32_t* ids, launchpad_t** out_launchpad) {
-    launchpad_t* lp = NULL;
+  launchpad_t* lp = NULL;
 
-    const char* filename = argv[0];
-    if (name == NULL)
-        name = filename;
+  const char* filename = argv[0];
+  if (name == NULL)
+    name = filename;
 
-    zx_status_t status;
-    launchpad_create(0u, name, &lp);
-    launchpad_load_from_file(lp, filename);
-    launchpad_set_args(lp, argc, argv);
-    launchpad_set_environ(lp, envp);
-    launchpad_clone(lp, LP_CLONE_FDIO_ALL);
-    status = launchpad_add_handles(lp, hnds_count, handles, ids);
+  zx_status_t status;
+  launchpad_create(0u, name, &lp);
+  launchpad_load_from_file(lp, filename);
+  launchpad_set_args(lp, argc, argv);
+  launchpad_set_environ(lp, envp);
+  launchpad_clone(lp, LP_CLONE_FDIO_ALL);
+  status = launchpad_add_handles(lp, hnds_count, handles, ids);
 
-    if (status < 0) {
-        launchpad_destroy(lp);
-    } else {
-        *out_launchpad = lp;
-    }
-    return status;
+  if (status < 0) {
+    launchpad_destroy(lp);
+  } else {
+    *out_launchpad = lp;
+  }
+  return status;
 }
 
 bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inferior,
                     zx_handle_t* out_channel) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    zx_status_t status;
-    zx_handle_t channel1, channel2;
-    tu_channel_create(&channel1, &channel2);
+  zx_status_t status;
+  zx_handle_t channel1, channel2;
+  tu_channel_create(&channel1, &channel2);
 
-    const char verbosity_string[] = {'v', '=', static_cast<char>(utest_verbosity_level + '0'),
-                                     '\0'};
-    const char* test_child_path = g_program_path;
-    const char* const argv[] = {test_child_path, name, verbosity_string};
-    zx_handle_t handles[1] = {channel2};
-    uint32_t handle_ids[1] = {PA_USER0};
+  const char verbosity_string[] = {'v', '=', static_cast<char>(utest_verbosity_level + '0'), '\0'};
+  const char* test_child_path = g_program_path;
+  const char* const argv[] = {test_child_path, name, verbosity_string};
+  zx_handle_t handles[1] = {channel2};
+  uint32_t handle_ids[1] = {PA_USER0};
 
-    launchpad_t* lp;
-    unittest_printf("Creating process \"%s\"\n", name);
-    status = create_inferior(name, fbl::count_of(argv), argv, NULL, fbl::count_of(handles),
-                             handles, handle_ids, &lp);
-    ASSERT_EQ(status, ZX_OK, "failed to create inferior");
+  launchpad_t* lp;
+  unittest_printf("Creating process \"%s\"\n", name);
+  status = create_inferior(name, fbl::count_of(argv), argv, NULL, fbl::count_of(handles), handles,
+                           handle_ids, &lp);
+  ASSERT_EQ(status, ZX_OK, "failed to create inferior");
 
-    // Note: |inferior| is a borrowed handle here.
-    zx_handle_t inferior = launchpad_get_process_handle(lp);
-    ASSERT_NE(inferior, ZX_HANDLE_INVALID, "can't get launchpad process handle");
+  // Note: |inferior| is a borrowed handle here.
+  zx_handle_t inferior = launchpad_get_process_handle(lp);
+  ASSERT_NE(inferior, ZX_HANDLE_INVALID, "can't get launchpad process handle");
 
-    zx_info_handle_basic_t process_info;
-    tu_handle_get_basic_info(inferior, &process_info);
-    unittest_printf("Inferior pid = %llu\n", (long long)process_info.koid);
+  zx_info_handle_basic_t process_info;
+  tu_handle_get_basic_info(inferior, &process_info);
+  unittest_printf("Inferior pid = %llu\n", (long long)process_info.koid);
 
-    // |inferior| is given to the child by launchpad_go.
-    // We need our own copy, and launchpad_go will give us one, but we need
-    // it before we call launchpad_go in order to attach to the debugging
-    // exception port. We could leave this to our caller to do, but since every
-    // caller needs this for convenience sake we do this here.
-    status = zx_handle_duplicate(inferior, ZX_RIGHT_SAME_RIGHTS, &inferior);
-    ASSERT_EQ(status, ZX_OK, "zx_handle_duplicate failed");
+  // |inferior| is given to the child by launchpad_go.
+  // We need our own copy, and launchpad_go will give us one, but we need
+  // it before we call launchpad_go in order to attach to the debugging
+  // exception port. We could leave this to our caller to do, but since every
+  // caller needs this for convenience sake we do this here.
+  status = zx_handle_duplicate(inferior, ZX_RIGHT_SAME_RIGHTS, &inferior);
+  ASSERT_EQ(status, ZX_OK, "zx_handle_duplicate failed");
 
-    *out_lp = lp;
-    *out_inferior = inferior;
-    *out_channel = channel1;
+  *out_lp = lp;
+  *out_inferior = inferior;
+  *out_channel = channel1;
 
-    END_HELPER;
+  END_HELPER;
 }
 
 // While this should perhaps take a launchpad_t* argument instead of the
@@ -192,118 +191,119 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inf
 // Returns a boolean indicating success.
 
 inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t max_threads) {
-    // Fetch all current threads and attach async-waiters to them.
-    // N.B. We assume threads aren't being created as we're running.
-    // This is just a testcase so we can assume that. A real debugger
-    // would not have this assumption.
-    zx_koid_t* thread_koids = reinterpret_cast<zx_koid_t*>(tu_malloc(max_threads * sizeof(zx_koid_t)));
-    size_t num_threads = tu_process_get_threads(inferior, thread_koids, max_threads);
-    // For now require |max_threads| to be big enough.
-    if (num_threads > max_threads)
-        tu_fatal(__func__, ZX_ERR_BUFFER_TOO_SMALL);
+  // Fetch all current threads and attach async-waiters to them.
+  // N.B. We assume threads aren't being created as we're running.
+  // This is just a testcase so we can assume that. A real debugger
+  // would not have this assumption.
+  zx_koid_t* thread_koids =
+      reinterpret_cast<zx_koid_t*>(tu_malloc(max_threads * sizeof(zx_koid_t)));
+  size_t num_threads = tu_process_get_threads(inferior, thread_koids, max_threads);
+  // For now require |max_threads| to be big enough.
+  if (num_threads > max_threads)
+    tu_fatal(__func__, ZX_ERR_BUFFER_TOO_SMALL);
 
-    tu_object_wait_async(inferior, port, ZX_PROCESS_TERMINATED);
+  tu_object_wait_async(inferior, port, ZX_PROCESS_TERMINATED);
 
-    inferior_data_t* data = reinterpret_cast<inferior_data_t*>(tu_malloc(sizeof(*data)));
-    data->threads = reinterpret_cast<thread_data_t*>(tu_calloc(max_threads, sizeof(data->threads[0])));
-    data->inferior = inferior;
-    data->port = port;
-    data->exception_channel = tu_create_exception_channel(inferior, ZX_EXCEPTION_CHANNEL_DEBUGGER);
-    data->max_num_threads = max_threads;
+  inferior_data_t* data = reinterpret_cast<inferior_data_t*>(tu_malloc(sizeof(*data)));
+  data->threads =
+      reinterpret_cast<thread_data_t*>(tu_calloc(max_threads, sizeof(data->threads[0])));
+  data->inferior = inferior;
+  data->port = port;
+  data->exception_channel = tu_create_exception_channel(inferior, ZX_EXCEPTION_CHANNEL_DEBUGGER);
+  data->max_num_threads = max_threads;
 
-    // We don't need to listen for ZX_CHANNEL_PEER_CLOSED here because
-    // ZX_PROCESS_TERMINATED already tells us when the process terminates.
-    tu_object_wait_async(data->exception_channel, port, ZX_CHANNEL_READABLE);
+  // We don't need to listen for ZX_CHANNEL_PEER_CLOSED here because
+  // ZX_PROCESS_TERMINATED already tells us when the process terminates.
+  tu_object_wait_async(data->exception_channel, port, ZX_CHANNEL_READABLE);
 
-    // Notification of thread termination and suspension is delivered by
-    // signals. So that we can continue to only have to wait on |port|
-    // for inferior status change notification, install async-waiters
-    // for each thread.
-    size_t j = 0;
-    zx_signals_t thread_signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
-    for (size_t i = 0; i < num_threads; ++i) {
-        zx_handle_t thread = tu_process_get_thread(inferior, thread_koids[i]);
-        if (thread != ZX_HANDLE_INVALID) {
-            data->threads[j].tid = thread_koids[i];
-            data->threads[j].handle = thread;
-            tu_object_wait_async(thread, port, thread_signals);
-            ++j;
-        }
+  // Notification of thread termination and suspension is delivered by
+  // signals. So that we can continue to only have to wait on |port|
+  // for inferior status change notification, install async-waiters
+  // for each thread.
+  size_t j = 0;
+  zx_signals_t thread_signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
+  for (size_t i = 0; i < num_threads; ++i) {
+    zx_handle_t thread = tu_process_get_thread(inferior, thread_koids[i]);
+    if (thread != ZX_HANDLE_INVALID) {
+      data->threads[j].tid = thread_koids[i];
+      data->threads[j].handle = thread;
+      tu_object_wait_async(thread, port, thread_signals);
+      ++j;
     }
-    free(thread_koids);
+  }
+  free(thread_koids);
 
-    unittest_printf("Attached to inferior\n");
-    return data;
+  unittest_printf("Attached to inferior\n");
+  return data;
 }
 
 bool expect_debugger_attached_eq(zx_handle_t inferior, bool expected, const char* msg) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    zx_info_process_t info;
-    // ZX_ASSERT returns false if the check fails.
-    ASSERT_EQ(zx_object_get_info(inferior, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
-    ASSERT_EQ(info.debugger_attached, expected, msg);
+  zx_info_process_t info;
+  // ZX_ASSERT returns false if the check fails.
+  ASSERT_EQ(zx_object_get_info(inferior, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
+  ASSERT_EQ(info.debugger_attached, expected, msg);
 
-    END_HELPER;
+  END_HELPER;
 }
 
 void detach_inferior(inferior_data_t* data, bool close_exception_channel) {
-    if (close_exception_channel) {
-        unbind_inferior(data);
-    }
-    for (size_t i = 0; i < data->max_num_threads; ++i) {
-        if (data->threads[i].handle != ZX_HANDLE_INVALID)
-            tu_handle_close(data->threads[i].handle);
-    }
-    free(data->threads);
-    free(data);
+  if (close_exception_channel) {
+    unbind_inferior(data);
+  }
+  for (size_t i = 0; i < data->max_num_threads; ++i) {
+    if (data->threads[i].handle != ZX_HANDLE_INVALID)
+      tu_handle_close(data->threads[i].handle);
+  }
+  free(data->threads);
+  free(data);
 }
 
 void unbind_inferior(inferior_data_t* data) {
-    tu_handle_close(data->exception_channel);
-    data->exception_channel = ZX_HANDLE_INVALID;
+  tu_handle_close(data->exception_channel);
+  data->exception_channel = ZX_HANDLE_INVALID;
 }
 
 bool start_inferior(launchpad_t* lp) {
-    zx_handle_t dup_inferior = tu_launch_fdio_fini(lp);
-    unittest_printf("Inferior started\n");
-    // launchpad_go returns a dup of |inferior|. The original inferior
-    // handle is given to the child. However we don't need it, we already
-    // created one so that we could attach to the inferior before starting it.
-    tu_handle_close(dup_inferior);
-    return true;
+  zx_handle_t dup_inferior = tu_launch_fdio_fini(lp);
+  unittest_printf("Inferior started\n");
+  // launchpad_go returns a dup of |inferior|. The original inferior
+  // handle is given to the child. However we don't need it, we already
+  // created one so that we could attach to the inferior before starting it.
+  tu_handle_close(dup_inferior);
+  return true;
 }
 
 bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    unittest_printf("Shutting down inferior\n");
+  unittest_printf("Shutting down inferior\n");
 
-    send_simple_request(channel, RQST_DONE);
+  send_simple_request(channel, RQST_DONE);
 
-    tu_process_wait_signaled(inferior);
-    EXPECT_EQ(tu_process_get_return_code(inferior), kInferiorReturnCode, "");
+  tu_process_wait_signaled(inferior);
+  EXPECT_EQ(tu_process_get_return_code(inferior), kInferiorReturnCode, "");
 
-    END_HELPER;
+  END_HELPER;
 }
 
 // Wait for and read a packet on |port|.
 
 bool read_packet(zx_handle_t port, zx_port_packet_t* packet) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    unittest_printf("read_packet: waiting for signal on port %d\n", port);
-    ASSERT_EQ(zx_port_wait(port, ZX_TIME_INFINITE, packet), ZX_OK, "zx_port_wait failed");
+  unittest_printf("read_packet: waiting for signal on port %d\n", port);
+  ASSERT_EQ(zx_port_wait(port, ZX_TIME_INFINITE, packet), ZX_OK, "zx_port_wait failed");
 
-    if (ZX_PKT_IS_SIGNAL_ONE(packet->type)) {
-        unittest_printf("read_packet: got signal, observed 0x%x\n",
-                        packet->signal.observed);
-    } else {
-        // Leave it to the caller to digest these.
-        unittest_printf("read_packet: got other packet %d\n", packet->type);
-    }
+  if (ZX_PKT_IS_SIGNAL_ONE(packet->type)) {
+    unittest_printf("read_packet: got signal, observed 0x%x\n", packet->signal.observed);
+  } else {
+    // Leave it to the caller to digest these.
+    unittest_printf("read_packet: got other packet %d\n", packet->type);
+  }
 
-    END_HELPER;
+  END_HELPER;
 }
 
 // Wait for the thread to suspend
@@ -317,41 +317,41 @@ bool read_packet(zx_handle_t port, zx_port_packet_t* packet) {
 // things this way, which is generally what debuggers will do.
 
 bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t port) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    zx_koid_t tid = tu_get_koid(thread);
+  zx_koid_t tid = tu_get_koid(thread);
 
-    zx_signals_t signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
-    tu_object_wait_async(thread, port, signals);
+  zx_signals_t signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
+  tu_object_wait_async(thread, port, signals);
 
-    while (true) {
-        zx_port_packet_t packet;
-        zx_status_t status = zx_port_wait(port, zx_deadline_after(ZX_SEC(1)), &packet);
-        if (status == ZX_ERR_TIMED_OUT) {
-            // This shouldn't really happen unless the system is really loaded.
-            // Just flag it and try again. The watchdog will catch failures.
-            unittest_printf("%s: timed out???\n", __func__);
-            continue;
-        }
-        ASSERT_EQ(status, ZX_OK);
-        if (packet.key == tid) {
-            if (packet.signal.observed & ZX_THREAD_SUSPENDED)
-                break;
-            ASSERT_TRUE(packet.signal.observed & ZX_THREAD_RUNNING);
-            tu_object_wait_async(thread, port, signals);
-        }
-
-        // No action necessary if the packet was an exit exception from a
-        // previous test, the channel has already been closed so we just needed
-        // to pop the packet out of the port.
+  while (true) {
+    zx_port_packet_t packet;
+    zx_status_t status = zx_port_wait(port, zx_deadline_after(ZX_SEC(1)), &packet);
+    if (status == ZX_ERR_TIMED_OUT) {
+      // This shouldn't really happen unless the system is really loaded.
+      // Just flag it and try again. The watchdog will catch failures.
+      unittest_printf("%s: timed out???\n", __func__);
+      continue;
+    }
+    ASSERT_EQ(status, ZX_OK);
+    if (packet.key == tid) {
+      if (packet.signal.observed & ZX_THREAD_SUSPENDED)
+        break;
+      ASSERT_TRUE(packet.signal.observed & ZX_THREAD_RUNNING);
+      tu_object_wait_async(thread, port, signals);
     }
 
-    // Verify thread is suspended
-    zx_info_thread_t info = tu_thread_get_info(thread);
-    ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
-    ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
+    // No action necessary if the packet was an exit exception from a
+    // previous test, the channel has already been closed so we just needed
+    // to pop the packet out of the port.
+  }
 
-    END_HELPER;
+  // Verify thread is suspended
+  zx_info_thread_t info = tu_thread_get_info(thread);
+  ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
+  ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
+
+  END_HELPER;
 }
 
 // This returns a bool as it's a unittest "helper" routine.
@@ -359,30 +359,30 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t por
 
 bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info,
                            zx::exception exception) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    zx_handle_t thread = tu_exception_get_thread(exception.get());
-    zx_info_thread_t thread_info = tu_thread_get_info(thread);
-    // The thread could still transition to DEAD here (if the
-    // process exits), so check for either DYING or DEAD.
-    EXPECT_TRUE(thread_info.state == ZX_THREAD_STATE_DYING ||
-                thread_info.state == ZX_THREAD_STATE_DEAD);
-    // If the state is DYING it would be nice to check that the
-    // value of |info.wait_exception_channel_type| is DEBUGGER. Alas
-    // if the process has exited then the thread will get
-    // THREAD_SIGNAL_KILL which will cause exception handling to exit
-    // before we've told the thread to "resume" from ZX_EXCP_THREAD_EXITING.
-    // The thread is still in the DYING state but it is no longer
-    // in an exception. Thus |info.wait_exception_channel_type| can
-    // either be DEBUGGER or NONE.
-    EXPECT_TRUE(thread_info.wait_exception_channel_type == ZX_EXCEPTION_CHANNEL_TYPE_NONE ||
-                thread_info.wait_exception_channel_type == ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER);
-    tu_handle_close(thread);
+  zx_handle_t thread = tu_exception_get_thread(exception.get());
+  zx_info_thread_t thread_info = tu_thread_get_info(thread);
+  // The thread could still transition to DEAD here (if the
+  // process exits), so check for either DYING or DEAD.
+  EXPECT_TRUE(thread_info.state == ZX_THREAD_STATE_DYING ||
+              thread_info.state == ZX_THREAD_STATE_DEAD);
+  // If the state is DYING it would be nice to check that the
+  // value of |info.wait_exception_channel_type| is DEBUGGER. Alas
+  // if the process has exited then the thread will get
+  // THREAD_SIGNAL_KILL which will cause exception handling to exit
+  // before we've told the thread to "resume" from ZX_EXCP_THREAD_EXITING.
+  // The thread is still in the DYING state but it is no longer
+  // in an exception. Thus |info.wait_exception_channel_type| can
+  // either be DEBUGGER or NONE.
+  EXPECT_TRUE(thread_info.wait_exception_channel_type == ZX_EXCEPTION_CHANNEL_TYPE_NONE ||
+              thread_info.wait_exception_channel_type == ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER);
+  tu_handle_close(thread);
 
-    // A thread is gone, but we only care about the process.
-    unittest_printf("wait-inf: thread %" PRIu64 " exited\n", info->tid);
+  // A thread is gone, but we only care about the process.
+  unittest_printf("wait-inf: thread %" PRIu64 " exited\n", info->tid);
 
-    END_HELPER;
+  END_HELPER;
 }
 
 // A simpler exception handler.
@@ -390,99 +390,97 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info
 // Returns false if a test fails.
 // Otherwise waits for the inferior to exit and returns true.
 
-static bool wait_inferior_thread_worker(
-        inferior_data_t* inferior_data,
-        wait_inferior_exception_handler_t* handler, void* handler_arg) {
-    zx_handle_t inferior = inferior_data->inferior;
-    zx_koid_t pid = tu_get_koid(inferior);
-    zx_handle_t port = inferior_data->port;
+static bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
+                                        wait_inferior_exception_handler_t* handler,
+                                        void* handler_arg) {
+  zx_handle_t inferior = inferior_data->inferior;
+  zx_koid_t pid = tu_get_koid(inferior);
+  zx_handle_t port = inferior_data->port;
 
-    while (true) {
-        zx_port_packet_t packet;
-        if (!read_packet(port, &packet))
-            return false;
+  while (true) {
+    zx_port_packet_t packet;
+    if (!read_packet(port, &packet))
+      return false;
 
-        // Is the inferior gone?
-        if (packet.key == pid) {
-            if (packet.signal.observed & ZX_PROCESS_TERMINATED) {
-                return true;
-            }
-            tu_object_wait_async(inferior, port, ZX_PROCESS_TERMINATED);
-        } else if (packet.key != tu_get_koid(inferior_data->exception_channel)) {
-            zx_signals_t thread_signals = ZX_THREAD_TERMINATED;
-            if (packet.signal.observed & ZX_THREAD_RUNNING)
-                thread_signals |= ZX_THREAD_SUSPENDED;
-            if (packet.signal.observed & ZX_THREAD_SUSPENDED)
-                thread_signals |= ZX_THREAD_RUNNING;
-            zx_handle_t thread = tu_process_get_thread(inferior, packet.key);
-            if (thread == ZX_HANDLE_INVALID) {
-                continue;
-            }
-            tu_object_wait_async(thread, port, thread_signals);
-        }
-
-        bool handler_success = handler(inferior_data, &packet, handler_arg);
-
-        if (packet.key == tu_get_koid(inferior_data->exception_channel)) {
-            // Don't re-wait on READABLE until after handler() has read the
-            // exception out of the channel or it will trigger again
-            // immediately.
-            //
-            // We don't care about PEER_CLOSED here because we're already
-            // listening for PROCESS_TERMINATED which gives the same info.
-            tu_object_wait_async(inferior_data->exception_channel, port, ZX_CHANNEL_READABLE);
-        }
-
-        if (!handler_success) {
-            return false;
-        }
+    // Is the inferior gone?
+    if (packet.key == pid) {
+      if (packet.signal.observed & ZX_PROCESS_TERMINATED) {
+        return true;
+      }
+      tu_object_wait_async(inferior, port, ZX_PROCESS_TERMINATED);
+    } else if (packet.key != tu_get_koid(inferior_data->exception_channel)) {
+      zx_signals_t thread_signals = ZX_THREAD_TERMINATED;
+      if (packet.signal.observed & ZX_THREAD_RUNNING)
+        thread_signals |= ZX_THREAD_SUSPENDED;
+      if (packet.signal.observed & ZX_THREAD_SUSPENDED)
+        thread_signals |= ZX_THREAD_RUNNING;
+      zx_handle_t thread = tu_process_get_thread(inferior, packet.key);
+      if (thread == ZX_HANDLE_INVALID) {
+        continue;
+      }
+      tu_object_wait_async(thread, port, thread_signals);
     }
+
+    bool handler_success = handler(inferior_data, &packet, handler_arg);
+
+    if (packet.key == tu_get_koid(inferior_data->exception_channel)) {
+      // Don't re-wait on READABLE until after handler() has read the
+      // exception out of the channel or it will trigger again
+      // immediately.
+      //
+      // We don't care about PEER_CLOSED here because we're already
+      // listening for PROCESS_TERMINATED which gives the same info.
+      tu_object_wait_async(inferior_data->exception_channel, port, ZX_CHANNEL_READABLE);
+    }
+
+    if (!handler_success) {
+      return false;
+    }
+  }
 }
 
 struct wait_inferior_args_t {
-    inferior_data_t* inferior_data;
-    wait_inferior_exception_handler_t* handler;
-    void* handler_arg;
+  inferior_data_t* inferior_data;
+  wait_inferior_exception_handler_t* handler;
+  void* handler_arg;
 };
 
 static int wait_inferior_thread_func(void* arg) {
-    wait_inferior_args_t* args = reinterpret_cast<wait_inferior_args_t*>(arg);
-    inferior_data_t* inferior_data = args->inferior_data;
-    wait_inferior_exception_handler_t* handler = args->handler;
-    void* handler_arg = args->handler_arg;
-    free(args);
+  wait_inferior_args_t* args = reinterpret_cast<wait_inferior_args_t*>(arg);
+  inferior_data_t* inferior_data = args->inferior_data;
+  wait_inferior_exception_handler_t* handler = args->handler;
+  void* handler_arg = args->handler_arg;
+  free(args);
 
-    bool pass = wait_inferior_thread_worker(inferior_data, handler, handler_arg);
+  bool pass = wait_inferior_thread_worker(inferior_data, handler, handler_arg);
 
-    return pass ? 0 : -1;
+  return pass ? 0 : -1;
 }
 
 thrd_t start_wait_inf_thread(inferior_data_t* inferior_data,
-                             wait_inferior_exception_handler_t* handler,
-                             void* handler_arg) {
-    wait_inferior_args_t* args =
-        reinterpret_cast<wait_inferior_args_t*>(tu_calloc(1, sizeof(*args)));
+                             wait_inferior_exception_handler_t* handler, void* handler_arg) {
+  wait_inferior_args_t* args = reinterpret_cast<wait_inferior_args_t*>(tu_calloc(1, sizeof(*args)));
 
-    // The proc handle is loaned to the thread.
-    // The caller of this function owns and must close it.
-    args->inferior_data = inferior_data;
-    args->handler = handler;
-    args->handler_arg = handler_arg;
+  // The proc handle is loaned to the thread.
+  // The caller of this function owns and must close it.
+  args->inferior_data = inferior_data;
+  args->handler = handler;
+  args->handler_arg = handler_arg;
 
-    thrd_t wait_inferior_thread;
-    tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, args, "wait-inf thread");
-    return wait_inferior_thread;
+  thrd_t wait_inferior_thread;
+  tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, args, "wait-inf thread");
+  return wait_inferior_thread;
 }
 
 bool join_wait_inf_thread(thrd_t wait_inf_thread) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    unittest_printf("Waiting for wait-inf thread\n");
-    int thread_rc;
-    int ret = thrd_join(wait_inf_thread, &thread_rc);
-    EXPECT_EQ(ret, thrd_success, "thrd_join failed");
-    EXPECT_EQ(thread_rc, 0, "unexpected wait-inf return");
-    unittest_printf("wait-inf thread done\n");
+  unittest_printf("Waiting for wait-inf thread\n");
+  int thread_rc;
+  int ret = thrd_join(wait_inf_thread, &thread_rc);
+  EXPECT_EQ(ret, thrd_success, "thrd_join failed");
+  EXPECT_EQ(thread_rc, 0, "unexpected wait-inf return");
+  unittest_printf("wait-inf thread done\n");
 
-    END_HELPER;
+  END_HELPER;
 }

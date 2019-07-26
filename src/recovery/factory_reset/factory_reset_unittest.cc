@@ -35,16 +35,14 @@ const char* kRamdiskPath = "misc/ramctl";
 
 class MockAdmin : public fuchsia::device::manager::Administrator {
  public:
-  bool suspend_called() {
-    return suspend_called_;
-  }
+  bool suspend_called() { return suspend_called_; }
 
  private:
   void Suspend(uint32_t flags, SuspendCallback callback) override {
-     ASSERT_FALSE(suspend_called_);
-     suspend_called_ = true;
-     ASSERT_EQ(fuchsia::device::manager::SUSPEND_FLAG_REBOOT, flags);
-     callback(ZX_OK);
+    ASSERT_FALSE(suspend_called_);
+    suspend_called_ = true;
+    ASSERT_EQ(fuchsia::device::manager::SUSPEND_FLAG_REBOOT, flags);
+    callback(ZX_OK);
   }
 
   bool suspend_called_ = false;
@@ -58,10 +56,8 @@ class FactoryResetTest : public Test {
     devmgr_.reset(new IsolatedDevmgr());
     auto args = IsolatedDevmgr::DefaultArgs();
     args.disable_block_watcher = false;
-    args.sys_device_driver =
-        devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-    args.load_drivers.push_back(
-        devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
+    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), devmgr_.get()), ZX_OK);
 
@@ -81,8 +77,8 @@ class FactoryResetTest : public Test {
   void WaitForZxcrypt() {
     char data_block_path[PATH_MAX];
     // Second, wait for the data partition to be formatted.
-    snprintf(data_block_path, sizeof(data_block_path),
-             "%s/zxcrypt/unsealed/block", fvm_block_path_);
+    snprintf(data_block_path, sizeof(data_block_path), "%s/zxcrypt/unsealed/block",
+             fvm_block_path_);
     fbl::unique_fd fd;
     WaitForDevice(data_block_path, &fd);
   }
@@ -97,8 +93,7 @@ class FactoryResetTest : public Test {
 
     fbl::unique_fd ramdisk;
     WaitForDevice(kRamdiskPath, &ramdisk);
-    ASSERT_EQ(ramdisk_create_at_from_vmo(devfs_root().get(), disk.release(),
-                                         &ramdisk_client_),
+    ASSERT_EQ(ramdisk_create_at_from_vmo(devfs_root().get(), disk.release(), &ramdisk_client_),
               ZX_OK);
   }
 
@@ -125,21 +120,19 @@ class FactoryResetTest : public Test {
     fzl::UnownedFdioCaller caller(fvm_fd.get());
     zx_status_t status;
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
-                  caller.borrow_channel(), req.slice_count, &type_guid,
-                  &instance_guid, req.name, NAME_LEN, req.flags, &status),
+                  caller.borrow_channel(), req.slice_count, &type_guid, &instance_guid, req.name,
+                  NAME_LEN, req.flags, &status),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
 
-    snprintf(fvm_block_path_, sizeof(fvm_block_path_), "%s/%s-p-1/block",
-             fvm_path, kDataName);
+    snprintf(fvm_block_path_, sizeof(fvm_block_path_), "%s/%s-p-1/block", fvm_path, kDataName);
     fbl::unique_fd fd;
     WaitForDevice(fvm_block_path_, &fd);
   }
 
   void WaitForDevice(const char* path, fbl::unique_fd* fd) {
     printf("wait for device %s\n", path);
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), path, fd),
-              ZX_OK);
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), path, fd), ZX_OK);
 
     ASSERT_TRUE(*fd);
   }

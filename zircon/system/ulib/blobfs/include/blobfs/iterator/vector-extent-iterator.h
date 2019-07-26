@@ -20,21 +20,21 @@ namespace blobfs {
 // This iterator is useful for accessing blocks of blobs which have not yet been
 // committed to disk.
 class VectorExtentIterator : public ExtentIterator {
-public:
-    VectorExtentIterator(const fbl::Vector<ReservedExtent>& extents);
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VectorExtentIterator);
+ public:
+  VectorExtentIterator(const fbl::Vector<ReservedExtent>& extents);
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VectorExtentIterator);
 
-    ////////////////
-    // ExtentIterator interface.
+  ////////////////
+  // ExtentIterator interface.
 
-    bool Done() const final;
-    zx_status_t Next(const Extent** out) final;
-    uint64_t BlockIndex() const final;
+  bool Done() const final;
+  zx_status_t Next(const Extent** out) final;
+  uint64_t BlockIndex() const final;
 
-private:
-    const fbl::Vector<ReservedExtent>& extents_;
-    size_t extent_index_ = 0;
-    uint64_t block_count_ = 0;
+ private:
+  const fbl::Vector<ReservedExtent>& extents_;
+  size_t extent_index_ = 0;
+  uint64_t block_count_ = 0;
 };
 
-} // namespace blobfs
+}  // namespace blobfs

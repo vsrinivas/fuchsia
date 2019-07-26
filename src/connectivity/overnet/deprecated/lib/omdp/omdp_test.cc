@@ -33,8 +33,7 @@ class MockOmdpBase {
   std::mt19937 rng_{0};
   TraceCout trace_{&timer_};
   ScopedRenderer trace_render{&trace_};
-  ScopedSeverity scoped_severity_{FLAGS_verbose ? Severity::DEBUG
-                                                : Severity::INFO};
+  ScopedSeverity scoped_severity_{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
 };
 
 class MockOmdp : public MockOmdpBase, public Omdp {
@@ -55,8 +54,7 @@ auto bad_input_test = [](auto process_call) {
   // Next process should get caught by block list
   status = process_call(&nub);
   EXPECT_EQ(StatusCode::FAILED_PRECONDITION, status.code()) << status;
-  nub.timer()->Step(
-      TimeDelta::FromSeconds(Omdp::kBlockTimeSeconds + 1).as_us());
+  nub.timer()->Step(TimeDelta::FromSeconds(Omdp::kBlockTimeSeconds + 1).as_us());
   // After block timeout, final catch should be caught by parsing
   status = process_call(&nub);
   EXPECT_TRUE(status.is_error()) << status;
@@ -73,8 +71,7 @@ auto good_input_test = [](auto process_call) {
 
 TEST(Omdp, BadParse) {
   bad_input_test([](Omdp* nub) {
-    return nub->Process(IpAddr(1, 1, 1, 1, 1),
-                        Slice::FromContainer({1, 2, 3, 4}));
+    return nub->Process(IpAddr(1, 1, 1, 1, 1), Slice::FromContainer({1, 2, 3, 4}));
   });
 }
 
@@ -118,17 +115,13 @@ class OmdpNetwork {
   class Nub final : protected NubBase, public Omdp {
    public:
     Nub(OmdpNetwork* net, size_t i)
-        : NubBase(i),
-          Omdp(i, &net->timer_, [this]() { return NubBase::rng_(); }),
-          net_(net) {}
+        : NubBase(i), Omdp(i, &net->timer_, [this]() { return NubBase::rng_(); }), net_(net) {}
 
     void Start() { ScheduleBroadcast(); }
 
     void OnNewNode(uint64_t node, IpAddr addr) override {}
 
-    void Broadcast(Slice slice) override {
-      net_->Broadcast(std::move(slice), this);
-    }
+    void Broadcast(Slice slice) override { net_->Broadcast(std::move(slice), this); }
 
    private:
     OmdpNetwork* const net_;
@@ -149,8 +142,7 @@ class OmdpNetwork {
   TestTimer timer_;
   TraceCout trace_{&timer_};
   ScopedRenderer trace_render{&trace_};
-  ScopedSeverity scoped_severity_{FLAGS_verbose ? Severity::DEBUG
-                                                : Severity::INFO};
+  ScopedSeverity scoped_severity_{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
   std::vector<std::unique_ptr<Nub>> nubs_;
   uint64_t broadcasts_ = 0;
 };
@@ -182,8 +174,7 @@ TEST_P(OmdpNetworkTest, RateControl) {
 }
 
 INSTANTIATE_TEST_SUITE_P(OmdpNet, OmdpNetworkTest,
-                         testing::Values(1, 3, 10, 31, 100, 316, 1000, 3162,
-                                         10000));
+                         testing::Values(1, 3, 10, 31, 100, 316, 1000, 3162, 10000));
 
 }  // namespace omdp_nub_test
 }  // namespace overnet

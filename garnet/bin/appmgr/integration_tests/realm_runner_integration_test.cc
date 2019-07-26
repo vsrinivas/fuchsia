@@ -41,13 +41,11 @@ class RealmRunnerTest : public TestWithEnvironment {
     TestWithEnvironment::SetUp();
     auto services = CreateServices();
     ASSERT_EQ(ZX_OK, services->AddService(runner_registry_.GetHandler()));
-    enclosing_environment_ =
-        CreateNewEnclosingEnvironment(kRealm, std::move(services));
+    enclosing_environment_ = CreateNewEnclosingEnvironment(kRealm, std::move(services));
     WaitForEnclosingEnvToStart(enclosing_environment_.get());
   }
 
-  std::pair<std::unique_ptr<EnclosingEnvironment>,
-            std::unique_ptr<MockRunnerRegistry>>
+  std::pair<std::unique_ptr<EnclosingEnvironment>, std::unique_ptr<MockRunnerRegistry>>
   MakeNestedEnvironment(const fuchsia::sys::EnvironmentOptions& options) {
     fuchsia::sys::EnvironmentPtr env;
     enclosing_environment_->ConnectToService(fuchsia::sys::Environment::Name_,
@@ -55,8 +53,8 @@ class RealmRunnerTest : public TestWithEnvironment {
     auto registry = std::make_unique<MockRunnerRegistry>();
     auto services = sys::testing::EnvironmentServices::Create(env);
     EXPECT_EQ(ZX_OK, services->AddService(registry->GetHandler()));
-    auto nested_environment = EnclosingEnvironment::Create(
-        "nested-environment", env, std::move(services), std::move(options));
+    auto nested_environment = EnclosingEnvironment::Create("nested-environment", env,
+                                                           std::move(services), std::move(options));
     WaitForEnclosingEnvToStart(nested_environment.get());
     return std::make_pair(std::move(nested_environment), std::move(registry));
   }
@@ -85,9 +83,7 @@ class RealmRunnerTest : public TestWithEnvironment {
   void WaitForComponentCount(MockRunnerRegistry* runner_registry,
                              size_t expected_components_count) {
     auto runner = runner_registry->runner();
-    RunLoopUntil([&] {
-      return runner->components().size() == expected_components_count;
-    });
+    RunLoopUntil([&] { return runner->components().size() == expected_components_count; });
   }
 
   std::unique_ptr<EnclosingEnvironment> enclosing_environment_;
@@ -95,8 +91,7 @@ class RealmRunnerTest : public TestWithEnvironment {
 };
 
 TEST_F(RealmRunnerTest, RunnerLaunched) {
-  auto component =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
   WaitForComponentCount(1);
   auto components = runner_registry_.runner()->components();
@@ -104,31 +99,28 @@ TEST_F(RealmRunnerTest, RunnerLaunched) {
 }
 
 TEST_F(RealmRunnerTest, RunnerLaunchedOnlyOnce) {
-  auto component1 =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component1 = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
   // launch again and check that runner was not executed again
-  auto component2 =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component2 = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
 
   WaitForComponentCount(2);
   EXPECT_EQ(1, runner_registry_.connect_count());
 }
 
 TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
-  auto component =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
 
-  auto glob_str =
-      fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner.cmx/*", kRealm);
+  auto glob_str = fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner.cmx/*", kRealm);
   files::Glob glob(glob_str);
   ASSERT_EQ(glob.size(), 1u);
   std::string runner_path_in_hub = *(glob.begin());
 
   int64_t return_code = INT64_MIN;
-  component.events().OnTerminated =
-      [&](int64_t code, TerminationReason reason) { return_code = code; };
+  component.events().OnTerminated = [&](int64_t code, TerminationReason reason) {
+    return_code = code;
+  };
   runner_registry_.runner()->runner_ptr()->Crash();
   WaitForRunnerToDie();
   // Make sure component is dead.
@@ -142,8 +134,7 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
   });
 
   // launch again and check that runner was executed again
-  component =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  component = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
   ASSERT_EQ(2, runner_registry_.connect_count());
   // make sure component was also launched
@@ -153,8 +144,7 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
 }
 
 TEST_F(RealmRunnerTest, RunnerLaunchedForEachEnvironment) {
-  auto component1 =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component1 = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
 
   std::unique_ptr<EnclosingEnvironment> nested_environment;
@@ -162,8 +152,7 @@ TEST_F(RealmRunnerTest, RunnerLaunchedForEachEnvironment) {
   std::tie(nested_environment, nested_registry) = MakeNestedEnvironment({});
 
   // launch again and check that runner was created for the nested environment
-  auto component2 =
-      nested_environment->CreateComponentFromUrl(kComponentForRunner);
+  auto component2 = nested_environment->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister(nested_registry.get());
 
   WaitForComponentCount(&runner_registry_, 1);
@@ -173,8 +162,7 @@ TEST_F(RealmRunnerTest, RunnerLaunchedForEachEnvironment) {
 }
 
 TEST_F(RealmRunnerTest, RunnerSharedFromParent) {
-  auto component1 =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component1 = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
 
   std::unique_ptr<EnclosingEnvironment> nested_environment;
@@ -186,8 +174,7 @@ TEST_F(RealmRunnerTest, RunnerSharedFromParent) {
 
   // launch again and check that the runner from the parent environment was
   // shared.
-  auto component2 =
-      nested_environment->CreateComponentFromUrl(kComponentForRunner);
+  auto component2 = nested_environment->CreateComponentFromUrl(kComponentForRunner);
 
   WaitForComponentCount(&runner_registry_, 2);
   EXPECT_EQ(1, runner_registry_.connect_count());
@@ -195,8 +182,7 @@ TEST_F(RealmRunnerTest, RunnerSharedFromParent) {
 }
 
 TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {
-  auto component =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
   // make sure component was launched
   WaitForComponentCount(1);
@@ -209,8 +195,8 @@ TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {
   auto components = runner_registry_.runner()->components();
   const int64_t ret_code = 3;
   MockComponentPtr component_ptr;
-  runner_registry_.runner()->runner_ptr()->ConnectToComponent(
-      components[0].unique_id, component_ptr.NewRequest());
+  runner_registry_.runner()->runner_ptr()->ConnectToComponent(components[0].unique_id,
+                                                              component_ptr.NewRequest());
   component_ptr->Kill(ret_code);
   WaitForComponentCount(0);
   RunLoopUntil([&] { return reason == TerminationReason::EXITED; });
@@ -219,8 +205,7 @@ TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {
 
 TEST_F(RealmRunnerTest, DestroyingControllerKillsComponent) {
   {
-    auto component =
-        enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+    auto component = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
     WaitForRunnerToRegister();
     // make sure component was launched
     WaitForComponentCount(1);
@@ -230,15 +215,12 @@ TEST_F(RealmRunnerTest, DestroyingControllerKillsComponent) {
 }
 
 TEST_F(RealmRunnerTest, KillComponentController) {
-  auto component =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
   // make sure component was launched
   WaitForComponentCount(1);
   TerminationReason reason;
-  component.events().OnTerminated = [&](int64_t code, TerminationReason r) {
-    reason = r;
-  };
+  component.events().OnTerminated = [&](int64_t code, TerminationReason r) { reason = r; };
   component->Kill();
   WaitForComponentCount(0);
   RunLoopUntil([&] { return reason == TerminationReason::EXITED; });
@@ -250,19 +232,16 @@ class RealmRunnerServiceTest : public RealmRunnerTest {
     TestWithEnvironment::SetUp();
     auto env_services = CreateServices();
     ASSERT_EQ(ZX_OK, env_services->AddService(runner_registry_.GetHandler()));
-    ASSERT_EQ(ZX_OK,
-              env_services->AddServiceWithLaunchInfo(
-                  CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
-                                   "echo_server_cpp#meta/echo_server_cpp.cmx"),
-                  fidl::examples::echo::Echo::Name_));
-    enclosing_environment_ =
-        CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
+    ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
+                         CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
+                                          "echo_server_cpp#meta/echo_server_cpp.cmx"),
+                         fidl::examples::echo::Echo::Name_));
+    enclosing_environment_ = CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   }
 };
 
 TEST_F(RealmRunnerServiceTest, ComponentCanConnectToEnvService) {
-  auto component =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
   // make sure component was launched
   WaitForComponentCount(1);
@@ -270,14 +249,12 @@ TEST_F(RealmRunnerServiceTest, ComponentCanConnectToEnvService) {
   fidl::examples::echo::EchoPtr echo;
   MockComponentPtr component_ptr;
   runner_registry_.runner()->runner_ptr()->ConnectToComponent(
-      runner_registry_.runner()->components()[0].unique_id,
-      component_ptr.NewRequest());
+      runner_registry_.runner()->components()[0].unique_id, component_ptr.NewRequest());
   component_ptr->ConnectToService(fidl::examples::echo::Echo::Name_,
                                   echo.NewRequest().TakeChannel());
   const std::string message = "ConnectToEnvService";
   fidl::StringPtr ret_msg = "";
-  echo->EchoString(message,
-                   [&](::fidl::StringPtr retval) { ret_msg = retval; });
+  echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = retval; });
   RunLoopUntil([&] { return ret_msg.get() == message; });
 }
 
@@ -289,8 +266,7 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
   auto services = sys::ServiceDirectory::CreateWithRequest(&request);
   auto launch_info = CreateLaunchInfo(kComponentForRunner);
   launch_info.directory_request = std::move(request);
-  auto component =
-      enclosing_environment_->CreateComponent(std::move(launch_info));
+  auto component = enclosing_environment_->CreateComponent(std::move(launch_info));
 
   WaitForRunnerToRegister();
   // make sure component was launched
@@ -302,19 +278,14 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
   fake_service_dir.AddEntry(
       dummy_service_name,
       std::make_unique<vfs::Service>(
-          [&](zx::channel channel, async_dispatcher_t* dispatcher) {
-            connect_called = true;
-          }));
+          [&](zx::channel channel, async_dispatcher_t* dispatcher) { connect_called = true; }));
   MockComponentSyncPtr component_ptr;
   runner_registry_.runner()->runner_ptr()->ConnectToComponent(
-      runner_registry_.runner()->components()[0].unique_id,
-      component_ptr.NewRequest());
+      runner_registry_.runner()->components()[0].unique_id, component_ptr.NewRequest());
   fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  fake_service_dir.Serve(
-      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-      dir_handle.NewRequest().TakeChannel());
-  ASSERT_EQ(ZX_OK,
-            component_ptr->SetServiceDirectory(dir_handle.TakeChannel()));
+  fake_service_dir.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                         dir_handle.NewRequest().TakeChannel());
+  ASSERT_EQ(ZX_OK, component_ptr->SetServiceDirectory(dir_handle.TakeChannel()));
   ASSERT_EQ(ZX_OK, component_ptr->PublishService(dummy_service_name));
 
   // try to connect to fake service
@@ -324,14 +295,11 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
 }
 
 TEST_F(RealmRunnerTest, ProbeHub) {
-  auto glob_str =
-      fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner.cmx/*/c/%s/*", kRealm,
-                        kComponentForRunnerProcessName);
+  auto glob_str = fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner.cmx/*/c/%s/*", kRealm,
+                                    kComponentForRunnerProcessName);
   // launch two components and make sure both show up in /hub.
-  auto component1 =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
-  auto component2 =
-      enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component1 = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
+  auto component2 = enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);
   WaitForRunnerToRegister();
   WaitForComponentCount(2);
 
@@ -340,8 +308,7 @@ TEST_F(RealmRunnerTest, ProbeHub) {
 
   std::vector<std::string> paths = {glob.begin(), glob.end()};
   EXPECT_NE(paths[0], paths[1]);
-  EXPECT_EQ(files::GetDirectoryName(paths[0]),
-            files::GetDirectoryName(paths[1]));
+  EXPECT_EQ(files::GetDirectoryName(paths[0]), files::GetDirectoryName(paths[1]));
 }
 
 }  // namespace

@@ -11,78 +11,71 @@ namespace msm8x53 {
 
 // Branch clock control register.
 class CBCR : public hwreg::RegisterBase<CBCR, uint32_t> {
-public:
-    DEF_BIT(0, enable);
-    static auto Get(uint32_t offset) { return hwreg::RegisterAddr<CBCR>(offset); }
+ public:
+  DEF_BIT(0, enable);
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<CBCR>(offset); }
 };
 
 // Branch clock reset register.
 class BCR : public hwreg::RegisterBase<BCR, uint32_t> {
-public:
-    DEF_BIT(0, reset);
-    static auto Get(uint32_t offset) { return hwreg::RegisterAddr<BCR>(offset); }
+ public:
+  DEF_BIT(0, reset);
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<BCR>(offset); }
 };
 
 // Root clock gating command register.
 class RCG_CMD : public hwreg::RegisterBase<RCG_CMD, uint32_t> {
-public:
-    DEF_BIT(0, update);
-    static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_CMD>(offset); }
+ public:
+  DEF_BIT(0, update);
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_CMD>(offset); }
 };
 
 // Root clock gating config register.
 class RCG_CFG : public hwreg::RegisterBase<RCG_CFG, uint32_t> {
-public:
-    DEF_FIELD(12, 11, mode);
-    DEF_FIELD(8, 6, src_sel);
-    DEF_FIELD(4, 0, src_div);
-    static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_CFG>(offset); }
+ public:
+  DEF_FIELD(12, 11, mode);
+  DEF_FIELD(8, 6, src_sel);
+  DEF_FIELD(4, 0, src_div);
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_CFG>(offset); }
 };
 
 // Root clock gating M-prescalar.
 class RCG_M : public hwreg::RegisterBase<RCG_M, uint32_t> {
-public:
-    DEF_FIELD(31, 0, m);
-    static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_M>(offset); }
+ public:
+  DEF_FIELD(31, 0, m);
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_M>(offset); }
 };
 
 // Root clock gating N-prescalar.
 class RCG_N : public hwreg::RegisterBase<RCG_N, uint32_t> {
-public:
-    DEF_FIELD(31, 0, n);
-    static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_N>(offset); }
+ public:
+  DEF_FIELD(31, 0, n);
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_N>(offset); }
 };
 
 // Root clock gating D-prescalar.
 class RCG_D : public hwreg::RegisterBase<RCG_D, uint32_t> {
-public:
-    DEF_FIELD(31, 0, d);
-    static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_D>(offset); }
+ public:
+  DEF_FIELD(31, 0, d);
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_D>(offset); }
 };
 
 // Clock control registers.
 static constexpr uint32_t kCcBase = 0x1800000;
 static constexpr uint32_t kCcSize = 0x80000;
 
-enum class msm_clk_type : uint16_t {
-    kGate = 0,
-    kBranch,
-    kVoter,
-    kRcg
-};
+enum class msm_clk_type : uint16_t { kGate = 0, kBranch, kVoter, kRcg };
 
 // Create a clock ID based on a type and an index
 constexpr uint32_t MsmClkId(const uint16_t index, const msm_clk_type type) {
-    // Top 16 bits are the type, bottom 16 bits are the index.
-    return static_cast<uint32_t>(index) | ((static_cast<uint32_t>(type)) << 16);
+  // Top 16 bits are the type, bottom 16 bits are the index.
+  return static_cast<uint32_t>(index) | ((static_cast<uint32_t>(type)) << 16);
 }
 
-constexpr uint16_t MsmClkIndex(const uint32_t clk_id) {
-    return clk_id & 0x0000ffff;
-}
+constexpr uint16_t MsmClkIndex(const uint32_t clk_id) { return clk_id & 0x0000ffff; }
 
 constexpr msm_clk_type MsmClkType(const uint32_t clk_id) {
-    return static_cast<msm_clk_type>(clk_id >> 16);
+  return static_cast<msm_clk_type>(clk_id >> 16);
 }
 
 // The following is a list of Clock IDs that can be used as parameters to
@@ -294,4 +287,4 @@ constexpr uint32_t kUsb30MockUtmiClkSrc = MsmClkId(64, msm_clk_type::kRcg);
 constexpr uint32_t kUsb3AuxClkSrc = MsmClkId(65, msm_clk_type::kRcg);
 constexpr uint32_t kRcgClkCount = 66;
 
-} // namespace msm8x53
+}  // namespace msm8x53

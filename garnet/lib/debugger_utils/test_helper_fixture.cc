@@ -14,13 +14,12 @@
 namespace debugger_utils {
 
 const char* const TestWithHelper::kWaitPeerClosedArgv[] = {
-  kTestHelperPath,
-  "wait-peer-closed",
-  nullptr,
+    kTestHelperPath,
+    "wait-peer-closed",
+    nullptr,
 };
 
-void TestWithHelper::SetUp() {
-}
+void TestWithHelper::SetUp() {}
 
 void TestWithHelper::TearDown() {
   // Closing the channel should cause the helper to terminate, if it
@@ -28,13 +27,11 @@ void TestWithHelper::TearDown() {
   channel_.reset();
 
   zx_signals_t pending;
-  zx_status_t status =
-    process_.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), &pending);
+  zx_status_t status = process_.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), &pending);
   ASSERT_EQ(status, ZX_OK);
 }
 
-zx_status_t TestWithHelper::RunHelperProgram(const zx::job& job,
-                                             const char* const argv[]) {
+zx_status_t TestWithHelper::RunHelperProgram(const zx::job& job, const char* const argv[]) {
   zx::channel our_channel, their_channel;
   zx_status_t status = zx::channel::create(0, &our_channel, &their_channel);
   if (status != ZX_OK) {
@@ -49,12 +46,10 @@ zx_status_t TestWithHelper::RunHelperProgram(const zx::job& job,
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
   zx::process process;
-  status = fdio_spawn_etc(job.get(), flags, kTestHelperPath, argv, nullptr,
-                          arraysize(actions), actions,
-                          process.reset_and_get_address(), err_msg);
+  status = fdio_spawn_etc(job.get(), flags, kTestHelperPath, argv, nullptr, arraysize(actions),
+                          actions, process.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "fdio_spawn_etc failed: " << ZxErrorString(status)
-                   << ", " << err_msg;
+    FXL_LOG(ERROR) << "fdio_spawn_etc failed: " << ZxErrorString(status) << ", " << err_msg;
     return status;
   }
 
@@ -65,16 +60,15 @@ zx_status_t TestWithHelper::RunHelperProgram(const zx::job& job,
 
 zx_status_t TestWithHelper::GetHelperThread(zx::thread* out_thread) {
   zx_signals_t pending;
-  zx_status_t status =
-    channel_.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
+  zx_status_t status = channel_.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "channel->wait_one failed: " << ZxErrorString(status);
     return status;
   }
 
   uint32_t actual_bytes, actual_handles;
-  status = channel_.read(0u, nullptr, out_thread->reset_and_get_address(),
-                         0u, 1u, &actual_bytes, &actual_handles);
+  status = channel_.read(0u, nullptr, out_thread->reset_and_get_address(), 0u, 1u, &actual_bytes,
+                         &actual_handles);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "channel->read failed: " << ZxErrorString(status);
     return status;

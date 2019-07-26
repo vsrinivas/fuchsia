@@ -17,80 +17,61 @@ namespace cobalt {
 // To test run:
 //    fx set --with-base //bundles:tools,//src/cobalt/bin:cobalt_tests;
 //    fx run-test-component cobalt_testapp_no_network
-class LoggerImpl : public fuchsia::cobalt::Logger,
-                   public fuchsia::cobalt::LoggerSimple {
+class LoggerImpl : public fuchsia::cobalt::Logger, public fuchsia::cobalt::LoggerSimple {
  public:
-  LoggerImpl(std::unique_ptr<logger::ProjectContext> project_context,
-             logger::Encoder* encoder,
+  LoggerImpl(std::unique_ptr<logger::ProjectContext> project_context, logger::Encoder* encoder,
              logger::EventAggregator* event_aggregator,
-             logger::ObservationWriter* observation_writer,
-             TimerManager* timer_manager,
-             encoder::SystemDataInterface* system_data,
-             logger::LoggerInterface* internal_logger);
+             logger::ObservationWriter* observation_writer, TimerManager* timer_manager,
+             encoder::SystemDataInterface* system_data, logger::LoggerInterface* internal_logger);
 
  private:
-  void LogEvent(
-      uint32_t metric_id, uint32_t event_code,
-      fuchsia::cobalt::LoggerBase::LogEventCallback callback) override;
+  void LogEvent(uint32_t metric_id, uint32_t event_code,
+                fuchsia::cobalt::LoggerBase::LogEventCallback callback) override;
 
-  void LogEventCount(
-      uint32_t metric_id, uint32_t event_code, std::string component,
-      int64_t period_duration_micros, int64_t count,
-      fuchsia::cobalt::LoggerBase::LogEventCountCallback callback) override;
+  void LogEventCount(uint32_t metric_id, uint32_t event_code, std::string component,
+                     int64_t period_duration_micros, int64_t count,
+                     fuchsia::cobalt::LoggerBase::LogEventCountCallback callback) override;
 
-  void LogElapsedTime(
-      uint32_t metric_id, uint32_t event_code, std::string component,
-      int64_t elapsed_micros,
-      fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) override;
+  void LogElapsedTime(uint32_t metric_id, uint32_t event_code, std::string component,
+                      int64_t elapsed_micros,
+                      fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) override;
 
-  void LogFrameRate(
-      uint32_t metric_id, uint32_t event_code, std::string component, float fps,
-      fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) override;
+  void LogFrameRate(uint32_t metric_id, uint32_t event_code, std::string component, float fps,
+                    fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) override;
 
-  void LogMemoryUsage(
-      uint32_t metric_id, uint32_t event_code, std::string component,
-      int64_t bytes,
-      fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) override;
+  void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, std::string component, int64_t bytes,
+                      fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) override;
 
-  void LogString(
-      uint32_t metric_id, std::string s,
-      fuchsia::cobalt::LoggerBase::LogStringCallback callback) override;
+  void LogString(uint32_t metric_id, std::string s,
+                 fuchsia::cobalt::LoggerBase::LogStringCallback callback) override;
 
-  void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_code, std::string component,
-      std::vector<fuchsia::cobalt::HistogramBucket> histogram,
-      fuchsia::cobalt::Logger::LogIntHistogramCallback callback) override;
+  void LogIntHistogram(uint32_t metric_id, uint32_t event_code, std::string component,
+                       std::vector<fuchsia::cobalt::HistogramBucket> histogram,
+                       fuchsia::cobalt::Logger::LogIntHistogramCallback callback) override;
 
-  void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_code, std::string component,
-      std::vector<uint32_t> bucket_indices, std::vector<uint64_t> bucket_counts,
-      fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) override;
+  void LogIntHistogram(uint32_t metric_id, uint32_t event_code, std::string component,
+                       std::vector<uint32_t> bucket_indices, std::vector<uint64_t> bucket_counts,
+                       fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) override;
 
-  void LogCustomEvent(
-      uint32_t metric_id,
-      std::vector<fuchsia::cobalt::CustomEventValue> event_values,
-      fuchsia::cobalt::Logger::LogCustomEventCallback callback) override;
+  void LogCustomEvent(uint32_t metric_id,
+                      std::vector<fuchsia::cobalt::CustomEventValue> event_values,
+                      fuchsia::cobalt::Logger::LogCustomEventCallback callback) override;
 
   template <class CB>
-  void AddTimerObservationIfReady(std::unique_ptr<TimerVal> timer_val_ptr,
-                                  CB callback);
+  void AddTimerObservationIfReady(std::unique_ptr<TimerVal> timer_val_ptr, CB callback);
 
-  void StartTimer(
-      uint32_t metric_id, uint32_t event_code, std::string component,
-      std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
-      fuchsia::cobalt::LoggerBase::StartTimerCallback callback) override;
+  void StartTimer(uint32_t metric_id, uint32_t event_code, std::string component,
+                  std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
+                  fuchsia::cobalt::LoggerBase::StartTimerCallback callback) override;
 
-  void EndTimer(
-      std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
-      fuchsia::cobalt::LoggerBase::EndTimerCallback callback) override;
+  void EndTimer(std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
+                fuchsia::cobalt::LoggerBase::EndTimerCallback callback) override;
 
-  void LogCobaltEvent(
-      fuchsia::cobalt::CobaltEvent event,
-      fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
+  void LogCobaltEvent(fuchsia::cobalt::CobaltEvent event,
+                      fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
 
-  void LogCobaltEvents(
-      std::vector<fuchsia::cobalt::CobaltEvent> events,
-      fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
+  void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events,
+                       fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
 
  private:
   logger::Logger logger_;

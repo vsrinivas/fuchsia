@@ -50,8 +50,7 @@ fxl::UniqueFD MksTempAt(int root_fd, char* tp, size_t tp_length) {
   int retries = 100;
   do {
     GenerateRandName(tp + tp_length - 6);
-    fxl::UniqueFD result(
-        HANDLE_EINTR(openat(root_fd, tp, O_CREAT | O_EXCL, 0700)));
+    fxl::UniqueFD result(HANDLE_EINTR(openat(root_fd, tp, O_CREAT | O_EXCL, 0700)));
     if (result.is_valid()) {
       return result;
     }
@@ -81,8 +80,7 @@ char* MkdTempAt(int root_fd, char* tp, size_t tp_length) {
 
 ScopedTempDirAt::ScopedTempDirAt(int root_fd) : ScopedTempDirAt(root_fd, ".") {}
 
-ScopedTempDirAt::ScopedTempDirAt(int root_fd, fxl::StringView parent_path)
-    : root_fd_(root_fd) {
+ScopedTempDirAt::ScopedTempDirAt(int root_fd, fxl::StringView parent_path) : root_fd_(root_fd) {
   const std::string parent_path_str = parent_path.ToString();
   // MkdTempAt replaces "XXXXXX" so that the resulting directory path is unique.
   directory_path_ = parent_path_str + "/temp_dir_XXXXXX";
@@ -115,8 +113,7 @@ bool ScopedTempDirAt::NewTempFile(std::string* output) {
   return true;
 }
 
-bool ScopedTempDirAt::NewTempFileWithData(const std::string& data,
-                                          std::string* output) {
+bool ScopedTempDirAt::NewTempFileWithData(const std::string& data, std::string* output) {
   if (!NewTempFile(output)) {
     return false;
   }
@@ -142,17 +139,12 @@ ScopedTempDir::~ScopedTempDir() {}
 
 const std::string& ScopedTempDir::path() { return base_.path(); }
 
-bool ScopedTempDir::NewTempFile(std::string* output) {
-  return base_.NewTempFile(output);
-}
+bool ScopedTempDir::NewTempFile(std::string* output) { return base_.NewTempFile(output); }
 
-bool ScopedTempDir::NewTempFileWithData(const std::string& data,
-                                        std::string* output) {
+bool ScopedTempDir::NewTempFileWithData(const std::string& data, std::string* output) {
   return base_.NewTempFileWithData(data, output);
 }
 
-bool ScopedTempDir::NewTempDir(std::string* path) {
-  return base_.NewTempDir(path);
-}
+bool ScopedTempDir::NewTempDir(std::string* path) { return base_.NewTempDir(path); }
 
 }  // namespace files

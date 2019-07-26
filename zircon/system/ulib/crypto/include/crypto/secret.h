@@ -20,32 +20,32 @@
 namespace crypto {
 
 class Secret final {
-public:
-    Secret();
-    ~Secret();
+ public:
+  Secret();
+  ~Secret();
 
-    // Accessors
-    const uint8_t* get() const { return buf_.get(); }
-    size_t len() const { return len_; }
+  // Accessors
+  const uint8_t* get() const { return buf_.get(); }
+  size_t len() const { return len_; }
 
-    // Allocates |len| bytes for a secret and returns a pointer to the buffer via |out|.  This
-    // method should be used when populating a secret from another source, and |out| should be
-    // allowed to go out scope as quickly as possible.
-    zx_status_t Allocate(size_t len, uint8_t** out);
+  // Allocates |len| bytes for a secret and returns a pointer to the buffer via |out|.  This
+  // method should be used when populating a secret from another source, and |out| should be
+  // allowed to go out scope as quickly as possible.
+  zx_status_t Allocate(size_t len, uint8_t** out);
 
-    // Initializes this object with |size| pseudo-random bytes.
-    zx_status_t Generate(size_t size);
+  // Initializes this object with |size| pseudo-random bytes.
+  zx_status_t Generate(size_t size);
 
-    // Erases and frees the underlying buffer.
-    void Clear();
+  // Erases and frees the underlying buffer.
+  void Clear();
 
-private:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Secret);
+ private:
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Secret);
 
-    // The underlying buffer.  The destructor is guaranteed to zero this buffer if allocated.
-    fbl::unique_ptr<uint8_t[]> buf_;
-    // Length in bytes of memory currently allocated to the underlying buffer.
-    size_t len_;
+  // The underlying buffer.  The destructor is guaranteed to zero this buffer if allocated.
+  fbl::unique_ptr<uint8_t[]> buf_;
+  // Length in bytes of memory currently allocated to the underlying buffer.
+  size_t len_;
 };
 
-} // namespace crypto
+}  // namespace crypto

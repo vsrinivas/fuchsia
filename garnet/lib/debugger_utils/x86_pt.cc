@@ -17,8 +17,7 @@ namespace debugger_utils {
 /* Trick to get a 1 of the right size */
 #define ONE(x) (1 + ((x) - (x)))
 #define BIT(x, bit) ((x) & (ONE(x) << (bit)))
-#define BITS_SHIFT(x, high, low) \
-  (((x) >> (low)) & ((ONE(x) << ((high) - (low) + 1)) - 1))
+#define BITS_SHIFT(x, high, low) (((x) >> (low)) & ((ONE(x) << ((high) - (low) + 1)) - 1))
 
 static X86ProcessorTraceFeatures pt_features;  // TODO(dje): guard annotation
 static bool initialized = false;               // TODO(dje): guard annotation

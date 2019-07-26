@@ -24,9 +24,7 @@ std::string GetCurrentDirectory() {
   return std::string(buffer);
 }
 
-bool IsDirectory(const std::string& path) {
-  return IsDirectoryAt(AT_FDCWD, path);
-}
+bool IsDirectory(const std::string& path) { return IsDirectoryAt(AT_FDCWD, path); }
 
 bool IsDirectoryAt(int root_fd, const std::string& path) {
   struct stat buf;
@@ -45,8 +43,8 @@ bool CreateDirectoryAt(int root_fd, const std::string& full_path) {
   // Collect a list of all parent directories.
   std::string last_path = full_path;
   subpaths.push_back(full_path);
-  for (std::string path = GetDirectoryName(full_path);
-       !path.empty() && path != last_path; path = GetDirectoryName(path)) {
+  for (std::string path = GetDirectoryName(full_path); !path.empty() && path != last_path;
+       path = GetDirectoryName(path)) {
     subpaths.push_back(path);
     last_path = path;
   }

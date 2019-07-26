@@ -42,25 +42,25 @@ namespace internal {
 // number of entries. Each number is selected to be slightly less than twice the
 // previous and as far as possible from the nearest two powers of two.
 constexpr size_t NextPrime(size_t n) {
-    if (n < (1 << 4))
-        return 23;
-    else if (n < (1 << 5))
-        return 53;
-    else if (n < (1 << 6))
-        return 97;
-    else if (n < (1 << 7))
-        return 193;
-    else if (n < (1 << 8))
-        return 389;
-    else if (n < (1 << 9))
-        return 769;
-    else if (n < (1 << 10))
-        return 1543;
-    else
-        return 0; // The input exceeds the size of this prime table.
+  if (n < (1 << 4))
+    return 23;
+  else if (n < (1 << 5))
+    return 53;
+  else if (n < (1 << 6))
+    return 97;
+  else if (n < (1 << 7))
+    return 193;
+  else if (n < (1 << 8))
+    return 389;
+  else if (n < (1 << 9))
+    return 769;
+  else if (n < (1 << 10))
+    return 1543;
+  else
+    return 0;  // The input exceeds the size of this prime table.
 }
 
-} // namespace internal
+}  // namespace internal
 
 // The maximum number of dependencies each lock class may have. This is the
 // maximum branching factor of the directed graph of locks managed by this
@@ -77,50 +77,49 @@ constexpr bool kLockValidationEnabled = static_cast<bool>(LOCK_DEP_ENABLE_VALIDA
 // Utility template alias to simplify selecting different types based whether
 // lock validation is enabled or disabled.
 template <typename EnabledType, typename DisabledType>
-using IfLockValidationEnabled = typename std::conditional<kLockValidationEnabled,
-                                                          EnabledType,
-                                                          DisabledType>::type;
+using IfLockValidationEnabled =
+    typename std::conditional<kLockValidationEnabled, EnabledType, DisabledType>::type;
 
 // Result type that represents whether a lock attempt was successful, or if not
 // which check failed.
 enum class LockResult : uint8_t {
-    Success,
-    AlreadyAcquired,
-    OutOfOrder,
-    InvalidNesting,
-    InvalidIrqSafety,
+  Success,
+  AlreadyAcquired,
+  OutOfOrder,
+  InvalidNesting,
+  InvalidIrqSafety,
 
-    // Non-fatal error that indicates the dependency hash set for a particular
-    // lock class is full. Consider increasing the size of the lock dependency
-    // sets if this error is reported.
-    MaxLockDependencies,
+  // Non-fatal error that indicates the dependency hash set for a particular
+  // lock class is full. Consider increasing the size of the lock dependency
+  // sets if this error is reported.
+  MaxLockDependencies,
 
-    // Internal error value used to differentiate between dependency set updates
-    // that add a new edge and those that do not. Only new edges trigger loop
-    // detection.
-    DependencyExists,
+  // Internal error value used to differentiate between dependency set updates
+  // that add a new edge and those that do not. Only new edges trigger loop
+  // detection.
+  DependencyExists,
 };
 
 // Returns a string representation of the given LockResult.
 static inline const char* ToString(LockResult result) {
-    switch (result) {
+  switch (result) {
     case LockResult::Success:
-        return "Success";
+      return "Success";
     case LockResult::AlreadyAcquired:
-        return "Already Acquired";
+      return "Already Acquired";
     case LockResult::OutOfOrder:
-        return "Out Of Order";
+      return "Out Of Order";
     case LockResult::InvalidNesting:
-        return "Invalid Nesting";
+      return "Invalid Nesting";
     case LockResult::InvalidIrqSafety:
-        return "Invalid Irq Safety";
+      return "Invalid Irq Safety";
     case LockResult::MaxLockDependencies:
-        return "Max Lock Dependencies";
+      return "Max Lock Dependencies";
     case LockResult::DependencyExists:
-        return "Dependency Exists";
+      return "Dependency Exists";
     default:
-        return "Unknown";
-    }
+      return "Unknown";
+  }
 }
 
-} // namespace lockdep
+}  // namespace lockdep

@@ -15,13 +15,10 @@ namespace uuid {
 namespace {
 
 inline bool IsHexDigit(char c) {
-  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') ||
-         (c >= 'a' && c <= 'f');
+  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }
 
-inline bool IsLowerHexDigit(char c) {
-  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
-}
+inline bool IsLowerHexDigit(char c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'); }
 
 bool IsValidInternal(const std::string& guid, bool strict) {
   constexpr size_t kUUIDLength = 36U;
@@ -58,17 +55,14 @@ std::string Generate() {
   bytes[1] &= 0x3fffffffffffffffULL;
   bytes[1] |= 0x8000000000000000ULL;
 
-  return fxl::StringPrintf(
-      "%08x-%04x-%04x-%04x-%012llx", static_cast<unsigned int>(bytes[0] >> 32),
-      static_cast<unsigned int>((bytes[0] >> 16) & 0x0000ffff),
-      static_cast<unsigned int>(bytes[0] & 0x0000ffff),
-      static_cast<unsigned int>(bytes[1] >> 48),
-      bytes[1] & 0x0000ffffffffffffULL);
+  return fxl::StringPrintf("%08x-%04x-%04x-%04x-%012llx", static_cast<unsigned int>(bytes[0] >> 32),
+                           static_cast<unsigned int>((bytes[0] >> 16) & 0x0000ffff),
+                           static_cast<unsigned int>(bytes[0] & 0x0000ffff),
+                           static_cast<unsigned int>(bytes[1] >> 48),
+                           bytes[1] & 0x0000ffffffffffffULL);
 }
 
-bool IsValid(const std::string& guid) {
-  return IsValidInternal(guid, false /* strict */);
-}
+bool IsValid(const std::string& guid) { return IsValidInternal(guid, false /* strict */); }
 
 bool IsValidOutputString(const std::string& guid) {
   return IsValidInternal(guid, true /* strict */);

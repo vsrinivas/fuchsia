@@ -24,8 +24,7 @@ namespace time_server {
 
 bool RoughTimeServer::IsValid() const { return valid_; }
 
-std::pair<Status, std::optional<zx::time_utc>>
-RoughTimeServer::GetTimeFromServer() const {
+std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServer() const {
   if (!IsValid()) {
     FX_LOGS(ERROR) << "time server not supported: " << address_;
     return {NOT_SUPPORTED, {}};
@@ -64,8 +63,7 @@ RoughTimeServer::GetTimeFromServer() const {
     return {NETWORK_ERROR, {}};
   }
   auto ac1 = fit::defer([&]() { freeaddrinfo(addrs); });
-  fxl::UniqueFD sock_ufd(
-      socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
+  fxl::UniqueFD sock_ufd(socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {
     FX_LOGS(ERROR) << "creating UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};
@@ -78,8 +76,8 @@ RoughTimeServer::GetTimeFromServer() const {
   }
 
   char dest_str[INET6_ADDRSTRLEN];
-  err = getnameinfo(addrs->ai_addr, addrs->ai_addrlen, dest_str,
-                    sizeof(dest_str), NULL, 0, NI_NUMERICHOST);
+  err = getnameinfo(addrs->ai_addr, addrs->ai_addrlen, dest_str, sizeof(dest_str), NULL, 0,
+                    NI_NUMERICHOST);
 
   if (err != 0) {
     FX_LOGS(ERROR) << "getnameinfo: " << gai_strerror(err);
@@ -141,10 +139,9 @@ RoughTimeServer::GetTimeFromServer() const {
   uint32_t radius;
   std::string error;
   uint64_t timestamp_us;
-  if (!roughtime::ParseResponse(&timestamp_us, &radius, &error, public_key_,
-                                recv_buf, buf_len, nonce)) {
-    FX_LOGS(ERROR) << "response from " << address_
-                   << " failed verification: " << error;
+  if (!roughtime::ParseResponse(&timestamp_us, &radius, &error, public_key_, recv_buf, buf_len,
+                                nonce)) {
+    FX_LOGS(ERROR) << "response from " << address_ << " failed verification: " << error;
     return {BAD_RESPONSE, {}};
   }
 

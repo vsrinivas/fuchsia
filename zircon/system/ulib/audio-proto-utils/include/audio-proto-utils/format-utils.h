@@ -24,9 +24,7 @@ uint32_t ComputeFrameSize(uint16_t channels, audio_sample_format_t sample_format
 // Check to see if the specified format (rate, chan, sample_format) is
 // compatible with the given format range.  Returns true if it is, or
 // false otherwise.
-bool FormatIsCompatible(uint32_t frame_rate,
-                        uint16_t channels,
-                        audio_sample_format_t sample_format,
+bool FormatIsCompatible(uint32_t frame_rate, uint16_t channels, audio_sample_format_t sample_format,
                         const audio_stream_format_range_t& format_range);
 
 // A small helper class which allows code to use c++11 range-based for loop
@@ -41,46 +39,44 @@ bool FormatIsCompatible(uint32_t frame_rate,
 // enum placeholder instead and allow comparison between the iterator and the
 // token.
 class FrameRateEnumerator {
-public:
-    class iterator {
-    public:
-        iterator() { }
+ public:
+  class iterator {
+   public:
+    iterator() {}
 
-        iterator& operator++() {
-            Advance();
-            return *this;
-        }
+    iterator& operator++() {
+      Advance();
+      return *this;
+    }
 
-        uint32_t operator*() {
-            // No one should be dereferencing us if we are currently invalid.
-            ZX_DEBUG_ASSERT(enumerator_ != nullptr);
-            return cur_rate_;
-        }
+    uint32_t operator*() {
+      // No one should be dereferencing us if we are currently invalid.
+      ZX_DEBUG_ASSERT(enumerator_ != nullptr);
+      return cur_rate_;
+    }
 
-        bool operator!=(const iterator& rhs) const {
-            return ::memcmp(this, &rhs, sizeof(*this)) != 0;
-        }
+    bool operator!=(const iterator& rhs) const { return ::memcmp(this, &rhs, sizeof(*this)) != 0; }
 
-    private:
-        friend class FrameRateEnumerator;
-        explicit iterator(const FrameRateEnumerator* enumerator);
-        void Advance();
+   private:
+    friend class FrameRateEnumerator;
+    explicit iterator(const FrameRateEnumerator* enumerator);
+    void Advance();
 
-        const FrameRateEnumerator* enumerator_ = nullptr;
-        uint32_t cur_rate_ = 0;
-        uint16_t cur_flag_ = 0;
-        uint16_t fmt_ndx_ = 0;
-    };
+    const FrameRateEnumerator* enumerator_ = nullptr;
+    uint32_t cur_rate_ = 0;
+    uint16_t cur_flag_ = 0;
+    uint16_t fmt_ndx_ = 0;
+  };
 
-    explicit FrameRateEnumerator(const audio_stream_format_range_t& range) : range_(range) { }
+  explicit FrameRateEnumerator(const audio_stream_format_range_t& range) : range_(range) {}
 
-    iterator begin() { return iterator(this); }
-    iterator end()   { return iterator(nullptr); }
+  iterator begin() { return iterator(this); }
+  iterator end() { return iterator(nullptr); }
 
-    const audio_stream_format_range_t& range() const { return range_; }
+  const audio_stream_format_range_t& range() const { return range_; }
 
-private:
-    audio_stream_format_range_t range_;
+ private:
+  audio_stream_format_range_t range_;
 };
 
 }  // namespace utils

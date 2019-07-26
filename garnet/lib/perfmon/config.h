@@ -51,14 +51,14 @@ class Config {
 
   // Collect os data.
   // If neither |kFlagOs,KflagPc| are specified then both are collected.
-  static constexpr uint32_t kFlagOs   = 0x1;
+  static constexpr uint32_t kFlagOs = 0x1;
 
   // Collect userspace data.
   // If neither |kFlagOs,KflagPc| are specified then both are collected.
   static constexpr uint32_t kFlagUser = 0x2;
 
   // Collect aspace+pc values.
-  static constexpr uint32_t kFlagPc   = 0x4;
+  static constexpr uint32_t kFlagPc = 0x4;
 
   // If set then this event is used as the "timebase": data for events that
   // aren't their own time base is collected when data for this event is
@@ -74,8 +74,7 @@ class Config {
   static constexpr uint32_t kFlagLastBranch = 0x10;
 
   // These flags may only be specified with a non-zero rate.
-  static constexpr uint32_t kNonZeroRateOnlyFlags =
-    kFlagPc + kFlagLastBranch + kFlagTimebase;
+  static constexpr uint32_t kNonZeroRateOnlyFlags = kFlagPc + kFlagLastBranch + kFlagTimebase;
 
   enum class Status {
     OK,
@@ -120,9 +119,7 @@ class Config {
 
  private:
   struct EventHash {
-    inline std::size_t operator()(const EventConfig& event) const {
-      return event.event;
-    }
+    inline std::size_t operator()(const EventConfig& event) const { return event.event; }
   };
   struct EventEqual {
     inline bool operator()(const EventConfig& e1, const EventConfig& e2) const {

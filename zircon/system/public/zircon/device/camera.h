@@ -14,4 +14,4 @@
 // this will not be needed and can be cleaned up.
 typedef fuchsia_camera_common_FrameRate frame_rate_t;
 
-#endif // SYSROOT_ZIRCON_DEVICE_SYSMEM_H_
+#endif  // SYSROOT_ZIRCON_DEVICE_SYSMEM_H_

@@ -12,67 +12,67 @@ namespace minfs {
 namespace {
 
 TEST(MinfsFormat, MinfsSuperblock) {
-    minfs::Superblock info = {};
-    info.block_count = 29;
-    info.ibm_block = 2;
-    info.abm_block = 3;
-    info.ino_block = 5;
-    info.journal_start_block = 11;
-    info.dat_block = 19;
+  minfs::Superblock info = {};
+  info.block_count = 29;
+  info.ibm_block = 2;
+  info.abm_block = 3;
+  info.ino_block = 5;
+  info.journal_start_block = 11;
+  info.dat_block = 19;
 
-    info.ibm_slices = 3;
-    info.abm_slices = 5;
-    info.ino_slices = 11;
-    info.journal_slices = 13;
-    info.dat_slices = 17;
+  info.ibm_slices = 3;
+  info.abm_slices = 5;
+  info.ino_slices = 11;
+  info.journal_slices = 13;
+  info.dat_slices = 17;
 
-    ASSERT_FALSE(GetMinfsFlagFvm(info));
+  ASSERT_FALSE(GetMinfsFlagFvm(info));
 
-    ASSERT_EQ(InodeBitmapBlocks(info), info.abm_block - info.ibm_block);
+  ASSERT_EQ(InodeBitmapBlocks(info), info.abm_block - info.ibm_block);
 
-    ASSERT_EQ(BlockBitmapBlocks(info), info.ino_block - info.abm_block);
+  ASSERT_EQ(BlockBitmapBlocks(info), info.ino_block - info.abm_block);
 
-    ASSERT_EQ(InodeBlocks(info), info.journal_start_block - info.ino_block);
+  ASSERT_EQ(InodeBlocks(info), info.journal_start_block - info.ino_block);
 
-    ASSERT_EQ(JournalBlocks(info), info.dat_block - info.journal_start_block);
+  ASSERT_EQ(JournalBlocks(info), info.dat_block - info.journal_start_block);
 
-    ASSERT_EQ(DataBlocks(info), info.block_count);
+  ASSERT_EQ(DataBlocks(info), info.block_count);
 
-    ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info) +
-                                       InodeBlocks(info) + JournalBlocks(info));
+  ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info) +
+                                     InodeBlocks(info) + JournalBlocks(info));
 }
 
 TEST(MinfsFormat, MinfsSuperblockOnFvm) {
-    minfs::Superblock info = {};
-    info.block_count = 29;
-    info.ibm_block = 2;
-    info.abm_block = 3;
-    info.ino_block = 5;
-    info.journal_start_block = 11;
-    info.dat_block = 19;
+  minfs::Superblock info = {};
+  info.block_count = 29;
+  info.ibm_block = 2;
+  info.abm_block = 3;
+  info.ino_block = 5;
+  info.journal_start_block = 11;
+  info.dat_block = 19;
 
-    info.ibm_slices = 3;
-    info.abm_slices = 5;
-    info.ino_slices = 11;
-    info.journal_slices = 13;
-    info.dat_slices = 17;
+  info.ibm_slices = 3;
+  info.abm_slices = 5;
+  info.ino_slices = 11;
+  info.journal_slices = 13;
+  info.dat_slices = 17;
 
-    SetMinfsFlagFvm(info);
-    ASSERT_TRUE(GetMinfsFlagFvm(info));
+  SetMinfsFlagFvm(info);
+  ASSERT_TRUE(GetMinfsFlagFvm(info));
 
-    ASSERT_EQ(InodeBitmapBlocks(info), info.ibm_slices);
+  ASSERT_EQ(InodeBitmapBlocks(info), info.ibm_slices);
 
-    ASSERT_EQ(BlockBitmapBlocks(info), info.abm_slices);
+  ASSERT_EQ(BlockBitmapBlocks(info), info.abm_slices);
 
-    ASSERT_EQ(InodeBlocks(info), info.ino_slices);
+  ASSERT_EQ(InodeBlocks(info), info.ino_slices);
 
-    ASSERT_EQ(JournalBlocks(info), info.journal_slices);
+  ASSERT_EQ(JournalBlocks(info), info.journal_slices);
 
-    ASSERT_EQ(DataBlocks(info), info.dat_slices);
+  ASSERT_EQ(DataBlocks(info), info.dat_slices);
 
-    ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info) +
-                                       InodeBlocks(info) + JournalBlocks(info));
+  ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info) +
+                                     InodeBlocks(info) + JournalBlocks(info));
 }
 
-} // namespace
-} // namespace minfs
+}  // namespace
+}  // namespace minfs

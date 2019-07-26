@@ -22,8 +22,8 @@ void fb_release(void);
 // Gets the framebuffer configuration. In single buffer mode, this is the
 // configuration of the allocated buffer. In page flip mode, imported images
 // must have this configuration.
-void fb_get_config(uint32_t* width_out, uint32_t* height_out,
-                   uint32_t* linear_stride_px_out, zx_pixel_format_t* format_out);
+void fb_get_config(uint32_t* width_out, uint32_t* height_out, uint32_t* linear_stride_px_out,
+                   zx_pixel_format_t* format_out);
 
 // single buffer mode functions
 

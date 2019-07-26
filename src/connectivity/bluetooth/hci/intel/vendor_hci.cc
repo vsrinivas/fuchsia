@@ -24,8 +24,7 @@ constexpr auto kInitTimeoutMs = zx::sec(10);
 
 }  // namespace
 
-VendorHci::VendorHci(zx::channel* ctrl)
-    : ctrl_(ctrl), acl_(nullptr), manufacturer_(false) {}
+VendorHci::VendorHci(zx::channel* ctrl) : ctrl_(ctrl), acl_(nullptr), manufacturer_(false) {}
 
 ReadVersionReturnParams VendorHci::SendReadVersion() const {
   auto packet = CommandPacket::New(kReadVersion);
@@ -37,8 +36,7 @@ ReadVersionReturnParams VendorHci::SendReadVersion() const {
       return *params;
   }
   errorf("VendorHci: ReadVersion: Error reading response!\n");
-  return ReadVersionReturnParams{.status =
-                                     bt::hci::StatusCode::kUnspecifiedError};
+  return ReadVersionReturnParams{.status = bt::hci::StatusCode::kUnspecifiedError};
 }
 
 ReadBootParamsReturnParams VendorHci::SendReadBootParams() const {
@@ -51,8 +49,7 @@ ReadBootParamsReturnParams VendorHci::SendReadBootParams() const {
       return *params;
   }
   errorf("VendorHci: ReadBootParams: Error reading response!\n");
-  return ReadBootParamsReturnParams{.status =
-                                        bt::hci::StatusCode::kUnspecifiedError};
+  return ReadBootParamsReturnParams{.status = bt::hci::StatusCode::kUnspecifiedError};
 }
 
 bt::hci::StatusCode VendorHci::SendHciReset() const {
@@ -62,8 +59,7 @@ bt::hci::StatusCode VendorHci::SendHciReset() const {
   // TODO(armansito): Consider collecting a metric for initialization time
   // (successful and failing) to provide us with a better sense of how long
   // these timeouts should be.
-  auto evt_packet =
-      WaitForEventPacket(kInitTimeoutMs, bt::hci::kCommandCompleteEventCode);
+  auto evt_packet = WaitForEventPacket(kInitTimeoutMs, bt::hci::kCommandCompleteEventCode);
   if (!evt_packet) {
     errorf("VendorHci: failed while waiting for HCI_Reset response\n");
     return bt::hci::StatusCode::kUnspecifiedError;
@@ -96,8 +92,7 @@ void VendorHci::SendVendorReset() const {
   zx_nanosleep(zx_deadline_after(ZX_SEC(2)));
 }
 
-bool VendorHci::SendSecureSend(uint8_t type,
-                               const bt::BufferView& bytes) const {
+bool VendorHci::SendSecureSend(uint8_t type, const bt::BufferView& bytes) const {
   size_t left = bytes.size();
   while (left > 0) {
     size_t frag_len = fbl::min(left, kMaxSecureSendArgLen);
@@ -118,19 +113,16 @@ bool VendorHci::SendSecureSend(uint8_t type,
       if (le16toh(event_params.command_opcode) != kSecureSend) {
         errorf("VendorHci: Received command complete for something else!\n");
       } else if (event_params.return_parameters[0] != 0x00) {
-        errorf(
-            "VendorHci: Received 0x%x instead of zero in command complete!\n",
-            event_params.return_parameters[0]);
+        errorf("VendorHci: Received 0x%x instead of zero in command complete!\n",
+               event_params.return_parameters[0]);
         return false;
       }
     } else if (event->event_code() == bt::hci::kVendorDebugEventCode) {
-      const auto& params =
-          event->view().template payload<SecureSendEventParams>();
-      infof("VendorHci: SecureSend result 0x%x, opcode: 0x%x, status: 0x%x\n",
-            params.result, params.opcode, params.status);
+      const auto& params = event->view().template payload<SecureSendEventParams>();
+      infof("VendorHci: SecureSend result 0x%x, opcode: 0x%x, status: 0x%x\n", params.result,
+            params.opcode, params.status);
       if (params.result) {
-        errorf("VendorHci: Result of %d indicates some error!\n",
-               params.result);
+        errorf("VendorHci: Result of %d indicates some error!\n", params.result);
         return false;
       }
     }
@@ -139,9 +131,8 @@ bool VendorHci::SendSecureSend(uint8_t type,
   return true;
 }
 
-bool VendorHci::SendAndExpect(
-    const bt::PacketView<bt::hci::CommandHeader>& command,
-    std::deque<bt::BufferView> events) const {
+bool VendorHci::SendAndExpect(const bt::PacketView<bt::hci::CommandHeader>& command,
+                              std::deque<bt::BufferView> events) const {
   SendCommand(command);
 
   while (events.size() > 0) {
@@ -151,8 +142,7 @@ bool VendorHci::SendAndExpect(
     }
     auto expected = events.front();
     if ((evt_packet->view().size() != expected.size()) ||
-        (memcmp(evt_packet->view().data().data(), expected.data(),
-                expected.size()) != 0)) {
+        (memcmp(evt_packet->view().data().data(), expected.data(), expected.size()) != 0)) {
       errorf("VendorHci: SendAndExpect: unexpected event received\n");
       return false;
     }
@@ -166,17 +156,14 @@ void VendorHci::EnterManufacturerMode() {
   if (manufacturer_)
     return;
 
-  auto packet =
-      CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
-  auto params =
-      packet->mutable_view()->mutable_payload<MfgModeChangeCommandParams>();
+  auto packet = CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
+  auto params = packet->mutable_view()->mutable_payload<MfgModeChangeCommandParams>();
   params->enable = bt::hci::GenericEnableParam::kEnable;
   params->disable_mode = MfgDisableMode::kNoPatches;
 
   SendCommand(packet->view());
   auto evt_packet = WaitForEventPacket();
-  if (!evt_packet ||
-      evt_packet->event_code() != bt::hci::kCommandCompleteEventCode) {
+  if (!evt_packet || evt_packet->event_code() != bt::hci::kCommandCompleteEventCode) {
     errorf("VendorHci: EnterManufacturerMode failed");
     return;
   }
@@ -190,17 +177,14 @@ bool VendorHci::ExitManufacturerMode(MfgDisableMode mode) {
 
   manufacturer_ = false;
 
-  auto packet =
-      CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
-  auto params =
-      packet->mutable_view()->mutable_payload<MfgModeChangeCommandParams>();
+  auto packet = CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
+  auto params = packet->mutable_view()->mutable_payload<MfgModeChangeCommandParams>();
   params->enable = bt::hci::GenericEnableParam::kDisable;
   params->disable_mode = mode;
 
   SendCommand(packet->view());
   auto evt_packet = WaitForEventPacket();
-  if (!evt_packet ||
-      evt_packet->event_code() != bt::hci::kCommandCompleteEventCode) {
+  if (!evt_packet || evt_packet->event_code() != bt::hci::kCommandCompleteEventCode) {
     errorf("VendorHci: ExitManufacturerMode failed");
     return false;
   }
@@ -208,10 +192,8 @@ bool VendorHci::ExitManufacturerMode(MfgDisableMode mode) {
   return true;
 }
 
-void VendorHci::SendCommand(
-    const bt::PacketView<bt::hci::CommandHeader>& command) const {
-  zx_status_t status =
-      ctrl_->write(0, command.data().data(), command.size(), nullptr, 0);
+void VendorHci::SendCommand(const bt::PacketView<bt::hci::CommandHeader>& command) const {
+  zx_status_t status = ctrl_->write(0, command.data().data(), command.size(), nullptr, 0);
   if (status < 0) {
     errorf("VendorHci: SendCommand failed: %s\n", zx_status_get_string(status));
   }
@@ -235,11 +217,9 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
   }
 
   auto begin = zx::clock::get_monotonic();
-  for (zx::duration elapsed; elapsed < timeout;
-       elapsed = zx::clock::get_monotonic() - begin) {
-    zx_status_t status =
-        zx_object_wait_many(wait_items, wait_item_count,
-                            zx::deadline_after(timeout - elapsed).get());
+  for (zx::duration elapsed; elapsed < timeout; elapsed = zx::clock::get_monotonic() - begin) {
+    zx_status_t status = zx_object_wait_many(wait_items, wait_item_count,
+                                             zx::deadline_after(timeout - elapsed).get());
     if (status != ZX_OK) {
       errorf("VendorHci: channel error: %s\n", zx_status_get_string(status));
       return nullptr;
@@ -258,8 +238,7 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
 
     // Allocate a buffer for the event. We don't know the size
     // beforehand we allocate the largest possible buffer.
-    auto packet =
-        bt::hci::EventPacket::New(bt::hci::kMaxCommandPacketPayloadSize);
+    auto packet = bt::hci::EventPacket::New(bt::hci::kMaxCommandPacketPayloadSize);
     if (!packet) {
       errorf("VendorHci: Failed to allocate event packet!\n");
       return nullptr;
@@ -267,12 +246,10 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
 
     uint32_t read_size;
     auto packet_bytes = packet->mutable_view()->mutable_data();
-    zx_status_t read_status =
-        zx_channel_read(evt_handle, 0u, packet_bytes.mutable_data(), nullptr,
-                        packet_bytes.size(), 0, &read_size, nullptr);
+    zx_status_t read_status = zx_channel_read(evt_handle, 0u, packet_bytes.mutable_data(), nullptr,
+                                              packet_bytes.size(), 0, &read_size, nullptr);
     if (read_status < 0) {
-      errorf("VendorHci: Failed to read event bytes: %s\n",
-             zx_status_get_string(read_status));
+      errorf("VendorHci: Failed to read event bytes: %s\n", zx_status_get_string(read_status));
       return nullptr;
     }
 
@@ -284,8 +261,7 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
 
     // Compare the received payload size to what is in the header.
     const size_t rx_payload_size = read_size - sizeof(bt::hci::EventHeader);
-    const size_t size_from_header =
-        packet->view().header().parameter_total_size;
+    const size_t size_from_header = packet->view().header().parameter_total_size;
     if (size_from_header != rx_payload_size) {
       errorf(
           "VendorHci: Malformed event packet - header payload size (%zu) != "
@@ -295,8 +271,8 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
     }
 
     if (expected_event && expected_event != packet->event_code()) {
-      tracef("VendorHci: keep waiting (expected: 0x%02x, got: 0x%02x)\n",
-             expected_event, packet->event_code());
+      tracef("VendorHci: keep waiting (expected: 0x%02x, got: 0x%02x)\n", expected_event,
+             packet->event_code());
       continue;
     }
 

@@ -24,8 +24,7 @@ void TestPixelType(DmaFormat::PixelType pixel_type) {
   DmaFormat format(kTestWidth, kTestHeight, pixel_type, false);
   // Because of line and page alignment, the size should be >= width * height *
   // bytesperpixel
-  EXPECT_GE(format.GetImageSize(),
-            kTestWidth * kTestHeight * format.GetBytesPerPixel());
+  EXPECT_GE(format.GetImageSize(), kTestWidth * kTestHeight * format.GetBytesPerPixel());
 
   // Create the flipped version:
   DmaFormat format_flipped(kTestWidth, kTestHeight, pixel_type, true);
@@ -46,86 +45,49 @@ void TestPixelType(DmaFormat::PixelType pixel_type) {
   }
 }
 
-TEST(DmaFormat, CreateWithoutSysmemRGB32) {
-  TestPixelType(DmaFormat::PixelType::RGB32);
-}
+TEST(DmaFormat, CreateWithoutSysmemRGB32) { TestPixelType(DmaFormat::PixelType::RGB32); }
 
 TEST(DmaFormat, CreateWithoutSysmemA2R10G10B10) {
   TestPixelType(DmaFormat::PixelType::A2R10G10B10);
 }
 
-TEST(DmaFormat, CreateWithoutSysmemRGB565) {
-  TestPixelType(DmaFormat::PixelType::RGB565);
-}
+TEST(DmaFormat, CreateWithoutSysmemRGB565) { TestPixelType(DmaFormat::PixelType::RGB565); }
 
-TEST(DmaFormat, CreateWithoutSysmemRGB24) {
-  TestPixelType(DmaFormat::PixelType::RGB24);
-}
+TEST(DmaFormat, CreateWithoutSysmemRGB24) { TestPixelType(DmaFormat::PixelType::RGB24); }
 
-TEST(DmaFormat, CreateWithoutSysmemGEN32) {
-  TestPixelType(DmaFormat::PixelType::GEN32);
-}
+TEST(DmaFormat, CreateWithoutSysmemGEN32) { TestPixelType(DmaFormat::PixelType::GEN32); }
 
-TEST(DmaFormat, CreateWithoutSysmemRAW16) {
-  TestPixelType(DmaFormat::PixelType::RAW16);
-}
+TEST(DmaFormat, CreateWithoutSysmemRAW16) { TestPixelType(DmaFormat::PixelType::RAW16); }
 
-TEST(DmaFormat, CreateWithoutSysmemRAW12) {
-  TestPixelType(DmaFormat::PixelType::RAW12);
-}
+TEST(DmaFormat, CreateWithoutSysmemRAW12) { TestPixelType(DmaFormat::PixelType::RAW12); }
 
-TEST(DmaFormat, CreateWithoutSysmemAYUV) {
-  TestPixelType(DmaFormat::PixelType::AYUV);
-}
+TEST(DmaFormat, CreateWithoutSysmemAYUV) { TestPixelType(DmaFormat::PixelType::AYUV); }
 
-TEST(DmaFormat, CreateWithoutSysmemY410) {
-  TestPixelType(DmaFormat::PixelType::Y410);
-}
+TEST(DmaFormat, CreateWithoutSysmemY410) { TestPixelType(DmaFormat::PixelType::Y410); }
 
-TEST(DmaFormat, CreateWithoutSysmemYUY2) {
-  TestPixelType(DmaFormat::PixelType::YUY2);
-}
+TEST(DmaFormat, CreateWithoutSysmemYUY2) { TestPixelType(DmaFormat::PixelType::YUY2); }
 
-TEST(DmaFormat, CreateWithoutSysmemUYVY) {
-  TestPixelType(DmaFormat::PixelType::UYVY);
-}
+TEST(DmaFormat, CreateWithoutSysmemUYVY) { TestPixelType(DmaFormat::PixelType::UYVY); }
 
-TEST(DmaFormat, CreateWithoutSysmemY210) {
-  TestPixelType(DmaFormat::PixelType::Y210);
-}
+TEST(DmaFormat, CreateWithoutSysmemY210) { TestPixelType(DmaFormat::PixelType::Y210); }
 
-TEST(DmaFormat, CreateWithoutSysmemNV12_YUV) {
-  TestPixelType(DmaFormat::PixelType::NV12_YUV);
-}
+TEST(DmaFormat, CreateWithoutSysmemNV12_YUV) { TestPixelType(DmaFormat::PixelType::NV12_YUV); }
 
-TEST(DmaFormat, CreateWithoutSysmemNV12_YVU) {
-  TestPixelType(DmaFormat::PixelType::NV12_YVU);
-}
+TEST(DmaFormat, CreateWithoutSysmemNV12_YVU) { TestPixelType(DmaFormat::PixelType::NV12_YVU); }
 
-TEST(DmaFormat, CreateWithoutSysmemNV12_GREY) {
-  TestPixelType(DmaFormat::PixelType::NV12_GREY);
-}
+TEST(DmaFormat, CreateWithoutSysmemNV12_GREY) { TestPixelType(DmaFormat::PixelType::NV12_GREY); }
 
-TEST(DmaFormat, CreateWithoutSysmemYV12_YU) {
-  TestPixelType(DmaFormat::PixelType::YV12_YU);
-}
+TEST(DmaFormat, CreateWithoutSysmemYV12_YU) { TestPixelType(DmaFormat::PixelType::YV12_YU); }
 
-TEST(DmaFormat, CreateWithoutSysmemYV12_YV) {
-  TestPixelType(DmaFormat::PixelType::YV12_YV);
-}
+TEST(DmaFormat, CreateWithoutSysmemYV12_YV) { TestPixelType(DmaFormat::PixelType::YV12_YV); }
 
 TEST(DmaFormat, CreateWithoutSysmemInvalid) {
   // There are 3 invalid formats:
   // NV12 and YV12, because they are only used internally, and INVALID:
-  ASSERT_DEATH(([]() {
-    DmaFormat(kTestWidth, kTestHeight, DmaFormat::PixelType::NV12, false);
-  }));
-  ASSERT_DEATH(([]() {
-    DmaFormat(kTestWidth, kTestHeight, DmaFormat::PixelType::YV12, false);
-  }));
-  ASSERT_DEATH(([]() {
-    DmaFormat(kTestWidth, kTestHeight, DmaFormat::PixelType::INVALID, false);
-  }));
+  ASSERT_DEATH(([]() { DmaFormat(kTestWidth, kTestHeight, DmaFormat::PixelType::NV12, false); }));
+  ASSERT_DEATH(([]() { DmaFormat(kTestWidth, kTestHeight, DmaFormat::PixelType::YV12, false); }));
+  ASSERT_DEATH(
+      ([]() { DmaFormat(kTestWidth, kTestHeight, DmaFormat::PixelType::INVALID, false); }));
 }
 
 void TestSysmemType(fuchsia_sysmem_PixelFormatType pixel_type) {
@@ -149,8 +111,7 @@ void TestSysmemType(fuchsia_sysmem_PixelFormatType pixel_type) {
   DmaFormat format(image_format);
   // Because of line and page alignment, the size should be >= width * height *
   // bytesperpixel
-  EXPECT_GE(format.GetImageSize(),
-            kTestWidth * kTestHeight * format.GetBytesPerPixel());
+  EXPECT_GE(format.GetImageSize(), kTestWidth * kTestHeight * format.GetBytesPerPixel());
 
   // Planar format stuff:
   if (pixel_type == fuchsia_sysmem_PixelFormatType_NV12) {
@@ -164,13 +125,9 @@ TEST(DmaFormat, CreateWithSysmem_R8G8B8A8) {
   TestSysmemType(fuchsia_sysmem_PixelFormatType_R8G8B8A8);
 }
 
-TEST(DmaFormat, CreateWithSysmem_NV12) {
-  TestSysmemType(fuchsia_sysmem_PixelFormatType_NV12);
-}
+TEST(DmaFormat, CreateWithSysmem_NV12) { TestSysmemType(fuchsia_sysmem_PixelFormatType_NV12); }
 
-TEST(DmaFormat, CreateWithSysmem_YUY2) {
-  TestSysmemType(fuchsia_sysmem_PixelFormatType_YUY2);
-}
+TEST(DmaFormat, CreateWithSysmem_YUY2) { TestSysmemType(fuchsia_sysmem_PixelFormatType_YUY2); }
 
 }  // namespace
 }  // namespace camera

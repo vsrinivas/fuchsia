@@ -9,24 +9,24 @@
 namespace hisi_clock {
 
 enum class RegisterBank {
-    Sctrl,
-    Peri,
+  Sctrl,
+  Peri,
 };
 
 class Gate {
-public:
-    constexpr Gate(const uint32_t reg, const uint32_t bit, const RegisterBank bank)
-        : reg_(reg), bit_(bit), bank_(bank) {}
-    ~Gate() = default;
+ public:
+  constexpr Gate(const uint32_t reg, const uint32_t bit, const RegisterBank bank)
+      : reg_(reg), bit_(bit), bank_(bank) {}
+  ~Gate() = default;
 
-    uint32_t Reg() const { return reg_; }
-    uint32_t Bit() const { return bit_; }
-    RegisterBank Bank() const { return bank_; }
+  uint32_t Reg() const { return reg_; }
+  uint32_t Bit() const { return bit_; }
+  RegisterBank Bank() const { return bank_; }
 
-private:
-    const uint32_t reg_;
-    const uint32_t bit_;
-    const RegisterBank bank_;
+ private:
+  const uint32_t reg_;
+  const uint32_t bit_;
+  const RegisterBank bank_;
 };
 
-} // namespace hisi_clock
+}  // namespace hisi_clock

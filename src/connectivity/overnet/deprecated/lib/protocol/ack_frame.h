@@ -20,9 +20,7 @@ class AckFrame {
   struct Block {
     uint64_t acks;
     uint64_t nacks;
-    bool operator==(const Block& other) const {
-      return acks == other.acks && nacks == other.nacks;
-    }
+    bool operator==(const Block& other) const { return acks == other.acks && nacks == other.nacks; }
   };
   using Brit = std::vector<Block>::const_reverse_iterator;
 
@@ -44,8 +42,7 @@ class AckFrame {
     assert(ack_to_seq_ > 0);
   }
 
-  AckFrame(uint64_t ack_to_seq, uint64_t ack_delay_us,
-           std::initializer_list<uint64_t> nack_seqs)
+  AckFrame(uint64_t ack_to_seq, uint64_t ack_delay_us, std::initializer_list<uint64_t> nack_seqs)
       : partial_(false), ack_to_seq_(ack_to_seq), ack_delay_us_(ack_delay_us) {
     assert(ack_to_seq_ > 0);
     for (auto n : nack_seqs) {
@@ -115,8 +112,7 @@ class AckFrame {
       Iterator(Brit brit, uint64_t base) : brit_(brit), base_(base) {}
 
       bool operator!=(const Iterator& other) const {
-        return brit_ != other.brit_ || base_ != other.base_ ||
-               nack_ != other.nack_;
+        return brit_ != other.brit_ || base_ != other.base_ || nack_ != other.nack_;
       }
 
       void operator++() {
@@ -170,8 +166,8 @@ class AckFrame {
       auto& block0_nacks = blocks_[0].nacks;
       if (block0_acks > 0) {
         auto new_acks = varint::SmallerRecordedNumber(block0_acks);
-        OVERNET_TRACE(DEBUG) << "Trim too long ack (" << WrittenLength()
-                             << " > " << mss << " by moving ack " << ack_to_seq_
+        OVERNET_TRACE(DEBUG) << "Trim too long ack (" << WrittenLength() << " > " << mss
+                             << " by moving ack " << ack_to_seq_
                              << " to shorter first ack block length "
                              << (ack_to_seq_ - block0_acks + new_acks);
         ack_to_seq_ -= (block0_acks - new_acks);
@@ -180,18 +176,16 @@ class AckFrame {
         assert(block0_nacks > 0);
         auto new_nacks = varint::SmallerRecordedNumber(block0_nacks);
         if (new_nacks == 0) {
-          OVERNET_TRACE(DEBUG)
-              << "Trim too long ack (" << WrittenLength() << " > " << mss
-              << " by eliminating first block and moving first ack to "
-              << (ack_to_seq_ - block0_nacks + new_nacks);
+          OVERNET_TRACE(DEBUG) << "Trim too long ack (" << WrittenLength() << " > " << mss
+                               << " by eliminating first block and moving first ack to "
+                               << (ack_to_seq_ - block0_nacks + new_nacks);
           ack_to_seq_ -= (block0_nacks - new_nacks);
           blocks_.erase(blocks_.begin());
         } else {
-          OVERNET_TRACE(DEBUG)
-              << "Trim too long ack (" << WrittenLength() << " > " << mss
-              << " by moving ack " << ack_to_seq_
-              << " to shorter first nack block length "
-              << (ack_to_seq_ - block0_nacks + new_nacks);
+          OVERNET_TRACE(DEBUG) << "Trim too long ack (" << WrittenLength() << " > " << mss
+                               << " by moving ack " << ack_to_seq_
+                               << " to shorter first nack block length "
+                               << (ack_to_seq_ - block0_nacks + new_nacks);
           ack_to_seq_ -= (block0_nacks - new_nacks);
           block0_nacks = new_nacks;
         }

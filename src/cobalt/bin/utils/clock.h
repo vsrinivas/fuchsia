@@ -20,9 +20,7 @@ class SteadyClock {
 // An implementation of SteadyClock that uses a real clock.
 class RealSteadyClock : public SteadyClock {
  public:
-  std::chrono::steady_clock::time_point Now() override {
-    return std::chrono::steady_clock::now();
-  }
+  std::chrono::steady_clock::time_point Now() override { return std::chrono::steady_clock::now(); }
 };
 
 }  // namespace cobalt

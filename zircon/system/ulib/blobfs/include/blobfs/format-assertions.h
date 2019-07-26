@@ -161,6 +161,6 @@ static_assert(sizeof(ExtentContainer) ==
 
 // clang-format on
 
-} // namespace blobfs
+}  // namespace blobfs
 
-#endif // ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_

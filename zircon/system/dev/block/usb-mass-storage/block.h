@@ -17,25 +17,25 @@ namespace ums {
 class UsbMassStorageDevice;
 
 struct BlockDeviceParameters {
-    bool device_added = false;
+  bool device_added = false;
 
-    bool cache_enabled = false;
+  bool cache_enabled = false;
 
-    uint8_t lun = 0; // our logical unit number
+  uint8_t lun = 0;  // our logical unit number
 
-    unsigned char padding = 0;
+  unsigned char padding = 0;
 
-    uint32_t block_size = 0;
+  uint32_t block_size = 0;
 
-    uint32_t flags = 0; // flags for block_info_t
+  uint32_t flags = 0;  // flags for block_info_t
 
-    uint32_t max_transfer = 0;
+  uint32_t max_transfer = 0;
 
-    uint64_t total_blocks = 0;
+  uint64_t total_blocks = 0;
 
-    bool operator==(const BlockDeviceParameters& other) {
-        return memcmp(this, &other, sizeof(other)) == 0;
-    }
+  bool operator==(const BlockDeviceParameters& other) {
+    return memcmp(this, &other, sizeof(other)) == 0;
+  }
 };
 // This ensures that it is safe to use memcmp to compare equality
 static_assert(std::has_unique_object_representations_v<BlockDeviceParameters>);
@@ -45,41 +45,38 @@ using DeviceType = ddk::Device<UmsBlockDevice, ddk::GetSizable, ddk::Unbindable>
 class UmsBlockDevice : public DeviceType,
                        public ddk::BlockImplProtocol<UmsBlockDevice, ddk::base_protocol>,
                        public fbl::RefCounted<UmsBlockDevice> {
-public:
-    explicit UmsBlockDevice(zx_device_t* parent, uint8_t lun,
-                            fbl::Function<void(ums::Transaction*)>&& queue_callback)
-        : DeviceType(parent), queue_callback_(std::move(queue_callback)) {
-        parameters_ = {};
-        parameters_.lun = lun;
-    }
+ public:
+  explicit UmsBlockDevice(zx_device_t* parent, uint8_t lun,
+                          fbl::Function<void(ums::Transaction*)>&& queue_callback)
+      : DeviceType(parent), queue_callback_(std::move(queue_callback)) {
+    parameters_ = {};
+    parameters_.lun = lun;
+  }
 
-    zx_status_t Add();
+  zx_status_t Add();
 
-    // Device protocol implementation.
-    zx_off_t DdkGetSize();
+  // Device protocol implementation.
+  zx_off_t DdkGetSize();
 
-    void DdkRelease();
+  void DdkRelease();
 
-    // Block protocol implementation.
-    void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
+  // Block protocol implementation.
+  void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
 
-    void BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb,
-                        void* cookie);
+  void BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb, void* cookie);
 
-    void DdkUnbind(){}
+  void DdkUnbind() {}
 
-    const BlockDeviceParameters& GetBlockDeviceParameters() {
-        return parameters_;
-    }
+  const BlockDeviceParameters& GetBlockDeviceParameters() { return parameters_; }
 
-    void SetBlockDeviceParameters(const BlockDeviceParameters& parameters) {
-        parameters_ = parameters;
-    }
+  void SetBlockDeviceParameters(const BlockDeviceParameters& parameters) {
+    parameters_ = parameters;
+  }
 
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(UmsBlockDevice);
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(UmsBlockDevice);
 
-private:
-    fbl::Function<void(ums::Transaction*)> queue_callback_;
-    BlockDeviceParameters parameters_;
+ private:
+  fbl::Function<void(ums::Transaction*)> queue_callback_;
+  BlockDeviceParameters parameters_;
 };
-} // namespace ums
+}  // namespace ums

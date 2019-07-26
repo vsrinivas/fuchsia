@@ -41,13 +41,11 @@ class StringView {
 
   constexpr StringView(const char* str, size_t len) : data_(str), size_(len) {}
 
-  explicit constexpr StringView(const char* str)
-      : data_(str), size_(constexpr_strlen(str)) {}
+  explicit constexpr StringView(const char* str) : data_(str), size_(constexpr_strlen(str)) {}
 
   // Implicit constructor for constant C strings.
   template <size_t N>
-  constexpr StringView(const char (&str)[N])
-      : data_(str), size_(constexpr_strlen(str)) {}
+  constexpr StringView(const char (&str)[N]) : data_(str), size_(constexpr_strlen(str)) {}
 
   // Implicit constructor.
   StringView(const std::string& str) : data_(str.data()), size_(str.size()) {}
@@ -76,18 +74,10 @@ class StringView {
   constexpr const_iterator end() const { return cend(); }
   constexpr const_iterator cbegin() const { return data_; }
   constexpr const_iterator cend() const { return data_ + size_; }
-  const_reverse_iterator rbegin() const {
-    return const_reverse_iterator(cend());
-  }
-  const_reverse_iterator rend() const {
-    return const_reverse_iterator(cbegin());
-  }
-  const_reverse_iterator crbegin() const {
-    return const_reverse_iterator(cend());
-  }
-  const_reverse_iterator crend() const {
-    return const_reverse_iterator(cbegin());
-  }
+  const_reverse_iterator rbegin() const { return const_reverse_iterator(cend()); }
+  const_reverse_iterator rend() const { return const_reverse_iterator(cbegin()); }
+  const_reverse_iterator crbegin() const { return const_reverse_iterator(cend()); }
+  const_reverse_iterator crend() const { return const_reverse_iterator(cbegin()); }
 
   // Modifier methods.
   CONSTEXPR_IN_CPP14 void clear() {
@@ -136,9 +126,7 @@ class StringView {
   size_t find_last_not_of(StringView s, size_t pos = npos) const;
 
  private:
-  constexpr static size_t min(size_t v1, size_t v2) {
-    return v1 < v2 ? v1 : v2;
-  }
+  constexpr static size_t min(size_t v1, size_t v2) { return v1 < v2 ? v1 : v2; }
 
   constexpr static size_t constexpr_strlen(const char* str) {
 #if defined(_MSC_VER)

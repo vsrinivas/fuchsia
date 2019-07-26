@@ -21,22 +21,18 @@ FbView::FbView(async::Loop* loop, bool protected_output)
   painter_ = std::make_unique<SkiaGpuPainter>(&vk_swapchain_);
 }
 
-void FbView::RegisterDevice(
-    fuchsia::ui::input::DeviceDescriptor descriptor,
-    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device) {
+void FbView::RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
+                            fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device) {
   if (!descriptor.touchscreen && !descriptor.mouse)
     return;
   static uint32_t device_id = 0;
-  auto device_impl = std::make_unique<ui_input::InputDeviceImpl>(
-      ++device_id, std::move(descriptor), std::move(input_device), this);
+  auto device_impl = std::make_unique<ui_input::InputDeviceImpl>(++device_id, std::move(descriptor),
+                                                                 std::move(input_device), this);
   auto device_state = std::make_unique<ui_input::DeviceState>(
       device_impl->id(), device_impl->descriptor(),
-      [this](fuchsia::ui::input::InputEvent event) {
-        OnInputEvent(std::move(event));
-      });
-  input_devices_.emplace(
-      device_id,
-      InputDeviceTracker{std::move(device_impl), std::move(device_state)});
+      [this](fuchsia::ui::input::InputEvent event) { OnInputEvent(std::move(event)); });
+  input_devices_.emplace(device_id,
+                         InputDeviceTracker{std::move(device_impl), std::move(device_state)});
 }
 
 void FbView::OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
@@ -70,8 +66,7 @@ void FbView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   // pending draw.
   if (!had_pending_draw && painter_->HasPendingDraw()) {
     async::PostDelayedTask(
-        message_loop_->dispatcher(), [this]() { painter_->DrawImage(); },
-        draw_interval_);
+        message_loop_->dispatcher(), [this]() { painter_->DrawImage(); }, draw_interval_);
   }
 }
 

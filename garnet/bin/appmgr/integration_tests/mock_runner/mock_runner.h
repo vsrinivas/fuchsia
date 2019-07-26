@@ -26,11 +26,10 @@ class MockRunner;
 class FakeSubComponent : public fuchsia::sys::ComponentController,
                          public mockrunner::MockComponent {
  public:
-  FakeSubComponent(
-      uint64_t id, fuchsia::sys::Package application,
-      fuchsia::sys::StartupInfo startup_info,
-      ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-      MockRunner* runner);
+  FakeSubComponent(uint64_t id, fuchsia::sys::Package application,
+                   fuchsia::sys::StartupInfo startup_info,
+                   ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
+                   MockRunner* runner);
   ~FakeSubComponent() override;
 
   // fuchsia::sys::ComponentController
@@ -45,22 +44,17 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
     Kill();
   }
 
-  void ConnectToService(::std::string service_name,
-                        zx::channel channel) override {
+  void ConnectToService(::std::string service_name, zx::channel channel) override {
     svc_->Connect(service_name, std::move(channel));
   }
 
-  void SetServiceDirectory(zx::channel channel) override {
-    service_dir_.reset(channel.release());
-  }
+  void SetServiceDirectory(zx::channel channel) override { service_dir_.reset(channel.release()); }
 
-  void PublishService(::std::string service_name,
-                      PublishServiceCallback callback) override;
+  void PublishService(::std::string service_name, PublishServiceCallback callback) override;
 
   void SendReturnCodeIfTerminated();
 
-  void AddMockControllerBinding(
-      ::fidl::InterfaceRequest<mockrunner::MockComponent> req) {
+  void AddMockControllerBinding(::fidl::InterfaceRequest<mockrunner::MockComponent> req) {
     mock_bindings_.AddBinding(this, std::move(req));
   }
 
@@ -85,9 +79,8 @@ class MockRunner : public fuchsia::sys::Runner, public mockrunner::MockRunner {
 
   void Crash() override;
 
-  void ConnectToComponent(
-      uint64_t id,
-      ::fidl::InterfaceRequest<mockrunner::MockComponent> req) override;
+  void ConnectToComponent(uint64_t id,
+                          ::fidl::InterfaceRequest<mockrunner::MockComponent> req) override;
 
   void Start() { loop_.Run(); }
 
@@ -97,8 +90,7 @@ class MockRunner : public fuchsia::sys::Runner, public mockrunner::MockRunner {
   // |fuchsia::sys::Runner|
   void StartComponent(
       fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
-      ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller)
-      override;
+      ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
   async::Loop loop_;
   std::unique_ptr<sys::ComponentContext> context_;

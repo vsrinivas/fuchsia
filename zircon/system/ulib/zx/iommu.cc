@@ -10,7 +10,7 @@ namespace zx {
 
 zx_status_t iommu::create(const resource& resource, uint32_t type, const void* desc,
                           size_t desc_size, iommu* result) {
-    return zx_iommu_create(resource.get(), type, desc, desc_size, result->reset_and_get_address());
+  return zx_iommu_create(resource.get(), type, desc, desc_size, result->reset_and_get_address());
 }
 
-} // namespace zx
+}  // namespace zx

@@ -18,8 +18,8 @@ void insert_handle_koid(std::ostream& os, zx_handle_t handle) {
   }
 
   zx_info_handle_basic_t info;
-  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
-                                          sizeof(info), nullptr, nullptr);
+  zx_status_t status =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     os << "<get info failed>";
   }
@@ -34,14 +34,13 @@ void insert_handle_koid_pair(std::ostream& os, zx_handle_t handle) {
   }
 
   zx_info_handle_basic_t info;
-  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
-                                          sizeof(info), nullptr, nullptr);
+  zx_status_t status =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     os << "<get info failed>";
   }
 
-  os << "koid 0x" << std::hex << info.koid << " <-> 0x" << info.related_koid
-     << std::dec;
+  os << "koid 0x" << std::hex << info.koid << " <-> 0x" << info.related_koid << std::dec;
 }
 
 }  // namespace
@@ -68,8 +67,7 @@ std::ostream& operator<<(std::ostream& os, const zx::fifo& value) {
 
 std::ostream& operator<<(std::ostream& os, const zx::process& value) {
   char name[ZX_MAX_NAME_LEN];
-  zx_status_t status =
-      zx_object_get_property(value.get(), ZX_PROP_NAME, name, sizeof(name));
+  zx_status_t status = zx_object_get_property(value.get(), ZX_PROP_NAME, name, sizeof(name));
 
   if (status == ZX_OK) {
     return os << name;
@@ -86,8 +84,7 @@ std::ostream& operator<<(std::ostream& os, const zx::socket& value) {
 
 std::ostream& operator<<(std::ostream& os, const zx::thread& value) {
   char name[ZX_MAX_NAME_LEN];
-  zx_status_t status =
-      zx_object_get_property(value.get(), ZX_PROP_NAME, name, sizeof(name));
+  zx_status_t status = zx_object_get_property(value.get(), ZX_PROP_NAME, name, sizeof(name));
 
   if (status == ZX_OK) {
     return os << name;
@@ -115,9 +112,8 @@ std::ostream& operator<<(std::ostream& os, const zx::duration& value) {
   int64_t ms = s % 1000;
   s /= 1000;
 
-  return os << s << "." << std::setw(3) << std::setfill('0') << ms << ","
-            << std::setw(3) << std::setfill('0') << us << "," << std::setw(3)
-            << std::setfill('0') << ns;
+  return os << s << "." << std::setw(3) << std::setfill('0') << ms << "," << std::setw(3)
+            << std::setfill('0') << us << "," << std::setw(3) << std::setfill('0') << ns;
 }
 
 std::ostream& operator<<(std::ostream& os, const zx::vmo& value) {

@@ -18,9 +18,7 @@ class FakeSteadyClock : public SteadyClock {
  public:
   std::chrono::steady_clock::time_point Now() override { return now_; }
 
-  void Increment(std::chrono::seconds increment_seconds) {
-    now_ += increment_seconds;
-  }
+  void Increment(std::chrono::seconds increment_seconds) { now_ += increment_seconds; }
 
   void set_time(std::chrono::steady_clock::time_point t) { now_ = t; }
 

@@ -36,8 +36,7 @@ zx_status_t Instance::Bind() {
   // a clean way to ensure that all items in |pipes_| are destroyed
   // on the thread they were created.
   int rc = thrd_create_with_name(
-      &client_thread_,
-      [](void* arg) -> int { return static_cast<Instance*>(arg)->ClientThread(); },
+      &client_thread_, [](void* arg) -> int { return static_cast<Instance*>(arg)->ClientThread(); },
       this, "goldfish_pipe_client_thread");
   if (rc != thrd_success) {
     return thrd_status_to_zx_status(rc);

@@ -56,13 +56,11 @@ namespace {
 // stream offset is >= the EndOfStream offset.
 
 unsigned char new_stream_ivf[] = {
-    0x44, 0x4b, 0x49, 0x46, 0x00, 0x00, 0x20, 0x00, 0x56, 0x50, 0x39,
-    0x30, 0x2a, 0x00, 0x34, 0x00, 0x19, 0x00, 0x00, 0x00, 0x01, 0x00,
-    0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1e,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x82, 0x49, 0x83, 0x42, 0x00, 0x02, 0x90, 0x03, 0x36, 0x00, 0x38,
-    0x24, 0x1c, 0x18, 0x54, 0x00, 0x00, 0x30, 0x60, 0x00, 0x00, 0x13,
-    0xbf, 0xff, 0xfd, 0x15, 0x62, 0x00, 0x00, 0x00};
+    0x44, 0x4b, 0x49, 0x46, 0x00, 0x00, 0x20, 0x00, 0x56, 0x50, 0x39, 0x30, 0x2a, 0x00, 0x34,
+    0x00, 0x19, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0x1e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x82,
+    0x49, 0x83, 0x42, 0x00, 0x02, 0x90, 0x03, 0x36, 0x00, 0x38, 0x24, 0x1c, 0x18, 0x54, 0x00,
+    0x00, 0x30, 0x60, 0x00, 0x00, 0x13, 0xbf, 0xff, 0xfd, 0x15, 0x62, 0x00, 0x00, 0x00};
 unsigned int new_stream_ivf_len = 74;
 constexpr uint32_t kHeaderSkipBytes = 32 + 12;  // Skip IVF headers.
 constexpr uint32_t kFlushThroughBytes = 16384;
@@ -81,16 +79,14 @@ constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 // Zero-initialized, so it shouldn't take up space on-disk.
 const uint8_t kFlushThroughZeroes[kFlushThroughBytes] = {};
 
-static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
-                                             uint8_t d) {
+static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
   return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
          (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
 }
 
 }  // namespace
 
-CodecAdapterVp9::CodecAdapterVp9(std::mutex& lock,
-                                 CodecAdapterEvents* codec_adapter_events,
+CodecAdapterVp9::CodecAdapterVp9(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                                  DeviceCtx* device)
     : CodecAdapter(lock, codec_adapter_events),
       device_(device),
@@ -110,9 +106,7 @@ CodecAdapterVp9::~CodecAdapterVp9() {
   // CoreCodecStopStream().
 }
 
-bool CodecAdapterVp9::IsCoreCodecRequiringOutputConfigForFormatDetection() {
-  return false;
-}
+bool CodecAdapterVp9::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
 
 bool CodecAdapterVp9::IsCoreCodecMappedBufferNeeded(CodecPort port) {
   // If buffers are protected, the decoder should/will call secmem TA to re-pack
@@ -144,8 +138,7 @@ void CodecAdapterVp9::CoreCodecInit(
 
 fuchsia::sysmem::BufferCollectionConstraints
 CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
-    CodecPort port,
-    const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+    CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
   fuchsia::sysmem::BufferCollectionConstraints result;
 
@@ -162,8 +155,8 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
 
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-  uint32_t packet_count = partial_settings.packet_count_for_server() +
-                          partial_settings.packet_count_for_client();
+  uint32_t packet_count =
+      partial_settings.packet_count_for_server() + partial_settings.packet_count_for_client();
 
   // For now this is true - when we plumb more flexible buffer count range this
   // will change to account for a range.
@@ -178,8 +171,7 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
   // min_buffer_count_for_camping to packet_count_for_server() and the client
   // setting exactly and only min_buffer_count_for_camping to
   // packet_count_for_client().
-  result.min_buffer_count_for_camping =
-      partial_settings.packet_count_for_server();
+  result.min_buffer_count_for_camping = partial_settings.packet_count_for_server();
   // Some slack is nice overall, but avoid having each participant ask for
   // dedicated slack.  Using sysmem the client will ask for it's own buffers for
   // camping and any slack, so the codec doesn't need to ask for any extra on
@@ -213,17 +205,14 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
 
   if (port == kOutputPort) {
     result.image_format_constraints_count = 1;
-    fuchsia::sysmem::ImageFormatConstraints& image_constraints =
-        result.image_format_constraints[0];
-    image_constraints.pixel_format.type =
-        fuchsia::sysmem::PixelFormatType::NV12;
+    fuchsia::sysmem::ImageFormatConstraints& image_constraints = result.image_format_constraints[0];
+    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
     // TODO(MTWN-251): confirm that REC709 is always what we want here, or plumb
     // actual YUV color space if it can ever be REC601_*.  Since 2020 and 2100
     // are minimum 10 bits per Y sample and we're outputting NV12, 601 is the
     // only other potential possibility here.
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type =
-        fuchsia::sysmem::ColorSpaceType::REC709;
+    image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
 
     // The non-"required_" fields indicate the decoder's ability to potentially
     // output frames at various dimensions as coded in the stream.  Aside from
@@ -286,18 +275,13 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
 }
 
 void CodecAdapterVp9::CoreCodecSetBufferCollectionInfo(
-    CodecPort port,
-    const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
-  ZX_DEBUG_ASSERT(
-      buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
-  ZX_DEBUG_ASSERT(
-      buffer_collection_info.settings.buffer_settings.coherency_domain ==
-      fuchsia::sysmem::CoherencyDomain::CPU);
+    CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
+  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
+  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.coherency_domain ==
+                  fuchsia::sysmem::CoherencyDomain::CPU);
   if (port == kOutputPort) {
-    ZX_DEBUG_ASSERT(
-        buffer_collection_info.settings.has_image_format_constraints);
-    ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints
-                        .pixel_format.type ==
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
                     fuchsia::sysmem::PixelFormatType::NV12);
   }
 }
@@ -315,8 +299,7 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     is_stream_failed_ = false;
   }  // ~lock
 
-  auto decoder = std::make_unique<Vp9Decoder>(
-      video_, Vp9Decoder::InputType::kMultiFrameBased);
+  auto decoder = std::make_unique<Vp9Decoder>(video_, Vp9Decoder::InputType::kMultiFrameBased);
   decoder->SetFrameDataProvider(this);
   decoder->SetFrameReadyNotifier([this](std::shared_ptr<VideoFrame> frame) {
     // The Codec interface requires that emitted frames are cache clean
@@ -332,8 +315,7 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     // invalidate call here instead of two with no downsides.
     //
     // TODO(dustingreen): Skip this when the buffer isn't map-able.
-    io_buffer_cache_flush_invalidate(&frame->buffer, 0,
-                                     frame->stride * frame->height);
+    io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->height);
     io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
                                      frame->stride * frame->height / 2);
 
@@ -372,15 +354,12 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
     status = decoder->InitializeBuffers();
     if (status != ZX_OK) {
-      events_->onCoreCodecFailCodec(
-          "video_->video_decoder_->Initialize() failed");
+      events_->onCoreCodecFailCodec("video_->video_decoder_->Initialize() failed");
       return;
     }
 
-    auto instance = std::make_unique<DecoderInstance>(std::move(decoder),
-                                                      video_->hevc_core());
-    status = video_->AllocateStreamBuffer(instance->stream_buffer(),
-                                          512 * PAGE_SIZE);
+    auto instance = std::make_unique<DecoderInstance>(std::move(decoder), video_->hevc_core());
+    status = video_->AllocateStreamBuffer(instance->stream_buffer(), 512 * PAGE_SIZE);
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;
@@ -399,8 +378,7 @@ void CodecAdapterVp9::CoreCodecQueueInputFormatDetails(
   // in the FormatDetails at least optionally, and possibly sizing input
   // buffer constraints and/or other buffers based on that.
 
-  QueueInputItem(
-      CodecInputItem::FormatDetails(per_stream_override_format_details));
+  QueueInputItem(CodecInputItem::FormatDetails(per_stream_override_format_details));
 }
 
 void CodecAdapterVp9::CoreCodecQueueInputPacket(CodecPacket* packet) {
@@ -476,8 +454,7 @@ void CodecAdapterVp9::CoreCodecStopStream() {
   }
 }
 
-void CodecAdapterVp9::CoreCodecAddBuffer(CodecPort port,
-                                         const CodecBuffer* buffer) {
+void CodecAdapterVp9::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
   all_output_buffers_.push_back(buffer);
 }
 
@@ -495,8 +472,7 @@ void CodecAdapterVp9::CoreCodecConfigureBuffers(
     // This should prevent any inadvertent dependence by clients on the ordering
     // of packet_index values in the output stream or any assumptions re. the
     // relationship between packet_index and buffer_index.
-    std::shuffle(free_output_packets_.begin(), free_output_packets_.end(),
-                 not_for_security_prng_);
+    std::shuffle(free_output_packets_.begin(), free_output_packets_.end(), not_for_security_prng_);
   }
 }
 
@@ -561,8 +537,7 @@ void CodecAdapterVp9::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
 
 std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
 CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
-    uint64_t stream_lifetime_ordinal,
-    uint64_t new_output_buffer_constraints_version_ordinal,
+    uint64_t stream_lifetime_ordinal, uint64_t new_output_buffer_constraints_version_ordinal,
     bool buffer_constraints_action_required) {
   // bear.vp9 decodes into 320x192 YUV buffers, but the video display
   // dimensions are 320x180.  A the bottom of the buffer only .25 of the last
@@ -600,8 +575,7 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   // For the moment, there will be only one StreamOutputConstraints, and it'll
   // need output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
-  config->set_buffer_constraints_action_required(
-      buffer_constraints_action_required);
+  config->set_buffer_constraints_action_required(buffer_constraints_action_required);
   constraints->set_buffer_constraints_version_ordinal(
       new_output_buffer_constraints_version_ordinal);
 
@@ -609,8 +583,7 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   default_settings->set_buffer_lifetime_ordinal(0);
   default_settings->set_buffer_constraints_version_ordinal(
       new_output_buffer_constraints_version_ordinal);
-  default_settings->set_packet_count_for_server(packet_count_total_ -
-                                                kPacketCountForClientForced);
+  default_settings->set_packet_count_for_server(packet_count_total_ - kPacketCountForClientForced);
   default_settings->set_packet_count_for_client(kDefaultPacketCountForClient);
   // Packed NV12 (no extra padding, min UV offset, min stride).
   default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
@@ -623,14 +596,12 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
 
   // For the moment, let's just force the client to set this exact number of
   // frames for the codec.
-  constraints->set_packet_count_for_server_min(packet_count_total_ -
-                                               kPacketCountForClientForced);
-  constraints->set_packet_count_for_server_recommended(
-      packet_count_total_ - kPacketCountForClientForced);
-  constraints->set_packet_count_for_server_recommended_max(
-      packet_count_total_ - kPacketCountForClientForced);
-  constraints->set_packet_count_for_server_max(packet_count_total_ -
-                                               kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_min(packet_count_total_ - kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_recommended(packet_count_total_ -
+                                                       kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_recommended_max(packet_count_total_ -
+                                                           kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_max(packet_count_total_ - kPacketCountForClientForced);
 
   constraints->set_packet_count_for_client_min(kPacketCountForClientForced);
   constraints->set_packet_count_for_client_max(kPacketCountForClientForced);
@@ -641,12 +612,10 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
 
   constraints->set_is_physically_contiguous_required(true);
   ::zx::bti very_temp_kludge_bti;
-  zx_status_t dup_status =
-      ::zx::unowned<::zx::bti>(video_->bti())
-          ->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti);
+  zx_status_t dup_status = ::zx::unowned<::zx::bti>(video_->bti())
+                               ->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti);
   if (dup_status != ZX_OK) {
-    events_->onCoreCodecFailCodec("BTI duplicate failed - status: %d",
-                                  dup_status);
+    events_->onCoreCodecFailCodec("BTI duplicate failed - status: %d", dup_status);
     return nullptr;
   }
   // This is very temporary.  The BufferAllocator should handle this directly,
@@ -657,8 +626,7 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
 }
 
 fuchsia::media::StreamOutputFormat CodecAdapterVp9::CoreCodecGetOutputFormat(
-    uint64_t stream_lifetime_ordinal,
-    uint64_t new_output_format_details_version_ordinal) {
+    uint64_t stream_lifetime_ordinal, uint64_t new_output_format_details_version_ordinal) {
   fuchsia::media::StreamOutputFormat result;
   result.set_stream_lifetime_ordinal(stream_lifetime_ordinal);
   result.mutable_format_details()->set_format_details_version_ordinal(
@@ -692,8 +660,7 @@ fuchsia::media::StreamOutputFormat CodecAdapterVp9::CoreCodecGetOutputFormat(
   fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(video_uncompressed));
 
-  result.mutable_format_details()->mutable_domain()->set_video(
-      std::move(video_format));
+  result.mutable_format_details()->mutable_domain()->set_video(std::move(video_format));
 
   return result;
 }
@@ -718,11 +685,9 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
     // Now we need to populate the frames_out vector.
     for (uint32_t i = 0; i < all_output_buffers_.size(); i++) {
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->buffer_index() == i);
-      ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index() ==
-                      i);
+      ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index() == i);
       frames.emplace_back(CodecFrame{
-          .codec_buffer_spec =
-              fidl::Clone(all_output_buffers_[i]->codec_buffer()),
+          .codec_buffer_spec = fidl::Clone(all_output_buffers_[i]->codec_buffer()),
           .codec_buffer_ptr = all_output_buffers_[i],
       });
     }
@@ -732,16 +697,13 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
   }  // ~lock
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
-    video_->video_decoder()->InitializedFrames(std::move(frames), width, height,
-                                               stride);
+    video_->video_decoder()->InitializedFrames(std::move(frames), width, height, stride);
   }  // ~lock
 }
 
-void CodecAdapterVp9::PostSerial(async_dispatcher_t* dispatcher,
-                                 fit::closure to_run) {
+void CodecAdapterVp9::PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
   zx_status_t post_result = async::PostTask(dispatcher, std::move(to_run));
-  ZX_ASSERT_MSG(post_result == ZX_OK, "async::PostTask() failed - result: %d\n",
-                post_result);
+  ZX_ASSERT_MSG(post_result == ZX_OK, "async::PostTask() failed - result: %d\n", post_result);
 }
 
 void CodecAdapterVp9::PostToInputProcessingThread(fit::closure to_run) {
@@ -762,8 +724,7 @@ void CodecAdapterVp9::QueueInputItem(CodecInputItem input_item) {
     input_queue_.emplace_back(std::move(input_item));
   }  // ~lock
   if (is_trigger_needed) {
-    PostToInputProcessingThread(
-        fit::bind_member(this, &CodecAdapterVp9::ProcessInput));
+    PostToInputProcessingThread(fit::bind_member(this, &CodecAdapterVp9::ProcessInput));
   }
 }
 
@@ -800,8 +761,7 @@ void CodecAdapterVp9::ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) {
   // Trigger this on the input thread instead of immediately handling it to
   // simplifying the locking.
   if (is_trigger_needed) {
-    PostToInputProcessingThread(
-        fit::bind_member(this, &CodecAdapterVp9::ProcessInput));
+    PostToInputProcessingThread(fit::bind_member(this, &CodecAdapterVp9::ProcessInput));
   }
 }
 
@@ -810,8 +770,7 @@ bool CodecAdapterVp9::HasMoreInputData() {
     return true;
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
-    if (is_stream_failed_ || is_cancelling_input_processing_ ||
-        input_queue_.empty()) {
+    if (is_stream_failed_ || is_cancelling_input_processing_ || input_queue_.empty()) {
       return false;
     }
   }  // ~lock
@@ -821,8 +780,7 @@ bool CodecAdapterVp9::HasMoreInputData() {
 CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
-    if (is_stream_failed_ || is_cancelling_input_processing_ ||
-        input_queue_.empty()) {
+    if (is_stream_failed_ || is_cancelling_input_processing_ || input_queue_.empty()) {
       return CodecInputItem::Invalid();
     }
     CodecInputItem to_ret = std::move(input_queue_.front());
@@ -831,9 +789,7 @@ CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   }  // ~lock
 }
 
-void CodecAdapterVp9::FrameWasOutput() {
-  video_->TryToRescheduleAssumeVideoDecoderLocked();
-}
+void CodecAdapterVp9::FrameWasOutput() { video_->TryToRescheduleAssumeVideoDecoderLocked(); }
 
 // The decoder lock is held by caller during this method.
 void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
@@ -859,16 +815,13 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     if (item.is_end_of_stream()) {
       video_->pts_manager()->SetEndOfStreamOffset(parsed_video_size_);
       std::vector<uint8_t> split_data;
-      SplitSuperframe(
-          reinterpret_cast<const uint8_t*>(&new_stream_ivf[kHeaderSkipBytes]),
-          new_stream_ivf_len - kHeaderSkipBytes, &split_data);
-      if (ZX_OK !=
-          video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
+      SplitSuperframe(reinterpret_cast<const uint8_t*>(&new_stream_ivf[kHeaderSkipBytes]),
+                      new_stream_ivf_len - kHeaderSkipBytes, &split_data);
+      if (ZX_OK != video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
         OnCoreCodecFailStream();
         return;
       }
-      if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes,
-                                                sizeof(kFlushThroughZeroes))) {
+      if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
         OnCoreCodecFailStream();
         return;
       }
@@ -880,12 +833,10 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
 
     ZX_DEBUG_ASSERT(item.is_packet());
 
-    uint8_t* data =
-        item.packet()->buffer()->buffer_base() + item.packet()->start_offset();
+    uint8_t* data = item.packet()->buffer()->buffer_base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
 
-    video_->pts_manager()->InsertPts(parsed_video_size_,
-                                     item.packet()->has_timestamp_ish(),
+    video_->pts_manager()->InsertPts(parsed_video_size_, item.packet()->has_timestamp_ish(),
                                      item.packet()->timestamp_ish());
     std::vector<uint8_t> split_data;
     std::vector<uint32_t> new_queued_frame_sizes;
@@ -898,8 +849,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     // at a time.
     // TODO: Check for short writes and either feed in extra data as space is
     // made or resize the buffer to fit.
-    if (ZX_OK !=
-        video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
+    if (ZX_OK != video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
       OnCoreCodecFailStream();
       return;
     }
@@ -908,8 +858,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     // decoder may not see the data because it's stuck in a fifo somewhere and
     // we can get hangs.
     {
-      if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes,
-                                                sizeof(kFlushThroughZeroes))) {
+      if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
         OnCoreCodecFailStream();
         return;
       }
@@ -936,14 +885,14 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
   }
 }
 
-zx_status_t CodecAdapterVp9::InitializeFramesHandler(
-    ::zx::bti bti, uint32_t frame_count, uint32_t width, uint32_t height,
-    uint32_t stride, uint32_t display_width, uint32_t display_height,
-    bool has_sar, uint32_t sar_width, uint32_t sar_height) {
+zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t frame_count,
+                                                     uint32_t width, uint32_t height,
+                                                     uint32_t stride, uint32_t display_width,
+                                                     uint32_t display_height, bool has_sar,
+                                                     uint32_t sar_width, uint32_t sar_height) {
   // First handle the special case of EndOfStream marker showing up at the
   // output.
-  if (display_width == kEndOfStreamWidth &&
-      display_height == kEndOfStreamHeight) {
+  if (display_width == kEndOfStreamWidth && display_height == kEndOfStreamHeight) {
     bool is_output_end_of_stream = false;
     {  // scope lock
       std::lock_guard<std::mutex> lock(lock_);

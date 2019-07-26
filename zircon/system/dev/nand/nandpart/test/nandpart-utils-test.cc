@@ -26,119 +26,119 @@ constexpr fuchsia_hardware_nand_Info kNandInfo = {
 };
 
 zbi_partition_map_t MakePartitionMap(uint32_t partition_count) {
-    return zbi_partition_map_t{
-        .block_count = kNumBlocks * kPagesPerBlock,
-        .block_size = kPageSize,
-        .partition_count = partition_count,
-        .reserved = 0,
-        .guid = {},
-    };
+  return zbi_partition_map_t{
+      .block_count = kNumBlocks * kPagesPerBlock,
+      .block_size = kPageSize,
+      .partition_count = partition_count,
+      .reserved = 0,
+      .guid = {},
+  };
 }
 
 zbi_partition_t MakePartition(uint32_t first_block, uint32_t last_block) {
-    return zbi_partition_t{
-        .type_guid = {},
-        .uniq_guid = {},
-        .first_block = first_block,
-        .last_block = last_block,
-        .flags = 0,
-        .name = {},
-    };
+  return zbi_partition_t{
+      .type_guid = {},
+      .uniq_guid = {},
+      .first_block = first_block,
+      .last_block = last_block,
+      .flags = 0,
+      .name = {},
+  };
 }
 
 void ValidatePartition(zbi_partition_map_t* pmap, size_t partition_number, uint32_t first_block,
                        uint32_t last_block) {
-    EXPECT_EQ(pmap->partitions[partition_number].first_block, first_block);
-    EXPECT_EQ(pmap->partitions[partition_number].last_block, last_block);
+  EXPECT_EQ(pmap->partitions[partition_number].first_block, first_block);
+  EXPECT_EQ(pmap->partitions[partition_number].last_block, last_block);
 }
 
 TEST(NandPartUtilsTest, SanitizeEmptyPartitionMapTest) {
-    auto pmap = MakePartitionMap(0);
-    ASSERT_NE(SanitizePartitionMap(&pmap, kNandInfo), ZX_OK);
+  auto pmap = MakePartitionMap(0);
+  ASSERT_NE(SanitizePartitionMap(&pmap, kNandInfo), ZX_OK);
 }
 
 TEST(NandPartUtilsTest, SanitizeSinglePartitionMapTest) {
-    fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
-                                                       sizeof(zbi_partition_t)]);
-    auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
-    *pmap = MakePartitionMap(1);
-    pmap->partitions[0] = MakePartition(0, 9);
-    ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
-    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 4));
+  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+      new uint8_t[sizeof(zbi_partition_map_t) + sizeof(zbi_partition_t)]);
+  auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
+  *pmap = MakePartitionMap(1);
+  pmap->partitions[0] = MakePartition(0, 9);
+  ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
+  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 4));
 }
 
 TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapTest) {
-    fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
-                                                       3 * sizeof(zbi_partition_t)]);
-    auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
-    *pmap = MakePartitionMap(3);
-    pmap->partitions[0] = MakePartition(0, 3);
-    pmap->partitions[1] = MakePartition(4, 7);
-    pmap->partitions[2] = MakePartition(8, 9);
+  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+      new uint8_t[sizeof(zbi_partition_map_t) + 3 * sizeof(zbi_partition_t)]);
+  auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
+  *pmap = MakePartitionMap(3);
+  pmap->partitions[0] = MakePartition(0, 3);
+  pmap->partitions[1] = MakePartition(4, 7);
+  pmap->partitions[2] = MakePartition(8, 9);
 
-    ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
-    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
-    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 3));
-    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 2, 4, 4));
+  ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
+  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
+  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 3));
+  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 2, 4, 4));
 }
 
 TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOutOfOrderTest) {
-    fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
-                                                       2 * sizeof(zbi_partition_t)]);
-    auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
-    *pmap = MakePartitionMap(2);
-    pmap->partitions[0] = MakePartition(4, 9);
-    pmap->partitions[1] = MakePartition(0, 3);
+  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+      new uint8_t[sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t)]);
+  auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
+  *pmap = MakePartitionMap(2);
+  pmap->partitions[0] = MakePartition(4, 9);
+  pmap->partitions[1] = MakePartition(0, 3);
 
-    ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
-    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
-    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 4));
+  ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
+  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
+  ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 4));
 }
 
 TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOverlappingTest) {
-    fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
-                                                       3 * sizeof(zbi_partition_t)]);
-    auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
-    *pmap = MakePartitionMap(3);
-    pmap->partitions[0] = MakePartition(0, 3);
-    pmap->partitions[1] = MakePartition(8, 9);
-    pmap->partitions[2] = MakePartition(4, 8);
+  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+      new uint8_t[sizeof(zbi_partition_map_t) + 3 * sizeof(zbi_partition_t)]);
+  auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
+  *pmap = MakePartitionMap(3);
+  pmap->partitions[0] = MakePartition(0, 3);
+  pmap->partitions[1] = MakePartition(8, 9);
+  pmap->partitions[2] = MakePartition(4, 8);
 
-    ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
+  ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
 }
 
 TEST(NandPartUtilsTest, SanitizePartitionMapBadRangeTest) {
-    fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
-                                                       2 * sizeof(zbi_partition_t)]);
-    auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
-    *pmap = MakePartitionMap(2);
-    pmap->partitions[0] = MakePartition(1, 0);
-    pmap->partitions[1] = MakePartition(1, 9);
+  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+      new uint8_t[sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t)]);
+  auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
+  *pmap = MakePartitionMap(2);
+  pmap->partitions[0] = MakePartition(1, 0);
+  pmap->partitions[1] = MakePartition(1, 9);
 
-    ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
+  ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
 }
 
 TEST(NandPartUtilsTest, SanitizePartitionMapUnalignedTest) {
-    fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
-                                                       2 * sizeof(zbi_partition_t)]);
-    auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
-    *pmap = MakePartitionMap(2);
-    pmap->partitions[0] = MakePartition(0, 3);
-    pmap->partitions[1] = MakePartition(5, 8);
+  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+      new uint8_t[sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t)]);
+  auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
+  *pmap = MakePartitionMap(2);
+  pmap->partitions[0] = MakePartition(0, 3);
+  pmap->partitions[1] = MakePartition(5, 8);
 
-    ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
+  ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
 }
 
 TEST(NandPartUtilsTest, SanitizePartitionMapOutofBoundsTest) {
-    fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
-                                                       2 * sizeof(zbi_partition_t)]);
-    auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
-    *pmap = MakePartitionMap(2);
-    pmap->partitions[0] = MakePartition(0, 3);
-    pmap->partitions[1] = MakePartition(4, 11);
+  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+      new uint8_t[sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t)]);
+  auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
+  *pmap = MakePartitionMap(2);
+  pmap->partitions[0] = MakePartition(0, 3);
+  pmap->partitions[1] = MakePartition(4, 11);
 
-    ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
+  ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
 }
 
-} // namespace
-} // namespace nand
+}  // namespace
+}  // namespace nand

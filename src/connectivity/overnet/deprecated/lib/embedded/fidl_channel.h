@@ -22,26 +22,22 @@ class FidlChannel;
 class FidlChannelIO final : public fbl::RefCounted<FidlChannelIO>,
                             public fuchsia::overnet::protocol::ZirconChannel {
  public:
-  using ReplyFunc = fit::function<zx_status_t(
-      fuchsia::overnet::protocol::ZirconChannelMessage)>;
+  using ReplyFunc = fit::function<zx_status_t(fuchsia::overnet::protocol::ZirconChannelMessage)>;
 
   FidlChannelIO(FidlChannel* parent, ClosedPtr<ZxChannel> channel);
   ~FidlChannelIO();
   FidlChannelIO(const FidlChannelIO&) = delete;
   FidlChannelIO& operator=(const FidlChannelIO&) = delete;
 
-  void Send(const fidl_type_t* type,
-            fuchsia::overnet::protocol::ZirconChannelMessage message,
+  void Send(const fidl_type_t* type, fuchsia::overnet::protocol::ZirconChannelMessage message,
             ReplyFunc callback);
-  void Send(const fidl_type_t* type,
-            fuchsia::overnet::protocol::ZirconChannelMessage message);
+  void Send(const fidl_type_t* type, fuchsia::overnet::protocol::ZirconChannelMessage message);
   ClosedPtr<ZxChannel> TakeChannel();
   ZxChannel* channel() { return channel_.get(); }
 
   void Orphan() { parent_ = nullptr; }
 
-  void Message(
-      fuchsia::overnet::protocol::ZirconChannelMessage message) override;
+  void Message(fuchsia::overnet::protocol::ZirconChannelMessage message) override;
 
  private:
   FidlChannel* parent_;
@@ -70,8 +66,7 @@ class FidlChannel {
   //
   // The memory backing the message will remain valid until this method returns,
   // at which point the memory might or might not be deallocated.
-  virtual zx_status_t Dispatch_(
-      fuchsia::overnet::protocol::ZirconChannelMessage message) = 0;
+  virtual zx_status_t Dispatch_(fuchsia::overnet::protocol::ZirconChannelMessage message) = 0;
 };
 
 }  // namespace internal

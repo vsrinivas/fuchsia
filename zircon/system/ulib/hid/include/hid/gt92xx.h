@@ -14,15 +14,15 @@ __BEGIN_CDECLS
 #define GT92XX_RPT_ID_TOUCH 1
 
 typedef struct gt92xx_finger {
-    uint8_t finger_id;
-    uint16_t x;
-    uint16_t y;
+  uint8_t finger_id;
+  uint16_t x;
+  uint16_t y;
 } __PACKED gt92xx_finger_t;
 
 typedef struct gt92xx_touch {
-    uint8_t rpt_id;
-    gt92xx_finger_t fingers[5];
-    uint8_t contact_count;  // will be zero for reports for fingers 6-10
+  uint8_t rpt_id;
+  gt92xx_finger_t fingers[5];
+  uint8_t contact_count;  // will be zero for reports for fingers 6-10
 } __PACKED gt92xx_touch_t;
 
 bool is_gt92xx_touch_report_desc(const uint8_t* data, size_t len);

@@ -18,28 +18,27 @@ using ::fbl::internal::is_sentinel_ptr;
 // to be non-null and that the last link in the chain is terminated with the
 // proper sentinel value.
 class SinglyLinkedListChecker {
-public:
-    template <typename ContainerType>
-    static bool SanityCheck(const ContainerType& container) {
-        using NodeTraits = typename ContainerType::NodeTraits;
-        using PtrTraits  = typename ContainerType::PtrTraits;
-        BEGIN_TEST;
+ public:
+  template <typename ContainerType>
+  static bool SanityCheck(const ContainerType& container) {
+    using NodeTraits = typename ContainerType::NodeTraits;
+    using PtrTraits = typename ContainerType::PtrTraits;
+    BEGIN_TEST;
 
-        typename PtrTraits::RawPtrType tmp = container.head_;
-        while (true) {
-            ASSERT_NONNULL(tmp, "");
+    typename PtrTraits::RawPtrType tmp = container.head_;
+    while (true) {
+      ASSERT_NONNULL(tmp, "");
 
-            if (is_sentinel_ptr(tmp)) {
-                ASSERT_EQ(container.sentinel(), tmp, "");
-                break;
-            }
+      if (is_sentinel_ptr(tmp)) {
+        ASSERT_EQ(container.sentinel(), tmp, "");
+        break;
+      }
 
-            tmp = NodeTraits::node_state(*tmp).next_;
-
-        }
-
-        END_TEST;
+      tmp = NodeTraits::node_state(*tmp).next_;
     }
+
+    END_TEST;
+  }
 };
 
 }  // namespace intrusive_containers

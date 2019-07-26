@@ -31,8 +31,7 @@ class FakeNetworkWrapper : public NetworkWrapper {
   // NetworkWrapper
   fxl::RefPtr<callback::Cancellable> Request(
       fit::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
-      fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback)
-      override;
+      fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
 
   std::unique_ptr<::fuchsia::net::oldhttp::URLRequest> request_received_;
   std::unique_ptr<::fuchsia::net::oldhttp::URLResponse> response_to_return_;

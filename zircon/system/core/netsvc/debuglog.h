@@ -13,5 +13,3 @@ int debuglog_init();
 void debuglog_recv(void* data, size_t len, bool is_mcast);
 
 void debuglog_timeout_expired();
-
-

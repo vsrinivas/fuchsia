@@ -33,12 +33,11 @@ TEST(UtilZx, GetRelatedKoid) {
   zx::job job{GetDefaultJob()};
 
   static const char* const argv[] = {
-    kTestHelperPath,
-    nullptr,
+      kTestHelperPath,
+      nullptr,
   };
 
-  zx_status_t status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL,
-                                  kTestHelperPath, argv,
+  zx_status_t status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, kTestHelperPath, argv,
                                   process.reset_and_get_address());
   EXPECT_EQ(status, ZX_OK);
 
@@ -51,8 +50,7 @@ TEST(UtilZx, GetRelatedKoid) {
 TEST(UtilZx, GetObjectName) {
   zx_handle_t self = zx_thread_self();
   static const char name[] = "GetObjectNameTest";
-  ASSERT_EQ(zx_object_set_property(self, ZX_PROP_NAME, name, sizeof(name)),
-            ZX_OK);
+  ASSERT_EQ(zx_object_set_property(self, ZX_PROP_NAME, name, sizeof(name)), ZX_OK);
   ASSERT_STREQ(GetObjectName(self).c_str(), name);
 }
 
@@ -62,15 +60,13 @@ TEST(UtilZx, GetNoNameObjectName) {
   zx::event event;
   EXPECT_EQ(zx::event::create(0u, &event), ZX_OK);
   static const char name[] = "GetNoNameObjectNameTest";
-  ASSERT_EQ(event.set_property(ZX_PROP_NAME, name, sizeof(name)),
-            ZX_ERR_ACCESS_DENIED);
+  ASSERT_EQ(event.set_property(ZX_PROP_NAME, name, sizeof(name)), ZX_ERR_ACCESS_DENIED);
   ASSERT_STREQ(GetObjectName(event).c_str(), "");
 
   // Sockets have properties but not names, so we'll get NOT_SUPPORTED.
   zx::socket socket0, socket1;
   EXPECT_EQ(zx::socket::create(0u, &socket0, &socket1), ZX_OK);
-  ASSERT_EQ(socket0.set_property(ZX_PROP_NAME, name, sizeof(name)),
-            ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(socket0.set_property(ZX_PROP_NAME, name, sizeof(name)), ZX_ERR_NOT_SUPPORTED);
   ASSERT_STREQ(GetObjectName(socket0).c_str(), "");
 }
 

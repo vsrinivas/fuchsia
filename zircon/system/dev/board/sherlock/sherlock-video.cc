@@ -85,16 +85,16 @@ constexpr zx_bind_inst_t canvas_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
 };
 constexpr device_component_part_t sysmem_component[] = {
-    { countof(root_match), root_match },
-    { countof(sysmem_match), sysmem_match },
+    {countof(root_match), root_match},
+    {countof(sysmem_match), sysmem_match},
 };
 constexpr device_component_part_t canvas_component[] = {
-    { countof(root_match), root_match },
-    { countof(canvas_match), canvas_match },
+    {countof(root_match), root_match},
+    {countof(canvas_match), canvas_match},
 };
 constexpr device_component_t components[] = {
-    { countof(sysmem_component), sysmem_component },
-    { countof(canvas_component), canvas_component },
+    {countof(sysmem_component), sysmem_component},
+    {countof(canvas_component), canvas_component},
 };
 
 static pbus_dev_t video_dev = []() {
@@ -115,8 +115,8 @@ static pbus_dev_t video_dev = []() {
 }();
 
 zx_status_t Sherlock::VideoInit() {
-  zx_status_t status = pbus_.CompositeDeviceAdd(&video_dev, components, countof(components),
-                                                UINT32_MAX);
+  zx_status_t status =
+      pbus_.CompositeDeviceAdd(&video_dev, components, countof(components), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::VideoInit: CompositeDeviceAdd() failed for video: %d\n", status);
     return status;

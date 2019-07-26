@@ -43,8 +43,7 @@ auto CreateDecryptorParams() {
 class CodecImplLifetime : public gtest::RealLoopFixture {
  protected:
   CodecImplLifetime()
-      : loop_separate_thread_(&kAsyncLoopConfigNoAttachToThread),
-        admission_control_(dispatcher()) {
+      : loop_separate_thread_(&kAsyncLoopConfigNoAttachToThread), admission_control_(dispatcher()) {
     // nothing else to do here
   }
 
@@ -61,37 +60,37 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
   }
 
   bool RunLoopUntilOrGiveUp(fit::function<bool()> condition) {
-    return RunLoopWithTimeoutOrUntil(
-      std::move(condition), zx::sec(kDeadlineSec), zx::msec(kRunLoopIterMs));
+    return RunLoopWithTimeoutOrUntil(std::move(condition), zx::sec(kDeadlineSec),
+                                     zx::msec(kRunLoopIterMs));
   }
 
   void Create(bool bind = true, bool delete_async = false,
               CodecImpl::StreamProcessorParams params = CreateDecoderParams()) {
     ZX_DEBUG_ASSERT(!delete_async || bind);
     std::unique_ptr<CodecImpl> codec_impl;
-    admission_control_.TryAddCodec(true, [this, bind, delete_async, params = std::move(params),
-                                          &codec_impl](std::unique_ptr<CodecAdmission>
-                                                           codec_admission) mutable {
-      codec_impl = std::make_unique<CodecImpl>(
-          std::move(sysmem_client_), std::move(codec_admission), dispatcher(), thrd_current(),
-          std::move(params), std::move(codec_request_));
-      auto fake_codec_adapter =
-          std::make_unique<FakeCodecAdapter>(codec_impl->lock(), codec_impl.get());
-      fake_codec_adapter_ = fake_codec_adapter.get();
-      codec_impl->SetCoreCodecAdapter(std::move(fake_codec_adapter));
-      if (!bind) {
-        return;
-      }
-      codec_impl->BindAsync([this, delete_async] {
-        if (!delete_async) {
-          codec_impl_.reset();
-        } else {
-          zx_status_t status = async::PostTask(dispatcher(), [this] { codec_impl_.reset(); });
-          ZX_DEBUG_ASSERT(status == ZX_OK);
-        }
-        error_handler_ran_ = true;
-      });
-    });
+    admission_control_.TryAddCodec(
+        true, [this, bind, delete_async, params = std::move(params),
+               &codec_impl](std::unique_ptr<CodecAdmission> codec_admission) mutable {
+          codec_impl = std::make_unique<CodecImpl>(
+              std::move(sysmem_client_), std::move(codec_admission), dispatcher(), thrd_current(),
+              std::move(params), std::move(codec_request_));
+          auto fake_codec_adapter =
+              std::make_unique<FakeCodecAdapter>(codec_impl->lock(), codec_impl.get());
+          fake_codec_adapter_ = fake_codec_adapter.get();
+          codec_impl->SetCoreCodecAdapter(std::move(fake_codec_adapter));
+          if (!bind) {
+            return;
+          }
+          codec_impl->BindAsync([this, delete_async] {
+            if (!delete_async) {
+              codec_impl_.reset();
+            } else {
+              zx_status_t status = async::PostTask(dispatcher(), [this] { codec_impl_.reset(); });
+              ZX_DEBUG_ASSERT(status == ZX_OK);
+            }
+            error_handler_ran_ = true;
+          });
+        });
     RunLoopUntilOrGiveUp([&codec_impl] { return !!codec_impl; });
     ZX_DEBUG_ASSERT(codec_impl);
     codec_impl_ = std::move(codec_impl);

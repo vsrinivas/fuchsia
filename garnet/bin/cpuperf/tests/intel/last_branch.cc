@@ -11,17 +11,14 @@
 
 class LastBranchVerifier : public Verifier {
  public:
-  static std::unique_ptr<Verifier> Create(
-      const cpuperf::SessionResultSpec* spec) {
+  static std::unique_ptr<Verifier> Create(const cpuperf::SessionResultSpec* spec) {
     return std::make_unique<LastBranchVerifier>(spec);
   }
 
-  LastBranchVerifier(const cpuperf::SessionResultSpec* spec)
-      : Verifier(spec) {
+  LastBranchVerifier(const cpuperf::SessionResultSpec* spec) : Verifier(spec) {
     const perfmon::EventDetails* details;
 
-    bool rc __UNUSED =
-      LookupEventByName("arch", "instructions_retired", &details);
+    bool rc __UNUSED = LookupEventByName("arch", "instructions_retired", &details);
     FXL_DCHECK(rc);
     instructions_retired_id_ = details->id;
   }
@@ -34,13 +31,12 @@ class LastBranchVerifier : public Verifier {
     if (record.type() == perfmon::kRecordTypeLastBranch) {
       ++last_branch_record_count_;
       if (record.header->event != instructions_retired_id_) {
-        FXL_LOG(ERROR) << "Last branch record has wrong event id: "
-                       << record.header->event;
+        FXL_LOG(ERROR) << "Last branch record has wrong event id: " << record.header->event;
         return false;
       }
       const perfmon::LastBranchRecord* lbr = record.last_branch;
-      uint64_t valid_info_mask = (perfmon::kLastBranchInfoCyclesMask |
-                                  perfmon::kLastBranchInfoMispredMask);
+      uint64_t valid_info_mask =
+          (perfmon::kLastBranchInfoCyclesMask | perfmon::kLastBranchInfoMispredMask);
       for (size_t i = 0; i < lbr->num_branches; ++i) {
         if (lbr->aspace == 0) {
           FXL_LOG(ERROR) << "Last branch record has zero aspace";
@@ -87,6 +83,6 @@ class LastBranchVerifier : public Verifier {
 };
 
 const TestSpec kLastBranchSpec = {
-  "last-branch",
-  &LastBranchVerifier::Create,
+    "last-branch",
+    &LastBranchVerifier::Create,
 };

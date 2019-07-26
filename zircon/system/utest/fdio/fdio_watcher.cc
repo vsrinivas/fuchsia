@@ -7,5 +7,5 @@
 #include <zxtest/zxtest.h>
 
 TEST(WatcherTest, WatchInvalidDirFD) {
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdio_watch_directory(-1, nullptr, ZX_TIME_INFINITE, nullptr));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdio_watch_directory(-1, nullptr, ZX_TIME_INFINITE, nullptr));
 }

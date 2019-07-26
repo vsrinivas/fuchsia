@@ -26,9 +26,9 @@ using fuchsia::cobalt::Status;
 
 namespace cobalt {
 
-BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(
-    async_dispatcher_t* dispatcher, std::string project_name,
-    fuchsia::cobalt::ReleaseStage release_stage, ProjectProfile profile)
+BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, std::string project_name,
+                                           fuchsia::cobalt::ReleaseStage release_stage,
+                                           ProjectProfile profile)
     : dispatcher_(dispatcher),
       project_name_(std::move(project_name)),
       release_stage_(release_stage),
@@ -45,36 +45,27 @@ void BaseCobaltLoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_code) {
   LogEvent(std::make_unique<OccurrenceEvent>(metric_id, event_code));
 }
 
-void BaseCobaltLoggerImpl::LogEventCount(uint32_t metric_id,
-                                         uint32_t event_code,
-                                         const std::string& component,
-                                         zx::duration period_duration,
+void BaseCobaltLoggerImpl::LogEventCount(uint32_t metric_id, uint32_t event_code,
+                                         const std::string& component, zx::duration period_duration,
                                          int64_t count) {
   LogEvent(std::make_unique<CountEvent>(metric_id, event_code, component,
                                         period_duration.to_usecs(), count));
 }
 
-void BaseCobaltLoggerImpl::LogElapsedTime(uint32_t metric_id,
-                                          uint32_t event_code,
-                                          const std::string& component,
-                                          zx::duration elapsed_time) {
+void BaseCobaltLoggerImpl::LogElapsedTime(uint32_t metric_id, uint32_t event_code,
+                                          const std::string& component, zx::duration elapsed_time) {
   LogEvent(std::make_unique<ElapsedTimeEvent>(metric_id, event_code, component,
                                               elapsed_time.to_usecs()));
 }
 
 void BaseCobaltLoggerImpl::LogFrameRate(uint32_t metric_id, uint32_t event_code,
-                                        const std::string& component,
-                                        float fps) {
-  LogEvent(
-      std::make_unique<FrameRateEvent>(metric_id, event_code, component, fps));
+                                        const std::string& component, float fps) {
+  LogEvent(std::make_unique<FrameRateEvent>(metric_id, event_code, component, fps));
 }
 
-void BaseCobaltLoggerImpl::LogMemoryUsage(uint32_t metric_id,
-                                          uint32_t event_code,
-                                          const std::string& component,
-                                          int64_t bytes) {
-  LogEvent(std::make_unique<MemoryUsageEvent>(metric_id, event_code, component,
-                                              bytes));
+void BaseCobaltLoggerImpl::LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
+                                          const std::string& component, int64_t bytes) {
+  LogEvent(std::make_unique<MemoryUsageEvent>(metric_id, event_code, component, bytes));
 }
 
 void BaseCobaltLoggerImpl::LogString(uint32_t metric_id, const std::string& s) {
@@ -82,19 +73,16 @@ void BaseCobaltLoggerImpl::LogString(uint32_t metric_id, const std::string& s) {
 }
 
 void BaseCobaltLoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_code,
-                                      const std::string& component,
-                                      const std::string& timer_id,
-                                      zx::time timestamp,
-                                      zx::duration timeout) {
-  LogEvent(std::make_unique<StartTimerEvent>(
-      metric_id, event_code, component, timer_id, timestamp.get() / ZX_USEC(1),
-      timeout.to_secs()));
+                                      const std::string& component, const std::string& timer_id,
+                                      zx::time timestamp, zx::duration timeout) {
+  LogEvent(std::make_unique<StartTimerEvent>(metric_id, event_code, component, timer_id,
+                                             timestamp.get() / ZX_USEC(1), timeout.to_secs()));
 }
 
-void BaseCobaltLoggerImpl::EndTimer(const std::string& timer_id,
-                                    zx::time timestamp, zx::duration timeout) {
-  LogEvent(std::make_unique<EndTimerEvent>(
-      timer_id, timestamp.get() / ZX_USEC(1), timeout.to_secs()));
+void BaseCobaltLoggerImpl::EndTimer(const std::string& timer_id, zx::time timestamp,
+                                    zx::duration timeout) {
+  LogEvent(
+      std::make_unique<EndTimerEvent>(timer_id, timestamp.get() / ZX_USEC(1), timeout.to_secs()));
 }
 
 void BaseCobaltLoggerImpl::LogIntHistogram(
@@ -106,19 +94,16 @@ void BaseCobaltLoggerImpl::LogIntHistogram(
 }
 
 void BaseCobaltLoggerImpl::LogCustomEvent(
-    uint32_t metric_id,
-    std::vector<fuchsia::cobalt::CustomEventValue> event_values) {
+    uint32_t metric_id, std::vector<fuchsia::cobalt::CustomEventValue> event_values) {
   LogEvent(std::make_unique<CustomEvent>(
-      metric_id,
-      std::vector<fuchsia::cobalt::CustomEventValue>(std::move(event_values))));
+      metric_id, std::vector<fuchsia::cobalt::CustomEventValue>(std::move(event_values))));
 }
 
 void BaseCobaltLoggerImpl::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) {
   LogEvent(std::make_unique<CobaltEvent>(std::move(event)));
 }
 
-void BaseCobaltLoggerImpl::LogCobaltEvents(
-    std::vector<fuchsia::cobalt::CobaltEvent> events) {
+void BaseCobaltLoggerImpl::LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events) {
   LogEvent(std::make_unique<CobaltEvents>(std::move(events)));
 }
 
@@ -129,16 +114,14 @@ void BaseCobaltLoggerImpl::LogEvent(std::unique_ptr<BaseEvent> event) {
   }
 
   // Hop to the main thread, and go back to the global object dispatcher.
-  async::PostTask(dispatcher_, [event = std::move(event), this]() mutable {
-    this->LogEvent(std::move(event));
-  });
+  async::PostTask(dispatcher_,
+                  [event = std::move(event), this]() mutable { this->LogEvent(std::move(event)); });
 }
 
 ProjectProfile BaseCobaltLoggerImpl::CloneProjectProfile() {
   ProjectProfile cloned_profile;
-  FXL_CHECK(profile_.config.vmo.duplicate(
-                ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-                &cloned_profile.config.vmo) == ZX_OK)
+  FXL_CHECK(profile_.config.vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
+                                          &cloned_profile.config.vmo) == ZX_OK)
       << "Could not clone config VMO";
   cloned_profile.config.size = profile_.config.size;
 
@@ -156,8 +139,7 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
         CloneProjectProfile(), logger_.NewRequest(), [this](Status status) {
           if (status == Status::OK) {
             if (logger_) {
-              logger_.set_error_handler(
-                  [this](zx_status_t status) { OnConnectionError(); });
+              logger_.set_error_handler([this](zx_status_t status) { OnConnectionError(); });
               SendEvents();
             } else {
               OnConnectionError();
@@ -168,19 +150,16 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
         });
   } else {
     logger_factory->CreateLoggerFromProjectName(
-        project_name_, release_stage_, logger_.NewRequest(),
-        [this](Status status) {
+        project_name_, release_stage_, logger_.NewRequest(), [this](Status status) {
           if (status == Status::OK) {
             if (logger_) {
-              logger_.set_error_handler(
-                  [this](zx_status_t status) { OnConnectionError(); });
+              logger_.set_error_handler([this](zx_status_t status) { OnConnectionError(); });
               SendEvents();
             } else {
               OnConnectionError();
             }
           } else {
-            FX_LOGST(ERROR, "cobalt_lib")
-                << "CreateLoggerFromProjectName() failed";
+            FX_LOGST(ERROR, "cobalt_lib") << "CreateLoggerFromProjectName() failed";
           }
         });
   }
@@ -189,8 +168,7 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
 void BaseCobaltLoggerImpl::OnTransitFail() {
   // Ugly way to move unique_ptrs between sets
   for (const auto& event : events_in_transit_) {
-    events_to_send_.insert(
-        std::move(const_cast<std::unique_ptr<BaseEvent>&>(event)));
+    events_to_send_.insert(std::move(const_cast<std::unique_ptr<BaseEvent>&>(event)));
   }
 
   events_in_transit_.clear();
@@ -202,12 +180,10 @@ void BaseCobaltLoggerImpl::OnConnectionError() {
   OnTransitFail();
   logger_.Unbind();
   async::PostDelayedTask(
-      dispatcher_, [this]() { ConnectToCobaltApplication(); },
-      backoff_.GetNext());
+      dispatcher_, [this]() { ConnectToCobaltApplication(); }, backoff_.GetNext());
 }
 
-void BaseCobaltLoggerImpl::LogEventOnMainThread(
-    std::unique_ptr<BaseEvent> event) {
+void BaseCobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<BaseEvent> event) {
   events_to_send_.insert(std::move(event));
   if (!logger_ || !events_in_transit_.empty()) {
     return;
@@ -229,11 +205,11 @@ void BaseCobaltLoggerImpl::SendEvents() {
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   for (auto& event : events_in_transit_) {
     auto callback = waiter->NewCallback();
-    event->Log(&logger_, [this, event_ptr = event.get(),
-                          callback = std::move(callback)](Status status) {
-      LogEventCallback(event_ptr, status);
-      callback();
-    });
+    event->Log(&logger_,
+               [this, event_ptr = event.get(), callback = std::move(callback)](Status status) {
+                 LogEventCallback(event_ptr, status);
+                 callback();
+               });
   }
 
   waiter->Finalize([this]() {
@@ -257,22 +233,18 @@ void BaseCobaltLoggerImpl::SendEvents() {
   });
 }
 
-void BaseCobaltLoggerImpl::LogEventCallback(const BaseEvent* event,
-                                            Status status) {
+void BaseCobaltLoggerImpl::LogEventCallback(const BaseEvent* event, Status status) {
   switch (status) {
     case Status::INVALID_ARGUMENTS:
     case Status::EVENT_TOO_BIG:  // fall through
       // Log the failure.
-      FX_LOGS(WARNING) << "Cobalt rejected event for metric: "
-                       << event->metric_id()
+      FX_LOGS(WARNING) << "Cobalt rejected event for metric: " << event->metric_id()
                        << " with status: " << fidl::ToUnderlying(status);
     case Status::OK:  // fall through
       // Remove the event from the set of events to send.
       events_in_transit_.erase(std::lower_bound(
           events_in_transit_.begin(), events_in_transit_.end(), event,
-          [](const std::unique_ptr<BaseEvent>& a, const BaseEvent* b) {
-            return a.get() < b;
-          }));
+          [](const std::unique_ptr<BaseEvent>& a, const BaseEvent* b) { return a.get() < b; }));
       break;
     case Status::INTERNAL_ERROR:
     case Status::BUFFER_FULL:
@@ -285,21 +257,17 @@ fidl::InterfacePtr<LoggerFactory> CobaltLoggerImpl::ConnectToLoggerFactory() {
   return context_->svc()->Connect<LoggerFactory>();
 }
 
-CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
-                                   sys::ComponentContext* context,
+CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                                    ProjectProfile profile)
-    : BaseCobaltLoggerImpl(dispatcher, "", ReleaseStage::GA,
-                           std::move(profile)),
+    : BaseCobaltLoggerImpl(dispatcher, "", ReleaseStage::GA, std::move(profile)),
       context_(context) {
   ConnectToCobaltApplication();
 }
 
-CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
-                                   sys::ComponentContext* context,
+CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                                    std::string project_name,
                                    fuchsia::cobalt::ReleaseStage release_stage)
-    : BaseCobaltLoggerImpl(dispatcher, std::move(project_name), release_stage,
-                           ProjectProfile()),
+    : BaseCobaltLoggerImpl(dispatcher, std::move(project_name), release_stage, ProjectProfile()),
       context_(context) {
   ConnectToCobaltApplication();
 }

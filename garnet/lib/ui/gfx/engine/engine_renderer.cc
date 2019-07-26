@@ -131,10 +131,10 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx_time_t target_p
   if (layer->size().x != stage_width || layer->size().y != stage_height) {
     // TODO(SCN-248): Should be able to render into a viewport of the
     // output image, but we're not that fancy yet.
-    FXL_LOG(ERROR)
-        << "TODO(SCN-248): scenic::gfx::EngineRenderer::DrawLayer(): layer size of "
-        << layer->size().x << "x" << layer->size().y << " does not match output image size of "
-        << stage_width << "x" << stage_height << "... not drawing.";
+    FXL_LOG(ERROR) << "TODO(SCN-248): scenic::gfx::EngineRenderer::DrawLayer(): layer size of "
+                   << layer->size().x << "x" << layer->size().y
+                   << " does not match output image size of " << stage_width << "x" << stage_height
+                   << "... not drawing.";
     return;
   }
 

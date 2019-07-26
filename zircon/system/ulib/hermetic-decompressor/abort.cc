@@ -5,10 +5,6 @@
 #include <cassert>
 #include <cstdlib>
 
-void abort() {
-    __builtin_trap();
-}
+void abort() { __builtin_trap(); }
 
-void __assert_fail(const char*, const char*, int, const char*) {
-    __builtin_trap();
-}
+void __assert_fail(const char*, const char*, int, const char*) { __builtin_trap(); }

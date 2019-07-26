@@ -50,24 +50,24 @@
  * each tlv is specified by BRCMF_FWS_TLV_DEF(name, ID, length).
  * A length value 0 indicates variable length tlv.
  */
-#define BRCMF_FWS_TLV_DEFLIST                      \
-    BRCMF_FWS_TLV_DEF(MAC_OPEN, 1, 1)              \
-    BRCMF_FWS_TLV_DEF(MAC_CLOSE, 2, 1)             \
-    BRCMF_FWS_TLV_DEF(MAC_REQUEST_CREDIT, 3, 2)    \
-    BRCMF_FWS_TLV_DEF(TXSTATUS, 4, 4)              \
-    BRCMF_FWS_TLV_DEF(PKTTAG, 5, 4)                \
-    BRCMF_FWS_TLV_DEF(MACDESC_ADD, 6, 8)           \
-    BRCMF_FWS_TLV_DEF(MACDESC_DEL, 7, 8)           \
-    BRCMF_FWS_TLV_DEF(RSSI, 8, 1)                  \
-    BRCMF_FWS_TLV_DEF(INTERFACE_OPEN, 9, 1)        \
-    BRCMF_FWS_TLV_DEF(INTERFACE_CLOSE, 10, 1)      \
-    BRCMF_FWS_TLV_DEF(FIFO_CREDITBACK, 11, 6)      \
-    BRCMF_FWS_TLV_DEF(PENDING_TRAFFIC_BMP, 12, 2)  \
-    BRCMF_FWS_TLV_DEF(MAC_REQUEST_PACKET, 13, 3)   \
-    BRCMF_FWS_TLV_DEF(HOST_REORDER_RXPKTS, 14, 10) \
-    BRCMF_FWS_TLV_DEF(TRANS_ID, 18, 6)             \
-    BRCMF_FWS_TLV_DEF(COMP_TXSTATUS, 19, 1)        \
-    BRCMF_FWS_TLV_DEF(FILLER, 255, 0)
+#define BRCMF_FWS_TLV_DEFLIST                    \
+  BRCMF_FWS_TLV_DEF(MAC_OPEN, 1, 1)              \
+  BRCMF_FWS_TLV_DEF(MAC_CLOSE, 2, 1)             \
+  BRCMF_FWS_TLV_DEF(MAC_REQUEST_CREDIT, 3, 2)    \
+  BRCMF_FWS_TLV_DEF(TXSTATUS, 4, 4)              \
+  BRCMF_FWS_TLV_DEF(PKTTAG, 5, 4)                \
+  BRCMF_FWS_TLV_DEF(MACDESC_ADD, 6, 8)           \
+  BRCMF_FWS_TLV_DEF(MACDESC_DEL, 7, 8)           \
+  BRCMF_FWS_TLV_DEF(RSSI, 8, 1)                  \
+  BRCMF_FWS_TLV_DEF(INTERFACE_OPEN, 9, 1)        \
+  BRCMF_FWS_TLV_DEF(INTERFACE_CLOSE, 10, 1)      \
+  BRCMF_FWS_TLV_DEF(FIFO_CREDITBACK, 11, 6)      \
+  BRCMF_FWS_TLV_DEF(PENDING_TRAFFIC_BMP, 12, 2)  \
+  BRCMF_FWS_TLV_DEF(MAC_REQUEST_PACKET, 13, 3)   \
+  BRCMF_FWS_TLV_DEF(HOST_REORDER_RXPKTS, 14, 10) \
+  BRCMF_FWS_TLV_DEF(TRANS_ID, 18, 6)             \
+  BRCMF_FWS_TLV_DEF(COMP_TXSTATUS, 19, 1)        \
+  BRCMF_FWS_TLV_DEF(FILLER, 255, 0)
 
 /*
  * enum brcmf_fws_tlv_type - definition of tlv identifiers.
@@ -306,7 +306,7 @@ static_assert(sizeof(struct brcmf_netbuf_workspace) <=
 // clang-format on
 
 #define brcmf_txstatus_get_field(txs, field) \
-    brcmu_maskget32(txs, BRCMF_FWS_TXSTAT_##field##_MASK, BRCMF_FWS_TXSTAT_##field##_SHIFT)
+  brcmu_maskget32(txs, BRCMF_FWS_TXSTAT_##field##_MASK, BRCMF_FWS_TXSTAT_##field##_SHIFT)
 
 /* How long to defer borrowing in msec */
 #define BRCMF_FWS_BORROW_DEFER_PERIOD_MSEC (100)
@@ -324,14 +324,14 @@ static_assert(sizeof(struct brcmf_netbuf_workspace) <=
  * @BRCMF_FWS_FIFO_COUNT: number of fifos.
  */
 enum brcmf_fws_fifo {
-    BRCMF_FWS_FIFO_FIRST,
-    BRCMF_FWS_FIFO_AC_BK = BRCMF_FWS_FIFO_FIRST,
-    BRCMF_FWS_FIFO_AC_BE,
-    BRCMF_FWS_FIFO_AC_VI,
-    BRCMF_FWS_FIFO_AC_VO,
-    BRCMF_FWS_FIFO_BCMC,
-    BRCMF_FWS_FIFO_ATIM,
-    BRCMF_FWS_FIFO_COUNT
+  BRCMF_FWS_FIFO_FIRST,
+  BRCMF_FWS_FIFO_AC_BK = BRCMF_FWS_FIFO_FIRST,
+  BRCMF_FWS_FIFO_AC_BE,
+  BRCMF_FWS_FIFO_AC_VI,
+  BRCMF_FWS_FIFO_AC_VO,
+  BRCMF_FWS_FIFO_BCMC,
+  BRCMF_FWS_FIFO_ATIM,
+  BRCMF_FWS_FIFO_COUNT
 };
 
 /**
@@ -349,17 +349,17 @@ enum brcmf_fws_fifo {
  *  host tossed the packet.
  */
 enum brcmf_fws_txstatus {
-    BRCMF_FWS_TXSTATUS_DISCARD,
-    BRCMF_FWS_TXSTATUS_CORE_SUPPRESS,
-    BRCMF_FWS_TXSTATUS_FW_PS_SUPPRESS,
-    BRCMF_FWS_TXSTATUS_FW_TOSSED,
-    BRCMF_FWS_TXSTATUS_HOST_TOSSED
+  BRCMF_FWS_TXSTATUS_DISCARD,
+  BRCMF_FWS_TXSTATUS_CORE_SUPPRESS,
+  BRCMF_FWS_TXSTATUS_FW_PS_SUPPRESS,
+  BRCMF_FWS_TXSTATUS_FW_TOSSED,
+  BRCMF_FWS_TXSTATUS_HOST_TOSSED
 };
 
 enum brcmf_fws_fcmode {
-    BRCMF_FWS_FCMODE_NONE,
-    BRCMF_FWS_FCMODE_IMPLIED_CREDIT,
-    BRCMF_FWS_FCMODE_EXPLICIT_CREDIT
+  BRCMF_FWS_FCMODE_NONE,
+  BRCMF_FWS_FCMODE_IMPLIED_CREDIT,
+  BRCMF_FWS_FCMODE_EXPLICIT_CREDIT
 };
 
 enum brcmf_fws_mac_desc_state { BRCMF_FWS_STATE_OPEN = 1, BRCMF_FWS_STATE_CLOSE };
@@ -381,24 +381,24 @@ enum brcmf_fws_mac_desc_state { BRCMF_FWS_STATE_OPEN = 1, BRCMF_FWS_STATE_CLOSE 
  * @transit_count: packet in transit to firmware.
  */
 struct brcmf_fws_mac_descriptor {
-    char name[16];
-    uint8_t occupied;
-    uint8_t mac_handle;
-    uint8_t interface_id;
-    uint8_t state;
-    bool suppressed;
-    uint8_t generation;
-    uint8_t ac_bitmap;
-    uint8_t requested_credit;
-    uint8_t requested_packet;
-    uint8_t ea[ETH_ALEN];
-    uint8_t seq[BRCMF_FWS_FIFO_COUNT];
-    struct pktq psq;
-    int transit_count;
-    int suppr_transit_count;
-    bool send_tim_signal;
-    uint8_t traffic_pending_bmp;
-    uint8_t traffic_lastreported_bmp;
+  char name[16];
+  uint8_t occupied;
+  uint8_t mac_handle;
+  uint8_t interface_id;
+  uint8_t state;
+  bool suppressed;
+  uint8_t generation;
+  uint8_t ac_bitmap;
+  uint8_t requested_credit;
+  uint8_t requested_packet;
+  uint8_t ea[ETH_ALEN];
+  uint8_t seq[BRCMF_FWS_FIFO_COUNT];
+  struct pktq psq;
+  int transit_count;
+  int suppr_transit_count;
+  bool send_tim_signal;
+  uint8_t traffic_pending_bmp;
+  uint8_t traffic_lastreported_bmp;
 };
 
 #define BRCMF_FWS_HANGER_MAXITEMS 1024
@@ -411,9 +411,9 @@ struct brcmf_fws_mac_descriptor {
  * @BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED: item was suppressed.
  */
 enum brcmf_fws_hanger_item_state {
-    BRCMF_FWS_HANGER_ITEM_STATE_FREE = 1,
-    BRCMF_FWS_HANGER_ITEM_STATE_INUSE,
-    BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED
+  BRCMF_FWS_HANGER_ITEM_STATE_FREE = 1,
+  BRCMF_FWS_HANGER_ITEM_STATE_INUSE,
+  BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED
 };
 
 /**
@@ -423,8 +423,8 @@ enum brcmf_fws_hanger_item_state {
  * @pkt: packet itself.
  */
 struct brcmf_fws_hanger_item {
-    enum brcmf_fws_hanger_item_state state;
-    struct brcmf_netbuf* pkt;
+  enum brcmf_fws_hanger_item_state state;
+  struct brcmf_netbuf* pkt;
 };
 
 /**
@@ -439,71 +439,71 @@ struct brcmf_fws_hanger_item {
  * @items: array of hanger items.
  */
 struct brcmf_fws_hanger {
-    uint32_t pushed;
-    uint32_t popped;
-    uint32_t failed_to_push;
-    uint32_t failed_to_pop;
-    uint32_t failed_slotfind;
-    uint32_t slot_pos;
-    struct brcmf_fws_hanger_item items[BRCMF_FWS_HANGER_MAXITEMS];
+  uint32_t pushed;
+  uint32_t popped;
+  uint32_t failed_to_push;
+  uint32_t failed_to_pop;
+  uint32_t failed_slotfind;
+  uint32_t slot_pos;
+  struct brcmf_fws_hanger_item items[BRCMF_FWS_HANGER_MAXITEMS];
 };
 
 struct brcmf_fws_macdesc_table {
-    struct brcmf_fws_mac_descriptor nodes[BRCMF_FWS_MAC_DESC_TABLE_SIZE];
-    struct brcmf_fws_mac_descriptor iface[BRCMF_MAX_IFS];
-    struct brcmf_fws_mac_descriptor other;
+  struct brcmf_fws_mac_descriptor nodes[BRCMF_FWS_MAC_DESC_TABLE_SIZE];
+  struct brcmf_fws_mac_descriptor iface[BRCMF_MAX_IFS];
+  struct brcmf_fws_mac_descriptor other;
 };
 
 struct brcmf_fws_stats {
-    uint32_t tlv_parse_failed;
-    uint32_t tlv_invalid_type;
-    uint32_t header_only_pkt;
-    uint32_t header_pulls;
-    uint32_t pkt2bus;
-    uint32_t send_pkts[5];
-    uint32_t requested_sent[5];
-    uint32_t generic_error;
-    uint32_t mac_update_failed;
-    uint32_t mac_ps_update_failed;
-    uint32_t if_update_failed;
-    uint32_t packet_request_failed;
-    uint32_t credit_request_failed;
-    uint32_t rollback_success;
-    uint32_t rollback_failed;
-    uint32_t delayq_full_error;
-    uint32_t supprq_full_error;
-    uint32_t txs_indicate;
-    uint32_t txs_discard;
-    uint32_t txs_supp_core;
-    uint32_t txs_supp_ps;
-    uint32_t txs_tossed;
-    uint32_t txs_host_tossed;
-    uint32_t bus_flow_block;
-    uint32_t fws_flow_block;
+  uint32_t tlv_parse_failed;
+  uint32_t tlv_invalid_type;
+  uint32_t header_only_pkt;
+  uint32_t header_pulls;
+  uint32_t pkt2bus;
+  uint32_t send_pkts[5];
+  uint32_t requested_sent[5];
+  uint32_t generic_error;
+  uint32_t mac_update_failed;
+  uint32_t mac_ps_update_failed;
+  uint32_t if_update_failed;
+  uint32_t packet_request_failed;
+  uint32_t credit_request_failed;
+  uint32_t rollback_success;
+  uint32_t rollback_failed;
+  uint32_t delayq_full_error;
+  uint32_t supprq_full_error;
+  uint32_t txs_indicate;
+  uint32_t txs_discard;
+  uint32_t txs_supp_core;
+  uint32_t txs_supp_ps;
+  uint32_t txs_tossed;
+  uint32_t txs_host_tossed;
+  uint32_t bus_flow_block;
+  uint32_t fws_flow_block;
 };
 
 struct brcmf_fws_info {
-    struct brcmf_pub* drvr;
-    //spinlock_t spinlock;
-    struct brcmf_fws_stats stats;
-    struct brcmf_fws_hanger hanger;
-    enum brcmf_fws_fcmode fcmode;
-    bool fw_signals;
-    bool bcmc_credit_check;
-    struct brcmf_fws_macdesc_table desc;
-    struct workqueue_struct* fws_wq;
-    struct work_struct fws_dequeue_work;
-    uint32_t fifo_enqpkt[BRCMF_FWS_FIFO_COUNT];
-    int fifo_credit[BRCMF_FWS_FIFO_COUNT];
-    int credits_borrowed[BRCMF_FWS_FIFO_AC_VO + 1];
-    int deq_node_pos[BRCMF_FWS_FIFO_COUNT];
-    uint32_t fifo_credit_map;
-    uint32_t fifo_delay_map;
-    zx_time_t borrow_defer_timestamp;
-    bool bus_flow_blocked;
-    bool creditmap_received;
-    uint8_t mode;
-    bool avoid_queueing;
+  struct brcmf_pub* drvr;
+  // spinlock_t spinlock;
+  struct brcmf_fws_stats stats;
+  struct brcmf_fws_hanger hanger;
+  enum brcmf_fws_fcmode fcmode;
+  bool fw_signals;
+  bool bcmc_credit_check;
+  struct brcmf_fws_macdesc_table desc;
+  struct workqueue_struct* fws_wq;
+  struct work_struct fws_dequeue_work;
+  uint32_t fifo_enqpkt[BRCMF_FWS_FIFO_COUNT];
+  int fifo_credit[BRCMF_FWS_FIFO_COUNT];
+  int credits_borrowed[BRCMF_FWS_FIFO_AC_VO + 1];
+  int deq_node_pos[BRCMF_FWS_FIFO_COUNT];
+  uint32_t fifo_credit_map;
+  uint32_t fifo_delay_map;
+  zx_time_t borrow_defer_timestamp;
+  bool bus_flow_blocked;
+  bool creditmap_received;
+  uint8_t mode;
+  bool avoid_queueing;
 };
 
 /*
@@ -511,13 +511,12 @@ struct brcmf_fws_info {
  */
 static const int brcmf_fws_prio2fifo[] = {
     BRCMF_FWS_FIFO_AC_BE, BRCMF_FWS_FIFO_AC_BK, BRCMF_FWS_FIFO_AC_BK, BRCMF_FWS_FIFO_AC_BE,
-    BRCMF_FWS_FIFO_AC_VI, BRCMF_FWS_FIFO_AC_VI, BRCMF_FWS_FIFO_AC_VO, BRCMF_FWS_FIFO_AC_VO
-};
+    BRCMF_FWS_FIFO_AC_VI, BRCMF_FWS_FIFO_AC_VI, BRCMF_FWS_FIFO_AC_VO, BRCMF_FWS_FIFO_AC_VO};
 
 #define BRCMF_FWS_TLV_DEF(name, id, len) \
-    case BRCMF_FWS_TYPE_##name:          \
-        *len_out = len;                  \
-        return ZX_OK;
+  case BRCMF_FWS_TYPE_##name:            \
+    *len_out = len;                      \
+    return ZX_OK;
 
 /**
  * brcmf_fws_get_tlv_len() - returns defined length for given tlv id.
@@ -530,1845 +529,1840 @@ static const int brcmf_fws_prio2fifo[] = {
  */
 static zx_status_t brcmf_fws_get_tlv_len(struct brcmf_fws_info* fws, enum brcmf_fws_tlv_type id,
                                          int* len_out) {
-    if (!len_out) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    switch (id) {
-        BRCMF_FWS_TLV_DEFLIST
-    default:
-        fws->stats.tlv_invalid_type++;
-        break;
-    }
-    *len_out = 0;
+  if (!len_out) {
     return ZX_ERR_INVALID_ARGS;
+  }
+  switch (id) {
+    BRCMF_FWS_TLV_DEFLIST
+    default:
+      fws->stats.tlv_invalid_type++;
+      break;
+  }
+  *len_out = 0;
+  return ZX_ERR_INVALID_ARGS;
 }
 #undef BRCMF_FWS_TLV_DEF
 
-static void brcmf_fws_lock(struct brcmf_fws_info* fws) { // __TA_ACQUIRE(&fws->spinlock) {
-    //spin_lock_irqsave(&fws->spinlock, fws->flags);
-    pthread_mutex_lock(&irq_callback_lock);
+static void brcmf_fws_lock(struct brcmf_fws_info* fws) {  // __TA_ACQUIRE(&fws->spinlock) {
+  // spin_lock_irqsave(&fws->spinlock, fws->flags);
+  pthread_mutex_lock(&irq_callback_lock);
 }
 
-static void brcmf_fws_unlock(struct brcmf_fws_info* fws) { // __TA_RELEASE(&fws->spinlock) {
-    //spin_unlock_irqrestore(&fws->spinlock, fws->flags);
-    pthread_mutex_unlock(&irq_callback_lock);
+static void brcmf_fws_unlock(struct brcmf_fws_info* fws) {  // __TA_RELEASE(&fws->spinlock) {
+  // spin_unlock_irqrestore(&fws->spinlock, fws->flags);
+  pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static bool brcmf_fws_ifidx_match(struct brcmf_netbuf* netbuf, void* arg) {
-    uint32_t ifidx = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
-    return ifidx == *(uint32_t*)arg;
+  uint32_t ifidx = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
+  return ifidx == *(uint32_t*)arg;
 }
 
 static void brcmf_fws_psq_flush(struct brcmf_fws_info* fws, struct pktq* q, int ifidx) {
-    bool (*matchfn)(struct brcmf_netbuf*, void*) = NULL;
-    struct brcmf_netbuf* netbuf;
-    int prec;
+  bool (*matchfn)(struct brcmf_netbuf*, void*) = NULL;
+  struct brcmf_netbuf* netbuf;
+  int prec;
 
-    if (ifidx != -1) {
-        matchfn = brcmf_fws_ifidx_match;
+  if (ifidx != -1) {
+    matchfn = brcmf_fws_ifidx_match;
+  }
+  for (prec = 0; prec < q->num_prec; prec++) {
+    netbuf = brcmu_pktq_pdeq_match(q, prec, matchfn, &ifidx);
+    while (netbuf) {
+      brcmu_pkt_buf_free_netbuf(netbuf);
+      netbuf = brcmu_pktq_pdeq_match(q, prec, matchfn, &ifidx);
     }
-    for (prec = 0; prec < q->num_prec; prec++) {
-        netbuf = brcmu_pktq_pdeq_match(q, prec, matchfn, &ifidx);
-        while (netbuf) {
-            brcmu_pkt_buf_free_netbuf(netbuf);
-            netbuf = brcmu_pktq_pdeq_match(q, prec, matchfn, &ifidx);
-        }
-    }
+  }
 }
 
 static void brcmf_fws_hanger_init(struct brcmf_fws_hanger* hanger) {
-    int i;
+  int i;
 
-    memset(hanger, 0, sizeof(*hanger));
-    for (i = 0; i < (int)countof(hanger->items); i++) {
-        hanger->items[i].state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
-    }
+  memset(hanger, 0, sizeof(*hanger));
+  for (i = 0; i < (int)countof(hanger->items); i++) {
+    hanger->items[i].state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
+  }
 }
 
 static uint32_t brcmf_fws_hanger_get_free_slot(struct brcmf_fws_hanger* h) {
-    uint32_t i;
+  uint32_t i;
 
-    i = (h->slot_pos + 1) % BRCMF_FWS_HANGER_MAXITEMS;
+  i = (h->slot_pos + 1) % BRCMF_FWS_HANGER_MAXITEMS;
 
-    while (i != h->slot_pos) {
-        if (h->items[i].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
-            h->slot_pos = i;
-            goto done;
-        }
-        i++;
-        if (i == BRCMF_FWS_HANGER_MAXITEMS) {
-            i = 0;
-        }
+  while (i != h->slot_pos) {
+    if (h->items[i].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
+      h->slot_pos = i;
+      goto done;
     }
-    BRCMF_ERR("all slots occupied\n");
-    h->failed_slotfind++;
-    i = BRCMF_FWS_HANGER_MAXITEMS;
+    i++;
+    if (i == BRCMF_FWS_HANGER_MAXITEMS) {
+      i = 0;
+    }
+  }
+  BRCMF_ERR("all slots occupied\n");
+  h->failed_slotfind++;
+  i = BRCMF_FWS_HANGER_MAXITEMS;
 done:
-    return i;
+  return i;
 }
 
 static zx_status_t brcmf_fws_hanger_pushpkt(struct brcmf_fws_hanger* h, struct brcmf_netbuf* pkt,
                                             uint32_t slot_id) {
-    if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
+  if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
-    if (h->items[slot_id].state != BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
-        BRCMF_ERR("slot is not free\n");
-        h->failed_to_push++;
-        return ZX_ERR_BAD_STATE;
-    }
+  if (h->items[slot_id].state != BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
+    BRCMF_ERR("slot is not free\n");
+    h->failed_to_push++;
+    return ZX_ERR_BAD_STATE;
+  }
 
-    h->items[slot_id].state = BRCMF_FWS_HANGER_ITEM_STATE_INUSE;
-    h->items[slot_id].pkt = pkt;
-    h->pushed++;
-    return ZX_OK;
+  h->items[slot_id].state = BRCMF_FWS_HANGER_ITEM_STATE_INUSE;
+  h->items[slot_id].pkt = pkt;
+  h->pushed++;
+  return ZX_OK;
 }
 
 static inline zx_status_t brcmf_fws_hanger_poppkt(struct brcmf_fws_hanger* h, uint32_t slot_id,
                                                   struct brcmf_netbuf** pktout, bool remove_item) {
-    if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
+  if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
-    if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
-        BRCMF_ERR("entry not in use\n");
-        h->failed_to_pop++;
-        return ZX_ERR_BAD_STATE;
-    }
+  if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
+    BRCMF_ERR("entry not in use\n");
+    h->failed_to_pop++;
+    return ZX_ERR_BAD_STATE;
+  }
 
-    *pktout = h->items[slot_id].pkt;
-    if (remove_item) {
-        h->items[slot_id].state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
-        h->items[slot_id].pkt = NULL;
-        h->popped++;
-    }
-    return ZX_OK;
+  *pktout = h->items[slot_id].pkt;
+  if (remove_item) {
+    h->items[slot_id].state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
+    h->items[slot_id].pkt = NULL;
+    h->popped++;
+  }
+  return ZX_OK;
 }
 
 static zx_status_t brcmf_fws_hanger_mark_suppressed(struct brcmf_fws_hanger* h, uint32_t slot_id) {
-    if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
+  if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
-    if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
-        BRCMF_ERR("entry not in use\n");
-        return ZX_ERR_BAD_STATE;
-    }
+  if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
+    BRCMF_ERR("entry not in use\n");
+    return ZX_ERR_BAD_STATE;
+  }
 
-    h->items[slot_id].state = BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED;
-    return ZX_OK;
+  h->items[slot_id].state = BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED;
+  return ZX_OK;
 }
 
 static void brcmf_fws_hanger_cleanup(struct brcmf_fws_info* fws,
                                      bool (*fn)(struct brcmf_netbuf*, void*), int ifidx) {
-    struct brcmf_fws_hanger* h = &fws->hanger;
-    struct brcmf_netbuf* netbuf;
-    int i;
-    enum brcmf_fws_hanger_item_state s;
+  struct brcmf_fws_hanger* h = &fws->hanger;
+  struct brcmf_netbuf* netbuf;
+  int i;
+  enum brcmf_fws_hanger_item_state s;
 
-    for (i = 0; i < (int)countof(h->items); i++) {
-        s = h->items[i].state;
-        if (s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE ||
-                s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED) {
-            netbuf = h->items[i].pkt;
-            if (fn == NULL || fn(netbuf, &ifidx)) {
-                /* suppress packets freed from psq */
-                if (s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE) {
-                    brcmu_pkt_buf_free_netbuf(netbuf);
-                }
-                h->items[i].state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
-            }
+  for (i = 0; i < (int)countof(h->items); i++) {
+    s = h->items[i].state;
+    if (s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE ||
+        s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED) {
+      netbuf = h->items[i].pkt;
+      if (fn == NULL || fn(netbuf, &ifidx)) {
+        /* suppress packets freed from psq */
+        if (s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE) {
+          brcmu_pkt_buf_free_netbuf(netbuf);
         }
+        h->items[i].state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
+      }
     }
+  }
 }
 
 static void brcmf_fws_macdesc_set_name(struct brcmf_fws_info* fws,
                                        struct brcmf_fws_mac_descriptor* desc) {
-    if (desc == &fws->desc.other) {
-        strlcpy(desc->name, "MAC-OTHER", sizeof(desc->name));
-    } else if (desc->mac_handle)
-        snprintf(desc->name, sizeof(desc->name), "MAC-%d:%d", desc->mac_handle,
-                  desc->interface_id);
-    else {
-        snprintf(desc->name, sizeof(desc->name), "MACIF:%d", desc->interface_id);
-    }
+  if (desc == &fws->desc.other) {
+    strlcpy(desc->name, "MAC-OTHER", sizeof(desc->name));
+  } else if (desc->mac_handle)
+    snprintf(desc->name, sizeof(desc->name), "MAC-%d:%d", desc->mac_handle, desc->interface_id);
+  else {
+    snprintf(desc->name, sizeof(desc->name), "MACIF:%d", desc->interface_id);
+  }
 }
 
 static void brcmf_fws_macdesc_init(struct brcmf_fws_mac_descriptor* desc, uint8_t* addr,
                                    uint8_t ifidx) {
-    BRCMF_DBG(TRACE, "enter: desc %p ea=%pM, ifidx=%u\n", desc, addr, ifidx);
-    desc->occupied = 1;
-    desc->state = BRCMF_FWS_STATE_OPEN;
-    desc->requested_credit = 0;
-    desc->requested_packet = 0;
-    /* depending on use may need ifp->bsscfgidx instead */
-    desc->interface_id = ifidx;
-    desc->ac_bitmap = 0xff; /* update this when handling APSD */
-    if (addr) {
-        memcpy(&desc->ea[0], addr, ETH_ALEN);
-    }
+  BRCMF_DBG(TRACE, "enter: desc %p ea=%pM, ifidx=%u\n", desc, addr, ifidx);
+  desc->occupied = 1;
+  desc->state = BRCMF_FWS_STATE_OPEN;
+  desc->requested_credit = 0;
+  desc->requested_packet = 0;
+  /* depending on use may need ifp->bsscfgidx instead */
+  desc->interface_id = ifidx;
+  desc->ac_bitmap = 0xff; /* update this when handling APSD */
+  if (addr) {
+    memcpy(&desc->ea[0], addr, ETH_ALEN);
+  }
 }
 
 static void brcmf_fws_macdesc_deinit(struct brcmf_fws_mac_descriptor* desc) {
-    BRCMF_DBG(TRACE, "enter: ea=%pM, ifidx=%u\n", desc->ea, desc->interface_id);
-    desc->occupied = 0;
-    desc->state = BRCMF_FWS_STATE_CLOSE;
-    desc->requested_credit = 0;
-    desc->requested_packet = 0;
+  BRCMF_DBG(TRACE, "enter: ea=%pM, ifidx=%u\n", desc->ea, desc->interface_id);
+  desc->occupied = 0;
+  desc->state = BRCMF_FWS_STATE_CLOSE;
+  desc->requested_credit = 0;
+  desc->requested_packet = 0;
 }
 
 static zx_status_t brcmf_fws_macdesc_lookup(struct brcmf_fws_info* fws, uint8_t* ea,
                                             struct brcmf_fws_mac_descriptor** macdesc_out) {
-    struct brcmf_fws_mac_descriptor* entry;
-    int i;
+  struct brcmf_fws_mac_descriptor* entry;
+  int i;
 
-    if (macdesc_out) {
-        *macdesc_out = NULL;
+  if (macdesc_out) {
+    *macdesc_out = NULL;
+  }
+
+  if (ea == NULL) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  entry = &fws->desc.nodes[0];
+  for (i = 0; i < (int)countof(fws->desc.nodes); i++) {
+    if (entry->occupied && !memcmp(entry->ea, ea, ETH_ALEN)) {
+      if (macdesc_out) {
+        *macdesc_out = entry;
+      }
+      return ZX_OK;
     }
+    entry++;
+  }
 
-    if (ea == NULL) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    entry = &fws->desc.nodes[0];
-    for (i = 0; i < (int)countof(fws->desc.nodes); i++) {
-        if (entry->occupied && !memcmp(entry->ea, ea, ETH_ALEN)) {
-            if (macdesc_out) {
-                *macdesc_out = entry;
-            }
-            return ZX_OK;
-        }
-        entry++;
-    }
-
-    return ZX_ERR_NOT_FOUND;
+  return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t brcmf_fws_macdesc_find(struct brcmf_fws_info* fws,
-                                          struct brcmf_if* ifp, uint8_t* da,
+static zx_status_t brcmf_fws_macdesc_find(struct brcmf_fws_info* fws, struct brcmf_if* ifp,
+                                          uint8_t* da,
                                           struct brcmf_fws_mac_descriptor** macdesc_out) {
-    *macdesc_out = &fws->desc.other; // TODO(cphoenix): Isn't this overwritten?
-    bool multicast;
-    zx_status_t ret;
+  *macdesc_out = &fws->desc.other;  // TODO(cphoenix): Isn't this overwritten?
+  bool multicast;
+  zx_status_t ret;
 
-    multicast = address_is_multicast(da);
+  multicast = address_is_multicast(da);
 
-    /* Multicast destination, STA and P2P clients get the interface entry.
-     * STA/GC gets the Mac Entry for TDLS destinations, TDLS destinations
-     * have their own entry.
-     */
-    if (multicast && ifp->fws_desc) {
-        *macdesc_out = ifp->fws_desc;
-        ret = ZX_OK;
-        goto done;
-    }
+  /* Multicast destination, STA and P2P clients get the interface entry.
+   * STA/GC gets the Mac Entry for TDLS destinations, TDLS destinations
+   * have their own entry.
+   */
+  if (multicast && ifp->fws_desc) {
+    *macdesc_out = ifp->fws_desc;
+    ret = ZX_OK;
+    goto done;
+  }
 
-    ret = brcmf_fws_macdesc_lookup(fws, da, macdesc_out);
-    if (ret != ZX_OK) {
-        *macdesc_out = ifp->fws_desc;
-        // TODO(cphoenix): Check logic and expectations here, e.g. is fws_desc non-NULL?
-        ret = ZX_OK;
-    }
+  ret = brcmf_fws_macdesc_lookup(fws, da, macdesc_out);
+  if (ret != ZX_OK) {
+    *macdesc_out = ifp->fws_desc;
+    // TODO(cphoenix): Check logic and expectations here, e.g. is fws_desc non-NULL?
+    ret = ZX_OK;
+  }
 
 done:
-    return ret;
+  return ret;
 }
 
 static bool brcmf_fws_macdesc_closed(struct brcmf_fws_info* fws,
                                      struct brcmf_fws_mac_descriptor* entry, int fifo) {
-    struct brcmf_fws_mac_descriptor* if_entry;
-    bool closed;
+  struct brcmf_fws_mac_descriptor* if_entry;
+  bool closed;
 
-    /* for unique destination entries the related interface
-     * may be closed.
-     */
-    if (entry->mac_handle) {
-        if_entry = &fws->desc.iface[entry->interface_id];
-        if (if_entry->state == BRCMF_FWS_STATE_CLOSE) {
-            return true;
-        }
+  /* for unique destination entries the related interface
+   * may be closed.
+   */
+  if (entry->mac_handle) {
+    if_entry = &fws->desc.iface[entry->interface_id];
+    if (if_entry->state == BRCMF_FWS_STATE_CLOSE) {
+      return true;
     }
-    /* an entry is closed when the state is closed and
-     * the firmware did not request anything.
-     */
-    closed = entry->state == BRCMF_FWS_STATE_CLOSE && !entry->requested_credit &&
-             !entry->requested_packet;
+  }
+  /* an entry is closed when the state is closed and
+   * the firmware did not request anything.
+   */
+  closed =
+      entry->state == BRCMF_FWS_STATE_CLOSE && !entry->requested_credit && !entry->requested_packet;
 
-    /* Or firmware does not allow traffic for given fifo */
-    return closed || !(entry->ac_bitmap & BIT(fifo));
+  /* Or firmware does not allow traffic for given fifo */
+  return closed || !(entry->ac_bitmap & BIT(fifo));
 }
 
 static void brcmf_fws_macdesc_cleanup(struct brcmf_fws_info* fws,
                                       struct brcmf_fws_mac_descriptor* entry, int ifidx) {
-    if (entry->occupied && (ifidx == -1 || ifidx == entry->interface_id)) {
-        brcmf_fws_psq_flush(fws, &entry->psq, ifidx);
-        entry->occupied = !!(entry->psq.len);
-    }
+  if (entry->occupied && (ifidx == -1 || ifidx == entry->interface_id)) {
+    brcmf_fws_psq_flush(fws, &entry->psq, ifidx);
+    entry->occupied = !!(entry->psq.len);
+  }
 }
 
 static void brcmf_fws_bus_txq_cleanup(struct brcmf_fws_info* fws,
                                       bool (*fn)(struct brcmf_netbuf*, void*), int ifidx) {
-    struct brcmf_fws_hanger_item* hi;
-    struct pktq* txq;
-    struct brcmf_netbuf* netbuf;
-    int prec;
-    uint32_t hslot;
-    zx_status_t err;
+  struct brcmf_fws_hanger_item* hi;
+  struct pktq* txq;
+  struct brcmf_netbuf* netbuf;
+  int prec;
+  uint32_t hslot;
+  zx_status_t err;
 
-    err = brcmf_bus_gettxq(fws->drvr->bus_if, &txq);
-    if (err != ZX_OK) {
-        BRCMF_DBG(TRACE, "no txq to clean up\n");
-        return;
-    }
+  err = brcmf_bus_gettxq(fws->drvr->bus_if, &txq);
+  if (err != ZX_OK) {
+    BRCMF_DBG(TRACE, "no txq to clean up\n");
+    return;
+  }
 
-    for (prec = 0; prec < txq->num_prec; prec++) {
-        netbuf = brcmu_pktq_pdeq_match(txq, prec, fn, &ifidx);
-        while (netbuf) {
-            hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
-            hi = &fws->hanger.items[hslot];
-            WARN_ON(netbuf != hi->pkt);
-            hi->state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
-            brcmu_pkt_buf_free_netbuf(netbuf);
-            netbuf = brcmu_pktq_pdeq_match(txq, prec, fn, &ifidx);
-        }
+  for (prec = 0; prec < txq->num_prec; prec++) {
+    netbuf = brcmu_pktq_pdeq_match(txq, prec, fn, &ifidx);
+    while (netbuf) {
+      hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
+      hi = &fws->hanger.items[hslot];
+      WARN_ON(netbuf != hi->pkt);
+      hi->state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
+      brcmu_pkt_buf_free_netbuf(netbuf);
+      netbuf = brcmu_pktq_pdeq_match(txq, prec, fn, &ifidx);
     }
+  }
 }
 
 static void brcmf_fws_cleanup(struct brcmf_fws_info* fws, int ifidx) {
-    int i;
-    struct brcmf_fws_mac_descriptor* table;
-    bool (*matchfn)(struct brcmf_netbuf*, void*) = NULL;
+  int i;
+  struct brcmf_fws_mac_descriptor* table;
+  bool (*matchfn)(struct brcmf_netbuf*, void*) = NULL;
 
-    if (fws == NULL) {
-        return;
-    }
+  if (fws == NULL) {
+    return;
+  }
 
-    if (ifidx != -1) {
-        matchfn = brcmf_fws_ifidx_match;
-    }
+  if (ifidx != -1) {
+    matchfn = brcmf_fws_ifidx_match;
+  }
 
-    /* cleanup individual nodes */
-    table = &fws->desc.nodes[0];
-    for (i = 0; i < (int)countof(fws->desc.nodes); i++) {
-        brcmf_fws_macdesc_cleanup(fws, &table[i], ifidx);
-    }
+  /* cleanup individual nodes */
+  table = &fws->desc.nodes[0];
+  for (i = 0; i < (int)countof(fws->desc.nodes); i++) {
+    brcmf_fws_macdesc_cleanup(fws, &table[i], ifidx);
+  }
 
-    brcmf_fws_macdesc_cleanup(fws, &fws->desc.other, ifidx);
-    brcmf_fws_bus_txq_cleanup(fws, matchfn, ifidx);
-    brcmf_fws_hanger_cleanup(fws, matchfn, ifidx);
+  brcmf_fws_macdesc_cleanup(fws, &fws->desc.other, ifidx);
+  brcmf_fws_bus_txq_cleanup(fws, matchfn, ifidx);
+  brcmf_fws_hanger_cleanup(fws, matchfn, ifidx);
 }
 
 static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf* netbuf) {
-    struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(netbuf)->mac;
-    uint8_t* wlh;
-    uint16_t data_offset = 0;
-    uint8_t fillers;
-    uint32_t pkttag = brcmf_workspace(netbuf)->htod;
-    uint16_t pktseq = brcmf_workspace(netbuf)->htod_seq;
+  struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(netbuf)->mac;
+  uint8_t* wlh;
+  uint16_t data_offset = 0;
+  uint8_t fillers;
+  uint32_t pkttag = brcmf_workspace(netbuf)->htod;
+  uint16_t pktseq = brcmf_workspace(netbuf)->htod_seq;
 
-    BRCMF_DBG(TRACE, "enter: %s, idx=%d hslot=%d htod %X seq %X\n", entry->name,
-              brcmf_netbuf_if_flags_get_field(netbuf, INDEX), (pkttag) >> 8 & 0xffff,
-              brcmf_workspace(netbuf)->htod, brcmf_workspace(netbuf)->htod_seq);
-    if (entry->send_tim_signal) {
-        data_offset += 2 + BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN;
-    }
-    if (BRCMF_FWS_MODE_GET_REUSESEQ(fws->mode)) {
-        data_offset += BRCMF_FWS_TYPE_SEQ_LEN;
-    }
-    /* +2 is for Type[1] and Len[1] in TLV, plus TIM signal */
-    data_offset += 2 + BRCMF_FWS_TYPE_PKTTAG_LEN;
-    fillers = round_up(data_offset, 4) - data_offset;
-    data_offset += fillers;
+  BRCMF_DBG(TRACE, "enter: %s, idx=%d hslot=%d htod %X seq %X\n", entry->name,
+            brcmf_netbuf_if_flags_get_field(netbuf, INDEX), (pkttag) >> 8 & 0xffff,
+            brcmf_workspace(netbuf)->htod, brcmf_workspace(netbuf)->htod_seq);
+  if (entry->send_tim_signal) {
+    data_offset += 2 + BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN;
+  }
+  if (BRCMF_FWS_MODE_GET_REUSESEQ(fws->mode)) {
+    data_offset += BRCMF_FWS_TYPE_SEQ_LEN;
+  }
+  /* +2 is for Type[1] and Len[1] in TLV, plus TIM signal */
+  data_offset += 2 + BRCMF_FWS_TYPE_PKTTAG_LEN;
+  fillers = round_up(data_offset, 4) - data_offset;
+  data_offset += fillers;
 
-    brcmf_netbuf_grow_head(netbuf, data_offset);
-    wlh = netbuf->data;
+  brcmf_netbuf_grow_head(netbuf, data_offset);
+  wlh = netbuf->data;
 
-    wlh[0] = BRCMF_FWS_TYPE_PKTTAG;
-    wlh[1] = BRCMF_FWS_TYPE_PKTTAG_LEN;
-    memcpy(&wlh[2], &pkttag, sizeof(pkttag));
-    if (BRCMF_FWS_MODE_GET_REUSESEQ(fws->mode)) {
-        wlh[1] += BRCMF_FWS_TYPE_SEQ_LEN;
-        memcpy(&wlh[2 + BRCMF_FWS_TYPE_PKTTAG_LEN], &pktseq, sizeof(pktseq));
-    }
-    wlh += wlh[1] + 2;
+  wlh[0] = BRCMF_FWS_TYPE_PKTTAG;
+  wlh[1] = BRCMF_FWS_TYPE_PKTTAG_LEN;
+  memcpy(&wlh[2], &pkttag, sizeof(pkttag));
+  if (BRCMF_FWS_MODE_GET_REUSESEQ(fws->mode)) {
+    wlh[1] += BRCMF_FWS_TYPE_SEQ_LEN;
+    memcpy(&wlh[2 + BRCMF_FWS_TYPE_PKTTAG_LEN], &pktseq, sizeof(pktseq));
+  }
+  wlh += wlh[1] + 2;
 
-    if (entry->send_tim_signal) {
-        entry->send_tim_signal = 0;
-        wlh[0] = BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP;
-        wlh[1] = BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN;
-        wlh[2] = entry->mac_handle;
-        wlh[3] = entry->traffic_pending_bmp;
-        BRCMF_DBG(TRACE, "adding TIM info: handle %d bmp 0x%X\n", entry->mac_handle,
-                  entry->traffic_pending_bmp);
-        wlh += BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN + 2;
-        entry->traffic_lastreported_bmp = entry->traffic_pending_bmp;
-    }
-    if (fillers) {
-        memset(wlh, BRCMF_FWS_TYPE_FILLER, fillers);
-    }
+  if (entry->send_tim_signal) {
+    entry->send_tim_signal = 0;
+    wlh[0] = BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP;
+    wlh[1] = BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN;
+    wlh[2] = entry->mac_handle;
+    wlh[3] = entry->traffic_pending_bmp;
+    BRCMF_DBG(TRACE, "adding TIM info: handle %d bmp 0x%X\n", entry->mac_handle,
+              entry->traffic_pending_bmp);
+    wlh += BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN + 2;
+    entry->traffic_lastreported_bmp = entry->traffic_pending_bmp;
+  }
+  if (fillers) {
+    memset(wlh, BRCMF_FWS_TYPE_FILLER, fillers);
+  }
 
-    return (uint8_t)(data_offset >> 2);
+  return (uint8_t)(data_offset >> 2);
 }
 
 static bool brcmf_fws_tim_update(struct brcmf_fws_info* fws, struct brcmf_fws_mac_descriptor* entry,
                                  int fifo, bool send_immediately) {
-    struct brcmf_netbuf* netbuf;
-    struct brcmf_netbuf_workspace* workspace;
-    zx_status_t err;
-    uint32_t len;
-    uint8_t data_offset;
-    int ifidx;
+  struct brcmf_netbuf* netbuf;
+  struct brcmf_netbuf_workspace* workspace;
+  zx_status_t err;
+  uint32_t len;
+  uint8_t data_offset;
+  int ifidx;
 
-    /* check delayedQ and suppressQ in one call using bitmap */
-    if (brcmu_pktq_mlen(&entry->psq, 3 << (fifo * 2)) == 0) {
-        entry->traffic_pending_bmp &= ~NBITVAL(fifo);
-    } else {
-        entry->traffic_pending_bmp |= NBITVAL(fifo);
-    }
+  /* check delayedQ and suppressQ in one call using bitmap */
+  if (brcmu_pktq_mlen(&entry->psq, 3 << (fifo * 2)) == 0) {
+    entry->traffic_pending_bmp &= ~NBITVAL(fifo);
+  } else {
+    entry->traffic_pending_bmp |= NBITVAL(fifo);
+  }
 
-    entry->send_tim_signal = false;
-    if (entry->traffic_lastreported_bmp != entry->traffic_pending_bmp) {
-        entry->send_tim_signal = true;
+  entry->send_tim_signal = false;
+  if (entry->traffic_lastreported_bmp != entry->traffic_pending_bmp) {
+    entry->send_tim_signal = true;
+  }
+  if (send_immediately && entry->send_tim_signal && entry->state == BRCMF_FWS_STATE_CLOSE) {
+    /* create a dummy packet and sent that. The traffic          */
+    /* bitmap info will automatically be attached to that packet */
+    len = BRCMF_FWS_TYPE_PKTTAG_LEN + 2 + BRCMF_FWS_TYPE_SEQ_LEN +
+          BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN + 2 + 4 + fws->drvr->hdrlen;
+    netbuf = brcmu_pkt_buf_get_netbuf(len);
+    if (netbuf == NULL) {
+      return false;
     }
-    if (send_immediately && entry->send_tim_signal && entry->state == BRCMF_FWS_STATE_CLOSE) {
-        /* create a dummy packet and sent that. The traffic          */
-        /* bitmap info will automatically be attached to that packet */
-        len = BRCMF_FWS_TYPE_PKTTAG_LEN + 2 + BRCMF_FWS_TYPE_SEQ_LEN +
-              BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN + 2 + 4 + fws->drvr->hdrlen;
-        netbuf = brcmu_pkt_buf_get_netbuf(len);
-        if (netbuf == NULL) {
-            return false;
-        }
-        brcmf_netbuf_shrink_head(netbuf, len);
-        workspace = brcmf_workspace(netbuf);
-        workspace->mac = entry;
-        workspace->mac_status = ZX_OK;
-        workspace->state = BRCMF_FWS_NETBUFSTATE_TIM;
-        workspace->htod = 0;
-        workspace->htod_seq = 0;
-        data_offset = brcmf_fws_hdrpush(fws, netbuf);
-        ifidx = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
-        brcmf_fws_unlock(fws);
-        err = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, netbuf);
-        brcmf_fws_lock(fws);
-        if (err != ZX_OK) {
-            brcmu_pkt_buf_free_netbuf(netbuf);
-        }
-        return true;
+    brcmf_netbuf_shrink_head(netbuf, len);
+    workspace = brcmf_workspace(netbuf);
+    workspace->mac = entry;
+    workspace->mac_status = ZX_OK;
+    workspace->state = BRCMF_FWS_NETBUFSTATE_TIM;
+    workspace->htod = 0;
+    workspace->htod_seq = 0;
+    data_offset = brcmf_fws_hdrpush(fws, netbuf);
+    ifidx = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
+    brcmf_fws_unlock(fws);
+    err = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, netbuf);
+    brcmf_fws_lock(fws);
+    if (err != ZX_OK) {
+      brcmu_pkt_buf_free_netbuf(netbuf);
     }
-    return false;
+    return true;
+  }
+  return false;
 }
 
 static void brcmf_fws_flow_control_check(struct brcmf_fws_info* fws, struct pktq* pq,
                                          uint8_t if_id) {
-    struct brcmf_if* ifp = brcmf_get_ifp(fws->drvr, if_id);
+  struct brcmf_if* ifp = brcmf_get_ifp(fws->drvr, if_id);
 
-    if (WARN_ON(!ifp)) {
-        return;
-    }
-
-    if ((ifp->netif_stop & BRCMF_NETIF_STOP_REASON_FWS_FC) &&
-            pq->len <= BRCMF_FWS_FLOWCONTROL_LOWATER) {
-        brcmf_txflowblock_if(ifp, BRCMF_NETIF_STOP_REASON_FWS_FC, false);
-    }
-    if (!(ifp->netif_stop & BRCMF_NETIF_STOP_REASON_FWS_FC) &&
-            pq->len >= BRCMF_FWS_FLOWCONTROL_HIWATER) {
-        fws->stats.fws_flow_block++;
-        brcmf_txflowblock_if(ifp, BRCMF_NETIF_STOP_REASON_FWS_FC, true);
-    }
+  if (WARN_ON(!ifp)) {
     return;
+  }
+
+  if ((ifp->netif_stop & BRCMF_NETIF_STOP_REASON_FWS_FC) &&
+      pq->len <= BRCMF_FWS_FLOWCONTROL_LOWATER) {
+    brcmf_txflowblock_if(ifp, BRCMF_NETIF_STOP_REASON_FWS_FC, false);
+  }
+  if (!(ifp->netif_stop & BRCMF_NETIF_STOP_REASON_FWS_FC) &&
+      pq->len >= BRCMF_FWS_FLOWCONTROL_HIWATER) {
+    fws->stats.fws_flow_block++;
+    brcmf_txflowblock_if(ifp, BRCMF_NETIF_STOP_REASON_FWS_FC, true);
+  }
+  return;
 }
 
 static zx_status_t brcmf_fws_rssi_indicate(struct brcmf_fws_info* fws, int8_t rssi) {
-    BRCMF_DBG(CTL, "rssi %d\n", rssi);
-    return ZX_OK;
+  BRCMF_DBG(CTL, "rssi %d\n", rssi);
+  return ZX_OK;
 }
 
 static int brcmf_fws_macdesc_indicate(struct brcmf_fws_info* fws, uint8_t type, uint8_t* data) {
-    struct brcmf_fws_mac_descriptor* entry;
-    struct brcmf_fws_mac_descriptor* existing;
-    uint8_t mac_handle;
-    uint8_t ifidx;
-    uint8_t* addr;
-    zx_status_t ret;
+  struct brcmf_fws_mac_descriptor* entry;
+  struct brcmf_fws_mac_descriptor* existing;
+  uint8_t mac_handle;
+  uint8_t ifidx;
+  uint8_t* addr;
+  zx_status_t ret;
 
-    mac_handle = *data++;
-    ifidx = *data++;
-    addr = data;
+  mac_handle = *data++;
+  ifidx = *data++;
+  addr = data;
 
-    entry = &fws->desc.nodes[mac_handle & 0x1F];
-    if (type == BRCMF_FWS_TYPE_MACDESC_DEL) {
-        if (entry->occupied) {
-            BRCMF_DBG(TRACE, "deleting %s mac %pM\n", entry->name, addr);
-            brcmf_fws_lock(fws);
-            brcmf_fws_macdesc_cleanup(fws, entry, -1);
-            brcmf_fws_macdesc_deinit(entry);
-            brcmf_fws_unlock(fws);
-        } else {
-            fws->stats.mac_update_failed++;
-        }
-        return ZX_OK;
-    }
-
-    ret = brcmf_fws_macdesc_lookup(fws, addr, &existing);
-    if (ret != ZX_OK) {
-        if (!entry->occupied) {
-            brcmf_fws_lock(fws);
-            entry->mac_handle = mac_handle;
-            brcmf_fws_macdesc_init(entry, addr, ifidx);
-            brcmf_fws_macdesc_set_name(fws, entry);
-            brcmu_pktq_init(&entry->psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
-            brcmf_fws_unlock(fws);
-            BRCMF_DBG(TRACE, "add %s mac %pM\n", entry->name, addr);
-        } else {
-            fws->stats.mac_update_failed++;
-        }
+  entry = &fws->desc.nodes[mac_handle & 0x1F];
+  if (type == BRCMF_FWS_TYPE_MACDESC_DEL) {
+    if (entry->occupied) {
+      BRCMF_DBG(TRACE, "deleting %s mac %pM\n", entry->name, addr);
+      brcmf_fws_lock(fws);
+      brcmf_fws_macdesc_cleanup(fws, entry, -1);
+      brcmf_fws_macdesc_deinit(entry);
+      brcmf_fws_unlock(fws);
     } else {
-        if (entry != existing) {
-            BRCMF_DBG(TRACE, "copy mac %s\n", existing->name);
-            brcmf_fws_lock(fws);
-            memcpy(entry, existing, offsetof(struct brcmf_fws_mac_descriptor, psq));
-            entry->mac_handle = mac_handle;
-            brcmf_fws_macdesc_deinit(existing);
-            brcmf_fws_macdesc_set_name(fws, entry);
-            brcmf_fws_unlock(fws);
-            BRCMF_DBG(TRACE, "relocate %s mac %pM\n", entry->name, addr);
-        } else {
-            BRCMF_DBG(TRACE, "use existing\n");
-            WARN_ON(entry->mac_handle != mac_handle);
-            /* TODO: what should we do here: continue, reinit, .. */
-        }
+      fws->stats.mac_update_failed++;
     }
     return ZX_OK;
+  }
+
+  ret = brcmf_fws_macdesc_lookup(fws, addr, &existing);
+  if (ret != ZX_OK) {
+    if (!entry->occupied) {
+      brcmf_fws_lock(fws);
+      entry->mac_handle = mac_handle;
+      brcmf_fws_macdesc_init(entry, addr, ifidx);
+      brcmf_fws_macdesc_set_name(fws, entry);
+      brcmu_pktq_init(&entry->psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
+      brcmf_fws_unlock(fws);
+      BRCMF_DBG(TRACE, "add %s mac %pM\n", entry->name, addr);
+    } else {
+      fws->stats.mac_update_failed++;
+    }
+  } else {
+    if (entry != existing) {
+      BRCMF_DBG(TRACE, "copy mac %s\n", existing->name);
+      brcmf_fws_lock(fws);
+      memcpy(entry, existing, offsetof(struct brcmf_fws_mac_descriptor, psq));
+      entry->mac_handle = mac_handle;
+      brcmf_fws_macdesc_deinit(existing);
+      brcmf_fws_macdesc_set_name(fws, entry);
+      brcmf_fws_unlock(fws);
+      BRCMF_DBG(TRACE, "relocate %s mac %pM\n", entry->name, addr);
+    } else {
+      BRCMF_DBG(TRACE, "use existing\n");
+      WARN_ON(entry->mac_handle != mac_handle);
+      /* TODO: what should we do here: continue, reinit, .. */
+    }
+  }
+  return ZX_OK;
 }
 
 static enum brcmf_fws_should_schedule brcmf_fws_macdesc_state_indicate(struct brcmf_fws_info* fws,
                                                                        uint8_t type,
                                                                        uint8_t* data) {
-    struct brcmf_fws_mac_descriptor* entry;
-    uint8_t mac_handle;
-    int ret;
+  struct brcmf_fws_mac_descriptor* entry;
+  uint8_t mac_handle;
+  int ret;
 
-    mac_handle = data[0];
-    entry = &fws->desc.nodes[mac_handle & 0x1F];
-    if (!entry->occupied) {
-        fws->stats.mac_ps_update_failed++;
-        BRCMF_ERR("Unoccupied entry\n");
-        return BRCMF_FWS_NOSCHEDULE;
-    }
-    brcmf_fws_lock(fws);
-    /* a state update should wipe old credits */
-    entry->requested_credit = 0;
-    entry->requested_packet = 0;
-    if (type == BRCMF_FWS_TYPE_MAC_OPEN) {
-        entry->state = BRCMF_FWS_STATE_OPEN;
-        ret = BRCMF_FWS_SCHEDULE;
-    } else {
-        entry->state = BRCMF_FWS_STATE_CLOSE;
-        brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_BK, false);
-        brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_BE, false);
-        brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_VI, false);
-        brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_VO, true);
-        ret = BRCMF_FWS_NOSCHEDULE;
-    }
-    brcmf_fws_unlock(fws);
-    return static_cast<brcmf_fws_should_schedule>(ret);
+  mac_handle = data[0];
+  entry = &fws->desc.nodes[mac_handle & 0x1F];
+  if (!entry->occupied) {
+    fws->stats.mac_ps_update_failed++;
+    BRCMF_ERR("Unoccupied entry\n");
+    return BRCMF_FWS_NOSCHEDULE;
+  }
+  brcmf_fws_lock(fws);
+  /* a state update should wipe old credits */
+  entry->requested_credit = 0;
+  entry->requested_packet = 0;
+  if (type == BRCMF_FWS_TYPE_MAC_OPEN) {
+    entry->state = BRCMF_FWS_STATE_OPEN;
+    ret = BRCMF_FWS_SCHEDULE;
+  } else {
+    entry->state = BRCMF_FWS_STATE_CLOSE;
+    brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_BK, false);
+    brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_BE, false);
+    brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_VI, false);
+    brcmf_fws_tim_update(fws, entry, BRCMF_FWS_FIFO_AC_VO, true);
+    ret = BRCMF_FWS_NOSCHEDULE;
+  }
+  brcmf_fws_unlock(fws);
+  return static_cast<brcmf_fws_should_schedule>(ret);
 }
 
 static enum brcmf_fws_should_schedule brcmf_fws_interface_state_indicate(struct brcmf_fws_info* fws,
                                                                          uint8_t type,
                                                                          uint8_t* data) {
-    struct brcmf_fws_mac_descriptor* entry;
-    uint8_t ifidx;
-    enum brcmf_fws_should_schedule ret;
+  struct brcmf_fws_mac_descriptor* entry;
+  uint8_t ifidx;
+  enum brcmf_fws_should_schedule ret;
 
-    ifidx = data[0];
+  ifidx = data[0];
 
-    if (ifidx >= BRCMF_MAX_IFS) {
-        BRCMF_ERR("ifidx %d bigger than BRCMF_MAX_IFS\n", ifidx);
-        ret = BRCMF_FWS_NOSCHEDULE;
-        goto fail;
-    }
+  if (ifidx >= BRCMF_MAX_IFS) {
+    BRCMF_ERR("ifidx %d bigger than BRCMF_MAX_IFS\n", ifidx);
+    ret = BRCMF_FWS_NOSCHEDULE;
+    goto fail;
+  }
 
-    entry = &fws->desc.iface[ifidx];
-    if (!entry->occupied) {
-        BRCMF_ERR("Entry %d unoccupied\n", ifidx);
-        ret = BRCMF_FWS_NOSCHEDULE;
-        goto fail;
-    }
+  entry = &fws->desc.iface[ifidx];
+  if (!entry->occupied) {
+    BRCMF_ERR("Entry %d unoccupied\n", ifidx);
+    ret = BRCMF_FWS_NOSCHEDULE;
+    goto fail;
+  }
 
-    BRCMF_DBG(TRACE, "%s (%d): %s\n", brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)),
-              type, entry->name);
-    brcmf_fws_lock(fws);
-    switch (type) {
+  BRCMF_DBG(TRACE, "%s (%d): %s\n", brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)),
+            type, entry->name);
+  brcmf_fws_lock(fws);
+  switch (type) {
     case BRCMF_FWS_TYPE_INTERFACE_OPEN:
-        entry->state = BRCMF_FWS_STATE_OPEN;
-        ret = BRCMF_FWS_SCHEDULE;
-        break;
+      entry->state = BRCMF_FWS_STATE_OPEN;
+      ret = BRCMF_FWS_SCHEDULE;
+      break;
     case BRCMF_FWS_TYPE_INTERFACE_CLOSE:
-        entry->state = BRCMF_FWS_STATE_CLOSE;
-        ret = BRCMF_FWS_NOSCHEDULE;
-        break;
+      entry->state = BRCMF_FWS_STATE_CLOSE;
+      ret = BRCMF_FWS_NOSCHEDULE;
+      break;
     default:
-        BRCMF_ERR("Invalid type %d\n", type);
-        ret = BRCMF_FWS_NOSCHEDULE;
-        brcmf_fws_unlock(fws);
-        goto fail;
-    }
-    brcmf_fws_unlock(fws);
-    return ret;
+      BRCMF_ERR("Invalid type %d\n", type);
+      ret = BRCMF_FWS_NOSCHEDULE;
+      brcmf_fws_unlock(fws);
+      goto fail;
+  }
+  brcmf_fws_unlock(fws);
+  return ret;
 
 fail:
-    fws->stats.if_update_failed++;
-    return ret;
+  fws->stats.if_update_failed++;
+  return ret;
 }
 
 static enum brcmf_fws_should_schedule brcmf_fws_request_indicate(struct brcmf_fws_info* fws,
                                                                  uint8_t type, uint8_t* data) {
-    struct brcmf_fws_mac_descriptor* entry;
+  struct brcmf_fws_mac_descriptor* entry;
 
-    entry = &fws->desc.nodes[data[1] & 0x1F];
-    if (!entry->occupied) {
-        if (type == BRCMF_FWS_TYPE_MAC_REQUEST_CREDIT) {
-            fws->stats.credit_request_failed++;
-        } else {
-            fws->stats.packet_request_failed++;
-        }
-        BRCMF_ERR("Unoccupied entry %d\n", data[1] & 0x1F);
-        return BRCMF_FWS_NOSCHEDULE;
-    }
-
-    BRCMF_DBG(TRACE, "%s (%d): %s cnt %d bmp %d\n",
-              brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, entry->name,
-              data[0], data[2]);
-    brcmf_fws_lock(fws);
+  entry = &fws->desc.nodes[data[1] & 0x1F];
+  if (!entry->occupied) {
     if (type == BRCMF_FWS_TYPE_MAC_REQUEST_CREDIT) {
-        entry->requested_credit = data[0];
+      fws->stats.credit_request_failed++;
     } else {
-        entry->requested_packet = data[0];
+      fws->stats.packet_request_failed++;
     }
+    BRCMF_ERR("Unoccupied entry %d\n", data[1] & 0x1F);
+    return BRCMF_FWS_NOSCHEDULE;
+  }
 
-    entry->ac_bitmap = data[2];
-    brcmf_fws_unlock(fws);
-    return BRCMF_FWS_SCHEDULE;
+  BRCMF_DBG(TRACE, "%s (%d): %s cnt %d bmp %d\n",
+            brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, entry->name,
+            data[0], data[2]);
+  brcmf_fws_lock(fws);
+  if (type == BRCMF_FWS_TYPE_MAC_REQUEST_CREDIT) {
+    entry->requested_credit = data[0];
+  } else {
+    entry->requested_packet = data[0];
+  }
+
+  entry->ac_bitmap = data[2];
+  brcmf_fws_unlock(fws);
+  return BRCMF_FWS_SCHEDULE;
 }
 
 static void brcmf_fws_macdesc_use_req_credit(struct brcmf_fws_mac_descriptor* entry,
                                              struct brcmf_netbuf* netbuf) {
-    if (entry->requested_credit > 0) {
-        entry->requested_credit--;
-        brcmf_netbuf_if_flags_set_field(netbuf, REQUESTED, 1);
-        brcmf_netbuf_if_flags_set_field(netbuf, REQ_CREDIT, 1);
-        if (entry->state != BRCMF_FWS_STATE_CLOSE) {
-            BRCMF_ERR("requested credit set while mac not closed!\n");
-        }
-    } else if (entry->requested_packet > 0) {
-        entry->requested_packet--;
-        brcmf_netbuf_if_flags_set_field(netbuf, REQUESTED, 1);
-        brcmf_netbuf_if_flags_set_field(netbuf, REQ_CREDIT, 0);
-        if (entry->state != BRCMF_FWS_STATE_CLOSE) {
-            BRCMF_ERR("requested packet set while mac not closed!\n");
-        }
-    } else {
-        brcmf_netbuf_if_flags_set_field(netbuf, REQUESTED, 0);
-        brcmf_netbuf_if_flags_set_field(netbuf, REQ_CREDIT, 0);
+  if (entry->requested_credit > 0) {
+    entry->requested_credit--;
+    brcmf_netbuf_if_flags_set_field(netbuf, REQUESTED, 1);
+    brcmf_netbuf_if_flags_set_field(netbuf, REQ_CREDIT, 1);
+    if (entry->state != BRCMF_FWS_STATE_CLOSE) {
+      BRCMF_ERR("requested credit set while mac not closed!\n");
     }
+  } else if (entry->requested_packet > 0) {
+    entry->requested_packet--;
+    brcmf_netbuf_if_flags_set_field(netbuf, REQUESTED, 1);
+    brcmf_netbuf_if_flags_set_field(netbuf, REQ_CREDIT, 0);
+    if (entry->state != BRCMF_FWS_STATE_CLOSE) {
+      BRCMF_ERR("requested packet set while mac not closed!\n");
+    }
+  } else {
+    brcmf_netbuf_if_flags_set_field(netbuf, REQUESTED, 0);
+    brcmf_netbuf_if_flags_set_field(netbuf, REQ_CREDIT, 0);
+  }
 }
 
 static void brcmf_fws_macdesc_return_req_credit(struct brcmf_netbuf* netbuf) {
-    struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(netbuf)->mac;
+  struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(netbuf)->mac;
 
-    if ((brcmf_netbuf_if_flags_get_field(netbuf, REQ_CREDIT)) &&
-            (entry->state == BRCMF_FWS_STATE_CLOSE)) {
-        entry->requested_credit++;
-    }
+  if ((brcmf_netbuf_if_flags_get_field(netbuf, REQ_CREDIT)) &&
+      (entry->state == BRCMF_FWS_STATE_CLOSE)) {
+    entry->requested_credit++;
+  }
 }
 
 static void brcmf_fws_return_credits(struct brcmf_fws_info* fws, uint8_t fifo, uint8_t credits) {
-    int lender_ac;
-    int* borrowed;
-    int* fifo_credit;
+  int lender_ac;
+  int* borrowed;
+  int* fifo_credit;
 
-    if (!credits) {
-        return;
-    }
+  if (!credits) {
+    return;
+  }
 
-    fws->fifo_credit_map |= 1 << fifo;
+  fws->fifo_credit_map |= 1 << fifo;
 
-    if ((fifo == BRCMF_FWS_FIFO_AC_BE) && (fws->credits_borrowed[0])) {
-        for (lender_ac = BRCMF_FWS_FIFO_AC_VO; lender_ac >= 0; lender_ac--) {
-            borrowed = &fws->credits_borrowed[lender_ac];
-            if (*borrowed) {
-                fws->fifo_credit_map |= (1 << lender_ac);
-                fifo_credit = &fws->fifo_credit[lender_ac];
-                if (*borrowed >= credits) {
-                    *borrowed -= credits;
-                    *fifo_credit += credits;
-                    return;
-                } else {
-                    credits -= *borrowed;
-                    *fifo_credit += *borrowed;
-                    *borrowed = 0;
-                }
-            }
+  if ((fifo == BRCMF_FWS_FIFO_AC_BE) && (fws->credits_borrowed[0])) {
+    for (lender_ac = BRCMF_FWS_FIFO_AC_VO; lender_ac >= 0; lender_ac--) {
+      borrowed = &fws->credits_borrowed[lender_ac];
+      if (*borrowed) {
+        fws->fifo_credit_map |= (1 << lender_ac);
+        fifo_credit = &fws->fifo_credit[lender_ac];
+        if (*borrowed >= credits) {
+          *borrowed -= credits;
+          *fifo_credit += credits;
+          return;
+        } else {
+          credits -= *borrowed;
+          *fifo_credit += *borrowed;
+          *borrowed = 0;
         }
+      }
     }
+  }
 
-    fws->fifo_credit[fifo] += credits;
+  fws->fifo_credit[fifo] += credits;
 }
 
 static void brcmf_fws_schedule_deq(struct brcmf_fws_info* fws) {
-    /* only schedule dequeue when there are credits for delayed traffic */
-    if ((fws->fifo_credit_map & fws->fifo_delay_map) ||
-            (!brcmf_fws_fc_active(fws) && fws->fifo_delay_map)) {
-        workqueue_schedule(fws->fws_wq, &fws->fws_dequeue_work);
-    }
+  /* only schedule dequeue when there are credits for delayed traffic */
+  if ((fws->fifo_credit_map & fws->fifo_delay_map) ||
+      (!brcmf_fws_fc_active(fws) && fws->fifo_delay_map)) {
+    workqueue_schedule(fws->fws_wq, &fws->fws_dequeue_work);
+  }
 }
 
 static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_netbuf_state state,
                                  int fifo, struct brcmf_netbuf* p) {
-    int prec = 2 * fifo;
-    uint32_t* qfull_stat = &fws->stats.delayq_full_error;
-    struct brcmf_fws_mac_descriptor* entry;
-    struct pktq* pq;
-    struct brcmf_netbuf_list* queue;
-    struct brcmf_netbuf* p_head;
-    struct brcmf_netbuf* p_tail;
-    uint32_t fr_new;
-    uint32_t fr_compare;
+  int prec = 2 * fifo;
+  uint32_t* qfull_stat = &fws->stats.delayq_full_error;
+  struct brcmf_fws_mac_descriptor* entry;
+  struct pktq* pq;
+  struct brcmf_netbuf_list* queue;
+  struct brcmf_netbuf* p_head;
+  struct brcmf_netbuf* p_tail;
+  uint32_t fr_new;
+  uint32_t fr_compare;
 
-    entry = brcmf_workspace(p)->mac;
-    if (entry == NULL) {
-        BRCMF_ERR("no mac descriptor found for netbuf %p\n", p);
-        return ZX_ERR_NOT_FOUND;
+  entry = brcmf_workspace(p)->mac;
+  if (entry == NULL) {
+    BRCMF_ERR("no mac descriptor found for netbuf %p\n", p);
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  BRCMF_DBG(DATA, "enter: fifo %d netbuf %p\n", fifo, p);
+  if (state == BRCMF_FWS_NETBUFSTATE_SUPPRESSED) {
+    prec += 1;
+    qfull_stat = &fws->stats.supprq_full_error;
+
+    /* Fix out of order delivery of frames. Dont assume frame    */
+    /* can be inserted at the end, but look for correct position */
+    pq = &entry->psq;
+    if (pktq_full(pq) || pktq_pfull(pq, prec)) {
+      *qfull_stat += 1;
+      return ZX_ERR_NO_RESOURCES;
+    }
+    queue = &pq->q[prec].netbuf_list;
+
+    p_head = brcmf_netbuf_list_peek_head(queue);
+    p_tail = brcmf_netbuf_list_peek_tail(queue);
+    fr_new = brcmf_netbuf_htod_tag_get_field(p, FREERUN);
+
+    while (p_head != p_tail) {
+      fr_compare = brcmf_netbuf_htod_tag_get_field(p_tail, FREERUN);
+      /* be sure to handle wrap of 256 */
+      if (((fr_new > fr_compare) && ((fr_new - fr_compare) < 128)) ||
+          ((fr_new < fr_compare) && ((fr_compare - fr_new) > 128))) {
+        break;
+      }
+      p_tail = brcmf_netbuf_list_prev(queue, p_tail);
+    }
+    /* Position found. Determine what to do */
+    if (p_tail == NULL) {
+      /* empty list */
+      brcmf_netbuf_list_add_tail(queue, p);
+    } else {
+      fr_compare = brcmf_netbuf_htod_tag_get_field(p_tail, FREERUN);
+      if (((fr_new > fr_compare) && ((fr_new - fr_compare) < 128)) ||
+          ((fr_new < fr_compare) && ((fr_compare - fr_new) > 128))) {
+        /* After tail */
+        brcmf_netbuf_list_add_after(queue, p_tail, p);
+      } else {
+        /* Before tail */
+        brcmf_netbuf_list_add_after(queue, brcmf_netbuf_list_prev(queue, p_tail), p);
+      }
     }
 
-    BRCMF_DBG(DATA, "enter: fifo %d netbuf %p\n", fifo, p);
-    if (state == BRCMF_FWS_NETBUFSTATE_SUPPRESSED) {
-        prec += 1;
-        qfull_stat = &fws->stats.supprq_full_error;
-
-        /* Fix out of order delivery of frames. Dont assume frame    */
-        /* can be inserted at the end, but look for correct position */
-        pq = &entry->psq;
-        if (pktq_full(pq) || pktq_pfull(pq, prec)) {
-            *qfull_stat += 1;
-            return ZX_ERR_NO_RESOURCES;
-        }
-        queue = &pq->q[prec].netbuf_list;
-
-        p_head = brcmf_netbuf_list_peek_head(queue);
-        p_tail = brcmf_netbuf_list_peek_tail(queue);
-        fr_new = brcmf_netbuf_htod_tag_get_field(p, FREERUN);
-
-        while (p_head != p_tail) {
-            fr_compare = brcmf_netbuf_htod_tag_get_field(p_tail, FREERUN);
-            /* be sure to handle wrap of 256 */
-            if (((fr_new > fr_compare) && ((fr_new - fr_compare) < 128)) ||
-                    ((fr_new < fr_compare) && ((fr_compare - fr_new) > 128))) {
-                break;
-            }
-            p_tail = brcmf_netbuf_list_prev(queue, p_tail);
-        }
-        /* Position found. Determine what to do */
-        if (p_tail == NULL) {
-            /* empty list */
-            brcmf_netbuf_list_add_tail(queue, p);
-        } else {
-            fr_compare = brcmf_netbuf_htod_tag_get_field(p_tail, FREERUN);
-            if (((fr_new > fr_compare) && ((fr_new - fr_compare) < 128)) ||
-                    ((fr_new < fr_compare) && ((fr_compare - fr_new) > 128))) {
-                /* After tail */
-                brcmf_netbuf_list_add_after(queue, p_tail, p);
-            } else {
-                /* Before tail */
-                brcmf_netbuf_list_add_after(queue, brcmf_netbuf_list_prev(queue, p_tail), p);
-            }
-        }
-
-        /* Complete the counters and statistics */
-        pq->len++;
-        if (pq->hi_prec < prec) {
-            pq->hi_prec = (uint8_t)prec;
-        }
-    } else if (brcmu_pktq_penq(&entry->psq, prec, p) == NULL) {
-        *qfull_stat += 1;
-        return ZX_ERR_NO_RESOURCES;
+    /* Complete the counters and statistics */
+    pq->len++;
+    if (pq->hi_prec < prec) {
+      pq->hi_prec = (uint8_t)prec;
     }
+  } else if (brcmu_pktq_penq(&entry->psq, prec, p) == NULL) {
+    *qfull_stat += 1;
+    return ZX_ERR_NO_RESOURCES;
+  }
 
-    /* increment total enqueued packet count */
-    fws->fifo_delay_map |= 1 << fifo;
-    fws->fifo_enqpkt[fifo]++;
+  /* increment total enqueued packet count */
+  fws->fifo_delay_map |= 1 << fifo;
+  fws->fifo_enqpkt[fifo]++;
 
-    /* update the brcmf_netbuf state */
-    brcmf_workspace(p)->state = state;
+  /* update the brcmf_netbuf state */
+  brcmf_workspace(p)->state = state;
 
-    /*
-     * A packet has been pushed so update traffic
-     * availability bitmap, if applicable
-     */
-    brcmf_fws_tim_update(fws, entry, fifo, true);
-    brcmf_fws_flow_control_check(fws, &entry->psq, brcmf_netbuf_if_flags_get_field(p, INDEX));
-    return ZX_OK;
+  /*
+   * A packet has been pushed so update traffic
+   * availability bitmap, if applicable
+   */
+  brcmf_fws_tim_update(fws, entry, fifo, true);
+  brcmf_fws_flow_control_check(fws, &entry->psq, brcmf_netbuf_if_flags_get_field(p, INDEX));
+  return ZX_OK;
 }
 
 static struct brcmf_netbuf* brcmf_fws_deq(struct brcmf_fws_info* fws, int fifo) {
-    struct brcmf_fws_mac_descriptor* table;
-    struct brcmf_fws_mac_descriptor* entry;
-    struct brcmf_netbuf* p;
-    int num_nodes;
-    int node_pos;
-    int prec_out;
-    int pmsk;
-    int i;
+  struct brcmf_fws_mac_descriptor* table;
+  struct brcmf_fws_mac_descriptor* entry;
+  struct brcmf_netbuf* p;
+  int num_nodes;
+  int node_pos;
+  int prec_out;
+  int pmsk;
+  int i;
 
-    table = (struct brcmf_fws_mac_descriptor*)&fws->desc;
-    num_nodes = sizeof(fws->desc) / sizeof(struct brcmf_fws_mac_descriptor);
-    node_pos = fws->deq_node_pos[fifo];
+  table = (struct brcmf_fws_mac_descriptor*)&fws->desc;
+  num_nodes = sizeof(fws->desc) / sizeof(struct brcmf_fws_mac_descriptor);
+  node_pos = fws->deq_node_pos[fifo];
 
-    for (i = 0; i < num_nodes; i++) {
-        entry = &table[(node_pos + i) % num_nodes];
-        if (!entry->occupied || brcmf_fws_macdesc_closed(fws, entry, fifo)) {
-            continue;
-        }
-
-        if (entry->suppressed) {
-            pmsk = 2;
-        } else {
-            pmsk = 3;
-        }
-        p = brcmu_pktq_mdeq(&entry->psq, pmsk << (fifo * 2), &prec_out);
-        if (p == NULL) {
-            if (entry->suppressed) {
-                if (entry->suppr_transit_count) {
-                    continue;
-                }
-                entry->suppressed = false;
-                p = brcmu_pktq_mdeq(&entry->psq, 1 << (fifo * 2), &prec_out);
-            }
-        }
-        if (p == NULL) {
-            continue;
-        }
-
-        brcmf_fws_macdesc_use_req_credit(entry, p);
-
-        /* move dequeue position to ensure fair round-robin */
-        fws->deq_node_pos[fifo] = (node_pos + i + 1) % num_nodes;
-        brcmf_fws_flow_control_check(fws, &entry->psq, brcmf_netbuf_if_flags_get_field(p, INDEX));
-        /*
-         * A packet has been picked up, update traffic
-         * availability bitmap, if applicable
-         */
-        brcmf_fws_tim_update(fws, entry, fifo, false);
-
-        /*
-         * decrement total enqueued fifo packets and
-         * clear delay bitmap if done.
-         */
-        fws->fifo_enqpkt[fifo]--;
-        if (fws->fifo_enqpkt[fifo] == 0) {
-            fws->fifo_delay_map &= ~(1 << fifo);
-        }
-        goto done;
+  for (i = 0; i < num_nodes; i++) {
+    entry = &table[(node_pos + i) % num_nodes];
+    if (!entry->occupied || brcmf_fws_macdesc_closed(fws, entry, fifo)) {
+      continue;
     }
-    p = NULL;
+
+    if (entry->suppressed) {
+      pmsk = 2;
+    } else {
+      pmsk = 3;
+    }
+    p = brcmu_pktq_mdeq(&entry->psq, pmsk << (fifo * 2), &prec_out);
+    if (p == NULL) {
+      if (entry->suppressed) {
+        if (entry->suppr_transit_count) {
+          continue;
+        }
+        entry->suppressed = false;
+        p = brcmu_pktq_mdeq(&entry->psq, 1 << (fifo * 2), &prec_out);
+      }
+    }
+    if (p == NULL) {
+      continue;
+    }
+
+    brcmf_fws_macdesc_use_req_credit(entry, p);
+
+    /* move dequeue position to ensure fair round-robin */
+    fws->deq_node_pos[fifo] = (node_pos + i + 1) % num_nodes;
+    brcmf_fws_flow_control_check(fws, &entry->psq, brcmf_netbuf_if_flags_get_field(p, INDEX));
+    /*
+     * A packet has been picked up, update traffic
+     * availability bitmap, if applicable
+     */
+    brcmf_fws_tim_update(fws, entry, fifo, false);
+
+    /*
+     * decrement total enqueued fifo packets and
+     * clear delay bitmap if done.
+     */
+    fws->fifo_enqpkt[fifo]--;
+    if (fws->fifo_enqpkt[fifo] == 0) {
+      fws->fifo_delay_map &= ~(1 << fifo);
+    }
+    goto done;
+  }
+  p = NULL;
 done:
-    BRCMF_DBG(DATA, "exit: fifo %d netbuf %p\n", fifo, p);
-    return p;
+  BRCMF_DBG(DATA, "exit: fifo %d netbuf %p\n", fifo, p);
+  return p;
 }
 
 static zx_status_t brcmf_fws_txstatus_suppressed(struct brcmf_fws_info* fws, int fifo,
                                                  struct brcmf_netbuf* netbuf, uint32_t genbit,
                                                  uint16_t seq) {
-    struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(netbuf)->mac;
-    uint32_t hslot;
-    zx_status_t ret;
+  struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(netbuf)->mac;
+  uint32_t hslot;
+  zx_status_t ret;
 
-    hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
+  hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
 
-    /* this packet was suppressed */
-    if (!entry->suppressed) {
-        entry->suppressed = true;
-        entry->suppr_transit_count = entry->transit_count;
-        BRCMF_DBG(DATA, "suppress %s: transit %d\n", entry->name, entry->transit_count);
-    }
+  /* this packet was suppressed */
+  if (!entry->suppressed) {
+    entry->suppressed = true;
+    entry->suppr_transit_count = entry->transit_count;
+    BRCMF_DBG(DATA, "suppress %s: transit %d\n", entry->name, entry->transit_count);
+  }
 
-    entry->generation = genbit;
+  entry->generation = genbit;
 
-    brcmf_netbuf_htod_tag_set_field(netbuf, GENERATION, genbit);
-    brcmf_workspace(netbuf)->htod_seq = seq;
-    if (brcmf_netbuf_htod_seq_get_field(netbuf, FROMFW)) {
-        brcmf_netbuf_htod_seq_set_field(netbuf, FROMDRV, 1);
-        brcmf_netbuf_htod_seq_set_field(netbuf, FROMFW, 0);
-    } else {
-        brcmf_netbuf_htod_seq_set_field(netbuf, FROMDRV, 0);
-    }
-    ret = brcmf_fws_enq(fws, BRCMF_FWS_NETBUFSTATE_SUPPRESSED, fifo, netbuf);
+  brcmf_netbuf_htod_tag_set_field(netbuf, GENERATION, genbit);
+  brcmf_workspace(netbuf)->htod_seq = seq;
+  if (brcmf_netbuf_htod_seq_get_field(netbuf, FROMFW)) {
+    brcmf_netbuf_htod_seq_set_field(netbuf, FROMDRV, 1);
+    brcmf_netbuf_htod_seq_set_field(netbuf, FROMFW, 0);
+  } else {
+    brcmf_netbuf_htod_seq_set_field(netbuf, FROMDRV, 0);
+  }
+  ret = brcmf_fws_enq(fws, BRCMF_FWS_NETBUFSTATE_SUPPRESSED, fifo, netbuf);
 
-    if (ret != ZX_OK) {
-        /* suppress q is full drop this packet */
-        brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, true);
-    } else {
-        /* Mark suppressed to avoid a double free during wlfc cleanup */
-        brcmf_fws_hanger_mark_suppressed(&fws->hanger, hslot);
-    }
+  if (ret != ZX_OK) {
+    /* suppress q is full drop this packet */
+    brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, true);
+  } else {
+    /* Mark suppressed to avoid a double free during wlfc cleanup */
+    brcmf_fws_hanger_mark_suppressed(&fws->hanger, hslot);
+  }
 
-    return ret;
+  return ret;
 }
 
 static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t flags, uint32_t hslot,
                                          uint32_t genbit, uint16_t seq) {
-    uint32_t fifo;
-    zx_status_t ret;
-    bool remove_from_hanger = true;
-    struct brcmf_netbuf* netbuf;
-    struct brcmf_netbuf_workspace* workspace;
-    struct brcmf_fws_mac_descriptor* entry = NULL;
-    struct brcmf_if* ifp;
+  uint32_t fifo;
+  zx_status_t ret;
+  bool remove_from_hanger = true;
+  struct brcmf_netbuf* netbuf;
+  struct brcmf_netbuf_workspace* workspace;
+  struct brcmf_fws_mac_descriptor* entry = NULL;
+  struct brcmf_if* ifp;
 
-    BRCMF_DBG(DATA, "flags %d\n", flags);
+  BRCMF_DBG(DATA, "flags %d\n", flags);
 
-    if (flags == BRCMF_FWS_TXSTATUS_DISCARD) {
-        fws->stats.txs_discard++;
-    } else if (flags == BRCMF_FWS_TXSTATUS_CORE_SUPPRESS) {
-        fws->stats.txs_supp_core++;
-        remove_from_hanger = false;
-    } else if (flags == BRCMF_FWS_TXSTATUS_FW_PS_SUPPRESS) {
-        fws->stats.txs_supp_ps++;
-        remove_from_hanger = false;
-    } else if (flags == BRCMF_FWS_TXSTATUS_FW_TOSSED) {
-        fws->stats.txs_tossed++;
-    } else if (flags == BRCMF_FWS_TXSTATUS_HOST_TOSSED) {
-        fws->stats.txs_host_tossed++;
-    } else {
-        BRCMF_ERR("unexpected txstatus\n");
-    }
+  if (flags == BRCMF_FWS_TXSTATUS_DISCARD) {
+    fws->stats.txs_discard++;
+  } else if (flags == BRCMF_FWS_TXSTATUS_CORE_SUPPRESS) {
+    fws->stats.txs_supp_core++;
+    remove_from_hanger = false;
+  } else if (flags == BRCMF_FWS_TXSTATUS_FW_PS_SUPPRESS) {
+    fws->stats.txs_supp_ps++;
+    remove_from_hanger = false;
+  } else if (flags == BRCMF_FWS_TXSTATUS_FW_TOSSED) {
+    fws->stats.txs_tossed++;
+  } else if (flags == BRCMF_FWS_TXSTATUS_HOST_TOSSED) {
+    fws->stats.txs_host_tossed++;
+  } else {
+    BRCMF_ERR("unexpected txstatus\n");
+  }
 
-    ret = brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, remove_from_hanger);
-    if (ret != ZX_OK) {
-        BRCMF_ERR("no packet in hanger slot: hslot=%d\n", hslot);
-        return ret;
-    }
+  ret = brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, remove_from_hanger);
+  if (ret != ZX_OK) {
+    BRCMF_ERR("no packet in hanger slot: hslot=%d\n", hslot);
+    return ret;
+  }
 
-    workspace = brcmf_workspace(netbuf);
-    // TODO(cphoenix): Used to be WARN_ON(!entry) which wouldn't have picked up entry==error
-    // anyway. Revisit logic here.
-    if (workspace->mac_status == ZX_OK) {
-        entry = workspace->mac;
-    } else {
-        WARN_ON(true/*bad entry*/);
-        brcmu_pkt_buf_free_netbuf(netbuf);
-        return ZX_ERR_INTERNAL;
-    }
-    entry->transit_count--;
-    if (entry->suppressed && entry->suppr_transit_count) {
-        entry->suppr_transit_count--;
-    }
+  workspace = brcmf_workspace(netbuf);
+  // TODO(cphoenix): Used to be WARN_ON(!entry) which wouldn't have picked up entry==error
+  // anyway. Revisit logic here.
+  if (workspace->mac_status == ZX_OK) {
+    entry = workspace->mac;
+  } else {
+    WARN_ON(true /*bad entry*/);
+    brcmu_pkt_buf_free_netbuf(netbuf);
+    return ZX_ERR_INTERNAL;
+  }
+  entry->transit_count--;
+  if (entry->suppressed && entry->suppr_transit_count) {
+    entry->suppr_transit_count--;
+  }
 
-    BRCMF_DBG(DATA, "%s flags %d htod %X seq %X\n", entry->name, flags, workspace->htod, seq);
+  BRCMF_DBG(DATA, "%s flags %d htod %X seq %X\n", entry->name, flags, workspace->htod, seq);
 
-    /* pick up the implicit credit from this packet */
-    fifo = brcmf_netbuf_htod_tag_get_field(netbuf, FIFO);
-    if ((fws->fcmode == BRCMF_FWS_FCMODE_IMPLIED_CREDIT) ||
-            (brcmf_netbuf_if_flags_get_field(netbuf, REQ_CREDIT)) ||
-            (flags == BRCMF_FWS_TXSTATUS_HOST_TOSSED)) {
-        brcmf_fws_return_credits(fws, fifo, 1);
-        brcmf_fws_schedule_deq(fws);
-    }
-    brcmf_fws_macdesc_return_req_credit(netbuf);
+  /* pick up the implicit credit from this packet */
+  fifo = brcmf_netbuf_htod_tag_get_field(netbuf, FIFO);
+  if ((fws->fcmode == BRCMF_FWS_FCMODE_IMPLIED_CREDIT) ||
+      (brcmf_netbuf_if_flags_get_field(netbuf, REQ_CREDIT)) ||
+      (flags == BRCMF_FWS_TXSTATUS_HOST_TOSSED)) {
+    brcmf_fws_return_credits(fws, fifo, 1);
+    brcmf_fws_schedule_deq(fws);
+  }
+  brcmf_fws_macdesc_return_req_credit(netbuf);
 
-    ret = brcmf_proto_hdrpull(fws->drvr, false, netbuf, &ifp);
-    if (ret != ZX_OK) {
-        brcmu_pkt_buf_free_netbuf(netbuf);
-        return ZX_ERR_INTERNAL;
-    }
-    if (!remove_from_hanger) {
-        ret = brcmf_fws_txstatus_suppressed(fws, fifo, netbuf, genbit, seq);
-    }
-    if (remove_from_hanger || ret != ZX_OK) {
-        brcmf_txfinalize(ifp, netbuf, true);
-    }
+  ret = brcmf_proto_hdrpull(fws->drvr, false, netbuf, &ifp);
+  if (ret != ZX_OK) {
+    brcmu_pkt_buf_free_netbuf(netbuf);
+    return ZX_ERR_INTERNAL;
+  }
+  if (!remove_from_hanger) {
+    ret = brcmf_fws_txstatus_suppressed(fws, fifo, netbuf, genbit, seq);
+  }
+  if (remove_from_hanger || ret != ZX_OK) {
+    brcmf_txfinalize(ifp, netbuf, true);
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 static enum brcmf_fws_should_schedule brcmf_fws_fifocreditback_indicate(struct brcmf_fws_info* fws,
                                                                         uint8_t* data) {
-    int i;
+  int i;
 
-    if (fws->fcmode != BRCMF_FWS_FCMODE_EXPLICIT_CREDIT) {
-        BRCMF_DBG(INFO, "ignored\n");
-        return BRCMF_FWS_NOSCHEDULE;
-    }
+  if (fws->fcmode != BRCMF_FWS_FCMODE_EXPLICIT_CREDIT) {
+    BRCMF_DBG(INFO, "ignored\n");
+    return BRCMF_FWS_NOSCHEDULE;
+  }
 
-    BRCMF_DBG(DATA, "enter: data %pM\n", data);
-    brcmf_fws_lock(fws);
-    for (i = 0; i < BRCMF_FWS_FIFO_COUNT; i++) {
-        brcmf_fws_return_credits(fws, i, data[i]);
-    }
+  BRCMF_DBG(DATA, "enter: data %pM\n", data);
+  brcmf_fws_lock(fws);
+  for (i = 0; i < BRCMF_FWS_FIFO_COUNT; i++) {
+    brcmf_fws_return_credits(fws, i, data[i]);
+  }
 
-    BRCMF_DBG(DATA, "map: credit %x delay %x\n", fws->fifo_credit_map, fws->fifo_delay_map);
-    brcmf_fws_unlock(fws);
-    return BRCMF_FWS_SCHEDULE;
+  BRCMF_DBG(DATA, "map: credit %x delay %x\n", fws->fifo_credit_map, fws->fifo_delay_map);
+  brcmf_fws_unlock(fws);
+  return BRCMF_FWS_SCHEDULE;
 }
 
 static enum brcmf_fws_should_schedule brcmf_fws_txstatus_indicate(struct brcmf_fws_info* fws,
                                                                   uint8_t* data) {
-    uint32_t status_le;
-    uint16_t seq_le;
-    uint32_t status;
-    uint32_t hslot;
-    uint32_t genbit;
-    uint8_t flags;
-    uint16_t seq;
+  uint32_t status_le;
+  uint16_t seq_le;
+  uint32_t status;
+  uint32_t hslot;
+  uint32_t genbit;
+  uint8_t flags;
+  uint16_t seq;
 
-    fws->stats.txs_indicate++;
-    memcpy(&status_le, data, sizeof(status_le));
-    status = status_le;
-    flags = brcmf_txstatus_get_field(status, FLAGS);
-    hslot = brcmf_txstatus_get_field(status, HSLOT);
-    genbit = brcmf_txstatus_get_field(status, GENERATION);
-    if (BRCMF_FWS_MODE_GET_REUSESEQ(fws->mode)) {
-        memcpy(&seq_le, &data[BRCMF_FWS_TYPE_PKTTAG_LEN], sizeof(seq_le));
-        seq = seq_le;
-    } else {
-        seq = 0;
-    }
+  fws->stats.txs_indicate++;
+  memcpy(&status_le, data, sizeof(status_le));
+  status = status_le;
+  flags = brcmf_txstatus_get_field(status, FLAGS);
+  hslot = brcmf_txstatus_get_field(status, HSLOT);
+  genbit = brcmf_txstatus_get_field(status, GENERATION);
+  if (BRCMF_FWS_MODE_GET_REUSESEQ(fws->mode)) {
+    memcpy(&seq_le, &data[BRCMF_FWS_TYPE_PKTTAG_LEN], sizeof(seq_le));
+    seq = seq_le;
+  } else {
+    seq = 0;
+  }
 
-    brcmf_fws_lock(fws);
-    brcmf_fws_txs_process(fws, flags, hslot, genbit, seq);
-    brcmf_fws_unlock(fws);
-    return BRCMF_FWS_NOSCHEDULE;
+  brcmf_fws_lock(fws);
+  brcmf_fws_txs_process(fws, flags, hslot, genbit, seq);
+  brcmf_fws_unlock(fws);
+  return BRCMF_FWS_NOSCHEDULE;
 }
 
 static zx_status_t brcmf_fws_dbg_seqnum_check(struct brcmf_fws_info* fws, uint8_t* data) {
-    uint32_t timestamp;
+  uint32_t timestamp;
 
-    memcpy(&timestamp, &data[2], sizeof(timestamp));
-    BRCMF_DBG(CTL, "received: seq %d, timestamp %d\n", data[1], timestamp);
-    return ZX_OK;
+  memcpy(&timestamp, &data[2], sizeof(timestamp));
+  BRCMF_DBG(CTL, "received: seq %d, timestamp %d\n", data[1], timestamp);
+  return ZX_OK;
 }
 
 static zx_status_t brcmf_fws_notify_credit_map(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
-    struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
-    int i;
-    uint8_t* credits = static_cast<decltype(credits)>(data);
+  struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
+  int i;
+  uint8_t* credits = static_cast<decltype(credits)>(data);
 
-    if (e->datalen < BRCMF_FWS_FIFO_COUNT) {
-        BRCMF_ERR("event payload too small (%d)\n", e->datalen);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (fws->creditmap_received) {
-        return ZX_OK;
-    }
-
-    fws->creditmap_received = true;
-
-    BRCMF_DBG(TRACE, "enter: credits %pM\n", credits);
-    brcmf_fws_lock(fws);
-    for (i = 0; i < (int)countof(fws->fifo_credit); i++) {
-        if (*credits) {
-            fws->fifo_credit_map |= 1 << i;
-        } else {
-            fws->fifo_credit_map &= ~(1 << i);
-        }
-        fws->fifo_credit[i] = *credits++;
-    }
-    brcmf_fws_schedule_deq(fws);
-    brcmf_fws_unlock(fws);
+  if (e->datalen < BRCMF_FWS_FIFO_COUNT) {
+    BRCMF_ERR("event payload too small (%d)\n", e->datalen);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (fws->creditmap_received) {
     return ZX_OK;
+  }
+
+  fws->creditmap_received = true;
+
+  BRCMF_DBG(TRACE, "enter: credits %pM\n", credits);
+  brcmf_fws_lock(fws);
+  for (i = 0; i < (int)countof(fws->fifo_credit); i++) {
+    if (*credits) {
+      fws->fifo_credit_map |= 1 << i;
+    } else {
+      fws->fifo_credit_map &= ~(1 << i);
+    }
+    fws->fifo_credit[i] = *credits++;
+  }
+  brcmf_fws_schedule_deq(fws);
+  brcmf_fws_unlock(fws);
+  return ZX_OK;
 }
 
 static zx_status_t brcmf_fws_notify_bcmc_credit_support(struct brcmf_if* ifp,
                                                         const struct brcmf_event_msg* e,
                                                         void* data) {
-    struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
+  struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
 
-    if (fws) {
-        brcmf_fws_lock(fws);
-        fws->bcmc_credit_check = true;
-        brcmf_fws_unlock(fws);
-    }
-    return ZX_OK;
+  if (fws) {
+    brcmf_fws_lock(fws);
+    fws->bcmc_credit_check = true;
+    brcmf_fws_unlock(fws);
+  }
+  return ZX_OK;
 }
 
 static void brcmf_rxreorder_get_netbuf_list(struct brcmf_ampdu_rx_reorder* rfi, uint8_t start,
-                                         uint8_t end, struct brcmf_netbuf_list* netbuf_list) {
-    /* initialize return list */
-    brcmf_netbuf_list_init(netbuf_list);
+                                            uint8_t end, struct brcmf_netbuf_list* netbuf_list) {
+  /* initialize return list */
+  brcmf_netbuf_list_init(netbuf_list);
 
-    if (rfi->pend_pkts == 0) {
-        BRCMF_DBG(INFO, "no packets in reorder queue\n");
-        return;
+  if (rfi->pend_pkts == 0) {
+    BRCMF_DBG(INFO, "no packets in reorder queue\n");
+    return;
+  }
+
+  do {
+    if (rfi->pktslots[start]) {
+      brcmf_netbuf_list_add_tail(netbuf_list, rfi->pktslots[start]);
+      rfi->pktslots[start] = NULL;
     }
-
-    do {
-        if (rfi->pktslots[start]) {
-            brcmf_netbuf_list_add_tail(netbuf_list, rfi->pktslots[start]);
-            rfi->pktslots[start] = NULL;
-        }
-        start++;
-        if (start > rfi->max_idx) {
-            start = 0;
-        }
-    } while (start != end);
-    rfi->pend_pkts -= brcmf_netbuf_list_length(netbuf_list);
+    start++;
+    if (start > rfi->max_idx) {
+      start = 0;
+    }
+  } while (start != end);
+  rfi->pend_pkts -= brcmf_netbuf_list_length(netbuf_list);
 }
 
 void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
-    uint8_t* reorder_data;
-    uint8_t flow_id, max_idx, cur_idx, exp_idx, end_idx;
-    struct brcmf_ampdu_rx_reorder* rfi;
-    struct brcmf_netbuf_list reorder_list;
-    struct brcmf_netbuf* pnext;
-    uint8_t flags;
-    uint32_t buf_size;
+  uint8_t* reorder_data;
+  uint8_t flow_id, max_idx, cur_idx, exp_idx, end_idx;
+  struct brcmf_ampdu_rx_reorder* rfi;
+  struct brcmf_netbuf_list reorder_list;
+  struct brcmf_netbuf* pnext;
+  uint8_t flags;
+  uint32_t buf_size;
 
-    reorder_data = ((struct brcmf_netbuf_reorder_data*)pkt->workspace)->reorder;
-    flow_id = reorder_data[BRCMF_RXREORDER_FLOWID_OFFSET];
-    flags = reorder_data[BRCMF_RXREORDER_FLAGS_OFFSET];
+  reorder_data = ((struct brcmf_netbuf_reorder_data*)pkt->workspace)->reorder;
+  flow_id = reorder_data[BRCMF_RXREORDER_FLOWID_OFFSET];
+  flags = reorder_data[BRCMF_RXREORDER_FLAGS_OFFSET];
 
-    /* validate flags and flow id */
-    if (flags == 0xFF) {
-        BRCMF_ERR("invalid flags...so ignore this packet\n");
-        brcmf_netif_rx(ifp, pkt);
-        return;
-    }
+  /* validate flags and flow id */
+  if (flags == 0xFF) {
+    BRCMF_ERR("invalid flags...so ignore this packet\n");
+    brcmf_netif_rx(ifp, pkt);
+    return;
+  }
 
-    rfi = ifp->drvr->reorder_flows[flow_id];
-    if (flags & BRCMF_RXREORDER_DEL_FLOW) {
-        BRCMF_DBG(INFO, "flow-%d: delete\n", flow_id);
+  rfi = ifp->drvr->reorder_flows[flow_id];
+  if (flags & BRCMF_RXREORDER_DEL_FLOW) {
+    BRCMF_DBG(INFO, "flow-%d: delete\n", flow_id);
 
-        if (rfi == NULL) {
-            BRCMF_DBG(INFO, "received flags to cleanup, but no flow (%d) yet\n", flow_id);
-            brcmf_netif_rx(ifp, pkt);
-            return;
-        }
-
-        brcmf_rxreorder_get_netbuf_list(rfi, rfi->exp_idx, rfi->exp_idx, &reorder_list);
-        /* add the last packet */
-        brcmf_netbuf_list_add_tail(&reorder_list, pkt);
-        free(rfi);
-        ifp->drvr->reorder_flows[flow_id] = NULL;
-        goto netif_rx;
-    }
-    /* from here on we need a flow reorder instance */
     if (rfi == NULL) {
-        buf_size = sizeof(*rfi);
-        max_idx = reorder_data[BRCMF_RXREORDER_MAXIDX_OFFSET];
-
-        buf_size += (max_idx + 1) * sizeof(pkt);
-
-        /* allocate space for flow reorder info */
-        BRCMF_DBG(INFO, "flow-%d: start, maxidx %d\n", flow_id, max_idx);
-        rfi = static_cast<decltype(rfi)>(calloc(1, buf_size));
-        if (rfi == NULL) {
-            BRCMF_ERR("failed to alloc buffer\n");
-            brcmf_netif_rx(ifp, pkt);
-            return;
-        }
-
-        ifp->drvr->reorder_flows[flow_id] = rfi;
-        rfi->pktslots = (struct brcmf_netbuf**)(rfi + 1);
-        rfi->max_idx = max_idx;
+      BRCMF_DBG(INFO, "received flags to cleanup, but no flow (%d) yet\n", flow_id);
+      brcmf_netif_rx(ifp, pkt);
+      return;
     }
-    if (flags & BRCMF_RXREORDER_NEW_HOLE) {
-        if (rfi->pend_pkts) {
-            brcmf_rxreorder_get_netbuf_list(rfi, rfi->exp_idx, rfi->exp_idx, &reorder_list);
-            WARN_ON(rfi->pend_pkts);
-        } else {
-            brcmf_netbuf_list_init(&reorder_list);
-        }
-        rfi->cur_idx = reorder_data[BRCMF_RXREORDER_CURIDX_OFFSET];
-        rfi->exp_idx = reorder_data[BRCMF_RXREORDER_EXPIDX_OFFSET];
-        rfi->max_idx = reorder_data[BRCMF_RXREORDER_MAXIDX_OFFSET];
-        rfi->pktslots[rfi->cur_idx] = pkt;
-        rfi->pend_pkts++;
-        BRCMF_DBG(DATA, "flow-%d: new hole %d (%d), pending %d\n", flow_id, rfi->cur_idx,
-                  rfi->exp_idx, rfi->pend_pkts);
-    } else if (flags & BRCMF_RXREORDER_CURIDX_VALID) {
-        cur_idx = reorder_data[BRCMF_RXREORDER_CURIDX_OFFSET];
-        exp_idx = reorder_data[BRCMF_RXREORDER_EXPIDX_OFFSET];
 
-        if ((exp_idx == rfi->exp_idx) && (cur_idx != rfi->exp_idx)) {
-            /* still in the current hole */
-            /* enqueue the current on the buffer chain */
-            if (rfi->pktslots[cur_idx] != NULL) {
-                BRCMF_DBG(INFO, "HOLE: ERROR buffer pending..free it\n");
-                brcmu_pkt_buf_free_netbuf(rfi->pktslots[cur_idx]);
-                rfi->pktslots[cur_idx] = NULL;
-            }
-            rfi->pktslots[cur_idx] = pkt;
-            rfi->pend_pkts++;
-            rfi->cur_idx = cur_idx;
-            BRCMF_DBG(DATA, "flow-%d: store pkt %d (%d), pending %d\n", flow_id, cur_idx, exp_idx,
-                      rfi->pend_pkts);
+    brcmf_rxreorder_get_netbuf_list(rfi, rfi->exp_idx, rfi->exp_idx, &reorder_list);
+    /* add the last packet */
+    brcmf_netbuf_list_add_tail(&reorder_list, pkt);
+    free(rfi);
+    ifp->drvr->reorder_flows[flow_id] = NULL;
+    goto netif_rx;
+  }
+  /* from here on we need a flow reorder instance */
+  if (rfi == NULL) {
+    buf_size = sizeof(*rfi);
+    max_idx = reorder_data[BRCMF_RXREORDER_MAXIDX_OFFSET];
 
-            /* can return now as there is no reorder
-             * list to process.
-             */
-            return;
-        }
-        if (rfi->exp_idx == cur_idx) {
-            if (rfi->pktslots[cur_idx] != NULL) {
-                BRCMF_DBG(INFO, "error buffer pending..free it\n");
-                brcmu_pkt_buf_free_netbuf(rfi->pktslots[cur_idx]);
-                rfi->pktslots[cur_idx] = NULL;
-            }
-            rfi->pktslots[cur_idx] = pkt;
-            rfi->pend_pkts++;
+    buf_size += (max_idx + 1) * sizeof(pkt);
 
-            /* got the expected one. flush from current to expected
-             * and update expected
-             */
-            BRCMF_DBG(DATA, "flow-%d: expected %d (%d), pending %d\n", flow_id, cur_idx, exp_idx,
-                      rfi->pend_pkts);
+    /* allocate space for flow reorder info */
+    BRCMF_DBG(INFO, "flow-%d: start, maxidx %d\n", flow_id, max_idx);
+    rfi = static_cast<decltype(rfi)>(calloc(1, buf_size));
+    if (rfi == NULL) {
+      BRCMF_ERR("failed to alloc buffer\n");
+      brcmf_netif_rx(ifp, pkt);
+      return;
+    }
 
-            rfi->cur_idx = cur_idx;
-            rfi->exp_idx = exp_idx;
-
-            brcmf_rxreorder_get_netbuf_list(rfi, cur_idx, exp_idx, &reorder_list);
-            BRCMF_DBG(DATA, "flow-%d: freeing buffers %d, pending %d\n", flow_id,
-                      brcmf_netbuf_list_length(&reorder_list), rfi->pend_pkts);
-        } else {
-            uint8_t end_idx;
-
-            BRCMF_DBG(DATA, "flow-%d (0x%x): both moved, old %d/%d, new %d/%d\n", flow_id, flags,
-                      rfi->cur_idx, rfi->exp_idx, cur_idx, exp_idx);
-            if (flags & BRCMF_RXREORDER_FLUSH_ALL) {
-                end_idx = rfi->exp_idx;
-            } else {
-                end_idx = exp_idx;
-            }
-
-            /* flush pkts first */
-            brcmf_rxreorder_get_netbuf_list(rfi, rfi->exp_idx, end_idx, &reorder_list);
-
-            if (exp_idx == ((cur_idx + 1) % (rfi->max_idx + 1))) {
-                brcmf_netbuf_list_add_tail(&reorder_list, pkt);
-            } else {
-                rfi->pktslots[cur_idx] = pkt;
-                rfi->pend_pkts++;
-            }
-            rfi->exp_idx = exp_idx;
-            rfi->cur_idx = cur_idx;
-        }
+    ifp->drvr->reorder_flows[flow_id] = rfi;
+    rfi->pktslots = (struct brcmf_netbuf**)(rfi + 1);
+    rfi->max_idx = max_idx;
+  }
+  if (flags & BRCMF_RXREORDER_NEW_HOLE) {
+    if (rfi->pend_pkts) {
+      brcmf_rxreorder_get_netbuf_list(rfi, rfi->exp_idx, rfi->exp_idx, &reorder_list);
+      WARN_ON(rfi->pend_pkts);
     } else {
-        /* explicity window move updating the expected index */
-        exp_idx = reorder_data[BRCMF_RXREORDER_EXPIDX_OFFSET];
+      brcmf_netbuf_list_init(&reorder_list);
+    }
+    rfi->cur_idx = reorder_data[BRCMF_RXREORDER_CURIDX_OFFSET];
+    rfi->exp_idx = reorder_data[BRCMF_RXREORDER_EXPIDX_OFFSET];
+    rfi->max_idx = reorder_data[BRCMF_RXREORDER_MAXIDX_OFFSET];
+    rfi->pktslots[rfi->cur_idx] = pkt;
+    rfi->pend_pkts++;
+    BRCMF_DBG(DATA, "flow-%d: new hole %d (%d), pending %d\n", flow_id, rfi->cur_idx, rfi->exp_idx,
+              rfi->pend_pkts);
+  } else if (flags & BRCMF_RXREORDER_CURIDX_VALID) {
+    cur_idx = reorder_data[BRCMF_RXREORDER_CURIDX_OFFSET];
+    exp_idx = reorder_data[BRCMF_RXREORDER_EXPIDX_OFFSET];
 
-        BRCMF_DBG(DATA, "flow-%d (0x%x): change expected: %d -> %d\n", flow_id, flags, rfi->exp_idx,
-                  exp_idx);
-        if (flags & BRCMF_RXREORDER_FLUSH_ALL) {
-            end_idx = rfi->exp_idx;
-        } else {
-            end_idx = exp_idx;
-        }
+    if ((exp_idx == rfi->exp_idx) && (cur_idx != rfi->exp_idx)) {
+      /* still in the current hole */
+      /* enqueue the current on the buffer chain */
+      if (rfi->pktslots[cur_idx] != NULL) {
+        BRCMF_DBG(INFO, "HOLE: ERROR buffer pending..free it\n");
+        brcmu_pkt_buf_free_netbuf(rfi->pktslots[cur_idx]);
+        rfi->pktslots[cur_idx] = NULL;
+      }
+      rfi->pktslots[cur_idx] = pkt;
+      rfi->pend_pkts++;
+      rfi->cur_idx = cur_idx;
+      BRCMF_DBG(DATA, "flow-%d: store pkt %d (%d), pending %d\n", flow_id, cur_idx, exp_idx,
+                rfi->pend_pkts);
 
-        brcmf_rxreorder_get_netbuf_list(rfi, rfi->exp_idx, end_idx, &reorder_list);
+      /* can return now as there is no reorder
+       * list to process.
+       */
+      return;
+    }
+    if (rfi->exp_idx == cur_idx) {
+      if (rfi->pktslots[cur_idx] != NULL) {
+        BRCMF_DBG(INFO, "error buffer pending..free it\n");
+        brcmu_pkt_buf_free_netbuf(rfi->pktslots[cur_idx]);
+        rfi->pktslots[cur_idx] = NULL;
+      }
+      rfi->pktslots[cur_idx] = pkt;
+      rfi->pend_pkts++;
+
+      /* got the expected one. flush from current to expected
+       * and update expected
+       */
+      BRCMF_DBG(DATA, "flow-%d: expected %d (%d), pending %d\n", flow_id, cur_idx, exp_idx,
+                rfi->pend_pkts);
+
+      rfi->cur_idx = cur_idx;
+      rfi->exp_idx = exp_idx;
+
+      brcmf_rxreorder_get_netbuf_list(rfi, cur_idx, exp_idx, &reorder_list);
+      BRCMF_DBG(DATA, "flow-%d: freeing buffers %d, pending %d\n", flow_id,
+                brcmf_netbuf_list_length(&reorder_list), rfi->pend_pkts);
+    } else {
+      uint8_t end_idx;
+
+      BRCMF_DBG(DATA, "flow-%d (0x%x): both moved, old %d/%d, new %d/%d\n", flow_id, flags,
+                rfi->cur_idx, rfi->exp_idx, cur_idx, exp_idx);
+      if (flags & BRCMF_RXREORDER_FLUSH_ALL) {
+        end_idx = rfi->exp_idx;
+      } else {
+        end_idx = exp_idx;
+      }
+
+      /* flush pkts first */
+      brcmf_rxreorder_get_netbuf_list(rfi, rfi->exp_idx, end_idx, &reorder_list);
+
+      if (exp_idx == ((cur_idx + 1) % (rfi->max_idx + 1))) {
         brcmf_netbuf_list_add_tail(&reorder_list, pkt);
-        /* set the new expected idx */
-        rfi->exp_idx = exp_idx;
+      } else {
+        rfi->pktslots[cur_idx] = pkt;
+        rfi->pend_pkts++;
+      }
+      rfi->exp_idx = exp_idx;
+      rfi->cur_idx = cur_idx;
     }
+  } else {
+    /* explicity window move updating the expected index */
+    exp_idx = reorder_data[BRCMF_RXREORDER_EXPIDX_OFFSET];
+
+    BRCMF_DBG(DATA, "flow-%d (0x%x): change expected: %d -> %d\n", flow_id, flags, rfi->exp_idx,
+              exp_idx);
+    if (flags & BRCMF_RXREORDER_FLUSH_ALL) {
+      end_idx = rfi->exp_idx;
+    } else {
+      end_idx = exp_idx;
+    }
+
+    brcmf_rxreorder_get_netbuf_list(rfi, rfi->exp_idx, end_idx, &reorder_list);
+    brcmf_netbuf_list_add_tail(&reorder_list, pkt);
+    /* set the new expected idx */
+    rfi->exp_idx = exp_idx;
+  }
 netif_rx:
-    brcmf_netbuf_list_for_every_safe(&reorder_list, pkt, pnext) {
-        brcmf_netbuf_list_remove(&reorder_list, pkt);
-        brcmf_netif_rx(ifp, pkt);
-    }
+  brcmf_netbuf_list_for_every_safe(&reorder_list, pkt, pnext) {
+    brcmf_netbuf_list_remove(&reorder_list, pkt);
+    brcmf_netif_rx(ifp, pkt);
+  }
 }
 
 void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf* netbuf) {
-    struct brcmf_netbuf_reorder_data* rd;
-    struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
-    uint8_t* signal_data;
-    int16_t data_len;
-    uint8_t type;
-    uint8_t len;
-    uint8_t* data;
-    int tlv_len;
-    zx_status_t err;
-    enum brcmf_fws_should_schedule schedule_status;
+  struct brcmf_netbuf_reorder_data* rd;
+  struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
+  uint8_t* signal_data;
+  int16_t data_len;
+  uint8_t type;
+  uint8_t len;
+  uint8_t* data;
+  int tlv_len;
+  zx_status_t err;
+  enum brcmf_fws_should_schedule schedule_status;
 
-    BRCMF_DBG(HDRS, "enter: ifidx %d, netbuflen %u, siglen %d\n", ifp->ifidx, netbuf->len,
-              siglen);
+  BRCMF_DBG(HDRS, "enter: ifidx %d, netbuflen %u, siglen %d\n", ifp->ifidx, netbuf->len, siglen);
 
-    WARN_ON(siglen > (int32_t)netbuf->len);
+  WARN_ON(siglen > (int32_t)netbuf->len);
 
-    if (!siglen) {
-        return;
-    }
-    /* if flow control disabled, skip to packet data and leave */
-    if ((!fws) || (!fws->fw_signals)) {
-        brcmf_netbuf_shrink_head(netbuf, siglen);
-        return;
-    }
-
-    fws->stats.header_pulls++;
-    data_len = siglen;
-    signal_data = netbuf->data;
-
-    schedule_status = BRCMF_FWS_NOSCHEDULE;
-    while (data_len > 0) {
-        /* extract tlv info */
-        type = signal_data[0];
-
-        /* FILLER type is actually not a TLV, but
-         * a single byte that can be skipped.
-         */
-        if (type == BRCMF_FWS_TYPE_FILLER) {
-            signal_data += 1;
-            data_len -= 1;
-            continue;
-        }
-        len = signal_data[1];
-        data = signal_data + 2;
-
-        err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
-        BRCMF_DBG(HDRS, "tlv type=%s (%d), len=%d (%d:%d)\n",
-                  brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, len, err,
-                  tlv_len);
-
-        /* abort parsing when length invalid */
-        if (data_len < len + 2) {
-            break;
-        }
-
-        err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
-        if (err != ZX_OK || len < tlv_len) {
-            break;
-        }
-
-        switch (type) {
-        case BRCMF_FWS_TYPE_COMP_TXSTATUS:
-            break;
-        case BRCMF_FWS_TYPE_HOST_REORDER_RXPKTS:
-            rd = (struct brcmf_netbuf_reorder_data*)netbuf->workspace;
-            rd->reorder = data;
-            break;
-        case BRCMF_FWS_TYPE_MACDESC_ADD:
-        case BRCMF_FWS_TYPE_MACDESC_DEL:
-            brcmf_fws_macdesc_indicate(fws, type, data);
-            break;
-        case BRCMF_FWS_TYPE_MAC_OPEN:
-        case BRCMF_FWS_TYPE_MAC_CLOSE:
-            schedule_status = brcmf_fws_macdesc_state_indicate(fws, type, data);
-            break;
-        case BRCMF_FWS_TYPE_INTERFACE_OPEN:
-        case BRCMF_FWS_TYPE_INTERFACE_CLOSE:
-            schedule_status = brcmf_fws_interface_state_indicate(fws, type, data);
-            break;
-        case BRCMF_FWS_TYPE_MAC_REQUEST_CREDIT:
-        case BRCMF_FWS_TYPE_MAC_REQUEST_PACKET:
-            schedule_status = brcmf_fws_request_indicate(fws, type, data);
-            break;
-        case BRCMF_FWS_TYPE_TXSTATUS:
-            // TODO(cphoenix): Should this set schedule_status?
-            brcmf_fws_txstatus_indicate(fws, data);
-            break;
-        case BRCMF_FWS_TYPE_FIFO_CREDITBACK:
-            schedule_status = brcmf_fws_fifocreditback_indicate(fws, data);
-            break;
-        case BRCMF_FWS_TYPE_RSSI:
-            brcmf_fws_rssi_indicate(fws, *data);
-            break;
-        case BRCMF_FWS_TYPE_TRANS_ID:
-            brcmf_fws_dbg_seqnum_check(fws, data);
-            break;
-        case BRCMF_FWS_TYPE_PKTTAG:
-        case BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP:
-        default:
-            fws->stats.tlv_invalid_type++;
-            break;
-        }
-        signal_data += len + 2;
-        data_len -= len + 2;
-    }
-
-    if (data_len != 0) {
-        fws->stats.tlv_parse_failed++;
-    }
-
-    if (schedule_status == BRCMF_FWS_SCHEDULE) {
-        brcmf_fws_schedule_deq(fws);
-    }
-
-    /* signalling processing result does
-     * not affect the actual ethernet packet.
-     */
+  if (!siglen) {
+    return;
+  }
+  /* if flow control disabled, skip to packet data and leave */
+  if ((!fws) || (!fws->fw_signals)) {
     brcmf_netbuf_shrink_head(netbuf, siglen);
+    return;
+  }
 
-    /* this may be a signal-only packet
+  fws->stats.header_pulls++;
+  data_len = siglen;
+  signal_data = netbuf->data;
+
+  schedule_status = BRCMF_FWS_NOSCHEDULE;
+  while (data_len > 0) {
+    /* extract tlv info */
+    type = signal_data[0];
+
+    /* FILLER type is actually not a TLV, but
+     * a single byte that can be skipped.
      */
-    if (netbuf->len == 0) {
-        fws->stats.header_only_pkt++;
+    if (type == BRCMF_FWS_TYPE_FILLER) {
+      signal_data += 1;
+      data_len -= 1;
+      continue;
     }
+    len = signal_data[1];
+    data = signal_data + 2;
+
+    err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
+    BRCMF_DBG(HDRS, "tlv type=%s (%d), len=%d (%d:%d)\n",
+              brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, len, err,
+              tlv_len);
+
+    /* abort parsing when length invalid */
+    if (data_len < len + 2) {
+      break;
+    }
+
+    err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
+    if (err != ZX_OK || len < tlv_len) {
+      break;
+    }
+
+    switch (type) {
+      case BRCMF_FWS_TYPE_COMP_TXSTATUS:
+        break;
+      case BRCMF_FWS_TYPE_HOST_REORDER_RXPKTS:
+        rd = (struct brcmf_netbuf_reorder_data*)netbuf->workspace;
+        rd->reorder = data;
+        break;
+      case BRCMF_FWS_TYPE_MACDESC_ADD:
+      case BRCMF_FWS_TYPE_MACDESC_DEL:
+        brcmf_fws_macdesc_indicate(fws, type, data);
+        break;
+      case BRCMF_FWS_TYPE_MAC_OPEN:
+      case BRCMF_FWS_TYPE_MAC_CLOSE:
+        schedule_status = brcmf_fws_macdesc_state_indicate(fws, type, data);
+        break;
+      case BRCMF_FWS_TYPE_INTERFACE_OPEN:
+      case BRCMF_FWS_TYPE_INTERFACE_CLOSE:
+        schedule_status = brcmf_fws_interface_state_indicate(fws, type, data);
+        break;
+      case BRCMF_FWS_TYPE_MAC_REQUEST_CREDIT:
+      case BRCMF_FWS_TYPE_MAC_REQUEST_PACKET:
+        schedule_status = brcmf_fws_request_indicate(fws, type, data);
+        break;
+      case BRCMF_FWS_TYPE_TXSTATUS:
+        // TODO(cphoenix): Should this set schedule_status?
+        brcmf_fws_txstatus_indicate(fws, data);
+        break;
+      case BRCMF_FWS_TYPE_FIFO_CREDITBACK:
+        schedule_status = brcmf_fws_fifocreditback_indicate(fws, data);
+        break;
+      case BRCMF_FWS_TYPE_RSSI:
+        brcmf_fws_rssi_indicate(fws, *data);
+        break;
+      case BRCMF_FWS_TYPE_TRANS_ID:
+        brcmf_fws_dbg_seqnum_check(fws, data);
+        break;
+      case BRCMF_FWS_TYPE_PKTTAG:
+      case BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP:
+      default:
+        fws->stats.tlv_invalid_type++;
+        break;
+    }
+    signal_data += len + 2;
+    data_len -= len + 2;
+  }
+
+  if (data_len != 0) {
+    fws->stats.tlv_parse_failed++;
+  }
+
+  if (schedule_status == BRCMF_FWS_SCHEDULE) {
+    brcmf_fws_schedule_deq(fws);
+  }
+
+  /* signalling processing result does
+   * not affect the actual ethernet packet.
+   */
+  brcmf_netbuf_shrink_head(netbuf, siglen);
+
+  /* this may be a signal-only packet
+   */
+  if (netbuf->len == 0) {
+    fws->stats.header_only_pkt++;
+  }
 }
 
 static uint8_t brcmf_fws_precommit_netbuf(struct brcmf_fws_info* fws, int fifo,
-                                       struct brcmf_netbuf* p) {
-    struct brcmf_netbuf_workspace* workspace = brcmf_workspace(p);
-    // TODO(cphoenix): workspace->mac and mac_status are often unchecked in this file.
-    // Be more paranoid?
-    struct brcmf_fws_mac_descriptor* entry = workspace->mac;
-    uint8_t flags;
+                                          struct brcmf_netbuf* p) {
+  struct brcmf_netbuf_workspace* workspace = brcmf_workspace(p);
+  // TODO(cphoenix): workspace->mac and mac_status are often unchecked in this file.
+  // Be more paranoid?
+  struct brcmf_fws_mac_descriptor* entry = workspace->mac;
+  uint8_t flags;
 
-    if (workspace->state != BRCMF_FWS_NETBUFSTATE_SUPPRESSED) {
-        brcmf_netbuf_htod_tag_set_field(p, GENERATION, entry->generation);
-    }
-    flags = BRCMF_FWS_HTOD_FLAG_PKTFROMHOST;
-    if (brcmf_netbuf_if_flags_get_field(p, REQUESTED)) {
-        /*
-         * Indicate that this packet is being sent in response to an
-         * explicit request from the firmware side.
-         */
-        flags |= BRCMF_FWS_HTOD_FLAG_PKT_REQUESTED;
-    }
-    brcmf_netbuf_htod_tag_set_field(p, FLAGS, flags);
-    return brcmf_fws_hdrpush(fws, p);
+  if (workspace->state != BRCMF_FWS_NETBUFSTATE_SUPPRESSED) {
+    brcmf_netbuf_htod_tag_set_field(p, GENERATION, entry->generation);
+  }
+  flags = BRCMF_FWS_HTOD_FLAG_PKTFROMHOST;
+  if (brcmf_netbuf_if_flags_get_field(p, REQUESTED)) {
+    /*
+     * Indicate that this packet is being sent in response to an
+     * explicit request from the firmware side.
+     */
+    flags |= BRCMF_FWS_HTOD_FLAG_PKT_REQUESTED;
+  }
+  brcmf_netbuf_htod_tag_set_field(p, FLAGS, flags);
+  return brcmf_fws_hdrpush(fws, p);
 }
 
 static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct brcmf_netbuf* netbuf,
                                    int fifo) {
-    struct brcmf_fws_mac_descriptor* entry;
-    struct brcmf_netbuf* pktout;
-    int qidx, hslot;
-    zx_status_t rc = ZX_OK;
+  struct brcmf_fws_mac_descriptor* entry;
+  struct brcmf_netbuf* pktout;
+  int qidx, hslot;
+  zx_status_t rc = ZX_OK;
 
-    entry = brcmf_workspace(netbuf)->mac;
-    if (entry->occupied) {
-        qidx = 2 * fifo;
-        if (brcmf_workspace(netbuf)->state == BRCMF_FWS_NETBUFSTATE_SUPPRESSED) {
-            qidx++;
-        }
-
-        pktout = brcmu_pktq_penq_head(&entry->psq, qidx, netbuf);
-        if (pktout == NULL) {
-            BRCMF_ERR("%s queue %d full\n", entry->name, qidx);
-            rc = ZX_ERR_NO_RESOURCES;
-        }
-    } else {
-        BRCMF_ERR("%s entry removed\n", entry->name);
-        rc = ZX_ERR_NOT_FOUND;
+  entry = brcmf_workspace(netbuf)->mac;
+  if (entry->occupied) {
+    qidx = 2 * fifo;
+    if (brcmf_workspace(netbuf)->state == BRCMF_FWS_NETBUFSTATE_SUPPRESSED) {
+      qidx++;
     }
 
-    if (rc != ZX_OK) {
-        fws->stats.rollback_failed++;
-        hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
-        brcmf_fws_txs_process(fws, BRCMF_FWS_TXSTATUS_HOST_TOSSED, hslot, 0, 0);
-    } else {
-        fws->stats.rollback_success++;
-        brcmf_fws_return_credits(fws, fifo, 1);
-        brcmf_fws_macdesc_return_req_credit(netbuf);
+    pktout = brcmu_pktq_penq_head(&entry->psq, qidx, netbuf);
+    if (pktout == NULL) {
+      BRCMF_ERR("%s queue %d full\n", entry->name, qidx);
+      rc = ZX_ERR_NO_RESOURCES;
     }
+  } else {
+    BRCMF_ERR("%s entry removed\n", entry->name);
+    rc = ZX_ERR_NOT_FOUND;
+  }
+
+  if (rc != ZX_OK) {
+    fws->stats.rollback_failed++;
+    hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
+    brcmf_fws_txs_process(fws, BRCMF_FWS_TXSTATUS_HOST_TOSSED, hslot, 0, 0);
+  } else {
+    fws->stats.rollback_success++;
+    brcmf_fws_return_credits(fws, fifo, 1);
+    brcmf_fws_macdesc_return_req_credit(netbuf);
+  }
 }
 
 static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
-    int lender_ac;
+  int lender_ac;
 
-    if (fws->borrow_defer_timestamp > zx_clock_get_monotonic()) {
-        fws->fifo_credit_map &= ~(1 << BRCMF_FWS_FIFO_AC_BE);
-        return ZX_ERR_UNAVAILABLE;
-    }
-
-    for (lender_ac = 0; lender_ac <= BRCMF_FWS_FIFO_AC_VO; lender_ac++) {
-        if (fws->fifo_credit[lender_ac]) {
-            fws->credits_borrowed[lender_ac]++;
-            fws->fifo_credit[lender_ac]--;
-            if (fws->fifo_credit[lender_ac] == 0) {
-                fws->fifo_credit_map &= ~(1 << lender_ac);
-            }
-            fws->fifo_credit_map |= (1 << BRCMF_FWS_FIFO_AC_BE);
-            BRCMF_DBG(DATA, "borrow credit from: %d\n", lender_ac);
-            return ZX_OK;
-        }
-    }
+  if (fws->borrow_defer_timestamp > zx_clock_get_monotonic()) {
     fws->fifo_credit_map &= ~(1 << BRCMF_FWS_FIFO_AC_BE);
     return ZX_ERR_UNAVAILABLE;
+  }
+
+  for (lender_ac = 0; lender_ac <= BRCMF_FWS_FIFO_AC_VO; lender_ac++) {
+    if (fws->fifo_credit[lender_ac]) {
+      fws->credits_borrowed[lender_ac]++;
+      fws->fifo_credit[lender_ac]--;
+      if (fws->fifo_credit[lender_ac] == 0) {
+        fws->fifo_credit_map &= ~(1 << lender_ac);
+      }
+      fws->fifo_credit_map |= (1 << BRCMF_FWS_FIFO_AC_BE);
+      BRCMF_DBG(DATA, "borrow credit from: %d\n", lender_ac);
+      return ZX_OK;
+    }
+  }
+  fws->fifo_credit_map &= ~(1 << BRCMF_FWS_FIFO_AC_BE);
+  return ZX_ERR_UNAVAILABLE;
 }
 
 static zx_status_t brcmf_fws_commit_netbuf(struct brcmf_fws_info* fws, int fifo,
-                                        struct brcmf_netbuf* netbuf) {
-    struct brcmf_netbuf_workspace* workspace = brcmf_workspace(netbuf);
-    struct brcmf_fws_mac_descriptor* entry;
-    zx_status_t rc;
-    uint8_t ifidx;
-    uint8_t data_offset;
+                                           struct brcmf_netbuf* netbuf) {
+  struct brcmf_netbuf_workspace* workspace = brcmf_workspace(netbuf);
+  struct brcmf_fws_mac_descriptor* entry;
+  zx_status_t rc;
+  uint8_t ifidx;
+  uint8_t data_offset;
 
-    if (workspace->mac_status != ZX_OK) {
-        return workspace->mac_status;
-    }
-    entry = workspace->mac;
+  if (workspace->mac_status != ZX_OK) {
+    return workspace->mac_status;
+  }
+  entry = workspace->mac;
 
-    data_offset = brcmf_fws_precommit_netbuf(fws, fifo, netbuf);
-    entry->transit_count++;
+  data_offset = brcmf_fws_precommit_netbuf(fws, fifo, netbuf);
+  entry->transit_count++;
+  if (entry->suppressed) {
+    entry->suppr_transit_count++;
+  }
+  ifidx = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
+  brcmf_fws_unlock(fws);
+  rc = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, netbuf);
+  brcmf_fws_lock(fws);
+  BRCMF_DBG(DATA, "%s flags %X htod %X bus_tx %d\n", entry->name, workspace->if_flags,
+            workspace->htod, rc);
+  if (rc != ZX_OK) {
+    entry->transit_count--;
     if (entry->suppressed) {
-        entry->suppr_transit_count++;
+      entry->suppr_transit_count--;
     }
-    ifidx = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
-    brcmf_fws_unlock(fws);
-    rc = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, netbuf);
-    brcmf_fws_lock(fws);
-    BRCMF_DBG(DATA, "%s flags %X htod %X bus_tx %d\n", entry->name, workspace->if_flags,
-              workspace->htod, rc);
-    if (rc != ZX_OK) {
-        entry->transit_count--;
-        if (entry->suppressed) {
-            entry->suppr_transit_count--;
-        }
-        (void)brcmf_proto_hdrpull(fws->drvr, false, netbuf, NULL);
-        goto rollback;
-    }
+    (void)brcmf_proto_hdrpull(fws->drvr, false, netbuf, NULL);
+    goto rollback;
+  }
 
-    fws->stats.pkt2bus++;
-    fws->stats.send_pkts[fifo]++;
-    if (brcmf_netbuf_if_flags_get_field(netbuf, REQUESTED)) {
-        fws->stats.requested_sent[fifo]++;
-    }
+  fws->stats.pkt2bus++;
+  fws->stats.send_pkts[fifo]++;
+  if (brcmf_netbuf_if_flags_get_field(netbuf, REQUESTED)) {
+    fws->stats.requested_sent[fifo]++;
+  }
 
-    return rc;
+  return rc;
 
 rollback:
-    brcmf_fws_rollback_toq(fws, netbuf, fifo);
-    return rc;
+  brcmf_fws_rollback_toq(fws, netbuf, fifo);
+  return rc;
 }
 
 static zx_status_t brcmf_fws_assign_htod(struct brcmf_fws_info* fws, struct brcmf_netbuf* p,
                                          int fifo) {
-    struct brcmf_netbuf_workspace* workspace = brcmf_workspace(p);
-    zx_status_t rc;
-    int hslot;
+  struct brcmf_netbuf_workspace* workspace = brcmf_workspace(p);
+  zx_status_t rc;
+  int hslot;
 
-    workspace->htod = 0;
-    workspace->htod_seq = 0;
-    hslot = brcmf_fws_hanger_get_free_slot(&fws->hanger);
-    brcmf_netbuf_htod_tag_set_field(p, HSLOT, hslot);
-    brcmf_netbuf_htod_tag_set_field(p, FREERUN, workspace->mac->seq[fifo]);
-    brcmf_netbuf_htod_tag_set_field(p, FIFO, fifo);
-    rc = brcmf_fws_hanger_pushpkt(&fws->hanger, p, hslot);
-    if (rc == ZX_OK) {
-        workspace->mac->seq[fifo]++;
-    } else {
-        fws->stats.generic_error++;
-    }
-    return rc;
+  workspace->htod = 0;
+  workspace->htod_seq = 0;
+  hslot = brcmf_fws_hanger_get_free_slot(&fws->hanger);
+  brcmf_netbuf_htod_tag_set_field(p, HSLOT, hslot);
+  brcmf_netbuf_htod_tag_set_field(p, FREERUN, workspace->mac->seq[fifo]);
+  brcmf_netbuf_htod_tag_set_field(p, FIFO, fifo);
+  rc = brcmf_fws_hanger_pushpkt(&fws->hanger, p, hslot);
+  if (rc == ZX_OK) {
+    workspace->mac->seq[fifo]++;
+  } else {
+    fws->stats.generic_error++;
+  }
+  return rc;
 }
 
 zx_status_t brcmf_fws_process_netbuf(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
-    struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
-    struct brcmf_netbuf_workspace* workspace = brcmf_workspace(netbuf);
-    struct ethhdr* eh = (struct ethhdr*)(netbuf->data);
-    int fifo = BRCMF_FWS_FIFO_BCMC;
-    bool multicast = address_is_multicast(eh->h_dest);
-    zx_status_t rc = ZX_OK;
+  struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
+  struct brcmf_netbuf_workspace* workspace = brcmf_workspace(netbuf);
+  struct ethhdr* eh = (struct ethhdr*)(netbuf->data);
+  int fifo = BRCMF_FWS_FIFO_BCMC;
+  bool multicast = address_is_multicast(eh->h_dest);
+  zx_status_t rc = ZX_OK;
 
-    BRCMF_DBG(DATA, "tx proto=0x%X\n", be16toh(eh->h_proto));
+  BRCMF_DBG(DATA, "tx proto=0x%X\n", be16toh(eh->h_proto));
 
-    /* set control buffer information */
-    workspace->if_flags = 0;
-    workspace->state = BRCMF_FWS_NETBUFSTATE_NEW;
-    brcmf_netbuf_if_flags_set_field(netbuf, INDEX, ifp->ifidx);
-    if (!multicast) {
-        fifo = brcmf_fws_prio2fifo[netbuf->priority];
-    }
+  /* set control buffer information */
+  workspace->if_flags = 0;
+  workspace->state = BRCMF_FWS_NETBUFSTATE_NEW;
+  brcmf_netbuf_if_flags_set_field(netbuf, INDEX, ifp->ifidx);
+  if (!multicast) {
+    fifo = brcmf_fws_prio2fifo[netbuf->priority];
+  }
 
-    brcmf_fws_lock(fws);
-    if (fifo != BRCMF_FWS_FIFO_AC_BE && fifo < BRCMF_FWS_FIFO_BCMC) {
-        fws->borrow_defer_timestamp = zx_clock_get_monotonic() +
-                                      ZX_MSEC(BRCMF_FWS_BORROW_DEFER_PERIOD_MSEC);
-    }
+  brcmf_fws_lock(fws);
+  if (fifo != BRCMF_FWS_FIFO_AC_BE && fifo < BRCMF_FWS_FIFO_BCMC) {
+    fws->borrow_defer_timestamp =
+        zx_clock_get_monotonic() + ZX_MSEC(BRCMF_FWS_BORROW_DEFER_PERIOD_MSEC);
+  }
 
-    workspace->mac_status = brcmf_fws_macdesc_find(fws, ifp, eh->h_dest, &workspace->mac);
-    BRCMF_DBG(DATA, "%s mac %pM multi %d fifo %d\n", workspace->mac->name, eh->h_dest, multicast,
-              fifo);
-    if (brcmf_fws_assign_htod(fws, netbuf, fifo) == ZX_OK) {
-        brcmf_fws_enq(fws, BRCMF_FWS_NETBUFSTATE_DELAYED, fifo, netbuf);
-        brcmf_fws_schedule_deq(fws);
-    } else {
-        BRCMF_ERR("drop netbuf: no hanger slot\n");
-        brcmf_txfinalize(ifp, netbuf, false);
-        rc = ZX_ERR_NO_MEMORY;
-    }
-    brcmf_fws_unlock(fws);
+  workspace->mac_status = brcmf_fws_macdesc_find(fws, ifp, eh->h_dest, &workspace->mac);
+  BRCMF_DBG(DATA, "%s mac %pM multi %d fifo %d\n", workspace->mac->name, eh->h_dest, multicast,
+            fifo);
+  if (brcmf_fws_assign_htod(fws, netbuf, fifo) == ZX_OK) {
+    brcmf_fws_enq(fws, BRCMF_FWS_NETBUFSTATE_DELAYED, fifo, netbuf);
+    brcmf_fws_schedule_deq(fws);
+  } else {
+    BRCMF_ERR("drop netbuf: no hanger slot\n");
+    brcmf_txfinalize(ifp, netbuf, false);
+    rc = ZX_ERR_NO_MEMORY;
+  }
+  brcmf_fws_unlock(fws);
 
-    return rc;
+  return rc;
 }
 
 void brcmf_fws_reset_interface(struct brcmf_if* ifp) {
-    struct brcmf_fws_mac_descriptor* entry = ifp->fws_desc;
+  struct brcmf_fws_mac_descriptor* entry = ifp->fws_desc;
 
-    BRCMF_DBG(TRACE, "enter: bsscfgidx=%d\n", ifp->bsscfgidx);
-    if (!entry) {
-        return;
-    }
+  BRCMF_DBG(TRACE, "enter: bsscfgidx=%d\n", ifp->bsscfgidx);
+  if (!entry) {
+    return;
+  }
 
-    brcmf_fws_macdesc_init(entry, ifp->mac_addr, ifp->ifidx);
+  brcmf_fws_macdesc_init(entry, ifp->mac_addr, ifp->ifidx);
 }
 
 void brcmf_fws_add_interface(struct brcmf_if* ifp) {
-    struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
-    struct brcmf_fws_mac_descriptor* entry;
+  struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
+  struct brcmf_fws_mac_descriptor* entry;
 
-    if (!ifp->ndev || !brcmf_fws_queue_netbufs(fws)) {
-        return;
-    }
+  if (!ifp->ndev || !brcmf_fws_queue_netbufs(fws)) {
+    return;
+  }
 
-    entry = &fws->desc.iface[ifp->ifidx];
-    ifp->fws_desc = entry;
-    brcmf_fws_macdesc_init(entry, ifp->mac_addr, ifp->ifidx);
-    brcmf_fws_macdesc_set_name(fws, entry);
-    brcmu_pktq_init(&entry->psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
-    BRCMF_DBG(TRACE, "added %s\n", entry->name);
+  entry = &fws->desc.iface[ifp->ifidx];
+  ifp->fws_desc = entry;
+  brcmf_fws_macdesc_init(entry, ifp->mac_addr, ifp->ifidx);
+  brcmf_fws_macdesc_set_name(fws, entry);
+  brcmu_pktq_init(&entry->psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
+  BRCMF_DBG(TRACE, "added %s\n", entry->name);
 }
 
 void brcmf_fws_del_interface(struct brcmf_if* ifp) {
-    struct brcmf_fws_mac_descriptor* entry = ifp->fws_desc;
-    struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
+  struct brcmf_fws_mac_descriptor* entry = ifp->fws_desc;
+  struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
 
-    if (!entry) {
-        return;
-    }
+  if (!entry) {
+    return;
+  }
 
-    brcmf_fws_lock(fws);
-    ifp->fws_desc = NULL;
-    BRCMF_DBG(TRACE, "deleting %s\n", entry->name);
-    brcmf_fws_macdesc_deinit(entry);
-    brcmf_fws_cleanup(fws, ifp->ifidx);
-    brcmf_fws_unlock(fws);
+  brcmf_fws_lock(fws);
+  ifp->fws_desc = NULL;
+  BRCMF_DBG(TRACE, "deleting %s\n", entry->name);
+  brcmf_fws_macdesc_deinit(entry);
+  brcmf_fws_cleanup(fws, ifp->ifidx);
+  brcmf_fws_unlock(fws);
 }
 
 static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
-    struct brcmf_fws_info* fws;
-    struct brcmf_pub* drvr;
-    struct brcmf_netbuf* netbuf;
-    int fifo;
-    uint32_t hslot;
-    uint32_t ifidx;
-    zx_status_t ret;
+  struct brcmf_fws_info* fws;
+  struct brcmf_pub* drvr;
+  struct brcmf_netbuf* netbuf;
+  int fifo;
+  uint32_t hslot;
+  uint32_t ifidx;
+  zx_status_t ret;
 
-    fws = containerof(worker, struct brcmf_fws_info, fws_dequeue_work);
-    drvr = fws->drvr;
+  fws = containerof(worker, struct brcmf_fws_info, fws_dequeue_work);
+  drvr = fws->drvr;
 
-    brcmf_fws_lock(fws);
-    for (fifo = BRCMF_FWS_FIFO_BCMC; fifo >= 0 && !fws->bus_flow_blocked; fifo--) {
-        if (!brcmf_fws_fc_active(fws)) {
-            while ((netbuf = brcmf_fws_deq(fws, fifo)) != NULL) {
-                hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
-                brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, true);
-                ifidx = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
-                /* Use proto layer to send data frame */
-                brcmf_fws_unlock(fws);
-                ret = brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
-                brcmf_fws_lock(fws);
-                if (ret != ZX_OK) {
-                    brcmf_txfinalize(brcmf_get_ifp(drvr, ifidx), netbuf, false);
-                }
-                if (fws->bus_flow_blocked) {
-                    break;
-                }
-            }
-            continue;
+  brcmf_fws_lock(fws);
+  for (fifo = BRCMF_FWS_FIFO_BCMC; fifo >= 0 && !fws->bus_flow_blocked; fifo--) {
+    if (!brcmf_fws_fc_active(fws)) {
+      while ((netbuf = brcmf_fws_deq(fws, fifo)) != NULL) {
+        hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
+        brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, true);
+        ifidx = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
+        /* Use proto layer to send data frame */
+        brcmf_fws_unlock(fws);
+        ret = brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
+        brcmf_fws_lock(fws);
+        if (ret != ZX_OK) {
+          brcmf_txfinalize(brcmf_get_ifp(drvr, ifidx), netbuf, false);
         }
-        while ((fws->fifo_credit[fifo]) ||
-                ((!fws->bcmc_credit_check) && (fifo == BRCMF_FWS_FIFO_BCMC))) {
-            netbuf = brcmf_fws_deq(fws, fifo);
-            if (!netbuf) {
-                break;
-            }
-            fws->fifo_credit[fifo]--;
-            if (brcmf_fws_commit_netbuf(fws, fifo, netbuf) != ZX_OK) {
-                break;
-            }
-            if (fws->bus_flow_blocked) {
-                break;
-            }
+        if (fws->bus_flow_blocked) {
+          break;
         }
-        if ((fifo == BRCMF_FWS_FIFO_AC_BE) && (fws->fifo_credit[fifo] == 0) &&
-                (!fws->bus_flow_blocked)) {
-            while (brcmf_fws_borrow_credit(fws) == ZX_OK) {
-                netbuf = brcmf_fws_deq(fws, fifo);
-                if (!netbuf) {
-                    brcmf_fws_return_credits(fws, fifo, 1);
-                    break;
-                }
-                if (brcmf_fws_commit_netbuf(fws, fifo, netbuf) != ZX_OK) {
-                    break;
-                }
-                if (fws->bus_flow_blocked) {
-                    break;
-                }
-            }
-        }
+      }
+      continue;
     }
-    brcmf_fws_unlock(fws);
+    while ((fws->fifo_credit[fifo]) ||
+           ((!fws->bcmc_credit_check) && (fifo == BRCMF_FWS_FIFO_BCMC))) {
+      netbuf = brcmf_fws_deq(fws, fifo);
+      if (!netbuf) {
+        break;
+      }
+      fws->fifo_credit[fifo]--;
+      if (brcmf_fws_commit_netbuf(fws, fifo, netbuf) != ZX_OK) {
+        break;
+      }
+      if (fws->bus_flow_blocked) {
+        break;
+      }
+    }
+    if ((fifo == BRCMF_FWS_FIFO_AC_BE) && (fws->fifo_credit[fifo] == 0) &&
+        (!fws->bus_flow_blocked)) {
+      while (brcmf_fws_borrow_credit(fws) == ZX_OK) {
+        netbuf = brcmf_fws_deq(fws, fifo);
+        if (!netbuf) {
+          brcmf_fws_return_credits(fws, fifo, 1);
+          break;
+        }
+        if (brcmf_fws_commit_netbuf(fws, fifo, netbuf) != ZX_OK) {
+          break;
+        }
+        if (fws->bus_flow_blocked) {
+          break;
+        }
+      }
+    }
+  }
+  brcmf_fws_unlock(fws);
 }
 
 zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws_out) {
-    struct brcmf_fws_info* fws;
-    struct brcmf_if* ifp;
-    uint32_t tlv = BRCMF_FWS_FLAGS_RSSI_SIGNALS;
-    zx_status_t rc;
-    uint32_t mode;
+  struct brcmf_fws_info* fws;
+  struct brcmf_if* ifp;
+  uint32_t tlv = BRCMF_FWS_FLAGS_RSSI_SIGNALS;
+  zx_status_t rc;
+  uint32_t mode;
 
+  if (fws_out) {
+    *fws_out = NULL;
+  }
+
+  fws = static_cast<decltype(fws)>(calloc(1, sizeof(*fws)));
+  if (!fws) {
+    rc = ZX_ERR_NO_MEMORY;
+    goto fail;
+  }
+
+  // spin_lock_init(&fws->spinlock);
+
+  /* store drvr reference */
+  fws->drvr = drvr;
+  fws->fcmode = static_cast<brcmf_fws_fcmode>(drvr->settings->fcmode);
+
+  if ((drvr->bus_if->always_use_fws_queue == false) && (fws->fcmode == BRCMF_FWS_FCMODE_NONE)) {
+    fws->avoid_queueing = true;
+    BRCMF_DBG(INFO, "FWS queueing will be avoided\n");
     if (fws_out) {
-        *fws_out = NULL;
-    }
-
-    fws = static_cast<decltype(fws)>(calloc(1, sizeof(*fws)));
-    if (!fws) {
-        rc = ZX_ERR_NO_MEMORY;
-        goto fail;
-    }
-
-    //spin_lock_init(&fws->spinlock);
-
-    /* store drvr reference */
-    fws->drvr = drvr;
-    fws->fcmode = static_cast<brcmf_fws_fcmode>(drvr->settings->fcmode);
-
-    if ((drvr->bus_if->always_use_fws_queue == false) && (fws->fcmode == BRCMF_FWS_FCMODE_NONE)) {
-        fws->avoid_queueing = true;
-        BRCMF_DBG(INFO, "FWS queueing will be avoided\n");
-        if (fws_out) {
-            *fws_out = fws;
-        }
-        return ZX_OK;
-    }
-
-    fws->fws_wq = workqueue_create("brcmf_fws_wq");
-    if (fws->fws_wq == NULL) {
-        BRCMF_ERR("workqueue creation failed\n");
-        rc = ZX_ERR_NO_RESOURCES;
-        goto fail;
-    }
-    workqueue_init_work(&fws->fws_dequeue_work, brcmf_fws_dequeue_worker);
-
-    /* enable firmware signalling if fcmode active */
-    if (fws->fcmode != BRCMF_FWS_FCMODE_NONE)
-        tlv |= BRCMF_FWS_FLAGS_XONXOFF_SIGNALS | BRCMF_FWS_FLAGS_CREDIT_STATUS_SIGNALS |
-               BRCMF_FWS_FLAGS_HOST_PROPTXSTATUS_ACTIVE | BRCMF_FWS_FLAGS_HOST_RXREORDER_ACTIVE;
-
-    rc = brcmf_fweh_register(drvr, BRCMF_E_FIFO_CREDIT_MAP, brcmf_fws_notify_credit_map);
-    if (rc != ZX_OK) {
-        BRCMF_ERR("register credit map handler failed\n");
-        goto fail;
-    }
-    rc = brcmf_fweh_register(drvr, BRCMF_E_BCMC_CREDIT_SUPPORT,
-                             brcmf_fws_notify_bcmc_credit_support);
-    if (rc != ZX_OK) {
-        BRCMF_ERR("register bcmc credit handler failed\n");
-        brcmf_fweh_unregister(drvr, BRCMF_E_FIFO_CREDIT_MAP);
-        goto fail;
-    }
-
-    /* Setting the iovar may fail if feature is unsupported
-     * so leave the rc as is so driver initialization can
-     * continue. Set mode back to none indicating not enabled.
-     */
-    fws->fw_signals = true;
-    ifp = brcmf_get_ifp(drvr, 0);
-    if (brcmf_fil_iovar_int_set(ifp, "tlv", tlv, nullptr) != ZX_OK) {
-        BRCMF_ERR("failed to set bdcv2 tlv signaling\n");
-        fws->fcmode = BRCMF_FWS_FCMODE_NONE;
-        fws->fw_signals = false;
-    }
-
-    if (brcmf_fil_iovar_int_set(ifp, "ampdu_hostreorder", 1, nullptr) != ZX_OK) {
-        BRCMF_DBG(INFO, "enabling AMPDU host-reorder failed\n");
-    }
-
-    /* Enable seq number reuse, if supported */
-    if (brcmf_fil_iovar_int_get(ifp, "wlfc_mode", &mode, nullptr) == ZX_OK) {
-        if (BRCMF_FWS_MODE_GET_REUSESEQ(mode)) {
-            mode = 0;
-            BRCMF_FWS_MODE_SET_REUSESEQ(mode, 1);
-            if (brcmf_fil_iovar_int_set(ifp, "wlfc_mode", mode, nullptr) == ZX_OK) {
-                BRCMF_FWS_MODE_SET_REUSESEQ(fws->mode, 1);
-            }
-        }
-    }
-
-    brcmf_fws_hanger_init(&fws->hanger);
-    brcmf_fws_macdesc_init(&fws->desc.other, NULL, 0);
-    brcmf_fws_macdesc_set_name(fws, &fws->desc.other);
-    BRCMF_DBG(INFO, "added %s\n", fws->desc.other.name);
-    brcmu_pktq_init(&fws->desc.other.psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
-
-    BRCMF_DBG(INFO, "%s bdcv2 tlv signaling [%x]\n", fws->fw_signals ? "enabled" : "disabled", tlv);
-    if (fws_out) {
-        *fws_out = fws;
+      *fws_out = fws;
     }
     return ZX_OK;
+  }
+
+  fws->fws_wq = workqueue_create("brcmf_fws_wq");
+  if (fws->fws_wq == NULL) {
+    BRCMF_ERR("workqueue creation failed\n");
+    rc = ZX_ERR_NO_RESOURCES;
+    goto fail;
+  }
+  workqueue_init_work(&fws->fws_dequeue_work, brcmf_fws_dequeue_worker);
+
+  /* enable firmware signalling if fcmode active */
+  if (fws->fcmode != BRCMF_FWS_FCMODE_NONE)
+    tlv |= BRCMF_FWS_FLAGS_XONXOFF_SIGNALS | BRCMF_FWS_FLAGS_CREDIT_STATUS_SIGNALS |
+           BRCMF_FWS_FLAGS_HOST_PROPTXSTATUS_ACTIVE | BRCMF_FWS_FLAGS_HOST_RXREORDER_ACTIVE;
+
+  rc = brcmf_fweh_register(drvr, BRCMF_E_FIFO_CREDIT_MAP, brcmf_fws_notify_credit_map);
+  if (rc != ZX_OK) {
+    BRCMF_ERR("register credit map handler failed\n");
+    goto fail;
+  }
+  rc = brcmf_fweh_register(drvr, BRCMF_E_BCMC_CREDIT_SUPPORT, brcmf_fws_notify_bcmc_credit_support);
+  if (rc != ZX_OK) {
+    BRCMF_ERR("register bcmc credit handler failed\n");
+    brcmf_fweh_unregister(drvr, BRCMF_E_FIFO_CREDIT_MAP);
+    goto fail;
+  }
+
+  /* Setting the iovar may fail if feature is unsupported
+   * so leave the rc as is so driver initialization can
+   * continue. Set mode back to none indicating not enabled.
+   */
+  fws->fw_signals = true;
+  ifp = brcmf_get_ifp(drvr, 0);
+  if (brcmf_fil_iovar_int_set(ifp, "tlv", tlv, nullptr) != ZX_OK) {
+    BRCMF_ERR("failed to set bdcv2 tlv signaling\n");
+    fws->fcmode = BRCMF_FWS_FCMODE_NONE;
+    fws->fw_signals = false;
+  }
+
+  if (brcmf_fil_iovar_int_set(ifp, "ampdu_hostreorder", 1, nullptr) != ZX_OK) {
+    BRCMF_DBG(INFO, "enabling AMPDU host-reorder failed\n");
+  }
+
+  /* Enable seq number reuse, if supported */
+  if (brcmf_fil_iovar_int_get(ifp, "wlfc_mode", &mode, nullptr) == ZX_OK) {
+    if (BRCMF_FWS_MODE_GET_REUSESEQ(mode)) {
+      mode = 0;
+      BRCMF_FWS_MODE_SET_REUSESEQ(mode, 1);
+      if (brcmf_fil_iovar_int_set(ifp, "wlfc_mode", mode, nullptr) == ZX_OK) {
+        BRCMF_FWS_MODE_SET_REUSESEQ(fws->mode, 1);
+      }
+    }
+  }
+
+  brcmf_fws_hanger_init(&fws->hanger);
+  brcmf_fws_macdesc_init(&fws->desc.other, NULL, 0);
+  brcmf_fws_macdesc_set_name(fws, &fws->desc.other);
+  BRCMF_DBG(INFO, "added %s\n", fws->desc.other.name);
+  brcmu_pktq_init(&fws->desc.other.psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
+
+  BRCMF_DBG(INFO, "%s bdcv2 tlv signaling [%x]\n", fws->fw_signals ? "enabled" : "disabled", tlv);
+  if (fws_out) {
+    *fws_out = fws;
+  }
+  return ZX_OK;
 
 fail:
-    brcmf_fws_detach(fws);
-    return rc;
+  brcmf_fws_detach(fws);
+  return rc;
 }
 
 void brcmf_fws_detach(struct brcmf_fws_info* fws) {
-    if (!fws) {
-        return;
-    }
+  if (!fws) {
+    return;
+  }
 
-    if (fws->fws_wq) {
-        workqueue_destroy(fws->fws_wq);
-    }
+  if (fws->fws_wq) {
+    workqueue_destroy(fws->fws_wq);
+  }
 
-    /* cleanup */
-    brcmf_fws_lock(fws);
-    brcmf_fws_cleanup(fws, -1);
-    brcmf_fws_unlock(fws);
+  /* cleanup */
+  brcmf_fws_lock(fws);
+  brcmf_fws_cleanup(fws, -1);
+  brcmf_fws_unlock(fws);
 
-    /* free top structure */
-    free(fws);
+  /* free top structure */
+  free(fws);
 }
 
-bool brcmf_fws_queue_netbufs(struct brcmf_fws_info* fws) {
-    return !fws->avoid_queueing;
-}
+bool brcmf_fws_queue_netbufs(struct brcmf_fws_info* fws) { return !fws->avoid_queueing; }
 
 bool brcmf_fws_fc_active(struct brcmf_fws_info* fws) {
-    if (!fws->creditmap_received) {
-        return false;
-    }
+  if (!fws->creditmap_received) {
+    return false;
+  }
 
-    return fws->fcmode != BRCMF_FWS_FCMODE_NONE;
+  return fws->fcmode != BRCMF_FWS_FCMODE_NONE;
 }
 
 void brcmf_fws_bustxfail(struct brcmf_fws_info* fws, struct brcmf_netbuf* netbuf) {
-    uint32_t hslot;
+  uint32_t hslot;
 
-    if (brcmf_workspace(netbuf)->state == BRCMF_FWS_NETBUFSTATE_TIM) {
-        brcmu_pkt_buf_free_netbuf(netbuf);
-        return;
-    }
-    brcmf_fws_lock(fws);
-    hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
-    brcmf_fws_txs_process(fws, BRCMF_FWS_TXSTATUS_HOST_TOSSED, hslot, 0, 0);
-    brcmf_fws_unlock(fws);
+  if (brcmf_workspace(netbuf)->state == BRCMF_FWS_NETBUFSTATE_TIM) {
+    brcmu_pkt_buf_free_netbuf(netbuf);
+    return;
+  }
+  brcmf_fws_lock(fws);
+  hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
+  brcmf_fws_txs_process(fws, BRCMF_FWS_TXSTATUS_HOST_TOSSED, hslot, 0, 0);
+  brcmf_fws_unlock(fws);
 }
 
 void brcmf_fws_bus_blocked(struct brcmf_pub* drvr, bool flow_blocked) {
-    struct brcmf_fws_info* fws = drvr_to_fws(drvr);
-    struct brcmf_if* ifp;
-    int i;
+  struct brcmf_fws_info* fws = drvr_to_fws(drvr);
+  struct brcmf_if* ifp;
+  int i;
 
-    if (fws->avoid_queueing) {
-        for (i = 0; i < BRCMF_MAX_IFS; i++) {
-            ifp = drvr->iflist[i];
-            if (!ifp || !ifp->ndev) {
-                continue;
-            }
-            brcmf_txflowblock_if(ifp, BRCMF_NETIF_STOP_REASON_FLOW, flow_blocked);
-        }
-    } else {
-        fws->bus_flow_blocked = flow_blocked;
-        if (!flow_blocked) {
-            brcmf_fws_schedule_deq(fws);
-        } else {
-            fws->stats.bus_flow_block++;
-        }
+  if (fws->avoid_queueing) {
+    for (i = 0; i < BRCMF_MAX_IFS; i++) {
+      ifp = drvr->iflist[i];
+      if (!ifp || !ifp->ndev) {
+        continue;
+      }
+      brcmf_txflowblock_if(ifp, BRCMF_NETIF_STOP_REASON_FLOW, flow_blocked);
     }
+  } else {
+    fws->bus_flow_blocked = flow_blocked;
+    if (!flow_blocked) {
+      brcmf_fws_schedule_deq(fws);
+    } else {
+      fws->stats.bus_flow_block++;
+    }
+  }
 }

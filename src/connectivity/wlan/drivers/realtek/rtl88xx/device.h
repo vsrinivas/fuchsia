@@ -18,16 +18,16 @@ namespace rtl88xx {
 // This interface describes an instance of the Realtek chipset. Implementations are specialized on
 // the particular revision of the chipset they support.
 class Device {
-   public:
-    virtual ~Device() = 0;
+ public:
+  virtual ~Device() = 0;
 
-    // Creates and returns a WlanMac instance. Note that the returned instance is owned by a
-    // zx_device_t, and thus its lifetime is managed by devhost.
-    virtual zx_status_t CreateWlanMac(zx_device_t* parent_device, WlanMac** wlan_mac) = 0;
+  // Creates and returns a WlanMac instance. Note that the returned instance is owned by a
+  // zx_device_t, and thus its lifetime is managed by devhost.
+  virtual zx_status_t CreateWlanMac(zx_device_t* parent_device, WlanMac** wlan_mac) = 0;
 
-    // Factory function for Device instances. Returns an instance iff the device on `bus` is a
-    // supported chipset, and the Device can be initialized correctly.
-    static zx_status_t Create(std::unique_ptr<Bus> bus, std::unique_ptr<Device>* device);
+  // Factory function for Device instances. Returns an instance iff the device on `bus` is a
+  // supported chipset, and the Device can be initialized correctly.
+  static zx_status_t Create(std::unique_ptr<Bus> bus, std::unique_ptr<Device>* device);
 };
 
 }  // namespace rtl88xx

@@ -16,21 +16,19 @@ namespace utils {
 // implement a clamping policy in the case of overflow for int64_t.
 
 inline int64_t ClampAdd(int64_t a, int64_t b) {
-    int64_t ret;
-    if (unlikely(add_overflow(a, b, &ret))) {
-        return (b < 0) ? std::numeric_limits<int64_t>::min()
-                       : std::numeric_limits<int64_t>::max();
-    }
-    return ret;
+  int64_t ret;
+  if (unlikely(add_overflow(a, b, &ret))) {
+    return (b < 0) ? std::numeric_limits<int64_t>::min() : std::numeric_limits<int64_t>::max();
+  }
+  return ret;
 }
 
 inline int64_t ClampSub(int64_t a, int64_t b) {
-    int64_t ret;
-    if (unlikely(sub_overflow(a, b, &ret))) {
-        return (b < 0) ? std::numeric_limits<int64_t>::max()
-                       : std::numeric_limits<int64_t>::min();
-    }
-    return ret;
+  int64_t ret;
+  if (unlikely(sub_overflow(a, b, &ret))) {
+    return (b < 0) ? std::numeric_limits<int64_t>::max() : std::numeric_limits<int64_t>::min();
+  }
+  return ret;
 }
 
 }  // namespace utils

@@ -35,4 +35,4 @@ namespace simple_pt {
 
 const char* InsnClassName(enum pt_insn_class iclass);
 
-}  // namespace intel_processor_trace
+}  // namespace simple_pt

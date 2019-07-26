@@ -53,9 +53,7 @@ TEST(ScopedTaskRunnerTest, TaskWithMoveOnlyCapture) {
   bool called = false;
   ScopedTaskRunner tasks;
   MoveOnly move_only{true};
-  tasks.MakeScoped([&called, move_only = std::move(move_only)] {
-    called = move_only.called;
-  })();
+  tasks.MakeScoped([&called, move_only = std::move(move_only)] { called = move_only.called; })();
   EXPECT_TRUE(called);
 }
 

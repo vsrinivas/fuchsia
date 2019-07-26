@@ -22,29 +22,24 @@
 
 #define CMDLINE_MAX PAGE_SIZE
 
-int boot_kernel(efi_handle img, efi_system_table* sys,
-                void* image, size_t sz,
-                void* ramdisk, size_t rsz);
+int boot_kernel(efi_handle img, efi_system_table* sys, void* image, size_t sz, void* ramdisk,
+                size_t rsz);
 
 uint64_t find_acpi_root(efi_handle img, efi_system_table* sys);
 uint64_t find_smbios(efi_handle img, efi_system_table* sys);
 
 uint32_t get_zx_pixel_format(efi_graphics_output_protocol* gop);
 
-int boot_deprecated(efi_handle img, efi_system_table* sys,
-                    void* image, size_t sz,
-                    void* ramdisk, size_t rsz,
-                    void* cmdline, size_t csz);
+int boot_deprecated(efi_handle img, efi_system_table* sys, void* image, size_t sz, void* ramdisk,
+                    size_t rsz, void* cmdline, size_t csz);
 
-int zedboot(efi_handle img, efi_system_table* sys,
-            void* image, size_t sz);
+int zedboot(efi_handle img, efi_system_table* sys, void* image, size_t sz);
 
 #define IMAGE_INVALID 0
-#define IMAGE_EMPTY   1
-#define IMAGE_KERNEL  2
+#define IMAGE_EMPTY 1
+#define IMAGE_KERNEL 2
 #define IMAGE_RAMDISK 3
-#define IMAGE_COMBO   4
-
+#define IMAGE_COMBO 4
 
 unsigned identify_image(void* image, size_t sz);
 
@@ -53,9 +48,8 @@ unsigned identify_image(void* image, size_t sz);
 // otherwise returns 0
 size_t image_getsize(void* imageheader, size_t sz);
 
-
-void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* sz, const uint8_t* guid_value, const char* guid_name);
-
+void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* sz,
+                           const uint8_t* guid_value, const char* guid_name);
 
 // Where to start the kernel from
 extern size_t kernel_zone_size;

@@ -41,18 +41,10 @@ class StreamState {
   void SendCloseAck(const Status& status);
   void ForceClose(const Status& status);
 
-  bool IsOpenForSending() const {
-    return StateIsOpenForSending(kernel_.state());
-  }
-  bool IsOpenForReceiving() const {
-    return StateIsOpenForReceiving(kernel_.state());
-  }
-  bool IsClosedForSending() const {
-    return StateIsClosedForSending(kernel_.state());
-  }
-  bool IsClosedForReceiving() const {
-    return StateIsClosedForReceiving(kernel_.state());
-  }
+  bool IsOpenForSending() const { return StateIsOpenForSending(kernel_.state()); }
+  bool IsOpenForReceiving() const { return StateIsOpenForReceiving(kernel_.state()); }
+  bool IsClosedForSending() const { return StateIsClosedForSending(kernel_.state()); }
+  bool IsClosedForReceiving() const { return StateIsClosedForReceiving(kernel_.state()); }
   bool CanBeginOp() const { return StateCanBeginOp(kernel_.state()); }
   bool CanBeginSend() const { return StateCanBeginSend(kernel_.state()); }
 
@@ -112,13 +104,9 @@ class StreamState {
 
   // Projection operators
   static bool StateIsOpenForSending(State state);
-  static bool StateIsClosedForSending(State state) {
-    return !StateIsOpenForSending(state);
-  }
+  static bool StateIsClosedForSending(State state) { return !StateIsOpenForSending(state); }
   static bool StateIsOpenForReceiving(State state);
-  static bool StateIsClosedForReceiving(State state) {
-    return !StateIsOpenForReceiving(state);
-  }
+  static bool StateIsClosedForReceiving(State state) { return !StateIsOpenForReceiving(state); }
   static bool StateIsClosed(State state);
   static bool StateCanBeginSend(State state);
   static bool StateCanBeginOp(State state);

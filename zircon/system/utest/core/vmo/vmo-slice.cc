@@ -111,8 +111,7 @@ TEST(VmoSliceTestCase, NonSlice) {
             vmo.create_child(ZX_VMO_CHILD_SLICE, PAGE_SIZE, PAGE_SIZE * 2, &slice_vmo));
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
             vmo.create_child(ZX_VMO_CHILD_SLICE, PAGE_SIZE * 2, PAGE_SIZE, &slice_vmo));
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
-            vmo.create_child(ZX_VMO_CHILD_SLICE, 0, UINT64_MAX, &slice_vmo));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.create_child(ZX_VMO_CHILD_SLICE, 0, UINT64_MAX, &slice_vmo));
   const uint64_t nearly_int_max = UINT64_MAX - PAGE_SIZE + 1;
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
             vmo.create_child(ZX_VMO_CHILD_SLICE, 0, nearly_int_max, &slice_vmo));
@@ -122,7 +121,6 @@ TEST(VmoSliceTestCase, NonSlice) {
             vmo.create_child(ZX_VMO_CHILD_SLICE, nearly_int_max, nearly_int_max, &slice_vmo));
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
             vmo.create_child(ZX_VMO_CHILD_SLICE, nearly_int_max, UINT64_MAX, &slice_vmo));
-
 }
 
 TEST(VmoSliceTestCase, NonResizable) {

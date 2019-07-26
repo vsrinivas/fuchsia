@@ -26,20 +26,17 @@ struct NonnullableChannelMessage {
   alignas(FIDL_ALIGNMENT) fidl_message_header_t header;
   zx::channel channel;
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxNumHandles = 1;
+  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 1;
 
   static constexpr uint32_t PrimarySize =
       FIDL_ALIGN(sizeof(fidl_message_header_t)) + FIDL_ALIGN(sizeof(zx::channel));
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
 
   static constexpr const fidl_type_t* Type = &NonnullableChannelMessageType;
 
   static bool MakeDecodedMessageHelper(
-      fidl::BytePart buffer,
-      fidl::DecodedMessage<NonnullableChannelMessage>* out_decoded_message,
+      fidl::BytePart buffer, fidl::DecodedMessage<NonnullableChannelMessage>* out_decoded_message,
       zx::channel* out_channel);
 };
 
@@ -52,35 +49,28 @@ const fidl_type_t NonnullableChannelMessageType = fidl_type_t(
     fidl::FidlCodedStruct(NonnullableChannelMessageFields, /* field_count */ 1,
                           sizeof(NonnullableChannelMessage), "NonnullableChannelMessage"));
 
-
 extern const fidl_type_t InlinePODStructType;
 
 // A message with a uint64_t.
 struct InlinePODStruct {
   uint64_t payload;
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxNumHandles = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
 
   static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
 
   static constexpr const fidl_type_t* Type = &InlinePODStructType;
 
-  static bool MakeDecodedMessageHelper(
-      fidl::BytePart buffer,
-      uint64_t payload,
-      fidl::DecodedMessage<InlinePODStruct>* out_decoded_message);
+  static bool MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t payload,
+                                       fidl::DecodedMessage<InlinePODStruct>* out_decoded_message);
 };
 
 // Full-width primitives do not need coding tables.
 const fidl::FidlStructField InlinePODStructStructFields[] = {};
-const fidl_type_t InlinePODStructType =
-    fidl_type_t(fidl::FidlCodedStruct(InlinePODStructStructFields, 0,
-                                      sizeof(InlinePODStruct), "InlinePODStruct"));
-
+const fidl_type_t InlinePODStructType = fidl_type_t(fidl::FidlCodedStruct(
+    InlinePODStructStructFields, 0, sizeof(InlinePODStruct), "InlinePODStruct"));
 
 extern const fidl_type_t OutOfLineMessageType;
 
@@ -89,21 +79,18 @@ struct OutOfLineMessage {
   alignas(FIDL_ALIGNMENT) fidl_message_header_t header;
   InlinePODStruct* optional;
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxNumHandles = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
 
   static constexpr uint32_t PrimarySize =
       FIDL_ALIGN(sizeof(fidl_message_header_t)) + FIDL_ALIGN(sizeof(InlinePODStruct*));
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 8;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
 
   static constexpr const fidl_type_t* Type = &OutOfLineMessageType;
 
-  static bool MakeDecodedMessageHelper(
-      fidl::BytePart buffer,
-      std::optional<uint64_t> optional_field,
-      fidl::DecodedMessage<OutOfLineMessage>* out_decoded_message);
+  static bool MakeDecodedMessageHelper(fidl::BytePart buffer,
+                                       std::optional<uint64_t> optional_field,
+                                       fidl::DecodedMessage<OutOfLineMessage>* out_decoded_message);
 };
 
 const fidl_type_t OptionalPointerType =
@@ -111,10 +98,8 @@ const fidl_type_t OptionalPointerType =
 const fidl::FidlStructField OutOfLineMessageTypeFields[] = {
     fidl::FidlStructField(&OptionalPointerType, offsetof(OutOfLineMessage, optional), 0),
 };
-const fidl_type_t OutOfLineMessageType = fidl_type_t(
-    fidl::FidlCodedStruct(OutOfLineMessageTypeFields, /* field_count */ 1,
-                          sizeof(OutOfLineMessage), "OutOfLineMessage"));
-
+const fidl_type_t OutOfLineMessageType = fidl_type_t(fidl::FidlCodedStruct(
+    OutOfLineMessageTypeFields, /* field_count */ 1, sizeof(OutOfLineMessage), "OutOfLineMessage"));
 
 extern const fidl_type_t LargeStructType;
 
@@ -123,27 +108,22 @@ struct LargeStruct {
   // 4096 * 8 = 32 KB
   fidl::Array<uint64_t, 4096> payload;
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxNumHandles = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
 
   static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
 
   static constexpr const fidl_type_t* Type = &LargeStructType;
 
-  static bool MakeDecodedMessageHelper(
-      fidl::BytePart buffer,
-      uint64_t fill,
-      fidl::DecodedMessage<LargeStruct>* out_decoded_message);
+  static bool MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
+                                       fidl::DecodedMessage<LargeStruct>* out_decoded_message);
 };
 
 // Full-width primitives do not need coding tables.
 const fidl::FidlStructField LargeStructStructFields[] = {};
-const fidl_type_t LargeStructType =
-    fidl_type_t(fidl::FidlCodedStruct(LargeStructStructFields, 0,
-                                      sizeof(LargeStruct), "LargeStruct"));
+const fidl_type_t LargeStructType = fidl_type_t(
+    fidl::FidlCodedStruct(LargeStructStructFields, 0, sizeof(LargeStruct), "LargeStruct"));
 
 // These two structs are used to test the stack/heap allocation selection in
 // fidl::internal::ResponseStorage
@@ -151,25 +131,19 @@ const fidl_type_t LargeStructType =
 struct StructOf512Bytes {
   fidl::Array<uint8_t, 512> payload;
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxNumHandles = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  [[maybe_unused]]
-  static constexpr const fidl_type_t* Type = nullptr;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr const fidl_type_t* Type = nullptr;
 };
 
 struct StructOf513Bytes {
   fidl::Array<uint8_t, 513> payload;
 
-  [[maybe_unused]]
-  static constexpr uint32_t MaxNumHandles = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  [[maybe_unused]]
-  static constexpr const fidl_type_t* Type = nullptr;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr const fidl_type_t* Type = nullptr;
 };
 
 }  // namespace
@@ -437,8 +411,7 @@ class MySyncCall;
 // Helper to populate a OwnedSyncCallBase<NonnullableChannelMessage> with a decoded message,
 // as if receiving a FIDL reply.
 bool NonnullableChannelMessage::MakeDecodedMessageHelper(
-    fidl::BytePart buffer,
-    fidl::DecodedMessage<NonnullableChannelMessage>* out_decoded_message,
+    fidl::BytePart buffer, fidl::DecodedMessage<NonnullableChannelMessage>* out_decoded_message,
     zx::channel* out_channel) {
   BEGIN_HELPER;
 
@@ -474,10 +447,8 @@ class MySyncCall<NonnullableChannelMessage>
  public:
   explicit MySyncCall(zx::channel* out_channel) {
     fidl::DecodedMessage<NonnullableChannelMessage> decoded_message;
-    EXPECT_TRUE(NonnullableChannelMessage::MakeDecodedMessageHelper(
-        Super::response_buffer(),
-        &decoded_message,
-        out_channel));
+    EXPECT_TRUE(NonnullableChannelMessage::MakeDecodedMessageHelper(Super::response_buffer(),
+                                                                    &decoded_message, out_channel));
     Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
   }
   ~MySyncCall() = default;
@@ -491,8 +462,7 @@ class MySyncCall<NonnullableChannelMessage>
 // Helper to populate a OwnedSyncCallBase<InlinePODStruct> with a decoded message,
 // as if receiving a FIDL reply.
 bool InlinePODStruct::MakeDecodedMessageHelper(
-    fidl::BytePart buffer,
-    uint64_t payload,
+    fidl::BytePart buffer, uint64_t payload,
     fidl::DecodedMessage<InlinePODStruct>* out_decoded_message) {
   BEGIN_HELPER;
 
@@ -516,17 +486,14 @@ bool InlinePODStruct::MakeDecodedMessageHelper(
 // OwningSyncCallWithPODTest below.
 // This is similar to the llcpp codegen output.
 template <>
-class MySyncCall<InlinePODStruct>
-    : private fidl::internal::OwnedSyncCallBase<InlinePODStruct> {
+class MySyncCall<InlinePODStruct> : private fidl::internal::OwnedSyncCallBase<InlinePODStruct> {
   using Super = fidl::internal::OwnedSyncCallBase<InlinePODStruct>;
 
  public:
   explicit MySyncCall(uint64_t payload) {
     fidl::DecodedMessage<InlinePODStruct> decoded_message;
-    EXPECT_TRUE(InlinePODStruct::MakeDecodedMessageHelper(
-        Super::response_buffer(),
-        payload,
-        &decoded_message));
+    EXPECT_TRUE(InlinePODStruct::MakeDecodedMessageHelper(Super::response_buffer(), payload,
+                                                          &decoded_message));
     Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
   }
 
@@ -546,8 +513,7 @@ class MySyncCall<InlinePODStruct>
 // Helper to populate a OwnedSyncCallBase<OutOfLineMessage> with a decoded message,
 // as if receiving a FIDL reply.
 bool OutOfLineMessage::MakeDecodedMessageHelper(
-    fidl::BytePart buffer,
-    std::optional<uint64_t> optional_field,
+    fidl::BytePart buffer, std::optional<uint64_t> optional_field,
     fidl::DecodedMessage<OutOfLineMessage>* out_decoded_message) {
   BEGIN_HELPER;
 
@@ -556,7 +522,7 @@ bool OutOfLineMessage::MakeDecodedMessageHelper(
 
   if (optional_field) {
     ASSERT_EQ(buffer.capacity(), FIDL_ALIGN(OutOfLineMessage::PrimarySize) +
-                                   FIDL_ALIGN(OutOfLineMessage::MaxOutOfLine));
+                                     FIDL_ALIGN(OutOfLineMessage::MaxOutOfLine));
     auto out_of_line = reinterpret_cast<InlinePODStruct*>(
         reinterpret_cast<uint8_t*>(msg) + FIDL_ALIGN(OutOfLineMessage::PrimarySize));
     out_of_line->payload = optional_field.value();
@@ -580,17 +546,14 @@ bool OutOfLineMessage::MakeDecodedMessageHelper(
 // OwningSyncCallWithOutOfLineTest below.
 // This is similar to the llcpp codegen output.
 template <>
-class MySyncCall<OutOfLineMessage>
-    : private fidl::internal::OwnedSyncCallBase<OutOfLineMessage> {
+class MySyncCall<OutOfLineMessage> : private fidl::internal::OwnedSyncCallBase<OutOfLineMessage> {
   using Super = fidl::internal::OwnedSyncCallBase<OutOfLineMessage>;
 
  public:
   explicit MySyncCall(std::optional<uint64_t> optional_field) {
     fidl::DecodedMessage<OutOfLineMessage> decoded_message;
-    EXPECT_TRUE(OutOfLineMessage::MakeDecodedMessageHelper(
-        Super::response_buffer(),
-        optional_field,
-        &decoded_message));
+    EXPECT_TRUE(OutOfLineMessage::MakeDecodedMessageHelper(Super::response_buffer(), optional_field,
+                                                           &decoded_message));
     Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
   }
   ~MySyncCall() = default;
@@ -603,10 +566,8 @@ class MySyncCall<OutOfLineMessage>
 
 // Helper to populate a OwnedSyncCallBase<LargeStruct> with a decoded message,
 // as if receiving a FIDL reply.
-bool LargeStruct::MakeDecodedMessageHelper(
-    fidl::BytePart buffer,
-    uint64_t fill,
-    fidl::DecodedMessage<LargeStruct>* out_decoded_message) {
+bool LargeStruct::MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
+                                           fidl::DecodedMessage<LargeStruct>* out_decoded_message) {
   BEGIN_HELPER;
 
   auto msg = reinterpret_cast<LargeStruct*>(buffer.data());
@@ -632,17 +593,14 @@ bool LargeStruct::MakeDecodedMessageHelper(
 // Manually define the OwnedSyncCallBase type for LargeStruct, for the OwningSyncCallHeapTest below.
 // This is similar to the llcpp codegen output.
 template <>
-class MySyncCall<LargeStruct>
-    : private fidl::internal::OwnedSyncCallBase<LargeStruct> {
+class MySyncCall<LargeStruct> : private fidl::internal::OwnedSyncCallBase<LargeStruct> {
   using Super = fidl::internal::OwnedSyncCallBase<LargeStruct>;
 
  public:
   explicit MySyncCall(uint64_t fill) {
     fidl::DecodedMessage<LargeStruct> decoded_message;
-    EXPECT_TRUE(LargeStruct::MakeDecodedMessageHelper(
-        Super::response_buffer(),
-        fill,
-        &decoded_message));
+    EXPECT_TRUE(
+        LargeStruct::MakeDecodedMessageHelper(Super::response_buffer(), fill, &decoded_message));
     Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
   }
 

@@ -43,8 +43,7 @@ void Usage() {
 }
 
 std::string FirstNumericEntryInDir(const UniqueDIR& dir) {
-  for (struct dirent* de = readdir(dir.get()); de != nullptr;
-       de = readdir(dir.get())) {
+  for (struct dirent* de = readdir(dir.get()); de != nullptr; de = readdir(dir.get())) {
     char* name = de->d_name;
     if (!name[0] && name[0] == '.')
       continue;
@@ -85,8 +84,8 @@ ControllerPtr FindTiles() {
     return {};
   }
   std::string svc_name = tile_realm_entry + "/out/svc";
-  fxl::UniqueFD tile_svc(openat(dirfd(tile_component_dir.get()),
-                                svc_name.c_str(), O_DIRECTORY | O_RDONLY));
+  fxl::UniqueFD tile_svc(
+      openat(dirfd(tile_component_dir.get()), svc_name.c_str(), O_DIRECTORY | O_RDONLY));
   if (!tile_svc.is_valid()) {
     fprintf(stderr, "Couldn't open tile service directory\n");
     return {};
@@ -94,9 +93,9 @@ ControllerPtr FindTiles() {
 
   zx::channel svc_channel = fsl::CloneChannelFromFileDescriptor(tile_svc.get());
   ControllerPtr tiles;
-  zx_status_t st = fdio_service_connect_at(
-      svc_channel.release(), fuchsia::developer::tiles::Controller::Name_,
-      tiles.NewRequest().TakeChannel().get());
+  zx_status_t st =
+      fdio_service_connect_at(svc_channel.release(), fuchsia::developer::tiles::Controller::Name_,
+                              tiles.NewRequest().TakeChannel().get());
   if (st != ZX_OK) {
     fprintf(stderr, "Couldn't connect to tile service: %d\n", st);
     return {};
@@ -125,8 +124,7 @@ bool Add(std::string url, bool allow_focus, std::vector<std::string> args) {
   for (const auto& it : args) {
     arguments.push_back(it);
   }
-  if (tiles->AddTileFromURL(url, allow_focus, std::move(arguments), &key) !=
-      ZX_OK)
+  if (tiles->AddTileFromURL(url, allow_focus, std::move(arguments), &key) != ZX_OK)
     return false;
   printf("Tile added with key %u\n", key);
   return true;
@@ -154,8 +152,8 @@ bool List() {
 
   printf("Found %lu tiles:\n", keys.size());
   for (size_t i = 0u; i < keys.size(); ++i) {
-    printf("Tile key %u url %s size %.1fx%.1fx%.1f%s\n", keys.at(i),
-           (urls.at(i)).c_str(), sizes.at(i).x, sizes.at(i).y, sizes.at(i).z,
+    printf("Tile key %u url %s size %.1fx%.1fx%.1f%s\n", keys.at(i), (urls.at(i)).c_str(),
+           sizes.at(i).x, sizes.at(i).y, sizes.at(i).z,
            focusabilities.at(i) ? " (unfocusable)" : "");
   }
   return true;
@@ -198,8 +196,8 @@ int main(int argc, const char** argv) {
     }
     int adjust = allow_focus ? 0 : 1;
     auto url = positional_args[1 + adjust];
-    std::vector<std::string> component_args{
-        std::next(positional_args.begin(), 2 + adjust), positional_args.end()};
+    std::vector<std::string> component_args{std::next(positional_args.begin(), 2 + adjust),
+                                            positional_args.end()};
     if (!Add(url, allow_focus, component_args)) {
       return 1;
     }

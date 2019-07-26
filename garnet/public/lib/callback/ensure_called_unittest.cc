@@ -20,8 +20,8 @@ TEST(EnsureCalled, NormalCall) {
   int called_with = 0;
 
   {
-    auto callable = EnsureCalled(
-        callback::Capture(callback::SetWhenCalled(&called), &called_with), 1);
+    auto callable =
+        EnsureCalled(callback::Capture(callback::SetWhenCalled(&called), &called_with), 1);
     EXPECT_TRUE(callable);
 
     callable(2);
@@ -40,8 +40,7 @@ TEST(EnsureCalled, DestructorCall) {
   int called_with = 0;
 
   {
-    auto call = EnsureCalled(
-        callback::Capture(callback::SetWhenCalled(&called), &called_with), 1);
+    auto call = EnsureCalled(callback::Capture(callback::SetWhenCalled(&called), &called_with), 1);
   }
 
   EXPECT_TRUE(called);
@@ -52,9 +51,7 @@ TEST(EnsureCalled, MoveAssign) {
   bool called_internal = false;
   bool called_external = false;
 
-  auto make_callback = [](bool* called) {
-    return [called]() { *called = true; };
-  };
+  auto make_callback = [](bool* called) { return [called]() { *called = true; }; };
   auto callback_internal = make_callback(&called_internal);
   auto callback_external = make_callback(&called_external);
 

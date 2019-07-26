@@ -35,8 +35,7 @@ class Token {
 
   class KindAndSubkind {
    public:
-    constexpr KindAndSubkind(Kind kind, Subkind subkind)
-        : kind_(kind), subkind_(subkind) {}
+    constexpr KindAndSubkind(Kind kind, Subkind subkind) : kind_(kind), subkind_(subkind) {}
 
     constexpr Kind kind() const { return kind_; }
     constexpr Subkind subkind() const { return subkind_; }

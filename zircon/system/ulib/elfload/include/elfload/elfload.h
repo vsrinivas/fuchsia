@@ -17,18 +17,18 @@
 #include <stdint.h>
 
 #ifdef _LP64
-# define MY_ELFCLASS ELFCLASS64
+#define MY_ELFCLASS ELFCLASS64
 typedef Elf64_Ehdr elf_ehdr_t;
 typedef Elf64_Phdr elf_phdr_t;
 #else
-# define MY_ELFCLASS ELFCLASS32
+#define MY_ELFCLASS ELFCLASS32
 typedef Elf32_Ehdr elf_ehdr_t;
 typedef Elf32_Phdr elf_phdr_t;
 #endif
 
 typedef struct {
-    zx_vaddr_t e_entry;
-    uint_fast16_t e_phnum;
+  zx_vaddr_t e_entry;
+  uint_fast16_t e_phnum;
 } elf_load_header_t;
 
 // These routines use this error code to indicate an invalid file format,
@@ -43,20 +43,16 @@ zx_status_t elf_load_prepare(zx_handle_t vmo, const void* hdr_buf, size_t buf_sz
                              elf_load_header_t* header, uintptr_t* phoff);
 
 // Read the ELF program headers in.
-zx_status_t elf_load_read_phdrs(zx_handle_t vmo, elf_phdr_t* phdrs,
-                                uintptr_t phoff, size_t phnum);
+zx_status_t elf_load_read_phdrs(zx_handle_t vmo, elf_phdr_t* phdrs, uintptr_t phoff, size_t phnum);
 
 // Load the image into the process.
-zx_status_t elf_load_map_segments(zx_handle_t vmar,
-                                  const elf_load_header_t* header,
-                                  const elf_phdr_t* phdrs,
-                                  zx_handle_t vmo,
-                                  zx_handle_t* segments_vmar,
-                                  zx_vaddr_t* bias, zx_vaddr_t* entry);
+zx_status_t elf_load_map_segments(zx_handle_t vmar, const elf_load_header_t* header,
+                                  const elf_phdr_t* phdrs, zx_handle_t vmo,
+                                  zx_handle_t* segments_vmar, zx_vaddr_t* bias, zx_vaddr_t* entry);
 
 // Locate the PT_INTERP program header and extract its bounds in the file.
 // Returns false if there was no PT_INTERP.
-bool elf_load_find_interp(const elf_phdr_t* phdrs, size_t phnum,
-                          uintptr_t* interp_off, size_t* interp_len);
+bool elf_load_find_interp(const elf_phdr_t* phdrs, size_t phnum, uintptr_t* interp_off,
+                          size_t* interp_len);
 
 __END_CDECLS

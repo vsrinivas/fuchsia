@@ -78,8 +78,7 @@ Optional<IpAddr> IpAddr::AsIpv6() const {
       out.ipv6.sin6_port = ipv4.sin_port;
       out.ipv6.sin6_addr.s6_addr[10] = 0xff;
       out.ipv6.sin6_addr.s6_addr[11] = 0xff;
-      memcpy(out.ipv6.sin6_addr.s6_addr + 12, &ipv4.sin_addr,
-             sizeof(ipv4.sin_addr));
+      memcpy(out.ipv6.sin6_addr.s6_addr + 12, &ipv4.sin_addr, sizeof(ipv4.sin_addr));
       return out;
     }
   }
@@ -135,12 +134,10 @@ bool EqIpAddr::operator()(const IpAddr& a, const IpAddr& b) const {
     switch (a.addr.sa_family) {
       case AF_INET:
         return a.ipv4.sin_port == b.ipv4.sin_port &&
-               0 == memcmp(&a.ipv4.sin_addr, &b.ipv4.sin_addr,
-                           sizeof(a.ipv4.sin_addr));
+               0 == memcmp(&a.ipv4.sin_addr, &b.ipv4.sin_addr, sizeof(a.ipv4.sin_addr));
       case AF_INET6:
         return a.ipv6.sin6_port == b.ipv6.sin6_port &&
-               0 == memcmp(&a.ipv6.sin6_addr, &b.ipv6.sin6_addr,
-                           sizeof(a.ipv6.sin6_addr));
+               0 == memcmp(&a.ipv6.sin6_addr, &b.ipv6.sin6_addr, sizeof(a.ipv6.sin6_addr));
 #ifndef __Fuchsia__
       case AF_UNIX:
         return 0 == strcmp(a.unix.sun_path, b.unix.sun_path);

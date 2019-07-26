@@ -47,8 +47,7 @@ http::URLRequest MakeRequest(fxl::RefPtr<NetworkRequest> network_request) {
 
 }  // namespace
 
-void NetworkRequest::ReadResponse(async_dispatcher_t* dispatcher,
-                                  fxl::RefPtr<NetworkRequest> self,
+void NetworkRequest::ReadResponse(async_dispatcher_t* dispatcher, fxl::RefPtr<NetworkRequest> self,
                                   uint32_t http_code, zx::socket source) {
   // Store a reference to myself, so that I don't get deleted while reading from
   // the socket.
@@ -69,9 +68,8 @@ void NetworkRequest::OnDataComplete() {
   SetValueAndCleanUp(std::move(response));
 }
 
-FuchsiaHTTPClient::FuchsiaHTTPClient(
-    network_wrapper::NetworkWrapper* network_wrapper,
-    async_dispatcher_t* dispatcher)
+FuchsiaHTTPClient::FuchsiaHTTPClient(network_wrapper::NetworkWrapper* network_wrapper,
+                                     async_dispatcher_t* dispatcher)
     : network_wrapper_(network_wrapper), dispatcher_(dispatcher) {}
 
 void FuchsiaHTTPClient::HandleResponse(fxl::RefPtr<NetworkRequest> req,
@@ -97,18 +95,16 @@ void FuchsiaHTTPClient::HandleResponse(fxl::RefPtr<NetworkRequest> req,
 
 void FuchsiaHTTPClient::HandleDeadline(fxl::RefPtr<NetworkRequest> req) {
   req->CancelCallbacks();
-  req->SetValueAndCleanUp(
-      util::Status(util::StatusCode::DEADLINE_EXCEEDED,
-                   "Deadline exceeded while waiting for network request"));
+  req->SetValueAndCleanUp(util::Status(util::StatusCode::DEADLINE_EXCEEDED,
+                                       "Deadline exceeded while waiting for network request"));
 }
 
-void FuchsiaHTTPClient::SendRequest(
-    fxl::RefPtr<NetworkRequest> network_request) {
-  network_request->SetNetworkWrapperCancel(network_wrapper_->Request(
-      std::bind(&MakeRequest, network_request),
-      [this, network_request](http::URLResponse fx_response) {
-        HandleResponse(network_request, std::move(fx_response));
-      }));
+void FuchsiaHTTPClient::SendRequest(fxl::RefPtr<NetworkRequest> network_request) {
+  network_request->SetNetworkWrapperCancel(
+      network_wrapper_->Request(std::bind(&MakeRequest, network_request),
+                                [this, network_request](http::URLResponse fx_response) {
+                                  HandleResponse(network_request, std::move(fx_response));
+                                }));
 }
 
 void NetworkRequest::CancelCallbacks() {
@@ -138,17 +134,14 @@ void NetworkRequest::SetValueAndCleanUp(StatusOr<HTTPResponse> value) {
 
 std::future<StatusOr<HTTPResponse>> FuchsiaHTTPClient::Post(
     HTTPRequest request, std::chrono::steady_clock::time_point deadline) {
-  ZX_ASSERT_MSG(
-      async_get_default_dispatcher() != dispatcher_,
-      "Post should not be called from the same thread as dispatcher_, as "
-      "this may cause deadlocks");
-  auto network_request =
-      fxl::MakeRefCounted<NetworkRequest>(std::move(request));
+  ZX_ASSERT_MSG(async_get_default_dispatcher() != dispatcher_,
+                "Post should not be called from the same thread as dispatcher_, as "
+                "this may cause deadlocks");
+  auto network_request = fxl::MakeRefCounted<NetworkRequest>(std::move(request));
   network_request->SetDeadlineTask(std::make_unique<async::TaskClosure>(
       [this, network_request] { HandleDeadline(network_request); }));
 
-  async::PostTask(dispatcher_,
-                  [this, network_request]() { SendRequest(network_request); });
+  async::PostTask(dispatcher_, [this, network_request]() { SendRequest(network_request); });
 
   auto duration = zx::nsec(std::chrono::duration_cast<std::chrono::nanoseconds>(
                                deadline - std::chrono::steady_clock::now())

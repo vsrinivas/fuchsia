@@ -20,14 +20,13 @@ extern "C" {
 #include <zircon/syscall-vdso-definitions.h>
 
 __LOCAL decltype(zx_ticks_get) CODE_soft_ticks_get;
-
 }
 
 // Code should define '_zx_foo' and then do 'VDSO_INTERFACE_FUNCTION(zx_foo);'
 // to define the public name 'zx_foo' and the vDSO-private name 'VDSO_zx_foo'.
-#define VDSO_INTERFACE_FUNCTION(name) \
-    decltype(name) name __WEAK_ALIAS("_" #name); \
-    decltype(name) VDSO_##name __LOCAL __ALIAS("_" #name)
+#define VDSO_INTERFACE_FUNCTION(name)          \
+  decltype(name) name __WEAK_ALIAS("_" #name); \
+  decltype(name) VDSO_##name __LOCAL __ALIAS("_" #name)
 
 // This symbol is expected to appear in the build-time vDSO symbol table so
 // kernel/lib/userabi/ code can use it.

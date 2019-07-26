@@ -56,13 +56,13 @@ typedef struct test_expectation {
 void verify_expectation(test_expectation_t* expectation);
 
 // Macros to capture context, and validate.
-#define TEST_EXPECTATION(checkpoint_reached_set, test_must_have_errors, err_desc)                  \
-  test_expectation_t _expectation __attribute__((cleanup(verify_expectation)));                    \
-  _expectation.filename = __FILE__;                                                                \
-  _expectation.line = __LINE__;                                                                    \
-  _expectation.reason = err_desc;                                                                  \
-  _expectation.expect_errors = test_must_have_errors;                                              \
-  _expectation.checkpoint_reached_expected = checkpoint_reached_set;                               \
+#define TEST_EXPECTATION(checkpoint_reached_set, test_must_have_errors, err_desc) \
+  test_expectation_t _expectation __attribute__((cleanup(verify_expectation)));   \
+  _expectation.filename = __FILE__;                                               \
+  _expectation.line = __LINE__;                                                   \
+  _expectation.reason = err_desc;                                                 \
+  _expectation.expect_errors = test_must_have_errors;                             \
+  _expectation.checkpoint_reached_expected = checkpoint_reached_set;              \
   _expectation.checkpoint_reached = false
 
 #define TEST_CHECKPOINT() _expectation.checkpoint_reached = true

@@ -30,4 +30,4 @@ zx_status_t ResetAllSlices(const zx::unowned_channel& channel);
 // use the BlockDevice interface.
 zx_status_t ResetAllSlices2(block_client::BlockDevice* device);
 
-}
+}  // namespace fvm

@@ -42,8 +42,7 @@ void BufferPool::FreeBuffer(uint8_t* base) {
   free_buffers_.Push(buffer);
 }
 
-std::optional<BufferPool::Allocation> BufferPool::FindBufferByBase(
-    uint8_t* base) {
+std::optional<BufferPool::Allocation> BufferPool::FindBufferByBase(uint8_t* base) {
   std::lock_guard lock(lock_);
   auto iter = buffers_in_use_.find(base);
   if (iter == buffers_in_use_.end()) {

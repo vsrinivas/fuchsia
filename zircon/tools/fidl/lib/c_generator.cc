@@ -14,8 +14,7 @@ namespace {
 // RAII helper class to reset the iostream to its original flags.
 class IOFlagsGuard {
  public:
-  explicit IOFlagsGuard(std::ostream* stream)
-      : stream_(stream), flags_(stream_->flags()) {}
+  explicit IOFlagsGuard(std::ostream* stream) : stream_(stream), flags_(stream_->flags()) {}
 
   ~IOFlagsGuard() { stream_->setf(flags_); }
 

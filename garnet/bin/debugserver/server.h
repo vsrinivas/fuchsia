@@ -39,12 +39,9 @@ class RspServer final : public inferior_control::ServerWithIO {
   // |initial_attach_pid|, if not ZX_KOID_INVALID, is the koid of a process to
   // attach to in Run() before entering the main loop.
   // |argv| is passed to the inferior if ran from scratch.
-  explicit RspServer(uint16_t port, zx_koid_t initial_attach_pid,
-                     debugger_utils::Argv argv);
+  explicit RspServer(uint16_t port, zx_koid_t initial_attach_pid, debugger_utils::Argv argv);
 
-  void set_inferior_argv(const debugger_utils::Argv& argv) {
-    inferior_argv_ = argv;
-  }
+  void set_inferior_argv(const debugger_utils::Argv& argv) { inferior_argv_ = argv; }
   const debugger_utils::Argv& inferior_argv() const { return inferior_argv_; }
 
   // Starts the main loop. This will first block and wait for an incoming
@@ -62,18 +59,15 @@ class RspServer final : public inferior_control::ServerWithIO {
   // within |timeout|. If a notification times out, it will be sent again.
   void QueueNotification(
       const fxl::StringView& name, const fxl::StringView& event,
-      const fxl::TimeDelta& timeout =
-          fxl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
+      const fxl::TimeDelta& timeout = fxl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
 
   // Wrapper of QueueNotification for "Stop" notifications.
   void QueueStopNotification(
       const fxl::StringView& event,
-      const fxl::TimeDelta& timeout =
-          fxl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
+      const fxl::TimeDelta& timeout = fxl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
 
   // Set |parameter| to |value|. Return true if success.
-  bool SetParameter(const fxl::StringView& parameter,
-                    const fxl::StringView& value);
+  bool SetParameter(const fxl::StringView& parameter, const fxl::StringView& value);
 
   // Store the value of |parameter| in |*value|. Return true if success.
   bool GetParameter(const fxl::StringView& parameter, std::string* value);
@@ -84,8 +78,7 @@ class RspServer final : public inferior_control::ServerWithIO {
 
   // Represents a pending notification packet.
   struct PendingNotification {
-    PendingNotification(const fxl::StringView& name,
-                        const fxl::StringView& event,
+    PendingNotification(const fxl::StringView& name, const fxl::StringView& event,
                         const fxl::TimeDelta& timeout);
 
     std::string name;
@@ -133,24 +126,20 @@ class RspServer final : public inferior_control::ServerWithIO {
   void OnIOError() override;
 
   // Process::Delegate overrides.
-  void OnThreadStarting(inferior_control::Process* process,
-                        inferior_control::Thread* thread, zx_handle_t eport,
-                        const zx_exception_context_t& context) override;
-  void OnThreadExiting(inferior_control::Process* process,
-                       inferior_control::Thread* thread, zx_handle_t eport,
-                       const zx_exception_context_t& context) override;
+  void OnThreadStarting(inferior_control::Process* process, inferior_control::Thread* thread,
+                        zx_handle_t eport, const zx_exception_context_t& context) override;
+  void OnThreadExiting(inferior_control::Process* process, inferior_control::Thread* thread,
+                       zx_handle_t eport, const zx_exception_context_t& context) override;
   void OnProcessTermination(inferior_control::Process* process) override;
   void OnArchitecturalException(inferior_control::Process* process,
-                                inferior_control::Thread* thread,
-                                zx_handle_t eport, const zx_excp_type_t type,
+                                inferior_control::Thread* thread, zx_handle_t eport,
+                                const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;
-  void OnSyntheticException(inferior_control::Process* process,
-                            inferior_control::Thread* thread,
+  void OnSyntheticException(inferior_control::Process* process, inferior_control::Thread* thread,
                             zx_handle_t eport, zx_excp_type_t type,
                             const zx_exception_context_t& context) override;
-  void ExceptionHelper(inferior_control::Process* process,
-                       inferior_control::Thread* thread, zx_excp_type_t type,
-                       const zx_exception_context_t& context);
+  void ExceptionHelper(inferior_control::Process* process, inferior_control::Thread* thread,
+                       zx_excp_type_t type, const zx_exception_context_t& context);
 
   // TCP port number that we will listen on.
   uint16_t port_;

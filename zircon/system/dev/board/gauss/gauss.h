@@ -13,32 +13,32 @@
 #include <threads.h>
 
 enum {
-    AML_I2C_A,
-    AML_I2C_B,
-    AML_I2C_C,
-    AML_I2C_D,
+  AML_I2C_A,
+  AML_I2C_B,
+  AML_I2C_C,
+  AML_I2C_D,
 };
 
 // BTI IDs for our devices
 enum {
-    BTI_BOARD,
-    BTI_AUDIO_IN,
-    BTI_AUDIO_OUT,
-    BTI_USB_XHCI,
-    BTI_AML_RAW_NAND,
-    BTI_SYSMEM,
+  BTI_BOARD,
+  BTI_AUDIO_IN,
+  BTI_AUDIO_OUT,
+  BTI_USB_XHCI,
+  BTI_AML_RAW_NAND,
+  BTI_SYSMEM,
 };
 
 typedef struct {
-    zx_device_t* parent;
-    pbus_protocol_t pbus;
-    gpio_impl_protocol_t gpio;
-    iommu_protocol_t iommu;
-    zx_handle_t bti_handle;
-    mmio_buffer_t usb_phy;
-    zx_handle_t usb_phy_irq_handle;
-    thrd_t phy_irq_thread;
-    a113_clk_dev_t *clocks;
+  zx_device_t* parent;
+  pbus_protocol_t pbus;
+  gpio_impl_protocol_t gpio;
+  iommu_protocol_t iommu;
+  zx_handle_t bti_handle;
+  mmio_buffer_t usb_phy;
+  zx_handle_t usb_phy_irq_handle;
+  thrd_t phy_irq_thread;
+  a113_clk_dev_t* clocks;
 } gauss_bus_t;
 
 // gauss-sysmem.c

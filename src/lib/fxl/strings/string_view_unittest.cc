@@ -19,18 +19,15 @@ namespace {
 // Loops over all substrings of |needles|, and calls |callback| for each.
 void LoopOverSubstrings(
     StringView haystack, StringView needles,
-    fit::function<void(std::string haystack_str, StringView haystack_sw,
-                       std::string to_find_str, StringView to_find_sw,
-                       int start_index)>
+    fit::function<void(std::string haystack_str, StringView haystack_sw, std::string to_find_str,
+                       StringView to_find_sw, int start_index)>
         callback) {
   std::string haystack_str = haystack.ToString();
-  for (size_t substring_size = 0; substring_size < needles.size();
-       ++substring_size) {
+  for (size_t substring_size = 0; substring_size < needles.size(); ++substring_size) {
     for (size_t start_index = 0; start_index <= needles.size(); ++start_index) {
       auto to_find = needles.substr(start_index, substring_size);
       for (size_t start_pos = 0; start_pos <= haystack.size(); ++start_pos) {
-        callback(haystack_str, haystack, to_find.ToString(), to_find,
-                 start_pos);
+        callback(haystack_str, haystack, to_find.ToString(), to_find, start_pos);
       }
     }
   }
@@ -39,13 +36,11 @@ void LoopOverSubstrings(
 // Loops over all characters in |needles|, and calls |callback| for each.
 void LoopOverChars(
     StringView haystack, StringView needles,
-    fit::function<void(std::string haystack_str, StringView haystack_sw, char c,
-                       int start_index)>
+    fit::function<void(std::string haystack_str, StringView haystack_sw, char c, int start_index)>
         callback) {
   std::string haystack_str = haystack.ToString();
   for (size_t index = 0; index < needles.size(); ++index) {
-    for (size_t start_index = 0; start_index <= haystack.size();
-         ++start_index) {
+    for (size_t start_index = 0; start_index <= haystack.size(); ++start_index) {
       callback(haystack_str, haystack, needles[index], start_index);
     }
   }
@@ -53,11 +48,10 @@ void LoopOverChars(
 
 // Loops over all combinations of characters present in |needles|, and calls
 // |callback| for each.
-void LoopOverCharCombinations(
-    StringView haystack, StringView needles,
-    fit::function<void(std::string haystack_str, StringView haystack_sw,
-                       std::string current_chars, size_t pos)>
-        callback) {
+void LoopOverCharCombinations(StringView haystack, StringView needles,
+                              fit::function<void(std::string haystack_str, StringView haystack_sw,
+                                                 std::string current_chars, size_t pos)>
+                                  callback) {
   // Look for all chars combinations, and compare with string.
   std::set<char> chars(needles.begin(), needles.end());
   std::string haystack_str = haystack.ToString();
@@ -248,9 +242,8 @@ TEST(StringView, find_String) {
   EXPECT_EQ(StringView::npos, sw.find("H", 255));
   EXPECT_EQ(StringView::npos, sw.find("H", sw.size()));
 
-  auto test_callback = [](std::string haystack_str, StringView haystack_sw,
-                          std::string to_find_str, StringView to_find_sw,
-                          int start_index) {
+  auto test_callback = [](std::string haystack_str, StringView haystack_sw, std::string to_find_str,
+                          StringView to_find_sw, int start_index) {
     EXPECT_EQ(haystack_str.find(to_find_str, start_index),
               haystack_sw.find(to_find_sw, start_index));
   };
@@ -269,10 +262,9 @@ TEST(StringView, find_Chars) {
   EXPECT_EQ(StringView::npos, sw.find('H', 255));
   EXPECT_EQ(StringView::npos, sw.find('H', sw.size()));
 
-  auto test_callback = [](std::string haystack_str, StringView haystack_sw,
-                          char c, int start_index) {
-    EXPECT_EQ(haystack_str.find(c, start_index),
-              haystack_sw.find(c, start_index));
+  auto test_callback = [](std::string haystack_str, StringView haystack_sw, char c,
+                          int start_index) {
+    EXPECT_EQ(haystack_str.find(c, start_index), haystack_sw.find(c, start_index));
   };
 
   // Look for all chars at all position, and compare with string.
@@ -294,9 +286,8 @@ TEST(StringView, rfind_String) {
   EXPECT_EQ(StringView::npos, sw.rfind("d", 1));
 
   // Look for all substring at all position, and compare with string.
-  auto test_callback = [](std::string haystack_str, StringView haystack_sw,
-                          std::string to_find_str, StringView to_find_sw,
-                          int start_index) {
+  auto test_callback = [](std::string haystack_str, StringView haystack_sw, std::string to_find_str,
+                          StringView to_find_sw, int start_index) {
     EXPECT_EQ(haystack_str.rfind(to_find_str, start_index),
               haystack_sw.rfind(to_find_sw, start_index));
   };
@@ -315,10 +306,9 @@ TEST(StringView, rfind_Char) {
   EXPECT_EQ(StringView::npos, sw.rfind('d', 0));
   EXPECT_EQ(StringView::npos, sw.rfind('d', 1));
 
-  auto test_callback = [](std::string haystack_str, StringView haystack_sw,
-                          char c, int start_index) {
-    EXPECT_EQ(haystack_str.rfind(c, start_index),
-              haystack_sw.rfind(c, start_index));
+  auto test_callback = [](std::string haystack_str, StringView haystack_sw, char c,
+                          int start_index) {
+    EXPECT_EQ(haystack_str.rfind(c, start_index), haystack_sw.rfind(c, start_index));
   };
 
   // Look for all chars at all position, and compare with string.

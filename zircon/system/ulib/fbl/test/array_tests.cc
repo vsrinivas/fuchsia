@@ -11,82 +11,82 @@
 namespace {
 
 class DestructorSignaler {
-public:
-    DestructorSignaler() : array(nullptr), result(nullptr) {}
-    ~DestructorSignaler() {
-      if (array && result)
-        *result = array->get();
-    }
+ public:
+  DestructorSignaler() : array(nullptr), result(nullptr) {}
+  ~DestructorSignaler() {
+    if (array && result)
+      *result = array->get();
+  }
 
-    fbl::Array<DestructorSignaler>* array;
-    DestructorSignaler** result;
+  fbl::Array<DestructorSignaler>* array;
+  DestructorSignaler** result;
 };
 
 bool destructor_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    DestructorSignaler bogus;
-    DestructorSignaler* result = &bogus;
+  DestructorSignaler bogus;
+  DestructorSignaler* result = &bogus;
 
-    fbl::AllocChecker ac;
-    DestructorSignaler* signalers = new (&ac) DestructorSignaler[2];
-    EXPECT_TRUE(ac.check());
+  fbl::AllocChecker ac;
+  DestructorSignaler* signalers = new (&ac) DestructorSignaler[2];
+  EXPECT_TRUE(ac.check());
 
-    {
-        fbl::Array<DestructorSignaler> array(signalers, 2);
-        array[0].array = &array;
-        array[0].result = &result;
-    }
+  {
+    fbl::Array<DestructorSignaler> array(signalers, 2);
+    array[0].array = &array;
+    array[0].result = &result;
+  }
 
-    EXPECT_FALSE(result == &bogus);
-    EXPECT_TRUE(result == nullptr);
+  EXPECT_FALSE(result == &bogus);
+  EXPECT_TRUE(result == nullptr);
 
-    END_TEST;
+  END_TEST;
 }
 
 bool move_to_const_ctor_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    constexpr size_t kSize = 10;
-    fbl::Array<uint32_t> array(new uint32_t[kSize], kSize);
-    for (uint32_t i = 0; i < kSize; ++i) {
-        array[i] = i;
-    }
-    uint32_t* array_ptr = array.get();
+  constexpr size_t kSize = 10;
+  fbl::Array<uint32_t> array(new uint32_t[kSize], kSize);
+  for (uint32_t i = 0; i < kSize; ++i) {
+    array[i] = i;
+  }
+  uint32_t* array_ptr = array.get();
 
-    fbl::Array<const uint32_t> const_array(std::move(array));
-    EXPECT_NULL(array.get());
-    EXPECT_EQ(array.size(), 0);
-    EXPECT_EQ(const_array.get(), array_ptr);
-    EXPECT_EQ(const_array.size(), kSize);
-    for (size_t i = 0; i < kSize; ++i) {
-        EXPECT_EQ(const_array[i], i);
-    }
+  fbl::Array<const uint32_t> const_array(std::move(array));
+  EXPECT_NULL(array.get());
+  EXPECT_EQ(array.size(), 0);
+  EXPECT_EQ(const_array.get(), array_ptr);
+  EXPECT_EQ(const_array.size(), kSize);
+  for (size_t i = 0; i < kSize; ++i) {
+    EXPECT_EQ(const_array[i], i);
+  }
 
-    END_TEST;
+  END_TEST;
 }
 
 bool move_to_const_assignment_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    constexpr size_t kSize = 10;
-    fbl::Array<uint32_t> array(new uint32_t[kSize], kSize);
-    for (uint32_t i = 0; i < kSize; ++i) {
-        array[i] = i;
-    }
-    uint32_t* array_ptr = array.get();
+  constexpr size_t kSize = 10;
+  fbl::Array<uint32_t> array(new uint32_t[kSize], kSize);
+  for (uint32_t i = 0; i < kSize; ++i) {
+    array[i] = i;
+  }
+  uint32_t* array_ptr = array.get();
 
-    fbl::Array<const uint32_t> const_array;
-    const_array = std::move(array);
-    EXPECT_NULL(array.get());
-    EXPECT_EQ(array.size(), 0);
-    EXPECT_EQ(const_array.get(), array_ptr);
-    EXPECT_EQ(const_array.size(), kSize);
-    for (size_t i = 0; i < kSize; ++i) {
-        EXPECT_EQ(const_array[i], i);
-    }
+  fbl::Array<const uint32_t> const_array;
+  const_array = std::move(array);
+  EXPECT_NULL(array.get());
+  EXPECT_EQ(array.size(), 0);
+  EXPECT_EQ(const_array.get(), array_ptr);
+  EXPECT_EQ(const_array.size(), kSize);
+  for (size_t i = 0; i < kSize; ++i) {
+    EXPECT_EQ(const_array[i], i);
+  }
 
-    END_TEST;
+  END_TEST;
 }
 
 }  // namespace

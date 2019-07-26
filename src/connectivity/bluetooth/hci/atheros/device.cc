@@ -33,8 +33,7 @@ static constexpr size_t NVM_HDR = 4;
 
 static zx_protocol_device_t dev_proto = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = [](void* ctx, uint32_t proto_id,
-                       void* protocol) -> zx_status_t {
+    .get_protocol = [](void* ctx, uint32_t proto_id, void* protocol) -> zx_status_t {
       return static_cast<Device*>(ctx)->DdkGetProtocol(proto_id, protocol);
     },
     .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
@@ -83,9 +82,8 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
   size_t size = std::min(count, NVM_HDR);
   size_t sent = 0;
 
-  result =
-      usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
-                      ZX_TIME_INFINITE, (void*)file.view(0, size).data(), size);
+  result = usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0, ZX_TIME_INFINITE,
+                           (void*)file.view(0, size).data(), size);
   if (result != ZX_OK) {
     return result;
   }
@@ -144,9 +142,8 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
 
   BufferView file(reinterpret_cast<void*>(fw_addr), fw_size);
 
-  result =
-      usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
-                      ZX_TIME_INFINITE, (void*)file.view(0, size).data(), size);
+  result = usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0, ZX_TIME_INFINITE,
+                           (void*)file.view(0, size).data(), size);
   usb_request_t* req;
   result = usb_request_alloc(&req, size, bulk_out_addr_, parent_req_size_);
   if (result != ZX_OK) {
@@ -194,9 +191,8 @@ zx_status_t Device::LoadFirmware() {
 
   struct qca_version ver;
   size_t actual_read;
-  result =
-      usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_TARGET_VERSION, 0,
-                     0, ZX_TIME_INFINITE, &ver, sizeof(ver), &actual_read);
+  result = usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_TARGET_VERSION, 0, 0,
+                          ZX_TIME_INFINITE, &ver, sizeof(ver), &actual_read);
 
   if (result != ZX_OK) {
     errorf("couldn't get version");
@@ -204,9 +200,8 @@ zx_status_t Device::LoadFirmware() {
   }
 
   uint8_t status;
-  result =
-      usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_STATUS, 0, 0,
-                     ZX_TIME_INFINITE, &status, sizeof(status), &actual_read);
+  result = usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_STATUS, 0, 0, ZX_TIME_INFINITE,
+                          &status, sizeof(status), &actual_read);
 
   usb_desc_iter_t iter;
   result = usb_desc_iter_init(&usb_, &iter);
@@ -270,16 +265,14 @@ zx_status_t Device::Appear(const char* note) {
   return ZX_OK;
 }
 
-zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr,
-                                size_t* fw_size) {
+zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw_size) {
   zx_handle_t vmo = ZX_HANDLE_INVALID;
   size_t size;
   zx_status_t status = load_firmware(zxdev_, name, &vmo, &size);
   if (status != ZX_OK) {
     return ZX_HANDLE_INVALID;
   }
-  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size,
-                       fw_addr);
+  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, fw_addr);
   if (status != ZX_OK) {
     return ZX_HANDLE_INVALID;
   }

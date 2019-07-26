@@ -51,8 +51,8 @@ class Walker final : public TaskEnumerator {
     }
 
     char task_name[ZX_MAX_NAME_LEN];
-    FXL_CHECK(zx::unowned<zx::job>(task)->get_property(
-                  ZX_PROP_NAME, task_name, ZX_MAX_NAME_LEN) == ZX_OK);
+    FXL_CHECK(zx::unowned<zx::job>(task)->get_property(ZX_PROP_NAME, task_name, ZX_MAX_NAME_LEN) ==
+              ZX_OK);
     std::string name(task_name);
     if (name == kEnvironmentName) {
       // The test finished successfully: the current task was the expected koid
@@ -79,8 +79,8 @@ class Walker final : public TaskEnumerator {
 
 int main(int argc, char* argv[]) {
   zx_info_handle_basic_t info;
-  zx_status_t status = zx::job::default_job()->get_info(
-      ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  zx_status_t status =
+      zx::job::default_job()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get default job's information.";
     return EXIT_FAILURE;

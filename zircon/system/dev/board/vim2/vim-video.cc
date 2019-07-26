@@ -75,39 +75,39 @@ constexpr zx_bind_inst_t canvas_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
 };
 constexpr device_component_part_t sysmem_component[] = {
-    { countof(root_match), root_match },
-    { countof(sysmem_match), sysmem_match },
+    {countof(root_match), root_match},
+    {countof(sysmem_match), sysmem_match},
 };
 constexpr device_component_part_t canvas_component[] = {
-    { countof(root_match), root_match },
-    { countof(canvas_match), canvas_match },
+    {countof(root_match), root_match},
+    {countof(canvas_match), canvas_match},
 };
 constexpr device_component_t components[] = {
-    { countof(sysmem_component), sysmem_component },
-    { countof(canvas_component), canvas_component },
+    {countof(sysmem_component), sysmem_component},
+    {countof(canvas_component), canvas_component},
 };
 
 zx_status_t Vim::VideoInit() {
-    pbus_dev_t video_dev = {};
-    video_dev.name = "aml-video";
-    video_dev.vid = PDEV_VID_AMLOGIC;
-    video_dev.pid = PDEV_PID_AMLOGIC_S912;
-    video_dev.did = PDEV_DID_AMLOGIC_VIDEO;
-    video_dev.mmio_list = vim_video_mmios;
-    video_dev.mmio_count = countof(vim_video_mmios);
-    video_dev.irq_list = vim_video_irqs;
-    video_dev.irq_count = countof(vim_video_irqs);
-    video_dev.bti_list = vim_video_btis;
-    video_dev.bti_count = countof(vim_video_btis);
+  pbus_dev_t video_dev = {};
+  video_dev.name = "aml-video";
+  video_dev.vid = PDEV_VID_AMLOGIC;
+  video_dev.pid = PDEV_PID_AMLOGIC_S912;
+  video_dev.did = PDEV_DID_AMLOGIC_VIDEO;
+  video_dev.mmio_list = vim_video_mmios;
+  video_dev.mmio_count = countof(vim_video_mmios);
+  video_dev.irq_list = vim_video_irqs;
+  video_dev.irq_count = countof(vim_video_irqs);
+  video_dev.bti_list = vim_video_btis;
+  video_dev.bti_count = countof(vim_video_btis);
 
-    zx_status_t status;
+  zx_status_t status;
 
-    if ((status = pbus_.CompositeDeviceAdd(&video_dev, components, countof(components),
-                                          UINT32_MAX)) != ZX_OK) {
-        zxlogf(ERROR, "VideoInit: CompositeDeviceAdd() failed for video: %d\n", status);
-        return status;
-    }
+  if ((status = pbus_.CompositeDeviceAdd(&video_dev, components, countof(components),
+                                         UINT32_MAX)) != ZX_OK) {
+    zxlogf(ERROR, "VideoInit: CompositeDeviceAdd() failed for video: %d\n", status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
-} //namespace vim
+}  // namespace vim

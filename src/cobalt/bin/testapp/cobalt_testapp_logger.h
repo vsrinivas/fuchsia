@@ -17,28 +17,26 @@ std::string StatusToString(fuchsia::cobalt::Status status);
 
 class CobaltTestAppLogger {
  public:
-  CobaltTestAppLogger(bool use_network,
-                      fuchsia::cobalt::ControllerSyncPtr* cobalt_controller)
+  CobaltTestAppLogger(bool use_network, fuchsia::cobalt::ControllerSyncPtr* cobalt_controller)
       : use_network_(use_network), cobalt_controller_(cobalt_controller) {}
 
   // Synchronously invokes LogEvent() using the given parameters.
   bool LogEvent(uint32_t metric_id, uint32_t index);
 
   // Synchronously invokes LogEventCount() using the given parameters.
-  bool LogEventCount(uint32_t metric_id, uint32_t index,
-                     const std::string& component, int64_t count);
+  bool LogEventCount(uint32_t metric_id, uint32_t index, const std::string& component,
+                     int64_t count);
 
   // Synchronously invokes LogElapsedTime() using the given parameters.
-  bool LogElapsedTime(uint32_t metric_id, uint32_t index,
-                      const std::string& component, int64_t elapsed_micros);
+  bool LogElapsedTime(uint32_t metric_id, uint32_t index, const std::string& component,
+                      int64_t elapsed_micros);
 
   // Synchronously invokes LogFrameRate() using the given parameters.
-  bool LogFrameRate(uint32_t metric_id, uint32_t index,
-                    const std::string& component, float fps);
+  bool LogFrameRate(uint32_t metric_id, uint32_t index, const std::string& component, float fps);
 
   // Synchronously invokes LogMemoryUsage() using the given parameters.
-  bool LogMemoryUsage(uint32_t metric_id, uint32_t index,
-                      const std::string& component, int64_t bytes);
+  bool LogMemoryUsage(uint32_t metric_id, uint32_t index, const std::string& component,
+                      int64_t bytes);
 
   // Synchronously invokes LogString() using the given parameters.
   bool LogString(uint32_t metric_id, const std::string& val);
@@ -49,8 +47,7 @@ class CobaltTestAppLogger {
                 const std::string& timer_id, uint32_t timeout_s);
 
   // Synchronously invokes LogIntHistogram() using the given parameters.
-  bool LogIntHistogram(uint32_t metric_id, uint32_t index,
-                       const std::string& component,
+  bool LogIntHistogram(uint32_t metric_id, uint32_t index, const std::string& component,
                        const std::map<uint32_t, uint64_t>& histogram_map);
 
   // Synchronously invokes LogCobaltEvent() using the given parameters.
@@ -58,16 +55,13 @@ class CobaltTestAppLogger {
 
   // Synchronously invokes LogCustomEvent() for an event with
   // two string parts using the given parameters.
-  bool LogStringPair(uint32_t metric_id, const std::string& part0,
-                     const std::string& val0, const std::string& part1,
-                     const std::string& val1);
+  bool LogStringPair(uint32_t metric_id, const std::string& part0, const std::string& val0,
+                     const std::string& part1, const std::string& val1);
 
   // Synchronously invokes LogCustomEvent() for an event of type
   // cobalt.CobaltMetricsTestProto, using the given parameter values.
-  bool LogCustomMetricsTestProto(uint32_t metric_id,
-                                 const std::string& query_val,
-                                 const int64_t wait_time_val,
-                                 const uint32_t response_code_val);
+  bool LogCustomMetricsTestProto(uint32_t metric_id, const std::string& query_val,
+                                 const int64_t wait_time_val, const uint32_t response_code_val);
 
   // If |use_network_| is false this method returns true immediately.
   //

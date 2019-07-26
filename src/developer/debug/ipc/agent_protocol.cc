@@ -13,8 +13,7 @@ namespace debug_ipc {
 // Record deserializers --------------------------------------------------------
 
 bool Deserialize(MessageReader* reader, ProcessBreakpointSettings* settings) {
-  if (!reader->ReadUint64(&settings->process_koid) ||
-      !reader->ReadUint64(&settings->thread_koid) ||
+  if (!reader->ReadUint64(&settings->process_koid) || !reader->ReadUint64(&settings->thread_koid) ||
       !reader->ReadUint64(&settings->address)) {
     return false;
   }
@@ -48,8 +47,7 @@ bool Deserialize(MessageReader* reader, RegisterCategory::Type* type) {
 
 bool Deserialize(MessageReader* reader, ConfigAction* action) {
   uint32_t type = 0;
-  if (!reader->ReadUint32(&type) ||
-      type >= static_cast<uint32_t>(ConfigAction::Type::kLast)) {
+  if (!reader->ReadUint32(&type) || type >= static_cast<uint32_t>(ConfigAction::Type::kLast)) {
     return false;
   }
   action->type = static_cast<ConfigAction::Type>(type);
@@ -118,8 +116,7 @@ void Serialize(const BreakpointStats& stats, MessageWriter* writer) {
 
 // Hello -----------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, HelloRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, HelloRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -127,16 +124,14 @@ bool ReadRequest(MessageReader* reader, HelloRequest* request,
   return true;
 }
 
-void WriteReply(const HelloReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const HelloReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kHello, transaction_id);
   writer->WriteBytes(&reply, sizeof(HelloReply));
 }
 
 // Launch ----------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, LaunchRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, LaunchRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -152,8 +147,7 @@ bool ReadRequest(MessageReader* reader, LaunchRequest* request,
   return Deserialize(reader, &request->argv);
 }
 
-void WriteReply(const LaunchReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const LaunchReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
   writer->WriteUint32(static_cast<uint32_t>(reply.inferior_type));
   writer->WriteUint32(reply.status);
@@ -164,8 +158,7 @@ void WriteReply(const LaunchReply& reply, uint32_t transaction_id,
 
 // Kill ----------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, KillRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, KillRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -173,16 +166,14 @@ bool ReadRequest(MessageReader* reader, KillRequest* request,
   return reader->ReadUint64(&request->process_koid);
 }
 
-void WriteReply(const KillReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const KillReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kKill, transaction_id);
   writer->WriteUint32(reply.status);
 }
 
 // Attach ----------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, AttachRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, AttachRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -196,8 +187,7 @@ bool ReadRequest(MessageReader* reader, AttachRequest* request,
   return reader->ReadUint64(&request->koid);
 }
 
-void WriteReply(const AttachReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const AttachReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
   writer->WriteUint64(reply.koid);
   writer->WriteUint32(reply.status);
@@ -206,8 +196,7 @@ void WriteReply(const AttachReply& reply, uint32_t transaction_id,
 
 // Detach ----------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, DetachRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, DetachRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -221,16 +210,14 @@ bool ReadRequest(MessageReader* reader, DetachRequest* request,
   return reader->ReadUint64(&request->koid);
 }
 
-void WriteReply(const DetachReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const DetachReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kDetach, transaction_id);
   writer->WriteUint32(reply.status);
 }
 
 // Pause -----------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, PauseRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, PauseRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -242,16 +229,14 @@ bool ReadRequest(MessageReader* reader, PauseRequest* request,
   return true;
 }
 
-void WriteReply(const PauseReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const PauseReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kPause, transaction_id);
   Serialize(reply.threads, writer);
 }
 
 // QuitAgent -------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, QuitAgentRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, QuitAgentRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -259,15 +244,13 @@ bool ReadRequest(MessageReader* reader, QuitAgentRequest* request,
   return true;
 }
 
-void WriteReply(const QuitAgentReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const QuitAgentReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kQuitAgent, transaction_id);
 }
 
 // Resume ----------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, ResumeRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, ResumeRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -292,15 +275,13 @@ bool ReadRequest(MessageReader* reader, ResumeRequest* request,
   return true;
 }
 
-void WriteReply(const ResumeReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const ResumeReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kResume, transaction_id);
 }
 
 // ProcessTree -----------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, ProcessTreeRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, ProcessTreeRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -308,16 +289,14 @@ bool ReadRequest(MessageReader* reader, ProcessTreeRequest* request,
   return reader->ReadBytes(sizeof(ProcessTreeRequest), request);
 }
 
-void WriteReply(const ProcessTreeReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const ProcessTreeReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kProcessTree, transaction_id);
   Serialize(reply.root, writer);
 }
 
 // Threads ---------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, ThreadsRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, ThreadsRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -325,16 +304,14 @@ bool ReadRequest(MessageReader* reader, ThreadsRequest* request,
   return reader->ReadBytes(sizeof(ThreadsRequest), request);
 }
 
-void WriteReply(const ThreadsReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const ThreadsReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kThreads, transaction_id);
   Serialize(reply.threads, writer);
 }
 
 // ReadMemory ------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, ReadMemoryRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, ReadMemoryRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -342,8 +319,7 @@ bool ReadRequest(MessageReader* reader, ReadMemoryRequest* request,
   return reader->ReadBytes(sizeof(ReadMemoryRequest), request);
 }
 
-void WriteReply(const ReadMemoryReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const ReadMemoryReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kReadMemory, transaction_id);
   Serialize(reply.blocks, writer);
 }
@@ -367,8 +343,8 @@ bool ReadRequest(MessageReader* reader, AddOrChangeBreakpointRequest* request,
   return Deserialize(reader, &request->breakpoint);
 }
 
-void WriteReply(const AddOrChangeBreakpointReply& reply,
-                uint32_t transaction_id, MessageWriter* writer) {
+void WriteReply(const AddOrChangeBreakpointReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAddOrChangeBreakpoint, transaction_id);
   writer->WriteUint32(reply.status);
 }
@@ -391,8 +367,7 @@ void WriteReply(const RemoveBreakpointReply& reply, uint32_t transaction_id,
 
 // SysInfo ---------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, SysInfoRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, SysInfoRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -400,8 +375,7 @@ bool ReadRequest(MessageReader* reader, SysInfoRequest* request,
   return true;
 }
 
-void WriteReply(const SysInfoReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const SysInfoReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kSysInfo, transaction_id);
   writer->WriteString(reply.version);
   writer->WriteUint32(reply.num_cpus);
@@ -412,8 +386,7 @@ void WriteReply(const SysInfoReply& reply, uint32_t transaction_id,
 
 // ThreadStatus ----------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, ThreadStatusRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, ThreadStatusRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -421,16 +394,14 @@ bool ReadRequest(MessageReader* reader, ThreadStatusRequest* request,
   return reader->ReadBytes(sizeof(ThreadStatusRequest), request);
 }
 
-void WriteReply(const ThreadStatusReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const ThreadStatusReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kThreadStatus, transaction_id);
   Serialize(reply.record, writer);
 }
 
 // Modules ---------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, ModulesRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, ModulesRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -438,16 +409,14 @@ bool ReadRequest(MessageReader* reader, ModulesRequest* request,
   return reader->ReadBytes(sizeof(ModulesRequest), request);
 }
 
-void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const ModulesReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kModules, transaction_id);
   Serialize(reply.modules, writer);
 }
 
 // JobFilter ------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, JobFilterRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, JobFilterRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -457,16 +426,14 @@ bool ReadRequest(MessageReader* reader, JobFilterRequest* request,
   return Deserialize(reader, &request->filters);
 }
 
-void WriteReply(const JobFilterReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const JobFilterReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kJobFilter, transaction_id);
   writer->WriteUint32(reply.status);
 }
 
 // WriteMemory -----------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, WriteMemoryRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, WriteMemoryRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -478,59 +445,51 @@ bool ReadRequest(MessageReader* reader, WriteMemoryRequest* request,
   return Deserialize(reader, &request->data);
 }
 
-void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kWriteMemory, transaction_id);
   writer->WriteUint64(reply.status);
 }
 
 // ReadRegisters ---------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadUint64(&request->process_koid) ||
-      !reader->ReadUint64(&request->thread_koid))
+  if (!reader->ReadUint64(&request->process_koid) || !reader->ReadUint64(&request->thread_koid))
     return false;
 
   return Deserialize(reader, &request->categories);
 }
 
-void WriteReply(const ReadRegistersReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const ReadRegistersReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kReadRegisters, transaction_id);
   Serialize(reply.categories, writer);
 }
 
 // WriteRegisters --------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, WriteRegistersRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, WriteRegistersRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadUint64(&request->process_koid) ||
-      !reader->ReadUint64(&request->thread_koid))
+  if (!reader->ReadUint64(&request->process_koid) || !reader->ReadUint64(&request->thread_koid))
     return false;
   return Deserialize(reader, &request->registers);
 }
 
-void WriteReply(const WriteRegistersReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const WriteRegistersReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kWriteRegisters, transaction_id);
   writer->WriteUint64(reply.status);
 }
 
 // Address space ---------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -538,16 +497,14 @@ bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request,
   return reader->ReadBytes(sizeof(AddressSpaceRequest), request);
 }
 
-void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAddressSpace, transaction_id);
   Serialize(reply.map, writer);
 }
 
 // ConfigAgent -----------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, ConfigAgentRequest* request,
-                 uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, ConfigAgentRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
@@ -555,37 +512,32 @@ bool ReadRequest(MessageReader* reader, ConfigAgentRequest* request,
   return Deserialize(reader, &request->actions);
 }
 
-void WriteReply(const ConfigAgentReply& reply, uint32_t transaction_id,
-                MessageWriter* writer) {
+void WriteReply(const ConfigAgentReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kConfigAgent, transaction_id);
   Serialize(reply.results, writer);
 }
 
 // Notifications ---------------------------------------------------------------
 
-void WriteNotifyProcessExiting(const NotifyProcessExiting& notify,
-                               MessageWriter* writer) {
+void WriteNotifyProcessExiting(const NotifyProcessExiting& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyProcessExiting, 0);
   writer->WriteUint64(notify.process_koid);
   writer->WriteInt64(notify.return_code);
 }
 
-void WriteNotifyProcessStarting(const NotifyProcessStarting& notify,
-                                MessageWriter* writer) {
+void WriteNotifyProcessStarting(const NotifyProcessStarting& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyProcessStarting, 0);
   writer->WriteUint64(notify.koid);
   writer->WriteUint32(notify.component_id);
   writer->WriteString(notify.name);
 }
 
-void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
-                       MessageWriter* writer) {
+void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify, MessageWriter* writer) {
   writer->WriteHeader(type, 0);
   Serialize(notify.record, writer);
 }
 
-void WriteNotifyException(const NotifyException& notify,
-                          MessageWriter* writer) {
+void WriteNotifyException(const NotifyException& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyException, 0);
   Serialize(notify.thread, writer);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));

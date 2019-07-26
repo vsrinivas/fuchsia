@@ -19,8 +19,7 @@
 
 namespace inferior_control {
 
-void Delegate::OnThreadStarting(Process* process, Thread* thread,
-                                zx_handle_t eport,
+void Delegate::OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
                                 const zx_exception_context_t& context) {
   if (!thread->ResumeFromException(eport)) {
     // If resumption fails something is really wrong. Do a graceful exit.
@@ -32,8 +31,7 @@ void Delegate::OnThreadStarting(Process* process, Thread* thread,
   }
 }
 
-void Delegate::OnThreadExiting(Process* process, Thread* thread,
-                               zx_handle_t eport,
+void Delegate::OnThreadExiting(Process* process, Thread* thread, zx_handle_t eport,
                                const zx_exception_context_t& context) {
   thread->ResumeForExit(eport);
 }
@@ -58,9 +56,9 @@ void Delegate::OnProcessTermination(Process* process) {
   server_->PostQuitMessageLoop(true);
 }
 
-void Delegate::OnArchitecturalException(
-    Process* process, Thread* thread, zx_handle_t eport,
-    zx_excp_type_t type, const zx_exception_context_t& context) {
+void Delegate::OnArchitecturalException(Process* process, Thread* thread, zx_handle_t eport,
+                                        zx_excp_type_t type,
+                                        const zx_exception_context_t& context) {
   // There is one exception we need to handle: the ld.so breakpoint.
   // The DSO list hasn't been loaded yet, it's our responsibility to do so.
   // This is one place where we deviate from the goal of having internal
@@ -78,8 +76,7 @@ void Delegate::OnArchitecturalException(
     if (process->CheckDsosList(thread)) {
       // At ld.so breakpoint, DSO list loaded.
       zx_status_t status =
-        debugger_utils::ResumeAfterSoftwareBreakpointInstruction(
-            thread->handle(), eport);
+          debugger_utils::ResumeAfterSoftwareBreakpointInstruction(thread->handle(), eport);
       if (status != ZX_OK) {
         // This is a breakpoint we introduced. No point in passing it on to
         // other handlers. If resumption fails there's not much we can do.
@@ -98,9 +95,8 @@ void Delegate::OnArchitecturalException(
   process->Kill();
 }
 
-void Delegate::OnSyntheticException(
-    Process* process, Thread* thread, zx_handle_t eport,
-    zx_excp_type_t type, const zx_exception_context_t& context) {
+void Delegate::OnSyntheticException(Process* process, Thread* thread, zx_handle_t eport,
+                                    zx_excp_type_t type, const zx_exception_context_t& context) {
   thread->Dump();
   process->Kill();
 }

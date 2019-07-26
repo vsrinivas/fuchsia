@@ -28,14 +28,12 @@ static constexpr size_t kUsbDescriptorStringSize = 512;
 // Strings in the usb device description are represented as indices
 // into the 'strings' section at the end.  This function unpacks a specific
 // string, given its index.
-std::string FetchString(const usb_protocol_t& usb_proto,
-                        uint8_t description_index) {
+std::string FetchString(const usb_protocol_t& usb_proto, uint8_t description_index) {
   uint8_t str_buf[kUsbDescriptorStringSize];
   size_t buflen = sizeof(str_buf);
   uint16_t language_id = 0;
-  zx_status_t res =
-      usb_get_string_descriptor(&usb_proto, description_index, language_id,
-                                &language_id, str_buf, buflen, &buflen);
+  zx_status_t res = usb_get_string_descriptor(&usb_proto, description_index, language_id,
+                                              &language_id, str_buf, buflen, &buflen);
   if (res != ZX_OK) {
     return std::string();
   }
@@ -56,8 +54,7 @@ video::usb::UsbDeviceInfo GetDeviceInfo(const usb_protocol_t& usb_proto) {
   // Attempt to fetch the string descriptors for our manufacturer name,
   // product name, and serial number.
   if (usb_dev_desc.iManufacturer) {
-    device_info.manufacturer =
-        FetchString(usb_proto, usb_dev_desc.iManufacturer);
+    device_info.manufacturer = FetchString(usb_proto, usb_dev_desc.iManufacturer);
   }
 
   if (usb_dev_desc.iProduct) {
@@ -65,8 +62,7 @@ video::usb::UsbDeviceInfo GetDeviceInfo(const usb_protocol_t& usb_proto) {
   }
 
   if (usb_dev_desc.iSerialNumber) {
-    device_info.serial_number =
-        FetchString(usb_proto, usb_dev_desc.iSerialNumber);
+    device_info.serial_number = FetchString(usb_proto, usb_dev_desc.iSerialNumber);
   }
   return device_info;
 }
@@ -107,8 +103,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
   while ((header = usb_desc_iter_next(&iter)) != NULL) {
     switch (header->bDescriptorType) {
       case USB_DT_INTERFACE_ASSOCIATION: {
-        usb_interface_assoc_descriptor_t* assoc_desc =
-            (usb_interface_assoc_descriptor_t*)header;
+        usb_interface_assoc_descriptor_t* assoc_desc = (usb_interface_assoc_descriptor_t*)header;
         zxlogf(TRACE,
                "USB_DT_INTERFACE_ASSOCIATION bInterfaceCount: %u "
                "bFirstInterface: %u\n",
@@ -133,9 +128,9 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               // interface.
               if (formats.Size() > 0) {
                 status = video::usb::UsbVideoStream::Create(
-                    device, &usb, video_source_index++, intf, control_header,
-                    input_header, std::move(formats), &streaming_settings,
-                    std::move(device_info), parent_req_size);
+                    device, &usb, video_source_index++, intf, control_header, input_header,
+                    std::move(formats), &streaming_settings, std::move(device_info),
+                    parent_req_size);
                 if (status != ZX_OK) {
                   zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
                   goto error_return;
@@ -146,8 +141,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               input_header = NULL;
             }
             break;
-          } else if (intf->bInterfaceSubClass ==
-                     USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION) {
+          } else if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION) {
             zxlogf(TRACE,
                    "interface USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION "
                    "bAlternateSetting: %d\n",
@@ -170,17 +164,14 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               break;
             }
             case USB_VIDEO_VC_INPUT_TERMINAL: {
-              usb_video_vc_input_terminal_desc* desc =
-                  (usb_video_vc_input_terminal_desc*)header;
+              usb_video_vc_input_terminal_desc* desc = (usb_video_vc_input_terminal_desc*)header;
               zxlogf(TRACE, "USB_VIDEO_VC_INPUT_TERMINAL wTerminalType: %04X\n",
                      le16toh(desc->wTerminalType));
               break;
             }
             case USB_VIDEO_VC_OUTPUT_TERMINAL: {
-              usb_video_vc_output_terminal_desc* desc =
-                  (usb_video_vc_output_terminal_desc*)header;
-              zxlogf(TRACE,
-                     "USB_VIDEO_VC_OUTPUT_TERMINAL wTerminalType: %04X\n",
+              usb_video_vc_output_terminal_desc* desc = (usb_video_vc_output_terminal_desc*)header;
+              zxlogf(TRACE, "USB_VIDEO_VC_OUTPUT_TERMINAL wTerminalType: %04X\n",
                      le16toh(desc->wTerminalType));
               break;
             }
@@ -222,10 +213,8 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
             case USB_VIDEO_VS_FORMAT_VP8_SIMULCAST:
               if (formats.number_of_formats() >= input_header->bNumFormats) {
                 // More formats than expected, this should never happen.
-                zxlogf(
-                    ERROR,
-                    "skipping unexpected format %u, already have %d formats\n",
-                    vc_header->bDescriptorSubtype, input_header->bNumFormats);
+                zxlogf(ERROR, "skipping unexpected format %u, already have %d formats\n",
+                       vc_header->bDescriptorSubtype, input_header->bNumFormats);
                 break;
               }
               status = formats.ParseUsbDescriptor(vc_header, &iter);
@@ -237,8 +226,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               // other formats we support.
               break;
           }
-        } else if (intf->bInterfaceSubClass ==
-                   USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION) {
+        } else if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION) {
           zxlogf(TRACE, "USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION\n");
         }
         break;
@@ -246,14 +234,11 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
       case USB_DT_ENDPOINT: {
         usb_endpoint_descriptor_t* endp = (usb_endpoint_descriptor_t*)header;
         const char* direction =
-            (endp->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN
-                ? "IN"
-                : "OUT";
+            (endp->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN ? "IN" : "OUT";
         uint16_t max_packet_size = usb_ep_max_packet(endp);
         // The additional transactions per microframe value is extracted
         // from bits 12..11 of wMaxPacketSize, so it fits in a uint8_t.
-        uint8_t per_mf =
-            static_cast<uint8_t>(usb_ep_add_mf_transactions(endp) + 1);
+        uint8_t per_mf = static_cast<uint8_t>(usb_ep_add_mf_transactions(endp) + 1);
         zxlogf(TRACE,
                "USB_DT_ENDPOINT %s bEndpointAddress 0x%x packet size %d, %d / "
                "mf\n",
@@ -261,13 +246,11 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
 
         // There may be another still image endpoint, so check the address
         // matches the input header.
-        if (input_header &&
-            endp->bEndpointAddress == input_header->bEndpointAddress) {
-          video::usb::UsbVideoStreamingSetting setting = {
-              .alt_setting = intf->bAlternateSetting,
-              .transactions_per_microframe = per_mf,
-              .max_packet_size = max_packet_size,
-              .ep_type = usb_ep_type(endp)};
+        if (input_header && endp->bEndpointAddress == input_header->bEndpointAddress) {
+          video::usb::UsbVideoStreamingSetting setting = {.alt_setting = intf->bAlternateSetting,
+                                                          .transactions_per_microframe = per_mf,
+                                                          .max_packet_size = max_packet_size,
+                                                          .ep_type = usb_ep_type(endp)};
           streaming_settings.push_back(setting, &ac);
           if (!ac.check()) {
             status = ZX_ERR_NO_MEMORY;
@@ -277,10 +260,8 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         break;
       }
       case USB_VIDEO_CS_ENDPOINT: {
-        usb_video_vc_interrupt_endpoint_desc* desc =
-            (usb_video_vc_interrupt_endpoint_desc*)header;
-        zxlogf(TRACE, "USB_VIDEO_CS_ENDPOINT wMaxTransferSize %u\n",
-               desc->wMaxTransferSize);
+        usb_video_vc_interrupt_endpoint_desc* desc = (usb_video_vc_interrupt_endpoint_desc*)header;
+        zxlogf(TRACE, "USB_VIDEO_CS_ENDPOINT wMaxTransferSize %u\n", desc->wMaxTransferSize);
         break;
       }
       case USB_DT_SS_EP_COMPANION: {
@@ -291,23 +272,20 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         auto& settings = streaming_settings[streaming_settings.size() - 1];
 
         if (settings.ep_type == USB_ENDPOINT_ISOCHRONOUS) {
-          usb_ss_ep_comp_descriptor_t* desc =
-              (usb_ss_ep_comp_descriptor_t*)header;
+          usb_ss_ep_comp_descriptor_t* desc = (usb_ss_ep_comp_descriptor_t*)header;
           if (usb_ss_ep_comp_isoc_comp(desc)) {
             auto next = usb_desc_iter_next(&iter);
-            if (next == nullptr ||
-                next->bDescriptorType != USB_DT_SS_ISOCH_EP_COMPANION) {
+            if (next == nullptr || next->bDescriptorType != USB_DT_SS_ISOCH_EP_COMPANION) {
               status = ZX_ERR_BAD_STATE;
               goto error_return;
             }
-            usb_ss_isoch_ep_comp_descriptor_t* next_desc =
-                (usb_ss_isoch_ep_comp_descriptor_t*)next;
+            usb_ss_isoch_ep_comp_descriptor_t* next_desc = (usb_ss_isoch_ep_comp_descriptor_t*)next;
             uint32_t denom = (desc->bMaxBurst + 1) * settings.max_packet_size;
             settings.transactions_per_microframe =
                 (uint8_t)((next_desc->dwBytesPerInterval + denom - 1) / denom);
           } else {
-            settings.transactions_per_microframe = (uint8_t)(
-                (desc->bMaxBurst + 1) * (usb_ss_ep_comp_isoc_mult(desc) + 1));
+            settings.transactions_per_microframe =
+                (uint8_t)((desc->bMaxBurst + 1) * (usb_ss_ep_comp_isoc_mult(desc) + 1));
           }
           break;
         }
@@ -320,9 +298,8 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
   }
   if (formats.Size() > 0) {
     status = video::usb::UsbVideoStream::Create(
-        device, &usb, video_source_index++, intf, control_header, input_header,
-        std::move(formats), &streaming_settings, std::move(device_info),
-        parent_req_size);
+        device, &usb, video_source_index++, intf, control_header, input_header, std::move(formats),
+        &streaming_settings, std::move(device_info), parent_req_size);
     if (status != ZX_OK) {
       zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
     }

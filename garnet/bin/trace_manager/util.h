@@ -26,8 +26,7 @@ enum class TransferStatus {
 // successfully transferred. A return value of
 // TransferStatus::kReceiverDead indicates that the peer was closed
 // during the transfer.
-TransferStatus WriteBufferToSocket(const zx::socket& socket, const void* buffer,
-                                   size_t len);
+TransferStatus WriteBufferToSocket(const zx::socket& socket, const void* buffer, size_t len);
 
 }  // namespace tracing
 

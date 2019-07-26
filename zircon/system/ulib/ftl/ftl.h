@@ -16,15 +16,15 @@ typedef const struct ndm* CNDM;
 
 // FTL Interface Structure
 typedef struct XfsVol {
-    // Driver functions
-    int (*write_pages)(const void* buf, uint32_t page0, int cnt, void* vol);
-    int (*read_pages)(void* buf, uint32_t page0, int cnt, void* vol);
-    int (*report)(void *vol, uint32_t msg, ...);
+  // Driver functions
+  int (*write_pages)(const void* buf, uint32_t page0, int cnt, void* vol);
+  int (*read_pages)(void* buf, uint32_t page0, int cnt, void* vol);
+  int (*report)(void* vol, uint32_t msg, ...);
 
-    const char* name;       // volume name
-    uint32_t flags;         // option flags
-    uint32_t num_pages;     // number of pages in volume
-    uint32_t page_size;     // page size in bytes
-    void* vol;              // driver's volume pointer
-    void* ftl_volume;       // ftl layer (block device) volume
+  const char* name;    // volume name
+  uint32_t flags;      // option flags
+  uint32_t num_pages;  // number of pages in volume
+  uint32_t page_size;  // page size in bytes
+  void* vol;           // driver's volume pointer
+  void* ftl_volume;    // ftl layer (block device) volume
 } XfsVol;

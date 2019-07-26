@@ -25,8 +25,7 @@ void Exit(const char* format, ...) {
   std::unique_ptr<char[]> buffer(new char[buffer_bytes]);
 
   va_start(args, format);
-  size_t buffer_bytes_2 =
-      vsnprintf(buffer.get(), buffer_bytes, format, args) + 1;
+  size_t buffer_bytes_2 = vsnprintf(buffer.get(), buffer_bytes, format, args) + 1;
   (void)buffer_bytes_2;
   // sanity check; should match so go ahead and assert that it does.
   assert(buffer_bytes == buffer_bytes_2);
@@ -77,20 +76,17 @@ void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
   }
 }
 
-void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
-                                   const fuchsia::media::PcmFormat& pcm) {
+void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx, const fuchsia::media::PcmFormat& pcm) {
   uint32_t pcm_mode_le = htole32(pcm.pcm_mode);
   if (!SHA256_Update(sha256_ctx, &pcm_mode_le, sizeof(pcm_mode_le))) {
     assert(false);
   }
   uint32_t bits_per_sample_le = htole32(pcm.bits_per_sample);
-  if (!SHA256_Update(sha256_ctx, &bits_per_sample_le,
-                     sizeof(bits_per_sample_le))) {
+  if (!SHA256_Update(sha256_ctx, &bits_per_sample_le, sizeof(bits_per_sample_le))) {
     assert(false);
   }
   uint32_t frames_per_second_le = htole32(pcm.frames_per_second);
-  if (!SHA256_Update(sha256_ctx, &frames_per_second_le,
-                     sizeof(frames_per_second_le))) {
+  if (!SHA256_Update(sha256_ctx, &frames_per_second_le, sizeof(frames_per_second_le))) {
     assert(false);
   }
   for (fuchsia::media::AudioChannelId channel_id : pcm.channel_map) {
@@ -101,9 +97,8 @@ void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
   }
 }
 
-void SHA256_Update_VideoParameters(
-    SHA256_CTX* sha256_ctx,
-    const fuchsia::media::VideoUncompressedFormat& video) {
+void SHA256_Update_VideoParameters(SHA256_CTX* sha256_ctx,
+                                   const fuchsia::media::VideoUncompressedFormat& video) {
   UpdateSha256(sha256_ctx, video.fourcc);
   UpdateSha256(sha256_ctx, video.primary_width_pixels);
   UpdateSha256(sha256_ctx, video.primary_height_pixels);
@@ -120,9 +115,8 @@ void SHA256_Update_VideoParameters(
   UpdateSha256(sha256_ctx, video.secondary_pixel_stride);
 }
 
-void SHA256_Update_VideoPlane(SHA256_CTX* sha256_ctx, uint8_t* start,
-                              uint32_t width, uint32_t stride,
-                              uint32_t height) {
+void SHA256_Update_VideoPlane(SHA256_CTX* sha256_ctx, uint8_t* start, uint32_t width,
+                              uint32_t stride, uint32_t height) {
   uint8_t* src = start;
   for (uint32_t row = 0; row < height; ++row) {
     SHA256_Update(sha256_ctx, src, width);

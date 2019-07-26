@@ -13,10 +13,8 @@ using CategoryType = RegisterCategory::Type;
 TEST(RegisterIDToCategory, Border) {
   auto IDToCat = RegisterCategory::RegisterIDToCategory;
   EXPECT_EQ(IDToCat(RegisterID::kUnknown), CategoryType::kNone);
-  EXPECT_EQ(IDToCat(static_cast<RegisterID>(kARMv8GeneralBegin - 1)),
-            CategoryType::kNone);
-  EXPECT_EQ(IDToCat(static_cast<RegisterID>(kX64DebugEnd + 1)),
-            CategoryType::kNone);
+  EXPECT_EQ(IDToCat(static_cast<RegisterID>(kARMv8GeneralBegin - 1)), CategoryType::kNone);
+  EXPECT_EQ(IDToCat(static_cast<RegisterID>(kX64DebugEnd + 1)), CategoryType::kNone);
 }
 
 TEST(RegisterIDToCategory, ARMv8) {
@@ -283,73 +281,40 @@ TEST(RegisterIDToString, Registers) {
   EXPECT_STREQ("v29", RegisterIDToString(RegisterID::kARMv8_v29));
   EXPECT_STREQ("v30", RegisterIDToString(RegisterID::kARMv8_v30));
   EXPECT_STREQ("v31", RegisterIDToString(RegisterID::kARMv8_v31));
-  EXPECT_STREQ("id_aa64dfr0_el1",
-               RegisterIDToString(RegisterID::kARMv8_id_aa64dfr0_el1));
+  EXPECT_STREQ("id_aa64dfr0_el1", RegisterIDToString(RegisterID::kARMv8_id_aa64dfr0_el1));
   EXPECT_STREQ("mdscr_el1", RegisterIDToString(RegisterID::kARMv8_mdscr_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr0_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr0_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr1_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr1_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr2_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr2_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr3_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr3_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr4_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr4_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr5_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr5_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr6_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr6_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr7_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr7_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr8_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr8_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr9_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr9_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr10_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr10_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr11_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr11_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr12_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr12_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr13_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr13_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr14_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr14_el1));
-  EXPECT_STREQ("kARMv8_dbgbcr15_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbcr15_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr0_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr0_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr1_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr1_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr2_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr2_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr3_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr3_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr4_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr4_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr5_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr5_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr6_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr6_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr7_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr7_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr8_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr8_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr9_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr9_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr10_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr10_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr11_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr11_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr12_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr12_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr13_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr13_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr14_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr14_el1));
-  EXPECT_STREQ("kARMv8_dbgbvr15_el1",
-               RegisterIDToString(RegisterID::kARMv8_dbgbvr15_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr0_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr0_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr1_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr1_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr2_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr2_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr3_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr3_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr4_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr4_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr5_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr5_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr6_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr6_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr7_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr7_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr8_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr8_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr9_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr9_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr10_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr10_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr11_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr11_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr12_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr12_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr13_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr13_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr14_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr14_el1));
+  EXPECT_STREQ("kARMv8_dbgbcr15_el1", RegisterIDToString(RegisterID::kARMv8_dbgbcr15_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr0_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr0_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr1_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr1_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr2_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr2_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr3_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr3_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr4_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr4_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr5_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr5_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr6_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr6_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr7_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr7_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr8_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr8_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr9_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr9_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr10_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr10_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr11_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr11_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr12_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr12_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr13_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr13_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr14_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr14_el1));
+  EXPECT_STREQ("kARMv8_dbgbvr15_el1", RegisterIDToString(RegisterID::kARMv8_dbgbvr15_el1));
   EXPECT_STREQ("rax", RegisterIDToString(RegisterID::kX64_rax));
   EXPECT_STREQ("rbx", RegisterIDToString(RegisterID::kX64_rbx));
   EXPECT_STREQ("rcx", RegisterIDToString(RegisterID::kX64_rcx));

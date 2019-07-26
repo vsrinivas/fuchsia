@@ -86,47 +86,48 @@ static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
 static const device_component_part_t hpd_gpio_component[] = {
-    { countof(root_match), root_match },
-    { countof(hpd_gpio_match), hpd_gpio_match },
+    {countof(root_match), root_match},
+    {countof(hpd_gpio_match), hpd_gpio_match},
 };
 static const device_component_part_t canvas_component[] = {
-    { countof(root_match), root_match },
-    { countof(canvas_match), canvas_match },
+    {countof(root_match), root_match},
+    {countof(canvas_match), canvas_match},
 };
 static const device_component_part_t sysmem_component[] = {
-    { countof(root_match), root_match },
-    { countof(sysmem_match), sysmem_match },
+    {countof(root_match), root_match},
+    {countof(sysmem_match), sysmem_match},
 };
 static const device_component_t components[] = {
-    { countof(hpd_gpio_component), hpd_gpio_component },
-    { countof(canvas_component), canvas_component },
-    { countof(sysmem_component), sysmem_component },
+    {countof(hpd_gpio_component), hpd_gpio_component},
+    {countof(canvas_component), canvas_component},
+    {countof(sysmem_component), sysmem_component},
 };
 
 zx_status_t Vim::DisplayInit() {
-    zx_status_t status;
-    pbus_dev_t display_dev = {};
-    display_dev.name = "display";
-    display_dev.vid = PDEV_VID_KHADAS;
-    display_dev.pid = PDEV_PID_VIM2;
-    display_dev.did = PDEV_DID_VIM_DISPLAY;
-    display_dev.mmio_list = vim_display_mmios;
-    display_dev.mmio_count = countof(vim_display_mmios);
-    display_dev.irq_list = vim_display_irqs;
-    display_dev.irq_count = countof(vim_display_irqs);
-    display_dev.bti_list = vim_display_btis;
-    display_dev.bti_count = countof(vim_display_btis);
+  zx_status_t status;
+  pbus_dev_t display_dev = {};
+  display_dev.name = "display";
+  display_dev.vid = PDEV_VID_KHADAS;
+  display_dev.pid = PDEV_PID_VIM2;
+  display_dev.did = PDEV_DID_VIM_DISPLAY;
+  display_dev.mmio_list = vim_display_mmios;
+  display_dev.mmio_count = countof(vim_display_mmios);
+  display_dev.irq_list = vim_display_irqs;
+  display_dev.irq_count = countof(vim_display_irqs);
+  display_dev.bti_list = vim_display_btis;
+  display_dev.bti_count = countof(vim_display_btis);
 
-    // enable this #if 0 in order to enable the SPDIF out pin for VIM2 (GPIO H4, pad M22)
+  // enable this #if 0 in order to enable the SPDIF out pin for VIM2 (GPIO H4, pad M22)
 #if 0
     gpio_set_alt_function(&bus->gpio, S912_SPDIF_H4, S912_SPDIF_H4_OUT_FN);
 #endif
 
-    if ((status = pbus_.CompositeDeviceAdd(&display_dev, components, countof(components), UINT32_MAX)) != ZX_OK) {
-        zxlogf(ERROR, "DisplayInit: pbus_device_add() failed for display: %d\n", status);
-        return status;
-    }
+  if ((status = pbus_.CompositeDeviceAdd(&display_dev, components, countof(components),
+                                         UINT32_MAX)) != ZX_OK) {
+    zxlogf(ERROR, "DisplayInit: pbus_device_add() failed for display: %d\n", status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
-} //namespace vim
+}  // namespace vim

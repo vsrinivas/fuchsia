@@ -17,65 +17,61 @@
 // FVM slice size used for tests.
 constexpr size_t kTestFvmSliceSize = blobfs::kBlobfsBlockSize;  // 8kb.
 
-constexpr uint8_t kTestUniqueGUID[] = {
-    0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
-};
+constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                       0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
-constexpr uint8_t kTestPartGUID[] = {
-    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-    0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-};
+constexpr uint8_t kTestPartGUID[] = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+                                     0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 
 constexpr char kMountPath[] = "/blobfs-tmp/zircon-blobfs-test";
 
 enum class FsTestType {
-    kGeneric,  // Use a generic block device.
-    kFvm       // Use an FVM device.
+  kGeneric,  // Use a generic block device.
+  kFvm       // Use an FVM device.
 };
 
 class BlobfsTest : public zxtest::Test {
-  public:
-    explicit BlobfsTest(FsTestType type = FsTestType::kGeneric);
+ public:
+  explicit BlobfsTest(FsTestType type = FsTestType::kGeneric);
 
-    // zxtest::Test interface:
-    void SetUp() override;
-    void TearDown() override;
+  // zxtest::Test interface:
+  void SetUp() override;
+  void TearDown() override;
 
-    // Unmounts and remounts the filesystem.
-    void Remount();
+  // Unmounts and remounts the filesystem.
+  void Remount();
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTest);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTest);
 
-  protected:
-    void Mount();
-    void Unmount();
-    zx_status_t CheckFs();
-    void CheckInfo();
+ protected:
+  void Mount();
+  void Unmount();
+  zx_status_t CheckFs();
+  void CheckInfo();
 
-    FsTestType type_;
-    Environment* environment_;
-    std::string device_path_;
-    bool read_only_ = false;
-    bool mounted_ = false;
+  FsTestType type_;
+  Environment* environment_;
+  std::string device_path_;
+  bool read_only_ = false;
+  bool mounted_ = false;
 };
 
 class BlobfsTestWithFvm : public BlobfsTest {
-  public:
-    BlobfsTestWithFvm() : BlobfsTest(FsTestType::kFvm) {}
+ public:
+  BlobfsTestWithFvm() : BlobfsTest(FsTestType::kFvm) {}
 
-    // zxtest::Test interface:
-    void SetUp() override;
-    void TearDown() override;
+  // zxtest::Test interface:
+  void SetUp() override;
+  void TearDown() override;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTestWithFvm);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTestWithFvm);
 
-  private:
-    void BindFvm();
-    void CreatePartition();
+ private:
+  void BindFvm();
+  void CreatePartition();
 
-    std::string fvm_path_;
-    std::string partition_path_;
+  std::string fvm_path_;
+  std::string partition_path_;
 };
 
 // Creates an open blob with the provided Merkle tree + Data, and reads back to

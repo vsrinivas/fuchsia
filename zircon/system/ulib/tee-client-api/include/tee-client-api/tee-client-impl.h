@@ -17,21 +17,21 @@
 #define TEEC_NUM_PARAMS_MAX 4
 
 typedef struct teec_context_impl {
-    zx_handle_t tee_channel;
+  zx_handle_t tee_channel;
 } teec_context_impl_t;
 
 typedef struct teec_session_impl {
-    uint32_t session_id;
-    teec_context_impl_t* context_imp;
+  uint32_t session_id;
+  teec_context_impl_t* context_imp;
 } teec_session_impl_t;
 
 typedef struct teec_shared_memory_impl {
-    zx_handle_t vmo;
-    zx_vaddr_t mapped_addr;
-    size_t mapped_size;
+  zx_handle_t vmo;
+  zx_vaddr_t mapped_addr;
+  size_t mapped_size;
 } teec_shared_memory_impl_t;
 
 typedef struct teec_operation_impl {
-    /* This is just a placeholder so that the struct is not empty. */
-    char reserved;
+  /* This is just a placeholder so that the struct is not empty. */
+  char reserved;
 } teec_operation_impl_t;

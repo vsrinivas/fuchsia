@@ -7,18 +7,15 @@
 
 namespace display {
 
-DisplayManagerImpl::DisplayManagerImpl()
-    : DisplayManagerImpl(sys::ComponentContext::Create()) {}
+DisplayManagerImpl::DisplayManagerImpl() : DisplayManagerImpl(sys::ComponentContext::Create()) {}
 
-DisplayManagerImpl::DisplayManagerImpl(
-    std::unique_ptr<sys::ComponentContext> context)
+DisplayManagerImpl::DisplayManagerImpl(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {
   display_ = std::unique_ptr<Display>(Display::GetDisplay());
 
-  context_->outgoing()->AddPublicService<Manager>(
-      [this](fidl::InterfaceRequest<Manager> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  context_->outgoing()->AddPublicService<Manager>([this](fidl::InterfaceRequest<Manager> request) {
+    bindings_.AddBinding(this, std::move(request));
+  });
 }
 
 void DisplayManagerImpl::GetBrightness(GetBrightnessCallback callback) {
@@ -32,8 +29,7 @@ void DisplayManagerImpl::GetBrightness(GetBrightnessCallback callback) {
   callback(display_->GetBrightness(&brightness), brightness);
 }
 
-void DisplayManagerImpl::SetBrightness(double brightness,
-                                       SetBrightnessCallback callback) {
+void DisplayManagerImpl::SetBrightness(double brightness, SetBrightnessCallback callback) {
   if (NULL == display_.get()) {
     FXL_LOG(ERROR) << "SetBrightness: display not retrieved";
     callback(false);

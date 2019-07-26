@@ -10,7 +10,6 @@ App::App()
     : startup_context_(sys::ComponentContext::Create()),
       settings_manager_impl_(std::make_unique<SettingsManagerImpl>()),
       semantics_manager_impl_(std::make_unique<SemanticsManagerImpl>()) {
-
   startup_context_->outgoing()->AddPublicService<fuchsia::accessibility::SettingsManager>(
       [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request) {
         settings_manager_impl_->AddBinding(std::move(request));

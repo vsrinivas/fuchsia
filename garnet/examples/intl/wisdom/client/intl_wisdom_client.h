@@ -21,9 +21,7 @@ class IntlWisdomClient {
  public:
   IntlWisdomClient(std::unique_ptr<sys::ComponentContext> startup_context);
 
-  const fuchsia::examples::intl::wisdom::IntlWisdomServerPtr& server() const {
-    return server_;
-  }
+  const fuchsia::examples::intl::wisdom::IntlWisdomServerPtr& server() const { return server_; }
 
   // Asks the startup context's launcher to launch a server, and then connects
   // to the server.
@@ -37,8 +35,7 @@ class IntlWisdomClient {
   //   callback: async callback
   void SendRequest(
       zx::time timestamp, const icu::TimeZone& time_zone,
-      fuchsia::examples::intl::wisdom::IntlWisdomServer::AskForWisdomCallback
-          callback) const;
+      fuchsia::examples::intl::wisdom::IntlWisdomServer::AskForWisdomCallback callback) const;
 
  private:
   IntlWisdomClient(const IntlWisdomClient&) = delete;

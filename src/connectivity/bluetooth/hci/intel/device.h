@@ -16,8 +16,7 @@ namespace btintel {
 
 class Device;
 
-using DeviceType =
-    ddk::Device<Device, ddk::GetProtocolable, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<Device, ddk::GetProtocolable, ddk::Unbindable, ddk::Messageable>;
 
 class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_protocol> {
  public:
@@ -51,9 +50,9 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t in);
 
   static constexpr fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops_ = {
-    .OpenCommandChannel = OpenCommandChannel,
-    .OpenAclDataChannel = OpenAclDataChannel,
-    .OpenSnoopChannel = OpenSnoopChannel,
+      .OpenCommandChannel = OpenCommandChannel,
+      .OpenAclDataChannel = OpenAclDataChannel,
+      .OpenSnoopChannel = OpenSnoopChannel,
   };
 
   zx_status_t LoadSecureFirmware(zx::channel* cmd, zx::channel* acl);
@@ -70,8 +69,7 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   // Closing this handle will invalidate |fw_addr|, which
   // receives a pointer to the memory.
   // |fw_size| receives the size of the firmware if valid.
-  zx_handle_t MapFirmware(const char* name, uintptr_t* fw_addr,
-                          size_t* fw_size);
+  zx_handle_t MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw_size);
 
   ddk::BtHciProtocolClient hci_;
   bool firmware_loaded_;

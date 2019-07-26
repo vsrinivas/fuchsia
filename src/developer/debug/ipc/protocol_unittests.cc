@@ -49,10 +49,9 @@ bool SerializeDeserializeReply(const ReplyType& in, ReplyType* out) {
 }
 
 template <typename NotificationType>
-bool SerializeDeserializeNotification(
-    const NotificationType& in, NotificationType* out,
-    void (*write_fn)(const NotificationType&, MessageWriter*),
-    bool (*read_fn)(MessageReader*, NotificationType*)) {
+bool SerializeDeserializeNotification(const NotificationType& in, NotificationType* out,
+                                      void (*write_fn)(const NotificationType&, MessageWriter*),
+                                      bool (*read_fn)(MessageReader*, NotificationType*)) {
   MessageWriter writer;
   write_fn(in, &writer);
 
@@ -396,15 +395,13 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   EXPECT_EQ(initial.breakpoint_type, second.breakpoint_type);
   EXPECT_EQ(initial.breakpoint.id, second.breakpoint.id);
   EXPECT_EQ(initial.breakpoint.stop, second.breakpoint.stop);
-  ASSERT_EQ(initial.breakpoint.locations.size(),
-            second.breakpoint.locations.size());
+  ASSERT_EQ(initial.breakpoint.locations.size(), second.breakpoint.locations.size());
 
   EXPECT_EQ(initial.breakpoint.locations[0].process_koid,
             second.breakpoint.locations[0].process_koid);
   EXPECT_EQ(initial.breakpoint.locations[0].thread_koid,
             second.breakpoint.locations[0].thread_koid);
-  EXPECT_EQ(initial.breakpoint.locations[0].address,
-            second.breakpoint.locations[0].address);
+  EXPECT_EQ(initial.breakpoint.locations[0].address, second.breakpoint.locations[0].address);
   EXPECT_EQ(initial.breakpoint.locations[0].address_range.begin,
             second.breakpoint.locations[0].address_range.begin);
   EXPECT_EQ(initial.breakpoint.locations[0].address_range.end,
@@ -488,12 +485,10 @@ TEST(Protocol, ThreadStatusReply) {
   initial.record.stack_amount = ThreadRecord::StackAmount::kFull;
   initial.record.frames.emplace_back(
       1234, 9875, 89236413,
-      std::vector<Register>{{RegisterID::kX64_rsi, 12},
-                            {RegisterID::kX64_rdi, 0}});
+      std::vector<Register>{{RegisterID::kX64_rsi, 12}, {RegisterID::kX64_rdi, 0}});
   initial.record.frames.emplace_back(
       71562341, 89236413, 0,
-      std::vector<Register>{{RegisterID::kX64_rsi, 11},
-                            {RegisterID::kX64_rdi, 1}});
+      std::vector<Register>{{RegisterID::kX64_rsi, 11}, {RegisterID::kX64_rdi, 1}});
 
   ThreadStatusReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -715,8 +710,7 @@ TEST(Protocol, WriteRegistersRequest) {
   initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x1, 2));
   initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x2, 4));
   initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x3, 8));
-  initial.registers.push_back(
-      CreateRegisterWithData(RegisterID::kARMv8_x4, 16));
+  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x4, 16));
 
   WriteRegistersRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
@@ -788,8 +782,8 @@ TEST(Protocol, NotifyException) {
   initial.hit_breakpoints[1].should_delete = false;
 
   NotifyException second;
-  ASSERT_TRUE(SerializeDeserializeNotification(
-      initial, &second, &WriteNotifyException, &ReadNotifyException));
+  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyException,
+                                               &ReadNotifyException));
 
   EXPECT_EQ(initial.thread.process_koid, second.thread.process_koid);
   EXPECT_EQ(initial.thread.thread_koid, second.thread.thread_koid);
@@ -800,16 +794,12 @@ TEST(Protocol, NotifyException) {
   ASSERT_EQ(initial.hit_breakpoints.size(), second.hit_breakpoints.size());
 
   EXPECT_EQ(initial.hit_breakpoints[0].id, second.hit_breakpoints[0].id);
-  EXPECT_EQ(initial.hit_breakpoints[0].hit_count,
-            second.hit_breakpoints[0].hit_count);
-  EXPECT_EQ(initial.hit_breakpoints[0].should_delete,
-            second.hit_breakpoints[0].should_delete);
+  EXPECT_EQ(initial.hit_breakpoints[0].hit_count, second.hit_breakpoints[0].hit_count);
+  EXPECT_EQ(initial.hit_breakpoints[0].should_delete, second.hit_breakpoints[0].should_delete);
 
   EXPECT_EQ(initial.hit_breakpoints[1].id, second.hit_breakpoints[1].id);
-  EXPECT_EQ(initial.hit_breakpoints[1].hit_count,
-            second.hit_breakpoints[1].hit_count);
-  EXPECT_EQ(initial.hit_breakpoints[1].should_delete,
-            second.hit_breakpoints[1].should_delete);
+  EXPECT_EQ(initial.hit_breakpoints[1].hit_count, second.hit_breakpoints[1].hit_count);
+  EXPECT_EQ(initial.hit_breakpoints[1].should_delete, second.hit_breakpoints[1].should_delete);
 }
 
 TEST(Protocol, NotifyModules) {
@@ -824,8 +814,8 @@ TEST(Protocol, NotifyModules) {
   initial.stopped_thread_koids.push_back(96);
 
   NotifyModules second;
-  ASSERT_TRUE(SerializeDeserializeNotification(
-      initial, &second, &WriteNotifyModules, &ReadNotifyModules));
+  ASSERT_TRUE(
+      SerializeDeserializeNotification(initial, &second, &WriteNotifyModules, &ReadNotifyModules));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   ASSERT_EQ(initial.modules.size(), second.modules.size());
@@ -843,8 +833,7 @@ TEST(Protocol, NotifyProcessStarting) {
   initial.name = "some_process";
 
   NotifyProcessStarting second;
-  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second,
-                                               &WriteNotifyProcessStarting,
+  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessStarting,
                                                &ReadNotifyProcessStarting));
 
   EXPECT_EQ(initial.koid, second.koid);
@@ -858,8 +847,8 @@ TEST(Protocol, NotifyProcessExiting) {
   initial.return_code = 3;
 
   NotifyProcessExiting second;
-  ASSERT_TRUE(SerializeDeserializeNotification(
-      initial, &second, &WriteNotifyProcessExiting, &ReadNotifyProcessExiting));
+  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessExiting,
+                                               &ReadNotifyProcessExiting));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.return_code, second.return_code);
@@ -873,8 +862,7 @@ TEST(Protocol, NotifyIO) {
   initial.more_data_available = true;
 
   NotifyIO second;
-  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyIO,
-                                               &ReadNotifyIO));
+  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyIO, &ReadNotifyIO));
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.type, second.type);
   EXPECT_EQ(initial.data, second.data);

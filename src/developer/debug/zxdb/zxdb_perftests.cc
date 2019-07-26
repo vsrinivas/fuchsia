@@ -20,8 +20,7 @@ int main(int argc, char **argv) {
 
   // Set up for command line parsing.
   cmdline::ArgsParser<CommandLineOptions> parser;
-  parser.AddSwitch("out", 0,
-                   "--out\n  [required] JSON file to write perf stats to.",
+  parser.AddSwitch("out", 0, "--out\n  [required] JSON file to write perf stats to.",
                    &CommandLineOptions::out_file);
 
   bool requested_help = false;
@@ -31,8 +30,7 @@ int main(int argc, char **argv) {
   // Parse the command line.
   CommandLineOptions options;
   std::vector<std::string> params;
-  if (auto status = parser.Parse(argc, const_cast<const char **>(argv),
-                                 &options, &params);
+  if (auto status = parser.Parse(argc, const_cast<const char **>(argv), &options, &params);
       status.has_error()) {
     fprintf(stderr, "Error: %s\n", status.error_message().c_str());
     return 1;

@@ -33,8 +33,7 @@ TEST(SharedVmos, Mapped) {
   ASSERT_TRUE(VmoFromString(content, &vmo));
   zx_handle_t vmo_handle = vmo.vmo().get();
 
-  auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo.vmo()),
-                                                   ZX_VM_PERM_READ);
+  auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo.vmo()), ZX_VM_PERM_READ);
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
   EXPECT_LE(content.size(), shared_vmo->vmo_size());

@@ -13,24 +13,24 @@
 namespace disk_pave {
 
 class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface {
-public:
-    PayloadStreamer(zx::channel chan, fbl::unique_fd payload);
-    ~PayloadStreamer();
+ public:
+  PayloadStreamer(zx::channel chan, fbl::unique_fd payload);
+  ~PayloadStreamer();
 
-    PayloadStreamer(const PayloadStreamer&) = delete;
-    PayloadStreamer& operator=(const PayloadStreamer&) = delete;
-    PayloadStreamer(PayloadStreamer&&) = delete;
-    PayloadStreamer& operator=(PayloadStreamer&&) = delete;
+  PayloadStreamer(const PayloadStreamer&) = delete;
+  PayloadStreamer& operator=(const PayloadStreamer&) = delete;
+  PayloadStreamer(PayloadStreamer&&) = delete;
+  PayloadStreamer& operator=(PayloadStreamer&&) = delete;
 
-    void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer);
+  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer);
 
-    void ReadData(ReadDataCompleter::Sync completer);
+  void ReadData(ReadDataCompleter::Sync completer);
 
-private:
-    fbl::unique_fd payload_;
-    zx::vmo vmo_;
-    fzl::VmoMapper mapper_;
-    bool eof_reached_ = false;
+ private:
+  fbl::unique_fd payload_;
+  zx::vmo vmo_;
+  fzl::VmoMapper mapper_;
+  bool eof_reached_ = false;
 };
 
-} // namespace disk_pave
+}  // namespace disk_pave

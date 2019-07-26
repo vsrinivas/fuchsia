@@ -35,8 +35,7 @@ typedef struct dsoinfo {
   char name[];
 } dsoinfo_t;
 
-extern dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap,
-                                 const char* name);
+extern dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap, const char* name);
 
 extern void dso_free_list(dsoinfo_t*);
 
@@ -48,7 +47,6 @@ extern void dso_print_list(FILE* out, const dsoinfo_t* dso_list);
 
 extern void dso_vlog_list(const dsoinfo_t* dso_list);
 
-extern zx_status_t dso_find_debug_file(dsoinfo_t* dso,
-                                       const char** out_debug_file);
+extern zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file);
 
 }  // namespace debugger_utils

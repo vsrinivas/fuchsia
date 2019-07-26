@@ -41,10 +41,8 @@ To Narrow(From value) {
   return static_cast<To>(std::min(value, upper_limit));
 }
 
-std::vector<uint8_t> MakeMeasurementPayload(int rate,
-                                            const bool* sensor_contact,
-                                            const int* energy_expended,
-                                            const int* rr_interval) {
+std::vector<uint8_t> MakeMeasurementPayload(int rate, const bool* sensor_contact,
+                                            const int* energy_expended, const int* rr_interval) {
   std::vector<uint8_t> payload(1);
 
   // Compute width of field necessary for the heart rate.
@@ -87,8 +85,7 @@ std::vector<uint8_t> MakeMeasurementPayload(int rate,
 void PrintBytes(const std::vector<uint8_t>& value) {
   const auto fmtflags = std::cout.flags();
   std::cout << std::hex;
-  std::copy(value.begin(), value.end(),
-            std::ostream_iterator<unsigned>(std::cout));
+  std::copy(value.begin(), value.end(), std::ostream_iterator<unsigned>(std::cout));
   std::cout.flags(fmtflags);
 }
 
@@ -151,8 +148,8 @@ void Service::PublishService(gatt::ServerPtr* gatt_server) {
     std::cout << "PublishService status: " << bool(status.error) << std::endl;
   };
   (*gatt_server)
-      ->PublishService(std::move(si), binding_.NewBinding(),
-                       service_.NewRequest(), std::move(publish_svc_result_cb));
+      ->PublishService(std::move(si), binding_.NewBinding(), service_.NewRequest(),
+                       std::move(publish_svc_result_cb));
 }
 
 void Service::NotifyMeasurement() {
@@ -160,13 +157,11 @@ void Service::NotifyMeasurement() {
   if (!heart_model_->ReadMeasurement(&measurement))
     return;
 
-  const auto payload =
-      MakeMeasurementPayload(measurement.rate, &measurement.contact,
-                             &measurement.energy_expended, nullptr);
+  const auto payload = MakeMeasurementPayload(measurement.rate, &measurement.contact,
+                                              &measurement.energy_expended, nullptr);
 
   for (const auto& peer_id : measurement_peers_) {
-    service_->NotifyValue(0, peer_id,
-                          fidl::VectorPtr<uint8_t>(std::move(payload)), false);
+    service_->NotifyValue(0, peer_id, fidl::VectorPtr<uint8_t>(std::move(payload)), false);
   }
 }
 
@@ -190,12 +185,10 @@ void Service::ScheduleNotification() {
   notify_scheduled_ = true;
 }
 
-void Service::OnCharacteristicConfiguration(uint64_t characteristic_id,
-                                            std::string peer_id, bool notify,
-                                            bool indicate) {
-  std::cout << "CharacteristicConfiguration on peer " << peer_id
-            << " (notify: " << notify << ", indicate: " << indicate << ")"
-            << std::endl;
+void Service::OnCharacteristicConfiguration(uint64_t characteristic_id, std::string peer_id,
+                                            bool notify, bool indicate) {
+  std::cout << "CharacteristicConfiguration on peer " << peer_id << " (notify: " << notify
+            << ", indicate: " << indicate << ")" << std::endl;
 
   if (characteristic_id != kHeartRateMeasurementId) {
     std::cout << "Ignoring configuration for characteristic other than Heart "
@@ -205,8 +198,7 @@ void Service::OnCharacteristicConfiguration(uint64_t characteristic_id,
   }
 
   if (notify) {
-    std::cout << "Enabling heart rate measurements for peer " << peer_id
-              << std::endl;
+    std::cout << "Enabling heart rate measurements for peer " << peer_id << std::endl;
 
     auto insert_res = measurement_peers_.insert(peer_id);
     if (insert_res.second && measurement_peers_.size() == 1) {
@@ -214,16 +206,13 @@ void Service::OnCharacteristicConfiguration(uint64_t characteristic_id,
         ScheduleNotification();
     }
   } else {
-    std::cout << "Disabling heart rate measurements for peer " << peer_id
-              << std::endl;
+    std::cout << "Disabling heart rate measurements for peer " << peer_id << std::endl;
     measurement_peers_.erase(peer_id);
   }
 }
 
-void Service::OnReadValue(uint64_t id, int32_t offset,
-                          OnReadValueCallback callback) {
-  std::cout << "ReadValue on characteristic " << id << " at offset " << offset
-            << std::endl;
+void Service::OnReadValue(uint64_t id, int32_t offset, OnReadValueCallback callback) {
+  std::cout << "ReadValue on characteristic " << id << " at offset " << offset << std::endl;
 
   if (id != kBodySensorLocationId) {
     callback(nullptr, gatt::ErrorCode::NOT_PERMITTED);
@@ -236,11 +225,9 @@ void Service::OnReadValue(uint64_t id, int32_t offset,
   callback(std::move(value), gatt::ErrorCode::NO_ERROR);
 }
 
-void Service::OnWriteValue(uint64_t id, uint16_t offset,
-                           std::vector<uint8_t> value,
+void Service::OnWriteValue(uint64_t id, uint16_t offset, std::vector<uint8_t> value,
                            OnWriteValueCallback callback) {
-  std::cout << "WriteValue on characteristic " << id << " at offset " << offset
-            << " (";
+  std::cout << "WriteValue on characteristic " << id << " at offset " << offset << " (";
   PrintBytes(value);
   std::cout << ")" << std::endl;
 
@@ -277,10 +264,8 @@ void Service::OnWriteValue(uint64_t id, uint16_t offset,
   callback(gatt::ErrorCode::NO_ERROR);
 }
 
-void Service::OnWriteWithoutResponse(uint64_t id, uint16_t offset,
-                                     std::vector<uint8_t> value) {
-  std::cout << "WriteWithoutResponse on characteristic " << id << " at offset "
-            << offset << " (";
+void Service::OnWriteWithoutResponse(uint64_t id, uint16_t offset, std::vector<uint8_t> value) {
+  std::cout << "WriteWithoutResponse on characteristic " << id << " at offset " << offset << " (";
   PrintBytes(value);
   std::cout << ")" << std::endl;
 }

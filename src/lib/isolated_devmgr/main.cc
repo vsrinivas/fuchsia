@@ -122,19 +122,17 @@ int main(int argc, const char** argv) {
 
   for (const auto& path : wait) {
     if (devmgr->WaitForFile(path.c_str()) != ZX_OK) {
-      FXL_LOG(ERROR) << "Isolated Devmgr failed while waiting for path "
-                     << path;
+      FXL_LOG(ERROR) << "Isolated Devmgr failed while waiting for path " << path;
       return 1;
     }
   }
 
   auto context = sys::ComponentContext::Create();
-  auto service = std::make_unique<vfs::Service>(
-      [&devmgr](zx::channel chan, async_dispatcher_t* dispatcher) {
+  auto service =
+      std::make_unique<vfs::Service>([&devmgr](zx::channel chan, async_dispatcher_t* dispatcher) {
         devmgr->Connect(std::move(chan));
       });
-  context->outgoing()->AddPublicService(std::move(service),
-                                        std::move(svc_name));
+  context->outgoing()->AddPublicService(std::move(service), std::move(svc_name));
 
   loop.Run();
 

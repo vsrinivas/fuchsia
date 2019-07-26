@@ -31,8 +31,7 @@ struct KtraceData {
   DecoderState* state;
 };
 
-int DecoderState::ProcessKtraceRecord(debugger_utils::KtraceRecord* rec,
-                                      void* arg) {
+int DecoderState::ProcessKtraceRecord(debugger_utils::KtraceRecord* rec, void* arg) {
   KtraceData* data = reinterpret_cast<KtraceData*>(arg);
   DecoderState* state = data->state;
 
@@ -69,8 +68,8 @@ int DecoderState::ProcessKtraceRecord(debugger_utils::KtraceRecord* rec,
       const ktrace_rec_32b* r = &rec->r_32B;
       uint64_t pid = r->a | ((uint64_t)r->b << 32);
       uint64_t cr3 = r->c | ((uint64_t)r->d << 32);
-      FXL_LOG(INFO) << fxl::StringPrintf("Ktrace process create, ts %" PRIu64
-                                         ", pid %" PRIu64 ", cr3 0x%" PRIx64,
+      FXL_LOG(INFO) << fxl::StringPrintf("Ktrace process create, ts %" PRIu64 ", pid %" PRIu64
+                                         ", cr3 0x%" PRIx64,
                                          rec->hdr.ts, pid, cr3);
       if (!state->AddProcess(pid, cr3, rec->hdr.ts)) {
         FXL_LOG(ERROR) << "Error adding process: " << pid;
@@ -80,8 +79,7 @@ int DecoderState::ProcessKtraceRecord(debugger_utils::KtraceRecord* rec,
     case TAG_PROC_EXIT: {
       const ktrace_rec_32b* r = &rec->r_32B;
       uint64_t pid = r->a | ((uint64_t)r->b << 32);
-      FXL_LOG(INFO) << fxl::StringPrintf("Ktrace process exit, ts %" PRIu64
-                                         ", pid %" PRIu64,
+      FXL_LOG(INFO) << fxl::StringPrintf("Ktrace process exit, ts %" PRIu64 ", pid %" PRIu64,
                                          rec->hdr.ts, pid);
       // N.B. We don't remove the process from any table here. This pass is run
       // before we scan the actual PT dump.
@@ -121,9 +119,7 @@ bool DecoderState::ReadMapFile(const std::string& file) {
   return load_maps_.ReadLogListenerOutput(file);
 }
 
-bool DecoderState::ReadIdsFile(const std::string& file) {
-  return build_ids_.ReadIdsFile(file);
-}
+bool DecoderState::ReadIdsFile(const std::string& file) { return build_ids_.ReadIdsFile(file); }
 
 bool DecoderState::ReadPtListFile(const std::string& file) {
   FXL_LOG(INFO) << "Loading pt file list from " << file;
@@ -177,15 +173,15 @@ void DecoderState::AddSymtab(std::unique_ptr<SymbolTable> symtab) {
   symtabs_.push_back(std::move(symtab));
 }
 
-bool DecoderState::ReadElf(const std::string& file_name, uint64_t base,
-                           uint64_t cr3, uint64_t file_off, uint64_t map_len) {
+bool DecoderState::ReadElf(const std::string& file_name, uint64_t base, uint64_t cr3,
+                           uint64_t file_off, uint64_t map_len) {
   FXL_DCHECK(image_);
 
   std::unique_ptr<SymbolTable> symtab;
   std::unique_ptr<SymbolTable> dynsym;
 
-  if (!simple_pt::ReadElf(file_name.c_str(), image_, base, cr3, file_off,
-                          map_len, &symtab, &dynsym))
+  if (!simple_pt::ReadElf(file_name.c_str(), image_, base, cr3, file_off, map_len, &symtab,
+                          &dynsym))
     return false;
 
   if (symtab)
@@ -201,8 +197,7 @@ bool DecoderState::ReadKernelElf(const std::string& file_name, uint64_t cr3) {
   std::unique_ptr<SymbolTable> symtab;
   std::unique_ptr<SymbolTable> dynsym;
 
-  if (!simple_pt::ReadNonPicElf(file_name.c_str(), image_, cr3, true, &symtab,
-                                &dynsym))
+  if (!simple_pt::ReadNonPicElf(file_name.c_str(), image_, cr3, true, &symtab, &dynsym))
     return false;
 
   if (symtab)

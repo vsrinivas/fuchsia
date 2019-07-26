@@ -34,8 +34,8 @@ class H264Decoder : public VideoDecoder {
   // All H264Decoder errors require creating a new H264Decoder to recover.
   void SetErrorHandler(fit::closure error_handler) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
-  void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
-                         uint32_t height, uint32_t stride) override;
+  void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
+                         uint32_t stride) override;
 
  private:
   struct ReferenceFrame {
@@ -45,11 +45,9 @@ class H264Decoder : public VideoDecoder {
   };
 
   zx_status_t ResetHardware();
-  zx_status_t LoadSecondaryFirmware(const uint8_t* data,
-                                    uint32_t firmware_size);
-  zx_status_t InitializeFrames(uint32_t frame_count, uint32_t width,
-                               uint32_t height, uint32_t display_width,
-                               uint32_t display_height, bool has_sar,
+  zx_status_t LoadSecondaryFirmware(const uint8_t* data, uint32_t firmware_size);
+  zx_status_t InitializeFrames(uint32_t frame_count, uint32_t width, uint32_t height,
+                               uint32_t display_width, uint32_t display_height, bool has_sar,
                                uint32_t sar_width, uint32_t sar_height);
   zx_status_t InitializeStream();
   void ReceivedFrames(uint32_t frame_count);

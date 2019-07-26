@@ -15,55 +15,51 @@ namespace hisi_clock {
 class Gate;
 
 class HisiClock;
-using DeviceType = ddk::Device<HisiClock,
-                               ddk::Unbindable>;
+using DeviceType = ddk::Device<HisiClock, ddk::Unbindable>;
 
-class HisiClock : public DeviceType,
-                  public ddk::ClockImplProtocol<HisiClock, ddk::base_protocol> {
-public:
-    HisiClock(const HisiClock&) = delete;            // No Copies.
-    HisiClock& operator=(const HisiClock&) = delete; // No Moves.
+class HisiClock : public DeviceType, public ddk::ClockImplProtocol<HisiClock, ddk::base_protocol> {
+ public:
+  HisiClock(const HisiClock&) = delete;             // No Copies.
+  HisiClock& operator=(const HisiClock&) = delete;  // No Moves.
 
-    static zx_status_t Create(const char* name, const Gate gates[],
-                              const size_t gate_count, zx_device_t* parent);
+  static zx_status_t Create(const char* name, const Gate gates[], const size_t gate_count,
+                            zx_device_t* parent);
 
-    // Implement the Clock Protocol
-    zx_status_t ClockImplEnable(uint32_t clock);
-    zx_status_t ClockImplDisable(uint32_t clock);
-    zx_status_t ClockImplIsEnabled(uint32_t id, bool* out_enabled);
+  // Implement the Clock Protocol
+  zx_status_t ClockImplEnable(uint32_t clock);
+  zx_status_t ClockImplDisable(uint32_t clock);
+  zx_status_t ClockImplIsEnabled(uint32_t id, bool* out_enabled);
 
-    zx_status_t ClockImplSetRate(uint32_t id, uint64_t hz);
-    zx_status_t ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate, uint64_t* out_best_rate);
-    zx_status_t ClockImplGetRate(uint32_t id, uint64_t* out_current_rate);
+  zx_status_t ClockImplSetRate(uint32_t id, uint64_t hz);
+  zx_status_t ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate, uint64_t* out_best_rate);
+  zx_status_t ClockImplGetRate(uint32_t id, uint64_t* out_current_rate);
 
-    // Device Protocol Implementation.
-    void DdkUnbind();
-    void DdkRelease();
+  // Device Protocol Implementation.
+  void DdkUnbind();
+  void DdkRelease();
 
-private:
-    // Create instances via "Create"
-    explicit HisiClock(zx_device_t* device, const Gate gates[],
-                       const size_t gate_count)
-        : DeviceType(device), gates_(gates), gate_count_(gate_count) {}
+ private:
+  // Create instances via "Create"
+  explicit HisiClock(zx_device_t* device, const Gate gates[], const size_t gate_count)
+      : DeviceType(device), gates_(gates), gate_count_(gate_count) {}
 
-    // Init after construction, DeInit before destruction.
-    zx_status_t Init();
-    void DeInit();
+  // Init after construction, DeInit before destruction.
+  zx_status_t Init();
+  void DeInit();
 
+  zx_status_t Toggle(uint32_t clock, bool enable);
+  zx_status_t ToggleSepClkLocked(const Gate& gate, bool enable) __TA_REQUIRES(lock_);
+  zx_status_t ToggleGateClkLocked(const Gate& gate, bool enable) __TA_REQUIRES(lock_);
 
-    zx_status_t Toggle(uint32_t clock, bool enable);
-    zx_status_t ToggleSepClkLocked(const Gate& gate, bool enable) __TA_REQUIRES(lock_);
-    zx_status_t ToggleGateClkLocked(const Gate& gate, bool enable) __TA_REQUIRES(lock_);
+  // Publish the clock protocol to the platform bus.
+  zx_status_t RegisterClockProtocol();
 
-    // Publish the clock protocol to the platform bus.
-    zx_status_t RegisterClockProtocol();
+  fbl::Mutex lock_;
+  std::optional<ddk::MmioBuffer> peri_crg_mmio_ __TA_GUARDED(lock_);
+  std::optional<ddk::MmioBuffer> sctrl_mmio_ __TA_GUARDED(lock_);
 
-    fbl::Mutex lock_;
-    std::optional<ddk::MmioBuffer> peri_crg_mmio_ __TA_GUARDED(lock_);
-    std::optional<ddk::MmioBuffer> sctrl_mmio_ __TA_GUARDED(lock_);
-
-    const Gate* const gates_;
-    const size_t gate_count_;
+  const Gate* const gates_;
+  const size_t gate_count_;
 };
 
-} // namespace hisi_clock
+}  // namespace hisi_clock

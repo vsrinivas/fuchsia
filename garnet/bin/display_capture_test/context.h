@@ -16,8 +16,7 @@ class Context {
   PrimaryLayer* CreatePrimaryLayer(uint32_t width, uint32_t height);
   Image* CreateImage(uint32_t width, uint32_t height);
   Image* CreateScalableImage(uint32_t width, uint32_t height);
-  Image* CreateAlphaImage(uint32_t width, uint32_t height, uint8_t alpha,
-                          bool premultiply);
+  Image* CreateAlphaImage(uint32_t width, uint32_t height, uint8_t alpha, bool premultiply);
 
   uint32_t display_width() const;
   uint32_t display_height() const;

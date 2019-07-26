@@ -14,29 +14,25 @@ namespace {
 // Zircon fifo, on a single thread.  This does not involve any
 // cross-thread wakeups. The number of fifo entries to write/read at a
 // time is specified with the |batch_size| argument.
-bool FifoWriteReadTest(perftest::RepeatState* state, uint32_t entry_size,
-                       uint32_t batch_size) {
+bool FifoWriteReadTest(perftest::RepeatState* state, uint32_t entry_size, uint32_t batch_size) {
   state->DeclareStep("write");
   state->DeclareStep("read");
   state->SetBytesProcessedPerRun(entry_size * batch_size);
 
   zx::fifo fifo1;
   zx::fifo fifo2;
-  ZX_ASSERT(zx::fifo::create(PAGE_SIZE / entry_size, entry_size, 0, &fifo1,
-                             &fifo2) == ZX_OK);
+  ZX_ASSERT(zx::fifo::create(PAGE_SIZE / entry_size, entry_size, 0, &fifo1, &fifo2) == ZX_OK);
   // The buffer represents |batch_size| consecutive entries.
   std::vector<char> buffer(entry_size * batch_size);
 
   while (state->KeepRunning()) {
     size_t entries_written;
-    ZX_ASSERT(fifo1.write(entry_size, buffer.data(), batch_size,
-                          &entries_written) == ZX_OK);
+    ZX_ASSERT(fifo1.write(entry_size, buffer.data(), batch_size, &entries_written) == ZX_OK);
     ZX_ASSERT(entries_written == batch_size);
     state->NextStep();
 
     size_t entries_read;
-    ZX_ASSERT(fifo2.read(entry_size, buffer.data(), batch_size,
-                         &entries_read) == ZX_OK);
+    ZX_ASSERT(fifo2.read(entry_size, buffer.data(), batch_size, &entries_read) == ZX_OK);
     ZX_ASSERT(entries_read == batch_size);
   }
   return true;
@@ -54,10 +50,8 @@ void RegisterTests() {
       {16, 1}, {16, 4}, {16, 64}, {32, 1}, {32, 4}, {64, 1}, {64, 4},
   };
   for (auto t : kTestSizes) {
-    auto name = fbl::StringPrintf("Fifo/WriteRead/%ubytes_%ubatch",
-                                  t.entry_size, t.batch_size);
-    perftest::RegisterTest(name.c_str(), FifoWriteReadTest, t.entry_size,
-                           t.batch_size);
+    auto name = fbl::StringPrintf("Fifo/WriteRead/%ubytes_%ubatch", t.entry_size, t.batch_size);
+    perftest::RegisterTest(name.c_str(), FifoWriteReadTest, t.entry_size, t.batch_size);
   }
 }
 PERFTEST_CTOR(RegisterTests);

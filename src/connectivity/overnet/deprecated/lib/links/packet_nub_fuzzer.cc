@@ -34,11 +34,9 @@ void PacketNubFuzzer::Budget::ConsumeBudget(uint64_t address, uint64_t bytes) {
   allowed.erase(it);
 }
 
-PacketNubFuzzer::Nub::Nub(Timer* timer)
-    : Router(timer, NodeId(1), false), BaseNub(this) {}
+PacketNubFuzzer::Nub::Nub(Timer* timer) : Router(timer, NodeId(1), false), BaseNub(this) {}
 
-void PacketNubFuzzer::Nub::Process(TimeStamp received, uint64_t src,
-                                   Slice slice) {
+void PacketNubFuzzer::Nub::Process(TimeStamp received, uint64_t src, Slice slice) {
   if (!HasConnectionTo(src)) {
     budget_.AddBudget(src, slice.length());
   }

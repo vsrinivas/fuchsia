@@ -105,14 +105,10 @@ class Reporter : public LifecycleObserver {
   void OnProgramEnd(const Runner& runner) final;
 
   // Returns a pointer to the log sink, so arbitrary messages can be logged.
-  LogSink* mutable_log_sink() {
-    return log_sink_.get();
-  }
+  LogSink* mutable_log_sink() { return log_sink_.get(); }
 
   // Replaces the current instance of the sink being used to write to.
-  void set_log_sink(std::unique_ptr<LogSink> log_sink) {
-    log_sink_ = std::move(log_sink);
-  }
+  void set_log_sink(std::unique_ptr<LogSink> log_sink) { log_sink_ = std::move(log_sink); }
 
  private:
   // Pointer to where report should be written to.

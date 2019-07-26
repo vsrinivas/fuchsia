@@ -39,8 +39,7 @@ class ServiceNamespace : public fuchsia::sys::ServiceProvider {
   // Constructs this service provider implementation, binding it to the given
   // interface request. Note: If |request| is not valid ("pending"), then the
   // object will be put into an unbound state.
-  explicit ServiceNamespace(
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
+  explicit ServiceNamespace(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
 
   explicit ServiceNamespace(fbl::RefPtr<fs::PseudoDir> directory);
 
@@ -52,8 +51,7 @@ class ServiceNamespace : public fuchsia::sys::ServiceProvider {
   // Binds this service provider implementation to the given interface request.
   // Multiple bindings may be added.  They are automatically removed when closed
   // remotely.
-  void AddBinding(
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
 
   // Disconnect this service provider implementation and put it in a state where
   // it can be rebound to a new request (i.e., restores this object to an
@@ -62,8 +60,7 @@ class ServiceNamespace : public fuchsia::sys::ServiceProvider {
 
   // Adds a supported service with the given |service_name|, using the given
   // |service_connector|.
-  void AddServiceForName(ServiceConnector connector,
-                         const std::string& service_name);
+  void AddServiceForName(ServiceConnector connector, const std::string& service_name);
 
   // Adds a supported service with the given |service_name|, using the given
   // |InterfaceRequestHandler|, which should remain valid for the lifetime of
@@ -96,8 +93,7 @@ class ServiceNamespace : public fuchsia::sys::ServiceProvider {
 
  private:
   // Overridden from |ServiceProvider|:
-  void ConnectToService(std::string service_name,
-                        zx::channel channel) override;
+  void ConnectToService(std::string service_name, zx::channel channel) override;
 
   void Connect(fbl::StringPiece name, zx::channel channel);
   void ConnectCommon(const std::string& service_name, zx::channel channel);

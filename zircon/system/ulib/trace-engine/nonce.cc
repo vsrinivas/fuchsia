@@ -10,8 +10,8 @@ namespace {
 
 std::atomic_uint64_t g_nonce{1u};
 
-} // namespace
+}  // namespace
 
 __EXPORT uint64_t trace_generate_nonce() {
-    return g_nonce.fetch_add(1u, std::memory_order_relaxed);
+  return g_nonce.fetch_add(1u, std::memory_order_relaxed);
 }

@@ -16,15 +16,15 @@ struct GlobalReference {};
 // other types through unchanged.
 template <typename T>
 struct RemoveGlobalReferenceType {
-    using Type = T;
+  using Type = T;
 };
 template <typename T, T& Reference>
 struct RemoveGlobalReferenceType<GlobalReference<T, Reference>> {
-    using Type = T;
+  using Type = T;
 };
 
 // Alias to simplify type expressions for RemoveGlobalReferenceType.
 template <typename T>
 using RemoveGlobalReference = typename RemoveGlobalReferenceType<T>::Type;
 
-} // namespace lockdep
+}  // namespace lockdep

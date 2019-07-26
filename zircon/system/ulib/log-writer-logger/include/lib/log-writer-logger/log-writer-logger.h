@@ -38,4 +38,4 @@ void log_set_logger_writer_socket(log_writer_t* writer, zx_handle_t socket);
 }
 #endif
 
-#endif // LIB_LOG_WRITER_LOGGER_LOG_WRITER_LOGGER_H_
+#endif  // LIB_LOG_WRITER_LOGGER_LOG_WRITER_LOGGER_H_

@@ -55,16 +55,16 @@ std::string LibraryName(const Library* library, std::string_view separator);
 // struct name).
 struct Name final {
   Name(const Library* library, const SourceLocation name)
-     : library_(library), name_(name), member_name_(std::nullopt) {}
+      : library_(library), name_(name), member_name_(std::nullopt) {}
 
   Name(const Library* library, const SourceLocation name, const std::string member)
-     : library_(library), name_(name), member_name_(member) {}
+      : library_(library), name_(name), member_name_(member) {}
 
   Name(const Library* library, const std::string& name)
-     : library_(library), name_(name), member_name_(std::nullopt) {}
+      : library_(library), name_(name), member_name_(std::nullopt) {}
 
   Name(Name&&) = default;
-  Name(const Name &) = default;
+  Name(const Name&) = default;
   Name& operator=(Name&&) = default;
 
   const Library* library() const { return library_; }
@@ -89,9 +89,7 @@ struct Name final {
     }
     return name;
   }
-  const std::optional<std::string> member_name() const {
-    return member_name_;
-  }
+  const std::optional<std::string> member_name() const { return member_name_; }
   const Name memberless_name() const {
     if (!member_name_) {
       return *this;
@@ -103,9 +101,8 @@ struct Name final {
     // can't use the library name yet, not necesserily compiled!
     auto library_ptr = reinterpret_cast<uintptr_t>(library_);
     auto other_library_ptr = reinterpret_cast<uintptr_t>(other.library_);
-    return (library_ptr == other_library_ptr) &&
-      name_part() == other.name_part() &&
-      member_name_ == other.member_name_;
+    return (library_ptr == other_library_ptr) && name_part() == other.name_part() &&
+           member_name_ == other.member_name_;
   }
   bool operator!=(const Name& other) const { return !operator==(other); }
 
@@ -123,10 +120,9 @@ struct Name final {
  private:
   using AnonymousName = std::string;
 
-  Name(const Library* library,
-       const std::variant<SourceLocation, AnonymousName>& name,
+  Name(const Library* library, const std::variant<SourceLocation, AnonymousName>& name,
        std::optional<std::string> member_name)
-     : library_(library), name_(name), member_name_(member_name) {}
+      : library_(library), name_(name), member_name_(member_name) {}
 
   const Library* library_ = nullptr;
   std::variant<SourceLocation, AnonymousName> name_;
@@ -157,8 +153,7 @@ struct ConstantValue {
   const Kind kind;
 
  protected:
-  explicit ConstantValue(Kind kind)
-      : kind(kind) {}
+  explicit ConstantValue(Kind kind) : kind(kind) {}
 };
 
 template <typename ValueType>
@@ -166,8 +161,7 @@ struct NumericConstantValue final : ConstantValue {
   static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
                 "NumericConstantValue can only be used with a numeric ValueType!");
 
-  NumericConstantValue(ValueType value)
-      : ConstantValue(GetKind()), value(value) {}
+  NumericConstantValue(ValueType value) : ConstantValue(GetKind()), value(value) {}
 
   operator ValueType() const { return value; }
 
@@ -344,8 +338,7 @@ struct NumericConstantValue final : ConstantValue {
 using Size = NumericConstantValue<uint32_t>;
 
 struct BoolConstantValue final : ConstantValue {
-  BoolConstantValue(bool value)
-      : ConstantValue(ConstantValue::Kind::kBool), value(value) {}
+  BoolConstantValue(bool value) : ConstantValue(ConstantValue::Kind::kBool), value(value) {}
 
   operator bool() const { return value; }
 
@@ -408,8 +401,7 @@ struct Constant {
     kSynthesized,
   };
 
-  explicit Constant(Kind kind)
-      : kind(kind), value_(nullptr) {}
+  explicit Constant(Kind kind) : kind(kind), value_(nullptr) {}
 
   bool IsResolved() const { return value_ != nullptr; }
 
@@ -431,8 +423,7 @@ struct Constant {
 };
 
 struct IdentifierConstant final : Constant {
-  explicit IdentifierConstant(Name name)
-      : Constant(Kind::kIdentifier), name(std::move(name)) {}
+  explicit IdentifierConstant(Name name) : Constant(Kind::kIdentifier), name(std::move(name)) {}
 
   const Name name;
 };
@@ -529,8 +520,7 @@ struct Type {
     bool IsLessThan() const { return result_ < 0; }
 
    private:
-    Comparison(int result)
-        : result_(result) {}
+    Comparison(int result) : result_(result) {}
 
     const int result_ = 0;
   };
@@ -688,8 +678,7 @@ struct TypeConstructor final {
 };
 
 struct Using final {
-  Using(Name name, const PrimitiveType* type)
-      : name(std::move(name)), type(type) {}
+  Using(Name name, const PrimitiveType* type) : name(std::move(name)), type(type) {}
 
   const Name name;
   const PrimitiveType* type;
@@ -1006,8 +995,7 @@ class TypeTemplate {
 // the same type.
 class Typespace {
  public:
-  explicit Typespace(ErrorReporter* error_reporter)
-      : error_reporter_(error_reporter) {}
+  explicit Typespace(ErrorReporter* error_reporter) : error_reporter_(error_reporter) {}
 
   bool Create(const flat::Name& name, const Type* arg_type,
               const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,

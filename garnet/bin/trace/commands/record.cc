@@ -74,8 +74,7 @@ const struct {
     {"streaming", controller::BufferingMode::STREAMING},
 };
 
-static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
-                       fxl::StringView* arg) {
+static bool BeginsWith(fxl::StringView str, fxl::StringView prefix, fxl::StringView* arg) {
   size_t prefix_size = prefix.size();
   if (str.size() < prefix_size)
     return false;
@@ -85,8 +84,7 @@ static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
   return true;
 }
 
-zx_status_t Spawn(const std::vector<std::string>& args,
-                  zx::process* subprocess) {
+zx_status_t Spawn(const std::vector<std::string>& args, zx::process* subprocess) {
   FXL_DCHECK(args.size() > 0);
 
   std::vector<const char*> raw_args;
@@ -95,12 +93,11 @@ zx_status_t Spawn(const std::vector<std::string>& args,
   }
   raw_args.push_back(nullptr);
 
-  return fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, raw_args[0],
-                    raw_args.data(), subprocess->reset_and_get_address());
+  return fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, raw_args[0], raw_args.data(),
+                    subprocess->reset_and_get_address());
 }
 
-bool LookupBufferingMode(const std::string& mode_name,
-                         controller::BufferingMode* out_mode) {
+bool LookupBufferingMode(const std::string& mode_name, controller::BufferingMode* out_mode) {
   for (const auto& mode : kBufferingModes) {
     if (mode_name == mode.name) {
       *out_mode = mode.mode;
@@ -110,8 +107,8 @@ bool LookupBufferingMode(const std::string& mode_name,
   return false;
 }
 
-OptionStatus ParseBooleanOption(const fxl::CommandLine& command_line,
-                                const char* name, bool* out_value) {
+OptionStatus ParseBooleanOption(const fxl::CommandLine& command_line, const char* name,
+                                bool* out_value) {
   std::string arg;
   bool have_option = command_line.GetOptionValue(fxl::StringView(name), &arg);
 
@@ -124,8 +121,7 @@ OptionStatus ParseBooleanOption(const fxl::CommandLine& command_line,
   } else if (arg == "false") {
     *out_value = false;
   } else {
-    FXL_LOG(ERROR) << "Bad value for --" << name
-                   << " option, pass true or false";
+    FXL_LOG(ERROR) << "Bad value for --" << name << " option, pass true or false";
     return OptionStatus::ERROR;
   }
 
@@ -146,10 +142,9 @@ void CheckCommandLineOverride(const char* name, const T& object) {
 }
 
 bool CheckBufferSize(uint32_t megabytes) {
-  if (megabytes < kMinBufferSizeMegabytes ||
-      megabytes > kMaxBufferSizeMegabytes) {
-    FXL_LOG(ERROR) << "Buffer size not between " << kMinBufferSizeMegabytes
-                   << "," << kMaxBufferSizeMegabytes << ": " << megabytes;
+  if (megabytes < kMinBufferSizeMegabytes || megabytes > kMaxBufferSizeMegabytes) {
+    FXL_LOG(ERROR) << "Buffer size not between " << kMinBufferSizeMegabytes << ","
+                   << kMaxBufferSizeMegabytes << ": " << megabytes;
     return false;
   }
   return true;
@@ -158,24 +153,15 @@ bool CheckBufferSize(uint32_t megabytes) {
 }  // namespace
 
 bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
-  const std::unordered_set<std::string> known_options = {
-      kSpecFile,
-      kCategories,
-      kAppendArgs,
-      kOutputFile,
-      kBinary,
-      kCompress,
-      kDuration,
-      kDetach,
-      kDecouple,
-      kSpawn,
-      kEnvironmentName,
-      kReturnChildResult,
-      kBufferSize,
-      kProviderBufferSize,
-      kBufferingMode,
-      kBenchmarkResultsFile,
-      kTestSuite};
+  const std::unordered_set<std::string> known_options = {kSpecFile,        kCategories,
+                                                         kAppendArgs,      kOutputFile,
+                                                         kBinary,          kCompress,
+                                                         kDuration,        kDetach,
+                                                         kDecouple,        kSpawn,
+                                                         kEnvironmentName, kReturnChildResult,
+                                                         kBufferSize,      kProviderBufferSize,
+                                                         kBufferingMode,   kBenchmarkResultsFile,
+                                                         kTestSuite};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -221,8 +207,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
       categories = *spec.categories;
     if (spec.buffering_mode) {
       if (!LookupBufferingMode(*spec.buffering_mode, &buffering_mode)) {
-        FXL_LOG(ERROR) << "Unknown spec parameter buffering-mode: "
-                       << spec.buffering_mode;
+        FXL_LOG(ERROR) << "Unknown spec parameter buffering-mode: " << spec.buffering_mode;
         return false;
       }
     }
@@ -240,9 +225,8 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
 
   // --categories=<cat1>,<cat2>,...
   if (command_line.HasOption(kCategories, &index)) {
-    categories =
-        fxl::SplitStringCopy(command_line.options()[index].value, ",",
-                             fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+    categories = fxl::SplitStringCopy(command_line.options()[index].value, ",",
+                                      fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
     CheckCommandLineOverride("categories", spec.categories);
   }
 
@@ -254,16 +238,13 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   if (command_line.HasOption(kAppendArgs, nullptr)) {
     auto all_append_args = command_line.GetOptionValues(kAppendArgs);
     for (const auto& arg : all_append_args) {
-      auto args = fxl::SplitStringCopy(arg, ",", fxl::kTrimWhitespace,
-                                       fxl::kSplitWantNonEmpty);
-      std::move(std::begin(args), std::end(args),
-                std::back_inserter(append_args));
+      auto args = fxl::SplitStringCopy(arg, ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+      std::move(std::begin(args), std::end(args), std::back_inserter(append_args));
     }
   }
 
   // --binary
-  if (ParseBooleanOption(command_line, kBinary, &binary) ==
-      OptionStatus::ERROR) {
+  if (ParseBooleanOption(command_line, kBinary, &binary) == OptionStatus::ERROR) {
     return false;
   }
   if (binary) {
@@ -271,8 +252,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   }
 
   // --compress
-  if (ParseBooleanOption(command_line, kCompress, &compress) ==
-      OptionStatus::ERROR) {
+  if (ParseBooleanOption(command_line, kCompress, &compress) == OptionStatus::ERROR) {
     return false;
   }
   if (compress) {
@@ -287,10 +267,9 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   // --duration=<seconds>
   if (command_line.HasOption(kDuration, &index)) {
     uint64_t seconds;
-    if (!fxl::StringToNumberWithError(command_line.options()[index].value,
-                                      &seconds)) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option " << kDuration
-                     << ": " << command_line.options()[index].value;
+    if (!fxl::StringToNumberWithError(command_line.options()[index].value, &seconds)) {
+      FXL_LOG(ERROR) << "Failed to parse command-line option " << kDuration << ": "
+                     << command_line.options()[index].value;
       return false;
     }
     duration = fxl::TimeDelta::FromSeconds(seconds);
@@ -298,22 +277,19 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   }
 
   // --detach
-  if (ParseBooleanOption(command_line, kDetach, &detach) ==
-      OptionStatus::ERROR) {
+  if (ParseBooleanOption(command_line, kDetach, &detach) == OptionStatus::ERROR) {
     return false;
   }
 
   // --decouple
-  if (ParseBooleanOption(command_line, kDecouple, &decouple) ==
-      OptionStatus::ERROR) {
+  if (ParseBooleanOption(command_line, kDecouple, &decouple) == OptionStatus::ERROR) {
     return false;
   }
 
   // --spawn
   {
     bool spawn_value = false;
-    OptionStatus spawn_status =
-        ParseBooleanOption(command_line, kSpawn, &spawn_value);
+    OptionStatus spawn_status = ParseBooleanOption(command_line, kSpawn, &spawn_value);
     if (spawn_status == OptionStatus::ERROR) {
       return false;
     }
@@ -327,23 +303,21 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   // --environment-name
   if (command_line.HasOption(kEnvironmentName, &index)) {
     environment_name = command_line.options()[index].value;
-    CheckCommandLineOverride(kEnvironmentName,
-                             spec.environment_name);
+    CheckCommandLineOverride(kEnvironmentName, spec.environment_name);
   }
 
   // --return-child-result=<flag>
-  if (ParseBooleanOption(command_line, kReturnChildResult,
-                         &return_child_result) == OptionStatus::ERROR) {
+  if (ParseBooleanOption(command_line, kReturnChildResult, &return_child_result) ==
+      OptionStatus::ERROR) {
     return false;
   }
 
   // --buffer-size=<megabytes>
   if (command_line.HasOption(kBufferSize, &index)) {
     uint32_t megabytes;
-    if (!fxl::StringToNumberWithError(command_line.options()[index].value,
-                                      &megabytes)) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferSize
-                     << ": " << command_line.options()[index].value;
+    if (!fxl::StringToNumberWithError(command_line.options()[index].value, &megabytes)) {
+      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferSize << ": "
+                     << command_line.options()[index].value;
       return false;
     }
     if (!CheckBufferSize(megabytes)) {
@@ -355,8 +329,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
 
   // --provider-buffer-size=<name:megabytes>
   if (command_line.HasOption(kProviderBufferSize)) {
-    std::vector<fxl::StringView> args =
-        command_line.GetOptionValues(kProviderBufferSize);
+    std::vector<fxl::StringView> args = command_line.GetOptionValues(kProviderBufferSize);
     for (const auto& arg : args) {
       size_t colon = arg.rfind(':');
       if (colon == arg.npos) {
@@ -381,10 +354,9 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
 
   // --buffering-mode=oneshot|circular|streaming
   if (command_line.HasOption(kBufferingMode, &index)) {
-    if (!LookupBufferingMode(command_line.options()[index].value,
-                             &buffering_mode)) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferingMode
-                     << ": " << command_line.options()[index].value;
+    if (!LookupBufferingMode(command_line.options()[index].value, &buffering_mode)) {
+      FXL_LOG(ERROR) << "Failed to parse command-line option " << kBufferingMode << ": "
+                     << command_line.options()[index].value;
       return false;
     }
     CheckCommandLineOverride("buffering-mode", spec.buffering_mode);
@@ -405,23 +377,19 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {
     app = positional_args[0];
-    args = std::vector<std::string>(positional_args.begin() + 1,
-                                    positional_args.end());
+    args = std::vector<std::string>(positional_args.begin() + 1, positional_args.end());
     CheckCommandLineOverride("app,args", spec.app || spec.args);
   }
 
   // Now that we've processed positional args we can append --append-args args.
-  std::move(std::begin(append_args), std::end(append_args),
-            std::back_inserter(args));
+  std::move(std::begin(append_args), std::end(append_args), std::back_inserter(args));
 
   return true;
 }
 
 Command::Info RecordCommand::Describe() {
   return Command::Info{
-      [](sys::ComponentContext* context) {
-        return std::make_unique<RecordCommand>(context);
-      },
+      [](sys::ComponentContext* context) { return std::make_unique<RecordCommand>(context); },
       "record",
       "starts tracing and records data",
       {{"spec-file=[none]", "Tracing specification file"},
@@ -444,22 +412,18 @@ Command::Info RecordCommand::Describe() {
         "Additional args for the app being traced, appended to those from the "
         "spec file, if any. The value is a comma-separated list of arguments "
         "to pass. This option may be repeated, arguments are added in order."},
-       {"detach=[false]",
-        "Don't stop the traced program when tracing finished"},
+       {"detach=[false]", "Don't stop the traced program when tracing finished"},
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
        {"spawn=[false]", "Use fdio_spawn to run a legacy app."},
        {"return-child-result=[true]",
         "Return with the same return code as the child. "
         "Only valid when a child program is passed."},
-       {"buffer-size=[4]",
-        "Maximum size of trace buffer for each provider in megabytes"},
+       {"buffer-size=[4]", "Maximum size of trace buffer for each provider in megabytes"},
        {"provider-buffer-size=[provider-name:buffer-size]",
         "Specify the buffer size that \"provider-name\" will use. "
         "May be specified multiple times, once per provider."},
-       {"buffering-mode=oneshot|circular|streaming",
-        "The buffering mode to use"},
-       {"benchmark-results-file=[none]",
-        "Destination for exported benchmark results"},
+       {"buffering-mode=oneshot|circular|streaming", "The buffering mode to use"},
+       {"benchmark-results-file=[none]", "Destination for exported benchmark results"},
        {"test-suite=[none]",
         "Test suite name to put into the exported benchmark results file. "
         "This is used by the Catapult dashboard. This argument is required if "
@@ -478,8 +442,7 @@ RecordCommand::RecordCommand(sys::ComponentContext* context)
   wait_spawned_app_.set_trigger(ZX_PROCESS_TERMINATED);
 }
 
-static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
-                              addrinfo* out_addr) {
+static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port, addrinfo* out_addr) {
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
@@ -488,16 +451,15 @@ static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
   hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
 
   addrinfo* addrinfos;
-  int errcode = getaddrinfo(address.ToString().c_str(), port.ToString().c_str(),
-                            &hints, &addrinfos);
+  int errcode =
+      getaddrinfo(address.ToString().c_str(), port.ToString().c_str(), &hints, &addrinfos);
   if (errcode != 0) {
-    FXL_LOG(ERROR) << "Failed to getaddrinfo for address " << address << ":"
-                   << port << ": " << gai_strerror(errcode);
+    FXL_LOG(ERROR) << "Failed to getaddrinfo for address " << address << ":" << port << ": "
+                   << gai_strerror(errcode);
     return false;
   }
   if (addrinfos == nullptr) {
-    FXL_LOG(ERROR) << "No matching addresses found for " << address << ":"
-                   << port;
+    FXL_LOG(ERROR) << "No matching addresses found for " << address << ":" << port;
     return false;
   }
 
@@ -506,8 +468,7 @@ static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
   return true;
 }
 
-static std::unique_ptr<std::ostream> ConnectToTraceSaver(
-    fxl::StringView address) {
+static std::unique_ptr<std::ostream> ConnectToTraceSaver(fxl::StringView address) {
   FXL_LOG(INFO) << "Connecting to " << address;
 
   size_t colon = address.rfind(':');
@@ -544,22 +505,22 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(
   return ofstream;
 }
 
-static std::unique_ptr<std::ostream> OpenOutputStream(
-    const std::string& output_file_name, bool compress) {
+static std::unique_ptr<std::ostream> OpenOutputStream(const std::string& output_file_name,
+                                                      bool compress) {
   std::unique_ptr<std::ostream> out_stream;
   fxl::StringView address;
   if (BeginsWith(output_file_name, kTcpPrefix, &address)) {
     out_stream = ConnectToTraceSaver(address);
   } else if (compress) {
     // TODO(dje): Compressing a network stream is not supported.
-    auto gzstream = std::make_unique<gzofstream>(
-        output_file_name.c_str(), std::ios_base::out | std::ios_base::trunc);
+    auto gzstream = std::make_unique<gzofstream>(output_file_name.c_str(),
+                                                 std::ios_base::out | std::ios_base::trunc);
     if (gzstream->is_open()) {
       out_stream = std::move(gzstream);
     }
   } else {
-    auto ofstream = std::make_unique<std::ofstream>(
-        output_file_name, std::ios_base::out | std::ios_base::trunc);
+    auto ofstream = std::make_unique<std::ofstream>(output_file_name,
+                                                    std::ios_base::out | std::ios_base::trunc);
     if (ofstream->is_open()) {
       out_stream = std::move(ofstream);
     }
@@ -577,8 +538,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
   std::unique_ptr<std::ostream> out_stream =
       OpenOutputStream(options_.output_file_name, options_.compress);
   if (!out_stream) {
-    FXL_LOG(ERROR) << "Failed to open " << options_.output_file_name
-                   << " for writing";
+    FXL_LOG(ERROR) << "Failed to open " << options_.output_file_name << " for writing";
     Done(1);
     return;
   }
@@ -612,8 +572,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
 
   if (!options_.measurements.duration.empty()) {
     aggregate_events_ = true;
-    measure_duration_.reset(
-        new measure::MeasureDuration(options_.measurements.duration));
+    measure_duration_.reset(new measure::MeasureDuration(options_.measurements.duration));
   }
   if (!options_.measurements.time_between.empty()) {
     aggregate_events_ = true;
@@ -622,8 +581,8 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
   }
   if (!options_.measurements.argument_value.empty()) {
     aggregate_events_ = true;
-    measure_argument_value_.reset(new measure::MeasureArgumentValue(
-        options_.measurements.argument_value));
+    measure_argument_value_.reset(
+        new measure::MeasureArgumentValue(options_.measurements.argument_value));
   }
 
   tracing_ = true;
@@ -693,12 +652,10 @@ void RecordCommand::ProcessMeasurements() {
 
   std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
   if (measure_duration_) {
-    ticks.insert(measure_duration_->results().begin(),
-                 measure_duration_->results().end());
+    ticks.insert(measure_duration_->results().begin(), measure_duration_->results().end());
   }
   if (measure_time_between_) {
-    ticks.insert(measure_time_between_->results().begin(),
-                 measure_time_between_->results().end());
+    ticks.insert(measure_time_between_->results().begin(), measure_time_between_->results().end());
   }
   if (measure_argument_value_) {
     ticks.insert(measure_argument_value_->results().begin(),
@@ -715,8 +672,7 @@ void RecordCommand::ProcessMeasurements() {
   bool errored = false;
   for (auto& result : results) {
     if (result.values.empty()) {
-      FXL_LOG(ERROR) << "No results for measurement \"" << result.label
-                     << "\".";
+      FXL_LOG(ERROR) << "No results for measurement \"" << result.label << "\".";
       errored = true;
     }
   }
@@ -732,13 +688,11 @@ void RecordCommand::ProcessMeasurements() {
       result.test_suite = options_.test_suite;
     }
     if (!ExportResults(options_.benchmark_results_file, results)) {
-      FXL_LOG(ERROR) << "Failed to write benchmark results to "
-                     << options_.benchmark_results_file;
+      FXL_LOG(ERROR) << "Failed to write benchmark results to " << options_.benchmark_results_file;
       Done(1);
       return;
     }
-    out() << "Benchmark results written to " << options_.benchmark_results_file
-          << std::endl;
+    out() << "Benchmark results written to " << options_.benchmark_results_file << std::endl;
   }
 
   Done(return_code_);
@@ -788,8 +742,7 @@ void RecordCommand::LaunchComponentApp() {
 
   // Include the arguments here for when invoked by traceutil: It's useful to
   // see how the passed command+args ended up after shell processing.
-  FXL_LOG(INFO) << "Launching: " << launch_info.url << " "
-                << JoinArgsForLogging(options_.args);
+  FXL_LOG(INFO) << "Launching: " << launch_info.url << " " << JoinArgsForLogging(options_.args);
 
   fuchsia::sys::LauncherPtr launcher;
   if (options_.environment_name.has_value()) {
@@ -808,22 +761,19 @@ void RecordCommand::LaunchComponentApp() {
   } else {
     context()->svc()->Connect(launcher.NewRequest());
   }
-  launcher->CreateComponent(std::move(launch_info),
-                            component_controller_.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), component_controller_.NewRequest());
 
   component_controller_.set_error_handler([this](zx_status_t error) {
-    out() << "Error launching component: " << error << "/"
-          << zx_status_get_string(error) << std::endl;
+    out() << "Error launching component: " << error << "/" << zx_status_get_string(error)
+          << std::endl;
     if (!options_.decouple)
       // The trace might have been already stopped by the |Wait()| callback. In
       // that case, |StopTrace| below does nothing.
       StopTrace(-1);
   });
   component_controller_.events().OnTerminated =
-      [this](int64_t return_code,
-             fuchsia::sys::TerminationReason termination_reason) {
-        out() << "Application exited with return code " << return_code
-              << std::endl;
+      [this](int64_t return_code, fuchsia::sys::TerminationReason termination_reason) {
+        out() << "Application exited with return code " << return_code << std::endl;
         if (!options_.decouple) {
           if (options_.return_child_result) {
             StopTrace(return_code);
@@ -861,9 +811,8 @@ void RecordCommand::LaunchSpawnedApp() {
   FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
 }
 
-void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher,
-                                     async::WaitBase* wait, zx_status_t status,
-                                     const zx_packet_signal_t* signal) {
+void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                     zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for spawned app: status=" << status;
     StopTrace(-1);
@@ -872,12 +821,11 @@ void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher,
 
   if (signal->observed & ZX_PROCESS_TERMINATED) {
     zx_info_process_t proc_info;
-    [[maybe_unused]] zx_status_t info_status = spawned_app_.get_info(
-        ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
+    [[maybe_unused]] zx_status_t info_status =
+        spawned_app_.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
     FXL_DCHECK(info_status == ZX_OK);
 
-    out() << "Application exited with return code " << proc_info.return_code
-          << std::endl;
+    out() << "Application exited with return code " << proc_info.return_code << std::endl;
     if (!options_.decouple) {
       if (options_.return_child_result) {
         StopTrace(proc_info.return_code);
@@ -909,8 +857,8 @@ void RecordCommand::StartTimer() {
           weak->StopTrace(0);
       },
       zx::nsec(options_.duration.ToNanoseconds()));
-  out() << "Starting trace; will stop in " << options_.duration.ToSecondsF()
-        << " seconds..." << std::endl;
+  out() << "Starting trace; will stop in " << options_.duration.ToSecondsF() << " seconds..."
+        << std::endl;
 }
 
 }  // namespace tracing

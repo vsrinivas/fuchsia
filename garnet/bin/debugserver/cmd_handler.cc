@@ -69,8 +69,7 @@ bool ReplyOK(CommandHandler::ResponseCallback callback) {
 
 // This always returns true so that command handlers can simple call "return
 // ReplyWithError()" rather than "ReplyWithError(); return true;
-bool ReplyWithError(ErrorCode error_code,
-                    CommandHandler::ResponseCallback callback) {
+bool ReplyWithError(ErrorCode error_code, CommandHandler::ResponseCallback callback) {
   std::string error_rsp = BuildErrorPacket(error_code);
   callback(error_rsp);
   return true;
@@ -93,8 +92,7 @@ debugger_utils::Argv BuildArgvFor_vRun(const fxl::StringView& packet) {
       n = len - s;
     else
       n = semi - s;
-    std::vector<uint8_t> arg =
-        debugger_utils::DecodeByteArrayString(packet.substr(s, n));
+    std::vector<uint8_t> arg = debugger_utils::DecodeByteArrayString(packet.substr(s, n));
     auto char_arg = reinterpret_cast<char*>(arg.data());
     argv.push_back(std::string(char_arg, arg.size()));
     if (semi == fxl::StringView::npos)
@@ -113,8 +111,7 @@ CommandHandler::CommandHandler(RspServer* server)
   FXL_DCHECK(server_);
 }
 
-bool CommandHandler::HandleCommand(const fxl::StringView& packet,
-                                   ResponseCallback callback) {
+bool CommandHandler::HandleCommand(const fxl::StringView& packet, ResponseCallback callback) {
   // GDB packets are prefixed with a letter that maps to a particular command
   // "family". We do the initial multiplexing here and let each individual
   // sub-handler deal with the rest.
@@ -188,8 +185,7 @@ bool CommandHandler::HandleQuestionMark(ResponseCallback callback) {
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::Handle_c(const fxl::StringView& packet,
-                              ResponseCallback callback) {
+bool CommandHandler::Handle_c(const fxl::StringView& packet, ResponseCallback callback) {
   // If there is no current process or if the current process isn't attached,
   // then report an error.
   inferior_control::Process* current_process = server_->current_process();
@@ -205,8 +201,7 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
   // remain untouched.
   zx_vaddr_t addr;
   if (!packet.empty()) {
-    if (!fxl::StringToNumberWithError<zx_vaddr_t>(packet, &addr,
-                                                  fxl::Base::k16)) {
+    if (!fxl::StringToNumberWithError<zx_vaddr_t>(packet, &addr, fxl::Base::k16)) {
       FXL_LOG(ERROR) << "c: Malformed address given: " << packet;
       return ReplyWithError(ErrorCode::INVAL, std::move(callback));
     }
@@ -221,8 +216,7 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
     if (!current_thread->registers()->RefreshGeneralRegisters()) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
-    if (!current_thread->registers()->SetRegister(
-            GetPCRegisterNumber(), &addr, sizeof(addr))) {
+    if (!current_thread->registers()->SetRegister(GetPCRegisterNumber(), &addr, sizeof(addr))) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->WriteGeneralRegisters()) {
@@ -261,8 +255,7 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::Handle_C(const fxl::StringView& packet,
-                              ResponseCallback callback) {
+bool CommandHandler::Handle_C(const fxl::StringView& packet, ResponseCallback callback) {
   // If there is no current process or if the current process isn't attached,
   // then report an error.
   inferior_control::Process* current_process = server_->current_process();
@@ -283,8 +276,7 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
     semicolon = packet.size();
 
   int signo;
-  if (!fxl::StringToNumberWithError<int>(packet.substr(0, semicolon), &signo,
-                                         fxl::Base::k16)) {
+  if (!fxl::StringToNumberWithError<int>(packet.substr(0, semicolon), &signo, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "C: Malformed packet: " << packet;
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
@@ -298,8 +290,8 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
   int int_thread_signo = static_cast<int>(thread_signo);
 
   if (int_thread_signo != signo) {
-    FXL_LOG(ERROR) << "C: Signal numbers don't match - actual: "
-                   << int_thread_signo << ", received: " << signo;
+    FXL_LOG(ERROR) << "C: Signal numbers don't match - actual: " << int_thread_signo
+                   << ", received: " << signo;
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
@@ -312,8 +304,7 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
   // we don't have to keep repeating this code.
   if (!addr_param.empty()) {
     zx_vaddr_t addr;
-    if (!fxl::StringToNumberWithError<zx_vaddr_t>(addr_param, &addr,
-                                                  fxl::Base::k16)) {
+    if (!fxl::StringToNumberWithError<zx_vaddr_t>(addr_param, &addr, fxl::Base::k16)) {
       FXL_LOG(ERROR) << "C: Malformed address given: " << packet;
       return ReplyWithError(ErrorCode::INVAL, std::move(callback));
     }
@@ -321,8 +312,7 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
     if (!current_thread->registers()->RefreshGeneralRegisters()) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
-    if (!current_thread->registers()->SetRegister(
-            GetPCRegisterNumber(), &addr, sizeof(addr))) {
+    if (!current_thread->registers()->SetRegister(GetPCRegisterNumber(), &addr, sizeof(addr))) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->WriteGeneralRegisters()) {
@@ -341,8 +331,7 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::Handle_D(const fxl::StringView& packet,
-                              ResponseCallback callback) {
+bool CommandHandler::Handle_D(const fxl::StringView& packet, ResponseCallback callback) {
   // If there is no current process or if the current process isn't attached,
   // then report an error.
   inferior_control::Process* current_process = server_->current_process();
@@ -354,8 +343,7 @@ bool CommandHandler::Handle_D(const fxl::StringView& packet,
   // For now we only support detaching from the one process we have.
   if (packet[0] == ';') {
     zx_koid_t pid;
-    if (!fxl::StringToNumberWithError<zx_koid_t>(packet.substr(1), &pid,
-                                                 fxl::Base::k16)) {
+    if (!fxl::StringToNumberWithError<zx_koid_t>(packet.substr(1), &pid, fxl::Base::k16)) {
       FXL_LOG(ERROR) << "D: bad pid: " << packet;
       return ReplyWithError(ErrorCode::INVAL, std::move(callback));
     }
@@ -412,8 +400,7 @@ bool CommandHandler::Handle_g(ResponseCallback callback) {
   return true;
 }
 
-bool CommandHandler::Handle_G(const fxl::StringView& packet,
-                              ResponseCallback callback) {
+bool CommandHandler::Handle_G(const fxl::StringView& packet, ResponseCallback callback) {
   // If there is no current process or if the current process isn't attached,
   // then report an error.
   inferior_control::Process* current_process = server_->current_process();
@@ -445,8 +432,7 @@ bool CommandHandler::Handle_G(const fxl::StringView& packet,
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::Handle_H(const fxl::StringView& packet,
-                              ResponseCallback callback) {
+bool CommandHandler::Handle_H(const fxl::StringView& packet, ResponseCallback callback) {
   // Here we set the "current thread" for subsequent operations
   // (‘m’, ‘M’, ‘g’, ‘G’, et.al.).
   // There are two types of an H packet. 'c' and 'g'. We claim to not support
@@ -469,9 +455,8 @@ bool CommandHandler::Handle_H(const fxl::StringView& packet,
       // TODO(armansito): What to do with a process ID? Replying with an empty
       // packet for now.
       if (has_pid) {
-        FXL_LOG(WARNING)
-            << "Specifying a pid while setting the current thread is"
-            << " not supported";
+        FXL_LOG(WARNING) << "Specifying a pid while setting the current thread is"
+                         << " not supported";
         return false;
       }
 
@@ -538,8 +523,7 @@ bool CommandHandler::Handle_H(const fxl::StringView& packet,
   return false;
 }
 
-bool CommandHandler::Handle_m(const fxl::StringView& packet,
-                              ResponseCallback callback) {
+bool CommandHandler::Handle_m(const fxl::StringView& packet, ResponseCallback callback) {
   // If there is no current process or if the current process isn't attached,
   // then report an error.
   inferior_control::Process* current_process = server_->current_process();
@@ -550,8 +534,7 @@ bool CommandHandler::Handle_m(const fxl::StringView& packet,
 
   // The "m" packet should have two arguments for addr and length, separated by
   // a single comma.
-  auto params = fxl::SplitString(packet, ",", fxl::kKeepWhitespace,
-                                 fxl::kSplitWantNonEmpty);
+  auto params = fxl::SplitString(packet, ",", fxl::kKeepWhitespace, fxl::kSplitWantNonEmpty);
   if (params.size() != 2) {
     FXL_LOG(ERROR) << "m: Malformed packet: " << packet;
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
@@ -559,10 +542,8 @@ bool CommandHandler::Handle_m(const fxl::StringView& packet,
 
   uintptr_t addr;
   size_t length;
-  if (!fxl::StringToNumberWithError<uintptr_t>(params[0], &addr,
-                                               fxl::Base::k16) ||
-      !fxl::StringToNumberWithError<size_t>(params[1], &length,
-                                            fxl::Base::k16)) {
+  if (!fxl::StringToNumberWithError<uintptr_t>(params[0], &addr, fxl::Base::k16) ||
+      !fxl::StringToNumberWithError<size_t>(params[1], &length, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "m: Malformed params: " << packet;
     return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
@@ -573,14 +554,12 @@ bool CommandHandler::Handle_m(const fxl::StringView& packet,
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
-  std::string result =
-      debugger_utils::EncodeByteArrayString(buffer.get(), length);
+  std::string result = debugger_utils::EncodeByteArrayString(buffer.get(), length);
   callback(result);
   return true;
 }
 
-bool CommandHandler::Handle_M(const fxl::StringView& packet,
-                              ResponseCallback callback) {
+bool CommandHandler::Handle_M(const fxl::StringView& packet, ResponseCallback callback) {
   // If there is no current process or if the current process isn't attached,
   // then report an error.
   inferior_control::Process* current_process = server_->current_process();
@@ -593,8 +572,7 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
   // First, extract the addr,len and data sections. Using fxl::kSplitWantAll
   // here since the data portion could technically be empty if the given length
   // is 0.
-  auto params =
-      fxl::SplitString(packet, ":", fxl::kKeepWhitespace, fxl::kSplitWantAll);
+  auto params = fxl::SplitString(packet, ":", fxl::kKeepWhitespace, fxl::kSplitWantAll);
   if (params.size() != 2) {
     FXL_LOG(ERROR) << "M: Malformed packet: " << packet;
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
@@ -603,8 +581,7 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
   fxl::StringView data = params[1];
 
   // Extract addr and len
-  params = fxl::SplitString(params[0], ",", fxl::kKeepWhitespace,
-                            fxl::kSplitWantNonEmpty);
+  params = fxl::SplitString(params[0], ",", fxl::kKeepWhitespace, fxl::kSplitWantNonEmpty);
   if (params.size() != 2) {
     FXL_LOG(ERROR) << "M: Malformed packet: " << packet;
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
@@ -612,28 +589,23 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
 
   uintptr_t addr;
   size_t length;
-  if (!fxl::StringToNumberWithError<uintptr_t>(params[0], &addr,
-                                               fxl::Base::k16) ||
-      !fxl::StringToNumberWithError<size_t>(params[1], &length,
-                                            fxl::Base::k16)) {
+  if (!fxl::StringToNumberWithError<uintptr_t>(params[0], &addr, fxl::Base::k16) ||
+      !fxl::StringToNumberWithError<size_t>(params[1], &length, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "M: Malformed params: " << packet;
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
-  FXL_VLOG(1) << fxl::StringPrintf("M: addr=0x%" PRIxPTR ", len=%lu", addr,
-                                   length);
+  FXL_VLOG(1) << fxl::StringPrintf("M: addr=0x%" PRIxPTR ", len=%lu", addr, length);
 
   auto data_bytes = debugger_utils::DecodeByteArrayString(data);
   if (data_bytes.size() != length) {
     FXL_LOG(ERROR) << "M: payload length doesn't match length argument - "
-                   << "payload size: " << data_bytes.size()
-                   << ", length requested: " << length;
+                   << "payload size: " << data_bytes.size() << ", length requested: " << length;
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   // Short-circuit if |length| is 0.
-  if (length &&
-      !current_process->WriteMemory(addr, data_bytes.data(), length)) {
+  if (length && !current_process->WriteMemory(addr, data_bytes.data(), length)) {
     FXL_LOG(ERROR) << "M: Failed to write memory";
 
     // TODO(armansito): The error code definitions from GDB aren't really
@@ -646,8 +618,7 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::Handle_q(const fxl::StringView& prefix,
-                              const fxl::StringView& params,
+bool CommandHandler::Handle_q(const fxl::StringView& prefix, const fxl::StringView& params,
                               ResponseCallback callback) {
   if (prefix == kAttached)
     return HandleQueryAttached(params, std::move(callback));
@@ -660,8 +631,7 @@ bool CommandHandler::Handle_q(const fxl::StringView& prefix,
 
   // The qRcmd packet is different than most. It uses , as a delimiter, not :.
   if (StartsWith(prefix, kRcmd))
-    return HandleQueryRcmd(prefix.substr(std::strlen(kRcmd)),
-                           std::move(callback));
+    return HandleQueryRcmd(prefix.substr(std::strlen(kRcmd)), std::move(callback));
 
   if (prefix == kSubsequentThreadInfo)
     return HandleQueryThreadInfo(false, std::move(callback));
@@ -680,8 +650,7 @@ bool CommandHandler::Handle_q(const fxl::StringView& prefix,
   return false;
 }
 
-bool CommandHandler::Handle_Q(const fxl::StringView& prefix,
-                              const fxl::StringView& params,
+bool CommandHandler::Handle_Q(const fxl::StringView& prefix, const fxl::StringView& params,
                               ResponseCallback callback) {
   if (prefix == kNonStop)
     return HandleSetNonStop(params, std::move(callback));
@@ -689,8 +658,7 @@ bool CommandHandler::Handle_Q(const fxl::StringView& prefix,
   return false;
 }
 
-bool CommandHandler::Handle_T(const fxl::StringView& packet,
-                              ResponseCallback callback) {
+bool CommandHandler::Handle_T(const fxl::StringView& packet, ResponseCallback callback) {
   // If there is no current process or if the current process isn't attached,
   // then report an error.
   inferior_control::Process* current_process = server_->current_process();
@@ -718,11 +686,9 @@ bool CommandHandler::Handle_T(const fxl::StringView& packet,
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::Handle_v(const fxl::StringView& packet,
-                              ResponseCallback callback) {
+bool CommandHandler::Handle_v(const fxl::StringView& packet, ResponseCallback callback) {
   if (StartsWith(packet, kAttach))
-    return Handle_vAttach(packet.substr(std::strlen(kAttach)),
-                          std::move(callback));
+    return Handle_vAttach(packet.substr(std::strlen(kAttach)), std::move(callback));
   if (StartsWith(packet, kCont))
     return Handle_vCont(packet.substr(std::strlen(kCont)), std::move(callback));
   if (StartsWith(packet, kKill))
@@ -796,8 +762,7 @@ bool CommandHandler::Handle_zZ(bool insert, const fxl::StringView& packet,
   return false;
 }
 
-bool CommandHandler::HandleQueryAttached(const fxl::StringView& params,
-                                         ResponseCallback callback) {
+bool CommandHandler::HandleQueryAttached(const fxl::StringView& params, ResponseCallback callback) {
   // We don't support multiprocessing yet, so make sure we received the version
   // of qAttached that doesn't have a "pid" parameter.
   if (!params.empty())
@@ -835,19 +800,17 @@ bool CommandHandler::HandleQueryCurrentThreadId(const fxl::StringView& params,
     }
   }
 
-  std::string thread_id =
-      fxl::NumberToString<zx_koid_t>(current_thread->id(), fxl::Base::k16);
+  std::string thread_id = fxl::NumberToString<zx_koid_t>(current_thread->id(), fxl::Base::k16);
 
   std::string reply = "QC" + thread_id;
   callback(reply);
   return true;
 }
 
-bool CommandHandler::HandleQueryRcmd(const fxl::StringView& command,
-                                     ResponseCallback callback) {
+bool CommandHandler::HandleQueryRcmd(const fxl::StringView& command, ResponseCallback callback) {
   auto cmd_string = debugger_utils::DecodeString(command);
-  std::vector<fxl::StringView> argv = fxl::SplitString(
-      cmd_string, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  std::vector<fxl::StringView> argv =
+      fxl::SplitString(cmd_string, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (argv.size() == 0) {
     // No command, just reply OK.
     return ReplyOK(std::move(callback));
@@ -908,8 +871,7 @@ bool CommandHandler::HandleQuerySupported(const fxl::StringView& params,
   return true;
 }
 
-bool CommandHandler::HandleSetNonStop(const fxl::StringView& params,
-                                      ResponseCallback callback) {
+bool CommandHandler::HandleSetNonStop(const fxl::StringView& params, ResponseCallback callback) {
   // The only values we accept are "1" and "0".
   if (params.size() != 1)
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
@@ -926,8 +888,7 @@ bool CommandHandler::HandleSetNonStop(const fxl::StringView& params,
   return ReplyWithError(ErrorCode::INVAL, std::move(callback));
 }
 
-bool CommandHandler::HandleQueryThreadInfo(bool is_first,
-                                           ResponseCallback callback) {
+bool CommandHandler::HandleQueryThreadInfo(bool is_first, ResponseCallback callback) {
   FXL_DCHECK(server_);
 
   inferior_control::Process* current_process = server_->current_process();
@@ -967,13 +928,11 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
 
   std::deque<std::string> thread_ids;
   size_t buf_size = 0;
-  current_process->ForEachLiveThread(
-      [&thread_ids, &buf_size](inferior_control::Thread* thread) {
-        std::string thread_id =
-            fxl::NumberToString<zx_koid_t>(thread->id(), fxl::Base::k16);
-        buf_size += thread_id.length();
-        thread_ids.push_back(thread_id);
-      });
+  current_process->ForEachLiveThread([&thread_ids, &buf_size](inferior_control::Thread* thread) {
+    std::string thread_id = fxl::NumberToString<zx_koid_t>(thread->id(), fxl::Base::k16);
+    buf_size += thread_id.length();
+    thread_ids.push_back(thread_id);
+  });
 
   if (thread_ids.empty()) {
     // No ids to report. End of sequence.
@@ -995,8 +954,7 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
   return true;
 }
 
-bool CommandHandler::HandleQueryXfer(const fxl::StringView& params,
-                                     ResponseCallback callback) {
+bool CommandHandler::HandleQueryXfer(const fxl::StringView& params, ResponseCallback callback) {
   // We only support qXfer:auxv:read::
   // TODO(dje): TO-195
   // - qXfer::osdata::read::OFFSET,LENGTH
@@ -1008,8 +966,8 @@ bool CommandHandler::HandleQueryXfer(const fxl::StringView& params,
     return false;
 
   // Parse offset,length
-  auto args = fxl::SplitString(params.substr(auxv_read.size()), ",",
-                               fxl::kKeepWhitespace, fxl::kSplitWantNonEmpty);
+  auto args = fxl::SplitString(params.substr(auxv_read.size()), ",", fxl::kKeepWhitespace,
+                               fxl::kSplitWantNonEmpty);
   if (args.size() != 2) {
     FXL_LOG(ERROR) << "qXfer:auxv:read:: Malformed params: " << params;
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
@@ -1085,8 +1043,7 @@ bool CommandHandler::HandleQueryXfer(const fxl::StringView& params,
   return true;
 }
 
-bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
-                                    ResponseCallback callback) {
+bool CommandHandler::Handle_vAttach(const fxl::StringView& packet, ResponseCallback callback) {
   inferior_control::Process* inferior = server_->current_process();
   if (!inferior) {
     FXL_LOG(ERROR) << "vAttach: no inferior selected";
@@ -1104,8 +1061,7 @@ bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
     case inferior_control::Process::State::kGone:
       break;
     default:
-      FXL_LOG(ERROR)
-          << "vAttach: need to kill the currently running process first";
+      FXL_LOG(ERROR) << "vAttach: need to kill the currently running process first";
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
@@ -1126,8 +1082,7 @@ bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::Handle_vCont(const fxl::StringView& packet,
-                                  ResponseCallback callback) {
+bool CommandHandler::Handle_vCont(const fxl::StringView& packet, ResponseCallback callback) {
   inferior_control::Process* current_process = server_->current_process();
   if (!current_process) {
     FXL_LOG(ERROR) << "vCont: no current process to run!";
@@ -1149,8 +1104,7 @@ bool CommandHandler::Handle_vCont(const fxl::StringView& packet,
     if (e.tid() == 0) {
       FXL_DCHECK(e.pid() > 0);
       // TODO(dje): For now we assume there is only one process.
-      FXL_DCHECK(current_process->id() == e.pid() ||
-                 e.pid() == ThreadActionList::kAll);
+      FXL_DCHECK(current_process->id() == e.pid() || e.pid() == ThreadActionList::kAll);
       inferior_control::Thread* t = current_process->PickOneThread();
       if (t)
         e.set_picked_tid(t->id());
@@ -1184,46 +1138,43 @@ bool CommandHandler::Handle_vCont(const fxl::StringView& packet,
   if (!action_list_ok)
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
 
-  current_process->ForEachLiveThread(
-      [&actions](inferior_control::Thread* thread) {
-        inferior_control::Process* process = thread->process();
-        zx_koid_t pid = process->id();
-        zx_koid_t tid = thread->id();
-        ThreadActionList::Action action = actions.GetAction(pid, tid);
-        FXL_VLOG(1) << "vCont; Thread " << thread->GetDebugName()
-                    << " state: " << thread->StateName(thread->state())
-                    << " action: " << ThreadActionList::ActionToString(action);
-        switch (action) {
-          case ThreadActionList::Action::kContinue:
-            switch (thread->state()) {
-              case inferior_control::Thread::State::kNew:
-              case inferior_control::Thread::State::kInException:
-                thread->ResumeFromException(
-                  process->server()->exception_port_handle());
-                break;
-              default:
-                break;
-            }
-          case ThreadActionList::Action::kStep:
-            switch (thread->state()) {
-              case inferior_control::Thread::State::kInException:
-                thread->Step();
-                break;
-              default:
-                break;
-            }
+  current_process->ForEachLiveThread([&actions](inferior_control::Thread* thread) {
+    inferior_control::Process* process = thread->process();
+    zx_koid_t pid = process->id();
+    zx_koid_t tid = thread->id();
+    ThreadActionList::Action action = actions.GetAction(pid, tid);
+    FXL_VLOG(1) << "vCont; Thread " << thread->GetDebugName()
+                << " state: " << thread->StateName(thread->state())
+                << " action: " << ThreadActionList::ActionToString(action);
+    switch (action) {
+      case ThreadActionList::Action::kContinue:
+        switch (thread->state()) {
+          case inferior_control::Thread::State::kNew:
+          case inferior_control::Thread::State::kInException:
+            thread->ResumeFromException(process->server()->exception_port_handle());
+            break;
           default:
             break;
         }
-      });
+      case ThreadActionList::Action::kStep:
+        switch (thread->state()) {
+          case inferior_control::Thread::State::kInException:
+            thread->Step();
+            break;
+          default:
+            break;
+        }
+      default:
+        break;
+    }
+  });
 
   // We defer sending a stop-reply packet. Server will send it out when threads
   // stop. At this point in time GDB is just expecting "OK".
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::Handle_vKill(const fxl::StringView& packet,
-                                  ResponseCallback callback) {
+bool CommandHandler::Handle_vKill(const fxl::StringView& packet, ResponseCallback callback) {
   FXL_VLOG(2) << "Handle_vKill: " << packet;
 
   inferior_control::Process* current_process = server_->current_process();
@@ -1263,8 +1214,7 @@ bool CommandHandler::Handle_vKill(const fxl::StringView& packet,
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
-                                 ResponseCallback callback) {
+bool CommandHandler::Handle_vRun(const fxl::StringView& packet, ResponseCallback callback) {
   FXL_VLOG(2) << "Handle_vRun: " << packet;
 
   inferior_control::Process* inferior = server_->current_process();
@@ -1287,14 +1237,12 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
     case inferior_control::Process::State::kGone:
       break;
     default:
-      FXL_LOG(ERROR)
-          << "vRun: need to kill the currently running process first";
+      FXL_LOG(ERROR) << "vRun: need to kill the currently running process first";
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   std::unique_ptr<process::ProcessBuilder> builder;
-  if (!server_->CreateProcessViaBuilder(server_->inferior_argv()[0],
-                                        server_->inferior_argv(),
+  if (!server_->CreateProcessViaBuilder(server_->inferior_argv()[0], server_->inferior_argv(),
                                         &builder)) {
     FXL_LOG(ERROR) << "vRun: unable to initialize process builder";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
@@ -1324,11 +1272,10 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
   return true;
 }
 
-bool CommandHandler::InsertSoftwareBreakpoint(
-    uintptr_t addr, const fxl::StringView& optional_params,
-    ResponseCallback callback) {
-  FXL_VLOG(1) << fxl::StringPrintf(
-      "Insert software breakpoint at 0x%lx", addr);
+bool CommandHandler::InsertSoftwareBreakpoint(uintptr_t addr,
+                                              const fxl::StringView& optional_params,
+                                              ResponseCallback callback) {
+  FXL_VLOG(1) << fxl::StringPrintf("Insert software breakpoint at 0x%lx", addr);
 
   inferior_control::Process* current_process = server_->current_process();
   if (!current_process) {
@@ -1346,10 +1293,8 @@ bool CommandHandler::InsertSoftwareBreakpoint(
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::RemoveSoftwareBreakpoint(uintptr_t addr,
-                                              ResponseCallback callback) {
-  FXL_VLOG(1) << fxl::StringPrintf(
-      "Remove software breakpoint at 0x%lx", addr);
+bool CommandHandler::RemoveSoftwareBreakpoint(uintptr_t addr, ResponseCallback callback) {
+  FXL_VLOG(1) << fxl::StringPrintf("Remove software breakpoint at 0x%lx", addr);
 
   inferior_control::Process* current_process = server_->current_process();
   if (!current_process) {

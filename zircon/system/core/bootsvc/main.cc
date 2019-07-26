@@ -49,8 +49,7 @@ zx_status_t SetupStdout(const zx::debuglog& log) {
 }
 
 // Parse ZBI_TYPE_IMAGE_ARGS item into boot args buffer
-zx_status_t ExtractBootArgsFromImage(fbl::Vector<char>* buf,
-                                     const zx::vmo& image_vmo,
+zx_status_t ExtractBootArgsFromImage(fbl::Vector<char>* buf, const zx::vmo& image_vmo,
                                      bootsvc::ItemMap* item_map) {
   auto it = item_map->find(bootsvc::ItemKey{ZBI_TYPE_IMAGE_ARGS, 0});
   if (it == item_map->end()) {
@@ -100,18 +99,14 @@ zx_status_t ExtractBootArgsFromBootfs(fbl::Vector<char>* buf,
 
 // Load the boot arguments from bootfs/ZBI_TYPE_IMAGE_ARGS and environment variables.
 zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
-                         const zx::vmo& image_vmo,
-                         bootsvc::ItemMap* item_map,
-                         zx::vmo* out,
+                         const zx::vmo& image_vmo, bootsvc::ItemMap* item_map, zx::vmo* out,
                          uint64_t* size) {
-
   fbl::Vector<char> boot_args;
   zx_status_t status;
 
   status = ExtractBootArgsFromImage(&boot_args, image_vmo, item_map);
   ZX_ASSERT_MSG(((status == ZX_OK) || (status == ZX_ERR_NOT_FOUND)),
-                "Retrieving boot args failed: %s\n",
-                zx_status_get_string(status));
+                "Retrieving boot args failed: %s\n", zx_status_get_string(status));
 
   if (status == ZX_ERR_NOT_FOUND) {
     status = ExtractBootArgsFromBootfs(&boot_args, bootfs);

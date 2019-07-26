@@ -19,35 +19,35 @@ namespace cobalt_client {
 // This class is copyable, moveable and assignable.
 // This class is thread-safe.
 class Counter {
-public:
-    // Underlying type used for representing an actual counter.
-    using Count = uint64_t;
+ public:
+  // Underlying type used for representing an actual counter.
+  using Count = uint64_t;
 
-    Counter() = default;
-    Counter(const MetricOptions& options);
-    Counter(const MetricOptions& options, Collector* collector);
-    // Constructor for internal use only.
-    Counter(const MetricOptions& options, internal::FlushInterface** flush_interface);
-    Counter(const Counter& other) = delete;
-    Counter(Counter&&) = delete;
-    ~Counter();
+  Counter() = default;
+  Counter(const MetricOptions& options);
+  Counter(const MetricOptions& options, Collector* collector);
+  // Constructor for internal use only.
+  Counter(const MetricOptions& options, internal::FlushInterface** flush_interface);
+  Counter(const Counter& other) = delete;
+  Counter(Counter&&) = delete;
+  ~Counter();
 
-    // Optionally initialize lazily the histogram, if is more readable to do so
-    // in the constructor or function body.
-    void Initialize(const MetricOptions& options, Collector* collector);
+  // Optionally initialize lazily the histogram, if is more readable to do so
+  // in the constructor or function body.
+  void Initialize(const MetricOptions& options, Collector* collector);
 
-    // Increments the counter value by |value|. This applies to local and remote
-    // values of the counter.
-    void Increment(Count value = 1);
+  // Increments the counter value by |value|. This applies to local and remote
+  // values of the counter.
+  void Increment(Count value = 1);
 
-    // Returns the current value of the counter that would be
-    // sent to the remote service(cobalt).
-    Count GetRemoteCount() const;
+  // Returns the current value of the counter that would be
+  // sent to the remote service(cobalt).
+  Count GetRemoteCount() const;
 
-private:
-    internal::RemoteCounter remote_counter_;
-    Collector* collector_ = nullptr;
-    MetricOptions::Mode mode_ = MetricOptions::Mode::kLazy;
+ private:
+  internal::RemoteCounter remote_counter_;
+  Collector* collector_ = nullptr;
+  MetricOptions::Mode mode_ = MetricOptions::Mode::kLazy;
 };
 
-} // namespace cobalt_client
+}  // namespace cobalt_client

@@ -44,8 +44,7 @@ const char* Process::StateName(Process::State state) {
 Process::Process(Server* server, Delegate* delegate)
     : server_(server),
       delegate_(delegate),
-      memory_(
-          std::shared_ptr<debugger_utils::ByteBlock>(new ProcessMemory(this))),
+      memory_(std::shared_ptr<debugger_utils::ByteBlock>(new ProcessMemory(this))),
       breakpoints_(this) {
   FXL_DCHECK(server_);
   FXL_DCHECK(delegate_);
@@ -65,18 +64,14 @@ Process::~Process() {
   Clear();
 }
 
-std::string Process::GetName() const {
-  return fxl::StringPrintf("%" PRId64, id());
-}
+std::string Process::GetName() const { return fxl::StringPrintf("%" PRId64, id()); }
 
-bool Process::InitializeFromBuilder(
-    std::unique_ptr<process::ProcessBuilder> builder) {
+bool Process::InitializeFromBuilder(std::unique_ptr<process::ProcessBuilder> builder) {
   std::string error_message;
   zx_status_t status = builder->Prepare(&error_message);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to initialize process: "
-                   << debugger_utils::ZxErrorString(status) << ": "
-                   << error_message;
+    FXL_LOG(ERROR) << "Unable to initialize process: " << debugger_utils::ZxErrorString(status)
+                   << ": " << error_message;
     return false;
   }
 
@@ -87,8 +82,7 @@ bool Process::InitializeFromBuilder(
   status = builder->data().process.duplicate(ZX_RIGHT_SAME_RIGHTS, &process);
   FXL_DCHECK(status == ZX_OK);
 
-  if (!AttachToNew(std::move(process),
-                   [builder = std::move(builder)](Process* p) -> zx_status_t {
+  if (!AttachToNew(std::move(process), [builder = std::move(builder)](Process* p) -> zx_status_t {
         return builder->Start(nullptr);
       })) {
     FXL_LOG(ERROR) << "Unable to attach to inferior process";
@@ -247,8 +241,7 @@ bool Process::Start() {
   zx_status_t status = start_callback_(this);
 
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start inferior process: "
-                   << debugger_utils::ZxErrorString(status);
+    FXL_LOG(ERROR) << "Failed to start inferior process: " << debugger_utils::ZxErrorString(status);
     return false;
   }
 
@@ -374,9 +367,7 @@ Thread* Process::AddThread(zx_handle_t thread_handle, zx_koid_t thread_id) {
   return thread;
 }
 
-bool Process::IsLive() const {
-  return state_ != State::kNew && state_ != State::kGone;
-}
+bool Process::IsLive() const { return state_ != State::kNew && state_ != State::kGone; }
 
 bool Process::IsAttached() const {
   if (eport_bound_) {
@@ -402,8 +393,8 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
 
   // If process is dead all its threads have been removed.
   if (state_ == State::kGone) {
-    FXL_VLOG(2) << "FindThreadById: Process " << id_ << " is gone, thread "
-                << thread_id << " is gone";
+    FXL_VLOG(2) << "FindThreadById: Process " << id_ << " is gone, thread " << thread_id
+                << " is gone";
     return nullptr;
   }
 
@@ -414,8 +405,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
   if (iter != threads_.end()) {
     Thread* thread = iter->second.get();
     if (thread->state() == Thread::State::kGone) {
-      FXL_VLOG(2) << "FindThreadById: Thread " << thread->GetDebugName()
-                  << " is gone";
+      FXL_VLOG(2) << "FindThreadById: Thread " << thread->GetDebugName() << " is gone";
       return nullptr;
     }
     return thread;
@@ -424,13 +414,12 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
   // Try to get a debug capable handle to the child of the current process with
   // a kernel object ID that matches |thread_id|.
   zx::thread thread;
-  zx_status_t status = process_.get_child(
-      thread_id, ZX_RIGHT_SAME_RIGHTS, &thread);
+  zx_status_t status = process_.get_child(thread_id, ZX_RIGHT_SAME_RIGHTS, &thread);
   if (status != ZX_OK) {
     // If the process just exited then the thread will be gone. So this is
     // just a debug message, not a warning or error.
-    FXL_VLOG(2) << "Could not obtain a debug handle to thread " << thread_id
-                << ": " << debugger_utils::ZxErrorString(status);
+    FXL_VLOG(2) << "Could not obtain a debug handle to thread " << thread_id << ": "
+                << debugger_utils::ZxErrorString(status);
     return nullptr;
   }
 
@@ -452,9 +441,8 @@ void Process::RefreshAllThreads() {
   std::vector<zx_koid_t> threads;
   size_t num_available_threads;
 
-  __UNUSED zx_status_t status =
-      debugger_utils::GetProcessThreadKoids(process_, kRefreshThreadsTryCount,
-          kNumExtraRefreshThreads, &threads, &num_available_threads);
+  __UNUSED zx_status_t status = debugger_utils::GetProcessThreadKoids(
+      process_, kRefreshThreadsTryCount, kNumExtraRefreshThreads, &threads, &num_available_threads);
   // The only way this can fail is if we have a bug (or the kernel runs out
   // of memory, but we don't try to cope with that case).
   // TODO(dje): Verify the handle we are given has sufficient rights.
@@ -511,22 +499,18 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
 zx_vaddr_t Process::GetDebugAddrProperty() {
   zx_vaddr_t debug_addr = 0;
   [[maybe_unused]] zx_status_t status =
-      process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR,
-                            &debug_addr, sizeof(debug_addr));
+      process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr));
   FXL_DCHECK(status == ZX_OK);
   return debug_addr;
 }
 
 void Process::SetDebugAddrProperty(zx_vaddr_t debug_addr) {
   [[maybe_unused]] zx_status_t status =
-      process_.set_property(ZX_PROP_PROCESS_DEBUG_ADDR,
-                            &debug_addr, sizeof(debug_addr));
+      process_.set_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr));
   FXL_DCHECK(status == ZX_OK);
 }
 
-void Process::SetLdsoDebugTrigger() {
-  SetDebugAddrProperty(ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET);
-}
+void Process::SetLdsoDebugTrigger() { SetDebugAddrProperty(ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET); }
 
 zx_vaddr_t Process::GetDebugAddr() {
   if (debug_addr_property_ != 0)
@@ -536,8 +520,7 @@ zx_vaddr_t Process::GetDebugAddr() {
 
   // Since we could, theoretically, stop in the dynamic linker before we get
   // that far check to see if it has been filled in.
-  if (debug_addr == 0 ||
-      debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET) {
+  if (debug_addr == 0 || debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET) {
     FXL_VLOG(4) << "Ld.so hasn't loaded symbols yet";
     return 0;
   }
@@ -645,13 +628,9 @@ bool Process::CheckDsosList(Thread* thread) {
   return true;
 }
 
-const debugger_utils::dsoinfo_t* Process::GetExecDso() {
-  return dso_get_main_exec(dsos_);
-}
+const debugger_utils::dsoinfo_t* Process::GetExecDso() { return dso_get_main_exec(dsos_); }
 
-debugger_utils::dsoinfo_t* Process::LookupDso(zx_vaddr_t pc) const {
-  return dso_lookup(dsos_, pc);
-}
+debugger_utils::dsoinfo_t* Process::LookupDso(zx_vaddr_t pc) const { return dso_lookup(dsos_, pc); }
 
 void Process::OnTermination() {
   set_state(Process::State::kGone);
@@ -673,15 +652,12 @@ void Process::OnTermination() {
 
 void Process::RecordReturnCode() {
   FXL_DCHECK(state_ == State::kGone);
-  zx_status_t status = debugger_utils::GetProcessReturnCode(process_.get(),
-                                                            &return_code_);
+  zx_status_t status = debugger_utils::GetProcessReturnCode(process_.get(), &return_code_);
   if (status == ZX_OK) {
     return_code_is_set_ = true;
-    FXL_VLOG(4) << "Process " << GetName() << " exited with return code "
-                << return_code_;
+    FXL_VLOG(4) << "Process " << GetName() << " exited with return code " << return_code_;
   } else {
-    FXL_LOG(ERROR) << "Error getting process exit code: "
-                   << debugger_utils::ZxErrorString(status);
+    FXL_LOG(ERROR) << "Error getting process exit code: " << debugger_utils::ZxErrorString(status);
   }
 }
 
@@ -689,9 +665,7 @@ void Process::Dump() {
   EnsureThreadMapFresh();
   FXL_LOG(INFO) << "Dump of threads for process " << id_;
 
-  ForEachLiveThread([](Thread* thread) {
-    thread->Dump();
-  });
+  ForEachLiveThread([](Thread* thread) { thread->Dump(); });
 }
 
 }  // namespace inferior_control

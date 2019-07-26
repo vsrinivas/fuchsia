@@ -75,123 +75,118 @@ Usage:
 // Gather some info about the executed tests, and use it to display
 // gTest lookalike summary.
 struct TestStats {
-    uint32_t passed = 0;
-    uint32_t failed = 0;
-    uint32_t skipped = 0;
-    uint32_t total = 0;
+  uint32_t passed = 0;
+  uint32_t failed = 0;
+  uint32_t skipped = 0;
+  uint32_t total = 0;
 };
 
-uint64_t GetDelta(zx::ticks start) {
-    return (fzl::TicksToNs(zx::ticks::now() - start).to_msecs());
-}
+uint64_t GetDelta(zx::ticks start) { return (fzl::TicksToNs(zx::ticks::now() - start).to_msecs()); }
 
 void PrintTestStart(const fbl::String& name, FILE* out) {
-    if (out) {
-        fprintf(out, "[ RUN      ] %s\n", name.c_str());
-    }
+  if (out) {
+    fprintf(out, "[ RUN      ] %s\n", name.c_str());
+  }
 }
 
 void PrintTestSkipped(const fbl::String& name, zx::ticks start, FILE* out) {
-    if (out) {
-        fprintf(out, "[  SKIPPED ] %s(%lu ms total)\n", name.c_str(), GetDelta(start));
-    }
+  if (out) {
+    fprintf(out, "[  SKIPPED ] %s(%lu ms total)\n", name.c_str(), GetDelta(start));
+  }
 }
 
 void PrintTestFailed(const fbl::String& name, zx::ticks start, FILE* out) {
-    if (out) {
-        fprintf(out, "[   FAILED ] %s(%lu ms total)\n", name.c_str(), GetDelta(start));
-    }
+  if (out) {
+    fprintf(out, "[   FAILED ] %s(%lu ms total)\n", name.c_str(), GetDelta(start));
+  }
 }
 
 void PrintTestPassed(const fbl::String& name, zx::ticks start, FILE* out) {
-    if (out) {
-        fprintf(out, "[   PASSED ] %s(%lu ms total)\n", name.c_str(), GetDelta(start));
-    }
+  if (out) {
+    fprintf(out, "[   PASSED ] %s(%lu ms total)\n", name.c_str(), GetDelta(start));
+  }
 }
 
 void PrintTestCaseStart(const fbl::String& name, size_t test_count, FILE* out) {
-    if (out) {
-        fprintf(out, "[----------] %lu tests from %s\n", test_count, name.c_str());
-    }
+  if (out) {
+    fprintf(out, "[----------] %lu tests from %s\n", test_count, name.c_str());
+  }
 }
 
 void PrintTestCaseEnd(const fbl::String& name, size_t test_count, zx::ticks start, FILE* out) {
-    if (out) {
-        fprintf(out, "[----------] %lu tests from %s(%lu ms total)\n\n", test_count, name.c_str(),
-                GetDelta(start));
-    }
+  if (out) {
+    fprintf(out, "[----------] %lu tests from %s(%lu ms total)\n\n", test_count, name.c_str(),
+            GetDelta(start));
+  }
 }
 
 void PrintTestsCasesSummary(size_t test_case_count, const TestStats& stats, zx::ticks start,
                             FILE* out) {
-    if (out) {
-        fprintf(out, "[==========] %d tests from %lu test cases ran. (%lu ms total)\n", stats.total,
-                test_case_count, fzl::TicksToNs(zx::ticks::now() - start).to_msecs());
-        fprintf(out, "[  PASSED  ] %d tests.\n", stats.passed);
-        fprintf(out, "[  FAILED  ] %d tests.\n", stats.failed);
-        fprintf(out, "[  SKIPPED ] %d tests.\n", stats.skipped);
-    }
+  if (out) {
+    fprintf(out, "[==========] %d tests from %lu test cases ran. (%lu ms total)\n", stats.total,
+            test_case_count, fzl::TicksToNs(zx::ticks::now() - start).to_msecs());
+    fprintf(out, "[  PASSED  ] %d tests.\n", stats.passed);
+    fprintf(out, "[  FAILED  ] %d tests.\n", stats.failed);
+    fprintf(out, "[  SKIPPED ] %d tests.\n", stats.skipped);
+  }
 }
 
-void PrintUsage(char* arg0, FILE* out) {
-    fprintf(out, kUsage, arg0);
-}
+void PrintUsage(char* arg0, FILE* out) { fprintf(out, kUsage, arg0); }
 
 bool HasEnoughSpace(const fbl::String& block_device_path, size_t required_space) {
-    if (required_space == 0) {
-        return true;
-    }
-
-    fbl::unique_fd fd(open(block_device_path.c_str(), O_RDONLY));
-    fzl::FdioCaller disk_caller(std::move(fd));
-    fuchsia_hardware_block_BlockInfo block_info;
-    zx_status_t io_status, status;
-    io_status = fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status,
-                                                    &block_info);
-    if (io_status != ZX_OK || status != ZX_OK) {
-        LOG_ERROR(status, "Failed to verify block_device size.\n %s\n", block_device_path.c_str());
-        return false;
-    }
-
-    if (required_space > block_info.block_count * block_info.block_size) {
-        return false;
-    }
+  if (required_space == 0) {
     return true;
+  }
+
+  fbl::unique_fd fd(open(block_device_path.c_str(), O_RDONLY));
+  fzl::FdioCaller disk_caller(std::move(fd));
+  fuchsia_hardware_block_BlockInfo block_info;
+  zx_status_t io_status, status;
+  io_status =
+      fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, &block_info);
+  if (io_status != ZX_OK || status != ZX_OK) {
+    LOG_ERROR(status, "Failed to verify block_device size.\n %s\n", block_device_path.c_str());
+    return false;
+  }
+
+  if (required_space > block_info.block_count * block_info.block_size) {
+    return false;
+  }
+  return true;
 }
 
-void RunTest(const TestInfo& test, uint32_t sample_count, bool skip,
-             Fixture* fixture, perftest::ResultsSet* result_set, TestStats* stats,
-             FILE* out) {
-    zx::ticks test_start = zx::ticks::now();
-    PrintTestStart(test.name, out);
-    stats->total++;
-    fbl::String error;
-    if (skip) {
-        stats->skipped++;
-        PrintTestSkipped(test.name, test_start, out);
-        return;
-    }
-    auto test_wrapper = [&test, fixture](perftest::RepeatState* state) {
-        // Reset the seed before running the test.
-        *fixture->mutable_seed() = fixture->options().seed;
-        bool result = test.test_fn(state, fixture);
-        return result;
-    };
+void RunTest(const TestInfo& test, uint32_t sample_count, bool skip, Fixture* fixture,
+             perftest::ResultsSet* result_set, TestStats* stats, FILE* out) {
+  zx::ticks test_start = zx::ticks::now();
+  PrintTestStart(test.name, out);
+  stats->total++;
+  fbl::String error;
+  if (skip) {
+    stats->skipped++;
+    PrintTestSkipped(test.name, test_start, out);
+    return;
+  }
+  auto test_wrapper = [&test, fixture](perftest::RepeatState* state) {
+    // Reset the seed before running the test.
+    *fixture->mutable_seed() = fixture->options().seed;
+    bool result = test.test_fn(state, fixture);
+    return result;
+  };
 
-    constexpr char kTestSuite[] = "fuchsia.zircon";
-    bool failed = !perftest::RunTest(kTestSuite, test.name.c_str(), test_wrapper,
-                                     sample_count, result_set, &error);
-    if (failed) {
-        // Log if the error is from the perftest lib.
-        if (!error.empty()) {
-            LOG_ERROR(ZX_ERR_INTERNAL, "%s\n", error.c_str());
-        }
-        stats->failed++;
-        PrintTestFailed(test.name, test_start, out);
-        return;
+  constexpr char kTestSuite[] = "fuchsia.zircon";
+  bool failed = !perftest::RunTest(kTestSuite, test.name.c_str(), test_wrapper, sample_count,
+                                   result_set, &error);
+  if (failed) {
+    // Log if the error is from the perftest lib.
+    if (!error.empty()) {
+      LOG_ERROR(ZX_ERR_INTERNAL, "%s\n", error.c_str());
     }
-    PrintTestPassed(test.name, test_start, out);
-    stats->passed++;
+    stats->failed++;
+    PrintTestFailed(test.name, test_start, out);
+    return;
+  }
+  PrintTestPassed(test.name, test_start, out);
+  stats->passed++;
 }
 
 // Runs all tests in the given testcase.
@@ -199,226 +194,225 @@ void RunTestCase(const FixtureOptions& fixture_options,
                  const PerformanceTestOptions& performance_test_options,
                  const TestCaseInfo& test_case, perftest::ResultsSet* result_set,
                  TestStats* global_stats, FILE* out) {
-    Fixture fixture(fixture_options);
+  Fixture fixture(fixture_options);
 
-    zx::ticks start = zx::ticks::now();
-    PrintTestCaseStart(test_case.name, test_case.tests.size(), out);
-    bool skip_tests = (fixture.SetUpTestCase() != ZX_OK);
-    bool setUp = true;
-    for (auto& test : test_case.tests) {
-        // Verify that the disk has enough space to run the test. This is set up by the user
-        // since the actual may change depending on the test input.
-        skip_tests = !HasEnoughSpace(fixture.GetFsBlockDevice(), test.required_disk_space);
-        if (skip_tests) {
-            LOG_ERROR(ZX_ERR_NO_SPACE, "Not enough space on disk to run test.\n");
-        } else if (setUp) {
-            skip_tests = (fixture.SetUp() != ZX_OK);
-            setUp = false;
-        }
-        uint32_t actual_sample_count = test_case.sample_count;
-        if (actual_sample_count == 0 || performance_test_options.is_unittest) {
-            actual_sample_count = performance_test_options.sample_count;
-        }
-        RunTest(test, actual_sample_count, skip_tests, &fixture, result_set,
-                global_stats, out);
-        if (test_case.teardown) {
-            fixture.TearDown();
-            setUp = true;
-        }
+  zx::ticks start = zx::ticks::now();
+  PrintTestCaseStart(test_case.name, test_case.tests.size(), out);
+  bool skip_tests = (fixture.SetUpTestCase() != ZX_OK);
+  bool setUp = true;
+  for (auto& test : test_case.tests) {
+    // Verify that the disk has enough space to run the test. This is set up by the user
+    // since the actual may change depending on the test input.
+    skip_tests = !HasEnoughSpace(fixture.GetFsBlockDevice(), test.required_disk_space);
+    if (skip_tests) {
+      LOG_ERROR(ZX_ERR_NO_SPACE, "Not enough space on disk to run test.\n");
+    } else if (setUp) {
+      skip_tests = (fixture.SetUp() != ZX_OK);
+      setUp = false;
     }
-    if (!test_case.teardown) {
-        fixture.TearDown();
+    uint32_t actual_sample_count = test_case.sample_count;
+    if (actual_sample_count == 0 || performance_test_options.is_unittest) {
+      actual_sample_count = performance_test_options.sample_count;
     }
-    fixture.TearDownTestCase();
-    PrintTestCaseEnd(test_case.name, test_case.tests.size(), start, out);
+    RunTest(test, actual_sample_count, skip_tests, &fixture, result_set, global_stats, out);
+    if (test_case.teardown) {
+      fixture.TearDown();
+      setUp = true;
+    }
+  }
+  if (!test_case.teardown) {
+    fixture.TearDown();
+  }
+  fixture.TearDownTestCase();
+  PrintTestCaseEnd(test_case.name, test_case.tests.size(), start, out);
 }
 
-} // namespace
+}  // namespace
 
 bool PerformanceTestOptions::IsValid(fbl::String* error) const {
-    if (is_unittest) {
-        return true;
-    }
-
-    // Something must be printed.
-    if (result_path.empty() && summary_path.empty() && !print_statistics) {
-        *error = "Performance test must produce output."
-                 " result_path(out), summary_path or prints_statistics must be set.\n";
-        return false;
-    }
-
-    if (result_path == summary_path && !result_path.empty()) {
-        *error = "result_path(out) and summary_path cannot point to the same file.\n";
-        return false;
-    }
-
-    if (sample_count == 0) {
-        *error = "sample_count must be a positive integer.\n";
-        return false;
-    }
-
+  if (is_unittest) {
     return true;
+  }
+
+  // Something must be printed.
+  if (result_path.empty() && summary_path.empty() && !print_statistics) {
+    *error =
+        "Performance test must produce output."
+        " result_path(out), summary_path or prints_statistics must be set.\n";
+    return false;
+  }
+
+  if (result_path == summary_path && !result_path.empty()) {
+    *error = "result_path(out) and summary_path cannot point to the same file.\n";
+    return false;
+  }
+
+  if (sample_count == 0) {
+    *error = "sample_count must be a positive integer.\n";
+    return false;
+  }
+
+  return true;
 }
 
 bool RunTestCases(const FixtureOptions& fixture_options,
                   const PerformanceTestOptions& performance_test_options,
                   const fbl::Vector<TestCaseInfo>& test_cases, FILE* out) {
-    TestStats stats;
-    perftest::ResultsSet result_set;
-    bool error = false;
-    zx::ticks start = zx::ticks::now();
-    for (auto& test_case : test_cases) {
-        RunTestCase(fixture_options, performance_test_options, test_case, &result_set, &stats, out);
-    }
-    PrintTestsCasesSummary(test_cases.size(), stats, start, out);
-    if (performance_test_options.print_statistics) {
-        fprintf(out, "\n");
-        result_set.PrintSummaryStatistics(out);
-        fprintf(out, "\n");
-    }
+  TestStats stats;
+  perftest::ResultsSet result_set;
+  bool error = false;
+  zx::ticks start = zx::ticks::now();
+  for (auto& test_case : test_cases) {
+    RunTestCase(fixture_options, performance_test_options, test_case, &result_set, &stats, out);
+  }
+  PrintTestsCasesSummary(test_cases.size(), stats, start, out);
+  if (performance_test_options.print_statistics) {
+    fprintf(out, "\n");
+    result_set.PrintSummaryStatistics(out);
+    fprintf(out, "\n");
+  }
 
-    if (!performance_test_options.summary_path.empty()) {
-        FILE* fp = fopen(performance_test_options.summary_path.c_str(), "w");
-        if (fp) {
-            result_set.PrintSummaryStatistics(fp);
-            fclose(fp);
-        } else {
-            LOG_ERROR(ZX_ERR_IO, "%s\n", strerror(errno));
-            error = true;
-        }
+  if (!performance_test_options.summary_path.empty()) {
+    FILE* fp = fopen(performance_test_options.summary_path.c_str(), "w");
+    if (fp) {
+      result_set.PrintSummaryStatistics(fp);
+      fclose(fp);
+    } else {
+      LOG_ERROR(ZX_ERR_IO, "%s\n", strerror(errno));
+      error = true;
     }
+  }
 
-    if (!performance_test_options.result_path.empty()) {
-        FILE* fp = fopen(performance_test_options.result_path.c_str(), "w");
-        if (fp) {
-            result_set.WriteJSON(fp);
-            fclose(fp);
-        } else {
-            LOG_ERROR(ZX_ERR_IO, "%s\n", strerror(errno));
-        }
+  if (!performance_test_options.result_path.empty()) {
+    FILE* fp = fopen(performance_test_options.result_path.c_str(), "w");
+    if (fp) {
+      result_set.WriteJSON(fp);
+      fclose(fp);
+    } else {
+      LOG_ERROR(ZX_ERR_IO, "%s\n", strerror(errno));
     }
-    return stats.failed == 0 && !error;
+  }
+  return stats.failed == 0 && !error;
 }
 
 bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fixture_options,
                           PerformanceTestOptions* performance_test_options, FILE* out) {
-    static const struct option opts[] = {
-        {"help", no_argument, nullptr, 'h'},
-        {"block_device", required_argument, nullptr, 0},
-        {"use_ramdisk", no_argument, nullptr, 0},
-        {"ramdisk_block_size", required_argument, nullptr, 0},
-        {"ramdisk_block_count", required_argument, nullptr, 0},
-        {"use_fvm", no_argument, nullptr, 0},
-        {"fvm_slice_size", required_argument, nullptr, 0},
-        {"fs", required_argument, nullptr, 0},
-        {"out", required_argument, nullptr, 0},
-        {"summary_path", required_argument, nullptr, 0},
-        {"print_statistics", no_argument, nullptr, 0},
-        {"runs", required_argument, nullptr, 0},
-        {"seed", required_argument, nullptr, 0},
-        {0, 0, 0, 0},
-    };
-    // Resets the internal state of getopt*, making this function idempotent.
-    optind = 0;
-    bool ramdisk_set = false;
-    bool block_device_set = false;
+  static const struct option opts[] = {
+      {"help", no_argument, nullptr, 'h'},
+      {"block_device", required_argument, nullptr, 0},
+      {"use_ramdisk", no_argument, nullptr, 0},
+      {"ramdisk_block_size", required_argument, nullptr, 0},
+      {"ramdisk_block_count", required_argument, nullptr, 0},
+      {"use_fvm", no_argument, nullptr, 0},
+      {"fvm_slice_size", required_argument, nullptr, 0},
+      {"fs", required_argument, nullptr, 0},
+      {"out", required_argument, nullptr, 0},
+      {"summary_path", required_argument, nullptr, 0},
+      {"print_statistics", no_argument, nullptr, 0},
+      {"runs", required_argument, nullptr, 0},
+      {"seed", required_argument, nullptr, 0},
+      {0, 0, 0, 0},
+  };
+  // Resets the internal state of getopt*, making this function idempotent.
+  optind = 0;
+  bool ramdisk_set = false;
+  bool block_device_set = false;
 
-    *performance_test_options = PerformanceTestOptions::UnitTest();
-    // get_opt expects non const pointers.
-    char** argvs = const_cast<char**>(argv);
+  *performance_test_options = PerformanceTestOptions::UnitTest();
+  // get_opt expects non const pointers.
+  char** argvs = const_cast<char**>(argv);
 
-    int c = -1;
-    int option_index = -1;
-    while ((c = getopt_long(argc, argvs, "ph", opts, &option_index)) >= 0) {
-        switch (c) {
-        case 0:
-            switch (option_index) {
-            case 0:
-                PrintUsage(argvs[0], out);
-                return false;
-            case 1:
-                fixture_options->block_device_path = optarg;
-                block_device_set = true;
-                break;
-            case 2:
-                fixture_options->use_ramdisk = true;
-                ramdisk_set = true;
-                break;
-            case 3:
-                fixture_options->ramdisk_block_size = atoi(optarg);
-                break;
-            case 4:
-                fixture_options->ramdisk_block_count = atoi(optarg);
-                break;
-            case 5:
-                fixture_options->use_fvm = true;
-                break;
-            case 6:
-                fixture_options->fvm_slice_size = atoi(optarg);
-                break;
-            case 7:
-                if (strcmp(optarg, "minfs") == 0) {
-                    fixture_options->fs_type = DISK_FORMAT_MINFS;
-                } else if (strcmp(optarg, "blobfs") == 0) {
-                    fixture_options->fs_type = DISK_FORMAT_BLOBFS;
-                } else {
-                    LOG_ERROR(ZX_ERR_INVALID_ARGS,
-                              "Unknown disk_format %s. Support values are minfs and blobfs.\n",
-                              optarg);
-                    return false;
-                }
-                break;
-            case 8:
-                performance_test_options->result_path = optarg;
-                break;
-            case 9:
-                performance_test_options->summary_path = optarg;
-                break;
-            case 10:
-                performance_test_options->print_statistics = true;
-                break;
-            case 11:
-                performance_test_options->sample_count = atoi(optarg);
-                break;
-            case 12:
-                fixture_options->seed = static_cast<unsigned int>(strtoul(optarg, NULL, 0));
-                break;
-            default:
-                break;
-            }
-            break;
-        case 'p':
-            *performance_test_options = PerformanceTestOptions::PerformanceTest();
-            break;
-        case 'h':
-        default:
+  int c = -1;
+  int option_index = -1;
+  while ((c = getopt_long(argc, argvs, "ph", opts, &option_index)) >= 0) {
+    switch (c) {
+      case 0:
+        switch (option_index) {
+          case 0:
             PrintUsage(argvs[0], out);
             return false;
+          case 1:
+            fixture_options->block_device_path = optarg;
+            block_device_set = true;
+            break;
+          case 2:
+            fixture_options->use_ramdisk = true;
+            ramdisk_set = true;
+            break;
+          case 3:
+            fixture_options->ramdisk_block_size = atoi(optarg);
+            break;
+          case 4:
+            fixture_options->ramdisk_block_count = atoi(optarg);
+            break;
+          case 5:
+            fixture_options->use_fvm = true;
+            break;
+          case 6:
+            fixture_options->fvm_slice_size = atoi(optarg);
+            break;
+          case 7:
+            if (strcmp(optarg, "minfs") == 0) {
+              fixture_options->fs_type = DISK_FORMAT_MINFS;
+            } else if (strcmp(optarg, "blobfs") == 0) {
+              fixture_options->fs_type = DISK_FORMAT_BLOBFS;
+            } else {
+              LOG_ERROR(ZX_ERR_INVALID_ARGS,
+                        "Unknown disk_format %s. Support values are minfs and blobfs.\n", optarg);
+              return false;
+            }
+            break;
+          case 8:
+            performance_test_options->result_path = optarg;
+            break;
+          case 9:
+            performance_test_options->summary_path = optarg;
+            break;
+          case 10:
+            performance_test_options->print_statistics = true;
+            break;
+          case 11:
+            performance_test_options->sample_count = atoi(optarg);
+            break;
+          case 12:
+            fixture_options->seed = static_cast<unsigned int>(strtoul(optarg, NULL, 0));
+            break;
+          default:
+            break;
         }
-    }
-
-    // Unset ramdisk when not requested and block device is passed.
-    if (block_device_set && !ramdisk_set) {
-        fixture_options->use_ramdisk = false;
-    }
-
-    bool ok = true;
-    fbl::String error;
-    if (!fixture_options->IsValid(&error)) {
-        LOG_ERROR(ZX_ERR_INVALID_ARGS, "%s\n", error.c_str());
-        ok = false;
-    }
-
-    if (!performance_test_options->IsValid(&error)) {
-        LOG_ERROR(ZX_ERR_INVALID_ARGS, "%s\n", error.c_str());
-        ok = false;
-    }
-
-    if (!ok) {
+        break;
+      case 'p':
+        *performance_test_options = PerformanceTestOptions::PerformanceTest();
+        break;
+      case 'h':
+      default:
         PrintUsage(argvs[0], out);
+        return false;
     }
+  }
 
-    return ok;
+  // Unset ramdisk when not requested and block device is passed.
+  if (block_device_set && !ramdisk_set) {
+    fixture_options->use_ramdisk = false;
+  }
+
+  bool ok = true;
+  fbl::String error;
+  if (!fixture_options->IsValid(&error)) {
+    LOG_ERROR(ZX_ERR_INVALID_ARGS, "%s\n", error.c_str());
+    ok = false;
+  }
+
+  if (!performance_test_options->IsValid(&error)) {
+    LOG_ERROR(ZX_ERR_INVALID_ARGS, "%s\n", error.c_str());
+    ok = false;
+  }
+
+  if (!ok) {
+    PrintUsage(argvs[0], out);
+  }
+
+  return ok;
 }
 
-} // namespace fs_test_utils
+}  // namespace fs_test_utils

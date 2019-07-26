@@ -36,80 +36,80 @@
  * interface.
  */
 enum ath_fft_sample_type {
-    ATH_FFT_SAMPLE_HT20 = 1,
-    ATH_FFT_SAMPLE_HT20_40,
-    ATH_FFT_SAMPLE_ATH10K,
+  ATH_FFT_SAMPLE_HT20 = 1,
+  ATH_FFT_SAMPLE_HT20_40,
+  ATH_FFT_SAMPLE_ATH10K,
 };
 
 struct fft_sample_tlv {
-    uint8_t type; /* see ath_fft_sample */
-    __be16 length;
-    /* type dependent data follows */
+  uint8_t type; /* see ath_fft_sample */
+  __be16 length;
+  /* type dependent data follows */
 } __packed;
 
 struct fft_sample_ht20 {
-    struct fft_sample_tlv tlv;
+  struct fft_sample_tlv tlv;
 
-    uint8_t max_exp;
+  uint8_t max_exp;
 
-    __be16 freq;
-    int8_t rssi;
-    int8_t noise;
+  __be16 freq;
+  int8_t rssi;
+  int8_t noise;
 
-    __be16 max_magnitude;
-    uint8_t max_index;
-    uint8_t bitmap_weight;
+  __be16 max_magnitude;
+  uint8_t max_index;
+  uint8_t bitmap_weight;
 
-    __be64 tsf;
+  __be64 tsf;
 
-    uint8_t data[SPECTRAL_HT20_NUM_BINS];
+  uint8_t data[SPECTRAL_HT20_NUM_BINS];
 } __packed;
 
 struct fft_sample_ht20_40 {
-    struct fft_sample_tlv tlv;
+  struct fft_sample_tlv tlv;
 
-    uint8_t channel_type;
-    __be16 freq;
+  uint8_t channel_type;
+  __be16 freq;
 
-    int8_t lower_rssi;
-    int8_t upper_rssi;
+  int8_t lower_rssi;
+  int8_t upper_rssi;
 
-    __be64 tsf;
+  __be64 tsf;
 
-    int8_t lower_noise;
-    int8_t upper_noise;
+  int8_t lower_noise;
+  int8_t upper_noise;
 
-    __be16 lower_max_magnitude;
-    __be16 upper_max_magnitude;
+  __be16 lower_max_magnitude;
+  __be16 upper_max_magnitude;
 
-    uint8_t lower_max_index;
-    uint8_t upper_max_index;
+  uint8_t lower_max_index;
+  uint8_t upper_max_index;
 
-    uint8_t lower_bitmap_weight;
-    uint8_t upper_bitmap_weight;
+  uint8_t lower_bitmap_weight;
+  uint8_t upper_bitmap_weight;
 
-    uint8_t max_exp;
+  uint8_t max_exp;
 
-    uint8_t data[SPECTRAL_HT20_40_NUM_BINS];
+  uint8_t data[SPECTRAL_HT20_40_NUM_BINS];
 } __packed;
 
 struct fft_sample_ath10k {
-    struct fft_sample_tlv tlv;
-    uint8_t chan_width_mhz;
-    __be16 freq1;
-    __be16 freq2;
-    __be16 noise;
-    __be16 max_magnitude;
-    __be16 total_gain_db;
-    __be16 base_pwr_db;
-    __be64 tsf;
-    int8_t max_index;
-    uint8_t rssi;
-    uint8_t relpwr_db;
-    uint8_t avgpwr_db;
-    uint8_t max_exp;
+  struct fft_sample_tlv tlv;
+  uint8_t chan_width_mhz;
+  __be16 freq1;
+  __be16 freq2;
+  __be16 noise;
+  __be16 max_magnitude;
+  __be16 total_gain_db;
+  __be16 base_pwr_db;
+  __be64 tsf;
+  int8_t max_index;
+  uint8_t rssi;
+  uint8_t relpwr_db;
+  uint8_t avgpwr_db;
+  uint8_t max_exp;
 
-    uint8_t data[0];
+  uint8_t data[0];
 } __packed;
 
 #endif /* SPECTRAL_COMMON_H */

@@ -23,8 +23,8 @@ int main(int argc, const char** argv) {
   fidl::examples::echo::EchoSyncPtr echo;
 
   std::string file_name = files::AbsolutePath(argv[1]);
-  zx_status_t status = fdio_service_connect(
-      file_name.c_str(), echo.NewRequest().TakeChannel().release());
+  zx_status_t status =
+      fdio_service_connect(file_name.c_str(), echo.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     printf("Failed to open %s, %d\n", file_name.c_str(), status);
     return -1;

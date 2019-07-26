@@ -25,8 +25,8 @@ class EventRegistry : public std::unordered_map<std::string, ModelEvents> {
  public:
   // Register the events for |model_name,group_name|.
   // |events| points to storage of static duration.
-  void RegisterEvents(const char* model_name, const char* group_name,
-                      const EventDetails* events, size_t count);
+  void RegisterEvents(const char* model_name, const char* group_name, const EventDetails* events,
+                      size_t count);
 };
 
 // Names of the various event groups.

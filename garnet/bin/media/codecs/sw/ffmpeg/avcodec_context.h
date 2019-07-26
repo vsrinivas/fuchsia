@@ -25,9 +25,9 @@ class AvCodecContext {
     size_t buffer_bytes_needed;
   };
 
-  using GetBufferCallback = ::fit::function<int(
-      const FrameBufferRequest& frame_buffer_request,
-      AVCodecContext* avcodec_context, AVFrame* frame, int flags)>;
+  using GetBufferCallback =
+      ::fit::function<int(const FrameBufferRequest& frame_buffer_request,
+                          AVCodecContext* avcodec_context, AVFrame* frame, int flags)>;
 
   using AVFramePtr = ::std::unique_ptr<AVFrame, fit::function<void(AVFrame*)>>;
 
@@ -50,8 +50,7 @@ class AvCodecContext {
   //
   // See ffmpeg's get_buffer2 and av_buffer_create for more details.
   static std::optional<std::unique_ptr<AvCodecContext>> CreateDecoder(
-      const fuchsia::media::FormatDetails& format_details,
-      GetBufferCallback get_buffer_callback);
+      const fuchsia::media::FormatDetails& format_details, GetBufferCallback get_buffer_callback);
 
   // Sends a compressed packet to the decoder. The semantics of SendPacket and
   // ReceiveFrame mirror those of avcodec_send_packet and avcodec_receive_frame
@@ -71,21 +70,17 @@ class AvCodecContext {
   // be allocated for it.
   FrameBufferRequest frame_buffer_request(AVFrame* frame) const;
 
-  static int GetBufferCallbackRouter(AVCodecContext* avcodec_context,
-                                     AVFrame* frame, int flag);
+  static int GetBufferCallbackRouter(AVCodecContext* avcodec_context, AVFrame* frame, int flag);
 
-  int GetBufferHandler(AVCodecContext* avcodec_context, AVFrame* frame,
-                       int flag);
+  int GetBufferHandler(AVCodecContext* avcodec_context, AVFrame* frame, int flag);
 
   // Takes ownership of ffmpeg's AVCodecContext type (note uppercase V).
   AvCodecContext(
-      std::unique_ptr<AVCodecContext, fit::function<void(AVCodecContext*)>>
-          avcodec_context,
+      std::unique_ptr<AVCodecContext, fit::function<void(AVCodecContext*)>> avcodec_context,
       GetBufferCallback get_buffer_callback);
 
   // ffmpeg's AVCodecContext (note uppercase V).
-  std::unique_ptr<AVCodecContext, fit::function<void(AVCodecContext*)>>
-      avcodec_context_;
+  std::unique_ptr<AVCodecContext, fit::function<void(AVCodecContext*)>> avcodec_context_;
 
   // callback to get buffers for decoding.
   GetBufferCallback get_buffer_callback_;

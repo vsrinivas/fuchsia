@@ -17,31 +17,30 @@ namespace ddk {
 class MmioBuffer;
 
 class PDev : public PDevProtocolClient {
+ public:
+  PDev() {}
 
-public:
-    PDev() {}
+  // TODO(andresoportus): pass protocol by value/const& so there is no question on lifecycle.
+  PDev(pdev_protocol_t* proto) : PDevProtocolClient(proto) {}
 
-    // TODO(andresoportus): pass protocol by value/const& so there is no question on lifecycle.
-    PDev(pdev_protocol_t* proto) : PDevProtocolClient(proto) {}
+  PDev(zx_device_t* parent) : PDevProtocolClient(parent) {}
 
-    PDev(zx_device_t* parent) : PDevProtocolClient(parent) {}
+  ~PDev() = default;
 
-    ~PDev() = default;
+  // Prints out information about the platform device.
+  void ShowInfo();
 
-    // Prints out information about the platform device.
-    void ShowInfo();
+  zx_status_t MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio);
 
-    zx_status_t MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio);
+  zx_status_t GetInterrupt(uint32_t index, zx::interrupt* out) {
+    return PDevProtocolClient::GetInterrupt(index, 0, out);
+  }
 
-    zx_status_t GetInterrupt(uint32_t index, zx::interrupt* out) {
-        return PDevProtocolClient::GetInterrupt(index, 0, out);
-    }
+  zx_status_t GetBti(uint32_t index, zx::bti* out) {
+    return PDevProtocolClient::GetBti(index, out);
+  }
 
-    zx_status_t GetBti(uint32_t index, zx::bti* out) {
-        return PDevProtocolClient::GetBti(index, out);
-    }
-
-    ClockProtocolClient GetClk(uint32_t index);
+  ClockProtocolClient GetClk(uint32_t index);
 };
 
-} // namespace ddk
+}  // namespace ddk

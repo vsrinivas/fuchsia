@@ -37,8 +37,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
 
   fidl::InterfaceHandle<fuchsia::hardware::ethertap::TapDevice> CreateTapDevice(
       const zx::channel& devfs) {
-    fidl::SynchronousInterfacePtr<fuchsia::hardware::ethertap::TapControl>
-        tapctl;
+    fidl::SynchronousInterfacePtr<fuchsia::hardware::ethertap::TapControl> tapctl;
     fdio_service_connect_at(devfs.get(), "misc/tapctl",
                             tapctl.NewRequest().TakeChannel().release());
     fuchsia::hardware::ethertap::Config config;
@@ -50,8 +49,8 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
 
     fidl::InterfaceHandle<fuchsia::hardware::ethertap::TapDevice> device;
     zx_status_t o_status;
-    if (tapctl->OpenDevice("tap_device", std::move(config), device.NewRequest(),
-                           &o_status) != ZX_OK ||
+    if (tapctl->OpenDevice("tap_device", std::move(config), device.NewRequest(), &o_status) !=
+            ZX_OK ||
         o_status != ZX_OK) {
       // discard channel
       device = nullptr;
@@ -95,8 +94,7 @@ TEST_F(DevmgrTest, DISABLED_ExceptionCallback) {
   //  validate that the exception callback works and
   //  enable this test. There's no good way to cause a crash
   //  today.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&exception]() { return exception; },
-                                        kTimeout));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&exception]() { return exception; }, kTimeout));
 }
 
 TEST_F(DevmgrTest, ExposedThroughComponent) {
@@ -115,8 +113,7 @@ TEST_F(DevmgrTest, ExposedThroughComponent) {
   fidl::InterfacePtr<fuchsia::sys::ComponentController> ctlr;
 
   launcher->CreateComponent(std::move(info), ctlr.NewRequest());
-  ctlr.set_error_handler(
-      [](zx_status_t err) { FAIL() << "Controller shouldn't exit"; });
+  ctlr.set_error_handler([](zx_status_t err) { FAIL() << "Controller shouldn't exit"; });
 
   zx::channel devfs_req, devfs;
   zx::channel::create(0, &devfs_req, &devfs);
@@ -142,8 +139,7 @@ TEST_F(DevmgrTest, ExposeDriverFromComponentNamespace) {
   fidl::InterfacePtr<fuchsia::sys::ComponentController> ctlr;
 
   launcher->CreateComponent(std::move(info), ctlr.NewRequest());
-  ctlr.set_error_handler(
-      [](zx_status_t err) { FAIL() << "Controller shouldn't exit"; });
+  ctlr.set_error_handler([](zx_status_t err) { FAIL() << "Controller shouldn't exit"; });
 
   zx::channel devfs_req, devfs;
   zx::channel::create(0, &devfs_req, &devfs);

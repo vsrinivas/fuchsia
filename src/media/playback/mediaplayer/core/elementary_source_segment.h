@@ -28,7 +28,7 @@ class ElementarySourceSegment : public SourceSegment {
 
   // Adds a stream to this source segment.
   void AddStream(std::shared_ptr<Node> node, const StreamType& output_stream_type);
-  
+
   // SourceSegment overrides.
   std::vector<NodeRef> source_nodes() const override { return nodes_; }
 

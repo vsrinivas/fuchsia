@@ -16,8 +16,8 @@ class AEADCodec final : public PacketProtocol::Codec {
   static const auto inline kMaxKeyLength = EVP_AEAD_MAX_KEY_LENGTH;
   static const auto inline kMaxADLength = 32;
 
-  AEADCodec(const EVP_AEAD* aead, const uint8_t* key, size_t key_len,
-            const uint8_t* ad, size_t ad_len)
+  AEADCodec(const EVP_AEAD* aead, const uint8_t* key, size_t key_len, const uint8_t* ad,
+            size_t ad_len)
       : Codec(Border::Suffix(EVP_AEAD_max_overhead(aead))),
         aead_(aead),
         key_(Copy<uint8_t, kMaxKeyLength>(key, key_len)),

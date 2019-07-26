@@ -19,84 +19,79 @@
 namespace amlogic_clock {
 
 class AmlClockTest : public AmlClock {
-public:
-    AmlClockTest(ddk_mock::MockMmioRegRegion& hiu, uint32_t did)
-        : AmlClock(nullptr,
-                   ddk::MmioBuffer(hiu.GetMmioBuffer()),
-                   std::nullopt,
-                   did) {}
+ public:
+  AmlClockTest(ddk_mock::MockMmioRegRegion& hiu, uint32_t did)
+      : AmlClock(nullptr, ddk::MmioBuffer(hiu.GetMmioBuffer()), std::nullopt, did) {}
 };
 
 TEST(ClkTestAml, AxgEnableDisableAll) {
-    auto hiu_reg_arr = std::make_unique<ddk_mock::MockMmioReg[]>(S912_HIU_LENGTH);
-    ddk_mock::MockMmioRegRegion hiu_regs(hiu_reg_arr.get(), sizeof(uint32_t),
-                                         S912_HIU_LENGTH);
+  auto hiu_reg_arr = std::make_unique<ddk_mock::MockMmioReg[]>(S912_HIU_LENGTH);
+  ddk_mock::MockMmioRegRegion hiu_regs(hiu_reg_arr.get(), sizeof(uint32_t), S912_HIU_LENGTH);
 
-    AmlClockTest clk(hiu_regs, PDEV_DID_AMLOGIC_AXG_CLK);
-    auto regvals = std::make_unique<uint32_t[]>(S912_HIU_LENGTH);
+  AmlClockTest clk(hiu_regs, PDEV_DID_AMLOGIC_AXG_CLK);
+  auto regvals = std::make_unique<uint32_t[]>(S912_HIU_LENGTH);
 
-    constexpr size_t kClkStart = 0;
-    constexpr size_t kClkEnd = static_cast<size_t>(CLK_AXG_COUNT);
+  constexpr size_t kClkStart = 0;
+  constexpr size_t kClkEnd = static_cast<size_t>(CLK_AXG_COUNT);
 
-    for (size_t i = kClkStart; i < kClkEnd; ++i) {
-        const uint32_t reg = axg_clk_gates[i].reg;
-        const uint32_t bit = (1u << axg_clk_gates[i].bit);
-        regvals[reg] |= bit;
-        hiu_regs[reg].ExpectWrite(regvals[reg]);
+  for (size_t i = kClkStart; i < kClkEnd; ++i) {
+    const uint32_t reg = axg_clk_gates[i].reg;
+    const uint32_t bit = (1u << axg_clk_gates[i].bit);
+    regvals[reg] |= bit;
+    hiu_regs[reg].ExpectWrite(regvals[reg]);
 
-        const axg_clk_gate_idx clk_i = static_cast<axg_clk_gate_idx>(i);
-        zx_status_t st = clk.ClockImplEnable(clk_i);
-        EXPECT_OK(st);
-    }
+    const axg_clk_gate_idx clk_i = static_cast<axg_clk_gate_idx>(i);
+    zx_status_t st = clk.ClockImplEnable(clk_i);
+    EXPECT_OK(st);
+  }
 
-    for (size_t i = kClkStart; i < kClkEnd; ++i) {
-        const uint32_t reg = axg_clk_gates[i].reg;
-        const uint32_t bit = (1u << axg_clk_gates[i].bit);
-        regvals[reg] &= ~(bit);
-        hiu_regs[reg].ExpectWrite(regvals[reg]);
+  for (size_t i = kClkStart; i < kClkEnd; ++i) {
+    const uint32_t reg = axg_clk_gates[i].reg;
+    const uint32_t bit = (1u << axg_clk_gates[i].bit);
+    regvals[reg] &= ~(bit);
+    hiu_regs[reg].ExpectWrite(regvals[reg]);
 
-        const axg_clk_gate_idx clk_i = static_cast<axg_clk_gate_idx>(i);
-        zx_status_t st = clk.ClockImplDisable(clk_i);
-        EXPECT_OK(st);
-    }
+    const axg_clk_gate_idx clk_i = static_cast<axg_clk_gate_idx>(i);
+    zx_status_t st = clk.ClockImplDisable(clk_i);
+    EXPECT_OK(st);
+  }
 
-    hiu_regs.VerifyAll();
+  hiu_regs.VerifyAll();
 }
 
 TEST(ClkTestAml, G12aEnableDisableAll) {
-    auto hiu_reg_arr = std::make_unique<ddk_mock::MockMmioReg[]>(S905D2_HIU_LENGTH);
-    ddk_mock::MockMmioRegRegion hiu_regs(hiu_reg_arr.get(), sizeof(uint32_t),
-                                         S905D2_HIU_LENGTH);
+  auto hiu_reg_arr = std::make_unique<ddk_mock::MockMmioReg[]>(S905D2_HIU_LENGTH);
+  ddk_mock::MockMmioRegRegion hiu_regs(hiu_reg_arr.get(), sizeof(uint32_t), S905D2_HIU_LENGTH);
 
-    AmlClockTest clk(hiu_regs, PDEV_DID_AMLOGIC_G12A_CLK);
-    auto regvals = std::make_unique<uint32_t[]>(S905D2_HIU_LENGTH);
+  AmlClockTest clk(hiu_regs, PDEV_DID_AMLOGIC_G12A_CLK);
+  auto regvals = std::make_unique<uint32_t[]>(S905D2_HIU_LENGTH);
 
-    constexpr size_t kClkStart = 0;
-    constexpr size_t kClkEnd = static_cast<size_t>(CLK_G12A_COUNT);
+  constexpr size_t kClkStart = 0;
+  constexpr size_t kClkEnd = static_cast<size_t>(CLK_G12A_COUNT);
 
-    for (size_t i = kClkStart; i < kClkEnd; ++i) {
-        const uint32_t reg = g12a_clk_gates[i].reg;
-        const uint32_t bit = (1u << g12a_clk_gates[i].bit);
-        regvals[reg] |= bit;
-        hiu_regs[reg].ExpectWrite(regvals[reg]);
+  for (size_t i = kClkStart; i < kClkEnd; ++i) {
+    const uint32_t reg = g12a_clk_gates[i].reg;
+    const uint32_t bit = (1u << g12a_clk_gates[i].bit);
+    regvals[reg] |= bit;
+    hiu_regs[reg].ExpectWrite(regvals[reg]);
 
-        const g12a_clk_gate_idx clk_i = static_cast<g12a_clk_gate_idx>(i);
-        zx_status_t st = clk.ClockImplEnable(clk_i);
-        EXPECT_OK(st);
-    }
+    const g12a_clk_gate_idx clk_i = static_cast<g12a_clk_gate_idx>(i);
+    zx_status_t st = clk.ClockImplEnable(clk_i);
+    EXPECT_OK(st);
+  }
 
-    for (size_t i = kClkStart; i < kClkEnd; ++i) {
-        const uint32_t reg = g12a_clk_gates[i].reg;
-        const uint32_t bit = (1u << g12a_clk_gates[i].bit);
-        regvals[reg] &= ~(bit);
-        hiu_regs[reg].ExpectWrite(regvals[reg]);
+  for (size_t i = kClkStart; i < kClkEnd; ++i) {
+    const uint32_t reg = g12a_clk_gates[i].reg;
+    const uint32_t bit = (1u << g12a_clk_gates[i].bit);
+    regvals[reg] &= ~(bit);
+    hiu_regs[reg].ExpectWrite(regvals[reg]);
 
-        const g12a_clk_gate_idx clk_i = static_cast<g12a_clk_gate_idx>(i);
-        zx_status_t st = clk.ClockImplDisable(clk_i);
-        EXPECT_OK(st);
-    }
+    const g12a_clk_gate_idx clk_i = static_cast<g12a_clk_gate_idx>(i);
+    zx_status_t st = clk.ClockImplDisable(clk_i);
+    EXPECT_OK(st);
+  }
 
-    hiu_regs.VerifyAll();
+  hiu_regs.VerifyAll();
 }
 
-} // namespace amlogic_clock
+}  // namespace amlogic_clock

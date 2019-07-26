@@ -12,20 +12,20 @@ namespace audio {
 
 // TODO(andresoportus): Evolve this to channel communication as we separate codecs from controllers.
 class Codec {
-public:
-    virtual ~Codec() = default;
+ public:
+  virtual ~Codec() = default;
 
-    virtual bool ValidGain(float gain) const = 0;
-    virtual zx_status_t SetGain(float gain) = 0;
-    virtual zx_status_t Init(std::optional<uint8_t> slot) = 0;
-    virtual zx_status_t Reset() = 0;
-    virtual zx_status_t Standby() = 0;
-    virtual zx_status_t ExitStandby() = 0;
-    virtual float GetGain() const = 0;
-    virtual float GetMinGain() const = 0;
-    virtual float GetMaxGain() const = 0;
-    virtual float GetGainStep() const = 0;
-    virtual zx_status_t Mute(bool mute) = 0;
+  virtual bool ValidGain(float gain) const = 0;
+  virtual zx_status_t SetGain(float gain) = 0;
+  virtual zx_status_t Init(std::optional<uint8_t> slot) = 0;
+  virtual zx_status_t Reset() = 0;
+  virtual zx_status_t Standby() = 0;
+  virtual zx_status_t ExitStandby() = 0;
+  virtual float GetGain() const = 0;
+  virtual float GetMinGain() const = 0;
+  virtual float GetMaxGain() const = 0;
+  virtual float GetGainStep() const = 0;
+  virtual zx_status_t Mute(bool mute) = 0;
 };
 
 }  // namespace audio

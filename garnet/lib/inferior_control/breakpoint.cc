@@ -14,17 +14,14 @@
 
 namespace inferior_control {
 
-Breakpoint::Breakpoint(zx_vaddr_t address, size_t size)
-    : address_(address), size_(size) {}
+Breakpoint::Breakpoint(zx_vaddr_t address, size_t size) : address_(address), size_(size) {}
 
-ProcessBreakpoint::ProcessBreakpoint(zx_vaddr_t address, size_t size,
-                                     ProcessBreakpointSet* owner)
+ProcessBreakpoint::ProcessBreakpoint(zx_vaddr_t address, size_t size, ProcessBreakpointSet* owner)
     : Breakpoint(address, size), owner_(owner) {
   FXL_DCHECK(owner_);
 }
 
-SoftwareBreakpoint::SoftwareBreakpoint(zx_vaddr_t address,
-                                       ProcessBreakpointSet* owner)
+SoftwareBreakpoint::SoftwareBreakpoint(zx_vaddr_t address, ProcessBreakpointSet* owner)
     : ProcessBreakpoint(address, Size(), owner) {}
 
 SoftwareBreakpoint::~SoftwareBreakpoint() {
@@ -32,9 +29,7 @@ SoftwareBreakpoint::~SoftwareBreakpoint() {
     Remove();
 }
 
-size_t SoftwareBreakpoint::Size() {
-  return debugger_utils::GetBreakpointInstructionSize();
-}
+size_t SoftwareBreakpoint::Size() { return debugger_utils::GetBreakpointInstructionSize(); }
 
 bool SoftwareBreakpoint::Insert() {
   // TODO(PT-103): Handle breakpoints in unloaded solibs.
@@ -74,8 +69,7 @@ bool SoftwareBreakpoint::Remove() {
   FXL_DCHECK(original_bytes_.size() == Size());
 
   // Restore the original contents.
-  if (!owner()->process()->WriteMemory(
-        address(), original_bytes_.data(), Size())) {
+  if (!owner()->process()->WriteMemory(address(), original_bytes_.data(), Size())) {
     FXL_LOG(ERROR) << "Failed to restore original instructions";
     return false;
   }
@@ -84,24 +78,20 @@ bool SoftwareBreakpoint::Remove() {
   return true;
 }
 
-bool SoftwareBreakpoint::IsInserted() const {
-  return !original_bytes_.empty();
-}
+bool SoftwareBreakpoint::IsInserted() const { return !original_bytes_.empty(); }
 
-ProcessBreakpointSet::ProcessBreakpointSet(Process* process)
-    : process_(process) {
+ProcessBreakpointSet::ProcessBreakpointSet(Process* process) : process_(process) {
   FXL_DCHECK(process_);
 }
 
 bool ProcessBreakpointSet::InsertSoftwareBreakpoint(zx_vaddr_t address) {
   if (breakpoints_.find(address) != breakpoints_.end()) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-        "Breakpoint already inserted at address: 0x%" PRIxPTR, address);
+    FXL_LOG(ERROR) << fxl::StringPrintf("Breakpoint already inserted at address: 0x%" PRIxPTR,
+                                        address);
     return false;
   }
 
-  std::unique_ptr<ProcessBreakpoint> breakpoint(
-      new SoftwareBreakpoint(address, this));
+  std::unique_ptr<ProcessBreakpoint> breakpoint(new SoftwareBreakpoint(address, this));
   if (!breakpoint->Insert()) {
     FXL_LOG(ERROR) << "Failed to insert software breakpoint";
     return false;
@@ -114,8 +104,7 @@ bool ProcessBreakpointSet::InsertSoftwareBreakpoint(zx_vaddr_t address) {
 bool ProcessBreakpointSet::RemoveSoftwareBreakpoint(zx_vaddr_t address) {
   auto iter = breakpoints_.find(address);
   if (iter == breakpoints_.end()) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-        "No breakpoint inserted at address: 0x%" PRIxPTR, address);
+    FXL_LOG(ERROR) << fxl::StringPrintf("No breakpoint inserted at address: 0x%" PRIxPTR, address);
     return false;
   }
 
@@ -128,14 +117,12 @@ bool ProcessBreakpointSet::RemoveSoftwareBreakpoint(zx_vaddr_t address) {
   return true;
 }
 
-ThreadBreakpoint::ThreadBreakpoint(zx_vaddr_t address, size_t size,
-                                   ThreadBreakpointSet* owner)
+ThreadBreakpoint::ThreadBreakpoint(zx_vaddr_t address, size_t size, ThreadBreakpointSet* owner)
     : Breakpoint(address, size), owner_(owner) {
   FXL_DCHECK(owner_);
 }
 
-SingleStepBreakpoint::SingleStepBreakpoint(zx_vaddr_t address,
-                                           ThreadBreakpointSet* owner)
+SingleStepBreakpoint::SingleStepBreakpoint(zx_vaddr_t address, ThreadBreakpointSet* owner)
     : ThreadBreakpoint(address, 0 /*TODO:type?*/, owner) {}
 
 SingleStepBreakpoint::~SingleStepBreakpoint() {
@@ -143,21 +130,17 @@ SingleStepBreakpoint::~SingleStepBreakpoint() {
     Remove();
 }
 
-ThreadBreakpointSet::ThreadBreakpointSet(Thread* thread) : thread_(thread) {
-  FXL_DCHECK(thread_);
-}
+ThreadBreakpointSet::ThreadBreakpointSet(Thread* thread) : thread_(thread) { FXL_DCHECK(thread_); }
 
 bool ThreadBreakpointSet::InsertSingleStepBreakpoint(zx_vaddr_t address) {
   if (single_step_breakpoint_) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-        "S/S bkpt already inserted at 0x%" PRIxPTR
-        ", requested address: 0x%" PRIxPTR,
-        single_step_breakpoint_->address(), address);
+    FXL_LOG(ERROR) << fxl::StringPrintf("S/S bkpt already inserted at 0x%" PRIxPTR
+                                        ", requested address: 0x%" PRIxPTR,
+                                        single_step_breakpoint_->address(), address);
     return false;
   }
 
-  std::unique_ptr<ThreadBreakpoint> breakpoint(
-      new SingleStepBreakpoint(address, this));
+  std::unique_ptr<ThreadBreakpoint> breakpoint(new SingleStepBreakpoint(address, this));
   if (!breakpoint->Insert()) {
     FXL_LOG(ERROR) << "Failed to insert s/s bkpt";
     return false;
@@ -177,8 +160,6 @@ bool ThreadBreakpointSet::RemoveSingleStepBreakpoint() {
   return true;
 }
 
-bool ThreadBreakpointSet::SingleStepBreakpointInserted() {
-  return !!single_step_breakpoint_;
-}
+bool ThreadBreakpointSet::SingleStepBreakpointInserted() { return !!single_step_breakpoint_; }
 
 }  // namespace inferior_control

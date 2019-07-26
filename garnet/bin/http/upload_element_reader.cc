@@ -25,8 +25,8 @@ bool SocketUploadElementReader::ReadAvailable(std::ostream* os) {
     size_t num_bytes = buf_.size();
     err_ = socket_.read(0u, buf_.data(), num_bytes, &num_bytes);
     if (err_ == ZX_ERR_SHOULD_WAIT) {
-      err_ = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                              zx::time::infinite(), nullptr);
+      err_ = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(),
+                              nullptr);
       if (err_ == ZX_OK)
         continue;  // retry now that the socket is ready
     }
@@ -53,8 +53,7 @@ bool SocketUploadElementReader::ReadAvailable(std::ostream* os) {
   }
 }
 
-VmoUploadElementReader::VmoUploadElementReader(zx::vmo vmo)
-    : vmo_(std::move(vmo)), offset_(0) {
+VmoUploadElementReader::VmoUploadElementReader(zx::vmo vmo) : vmo_(std::move(vmo)), offset_(0) {
   err_ = vmo_.get_size(&size_);
 }
 

@@ -20,11 +20,10 @@ __BEGIN_CDECLS
 //
 // |sync_mutex| resolves these issues.
 typedef struct __TA_CAPABILITY("mutex") sync_mutex {
-    zx_futex_t futex;
+  zx_futex_t futex;
 
 #ifdef __cplusplus
-    sync_mutex()
-        : futex(0) {}
+  sync_mutex() : futex(0) {}
 #endif
 } sync_mutex_t;
 
@@ -69,4 +68,4 @@ void sync_mutex_unlock(sync_mutex_t* mutex) __TA_RELEASE(mutex);
 
 __END_CDECLS
 
-#endif // LIB_SYNC_MUTEX_H_
+#endif  // LIB_SYNC_MUTEX_H_

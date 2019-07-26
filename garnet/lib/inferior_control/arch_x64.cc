@@ -81,8 +81,7 @@ GdbSignal ComputeGdbSignal(const zx_exception_context_t& context) {
       break;
   }
 
-  FXL_VLOG(2) << "X64 exception (" << arch_exception
-              << ") mapped to: " << static_cast<int>(sigval);
+  FXL_VLOG(2) << "X64 exception (" << arch_exception << ") mapped to: " << static_cast<int>(sigval);
 
   return sigval;
 }

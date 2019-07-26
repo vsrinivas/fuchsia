@@ -15,26 +15,26 @@ namespace paver {
 // Implements fvm::ReaderInterface to allow interoperability between paver and
 // fvm sparse reader library.
 class StreamReader : public fvm::ReaderInterface {
-public:
-    static zx_status_t Create(zx::channel stream, fbl::unique_ptr<StreamReader>* reader);
+ public:
+  static zx_status_t Create(zx::channel stream, fbl::unique_ptr<StreamReader>* reader);
 
-    virtual ~StreamReader() = default;
+  virtual ~StreamReader() = default;
 
-    virtual zx_status_t Read(void* buf, size_t buf_size, size_t* size_actual) final;
+  virtual zx_status_t Read(void* buf, size_t buf_size, size_t* size_actual) final;
 
-private:
-    StreamReader(zx::channel stream, zx::vmo vmo)
-        : stream_(std::move(stream)), vmo_(std::move(vmo)) {}
+ private:
+  StreamReader(zx::channel stream, zx::vmo vmo)
+      : stream_(std::move(stream)), vmo_(std::move(vmo)) {}
 
-    StreamReader(const StreamReader&) = delete;
-    StreamReader& operator=(const StreamReader&) = delete;
-    StreamReader(StreamReader&&) = delete;
-    StreamReader& operator=(StreamReader&&) = delete;
+  StreamReader(const StreamReader&) = delete;
+  StreamReader& operator=(const StreamReader&) = delete;
+  StreamReader(StreamReader&&) = delete;
+  StreamReader& operator=(StreamReader&&) = delete;
 
-    ::llcpp::fuchsia::paver::PayloadStream::SyncClient stream_;
-    zx::vmo vmo_;
-    zx_off_t offset_ = 0;
-    size_t size_ = 0;
+  ::llcpp::fuchsia::paver::PayloadStream::SyncClient stream_;
+  zx::vmo vmo_;
+  zx_off_t offset_ = 0;
+  size_t size_ = 0;
 };
 
-} // namespace paver
+}  // namespace paver

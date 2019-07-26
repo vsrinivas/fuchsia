@@ -27,11 +27,9 @@
 
 using debugger_utils::ZxErrorString;
 
-static void ExceptionHandlerThreadFunc(
-    zx_handle_t thread, zx::port* eport, zx::event* event) {
+static void ExceptionHandlerThreadFunc(zx_handle_t thread, zx::port* eport, zx::event* event) {
   zx_koid_t tid = debugger_utils::GetKoid(thread);
-  zx_status_t status = zx_task_bind_exception_port(
-      thread, eport->get(), tid, 0);
+  zx_status_t status = zx_task_bind_exception_port(thread, eport->get(), tid, 0);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 
   // Now that we've bound to the thread, notify the test.
@@ -51,8 +49,7 @@ static void ExceptionHandlerThreadFunc(
     FXL_CHECK(ZX_PKT_IS_EXCEPTION(packet.type));
     FXL_CHECK(packet.type == ZX_EXCP_SW_BREAKPOINT);
     FXL_CHECK(packet.key == tid);
-    status = debugger_utils::ResumeAfterSoftwareBreakpointInstruction(
-        thread, eport->get());
+    status = debugger_utils::ResumeAfterSoftwareBreakpointInstruction(thread, eport->get());
     FXL_CHECK(status == ZX_OK);
   }
 }
@@ -60,16 +57,14 @@ static void ExceptionHandlerThreadFunc(
 static void SendSelfThread(const zx::channel& channel) {
   // Send the parent a packet so that it knows we've started.
   zx_handle_t self_copy;
-  zx_status_t status = zx_handle_duplicate(
-      zx_thread_self(), ZX_RIGHT_SAME_RIGHTS, &self_copy);
+  zx_status_t status = zx_handle_duplicate(zx_thread_self(), ZX_RIGHT_SAME_RIGHTS, &self_copy);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
   status = channel.write(0, nullptr, 0, &self_copy, 1);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 }
 
 static void WaitPeerClosed(const zx::channel& channel) {
-  zx_status_t status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED,
-                                        zx::time::infinite(), nullptr);
+  zx_status_t status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 }
 
@@ -80,8 +75,7 @@ static int PerformWaitPeerClosed(const zx::channel& channel) {
   return 0;
 }
 
-static int TriggerSoftwareBreakpoint(const zx::channel& channel,
-                                     bool with_handler) {
+static int TriggerSoftwareBreakpoint(const zx::channel& channel, bool with_handler) {
   zx::port eport;
   zx_status_t status = zx::port::create(0, &eport);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
@@ -92,8 +86,7 @@ static int TriggerSoftwareBreakpoint(const zx::channel& channel,
     FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 
     zx_handle_t self_thread = zx_thread_self();
-    std::thread exception_thread(
-      &ExceptionHandlerThreadFunc, self_thread, &eport, &event);
+    std::thread exception_thread(&ExceptionHandlerThreadFunc, self_thread, &eport, &event);
 
     // Don't trigger the s/w breakpoint until the exception loop is ready
     // to handle it.
@@ -124,16 +117,13 @@ static int TriggerSoftwareBreakpoint(const zx::channel& channel,
 
 void WaitChannelReadable(const zx::channel& channel) {
   zx_signals_t pending;
-  FXL_CHECK(channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
-                             &pending) == ZX_OK);
+  FXL_CHECK(channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending) == ZX_OK);
 }
 
-static void ReadUint64Packet(const zx::channel& channel,
-                             uint64_t expected_value) {
+static void ReadUint64Packet(const zx::channel& channel, uint64_t expected_value) {
   uint64_t packet;
   uint32_t packet_size;
-  FXL_CHECK(channel.read(0, &packet, nullptr, sizeof(packet), 0,
-                         &packet_size,  nullptr) == ZX_OK);
+  FXL_CHECK(channel.read(0, &packet, nullptr, sizeof(packet), 0, &packet_size, nullptr) == ZX_OK);
   FXL_CHECK(packet_size == sizeof(packet));
   FXL_CHECK(packet == expected_value);
 }
@@ -141,8 +131,8 @@ static void ReadUint64Packet(const zx::channel& channel,
 static void StartNThreadsThreadFunc(zx_handle_t eventpair) {
   // The main thread will close its side of |eventpair| when it's done.
   zx_signals_t pending;
-  zx_status_t status = zx_object_wait_one(eventpair, ZX_EVENTPAIR_PEER_CLOSED,
-                                          ZX_TIME_INFINITE, &pending);
+  zx_status_t status =
+      zx_object_wait_one(eventpair, ZX_EVENTPAIR_PEER_CLOSED, ZX_TIME_INFINITE, &pending);
   FXL_CHECK(status == ZX_OK);
 }
 
@@ -159,8 +149,7 @@ static int StartNThreads(const zx::channel& channel, int num_iterations) {
   for (int i = 0; i < num_iterations; ++i) {
     FXL_VLOG(1) << "StartNThreads iteration " << i + 1;
 
-    threads.emplace_back(
-        std::thread{StartNThreadsThreadFunc, their_event.get()});
+    threads.emplace_back(std::thread{StartNThreadsThreadFunc, their_event.get()});
 
     WaitChannelReadable(channel);
     ReadUint64Packet(channel, inferior_control::kUint64MagicPacketValue);
@@ -206,8 +195,7 @@ int main(int argc, char* argv[]) {
         return 1;
       }
       int num_threads = 0;
-      if (!fxl::StringToNumberWithError(args[1], &num_threads) ||
-          num_threads < 1) {
+      if (!fxl::StringToNumberWithError(args[1], &num_threads) || num_threads < 1) {
         FXL_LOG(ERROR) << "Error parsing number of threads";
         return 1;
       }

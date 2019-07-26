@@ -15,9 +15,7 @@
 namespace files {
 namespace {
 
-void ExpectPlatformPath(std::string expected, std::string actual) {
-  EXPECT_EQ(expected, actual);
-}
+void ExpectPlatformPath(std::string expected, std::string actual) { EXPECT_EQ(expected, actual); }
 
 TEST(Path, SimplifyPath) {
   ExpectPlatformPath(".", SimplifyPath(""));
@@ -120,8 +118,7 @@ TEST(Path, SimplifyPath) {
   ExpectPlatformPath("/", SimplifyPath("/abc/def/../.."));
   ExpectPlatformPath("..", SimplifyPath("abc/def/../../.."));
   ExpectPlatformPath("/", SimplifyPath("/abc/def/../../.."));
-  ExpectPlatformPath("../../mno",
-                     SimplifyPath("abc/def/../../../ghi/jkl/../../../mno"));
+  ExpectPlatformPath("../../mno", SimplifyPath("abc/def/../../../ghi/jkl/../../../mno"));
   ExpectPlatformPath("/mno", SimplifyPath("/../mno"));
 
   // Combinations
@@ -273,8 +270,7 @@ TEST(Path, JoinPath) {
   EXPECT_EQ(JoinPath("", "/bar"), "/bar");
   EXPECT_EQ(JoinPath("", "/bar/"), "/bar/");
 
-  EXPECT_EQ(JoinPath("/foo/bar/baz/", "/blah/blink/biz"),
-            "/foo/bar/baz/blah/blink/biz");
+  EXPECT_EQ(JoinPath("/foo/bar/baz/", "/blah/blink/biz"), "/foo/bar/baz/blah/blink/biz");
 }
 
 }  // namespace

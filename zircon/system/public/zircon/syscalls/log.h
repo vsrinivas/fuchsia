@@ -11,13 +11,13 @@ __BEGIN_CDECLS
 
 // Defines and structures for zx_log_*()
 typedef struct zx_log_record {
-    uint32_t reserved;
-    uint16_t datalen;
-    uint16_t flags;
-    zx_time_t timestamp;
-    uint64_t pid;
-    uint64_t tid;
-    char data[];
+  uint32_t reserved;
+  uint16_t datalen;
+  uint16_t flags;
+  zx_time_t timestamp;
+  uint64_t pid;
+  uint64_t tid;
+  char data[];
 } zx_log_record_t;
 
 // ask clang format not to mess up the indentation:

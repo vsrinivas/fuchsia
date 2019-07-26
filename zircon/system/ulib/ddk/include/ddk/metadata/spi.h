@@ -8,11 +8,11 @@
 #include <inttypes.h>
 
 typedef struct {
-    uint32_t bus_id;
-    uint32_t cs;
-    uint32_t vid;
-    uint32_t pid;
-    uint32_t did;
+  uint32_t bus_id;
+  uint32_t cs;
+  uint32_t vid;
+  uint32_t pid;
+  uint32_t did;
 } spi_channel_t;
 
 #endif  // DDK_METADATA_SPI_H_

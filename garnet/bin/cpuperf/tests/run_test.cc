@@ -29,17 +29,14 @@ static void AppendLoggingArgs(std::vector<std::string>* argv) {
   std::string log_file_arg;
   std::string verbose_or_quiet_arg;
   if (log_settings.log_file != "") {
-    log_file_arg = fxl::StringPrintf("--log-file=%s",
-                                     log_settings.log_file.c_str());
+    log_file_arg = fxl::StringPrintf("--log-file=%s", log_settings.log_file.c_str());
     argv->push_back(log_file_arg);
   }
   if (log_settings.min_log_level != 0) {
     if (log_settings.min_log_level < 0) {
-      verbose_or_quiet_arg = fxl::StringPrintf("--verbose=%d",
-                                               -log_settings.min_log_level);
+      verbose_or_quiet_arg = fxl::StringPrintf("--verbose=%d", -log_settings.min_log_level);
     } else {
-      verbose_or_quiet_arg = fxl::StringPrintf("--quiet=%d",
-                                               log_settings.min_log_level);
+      verbose_or_quiet_arg = fxl::StringPrintf("--quiet=%d", log_settings.min_log_level);
     }
     argv->push_back(verbose_or_quiet_arg);
   }
@@ -53,15 +50,13 @@ static void StringArgvToCArgv(const std::vector<std::string>& argv,
   c_argv->push_back(nullptr);
 }
 
-static void BuildCpuperfProgramArgv(const std::string& spec_path,
-                                    std::vector<std::string>* argv) {
+static void BuildCpuperfProgramArgv(const std::string& spec_path, std::vector<std::string>* argv) {
   argv->push_back(kCpuperfProgramPath);
   AppendLoggingArgs(argv);
   argv->push_back(fxl::StringPrintf("--spec-file=%s", spec_path.c_str()));
 }
 
-static zx_status_t SpawnProgram(const zx::job& job,
-                                const std::vector<std::string>& argv,
+static zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& argv,
                                 zx::process* out_process) {
   std::vector<const char*> c_argv;
   StringArgvToCArgv(argv, &c_argv);
@@ -72,26 +67,21 @@ static zx_status_t SpawnProgram(const zx::job& job,
   fdio_spawn_action_t* spawn_actions = nullptr;
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  auto status = fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL,
-                               c_argv[0], c_argv.data(), nullptr,
-                               action_count, spawn_actions,
-                               out_process->reset_and_get_address(),
-                               err_msg);
+  auto status =
+      fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, c_argv[0], c_argv.data(), nullptr,
+                     action_count, spawn_actions, out_process->reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: "
-                   << status << ", " << err_msg;
+    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << status << ", " << err_msg;
     return status;
   }
 
   return ZX_OK;
 }
 
-static zx_status_t WaitAndGetExitCode(const std::string& program_name,
-                                      const zx::process& process,
+static zx_status_t WaitAndGetExitCode(const std::string& program_name, const zx::process& process,
                                       int* out_exit_code) {
-  auto status = process.wait_one(
-    ZX_PROCESS_TERMINATED, zx::deadline_after(zx::duration(kTestTimeout)),
-    nullptr);
+  auto status = process.wait_one(ZX_PROCESS_TERMINATED,
+                                 zx::deadline_after(zx::duration(kTestTimeout)), nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed waiting for program " << program_name
                    << " to exit: " << zx_status_get_string(status);
@@ -99,17 +89,16 @@ static zx_status_t WaitAndGetExitCode(const std::string& program_name,
   }
 
   zx_info_process_t proc_info;
-  status = zx_object_get_info(process.get(), ZX_INFO_PROCESS, &proc_info,
-                              sizeof(proc_info), nullptr, nullptr);
+  status = zx_object_get_info(process.get(), ZX_INFO_PROCESS, &proc_info, sizeof(proc_info),
+                              nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error getting return code for program "
-                   << program_name << ": " << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Error getting return code for program " << program_name << ": "
+                   << zx_status_get_string(status);
     return status;
   }
 
   if (proc_info.return_code != 0) {
-    FXL_LOG(ERROR) << program_name << " exited with exit code "
-                   << proc_info.return_code;
+    FXL_LOG(ERROR) << program_name << " exited with exit code " << proc_info.return_code;
   }
   *out_exit_code = proc_info.return_code;
   return ZX_OK;
@@ -117,7 +106,7 @@ static zx_status_t WaitAndGetExitCode(const std::string& program_name,
 
 bool RunSpec(const std::string& spec_path) {
   FXL_LOG(INFO) << "Running spec " << spec_path;
-  zx::job job{}; // -> default job
+  zx::job job{};  // -> default job
   zx::process subprocess;
 
   std::vector<std::string> argv;

@@ -27,12 +27,11 @@ typedef uint64_t BITARR_TYPE;
 #define BITARR_SIZE(num_bits) (DIV_ROUNDUP((num_bits), BITARR_TYPE_NUM_BITS))
 #define BITARR(name, num_bits) BITARR_TYPE name[BITARR_SIZE(num_bits)]
 #define BITARR_SET(name, bit) \
-    (name)[(bit) / BITARR_TYPE_NUM_BITS] |= ((BITARR_TYPE)1 << ((bit) % BITARR_TYPE_NUM_BITS))
+  (name)[(bit) / BITARR_TYPE_NUM_BITS] |= ((BITARR_TYPE)1 << ((bit) % BITARR_TYPE_NUM_BITS))
 #define BITARR_CLEAR(name, bit) \
-    (name)[(bit) / BITARR_TYPE_NUM_BITS] &= ~((BITARR_TYPE)1 << ((bit) % BITARR_TYPE_NUM_BITS))
-#define BITARR_TEST(name, bit)               \
-    (((name)[(bit) / BITARR_TYPE_NUM_BITS] & \
-      ((BITARR_TYPE)1 << ((bit) % BITARR_TYPE_NUM_BITS))) != 0)
+  (name)[(bit) / BITARR_TYPE_NUM_BITS] &= ~((BITARR_TYPE)1 << ((bit) % BITARR_TYPE_NUM_BITS))
+#define BITARR_TEST(name, bit) \
+  (((name)[(bit) / BITARR_TYPE_NUM_BITS] & ((BITARR_TYPE)1 << ((bit) % BITARR_TYPE_NUM_BITS))) != 0)
 
 size_t find_first_bit(const BITARR_TYPE* bitarr, size_t num_bits);
 
@@ -40,8 +39,8 @@ size_t find_next_bit(const BITARR_TYPE* bitarr, size_t num_bits, size_t bit_offs
 
 bool bitarr_empty(const BITARR_TYPE* bitarr, size_t num_bits);
 
-#define for_each_set_bit(bit, bitarr, num_bits)                            \
-    for ((bit) = find_first_bit((bitarr), (num_bits)); (bit) < (num_bits); \
-         (bit) = find_next_bit((bitarr), (num_bits), (bit) + 1))
+#define for_each_set_bit(bit, bitarr, num_bits)                          \
+  for ((bit) = find_first_bit((bitarr), (num_bits)); (bit) < (num_bits); \
+       (bit) = find_next_bit((bitarr), (num_bits), (bit) + 1))
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_

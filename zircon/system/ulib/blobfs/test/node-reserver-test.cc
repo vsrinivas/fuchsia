@@ -12,70 +12,68 @@ namespace {
 
 // Test that reserving a node actually changes the node count, and that RAII releases the node.
 TEST(NodeReserver, Reserve) {
-    NodeReserver reserver;
-    {
-        const uint32_t ino = 3;
-        ReservedNode reserved_node(&reserver, ino);
-        EXPECT_EQ(1, reserver.ReservedNodeCount());
-    }
-    EXPECT_EQ(0, reserver.ReservedNodeCount());
+  NodeReserver reserver;
+  {
+    const uint32_t ino = 3;
+    ReservedNode reserved_node(&reserver, ino);
+    EXPECT_EQ(1, reserver.ReservedNodeCount());
+  }
+  EXPECT_EQ(0, reserver.ReservedNodeCount());
 }
 
 TEST(NodeReserver, ReserveReset) {
-    NodeReserver reserver;
-    {
-        const uint32_t ino = 3;
-        ReservedNode reserved_node(&reserver, ino);
-        EXPECT_EQ(1, reserver.ReservedNodeCount());
-        reserved_node.Reset();
-        EXPECT_EQ(0, reserver.ReservedNodeCount());
-    }
+  NodeReserver reserver;
+  {
+    const uint32_t ino = 3;
+    ReservedNode reserved_node(&reserver, ino);
+    EXPECT_EQ(1, reserver.ReservedNodeCount());
+    reserved_node.Reset();
     EXPECT_EQ(0, reserver.ReservedNodeCount());
-
+  }
+  EXPECT_EQ(0, reserver.ReservedNodeCount());
 }
 
 // Test the constructors of the reserved node.
 TEST(NodeReserver, Constructor) {
-    NodeReserver reserver;
-    // Test the constructor.
-    {
-        ReservedNode reserved_node(&reserver, 3);
-        EXPECT_EQ(3, reserved_node.index());
-        EXPECT_EQ(1, reserver.ReservedNodeCount());
-    }
-    EXPECT_EQ(0, reserver.ReservedNodeCount());
+  NodeReserver reserver;
+  // Test the constructor.
+  {
+    ReservedNode reserved_node(&reserver, 3);
+    EXPECT_EQ(3, reserved_node.index());
+    EXPECT_EQ(1, reserver.ReservedNodeCount());
+  }
+  EXPECT_EQ(0, reserver.ReservedNodeCount());
 }
 
 TEST(NodeReserver, MoveConstructor) {
-    NodeReserver reserver;
-    // Test the move constructor.
-    {
-        ReservedNode reserved_node(&reserver, 3);
-        EXPECT_EQ(3, reserved_node.index());
-        EXPECT_EQ(1, reserver.ReservedNodeCount());
+  NodeReserver reserver;
+  // Test the move constructor.
+  {
+    ReservedNode reserved_node(&reserver, 3);
+    EXPECT_EQ(3, reserved_node.index());
+    EXPECT_EQ(1, reserver.ReservedNodeCount());
 
-        ReservedNode dest_node(std::move(reserved_node));
-        EXPECT_EQ(3, dest_node.index());
-        EXPECT_EQ(1, reserver.ReservedNodeCount());
-    }
-    EXPECT_EQ(0, reserver.ReservedNodeCount());
+    ReservedNode dest_node(std::move(reserved_node));
+    EXPECT_EQ(3, dest_node.index());
+    EXPECT_EQ(1, reserver.ReservedNodeCount());
+  }
+  EXPECT_EQ(0, reserver.ReservedNodeCount());
 }
 
 TEST(NodeReserver, MoveAssignment) {
-    NodeReserver reserver;
-    // Test the move assignment operator.
-    {
-        ReservedNode reserved_node(&reserver, 3);
-        EXPECT_EQ(3, reserved_node.index());
-        EXPECT_EQ(1, reserver.ReservedNodeCount());
+  NodeReserver reserver;
+  // Test the move assignment operator.
+  {
+    ReservedNode reserved_node(&reserver, 3);
+    EXPECT_EQ(3, reserved_node.index());
+    EXPECT_EQ(1, reserver.ReservedNodeCount());
 
-        ReservedNode dest_node = std::move(reserved_node);
-        EXPECT_EQ(3, dest_node.index());
-        EXPECT_EQ(1, reserver.ReservedNodeCount());
-    }
-    EXPECT_EQ(0, reserver.ReservedNodeCount());
-
+    ReservedNode dest_node = std::move(reserved_node);
+    EXPECT_EQ(3, dest_node.index());
+    EXPECT_EQ(1, reserver.ReservedNodeCount());
+  }
+  EXPECT_EQ(0, reserver.ReservedNodeCount());
 }
 
-} // namespace
-} // namespace blobfs
+}  // namespace
+}  // namespace blobfs

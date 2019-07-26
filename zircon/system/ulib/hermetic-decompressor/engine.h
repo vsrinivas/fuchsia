@@ -9,8 +9,7 @@
 
 using byte_view = std::basic_string_view<std::byte>;
 
-struct DecompressorEngine :
-    public HermeticComputeEngine<DecompressorEngine,
-                                 byte_view, std::byte*, size_t> {
-    int64_t operator()(byte_view input, std::byte* output, size_t output_size);
+struct DecompressorEngine
+    : public HermeticComputeEngine<DecompressorEngine, byte_view, std::byte*, size_t> {
+  int64_t operator()(byte_view input, std::byte* output, size_t output_size);
 };

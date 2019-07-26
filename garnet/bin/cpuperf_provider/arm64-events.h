@@ -11,11 +11,10 @@ namespace cpuperf_provider {
 
 enum EventId {
 
-#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
-                        readable_name, description) \
+#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
   symbol = perfmon::MakeEventId(perfmon::kGroupFixed, id),
-#define DEF_ARCH_EVENT(symbol, event_name, id, pmceid_bit, event, \
-                       flags, readable_name, description) \
+#define DEF_ARCH_EVENT(symbol, event_name, id, pmceid_bit, event, flags, readable_name, \
+                       description)                                                     \
   symbol = perfmon::MakeEventId(perfmon::kGroupArch, id),
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm-events.inc>
 
@@ -23,4 +22,4 @@ enum EventId {
 
 }  // namespace cpuperf_provider
 
-#endif // GARNET_BIN_CPUPERF_PROVIDER_ARM64_EVENTS_H_
+#endif  // GARNET_BIN_CPUPERF_PROVIDER_ARM64_EVENTS_H_

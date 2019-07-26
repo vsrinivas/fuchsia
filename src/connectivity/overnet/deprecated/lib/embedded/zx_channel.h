@@ -60,14 +60,12 @@ class ZxChannel final : public fuchsia::overnet::protocol::ZirconChannel {
 
   class Stub final : public fuchsia::overnet::protocol::ZirconChannel_Stub {
    public:
-    Stub(RouterEndpoint::Stream* stream, ZxChannel* channel)
-        : stream_(stream), channel_(channel) {}
+    Stub(RouterEndpoint::Stream* stream, ZxChannel* channel) : stream_(stream), channel_(channel) {}
     ~Stub() { OVERNET_TRACE(DEBUG) << this << " :::: " << __PRETTY_FUNCTION__; }
 
     void Start();
 
-    void Message(
-        fuchsia::overnet::protocol::ZirconChannelMessage message) override;
+    void Message(fuchsia::overnet::protocol::ZirconChannelMessage message) override;
 
    private:
     void Send_(fidl::Message message) override;
@@ -116,14 +114,12 @@ template <>
 struct CodingTraits<overnet::ClosedPtr<overnet::ZxChannel>> {
  public:
   static void Encode(overnet::internal::Encoder* encoder,
-                     overnet::ClosedPtr<overnet::ZxChannel>* channel,
-                     size_t offset) {
+                     overnet::ClosedPtr<overnet::ZxChannel>* channel, size_t offset) {
     (*channel)->Encode(encoder, offset);
     channel->reset();
   }
   static void Decode(overnet::internal::Decoder* decoder,
-                     overnet::ClosedPtr<overnet::ZxChannel>* channel,
-                     size_t offset) {
+                     overnet::ClosedPtr<overnet::ZxChannel>* channel, size_t offset) {
     *channel = overnet::ZxChannel::Decode(decoder, offset);
   }
 };

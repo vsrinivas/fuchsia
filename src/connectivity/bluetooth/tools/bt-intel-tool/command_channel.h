@@ -30,8 +30,7 @@ class CommandChannel {
 
   // Sets the event callback to be called when an HCI Event arrives on the
   // channel.
-  using EventCallback =
-      fit::function<void(const ::bt::hci::EventPacket& event_packet)>;
+  using EventCallback = fit::function<void(const ::bt::hci::EventPacket& event_packet)>;
   void SetEventCallback(EventCallback callback);
 
   // Sends the command in |command| to the controller. The channel must
@@ -41,33 +40,30 @@ class CommandChannel {
   // Sends the command in |command| to the controller and waits for
   // an Event, which is delivered to |callback| before this function
   // returns.
-  void SendCommandSync(
-      const ::bt::PacketView<::bt::hci::CommandHeader>& command,
-      EventCallback callback);
+  void SendCommandSync(const ::bt::PacketView<::bt::hci::CommandHeader>& command,
+                       EventCallback callback);
 
  private:
   // Common read handler implemntation
-  void HandleChannelReady(const zx::channel& channel,
-                          async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                          zx_status_t status, const zx_packet_signal_t* signal);
+  void HandleChannelReady(const zx::channel& channel, async_dispatcher_t* dispatcher,
+                          async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
 
   // Read ready handler for |cmd_channel_|
-  void OnCmdChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                         zx_status_t status, const zx_packet_signal_t* signal);
+  void OnCmdChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                         const zx_packet_signal_t* signal);
 
   // Read ready handler for |acl_channel_|
-  void OnAclChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                         zx_status_t status, const zx_packet_signal_t* signal);
+  void OnAclChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                         const zx_packet_signal_t* signal);
 
   bool valid_;
   EventCallback event_callback_;
   fbl::unique_fd hci_fd_;
   zx::channel cmd_channel_;
-  async::WaitMethod<CommandChannel, &CommandChannel::OnCmdChannelReady>
-      cmd_channel_wait_{this};
+  async::WaitMethod<CommandChannel, &CommandChannel::OnCmdChannelReady> cmd_channel_wait_{this};
   zx::channel acl_channel_;
-  async::WaitMethod<CommandChannel, &CommandChannel::OnAclChannelReady>
-      acl_channel_wait_{this};
+  async::WaitMethod<CommandChannel, &CommandChannel::OnAclChannelReady> acl_channel_wait_{this};
 };
 
 #endif  // SRC_CONNECTIVITY_BLUETOOTH_TOOLS_BT_INTEL_TOOL_COMMAND_CHANNEL_H_

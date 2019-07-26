@@ -12,11 +12,11 @@ namespace metadata {
 constexpr size_t kMaxNameLen = 16;
 
 struct Firmware {
-    char name[kMaxNameLen];
-    uint8_t id;
-    zx_paddr_t pa;
+  char name[kMaxNameLen];
+  uint8_t id;
+  zx_paddr_t pa;
 };
 
-} // namespace metadata
+}  // namespace metadata
 
 #endif  // DDKTL_METADATA_FW_H_

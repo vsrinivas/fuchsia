@@ -24,14 +24,14 @@
 namespace minfs {
 
 class InspectableInodeManager {
-public:
-    virtual ~InspectableInodeManager() {}
+ public:
+  virtual ~InspectableInodeManager() {}
 
-    // Gets immutable reference to the inode allocator.
-    virtual const Allocator* GetInodeAllocator() const = 0;
+  // Gets immutable reference to the inode allocator.
+  virtual const Allocator* GetInodeAllocator() const = 0;
 
-    // Loads the inode from storage.
-    virtual void Load(ino_t inode_num, Inode* out) const = 0;
+  // Loads the inode from storage.
+  virtual void Load(ino_t inode_num, Inode* out) const = 0;
 };
 
 // InodeManager is responsible for owning the persistent storage for inodes.
@@ -39,59 +39,57 @@ public:
 // It can be used to Load and Update inodes on storage.
 // Additionally, it is responsible for allocating and freeing inodes.
 class InodeManager : public InspectableInodeManager {
-public:
-    InodeManager() = delete;
-    DISALLOW_COPY_ASSIGN_AND_MOVE(InodeManager);
-    ~InodeManager() {}
+ public:
+  InodeManager() = delete;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(InodeManager);
+  ~InodeManager() {}
 
 #ifdef __Fuchsia__
-    static zx_status_t Create(block_client::BlockDevice* device, SuperblockManager* sb,
-                              fs::ReadTxn* txn, AllocatorMetadata metadata, blk_t start_block,
-                              size_t inodes, std::unique_ptr<InodeManager>* out);
+  static zx_status_t Create(block_client::BlockDevice* device, SuperblockManager* sb,
+                            fs::ReadTxn* txn, AllocatorMetadata metadata, blk_t start_block,
+                            size_t inodes, std::unique_ptr<InodeManager>* out);
 #else
-    static zx_status_t Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
-                              AllocatorMetadata metadata, blk_t start_block, size_t inodes,
-                              std::unique_ptr<InodeManager>* out);
+  static zx_status_t Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
+                            AllocatorMetadata metadata, blk_t start_block, size_t inodes,
+                            std::unique_ptr<InodeManager>* out);
 #endif
 
-    // Reserve |inodes| inodes in the allocator.
-    zx_status_t Reserve(WriteTxn* txn, size_t inodes, AllocatorPromise* promise) {
-        return promise->Initialize(txn, inodes, inode_allocator_.get());
-    }
+  // Reserve |inodes| inodes in the allocator.
+  zx_status_t Reserve(WriteTxn* txn, size_t inodes, AllocatorPromise* promise) {
+    return promise->Initialize(txn, inodes, inode_allocator_.get());
+  }
 
-    // Free an inode.
-    void Free(WriteTxn* txn, size_t index) {
-        inode_allocator_->Free(txn, index);
-    }
+  // Free an inode.
+  void Free(WriteTxn* txn, size_t index) { inode_allocator_->Free(txn, index); }
 
-    // Persist the inode to storage.
-    void Update(WriteTxn* txn, ino_t ino, const Inode* inode);
+  // Persist the inode to storage.
+  void Update(WriteTxn* txn, ino_t ino, const Inode* inode);
 
-    // InspectableInodeManager interface:
-    const Allocator* GetInodeAllocator() const final;
+  // InspectableInodeManager interface:
+  const Allocator* GetInodeAllocator() const final;
 
-    void Load(ino_t ino, Inode* out) const final;
+  void Load(ino_t ino, Inode* out) const final;
 
-    // Extend the number of inodes managed.
-    //
-    // It is the caller's responsibility to ensure that there is space
-    // on persistent storage for these inodes to be stored.
-    zx_status_t Grow(size_t inodes);
+  // Extend the number of inodes managed.
+  //
+  // It is the caller's responsibility to ensure that there is space
+  // on persistent storage for these inodes to be stored.
+  zx_status_t Grow(size_t inodes);
 
-private:
+ private:
 #ifdef __Fuchsia__
-    InodeManager(blk_t start_block);
+  InodeManager(blk_t start_block);
 #else
-    InodeManager(Bcache* bc, blk_t start_block);
+  InodeManager(Bcache* bc, blk_t start_block);
 #endif
 
-    blk_t start_block_;
-    fbl::unique_ptr<Allocator> inode_allocator_;
+  blk_t start_block_;
+  fbl::unique_ptr<Allocator> inode_allocator_;
 #ifdef __Fuchsia__
-    fzl::ResizeableVmoMapper inode_table_;
+  fzl::ResizeableVmoMapper inode_table_;
 #else
-    Bcache* bc_;
+  Bcache* bc_;
 #endif
 };
 
-} // namespace minfs
+}  // namespace minfs

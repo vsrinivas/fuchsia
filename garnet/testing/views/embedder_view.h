@@ -17,14 +17,12 @@ namespace scenic {
 // See also lib/ui/base_view.
 class EmbedderView : public fuchsia::ui::scenic::SessionListener {
  public:
-  EmbedderView(ViewContext context,
-               const std::string& debug_name = "EmbedderView");
+  EmbedderView(ViewContext context, const std::string& debug_name = "EmbedderView");
 
   // Sets the EmbeddedViewInfo and attaches the embedded View to the scene. Any
   // callbacks for the embedded View's ViewState are delivered to the supplied
   // callback.
-  void EmbedView(EmbeddedViewInfo info,
-                 std::function<void(fuchsia::ui::gfx::ViewState)> callback);
+  void EmbedView(EmbeddedViewInfo info, std::function<void(fuchsia::ui::gfx::ViewState)> callback);
 
  private:
   // |fuchsia::ui::scenic::SessionListener|
@@ -33,15 +31,13 @@ class EmbedderView : public fuchsia::ui::scenic::SessionListener {
   void OnScenicError(std::string error) override;
 
   struct EmbeddedView {
-    EmbeddedView(
-        EmbeddedViewInfo info, Session* session,
-        std::function<void(fuchsia::ui::gfx::ViewState)> view_state_callback,
-        const std::string& debug_name = "EmbedderView");
+    EmbeddedView(EmbeddedViewInfo info, Session* session,
+                 std::function<void(fuchsia::ui::gfx::ViewState)> view_state_callback,
+                 const std::string& debug_name = "EmbedderView");
 
     EmbeddedViewInfo embedded_info;
     ViewHolder view_holder;
-    std::function<void(fuchsia::ui::gfx::ViewState)>
-        view_state_changed_callback;
+    std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback;
   };
 
   fidl::Binding<fuchsia::ui::scenic::SessionListener> binding_;

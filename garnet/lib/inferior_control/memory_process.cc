@@ -17,20 +17,16 @@ namespace inferior_control {
 
 ProcessMemory::ProcessMemory(Process* process) : process_(process) {}
 
-bool ProcessMemory::Read(uintptr_t address, void* out_buffer,
-                         size_t length) const {
+bool ProcessMemory::Read(uintptr_t address, void* out_buffer, size_t length) const {
   FXL_DCHECK(out_buffer);
 
   zx_handle_t handle = process_->process().get();
   FXL_DCHECK(handle != ZX_HANDLE_INVALID);
 
   size_t bytes_read;
-  zx_status_t status =
-      zx_process_read_memory(handle, address, out_buffer, length, &bytes_read);
+  zx_status_t status = zx_process_read_memory(handle, address, out_buffer, length, &bytes_read);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-                          "Failed to read memory at addr: %" PRIxPTR ": ",
-                          address)
+    FXL_LOG(ERROR) << fxl::StringPrintf("Failed to read memory at addr: %" PRIxPTR ": ", address)
                    << debugger_utils::ZxErrorString(status);
     return false;
   }
@@ -44,8 +40,7 @@ bool ProcessMemory::Read(uintptr_t address, void* out_buffer,
   return true;
 }
 
-bool ProcessMemory::Write(uintptr_t address, const void* buffer,
-                          size_t length) const {
+bool ProcessMemory::Write(uintptr_t address, const void* buffer, size_t length) const {
   FXL_DCHECK(buffer);
 
   // We could be trying to remove a breakpoint after the process has exited.
@@ -62,12 +57,9 @@ bool ProcessMemory::Write(uintptr_t address, const void* buffer,
   }
 
   size_t bytes_written;
-  zx_status_t status =
-      zx_process_write_memory(handle, address, buffer, length, &bytes_written);
+  zx_status_t status = zx_process_write_memory(handle, address, buffer, length, &bytes_written);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
-                          "Failed to write memory at addr: %" PRIxPTR ": ",
-                          address)
+    FXL_LOG(ERROR) << fxl::StringPrintf("Failed to write memory at addr: %" PRIxPTR ": ", address)
                    << debugger_utils::ZxErrorString(status);
     return false;
   }

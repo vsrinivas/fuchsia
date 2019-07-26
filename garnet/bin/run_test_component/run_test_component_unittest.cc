@@ -21,8 +21,7 @@ TEST(RunTest, ParseArgs) {
   auto env_services = sys::ServiceDirectory::CreateFromNamespace();
   constexpr char kBinName[] = "bin_name";
 
-  constexpr char component_url[] =
-      "fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello.cmx";
+  constexpr char component_url[] = "fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello.cmx";
   {
     const char* argv[] = {kBinName, component_url};
     auto result = ParseArgs(env_services, 2, argv);
@@ -58,8 +57,7 @@ TEST(RunTest, ParseArgs) {
     auto result = ParseArgs(env_services, 2, argv);
     EXPECT_FALSE(result.error);
     EXPECT_EQ(2u, result.matching_urls.size());
-    EXPECT_THAT(result.matching_urls,
-                ::testing::UnorderedElementsAreArray(expected_urls));
+    EXPECT_THAT(result.matching_urls, ::testing::UnorderedElementsAreArray(expected_urls));
   }
 
   {

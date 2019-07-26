@@ -36,9 +36,7 @@ TEST_F(OAuthRequestBuilderTest, JsonEncodedPostRequest) {
   rapidjson::Writer<rapidjson::StringBuffer> writer(strbuf);
   json_doc.Accept(writer);
 
-  auto req = OAuthRequestBuilder(kTestUrl, kPostMethod)
-                 .SetJsonBody(strbuf.GetString())
-                 .Build();
+  auto req = OAuthRequestBuilder(kTestUrl, kPostMethod).SetJsonBody(strbuf.GetString()).Build();
 
   EXPECT_TRUE(req.url.find("example.org") != std::string::npos);
   EXPECT_EQ(req.method, kPostMethod);
@@ -53,9 +51,7 @@ TEST_F(OAuthRequestBuilderTest, JsonEncodedPostRequest) {
 }
 
 TEST_F(OAuthRequestBuilderTest, UrlEncodedPostRequest) {
-  auto req = OAuthRequestBuilder(kTestUrl, kPostMethod)
-                 .SetUrlEncodedBody("test_data")
-                 .Build();
+  auto req = OAuthRequestBuilder(kTestUrl, kPostMethod).SetUrlEncodedBody("test_data").Build();
 
   EXPECT_TRUE(req.url.find("example.org") != std::string::npos);
   EXPECT_EQ(req.method, kPostMethod);
@@ -71,8 +67,7 @@ TEST_F(OAuthRequestBuilderTest, UrlEncodedPostRequest) {
 }
 
 TEST_F(OAuthRequestBuilderTest, EmptyBodyPostRequest) {
-  auto req =
-      OAuthRequestBuilder(kTestUrl, kPostMethod).SetUrlEncodedBody("").Build();
+  auto req = OAuthRequestBuilder(kTestUrl, kPostMethod).SetUrlEncodedBody("").Build();
 
   EXPECT_TRUE(req.url.find("example.org") != std::string::npos);
   EXPECT_EQ(req.method, kPostMethod);
@@ -117,8 +112,7 @@ TEST_F(OAuthRequestBuilderTest, GetRequestWithQueryParams) {
   params["foo1"] = "bar1";
   params["foo2"] = "bar2";
   params["foo3"] = "bar 3";
-  auto req =
-      OAuthRequestBuilder(kTestUrl, kGetMethod).SetQueryParams(params).Build();
+  auto req = OAuthRequestBuilder(kTestUrl, kGetMethod).SetQueryParams(params).Build();
 
   EXPECT_TRUE(req.url.find("example.org") != std::string::npos);
   EXPECT_TRUE(req.url.find("foo1") != std::string::npos);

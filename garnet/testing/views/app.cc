@@ -22,14 +22,12 @@
 
 namespace {
 
-using ViewFactory =
-    std::function<std::unique_ptr<scenic::TestView>(scenic::ViewContext)>;
+using ViewFactory = std::function<std::unique_ptr<scenic::TestView>(scenic::ViewContext)>;
 
 template <class T>
 ViewFactory ViewFactoryImpl() {
-  return [](scenic::ViewContext view_context) {
-    return std::make_unique<T>(std::move(view_context));
-  };
+  return
+      [](scenic::ViewContext view_context) { return std::make_unique<T>(std::move(view_context)); };
 }
 
 const std::map<std::string, ViewFactory> kViews{
@@ -45,11 +43,10 @@ class App : public fuchsia::ui::views::View {
  private:
   // |fuchsia::ui::view::View|
   void Present(fuchsia::ui::views::ViewToken view_token) override {
-    auto scenic =
-        context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    auto scenic = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext view_context = {
         .session_and_listener_request =
-        scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
+            scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
     };
 

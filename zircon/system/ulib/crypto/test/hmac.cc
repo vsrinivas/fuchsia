@@ -21,175 +21,174 @@ namespace testing {
 namespace {
 
 bool TestInit(void) {
-    BEGIN_TEST;
-    HMAC hmac;
-    Secret key;
+  BEGIN_TEST;
+  HMAC hmac;
+  Secret key;
 
-    size_t key_len;
-    ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
+  size_t key_len;
+  ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
 
-    // Bad digest
-    EXPECT_ZX(hmac.Init(digest::kUninitialized, key), ZX_ERR_INVALID_ARGS);
+  // Bad digest
+  EXPECT_ZX(hmac.Init(digest::kUninitialized, key), ZX_ERR_INVALID_ARGS);
 
-    // Bad flags
-    EXPECT_ZX(hmac.Init(digest::kSHA256, key, 0x8000), ZX_ERR_INVALID_ARGS);
+  // Bad flags
+  EXPECT_ZX(hmac.Init(digest::kSHA256, key, 0x8000), ZX_ERR_INVALID_ARGS);
 
-    // Short key
-    ASSERT_OK(key.Generate(key_len - 1));
-    EXPECT_ZX(hmac.Init(digest::kSHA256, key), ZX_ERR_INVALID_ARGS);
+  // Short key
+  ASSERT_OK(key.Generate(key_len - 1));
+  EXPECT_ZX(hmac.Init(digest::kSHA256, key), ZX_ERR_INVALID_ARGS);
 
-    // Medium key
-    ASSERT_OK(key.Generate(key_len));
-    EXPECT_OK(hmac.Init(digest::kSHA256, key));
+  // Medium key
+  ASSERT_OK(key.Generate(key_len));
+  EXPECT_OK(hmac.Init(digest::kSHA256, key));
 
-    // Long key
-    ASSERT_OK(key.Generate(PAGE_SIZE));
-    EXPECT_OK(hmac.Init(digest::kSHA256, key));
-    END_TEST;
+  // Long key
+  ASSERT_OK(key.Generate(PAGE_SIZE));
+  EXPECT_OK(hmac.Init(digest::kSHA256, key));
+  END_TEST;
 }
 
 bool TestUpdate(void) {
-    BEGIN_TEST;
-    HMAC hmac;
+  BEGIN_TEST;
+  HMAC hmac;
 
-    size_t key_len;
-    Secret key;
-    Bytes buf;
-    ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
-    ASSERT_OK(key.Generate(key_len));
-    ASSERT_OK(buf.Randomize(PAGE_SIZE));
+  size_t key_len;
+  Secret key;
+  Bytes buf;
+  ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
+  ASSERT_OK(key.Generate(key_len));
+  ASSERT_OK(buf.Randomize(PAGE_SIZE));
 
-    // Uninitialized
-    EXPECT_ZX(hmac.Update(buf.get(), buf.len()), ZX_ERR_BAD_STATE);
+  // Uninitialized
+  EXPECT_ZX(hmac.Update(buf.get(), buf.len()), ZX_ERR_BAD_STATE);
 
-    // Null data
-    ASSERT_OK(hmac.Init(digest::kSHA256, key));
-    EXPECT_OK(hmac.Update(nullptr, 0));
-    EXPECT_ZX(hmac.Update(nullptr, buf.len()), ZX_ERR_INVALID_ARGS);
+  // Null data
+  ASSERT_OK(hmac.Init(digest::kSHA256, key));
+  EXPECT_OK(hmac.Update(nullptr, 0));
+  EXPECT_ZX(hmac.Update(nullptr, buf.len()), ZX_ERR_INVALID_ARGS);
 
-    // Multiple calls
-    EXPECT_OK(hmac.Update(buf.get(), buf.len()));
-    EXPECT_OK(hmac.Update(buf.get(), buf.len()));
-    END_TEST;
+  // Multiple calls
+  EXPECT_OK(hmac.Update(buf.get(), buf.len()));
+  EXPECT_OK(hmac.Update(buf.get(), buf.len()));
+  END_TEST;
 }
 
 bool TestFinal(void) {
-    BEGIN_TEST;
-    HMAC hmac;
+  BEGIN_TEST;
+  HMAC hmac;
 
-    size_t key_len;
-    Secret key;
-    Bytes buf;
-    ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
-    ASSERT_OK(key.Generate(key_len));
-    ASSERT_OK(buf.Randomize(PAGE_SIZE));
+  size_t key_len;
+  Secret key;
+  Bytes buf;
+  ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
+  ASSERT_OK(key.Generate(key_len));
+  ASSERT_OK(buf.Randomize(PAGE_SIZE));
 
-    // Uninitialized
-    Bytes out;
-    EXPECT_ZX(hmac.Final(&out), ZX_ERR_BAD_STATE);
+  // Uninitialized
+  Bytes out;
+  EXPECT_ZX(hmac.Final(&out), ZX_ERR_BAD_STATE);
 
-    // Bad parameter
-    ASSERT_OK(hmac.Init(digest::kSHA256, key));
-    EXPECT_ZX(hmac.Final(nullptr), ZX_ERR_INVALID_ARGS);
+  // Bad parameter
+  ASSERT_OK(hmac.Init(digest::kSHA256, key));
+  EXPECT_ZX(hmac.Final(nullptr), ZX_ERR_INVALID_ARGS);
 
-    // No update
-    EXPECT_OK(hmac.Final(&out));
+  // No update
+  EXPECT_OK(hmac.Final(&out));
 
-    // No update after final without init
-    EXPECT_ZX(hmac.Update(buf.get(), buf.len()), ZX_ERR_BAD_STATE);
+  // No update after final without init
+  EXPECT_ZX(hmac.Update(buf.get(), buf.len()), ZX_ERR_BAD_STATE);
 
-    // With update
-    ASSERT_OK(hmac.Init(digest::kSHA256, key));
-    ASSERT_OK(hmac.Update(buf.get(), buf.len()));
-    EXPECT_OK(hmac.Final(&out));
-    END_TEST;
+  // With update
+  ASSERT_OK(hmac.Init(digest::kSHA256, key));
+  ASSERT_OK(hmac.Update(buf.get(), buf.len()));
+  EXPECT_OK(hmac.Final(&out));
+  END_TEST;
 }
 
 bool TestCreate(void) {
-    BEGIN_TEST;
-    Secret key;
-    Bytes digest1, digest2, block1, block2;
+  BEGIN_TEST;
+  Secret key;
+  Bytes digest1, digest2, block1, block2;
 
-    ASSERT_OK(block1.Randomize(PAGE_SIZE));
+  ASSERT_OK(block1.Randomize(PAGE_SIZE));
 
-    size_t key_len;
-    ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
+  size_t key_len;
+  ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
 
-    // Bad parameters
-    EXPECT_ZX(HMAC::Create(digest::kUninitialized, key, block1.get(), PAGE_SIZE, &digest1),
-              ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Generate(key_len - 1));
-    EXPECT_ZX(HMAC::Create(digest::kSHA256, key, block1.get(), PAGE_SIZE, &digest1),
-              ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Generate(key_len));
-    EXPECT_ZX(HMAC::Create(digest::kSHA256, key, nullptr, PAGE_SIZE, &digest1),
-              ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(HMAC::Create(digest::kSHA256, key, block1.get(), PAGE_SIZE, nullptr),
-              ZX_ERR_INVALID_ARGS);
+  // Bad parameters
+  EXPECT_ZX(HMAC::Create(digest::kUninitialized, key, block1.get(), PAGE_SIZE, &digest1),
+            ZX_ERR_INVALID_ARGS);
+  ASSERT_OK(key.Generate(key_len - 1));
+  EXPECT_ZX(HMAC::Create(digest::kSHA256, key, block1.get(), PAGE_SIZE, &digest1),
+            ZX_ERR_INVALID_ARGS);
+  ASSERT_OK(key.Generate(key_len));
+  EXPECT_ZX(HMAC::Create(digest::kSHA256, key, nullptr, PAGE_SIZE, &digest1), ZX_ERR_INVALID_ARGS);
+  EXPECT_ZX(HMAC::Create(digest::kSHA256, key, block1.get(), PAGE_SIZE, nullptr),
+            ZX_ERR_INVALID_ARGS);
 
-    // Same blocks, same HMACs
-    ASSERT_OK(block2.Copy(block1));
-    EXPECT_OK(HMAC::Create(digest::kSHA256, key, block1.get(), PAGE_SIZE, &digest1));
-    EXPECT_OK(HMAC::Create(digest::kSHA256, key, block2.get(), PAGE_SIZE, &digest2));
-    EXPECT_TRUE(digest1 == digest2);
+  // Same blocks, same HMACs
+  ASSERT_OK(block2.Copy(block1));
+  EXPECT_OK(HMAC::Create(digest::kSHA256, key, block1.get(), PAGE_SIZE, &digest1));
+  EXPECT_OK(HMAC::Create(digest::kSHA256, key, block2.get(), PAGE_SIZE, &digest2));
+  EXPECT_TRUE(digest1 == digest2);
 
-    // Different blocks, different HMACs
-    block2.get()[0] ^= 1;
-    EXPECT_OK(HMAC::Create(digest::kSHA256, key, block2.get(), PAGE_SIZE, &digest2));
-    EXPECT_TRUE(digest1 != digest2);
-    END_TEST;
+  // Different blocks, different HMACs
+  block2.get()[0] ^= 1;
+  EXPECT_OK(HMAC::Create(digest::kSHA256, key, block2.get(), PAGE_SIZE, &digest2));
+  EXPECT_TRUE(digest1 != digest2);
+  END_TEST;
 }
 
 bool TestVerify(void) {
-    BEGIN_TEST;
-    Secret key;
-    Bytes out, block;
+  BEGIN_TEST;
+  Secret key;
+  Bytes out, block;
 
-    ASSERT_OK(block.Randomize(PAGE_SIZE));
+  ASSERT_OK(block.Randomize(PAGE_SIZE));
 
-    size_t key_len;
-    ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
+  size_t key_len;
+  ASSERT_OK(GetDigestLen(digest::kSHA256, &key_len));
 
-    // Bad parameters
-    EXPECT_ZX(HMAC::Verify(digest::kUninitialized, key, block.get(), PAGE_SIZE, out),
-              ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Generate(key_len - 1));
-    EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Generate(key_len));
-    EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, nullptr, PAGE_SIZE, out), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key.Generate(key_len));
-    EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out), ZX_ERR_INVALID_ARGS);
+  // Bad parameters
+  EXPECT_ZX(HMAC::Verify(digest::kUninitialized, key, block.get(), PAGE_SIZE, out),
+            ZX_ERR_INVALID_ARGS);
+  ASSERT_OK(key.Generate(key_len - 1));
+  EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out), ZX_ERR_INVALID_ARGS);
+  ASSERT_OK(key.Generate(key_len));
+  EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, nullptr, PAGE_SIZE, out), ZX_ERR_INVALID_ARGS);
+  ASSERT_OK(key.Generate(key_len));
+  EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out), ZX_ERR_INVALID_ARGS);
 
-    // Verify valid
-    ASSERT_OK(key.Generate(key_len));
-    ASSERT_OK(HMAC::Create(digest::kSHA256, key, block.get(), PAGE_SIZE, &out));
-    EXPECT_OK(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out));
+  // Verify valid
+  ASSERT_OK(key.Generate(key_len));
+  ASSERT_OK(HMAC::Create(digest::kSHA256, key, block.get(), PAGE_SIZE, &out));
+  EXPECT_OK(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out));
 
-    // Verify invalid
-    block.get()[0] ^= 1;
-    EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out),
-              ZX_ERR_IO_DATA_INTEGRITY);
-    block.get()[0] ^= 1;
-    EXPECT_OK(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out));
+  // Verify invalid
+  block.get()[0] ^= 1;
+  EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out),
+            ZX_ERR_IO_DATA_INTEGRITY);
+  block.get()[0] ^= 1;
+  EXPECT_OK(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out));
 
-    ASSERT_OK(key.Generate(key_len));
-    EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out),
-              ZX_ERR_IO_DATA_INTEGRITY);
-    END_TEST;
+  ASSERT_OK(key.Generate(key_len));
+  EXPECT_ZX(HMAC::Verify(digest::kSHA256, key, block.get(), PAGE_SIZE, out),
+            ZX_ERR_IO_DATA_INTEGRITY);
+  END_TEST;
 }
 
 // The following tests are taken from RFC 4231 section 4.  They are intentionally formatted to be as
 // close to the RFC's representation as possible.
 bool TestRfc4231_TC(const char* xkey, const char* xdata, const char* xhmac) {
-    BEGIN_TEST;
-    Secret key;
-    Bytes data, hmac;
-    ASSERT_OK(HexToSecret(xkey, &key));
-    ASSERT_OK(HexToBytes(xdata, &data));
-    ASSERT_OK(HexToBytes(xhmac, &hmac));
-    EXPECT_OK(HMAC::Verify(digest::kSHA256, key, data.get(), data.len(), hmac,
-                           HMAC::ALLOW_WEAK_KEY | HMAC::ALLOW_TRUNCATION));
-    END_TEST;
+  BEGIN_TEST;
+  Secret key;
+  Bytes data, hmac;
+  ASSERT_OK(HexToSecret(xkey, &key));
+  ASSERT_OK(HexToBytes(xdata, &data));
+  ASSERT_OK(HexToBytes(xhmac, &hmac));
+  EXPECT_OK(HMAC::Verify(digest::kSHA256, key, data.get(), data.len(), hmac,
+                         HMAC::ALLOW_WEAK_KEY | HMAC::ALLOW_TRUNCATION));
+  END_TEST;
 }
 
 // clang-format off
@@ -287,7 +286,7 @@ bool TestRfc4231_TC7(void) {
                  "676f726974686d2e",                // "gorithm."
     /* SHA256 */ "9b09ffa71b942fcb27635fbcd5b0e944"
                  "bfdc63644f0713938a7f51535c3a35e2");
-} // clang-format on
+}  // clang-format on
 
 BEGIN_TEST_CASE(HmacTest)
 RUN_TEST(TestInit)
@@ -304,6 +303,6 @@ RUN_TEST(TestRfc4231_TC6)
 RUN_TEST(TestRfc4231_TC7)
 END_TEST_CASE(HmacTest)
 
-} // namespace
-} // namespace testing
-} // namespace crypto
+}  // namespace
+}  // namespace testing
+}  // namespace crypto

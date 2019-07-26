@@ -13,10 +13,8 @@ __BEGIN_CDECLS
 //
 // The |status| is |ZX_OK| if the packet was successfully delivered and |data|
 // contains the information from the packet, otherwise |data| is null.
-typedef void(async_receiver_handler_t)(async_dispatcher_t* dispatcher,
-                                       async_receiver_t* receiver,
-                                       zx_status_t status,
-                                       const zx_packet_user_t* data);
+typedef void(async_receiver_handler_t)(async_dispatcher_t* dispatcher, async_receiver_t* receiver,
+                                       zx_status_t status, const zx_packet_user_t* data);
 
 // Holds content for a packet receiver and its handler.
 //
@@ -27,11 +25,11 @@ typedef void(async_receiver_handler_t)(async_dispatcher_t* dispatcher,
 //
 // Multiple packets may be delivered to the same receiver concurrently.
 struct async_receiver {
-    // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
-    async_state_t state;
+  // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
+  async_state_t state;
 
-    // The handler to invoke when a packet is received.
-    async_receiver_handler_t* handler;
+  // The handler to invoke when a packet is received.
+  async_receiver_handler_t* handler;
 };
 
 // Enqueues a packet of data for delivery to a receiver.

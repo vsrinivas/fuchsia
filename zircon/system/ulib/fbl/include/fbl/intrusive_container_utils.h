@@ -47,9 +47,9 @@ namespace fbl {
 // the purpose of generating implementation of LessThan and EqualTo.
 template <typename KeyType, typename ObjType>
 struct DefaultKeyedObjectTraits {
-    static KeyType GetKey(const ObjType& obj)                       { return obj.GetKey(); }
-    static bool LessThan(const KeyType& key1, const KeyType& key2)  { return key1 <  key2; }
-    static bool EqualTo (const KeyType& key1, const KeyType& key2)  { return key1 == key2; }
+  static KeyType GetKey(const ObjType& obj) { return obj.GetKey(); }
+  static bool LessThan(const KeyType& key1, const KeyType& key2) { return key1 < key2; }
+  static bool EqualTo(const KeyType& key1, const KeyType& key2) { return key1 == key2; }
 };
 
 struct DefaultObjectTag {};
@@ -103,29 +103,24 @@ struct ContainableBaseClasses;
 
 template <>
 struct ContainableBaseClasses<> {
-    using TagTypes = std::tuple<>;
+  using TagTypes = std::tuple<>;
 };
 
-template <template <typename, typename>
-             class    Container,
-          typename    PtrType,
-          typename    TagType,
+template <template <typename, typename> class Container, typename PtrType, typename TagType,
           typename... Rest>
 struct ContainableBaseClasses<Container<PtrType, TagType>, Rest...>
-       : public Container<PtrType, TagType>,
-         public ContainableBaseClasses<Rest...> {
-    static_assert(internal::ContainerPtrTraits<PtrType>::CanCopy,
-                  "You can't have a unique_ptr in multiple containers at once.");
-    static_assert(!std::is_same_v<TagType, DefaultObjectTag>,
-                  "Do not use fbl::DefaultObjectTag when inheriting from "
-                  "fbl::ContainableBaseClasses; define your own instead.");
-    static_assert((!std::is_same_v<TagType, typename Rest::TagType> && ...),
-                  "All tag types used with fbl::ContainableBaseClasses must be unique.");
+    : public Container<PtrType, TagType>, public ContainableBaseClasses<Rest...> {
+  static_assert(internal::ContainerPtrTraits<PtrType>::CanCopy,
+                "You can't have a unique_ptr in multiple containers at once.");
+  static_assert(!std::is_same_v<TagType, DefaultObjectTag>,
+                "Do not use fbl::DefaultObjectTag when inheriting from "
+                "fbl::ContainableBaseClasses; define your own instead.");
+  static_assert((!std::is_same_v<TagType, typename Rest::TagType> && ...),
+                "All tag types used with fbl::ContainableBaseClasses must be unique.");
 
-    using TagTypes =
-        decltype(std::tuple_cat(
-                     std::declval<std::tuple<TagType>>(),
-                     std::declval<typename ContainableBaseClasses<Rest...>::TagTypes>()));
+  using TagTypes =
+      decltype(std::tuple_cat(std::declval<std::tuple<TagType>>(),
+                              std::declval<typename ContainableBaseClasses<Rest...>::TagTypes>()));
 };
 
 }  // namespace fbl
@@ -142,31 +137,24 @@ struct DirectEraseUtils;
 
 template <typename ContainerType>
 struct DirectEraseUtils<
-        ContainerType,
-        std::enable_if_t<ContainerType::SupportsConstantOrderErase == false, void>> {
-    using PtrTraits = typename ContainerType::PtrTraits;
-    using PtrType   = typename PtrTraits::PtrType;
-    using ValueType = typename PtrTraits::ValueType;
+    ContainerType, std::enable_if_t<ContainerType::SupportsConstantOrderErase == false, void>> {
+  using PtrTraits = typename ContainerType::PtrTraits;
+  using PtrType = typename PtrTraits::PtrType;
+  using ValueType = typename PtrTraits::ValueType;
 
-    static PtrType erase(ContainerType& container, ValueType& obj) {
-        return container.erase_if(
-            [&obj](const ValueType& other) -> bool {
-                return &obj == &other;
-            });
-    }
+  static PtrType erase(ContainerType& container, ValueType& obj) {
+    return container.erase_if([&obj](const ValueType& other) -> bool { return &obj == &other; });
+  }
 };
 
 template <typename ContainerType>
-struct DirectEraseUtils<
-        ContainerType,
-        std::enable_if_t<ContainerType::SupportsConstantOrderErase == true, void>> {
-    using PtrTraits = typename ContainerType::PtrTraits;
-    using PtrType   = typename PtrTraits::PtrType;
-    using ValueType = typename PtrTraits::ValueType;
+struct DirectEraseUtils<ContainerType,
+                        std::enable_if_t<ContainerType::SupportsConstantOrderErase == true, void>> {
+  using PtrTraits = typename ContainerType::PtrTraits;
+  using PtrType = typename PtrTraits::PtrType;
+  using ValueType = typename PtrTraits::ValueType;
 
-    static PtrType erase(ContainerType& container, ValueType& obj) {
-        return container.erase(obj);
-    }
+  static PtrType erase(ContainerType& container, ValueType& obj) { return container.erase(obj); }
 };
 
 // KeyEraseUtils
@@ -178,43 +166,38 @@ template <typename ContainerType, typename KeyTraits, typename Enable = void>
 struct KeyEraseUtils;
 
 template <typename ContainerType, typename KeyTraits>
-struct KeyEraseUtils<
-        ContainerType,
-        KeyTraits,
-        std::enable_if_t<ContainerType::IsAssociative == false, void>> {
-    using PtrTraits = typename ContainerType::PtrTraits;
-    using PtrType   = typename PtrTraits::PtrType;
-    using ValueType = typename PtrTraits::ValueType;
+struct KeyEraseUtils<ContainerType, KeyTraits,
+                     std::enable_if_t<ContainerType::IsAssociative == false, void>> {
+  using PtrTraits = typename ContainerType::PtrTraits;
+  using PtrType = typename PtrTraits::PtrType;
+  using ValueType = typename PtrTraits::ValueType;
 
-    template <typename KeyType>
-    static PtrType erase(ContainerType& container, const KeyType& key) {
-        return container.erase_if(
-            [key](const ValueType& other) -> bool {
-                return KeyTraits::EqualTo(key, KeyTraits::GetKey(other));
-            });
-    }
+  template <typename KeyType>
+  static PtrType erase(ContainerType& container, const KeyType& key) {
+    return container.erase_if([key](const ValueType& other) -> bool {
+      return KeyTraits::EqualTo(key, KeyTraits::GetKey(other));
+    });
+  }
 };
 
 template <typename ContainerType, typename KeyTraits>
-struct KeyEraseUtils<
-        ContainerType,
-        KeyTraits,
-        std::enable_if_t<ContainerType::IsAssociative == true, void>> {
-    using PtrTraits = typename ContainerType::PtrTraits;
-    using PtrType   = typename PtrTraits::PtrType;
+struct KeyEraseUtils<ContainerType, KeyTraits,
+                     std::enable_if_t<ContainerType::IsAssociative == true, void>> {
+  using PtrTraits = typename ContainerType::PtrTraits;
+  using PtrType = typename PtrTraits::PtrType;
 
-    template <typename KeyType>
-    static PtrType erase(ContainerType& container, const KeyType& key) {
-        return container.erase(key);
-    }
+  template <typename KeyType>
+  static PtrType erase(ContainerType& container, const KeyType& key) {
+    return container.erase(key);
+  }
 };
 
 // Swaps two plain old data types with size no greater than 64 bits.
 template <typename T, typename = std::enable_if_t<std::is_pod_v<T> && (sizeof(T) <= 8)>>
 inline void Swap(T& a, T& b) noexcept {
-    T tmp = a;
-    a = b;
-    b = tmp;
+  T tmp = a;
+  a = b;
+  b = tmp;
 }
 
 // Notes on container sentinels:
@@ -246,34 +229,32 @@ constexpr uintptr_t kContainerSentinelBit = 1U;
 // type in the process.
 template <typename T, typename U, typename = std::enable_if_t<std::is_pointer_v<T>>>
 constexpr T make_sentinel(U* ptr) {
-    return reinterpret_cast<T>(reinterpret_cast<uintptr_t>(ptr) |
-                               kContainerSentinelBit);
+  return reinterpret_cast<T>(reinterpret_cast<uintptr_t>(ptr) | kContainerSentinelBit);
 }
 
 template <typename T, typename = std::enable_if_t<std::is_pointer_v<T>>>
 constexpr T make_sentinel(decltype(nullptr)) {
-    return reinterpret_cast<T>(kContainerSentinelBit);
+  return reinterpret_cast<T>(kContainerSentinelBit);
 }
 
 // Turn a sentinel pointer back into a normal pointer, automatically
 // re-interpreting its type in the process.
 template <typename T, typename U, typename = std::enable_if_t<std::is_pointer_v<T>>>
 constexpr T unmake_sentinel(U* sentinel) {
-    return reinterpret_cast<T>(reinterpret_cast<uintptr_t>(sentinel) &
-                               ~kContainerSentinelBit);
+  return reinterpret_cast<T>(reinterpret_cast<uintptr_t>(sentinel) & ~kContainerSentinelBit);
 }
 
 // Test to see if a pointer is a sentinel pointer.
 template <typename T>
 constexpr bool is_sentinel_ptr(const T* ptr) {
-    return (reinterpret_cast<uintptr_t>(ptr) & kContainerSentinelBit) != 0;
+  return (reinterpret_cast<uintptr_t>(ptr) & kContainerSentinelBit) != 0;
 }
 
 // Test to see if a pointer (which may be a sentinel) is valid.  Valid in this
 // context means that the pointer is not null, and is not a sentinel.
 template <typename T>
 constexpr bool valid_sentinel_ptr(const T* ptr) {
-    return ptr && !is_sentinel_ptr(ptr);
+  return ptr && !is_sentinel_ptr(ptr);
 }
 
 DECLARE_HAS_MEMBER_FN(has_node_state, node_state);

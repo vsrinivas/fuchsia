@@ -59,35 +59,24 @@ class RegistersArm64 final : public Registers {
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(greg_bytes, value, value_size);
     FXL_VLOG(2) << "Set register " << regno << " = "
-                << debugger_utils::EncodeByteArrayString(greg_bytes,
-                                                         value_size);
+                << debugger_utils::EncodeByteArrayString(greg_bytes, value_size);
     return true;
   }
 
-  zx_vaddr_t GetPC() override {
-    return general_regs_.pc;
-  }
+  zx_vaddr_t GetPC() override { return general_regs_.pc; }
 
-  zx_vaddr_t GetSP() override {
-    return general_regs_.sp;
-  }
+  zx_vaddr_t GetSP() override { return general_regs_.sp; }
 
-  zx_vaddr_t GetFP() override {
-    return general_regs_.r[29];
-  }
+  zx_vaddr_t GetFP() override { return general_regs_.r[29]; }
 
-  void SetPC(zx_vaddr_t pc) override {
-    general_regs_.pc = pc;
-  }
+  void SetPC(zx_vaddr_t pc) override { general_regs_.pc = pc; }
 
   bool SetSingleStep(bool enable) override {
     FXL_NOTIMPLEMENTED();
     return false;
   }
 
-  std::string GetFormattedRegset(int regset) override {
-    return "unimplemented\n";
-  }
+  std::string GetFormattedRegset(int regset) override { return "unimplemented\n"; }
 };
 
 }  // namespace

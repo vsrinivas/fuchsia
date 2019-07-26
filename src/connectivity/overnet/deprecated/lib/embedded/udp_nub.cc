@@ -31,16 +31,14 @@ Status UdpNub::Start() {
 
 void UdpNub::SendTo(IpAddr addr, overnet::Slice slice) {
   OVERNET_TRACE(TRACE) << "sending packet " << slice << " to " << addr;
-  if (auto status = socket_.SendTo(std::move(slice), 0, *addr.AsIpv6());
-      status.is_error()) {
+  if (auto status = socket_.SendTo(std::move(slice), 0, *addr.AsIpv6()); status.is_error()) {
     OVERNET_TRACE(WARNING) << "sendto fails: " << status;
   }
 }
 
 void UdpNub::WaitForInbound() {
   assert(socket_.IsValid());
-  reactor_->OnRead(socket_.get(),
-                   [this](const Status& status) { InboundReady(status); });
+  reactor_->OnRead(socket_.get(), [this](const Status& status) { InboundReady(status); });
 }
 
 void UdpNub::InboundReady(const Status& status) {
@@ -55,14 +53,12 @@ void UdpNub::InboundReady(const Status& status) {
   if (data_and_addr.is_error()) {
     OVERNET_TRACE(ERROR) << data_and_addr.AsStatus();
     // Wait a bit before trying again to avoid spamming the log.
-    timer_->At(timer_->Now() + TimeDelta::FromSeconds(10),
-               [this] { WaitForInbound(); });
+    timer_->At(timer_->Now() + TimeDelta::FromSeconds(10), [this] { WaitForInbound(); });
     return;
   }
 
   ScopedOp scoped_op(Op::New(overnet::OpType::INCOMING_PACKET));
-  OVERNET_TRACE(TRACE) << "Got packet " << data_and_addr->data << " from "
-                       << data_and_addr->addr;
+  OVERNET_TRACE(TRACE) << "Got packet " << data_and_addr->data << " from " << data_and_addr->addr;
   Process(now, data_and_addr->addr, std::move(data_and_addr->data));
 
   WaitForInbound();

@@ -20,22 +20,21 @@ using SpiChildType = ddk::Device<SpiChild, ddk::Messageable>;
 class SpiChild : public SpiChildType,
                  public fbl::RefCounted<SpiChild>,
                  public llcpp::fuchsia::hardware::spi::Device::Interface {
-public:
-    SpiChild(zx_device_t* parent, ddk::SpiImplProtocolClient spi,
-             const spi_channel_t* channel)
-        : SpiChildType(parent), spi_(spi), cs_(channel->cs) {}
+ public:
+  SpiChild(zx_device_t* parent, ddk::SpiImplProtocolClient spi, const spi_channel_t* channel)
+      : SpiChildType(parent), spi_(spi), cs_(channel->cs) {}
 
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-    void DdkUnbind();
-    void DdkRelease();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  void DdkUnbind();
+  void DdkRelease();
 
-    void Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync completer) override;
-    void Receive(uint32_t size, ReceiveCompleter::Sync completer) override;
-    void Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Sync completer) override;
+  void Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync completer) override;
+  void Receive(uint32_t size, ReceiveCompleter::Sync completer) override;
+  void Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Sync completer) override;
 
-private:
-    const ddk::SpiImplProtocolClient spi_;
-    const uint32_t cs_;
+ private:
+  const ddk::SpiImplProtocolClient spi_;
+  const uint32_t cs_;
 };
 
-} // namespace spi
+}  // namespace spi

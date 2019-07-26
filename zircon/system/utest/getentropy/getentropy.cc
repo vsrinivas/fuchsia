@@ -8,38 +8,38 @@
 #include <unittest/unittest.h>
 
 bool getentropy_valid() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    char buf[16];
+  char buf[16];
 
-    errno = 0;
-    int result = getentropy(buf, sizeof(buf));
-    int err = errno;
+  errno = 0;
+  int result = getentropy(buf, sizeof(buf));
+  int err = errno;
 
-    EXPECT_EQ(result, 0);
-    EXPECT_EQ(err, 0);
+  EXPECT_EQ(result, 0);
+  EXPECT_EQ(err, 0);
 
-    END_TEST;
+  END_TEST;
 }
 
 bool getentropy_too_big() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    const size_t size = 1024 * 1024 * 1024;
+  const size_t size = 1024 * 1024 * 1024;
 
-    char* buf = static_cast<char*>(malloc(size));
-    EXPECT_NONNULL(buf);
+  char* buf = static_cast<char*>(malloc(size));
+  EXPECT_NONNULL(buf);
 
-    errno = 0;
-    int result = getentropy(buf, size);
-    int err = errno;
+  errno = 0;
+  int result = getentropy(buf, size);
+  int err = errno;
 
-    EXPECT_EQ(result, -1);
-    EXPECT_EQ(err, EIO);
+  EXPECT_EQ(result, -1);
+  EXPECT_EQ(err, EIO);
 
-    free(buf);
+  free(buf);
 
-    END_TEST;
+  END_TEST;
 }
 
 BEGIN_TEST_CASE(getentropy_tests)

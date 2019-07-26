@@ -16,8 +16,7 @@ namespace {
 
 class RoutingTableFuzzer {
  public:
-  RoutingTableFuzzer(bool log_stuff)
-      : logging_(log_stuff ? new Logging(&timer_) : nullptr) {}
+  RoutingTableFuzzer(bool log_stuff) : logging_(log_stuff ? new Logging(&timer_) : nullptr) {}
 
   void Run(fuchsia::overnet::routingtablefuzzer::RoutingTableFuzzPlan plan) {
     using namespace fuchsia::overnet::routingtablefuzzer;
@@ -29,14 +28,12 @@ class RoutingTableFuzzer {
         case RoutingTableAction::Tag::kUpdateNode:
           // Ignores failures in order to verify that the next input doesn't
           // crash.
-          routing_table_.ProcessUpdate({fidl::Clone(action.update_node())}, {},
-                                       false);
+          routing_table_.ProcessUpdate({fidl::Clone(action.update_node())}, {}, false);
           break;
         case RoutingTableAction::Tag::kUpdateLink:
           // Ignores failures in order to verify that the next input doesn't
           // crash.
-          routing_table_.ProcessUpdate({}, {fidl::Clone(action.update_link())},
-                                       false);
+          routing_table_.ProcessUpdate({}, {fidl::Clone(action.update_link())}, false);
           break;
         case RoutingTableAction::Tag::kUpdateFlush:
           // Ignores failures in order to verify that the next input doesn't
@@ -63,9 +60,8 @@ class RoutingTableFuzzer {
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  if (auto buffer =
-          Decode<fuchsia::overnet::routingtablefuzzer::RoutingTableFuzzPlan>(
-              Slice::FromCopiedBuffer(data, size));
+  if (auto buffer = Decode<fuchsia::overnet::routingtablefuzzer::RoutingTableFuzzPlan>(
+          Slice::FromCopiedBuffer(data, size));
       buffer.is_ok()) {
     RoutingTableFuzzer(false).Run(std::move(*buffer));
   }

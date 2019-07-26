@@ -17,10 +17,10 @@
 namespace fbl {
 
 class __TA_CAPABILITY("mutex") NullLock {
-public:
-    constexpr NullLock() { }
-    void Acquire() __TA_ACQUIRE() { }
-    void Release() __TA_RELEASE() { }
+ public:
+  constexpr NullLock() {}
+  void Acquire() __TA_ACQUIRE() {}
+  void Release() __TA_RELEASE() {}
 };
 
 }  // namespace fbl

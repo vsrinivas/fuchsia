@@ -12,6 +12,4 @@
 // TODO(BLD-353): It shouldn't be necessary for this to be weak.
 // But the legacy Fuchsia GN build's "SDK import" logic turns a "source"
 // library into a source_set() rather than an actual static library.
-__WEAK int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
+__WEAK int main(int argc, char** argv) { return unittest_run_all_tests(argc, argv) ? 0 : -1; }

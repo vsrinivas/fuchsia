@@ -30,54 +30,54 @@ namespace minfs {
 // superblock to disk while another thread has only partially
 // updated the superblock.
 class SuperblockManager {
-public:
-    SuperblockManager() = delete;
-    ~SuperblockManager();
-    DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
+ public:
+  SuperblockManager() = delete;
+  ~SuperblockManager();
+  DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
 
 #ifdef __Fuchsia__
-    static zx_status_t Create(block_client::BlockDevice* device, const Superblock* info,
-                              uint32_t max_blocks, IntegrityCheck checks,
-                              fbl::unique_ptr<SuperblockManager>* out);
+  static zx_status_t Create(block_client::BlockDevice* device, const Superblock* info,
+                            uint32_t max_blocks, IntegrityCheck checks,
+                            fbl::unique_ptr<SuperblockManager>* out);
 #else
-    static zx_status_t Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
-                              fbl::unique_ptr<SuperblockManager>* out);
+  static zx_status_t Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
+                            fbl::unique_ptr<SuperblockManager>* out);
 #endif
 
-    const Superblock& Info() const {
+  const Superblock& Info() const {
 #ifdef __Fuchsia__
-        return *reinterpret_cast<const Superblock*>(mapping_.start());
+    return *reinterpret_cast<const Superblock*>(mapping_.start());
 #else
-        return *reinterpret_cast<const Superblock*>(&info_blk_[0]);
+    return *reinterpret_cast<const Superblock*>(&info_blk_[0]);
 #endif
-    }
+  }
 
-    // Acquire a pointer to the superblock, such that any
-    // modifications will be carried out to persistent storage
-    // the next time "Write" is invoked.
-    Superblock* MutableInfo() {
+  // Acquire a pointer to the superblock, such that any
+  // modifications will be carried out to persistent storage
+  // the next time "Write" is invoked.
+  Superblock* MutableInfo() {
 #ifdef __Fuchsia__
-        return reinterpret_cast<Superblock*>(mapping_.start());
+    return reinterpret_cast<Superblock*>(mapping_.start());
 #else
-        return reinterpret_cast<Superblock*>(&info_blk_[0]);
+    return reinterpret_cast<Superblock*>(&info_blk_[0]);
 #endif
-    }
+  }
 
-    // Write the superblock back to persistent storage.
-    void Write(WriteTxn* txn);
+  // Write the superblock back to persistent storage.
+  void Write(WriteTxn* txn);
 
-private:
+ private:
 #ifdef __Fuchsia__
-    SuperblockManager(const Superblock* info, fzl::OwnedVmoMapper mapper);
+  SuperblockManager(const Superblock* info, fzl::OwnedVmoMapper mapper);
 #else
-    SuperblockManager(const Superblock* info);
+  SuperblockManager(const Superblock* info);
 #endif
 
 #ifdef __Fuchsia__
-    fzl::OwnedVmoMapper mapping_;
+  fzl::OwnedVmoMapper mapping_;
 #else
-    uint8_t info_blk_[kMinfsBlockSize];
+  uint8_t info_blk_[kMinfsBlockSize];
 #endif
 };
 
-} // namespace minfs
+}  // namespace minfs

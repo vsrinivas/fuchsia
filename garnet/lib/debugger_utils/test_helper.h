@@ -15,4 +15,4 @@ constexpr uint64_t kUint64MagicPacketValue = 0x0123456789abcdeful;
 
 }  // namespace debugger_utils
 
-#endif // GARNET_LIB_DEBUGGER_UTILS_TEST_HELPER_H_
+#endif  // GARNET_LIB_DEBUGGER_UTILS_TEST_HELPER_H_

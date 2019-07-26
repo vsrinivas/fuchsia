@@ -21,8 +21,7 @@ class InputDeviceImpl : public fuchsia::ui::input::InputDevice {
   };
 
   InputDeviceImpl(uint32_t id, fuchsia::ui::input::DeviceDescriptor descriptor,
-                  fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-                      input_device_request,
+                  fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request,
                   Listener* listener);
   ~InputDeviceImpl();
 
@@ -32,9 +31,7 @@ class InputDeviceImpl : public fuchsia::ui::input::InputDevice {
   // Returns the last seen InputReport or nullptr if no reports have been
   // seen. At the moment we only ever save InputReports from a MediaButton,
   // so all other device types will always return nullptr.
-  const fuchsia::ui::input::InputReport* LastReport() const {
-    return last_report_.get();
-  }
+  const fuchsia::ui::input::InputReport* LastReport() const { return last_report_.get(); }
 
  private:
   // |InputDevice|

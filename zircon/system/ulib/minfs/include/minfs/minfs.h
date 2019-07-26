@@ -28,31 +28,29 @@ namespace minfs {
 // Controls the validation-checking performed by minfs when loading
 // structures from disk.
 enum class IntegrityCheck {
-    // Do not attempt to validate structures on load. This is useful
-    // for inspection tools, which do not depend on the correctness
-    // of on-disk structures.
-    kNone,
-    // Validate structures (locally) before usage. This is the
-    // recommended option for mounted filesystems.
-    kAll,
+  // Do not attempt to validate structures on load. This is useful
+  // for inspection tools, which do not depend on the correctness
+  // of on-disk structures.
+  kNone,
+  // Validate structures (locally) before usage. This is the
+  // recommended option for mounted filesystems.
+  kAll,
 };
 
 struct MountOptions {
-    bool readonly;
-    bool metrics;
-    bool verbose;
+  bool readonly;
+  bool metrics;
+  bool verbose;
 
-    // Number of slices to preallocate for data when the filesystem is created.
-    uint32_t fvm_data_slices = 1;
+  // Number of slices to preallocate for data when the filesystem is created.
+  uint32_t fvm_data_slices = 1;
 };
 
 // Format the partition backed by |bc| as MinFS.
 zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc);
 
 // Format the partition backed by |bc| as MinFS.
-inline zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) {
-    return Mkfs({}, std::move(bc));
-}
+inline zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) { return Mkfs({}, std::move(bc)); }
 
 #ifdef __Fuchsia__
 
@@ -67,4 +65,4 @@ zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispa
                           fbl::Closure on_unmount);
 #endif
 
-} // namespace minfs
+}  // namespace minfs

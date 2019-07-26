@@ -16,8 +16,7 @@ struct TestTimes {
   TimeStamp connected;
 };
 
-TestTimes OneMessageSrcToDest(Env* env, Slice body,
-                              Optional<TimeDelta> allowed_time);
+TestTimes OneMessageSrcToDest(Env* env, Slice body, Optional<TimeDelta> allowed_time);
 
 TestTimes RequestResponse(Env* env, Slice request_body, Slice response_body,
                           Optional<TimeDelta> allowed_time);

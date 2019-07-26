@@ -93,11 +93,11 @@ uint64_t IptConfig::AddrEnd(unsigned i) const {
   return addr_range[i].end;
 }
 
-IptServer::IptServer(const IptConfig& config,
-                     const debugger_utils::Argv& argv)
+IptServer::IptServer(const IptConfig& config, const debugger_utils::Argv& argv)
     : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob(),
              sys::ServiceDirectory::CreateFromNamespace()),
-      config_(config), inferior_argv_(argv) {}
+      config_(config),
+      inferior_argv_(argv) {}
 
 bool IptServer::StartInferior() {
   inferior_control::Process* inferior = current_process();
@@ -202,8 +202,7 @@ bool IptServer::Run() {
 }
 
 void IptServer::OnThreadStarting(inferior_control::Process* process,
-                                 inferior_control::Thread* thread,
-                                 zx_handle_t eport,
+                                 inferior_control::Thread* thread, zx_handle_t eport,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -230,8 +229,7 @@ Fail:
 }
 
 void IptServer::OnThreadExiting(inferior_control::Process* process,
-                                inferior_control::Thread* thread,
-                                zx_handle_t eport,
+                                inferior_control::Thread* thread, zx_handle_t eport,
                                 const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -253,18 +251,17 @@ void IptServer::OnThreadExiting(inferior_control::Process* process,
 void IptServer::OnProcessTermination(inferior_control::Process* process) {
   FXL_DCHECK(process);
 
-  printf("Process %s is gone, rc %d\n", process->GetName().c_str(),
-         process->return_code());
+  printf("Process %s is gone, rc %d\n", process->GetName().c_str(), process->return_code());
 
   // If the process is gone, unset current thread, and exit main loop.
   SetCurrentThread(nullptr);
   QuitMessageLoop(true);
 }
 
-void IptServer::OnArchitecturalException(
-    inferior_control::Process* process, inferior_control::Thread* thread,
-    zx_handle_t eport, const zx_excp_type_t type,
-    const zx_exception_context_t& context) {
+void IptServer::OnArchitecturalException(inferior_control::Process* process,
+                                         inferior_control::Thread* thread, zx_handle_t eport,
+                                         const zx_excp_type_t type,
+                                         const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
@@ -275,9 +272,8 @@ void IptServer::OnArchitecturalException(
 }
 
 void IptServer::OnSyntheticException(inferior_control::Process* process,
-                                     inferior_control::Thread* thread,
-                                     zx_handle_t eport, zx_excp_type_t type,
-                                     const zx_exception_context_t& context) {
+                                     inferior_control::Thread* thread, zx_handle_t eport,
+                                     zx_excp_type_t type, const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 

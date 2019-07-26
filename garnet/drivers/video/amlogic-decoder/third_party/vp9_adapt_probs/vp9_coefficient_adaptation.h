@@ -25,12 +25,10 @@ struct adapt_coef_proc_cfg {
   unsigned int *count_buf;
 };
 
-void adapt_coef_process(struct adapt_coef_proc_cfg *cfg,
-  int prev_k, int cur_k, int pre_f);
+void adapt_coef_process(struct adapt_coef_proc_cfg *cfg, int prev_k, int cur_k, int pre_f);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // __VP9_COEFFICIENT_ADAPTATION_H
-
+#endif  // __VP9_COEFFICIENT_ADAPTATION_H

@@ -193,12 +193,11 @@ TEST(MyEnum, CodingTable) {
   ASSERT_EQ(fidl::FidlCodedPrimitive::kUint32, my_enum_table.underlying_type);
 }
 
-
 // This ensures that the number collision tests compile. (See FIDL-448).
 // These tests ensure that the name mangling rules used in the generator avoid certain types
 // of collisions that appeared in earlier versions (e.g. number of elements would merge with
 // other content).
-TEST(NumberCollision, CodingTable) {  
+TEST(NumberCollision, CodingTable) {
   const fidl_type& type = fidl_test_example_codingtables_CodingNumberCollisionRequestTable;
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;

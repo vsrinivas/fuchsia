@@ -15,21 +15,18 @@ using ::fuchsia::perfmon::cpu::EventConfigFlags;
 
 std::string Config::StatusToString(Status status) {
   switch (status) {
-  case Status::OK:
-    return "OK";
-  case Status::MAX_EVENTS:
-    return "MAX_EVENTS";
-  case Status::INVALID_ARGS:
-    return "INVALID_ARGS";
+    case Status::OK:
+      return "OK";
+    case Status::MAX_EVENTS:
+      return "MAX_EVENTS";
+    case Status::INVALID_ARGS:
+      return "INVALID_ARGS";
   }
 }
 
-void Config::Reset() {
-  events_.clear();
-}
+void Config::Reset() { events_.clear(); }
 
-Config::Status Config::AddEvent(
-    EventId event, EventRate rate, uint32_t flags) {
+Config::Status Config::AddEvent(EventId event, EventRate rate, uint32_t flags) {
   if (events_.size() == kMaxNumEvents) {
     return Status::MAX_EVENTS;
   }
@@ -40,9 +37,7 @@ Config::Status Config::AddEvent(
   return Status::OK;
 }
 
-size_t Config::GetEventCount() const {
-  return events_.size();
-}
+size_t Config::GetEventCount() const { return events_.size(); }
 
 CollectionMode Config::GetMode() const {
   for (const auto& event : events_) {
@@ -61,8 +56,7 @@ void Config::IterateOverEvents(IterateFunc func) const {
 }
 
 static std::string EventConfigToString(Config::EventConfig event) {
-  return fxl::StringPrintf("event 0x%x, rate %u, flags 0x%x",
-                           event.event, event.rate, event.flags);
+  return fxl::StringPrintf("event 0x%x, rate %u, flags 0x%x", event.event, event.rate, event.flags);
 }
 
 std::string Config::ToString() {

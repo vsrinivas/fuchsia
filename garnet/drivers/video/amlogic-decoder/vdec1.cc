@@ -19,9 +19,8 @@ zx_status_t Vdec1::LoadFirmware(const uint8_t* data, uint32_t size) {
   const uint32_t kFirmwareSize = 4 * 4096;
   // Most buffers should be 64-kbyte aligned.
   const uint32_t kBufferAlignShift = 16;
-  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, owner_->bti(),
-                                              kFirmwareSize, kBufferAlignShift,
-                                              IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, owner_->bti(), kFirmwareSize,
+                                              kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make firmware buffer");
     return status;
@@ -34,14 +33,11 @@ zx_status_t Vdec1::LoadFirmware(const uint8_t* data, uint32_t size) {
   ImemDmaAdr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&firmware_buffer)))
       .WriteTo(mmio()->dosbus);
-  ImemDmaCount::Get()
-      .FromValue(kFirmwareSize / sizeof(uint32_t))
-      .WriteTo(mmio()->dosbus);
+  ImemDmaCount::Get().FromValue(kFirmwareSize / sizeof(uint32_t)).WriteTo(mmio()->dosbus);
   ImemDmaCtrl::Get().FromValue(0x8000 | (7 << 16)).WriteTo(mmio()->dosbus);
 
   if (!WaitForRegister(std::chrono::milliseconds(100), [this] {
-        return (ImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() &
-                0x8000) == 0;
+        return (ImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() & 0x8000) == 0;
       })) {
     DECODE_ERROR("Failed to load microcode.");
 
@@ -92,16 +88,13 @@ void Vdec1::PowerOn() {
   // requires using GP0, which is already being used by the GPU.
   // The linux driver also uses 200MHz in some circumstances for videos <=
   // 1080p30.
-  uint32_t clock_sel = (owner_->device_type() == DeviceType::kG12A ||
-                        owner_->device_type() == DeviceType::kG12B)
-                           ? kG12xFclkDiv4
-                           : kGxmFclkDiv4;
+  uint32_t clock_sel =
+      (owner_->device_type() == DeviceType::kG12A || owner_->device_type() == DeviceType::kG12B)
+          ? kG12xFclkDiv4
+          : kGxmFclkDiv4;
 
-  HhiVdecClkCntl::Get()
-      .FromValue(0)
-      .set_vdec_en(true)
-      .set_vdec_sel(clock_sel)
-      .WriteTo(mmio()->hiubus);
+  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(true).set_vdec_sel(clock_sel).WriteTo(
+      mmio()->hiubus);
   DosGclkEn::Get().FromValue(0x3ff).WriteTo(mmio()->dosbus);
   DosMemPdVdec::Get().FromValue(0).WriteTo(mmio()->dosbus);
   {
@@ -112,10 +105,7 @@ void Vdec1::PowerOn() {
   DosVdecMcrccStallCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
   DmcReqCtrl::Get().ReadFrom(mmio()->dmc).set_vdec(true).WriteTo(mmio()->dmc);
 
-  MdecPicDcCtrl::Get()
-      .ReadFrom(mmio()->dosbus)
-      .set_bit31(false)
-      .WriteTo(mmio()->dosbus);
+  MdecPicDcCtrl::Get().ReadFrom(mmio()->dosbus).set_bit31(false).WriteTo(mmio()->dosbus);
   powered_on_ = true;
 }
 
@@ -131,8 +121,7 @@ void Vdec1::PowerOff() {
     temp.WriteTo(mmio()->aobus);
   }
   DosMemPdVdec::Get().FromValue(~0u).WriteTo(mmio()->dosbus);
-  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(false).set_vdec_sel(3).WriteTo(
-      mmio()->hiubus);
+  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(false).set_vdec_sel(3).WriteTo(mmio()->hiubus);
 
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
@@ -168,8 +157,7 @@ void Vdec1::StopDecoding() {
   Cpsr::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
   if (!WaitForRegister(std::chrono::milliseconds(100), [this] {
-        return (ImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() &
-                0x8000) == 0;
+        return (ImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() & 0x8000) == 0;
       })) {
     DECODE_ERROR("Failed to wait for DMA completion");
     return;
@@ -214,9 +202,8 @@ void Vdec1::WaitForIdle() {
     }
   }
 
-  if (!WaitForRegister(timeout, [this] {
-        return McStatus0::Get().ReadFrom(mmio()->dosbus).reg_value() == 0;
-      })) {
+  if (!WaitForRegister(
+          timeout, [this] { return McStatus0::Get().ReadFrom(mmio()->dosbus).reg_value() == 0; })) {
     // Forcibly shutoff reference frame reading hardware.
     auto temp = McCtrl1::Get().ReadFrom(mmio()->dosbus);
     temp.set_reg_value(0x9 | temp.reg_value());
@@ -232,8 +219,7 @@ void Vdec1::WaitForIdle() {
   });
 }
 
-void Vdec1::InitializeStreamInput(bool use_parser, uint32_t buffer_address,
-                                  uint32_t buffer_size) {
+void Vdec1::InitializeStreamInput(bool use_parser, uint32_t buffer_address, uint32_t buffer_size) {
   VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);
   VldMemVififoWrapCount::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
@@ -245,25 +231,15 @@ void Vdec1::InitializeStreamInput(bool use_parser, uint32_t buffer_address,
 
   VldMemVififoStartPtr::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
   VldMemVififoCurrPtr::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
-  VldMemVififoEndPtr::Get()
-      .FromValue(buffer_address + buffer_size - 8)
-      .WriteTo(mmio()->dosbus);
-  VldMemVififoControl::Get().FromValue(0).set_init(true).WriteTo(
-      mmio()->dosbus);
+  VldMemVififoEndPtr::Get().FromValue(buffer_address + buffer_size - 8).WriteTo(mmio()->dosbus);
+  VldMemVififoControl::Get().FromValue(0).set_init(true).WriteTo(mmio()->dosbus);
   VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);
-  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
-      mmio()->dosbus);
+  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(mmio()->dosbus);
   VldMemVififoWP::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
-  VldMemVififoBufCntl::Get()
-      .FromValue(0)
-      .set_manual(true)
-      .set_init(true)
-      .WriteTo(mmio()->dosbus);
-  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
-      mmio()->dosbus);
+  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).set_init(true).WriteTo(mmio()->dosbus);
+  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(mmio()->dosbus);
   auto fifo_control =
-      VldMemVififoControl::Get().FromValue(0).set_upper(0x11).set_fill_on_level(
-          true);
+      VldMemVififoControl::Get().FromValue(0).set_upper(0x11).set_fill_on_level(true);
   if (use_parser) {
     fifo_control.set_fill_en(true).set_empty_en(true);
     // Parser will do 64-bit endianness conversion.
@@ -276,21 +252,15 @@ void Vdec1::InitializeStreamInput(bool use_parser, uint32_t buffer_address,
 }
 
 void Vdec1::InitializeParserInput() {
-  VldMemVififoBufCntl::Get().FromValue(0).set_init(true).WriteTo(
-      mmio()->dosbus);
+  VldMemVififoBufCntl::Get().FromValue(0).set_init(true).WriteTo(mmio()->dosbus);
   VldMemVififoBufCntl::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
   DosGenCtrl0::Get().FromValue(0).WriteTo(mmio()->dosbus);
 }
 
 void Vdec1::InitializeDirectInput() {
-  VldMemVififoBufCntl::Get()
-      .FromValue(0)
-      .set_init(true)
-      .set_manual(true)
-      .WriteTo(mmio()->dosbus);
-  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
-      mmio()->dosbus);
+  VldMemVififoBufCntl::Get().FromValue(0).set_init(true).set_manual(true).WriteTo(mmio()->dosbus);
+  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(mmio()->dosbus);
 }
 
 void Vdec1::UpdateWritePointer(uint32_t write_pointer) {
@@ -303,19 +273,15 @@ void Vdec1::UpdateWritePointer(uint32_t write_pointer) {
 }
 
 uint32_t Vdec1::GetStreamInputOffset() {
-  uint32_t write_ptr =
-      VldMemVififoWP::Get().ReadFrom(mmio()->dosbus).reg_value();
-  uint32_t buffer_start =
-      VldMemVififoStartPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
+  uint32_t write_ptr = VldMemVififoWP::Get().ReadFrom(mmio()->dosbus).reg_value();
+  uint32_t buffer_start = VldMemVififoStartPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
   assert(write_ptr >= buffer_start);
   return write_ptr - buffer_start;
 }
 
 uint32_t Vdec1::GetReadOffset() {
-  uint32_t read_ptr =
-      VldMemVififoRP::Get().ReadFrom(mmio()->dosbus).reg_value();
-  uint32_t buffer_start =
-      VldMemVififoStartPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
+  uint32_t read_ptr = VldMemVififoRP::Get().ReadFrom(mmio()->dosbus).reg_value();
+  uint32_t buffer_start = VldMemVififoStartPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
   assert(read_ptr >= buffer_start);
   return read_ptr - buffer_start;
 }

@@ -24,8 +24,7 @@ class ResponsePrinter {
  public:
   void Run(async::Loop* loop, http::URLResponse response) const {
     if (response.error) {
-      printf("Got error: %d (%s)\n", response.error->code,
-             response.error->description->c_str());
+      printf("Got error: %d (%s)\n", response.error->code, response.error->description->c_str());
     } else {
       PrintResponse(response);
       PrintResponseBody(std::move(response.body->stream()));
@@ -54,8 +53,7 @@ class ResponsePrinter {
       zx_status_t result = body.read(0u, buf, num_bytes, &num_bytes);
 
       if (result == ZX_ERR_SHOULD_WAIT) {
-        body.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                      zx::time::infinite(), nullptr);
+        body.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(), nullptr);
       } else if (result == ZX_OK) {
         if (fwrite(buf, num_bytes, 1, stdout) != 1) {
           printf("\nUnexpected error writing to file\n");
@@ -72,8 +70,7 @@ class ResponsePrinter {
 
 class PostFileApp {
  public:
-  PostFileApp(async::Loop* loop)
-      : loop_(loop), context_(sys::ComponentContext::Create()) {
+  PostFileApp(async::Loop* loop) : loop_(loop), context_(sys::ComponentContext::Create()) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
   }
 

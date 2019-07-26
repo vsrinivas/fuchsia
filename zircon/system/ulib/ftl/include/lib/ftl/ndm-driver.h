@@ -27,101 +27,101 @@ constexpr uint32_t kReadOnlyInit = (1 << 8);  // Matches FSF_READ_ONLY_INIT.
 
 // Options for a device to be created. All sizes are in bytes.
 struct VolumeOptions {
-    uint32_t num_blocks;
-    uint32_t max_bad_blocks;
-    uint32_t block_size;
-    uint32_t page_size;
-    uint32_t eb_size;  // Extra bytes, a.k.a. OOB.
-    uint32_t flags;
+  uint32_t num_blocks;
+  uint32_t max_bad_blocks;
+  uint32_t block_size;
+  uint32_t page_size;
+  uint32_t eb_size;  // Extra bytes, a.k.a. OOB.
+  uint32_t flags;
 };
 
 // Encapsulates the lower layer TargetFtl-Ndm driver.
 class NdmDriver {
-  public:
-    virtual ~NdmDriver() {}
+ public:
+  virtual ~NdmDriver() {}
 
-    // Performs driver initialization. Returns an error string, or nullptr on
-    // success.
-    virtual const char* Init() = 0;
+  // Performs driver initialization. Returns an error string, or nullptr on
+  // success.
+  virtual const char* Init() = 0;
 
-    // Creates a new volume. Note that multiple volumes are not supported.
-    // |ftl_volume| (if provided) will be notified with the volume details.
-    // Returns an error string, or nullptr on success.
-    virtual const char* Attach(const Volume* ftl_volume) = 0;
+  // Creates a new volume. Note that multiple volumes are not supported.
+  // |ftl_volume| (if provided) will be notified with the volume details.
+  // Returns an error string, or nullptr on success.
+  virtual const char* Attach(const Volume* ftl_volume) = 0;
 
-    // Destroy the volume created with Attach(). Returns true on success.
-    virtual bool Detach() = 0;
+  // Destroy the volume created with Attach(). Returns true on success.
+  virtual bool Detach() = 0;
 
-    // Reads |page_count| pages starting at |start_page|, placing the results on
-    // |page_buffer| and |oob_buffer|. Either pointer can be nullptr if that
-    // part is not desired.
-    // Returns kNdmOk, kNdmUncorrectableEcc, kNdmFatalError or kNdmUnsafeEcc.
-    virtual int NandRead(uint32_t start_page, uint32_t page_count, void* page_buffer,
-                         void* oob_buffer) = 0;
+  // Reads |page_count| pages starting at |start_page|, placing the results on
+  // |page_buffer| and |oob_buffer|. Either pointer can be nullptr if that
+  // part is not desired.
+  // Returns kNdmOk, kNdmUncorrectableEcc, kNdmFatalError or kNdmUnsafeEcc.
+  virtual int NandRead(uint32_t start_page, uint32_t page_count, void* page_buffer,
+                       void* oob_buffer) = 0;
 
-    // Writes |page_count| pages starting at |start_page|, using the data from
-    // |page_buffer| and |oob_buffer|.
-    // Returns kNdmOk, kNdmError or kNdmFatalError. kNdmError triggers marking
-    // the block as bad.
-    virtual int NandWrite(uint32_t start_page, uint32_t page_count, const void* page_buffer,
-                          const void* oob_buffer) = 0;
+  // Writes |page_count| pages starting at |start_page|, using the data from
+  // |page_buffer| and |oob_buffer|.
+  // Returns kNdmOk, kNdmError or kNdmFatalError. kNdmError triggers marking
+  // the block as bad.
+  virtual int NandWrite(uint32_t start_page, uint32_t page_count, const void* page_buffer,
+                        const void* oob_buffer) = 0;
 
-    // Erases the block containing |page_num|.
-    // Returns kNdmOk or kNdmError. kNdmError triggers marking the block as bad.
-    virtual int NandErase(uint32_t page_num) = 0;
+  // Erases the block containing |page_num|.
+  // Returns kNdmOk or kNdmError. kNdmError triggers marking the block as bad.
+  virtual int NandErase(uint32_t page_num) = 0;
 
-    // Returns whether the block containing |page_num| was factory-marked as bad.
-    // Returns kTrue, kFalse or kNdmError.
-    virtual int IsBadBlock(uint32_t page_num) = 0;
+  // Returns whether the block containing |page_num| was factory-marked as bad.
+  // Returns kTrue, kFalse or kNdmError.
+  virtual int IsBadBlock(uint32_t page_num) = 0;
 
-    // Returns whether a given page is empty or not. |data| and |spare| store
-    // the contents of the page.
-    virtual bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) = 0;
+  // Returns whether a given page is empty or not. |data| and |spare| store
+  // the contents of the page.
+  virtual bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) = 0;
 };
 
 // Base functionality for a driver implementation.
 class NdmBaseDriver : public NdmDriver {
-  public:
-    NdmBaseDriver() {}
-    virtual ~NdmBaseDriver();
+ public:
+  NdmBaseDriver() {}
+  virtual ~NdmBaseDriver();
 
-    // Returns true if known data appears to be present on the device. This does
-    // not imply that creating a volume will not find errors, just that calling
-    // CreateNdmVolume after this method returns false will result in a freshly
-    // minted (aka empty) volume.
-    // This method should be called after Init(), but before CreateNdmVolume(),
-    // for the result to be meaningful, but calling this is not required.
-    bool IsNdmDataPresent(const VolumeOptions& options);
+  // Returns true if known data appears to be present on the device. This does
+  // not imply that creating a volume will not find errors, just that calling
+  // CreateNdmVolume after this method returns false will result in a freshly
+  // minted (aka empty) volume.
+  // This method should be called after Init(), but before CreateNdmVolume(),
+  // for the result to be meaningful, but calling this is not required.
+  bool IsNdmDataPresent(const VolumeOptions& options);
 
-    // Returns true if the size of the bad block reservation cannot be used.
-    // The size to use (options.max_bad_blocks) may be too small to hold the
-    // current known bad blocks, or some internal value may be inconsistent if
-    // this size is used.
-    // This only makes sense when comparing the desired options with the data
-    // already stored on a volume, and in general should only be used to attempt
-    // to reduce the reserved space (increasing it would reduce the size of the
-    // visible volume, and that is not supported).
-    // This method should only be called right after calling IsNdmDataPresent(),
-    // before calling CreateNdmVolume().
-    bool BadBbtReservation() const;
+  // Returns true if the size of the bad block reservation cannot be used.
+  // The size to use (options.max_bad_blocks) may be too small to hold the
+  // current known bad blocks, or some internal value may be inconsistent if
+  // this size is used.
+  // This only makes sense when comparing the desired options with the data
+  // already stored on a volume, and in general should only be used to attempt
+  // to reduce the reserved space (increasing it would reduce the size of the
+  // visible volume, and that is not supported).
+  // This method should only be called right after calling IsNdmDataPresent(),
+  // before calling CreateNdmVolume().
+  bool BadBbtReservation() const;
 
-    // Creates the underlying NDM volume, with the provided parameters.
-    const char* CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options);
+  // Creates the underlying NDM volume, with the provided parameters.
+  const char* CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options);
 
-    // Deletes the underlying NDM volume.
-    bool RemoveNdmVolume();
+  // Deletes the underlying NDM volume.
+  bool RemoveNdmVolume();
 
-    // Saves and restores bad block data for volume extension.
-    bool SaveBadBlockData();
-    bool RestoreBadBlockData();
+  // Saves and restores bad block data for volume extension.
+  bool SaveBadBlockData();
+  bool RestoreBadBlockData();
 
-    // Inspects |data_len| bytes from |data| and |spare_len| bytes from |spare|
-    // looking for a typical empty (erased) page. Returns true if all bits are 1.
-    bool IsEmptyPageImpl(const uint8_t* data, uint32_t data_len, const uint8_t* spare,
-                         uint32_t spare_len) const;
+  // Inspects |data_len| bytes from |data| and |spare_len| bytes from |spare|
+  // looking for a typical empty (erased) page. Returns true if all bits are 1.
+  bool IsEmptyPageImpl(const uint8_t* data, uint32_t data_len, const uint8_t* spare,
+                       uint32_t spare_len) const;
 
-  private:
-    ndm* ndm_ = nullptr;
+ private:
+  ndm* ndm_ = nullptr;
 };
 
 // Performs global module initialization. This is exposed to support unit tests,

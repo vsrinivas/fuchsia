@@ -9,22 +9,20 @@
 
 #include "wav-common.h"
 
-class WAVSink : public WAVCommon,
-                public audio::utils::AudioSink {
-public:
-    WAVSink() { }
-    ~WAVSink() { Finalize(); }
-    zx_status_t Initialize(const char* filename) {
-        return WAVCommon::Initialize(filename, InitMode::SINK);
-    }
+class WAVSink : public WAVCommon, public audio::utils::AudioSink {
+ public:
+  WAVSink() {}
+  ~WAVSink() { Finalize(); }
+  zx_status_t Initialize(const char* filename) {
+    return WAVCommon::Initialize(filename, InitMode::SINK);
+  }
 
-    // AudioSink interface
-    zx_status_t SetFormat(const AudioStream::Format& format) final;
-    zx_status_t PutFrames(const void* buffer, uint32_t amt) final;
-    zx_status_t Finalize() final;
+  // AudioSink interface
+  zx_status_t SetFormat(const AudioStream::Format& format) final;
+  zx_status_t PutFrames(const void* buffer, uint32_t amt) final;
+  zx_status_t Finalize() final;
 
-private:
-    bool format_set_ = false;
-    uint64_t bytes_written_ = 0;
+ private:
+  bool format_set_ = false;
+  uint64_t bytes_written_ = 0;
 };
-

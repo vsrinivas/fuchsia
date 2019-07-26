@@ -30,21 +30,21 @@ __BEGIN_CDECLS
 #define VNATTR_BLKSIZE 512
 
 typedef struct vnattr {
-    uint32_t valid;        // mask of which bits to set for setattr
-    uint32_t mode;
-    uint64_t inode;
-    uint64_t size;
-    uint64_t blksize;      // Block size for filesystem I/O
-    uint64_t blkcount;     // Number of VNATTR_BLKSIZE byte blocks allocated
-    uint64_t nlink;
-    uint64_t create_time;  // posix time (seconds since epoch)
-    uint64_t modify_time;  // posix time
+  uint32_t valid;  // mask of which bits to set for setattr
+  uint32_t mode;
+  uint64_t inode;
+  uint64_t size;
+  uint64_t blksize;   // Block size for filesystem I/O
+  uint64_t blkcount;  // Number of VNATTR_BLKSIZE byte blocks allocated
+  uint64_t nlink;
+  uint64_t create_time;  // posix time (seconds since epoch)
+  uint64_t modify_time;  // posix time
 } vnattr_t;
 
 // mask that identifies what fields to set in setattr
-#define ATTR_CTIME  0000001
-#define ATTR_MTIME  0000002
-#define ATTR_ATIME  0000004  // not yet implemented
+#define ATTR_CTIME 0000001
+#define ATTR_MTIME 0000002
+#define ATTR_ATIME 0000004  // not yet implemented
 
 // bits compatible with POSIX stat
 #define V_TYPE_MASK 0170000
@@ -52,7 +52,7 @@ typedef struct vnattr {
 #define V_TYPE_LINK 0120000
 #define V_TYPE_FILE 0100000
 #define V_TYPE_BDEV 0060000
-#define V_TYPE_DIR  0040000
+#define V_TYPE_DIR 0040000
 #define V_TYPE_CDEV 0020000
 #define V_TYPE_PIPE 0010000
 
@@ -76,10 +76,10 @@ typedef struct vnattr {
 #define DTYPE_TO_VTYPE(type) (((type)&15) << 12)
 
 typedef struct vdirent {
-    uint64_t ino;
-    uint8_t size;
-    uint8_t type;
-    char name[0];
+  uint64_t ino;
+  uint8_t size;
+  uint8_t type;
+  char name[0];
 } __PACKED vdirent_t;
 
 __END_CDECLS

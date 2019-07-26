@@ -49,8 +49,7 @@ class ChromiumExporter {
   // Virtual threads mean the same thread id can appear in different processes.
   // Organize threads by process to cope with this.
   std::unordered_map<zx_koid_t /* process id */,
-                     std::unordered_map<zx_koid_t /* thread id */,
-                                        fbl::String /* thread name */>>
+                     std::unordered_map<zx_koid_t /* thread id */, fbl::String /* thread name */>>
       threads_;
 
   // The chromium/catapult trace file format doesn't support context switch

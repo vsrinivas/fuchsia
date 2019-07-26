@@ -21,9 +21,9 @@
 
 namespace fbl {
 using Mutex = ::Mutex;
-} // namespace fbl
+}  // namespace fbl
 
-#else   // if _KERNEL
+#else  // if _KERNEL
 
 #include <zircon/types.h>
 #include <threads.h>
@@ -31,34 +31,32 @@ using Mutex = ::Mutex;
 namespace fbl {
 
 class __TA_CAPABILITY("mutex") Mutex {
-public:
+ public:
 #ifdef MTX_INIT
-    constexpr Mutex() : mutex_(MTX_INIT) { }
+  constexpr Mutex() : mutex_(MTX_INIT) {}
 #else
-    Mutex() { mtx_init(&mutex_, mtx_plain); }
+  Mutex() { mtx_init(&mutex_, mtx_plain); }
 #endif
-    ~Mutex() { mtx_destroy(&mutex_); }
-    void Acquire() __TA_ACQUIRE() { mtx_lock(&mutex_); }
-    void Release() __TA_RELEASE() { mtx_unlock(&mutex_); }
+  ~Mutex() { mtx_destroy(&mutex_); }
+  void Acquire() __TA_ACQUIRE() { mtx_lock(&mutex_); }
+  void Release() __TA_RELEASE() { mtx_unlock(&mutex_); }
 
-    /* IsHeld is not supported by the Mutex wrapper in user-mode as C11 mtx_t
-     * instances do not support a direct IsHeld style check.  A possible
-     * implementation could be built out of mtx_trylock, but would require
-     * either relaxing away the const constraint on the method signature, or
-     * flagging the mutex_ member as mutable */
+  /* IsHeld is not supported by the Mutex wrapper in user-mode as C11 mtx_t
+   * instances do not support a direct IsHeld style check.  A possible
+   * implementation could be built out of mtx_trylock, but would require
+   * either relaxing away the const constraint on the method signature, or
+   * flagging the mutex_ member as mutable */
 
-    mtx_t* GetInternal() __TA_RETURN_CAPABILITY(mutex_) {
-        return &mutex_;
-    }
+  mtx_t* GetInternal() __TA_RETURN_CAPABILITY(mutex_) { return &mutex_; }
 
-    // suppress default constructors
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Mutex);
+  // suppress default constructors
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Mutex);
 
-private:
-    mtx_t mutex_;
+ private:
+  mtx_t mutex_;
 };
 
-}
+}  // namespace fbl
 
 #endif  // if _KERNEL
 #endif  // ifdef __cplusplus

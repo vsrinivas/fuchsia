@@ -15,8 +15,8 @@ namespace digest {
 
 // Algorithm enumerates the supported message digests
 enum Algorithm {
-    kUninitialized = 0,
-    kSHA256,
+  kUninitialized = 0,
+  kSHA256,
 };
 
 // Gets a pointer to the opaque crypto implementation of the digest algorithm.
@@ -25,5 +25,5 @@ zx_status_t GetDigest(Algorithm digest, uintptr_t* out);
 // Gets the number of bytes needed for the digest produced by the given |version|.
 zx_status_t GetDigestLen(Algorithm digest, size_t* out);
 
-} // namespace digest
-} // namespace crypto
+}  // namespace digest
+}  // namespace crypto

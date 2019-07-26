@@ -14,8 +14,7 @@ __BEGIN_CDECLS
 // The |status| is |ZX_OK| if the bell was received and |bell| contains the
 // information from the packet, otherwise |bell| is null.
 typedef void(async_guest_bell_trap_handler_t)(async_dispatcher_t* dispatcher,
-                                              async_guest_bell_trap_t* trap,
-                                              zx_status_t status,
+                                              async_guest_bell_trap_t* trap, zx_status_t status,
                                               const zx_packet_guest_bell_t* bell);
 
 // Holds context for a bell trap and its handler.
@@ -24,11 +23,11 @@ typedef void(async_guest_bell_trap_handler_t)(async_dispatcher_t* dispatcher,
 // the structure in memory (and unmodified) until the guest has been destroyed or the
 // dispatcher shuts down.  There is no way to cancel a trap which has been set.
 struct async_guest_bell_trap {
-    // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
-    async_state_t state;
+  // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
+  async_state_t state;
 
-    // The handler to invoke to handle the trap access.
-    async_guest_bell_trap_handler_t* handler;
+  // The handler to invoke to handle the trap access.
+  async_guest_bell_trap_handler_t* handler;
 };
 
 // Sets a bell trap in the guest to be handled asynchronously via a handler.

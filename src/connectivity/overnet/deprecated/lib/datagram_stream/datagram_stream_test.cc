@@ -30,8 +30,7 @@ class MockLink {
   LinkPtr<> MakeLink(NodeId src, NodeId peer) {
     class LinkInst final : public Link {
      public:
-      LinkInst(MockLink* link, NodeId src, NodeId peer)
-          : link_(link), src_(src), peer_(peer) {}
+      LinkInst(MockLink* link, NodeId src, NodeId peer) : link_(link), src_(src), peer_(peer) {}
 
       void Close(Callback<void> quiesced) override {}
 
@@ -42,8 +41,7 @@ class MockLink {
       const LinkStats* GetStats() const override { return nullptr; }
 
       fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override {
-        return fuchsia::overnet::protocol::LinkStatus{src_.as_fidl(),
-                                                      peer_.as_fidl(), 1, 1};
+        return fuchsia::overnet::protocol::LinkStatus{src_.as_fidl(), peer_.as_fidl(), 1, 1};
       }
 
      private:
@@ -69,9 +67,7 @@ class MockPullCB {
   MOCK_METHOD1(Callback, void(const StatusOr<Optional<Slice>>&));
 
   StatusOrCallback<Optional<Slice>> MakeCallback() {
-    return [this](const StatusOr<Optional<Slice>>& status) {
-      this->Callback(status);
-    };
+    return [this](const StatusOr<Optional<Slice>>& status) { this->Callback(status); };
   }
 };
 
@@ -88,8 +84,7 @@ class DGStream : public DatagramStream {
 static const auto kDefaultSliceArgs =
     LazySliceArgs{Border::None(), std::numeric_limits<uint32_t>::max(), false};
 
-const Slice kTestPayload =
-    Slice::FromContainer({0x68, 0xbc, 0x05, 0xe7, 0, 0x80, 1, 0, 1, 2, 3});
+const Slice kTestPayload = Slice::FromContainer({0x68, 0xbc, 0x05, 0xe7, 0, 0x80, 1, 0, 1, 2, 3});
 
 TEST(DatagramStream, UnreliableSend) {
   MockLink link;
@@ -98,8 +93,7 @@ TEST(DatagramStream, UnreliableSend) {
   TestTimer timer;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_render(&renderer);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
 
   auto router = MakeClosedPtr<Router>(&timer, NodeId(1), true);
   router->RegisterLink(link.MakeLink(NodeId(1), NodeId(2)));
@@ -110,8 +104,7 @@ TEST(DatagramStream, UnreliableSend) {
 
   auto ds1 = MakeClosedPtr<DGStream>(
       router.get(), NodeId(2),
-      fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableUnordered,
-      StreamId(1));
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableUnordered, StreamId(1));
 
   std::shared_ptr<Message> message;
   EXPECT_CALL(link, Forward(_)).WillOnce(SaveArg<0>(&message));
@@ -135,8 +128,7 @@ TEST(DatagramStream, ReadThenRecv) {
   TestTimer timer;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_render(&renderer);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
 
   MockLink link;
   StrictMock<MockPullCB> pull_cb;
@@ -159,20 +151,17 @@ TEST(DatagramStream, ReadThenRecv) {
 
   auto ds1 = MakeClosedPtr<DGStream>(
       router.get(), NodeId(2),
-      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered,
-      StreamId(1));
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered, StreamId(1));
 
-  router->Forward(
-      Message{std::move(RoutableMessage(NodeId(2)).AddDestination(
-                  NodeId(1), StreamId(1), SeqNum(1, 1))),
-              ForwardingPayloadFactory(kTestPayload),
-              TimeStamp::AfterEpoch(TimeDelta::FromMilliseconds(123))});
+  router->Forward(Message{
+      std::move(RoutableMessage(NodeId(2)).AddDestination(NodeId(1), StreamId(1), SeqNum(1, 1))),
+      ForwardingPayloadFactory(kTestPayload),
+      TimeStamp::AfterEpoch(TimeDelta::FromMilliseconds(123))});
 
   DatagramStream::ReceiveOp recv_op(ds1.get());
 
-  EXPECT_CALL(pull_cb, Callback(Property(
-                           &StatusOr<Optional<Slice>>::get,
-                           Pointee(Pointee(Slice::FromContainer({1, 2, 3}))))));
+  EXPECT_CALL(pull_cb, Callback(Property(&StatusOr<Optional<Slice>>::get,
+                                         Pointee(Pointee(Slice::FromContainer({1, 2, 3}))))));
   recv_op.Pull(pull_cb.MakeCallback());
 
   expect_all_done();
@@ -184,8 +173,7 @@ TEST(DatagramStream, RecvThenRead) {
   TestTimer timer;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_render(&renderer);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
 
   MockLink link;
   StrictMock<MockPullCB> pull_cb;
@@ -208,21 +196,18 @@ TEST(DatagramStream, RecvThenRead) {
 
   auto ds1 = MakeClosedPtr<DGStream>(
       router.get(), NodeId(2),
-      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered,
-      StreamId(1));
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered, StreamId(1));
 
   DatagramStream::ReceiveOp recv_op(ds1.get());
 
   recv_op.Pull(pull_cb.MakeCallback());
 
-  EXPECT_CALL(pull_cb, Callback(Property(
-                           &StatusOr<Optional<Slice>>::get,
-                           Pointee(Pointee(Slice::FromContainer({1, 2, 3}))))));
-  router->Forward(
-      Message{std::move(RoutableMessage(NodeId(2)).AddDestination(
-                  NodeId(1), StreamId(1), SeqNum(1, 1))),
-              ForwardingPayloadFactory(kTestPayload),
-              TimeStamp::AfterEpoch(TimeDelta::FromMilliseconds(123))});
+  EXPECT_CALL(pull_cb, Callback(Property(&StatusOr<Optional<Slice>>::get,
+                                         Pointee(Pointee(Slice::FromContainer({1, 2, 3}))))));
+  router->Forward(Message{
+      std::move(RoutableMessage(NodeId(2)).AddDestination(NodeId(1), StreamId(1), SeqNum(1, 1))),
+      ForwardingPayloadFactory(kTestPayload),
+      TimeStamp::AfterEpoch(TimeDelta::FromMilliseconds(123))});
 
   expect_all_done();
 

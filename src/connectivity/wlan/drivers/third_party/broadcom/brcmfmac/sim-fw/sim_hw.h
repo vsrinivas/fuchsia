@@ -23,6 +23,7 @@
 class SimHardware {
  public:
   zx_status_t setMacAddr(uint8_t* macAddr);
+
  private:
   uint8_t macAddr_[ETH_ALEN];
 };

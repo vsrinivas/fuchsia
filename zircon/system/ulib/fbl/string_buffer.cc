@@ -9,17 +9,16 @@
 
 namespace fbl::internal {
 
-size_t StringBufferAppendPrintf(char* dest, size_t remaining,
-                                const char* format, va_list ap) {
-    if (remaining == 0U) {
-        return 0U;
-    }
-    int count = vsnprintf(dest, remaining + 1U, format, ap);
-    if (count < 0) {
-        return 0U;
-    }
-    size_t length = static_cast<size_t>(count);
-    return length >= remaining ? remaining : length;
+size_t StringBufferAppendPrintf(char* dest, size_t remaining, const char* format, va_list ap) {
+  if (remaining == 0U) {
+    return 0U;
+  }
+  int count = vsnprintf(dest, remaining + 1U, format, ap);
+  if (count < 0) {
+    return 0U;
+  }
+  size_t length = static_cast<size_t>(count);
+  return length >= remaining ? remaining : length;
 }
 
-} // namespace fbl::internal
+}  // namespace fbl::internal

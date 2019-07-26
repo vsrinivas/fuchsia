@@ -6,26 +6,22 @@
 
 namespace cobalt {
 
-fuchsia::cobalt::ProjectProfile ProjectProfileFromBase64String(
-    const std::string &encoded_cfg) {
+fuchsia::cobalt::ProjectProfile ProjectProfileFromBase64String(const std::string &encoded_cfg) {
   std::string cfg;
   cobalt::crypto::Base64Decode(encoded_cfg, &cfg);
 
   return ProjectProfileFromString(cfg);
 }
 
-fuchsia::cobalt::ProjectProfile ProjectProfileFromString(
-    const std::string &cfg) {
+fuchsia::cobalt::ProjectProfile ProjectProfileFromString(const std::string &cfg) {
   fsl::SizedVmo config_vmo;
   bool success = fsl::VmoFromString(cfg, &config_vmo);
-  FXL_CHECK(success)
-      << "Could not convert Cobalt metrics registry string into VMO";
+  FXL_CHECK(success) << "Could not convert Cobalt metrics registry string into VMO";
 
   return ProjectProfileFromVmo(std::move(config_vmo));
 }
 
-fuchsia::cobalt::ProjectProfile ProjectProfileFromFile(
-    const std::string &filename) {
+fuchsia::cobalt::ProjectProfile ProjectProfileFromFile(const std::string &filename) {
   fsl::SizedVmo config_vmo;
   bool success = fsl::VmoFromFilename(filename, &config_vmo);
   FXL_CHECK(success) << "Could not read Cobalt metrics registry file into VMO";

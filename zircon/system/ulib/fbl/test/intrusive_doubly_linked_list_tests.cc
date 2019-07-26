@@ -14,16 +14,16 @@ namespace intrusive_containers {
 
 template <typename ContainerStateType>
 struct OtherListTraits {
-    using PtrTraits = typename ContainerStateType::PtrTraits;
-    static ContainerStateType& node_state(typename PtrTraits::RefType obj) {
-        return obj.other_container_state_;
-    }
+  using PtrTraits = typename ContainerStateType::PtrTraits;
+  static ContainerStateType& node_state(typename PtrTraits::RefType obj) {
+    return obj.other_container_state_;
+  }
 };
 
 template <typename PtrType>
 class DLLTraits {
-public:
-// clang-format off
+ public:
+  // clang-format off
     using TestObjBaseType         = TestObjBase;
 
     using ContainerType           = DoublyLinkedList<PtrType>;
@@ -46,15 +46,15 @@ public:
     using TaggedType1 = TaggedDoublyLinkedList<PtrType, Tag1>;
     using TaggedType2 = TaggedDoublyLinkedList<PtrType, Tag2>;
     using TaggedType3 = TaggedDoublyLinkedList<PtrType, Tag3>;
-// clang-format on
+  // clang-format on
 };
 
 // Just a sanity check so we know our metaprogramming nonsense is
 // doing what we expect:
-static_assert(std::is_same_v<typename DLLTraits<int*>::TaggedContainableBaseClasses::TagTypes,
-                             std::tuple<typename DLLTraits<int*>::Tag1,
-                                        typename DLLTraits<int*>::Tag2,
-                                        typename DLLTraits<int*>::Tag3>>);
+static_assert(
+    std::is_same_v<typename DLLTraits<int*>::TaggedContainableBaseClasses::TagTypes,
+                   std::tuple<typename DLLTraits<int*>::Tag1, typename DLLTraits<int*>::Tag2,
+                              typename DLLTraits<int*>::Tag3>>);
 
 // clang-format off
 DEFINE_TEST_OBJECTS(DLL);

@@ -40,7 +40,7 @@ namespace camera {
 
 namespace {
 
-//TODO(CAM-87): Formalize isp sub-block start address style.
+// TODO(CAM-87): Formalize isp sub-block start address style.
 constexpr uint32_t kGammaRgbPingFrAddr = 0x1c064;
 constexpr uint32_t kGammaRgbPingDsAddr = 0x1c1d8;
 
@@ -56,11 +56,9 @@ class ArmIspDevice : public IspDeviceType,
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ArmIspDevice);
 
-  explicit ArmIspDevice(zx_device_t* parent, ddk ::MmioBuffer hiu_mmio,
-                        ddk ::MmioBuffer power_mmio,
-                        ddk ::MmioBuffer memory_pd_mmio,
-                        ddk ::MmioBuffer reset_mmio, ddk ::MmioBuffer isp_mmio,
-                        mmio_buffer_t local_mmio, zx::interrupt isp_irq,
+  explicit ArmIspDevice(zx_device_t* parent, ddk ::MmioBuffer hiu_mmio, ddk ::MmioBuffer power_mmio,
+                        ddk ::MmioBuffer memory_pd_mmio, ddk ::MmioBuffer reset_mmio,
+                        ddk ::MmioBuffer isp_mmio, mmio_buffer_t local_mmio, zx::interrupt isp_irq,
                         zx::bti bti, zx_device_t* camera_sensor)
       : IspDeviceType(parent),
         pdev_(parent),
@@ -97,10 +95,10 @@ class ArmIspDevice : public IspDeviceType,
   // |type|  : The stream type (full resolution or downscaled)
   // |out_s| : (output) Protocol over which the flow of frames is controlled.
   // @Return : indicates if the stream was created.
-  zx_status_t IspCreateOutputStream(
-      const buffer_collection_info_t* buffer_collection,
-      const frame_rate_t* rate, stream_type_t type,
-      const output_stream_callback_t* stream, output_stream_protocol_t* out_s);
+  zx_status_t IspCreateOutputStream(const buffer_collection_info_t* buffer_collection,
+                                    const frame_rate_t* rate, stream_type_t type,
+                                    const output_stream_callback_t* stream,
+                                    output_stream_protocol_t* out_s);
 
   // Functions to service the output_stream_protocol interface:
 
@@ -152,7 +150,7 @@ class ArmIspDevice : public IspDeviceType,
   zx_status_t StopStreaming();
 
   // Get the DMA Manager associated with stream type |type|.
-  DmaManager *GetStream(stream_type_t type);
+  DmaManager* GetStream(stream_type_t type);
 
   // Functions used by the debugging / testing interface:
   // Returns all the current registers written into a struct for analysis.
@@ -183,7 +181,7 @@ class ArmIspDevice : public IspDeviceType,
   fbl::unique_ptr<camera::DmaManager> downscaled_dma_;
   bool streaming_ = false;
 
-  //TODO(CAM-88): Formalize isp sub-block ownership.
+  // TODO(CAM-88): Formalize isp sub-block ownership.
   GammaRgbRegisters gamma_rgb_fr_regs_;
   GammaRgbRegisters gamma_rgb_ds_regs_;
 

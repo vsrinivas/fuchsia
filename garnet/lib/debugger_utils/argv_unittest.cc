@@ -35,8 +35,7 @@ TEST(Argv, BuildFromCStrings) {
 
   const char* const multiple_args[] = {"a", "b", "c"};
   const Argv expected_multiple{"a", "b", "c"};
-  EXPECT_EQ(BuildArgv(multiple_args, arraysize(multiple_args)),
-            expected_multiple);
+  EXPECT_EQ(BuildArgv(multiple_args, arraysize(multiple_args)), expected_multiple);
 }
 
 TEST(Argv, ArgvToString) {

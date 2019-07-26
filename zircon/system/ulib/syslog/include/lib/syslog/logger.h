@@ -33,27 +33,27 @@ __BEGIN_CDECLS
 // Specifies the destination to which log messages should be written.
 // Multiple destinations may be used concurrently.
 typedef struct fx_logger_config {
-    // The minimum log severity.
-    // Log messages with lower severity will be discarded.
-    fx_log_severity_t min_severity;
+  // The minimum log severity.
+  // Log messages with lower severity will be discarded.
+  fx_log_severity_t min_severity;
 
-    // The file descriptor to which formatted log messages should be written,
-    // or -1 if log messages should not be written to the console.
-    // logger takes ownership of this fd.
-    int console_fd;
+  // The file descriptor to which formatted log messages should be written,
+  // or -1 if log messages should not be written to the console.
+  // logger takes ownership of this fd.
+  int console_fd;
 
-    // The FIDL log service channel to which the logger should connect, or
-    // |ZX_HANDLE_INVALID| if the logger should not connect to the log service.
-    // logger takes ownership of this handle.
-    zx_handle_t log_service_channel;
+  // The FIDL log service channel to which the logger should connect, or
+  // |ZX_HANDLE_INVALID| if the logger should not connect to the log service.
+  // logger takes ownership of this handle.
+  zx_handle_t log_service_channel;
 
-    // An array of tag strings to associate with all messages written
-    // by this logger.  Tags will be truncated if they are (individually) longer
-    // than |FX_LOG_MAX_TAG_LEN|.
-    const char** tags;
+  // An array of tag strings to associate with all messages written
+  // by this logger.  Tags will be truncated if they are (individually) longer
+  // than |FX_LOG_MAX_TAG_LEN|.
+  const char** tags;
 
-    // Number of tag strings.  Must be no more than |FX_LOG_MAX_TAGS|.
-    size_t num_tags;
+  // Number of tag strings.  Must be no more than |FX_LOG_MAX_TAGS|.
+  size_t num_tags;
 } fx_logger_config_t;
 
 // Opaque type representing a logger object.
@@ -64,8 +64,7 @@ typedef struct fx_logger fx_logger_t;
 // This will return ZX_ERR_INVALID_ARGS if |num_tags| is more than
 // |FX_LOG_MAX_TAGS| and return |ZX_ERR_INTERNAL} if dup fails.
 // |config| can be safely deleted after this function returns.
-zx_status_t fx_logger_create(const fx_logger_config_t* config,
-                             fx_logger_t** out_logger);
+zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out_logger);
 
 // Destroys a logger object.
 //
@@ -77,8 +76,7 @@ void fx_logger_destroy(fx_logger_t* logger);
 fx_log_severity_t fx_logger_get_min_severity(fx_logger_t* logger);
 
 // Sets logger severity
-void fx_logger_set_min_severity(fx_logger_t* logger,
-                                fx_log_severity_t severity);
+void fx_logger_set_min_severity(fx_logger_t* logger, fx_log_severity_t severity);
 
 // Activates fallback mode and logger starts writing to |fallback_fd|.
 // There is no way to revert this action.
@@ -88,8 +86,7 @@ void fx_logger_set_min_severity(fx_logger_t* logger,
 // stderr if -1 is provided.
 //
 // This function is thread unsafe.
-void fx_logger_activate_fallback(fx_logger_t* logger,
-                                 int fallback_fd);
+void fx_logger_activate_fallback(fx_logger_t* logger, int fallback_fd);
 
 // Writes formatted message to a logger.
 // The message will be discarded if |severity| is less than the logger's
@@ -98,8 +95,8 @@ void fx_logger_activate_fallback(fx_logger_t* logger,
 // log message.
 // The |tag| will be truncated if it is longer than |FX_LOG_MAX_TAG_LEN|.
 // No message is written if |message| is NULL.
-zx_status_t fx_logger_logf(fx_logger_t* logger, fx_log_severity_t severity,
-                           const char* tag, const char* msg, ...);
+zx_status_t fx_logger_logf(fx_logger_t* logger, fx_log_severity_t severity, const char* tag,
+                           const char* msg, ...);
 
 // Writes formatted message to a logger using varargs.
 // The message will be discarded if |severity| is less than the logger's
@@ -108,8 +105,8 @@ zx_status_t fx_logger_logf(fx_logger_t* logger, fx_log_severity_t severity,
 // log message.
 // The |tag| will be truncated if it is longer than |FX_LOG_MAX_TAG_LEN|.
 // No message is written if |message| is NULL.
-zx_status_t fx_logger_logvf(fx_logger_t* logger, fx_log_severity_t severity,
-                            const char* tag, const char* msg, va_list args);
+zx_status_t fx_logger_logvf(fx_logger_t* logger, fx_log_severity_t severity, const char* tag,
+                            const char* msg, va_list args);
 
 // Writes a message to a logger.
 // The message will be discarded if |severity| is less than the logger's
@@ -118,9 +115,9 @@ zx_status_t fx_logger_logvf(fx_logger_t* logger, fx_log_severity_t severity,
 // log message.
 // The |tag| will be truncated if it is longer than |FX_LOG_MAX_TAG_LEN|.
 // No message is written if |message| is NULL.
-zx_status_t fx_logger_log(fx_logger_t* logger, fx_log_severity_t severity,
-                          const char* tag, const char* msg);
+zx_status_t fx_logger_log(fx_logger_t* logger, fx_log_severity_t severity, const char* tag,
+                          const char* msg);
 
 __END_CDECLS
 
-#endif // LIB_SYSLOG_LOGGER_H_
+#endif  // LIB_SYSLOG_LOGGER_H_

@@ -13,9 +13,9 @@ namespace rtl88xx {
 // the register with and mapping offset.
 template <typename ValueTypeT, uint16_t Offset>
 class Register : public common::AddressableBitField<uint16_t, ValueTypeT, Offset> {
-   public:
-    using ValueType = ValueTypeT;
-    constexpr Register() = default;
+ public:
+  using ValueType = ValueTypeT;
+  constexpr Register() = default;
 };
 
 }  // namespace rtl88xx

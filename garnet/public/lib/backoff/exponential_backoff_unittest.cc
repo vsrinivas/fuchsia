@@ -27,8 +27,7 @@ class ExponentialBackoffTest : public ::testing::Test {
 };
 
 TEST_F(ExponentialBackoffTest, GrowExponentionally) {
-  ExponentialBackoff backoff(kDefaultInitialValue, 2, zx::duration::infinite(),
-                             GetSeed);
+  ExponentialBackoff backoff(kDefaultInitialValue, 2, zx::duration::infinite(), GetSeed);
 
   int factor = 1;
   for (size_t i = 0; i < 5u; i++) {
@@ -40,8 +39,7 @@ TEST_F(ExponentialBackoffTest, GrowExponentionally) {
 }
 
 TEST_F(ExponentialBackoffTest, Reset) {
-  ExponentialBackoff backoff(kDefaultInitialValue, 2, zx::duration::infinite(),
-                             GetSeed);
+  ExponentialBackoff backoff(kDefaultInitialValue, 2, zx::duration::infinite(), GetSeed);
 
   for (size_t i = 0; i < 4; ++i) {
     zx::duration delay = backoff.GetNext();
@@ -52,8 +50,7 @@ TEST_F(ExponentialBackoffTest, Reset) {
 }
 
 TEST_F(ExponentialBackoffTest, NoOverflow) {
-  ExponentialBackoff backoff(kDefaultInitialValue, 2, zx::duration::infinite(),
-                             GetSeed);
+  ExponentialBackoff backoff(kDefaultInitialValue, 2, zx::duration::infinite(), GetSeed);
 
   zx::duration previous = backoff.GetNext();
   for (size_t i = 0; i < 200u; i++) {

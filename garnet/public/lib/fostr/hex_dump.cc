@@ -32,14 +32,12 @@ std::ostream& operator<<(std::ostream& os, const HexDump& value) {
   }
 
   if (bytes_remaining == 0) {
-    return os << "<zero bytes at " << std::hex << std::setw(address_width)
-              << std::setfill('0') << address << std::setfill(' ') << std::dec
-              << ">";
+    return os << "<zero bytes at " << std::hex << std::setw(address_width) << std::setfill('0')
+              << address << std::setfill(' ') << std::dec << ">";
   }
 
   while (true) {
-    os << NewLine << std::hex << std::setw(address_width) << std::setfill('0')
-       << address << " ";
+    os << NewLine << std::hex << std::setw(address_width) << std::setfill('0') << address << " ";
 
     std::string chars(kBytesPerLine, ' ');
 
@@ -51,8 +49,7 @@ std::ostream& operator<<(std::ostream& os, const HexDump& value) {
       if (i >= bytes_remaining) {
         os << "   ";
       } else {
-        os << " " << std::setw(2) << std::setfill('0')
-           << static_cast<uint16_t>(*bytes);
+        os << " " << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(*bytes);
         if (*bytes >= ' ' && *bytes <= '~') {
           chars[i] = *bytes;
         } else {

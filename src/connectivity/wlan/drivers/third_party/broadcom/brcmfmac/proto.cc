@@ -24,40 +24,40 @@
 #include "linuxisms.h"
 
 zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
-    struct brcmf_proto* proto;
+  struct brcmf_proto* proto;
 
-    BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(TRACE, "Enter\n");
 
-    proto = static_cast<decltype(proto)>(calloc(1, sizeof(*proto)));
-    if (!proto) {
-        goto fail;
-    }
+  proto = static_cast<decltype(proto)>(calloc(1, sizeof(*proto)));
+  if (!proto) {
+    goto fail;
+  }
 
-    drvr->proto = proto;
+  drvr->proto = proto;
 
-    if (brcmf_proto_bcdc_attach(drvr)) {
-        goto fail;
-    }
-    if (!proto->tx_queue_data || (proto->hdrpull == NULL) || (proto->query_dcmd == NULL) ||
-            (proto->set_dcmd == NULL) || (proto->configure_addr_mode == NULL) ||
-            (proto->delete_peer == NULL) || (proto->add_tdls_peer == NULL)) {
-        BRCMF_ERR("Not all proto handlers have been installed\n");
-        goto fail;
-    }
-    return ZX_OK;
+  if (brcmf_proto_bcdc_attach(drvr)) {
+    goto fail;
+  }
+  if (!proto->tx_queue_data || (proto->hdrpull == NULL) || (proto->query_dcmd == NULL) ||
+      (proto->set_dcmd == NULL) || (proto->configure_addr_mode == NULL) ||
+      (proto->delete_peer == NULL) || (proto->add_tdls_peer == NULL)) {
+    BRCMF_ERR("Not all proto handlers have been installed\n");
+    goto fail;
+  }
+  return ZX_OK;
 
 fail:
-    free(proto);
-    drvr->proto = NULL;
-    return ZX_ERR_NO_MEMORY;
+  free(proto);
+  drvr->proto = NULL;
+  return ZX_ERR_NO_MEMORY;
 }
 
 void brcmf_proto_detach(struct brcmf_pub* drvr) {
-    BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(TRACE, "Enter\n");
 
-    if (drvr->proto) {
-        brcmf_proto_bcdc_detach(drvr);
-        free(drvr->proto);
-        drvr->proto = NULL;
-    }
+  if (drvr->proto) {
+    brcmf_proto_bcdc_detach(drvr);
+    free(drvr->proto);
+    drvr->proto = NULL;
+  }
 }

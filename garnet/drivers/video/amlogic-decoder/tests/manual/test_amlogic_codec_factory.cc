@@ -40,9 +40,8 @@ void test_factory() {
   // thread's default async_t, and we don't want to be accidentally doing
   // FIDL requests from the main thread, so we use
   // kAsyncLoopConfigNoAttachToThread above.
-  PostSerial(fidl_loop.dispatcher(), [&component_context] {
-    component_context = sys::ComponentContext::Create();
-  });
+  PostSerial(fidl_loop.dispatcher(),
+             [&component_context] { component_context = sys::ComponentContext::Create(); });
 
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   codec_factory.set_error_handler([](zx_status_t error) {
@@ -55,10 +54,8 @@ void test_factory() {
   // won't be any longer, so call from FIDL thread instead.
   PostSerial(
       fidl_loop.dispatcher(),
-      [&component_context,
-       request = codec_factory.NewRequest(fidl_loop.dispatcher())]() mutable {
-        component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(
-            std::move(request));
+      [&component_context, request = codec_factory.NewRequest(fidl_loop.dispatcher())]() mutable {
+        component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(std::move(request));
       });
 
   fuchsia::media::StreamProcessorPtr codec;
@@ -78,9 +75,7 @@ void test_factory() {
            .input_details.mime_type = "video/h264",
            .promise_separate_access_units_on_input = true,
            .require_hw = true,
-       }]() mutable {
-        codec_factory->CreateDecoder(std::move(params), std::move(request));
-      });
+       }]() mutable { codec_factory->CreateDecoder(std::move(params), std::move(request)); });
 
   // Use FIDL thread to check that codec can communicate to the driver
   // round-trip.  The other-thread usage is a bit unnatural here, but we want to
@@ -89,17 +84,17 @@ void test_factory() {
   std::mutex is_sync_done_lock;
   bool is_sync_done = false;
   std::condition_variable is_sync_done_condition;
-  PostSerial(fidl_loop.dispatcher(), [&codec, &is_sync_done_lock, &is_sync_done,
-                                      &is_sync_done_condition] {
-    codec->Sync([&is_sync_done_lock, &is_sync_done, &is_sync_done_condition] {
-      printf("codec->Sync() completing (FIDL thread)\n");
-      {  // scope lock
-        std::unique_lock<std::mutex> lock(is_sync_done_lock);
-        is_sync_done = true;
-      }  // ~lock
-      is_sync_done_condition.notify_all();
-    });
-  });
+  PostSerial(fidl_loop.dispatcher(),
+             [&codec, &is_sync_done_lock, &is_sync_done, &is_sync_done_condition] {
+               codec->Sync([&is_sync_done_lock, &is_sync_done, &is_sync_done_condition] {
+                 printf("codec->Sync() completing (FIDL thread)\n");
+                 {  // scope lock
+                   std::unique_lock<std::mutex> lock(is_sync_done_lock);
+                   is_sync_done = true;
+                 }  // ~lock
+                 is_sync_done_condition.notify_all();
+               });
+             });
 
   // Wait for Sync() to be done, or a channel to fail (in which case the error
   // handler(s) will exit(-1) and fail the test).

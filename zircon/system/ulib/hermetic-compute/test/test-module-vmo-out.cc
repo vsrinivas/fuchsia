@@ -7,8 +7,8 @@
 #include <cstring>
 
 struct TestEngine : public HermeticComputeEngine<TestEngine, void*, size_t> {
-    int64_t operator()(void* data, size_t size) {
-        memset(data, 42, size);
-        return 0;
-    }
+  int64_t operator()(void* data, size_t size) {
+    memset(data, 42, size);
+    return 0;
+  }
 };

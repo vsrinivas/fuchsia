@@ -19,8 +19,7 @@ std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json);
 
 // Validate that the given json value match the given schema.
 // If not empty, |value_name| is printed in the log should the validation fail.
-bool ValidateSchema(const rapidjson::Value& value,
-                    const rapidjson::SchemaDocument& schema,
+bool ValidateSchema(const rapidjson::Value& value, const rapidjson::SchemaDocument& schema,
                     fxl::StringView value_name = "");
 
 }  // namespace rapidjson_utils

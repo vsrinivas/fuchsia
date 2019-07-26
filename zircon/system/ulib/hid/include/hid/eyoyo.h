@@ -22,16 +22,16 @@ __BEGIN_CDECLS
 #define EYOYO_Y_MAX 32767
 
 typedef struct eyoyo_finger {
-    uint8_t finger_id;
-    uint16_t x;
-    uint16_t y;
+  uint8_t finger_id;
+  uint16_t x;
+  uint16_t y;
 } __attribute__((packed)) eyoyo_finger_t;
 
 typedef struct eyoyo_touch {
-    uint8_t rpt_id;
-    eyoyo_finger_t fingers[10];
-    uint8_t unknown0;
-    uint16_t unknown1;
+  uint8_t rpt_id;
+  eyoyo_finger_t fingers[10];
+  uint8_t unknown0;
+  uint16_t unknown1;
 } __attribute__((packed)) eyoyo_touch_t;
 
 bool is_eyoyo_touch_report_desc(const uint8_t* data, size_t len);

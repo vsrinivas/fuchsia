@@ -13,10 +13,10 @@ namespace fs_metrics {
 namespace internal {
 
 // Returns the appropiate histogram for an event.
-cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>*
-SelectHistogram(const Event event, fs_metrics::VnodeMetrics* metrics);
+cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* SelectHistogram(
+    const Event event, fs_metrics::VnodeMetrics* metrics);
 
-} // namespace internal
+}  // namespace internal
 
 // This class allows clients to create a single filesystem event that creates metrics for both the
 // inspect API and Cobalt instrumentation. This is intended to make it easier to measure events for
@@ -28,30 +28,30 @@ SelectHistogram(const Event event, fs_metrics::VnodeMetrics* metrics);
 // 'Broker Service.' Clients who do not currently export Cobalt metrics should prefer using this
 // Inspect API directly.
 class CompositeLatencyEvent {
-public:
-    CompositeLatencyEvent() = delete;
-    CompositeLatencyEvent(Event event, Histograms* histogram_collection,
-                          fs_metrics::VnodeMetrics* metrics);
-    CompositeLatencyEvent(const CompositeLatencyEvent&) = delete;
-    CompositeLatencyEvent(CompositeLatencyEvent&&) = default;
-    CompositeLatencyEvent& operator=(const CompositeLatencyEvent&) = delete;
-    CompositeLatencyEvent& operator=(CompositeLatencyEvent&&) = delete;
-    ~CompositeLatencyEvent();
+ public:
+  CompositeLatencyEvent() = delete;
+  CompositeLatencyEvent(Event event, Histograms* histogram_collection,
+                        fs_metrics::VnodeMetrics* metrics);
+  CompositeLatencyEvent(const CompositeLatencyEvent&) = delete;
+  CompositeLatencyEvent(CompositeLatencyEvent&&) = default;
+  CompositeLatencyEvent& operator=(const CompositeLatencyEvent&) = delete;
+  CompositeLatencyEvent& operator=(CompositeLatencyEvent&&) = delete;
+  ~CompositeLatencyEvent();
 
-    // Resets start for the latency event.
-    void Reset();
+  // Resets start for the latency event.
+  void Reset();
 
-    // Prevents the latency event from being recorded.
-    void Cancel();
+  // Prevents the latency event from being recorded.
+  void Cancel();
 
-    LatencyEvent* mutable_latency_event() { return &inspect_event_; }
-    cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* mutable_histogram() {
-        return cobalt_histogram_;
-    }
+  LatencyEvent* mutable_latency_event() { return &inspect_event_; }
+  cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* mutable_histogram() {
+    return cobalt_histogram_;
+  }
 
-private:
-    LatencyEvent inspect_event_;
-    cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* cobalt_histogram_;
+ private:
+  LatencyEvent inspect_event_;
+  cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* cobalt_histogram_;
 };
 
-} // namespace fs_metrics
+}  // namespace fs_metrics

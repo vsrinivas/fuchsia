@@ -8,7 +8,6 @@
 #include <unittest/unittest.h>
 
 int main(int argc, char** argv) {
-    return fs_test_utils::RunWithMemFs([argc, argv]() {
-        return unittest_run_all_tests(argc, argv) ? 0 : -1;
-    });
+  return fs_test_utils::RunWithMemFs(
+      [argc, argv]() { return unittest_run_all_tests(argc, argv) ? 0 : -1; });
 }

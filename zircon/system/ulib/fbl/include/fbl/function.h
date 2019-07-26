@@ -22,118 +22,108 @@ namespace internal {
 // comparing a T value with nullptr.
 template <typename T, typename Comparison = bool>
 struct NullEq {
-    static constexpr bool Test(const T&) { return false; }
+  static constexpr bool Test(const T&) { return false; }
 };
 
 // Partial specialization for |T| values comparable to nullptr.
 template <typename T>
 struct NullEq<T, decltype(*static_cast<T*>(nullptr) == nullptr)> {
-    // This is intended for a T that's a function pointer type.  However, it
-    // also matches for a T that can be implicitly coerced to a function
-    // pointer type, such as a function type or a captureless lambda's closure
-    // type.  In that case, the compiler might complain that the comparison is
-    // always false because the address of a function can never be a null
-    // pointer.  It's possible to do template selection to match function
-    // types, but it's not possible to match captureless lambda closure types
-    // that way.  So just suppress the warning.  The compiler will optimize
-    // away the always-false comparison.
+  // This is intended for a T that's a function pointer type.  However, it
+  // also matches for a T that can be implicitly coerced to a function
+  // pointer type, such as a function type or a captureless lambda's closure
+  // type.  In that case, the compiler might complain that the comparison is
+  // always false because the address of a function can never be a null
+  // pointer.  It's possible to do template selection to match function
+  // types, but it's not possible to match captureless lambda closure types
+  // that way.  So just suppress the warning.  The compiler will optimize
+  // away the always-false comparison.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Waddress"
-    static constexpr bool Test(const T& v) { return v == nullptr; }
+  static constexpr bool Test(const T& v) { return v == nullptr; }
 #pragma GCC diagnostic pop
 };
 
 template <typename T>
 static constexpr bool IsNull(const T& v) {
-    return NullEq<T>::Test(v);
+  return NullEq<T>::Test(v);
 }
 
 template <typename Result, typename... Args>
 class FunctionTarget {
-public:
-    FunctionTarget() = default;
-    virtual ~FunctionTarget() = default;
+ public:
+  FunctionTarget() = default;
+  virtual ~FunctionTarget() = default;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(FunctionTarget);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(FunctionTarget);
 
-    virtual bool is_null() const = 0;
+  virtual bool is_null() const = 0;
 
-    virtual Result operator()(Args... args) const = 0;
+  virtual Result operator()(Args... args) const = 0;
 
-    virtual void MoveInitializeTo(void* ptr) = 0;
+  virtual void MoveInitializeTo(void* ptr) = 0;
 };
 
 template <typename Result, typename... Args>
 class NullFunctionTarget final : public FunctionTarget<Result, Args...> {
-public:
-    NullFunctionTarget() = default;
-    ~NullFunctionTarget() final = default;
+ public:
+  NullFunctionTarget() = default;
+  ~NullFunctionTarget() final = default;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(NullFunctionTarget);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(NullFunctionTarget);
 
-    bool is_null() const final { return true; }
+  bool is_null() const final { return true; }
 
-    Result operator()(Args... args) const final {
-        ZX_PANIC("Attempted to invoke fbl::Function with a null target.");
-    }
+  Result operator()(Args... args) const final {
+    ZX_PANIC("Attempted to invoke fbl::Function with a null target.");
+  }
 
-    void MoveInitializeTo(void* ptr) final {
-        new (ptr) NullFunctionTarget();
-    }
+  void MoveInitializeTo(void* ptr) final { new (ptr) NullFunctionTarget(); }
 };
 
 template <typename Callable, typename Result, typename... Args>
 class InlineFunctionTarget final : public FunctionTarget<Result, Args...> {
-public:
-    explicit InlineFunctionTarget(Callable target)
-        : target_(std::move(target)) {}
-    InlineFunctionTarget(Callable target, AllocChecker* ac)
-        : target_(std::move(target)) { ac->arm(0U, true); }
-    InlineFunctionTarget(InlineFunctionTarget&& other)
-        : target_(std::move(other.target_)) {}
-    ~InlineFunctionTarget() final = default;
+ public:
+  explicit InlineFunctionTarget(Callable target) : target_(std::move(target)) {}
+  InlineFunctionTarget(Callable target, AllocChecker* ac) : target_(std::move(target)) {
+    ac->arm(0U, true);
+  }
+  InlineFunctionTarget(InlineFunctionTarget&& other) : target_(std::move(other.target_)) {}
+  ~InlineFunctionTarget() final = default;
 
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(InlineFunctionTarget);
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(InlineFunctionTarget);
 
-    bool is_null() const final { return false; }
+  bool is_null() const final { return false; }
 
-    Result operator()(Args... args) const final {
-        return target_(std::forward<Args>(args)...);
-    }
+  Result operator()(Args... args) const final { return target_(std::forward<Args>(args)...); }
 
-    void MoveInitializeTo(void* ptr) final {
-        new (ptr) InlineFunctionTarget(std::move(*this));
-    }
+  void MoveInitializeTo(void* ptr) final { new (ptr) InlineFunctionTarget(std::move(*this)); }
 
-private:
-    mutable Callable target_;
+ private:
+  mutable Callable target_;
 };
 
 template <typename Callable, typename Result, typename... Args>
 class HeapFunctionTarget final : public FunctionTarget<Result, Args...> {
-public:
-    explicit HeapFunctionTarget(Callable target)
-        : target_ptr_(std::make_unique<Callable>(std::move(target))) {}
-    HeapFunctionTarget(Callable target, AllocChecker* ac)
-        : target_ptr_(fbl::make_unique_checked<Callable>(ac, std::move(target))) {}
-    HeapFunctionTarget(HeapFunctionTarget&& other)
-        : target_ptr_(std::move(other.target_ptr_)) {}
-    ~HeapFunctionTarget() final = default;
+ public:
+  explicit HeapFunctionTarget(Callable target)
+      : target_ptr_(std::make_unique<Callable>(std::move(target))) {}
+  HeapFunctionTarget(Callable target, AllocChecker* ac)
+      : target_ptr_(fbl::make_unique_checked<Callable>(ac, std::move(target))) {}
+  HeapFunctionTarget(HeapFunctionTarget&& other) : target_ptr_(std::move(other.target_ptr_)) {}
+  ~HeapFunctionTarget() final = default;
 
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(HeapFunctionTarget);
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(HeapFunctionTarget);
 
-    bool is_null() const final { return false; }
+  bool is_null() const final { return false; }
 
-    Result operator()(Args... args) const final {
-        return (*target_ptr_)(std::forward<Args>(args)...);
-    }
+  Result operator()(Args... args) const final {
+    return (*target_ptr_)(std::forward<Args>(args)...);
+  }
 
-    void MoveInitializeTo(void* ptr) final {
-        new (ptr) HeapFunctionTarget(std::move(*this));
-    }
+  void MoveInitializeTo(void* ptr) final { new (ptr) HeapFunctionTarget(std::move(*this)); }
 
-private:
-    fbl::unique_ptr<Callable> target_ptr_;
+ private:
+  fbl::unique_ptr<Callable> target_ptr_;
 };
 
 // Holds a function target.
@@ -141,50 +131,48 @@ private:
 // Otherwise it will be stored as a |HeapFunctionTarget|.
 template <size_t target_size, typename Result, typename... Args>
 struct FunctionTargetHolder final {
-    FunctionTargetHolder() = default;
+  FunctionTargetHolder() = default;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(FunctionTargetHolder);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(FunctionTargetHolder);
 
-    void InitializeNullTarget() {
-        using NullFunctionTarget = fbl::internal::NullFunctionTarget<Result, Args...>;
-        static_assert(sizeof(NullFunctionTarget) <= target_size,
-                      "NullFunctionTarget should fit in FunctionTargetHolder.");
-        new (&bits_) NullFunctionTarget();
-    }
+  void InitializeNullTarget() {
+    using NullFunctionTarget = fbl::internal::NullFunctionTarget<Result, Args...>;
+    static_assert(sizeof(NullFunctionTarget) <= target_size,
+                  "NullFunctionTarget should fit in FunctionTargetHolder.");
+    new (&bits_) NullFunctionTarget();
+  }
 
-    template <typename Callable>
-    struct TargetHelper {
-        using InlineFunctionTarget = fbl::internal::InlineFunctionTarget<Callable, Result, Args...>;
-        using HeapFunctionTarget = fbl::internal::HeapFunctionTarget<Callable, Result, Args...>;
-        static constexpr bool can_inline = (sizeof(InlineFunctionTarget) <= target_size);
-        using Type = std::conditional_t<can_inline, InlineFunctionTarget, HeapFunctionTarget>;
-        static_assert(sizeof(Type) <= target_size, "Target should fit in FunctionTargetHolder.");
-    };
+  template <typename Callable>
+  struct TargetHelper {
+    using InlineFunctionTarget = fbl::internal::InlineFunctionTarget<Callable, Result, Args...>;
+    using HeapFunctionTarget = fbl::internal::HeapFunctionTarget<Callable, Result, Args...>;
+    static constexpr bool can_inline = (sizeof(InlineFunctionTarget) <= target_size);
+    using Type = std::conditional_t<can_inline, InlineFunctionTarget, HeapFunctionTarget>;
+    static_assert(sizeof(Type) <= target_size, "Target should fit in FunctionTargetHolder.");
+  };
 
-    template <typename Callable>
-    void InitializeTarget(Callable target) {
-        new (&bits_) typename TargetHelper<Callable>::Type(std::move(target));
-    }
+  template <typename Callable>
+  void InitializeTarget(Callable target) {
+    new (&bits_) typename TargetHelper<Callable>::Type(std::move(target));
+  }
 
-    template <typename Callable>
-    void InitializeTarget(Callable target, AllocChecker* ac) {
-        new (&bits_) typename TargetHelper<Callable>::Type(std::move(target), ac);
-    }
+  template <typename Callable>
+  void InitializeTarget(Callable target, AllocChecker* ac) {
+    new (&bits_) typename TargetHelper<Callable>::Type(std::move(target), ac);
+  }
 
-    void MoveInitializeTargetFrom(FunctionTargetHolder& other) {
-        other.target().MoveInitializeTo(&bits_);
-    }
+  void MoveInitializeTargetFrom(FunctionTargetHolder& other) {
+    other.target().MoveInitializeTo(&bits_);
+  }
 
-    void DestroyTarget() {
-        target().~FunctionTarget();
-    }
+  void DestroyTarget() { target().~FunctionTarget(); }
 
-    using FunctionTarget = fbl::internal::FunctionTarget<Result, Args...>;
-    FunctionTarget& target() { return *reinterpret_cast<FunctionTarget*>(&bits_); }
-    const FunctionTarget& target() const { return *reinterpret_cast<const FunctionTarget*>(&bits_); }
+  using FunctionTarget = fbl::internal::FunctionTarget<Result, Args...>;
+  FunctionTarget& target() { return *reinterpret_cast<FunctionTarget*>(&bits_); }
+  const FunctionTarget& target() const { return *reinterpret_cast<const FunctionTarget*>(&bits_); }
 
-private:
-    alignas(max_align_t) union { char data[target_size]; } bits_;
+ private:
+  alignas(max_align_t) union { char data[target_size]; } bits_;
 };
 
 template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
@@ -192,136 +180,127 @@ class Function;
 
 template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
 class Function<inline_callable_size, require_inline, Result(Args...)> {
-    struct FakeCallable {
-        alignas(max_align_t) char bits[fbl::round_up(inline_callable_size, sizeof(void*))];
-    };
-    static constexpr size_t inline_target_size =
-        sizeof(InlineFunctionTarget<FakeCallable, Result, Args...>);
-    static constexpr size_t heap_target_size =
-        sizeof(HeapFunctionTarget<FakeCallable, Result, Args...>);
-    static constexpr size_t target_size = require_inline ? inline_target_size
-                                                         : fbl::max(inline_target_size, heap_target_size);
-    using TargetHolder = FunctionTargetHolder<target_size, Result, Args...>;
+  struct FakeCallable {
+    alignas(max_align_t) char bits[fbl::round_up(inline_callable_size, sizeof(void*))];
+  };
+  static constexpr size_t inline_target_size =
+      sizeof(InlineFunctionTarget<FakeCallable, Result, Args...>);
+  static constexpr size_t heap_target_size =
+      sizeof(HeapFunctionTarget<FakeCallable, Result, Args...>);
+  static constexpr size_t target_size =
+      require_inline ? inline_target_size : fbl::max(inline_target_size, heap_target_size);
+  using TargetHolder = FunctionTargetHolder<target_size, Result, Args...>;
 
-public:
-    using result_type = Result;
+ public:
+  using result_type = Result;
 
-    Function() { holder_.InitializeNullTarget(); }
+  Function() { holder_.InitializeNullTarget(); }
 
-    Function(decltype(nullptr)) { holder_.InitializeNullTarget(); }
+  Function(decltype(nullptr)) { holder_.InitializeNullTarget(); }
 
-    Function(Function&& other) {
-        holder_.MoveInitializeTargetFrom(other.holder_);
-        other.holder_.InitializeNullTarget();
+  Function(Function&& other) {
+    holder_.MoveInitializeTargetFrom(other.holder_);
+    other.holder_.InitializeNullTarget();
+  }
+
+  template <typename Callable>
+  Function(Callable target) {
+    InitializeTarget(std::move(target));
+  }
+
+  template <typename Callable>
+  Function(Callable target, AllocChecker* ac) {
+    InitializeTarget(std::move(target), ac);
+  }
+
+  ~Function() { holder_.DestroyTarget(); }
+
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Function);
+
+  explicit operator bool() const { return !holder_.target().is_null(); }
+
+  Result operator()(Args... args) const { return holder_.target()(std::forward<Args>(args)...); }
+
+  Function& operator=(decltype(nullptr)) {
+    holder_.DestroyTarget();
+    holder_.InitializeNullTarget();
+    return *this;
+  }
+
+  Function& operator=(Function&& other) {
+    holder_.DestroyTarget();
+    holder_.MoveInitializeTargetFrom(other.holder_);
+    other.holder_.InitializeNullTarget();
+    return *this;
+  }
+
+  template <typename Callable>
+  Function& operator=(Callable target) {
+    SetTarget(std::move(target));
+    return *this;
+  }
+
+  template <typename Callable>
+  void SetTarget(Callable target) {
+    holder_.DestroyTarget();
+    InitializeTarget(std::move(target));
+  }
+
+  template <typename Callable>
+  void SetTarget(Callable target, AllocChecker* ac) {
+    holder_.DestroyTarget();
+    InitializeTarget(std::move(target), ac);
+  }
+
+  void swap(Function& other) {
+    TargetHolder temp;
+    temp.MoveInitializeTargetFrom(holder_);
+    holder_.MoveInitializeTargetFrom(other.holder_);
+    other.holder_.MoveInitializeTargetFrom(temp);
+  }
+
+ private:
+  template <typename Callable>
+  void InitializeTarget(Callable target) {
+    static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
+                  "Callable too large for InlineFunction.");
+    if (IsNull(target)) {
+      holder_.InitializeNullTarget();
+    } else {
+      holder_.InitializeTarget(std::move(target));
     }
+  }
 
-    template <typename Callable>
-    Function(Callable target) {
-        InitializeTarget(std::move(target));
+  template <typename Callable>
+  void InitializeTarget(Callable target, AllocChecker* ac) {
+    static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
+                  "Callable too large for InlineFunction.");
+    if (IsNull(target)) {
+      holder_.InitializeNullTarget();
+    } else {
+      holder_.InitializeTarget(std::move(target), ac);
     }
+  }
 
-    template <typename Callable>
-    Function(Callable target, AllocChecker* ac) {
-        InitializeTarget(std::move(target), ac);
-    }
-
-    ~Function() {
-        holder_.DestroyTarget();
-    }
-
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Function);
-
-    explicit operator bool() const {
-        return !holder_.target().is_null();
-    }
-
-    Result operator()(Args... args) const {
-        return holder_.target()(std::forward<Args>(args)...);
-    }
-
-    Function& operator=(decltype(nullptr)) {
-        holder_.DestroyTarget();
-        holder_.InitializeNullTarget();
-        return *this;
-    }
-
-    Function& operator=(Function&& other) {
-        holder_.DestroyTarget();
-        holder_.MoveInitializeTargetFrom(other.holder_);
-        other.holder_.InitializeNullTarget();
-        return *this;
-    }
-
-    template <typename Callable>
-    Function& operator=(Callable target) {
-        SetTarget(std::move(target));
-        return *this;
-    }
-
-    template <typename Callable>
-    void SetTarget(Callable target) {
-        holder_.DestroyTarget();
-        InitializeTarget(std::move(target));
-    }
-
-    template <typename Callable>
-    void SetTarget(Callable target, AllocChecker* ac) {
-        holder_.DestroyTarget();
-        InitializeTarget(std::move(target), ac);
-    }
-
-    void swap(Function& other) {
-        TargetHolder temp;
-        temp.MoveInitializeTargetFrom(holder_);
-        holder_.MoveInitializeTargetFrom(other.holder_);
-        other.holder_.MoveInitializeTargetFrom(temp);
-    }
-
-private:
-    template <typename Callable>
-    void InitializeTarget(Callable target) {
-        static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
-                      "Callable too large for InlineFunction.");
-        if (IsNull(target)) {
-            holder_.InitializeNullTarget();
-        } else {
-            holder_.InitializeTarget(std::move(target));
-        }
-    }
-
-    template <typename Callable>
-    void InitializeTarget(Callable target, AllocChecker* ac) {
-        static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
-                      "Callable too large for InlineFunction.");
-        if (IsNull(target)) {
-            holder_.InitializeNullTarget();
-        } else {
-            holder_.InitializeTarget(std::move(target), ac);
-        }
-    }
-
-    TargetHolder holder_;
+  TargetHolder holder_;
 };
 
 // Helper used by |BindMember| to invoke a pointer to member function.
 template <typename R, typename T, typename... Args>
 class MemberInvoker final {
-public:
-    using MemFn = R (T::*)(Args...);
+ public:
+  using MemFn = R (T::*)(Args...);
 
-    MemberInvoker(T* instance, MemFn fn)
-        : instance_(instance), fn_(fn) {}
+  MemberInvoker(T* instance, MemFn fn) : instance_(instance), fn_(fn) {}
 
-    R operator()(Args... args) const {
-        return (instance_->*fn_)(std::forward<Args>(args)...);
-    }
+  R operator()(Args... args) const { return (instance_->*fn_)(std::forward<Args>(args)...); }
 
-private:
-    T* const instance_;
-    MemFn const fn_;
+ private:
+  T* const instance_;
+  MemFn const fn_;
 };
 
-} // namespace internal
+}  // namespace internal
 
 // The default size allowance for callable objects which can be inlined within
 // a function object.  This default allows for inline storage of callables
@@ -434,24 +413,28 @@ using InlineFunction = fbl::internal::Function<inline_callable_size, true, T>;
 
 // Comparing functions with nullptr.
 template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
-bool operator==(const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f,
-                decltype(nullptr)) {
-    return !f;
+bool operator==(
+    const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f,
+    decltype(nullptr)) {
+  return !f;
 }
 template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
-bool operator!=(const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f,
-                decltype(nullptr)) {
-    return !!f;
+bool operator!=(
+    const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f,
+    decltype(nullptr)) {
+  return !!f;
 }
 template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
-bool operator==(decltype(nullptr),
-                const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f) {
-    return !f;
+bool operator==(
+    decltype(nullptr),
+    const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f) {
+  return !f;
 }
 template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
-bool operator!=(decltype(nullptr),
-                const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f) {
-    return !!f;
+bool operator!=(
+    decltype(nullptr),
+    const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f) {
+  return !!f;
 }
 
 // A function which takes no arguments and produces no result.
@@ -483,9 +466,9 @@ using Closure = fbl::Function<void()>;
 // }
 template <typename R, typename T, typename... Args>
 auto BindMember(T* instance, R (T::*fn)(Args...)) {
-    return internal::MemberInvoker<R, T, Args...>(instance, fn);
+  return internal::MemberInvoker<R, T, Args...>(instance, fn);
 }
 
-} // namespace fbl
+}  // namespace fbl
 
 #endif  // FBL_FUNCTION_H_

@@ -21,28 +21,28 @@ class SdmmcRootDevice;
 using SdmmcRootDeviceType = ddk::Device<SdmmcRootDevice, ddk::Unbindable>;
 
 class SdmmcRootDevice : public SdmmcRootDeviceType {
-public:
-    static zx_status_t Bind(void* ctx, zx_device_t* parent);
+ public:
+  static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
-    void DdkUnbind();
-    void DdkRelease();
+  void DdkUnbind();
+  void DdkRelease();
 
-    zx_status_t Init();
+  zx_status_t Init();
 
-private:
-    SdmmcRootDevice(zx_device_t* parent, const ddk::SdmmcProtocolClient& host)
-        : SdmmcRootDeviceType(parent), host_(host) {}
+ private:
+  SdmmcRootDevice(zx_device_t* parent, const ddk::SdmmcProtocolClient& host)
+      : SdmmcRootDeviceType(parent), host_(host) {}
 
-    int WorkerThread();
+  int WorkerThread();
 
-    const ddk::SdmmcProtocolClient host_;
+  const ddk::SdmmcProtocolClient host_;
 
-    thrd_t worker_thread_ = 0;
+  thrd_t worker_thread_ = 0;
 
-    std::atomic<bool> dead_ = false;
+  std::atomic<bool> dead_ = false;
 
-    fbl::RefPtr<SdmmcBlockDevice> block_dev_;
-    fbl::RefPtr<SdioControllerDevice> sdio_dev_;
+  fbl::RefPtr<SdmmcBlockDevice> block_dev_;
+  fbl::RefPtr<SdioControllerDevice> sdio_dev_;
 };
 
 }  // namespace sdmmc

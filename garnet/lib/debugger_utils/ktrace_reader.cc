@@ -23,8 +23,7 @@ int KtraceReadFile(int fd, KtraceRecordReader* reader, void* arg) {
   KtraceRecord rec;
   unsigned offset = 0;
 
-  while (read(fd, rec.raw, sizeof(ktrace_header_t)) ==
-         sizeof(ktrace_header_t)) {
+  while (read(fd, rec.raw, sizeof(ktrace_header_t)) == sizeof(ktrace_header_t)) {
     uint32_t tag = rec.hdr.tag;
     uint32_t len = KTRACE_LEN(tag);
     if (tag == 0) {

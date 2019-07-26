@@ -87,8 +87,7 @@ std::string EncodeString(const fxl::StringView& string) {
 std::vector<uint8_t> DecodeByteArrayString(const fxl::StringView& string) {
   std::vector<uint8_t> result;
   if (string.size() % 2) {
-    FXL_LOG(ERROR)
-        << "Byte array string must have an even number of characters";
+    FXL_LOG(ERROR) << "Byte array string must have an even number of characters";
     return result;
   }
 
@@ -128,12 +127,10 @@ std::string EscapeNonPrintableString(const fxl::StringView& data) {
   return result;
 }
 
-std::string ErrnoString(int err) {
-  return fxl::StringPrintf("%s(%d)", strerror(err), err);
-}
+std::string ErrnoString(int err) { return fxl::StringPrintf("%s(%d)", strerror(err), err); }
 
-size_t JoinStrings(const std::deque<std::string>& strings, const char delimiter,
-                   char* buffer, size_t buffer_size) {
+size_t JoinStrings(const std::deque<std::string>& strings, const char delimiter, char* buffer,
+                   size_t buffer_size) {
   FXL_DCHECK(buffer);
 
   size_t index = 0, count = 0;
@@ -181,9 +178,7 @@ void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr) {
     size_t s = ROUNDUP(MIN(len - count, 16), 4);
     size_t i;
 
-    fprintf(out,
-            ((disp_addr + len) > 0xFFFFFFFF) ? "0x%016" PRIx64 ": "
-                                             : "0x%08" PRIx64 ": ",
+    fprintf(out, ((disp_addr + len) > 0xFFFFFFFF) ? "0x%016" PRIx64 ": " : "0x%08" PRIx64 ": ",
             disp_addr + count);
 
     for (i = 0; i < s / 4; i++) {

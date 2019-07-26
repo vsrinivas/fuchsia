@@ -15,9 +15,9 @@ namespace fzl {
 zx::ticks NsToTicks(zx::duration ns);
 zx::duration TicksToNs(zx::ticks ticks);
 
-} // namespace fzl
+}  // namespace fzl
 
-#endif // _cplusplus
+#endif  // _cplusplus
 
 __BEGIN_CDECLS
 

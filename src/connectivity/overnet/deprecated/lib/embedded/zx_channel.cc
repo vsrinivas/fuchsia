@@ -46,23 +46,20 @@ void ZxChannel::Close(Callback<void> quiesced) {
 
 std::pair<ClosedPtr<ZxChannel>, ClosedPtr<ZxChannel>> ZxChannel::MakePair() {
   auto p = std::pair<ClosedPtr<ZxChannel>, ClosedPtr<ZxChannel>>(
-      ClosedPtr<ZxChannel>(new ZxChannel()),
-      ClosedPtr<ZxChannel>(new ZxChannel()));
+      ClosedPtr<ZxChannel>(new ZxChannel()), ClosedPtr<ZxChannel>(new ZxChannel()));
   p.first->state_.unbound.peer = p.second.get();
   p.second->state_.unbound.peer = p.first.get();
   return p;
 }
 
-void ZxChannel::Message(
-    fuchsia::overnet::protocol::ZirconChannelMessage message) {
+void ZxChannel::Message(fuchsia::overnet::protocol::ZirconChannelMessage message) {
   switch (state_tag_) {
     case StateTag::kDisconnected:
       break;
     case StateTag::kUnbound:
       ZX_ASSERT(state_.unbound.peer->state_tag_ == StateTag::kUnbound);
       ZX_ASSERT(state_.unbound.queued.empty());
-      state_.unbound.peer->state_.unbound.queued.emplace_back(
-          std::move(message));
+      state_.unbound.peer->state_.unbound.queued.emplace_back(std::move(message));
       break;
     case StateTag::kBound:
       state_.bound.proxy.Message(std::move(message));
@@ -107,23 +104,18 @@ void ZxChannel::Bind(RouterEndpoint::NewStream stream) {
 
 void ZxChannel::Encode(internal::Encoder* encoder, size_t offset) {
   Bind(encoder->AppendHandle(
-      offset,
-      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
+      offset, fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
       [](fuchsia::overnet::protocol::ZirconHandle* zh, StreamId stream_id) {
-        zh->set_channel(
-            fuchsia::overnet::protocol::ChannelHandle{stream_id.as_fidl()});
+        zh->set_channel(fuchsia::overnet::protocol::ChannelHandle{stream_id.as_fidl()});
       }));
 }
 
-ClosedPtr<ZxChannel> ZxChannel::Decode(internal::Decoder* decoder,
-                                       size_t offset) {
+ClosedPtr<ZxChannel> ZxChannel::Decode(internal::Decoder* decoder, size_t offset) {
   auto stream = decoder->ClaimHandle(
-      offset,
-      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
+      offset, fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
       [](fuchsia::overnet::protocol::ZirconHandle zh)
           -> Optional<fuchsia::overnet::protocol::StreamId> {
-        if (zh.Which() !=
-            fuchsia::overnet::protocol::ZirconHandle::Tag::kChannel) {
+        if (zh.Which() != fuchsia::overnet::protocol::ZirconHandle::Tag::kChannel) {
           return Nothing;
         }
         return zh.channel().stream_id;
@@ -137,8 +129,7 @@ ClosedPtr<ZxChannel> ZxChannel::Decode(internal::Decoder* decoder,
 void ZxChannel::Proxy::Send_(fidl::Message message) {
   assert(message.handles().size() == 0);
   auto send_slice = *overnet::Encode(Slice::FromContainer(message.bytes()));
-  RouterEndpoint::Stream::SendOp(stream_, send_slice.length())
-      .Push(std::move(send_slice), [] {});
+  RouterEndpoint::Stream::SendOp(stream_, send_slice.length()).Push(std::move(send_slice), [] {});
 }
 
 void ZxChannel::Stub::Send_(fidl::Message message) {
@@ -146,8 +137,7 @@ void ZxChannel::Stub::Send_(fidl::Message message) {
   abort();
 }
 
-void ZxChannel::Stub::Message(
-    fuchsia::overnet::protocol::ZirconChannelMessage message) {
+void ZxChannel::Stub::Message(fuchsia::overnet::protocol::ZirconChannelMessage message) {
   auto channel = channel_;
   auto reader = channel->reader_;
   reader->Message(std::move(message));
@@ -157,37 +147,34 @@ void ZxChannel::Stub::Message(
 void ZxChannel::Stub::Start() {
   recv_op_.Reset(stream_);
   channel_->Ref();
-  recv_op_->PullAll(
-      [this](overnet::StatusOr<overnet::Optional<std::vector<overnet::Slice>>>
-                 status) {
-        OVERNET_TRACE(DEBUG) << "Stub read got " << status;
-        if (status.is_error() || !status->has_value()) {
-          // If a read failed, finish up.
-          return;
-        }
-        auto decode_status = overnet::Decode(
-            Slice::AlignedJoin((*status)->begin(), (*status)->end()));
-        if (decode_status.is_error()) {
-          // Failed to decode: close stream
-          stream_->Close(decode_status.AsStatus(), Callback<void>::Ignored());
-          return;
-        }
-        auto packet = Slice::Aligned(std::move(*decode_status));
-        if (auto process_status = Process_(fidl::Message(
-                fidl::BytePart(const_cast<uint8_t*>(packet.begin()),
-                               packet.length(), packet.length()),
-                fidl::HandlePart()));
-            process_status != ZX_OK) {
-          stream_->Close(Status::FromZx(process_status)
-                             .WithContext("Processing ZxChannel stub message"),
-                         Callback<void>::Ignored());
-          return;
-        }
-        if (!channel_->closed_) {
-          Start();
-        }
-        channel_->Unref();
-      });
+  recv_op_->PullAll([this](
+                        overnet::StatusOr<overnet::Optional<std::vector<overnet::Slice>>> status) {
+    OVERNET_TRACE(DEBUG) << "Stub read got " << status;
+    if (status.is_error() || !status->has_value()) {
+      // If a read failed, finish up.
+      return;
+    }
+    auto decode_status = overnet::Decode(Slice::AlignedJoin((*status)->begin(), (*status)->end()));
+    if (decode_status.is_error()) {
+      // Failed to decode: close stream
+      stream_->Close(decode_status.AsStatus(), Callback<void>::Ignored());
+      return;
+    }
+    auto packet = Slice::Aligned(std::move(*decode_status));
+    if (auto process_status = Process_(fidl::Message(
+            fidl::BytePart(const_cast<uint8_t*>(packet.begin()), packet.length(), packet.length()),
+            fidl::HandlePart()));
+        process_status != ZX_OK) {
+      stream_->Close(
+          Status::FromZx(process_status).WithContext("Processing ZxChannel stub message"),
+          Callback<void>::Ignored());
+      return;
+    }
+    if (!channel_->closed_) {
+      Start();
+    }
+    channel_->Unref();
+  });
 }
 
 RouterEndpoint::Stream* ZxChannel::overnet_stream() {

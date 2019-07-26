@@ -12,8 +12,7 @@ static uint32_t get_next_color() {
   static uint32_t next_color_idx = 0x1;  // skip black
   ZX_ASSERT(next_color_idx <= 0xfff);
   // Map 0xXYZ -> 0xffX0Y0Z0
-  uint32_t res = ((next_color_idx & 0xf) << 4) |
-                 ((next_color_idx & 0xf0) << 8) |
+  uint32_t res = ((next_color_idx & 0xf) << 4) | ((next_color_idx & 0xf0) << 8) |
                  ((next_color_idx & 0xf00) << 12);
   next_color_idx++;
   return res;
@@ -23,9 +22,7 @@ static uint32_t compute_color(uint8_t alpha, bool premultiplied, bool bg) {
   static uint32_t bg_color = get_next_color();
 
   uint32_t color = (bg ? bg_color : get_next_color()) | (alpha << 24);
-  return premultiplied
-             ? display_test::internal::premultiply_color_channels(color, alpha)
-             : color;
+  return premultiplied ? display_test::internal::premultiply_color_channels(color, alpha) : color;
 }
 
 }  // namespace
@@ -33,8 +30,8 @@ static uint32_t compute_color(uint8_t alpha, bool premultiplied, bool bg) {
 namespace display_test {
 namespace internal {
 
-ImageImpl::ImageImpl(Runner* runner, uint32_t width, uint32_t height,
-                     bool scalable, uint8_t alpha, bool premultiplied)
+ImageImpl::ImageImpl(Runner* runner, uint32_t width, uint32_t height, bool scalable, uint8_t alpha,
+                     bool premultiplied)
     : width_(width),
       height_(height),
       scalable_(scalable),
@@ -44,29 +41,25 @@ ImageImpl::ImageImpl(Runner* runner, uint32_t width, uint32_t height,
   ZX_ASSERT(width % 2 == 0);
 
   if (scalable) {
-    ZX_ASSERT(width >= kMinScalableImageSize &&
-              height >= kMinScalableImageSize);
+    ZX_ASSERT(width >= kMinScalableImageSize && height >= kMinScalableImageSize);
   }
 
   runner->display()->ComputeLinearImageStride(
-      width_, kFormat,
-      fit::bind_member(this, &ImageImpl::ComputeLinearStrideCallback));
+      width_, kFormat, fit::bind_member(this, &ImageImpl::ComputeLinearStrideCallback));
 }
 
 void ImageImpl::ComputeLinearStrideCallback(uint32_t stride) {
   ZX_ASSERT(stride);
   stride_ = stride;
-  runner_->display()->AllocateVmo(
-      height_ * stride * kBytesPerPixel,
-      fit::bind_member(this, &ImageImpl::AllocateVmoCallback));
+  runner_->display()->AllocateVmo(height_ * stride * kBytesPerPixel,
+                                  fit::bind_member(this, &ImageImpl::AllocateVmoCallback));
 }
 
 void ImageImpl::AllocateVmoCallback(zx_status_t status, zx::vmo vmo) {
   ZX_ASSERT(status == ZX_OK);
   zx_vaddr_t addr;
   uint32_t size = height_ * stride_ * kBytesPerPixel;
-  status = zx::vmar::root_self()->map(
-      0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr);
+  status = zx::vmar::root_self()->map(0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr);
   ZX_ASSERT(status == ZX_OK);
 
   uint32_t* ptr = reinterpret_cast<uint32_t*>(addr);
@@ -88,9 +81,8 @@ void ImageImpl::AllocateVmoCallback(zx_status_t status, zx::vmo vmo) {
       .pixel_format = kFormat,
   };
 
-  runner_->display()->ImportVmoImage(
-      config, std::move(vmo), 0,
-      fit::bind_member(this, &ImageImpl::ImportVmoImageCallback));
+  runner_->display()->ImportVmoImage(config, std::move(vmo), 0,
+                                     fit::bind_member(this, &ImageImpl::ImportVmoImageCallback));
 }
 
 void ImageImpl::ImportVmoImageCallback(zx_status_t status, uint64_t id) {

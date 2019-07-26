@@ -45,12 +45,8 @@
 
 namespace simple_pt {
 
-SymbolTable::SymbolTable(debugger_utils::ElfReader* reader,
-                         const std::string& contents,
-                         uint64_t cr3,
-                         uint64_t base,
-                         uint64_t offset,
-                         bool is_kernel)
+SymbolTable::SymbolTable(debugger_utils::ElfReader* reader, const std::string& contents,
+                         uint64_t cr3, uint64_t base, uint64_t offset, bool is_kernel)
     : debugger_utils::ElfSymbolTable(reader->file_name(), contents),
       cr3_(cr3),
       base_(base),
@@ -76,8 +72,7 @@ static bool Cr3Matches(uint64_t cr3_1, uint64_t cr3_2) {
   return cr3_1 == cr3_2;
 }
 
-const SymbolTable* FindSymbolTable(const SymbolTableTable& symtabs,
-                                   uint64_t cr3, uint64_t pc) {
+const SymbolTable* FindSymbolTable(const SymbolTableTable& symtabs, uint64_t cr3, uint64_t pc) {
   for (auto& st : symtabs) {
     if (!Cr3Matches(st->cr3(), cr3))
       continue;
@@ -89,8 +84,7 @@ const SymbolTable* FindSymbolTable(const SymbolTableTable& symtabs,
   return nullptr;
 }
 
-const Symbol* FindSymbol(const SymbolTableTable& symtabs,
-                         uint64_t cr3, uint64_t pc,
+const Symbol* FindSymbol(const SymbolTableTable& symtabs, uint64_t cr3, uint64_t pc,
                          const SymbolTable** out_symtab) {
   const SymbolTable* symtab = FindSymbolTable(symtabs, cr3, pc);
   if (!symtab) {
@@ -101,8 +95,7 @@ const Symbol* FindSymbol(const SymbolTableTable& symtabs,
   return symtab->FindSymbol(pc);
 }
 
-const char* FindPcFileName(const SymbolTableTable& symtabs,
-                           uint64_t cr3, uint64_t pc) {
+const char* FindPcFileName(const SymbolTableTable& symtabs, uint64_t cr3, uint64_t pc) {
   for (const auto& st : symtabs) {
     if (!Cr3Matches(st->cr3(), cr3))
       continue;
@@ -121,4 +114,4 @@ bool SeenCr3(const SymbolTableTable& symtabs, uint64_t cr3) {
   return false;
 }
 
-}  // simple_pt
+}  // namespace simple_pt

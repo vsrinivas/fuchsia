@@ -84,15 +84,13 @@ class ImagePipeSwapchain {
         is_protected_(false),
         device_(VK_NULL_HANDLE) {}
 
-  VkResult Initialize(VkDevice device,
-                      const VkSwapchainCreateInfoKHR* pCreateInfo,
+  VkResult Initialize(VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo,
                       const VkAllocationCallbacks* pAllocator);
 
   void Cleanup(VkDevice device, const VkAllocationCallbacks* pAllocator);
 
   VkResult GetSwapchainImages(uint32_t* pCount, VkImage* pSwapchainImages);
-  VkResult AcquireNextImage(uint64_t timeout_ns, VkSemaphore semaphore,
-                            uint32_t* pImageIndex);
+  VkResult AcquireNextImage(uint64_t timeout_ns, VkSemaphore semaphore, uint32_t* pImageIndex);
   VkResult Present(VkQueue queue, uint32_t index, uint32_t waitSemaphoreCount,
                    const VkSemaphore* pWaitSemaphores);
 
@@ -112,14 +110,13 @@ class ImagePipeSwapchain {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-VkResult ImagePipeSwapchain::Initialize(
-    VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo,
-    const VkAllocationCallbacks* pAllocator) {
+VkResult ImagePipeSwapchain::Initialize(VkDevice device,
+                                        const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                        const VkAllocationCallbacks* pAllocator) {
   is_protected_ = pCreateInfo->flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR;
   VkResult result;
   VkLayerDispatchTable* pDisp =
-      GetLayerDataPtr(get_dispatch_key(device), layer_data_map)
-          ->device_dispatch_table;
+      GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->device_dispatch_table;
   uint32_t num_images = pCreateInfo->minImageCount;
   VkFlags usage = pCreateInfo->imageUsage & surface_->SupportedUsage();
   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
@@ -132,21 +129,17 @@ VkResult ImagePipeSwapchain::Initialize(
   image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
   std::vector<ImagePipeSurface::ImageInfo> image_infos;
 
-  if (!surface_->CreateImage(device, pDisp, pCreateInfo->imageFormat, usage,
-                             pCreateInfo->flags, image_info, num_images,
-                             pAllocator, &image_infos)) {
+  if (!surface_->CreateImage(device, pDisp, pCreateInfo->imageFormat, usage, pCreateInfo->flags,
+                             image_info, num_images, pAllocator, &image_infos)) {
     return VK_ERROR_OUT_OF_DEVICE_MEMORY;
   }
   for (uint32_t i = 0; i < num_images; i++) {
     images_.push_back({image_infos[i].image, image_infos[i].image_id});
     memories_.push_back(image_infos[i].memory);
     VkSemaphoreCreateInfo create_semaphore_info{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0};
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, .pNext = nullptr, .flags = 0};
     VkSemaphore semaphore;
-    result = pDisp->CreateSemaphore(device, &create_semaphore_info, pAllocator,
-                                    &semaphore);
+    result = pDisp->CreateSemaphore(device, &create_semaphore_info, pAllocator, &semaphore);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "vkCreateSemaphore failed: %d", result);
       return result;
@@ -168,13 +161,13 @@ VkResult ImagePipeSwapchain::Initialize(
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(
-    VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo,
-    const VkAllocationCallbacks* pAllocator, VkSwapchainKHR* pSwapchain) {
+VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device,
+                                                  const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                                  const VkAllocationCallbacks* pAllocator,
+                                                  VkSwapchainKHR* pSwapchain) {
   VkResult ret = VK_ERROR_INITIALIZATION_FAILED;
 
-  auto image_pipe_surface =
-      reinterpret_cast<ImagePipeSurface*>(pCreateInfo->surface);
+  auto image_pipe_surface = reinterpret_cast<ImagePipeSurface*>(pCreateInfo->surface);
   auto swapchain = std::make_unique<ImagePipeSwapchain>(image_pipe_surface);
 
   ret = swapchain->Initialize(device, pCreateInfo, pAllocator);
@@ -187,11 +180,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(
   return VK_SUCCESS;
 }
 
-void ImagePipeSwapchain::Cleanup(VkDevice device,
-                                 const VkAllocationCallbacks* pAllocator) {
+void ImagePipeSwapchain::Cleanup(VkDevice device, const VkAllocationCallbacks* pAllocator) {
   VkLayerDispatchTable* pDisp =
-      GetLayerDataPtr(get_dispatch_key(device), layer_data_map)
-          ->device_dispatch_table;
+      GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->device_dispatch_table;
 
   for (auto& image : images_) {
     surface()->RemoveImage(image.id);
@@ -205,16 +196,14 @@ void ImagePipeSwapchain::Cleanup(VkDevice device,
   }
 }
 
-VKAPI_ATTR void VKAPI_CALL
-DestroySwapchainKHR(VkDevice device, VkSwapchainKHR vk_swapchain,
-                    const VkAllocationCallbacks* pAllocator) {
+VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR vk_swapchain,
+                                               const VkAllocationCallbacks* pAllocator) {
   auto swapchain = reinterpret_cast<ImagePipeSwapchain*>(vk_swapchain);
   swapchain->Cleanup(device, pAllocator);
   delete reinterpret_cast<ImagePipeSwapchain*>(swapchain);
 }
 
-VkResult ImagePipeSwapchain::GetSwapchainImages(uint32_t* pCount,
-                                                VkImage* pSwapchainImages) {
+VkResult ImagePipeSwapchain::GetSwapchainImages(uint32_t* pCount, VkImage* pSwapchainImages) {
   if (image_pipe_closed_)
     return VK_ERROR_DEVICE_LOST;
 
@@ -232,15 +221,13 @@ VkResult ImagePipeSwapchain::GetSwapchainImages(uint32_t* pCount,
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR vk_swapchain,
-                      uint32_t* pCount, VkImage* pSwapchainImages) {
+VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR vk_swapchain,
+                                                     uint32_t* pCount, VkImage* pSwapchainImages) {
   auto swapchain = reinterpret_cast<ImagePipeSwapchain*>(vk_swapchain);
   return swapchain->GetSwapchainImages(pCount, pSwapchainImages);
 }
 
-VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
-                                              VkSemaphore semaphore,
+VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore semaphore,
                                               uint32_t* pImageIndex) {
   if (pending_images_.empty()) {
     // All images acquired and none presented.  We will never acquire anything.
@@ -272,20 +259,16 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
     }
 
     VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
-        .sType =
-            VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
+        .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
         .pNext = nullptr,
         .semaphore = semaphore,
         .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
-        .handleType =
-            VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
+        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
         .handle = handle};
 
     VkLayerDispatchTable* pDisp =
-        GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)
-            ->device_dispatch_table;
-    VkResult result =
-        pDisp->ImportSemaphoreZirconHandleFUCHSIA(device_, &import_info);
+        GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)->device_dispatch_table;
+    VkResult result = pDisp->ImportSemaphoreZirconHandleFUCHSIA(device_, &import_info);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "semaphore import failed: %d", result);
       return VK_SUCCESS;
@@ -297,8 +280,7 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
     zx_signals_t pending;
     zx_status_t status = pending_images_[0].release_fence.wait_one(
         ZX_EVENT_SIGNALED,
-        timeout_ns == UINT64_MAX ? zx::time::infinite()
-                                 : zx::deadline_after(zx::nsec(timeout_ns)),
+        timeout_ns == UINT64_MAX ? zx::time::infinite() : zx::deadline_after(zx::nsec(timeout_ns)),
         &pending);
     if (status == ZX_ERR_TIMED_OUT)
       return VK_TIMEOUT;
@@ -316,9 +298,9 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(
-    VkDevice device, VkSwapchainKHR vk_swapchain, uint64_t timeout,
-    VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex) {
+VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR vk_swapchain,
+                                                   uint64_t timeout, VkSemaphore semaphore,
+                                                   VkFence fence, uint32_t* pImageIndex) {
   // TODO(MA-264) handle this correctly
   assert(fence == VK_NULL_HANDLE);
 
@@ -326,15 +308,13 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(
   return swapchain->AcquireNextImage(timeout, semaphore, pImageIndex);
 }
 
-VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
-                                     uint32_t waitSemaphoreCount,
+VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t waitSemaphoreCount,
                                      const VkSemaphore* pWaitSemaphores) {
   if (image_pipe_closed_)
     return VK_ERROR_DEVICE_LOST;
 
   VkLayerDispatchTable* pDisp =
-      GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)
-          ->device_dispatch_table;
+      GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)->device_dispatch_table;
 
   zx::event acquire_fence;
   zx_status_t status = zx::event::create(0, &acquire_fence);
@@ -354,37 +334,33 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
   }
 
   VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
-      .sType =
-          VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
+      .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
       .pNext = nullptr,
       .semaphore = semaphores_[index],
       .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
-      .handleType =
-          VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
+      .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
       .handle = image_acquire_fence.release()};
 
-  VkResult result =
-      pDisp->ImportSemaphoreZirconHandleFUCHSIA(device_, &import_info);
+  VkResult result = pDisp->ImportSemaphoreZirconHandleFUCHSIA(device_, &import_info);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "semaphore import failed: %d", result);
     return VK_ERROR_SURFACE_LOST_KHR;
   }
 
-  std::vector<VkPipelineStageFlags> flag_bits(
-      waitSemaphoreCount, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+  std::vector<VkPipelineStageFlags> flag_bits(waitSemaphoreCount,
+                                              VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
   VkProtectedSubmitInfo protected_submit_info = {
       .sType = VK_STRUCTURE_TYPE_PROTECTED_SUBMIT_INFO,
       .pNext = nullptr,
       .protectedSubmit = VK_TRUE,
   };
-  VkSubmitInfo submit_info = {
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .pNext = is_protected_ ? &protected_submit_info : nullptr,
-      .waitSemaphoreCount = waitSemaphoreCount,
-      .pWaitSemaphores = pWaitSemaphores,
-      .pWaitDstStageMask = flag_bits.data(),
-      .signalSemaphoreCount = 1,
-      .pSignalSemaphores = &semaphores_[index]};
+  VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                              .pNext = is_protected_ ? &protected_submit_info : nullptr,
+                              .waitSemaphoreCount = waitSemaphoreCount,
+                              .pWaitSemaphores = pWaitSemaphores,
+                              .pWaitDstStageMask = flag_bits.data(),
+                              .signalSemaphoreCount = 1,
+                              .pSignalSemaphores = &semaphores_[index]};
   result = pDisp->QueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "vkQueueSubmit failed with result %d", result);
@@ -407,8 +383,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
     }
 
     zx::event image_release_fence;
-    status =
-        release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_release_fence);
+    status = release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_release_fence);
     if (status != ZX_OK) {
       fprintf(stderr,
               "failed to duplicate release fence, "
@@ -432,14 +407,13 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) {
+VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue,
+                                               const VkPresentInfoKHR* pPresentInfo) {
   for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-    auto swapchain =
-        reinterpret_cast<ImagePipeSwapchain*>(pPresentInfo->pSwapchains[i]);
-    VkResult result = swapchain->Present(queue, pPresentInfo->pImageIndices[i],
-                                         pPresentInfo->waitSemaphoreCount,
-                                         pPresentInfo->pWaitSemaphores);
+    auto swapchain = reinterpret_cast<ImagePipeSwapchain*>(pPresentInfo->pSwapchains[i]);
+    VkResult result =
+        swapchain->Present(queue, pPresentInfo->pImageIndices[i], pPresentInfo->waitSemaphoreCount,
+                           pPresentInfo->pWaitSemaphores);
     if (pPresentInfo->pResults) {
       pPresentInfo->pResults[i] = result;
     } else if (result != VK_SUCCESS) {
@@ -449,9 +423,10 @@ QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) {
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(
-    VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
-    const VkSurfaceKHR surface, VkBool32* pSupported) {
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice,
+                                                                  uint32_t queueFamilyIndex,
+                                                                  const VkSurfaceKHR surface,
+                                                                  VkBool32* pSupported) {
   *pSupported = surface != nullptr ? VK_TRUE : VK_FALSE;
   return VK_SUCCESS;
 }
@@ -474,18 +449,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImagePipeSurfaceFUCHSIA(
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR void VKAPI_CALL
-DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
-                  const VkAllocationCallbacks* pAllocator) {
+VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
+                                             const VkAllocationCallbacks* pAllocator) {
   delete reinterpret_cast<ImagePipeSurface*>(surface);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(
-    VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
-    VkSurfaceCapabilitiesKHR* pSurfaceCapabilities) {
+VKAPI_ATTR VkResult VKAPI_CALL
+GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                        VkSurfaceCapabilitiesKHR* pSurfaceCapabilities) {
   VkLayerInstanceDispatchTable* instance_dispatch_table =
-      GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map)
-          ->instance_dispatch_table;
+      GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map)->instance_dispatch_table;
 
   VkPhysicalDeviceProperties props;
   instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, &props);
@@ -507,24 +480,19 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(
                                             props.limits.maxImageDimension2D};
   }
 
-  pSurfaceCapabilities->supportedTransforms =
-      VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-  pSurfaceCapabilities->currentTransform =
-      VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+  pSurfaceCapabilities->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+  pSurfaceCapabilities->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
   pSurfaceCapabilities->maxImageArrayLayers = 1;
-  pSurfaceCapabilities->supportedUsageFlags =
-      image_pipe_surface->SupportedUsage();
-  pSurfaceCapabilities->supportedCompositeAlpha =
-      VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  pSurfaceCapabilities->supportedUsageFlags = image_pipe_surface->SupportedUsage();
+  pSurfaceCapabilities->supportedCompositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(
-    VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface,
-    uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats) {
+VKAPI_ATTR VkResult VKAPI_CALL
+GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface,
+                                   uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats) {
   SupportedImageProperties& supported_properties =
-      reinterpret_cast<ImagePipeSurface*>(surface)
-          ->supported_image_properties();
+      reinterpret_cast<ImagePipeSurface*>(surface)->supported_image_properties();
   if (pSurfaceFormats == nullptr) {
     *pCount = supported_properties.formats.size();
     return VK_SUCCESS;
@@ -537,9 +505,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(
-    VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface,
-    uint32_t* pCount, VkPresentModeKHR* pPresentModes) {
+VKAPI_ATTR VkResult VKAPI_CALL
+GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface,
+                                        uint32_t* pCount, VkPresentModeKHR* pPresentModes) {
   constexpr int present_mode_count = 1;
   constexpr VkPresentModeKHR present_modes[] = {VK_PRESENT_MODE_FIFO_KHR};
   if (pPresentModes == nullptr) {
@@ -557,11 +525,10 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(
   return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-CreateInstance(const VkInstanceCreateInfo* pCreateInfo,
-               const VkAllocationCallbacks* pAllocator, VkInstance* pInstance) {
-  VkLayerInstanceCreateInfo* chain_info =
-      get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo* pCreateInfo,
+                                              const VkAllocationCallbacks* pAllocator,
+                                              VkInstance* pInstance) {
+  VkLayerInstanceCreateInfo* chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
   assert(chain_info->u.pLayerInfo);
   PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
@@ -579,18 +546,17 @@ CreateInstance(const VkInstanceCreateInfo* pCreateInfo,
   if (result != VK_SUCCESS)
     return result;
 
-  LayerData* my_data =
-      GetLayerDataPtr(get_dispatch_key(*pInstance), layer_data_map);
+  LayerData* my_data = GetLayerDataPtr(get_dispatch_key(*pInstance), layer_data_map);
   my_data->instance = *pInstance;
   my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
-  layer_init_instance_dispatch_table(
-      *pInstance, my_data->instance_dispatch_table, fpGetInstanceProcAddr);
+  layer_init_instance_dispatch_table(*pInstance, my_data->instance_dispatch_table,
+                                     fpGetInstanceProcAddr);
 
   return result;
 }
 
-VKAPI_ATTR void VKAPI_CALL
-DestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator) {
+VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance,
+                                           const VkAllocationCallbacks* pAllocator) {
   dispatch_key key = get_dispatch_key(instance);
   LayerData* my_data = GetLayerDataPtr(key, layer_data_map);
 
@@ -599,25 +565,22 @@ DestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator) {
   layer_data_map.erase(key);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
-             const VkAllocationCallbacks* pAllocator, VkDevice* pDevice) {
-  LayerData* layer_data =
-      GetLayerDataPtr(get_dispatch_key(gpu), layer_data_map);
+VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
+                                            const VkDeviceCreateInfo* pCreateInfo,
+                                            const VkAllocationCallbacks* pAllocator,
+                                            VkDevice* pDevice) {
+  LayerData* layer_data = GetLayerDataPtr(get_dispatch_key(gpu), layer_data_map);
 
   bool external_memory_extension_available = false;
   bool external_semaphore_extension_available = false;
   bool fuchsia_buffer_collection_extension_available = false;
   uint32_t device_extension_count;
-  VkResult result =
-      layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
-          gpu, nullptr, &device_extension_count, nullptr);
+  VkResult result = layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+      gpu, nullptr, &device_extension_count, nullptr);
   if (result == VK_SUCCESS && device_extension_count > 0) {
-    std::vector<VkExtensionProperties> device_extensions(
-        device_extension_count);
-    result =
-        layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
-            gpu, nullptr, &device_extension_count, device_extensions.data());
+    std::vector<VkExtensionProperties> device_extensions(device_extension_count);
+    result = layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+        gpu, nullptr, &device_extension_count, device_extensions.data());
     if (result == VK_SUCCESS) {
       for (uint32_t i = 0; i < device_extension_count; i++) {
         if (!strcmp(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
@@ -649,8 +612,7 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
             VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
   }
 #endif
-  if (!external_memory_extension_available ||
-      !external_semaphore_extension_available)
+  if (!external_memory_extension_available || !external_semaphore_extension_available)
     return VK_ERROR_INITIALIZATION_FAILED;
 
   VkDeviceCreateInfo create_info = *pCreateInfo;
@@ -666,16 +628,14 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
   create_info.enabledExtensionCount = enabled_extensions.size();
   create_info.ppEnabledExtensionNames = enabled_extensions.data();
 
-  VkLayerDeviceCreateInfo* chain_info =
-      get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+  VkLayerDeviceCreateInfo* chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
   assert(chain_info->u.pLayerInfo);
   PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
       chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
-  PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr =
-      chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
-  PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice)fpGetInstanceProcAddr(
-      layer_data->instance, "vkCreateDevice");
+  PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+  PFN_vkCreateDevice fpCreateDevice =
+      (PFN_vkCreateDevice)fpGetInstanceProcAddr(layer_data->instance, "vkCreateDevice");
   if (fpCreateDevice == NULL) {
     return VK_ERROR_INITIALIZATION_FAILED;
   }
@@ -688,67 +648,62 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
     return result;
   }
 
-  LayerData* my_device_data =
-      GetLayerDataPtr(get_dispatch_key(*pDevice), layer_data_map);
+  LayerData* my_device_data = GetLayerDataPtr(get_dispatch_key(*pDevice), layer_data_map);
 
   // Setup device dispatch table
   my_device_data->device_dispatch_table = new VkLayerDispatchTable;
   my_device_data->instance = layer_data->instance;
-  layer_init_device_dispatch_table(
-      *pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
+  layer_init_device_dispatch_table(*pDevice, my_device_data->device_dispatch_table,
+                                   fpGetDeviceProcAddr);
 
   return result;
 }
 
-VKAPI_ATTR void VKAPI_CALL
-DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator) {
+VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator) {
   dispatch_key key = get_dispatch_key(device);
   LayerData* dev_data = GetLayerDataPtr(key, layer_data_map);
   dev_data->device_dispatch_table->DestroyDevice(device, pAllocator);
   layer_data_map.erase(key);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceLayerProperties(
-    uint32_t* pCount, VkLayerProperties* pProperties) {
+VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceLayerProperties(uint32_t* pCount,
+                                                                VkLayerProperties* pProperties) {
   return util_GetLayerProperties(1, &swapchain_layer, pCount, pProperties);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceLayerProperties(
-    VkPhysicalDevice physicalDevice, uint32_t* pCount,
-    VkLayerProperties* pProperties) {
+VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
+                                                              uint32_t* pCount,
+                                                              VkLayerProperties* pProperties) {
   return util_GetLayerProperties(1, &swapchain_layer, pCount, pProperties);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-EnumerateInstanceExtensionProperties(const char* pLayerName, uint32_t* pCount,
-                                     VkExtensionProperties* pProperties) {
+VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceExtensionProperties(
+    const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties) {
   if (pLayerName && !strcmp(pLayerName, swapchain_layer.layerName))
-    return util_GetExtensionProperties(ARRAY_SIZE(instance_extensions),
-                                       instance_extensions, pCount,
+    return util_GetExtensionProperties(ARRAY_SIZE(instance_extensions), instance_extensions, pCount,
                                        pProperties);
 
   return VK_ERROR_LAYER_NOT_PRESENT;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(
-    VkPhysicalDevice physicalDevice, const char* pLayerName, uint32_t* pCount,
-    VkExtensionProperties* pProperties) {
+VKAPI_ATTR VkResult VKAPI_CALL
+EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice, const char* pLayerName,
+                                   uint32_t* pCount, VkExtensionProperties* pProperties) {
   if (pLayerName && !strcmp(pLayerName, swapchain_layer.layerName))
-    return util_GetExtensionProperties(ARRAY_SIZE(device_extensions),
-                                       device_extensions, pCount, pProperties);
+    return util_GetExtensionProperties(ARRAY_SIZE(device_extensions), device_extensions, pCount,
+                                       pProperties);
 
   assert(physicalDevice);
 
   dispatch_key key = get_dispatch_key(physicalDevice);
   LayerData* my_data = GetLayerDataPtr(key, layer_data_map);
-  return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
-      physicalDevice, NULL, pCount, pProperties);
+  return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(physicalDevice, NULL,
+                                                                              pCount, pProperties);
 }
 
-VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
-GetDeviceProcAddr(VkDevice device, const char* funcName);
-VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
-GetInstanceProcAddr(VkInstance instance, const char* funcName);
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char* funcName);
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance,
+                                                             const char* funcName);
 
 static inline PFN_vkVoidFunction layer_intercept_proc(const char* name) {
   if (!name || name[0] != 'v' || name[1] != 'k')
@@ -775,21 +730,17 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char* name) {
   if (!strcmp("QueuePresentKHR", name))
     return reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR);
   if (!strcmp("EnumerateDeviceExtensionProperties", name))
-    return reinterpret_cast<PFN_vkVoidFunction>(
-        EnumerateDeviceExtensionProperties);
+    return reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties);
   if (!strcmp("EnumerateInstanceExtensionProperties", name))
-    return reinterpret_cast<PFN_vkVoidFunction>(
-        EnumerateInstanceExtensionProperties);
+    return reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceExtensionProperties);
   if (!strcmp("EnumerateDeviceLayerProperties", name))
     return reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceLayerProperties);
   if (!strcmp("EnumerateInstanceLayerProperties", name))
-    return reinterpret_cast<PFN_vkVoidFunction>(
-        EnumerateInstanceLayerProperties);
+    return reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceLayerProperties);
   return NULL;
 }
 
-static inline PFN_vkVoidFunction layer_intercept_instance_proc(
-    const char* name) {
+static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char* name) {
   if (!name || name[0] != 'v' || name[1] != 'k')
     return NULL;
   name += 2;
@@ -800,17 +751,13 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(
   if (!strcmp(name, "DestroyInstance"))
     return reinterpret_cast<PFN_vkVoidFunction>(DestroyInstance);
   if (!strcmp("GetPhysicalDeviceSurfaceSupportKHR", name))
-    return reinterpret_cast<PFN_vkVoidFunction>(
-        GetPhysicalDeviceSurfaceSupportKHR);
+    return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR);
   if (!strcmp("GetPhysicalDeviceSurfaceCapabilitiesKHR", name))
-    return reinterpret_cast<PFN_vkVoidFunction>(
-        GetPhysicalDeviceSurfaceCapabilitiesKHR);
+    return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR);
   if (!strcmp("GetPhysicalDeviceSurfaceFormatsKHR", name))
-    return reinterpret_cast<PFN_vkVoidFunction>(
-        GetPhysicalDeviceSurfaceFormatsKHR);
+    return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR);
   if (!strcmp("GetPhysicalDeviceSurfacePresentModesKHR", name))
-    return reinterpret_cast<PFN_vkVoidFunction>(
-        GetPhysicalDeviceSurfacePresentModesKHR);
+    return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR);
   if (!strcmp("CreateImagePipeSurfaceFUCHSIA", name))
     return reinterpret_cast<PFN_vkVoidFunction>(CreateImagePipeSurfaceFUCHSIA);
   if (!strcmp("DestroySurfaceKHR", name))
@@ -818,8 +765,7 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(
   return NULL;
 }
 
-VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
-GetDeviceProcAddr(VkDevice device, const char* funcName) {
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char* funcName) {
   PFN_vkVoidFunction addr;
   LayerData* dev_data;
 
@@ -839,8 +785,8 @@ GetDeviceProcAddr(VkDevice device, const char* funcName) {
   return pTable->GetDeviceProcAddr(device, funcName);
 }
 
-VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
-GetInstanceProcAddr(VkInstance instance, const char* funcName) {
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance,
+                                                             const char* funcName) {
   PFN_vkVoidFunction addr;
   LayerData* my_data;
 
@@ -865,8 +811,8 @@ GetInstanceProcAddr(VkInstance instance, const char* funcName) {
   return addr;
 }
 
-VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
-GetPhysicalDeviceProcAddr(VkInstance instance, const char* funcName) {
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance,
+                                                                   const char* funcName) {
   assert(instance);
 
   LayerData* my_data;
@@ -880,39 +826,33 @@ GetPhysicalDeviceProcAddr(VkInstance instance, const char* funcName) {
 
 }  // namespace image_pipe_swapchain
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkEnumerateInstanceExtensionProperties(const char* pLayerName, uint32_t* pCount,
-                                       VkExtensionProperties* pProperties) {
-  return image_pipe_swapchain::EnumerateInstanceExtensionProperties(
-      pLayerName, pCount, pProperties);
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
+    const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties) {
+  return image_pipe_swapchain::EnumerateInstanceExtensionProperties(pLayerName, pCount,
+                                                                    pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkEnumerateInstanceLayerProperties(uint32_t* pCount,
-                                   VkLayerProperties* pProperties) {
-  return image_pipe_swapchain::EnumerateInstanceLayerProperties(pCount,
-                                                                pProperties);
+vkEnumerateInstanceLayerProperties(uint32_t* pCount, VkLayerProperties* pProperties) {
+  return image_pipe_swapchain::EnumerateInstanceLayerProperties(pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
-    VkPhysicalDevice physicalDevice, uint32_t* pCount,
-    VkLayerProperties* pProperties) {
+    VkPhysicalDevice physicalDevice, uint32_t* pCount, VkLayerProperties* pProperties) {
   assert(physicalDevice == VK_NULL_HANDLE);
-  return image_pipe_swapchain::EnumerateDeviceLayerProperties(
-      VK_NULL_HANDLE, pCount, pProperties);
+  return image_pipe_swapchain::EnumerateDeviceLayerProperties(VK_NULL_HANDLE, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
-                                     const char* pLayerName, uint32_t* pCount,
-                                     VkExtensionProperties* pProperties) {
+vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice, const char* pLayerName,
+                                     uint32_t* pCount, VkExtensionProperties* pProperties) {
   assert(physicalDevice == VK_NULL_HANDLE);
-  return image_pipe_swapchain::EnumerateDeviceExtensionProperties(
-      VK_NULL_HANDLE, pLayerName, pCount, pProperties);
+  return image_pipe_swapchain::EnumerateDeviceExtensionProperties(VK_NULL_HANDLE, pLayerName,
+                                                                  pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
-vkGetDeviceProcAddr(VkDevice dev, const char* funcName) {
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev,
+                                                                             const char* funcName) {
   return image_pipe_swapchain::GetDeviceProcAddr(dev, funcName);
 }
 

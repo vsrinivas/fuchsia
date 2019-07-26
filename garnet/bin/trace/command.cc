@@ -24,8 +24,7 @@ std::ostream& Command::out() {
 
 std::istream& Command::in() { return std::cin; }
 
-void Command::Run(const fxl::CommandLine& command_line,
-                  OnDoneCallback on_done) {
+void Command::Run(const fxl::CommandLine& command_line, OnDoneCallback on_done) {
   if (return_code_ >= 0) {
     on_done(return_code_);
   } else {
@@ -43,8 +42,7 @@ void Command::Done(int32_t return_code) {
 }
 
 CommandWithController::CommandWithController(sys::ComponentContext* context)
-    : Command(context),
-      controller_(context->svc()->Connect<controller::Controller>()) {
+    : Command(context), controller_(context->svc()->Connect<controller::Controller>()) {
   controller_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Trace controller(controller) disconnected unexpectedly";
     Done(1);

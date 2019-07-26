@@ -25,8 +25,7 @@ TEST(SysmemConnectorTest, Connect) {
 
   fuchsia::sysmem::AllocatorPtr allocator;
   allocator.set_error_handler([](zx_status_t status) { ASSERT_TRUE(false); });
-  component_context->svc()->Connect(
-      allocator.NewRequest(main_loop.dispatcher()));
+  component_context->svc()->Connect(allocator.NewRequest(main_loop.dispatcher()));
 
   fuchsia::sysmem::BufferCollectionTokenPtr token;
   token.set_error_handler([](zx_status_t status) { ASSERT_TRUE(false); });
@@ -54,8 +53,6 @@ TEST(SysmemConnectorTest, Connect) {
   // The Sync() working means the Allocator connection was established to the
   // sysmem driver, and the driver responded.
 
-  allocator.set_error_handler(
-      [](zx_status_t status) { ASSERT_EQ(status, ZX_ERR_CANCELED); });
-  token.set_error_handler(
-      [](zx_status_t status) { ASSERT_EQ(status, ZX_ERR_CANCELED); });
+  allocator.set_error_handler([](zx_status_t status) { ASSERT_EQ(status, ZX_ERR_CANCELED); });
+  token.set_error_handler([](zx_status_t status) { ASSERT_EQ(status, ZX_ERR_CANCELED); });
 }

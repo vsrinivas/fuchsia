@@ -52,9 +52,7 @@ class Server : public Delegate {
 
   // Sets the current process. This cleans up the current process (if any) and
   // takes ownership of |process|.
-  void set_current_process(Process* process) {
-    current_process_.reset(process);
-  }
+  void set_current_process(Process* process) { current_process_.reset(process); }
 
   // Returns a raw pointer to the current thread.
   Thread* current_thread() const { return current_thread_.get(); }
@@ -82,9 +80,8 @@ class Server : public Delegate {
   // intended to be passed to |Process::InitializeFromBuilder|.
   // TODO(dje): InferiorManager class to manage multiple inferiors, and
   // creating them.
-  bool CreateProcessViaBuilder(
-      const std::string& path, const debugger_utils::Argv& argv,
-      std::unique_ptr<process::ProcessBuilder>* out_builder);
+  bool CreateProcessViaBuilder(const std::string& path, const debugger_utils::Argv& argv,
+                               std::unique_ptr<process::ProcessBuilder>* out_builder);
 
   // Return a handle to a running process that can be used for debugging.
   // Returns an invalid object if the process is not found or the handle is

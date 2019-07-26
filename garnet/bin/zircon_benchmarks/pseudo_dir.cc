@@ -71,8 +71,7 @@ bool PseudoDirLookupTest(perftest::RepeatState* state, int file_count) {
 
 // Benchmark the time to read out a directory.
 // Parameterized by the number of files and the size of the output buffer.
-bool PseudoDirReaddirTest(perftest::RepeatState* state, int file_count,
-                          int buffer_size) {
+bool PseudoDirReaddirTest(perftest::RepeatState* state, int file_count, int buffer_size) {
   auto file_names = util::MakeDeterministicNamesList(file_count);
   std::vector<char> buffer(buffer_size);
 
@@ -87,8 +86,7 @@ bool PseudoDirReaddirTest(perftest::RepeatState* state, int file_count,
     fs::vdircookie_t cookie;
     size_t real_len = 0;
     do {
-      auto status =
-          dir->Readdir(&cookie, buffer.data(), buffer.size(), &real_len);
+      auto status = dir->Readdir(&cookie, buffer.data(), buffer.size(), &real_len);
       ZX_DEBUG_ASSERT(ZX_OK == status);
     } while (real_len > 0);
   }
@@ -110,10 +108,8 @@ void RegisterTests() {
 
   for (int buffer_size = 1; buffer_size <= 64; buffer_size *= 8) {
     for (int file_count = 1; file_count <= 1 << 14; file_count *= 8) {
-      auto name = fbl::StringPrintf("PseudoDir/Readdir/%d/%dk", file_count,
-                                    buffer_size);
-      perftest::RegisterTest(name.c_str(), PseudoDirReaddirTest, file_count,
-                             buffer_size * 1024);
+      auto name = fbl::StringPrintf("PseudoDir/Readdir/%d/%dk", file_count, buffer_size);
+      perftest::RegisterTest(name.c_str(), PseudoDirReaddirTest, file_count, buffer_size * 1024);
     }
   }
 }

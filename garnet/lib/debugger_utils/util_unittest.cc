@@ -46,11 +46,10 @@ TEST(UtilTest, DecodeByteString) {
   struct {
     const char* str;
     const uint8_t byte;
-  } kTestCases[] = {
-      {kByteStr1, kByte1},  {kByteStr2, kByte2},  {kByteStr3, kByte3},
-      {kByteStr4, kByte4},  {kByteStr5, kByte5},  {kByteStr6, kByte6},
-      {kByteStr7, kByte2},  {kByteStr8, kByte3},  {kByteStr9, kByte4},
-      {kByteStr10, kByte5}, {kByteStr11, kByte6}, {}};
+  } kTestCases[] = {{kByteStr1, kByte1},  {kByteStr2, kByte2},  {kByteStr3, kByte3},
+                    {kByteStr4, kByte4},  {kByteStr5, kByte5},  {kByteStr6, kByte6},
+                    {kByteStr7, kByte2},  {kByteStr8, kByte3},  {kByteStr9, kByte4},
+                    {kByteStr10, kByte5}, {kByteStr11, kByte6}, {}};
 
   for (int i = 0; kTestCases[i].str; ++i) {
     EXPECT_TRUE(DecodeByteString(kTestCases[i].str, &result));
@@ -118,8 +117,8 @@ TEST(UtilTest, EscapeNonPrintableString) {
       "\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\x09\\x0a\\x0b\\x0c\\x0d"
       "\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\x1b"
       "\\x1c\\x1d\\x1e\\x1f ",
-      EscapeNonPrintableString(fxl::StringView(
-          kSomeNonPrintableChars, sizeof(kSomeNonPrintableChars))));
+      EscapeNonPrintableString(
+          fxl::StringView(kSomeNonPrintableChars, sizeof(kSomeNonPrintableChars))));
 }
 
 TEST(UtilTest, JoinStrings) {
@@ -129,8 +128,7 @@ TEST(UtilTest, JoinStrings) {
 
   // Allocate a buffer that's just large enough to join all three entries above
   // (including 2 commas).
-  const size_t kBufferSize =
-      std::strlen(kEntry1) + std::strlen(kEntry2) + std::strlen(kEntry3) + 2;
+  const size_t kBufferSize = std::strlen(kEntry1) + std::strlen(kEntry2) + std::strlen(kEntry3) + 2;
   char buffer[kBufferSize];
   std::deque<std::string> strings;
 
@@ -149,8 +147,7 @@ TEST(UtilTest, JoinStrings) {
   strings.push_back(kEntry3);
   result_size = JoinStrings(strings, ',', buffer, kBufferSize);
   EXPECT_EQ(kBufferSize, result_size);
-  EXPECT_EQ("an entry,another entry,banana",
-            fxl::StringView(buffer, result_size));
+  EXPECT_EQ("an entry,another entry,banana", fxl::StringView(buffer, result_size));
 }
 
 }  // namespace

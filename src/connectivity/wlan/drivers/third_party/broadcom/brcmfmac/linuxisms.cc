@@ -18,10 +18,6 @@
 
 #include <pthread.h>
 
-void sdio_claim_host(struct sdio_func* func) {
-    pthread_mutex_lock(&func->lock);
-}
+void sdio_claim_host(struct sdio_func* func) { pthread_mutex_lock(&func->lock); }
 
-void sdio_release_host(struct sdio_func* func) {
-    pthread_mutex_unlock(&func->lock);
-}
+void sdio_release_host(struct sdio_func* func) { pthread_mutex_unlock(&func->lock); }

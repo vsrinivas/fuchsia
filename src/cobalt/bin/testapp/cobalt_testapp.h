@@ -46,11 +46,9 @@ class CobaltTestApp {
  private:
   // Starts and connects to the cobalt fidl service using the provided
   // parameters, passing the values of the parameters as command-line flags.
-  void Connect(
-      uint32_t schedule_interval_seconds, uint32_t min_interval_seconds,
-      size_t event_aggregator_backfill_days = kEventAggregatorBackfillDays,
-      bool start_event_aggregator_worker = false,
-      uint32_t initial_interval_seconds = 0);
+  void Connect(uint32_t schedule_interval_seconds, uint32_t min_interval_seconds,
+               size_t event_aggregator_backfill_days = kEventAggregatorBackfillDays,
+               bool start_event_aggregator_worker = false, uint32_t initial_interval_seconds = 0);
 
   void SetChannel(const std::string &current_channel);
   bool DoChannelFilteringTests();

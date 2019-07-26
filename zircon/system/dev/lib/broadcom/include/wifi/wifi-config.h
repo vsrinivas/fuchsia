@@ -4,5 +4,5 @@
 
 #pragma once
 typedef struct wifi_config {
-    uint32_t oob_irq_mode; //{edge or level etc}
+  uint32_t oob_irq_mode;  //{edge or level etc}
 } wifi_config_t;

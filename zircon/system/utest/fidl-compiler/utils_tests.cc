@@ -483,7 +483,6 @@ bool is_only_whitespace() {
   END_TEST;
 }
 
-
 BEGIN_TEST_CASE(utils_tests)
 
 RUN_TEST(id_to_words)

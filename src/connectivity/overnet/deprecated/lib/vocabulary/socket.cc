@@ -23,8 +23,7 @@ Status Socket::Create(int family, int type, int option) {
   *this = Socket(socket(family, type, option));
   if (socket_ == -1) {
     std::ostringstream msg;
-    msg << "Creating socket family=" << family << " type=" << type
-        << " option=" << option;
+    msg << "Creating socket family=" << family << " type=" << type << " option=" << option;
     return Status::Unknown(strerror(errno)).WithContext(msg.str().c_str());
   }
   return Status::Ok();
@@ -104,8 +103,8 @@ Status Socket::Connect(IpAddr addr) {
 }
 
 Status Socket::SendTo(Slice data, int flags, IpAddr dest) {
-  const auto result = sendto(socket_, data.begin(), data.length(), flags,
-                             dest.get(), dest.length());
+  const auto result =
+      sendto(socket_, data.begin(), data.length(), flags, dest.get(), dest.length());
   if (result < 0) {
     return Status::Unknown(strerror(errno)).WithContext("sendto failed");
   }
@@ -115,15 +114,13 @@ Status Socket::SendTo(Slice data, int flags, IpAddr dest) {
   return Status::Ok();
 }
 
-StatusOr<Socket::DataAndAddr> Socket::RecvFrom(size_t maximum_packet_size,
-                                               int flags) {
+StatusOr<Socket::DataAndAddr> Socket::RecvFrom(size_t maximum_packet_size, int flags) {
   auto msg = Slice::WithInitializer(maximum_packet_size, [](uint8_t*) {});
   IpAddr source_address;
   socklen_t source_address_length = sizeof(source_address);
 
-  auto result =
-      recvfrom(socket_, const_cast<uint8_t*>(msg.begin()), msg.length(), 0,
-               &source_address.addr, &source_address_length);
+  auto result = recvfrom(socket_, const_cast<uint8_t*>(msg.begin()), msg.length(), 0,
+                         &source_address.addr, &source_address_length);
   if (result < 0) {
     return Status::Unknown(strerror(errno)).WithContext("recvfrom failed");
   }

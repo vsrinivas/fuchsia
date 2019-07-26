@@ -27,26 +27,20 @@ constexpr char kInjectedServices[] = "injected-services";
 constexpr char kSystemServices[] = "system-services";
 
 const std::unordered_set<std::string> kAllowedSystemServices = {
-    fuchsia::boot::RootResource::Name_,
-    fuchsia::device::NameProvider::Name_,
-    fuchsia::net::Connectivity::Name_,
-    fuchsia::net::NameLookup::Name_,
-    fuchsia::net::SocketProvider::Name_,
-    fuchsia::net::stack::Stack::Name_,
-    fuchsia::netstack::Netstack::Name_,
-    fuchsia::posix::socket::Provider::Name_,
-    fuchsia::scheduler::ProfileProvider::Name_,
-    fuchsia::sys::test::CacheControl::Name_,
-    fuchsia::ui::policy::Presenter::Name_,
-    fuchsia::ui::scenic::Scenic::Name_,
+    fuchsia::boot::RootResource::Name_,         fuchsia::device::NameProvider::Name_,
+    fuchsia::net::Connectivity::Name_,          fuchsia::net::NameLookup::Name_,
+    fuchsia::net::SocketProvider::Name_,        fuchsia::net::stack::Stack::Name_,
+    fuchsia::netstack::Netstack::Name_,         fuchsia::posix::socket::Provider::Name_,
+    fuchsia::scheduler::ProfileProvider::Name_, fuchsia::sys::test::CacheControl::Name_,
+    fuchsia::ui::policy::Presenter::Name_,      fuchsia::ui::scenic::Scenic::Name_,
 };
 }  // namespace
 
 TestMetadata::TestMetadata() {}
 TestMetadata::~TestMetadata() {}
 
-fuchsia::sys::LaunchInfo TestMetadata::GetLaunchInfo(
-    const rapidjson::Document::ValueType& value, const std::string& name) {
+fuchsia::sys::LaunchInfo TestMetadata::GetLaunchInfo(const rapidjson::Document::ValueType& value,
+                                                     const std::string& name) {
   fuchsia::sys::LaunchInfo launch_info;
   if (value.IsString()) {
     launch_info.url = value.GetString();
@@ -58,9 +52,7 @@ fuchsia::sys::LaunchInfo TestMetadata::GetLaunchInfo(
     // If the element is an array, ensure it is non-empty and all values are
     // strings.
     if (!array.Empty() && std::all_of(array.begin(), array.end(),
-                                      [](const rapidjson::Value& val) {
-                                        return val.IsString();
-                                      })) {
+                                      [](const rapidjson::Value& val) { return val.IsString(); })) {
       launch_info.url = array[0].GetString();
       for (size_t i = 1; i < array.Size(); ++i) {
         launch_info.arguments.push_back(array[i].GetString());
@@ -69,13 +61,12 @@ fuchsia::sys::LaunchInfo TestMetadata::GetLaunchInfo(
     }
   }
 
-  json_parser_.ReportError(Substitute(
-      "'$0' must be a string or a non-empty array of strings.", name));
+  json_parser_.ReportError(
+      Substitute("'$0' must be a string or a non-empty array of strings.", name));
   return launch_info;
 }
 
-bool TestMetadata::ParseFromString(const std::string& cmx_data,
-                                   const std::string& filename) {
+bool TestMetadata::ParseFromString(const std::string& cmx_data, const std::string& filename) {
   component::CmxMetadata cmx;
   cmx.ParseFromString(cmx_data, filename, &json_parser_);
   if (json_parser_.HasError()) {
@@ -85,56 +76,49 @@ bool TestMetadata::ParseFromString(const std::string& cmx_data,
   if (!fuchsia_test.IsNull()) {
     null_ = false;
     if (!fuchsia_test.IsObject()) {
-      json_parser_.ReportError(
-          Substitute("'$0' in 'facets' should be an object.", kFuchsiaTest));
+      json_parser_.ReportError(Substitute("'$0' in 'facets' should be an object.", kFuchsiaTest));
       return false;
     }
     auto allow_network_services = fuchsia_test.FindMember(kSystemServices);
     if (allow_network_services != fuchsia_test.MemberEnd()) {
       if (!allow_network_services->value.IsArray()) {
         json_parser_.ReportError(
-            Substitute("'$0' in '$1' should be a string array.",
-                       kSystemServices, kFuchsiaTest));
+            Substitute("'$0' in '$1' should be a string array.", kSystemServices, kFuchsiaTest));
       } else {
         const auto& array = allow_network_services->value.GetArray();
-        std::all_of(
-            array.begin(), array.end(), [&](const rapidjson::Value& val) {
-              if (!val.IsString()) {
-                json_parser_.ReportError(
-                    Substitute("'$0' in '$1' should be a string array.",
-                               kSystemServices, kFuchsiaTest));
-                return false;
-              }
-              std::string service = val.GetString();
-              if (kAllowedSystemServices.count(service) == 0) {
-                json_parser_.ReportError(fxl::Substitute(
-                    "'$0' cannot contain '$1'.", kSystemServices, service));
-                return false;
-              }
-              system_services_.push_back(service);
-              return true;
-            });
+        std::all_of(array.begin(), array.end(), [&](const rapidjson::Value& val) {
+          if (!val.IsString()) {
+            json_parser_.ReportError(Substitute("'$0' in '$1' should be a string array.",
+                                                kSystemServices, kFuchsiaTest));
+            return false;
+          }
+          std::string service = val.GetString();
+          if (kAllowedSystemServices.count(service) == 0) {
+            json_parser_.ReportError(
+                fxl::Substitute("'$0' cannot contain '$1'.", kSystemServices, service));
+            return false;
+          }
+          system_services_.push_back(service);
+          return true;
+        });
       }
     }
     auto services = fuchsia_test.FindMember(kInjectedServices);
     if (services != fuchsia_test.MemberEnd()) {
       if (!services->value.IsObject()) {
-        json_parser_.ReportError(Substitute("'$0' in '$1' should be an object.",
-                                            kInjectedServices, kFuchsiaTest));
+        json_parser_.ReportError(
+            Substitute("'$0' in '$1' should be an object.", kInjectedServices, kFuchsiaTest));
         return false;
       }
-      for (auto itr = services->value.MemberBegin();
-           itr != services->value.MemberEnd(); ++itr) {
+      for (auto itr = services->value.MemberBegin(); itr != services->value.MemberEnd(); ++itr) {
         if (!itr->name.IsString()) {
-          json_parser_.ReportError(
-              Substitute("'$0' in '$1' should define string service names.",
-                         kInjectedServices, kFuchsiaTest));
+          json_parser_.ReportError(Substitute("'$0' in '$1' should define string service names.",
+                                              kInjectedServices, kFuchsiaTest));
           return false;
         }
         auto name = itr->name.GetString();
         auto launch_info = GetLaunchInfo(itr->value, name);
-        service_url_pair_.push_back(
-            std::make_pair(name, std::move(launch_info)));
+        service_url_pair_.push_back(std::make_pair(name, std::move(launch_info)));
       }
     }
   }

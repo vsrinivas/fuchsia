@@ -27,8 +27,6 @@ __BEGIN_CDECLS
  * exactly 'tee_client_api.h'.
  */
 
-
-
 /*************
  * Functions *
  *************/
@@ -147,12 +145,9 @@ void TEEC_ReleaseSharedMemory(TEEC_SharedMemory* sharedMem);
  *                opened and a return code different from TEEC_SUCCESS means that the session
  *                opening failed.
  */
-TEEC_Result TEEC_OpenSession(TEEC_Context* context,
-                             TEEC_Session* session,
-                             const TEEC_UUID* destination,
-                             uint32_t connectionMethod,
-                             const void* connectionData,
-                             TEEC_Operation* operation,
+TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
+                             const TEEC_UUID* destination, uint32_t connectionMethod,
+                             const void* connectionData, TEEC_Operation* operation,
                              uint32_t* returnOrigin);
 
 /* TEEC_CloseSession
@@ -183,9 +178,7 @@ void TEEC_CloseSession(TEEC_Session* session);
  *              * If the returnOrigin is TEEC_ORIGIN_TRUSTED_APP, a return code defined by the
  *                Trusted Application protocol.
  */
-TEEC_Result TEEC_InvokeCommand(TEEC_Session* session,
-                               uint32_t commandID,
-                               TEEC_Operation* operation,
+TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_Operation* operation,
                                uint32_t* returnOrigin);
 
 /* TEEC_RequestCancellation

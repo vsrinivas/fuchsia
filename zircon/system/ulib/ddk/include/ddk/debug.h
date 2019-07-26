@@ -21,60 +21,59 @@ __BEGIN_CDECLS
 // should avoid flooding the log (if an error is likely to happen
 // repeatedly, rapidly, it should throttle its dprintf()s).
 // Error messages are always displayed by default.
-#define DDK_LOG_ERROR    ZX_LOG_ERROR
+#define DDK_LOG_ERROR ZX_LOG_ERROR
 
 // Warning messages are for situations that are not errors but
 // may be indicative of an impending problem.  As with errors they
 // should not be issued repeatedly and rapidly.
 // Warning messages are always displayed by default.
-#define DDK_LOG_WARN     ZX_LOG_WARN
+#define DDK_LOG_WARN ZX_LOG_WARN
 
 // Info messages should provide terse information messages
 // around driver startup, shutdown or state change.  They
 // should be concise, infrequent, and one-line whenever possible.
 // Info messages are always displayed by default.
-#define DDK_LOG_INFO     ZX_LOG_INFO
+#define DDK_LOG_INFO ZX_LOG_INFO
 
 // Trace messages are intended to provide detailed information
 // about what a driver is doing (start/end of transaction, etc)
 // They should aim for terseness, but provide visibility into
 // driver operation.  They are not displayed by default.
-#define DDK_LOG_TRACE    ZX_LOG_TRACE
+#define DDK_LOG_TRACE ZX_LOG_TRACE
 
 // Spew messages are extremely verbose driver state tracing
 // (possibly including register dumps / full state dumps).
 // They are not displayed by default.
-#define DDK_LOG_SPEW     ZX_LOG_SPEW
+#define DDK_LOG_SPEW ZX_LOG_SPEW
 
 // Debug1 through Debug4 messages are driver specific, and not
 // displayed by default.  Consult driver source or documentation
 // to learn if these messages exist for a specific driver and
 // what they're used for.
-#define DDK_LOG_DEBUG1   ZX_LOG_DEBUG1
-#define DDK_LOG_DEBUG2   ZX_LOG_DEBUG2
-#define DDK_LOG_DEBUG3   ZX_LOG_DEBUG3
-#define DDK_LOG_DEBUG4   ZX_LOG_DEBUG4
-
+#define DDK_LOG_DEBUG1 ZX_LOG_DEBUG1
+#define DDK_LOG_DEBUG2 ZX_LOG_DEBUG2
+#define DDK_LOG_DEBUG3 ZX_LOG_DEBUG3
+#define DDK_LOG_DEBUG4 ZX_LOG_DEBUG4
 
 // Local variants of log levels.  These levels will flag debug
 // messages so they do not get sent over the network.  They're
 // useful for network core or driver logging that would otherwise
 // spiral out of control as it logs about packets about logging...
-#define DDK_LOG_LERROR   (ZX_LOG_ERROR | ZX_LOG_LOCAL)
-#define DDK_LOG_LWARN    (ZX_LOG_WARN | ZX_LOG_LOCAL)
-#define DDK_LOG_LINFO    (ZX_LOG_INFO | ZX_LOG_LOCAL)
-#define DDK_LOG_LTRACE   (ZX_LOG_TRACE | ZX_LOG_LOCAL)
-#define DDK_LOG_LSPEW    (ZX_LOG_SPEW | ZX_LOG_LOCAL)
-#define DDK_LOG_LDEBUG1  (ZX_LOG_DEBUG1 | ZX_LOG_LOCAL)
-#define DDK_LOG_LDEBUG2  (ZX_LOG_DEBUG2 | ZX_LOG_LOCAL)
-#define DDK_LOG_LDEBUG3  (ZX_LOG_DEBUG3 | ZX_LOG_LOCAL)
-#define DDK_LOG_LDEBUG4  (ZX_LOG_DEBUG4 | ZX_LOG_LOCAL)
+#define DDK_LOG_LERROR (ZX_LOG_ERROR | ZX_LOG_LOCAL)
+#define DDK_LOG_LWARN (ZX_LOG_WARN | ZX_LOG_LOCAL)
+#define DDK_LOG_LINFO (ZX_LOG_INFO | ZX_LOG_LOCAL)
+#define DDK_LOG_LTRACE (ZX_LOG_TRACE | ZX_LOG_LOCAL)
+#define DDK_LOG_LSPEW (ZX_LOG_SPEW | ZX_LOG_LOCAL)
+#define DDK_LOG_LDEBUG1 (ZX_LOG_DEBUG1 | ZX_LOG_LOCAL)
+#define DDK_LOG_LDEBUG2 (ZX_LOG_DEBUG2 | ZX_LOG_LOCAL)
+#define DDK_LOG_LDEBUG3 (ZX_LOG_DEBUG3 | ZX_LOG_LOCAL)
+#define DDK_LOG_LDEBUG4 (ZX_LOG_DEBUG4 | ZX_LOG_LOCAL)
 
 // zxlog_level_enabled_etc(...) is an internal macro which tests to see if a
 // given log level is currently enabled.  Users should not use this macro, they
 // should use zxlog_level_enabled(...) instead.
 #define zxlog_level_enabled_etc(flag) \
-    (((flag & ZX_LOG_LEVEL_MASK) & __zircon_driver_rec__.log_flags) != 0)
+  (((flag & ZX_LOG_LEVEL_MASK) & __zircon_driver_rec__.log_flags) != 0)
 
 // zxlog_level_enabled(...) provides a way for a driver to test to see if a
 // particular log level is currently enabled.  This allows for patterns where a
@@ -109,20 +108,16 @@ void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
 //
 // Example driver.floppydisk.log=-info,+trace,+0x10
 //
-#define zxlogf(flag, fmt...) \
-    do { \
-        if (zxlog_level_enabled_etc(DDK_LOG_##flag)) { \
-            driver_printf(DDK_LOG_##flag, fmt); \
-        } \
-    } while (0)
+#define zxlogf(flag, fmt...)                       \
+  do {                                             \
+    if (zxlog_level_enabled_etc(DDK_LOG_##flag)) { \
+      driver_printf(DDK_LOG_##flag, fmt);          \
+    }                                              \
+  } while (0)
 
-static inline void driver_set_log_flags(uint32_t flags) {
-    __zircon_driver_rec__.log_flags = flags;
-}
+static inline void driver_set_log_flags(uint32_t flags) { __zircon_driver_rec__.log_flags = flags; }
 
-static inline uint32_t driver_get_log_flags(void) {
-    return __zircon_driver_rec__.log_flags;
-}
+static inline uint32_t driver_get_log_flags(void) { return __zircon_driver_rec__.log_flags; }
 
 __END_CDECLS
 

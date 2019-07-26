@@ -22,14 +22,13 @@ using OnDeviceCallback = fit::function<void(MockInputDevice*)>;
 
 class MockInputDeviceRegistry : public fuchsia::ui::input::InputDeviceRegistry {
  public:
-  MockInputDeviceRegistry(OnDeviceCallback on_device_callback,
-                          OnReportCallback on_report_callback);
+  MockInputDeviceRegistry(OnDeviceCallback on_device_callback, OnReportCallback on_report_callback);
   ~MockInputDeviceRegistry();
 
   // |InputDeviceRegistry|:
-  void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
-                      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-                          input_device_request) override;
+  void RegisterDevice(
+      fuchsia::ui::input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) override;
 
  private:
   OnDeviceCallback on_device_callback_;

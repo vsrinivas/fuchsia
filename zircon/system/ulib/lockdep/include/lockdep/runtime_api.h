@@ -23,18 +23,12 @@ enum class LockResult : uint8_t;
 
 // System-defined hook to report detected lock validation failures.
 extern void SystemLockValidationError(AcquiredLockEntry* lock_entry,
-                                      AcquiredLockEntry* conflicting_entry,
-                                      ThreadLockState* state,
-                                      void* caller_address,
-                                      void* caller_frame,
-                                      LockResult result);
+                                      AcquiredLockEntry* conflicting_entry, ThreadLockState* state,
+                                      void* caller_address, void* caller_frame, LockResult result);
 
 // System-defined hook to abort the program due to a fatal lock violation.
-extern void SystemLockValidationFatal(AcquiredLockEntry* lock_entry,
-                                      ThreadLockState* state,
-                                      void* caller_address,
-                                      void* caller_frame,
-                                      LockResult result);
+extern void SystemLockValidationFatal(AcquiredLockEntry* lock_entry, ThreadLockState* state,
+                                      void* caller_address, void* caller_frame, LockResult result);
 
 // System-defined hook to report detection of a circular lock dependency.
 extern void SystemCircularLockDependencyDetected(LockClassState* connected_set_root);
@@ -54,4 +48,4 @@ extern void SystemInitThreadLockState(ThreadLockState* state);
 // given time interval.
 extern void SystemTriggerLoopDetection();
 
-} // namespace lockdep
+}  // namespace lockdep

@@ -112,119 +112,119 @@
 // clang-format on
 
 struct ath10k_sdio_bus_request {
-    struct list_head list;
+  struct list_head list;
 
-    /* sdio address */
-    uint32_t address;
+  /* sdio address */
+  uint32_t address;
 
-    struct sk_buff* skb;
-    enum ath10k_htc_ep_id eid;
-    int status;
-    /* Specifies if the current request is an HTC message.
-     * If not, the eid is not applicable an the TX completion handler
-     * associated with the endpoint will not be invoked.
-     */
-    bool htc_msg;
-    /* Completion that (if set) will be invoked for non HTC requests
-     * (htc_msg == false) when the request has been processed.
-     */
-    sync_completion_t* comp;
+  struct sk_buff* skb;
+  enum ath10k_htc_ep_id eid;
+  int status;
+  /* Specifies if the current request is an HTC message.
+   * If not, the eid is not applicable an the TX completion handler
+   * associated with the endpoint will not be invoked.
+   */
+  bool htc_msg;
+  /* Completion that (if set) will be invoked for non HTC requests
+   * (htc_msg == false) when the request has been processed.
+   */
+  sync_completion_t* comp;
 };
 
 struct ath10k_sdio_rx_data {
-    struct sk_buff* skb;
-    size_t alloc_len;
-    size_t act_len;
-    enum ath10k_htc_ep_id eid;
-    bool part_of_bundle;
-    bool last_in_bundle;
-    bool trailer_only;
-    int status;
+  struct sk_buff* skb;
+  size_t alloc_len;
+  size_t act_len;
+  enum ath10k_htc_ep_id eid;
+  bool part_of_bundle;
+  bool last_in_bundle;
+  bool trailer_only;
+  int status;
 };
 
 struct ath10k_sdio_irq_proc_regs {
-    uint8_t host_int_status;
-    uint8_t cpu_int_status;
-    uint8_t error_int_status;
-    uint8_t counter_int_status;
-    uint8_t mbox_frame;
-    uint8_t rx_lookahead_valid;
-    uint8_t host_int_status2;
-    uint8_t gmbox_rx_avail;
-    uint32_t rx_lookahead[2];
-    uint32_t rx_gmbox_lookahead_alias[2];
+  uint8_t host_int_status;
+  uint8_t cpu_int_status;
+  uint8_t error_int_status;
+  uint8_t counter_int_status;
+  uint8_t mbox_frame;
+  uint8_t rx_lookahead_valid;
+  uint8_t host_int_status2;
+  uint8_t gmbox_rx_avail;
+  uint32_t rx_lookahead[2];
+  uint32_t rx_gmbox_lookahead_alias[2];
 };
 
 struct ath10k_sdio_irq_enable_regs {
-    uint8_t int_status_en;
-    uint8_t cpu_int_status_en;
-    uint8_t err_int_status_en;
-    uint8_t cntr_int_status_en;
+  uint8_t int_status_en;
+  uint8_t cpu_int_status_en;
+  uint8_t err_int_status_en;
+  uint8_t cntr_int_status_en;
 };
 
 struct ath10k_sdio_irq_data {
-    /* protects irq_proc_reg and irq_en_reg below.
-     * We use a mutex here and not a spinlock since we will have the
-     * mutex locked while calling the sdio_memcpy_ functions.
-     * These function require non atomic context, and hence, spinlocks
-     * can be held while calling these functions.
-     */
-    mtx_t mtx;
-    struct ath10k_sdio_irq_proc_regs* irq_proc_reg;
-    struct ath10k_sdio_irq_enable_regs* irq_en_reg;
+  /* protects irq_proc_reg and irq_en_reg below.
+   * We use a mutex here and not a spinlock since we will have the
+   * mutex locked while calling the sdio_memcpy_ functions.
+   * These function require non atomic context, and hence, spinlocks
+   * can be held while calling these functions.
+   */
+  mtx_t mtx;
+  struct ath10k_sdio_irq_proc_regs* irq_proc_reg;
+  struct ath10k_sdio_irq_enable_regs* irq_en_reg;
 };
 
 struct ath10k_mbox_ext_info {
-    uint32_t htc_ext_addr;
-    uint32_t htc_ext_sz;
+  uint32_t htc_ext_addr;
+  uint32_t htc_ext_sz;
 };
 
 struct ath10k_mbox_info {
-    uint32_t htc_addr;
-    struct ath10k_mbox_ext_info ext_info[2];
-    uint32_t block_size;
-    uint32_t block_mask;
-    uint32_t gmbox_addr;
-    uint32_t gmbox_sz;
+  uint32_t htc_addr;
+  struct ath10k_mbox_ext_info ext_info[2];
+  uint32_t block_size;
+  uint32_t block_mask;
+  uint32_t gmbox_addr;
+  uint32_t gmbox_sz;
 };
 
 struct ath10k_sdio {
-    struct sdio_func* func;
+  struct sdio_func* func;
 
-    struct ath10k_mbox_info mbox_info;
-    bool swap_mbox;
-    uint32_t mbox_addr[ATH10K_HTC_EP_COUNT];
-    uint32_t mbox_size[ATH10K_HTC_EP_COUNT];
+  struct ath10k_mbox_info mbox_info;
+  bool swap_mbox;
+  uint32_t mbox_addr[ATH10K_HTC_EP_COUNT];
+  uint32_t mbox_size[ATH10K_HTC_EP_COUNT];
 
-    /* available bus requests */
-    struct ath10k_sdio_bus_request bus_req[ATH10K_SDIO_BUS_REQUEST_MAX_NUM];
-    /* free list of bus requests */
-    struct list_head bus_req_freeq;
-    /* protects access to bus_req_freeq */
-    mtx_t lock;
+  /* available bus requests */
+  struct ath10k_sdio_bus_request bus_req[ATH10K_SDIO_BUS_REQUEST_MAX_NUM];
+  /* free list of bus requests */
+  struct list_head bus_req_freeq;
+  /* protects access to bus_req_freeq */
+  mtx_t lock;
 
-    struct ath10k_sdio_rx_data rx_pkts[ATH10K_SDIO_MAX_RX_MSGS];
-    size_t n_rx_pkts;
+  struct ath10k_sdio_rx_data rx_pkts[ATH10K_SDIO_MAX_RX_MSGS];
+  size_t n_rx_pkts;
 
-    struct ath10k* ar;
-    struct ath10k_sdio_irq_data irq_data;
+  struct ath10k* ar;
+  struct ath10k_sdio_irq_data irq_data;
 
-    /* temporary buffer for BMI requests */
-    uint8_t* bmi_buf;
+  /* temporary buffer for BMI requests */
+  uint8_t* bmi_buf;
 
-    wait_queue_head_t irq_wq;
+  wait_queue_head_t irq_wq;
 
-    bool is_disabled;
+  bool is_disabled;
 
-    struct workqueue_struct* workqueue;
-    struct work_struct wr_async_work;
-    struct list_head wr_asyncq;
-    /* protects access to wr_asyncq */
-    mtx_t wr_async_lock;
+  struct workqueue_struct* workqueue;
+  struct work_struct wr_async_work;
+  struct list_head wr_asyncq;
+  /* protects access to wr_asyncq */
+  mtx_t wr_async_lock;
 };
 
 static inline struct ath10k_sdio* ath10k_sdio_priv(struct ath10k* ar) {
-    return (struct ath10k_sdio*)ar->drv_priv;
+  return (struct ath10k_sdio*)ar->drv_priv;
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_SDIO_H_

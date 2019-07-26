@@ -7,19 +7,19 @@
 #define A113_TDM_PHYS_BASE 0xff642000
 
 // USB MMIO and IRQ
-#define DWC3_MMIO_BASE      0xff500000
-#define DWC3_MMIO_LENGTH    0x100000
-#define DWC3_IRQ            62
-#define USB_PHY_IRQ         48
+#define DWC3_MMIO_BASE 0xff500000
+#define DWC3_MMIO_LENGTH 0x100000
+#define DWC3_IRQ 62
+#define USB_PHY_IRQ 48
 
 // PCIe Resources
-#define DW_PCIE_IRQ0        177
-#define DW_PCIE_IRQ1        179
+#define DW_PCIE_IRQ0 177
+#define DW_PCIE_IRQ1 179
 
 // Clock Control
 #define AXG_HIU_BASE_PHYS 0xff63c000
 
 // RAW_NAND MMIO and IRQ
-#define GAUSS_RAW_NAND_REG   0xffe07800
-#define GAUSS_RAW_NAND_CLKREG   0xffe07000
-#define GAUSS_RAW_NAND_IRQ   66
+#define GAUSS_RAW_NAND_REG 0xffe07800
+#define GAUSS_RAW_NAND_CLKREG 0xffe07000
+#define GAUSS_RAW_NAND_IRQ 66

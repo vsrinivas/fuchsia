@@ -28,8 +28,7 @@ struct ConverterArgs {
   bool use_test_guids = false;
 };
 
-void Convert(rapidjson::Document* input, rapidjson::Document* output,
-             const ConverterArgs* args);
+void Convert(rapidjson::Document* input, rapidjson::Document* output, const ConverterArgs* args);
 int ConverterMain(int argc, char** argv);
 
 #endif  // GARNET_BIN_CATAPULT_CONVERTER_CONVERTER_H_

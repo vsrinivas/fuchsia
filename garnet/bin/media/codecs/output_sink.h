@@ -89,8 +89,7 @@ class OutputSink {
   // This should only be called on the writer thread.
   Status NextOutputBlock(
       size_t write_size, std::optional<uint64_t> timestamp_ish,
-      fit::function<std::pair<size_t, UserStatus>(OutputBlock)>
-          output_block_writer);
+      fit::function<std::pair<size_t, UserStatus>(OutputBlock)> output_block_writer);
 
   // Flushes the current output packet even if it isn't full.
   //

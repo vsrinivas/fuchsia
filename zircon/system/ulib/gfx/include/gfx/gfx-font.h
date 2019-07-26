@@ -7,6 +7,6 @@
 #include <stdint.h>
 
 typedef struct gfx_font {
-    uint32_t width, height;
-    uint16_t data[];
+  uint32_t width, height;
+  uint16_t data[];
 } gfx_font;

@@ -247,11 +247,9 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
   // Blocking write. This should always make progress or fail.
   while (remaining) {
     size_t actual;
-    zx_status_t status =
-        TransferLocked(cmd, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                       fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE,
-                       buffer_.phys + offset, remaining,
-                       read_paddr, read_count, &actual);
+    zx_status_t status = TransferLocked(
+        cmd, PIPE_CMD_CODE_WAKE_ON_WRITE, fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE,
+        buffer_.phys + offset, remaining, read_paddr, read_count, &actual);
     if (status == ZX_OK) {
       // Calculate bytes written and bytes read. Adjust counts and offsets accordingly.
       size_t actual_write = std::min(actual, remaining);
@@ -274,8 +272,7 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
     size_t actual = 0;
     status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
                             fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE,
-                            buffer_.phys + read_offset, remaining_read, 0, 0,
-                            &actual);
+                            buffer_.phys + read_offset, remaining_read, 0, 0, &actual);
     if (status == ZX_OK) {
       remaining_read -= actual;
     }
@@ -287,9 +284,8 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
 // This function can be trusted to complete fairly quickly. It will cause a
 // VM exit but that should never block for a significant amount of time.
 zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t state_clr,
-                                 zx_paddr_t paddr, size_t count,
-                                 zx_paddr_t read_paddr, size_t read_count,
-                                 size_t* actual) {
+                                 zx_paddr_t paddr, size_t count, zx_paddr_t read_paddr,
+                                 size_t read_count, size_t* actual) {
   TRACE_DURATION("gfx", "Pipe::Transfer", "count", count, "read_count", read_count);
 
   auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());

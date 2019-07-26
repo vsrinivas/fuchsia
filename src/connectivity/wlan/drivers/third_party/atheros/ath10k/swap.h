@@ -30,39 +30,39 @@
 struct ath10k_fw_file;
 
 struct ath10k_swap_code_seg_tlv {
-    uint32_t address;
-    uint32_t length;
-    uint8_t data[0];
+  uint32_t address;
+  uint32_t length;
+  uint8_t data[0];
 } __PACKED;
 
 struct ath10k_swap_code_seg_tail {
-    uint8_t magic_signature[ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ];
-    uint32_t bmi_write_addr;
+  uint8_t magic_signature[ATH10K_SWAP_CODE_SEG_MAGIC_BYTES_SZ];
+  uint32_t bmi_write_addr;
 } __PACKED;
 
 union ath10k_swap_code_seg_item {
-    struct ath10k_swap_code_seg_tlv tlv;
-    struct ath10k_swap_code_seg_tail tail;
+  struct ath10k_swap_code_seg_tlv tlv;
+  struct ath10k_swap_code_seg_tail tail;
 } __PACKED;
 
 struct ath10k_swap_code_seg_hw_info {
-    /* Swap binary image size */
-    uint32_t swap_size;
-    uint32_t num_segs;
+  /* Swap binary image size */
+  uint32_t swap_size;
+  uint32_t num_segs;
 
-    /* Swap data size */
-    uint32_t size;
-    uint32_t size_log2;
-    uint32_t bus_addr[ATH10K_SWAP_CODE_SEG_NUM_MAX];
-    uint64_t reserved[ATH10K_SWAP_CODE_SEG_NUM_MAX];
+  /* Swap data size */
+  uint32_t size;
+  uint32_t size_log2;
+  uint32_t bus_addr[ATH10K_SWAP_CODE_SEG_NUM_MAX];
+  uint64_t reserved[ATH10K_SWAP_CODE_SEG_NUM_MAX];
 } __PACKED;
 
 struct ath10k_swap_code_seg_info {
-    struct ath10k_swap_code_seg_hw_info seg_hw_info;
-    io_buffer_t handles[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
-    void* virt_address[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
-    uint32_t target_addr;
-    zx_paddr_t paddr[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
+  struct ath10k_swap_code_seg_hw_info seg_hw_info;
+  io_buffer_t handles[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
+  void* virt_address[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
+  uint32_t target_addr;
+  zx_paddr_t paddr[ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED];
 };
 
 zx_status_t ath10k_swap_code_seg_configure(struct ath10k* ar, const struct ath10k_fw_file* fw_file);

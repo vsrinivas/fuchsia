@@ -46,15 +46,18 @@ TEST_F(TestLoopFixtureTest, WorkBeingDoneIsReported) {
   async::PostTask(dispatcher(), [] {});
   EXPECT_TRUE(RunLoopUntilIdle());
 
-  async::PostTaskForTime(dispatcher(), [] {}, zx::time(0) + zx::sec(15));
+  async::PostTaskForTime(
+      dispatcher(), [] {}, zx::time(0) + zx::sec(15));
   EXPECT_TRUE(RunLoopUntil(zx::time(0) + zx::sec(15)));
 
-  async::PostDelayedTask(dispatcher(), [] {}, zx::sec(5));
+  async::PostDelayedTask(
+      dispatcher(), [] {}, zx::sec(5));
   EXPECT_TRUE(RunLoopFor(zx::sec(5)));
 }
 
 TEST_F(TestLoopFixtureTest, LoopCanQuitAndReset) {
-  async::PostDelayedTask(dispatcher(), [] {}, zx::sec(1));
+  async::PostDelayedTask(
+      dispatcher(), [] {}, zx::sec(1));
   QuitLoop();
 
   // Loop has quit, so time does not advance and no work is done.
@@ -78,7 +81,8 @@ TEST_F(TestLoopFixtureTest, LoopCanQuitAndReset) {
 
 TEST_F(TestLoopFixtureTest, LoopRunsRepeatedly) {
   for (int i = 0; i <= 60; ++i) {
-    async::PostDelayedTask(dispatcher(), [] {}, zx::sec(i));
+    async::PostDelayedTask(
+        dispatcher(), [] {}, zx::sec(i));
   }
   // Run the loop repeatedly at ten second intervals until the delayed tasks
   // are all dispatched.
@@ -97,8 +101,8 @@ class RandomSeedTest : public TestLoopFixture {
  public:
   static void SetUpTestSuite() {
     random_seed_ = getenv("TEST_LOOP_RANDOM_SEED");
-    FXL_CHECK(fxl::SetTestSettings(fxl::CommandLineFromInitializerList(
-        {"argv0", "--test_loop_seed=1234"})));
+    FXL_CHECK(fxl::SetTestSettings(
+        fxl::CommandLineFromInitializerList({"argv0", "--test_loop_seed=1234"})));
   }
 
   static void TearDownTestSuite() {
@@ -116,9 +120,7 @@ class RandomSeedTest : public TestLoopFixture {
 
 char *RandomSeedTest::random_seed_;
 
-TEST_F(RandomSeedTest, RandomSeedFromFlag) {
-  EXPECT_EQ(test_loop().initial_state(), 1234u);
-}
+TEST_F(RandomSeedTest, RandomSeedFromFlag) { EXPECT_EQ(test_loop().initial_state(), 1234u); }
 
 }  // namespace
 }  // namespace gtest

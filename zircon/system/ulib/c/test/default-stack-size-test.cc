@@ -30,13 +30,11 @@ TEST(StackSizeTests, MainThreadStackSize) {
 
 TEST(StackSizeTests, NewThreadStackSize) {
   pthread_t th;
-  ASSERT_EQ(
-      0, pthread_create(
-             &th, nullptr, [](void*) -> void* { return nullptr; }, nullptr));
+  ASSERT_EQ(0, pthread_create(
+                   &th, nullptr, [](void*) -> void* { return nullptr; }, nullptr));
 
   size_t size;
-  ASSERT_NO_FATAL_FAILURES(FetchStackSize(th, &size),
-                           "Cannot retrieve new thread's stack size");
+  ASSERT_NO_FATAL_FAILURES(FetchStackSize(th, &size), "Cannot retrieve new thread's stack size");
   EXPECT_EQ(kExpectedSize, size);
 
   void* result = &result;

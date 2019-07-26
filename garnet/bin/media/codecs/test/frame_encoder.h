@@ -36,10 +36,10 @@ class FrameEncoder {
   // Encodes `payload` using the codec vended by CodecFactory for the
   // `input_details`. If `expect_access_units` is true, each packet will be
   // expected to be on access unit boundaries.
-  static std::vector<EncodedFrame> EncodeFrames(
-      const Payload& payload,
-      const fuchsia::media::FormatDetails& input_details,
-      component::StartupContext* startup_context, bool expect_access_units);
+  static std::vector<EncodedFrame> EncodeFrames(const Payload& payload,
+                                                const fuchsia::media::FormatDetails& input_details,
+                                                component::StartupContext* startup_context,
+                                                bool expect_access_units);
 };
 
 #endif  // GARNET_BIN_MEDIA_CODECS_TEST_FRAME_ENCODER_H_

@@ -22,39 +22,39 @@
 
 // GPIO Indexes
 enum {
-    FAN_CTL0,
-    FAN_CTL1,
-    FAN_CTL_COUNT,
+  FAN_CTL0,
+  FAN_CTL1,
+  FAN_CTL_COUNT,
 };
 
 typedef struct {
-    zx_device_t*                                zxdev;
-    pdev_protocol_t                             pdev;
+  zx_device_t* zxdev;
+  pdev_protocol_t pdev;
 
-    gpio_protocol_t                             gpios[FAN_CTL_COUNT];
-    scpi_protocol_t                             scpi;
+  gpio_protocol_t gpios[FAN_CTL_COUNT];
+  scpi_protocol_t scpi;
 
-    zx_handle_t                                 port;
+  zx_handle_t port;
 
-    thrd_t                                      notify_thread;
+  thrd_t notify_thread;
 
-    fuchsia_hardware_thermal_ThermalDeviceInfo* device;
+  fuchsia_hardware_thermal_ThermalDeviceInfo* device;
 
-    uint32_t                                    temp_sensor_id;
+  uint32_t temp_sensor_id;
 
-    uint32_t                                    current_trip_idx;
-    uint32_t                                    current_temperature;
-    uint32_t                                    current_fan_level;
-    uint32_t                                    current_big_cluster_opp_idx;
-    uint32_t                                    current_little_cluster_opp_idx;
+  uint32_t current_trip_idx;
+  uint32_t current_temperature;
+  uint32_t current_fan_level;
+  uint32_t current_big_cluster_opp_idx;
+  uint32_t current_little_cluster_opp_idx;
 } aml_thermal_t;
 
 typedef struct {
-    uint32_t microvolt;
-    uint32_t duty_cycle;
+  uint32_t microvolt;
+  uint32_t duty_cycle;
 } aml_voltage_table_t;
 
 typedef struct {
-    fuchsia_hardware_thermal_OperatingPointEntry opps[fuchsia_hardware_thermal_MAX_TRIP_POINTS];
-    aml_voltage_table_t voltage_table[MAX_VOLTAGE_TABLE];
+  fuchsia_hardware_thermal_OperatingPointEntry opps[fuchsia_hardware_thermal_MAX_TRIP_POINTS];
+  aml_voltage_table_t voltage_table[MAX_VOLTAGE_TABLE];
 } aml_opp_info_t;

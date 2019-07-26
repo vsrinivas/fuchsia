@@ -23,9 +23,7 @@ class Reader {
   size_t number_records_read() const { return number_records_read_; }
 
  protected:
-  inline size_t AvailableBytes() const {
-    return std::distance(current_, marker_);
-  }
+  inline size_t AvailableBytes() const { return std::distance(current_, marker_); }
 
   virtual void ReadMoreData() = 0;
 

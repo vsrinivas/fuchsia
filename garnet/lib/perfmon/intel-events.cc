@@ -15,60 +15,50 @@ namespace perfmon {
 namespace {
 
 const EventDetails g_fixed_event_details[] = {
-#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
-                        readable_name, description) \
-  [id] = {MakeEventId(kGroupFixed, id), #event_name, \
-          readable_name, description},
+#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
+  [id] = {MakeEventId(kGroupFixed, id), #event_name, readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 
 const size_t g_num_fixed_event_details = arraysize(g_fixed_event_details);
 
 const EventDetails g_arch_event_details[] = {
-#define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, \
-                       umask, flags, readable_name, description) \
-  [id] = {MakeEventId(kGroupArch, id), #event_name, \
-          readable_name, description},
+#define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, \
+                       description)                                                         \
+  [id] = {MakeEventId(kGroupArch, id), #event_name, readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 
 const size_t g_num_arch_event_details = arraysize(g_arch_event_details);
 
 const EventDetails g_skl_event_details[] = {
-#define DEF_SKL_EVENT(symbol, event_name, id, event, umask, \
-                      flags, readable_name, description) \
-  [id] = {MakeEventId(kGroupModel, id), #event_name, \
-          readable_name, description},
+#define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
+  [id] = {MakeEventId(kGroupModel, id), #event_name, readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 };
 
 const size_t g_num_skl_event_details = arraysize(g_skl_event_details);
 
 const EventDetails g_skl_misc_event_details[] = {
-#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, \
-                           flags, readable_name, description) \
-  [id] = {MakeEventId(kGroupMisc, id), #event_name, \
-          readable_name, description},
+#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, \
+                           description)                                                \
+  [id] = {MakeEventId(kGroupMisc, id), #event_name, readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 
-const size_t g_num_skl_misc_event_details =
-  arraysize(g_skl_misc_event_details);
+const size_t g_num_skl_misc_event_details = arraysize(g_skl_misc_event_details);
 
 // Register all events for Intel Skylake.
 void RegisterIntelSkylakeEvents(internal::EventRegistry* registry) {
   // TODO(dje): Clear table first (start over).
-  registry->RegisterEvents("skylake", "fixed", g_fixed_event_details,
-                           g_num_fixed_event_details);
-  registry->RegisterEvents("skylake", "arch", g_arch_event_details,
-                           g_num_arch_event_details);
-  registry->RegisterEvents("skylake", "model", g_skl_event_details,
-                           g_num_skl_event_details);
+  registry->RegisterEvents("skylake", "fixed", g_fixed_event_details, g_num_fixed_event_details);
+  registry->RegisterEvents("skylake", "arch", g_arch_event_details, g_num_arch_event_details);
+  registry->RegisterEvents("skylake", "model", g_skl_event_details, g_num_skl_event_details);
   registry->RegisterEvents("skylake", "misc", g_skl_misc_event_details,
                            g_num_skl_misc_event_details);
 }
 
-}  // namespace anonymous
+}  // namespace
 
 namespace internal {
 

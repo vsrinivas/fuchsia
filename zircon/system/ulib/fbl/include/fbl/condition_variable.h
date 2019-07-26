@@ -24,28 +24,22 @@
 namespace fbl {
 
 class ConditionVariable {
-public:
-    ConditionVariable() { cnd_init(&cond_); }
-    ~ConditionVariable() { cnd_destroy(&cond_); }
-    DISALLOW_COPY_ASSIGN_AND_MOVE(ConditionVariable);
+ public:
+  ConditionVariable() { cnd_init(&cond_); }
+  ~ConditionVariable() { cnd_destroy(&cond_); }
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ConditionVariable);
 
-    void Wait(Mutex* mutex) __TA_REQUIRES(mutex) {
-        cnd_wait(&cond_, mutex->GetInternal());
-    }
+  void Wait(Mutex* mutex) __TA_REQUIRES(mutex) { cnd_wait(&cond_, mutex->GetInternal()); }
 
-    void Signal() {
-        cnd_signal(&cond_);
-    }
+  void Signal() { cnd_signal(&cond_); }
 
-    void Broadcast() {
-        cnd_broadcast(&cond_);
-    }
+  void Broadcast() { cnd_broadcast(&cond_); }
 
-private:
-    cnd_t cond_;
+ private:
+  cnd_t cond_;
 };
 
-}
+}  // namespace fbl
 
 #endif  // ifndef _KERNEL
 #endif  // ifdef __cplusplus

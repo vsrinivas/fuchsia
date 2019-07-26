@@ -14,44 +14,41 @@ namespace virtual_camera {
 namespace fuchsia = ::llcpp::fuchsia;
 
 zx_status_t VirtualCameraFactory::Create(void* ctx, zx_device_t* parent) {
-    fbl::AllocChecker ac;
-    auto manager = fbl::make_unique_checked<VirtualCameraFactory>(&ac, parent);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+  fbl::AllocChecker ac;
+  auto manager = fbl::make_unique_checked<VirtualCameraFactory>(&ac, parent);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
-    zx_status_t status = manager->DdkAdd("virtual_camera_factory");
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "virtual_camera_manager: Could not add virtual camera  manager: %d\n", status);
-        return status;
-    }
+  zx_status_t status = manager->DdkAdd("virtual_camera_factory");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "virtual_camera_manager: Could not add virtual camera  manager: %d\n", status);
+    return status;
+  }
 
-    __UNUSED auto* dev = manager.release();
-    return ZX_OK;
+  __UNUSED auto* dev = manager.release();
+  return ZX_OK;
 }
 
-void VirtualCameraFactory::DdkUnbind() {
-    DdkRemove();
-}
+void VirtualCameraFactory::DdkUnbind() { DdkRemove(); }
 
-void VirtualCameraFactory::DdkRelease() {
-    delete this;
-}
+void VirtualCameraFactory::DdkRelease() { delete this; }
 
 void VirtualCameraFactory::CreateDevice(
     fuchsia::camera::common::VirtualCameraConfig config,
-    fuchsia::camera::common::VirtualCameraFactory::Interface::CreateDeviceCompleter::Sync completer) {
-    // TODO(eweeks): Implement this.
+    fuchsia::camera::common::VirtualCameraFactory::Interface::CreateDeviceCompleter::Sync
+        completer) {
+  // TODO(eweeks): Implement this.
 }
 
 static constexpr zx_driver_ops_t kDriverOps = []() {
-    zx_driver_ops_t ops = {};
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = VirtualCameraFactory::Create;
-    return ops;
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = VirtualCameraFactory::Create;
+  return ops;
 }();
 
-} // namespace virtual_camera
+}  // namespace virtual_camera
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(virtual_factory, virtual_camera::kDriverOps, "vfactory", "0.1", 3)

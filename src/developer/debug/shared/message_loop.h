@@ -219,7 +219,7 @@ class MessageLoop : public fit::executor, public fit::suspended_task::resolver {
   uint64_t NextExpiryNS() const;
 
   // Backend for the public PostTask variants above that can handle any task type.
-  template<typename TaskType>
+  template <typename TaskType>
   void PostTaskInternal(FileLineFunction file_line, TaskType task);
 
   // Runs the given task, executing either the lambda or the fit::pending_task.

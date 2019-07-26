@@ -18,7 +18,7 @@ __BEGIN_CDECLS
 zx_status_t acpi_bbn_call(ACPI_HANDLE dev_obj, uint8_t* out_bbn);
 zx_status_t acpi_crt_call(ACPI_HANDLE dev_obj, uint64_t* out);
 
-// Call the ACPI _OSC method on a device object. 
+// Call the ACPI _OSC method on a device object.
 //
 // Returns values:
 //  ZX_ERR_INVALID_ARGS: dwords_in or dwords_out are NULL, dword_cnt is less than 2,
@@ -26,12 +26,8 @@ zx_status_t acpi_crt_call(ACPI_HANDLE dev_obj, uint64_t* out);
 //  ZX_ERR_BUFFER_TOO_SMALL: The dwords provided are not large enough for the result
 //                           from the method.
 //  ZX_ERR_INTERNAL: The method returned an error bit that should be checked in dwords_out[0]
-zx_status_t acpi_osc_call(ACPI_HANDLE dev_obj,
-                          const char* uuid_str,
-                          uint64_t revision,
-                          size_t dword_cnt,
-                          uint32_t* dwords_in,
-                          uint32_t* dwords_out,
+zx_status_t acpi_osc_call(ACPI_HANDLE dev_obj, const char* uuid_str, uint64_t revision,
+                          size_t dword_cnt, uint32_t* dwords_in, uint32_t* dwords_out,
                           bool* bit_masked);
 zx_status_t acpi_psv_call(ACPI_HANDLE dev_obj, uint64_t* out);
 zx_status_t acpi_seg_call(ACPI_HANDLE dev_obj, uint16_t* out_seg);

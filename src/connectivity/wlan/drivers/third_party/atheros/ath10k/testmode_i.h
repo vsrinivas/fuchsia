@@ -30,7 +30,7 @@
 #define ATH10K_TM_DATA_MAX_LEN 5000
 
 enum ath10k_tm_attr {
-    // clang-format off
+  // clang-format off
     __ATH10K_TM_ATTR_INVALID      = 0,
     ATH10K_TM_ATTR_CMD            = 1,
     ATH10K_TM_ATTR_DATA           = 2,
@@ -42,37 +42,37 @@ enum ath10k_tm_attr {
     /* keep last */
     __ATH10K_TM_ATTR_AFTER_LAST,
     ATH10K_TM_ATTR_MAX            = __ATH10K_TM_ATTR_AFTER_LAST - 1,
-    // clang-format on
+  // clang-format on
 };
 
 /* All ath10k testmode interface commands specified in
  * ATH10K_TM_ATTR_CMD
  */
 enum ath10k_tm_cmd {
-    /* Returns the supported ath10k testmode interface version in
-     * ATH10K_TM_ATTR_VERSION. Always guaranteed to work. User space
-     * uses this to verify it's using the correct version of the
-     * testmode interface
-     */
-    ATH10K_TM_CMD_GET_VERSION = 0,
+  /* Returns the supported ath10k testmode interface version in
+   * ATH10K_TM_ATTR_VERSION. Always guaranteed to work. User space
+   * uses this to verify it's using the correct version of the
+   * testmode interface
+   */
+  ATH10K_TM_CMD_GET_VERSION = 0,
 
-    /* Boots the UTF firmware, the netdev interface must be down at the
-     * time.
-     */
-    ATH10K_TM_CMD_UTF_START = 1,
+  /* Boots the UTF firmware, the netdev interface must be down at the
+   * time.
+   */
+  ATH10K_TM_CMD_UTF_START = 1,
 
-    /* Shuts down the UTF firmware and puts the driver back into OFF
-     * state.
-     */
-    ATH10K_TM_CMD_UTF_STOP = 2,
+  /* Shuts down the UTF firmware and puts the driver back into OFF
+   * state.
+   */
+  ATH10K_TM_CMD_UTF_STOP = 2,
 
-    /* The command used to transmit a WMI command to the firmware and
-     * the event to receive WMI events from the firmware. Without
-     * struct wmi_cmd_hdr header, only the WMI payload. Command id is
-     * provided with ATH10K_TM_ATTR_WMI_CMDID and payload in
-     * ATH10K_TM_ATTR_DATA.
-     */
-    ATH10K_TM_CMD_WMI = 3,
+  /* The command used to transmit a WMI command to the firmware and
+   * the event to receive WMI events from the firmware. Without
+   * struct wmi_cmd_hdr header, only the WMI payload. Command id is
+   * provided with ATH10K_TM_ATTR_WMI_CMDID and payload in
+   * ATH10K_TM_ATTR_DATA.
+   */
+  ATH10K_TM_CMD_WMI = 3,
 };
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_TESTMODE_I_H_

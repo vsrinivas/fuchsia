@@ -6,13 +6,8 @@
 
 #include "test-module-struct.h"
 
-struct TestEngine : public HermeticComputeEngine<TestEngine,
-                                                 OneWord,
-                                                 MultiWord,
-                                                 Tiny,
-                                                 Odd> {
-    int64_t operator()(const OneWord& a, const MultiWord& b,
-                       const Tiny& c, const Odd& d) {
-        return a.x + b.x + b.y + b.z + c.x + c.y + d.Total();
-    }
+struct TestEngine : public HermeticComputeEngine<TestEngine, OneWord, MultiWord, Tiny, Odd> {
+  int64_t operator()(const OneWord& a, const MultiWord& b, const Tiny& c, const Odd& d) {
+    return a.x + b.x + b.y + b.z + c.x + c.y + d.Total();
+  }
 };

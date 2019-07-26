@@ -12,8 +12,7 @@ namespace harvester {
 // Collect a list of components that have inspect data.
 class GatherInspectable : public GatherCategory {
  public:
-  GatherInspectable(zx_handle_t root_resource,
-                    harvester::DockyardProxy& dockyard_proxy)
+  GatherInspectable(zx_handle_t root_resource, harvester::DockyardProxy& dockyard_proxy)
       : GatherCategory(root_resource, dockyard_proxy) {}
 
   void Gather() override;

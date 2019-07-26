@@ -5,23 +5,23 @@
 #pragma once
 
 /* iomg bit definition */
-#define MUX_M0      0
-#define MUX_M1      1
-#define MUX_M2      2
-#define MUX_M3      3
-#define MUX_M4      4
-#define MUX_M5      5
-#define MUX_M6      6
-#define MUX_M7      7
+#define MUX_M0 0
+#define MUX_M1 1
+#define MUX_M2 2
+#define MUX_M3 3
+#define MUX_M4 4
+#define MUX_M5 5
+#define MUX_M6 6
+#define MUX_M7 7
 
 /* iocg bit definition */
-#define PULL_MASK   (3)
-#define PULL_DIS    (0)
-#define PULL_UP     (1 << 0)
-#define PULL_DOWN   (1 << 1)
+#define PULL_MASK (3)
+#define PULL_DIS (0)
+#define PULL_UP (1 << 0)
+#define PULL_DOWN (1 << 1)
 
 /* drive strength definition */
-#define DRIVE_MASK  (7 << 4)
+#define DRIVE_MASK (7 << 4)
 #define DRIVE1_02MA (0 << 4)
 #define DRIVE1_04MA (1 << 4)
 #define DRIVE1_08MA (2 << 4)
@@ -60,12 +60,12 @@
 #define DRIVE7_16MA (7 << 4)
 
 /* I2C0 and I2C1 pinxmux and pincfg offsets */
-#define I2C0_SCL_MUX_OFFSET            0x14
-#define I2C0_SDA_MUX_OFFSET            0x18
-#define I2C1_SCL_MUX_OFFSET            0x1C
-#define I2C1_SDA_MUX_OFFSET            0x20
+#define I2C0_SCL_MUX_OFFSET 0x14
+#define I2C0_SDA_MUX_OFFSET 0x18
+#define I2C1_SCL_MUX_OFFSET 0x1C
+#define I2C1_SDA_MUX_OFFSET 0x20
 
-#define I2C0_SCL_CFG_OFFSET            0x1C
-#define I2C0_SDA_CFG_OFFSET            0x20
-#define I2C1_SCL_CFG_OFFSET            0x24
-#define I2C1_SDA_CFG_OFFSET            0x28
+#define I2C0_SCL_CFG_OFFSET 0x1C
+#define I2C0_SDA_CFG_OFFSET 0x20
+#define I2C1_SCL_CFG_OFFSET 0x24
+#define I2C1_SDA_CFG_OFFSET 0x28

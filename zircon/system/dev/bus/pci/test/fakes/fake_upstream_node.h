@@ -10,28 +10,23 @@
 namespace pci {
 
 class FakeUpstreamNode : public UpstreamNode {
-public:
-    FakeUpstreamNode(Type type, uint32_t mbus_id)
-        : UpstreamNode(type, mbus_id) {}
+ public:
+  FakeUpstreamNode(Type type, uint32_t mbus_id) : UpstreamNode(type, mbus_id) {}
 
-    PciAllocator& pf_mmio_regions() final { return pf_mmio_alloc_; }
-    PciAllocator& mmio_regions() final { return mmio_alloc_; }
-    PciAllocator& pio_regions() final { return pio_alloc_; }
+  PciAllocator& pf_mmio_regions() final { return pf_mmio_alloc_; }
+  PciAllocator& mmio_regions() final { return mmio_alloc_; }
+  PciAllocator& pio_regions() final { return pio_alloc_; }
 
-    void UnplugDownstream() final {
-        UpstreamNode::UnplugDownstream();
-    }
+  void UnplugDownstream() final { UpstreamNode::UnplugDownstream(); }
 
-    void DisableDownstream() final {
-        UpstreamNode::DisableDownstream();
-    }
+  void DisableDownstream() final { UpstreamNode::DisableDownstream(); }
 
-    PCI_IMPLEMENT_REFCOUNTED;
+  PCI_IMPLEMENT_REFCOUNTED;
 
-private:
-    FakeAllocator pf_mmio_alloc_;
-    FakeAllocator mmio_alloc_;
-    FakeAllocator pio_alloc_;
+ private:
+  FakeAllocator pf_mmio_alloc_;
+  FakeAllocator mmio_alloc_;
+  FakeAllocator pio_alloc_;
 };
 
-} // namespace pci
+}  // namespace pci

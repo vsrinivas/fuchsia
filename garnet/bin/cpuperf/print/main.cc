@@ -48,12 +48,9 @@ static constexpr char kUsageString[] =
     " 2 - ERROR\n"
     " 3 - FATAL\n";
 
-static void PrintUsage(FILE* f) {
-  fputs(kUsageString, f);
-}
+static void PrintUsage(FILE* f) { fputs(kUsageString, f); }
 
-static bool ParseArgv(const fxl::CommandLine& cl,
-                      std::string* session_result_spec_path,
+static bool ParseArgv(const fxl::CommandLine& cl, std::string* session_result_spec_path,
                       cpuperf::SessionResultSpec* out_session_result_spec,
                       cpuperf::PrinterConfig* out_printer_config) {
   std::string arg;
@@ -106,23 +103,19 @@ int main(int argc, char** argv) {
   std::string session_result_spec_path;
   cpuperf::SessionResultSpec session_result_spec;
   cpuperf::PrinterConfig printer_config;
-  if (!ParseArgv(cl, &session_result_spec_path, &session_result_spec,
-                 &printer_config)) {
+  if (!ParseArgv(cl, &session_result_spec_path, &session_result_spec, &printer_config)) {
     return EXIT_FAILURE;
   }
 
   // Modify the recorded output path prefix to point to where we found the
   // session result spec. The directory currently recorded is probably for
   // the target.
-  std::string spec_directory =
-    files::GetDirectoryName(session_result_spec_path);
+  std::string spec_directory = files::GetDirectoryName(session_result_spec_path);
   if (spec_directory == "") {
     spec_directory = ".";
   }
-  std::string path_prefix_basename =
-    files::GetBaseName(session_result_spec.output_path_prefix);
-  session_result_spec.output_path_prefix =
-    spec_directory + "/" + path_prefix_basename;
+  std::string path_prefix_basename = files::GetBaseName(session_result_spec.output_path_prefix);
+  session_result_spec.output_path_prefix = spec_directory + "/" + path_prefix_basename;
 
   fxl::Stopwatch stop_watch;
   stop_watch.Start();
@@ -134,14 +127,12 @@ int main(int argc, char** argv) {
   }
   FXL_LOG(INFO) << session_result_spec.num_iterations << " iteration(s), "
                 << session_result_spec.num_traces << " trace(s)";
-  FXL_LOG(INFO) << "Output path prefix: "
-                << session_result_spec.output_path_prefix;
+  FXL_LOG(INFO) << "Output path prefix: " << session_result_spec.output_path_prefix;
 
   uint64_t total_records;
   if (printer_config.output_format == cpuperf::OutputFormat::kRaw) {
     std::unique_ptr<cpuperf::RawPrinter> printer;
-    if (!cpuperf::RawPrinter::Create(&session_result_spec,
-                                     printer_config.ToRawPrinterConfig(),
+    if (!cpuperf::RawPrinter::Create(&session_result_spec, printer_config.ToRawPrinterConfig(),
                                      &printer)) {
       return EXIT_FAILURE;
     }
@@ -154,9 +145,8 @@ int main(int argc, char** argv) {
   fxl::TimeDelta delta = stop_watch.Elapsed();
   int64_t seconds = delta.ToSeconds();
   int milliseconds = delta.ToMilliseconds() % 1000;
-  FXL_LOG(INFO) << fxl::StringPrintf(
-      "%" PRIu64 " records processed in %" PRId64 ".%03d seconds\n",
-      total_records, seconds, milliseconds);
+  FXL_LOG(INFO) << fxl::StringPrintf("%" PRIu64 " records processed in %" PRId64 ".%03d seconds\n",
+                                     total_records, seconds, milliseconds);
 
   return EXIT_SUCCESS;
 }

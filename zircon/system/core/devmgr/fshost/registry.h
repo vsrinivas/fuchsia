@@ -18,25 +18,25 @@ namespace fshost {
 // A registry of filesystems, exposed through a VFS.
 // For more context on the nodes being served and the API exposed, refer to "vnode.h".
 class Registry {
-public:
-    // Creates the filesystem registry as a filesystem. Yes, you read that right.
-    //
-    // Within this sub-filesystem, there are two entries:
-    // "/fuchsia.fshost.Filesystems": A directory of all registered filesystems.
-    // "/fuchsia.fshost.Registry": A service node which may be used to register a filesystem.
-    Registry(async::Loop* loop);
+ public:
+  // Creates the filesystem registry as a filesystem. Yes, you read that right.
+  //
+  // Within this sub-filesystem, there are two entries:
+  // "/fuchsia.fshost.Filesystems": A directory of all registered filesystems.
+  // "/fuchsia.fshost.Registry": A service node which may be used to register a filesystem.
+  Registry(async::Loop* loop);
 
-    // Give a channel to the root directory, where it will begin serving requests.
-    zx_status_t ServeRoot(zx::channel server);
+  // Give a channel to the root directory, where it will begin serving requests.
+  zx_status_t ServeRoot(zx::channel server);
 
-private:
-    fs::SynchronousVfs vfs_;
-    // An exported pseudo-directory containing access to all filesystem metadata.
-    // This directory serves the "fuchsia.fshost" services.
-    fbl::RefPtr<fs::PseudoDir> root_;
-    // An exported service which allows control over the fshost itself.
-    fbl::RefPtr<fshost::Vnode> svc_;
+ private:
+  fs::SynchronousVfs vfs_;
+  // An exported pseudo-directory containing access to all filesystem metadata.
+  // This directory serves the "fuchsia.fshost" services.
+  fbl::RefPtr<fs::PseudoDir> root_;
+  // An exported service which allows control over the fshost itself.
+  fbl::RefPtr<fshost::Vnode> svc_;
 };
 
-} // namespace fshost
-} // namespace devmgr
+}  // namespace fshost
+}  // namespace devmgr

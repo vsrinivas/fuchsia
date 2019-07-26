@@ -35,8 +35,7 @@ void AgentThread(debug_ipc::MessageLoopZircon* loop, zx::socket socket) {
     // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
     debug_agent::DebugAgent agent(&router_buffer.stream());
     debug_agent::RemoteAPIAdapter adapter(&agent, &router_buffer.stream());
-    router_buffer.set_data_available_callback(
-        [&adapter]() { adapter.OnStreamReadable(); });
+    router_buffer.set_data_available_callback([&adapter]() { adapter.OnStreamReadable(); });
 
     loop->Run();
   }
@@ -52,8 +51,7 @@ int main(int argc, char* argv[]) {
   // ourselves keeps the same codepath regardless of whether the debug_agent
   // code is running in process or remotely.
   zx::socket client_socket, agent_socket;
-  if (zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &agent_socket) !=
-      ZX_OK) {
+  if (zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &agent_socket) != ZX_OK) {
     fprintf(stderr, "Can't create socket, aborting.\n");
     return 1;
   }
@@ -77,8 +75,7 @@ int main(int argc, char* argv[]) {
 
     // Route data from buffer -> session.
     zxdb::Session session(&buffer.stream());
-    buffer.set_data_available_callback(
-        [&session]() { session.OnStreamReadable(); });
+    buffer.set_data_available_callback([&session]() { session.OnStreamReadable(); });
 
     zxdb::Console console(&session);
     console.Init();

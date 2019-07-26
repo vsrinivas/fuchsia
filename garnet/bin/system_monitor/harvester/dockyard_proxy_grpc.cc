@@ -18,8 +18,7 @@ namespace harvester {
 
 namespace {
 
-constexpr DockyardProxyStatus ToDockyardProxyStatus(
-    const grpc::Status& status) {
+constexpr DockyardProxyStatus ToDockyardProxyStatus(const grpc::Status& status) {
   return status.ok() ? DockyardProxyStatus::OK : DockyardProxyStatus::ERROR;
 }
 
@@ -30,9 +29,8 @@ DockyardProxyStatus DockyardProxyGrpc::Init() {
   request.set_device_name("TODO SET DEVICE NAME");
   request.set_version(dockyard::DOCKYARD_VERSION);
   auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
   request.set_device_time_ns(nanoseconds);
   dockyard_proto::InitReply reply;
 
@@ -46,34 +44,30 @@ DockyardProxyStatus DockyardProxyGrpc::Init() {
   return DockyardProxyStatus::OK;
 }
 
-DockyardProxyStatus DockyardProxyGrpc::SendInspectJson(
-    const std::string& dockyard_path, const std::string& json) {
+DockyardProxyStatus DockyardProxyGrpc::SendInspectJson(const std::string& dockyard_path,
+                                                       const std::string& json) {
   auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
   dockyard::DockyardId dockyard_id;
   grpc::Status status = GetDockyardIdForPath(&dockyard_id, dockyard_path);
   if (status.ok()) {
-    return ToDockyardProxyStatus(
-        SendInspectJsonById(nanoseconds, dockyard_id, json));
+    return ToDockyardProxyStatus(SendInspectJsonById(nanoseconds, dockyard_id, json));
   }
   return ToDockyardProxyStatus(status);
 }
 
-DockyardProxyStatus DockyardProxyGrpc::SendSample(
-    const std::string& dockyard_path, uint64_t value) {
+DockyardProxyStatus DockyardProxyGrpc::SendSample(const std::string& dockyard_path,
+                                                  uint64_t value) {
   // TODO(smbug.com/35): system_clock might be at usec resolution. Consider
   // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
   dockyard::DockyardId dockyard_id;
   grpc::Status status = GetDockyardIdForPath(&dockyard_id, dockyard_path);
   if (status.ok()) {
-    return ToDockyardProxyStatus(
-        SendSampleById(nanoseconds, dockyard_id, value));
+    return ToDockyardProxyStatus(SendSampleById(nanoseconds, dockyard_id, value));
   }
   return ToDockyardProxyStatus(status);
 }
@@ -82,9 +76,8 @@ DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList list) {
   // TODO(smbug.com/35): system_clock might be at usec resolution. Consider
   // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
   SampleListById by_id(list.size());
   auto path_iter = list.begin();
   auto id_iter = by_id.begin();
@@ -100,14 +93,12 @@ DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList list) {
   return ToDockyardProxyStatus(SendSampleListById(nanoseconds, by_id));
 }
 
-DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(
-    const StringSampleList list) {
+DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(const StringSampleList list) {
   // TODO(smbug.com/35): system_clock might be at usec resolution. Consider
   // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 
   std::vector<const std::string*> dockyard_strings;
   for (const auto& element : list) {
@@ -129,8 +120,8 @@ DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(
   return ToDockyardProxyStatus(SendSampleListById(nanoseconds, by_id));
 }
 
-grpc::Status DockyardProxyGrpc::SendInspectJsonById(
-    uint64_t time, dockyard::DockyardId dockyard_id, const std::string& json) {
+grpc::Status DockyardProxyGrpc::SendInspectJsonById(uint64_t time, dockyard::DockyardId dockyard_id,
+                                                    const std::string& json) {
   // Data we are sending to the server.
   dockyard_proto::InspectJson inspect;
   inspect.set_time(time);
@@ -138,8 +129,8 @@ grpc::Status DockyardProxyGrpc::SendInspectJsonById(
   inspect.set_json(json);
 
   grpc::ClientContext context;
-  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::InspectJson,
-                                           dockyard_proto::EmptyMessage>>
+  std::shared_ptr<
+      grpc::ClientReaderWriter<dockyard_proto::InspectJson, dockyard_proto::EmptyMessage>>
       stream(stub_->SendInspectJson(&context));
 
   stream->Write(inspect);
@@ -147,8 +138,7 @@ grpc::Status DockyardProxyGrpc::SendInspectJsonById(
   return stream->Finish();
 }
 
-grpc::Status DockyardProxyGrpc::SendSampleById(uint64_t time,
-                                               dockyard::DockyardId dockyard_id,
+grpc::Status DockyardProxyGrpc::SendSampleById(uint64_t time, dockyard::DockyardId dockyard_id,
                                                uint64_t value) {
   // Data we are sending to the server.
   dockyard_proto::RawSample sample;
@@ -157,8 +147,7 @@ grpc::Status DockyardProxyGrpc::SendSampleById(uint64_t time,
   sample.mutable_sample()->set_value(value);
 
   grpc::ClientContext context;
-  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSample,
-                                           dockyard_proto::EmptyMessage>>
+  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSample, dockyard_proto::EmptyMessage>>
       stream(stub_->SendSample(&context));
 
   stream->Write(sample);
@@ -166,8 +155,7 @@ grpc::Status DockyardProxyGrpc::SendSampleById(uint64_t time,
   return stream->Finish();
 }
 
-grpc::Status DockyardProxyGrpc::SendSampleListById(uint64_t time,
-                                                   const SampleListById list) {
+grpc::Status DockyardProxyGrpc::SendSampleListById(uint64_t time, const SampleListById list) {
   // Data we are sending to the server.
   dockyard_proto::RawSamples samples;
   samples.set_time(time);
@@ -178,8 +166,8 @@ grpc::Status DockyardProxyGrpc::SendSampleListById(uint64_t time,
   }
 
   grpc::ClientContext context;
-  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSamples,
-                                           dockyard_proto::EmptyMessage>>
+  std::shared_ptr<
+      grpc::ClientReaderWriter<dockyard_proto::RawSamples, dockyard_proto::EmptyMessage>>
       stream(stub_->SendSamples(&context));
 
   stream->Write(samples);
@@ -187,8 +175,8 @@ grpc::Status DockyardProxyGrpc::SendSampleListById(uint64_t time,
   return stream->Finish();
 }
 
-grpc::Status DockyardProxyGrpc::GetDockyardIdForPath(
-    dockyard::DockyardId* dockyard_id, const std::string& dockyard_path) {
+grpc::Status DockyardProxyGrpc::GetDockyardIdForPath(dockyard::DockyardId* dockyard_id,
+                                                     const std::string& dockyard_path) {
   std::vector<dockyard::DockyardId> dockyard_ids;
   std::vector<const std::string*> dockyard_paths = {&dockyard_path};
   grpc::Status status = GetDockyardIdsForPaths(&dockyard_ids, dockyard_paths);
@@ -225,8 +213,7 @@ grpc::Status DockyardProxyGrpc::GetDockyardIdsForPaths(
   dockyard_proto::DockyardIds reply;
 
   grpc::ClientContext context;
-  grpc::Status status =
-      stub_->GetDockyardIdsForPaths(&context, need_ids, &reply);
+  grpc::Status status = stub_->GetDockyardIdsForPaths(&context, need_ids, &reply);
   if (status.ok()) {
     size_t reply_index = 0;
     for (size_t id_index : indexes) {

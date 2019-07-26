@@ -72,8 +72,7 @@ int main(int argc, char* argv[]) {
   auto complete_cb = [&loop] { loop.Shutdown(); };
 
   bool cmd_found;
-  if (!dispatcher.ExecuteCommand(cl.positional_args(), complete_cb,
-                                 &cmd_found)) {
+  if (!dispatcher.ExecuteCommand(cl.positional_args(), complete_cb, &cmd_found)) {
     if (!cmd_found)
       std::cout << "Unknown command: " << cl.positional_args()[0] << std::endl;
     return EXIT_FAILURE;

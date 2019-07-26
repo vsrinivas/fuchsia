@@ -43,16 +43,15 @@ bool TimezoneImpl::Init() {
 
   // Maps the ICU VMO into this process.
   uintptr_t icu_data_ptr = 0;
-  if (zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, icu_data.vmo().get(),
-                  0, icu_data.size(), &icu_data_ptr) != ZX_OK) {
+  if (zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, icu_data.vmo().get(), 0, icu_data.size(),
+                  &icu_data_ptr) != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to map ICU data into process.";
     return false;
   }
 
   // ICU-related initialization.
   UErrorCode icu_set_data_status = U_ZERO_ERROR;
-  udata_setCommonData(reinterpret_cast<void*>(icu_data_ptr),
-                      &icu_set_data_status);
+  udata_setCommonData(reinterpret_cast<void*>(icu_data_ptr), &icu_set_data_status);
   if (icu_set_data_status != U_ZERO_ERROR) {
     FXL_LOG(ERROR) << "Unable to set common ICU data. "
                    << "Timezone data unavailable.";
@@ -62,27 +61,25 @@ bool TimezoneImpl::Init() {
   return true;
 }
 
-void TimezoneImpl::GetTimezoneOffsetMinutes(
-    int64_t milliseconds_since_epoch,
-    GetTimezoneOffsetMinutesCallback callback) {
+void TimezoneImpl::GetTimezoneOffsetMinutes(int64_t milliseconds_since_epoch,
+                                            GetTimezoneOffsetMinutesCallback callback) {
   if (!valid_) {
     callback(0, 0);
     return;
   }
   fidl::StringPtr timezone_id = GetTimezoneIdImpl();
-  std::unique_ptr<icu::TimeZone> timezone(
-      icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
+  std::unique_ptr<icu::TimeZone> timezone(icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
   int32_t local_offset = 0, dst_offset = 0;
   UErrorCode error = U_ZERO_ERROR;
   // Local time is set to false, and local_offset/dst_offset/error are mutated
   // via non-const references.
-  timezone->getOffset(static_cast<UDate>(milliseconds_since_epoch), false,
-                      local_offset, dst_offset, error);
+  timezone->getOffset(static_cast<UDate>(milliseconds_since_epoch), false, local_offset, dst_offset,
+                      error);
   if (error != U_ZERO_ERROR) {
     icu::ErrorCode icuError;
     icuError.set(error);
-    FXL_LOG(ERROR) << "Unable to get correct offset: error code " << error
-                   << " " << icuError.errorName();
+    FXL_LOG(ERROR) << "Unable to get correct offset: error code " << error << " "
+                   << icuError.errorName();
     callback(0, 0);
     return;
   }
@@ -101,16 +98,14 @@ void TimezoneImpl::NotifyWatchers(const fidl::StringPtr& new_timezone_id) {
 }
 
 bool TimezoneImpl::IsValidTimezoneId(const fidl::StringPtr& timezone_id) {
-  std::unique_ptr<icu::TimeZone> timezone(
-      icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
+  std::unique_ptr<icu::TimeZone> timezone(icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
   if ((*timezone) == icu::TimeZone::getUnknown()) {
     return false;
   }
   return true;
 }
 
-void TimezoneImpl::SetTimezone(std::string timezone_id,
-                               SetTimezoneCallback callback) {
+void TimezoneImpl::SetTimezone(std::string timezone_id, SetTimezoneCallback callback) {
   if (!valid_) {
     FXL_LOG(ERROR) << "Time service is not valid.";
     callback(false);
@@ -133,9 +128,7 @@ void TimezoneImpl::SetTimezone(std::string timezone_id,
   callback(true);
 }
 
-void TimezoneImpl::GetTimezoneId(GetTimezoneIdCallback callback) {
-  callback(GetTimezoneIdImpl());
-}
+void TimezoneImpl::GetTimezoneId(GetTimezoneIdCallback callback) { callback(GetTimezoneIdImpl()); }
 
 fidl::StringPtr TimezoneImpl::GetTimezoneIdImpl() {
   if (!valid_) {
@@ -161,42 +154,30 @@ fidl::StringPtr TimezoneImpl::GetTimezoneIdImpl() {
 }
 
 void TimezoneImpl::ReleaseWatcher(fuchsia::timezone::TimezoneWatcher* watcher) {
-  auto predicate = [watcher](const auto& target) {
-    return target.get() == watcher;
-  };
-  watchers_.erase(
-      std::remove_if(watchers_.begin(), watchers_.end(), predicate));
+  auto predicate = [watcher](const auto& target) { return target.get() == watcher; };
+  watchers_.erase(std::remove_if(watchers_.begin(), watchers_.end(), predicate));
 }
 
-void TimezoneImpl::ReleaseWatcher(
-    fuchsia::deprecatedtimezone::TimezoneWatcher* watcher) {
-  auto predicate = [watcher](const auto& target) {
-    return target.get() == watcher;
-  };
-  deprecated_watchers_.erase(std::remove_if(
-      deprecated_watchers_.begin(), deprecated_watchers_.end(), predicate));
+void TimezoneImpl::ReleaseWatcher(fuchsia::deprecatedtimezone::TimezoneWatcher* watcher) {
+  auto predicate = [watcher](const auto& target) { return target.get() == watcher; };
+  deprecated_watchers_.erase(
+      std::remove_if(deprecated_watchers_.begin(), deprecated_watchers_.end(), predicate));
 }
 
-void TimezoneImpl::Watch(
-    fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher) {
+void TimezoneImpl::Watch(fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher) {
   fuchsia::timezone::TimezoneWatcherPtr watcher_proxy = watcher.Bind();
   fuchsia::timezone::TimezoneWatcher* proxy_raw_ptr = watcher_proxy.get();
-  watcher_proxy.set_error_handler([this, proxy_raw_ptr](zx_status_t status) {
-    ReleaseWatcher(proxy_raw_ptr);
-  });
+  watcher_proxy.set_error_handler(
+      [this, proxy_raw_ptr](zx_status_t status) { ReleaseWatcher(proxy_raw_ptr); });
   watchers_.push_back(std::move(watcher_proxy));
 }
 
 void TimezoneImpl::Watch(
-    fidl::InterfaceHandle<fuchsia::deprecatedtimezone::TimezoneWatcher>
-        watcher) {
-  fuchsia::deprecatedtimezone::TimezoneWatcherPtr watcher_proxy =
-      watcher.Bind();
-  fuchsia::deprecatedtimezone::TimezoneWatcher* proxy_raw_ptr =
-      watcher_proxy.get();
-  watcher_proxy.set_error_handler([this, proxy_raw_ptr](zx_status_t status) {
-    ReleaseWatcher(proxy_raw_ptr);
-  });
+    fidl::InterfaceHandle<fuchsia::deprecatedtimezone::TimezoneWatcher> watcher) {
+  fuchsia::deprecatedtimezone::TimezoneWatcherPtr watcher_proxy = watcher.Bind();
+  fuchsia::deprecatedtimezone::TimezoneWatcher* proxy_raw_ptr = watcher_proxy.get();
+  watcher_proxy.set_error_handler(
+      [this, proxy_raw_ptr](zx_status_t status) { ReleaseWatcher(proxy_raw_ptr); });
   deprecated_watchers_.push_back(std::move(watcher_proxy));
 }
 

@@ -15,14 +15,14 @@ namespace debugger_utils {
 
 zx::job GetDefaultJob();
 
-using JobTreeJobCallback = std::function<zx_status_t(
-    zx::job* job, zx_koid_t koid, zx_koid_t parent_koid, int depth)>;
+using JobTreeJobCallback =
+    std::function<zx_status_t(zx::job* job, zx_koid_t koid, zx_koid_t parent_koid, int depth)>;
 
-using JobTreeProcessCallback = std::function<zx_status_t(
-    zx::process* process, zx_koid_t koid, zx_koid_t parent_koid, int depth)>;
+using JobTreeProcessCallback = std::function<zx_status_t(zx::process* process, zx_koid_t koid,
+                                                         zx_koid_t parent_koid, int depth)>;
 
-using JobTreeThreadCallback = std::function<zx_status_t(
-    zx::thread* thread, zx_koid_t koid, zx_koid_t parent_koid, int depth)>;
+using JobTreeThreadCallback = std::function<zx_status_t(zx::thread* thread, zx_koid_t koid,
+                                                        zx_koid_t parent_koid, int depth)>;
 
 // Walk the job tree of |job|. Jobs are searched in depth-first order, except
 // that |job| itself is not passed to the job callback. If the caller wants to

@@ -16,9 +16,8 @@ namespace {
 // Canonicalize the given |component| from |source| into |output| and
 // |new_component|. If |separator| is non-zero, it is pre-pended to |output|
 // prior to the canonicalized component; i.e. for the '?' or '#' characters.
-bool DoCanonicalizePathComponent(const char* source, const Component& component,
-                                 char separator, CanonOutput* output,
-                                 Component* new_component) {
+bool DoCanonicalizePathComponent(const char* source, const Component& component, char separator,
+                                 CanonOutput* output, Component* new_component) {
   bool success = true;
   if (component.is_valid()) {
     if (separator)
@@ -45,14 +44,12 @@ bool DoCanonicalizePathComponent(const char* source, const Component& component,
 
 }  // namespace
 
-bool CanonicalizePathURL(const char* spec, size_t spec_len,
-                         const Parsed& parsed, CanonOutput* output,
-                         Parsed* new_parsed) {
+bool CanonicalizePathURL(const char* spec, size_t spec_len, const Parsed& parsed,
+                         CanonOutput* output, Parsed* new_parsed) {
   URLComponentSource source(spec);
 
   // Scheme: this will append the colon.
-  bool success = CanonicalizeScheme(source.scheme, parsed.scheme, output,
-                                    &new_parsed->scheme);
+  bool success = CanonicalizeScheme(source.scheme, parsed.scheme, output, &new_parsed->scheme);
 
   // We assume there's no authority for path URLs. Note that hosts should never
   // have -1 length.
@@ -62,12 +59,10 @@ bool CanonicalizePathURL(const char* spec, size_t spec_len,
   new_parsed->port.reset();
   // We allow path URLs to have the path, query and fragment components, but we
   // will canonicalize each of the via the weaker path URL rules.
-  success &= DoCanonicalizePathComponent(source.path, parsed.path, '\0', output,
-                                         &new_parsed->path);
-  success &= DoCanonicalizePathComponent(source.query, parsed.query, '?',
-                                         output, &new_parsed->query);
-  success &= DoCanonicalizePathComponent(source.ref, parsed.ref, '#', output,
-                                         &new_parsed->ref);
+  success &= DoCanonicalizePathComponent(source.path, parsed.path, '\0', output, &new_parsed->path);
+  success &=
+      DoCanonicalizePathComponent(source.query, parsed.query, '?', output, &new_parsed->query);
+  success &= DoCanonicalizePathComponent(source.ref, parsed.ref, '#', output, &new_parsed->ref);
 
   return success;
 }

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -33,20 +32,17 @@
 #include "garnet/bin/sshd-host/service.h"
 
 const auto kSshdPath = "/pkg/bin/sshd";
-const char* kSshdArgv[] = {kSshdPath, "-ie", "-f", "/config/data/sshd_config",
-                           nullptr};
+const char* kSshdArgv[] = {kSshdPath, "-ie", "-f", "/config/data/sshd_config", nullptr};
 
 namespace sshd_host {
-zx_status_t make_child_job(const zx::job& parent, std::string name,
-                           zx::job* job) {
+zx_status_t make_child_job(const zx::job& parent, std::string name, zx::job* job) {
   zx_status_t s;
   if ((s = zx::job::create(parent, 0, job)) != ZX_OK) {
     FXL_PLOG(ERROR, s) << "Failed to create child job; parent = " << parent.get();
     return s;
   }
 
-  if ((s = job->set_property(ZX_PROP_NAME, name.data(), name.size())) !=
-      ZX_OK) {
+  if ((s = job->set_property(ZX_PROP_NAME, name.data(), name.size())) != ZX_OK) {
     FXL_PLOG(ERROR, s) << "Failed to set name of child job; job = " << job->get();
     return s;
   }
@@ -66,8 +62,7 @@ Service::Service(int port) : port_(port) {
   }
 
   const struct sockaddr_in6 addr {
-    .sin6_family = AF_INET6, .sin6_port = htons(port_),
-    .sin6_addr = in6addr_any,
+    .sin6_family = AF_INET6, .sin6_port = htons(port_), .sin6_addr = in6addr_any,
   };
   if (bind(sock_, reinterpret_cast<const sockaddr*>(&addr), sizeof addr) < 0) {
     FXL_LOG(ERROR) << "Failed to bind to " << port_ << ": " << strerror(errno);
@@ -102,7 +97,7 @@ Service::~Service() {
 void Service::Wait() {
   waiter_.Wait(
       [this](zx_status_t /*success*/, uint32_t /*events*/) {
-        struct sockaddr_in6 peer_addr{};
+        struct sockaddr_in6 peer_addr {};
         socklen_t peer_addr_len = sizeof(peer_addr);
         int conn = accept(sock_, reinterpret_cast<struct sockaddr*>(&peer_addr), &peer_addr_len);
         if (conn < 0) {
@@ -120,8 +115,7 @@ void Service::Wait() {
         char host[32];
         char port[16];
         if (getnameinfo(reinterpret_cast<struct sockaddr*>(&peer_addr), peer_addr_len, host,
-                        sizeof(host), port, sizeof(port),
-                        NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
+                        sizeof(host), port, sizeof(port), NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
           peer_name = fxl::StringPrintf("%s:%s", host, port);
         }
         Launch(conn, peer_name);
@@ -144,8 +138,7 @@ void Service::Launch(int conn, const std::string& peer_name) {
   // Launch process with chrealm so that it gets /svc of sys realm
   const std::vector<fdio_spawn_action_t> actions{
       // Transfer the socket as stdin and stdout
-      {.action = FDIO_SPAWN_ACTION_CLONE_FD,
-       .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
+      {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
       {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
        .fd = {.local_fd = conn, .target_fd = STDOUT_FILENO}},
       // Clone this process' stderr.
@@ -155,8 +148,7 @@ void Service::Launch(int conn, const std::string& peer_name) {
   zx::process process;
   std::string error;
   zx_status_t status = chrealm::SpawnBinaryInRealmAsync(
-      "/hub", kSshdArgv, child_job.get(),
-      FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC, actions,
+      "/hub", kSshdArgv, child_job.get(), FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC, actions,
       process.reset_and_get_address(), &error);
   if (status < 0) {
     shutdown(conn, SHUT_RDWR);
@@ -167,12 +159,11 @@ void Service::Launch(int conn, const std::string& peer_name) {
 
   std::unique_ptr<async::Wait> waiter =
       std::make_unique<async::Wait>(process.get(), ZX_PROCESS_TERMINATED);
-  waiter->set_handler(
-      [this, process = std::move(process), job = std::move(child_job)](
-          async_dispatcher_t*, async::Wait*, zx_status_t /*status*/,
-          const zx_packet_signal_t* /*signal*/) mutable {
-        ProcessTerminated(std::move(process), std::move(job));
-      });
+  waiter->set_handler([this, process = std::move(process), job = std::move(child_job)](
+                          async_dispatcher_t*, async::Wait*, zx_status_t /*status*/,
+                          const zx_packet_signal_t* /*signal*/) mutable {
+    ProcessTerminated(std::move(process), std::move(job));
+  });
   waiter->Begin(async_get_default_dispatcher());
   process_waiters_.push_back(std::move(waiter));
 }
@@ -189,10 +180,9 @@ void Service::ProcessTerminated(zx::process process, zx::job job) {
   }
 
   // Find the waiter.
-  auto i = std::find_if(process_waiters_.begin(), process_waiters_.end(),
-                        [&process](const std::unique_ptr<async::Wait>& w) {
-                          return w->object() == process.get();
-                        });
+  auto i = std::find_if(
+      process_waiters_.begin(), process_waiters_.end(),
+      [&process](const std::unique_ptr<async::Wait>& w) { return w->object() == process.get(); });
   // And remove it.
   if (i != process_waiters_.end()) {
     process_waiters_.erase(i);

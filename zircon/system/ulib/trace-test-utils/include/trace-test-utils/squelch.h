@@ -20,30 +20,30 @@ namespace trace_testing {
 // The term "squelch" derives from radio circuitry used to remove noise.
 
 class Squelcher {
-public:
-    // |regex_str| is a regular expression consistenting of one or more
-    // subexpressions, the text in the parenthesis of each matching expressions
-    // is replaced with '<>'.
-    // Best illustration is an example. This example removes decimal numbers,
-    // koids, timestamps ("ts"), and lowercase hex numbers.
-    // const char regex[] = "([0-9]+/[0-9]+)"
-    //   "|koid\\(([0-9]+)\\)"
-    //   "|koid: ([0-9]+)"
-    //   "|ts: ([0-9]+)"
-    //   "|(0x[0-9a-f]+)";
-    // So "ts: 123 42 mumble koid(456) foo koid: 789, bar 0xabcd"
-    // becomes "ts: <> <> mumble koid(<>) foo koid: <>, bar <>".
-    static std::unique_ptr<Squelcher> Create(const char* regex_str);
+ public:
+  // |regex_str| is a regular expression consistenting of one or more
+  // subexpressions, the text in the parenthesis of each matching expressions
+  // is replaced with '<>'.
+  // Best illustration is an example. This example removes decimal numbers,
+  // koids, timestamps ("ts"), and lowercase hex numbers.
+  // const char regex[] = "([0-9]+/[0-9]+)"
+  //   "|koid\\(([0-9]+)\\)"
+  //   "|koid: ([0-9]+)"
+  //   "|ts: ([0-9]+)"
+  //   "|(0x[0-9a-f]+)";
+  // So "ts: 123 42 mumble koid(456) foo koid: 789, bar 0xabcd"
+  // becomes "ts: <> <> mumble koid(<>) foo koid: <>, bar <>".
+  static std::unique_ptr<Squelcher> Create(const char* regex_str);
 
-    ~Squelcher();
+  ~Squelcher();
 
-    fbl::String Squelch(const char* str);
+  fbl::String Squelch(const char* str);
 
-private:
-    Squelcher() = default;
+ private:
+  Squelcher() = default;
 
-    // The compiled regex.
-    regex_t regex_;
+  // The compiled regex.
+  regex_t regex_;
 };
 
 }  // namespace trace_testing

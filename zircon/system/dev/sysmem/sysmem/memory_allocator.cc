@@ -7,19 +7,18 @@
 #include <zircon/assert.h>
 
 MemoryAllocator::~MemoryAllocator() {
-    for (auto& it : destroy_callbacks_) {
-        it.second();
-    }
+  for (auto& it : destroy_callbacks_) {
+    it.second();
+  }
 }
 
-void MemoryAllocator::AddDestroyCallback(intptr_t key,
-                                         fit::callback<void()> callback) {
-    ZX_DEBUG_ASSERT(destroy_callbacks_.find(key) == destroy_callbacks_.end());
-    destroy_callbacks_[key] = std::move(callback);
+void MemoryAllocator::AddDestroyCallback(intptr_t key, fit::callback<void()> callback) {
+  ZX_DEBUG_ASSERT(destroy_callbacks_.find(key) == destroy_callbacks_.end());
+  destroy_callbacks_[key] = std::move(callback);
 }
 
 void MemoryAllocator::RemoveDestroyCallback(intptr_t key) {
-    // The key isn't required to be in the map in case of failures during
-    // create.  Erase if present.
-    destroy_callbacks_.erase(key);
+  // The key isn't required to be in the map in case of failures during
+  // create.  Erase if present.
+  destroy_callbacks_.erase(key);
 }

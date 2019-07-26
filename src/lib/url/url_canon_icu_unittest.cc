@@ -48,8 +48,7 @@ TEST(URLCanonIcuTest, ICUCharsetConverter) {
       // Big5
       {L"\x4f60\x597d", "big5", "\xa7\x41\xa6\x6e"},
       // Unrepresentable character in the destination set.
-      {L"hello\x4f60\x06de\x597dworld", "big5",
-       "hello\xa7\x41%26%231758%3B\xa6\x6eworld"},
+      {L"hello\x4f60\x06de\x597dworld", "big5", "hello\xa7\x41%26%231758%3B\xa6\x6eworld"},
   };
 
   for (const auto& icu_case : icu_cases) {
@@ -81,8 +80,7 @@ TEST(URLCanonIcuTest, ICUCharsetConverter) {
       input.push_back('a');
 
     RawCanonOutput<static_size> output;
-    converter.ConvertFromUTF16(input.c_str(), static_cast<int>(input.length()),
-                               &output);
+    converter.ConvertFromUTF16(input.c_str(), static_cast<int>(input.length()), &output);
     EXPECT_EQ(input.length(), static_cast<size_t>(output.length()));
   }
 }
@@ -118,8 +116,7 @@ TEST(URLCanonIcuTest, QueryWithConverter) {
     std::string out_str;
 
     StdStringCanonOutput output(&out_str);
-    CanonicalizeQuery(query_case.input8, in_comp, &converter, &output,
-                      &out_comp);
+    CanonicalizeQuery(query_case.input8, in_comp, &converter, &output, &out_comp);
     output.Complete();
 
     EXPECT_EQ(query_case.expected, out_str);

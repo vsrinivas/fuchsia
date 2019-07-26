@@ -24,8 +24,7 @@ typedef struct memfs_filesystem memfs_filesystem_t;
 //
 // Returns a handle to the root directory in |out_root|.
 __EXPORT zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher,
-                                             memfs_filesystem_t** out_fs,
-                                             zx_handle_t* out_root);
+                                             memfs_filesystem_t** out_fs, zx_handle_t* out_root);
 
 // Same as memfs_create_filesystem, but with an extra |max_num_pages| option.
 //
@@ -62,9 +61,8 @@ __EXPORT zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char
 // Specify the maximum number of pages available to the fs via |max_num_pages|.
 // This puts a custom bound on memory consumption.
 __EXPORT zx_status_t memfs_install_at_with_page_limit(async_dispatcher_t* dispatcher,
-                                                      size_t max_num_pages,
-                                                      const char* path);
+                                                      size_t max_num_pages, const char* path);
 
 __END_CDECLS
 
-#endif // LIB_MEMFS_INCLUDE_LIB_MEMFS_MEMFS_H_
+#endif  // LIB_MEMFS_INCLUDE_LIB_MEMFS_MEMFS_H_

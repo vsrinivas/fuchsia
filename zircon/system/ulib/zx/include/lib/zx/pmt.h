@@ -11,27 +11,27 @@
 namespace zx {
 
 class pmt final : public object<pmt> {
-public:
-    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_PMT;
+ public:
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_PMT;
 
-    constexpr pmt() = default;
+  constexpr pmt() = default;
 
-    explicit pmt(zx_handle_t value) : object(value) {}
+  explicit pmt(zx_handle_t value) : object(value) {}
 
-    explicit pmt(handle&& h) : object(h.release()) {}
+  explicit pmt(handle&& h) : object(h.release()) {}
 
-    pmt(pmt&& other) : object(other.release()) {}
+  pmt(pmt&& other) : object(other.release()) {}
 
-    pmt& operator=(pmt&& other) {
-        reset(other.release());
-        return *this;
-    }
+  pmt& operator=(pmt&& other) {
+    reset(other.release());
+    return *this;
+  }
 
-    zx_status_t unpin() { return zx_pmt_unpin(release()); }
+  zx_status_t unpin() { return zx_pmt_unpin(release()); }
 };
 
 using unowned_pmt = unowned<pmt>;
 
-} // namespace zx
+}  // namespace zx
 
 #endif  // LIB_ZX_PMT_H_

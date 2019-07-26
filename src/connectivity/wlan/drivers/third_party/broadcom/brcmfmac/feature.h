@@ -36,21 +36,21 @@
  * GSCAN: enhanced scan offload feature.
  * FWSUP: Firmware supplicant.
  */
-#define BRCMF_FEAT_LIST             \
-    BRCMF_FEAT_DEF(MBSS)            \
-    BRCMF_FEAT_DEF(MCHAN)           \
-    BRCMF_FEAT_DEF(PNO)             \
-    BRCMF_FEAT_DEF(WOWL)            \
-    BRCMF_FEAT_DEF(P2P)             \
-    BRCMF_FEAT_DEF(RSDB)            \
-    BRCMF_FEAT_DEF(TDLS)            \
-    BRCMF_FEAT_DEF(SCAN_RANDOM_MAC) \
-    BRCMF_FEAT_DEF(WOWL_ND)         \
-    BRCMF_FEAT_DEF(WOWL_GTK)        \
-    BRCMF_FEAT_DEF(WOWL_ARP_ND)     \
-    BRCMF_FEAT_DEF(MFP)             \
-    BRCMF_FEAT_DEF(GSCAN)           \
-    BRCMF_FEAT_DEF(FWSUP)
+#define BRCMF_FEAT_LIST           \
+  BRCMF_FEAT_DEF(MBSS)            \
+  BRCMF_FEAT_DEF(MCHAN)           \
+  BRCMF_FEAT_DEF(PNO)             \
+  BRCMF_FEAT_DEF(WOWL)            \
+  BRCMF_FEAT_DEF(P2P)             \
+  BRCMF_FEAT_DEF(RSDB)            \
+  BRCMF_FEAT_DEF(TDLS)            \
+  BRCMF_FEAT_DEF(SCAN_RANDOM_MAC) \
+  BRCMF_FEAT_DEF(WOWL_ND)         \
+  BRCMF_FEAT_DEF(WOWL_GTK)        \
+  BRCMF_FEAT_DEF(WOWL_ARP_ND)     \
+  BRCMF_FEAT_DEF(MFP)             \
+  BRCMF_FEAT_DEF(GSCAN)           \
+  BRCMF_FEAT_DEF(FWSUP)
 
 /*
  * Quirks:
@@ -59,10 +59,10 @@
  * NEED_MPC: driver needs to disable MPC during scanning operation.
  * IS_4359: needs special-case code for 4359 chip.
  */
-#define BRCMF_QUIRK_LIST       \
-    BRCMF_QUIRK_DEF(AUTO_AUTH) \
-    BRCMF_QUIRK_DEF(NEED_MPC)  \
-    BRCMF_QUIRK_DEF(IS_4359)
+#define BRCMF_QUIRK_LIST     \
+  BRCMF_QUIRK_DEF(AUTO_AUTH) \
+  BRCMF_QUIRK_DEF(NEED_MPC)  \
+  BRCMF_QUIRK_DEF(IS_4359)
 
 #define BRCMF_FEAT_DEF(_f) BRCMF_FEAT_##_f,
 /*

@@ -36,8 +36,7 @@ void StreamServerBase::AwaitRead() {
       OVERNET_TRACE(ERROR) << "Failed to accept socket: " << fd.AsStatus();
       return;
     }
-    RegisterStreamSocketLink(app_, std::move(*fd), CreateFramer(), true,
-                             TimeDelta::PositiveInf(),
+    RegisterStreamSocketLink(app_, std::move(*fd), CreateFramer(), true, TimeDelta::PositiveInf(),
                              Callback<void>::Ignored());
     AwaitRead();
   });

@@ -21,8 +21,7 @@ const char kDurationArg[] = "--duration=1";
 const char kOutputFile[] = "/tmp/test-trace.fxt";
 
 #if defined(__x86_64__)
-const char kCategoriesArg[] =
-    "--categories=cpu:fixed:instructions_retired,cpu:tally";
+const char kCategoriesArg[] = "--categories=cpu:fixed:instructions_retired,cpu:tally";
 const char kCategoryName[] = "cpu:perf";
 const char kTestEventName[] = "instructions_retired";
 #else
@@ -34,9 +33,9 @@ TEST(CpuperfProvider, IntegrationTest) {
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
   zx::process child;
-  std::vector<std::string> argv{
-      kTracePath, "record", "--binary", kDurationArg, kCategoriesArg,
-      std::string("--output-file=") + kOutputFile};
+  std::vector<std::string> argv{kTracePath,     "record",
+                                "--binary",     kDurationArg,
+                                kCategoriesArg, std::string("--output-file=") + kOutputFile};
   ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
   int return_code;
@@ -49,8 +48,7 @@ TEST(CpuperfProvider, IntegrationTest) {
     ++record_count;
     if (record.type() == trace::RecordType::kEvent) {
       const trace::Record::Event& event = record.GetEvent();
-      if (event.type() == trace::EventType::kCounter &&
-          event.category == kCategoryName &&
+      if (event.type() == trace::EventType::kCounter && event.category == kCategoryName &&
           event.name == kTestEventName) {
         ++instructions_retired_count;
       }
@@ -64,14 +62,13 @@ TEST(CpuperfProvider, IntegrationTest) {
   };
 
   std::unique_ptr<trace::FileReader> reader;
-  ASSERT_TRUE(trace::FileReader::Create(kOutputFile,
-                                        std::move(record_consumer),
+  ASSERT_TRUE(trace::FileReader::Create(kOutputFile, std::move(record_consumer),
                                         std::move(error_handler), &reader));
   reader->ReadFile();
   ASSERT_FALSE(got_error);
 
-  FXL_LOG(INFO) << "Got " << record_count << " records, "
-                << instructions_retired_count << " instructions";
+  FXL_LOG(INFO) << "Got " << record_count << " records, " << instructions_retired_count
+                << " instructions";
 
   ASSERT_GT(instructions_retired_count, 0u);
 }

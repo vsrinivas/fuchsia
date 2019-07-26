@@ -32,37 +32,35 @@ static const zx_bind_inst_t gpio_match[] = {
 };
 
 static const device_component_part_t i2c_component[] = {
-    { countof(root_match), root_match },
-    { countof(i2c_match), i2c_match },
+    {countof(root_match), root_match},
+    {countof(i2c_match), i2c_match},
 };
 
 static const device_component_part_t gpio_component[] = {
-    { countof(root_match), root_match },
-    { countof(gpio_match), gpio_match },
+    {countof(root_match), root_match},
+    {countof(gpio_match), gpio_match},
 };
 
 static const device_component_t components[] = {
-    { countof(i2c_component), i2c_component },
-    { countof(gpio_component), gpio_component },
+    {countof(i2c_component), i2c_component},
+    {countof(gpio_component), gpio_component},
 };
 
 zx_status_t Astro::LightInit() {
-    const zx_device_prop_t props[] = {
-        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMS },
-        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMS_TCS3400 },
-        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMS_LIGHT },
-    };
+  const zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMS},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMS_TCS3400},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMS_LIGHT},
+  };
 
-    zx_status_t status = DdkAddComposite("tcs3400-light", props, countof(props),
-                                         components, countof(components),
-                                         UINT32_MAX);
-    if (status != ZX_OK) {
-        zxlogf(ERROR,
-               "%s(tcs-3400): DdkAddComposite failed: %d\n", __func__, status);
-        return status;
-    }
+  zx_status_t status = DdkAddComposite("tcs3400-light", props, countof(props), components,
+                                       countof(components), UINT32_MAX);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s(tcs-3400): DdkAddComposite failed: %d\n", __func__, status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-} // namespace astro
+}  // namespace astro

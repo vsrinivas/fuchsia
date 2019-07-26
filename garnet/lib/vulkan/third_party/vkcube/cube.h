@@ -128,11 +128,9 @@ struct demo {
   VkColorSpaceKHR color_space;
 
   PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
-  PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR
-      fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
+  PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
   PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
-  PFN_vkGetPhysicalDeviceSurfacePresentModesKHR
-      fpGetPhysicalDeviceSurfacePresentModesKHR;
+  PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
   PFN_vkGetPhysicalDeviceFeatures2KHR fpGetPhysicalDeviceFeatures2KHR;
   PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
   PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;

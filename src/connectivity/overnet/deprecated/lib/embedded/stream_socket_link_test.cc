@@ -38,8 +38,7 @@ class TypedTest : public ::testing::Test {
     ASSERT_EQ(0, socketpair(AF_UNIX, SOCK_STREAM, 0, sv));
     mocked_socket_ = Socket(sv[1]);
     ASSERT_TRUE(mocked_socket_.SetNonBlocking(true).is_ok());
-    RegisterStreamSocketLink(&app_, Socket(sv[0]),
-                             std::make_unique<typename Traits::Framer>(),
+    RegisterStreamSocketLink(&app_, Socket(sv[0]), std::make_unique<typename Traits::Framer>(),
                              Traits::kEagerAnnounce, Traits::kReadTimeout,
                              [this] { destroyed_ = true; });
   }
@@ -56,13 +55,12 @@ class TypedTest : public ::testing::Test {
       bool done = false;
       app_.reactor()->OnWrite(
           mocked_socket_.get(),
-          StatusCallback(ALLOCATED_CALLBACK,
-                         [this, &done, remaining = std::move(*write_result)](
-                             const Status& status) mutable {
-                           ASSERT_TRUE(status.is_ok()) << status;
-                           done = true;
-                           Write(std::move(remaining));
-                         }));
+          StatusCallback(ALLOCATED_CALLBACK, [this, &done, remaining = std::move(*write_result)](
+                                                 const Status& status) mutable {
+            ASSERT_TRUE(status.is_ok()) << status;
+            done = true;
+            Write(std::move(remaining));
+          }));
       StepUntil(&done);
     }
   }
@@ -78,42 +76,36 @@ class TypedTest : public ::testing::Test {
       return std::move(**poll_result);
     }
     bool done = false;
-    app_.reactor()->OnRead(
-        mocked_socket_.get(),
-        StatusCallback(ALLOCATED_CALLBACK, [this, &done](const Status& status) {
-          ASSERT_TRUE(status.is_ok()) << status;
-          done = true;
-          auto input = mocked_socket_.Read(4096);
-          ASSERT_TRUE(input.is_ok()) << input;
-          if (input->has_value()) {
-            mocked_side_framer_.Push(std::move(**input));
-          }
-        }));
+    app_.reactor()->OnRead(mocked_socket_.get(),
+                           StatusCallback(ALLOCATED_CALLBACK, [this, &done](const Status& status) {
+                             ASSERT_TRUE(status.is_ok()) << status;
+                             done = true;
+                             auto input = mocked_socket_.Read(4096);
+                             ASSERT_TRUE(input.is_ok()) << input;
+                             if (input->has_value()) {
+                               mocked_side_framer_.Push(std::move(**input));
+                             }
+                           }));
     StepUntil(&done);
     return ReadFrame();
   }
 
   template <class F>
   StatusOr<F> ReadAndDecode() {
-    return ReadFrame().Then(
-        [](Slice slice) { return Decode<F>(std::move(slice)); });
+    return ReadFrame().Then([](Slice slice) { return Decode<F>(std::move(slice)); });
   }
 
   Slice Frame(Slice stuff) { return mocked_side_framer_.Frame(stuff); }
 
-  bool RouterHasRouteTo(NodeId node_id) {
-    return app_.endpoint()->HasRouteTo(node_id);
-  }
+  bool RouterHasRouteTo(NodeId node_id) { return app_.endpoint()->HasRouteTo(node_id); }
 
   template <class F>
   bool WaitFor(F succeeds, TimeDelta timeout) {
-    return app_.reactor()->WaitUntil(std::move(succeeds),
-                                     app_.timer()->Now() + timeout);
+    return app_.reactor()->WaitUntil(std::move(succeeds), app_.timer()->Now() + timeout);
   }
 
   void StepUntil(bool* done) {
-    Timeout timeout(app_.timer(),
-                    app_.timer()->Now() + TimeDelta::FromSeconds(5),
+    Timeout timeout(app_.timer(), app_.timer()->Now() + TimeDelta::FromSeconds(5),
                     [](const Status& status) {
                       if (status.is_ok()) {
                         abort();
@@ -126,8 +118,7 @@ class TypedTest : public ::testing::Test {
 
  private:
   BasicOvernetEmbedded app_{false};
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
   typename Traits::Framer mocked_side_framer_;
   Socket mocked_socket_;
   bool destroyed_ = false;
@@ -146,22 +137,22 @@ static Slice EncodedGreeting() {
 TYPED_TEST_P(TypedTest, Connects) {
   this->Write(this->Frame(EncodedGreeting()));
 
-  auto got_greeting = this->template ReadAndDecode<
-      fuchsia::overnet::protocol::StreamSocketGreeting>();
+  auto got_greeting =
+      this->template ReadAndDecode<fuchsia::overnet::protocol::StreamSocketGreeting>();
   ASSERT_TRUE(got_greeting.is_ok()) << got_greeting;
   ASSERT_TRUE(got_greeting->has_magic_string());
   EXPECT_EQ(got_greeting->magic_string(), "Fuchsia Socket Stream");
   EXPECT_TRUE(got_greeting->has_node_id());
   EXPECT_TRUE(got_greeting->has_local_link_id());
 
-  EXPECT_TRUE(this->WaitFor(
-      [this] { return this->RouterHasRouteTo(NodeId(0x1111'2222'3333'4444)); },
-      TimeDelta::FromMilliseconds(200)));
+  EXPECT_TRUE(
+      this->WaitFor([this] { return this->RouterHasRouteTo(NodeId(0x1111'2222'3333'4444)); },
+                    TimeDelta::FromMilliseconds(200)));
 }
 
 REGISTER_TYPED_TEST_SUITE_P(TypedTest, Connects);
-using FramerTypes = ::testing::Types<ReliableEager, ReliableUneager,
-                                     UnreliableEager, UnreliableUneager>;
+using FramerTypes =
+    ::testing::Types<ReliableEager, ReliableUneager, UnreliableEager, UnreliableUneager>;
 INSTANTIATE_TYPED_TEST_SUITE_P(StreamSocketLinkSuite, TypedTest, FramerTypes);
 
 struct UnreliableUneagerTest : public TypedTest<UnreliableUneager>,
@@ -171,37 +162,32 @@ TEST_P(UnreliableUneagerTest, Connects) {
   OVERNET_TRACE(INFO) << GetParam();
   this->Write(GetParam());
 
-  auto got_greeting = this->template ReadAndDecode<
-      fuchsia::overnet::protocol::StreamSocketGreeting>();
+  auto got_greeting =
+      this->template ReadAndDecode<fuchsia::overnet::protocol::StreamSocketGreeting>();
   ASSERT_TRUE(got_greeting.is_ok()) << got_greeting;
   ASSERT_TRUE(got_greeting->has_magic_string());
   EXPECT_EQ(got_greeting->magic_string(), "Fuchsia Socket Stream");
   EXPECT_TRUE(got_greeting->has_node_id());
   EXPECT_TRUE(got_greeting->has_local_link_id());
 
-  EXPECT_TRUE(this->WaitFor(
-      [this] { return this->RouterHasRouteTo(NodeId(0x1111'2222'3333'4444)); },
-      TimeDelta::FromMilliseconds(200)));
+  EXPECT_TRUE(
+      this->WaitFor([this] { return this->RouterHasRouteTo(NodeId(0x1111'2222'3333'4444)); },
+                    TimeDelta::FromMilliseconds(200)));
 }
 
-const Slice kUnreliableStreamGreetingFrame =
-    UnreliableFramer().Frame(EncodedGreeting());
+const Slice kUnreliableStreamGreetingFrame = UnreliableFramer().Frame(EncodedGreeting());
 
 INSTANTIATE_TEST_SUITE_P(
     UnreliableUneagerSuite, UnreliableUneagerTest,
     ::testing::Values(
         kUnreliableStreamGreetingFrame,
+        Slice::Join({kUnreliableStreamGreetingFrame,
+                     Slice::FromStaticString("\nsome random trailing bytes\n")}),
         Slice::Join(
             {kUnreliableStreamGreetingFrame,
-             Slice::FromStaticString("\nsome random trailing bytes\n")}),
-        Slice::Join(
-            {kUnreliableStreamGreetingFrame,
-             Slice::FromStaticString(
-                 "some random trailing bytes without the extra newlines")}),
-        Slice::Join({Slice::FromStaticString("not a frame"),
-                     kUnreliableStreamGreetingFrame}),
-        Slice::Join({Slice::FromStaticString("\n\xff"),
-                     kUnreliableStreamGreetingFrame})));
+             Slice::FromStaticString("some random trailing bytes without the extra newlines")}),
+        Slice::Join({Slice::FromStaticString("not a frame"), kUnreliableStreamGreetingFrame}),
+        Slice::Join({Slice::FromStaticString("\n\xff"), kUnreliableStreamGreetingFrame})));
 
 }  // namespace stream_socket_link_test
 }  // namespace overnet

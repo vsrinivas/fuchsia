@@ -25,30 +25,31 @@ namespace fs {
 typedef zx::ticks Duration;
 
 class Ticker {
-public:
-    explicit Ticker(bool collecting_metrics)
-            : ticks_(collecting_metrics ? zx::ticks::now() : zx::ticks()) {}
+ public:
+  explicit Ticker(bool collecting_metrics)
+      : ticks_(collecting_metrics ? zx::ticks::now() : zx::ticks()) {}
 
-    void Reset() {
-        if (ticks_.get() == 0) {
-            return;
-        }
-        ticks_ = zx::ticks::now();
+  void Reset() {
+    if (ticks_.get() == 0) {
+      return;
     }
+    ticks_ = zx::ticks::now();
+  }
 
-    // Returns '0' for duration if collecting_metrics is false,
-    // preventing an unnecessary syscall.
-    //
-    // Otherwise, returns the time since either the constructor
-    // or the last call to reset (whichever was more recent).
-    Duration End() const {
-        if (ticks_.get() == 0) {
-            return zx::ticks();
-        }
-        return zx::ticks::now() - ticks_;
+  // Returns '0' for duration if collecting_metrics is false,
+  // preventing an unnecessary syscall.
+  //
+  // Otherwise, returns the time since either the constructor
+  // or the last call to reset (whichever was more recent).
+  Duration End() const {
+    if (ticks_.get() == 0) {
+      return zx::ticks();
     }
-private:
-    zx::ticks ticks_;
+    return zx::ticks::now() - ticks_;
+  }
+
+ private:
+  zx::ticks ticks_;
 };
 
 #else
@@ -57,14 +58,12 @@ private:
 class Duration {};
 
 class Ticker {
-public:
-    Ticker(bool) {}
-    void Reset();
-    Duration End() const {
-        return Duration();
-    }
+ public:
+  Ticker(bool) {}
+  void Reset();
+  Duration End() const { return Duration(); }
 };
 
 #endif
 
-} // namespace fs
+}  // namespace fs

@@ -33,10 +33,10 @@
 #define DIAG_TRANSFER_LIMIT 2048
 
 struct bmi_xfer {
-    bool tx_done;
-    bool rx_done;
-    bool wait_for_resp;
-    uint32_t resp_len;
+  bool tx_done;
+  bool rx_done;
+  bool wait_for_resp;
+  uint32_t resp_len;
 };
 
 /*
@@ -51,38 +51,38 @@ struct bmi_xfer {
  * required to initialize pipe_cfg_addr and svc_to_pipe_map.
  */
 struct pcie_state {
-    /* Pipe configuration Target address */
-    /* NB: ce_pipe_config[CE_COUNT] */
-    uint32_t pipe_cfg_addr;
+  /* Pipe configuration Target address */
+  /* NB: ce_pipe_config[CE_COUNT] */
+  uint32_t pipe_cfg_addr;
 
-    /* Service to pipe map Target address */
-    /* NB: service_to_pipe[PIPE_TO_CE_MAP_CN] */
-    uint32_t svc_to_pipe_map;
+  /* Service to pipe map Target address */
+  /* NB: service_to_pipe[PIPE_TO_CE_MAP_CN] */
+  uint32_t svc_to_pipe_map;
 
-    /* number of MSI interrupts requested */
-    uint32_t msi_requested;
+  /* number of MSI interrupts requested */
+  uint32_t msi_requested;
 
-    /* number of MSI interrupts granted */
-    uint32_t msi_granted;
+  /* number of MSI interrupts granted */
+  uint32_t msi_granted;
 
-    /* Message Signalled Interrupt address */
-    uint32_t msi_addr;
+  /* Message Signalled Interrupt address */
+  uint32_t msi_addr;
 
-    /* Base data */
-    uint32_t msi_data;
+  /* Base data */
+  uint32_t msi_data;
 
-    /*
-     * Data for firmware interrupt;
-     * MSI data for other interrupts are
-     * in various SoC registers
-     */
-    uint32_t msi_fw_intr_data;
+  /*
+   * Data for firmware interrupt;
+   * MSI data for other interrupts are
+   * in various SoC registers
+   */
+  uint32_t msi_fw_intr_data;
 
-    /* PCIE_PWR_METHOD_* */
-    uint32_t power_mgmt_method;
+  /* PCIE_PWR_METHOD_* */
+  uint32_t power_mgmt_method;
 
-    /* PCIE_CONFIG_FLAG_* */
-    uint32_t config_flags;
+  /* PCIE_CONFIG_FLAG_* */
+  uint32_t config_flags;
 };
 
 /* PCIE_CONFIG_FLAG definitions */
@@ -98,12 +98,12 @@ struct pcie_state {
  * NOTE: Structure is shared between Host software and Target firmware!
  */
 struct ce_pipe_config {
-    uint32_t pipenum;
-    uint32_t pipedir;
-    uint32_t nentries;
-    uint32_t nbytes_max;
-    uint32_t flags;
-    uint32_t reserved;
+  uint32_t pipenum;
+  uint32_t pipedir;
+  uint32_t nentries;
+  uint32_t nbytes_max;
+  uint32_t flags;
+  uint32_t reserved;
 };
 
 /*
@@ -127,89 +127,89 @@ struct ce_pipe_config {
 
 /* Establish a mapping between a service/direction and a pipe. */
 struct service_to_pipe {
-    uint32_t service_id;
-    uint32_t pipedir;
-    uint32_t pipenum;
+  uint32_t service_id;
+  uint32_t pipedir;
+  uint32_t pipenum;
 };
 
 /* Per-pipe state. */
 struct ath10k_pci_pipe {
-    /* Handle of underlying Copy Engine */
-    struct ath10k_ce_pipe* ce_hdl;
+  /* Handle of underlying Copy Engine */
+  struct ath10k_ce_pipe* ce_hdl;
 
-    /* Our pipe number; facilitiates use of pipe_info ptrs. */
-    uint8_t pipe_num;
+  /* Our pipe number; facilitiates use of pipe_info ptrs. */
+  uint8_t pipe_num;
 
-    /* Convenience back pointer to hif_ce_state. */
-    struct ath10k* hif_ce_state;
+  /* Convenience back pointer to hif_ce_state. */
+  struct ath10k* hif_ce_state;
 
-    size_t buf_sz;
+  size_t buf_sz;
 
-    /* protects compl_free and num_send_allowed */
-    mtx_t pipe_lock;
+  /* protects compl_free and num_send_allowed */
+  mtx_t pipe_lock;
 };
 
 struct ath10k_pci_supp_chip {
-    uint32_t dev_id;
-    uint32_t rev_id;
+  uint32_t dev_id;
+  uint32_t rev_id;
 };
 
 struct ath10k_bus_ops {
-    uint32_t (*read32)(struct ath10k* ar, uint32_t offset);
-    void (*write32)(struct ath10k* ar, uint32_t offset, uint32_t value);
-    int (*get_num_banks)(struct ath10k* ar);
+  uint32_t (*read32)(struct ath10k* ar, uint32_t offset);
+  void (*write32)(struct ath10k* ar, uint32_t offset, uint32_t value);
+  int (*get_num_banks)(struct ath10k* ar);
 };
 
 enum ath10k_pci_irq_mode {
-    ATH10K_PCI_IRQ_AUTO = 0,
-    ATH10K_PCI_IRQ_LEGACY = 1,
-    ATH10K_PCI_IRQ_MSI = 2,
+  ATH10K_PCI_IRQ_AUTO = 0,
+  ATH10K_PCI_IRQ_LEGACY = 1,
+  ATH10K_PCI_IRQ_MSI = 2,
 };
 
 struct ath10k_pci {
-    pci_protocol_t pdev;
-    zx_device_t* dev;
+  pci_protocol_t pdev;
+  zx_device_t* dev;
 
-    /* Bus transaction initiator (for DMA) */
-    zx_handle_t btih;
+  /* Bus transaction initiator (for DMA) */
+  zx_handle_t btih;
 
-    struct ath10k* ar;
+  struct ath10k* ar;
 
-    /* PCI BAR mapping */
-    mmio_buffer_t mmio;
+  /* PCI BAR mapping */
+  mmio_buffer_t mmio;
 
-    /* Operating interrupt mode */
-    enum ath10k_pci_irq_mode oper_irq_mode;
+  /* Operating interrupt mode */
+  enum ath10k_pci_irq_mode oper_irq_mode;
 
-    zx_handle_t irq_handle;
+  zx_handle_t irq_handle;
 
-    struct ath10k_pci_pipe pipe_info[CE_COUNT_MAX];
+  struct ath10k_pci_pipe pipe_info[CE_COUNT_MAX];
 
-    /* Copy Engine used for Diagnostic Accesses */
-    struct ath10k_ce_pipe* ce_diag;
+  /* Copy Engine used for Diagnostic Accesses */
+  struct ath10k_ce_pipe* ce_diag;
 
-    /* FIXME: document what this really protects */
-    mtx_t ce_lock;
+  /* FIXME: document what this really protects */
+  mtx_t ce_lock;
 
-    /* Map CE id to ce_state */
-    struct ath10k_ce_pipe ce_states[CE_COUNT_MAX];
+  /* Map CE id to ce_state */
+  struct ath10k_ce_pipe ce_states[CE_COUNT_MAX];
 
-    /* Due to HW quirks it is recommended to disable ASPM during device
-     * bootup. To do that the original PCI-E Link Control is stored before
-     * device bootup is executed and re-programmed later.
-     */
-    uint16_t link_ctl;
+  /* Due to HW quirks it is recommended to disable ASPM during device
+   * bootup. To do that the original PCI-E Link Control is stored before
+   * device bootup is executed and re-programmed later.
+   */
+  uint16_t link_ctl;
 
-    /* Protects ps_awake and ps_wake_refcount */
-    mtx_t ps_lock;
+  /* Protects ps_awake and ps_wake_refcount */
+  mtx_t ps_lock;
 
-    /* The device has a special powersave-oriented register. When device is
-     * considered asleep it drains less power and driver is forbidden from
-     * accessing most MMIO registers. If host were to access them without
-     * waking up the device might scribble over host memory or return
-     * 0xdeadbeef readouts.
-     */
-    unsigned long ps_wake_refcount;
+  /* The device has a special powersave-oriented register. When device is
+   * considered asleep it drains less power and driver is forbidden from
+   * accessing most MMIO registers. If host were to access them without
+   * waking up the device might scribble over host memory or return
+   * 0xdeadbeef readouts.
+   */
+  unsigned long ps_wake_refcount;
 
 #if 0   // NEEDS PORTING
     /* Waking up takes some time (up to 2ms in some cases) so it can be bad
@@ -223,32 +223,32 @@ struct ath10k_pci {
     struct timer_list ps_timer;
 #endif  // NEEDS PORTING
 
-    /* MMIO registers are used to communicate with the device. With
-     * intensive traffic accessing powersave register would be a bit
-     * wasteful overhead and would needlessly stall CPU. It is far more
-     * efficient to rely on a variable in RAM and update it only upon
-     * powersave register state changes.
-     */
-    bool ps_awake;
+  /* MMIO registers are used to communicate with the device. With
+   * intensive traffic accessing powersave register would be a bit
+   * wasteful overhead and would needlessly stall CPU. It is far more
+   * efficient to rely on a variable in RAM and update it only upon
+   * powersave register state changes.
+   */
+  bool ps_awake;
 
-    /* pci power save, disable for QCA988X and QCA99X0.
-     * Writing 'false' to this variable avoids frequent locking
-     * on MMIO read/write.
-     */
-    bool pci_ps;
+  /* pci power save, disable for QCA988X and QCA99X0.
+   * Writing 'false' to this variable avoids frequent locking
+   * on MMIO read/write.
+   */
+  bool pci_ps;
 
-    const struct ath10k_bus_ops* bus_ops;
+  const struct ath10k_bus_ops* bus_ops;
 
-    /* Chip specific pci reset routine used to do a safe reset */
-    zx_status_t (*pci_soft_reset)(struct ath10k* ar);
+  /* Chip specific pci reset routine used to do a safe reset */
+  zx_status_t (*pci_soft_reset)(struct ath10k* ar);
 
-    /* Chip specific pci full reset function */
-    zx_status_t (*pci_hard_reset)(struct ath10k* ar);
+  /* Chip specific pci full reset function */
+  zx_status_t (*pci_hard_reset)(struct ath10k* ar);
 
-    /* chip specific methods for converting target CPU virtual address
-     * space to CE address space
-     */
-    zx_status_t (*targ_cpu_to_ce_addr)(struct ath10k* ar, uint32_t addr, uint32_t* ce_addr);
+  /* chip specific methods for converting target CPU virtual address
+   * space to CE address space
+   */
+  zx_status_t (*targ_cpu_to_ce_addr)(struct ath10k* ar, uint32_t addr, uint32_t* ce_addr);
 
 #if 0   // NEEDS PORTING
     /* Keep this entry in the last, memory for struct ath10k_ahb is
@@ -260,7 +260,7 @@ struct ath10k_pci {
 };
 
 static inline struct ath10k_pci* ath10k_pci_priv(struct ath10k* ar) {
-    return (struct ath10k_pci*)ar->drv_priv;
+  return (struct ath10k_pci*)ar->drv_priv;
 }
 
 // clang-format off

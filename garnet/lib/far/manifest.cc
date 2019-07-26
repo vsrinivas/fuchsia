@@ -28,8 +28,8 @@ bool ReadManifest(fxl::StringView path, ArchiveWriter* writer) {
     size_t offset = line.find('=');
     if (offset == std::string::npos)
       continue;
-    writer->Add(ArchiveEntry(line.substr(offset + 1).ToString(),
-                             line.substr(0, offset).ToString()));
+    writer->Add(
+        ArchiveEntry(line.substr(offset + 1).ToString(), line.substr(0, offset).ToString()));
   }
 
   return true;

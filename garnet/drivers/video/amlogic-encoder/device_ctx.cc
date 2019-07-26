@@ -7,8 +7,8 @@
 
 #include "device_ctx.h"
 
-std::pair<zx_status_t, std::unique_ptr<DeviceCtx>> DeviceCtx::Bind(
-    DriverCtx* driver_ctx, zx_device_t* parent) {
+std::pair<zx_status_t, std::unique_ptr<DeviceCtx>> DeviceCtx::Bind(DriverCtx* driver_ctx,
+                                                                   zx_device_t* parent) {
   zxlogf(ERROR, "amlogic-encoder bind not yet implemented.");
   return {ZX_ERR_NOT_SUPPORTED, nullptr};
 }

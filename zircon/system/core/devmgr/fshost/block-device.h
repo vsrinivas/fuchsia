@@ -20,28 +20,28 @@ namespace devmgr {
 // Used by fshost to attach either drivers or filesystems to
 // incoming block devices.
 class BlockDevice final : public BlockDeviceInterface {
-public:
-    BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd);
+ public:
+  BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd);
 
-    disk_format_t GetFormat() final;
-    void SetFormat(disk_format_t format) final;
-    bool Netbooting() final;
-    zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) final;
-    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final;
-    zx_status_t AttachDriver(const fbl::StringPiece& driver) final;
-    zx_status_t UnsealZxcrypt() final;
-    zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final;
-    zx_status_t FormatZxcrypt() final;
-    bool ShouldCheckFilesystems() final;
-    zx_status_t CheckFilesystem() final;
-    zx_status_t FormatFilesystem() final;
-    zx_status_t MountFilesystem() final;
+  disk_format_t GetFormat() final;
+  void SetFormat(disk_format_t format) final;
+  bool Netbooting() final;
+  zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) final;
+  zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final;
+  zx_status_t AttachDriver(const fbl::StringPiece& driver) final;
+  zx_status_t UnsealZxcrypt() final;
+  zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final;
+  zx_status_t FormatZxcrypt() final;
+  bool ShouldCheckFilesystems() final;
+  zx_status_t CheckFilesystem() final;
+  zx_status_t FormatFilesystem() final;
+  zx_status_t MountFilesystem() final;
 
-private:
-    FilesystemMounter* mounter_ = nullptr;
-    fbl::unique_fd fd_;
-    std::optional<fuchsia_hardware_block_BlockInfo> info_ = {};
-    disk_format_t format_ = DISK_FORMAT_UNKNOWN;
+ private:
+  FilesystemMounter* mounter_ = nullptr;
+  fbl::unique_fd fd_;
+  std::optional<fuchsia_hardware_block_BlockInfo> info_ = {};
+  disk_format_t format_ = DISK_FORMAT_UNKNOWN;
 };
 
-} // namespace devmgr
+}  // namespace devmgr

@@ -32,8 +32,8 @@
 /*
  * Ensure all of data on socket comes through. f==read || f==vwrite
  */
-size_t  atomicio(ssize_t (*)(int, void *, size_t), int, void *, size_t);
+size_t atomicio(ssize_t (*)(int, void *, size_t), int, void *, size_t);
 
-#define vwrite (ssize_t (*)(int, void *, size_t))write
+#define vwrite (ssize_t(*)(int, void *, size_t)) write
 
 #endif /* _ATOMICIO_H */

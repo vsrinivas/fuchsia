@@ -51,8 +51,7 @@ class RoutableMessage {
     SeqNum seq() const { return seq_; }
 
     friend bool operator==(const Destination& a, const Destination& b) {
-      return std::tie(a.dst_, a.stream_id_, a.seq_) ==
-             std::tie(b.dst_, b.stream_id_, b.seq_);
+      return std::tie(a.dst_, a.stream_id_, a.seq_) == std::tie(b.dst_, b.stream_id_, b.seq_);
     }
 
    private:
@@ -67,14 +66,12 @@ class RoutableMessage {
   RoutableMessage& operator=(const RoutableMessage&) = delete;
 
   // Move construction
-  RoutableMessage(RoutableMessage&& other)
-      : src_(other.src_), dsts_(std::move(other.dsts_)) {}
+  RoutableMessage(RoutableMessage&& other) : src_(other.src_), dsts_(std::move(other.dsts_)) {}
 
   // Payload message header constructor
   explicit RoutableMessage(NodeId src) : src_(src) {}
 
-  static StatusOr<MessageWithPayload> Parse(Slice source, NodeId reader,
-                                            NodeId writer);
+  static StatusOr<MessageWithPayload> Parse(Slice source, NodeId reader, NodeId writer);
   Slice Write(NodeId writer, NodeId target, Slice payload) const;
 
   RoutableMessage& AddDestination(NodeId peer, StreamId stream, SeqNum seq) {
@@ -82,11 +79,8 @@ class RoutableMessage {
     return *this;
   }
 
-  Optional<size_t> MaxPayloadLength(NodeId writer, NodeId target,
-                                    size_t remaining_space) const;
-  size_t MaxHeaderLength() {
-    return HeaderLength(NodeId(0), NodeId(0), nullptr);
-  }
+  Optional<size_t> MaxPayloadLength(NodeId writer, NodeId target, size_t remaining_space) const;
+  size_t MaxHeaderLength() { return HeaderLength(NodeId(0), NodeId(0), nullptr); }
 
   NodeId src() const { return src_; }
 
@@ -103,8 +97,7 @@ class RoutableMessage {
   }
 
  private:
-  RoutableMessage(NodeId src, std::vector<Destination> dsts)
-      : src_(src), dsts_(std::move(dsts)) {}
+  RoutableMessage(NodeId src, std::vector<Destination> dsts) : src_(src), dsts_(std::move(dsts)) {}
 
   NodeId src_;
   // TODO(ctiller): small vector optimization

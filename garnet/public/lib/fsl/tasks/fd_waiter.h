@@ -56,8 +56,8 @@ class FXL_EXPORT FDWaiter {
   // Release the fdio_t*
   void Release();
 
-  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-               zx_status_t status, const zx_packet_signal_t* signal);
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+               const zx_packet_signal_t* signal);
 
   async_dispatcher_t* const dispatcher_;
   fdio_t* io_;

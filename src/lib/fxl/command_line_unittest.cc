@@ -62,8 +62,7 @@ TEST(CommandLineTest, DefaultConstructor) {
 
 TEST(CommandLineTest, ComponentConstructor) {
   const std::string argv0 = "my_program";
-  const std::vector<CommandLine::Option> options = {
-      CommandLine::Option("flag", "value")};
+  const std::vector<CommandLine::Option> options = {CommandLine::Option("flag", "value")};
   const std::vector<std::string> positional_args = {"arg"};
 
   CommandLine cl(argv0, options, positional_args);
@@ -77,21 +76,18 @@ TEST(CommandLineTest, ComponentConstructor) {
 TEST(CommandLineTest, CommandLineFromIteratorsFindFirstPositionalArg) {
   // This shows how one might process subcommands.
   {
-    static std::vector<std::string> argv = {"my_program", "--flag1",
-                                            "--flag2",    "subcommand",
-                                            "--subflag",  "subarg"};
+    static std::vector<std::string> argv = {"my_program", "--flag1",   "--flag2",
+                                            "subcommand", "--subflag", "subarg"};
     auto first = argv.cbegin();
     auto last = argv.cend();
     std::vector<std::string>::const_iterator sub_first;
-    auto cl =
-        CommandLineFromIteratorsFindFirstPositionalArg(first, last, &sub_first);
+    auto cl = CommandLineFromIteratorsFindFirstPositionalArg(first, last, &sub_first);
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ(argv[0], cl.argv0());
-    std::vector<CommandLine::Option> expected_options = {
-        CommandLine::Option("flag1"), CommandLine::Option("flag2")};
+    std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag1"),
+                                                         CommandLine::Option("flag2")};
     EXPECT_EQ(expected_options, cl.options());
-    std::vector<std::string> expected_positional_args = {argv[3], argv[4],
-                                                         argv[5]};
+    std::vector<std::string> expected_positional_args = {argv[3], argv[4], argv[5]};
     EXPECT_EQ(expected_positional_args, cl.positional_args());
     EXPECT_TRUE(cl.HasOption("flag1", nullptr));
     EXPECT_TRUE(cl.HasOption("flag2", nullptr));
@@ -101,8 +97,7 @@ TEST(CommandLineTest, CommandLineFromIteratorsFindFirstPositionalArg) {
     auto sub_cl = CommandLineFromIterators(sub_first, last);
     EXPECT_TRUE(sub_cl.has_argv0());
     EXPECT_EQ(argv[3], sub_cl.argv0());
-    std::vector<CommandLine::Option> expected_sub_options = {
-        CommandLine::Option("subflag")};
+    std::vector<CommandLine::Option> expected_sub_options = {CommandLine::Option("subflag")};
     EXPECT_EQ(expected_sub_options, sub_cl.options());
     std::vector<std::string> expected_sub_positional_args = {argv[5]};
     EXPECT_EQ(expected_sub_positional_args, sub_cl.positional_args());
@@ -115,8 +110,8 @@ TEST(CommandLineTest, CommandLineFromIteratorsFindFirstPositionalArg) {
   {
     static std::vector<std::string> argv = {"my_program", "--flag"};
     std::vector<std::string>::const_iterator sub_first;
-    auto cl = CommandLineFromIteratorsFindFirstPositionalArg(
-        argv.cbegin(), argv.cend(), &sub_first);
+    auto cl =
+        CommandLineFromIteratorsFindFirstPositionalArg(argv.cbegin(), argv.cend(), &sub_first);
     EXPECT_EQ(argv.cend(), sub_first);
   }
 
@@ -124,8 +119,8 @@ TEST(CommandLineTest, CommandLineFromIteratorsFindFirstPositionalArg) {
   {
     static std::vector<std::string> argv = {"my_program", "arg1", "arg2"};
     std::vector<std::string>::const_iterator sub_first;
-    auto cl = CommandLineFromIteratorsFindFirstPositionalArg(
-        argv.cbegin(), argv.cend(), &sub_first);
+    auto cl =
+        CommandLineFromIteratorsFindFirstPositionalArg(argv.cbegin(), argv.cend(), &sub_first);
     EXPECT_EQ(argv.cbegin() + 1, sub_first);
   }
 
@@ -133,8 +128,8 @@ TEST(CommandLineTest, CommandLineFromIteratorsFindFirstPositionalArg) {
   {
     static std::vector<std::string> argv = {"my_program", "--", "--arg"};
     std::vector<std::string>::const_iterator sub_first;
-    auto cl = CommandLineFromIteratorsFindFirstPositionalArg(
-        argv.cbegin(), argv.cend(), &sub_first);
+    auto cl =
+        CommandLineFromIteratorsFindFirstPositionalArg(argv.cbegin(), argv.cend(), &sub_first);
     EXPECT_EQ(argv.cbegin() + 2, sub_first);
   }
 }
@@ -148,8 +143,7 @@ TEST(CommandLineTest, CommandLineFromIterators) {
     auto cl = CommandLineFromIterators(argv.begin(), argv.end());
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ(argv[0], cl.argv0());
-    std::vector<CommandLine::Option> expected_options = {
-        CommandLine::Option("flag", "value")};
+    std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag", "value")};
     EXPECT_EQ(expected_options, cl.options());
     std::vector<std::string> expected_positional_args = {argv[2]};
     EXPECT_EQ(expected_positional_args, cl.positional_args());
@@ -185,8 +179,7 @@ TEST(CommandLineTest, CommandLineFromIterators) {
     auto cl = CommandLineFromIterators(argv.begin(), argv.end());
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ(argv[0], cl.argv0());
-    std::vector<CommandLine::Option> expected_options = {
-        CommandLine::Option("flag", "value")};
+    std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag", "value")};
     EXPECT_EQ(expected_options, cl.options());
     std::vector<std::string> expected_positional_args = {argv[2]};
     EXPECT_EQ(expected_positional_args, cl.positional_args());
@@ -200,8 +193,7 @@ TEST(CommandLineTest, CommandLineFromIterators) {
     auto cl = CommandLineFromIterators(argv, argv + arraysize(argv));
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ(argv[0], cl.argv0());
-    std::vector<CommandLine::Option> expected_options = {
-        CommandLine::Option("flag", "value")};
+    std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag", "value")};
     EXPECT_EQ(expected_options, cl.options());
     std::vector<std::string> expected_positional_args = {argv[2]};
     EXPECT_EQ(expected_positional_args, cl.positional_args());
@@ -216,8 +208,7 @@ TEST(CommandLineTest, CommandLineFromArgcArgv) {
   auto cl = CommandLineFromArgcArgv(argc, argv);
   EXPECT_TRUE(cl.has_argv0());
   EXPECT_EQ(argv[0], cl.argv0());
-  std::vector<CommandLine::Option> expected_options = {
-      CommandLine::Option("flag", "value")};
+  std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag", "value")};
   EXPECT_EQ(expected_options, cl.options());
   std::vector<std::string> expected_positional_args = {argv[2]};
   EXPECT_EQ(expected_positional_args, cl.positional_args());
@@ -226,13 +217,11 @@ TEST(CommandLineTest, CommandLineFromArgcArgv) {
 
 TEST(CommandLineTest, CommandLineFromInitializerList) {
   {
-    std::initializer_list<const char*> il = {"my_program", "--flag=value",
-                                             "arg"};
+    std::initializer_list<const char*> il = {"my_program", "--flag=value", "arg"};
     auto cl = CommandLineFromInitializerList(il);
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ("my_program", cl.argv0());
-    std::vector<CommandLine::Option> expected_options = {
-        CommandLine::Option("flag", "value")};
+    std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag", "value")};
     EXPECT_EQ(expected_options, cl.options());
     std::vector<std::string> expected_positional_args = {"arg"};
     EXPECT_EQ(expected_positional_args, cl.positional_args());
@@ -240,13 +229,11 @@ TEST(CommandLineTest, CommandLineFromInitializerList) {
   }
 
   {
-    std::initializer_list<std::string> il = {"my_program", "--flag=value",
-                                             "arg"};
+    std::initializer_list<std::string> il = {"my_program", "--flag=value", "arg"};
     auto cl = CommandLineFromInitializerList(il);
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ("my_program", cl.argv0());
-    std::vector<CommandLine::Option> expected_options = {
-        CommandLine::Option("flag", "value")};
+    std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag", "value")};
     EXPECT_EQ(expected_options, cl.options());
     std::vector<std::string> expected_positional_args = {"arg"};
     EXPECT_EQ(expected_positional_args, cl.positional_args());
@@ -258,14 +245,12 @@ TEST(CommandLineTest, OddArguments) {
   {
     // Except for "arg", these are all options.
     auto cl = CommandLineFromInitializerList(
-        {"my_program", "--=", "--=foo", "--bar=", "--==", "--===", "--==x",
-         "arg"});
+        {"my_program", "--=", "--=foo", "--bar=", "--==", "--===", "--==x", "arg"});
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ("my_program", cl.argv0());
     std::vector<CommandLine::Option> expected_options = {
-        CommandLine::Option("="),      CommandLine::Option("=foo"),
-        CommandLine::Option("bar"),    CommandLine::Option("="),
-        CommandLine::Option("=", "="), CommandLine::Option("=", "x")};
+        CommandLine::Option("="), CommandLine::Option("=foo"),   CommandLine::Option("bar"),
+        CommandLine::Option("="), CommandLine::Option("=", "="), CommandLine::Option("=", "x")};
     EXPECT_EQ(expected_options, cl.options());
     std::vector<std::string> expected_positional_args = {"arg"};
     EXPECT_EQ(expected_positional_args, cl.positional_args());
@@ -294,14 +279,12 @@ TEST(CommandLineTest, OddArguments) {
   // "--" terminates option processing, but isn't an argument in the first
   // occurrence.
   {
-    auto cl = CommandLineFromInitializerList(
-        {"", "--flag=value", "--", "--not-a-flag", "arg", "--"});
+    auto cl =
+        CommandLineFromInitializerList({"", "--flag=value", "--", "--not-a-flag", "arg", "--"});
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ(std::string(), cl.argv0());
-    std::vector<CommandLine::Option> expected_options = {
-        CommandLine::Option("flag", "value")};
-    std::vector<std::string> expected_positional_args = {"--not-a-flag", "arg",
-                                                         "--"};
+    std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag", "value")};
+    std::vector<std::string> expected_positional_args = {"--not-a-flag", "arg", "--"};
     EXPECT_EQ(expected_positional_args, cl.positional_args());
   }
 }
@@ -309,10 +292,9 @@ TEST(CommandLineTest, OddArguments) {
 TEST(CommandLineTest, MultipleOccurrencesOfOption) {
   auto cl = CommandLineFromInitializerList(
       {"my_program", "--flag1=value1", "--flag2=value2", "--flag1=value3"});
-  std::vector<CommandLine::Option> expected_options = {
-      CommandLine::Option("flag1", "value1"),
-      CommandLine::Option("flag2", "value2"),
-      CommandLine::Option("flag1", "value3")};
+  std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag1", "value1"),
+                                                       CommandLine::Option("flag2", "value2"),
+                                                       CommandLine::Option("flag1", "value3")};
   EXPECT_EQ("value3", cl.GetOptionValueWithDefault("flag1", "nope"));
   EXPECT_EQ("value2", cl.GetOptionValueWithDefault("flag2", "nope"));
   std::vector<StringView> values = cl.GetOptionValues("flag1");
@@ -379,8 +361,8 @@ TEST(CommandLineTest, ComparisonOperators) {
 }
 
 TEST(CommandLineTest, MoveAndCopy) {
-  const auto cl = CommandLineFromInitializerList(
-      {"my_program", "--flag1=value1", "--flag2", "arg"});
+  const auto cl =
+      CommandLineFromInitializerList({"my_program", "--flag1=value1", "--flag2", "arg"});
 
   // Copy constructor.
   CommandLine cl2(cl);
@@ -434,8 +416,7 @@ TEST(CommandLineTest, CommandLineToArgv) {
     EXPECT_EQ(argv, CommandLineToArgv(cl));
   }
   {
-    auto cl =
-        CommandLineFromInitializerList({"my_program", "--flag", "--", "arg"});
+    auto cl = CommandLineFromInitializerList({"my_program", "--flag", "--", "arg"});
     std::vector<std::string> argv = {"my_program", "--flag", "arg"};
     EXPECT_EQ(argv, CommandLineToArgv(cl));
   }

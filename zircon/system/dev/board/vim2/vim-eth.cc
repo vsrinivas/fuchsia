@@ -74,9 +74,9 @@ static const pbus_metadata_t eth_mac_device_metadata[] = {
 
 static const eth_dev_metadata_t eth_mac_device = {
     .vid = PDEV_VID_DESIGNWARE,
-    //c++ init error
+    // c++ init error
     .pid = 0,
-    //c++ init error
+    // c++ init error
     .did = PDEV_DID_ETH_MAC,
 };
 
@@ -88,35 +88,35 @@ static const pbus_metadata_t eth_board_metadata[] = {
     },
 };
 
-static pbus_dev_t eth_board_dev = [](){
-    pbus_dev_t dev = {};
-    dev.name = "ethernet_mac";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_S912;
-    dev.did = PDEV_DID_AMLOGIC_ETH;
-    dev.mmio_list = eth_board_mmios;
-    dev.mmio_count = countof(eth_board_mmios);
-    dev.metadata_list = eth_board_metadata;
-    dev.metadata_count = countof(eth_board_metadata);
-    return dev;
+static pbus_dev_t eth_board_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "ethernet_mac";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_S912;
+  dev.did = PDEV_DID_AMLOGIC_ETH;
+  dev.mmio_list = eth_board_mmios;
+  dev.mmio_count = countof(eth_board_mmios);
+  dev.metadata_list = eth_board_metadata;
+  dev.metadata_count = countof(eth_board_metadata);
+  return dev;
 }();
 
-static pbus_dev_t dwmac_dev = [](){
-    pbus_dev_t dev = {};
-    dev.name = "dwmac";
-    dev.vid = PDEV_VID_DESIGNWARE;
-    dev.did = PDEV_DID_ETH_MAC;
-    dev.mmio_list = eth_mac_mmios;
-    dev.mmio_count = countof(eth_mac_mmios);
-    dev.irq_list = eth_mac_irqs;
-    dev.irq_count = countof(eth_mac_irqs);
-    dev.bti_list = eth_mac_btis;
-    dev.bti_count = countof(eth_mac_btis);
-    dev.metadata_list = eth_mac_device_metadata;
-    dev.metadata_count = countof(eth_mac_device_metadata);
-    dev.boot_metadata_list = eth_mac_metadata;
-    dev.boot_metadata_count = countof(eth_mac_metadata);
-    return dev;
+static pbus_dev_t dwmac_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "dwmac";
+  dev.vid = PDEV_VID_DESIGNWARE;
+  dev.did = PDEV_DID_ETH_MAC;
+  dev.mmio_list = eth_mac_mmios;
+  dev.mmio_count = countof(eth_mac_mmios);
+  dev.irq_list = eth_mac_irqs;
+  dev.irq_count = countof(eth_mac_irqs);
+  dev.bti_list = eth_mac_btis;
+  dev.bti_count = countof(eth_mac_btis);
+  dev.metadata_list = eth_mac_device_metadata;
+  dev.metadata_count = countof(eth_mac_device_metadata);
+  dev.boot_metadata_list = eth_mac_metadata;
+  dev.boot_metadata_count = countof(eth_mac_metadata);
+  return dev;
 }();
 
 static const zx_bind_inst_t root_match[] = {
@@ -138,21 +138,21 @@ static const zx_bind_inst_t gpio_int_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_ETH_MAC_INTR),
 };
 static const device_component_part_t i2c_component[] = {
-    { countof(root_match), root_match },
-    { countof(i2c_match), i2c_match },
+    {countof(root_match), root_match},
+    {countof(i2c_match), i2c_match},
 };
 static const device_component_part_t gpio_reset_component[] = {
-    { countof(root_match), root_match },
-    { countof(gpio_reset_match), gpio_reset_match },
+    {countof(root_match), root_match},
+    {countof(gpio_reset_match), gpio_reset_match},
 };
 static const device_component_part_t gpio_int_component[] = {
-    { countof(root_match), root_match },
-    { countof(gpio_int_match), gpio_int_match },
+    {countof(root_match), root_match},
+    {countof(gpio_int_match), gpio_int_match},
 };
 static const device_component_t eth_components[] = {
-    { countof(i2c_component), i2c_component },
-    { countof(gpio_reset_component), gpio_reset_component },
-    { countof(gpio_int_component), gpio_int_component },
+    {countof(i2c_component), i2c_component},
+    {countof(gpio_reset_component), gpio_reset_component},
+    {countof(gpio_int_component), gpio_int_component},
 };
 
 // Composite binding rules for dwmac.
@@ -162,49 +162,47 @@ static const zx_bind_inst_t eth_board_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ETH_MAC),
 };
 static const device_component_part_t eth_board_component[] = {
-    { fbl::count_of(root_match), root_match },
-    { fbl::count_of(eth_board_match), eth_board_match },
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(eth_board_match), eth_board_match},
 };
 static const device_component_t dwmac_components[] = {
-    { fbl::count_of(eth_board_component), eth_board_component },
+    {fbl::count_of(eth_board_component), eth_board_component},
 };
 
 zx_status_t Vim::EthInit() {
-    // setup pinmux for RGMII connections
-    gpio_impl_.SetAltFunction(S912_ETH_MDIO, S912_ETH_MDIO_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_MDC, S912_ETH_MDC_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_RGMII_RX_CLK,
-                              S912_ETH_RGMII_RX_CLK_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_RX_DV, S912_ETH_RX_DV_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_RXD0, S912_ETH_RXD0_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_RXD1, S912_ETH_RXD1_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_RXD2, S912_ETH_RXD2_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_RXD3, S912_ETH_RXD3_FN);
+  // setup pinmux for RGMII connections
+  gpio_impl_.SetAltFunction(S912_ETH_MDIO, S912_ETH_MDIO_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_MDC, S912_ETH_MDC_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_RGMII_RX_CLK, S912_ETH_RGMII_RX_CLK_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_RX_DV, S912_ETH_RX_DV_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_RXD0, S912_ETH_RXD0_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_RXD1, S912_ETH_RXD1_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_RXD2, S912_ETH_RXD2_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_RXD3, S912_ETH_RXD3_FN);
 
-    gpio_impl_.SetAltFunction(S912_ETH_RGMII_TX_CLK,
-                              S912_ETH_RGMII_TX_CLK_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_TX_EN, S912_ETH_TX_EN_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_TXD0, S912_ETH_TXD0_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_TXD1, S912_ETH_TXD1_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_TXD2, S912_ETH_TXD2_FN);
-    gpio_impl_.SetAltFunction(S912_ETH_TXD3, S912_ETH_TXD3_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_RGMII_TX_CLK, S912_ETH_RGMII_TX_CLK_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_TX_EN, S912_ETH_TX_EN_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_TXD0, S912_ETH_TXD0_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_TXD1, S912_ETH_TXD1_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_TXD2, S912_ETH_TXD2_FN);
+  gpio_impl_.SetAltFunction(S912_ETH_TXD3, S912_ETH_TXD3_FN);
 
-    // Add a composite device for ethernet board in a new devhost.
-    auto status = pbus_.CompositeDeviceAdd(&eth_board_dev, eth_components,
-                                           fbl::count_of(eth_components), UINT32_MAX);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
-        return status;
-    }
+  // Add a composite device for ethernet board in a new devhost.
+  auto status = pbus_.CompositeDeviceAdd(&eth_board_dev, eth_components,
+                                         fbl::count_of(eth_components), UINT32_MAX);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    return status;
+  }
 
-    // Add a composite device for dwmac driver in the ethernet board driver's devhost.
-    status = pbus_.CompositeDeviceAdd(&dwmac_dev, dwmac_components, fbl::count_of(dwmac_components),
-                                      1);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
-        return status;
-    }
+  // Add a composite device for dwmac driver in the ethernet board driver's devhost.
+  status =
+      pbus_.CompositeDeviceAdd(&dwmac_dev, dwmac_components, fbl::count_of(dwmac_components), 1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
-} //namespace vim
+}  // namespace vim

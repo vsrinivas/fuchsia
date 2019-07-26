@@ -14,15 +14,13 @@ namespace fsl {
 bool BlockingCopyToString(zx::socket source, std::string* result) {
   FXL_CHECK(result);
   result->clear();
-  return BlockingDrainFrom(
-      std::move(source), [result](const void* buffer, uint32_t num_bytes) {
-        result->append(static_cast<const char*>(buffer), num_bytes);
-        return num_bytes;
-      });
+  return BlockingDrainFrom(std::move(source), [result](const void* buffer, uint32_t num_bytes) {
+    result->append(static_cast<const char*>(buffer), num_bytes);
+    return num_bytes;
+  });
 }
 
-bool BlockingCopyFromString(fxl::StringView source,
-                            const zx::socket& destination) {
+bool BlockingCopyFromString(fxl::StringView source, const zx::socket& destination) {
   const char* ptr = source.data();
   size_t to_write = source.size();
   for (;;) {

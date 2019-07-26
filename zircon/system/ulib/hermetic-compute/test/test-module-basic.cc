@@ -5,7 +5,5 @@
 #include <lib/hermetic-compute/hermetic-engine.h>
 
 struct TestEngine : public HermeticComputeEngine<TestEngine, int, int> {
-    int64_t operator()(int x, int y) const {
-        return x + y;
-    }
+  int64_t operator()(int x, int y) const { return x + y; }
 };

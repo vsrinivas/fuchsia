@@ -17,8 +17,7 @@ namespace {
 
 class FakeEcho : public fidl::examples::echo::Echo {
  public:
-  FakeEcho(fidl::InterfaceRequest<fidl::examples::echo::Echo> request)
-      : binding_(this) {
+  FakeEcho(fidl::InterfaceRequest<fidl::examples::echo::Echo> request) : binding_(this) {
     binding_.Bind(std::move(request));
   };
   ~FakeEcho() override {}
@@ -40,52 +39,44 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
   ServiceProviderTest() : vfs_(dispatcher()) {}
 
   fbl::RefPtr<fs::Service> CreateService(int set_value) {
-    return fbl::AdoptRef(
-        new fs::Service([this, set_value](zx::channel channel) {
-          value_ = set_value;
-          return ZX_OK;
-        }));
+    return fbl::AdoptRef(new fs::Service([this, set_value](zx::channel channel) {
+      value_ = set_value;
+      return ZX_OK;
+    }));
   }
 
   fbl::RefPtr<fs::Service> CreateEchoService(fidl::StringPtr answer) {
     return fbl::AdoptRef(new fs::Service([this, answer](zx::channel channel) {
       auto echo = std::make_unique<FakeEcho>(
-          fidl::InterfaceRequest<fidl::examples::echo::Echo>(
-              std::move(channel)));
+          fidl::InterfaceRequest<fidl::examples::echo::Echo>(std::move(channel)));
       echo->SetAnswer(answer);
       echo_services_.push_back(std::move(echo));
       return ZX_OK;
     }));
   }
 
-  void AddService(ServiceProviderDirImpl* service_provider,
-                  const std::string& prefix, int val) {
+  void AddService(ServiceProviderDirImpl* service_provider, const std::string& prefix, int val) {
     AddService(service_provider, prefix, val, CreateService(val));
   }
-  void AddService(ServiceProviderDirImpl* service_provider,
-                  const std::string& prefix, int i,
+  void AddService(ServiceProviderDirImpl* service_provider, const std::string& prefix, int i,
                   fbl::RefPtr<fs::Service> svc) {
-    const std::string service_name = fxl::Substitute("$0_service$1", prefix,
-                                                     std::to_string(i));
+    const std::string service_name = fxl::Substitute("$0_service$1", prefix, std::to_string(i));
     service_provider->AddService(service_name, svc);
   }
 
-  void GetService(ServiceProviderDirImpl* service_provider,
-                  const fbl::String& service_name,
+  void GetService(ServiceProviderDirImpl* service_provider, const fbl::String& service_name,
                   fbl::RefPtr<fs::Service>* out) {
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name))
-        << service_name.c_str();
+    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name)) << service_name.c_str();
     *out = fbl::RefPtr<fs::Service>(static_cast<fs::Service*>(child.get()));
   }
 
-  void TestService(ServiceProviderDirImpl* service_provider,
-                   const fbl::String& service_name, int expected_value) {
+  void TestService(ServiceProviderDirImpl* service_provider, const fbl::String& service_name,
+                   int expected_value) {
     // Using Lookup.
     value_ = -1;
     fbl::RefPtr<fs::Vnode> child;
-    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name))
-        << service_name.c_str();
+    ASSERT_EQ(ZX_OK, service_provider->Lookup(&child, service_name)) << service_name.c_str();
     fbl::RefPtr<fs::Service> child_node;
     GetService(service_provider, service_name, &child_node);
     ASSERT_TRUE(child_node);
@@ -96,8 +87,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
     value_ = -1;
     zx::channel h1, h2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-    service_provider->ConnectToService(fidl::StringPtr(service_name.c_str()),
-                                       std::move(h2));
+    service_provider->ConnectToService(fidl::StringPtr(service_name.c_str()), std::move(h2));
     EXPECT_EQ(expected_value, value_) << service_name.c_str();
   }
 
@@ -115,8 +105,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
     value_ = -1;
     zx::channel h1, h2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-    service_provider->ConnectToService(fidl::StringPtr(service_name.c_str()),
-                                       std::move(h2));
+    service_provider->ConnectToService(fidl::StringPtr(service_name.c_str()), std::move(h2));
     // Never connected to service.
     EXPECT_EQ(value_, -1) << service_name.c_str();
   }
@@ -166,8 +155,7 @@ TEST_F(ServiceProviderTest, Parent) {
 }
 
 TEST_F(ServiceProviderTest, RestrictedServices) {
-  static const std::vector<std::string> kWhitelist{"parent_service1",
-                                                   "my_service1"};
+  static const std::vector<std::string> kWhitelist{"parent_service1", "my_service1"};
   auto parent_service_provider = fbl::AdoptRef(new ServiceProviderDirImpl);
   AddService(parent_service_provider.get(), "parent", 1);
   AddService(parent_service_provider.get(), "parent", 2);
@@ -188,12 +176,9 @@ TEST_F(ServiceProviderTest, RestrictedServices) {
 class DirentChecker {
  public:
   DirentChecker(const void* buffer, size_t length)
-      : current_(reinterpret_cast<const uint8_t*>(buffer)),
-        remaining_(length) {}
+      : current_(reinterpret_cast<const uint8_t*>(buffer)), remaining_(length) {}
 
-  void ExpectEnd() {
-    EXPECT_EQ(0u, remaining_);
-  }
+  void ExpectEnd() { EXPECT_EQ(0u, remaining_); }
 
   void ExpectEntry(const char* name, uint32_t vtype) {
     ASSERT_NE(0u, remaining_);
@@ -204,8 +189,7 @@ class DirentChecker {
     remaining_ -= entry_size;
     const std::string entry_name(entry->name, strlen(name));
     EXPECT_STREQ(entry_name.c_str(), name);
-    EXPECT_EQ(VTYPE_TO_DTYPE(vtype), entry->type)
-        << "Unexpected DTYPE for '" << name << "'.";
+    EXPECT_EQ(VTYPE_TO_DTYPE(vtype), entry->type) << "Unexpected DTYPE for '" << name << "'.";
   }
 
  private:
@@ -225,8 +209,7 @@ TEST_F(ServiceProviderTest, Readdir_Simple) {
   uint8_t buffer[kBufSz];
   size_t len;
   {
-    EXPECT_EQ(ZX_OK,
-              service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
+    EXPECT_EQ(ZX_OK, service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
     DirentChecker dc(buffer, len);
     dc.ExpectEntry(".", V_TYPE_DIR);
     dc.ExpectEntry("my_service1", V_TYPE_FILE);
@@ -235,8 +218,7 @@ TEST_F(ServiceProviderTest, Readdir_Simple) {
     dc.ExpectEnd();
   }
   {
-    EXPECT_EQ(ZX_OK,
-              service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
+    EXPECT_EQ(ZX_OK, service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
     EXPECT_EQ(len, 0u);
   }
 }
@@ -254,8 +236,7 @@ TEST_F(ServiceProviderTest, Readdir_WithParent) {
   uint8_t buffer[kBufSz];
   size_t len;
   {
-    EXPECT_EQ(ZX_OK,
-              service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
+    EXPECT_EQ(ZX_OK, service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
     DirentChecker dc(buffer, len);
     dc.ExpectEntry(".", V_TYPE_DIR);
     dc.ExpectEntry("my_service1", V_TYPE_FILE);
@@ -265,8 +246,7 @@ TEST_F(ServiceProviderTest, Readdir_WithParent) {
     dc.ExpectEnd();
   }
   {
-    EXPECT_EQ(ZX_OK,
-              service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
+    EXPECT_EQ(ZX_OK, service_provider.Readdir(&cookie, buffer, sizeof(buffer), &len));
     EXPECT_EQ(len, 0u);
   }
 }

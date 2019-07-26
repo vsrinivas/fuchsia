@@ -8,12 +8,10 @@ using namespace overnet;
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Parse data as a header.
-  auto status = RoutableMessage::Parse(Slice::FromCopiedBuffer(data, size),
-                                       NodeId(1), NodeId(2));
+  auto status = RoutableMessage::Parse(Slice::FromCopiedBuffer(data, size), NodeId(1), NodeId(2));
   if (status.is_ok()) {
     // If parsed ok: rewrite, between different endpoints.
-    Slice written =
-        status->message.Write(NodeId(3), NodeId(4), status->payload);
+    Slice written = status->message.Write(NodeId(3), NodeId(4), status->payload);
     // And re-parse.
     auto status2 = RoutableMessage::Parse(written, NodeId(4), NodeId(3));
     // Should parse ok, and get the same result.

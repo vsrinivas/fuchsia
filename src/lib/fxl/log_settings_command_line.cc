@@ -10,8 +10,7 @@
 
 namespace fxl {
 
-bool ParseLogSettings(const fxl::CommandLine& command_line,
-                      LogSettings* out_settings) {
+bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_settings) {
   LogSettings settings = *out_settings;
 
   // --verbose=<level>
@@ -19,8 +18,7 @@ bool ParseLogSettings(const fxl::CommandLine& command_line,
   std::string verbosity;
   if (command_line.GetOptionValue("verbose", &verbosity)) {
     int level = 1;
-    if (!verbosity.empty() &&
-        (!fxl::StringToNumberWithError(verbosity, &level) || level < 0)) {
+    if (!verbosity.empty() && (!fxl::StringToNumberWithError(verbosity, &level) || level < 0)) {
       FXL_LOG(ERROR) << "Error parsing --verbose option.";
       return false;
     }
@@ -31,8 +29,7 @@ bool ParseLogSettings(const fxl::CommandLine& command_line,
   std::string quietness;
   if (command_line.GetOptionValue("quiet", &quietness)) {
     int level = 1;
-    if (!quietness.empty() &&
-        (!fxl::StringToNumberWithError(quietness, &level) || level < 0)) {
+    if (!quietness.empty() && (!fxl::StringToNumberWithError(quietness, &level) || level < 0)) {
       FXL_LOG(ERROR) << "Error parsing --quiet option.";
       return false;
     }
@@ -71,8 +68,7 @@ std::vector<std::string> LogSettingsToArgv(const LogSettings& settings) {
   }
 
   if (settings.log_file != "") {
-    result.emplace_back(StringPrintf("--log-file=%s",
-                                     settings.log_file.c_str()));
+    result.emplace_back(StringPrintf("--log-file=%s", settings.log_file.c_str()));
   }
 
   return result;

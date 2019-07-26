@@ -49,8 +49,7 @@ bool EventReplaceTest(perftest::RepeatState* state) {
 
     state->NextStep();
     zx::event replaced_event;
-    ZX_ASSERT(dup_event.replace(ZX_RIGHT_SAME_RIGHTS, &replaced_event) ==
-              ZX_OK);
+    ZX_ASSERT(dup_event.replace(ZX_RIGHT_SAME_RIGHTS, &replaced_event) == ZX_OK);
 
     state->NextStep();
     // This step covers the work done by replaced_event's destructor.
@@ -65,8 +64,7 @@ bool WaitForAlreadySignaledEventTest(perftest::RepeatState* state) {
 
   while (state->KeepRunning()) {
     zx_signals_t pending = 0;
-    ZX_ASSERT(event.wait_one(ZX_EVENT_SIGNALED, zx::time(0), &pending) ==
-              ZX_OK);
+    ZX_ASSERT(event.wait_one(ZX_EVENT_SIGNALED, zx::time(0), &pending) == ZX_OK);
   }
   return true;
 }
@@ -83,8 +81,7 @@ bool WaitForManyWithAlreadySignaledEventTest(perftest::RepeatState* state) {
   ZX_ASSERT(events[0].signal(0, ZX_EVENT_SIGNALED) == ZX_OK);
 
   while (state->KeepRunning()) {
-    ZX_ASSERT(zx::event::wait_many(wait_items, kNumItems, zx::time(0)) ==
-              ZX_OK);
+    ZX_ASSERT(zx::event::wait_many(wait_items, kNumItems, zx::time(0)) == ZX_OK);
   }
   return true;
 }
@@ -93,8 +90,7 @@ void RegisterTests() {
   perftest::RegisterTest("Event/Signal", EventSignalTest);
   perftest::RegisterTest("Event/Duplicate", EventDuplicateTest);
   perftest::RegisterTest("Event/Replace", EventReplaceTest);
-  perftest::RegisterTest("Event/WaitForAlreadySignaledEvent",
-                         WaitForAlreadySignaledEventTest);
+  perftest::RegisterTest("Event/WaitForAlreadySignaledEvent", WaitForAlreadySignaledEventTest);
   perftest::RegisterTest("Event/WaitForManyWithAlreadySignaledEvent",
                          WaitForManyWithAlreadySignaledEventTest);
 }

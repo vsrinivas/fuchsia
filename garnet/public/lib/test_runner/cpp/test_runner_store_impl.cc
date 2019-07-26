@@ -8,8 +8,7 @@ namespace test_runner {
 
 TestRunnerStoreImpl::TestRunnerStoreImpl() = default;
 
-void TestRunnerStoreImpl::AddBinding(
-    fidl::InterfaceRequest<TestRunnerStore> req) {
+void TestRunnerStoreImpl::AddBinding(fidl::InterfaceRequest<TestRunnerStore> req) {
   binding_set_.AddBinding(this, std::move(req));
 }
 
@@ -18,8 +17,7 @@ void TestRunnerStoreImpl::Get(std::string key, GetCallback cb) {
   MaybeNotify(key);
 }
 
-void TestRunnerStoreImpl::Put(std::string key, std::string value,
-                              PutCallback cb) {
+void TestRunnerStoreImpl::Put(std::string key, std::string value, PutCallback cb) {
   store_[key].push(value);
   MaybeNotify(key);
   cb();

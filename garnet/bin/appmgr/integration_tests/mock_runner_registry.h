@@ -18,14 +18,12 @@ class MockRunnerWrapper {
  public:
   const mockrunner::MockRunnerPtr& runner_ptr() const { return runner_; }
 
-  const std::vector<mockrunner::ComponentInfo>& components() const {
-    return components_;
-  }
+  const std::vector<mockrunner::ComponentInfo>& components() const { return components_; }
 
-  MockRunnerWrapper(mockrunner::MockRunnerPtr runner)
-      : runner_(std::move(runner)) {
-    runner_.events().OnComponentCreated =
-        [this](mockrunner::ComponentInfo info) { components_.push_back(info); };
+  MockRunnerWrapper(mockrunner::MockRunnerPtr runner) : runner_(std::move(runner)) {
+    runner_.events().OnComponentCreated = [this](mockrunner::ComponentInfo info) {
+      components_.push_back(info);
+    };
 
     runner_.events().OnComponentKilled = [this](uint64_t id) {
       for (auto it = components_.begin(); it != components_.end(); it++) {
@@ -56,8 +54,7 @@ class MockRunnerRegistry : public mockrunner::MockRunnerRegistry {
   int dead_runner_count() const { return dead_runner_count_; }
   const MockRunnerWrapper* runner() const { return runner_.get(); }
 
-  void Register(
-      ::fidl::InterfaceHandle<mockrunner::MockRunner> runner) override;
+  void Register(::fidl::InterfaceHandle<mockrunner::MockRunner> runner) override;
 
  private:
   std::unique_ptr<MockRunnerWrapper> runner_;

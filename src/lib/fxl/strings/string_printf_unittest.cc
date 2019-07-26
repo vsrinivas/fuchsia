@@ -33,22 +33,15 @@ TEST(StringPrintfTest, StringPrintf_Basic) {
 }
 
 TEST(StringPrintfTest, StringVPrintf_Basic) {
-  EXPECT_EQ("", VAListHelper([](va_list ap) -> std::string {
-              return StringVPrintf("", ap);
-            }));
-  EXPECT_EQ("hello", VAListHelper([](va_list ap) -> std::string {
-              return StringVPrintf("hello", ap);
-            }));
-  EXPECT_EQ("hello-123", VAListHelper(
-                             [](va_list ap) -> std::string {
-                               return StringVPrintf("hello%d", ap);
-                             },
-                             -123));
-  EXPECT_EQ("hello0123FACE", VAListHelper(
-                                 [](va_list ap) -> std::string {
-                                   return StringVPrintf("%s%04d%X", ap);
-                                 },
-                                 "hello", 123, 0xfaceU));
+  EXPECT_EQ("", VAListHelper([](va_list ap) -> std::string { return StringVPrintf("", ap); }));
+  EXPECT_EQ("hello",
+            VAListHelper([](va_list ap) -> std::string { return StringVPrintf("hello", ap); }));
+  EXPECT_EQ(
+      "hello-123",
+      VAListHelper([](va_list ap) -> std::string { return StringVPrintf("hello%d", ap); }, -123));
+  EXPECT_EQ("hello0123FACE",
+            VAListHelper([](va_list ap) -> std::string { return StringVPrintf("%s%04d%X", ap); },
+                         "hello", 123, 0xfaceU));
 }
 
 TEST(StringPrintfTest, StringAppendf_Basic) {
@@ -110,9 +103,7 @@ TEST(StringPrintfTest, StringPrintf_Boundary) {
   for (size_t i = 800; i < 1200; i++) {
     std::string stuff(i, 'x');
     std::string format = stuff + "%d" + "%s" + " world";
-    EXPECT_EQ(stuff + "123" + "hello world",
-              StringPrintf(format.c_str(), 123, "hello"))
-        << i;
+    EXPECT_EQ(stuff + "123" + "hello world", StringPrintf(format.c_str(), 123, "hello")) << i;
   }
 }
 
@@ -121,8 +112,7 @@ TEST(StringPrintfTest, StringPrintf_VeryBig) {
   std::string stuff(4u << 20u, 'x');
   std::string format = "%s" + stuff + "%s" + stuff + "%s";
   EXPECT_EQ(stuff + stuff + stuff + stuff + stuff,
-            StringPrintf(format.c_str(), stuff.c_str(), stuff.c_str(),
-                         stuff.c_str()));
+            StringPrintf(format.c_str(), stuff.c_str(), stuff.c_str(), stuff.c_str()));
 }
 
 }  // namespace

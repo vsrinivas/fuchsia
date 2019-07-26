@@ -46,29 +46,29 @@ enum {
 
 Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
     : lexer_(lexer), error_reporter_(error_reporter) {
-    handle_subtype_table_ = {
-        {"exception", types::HandleSubtype::kException},
-        {"process", types::HandleSubtype::kProcess},
-        {"thread", types::HandleSubtype::kThread},
-        {"vmo", types::HandleSubtype::kVmo},
-        {"channel", types::HandleSubtype::kChannel},
-        {"event", types::HandleSubtype::kEvent},
-        {"port", types::HandleSubtype::kPort},
-        {"interrupt", types::HandleSubtype::kInterrupt},
-        {"debuglog", types::HandleSubtype::kLog},
-        {"socket", types::HandleSubtype::kSocket},
-        {"resource", types::HandleSubtype::kResource},
-        {"eventpair", types::HandleSubtype::kEventpair},
-        {"job", types::HandleSubtype::kJob},
-        {"vmar", types::HandleSubtype::kVmar},
-        {"fifo", types::HandleSubtype::kFifo},
-        {"guest", types::HandleSubtype::kGuest},
-        {"timer", types::HandleSubtype::kTimer},
-        {"bti", types::HandleSubtype::kBti},
-        {"profile", types::HandleSubtype::kProfile},
-    };
+  handle_subtype_table_ = {
+      {"exception", types::HandleSubtype::kException},
+      {"process", types::HandleSubtype::kProcess},
+      {"thread", types::HandleSubtype::kThread},
+      {"vmo", types::HandleSubtype::kVmo},
+      {"channel", types::HandleSubtype::kChannel},
+      {"event", types::HandleSubtype::kEvent},
+      {"port", types::HandleSubtype::kPort},
+      {"interrupt", types::HandleSubtype::kInterrupt},
+      {"debuglog", types::HandleSubtype::kLog},
+      {"socket", types::HandleSubtype::kSocket},
+      {"resource", types::HandleSubtype::kResource},
+      {"eventpair", types::HandleSubtype::kEventpair},
+      {"job", types::HandleSubtype::kJob},
+      {"vmar", types::HandleSubtype::kVmar},
+      {"fifo", types::HandleSubtype::kFifo},
+      {"guest", types::HandleSubtype::kGuest},
+      {"timer", types::HandleSubtype::kTimer},
+      {"bti", types::HandleSubtype::kBti},
+      {"profile", types::HandleSubtype::kProfile},
+  };
 
-    last_token_ = Lex();
+  last_token_ = Lex();
 }
 
 bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
@@ -1129,9 +1129,9 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
   auto parse_declaration = [&bits_declaration_list, &const_declaration_list, &enum_declaration_list,
                             &protocol_declaration_list, &service_declaration_list,
-                            &struct_declaration_list,
-                            &done_with_library_imports, &using_list, &table_declaration_list,
-                            &union_declaration_list, &xunion_declaration_list, this]() {
+                            &struct_declaration_list, &done_with_library_imports, &using_list,
+                            &table_declaration_list, &union_declaration_list,
+                            &xunion_declaration_list, this]() {
     ASTScope scope(this);
     std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
     if (!Ok())
@@ -1165,7 +1165,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       case CASE_IDENTIFIER(Token::Subkind::kService):
         done_with_library_imports = true;
         service_declaration_list.emplace_back(
-          ParseServiceDeclaration(std::move(attributes), scope));
+            ParseServiceDeclaration(std::move(attributes), scope));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kStruct):
@@ -1238,9 +1238,9 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       scope.GetSourceElement(), end, std::move(attributes), std::move(library_name),
       std::move(using_list), std::move(bits_declaration_list), std::move(const_declaration_list),
       std::move(enum_declaration_list), std::move(protocol_declaration_list),
-      std::move(service_declaration_list),
-      std::move(struct_declaration_list), std::move(table_declaration_list),
-      std::move(union_declaration_list), std::move(xunion_declaration_list));
+      std::move(service_declaration_list), std::move(struct_declaration_list),
+      std::move(table_declaration_list), std::move(union_declaration_list),
+      std::move(xunion_declaration_list));
 }
 
 }  // namespace fidl

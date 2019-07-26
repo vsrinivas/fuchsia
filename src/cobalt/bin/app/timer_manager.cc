@@ -15,9 +15,8 @@ using std::string;
 
 const uint32_t kMaxTimerTimeout = 300;
 
-void TimerVal::AddStart(uint32_t metric_id, uint32_t event_code,
-                        const std::string& component, uint32_t encoding_id,
-                        int64_t timestamp) {
+void TimerVal::AddStart(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                        uint32_t encoding_id, int64_t timestamp) {
   this->metric_id = metric_id;
   this->encoding_id = encoding_id;
   this->event_code = event_code;
@@ -30,8 +29,7 @@ void TimerVal::AddEnd(int64_t timestamp, const std::string& part_name) {
   this->part_name = std::move(part_name);
 }
 
-TimerManager::TimerManager(async_dispatcher_t* dispatcher)
-    : dispatcher_(dispatcher) {}
+TimerManager::TimerManager(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 TimerManager::~TimerManager() {}
 
@@ -39,14 +37,12 @@ bool TimerManager::isReady(const std::unique_ptr<TimerVal>& timer_val_ptr) {
   if (!timer_val_ptr) {
     return false;
   }
-  FXL_DCHECK(timer_val_ptr->start_timestamp > 0 &&
-             timer_val_ptr->end_timestamp > 0)
+  FXL_DCHECK(timer_val_ptr->start_timestamp > 0 && timer_val_ptr->end_timestamp > 0)
       << "Incomplete timer was returned.";
   return true;
 }
 
-bool TimerManager::isValidTimerArguments(fidl::StringPtr timer_id,
-                                         int64_t timestamp,
+bool TimerManager::isValidTimerArguments(fidl::StringPtr timer_id, int64_t timestamp,
                                          uint32_t timeout_s) {
   if (timer_id.is_null() || timer_id.get() == "") {
     FXL_DLOG(ERROR) << "Invalid timer_id.";
@@ -63,12 +59,12 @@ bool TimerManager::isValidTimerArguments(fidl::StringPtr timer_id,
   return true;
 }
 
-Status TimerManager::GetTimerValWithStart(
-    uint32_t metric_id, uint32_t event_code, const std::string& component,
-    uint32_t encoding_id, const std::string& timer_id, int64_t timestamp,
-    uint32_t timeout_s, std::unique_ptr<TimerVal>* timer_val_ptr) {
-  if (!timer_val_ptr ||
-      !isValidTimerArguments(timer_id, timestamp, timeout_s)) {
+Status TimerManager::GetTimerValWithStart(uint32_t metric_id, uint32_t event_code,
+                                          const std::string& component, uint32_t encoding_id,
+                                          const std::string& timer_id, int64_t timestamp,
+                                          uint32_t timeout_s,
+                                          std::unique_ptr<TimerVal>* timer_val_ptr) {
+  if (!timer_val_ptr || !isValidTimerArguments(timer_id, timestamp, timeout_s)) {
     return Status::INVALID_ARGUMENTS;
   }
 
@@ -98,17 +94,15 @@ Status TimerManager::GetTimerValWithStart(
   }
 
   // Return TimerVal with start_timestamp and end_timestamp.
-  timer_val_iter->second->AddStart(metric_id, event_code, component,
-                                   encoding_id, timestamp);
+  timer_val_iter->second->AddStart(metric_id, event_code, component, encoding_id, timestamp);
   MoveTimerToTimerVal(&timer_val_iter, timer_val_ptr);
   return Status::OK;
 }
 
-Status TimerManager::GetTimerValWithEnd(
-    const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
-    std::unique_ptr<TimerVal>* timer_val_ptr) {
-  if (!timer_val_ptr ||
-      !isValidTimerArguments(timer_id, timestamp, timeout_s)) {
+Status TimerManager::GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp,
+                                        uint32_t timeout_s,
+                                        std::unique_ptr<TimerVal>* timer_val_ptr) {
+  if (!timer_val_ptr || !isValidTimerArguments(timer_id, timestamp, timeout_s)) {
     return Status::INVALID_ARGUMENTS;
   }
 
@@ -143,11 +137,10 @@ Status TimerManager::GetTimerValWithEnd(
   return Status::OK;
 }
 
-Status TimerManager::GetTimerValWithEnd(
-    const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
-    const std::string& part_name, std::unique_ptr<TimerVal>* timer_val_ptr) {
-  if (!timer_val_ptr ||
-      !isValidTimerArguments(timer_id, timestamp, timeout_s)) {
+Status TimerManager::GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp,
+                                        uint32_t timeout_s, const std::string& part_name,
+                                        std::unique_ptr<TimerVal>* timer_val_ptr) {
+  if (!timer_val_ptr || !isValidTimerArguments(timer_id, timestamp, timeout_s)) {
     return Status::INVALID_ARGUMENTS;
   }
 
@@ -181,8 +174,7 @@ Status TimerManager::GetTimerValWithEnd(
 }
 
 void TimerManager::MoveTimerToTimerVal(
-    std::unordered_map<std::string, std::unique_ptr<TimerVal>>::iterator*
-        timer_val_iter,
+    std::unordered_map<std::string, std::unique_ptr<TimerVal>>::iterator* timer_val_iter,
     std::unique_ptr<TimerVal>* timer_val_ptr) {
   zx_status_t status = (*timer_val_iter)->second->expiry_task.Cancel();
   if (status != ZX_OK & status != ZX_ERR_BAD_STATE) {
@@ -193,22 +185,18 @@ void TimerManager::MoveTimerToTimerVal(
   timer_values_.erase(*timer_val_iter);
 }
 
-void TimerManager::ScheduleExpiryTask(
-    const std::string& timer_id, uint32_t timeout_s,
-    std::unique_ptr<TimerVal>* timer_val_ptr) {
+void TimerManager::ScheduleExpiryTask(const std::string& timer_id, uint32_t timeout_s,
+                                      std::unique_ptr<TimerVal>* timer_val_ptr) {
   (*timer_val_ptr)->expiry_time = async::Now(dispatcher_) + zx::sec(timeout_s);
 
   (*timer_val_ptr)
-      ->expiry_task.set_handler(
-          [this, timer_id, me = &((*timer_val_ptr)->expiry_task)] {
-            auto timer_val_iter = timer_values_.find(timer_id);
-            FXL_DCHECK(&(timer_val_iter->second->expiry_task) == me);
-            timer_values_.erase(timer_val_iter);
-          });
+      ->expiry_task.set_handler([this, timer_id, me = &((*timer_val_ptr)->expiry_task)] {
+        auto timer_val_iter = timer_values_.find(timer_id);
+        FXL_DCHECK(&(timer_val_iter->second->expiry_task) == me);
+        timer_values_.erase(timer_val_iter);
+      });
 
-  zx_status_t status =
-      (*timer_val_ptr)
-          ->expiry_task.PostDelayed(dispatcher_, zx::sec(timeout_s));
+  zx_status_t status = (*timer_val_ptr)->expiry_task.PostDelayed(dispatcher_, zx::sec(timeout_s));
   if (status != ZX_OK & status != ZX_ERR_BAD_STATE) {
     FXL_DLOG(ERROR) << "Failed to post task: status = " << status;
   }

@@ -13,11 +13,13 @@ Bus::~Bus() {}
 
 // static
 zx_status_t Bus::Create(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
-    const zx_status_t usb_status = CreateUsbBus(bus_device, bus);
-    if (usb_status == ZX_OK) { return ZX_OK; }
+  const zx_status_t usb_status = CreateUsbBus(bus_device, bus);
+  if (usb_status == ZX_OK) {
+    return ZX_OK;
+  }
 
-    zxlogf(ERROR, "rtl88xx: CreateUsbBus() returned %s\n", zx_status_get_string(usb_status));
-    return ZX_ERR_NOT_SUPPORTED;
+  zxlogf(ERROR, "rtl88xx: CreateUsbBus() returned %s\n", zx_status_get_string(usb_status));
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace rtl88xx

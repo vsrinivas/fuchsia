@@ -22,13 +22,11 @@ namespace insntrace {
 
 constexpr char kKtraceDevicePath[] = "/dev/misc/ktrace";
 
-bool OpenKtraceChannel(
-    fuchsia::tracing::kernel::ControllerSyncPtr* out_controller_ptr) {
+bool OpenKtraceChannel(fuchsia::tracing::kernel::ControllerSyncPtr* out_controller_ptr) {
   zx_status_t status = fdio_service_connect(
       kKtraceDevicePath, out_controller_ptr->NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << kKtraceDevicePath << ": "
-                   << status;
+    FXL_LOG(ERROR) << "Error connecting to " << kKtraceDevicePath << ": " << status;
     return false;
   }
   return true;
@@ -37,15 +35,14 @@ bool OpenKtraceChannel(
 static void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status,
                            zx_status_t rqst_status) {
   if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace FIDL " << rqst_name
-                   << " failed: status=" << fidl_status;
+    FXL_LOG(ERROR) << "Ktrace FIDL " << rqst_name << " failed: status=" << fidl_status;
   } else if (rqst_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace " << rqst_name
-                   << " failed: error=" << rqst_status;
+    FXL_LOG(ERROR) << "Ktrace " << rqst_name << " failed: error=" << rqst_status;
   }
 }
 
-bool RequestKtraceStart(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace, uint32_t group_mask) {
+bool RequestKtraceStart(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace,
+                        uint32_t group_mask) {
   zx_status_t start_status;
   zx_status_t status = ktrace->Start(group_mask, &start_status);
   LogFidlFailure("start", status, start_status);
@@ -64,8 +61,7 @@ void RequestKtraceRewind(const fuchsia::tracing::kernel::ControllerSyncPtr& ktra
   LogFidlFailure("rewind", status, rewind_status);
 }
 
-void DumpKtraceBuffer(const char* output_path_prefix,
-                      const char* output_path_suffix) {
+void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_suffix) {
   int fd = open(kKtraceDevicePath, O_RDONLY);
   if (fd < 0) {
     FXL_LOG(ERROR) << "open ktrace"
@@ -74,12 +70,11 @@ void DumpKtraceBuffer(const char* output_path_prefix,
   }
   fxl::UniqueFD ktrace_fd{fd};
 
-  std::string ktrace_output_path = fxl::StringPrintf(
-      "%s.%s", output_path_prefix, output_path_suffix);
+  std::string ktrace_output_path =
+      fxl::StringPrintf("%s.%s", output_path_prefix, output_path_suffix);
   const char* ktrace_c_path = ktrace_output_path.c_str();
 
-  fxl::UniqueFD dest_fd(
-      open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
+  fxl::UniqueFD dest_fd(open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (dest_fd.is_valid()) {
     ssize_t count;
     char buf[1024];

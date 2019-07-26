@@ -10,10 +10,9 @@ namespace component {
 namespace {
 
 TEST(UtilTests, GetLabelFromURL) {
-  std::string values[][2] = {
-      {"", ""},        {"foo/bar", "bar"},  {"foo/bar/", "foo/bar/"},
-      {"/foo", "foo"}, {"/foo/bar", "bar"}, {"foo", "foo"},
-      {"foo/", "foo/"}};
+  std::string values[][2] = {{"", ""},        {"foo/bar", "bar"},  {"foo/bar/", "foo/bar/"},
+                             {"/foo", "foo"}, {"/foo/bar", "bar"}, {"foo", "foo"},
+                             {"foo/", "foo/"}};
   for (auto value : values) {
     auto& url = value[0];
     auto& expected = value[1];

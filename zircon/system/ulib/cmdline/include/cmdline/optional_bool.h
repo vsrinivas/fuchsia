@@ -32,52 +32,45 @@ namespace cmdline {
 // not need to be templatized since it is purely intended to support the
 // potential ambiguity of std::optional<bool>.
 class OptionalBool {
+ public:
+  OptionalBool() : has_value_(false) {}
+  explicit OptionalBool(bool value) : has_value_(true), value_(value) {}
 
-public:
-    OptionalBool()
-        : has_value_(false) {}
-    explicit OptionalBool(bool value)
-        : has_value_(true), value_(value) {}
+  explicit OptionalBool(const OptionalBool& rhs) = default;
+  OptionalBool& operator=(const OptionalBool& rhs) = default;
 
-    explicit OptionalBool(const OptionalBool& rhs) = default;
-    OptionalBool& operator=(const OptionalBool& rhs) = default;
+  OptionalBool& operator=(std::nullopt_t) noexcept {
+    has_value_ = false;
+    return *this;
+  }
 
-    OptionalBool& operator=(std::nullopt_t) noexcept {
-        has_value_ = false;
-        return *this;
+  OptionalBool& operator=(bool rhs) {
+    has_value_ = true;
+    value_ = rhs;
+    return *this;
+  }
+
+  bool has_value() const { return has_value_; }
+
+  bool value() const {
+    assert(has_value_);
+    return value_;
+  }
+
+  bool operator*() const { return value(); }
+
+  bool value_or(bool default_value) const {
+    if (has_value_) {
+      return value_;
     }
+    return default_value;
+  }
 
-    OptionalBool& operator=(bool rhs) {
-        has_value_ = true;
-        value_ = rhs;
-        return *this;
-    }
-
-    bool has_value() const {
-        return has_value_;
-    }
-
-    bool value() const {
-        assert(has_value_);
-        return value_;
-    }
-
-    bool operator*() const {
-        return value();
-    }
-
-    bool value_or(bool default_value) const {
-        if (has_value_) {
-            return value_;
-        }
-        return default_value;
-    }
-
-private:
-    bool has_value_;
-    bool value_;
+ private:
+  bool has_value_;
+  bool value_;
 };
 
-} // namespace cmdline
+}  // namespace cmdline
 
-#endif // CMDLINE_OPTIONAL_BOOL_H_
+#endif  // CMDLINE_OPTIONAL_BOOL_H_

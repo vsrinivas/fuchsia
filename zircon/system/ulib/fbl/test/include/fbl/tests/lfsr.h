@@ -18,43 +18,39 @@ namespace internal {
 // (except for all zeros) exactly once before repeating.
 template <typename CoreType, CoreType generator>
 class Lfsr {
-public:
-    static_assert(std::is_unsigned_v<CoreType>,
-                 "LFSR core type must be an unsigned integer!");
+ public:
+  static_assert(std::is_unsigned_v<CoreType>, "LFSR core type must be an unsigned integer!");
 
-    constexpr explicit Lfsr(CoreType initial_core) : core_(initial_core) { }
+  constexpr explicit Lfsr(CoreType initial_core) : core_(initial_core) {}
 
-    template <typename T>
-    void SetCore(T val) {
-        static_assert(std::is_unsigned_v<T>,
-                     "LFSR initializer type must be an unsigned integer!");
-        core_ = static_cast<CoreType>(val);
+  template <typename T>
+  void SetCore(T val) {
+    static_assert(std::is_unsigned_v<T>, "LFSR initializer type must be an unsigned integer!");
+    core_ = static_cast<CoreType>(val);
+  }
+
+  CoreType PeekCore() const { return core_; }
+
+  CoreType GetNext() {
+    CoreType ret = 0u;
+    CoreType flag = 1u;
+
+    for (size_t i = 0; i < (sizeof(size_t) << 3); ++i) {
+      bool bit = core_ & 1u;
+      core_ = static_cast<CoreType>(core_ >> 1u);
+      if (bit) {
+        core_ ^= generator;
+        ret |= flag;
+      }
+
+      flag = static_cast<CoreType>(flag << 1u);
     }
 
-    CoreType PeekCore() const {
-        return core_;
-    }
+    return ret;
+  }
 
-    CoreType GetNext() {
-        CoreType ret  = 0u;
-        CoreType flag = 1u;
-
-        for (size_t i = 0; i < (sizeof(size_t) << 3); ++i) {
-            bool bit = core_ & 1u;
-            core_ = static_cast<CoreType>(core_ >> 1u);
-            if (bit) {
-                core_ ^= generator;
-                ret   |= flag;
-            }
-
-            flag = static_cast<CoreType>(flag << 1u);
-        }
-
-        return ret;
-    }
-
-private:
-    CoreType core_;
+ private:
+  CoreType core_;
 };
 
 }  // namespace internal
@@ -69,26 +65,23 @@ class Lfsr;
 // Temporary macro which deals with the boilerplate declaration of an LFSR of a
 // particular core size with a particular generator, exposing the constructor in
 // the process.
-#define MAKE_LFSR(_bits, _gen)                                                  \
-template <typename T>                                                           \
-class Lfsr<T,                                                                   \
-           std::enable_if_t<std::is_unsigned_v<T> &&                            \
-                                  ((sizeof(T) << 3) == _bits)>                  \
-          > : public internal::Lfsr<uint ## _bits ## _t, _gen> {                \
-public:                                                                         \
-    using CoreType = uint ## _bits ## _t;                                       \
-                                                                                \
-    template <typename U>                                                       \
-    constexpr explicit Lfsr(U initial_core)                                     \
-        : internal::Lfsr<CoreType, _gen>(static_cast<CoreType>(initial_core)) { \
-        static_assert(std::is_unsigned_v<U>,                                    \
-                     "LFSR initializer type must be an unsigned integer!");     \
-    }                                                                           \
-                                                                                \
-    constexpr Lfsr() : internal::Lfsr<CoreType, _gen>(1u) { }                   \
-}
+#define MAKE_LFSR(_bits, _gen)                                                                    \
+  template <typename T>                                                                           \
+  class Lfsr<T, std::enable_if_t<std::is_unsigned_v<T> && ((sizeof(T) << 3) == _bits)>>           \
+      : public internal::Lfsr<uint##_bits##_t, _gen> {                                            \
+   public:                                                                                        \
+    using CoreType = uint##_bits##_t;                                                             \
+                                                                                                  \
+    template <typename U>                                                                         \
+    constexpr explicit Lfsr(U initial_core)                                                       \
+        : internal::Lfsr<CoreType, _gen>(static_cast<CoreType>(initial_core)) {                   \
+      static_assert(std::is_unsigned_v<U>, "LFSR initializer type must be an unsigned integer!"); \
+    }                                                                                             \
+                                                                                                  \
+    constexpr Lfsr() : internal::Lfsr<CoreType, _gen>(1u) {}                                      \
+  }
 
-MAKE_LFSR(8,  0xB8);
+MAKE_LFSR(8, 0xB8);
 MAKE_LFSR(16, 0xB400);
 MAKE_LFSR(32, 0xA3000000);
 MAKE_LFSR(64, 0xD800000000000000);

@@ -36,49 +36,49 @@ typedef zx_status_t(MessageOp)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 //          <fidl_client_function> ( <fake_ddk>.local().get(), <args>);
 //
 class FidlMessenger {
-public:
-    // Local channel to send FIDL client messages
-    zx::channel& local() { return local_; }
+ public:
+  // Local channel to send FIDL client messages
+  zx::channel& local() { return local_; }
 
-    // Set handlers to be called when FIDL message is received
-    // Note: Message operation context |op_ctx| and |op| must outlive FidlMessenger
-    zx_status_t SetMessageOp(void* op_ctx, MessageOp* op) {
-        zx_status_t status;
-        zx::channel remote;
+  // Set handlers to be called when FIDL message is received
+  // Note: Message operation context |op_ctx| and |op| must outlive FidlMessenger
+  zx_status_t SetMessageOp(void* op_ctx, MessageOp* op) {
+    zx_status_t status;
+    zx::channel remote;
 
-        if (message_op_) {
-            // Message op was already set
-            return ZX_ERR_INVALID_ARGS;
-        }
-        message_op_ = op;
-        if ((status = zx::channel::create(0, &local_, &remote)) < 0) {
-            return status;
-        }
-
-        if ((status = loop_.StartThread()) < 0) {
-            return status;
-        }
-
-        auto dispatch_fn = [](void* ctx, fidl_txn_t* txn,
-                              fidl_msg_t* msg, const void* ops) -> zx_status_t {
-            return reinterpret_cast<MessageOp*>(const_cast<void*>(ops))(ctx, msg, txn);
-        };
-
-        status = fidl_bind(loop_.dispatcher(), remote.release(), dispatch_fn, op_ctx,
-                           reinterpret_cast<const void*>(message_op_));
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        return status;
+    if (message_op_) {
+      // Message op was already set
+      return ZX_ERR_INVALID_ARGS;
+    }
+    message_op_ = op;
+    if ((status = zx::channel::create(0, &local_, &remote)) < 0) {
+      return status;
     }
 
-private:
-    MessageOp* message_op_ = nullptr;
-    // Channel to mimic RPC
-    zx::channel local_;
-    // Dispatcher for fidl messages
-    async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
+    if ((status = loop_.StartThread()) < 0) {
+      return status;
+    }
+
+    auto dispatch_fn = [](void* ctx, fidl_txn_t* txn, fidl_msg_t* msg,
+                          const void* ops) -> zx_status_t {
+      return reinterpret_cast<MessageOp*>(const_cast<void*>(ops))(ctx, msg, txn);
+    };
+
+    status = fidl_bind(loop_.dispatcher(), remote.release(), dispatch_fn, op_ctx,
+                       reinterpret_cast<const void*>(message_op_));
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    return status;
+  }
+
+ private:
+  MessageOp* message_op_ = nullptr;
+  // Channel to mimic RPC
+  zx::channel local_;
+  // Dispatcher for fidl messages
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
 };
 
-} // namespace fake_ddk
+}  // namespace fake_ddk

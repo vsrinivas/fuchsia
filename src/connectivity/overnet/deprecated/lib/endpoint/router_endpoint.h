@@ -59,8 +59,7 @@ class RouterEndpoint : public Router {
    private:
     friend class RouterEndpoint;
     NewStream(RouterEndpoint * creator, NodeId peer,
-              fuchsia::overnet::protocol::ReliabilityAndOrdering
-                  reliability_and_ordering,
+              fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
               StreamId stream_id)
         : creator_(creator),
           peer_(peer),
@@ -69,8 +68,7 @@ class RouterEndpoint : public Router {
 
     RouterEndpoint* creator_;
     NodeId peer_;
-    fuchsia::overnet::protocol::ReliabilityAndOrdering
-        reliability_and_ordering_;
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering_;
     StreamId stream_id_;
   };
 
@@ -81,12 +79,10 @@ class RouterEndpoint : public Router {
     Stream(NewStream introduction);
 
     StatusOr<NewStream> InitiateFork(
-        fuchsia::overnet::protocol::ReliabilityAndOrdering
-            reliability_and_ordering);
+        fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering);
     StatusOr<NewStream> ReceiveFork(
         fuchsia::overnet::protocol::StreamId stream_id,
-        fuchsia::overnet::protocol::ReliabilityAndOrdering
-            reliability_and_ordering);
+        fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering);
     using DatagramStream::Close;
     void Close(const Status& status, Callback<void> quiesced) override;
 
@@ -101,8 +97,7 @@ class RouterEndpoint : public Router {
   class Service {
    public:
     Service(RouterEndpoint* endpoint, std::string fully_qualified_name,
-            fuchsia::overnet::protocol::ReliabilityAndOrdering
-                reliability_and_ordering)
+            fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering)
         : fully_qualified_name(std::move(fully_qualified_name)),
           reliability_and_ordering(reliability_and_ordering),
           endpoint_(endpoint) {
@@ -116,8 +111,7 @@ class RouterEndpoint : public Router {
     // The name clients can request to reach this service.
     const std::string fully_qualified_name;
     // The reliability and ordering constraints expected by this service.
-    const fuchsia::overnet::protocol::ReliabilityAndOrdering
-        reliability_and_ordering;
+    const fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering;
 
     // Acceptor function to create a new stream.
     virtual void AcceptStream(NewStream stream) = 0;
@@ -129,8 +123,7 @@ class RouterEndpoint : public Router {
   using SendOp = Stream::SendOp;
   using ReceiveOp = Stream::ReceiveOp;
 
-  explicit RouterEndpoint(Timer* timer, NodeId node_id,
-                          bool allow_non_determinism);
+  explicit RouterEndpoint(Timer* timer, NodeId node_id, bool allow_non_determinism);
   ~RouterEndpoint();
   void Close(Callback<void> done) override final;
 
@@ -143,23 +136,20 @@ class RouterEndpoint : public Router {
     }
   }
 
-  void OnNodeDescriptionTableChange(uint64_t last_seen_version,
-                                    StatusCallback on_change);
+  void OnNodeDescriptionTableChange(uint64_t last_seen_version, StatusCallback on_change);
 
   template <class F>
   uint64_t ForEachNodeDescription(F f) {
     for (const auto& peer : connection_streams_) {
-      OVERNET_TRACE(DEBUG) << node_id() << " query desc on " << peer.first
-                           << " = " << peer.second.description_;
+      OVERNET_TRACE(DEBUG) << node_id() << " query desc on " << peer.first << " = "
+                           << peer.second.description_;
       f(peer.first, peer.second.description_);
     }
     return node_description_table_version_;
   }
 
   StatusOr<NewStream> InitiateStream(
-      NodeId peer,
-      fuchsia::overnet::protocol::ReliabilityAndOrdering
-          reliability_and_ordering,
+      NodeId peer, fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
       const std::string& service_name);
 
  private:
@@ -184,15 +174,14 @@ class RouterEndpoint : public Router {
     void Register() { DatagramStream::Register(); }
 
     StatusOr<NewStream> MakeFork(
-        fuchsia::overnet::protocol::ReliabilityAndOrdering
-            reliability_and_ordering);
+        fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering);
     StatusOr<NewStream> MakeFork(
-        StreamId stream_id, fuchsia::overnet::protocol::ReliabilityAndOrdering
-                                reliability_and_ordering);
+        StreamId stream_id,
+        fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering);
 
-    StatusOr<NewStream> Fork(fuchsia::overnet::protocol::ReliabilityAndOrdering
-                                 reliability_and_ordering,
-                             std::string service_name);
+    StatusOr<NewStream> Fork(
+        fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
+        std::string service_name);
 
     fuchsia::overnet::protocol::Peer_Proxy* proxy() { return &proxy_; }
 
@@ -210,8 +199,7 @@ class RouterEndpoint : public Router {
 
     class Proxy final : public fuchsia::overnet::protocol::Peer_Proxy {
      public:
-      Proxy(ConnectionStream* connection_stream)
-          : connection_stream_(connection_stream) {}
+      Proxy(ConnectionStream* connection_stream) : connection_stream_(connection_stream) {}
 
      private:
       void Send_(fidl::Message message) override {
@@ -221,19 +209,14 @@ class RouterEndpoint : public Router {
     };
     class Stub final : public fuchsia::overnet::protocol::Peer_Stub {
      public:
-      Stub(ConnectionStream* connection_stream)
-          : connection_stream_(connection_stream) {}
+      Stub(ConnectionStream* connection_stream) : connection_stream_(connection_stream) {}
 
-      void ConnectToService(
-          std::string service_name,
-          fuchsia::overnet::protocol::StreamId stream_id) override;
+      void ConnectToService(std::string service_name,
+                            fuchsia::overnet::protocol::StreamId stream_id) override;
       void Ping(PingCallback callback) override;
-      void UpdateNodeStatus(
-          fuchsia::overnet::protocol::NodeStatus node) override;
-      void UpdateNodeDescription(
-          fuchsia::overnet::protocol::PeerDescription desc) override;
-      void UpdateLinkStatus(
-          fuchsia::overnet::protocol::LinkStatus link) override;
+      void UpdateNodeStatus(fuchsia::overnet::protocol::NodeStatus node) override;
+      void UpdateNodeDescription(fuchsia::overnet::protocol::PeerDescription desc) override;
+      void UpdateLinkStatus(fuchsia::overnet::protocol::LinkStatus link) override;
 
      private:
       void Send_(fidl::Message message) override {
@@ -248,9 +231,7 @@ class RouterEndpoint : public Router {
 
   ConnectionStream* GetOrCreateConnectionStream(NodeId peer);
 
-  static constexpr TimeDelta InitialGossipInterval() {
-    return TimeDelta::FromMilliseconds(42);
-  }
+  static constexpr TimeDelta InitialGossipInterval() { return TimeDelta::FromMilliseconds(42); }
   void StartGossipTimer();
   void SendGossipTo(NodeId target);
 

@@ -12,9 +12,9 @@ __BEGIN_CDECLS
 
 // Structure for passing around PCI address information
 typedef struct pci_bdf {
-    uint8_t bus_id;
-    uint8_t device_id;
-    uint8_t function_id;
+  uint8_t bus_id;
+  uint8_t device_id;
+  uint8_t function_id;
 } pci_bdf_t;
 
 // TODO(cja): This header is used for the transition of these defines from
@@ -43,8 +43,8 @@ typedef struct pci_bdf {
 
 #define PCI_INVALID_VENDOR_ID (0xFFFF)
 
-#endif // WITH_KERNEL_PCIE
+#endif  // WITH_KERNEL_PCIE
 
 __END_CDECLS
 
-#endif // SYSROOT_ZIRCON_HW_PCI_H_
+#endif  // SYSROOT_ZIRCON_HW_PCI_H_

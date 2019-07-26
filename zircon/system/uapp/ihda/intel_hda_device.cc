@@ -11,27 +11,27 @@ namespace audio {
 namespace intel_hda {
 
 zx_status_t IntelHDADevice::Probe() {
-    zx_status_t res = ZirconDevice::Connect();
-    if (res != ZX_OK)
-        return res;
+  zx_status_t res = ZirconDevice::Connect();
+  if (res != ZX_OK)
+    return res;
 
-    ihda_get_ids_req_t req;
-    ihda_get_ids_resp_t resp;
+  ihda_get_ids_req_t req;
+  ihda_get_ids_resp_t resp;
 
-    InitRequest(&req, IHDA_CMD_GET_IDS);
-    res = CallDevice(req, &resp);
-    if (res != ZX_OK)
-        return res;
+  InitRequest(&req, IHDA_CMD_GET_IDS);
+  res = CallDevice(req, &resp);
+  if (res != ZX_OK)
+    return res;
 
-    vid_       = resp.vid;
-    did_       = resp.did;
-    ihda_vmaj_ = resp.ihda_vmaj;
-    ihda_vmin_ = resp.ihda_vmin;
-    rev_id_    = resp.rev_id;
-    step_id_   = resp.step_id;
+  vid_ = resp.vid;
+  did_ = resp.did;
+  ihda_vmaj_ = resp.ihda_vmaj;
+  ihda_vmin_ = resp.ihda_vmin;
+  rev_id_ = resp.rev_id;
+  step_id_ = resp.step_id;
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-}  // namespace audio
 }  // namespace intel_hda
+}  // namespace audio

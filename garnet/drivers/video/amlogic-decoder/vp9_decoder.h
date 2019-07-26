@@ -80,21 +80,17 @@ class Vp9Decoder : public VideoDecoder {
   void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
   void SetErrorHandler(fit::closure error_handler) override;
   void SetCheckOutputReady(CheckOutputReady check_output_ready) override;
-  void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
-                         uint32_t height, uint32_t stride) override;
+  void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
+                         uint32_t stride) override;
   __WARN_UNUSED_RESULT bool CanBeSwappedIn() override;
   __WARN_UNUSED_RESULT bool CanBeSwappedOut() const override {
     return state_ == DecoderState::kFrameJustProduced ||
            state_ == DecoderState::kPausedAtEndOfStream;
   }
   void SetSwappedOut() override { state_ = DecoderState::kSwappedOut; }
-  void SwappedIn() override {
-    frame_data_provider_->ReadMoreInputDataFromReschedule(this);
-  }
+  void SwappedIn() override { frame_data_provider_->ReadMoreInputDataFromReschedule(this); }
 
-  void SetFrameDataProvider(FrameDataProvider* provider) {
-    frame_data_provider_ = provider;
-  }
+  void SetFrameDataProvider(FrameDataProvider* provider) { frame_data_provider_ = provider; }
   void UpdateDecodeSize(uint32_t size);
 
   __WARN_UNUSED_RESULT bool needs_more_input_data() const {
@@ -102,9 +98,7 @@ class Vp9Decoder : public VideoDecoder {
            state_ == DecoderState::kInitialWaitingForInput;
   }
 
-  __WARN_UNUSED_RESULT bool swapped_out() const {
-    return state_ == DecoderState::kSwappedOut;
-  }
+  __WARN_UNUSED_RESULT bool swapped_out() const { return state_ == DecoderState::kSwappedOut; }
 
   void SetPausedAtEndOfStream() {
     ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);

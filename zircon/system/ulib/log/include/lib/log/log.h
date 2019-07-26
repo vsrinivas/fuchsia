@@ -26,8 +26,7 @@ extern "C" {
 // Returns true if writing messages with the given level is enabled in the
 // global logger.
 // |level| is one of VERBOSE(N), INFO, WARNING, ERROR, or FATAL.
-#define LOG_LEVEL_IS_ENABLED(level) \
-    log_level_is_enabled(LOG_LEVEL_##level)
+#define LOG_LEVEL_IS_ENABLED(level) log_level_is_enabled(LOG_LEVEL_##level)
 
 // Sets the minimum level for global logger. Log messages with a lower severity
 // (or higher verbosity) than the given value will not be emitted. |level| is
@@ -43,12 +42,12 @@ extern "C" {
 //
 // Example usage:
 //   LOG_INITIALIZE(INFO, log_writer, "program_name");
-#define LOG_INITIALIZE(min_level, log_writer, ...)                         \
-    do {                                                                   \
-        const char* tags[] = {__VA_ARGS__};                                \
-        size_t num_tags = sizeof(tags) / sizeof(tags[0]);                  \
-        log_initialize(LOG_LEVEL_##min_level, log_writer, num_tags, tags); \
-    } while (0)
+#define LOG_INITIALIZE(min_level, log_writer, ...)                     \
+  do {                                                                 \
+    const char* tags[] = {__VA_ARGS__};                                \
+    size_t num_tags = sizeof(tags) / sizeof(tags[0]);                  \
+    log_initialize(LOG_LEVEL_##min_level, log_writer, num_tags, tags); \
+  } while (0)
 
 // Frees and resets the global logging state. Should be called at program end to
 // clean up memory taken up by this logging framework. If messages are logged
@@ -67,12 +66,12 @@ void log_shutdown(void);
 //
 // Example usage:
 //   LOGF(ERROR, "tag1", "tag2")("sorry that didn't work: %s", msg);
-#define LOGF(level, ...)                                  \
-    do {                                                  \
-        const char* tags[] = {__VA_ARGS__};               \
-        size_t num_tags = sizeof(tags) / sizeof(tags[0]); \
-        log_level_t lvl = LOG_LEVEL_##level;              \
-    LOGF_INNER
+#define LOGF(level, ...)                              \
+  do {                                                \
+    const char* tags[] = {__VA_ARGS__};               \
+    size_t num_tags = sizeof(tags) / sizeof(tags[0]); \
+    log_level_t lvl = LOG_LEVEL_##level;              \
+  LOGF_INNER
 
 // Log a message at the given level with the given tags.
 // Takes two sets of arguments.
@@ -85,51 +84,45 @@ void log_shutdown(void);
 //
 // Example usage:
 //   LOG(ERROR, "tag1", "tag2")("internal error encountered");
-#define LOG(level, ...)                                   \
-    do {                                                  \
-        const char* tags[] = {__VA_ARGS__};               \
-        size_t num_tags = sizeof(tags) / sizeof(tags[0]); \
-        log_level_t lvl = LOG_LEVEL_##level;              \
-    LOG_INNER
+#define LOG(level, ...)                               \
+  do {                                                \
+    const char* tags[] = {__VA_ARGS__};               \
+    size_t num_tags = sizeof(tags) / sizeof(tags[0]); \
+    log_level_t lvl = LOG_LEVEL_##level;              \
+  LOG_INNER
 
 // The following are helper functions and macros used in the above macros, and
 // should not be called directly outside of macro usage.
 
-#define LOGF_INNER(message, ...)                        \
-    if (log_level_is_enabled(lvl)) {                    \
-        log_write_message_printf(lvl,                   \
-                                 num_tags, tags,        \
-                                 message, __VA_ARGS__); \
-    }                                                   \
-    }                                                   \
-    while (0)
+#define LOGF_INNER(message, ...)                                         \
+  if (log_level_is_enabled(lvl)) {                                       \
+    log_write_message_printf(lvl, num_tags, tags, message, __VA_ARGS__); \
+  }                                                                      \
+  }                                                                      \
+  while (0)
 
-#define LOG_INNER(message)                \
-    if (log_level_is_enabled(lvl)) {      \
-        log_write_message(lvl,            \
-                          num_tags, tags, \
-                          message);       \
-    }                                     \
-    }                                     \
-    while (0)
+#define LOG_INNER(message)                           \
+  if (log_level_is_enabled(lvl)) {                   \
+    log_write_message(lvl, num_tags, tags, message); \
+  }                                                  \
+  }                                                  \
+  while (0)
 
 bool log_level_is_enabled(log_level_t level);
 
 void log_set_min_level(log_level_t min_level);
 
-void log_initialize(log_level_t min_level, log_writer_t* log_writer,
-                    const size_t num_tags, const char** tags);
+void log_initialize(log_level_t min_level, log_writer_t* log_writer, const size_t num_tags,
+                    const char** tags);
 
-void log_write_message(log_level_t level,
-                       size_t num_tags, const char** tags_ptr,
+void log_write_message(log_level_t level, size_t num_tags, const char** tags_ptr,
                        const char* message);
 
-void log_write_message_printf(log_level_t level,
-                              size_t num_tags, const char** tags_ptr,
+void log_write_message_printf(log_level_t level, size_t num_tags, const char** tags_ptr,
                               const char* message, ...);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // LIB_LOG_LOG_H_
+#endif  // LIB_LOG_LOG_H_

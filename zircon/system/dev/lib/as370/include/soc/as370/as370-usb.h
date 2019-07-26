@@ -17,22 +17,21 @@ constexpr uint32_t kUsbPhy0Size = 0x100;
 constexpr uint32_t kUsb0Irq = 19 + 32;
 
 class USB_PHY_CTRL0 : public hwreg::RegisterBase<USB_PHY_CTRL0, uint32_t> {
-public:
-    DEF_FIELD(31, 0, value);
-    static auto Get() { return hwreg::RegisterAddr<USB_PHY_CTRL0>(0x0); }
+ public:
+  DEF_FIELD(31, 0, value);
+  static auto Get() { return hwreg::RegisterAddr<USB_PHY_CTRL0>(0x0); }
 };
 
 class USB_PHY_CTRL1 : public hwreg::RegisterBase<USB_PHY_CTRL1, uint32_t> {
-public:
-    DEF_FIELD(31, 0, value);
-    static auto Get() { return hwreg::RegisterAddr<USB_PHY_CTRL1>(0x4); }
+ public:
+  DEF_FIELD(31, 0, value);
+  static auto Get() { return hwreg::RegisterAddr<USB_PHY_CTRL1>(0x4); }
 };
 
 class USB_PHY_RB : public hwreg::RegisterBase<USB_PHY_RB, uint32_t> {
-public:
-    DEF_BIT(0, clk_rdy);
-    static auto Get() { return hwreg::RegisterAddr<USB_PHY_RB>(0x10); }
+ public:
+  DEF_BIT(0, clk_rdy);
+  static auto Get() { return hwreg::RegisterAddr<USB_PHY_RB>(0x10); }
 };
-
 
 }  // namespace as370

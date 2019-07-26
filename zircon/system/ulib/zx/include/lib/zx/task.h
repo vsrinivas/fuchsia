@@ -15,40 +15,39 @@ namespace zx {
 class port;
 class suspend_token;
 
-template <typename T = void> class task : public object<T> {
-public:
-    constexpr task() = default;
+template <typename T = void>
+class task : public object<T> {
+ public:
+  constexpr task() = default;
 
-    explicit task(zx_handle_t value) : object<T>(value) {}
+  explicit task(zx_handle_t value) : object<T>(value) {}
 
-    explicit task(handle&& h) : object<T>(h.release()) {}
+  explicit task(handle&& h) : object<T>(h.release()) {}
 
-    task(task&& other) : object<T>(other.release()) {}
+  task(task&& other) : object<T>(other.release()) {}
 
-    zx_status_t bind_exception_port(
-            const object<port>& port, uint64_t key, uint32_t options) const {
-        return zx_task_bind_exception_port(object<T>::get(), port.get(), key, options);
-    }
+  zx_status_t bind_exception_port(const object<port>& port, uint64_t key, uint32_t options) const {
+    return zx_task_bind_exception_port(object<T>::get(), port.get(), key, options);
+  }
 
-    zx_status_t kill() const { return zx_task_kill(object<T>::get()); }
+  zx_status_t kill() const { return zx_task_kill(object<T>::get()); }
 
-    zx_status_t suspend(suspend_token* result) const {
-        // Assume |result| must refer to a different container than |this|, due
-        // to strict aliasing.
-        return zx_task_suspend_token(
-            object<T>::get(), result->reset_and_get_address());
-    }
+  zx_status_t suspend(suspend_token* result) const {
+    // Assume |result| must refer to a different container than |this|, due
+    // to strict aliasing.
+    return zx_task_suspend_token(object<T>::get(), result->reset_and_get_address());
+  }
 
-    zx_status_t resume_from_exception(const object<port>& port, uint32_t options) const {
-        return zx_task_resume_from_exception(object<T>::get(), port.get(), options);
-    }
+  zx_status_t resume_from_exception(const object<port>& port, uint32_t options) const {
+    return zx_task_resume_from_exception(object<T>::get(), port.get(), options);
+  }
 
-    zx_status_t create_exception_channel(uint32_t options, object<channel>* channel) const {
-        return zx_task_create_exception_channel(object<T>::get(), options,
-                                                channel->reset_and_get_address());
-    }
+  zx_status_t create_exception_channel(uint32_t options, object<channel>* channel) const {
+    return zx_task_create_exception_channel(object<T>::get(), options,
+                                            channel->reset_and_get_address());
+  }
 };
 
-} // namespace zx
+}  // namespace zx
 
 #endif  // LIB_ZX_TASK_H_

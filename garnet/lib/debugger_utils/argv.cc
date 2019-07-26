@@ -53,4 +53,4 @@ std::string ArgvToString(const Argv& argv) {
   return result;
 }
 
-}  // namespace inferior_control
+}  // namespace debugger_utils

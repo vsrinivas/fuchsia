@@ -21,8 +21,7 @@ class SourceLocation {
   SourceLocation(std::string_view data, const SourceFile& source_file)
       : data_(data), source_file_(&source_file) {}
 
-  SourceLocation()
-      : data_(std::string_view()), source_file_(nullptr) {}
+  SourceLocation() : data_(std::string_view()), source_file_(nullptr) {}
 
   bool valid() const { return source_file_ != nullptr; }
 

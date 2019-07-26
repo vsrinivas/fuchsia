@@ -21,4 +21,3 @@ class DownloadObserver {
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_DOWNLOAD_OBSERVER_H_
-

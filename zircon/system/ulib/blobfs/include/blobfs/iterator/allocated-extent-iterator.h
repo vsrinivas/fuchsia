@@ -19,60 +19,60 @@ namespace blobfs {
 // This iterator is useful for accessing blobs which have already been written
 // to disk.
 class AllocatedExtentIterator : public ExtentIterator {
-public:
-    AllocatedExtentIterator(NodeFinder* finder, uint32_t node_index);
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AllocatedExtentIterator);
+ public:
+  AllocatedExtentIterator(NodeFinder* finder, uint32_t node_index);
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AllocatedExtentIterator);
 
-    ////////////////
-    // ExtentIterator interface.
+  ////////////////
+  // ExtentIterator interface.
 
-    bool Done() const final;
-    zx_status_t Next(const Extent** out) final;
-    uint64_t BlockIndex() const final;
+  bool Done() const final;
+  zx_status_t Next(const Extent** out) final;
+  uint64_t BlockIndex() const final;
 
-    ////////////////
-    // Other methods.
+  ////////////////
+  // Other methods.
 
-    // Returns the number of extents we've iterated past already.
-    uint32_t ExtentIndex() const;
+  // Returns the number of extents we've iterated past already.
+  uint32_t ExtentIndex() const;
 
-    // Returns the node we're about to read from on the upcoming call to |Next|.
-    //
-    // It is unsafe to call this method if |Done()| is true.
-    uint32_t NodeIndex() const;
+  // Returns the node we're about to read from on the upcoming call to |Next|.
+  //
+  // It is unsafe to call this method if |Done()| is true.
+  uint32_t NodeIndex() const;
 
-private:
-    // Indicates if the current node is the inode (as opposed to a container).
-    bool IsInode() const;
+ private:
+  // Indicates if the current node is the inode (as opposed to a container).
+  bool IsInode() const;
 
-    // Returns |ZX_OK| if the container can accept another extent.
-    zx_status_t ValidateExtentCount() const;
+  // Returns |ZX_OK| if the container can accept another extent.
+  zx_status_t ValidateExtentCount() const;
 
-    // Moves the block, extent, and local indices forward.
-    void UpdateIndices(const Extent& extent);
+  // Moves the block, extent, and local indices forward.
+  void UpdateIndices(const Extent& extent);
 
-    // Acquires the current extent.
-    const Extent* GetExtent() const;
+  // Acquires the current extent.
+  const Extent* GetExtent() const;
 
-    // Acquires the index of the next node in the chain of nodes.
-    uint32_t GetNextNode() const;
+  // Acquires the index of the next node in the chain of nodes.
+  uint32_t GetNextNode() const;
 
-    // Moves from either an inode to a container, or from one container to another.
-    //
-    // Returns an error if this container is unallocated, or not marked as a container.
-    zx_status_t NextContainer();
+  // Moves from either an inode to a container, or from one container to another.
+  //
+  // Returns an error if this container is unallocated, or not marked as a container.
+  zx_status_t NextContainer();
 
-    NodeFinder* finder_;
-    Inode* inode_;
-    // The index of the node we're currently observing.
-    uint32_t node_index_;
-    ExtentContainer* extent_node_ = nullptr;
-    // The block index, indicating how many blocks we've iterated past thus far.
-    uint64_t block_index_ = 0;
-    // The extent index into the global inode (monotonically increases).
-    uint32_t extent_index_ = 0;
-    // The extent index into the current inode or container.
-    uint32_t local_index_ = 0;
+  NodeFinder* finder_;
+  Inode* inode_;
+  // The index of the node we're currently observing.
+  uint32_t node_index_;
+  ExtentContainer* extent_node_ = nullptr;
+  // The block index, indicating how many blocks we've iterated past thus far.
+  uint64_t block_index_ = 0;
+  // The extent index into the global inode (monotonically increases).
+  uint32_t extent_index_ = 0;
+  // The extent index into the current inode or container.
+  uint32_t local_index_ = 0;
 };
 
-} // namespace blobfs
+}  // namespace blobfs

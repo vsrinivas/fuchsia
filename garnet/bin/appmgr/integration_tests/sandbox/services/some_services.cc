@@ -29,13 +29,11 @@ TEST_F(NamespaceTest, SomeServices) {
   zx_status_t status;
   zx::vmo exe;
   fidl::InterfaceHandle<fuchsia::ldsvc::Loader> svc;
-  EXPECT_EQ(ZX_OK,
-            resolver->Resolve("some_url", &status, &exe, &svc));
+  EXPECT_EQ(ZX_OK, resolver->Resolve("some_url", &status, &exe, &svc));
 
   // readdir should list services in sandbox.
   std::vector<std::string> files;
   ASSERT_TRUE(files::ReadDirContents("/svc", &files));
-  EXPECT_THAT(files, ::testing::UnorderedElementsAre(
-                         ".", "fuchsia.sys.Environment",
-                         "fuchsia.process.Resolver"));
+  EXPECT_THAT(files, ::testing::UnorderedElementsAre(".", "fuchsia.sys.Environment",
+                                                     "fuchsia.process.Resolver"));
 }

@@ -24,8 +24,7 @@ class OvernetApp;
 // - ensure system messages are never propagated.
 class BoundSocket {
  public:
-  BoundSocket(OvernetApp* app, overnet::RouterEndpoint::NewStream ns,
-              zx::socket socket);
+  BoundSocket(OvernetApp* app, overnet::RouterEndpoint::NewStream ns, zx::socket socket);
 
  private:
   void Close(const overnet::Status& status);
@@ -40,11 +39,11 @@ class BoundSocket {
     BoundSocket* stream;
   };
 
-  static void SendReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal);
+  static void SendReady(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
   void OnSendReady(zx_status_t status, const zx_packet_signal_t* signal);
-  static void RecvReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal);
+  static void RecvReady(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
   void OnRecvReady(zx_status_t status, const zx_packet_signal_t* signal);
 
   class Proxy final : public fuchsia::overnet::protocol::ZirconSocket_Proxy {
@@ -78,12 +77,8 @@ class BoundSocket {
   overnet::Optional<overnet::RouterEndpoint::Stream::ReceiveOp> net_recv_;
   std::vector<uint8_t> pending_write_;
   bool sock_read_data_ = true;
-  BoundWait wait_send_{{{ASYNC_STATE_INIT},
-                        &BoundSocket::SendReady,
-                        zx_socket_.get(),
-                        ZX_SOCKET_WRITABLE,
-                        0},
-                       this};
+  BoundWait wait_send_{
+      {{ASYNC_STATE_INIT}, &BoundSocket::SendReady, zx_socket_.get(), ZX_SOCKET_WRITABLE, 0}, this};
   BoundWait wait_recv_{{{ASYNC_STATE_INIT},
                         &BoundSocket::RecvReady,
                         zx_socket_.get(),

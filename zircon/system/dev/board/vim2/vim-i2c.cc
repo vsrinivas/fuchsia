@@ -86,42 +86,39 @@ static const i2c_channel_t i2c_channels[] = {
     },
 };
 
-static const pbus_metadata_t i2c_metadata[] = {
-    {
-        .type = DEVICE_METADATA_I2C_CHANNELS,
-        .data_buffer = &i2c_channels,
-        .data_size = sizeof(i2c_channels),
-    }
-};
+static const pbus_metadata_t i2c_metadata[] = {{
+    .type = DEVICE_METADATA_I2C_CHANNELS,
+    .data_buffer = &i2c_channels,
+    .data_size = sizeof(i2c_channels),
+}};
 zx_status_t Vim::I2cInit() {
+  pbus_dev_t i2c_dev = {};
+  i2c_dev.name = "i2c";
+  i2c_dev.vid = PDEV_VID_AMLOGIC;
+  i2c_dev.pid = PDEV_PID_GENERIC;
+  i2c_dev.did = PDEV_DID_AMLOGIC_I2C;
+  i2c_dev.mmio_list = i2c_mmios;
+  i2c_dev.mmio_count = countof(i2c_mmios);
+  i2c_dev.irq_list = i2c_irqs;
+  i2c_dev.irq_count = countof(i2c_irqs);
+  i2c_dev.metadata_list = i2c_metadata;
+  i2c_dev.metadata_count = countof(i2c_metadata);
 
-    pbus_dev_t i2c_dev = {};
-    i2c_dev.name = "i2c";
-    i2c_dev.vid = PDEV_VID_AMLOGIC;
-    i2c_dev.pid = PDEV_PID_GENERIC;
-    i2c_dev.did = PDEV_DID_AMLOGIC_I2C;
-    i2c_dev.mmio_list = i2c_mmios;
-    i2c_dev.mmio_count = countof(i2c_mmios);
-    i2c_dev.irq_list = i2c_irqs;
-    i2c_dev.irq_count = countof(i2c_irqs);
-    i2c_dev.metadata_list = i2c_metadata;
-    i2c_dev.metadata_count = countof(i2c_metadata);
+  // setup pinmux for our I2C busses
+  // I2C_A and I2C_B are exposed on the 40 pin header and I2C_C on the FPC connector
+  gpio_impl_.SetAltFunction(S912_I2C_SDA_A, S912_I2C_SDA_A_FN);
+  gpio_impl_.SetAltFunction(S912_I2C_SCK_A, S912_I2C_SCK_A_FN);
+  gpio_impl_.SetAltFunction(S912_I2C_SDA_B, S912_I2C_SDA_B_FN);
+  gpio_impl_.SetAltFunction(S912_I2C_SCK_B, S912_I2C_SCK_B_FN);
+  gpio_impl_.SetAltFunction(S912_I2C_SDA_C, S912_I2C_SDA_C_FN);
+  gpio_impl_.SetAltFunction(S912_I2C_SCK_C, S912_I2C_SCK_C_FN);
 
-    // setup pinmux for our I2C busses
-    // I2C_A and I2C_B are exposed on the 40 pin header and I2C_C on the FPC connector
-    gpio_impl_.SetAltFunction(S912_I2C_SDA_A, S912_I2C_SDA_A_FN);
-    gpio_impl_.SetAltFunction(S912_I2C_SCK_A, S912_I2C_SCK_A_FN);
-    gpio_impl_.SetAltFunction(S912_I2C_SDA_B, S912_I2C_SDA_B_FN);
-    gpio_impl_.SetAltFunction(S912_I2C_SCK_B, S912_I2C_SCK_B_FN);
-    gpio_impl_.SetAltFunction(S912_I2C_SDA_C, S912_I2C_SDA_C_FN);
-    gpio_impl_.SetAltFunction(S912_I2C_SCK_C, S912_I2C_SCK_C_FN);
+  zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "I2cInit: DeviceAdd failed: %d\n", status);
+    return status;
+  }
 
-    zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "I2cInit: DeviceAdd failed: %d\n", status);
-        return status;
-    }
-
-    return ZX_OK;
+  return ZX_OK;
 }
-} //namespace vim
+}  // namespace vim

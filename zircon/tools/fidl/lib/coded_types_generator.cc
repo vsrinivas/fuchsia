@@ -89,8 +89,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         return iter->second;
       auto name = NameFlatName(primitive_type->name);
       auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(
-          std::move(name), primitive_type->subtype,
-          primitive_type->shape.Size(), context);
+          std::move(name), primitive_type->subtype, primitive_type->shape.Size(), context);
       primitive_type_map_[WithContext(context, primitive_type)] = coded_primitive_type.get();
       coded_types_.push_back(std::move(coded_primitive_type));
       return coded_types_.back().get();
@@ -243,7 +242,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         auto coded_member_type =
             CompileType(member.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
         if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
-          [[maybe_unused]] auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
+          [[maybe_unused]] auto is_primitive =
+              coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in struct coding table!");
           struct_fields.emplace_back(coded_member_type, member.fieldshape.Size(),
                                      member.fieldshape.Offset(), member.fieldshape.Padding());
@@ -265,7 +265,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         auto coded_member_type =
             CompileType(member.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
         if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
-          [[maybe_unused]] auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
+          [[maybe_unused]] auto is_primitive =
+              coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in union coding table!");
           union_members.emplace_back(coded_member_type, member.fieldshape.Padding());
         } else {
@@ -329,12 +330,11 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kBits: {
       auto bits_decl = static_cast<const flat::Bits*>(decl);
       std::string bits_name = NameCodedName(bits_decl->name);
-      auto primitive_type = 
-          static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type);
+      auto primitive_type = static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type);
       named_coded_types_.emplace(
-          &bits_decl->name, std::make_unique<coded::BitsType>(
-                                std::move(bits_name), primitive_type->subtype,
-                                primitive_type->shape.Size(), bits_decl->mask));
+          &bits_decl->name,
+          std::make_unique<coded::BitsType>(std::move(bits_name), primitive_type->subtype,
+                                            primitive_type->shape.Size(), bits_decl->mask));
       break;
     }
     case flat::Decl::Kind::kEnum: {
@@ -361,9 +361,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       }
       named_coded_types_.emplace(
           &enum_decl->name,
-          std::make_unique<coded::EnumType>(
-              std::move(enum_name), enum_decl->type->subtype,
-              enum_decl->type->shape.Size(), std::move(members)));
+          std::make_unique<coded::EnumType>(std::move(enum_name), enum_decl->type->subtype,
+                                            enum_decl->type->shape.Size(), std::move(members)));
       break;
     }
     case flat::Decl::Kind::kProtocol: {

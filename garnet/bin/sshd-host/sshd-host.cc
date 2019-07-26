@@ -19,7 +19,7 @@
 const int kPort = 22;
 const char* kKeyGenArgs[] = {"/pkg/bin/hostkeygen", nullptr};
 
-int main(int  /*argc*/, const char**  /*argv*/) {
+int main(int /*argc*/, const char** /*argv*/) {
   // We need to close PA_DIRECTORY_REQUEST otherwise clients that expect us to
   // offer services won't know that we've started and are not going to offer
   // any services.

@@ -32,13 +32,13 @@ zx::channel GetCommandChannel(int fd) {
     return ours;
   }
 
-  status = fuchsia_hardware_bluetooth_HciOpenCommandChannel(
-      fdio_unsafe_borrow_channel(hci_io), theirs.release());
+  status = fuchsia_hardware_bluetooth_HciOpenCommandChannel(fdio_unsafe_borrow_channel(hci_io),
+                                                            theirs.release());
   fdio_unsafe_release(hci_io);
 
   if (status != ZX_OK) {
-    std::cerr << "hci: Failed to obtain command channel handle: "
-              << zx_status_get_string(status) << std::endl;
+    std::cerr << "hci: Failed to obtain command channel handle: " << zx_status_get_string(status)
+              << std::endl;
     assert(!ours.is_valid());
   }
   return ours;
@@ -56,13 +56,13 @@ zx::channel GetAclChannel(int fd) {
     return ours;
   }
 
-  status = fuchsia_hardware_bluetooth_HciOpenAclDataChannel(
-      fdio_unsafe_borrow_channel(hci_io), theirs.release());
+  status = fuchsia_hardware_bluetooth_HciOpenAclDataChannel(fdio_unsafe_borrow_channel(hci_io),
+                                                            theirs.release());
   fdio_unsafe_release(hci_io);
 
   if (status != ZX_OK) {
-    std::cerr << "hci: Failed to obtain ACL channel handle: "
-              << zx_status_get_string(status) << std::endl;
+    std::cerr << "hci: Failed to obtain ACL channel handle: " << zx_status_get_string(status)
+              << std::endl;
     assert(!ours.is_valid());
   }
   return ours;
@@ -70,8 +70,7 @@ zx::channel GetAclChannel(int fd) {
 
 }  // namespace
 
-CommandChannel::CommandChannel(std::string hcidev_path)
-    : valid_(false), event_callback_(nullptr) {
+CommandChannel::CommandChannel(std::string hcidev_path) : valid_(false), event_callback_(nullptr) {
   hci_fd_.reset(open(hcidev_path.c_str(), O_RDWR));
   if (!bool(hci_fd_)) {
     return;
@@ -91,8 +90,8 @@ CommandChannel::CommandChannel(std::string hcidev_path)
   acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE);
   status = acl_channel_wait_.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
-    std::cerr << "CommandChannel: problem setting up ACL channel: "
-              << zx_status_get_string(status) << std::endl;
+    std::cerr << "CommandChannel: problem setting up ACL channel: " << zx_status_get_string(status)
+              << std::endl;
     return;
   }
 
@@ -109,8 +108,7 @@ void CommandChannel::SetEventCallback(EventCallback callback) {
   event_callback_ = std::move(callback);
 }
 
-void CommandChannel::SendCommand(
-    const ::bt::PacketView<::bt::hci::CommandHeader>& command) {
+void CommandChannel::SendCommand(const ::bt::PacketView<::bt::hci::CommandHeader>& command) {
   zx::channel* channel = &cmd_channel_;
   // Bootloader Secure Send commands are sent and responded to via the bulk
   // endpoint (ACL channel)
@@ -118,22 +116,19 @@ void CommandChannel::SendCommand(
     channel = &acl_channel_;
   }
 
-  zx_status_t status =
-      channel->write(0, command.data().data(), command.size(), nullptr, 0);
+  zx_status_t status = channel->write(0, command.data().data(), command.size(), nullptr, 0);
   if (status < 0) {
-    std::cerr << "CommandChannel: Failed to send command: "
-              << zx_status_get_string(status) << std::endl;
+    std::cerr << "CommandChannel: Failed to send command: " << zx_status_get_string(status)
+              << std::endl;
   }
 }
 
-void CommandChannel::SendCommandSync(
-    const ::bt::PacketView<::bt::hci::CommandHeader>& command,
-    EventCallback callback) {
+void CommandChannel::SendCommandSync(const ::bt::PacketView<::bt::hci::CommandHeader>& command,
+                                     EventCallback callback) {
   bool received = false;
   auto previous_cb = std::move(event_callback_);
 
-  auto cb = [&received,
-             callback = std::move(callback)](const auto& event_packet) {
+  auto cb = [&received, callback = std::move(callback)](const auto& event_packet) {
     if (callback) {
       callback(event_packet);
     }
@@ -169,19 +164,16 @@ void CommandChannel::SendCommandSync(
   SetEventCallback(std::move(previous_cb));
 
   if (status != ZX_OK) {
-    std::cerr << "CommandChannel: error waiting for event "
-              << zx_status_get_string(status) << std::endl;
+    std::cerr << "CommandChannel: error waiting for event " << zx_status_get_string(status)
+              << std::endl;
   }
 }
 
-void CommandChannel::HandleChannelReady(const zx::channel& channel,
-                                        async_dispatcher_t* dispatcher,
-                                        async::WaitBase* wait,
-                                        zx_status_t status,
+void CommandChannel::HandleChannelReady(const zx::channel& channel, async_dispatcher_t* dispatcher,
+                                        async::WaitBase* wait, zx_status_t status,
                                         const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    std::cerr << "CommandChannel: channel error: "
-              << zx_status_get_string(status) << std::endl;
+    std::cerr << "CommandChannel: channel error: " << zx_status_get_string(status) << std::endl;
     return;
   }
 
@@ -190,17 +182,14 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel,
     uint32_t read_size;
     // Allocate a buffer for the event. Since we don't know the size
     // beforehand we allocate the largest possible buffer.
-    auto packet = ::bt::hci::EventPacket::New(
-        ::bt::hci::slab_allocators::kLargeControlPayloadSize);
+    auto packet = ::bt::hci::EventPacket::New(::bt::hci::slab_allocators::kLargeControlPayloadSize);
     if (!packet) {
-      std::cerr << "CommandChannel: Failed to allocate event packet!"
-                << std::endl;
+      std::cerr << "CommandChannel: Failed to allocate event packet!" << std::endl;
       return;
     }
     auto packet_bytes = packet->mutable_view()->mutable_data();
-    zx_status_t read_status =
-        channel.read(0u, packet_bytes.mutable_data(), nullptr,
-                     packet_bytes.size(), 0, &read_size, nullptr);
+    zx_status_t read_status = channel.read(0u, packet_bytes.mutable_data(), nullptr,
+                                           packet_bytes.size(), 0, &read_size, nullptr);
     if (read_status < 0) {
       std::cerr << "CommandChannel: Failed to read event bytes: "
                 << zx_status_get_string(read_status) << std::endl;
@@ -210,20 +199,18 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel,
 
     if (read_size < sizeof(::bt::hci::EventHeader)) {
       std::cerr << "CommandChannel: Malformed event packet - "
-                << "expected at least " << sizeof(::bt::hci::EventHeader)
-                << " bytes, got " << read_size << std::endl;
+                << "expected at least " << sizeof(::bt::hci::EventHeader) << " bytes, got "
+                << read_size << std::endl;
       continue;
     }
 
     // Compare the received payload size to what is in the header.
     const size_t rx_payload_size = read_size - sizeof(::bt::hci::EventHeader);
-    const size_t size_from_header =
-        packet->view().header().parameter_total_size;
+    const size_t size_from_header = packet->view().header().parameter_total_size;
     if (size_from_header != rx_payload_size) {
       std::cerr << "CommandChannel: Malformed event packet - "
                 << "payload size from header (" << size_from_header << ")"
-                << " does not match received payload size: " << rx_payload_size
-                << std::endl;
+                << " does not match received payload size: " << rx_payload_size << std::endl;
       continue;
     }
 
@@ -232,31 +219,25 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel,
     if (event_callback_) {
       event_callback_(*packet);
     } else {
-      std::cerr << fxl::StringPrintf(
-                       "CommandChannel: Event received with no handler: 0x%02x",
-                       packet->event_code())
+      std::cerr << fxl::StringPrintf("CommandChannel: Event received with no handler: 0x%02x",
+                                     packet->event_code())
                 << std::endl;
     }
   }
 
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
-    std::cerr << "CommandChannel: resume wait error: "
-              << zx_status_get_string(status) << std::endl;
+    std::cerr << "CommandChannel: resume wait error: " << zx_status_get_string(status) << std::endl;
   }
 }
 
-void CommandChannel::OnCmdChannelReady(async_dispatcher_t* dispatcher,
-                                       async::WaitBase* wait,
-                                       zx_status_t status,
-                                       const zx_packet_signal_t* signal) {
+void CommandChannel::OnCmdChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                       zx_status_t status, const zx_packet_signal_t* signal) {
   HandleChannelReady(cmd_channel_, dispatcher, wait, status, signal);
 }
 
-void CommandChannel::OnAclChannelReady(async_dispatcher_t* dispatcher,
-                                       async::WaitBase* wait,
-                                       zx_status_t status,
-                                       const zx_packet_signal_t* signal) {
+void CommandChannel::OnAclChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                       zx_status_t status, const zx_packet_signal_t* signal) {
   // A Command packet response from a Secure Send command.
   HandleChannelReady(acl_channel_, dispatcher, wait, status, signal);
 }

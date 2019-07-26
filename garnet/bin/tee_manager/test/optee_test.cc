@@ -92,8 +92,7 @@ class Hex {
  public:
   constexpr explicit Hex(NumericType number) : number_(number) {}
 
-  friend std::ostream& operator<<(std::ostream& os,
-                                  const Hex<NumericType>& obj) {
+  friend std::ostream& operator<<(std::ostream& os, const Hex<NumericType>& obj) {
     return os << "0x" << std::hex << obj.number_;
   }
 
@@ -113,9 +112,8 @@ class Hex {
   if (op_result.result == TEEC_SUCCESS) {
     return ::testing::AssertionSuccess();
   } else {
-    return ::testing::AssertionFailure()
-           << "result: " << Hex(op_result.result)
-           << ", return origin: " << Hex(op_result.return_origin);
+    return ::testing::AssertionFailure() << "result: " << Hex(op_result.result)
+                                         << ", return origin: " << Hex(op_result.return_origin);
   }
 }
 
@@ -131,9 +129,8 @@ enum class SeekFrom : uint32_t { kBeginning = 0x0, kCurrent = 0x1, kEnd = 0x2 };
 
 // Invokes the storage TA to create a file. Returns an object handle, if
 // successful.
-static void CreateFile(TEEC_Session* session, std::string name,
-                       std::vector<uint8_t>* init_data, uint32_t flags,
-                       OpteeFileHandleGuard* out_handle_guard) {
+static void CreateFile(TEEC_Session* session, std::string name, std::vector<uint8_t>* init_data,
+                       uint32_t flags, OpteeFileHandleGuard* out_handle_guard) {
   ASSERT_NE(session, nullptr);
   ASSERT_NE(init_data, nullptr);
   ASSERT_GT(init_data->size(), 0u)
@@ -141,8 +138,8 @@ static void CreateFile(TEEC_Session* session, std::string name,
   ASSERT_NE(out_handle_guard, nullptr);
 
   TEEC_Operation op = {};
-  op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_VALUE_INOUT,
-                                   TEEC_VALUE_INPUT, TEEC_MEMREF_TEMP_INPUT);
+  op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_VALUE_INOUT, TEEC_VALUE_INPUT,
+                                   TEEC_MEMREF_TEMP_INPUT);
   op.params[2].value.b = kPrivateStorage;
 
   op.params[0].tmpref.buffer = static_cast<void*>(name.data());
@@ -157,8 +154,8 @@ static void CreateFile(TEEC_Session* session, std::string name,
   op.params[3].tmpref.size = static_cast<uint32_t>(init_data->size());
 
   OperationResult op_result;
-  op_result.result = TEEC_InvokeCommand(session, TA_STORAGE_CMD_CREATE, &op,
-                                        &op_result.return_origin);
+  op_result.result =
+      TEEC_InvokeCommand(session, TA_STORAGE_CMD_CREATE, &op, &op_result.return_origin);
   ASSERT_TRUE(IsTeecSuccess(op_result));
 
   *out_handle_guard = OpteeFileHandleGuard(session, op.params[1].value.b);
@@ -172,8 +169,8 @@ static void OpenFile(TEEC_Session* session, std::string name, uint32_t flags,
   ASSERT_NE(out_handle_guard, nullptr);
 
   TEEC_Operation op = {};
-  op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_VALUE_INOUT,
-                                   TEEC_VALUE_INPUT, TEEC_NONE);
+  op.paramTypes =
+      TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_VALUE_INOUT, TEEC_VALUE_INPUT, TEEC_NONE);
   op.params[2].value.a = kPrivateStorage;
 
   op.params[0].tmpref.buffer = static_cast<void*>(name.data());
@@ -182,28 +179,26 @@ static void OpenFile(TEEC_Session* session, std::string name, uint32_t flags,
   op.params[1].value.a = flags;
 
   OperationResult op_result;
-  op_result.result = TEEC_InvokeCommand(session, TA_STORAGE_CMD_OPEN, &op,
-                                        &op_result.return_origin);
+  op_result.result =
+      TEEC_InvokeCommand(session, TA_STORAGE_CMD_OPEN, &op, &op_result.return_origin);
   ASSERT_TRUE(IsTeecSuccess(op_result));
 
   *out_handle_guard = OpteeFileHandleGuard(session, op.params[1].value.b);
 }
 
 // Invokes the storage TA to close a file.
-static void CloseFile(TEEC_Session* session,
-                      OpteeFileHandleGuard* handle_guard) {
+static void CloseFile(TEEC_Session* session, OpteeFileHandleGuard* handle_guard) {
   ASSERT_NE(session, nullptr);
   ASSERT_NE(handle_guard, nullptr);
 
   TEEC_Operation op = {};
-  op.paramTypes =
-      TEEC_PARAM_TYPES(TEEC_VALUE_INPUT, TEEC_NONE, TEEC_NONE, TEEC_NONE);
+  op.paramTypes = TEEC_PARAM_TYPES(TEEC_VALUE_INPUT, TEEC_NONE, TEEC_NONE, TEEC_NONE);
 
   op.params[0].value.a = handle_guard->GetHandle();
 
   OperationResult op_result;
-  op_result.result = TEEC_InvokeCommand(session, TA_STORAGE_CMD_CLOSE, &op,
-                                        &op_result.return_origin);
+  op_result.result =
+      TEEC_InvokeCommand(session, TA_STORAGE_CMD_CLOSE, &op, &op_result.return_origin);
   EXPECT_TRUE(IsTeecSuccess(op_result));  // Okay to continue on failure
 
   handle_guard->Release();
@@ -211,23 +206,21 @@ static void CloseFile(TEEC_Session* session,
 
 // Invokes the storage TA to read from a file. Returns the number of bytes read,
 // if successful.
-static void ReadFile(TEEC_Session* session,
-                     const OpteeFileHandleGuard& handle_guard,
+static void ReadFile(TEEC_Session* session, const OpteeFileHandleGuard& handle_guard,
                      std::vector<uint8_t>* buffer) {
   ASSERT_NE(session, nullptr);
   ASSERT_NE(buffer, nullptr);
 
   TEEC_Operation op = {};
-  op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_OUTPUT, TEEC_VALUE_INOUT,
-                                   TEEC_NONE, TEEC_NONE);
+  op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_OUTPUT, TEEC_VALUE_INOUT, TEEC_NONE, TEEC_NONE);
   op.params[0].tmpref.buffer = static_cast<void*>(buffer->data());
   op.params[0].tmpref.size = static_cast<uint32_t>(buffer->size());
 
   op.params[1].value.a = handle_guard.GetHandle();
 
   OperationResult op_result;
-  op_result.result = TEEC_InvokeCommand(session, TA_STORAGE_CMD_READ, &op,
-                                        &op_result.return_origin);
+  op_result.result =
+      TEEC_InvokeCommand(session, TA_STORAGE_CMD_READ, &op, &op_result.return_origin);
   ASSERT_TRUE(IsTeecSuccess(op_result));
 
   size_t bytes = static_cast<size_t>(op.params[1].value.b);
@@ -238,36 +231,32 @@ static void ReadFile(TEEC_Session* session,
 
 // Invokes the storage TA to write to a file. Returns the number of bytes
 // written, if successful.
-static void WriteFile(TEEC_Session* session,
-                      const OpteeFileHandleGuard& handle_guard,
+static void WriteFile(TEEC_Session* session, const OpteeFileHandleGuard& handle_guard,
                       std::vector<uint8_t>* buffer) {
   ASSERT_NE(session, nullptr);
   ASSERT_NE(buffer, nullptr);
 
   TEEC_Operation op = {};
-  op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_VALUE_INPUT,
-                                   TEEC_NONE, TEEC_NONE);
+  op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_VALUE_INPUT, TEEC_NONE, TEEC_NONE);
   op.params[0].tmpref.buffer = static_cast<void*>(buffer->data());
   op.params[0].tmpref.size = static_cast<uint32_t>(buffer->size());
 
   op.params[1].value.a = handle_guard.GetHandle();
 
   OperationResult op_result;
-  op_result.result = TEEC_InvokeCommand(session, TA_STORAGE_CMD_WRITE, &op,
-                                        &op_result.return_origin);
+  op_result.result =
+      TEEC_InvokeCommand(session, TA_STORAGE_CMD_WRITE, &op, &op_result.return_origin);
   EXPECT_TRUE(IsTeecSuccess(op_result));  // Okay to continue on failure
 }
 
 // Invokes the storage TA to seek in a file. If successful, returns the offset
 // from the beginning of the file.
-static void SeekFile(TEEC_Session* session,
-                     const OpteeFileHandleGuard& handle_guard, int32_t offset,
-                     SeekFrom whence, uint32_t* out_absolute_offset) {
+static void SeekFile(TEEC_Session* session, const OpteeFileHandleGuard& handle_guard,
+                     int32_t offset, SeekFrom whence, uint32_t* out_absolute_offset) {
   ASSERT_NE(session, nullptr);
 
   TEEC_Operation op = {};
-  op.paramTypes = TEEC_PARAM_TYPES(TEEC_VALUE_INPUT, TEEC_VALUE_INOUT,
-                                   TEEC_NONE, TEEC_NONE);
+  op.paramTypes = TEEC_PARAM_TYPES(TEEC_VALUE_INPUT, TEEC_VALUE_INOUT, TEEC_NONE, TEEC_NONE);
   op.params[0].value.a = handle_guard.GetHandle();
 
   // Intentionally copy this int32_t to an uint32_t field, as the TA
@@ -278,8 +267,8 @@ static void SeekFile(TEEC_Session* session,
   op.params[1].value.a = static_cast<uint32_t>(whence);
 
   OperationResult op_result;
-  op_result.result = TEEC_InvokeCommand(session, TA_STORAGE_CMD_SEEK, &op,
-                                        &op_result.return_origin);
+  op_result.result =
+      TEEC_InvokeCommand(session, TA_STORAGE_CMD_SEEK, &op, &op_result.return_origin);
   ASSERT_TRUE(IsTeecSuccess(op_result));
 
   // Since there are scenarios where the client may ignore this, check if null
@@ -289,19 +278,17 @@ static void SeekFile(TEEC_Session* session,
 }
 
 // Invokes the storage TA to unlink a file.
-static void UnlinkFile(TEEC_Session* session,
-                       OpteeFileHandleGuard* handle_guard) {
+static void UnlinkFile(TEEC_Session* session, OpteeFileHandleGuard* handle_guard) {
   ASSERT_NE(session, nullptr);
   ASSERT_NE(handle_guard, nullptr);
 
   TEEC_Operation op = {};
-  op.paramTypes =
-      TEEC_PARAM_TYPES(TEEC_VALUE_INPUT, TEEC_NONE, TEEC_NONE, TEEC_NONE);
+  op.paramTypes = TEEC_PARAM_TYPES(TEEC_VALUE_INPUT, TEEC_NONE, TEEC_NONE, TEEC_NONE);
   op.params[0].value.a = handle_guard->GetHandle();
 
   OperationResult op_result;
-  op_result.result = TEEC_InvokeCommand(session, TA_STORAGE_CMD_UNLINK, &op,
-                                        &op_result.return_origin);
+  op_result.result =
+      TEEC_InvokeCommand(session, TA_STORAGE_CMD_UNLINK, &op, &op_result.return_origin);
   EXPECT_TRUE(IsTeecSuccess(op_result));  // Okay to continue on failure
 
   handle_guard->Release();
@@ -323,9 +310,7 @@ class ContextGuard {
 
   ~ContextGuard() { Close(); }
 
-  ContextGuard(ContextGuard&& other) : context_(other.context_) {
-    other.context_ = nullptr;
-  }
+  ContextGuard(ContextGuard&& other) : context_(other.context_) { other.context_ = nullptr; }
 
   ContextGuard& operator=(ContextGuard&& other) {
     if (&other == this) {
@@ -369,9 +354,7 @@ class SessionGuard {
 
   ~SessionGuard() { Close(); }
 
-  SessionGuard(SessionGuard&& other) : session_(other.session_) {
-    other.session_ = nullptr;
-  }
+  SessionGuard(SessionGuard&& other) : session_(other.session_) { other.session_ = nullptr; }
 
   SessionGuard& operator=(SessionGuard&& other) {
     if (&other == this) {
@@ -416,12 +399,11 @@ class OpteeTest : public sys::testing::TestWithEnvironment {
 
     fuchsia::sys::LaunchInfo launch_info{
         "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"};
-    zx_status_t status = services->AddServiceWithLaunchInfo(
-        std::move(launch_info), fuchsia::tee::Device::Name_);
+    zx_status_t status =
+        services->AddServiceWithLaunchInfo(std::move(launch_info), fuchsia::tee::Device::Name_);
     ASSERT_EQ(status, ZX_OK);
 
-    environment_ =
-        CreateNewEnclosingEnvironment("optee_test", std::move(services));
+    environment_ = CreateNewEnclosingEnvironment("optee_test", std::move(services));
     WaitForEnclosingEnvToStart(environment_.get());
 
     TEEC_Result result = TEEC_InitializeContext(nullptr, &context_);
@@ -429,9 +411,8 @@ class OpteeTest : public sys::testing::TestWithEnvironment {
     context_guard_ = ContextGuard(&context_);
 
     OperationResult op_result;
-    op_result.result =
-        TEEC_OpenSession(&context_, &session_, &kStorageUuid, TEEC_LOGIN_PUBLIC,
-                         nullptr, nullptr, &op_result.return_origin);
+    op_result.result = TEEC_OpenSession(&context_, &session_, &kStorageUuid, TEEC_LOGIN_PUBLIC,
+                                        nullptr, nullptr, &op_result.return_origin);
     ASSERT_TRUE(IsTeecSuccess(op_result));
     session_guard_ = SessionGuard(&session_);
 
@@ -454,8 +435,7 @@ class OpteeTest : public sys::testing::TestWithEnvironment {
   }
 
   static std::string GetInitialFileContents() {
-    static const std::string kInitialContents =
-        "the quick brown fox jumped over the lazy dog";
+    static const std::string kInitialContents = "the quick brown fox jumped over the lazy dog";
     return kInitialContents;
   }
 
@@ -546,13 +526,11 @@ TEST_F(OpteeTest, SeekWriteReadFile) {
 
   // Seek to the beginning of the file
   absolute_offset = std::numeric_limits<decltype(absolute_offset)>::max();
-  SeekFile(GetSession(), handle_guard, 0, SeekFrom::kBeginning,
-           &absolute_offset);
+  SeekFile(GetSession(), handle_guard, 0, SeekFrom::kBeginning, &absolute_offset);
   EXPECT_EQ(absolute_offset, 0u);
 
   // Check the new string
-  const std::string kNewFileContents =
-      GetInitialFileContents() + kStringToAppend;
+  const std::string kNewFileContents = GetInitialFileContents() + kStringToAppend;
   constexpr size_t kBufferSize = 128;
   buffer.assign(kBufferSize, 0);  // Zero out and resize the buffer
   ReadFile(GetSession(), handle_guard, &buffer);

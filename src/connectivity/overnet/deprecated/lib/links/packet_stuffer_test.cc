@@ -11,14 +11,12 @@
 namespace overnet {
 namespace packet_stuffer_test {
 
-constexpr TimeStamp kDummyTimestamp123 =
-    TimeStamp::AfterEpoch(TimeDelta::FromMicroseconds(123));
+constexpr TimeStamp kDummyTimestamp123 = TimeStamp::AfterEpoch(TimeDelta::FromMicroseconds(123));
 
 Message DummyMessage() {
-  return Message{std::move(RoutableMessage(NodeId(1)).AddDestination(
-                     NodeId(2), StreamId(1), SeqNum(1, 1))),
-                 ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})),
-                 kDummyTimestamp123};
+  return Message{
+      std::move(RoutableMessage(NodeId(1)).AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))),
+      ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})), kDummyTimestamp123};
 }
 
 template <class T>
@@ -47,22 +45,20 @@ struct PacketVerificationArgs {
   Slice expected_bytes;
 };
 
-struct PacketStufferSerialization
-    : public ::testing::TestWithParam<PacketVerificationArgs> {};
+struct PacketStufferSerialization : public ::testing::TestWithParam<PacketVerificationArgs> {};
 
 TEST_P(PacketStufferSerialization, Write) {
   PacketStuffer stuffer(NodeId(1), NodeId(2));
 
   int i = 0;
   for (auto msg : GetParam().messages) {
-    IgnoreResult(stuffer.Forward(Message{
-        std::move(RoutableMessage(NodeId(1)).AddDestination(
-            NodeId(3), StreamId(1), SeqNum(i++, GetParam().messages.size()))),
-        ForwardingPayloadFactory(msg), kDummyTimestamp123}));
+    IgnoreResult(stuffer.Forward(
+        Message{std::move(RoutableMessage(NodeId(1)).AddDestination(
+                    NodeId(3), StreamId(1), SeqNum(i++, GetParam().messages.size()))),
+                ForwardingPayloadFactory(msg), kDummyTimestamp123}));
   }
 
-  EXPECT_EQ(stuffer.BuildPacket(
-                LazySliceArgs{Border::None(), GetParam().max_serialize_length}),
+  EXPECT_EQ(stuffer.BuildPacket(LazySliceArgs{Border::None(), GetParam().max_serialize_length}),
             GetParam().expected_bytes);
 }
 
@@ -77,8 +73,7 @@ TEST_P(PacketStufferSerialization, Read) {
 
     void Close(Callback<void> quiesced) override {}
     fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override {
-      return fuchsia::overnet::protocol::LinkStatus{NodeId(2).as_fidl(),
-                                                    NodeId(3).as_fidl(), 1, 1};
+      return fuchsia::overnet::protocol::LinkStatus{NodeId(2).as_fidl(), NodeId(3).as_fidl(), 1, 1};
     }
     const LinkStats* GetStats() const override { return nullptr; }
 
@@ -86,8 +81,8 @@ TEST_P(PacketStufferSerialization, Read) {
       EXPECT_EQ(message.header.src(), NodeId(1));
       EXPECT_EQ(message.header.destinations().size(), size_t(1));
       EXPECT_EQ(message.header.destinations()[0].dst(), NodeId(3));
-      got_messages_->emplace_back(message.make_payload(
-          LazySliceArgs{Border::None(), std::numeric_limits<size_t>::max()}));
+      got_messages_->emplace_back(
+          message.make_payload(LazySliceArgs{Border::None(), std::numeric_limits<size_t>::max()}));
     }
 
    private:
@@ -100,15 +95,13 @@ TEST_P(PacketStufferSerialization, Read) {
   }
 
   auto status = PacketStuffer(NodeId(1), NodeId(2))
-                    .ParseAndForwardTo(kDummyTimestamp123,
-                                       GetParam().expected_bytes, &router);
+                    .ParseAndForwardTo(kDummyTimestamp123, GetParam().expected_bytes, &router);
 
   EXPECT_TRUE(status.is_ok()) << status;
   EXPECT_EQ(got_messages, GetParam().messages);
 }
 
-INSTANTIATE_TEST_SUITE_P(PacketStufferSerializationSuite,
-                         PacketStufferSerialization,
+INSTANTIATE_TEST_SUITE_P(PacketStufferSerializationSuite, PacketStufferSerialization,
                          ::testing::Values(PacketVerificationArgs{
                              {Slice::FromContainer({1, 2, 3})},
                              256,

@@ -26,9 +26,8 @@ class EnsureCalled {
   EnsureCalled() = default;
 
   explicit EnsureCalled(T&& function, ArgType&&... args)
-      : closure_(std::pair(
-            std::move(function),
-            std::tuple<ArgType...>(std::forward<ArgType>(args)...))){};
+      : closure_(std::pair(std::move(function),
+                           std::tuple<ArgType...>(std::forward<ArgType>(args)...))){};
 
   EnsureCalled(EnsureCalled&& other) { *this = std::move(other); }
 
@@ -49,8 +48,7 @@ class EnsureCalled {
   auto operator()(ArgType... args) {
     FXL_DCHECK(closure_);
     auto closure = TakeClosure();
-    return std::invoke(std::move(closure->first),
-                       std::forward<ArgType>(args)...);
+    return std::invoke(std::move(closure->first), std::forward<ArgType>(args)...);
   }
 
   explicit operator bool() const { return closure_.has_value(); }

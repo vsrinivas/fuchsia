@@ -18,8 +18,8 @@
 //
 // TODO(FIDL-127): Compute these values with the "union of all fuchsia-io"
 // messages.
-#define ZXFIDL_MAX_MSG_BYTES    (FDIO_CHUNK_SIZE * 2)
-#define ZXFIDL_MAX_MSG_HANDLES  (16)
+#define ZXFIDL_MAX_MSG_BYTES (FDIO_CHUNK_SIZE * 2)
+#define ZXFIDL_MAX_MSG_HANDLES (16)
 
 // indicates the callback is taking responsibility for the
 // channel receiving incoming messages.
@@ -39,53 +39,46 @@ namespace fs {
 // It contains both the underlying fidl transaction, as well as the channel and txid,
 // which are necessary for responding to fidl messages.
 class FidlConnection {
-public:
-    // TODO(smklein): convert channel to a zx::unowned_channel.
-    FidlConnection(fidl_txn_t txn, zx_handle_t channel, zx_txid_t txid)
-        : txn_(std::move(txn)), channel_(std::move(channel)), txid_(std::move(txid)) {}
+ public:
+  // TODO(smklein): convert channel to a zx::unowned_channel.
+  FidlConnection(fidl_txn_t txn, zx_handle_t channel, zx_txid_t txid)
+      : txn_(std::move(txn)), channel_(std::move(channel)), txid_(std::move(txid)) {}
 
-    fidl_txn_t* Txn() {
-        return &txn_;
-    }
+  fidl_txn_t* Txn() { return &txn_; }
 
-    zx_txid_t Txid() const {
-        return txid_;
-    }
+  zx_txid_t Txid() const { return txid_; }
 
-    zx_handle_t Channel() const {
-        return channel_;
-    }
+  zx_handle_t Channel() const { return channel_; }
 
-    // Utilizes a |fidl_txn_t| object as a wrapped FidlConnection.
-    //
-    // Only safe to call if |txn| was previously returned by |FidlConnection.Txn()|.
-    static const FidlConnection* FromTxn(const fidl_txn_t* txn);
+  // Utilizes a |fidl_txn_t| object as a wrapped FidlConnection.
+  //
+  // Only safe to call if |txn| was previously returned by |FidlConnection.Txn()|.
+  static const FidlConnection* FromTxn(const fidl_txn_t* txn);
 
-    // Copies txn into a new FidlConnection.
-    //
-    // This may be useful for copying a FidlConnection out of stack-allocated scope,
-    // so a response may be generated asynchronously.
-    //
-    // Only safe to call if |txn| was previously returned by |FidlConnection.Txn()|.
-    static FidlConnection CopyTxn(const fidl_txn_t* txn);
+  // Copies txn into a new FidlConnection.
+  //
+  // This may be useful for copying a FidlConnection out of stack-allocated scope,
+  // so a response may be generated asynchronously.
+  //
+  // Only safe to call if |txn| was previously returned by |FidlConnection.Txn()|.
+  static FidlConnection CopyTxn(const fidl_txn_t* txn);
 
-private:
-    fidl_txn_t txn_;
-    zx_handle_t channel_;
-    zx_txid_t txid_;
+ private:
+  fidl_txn_t txn_;
+  zx_handle_t channel_;
+  zx_txid_t txid_;
 };
 
 inline const FidlConnection* FidlConnection::FromTxn(const fidl_txn_t* txn) {
-    static_assert(std::is_standard_layout<FidlConnection>::value,
-                  "Cannot cast from non-standard layout class");
-    static_assert(offsetof(FidlConnection, txn_) == 0,
-                  "FidlConnection must be convertable to txn");
-    return reinterpret_cast<const FidlConnection*>(txn);
+  static_assert(std::is_standard_layout<FidlConnection>::value,
+                "Cannot cast from non-standard layout class");
+  static_assert(offsetof(FidlConnection, txn_) == 0, "FidlConnection must be convertable to txn");
+  return reinterpret_cast<const FidlConnection*>(txn);
 }
 
 inline FidlConnection FidlConnection::CopyTxn(const fidl_txn_t* txn) {
-    static_assert(std::is_trivially_copyable<FidlConnection>::value, "Cannot trivially copy");
-    return *FromTxn(txn);
+  static_assert(std::is_trivially_copyable<FidlConnection>::value, "Cannot trivially copy");
+  return *FromTxn(txn);
 }
 
 // callback to process a FIDL message.
@@ -113,4 +106,4 @@ zx_status_t ReadMessage(zx_handle_t h, FidlDispatchFunction dispatch);
 // to the same close function.
 zx_status_t CloseMessage(FidlDispatchFunction dispatch);
 
-} // namespace fs
+}  // namespace fs

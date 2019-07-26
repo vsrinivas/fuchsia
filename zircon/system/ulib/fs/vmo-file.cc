@@ -20,174 +20,170 @@ namespace {
 constexpr uint64_t kVmoFileBlksize = PAGE_SIZE;
 
 zx_rights_t GetVmoRightsForAccessMode(uint32_t flags) {
-    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
-    if (flags & ZX_FS_RIGHT_READABLE) {
-        rights |= ZX_RIGHT_READ;
-    }
-    if (flags & ZX_FS_RIGHT_WRITABLE) {
-        rights |= ZX_RIGHT_WRITE;
-    }
-    // TODO(mdempsky): Add ZX_FS_RIGHT_EXECUTABLE flag?
-    return rights;
+  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
+  if (flags & ZX_FS_RIGHT_READABLE) {
+    rights |= ZX_RIGHT_READ;
+  }
+  if (flags & ZX_FS_RIGHT_WRITABLE) {
+    rights |= ZX_RIGHT_WRITE;
+  }
+  // TODO(mdempsky): Add ZX_FS_RIGHT_EXECUTABLE flag?
+  return rights;
 }
 
-} // namespace
+}  // namespace
 
-VmoFile::VmoFile(const zx::vmo& unowned_vmo,
-                 size_t offset,
-                 size_t length,
-                 bool writable,
+VmoFile::VmoFile(const zx::vmo& unowned_vmo, size_t offset, size_t length, bool writable,
                  VmoSharing vmo_sharing)
     : vmo_handle_(unowned_vmo.get()),
-      offset_(offset), length_(length), writable_(writable), vmo_sharing_(vmo_sharing) {
-    ZX_DEBUG_ASSERT(vmo_handle_ != ZX_HANDLE_INVALID);
+      offset_(offset),
+      length_(length),
+      writable_(writable),
+      vmo_sharing_(vmo_sharing) {
+  ZX_DEBUG_ASSERT(vmo_handle_ != ZX_HANDLE_INVALID);
 }
 
 VmoFile::~VmoFile() {}
 
 zx_status_t VmoFile::ValidateFlags(uint32_t flags) {
-    if (flags & ZX_FS_FLAG_DIRECTORY) {
-        return ZX_ERR_NOT_DIR;
-    }
-    if (IsWritable(flags) && !writable_) {
-        return ZX_ERR_ACCESS_DENIED;
-    }
-    return ZX_OK;
+  if (flags & ZX_FS_FLAG_DIRECTORY) {
+    return ZX_ERR_NOT_DIR;
+  }
+  if (IsWritable(flags) && !writable_) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  return ZX_OK;
 }
 
 zx_status_t VmoFile::Getattr(vnattr_t* attr) {
-    memset(attr, 0, sizeof(vnattr_t));
-    attr->mode = V_TYPE_FILE | V_IRUSR;
-    if (writable_) {
-        attr->mode |= V_IWUSR;
-    }
-    attr->inode = fuchsia_io_INO_UNKNOWN;
-    attr->size = length_;
-    attr->blksize = kVmoFileBlksize;
-    attr->blkcount = fbl::round_up(attr->size, kVmoFileBlksize) / VNATTR_BLKSIZE;
-    attr->nlink = 1;
-    return ZX_OK;
+  memset(attr, 0, sizeof(vnattr_t));
+  attr->mode = V_TYPE_FILE | V_IRUSR;
+  if (writable_) {
+    attr->mode |= V_IWUSR;
+  }
+  attr->inode = fuchsia_io_INO_UNKNOWN;
+  attr->size = length_;
+  attr->blksize = kVmoFileBlksize;
+  attr->blkcount = fbl::round_up(attr->size, kVmoFileBlksize) / VNATTR_BLKSIZE;
+  attr->nlink = 1;
+  return ZX_OK;
 }
 
 zx_status_t VmoFile::Read(void* data, size_t length, size_t offset, size_t* out_actual) {
-    if (length == 0u || offset >= length_) {
-        *out_actual = 0u;
-        return ZX_OK;
-    }
-
-    size_t remaining_length = length_ - offset;
-    if (length > remaining_length) {
-        length = remaining_length;
-    }
-    zx_status_t status = zx_vmo_read(vmo_handle_, data, offset_ + offset, length);
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out_actual = length;
+  if (length == 0u || offset >= length_) {
+    *out_actual = 0u;
     return ZX_OK;
+  }
+
+  size_t remaining_length = length_ - offset;
+  if (length > remaining_length) {
+    length = remaining_length;
+  }
+  zx_status_t status = zx_vmo_read(vmo_handle_, data, offset_ + offset, length);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_actual = length;
+  return ZX_OK;
 }
 
 zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_t* out_actual) {
-    ZX_DEBUG_ASSERT(writable_); // checked by the VFS
+  ZX_DEBUG_ASSERT(writable_);  // checked by the VFS
 
-    if (length == 0u) {
-        *out_actual = 0u;
-        return ZX_OK;
-    }
-    if (offset >= length_) {
-        return ZX_ERR_NO_SPACE;
-    }
+  if (length == 0u) {
+    *out_actual = 0u;
+    return ZX_OK;
+  }
+  if (offset >= length_) {
+    return ZX_ERR_NO_SPACE;
+  }
 
-    size_t remaining_length = length_ - offset;
-    if (length > remaining_length) {
-        length = remaining_length;
-    }
-    zx_status_t status = zx_vmo_write(vmo_handle_, data, offset_ + offset, length);
-    if (status == ZX_OK) {
-        *out_actual = length;
-    }
-    return status;
+  size_t remaining_length = length_ - offset;
+  if (length > remaining_length) {
+    length = remaining_length;
+  }
+  zx_status_t status = zx_vmo_write(vmo_handle_, data, offset_ + offset, length);
+  if (status == ZX_OK) {
+    *out_actual = length;
+  }
+  return status;
 }
 
 zx_status_t VmoFile::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
-    ZX_DEBUG_ASSERT(!IsWritable(flags) || writable_); // checked by the VFS
+  ZX_DEBUG_ASSERT(!IsWritable(flags) || writable_);  // checked by the VFS
 
-    zx::vmo vmo;
-    size_t offset;
-    zx_status_t status = AcquireVmo(GetVmoRightsForAccessMode(flags), &vmo, &offset);
-    if (status != ZX_OK) {
-        return status;
-    }
+  zx::vmo vmo;
+  size_t offset;
+  zx_status_t status = AcquireVmo(GetVmoRightsForAccessMode(flags), &vmo, &offset);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    info->tag = fuchsia_io_NodeInfoTag_vmofile;
-    info->vmofile.vmo = vmo.release();
-    info->vmofile.offset = offset;
-    info->vmofile.length = length_;
-    return ZX_OK;
+  info->tag = fuchsia_io_NodeInfoTag_vmofile;
+  info->vmofile.vmo = vmo.release();
+  info->vmofile.offset = offset;
+  info->vmofile.length = length_;
+  return ZX_OK;
 }
 
-bool VmoFile::IsDirectory() const {
-    return false;
-}
+bool VmoFile::IsDirectory() const { return false; }
 
 zx_status_t VmoFile::AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
-    ZX_DEBUG_ASSERT(!(rights & ZX_RIGHT_WRITE) || writable_); // checked by the VFS
+  ZX_DEBUG_ASSERT(!(rights & ZX_RIGHT_WRITE) || writable_);  // checked by the VFS
 
-    switch (vmo_sharing_) {
+  switch (vmo_sharing_) {
     case VmoSharing::NONE:
-        return ZX_ERR_NOT_SUPPORTED;
+      return ZX_ERR_NOT_SUPPORTED;
     case VmoSharing::DUPLICATE:
-        return DuplicateVmo(rights, out_vmo, out_offset);
+      return DuplicateVmo(rights, out_vmo, out_offset);
     case VmoSharing::CLONE_COW:
-        return CloneVmo(rights, out_vmo, out_offset);
-    }
-    __UNREACHABLE;
+      return CloneVmo(rights, out_vmo, out_offset);
+  }
+  __UNREACHABLE;
 }
 
 zx_status_t VmoFile::DuplicateVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
-    zx_status_t status = zx_handle_duplicate(vmo_handle_, rights, out_vmo->reset_and_get_address());
-    if (status != ZX_OK)
-        return status;
+  zx_status_t status = zx_handle_duplicate(vmo_handle_, rights, out_vmo->reset_and_get_address());
+  if (status != ZX_OK)
+    return status;
 
-    *out_offset = offset_;
-    return ZX_OK;
+  *out_offset = offset_;
+  return ZX_OK;
 }
 
 zx_status_t VmoFile::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
-    size_t clone_offset = fbl::round_down(offset_, static_cast<size_t>(PAGE_SIZE));
-    size_t clone_length = fbl::round_up(offset_ + length_, static_cast<size_t>(PAGE_SIZE)) -
-                          clone_offset;
+  size_t clone_offset = fbl::round_down(offset_, static_cast<size_t>(PAGE_SIZE));
+  size_t clone_length =
+      fbl::round_up(offset_ + length_, static_cast<size_t>(PAGE_SIZE)) - clone_offset;
 
-    if (!(rights & ZX_RIGHT_WRITE)) {
-        // Use a shared clone for read-only content.
-        zx_status_t status = ZX_OK;
-        std::call_once(shared_clone_.once, [&]() {
-            status = zx_vmo_create_child(vmo_handle_, ZX_VMO_CHILD_COPY_ON_WRITE,
-                                         clone_offset, clone_length,
-                                         shared_clone_.vmo.reset_and_get_address());
-        });
-        if (status != ZX_OK)
-            return status;
+  if (!(rights & ZX_RIGHT_WRITE)) {
+    // Use a shared clone for read-only content.
+    zx_status_t status = ZX_OK;
+    std::call_once(shared_clone_.once, [&]() {
+      status = zx_vmo_create_child(vmo_handle_, ZX_VMO_CHILD_COPY_ON_WRITE, clone_offset,
+                                   clone_length, shared_clone_.vmo.reset_and_get_address());
+    });
+    if (status != ZX_OK)
+      return status;
 
-        status = shared_clone_.vmo.duplicate(rights, out_vmo);
-        if (status != ZX_OK)
-            return status;
-    } else {
-        // Use separate clone for each client with writable COW access.
-        zx::vmo private_clone;
-        zx_status_t status = zx_vmo_create_child(vmo_handle_, ZX_VMO_CHILD_COPY_ON_WRITE,
-                                                 clone_offset, clone_length,
-                                                 private_clone.reset_and_get_address());
-        if (status != ZX_OK)
-            return status;
+    status = shared_clone_.vmo.duplicate(rights, out_vmo);
+    if (status != ZX_OK)
+      return status;
+  } else {
+    // Use separate clone for each client with writable COW access.
+    zx::vmo private_clone;
+    zx_status_t status = zx_vmo_create_child(vmo_handle_, ZX_VMO_CHILD_COPY_ON_WRITE, clone_offset,
+                                             clone_length, private_clone.reset_and_get_address());
+    if (status != ZX_OK)
+      return status;
 
-        status = private_clone.replace(rights, out_vmo);
-        if (status != ZX_OK)
-            return status;
-    }
+    status = private_clone.replace(rights, out_vmo);
+    if (status != ZX_OK)
+      return status;
+  }
 
-    *out_offset = offset_ - clone_offset;
-    return ZX_OK;
+  *out_offset = offset_ - clone_offset;
+  return ZX_OK;
 }
 
-} // namespace fs
+}  // namespace fs

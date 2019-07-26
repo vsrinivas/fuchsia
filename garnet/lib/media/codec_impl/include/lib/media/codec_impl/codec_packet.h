@@ -54,10 +54,8 @@ class CodecPacket {
   friend class CodecImpl;
   friend class CodecPacketForTest;
 
-  static constexpr uint32_t kStartOffsetNotSet =
-      std::numeric_limits<uint32_t>::max();
-  static constexpr uint32_t kValidLengthBytesNotSet =
-      std::numeric_limits<uint32_t>::max();
+  static constexpr uint32_t kStartOffsetNotSet = std::numeric_limits<uint32_t>::max();
+  static constexpr uint32_t kValidLengthBytesNotSet = std::numeric_limits<uint32_t>::max();
 
   // The buffer ptr is not owned.  The buffer lifetime is slightly longer than
   // the Packet lifetime.

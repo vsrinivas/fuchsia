@@ -220,29 +220,28 @@ constexpr pbus_dev_t thermal_dev = []() {
 }();
 
 static const zx_bind_inst_t root_match[] = {
-  BI_MATCH(),
+    BI_MATCH(),
 };
 static const zx_bind_inst_t clk1_match[] = {
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-  BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_PLL_DIV16),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_PLL_DIV16),
 };
 static const zx_bind_inst_t clk2_match[] = {
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-  BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_CPU_CLK_DIV16),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_CPU_CLK_DIV16),
 };
 static const device_component_part_t clk1_component[] = {
-  { countof(root_match), root_match },
-  { countof(clk1_match), clk1_match },
+    {countof(root_match), root_match},
+    {countof(clk1_match), clk1_match},
 };
 static const device_component_part_t clk2_component[] = {
-  { countof(root_match), root_match },
-  { countof(clk2_match), clk2_match },
+    {countof(root_match), root_match},
+    {countof(clk2_match), clk2_match},
 };
 static const device_component_t components[] = {
-  { countof(clk1_component), clk1_component },
-  { countof(clk2_component), clk2_component },
+    {countof(clk1_component), clk1_component},
+    {countof(clk2_component), clk2_component},
 };
-
 
 }  // namespace
 

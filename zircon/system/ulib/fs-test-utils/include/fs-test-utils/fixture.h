@@ -23,15 +23,14 @@
 
 // Macro for printing more information in error logs.
 // "[File:Line] Error(error_name): Message\n"
-#define LOG_ERROR(error_code, msg_fmt, ...)        \
-    fprintf(stderr, "[%s:%d] Error(%s): " msg_fmt, \
-            __FILE__, __LINE__, zx_status_get_string(error_code), ##__VA_ARGS__)
+#define LOG_ERROR(error_code, msg_fmt, ...)                          \
+  fprintf(stderr, "[%s:%d] Error(%s): " msg_fmt, __FILE__, __LINE__, \
+          zx_status_get_string(error_code), ##__VA_ARGS__)
 
 // Macro for printing more information in stdout.
 // "[File:Line] Info: Message\n"
-#define LOG_INFO(msg_fmt, ...)                \
-    fprintf(stdout, "[%s:%d] Info: " msg_fmt, \
-            __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_INFO(msg_fmt, ...) \
+  fprintf(stdout, "[%s:%d] Info: " msg_fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace fs_test_utils {
 
@@ -49,58 +48,57 @@ int RunWithMemFs(const fbl::Function<int()>& main_fn);
 //
 // Note: use_ramdisk and block_device_path are mutually exclusive.
 struct FixtureOptions {
+  static FixtureOptions Default(disk_format_t format) {
+    FixtureOptions options;
+    options.use_ramdisk = true;
+    options.ramdisk_block_size = 512;
+    options.ramdisk_block_count = zx_system_get_physmem() / (2 * options.ramdisk_block_size);
+    options.use_fvm = false;
+    options.fvm_slice_size = kFvmBlockSize * (2 << 10);
+    options.fs_type = format;
+    options.seed = static_cast<unsigned int>(zx::ticks::now().get());
+    options.isolated_devmgr = false;
+    return options;
+  }
 
-    static FixtureOptions Default(disk_format_t format) {
-        FixtureOptions options;
-        options.use_ramdisk = true;
-        options.ramdisk_block_size = 512;
-        options.ramdisk_block_count = zx_system_get_physmem() / (2 * options.ramdisk_block_size);
-        options.use_fvm = false;
-        options.fvm_slice_size = kFvmBlockSize * (2 << 10);
-        options.fs_type = format;
-        options.seed = static_cast<unsigned int>(zx::ticks::now().get());
-        options.isolated_devmgr = false;
-        return options;
-    }
+  // Returns true if the options are valid.
+  // When invalid |err_string| will be populated with a human readable error description.
+  bool IsValid(fbl::String* err_description) const;
 
-    // Returns true if the options are valid.
-    // When invalid |err_string| will be populated with a human readable error description.
-    bool IsValid(fbl::String* err_description) const;
+  // Path to the block device to use.
+  fbl::String block_device_path = "";
 
-    // Path to the block device to use.
-    fbl::String block_device_path = "";
+  // If true a ramdisk will be created and shared for the test.
+  bool use_ramdisk = false;
 
-    // If true a ramdisk will be created and shared for the test.
-    bool use_ramdisk = false;
+  // Number of blocks the ramdisk will contain.
+  size_t ramdisk_block_count = 0;
 
-    // Number of blocks the ramdisk will contain.
-    size_t ramdisk_block_count = 0;
+  // Size of the blocks the ramdisk will have.
+  size_t ramdisk_block_size = 0;
 
-    // Size of the blocks the ramdisk will have.
-    size_t ramdisk_block_size = 0;
+  // If true an fvm will be mounted on the device, and the filesystem will be
+  // mounted on top of a fresh partition.
+  bool use_fvm = false;
 
-    // If true an fvm will be mounted on the device, and the filesystem will be
-    // mounted on top of a fresh partition.
-    bool use_fvm = false;
+  // Size of each slice of the created fvm.
+  size_t fvm_slice_size = 0;
 
-    // Size of each slice of the created fvm.
-    size_t fvm_slice_size = 0;
+  // Type of filesystem to mount.
+  disk_format_t fs_type;
 
-    // Type of filesystem to mount.
-    disk_format_t fs_type;
+  // Format the device device with the given |fs_type|. This is useful
+  // when a test requires a block_device(and fvm) for tests.
+  bool fs_format = true;
 
-    // Format the device device with the given |fs_type|. This is useful
-    // when a test requires a block_device(and fvm) for tests.
-    bool fs_format = true;
+  // Mount the device in |Fixture::fs_path()|. Format is auto detected.
+  bool fs_mount = true;
 
-    // Mount the device in |Fixture::fs_path()|. Format is auto detected.
-    bool fs_mount = true;
+  // Seed for pseudo random number generator.
+  unsigned int seed = 0;
 
-    // Seed for pseudo random number generator.
-    unsigned int seed = 0;
-
-    // Whether to use an isolated devmgr for each test.
-    bool isolated_devmgr = false;
+  // Whether to use an isolated devmgr for each test.
+  bool isolated_devmgr = false;
 };
 
 // Provides a base fixture for File system tests.
@@ -110,119 +108,109 @@ struct FixtureOptions {
 //   return run_all_unittests(argc, argv) ? 0: 1;
 // }
 class Fixture {
-public:
-    Fixture() = delete;
-    explicit Fixture(const FixtureOptions& options);
-    Fixture(const Fixture&) = delete;
-    Fixture(Fixture&&) = delete;
-    Fixture& operator=(const Fixture&) = delete;
-    Fixture& operator=(Fixture&&) = delete;
-    ~Fixture();
+ public:
+  Fixture() = delete;
+  explicit Fixture(const FixtureOptions& options);
+  Fixture(const Fixture&) = delete;
+  Fixture(Fixture&&) = delete;
+  Fixture& operator=(const Fixture&) = delete;
+  Fixture& operator=(Fixture&&) = delete;
+  ~Fixture();
 
-    // Returns the options used by this fixture.
-    const FixtureOptions& options() const {
-        return options_;
+  // Returns the options used by this fixture.
+  const FixtureOptions& options() const { return options_; }
+
+  // Returns the path to the block device hosting the FS.
+  const fbl::String& block_device_path() const { return block_device_path_; }
+
+  // Returns the path to the FVM partition created for the block device
+  // hosting the FS. Will return empty if !options_.use_fvm.
+  const fbl::String& partition_path() const { return partition_path_; }
+
+  // Returns either the block_device path or partition_path if using fvm.
+  const fbl::String& GetFsBlockDevice() const {
+    return (options_.use_fvm) ? partition_path_ : block_device_path_;
+  }
+
+  // Returns the path where the filesystem was mounted.
+  const fbl::String& fs_path() const { return fs_path_; }
+
+  // Returns a seed to be used along the test, for rand_r calls.
+  unsigned int* mutable_seed() { return &seed_; }
+
+  // Unmounts the FS from fs_path.
+  zx_status_t Umount();
+
+  // Mounts the FsBlockDevice into fs_path.
+  zx_status_t Mount();
+
+  // Umounts and then Mounts the device.
+  zx_status_t Remount() {
+    zx_status_t res = Umount();
+    if (res != ZX_OK) {
+      return res;
     }
+    res = Mount();
+    return res;
+  }
 
-    // Returns the path to the block device hosting the FS.
-    const fbl::String& block_device_path() const {
-        return block_device_path_;
-    }
+  // Checks the disk with fsck.
+  zx_status_t Fsck() const;
 
-    // Returns the path to the FVM partition created for the block device
-    // hosting the FS. Will return empty if !options_.use_fvm.
-    const fbl::String& partition_path() const {
-        return partition_path_;
-    }
+  // Format (or reformat) the device.
+  zx_status_t Format() const;
 
-    // Returns either the block_device path or partition_path if using fvm.
-    const fbl::String& GetFsBlockDevice() const {
-        return (options_.use_fvm) ? partition_path_ : block_device_path_;
-    }
+  // Sets up MemFs and Ramdisk, allocating resources for the tests.
+  zx_status_t SetUpTestCase();
 
-    // Returns the path where the filesystem was mounted.
-    const fbl::String& fs_path() const {
-        return fs_path_;
-    }
+  // Formats the block device with the required type, creates a fvm, and mounts
+  // the fs.
+  zx_status_t SetUp();
 
-    // Returns a seed to be used along the test, for rand_r calls.
-    unsigned int* mutable_seed() {
-        return &seed_;
-    }
+  // Cleans up the block device by reformatting it, destroys the fvm and
+  // unmounts the fs.
+  zx_status_t TearDown();
 
-    // Unmounts the FS from fs_path.
-    zx_status_t Umount();
+  // Destroys the ramdisk, MemFs will die with the process. This should be
+  // called after all tests finished execution to free resources.
+  zx_status_t TearDownTestCase();
 
-    // Mounts the FsBlockDevice into fs_path.
-    zx_status_t Mount();
+ private:
+  FixtureOptions options_;
 
-    // Umounts and then Mounts the device.
-    zx_status_t Remount() {
-        zx_status_t res = Umount();
-        if (res != ZX_OK) {
-            return res;
-        }
-        res = Mount();
-        return res;
-    }
+  // State of the resources allocated by the fixture.
+  enum class ResourceState {
+    kUnallocated,
+    kAllocated,
+    kFreed,
+  };
 
-    // Checks the disk with fsck.
-    zx_status_t Fsck() const;
+  // The ramdisk, if it exists.
+  ramdisk_client_t* ramdisk_ = nullptr;
 
-    // Format (or reformat) the device.
-    zx_status_t Format() const;
+  // Path to the block device hosting the mounted FS.
+  fbl::String block_device_path_;
 
-    // Sets up MemFs and Ramdisk, allocating resources for the tests.
-    zx_status_t SetUpTestCase();
+  // When using fvm, the FS will be mounted here.
+  fbl::String partition_path_;
 
-    // Formats the block device with the required type, creates a fvm, and mounts
-    // the fs.
-    zx_status_t SetUp();
+  // The root path where FS is mounted.
+  fbl::String fs_path_;
 
-    // Cleans up the block device by reformatting it, destroys the fvm and
-    // unmounts the fs.
-    zx_status_t TearDown();
+  unsigned int seed_;
 
-    // Destroys the ramdisk, MemFs will die with the process. This should be
-    // called after all tests finished execution to free resources.
-    zx_status_t TearDownTestCase();
+  // Keep track of the resource allocation during the setup teardown process,
+  // to avoid leaks, or unnecessary errors when trying to free resources, that
+  // may have never been allocated in first place.
+  ResourceState fs_state_ = ResourceState::kUnallocated;
+  ResourceState fvm_state_ = ResourceState::kUnallocated;
+  ResourceState ramdisk_state_ = ResourceState::kUnallocated;
 
-private:
-    FixtureOptions options_;
+  // Isolated devmgr if requested.
+  devmgr_integration_test::IsolatedDevmgr devmgr_;
 
-    // State of the resources allocated by the fixture.
-    enum class ResourceState {
-        kUnallocated,
-        kAllocated,
-        kFreed,
-    };
-
-    // The ramdisk, if it exists.
-    ramdisk_client_t* ramdisk_ = nullptr;
-
-    // Path to the block device hosting the mounted FS.
-    fbl::String block_device_path_;
-
-    // When using fvm, the FS will be mounted here.
-    fbl::String partition_path_;
-
-    // The root path where FS is mounted.
-    fbl::String fs_path_;
-
-    unsigned int seed_;
-
-    // Keep track of the resource allocation during the setup teardown process,
-    // to avoid leaks, or unnecessary errors when trying to free resources, that
-    // may have never been allocated in first place.
-    ResourceState fs_state_ = ResourceState::kUnallocated;
-    ResourceState fvm_state_ = ResourceState::kUnallocated;
-    ResourceState ramdisk_state_ = ResourceState::kUnallocated;
-
-    // Isolated devmgr if requested.
-    devmgr_integration_test::IsolatedDevmgr devmgr_;
-
-    fbl::unique_fd devfs_root_;
-    const char* root_path_;
+  fbl::unique_fd devfs_root_;
+  const char* root_path_;
 };
 
-} // namespace fs_test_utils
+}  // namespace fs_test_utils

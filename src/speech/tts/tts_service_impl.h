@@ -26,8 +26,7 @@ class TtsServiceImpl {
  private:
   class Client : public fuchsia::tts::TtsService {
    public:
-    Client(TtsServiceImpl* owner,
-           fidl::InterfaceRequest<fuchsia::tts::TtsService> request);
+    Client(TtsServiceImpl* owner, fidl::InterfaceRequest<fuchsia::tts::TtsService> request);
     ~Client();
 
     void Shutdown();
@@ -36,8 +35,8 @@ class TtsServiceImpl {
     void Say(std::string words, uint64_t token, SayCallback cbk) override;
 
    private:
-    void OnSpeakComplete(const std::shared_ptr<TtsSpeaker>& speaker,
-                         uint64_t token, SayCallback cbk);
+    void OnSpeakComplete(const std::shared_ptr<TtsSpeaker>& speaker, uint64_t token,
+                         SayCallback cbk);
 
     TtsServiceImpl* const owner_;
     fidl::Binding<TtsService> binding_;

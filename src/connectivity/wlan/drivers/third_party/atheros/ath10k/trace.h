@@ -26,14 +26,14 @@
 
 #if !defined(_TRACE_H_)
 static inline uint32_t ath10k_frm_hdr_len(const void* buf, size_t len) {
-    const struct ieee80211_hdr* hdr = buf;
+  const struct ieee80211_hdr* hdr = buf;
 
-    /* In some rare cases (e.g. fcs error) device reports frame buffer
-     * shorter than what frame header implies (e.g. len = 0). The buffer
-     * can still be accessed so do a simple MIN() to guarantee caller
-     * doesn't get value greater than len.
-     */
-    return MIN_T(uint32_t, len, ieee80211_hdrlen(hdr->frame_control));
+  /* In some rare cases (e.g. fcs error) device reports frame buffer
+   * shorter than what frame header implies (e.g. len = 0). The buffer
+   * can still be accessed so do a simple MIN() to guarantee caller
+   * doesn't get value greater than len.
+   */
+  return MIN_T(uint32_t, len, ieee80211_hdrlen(hdr->frame_control));
 }
 #endif
 
@@ -43,12 +43,12 @@ static inline uint32_t ath10k_frm_hdr_len(const void* buf, size_t len) {
 #if !defined(CONFIG_ATH10K_TRACING)
 #undef TRACE_EVENT
 #define TRACE_EVENT(name, proto, ...) \
-    static inline void trace_##name(proto) {}
+  static inline void trace_##name(proto) {}
 #undef DECLARE_EVENT_CLASS
 #define DECLARE_EVENT_CLASS(...)
 #undef DEFINE_EVENT
 #define DEFINE_EVENT(evt_class, name, proto, ...) \
-    static inline void trace_##name(proto) {}
+  static inline void trace_##name(proto) {}
 #endif /* !CONFIG_ATH10K_TRACING || __CHECKER__ */
 
 #undef TRACE_SYSTEM

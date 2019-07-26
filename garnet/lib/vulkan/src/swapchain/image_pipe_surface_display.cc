@@ -21,13 +21,11 @@
 
 namespace image_pipe_swapchain {
 
-ImagePipeSurfaceDisplay::ImagePipeSurfaceDisplay()
-    : loop_(&kAsyncLoopConfigNoAttachToThread) {}
+ImagePipeSurfaceDisplay::ImagePipeSurfaceDisplay() : loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
 bool ImagePipeSurfaceDisplay::Init() {
-  zx_status_t status = fdio_service_connect(
-      "/svc/fuchsia.sysmem.Allocator",
-      sysmem_allocator_.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
+                                            sysmem_allocator_.NewRequest().TakeChannel().release());
 
   if (status != ZX_OK) {
     fprintf(stderr, "Couldn't connect to sysmem service\n");
@@ -58,16 +56,14 @@ bool ImagePipeSurfaceDisplay::Init() {
 
   fzl::FdioCaller caller(std::move(fd));
   zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
-      caller.borrow_channel(), device_server.release(), dc_server.release(),
-      &status);
+      caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
   if (fidl_status != ZX_OK) {
     fprintf(stderr, "Failed to call service handle %d (%s)\n", fidl_status,
             zx_status_get_string(fidl_status));
     return false;
   }
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to open controller %d (%s)\n", status,
-            zx_status_get_string(status));
+    fprintf(stderr, "Failed to open controller %d (%s)\n", status, zx_status_get_string(status));
     return false;
   }
 
@@ -78,8 +74,8 @@ bool ImagePipeSurfaceDisplay::Init() {
   display_controller_.set_error_handler(
       fit::bind_member(this, &ImagePipeSurfaceDisplay::ControllerError));
 
-  display_controller_.events().DisplaysChanged = fit::bind_member(
-      this, &ImagePipeSurfaceDisplay::ControllerDisplaysChanged);
+  display_controller_.events().DisplaysChanged =
+      fit::bind_member(this, &ImagePipeSurfaceDisplay::ControllerDisplaysChanged);
   while (!have_display_) {
     loop_.Run(zx::time::infinite(), true);
     if (display_connection_exited_)
@@ -110,33 +106,32 @@ void ImagePipeSurfaceDisplay::ControllerDisplaysChanged(
   have_display_ = true;
 }
 
-bool ImagePipeSurfaceDisplay::CreateImage(
-    VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
-    VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
-    fuchsia::images::ImageInfo image_info, uint32_t image_count,
-    const VkAllocationCallbacks* pAllocator,
-    std::vector<ImageInfo>* image_info_out) {
+bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
+                                          VkFormat format, VkImageUsageFlags usage,
+                                          VkSwapchainCreateFlagsKHR swapchain_flags,
+                                          fuchsia::images::ImageInfo image_info,
+                                          uint32_t image_count,
+                                          const VkAllocationCallbacks* pAllocator,
+                                          std::vector<ImageInfo>* image_info_out) {
   VkResult result;
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   zx_status_t status;
-  status =
-      sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
+  status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "Swapchain: AllocateSharedCollection failed: %d\n", status);
     return false;
   }
   fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
 
-  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(),
-                                  vulkan_token.NewRequest());
+  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "Swapchain: Duplicate failed: %d\n", status);
     return false;
   }
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
 
-  status = vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(),
-                                   display_token.NewRequest());
+  status =
+      vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "Swapchain: Duplicate failed: %d\n", status);
     return false;
@@ -149,12 +144,11 @@ bool ImagePipeSurfaceDisplay::CreateImage(
 
   constexpr uint32_t kBufferCollectionId = 1;
 
-  display_controller_->ImportBufferCollection(
-      kBufferCollectionId, std::move(display_token),
-      [this, &status](zx_status_t import_status) {
-        status = import_status;
-        got_message_response_ = true;
-      });
+  display_controller_->ImportBufferCollection(kBufferCollectionId, std::move(display_token),
+                                              [this, &status](zx_status_t import_status) {
+                                                status = import_status;
+                                                got_message_response_ = true;
+                                              });
   if (!WaitForAsyncMessage()) {
     fprintf(stderr, "Swapchain: Display Disconnected\n");
     return false;
@@ -181,8 +175,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(
 #endif
 
   display_controller_->SetBufferCollectionConstraints(
-      kBufferCollectionId, image_config,
-      [this, &status](zx_status_t constraint_status) {
+      kBufferCollectionId, image_config, [this, &status](zx_status_t constraint_status) {
         status = constraint_status;
         got_message_response_ = true;
       });
@@ -191,8 +184,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     return false;
   }
   if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: SetBufferCollectionConstraints failed: %d\n",
-            status);
+    fprintf(stderr, "Swapchain: SetBufferCollectionConstraints failed: %d\n", status);
     return false;
   }
 
@@ -224,15 +216,13 @@ bool ImagePipeSurfaceDisplay::CreateImage(
       .collectionToken = vulkan_token.Unbind().TakeChannel().release(),
   };
   VkBufferCollectionFUCHSIA collection;
-  result = pDisp->CreateBufferCollectionFUCHSIA(device, &import_info,
-                                                pAllocator, &collection);
+  result = pDisp->CreateBufferCollectionFUCHSIA(device, &import_info, pAllocator, &collection);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "Failed to import buffer collection: %d\n", result);
     return false;
   }
 
-  result = pDisp->SetBufferCollectionConstraintsFUCHSIA(device, collection,
-                                                        &image_create_info);
+  result = pDisp->SetBufferCollectionConstraintsFUCHSIA(device, collection, &image_create_info);
 
   if (result != VK_SUCCESS) {
     fprintf(stderr, "Failed to import buffer collection: %d\n", result);
@@ -240,8 +230,8 @@ bool ImagePipeSurfaceDisplay::CreateImage(
   }
 
   fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection;
-  status = sysmem_allocator_->BindSharedCollection(
-      std::move(local_token), sysmem_collection.NewRequest());
+  status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
+                                                   sysmem_collection.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "Swapchain: BindSharedCollection failed: %d\n", status);
     return false;
@@ -258,18 +248,16 @@ bool ImagePipeSurfaceDisplay::CreateImage(
 
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
-  status = sysmem_collection->WaitForBuffersAllocated(&allocation_status,
-                                                      &buffer_collection_info);
+  status = sysmem_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (status != ZX_OK || allocation_status != ZX_OK) {
-    fprintf(stderr, "Swapchain: WaitForBuffersAllocated failed: %d %d\n",
-            status, allocation_status);
+    fprintf(stderr, "Swapchain: WaitForBuffersAllocated failed: %d %d\n", status,
+            allocation_status);
     return false;
   }
   sysmem_collection->Close();
 
   if (buffer_collection_info.buffer_count != image_count) {
-    fprintf(stderr,
-            "Swapchain: incorrect image count %d allocated vs. %d requested\n",
+    fprintf(stderr, "Swapchain: incorrect image count %d allocated vs. %d requested\n",
             buffer_collection_info.buffer_count, image_count);
     return false;
   }
@@ -278,8 +266,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     VkExternalMemoryImageCreateInfo external_image_create_info = {
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
         .pNext = nullptr,
-        .handleTypes =
-            VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
     };
     VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
@@ -300,18 +287,15 @@ bool ImagePipeSurfaceDisplay::CreateImage(
 
     VkBufferCollectionPropertiesFUCHSIA properties = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
-    result = pDisp->GetBufferCollectionPropertiesFUCHSIA(device, collection,
-                                                         &properties);
+    result = pDisp->GetBufferCollectionPropertiesFUCHSIA(device, collection, &properties);
     if (result != VK_SUCCESS) {
-      fprintf(stderr,
-              "Swapchain: GetBufferCollectionPropertiesFUCHSIA failed: %d\n",
-              status);
+      fprintf(stderr, "Swapchain: GetBufferCollectionPropertiesFUCHSIA failed: %d\n", status);
       return false;
     }
 
     // Find lowest usable index.
-    uint32_t memory_type_index = __builtin_ctz(
-        memory_requirements.memoryTypeBits & properties.memoryTypeBits);
+    uint32_t memory_type_index =
+        __builtin_ctz(memory_requirements.memoryTypeBits & properties.memoryTypeBits);
 
     VkImportMemoryBufferCollectionFUCHSIA import_info = {
         .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
@@ -340,8 +324,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     uint64_t fb_image_id;
     display_controller_->ImportImage(
         image_config, kBufferCollectionId, i,
-        [this, &status, &fb_image_id](zx_status_t import_status,
-                                      uint64_t image_id) {
+        [this, &status, &fb_image_id](zx_status_t import_status, uint64_t image_id) {
           status = import_status;
           fb_image_id = image_id;
           got_message_response_ = true;
@@ -355,8 +338,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(
       return false;
     }
 
-    ImageInfo info = {
-        .image = image, .memory = memory, .image_id = next_image_id()};
+    ImageInfo info = {.image = image, .memory = memory, .image_id = next_image_id()};
 
     image_info_out->push_back(info);
 
@@ -366,12 +348,11 @@ bool ImagePipeSurfaceDisplay::CreateImage(
   pDisp->DestroyBufferCollectionFUCHSIA(device, collection, pAllocator);
   display_controller_->ReleaseBufferCollection(kBufferCollectionId);
 
-  display_controller_->CreateLayer(
-      [this, &status](zx_status_t layer_status, uint64_t layer_id) {
-        status = layer_status;
-        layer_id_ = layer_id;
-        got_message_response_ = true;
-      });
+  display_controller_->CreateLayer([this, &status](zx_status_t layer_status, uint64_t layer_id) {
+    status = layer_status;
+    layer_id_ = layer_id;
+    got_message_response_ = true;
+  });
   if (!WaitForAsyncMessage()) {
     return false;
   }
@@ -380,15 +361,13 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     return false;
   }
 
-  display_controller_->SetDisplayLayers(display_id_,
-                                        std::vector<uint64_t>{layer_id_});
+  display_controller_->SetDisplayLayers(display_id_, std::vector<uint64_t>{layer_id_});
   display_controller_->SetLayerPrimaryConfig(layer_id_, image_config);
 
   return true;
 }
 
-bool ImagePipeSurfaceDisplay::GetSize(uint32_t* width_out,
-                                      uint32_t* height_out) {
+bool ImagePipeSurfaceDisplay::GetSize(uint32_t* width_out, uint32_t* height_out) {
   *width_out = width_;
   *height_out = height_;
   return true;
@@ -401,9 +380,8 @@ void ImagePipeSurfaceDisplay::RemoveImage(uint32_t image_id) {
   }
 }
 
-void ImagePipeSurfaceDisplay::PresentImage(
-    uint32_t image_id, std::vector<zx::event> wait_events,
-    std::vector<zx::event> signal_events) {
+void ImagePipeSurfaceDisplay::PresentImage(uint32_t image_id, std::vector<zx::event> wait_events,
+                                           std::vector<zx::event> signal_events) {
   assert(wait_events.size() <= 1);
   assert(signal_events.size() <= 1);
 
@@ -417,8 +395,8 @@ void ImagePipeSurfaceDisplay::PresentImage(
   if (wait_events.size()) {
     zx_info_handle_basic_t info;
     zx::event event = std::move(wait_events[0]);
-    zx_status_t status = event.get_info(ZX_INFO_HANDLE_BASIC, &info,
-                                        sizeof(info), nullptr, nullptr);
+    zx_status_t status =
+        event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
       fprintf(stderr, "failed to get event id: %d\n", status);
       return;
@@ -435,8 +413,8 @@ void ImagePipeSurfaceDisplay::PresentImage(
   if (signal_events.size()) {
     zx_info_handle_basic_t info;
     zx::event event = std::move(signal_events[0]);
-    zx_status_t status = event.get_info(ZX_INFO_HANDLE_BASIC, &info,
-                                        sizeof(info), nullptr, nullptr);
+    zx_status_t status =
+        event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
       fprintf(stderr, "failed to get event id: %d\n", status);
       return;
@@ -449,8 +427,7 @@ void ImagePipeSurfaceDisplay::PresentImage(
     }
   }
 
-  display_controller_->SetLayerImage(layer_id_, iter->second, wait_event_id,
-                                     signal_event_id);
+  display_controller_->SetLayerImage(layer_id_, iter->second, wait_event_id, signal_event_id);
   display_controller_->ApplyConfig();
 
   if (wait_event_id != fuchsia::hardware::display::invalidId) {

@@ -16,9 +16,7 @@ const ResourceTypeInfo ViewNode::kTypeInfo = {ResourceType::kNode | ResourceType
 ViewNode::ViewNode(Session* session, fxl::WeakPtr<View> view)
     : Node(session, /* node_id */ 0, ViewNode::kTypeInfo), view_(std::move(view)) {}
 
-ViewPtr ViewNode::FindOwningView() const {
-  return ViewPtr(view_.get());
-}
+ViewPtr ViewNode::FindOwningView() const { return ViewPtr(view_.get()); }
 
 // Test the ray against the bounding box of the view, which is
 // stored in the properties of the view holder.

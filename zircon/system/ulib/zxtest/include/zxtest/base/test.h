@@ -28,20 +28,16 @@ class Test : private internal::TestInternal {
   virtual ~Test() = default;
 
   // Dummy implementation for TestCase SetUp functions.
-  static void SetUpTestCase() {
-  }
+  static void SetUpTestCase() {}
 
   // Dummy implementation for TestCase TearDown functions.
-  static void TearDownTestCase() {
-  }
+  static void TearDownTestCase() {}
 
   // Dummy SetUp method.
-  virtual void SetUp() {
-  }
+  virtual void SetUp() {}
 
   // Dummy TearDown method.
-  virtual void TearDown() {
-  }
+  virtual void TearDown() {}
 
   // Executed the current test instance.
   virtual void Run();

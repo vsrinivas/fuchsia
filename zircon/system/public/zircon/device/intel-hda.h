@@ -34,23 +34,23 @@ typedef uint32_t ihda_cmd_t;
 #define IHDA_CODEC_RELEASE_STREAM_NOACK ((ihda_cmd_t)(IHDA_NOACK_FLAG | IHDA_CODEC_RELEASE_STREAM))
 
 typedef struct ihda_cmd_hdr {
-    zx_txid_t transaction_id;
-    ihda_cmd_t cmd;
+  zx_txid_t transaction_id;
+  ihda_cmd_t cmd;
 } ihda_cmd_hdr_t;
 
 // IHDA_CONTROLLER_CMD_GET_IDS
 typedef struct ihda_get_ids_req {
-    ihda_cmd_hdr_t hdr;
+  ihda_cmd_hdr_t hdr;
 } ihda_get_ids_req_t;
 
 typedef struct ihda_get_ids_resp {
-    ihda_cmd_hdr_t hdr;
-    uint16_t vid;
-    uint16_t did;
-    uint8_t ihda_vmaj;
-    uint8_t ihda_vmin;
-    uint8_t rev_id;
-    uint8_t step_id;
+  ihda_cmd_hdr_t hdr;
+  uint16_t vid;
+  uint16_t did;
+  uint8_t ihda_vmaj;
+  uint8_t ihda_vmin;
+  uint8_t rev_id;
+  uint8_t step_id;
 } ihda_get_ids_resp_t;
 
 // IHDA_CONTROLLER_CMD_SNAPSHOT_REGS,
@@ -62,12 +62,12 @@ typedef struct ihda_get_ids_resp {
 // provides access to the actual PCI registers, do that instead of snapshotting
 // and marshaling the result back.
 typedef struct ihda_controller_snapshot_regs_req {
-    ihda_cmd_hdr_t hdr;
+  ihda_cmd_hdr_t hdr;
 } ihda_controller_snapshot_regs_req_t;
 
 typedef struct ihda_controller_snapshot_regs_resp {
-    ihda_cmd_hdr_t hdr;
-    uint8_t snapshot[IHDA_REGISTER_SNAPSHOT_SIZE];
+  ihda_cmd_hdr_t hdr;
+  uint8_t snapshot[IHDA_REGISTER_SNAPSHOT_SIZE];
 } ihda_controller_snapshot_regs_resp_t;
 
 // IHDA_CODEC_SEND_CORB_CMD
@@ -76,52 +76,52 @@ typedef struct ihda_controller_snapshot_regs_resp {
 // command to be queued per job.
 //
 typedef struct ihda_codec_send_corb_cmd_req {
-    ihda_cmd_hdr_t hdr;
-    uint32_t verb;
-    uint16_t nid;
+  ihda_cmd_hdr_t hdr;
+  uint32_t verb;
+  uint16_t nid;
 } ihda_codec_send_corb_cmd_req_t;
 
 typedef struct ihda_codec_send_corb_cmd_resp {
-    ihda_cmd_hdr_t hdr;
-    uint32_t data;
-    uint32_t data_ex;
+  ihda_cmd_hdr_t hdr;
+  uint32_t data;
+  uint32_t data_ex;
 } ihda_codec_send_corb_cmd_resp_t;
 
 // IHDA_CODEC_REQUEST_STREAM
 //
 typedef struct ihda_codec_request_stream_req {
-    ihda_cmd_hdr_t hdr;
-    bool input; // true => input, false => output
+  ihda_cmd_hdr_t hdr;
+  bool input;  // true => input, false => output
 } ihda_codec_request_stream_req_t;
 
 typedef struct ihda_codec_request_stream_resp {
-    ihda_cmd_hdr_t hdr;
-    zx_status_t result;
-    uint16_t stream_id;
-    uint8_t stream_tag;
+  ihda_cmd_hdr_t hdr;
+  zx_status_t result;
+  uint16_t stream_id;
+  uint8_t stream_tag;
 } ihda_codec_request_stream_resp_t;
 
 // IHDA_CODEC_RELEASE_STREAM
 //
 typedef struct ihda_codec_release_stream_req {
-    ihda_cmd_hdr_t hdr;
-    uint16_t stream_id;
+  ihda_cmd_hdr_t hdr;
+  uint16_t stream_id;
 } ihda_codec_release_stream_req_t;
 
 typedef struct ihda_codec_release_stream_resp {
-    ihda_cmd_hdr_t hdr;
+  ihda_cmd_hdr_t hdr;
 } ihda_codec_release_stream_resp_t;
 
 // IHDA_CODEC_SET_STREAM_FORMAT
 //
 typedef struct ihda_codec_set_stream_format_req {
-    ihda_cmd_hdr_t hdr;
-    uint16_t stream_id;
-    uint16_t format; // see section 3.7.1
+  ihda_cmd_hdr_t hdr;
+  uint16_t stream_id;
+  uint16_t format;  // see section 3.7.1
 } ihda_codec_set_stream_format_req_t;
 
 typedef struct ihda_codec_set_stream_format_resp {
-    ihda_cmd_hdr_t hdr;
+  ihda_cmd_hdr_t hdr;
 } ihda_codec_set_stream_format_resp_t;
 
 __END_CDECLS

@@ -58,8 +58,7 @@ constexpr uint32_t kInputDefaultPerPacketBufferBytes = kInputPerPacketBufferByte
 
 }  // namespace
 
-CodecAdapter::CodecAdapter(std::mutex& lock,
-                           CodecAdapterEvents* codec_adapter_events)
+CodecAdapter::CodecAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
     : lock_(lock),
       events_(codec_adapter_events),
       random_device_(),

@@ -62,8 +62,7 @@ bool BuildIdTable::ReadIdsFile(const std::string& file) {
   return true;
 }
 
-void BuildIdTable::AddBuildId(const std::string& file_dir,
-                              const std::string& build_id,
+void BuildIdTable::AddBuildId(const std::string& file_dir, const std::string& build_id,
                               const std::string& path) {
   std::string abs_path;
 
@@ -74,8 +73,7 @@ void BuildIdTable::AddBuildId(const std::string& file_dir,
   } else {
     abs_path = path;
   }
-  FXL_VLOG(2) << fxl::StringPrintf("build_id %s, file %s", build_id.c_str(),
-                                   abs_path.c_str());
+  FXL_VLOG(2) << fxl::StringPrintf("build_id %s, file %s", build_id.c_str(), abs_path.c_str());
   BuildId build_id_object;
   build_id_object.build_id = build_id;
   build_id_object.file = abs_path;

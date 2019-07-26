@@ -27,12 +27,12 @@ volatile int gVariableToChange = 0;
 std::atomic<bool> gWatchpointThreadShouldContinue;
 
 int watchpoint_function(void* user) {
-    while (gWatchpointThreadShouldContinue) {
-        gVariableToChange++;
-        zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
-    }
+  while (gWatchpointThreadShouldContinue) {
+    gVariableToChange++;
+    zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+  }
 
-    return 0;
+  return 0;
 }
 
 #if defined(__x86_64__)
@@ -40,17 +40,17 @@ int watchpoint_function(void* user) {
 zx_status_t set_watchpoint(zx_handle_t thread_handle) {
   zx_thread_state_debug_regs_t debug_regs = {};
   // TODO(donosoc): Unify this under one public arch header.
-  debug_regs.dr7 = 0b1 |          // L0 = 1 (watchpoint is active).
-                   0b01 << 16 |   // R/W0 = 01 (Only data write triggers).
-                   0b11 << 18;    // LEN0 = 11 (4 byte watchpoint).
+  debug_regs.dr7 = 0b1 |         // L0 = 1 (watchpoint is active).
+                   0b01 << 16 |  // R/W0 = 01 (Only data write triggers).
+                   0b11 << 18;   // LEN0 = 11 (4 byte watchpoint).
 
   uint64_t addr = reinterpret_cast<uint64_t>(&gVariableToChange);
   // 4 byte aligned.
   assert((addr & 0b11) == 0);
   debug_regs.dr[0] = reinterpret_cast<uint64_t>(addr);
 
-  return zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS,
-                               &debug_regs, sizeof(debug_regs));
+  return zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                               sizeof(debug_regs));
 }
 
 #elif defined(__aarch64__)
@@ -60,11 +60,11 @@ zx_status_t set_watchpoint(zx_handle_t thread_handle) {
   // For now the API is very simple, as zircon is not using further
   // configuration beyond simply adding a write watchpoint.
   // TODO(donosoc): Unify this under one public arch header.
-  debug_regs.hw_wps[0].dbgwcr = 0b1;   // DBGWCR_E
+  debug_regs.hw_wps[0].dbgwcr = 0b1;  // DBGWCR_E
   debug_regs.hw_wps[0].dbgwvr = reinterpret_cast<uint64_t>(&gVariableToChange);
 
-  return zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS,
-                               &debug_regs, sizeof(debug_regs));
+  return zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                               sizeof(debug_regs));
 }
 
 #else
@@ -73,79 +73,79 @@ zx_status_t set_watchpoint(zx_handle_t thread_handle) {
 
 zx_status_t unset_watchpoint(zx_handle_t thread_handle) {
   zx_thread_state_debug_regs_t debug_regs = {};
-  return zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS,
-                               &debug_regs, sizeof(debug_regs));
+  return zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                               sizeof(debug_regs));
 }
 
 }  // namespace
 
 bool test_watchpoint_impl(zx_handle_t excp_channel) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    gWatchpointThreadShouldContinue = true;
+  gWatchpointThreadShouldContinue = true;
 
-    thrd_t thread;
-    thrd_create(&thread, watchpoint_function, nullptr);
-    zx_handle_t thread_handle = 0;
-    thread_handle = thrd_get_zx_handle(thread);
+  thrd_t thread;
+  thrd_create(&thread, watchpoint_function, nullptr);
+  zx_handle_t thread_handle = 0;
+  thread_handle = thrd_get_zx_handle(thread);
 
-    zx_status_t status;
-    zx_handle_t suspend_token;
-    status = zx_task_suspend(thread_handle, &suspend_token);
-    ASSERT_EQ(status, ZX_OK);
+  zx_status_t status;
+  zx_handle_t suspend_token;
+  status = zx_task_suspend(thread_handle, &suspend_token);
+  ASSERT_EQ(status, ZX_OK);
 
-    zx_signals_t observed;
-    status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED,
-                                zx_deadline_after(ZX_TIME_INFINITE), &observed);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_NE((observed & ZX_THREAD_SUSPENDED), 0);
+  zx_signals_t observed;
+  status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED,
+                              zx_deadline_after(ZX_TIME_INFINITE), &observed);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NE((observed & ZX_THREAD_SUSPENDED), 0);
 
-    // Verify that the thread is suspended.
-    zx_info_thread thread_info;
-    status = zx_object_get_info(thread_handle, ZX_INFO_THREAD, &thread_info,
-                                sizeof(thread_info), nullptr, nullptr);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(thread_info.state, ZX_THREAD_STATE_SUSPENDED);
+  // Verify that the thread is suspended.
+  zx_info_thread thread_info;
+  status = zx_object_get_info(thread_handle, ZX_INFO_THREAD, &thread_info, sizeof(thread_info),
+                              nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(thread_info.state, ZX_THREAD_STATE_SUSPENDED);
 
-    unittest_printf("Watchpoint: Writing debug registers.\n");
+  unittest_printf("Watchpoint: Writing debug registers.\n");
 
-    status = set_watchpoint(thread_handle);
-    ASSERT_EQ(status, ZX_OK);
+  status = set_watchpoint(thread_handle);
+  ASSERT_EQ(status, ZX_OK);
 
-    unittest_printf("Watchpoint: Resuming thread.\n");
+  unittest_printf("Watchpoint: Resuming thread.\n");
 
-    zx_handle_close(suspend_token);
+  zx_handle_close(suspend_token);
 
-    // We wait for the exception.
-    tu_channel_wait_readable(excp_channel);
-    tu_exception_t exception = tu_read_exception(excp_channel);
-    ASSERT_EQ(exception.info.type, ZX_EXCP_HW_BREAKPOINT);
+  // We wait for the exception.
+  tu_channel_wait_readable(excp_channel);
+  tu_exception_t exception = tu_read_exception(excp_channel);
+  ASSERT_EQ(exception.info.type, ZX_EXCP_HW_BREAKPOINT);
 
-    // Clear the state and resume the thread.
-    status = unset_watchpoint(thread_handle);
-    ASSERT_EQ(status, ZX_OK);
-    gWatchpointThreadShouldContinue = false;
+  // Clear the state and resume the thread.
+  status = unset_watchpoint(thread_handle);
+  ASSERT_EQ(status, ZX_OK);
+  gWatchpointThreadShouldContinue = false;
 
-    tu_resume_from_exception(exception.exception);
+  tu_resume_from_exception(exception.exception);
 
-    // join the thread.
-    int res = -1;
-    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
-    ASSERT_EQ(res, 0);
+  // join the thread.
+  int res = -1;
+  ASSERT_EQ(thrd_join(thread, &res), thrd_success);
+  ASSERT_EQ(res, 0);
 
-    END_HELPER;
+  END_HELPER;
 }
 
 bool WatchpointTest() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    zx_handle_t excp_channel = tu_create_exception_channel(zx_process_self(), 0);
+  zx_handle_t excp_channel = tu_create_exception_channel(zx_process_self(), 0);
 
-    EXPECT_TRUE(test_watchpoint_impl(excp_channel));
+  EXPECT_TRUE(test_watchpoint_impl(excp_channel));
 
-    zx_handle_close(excp_channel);
+  zx_handle_close(excp_channel);
 
-    END_TEST;
+  END_TEST;
 }
 
 BEGIN_TEST_CASE(watchpoint_start_tests)

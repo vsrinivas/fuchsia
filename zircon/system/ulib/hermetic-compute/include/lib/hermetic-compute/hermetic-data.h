@@ -21,17 +21,13 @@ namespace hermetic {
 
 template <typename T>
 struct HermeticType {
-    static_assert(
-        std::is_void_v<T> || std::is_trivially_copyable_v<T>,
-        "just the bits");
-    static_assert(
-        std::is_void_v<T> || std::has_unique_object_representations_v<T>,
-        "no hidden bits");
+  static_assert(std::is_void_v<T> || std::is_trivially_copyable_v<T>, "just the bits");
+  static_assert(std::is_void_v<T> || std::has_unique_object_representations_v<T>, "no hidden bits");
 
 #if HERMETIC_COMPUTE_MODULE || !defined(__clang_)
-    using type = T;
+  using type = T;
 #else
-    using type = [[clang::address_space(42), clang::noderef]] T;
+  using type = [[clang::address_space(42), clang::noderef]] T;
 #endif
 };
 
@@ -69,44 +65,39 @@ using Out = HermeticPtr<const T>;
 #ifdef __aarch64__
 
 struct Tcb {
-    Tcb(uintptr_t, uintptr_t guard, uintptr_t usp) :
-        stack_guard(guard),
-        unsafe_sp(reinterpret_cast<HermeticPtr<std::byte>>(usp)) {}
+  Tcb(uintptr_t, uintptr_t guard, uintptr_t usp)
+      : stack_guard(guard), unsafe_sp(reinterpret_cast<HermeticPtr<std::byte>>(usp)) {}
 
-    uintptr_t stack_guard;
-    HermeticPtr<std::byte> unsafe_sp;
-    // TPIDR_EL0 points here.
+  uintptr_t stack_guard;
+  HermeticPtr<std::byte> unsafe_sp;
+  // TPIDR_EL0 points here.
 
-    static constexpr std::ptrdiff_t ThreadPointerOffset() {
-        return sizeof(Tcb);
-    }
+  static constexpr std::ptrdiff_t ThreadPointerOffset() { return sizeof(Tcb); }
 };
-static_assert(offsetof(Tcb, stack_guard) ==
-              sizeof(Tcb) + ZX_TLS_STACK_GUARD_OFFSET);
-static_assert(offsetof(Tcb, unsafe_sp) ==
-              sizeof(Tcb) + ZX_TLS_UNSAFE_SP_OFFSET);
+static_assert(offsetof(Tcb, stack_guard) == sizeof(Tcb) + ZX_TLS_STACK_GUARD_OFFSET);
+static_assert(offsetof(Tcb, unsafe_sp) == sizeof(Tcb) + ZX_TLS_UNSAFE_SP_OFFSET);
 
 #elif defined(__x86_64__)
 
 // %fs.base points here, so %fs:0 maps to this struct.
 struct Tcb {
-    Tcb(uintptr_t tcb, uintptr_t guard, uintptr_t usp) :
-        self(reinterpret_cast<HermeticPtr<void>>(tcb)),
+  Tcb(uintptr_t tcb, uintptr_t guard, uintptr_t usp)
+      : self(reinterpret_cast<HermeticPtr<void>>(tcb)),
         stack_guard(guard),
         unsafe_sp(reinterpret_cast<HermeticPtr<std::byte>>(usp)) {}
 
-    HermeticPtr<void> self;             // Points to this address (%fs:0).
-    HermeticPtr<void> reserved{};       // unused (reserved for runtime)
-    uintptr_t stack_guard;
-    HermeticPtr<std::byte> unsafe_sp;
+  HermeticPtr<void> self;        // Points to this address (%fs:0).
+  HermeticPtr<void> reserved{};  // unused (reserved for runtime)
+  uintptr_t stack_guard;
+  HermeticPtr<std::byte> unsafe_sp;
 
-    static constexpr std::ptrdiff_t ThreadPointerOffset() { return 0; }
+  static constexpr std::ptrdiff_t ThreadPointerOffset() { return 0; }
 };
 static_assert(offsetof(Tcb, stack_guard) == ZX_TLS_STACK_GUARD_OFFSET);
 static_assert(offsetof(Tcb, unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET);
 
 #else
-# error "unsupported architecture"
+#error "unsupported architecture"
 #endif
 
-} // namespace hermetic
+}  // namespace hermetic

@@ -5,8 +5,7 @@
 #include "src/connectivity/overnet/deprecated/lib/datagram_stream/linearizer.h"
 
 #ifndef NDEBUG
-#define SCOPED_CHECK_VALID \
-  CheckValid check_valid(this, __PRETTY_FUNCTION__, __FILE__, __LINE__)
+#define SCOPED_CHECK_VALID CheckValid check_valid(this, __PRETTY_FUNCTION__, __FILE__, __LINE__)
 #else
 #define SCOPED_CHECK_VALID
 #endif
@@ -35,11 +34,11 @@ Linearizer::~Linearizer() {
 #endif
 }
 
-void Linearizer::AssertValid(const char* marker, const char* pretty_function,
-                             const char* file, int line) const {
+void Linearizer::AssertValid(const char* marker, const char* pretty_function, const char* file,
+                             int line) const {
 #ifndef NDEBUG
-  OVERNET_TRACE(DEBUG) << "CHECKVALID:" << marker << " " << pretty_function
-                       << " @ " << file << ":" << line;
+  OVERNET_TRACE(DEBUG) << "CHECKVALID:" << marker << " " << pretty_function << " @ " << file << ":"
+                       << line;
   // If closed, nothing should be pending
   if (read_mode_ == ReadMode::Closed) {
     assert(pending_push_.empty());
@@ -71,19 +70,15 @@ void Linearizer::AssertValid(const char* marker, const char* pretty_function,
 #endif
 
   std::ostringstream rep;
-  rep << "MODE:" << read_mode_ << " LENGTH:" << length_ << " OFFSET:" << offset_
-      << " PENDING:";
+  rep << "MODE:" << read_mode_ << " LENGTH:" << length_ << " OFFSET:" << offset_ << " PENDING:";
   for (const auto& pending : pending_push_) {
-    rep << "<" << pending.first << "-"
-        << (pending.first + pending.second.length()) << ">";
+    rep << "<" << pending.first << "-" << (pending.first + pending.second.length()) << ">";
   }
   OVERNET_TRACE(DEBUG) << "OK: " << rep.str();
 #endif
 }
 
-Status Linearizer::Close(const Status& status) {
-  return Close(status, Callback<void>::Ignored());
-}
+Status Linearizer::Close(const Status& status) { return Close(status, Callback<void>::Ignored()); }
 
 Status Linearizer::Close(const Status& status, Callback<void> quiesced) {
   OVERNET_TRACE(DEBUG) << "Close " << status << " mode=" << read_mode_;
@@ -91,12 +86,10 @@ Status Linearizer::Close(const Status& status, Callback<void> quiesced) {
     return Close(Status(StatusCode::CANCELLED, "Gaps existed at close time"));
   }
   if (status.is_ok() && !length_) {
-    return Close(
-        Status(StatusCode::CANCELLED, "Closed before end of message seen"));
+    return Close(Status(StatusCode::CANCELLED, "Closed before end of message seen"));
   }
   if (status.is_ok() && offset_ != *length_) {
-    return Close(
-        Status(StatusCode::CANCELLED, "Closed before end of message reached"));
+    return Close(Status(StatusCode::CANCELLED, "Closed before end of message reached"));
   }
   switch (read_mode_) {
     case ReadMode::Closed:
@@ -137,8 +130,7 @@ bool Linearizer::Push(Chunk chunk) {
   const uint64_t chunk_end = chunk_start + chunk.slice.length();
 
   OVERNET_TRACE(DEBUG) << "Push start=" << chunk_start << " end=" << chunk_end
-                       << " end-of-message=" << chunk.end_of_message
-                       << " lin-offset=" << offset_;
+                       << " end-of-message=" << chunk.end_of_message << " lin-offset=" << offset_;
 
   // TODO(ctiller): re-enable buffer upper-limit once we have a global
   // accounting of memory usage
@@ -155,26 +147,20 @@ bool Linearizer::Push(Chunk chunk) {
 
   if (length_) {
     if (chunk_end > *length_) {
-      Close(Status(StatusCode::INVALID_ARGUMENT,
-                   "Received chunk past end of message"))
-          .Ignore();
+      Close(Status(StatusCode::INVALID_ARGUMENT, "Received chunk past end of message")).Ignore();
     } else if (chunk.end_of_message && *length_ != chunk_end) {
-      Close(Status(StatusCode::INVALID_ARGUMENT,
-                   "Received ambiguous end of message point"))
+      Close(Status(StatusCode::INVALID_ARGUMENT, "Received ambiguous end of message point"))
           .Ignore();
     }
   } else if (chunk.end_of_message) {
     if (offset_ > chunk_end) {
-      Close(Status(StatusCode::INVALID_ARGUMENT,
-                   "Already read past end of message"))
-          .Ignore();
+      Close(Status(StatusCode::INVALID_ARGUMENT, "Already read past end of message")).Ignore();
     }
     if (!pending_push_.empty()) {
       const auto it = pending_push_.rbegin();
       const auto end = it->first + it->second.length();
       if (end > chunk_end) {
-        Close(Status(StatusCode::INVALID_ARGUMENT,
-                     "Already received bytes past end of message"))
+        Close(Status(StatusCode::INVALID_ARGUMENT, "Already received bytes past end of message"))
             .Ignore();
       }
     }
@@ -267,14 +253,11 @@ void Linearizer::IntegratePush(Chunk chunk) {
   if (lb != pending_push_.end() && lb->first == chunk.offset) {
     // Coincident with another chunk we've already received.
     // First check whether the common bytes are the same.
-    const size_t common_length =
-        std::min(chunk.slice.length(), lb->second.length());
-    OVERNET_TRACE(DEBUG) << "coincident with existing; common_length="
-                         << common_length;
+    const size_t common_length = std::min(chunk.slice.length(), lb->second.length());
+    OVERNET_TRACE(DEBUG) << "coincident with existing; common_length=" << common_length;
     if (0 != memcmp(chunk.slice.begin(), lb->second.begin(), common_length)) {
       stats_->linearizer_integration_errors++;
-      Close(Status(StatusCode::DATA_LOSS,
-                   "Linearizer received different bytes for the same span"))
+      Close(Status(StatusCode::DATA_LOSS, "Linearizer received different bytes for the same span"))
           .Ignore();
     } else if (chunk.slice.length() <= lb->second.length()) {
       // New chunk is shorter than what's there (or the same length): We're
@@ -297,20 +280,18 @@ void Linearizer::IntegratePush(Chunk chunk) {
     assert(before->first < chunk.offset);
     // Check to see if that chunk overlaps with this one.
     const size_t before_end = before->first + before->second.length();
-    OVERNET_TRACE(DEBUG) << "prior chunk start=" << before->first
-                         << " end=" << before_end;
+    OVERNET_TRACE(DEBUG) << "prior chunk start=" << before->first << " end=" << before_end;
     if (before_end > chunk.offset) {
       // Prior chunk overlaps with this one.
       // First check whether the common bytes are the same.
       const size_t common_length =
           std::min(before_end - chunk.offset, uint64_t(chunk.slice.length()));
-      OVERNET_TRACE(DEBUG) << "overlap with prior; common_length="
-                           << common_length;
-      if (0 != memcmp(before->second.begin() + (chunk.offset - before->first),
-                      chunk.slice.begin(), common_length)) {
+      OVERNET_TRACE(DEBUG) << "overlap with prior; common_length=" << common_length;
+      if (0 != memcmp(before->second.begin() + (chunk.offset - before->first), chunk.slice.begin(),
+                      common_length)) {
         stats_->linearizer_integration_errors++;
-        Close(Status(StatusCode::DATA_LOSS,
-                     "Linearizer received different bytes for the same span"))
+        Close(
+            Status(StatusCode::DATA_LOSS, "Linearizer received different bytes for the same span"))
             .Ignore();
       } else if (before_end >= chunk.offset + chunk.slice.length()) {
         // New chunk is a subset of the one before: we're done.
@@ -334,21 +315,17 @@ void Linearizer::IntegratePush(Chunk chunk) {
     OVERNET_TRACE(DEBUG) << "subsequent chunk start=" << after->first
                          << " end=" << (after->first + after->second.length());
     if (after->first < chunk.offset + chunk.slice.length()) {
-      const size_t common_length =
-          std::min(chunk.offset + chunk.slice.length() - after->first,
-                   uint64_t(after->second.length()));
-      OVERNET_TRACE(DEBUG) << "overlap with subsequent; common_length="
-                           << common_length;
-      if (0 != memcmp(after->second.begin(),
-                      chunk.slice.begin() + (after->first - chunk.offset),
+      const size_t common_length = std::min(chunk.offset + chunk.slice.length() - after->first,
+                                            uint64_t(after->second.length()));
+      OVERNET_TRACE(DEBUG) << "overlap with subsequent; common_length=" << common_length;
+      if (0 != memcmp(after->second.begin(), chunk.slice.begin() + (after->first - chunk.offset),
                       common_length)) {
         stats_->linearizer_integration_errors++;
-        Close(Status(StatusCode::DATA_LOSS,
-                     "Linearizer received different bytes for the same span"))
+        Close(
+            Status(StatusCode::DATA_LOSS, "Linearizer received different bytes for the same span"))
             .Ignore();
         return;
-      } else if (after->first + after->second.length() <
-                 chunk.offset + chunk.slice.length()) {
+      } else if (after->first + after->second.length() < chunk.offset + chunk.slice.length()) {
         OVERNET_TRACE(DEBUG) << "Split and integrate separately";
         stats_->linearizer_integration_subsequent_splits++;
         // Split chunk into two and integrate each separately
@@ -465,8 +442,7 @@ void Linearizer::IdleToReadSlice(StatusOrCallback<Optional<Slice>> done) {
   new (&read_data_.read_slice) ReadSlice{std::move(done)};
 }
 
-void Linearizer::IdleToReadAll(
-    StatusOrCallback<Optional<std::vector<Slice>>> done) {
+void Linearizer::IdleToReadAll(StatusOrCallback<Optional<std::vector<Slice>>> done) {
   assert(read_mode_ == ReadMode::Idle);
   read_mode_ = ReadMode::ReadAll;
   new (&read_data_.read_all) ReadAll{{}, std::move(done)};

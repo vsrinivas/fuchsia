@@ -18,9 +18,8 @@ class Realm;
 
 class EnvironmentControllerImpl : public fuchsia::sys::EnvironmentController {
  public:
-  EnvironmentControllerImpl(
-      fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> request,
-      std::unique_ptr<Realm> realm);
+  EnvironmentControllerImpl(fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> request,
+                            std::unique_ptr<Realm> realm);
   ~EnvironmentControllerImpl() override;
 
   Realm* realm() const { return realm_.get(); }
@@ -37,16 +36,14 @@ class EnvironmentControllerImpl : public fuchsia::sys::EnvironmentController {
   // Kills realm and returns self object extracted form parent realm.
   std::unique_ptr<EnvironmentControllerImpl> ExtractEnvironmentController();
 
-  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-               zx_status_t status, const zx_packet_signal* signal);
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+               const zx_packet_signal* signal);
 
   fidl::Binding<fuchsia::sys::EnvironmentController> binding_;
 
   std::unique_ptr<Realm> realm_;
 
-  async::WaitMethod<EnvironmentControllerImpl,
-                    &EnvironmentControllerImpl::Handler>
-      wait_;
+  async::WaitMethod<EnvironmentControllerImpl, &EnvironmentControllerImpl::Handler> wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EnvironmentControllerImpl);
 };

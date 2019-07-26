@@ -13,25 +13,23 @@ namespace {
 // This serves an example of a multi-step perf test.  It is also useful for
 // getting a rough idea of the cost of malloc() and free().
 bool MallocFreeTest(perftest::RepeatState* state) {
-    state->DeclareStep("malloc");
-    state->DeclareStep("free");
-    while (state->KeepRunning()) {
-        void* block = malloc(100);
-        // Clang can optimize away pairs of malloc() and free() calls;
-        // prevent it from doing that.
-        perftest::DoNotOptimize(block);
-        if (!block) {
-            return false;
-        }
-        state->NextStep();
-        free(block);
+  state->DeclareStep("malloc");
+  state->DeclareStep("free");
+  while (state->KeepRunning()) {
+    void* block = malloc(100);
+    // Clang can optimize away pairs of malloc() and free() calls;
+    // prevent it from doing that.
+    perftest::DoNotOptimize(block);
+    if (!block) {
+      return false;
     }
-    return true;
+    state->NextStep();
+    free(block);
+  }
+  return true;
 }
 
-void RegisterTests() {
-    perftest::RegisterTest("MallocFree/100bytes", MallocFreeTest);
-}
+void RegisterTests() { perftest::RegisterTest("MallocFree/100bytes", MallocFreeTest); }
 PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

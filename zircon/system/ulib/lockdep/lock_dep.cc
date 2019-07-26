@@ -19,10 +19,10 @@ namespace lockdep {
 // the C++ thread_local TLS mechanism.
 
 __WEAK ThreadLockState* SystemGetThreadLockState() {
-    thread_local ThreadLockState thread_lock_state{};
-    return &thread_lock_state;
+  thread_local ThreadLockState thread_lock_state{};
+  return &thread_lock_state;
 }
 
 __WEAK void SystemInitThreadLockState(ThreadLockState* state) {}
 
-} // namespace fbl
+}  // namespace lockdep

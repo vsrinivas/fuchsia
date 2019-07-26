@@ -41,11 +41,9 @@ std::string GetGeneralRegistersAsString(Thread* trhead);
 // Fill a regset buffer.
 // This does not write the values to the cpu.
 // N.B. This helper assumes there is no padding in the regset buffer.
-bool SetRegsetHelper(Thread* thread, int regset, const void* value,
-                     size_t size);
+bool SetRegsetHelper(Thread* thread, int regset, const void* value, size_t size);
 
-bool SetGeneralRegistersFromString(Thread* thread,
-                                   const fxl::StringView& value);
+bool SetGeneralRegistersFromString(Thread* thread, const fxl::StringView& value);
 
 // TODO(armansito): The Get/Set AsString/FromString methods work with
 // strings that conform to the GDB remote serial protocol. We should change
@@ -68,8 +66,7 @@ std::string GetRegsetAsString(Thread* thread, int regset);
 // GetRegsetAsString(), as described above.
 // WriteRegset() must be called afterwards.
 // Returns true on success.
-bool SetRegsetFromString(Thread* thread, int regset,
-                         const fxl::StringView& value);
+bool SetRegsetFromString(Thread* thread, int regset, const fxl::StringView& value);
 
 // Gets the value of the register numbered |regno|. Returns an empty
 // string in case of an error or if |regno| is invalid. This avoids

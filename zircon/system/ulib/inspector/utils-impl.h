@@ -17,24 +17,23 @@ extern void do_print_error(const char* file, int line, const char* fmt, ...);
 
 extern void do_print_zx_error(const char* file, int line, const char* what, zx_status_t status);
 
-#define print_error(fmt...) \
-  do { \
+#define print_error(fmt...)                               \
+  do {                                                    \
     ::inspector::do_print_error(__FILE__, __LINE__, fmt); \
   } while (0)
 
-#define print_zx_error(what, status) \
-  do { \
-    ::inspector::do_print_zx_error(__FILE__, __LINE__, \
-                                   (what), static_cast<zx_status_t>(status)); \
+#define print_zx_error(what, status)                                                              \
+  do {                                                                                            \
+    ::inspector::do_print_zx_error(__FILE__, __LINE__, (what), static_cast<zx_status_t>(status)); \
   } while (0)
 
 extern void do_print_debug(const char* file, int line, const char* func, const char* fmt, ...);
 
-#define debugf(level, fmt...) \
-  do { \
-    if (::inspector::verbosity_level >= (level)) { \
-      ::inspector::do_print_debug (__FILE__, __LINE__, __func__, fmt); \
-    } \
+#define debugf(level, fmt...)                                         \
+  do {                                                                \
+    if (::inspector::verbosity_level >= (level)) {                    \
+      ::inspector::do_print_debug(__FILE__, __LINE__, __func__, fmt); \
+    }                                                                 \
   } while (0)
 
 extern const char* path_basename(const char* path);

@@ -13,32 +13,28 @@
 #include <zircon/syscalls/debug.h>
 #include <lib/syslog/global.h>
 
-#define print_error(...)                                                    \
-    do {                                                                    \
-        fx_logger_t* logger = fx_log_get_logger();                          \
-        if (logger && fx_logger_get_min_severity(logger) <= FX_LOG_ERROR) { \
-            fx_logger_logf(logger, (FX_LOG_ERROR), nullptr,                 \
-                           __VA_ARGS__);                                    \
-        }                                                                   \
-    } while (0)
+#define print_error(...)                                                \
+  do {                                                                  \
+    fx_logger_t* logger = fx_log_get_logger();                          \
+    if (logger && fx_logger_get_min_severity(logger) <= FX_LOG_ERROR) { \
+      fx_logger_logf(logger, (FX_LOG_ERROR), nullptr, __VA_ARGS__);     \
+    }                                                                   \
+  } while (0)
 
-#define log_zx_error(status, ...)                                           \
-    do {                                                                    \
-        fx_logger_t* logger = fx_log_get_logger();                          \
-        if (logger && fx_logger_get_min_severity(logger) <= FX_LOG_ERROR) { \
-            fx_logger_logf(logger, (FX_LOG_ERROR), nullptr,                 \
-                           "%d(%s)" __VA_ARGS__,                            \
-                           status, zx_status_get_string(status));           \
-        }                                                                   \
-    } while (0)
-
+#define log_zx_error(status, ...)                                                   \
+  do {                                                                              \
+    fx_logger_t* logger = fx_log_get_logger();                                      \
+    if (logger && fx_logger_get_min_severity(logger) <= FX_LOG_ERROR) {             \
+      fx_logger_logf(logger, (FX_LOG_ERROR), nullptr, "%d(%s)" __VA_ARGS__, status, \
+                     zx_status_get_string(status));                                 \
+    }                                                                               \
+  } while (0)
 
 static zx_koid_t get_koid(zx_handle_t thread_handle) {
   zx_status_t status;
   zx_info_handle_basic_t info_handle_basic;
-  status = zx_object_get_info(thread_handle, ZX_INFO_HANDLE_BASIC,
-                              &info_handle_basic, sizeof(info_handle_basic),
-                              nullptr, nullptr);
+  status = zx_object_get_info(thread_handle, ZX_INFO_HANDLE_BASIC, &info_handle_basic,
+                              sizeof(info_handle_basic), nullptr, nullptr);
   if (status != ZX_OK) {
     return ZX_KOID_INVALID;
   }
@@ -49,7 +45,7 @@ bool ThreadInterrupter::initialized_ = false;
 bool ThreadInterrupter::shutdown_ = false;
 bool ThreadInterrupter::thread_running_ = false;
 bool ThreadInterrupter::woken_up_ = false;
-intptr_t ThreadInterrupter::interrupt_period_ = 1000;   // msec
+intptr_t ThreadInterrupter::interrupt_period_ = 1000;  // msec
 async::Loop* ThreadInterrupter::loop_ = nullptr;
 CpuProfiler* ThreadInterrupter::profiler_ = nullptr;
 HandlerCallback ThreadInterrupter::callback_ = nullptr;
@@ -89,9 +85,7 @@ void ThreadInterrupter::RegisterHandler(HandlerCallback callback) {
   callback_ = callback;
   shutdown_ = false;
 
-  async::PostTask(loop_->dispatcher(), [] {
-    ThreadInterrupt();
-  });
+  async::PostTask(loop_->dispatcher(), [] { ThreadInterrupt(); });
 }
 
 void ThreadInterrupter::UnregisterHandler() {
@@ -116,8 +110,7 @@ class ThreadSuspendScope {
     // If a thread is somewhere where suspend is impossible, zx_task_suspend()
     // can return ZX_ERR_NOT_SUPPORTED.
     if (status != ZX_OK) {
-      print_error("ThreadInterrupter: zx_task_suspend failed: %s\n",
-                   zx_status_get_string(status));
+      print_error("ThreadInterrupter: zx_task_suspend failed: %s\n", zx_status_get_string(status));
     }
   }
 
@@ -155,8 +148,8 @@ void ThreadInterrupter::ThreadInterrupt() {
     }
 
     size_t num_threads;
-    zx_status_t status = zx_object_get_info(process_handle, ZX_INFO_PROCESS_THREADS,
-                                            nullptr, 0, nullptr, &num_threads);
+    zx_status_t status = zx_object_get_info(process_handle, ZX_INFO_PROCESS_THREADS, nullptr, 0,
+                                            nullptr, &num_threads);
     if (status != ZX_OK) {
       print_error("failed to get process thread info (#threads)");
       break;  // Too broken to continue.
@@ -169,9 +162,8 @@ void ThreadInterrupter::ThreadInterrupt() {
     // TODO: this is dangerous
     zx_koid_t threads[num_threads];
     size_t records_read;
-    status = zx_object_get_info(process_handle, ZX_INFO_PROCESS_THREADS,
-                                threads, num_threads * sizeof(threads[0]),
-                                &records_read, nullptr);
+    status = zx_object_get_info(process_handle, ZX_INFO_PROCESS_THREADS, threads,
+                                num_threads * sizeof(threads[0]), &records_read, nullptr);
     if (status != ZX_OK) {
       log_zx_error(status, "failed to get process thread info");
       break;  // Too broken to continue.
@@ -192,15 +184,15 @@ void ThreadInterrupter::ThreadInterrupt() {
       }
 
       zx_handle_t thread;
-      status = zx_object_get_child(process_handle, tid, ZX_RIGHT_SAME_RIGHTS,
-                                   &thread);
+      status = zx_object_get_child(process_handle, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
       if (status != ZX_OK) {
         log_zx_error(status, "failed to get a handle to [%ld.%ld]", pid, tid);
         continue;  // Skip this thread.
       }
 
       zx_info_thread_t thread_info;
-      status = zx_object_get_info(thread, ZX_INFO_THREAD, &thread_info, sizeof(thread_info), NULL, NULL);
+      status =
+          zx_object_get_info(thread, ZX_INFO_THREAD, &thread_info, sizeof(thread_info), NULL, NULL);
       if (status != ZX_OK) {
         log_zx_error(status, "unable to get thread info, skipping");
         continue;  // Skip this thread.
@@ -230,9 +222,7 @@ void ThreadInterrupter::ThreadInterrupt() {
       status = zx_object_wait_one(thread, signals, deadline, &observed);
 
       if (status != ZX_OK) {
-        log_zx_error(status,
-                     "failure waiting for thread %ld.%ld to suspend, skipping",
-                     pid, tid);
+        log_zx_error(status, "failure waiting for thread %ld.%ld to suspend, skipping", pid, tid);
         continue;  // Skip this thread.
       }
 
@@ -246,11 +236,10 @@ void ThreadInterrupter::ThreadInterrupt() {
   }
 }
 
-bool ThreadInterrupter::GrabRegisters(zx_handle_t thread,
-                                      InterruptedThreadState* state) {
+bool ThreadInterrupter::GrabRegisters(zx_handle_t thread, InterruptedThreadState* state) {
   zx_thread_state_general_regs regs;
-  zx_status_t status = zx_thread_read_state(
-      thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+  zx_status_t status =
+      zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
   if (status != ZX_OK) {
     log_zx_error(status, "ThreadInterrupter: failed to get registers");
     return false;

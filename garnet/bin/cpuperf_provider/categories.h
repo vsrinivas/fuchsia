@@ -80,13 +80,10 @@ class TraceConfig final {
  public:
   using IsCategoryEnabledFunc = std::function<bool(const char* name)>;
 
-  static std::unique_ptr<TraceConfig> Create(
-      perfmon::ModelEventManager* model_event_manager,
-      IsCategoryEnabledFunc category_is_enabled);
+  static std::unique_ptr<TraceConfig> Create(perfmon::ModelEventManager* model_event_manager,
+                                             IsCategoryEnabledFunc category_is_enabled);
 
-  perfmon::ModelEventManager* model_event_manager() const {
-    return model_event_manager_;
-  }
+  perfmon::ModelEventManager* model_event_manager() const { return model_event_manager_; }
 
   bool is_enabled() const { return is_enabled_; }
 
@@ -120,8 +117,7 @@ class TraceConfig final {
               IsCategoryEnabledFunc category_is_enabled);
 
   bool ProcessAllCategories();
-  bool ProcessCategories(const CategorySpec categories[],
-                         size_t num_categories,
+  bool ProcessCategories(const CategorySpec categories[], size_t num_categories,
                          CategoryData* data);
 
   bool ProcessTimebase();

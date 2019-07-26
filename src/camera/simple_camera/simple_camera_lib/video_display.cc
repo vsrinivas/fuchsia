@@ -21,8 +21,7 @@ void VideoDisplay::BufferReleased(uint32_t buffer_id) {
 }
 
 // When an incoming buffer is filled, VideoDisplay releases the acquire fence
-zx_status_t VideoDisplay::IncomingBufferFilled(
-    const fuchsia::camera::FrameAvailableEvent& frame) {
+zx_status_t VideoDisplay::IncomingBufferFilled(const fuchsia::camera::FrameAvailableEvent& frame) {
   if (frame.frame_status != fuchsia::camera::FrameStatus::OK) {
     FXL_LOG(ERROR) << "Error set on incoming frame. Error: "
                    << static_cast<int>(frame.frame_status);
@@ -42,13 +41,12 @@ zx_status_t VideoDisplay::IncomingBufferFilled(
   release_fences.push_back(std::move(release_fence));
   FXL_VLOG(4) << "presenting Buffer " << buffer_id << " at " << pres_time;
 
-  image_pipe_->PresentImage(
-      buffer_id + 1, pres_time, std::move(acquire_fences),
-      std::move(release_fences),
-      [this, pres_time](const fuchsia::images::PresentationInfo& info) {
-        this->frame_scheduler_.OnFramePresented(
-            info.presentation_time, info.presentation_interval, pres_time);
-      });
+  image_pipe_->PresentImage(buffer_id + 1, pres_time, std::move(acquire_fences),
+                            std::move(release_fences),
+                            [this, pres_time](const fuchsia::images::PresentationInfo& info) {
+                              this->frame_scheduler_.OnFramePresented(
+                                  info.presentation_time, info.presentation_interval, pres_time);
+                            });
   frame_buffers_[buffer_id]->Signal();
   return ZX_OK;
 }
@@ -60,8 +58,8 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   // In the future, some special alignment might happen here, or special
   // memory allocated...
   // Simple GetBufferSize.  Only valid for simple formats:
-  size_t buffer_size = ROUNDUP(
-      format.format.height * format.format.planes[0].bytes_per_row, PAGE_SIZE);
+  size_t buffer_size =
+      ROUNDUP(format.format.height * format.format.planes[0].bytes_per_row, PAGE_SIZE);
   buffer_collection->buffer_count = num_buffers;
   buffer_collection->vmo_size = buffer_size;
   buffer_collection->format.set_image(std::move(format.format));
@@ -107,21 +105,18 @@ zx_status_t VideoDisplay::SetupBuffers(
   // To make things look like a webcam application, mirror left-right.
   image_info.transform = fuchsia::images::Transform::FLIP_HORIZONTAL;
 
-  if (!ConvertFormat(buffer_collection.format.image().pixel_format,
-                     &image_info.pixel_format)) {
+  if (!ConvertFormat(buffer_collection.format.image().pixel_format, &image_info.pixel_format)) {
     FXL_CHECK(false) << "Unsupported format";
   }
 
   for (size_t id = 0; id < buffer_collection.buffer_count; ++id) {
     zx::vmo vmo_dup;
-    zx_status_t status =
-        buffer_collection.vmos[id].duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+    zx_status_t status = buffer_collection.vmos[id].duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Failed to duplicate vmo";
       return status;
     }
-    image_pipe_->AddImage(id + 1, image_info, std::move(vmo_dup), 0,
-                          buffer_collection.vmo_size,
+    image_pipe_->AddImage(id + 1, image_info, std::move(vmo_dup), 0, buffer_collection.vmo_size,
                           fuchsia::images::MemoryType::HOST_MEMORY);
 
     // Now create the fence for the buffer:
@@ -142,8 +137,7 @@ zx_status_t VideoDisplay::SetupBuffers(
 // TODO(CAM-9): Clean up this function after major changes land.
 zx_status_t VideoDisplay::ConnectToCamera(
     component::StartupContext* context, uint32_t camera_id,
-    fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe,
-    OnShutdownCallback callback) {
+    fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe, OnShutdownCallback callback) {
   if (!callback) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -159,9 +153,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
   camera_client_ = std::make_unique<CameraClient>();
 
   camera_client_->stream_.events().OnFrameAvailable =
-      [this](fuchsia::camera::FrameAvailableEvent frame) {
-        IncomingBufferFilled(frame);
-      };
+      [this](fuchsia::camera::FrameAvailableEvent frame) { IncomingBufferFilled(frame); };
 
   camera_client_->stream_.set_error_handler([this](zx_status_t status) {
     DisconnectFromCamera();
@@ -180,8 +172,8 @@ zx_status_t VideoDisplay::ConnectToCamera(
     uint32_t format_index = 0;
     do {
       std::vector<fuchsia::camera::VideoFormat> formats_ptr;
-      status = camera_client_->manager_->GetFormats(
-          camera_id, format_index, &formats_ptr, &total_format_count);
+      status = camera_client_->manager_->GetFormats(camera_id, format_index, &formats_ptr,
+                                                    &total_format_count);
       if (status != ZX_OK) {
         FXL_PLOG(ERROR, status) << "Couldn't get camera formats";
         DisconnectFromCamera();
@@ -195,10 +187,9 @@ zx_status_t VideoDisplay::ConnectToCamera(
 
     FXL_LOG(INFO) << "Available formats: " << formats.size();
     for (int i = 0; i < (int)formats.size(); i++) {
-      FXL_LOG(INFO) << "format[" << i
-                    << "] - width: " << formats[i].format.width
-                    << ", height: " << formats[i].format.height << ", stride: "
-                    << formats[i].format.planes[0].bytes_per_row;
+      FXL_LOG(INFO) << "format[" << i << "] - width: " << formats[i].format.width
+                    << ", height: " << formats[i].format.height
+                    << ", stride: " << formats[i].format.planes[0].bytes_per_row;
     }
   }
   uint32_t idx = 0;
@@ -237,12 +228,11 @@ zx_status_t VideoDisplay::ConnectToCamera(
       return status;
     }
 
-    fuchsia::camera::VideoStream request = {.camera_id = camera_id,
-                                            .format = chosen_format};
+    fuchsia::camera::VideoStream request = {.camera_id = camera_id, .format = chosen_format};
 
-    status = camera_client_->manager_->CreateStream(
-        request, std::move(buffer_collection),
-        camera_client_->stream_.NewRequest(), std::move(driver_token));
+    status = camera_client_->manager_->CreateStream(request, std::move(buffer_collection),
+                                                    camera_client_->stream_.NewRequest(),
+                                                    std::move(driver_token));
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Couldn't set camera format";
       DisconnectFromCamera();

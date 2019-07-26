@@ -81,7 +81,8 @@ TEST_F(NotifWaitTest, TestNotInterestedCommand) {
   iwl_notification_wait_notify(&wait_data, &pkt);
 
   // Wait for the notification, but expect timeout.
-  EXPECT_EQ(ZX_ERR_TIMED_OUT, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+  EXPECT_EQ(ZX_ERR_TIMED_OUT,
+            iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
 }
 
 // Expect the waiting is aborted.

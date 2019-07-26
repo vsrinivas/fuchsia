@@ -12,8 +12,7 @@ using namespace overnet;
 namespace {
 class InputStream {
  public:
-  InputStream(const uint8_t* data, size_t size)
-      : cur_(data), end_(data + size) {}
+  InputStream(const uint8_t* data, size_t size) : cur_(data), end_(data + size) {}
 
   uint64_t Next64() {
     uint64_t out;

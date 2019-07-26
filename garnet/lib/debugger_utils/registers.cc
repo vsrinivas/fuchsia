@@ -10,11 +10,9 @@
 
 namespace debugger_utils {
 
-zx_status_t ReadGeneralRegisters(zx_handle_t thread,
-                                 zx_thread_state_general_regs_t* regs) {
+zx_status_t ReadGeneralRegisters(zx_handle_t thread, zx_thread_state_general_regs_t* regs) {
   zx_status_t status =
-      zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS,
-                           regs, sizeof(*regs));
+      zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(*regs));
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to read general registers for thread "
                    << debugger_utils::GetKoid(thread) << ": "
@@ -23,11 +21,9 @@ zx_status_t ReadGeneralRegisters(zx_handle_t thread,
   return status;
 }
 
-zx_status_t WriteGeneralRegisters(zx_handle_t thread,
-                                  const zx_thread_state_general_regs_t* regs) {
+zx_status_t WriteGeneralRegisters(zx_handle_t thread, const zx_thread_state_general_regs_t* regs) {
   zx_status_t status =
-      zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS,
-                            regs, sizeof(*regs));
+      zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(*regs));
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to write general registers for thread "
                    << debugger_utils::GetKoid(thread) << ": "

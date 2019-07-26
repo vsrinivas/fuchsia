@@ -7,10 +7,8 @@
 
 #include <ddk/debug.h>
 
-#define DRIVER_ERROR(fmt, ...)                                                 \
-    zxlogf(ERROR, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DRIVER_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
 
-#define DRIVER_INFO(fmt, ...)                                                  \
-    zxlogf(INFO, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DRIVER_INFO(fmt, ...) zxlogf(INFO, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
 
-#endif // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MACROS_H_
+#endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MACROS_H_

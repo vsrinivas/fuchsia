@@ -21,14 +21,12 @@ TEST_F(GatherMemoryTest, Inspectable) {
   uint64_t test_value;
 
   // Test device_total_bytes.
-  EXPECT_TRUE(
-      dockyard_proxy.CheckValueSent("memory:device_total_bytes", &test_value));
+  EXPECT_TRUE(dockyard_proxy.CheckValueSent("memory:device_total_bytes", &test_value));
   EXPECT_LT(1000ULL, test_value);  // Test value is arbitrary.
   const uint64_t TB = 1024ULL * 1024 * 1024 * 1024;
   EXPECT_GT(TB, test_value);  // Test value is arbitrary.
 
   // Test device_free_bytes.
-  EXPECT_TRUE(
-      dockyard_proxy.CheckValueSent("memory:device_free_bytes", &test_value));
+  EXPECT_TRUE(dockyard_proxy.CheckValueSent("memory:device_free_bytes", &test_value));
   EXPECT_GT(test_value, 0ULL);
 }

@@ -14,11 +14,9 @@
 
 namespace {
 
-class IsolatedStorageTestUtil
-    : public test::appmgr::integration::DataFileReaderWriter {
+class IsolatedStorageTestUtil : public test::appmgr::integration::DataFileReaderWriter {
  public:
-  explicit IsolatedStorageTestUtil(
-      const std::shared_ptr<sys::OutgoingDirectory>& outgoing) {
+  explicit IsolatedStorageTestUtil(const std::shared_ptr<sys::OutgoingDirectory>& outgoing) {
     outgoing->AddPublicService(bindings_.GetHandler(this));
   }
 
@@ -31,10 +29,8 @@ class IsolatedStorageTestUtil
     callback(contents);
   }
 
-  void WriteFile(std::string path, std::string contents,
-                 WriteFileCallback callback) override {
-    if (!files::WriteFile(files::JoinPath("/data", path), contents.c_str(),
-                          contents.length())) {
+  void WriteFile(std::string path, std::string contents, WriteFileCallback callback) override {
+    if (!files::WriteFile(files::JoinPath("/data", path), contents.c_str(), contents.length())) {
       callback(ZX_ERR_IO);
       return;
     }

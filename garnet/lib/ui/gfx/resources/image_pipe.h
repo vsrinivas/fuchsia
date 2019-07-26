@@ -100,7 +100,8 @@ class ImagePipe : public ImageBase {
 
   // Virtual so that test subclasses can override.
   virtual ImagePtr CreateImage(Session* session, ResourceId id, MemoryPtr memory,
-                               const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset);
+                               const fuchsia::images::ImageInfo& image_info,
+                               uint64_t memory_offset);
 
   // A |Frame| stores the arguments passed to a particular invocation of
   // Present().

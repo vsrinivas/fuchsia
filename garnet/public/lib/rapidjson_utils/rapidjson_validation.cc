@@ -15,8 +15,7 @@ std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
     auto offset = schema_document.GetErrorOffset();
     auto code = schema_document.GetParseError();
     FXL_LOG(ERROR) << "Schema validation spec itself is not valid JSON"
-                   << ": offset " << offset << ", "
-                   << rapidjson::GetParseError_En(code);
+                   << ": offset " << offset << ", " << rapidjson::GetParseError_En(code);
     return nullptr;
   }
   auto schema = std::make_unique<rapidjson::SchemaDocument>(schema_document);
@@ -28,8 +27,7 @@ std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
   return schema;
 }
 
-bool ValidateSchema(const rapidjson::Value& value,
-                    const rapidjson::SchemaDocument& schema,
+bool ValidateSchema(const rapidjson::Value& value, const rapidjson::SchemaDocument& schema,
                     fxl::StringView value_name) {
   rapidjson::SchemaValidator validator(schema);
   if (!value.Accept(validator)) {
@@ -39,9 +37,8 @@ bool ValidateSchema(const rapidjson::Value& value,
     if (!value_name.empty()) {
       extra_log_info = "of \"" + value_name.ToString() + "\" ";
     }
-    FXL_LOG(ERROR) << "Incorrect schema " << extra_log_info << "at "
-                   << uri_buffer.GetString() << " , schema violation: "
-                   << validator.GetInvalidSchemaKeyword();
+    FXL_LOG(ERROR) << "Incorrect schema " << extra_log_info << "at " << uri_buffer.GetString()
+                   << " , schema violation: " << validator.GetInvalidSchemaKeyword();
     return false;
   }
   return true;

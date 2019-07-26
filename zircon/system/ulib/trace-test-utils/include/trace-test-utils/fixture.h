@@ -26,19 +26,18 @@
 // Specifies whether the trace engine async loop uses the same thread as the
 // app or a different thread.
 typedef enum {
-    // Use different thread from app.
-    kNoAttachToThread,
-    // Use same thread as app.
-    kAttachToThread,
+  // Use different thread from app.
+  kNoAttachToThread,
+  // Use same thread as app.
+  kAttachToThread,
 } attach_to_thread_t;
 
 #ifdef __cplusplus
 
 bool fixture_read_records(fbl::Vector<trace::Record>* out_records);
 
-bool fixture_compare_raw_records(const fbl::Vector<trace::Record>& records,
-                                 size_t start_record, size_t max_num_records,
-                                 const char* expected);
+bool fixture_compare_raw_records(const fbl::Vector<trace::Record>& records, size_t start_record,
+                                 size_t max_num_records, const char* expected);
 bool fixture_compare_n_records(size_t max_num_records, const char* expected,
                                fbl::Vector<trace::Record>* out_records,
                                size_t* out_leading_to_skip);
@@ -50,8 +49,8 @@ void fixture_snapshot_buffer_header(trace_buffer_header* header);
 
 __BEGIN_CDECLS
 
-void fixture_set_up(attach_to_thread_t attach_to_thread,
-                    trace_buffering_mode_t mode, size_t buffer_size);
+void fixture_set_up(attach_to_thread_t attach_to_thread, trace_buffering_mode_t mode,
+                    size_t buffer_size);
 void fixture_tear_down(void);
 
 void fixture_initialize_engine(void);
@@ -91,8 +90,6 @@ uint32_t fixture_get_buffer_full_wrapped_count(void);
 void fixture_reset_buffer_full_notification(void);
 bool fixture_compare_records(const char* expected);
 
-static inline void fixture_scope_cleanup(bool* scope) {
-    fixture_tear_down();
-}
+static inline void fixture_scope_cleanup(bool* scope) { fixture_tear_down(); }
 
 __END_CDECLS

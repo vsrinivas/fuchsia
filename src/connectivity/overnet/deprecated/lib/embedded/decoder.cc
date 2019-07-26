@@ -14,12 +14,9 @@ namespace internal {
 
 Decoder::Decoder(fuchsia::overnet::protocol::ZirconChannelMessage message,
                  FidlChannelIO* fidl_channel_io)
-    : message_(std::move(message)),
-      stream_(fidl_channel_io->channel()->overnet_stream()) {}
+    : message_(std::move(message)), stream_(fidl_channel_io->channel()->overnet_stream()) {}
 
-size_t Decoder::GetOffset(void* ptr) {
-  return GetOffset(reinterpret_cast<uintptr_t>(ptr));
-}
+size_t Decoder::GetOffset(void* ptr) { return GetOffset(reinterpret_cast<uintptr_t>(ptr)); }
 
 size_t Decoder::GetOffset(uintptr_t ptr) {
   // The |ptr| value comes from the message buffer, which we've already
@@ -60,8 +57,8 @@ constexpr uintptr_t kAllocAbsenceMarker = FIDL_ALLOC_ABSENT;
 
 using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
 
-class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait,
-                                               StartingPoint, Position> {
+class FidlDecoder final
+    : public fidl::Visitor<fidl::MutatingVisitorTrait, StartingPoint, Position> {
  public:
   FidlDecoder(std::vector<uint8_t>* bytes,
               std::vector<fuchsia::overnet::protocol::ZirconHandle>* handles,
@@ -79,9 +76,8 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait,
 
   static constexpr bool kAllowNonNullableCollectionsToBeAbsent = false;
 
-  Status VisitPointer(Position ptr_position,
-                      ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
-                      Position* out_position) {
+  Status VisitPointer(Position ptr_position, ObjectPointerPointer object_ptr_ptr,
+                      uint32_t inline_size, Position* out_position) {
     if (reinterpret_cast<uintptr_t>(*object_ptr_ptr) != kAllocPresenceMarker) {
       SetError("decoder encountered invalid pointer");
       return Status::kConstraintViolationError;
@@ -113,8 +109,7 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait,
       return Status::kConstraintViolationError;
     }
     if (handles_ == nullptr) {
-      SetError(
-          "decoder noticed a handle is present but the handle table is empty");
+      SetError("decoder noticed a handle is present but the handle table is empty");
       *handle = ZX_HANDLE_INVALID;
       return Status::kConstraintViolationError;
     }
@@ -135,8 +130,7 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait,
       return Status::kConstraintViolationError;
     }
     uint32_t expected_handle_count;
-    if (add_overflow(handle_idx_, envelope->num_handles,
-                     &expected_handle_count) ||
+    if (add_overflow(handle_idx_, envelope->num_handles, &expected_handle_count) ||
         expected_handle_count > handles_->size()) {
       SetError("Envelope has more handles than expected");
       return Status::kConstraintViolationError;
@@ -174,10 +168,8 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait,
     return Status::kSuccess;
   }
 
-  Status VisitInternalPadding(Position padding_position,
-                              uint32_t padding_length) {
-    auto padding_ptr = padding_position.template Get<const uint8_t>(
-        StartingPoint{bytes_->data()});
+  Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
+    auto padding_ptr = padding_position.template Get<const uint8_t>(StartingPoint{bytes_->data()});
     for (uint32_t i = 0; i < padding_length; i++) {
       if (padding_ptr[i] != 0) {
         SetError("non-zero padding bytes detected");
@@ -191,9 +183,7 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait,
 
   zx_status_t status() const { return status_; }
 
-  bool DidConsumeAllBytes() const {
-    return next_out_of_line_ == bytes_->size();
-  }
+  bool DidConsumeAllBytes() const { return next_out_of_line_ == bytes_->size(); }
 
   bool DidConsumeAllHandles() const { return handle_idx_ == handles_->size(); }
 
@@ -223,8 +213,7 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait,
 
 }  // namespace
 
-zx_status_t Decoder::FidlDecode(const fidl_type_t* type,
-                                const char** out_error_msg) {
+zx_status_t Decoder::FidlDecode(const fidl_type_t* type, const char** out_error_msg) {
   auto set_error = [&out_error_msg](const char* msg) {
     if (out_error_msg)
       *out_error_msg = msg;
@@ -238,13 +227,12 @@ zx_status_t Decoder::FidlDecode(const fidl_type_t* type,
 
   uint32_t next_out_of_line;
   zx_status_t status;
-  if ((status = fidl::StartingOutOfLineOffset(
-           type, num_bytes, &next_out_of_line, out_error_msg)) != ZX_OK) {
+  if ((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line, out_error_msg)) !=
+      ZX_OK) {
     return status;
   }
 
-  FidlDecoder decoder(&message_.bytes, &message_.handles, next_out_of_line,
-                      out_error_msg);
+  FidlDecoder decoder(&message_.bytes, &message_.handles, next_out_of_line, out_error_msg);
   fidl::Walk(decoder, type, StartingPoint{reinterpret_cast<uint8_t*>(bytes)});
 
   if (decoder.status() == ZX_OK) {

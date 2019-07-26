@@ -12,8 +12,7 @@ namespace overnet {
 
 class OvernetEmbedded : public BasicOvernetEmbedded {
  public:
-  OvernetEmbedded(
-      IpAddr ascendd_addr = *overnet::IpAddr::Unix("/tmp/ascendd.socket"))
+  OvernetEmbedded(IpAddr ascendd_addr = *overnet::IpAddr::Unix("/tmp/ascendd.socket"))
       : stream_client_{this, ascendd_addr} {}
 
  private:

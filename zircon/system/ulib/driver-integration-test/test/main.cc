@@ -24,28 +24,28 @@ using devmgr_integration_test::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
 
 const board_test::DeviceEntry kDeviceEntry = []() {
-    board_test::DeviceEntry entry = {};
-    strcpy(entry.name, "fallback-rtc");
-    entry.vid = PDEV_VID_GENERIC;
-    entry.pid = PDEV_PID_GENERIC;
-    entry.did = PDEV_DID_RTC_FALLBACK;
-    return entry;
+  board_test::DeviceEntry entry = {};
+  strcpy(entry.name, "fallback-rtc");
+  entry.vid = PDEV_VID_GENERIC;
+  entry.pid = PDEV_PID_GENERIC;
+  entry.did = PDEV_DID_RTC_FALLBACK;
+  return entry;
 }();
 
 TEST(DriverIntegrationTest, EnumerationTest) {
-    IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
-    args.device_list.push_back(kDeviceEntry);
+  IsolatedDevmgr::Args args;
+  args.driver_search_paths.push_back("/boot/driver");
+  args.device_list.push_back(kDeviceEntry);
 
-    IsolatedDevmgr devmgr;
-    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
+  IsolatedDevmgr devmgr;
+  ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
 
-    fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
+  fbl::unique_fd fd;
+  ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd));
+  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd));
 
-    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd));
+  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd));
 }
 
-} // namespace
+}  // namespace

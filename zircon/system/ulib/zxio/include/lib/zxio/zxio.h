@@ -67,8 +67,8 @@ zx_status_t zxio_close(zxio_t* io);
 // Returns |ZX_ERR_TIMED_OUT| if |deadline| passes before any of the |signals|
 // are asserted for |io|. Returns the set of signals that were actually observed
 // via |observed|.
-zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals,
-                          zx_time_t deadline, zxio_signals_t* out_observed);
+zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals, zx_time_t deadline,
+                          zxio_signals_t* out_observed);
 
 // Translate |zxio_signals_t| into |zx_signals_t| for |io|.
 //
@@ -77,15 +77,14 @@ zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals,
 //
 // Use |zxio_wait_end| to translate the observed |zx_signals_t| back into
 // |zxio_signals_t|.
-void zxio_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
-                     zx_handle_t* out_handle, zx_signals_t* out_zx_signals);
+void zxio_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
+                     zx_signals_t* out_zx_signals);
 
 // Translate |zx_signals_t| into |zxio_signals_t| for |io|.
 //
 // Typically used with |zxio_wait_begin| to wait asynchronously on a
 // |zx_handle_t| and to interpret the observed |zx_signals|.
-void zxio_wait_end(zxio_t* io, zx_signals_t zx_signals,
-                   zxio_signals_t* out_zxio_signals);
+void zxio_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals);
 
 // Synchronizes updates to the file to the underlying media, if it exists.
 zx_status_t zxio_sync(zxio_t* io);
@@ -96,8 +95,7 @@ zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attr_t* out_attr);
 // Update information about the file.
 //
 // See io.fidl for the available |flags|.
-zx_status_t zxio_attr_set(zxio_t* io, uint32_t flags,
-                          const zxio_node_attr_t* attr);
+zx_status_t zxio_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* attr);
 
 // File
 
@@ -106,32 +104,30 @@ zx_status_t zxio_attr_set(zxio_t* io, uint32_t flags,
 // The seek offset is moved forward by the actual number of bytes read.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity,
-                      size_t* out_actual);
+zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual);
 
 // Attempt to read |capacity| bytes from the file at the provided offset.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_read_at(zxio_t* io, size_t offset, void* buffer,
-                         size_t capacity, size_t* out_actual);
+zx_status_t zxio_read_at(zxio_t* io, size_t offset, void* buffer, size_t capacity,
+                         size_t* out_actual);
 
 // Attempt to write data to the file at the current seek offset.
 //
 // The seek offset is moved forward by the actual number of bytes written.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity,
-                       size_t* out_actual);
+zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual);
 
 // Attempt to write data to the file at the provided offset.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_write_at(zxio_t* io, size_t offset, const void* buffer,
-                          size_t capacity, size_t* out_actual);
+zx_status_t zxio_write_at(zxio_t* io, size_t offset, const void* buffer, size_t capacity,
+                          size_t* out_actual);
 
 // Modify the seek offset.
 //
@@ -139,8 +135,7 @@ zx_status_t zxio_write_at(zxio_t* io, size_t offset, const void* buffer,
 //
 // The resulting seek offset relative to the start of the file is returned in
 // |out_offset|.
-zx_status_t zxio_seek(zxio_t* io, size_t offset,
-                      zxio_seek_origin_t start, size_t* out_offset);
+zx_status_t zxio_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start, size_t* out_offset);
 
 // Shrink the file size to |length| bytes.
 zx_status_t zxio_truncate(zxio_t* io, size_t length);
@@ -190,8 +185,8 @@ zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_siz
 // remote server is able to describe the new connection.
 //
 // See io.fidl for the available |flags| and |mode|.
-zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode,
-                      const char* path, zxio_t** out_io);
+zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
+                      zxio_t** out_io);
 
 // Open a new file relative to the given |directory|.
 //
@@ -200,8 +195,7 @@ zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode,
 // block on the remote server.
 //
 // See io.fidl for the available |flags| and |mode|.
-zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags,
-                            uint32_t mode, const char* path,
+zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
                             zx_handle_t request);
 
 // Remove an file relative to the given directory.
@@ -211,36 +205,36 @@ zx_status_t zxio_unlink(zxio_t* directory, const char* path);
 // relative to |new_directory|.
 //
 // |old_directory| and |new_directory| may be aliased.
-zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path,
-                        zxio_t* new_directory, const char* new_path);
+zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path, zxio_t* new_directory,
+                        const char* new_path);
 
 // Attempts to link |dst_path| relative to |dst_directory| to |src_path|
 // relative to |src_directory|.
 //
 // |src_directory| and |dst_directory| may be aliased.
-zx_status_t zxio_link(zxio_t* src_directory, const char* src_path,
-                      zxio_t* dst_directory, const char* dst_path);
+zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zxio_t* dst_directory,
+                      const char* dst_path);
 
 // Directory iterator
 
 // An entry in a directory.
 typedef struct zxio_dirent {
-    // The inode number of the entry.
-    uint64_t inode;
+  // The inode number of the entry.
+  uint64_t inode;
 
-    // The length of the name of the entry.
-    uint8_t size;
+  // The length of the name of the entry.
+  uint8_t size;
 
-    // The type of the entry.
-    //
-    // Aligned with the POSIX d_type values.
-    uint8_t type;
+  // The type of the entry.
+  //
+  // Aligned with the POSIX d_type values.
+  uint8_t type;
 
-    // The name of the entry.
-    //
-    // This string is not null terminated. Instead, refer to |size| to
-    // determine the length of the string.
-    char name[0];
+  // The name of the entry.
+  //
+  // This string is not null terminated. Instead, refer to |size| to
+  // determine the length of the string.
+  char name[0];
 } zxio_dirent_t;
 
 // An iterator for |zxio_dirent_t| objects.
@@ -251,7 +245,7 @@ typedef struct zxio_dirent {
 //
 // Typically allocated on the stack.
 typedef struct zxio_dirent_iterator {
-    uint64_t opaque[8];
+  uint64_t opaque[8];
 } zxio_dirent_iterator_t;
 
 // A reasonable default capacity for |zxio_dirent_iterator_init|.
@@ -270,9 +264,8 @@ typedef struct zxio_dirent_iterator {
 // |ZXIO_DIRENT_ITERATOR_DEFAULT_BUFFER_SIZE| is a reasonable capacity buffer to
 // use for this operation. Larger buffers might improve performance. Smaller
 // buffers are likely to degrade performance.
-zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator,
-                                      zxio_t* directory, void* buffer,
-                                      size_t capacity);
+zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory,
+                                      void* buffer, size_t capacity);
 
 // Read a |zxio_dirent_t| from the given |iterator|.
 //
@@ -290,8 +283,7 @@ zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator,
 //
 // |iterator| must have been previously initialized via
 // |zxio_dirent_iterator_init|.
-zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator,
-                                      zxio_dirent_t** out_entry);
+zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator, zxio_dirent_t** out_entry);
 
 // Return in |tty| whether or not |io| represents a TTY object (should
 // line buffer for stdio, etc).
@@ -299,4 +291,4 @@ zx_status_t zxio_isatty(zxio_t* io, bool* tty);
 
 __END_CDECLS
 
-#endif // LIB_ZXIO_ZXIO_H_
+#endif  // LIB_ZXIO_ZXIO_H_

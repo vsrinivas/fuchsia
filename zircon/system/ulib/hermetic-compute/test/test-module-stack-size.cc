@@ -6,11 +6,11 @@
 #include <lib/hermetic-compute/hermetic-engine.h>
 
 struct TestEngine : public HermeticComputeEngine<TestEngine> {
-    int64_t operator()() const {
-        volatile std::byte a[16 << 10];
-        for (auto &x : a) {
-            x = std::byte{42};
-        }
-        return 0;
+  int64_t operator()() const {
+    volatile std::byte a[16 << 10];
+    for (auto &x : a) {
+      x = std::byte{42};
     }
+    return 0;
+  }
 };

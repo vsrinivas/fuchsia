@@ -19,15 +19,9 @@ class TimeDelta {
   constexpr TimeDelta() = default;
 
   static constexpr TimeDelta Zero() { return TimeDelta(); }
-  static constexpr TimeDelta Min() {
-    return TimeDelta(std::numeric_limits<int64_t>::min());
-  }
-  static constexpr TimeDelta Max() {
-    return TimeDelta(std::numeric_limits<int64_t>::max());
-  }
-  static constexpr TimeDelta FromNanoseconds(int64_t nanos) {
-    return TimeDelta(nanos);
-  }
+  static constexpr TimeDelta Min() { return TimeDelta(std::numeric_limits<int64_t>::min()); }
+  static constexpr TimeDelta Max() { return TimeDelta(std::numeric_limits<int64_t>::max()); }
+  static constexpr TimeDelta FromNanoseconds(int64_t nanos) { return TimeDelta(nanos); }
   static constexpr TimeDelta FromMicroseconds(int64_t micros) {
     return FromNanoseconds(micros * 1000);
   }
@@ -49,12 +43,8 @@ class TimeDelta {
 
   constexpr double ToNanosecondsF() const { return delta_; }
   constexpr double ToMicrosecondsF() const { return delta_ / 1000.0; }
-  constexpr double ToMillisecondsF() const {
-    return delta_ / (1000.0 * 1000.0);
-  }
-  constexpr double ToSecondsF() const {
-    return delta_ / (1000.0 * 1000.0 * 1000.0);
-  }
+  constexpr double ToMillisecondsF() const { return delta_ / (1000.0 * 1000.0); }
+  constexpr double ToSecondsF() const { return delta_ / (1000.0 * 1000.0 * 1000.0); }
 
   constexpr TimeDelta operator-(TimeDelta other) const {
     return TimeDelta::FromNanoseconds(delta_ - other.delta_);
@@ -68,9 +58,7 @@ class TimeDelta {
     return TimeDelta::FromNanoseconds(delta_ / divisor);
   }
 
-  constexpr int64_t operator/(TimeDelta other) const {
-    return delta_ / other.delta_;
-  }
+  constexpr int64_t operator/(TimeDelta other) const { return delta_ / other.delta_; }
 
   constexpr TimeDelta operator*(int64_t multiplier) const {
     return TimeDelta::FromNanoseconds(delta_ * multiplier);
@@ -88,8 +76,7 @@ class TimeDelta {
   bool operator>=(TimeDelta other) const { return delta_ >= other.delta_; }
 
   static constexpr TimeDelta FromTimespec(struct timespec ts) {
-    return TimeDelta::FromSeconds(ts.tv_sec) +
-           TimeDelta::FromNanoseconds(ts.tv_nsec);
+    return TimeDelta::FromSeconds(ts.tv_sec) + TimeDelta::FromNanoseconds(ts.tv_nsec);
   }
   struct timespec ToTimespec() {
     struct timespec ts;

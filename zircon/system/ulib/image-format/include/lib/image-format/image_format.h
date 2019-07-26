@@ -11,7 +11,8 @@ extern "C" {
 #endif
 
 // Iff this returns true, the two pixel formats are equal.
-bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a, const fuchsia_sysmem_PixelFormat& b);
+bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a,
+                                   const fuchsia_sysmem_PixelFormat& b);
 
 // true - The color_space is potentially compatible with the PixelFormat,
 // assuming the correct variant of the ColorSpace is used (with correct bpp).
@@ -21,7 +22,8 @@ bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a, const fu
 // is not compatible with BT.2100.  Or, the system does not support the
 // combination of ColorSpace and PixelFormat (even if they are hypothetically
 // compatible; in this case support might be added later).
-bool ImageFormatIsSupportedColorSpaceForPixelFormat(const fuchsia_sysmem_ColorSpace& color_space, const fuchsia_sysmem_PixelFormat& pixel_format);
+bool ImageFormatIsSupportedColorSpaceForPixelFormat(const fuchsia_sysmem_ColorSpace& color_space,
+                                                    const fuchsia_sysmem_PixelFormat& pixel_format);
 
 // If this returns true, the remainder of the functions in this header can be
 // called with pixel_format.  If this returns false, calling any other method of
@@ -41,26 +43,22 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* pixel_format)
 // data, this is the number of stride bytes of the Y plane (plane 0).  NV12 has
 // the same stride for the UV data.  This function doesn't return stride
 // information for planes beyond plane 0.
-uint32_t ImageFormatStrideBytesPerWidthPixel(
-    const fuchsia_sysmem_PixelFormat* pixel_format);
+uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 // This would be height * stride, if it weren't for formats like NV12, where it
 // isn't.  The return value is in bytes.
 uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format);
 
-uint32_t ImageFormatCodedWidthMinDivisor(
-    const fuchsia_sysmem_PixelFormat* pixel_format);
+uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem_PixelFormat* pixel_format);
 
-uint32_t ImageFormatCodedHeightMinDivisor(
-    const fuchsia_sysmem_PixelFormat* pixel_format);
+uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 // The start of image data must be at least this aligned.
 //
 // The plane 0 stride is required to be divisible by this alignment.  Generally
 // the stride of planes beyond plane 0 (if any) will have a known fixed
 // relationship with the plane 0 stride.
-uint32_t ImageFormatSampleAlignment(
-    const fuchsia_sysmem_PixelFormat* pixel_format);
+uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_format);
 
 // Gets the minimum number of bytes per row possible for an image with a
 // specific width and specific constraints. Returns false if the width would not

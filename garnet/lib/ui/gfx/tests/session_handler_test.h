@@ -42,9 +42,7 @@ class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
     return static_cast<SessionHandler*>(command_dispatcher_.get());
   }
 
-  Session* session() {
-    return session_handler()->session();
-  }
+  Session* session() { return session_handler()->session(); }
 
   // |SessionUpdater|
   UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,

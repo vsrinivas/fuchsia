@@ -44,42 +44,42 @@ struct rfc1042_hdr {
 #endif  // NEEDS PORTING
 
 enum ath10k_channel_flags {
-    // clang-format off
+  // clang-format off
     IEEE80211_CHAN_DISABLED    = (1 << 0),
     IEEE80211_CHAN_NO_IR       = (1 << 1),
     IEEE80211_CHAN_NO_HT40PLUS = (1 << 2),
     IEEE80211_CHAN_RADAR       = (1 << 3),
-    // clang-format on
+  // clang-format on
 };
 
 struct ath10k_channel_freq {
-    uint32_t cbw20;
-    uint32_t cbw40_above;
-    uint32_t cbw40_below;
-    uint32_t cbw80;
-    uint32_t cbw160;
-    uint32_t cbw80p80;
+  uint32_t cbw20;
+  uint32_t cbw40_above;
+  uint32_t cbw40_below;
+  uint32_t cbw80;
+  uint32_t cbw160;
+  uint32_t cbw80p80;
 };
 
 struct ath10k_channel {
-    uint32_t hw_value;
-    uint32_t flags;
-    struct ath10k_channel_freq center_freq;
-    uint32_t max_power;
-    uint32_t max_reg_power;
-    uint32_t max_antenna_gain;
+  uint32_t hw_value;
+  uint32_t flags;
+  struct ath10k_channel_freq center_freq;
+  uint32_t max_power;
+  uint32_t max_reg_power;
+  uint32_t max_antenna_gain;
 };
 
 struct ath10k_band {
-    uint8_t band_id;  // WLAN_BAND_*
+  uint8_t band_id;  // WLAN_BAND_*
 
-    bool ht_supported;
-    bool vht_supported;
-    ieee80211_vht_capabilities_t vht_caps;
-    uint8_t basic_rates[12];
-    uint16_t base_freq;
-    size_t n_channels;
-    const struct ath10k_channel* channels;
+  bool ht_supported;
+  bool vht_supported;
+  ieee80211_vht_capabilities_t vht_caps;
+  uint8_t basic_rates[12];
+  uint16_t base_freq;
+  size_t n_channels;
+  const struct ath10k_channel* channels;
 };
 
 struct ath10k* ath10k_mac_create(size_t priv_size);

@@ -10,34 +10,32 @@
 #define FUNCTION(NAME, SIZE) FUNCTION_1(global, NAME)
 #define WEAK_FUNCTION(NAME, SIZE) FUNCTION_1(weak, NAME)
 
-#define FUNCTION_1(BINDING, NAME) \
-    .pushsection .text,"ax",%progbits; \
-    .BINDING NAME; \
-    .type NAME,%function; \
-    NAME: .space 1; \
-    .popsection
+#define FUNCTION_1(BINDING, NAME)      \
+  .pushsection.text, "ax", % progbits; \
+  .BINDING NAME;                       \
+  .type NAME, % function;              \
+  NAME:                                \
+  .space 1;                            \
+  .popsection
 
 #define OBJECT_1(SECTION, SECFLAGS, SECTYPE, BINDING, NAME, SIZE) \
-    .pushsection SECTION,SECFLAGS,%SECTYPE; \
-    .BINDING NAME; \
-    .type NAME,%object; \
-    NAME: .space SIZE; \
-    .size NAME,SIZE; \
-    .popsection
+  .pushsection SECTION, SECFLAGS, % SECTYPE;                      \
+  .BINDING NAME;                                                  \
+  .type NAME, % object;                                           \
+  NAME:                                                           \
+  .space SIZE;                                                    \
+  .size NAME, SIZE;                                               \
+  .popsection
 
-#define RODATA_OBJECT(NAME, SIZE) \
-    OBJECT_1(.rodata, "a", progbits, global, NAME, SIZE)
-#define DATA_OBJECT(NAME, SIZE) \
-    OBJECT_1(.data, "aw", progbits, global, NAME, SIZE)
-#define WEAK_DATA_OBJECT(NAME, SIZE) \
-    OBJECT_1(.data, "aw", progbits, weak, NAME, SIZE)
-#define BSS_OBJECT(NAME, SIZE) \
-    OBJECT_1(.bss, "aw", nobits, global, NAME, SIZE)
+#define RODATA_OBJECT(NAME, SIZE) OBJECT_1(.rodata, "a", progbits, global, NAME, SIZE)
+#define DATA_OBJECT(NAME, SIZE) OBJECT_1(.data, "aw", progbits, global, NAME, SIZE)
+#define WEAK_DATA_OBJECT(NAME, SIZE) OBJECT_1(.data, "aw", progbits, weak, NAME, SIZE)
+#define BSS_OBJECT(NAME, SIZE) OBJECT_1(.bss, "aw", nobits, global, NAME, SIZE)
 
 #define UNDEFINED_WEAK(NAME, SIZE) UNDEFINED_1(weak, NAME)
 #define UNDEFINED(NAME, SIZE) UNDEFINED_1(globl, NAME)
-#define UNDEFINED_1(BINDING, NAME) \
-    .pushsection .undefined,"aw",%progbits; \
-    .BINDING NAME; \
-    .dc.a NAME; \
-    .popsection
+#define UNDEFINED_1(BINDING, NAME)          \
+  .pushsection.undefined, "aw", % progbits; \
+  .BINDING NAME;                            \
+  .dc.a NAME;                               \
+  .popsection

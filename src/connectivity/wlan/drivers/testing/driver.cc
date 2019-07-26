@@ -36,8 +36,7 @@ zx_status_t wlanphy_test_bind(void* ctx, zx_device_t* device) {
   zxlogf(INFO, "%s\n", __func__);
 
   test_protocol_t proto;
-  auto status = device_get_protocol(device, ZX_PROTOCOL_TEST,
-                                    reinterpret_cast<void*>(&proto));
+  auto status = device_get_protocol(device, ZX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
   if (status != ZX_OK) {
     return status;
   }

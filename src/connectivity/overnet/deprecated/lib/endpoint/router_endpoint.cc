@@ -18,8 +18,7 @@ void RouterEndpoint::NewStream::Fail(const Status& status) {
   s->Close(status, [s] { delete s; });
 }
 
-RouterEndpoint::RouterEndpoint(Timer* timer, NodeId node_id,
-                               bool allow_non_determinism)
+RouterEndpoint::RouterEndpoint(Timer* timer, NodeId node_id, bool allow_non_determinism)
     : Router(timer, node_id, allow_non_determinism) {
   StartGossipTimer();
 }
@@ -28,20 +27,18 @@ RouterEndpoint::~RouterEndpoint() { assert(connection_streams_.empty()); }
 
 void RouterEndpoint::StartGossipTimer() {
   Timer* timer = this->timer();
-  gossip_timer_.Reset(
-      timer, timer->Now() + gossip_interval_, [this](const Status& status) {
-        if (status.is_error())
-          return;
-        auto node = SelectGossipPeer();
-        if (!node) {
-          gossip_interval_ =
-              std::min(3 * gossip_interval_ / 2, TimeDelta::FromMinutes(30));
-        } else {
-          gossip_interval_ = InitialGossipInterval();
-          SendGossipTo(*node);
-        }
-        StartGossipTimer();
-      });
+  gossip_timer_.Reset(timer, timer->Now() + gossip_interval_, [this](const Status& status) {
+    if (status.is_error())
+      return;
+    auto node = SelectGossipPeer();
+    if (!node) {
+      gossip_interval_ = std::min(3 * gossip_interval_ / 2, TimeDelta::FromMinutes(30));
+    } else {
+      gossip_interval_ = InitialGossipInterval();
+      SendGossipTo(*node);
+    }
+    StartGossipTimer();
+  });
 }
 
 void RouterEndpoint::SendGossipTo(NodeId target) {
@@ -71,19 +68,16 @@ void RouterEndpoint::Close(Callback<void> done) {
   }
   auto it = connection_streams_.begin();
   OVERNET_TRACE(DEBUG) << "Closing peer " << it->first;
-  Callback<void> after_close(
-      ALLOCATED_CALLBACK, [this, it, done = std::move(done)]() mutable {
-        OVERNET_TRACE(DEBUG) << "Closed peer " << it->first;
-        connection_streams_.erase(it);
-        NewNodeDescriptionTableVersion();
-        Close(std::move(done));
-      });
+  Callback<void> after_close(ALLOCATED_CALLBACK, [this, it, done = std::move(done)]() mutable {
+    OVERNET_TRACE(DEBUG) << "Closed peer " << it->first;
+    connection_streams_.erase(it);
+    NewNodeDescriptionTableVersion();
+    Close(std::move(done));
+  });
   it->second.Close(Status::Cancelled(), std::move(after_close));
 }
 
-void RouterEndpoint::RegisterPeer(NodeId peer) {
-  GetOrCreateConnectionStream(peer);
-}
+void RouterEndpoint::RegisterPeer(NodeId peer) { GetOrCreateConnectionStream(peer); }
 
 void RouterEndpoint::Bind(Service* service) {
   if (services_.emplace(service->fully_qualified_name, service).second) {
@@ -106,8 +100,7 @@ void RouterEndpoint::UpdatedDescription() {
   }
   OVERNET_TRACE(DEBUG) << "Schedule send update";
   description_timer_.Reset(
-      timer(), timer()->Now() + TimeDelta::FromMilliseconds(200),
-      [this](const Status& status) {
+      timer(), timer()->Now() + TimeDelta::FromMilliseconds(200), [this](const Status& status) {
         if (status.is_error()) {
           return;
         }
@@ -119,17 +112,14 @@ void RouterEndpoint::UpdatedDescription() {
                                  << id_conn_pair.first << ": Closing";
             continue;
           }
-          OVERNET_TRACE(DEBUG)
-              << node_id() << " send description to " << id_conn_pair.first
-              << ": " << BuildDescription();
-          id_conn_pair.second.proxy()->UpdateNodeDescription(
-              fidl::Clone(description));
+          OVERNET_TRACE(DEBUG) << node_id() << " send description to " << id_conn_pair.first << ": "
+                               << BuildDescription();
+          id_conn_pair.second.proxy()->UpdateNodeDescription(fidl::Clone(description));
         }
       });
 }
 
-fuchsia::overnet::protocol::PeerDescription RouterEndpoint::BuildDescription()
-    const {
+fuchsia::overnet::protocol::PeerDescription RouterEndpoint::BuildDescription() const {
   fuchsia::overnet::protocol::PeerDescription desc;
   for (const auto& str_svc_pair : services_) {
     desc.mutable_services()->push_back(str_svc_pair.first);
@@ -137,26 +127,22 @@ fuchsia::overnet::protocol::PeerDescription RouterEndpoint::BuildDescription()
   return desc;
 }
 
-RouterEndpoint::ConnectionStream* RouterEndpoint::GetOrCreateConnectionStream(
-    NodeId peer) {
+RouterEndpoint::ConnectionStream* RouterEndpoint::GetOrCreateConnectionStream(NodeId peer) {
   assert(peer != node_id());
   auto it = connection_streams_.find(peer);
   if (it != connection_streams_.end()) {
     return &it->second;
   }
   if (closing_) {
-    OVERNET_TRACE(DEBUG) << node_id()
-                         << " skip creating connection stream for peer " << peer
+    OVERNET_TRACE(DEBUG) << node_id() << " skip creating connection stream for peer " << peer
                          << " as we're closing";
     return nullptr;
   }
-  OVERNET_TRACE(DEBUG) << node_id() << " creating connection stream for peer "
-                       << peer;
-  auto* stream =
-      &connection_streams_
-           .emplace(std::piecewise_construct, std::forward_as_tuple(peer),
-                    std::forward_as_tuple(this, peer))
-           .first->second;
+  OVERNET_TRACE(DEBUG) << node_id() << " creating connection stream for peer " << peer;
+  auto* stream = &connection_streams_
+                      .emplace(std::piecewise_construct, std::forward_as_tuple(peer),
+                               std::forward_as_tuple(this, peer))
+                      .first->second;
   stream->Register();
   if (!description_timer_.has_value()) {
     // Send a description (if there's a description timer then it'll anyway be
@@ -171,14 +157,12 @@ RouterEndpoint::ConnectionStream* RouterEndpoint::GetOrCreateConnectionStream(
 
 RouterEndpoint::Stream::Stream(NewStream introduction)
     : DatagramStream(introduction.creator_, introduction.peer_,
-                     introduction.reliability_and_ordering_,
-                     introduction.stream_id_) {
+                     introduction.reliability_and_ordering_, introduction.stream_id_) {
   auto it = introduction.creator_->connection_streams_.find(introduction.peer_);
   if (it == introduction.creator_->connection_streams_.end()) {
     OVERNET_TRACE(DEBUG) << "Failed to find connection " << introduction.peer_;
-    Close(
-        Status::FailedPrecondition("Connection closed before stream creation"),
-        Callback<void>::Ignored());
+    Close(Status::FailedPrecondition("Connection closed before stream creation"),
+          Callback<void>::Ignored());
   } else {
     connection_stream_ = &it->second;
     connection_stream_->forked_streams_.PushBack(this);
@@ -187,8 +171,7 @@ RouterEndpoint::Stream::Stream(NewStream introduction)
   Register();
 }
 
-void RouterEndpoint::Stream::Close(const Status& status,
-                                   Callback<void> quiesced) {
+void RouterEndpoint::Stream::Close(const Status& status, Callback<void> quiesced) {
   if (connection_stream_ != nullptr) {
     connection_stream_->forked_streams_.Remove(this);
     connection_stream_ = nullptr;
@@ -196,12 +179,10 @@ void RouterEndpoint::Stream::Close(const Status& status,
   DatagramStream::Close(status, std::move(quiesced));
 }
 
-RouterEndpoint::ConnectionStream::ConnectionStream(RouterEndpoint* endpoint,
-                                                   NodeId peer)
-    : DatagramStream(
-          endpoint, peer,
-          fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered,
-          StreamId(0)),
+RouterEndpoint::ConnectionStream::ConnectionStream(RouterEndpoint* endpoint, NodeId peer)
+    : DatagramStream(endpoint, peer,
+                     fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered,
+                     StreamId(0)),
       endpoint_(endpoint),
       next_stream_id_(peer < endpoint->node_id() ? 2 : 1),
       proxy_(this),
@@ -214,11 +195,9 @@ RouterEndpoint::ConnectionStream::~ConnectionStream() {}
 void RouterEndpoint::ConnectionStream::SendFidl(fidl::Message message) {
   auto slice = Encode(Slice::FromContainer(message.bytes()));
   if (slice.is_error()) {
-    OVERNET_TRACE(ERROR) << "Failed to encode connection stream message: "
-                         << slice.AsStatus();
+    OVERNET_TRACE(ERROR) << "Failed to encode connection stream message: " << slice.AsStatus();
   }
-  SendOp(this, slice->length())
-      .Push(std::move(*slice), Callback<void>::Ignored());
+  SendOp(this, slice->length()).Push(std::move(*slice), Callback<void>::Ignored());
 }
 
 void RouterEndpoint::ConnectionStream::BeginReading() {
@@ -233,17 +212,15 @@ void RouterEndpoint::ConnectionStream::BeginReading() {
           return;
         }
 
-        auto bytes =
-            Decode(Slice::Join((*read_status)->begin(), (*read_status)->end()));
+        auto bytes = Decode(Slice::Join((*read_status)->begin(), (*read_status)->end()));
         if (bytes.is_error()) {
           Close(bytes.AsStatus(), Callback<void>::Ignored());
           return;
         }
         auto process_with = [&bytes](auto& with) {
           std::vector<uint8_t> copy(bytes->begin(), bytes->end());
-          return with.Process_(fidl::Message(
-              fidl::BytePart(copy.data(), copy.size(), copy.size()),
-              fidl::HandlePart(nullptr, 0)));
+          return with.Process_(fidl::Message(fidl::BytePart(copy.data(), copy.size(), copy.size()),
+                                             fidl::HandlePart(nullptr, 0)));
         };
 
         auto status = process_with(proxy_);
@@ -260,28 +237,22 @@ void RouterEndpoint::ConnectionStream::BeginReading() {
 }
 
 StatusOr<RouterEndpoint::NewStream> RouterEndpoint::InitiateStream(
-    NodeId peer,
-    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
+    NodeId peer, fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
     const std::string& service_name) {
-  return GetOrCreateConnectionStream(peer)->Fork(reliability_and_ordering,
-                                                 service_name);
+  return GetOrCreateConnectionStream(peer)->Fork(reliability_and_ordering, service_name);
 }
 
 StatusOr<RouterEndpoint::NewStream> RouterEndpoint::Stream::InitiateFork(
-    fuchsia::overnet::protocol::ReliabilityAndOrdering
-        reliability_and_ordering) {
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering) {
   if (connection_stream_ == nullptr) {
-    return StatusOr<NewStream>(StatusCode::FAILED_PRECONDITION,
-                               "Closed stream");
+    return StatusOr<NewStream>(StatusCode::FAILED_PRECONDITION, "Closed stream");
   }
   return connection_stream_->MakeFork(reliability_and_ordering);
 }
 
-void RouterEndpoint::ConnectionStream::Close(const Status& status,
-                                             Callback<void> quiesced) {
+void RouterEndpoint::ConnectionStream::Close(const Status& status, Callback<void> quiesced) {
   if (status.is_error()) {
-    OVERNET_TRACE(ERROR) << "Connection to " << peer()
-                         << " closed with error: " << status;
+    OVERNET_TRACE(ERROR) << "Connection to " << peer() << " closed with error: " << status;
   }
   if (!closing_status_) {
     closing_status_.Reset(status);
@@ -292,17 +263,15 @@ void RouterEndpoint::ConnectionStream::Close(const Status& status,
   } else {
     forked_streams_.Front()->Close(
         status,
-        Callback<void>(ALLOCATED_CALLBACK,
-                       [this, status, quiesced{std::move(quiesced)}]() mutable {
-                         this->Close(status, std::move(quiesced));
-                       }));
+        Callback<void>(ALLOCATED_CALLBACK, [this, status, quiesced{std::move(quiesced)}]() mutable {
+          this->Close(status, std::move(quiesced));
+        }));
   }
   assert(quiesced.empty());
 }
 
 StatusOr<RouterEndpoint::NewStream> RouterEndpoint::ConnectionStream::MakeFork(
-    fuchsia::overnet::protocol::ReliabilityAndOrdering
-        reliability_and_ordering) {
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering) {
   if (closing_status_) {
     return *closing_status_;
   }
@@ -314,8 +283,7 @@ StatusOr<RouterEndpoint::NewStream> RouterEndpoint::ConnectionStream::MakeFork(
 }
 
 StatusOr<RouterEndpoint::NewStream> RouterEndpoint::ConnectionStream::MakeFork(
-    StreamId id, fuchsia::overnet::protocol::ReliabilityAndOrdering
-                     reliability_and_ordering) {
+    StreamId id, fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering) {
   return NewStream{endpoint_, peer(), reliability_and_ordering, id};
 }
 
@@ -327,18 +295,15 @@ StatusOr<RouterEndpoint::NewStream> RouterEndpoint::ConnectionStream::Fork(
     return outgoing_fork.AsStatus();
   }
 
-  proxy_.ConnectToService(std::move(service_name),
-                          outgoing_fork->stream_id().as_fidl());
+  proxy_.ConnectToService(std::move(service_name), outgoing_fork->stream_id().as_fidl());
   return outgoing_fork;
 }
 
 StatusOr<RouterEndpoint::NewStream> RouterEndpoint::Stream::ReceiveFork(
     fuchsia::overnet::protocol::StreamId stream_id,
-    fuchsia::overnet::protocol::ReliabilityAndOrdering
-        reliability_and_ordering) {
+    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering) {
   if (connection_stream_ == nullptr) {
-    return StatusOr<NewStream>(StatusCode::FAILED_PRECONDITION,
-                               "Closed stream");
+    return StatusOr<NewStream>(StatusCode::FAILED_PRECONDITION, "Closed stream");
   }
   return connection_stream_->MakeFork(stream_id, reliability_and_ordering);
 }
@@ -352,8 +317,7 @@ void RouterEndpoint::OnUnknownStream(NodeId node_id, StreamId stream_id) {
 void RouterEndpoint::ConnectionStream::Stub::ConnectToService(
     std::string service_name, fuchsia::overnet::protocol::StreamId stream_id) {
   auto new_stream = connection_stream_->MakeFork(
-      stream_id,
-      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered);
+      stream_id, fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered);
   if (new_stream.is_error()) {
     OVERNET_TRACE(ERROR) << "Failed to process ConnectToService NewStream: "
                          << new_stream.AsStatus();
@@ -384,9 +348,8 @@ void RouterEndpoint::ConnectionStream::Stub::UpdateNodeStatus(
   auto* const endpoint = connection_stream_->endpoint_;
   OVERNET_TRACE(DEBUG) << "Got: UpdateNodeStatus " << status;
   if (status.id == endpoint->node_id()) {
-    connection_stream_->Close(
-        Status::InvalidArgument("Attempt to set this nodes status"),
-        Callback<void>::Ignored());
+    connection_stream_->Close(Status::InvalidArgument("Attempt to set this nodes status"),
+                              Callback<void>::Ignored());
     return;
   }
   connection_stream_->endpoint_->RegisterPeer(NodeId(status.id));
@@ -398,9 +361,8 @@ void RouterEndpoint::ConnectionStream::Stub::UpdateLinkStatus(
   auto* const endpoint = connection_stream_->endpoint_;
   OVERNET_TRACE(DEBUG) << "Got: UpdateLinkStatus " << status;
   if (status.from == endpoint->node_id()) {
-    connection_stream_->Close(
-        Status::InvalidArgument("Attempt to set this nodes link status"),
-        Callback<void>::Ignored());
+    connection_stream_->Close(Status::InvalidArgument("Attempt to set this nodes link status"),
+                              Callback<void>::Ignored());
     return;
   }
   endpoint->ApplyGossipUpdate(std::move(status));
@@ -409,8 +371,8 @@ void RouterEndpoint::ConnectionStream::Stub::UpdateLinkStatus(
 void RouterEndpoint::ConnectionStream::Stub::UpdateNodeDescription(
     fuchsia::overnet::protocol::PeerDescription description) {
   OVERNET_TRACE(DEBUG) << connection_stream_->endpoint_->node_id()
-                       << " update node description for "
-                       << connection_stream_->peer() << ": " << description;
+                       << " update node description for " << connection_stream_->peer() << ": "
+                       << description;
   connection_stream_->description_ = std::move(description);
   connection_stream_->endpoint_->NewNodeDescriptionTableVersion();
 }

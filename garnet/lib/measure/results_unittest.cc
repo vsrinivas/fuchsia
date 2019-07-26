@@ -10,9 +10,8 @@ namespace tracing {
 namespace measure {
 
 bool operator==(const Result& lhs, const Result& rhs) {
-  return lhs.values == rhs.values && lhs.unit == rhs.unit &&
-         lhs.label == rhs.label && lhs.test_suite == rhs.test_suite &&
-         lhs.split_first == rhs.split_first;
+  return lhs.values == rhs.values && lhs.unit == rhs.unit && lhs.label == rhs.label &&
+         lhs.test_suite == rhs.test_suite && lhs.split_first == rhs.split_first;
 }
 
 namespace {
@@ -63,8 +62,7 @@ TEST(Results, TimeBetween) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {
-      {1.0, 2.0, 3.0}, "ms", "foo1 (bar1) to foo2 (bar2)", "", false};
+  Result expected = {{1.0, 2.0, 3.0}, "ms", "foo1 (bar1) to foo2 (bar2)", "", false};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }

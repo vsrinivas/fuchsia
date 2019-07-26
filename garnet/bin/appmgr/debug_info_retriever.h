@@ -16,9 +16,7 @@
 namespace component {
 
 struct DsoListWrapper {
-  DsoListWrapper(const zx::process& process) {
-    info = inspector_dso_fetch_list(process.get());
-  }
+  DsoListWrapper(const zx::process& process) { info = inspector_dso_fetch_list(process.get()); }
   ~DsoListWrapper() {
     if (info) {
       inspector_dso_free_list(info);
@@ -34,8 +32,8 @@ class DebugInfoRetriever {
   // If thread_ids is not null, it must be an array of thread object ids of size
   // num to output. If thread_ids is null, all threads in the process will be
   // fetched and output.
-  static fbl::String GetInfo(const zx::process* process,
-                             zx_koid_t* thread_ids = nullptr, size_t num = 0);
+  static fbl::String GetInfo(const zx::process* process, zx_koid_t* thread_ids = nullptr,
+                             size_t num = 0);
 
  private:
   static constexpr int kMaxThreads = 1024;

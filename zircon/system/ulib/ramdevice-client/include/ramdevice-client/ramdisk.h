@@ -42,8 +42,7 @@ zx_status_t ramdisk_create_with_guid(uint64_t blk_size, uint64_t blk_count,
                                      ramdisk_client_t** out);
 // Same as above except that it opens the ramdisk relative to the passed in 'dev_root_fd'.
 // Ownership of 'dev_root_fd' is not transferred.
-zx_status_t ramdisk_create_at_with_guid(int dev_root_fd, uint64_t blk_size,
-                                        uint64_t blk_count,
+zx_status_t ramdisk_create_at_with_guid(int dev_root_fd, uint64_t blk_size, uint64_t blk_count,
                                         const uint8_t* type_guid, size_t guid_len,
                                         ramdisk_client_t** out);
 
@@ -78,9 +77,9 @@ zx_status_t ramdisk_grow(const ramdisk_client_t* client, uint64_t required_size)
 // A struct containing the number of write operations transmitted to the ramdisk
 // since the last invocation of "wake" or "sleep_after".
 typedef struct ramdisk_block_write_counts {
-    uint64_t received;
-    uint64_t successful;
-    uint64_t failed;
+  uint64_t received;
+  uint64_t successful;
+  uint64_t failed;
 } ramdisk_block_write_counts_t;
 
 // Returns the ramdisk's current failed, successful, and total block counts as |counts|.

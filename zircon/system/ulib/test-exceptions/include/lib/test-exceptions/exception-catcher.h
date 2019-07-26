@@ -40,69 +40,69 @@ namespace test_exceptions {
 // This class is thread-unsafe so external locking must be applied if it is
 // used across threads.
 class ExceptionCatcher {
-public:
-    ExceptionCatcher() = default;
+ public:
+  ExceptionCatcher() = default;
 
-    // Calls Start() automatically and asserts that it succeeded.
-    template <typename T>
-    explicit ExceptionCatcher(const zx::task<T>& task);
+  // Calls Start() automatically and asserts that it succeeded.
+  template <typename T>
+  explicit ExceptionCatcher(const zx::task<T>& task);
 
-    // Calls Stop() automatically and asserts that it succeeded.
-    ~ExceptionCatcher();
+  // Calls Stop() automatically and asserts that it succeeded.
+  ~ExceptionCatcher();
 
-    // Starts watching for exceptions on |task|. Can only be bound to a single
-    // task at a time.
-    template <typename T>
-    zx_status_t Start(const zx::task<T>& task);
+  // Starts watching for exceptions on |task|. Can only be bound to a single
+  // task at a time.
+  template <typename T>
+  zx_status_t Start(const zx::task<T>& task);
 
-    // Stops watching for exceptions. Returns ZX_ERR_CANCELED if we got any
-    // exceptions that were not handled via ExpectException().
-    //
-    // Any unhandled exceptions will be closed with TRY_NEXT.
-    zx_status_t Stop();
+  // Stops watching for exceptions. Returns ZX_ERR_CANCELED if we got any
+  // exceptions that were not handled via ExpectException().
+  //
+  // Any unhandled exceptions will be closed with TRY_NEXT.
+  zx_status_t Stop();
 
-    // Blocks until an exception is received and kills the exception thread.
-    zx_status_t ExpectException();
+  // Blocks until an exception is received and kills the exception thread.
+  zx_status_t ExpectException();
 
-    // Same as ExpectException() but only matches exceptions on |thread|.
-    //
-    // Any non-|thread| exceptions received will be held until they are
-    // handled or the catcher is stopped.
-    zx_status_t ExpectException(const zx::thread& thread);
+  // Same as ExpectException() but only matches exceptions on |thread|.
+  //
+  // Any non-|thread| exceptions received will be held until they are
+  // handled or the catcher is stopped.
+  zx_status_t ExpectException(const zx::thread& thread);
 
-    // Same as ExpectException() but only matches exceptions on |process|.
-    //
-    // Any non-|process| exceptions received will be held until they are
-    // handled or the catcher is stopped.
-    zx_status_t ExpectException(const zx::process& process);
+  // Same as ExpectException() but only matches exceptions on |process|.
+  //
+  // Any non-|process| exceptions received will be held until they are
+  // handled or the catcher is stopped.
+  zx_status_t ExpectException(const zx::process& process);
 
-private:
-    struct ActiveException {
-        zx_exception_info_t info;
-        zx::exception exception;
-    };
+ private:
+  struct ActiveException {
+    zx_exception_info_t info;
+    zx::exception exception;
+  };
 
-    zx_status_t ExpectException(zx_koid_t pid, zx_koid_t tid);
+  zx_status_t ExpectException(zx_koid_t pid, zx_koid_t tid);
 
-    zx::channel exception_channel_;
-    std::list<ActiveException> active_exceptions_;
+  zx::channel exception_channel_;
+  std::list<ActiveException> active_exceptions_;
 };
 
 template <typename T>
 ExceptionCatcher::ExceptionCatcher(const zx::task<T>& task) {
-    zx_status_t status = Start(task);
-    ZX_ASSERT_MSG(status == ZX_OK, "ExceptionCatcher::Start() failed (%s)",
-                  zx_status_get_string(status));
+  zx_status_t status = Start(task);
+  ZX_ASSERT_MSG(status == ZX_OK, "ExceptionCatcher::Start() failed (%s)",
+                zx_status_get_string(status));
 }
 
 template <typename T>
 zx_status_t ExceptionCatcher::Start(const zx::task<T>& task) {
-    if (exception_channel_) {
-        return ZX_ERR_ALREADY_BOUND;
-    }
-    return task.create_exception_channel(0, &exception_channel_);
+  if (exception_channel_) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+  return task.create_exception_channel(0, &exception_channel_);
 }
 
-} // namespace test_exceptions
+}  // namespace test_exceptions
 
-#endif // ZIRCON_SYSTEM_ULIB_TEST_EXCEPTIONS_INCLUDE_LIB_TEST_EXCEPTIONS_EXCEPTION_CATCHER_H_
+#endif  // ZIRCON_SYSTEM_ULIB_TEST_EXCEPTIONS_INCLUDE_LIB_TEST_EXCEPTIONS_EXCEPTION_CATCHER_H_

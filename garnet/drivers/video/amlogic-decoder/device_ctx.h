@@ -33,9 +33,7 @@ class DeviceCtx {
 
   DeviceFidl* device_fidl() { return device_fidl_.get(); }
 
-  CodecAdmissionControl* codec_admission_control() {
-    return &codec_admission_control_;
-  }
+  CodecAdmissionControl* codec_admission_control() { return &codec_admission_control_; }
 
  private:
   DriverCtx* driver_ = nullptr;

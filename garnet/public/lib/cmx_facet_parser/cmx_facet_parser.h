@@ -24,13 +24,11 @@ class CmxFacetParser {
   // Takes in a parsed JSON document and parses out the different facets. After
   // calling |Parse()| (or the |ParseFromFileAt| variant below), |GetSection()|
   // may be used to retrieve a particular facet.
-  bool Parse(const rapidjson::Document& document,
-             json::JSONParser* json_parser);
+  bool Parse(const rapidjson::Document& document, json::JSONParser* json_parser);
 
   // Like |Parse()|, but parses the json file in |file|, which is rooted at
   // |dirfd|. Returns false if there were any errors.
-  bool ParseFromFileAt(int dirfd, const std::string& file,
-                       json::JSONParser* json_parser);
+  bool ParseFromFileAt(int dirfd, const std::string& file, json::JSONParser* json_parser);
 
   // Returns section value if found, else returns null value.
   const rapidjson::Value& GetSection(const std::string& key) const;

@@ -9,13 +9,8 @@
 // List of tests.
 // A test automatically fails if it's not listed here.
 extern const TestSpec* const kTestSpecs[] = {
-  &kFixedCounterSpec,
-  &kLastBranchSpec,
-  &kOsFlagSpec,
-  &kProgrammableCounterSpec,
-  &kTallySpec,
-  &kUserFlagSpec,
-  &kValueRecordsSpec,
+    &kFixedCounterSpec, &kLastBranchSpec, &kOsFlagSpec,       &kProgrammableCounterSpec,
+    &kTallySpec,        &kUserFlagSpec,   &kValueRecordsSpec,
 };
 
 extern const size_t kTestSpecCount = arraysize(kTestSpecs);

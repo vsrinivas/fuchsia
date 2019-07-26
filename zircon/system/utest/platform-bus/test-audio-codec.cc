@@ -13,19 +13,19 @@
 namespace board_test {
 
 zx_status_t TestBoard::AudioCodecInit() {
-    pbus_dev_t codec_dev = {};
-    codec_dev.name = "codec";
-    codec_dev.vid = PDEV_VID_TEST;
-    codec_dev.pid = PDEV_PID_PBUS_TEST;
-    codec_dev.did = PDEV_DID_TEST_AUDIO_CODEC;
+  pbus_dev_t codec_dev = {};
+  codec_dev.name = "codec";
+  codec_dev.vid = PDEV_VID_TEST;
+  codec_dev.pid = PDEV_PID_PBUS_TEST;
+  codec_dev.did = PDEV_DID_TEST_AUDIO_CODEC;
 
-    zx_status_t status = pbus_.DeviceAdd(&codec_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
-        return status;
-    }
+  zx_status_t status = pbus_.DeviceAdd(&codec_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-} // namespace board_test
+}  // namespace board_test

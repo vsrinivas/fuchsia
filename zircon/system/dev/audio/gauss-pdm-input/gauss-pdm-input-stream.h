@@ -28,114 +28,102 @@ namespace audio {
 namespace gauss {
 
 class GaussPdmInputStream;
-using GaussPdmInputStreamBase =
-    ddk::Device<GaussPdmInputStream, ddk::Messageable, ddk::Unbindable>;
+using GaussPdmInputStreamBase = ddk::Device<GaussPdmInputStream, ddk::Messageable, ddk::Unbindable>;
 
 class GaussPdmInputStream : public GaussPdmInputStreamBase,
                             public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_INPUT>,
                             public fbl::RefCounted<GaussPdmInputStream> {
-public:
-    static zx_status_t Create(zx_device_t* parent);
+ public:
+  static zx_status_t Create(zx_device_t* parent);
 
-    // DDK device implementation
-    void DdkUnbind();
-    void DdkRelease();
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-        return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
-    }
+  // DDK device implementation
+  void DdkUnbind();
+  void DdkRelease();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
+  }
 
-private:
-    friend class fbl::RefPtr<GaussPdmInputStream>;
+ private:
+  friend class fbl::RefPtr<GaussPdmInputStream>;
 
-    GaussPdmInputStream(
-        zx_device_t* parent,
-        fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
-        : GaussPdmInputStreamBase(parent),
-          default_domain_(std::move(default_domain)) {}
+  GaussPdmInputStream(zx_device_t* parent,
+                      fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
+      : GaussPdmInputStreamBase(parent), default_domain_(std::move(default_domain)) {}
 
-    virtual ~GaussPdmInputStream();
+  virtual ~GaussPdmInputStream();
 
-    // Device FIDL implementation
-    zx_status_t GetChannel(fidl_txn_t* txn);
+  // Device FIDL implementation
+  zx_status_t GetChannel(fidl_txn_t* txn);
 
-    int IrqThread();
+  int IrqThread();
 
-    zx_status_t Bind(const char* devname, zx_device_t* parent);
+  zx_status_t Bind(const char* devname, zx_device_t* parent);
 
-    // Thunks for dispatching stream channel events.
-    zx_status_t ProcessStreamChannel(dispatcher::Channel* channel,
-                                     bool privileged);
+  // Thunks for dispatching stream channel events.
+  zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged);
 
-    void DeactivateStreamChannel(const dispatcher::Channel* channel);
+  void DeactivateStreamChannel(const dispatcher::Channel* channel);
 
-    zx_status_t OnGetStreamFormats(dispatcher::Channel* channel,
-                                   const audio_proto::StreamGetFmtsReq& req);
+  zx_status_t OnGetStreamFormats(dispatcher::Channel* channel,
+                                 const audio_proto::StreamGetFmtsReq& req);
 
-    zx_status_t OnSetStreamFormat(dispatcher::Channel* channel,
-                                  const audio_proto::StreamSetFmtReq& req,
-                                  bool privileged);
+  zx_status_t OnSetStreamFormat(dispatcher::Channel* channel,
+                                const audio_proto::StreamSetFmtReq& req, bool privileged);
 
-    zx_status_t OnGetGain(dispatcher::Channel* channel,
-                          const audio_proto::GetGainReq& req);
+  zx_status_t OnGetGain(dispatcher::Channel* channel, const audio_proto::GetGainReq& req);
 
-    zx_status_t OnSetGain(dispatcher::Channel* channel,
-                          const audio_proto::SetGainReq& req);
+  zx_status_t OnSetGain(dispatcher::Channel* channel, const audio_proto::SetGainReq& req);
 
-    zx_status_t OnPlugDetect(dispatcher::Channel* channel,
-                             const audio_proto::PlugDetectReq& req);
+  zx_status_t OnPlugDetect(dispatcher::Channel* channel, const audio_proto::PlugDetectReq& req);
 
-    zx_status_t OnGetUniqueId(dispatcher::Channel* channel, const audio_proto::GetUniqueIdReq& req);
-    zx_status_t OnGetString(dispatcher::Channel* channel, const audio_proto::GetStringReq& req);
+  zx_status_t OnGetUniqueId(dispatcher::Channel* channel, const audio_proto::GetUniqueIdReq& req);
+  zx_status_t OnGetString(dispatcher::Channel* channel, const audio_proto::GetStringReq& req);
 
-    // Thunks for dispatching ring buffer channel events.
-    zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel);
+  // Thunks for dispatching ring buffer channel events.
+  zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel);
 
-    void DeactivateRingBufferChannel(const dispatcher::Channel* channel);
+  void DeactivateRingBufferChannel(const dispatcher::Channel* channel);
 
-    // Stream command handlers
-    // Ring buffer command handlers
-    zx_status_t OnGetFifoDepth(dispatcher::Channel* channel,
-                               const audio_proto::RingBufGetFifoDepthReq& req)
-        __TA_REQUIRES(lock_);
+  // Stream command handlers
+  // Ring buffer command handlers
+  zx_status_t OnGetFifoDepth(dispatcher::Channel* channel,
+                             const audio_proto::RingBufGetFifoDepthReq& req) __TA_REQUIRES(lock_);
 
-    zx_status_t OnGetBuffer(dispatcher::Channel* channel,
-                            const audio_proto::RingBufGetBufferReq& req)
-        __TA_REQUIRES(lock_);
+  zx_status_t OnGetBuffer(dispatcher::Channel* channel, const audio_proto::RingBufGetBufferReq& req)
+      __TA_REQUIRES(lock_);
 
-    zx_status_t OnStart(dispatcher::Channel* channel,
-                        const audio_proto::RingBufStartReq& req)
-        __TA_REQUIRES(lock_);
+  zx_status_t OnStart(dispatcher::Channel* channel, const audio_proto::RingBufStartReq& req)
+      __TA_REQUIRES(lock_);
 
-    zx_status_t OnStop(dispatcher::Channel* channel,
-                       const audio_proto::RingBufStopReq& req)
-        __TA_REQUIRES(lock_);
+  zx_status_t OnStop(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
+      __TA_REQUIRES(lock_);
 
-    static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
+  static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
 
-    fbl::Mutex lock_;
+  fbl::Mutex lock_;
 
-    // Dispatcher framework state
-    fbl::RefPtr<dispatcher::Channel> stream_channel_;
-    fbl::RefPtr<dispatcher::Channel> rb_channel_ __TA_GUARDED(lock_);
-    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
+  // Dispatcher framework state
+  fbl::RefPtr<dispatcher::Channel> stream_channel_;
+  fbl::RefPtr<dispatcher::Channel> rb_channel_ __TA_GUARDED(lock_);
+  fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
-    fbl::Vector<audio_stream_format_range_t> supported_formats_;
+  fbl::Vector<audio_stream_format_range_t> supported_formats_;
 
-    uint32_t frame_size_;
+  uint32_t frame_size_;
 
-    VmoHelper<false> vmo_helper_;
+  VmoHelper<false> vmo_helper_;
 
-    // TODO(almasrymina): hardcoded.
-    uint32_t frame_rate_ = 48000;
+  // TODO(almasrymina): hardcoded.
+  uint32_t frame_rate_ = 48000;
 
-    a113_audio_device_t audio_device_;
-    thrd_t irqthrd_;
+  a113_audio_device_t audio_device_;
+  thrd_t irqthrd_;
 
-    uint32_t fifo_depth_ = 0x200;
+  uint32_t fifo_depth_ = 0x200;
 
-    std::atomic<size_t> ring_buffer_size_;
-    std::atomic<uint32_t> notifications_per_ring_;
+  std::atomic<size_t> ring_buffer_size_;
+  std::atomic<uint32_t> notifications_per_ring_;
 };
 
-} // namespace gauss
-} // namespace audio
+}  // namespace gauss
+}  // namespace audio

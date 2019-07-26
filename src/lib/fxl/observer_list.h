@@ -103,17 +103,13 @@ class ObserverListBase {
 
     // Methods for accessing the underlying container and current element. DO
     // NOT call these methods directly: these are public for testing only.
-    const fxl::WeakPtr<ObserverListBase<ObserverType>>& GetContainer() {
-      return list_;
-    }
+    const fxl::WeakPtr<ObserverListBase<ObserverType>>& GetContainer() { return list_; }
     ObserverType* GetCurrent() const;
 
    private:
     void EnsureValidIndex();
 
-    size_t clamped_max_index() const {
-      return std::min(max_index_, list_->observers_.size());
-    }
+    size_t clamped_max_index() const { return std::min(max_index_, list_->observers_.size()); }
 
     bool is_end() const { return !list_ || index_ == clamped_max_index(); }
 
@@ -138,8 +134,7 @@ class ObserverListBase {
   }
   const_iterator end() const { return const_iterator(); }
 
-  ObserverListBase()
-      : notify_depth_(0), what_(NotifyWhat::kAll), weak_ptr_factory_(this) {}
+  ObserverListBase() : notify_depth_(0), what_(NotifyWhat::kAll), weak_ptr_factory_(this) {}
   explicit ObserverListBase(NotifyWhat what)
       : notify_depth_(0), what_(what), weak_ptr_factory_(this) {}
 
@@ -163,9 +158,7 @@ class ObserverListBase {
  private:
   using ListType = std::vector<ObserverType*>;
 
-  fxl::WeakPtr<ObserverListBase> AsWeakPtr() {
-    return weak_ptr_factory_.GetWeakPtr();
-  }
+  fxl::WeakPtr<ObserverListBase> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
   ListType observers_;
   int notify_depth_;
@@ -181,17 +174,15 @@ class ObserverListBase {
 
 template <class ObserverType>
 template <class ContainerType>
-ObserverListBase<ObserverType>::Iter<ContainerType>::Iter()
-    : index_(0), max_index_(0) {}
+ObserverListBase<ObserverType>::Iter<ContainerType>::Iter() : index_(0), max_index_(0) {}
 
 template <class ObserverType>
 template <class ContainerType>
 ObserverListBase<ObserverType>::Iter<ContainerType>::Iter(ContainerType* list)
     : list_(const_cast<ObserverListBase<ObserverType>*>(list)->AsWeakPtr()),
       index_(0),
-      max_index_(list->what_ == NotifyWhat::kAll
-                     ? std::numeric_limits<size_t>::max()
-                     : list->observers_.size()) {
+      max_index_(list->what_ == NotifyWhat::kAll ? std::numeric_limits<size_t>::max()
+                                                 : list->observers_.size()) {
   EnsureValidIndex();
   FXL_DCHECK(list_);
   ++list_->notify_depth_;
@@ -206,8 +197,7 @@ ObserverListBase<ObserverType>::Iter<ContainerType>::~Iter() {
 
 template <class ObserverType>
 template <class ContainerType>
-bool ObserverListBase<ObserverType>::Iter<ContainerType>::operator==(
-    const Iter& other) const {
+bool ObserverListBase<ObserverType>::Iter<ContainerType>::operator==(const Iter& other) const {
   if (is_end() && other.is_end())
     return true;
   return list_.get() == other.list_.get() && index_ == other.index_;
@@ -215,8 +205,7 @@ bool ObserverListBase<ObserverType>::Iter<ContainerType>::operator==(
 
 template <class ObserverType>
 template <class ContainerType>
-bool ObserverListBase<ObserverType>::Iter<ContainerType>::operator!=(
-    const Iter& other) const {
+bool ObserverListBase<ObserverType>::Iter<ContainerType>::operator!=(const Iter& other) const {
   return !operator==(other);
 }
 
@@ -233,8 +222,7 @@ ObserverListBase<ObserverType>::Iter<ContainerType>::operator++() {
 
 template <class ObserverType>
 template <class ContainerType>
-ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::operator->()
-    const {
+ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::operator->() const {
   ObserverType* current = GetCurrent();
   FXL_DCHECK(current);
   return current;
@@ -242,8 +230,7 @@ ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::operator->()
 
 template <class ObserverType>
 template <class ContainerType>
-ObserverType& ObserverListBase<ObserverType>::Iter<ContainerType>::operator*()
-    const {
+ObserverType& ObserverListBase<ObserverType>::Iter<ContainerType>::operator*() const {
   ObserverType* current = GetCurrent();
   FXL_DCHECK(current);
   return *current;
@@ -251,8 +238,7 @@ ObserverType& ObserverListBase<ObserverType>::Iter<ContainerType>::operator*()
 
 template <class ObserverType>
 template <class ContainerType>
-ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::GetCurrent()
-    const {
+ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::GetCurrent() const {
   if (!list_)
     return nullptr;
   return index_ < clamped_max_index() ? list_->observers_[index_] : nullptr;
@@ -272,8 +258,7 @@ void ObserverListBase<ObserverType>::Iter<ContainerType>::EnsureValidIndex() {
 template <class ObserverType>
 void ObserverListBase<ObserverType>::AddObserver(ObserverType* obs) {
   FXL_DCHECK(obs);
-  if (std::find(observers_.begin(), observers_.end(), obs) !=
-      observers_.end()) {
+  if (std::find(observers_.begin(), observers_.end(), obs) != observers_.end()) {
     FXL_NOTREACHED() << "Observers can only be added once!";
     return;
   }
@@ -283,8 +268,7 @@ void ObserverListBase<ObserverType>::AddObserver(ObserverType* obs) {
 template <class ObserverType>
 void ObserverListBase<ObserverType>::RemoveObserver(ObserverType* obs) {
   FXL_DCHECK(obs);
-  typename ListType::iterator it =
-      std::find(observers_.begin(), observers_.end(), obs);
+  typename ListType::iterator it = std::find(observers_.begin(), observers_.end(), obs);
   if (it != observers_.end()) {
     if (notify_depth_) {
       *it = nullptr;
@@ -295,8 +279,7 @@ void ObserverListBase<ObserverType>::RemoveObserver(ObserverType* obs) {
 }
 
 template <class ObserverType>
-bool ObserverListBase<ObserverType>::HasObserver(
-    const ObserverType* observer) const {
+bool ObserverListBase<ObserverType>::HasObserver(const ObserverType* observer) const {
   for (size_t i = 0; i < observers_.size(); ++i) {
     if (observers_[i] == observer)
       return true;
@@ -307,8 +290,7 @@ bool ObserverListBase<ObserverType>::HasObserver(
 template <class ObserverType>
 void ObserverListBase<ObserverType>::Clear() {
   if (notify_depth_) {
-    for (typename ListType::iterator it = observers_.begin();
-         it != observers_.end(); ++it) {
+    for (typename ListType::iterator it = observers_.begin(); it != observers_.end(); ++it) {
       *it = nullptr;
     }
   } else {
@@ -318,8 +300,7 @@ void ObserverListBase<ObserverType>::Clear() {
 
 template <class ObserverType>
 void ObserverListBase<ObserverType>::Compact() {
-  observers_.erase(std::remove(observers_.begin(), observers_.end(), nullptr),
-                   observers_.end());
+  observers_.erase(std::remove(observers_.begin(), observers_.end(), nullptr), observers_.end());
 }
 
 template <class ObserverType, bool check_empty = false>
@@ -328,8 +309,7 @@ class ObserverList : public ObserverListBase<ObserverType> {
   using NotifyWhat = typename ObserverListBase<ObserverType>::NotifyWhat;
 
   ObserverList() {}
-  explicit ObserverList(NotifyWhat what)
-      : ObserverListBase<ObserverType>(what) {}
+  explicit ObserverList(NotifyWhat what) : ObserverListBase<ObserverType>(what) {}
 
   ~ObserverList() {
     // When check_empty is true, assert that the list is empty on destruction.
@@ -339,9 +319,7 @@ class ObserverList : public ObserverListBase<ObserverType> {
     }
   }
 
-  bool might_have_observers() const {
-    return ObserverListBase<ObserverType>::size() != 0;
-  }
+  bool might_have_observers() const { return ObserverListBase<ObserverType>::size() != 0; }
 };
 
 }  // namespace fxl

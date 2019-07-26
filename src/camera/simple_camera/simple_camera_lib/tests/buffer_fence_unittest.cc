@@ -21,8 +21,7 @@ TEST_F(BufferFenceTest, buffer_fence_smoketest) {
   zx::event release_fence;
   bf->DuplicateReleaseFence(&release_fence);
 
-  bf->SetReleaseFenceHandler(
-      [&signalled_index](BufferFence* b) { signalled_index = b->index(); });
+  bf->SetReleaseFenceHandler([&signalled_index](BufferFence* b) { signalled_index = b->index(); });
 
   // signal the fence so we will get a callback
   release_fence.signal(0, ZX_EVENT_SIGNALED);

@@ -17,35 +17,35 @@ namespace ftl {
 
 // Wrapper for nand Queue() protocol operations.
 class NandOperation {
-  public:
-    explicit NandOperation(size_t op_size) : op_size_(op_size) {}
-    ~NandOperation() {}
+ public:
+  explicit NandOperation(size_t op_size) : op_size_(op_size) {}
+  ~NandOperation() {}
 
-    // Creates a vmo and sets the handle on the nand_operation_t.
-    zx_status_t SetDataVmo(size_t num_bytes);
-    zx_status_t SetOobVmo(size_t num_bytes);
+  // Creates a vmo and sets the handle on the nand_operation_t.
+  zx_status_t SetDataVmo(size_t num_bytes);
+  zx_status_t SetOobVmo(size_t num_bytes);
 
-    nand_operation_t* GetOperation();
+  nand_operation_t* GetOperation();
 
-    // Executes the operation and returns the final operation status.
-    zx_status_t Execute(OobDoubler* parent);
+  // Executes the operation and returns the final operation status.
+  zx_status_t Execute(OobDoubler* parent);
 
-    // Accessors for the memory represented by the operation's vmo.
-    size_t buffer_size() const { return mapper_.size(); }
-    char* buffer() const { return reinterpret_cast<char*>(mapper_.start()); }
+  // Accessors for the memory represented by the operation's vmo.
+  size_t buffer_size() const { return mapper_.size(); }
+  char* buffer() const { return reinterpret_cast<char*>(mapper_.start()); }
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(NandOperation);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(NandOperation);
 
-  private:
-    static void OnCompletion(void* cookie, zx_status_t status, nand_operation_t* op);
-    zx_status_t GetVmo(size_t num_bytes);
-    void CreateOperation();
+ private:
+  static void OnCompletion(void* cookie, zx_status_t status, nand_operation_t* op);
+  zx_status_t GetVmo(size_t num_bytes);
+  void CreateOperation();
 
-    sync_completion_t event_;
-    fzl::OwnedVmoMapper mapper_;
-    size_t op_size_;
-    zx_status_t status_ = ZX_ERR_INTERNAL;
-    std::unique_ptr<char[]> raw_buffer_;
+  sync_completion_t event_;
+  fzl::OwnedVmoMapper mapper_;
+  size_t op_size_;
+  zx_status_t status_ = ZX_ERR_INTERNAL;
+  std::unique_ptr<char[]> raw_buffer_;
 };
 
 }  // namespace ftl.

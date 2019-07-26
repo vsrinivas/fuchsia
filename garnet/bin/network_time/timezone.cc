@@ -68,43 +68,38 @@ bool Timezone::UpdateSystemTime(uint32_t tries) {
       }
       continue;
     } else if (ret.first != OK || !ret.second) {
-      FX_LOGS(ERROR) << "Error with roughtime server [" << ret.first
-                     << "], abort";
+      FX_LOGS(ERROR) << "Error with roughtime server [" << ret.first << "], abort";
       return false;
     }
     if (SetSystemTime(rtc_service_path_, *ret.second)) {
       return true;
     }
   }
-  FX_LOGS(ERROR) << "Inexplicably failed to get time after " << tries
-                 << " attempts, abort";
+  FX_LOGS(ERROR) << "Inexplicably failed to get time after " << tries << " attempts, abort";
   return false;
 }
 
-bool Timezone::SetSystemTime(const std::string& rtc_service_path,
-                             zx::time_utc time) {
+bool Timezone::SetSystemTime(const std::string& rtc_service_path, zx::time_utc time) {
   int64_t epoch_seconds = time.get() / 1'000'000'000;
   struct tm ptm;
   gmtime_r(&epoch_seconds, &ptm);
   const rtc::Time rtc_time = ToRtcTime(&ptm);
 
   rtc::DeviceSyncPtr rtc_device_ptr;
-  zx_status_t status =
-      fdio_service_connect(rtc_service_path.c_str(),
-                           rtc_device_ptr.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_service_connect(rtc_service_path.c_str(),
+                                            rtc_device_ptr.NewRequest().TakeChannel().release());
 
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't open RTC service at " << rtc_service_path
-                   << ": " << strerror(errno);
+    FX_LOGS(ERROR) << "Couldn't open RTC service at " << rtc_service_path << ": "
+                   << strerror(errno);
     return false;
   }
 
   zx_status_t set_status;
   status = rtc_device_ptr->Set(rtc_time, &set_status);
   if ((status != ZX_OK) || (set_status != ZX_OK)) {
-    FX_LOGS(ERROR) << "rtc::DeviceSyncPtr->Set failed: " << status << "/"
-                   << set_status << " for " << ToIso8601String(epoch_seconds)
-                   << " (" << epoch_seconds << ")";
+    FX_LOGS(ERROR) << "rtc::DeviceSyncPtr->Set failed: " << status << "/" << set_status << " for "
+                   << ToIso8601String(epoch_seconds) << " (" << epoch_seconds << ")";
     return false;
   }
   FX_LOGS(INFO) << "time set to: " << ToIso8601String(epoch_seconds);

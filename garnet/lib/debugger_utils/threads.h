@@ -15,8 +15,7 @@
 
 namespace debugger_utils {
 
-using WithThreadSuspendedFunction =
-    std::function<zx_status_t(const zx::thread& thread)>;
+using WithThreadSuspendedFunction = std::function<zx_status_t(const zx::thread& thread)>;
 
 // Return the thread's current state according to the o/s.
 // The result is one if ZX_THREAD_STATE_*.
@@ -40,9 +39,8 @@ const std::string ThreadOsStateNameAsString(uint32_t state);
 // If the thread terminates while waiting for it to suspend then the result
 // is ZX_ERR_NOT_FOUND.
 // Otherwise the result is the result of |function|.
-zx_status_t WithThreadSuspended(
-    const zx::thread& thread, zx::duration thread_suspend_timeout,
-    const WithThreadSuspendedFunction& function);
+zx_status_t WithThreadSuspended(const zx::thread& thread, zx::duration thread_suspend_timeout,
+                                const WithThreadSuspendedFunction& function);
 
 // Suspend all |threads|, run |function| on each one in order, and then
 // resume them. If any call to |function| returns !ZX_OK then the iteration
@@ -52,10 +50,9 @@ zx_status_t WithThreadSuspended(
 // If waiting for a thread to suspend times out then |function| is not called
 // on any thread, and the result is ZX_ERR_TIMED_OUT.
 // Otherwise the result is ZX_OK.
-zx_status_t WithAllThreadsSuspended(
-    const std::vector<zx::thread>& threads,
-    zx::duration thread_suspend_timeout,
-    const WithThreadSuspendedFunction& function);
+zx_status_t WithAllThreadsSuspended(const std::vector<zx::thread>& threads,
+                                    zx::duration thread_suspend_timeout,
+                                    const WithThreadSuspendedFunction& function);
 
 // Print a dump of |thread| suitable for use with the symbolizer.
 // If |in_exception| is true then the thread is in an exception and extra

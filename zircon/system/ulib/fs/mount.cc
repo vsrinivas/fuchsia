@@ -24,149 +24,147 @@ namespace fs {
 
 constexpr Vfs::MountNode::MountNode() : vn_(nullptr) {}
 
-Vfs::MountNode::~MountNode() {
-    ZX_DEBUG_ASSERT(vn_ == nullptr);
-}
+Vfs::MountNode::~MountNode() { ZX_DEBUG_ASSERT(vn_ == nullptr); }
 
 void Vfs::MountNode::SetNode(fbl::RefPtr<Vnode> vn) {
-    ZX_DEBUG_ASSERT(vn_ == nullptr);
-    vn_ = vn;
+  ZX_DEBUG_ASSERT(vn_ == nullptr);
+  vn_ = vn;
 }
 
 zx::channel Vfs::MountNode::ReleaseRemote() {
-    ZX_DEBUG_ASSERT(vn_ != nullptr);
-    zx::channel h = vn_->DetachRemote();
-    vn_ = nullptr;
-    return h;
+  ZX_DEBUG_ASSERT(vn_ != nullptr);
+  zx::channel h = vn_->DetachRemote();
+  vn_ = nullptr;
+  return h;
 }
 
 bool Vfs::MountNode::VnodeMatch(fbl::RefPtr<Vnode> vn) const {
-    ZX_DEBUG_ASSERT(vn_ != nullptr);
-    return vn == vn_;
+  ZX_DEBUG_ASSERT(vn_ != nullptr);
+  return vn == vn_;
 }
 
 // Installs a remote filesystem on vn and adds it to the remote_list_.
 zx_status_t Vfs::InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) {
-    if (vn == nullptr) {
-        return ZX_ERR_ACCESS_DENIED;
-    }
+  if (vn == nullptr) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
 
-    // Allocate a node to track the remote handle
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    zx_status_t status = vn->AttachRemote(std::move(h));
-    if (status != ZX_OK) {
-        return status;
-    }
-    // Save this node in the list of mounted vnodes
-    mount_point->SetNode(std::move(vn));
-    fbl::AutoLock lock(&vfs_lock_);
-    remote_list_.push_front(std::move(mount_point));
-    return ZX_OK;
+  // Allocate a node to track the remote handle
+  fbl::AllocChecker ac;
+  fbl::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  zx_status_t status = vn->AttachRemote(std::move(h));
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Save this node in the list of mounted vnodes
+  mount_point->SetNode(std::move(vn));
+  fbl::AutoLock lock(&vfs_lock_);
+  remote_list_.push_front(std::move(mount_point));
+  return ZX_OK;
 }
 
 // Installs a remote filesystem on vn and adds it to the remote_list_.
 zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
-    if (vn == nullptr) {
-        return ZX_ERR_ACCESS_DENIED;
-    }
+  if (vn == nullptr) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
 
-    // Allocate a node to track the remote handle
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    zx_status_t status = vn->AttachRemote(std::move(h));
-    if (status != ZX_OK) {
-        return status;
-    }
-    // Save this node in the list of mounted vnodes
-    mount_point->SetNode(std::move(vn));
-    remote_list_.push_front(std::move(mount_point));
-    return ZX_OK;
+  // Allocate a node to track the remote handle
+  fbl::AllocChecker ac;
+  fbl::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  zx_status_t status = vn->AttachRemote(std::move(h));
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Save this node in the list of mounted vnodes
+  mount_point->SetNode(std::move(vn));
+  remote_list_.push_front(std::move(mount_point));
+  return ZX_OK;
 }
 
 zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountChannel h,
                             uint32_t flags) {
-    fbl::AutoLock lock(&vfs_lock_);
-    zx_status_t r = OpenLocked(vn, &vn, name, &name, ZX_FS_FLAG_CREATE |
-                               ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY |
-                               ZX_FS_FLAG_NOREMOTE, S_IFDIR);
-    ZX_DEBUG_ASSERT(r <= ZX_OK); // Should not be accessing remote nodes
-    if (r < 0) {
-        return r;
+  fbl::AutoLock lock(&vfs_lock_);
+  zx_status_t r = OpenLocked(
+      vn, &vn, name, &name,
+      ZX_FS_FLAG_CREATE | ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE,
+      S_IFDIR);
+  ZX_DEBUG_ASSERT(r <= ZX_OK);  // Should not be accessing remote nodes
+  if (r < 0) {
+    return r;
+  }
+  if (vn->IsRemote()) {
+    if (flags & fuchsia_io_MOUNT_CREATE_FLAG_REPLACE) {
+      // There is an old remote handle on this vnode; shut it down and
+      // replace it with our own.
+      zx::channel old_remote;
+      Vfs::UninstallRemoteLocked(vn, &old_remote);
+      vfs_unmount_handle(old_remote.release(), 0);
+    } else {
+      return ZX_ERR_BAD_STATE;
     }
-    if (vn->IsRemote()) {
-        if (flags & fuchsia_io_MOUNT_CREATE_FLAG_REPLACE) {
-            // There is an old remote handle on this vnode; shut it down and
-            // replace it with our own.
-            zx::channel old_remote;
-            Vfs::UninstallRemoteLocked(vn, &old_remote);
-            vfs_unmount_handle(old_remote.release(), 0);
-        } else {
-            return ZX_ERR_BAD_STATE;
-        }
-    }
-    return Vfs::InstallRemoteLocked(vn, std::move(h));
+  }
+  return Vfs::InstallRemoteLocked(vn, std::move(h));
 }
 
 zx_status_t Vfs::UninstallRemote(fbl::RefPtr<Vnode> vn, zx::channel* h) {
-    fbl::AutoLock lock(&vfs_lock_);
-    return UninstallRemoteLocked(std::move(vn), h);
+  fbl::AutoLock lock(&vfs_lock_);
+  return UninstallRemoteLocked(std::move(vn), h);
 }
 
 zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
                                    fbl::StringPiece path, uint32_t flags, uint32_t mode) {
-    fbl::AutoLock lock(&vfs_lock_);
-    zx_handle_t h = vn->GetRemote();
-    if (h == ZX_HANDLE_INVALID) {
-        return ZX_ERR_NOT_FOUND;
-    }
+  fbl::AutoLock lock(&vfs_lock_);
+  zx_handle_t h = vn->GetRemote();
+  if (h == ZX_HANDLE_INVALID) {
+    return ZX_ERR_NOT_FOUND;
+  }
 
-    zx_status_t r = fuchsia_io_DirectoryOpen(h, flags, mode, path.data(),
-                                             path.length(), channel.release());
-    if (r == ZX_ERR_PEER_CLOSED) {
-        zx::channel c;
-        UninstallRemoteLocked(std::move(vn), &c);
-    }
-    return r;
+  zx_status_t r =
+      fuchsia_io_DirectoryOpen(h, flags, mode, path.data(), path.length(), channel.release());
+  if (r == ZX_ERR_PEER_CLOSED) {
+    zx::channel c;
+    UninstallRemoteLocked(std::move(vn), &c);
+  }
+  return r;
 }
 
 // Uninstall the remote filesystem mounted on vn. Removes vn from the
 // remote_list_, and sends its corresponding filesystem an 'unmount' signal.
 zx_status_t Vfs::UninstallRemoteLocked(fbl::RefPtr<Vnode> vn, zx::channel* h) {
-    fbl::unique_ptr<MountNode> mount_point;
-    {
-        mount_point = remote_list_.erase_if([&vn](const MountNode& node) {
-            return node.VnodeMatch(vn);
-        });
-        if (!mount_point) {
-            return ZX_ERR_NOT_FOUND;
-        }
+  fbl::unique_ptr<MountNode> mount_point;
+  {
+    mount_point =
+        remote_list_.erase_if([&vn](const MountNode& node) { return node.VnodeMatch(vn); });
+    if (!mount_point) {
+      return ZX_ERR_NOT_FOUND;
     }
-    *h = mount_point->ReleaseRemote();
-    return ZX_OK;
+  }
+  *h = mount_point->ReleaseRemote();
+  return ZX_OK;
 }
 
 // Uninstall all remote filesystems. Acts like 'UninstallRemote' for all
 // known remotes.
 zx_status_t Vfs::UninstallAll(zx_time_t deadline) {
-    fbl::unique_ptr<MountNode> mount_point;
-    for (;;) {
-        {
-            fbl::AutoLock lock(&vfs_lock_);
-            mount_point = remote_list_.pop_front();
-        }
-        if (mount_point) {
-            vfs_unmount_handle(mount_point->ReleaseRemote().release(), deadline);
-        } else {
-            return ZX_OK;
-        }
+  fbl::unique_ptr<MountNode> mount_point;
+  for (;;) {
+    {
+      fbl::AutoLock lock(&vfs_lock_);
+      mount_point = remote_list_.pop_front();
     }
+    if (mount_point) {
+      vfs_unmount_handle(mount_point->ReleaseRemote().release(), deadline);
+    } else {
+      return ZX_OK;
+    }
+  }
 }
 
-} // namespace fs
+}  // namespace fs

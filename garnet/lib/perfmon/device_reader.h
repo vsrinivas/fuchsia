@@ -21,15 +21,13 @@ namespace internal {
 
 class DeviceReader final : public Reader {
  public:
-  static bool Create(fxl::WeakPtr<Controller> controller,
-                     uint32_t buffer_size_in_pages,
+  static bool Create(fxl::WeakPtr<Controller> controller, uint32_t buffer_size_in_pages,
                      std::unique_ptr<Reader>* out_reader);
 
   ~DeviceReader();
 
  private:
-  DeviceReader(fxl::WeakPtr<Controller> controller,
-               uint32_t buffer_size_in_pages, zx::vmar vmar);
+  DeviceReader(fxl::WeakPtr<Controller> controller, uint32_t buffer_size_in_pages, zx::vmar vmar);
 
   bool MapBuffer(const std::string& name, uint32_t trace_num) override;
   bool UnmapBuffer() override;

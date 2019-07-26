@@ -31,8 +31,7 @@ constexpr char kPkgPrefix[] = "/pkgfs/packages/";
 // Code which uses this url:
 // https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/appmgr/root_loader.cc
 //
-void TestFileComponentInfo(const fbl::String& path,
-                           fbl::String* component_url_out,
+void TestFileComponentInfo(const fbl::String& path, fbl::String* component_url_out,
                            fbl::String* cmx_file_path_out);
 
 // Invokes a Fuchsia test binary and writes its output to a file.
@@ -42,11 +41,9 @@ void TestFileComponentInfo(const fbl::String& path,
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
-std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
-                                       const char* output_dir,
-                                       const char* output_filename,
-                                       const char* test_name);
+std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_dir,
+                                       const char* output_filename, const char* test_name);
 
-} // namespace runtests
+}  // namespace runtests
 
-#endif // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_FUCHSIA_RUN_TEST_H_
+#endif  // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_FUCHSIA_RUN_TEST_H_

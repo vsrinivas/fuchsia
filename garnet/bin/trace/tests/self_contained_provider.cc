@@ -35,8 +35,8 @@ static int SelfContainedProviderThread(void* arg) {
 }
 
 __EXPORT bool StartSelfContainedProvider(thrd_t* out_thread) {
-  if (thrd_create_with_name(out_thread, SelfContainedProviderThread, nullptr,
-                            kName) != thrd_success) {
+  if (thrd_create_with_name(out_thread, SelfContainedProviderThread, nullptr, kName) !=
+      thrd_success) {
     FXL_LOG(ERROR) << "Error creating " << kName << " thread";
     return false;
   }

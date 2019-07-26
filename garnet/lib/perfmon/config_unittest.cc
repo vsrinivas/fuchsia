@@ -19,30 +19,27 @@ TEST(Config, Events) {
 
   EXPECT_EQ(config.GetEventCount(), 0u);
 
-  EXPECT_EQ(config.AddEvent(kEventOne, 0, 0),
-            Config::Status::OK);
+  EXPECT_EQ(config.AddEvent(kEventOne, 0, 0), Config::Status::OK);
   EXPECT_EQ(config.GetEventCount(), 1u);
 
-  EXPECT_EQ(config.AddEvent(kEventTwo, 1000, Config::kFlagOs),
-            Config::Status::OK);
+  EXPECT_EQ(config.AddEvent(kEventTwo, 1000, Config::kFlagOs), Config::Status::OK);
   EXPECT_EQ(config.GetEventCount(), 2u);
 
   std::vector<Config::EventConfig> events;
-  config.IterateOverEvents([&events](const Config::EventConfig& event) {
-    events.push_back(event);
-  });
+  config.IterateOverEvents(
+      [&events](const Config::EventConfig& event) { events.push_back(event); });
 
   EXPECT_EQ(events.size(), 2u);
   for (const auto& event : events) {
     switch (event.event) {
-    case kEventOne:
-      EXPECT_EQ(event.rate, 0u);
-      EXPECT_EQ(event.flags, 0u);
-      break;
-    case kEventTwo:
-      EXPECT_EQ(event.rate, 1000u);
-      EXPECT_EQ(event.flags, Config::kFlagOs);
-      break;
+      case kEventOne:
+        EXPECT_EQ(event.rate, 0u);
+        EXPECT_EQ(event.flags, 0u);
+        break;
+      case kEventTwo:
+        EXPECT_EQ(event.rate, 1000u);
+        EXPECT_EQ(event.flags, Config::kFlagOs);
+        break;
     }
   }
 }
@@ -50,8 +47,7 @@ TEST(Config, Events) {
 TEST(Config, SampleMode) {
   Config config;
 
-  EXPECT_EQ(config.AddEvent(kEventOne, 1000, Config::kFlagOs),
-            Config::Status::OK);
+  EXPECT_EQ(config.AddEvent(kEventOne, 1000, Config::kFlagOs), Config::Status::OK);
 
   EXPECT_EQ(config.GetMode(), CollectionMode::kSample);
 }
@@ -59,8 +55,7 @@ TEST(Config, SampleMode) {
 TEST(Config, TallyMode) {
   Config config;
 
-  EXPECT_EQ(config.AddEvent(kEventTwo, 0, Config::kFlagOs),
-            Config::Status::OK);
+  EXPECT_EQ(config.AddEvent(kEventTwo, 0, Config::kFlagOs), Config::Status::OK);
 
   EXPECT_EQ(config.GetMode(), CollectionMode::kTally);
 }
@@ -68,10 +63,8 @@ TEST(Config, TallyMode) {
 TEST(Config, Reset) {
   Config config;
 
-  EXPECT_EQ(config.AddEvent(kEventOne, 10, Config::kFlagOs),
-            Config::Status::OK);
-  EXPECT_EQ(config.AddEvent(kEventTwo, 1000, Config::kFlagUser),
-            Config::Status::OK);
+  EXPECT_EQ(config.AddEvent(kEventOne, 10, Config::kFlagOs), Config::Status::OK);
+  EXPECT_EQ(config.AddEvent(kEventTwo, 1000, Config::kFlagUser), Config::Status::OK);
   EXPECT_EQ(config.GetEventCount(), 2u);
 
   config.Reset();
@@ -81,8 +74,7 @@ TEST(Config, Reset) {
 TEST(Config, ToString) {
   Config config;
 
-  EXPECT_EQ(config.AddEvent(kEventOne, 10, Config::kFlagOs),
-            Config::Status::OK);
+  EXPECT_EQ(config.AddEvent(kEventOne, 10, Config::kFlagOs), Config::Status::OK);
 
   EXPECT_EQ(config.ToString(), "event 0x2001, rate 10, flags 0x1");
 }

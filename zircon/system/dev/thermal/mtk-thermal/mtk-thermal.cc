@@ -32,7 +32,7 @@ constexpr uint32_t kSrcClkFreq = 66'000'000;
 constexpr uint32_t kSrcClkDivider = 256;
 
 constexpr uint32_t FreqToPeriodUnits(uint32_t freq_hz, uint32_t period) {
-    return (kSrcClkFreq / (kSrcClkDivider * (period + 1) * freq_hz)) - 1;
+  return (kSrcClkFreq / (kSrcClkDivider * (period + 1) * freq_hz)) - 1;
 }
 
 constexpr uint32_t kThermalPeriod = 1023;
@@ -40,16 +40,14 @@ constexpr uint32_t kFilterInterval = 0;
 constexpr uint32_t kSenseInterval = FreqToPeriodUnits(10, kThermalPeriod);
 constexpr uint32_t kAhbPollPeriod = FreqToPeriodUnits(10, kThermalPeriod);
 
-constexpr int32_t FixedPoint(int32_t value) {
-    return (value * 10000) >> 12;
-}
+constexpr int32_t FixedPoint(int32_t value) { return (value * 10000) >> 12; }
 
 constexpr int32_t RawWithGain(int32_t raw, int32_t gain) {
-    return (FixedPoint(raw) * 10000) / gain;
+  return (FixedPoint(raw) * 10000) / gain;
 }
 
 constexpr int32_t TempWithoutGain(int32_t temp, int32_t gain) {
-    return (((temp * gain) / 10000) << 12) / 10000;
+  return (((temp * gain) / 10000) << 12) / 10000;
 }
 
 }  // namespace
@@ -57,598 +55,584 @@ constexpr int32_t TempWithoutGain(int32_t temp, int32_t gain) {
 namespace thermal {
 
 zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
-    zx_status_t status;
+  zx_status_t status;
 
-    ddk::CompositeProtocolClient composite(parent);
-    if (!composite.is_valid()) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_COMPOSITE not available\n", __FILE__);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_COMPOSITE not available\n", __FILE__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    zx_device_t* pdev_component;
-    size_t actual;
-    composite.GetComponents(&pdev_component, 1, &actual);
-    if (actual != 1) {
-        zxlogf(ERROR, "%s: could not get pdev_component\n", __FILE__);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  zx_device_t* pdev_component;
+  size_t actual;
+  composite.GetComponents(&pdev_component, 1, &actual);
+  if (actual != 1) {
+    zxlogf(ERROR, "%s: could not get pdev_component\n", __FILE__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    ddk::PDev pdev(pdev_component);
-    if (!pdev.is_valid()) {
-        zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  ddk::PDev pdev(pdev_component);
+  if (!pdev.is_valid()) {
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    pdev_device_info_t info;
-    if ((status = pdev.GetDeviceInfo(&info)) != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_get_device_info failed\n", __FILE__);
-        return status;
-    }
+  pdev_device_info_t info;
+  if ((status = pdev.GetDeviceInfo(&info)) != ZX_OK) {
+    zxlogf(ERROR, "%s: pdev_get_device_info failed\n", __FILE__);
+    return status;
+  }
 
-    std::optional<ddk::MmioBuffer> mmio;
-    if ((status = pdev.MapMmio(0, &mmio)) != ZX_OK) {
-        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
-        return status;
-    }
+  std::optional<ddk::MmioBuffer> mmio;
+  if ((status = pdev.MapMmio(0, &mmio)) != ZX_OK) {
+    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    return status;
+  }
 
-    std::optional<ddk::MmioBuffer> fuse_mmio;
-    if ((status = pdev.MapMmio(1, &fuse_mmio)) != ZX_OK) {
-        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
-        return status;
-    }
+  std::optional<ddk::MmioBuffer> fuse_mmio;
+  if ((status = pdev.MapMmio(1, &fuse_mmio)) != ZX_OK) {
+    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    return status;
+  }
 
-    std::optional<ddk::MmioBuffer> pll_mmio;
-    if ((status = pdev.MapMmio(2, &pll_mmio)) != ZX_OK) {
-        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
-        return status;
-    }
+  std::optional<ddk::MmioBuffer> pll_mmio;
+  if ((status = pdev.MapMmio(2, &pll_mmio)) != ZX_OK) {
+    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    return status;
+  }
 
-    std::optional<ddk::MmioBuffer> pmic_mmio;
-    if ((status = pdev.MapMmio(3, &pmic_mmio)) != ZX_OK) {
-        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
-        return status;
-    }
+  std::optional<ddk::MmioBuffer> pmic_mmio;
+  if ((status = pdev.MapMmio(3, &pmic_mmio)) != ZX_OK) {
+    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    return status;
+  }
 
-    std::optional<ddk::MmioBuffer> infracfg_mmio;
-    if ((status = pdev.MapMmio(4, &infracfg_mmio)) != ZX_OK) {
-        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
-        return status;
-    }
+  std::optional<ddk::MmioBuffer> infracfg_mmio;
+  if ((status = pdev.MapMmio(4, &infracfg_mmio)) != ZX_OK) {
+    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    return status;
+  }
 
-    fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
-    status = device_get_metadata(parent, DEVICE_METADATA_THERMAL_CONFIG, &thermal_info,
-                                 sizeof(thermal_info), &actual);
-    if (status != ZX_OK || actual != sizeof(thermal_info)) {
-        zxlogf(ERROR, "%s: device_get_metadata failed\n", __FILE__);
-        return status == ZX_OK ? ZX_ERR_INTERNAL : status;
-    }
+  fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
+  status = device_get_metadata(parent, DEVICE_METADATA_THERMAL_CONFIG, &thermal_info,
+                               sizeof(thermal_info), &actual);
+  if (status != ZX_OK || actual != sizeof(thermal_info)) {
+    zxlogf(ERROR, "%s: device_get_metadata failed\n", __FILE__);
+    return status == ZX_OK ? ZX_ERR_INTERNAL : status;
+  }
 
-    zx::interrupt irq;
-    if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to get interrupt\n", __FILE__);
-        return status;
-    }
+  zx::interrupt irq;
+  if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get interrupt\n", __FILE__);
+    return status;
+  }
 
-    zx::port port;
-    if ((status = zx::port::create(0, &port)) != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to create port\n", __FILE__);
-        return status;
-    }
+  zx::port port;
+  if ((status = zx::port::create(0, &port)) != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to create port\n", __FILE__);
+    return status;
+  }
 
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
-        parent, std::move(*mmio), std::move(*pll_mmio), std::move(*pmic_mmio),
-        std::move(*infracfg_mmio), composite, pdev, thermal_info, std::move(port),
-        std::move(irq), TempCalibration0::Get().ReadFrom(&(*fuse_mmio)),
-        TempCalibration1::Get().ReadFrom(&(*fuse_mmio)),
-        TempCalibration2::Get().ReadFrom(&(*fuse_mmio))));
-    if (!ac.check()) {
-        zxlogf(ERROR, "%s: MtkThermal alloc failed\n", __FILE__);
-        return ZX_ERR_NO_MEMORY;
-    }
+  fbl::AllocChecker ac;
+  fbl::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
+      parent, std::move(*mmio), std::move(*pll_mmio), std::move(*pmic_mmio),
+      std::move(*infracfg_mmio), composite, pdev, thermal_info, std::move(port), std::move(irq),
+      TempCalibration0::Get().ReadFrom(&(*fuse_mmio)),
+      TempCalibration1::Get().ReadFrom(&(*fuse_mmio)),
+      TempCalibration2::Get().ReadFrom(&(*fuse_mmio))));
+  if (!ac.check()) {
+    zxlogf(ERROR, "%s: MtkThermal alloc failed\n", __FILE__);
+    return ZX_ERR_NO_MEMORY;
+  }
 
-    if ((status = device->Init()) != ZX_OK) {
-        return status;
-    }
+  if ((status = device->Init()) != ZX_OK) {
+    return status;
+  }
 
-    if ((status = device->DdkAdd("mtk-thermal")) != ZX_OK) {
-        zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
-        return status;
-    }
+  if ((status = device->DdkAdd("mtk-thermal")) != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    return status;
+  }
 
-    __UNUSED auto* dummy = device.release();
+  __UNUSED auto* dummy = device.release();
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 zx_status_t MtkThermal::Init() {
-    auto component_count = composite_.GetComponentCount();
+  auto component_count = composite_.GetComponentCount();
 
-    zx_device_t* components[component_count];
-    size_t actual;
-    composite_.GetComponents(components, component_count, &actual);
-    if (component_count != actual) {
-        return ZX_ERR_INTERNAL;
-    }
+  zx_device_t* components[component_count];
+  size_t actual;
+  composite_.GetComponents(components, component_count, &actual);
+  if (component_count != actual) {
+    return ZX_ERR_INTERNAL;
+  }
 
-    // zeroth component is pdev
-    for (uint32_t i = 1; i < component_count; i++) {
-        clock_protocol_t clock;
-        auto status = device_get_protocol(components[i], ZX_PROTOCOL_CLOCK, &clock);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: Failed to get clock %u\n", __FILE__, i);
-            return status;
-        }
-
-        status = clock_enable(&clock);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: Failed to enable clock %u\n", __FILE__, i);
-            return status;
-        }
-    }
-
-    // Set the initial DVFS operating point. The bootloader sets it to 1.001 GHz @ 1.2 V.
-    uint32_t op_idx =
-        thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN].count - 1;
-    auto status = SetDvfsOpp(static_cast<uint16_t>(op_idx));
+  // zeroth component is pdev
+  for (uint32_t i = 1; i < component_count; i++) {
+    clock_protocol_t clock;
+    auto status = device_get_protocol(components[i], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
-        return status;
+      zxlogf(ERROR, "%s: Failed to get clock %u\n", __FILE__, i);
+      return status;
     }
 
-    TempMonCtl0::Get().ReadFrom(&mmio_).disable_all().WriteTo(&mmio_);
-
-    TempMsrCtl0::Get()
-        .ReadFrom(&mmio_)
-        .set_msrctl0(TempMsrCtl0::kSample1)
-        .set_msrctl1(TempMsrCtl0::kSample1)
-        .set_msrctl2(TempMsrCtl0::kSample1)
-        .set_msrctl3(TempMsrCtl0::kSample1)
-        .WriteTo(&mmio_);
-
-    TempAhbTimeout::Get().FromValue(0xffffffff).WriteTo(&mmio_);
-    TempAdcPnp::Get(0).FromValue(0).WriteTo(&mmio_);
-    TempAdcPnp::Get(1).FromValue(1).WriteTo(&mmio_);
-    TempAdcPnp::Get(2).FromValue(2).WriteTo(&mmio_);
-
-    // Set the thermal controller to read from the spare registers, then wait for the dummy sensor
-    // reading to end up in TempMsr0-2.
-    TempMonCtl1::Get().ReadFrom(&mmio_).set_period(1).WriteTo(&mmio_);
-    TempMonCtl2::Get().ReadFrom(&mmio_).set_sen_interval(1).WriteTo(&mmio_);
-    TempAhbPoll::Get().FromValue(1).WriteTo(&mmio_);
-
-    constexpr uint32_t dummy_temp = (1 << kAuxAdcBits) - 1;
-    TempSpare::Get(0).FromValue(dummy_temp | (1 << kAuxAdcBits)).WriteTo(&mmio_);
-
-    TempPnpMuxAddr::Get().FromValue(TempSpare::Get(2).addr() + MT8167_THERMAL_BASE).WriteTo(&mmio_);
-    TempAdcMuxAddr::Get().FromValue(TempSpare::Get(2).addr() + MT8167_THERMAL_BASE).WriteTo(&mmio_);
-    TempAdcEnAddr::Get().FromValue(TempSpare::Get(1).addr() + MT8167_THERMAL_BASE).WriteTo(&mmio_);
-    TempAdcValidAddr::Get()
-        .FromValue(TempSpare::Get(0).addr() + MT8167_THERMAL_BASE)
-        .WriteTo(&mmio_);
-    TempAdcVoltAddr::Get()
-        .FromValue(TempSpare::Get(0).addr() + MT8167_THERMAL_BASE)
-        .WriteTo(&mmio_);
-
-    TempRdCtrl::Get().ReadFrom(&mmio_).set_diff(TempRdCtrl::kValidVoltageSame).WriteTo(&mmio_);
-    TempAdcValidMask::Get()
-        .ReadFrom(&mmio_)
-        .set_polarity(TempAdcValidMask::kActiveHigh)
-        .set_pos(kAuxAdcBits)
-        .WriteTo(&mmio_);
-    TempAdcVoltageShift::Get().FromValue(0).WriteTo(&mmio_);
-    TempMonCtl0::Get().ReadFrom(&mmio_).enable_all().WriteTo(&mmio_);
-
-    for (uint32_t i = 0; i < kSensorCount; i++) {
-        auto msr = TempMsr::Get(i).ReadFrom(&mmio_);
-        for (; msr.valid() == 0 || msr.reading() != dummy_temp; msr.ReadFrom(&mmio_)) {}
+    status = clock_enable(&clock);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to enable clock %u\n", __FILE__, i);
+      return status;
     }
+  }
 
-    TempMonCtl0::Get().ReadFrom(&mmio_).disable_all().WriteTo(&mmio_);
+  // Set the initial DVFS operating point. The bootloader sets it to 1.001 GHz @ 1.2 V.
+  uint32_t op_idx =
+      thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN].count - 1;
+  auto status = SetDvfsOpp(static_cast<uint16_t>(op_idx));
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    // Set the thermal controller to get temperature readings from the aux ADC.
-    TempMonCtl1::Get().ReadFrom(&mmio_).set_period(kThermalPeriod).WriteTo(&mmio_);
-    TempMonCtl2::Get()
-        .ReadFrom(&mmio_)
-        .set_sen_interval(kSenseInterval)
-        .set_filt_interval(kFilterInterval)
-        .WriteTo(&mmio_);
-    TempAhbPoll::Get().FromValue(kAhbPollPeriod).WriteTo(&mmio_);
+  TempMonCtl0::Get().ReadFrom(&mmio_).disable_all().WriteTo(&mmio_);
 
-    TempAdcEn::Get().FromValue(1 << kAuxAdcChannel).WriteTo(&mmio_);
-    TempAdcMux::Get().FromValue(1 << kAuxAdcChannel).WriteTo(&mmio_);
+  TempMsrCtl0::Get()
+      .ReadFrom(&mmio_)
+      .set_msrctl0(TempMsrCtl0::kSample1)
+      .set_msrctl1(TempMsrCtl0::kSample1)
+      .set_msrctl2(TempMsrCtl0::kSample1)
+      .set_msrctl3(TempMsrCtl0::kSample1)
+      .WriteTo(&mmio_);
 
-    TempPnpMuxAddr::Get().FromValue(kTsCon1Addr).WriteTo(&mmio_);
-    TempAdcEnAddr::Get().FromValue(kAuxAdcCon1SetAddr).WriteTo(&mmio_);
-    TempAdcMuxAddr::Get().FromValue(kAuxAdcCon1ClrAddr).WriteTo(&mmio_);
-    TempAdcValidAddr::Get().FromValue(kAuxAdcDat11Addr).WriteTo(&mmio_);
-    TempAdcVoltAddr::Get().FromValue(kAuxAdcDat11Addr).WriteTo(&mmio_);
+  TempAhbTimeout::Get().FromValue(0xffffffff).WriteTo(&mmio_);
+  TempAdcPnp::Get(0).FromValue(0).WriteTo(&mmio_);
+  TempAdcPnp::Get(1).FromValue(1).WriteTo(&mmio_);
+  TempAdcPnp::Get(2).FromValue(2).WriteTo(&mmio_);
 
-    TempAdcWriteCtrl::Get()
-        .ReadFrom(&mmio_)
-        .set_mux_write_en(1)
-        .set_pnp_write_en(1)
-        .WriteTo(&mmio_);
+  // Set the thermal controller to read from the spare registers, then wait for the dummy sensor
+  // reading to end up in TempMsr0-2.
+  TempMonCtl1::Get().ReadFrom(&mmio_).set_period(1).WriteTo(&mmio_);
+  TempMonCtl2::Get().ReadFrom(&mmio_).set_sen_interval(1).WriteTo(&mmio_);
+  TempAhbPoll::Get().FromValue(1).WriteTo(&mmio_);
 
-    TempMonCtl0::Get().ReadFrom(&mmio_).enable_real().WriteTo(&mmio_);
+  constexpr uint32_t dummy_temp = (1 << kAuxAdcBits) - 1;
+  TempSpare::Get(0).FromValue(dummy_temp | (1 << kAuxAdcBits)).WriteTo(&mmio_);
 
-    TempMsrCtl0::Get()
-        .ReadFrom(&mmio_)
-        .set_msrctl0(TempMsrCtl0::kSample4Drop2)
-        .set_msrctl1(TempMsrCtl0::kSample4Drop2)
-        .set_msrctl2(TempMsrCtl0::kSample4Drop2)
-        .set_msrctl3(TempMsrCtl0::kSample4Drop2)
-        .WriteTo(&mmio_);
+  TempPnpMuxAddr::Get().FromValue(TempSpare::Get(2).addr() + MT8167_THERMAL_BASE).WriteTo(&mmio_);
+  TempAdcMuxAddr::Get().FromValue(TempSpare::Get(2).addr() + MT8167_THERMAL_BASE).WriteTo(&mmio_);
+  TempAdcEnAddr::Get().FromValue(TempSpare::Get(1).addr() + MT8167_THERMAL_BASE).WriteTo(&mmio_);
+  TempAdcValidAddr::Get().FromValue(TempSpare::Get(0).addr() + MT8167_THERMAL_BASE).WriteTo(&mmio_);
+  TempAdcVoltAddr::Get().FromValue(TempSpare::Get(0).addr() + MT8167_THERMAL_BASE).WriteTo(&mmio_);
 
-    return StartThread();
+  TempRdCtrl::Get().ReadFrom(&mmio_).set_diff(TempRdCtrl::kValidVoltageSame).WriteTo(&mmio_);
+  TempAdcValidMask::Get()
+      .ReadFrom(&mmio_)
+      .set_polarity(TempAdcValidMask::kActiveHigh)
+      .set_pos(kAuxAdcBits)
+      .WriteTo(&mmio_);
+  TempAdcVoltageShift::Get().FromValue(0).WriteTo(&mmio_);
+  TempMonCtl0::Get().ReadFrom(&mmio_).enable_all().WriteTo(&mmio_);
+
+  for (uint32_t i = 0; i < kSensorCount; i++) {
+    auto msr = TempMsr::Get(i).ReadFrom(&mmio_);
+    for (; msr.valid() == 0 || msr.reading() != dummy_temp; msr.ReadFrom(&mmio_)) {
+    }
+  }
+
+  TempMonCtl0::Get().ReadFrom(&mmio_).disable_all().WriteTo(&mmio_);
+
+  // Set the thermal controller to get temperature readings from the aux ADC.
+  TempMonCtl1::Get().ReadFrom(&mmio_).set_period(kThermalPeriod).WriteTo(&mmio_);
+  TempMonCtl2::Get()
+      .ReadFrom(&mmio_)
+      .set_sen_interval(kSenseInterval)
+      .set_filt_interval(kFilterInterval)
+      .WriteTo(&mmio_);
+  TempAhbPoll::Get().FromValue(kAhbPollPeriod).WriteTo(&mmio_);
+
+  TempAdcEn::Get().FromValue(1 << kAuxAdcChannel).WriteTo(&mmio_);
+  TempAdcMux::Get().FromValue(1 << kAuxAdcChannel).WriteTo(&mmio_);
+
+  TempPnpMuxAddr::Get().FromValue(kTsCon1Addr).WriteTo(&mmio_);
+  TempAdcEnAddr::Get().FromValue(kAuxAdcCon1SetAddr).WriteTo(&mmio_);
+  TempAdcMuxAddr::Get().FromValue(kAuxAdcCon1ClrAddr).WriteTo(&mmio_);
+  TempAdcValidAddr::Get().FromValue(kAuxAdcDat11Addr).WriteTo(&mmio_);
+  TempAdcVoltAddr::Get().FromValue(kAuxAdcDat11Addr).WriteTo(&mmio_);
+
+  TempAdcWriteCtrl::Get().ReadFrom(&mmio_).set_mux_write_en(1).set_pnp_write_en(1).WriteTo(&mmio_);
+
+  TempMonCtl0::Get().ReadFrom(&mmio_).enable_real().WriteTo(&mmio_);
+
+  TempMsrCtl0::Get()
+      .ReadFrom(&mmio_)
+      .set_msrctl0(TempMsrCtl0::kSample4Drop2)
+      .set_msrctl1(TempMsrCtl0::kSample4Drop2)
+      .set_msrctl2(TempMsrCtl0::kSample4Drop2)
+      .set_msrctl3(TempMsrCtl0::kSample4Drop2)
+      .WriteTo(&mmio_);
+
+  return StartThread();
 }
 
 void MtkThermal::PmicWrite(uint16_t data, uint32_t addr) {
-    while (PmicReadData::Get().ReadFrom(&pmic_mmio_).status() != PmicReadData::kStateIdle) {}
-    PmicCmd::Get().FromValue(0).set_write(1).set_addr(addr).set_data(data).WriteTo(&pmic_mmio_);
+  while (PmicReadData::Get().ReadFrom(&pmic_mmio_).status() != PmicReadData::kStateIdle) {
+  }
+  PmicCmd::Get().FromValue(0).set_write(1).set_addr(addr).set_data(data).WriteTo(&pmic_mmio_);
 }
 
 uint32_t MtkThermal::RawToTemperature(uint32_t raw, uint32_t sensor) {
-    int32_t vts = cal2_fuse_.get_vts3();
-    if (sensor == 0) {
-        vts = cal0_fuse_.get_vts0();
-    } else if (sensor == 1) {
-        vts = cal0_fuse_.get_vts1();
-    } else if (sensor == 2) {
-        vts = cal2_fuse_.get_vts2();
-    }
+  int32_t vts = cal2_fuse_.get_vts3();
+  if (sensor == 0) {
+    vts = cal0_fuse_.get_vts0();
+  } else if (sensor == 1) {
+    vts = cal0_fuse_.get_vts1();
+  } else if (sensor == 2) {
+    vts = cal2_fuse_.get_vts2();
+  }
 
-    // See misc/mediatek/thermal/mt8167/mtk_ts_cpu.c in the Linux kernel source.
-    int32_t gain = 10000 + FixedPoint(cal1_fuse_.get_adc_gain());
-    int32_t vts_with_gain = RawWithGain(vts - cal1_fuse_.get_adc_offset(), gain);
-    int32_t slope = cal0_fuse_.slope_sign() == 0 ? cal0_fuse_.slope() : -cal0_fuse_.slope();
+  // See misc/mediatek/thermal/mt8167/mtk_ts_cpu.c in the Linux kernel source.
+  int32_t gain = 10000 + FixedPoint(cal1_fuse_.get_adc_gain());
+  int32_t vts_with_gain = RawWithGain(vts - cal1_fuse_.get_adc_offset(), gain);
+  int32_t slope = cal0_fuse_.slope_sign() == 0 ? cal0_fuse_.slope() : -cal0_fuse_.slope();
 
-    int32_t temp_c = ((RawWithGain(raw - cal1_fuse_.get_adc_offset(), gain) - vts_with_gain) * 5) / 6;
-    temp_c = (temp_c * 100) / (165 + (cal1_fuse_.id() == 0 ? 0 : slope));
-    return cal0_fuse_.temp_offset() - temp_c + kKelvinOffset;
+  int32_t temp_c = ((RawWithGain(raw - cal1_fuse_.get_adc_offset(), gain) - vts_with_gain) * 5) / 6;
+  temp_c = (temp_c * 100) / (165 + (cal1_fuse_.id() == 0 ? 0 : slope));
+  return cal0_fuse_.temp_offset() - temp_c + kKelvinOffset;
 }
 
 uint32_t MtkThermal::TemperatureToRaw(uint32_t temp, uint32_t sensor) {
-    int32_t vts = cal2_fuse_.get_vts3();
-    if (sensor == 0) {
-        vts = cal0_fuse_.get_vts0();
-    } else if (sensor == 1) {
-        vts = cal0_fuse_.get_vts1();
-    } else if (sensor == 2) {
-        vts = cal2_fuse_.get_vts2();
-    }
+  int32_t vts = cal2_fuse_.get_vts3();
+  if (sensor == 0) {
+    vts = cal0_fuse_.get_vts0();
+  } else if (sensor == 1) {
+    vts = cal0_fuse_.get_vts1();
+  } else if (sensor == 2) {
+    vts = cal2_fuse_.get_vts2();
+  }
 
-    int32_t gain = 10000 + FixedPoint(cal1_fuse_.get_adc_gain());
-    int32_t vts_with_gain = RawWithGain(vts - cal1_fuse_.get_adc_offset(), gain);
-    int32_t slope = cal0_fuse_.slope_sign() == 0 ? cal0_fuse_.slope() : -cal0_fuse_.slope();
+  int32_t gain = 10000 + FixedPoint(cal1_fuse_.get_adc_gain());
+  int32_t vts_with_gain = RawWithGain(vts - cal1_fuse_.get_adc_offset(), gain);
+  int32_t slope = cal0_fuse_.slope_sign() == 0 ? cal0_fuse_.slope() : -cal0_fuse_.slope();
 
-    int32_t temp_c = kKelvinOffset + cal0_fuse_.temp_offset() - temp;
-    temp_c = (temp_c * (165 + (cal1_fuse_.id() == 0 ? 0 : slope))) / 100;
-    return TempWithoutGain(((temp_c * 6) / 5) + vts_with_gain, gain) + cal1_fuse_.get_adc_offset();
+  int32_t temp_c = kKelvinOffset + cal0_fuse_.temp_offset() - temp;
+  temp_c = (temp_c * (165 + (cal1_fuse_.id() == 0 ? 0 : slope))) / 100;
+  return TempWithoutGain(((temp_c * 6) / 5) + vts_with_gain, gain) + cal1_fuse_.get_adc_offset();
 }
 
 uint32_t MtkThermal::GetRawHot(uint32_t temp) {
-    // Find the ADC value corresponding to this temperature for each sensor. ADC values are
-    // inversely proportional to temperature, so the maximum represents the lowest temperature
-    // required to hit the trip point.
+  // Find the ADC value corresponding to this temperature for each sensor. ADC values are
+  // inversely proportional to temperature, so the maximum represents the lowest temperature
+  // required to hit the trip point.
 
-    uint32_t raw_max = 0;
-    for (uint32_t i = 0; i < kSensorCount; i++) {
-        uint32_t raw = TemperatureToRaw(temp, i);
-        if (raw > raw_max) {
-            raw_max = raw;
-        }
+  uint32_t raw_max = 0;
+  for (uint32_t i = 0; i < kSensorCount; i++) {
+    uint32_t raw = TemperatureToRaw(temp, i);
+    if (raw > raw_max) {
+      raw_max = raw;
     }
+  }
 
-    return raw_max;
+  return raw_max;
 }
 
 uint32_t MtkThermal::GetRawCold(uint32_t temp) {
-    uint32_t raw_min = UINT32_MAX;
-    for (uint32_t i = 0; i < kSensorCount; i++) {
-        uint32_t raw = TemperatureToRaw(temp, i);
-        if (raw < raw_min) {
-            raw_min = raw;
-        }
+  uint32_t raw_min = UINT32_MAX;
+  for (uint32_t i = 0; i < kSensorCount; i++) {
+    uint32_t raw = TemperatureToRaw(temp, i);
+    if (raw < raw_min) {
+      raw_min = raw;
     }
+  }
 
-    return raw_min;
+  return raw_min;
 }
 
 uint32_t MtkThermal::ReadTemperatureSensors() {
-    uint32_t sensor_values[kSensorCount];
-    for (uint32_t i = 0; i < countof(sensor_values); i++) {
-        auto msr = TempMsr::Get(i).ReadFrom(&mmio_);
-        while (!msr.valid()) {
-            msr.ReadFrom(&mmio_);
-        }
-
-        sensor_values[i] = msr.reading();
+  uint32_t sensor_values[kSensorCount];
+  for (uint32_t i = 0; i < countof(sensor_values); i++) {
+    auto msr = TempMsr::Get(i).ReadFrom(&mmio_);
+    while (!msr.valid()) {
+      msr.ReadFrom(&mmio_);
     }
 
-    uint32_t temp = 0;
-    for (uint32_t i = 0; i < countof(sensor_values); i++) {
-        uint32_t sensor_temp = RawToTemperature(sensor_values[i], i);
-        if (sensor_temp > temp) {
-            temp = sensor_temp;
-        }
-    }
+    sensor_values[i] = msr.reading();
+  }
 
-    return temp;
+  uint32_t temp = 0;
+  for (uint32_t i = 0; i < countof(sensor_values); i++) {
+    uint32_t sensor_temp = RawToTemperature(sensor_values[i], i);
+    if (sensor_temp > temp) {
+      temp = sensor_temp;
+    }
+  }
+
+  return temp;
 }
 
 zx_status_t MtkThermal::SetDvfsOpp(uint16_t op_idx) {
-    const fuchsia_hardware_thermal_OperatingPoint& opps =
-        thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
-    if (op_idx >= opps.count) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
+  const fuchsia_hardware_thermal_OperatingPoint& opps =
+      thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
+  if (op_idx >= opps.count) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
-    uint32_t new_freq = opps.opp[op_idx].freq_hz;
-    uint32_t new_volt = opps.opp[op_idx].volt_mv;
+  uint32_t new_freq = opps.opp[op_idx].freq_hz;
+  uint32_t new_volt = opps.opp[op_idx].volt_mv;
 
-    if (new_volt > VprocCon10::kMaxVoltageUv || new_volt < VprocCon10::kMinVoltageUv) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
+  if (new_volt > VprocCon10::kMaxVoltageUv || new_volt < VprocCon10::kMinVoltageUv) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
-    fbl::AutoLock lock(&dvfs_lock_);
+  fbl::AutoLock lock(&dvfs_lock_);
 
-    auto armpll = ArmPllCon1::Get().ReadFrom(&pll_mmio_);
-    uint32_t old_freq = armpll.frequency();
+  auto armpll = ArmPllCon1::Get().ReadFrom(&pll_mmio_);
+  uint32_t old_freq = armpll.frequency();
 
-    auto vproc = VprocCon10::Get().FromValue(0).set_voltage(new_volt);
-    if (vproc.voltage() != new_volt) {
-        // The requested voltage is not a multiple of the voltage step.
-        return ZX_ERR_INVALID_ARGS;
-    }
+  auto vproc = VprocCon10::Get().FromValue(0).set_voltage(new_volt);
+  if (vproc.voltage() != new_volt) {
+    // The requested voltage is not a multiple of the voltage step.
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    // Switch to a stable clock before changing the ARMPLL frequency.
-    auto infra_mux = InfraCfgClkMux::Get().ReadFrom(&infracfg_mmio_);
-    infra_mux.set_ifr_mux_sel(InfraCfgClkMux::kIfrClk26M).WriteTo(&infracfg_mmio_);
+  // Switch to a stable clock before changing the ARMPLL frequency.
+  auto infra_mux = InfraCfgClkMux::Get().ReadFrom(&infracfg_mmio_);
+  infra_mux.set_ifr_mux_sel(InfraCfgClkMux::kIfrClk26M).WriteTo(&infracfg_mmio_);
 
-    armpll.set_frequency(new_freq).WriteTo(&pll_mmio_);
+  armpll.set_frequency(new_freq).WriteTo(&pll_mmio_);
 
-    // Wait for the PLL to stabilize.
-    zx::nanosleep(zx::deadline_after(zx::usec(20)));
+  // Wait for the PLL to stabilize.
+  zx::nanosleep(zx::deadline_after(zx::usec(20)));
 
-    if (new_freq > old_freq) {
-        PmicWrite(vproc.reg_value(), vproc.reg_addr());
-        infra_mux.set_ifr_mux_sel(InfraCfgClkMux::kIfrClkArmPll).WriteTo(&infracfg_mmio_);
-    } else {
-        infra_mux.set_ifr_mux_sel(InfraCfgClkMux::kIfrClkArmPll).WriteTo(&infracfg_mmio_);
-        PmicWrite(vproc.reg_value(), vproc.reg_addr());
-    }
+  if (new_freq > old_freq) {
+    PmicWrite(vproc.reg_value(), vproc.reg_addr());
+    infra_mux.set_ifr_mux_sel(InfraCfgClkMux::kIfrClkArmPll).WriteTo(&infracfg_mmio_);
+  } else {
+    infra_mux.set_ifr_mux_sel(InfraCfgClkMux::kIfrClkArmPll).WriteTo(&infracfg_mmio_);
+    PmicWrite(vproc.reg_value(), vproc.reg_addr());
+  }
 
-    current_op_idx_ = op_idx;
+  current_op_idx_ = op_idx;
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 zx_status_t MtkThermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_thermal_Device_dispatch(this, txn, msg, &fidl_ops);
+  return fuchsia_hardware_thermal_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 
 zx_status_t MtkThermal::GetInfo(fidl_txn_t* txn) {
-    return fuchsia_hardware_thermal_DeviceGetInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+  return fuchsia_hardware_thermal_DeviceGetInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
 zx_status_t MtkThermal::GetDeviceInfo(fidl_txn_t* txn) {
-    return fuchsia_hardware_thermal_DeviceGetDeviceInfo_reply(txn, ZX_OK, &thermal_info_);
+  return fuchsia_hardware_thermal_DeviceGetDeviceInfo_reply(txn, ZX_OK, &thermal_info_);
 }
 
 zx_status_t MtkThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain,
                                     fidl_txn_t* txn) {
-    if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
-        fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
-    }
+  if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+    fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+  }
 
-    const fuchsia_hardware_thermal_OperatingPoint* info =
-        &thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
-    return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_OK, info);
+  const fuchsia_hardware_thermal_OperatingPoint* info =
+      &thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
+  return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_OK, info);
 }
 
 zx_status_t MtkThermal::GetTemperature(fidl_txn_t* txn) {
-    return fuchsia_hardware_thermal_DeviceGetTemperature_reply(txn, ZX_OK,
-                                                               ReadTemperatureSensors());
+  return fuchsia_hardware_thermal_DeviceGetTemperature_reply(txn, ZX_OK, ReadTemperatureSensors());
 }
 
 zx_status_t MtkThermal::GetStateChangeEvent(fidl_txn_t* txn) {
-    return fuchsia_hardware_thermal_DeviceGetStateChangeEvent_reply(txn, ZX_ERR_NOT_SUPPORTED,
-                                                                    ZX_HANDLE_INVALID);
+  return fuchsia_hardware_thermal_DeviceGetStateChangeEvent_reply(txn, ZX_ERR_NOT_SUPPORTED,
+                                                                  ZX_HANDLE_INVALID);
 }
 
 zx_status_t MtkThermal::GetStateChangePort(fidl_txn_t* txn) {
-    zx::port dup;
-    zx_status_t status = GetPort(&dup);
-    return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, status, dup.release());
+  zx::port dup;
+  zx_status_t status = GetPort(&dup);
+  return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, status, dup.release());
 }
 
 zx_status_t MtkThermal::SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn) {
-    return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_ERR_NOT_SUPPORTED);
+  return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t MtkThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
                                               fidl_txn_t* txn) {
-    if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
-        fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
-    }
+  if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+    fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+  }
 
-    return fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(txn, ZX_OK, get_dvfs_opp());
+  return fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(txn, ZX_OK, get_dvfs_opp());
 }
 
 zx_status_t MtkThermal::SetDvfsOperatingPoint(uint16_t op_idx,
                                               fuchsia_hardware_thermal_PowerDomain power_domain,
                                               fidl_txn_t* txn) {
-    if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
-        fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED);
-    }
+  if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+    fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED);
+  }
 
-    return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, SetDvfsOpp(op_idx));
+  return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, SetDvfsOpp(op_idx));
 }
 
 zx_status_t MtkThermal::GetFanLevel(fidl_txn_t* txn) {
-    return fuchsia_hardware_thermal_DeviceGetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+  return fuchsia_hardware_thermal_DeviceGetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
 }
 
 zx_status_t MtkThermal::SetFanLevel(uint32_t fan_level, fidl_txn_t* txn) {
-    return fuchsia_hardware_thermal_DeviceSetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED);
+  return fuchsia_hardware_thermal_DeviceSetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t MtkThermal::SetTripPoint(size_t trip_pt) {
-    zx_port_packet_t packet;
-    packet.type = ZX_PKT_TYPE_USER;
-    packet.key = trip_pt;
+  zx_port_packet_t packet;
+  packet.type = ZX_PKT_TYPE_USER;
+  packet.key = trip_pt;
 
-    zx_status_t status = port_.queue(&packet);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Faild to queue packet\n", __FILE__);
-        return status;
-    }
+  zx_status_t status = port_.queue(&packet);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Faild to queue packet\n", __FILE__);
+    return status;
+  }
 
-    uint32_t raw_hot = 0;
-    uint32_t raw_cold = 0xfff;
+  uint32_t raw_hot = 0;
+  uint32_t raw_cold = 0xfff;
 
-    if (trip_pt > 0) {
-        raw_cold = GetRawCold(thermal_info_.trip_point_info[trip_pt - 1].down_temp);
-    }
-    if (trip_pt < thermal_info_.num_trip_points - 1) {
-        raw_hot = GetRawHot(thermal_info_.trip_point_info[trip_pt + 1].up_temp);
-    }
+  if (trip_pt > 0) {
+    raw_cold = GetRawCold(thermal_info_.trip_point_info[trip_pt - 1].down_temp);
+  }
+  if (trip_pt < thermal_info_.num_trip_points - 1) {
+    raw_hot = GetRawHot(thermal_info_.trip_point_info[trip_pt + 1].up_temp);
+  }
 
-    // Update the hot and cold interrupt thresholds for the new trip point.
-    TempHotThreshold::Get().ReadFrom(&mmio_).set_threshold(raw_hot).WriteTo(&mmio_);
-    TempHotToNormalThreshold::Get().ReadFrom(&mmio_).set_threshold(raw_hot).WriteTo(&mmio_);
-    TempColdThreshold::Get().ReadFrom(&mmio_).set_threshold(raw_cold).WriteTo(&mmio_);
+  // Update the hot and cold interrupt thresholds for the new trip point.
+  TempHotThreshold::Get().ReadFrom(&mmio_).set_threshold(raw_hot).WriteTo(&mmio_);
+  TempHotToNormalThreshold::Get().ReadFrom(&mmio_).set_threshold(raw_hot).WriteTo(&mmio_);
+  TempColdThreshold::Get().ReadFrom(&mmio_).set_threshold(raw_cold).WriteTo(&mmio_);
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 int MtkThermal::Thread() {
-    const fuchsia_hardware_thermal_ThermalTemperatureInfo* trip_pts = thermal_info_.trip_point_info;
+  const fuchsia_hardware_thermal_ThermalTemperatureInfo* trip_pts = thermal_info_.trip_point_info;
 
-    TempProtCtl::Get().ReadFrom(&mmio_).set_strategy(TempProtCtl::kStrategyMaximum).WriteTo(&mmio_);
-    TempProtStage3::Get()
-        .FromValue(0)
-        .set_threshold(GetRawHot(thermal_info_.critical_temp))
-        .WriteTo(&mmio_);
+  TempProtCtl::Get().ReadFrom(&mmio_).set_strategy(TempProtCtl::kStrategyMaximum).WriteTo(&mmio_);
+  TempProtStage3::Get()
+      .FromValue(0)
+      .set_threshold(GetRawHot(thermal_info_.critical_temp))
+      .WriteTo(&mmio_);
 
-    uint32_t temp = ReadTemperatureSensors();
+  uint32_t temp = ReadTemperatureSensors();
+  TempMsrCtl1::Get().ReadFrom(&mmio_).pause_real().WriteTo(&mmio_);
+
+  // Set the initial trip point based on the current temperature.
+  size_t trip_pt = 0;
+  for (; trip_pt < thermal_info_.num_trip_points - 1; trip_pt++) {
+    if (temp < trip_pts[trip_pt + 1].up_temp) {
+      break;
+    }
+  }
+
+  size_t last_trip_pt = trip_pt;
+  SetTripPoint(trip_pt);
+
+  TempMonInt::Get()
+      .ReadFrom(&mmio_)
+      .set_hot_en_0(1)
+      .set_cold_en_0(1)
+      .set_hot_en_1(1)
+      .set_cold_en_1(1)
+      .set_hot_en_2(1)
+      .set_cold_en_2(1)
+      .set_stage_3_en(1)
+      .WriteTo(&mmio_);
+
+  TempMsrCtl1::Get().ReadFrom(&mmio_).resume_real().WriteTo(&mmio_);
+
+  while (1) {
+    zx_status_t status = WaitForInterrupt();
+    if (status == ZX_ERR_CANCELED) {
+      return thrd_success;
+    } else if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: IRQ wait failed\n", __FILE__);
+      return thrd_error;
+    }
+
+    auto int_status = TempMonIntStatus::Get().ReadFrom(&mmio_);
+
+    auto int_enable = TempMonInt::Get().ReadFrom(&mmio_);
+    uint32_t int_enable_old = int_enable.reg_value();
+    int_enable.set_reg_value(0).WriteTo(&mmio_);
+
+    // Read the current temperature then pause periodic measurements so we don't get out of sync
+    // with the hardware.
+    temp = ReadTemperatureSensors();
     TempMsrCtl1::Get().ReadFrom(&mmio_).pause_real().WriteTo(&mmio_);
 
-    // Set the initial trip point based on the current temperature.
-    size_t trip_pt = 0;
-    for (; trip_pt < thermal_info_.num_trip_points - 1; trip_pt++) {
+    if (int_status.stage_3()) {
+      trip_pt = thermal_info_.num_trip_points - 1;
+      if (SetDvfsOpp(0) != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to set safe operating point\n", __FILE__);
+        return thrd_error;
+      }
+    } else if (int_status.hot_0() || int_status.hot_1() || int_status.hot_2()) {
+      // Skip to the appropriate trip point for the current temperature.
+      for (; trip_pt < thermal_info_.num_trip_points - 1; trip_pt++) {
         if (temp < trip_pts[trip_pt + 1].up_temp) {
-            break;
+          break;
         }
+      }
+    } else if (int_status.cold_0() || int_status.cold_1() || int_status.cold_2()) {
+      for (; trip_pt > 0; trip_pt--) {
+        if (temp > trip_pts[trip_pt - 1].down_temp) {
+          break;
+        }
+      }
     }
 
-    size_t last_trip_pt = trip_pt;
-    SetTripPoint(trip_pt);
+    if (trip_pt != last_trip_pt) {
+      SetTripPoint(trip_pt);
+    }
 
-    TempMonInt::Get()
-        .ReadFrom(&mmio_)
-        .set_hot_en_0(1)
-        .set_cold_en_0(1)
-        .set_hot_en_1(1)
-        .set_cold_en_1(1)
-        .set_hot_en_2(1)
-        .set_cold_en_2(1)
-        .set_stage_3_en(1)
-        .WriteTo(&mmio_);
+    last_trip_pt = trip_pt;
 
+    int_enable.set_reg_value(int_enable_old).WriteTo(&mmio_);
     TempMsrCtl1::Get().ReadFrom(&mmio_).resume_real().WriteTo(&mmio_);
+  }
 
-    while (1) {
-        zx_status_t status = WaitForInterrupt();
-        if (status == ZX_ERR_CANCELED) {
-            return thrd_success;
-        } else if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: IRQ wait failed\n", __FILE__);
-            return thrd_error;
-        }
-
-        auto int_status = TempMonIntStatus::Get().ReadFrom(&mmio_);
-
-        auto int_enable = TempMonInt::Get().ReadFrom(&mmio_);
-        uint32_t int_enable_old = int_enable.reg_value();
-        int_enable.set_reg_value(0).WriteTo(&mmio_);
-
-        // Read the current temperature then pause periodic measurements so we don't get out of sync
-        // with the hardware.
-        temp = ReadTemperatureSensors();
-        TempMsrCtl1::Get().ReadFrom(&mmio_).pause_real().WriteTo(&mmio_);
-
-        if (int_status.stage_3()) {
-            trip_pt = thermal_info_.num_trip_points - 1;
-            if (SetDvfsOpp(0) != ZX_OK) {
-                zxlogf(ERROR, "%s: Failed to set safe operating point\n", __FILE__);
-                return thrd_error;
-            }
-        } else if (int_status.hot_0() || int_status.hot_1() || int_status.hot_2()) {
-            // Skip to the appropriate trip point for the current temperature.
-            for (; trip_pt < thermal_info_.num_trip_points - 1; trip_pt++) {
-                if (temp < trip_pts[trip_pt + 1].up_temp) {
-                    break;
-                }
-            }
-        } else if (int_status.cold_0() || int_status.cold_1() || int_status.cold_2()) {
-            for (; trip_pt > 0; trip_pt--) {
-                if (temp > trip_pts[trip_pt - 1].down_temp) {
-                    break;
-                }
-            }
-        }
-
-        if (trip_pt != last_trip_pt) {
-            SetTripPoint(trip_pt);
-        }
-
-        last_trip_pt = trip_pt;
-
-        int_enable.set_reg_value(int_enable_old).WriteTo(&mmio_);
-        TempMsrCtl1::Get().ReadFrom(&mmio_).resume_real().WriteTo(&mmio_);
-    }
-
-    return thrd_success;
+  return thrd_success;
 }
 
-zx_status_t MtkThermal::WaitForInterrupt() {
-    return irq_.wait(nullptr);
-}
+zx_status_t MtkThermal::WaitForInterrupt() { return irq_.wait(nullptr); }
 
 zx_status_t MtkThermal::StartThread() {
-    return thrd_status_to_zx_status(thrd_create_with_name(
-        &thread_,
-        [](void* arg) -> int {
-            return reinterpret_cast<MtkThermal*>(arg)->Thread();
-        },
-        this,
-        "mtk-thermal-thread"
-    ));
+  return thrd_status_to_zx_status(thrd_create_with_name(
+      &thread_, [](void* arg) -> int { return reinterpret_cast<MtkThermal*>(arg)->Thread(); }, this,
+      "mtk-thermal-thread"));
 }
 
 zx_status_t MtkThermal::StopThread() {
-    irq_.destroy();
-    JoinThread();
-    return ZX_OK;
+  irq_.destroy();
+  JoinThread();
+  return ZX_OK;
 }
 
 void MtkThermal::DdkRelease() {
-    StopThread();
-    delete this;
+  StopThread();
+  delete this;
 }
 
 }  // namespace thermal
 
 static constexpr zx_driver_ops_t mtk_thermal_driver_ops = []() -> zx_driver_ops_t {
-    zx_driver_ops_t ops = {};
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = thermal::MtkThermal::Create;
-    return ops;
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = thermal::MtkThermal::Create;
+  return ops;
 }();
 
 ZIRCON_DRIVER_BEGIN(mtk_thermal, mtk_thermal_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_THERMAL),
-ZIRCON_DRIVER_END(mtk_thermal)
+    ZIRCON_DRIVER_END(mtk_thermal)

@@ -15,4 +15,4 @@ namespace fs_metrics {
 template <typename... AttributeList>
 struct ObjectOffsets : Offsets<AttributeList...>, ObjectGenerator<AttributeList...> {};
 
-} // namespace fs_metrics
+}  // namespace fs_metrics

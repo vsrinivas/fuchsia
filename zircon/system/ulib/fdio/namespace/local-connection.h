@@ -21,4 +21,4 @@ namespace fdio_internal {
 fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
                               fbl::RefPtr<const LocalVnode> vn);
 
-} // namespace fdio_internal
+}  // namespace fdio_internal

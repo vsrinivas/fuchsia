@@ -16,12 +16,11 @@ Gesture::Delta& Gesture::Delta::operator+=(const Delta& other) {
 }
 
 bool Gesture::Delta::operator==(const Delta& other) const {
-  return fidl::Equals(translation, other.translation) &&
-         rotation == other.rotation && scale == other.scale;
+  return fidl::Equals(translation, other.translation) && rotation == other.rotation &&
+         scale == other.scale;
 }
 
-void Gesture::AddPointer(PointerId pointer_id,
-                         const fuchsia::ui::gfx::vec2& position) {
+void Gesture::AddPointer(PointerId pointer_id, const fuchsia::ui::gfx::vec2& position) {
   // TODO(SCN-1404): This is sometimes violated.
   // FX_DCHECK(pointers_.find(pointer_id) == pointers_.end());
 
@@ -65,8 +64,7 @@ Gesture::Delta Gesture::UpdatePointer(PointerId pointer_id,
 
       // For small displacements, this approximates radians.
       delta.rotation +=
-          (old_relative.x * p.relative.y - old_relative.y * p.relative.x) /
-          old_distance;
+          (old_relative.x * p.relative.y - old_relative.y * p.relative.x) / old_distance;
       moment_sum += old_distance;
       scale_sum += p.distance / old_distance;
     }

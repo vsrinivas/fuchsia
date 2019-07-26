@@ -8,8 +8,7 @@
 
 namespace debugger_utils {
 
-ElfSymbolTable::ElfSymbolTable(const std::string& file_name,
-                               const std::string& contents)
+ElfSymbolTable::ElfSymbolTable(const std::string& file_name, const std::string& contents)
     : file_name_(file_name), contents_(contents) {}
 
 ElfSymbolTable::~ElfSymbolTable() {
@@ -93,17 +92,15 @@ static int CompareSymbol(const void* ap, const void* bp) {
   return a->addr - b->addr;
 }
 
-void ElfSymbolTable::Finalize() {
-  qsort(symbols_, num_symbols_, sizeof(ElfSymbol), CompareSymbol);
-}
+void ElfSymbolTable::Finalize() { qsort(symbols_, num_symbols_, sizeof(ElfSymbol), CompareSymbol); }
 
 const ElfSymbol* ElfSymbolTable::FindSymbol(uint64_t addr) const {
   ElfSymbol search = {.addr = addr};
 
   /* add last hit cache here */
 
-  auto s = reinterpret_cast<const ElfSymbol*>(bsearch(
-      &search, symbols_, num_symbols_, sizeof(ElfSymbol), CompareSymbol));
+  auto s = reinterpret_cast<const ElfSymbol*>(
+      bsearch(&search, symbols_, num_symbols_, sizeof(ElfSymbol), CompareSymbol));
   return s;
 }
 

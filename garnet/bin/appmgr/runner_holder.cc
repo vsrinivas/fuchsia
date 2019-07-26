@@ -30,25 +30,23 @@ RunnerHolder::RunnerHolder(std::shared_ptr<sys::ServiceDirectory> services,
       error_handler_(std::move(error_handler)),
       component_id_counter_(0) {
   auto url = launch_info.url;
-  realm->CreateComponent(
-      std::move(launch_info), controller_.NewRequest(),
-      [this](std::weak_ptr<ComponentControllerImpl> component) {
-        CreateComponentCallback(component);
-      });
+  realm->CreateComponent(std::move(launch_info), controller_.NewRequest(),
+                         [this](std::weak_ptr<ComponentControllerImpl> component) {
+                           CreateComponentCallback(component);
+                         });
 
-  controller_.events().OnTerminated =
-      [this, url](int64_t return_code, TerminationReason termination_reason) {
-        if (termination_reason != TerminationReason::EXITED) {
-          FXL_LOG(ERROR) << "Runner (" << url << ") terminating, reason: "
-                         << sys::HumanReadableTerminationReason(
-                                termination_reason);
-        }
-        Cleanup();
+  controller_.events().OnTerminated = [this, url](int64_t return_code,
+                                                  TerminationReason termination_reason) {
+    if (termination_reason != TerminationReason::EXITED) {
+      FXL_LOG(ERROR) << "Runner (" << url << ") terminating, reason: "
+                     << sys::HumanReadableTerminationReason(termination_reason);
+    }
+    Cleanup();
 
-        if (error_handler_) {
-          error_handler_();
-        }
-      };
+    if (error_handler_) {
+      error_handler_();
+    }
+  };
 
   services_->Connect(runner_.NewRequest());
 }
@@ -59,14 +57,12 @@ void RunnerHolder::Cleanup() {
   impl_object_.reset();
   // Terminate all bridges currently owned by this runner.
   for (auto& component : components_) {
-    component.second->SetTerminationReason(
-        TerminationReason::RUNNER_TERMINATED);
+    component.second->SetTerminationReason(TerminationReason::RUNNER_TERMINATED);
   }
   components_.clear();
 }
 
-void RunnerHolder::CreateComponentCallback(
-    std::weak_ptr<ComponentControllerImpl> component) {
+void RunnerHolder::CreateComponentCallback(std::weak_ptr<ComponentControllerImpl> component) {
   impl_object_ = component;
 
   if (auto impl = impl_object_.lock()) {
@@ -81,12 +77,10 @@ void RunnerHolder::CreateComponentCallback(
 
 void RunnerHolder::StartComponent(
     fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
-    fxl::RefPtr<Namespace> ns,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
+    fxl::RefPtr<Namespace> ns, fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
     TerminationCallback termination_callback) {
   auto url = startup_info.launch_info.url;
-  const std::string args =
-      Util::GetArgsString(startup_info.launch_info.arguments);
+  const std::string args = Util::GetArgsString(startup_info.launch_info.arguments);
   auto channels = Util::BindDirectory(&startup_info.launch_info);
 
   fuchsia::sys::ComponentControllerPtr remote_controller;
@@ -94,9 +88,8 @@ void RunnerHolder::StartComponent(
 
   // TODO(anmittal): Create better unique instance id, instead of 1,2,3,4,...
   auto component = std::make_shared<ComponentBridge>(
-      std::move(controller), std::move(remote_controller), this, url,
-      std::move(args), Util::GetLabelFromURL(url),
-      std::to_string(++component_id_counter_), std::move(ns),
+      std::move(controller), std::move(remote_controller), this, url, std::move(args),
+      Util::GetLabelFromURL(url), std::to_string(++component_id_counter_), std::move(ns),
       std::move(channels.exported_dir), std::move(channels.client_request),
       std::move(termination_callback));
 
@@ -113,8 +106,7 @@ void RunnerHolder::StartComponent(
                           std::move(remote_controller_request));
 }
 
-std::shared_ptr<ComponentBridge> RunnerHolder::ExtractComponent(
-    ComponentBridge* controller) {
+std::shared_ptr<ComponentBridge> RunnerHolder::ExtractComponent(ComponentBridge* controller) {
   auto it = components_.find(controller);
   if (it == components_.end()) {
     return nullptr;

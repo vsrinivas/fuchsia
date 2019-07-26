@@ -17,20 +17,15 @@ namespace {
 constexpr char kTraceDev[] = "/dev/misc/ktrace";
 }  // namespace
 
-DeviceReader::DeviceReader()
-  : Reader(buffer_, kChunkSize),
-    fd_(open(kTraceDev, O_RDONLY)) {
-}
+DeviceReader::DeviceReader() : Reader(buffer_, kChunkSize), fd_(open(kTraceDev, O_RDONLY)) {}
 
 void DeviceReader::ReadMoreData() {
   memcpy(buffer_, current_, AvailableBytes());
   char* new_marker = buffer_ + AvailableBytes();
 
   while (new_marker < end_) {
-    int bytes_read =
-        HANDLE_EINTR(read(fd_.get(), new_marker,
-                          std::distance(const_cast<const char*>(new_marker),
-                                        end_)));
+    int bytes_read = HANDLE_EINTR(
+        read(fd_.get(), new_marker, std::distance(const_cast<const char*>(new_marker), end_)));
 
     if (bytes_read <= 0)
       break;

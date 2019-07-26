@@ -25,8 +25,7 @@ class Env {
   uint64_t IncomingPacketsAtDestination();
   void AwaitConnected();
 
-  void FlushTodo(std::function<bool()> until,
-                 TimeDelta timeout = TimeDelta::FromMinutes(10));
+  void FlushTodo(std::function<bool()> until, TimeDelta timeout = TimeDelta::FromMinutes(10));
   void FlushTodo(std::function<bool()> until, TimeStamp deadline);
 
   Timer* timer() { return &test_timer_; }
@@ -35,8 +34,7 @@ class Env {
   TestTimer test_timer_;
 
   struct Logging {
-    Logging(Timer* timer, Severity severity)
-        : trace_cout_(timer), scoped_severity_(severity) {}
+    Logging(Timer* timer, Severity severity) : trace_cout_(timer), scoped_severity_(severity) {}
     TraceCout trace_cout_;
     ScopedRenderer scoped_renderer_{&trace_cout_};
     ScopedSeverity scoped_severity_;
@@ -58,8 +56,8 @@ struct NamedSimulator {
 
 class TwoNode final : public Env {
  public:
-  TwoNode(Optional<Severity> logging, const NamedSimulator* simulator,
-          uint64_t node_id_1, uint64_t node_id_2);
+  TwoNode(Optional<Severity> logging, const NamedSimulator* simulator, uint64_t node_id_1,
+          uint64_t node_id_2);
 
   void DumpAllStats() override;
   virtual ~TwoNode();
@@ -76,8 +74,8 @@ class TwoNode final : public Env {
 class ThreeNode final : public Env {
  public:
   ThreeNode(Optional<Severity> logging, const NamedSimulator* simulator_1_h,
-            const NamedSimulator* simulator_h_2, uint64_t node_id_1,
-            uint64_t node_id_h, uint64_t node_id_2);
+            const NamedSimulator* simulator_h_2, uint64_t node_id_1, uint64_t node_id_h,
+            uint64_t node_id_2);
 
   void DumpAllStats() override;
   virtual ~ThreeNode();
@@ -111,13 +109,10 @@ class InProcessLink final : public Link {
 
   void Close(Callback<void> quiesced) override {
     impl_->Close(Callback<void>(
-        ALLOCATED_CALLBACK,
-        [this, quiesced = std::move(quiesced)]() mutable { impl_.reset(); }));
+        ALLOCATED_CALLBACK, [this, quiesced = std::move(quiesced)]() mutable { impl_.reset(); }));
   }
   void Forward(Message message) override { impl_->Forward(std::move(message)); }
-  fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override {
-    return impl_->GetLinkStatus();
-  }
+  fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override { return impl_->GetLinkStatus(); }
   const LinkStats* GetStats() const override { return impl_->GetStats(); }
 
  private:

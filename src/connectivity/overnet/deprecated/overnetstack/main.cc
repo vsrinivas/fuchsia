@@ -19,9 +19,7 @@ namespace overnetstack {
 
 class FuchsiaTimer final : public overnet::Timer {
  public:
-  overnet::TimeStamp Now() override {
-    return ToTimeStamp(async::Now(dispatcher_));
-  }
+  overnet::TimeStamp Now() override { return ToTimeStamp(async::Now(dispatcher_)); }
 
  private:
   async_dispatcher_t* dispatcher_ = async_get_default_dispatcher();
@@ -30,14 +28,11 @@ class FuchsiaTimer final : public overnet::Timer {
     overnet::Timeout* timeout;
   };
 
-  static void TaskHandler(async_dispatcher_t* async, async_task_t* task,
-                          zx_status_t status) {
-    FireTimeout(static_cast<Task*>(task)->timeout,
-                overnet::Status::FromZx(status));
+  static void TaskHandler(async_dispatcher_t* async, async_task_t* task, zx_status_t status) {
+    FireTimeout(static_cast<Task*>(task)->timeout, overnet::Status::FromZx(status));
   }
 
-  void InitTimeout(overnet::Timeout* timeout,
-                   overnet::TimeStamp when) override {
+  void InitTimeout(overnet::Timeout* timeout, overnet::TimeStamp when) override {
     auto* async_timeout = TimeoutStorage<Task>(timeout);
     async_timeout->state = {ASYNC_STATE_INIT};
     async_timeout->handler = TaskHandler;
@@ -47,10 +42,8 @@ class FuchsiaTimer final : public overnet::Timer {
       FireTimeout(timeout, overnet::Status::Cancelled());
     }
   }
-  void CancelTimeout(overnet::Timeout* timeout,
-                     overnet::Status status) override {
-    if (async_cancel_task(dispatcher_, TimeoutStorage<Task>(timeout)) ==
-        ZX_OK) {
+  void CancelTimeout(overnet::Timeout* timeout, overnet::Status status) override {
+    if (async_cancel_task(dispatcher_, TimeoutStorage<Task>(timeout)) == ZX_OK) {
       FireTimeout(timeout, overnet::Status::Cancelled());
     }
   }
@@ -96,11 +89,8 @@ class FuchsiaLog final : public overnet::TraceRenderer {
 };
 
 static std::string Trim(std::string s) {
-  s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-                                  [](int ch) { return !std::isspace(ch); }));
-  s.erase(std::find_if(s.rbegin(), s.rend(),
-                       [](int ch) { return !std::isspace(ch); })
-              .base(),
+  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) { return !std::isspace(ch); }));
+  s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return !std::isspace(ch); }).base(),
           s.end());
   return s;
 }
@@ -108,8 +98,7 @@ static std::string Trim(std::string s) {
 class Configuration {
  public:
   overnet::Severity trace_severity = overnet::Severity::INFO;
-  std::set<std::string> modules = {"udp", "mdns_advertiser", "mdns_subscriber",
-                                   "omdp"};
+  std::set<std::string> modules = {"udp", "mdns_advertiser", "mdns_subscriber", "omdp"};
   bool help = false;
 
   bool ParseCommandLine(int argc, const char** argv);
@@ -132,21 +121,17 @@ class Configuration {
 // The processor returns true if the option is legal, or prints a message to
 // std::cerr and returns false if the option is invalid.
 static const auto kConfigurationCommandLineProcessors = []() {
-  std::map<std::string,
-           std::function<bool(Configuration * config, const std::string&)>>
-      processors;
+  std::map<std::string, std::function<bool(Configuration * config, const std::string&)>> processors;
   processors["help"] = [](Configuration* config, const std::string& value) {
     config->help = true;
     return true;
   };
-  processors["verbosity"] = [](Configuration* config,
-                               const std::string& value) {
+  processors["verbosity"] = [](Configuration* config, const std::string& value) {
     if (value.empty()) {
       config->trace_severity = overnet::Severity::INFO;
       return true;
     }
-    if (auto severity = overnet::SeverityFromString(value);
-        severity.has_value()) {
+    if (auto severity = overnet::SeverityFromString(value); severity.has_value()) {
       config->trace_severity = *severity;
       return true;
     }
@@ -188,24 +173,22 @@ bool Configuration::ParseCommandLine(int argc, const char** argv) {
 
 void Usage() {
   Configuration default_config;
-  std::cout
-      << "overnetstack - Runs Overnet and associated protocols\n"
-      << "Arguments:\n"
-      << "  --help          display this help and exit\n"
-      << "  --verbosity=X   set the log verbosity (X is one of: debug, trace,\n"
-      << "                  info, warning, error)\n"
-      << "                  defaults to: " << default_config.trace_severity
-      << "\n"
-      << "  --modules=X     comma separated list of modules to start, where\n"
-      << "                  X could be:\n"
-      << "                  udp               allow communication over udp\n"
-      << "                  mdns_advertiser   advertise udp communications\n"
-      << "                                    over mdns\n"
-      << "                  mdns_subscriber   listen for udp communications\n"
-      << "                                    with mdns\n"
-      << "                  omdp              advertise *and* listen for udp\n"
-      << "                                    communications using omdp\n"
-      << "                  defaults to: ";
+  std::cout << "overnetstack - Runs Overnet and associated protocols\n"
+            << "Arguments:\n"
+            << "  --help          display this help and exit\n"
+            << "  --verbosity=X   set the log verbosity (X is one of: debug, trace,\n"
+            << "                  info, warning, error)\n"
+            << "                  defaults to: " << default_config.trace_severity << "\n"
+            << "  --modules=X     comma separated list of modules to start, where\n"
+            << "                  X could be:\n"
+            << "                  udp               allow communication over udp\n"
+            << "                  mdns_advertiser   advertise udp communications\n"
+            << "                                    over mdns\n"
+            << "                  mdns_subscriber   listen for udp communications\n"
+            << "                                    with mdns\n"
+            << "                  omdp              advertise *and* listen for udp\n"
+            << "                                    communications using omdp\n"
+            << "                  defaults to: ";
   bool first = true;
   for (const auto& module : default_config.modules) {
     if (!first) {

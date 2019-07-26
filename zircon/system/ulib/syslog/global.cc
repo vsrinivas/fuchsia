@@ -12,39 +12,37 @@ namespace {
 
 fbl::unique_ptr<fx_logger> g_logger_ptr;
 
-} // namespace
+}  // namespace
 
 __EXPORT
-fx_logger_t* fx_log_get_logger() {
-    return g_logger_ptr.get();
-}
+fx_logger_t* fx_log_get_logger() { return g_logger_ptr.get(); }
 
 __EXPORT
 zx_status_t fx_log_init(void) {
-    fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                                 .console_fd = -1,
-                                 .log_service_channel = ZX_HANDLE_INVALID,
-                                 .tags = NULL,
-                                 .num_tags = 0};
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = ZX_HANDLE_INVALID,
+                               .tags = NULL,
+                               .num_tags = 0};
 
-    return fx_log_init_with_config(&config);
+  return fx_log_init_with_config(&config);
 }
 
 __EXPORT
 zx_status_t fx_log_init_with_config(const fx_logger_config_t* config) {
-    if (config == nullptr) {
-        return ZX_ERR_BAD_STATE;
-    }
-    if (g_logger_ptr.get()) {
-        return ZX_ERR_BAD_STATE;
-    }
-    fx_logger_t* logger = NULL;
-    auto status = fx_logger_create(config, &logger);
-    if (status != ZX_OK) {
-        return status;
-    }
-    g_logger_ptr.reset(logger);
-    return ZX_OK;
+  if (config == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+  if (g_logger_ptr.get()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  fx_logger_t* logger = NULL;
+  auto status = fx_logger_create(config, &logger);
+  if (status != ZX_OK) {
+    return status;
+  }
+  g_logger_ptr.reset(logger);
+  return ZX_OK;
 }
 
 // This is here to force a definition to be included here for C99.
@@ -54,8 +52,6 @@ __BEGIN_CDECLS
 
 __EXPORT
 // This clears out global logger. This is used from tests
-void fx_log_reset_global_for_testing() {
-    g_logger_ptr.reset(nullptr);
-}
+void fx_log_reset_global_for_testing() { g_logger_ptr.reset(nullptr); }
 
 __END_CDECLS

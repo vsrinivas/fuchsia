@@ -158,8 +158,7 @@ bool ReadFromArray(const uint8_t** bytes, uint64_t* value) {
   return false;
 
 done:
-  *value = (static_cast<uint64_t>(part0)) |
-           (static_cast<uint64_t>(part1) << 28) |
+  *value = (static_cast<uint64_t>(part0)) | (static_cast<uint64_t>(part1) << 28) |
            (static_cast<uint64_t>(part2) << 56);
   *bytes = ptr;
   return true;

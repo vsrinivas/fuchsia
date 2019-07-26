@@ -8,14 +8,11 @@
 
 class UserFlagVerifier : public Verifier {
  public:
-  static std::unique_ptr<Verifier> Create(
-      const cpuperf::SessionResultSpec* spec) {
+  static std::unique_ptr<Verifier> Create(const cpuperf::SessionResultSpec* spec) {
     return std::make_unique<UserFlagVerifier>(spec);
   }
 
-  UserFlagVerifier(const cpuperf::SessionResultSpec* spec)
-      : Verifier(spec) {
-  }
+  UserFlagVerifier(const cpuperf::SessionResultSpec* spec) : Verifier(spec) {}
 
  private:
   bool VerifyRecord(const perfmon::SampleRecord& record) override {
@@ -38,6 +35,6 @@ class UserFlagVerifier : public Verifier {
 };
 
 const TestSpec kUserFlagSpec = {
-  "user-flag",
-  &UserFlagVerifier::Create,
+    "user-flag",
+    &UserFlagVerifier::Create,
 };

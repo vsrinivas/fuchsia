@@ -41,9 +41,8 @@ TEST_F(GoogleFactoryImplTest, GetAuthProvider) {
   fuchsia::auth::AuthProviderStatus status;
   auth_provider_.Unbind();
   bool callback_called = false;
-  factory_->GetAuthProvider(
-      auth_provider_.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  factory_->GetAuthProvider(auth_provider_.NewRequest(),
+                            callback::Capture(callback::SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(fuchsia::auth::AuthProviderStatus::OK, status);

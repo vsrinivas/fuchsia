@@ -16,8 +16,7 @@ namespace cobalt {
 
 std::unique_ptr<CobaltLogger> DeprecatedNewCobaltLogger(
     async_dispatcher_t* dispatcher, component::StartupContext* context,
-    const std::string& config_path,
-    fuchsia::cobalt::ReleaseStage release_stage) {
+    const std::string& config_path, fuchsia::cobalt::ReleaseStage release_stage) {
   fsl::SizedVmo config_vmo;
   if (!fsl::VmoFromFilename(config_path, &config_vmo)) {
     FXL_LOG(ERROR) << "Could not find config file at " << config_path;
@@ -27,15 +26,13 @@ std::unique_ptr<CobaltLogger> DeprecatedNewCobaltLogger(
   ProjectProfile profile;
   profile.config = std::move(config_vmo).ToTransport();
   profile.release_stage = release_stage;
-  return std::make_unique<DeprecatedCobaltLoggerImpl>(dispatcher, context,
-                                                      std::move(profile));
+  return std::make_unique<DeprecatedCobaltLoggerImpl>(dispatcher, context, std::move(profile));
 }
 
-std::unique_ptr<CobaltLogger> DeprecatedNewCobaltLogger(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
-    ProjectProfile profile) {
-  return std::make_unique<DeprecatedCobaltLoggerImpl>(dispatcher, context,
-                                                      std::move(profile));
+std::unique_ptr<CobaltLogger> DeprecatedNewCobaltLogger(async_dispatcher_t* dispatcher,
+                                                        component::StartupContext* context,
+                                                        ProjectProfile profile) {
+  return std::make_unique<DeprecatedCobaltLoggerImpl>(dispatcher, context, std::move(profile));
 }
 
 }  // namespace cobalt

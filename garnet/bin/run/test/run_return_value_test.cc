@@ -40,13 +40,12 @@ void test_case(const char* url, const char* value, bool daemonize) {
     argv = new const char* [] { kRunPath, url, value, NULL };
   }
   zx_handle_t process = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, kRunPath, argv,
-                                      NULL, 2, actions, &process, nullptr);
+  zx_status_t status =
+      fdio_spawn_etc(ZX_HANDLE_INVALID, flags, kRunPath, argv, NULL, 2, actions, &process, nullptr);
   ASSERT_EQ(ZX_OK, status);
 
   // Wait for `run` to terminate
-  status =
-      zx_object_wait_one(process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, NULL);
+  status = zx_object_wait_one(process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, NULL);
   ASSERT_EQ(ZX_OK, status);
 
   std::string output;
@@ -57,8 +56,7 @@ void test_case(const char* url, const char* value, bool daemonize) {
 
   // Verify `run` return code
   zx_info_process_t proc_info;
-  status = zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info,
-                              sizeof(proc_info), NULL, NULL);
+  status = zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
   ASSERT_EQ(ZX_OK, status);
   if (daemonize) {
     // If we run daemonize, the return code for run is going to be 0.
@@ -71,22 +69,12 @@ void test_case(const char* url, const char* value, bool daemonize) {
 TEST(RunReturnValueTest, Zero) { test_case(kExiter, "0", false); }
 TEST(RunReturnValueTest, OneTwoThree) { test_case(kExiter, "123", false); }
 TEST(RunReturnValueTest, Negative) { test_case(kExiter, "-99999", false); }
-TEST(RunReturnValueTest, LongValue) {
-  test_case(kExiter, "1152921504606846976", false);
-}
-TEST(RunReturnValueTest, FuzzySearchZero) {
-  test_case(kExiterShort, "0", false);
-}
-TEST(RunReturnValueTest, FuzzySearchOneTwoThree) {
-  test_case(kExiterShort, "123", false);
-}
-TEST(RunReturnValueTest, FuzzySearchNegative) {
-  test_case(kExiterShort, "-99999", false);
-}
+TEST(RunReturnValueTest, LongValue) { test_case(kExiter, "1152921504606846976", false); }
+TEST(RunReturnValueTest, FuzzySearchZero) { test_case(kExiterShort, "0", false); }
+TEST(RunReturnValueTest, FuzzySearchOneTwoThree) { test_case(kExiterShort, "123", false); }
+TEST(RunReturnValueTest, FuzzySearchNegative) { test_case(kExiterShort, "-99999", false); }
 TEST(RunReturnValueTest, FuzzySearchLongValue) {
   test_case(kExiterShort, "1152921504606846976", false);
 }
 TEST(RunReturnValueTest, ZeroD) { test_case(kExiter, "0", true); }
-TEST(RunReturnValueTest, FuzzySearchZeroD) {
-  test_case(kExiterShort, "0", true);
-}
+TEST(RunReturnValueTest, FuzzySearchZeroD) { test_case(kExiterShort, "0", true); }

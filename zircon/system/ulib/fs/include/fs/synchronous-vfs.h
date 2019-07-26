@@ -30,27 +30,27 @@ namespace fs {
 // It is safe to shutdown the dispatch loop before destroying the
 // SynchronousVfs object.
 class SynchronousVfs : public Vfs {
-public:
-    SynchronousVfs();
-    SynchronousVfs(async_dispatcher_t* dispatcher);
+ public:
+  SynchronousVfs();
+  SynchronousVfs(async_dispatcher_t* dispatcher);
 
-    // The SynchronousVfs destructor terminates all open
-    // connections.
-    ~SynchronousVfs() override;
+  // The SynchronousVfs destructor terminates all open
+  // connections.
+  ~SynchronousVfs() override;
 
-private:
-    // Synchronously drop all connections managed by the VFS.
-    //
-    // Invokes |handler| once when all connections are destroyed.
-    // It is safe to delete SynchronousVfs from within the closure.
-    void Shutdown(ShutdownCallback handler) override;
+ private:
+  // Synchronously drop all connections managed by the VFS.
+  //
+  // Invokes |handler| once when all connections are destroyed.
+  // It is safe to delete SynchronousVfs from within the closure.
+  void Shutdown(ShutdownCallback handler) override;
 
-    void RegisterConnection(fbl::unique_ptr<Connection> connection) final;
-    void UnregisterConnection(Connection* connection) final;
-    bool IsTerminating() const final;
+  void RegisterConnection(fbl::unique_ptr<Connection> connection) final;
+  void UnregisterConnection(Connection* connection) final;
+  bool IsTerminating() const final;
 
-    fbl::DoublyLinkedList<fbl::unique_ptr<Connection>> connections_;
-    bool is_shutting_down_;
+  fbl::DoublyLinkedList<fbl::unique_ptr<Connection>> connections_;
+  bool is_shutting_down_;
 };
 
-} // namespace fs
+}  // namespace fs

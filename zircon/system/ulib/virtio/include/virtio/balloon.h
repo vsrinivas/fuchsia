@@ -29,13 +29,13 @@
 __BEGIN_CDECLS
 
 typedef struct virtio_balloon_stat {
-    uint16_t tag;
-    uint64_t val;
+  uint16_t tag;
+  uint64_t val;
 } __PACKED virtio_balloon_stat_t;
 
 typedef struct virtio_balloon_config {
-    uint32_t num_pages;
-    uint32_t actual;
+  uint32_t num_pages;
+  uint32_t actual;
 } __PACKED virtio_balloon_config_t;
 
 __END_CDECLS

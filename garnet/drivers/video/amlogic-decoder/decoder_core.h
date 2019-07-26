@@ -45,8 +45,7 @@ class DecoderCore {
 
   virtual ~DecoderCore() {}
 
-  virtual __WARN_UNUSED_RESULT zx_status_t LoadFirmware(const uint8_t* data,
-                                                        uint32_t len) = 0;
+  virtual __WARN_UNUSED_RESULT zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) = 0;
   virtual void PowerOn() = 0;
   virtual void PowerOff() = 0;
   virtual void StartDecoding() = 0;
@@ -64,8 +63,7 @@ class DecoderCore {
   virtual __WARN_UNUSED_RESULT uint32_t GetStreamInputOffset() = 0;
   virtual __WARN_UNUSED_RESULT uint32_t GetReadOffset() = 0;
 
-  virtual __WARN_UNUSED_RESULT zx_status_t
-  InitializeInputContext(InputContext* context) {
+  virtual __WARN_UNUSED_RESULT zx_status_t InitializeInputContext(InputContext* context) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual void SaveInputContext(InputContext* context) {}

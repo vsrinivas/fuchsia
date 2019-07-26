@@ -57,8 +57,7 @@ class CallPrinter {
     bool dump_insn = false;
   };
 
-  static std::unique_ptr<CallPrinter> Create(DecoderState* decoder,
-                                             const Config& config);
+  static std::unique_ptr<CallPrinter> Create(DecoderState* decoder, const Config& config);
 
   ~CallPrinter();
 
@@ -88,23 +87,22 @@ class CallPrinter {
 
   void PrintHeader(uint64_t id);
 
-  void PrintPc(const SymbolTable* symtab, const Symbol* sym,
-               uint64_t pc, uint64_t cr3, bool print_cr3);
+  void PrintPc(const SymbolTable* symtab, const Symbol* sym, uint64_t pc, uint64_t cr3,
+               bool print_cr3);
   void PrintPc(uint64_t pc, uint64_t cr3, bool print_cr3);
   void PrintEv(const char* name, const Instruction* insn);
   void PrintEvent(const Instruction* insn);
-  void PrintSpeculativeEvent(const Instruction* insn,
-                             int* prev_spec, int* indent);
+  void PrintSpeculativeEvent(const Instruction* insn, int* prev_spec, int* indent);
   void PrintTic(uint64_t tic);
   void PrintTimeIndent();
   void PrintTime(uint64_t ts, uint64_t* first_ts, uint64_t* last_ts);
-  void PrintInsn(const struct pt_insn* insn, uint64_t total_insncnt,
-                 uint64_t ts, struct dis* d, uint64_t cr3);
+  void PrintInsn(const struct pt_insn* insn, uint64_t total_insncnt, uint64_t ts, struct dis* d,
+                 uint64_t cr3);
   void PrintKernelMarker(const Instruction* insn, const SymbolTable* symtab);
   void PrintInsnTime(const Instruction* insn, GlobalPrintState* gps);
   void ReportLost(const Instruction* insn);
-  void PrintOutput(const Instruction* insnbuf, uint32_t count,
-                   GlobalPrintState* gps, LocalPrintState* lps);
+  void PrintOutput(const Instruction* insnbuf, uint32_t count, GlobalPrintState* gps,
+                   LocalPrintState* lps);
 
   FILE* out_file_;
   DecoderState* state_;

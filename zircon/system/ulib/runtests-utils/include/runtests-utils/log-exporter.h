@@ -29,12 +29,12 @@ namespace runtests {
 
 // Error while launching LogExporter.
 enum ExporterLaunchError {
-    OPEN_FILE,
-    CREATE_CHANNEL,
-    FIDL_ERROR,
-    CONNECT_TO_LOGGER_SERVICE,
-    START_LISTENER,
-    NO_ERROR,
+  OPEN_FILE,
+  CREATE_CHANNEL,
+  FIDL_ERROR,
+  CONNECT_TO_LOGGER_SERVICE,
+  START_LISTENER,
+  NO_ERROR,
 };
 
 // Listens to channel messages, converts them fidl log object and writes them to
@@ -48,84 +48,82 @@ enum ExporterLaunchError {
 //    LogExporter l(std::move(channel), f);
 //    l->StartThread();
 class LogExporter {
-public:
-    using ErrorHandler = fbl::Function<void(zx_status_t)>;
-    using FileErrorHandler = fbl::Function<void(const char* error)>;
+ public:
+  using ErrorHandler = fbl::Function<void(zx_status_t)>;
+  using FileErrorHandler = fbl::Function<void(const char* error)>;
 
-    // Creates object and starts listening for msgs on channel written by Log
-    // interface in logger fidl.
-    //
-    // |channel| channel to read log messages from.
-    // |output_file| file to write logs to.
-    //
-    LogExporter(zx::channel channel, FILE* output_file);
-    ~LogExporter();
+  // Creates object and starts listening for msgs on channel written by Log
+  // interface in logger fidl.
+  //
+  // |channel| channel to read log messages from.
+  // |output_file| file to write logs to.
+  //
+  LogExporter(zx::channel channel, FILE* output_file);
+  ~LogExporter();
 
-    // Starts LogListener service on a seperate thread.
-    //
-    // Returns result of loop_.StartThread().
-    zx_status_t StartThread();
+  // Starts LogListener service on a seperate thread.
+  //
+  // Returns result of loop_.StartThread().
+  zx_status_t StartThread();
 
-    // Runs LogListener service until message loop is idle.
-    //
-    // Returns result of loop_.RunUntilIdle().
-    zx_status_t RunUntilIdle();
+  // Runs LogListener service until message loop is idle.
+  //
+  // Returns result of loop_.RunUntilIdle().
+  zx_status_t RunUntilIdle();
 
-    // Sets Error handler which would be called when there is an error
-    // while serving |channel_|. If an error occurs, the channel will close and
-    // the listener thread will stop.
-    void set_error_handler(ErrorHandler error_handler) {
-        error_handler_ = std::move(error_handler);
-    }
+  // Sets Error handler which would be called when there is an error
+  // while serving |channel_|. If an error occurs, the channel will close and
+  // the listener thread will stop.
+  void set_error_handler(ErrorHandler error_handler) { error_handler_ = std::move(error_handler); }
 
-    // Sets Error handler which would be called whenever there is an error
-    // writing to file. If an error occurs, the channel will close and the
-    // listener thread will stop.
-    void set_file_error_handler(FileErrorHandler error_handler) {
-        file_error_handler_ = std::move(error_handler);
-    }
+  // Sets Error handler which would be called whenever there is an error
+  // writing to file. If an error occurs, the channel will close and the
+  // listener thread will stop.
+  void set_file_error_handler(FileErrorHandler error_handler) {
+    file_error_handler_ = std::move(error_handler);
+  }
 
-private:
-    // Keeps track of the count of dropped logs for a process.
-    struct DroppedLogs {
-        uint64_t pid;
-        uint32_t dropped_logs;
-    };
+ private:
+  // Keeps track of the count of dropped logs for a process.
+  struct DroppedLogs {
+    uint64_t pid;
+    uint32_t dropped_logs;
+  };
 
-    void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                       const zx_packet_signal_t* signal);
+  void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                     const zx_packet_signal_t* signal);
 
-    // Decodes channel message and dispatches to correct handler.
-    zx_status_t ReadAndDispatchMessage(fidl::MessageBuffer* buffer);
+  // Decodes channel message and dispatches to correct handler.
+  zx_status_t ReadAndDispatchMessage(fidl::MessageBuffer* buffer);
 
-    // Implementation of LogListener Log method.
-    zx_status_t Log(fidl::Message message);
+  // Implementation of LogListener Log method.
+  zx_status_t Log(fidl::Message message);
 
-    // Implementation of LogListener LogMany method.
-    zx_status_t LogMany(fidl::Message message);
+  // Implementation of LogListener LogMany method.
+  zx_status_t LogMany(fidl::Message message);
 
-    // Helper method to log |message| to file.
-    int LogMessage(fuchsia_logger_LogMessage* message);
+  // Helper method to log |message| to file.
+  int LogMessage(fuchsia_logger_LogMessage* message);
 
-    // Helper method to call |error_handler_|.
-    void NotifyError(zx_status_t error);
+  // Helper method to call |error_handler_|.
+  void NotifyError(zx_status_t error);
 
-    // Helper method to call |error_handler_|.
-    void NotifyFileError(const char* error);
+  // Helper method to call |error_handler_|.
+  void NotifyFileError(const char* error);
 
-    // Helper method to write severity string.
-    int WriteSeverity(int32_t severity);
+  // Helper method to write severity string.
+  int WriteSeverity(int32_t severity);
 
-    async::Loop loop_;
-    zx::channel channel_;
-    async::WaitMethod<LogExporter, &LogExporter::OnHandleReady> wait_;
-    ErrorHandler error_handler_;
-    FileErrorHandler file_error_handler_;
+  async::Loop loop_;
+  zx::channel channel_;
+  async::WaitMethod<LogExporter, &LogExporter::OnHandleReady> wait_;
+  ErrorHandler error_handler_;
+  FileErrorHandler file_error_handler_;
 
-    FILE* output_file_;
+  FILE* output_file_;
 
-    // Vector to keep track of dropped logs per pid
-    fbl::Vector<DroppedLogs> dropped_logs_;
+  // Vector to keep track of dropped logs per pid
+  fbl::Vector<DroppedLogs> dropped_logs_;
 };
 
 // Launches Log Exporter.
@@ -139,6 +137,6 @@ private:
 std::unique_ptr<LogExporter> LaunchLogExporter(fbl::StringPiece syslog_path,
                                                ExporterLaunchError* error);
 
-} // namespace runtests
+}  // namespace runtests
 
-#endif // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_LOG_EXPORTER_H_
+#endif  // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_LOG_EXPORTER_H_

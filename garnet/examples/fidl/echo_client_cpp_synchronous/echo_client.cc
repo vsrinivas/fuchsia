@@ -12,8 +12,7 @@
 #include "echo_client_app.h"
 
 int main(int argc, const char** argv) {
-  std::string server_url =
-      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx";
+  std::string server_url = "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx";
   std::string msg = "hello synchronous world";
 
   for (int i = 1; i < argc - 1; ++i) {

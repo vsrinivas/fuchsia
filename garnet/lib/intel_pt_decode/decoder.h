@@ -95,8 +95,7 @@ class DecoderState {
   std::string LookupFile(const std::string& file);
 
   const SymbolTable* FindSymbolTable(uint64_t cr3, uint64_t pc);
-  const Symbol* FindSymbol(uint64_t cr3, uint64_t pc,
-                           const SymbolTable** out_symtab);
+  const Symbol* FindSymbol(uint64_t cr3, uint64_t pc, const SymbolTable** out_symtab);
   const char* FindPcFileName(uint64_t cr3, uint64_t pc);
 
   bool SeenCr3(uint64_t cr3);
@@ -118,9 +117,7 @@ class DecoderState {
 
   const std::vector<PtFile>& pt_files() const { return pt_files_; }
 
-  const std::unordered_set<uint64_t>& unknown_cr3s() const {
-    return unknown_cr3s_;
-  }
+  const std::unordered_set<uint64_t>& unknown_cr3s() const { return unknown_cr3s_; }
 
  private:
   DecoderState();
@@ -133,23 +130,21 @@ class DecoderState {
   bool ReadPtListFile(const std::string& file);
 
   void AddSymtab(std::unique_ptr<SymbolTable> symtab);
-  bool ReadElf(const std::string& file, uint64_t base, uint64_t cr3,
-               uint64_t file_off, uint64_t map_len);
+  bool ReadElf(const std::string& file, uint64_t base, uint64_t cr3, uint64_t file_off,
+               uint64_t map_len);
   bool ReadKernelElf(const std::string& file, uint64_t cr3);
 
   void SetKernelCr3(uint64_t cr3) { kernel_cr3_ = cr3; }
 
-  static int ReadMemCallback(uint8_t* buffer, size_t size,
-                             const struct pt_asid* asid, uint64_t addr,
-                             void* context);
+  static int ReadMemCallback(uint8_t* buffer, size_t size, const struct pt_asid* asid,
+                             uint64_t addr, void* context);
 
   static int ProcessKtraceRecord(debugger_utils::KtraceRecord* rec, void* arg);
 
   bool AddProcess(zx_koid_t pid, uint64_t cr3, uint64_t start_time);
   bool MarkProcessExited(zx_koid_t pid, uint64_t end_time);
 
-  void AddPtFile(const std::string& file_dir, uint64_t id,
-                 const std::string& path);
+  void AddPtFile(const std::string& file_dir, uint64_t id, const std::string& path);
 
   pt_config config_;
   pt_image* image_;

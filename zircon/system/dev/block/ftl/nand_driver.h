@@ -19,11 +19,11 @@ namespace ftl {
 
 // Encapsulates the lower layer TargetFtl-Ndm driver.
 class NandDriver : public ftl::NdmBaseDriver {
-  public:
-    static std::unique_ptr<NandDriver> Create(const nand_protocol_t* parent,
-                                              const bad_block_protocol_t* bad_block);
+ public:
+  static std::unique_ptr<NandDriver> Create(const nand_protocol_t* parent,
+                                            const bad_block_protocol_t* bad_block);
 
-    virtual const fuchsia_hardware_nand_Info& info() const = 0;
+  virtual const fuchsia_hardware_nand_Info& info() const = 0;
 };
 
 }  // namespace ftl.

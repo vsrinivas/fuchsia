@@ -67,17 +67,14 @@ std::string Thread::GetName() const {
   if (name_.empty()) {
     return fxl::StringPrintf("%lu.%lu", process_->id(), id_);
   }
-  return fxl::StringPrintf("%lu.%lu(%s)",
-                           process_->id(), id_, name_.c_str());
+  return fxl::StringPrintf("%lu.%lu(%s)", process_->id(), id_, name_.c_str());
 }
 
 std::string Thread::GetDebugName() const {
   if (name_.empty()) {
-    return fxl::StringPrintf("%lu.%lu(%lx.%lx)",
-                             process_->id(), id_, process_->id(), id_);
+    return fxl::StringPrintf("%lu.%lu(%lx.%lx)", process_->id(), id_, process_->id(), id_);
   }
-  return fxl::StringPrintf("%lu.%lu(%lx.%lx)(%s)",
-                           process_->id(), id_, process_->id(), id_,
+  return fxl::StringPrintf("%lu.%lu(%lx.%lx)(%s)", process_->id(), id_, process_->id(), id_,
                            name_.c_str());
 }
 
@@ -106,13 +103,9 @@ void Thread::Clear() {
   handle_ = ZX_HANDLE_INVALID;
 }
 
-zx_handle_t Thread::GetExceptionPortHandle() {
-  return process_->server()->exception_port_handle();
-}
+zx_handle_t Thread::GetExceptionPortHandle() { return process_->server()->exception_port_handle(); }
 
-fxl::WeakPtr<Thread> Thread::AsWeakPtr() {
-  return weak_ptr_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<Thread> Thread::AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
 GdbSignal Thread::GetGdbSignal() const {
   if (!exception_context_) {
@@ -123,8 +116,7 @@ GdbSignal Thread::GetGdbSignal() const {
   return ComputeGdbSignal(*exception_context_);
 }
 
-void Thread::OnException(const zx_excp_type_t type,
-                         const zx_exception_context_t& context) {
+void Thread::OnException(const zx_excp_type_t type, const zx_exception_context_t& context) {
   // TODO(dje): While having a pointer allows for a simple "do we have a
   // context" check, it might be simpler to just store the struct in the class.
   exception_context_.reset(new zx_exception_context_t);
@@ -140,11 +132,9 @@ void Thread::OnException(const zx_excp_type_t type,
   if (prev_state == State::kStepping && type != ZX_EXCP_THREAD_EXITING) {
     FXL_DCHECK(breakpoints_.SingleStepBreakpointInserted());
     if (!breakpoints_.RemoveSingleStepBreakpoint()) {
-      FXL_LOG(ERROR) << "Unable to clear single-step bkpt for thread "
-                     << GetName();
+      FXL_LOG(ERROR) << "Unable to clear single-step bkpt for thread " << GetName();
     } else {
-      FXL_VLOG(4) << "Single-step bkpt cleared for thread "
-                  << GetDebugName();
+      FXL_VLOG(4) << "Single-step bkpt cleared for thread " << GetDebugName();
     }
   }
 
@@ -170,12 +160,12 @@ void Thread::OnResumption() {
 }
 
 void Thread::OnSignal(zx_signals_t signals) {
-    if (signals & ZX_THREAD_TERMINATED) {
-      OnTermination();
-      return;
-    }
+  if (signals & ZX_THREAD_TERMINATED) {
+    OnTermination();
+    return;
+  }
 
-    switch (signals & (ZX_THREAD_SUSPENDED | ZX_THREAD_RUNNING)) {
+  switch (signals & (ZX_THREAD_SUSPENDED | ZX_THREAD_RUNNING)) {
     case 0:
       break;
     case ZX_THREAD_SUSPENDED:
@@ -188,51 +178,48 @@ void Thread::OnSignal(zx_signals_t signals) {
       // These signals can get folded together.
       uint32_t state = debugger_utils::GetThreadOsState(handle_);
       switch (ZX_THREAD_STATE_BASIC(state)) {
-      case ZX_THREAD_STATE_RUNNING:
-        OnResumption();
-        break;
-      case ZX_THREAD_STATE_SUSPENDED:
-        OnSuspension();
-        break;
-      case ZX_THREAD_STATE_BLOCKED:
-        // If we're blocked in a syscall or some such we're still running
-        // as far as we're concerned.
-        OnResumption();
-        break;
-      case ZX_THREAD_STATE_DYING:
-      case ZX_THREAD_STATE_DEAD:
-        // These are handled elsewhere, e.g., on receipt of ZX_THREAD_TERMINATED.
-        // But if we were suspended we no longer are.
-        if (state_ == State::kSuspended) {
-          // The transition to kExiting or kGone is handled elsewhere.
-          // Here we just process the fact that we got SUSPENDED|RUNNING signals.
+        case ZX_THREAD_STATE_RUNNING:
           OnResumption();
-        }
-        break;
-      default:
-        FXL_NOTREACHED();
-        break;
+          break;
+        case ZX_THREAD_STATE_SUSPENDED:
+          OnSuspension();
+          break;
+        case ZX_THREAD_STATE_BLOCKED:
+          // If we're blocked in a syscall or some such we're still running
+          // as far as we're concerned.
+          OnResumption();
+          break;
+        case ZX_THREAD_STATE_DYING:
+        case ZX_THREAD_STATE_DEAD:
+          // These are handled elsewhere, e.g., on receipt of ZX_THREAD_TERMINATED.
+          // But if we were suspended we no longer are.
+          if (state_ == State::kSuspended) {
+            // The transition to kExiting or kGone is handled elsewhere.
+            // Here we just process the fact that we got SUSPENDED|RUNNING signals.
+            OnResumption();
+          }
+          break;
+        default:
+          FXL_NOTREACHED();
+          break;
       }
       break;
     }
-    }
+  }
 }
 
 bool Thread::TryNext(zx_handle_t eport) {
   if (state() != State::kInException && state() != State::kNew) {
-    FXL_LOG(ERROR) << "Cannot try-next thread " << GetName()
-                   << " while in state " << StateName(state());
+    FXL_LOG(ERROR) << "Cannot try-next thread " << GetName() << " while in state "
+                   << StateName(state());
     return false;
   }
 
-  FXL_VLOG(4) << "Thread " << GetDebugName()
-              << ": trying next exception handler";
+  FXL_VLOG(4) << "Thread " << GetDebugName() << ": trying next exception handler";
 
-  zx_status_t status =
-      zx_task_resume_from_exception(handle_, eport, ZX_RESUME_TRY_NEXT);
+  zx_status_t status = zx_task_resume_from_exception(handle_, eport, ZX_RESUME_TRY_NEXT);
   if (status < 0) {
-    FXL_LOG(ERROR) << "Failed to try-next thread "
-                   << GetName() << ": "
+    FXL_LOG(ERROR) << "Failed to try-next thread " << GetName() << ": "
                    << debugger_utils::ZxErrorString(status);
     return false;
   }
@@ -252,8 +239,7 @@ bool Thread::ResumeFromException(zx_handle_t eport) {
   // thread).
   FXL_VLOG(4) << "Resuming thread " << GetDebugName() << " after an exception";
 
-  zx_status_t status =
-      zx_task_resume_from_exception(handle_, eport, 0);
+  zx_status_t status = zx_task_resume_from_exception(handle_, eport, 0);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to resume thread " << GetName() << ": "
                    << debugger_utils::ZxErrorString(status);
@@ -295,27 +281,23 @@ void Thread::ResumeForExit(zx_handle_t eport) {
 
   FXL_VLOG(4) << "Thread " << GetDebugName() << " is exiting";
 
-  auto status =
-      zx_task_resume_from_exception(handle_, eport, 0);
+  auto status = zx_task_resume_from_exception(handle_, eport, 0);
   if (status < 0) {
     // This might fail if the process has been killed in the interim.
     // It shouldn't otherwise fail. Just log the failure, nothing else
     // we can do.
     zx_info_process_t info;
-    auto info_status =
-        zx_object_get_info(process()->process().get(), ZX_INFO_PROCESS, &info,
-                           sizeof(info), nullptr, nullptr);
+    auto info_status = zx_object_get_info(process()->process().get(), ZX_INFO_PROCESS, &info,
+                                          sizeof(info), nullptr, nullptr);
     if (info_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error getting process info for thread "
-                     << GetName() << ": "
+      FXL_LOG(ERROR) << "Error getting process info for thread " << GetName() << ": "
                      << debugger_utils::ZxErrorString(info_status);
     }
     if (info_status == ZX_OK && info.exited) {
       FXL_VLOG(4) << "Process " << process()->GetName() << " exited too";
     } else {
       FXL_LOG(ERROR) << "Failed to resume thread " << GetName()
-                     << " for exit: "
-                     << debugger_utils::ZxErrorString(status);
+                     << " for exit: " << debugger_utils::ZxErrorString(status);
     }
   }
 
@@ -374,12 +356,11 @@ bool Thread::Step() {
   FXL_LOG(INFO) << "Thread " << GetName() << " is now stepping";
 
   // TODO(dje): Handle stopped by suspension.
-  zx_status_t status =
-      zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
+  zx_status_t status = zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
-    FXL_LOG(ERROR) << "Failed to resume thread " << GetName() << " for step: "
-                   << debugger_utils::ZxErrorString(status);
+    FXL_LOG(ERROR) << "Failed to resume thread " << GetName()
+                   << " for step: " << debugger_utils::ZxErrorString(status);
     return false;
   }
 
@@ -388,9 +369,8 @@ bool Thread::Step() {
 }
 
 zx_status_t Thread::GetExceptionReport(zx_exception_report_t* report) const {
-  zx_status_t status =
-    zx_object_get_info(handle_, ZX_INFO_THREAD_EXCEPTION_REPORT,
-                       report, sizeof(*report), nullptr, nullptr);
+  zx_status_t status = zx_object_get_info(handle_, ZX_INFO_THREAD_EXCEPTION_REPORT, report,
+                                          sizeof(*report), nullptr, nullptr);
   // This could fail if the process terminates before we get a chance to
   // look at it.
   if (status == ZX_ERR_BAD_STATE) {
@@ -406,22 +386,19 @@ zx_status_t Thread::GetExceptionReport(zx_exception_report_t* report) const {
 }
 
 void Thread::Dump() {
-  if (state_ == State::kInException ||
-      state_ == State::kSuspended) {
+  if (state_ == State::kInException || state_ == State::kSuspended) {
     FXL_LOG(INFO) << "Thread " << GetDebugName() << " dump";
-    debugger_utils::DumpThread(process()->process().get(), handle(),
-                               state_ == State::kInException);
+    debugger_utils::DumpThread(process()->process().get(), handle(), state_ == State::kInException);
   } else {
     FXL_LOG(INFO) << "Thread " << id_ << " not stopped, skipping dump";
   }
 }
 
-std::string Thread::ExceptionToString(
-    zx_excp_type_t type, const zx_exception_context_t& context) const {
-  std::string description = fxl::StringPrintf(
-    "Thread %s: received exception %s",
-    GetDebugName().c_str(),
-    debugger_utils::ExceptionNameAsString(type).c_str());
+std::string Thread::ExceptionToString(zx_excp_type_t type,
+                                      const zx_exception_context_t& context) const {
+  std::string description =
+      fxl::StringPrintf("Thread %s: received exception %s", GetDebugName().c_str(),
+                        debugger_utils::ExceptionNameAsString(type).c_str());
 
   if (ZX_EXCP_IS_ARCH(type)) {
     Registers* regs = registers();
@@ -442,14 +419,13 @@ std::string Thread::SignalsToString(zx_signals_t signals) const {
     description += ", suspended";
   if (signals & ZX_THREAD_TERMINATED)
     description += ", terminated";
-  zx_signals_t mask =
-      (ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED);
+  zx_signals_t mask = (ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED);
   if (signals & ~mask)
     description += fxl::StringPrintf(", unknown (0x%x)", signals & ~mask);
   if (description.length() == 0)
     description = ", none";
-  return fxl::StringPrintf("Thread %s got signals: %s",
-                           GetDebugName().c_str(), description.c_str() + 2);
+  return fxl::StringPrintf("Thread %s got signals: %s", GetDebugName().c_str(),
+                           description.c_str() + 2);
 }
 
 }  // namespace inferior_control

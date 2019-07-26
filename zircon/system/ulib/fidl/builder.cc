@@ -8,8 +8,7 @@
 
 namespace fidl {
 
-Builder::Builder()
-    : capacity_(0u), at_(0u), buffer_(nullptr) {}
+Builder::Builder() : capacity_(0u), at_(0u), buffer_(nullptr) {}
 
 Builder::Builder(void* buffer, uint32_t capacity)
     : capacity_(capacity), at_(0u), buffer_(static_cast<uint8_t*>(buffer)) {}

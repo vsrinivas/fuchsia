@@ -31,8 +31,7 @@
 #define ROUND_POWER_OF_TWO(value, n) (((value) + (1 << ((n)-1))) >> (n))
 #define ROUND64_POWER_OF_TWO(value, n) (((value) + (1ULL << ((n)-1))) >> (n))
 
-#define ALIGN_POWER_OF_TWO(value, n) \
-  (((value) + ((1 << (n)) - 1)) & ~((1 << (n)) - 1))
+#define ALIGN_POWER_OF_TWO(value, n) (((value) + ((1 << (n)) - 1)) & ~((1 << (n)) - 1))
 
 #define CONVERT_TO_SHORTPTR(x) ((uint16_t *)(((uintptr_t)(x)) << 1))
 #define CAST_TO_SHORTPTR(x) ((uint16_t *)((uintptr_t)(x)))

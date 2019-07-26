@@ -21,8 +21,7 @@ class CodecInputItem {
   CodecInputItem& operator=(CodecInputItem&& from) = default;
 
   static CodecInputItem Invalid();
-  static CodecInputItem FormatDetails(
-      const fuchsia::media::FormatDetails& format_details);
+  static CodecInputItem FormatDetails(const fuchsia::media::FormatDetails& format_details);
   static CodecInputItem Packet(CodecPacket* packet);
   static CodecInputItem EndOfStream();
 

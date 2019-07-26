@@ -27,21 +27,17 @@ struct ConnectRequestContext {
 
 class Server final : public llcpp::fidl::examples::echo::Echo::Interface {
  public:
-  void EchoString(::fidl::StringView value,
-                  EchoStringCompleter::Sync completer) override {
+  void EchoString(::fidl::StringView value, EchoStringCompleter::Sync completer) override {
     completer.Reply(value);
   }
 };
 
-static void connect(void* untyped_context, const char* service_name,
-                    zx_handle_t service_request) {
+static void connect(void* untyped_context, const char* service_name, zx_handle_t service_request) {
   auto context = static_cast<ConnectRequestContext*>(untyped_context);
   if (!context->quiet) {
-    std::cout << "echo_server_llcpp: Incoming connection for " << service_name
-              << std::endl;
+    std::cout << "echo_server_llcpp: Incoming connection for " << service_name << std::endl;
   }
-  fidl::Bind(context->dispatcher, zx::channel(service_request),
-             context->server.get());
+  fidl::Bind(context->dispatcher, zx::channel(service_request), context->server.get());
 }
 
 int main(int argc, char** argv) {
@@ -65,12 +61,8 @@ int main(int argc, char** argv) {
   }
 
   ConnectRequestContext context = {
-    .quiet = quiet,
-    .dispatcher = dispatcher,
-    .server = std::make_unique<Server>()
-  };
-  status = svc_dir_add_service(dir, "public", "fidl.examples.echo.Echo",
-                               &context, connect);
+      .quiet = quiet, .dispatcher = dispatcher, .server = std::make_unique<Server>()};
+  status = svc_dir_add_service(dir, "public", "fidl.examples.echo.Echo", &context, connect);
   if (status != ZX_OK) {
     std::cerr << "error: svc_dir_add_service returned: " << status << " ("
               << zx_status_get_string(status) << ")" << std::endl;

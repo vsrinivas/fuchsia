@@ -12,8 +12,7 @@ namespace harvester {
 // Gather Samples for jobs, processes, and threads.
 class GatherTasks : public GatherCategory {
  public:
-  GatherTasks(zx_handle_t root_resource,
-              harvester::DockyardProxy& dockyard_proxy)
+  GatherTasks(zx_handle_t root_resource, harvester::DockyardProxy& dockyard_proxy)
       : GatherCategory(root_resource, dockyard_proxy) {}
 
   void Gather() override;

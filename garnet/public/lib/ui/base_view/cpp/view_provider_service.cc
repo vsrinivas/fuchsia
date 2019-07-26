@@ -12,17 +12,16 @@
 
 namespace scenic {
 
-ViewProviderService::ViewProviderService(
-    component::StartupContext* startup_context,
-    fuchsia::ui::scenic::Scenic* scenic, ViewFactory view_factory)
+ViewProviderService::ViewProviderService(component::StartupContext* startup_context,
+                                         fuchsia::ui::scenic::Scenic* scenic,
+                                         ViewFactory view_factory)
     : ViewProviderService(startup_context, scenic) {
   FXL_DCHECK(view_factory);
   view_factory_ = std::move(view_factory);
 }
 
-ViewProviderService::ViewProviderService(
-    component::StartupContext* startup_context,
-    fuchsia::ui::scenic::Scenic* scenic)
+ViewProviderService::ViewProviderService(component::StartupContext* startup_context,
+                                         fuchsia::ui::scenic::Scenic* scenic)
     : startup_context_(startup_context), scenic_(scenic) {
   FXL_DCHECK(startup_context_);
 
@@ -33,8 +32,7 @@ ViewProviderService::ViewProviderService(
 }
 
 ViewProviderService::~ViewProviderService() {
-  startup_context_->outgoing()
-      .RemovePublicService<fuchsia::ui::app::ViewProvider>();
+  startup_context_->outgoing().RemovePublicService<fuchsia::ui::app::ViewProvider>();
 }
 
 void ViewProviderService::CreateView(
@@ -42,8 +40,7 @@ void ViewProviderService::CreateView(
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
   ViewContext context = {
-      .session_and_listener_request =
-          CreateScenicSessionPtrAndListenerRequest(scenic_),
+      .session_and_listener_request = CreateScenicSessionPtrAndListenerRequest(scenic_),
       .view_token = scenic::ToViewToken(std::move(view_token)),
       .incoming_services = std::move(incoming_services),
       .outgoing_services = std::move(outgoing_services),
@@ -52,16 +49,14 @@ void ViewProviderService::CreateView(
 
   if (view_factory_) {
     if (auto base_view = view_factory_(std::move(context))) {
-      base_view->SetReleaseHandler(
-          [this, base_view = base_view.get()](zx_status_t status) {
-            auto it = std::find_if(
-                views_.begin(), views_.end(),
-                [base_view](const std::unique_ptr<BaseView>& other) {
-                  return other.get() == base_view;
-                });
-            FXL_DCHECK(it != views_.end());
-            views_.erase(it);
-          });
+      base_view->SetReleaseHandler([this, base_view = base_view.get()](zx_status_t status) {
+        auto it = std::find_if(views_.begin(), views_.end(),
+                               [base_view](const std::unique_ptr<BaseView>& other) {
+                                 return other.get() == base_view;
+                               });
+        FXL_DCHECK(it != views_.end());
+        views_.erase(it);
+      });
       views_.push_back(std::move(base_view));
     }
   } else {

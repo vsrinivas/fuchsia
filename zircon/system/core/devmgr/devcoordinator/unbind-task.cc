@@ -9,8 +9,7 @@
 
 namespace devmgr {
 
-UnbindTask::UnbindTask(
-    fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion)
+UnbindTask::UnbindTask(fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion)
     : Task(device->coordinator->dispatcher(), std::move(completion), opts.post_on_create),
       device_(std::move(device)),
       do_unbind_(opts.do_unbind),
@@ -18,8 +17,8 @@ UnbindTask::UnbindTask(
 
 UnbindTask::~UnbindTask() = default;
 
-fbl::RefPtr<UnbindTask> UnbindTask::Create(
-    fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion) {
+fbl::RefPtr<UnbindTask> UnbindTask::Create(fbl::RefPtr<Device> device, UnbindTaskOpts opts,
+                                           Completion completion) {
   return fbl::MakeRefCounted<UnbindTask>(std::move(device), opts, std::move(completion));
 }
 
@@ -122,5 +121,4 @@ void UnbindTask::Run() {
   }
 }
 
-} // namespace devmgr
-
+}  // namespace devmgr

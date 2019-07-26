@@ -190,7 +190,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   // The connection associated with fuchsia.device.Controller/RunCompatibilityTests
   fbl::Mutex test_compatibility_conn_lock_;
   fbl::Vector<fs::FidlConnection> test_compatibility_conn_
-                                        TA_GUARDED(test_compatibility_conn_lock_);
+      TA_GUARDED(test_compatibility_conn_lock_);
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

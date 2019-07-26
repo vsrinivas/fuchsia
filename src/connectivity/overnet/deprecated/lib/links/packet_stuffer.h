@@ -25,8 +25,7 @@ class PacketStuffer {
   bool HasPendingMessages() const;
 
   Slice BuildPacket(LazySliceArgs args);
-  Status ParseAndForwardTo(TimeStamp received, Slice packet,
-                           Router* router) const;
+  Status ParseAndForwardTo(TimeStamp received, Slice packet, Router* router) const;
 
  private:
   const NodeId my_node_id_;

@@ -35,7 +35,7 @@
 
 #define BCDC_GET_IF_IDX(hdr) ((int)((((hdr)->flags2) & BCDC_FLAG2_IF_MASK) >> BCDC_FLAG2_IF_SHIFT))
 #define BCDC_SET_IF_IDX(hdr, idx) \
-    ((hdr)->flags2 = (((hdr)->flags2 & ~BCDC_FLAG2_IF_MASK) | ((idx) << BCDC_FLAG2_IF_SHIFT)))
+  ((hdr)->flags2 = (((hdr)->flags2 & ~BCDC_FLAG2_IF_MASK) | ((idx) << BCDC_FLAG2_IF_SHIFT)))
 
 /**
  * struct brcmf_proto_bcdc_header - BCDC header format
@@ -46,10 +46,10 @@
  * @data_offset: start of packet data. header is following by firmware signals.
  */
 struct brcmf_proto_bcdc_header {
-    uint8_t flags;
-    uint8_t priority;
-    uint8_t flags2;
-    uint8_t data_offset;
+  uint8_t flags;
+  uint8_t priority;
+  uint8_t flags2;
+  uint8_t data_offset;
 };
 
 /*
@@ -66,303 +66,302 @@ struct brcmf_proto_bcdc_header {
  */
 #define BUS_HEADER_LEN (16 + 64)
 struct brcmf_bcdc {
-    uint16_t reqid;
-    uint8_t bus_header[BUS_HEADER_LEN];
-    struct brcmf_proto_bcdc_dcmd msg;
-    // buf must be packed right after msg; see brcmf_proto_bcdc_msg
-    unsigned char buf[BRCMF_DCMD_MAXLEN];
-    struct brcmf_fws_info* fws;
+  uint16_t reqid;
+  uint8_t bus_header[BUS_HEADER_LEN];
+  struct brcmf_proto_bcdc_dcmd msg;
+  // buf must be packed right after msg; see brcmf_proto_bcdc_msg
+  unsigned char buf[BRCMF_DCMD_MAXLEN];
+  struct brcmf_fws_info* fws;
 };
 
 struct brcmf_fws_info* drvr_to_fws(struct brcmf_pub* drvr) {
-    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
+  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
 
-    return bcdc->fws;
+  return bcdc->fws;
 }
 
 static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
                                         uint len, bool set) {
-    struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
-    struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
-    uint32_t flags;
+  struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
+  struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
+  uint32_t flags;
 
-    if (cmd == BRCMF_C_GET_VAR) {
-        // buf starts with a NULL-terminated string
-        BRCMF_DBG(BCDC, "Getting iovar '%.*s'\n", len, buf);
-    } else if (cmd == BRCMF_C_SET_VAR) {
-        // buf starts with a NULL-terminated string
-        BRCMF_DBG(BCDC, "Setting iovar '%.*s'\n", len, buf);
-    } else {
-        BRCMF_DBG(BCDC, "Enter\n");
-    }
+  if (cmd == BRCMF_C_GET_VAR) {
+    // buf starts with a NULL-terminated string
+    BRCMF_DBG(BCDC, "Getting iovar '%.*s'\n", len, buf);
+  } else if (cmd == BRCMF_C_SET_VAR) {
+    // buf starts with a NULL-terminated string
+    BRCMF_DBG(BCDC, "Setting iovar '%.*s'\n", len, buf);
+  } else {
+    BRCMF_DBG(BCDC, "Enter\n");
+  }
 
-    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), buf, len,
-                       "Sending BCDC Message (%u bytes)\n", len);
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), buf, len,
+                     "Sending BCDC Message (%u bytes)\n", len);
 
-    memset(msg, 0, sizeof(struct brcmf_proto_bcdc_dcmd));
+  memset(msg, 0, sizeof(struct brcmf_proto_bcdc_dcmd));
 
-    msg->cmd = cmd;
-    msg->len = len;
-    flags = (++bcdc->reqid << BCDC_DCMD_ID_SHIFT);
-    if (set) {
-        flags |= BCDC_DCMD_SET;
-    }
-    flags = (flags & ~BCDC_DCMD_IF_MASK) | (ifidx << BCDC_DCMD_IF_SHIFT);
-    msg->flags = flags;
+  msg->cmd = cmd;
+  msg->len = len;
+  flags = (++bcdc->reqid << BCDC_DCMD_ID_SHIFT);
+  if (set) {
+    flags |= BCDC_DCMD_SET;
+  }
+  flags = (flags & ~BCDC_DCMD_IF_MASK) | (ifidx << BCDC_DCMD_IF_SHIFT);
+  msg->flags = flags;
 
-    if (buf) {
-        memcpy(bcdc->buf, buf, len);
-    }
+  if (buf) {
+    memcpy(bcdc->buf, buf, len);
+  }
 
-    len += sizeof(*msg);
-    if (len > BRCMF_TX_IOCTL_MAX_MSG_SIZE) {
-        len = BRCMF_TX_IOCTL_MAX_MSG_SIZE;
-    }
+  len += sizeof(*msg);
+  if (len > BRCMF_TX_IOCTL_MAX_MSG_SIZE) {
+    len = BRCMF_TX_IOCTL_MAX_MSG_SIZE;
+  }
 
-    /* Send request */
-    return brcmf_bus_txctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len);
+  /* Send request */
+  return brcmf_bus_txctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len);
 }
 
 static zx_status_t brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, uint32_t len,
                                           int* rxlen_out) {
-    zx_status_t ret;
-    struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
+  zx_status_t ret;
+  struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
 
-    BRCMF_DBG(BCDC, "Enter\n");
-    len += sizeof(struct brcmf_proto_bcdc_dcmd);
-    do {
-        ret = brcmf_bus_rxctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len, rxlen_out);
-        if (ret != ZX_OK) {
-            break;
-        }
-    } while (BCDC_DCMD_ID(bcdc->msg.flags) != id);
+  BRCMF_DBG(BCDC, "Enter\n");
+  len += sizeof(struct brcmf_proto_bcdc_dcmd);
+  do {
+    ret = brcmf_bus_rxctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len, rxlen_out);
+    if (ret != ZX_OK) {
+      break;
+    }
+  } while (BCDC_DCMD_ID(bcdc->msg.flags) != id);
 
-    uint32_t actual_len = bcdc->msg.len;
-    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), bcdc->buf, actual_len,
-                       "Received BCDC Message (%u bytes)\n", actual_len);
+  uint32_t actual_len = bcdc->msg.len;
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), bcdc->buf, actual_len,
+                     "Received BCDC Message (%u bytes)\n", actual_len);
 
-    return ret;
+  return ret;
 }
 
 static zx_status_t brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
                                                void* buf, uint len, int32_t* fwerr) {
-    struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
-    struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
-    void* info;
-    zx_status_t ret = ZX_OK;
-    int retries = 0;
-    int rxlen;
-    uint32_t id, flags;
+  struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
+  struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
+  void* info;
+  zx_status_t ret = ZX_OK;
+  int retries = 0;
+  int rxlen;
+  uint32_t id, flags;
 
-    BRCMF_DBG(BCDC, "Enter, cmd %d len %d\n", cmd, len);
+  BRCMF_DBG(BCDC, "Enter, cmd %d len %d\n", cmd, len);
 
-    *fwerr = ZX_OK;
-    ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, false);
-    if (ret != ZX_OK) {
-        BRCMF_ERR("brcmf_proto_bcdc_msg failed w/status %d\n", ret);
-        goto done;
-    }
+  *fwerr = ZX_OK;
+  ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, false);
+  if (ret != ZX_OK) {
+    BRCMF_ERR("brcmf_proto_bcdc_msg failed w/status %d\n", ret);
+    goto done;
+  }
 
 retry:
-    /* wait for interrupt and get first fragment */
-    ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxlen);
-    if (ret != ZX_OK) {
-        goto done;
+  /* wait for interrupt and get first fragment */
+  ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxlen);
+  if (ret != ZX_OK) {
+    goto done;
+  }
+
+  flags = msg->flags;
+  id = (flags & BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT;
+
+  if ((id < bcdc->reqid) && (++retries < RETRIES)) {
+    goto retry;
+  }
+  if (id != bcdc->reqid) {
+    BRCMF_ERR("%s: unexpected request id %d (expected %d)\n",
+              brcmf_ifname(brcmf_get_ifp(drvr, ifidx)), id, bcdc->reqid);
+    ret = ZX_ERR_BAD_STATE;
+    goto done;
+  }
+
+  /* Check info buffer */
+  info = (void*)&bcdc->buf[0];
+
+  /* Copy info buffer */
+  if (buf) {
+    if (rxlen < (int)len) {
+      len = rxlen;
     }
+    memcpy(buf, info, len);
+  }
 
-    flags = msg->flags;
-    id = (flags & BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT;
+  ret = ZX_OK;
 
-    if ((id < bcdc->reqid) && (++retries < RETRIES)) {
-        goto retry;
-    }
-    if (id != bcdc->reqid) {
-        BRCMF_ERR("%s: unexpected request id %d (expected %d)\n",
-                  brcmf_ifname(brcmf_get_ifp(drvr, ifidx)), id, bcdc->reqid);
-        ret = ZX_ERR_BAD_STATE;
-        goto done;
-    }
-
-    /* Check info buffer */
-    info = (void*)&bcdc->buf[0];
-
-    /* Copy info buffer */
-    if (buf) {
-        if (rxlen < (int)len) {
-            len = rxlen;
-        }
-        memcpy(buf, info, len);
-    }
-
-    ret = ZX_OK;
-
-    /* Check the ERROR flag */
-    if (flags & BCDC_DCMD_ERROR) {
-        *fwerr = msg->status;
-    }
+  /* Check the ERROR flag */
+  if (flags & BCDC_DCMD_ERROR) {
+    *fwerr = msg->status;
+  }
 done:
-    return ret;
+  return ret;
 }
 
 static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
                                              uint len, int32_t* fwerr) {
-    struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
-    struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
-    zx_status_t ret;
-    uint32_t flags, id;
-    int rxlen_out;
+  struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
+  struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
+  zx_status_t ret;
+  uint32_t flags, id;
+  int rxlen_out;
 
-    BRCMF_DBG(BCDC, "Enter, cmd %d len %d\n", cmd, len);
+  BRCMF_DBG(BCDC, "Enter, cmd %d len %d\n", cmd, len);
 
-    *fwerr = ZX_OK;
-    ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, true);
-    if (ret != ZX_OK) {
-        goto done;
-    }
+  *fwerr = ZX_OK;
+  ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, true);
+  if (ret != ZX_OK) {
+    goto done;
+  }
 
-    ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxlen_out);
-    if (ret != ZX_OK) {
-        BRCMF_DBG(TEMP, "Just got back from message cmplt, result %d", ret);
-        goto done;
-    }
+  ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxlen_out);
+  if (ret != ZX_OK) {
+    BRCMF_DBG(TEMP, "Just got back from message cmplt, result %d", ret);
+    goto done;
+  }
 
-    flags = msg->flags;
-    id = (flags & BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT;
+  flags = msg->flags;
+  id = (flags & BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT;
 
-    if (id != bcdc->reqid) {
-        BRCMF_ERR("%s: unexpected request id %d (expected %d)\n",
-                  brcmf_ifname(brcmf_get_ifp(drvr, ifidx)), id, bcdc->reqid);
-        ret = ZX_ERR_BAD_STATE;
-        goto done;
-    }
+  if (id != bcdc->reqid) {
+    BRCMF_ERR("%s: unexpected request id %d (expected %d)\n",
+              brcmf_ifname(brcmf_get_ifp(drvr, ifidx)), id, bcdc->reqid);
+    ret = ZX_ERR_BAD_STATE;
+    goto done;
+  }
 
-    ret = ZX_OK;
+  ret = ZX_OK;
 
-    /* Check the ERROR flag */
-    if (flags & BCDC_DCMD_ERROR) {
-        *fwerr = msg->status;
-    }
+  /* Check the ERROR flag */
+  if (flags & BCDC_DCMD_ERROR) {
+    *fwerr = msg->status;
+  }
 
 done:
-    return ret;
+  return ret;
 }
 
 static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
                                      struct brcmf_netbuf* pktbuf) {
-    struct brcmf_proto_bcdc_header* h;
+  struct brcmf_proto_bcdc_header* h;
 
-    BRCMF_DBG(BCDC, "Enter\n");
+  BRCMF_DBG(BCDC, "Enter\n");
 
-    /* Push BDC header used to convey priority for buses that don't */
-    brcmf_netbuf_grow_head(pktbuf, BCDC_HEADER_LEN);
+  /* Push BDC header used to convey priority for buses that don't */
+  brcmf_netbuf_grow_head(pktbuf, BCDC_HEADER_LEN);
 
-    h = (struct brcmf_proto_bcdc_header*)(pktbuf->data);
+  h = (struct brcmf_proto_bcdc_header*)(pktbuf->data);
 
-    h->flags = (BCDC_PROTO_VER << BCDC_FLAG_VER_SHIFT);
-    if (pktbuf->ip_summed == CHECKSUM_PARTIAL) {
-        h->flags |= BCDC_FLAG_SUM_NEEDED;
-    }
+  h->flags = (BCDC_PROTO_VER << BCDC_FLAG_VER_SHIFT);
+  if (pktbuf->ip_summed == CHECKSUM_PARTIAL) {
+    h->flags |= BCDC_FLAG_SUM_NEEDED;
+  }
 
-    h->priority = (pktbuf->priority & BCDC_PRIORITY_MASK);
-    h->flags2 = 0;
-    h->data_offset = offset;
-    BCDC_SET_IF_IDX(h, ifidx);
+  h->priority = (pktbuf->priority & BCDC_PRIORITY_MASK);
+  h->flags2 = 0;
+  h->data_offset = offset;
+  BCDC_SET_IF_IDX(h, ifidx);
 }
 
 static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
-                                            struct brcmf_netbuf* pktbuf,
-                                            struct brcmf_if** ifp) {
-    struct brcmf_proto_bcdc_header* h;
-    struct brcmf_if* tmp_if;
+                                            struct brcmf_netbuf* pktbuf, struct brcmf_if** ifp) {
+  struct brcmf_proto_bcdc_header* h;
+  struct brcmf_if* tmp_if;
 
-    BRCMF_DBG(BCDC, "Enter\n");
+  BRCMF_DBG(BCDC, "Enter\n");
 
-    /* Pop BCDC header used to convey priority for buses that don't */
-    if (pktbuf->len <= BCDC_HEADER_LEN) {
-        BRCMF_DBG(INFO, "rx data too short (%d <= %d)\n", pktbuf->len, BCDC_HEADER_LEN);
-        return ZX_ERR_IO_DATA_INTEGRITY;
-    }
+  /* Pop BCDC header used to convey priority for buses that don't */
+  if (pktbuf->len <= BCDC_HEADER_LEN) {
+    BRCMF_DBG(INFO, "rx data too short (%d <= %d)\n", pktbuf->len, BCDC_HEADER_LEN);
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
 
-    h = (struct brcmf_proto_bcdc_header*)(pktbuf->data);
+  h = (struct brcmf_proto_bcdc_header*)(pktbuf->data);
 
-    tmp_if = brcmf_get_ifp(drvr, BCDC_GET_IF_IDX(h));
-    if (!tmp_if) {
-        BRCMF_DBG(INFO, "no matching ifp found\n");
-        return ZX_ERR_NOT_FOUND;
-    }
-    if (((h->flags & BCDC_FLAG_VER_MASK) >> BCDC_FLAG_VER_SHIFT) != BCDC_PROTO_VER) {
-        BRCMF_ERR("%s: non-BCDC packet received, flags 0x%x\n", brcmf_ifname(tmp_if), h->flags);
-        return ZX_ERR_IO_DATA_INTEGRITY;
-    }
+  tmp_if = brcmf_get_ifp(drvr, BCDC_GET_IF_IDX(h));
+  if (!tmp_if) {
+    BRCMF_DBG(INFO, "no matching ifp found\n");
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (((h->flags & BCDC_FLAG_VER_MASK) >> BCDC_FLAG_VER_SHIFT) != BCDC_PROTO_VER) {
+    BRCMF_ERR("%s: non-BCDC packet received, flags 0x%x\n", brcmf_ifname(tmp_if), h->flags);
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
 
-    if (h->flags & BCDC_FLAG_SUM_GOOD) {
-        BRCMF_DBG(BCDC, "%s: BDC rcv, good checksum, flags 0x%x\n", brcmf_ifname(tmp_if), h->flags);
-        pktbuf->ip_summed = CHECKSUM_UNNECESSARY;
-    }
+  if (h->flags & BCDC_FLAG_SUM_GOOD) {
+    BRCMF_DBG(BCDC, "%s: BDC rcv, good checksum, flags 0x%x\n", brcmf_ifname(tmp_if), h->flags);
+    pktbuf->ip_summed = CHECKSUM_UNNECESSARY;
+  }
 
-    pktbuf->priority = h->priority & BCDC_PRIORITY_MASK;
+  pktbuf->priority = h->priority & BCDC_PRIORITY_MASK;
 
-    brcmf_netbuf_shrink_head(pktbuf, BCDC_HEADER_LEN);
-    if (do_fws) {
-        brcmf_fws_hdrpull(tmp_if, h->data_offset << 2, pktbuf);
-    } else {
-        brcmf_netbuf_shrink_head(pktbuf, h->data_offset << 2);
-    }
+  brcmf_netbuf_shrink_head(pktbuf, BCDC_HEADER_LEN);
+  if (do_fws) {
+    brcmf_fws_hdrpull(tmp_if, h->data_offset << 2, pktbuf);
+  } else {
+    brcmf_netbuf_shrink_head(pktbuf, h->data_offset << 2);
+  }
 
-    if (pktbuf->len == 0) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
+  if (pktbuf->len == 0) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
 
-    if (ifp != NULL) {
-        *ifp = tmp_if;
-    }
-    return ZX_OK;
+  if (ifp != NULL) {
+    *ifp = tmp_if;
+  }
+  return ZX_OK;
 }
 
 static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
                                                   struct brcmf_netbuf* netbuf) {
-    struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifidx);
-    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
+  struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifidx);
+  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
 
-    if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
-        return brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
-    }
+  if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
+    return brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
+  }
 
-    return brcmf_fws_process_netbuf(ifp, netbuf);
+  return brcmf_fws_process_netbuf(ifp, netbuf);
 }
 
 static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
                                    struct brcmf_netbuf* pktbuf) {
-    brcmf_proto_bcdc_hdrpush(drvr, ifidx, offset, pktbuf);
-    return brcmf_bus_txdata(drvr->bus_if, pktbuf);
+  brcmf_proto_bcdc_hdrpush(drvr, ifidx, offset, pktbuf);
+  return brcmf_bus_txdata(drvr->bus_if, pktbuf);
 }
 
 void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state) {
-    struct brcmf_bus* bus_if = dev_to_bus(dev);
-    struct brcmf_pub* drvr = bus_if->drvr;
+  struct brcmf_bus* bus_if = dev_to_bus(dev);
+  struct brcmf_pub* drvr = bus_if->drvr;
 
-    BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(TRACE, "Enter\n");
 
-    brcmf_fws_bus_blocked(drvr, state);
+  brcmf_fws_bus_blocked(drvr, state);
 }
 
 void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* txp, bool success) {
-    struct brcmf_bus* bus_if = dev_to_bus(dev);
-    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(bus_if->drvr->proto->pd);
-    struct brcmf_if* ifp;
+  struct brcmf_bus* bus_if = dev_to_bus(dev);
+  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(bus_if->drvr->proto->pd);
+  struct brcmf_if* ifp;
 
-    /* await txstatus signal for firmware if active */
-    if (brcmf_fws_fc_active(bcdc->fws)) {
-        if (!success) {
-            brcmf_fws_bustxfail(bcdc->fws, txp);
-        }
-    } else {
-        if (brcmf_proto_bcdc_hdrpull(bus_if->drvr, false, txp, &ifp)) {
-            brcmu_pkt_buf_free_netbuf(txp);
-        } else {
-            brcmf_txfinalize(ifp, txp, success);
-        }
+  /* await txstatus signal for firmware if active */
+  if (brcmf_fws_fc_active(bcdc->fws)) {
+    if (!success) {
+      brcmf_fws_bustxfail(bcdc->fws, txp);
     }
+  } else {
+    if (brcmf_proto_bcdc_hdrpull(bus_if->drvr, false, txp, &ifp)) {
+      brcmu_pkt_buf_free_netbuf(txp);
+    } else {
+      brcmf_txfinalize(ifp, txp, success);
+    }
+  }
 }
 
 static void brcmf_proto_bcdc_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
@@ -375,78 +374,72 @@ static void brcmf_proto_bcdc_add_tdls_peer(struct brcmf_pub* drvr, int ifidx,
                                            uint8_t peer[ETH_ALEN]) {}
 
 static void brcmf_proto_bcdc_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
-    brcmf_fws_rxreorder(ifp, netbuf);
+  brcmf_fws_rxreorder(ifp, netbuf);
 }
 
-static void brcmf_proto_bcdc_add_if(struct brcmf_if* ifp) {
-    brcmf_fws_add_interface(ifp);
-}
+static void brcmf_proto_bcdc_add_if(struct brcmf_if* ifp) { brcmf_fws_add_interface(ifp); }
 
-static void brcmf_proto_bcdc_del_if(struct brcmf_if* ifp) {
-    brcmf_fws_del_interface(ifp);
-}
+static void brcmf_proto_bcdc_del_if(struct brcmf_if* ifp) { brcmf_fws_del_interface(ifp); }
 
-static void brcmf_proto_bcdc_reset_if(struct brcmf_if* ifp) {
-    brcmf_fws_reset_interface(ifp);
-}
+static void brcmf_proto_bcdc_reset_if(struct brcmf_if* ifp) { brcmf_fws_reset_interface(ifp); }
 
 static zx_status_t brcmf_proto_bcdc_init_done(struct brcmf_pub* drvr) {
-    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
-    struct brcmf_fws_info* fws;
-    zx_status_t err;
+  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
+  struct brcmf_fws_info* fws;
+  zx_status_t err;
 
-    err = brcmf_fws_attach(drvr, &fws);
-    if (err != ZX_OK) {
-        bcdc->fws = NULL;
-        return err;
-    }
+  err = brcmf_fws_attach(drvr, &fws);
+  if (err != ZX_OK) {
+    bcdc->fws = NULL;
+    return err;
+  }
 
-    bcdc->fws = fws;
-    return ZX_OK;
+  bcdc->fws = fws;
+  return ZX_OK;
 }
 
 zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
-    struct brcmf_bcdc* bcdc;
+  struct brcmf_bcdc* bcdc;
 
-    bcdc = static_cast<decltype(bcdc)>(calloc(1, sizeof(*bcdc)));
-    if (!bcdc) {
-        goto fail;
-    }
+  bcdc = static_cast<decltype(bcdc)>(calloc(1, sizeof(*bcdc)));
+  if (!bcdc) {
+    goto fail;
+  }
 
-    /* ensure that the msg buf directly follows the cdc msg struct */
-    if ((unsigned long)(&bcdc->msg + 1) != (unsigned long)bcdc->buf) {
-        BRCMF_ERR("struct brcmf_proto_bcdc is not correctly defined\n");
-        goto fail;
-    }
+  /* ensure that the msg buf directly follows the cdc msg struct */
+  if ((unsigned long)(&bcdc->msg + 1) != (unsigned long)bcdc->buf) {
+    BRCMF_ERR("struct brcmf_proto_bcdc is not correctly defined\n");
+    goto fail;
+  }
 
-    drvr->proto->hdrpull = brcmf_proto_bcdc_hdrpull;
-    drvr->proto->query_dcmd = brcmf_proto_bcdc_query_dcmd;
-    drvr->proto->set_dcmd = brcmf_proto_bcdc_set_dcmd;
-    drvr->proto->tx_queue_data = brcmf_proto_bcdc_tx_queue_data;
-    drvr->proto->txdata = brcmf_proto_bcdc_txdata;
-    drvr->proto->configure_addr_mode = brcmf_proto_bcdc_configure_addr_mode;
-    drvr->proto->delete_peer = brcmf_proto_bcdc_delete_peer;
-    drvr->proto->add_tdls_peer = brcmf_proto_bcdc_add_tdls_peer;
-    drvr->proto->rxreorder = brcmf_proto_bcdc_rxreorder;
-    drvr->proto->add_if = brcmf_proto_bcdc_add_if;
-    drvr->proto->del_if = brcmf_proto_bcdc_del_if;
-    drvr->proto->reset_if = brcmf_proto_bcdc_reset_if;
-    drvr->proto->init_done = brcmf_proto_bcdc_init_done;
-    drvr->proto->pd = bcdc;
+  drvr->proto->hdrpull = brcmf_proto_bcdc_hdrpull;
+  drvr->proto->query_dcmd = brcmf_proto_bcdc_query_dcmd;
+  drvr->proto->set_dcmd = brcmf_proto_bcdc_set_dcmd;
+  drvr->proto->tx_queue_data = brcmf_proto_bcdc_tx_queue_data;
+  drvr->proto->txdata = brcmf_proto_bcdc_txdata;
+  drvr->proto->configure_addr_mode = brcmf_proto_bcdc_configure_addr_mode;
+  drvr->proto->delete_peer = brcmf_proto_bcdc_delete_peer;
+  drvr->proto->add_tdls_peer = brcmf_proto_bcdc_add_tdls_peer;
+  drvr->proto->rxreorder = brcmf_proto_bcdc_rxreorder;
+  drvr->proto->add_if = brcmf_proto_bcdc_add_if;
+  drvr->proto->del_if = brcmf_proto_bcdc_del_if;
+  drvr->proto->reset_if = brcmf_proto_bcdc_reset_if;
+  drvr->proto->init_done = brcmf_proto_bcdc_init_done;
+  drvr->proto->pd = bcdc;
 
-    drvr->hdrlen += BCDC_HEADER_LEN + BRCMF_PROT_FW_SIGNAL_MAX_TXBYTES;
-    drvr->bus_if->maxctl = BRCMF_DCMD_MAXLEN + sizeof(struct brcmf_proto_bcdc_dcmd);
-    return ZX_OK;
+  drvr->hdrlen += BCDC_HEADER_LEN + BRCMF_PROT_FW_SIGNAL_MAX_TXBYTES;
+  drvr->bus_if->maxctl = BRCMF_DCMD_MAXLEN + sizeof(struct brcmf_proto_bcdc_dcmd);
+  return ZX_OK;
 
 fail:
-    free(bcdc);
-    return ZX_ERR_NO_MEMORY;
+  free(bcdc);
+  return ZX_ERR_NO_MEMORY;
 }
 
 void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr) {
-    struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
+  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
 
-    drvr->proto->pd = NULL;
-    brcmf_fws_detach(bcdc->fws);
-    free(bcdc);
+  drvr->proto->pd = NULL;
+  brcmf_fws_detach(bcdc->fws);
+  free(bcdc);
 }

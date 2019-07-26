@@ -20,24 +20,22 @@ namespace thermal {
 // period and configure to appropriate
 // duty cycle.
 class AmlPwm {
+ public:
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlPwm);
+  AmlPwm(uint32_t period, uint32_t hwpwm) : period_(period), hwpwm_(hwpwm) {}
+  zx_status_t Init(zx_device_t* parent);
+  zx_status_t Configure(uint32_t duty_cycle);
+  ~AmlPwm() = default;
 
-public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlPwm);
-    AmlPwm(uint32_t period, uint32_t hwpwm)
-        : period_(period), hwpwm_(hwpwm){}
-    zx_status_t Init(zx_device_t* parent);
-    zx_status_t Configure(uint32_t duty_cycle);
-    ~AmlPwm() = default;
-
-private:
-    uint32_t period_;
-    uint32_t duty_cycle_;
-    uint32_t hwpwm_;
-    uint32_t pwm_duty_cycle_offset_;
-    uint32_t enable_bit_;
-    uint32_t clk_enable_bit_;
-    pdev_protocol_t pdev_;
-    std::optional<ddk::MmioBuffer> pwm_mmio_;
-    fbl::Mutex pwm_lock_;
+ private:
+  uint32_t period_;
+  uint32_t duty_cycle_;
+  uint32_t hwpwm_;
+  uint32_t pwm_duty_cycle_offset_;
+  uint32_t enable_bit_;
+  uint32_t clk_enable_bit_;
+  pdev_protocol_t pdev_;
+  std::optional<ddk::MmioBuffer> pwm_mmio_;
+  fbl::Mutex pwm_lock_;
 };
-} // namespace thermal
+}  // namespace thermal

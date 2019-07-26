@@ -146,8 +146,7 @@ constexpr char kUsageString[] =
 
 static void PrintUsageString() { std::cout << kUsageString << std::endl; }
 
-static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
-                       fxl::StringView* arg) {
+static bool BeginsWith(fxl::StringView str, fxl::StringView prefix, fxl::StringView* arg) {
   size_t prefix_size = prefix.size();
   if (str.size() < prefix_size)
     return false;
@@ -157,8 +156,7 @@ static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
   return true;
 }
 
-static bool ParseFlag(const char* name, const fxl::StringView& arg,
-                      bool* value) {
+static bool ParseFlag(const char* name, const fxl::StringView& arg, bool* value) {
   if (arg == "on")
     *value = true;
   else if (arg == "off")
@@ -172,11 +170,9 @@ static bool ParseFlag(const char* name, const fxl::StringView& arg,
 
 // If only fxl string/number conversions supported 0x.
 
-static bool ParseNumber(const char* name, const fxl::StringView& arg,
-                        uint64_t* value) {
+static bool ParseNumber(const char* name, const fxl::StringView& arg, uint64_t* value) {
   if (arg.size() > 2 && arg[0] == '0' && (arg[1] == 'x' || arg[1] == 'X')) {
-    if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value,
-                                                fxl::Base::k16)) {
+    if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value, fxl::Base::k16)) {
       FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
       return false;
     }
@@ -189,8 +185,7 @@ static bool ParseNumber(const char* name, const fxl::StringView& arg,
   return true;
 }
 
-static bool ParseCr3Match(const char* name, const fxl::StringView& arg,
-                          uint64_t* value) {
+static bool ParseCr3Match(const char* name, const fxl::StringView& arg, uint64_t* value) {
   if (arg == "off") {
     *value = 0;
     return true;
@@ -199,8 +194,7 @@ static bool ParseCr3Match(const char* name, const fxl::StringView& arg,
   if (!ParseNumber(name, arg, value))
     return false;
   if ((*value & kCr3MatchReservedMask) != 0) {
-    FXL_LOG(ERROR) << "Invalid value (reserved bits set) for " << name << ": "
-                   << arg;
+    FXL_LOG(ERROR) << "Invalid value (reserved bits set) for " << name << ": " << arg;
     return false;
   }
   return true;
@@ -223,8 +217,8 @@ static bool ParseAddrConfig(const char* name, const fxl::StringView& arg,
 
 static bool ParseAddrRange(const char* name, const fxl::StringView& arg,
                            insntrace::IptConfig::AddrRange* value) {
-  std::vector<fxl::StringView> range_strings = fxl::SplitString(
-      fxl::StringView(arg), ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  std::vector<fxl::StringView> range_strings =
+      fxl::SplitString(fxl::StringView(arg), ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (range_strings.size() != 2 && range_strings.size() != 3) {
     FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
@@ -241,8 +235,7 @@ static bool ParseAddrRange(const char* name, const fxl::StringView& arg,
   return true;
 }
 
-static bool ParseFreqValue(const char* name, const fxl::StringView& arg,
-                           uint32_t* value) {
+static bool ParseFreqValue(const char* name, const fxl::StringView& arg, uint32_t* value) {
   if (!fxl::StringToNumberWithError<uint32_t>(arg, value)) {
     FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
@@ -250,11 +243,9 @@ static bool ParseFreqValue(const char* name, const fxl::StringView& arg,
   return true;
 }
 
-static bool ParseConfigOption(insntrace::IptConfig* config,
-                              const std::string& options_string) {
-  std::vector<fxl::StringView> options =
-      fxl::SplitString(fxl::StringView(options_string), ";",
-                       fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+static bool ParseConfigOption(insntrace::IptConfig* config, const std::string& options_string) {
+  std::vector<fxl::StringView> options = fxl::SplitString(
+      fxl::StringView(options_string), ";", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
 
   fxl::StringView arg;
 
@@ -334,8 +325,7 @@ static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
 
   if (cl.GetOptionValue("chunk-order", &arg)) {
     size_t chunk_order;
-    if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg),
-                                              &chunk_order)) {
+    if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg), &chunk_order)) {
       FXL_LOG(ERROR) << "Not a valid buffer order: " << arg;
       exit(EXIT_FAILURE);
     }
@@ -361,8 +351,7 @@ static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
 
   if (cl.GetOptionValue("num-chunks", &arg)) {
     size_t num_chunks;
-    if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg),
-                                              &num_chunks)) {
+    if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg), &num_chunks)) {
       FXL_LOG(ERROR) << "Not a valid buffer size: " << arg;
       exit(EXIT_FAILURE);
     }
@@ -386,8 +375,7 @@ static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
   return config;
 }
 
-static bool ControlIpt(const insntrace::IptConfig& config,
-                       const fxl::CommandLine& cl) {
+static bool ControlIpt(const insntrace::IptConfig& config, const fxl::CommandLine& cl) {
   // We only support the cpu mode here.
   // This isn't a full test as we only actually set the mode for "init".
   // But it catches obvious mistakes like passing --mode=thread.
@@ -427,10 +415,8 @@ static bool ControlIpt(const insntrace::IptConfig& config,
   return true;
 }
 
-static bool RunProgram(const insntrace::IptConfig& config,
-                       const fxl::CommandLine& cl) {
-  debugger_utils::Argv inferior_argv{cl.positional_args().begin(),
-                                     cl.positional_args().end()};
+static bool RunProgram(const insntrace::IptConfig& config, const fxl::CommandLine& cl) {
+  debugger_utils::Argv inferior_argv{cl.positional_args().begin(), cl.positional_args().end()};
   if (inferior_argv.empty()) {
     FXL_LOG(ERROR) << "Missing program";
     return false;

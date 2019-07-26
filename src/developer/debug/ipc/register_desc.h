@@ -26,8 +26,7 @@ const char* RegisterIDToString(debug_ipc::RegisterID);
 debug_ipc::RegisterID StringToRegisterID(const std::string&);
 
 // Returns the register ID for the given special register.
-debug_ipc::RegisterID GetSpecialRegisterID(debug_ipc::Arch,
-                                           SpecialRegisterType);
+debug_ipc::RegisterID GetSpecialRegisterID(debug_ipc::Arch, SpecialRegisterType);
 
 // Returns the special register type for a register ID.
 SpecialRegisterType GetSpecialRegisterType(RegisterID id);

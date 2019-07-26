@@ -15,8 +15,8 @@ void GatherIntrospection::Gather() {
   // TODO(smbug.com/223): Use lib inspect to get inspection data (rather than
   // the test/placeholder used here).
   std::string fake_json_data = "{ \"test\": 5 }";
-  DockyardProxyStatus status = Dockyard().SendInspectJson(
-      "inspect:/hub/fake/234/faux.Inspect", fake_json_data);
+  DockyardProxyStatus status =
+      Dockyard().SendInspectJson("inspect:/hub/fake/234/faux.Inspect", fake_json_data);
   if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
   }

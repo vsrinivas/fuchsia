@@ -24,11 +24,10 @@ bool ChannelWriteReadTest(perftest::RepeatState* state, uint32_t message_size) {
   std::vector<char> buffer(message_size);
 
   while (state->KeepRunning()) {
-    ZX_ASSERT(channel1.write(0, buffer.data(), buffer.size(), nullptr, 0) ==
-              ZX_OK);
+    ZX_ASSERT(channel1.write(0, buffer.data(), buffer.size(), nullptr, 0) == ZX_OK);
     state->NextStep();
-    ZX_ASSERT(channel2.read(0, buffer.data(), nullptr, buffer.size(), 0,
-                            nullptr, nullptr) == ZX_OK);
+    ZX_ASSERT(channel2.read(0, buffer.data(), nullptr, buffer.size(), 0, nullptr, nullptr) ==
+              ZX_OK);
   }
   return true;
 }

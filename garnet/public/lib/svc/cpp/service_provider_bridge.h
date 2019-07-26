@@ -34,8 +34,7 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
 
   using ServiceConnector = fit::function<void(zx::channel)>;
 
-  void AddServiceForName(ServiceConnector connector,
-                         const std::string& service_name);
+  void AddServiceForName(ServiceConnector connector, const std::string& service_name);
 
   template <typename Interface>
   void AddService(fidl::InterfaceRequestHandler<Interface> handler,
@@ -47,13 +46,9 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
         service_name);
   }
 
-  void set_backend(fuchsia::sys::ServiceProviderPtr backend) {
-    backend_ = std::move(backend);
-  }
+  void set_backend(fuchsia::sys::ServiceProviderPtr backend) { backend_ = std::move(backend); }
 
-  void set_backing_dir(zx::channel backing_dir) {
-    backing_dir_ = std::move(backing_dir);
-  }
+  void set_backing_dir(zx::channel backing_dir) { backing_dir_ = std::move(backing_dir); }
 
   void AddBinding(fidl::InterfaceRequest<ServiceProvider> request);
   fidl::InterfaceHandle<ServiceProvider> AddBinding();
@@ -73,8 +68,7 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
     ~ServiceProviderDir() final;
 
     // Overridden from |fs::Vnode|:
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out,
-                       fbl::StringPiece name) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t Getattr(vnattr_t* a) final;
     bool IsDirectory() const final;
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;

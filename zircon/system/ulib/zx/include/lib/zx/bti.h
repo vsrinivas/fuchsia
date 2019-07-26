@@ -14,35 +14,35 @@
 namespace zx {
 
 class bti final : public object<bti> {
-public:
-    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_BTI;
+ public:
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_BTI;
 
-    constexpr bti() = default;
+  constexpr bti() = default;
 
-    explicit bti(zx_handle_t value) : object(value) {}
+  explicit bti(zx_handle_t value) : object(value) {}
 
-    explicit bti(handle&& h) : object(h.release()) {}
+  explicit bti(handle&& h) : object(h.release()) {}
 
-    bti(bti&& other) : object(other.release()) {}
+  bti(bti&& other) : object(other.release()) {}
 
-    bti& operator=(bti&& other) {
-        reset(other.release());
-        return *this;
-    }
+  bti& operator=(bti&& other) {
+    reset(other.release());
+    return *this;
+  }
 
-    static zx_status_t create(const iommu& iommu, uint32_t options, uint64_t bti_id, bti* result);
+  static zx_status_t create(const iommu& iommu, uint32_t options, uint64_t bti_id, bti* result);
 
-    zx_status_t pin(uint32_t options, const vmo& vmo, uint64_t offset, uint64_t size,
-                    zx_paddr_t* addrs, size_t addrs_count, pmt* pmt) const {
-        return zx_bti_pin(get(), options, vmo.get(), offset, size, addrs, addrs_count,
-                          pmt->reset_and_get_address());
-    }
+  zx_status_t pin(uint32_t options, const vmo& vmo, uint64_t offset, uint64_t size,
+                  zx_paddr_t* addrs, size_t addrs_count, pmt* pmt) const {
+    return zx_bti_pin(get(), options, vmo.get(), offset, size, addrs, addrs_count,
+                      pmt->reset_and_get_address());
+  }
 
-    zx_status_t release_quarantine() const { return zx_bti_release_quarantine(get()); }
+  zx_status_t release_quarantine() const { return zx_bti_release_quarantine(get()); }
 };
 
 using unowned_bti = unowned<bti>;
 
-} // namespace zx
+}  // namespace zx
 
 #endif  // LIB_ZX_BTI_H_

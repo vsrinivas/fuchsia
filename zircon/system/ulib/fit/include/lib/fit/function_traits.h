@@ -13,6 +13,6 @@ namespace fit {
 template <typename T>
 using function_traits = callable_traits<T>;
 
-} // namespace fit
+}  // namespace fit
 
-#endif // LIB_FIT_FUNCTION_TRAITS_H_
+#endif  // LIB_FIT_FUNCTION_TRAITS_H_

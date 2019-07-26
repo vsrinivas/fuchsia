@@ -19,24 +19,20 @@ using fuchsia::auth::AuthProviderStatus;
 OAuthResponse ParseOAuthResponse(http::URLResponse response) {
   rapidjson::Document out;
   if (response.error) {
-    FXL_LOG(ERROR) << "Encountered error: " +
-                          std::to_string(response.error->code) +
-                          " ,with description: " +
-                          response.error->description->data();
-    return OAuthResponse(AuthProviderStatus::NETWORK_ERROR,
-                         response.error->description->data(), std::move(out));
+    FXL_LOG(ERROR) << "Encountered error: " + std::to_string(response.error->code) +
+                          " ,with description: " + response.error->description->data();
+    return OAuthResponse(AuthProviderStatus::NETWORK_ERROR, response.error->description->data(),
+                         std::move(out));
   }
 
   std::string response_body;
   if (response.body) {
     FXL_DCHECK(response.body->is_stream());
-    if (!fsl::BlockingCopyToString(std::move(response.body->stream()),
-                                   &response_body)) {
+    if (!fsl::BlockingCopyToString(std::move(response.body->stream()), &response_body)) {
       FXL_LOG(ERROR) << "Internal error while reading response from socket,"
                         "network returned: " +
                             std::to_string(response.status_code);
-      return OAuthResponse(AuthProviderStatus::NETWORK_ERROR,
-                           "Error reading response from socket",
+      return OAuthResponse(AuthProviderStatus::NETWORK_ERROR, "Error reading response from socket",
                            std::move(out));
     }
   }
@@ -46,10 +42,9 @@ OAuthResponse ParseOAuthResponse(http::URLResponse response) {
   rapidjson::ParseResult ok = out.Parse(response_body);
   if (!ok) {
     std::string error_msg = GetParseError_En(ok.Code());
-    return OAuthResponse(
-        AuthProviderStatus::BAD_RESPONSE,
-        "Error in parsing json response[" + response_body + "]: " + error_msg,
-        std::move(out));
+    return OAuthResponse(AuthProviderStatus::BAD_RESPONSE,
+                         "Error in parsing json response[" + response_body + "]: " + error_msg,
+                         std::move(out));
   }
   switch (response.status_code) {
     case 200:  // Success
@@ -58,16 +53,13 @@ OAuthResponse ParseOAuthResponse(http::URLResponse response) {
     case 401:  // Unauthorized, returned with invalid_client.
     case 403:  // Forbidden, user denied access.
     default:
-      std::string oauth_error(out.HasMember("error") && out["error"].IsString()
-                                  ? out["error"].GetString()
-                                  : "");
-      auto status = (oauth_error == "invalid_grant")
-                        ? AuthProviderStatus::REAUTH_REQUIRED
-                        : AuthProviderStatus::OAUTH_SERVER_ERROR;
+      std::string oauth_error(
+          out.HasMember("error") && out["error"].IsString() ? out["error"].GetString() : "");
+      auto status = (oauth_error == "invalid_grant") ? AuthProviderStatus::REAUTH_REQUIRED
+                                                     : AuthProviderStatus::OAUTH_SERVER_ERROR;
 
       return OAuthResponse(status,
-                           "OAuth backend returned error: " +
-                               std::to_string(response.status_code),
+                           "OAuth backend returned error: " + std::to_string(response.status_code),
                            std::move(out));
   }
 }

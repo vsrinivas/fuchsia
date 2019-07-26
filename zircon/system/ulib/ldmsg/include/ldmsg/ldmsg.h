@@ -16,33 +16,33 @@
 __BEGIN_CDECLS
 
 // See system/fidl/fuchsia-ldsvc/ldsvc.fidl for the definition of these message ordinals.
-#define LDMSG_OP_DONE                    ((uint64_t)0x501635DA<<32)
-#define LDMSG_OP_LOAD_OBJECT             ((uint64_t)0x18D35E60<<32)
-#define LDMSG_OP_LOAD_SCRIPT_INTERPRETER ((uint64_t)0x32CC7F4E<<32)
-#define LDMSG_OP_CONFIG                  ((uint64_t)0x1ADEB78D<<32)
-#define LDMSG_OP_CLONE                   ((uint64_t)0x3862FCB9<<32)
-#define LDMSG_OP_DEBUG_PUBLISH_DATA_SINK ((uint64_t)0x4F64FA41<<32)
-#define LDMSG_OP_DEBUG_LOAD_CONFIG       ((uint64_t)0x722D77BA<<32)
+#define LDMSG_OP_DONE ((uint64_t)0x501635DA << 32)
+#define LDMSG_OP_LOAD_OBJECT ((uint64_t)0x18D35E60 << 32)
+#define LDMSG_OP_LOAD_SCRIPT_INTERPRETER ((uint64_t)0x32CC7F4E << 32)
+#define LDMSG_OP_CONFIG ((uint64_t)0x1ADEB78D << 32)
+#define LDMSG_OP_CLONE ((uint64_t)0x3862FCB9 << 32)
+#define LDMSG_OP_DEBUG_PUBLISH_DATA_SINK ((uint64_t)0x4F64FA41 << 32)
+#define LDMSG_OP_DEBUG_LOAD_CONFIG ((uint64_t)0x722D77BA << 32)
 
-#define LDMSG_OP_DONE_OLD                    1u
-#define LDMSG_OP_LOAD_OBJECT_OLD             2u
+#define LDMSG_OP_DONE_OLD 1u
+#define LDMSG_OP_LOAD_OBJECT_OLD 2u
 #define LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD 3u
-#define LDMSG_OP_CONFIG_OLD                  4u
-#define LDMSG_OP_CLONE_OLD                   5u
+#define LDMSG_OP_CONFIG_OLD 4u
+#define LDMSG_OP_CLONE_OLD 5u
 #define LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD 7u
-#define LDMSG_OP_DEBUG_LOAD_CONFIG_OLD       8u
+#define LDMSG_OP_DEBUG_LOAD_CONFIG_OLD 8u
 
 // The payload format used for all the requests other than LDMSG_OP_CLONE.
 typedef struct ldmsg_common ldmsg_common_t;
 struct ldmsg_common {
-    alignas(FIDL_ALIGNMENT) fidl_string_t string;
-    alignas(FIDL_ALIGNMENT) zx_handle_t object;
+  alignas(FIDL_ALIGNMENT) fidl_string_t string;
+  alignas(FIDL_ALIGNMENT) zx_handle_t object;
 };
 
 // The payload format used for LDMSG_OP_CLONE.
 typedef struct ldmsg_clone ldmsg_clone_t;
 struct ldmsg_clone {
-    alignas(FIDL_ALIGNMENT) zx_handle_t object;
+  alignas(FIDL_ALIGNMENT) zx_handle_t object;
 };
 
 // The maximum size of a ldmsg_req_t payload.
@@ -60,12 +60,12 @@ struct ldmsg_clone {
 // null terminator.
 typedef struct ldmsg_req ldmsg_req_t;
 struct ldmsg_req {
-    fidl_message_header_t header;
-    union {
-        ldmsg_common_t common;
-        ldmsg_clone_t clone;
-        char data[LDMSG_MAX_PAYLOAD];
-    };
+  fidl_message_header_t header;
+  union {
+    ldmsg_common_t common;
+    ldmsg_clone_t clone;
+    char data[LDMSG_MAX_PAYLOAD];
+  };
 };
 
 // The message format used for responses.
@@ -77,9 +77,9 @@ struct ldmsg_req {
 // is used for a given ordinal.
 typedef struct ldmsg_rsp ldmsg_rsp_t;
 struct ldmsg_rsp {
-    fidl_message_header_t header;
-    zx_status_t rv;
-    zx_handle_t object;
+  fidl_message_header_t header;
+  zx_status_t rv;
+  zx_handle_t object;
 };
 
 // Encode the message in |req|.
@@ -93,8 +93,7 @@ struct ldmsg_rsp {
 // will return ZX_ERR_OUT_OF_RANGE.
 //
 // Otherwise, this function will return ZX_OK.
-zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out,
-                             const char* data, size_t len);
+zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out, const char* data, size_t len);
 
 // Decode the message in |req|.
 //
@@ -111,8 +110,8 @@ zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out,
 // validation, this function will return ZX_ERR_INVALID_ARGS.
 //
 // Otherwise, this function will return ZX_OK.
-zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len,
-                             const char** data_out, size_t* len_out);
+zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len, const char** data_out,
+                             size_t* len_out);
 
 // The appropriate size message to send for the given |rsp|.
 //

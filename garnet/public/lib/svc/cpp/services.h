@@ -28,9 +28,9 @@ void ConnectToService(const zx::channel& directory, zx::channel request,
 // TODO(ZX-1358): Replace use of bare directory channel with suitable interface
 // once RIO is ported to FIDL.
 template <typename Interface>
-inline void ConnectToService(
-    const zx::channel& directory, fidl::InterfaceRequest<Interface> request,
-    const std::string& service_path = Interface::Name_) {
+inline void ConnectToService(const zx::channel& directory,
+                             fidl::InterfaceRequest<Interface> request,
+                             const std::string& service_path = Interface::Name_) {
   ConnectToService(directory, request.TakeChannel(), service_path);
 }
 
@@ -41,8 +41,7 @@ inline void ConnectToService(
 // once RIO is ported to FIDL.
 template <typename Interface>
 inline fidl::InterfacePtr<Interface> ConnectToService(
-    const zx::channel& directory,
-    const std::string& service_path = Interface::Name_) {
+    const zx::channel& directory, const std::string& service_path = Interface::Name_) {
   fidl::InterfacePtr<Interface> client;
   ConnectToService(directory, client.NewRequest(), service_path);
   return client;
@@ -76,8 +75,7 @@ class Services {
   // Connects to a service located at a path within the directory and binds it
   // to an untyped interface request.
   // By default, uses the interface name as the service's path.
-  void ConnectToService(zx::channel request,
-                        const std::string& service_path) const {
+  void ConnectToService(zx::channel request, const std::string& service_path) const {
     component::ConnectToService(directory_, std::move(request), service_path);
   }
 
@@ -85,11 +83,9 @@ class Services {
   // to a fully-typed interface request.
   // By default, uses the interface name as the service's path.
   template <typename Interface>
-  void ConnectToService(
-      fidl::InterfaceRequest<Interface> request,
-      const std::string& service_path = Interface::Name_) const {
-    component::ConnectToService<Interface>(directory_, std::move(request),
-                                           service_path);
+  void ConnectToService(fidl::InterfaceRequest<Interface> request,
+                        const std::string& service_path = Interface::Name_) const {
+    component::ConnectToService<Interface>(directory_, std::move(request), service_path);
   }
 
   // Connects to a service located at a path within the directory and returns a

@@ -41,8 +41,7 @@ struct Component {
   }
 
   bool operator==(const Component& other) const {
-    return begin == other.begin && len_ == other.len_ &&
-           is_valid_ == other.is_valid_;
+    return begin == other.begin && len_ == other.len_ && is_valid_ == other.is_valid_;
   }
 
   size_t begin;  // Byte offset in the string of this component.
@@ -64,9 +63,7 @@ struct Component {
 
 // Helper that returns a component created with the given begin and ending
 // points. The ending point is non-inclusive.
-inline Component MakeRange(size_t begin, size_t end) {
-  return Component(begin, end - begin);
-}
+inline Component MakeRange(size_t begin, size_t end) { return Component(begin, end - begin); }
 
 // Parsed ---------------------------------------------------------------------
 
@@ -139,8 +136,7 @@ struct URL_EXPORT Parsed {
   //      *QUERY: 14                   15 <-
   //        *REF: 20                   20
   //
-  size_t CountCharactersBefore(ComponentType type,
-                               bool include_delimiter) const;
+  size_t CountCharactersBefore(ComponentType type, bool include_delimiter) const;
 
   // Scheme without the colon: "http://foo"/ would have a scheme of "http".
   // The length will be -1 if no scheme is specified ("foo.com"), or 0 if there
@@ -207,15 +203,13 @@ struct URL_EXPORT Parsed {
 // StandardURL is for when the scheme is known to be one that has an
 // authority (host) like "http". This function will not handle weird ones
 // like "about:" and "javascript:", or do the right thing for "file:" URLs.
-URL_EXPORT void ParseStandardURL(const char* url, size_t url_len,
-                                 Parsed* parsed);
+URL_EXPORT void ParseStandardURL(const char* url, size_t url_len, Parsed* parsed);
 
 // PathURL is for when the scheme is known not to have an authority (host)
 // section but that aren't file URLs either. The scheme is parsed, and
 // everything after the scheme is considered as the path. This is used for
 // things like "about:" and "javascript:"
-URL_EXPORT void ParsePathURL(const char* url, size_t url_len,
-                             bool trim_path_end, Parsed* parsed);
+URL_EXPORT void ParsePathURL(const char* url, size_t url_len, bool trim_path_end, Parsed* parsed);
 
 // FileURL is for file URLs. There are some special rules for interpreting
 // these.
@@ -246,8 +240,7 @@ URL_EXPORT void ParseMailtoURL(const char* url, size_t url_len, Parsed* parsed);
 // end of the string).
 //
 // The 8-bit version requires UTF-8 encoding.
-URL_EXPORT bool ExtractScheme(const char* url, size_t url_len,
-                              Component* scheme);
+URL_EXPORT bool ExtractScheme(const char* url, size_t url_len, Component* scheme);
 
 // Returns true if ch is a character that terminates the authority segment
 // of a URL.
@@ -255,9 +248,8 @@ URL_EXPORT bool IsAuthorityTerminator(char ch);
 
 // Does a best effort parse of input |spec|, in range |auth|. If a particular
 // component is not found, it will be set to invalid.
-URL_EXPORT void ParseAuthority(const char* spec, const Component& auth,
-                               Component* username, Component* password,
-                               Component* hostname, Component* port_num);
+URL_EXPORT void ParseAuthority(const char* spec, const Component& auth, Component* username,
+                               Component* password, Component* hostname, Component* port_num);
 
 // Computes the integer port value from the given port component. The port
 // component should have been identified by one of the init functions on
@@ -278,8 +270,7 @@ URL_EXPORT int ParsePort(const char* url, const Component& port);
 // following the last slash.
 //
 // The 8-bit version requires UTF-8 encoding.
-URL_EXPORT void ExtractFileName(const char* url, const Component& path,
-                                Component* file_name);
+URL_EXPORT void ExtractFileName(const char* url, const Component& path, Component* file_name);
 
 // Extract the first key/value from the range defined by |*query|. Updates
 // |*query| to start at the end of the extracted key/value pair. This is
@@ -296,8 +287,8 @@ URL_EXPORT void ExtractFileName(const char* url, const Component& path,
 //
 // If no key/value are found |*key| and |*value| will be unchanged and it will
 // return false.
-URL_EXPORT bool ExtractQueryKeyValue(const char* url, Component* query,
-                                     Component* key, Component* value);
+URL_EXPORT bool ExtractQueryKeyValue(const char* url, Component* query, Component* key,
+                                     Component* value);
 
 }  // namespace url
 

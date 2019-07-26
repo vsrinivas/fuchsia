@@ -36,23 +36,23 @@ static constexpr uint16_t kArchArm64 = 2;
 
 // Header for each data buffer.
 struct BufferHeader {
-    // Values for the |flags| field.
-    // The buffer filled, and records were dropped.
-    static constexpr uint32_t kBufferFlagFull = 1 << 0;
+  // Values for the |flags| field.
+  // The buffer filled, and records were dropped.
+  static constexpr uint32_t kBufferFlagFull = 1 << 0;
 
-    // Format version number |kBufferVersion|.
-    uint16_t version;
+  // Format version number |kBufferVersion|.
+  uint16_t version;
 
-    // The architecture that generated the data.
-    uint16_t arch;
+  // The architecture that generated the data.
+  uint16_t arch;
 
-    uint32_t flags;
+  uint32_t flags;
 
-    // zx_ticks_per_second in the kernel
-    zx_ticks_t ticks_per_second;
+  // zx_ticks_per_second in the kernel
+  zx_ticks_t ticks_per_second;
 
-    // Offset into the buffer of the end of the data.
-    uint64_t capture_end;
+  // Offset into the buffer of the end of the data.
+  uint64_t capture_end;
 };
 
 using RecordType = uint8_t;
@@ -101,19 +101,18 @@ constexpr uint16_t kGroupFixed = 2;
 constexpr uint16_t kGroupModel = 3;
 constexpr uint16_t kGroupMisc = 4;
 
-static inline constexpr EventId MakeEventId(EventIdGroupType group,
-                                            EventIdEventType event) {
-    return static_cast<EventId>((group << 11) | event);
+static inline constexpr EventId MakeEventId(EventIdGroupType group, EventIdEventType event) {
+  return static_cast<EventId>((group << 11) | event);
 }
 
 static inline constexpr EventIdGroupType GetEventIdGroup(EventId id) {
-    EventIdGroupType mask = kMaxGroup;
-    return static_cast<EventIdGroupType>((id >> 11) & mask);
+  EventIdGroupType mask = kMaxGroup;
+  return static_cast<EventIdGroupType>((id >> 11) & mask);
 }
 
 static inline constexpr EventIdEventType GetEventIdEvent(EventId id) {
-    EventIdEventType mask = kMaxEvent;
-    return static_cast<EventIdEventType>(id & mask);
+  EventIdEventType mask = kMaxEvent;
+  return static_cast<EventIdEventType>(id & mask);
 }
 
 // The rate at which to collect data.
@@ -129,41 +128,38 @@ using EventRate = uint32_t;
 // Trace record header.
 // Note: Avoid holes in all trace records.
 struct RecordHeader {
-    // One of |kRecordType*|.
-    uint8_t type;
+  // One of |kRecordType*|.
+  uint8_t type;
 
-    // A possible usage of this field is to add some type-specific flags.
-    uint8_t reserved_flags;
+  // A possible usage of this field is to add some type-specific flags.
+  uint8_t reserved_flags;
 
-    // The event the record is for.
-    // If there is none then use |kEventIdNone|.
-    perfmon::EventId event;
+  // The event the record is for.
+  // If there is none then use |kEventIdNone|.
+  perfmon::EventId event;
 } PERFMON_ALIGN_RECORD;
 
 // Verify our alignment assumptions.
-static_assert(sizeof(RecordHeader) == 4,
-              "record header not 4 bytes");
+static_assert(sizeof(RecordHeader) == 4, "record header not 4 bytes");
 
 // Record the current time of the trace.
 // If the event id is non-zero (!NONE) then it must be for a counting event
 // and then this record is also a "tick" record indicating the counter has
 // reached its sample rate. The counter resets to zero after this record.
 struct TimeRecord {
-    RecordHeader header;
-    // The value is architecture and possibly platform specific.
-    // The |ticks_per_second| field in the buffer header provides the
-    // conversion factor from this value to ticks per second.
-    // For x86 this is the TSC value.
-    zx_ticks_t time;
+  RecordHeader header;
+  // The value is architecture and possibly platform specific.
+  // The |ticks_per_second| field in the buffer header provides the
+  // conversion factor from this value to ticks per second.
+  // For x86 this is the TSC value.
+  zx_ticks_t time;
 } PERFMON_ALIGN_RECORD;
 
 // Verify our alignment assumptions.
 // We don't need to do this for every record, but doing it for this one
 // verifies PERFMON_ALIGN_RECORD is working.
-static_assert(sizeof(TimeRecord) == 12,
-              "time record not 12 bytes");
-static_assert(alignof(TimeRecord) == 4,
-              "time record not 4-byte aligned");
+static_assert(sizeof(TimeRecord) == 12, "time record not 12 bytes");
+static_assert(alignof(TimeRecord) == 4, "time record not 4-byte aligned");
 
 // Record that a counting event reached its sample rate.
 // It is expected that this record follows a TIME record.
@@ -171,7 +167,7 @@ static_assert(alignof(TimeRecord) == 4,
 // This does not include the event's value in order to keep the size small:
 // the value is the sample rate which is known from the configuration.
 struct TickRecord {
-    RecordHeader header;
+  RecordHeader header;
 } PERFMON_ALIGN_RECORD;
 
 // Record the value of a counter at a particular time.
@@ -181,8 +177,8 @@ struct TickRecord {
 // counter. Otherwise the "tick" record is generally used as it takes less
 // space.
 struct CountRecord {
-    RecordHeader header;
-    uint64_t count;
+  RecordHeader header;
+  uint64_t count;
 } PERFMON_ALIGN_RECORD;
 
 // Record the value of an event.
@@ -190,8 +186,8 @@ struct CountRecord {
 // This value is not a count and cannot be used to produce a "rate"
 // (e.g., some value per second).
 struct ValueRecord {
-    RecordHeader header;
-    uint64_t value;
+  RecordHeader header;
+  uint64_t value;
 } PERFMON_ALIGN_RECORD;
 
 // Record the aspace+pc values.
@@ -203,25 +199,25 @@ struct ValueRecord {
 // The event's value is not included here as this is typically used when
 // the counter is its own trigger: the value is known from the sample rate.
 struct PcRecord {
-    RecordHeader header;
-    // The aspace id at the time data was collected.
-    // The meaning of the value is architecture-specific.
-    // In the case of x86 this is the cr3 value.
-    uint64_t aspace;
-    uint64_t pc;
+  RecordHeader header;
+  // The aspace id at the time data was collected.
+  // The meaning of the value is architecture-specific.
+  // In the case of x86 this is the cr3 value.
+  uint64_t aspace;
+  uint64_t pc;
 } PERFMON_ALIGN_RECORD;
 
 // Entry in a last branch record.
 struct LastBranchEntry {
-    uint64_t from;
-    uint64_t to;
-    // Various bits of info about this branch. See |kLastBranchInfo*|.
-    uint64_t info;
+  uint64_t from;
+  uint64_t to;
+  // Various bits of info about this branch. See |kLastBranchInfo*|.
+  uint64_t info;
 } PERFMON_ALIGN_RECORD;
 
 // Utility to compute masks for fields in this file.
 static inline constexpr uint64_t GenMask64(size_t len, size_t shift) {
-    return ((1ull << len) - 1) << shift;
+  return ((1ull << len) - 1) << shift;
 }
 
 // Fields in |LastBranchEntry.info|.
@@ -245,32 +241,30 @@ static constexpr uint64_t kLastBranchInfoMispredMask =
 // Note that this record is variable-length.
 // This is used when doing gprof-like profiling.
 struct LastBranchRecord {
-   // 32 is the max value for Skylake.
-   static constexpr uint32_t kMaxNumLastBranch = 32;
+  // 32 is the max value for Skylake.
+  static constexpr uint32_t kMaxNumLastBranch = 32;
 
-    RecordHeader header;
-    // Number of entries in |branch|.
-    uint32_t num_branches;
-    // The aspace id at the time data was collected. This is not necessarily
-    // the aspace id of each branch. S/W will need to determine from the
-    // branch addresses how far back aspace is valid.
-    // The meaning of the value is architecture-specific.
-    // In the case of x86 this is the cr3 value.
-    uint64_t aspace;
-    // The set of last branches, in reverse chronological order:
-    // The first entry is the most recent one.
-    // Note that the emitted record may be smaller than this, as indicated by
-    // |num_branches|.
-    // Reverse order seems most useful.
-    LastBranchEntry branches[kMaxNumLastBranch];
+  RecordHeader header;
+  // Number of entries in |branch|.
+  uint32_t num_branches;
+  // The aspace id at the time data was collected. This is not necessarily
+  // the aspace id of each branch. S/W will need to determine from the
+  // branch addresses how far back aspace is valid.
+  // The meaning of the value is architecture-specific.
+  // In the case of x86 this is the cr3 value.
+  uint64_t aspace;
+  // The set of last branches, in reverse chronological order:
+  // The first entry is the most recent one.
+  // Note that the emitted record may be smaller than this, as indicated by
+  // |num_branches|.
+  // Reverse order seems most useful.
+  LastBranchEntry branches[kMaxNumLastBranch];
 } PERFMON_ALIGN_RECORD;
 
 // Return the size of valid last branch record |lbr|.
-static inline constexpr size_t LastBranchRecordSize(
-        const LastBranchRecord* lbr) {
-    return (sizeof(LastBranchRecord) -
-            (LastBranchRecord::kMaxNumLastBranch -
-             (lbr)->num_branches) * sizeof((lbr)->branches[0]));
+static inline constexpr size_t LastBranchRecordSize(const LastBranchRecord* lbr) {
+  return (sizeof(LastBranchRecord) -
+          (LastBranchRecord::kMaxNumLastBranch - (lbr)->num_branches) * sizeof((lbr)->branches[0]));
 }
 
 }  // namespace perfmon

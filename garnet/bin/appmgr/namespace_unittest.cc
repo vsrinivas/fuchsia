@@ -38,11 +38,9 @@ namespace {
 
 class NamespaceTest : public ::gtest::RealLoopFixture {
  protected:
-  fxl::RefPtr<Namespace> MakeNamespace(
-      ServiceListPtr additional_services,
-      fxl::RefPtr<Namespace> parent = nullptr) {
-    return fxl::MakeRefCounted<Namespace>(
-        parent, nullptr, std::move(additional_services), nullptr);
+  fxl::RefPtr<Namespace> MakeNamespace(ServiceListPtr additional_services,
+                                       fxl::RefPtr<Namespace> parent = nullptr) {
+    return fxl::MakeRefCounted<Namespace>(parent, nullptr, std::move(additional_services), nullptr);
   }
 
   zx_status_t ConnectToService(zx_handle_t svc_dir, const std::string& name) {
@@ -59,15 +57,13 @@ class NamespaceHostDirectoryTest : public NamespaceTest {
  protected:
   zx::channel OpenAsDirectory() {
     fidl::InterfaceHandle<fuchsia::io::Directory> dir;
-    directory_.Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                         fuchsia::io::OPEN_RIGHT_WRITABLE,
+    directory_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                      dir.NewRequest().TakeChannel(), dispatcher());
     return dir.TakeChannel();
   }
 
   zx_status_t AddService(const std::string& name) {
-    auto cb = [this, name](zx::channel channel,
-                           async_dispatcher_t* dispatcher) {
+    auto cb = [this, name](zx::channel channel, async_dispatcher_t* dispatcher) {
       ++connection_ctr_[name];
     };
     return directory_.AddEntry(name, std::make_unique<vfs::Service>(cb));
@@ -80,8 +76,8 @@ class NamespaceHostDirectoryTest : public NamespaceTest {
 class NamespaceProviderTest : public NamespaceTest {
  protected:
   fxl::RefPtr<Namespace> MakeNamespace(ServiceListPtr additional_services) {
-    return fxl::MakeRefCounted<Namespace>(
-        nullptr, nullptr, std::move(additional_services), nullptr);
+    return fxl::MakeRefCounted<Namespace>(nullptr, nullptr, std::move(additional_services),
+                                          nullptr);
   }
 
   zx_status_t AddService(const std::string& name) {
@@ -97,9 +93,7 @@ class NamespaceProviderTest : public NamespaceTest {
   std::map<std::string, int> connection_ctr_;
 };
 
-std::pair<std::string, int> StringIntPair(const std::string& s, int i) {
-  return {s, i};
-}
+std::pair<std::string, int> StringIntPair(const std::string& s, int i) { return {s, i}; }
 
 TEST_F(NamespaceHostDirectoryTest, AdditionalServices) {
   static constexpr char kService1[] = "fuchsia.test.TestService1";
@@ -125,8 +119,7 @@ TEST_F(NamespaceHostDirectoryTest, AdditionalServices) {
     connection_ctr_vec.push_back(e);
   }
   EXPECT_THAT(connection_ctr_vec,
-              ::testing::ElementsAre(StringIntPair(kService1, 1),
-                                     StringIntPair(kService2, 2)));
+              ::testing::ElementsAre(StringIntPair(kService1, 1), StringIntPair(kService2, 2)));
 }
 
 TEST_F(NamespaceHostDirectoryTest, AdditionalServices_InheritParent) {
@@ -154,8 +147,7 @@ TEST_F(NamespaceHostDirectoryTest, AdditionalServices_InheritParent) {
     connection_ctr_vec.push_back(e);
   }
   EXPECT_THAT(connection_ctr_vec,
-              ::testing::ElementsAre(StringIntPair(kService1, 1),
-                                     StringIntPair(kService2, 1)));
+              ::testing::ElementsAre(StringIntPair(kService1, 1), StringIntPair(kService2, 1)));
 }
 
 TEST_F(NamespaceProviderTest, AdditionalServices) {
@@ -168,8 +160,7 @@ TEST_F(NamespaceProviderTest, AdditionalServices) {
   EXPECT_EQ(ZX_OK, AddService(kService1));
   EXPECT_EQ(ZX_OK, AddService(kService2));
 
-  service_list->host_directory =
-      provider_.service_directory()->CloneChannel().TakeChannel();
+  service_list->host_directory = provider_.service_directory()->CloneChannel().TakeChannel();
   auto ns = MakeNamespace(std::move(service_list));
 
   zx::channel svc_dir = ns->OpenServicesAsDirectory();
@@ -184,8 +175,7 @@ TEST_F(NamespaceProviderTest, AdditionalServices) {
     connection_ctr_vec.push_back(e);
   }
   EXPECT_THAT(connection_ctr_vec,
-              ::testing::ElementsAre(StringIntPair(kService1, 1),
-                                     StringIntPair(kService2, 2)));
+              ::testing::ElementsAre(StringIntPair(kService1, 1), StringIntPair(kService2, 2)));
 }
 
 }  // namespace

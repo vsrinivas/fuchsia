@@ -27,7 +27,7 @@
 
 #undef TRACE_EVENT
 #define TRACE_EVENT(name, proto, ...) \
-    static inline void trace_##name(proto) {}
+  static inline void trace_##name(proto) {}
 
 #endif /* CONFIG_ATH_TRACEPOINTS */
 

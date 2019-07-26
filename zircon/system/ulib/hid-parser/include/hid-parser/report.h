@@ -43,6 +43,6 @@ bool ExtractUint(const uint8_t* report, size_t report_len, const hid::Attributes
 
 bool InsertUint(uint8_t* report, size_t report_len, const hid::Attributes& attr, uint32_t value_in);
 
-} // namespace hid
+}  // namespace hid
 
-#endif // HID_PARSER_REPORT_H_
+#endif  // HID_PARSER_REPORT_H_

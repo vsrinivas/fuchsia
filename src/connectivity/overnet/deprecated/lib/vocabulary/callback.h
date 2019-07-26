@@ -34,8 +34,7 @@ class Callback {
   Callback() : vtable_(&null_vtable) {}
   ~Callback() { vtable_->not_called(&env_); }
 
-  template <class F,
-            typename = typename std::enable_if<sizeof(F) <= kMaxPayload>::type>
+  template <class F, typename = typename std::enable_if<sizeof(F) <= kMaxPayload>::type>
   Callback(F&& f) {
     vtable_ = &SmallFunctor<F>::vtable;
     SmallFunctor<F>::InitEnv(&env_, std::forward<F>(f));
@@ -110,9 +109,7 @@ class Callback {
       (*f)(std::forward<Arg>(arg));
       f->~F();
     }
-    static void NotCalled(void* env) {
-      Call(env, Arg(StatusCode::CANCELLED, __PRETTY_FUNCTION__));
-    }
+    static void NotCalled(void* env) { Call(env, Arg(StatusCode::CANCELLED, __PRETTY_FUNCTION__)); }
   };
 
   const VTable* vtable_;
@@ -124,15 +121,13 @@ template <class T>
 using StatusOrCallback = Callback<StatusOr<T>>;
 
 template <class Arg, size_t kMaxPayload>
-const typename Callback<Arg, kMaxPayload>::VTable
-    Callback<Arg, kMaxPayload>::null_vtable = {NullVTableMove, NullVTableCall,
-                                               NullVTableNotCalled};
+const typename Callback<Arg, kMaxPayload>::VTable Callback<Arg, kMaxPayload>::null_vtable = {
+    NullVTableMove, NullVTableCall, NullVTableNotCalled};
 
 template <class Arg, size_t kMaxPayload>
 template <class F>
 const typename Callback<Arg, kMaxPayload>::VTable
-    Callback<Arg, kMaxPayload>::SmallFunctor<F>::vtable = {Move, Call,
-                                                           NotCalled};
+    Callback<Arg, kMaxPayload>::SmallFunctor<F>::vtable = {Move, Call, NotCalled};
 
 template <size_t kMaxPayload>
 class Callback<void, kMaxPayload> {
@@ -150,8 +145,7 @@ class Callback<void, kMaxPayload> {
   Callback() : vtable_(&null_vtable) {}
   ~Callback() { vtable_->not_called(&env_); }
 
-  template <class F,
-            typename = typename std::enable_if<sizeof(F) <= kMaxPayload>::type>
+  template <class F, typename = typename std::enable_if<sizeof(F) <= kMaxPayload>::type>
   Callback(F&& f) {
     vtable_ = &SmallFunctor<F>::vtable;
     SmallFunctor<F>::InitEnv(&env_, std::forward<F>(f));
@@ -229,14 +223,12 @@ class Callback<void, kMaxPayload> {
 };
 
 template <size_t kMaxPayload>
-const typename Callback<void, kMaxPayload>::VTable
-    Callback<void, kMaxPayload>::null_vtable = {NullVTableMove, NullVTableCall,
-                                                NullVTableNotCalled};
+const typename Callback<void, kMaxPayload>::VTable Callback<void, kMaxPayload>::null_vtable = {
+    NullVTableMove, NullVTableCall, NullVTableNotCalled};
 
 template <size_t kMaxPayload>
 template <class F>
 const typename Callback<void, kMaxPayload>::VTable
-    Callback<void, kMaxPayload>::SmallFunctor<F>::vtable = {Move, Call,
-                                                            NotCalled};
+    Callback<void, kMaxPayload>::SmallFunctor<F>::vtable = {Move, Call, NotCalled};
 
 }  // namespace overnet

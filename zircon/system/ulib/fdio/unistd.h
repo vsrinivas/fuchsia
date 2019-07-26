@@ -23,25 +23,25 @@ zx_status_t errno_to_fdio_status(int16_t out_code);
 
 // set errno to the closest match for error and return -1
 static inline int ERROR(zx_status_t error) {
-    errno = fdio_status_to_errno(error);
-    return -1;
+  errno = fdio_status_to_errno(error);
+  return -1;
 }
 
 // if status is negative, set errno as appropriate and return -1
 // otherwise return status
 static inline int STATUS(zx_status_t status) {
-    if (status < 0) {
-        errno = fdio_status_to_errno(status);
-        return -1;
-    } else {
-        return status;
-    }
+  if (status < 0) {
+    errno = fdio_status_to_errno(status);
+    return -1;
+  } else {
+    return status;
+  }
 }
 
 // set errno to e, return -1
 static inline int ERRNO(int e) {
-    errno = e;
-    return -1;
+  errno = e;
+  return -1;
 }
 
 __END_CDECLS

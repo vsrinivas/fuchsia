@@ -148,8 +148,7 @@ class BlockingMpscQueue {
   std::optional<T> WaitForElement() {
     std::optional<T> element;
     while (should_wait_ && !(element = queue_.Pop())) {
-      should_wait_event_.wait_one(ZX_EVENT_SIGNALED, zx::time(ZX_TIME_INFINITE),
-                                  nullptr);
+      should_wait_event_.wait_one(ZX_EVENT_SIGNALED, zx::time(ZX_TIME_INFINITE), nullptr);
     }
 
     return element;

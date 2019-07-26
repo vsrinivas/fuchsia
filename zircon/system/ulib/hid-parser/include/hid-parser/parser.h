@@ -120,70 +120,66 @@ namespace hid {
 
 // Logical minimum and maximum per hid spec.
 struct MinMax {
-    int64_t min;
-    int64_t max;
+  int64_t min;
+  int64_t max;
 };
 
 // Physical units descriptor.
 struct Unit {
-    uint32_t type;
-    int32_t exp;
+  uint32_t type;
+  int32_t exp;
 };
 
 // Describes the semantic meaning of fields. See the "HID Usage tables"
 // document from usb.org.
 struct Usage {
-    uint16_t page;
-    uint32_t usage;
+  uint16_t page;
+  uint32_t usage;
 };
 
 enum class CollectionType : uint32_t {
-    kPhysical,
-    kApplication,
-    kLogical,
-    kReport,
-    kNamedArray,
-    kUsageSwitch,
-    kUsageModifier,
-    kReserved,
-    kVendor
+  kPhysical,
+  kApplication,
+  kLogical,
+  kReport,
+  kNamedArray,
+  kUsageSwitch,
+  kUsageModifier,
+  kReserved,
+  kVendor
 };
 
-enum NodeType : uint32_t {
-    kInput,
-    kOutput,
-    kFeature
-};
+enum NodeType : uint32_t { kInput, kOutput, kFeature };
 
 enum FieldTypeFlags : uint32_t {
-    // Indicates if field can be modified. Constant often means is padding.
-    kData = 1 << 0,
-    kConstant = 1 << 1,
-    // The field is either an array or scalar. If it is an array only
-    // the kData|kConstant and kAbsolute|kRelative flags are valid.
-    kArray = 1 << 2,
-    kScalar = 1 << 3,
-    // Value is absolute wrt to a fixed origin or not.
-    kAbsolute = 1 << 4,
-    kRelative = 1 << 5,
-    // Whether the data rolls over wrt to the logical min/max.
-    kNoWrap = 1 << 6,
-    kWrap = 1 << 7,
-    // Data has been pre-processed, for example dead-zone.
-    kLinear = 1 << 8,
-    kNonLinear = 1 << 9,
-    // Value returns to a preset value when the user is not interacting with control.
-    kPreferredState = 1 << 10,
-    kNoPreferred = 1 << 11,
-    // If the control can enter a state when it does not report data.
-    kNoNullPosition = 1 << 12,
-    kNullState = 1 << 13,
-    // Output-only: can the value be modified without host interaction.
-    kNonVolatile = 1 << 14,
-    kVolatile = 1 << 15,
-    // Data is a fixed size stream.
-    kBitField = 1 << 16,
-    kBufferedBytes = 1 << 17,
+  // Indicates if field can be modified. Constant often means is padding.
+  kData = 1 << 0,
+  kConstant = 1 << 1,
+  // The field is either an array or scalar. If it is an array only
+  // the kData|kConstant and kAbsolute|kRelative flags are valid.
+  kArray = 1 << 2,
+  kScalar = 1 << 3,
+  // Value is absolute wrt to a fixed origin or not.
+  kAbsolute = 1 << 4,
+  kRelative = 1 << 5,
+  // Whether the data rolls over wrt to the logical min/max.
+  kNoWrap = 1 << 6,
+  kWrap = 1 << 7,
+  // Data has been pre-processed, for example dead-zone.
+  kLinear = 1 << 8,
+  kNonLinear = 1 << 9,
+  // Value returns to a preset value when the user is not interacting with control.
+  kPreferredState = 1 << 10,
+  kNoPreferred = 1 << 11,
+  // If the control can enter a state when it does not report data.
+  kNoNullPosition = 1 << 12,
+  kNullState = 1 << 13,
+  // Output-only: can the value be modified without host interaction.
+  kNonVolatile = 1 << 14,
+  kVolatile = 1 << 15,
+  // Data is a fixed size stream.
+  kBitField = 1 << 16,
+  kBufferedBytes = 1 << 17,
 };
 
 // TODO(cpu): consider repurposing the kData| kArray | kNonLinear to indicate
@@ -191,75 +187,74 @@ enum FieldTypeFlags : uint32_t {
 // for an example of this case.
 
 struct Collection {
-    CollectionType type;
-    Usage usage;
-    Collection* parent; // Enclosing collection or null.
+  CollectionType type;
+  Usage usage;
+  Collection* parent;  // Enclosing collection or null.
 };
 
 struct Attributes {
-    Usage usage;
-    Unit unit;
-    MinMax logc_mm;
-    MinMax phys_mm;
-    uint8_t bit_sz;
-    uint32_t offset;
+  Usage usage;
+  Unit unit;
+  MinMax logc_mm;
+  MinMax phys_mm;
+  uint8_t bit_sz;
+  uint32_t offset;
 };
 
 struct ReportField {
-    uint8_t report_id;
-    Attributes attr;
-    NodeType type;
-    uint32_t flags;
-    Collection* col;
+  uint8_t report_id;
+  Attributes attr;
+  NodeType type;
+  uint32_t flags;
+  Collection* col;
 };
 
 struct ReportDescriptor {
-    uint8_t report_id;
+  uint8_t report_id;
 
-    // The byte size includes the 1 byte for the report ID if the report ID is
-    // not equal to zero.
-    size_t input_byte_sz;
-    size_t input_count;
-    ReportField* input_fields;
+  // The byte size includes the 1 byte for the report ID if the report ID is
+  // not equal to zero.
+  size_t input_byte_sz;
+  size_t input_count;
+  ReportField* input_fields;
 
-    size_t output_byte_sz;
-    size_t output_count;
-    ReportField* output_fields;
+  size_t output_byte_sz;
+  size_t output_count;
+  ReportField* output_fields;
 
-    size_t feature_byte_sz;
-    size_t feature_count;
-    ReportField* feature_fields;
+  size_t feature_byte_sz;
+  size_t feature_count;
+  ReportField* feature_fields;
 };
 
 struct DeviceDescriptor {
-    size_t rep_count;
-    ReportDescriptor report[];
+  size_t rep_count;
+  ReportDescriptor report[];
 };
 
 enum ParseResult : uint32_t {
-    kParseOk = 0,
-    kParseNoMemory = 1,
-    kParseMoreNeeded = 2,
-    kParseUnsuported = 3,
-    kParseInvalidTag = 4,
-    kParseInvalidItemType = 5,
-    kParseInvalidItemValue = 6,
-    kParseUsageLimit = 7,
-    kParseInvalidRange = 8,
-    kParseOverflow = 9,
-    kParseLeftovers = 10,
-    kParseUnexpectedCol = 11,
-    kParseUnexpectedItem = 12,
-    kParseInvalidUsage = 13,
-    kParseMissingUsage = 14,
-    kParserMissingPage = 15,
-    kParserUnexpectedPop = 16,
-    kParserInvalidID = 17
+  kParseOk = 0,
+  kParseNoMemory = 1,
+  kParseMoreNeeded = 2,
+  kParseUnsuported = 3,
+  kParseInvalidTag = 4,
+  kParseInvalidItemType = 5,
+  kParseInvalidItemValue = 6,
+  kParseUsageLimit = 7,
+  kParseInvalidRange = 8,
+  kParseOverflow = 9,
+  kParseLeftovers = 10,
+  kParseUnexpectedCol = 11,
+  kParseUnexpectedItem = 12,
+  kParseInvalidUsage = 13,
+  kParseMissingUsage = 14,
+  kParserMissingPage = 15,
+  kParserUnexpectedPop = 16,
+  kParserInvalidID = 17
 };
 
-ParseResult ParseReportDescriptor(
-    const uint8_t* rpt_desc, size_t desc_len,
-    DeviceDescriptor** dev_desc);
+ParseResult ParseReportDescriptor(const uint8_t* rpt_desc, size_t desc_len,
+                                  DeviceDescriptor** dev_desc);
 
 void FreeDeviceDescriptor(DeviceDescriptor* dev_desc);
 
@@ -268,21 +263,21 @@ Collection* GetAppCollection(const ReportField* field);
 // Helper for creating Usage constants.
 template <typename P, typename U>
 constexpr Usage USAGE(P page, U usage) {
-    return Usage{static_cast<uint16_t>(page), static_cast<uint32_t>(usage)};
+  return Usage{static_cast<uint16_t>(page), static_cast<uint32_t>(usage)};
 }
 
-} // namespace hid
+}  // namespace hid
 
 inline bool operator==(hid::Usage a, hid::Usage b) {
-    return (a.page == b.page) && (a.usage == b.usage);
+  return (a.page == b.page) && (a.usage == b.usage);
 }
 
 inline bool operator!=(hid::Usage a, hid::Usage b) {
-    return (a.page != b.page) || (a.usage != b.usage);
+  return (a.page != b.page) || (a.usage != b.usage);
 }
 
 inline bool operator==(hid::MinMax a, hid::MinMax b) {
-    return (a.min == b.min) && (a.max == b.max);
+  return (a.min == b.min) && (a.max == b.max);
 }
 
-#endif // HID_PARSER_PARSER_H_
+#endif  // HID_PARSER_PARSER_H_

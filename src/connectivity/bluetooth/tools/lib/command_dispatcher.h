@@ -28,8 +28,8 @@ class CommandDispatcher final {
   // contained invalid arguments or if no handler for the command had been
   // previously registered. |out_cmd_found| will be set to false if no command
   // handler for this command was registered, true otherwise.
-  bool ExecuteCommand(const std::vector<std::string>& argv,
-                      fit::closure complete_cb, bool* out_cmd_found);
+  bool ExecuteCommand(const std::vector<std::string>& argv, fit::closure complete_cb,
+                      bool* out_cmd_found);
 
   // Prints the names of all commands and their descriptions.
   void DescribeAllCommands() const;
@@ -42,19 +42,18 @@ class CommandDispatcher final {
   //
   // Once a command has been executed, |complete_cb| should be called to mark
   // completion the of the command.
-  using CommandHandler = fit::function<bool(
-      const fxl::CommandLine& command_line, fit::closure complete_cb)>;
+  using CommandHandler =
+      fit::function<bool(const fxl::CommandLine& command_line, fit::closure complete_cb)>;
 
   // Registers a handler to be executed for the command |command_name|.
   // |description| is the string that describes the command (to be displayed by
   // DescribedAllCommands()).
-  void RegisterHandler(const std::string& command_name,
-                       const std::string& description, CommandHandler handler);
+  void RegisterHandler(const std::string& command_name, const std::string& description,
+                       CommandHandler handler);
 
   // Returns a list of currently registered command names that start with
   // |prefix|.
-  std::vector<std::string> GetCommandsThatMatch(
-      const std::string& prefix) const;
+  std::vector<std::string> GetCommandsThatMatch(const std::string& prefix) const;
 
  private:
   struct CommandHandlerData {

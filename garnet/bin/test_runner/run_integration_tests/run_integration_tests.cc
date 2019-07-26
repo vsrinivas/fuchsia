@@ -46,16 +46,14 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
   bool success_;
 };
 
-bool RunTest(async::Loop* loop,
-             std::shared_ptr<component::StartupContext> app_context,
+bool RunTest(async::Loop* loop, std::shared_ptr<component::StartupContext> app_context,
              const std::string& url, const std::vector<std::string>& args) {
   FXL_CHECK(loop);
   uint64_t random_number;
   zx_cprng_draw(&random_number, sizeof random_number);
   std::string test_id = fxl::StringPrintf("test_%lX", random_number);
   TestRunObserverImpl observer(loop, test_id);
-  test_runner::TestRunContext context(app_context, &observer, test_id, url,
-                                      args);
+  test_runner::TestRunContext context(app_context, &observer, test_id, url, args);
 
   loop->Run();
   loop->ResetQuit();
@@ -172,6 +170,4 @@ int RunIntegrationTestsMain(int argc, char** argv) {
 }  // namespace
 }  // namespace test_runner
 
-int main(int argc, char** argv) {
-  return test_runner::RunIntegrationTestsMain(argc, argv);
-}
+int main(int argc, char** argv) { return test_runner::RunIntegrationTestsMain(argc, argv); }

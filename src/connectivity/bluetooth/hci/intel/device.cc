@@ -18,9 +18,7 @@ namespace btintel {
 Device::Device(zx_device_t* device, bt_hci_protocol_t* hci)
     : DeviceType(device), hci_(hci), firmware_loaded_(false) {}
 
-zx_status_t Device::Bind() {
-  return DdkAdd("bt_hci_intel", DEVICE_ADD_INVISIBLE);
-}
+zx_status_t Device::Bind() { return DdkAdd("bt_hci_intel", DEVICE_ADD_INVISIBLE); }
 
 zx_status_t Device::LoadFirmware(bool secure) {
   tracef("LoadFirmware(secure: %s)\n", (secure ? "yes" : "no"));
@@ -70,18 +68,15 @@ zx_status_t Device::Remove(zx_status_t status, const char* note) {
   return status;
 }
 
-zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr,
-                                size_t* fw_size) {
+zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw_size) {
   zx_handle_t vmo = ZX_HANDLE_INVALID;
   size_t size;
   zx_status_t status = load_firmware(zxdev(), name, &vmo, &size);
   if (status != ZX_OK) {
-    errorf("failed to load firmware '%s': %s\n", name,
-           zx_status_get_string(status));
+    errorf("failed to load firmware '%s': %s\n", name, zx_status_get_string(status));
     return ZX_HANDLE_INVALID;
   }
-  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size,
-                       fw_addr);
+  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, fw_addr);
   if (status != ZX_OK) {
     errorf("firmware map failed: %s\n", zx_status_get_string(status));
     return ZX_HANDLE_INVALID;
@@ -177,8 +172,7 @@ zx_status_t Device::LoadSecureFirmware(zx::channel* cmd, zx::channel* acl) {
   }
 
   // Map the firmware file into memory.
-  auto fw_filename = fbl::StringPrintf("ibt-%d-%d.sfi", version.hw_variant,
-                                       boot_params.dev_revid);
+  auto fw_filename = fbl::StringPrintf("ibt-%d-%d.sfi", version.hw_variant, boot_params.dev_revid);
   zx::vmo fw_vmo;
   uintptr_t fw_addr;
   size_t fw_size;
@@ -228,10 +222,9 @@ zx_status_t Device::LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl) {
   }
 
   auto fw_filename = fbl::StringPrintf(
-      "ibt-hw-%x.%x.%x-fw-%x.%x.%x.%x.%x.bseq", version.hw_platform,
-      version.hw_variant, version.hw_revision, version.fw_variant,
-      version.fw_revision, version.fw_build_num, version.fw_build_week,
-      version.fw_build_year);
+      "ibt-hw-%x.%x.%x-fw-%x.%x.%x.%x.%x.bseq", version.hw_platform, version.hw_variant,
+      version.hw_revision, version.fw_variant, version.fw_revision, version.fw_build_num,
+      version.fw_build_week, version.fw_build_year);
 
   zx::vmo fw_vmo;
   uintptr_t fw_addr;
@@ -241,8 +234,7 @@ zx_status_t Device::LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl) {
   // Try the fallback patch file on initial failure.
   if (!fw_vmo) {
     // Try the fallback patch file
-    fw_filename = fbl::StringPrintf("ibt-hw-%x.%x.bseq", version.hw_platform,
-                                    version.hw_variant);
+    fw_filename = fbl::StringPrintf("ibt-hw-%x.%x.bseq", version.hw_platform, version.hw_variant);
     fw_vmo.reset(MapFirmware(fw_filename.c_str(), &fw_addr, &fw_size));
   }
 

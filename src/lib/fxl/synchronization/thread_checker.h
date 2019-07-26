@@ -53,13 +53,9 @@ class FXL_CAPABILITY("mutex") ThreadChecker final {
 
   // Returns true if the current thread is the thread this object was created
   // on and false otherwise.
-  bool IsCreationThreadCurrent() const {
-    return !!pthread_equal(pthread_self(), self_);
-  }
+  bool IsCreationThreadCurrent() const { return !!pthread_equal(pthread_self(), self_); }
 
-  void lock() FXL_ACQUIRE() {
-    FXL_DCHECK(IsCreationThreadCurrent());
-  }
+  void lock() FXL_ACQUIRE() { FXL_DCHECK(IsCreationThreadCurrent()); }
 
   void unlock() FXL_RELEASE() {}
 
@@ -71,8 +67,7 @@ class FXL_CAPABILITY("mutex") ThreadChecker final {
 
 #ifndef NDEBUG
 #define FXL_DECLARE_THREAD_CHECKER(c) fxl::ThreadChecker c
-#define FXL_DCHECK_CREATION_THREAD_IS_CURRENT(c) \
-  FXL_DCHECK((c).IsCreationThreadCurrent())
+#define FXL_DCHECK_CREATION_THREAD_IS_CURRENT(c) FXL_DCHECK((c).IsCreationThreadCurrent())
 #else
 #define FXL_DECLARE_THREAD_CHECKER(c)
 #define FXL_DCHECK_CREATION_THREAD_IS_CURRENT(c) ((void)0)

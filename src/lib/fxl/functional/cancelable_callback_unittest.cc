@@ -109,8 +109,7 @@ TEST(CancelableCallbackTest, VaryingSignatures) {
   int count = 0;
 
   // Single-argument function via std::bind
-  CancelableCallback<void(int)> cancelable(
-      std::bind(&AddBToA, &count, std::placeholders::_1));
+  CancelableCallback<void(int)> cancelable(std::bind(&AddBToA, &count, std::placeholders::_1));
 
   auto callback = cancelable.callback();
   callback(2);
@@ -130,8 +129,7 @@ TEST(CancelableCallbackTest, VaryingSignatures) {
   EXPECT_EQ(5, count);
 
   // Two-argument lambda
-  CancelableCallback<void(int*, int)> cancelable2(
-      [](int* a, int b) { (*a) += b; });
+  CancelableCallback<void(int*, int)> cancelable2([](int* a, int b) { (*a) += b; });
   auto callback2 = cancelable2.callback();
   callback2(&count, 2);
   EXPECT_EQ(7, count);

@@ -19,17 +19,11 @@ class ComponentHub : public Hub {
  public:
   ComponentHub(fbl::RefPtr<fs::PseudoDir> root);
 
-  zx_status_t SetProcessId(fbl::String koid) {
-    return AddEntry("process-id", std::move(koid));
-  }
+  zx_status_t SetProcessId(fbl::String koid) { return AddEntry("process-id", std::move(koid)); }
 
-  zx_status_t SetArgs(fbl::String args) {
-    return AddEntry("args", std::move(args));
-  }
+  zx_status_t SetArgs(fbl::String args) { return AddEntry("args", std::move(args)); }
 
-  zx_status_t PublishOut(fbl::RefPtr<fs::Vnode> vn) {
-    return AddEntry("out", std::move(vn));
-  }
+  zx_status_t PublishOut(fbl::RefPtr<fs::Vnode> vn) { return AddEntry("out", std::move(vn)); }
 
   // Add a list of incoming services that the component has access to.
   zx_status_t AddIncomingServices(fbl::RefPtr<fs::Vnode> incoming_services);

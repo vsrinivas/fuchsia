@@ -8,14 +8,14 @@
 
 namespace zx {
 
-zx_status_t vmar::allocate(size_t offset, size_t size, zx_vm_option_t options,
-                           vmar* child, uintptr_t* child_addr) const {
-    // Allow for aliasing of |child| to the same container as |this|.
-    vmar h;
-    zx_status_t status = zx_vmar_allocate(
-        get(), options, offset, size, h.reset_and_get_address(), child_addr);
-    child->reset(h.release());
-    return status;
+zx_status_t vmar::allocate(size_t offset, size_t size, zx_vm_option_t options, vmar* child,
+                           uintptr_t* child_addr) const {
+  // Allow for aliasing of |child| to the same container as |this|.
+  vmar h;
+  zx_status_t status =
+      zx_vmar_allocate(get(), options, offset, size, h.reset_and_get_address(), child_addr);
+  child->reset(h.release());
+  return status;
 }
 
-} // namespace zx
+}  // namespace zx

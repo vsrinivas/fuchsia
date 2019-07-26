@@ -66,13 +66,11 @@ bool Compare(const fuchsia::camera::VideoFormat &vf, const UvcFormat &uf);
 class UvcFormatList {
  public:
   size_t Size() { return formats_.size(); }
-  zx_status_t ParseUsbDescriptor(usb_video_vc_desc_header *format_desc,
-                                 usb_desc_iter_t *iter);
+  zx_status_t ParseUsbDescriptor(usb_video_vc_desc_header *format_desc, usb_desc_iter_t *iter);
   uint32_t number_of_formats() { return number_of_formats_; }
 
-  bool MatchFormat(const fuchsia::camera::VideoFormat &requested_format,
-                   uint8_t *format_index, uint8_t *frame_index,
-                   uint32_t *default_frame_interval) const {
+  bool MatchFormat(const fuchsia::camera::VideoFormat &requested_format, uint8_t *format_index,
+                   uint8_t *frame_index, uint32_t *default_frame_interval) const {
     for (const auto &format : formats_) {
       if (Compare(requested_format, format)) {
         *format_index = format.format_index;
@@ -84,8 +82,7 @@ class UvcFormatList {
     return false;
   }
 
-  void FillFormats(
-      fidl::VectorPtr<fuchsia::camera::VideoFormat> &formats) const {
+  void FillFormats(fidl::VectorPtr<fuchsia::camera::VideoFormat> &formats) const {
     for (auto &format : formats_) {
       formats.push_back(ToFidl(format));
     }

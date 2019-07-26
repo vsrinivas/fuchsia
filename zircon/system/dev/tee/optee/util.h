@@ -19,16 +19,16 @@ namespace optee {
 // 4122 states that when encoding a UUID as a sequence of bytes, each field will be encoded in
 // network byte order. This class stores the data as a sequence of bytes.
 struct Uuid final {
-public:
-    explicit Uuid(const fuchsia_tee_Uuid& zx_uuid);
+ public:
+  explicit Uuid(const fuchsia_tee_Uuid& zx_uuid);
 
-    void ToUint64Pair(uint64_t* out_hi, uint64_t* out_low) const;
+  void ToUint64Pair(uint64_t* out_hi, uint64_t* out_low) const;
 
-private:
-    static constexpr size_t kUuidSize = 16;
-    uint8_t data_[kUuidSize];
+ private:
+  static constexpr size_t kUuidSize = 16;
+  uint8_t data_[kUuidSize];
 };
 
 static_assert(sizeof(Uuid) == 16, "Uuid must remain exactly 16 bytes");
 
-} // namespace optee
+}  // namespace optee

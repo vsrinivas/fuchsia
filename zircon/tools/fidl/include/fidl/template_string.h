@@ -26,12 +26,10 @@ using Substitutions = std::map<std::string, std::string>;
 //   });
 class TemplateString {
  public:
-  TemplateString(std::string str)
-      : str_(str) {}
+  TemplateString(std::string str) : str_(str) {}
 
   // Constructs an empty template.
-  TemplateString()
-      : TemplateString("") {}
+  TemplateString() : TemplateString("") {}
 
   // Returns true if the template string is not empty.
   explicit operator bool() const { return str_.size() > 0; }

@@ -24,8 +24,7 @@ int main(int argc, char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  auto config_file =
-      command_line.GetOptionValueWithDefault("config", kDefaultConfigFile);
+  auto config_file = command_line.GetOptionValueWithDefault("config", kDefaultConfigFile);
 
   Config config;
   if (!config.ReadFrom(config_file)) {

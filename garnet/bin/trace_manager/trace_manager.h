@@ -23,30 +23,26 @@ namespace tracing {
 namespace controller = ::fuchsia::tracing::controller;
 namespace provider = ::fuchsia::tracing::provider;
 
-class TraceManager : public controller::Controller,
-                     public provider::Registry {
+class TraceManager : public controller::Controller, public provider::Registry {
  public:
   TraceManager(sys::ComponentContext* context, const Config& config);
   ~TraceManager() override;
 
  private:
   // |Controller| implementation.
-  void StartTracing(controller::TraceOptions options,
-                    zx::socket output, StartTracingCallback cb) override;
+  void StartTracing(controller::TraceOptions options, zx::socket output,
+                    StartTracingCallback cb) override;
   void StopTracing() override;
   void GetKnownCategories(GetKnownCategoriesCallback callback) override;
 
   // |TraceRegistry| implementation.
-  void RegisterProviderWorker(
-      fidl::InterfaceHandle<provider::Provider> provider,
-      uint64_t pid, fidl::StringPtr name);
-  void RegisterProvider(
-      fidl::InterfaceHandle<provider::Provider> provider,
-      uint64_t pid, std::string name) override;
-  void RegisterProviderSynchronously(
-      fidl::InterfaceHandle<provider::Provider> provider,
-      uint64_t pid, std::string name,
-      RegisterProviderSynchronouslyCallback callback) override;
+  void RegisterProviderWorker(fidl::InterfaceHandle<provider::Provider> provider, uint64_t pid,
+                              fidl::StringPtr name);
+  void RegisterProvider(fidl::InterfaceHandle<provider::Provider> provider, uint64_t pid,
+                        std::string name) override;
+  void RegisterProviderSynchronously(fidl::InterfaceHandle<provider::Provider> provider,
+                                     uint64_t pid, std::string name,
+                                     RegisterProviderSynchronouslyCallback callback) override;
 
   void FinalizeTracing();
   void LaunchConfiguredProviders();

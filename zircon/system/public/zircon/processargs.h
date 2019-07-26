@@ -14,46 +14,46 @@ __BEGIN_CDECLS
 // This is a protocol for passing state to a new process
 // via a message in a channel.
 
-#define ZX_PROCARGS_PROTOCOL ((uint32_t)0x4150585du) // MXPA
+#define ZX_PROCARGS_PROTOCOL ((uint32_t)0x4150585du)  // MXPA
 #define ZX_PROCARGS_VERSION ((uint32_t)0x0001000u)
 
 typedef struct zx_proc_args zx_proc_args_t;
 
 struct zx_proc_args {
-    // Protocol and version identifiers to allow for
-    // different process start message protocols and
-    // versioning of the same.
-    uint32_t protocol;
-    uint32_t version;
+  // Protocol and version identifiers to allow for
+  // different process start message protocols and
+  // versioning of the same.
+  uint32_t protocol;
+  uint32_t version;
 
-    // Offset from start of message to handle info
-    // array, which contains one uint32_t per handle
-    // passed along with the message.
-    uint32_t handle_info_off;
+  // Offset from start of message to handle info
+  // array, which contains one uint32_t per handle
+  // passed along with the message.
+  uint32_t handle_info_off;
 
-    // Offset from start of message to arguments and
-    // count of arguments.  Arguments are provided as
-    // a set of null-terminated utf-8 strings, one
-    // after the other.
-    uint32_t args_off;
-    uint32_t args_num;
+  // Offset from start of message to arguments and
+  // count of arguments.  Arguments are provided as
+  // a set of null-terminated utf-8 strings, one
+  // after the other.
+  uint32_t args_off;
+  uint32_t args_num;
 
-    // Offset from start of message to environment strings and count of
-    // them.  Environment entries are provided as a set of null-terminated
-    // UTF-8 strings, one after the other.  Canonically each string has
-    // the form "NAME=VALUE", but nothing enforces this.
-    uint32_t environ_off;
-    uint32_t environ_num;
+  // Offset from start of message to environment strings and count of
+  // them.  Environment entries are provided as a set of null-terminated
+  // UTF-8 strings, one after the other.  Canonically each string has
+  // the form "NAME=VALUE", but nothing enforces this.
+  uint32_t environ_off;
+  uint32_t environ_num;
 
-    // Offset from start of message to name strings and count of them.
-    // These strings are packed similar to the argument strings,
-    // but are referenced by PA_NS_* handle table entries and used
-    // to set up namespaces.
-    //
-    // Specifically: In a handle table entry with PA_HND_TYPE(info)
-    // of PA_NS_*, PA_HND_ARG(info) is an index into this name table.
-    uint32_t names_off;
-    uint32_t names_num;
+  // Offset from start of message to name strings and count of them.
+  // These strings are packed similar to the argument strings,
+  // but are referenced by PA_NS_* handle table entries and used
+  // to set up namespaces.
+  //
+  // Specifically: In a handle table entry with PA_HND_TYPE(info)
+  // of PA_NS_*, PA_HND_ARG(info) is an index into this name table.
+  uint32_t names_off;
+  uint32_t names_num;
 };
 
 // Handle Info entries associate a type and optional
@@ -154,4 +154,4 @@ struct zx_proc_args {
 
 __END_CDECLS
 
-#endif // SYSROOT_ZIRCON_PROCESSARGS_H_
+#endif  // SYSROOT_ZIRCON_PROCESSARGS_H_

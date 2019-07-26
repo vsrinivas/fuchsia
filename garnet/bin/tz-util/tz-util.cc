@@ -20,8 +20,7 @@ static constexpr char kGetTimezoneIdCmd[] = "get_timezone_id";
 
 class TzUtil {
  public:
-  TzUtil(std::unique_ptr<sys::ComponentContext> context)
-      : context_(std::move(context)) {
+  TzUtil(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {
     context_->svc()->Connect(timezone_.NewRequest());
   }
 
@@ -59,8 +58,8 @@ class TzUtil {
       zx_time_t milliseconds_since_epoch = 0;
       zx_clock_get(ZX_CLOCK_UTC, &milliseconds_since_epoch);
       milliseconds_since_epoch /= ZX_MSEC(1);
-      if (timezone_->GetTimezoneOffsetMinutes(
-              milliseconds_since_epoch, &local_offset, &dst_offset) == ZX_OK) {
+      if (timezone_->GetTimezoneOffsetMinutes(milliseconds_since_epoch, &local_offset,
+                                              &dst_offset) == ZX_OK) {
         std::cout << local_offset + dst_offset << std::endl;
       } else {
         std::cerr << "ERROR: Unable to get offset." << std::endl;

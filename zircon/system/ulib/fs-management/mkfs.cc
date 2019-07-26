@@ -30,56 +30,56 @@ namespace {
 
 zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
                          const mkfs_options_t* options) {
-    fbl::unique_fd device_fd;
-    device_fd.reset(open(device_path, O_RDWR));
-    if (!device_fd) {
-        fprintf(stderr, "Failed to open device\n");
-        return ZX_ERR_BAD_STATE;
-    }
-    zx::channel block_device;
-    zx_status_t status = fdio_get_service_handle(device_fd.release(),
-                                                 block_device.reset_and_get_address());
-    if (status != ZX_OK) {
-        return status;
-    }
-    fbl::Vector<const char*> argv;
-    argv.push_back(binary);
-    if (options->verbose) {
-        argv.push_back("-v");
-    }
-    fbl::StringBuffer<20> fvm_data_slices;
-    if (options->fvm_data_slices > default_mkfs_options.fvm_data_slices) {
-        argv.push_back("--fvm_data_slices");
-        fvm_data_slices.AppendPrintf("%u", options->fvm_data_slices);
-        argv.push_back(fvm_data_slices.c_str());
-    }
-    argv.push_back("mkfs");
-    argv.push_back(nullptr);
-
-    zx_handle_t hnd = block_device.release();
-    uint32_t id = FS_HANDLE_BLOCK_DEVICE_ID;
-    status = static_cast<zx_status_t>(cb(static_cast<int>(argv.size() - 1), argv.get(),
-                                         &hnd, &id, 1));
+  fbl::unique_fd device_fd;
+  device_fd.reset(open(device_path, O_RDWR));
+  if (!device_fd) {
+    fprintf(stderr, "Failed to open device\n");
+    return ZX_ERR_BAD_STATE;
+  }
+  zx::channel block_device;
+  zx_status_t status =
+      fdio_get_service_handle(device_fd.release(), block_device.reset_and_get_address());
+  if (status != ZX_OK) {
     return status;
+  }
+  fbl::Vector<const char*> argv;
+  argv.push_back(binary);
+  if (options->verbose) {
+    argv.push_back("-v");
+  }
+  fbl::StringBuffer<20> fvm_data_slices;
+  if (options->fvm_data_slices > default_mkfs_options.fvm_data_slices) {
+    argv.push_back("--fvm_data_slices");
+    fvm_data_slices.AppendPrintf("%u", options->fvm_data_slices);
+    argv.push_back(fvm_data_slices.c_str());
+  }
+  argv.push_back("mkfs");
+  argv.push_back(nullptr);
+
+  zx_handle_t hnd = block_device.release();
+  uint32_t id = FS_HANDLE_BLOCK_DEVICE_ID;
+  status =
+      static_cast<zx_status_t>(cb(static_cast<int>(argv.size() - 1), argv.get(), &hnd, &id, 1));
+  return status;
 }
 
 zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_options_t* options) {
-    const char* argv[] = {"/boot/bin/mkfs-msdosfs", device_path, nullptr};
-    return cb(fbl::count_of(argv) - 1, argv, NULL, NULL, 0);
+  const char* argv[] = {"/boot/bin/mkfs-msdosfs", device_path, nullptr};
+  return cb(fbl::count_of(argv) - 1, argv, NULL, NULL, 0);
 }
 
-} // namespace
+}  // namespace
 
 zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
                  const mkfs_options_t* options) {
-    switch (df) {
+  switch (df) {
     case DISK_FORMAT_MINFS:
-        return MkfsNativeFs("/boot/bin/minfs", device_path, cb, options);
+      return MkfsNativeFs("/boot/bin/minfs", device_path, cb, options);
     case DISK_FORMAT_FAT:
-        return MkfsFat(device_path, cb, options);
+      return MkfsFat(device_path, cb, options);
     case DISK_FORMAT_BLOBFS:
-        return MkfsNativeFs("/boot/bin/blobfs", device_path, cb, options);
+      return MkfsNativeFs("/boot/bin/blobfs", device_path, cb, options);
     default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 }

@@ -20,8 +20,7 @@ void LogImporter::Start() {
   if (log_)
     return;
 
-  zx_status_t status =
-      zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log_);
+  zx_status_t status = zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to open kernel log: status=" << status;
     return;
@@ -46,8 +45,8 @@ void LogImporter::Stop() {
   log_.reset();
 }
 
-void LogImporter::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                         zx_status_t status, const zx_packet_signal_t* signal) {
+void LogImporter::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                         const zx_packet_signal_t* signal) {
   if (status != ZX_OK)
     return;
 
@@ -67,9 +66,8 @@ void LogImporter::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
     if (auto context = trace_acquire_context()) {
       trace_thread_ref_t thread_ref =
           trace_make_inline_thread_ref(log_record->pid, log_record->tid);
-      trace_context_write_log_record(
-          context, log_record->timestamp * time_scale_, &thread_ref,
-          log_record->data, log_record->datalen);
+      trace_context_write_log_record(context, log_record->timestamp * time_scale_, &thread_ref,
+                                     log_record->data, log_record->datalen);
       trace_release_context(context);
     }
   }

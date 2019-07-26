@@ -25,14 +25,12 @@ bool SocketWriteReadTest(perftest::RepeatState* state, uint32_t message_size) {
 
   while (state->KeepRunning()) {
     size_t bytes_written;
-    ZX_ASSERT(socket1.write(0, buffer.data(), buffer.size(), &bytes_written) ==
-              ZX_OK);
+    ZX_ASSERT(socket1.write(0, buffer.data(), buffer.size(), &bytes_written) == ZX_OK);
     ZX_ASSERT(bytes_written == buffer.size());
     state->NextStep();
 
     size_t bytes_read;
-    ZX_ASSERT(socket2.read(0, buffer.data(), buffer.size(), &bytes_read) ==
-              ZX_OK);
+    ZX_ASSERT(socket2.read(0, buffer.data(), buffer.size(), &bytes_read) == ZX_OK);
     ZX_ASSERT(bytes_read == buffer.size());
   }
   return true;

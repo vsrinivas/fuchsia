@@ -66,8 +66,8 @@
 #define SDIO_CCCR_BRCM_SEPINT_ACT_HI BIT(2)
 
 // TODO(cphoenix): Clean up all these names to make it clearer what's an address vs. a value.
-#define SDIO_CCCR_INT_ENABLE  0x04
-#define SDIO_CCCR_INTx        0x05
+#define SDIO_CCCR_INT_ENABLE 0x04
+#define SDIO_CCCR_INTx 0x05
 #define SDIO_CCCR_ABORT_RESET 0x06
 
 /* function 1 miscellaneous registers */
@@ -155,9 +155,8 @@
 #define BRCMF_WD_POLL_MSEC (10)
 
 /* A couple of SDIO device IDs that need special handling */
-#define SDIO_DEVICE_ID_BROADCOM_4339      0x4339
+#define SDIO_DEVICE_ID_BROADCOM_4339 0x4339
 #define SDIO_DEVICE_ID_BROADCOM_4335_4339 0x4335
-
 
 /**
  * enum brcmf_sdiod_state - the state of the bus.
@@ -169,144 +168,144 @@
 enum brcmf_sdiod_state { BRCMF_SDIOD_DOWN, BRCMF_SDIOD_DATA, BRCMF_SDIOD_NOMEDIUM };
 
 enum {
-    COMPONENT_SDIO_FN1,
-    COMPONENT_SDIO_FN2,
-    COMPONENT_OOB_GPIO,
-    COMPONENT_DEBUG_GPIO,
-    COMPONENT_COUNT,
+  COMPONENT_SDIO_FN1,
+  COMPONENT_SDIO_FN2,
+  COMPONENT_OOB_GPIO,
+  COMPONENT_DEBUG_GPIO,
+  COMPONENT_COUNT,
 };
 
 enum {
-    WIFI_OOB_IRQ_GPIO_INDEX,
-    DEBUG_GPIO_INDEX,
-    GPIO_COUNT,
+  WIFI_OOB_IRQ_GPIO_INDEX,
+  DEBUG_GPIO_INDEX,
+  GPIO_COUNT,
 };
 
 struct brcmf_sdreg {
-    int func;
-    int offset;
-    int value;
+  int func;
+  int offset;
+  int value;
 };
 
 struct brcmf_sdio;
 
 struct brcmf_sdio_dev {
-    struct sdio_func *func1;
-    struct sdio_func *func2;
-    uint32_t manufacturer_id;
-    uint32_t product_id;
-    sdio_protocol_t sdio_proto_fn1;
-    sdio_protocol_t sdio_proto_fn2;
-    gpio_protocol_t gpios[GPIO_COUNT];
-    bool has_debug_gpio;
-    zx_handle_t irq_handle;
-    thrd_t isr_thread;
-    struct brcmf_device dev;
-    uint32_t sbwad;             /* Save backplane window address */
-    struct brcmf_core* cc_core; /* chipcommon core info struct */
-    struct brcmf_sdio* bus;
-    struct brcmf_bus* bus_if;
-    struct brcmf_mp_device* settings;
-    bool oob_irq_requested;
-    bool sd_irq_requested;
-    bool irq_wake; /* irq wake enable flags */
-    char fw_name[BRCMF_FW_NAME_LEN];
-    char nvram_name[BRCMF_FW_NAME_LEN];
-    bool wowl_enabled;
-    enum brcmf_sdiod_state state;
+  struct sdio_func* func1;
+  struct sdio_func* func2;
+  uint32_t manufacturer_id;
+  uint32_t product_id;
+  sdio_protocol_t sdio_proto_fn1;
+  sdio_protocol_t sdio_proto_fn2;
+  gpio_protocol_t gpios[GPIO_COUNT];
+  bool has_debug_gpio;
+  zx_handle_t irq_handle;
+  thrd_t isr_thread;
+  struct brcmf_device dev;
+  uint32_t sbwad;             /* Save backplane window address */
+  struct brcmf_core* cc_core; /* chipcommon core info struct */
+  struct brcmf_sdio* bus;
+  struct brcmf_bus* bus_if;
+  struct brcmf_mp_device* settings;
+  bool oob_irq_requested;
+  bool sd_irq_requested;
+  bool irq_wake; /* irq wake enable flags */
+  char fw_name[BRCMF_FW_NAME_LEN];
+  char nvram_name[BRCMF_FW_NAME_LEN];
+  bool wowl_enabled;
+  enum brcmf_sdiod_state state;
 };
 
 /* sdio core registers */
 struct sdpcmd_regs {
-    uint32_t corecontrol; /* 0x00, rev8 */
-    uint32_t corestatus;  /* rev8 */
-    uint32_t PAD[1];
-    uint32_t biststatus; /* rev8 */
+  uint32_t corecontrol; /* 0x00, rev8 */
+  uint32_t corestatus;  /* rev8 */
+  uint32_t PAD[1];
+  uint32_t biststatus; /* rev8 */
 
-    /* PCMCIA access */
-    uint16_t pcmciamesportaladdr; /* 0x010, rev8 */
-    uint16_t PAD[1];
-    uint16_t pcmciamesportalmask; /* rev8 */
-    uint16_t PAD[1];
-    uint16_t pcmciawrframebc; /* rev8 */
-    uint16_t PAD[1];
-    uint16_t pcmciaunderflowtimer; /* rev8 */
-    uint16_t PAD[1];
+  /* PCMCIA access */
+  uint16_t pcmciamesportaladdr; /* 0x010, rev8 */
+  uint16_t PAD[1];
+  uint16_t pcmciamesportalmask; /* rev8 */
+  uint16_t PAD[1];
+  uint16_t pcmciawrframebc; /* rev8 */
+  uint16_t PAD[1];
+  uint16_t pcmciaunderflowtimer; /* rev8 */
+  uint16_t PAD[1];
 
-    /* interrupt */
-    uint32_t intstatus;   /* 0x020, rev8 */
-    uint32_t hostintmask; /* rev8 */
-    uint32_t intmask;     /* rev8 */
-    uint32_t sbintstatus; /* rev8 */
-    uint32_t sbintmask;   /* rev8 */
-    uint32_t funcintmask; /* rev4 */
-    uint32_t PAD[2];
-    uint32_t tosbmailbox;       /* 0x040, rev8 */
-    uint32_t tohostmailbox;     /* rev8 */
-    uint32_t tosbmailboxdata;   /* rev8 */
-    uint32_t tohostmailboxdata; /* rev8 */
+  /* interrupt */
+  uint32_t intstatus;   /* 0x020, rev8 */
+  uint32_t hostintmask; /* rev8 */
+  uint32_t intmask;     /* rev8 */
+  uint32_t sbintstatus; /* rev8 */
+  uint32_t sbintmask;   /* rev8 */
+  uint32_t funcintmask; /* rev4 */
+  uint32_t PAD[2];
+  uint32_t tosbmailbox;       /* 0x040, rev8 */
+  uint32_t tohostmailbox;     /* rev8 */
+  uint32_t tosbmailboxdata;   /* rev8 */
+  uint32_t tohostmailboxdata; /* rev8 */
 
-    /* synchronized access to registers in SDIO clock domain */
-    uint32_t sdioaccess; /* 0x050, rev8 */
-    uint32_t PAD[3];
+  /* synchronized access to registers in SDIO clock domain */
+  uint32_t sdioaccess; /* 0x050, rev8 */
+  uint32_t PAD[3];
 
-    /* PCMCIA frame control */
-    uint8_t pcmciaframectrl; /* 0x060, rev8 */
-    uint8_t PAD[3];
-    uint8_t pcmciawatermark; /* rev8 */
-    uint8_t PAD[155];
+  /* PCMCIA frame control */
+  uint8_t pcmciaframectrl; /* 0x060, rev8 */
+  uint8_t PAD[3];
+  uint8_t pcmciawatermark; /* rev8 */
+  uint8_t PAD[155];
 
-    /* interrupt batching control */
-    uint32_t intrcvlazy; /* 0x100, rev8 */
-    uint32_t PAD[3];
+  /* interrupt batching control */
+  uint32_t intrcvlazy; /* 0x100, rev8 */
+  uint32_t PAD[3];
 
-    /* counters */
-    uint32_t cmd52rd;      /* 0x110, rev8 */
-    uint32_t cmd52wr;      /* rev8 */
-    uint32_t cmd53rd;      /* rev8 */
-    uint32_t cmd53wr;      /* rev8 */
-    uint32_t abort;        /* rev8 */
-    uint32_t datacrcerror; /* rev8 */
-    uint32_t rdoutofsync;  /* rev8 */
-    uint32_t wroutofsync;  /* rev8 */
-    uint32_t writebusy;    /* rev8 */
-    uint32_t readwait;     /* rev8 */
-    uint32_t readterm;     /* rev8 */
-    uint32_t writeterm;    /* rev8 */
-    uint32_t PAD[40];
-    uint32_t clockctlstatus; /* rev8 */
-    uint32_t PAD[7];
+  /* counters */
+  uint32_t cmd52rd;      /* 0x110, rev8 */
+  uint32_t cmd52wr;      /* rev8 */
+  uint32_t cmd53rd;      /* rev8 */
+  uint32_t cmd53wr;      /* rev8 */
+  uint32_t abort;        /* rev8 */
+  uint32_t datacrcerror; /* rev8 */
+  uint32_t rdoutofsync;  /* rev8 */
+  uint32_t wroutofsync;  /* rev8 */
+  uint32_t writebusy;    /* rev8 */
+  uint32_t readwait;     /* rev8 */
+  uint32_t readterm;     /* rev8 */
+  uint32_t writeterm;    /* rev8 */
+  uint32_t PAD[40];
+  uint32_t clockctlstatus; /* rev8 */
+  uint32_t PAD[7];
 
-    uint32_t PAD[128]; /* DMA engines */
+  uint32_t PAD[128]; /* DMA engines */
 
-    /* SDIO/PCMCIA CIS region */
-    char cis[512]; /* 0x400-0x5ff, rev6 */
+  /* SDIO/PCMCIA CIS region */
+  char cis[512]; /* 0x400-0x5ff, rev6 */
 
-    /* PCMCIA function control registers */
-    char pcmciafcr[256]; /* 0x600-6ff, rev6 */
-    uint16_t PAD[55];
+  /* PCMCIA function control registers */
+  char pcmciafcr[256]; /* 0x600-6ff, rev6 */
+  uint16_t PAD[55];
 
-    /* PCMCIA backplane access */
-    uint16_t backplanecsr;   /* 0x76E, rev6 */
-    uint16_t backplaneaddr0; /* rev6 */
-    uint16_t backplaneaddr1; /* rev6 */
-    uint16_t backplaneaddr2; /* rev6 */
-    uint16_t backplaneaddr3; /* rev6 */
-    uint16_t backplanedata0; /* rev6 */
-    uint16_t backplanedata1; /* rev6 */
-    uint16_t backplanedata2; /* rev6 */
-    uint16_t backplanedata3; /* rev6 */
-    uint16_t PAD[31];
+  /* PCMCIA backplane access */
+  uint16_t backplanecsr;   /* 0x76E, rev6 */
+  uint16_t backplaneaddr0; /* rev6 */
+  uint16_t backplaneaddr1; /* rev6 */
+  uint16_t backplaneaddr2; /* rev6 */
+  uint16_t backplaneaddr3; /* rev6 */
+  uint16_t backplanedata0; /* rev6 */
+  uint16_t backplanedata1; /* rev6 */
+  uint16_t backplanedata2; /* rev6 */
+  uint16_t backplanedata3; /* rev6 */
+  uint16_t PAD[31];
 
-    /* sprom "size" & "blank" info */
-    uint16_t spromstatus; /* 0x7BE, rev2 */
-    uint32_t PAD[464];
+  /* sprom "size" & "blank" info */
+  uint16_t spromstatus; /* 0x7BE, rev2 */
+  uint32_t PAD[464];
 
-    uint16_t PAD[0x80];
+  uint16_t PAD[0x80];
 };
 
 /* Get Bootloader MAC address. */
-zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, uint8_t *macaddr);
+zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, uint8_t* macaddr);
 
 /* Register/deregister interrupt handler. */
 zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev);
@@ -318,16 +317,16 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev);
  * Success is returned in result_out which may be NULL.
  */
 uint8_t brcmf_sdiod_vendor_control_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
-                                      zx_status_t *result_out);
+                                      zx_status_t* result_out);
 
 void brcmf_sdiod_vendor_control_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t value,
-                                   zx_status_t *result_out);
+                                   zx_status_t* result_out);
 
 uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
-                             zx_status_t *result_out);
+                             zx_status_t* result_out);
 
 void brcmf_sdiod_func1_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t value,
-                          zx_status_t *result_out);
+                          zx_status_t* result_out);
 
 uint32_t brcmf_sdiod_func1_rl(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
                               zx_status_t* result_out);

@@ -23,12 +23,10 @@ namespace perfmon {
 class BufferReader {
  public:
   // |buffer| must be sufficiently aligned (uin64_t).
-  static ReaderStatus Create(const std::string& name, const void* buffer,
-                             size_t buffer_size,
+  static ReaderStatus Create(const std::string& name, const void* buffer, size_t buffer_size,
                              std::unique_ptr<BufferReader>* out_reader);
 
-  static ReaderStatus AnalyzeHeader(const BufferHeader* header,
-                                    size_t buffer_size);
+  static ReaderStatus AnalyzeHeader(const BufferHeader* header, size_t buffer_size);
 
   ReaderStatus status() const { return status_; }
 
@@ -66,8 +64,7 @@ class BufferReader {
 
  private:
   // |buffer| must be sufficiently aligned (uin64_t).
-  BufferReader(const std::string& name, const void* buffer,
-               size_t capture_end);
+  BufferReader(const std::string& name, const void* buffer, size_t capture_end);
 
   // Utility to update |status_| and return the current value.
   // The status is updated only if it is currently |kOk|.

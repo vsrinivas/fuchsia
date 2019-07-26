@@ -31,8 +31,7 @@ class TestImporter : public ::testing::Test {
   };
 
   void SetUp() {
-    fixture_set_up(kNoAttachToThread, TRACE_BUFFERING_MODE_ONESHOT,
-                   kFxtBufferSize);
+    fixture_set_up(kNoAttachToThread, TRACE_BUFFERING_MODE_ONESHOT, kFxtBufferSize);
     fixture_initialize_and_start_tracing();
     context_ = trace_acquire_context();
     ASSERT_NE(context_, nullptr);
@@ -69,8 +68,7 @@ class TestImporter : public ::testing::Test {
       if (skipping) {
         if (rec.type() == trace::RecordType::kKernelObject) {
           const trace::Record::KernelObject& kobj = rec.GetKernelObject();
-          if (kobj.object_type == ZX_OBJ_TYPE_PROCESS && kobj.koid == 0u &&
-              kobj.name == "kernel") {
+          if (kobj.object_type == ZX_OBJ_TYPE_PROCESS && kobj.koid == 0u && kobj.name == "kernel") {
             skipping = false;
           }
         }
@@ -98,8 +96,8 @@ class TestImporter : public ::testing::Test {
     ktrace_buffer_next_ += record_size;
   }
 
-  void EmitKtrace32Record(uint32_t tag, uint32_t tid, uint64_t ts, uint32_t a,
-                          uint32_t b, uint32_t c, uint32_t d) {
+  void EmitKtrace32Record(uint32_t tag, uint32_t tid, uint64_t ts, uint32_t a, uint32_t b,
+                          uint32_t c, uint32_t d) {
     const ktrace_rec_32b record{
         .tag = tag,
         .tid = tid,
@@ -112,9 +110,8 @@ class TestImporter : public ::testing::Test {
     EmitKtraceRecord(&record, sizeof(record));
   }
 
-  void EmitContextSwitchRecord(uint64_t ts, uint32_t old_thread_tid,
-                               uint32_t new_thread_tid, uint8_t cpu,
-                               KernelThreadState old_thread_state,
+  void EmitContextSwitchRecord(uint64_t ts, uint32_t old_thread_tid, uint32_t new_thread_tid,
+                               uint8_t cpu, KernelThreadState old_thread_state,
                                uint8_t old_thread_prio, uint8_t new_thread_prio,
                                uint32_t new_kernel_thread) {
     uint32_t old_kernel_thread = 0;  // importer ignores this
@@ -124,74 +121,54 @@ class TestImporter : public ::testing::Test {
                        old_kernel_thread, new_kernel_thread);
   }
 
-  void EmitInheritPriorityStartRecord(uint64_t ts, uint32_t event_id,
-                                      uint8_t cpu_id) {
-    EmitKtrace32Record(TAG_INHERIT_PRIORITY_START, 0, ts, event_id, 0, 0,
-                       cpu_id);
+  void EmitInheritPriorityStartRecord(uint64_t ts, uint32_t event_id, uint8_t cpu_id) {
+    EmitKtrace32Record(TAG_INHERIT_PRIORITY_START, 0, ts, event_id, 0, 0, cpu_id);
   }
 
-  void EmitInheritPriorityRecord(uint64_t ts, uint32_t event_id, uint32_t tid,
-                                 int8_t old_effective, int8_t new_effective,
-                                 int8_t old_inherited, int8_t new_inherited,
-                                 uint8_t cpu_id, bool is_kernel_tid,
-                                 bool final_event) {
-    const uint32_t prios = (static_cast<uint32_t>(old_effective) << 0) |
-                           (static_cast<uint32_t>(new_effective) << 8) |
-                           (static_cast<uint32_t>(old_inherited) << 16) |
-                           (static_cast<uint32_t>(new_inherited) << 24);
-    const uint32_t flags =
-        cpu_id |
-        (is_kernel_tid ? KTRACE_FLAGS_INHERIT_PRIORITY_KERNEL_TID : 0) |
-        (final_event ? KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT : 0);
+  void EmitInheritPriorityRecord(uint64_t ts, uint32_t event_id, uint32_t tid, int8_t old_effective,
+                                 int8_t new_effective, int8_t old_inherited, int8_t new_inherited,
+                                 uint8_t cpu_id, bool is_kernel_tid, bool final_event) {
+    const uint32_t prios =
+        (static_cast<uint32_t>(old_effective) << 0) | (static_cast<uint32_t>(new_effective) << 8) |
+        (static_cast<uint32_t>(old_inherited) << 16) | (static_cast<uint32_t>(new_inherited) << 24);
+    const uint32_t flags = cpu_id | (is_kernel_tid ? KTRACE_FLAGS_INHERIT_PRIORITY_KERNEL_TID : 0) |
+                           (final_event ? KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT : 0);
 
-    EmitKtrace32Record(TAG_INHERIT_PRIORITY, 0, ts, event_id, tid, prios,
-                       flags);
+    EmitKtrace32Record(TAG_INHERIT_PRIORITY, 0, ts, event_id, tid, prios, flags);
   }
 
-  void EmitFutexWaitRecord(uint64_t ts, uint32_t futex_id_lo,
-                           uint32_t futex_id_hi, uint32_t new_owner_tid,
-                           uint8_t cpu_id) {
-    EmitKtrace32Record(TAG_FUTEX_WAIT, 0, ts, futex_id_lo, futex_id_hi,
-                       new_owner_tid, cpu_id);
+  void EmitFutexWaitRecord(uint64_t ts, uint32_t futex_id_lo, uint32_t futex_id_hi,
+                           uint32_t new_owner_tid, uint8_t cpu_id) {
+    EmitKtrace32Record(TAG_FUTEX_WAIT, 0, ts, futex_id_lo, futex_id_hi, new_owner_tid, cpu_id);
   }
 
-  void EmitFutexWokeRecord(uint64_t ts, uint32_t futex_id_lo,
-                           uint32_t futex_id_hi, zx_status_t wait_result,
-                           uint8_t cpu_id) {
+  void EmitFutexWokeRecord(uint64_t ts, uint32_t futex_id_lo, uint32_t futex_id_hi,
+                           zx_status_t wait_result, uint8_t cpu_id) {
     EmitKtrace32Record(TAG_FUTEX_WOKE, 0, ts, futex_id_lo, futex_id_hi,
                        static_cast<uint32_t>(wait_result), cpu_id);
   }
 
-  void EmitFutexWakeRecord(uint64_t ts, uint32_t futex_id_lo,
-                           uint32_t futex_id_hi, uint32_t assigned_owner_tid,
-                           uint8_t cpu_id, uint8_t count, bool requeue_op,
-                           bool futex_was_active) {
-    uint32_t flags =
-        cpu_id |
-        (static_cast<uint32_t>(count) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
-        (requeue_op ? KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG : 0) |
-        (futex_was_active ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
-    EmitKtrace32Record(TAG_FUTEX_WAKE, 0, ts, futex_id_lo, futex_id_hi,
-                       assigned_owner_tid, flags);
+  void EmitFutexWakeRecord(uint64_t ts, uint32_t futex_id_lo, uint32_t futex_id_hi,
+                           uint32_t assigned_owner_tid, uint8_t cpu_id, uint8_t count,
+                           bool requeue_op, bool futex_was_active) {
+    uint32_t flags = cpu_id | (static_cast<uint32_t>(count) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
+                     (requeue_op ? KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG : 0) |
+                     (futex_was_active ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
+    EmitKtrace32Record(TAG_FUTEX_WAKE, 0, ts, futex_id_lo, futex_id_hi, assigned_owner_tid, flags);
   }
 
-  void EmitFutexRequeueRecord(uint64_t ts, uint32_t futex_id_lo,
-                              uint32_t futex_id_hi, uint32_t assigned_owner_tid,
-                              uint8_t cpu_id, uint8_t count,
+  void EmitFutexRequeueRecord(uint64_t ts, uint32_t futex_id_lo, uint32_t futex_id_hi,
+                              uint32_t assigned_owner_tid, uint8_t cpu_id, uint8_t count,
                               bool futex_was_active) {
-    uint32_t flags =
-        cpu_id |
-        (static_cast<uint32_t>(count) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
-        (futex_was_active ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
-    EmitKtrace32Record(TAG_FUTEX_REQUEUE, 0, ts, futex_id_lo, futex_id_hi,
-                       assigned_owner_tid, flags);
+    uint32_t flags = cpu_id | (static_cast<uint32_t>(count) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
+                     (futex_was_active ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
+    EmitKtrace32Record(TAG_FUTEX_REQUEUE, 0, ts, futex_id_lo, futex_id_hi, assigned_owner_tid,
+                       flags);
   }
 
-  void EmitKernelMutexRecord(uint32_t tag, uint64_t ts, uint32_t mutex_addr,
-                             uint32_t tid, uint32_t threads_blocked,
-                             uint8_t cpu_id, bool user_mode_tid) {
-    uint32_t flags =
-        cpu_id | (user_mode_tid ? KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID : 0);
+  void EmitKernelMutexRecord(uint32_t tag, uint64_t ts, uint32_t mutex_addr, uint32_t tid,
+                             uint32_t threads_blocked, uint8_t cpu_id, bool user_mode_tid) {
+    uint32_t flags = cpu_id | (user_mode_tid ? KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID : 0);
 
     EmitKtrace32Record(tag, 0, ts, mutex_addr, tid, threads_blocked, flags);
   }
@@ -215,17 +192,13 @@ class TestImporter : public ::testing::Test {
 
   const char* ktrace_buffer() const { return ktrace_buffer_; }
 
-  size_t ktrace_buffer_written() const {
-    return ktrace_buffer_next_ - ktrace_buffer_;
-  }
+  size_t ktrace_buffer_written() const { return ktrace_buffer_next_ - ktrace_buffer_; }
 
  private:
   static constexpr size_t kKtraceBufferSize = 65536;
   static constexpr size_t kFxtBufferSize = 65536;
 
-  size_t KtraceAvailableBytes() {
-    return std::distance(ktrace_buffer_next_, ktrace_buffer_end_);
-  }
+  size_t KtraceAvailableBytes() { return std::distance(ktrace_buffer_next_, ktrace_buffer_end_); }
 
   char ktrace_buffer_[kKtraceBufferSize];
   char* ktrace_buffer_next_ = ktrace_buffer_;
@@ -235,35 +208,32 @@ class TestImporter : public ::testing::Test {
 
 TEST_F(TestImporter, ContextSwitch) {
   // Establish initial running thread.
-  EmitContextSwitchRecord(
-      99,                                 // ts
-      0,                                  // old_thread_tid
-      42,                                 // new_thread_tid
-      1,                                  // cpu
-      KernelThreadState::THREAD_RUNNING,  // old_thread_state
-      3,                                  // old_thread_prio
-      4,                                  // new_thread_prio
-      0);
+  EmitContextSwitchRecord(99,                                 // ts
+                          0,                                  // old_thread_tid
+                          42,                                 // new_thread_tid
+                          1,                                  // cpu
+                          KernelThreadState::THREAD_RUNNING,  // old_thread_state
+                          3,                                  // old_thread_prio
+                          4,                                  // new_thread_prio
+                          0);
   // Test switching to user thread.
-  EmitContextSwitchRecord(
-      100,                                // ts
-      42,                                 // old_thread_tid
-      43,                                 // new_thread_tid
-      1,                                  // cpu
-      KernelThreadState::THREAD_RUNNING,  // old_thread_state
-      5,                                  // old_thread_prio
-      6,                                  // new_thread_prio
-      0);
+  EmitContextSwitchRecord(100,                                // ts
+                          42,                                 // old_thread_tid
+                          43,                                 // new_thread_tid
+                          1,                                  // cpu
+                          KernelThreadState::THREAD_RUNNING,  // old_thread_state
+                          5,                                  // old_thread_prio
+                          6,                                  // new_thread_prio
+                          0);
   // Test switching to kernel thread.
-  EmitContextSwitchRecord(
-      101,                                // ts
-      43,                                 // old_thread_tid
-      0,                                  // 0 --> kernel thread
-      1,                                  // cpu
-      KernelThreadState::THREAD_RUNNING,  // old_thread_state
-      7,                                  // old_thread_prio
-      8,                                  // new_thread_prio
-      12345678);
+  EmitContextSwitchRecord(101,                                // ts
+                          43,                                 // old_thread_tid
+                          0,                                  // 0 --> kernel thread
+                          1,                                  // cpu
+                          KernelThreadState::THREAD_RUNNING,  // old_thread_state
+                          7,                                  // old_thread_prio
+                          8,                                  // new_thread_prio
+                          12345678);
   static const char* const expected[] = {
       "ContextSwitch(ts: 99, cpu: 1, os: running, opt: 0/0, ipt: 0/42, oprio: "
       "3, iprio: 4)",

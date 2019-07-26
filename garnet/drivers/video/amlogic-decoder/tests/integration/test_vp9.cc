@@ -57,8 +57,7 @@ std::vector<uint8_t> ConvertIvfToAmlV(const uint8_t* data, uint32_t length) {
 }
 
 // Split IVF-level frames
-std::vector<FrameData> ConvertIvfToAmlVFrames(const uint8_t* data,
-                                              uint32_t length) {
+std::vector<FrameData> ConvertIvfToAmlVFrames(const uint8_t* data, uint32_t length) {
   uint32_t offset = sizeof(IvfHeader);
   std::vector<FrameData> output_vector;
   while (offset < length) {
@@ -87,12 +86,8 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
 
   // Always claim that 50 more bytes are available. Due to the 16kB of padding
   // at the end this is always true.
-  void ReadMoreInputData(Vp9Decoder* decoder) override {
-    decoder->UpdateDecodeSize(50);
-  }
-  void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override {
-    ReadMoreInputData(decoder);
-  }
+  void ReadMoreInputData(Vp9Decoder* decoder) override { decoder->UpdateDecodeSize(50); }
+  void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override { ReadMoreInputData(decoder); }
 
   // Called while the decoder lock is held.
   void FrameWasOutput() override __TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -100,23 +95,19 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
     video_->SwapOutCurrentInstance();
     bool swapped_in_other = false;
     if (multi_instance_) {
-      DecoderInstance* other_instance =
-          video_->swapped_out_instances_.front().get();
+      DecoderInstance* other_instance = video_->swapped_out_instances_.front().get();
       // Only try to execute from the other instance if it hasn't decoded all
       // its data yet.
-      if (!other_instance->input_context() ||
-          (other_instance->input_context()->processed_video <
-           other_instance->stream_buffer()->data_size())) {
-        video_->current_instance_ =
-            std::move(video_->swapped_out_instances_.front());
+      if (!other_instance->input_context() || (other_instance->input_context()->processed_video <
+                                               other_instance->stream_buffer()->data_size())) {
+        video_->current_instance_ = std::move(video_->swapped_out_instances_.front());
         video_->swapped_out_instances_.pop_front();
         swapped_in_other = true;
       }
     }
     if (!swapped_in_other) {
       // Swap back in the previous instance.
-      video_->current_instance_ =
-          std::move(video_->swapped_out_instances_.back());
+      video_->current_instance_ = std::move(video_->swapped_out_instances_.back());
       video_->swapped_out_instances_.pop_back();
     }
     video_->SwapInCurrentInstance();
@@ -129,8 +120,7 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
 
 class TestVP9 {
  public:
-  static void Decode(bool use_parser, const char* input_filename,
-                     const char* filename) {
+  static void Decode(bool use_parser, const char* input_filename, const char* filename) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -139,9 +129,7 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(),
-                                       Vp9Decoder::InputType::kSingleStream),
-          true);
+          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream), true);
     }
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(use_parser, PAGE_SIZE));
 
@@ -198,9 +186,8 @@ class TestVP9 {
         while (!stop_parsing) {
           uint32_t processed_data;
           EXPECT_EQ(ZX_OK,
-                    video->ProcessVideoNoParser(
-                        data + current_offset, aml_data.size() - current_offset,
-                        &processed_data));
+                    video->ProcessVideoNoParser(data + current_offset,
+                                                aml_data.size() - current_offset, &processed_data));
           current_offset += processed_data;
           if (current_offset == aml_data.size())
             break;
@@ -218,13 +205,11 @@ class TestVP9 {
       frames_returned = true;
     }
 
-    EXPECT_EQ(std::future_status::ready,
-              wait_valid.get_future().wait_for(std::chrono::seconds(2)));
+    EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(2)));
 
     stop_parsing = true;
 
-    EXPECT_EQ(std::future_status::ready,
-              parser.wait_for(std::chrono::seconds(1)));
+    EXPECT_EQ(std::future_status::ready, parser.wait_for(std::chrono::seconds(1)));
     video.reset();
   }
 
@@ -234,15 +219,12 @@ class TestVP9 {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
 
-    auto test_ivf =
-        TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
+    auto test_ivf = TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
     ASSERT_NE(nullptr, test_ivf);
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(),
-                                       Vp9Decoder::InputType::kSingleStream),
-          true);
+          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream), true);
     }
 
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true, PAGE_SIZE));
@@ -263,8 +245,7 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frame_count, &wait_valid,
-           &next_pts](std::shared_ptr<VideoFrame> frame) {
+          [&video, &frame_count, &wait_valid, &next_pts](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d, pts: %ld\n", frame_count, frame->pts);
 #if DUMP_VIDEO_TO_FILE
@@ -290,19 +271,16 @@ class TestVP9 {
       auto aml_data = ConvertIvfToAmlVFrames(test_ivf->ptr, test_ivf->size);
       uint32_t stream_offset = 0;
       for (auto& data : aml_data) {
-        video->pts_manager()->InsertPts(stream_offset, true,
-                                        data.presentation_timestamp);
+        video->pts_manager()->InsertPts(stream_offset, true, data.presentation_timestamp);
         EXPECT_EQ(ZX_OK, video->ParseVideo(data.data.data(), data.data.size()));
         EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
         stream_offset += data.data.size();
       }
     });
 
-    EXPECT_EQ(std::future_status::ready,
-              wait_valid.get_future().wait_for(std::chrono::seconds(2)));
+    EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(2)));
 
-    EXPECT_EQ(std::future_status::ready,
-              parser.wait_for(std::chrono::seconds(1)));
+    EXPECT_EQ(std::future_status::ready, parser.wait_for(std::chrono::seconds(1)));
     video.reset();
   }
 
@@ -315,9 +293,7 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(),
-                                       Vp9Decoder::InputType::kMultiStream),
-          true);
+          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream), true);
     }
     // Don't use parser, because we need to be able to save and restore the read
     // and write pointers, which can't be done if the parser is using them as
@@ -329,8 +305,7 @@ class TestVP9 {
     TestFrameProvider frame_provider(video.get(), false);
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      static_cast<Vp9Decoder*>(video->video_decoder_)
-          ->SetFrameDataProvider(&frame_provider);
+      static_cast<Vp9Decoder*>(video->video_decoder_)->SetFrameDataProvider(&frame_provider);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
 
@@ -352,15 +327,14 @@ class TestVP9 {
           });
     }
 
-    auto test_ivf =
-        TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
+    auto test_ivf = TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
     ASSERT_NE(nullptr, test_ivf);
     auto aml_data = ConvertIvfToAmlVFrames(test_ivf->ptr, test_ivf->size);
     video->core_->InitializeDirectInput();
     // Only use the first 50 frames to save time.
     for (uint32_t i = 0; i < 50; i++) {
-      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(aml_data[i].data.data(),
-                                                   aml_data[i].data.size()));
+      EXPECT_EQ(ZX_OK,
+                video->ProcessVideoNoParser(aml_data[i].data.data(), aml_data[i].data.size()));
     }
     // Force all frames to be processed.
     uint8_t padding[16384] = {};
@@ -370,8 +344,7 @@ class TestVP9 {
       static_cast<Vp9Decoder*>(video->video_decoder())->UpdateDecodeSize(50);
     }
 
-    EXPECT_EQ(std::future_status::ready,
-              wait_valid.get_future().wait_for(std::chrono::seconds(2)));
+    EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(2)));
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
@@ -391,14 +364,12 @@ class TestVP9 {
 
     for (uint32_t i = 0; i < 2; i++) {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      auto decoder = std::make_unique<Vp9Decoder>(
-          video.get(), Vp9Decoder::InputType::kMultiStream);
+      auto decoder = std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream);
       decoder->SetFrameDataProvider(&frame_provider);
       EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
-      video->swapped_out_instances_.push_back(std::make_unique<DecoderInstance>(
-          std::move(decoder), video->hevc_core_.get()));
-      StreamBuffer* buffer =
-          video->swapped_out_instances_.back()->stream_buffer();
+      video->swapped_out_instances_.push_back(
+          std::make_unique<DecoderInstance>(std::move(decoder), video->hevc_core_.get()));
+      StreamBuffer* buffer = video->swapped_out_instances_.back()->stream_buffer();
       EXPECT_EQ(ZX_OK, video->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024));
     }
 
@@ -407,15 +378,13 @@ class TestVP9 {
       // AmlogicVideo::TryToSchedule() currently tries to read data and start
       // decoding, which is not quite what we want here.
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->current_instance_ =
-          std::move(video->swapped_out_instances_.front());
+      video->current_instance_ = std::move(video->swapped_out_instances_.front());
       video->swapped_out_instances_.pop_front();
       video->video_decoder_ = video->current_instance_->decoder();
       video->stream_buffer_ = video->current_instance_->stream_buffer();
       video->core_ = video->current_instance_->core();
       video->core_->PowerOn();
-      EXPECT_EQ(ZX_OK, static_cast<Vp9Decoder*>(video->video_decoder_)
-                           ->InitializeHardware());
+      EXPECT_EQ(ZX_OK, static_cast<Vp9Decoder*>(video->video_decoder_)->InitializeHardware());
     }
 
     // Don't use parser, because we need to be able to save and restore the read
@@ -430,8 +399,7 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frame_count,
-           &wait_valid](std::shared_ptr<VideoFrame> frame) {
+          [&video, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d\n", frame_count);
             DLOG("Width: %d, height: %d\n", frame->width, frame->height);
@@ -449,8 +417,7 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->swapped_out_instances_.back()->decoder()->SetFrameReadyNotifier(
-          [&video, &frame_count1,
-           &wait_valid1](std::shared_ptr<VideoFrame> frame) {
+          [&video, &frame_count1, &wait_valid1](std::shared_ptr<VideoFrame> frame) {
             ++frame_count1;
             DLOG("Decoder 2 Got frame %d\n", frame_count1);
             EXPECT_EQ(320u, frame->display_width);
@@ -469,15 +436,14 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       StreamBuffer* buffer = video->current_instance_->stream_buffer();
-      auto test_ivf =
-          TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
+      auto test_ivf = TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
       ASSERT_NE(nullptr, test_ivf);
       auto aml_data = ConvertIvfToAmlVFrames(test_ivf->ptr, test_ivf->size);
       video->core_->InitializeDirectInput();
       // Only use the first 50 frames to save time.
       for (uint32_t i = 0; i < 50; i++) {
-        EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(aml_data[i].data.data(),
-                                                     aml_data[i].data.size()));
+        EXPECT_EQ(ZX_OK,
+                  video->ProcessVideoNoParser(aml_data[i].data.data(), aml_data[i].data.size()));
       }
       buffer->set_padding_size(sizeof(padding));
       // Force all frames to be processed.
@@ -490,24 +456,21 @@ class TestVP9 {
     // initialize the write pointer later.
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      auto test_ivf2 =
-          TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9_2");
+      auto test_ivf2 = TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9_2");
       ASSERT_NE(nullptr, test_ivf2);
       auto aml_data2 = ConvertIvfToAmlVFrames(test_ivf2->ptr, test_ivf2->size);
-      StreamBuffer* buffer =
-          video->swapped_out_instances_.back()->stream_buffer();
+      StreamBuffer* buffer = video->swapped_out_instances_.back()->stream_buffer();
       uint32_t offset = 0;
       // Only use the first 30 frames to save time. Ensure this is different
       // from above, to test whether ending decoding early works.
       for (uint32_t i = 0; i < 30; i++) {
-        memcpy((uint8_t*)io_buffer_virt(buffer->buffer()) + offset,
-               aml_data2[i].data.data(), aml_data2[i].data.size());
+        memcpy((uint8_t*)io_buffer_virt(buffer->buffer()) + offset, aml_data2[i].data.data(),
+               aml_data2[i].data.size());
         offset += aml_data2[i].data.size();
       }
       buffer->set_data_size(offset);
       buffer->set_padding_size(sizeof(padding));
-      memcpy((uint8_t*)io_buffer_virt(buffer->buffer()) + offset, padding,
-             sizeof(padding));
+      memcpy((uint8_t*)io_buffer_virt(buffer->buffer()) + offset, padding, sizeof(padding));
       offset += sizeof(padding);
       io_buffer_cache_flush(buffer->buffer(), 0, offset);
     }
@@ -534,30 +497,23 @@ class TestVP9 {
  private:
   // This is called from the interrupt handler, which already holds the lock.
   static void ReturnFrame(AmlogicVideo* video,
-                          std::shared_ptr<VideoFrame> frame)
-      __TA_NO_THREAD_SAFETY_ANALYSIS {
+                          std::shared_ptr<VideoFrame> frame) __TA_NO_THREAD_SAFETY_ANALYSIS {
     video->video_decoder_->ReturnFrame(frame);
   }
 };
 
-TEST(VP9, Decode) {
-  TestVP9::Decode(true, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv");
-}
+TEST(VP9, Decode) { TestVP9::Decode(true, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv"); }
 
 TEST(VP9, DecodeNoParser) {
-  TestVP9::Decode(false, "video_test_data/test-25fps.vp9",
-                  "/tmp/bearvp9noparser.yuv");
+  TestVP9::Decode(false, "video_test_data/test-25fps.vp9", "/tmp/bearvp9noparser.yuv");
 }
 
 TEST(VP9, Decode10Bit) {
-  TestVP9::Decode(false, "video_test_data/test-25fps.vp9_2",
-                  "/tmp/bearvp9noparser.yuv");
+  TestVP9::Decode(false, "video_test_data/test-25fps.vp9_2", "/tmp/bearvp9noparser.yuv");
 }
 
 TEST(VP9, DecodePerFrame) { TestVP9::DecodePerFrame(); }
 
-TEST(VP9, DecodeResetHardware) {
-  TestVP9::DecodeResetHardware("/tmp/bearvp9reset.yuv");
-}
+TEST(VP9, DecodeResetHardware) { TestVP9::DecodeResetHardware("/tmp/bearvp9reset.yuv"); }
 
 TEST(VP9, DecodeMultiInstance) { TestVP9::DecodeMultiInstance(); }

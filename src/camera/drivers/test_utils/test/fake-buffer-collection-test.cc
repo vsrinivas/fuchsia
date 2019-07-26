@@ -23,8 +23,8 @@ TEST(CreateContiguousBufferCollectionInfo, CreatesCollection) {
   ASSERT_OK(fake_bti_create(&bti_handle));
 
   fuchsia_sysmem_BufferCollectionInfo buffer_collection;
-  ASSERT_OK(CreateContiguousBufferCollectionInfo(
-      &buffer_collection, bti_handle, kWidth, kHeight, kNumberOfBuffers));
+  ASSERT_OK(CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth, kHeight,
+                                                 kNumberOfBuffers));
 
   // Check it made the buffer collection like we want:
   EXPECT_EQ(buffer_collection.buffer_count, kNumberOfBuffers);
@@ -43,8 +43,8 @@ TEST(CreateContiguousBufferCollectionInfo, FailsOnBadHandle) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
   fuchsia_sysmem_BufferCollectionInfo buffer_collection;
   ASSERT_DEATH(([&buffer_collection, bti_handle]() {
-    camera::CreateContiguousBufferCollectionInfo(
-        &buffer_collection, bti_handle, kWidth, kHeight, kNumberOfBuffers);
+    camera::CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth, kHeight,
+                                                 kNumberOfBuffers);
   }));
 }
 

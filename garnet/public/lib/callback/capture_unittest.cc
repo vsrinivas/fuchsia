@@ -19,8 +19,8 @@ TEST(Capture, CaptureVariable) {
   std::unique_ptr<std::string> a3;
   bool called = false;
 
-  Capture([&called] { called = true; }, &a1, &a2, &a3)(
-      1, "hello", std::make_unique<std::string>("world"));
+  Capture([&called] { called = true; }, &a1, &a2, &a3)(1, "hello",
+                                                       std::make_unique<std::string>("world"));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(1, a1);
@@ -34,8 +34,7 @@ TEST(Capture, CaptureConstReference) {
   int a2 = 0;
   bool called = false;
 
-  fit::function<void(int, const int&)> capture =
-      Capture([&called] { called = true; }, &a1, &a2);
+  fit::function<void(int, const int&)> capture = Capture([&called] { called = true; }, &a1, &a2);
 
   capture(1, 2);
 

@@ -69,9 +69,7 @@ std::ostream& operator<<(std::ostream& out, ZxStatusWrapper w) {
   return out << zx_status_get_string(w.status) << "[" << w.status << "]";
 }
 #else
-std::ostream& operator<<(std::ostream& out, ZxStatusWrapper w) {
-  return out << w.status;
-}
+std::ostream& operator<<(std::ostream& out, ZxStatusWrapper w) { return out << w.status; }
 #endif
 
 Status Status::FromZx(zx_status_t status) {

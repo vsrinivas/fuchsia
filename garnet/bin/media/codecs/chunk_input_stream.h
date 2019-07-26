@@ -58,11 +58,9 @@ class ChunkInputStream {
     kTerminate = 1,
   };
 
-  using InputBlockProcessor =
-      fit::function<ControlFlow(const InputBlock input_block)>;
+  using InputBlockProcessor = fit::function<ControlFlow(const InputBlock input_block)>;
 
-  ChunkInputStream(size_t chunk_size,
-                   TimestampExtrapolator&& timestamp_extrapolator,
+  ChunkInputStream(size_t chunk_size, TimestampExtrapolator&& timestamp_extrapolator,
                    InputBlockProcessor&& input_block_processor);
 
   // Adds a new input packet to the input stream and executes

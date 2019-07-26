@@ -31,8 +31,7 @@ void ScopedTaskRunner::PostTask(fit::closure task) {
   async::PostTask(dispatcher_, MakeScoped(std::move(task)));
 }
 
-void ScopedTaskRunner::PostTaskForTime(fit::closure task,
-                                       zx::time target_time) {
+void ScopedTaskRunner::PostTaskForTime(fit::closure task, zx::time target_time) {
   async::PostTaskForTime(dispatcher_, MakeScoped(std::move(task)), target_time);
 }
 
@@ -40,9 +39,7 @@ void ScopedTaskRunner::PostDelayedTask(fit::closure task, zx::duration delay) {
   async::PostDelayedTask(dispatcher_, MakeScoped(std::move(task)), delay);
 }
 
-void ScopedTaskRunner::PostPeriodicTask(fit::closure task,
-                                        zx::duration interval,
-                                        bool invoke_now) {
+void ScopedTaskRunner::PostPeriodicTask(fit::closure task, zx::duration interval, bool invoke_now) {
   // We live with re-wrapping this task every iteration to greatly simplify the
   // implementation. It's possible to wrap once, but as the scoped task would
   // then need to capture itself, we'd have to declare a dedicated functor.

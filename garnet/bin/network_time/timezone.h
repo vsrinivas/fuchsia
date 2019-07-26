@@ -23,10 +23,8 @@ class Timezone {
  public:
   bool Run();
   bool UpdateSystemTime(uint32_t tries);
-  static bool SetSystemTime(const std::string& rtc_service_path,
-                            zx::time_utc time);
-  Timezone(std::string server_config_file,
-           std::string rtc_service_path = kRealRtcDevicePath)
+  static bool SetSystemTime(const std::string& rtc_service_path, zx::time_utc time);
+  Timezone(std::string server_config_file, std::string rtc_service_path = kRealRtcDevicePath)
       : server_config_file_(std::move(server_config_file)),
         rtc_service_path_(std::move(rtc_service_path)) {}
   ~Timezone() = default;

@@ -62,4 +62,4 @@ ZIRCON_DRIVER_BEGIN(amlogic_video, amlogic_video_driver_ops,
     // TODO(turnage): define/use PDEV_DID_AMLOGIC_VIDEO_ENCODER
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_VIDEO),
 ZIRCON_DRIVER_END(amlogic_video)
-// clang-format on
+    // clang-format on

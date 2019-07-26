@@ -73,19 +73,16 @@ std::vector<std::string> GetDefaultNamespaceServiceEntries() {
 // Create a new Namespace that contains the default services available to all
 // namespaces, plus the given |service_names|. The resulting object is useful
 // for listing its service names but not much else.
-fxl::RefPtr<Namespace> CreateFakeNamespace(
-    const std::vector<const char*>& extra_service_names) {
+fxl::RefPtr<Namespace> CreateFakeNamespace(const std::vector<const char*>& extra_service_names) {
   ServiceListPtr service_list(new ServiceList());
   for (auto& service : extra_service_names) {
     service_list->names.push_back(service);
   }
-  return fxl::MakeRefCounted<Namespace>(nullptr, nullptr,
-                                        std::move(service_list), nullptr);
+  return fxl::MakeRefCounted<Namespace>(nullptr, nullptr, std::move(service_list), nullptr);
 }
 
 std::vector<std::string> SplitPath(const std::string& path) {
-  return fxl::SplitStringCopy(path, "/",
-                              fxl::WhiteSpaceHandling::kKeepWhitespace,
+  return fxl::SplitStringCopy(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
                               fxl::SplitResult::kSplitWantAll);
 }
 
@@ -118,8 +115,7 @@ std::vector<std::string> GetDirectoryEntries(fbl::RefPtr<fs::Vnode> dir) {
   fs::vdircookie_t cookie{};
   // Actual number of bytes read into the buffer.
   size_t real_len = 0;
-  while (dir->Readdir(&cookie, buffer, sizeof(buffer), &real_len) == ZX_OK &&
-         real_len > 0) {
+  while (dir->Readdir(&cookie, buffer, sizeof(buffer), &real_len) == ZX_OK && real_len > 0) {
     size_t offset = 0;
     while (offset < real_len) {
       auto dir_entry = reinterpret_cast<vdirent_t*>(buffer + offset);
@@ -134,9 +130,8 @@ std::vector<std::string> GetDirectoryEntries(fbl::RefPtr<fs::Vnode> dir) {
 
 // Assert that the hub for the given component has "in", "in/svc", default
 // services, and the given extra service names.
-void AssertHubHasIncomingServices(
-    const ComponentControllerBase* component,
-    const std::vector<std::string>& extra_service_names) {
+void AssertHubHasIncomingServices(const ComponentControllerBase* component,
+                                  const std::vector<std::string>& extra_service_names) {
   ASSERT_TRUE(PathExists(component->hub_dir(), "in"));
   fbl::RefPtr<fs::Vnode> in_svc_dir;
   ASSERT_TRUE(PathExists(component->hub_dir(), "in/svc", &in_svc_dir));
@@ -168,8 +163,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
     // create process
     const char* argv[] = {"sleep", "999999999", NULL};
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-    status = fdio_spawn_etc(job_.get(), FDIO_SPAWN_CLONE_ALL, "/bin/sleep",
-                            argv, NULL, 0, NULL,
+    status = fdio_spawn_etc(job_.get(), FDIO_SPAWN_CLONE_ALL, "/bin/sleep", argv, NULL, 0, NULL,
                             process_.reset_and_get_address(), err_msg);
     ASSERT_EQ(status, ZX_OK) << err_msg;
     process_koid_ = std::to_string(fsl::GetKoid(process_.get()));
@@ -184,8 +178,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
 
  protected:
   std::unique_ptr<ComponentControllerImpl> CreateComponent(
-      fuchsia::sys::ComponentControllerPtr& controller,
-      zx::channel export_dir = zx::channel(),
+      fuchsia::sys::ComponentControllerPtr& controller, zx::channel export_dir = zx::channel(),
       fxl::RefPtr<Namespace> ns = CreateFakeNamespace({})) {
     // job_ is used later in a test to check the job-id, so we need to make a
     // clone of it to pass into std::move
@@ -194,9 +187,8 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
     if (status != ZX_OK)
       return NULL;
     return std::make_unique<ComponentControllerImpl>(
-        controller.NewRequest(), &realm_, std::move(job_clone),
-        std::move(process_), "test-url", "test-arg", "test-label", ns,
-        std::move(export_dir), zx::channel(),
+        controller.NewRequest(), &realm_, std::move(job_clone), std::move(process_), "test-url",
+        "test-arg", "test-label", ns, std::move(export_dir), zx::channel(),
         MakeForwardingTerminationCallback());
   }
 
@@ -210,8 +202,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
 class ComponentBridgeTest : public gtest::RealLoopFixture,
                             public fuchsia::sys::ComponentController {
  public:
-  ComponentBridgeTest()
-      : binding_(this), binding_error_handler_called_(false) {}
+  ComponentBridgeTest() : binding_(this), binding_error_handler_called_(false) {}
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
     vfs_.SetDispatcher(async_get_default_dispatcher());
@@ -231,17 +222,16 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
 
  protected:
   std::unique_ptr<ComponentBridge> CreateComponentBridge(
-      fuchsia::sys::ComponentControllerPtr& controller,
-      zx::channel export_dir = zx::channel(),
+      fuchsia::sys::ComponentControllerPtr& controller, zx::channel export_dir = zx::channel(),
       fxl::RefPtr<Namespace> ns = CreateFakeNamespace({})) {
     // only allow creation of one component.
     if (!remote_controller_) {
       return nullptr;
     }
     auto component = std::make_unique<ComponentBridge>(
-        controller.NewRequest(), std::move(remote_controller_), &runner_,
-        "test-url", "test-arg", "test-label", "1", ns, std::move(export_dir),
-        zx::channel(), MakeForwardingTerminationCallback());
+        controller.NewRequest(), std::move(remote_controller_), &runner_, "test-url", "test-arg",
+        "test-label", "1", ns, std::move(export_dir), zx::channel(),
+        MakeForwardingTerminationCallback());
     component->SetParentJobId(runner_.koid());
     return component;
   }
@@ -250,9 +240,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
 
   void SendReady() { binding_.events().OnDirectoryReady(); }
 
-  void SendReturnCode() {
-    binding_.events().OnTerminated(errcode_, TerminationReason::EXITED);
-  }
+  void SendReturnCode() { binding_.events().OnTerminated(errcode_, TerminationReason::EXITED); }
 
   FakeRunner runner_;
   ::fidl::Binding<fuchsia::sys::ComponentController> binding_;
@@ -263,8 +251,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
   bool binding_error_handler_called_;
 };
 
-fbl::String get_value(const fbl::RefPtr<fs::PseudoDir>& hub_dir,
-                      std::string path) {
+fbl::String get_value(const fbl::RefPtr<fs::PseudoDir>& hub_dir, std::string path) {
   auto tokens = SplitPath(path);
   auto ntokens = tokens.size();
   fbl::RefPtr<fs::Vnode> node = hub_dir;
@@ -304,8 +291,7 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
   bool wait = false;
   int64_t return_code;
   TerminationReason termination_reason;
-  component_ptr.events().OnTerminated = [&](int64_t err,
-                                            TerminationReason reason) {
+  component_ptr.events().OnTerminated = [&](int64_t err, TerminationReason reason) {
     return_code = err;
     termination_reason = reason;
     wait = true;
@@ -329,8 +315,7 @@ TEST_F(ComponentControllerTest, CreateAndDeleteWithoutKilling) {
   auto component = CreateComponent(component_ptr);
   auto* component_to_remove = component.get();
   realm_.AddComponent(std::move(component));
-  component_ptr.events().OnTerminated = [&](int64_t err,
-                                            TerminationReason reason) {
+  component_ptr.events().OnTerminated = [&](int64_t err, TerminationReason reason) {
     return_code = err;
     termination_reason = reason;
   };
@@ -364,12 +349,12 @@ TEST_F(ComponentControllerTest, DetachController) {
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = CreateComponent(component_ptr);
-    component_ptr.events().OnTerminated =
-        [&](int64_t return_code, TerminationReason termination_reason) {
-          FXL_LOG(ERROR) << "OnTerminated called: " << return_code
-                         << ", : " << static_cast<uint32_t>(termination_reason);
-          wait = true;
-        };
+    component_ptr.events().OnTerminated = [&](int64_t return_code,
+                                              TerminationReason termination_reason) {
+      FXL_LOG(ERROR) << "OnTerminated called: " << return_code
+                     << ", : " << static_cast<uint32_t>(termination_reason);
+      wait = true;
+    };
     realm_.AddComponent(std::move(component));
 
     ASSERT_EQ(realm_.ComponentCount(), 1u);
@@ -378,14 +363,12 @@ TEST_F(ComponentControllerTest, DetachController) {
     // component did not die.
     component_ptr->Detach();
     RunLoopUntilIdle();
-    EXPECT_FALSE(wait)
-        << "Please please please report logs from this failure to FLK-168.";
+    EXPECT_FALSE(wait) << "Please please please report logs from this failure to FLK-168.";
   }
 
   // make sure all messages are processed if Kill was called.
   RunLoopUntilIdle();
-  EXPECT_FALSE(wait)
-      << "Please please please report logs from this failure to FLK-168.";
+  EXPECT_FALSE(wait) << "Please please please report logs from this failure to FLK-168.";
   EXPECT_EQ(realm_.ComponentCount(), 1u)
       << "Please please please report logs from this failure to FLK-168.";
 }
@@ -393,8 +376,7 @@ TEST_F(ComponentControllerTest, DetachController) {
 TEST_F(ComponentControllerTest, Hub) {
   zx::channel export_dir, export_dir_req;
   ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(),
-                      std::move(export_dir));
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
@@ -410,8 +392,7 @@ TEST_F(ComponentControllerTest, Hub) {
   EXPECT_STREQ(get_value(component->hub_dir(), "job-id").c_str(),
                std::to_string(fsl::GetKoid(job_.get())).c_str());
   EXPECT_STREQ(get_value(component->hub_dir(), "url").c_str(), "test-url");
-  EXPECT_STREQ(get_value(component->hub_dir(), "process-id").c_str(),
-               process_koid_.c_str());
+  EXPECT_STREQ(get_value(component->hub_dir(), "process-id").c_str(), process_koid_.c_str());
 
   // "in", "in/svc", and default services should exist.
   AssertHubHasIncomingServices(component.get(), {});
@@ -424,15 +405,13 @@ TEST_F(ComponentControllerTest, Hub) {
 TEST_F(ComponentControllerTest, HubWithIncomingServices) {
   zx::channel export_dir, export_dir_req;
   ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(),
-                      std::move(export_dir));
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
   fxl::RefPtr<Namespace> ns = CreateFakeNamespace({"service_a", "service_b"});
 
-  auto component =
-      CreateComponent(component_ptr, std::move(export_dir_req), ns);
+  auto component = CreateComponent(component_ptr, std::move(export_dir_req), ns);
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
@@ -458,8 +437,7 @@ TEST_F(ComponentBridgeTest, CreateAndKill) {
   int64_t retval;
   TerminationReason termination_reason;
   component_ptr.events().OnTerminated = [&wait, &retval, &termination_reason](
-                                            int64_t errcode,
-                                            TerminationReason tr) {
+                                            int64_t errcode, TerminationReason tr) {
     wait = true;
     retval = errcode;
     termination_reason = tr;
@@ -489,8 +467,7 @@ TEST_F(ComponentBridgeTest, CreateAndDeleteWithoutKilling) {
   bool terminated = false;
   int64_t retval = 0;
   TerminationReason termination_reason;
-  component_ptr.events().OnTerminated = [&](int64_t errcode,
-                                            TerminationReason tr) {
+  component_ptr.events().OnTerminated = [&](int64_t errcode, TerminationReason tr) {
     terminated = true;
     retval = errcode;
     termination_reason = tr;
@@ -516,8 +493,7 @@ TEST_F(ComponentBridgeTest, RemoteComponentDied) {
   bool terminated = false;
   int64_t retval = 0;
   TerminationReason termination_reason;
-  component_ptr.events().OnTerminated = [&](int64_t errcode,
-                                            TerminationReason tr) {
+  component_ptr.events().OnTerminated = [&](int64_t errcode, TerminationReason tr) {
     terminated = true;
     retval = errcode;
     termination_reason = tr;
@@ -541,9 +517,7 @@ TEST_F(ComponentBridgeTest, ControllerScope) {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = CreateComponentBridge(component_ptr);
     component->OnTerminated(
-        [&wait](int64_t return_code, TerminationReason termination_reason) {
-          wait = true;
-        });
+        [&wait](int64_t return_code, TerminationReason termination_reason) { wait = true; });
     runner_.AddComponent(std::move(component));
     ASSERT_EQ(runner_.ComponentCount(), 1u);
   }
@@ -579,9 +553,7 @@ TEST_F(ComponentBridgeTest, DetachController) {
   // bridge should be still connected, kill that to see if we are able to kill
   // real component.
   component_bridge_ptr->OnTerminated(
-      [&wait](int64_t return_code, TerminationReason termination_reason) {
-        wait = true;
-      });
+      [&wait](int64_t return_code, TerminationReason termination_reason) { wait = true; });
   component_bridge_ptr->Kill();
   RunLoopUntil([&wait] { return wait; });
 
@@ -593,21 +565,17 @@ TEST_F(ComponentBridgeTest, DetachController) {
 TEST_F(ComponentBridgeTest, Hub) {
   zx::channel export_dir, export_dir_req;
   ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(),
-                      std::move(export_dir));
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
-  auto component =
-      CreateComponentBridge(component_ptr, std::move(export_dir_req));
+  auto component = CreateComponentBridge(component_ptr, std::move(export_dir_req));
 
-  RunLoopUntil(
-      [&component] { return PathExists(component->hub_dir(), "out"); });
+  RunLoopUntil([&component] { return PathExists(component->hub_dir(), "out"); });
 
   EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
   EXPECT_STREQ(get_value(component->hub_dir(), "args").c_str(), "test-arg");
-  EXPECT_STREQ(get_value(component->hub_dir(), "job-id").c_str(),
-               runner_.koid().c_str());
+  EXPECT_STREQ(get_value(component->hub_dir(), "job-id").c_str(), runner_.koid().c_str());
   EXPECT_STREQ(get_value(component->hub_dir(), "url").c_str(), "test-url");
   fbl::RefPtr<fs::Vnode> out_dir;
   ASSERT_TRUE(PathExists(component->hub_dir(), "out", &out_dir));
@@ -620,18 +588,15 @@ TEST_F(ComponentBridgeTest, Hub) {
 TEST_F(ComponentBridgeTest, HubWithIncomingServices) {
   zx::channel export_dir, export_dir_req;
   ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(),
-                      std::move(export_dir));
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
   fxl::RefPtr<Namespace> ns = CreateFakeNamespace({"service_a", "service_b"});
 
-  auto component =
-      CreateComponentBridge(component_ptr, std::move(export_dir_req), ns);
+  auto component = CreateComponentBridge(component_ptr, std::move(export_dir_req), ns);
 
-  RunLoopUntil(
-      [&component] { return PathExists(component->hub_dir(), "out"); });
+  RunLoopUntil([&component] { return PathExists(component->hub_dir(), "out"); });
 
   AssertHubHasIncomingServices(component.get(), {"service_a", "service_b"});
 }
@@ -643,8 +608,7 @@ TEST_F(ComponentBridgeTest, BindingErrorHandler) {
   fuchsia::sys::ComponentControllerPtr component_ptr;
   {
     // let it go out of scope, that should trigger binding error handler.
-    auto component =
-        CreateComponentBridge(component_ptr, std::move(export_dir_req));
+    auto component = CreateComponentBridge(component_ptr, std::move(export_dir_req));
   }
   RunLoopUntil([this] { return !binding_.is_bound(); });
   EXPECT_TRUE(binding_error_handler_called_);
@@ -657,8 +621,7 @@ TEST_F(ComponentBridgeTest, BindingErrorHandlerWhenDetached) {
   fuchsia::sys::ComponentControllerPtr component_ptr;
   {
     // let it go out of scope, that should trigger binding error handler.
-    auto component =
-        CreateComponentBridge(component_ptr, std::move(export_dir_req));
+    auto component = CreateComponentBridge(component_ptr, std::move(export_dir_req));
     component_ptr->Detach();
     RunLoopUntilIdle();
   }

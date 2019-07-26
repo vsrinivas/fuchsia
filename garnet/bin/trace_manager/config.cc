@@ -31,8 +31,7 @@ bool Config::ReadFrom(const std::string& config_file) {
   if (!document.ParseStream(isw).IsObject()) {
     FXL_LOG(ERROR) << "Failed to parse JSON object from: " << config_file;
     if (document.HasParseError()) {
-      FXL_LOG(ERROR) << "Parse error "
-                     << GetParseError_En(document.GetParseError()) << " ("
+      FXL_LOG(ERROR) << "Parse error " << GetParseError_En(document.GetParseError()) << " ("
                      << document.GetErrorOffset() << ")";
     }
     return false;

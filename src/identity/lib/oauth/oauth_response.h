@@ -19,8 +19,7 @@ struct OAuthResponse {
   rapidjson::Document json_response;
 
   OAuthResponse(const fuchsia::auth::AuthProviderStatus& status,
-                const std::string& error_description,
-                rapidjson::Document json_response)
+                const std::string& error_description, rapidjson::Document json_response)
       : status(status),
         error_description(error_description),
         json_response(std::move(json_response)) {}

@@ -31,27 +31,27 @@ typedef struct async_loop async_loop_t;
 // Message loop configuration structure.
 typedef void(async_loop_callback_t)(async_loop_t* loop, void* data);
 typedef struct async_loop_config {
-    // If true, the loop will automatically register itself as the default
-    // dispatcher for the thread upon which it was created and will
-    // automatically unregister itself when destroyed (which must occur on
-    // the same thread).
-    //
-    // If false, the loop will not do this.  The loop's creator is then
-    // responsible for retrieving the loop's dispatcher using |async_loop_get_dispatcher()|
-    // and passing it around explicitly or calling |async_set_default_dispatcher()| as needed.
-    //
-    // Note that the loop can be used even without setting it as the current
-    // thread's default.
-    bool make_default_for_current_thread;
+  // If true, the loop will automatically register itself as the default
+  // dispatcher for the thread upon which it was created and will
+  // automatically unregister itself when destroyed (which must occur on
+  // the same thread).
+  //
+  // If false, the loop will not do this.  The loop's creator is then
+  // responsible for retrieving the loop's dispatcher using |async_loop_get_dispatcher()|
+  // and passing it around explicitly or calling |async_set_default_dispatcher()| as needed.
+  //
+  // Note that the loop can be used even without setting it as the current
+  // thread's default.
+  bool make_default_for_current_thread;
 
-    // A function to call before the dispatcher invokes each handler, or NULL if none.
-    async_loop_callback_t* prologue;
+  // A function to call before the dispatcher invokes each handler, or NULL if none.
+  async_loop_callback_t* prologue;
 
-    // A function to call after the dispatcher invokes each handler, or NULL if none.
-    async_loop_callback_t* epilogue;
+  // A function to call after the dispatcher invokes each handler, or NULL if none.
+  async_loop_callback_t* epilogue;
 
-    // Data to pass to the callback functions.
-    void* data;
+  // Data to pass to the callback functions.
+  void* data;
 } async_loop_config_t;
 
 // Simple config that when passed to async_loop_create will create a loop
@@ -78,8 +78,7 @@ extern const async_loop_config_t kAsyncLoopConfigNoAttachToThread;
 // May return other errors if the necessary internal handles could not be created.
 //
 // See also |kAsyncLoopConfigAttachToThread| and |kAsyncLoopConfigNoAttachToThread|.
-zx_status_t async_loop_create(const async_loop_config_t* config,
-                              async_loop_t** out_loop);
+zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** out_loop);
 
 // Gets the message loop's asynchronous dispatch interface.
 async_dispatcher_t* async_loop_get_dispatcher(async_loop_t* loop);
@@ -151,9 +150,9 @@ zx_status_t async_loop_reset_quit(async_loop_t* loop);
 
 // Returns the current state of the message loop.
 typedef uint32_t async_loop_state_t;
-#define ASYNC_LOOP_RUNNABLE ((async_loop_state_t) 0)
-#define ASYNC_LOOP_QUIT ((async_loop_state_t) 1)
-#define ASYNC_LOOP_SHUTDOWN ((async_loop_state_t) 2)
+#define ASYNC_LOOP_RUNNABLE ((async_loop_state_t)0)
+#define ASYNC_LOOP_QUIT ((async_loop_state_t)1)
+#define ASYNC_LOOP_SHUTDOWN ((async_loop_state_t)2)
 async_loop_state_t async_loop_get_state(async_loop_t* loop);
 
 // Starts a message loop running on a new thread.
@@ -165,8 +164,7 @@ async_loop_state_t async_loop_get_state(async_loop_t* loop);
 // Returns |ZX_OK| on success.
 // Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
 // Returns |ZX_ERR_NO_MEMORY| if allocation or thread creation failed.
-zx_status_t async_loop_start_thread(async_loop_t* loop, const char* name,
-                                    thrd_t* out_thread);
+zx_status_t async_loop_start_thread(async_loop_t* loop, const char* name, thrd_t* out_thread);
 
 // Blocks until all dispatch threads started with |async_loop_start_thread()|
 // have terminated.

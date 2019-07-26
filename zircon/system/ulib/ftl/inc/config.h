@@ -14,8 +14,8 @@
 /***********************************************************************/
 /* File System Configuration                                           */
 /***********************************************************************/
-#define INC_FTL_NDM_MLC FALSE // TargetFTL-NDM on NDM MLC
-#define INC_FTL_NDM_SLC TRUE  // TargetFTL-NDM on NDM SLC
+#define INC_FTL_NDM_MLC FALSE  // TargetFTL-NDM on NDM MLC
+#define INC_FTL_NDM_SLC TRUE   // TargetFTL-NDM on NDM SLC
 
 #if INC_FTL_NDM_MLC && INC_FTL_NDM_SLC
 #error Set INC_FTL_NDM_MLC or INC_FTL_NDM_SLC to TRUE, not both
@@ -29,4 +29,4 @@
 /***********************************************************************/
 /* Private Module Assert/Debug Configuration                           */
 /***********************************************************************/
-#define FS_ASSERT TRUE    // TRUE enables filesys PfAssert()
+#define FS_ASSERT TRUE  // TRUE enables filesys PfAssert()

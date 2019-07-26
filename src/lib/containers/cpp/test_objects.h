@@ -18,7 +18,7 @@ namespace containers {
 class CopyOnlyInt {
  public:
   explicit CopyOnlyInt(int data = 1) : data_(data) {}
-  CopyOnlyInt(const CopyOnlyInt& other) : data_(other.data_) { }
+  CopyOnlyInt(const CopyOnlyInt& other) : data_(other.data_) {}
   ~CopyOnlyInt() { data_ = 0; }
 
   friend bool operator==(const CopyOnlyInt& lhs, const CopyOnlyInt& rhs) {
@@ -33,17 +33,11 @@ class CopyOnlyInt {
     return lhs.data_ < rhs.data_;
   }
 
-  friend bool operator>(const CopyOnlyInt& lhs, const CopyOnlyInt& rhs) {
-    return rhs < lhs;
-  }
+  friend bool operator>(const CopyOnlyInt& lhs, const CopyOnlyInt& rhs) { return rhs < lhs; }
 
-  friend bool operator<=(const CopyOnlyInt& lhs, const CopyOnlyInt& rhs) {
-    return !(rhs < lhs);
-  }
+  friend bool operator<=(const CopyOnlyInt& lhs, const CopyOnlyInt& rhs) { return !(rhs < lhs); }
 
-  friend bool operator>=(const CopyOnlyInt& lhs, const CopyOnlyInt& rhs) {
-    return !(lhs < rhs);
-  }
+  friend bool operator>=(const CopyOnlyInt& lhs, const CopyOnlyInt& rhs) { return !(lhs < rhs); }
 
   int data() const { return data_; }
 
@@ -76,29 +70,19 @@ class MoveOnlyInt {
     return !operator==(lhs, rhs);
   }
 
-  friend bool operator<(const MoveOnlyInt& lhs, int rhs) {
-    return lhs.data_ < rhs;
-  }
+  friend bool operator<(const MoveOnlyInt& lhs, int rhs) { return lhs.data_ < rhs; }
 
-  friend bool operator<(int lhs, const MoveOnlyInt& rhs) {
-    return lhs < rhs.data_;
-  }
+  friend bool operator<(int lhs, const MoveOnlyInt& rhs) { return lhs < rhs.data_; }
 
   friend bool operator<(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
     return lhs.data_ < rhs.data_;
   }
 
-  friend bool operator>(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
-    return rhs < lhs;
-  }
+  friend bool operator>(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) { return rhs < lhs; }
 
-  friend bool operator<=(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
-    return !(rhs < lhs);
-  }
+  friend bool operator<=(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) { return !(rhs < lhs); }
 
-  friend bool operator>=(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
-    return !(lhs < rhs);
-  }
+  friend bool operator>=(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) { return !(lhs < rhs); }
 
   int data() const { return data_; }
 

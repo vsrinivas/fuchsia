@@ -25,8 +25,7 @@ constexpr size_t kPcmChannels = 1;
 constexpr size_t kPcmFrameSize = kPcmSampleSize * kPcmChannels;
 constexpr uint64_t kTimeBase = ZX_SEC(1);
 // kByteDuration is the ratio of media duration to real time for a single byte.
-constexpr double kByteDuration =
-    ZX_SEC(1) / kAudioFrequency / double(kPcmFrameSize);
+constexpr double kByteDuration = ZX_SEC(1) / kAudioFrequency / double(kPcmFrameSize);
 constexpr uint64_t kTimeStampTolerance = ZX_USEC(100);
 constexpr char kDebugFilename[] = "/tmp/sbc_encoder_output.sbc";
 
@@ -58,9 +57,8 @@ std::vector<uint8_t> encode(RawAudio::CodecInput&& codec_input,
   for (auto position : codec_input.payload_offsets) {
     offsets.push_back({
         .position = position,
-        .timestamp_ish = !!expect_timestamp
-                             ? std::make_optional(TimestampForByte(position))
-                             : std::nullopt,
+        .timestamp_ish =
+            !!expect_timestamp ? std::make_optional(TimestampForByte(position)) : std::nullopt,
     });
   }
 
@@ -78,17 +76,15 @@ std::vector<uint8_t> encode(RawAudio::CodecInput&& codec_input,
   size_t sbc_frame_index = 0;
   for (auto frame : frames) {
     if (expect_timestamp && (*expect_timestamp)[sbc_frame_index]) {
-      FXL_CHECK(frame.timestamp_ish)
-          << "SBC frame " << sbc_frame_index << " missing timestamp.";
+      FXL_CHECK(frame.timestamp_ish) << "SBC frame " << sbc_frame_index << " missing timestamp.";
       FXL_CHECK(*frame.timestamp_ish >= last_timestamp)
-          << "Got timestamp " << *frame.timestamp_ish
-          << " but last timestamp was " << last_timestamp;
+          << "Got timestamp " << *frame.timestamp_ish << " but last timestamp was "
+          << last_timestamp;
       uint64_t expected_timestamp =
           TimestampForByte(sbc_frame_index * kSbcBatchSize * kPcmFrameSize);
-      FXL_CHECK(Difference(*frame.timestamp_ish, expected_timestamp) <=
-                kTimeStampTolerance)
-          << "At byte " << concat.size() << " of output, expected timestamp "
-          << expected_timestamp << " but got " << *frame.timestamp_ish;
+      FXL_CHECK(Difference(*frame.timestamp_ish, expected_timestamp) <= kTimeStampTolerance)
+          << "At byte " << concat.size() << " of output, expected timestamp " << expected_timestamp
+          << " but got " << *frame.timestamp_ish;
 
       last_timestamp = *frame.timestamp_ish;
     } else {
@@ -102,9 +98,8 @@ std::vector<uint8_t> encode(RawAudio::CodecInput&& codec_input,
   return concat;
 }
 
-void write_debug_file(const fuchsia::media::SbcEncoderSettings& sbc_settings,
-                      size_t batch_size, const RawAudio& raw_audio,
-                      component::StartupContext* startup_context) {
+void write_debug_file(const fuchsia::media::SbcEncoderSettings& sbc_settings, size_t batch_size,
+                      const RawAudio& raw_audio, component::StartupContext* startup_context) {
   auto codec_input = raw_audio.BuildCodecInput(kBatchesPerPacket * batch_size);
 
   fuchsia::media::EncoderSettings encoder_settings;
@@ -152,27 +147,22 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  std::fstream golden_file(kGoldenEncodedFile,
-                           std::ios::binary | std::ios::in | std::ios::ate);
-  FXL_CHECK(golden_file.is_open())
-      << "Could not open " << kGoldenEncodedFile << " for reading.";
+  std::fstream golden_file(kGoldenEncodedFile, std::ios::binary | std::ios::in | std::ios::ate);
+  FXL_CHECK(golden_file.is_open()) << "Could not open " << kGoldenEncodedFile << " for reading.";
 
   const size_t golden_file_size = golden_file.tellg();
   FXL_CHECK(golden_file_size == kGoldenEncodedFileSize);
   golden_file.seekg(0);
 
   uint8_t golden_file_content[golden_file_size];
-  golden_file.read(reinterpret_cast<char*>(&golden_file_content[0]),
-                   golden_file_size);
+  golden_file.read(reinterpret_cast<char*>(&golden_file_content[0]), golden_file_size);
 
-  const size_t output_packet_count =
-      kGoldenEncodedFileSize / kSbcFrameLength + 1;
+  const size_t output_packet_count = kGoldenEncodedFileSize / kSbcFrameLength + 1;
   struct TestCase {
     size_t frames_per_packet;
     bool set_timestamps;
   };
-  auto timestamp_pattern =
-      [](size_t frames_per_packet) -> std::vector<bool> {
+  auto timestamp_pattern = [](size_t frames_per_packet) -> std::vector<bool> {
     std::vector<bool> expect_timestamp(output_packet_count, false);
     const size_t bytes_per_packet = frames_per_packet * kPcmFrameSize;
     for (size_t i = 0; i < output_packet_count; ++i) {
@@ -180,8 +170,7 @@ int main(int argc, char** argv) {
       // An input timestamp is consumed by the first output packet whose
       // starting offset is >= the input packet's offset, so not all output
       // packets get timestamps.
-      expect_timestamp[i] =
-          input_index % bytes_per_packet < kSbcBatchSize * kPcmFrameSize;
+      expect_timestamp[i] = input_index % bytes_per_packet < kSbcBatchSize * kPcmFrameSize;
     }
     return expect_timestamp;
   };
@@ -203,8 +192,7 @@ int main(int argc, char** argv) {
   // to be funky and ensure our encoder can properly handle audio on PCM frame
   // boundaries, not just sbc batch boundaries.
   for (auto& test_case : test_cases) {
-    FXL_VLOG(3) << "Testing with PCM frames per packet: "
-                << test_case.frames_per_packet;
+    FXL_VLOG(3) << "Testing with PCM frames per packet: " << test_case.frames_per_packet;
     FXL_VLOG(3) << "Timestamps enabled: " << test_case.set_timestamps;
     auto codec_input = raw_audio.BuildCodecInput(test_case.frames_per_packet);
 
@@ -212,20 +200,18 @@ int main(int argc, char** argv) {
     encoder_settings.set_sbc(sbc);
     codec_input.format.set_encoder_settings(std::move(encoder_settings));
 
-    auto actual_file =
-        encode(std::move(codec_input), startup_context.get(),
-               test_case.set_timestamps
-                   ? std::make_optional<std::vector<bool>>(
-                         timestamp_pattern(test_case.frames_per_packet))
-                   : std::nullopt);
+    auto actual_file = encode(
+        std::move(codec_input), startup_context.get(),
+        test_case.set_timestamps
+            ? std::make_optional<std::vector<bool>>(timestamp_pattern(test_case.frames_per_packet))
+            : std::nullopt);
 
     // The actual file should be bigger than the golden file size, because the
     // golden file does not invent padding like our encoder does. Since the
     // input data is not exactly a multiple of our pcm block size, the result
     // should be at most one frame larger.
     FXL_CHECK(golden_file_size + kSbcFrameLength >= actual_file.size())
-        << "File is wrong size; expected: " << golden_file_size
-        << " got: " << actual_file.size();
+        << "File is wrong size; expected: " << golden_file_size << " got: " << actual_file.size();
 
     for (size_t i = 0; i < golden_file_size; i++) {
       FXL_CHECK(golden_file_content[i] == actual_file[i])
@@ -241,22 +227,19 @@ int main(int argc, char** argv) {
   encoder_settings.set_sbc(sbc);
   pcm_format.set_encoder_settings(std::move(encoder_settings));
   constexpr size_t kExpectedTimestamp = 13404;
-  auto payload = FrameEncoder::Payload{
-      .data = std::vector<uint8_t>(kSbcBatchSize * kPcmFrameSize * 2, 0),
-      .offsets = {FrameEncoder::PayloadOffset{
-          .position = 0,
-          .timestamp_ish = {kExpectedTimestamp},
-      }}};
-  auto frames =
-      FrameEncoder::EncodeFrames(payload, pcm_format, startup_context.get(),
-                                 /*expect_access_units=*/true);
+  auto payload =
+      FrameEncoder::Payload{.data = std::vector<uint8_t>(kSbcBatchSize * kPcmFrameSize * 2, 0),
+                            .offsets = {FrameEncoder::PayloadOffset{
+                                .position = 0,
+                                .timestamp_ish = {kExpectedTimestamp},
+                            }}};
+  auto frames = FrameEncoder::EncodeFrames(payload, pcm_format, startup_context.get(),
+                                           /*expect_access_units=*/true);
   FXL_CHECK(frames.size() == 2) << "Frames: " << frames.size();
-  FXL_CHECK(frames[0].data.size() == kSbcFrameLength)
-      << "Size: " << frames[0].data.size();
+  FXL_CHECK(frames[0].data.size() == kSbcFrameLength) << "Size: " << frames[0].data.size();
   FXL_CHECK(frames[0].timestamp_ish.has_value());
   FXL_CHECK(frames[0].timestamp_ish.value() == kExpectedTimestamp);
-  FXL_CHECK(frames[1].data.size() == kSbcFrameLength)
-      << "Size: " << frames[1].data.size();
+  FXL_CHECK(frames[1].data.size() == kSbcFrameLength) << "Size: " << frames[1].data.size();
   FXL_CHECK(!frames[1].timestamp_ish.has_value());
 
   return 0;

@@ -7,8 +7,8 @@
 namespace as370 {
 
 enum As370Clk {
-    kClkAvpll0,
-    kClkAvpll1,
+  kClkAvpll0,
+  kClkAvpll1,
 };
 
-} // namespace
+}  // namespace as370

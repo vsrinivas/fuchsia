@@ -32,19 +32,16 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
  private:
   void RequestSendSoon(RequestSendSoonCallback callback) override;
 
-  void BlockUntilEmpty(uint32_t max_wait_seconds,
-                       BlockUntilEmptyCallback callback) override;
+  void BlockUntilEmpty(uint32_t max_wait_seconds, BlockUntilEmptyCallback callback) override;
 
   void GetNumSendAttempts(GetNumSendAttemptsCallback callback) override;
 
   void GetFailedSendAttempts(GetFailedSendAttemptsCallback callback) override;
 
-  void GetNumObservationsAdded(
-      GetNumObservationsAddedCallback callback) override;
+  void GetNumObservationsAdded(GetNumObservationsAddedCallback callback) override;
 
-  void GenerateAggregatedObservations(
-      uint32_t day_index, std::vector<uint32_t> report_ids,
-      GenerateAggregatedObservationsCallback callback) override;
+  void GenerateAggregatedObservations(uint32_t day_index, std::vector<uint32_t> report_ids,
+                                      GenerateAggregatedObservationsCallback callback) override;
 
   async_dispatcher_t* const dispatcher_;
   std::vector<encoder::ShippingManager*> shipping_managers_;

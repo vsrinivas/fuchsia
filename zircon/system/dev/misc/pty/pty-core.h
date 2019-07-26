@@ -19,43 +19,43 @@ typedef struct pty_server pty_server_t;
 typedef struct pty_client pty_client_t;
 
 struct pty_server {
-    zx_device_t* zxdev;
+  zx_device_t* zxdev;
 
-    // lock covers server and all its clients
-    mtx_t lock;
+  // lock covers server and all its clients
+  mtx_t lock;
 
-    // track server lifetime
-    int32_t refcount;
+  // track server lifetime
+  int32_t refcount;
 
-    // pending OOB events
-    uint32_t events;
+  // pending OOB events
+  uint32_t events;
 
-    // list of all clients
-    list_node_t clients;
+  // list of all clients
+  list_node_t clients;
 
-    // active client receives inbound data
-    pty_client_t* active;
+  // active client receives inbound data
+  pty_client_t* active;
 
-    // control client receives events
-    pty_client_t* control;
+  // control client receives events
+  pty_client_t* control;
 
-    // called when data is written by active client
-    // pty_server's lock is held across this call
-    // (it is not legal to call back into any pty_server_*() functions)
-    zx_status_t (*recv)(pty_server_t* ps, const void* data, size_t len, size_t* actual);
+  // called when data is written by active client
+  // pty_server's lock is held across this call
+  // (it is not legal to call back into any pty_server_*() functions)
+  zx_status_t (*recv)(pty_server_t* ps, const void* data, size_t len, size_t* actual);
 
-    // if non-null, called for unhandled client message ops
-    // no lock is held across this call
-    zx_status_t (*set_window_size)(void* ctx, const fuchsia_hardware_pty_WindowSize* size,
-                                   fidl_txn_t* txn);
+  // if non-null, called for unhandled client message ops
+  // no lock is held across this call
+  zx_status_t (*set_window_size)(void* ctx, const fuchsia_hardware_pty_WindowSize* size,
+                                 fidl_txn_t* txn);
 
-    // called when pty_server_t should be deleted
-    // if NULL, free(ps) is called instead
-    void (*release)(pty_server_t* ps);
+  // called when pty_server_t should be deleted
+  // if NULL, free(ps) is called instead
+  void (*release)(pty_server_t* ps);
 
-    // window size in character cells
-    uint32_t width;
-    uint32_t height;
+  // window size in character cells
+  uint32_t width;
+  uint32_t height;
 };
 
 // this initializes everything *except* the embedded zx_device_t
@@ -78,4 +78,4 @@ void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h);
 zx_status_t pty_server_fidl_OpenClient(void* ctx, uint32_t id, zx_handle_t handle, fidl_txn_t* txn);
 void pty_server_release(void* ctx);
 
-#endif // ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_CORE_H_
+#endif  // ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_CORE_H_

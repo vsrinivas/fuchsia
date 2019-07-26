@@ -7,8 +7,7 @@
 const char* kSysmemClassPath = "/dev/class/sysmem";
 
 App::App() : component_context_(sys::ComponentContext::Create()) {
-  zx_status_t status =
-      sysmem_connector_init(kSysmemClassPath, &sysmem_connector_);
+  zx_status_t status = sysmem_connector_init(kSysmemClassPath, &sysmem_connector_);
   if (status != ZX_OK) {
     printf(
         "sysmem_connector sysmem_connector_init() failed - exiting - status: "
@@ -25,8 +24,8 @@ App::App() : component_context_(sys::ComponentContext::Create()) {
         // channel, but in this case we forward the service request to the
         // sysmem driver.  We do the forwarding via code we share with a similar
         // Zircon service.
-        sysmem_connector_queue_connection_request(
-            sysmem_connector_, request.TakeChannel().release());
+        sysmem_connector_queue_connection_request(sysmem_connector_,
+                                                  request.TakeChannel().release());
       });
 }
 

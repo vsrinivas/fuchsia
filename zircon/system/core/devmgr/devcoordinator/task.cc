@@ -60,8 +60,7 @@ void Task::DependencyComplete(const Task* dependency, zx_status_t status) {
       return;
     }
   }
-  log(ERROR, "devcoordinator: dependency %p not found, already removed?\n",
-      dependency);
+  log(ERROR, "devcoordinator: dependency %p not found, already removed?\n", dependency);
 }
 
 void Task::Complete(zx_status_t status) {

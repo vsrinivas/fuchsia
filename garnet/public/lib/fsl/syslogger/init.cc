@@ -21,8 +21,7 @@ std::string ParseLoggerSettings(const fxl::CommandLine& command_line,
   std::string verbosity;
   if (command_line.GetOptionValue("verbose", &verbosity)) {
     int level = 1;
-    if (!verbosity.empty() &&
-        (!fxl::StringToNumberWithError(verbosity, &level) || level < 0)) {
+    if (!verbosity.empty() && (!fxl::StringToNumberWithError(verbosity, &level) || level < 0)) {
       return "Error parsing --verbose option. Using default logging level";
     }
     severity = -level;
@@ -32,8 +31,7 @@ std::string ParseLoggerSettings(const fxl::CommandLine& command_line,
   std::string quietness;
   if (command_line.GetOptionValue("quiet", &quietness)) {
     int level = FX_LOG_INFO;
-    if (!quietness.empty() &&
-        (!fxl::StringToNumberWithError(quietness, &level) || level < 0)) {
+    if (!quietness.empty() && (!fxl::StringToNumberWithError(quietness, &level) || level < 0)) {
       return "Error parsing --quiet option. Using default logging level";
     }
     severity = level;

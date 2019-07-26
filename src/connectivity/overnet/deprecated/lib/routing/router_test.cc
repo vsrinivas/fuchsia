@@ -39,8 +39,7 @@ class MockLink {
   LinkPtr<> MakeLink(NodeId src, NodeId peer) {
     class LinkInst final : public Link {
      public:
-      LinkInst(MockLink* link, NodeId src, NodeId peer)
-          : link_(link), src_(src), peer_(peer) {}
+      LinkInst(MockLink* link, NodeId src, NodeId peer) : link_(link), src_(src), peer_(peer) {}
 
       void Close(Callback<void> quiesced) override {}
 
@@ -49,8 +48,7 @@ class MockLink {
       }
 
       fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override {
-        return fuchsia::overnet::protocol::LinkStatus{src_.as_fidl(),
-                                                      peer_.as_fidl(), 1, 1};
+        return fuchsia::overnet::protocol::LinkStatus{src_.as_fidl(), peer_.as_fidl(), 1, 1};
       }
 
       const LinkStats* GetStats() const override { return nullptr; }
@@ -68,8 +66,7 @@ TEST(Router, NoOp) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 }
 
@@ -78,28 +75,22 @@ TEST(Router, ForwardToSelf) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockStreamHandler> mock_stream_handler;
 
   // Establish that there's a stream.
-  EXPECT_TRUE(
-      router.RegisterStream(NodeId(2), StreamId(1), &mock_stream_handler)
-          .is_ok());
+  EXPECT_TRUE(router.RegisterStream(NodeId(2), StreamId(1), &mock_stream_handler).is_ok());
 
   // Forward a message: we should see HandleMessage on the stream.
-  EXPECT_CALL(
-      mock_stream_handler,
-      HandleMessage(Property(&SeqNum::ReconstructFromZero_TestOnly, 1),
-                    kDummyTimestamp123, Slice::FromContainer({1, 2, 3})));
+  EXPECT_CALL(mock_stream_handler,
+              HandleMessage(Property(&SeqNum::ReconstructFromZero_TestOnly, 1), kDummyTimestamp123,
+                            Slice::FromContainer({1, 2, 3})));
 
-  router.Forward(
-      Message{std::move(RoutableMessage(NodeId(2)).AddDestination(
-                  NodeId(1), StreamId(1), SeqNum(1, 1))),
-              ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})),
-              kDummyTimestamp123});
+  router.Forward(Message{
+      std::move(RoutableMessage(NodeId(2)).AddDestination(NodeId(1), StreamId(1), SeqNum(1, 1))),
+      ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})), kDummyTimestamp123});
 }
 
 // We should be able to forward messages to ourselves even if the stream isn't
@@ -108,27 +99,21 @@ TEST(Router, ForwardToSelfDelayed) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockStreamHandler> mock_stream_handler;
 
   // Forward a message: nothing should happen.
-  router.Forward(
-      Message{std::move(RoutableMessage(NodeId(2)).AddDestination(
-                  NodeId(1), StreamId(1), SeqNum(1, 1))),
-              ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})),
-              kDummyTimestamp123});
+  router.Forward(Message{
+      std::move(RoutableMessage(NodeId(2)).AddDestination(NodeId(1), StreamId(1), SeqNum(1, 1))),
+      ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})), kDummyTimestamp123});
 
   // Establish that there's a stream: we should see HandleMessage on the stream.
-  EXPECT_CALL(
-      mock_stream_handler,
-      HandleMessage(Property(&SeqNum::ReconstructFromZero_TestOnly, 1),
-                    kDummyTimestamp123, Slice::FromContainer({1, 2, 3})));
-  EXPECT_TRUE(
-      router.RegisterStream(NodeId(2), StreamId(1), &mock_stream_handler)
-          .is_ok());
+  EXPECT_CALL(mock_stream_handler,
+              HandleMessage(Property(&SeqNum::ReconstructFromZero_TestOnly, 1), kDummyTimestamp123,
+                            Slice::FromContainer({1, 2, 3})));
+  EXPECT_TRUE(router.RegisterStream(NodeId(2), StreamId(1), &mock_stream_handler).is_ok());
 }
 
 // We should be able to forward messages to others.
@@ -136,8 +121,7 @@ TEST(Router, ForwardToLink) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockLink> mock_link;
@@ -153,11 +137,9 @@ TEST(Router, ForwardToLink) {
   std::shared_ptr<Message> forwarded_message;
   EXPECT_CALL(mock_link, Forward(_)).WillOnce(SaveArg<0>(&forwarded_message));
 
-  router.Forward(
-      Message{std::move(RoutableMessage(NodeId(1)).AddDestination(
-                  NodeId(2), StreamId(1), SeqNum(1, 1))),
-              ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})),
-              kDummyTimestamp123});
+  router.Forward(Message{
+      std::move(RoutableMessage(NodeId(1)).AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))),
+      ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})), kDummyTimestamp123});
 }
 
 // We should be able to forward messages to others even if the link isn't ready
@@ -166,8 +148,7 @@ TEST(Router, ForwardToLinkDelayed) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockLink> mock_link;
@@ -175,11 +156,9 @@ TEST(Router, ForwardToLinkDelayed) {
   std::shared_ptr<Message> forwarded_message;
 
   // Forward a message: nothing should happen.
-  router.Forward(
-      Message{std::move(RoutableMessage(NodeId(1)).AddDestination(
-                  NodeId(2), StreamId(1), SeqNum(1, 1))),
-              ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})),
-              kDummyTimestamp123});
+  router.Forward(Message{
+      std::move(RoutableMessage(NodeId(1)).AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))),
+      ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})), kDummyTimestamp123});
 
   // Ready a link: we should see a message forwarded to the link.
   EXPECT_CALL(mock_link, Forward(_)).WillOnce(SaveArg<0>(&forwarded_message));
@@ -195,17 +174,14 @@ TEST(Router, ForwardToSelfAndLink) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockStreamHandler> mock_stream_handler;
   StrictMock<MockLink> mock_link;
 
   // Ready both link & stream.
-  EXPECT_TRUE(
-      router.RegisterStream(NodeId(3), StreamId(1), &mock_stream_handler)
-          .is_ok());
+  EXPECT_TRUE(router.RegisterStream(NodeId(3), StreamId(1), &mock_stream_handler).is_ok());
   router.RegisterLink(mock_link.MakeLink(NodeId(1), NodeId(2)));
   while (!router.HasRouteTo(NodeId(2))) {
     router.BlockUntilNoBackgroundUpdatesProcessing();
@@ -214,18 +190,16 @@ TEST(Router, ForwardToSelfAndLink) {
 
   // Forward a message: link and stream should see the message.
   std::shared_ptr<Message> forwarded_message;
-  EXPECT_CALL(
-      mock_stream_handler,
-      HandleMessage(Property(&SeqNum::ReconstructFromZero_TestOnly, 1),
-                    kDummyTimestamp123, Slice::FromContainer({1, 2, 3})));
+  EXPECT_CALL(mock_stream_handler,
+              HandleMessage(Property(&SeqNum::ReconstructFromZero_TestOnly, 1), kDummyTimestamp123,
+                            Slice::FromContainer({1, 2, 3})));
   EXPECT_CALL(mock_link, Forward(_)).WillOnce(SaveArg<0>(&forwarded_message));
 
-  router.Forward(Message{
-      std::move(RoutableMessage(NodeId(3))
-                    .AddDestination(NodeId(1), StreamId(1), SeqNum(1, 1))
-                    .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))),
-      ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})),
-      kDummyTimestamp123});
+  router.Forward(Message{std::move(RoutableMessage(NodeId(3))
+                                       .AddDestination(NodeId(1), StreamId(1), SeqNum(1, 1))
+                                       .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))),
+                         ForwardingPayloadFactory(Slice::FromContainer({1, 2, 3})),
+                         kDummyTimestamp123});
 }
 
 // TODO(ctiller): re-enable this test.

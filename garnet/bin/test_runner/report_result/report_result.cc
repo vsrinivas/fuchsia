@@ -21,8 +21,7 @@
 using fuchsia::testing::runner::TestResult;
 using fuchsia::testing::runner::TestRunner;
 
-static zx_status_t AddPipe(int target_fd, int* local_fd,
-                           fdio_spawn_action_t* action) {
+static zx_status_t AddPipe(int target_fd, int* local_fd, fdio_spawn_action_t* action) {
   zx_status_t status = fdio_pipe_half(local_fd, &action->h.handle);
   if (status != ZX_OK)
     return status;
@@ -115,9 +114,9 @@ int main(int argc, char** argv) {
 
   char error[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_handle_t handle = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_spawn_etc(
-      ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO,
-      argv[1], argv + 1, nullptr, arraysize(actions), actions, &handle, error);
+  zx_status_t status =
+      fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO, argv[1],
+                     argv + 1, nullptr, arraysize(actions), actions, &handle, error);
   if (status < 0) {
     reporter.Finish(true, error);
     return 1;
@@ -129,16 +128,14 @@ int main(int argc, char** argv) {
   stream << "[stderr]\n";
   ReadPipe(stderr_pipe, &stream);
 
-  status =
-      zx_object_wait_one(handle, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
+  status = zx_object_wait_one(handle, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
   if (status != ZX_OK) {
     reporter.Finish(true, "Failed to wait for exit");
     return 1;
   }
 
   zx_info_process_t proc_info;
-  status = zx_object_get_info(handle, ZX_INFO_PROCESS, &proc_info,
-                              sizeof(proc_info), NULL, NULL);
+  status = zx_object_get_info(handle, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
   zx_handle_close(handle);
   if (status < 0) {
     reporter.Finish(true, "Failed to get return code");

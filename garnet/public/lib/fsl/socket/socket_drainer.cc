@@ -28,14 +28,12 @@ SocketDrainer::~SocketDrainer() {
 void SocketDrainer::Start(zx::socket source) {
   source_ = std::move(source);
   wait_.set_object(source_.get());
-  wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED |
-                    ZX_SOCKET_PEER_CLOSED);
+  wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED);
   OnHandleReady(dispatcher_, &wait_, ZX_OK, nullptr);
 }
 
-void SocketDrainer::OnHandleReady(async_dispatcher_t* dispatcher,
-                                  async::WaitBase* wait, zx_status_t status,
-                                  const zx_packet_signal_t* signal) {
+void SocketDrainer::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                  zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     client_->OnDataComplete();
     return;

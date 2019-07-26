@@ -1964,9 +1964,9 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
             cur->parent_start_limit_ = head_end;
           }
 
-          DEBUG_ASSERT((cur_end & 1) == 0); // cur_end is page aligned
-          uint64_t scratch = cur_end >> 1; // gcc is finicky about setting bitfields
-          cur->stack_.scratch =  scratch & (~0ul >> 1);
+          DEBUG_ASSERT((cur_end & 1) == 0);  // cur_end is page aligned
+          uint64_t scratch = cur_end >> 1;   // gcc is finicky about setting bitfields
+          cur->stack_.scratch = scratch & (~0ul >> 1);
           parent->stack_.dir_flag =
               &parent->left_child_locked() == cur ? StackDir::Left : StackDir::Right;
 
@@ -1991,8 +1991,8 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
         // up the tree.
         parent->page_list_.RemovePages(tail_start, parent_range_end, free_list);
 
-        DEBUG_ASSERT((cur_end & 1) == 0); // cur_end is page aligned
-        uint64_t scratch = cur_end >> 1; // gcc is finicky about setting bitfields
+        DEBUG_ASSERT((cur_end & 1) == 0);  // cur_end is page aligned
+        uint64_t scratch = cur_end >> 1;   // gcc is finicky about setting bitfields
         cur->stack_.scratch = scratch & (~0ul >> 1);
         parent->stack_.dir_flag =
             &parent->left_child_locked() == cur ? StackDir::Left : StackDir::Right;

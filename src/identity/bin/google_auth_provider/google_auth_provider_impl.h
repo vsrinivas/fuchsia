@@ -33,15 +33,13 @@ using fuchsia::auth::AttestationSigner;
 using fuchsia::auth::AuthenticationUIContext;
 using fuchsia::web::NavigationState;
 
-class GoogleAuthProviderImpl
-    : fuchsia::web::NavigationEventListener,
-      fuchsia::auth::AuthProvider,
-      fuchsia::auth::testing::LegacyAuthCredentialInjector {
+class GoogleAuthProviderImpl : fuchsia::web::NavigationEventListener,
+                               fuchsia::auth::AuthProvider,
+                               fuchsia::auth::testing::LegacyAuthCredentialInjector {
  public:
-  GoogleAuthProviderImpl(
-      async_dispatcher_t* main_dispatcher, sys::ComponentContext* context,
-      network_wrapper::NetworkWrapper* network_wrapper, Settings settings,
-      fidl::InterfaceRequest<fuchsia::auth::AuthProvider> request);
+  GoogleAuthProviderImpl(async_dispatcher_t* main_dispatcher, sys::ComponentContext* context,
+                         network_wrapper::NetworkWrapper* network_wrapper, Settings settings,
+                         fidl::InterfaceRequest<fuchsia::auth::AuthProvider> request);
 
   ~GoogleAuthProviderImpl() override;
 
@@ -50,10 +48,8 @@ class GoogleAuthProviderImpl
  private:
   // |AuthProvider|
   void GetPersistentCredential(
-      fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext>
-          auth_ui_context,
-      fidl::StringPtr user_profile_id,
-      GetPersistentCredentialCallback callback) override;
+      fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext> auth_ui_context,
+      fidl::StringPtr user_profile_id, GetPersistentCredentialCallback callback) override;
 
   // |AuthProvider|
   void GetAppAccessToken(std::string credential, fidl::StringPtr app_client_id,
@@ -69,36 +65,31 @@ class GoogleAuthProviderImpl
                            GetAppFirebaseTokenCallback callback) override;
 
   // |AuthProvider|
-  void RevokeAppOrPersistentCredential(
-      std::string credential,
-      RevokeAppOrPersistentCredentialCallback callback) override;
+  void RevokeAppOrPersistentCredential(std::string credential,
+                                       RevokeAppOrPersistentCredentialCallback callback) override;
 
   // |AuthProvider|
   void GetPersistentCredentialFromAttestationJWT(
-      fidl::InterfaceHandle<AttestationSigner> attestation_signer,
-      AttestationJWTParams jwt_params,
+      fidl::InterfaceHandle<AttestationSigner> attestation_signer, AttestationJWTParams jwt_params,
       fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
       fidl::StringPtr user_profile_id,
       GetPersistentCredentialFromAttestationJWTCallback callback) override;
 
   // |AuthProvider|
   void GetAppAccessTokenFromAssertionJWT(
-      fidl::InterfaceHandle<AttestationSigner> attestation_signer,
-      AssertionJWTParams jwt_params, std::string credential,
-      std::vector<std::string> scopes,
+      fidl::InterfaceHandle<AttestationSigner> attestation_signer, AssertionJWTParams jwt_params,
+      std::string credential, std::vector<std::string> scopes,
       GetAppAccessTokenFromAssertionJWTCallback callback) override;
 
   // |fuchsia::web::NavigationEventListener|
-  void OnNavigationStateChanged(
-      NavigationState change,
-      OnNavigationStateChangedCallback callback) override;
+  void OnNavigationStateChanged(NavigationState change,
+                                OnNavigationStateChangedCallback callback) override;
 
   // |fuchsia::auth::testing::LegacyAuthCredentialInjector|
   // This is a short-term solution to enable end-to-end testing.  It should not
   // be carried over during any refactoring efforts.
-  void InjectPersistentCredential(
-      fuchsia::auth::UserProfileInfoPtr user_profile_info,
-      std::string credential) override;
+  void InjectPersistentCredential(fuchsia::auth::UserProfileInfoPtr user_profile_info,
+                                  std::string credential) override;
 
   // Returns the URL to be used for the authentication call, respecting any
   // settings that influence the URL.
@@ -123,10 +114,9 @@ class GoogleAuthProviderImpl
   // and returns immediately otherwise.  This enables interactive signin or
   // InjectPersistentCredential to terminate gracefully even after the other
   // has sent a response to the pending callback.
-  void SafelyCallbackGetPersistentCredential(
-      fuchsia::auth::AuthProviderStatus auth_provider_status,
-      fidl::StringPtr credential,
-      fuchsia::auth::UserProfileInfoPtr user_profile_info);
+  void SafelyCallbackGetPersistentCredential(fuchsia::auth::AuthProviderStatus auth_provider_status,
+                                             fidl::StringPtr credential,
+                                             fuchsia::auth::UserProfileInfoPtr user_profile_info);
 
   // Exposes a |fuchsia::auth::testing::LegacyAuthCredentialInjector| handle on
   // the output debug directory.
@@ -140,10 +130,8 @@ class GoogleAuthProviderImpl
   // instance, including the associated view.
   void ReleaseResources();
 
-  void Request(
-      fit::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
-      fit::function<void(::fuchsia::net::oldhttp::URLResponse response)>
-          callback);
+  void Request(fit::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
+               fit::function<void(::fuchsia::net::oldhttp::URLResponse response)> callback);
 
   async_dispatcher_t* const main_dispatcher_;
   sys::ComponentContext* context_;
@@ -155,10 +143,8 @@ class GoogleAuthProviderImpl
   fuchsia::web::FramePtr web_frame_;
   GetPersistentCredentialCallback get_persistent_credential_callback_;
 
-  fidl::BindingSet<fuchsia::web::NavigationEventListener>
-      navigation_event_listener_bindings_;
-  fidl::BindingSet<fuchsia::auth::testing::LegacyAuthCredentialInjector>
-      injector_bindings_;
+  fidl::BindingSet<fuchsia::web::NavigationEventListener> navigation_event_listener_bindings_;
+  fidl::BindingSet<fuchsia::auth::testing::LegacyAuthCredentialInjector> injector_bindings_;
   fidl::Binding<fuchsia::auth::AuthProvider> binding_;
   callback::CancellableContainer requests_;
 

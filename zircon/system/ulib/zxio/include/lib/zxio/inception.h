@@ -27,19 +27,17 @@ __BEGIN_CDECLS
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.
 typedef struct zxio_remote {
-    zxio_t io;
-    zx_handle_t control;
-    zx_handle_t event;
+  zxio_t io;
+  zx_handle_t control;
+  zx_handle_t event;
 } zxio_remote_t;
 
 static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
               "zxio_remote_t must fit inside zxio_storage_t.");
 
-zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control,
-                             zx_handle_t event);
+zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event);
 zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
-zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control,
-                           zx_handle_t event);
+zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event);
 
 // vmo -------------------------------------------------------------------------
 
@@ -52,28 +50,26 @@ zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control,
 // The |offset| is the initial seek offset within the file.
 //
 // Always consumes |vmo|.
-zx_status_t zxio_vmo_init(zxio_storage_t* file, zx_handle_t vmo,
-                          zx_off_t offset);
+zx_status_t zxio_vmo_init(zxio_storage_t* file, zx_handle_t vmo, zx_off_t offset);
 
 // vmofile ---------------------------------------------------------------------
 
 typedef struct zxio_vmofile {
-    zxio_t io;
-    zx_handle_t control;
-    zx_handle_t vmo;
-    zx_off_t off;
-    zx_off_t end;
-    zx_off_t ptr;
-    // TODO: Migrate to sync_mutex_t.
-    mtx_t lock;
+  zxio_t io;
+  zx_handle_t control;
+  zx_handle_t vmo;
+  zx_off_t off;
+  zx_off_t end;
+  zx_off_t ptr;
+  // TODO: Migrate to sync_mutex_t.
+  mtx_t lock;
 } zxio_vmofile_t;
 
 static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),
               "zxio_vmofile_t must fit inside zxio_storage_t.");
 
-zx_status_t zxio_vmofile_init(zxio_storage_t* file, zx_handle_t control,
-                              zx_handle_t vmo, zx_off_t offset, zx_off_t length,
-                              zx_off_t seek);
+zx_status_t zxio_vmofile_init(zxio_storage_t* file, zx_handle_t control, zx_handle_t vmo,
+                              zx_off_t offset, zx_off_t length, zx_off_t seek);
 
 // pipe ------------------------------------------------------------------------
 
@@ -84,8 +80,8 @@ zx_status_t zxio_vmofile_init(zxio_storage_t* file, zx_handle_t control,
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.
 typedef struct zxio_pipe {
-    zxio_t io;
-    zx::socket socket;
+  zxio_t io;
+  zx::socket socket;
 } zxio_pipe_t;
 
 static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
@@ -100,8 +96,8 @@ zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket);
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.
 typedef struct zxio_socket {
-    zxio_t io;
-    zxs_socket_t socket;
+  zxio_t io;
+  zxs_socket_t socket;
 } zxio_socket_t;
 
 static_assert(sizeof(zxio_socket_t) <= sizeof(zxio_storage_t),
@@ -118,4 +114,4 @@ zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx_handle_t handle);
 
 __END_CDECLS
 
-#endif // LIB_ZXIO_INCEPTION_H_
+#endif  // LIB_ZXIO_INCEPTION_H_

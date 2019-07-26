@@ -88,8 +88,7 @@ int main(int argc, char* argv[]) {
 
   debugserver::RspServer server(
       port, attach_pid,
-      debugger_utils::Argv{cl.positional_args().begin() + 1,
-                           cl.positional_args().end()});
+      debugger_utils::Argv{cl.positional_args().begin() + 1, cl.positional_args().end()});
 
   auto inferior = new inferior_control::Process(&server, &server);
 

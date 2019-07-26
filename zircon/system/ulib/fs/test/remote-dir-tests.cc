@@ -11,31 +11,31 @@
 namespace {
 
 bool TestRemoteDir() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    zx::channel server, client;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
+  zx::channel server, client;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
 
-    zx_handle_t client_handle = client.get();
-    auto dir = fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(std::move(client)));
+  zx_handle_t client_handle = client.get();
+  auto dir = fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(std::move(client)));
 
-    // get attributes
-    vnattr_t attr;
-    EXPECT_EQ(ZX_OK, dir->Getattr(&attr));
-    EXPECT_EQ(V_TYPE_DIR | V_IRUSR, attr.mode);
-    EXPECT_EQ(1, attr.nlink);
+  // get attributes
+  vnattr_t attr;
+  EXPECT_EQ(ZX_OK, dir->Getattr(&attr));
+  EXPECT_EQ(V_TYPE_DIR | V_IRUSR, attr.mode);
+  EXPECT_EQ(1, attr.nlink);
 
-    // get remote properties
-    EXPECT_TRUE(dir->IsRemote());
-    EXPECT_EQ(client_handle, dir->GetRemote());
+  // get remote properties
+  EXPECT_TRUE(dir->IsRemote());
+  EXPECT_EQ(client_handle, dir->GetRemote());
 
-    // detaching the remote mount isn't allowed
-    EXPECT_TRUE(!dir->DetachRemote());
+  // detaching the remote mount isn't allowed
+  EXPECT_TRUE(!dir->DetachRemote());
 
-    END_TEST;
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(remote_dir_tests)
 RUN_TEST(TestRemoteDir)

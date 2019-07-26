@@ -62,9 +62,7 @@ zx_status_t fdio_service_connect(const char* path, zx_handle_t request);
 //
 // ZX_ERR_ACCESS_DENIED: |directory| has insufficient rights to connect to
 // services.
-zx_status_t fdio_service_connect_at(zx_handle_t directory, const char* path,
-                                    zx_handle_t request);
-
+zx_status_t fdio_service_connect_at(zx_handle_t directory, const char* path, zx_handle_t request);
 
 // Opens the remote object at the given |path| with the given |flags|
 // asynchronously.
@@ -84,8 +82,8 @@ zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request);
 // Always consumes |request|.
 //
 // See |fdio_service_connect_at| for details.
-zx_status_t fdio_open_at(zx_handle_t directory, const char* path,
-                         uint32_t flags, zx_handle_t request);
+zx_status_t fdio_open_at(zx_handle_t directory, const char* path, uint32_t flags,
+                         zx_handle_t request);
 
 // Clone the given |node| asynchronously.
 //

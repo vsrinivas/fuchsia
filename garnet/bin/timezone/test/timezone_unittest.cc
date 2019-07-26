@@ -21,8 +21,8 @@ constexpr char kTzIdPath[] = "/tmp/timezone-unittest-tz_id_path";
 class TimezoneUnitTest : public gtest::TestLoopFixture {
  protected:
   TimezoneUnitTest()
-      : timezone_(std::make_unique<TimezoneImpl>(
-            context_provider_.TakeContext(), kIcuDataPath, kTzIdPath)) {}
+      : timezone_(std::make_unique<TimezoneImpl>(context_provider_.TakeContext(), kIcuDataPath,
+                                                 kTzIdPath)) {}
   void TearDown() override {
     timezone_.reset();
     remove(kTzIdPath);
@@ -43,8 +43,7 @@ class TimezoneUnitTest : public gtest::TestLoopFixture {
 TEST_F(TimezoneUnitTest, SetTimezone_Unknown) {
   auto timezone_ptr = timezone();
   bool status = true;
-  timezone_ptr->SetTimezone("invalid_timezone",
-                            [&status](bool retval) { status = retval; });
+  timezone_ptr->SetTimezone("invalid_timezone", [&status](bool retval) { status = retval; });
   RunLoopUntilIdle();
   // Should fail
   ASSERT_FALSE(status);
@@ -54,8 +53,7 @@ TEST_F(TimezoneUnitTest, SetTimezone_GetTimezoneId) {
   auto timezone_ptr = timezone();
   bool success = false;
   fidl::StringPtr expected_timezone = "America/Los_Angeles";
-  timezone_ptr->SetTimezone(expected_timezone,
-                            [&success](bool retval) { success = retval; });
+  timezone_ptr->SetTimezone(expected_timezone, [&success](bool retval) { success = retval; });
   RunLoopUntilIdle();
   ASSERT_TRUE(success);
 
@@ -69,8 +67,7 @@ TEST_F(TimezoneUnitTest, SetTimezone_GetTimezoneId) {
 TEST_F(TimezoneUnitTest, SetTimezone_GetTimezoneOffsetMinutes) {
   auto timezone_ptr = timezone();
   bool success = false;
-  timezone_ptr->SetTimezone("America/Los_Angeles",
-                            [&success](bool retval) { success = retval; });
+  timezone_ptr->SetTimezone("America/Los_Angeles", [&success](bool retval) { success = retval; });
   RunLoopUntilIdle();
   ASSERT_TRUE(success);
   // No sense in proceeding if SetTimezone failed because expectations below
@@ -79,29 +76,26 @@ TEST_F(TimezoneUnitTest, SetTimezone_GetTimezoneOffsetMinutes) {
   int32_t local_offset = INT32_MAX;
   int32_t dst_offset = INT32_MAX;
   int64_t milliseconds_since_epoch = 12345;
-  timezone_ptr->GetTimezoneOffsetMinutes(
-      milliseconds_since_epoch,
-      [&local_offset, &dst_offset](int32_t local, int32_t dst) {
-        local_offset = local;
-        dst_offset = dst;
-      });
+  timezone_ptr->GetTimezoneOffsetMinutes(milliseconds_since_epoch,
+                                         [&local_offset, &dst_offset](int32_t local, int32_t dst) {
+                                           local_offset = local;
+                                           dst_offset = dst;
+                                         });
   RunLoopUntilIdle();
   EXPECT_EQ(local_offset, -480);
   EXPECT_EQ(dst_offset, 0);
 
   // Test that we can change the timezone after it's already been set once
   success = false;
-  timezone_ptr->SetTimezone("Israel",
-                            [&success](bool retval) { success = retval; });
+  timezone_ptr->SetTimezone("Israel", [&success](bool retval) { success = retval; });
   RunLoopUntilIdle();
   ASSERT_TRUE(success);
 
-  timezone_ptr->GetTimezoneOffsetMinutes(
-      milliseconds_since_epoch,
-      [&local_offset, &dst_offset](int32_t local, int32_t dst) {
-        local_offset = local;
-        dst_offset = dst;
-      });
+  timezone_ptr->GetTimezoneOffsetMinutes(milliseconds_since_epoch,
+                                         [&local_offset, &dst_offset](int32_t local, int32_t dst) {
+                                           local_offset = local;
+                                           dst_offset = dst;
+                                         });
   RunLoopUntilIdle();
   EXPECT_EQ(local_offset, 120);
   EXPECT_EQ(dst_offset, 0);
@@ -133,8 +127,7 @@ TEST_F(TimezoneUnitTest, SetTimezone_Watcher) {
   ASSERT_NE(expected_timezone, watcher.last_seen_timezone);
 
   bool success = false;
-  timezone_ptr->SetTimezone(expected_timezone,
-                            [&success](bool retval) { success = retval; });
+  timezone_ptr->SetTimezone(expected_timezone, [&success](bool retval) { success = retval; });
   RunLoopUntilIdle();
   ASSERT_TRUE(success);
 

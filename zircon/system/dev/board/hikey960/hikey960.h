@@ -13,27 +13,27 @@
 
 // BTI IDs for our devices
 enum {
-    BTI_BOARD,
-    BTI_USB_DWC3,
-    BTI_DSI,
-    BTI_MALI,
-    BTI_UFS_DWC3,
-    BTI_SYSMEM,
+  BTI_BOARD,
+  BTI_USB_DWC3,
+  BTI_DSI,
+  BTI_MALI,
+  BTI_UFS_DWC3,
+  BTI_SYSMEM,
 };
 
 typedef struct {
-    pbus_protocol_t pbus;
-    zx_device_t* parent;
-    zx_handle_t bti_handle;
+  pbus_protocol_t pbus;
+  zx_device_t* parent;
+  zx_handle_t bti_handle;
 
-    mmio_buffer_t usb3otg_bc;
-    mmio_buffer_t peri_crg;
-    mmio_buffer_t iomcu;
-    mmio_buffer_t pctrl;
-    mmio_buffer_t iomg_pmx4;
-    mmio_buffer_t iocfg_pmx9;
-    mmio_buffer_t pmu_ssio;
-    mmio_buffer_t ufs_sctrl;
+  mmio_buffer_t usb3otg_bc;
+  mmio_buffer_t peri_crg;
+  mmio_buffer_t iomcu;
+  mmio_buffer_t pctrl;
+  mmio_buffer_t iomg_pmx4;
+  mmio_buffer_t iocfg_pmx9;
+  mmio_buffer_t pmu_ssio;
+  mmio_buffer_t ufs_sctrl;
 } hikey960_t;
 
 // hikey960-devices.c

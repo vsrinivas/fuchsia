@@ -34,7 +34,7 @@ char* tu_asprintf(const char* fmt, ...);
 // |what| is typically the name of the function that had the syscall failure,
 // but it can include more descriptive text as desired.
 
-void tu_fatal(const char *what, zx_status_t status) __NO_RETURN;
+void tu_fatal(const char* what, zx_status_t status) __NO_RETURN;
 
 // A wrapper on zx_handle_close.
 
@@ -46,20 +46,16 @@ zx_handle_t tu_handle_duplicate(zx_handle_t handle);
 
 // A wrapper on launchpad_launch.
 
-zx_handle_t tu_launch(zx_handle_t job, const char* name,
-                      int argc, const char* const* argv,
-                      const char* const* envp,
-                      size_t num_handles, zx_handle_t* handles,
+zx_handle_t tu_launch(zx_handle_t job, const char* name, int argc, const char* const* argv,
+                      const char* const* envp, size_t num_handles, zx_handle_t* handles,
                       uint32_t* handle_ids);
 
 // The first part of launchpad_launch_fdio_etc that creates the
 // launchpad and initializes the process.
 
-launchpad_t* tu_launch_fdio_init(zx_handle_t job, const char* name,
-                                 int argc, const char* const* argv,
-                                 const char* const* envp,
-                                 size_t num_handles, zx_handle_t* handles,
-                                 uint32_t* handle_ids);
+launchpad_t* tu_launch_fdio_init(zx_handle_t job, const char* name, int argc,
+                                 const char* const* argv, const char* const* envp,
+                                 size_t num_handles, zx_handle_t* handles, uint32_t* handle_ids);
 
 // The second part of launchpad_launch_fdio_etc that starts the process.
 // Returns a handle of the started process.
@@ -68,21 +64,17 @@ zx_handle_t tu_launch_fdio_fini(launchpad_t* lp);
 
 // A wrapper on C11 thrd_create.
 
-void tu_thread_create_c11(thrd_t* thread, thrd_start_t entry, void* arg,
-                          const char* name);
+void tu_thread_create_c11(thrd_t* thread, thrd_start_t entry, void* arg, const char* name);
 
 // A wrapper on zx_object_wait_many that can be easier to call.
 // |num_objects| is the number of elements in |handles,signals,pending|.
 
-zx_status_t tu_wait(uint32_t num_objects,
-                    const zx_handle_t* handles,
-                    const zx_signals_t* signals,
+zx_status_t tu_wait(uint32_t num_objects, const zx_handle_t* handles, const zx_signals_t* signals,
                     zx_signals_t* pending);
 
 // A wrapper on zx_channel_create.
 
 void tu_channel_create(zx_handle_t* handle0, zx_handle_t* handle1);
-
 
 // A wrapper on zx_channel_write.
 
@@ -150,8 +142,8 @@ zx_handle_t tu_create_exception_channel(zx_handle_t task, uint32_t options);
 // Reads an exception from an exception channel.
 
 typedef struct tu_exception {
-    zx_exception_info_t info;
-    zx_handle_t exception;
+  zx_exception_info_t info;
+  zx_handle_t exception;
 } tu_exception_t;
 
 tu_exception_t tu_read_exception(zx_handle_t channel);
@@ -204,7 +196,7 @@ void tu_task_kill(zx_handle_t task);
 // Any error in trying to run the program is fatal.
 // The result is the return code of the child process.
 
-int tu_run_program(const char *progname, int argc, const char** argv);
+int tu_run_program(const char* progname, int argc, const char** argv);
 
 // A wrapper for /bin/sh -c <command>.
 

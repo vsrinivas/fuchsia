@@ -28,10 +28,10 @@
 // Use |TA_INT64| for signed 64-bit integer values.
 // Use |TA_UINT64| for unsigned 64-bit integer values.
 // Use |TA_DOUBLE| for double-precision floating point values.
-// Use |TA_CHAR_ARRAY| for character arrays with a length (copied rather than cached), required in C++.
-// Use |TA_STRING| for null-terminated dynamic strings (copied rather than cached).
-// Use |TA_POINTER| for pointer values (records the memory address, not the target).
-// Use |TA_KOID| for kernel object ids, required in C++.
+// Use |TA_CHAR_ARRAY| for character arrays with a length (copied rather than cached), required in
+// C++. Use |TA_STRING| for null-terminated dynamic strings (copied rather than cached). Use
+// |TA_POINTER| for pointer values (records the memory address, not the target). Use |TA_KOID| for
+// kernel object ids, required in C++.
 //
 // TODO(PT-66): Re-add |TA_STRING_LITERAL|.
 //
@@ -87,11 +87,9 @@
 #define TA_UINT64(uint64_value) (trace_make_uint64_arg_value(uint64_value))
 #define TA_DOUBLE(double_value) (trace_make_double_arg_value(double_value))
 #define TA_CHAR_ARRAY(string_value, length) \
-    (trace_make_string_arg_value(           \
-        trace_make_inline_string_ref((string_value), (length))))
-#define TA_STRING(string_value)   \
-    (trace_make_string_arg_value( \
-        trace_make_inline_c_string_ref(string_value)))
+  (trace_make_string_arg_value(trace_make_inline_string_ref((string_value), (length))))
+#define TA_STRING(string_value) \
+  (trace_make_string_arg_value(trace_make_inline_c_string_ref(string_value)))
 #define TA_POINTER(pointer_value) (trace_make_pointer_arg_value((uintptr_t)pointer_value))
 #define TA_KOID(koid_value) (trace_make_koid_arg_value(koid_value))
 
@@ -151,17 +149,16 @@
 // disabling tracing by not emitting any code; you may wish to have your macro
 // emit zero code if NTRACE is defined.
 #define TRACE_DECLARE_ARGS(context, variable_name, args...) \
-    TRACE_INTERNAL_DECLARE_ARGS((context), variable_name, args)
+  TRACE_INTERNAL_DECLARE_ARGS((context), variable_name, args)
 
 // Before the argument list created by |TRACE_DECLARE_ARGS()| can be passed to
 // the trace-engine API it must be passed through this. This is done in a
 // separate pass as it can reduce the amount of generated code by calling this
 // in a helper routine instead of at the TRACE_<event>() call site.
 #define TRACE_COMPLETE_ARGS(context, arg_array, num_args) \
-    TRACE_INTERNAL_COMPLETE_ARGS((context), (arg_array), (num_args))
+  TRACE_INTERNAL_COMPLETE_ARGS((context), (arg_array), (num_args))
 
 // Return the number of arguments in |variable_name|.
-#define TRACE_NUM_ARGS(variable_name) \
-    TRACE_INTERNAL_NUM_ARGS(variable_name)
+#define TRACE_NUM_ARGS(variable_name) TRACE_INTERNAL_NUM_ARGS(variable_name)
 
-#endif // ZIRCON_SYSTEM_ULIB_LIB_TRACE_EVENT_ARGS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_EVENT_ARGS_H_

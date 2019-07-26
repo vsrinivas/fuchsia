@@ -25,76 +25,76 @@ result in system instability or even a completely unusable system.
 )""";
 
 struct Config {
-    const char* path;
+  const char* path;
 };
 
 bool GetOptions(int argc, char** argv, Config* config) {
-    while (true) {
-        struct option options[] = {
-            {"help", no_argument, nullptr, 'h'},
-            {nullptr, 0, nullptr, 0},
-        };
-        int opt_index;
-        int c = getopt_long(argc, argv, "h", options, &opt_index);
-        if (c < 0) {
-            break;
-        }
-        switch (c) {
-        case 'h':
-            return false;
-        }
+  while (true) {
+    struct option options[] = {
+        {"help", no_argument, nullptr, 'h'},
+        {nullptr, 0, nullptr, 0},
+    };
+    int opt_index;
+    int c = getopt_long(argc, argv, "h", options, &opt_index);
+    if (c < 0) {
+      break;
     }
-    if (argc == optind + 1) {
-        config->path = argv[optind];
-        return true;
+    switch (c) {
+      case 'h':
+        return false;
     }
-    return false;
+  }
+  if (argc == optind + 1) {
+    config->path = argv[optind];
+    return true;
+  }
+  return false;
 }
 
 bool ValidateOptions(const Config& config) {
-    if (!config.path) {
-        printf("Device path needed\n");
-        printf("%s\n", kUsageMessage);
-        return false;
-    }
-    return true;
+  if (!config.path) {
+    printf("Device path needed\n");
+    printf("%s\n", kUsageMessage);
+    return false;
+  }
+  return true;
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-    Config config = {};
-    if (!GetOptions(argc, argv, &config)) {
-        printf("%s\n", kUsageMessage);
-        return -1;
-    }
+  Config config = {};
+  if (!GetOptions(argc, argv, &config)) {
+    printf("%s\n", kUsageMessage);
+    return -1;
+  }
 
-    if (!ValidateOptions(config)) {
-        return -1;
-    }
+  if (!ValidateOptions(config)) {
+    return -1;
+  }
 
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-        printf("Could not create channel\n");
-        return -1;
-    }
-    status = fdio_service_connect(config.path, remote.release());
-    if (status != ZX_OK) {
-        printf("Unable to open device\n");
-        return -1;
-    }
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    printf("Could not create channel\n");
+    return -1;
+  }
+  status = fdio_service_connect(config.path, remote.release());
+  if (status != ZX_OK) {
+    printf("Unable to open device\n");
+    return -1;
+  }
 
-    zx_status_t call_status;
-    status = fuchsia_device_ControllerScheduleUnbind(local.get(), &call_status);
-    if (status == ZX_OK) {
-        status = call_status;
-    }
-    if (status != ZX_OK) {
-        printf("Failed to unbind device\n");
-        return -1;
-    }
+  zx_status_t call_status;
+  status = fuchsia_device_ControllerScheduleUnbind(local.get(), &call_status);
+  if (status == ZX_OK) {
+    status = call_status;
+  }
+  if (status != ZX_OK) {
+    printf("Failed to unbind device\n");
+    return -1;
+  }
 
-    printf("Command sent. The device may be gone now\n");
-    return 0;
+  printf("Command sent. The device may be gone now\n");
+  return 0;
 }

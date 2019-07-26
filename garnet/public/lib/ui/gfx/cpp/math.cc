@@ -6,8 +6,7 @@
 
 namespace scenic {
 
-bool ContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,
-                   const fuchsia::ui::gfx::vec3& point) {
+bool ContainsPoint(const fuchsia::ui::gfx::BoundingBox& box, const fuchsia::ui::gfx::vec3& point) {
   return point.x >= box.min.x && point.y >= box.min.y && point.z >= box.min.z &&
          point.x <= box.max.x && point.y <= box.max.y && point.z <= box.max.z;
 }
@@ -17,10 +16,9 @@ fuchsia::ui::gfx::BoundingBox InsetBy(const fuchsia::ui::gfx::BoundingBox& box,
   return {.min = box.min + inset, .max = box.max - inset};
 }
 
-fuchsia::ui::gfx::BoundingBox InsetBy(
-    const fuchsia::ui::gfx::BoundingBox& box,
-    const fuchsia::ui::gfx::vec3& inset_from_min,
-    const fuchsia::ui::gfx::vec3& inset_from_max) {
+fuchsia::ui::gfx::BoundingBox InsetBy(const fuchsia::ui::gfx::BoundingBox& box,
+                                      const fuchsia::ui::gfx::vec3& inset_from_min,
+                                      const fuchsia::ui::gfx::vec3& inset_from_max) {
   return {.min = box.min + inset_from_min, .max = box.max - inset_from_max};
 }
 

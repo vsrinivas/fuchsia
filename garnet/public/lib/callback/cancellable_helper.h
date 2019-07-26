@@ -20,8 +20,7 @@ namespace internal {
 template <typename T>
 class WrappedCancellableCallback {
  public:
-  WrappedCancellableCallback(T wrapped_callback, bool* is_done_ptr,
-                             fit::closure post_run)
+  WrappedCancellableCallback(T wrapped_callback, bool* is_done_ptr, fit::closure post_run)
       : wrapped_callback_(std::move(wrapped_callback)),
         post_run_(std::move(post_run)),
         is_done_ptr_(is_done_ptr) {
@@ -30,8 +29,7 @@ class WrappedCancellableCallback {
 
   WrappedCancellableCallback(const WrappedCancellableCallback&) = default;
   WrappedCancellableCallback(WrappedCancellableCallback&&) = default;
-  WrappedCancellableCallback& operator=(const WrappedCancellableCallback&) =
-      default;
+  WrappedCancellableCallback& operator=(const WrappedCancellableCallback&) = default;
   WrappedCancellableCallback& operator=(WrappedCancellableCallback&&) = default;
 
   template <typename... ArgType>
@@ -73,19 +71,19 @@ class CancellableImpl final : public Cancellable {
 
   template <typename T>
   internal::WrappedCancellableCallback<T> WrapCallback(T callback) {
-    return internal::WrappedCancellableCallback<T>(
-        std::move(callback), &is_done_,
-        [ref_ptr = fxl::RefPtr<CancellableImpl>(this)] {
-          FXL_DCHECK(ref_ptr->is_done_);
-          // Never call the done callback after Cancel(). Note that Cancel() can
-          // be called from within the wrapped callback.
-          if (ref_ptr->is_cancelled_) {
-            return;
-          }
-          if (ref_ptr->on_done_) {
-            ref_ptr->on_done_();
-          }
-        });
+    return internal::WrappedCancellableCallback<T>(std::move(callback), &is_done_,
+                                                   [ref_ptr = fxl::RefPtr<CancellableImpl>(this)] {
+                                                     FXL_DCHECK(ref_ptr->is_done_);
+                                                     // Never call the done callback after Cancel().
+                                                     // Note that Cancel() can be called from within
+                                                     // the wrapped callback.
+                                                     if (ref_ptr->is_cancelled_) {
+                                                       return;
+                                                     }
+                                                     if (ref_ptr->on_done_) {
+                                                       ref_ptr->on_done_();
+                                                     }
+                                                   });
   }
 
   // Cancellable

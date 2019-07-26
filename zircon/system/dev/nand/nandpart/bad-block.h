@@ -23,41 +23,41 @@ namespace nand {
 
 // Interface for interacting with device bad blocks.
 class BadBlock : public fbl::RefCounted<BadBlock> {
-public:
-    struct Config {
-        // Bad block configuration for device.
-        bad_block_config_t bad_block_config;
-        // Parent device NAND protocol.
-        nand_protocol_t nand_proto;
-    };
+ public:
+  struct Config {
+    // Bad block configuration for device.
+    bad_block_config_t bad_block_config;
+    // Parent device NAND protocol.
+    nand_protocol_t nand_proto;
+  };
 
-    static zx_status_t Create(Config config, fbl::RefPtr<BadBlock>* out);
+  static zx_status_t Create(Config config, fbl::RefPtr<BadBlock>* out);
 
-    virtual ~BadBlock() = default;
+  virtual ~BadBlock() = default;
 
-    // Returns a list of bad blocks between [first_block, last_block).
-    virtual zx_status_t GetBadBlockList(uint32_t first_block, uint32_t last_block,
-                                        fbl::Array<uint32_t>* bad_blocks) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  // Returns a list of bad blocks between [first_block, last_block).
+  virtual zx_status_t GetBadBlockList(uint32_t first_block, uint32_t last_block,
+                                      fbl::Array<uint32_t>* bad_blocks) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    // Marks a block bad and updates underlying storage.
-    virtual zx_status_t MarkBlockBad(uint32_t block) { return ZX_ERR_NOT_SUPPORTED; }
+  // Marks a block bad and updates underlying storage.
+  virtual zx_status_t MarkBlockBad(uint32_t block) { return ZX_ERR_NOT_SUPPORTED; }
 
-protected:
-    BadBlock(zx::vmo data_vmo, zx::vmo oob_vmo, fbl::Array<uint8_t> nand_op)
-        : data_vmo_(std::move(data_vmo)),
-          oob_vmo_(std::move(oob_vmo)),
-          nand_op_(std::move(nand_op)) {}
+ protected:
+  BadBlock(zx::vmo data_vmo, zx::vmo oob_vmo, fbl::Array<uint8_t> nand_op)
+      : data_vmo_(std::move(data_vmo)),
+        oob_vmo_(std::move(oob_vmo)),
+        nand_op_(std::move(nand_op)) {}
 
-    // Ensures serialized access.
-    fbl::Mutex lock_;
-    // VMO with data buffer. Size is dependent on bad block implementation.
-    zx::vmo data_vmo_ TA_GUARDED(lock_);
-    // VMO with oob buffer. Size is dependent on bad block implementation.
-    zx::vmo oob_vmo_ TA_GUARDED(lock_);
-    // Operation buffer of size parent_op_size.
-    fbl::Array<uint8_t> nand_op_ TA_GUARDED(lock_);
+  // Ensures serialized access.
+  fbl::Mutex lock_;
+  // VMO with data buffer. Size is dependent on bad block implementation.
+  zx::vmo data_vmo_ TA_GUARDED(lock_);
+  // VMO with oob buffer. Size is dependent on bad block implementation.
+  zx::vmo oob_vmo_ TA_GUARDED(lock_);
+  // Operation buffer of size parent_op_size.
+  fbl::Array<uint8_t> nand_op_ TA_GUARDED(lock_);
 };
 
-} // namespace nand
+}  // namespace nand

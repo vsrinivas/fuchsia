@@ -38,8 +38,8 @@ class URL_EXPORT GURL {
   // Constructor for URLs that have already been parsed and canonicalized. This
   // is used for conversions from KURL, for example. The caller must supply all
   // information associated with the URL, which must be correct and consistent.
-  GURL(const char* canonical_spec, size_t canonical_spec_len,
-       const url::Parsed& parsed, bool is_valid);
+  GURL(const char* canonical_spec, size_t canonical_spec_len, const url::Parsed& parsed,
+       bool is_valid);
   // Notice that we take the canonical_spec by value so that we can convert
   // from WebURL without copying the string. When we call this constructor
   // we pass in a temporary std::string, which lets the compiler skip the
@@ -96,9 +96,7 @@ class URL_EXPORT GURL {
   // or may not be valid. If you are using this to index into the spec, BE
   // SURE YOU ARE USING possibly_invalid_spec() to get the spec, and that you
   // don't do anything "important" with invalid specs.
-  const url::Parsed& parsed_for_possibly_invalid_spec() const {
-    return parsed_;
-  }
+  const url::Parsed& parsed_for_possibly_invalid_spec() const { return parsed_; }
 
   // Defiant equality operator!
   bool operator==(const GURL& other) const;
@@ -169,9 +167,7 @@ class URL_EXPORT GURL {
   // TODO(palmer): Audit callers and change them to |SchemeIsCryptographic| or
   // |IsOriginSecure|, as appropriate. Then remove |SchemeIsSecure|.
   // crbug.com/362214
-  bool SchemeIsSecure() const {
-    return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme);
-  }
+  bool SchemeIsSecure() const { return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme); }
 
   // Returns true if the scheme indicates a network connection that uses TLS or
   // some other cryptographic protocol (e.g. QUIC) for security.

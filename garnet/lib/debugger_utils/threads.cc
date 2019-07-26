@@ -14,17 +14,14 @@
 namespace debugger_utils {
 
 uint32_t GetThreadOsState(zx_handle_t thread) {
-    zx_info_thread_t info;
-    zx_status_t status =
-      zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info),
-                         nullptr, nullptr);
-    FXL_CHECK(status == ZX_OK) << status;
-    return info.state;
+  zx_info_thread_t info;
+  zx_status_t status =
+      zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+  FXL_CHECK(status == ZX_OK) << status;
+  return info.state;
 }
 
-uint32_t GetThreadOsState(const zx::thread& thread) {
-  return GetThreadOsState(thread.get());
-}
+uint32_t GetThreadOsState(const zx::thread& thread) { return GetThreadOsState(thread.get()); }
 
 const char* ThreadOsStateName(uint32_t state) {
 #define CASE_TO_STR(x) \
@@ -60,51 +57,42 @@ const std::string ThreadOsStateNameAsString(uint32_t state) {
   return fxl::StringPrintf("UNKNOWN(%u)", state);
 }
 
-zx_status_t WithThreadSuspended(
-    const zx::thread& thread, zx::duration thread_suspend_timeout,
-    const WithThreadSuspendedFunction& function) {
+zx_status_t WithThreadSuspended(const zx::thread& thread, zx::duration thread_suspend_timeout,
+                                const WithThreadSuspendedFunction& function) {
   zx::suspend_token suspend_token;
   auto status = thread.suspend(&suspend_token);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "unable to suspend thread "
-                   << GetKoid(thread)
-                   << ": " << ZxErrorString(status);
+    FXL_LOG(ERROR) << "unable to suspend thread " << GetKoid(thread) << ": "
+                   << ZxErrorString(status);
     return status;
   }
 
   zx_signals_t pending;
   status = thread.wait_one(ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED,
-                           zx::deadline_after(thread_suspend_timeout),
-                           &pending);
+                           zx::deadline_after(thread_suspend_timeout), &pending);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "error waiting for thread "
-                   << GetKoid(thread)
-                   << " to suspend: "
-                   << ZxErrorString(status);
+    FXL_LOG(ERROR) << "error waiting for thread " << GetKoid(thread)
+                   << " to suspend: " << ZxErrorString(status);
     return status;
   }
   if (pending & ZX_THREAD_TERMINATED) {
-    FXL_LOG(WARNING) << "thread "
-                     << GetKoid(thread)
-                     << " terminated";
+    FXL_LOG(WARNING) << "thread " << GetKoid(thread) << " terminated";
     return ZX_ERR_NOT_FOUND;
   }
 
   return function(thread);
 }
 
-zx_status_t WithAllThreadsSuspended(
-    const std::vector<zx::thread>& threads,
-    zx::duration thread_suspend_timeout,
-    const WithThreadSuspendedFunction& function) {
+zx_status_t WithAllThreadsSuspended(const std::vector<zx::thread>& threads,
+                                    zx::duration thread_suspend_timeout,
+                                    const WithThreadSuspendedFunction& function) {
   std::vector<zx::suspend_token> suspend_tokens;
   for (const auto& thread : threads) {
     zx::suspend_token suspend_token;
     auto status = thread.suspend(&suspend_token);
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "unable to suspend thread "
-                       << GetKoid(thread)
-                       << ": " << ZxErrorString(status);
+      FXL_LOG(WARNING) << "unable to suspend thread " << GetKoid(thread) << ": "
+                       << ZxErrorString(status);
       suspend_tokens.emplace_back(zx::suspend_token{});
     } else {
       suspend_tokens.emplace_back(std::move(suspend_token));
@@ -117,19 +105,14 @@ zx_status_t WithAllThreadsSuspended(
     zx_signals_t pending;
     const zx::thread& thread{threads[i]};
     auto status = thread.wait_one(ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED,
-                                  zx::deadline_after(thread_suspend_timeout),
-                                  &pending);
+                                  zx::deadline_after(thread_suspend_timeout), &pending);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "error waiting for thread "
-                     << GetKoid(thread)
-                     << " to suspend: "
-                     << ZxErrorString(status);
+      FXL_LOG(ERROR) << "error waiting for thread " << GetKoid(thread)
+                     << " to suspend: " << ZxErrorString(status);
       return status;
     }
     if (pending & ZX_THREAD_TERMINATED) {
-      FXL_LOG(WARNING) << "thread "
-                       << GetKoid(thread)
-                       << " terminated";
+      FXL_LOG(WARNING) << "thread " << GetKoid(thread) << " terminated";
       suspend_tokens[i].reset();
       continue;
     }

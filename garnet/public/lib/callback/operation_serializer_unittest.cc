@@ -62,14 +62,12 @@ TEST(OperationSerializer, DontContinueAfterDestruction) {
   fit::closure execute_later;
   {
     OperationSerializer operation_serializer;
-    operation_serializer.Serialize<>(std::move(op_1),
-                                     [&execute_later](fit::closure operation) {
-                                       // Store the operation to execute it
-                                       // later.
-                                       execute_later = std::move(operation);
-                                     });
-    operation_serializer.Serialize<>(
-        std::move(op_2), [](fit::closure operation) { operation(); });
+    operation_serializer.Serialize<>(std::move(op_1), [&execute_later](fit::closure operation) {
+      // Store the operation to execute it
+      // later.
+      execute_later = std::move(operation);
+    });
+    operation_serializer.Serialize<>(std::move(op_2), [](fit::closure operation) { operation(); });
 
     // Since the first operation is not yet executed, the second one is also
     // blocked.

@@ -20,42 +20,40 @@ namespace audio {
 namespace astro {
 
 class AstroAudioStreamIn : public SimpleAudioStream {
+ public:
+  AstroAudioStreamIn(zx_device_t* parent);
 
-public:
-    AstroAudioStreamIn(zx_device_t* parent);
+ protected:
+  zx_status_t Init() __TA_REQUIRES(domain_->token()) override;
+  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
+      __TA_REQUIRES(domain_->token()) override;
+  zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
+                        zx::vmo* out_buffer) __TA_REQUIRES(domain_->token()) override;
+  zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_->token()) override;
+  zx_status_t Stop() __TA_REQUIRES(domain_->token()) override;
+  void ShutdownHook() __TA_REQUIRES(domain_->token()) override;
+  zx_status_t InitPost() override;
 
-protected:
-    zx_status_t Init() __TA_REQUIRES(domain_->token()) override;
-    zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
-        __TA_REQUIRES(domain_->token()) override;
-    zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req,
-                          uint32_t* out_num_rb_frames,
-                          zx::vmo* out_buffer) __TA_REQUIRES(domain_->token()) override;
-    zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_->token()) override;
-    zx_status_t Stop() __TA_REQUIRES(domain_->token()) override;
-    void ShutdownHook() __TA_REQUIRES(domain_->token()) override;
-    zx_status_t InitPost() override;
+ private:
+  friend class fbl::RefPtr<AstroAudioStreamIn>;
 
-private:
-    friend class fbl::RefPtr<AstroAudioStreamIn>;
+  zx_status_t AddFormats() __TA_REQUIRES(domain_->token());
+  zx_status_t InitBuffer(size_t size);
+  zx_status_t InitPDev();
+  zx_status_t ProcessRingNotification();
 
-    zx_status_t AddFormats() __TA_REQUIRES(domain_->token());
-    zx_status_t InitBuffer(size_t size);
-    zx_status_t InitPDev();
-    zx_status_t ProcessRingNotification();
+  uint32_t us_per_notification_ = 0;
 
-    uint32_t us_per_notification_ = 0;
+  fbl::RefPtr<dispatcher::Timer> notify_timer_;
 
-    fbl::RefPtr<dispatcher::Timer> notify_timer_;
+  std::optional<ddk::PDev> pdev_;
 
-    std::optional<ddk::PDev> pdev_;
+  zx::vmo ring_buffer_vmo_;
+  fzl::PinnedVmo pinned_ring_buffer_;
 
-    zx::vmo ring_buffer_vmo_;
-    fzl::PinnedVmo pinned_ring_buffer_;
+  fbl::unique_ptr<AmlPdmDevice> pdm_;
 
-    fbl::unique_ptr<AmlPdmDevice> pdm_;
-
-    zx::bti bti_;
+  zx::bti bti_;
 };
-} //namespace astro
-} //namespace audio
+}  // namespace astro
+}  // namespace audio

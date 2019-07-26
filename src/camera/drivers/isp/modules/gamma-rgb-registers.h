@@ -19,21 +19,11 @@ constexpr uint32_t kOffsetDefaultG = 0;
 constexpr uint32_t kOffsetDefaultB = 0;
 
 struct GammaRgbRegisterDefs {
-  static hwreg::RegisterAddr<GammaRgb_Enable> enable() {
-    return GammaRgb_Enable::Get(0x00);
-  }
-  static hwreg::RegisterAddr<GammaRgb_Gain> gain_rg() {
-    return GammaRgb_Gain::Get(0x04);
-  }
-  static hwreg::RegisterAddr<GammaRgb_GainB> gain_b() {
-    return GammaRgb_GainB::Get(0x08);
-  }
-  static hwreg::RegisterAddr<GammaRgb_Offset> offset_rg() {
-    return GammaRgb_Offset::Get(0x0c);
-  }
-  static hwreg::RegisterAddr<GammaRgb_OffsetB> offset_b() {
-    return GammaRgb_OffsetB::Get(0x10);
-  }
+  static hwreg::RegisterAddr<GammaRgb_Enable> enable() { return GammaRgb_Enable::Get(0x00); }
+  static hwreg::RegisterAddr<GammaRgb_Gain> gain_rg() { return GammaRgb_Gain::Get(0x04); }
+  static hwreg::RegisterAddr<GammaRgb_GainB> gain_b() { return GammaRgb_GainB::Get(0x08); }
+  static hwreg::RegisterAddr<GammaRgb_Offset> offset_rg() { return GammaRgb_Offset::Get(0x0c); }
+  static hwreg::RegisterAddr<GammaRgb_OffsetB> offset_b() { return GammaRgb_OffsetB::Get(0x10); }
 };
 
 // Logical data structure to store registers that are used by the GammaRgb

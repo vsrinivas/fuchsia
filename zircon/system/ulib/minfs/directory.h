@@ -19,104 +19,94 @@
 namespace minfs {
 
 struct DirectoryOffset {
-    size_t off = 0;      // Offset in directory of current record
-    size_t off_prev = 0; // Offset in directory of previous record
+  size_t off = 0;       // Offset in directory of current record
+  size_t off_prev = 0;  // Offset in directory of previous record
 };
 
 struct DirArgs {
-    fbl::StringPiece name;
-    ino_t ino;
-    uint32_t type;
-    uint32_t reclen;
-    Transaction* transaction;
-    DirectoryOffset offs;
+  fbl::StringPiece name;
+  ino_t ino;
+  uint32_t type;
+  uint32_t reclen;
+  Transaction* transaction;
+  DirectoryOffset offs;
 };
 
 // A specialization of the Minfs Vnode which implements a directory interface.
-class Directory final : public VnodeMinfs,
-                        public fbl::Recyclable<Directory> {
-public:
-    Directory(Minfs* fs);
-    ~Directory();
+class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
+ public:
+  Directory(Minfs* fs);
+  ~Directory();
 
-    // fbl::Recyclable interface.
-    void fbl_recycle() final {
-        VnodeMinfs::fbl_recycle();
-    }
+  // fbl::Recyclable interface.
+  void fbl_recycle() final { VnodeMinfs::fbl_recycle(); }
 
-private:
-    // minfs::Vnode interface.
-    zx_status_t CanUnlink() const final;
-    blk_t GetBlockCount() const final;
-    uint64_t GetSize() const final;
-    void SetSize(uint32_t new_size) final;
-    void AcquireWritableBlock(Transaction* transaction, blk_t local_bno,
-                              blk_t old_bno, blk_t* out_bno) final;
-    void DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) final;
+ private:
+  // minfs::Vnode interface.
+  zx_status_t CanUnlink() const final;
+  blk_t GetBlockCount() const final;
+  uint64_t GetSize() const final;
+  void SetSize(uint32_t new_size) final;
+  void AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno,
+                            blk_t* out_bno) final;
+  void DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) final;
 
 #ifdef __Fuchsia__
-    void IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
-                        blk_t count) final;
-    bool HasPendingAllocation(blk_t vmo_offset) final;
-    void CancelPendingWriteback() final;
+  void IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
+                      blk_t count) final;
+  bool HasPendingAllocation(blk_t vmo_offset) final;
+  void CancelPendingWriteback() final;
 #endif
 
-    // fs::Vnode interface.
-    bool IsDirectory() const final { return true; }
-    zx_status_t ValidateFlags(uint32_t flags) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
-    zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-    zx_status_t Write(const void* data, size_t len, size_t offset,
+  // fs::Vnode interface.
+  bool IsDirectory() const final { return true; }
+  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
+  zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
+  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
+  zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
+  zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                       size_t* out_actual) final;
-    zx_status_t Append(const void* data, size_t len, size_t* out_end,
-                       size_t* out_actual) final;
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
-                        size_t* out_actual) final;
-    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
-                       uint32_t mode) final;
-    zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
-    zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir,
-                       fbl::StringPiece oldname, fbl::StringPiece newname,
-                       bool src_must_be_dir, bool dst_must_be_dir) final;
-    zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
-    zx_status_t Truncate(size_t len) final;
+  zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
+  zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
+  zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, fbl::StringPiece oldname,
+                     fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) final;
+  zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
+  zx_status_t Truncate(size_t len) final;
 
-    // Other, non-virtual methods:
+  // Other, non-virtual methods:
 
-    // Lookup which can traverse '..'
-    zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
+  // Lookup which can traverse '..'
+  zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
 
-    // Verify that the 'newdir' inode is not a subdirectory of this Vnode.
-    // Traces the path from newdir back to the root inode.
-    zx_status_t CheckNotSubdirectory(fbl::RefPtr<Directory> newdir);
+  // Verify that the 'newdir' inode is not a subdirectory of this Vnode.
+  // Traces the path from newdir back to the root inode.
+  zx_status_t CheckNotSubdirectory(fbl::RefPtr<Directory> newdir);
 
-    using DirentCallback = zx_status_t (*)(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  using DirentCallback = zx_status_t (*)(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
 
-    // Enumerates directories.
-    zx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
+  // Enumerates directories.
+  zx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
 
-    // Directory callback functions.
-    //
-    // The following functions are passable to |ForEachDirent|, which reads the parent directory,
-    // one dirent at a time, and passes each entry to the callback function, along with the DirArgs
-    // information passed to the initial call of |ForEachDirent|.
-    static zx_status_t DirentCallbackFind(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
-    static zx_status_t DirentCallbackUnlink(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
-    static zx_status_t DirentCallbackForceUnlink(fbl::RefPtr<Directory>, Dirent*,
-                                                 DirArgs*);
-    static zx_status_t DirentCallbackAttemptRename(fbl::RefPtr<Directory>, Dirent*,
-                                                   DirArgs*);
-    static zx_status_t DirentCallbackUpdateInode(fbl::RefPtr<Directory>, Dirent*,
-                                                 DirArgs*);
-    static zx_status_t DirentCallbackFindSpace(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  // Directory callback functions.
+  //
+  // The following functions are passable to |ForEachDirent|, which reads the parent directory,
+  // one dirent at a time, and passes each entry to the callback function, along with the DirArgs
+  // information passed to the initial call of |ForEachDirent|.
+  static zx_status_t DirentCallbackFind(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  static zx_status_t DirentCallbackUnlink(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  static zx_status_t DirentCallbackForceUnlink(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  static zx_status_t DirentCallbackAttemptRename(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  static zx_status_t DirentCallbackUpdateInode(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  static zx_status_t DirentCallbackFindSpace(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
 
-    // Appends a new directory at the specified offset within |args|. This requires a prior call to
-    // DirentCallbackFindSpace to find an offset where there is space for the direntry. It takes
-    // the same |args| that were passed into DirentCallbackFindSpace.
-    zx_status_t AppendDirent(DirArgs* args);
+  // Appends a new directory at the specified offset within |args|. This requires a prior call to
+  // DirentCallbackFindSpace to find an offset where there is space for the direntry. It takes
+  // the same |args| that were passed into DirentCallbackFindSpace.
+  zx_status_t AppendDirent(DirArgs* args);
 
-    zx_status_t UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMinfs> child,
-                            Dirent* de, DirectoryOffset* offs);
+  zx_status_t UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMinfs> child, Dirent* de,
+                          DirectoryOffset* offs);
 };
 
-} // namespace minfs
+}  // namespace minfs

@@ -25,8 +25,7 @@ namespace utils {
 template <typename DerivedT>
 class JsonWriter {
  public:
-  JsonWriter(std::ostream& os, int indent_level = 0)
-      : os_(os), indent_level_(indent_level) {}
+  JsonWriter(std::ostream& os, int indent_level = 0) : os_(os), indent_level_(indent_level) {}
 
   ~JsonWriter() = default;
 

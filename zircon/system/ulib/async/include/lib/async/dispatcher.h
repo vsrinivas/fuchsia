@@ -30,11 +30,11 @@ typedef struct async_exception async_exception_t;
 // Clients must initialize the contents of this structure to zero using
 // |ASYNC_STATE_INIT| or with calloc, memset, or a similar means.
 typedef struct {
-    uintptr_t reserved[2];
+  uintptr_t reserved[2];
 } async_state_t;
 
 #define ASYNC_STATE_INIT \
-    { 0u, 0u }
+  { 0u, 0u }
 
 // Asynchronous dispatcher interface.
 //
@@ -70,63 +70,62 @@ typedef struct {
 // the whole interface to ensure broad compatibility.
 typedef uint32_t async_ops_version_t;
 
-#define ASYNC_OPS_V1 ((async_ops_version_t) 1)
-#define ASYNC_OPS_V2 ((async_ops_version_t) 2)
-#define ASYNC_OPS_V3 ((async_ops_version_t) 3)
+#define ASYNC_OPS_V1 ((async_ops_version_t)1)
+#define ASYNC_OPS_V2 ((async_ops_version_t)2)
+#define ASYNC_OPS_V3 ((async_ops_version_t)3)
 
 typedef struct async_ops {
-    // The interface version number, e.g. |ASYNC_OPS_V3|.
-    async_ops_version_t version;
+  // The interface version number, e.g. |ASYNC_OPS_V3|.
+  async_ops_version_t version;
 
-    // Reserved for future expansion, set to zero.
-    uint32_t reserved;
+  // Reserved for future expansion, set to zero.
+  uint32_t reserved;
 
-    // Operations supported by |ASYNC_OPS_V1|.
-    struct v1 {
-        // See |async_now()| for details.
-        zx_time_t (*now)(async_dispatcher_t* dispatcher);
-        // See |async_begin_wait()| for details.
-        zx_status_t (*begin_wait)(async_dispatcher_t* dispatcher, async_wait_t* wait);
-        // See |async_cancel_wait()| for details.
-        zx_status_t (*cancel_wait)(async_dispatcher_t* dispatcher, async_wait_t* wait);
-        // See |async_post_task()| for details.
-        zx_status_t (*post_task)(async_dispatcher_t* dispatcher, async_task_t* task);
-        // See |async_cancel_task()| for details.
-        zx_status_t (*cancel_task)(async_dispatcher_t* dispatcher, async_task_t* task);
-        // See |async_queue_packet()| for details.
-        zx_status_t (*queue_packet)(async_dispatcher_t* dispatcher, async_receiver_t* receiver,
-                                    const zx_packet_user_t* data);
-        // See |async_set_guest_bell_trap()| for details.
-        zx_status_t (*set_guest_bell_trap)(async_dispatcher_t* dispatcher, async_guest_bell_trap_t* trap,
-                                           zx_handle_t guest, zx_vaddr_t addr, size_t length);
-    } v1;
+  // Operations supported by |ASYNC_OPS_V1|.
+  struct v1 {
+    // See |async_now()| for details.
+    zx_time_t (*now)(async_dispatcher_t* dispatcher);
+    // See |async_begin_wait()| for details.
+    zx_status_t (*begin_wait)(async_dispatcher_t* dispatcher, async_wait_t* wait);
+    // See |async_cancel_wait()| for details.
+    zx_status_t (*cancel_wait)(async_dispatcher_t* dispatcher, async_wait_t* wait);
+    // See |async_post_task()| for details.
+    zx_status_t (*post_task)(async_dispatcher_t* dispatcher, async_task_t* task);
+    // See |async_cancel_task()| for details.
+    zx_status_t (*cancel_task)(async_dispatcher_t* dispatcher, async_task_t* task);
+    // See |async_queue_packet()| for details.
+    zx_status_t (*queue_packet)(async_dispatcher_t* dispatcher, async_receiver_t* receiver,
+                                const zx_packet_user_t* data);
+    // See |async_set_guest_bell_trap()| for details.
+    zx_status_t (*set_guest_bell_trap)(async_dispatcher_t* dispatcher,
+                                       async_guest_bell_trap_t* trap, zx_handle_t guest,
+                                       zx_vaddr_t addr, size_t length);
+  } v1;
 
-    // Operations supported by |ASYNC_OPS_V2|, in addition to those in V1.
-    struct v2 {
-        // See |async_bind_exception_port()| for details.
-        zx_status_t (*bind_exception_port)(async_dispatcher_t* dispatcher,
-                                           async_exception_t* exception);
-        // See |async_unbind_exception_port()| for details.
-        zx_status_t (*unbind_exception_port)(async_dispatcher_t* dispatcher,
-                                             async_exception_t* exception);
-        // See |async_resume_from_exception()| for details.
-        zx_status_t (*resume_from_exception)(async_dispatcher_t* dispatcher,
-                                             async_exception_t* exception,
-                                             zx_handle_t task,
-                                             uint32_t options);
-    } v2;
+  // Operations supported by |ASYNC_OPS_V2|, in addition to those in V1.
+  struct v2 {
+    // See |async_bind_exception_port()| for details.
+    zx_status_t (*bind_exception_port)(async_dispatcher_t* dispatcher,
+                                       async_exception_t* exception);
+    // See |async_unbind_exception_port()| for details.
+    zx_status_t (*unbind_exception_port)(async_dispatcher_t* dispatcher,
+                                         async_exception_t* exception);
+    // See |async_resume_from_exception()| for details.
+    zx_status_t (*resume_from_exception)(async_dispatcher_t* dispatcher,
+                                         async_exception_t* exception, zx_handle_t task,
+                                         uint32_t options);
+  } v2;
 
-    // Operations supported by |ASYNC_OPS_V3|, in addition to those in V1 and V2.
-    struct v3 {
-      // See |async_begin_wait_with_options()| for details.
-      zx_status_t (*begin_wait_with_options)(async_dispatcher_t* dispatcher,
-                                             async_wait_t* wait,
-                                             uint32_t options);
-    } v3;
+  // Operations supported by |ASYNC_OPS_V3|, in addition to those in V1 and V2.
+  struct v3 {
+    // See |async_begin_wait_with_options()| for details.
+    zx_status_t (*begin_wait_with_options)(async_dispatcher_t* dispatcher, async_wait_t* wait,
+                                           uint32_t options);
+  } v3;
 } async_ops_t;
 
 struct async_dispatcher {
-    const async_ops_t* ops;
+  const async_ops_t* ops;
 };
 
 __END_CDECLS

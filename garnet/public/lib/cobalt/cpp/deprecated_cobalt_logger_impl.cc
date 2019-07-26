@@ -10,18 +10,16 @@ using fuchsia::cobalt::LoggerFactory;
 using fuchsia::cobalt::ProjectProfile;
 using fuchsia::cobalt::ReleaseStage;
 
-DeprecatedCobaltLoggerImpl::DeprecatedCobaltLoggerImpl(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
-    ProjectProfile profile)
-    : BaseCobaltLoggerImpl(dispatcher, "", ReleaseStage::GA,
-                           std::move(profile)),
+DeprecatedCobaltLoggerImpl::DeprecatedCobaltLoggerImpl(async_dispatcher_t* dispatcher,
+                                                       component::StartupContext* context,
+                                                       ProjectProfile profile)
+    : BaseCobaltLoggerImpl(dispatcher, "", ReleaseStage::GA, std::move(profile)),
       component_context_(context) {
   FXL_CHECK(component_context_);
   ConnectToCobaltApplication();
 }
 
-fidl::InterfacePtr<LoggerFactory>
-DeprecatedCobaltLoggerImpl::ConnectToLoggerFactory() {
+fidl::InterfacePtr<LoggerFactory> DeprecatedCobaltLoggerImpl::ConnectToLoggerFactory() {
   return component_context_->ConnectToEnvironmentService<LoggerFactory>();
 }
 

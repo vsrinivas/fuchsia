@@ -18,18 +18,18 @@ namespace fbl {
 namespace internal {
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_data, data, const char* (C::*)() const);
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_length, length, size_t (C::*)() const);
-} // namespace internal
+}  // namespace internal
 
 // Gets the character data from a string-like object.
 template <typename T>
 constexpr const char* GetStringData(const T& value) {
-    return value.data();
+  return value.data();
 }
 
 // Gets the length (in characters) of a string-like object.
 template <typename T>
 constexpr size_t GetStringLength(const T& value) {
-    return value.length();
+  return value.length();
 }
 
 // is_string_like_v<T>
@@ -37,13 +37,12 @@ constexpr size_t GetStringLength(const T& value) {
 // Evaluates to true if GetStringData() and GetStringLength() are supported
 // instances of type T.
 template <typename T>
-using is_string_like = std::integral_constant<bool,
-                                              internal::has_data_v<T> &&
-                                              internal::has_length_v<T>>;
+using is_string_like =
+    std::integral_constant<bool, internal::has_data_v<T> && internal::has_length_v<T>>;
 
 template <typename T>
 inline constexpr bool is_string_like_v = is_string_like<T>::value;
 
-} // namespace fbl
+}  // namespace fbl
 
 #endif  // FBL_STRING_TRAITS_H_

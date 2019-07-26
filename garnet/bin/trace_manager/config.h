@@ -28,14 +28,10 @@ class Config {
 
   // All categories known to the |TraceManager|, with every
   // category being described by a short string.
-  const std::map<std::string, std::string>& known_categories() const {
-    return known_categories_;
-  }
+  const std::map<std::string, std::string>& known_categories() const { return known_categories_; }
 
   // Well-known providers to start automatically.
-  const std::map<std::string, fuchsia::sys::LaunchInfoPtr>& providers() const {
-    return providers_;
-  }
+  const std::map<std::string, fuchsia::sys::LaunchInfoPtr>& providers() const { return providers_; }
 
  private:
   std::map<std::string, std::string> known_categories_;

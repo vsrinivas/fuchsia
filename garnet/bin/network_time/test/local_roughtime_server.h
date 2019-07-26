@@ -46,8 +46,7 @@ class LocalRoughtimeServer {
   //   hour: 0-23
   //   min: 0-59
   //   sec: 0-59
-  void SetTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour,
-               uint8_t min, uint8_t sec);
+  void SetTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t min, uint8_t sec);
 
   // Gets the server port number, which can differ from the port requested in
   // |MakeInstance| if that port was already taken.
@@ -55,10 +54,9 @@ class LocalRoughtimeServer {
 
  private:
   // Private because it should only be accessed through a factory method.
-  explicit LocalRoughtimeServer(
-      SettableTimeSource* time_source,
-      std::unique_ptr<roughtime::SimpleServer> simple_server,
-      uint16_t port_number);
+  explicit LocalRoughtimeServer(SettableTimeSource* time_source,
+                                std::unique_ptr<roughtime::SimpleServer> simple_server,
+                                uint16_t port_number);
 
   // Not owned.
   SettableTimeSource* const time_source_;

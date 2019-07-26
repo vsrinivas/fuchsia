@@ -30,8 +30,7 @@ class FuchsiaHTTPClient : public ::clearcut::HTTPClient {
   // Note: Do not invoke this method from |dispatcher_|'s thread.
   // Note: Do not wait on the returned future from |dispatcher_|'s thread.
   std::future<statusor::StatusOr<clearcut::HTTPResponse>> Post(
-      clearcut::HTTPRequest request,
-      std::chrono::steady_clock::time_point deadline);
+      clearcut::HTTPRequest request, std::chrono::steady_clock::time_point deadline);
 
  protected:
   // These are internal only functions that are intended to make
@@ -56,26 +55,22 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
  public:
   NetworkRequest(clearcut::HTTPRequest req) : request_(std::move(req)) {}
 
-  void ReadResponse(async_dispatcher_t* dispatcher,
-                    fxl::RefPtr<NetworkRequest> self, uint32_t http_code,
-                    zx::socket source);
+  void ReadResponse(async_dispatcher_t* dispatcher, fxl::RefPtr<NetworkRequest> self,
+                    uint32_t http_code, zx::socket source);
   void OnDataAvailable(const void* data, size_t num_bytes);
   void OnDataComplete();
 
   void CancelCallbacks();
 
-  std::future<statusor::StatusOr<clearcut::HTTPResponse>>
-  get_future() {
+  std::future<statusor::StatusOr<clearcut::HTTPResponse>> get_future() {
     return promise_.get_future();
   }
 
-  void SetValueAndCleanUp(
-      statusor::StatusOr<clearcut::HTTPResponse> value);
+  void SetValueAndCleanUp(statusor::StatusOr<clearcut::HTTPResponse> value);
 
   const clearcut::HTTPRequest& request() { return request_; }
 
-  void SetNetworkWrapperCancel(
-      fxl::RefPtr<callback::Cancellable> network_wrapper_cancel) {
+  void SetNetworkWrapperCancel(fxl::RefPtr<callback::Cancellable> network_wrapper_cancel) {
     network_wrapper_cancel_ = network_wrapper_cancel;
   }
 

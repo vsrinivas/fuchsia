@@ -7,22 +7,20 @@
 
 #include <unittest/unittest.h>
 
-static zx_status_t my_close(zxio_t* io) {
-    return ZX_OK;
-}
+static zx_status_t my_close(zxio_t* io) { return ZX_OK; }
 
 bool ctx_test(void) {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    zxio_ops_t ops;
-    memset(&ops, 0, sizeof(ops));
-    ops.close = my_close;
+  zxio_ops_t ops;
+  memset(&ops, 0, sizeof(ops));
+  ops.close = my_close;
 
-    zxio_t io = {};
-    zxio_init(&io, &ops);
-    ASSERT_EQ(ZX_OK, zxio_close(&io));
+  zxio_t io = {};
+  zxio_init(&io, &ops);
+  ASSERT_EQ(ZX_OK, zxio_close(&io));
 
-    END_TEST;
+  END_TEST;
 }
 
 BEGIN_TEST_CASE(zxio_test)

@@ -18,8 +18,7 @@ class ProgramMetadata {
  public:
   // Takes in a parsed value assumed to be corresponding to the "program"
   // attribute. Returns false if parsing failed.
-  bool Parse(const rapidjson::Value& program_value,
-             json::JSONParser* json_parser);
+  bool Parse(const rapidjson::Value& program_value, json::JSONParser* json_parser);
 
   bool IsBinaryNull() const { return binary_null_; }
   bool IsArgsNull() const { return args_null_; }
@@ -52,10 +51,8 @@ class ProgramMetadata {
   std::vector<std::string> env_vars_;
   std::string data_;
 
-  bool ParseBinary(const rapidjson::Value& program_value,
-                   json::JSONParser* json_parser);
-  bool ParseData(const rapidjson::Value& program_value,
-                 json::JSONParser* json_parser);
+  bool ParseBinary(const rapidjson::Value& program_value, json::JSONParser* json_parser);
+  bool ParseData(const rapidjson::Value& program_value, json::JSONParser* json_parser);
 };
 
 }  // namespace component

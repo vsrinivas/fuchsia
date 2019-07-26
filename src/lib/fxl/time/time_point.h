@@ -27,13 +27,9 @@ class TimePoint {
 
   static TimePoint Now();
 
-  static constexpr TimePoint Min() {
-    return TimePoint(std::numeric_limits<int64_t>::min());
-  }
+  static constexpr TimePoint Min() { return TimePoint(std::numeric_limits<int64_t>::min()); }
 
-  static constexpr TimePoint Max() {
-    return TimePoint(std::numeric_limits<int64_t>::max());
-  }
+  static constexpr TimePoint Max() { return TimePoint(std::numeric_limits<int64_t>::max()); }
 
   static constexpr TimePoint FromEpochDelta(TimeDelta ticks) {
     return TimePoint(ticks.ToNanoseconds());

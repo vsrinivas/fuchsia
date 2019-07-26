@@ -14,16 +14,14 @@ namespace component {
 
 void ConnectToService(const zx::channel& directory, zx::channel request,
                       const std::string& service_path) {
-  fdio_service_connect_at(directory.get(), service_path.c_str(),
-                          request.release());
+  fdio_service_connect_at(directory.get(), service_path.c_str(), request.release());
 }
 
 Services::Services() = default;
 
 Services::~Services() = default;
 
-Services::Services(Services&& other)
-    : directory_(std::move(other.directory_)) {}
+Services::Services(Services&& other) : directory_(std::move(other.directory_)) {}
 
 Services& Services::operator=(Services&& other) {
   directory_ = std::move(other.directory_);
@@ -36,8 +34,6 @@ zx::channel Services::NewRequest() {
   return request;
 }
 
-void Services::Bind(zx::channel directory) {
-  directory_ = std::move(directory);
-}
+void Services::Bind(zx::channel directory) { directory_ = std::move(directory); }
 
 }  // namespace component

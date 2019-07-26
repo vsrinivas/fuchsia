@@ -35,123 +35,123 @@ namespace fvm {
 namespace internal {
 // Helper struct for providing information about the buffer state.
 struct BufferInfo {
-    // Offset into buffer where valid data begins
-    size_t offset;
+  // Offset into buffer where valid data begins
+  size_t offset;
 
-    // Actual size of data contained within buffer
-    size_t size;
+  // Actual size of data contained within buffer
+  size_t size;
 };
 
 // Internal class for representing read and write buffers for the sparse image.
 class Buffer {
-public:
-    Buffer();
-    Buffer(uint64_t offset, size_t size, uint64_t capacity);
-    Buffer(const Buffer&) = delete;
-    Buffer(Buffer&&);
-    Buffer& operator=(const Buffer&) = delete;
-    Buffer& operator=(Buffer&&);
-    ~Buffer();
+ public:
+  Buffer();
+  Buffer(uint64_t offset, size_t size, uint64_t capacity);
+  Buffer(const Buffer&) = delete;
+  Buffer(Buffer&&);
+  Buffer& operator=(const Buffer&) = delete;
+  Buffer& operator=(Buffer&&);
+  ~Buffer();
 
-    // Write |length| bytes from |indata| into buffer.
-    bool IsEmpty() const;
+  // Write |length| bytes from |indata| into buffer.
+  bool IsEmpty() const;
 
-    // Writes |length| number of bytes from |data| into the buffer.
-    void Write(uint8_t* data, size_t length);
+  // Writes |length| number of bytes from |data| into the buffer.
+  void Write(uint8_t* data, size_t length);
 
-    // Read up to |length| bytes from the buffer into |target|, setting |actual| to the total
-    // amount of bytes copied.
-    void Read(uint8_t* target, size_t length, size_t* actual);
+  // Read up to |length| bytes from the buffer into |target|, setting |actual| to the total
+  // amount of bytes copied.
+  void Read(uint8_t* target, size_t length, size_t* actual);
 
-    size_t size() const { return info_.size; }
+  size_t size() const { return info_.size; }
 
-    size_t capacity() const { return capacity_; }
+  size_t capacity() const { return capacity_; }
 
-    size_t offset() const { return info_.offset; }
+  size_t offset() const { return info_.offset; }
 
-    BufferInfo* info() { return &info_; }
+  BufferInfo* info() { return &info_; }
 
-    uint8_t* get() { return data_.get(); }
+  uint8_t* get() { return data_.get(); }
 
-private:
-    // Data buffer
-    std::unique_ptr<uint8_t[]> data_;
+ private:
+  // Data buffer
+  std::unique_ptr<uint8_t[]> data_;
 
-    // Maximum size allocated for buffer
-    size_t capacity_;
+  // Maximum size allocated for buffer
+  size_t capacity_;
 
-    BufferInfo info_;
+  BufferInfo info_;
 };
 
-} // namespace internal
+}  // namespace internal
 
 class ReaderInterface {
  public:
-    virtual zx_status_t Read(void* buf, size_t buf_size, size_t* size_actual) = 0;
-    virtual ~ReaderInterface() = default;
+  virtual zx_status_t Read(void* buf, size_t buf_size, size_t* size_actual) = 0;
+  virtual ~ReaderInterface() = default;
 };
 
 class SparseReader {
-public:
-    static zx_status_t Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out);
-    static zx_status_t CreateSilent(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out);
+ public:
+  static zx_status_t Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out);
+  static zx_status_t CreateSilent(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out);
 
-    static zx_status_t Create(std::unique_ptr<ReaderInterface> reader,
-                              fbl::unique_ptr<SparseReader>* out);
+  static zx_status_t Create(std::unique_ptr<ReaderInterface> reader,
+                            fbl::unique_ptr<SparseReader>* out);
 
-    ~SparseReader();
+  ~SparseReader();
 
-    fvm::sparse_image_t* Image();
-    fvm::partition_descriptor_t* Partitions();
+  fvm::sparse_image_t* Image();
+  fvm::partition_descriptor_t* Partitions();
 
-    // Read requested data from sparse file into buffer
-    zx_status_t ReadData(uint8_t* data, size_t length, size_t* actual);
-    // Write decompressed data into new file
-    zx_status_t WriteDecompressed(fbl::unique_fd outfd);
+  // Read requested data from sparse file into buffer
+  zx_status_t ReadData(uint8_t* data, size_t length, size_t* actual);
+  // Write decompressed data into new file
+  zx_status_t WriteDecompressed(fbl::unique_fd outfd);
 
-private:
-    static zx_status_t CreateHelper(fbl::unique_ptr<ReaderInterface> reader, bool verbose,
-                                    fbl::unique_ptr<SparseReader>* out);
+ private:
+  static zx_status_t CreateHelper(fbl::unique_ptr<ReaderInterface> reader, bool verbose,
+                                  fbl::unique_ptr<SparseReader>* out);
 
-    SparseReader(fbl::unique_ptr<ReaderInterface> reader, bool verbose);
+  SparseReader(fbl::unique_ptr<ReaderInterface> reader, bool verbose);
 
-    // Read in header data, prepare buffers and decompression context if necessary
-    zx_status_t ReadMetadata();
+  // Read in header data, prepare buffers and decompression context if necessary
+  zx_status_t ReadMetadata();
 
-    // Initialize buffer with a given |size|
-    static zx_status_t InitializeBuffer(size_t size, internal::Buffer* out_buf);
+  // Initialize buffer with a given |size|
+  static zx_status_t InitializeBuffer(size_t size, internal::Buffer* out_buf);
 
-    // Read |length| bytes of raw data from file directly into |data|. Return |actual| bytes read.
-    zx_status_t ReadRaw(uint8_t* data, size_t length, size_t* actual);
+  // Read |length| bytes of raw data from file directly into |data|. Return |actual| bytes read.
+  zx_status_t ReadRaw(uint8_t* data, size_t length, size_t* actual);
 
-    void PrintStats() const;
+  void PrintStats() const;
 
-    // True if sparse file is compressed
-    bool compressed_;
+  // True if sparse file is compressed
+  bool compressed_;
 
-    // If true, all logs are printed.
-    bool verbose_;
+  // If true, all logs are printed.
+  bool verbose_;
 
-    fbl::unique_ptr<ReaderInterface> reader_;
-    fbl::unique_ptr<uint8_t[]> metadata_;
-    LZ4F_decompressionContext_t dctx_;
+  fbl::unique_ptr<ReaderInterface> reader_;
+  fbl::unique_ptr<uint8_t[]> metadata_;
+  LZ4F_decompressionContext_t dctx_;
 
-    // A hint of the size of the next compressed frame to be decompressed.
-    // May be an overestimate, but will not be an underestimate (0 indicates no more data left to
-    // decompress).
-    size_t to_read_;
+  // A hint of the size of the next compressed frame to be decompressed.
+  // May be an overestimate, but will not be an underestimate (0 indicates no more data left to
+  // decompress).
+  size_t to_read_;
 
-    // Buffer for compressed data read directly from file
-    internal::Buffer in_;
-    // Buffer for decompressed data
-    internal::Buffer out_;
+  // Buffer for compressed data read directly from file
+  internal::Buffer in_;
+  // Buffer for decompressed data
+  internal::Buffer out_;
 
 #ifdef __Fuchsia__
-    // Total time spent reading/decompressing data
-    zx_ticks_t total_time_ = 0;
-    // Total time spent reading data from fd
-    zx_ticks_t read_time_ = 0;
+  // Total time spent reading/decompressing data
+  zx_ticks_t total_time_ = 0;
+  // Total time spent reading data from fd
+  zx_ticks_t read_time_ = 0;
 #endif
 };
 
-} // namespace fvm
+}  // namespace fvm

@@ -39,18 +39,15 @@ class ComponentRequestWrapper {
   explicit ComponentRequestWrapper(
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
       TerminationCallback callback, int64_t default_return = -1,
-      fuchsia::sys::TerminationReason default_reason =
-          fuchsia::sys::TerminationReason::UNKNOWN);
+      fuchsia::sys::TerminationReason default_reason = fuchsia::sys::TerminationReason::UNKNOWN);
   ~ComponentRequestWrapper();
   ComponentRequestWrapper(ComponentRequestWrapper&& other);
   void operator=(ComponentRequestWrapper&& other);
 
-  void SetReturnValues(int64_t return_code,
-                       fuchsia::sys::TerminationReason reason);
+  void SetReturnValues(int64_t return_code, fuchsia::sys::TerminationReason reason);
 
-  bool Extract(
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController>* out_request,
-      TerminationCallback* out_callback) {
+  bool Extract(fidl::InterfaceRequest<fuchsia::sys::ComponentController>* out_request,
+               TerminationCallback* out_callback) {
     if (!active_) {
       return false;
     }
@@ -80,10 +77,9 @@ TerminationCallback MakeForwardingTerminationCallback();
 // event.
 class FailedComponentController : public fuchsia::sys::ComponentController {
  public:
-  FailedComponentController(
-      int64_t return_code, fuchsia::sys::TerminationReason termination_reason,
-      TerminationCallback termination_callback,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
+  FailedComponentController(int64_t return_code, fuchsia::sys::TerminationReason termination_reason,
+                            TerminationCallback termination_callback,
+                            fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
   virtual ~FailedComponentController();
   void Kill() override;
   void Detach() override;
@@ -97,11 +93,10 @@ class FailedComponentController : public fuchsia::sys::ComponentController {
 
 class ComponentControllerBase : public fuchsia::sys::ComponentController {
  public:
-  ComponentControllerBase(
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
-      std::string url, std::string args, std::string label,
-      std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-      zx::channel exported_dir, zx::channel client_request);
+  ComponentControllerBase(fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
+                          std::string url, std::string args, std::string label,
+                          std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
+                          zx::channel exported_dir, zx::channel client_request);
   virtual ~ComponentControllerBase() override;
 
  public:
@@ -140,12 +135,11 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
 class ComponentControllerImpl : public ComponentControllerBase {
  public:
-  ComponentControllerImpl(
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
-      ComponentContainer<ComponentControllerImpl>* container, zx::job job,
-      zx::process process, std::string url, std::string args, std::string label,
-      fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
-      zx::channel client_request, TerminationCallback termination_callback);
+  ComponentControllerImpl(fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
+                          ComponentContainer<ComponentControllerImpl>* container, zx::job job,
+                          zx::process process, std::string url, std::string args, std::string label,
+                          fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
+                          zx::channel client_request, TerminationCallback termination_callback);
   ~ComponentControllerImpl() override;
 
   const std::string& koid() const { return koid_; }
@@ -157,8 +151,8 @@ class ComponentControllerImpl : public ComponentControllerBase {
   void Kill() override;
 
  private:
-  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-               zx_status_t status, const zx_packet_signal* signal);
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+               const zx_packet_signal* signal);
 
   bool SendReturnCodeIfTerminated();
 
@@ -167,15 +161,13 @@ class ComponentControllerImpl : public ComponentControllerBase {
   zx::process process_;
   const std::string koid_;
 
-  async::WaitMethod<ComponentControllerImpl, &ComponentControllerImpl::Handler>
-      wait_;
+  async::WaitMethod<ComponentControllerImpl, &ComponentControllerImpl::Handler> wait_;
 
   TerminationCallback termination_callback_;
 
   SystemObjectsDirectory system_objects_directory_;
 
-  fidl::BindingSet<fuchsia::inspect::Inspect,
-                   std::shared_ptr<component::Object>>
+  fidl::BindingSet<fuchsia::inspect::Inspect, std::shared_ptr<component::Object>>
       system_directory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);
@@ -185,13 +177,12 @@ class ComponentControllerImpl : public ComponentControllerBase {
 // and |request|.
 class ComponentBridge : public ComponentControllerBase {
  public:
-  ComponentBridge(
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
-      fuchsia::sys::ComponentControllerPtr remote_controller,
-      ComponentContainer<ComponentBridge>* container, std::string url,
-      std::string args, std::string label, std::string hub_instance_id,
-      fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
-      zx::channel client_request, TerminationCallback termination_callback);
+  ComponentBridge(fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
+                  fuchsia::sys::ComponentControllerPtr remote_controller,
+                  ComponentContainer<ComponentBridge>* container, std::string url, std::string args,
+                  std::string label, std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
+                  zx::channel exported_dir, zx::channel client_request,
+                  TerminationCallback termination_callback);
 
   ~ComponentBridge() override;
 
@@ -205,9 +196,7 @@ class ComponentBridge : public ComponentControllerBase {
   // |fuchsia::sys::ComponentController| implementation:
   void Kill() override;
 
-  void OnTerminated(OnTerminatedCallback callback) {
-    on_terminated_event_ = std::move(callback);
-  }
+  void OnTerminated(OnTerminatedCallback callback) { on_terminated_event_ = std::move(callback); }
 
  private:
   fuchsia::sys::ComponentControllerPtr remote_controller_;

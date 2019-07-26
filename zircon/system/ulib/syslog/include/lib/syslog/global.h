@@ -20,8 +20,8 @@ fx_logger_t* fx_log_get_logger(void);
 // Returns true if writing messages with the given severity is enabled in the
 // global logger.
 static inline bool fx_log_is_enabled(fx_log_severity_t severity) {
-    fx_logger_t* logger = fx_log_get_logger();
-    return logger && severity >= fx_logger_get_min_severity(logger);
+  fx_logger_t* logger = fx_log_get_logger();
+  return logger && severity >= fx_logger_get_min_severity(logger);
 }
 
 // Initializes the logging infrastructure with the specified configuration.
@@ -48,13 +48,13 @@ zx_status_t fx_log_init(void);
 // global logger. |verbosity| is positive number.
 #define FX_VLOG_IS_ENABLED(verbosity) (fx_log_is_enabled(-(verbosity)))
 
-#define _FX_LOG_SET_SEVERITY(severity)                      \
-    do {                                                    \
-        fx_logger_t* logger = fx_log_get_logger();          \
-        if (logger) {                                       \
-            fx_logger_set_min_severity(logger, (severity)); \
-        }                                                   \
-    } while (0)
+#define _FX_LOG_SET_SEVERITY(severity)                \
+  do {                                                \
+    fx_logger_t* logger = fx_log_get_logger();        \
+    if (logger) {                                     \
+      fx_logger_set_min_severity(logger, (severity)); \
+    }                                                 \
+  } while (0)
 
 // Sets severity for global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, or FATAL.
@@ -64,30 +64,29 @@ zx_status_t fx_log_init(void);
 // |verbosity| is positive number. Logger severity is set to -verbosity
 #define FX_LOG_SET_VERBOSITY(verbosity) _FX_LOG_SET_SEVERITY(-(verbosity))
 
-#define _FX_LOG(severity, tag, message)                                   \
-    do {                                                                  \
-        fx_logger_t* logger = fx_log_get_logger();                        \
-        if (logger && fx_logger_get_min_severity(logger) <= (severity)) { \
-            fx_logger_log(logger, (severity), (tag), (message));          \
-        }                                                                 \
-    } while (0)
+#define _FX_LOG(severity, tag, message)                               \
+  do {                                                                \
+    fx_logger_t* logger = fx_log_get_logger();                        \
+    if (logger && fx_logger_get_min_severity(logger) <= (severity)) { \
+      fx_logger_log(logger, (severity), (tag), (message));            \
+    }                                                                 \
+  } while (0)
 
-#define _FX_LOGF(severity, tag, message, ...)                             \
-    do {                                                                  \
-        fx_logger_t* logger = fx_log_get_logger();                        \
-        if (logger && fx_logger_get_min_severity(logger) <= (severity)) { \
-            fx_logger_logf(logger, (severity), (tag), (message),          \
-                           __VA_ARGS__);                                  \
-        }                                                                 \
-    } while (0)
+#define _FX_LOGF(severity, tag, message, ...)                            \
+  do {                                                                   \
+    fx_logger_t* logger = fx_log_get_logger();                           \
+    if (logger && fx_logger_get_min_severity(logger) <= (severity)) {    \
+      fx_logger_logf(logger, (severity), (tag), (message), __VA_ARGS__); \
+    }                                                                    \
+  } while (0)
 
-#define _FX_LOGVF(severity, tag, message, args)                            \
-    do {                                                                   \
-        fx_logger_t* logger = fx_log_get_logger();                         \
-        if (logger && fx_logger_get_min_severity(logger) <= (severity)) {  \
-            fx_logger_logvf(logger, (severity), (tag), (message), (args)); \
-        }                                                                  \
-    } while (0)
+#define _FX_LOGVF(severity, tag, message, args)                       \
+  do {                                                                \
+    fx_logger_t* logger = fx_log_get_logger();                        \
+    if (logger && fx_logger_get_min_severity(logger) <= (severity)) { \
+      fx_logger_logvf(logger, (severity), (tag), (message), (args));  \
+    }                                                                 \
+  } while (0)
 
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
@@ -99,7 +98,8 @@ zx_status_t fx_log_init(void);
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
 // |message| is the message to write, or NULL if none.
-#define FX_LOGF(severity, tag, message, ...) _FX_LOGF((FX_LOG_##severity), tag, message, __VA_ARGS__)
+#define FX_LOGF(severity, tag, message, ...) \
+  _FX_LOGF((FX_LOG_##severity), tag, message, __VA_ARGS__)
 
 // Writes formatted message to the global logger using vaargs
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
@@ -129,4 +129,4 @@ zx_status_t fx_log_init(void);
 
 __END_CDECLS
 
-#endif // LIB_SYSLOG_GLOBAL_H_
+#endif  // LIB_SYSLOG_GLOBAL_H_

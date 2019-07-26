@@ -26,20 +26,17 @@ inline fidl::InterfacePtr<Interface> ConnectToService(
     fuchsia::sys::ServiceProvider* service_provider,
     const std::string& interface_name = Interface::Name_) {
   fidl::InterfacePtr<Interface> interface_ptr;
-  service_provider->ConnectToService(interface_name,
-                                     interface_ptr.NewRequest().TakeChannel());
+  service_provider->ConnectToService(interface_name, interface_ptr.NewRequest().TakeChannel());
   return interface_ptr;
 }
 
 // Helper for using a |ServiceProvider|'s |ConnectToService()| that takes a
 // fully-typed interface request (and can use the default interface name).
 template <typename Interface>
-inline void ConnectToService(
-    fuchsia::sys::ServiceProvider* service_provider,
-    fidl::InterfaceRequest<Interface> interface_request,
-    const std::string& interface_name = Interface::Name_) {
-  service_provider->ConnectToService(interface_name,
-                                     interface_request.TakeChannel());
+inline void ConnectToService(fuchsia::sys::ServiceProvider* service_provider,
+                             fidl::InterfaceRequest<Interface> interface_request,
+                             const std::string& interface_name = Interface::Name_) {
+  service_provider->ConnectToService(interface_name, interface_request.TakeChannel());
 }
 
 }  // namespace component

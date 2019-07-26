@@ -15,9 +15,9 @@ enum {
   kFirstNewResourceId = 6,
 };
 
-std::unique_ptr<ImagePipeView> ImagePipeView::Create(
-    sys::ComponentContext* context, fuchsia::ui::views::ViewToken view_token,
-    ResizeCallback resize_callback) {
+std::unique_ptr<ImagePipeView> ImagePipeView::Create(sys::ComponentContext* context,
+                                                     fuchsia::ui::views::ViewToken view_token,
+                                                     ResizeCallback resize_callback) {
   auto view = std::make_unique<ImagePipeView>(std::move(resize_callback));
   if (!view)
     return nullptr;
@@ -37,59 +37,48 @@ static void PushCommand(std::vector<fuchsia::ui::scenic::Command>* cmds,
   cmds->push_back(scenic::NewCommand(std::move(cmd)));
 }
 
-bool ImagePipeView::Init(sys::ComponentContext* context,
-                         fuchsia::ui::views::ViewToken view_token) {
-  fuchsia::ui::scenic::ScenicPtr scenic =
-      context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+bool ImagePipeView::Init(sys::ComponentContext* context, fuchsia::ui::views::ViewToken view_token) {
+  fuchsia::ui::scenic::ScenicPtr scenic = context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
 
-  scenic->CreateSession(session_.NewRequest(),
-                        session_listener_binding_.NewBinding());
+  scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
 
   zx::channel remote_endpoint;
-  zx_status_t status =
-      zx::channel::create(0, &image_pipe_endpoint_, &remote_endpoint);
+  zx_status_t status = zx::channel::create(0, &image_pipe_endpoint_, &remote_endpoint);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "ImagePipeView", "Init: failed to create channel (%d)",
-            status);
+    FX_LOGF(ERROR, "ImagePipeView", "Init: failed to create channel (%d)", status);
     return false;
   }
 
   std::vector<fuchsia::ui::scenic::Command> cmds;
 
-  PushCommand(&cmds, scenic::NewCreateViewCmd(kViewId, std::move(view_token),
-                                              "imagepipe_view"));
+  PushCommand(&cmds, scenic::NewCreateViewCmd(kViewId, std::move(view_token), "imagepipe_view"));
   PushCommand(&cmds, scenic::NewCreateEntityNodeCmd(kRootNodeId));
   PushCommand(&cmds, scenic::NewAddChildCmd(kViewId, kRootNodeId));
   PushCommand(&cmds, scenic::NewCreateMaterialCmd(kMaterialId));
   PushCommand(&cmds, scenic::NewCreateImagePipeCmd(
-                         kImagePipeId,
-                         fidl::InterfaceRequest<fuchsia::images::ImagePipe>(
-                             std::move(remote_endpoint))));
+                         kImagePipeId, fidl::InterfaceRequest<fuchsia::images::ImagePipe>(
+                                           std::move(remote_endpoint))));
   PushCommand(&cmds, scenic::NewSetTextureCmd(kMaterialId, kImagePipeId));
   PushCommand(&cmds, scenic::NewCreateShapeNodeCmd(kShapeNodeId));
   PushCommand(&cmds, scenic::NewSetMaterialCmd(kShapeNodeId, kMaterialId));
   PushCommand(&cmds, scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId));
 
   session_->Enqueue(std::move(cmds));
-  session_->Present(
-      0,                                             // presentation time
-      {},                                            // acquire fences
-      {},                                            // release fences
-      [](fuchsia::images::PresentationInfo info) {}  // presentation callback
+  session_->Present(0,                                             // presentation time
+                    {},                                            // acquire fences
+                    {},                                            // release fences
+                    [](fuchsia::images::PresentationInfo info) {}  // presentation callback
   );
   return true;
 }
 
-static bool IsViewPropertiesChangedEvent(
-    const fuchsia::ui::scenic::Event& event) {
+static bool IsViewPropertiesChangedEvent(const fuchsia::ui::scenic::Event& event) {
   return (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx) &&
-         (event.gfx().Which() ==
-          fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged);
+         (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged);
 }
 
 // |fuchsia::ui::scenic::SessionListener|
-void ImagePipeView::OnScenicEvent(
-    std::vector<fuchsia::ui::scenic::Event> events) {
+void ImagePipeView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   for (auto& event : events) {
     if (IsViewPropertiesChangedEvent(event)) {
       OnViewPropertiesChanged(event.gfx().view_properties_changed().properties);
@@ -97,12 +86,11 @@ void ImagePipeView::OnScenicEvent(
   }
 }
 
-void ImagePipeView::OnViewPropertiesChanged(
-    fuchsia::ui::gfx::ViewProperties vp) {
-  view_width_ = (vp.bounding_box.max.x - vp.inset_from_max.x) -
-                (vp.bounding_box.min.x + vp.inset_from_min.x);
-  view_height_ = (vp.bounding_box.max.y - vp.inset_from_max.y) -
-                 (vp.bounding_box.min.y + vp.inset_from_min.y);
+void ImagePipeView::OnViewPropertiesChanged(fuchsia::ui::gfx::ViewProperties vp) {
+  view_width_ =
+      (vp.bounding_box.max.x - vp.inset_from_max.x) - (vp.bounding_box.min.x + vp.inset_from_min.x);
+  view_height_ =
+      (vp.bounding_box.max.y - vp.inset_from_max.y) - (vp.bounding_box.min.y + vp.inset_from_min.y);
 
   if (view_width_ == 0 || view_height_ == 0)
     return;
@@ -110,8 +98,7 @@ void ImagePipeView::OnViewPropertiesChanged(
   std::vector<fuchsia::ui::scenic::Command> cmds;
 
   int shape_id = new_resource_id_++;
-  PushCommand(&cmds, scenic::NewCreateRectangleCmd(shape_id, view_width_,
-                                                   view_height_));
+  PushCommand(&cmds, scenic::NewCreateRectangleCmd(shape_id, view_width_, view_height_));
   PushCommand(&cmds, scenic::NewSetShapeCmd(kShapeNodeId, shape_id));
   PushCommand(&cmds, scenic::NewReleaseResourceCmd(shape_id));
 
@@ -121,15 +108,13 @@ void ImagePipeView::OnViewPropertiesChanged(
 
   constexpr float kBackgroundElevation = 0.f;
   PushCommand(&cmds, scenic::NewSetTranslationCmd(
-                         kShapeNodeId,
-                         (float[]){center_x, center_y, -kBackgroundElevation}));
+                         kShapeNodeId, (float[]){center_x, center_y, -kBackgroundElevation}));
 
   session_->Enqueue(std::move(cmds));
-  session_->Present(
-      0,                                             // presentation time
-      {},                                            // acquire fences
-      {},                                            // release fences
-      [](fuchsia::images::PresentationInfo info) {}  // presentation callback
+  session_->Present(0,                                             // presentation time
+                    {},                                            // acquire fences
+                    {},                                            // release fences
+                    [](fuchsia::images::PresentationInfo info) {}  // presentation callback
   );
   resize_callback_(view_width_, view_height_);
 }
@@ -139,8 +124,8 @@ void ImagePipeView::OnScenicError(std::string error) {
   FX_LOGF(ERROR, "ImagePipeView", "OnScenicError: %s", error.c_str());
 }
 
-ImagePipeViewProviderService::ImagePipeViewProviderService(
-    sys::ComponentContext* context, CreateViewCallback create_view_callback)
+ImagePipeViewProviderService::ImagePipeViewProviderService(sys::ComponentContext* context,
+                                                           CreateViewCallback create_view_callback)
     : create_view_callback_(std::move(create_view_callback)) {
   context->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
       [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {

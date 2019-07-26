@@ -52,8 +52,8 @@ class SimulatedAp {
     uint8_t key[32];
   };
 
-  SimulatedAp(const uint8_t bssid[ETH_ALEN], const uint8_t* ssid,
-              const size_t ssid_len, uint8_t chan)
+  SimulatedAp(const uint8_t bssid[ETH_ALEN], const uint8_t* ssid, const size_t ssid_len,
+              uint8_t chan)
       : chan_(chan) {
     memcpy(bssid_, bssid, sizeof(bssid_));
 

@@ -25,41 +25,41 @@ namespace cobalt_client {
 
 // Defines the options for initializing the Collector.
 struct CollectorOptions {
-    // Returns a |Collector| whose data will be logged for GA release stage.
-    static CollectorOptions GeneralAvailability();
+  // Returns a |Collector| whose data will be logged for GA release stage.
+  static CollectorOptions GeneralAvailability();
 
-    // Returns a |Collector| whose data will be logged for Dogfood release stage.
-    static CollectorOptions Dogfood();
+  // Returns a |Collector| whose data will be logged for Dogfood release stage.
+  static CollectorOptions Dogfood();
 
-    // Returns a |Collector| whose data will be logged for Fishfood release stage.
-    static CollectorOptions Fishfood();
+  // Returns a |Collector| whose data will be logged for Fishfood release stage.
+  static CollectorOptions Fishfood();
 
-    // Returns a |Collector| whose data will be logged for Debug release stage.
-    static CollectorOptions Debug();
+  // Returns a |Collector| whose data will be logged for Debug release stage.
+  static CollectorOptions Debug();
 
 #ifdef __Fuchsia__
-    // Callback used when reading the config to create a cobalt logger.
-    // Returns true when the write was successful. The VMO will be transferred
-    // to the cobalt service.
-    fbl::Function<bool(zx::vmo*, size_t*)> load_config = nullptr;
+  // Callback used when reading the config to create a cobalt logger.
+  // Returns true when the write was successful. The VMO will be transferred
+  // to the cobalt service.
+  fbl::Function<bool(zx::vmo*, size_t*)> load_config = nullptr;
 
-    // Configuration for RPC behavior for remote metrics.
-    // Only set if you plan to interact with cobalt service.
+  // Configuration for RPC behavior for remote metrics.
+  // Only set if you plan to interact with cobalt service.
 
-    // When registering with cobalt, will block for this amount of time, each
-    // time we need to reach cobalt, until the response is received.
-    zx::duration response_deadline = zx::duration(0);
+  // When registering with cobalt, will block for this amount of time, each
+  // time we need to reach cobalt, until the response is received.
+  zx::duration response_deadline = zx::duration(0);
 
-    // When registering with cobalt, will block for this amount of time, the first
-    // time we need to wait for a response.
-    zx::duration initial_response_deadline = zx::duration(0);
+  // When registering with cobalt, will block for this amount of time, the first
+  // time we need to wait for a response.
+  zx::duration initial_response_deadline = zx::duration(0);
 
-    // The name used to register the project with cobalt. This will be used to route the metrics
-    // to the right project.
-    fbl::String project_name;
+  // The name used to register the project with cobalt. This will be used to route the metrics
+  // to the right project.
+  fbl::String project_name;
 #endif
-    // This is set internally by factory functions.
-    uint32_t release_stage = 0;
+  // This is set internally by factory functions.
+  uint32_t release_stage = 0;
 };
 
 // This class acts as a peer for instantiating Histograms and Counters. All
@@ -73,31 +73,31 @@ struct CollectorOptions {
 // This class is not moveable, copyable or assignable.
 // This class is thread-compatible.
 class Collector {
-public:
-    Collector(CollectorOptions options);
-    Collector(std::unique_ptr<internal::Logger> logger);
-    Collector(const Collector&) = delete;
-    Collector(Collector&&) = delete;
-    Collector& operator=(const Collector&) = delete;
-    Collector& operator=(Collector&&) = delete;
-    ~Collector();
+ public:
+  Collector(CollectorOptions options);
+  Collector(std::unique_ptr<internal::Logger> logger);
+  Collector(const Collector&) = delete;
+  Collector(Collector&&) = delete;
+  Collector& operator=(const Collector&) = delete;
+  Collector& operator=(Collector&&) = delete;
+  ~Collector();
 
-    // Allows classes implementing |internal::FlushInterface| to subscribe for Flush events.
-    void Subscribe(internal::FlushInterface* flushable);
+  // Allows classes implementing |internal::FlushInterface| to subscribe for Flush events.
+  void Subscribe(internal::FlushInterface* flushable);
 
-    // Allows classes implementing |internal::FlushInterface| to UnSubscribe for Flush events.
-    void UnSubscribe(internal::FlushInterface* flushable);
+  // Allows classes implementing |internal::FlushInterface| to UnSubscribe for Flush events.
+  void UnSubscribe(internal::FlushInterface* flushable);
 
-    // Flushes the content of all flushable metrics into |logger_|. The |logger_| is
-    // in charge of persisting the data.
-    void Flush();
+  // Flushes the content of all flushable metrics into |logger_|. The |logger_| is
+  // in charge of persisting the data.
+  void Flush();
 
-private:
-    // Convert this into a HashTable.
-    fbl::Vector<internal::FlushInterface*> flushables_;
+ private:
+  // Convert this into a HashTable.
+  fbl::Vector<internal::FlushInterface*> flushables_;
 
-    std::unique_ptr<internal::Logger> logger_ = nullptr;
-    std::atomic<bool> flushing_ = false;
+  std::unique_ptr<internal::Logger> logger_ = nullptr;
+  std::atomic<bool> flushing_ = false;
 };
 
-} // namespace cobalt_client
+}  // namespace cobalt_client

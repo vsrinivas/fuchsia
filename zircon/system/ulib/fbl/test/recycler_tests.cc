@@ -9,103 +9,112 @@
 
 namespace {
 
-template <typename T> struct PtrTraits;
+template <typename T>
+struct PtrTraits;
 
 template <typename T>
 struct PtrTraits<fbl::RefPtr<T>> {
-    using ObjType = std::remove_cv_t<T>;
-    static fbl::RefPtr<T> MakePointer(T* raw) { return fbl::AdoptRef<T>(raw); }
+  using ObjType = std::remove_cv_t<T>;
+  static fbl::RefPtr<T> MakePointer(T* raw) { return fbl::AdoptRef<T>(raw); }
 };
 
-
 class TestBase {
-public:
-    TestBase() { recycle_was_called_ = false; }
-    static bool recycle_was_called() { return recycle_was_called_; }
-protected:
-    static bool recycle_was_called_;
+ public:
+  TestBase() { recycle_was_called_ = false; }
+  static bool recycle_was_called() { return recycle_was_called_; }
+
+ protected:
+  static bool recycle_was_called_;
 };
 
 bool TestBase::recycle_was_called_;
 
-class TestPublicRecycle : public TestBase,
-                          public fbl::Recyclable<TestPublicRecycle> {
-public:
-    void fbl_recycle() {
-        recycle_was_called_ = true;
-        delete this;
-    }
+class TestPublicRecycle : public TestBase, public fbl::Recyclable<TestPublicRecycle> {
+ public:
+  void fbl_recycle() {
+    recycle_was_called_ = true;
+    delete this;
+  }
 };
 
 class RefedTestPublicRecycle : public TestBase,
                                public fbl::RefCounted<RefedTestPublicRecycle>,
                                public fbl::Recyclable<RefedTestPublicRecycle> {
-public:
-    void fbl_recycle() {
-        recycle_was_called_ = true;
-        delete this;
-    }
+ public:
+  void fbl_recycle() {
+    recycle_was_called_ = true;
+    delete this;
+  }
 };
 
-class TestPrivateRecycle : public TestBase,
-                           public fbl::Recyclable<TestPrivateRecycle> {
-private:
-    friend class fbl::Recyclable<TestPrivateRecycle>;
-    void fbl_recycle() {
-        recycle_was_called_ = true;
-        delete this;
-    }
+class TestPrivateRecycle : public TestBase, public fbl::Recyclable<TestPrivateRecycle> {
+ private:
+  friend class fbl::Recyclable<TestPrivateRecycle>;
+  void fbl_recycle() {
+    recycle_was_called_ = true;
+    delete this;
+  }
 };
 
 class RefedTestPrivateRecycle : public TestBase,
                                 public fbl::RefCounted<RefedTestPrivateRecycle>,
                                 public fbl::Recyclable<RefedTestPrivateRecycle> {
-private:
-    friend class fbl::Recyclable<RefedTestPrivateRecycle>;
-    void fbl_recycle() {
-        recycle_was_called_ = true;
-        delete this;
-    }
+ private:
+  friend class fbl::Recyclable<RefedTestPrivateRecycle>;
+  void fbl_recycle() {
+    recycle_was_called_ = true;
+    delete this;
+  }
 };
 
-struct FailNoMethod : public fbl::Recyclable<FailNoMethod> { };
-struct FailBadRet : public fbl::Recyclable<FailBadRet> { int fbl_recycle() { return 1; } };
-struct FailBadArg : public fbl::Recyclable<FailBadArg> { void fbl_recycle(int a = 1) {} };
-class  FailNotVis : public fbl::Recyclable<FailNotVis> { void fbl_recycle() {} };
+struct FailNoMethod : public fbl::Recyclable<FailNoMethod> {};
+struct FailBadRet : public fbl::Recyclable<FailBadRet> {
+  int fbl_recycle() { return 1; }
+};
+struct FailBadArg : public fbl::Recyclable<FailBadArg> {
+  void fbl_recycle(int a = 1) {}
+};
+class FailNotVis : public fbl::Recyclable<FailNotVis> {
+  void fbl_recycle() {}
+};
 
 #if TEST_WILL_NOT_COMPILE || 0
-struct FailCVBase1 : public fbl::Recyclable<const FailCVBase1> { void fbl_recycle() {} };
+struct FailCVBase1 : public fbl::Recyclable<const FailCVBase1> {
+  void fbl_recycle() {}
+};
 #endif
 #if TEST_WILL_NOT_COMPILE || 0
-struct FailCVBase2 : public fbl::Recyclable<volatile FailCVBase2> { void fbl_recycle() {} };
+struct FailCVBase2 : public fbl::Recyclable<volatile FailCVBase2> {
+  void fbl_recycle() {}
+};
 #endif
 #if TEST_WILL_NOT_COMPILE || 0
-struct FailCVBase3 : public fbl::Recyclable<const volatile FailCVBase3> { void fbl_recycle() {} };
+struct FailCVBase3 : public fbl::Recyclable<const volatile FailCVBase3> {
+  void fbl_recycle() {}
+};
 #endif
 
 template <typename T>
 static bool do_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    fbl::AllocChecker ac;
-    auto ptr = PtrTraits<T>::MakePointer(new (&ac) typename PtrTraits<T>::ObjType);
+  fbl::AllocChecker ac;
+  auto ptr = PtrTraits<T>::MakePointer(new (&ac) typename PtrTraits<T>::ObjType);
 
-    ASSERT_TRUE(ac.check());
-    EXPECT_FALSE(TestBase::recycle_was_called());
+  ASSERT_TRUE(ac.check());
+  EXPECT_FALSE(TestBase::recycle_was_called());
 
-    ptr = nullptr;
-    EXPECT_TRUE(TestBase::recycle_was_called());
+  ptr = nullptr;
+  EXPECT_TRUE(TestBase::recycle_was_called());
 
-    END_TEST;
+  END_TEST;
 }
 
-}  // anon namespace
+}  // namespace
 
 BEGIN_TEST_CASE(fbl_recycle)
-RUN_NAMED_TEST("public RefPtr fbl_recycle()",
-               do_test<fbl::RefPtr<RefedTestPublicRecycle>>)
-RUN_NAMED_TEST("private RefPtr fbl_recycle()",
-               do_test<fbl::RefPtr<RefedTestPrivateRecycle>>)
+RUN_NAMED_TEST("public RefPtr fbl_recycle()", do_test<fbl::RefPtr<RefedTestPublicRecycle>>)
+RUN_NAMED_TEST("private RefPtr fbl_recycle()", do_test<fbl::RefPtr<RefedTestPrivateRecycle>>)
 #if TEST_WILL_NOT_COMPILE || 0
 // TODO(johngro) : If we ever support RefPtr<>s to const/volatile objects,
 // instantiate tests for them here.

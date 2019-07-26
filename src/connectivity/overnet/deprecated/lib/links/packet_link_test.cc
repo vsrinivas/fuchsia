@@ -44,8 +44,7 @@ class MockPacketLink {
     static uint64_t next_label = 1;
     class PacketLinkImpl final : public PacketLink {
      public:
-      PacketLinkImpl(MockPacketLink* mock, Router* router, NodeId peer,
-                     uint32_t mss)
+      PacketLinkImpl(MockPacketLink* mock, Router* router, NodeId peer, uint32_t mss)
           : PacketLink(router, peer, mss, next_label++), mock_(mock) {}
       void Emit(Slice packet) { mock_->Emit(std::move(packet)); }
 
@@ -60,27 +59,23 @@ TEST(PacketLink, NoOp) {
   TestTimer timer;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_renderer(&renderer);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
   StrictMock<MockPacketLink> mock_link;
   Router router(&timer, NodeId(1), true);
   router.RegisterLink(mock_link.MakeLink(&router, NodeId(2), kTestMSS));
 }
 
-static const Slice kSerializedPacket = Slice::FromContainer(
-    {0, 1, 0x02, 0x85, 0x95, 0x10, 0, 6, 0, 1, 1, 7, 8, 9});
+static const Slice kSerializedPacket =
+    Slice::FromContainer({0, 1, 0x02, 0x85, 0x95, 0x10, 0, 6, 0, 1, 1, 7, 8, 9});
 
 TEST(PacketLink, SendOne) {
   TestTimer timer;
   StrictMock<MockPacketLink> mock_link;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_renderer(&renderer);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
 
-  auto verify_all = [&]() {
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_link));
-  };
+  auto verify_all = [&]() { EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_link)); };
 
   Router router(&timer, NodeId(1), true);
   router.RegisterLink(mock_link.MakeLink(&router, NodeId(2), kTestMSS));
@@ -92,8 +87,7 @@ TEST(PacketLink, SendOne) {
   Slice emitted;
   EXPECT_CALL(mock_link, Emit(_)).WillOnce(SaveArg<0>(&emitted));
   router.Forward(Message{
-      std::move(RoutableMessage(NodeId(1)).AddDestination(
-          NodeId(2), StreamId(1), SeqNum(1, 1))),
+      std::move(RoutableMessage(NodeId(1)).AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))),
       ForwardingPayloadFactory(Slice::FromContainer({7, 8, 9})),
       timer.Now(),
   });
@@ -108,8 +102,7 @@ TEST(PacketLink, RecvOne) {
   StrictMock<MockStreamHandler> mock_stream_handler;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_renderer(&renderer);
-  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
-                                               : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG : Severity::INFO};
 
   Router router(&timer, NodeId(2), true);
   auto link_unique = mock_link.MakeLink(&router, NodeId(1), kTestMSS);
@@ -119,9 +112,7 @@ TEST(PacketLink, RecvOne) {
     router.BlockUntilNoBackgroundUpdatesProcessing();
     timer.StepUntilNextEvent();
   }
-  EXPECT_TRUE(
-      router.RegisterStream(NodeId(1), StreamId(1), &mock_stream_handler)
-          .is_ok());
+  EXPECT_TRUE(router.RegisterStream(NodeId(1), StreamId(1), &mock_stream_handler).is_ok());
 
   EXPECT_CALL(mock_stream_handler, HandleMessage(_, _, _));
   link->Process(timer.Now(), kSerializedPacket);

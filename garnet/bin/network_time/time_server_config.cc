@@ -64,9 +64,7 @@ static bool readFile(std::string* out_contents, const char* filename) {
   return true;
 }
 
-std::vector<RoughTimeServer> TimeServerConfig::ServerList() {
-  return server_list_;
-}
+std::vector<RoughTimeServer> TimeServerConfig::ServerList() { return server_list_; }
 
 bool checkSchema(rapidjson::Document& d) {
   rapidjson::Document sd;
@@ -82,8 +80,7 @@ bool checkSchema(rapidjson::Document& d) {
     rapidjson::StringBuffer sb;
     validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
     FX_LOGS(ERROR) << "Invalid schema: " << sb.GetString();
-    FX_LOGS(ERROR) << "Invalid keyword: "
-                   << validator.GetInvalidSchemaKeyword();
+    FX_LOGS(ERROR) << "Invalid keyword: " << validator.GetInvalidSchemaKeyword();
     sb.Clear();
     validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
     FX_LOGS(ERROR) << "Invalid document: " << sb.GetString();
@@ -101,8 +98,7 @@ bool TimeServerConfig::Parse(std::string config_file) {
   rapidjson::Document doc;
   rapidjson::ParseResult ok = doc.Parse(json.c_str());
   if (!ok) {
-    FX_LOGS(ERROR) << "JSON parse error: "
-                   << rapidjson::GetParseError_En(ok.Code()) << "("
+    FX_LOGS(ERROR) << "JSON parse error: " << rapidjson::GetParseError_En(ok.Code()) << "("
                    << ok.Offset() << ")";
     return false;
   }
@@ -133,8 +129,8 @@ bool TimeServerConfig::Parse(std::string config_file) {
         public_key[k] = strtoul(hex, NULL, 16);
       }
 
-      RoughTimeServer server(std::move(name), std::move(address_str),
-                             public_key, roughtime::kPublicKeyLength);
+      RoughTimeServer server(std::move(name), std::move(address_str), public_key,
+                             roughtime::kPublicKeyLength);
       server_list_.push_back(server);
     }
   }

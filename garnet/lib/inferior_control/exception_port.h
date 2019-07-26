@@ -32,8 +32,7 @@ class ExceptionPort final {
   // Callback invoked when a packet is received.
   using PacketCallback = fit::function<void(const zx_port_packet_t& packet)>;
 
-  explicit ExceptionPort(async_dispatcher_t* dispatcher,
-                         PacketCallback exception_callback,
+  explicit ExceptionPort(async_dispatcher_t* dispatcher, PacketCallback exception_callback,
                          PacketCallback signal_callback);
   ~ExceptionPort();
 

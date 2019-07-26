@@ -209,9 +209,9 @@ __BEGIN_CDECLS
  * This function-like macro builds a constant containing four Parameter types for use in the
  * paramTypes field of a TEEC_Operation structure.
  */
-#define TEEC_PARAM_TYPES(param0Type, param1Type, param2Type, param3Type) \
-    (((param0Type & 0xF) << 0) | ((param1Type & 0xF) << 4) |             \
-     ((param2Type & 0xF) << 8) | ((param3Type & 0xF) << 12))
+#define TEEC_PARAM_TYPES(param0Type, param1Type, param2Type, param3Type)               \
+  (((param0Type & 0xF) << 0) | ((param1Type & 0xF) << 4) | ((param2Type & 0xF) << 8) | \
+   ((param3Type & 0xF) << 12))
 
 /**************
  * Data Types *
@@ -232,10 +232,10 @@ typedef uint32_t TEEC_Result;
  * These UUID values are used to identify Trusted Applications.
  */
 typedef struct {
-    uint32_t timeLow;
-    uint16_t timeMid;
-    uint16_t timeHiAndVersion;
-    uint8_t clockSeqAndNode[8];
+  uint32_t timeLow;
+  uint16_t timeMid;
+  uint16_t timeHiAndVersion;
+  uint8_t clockSeqAndNode[8];
 } TEEC_UUID;
 
 /* TEEC_Context
@@ -244,7 +244,7 @@ typedef struct {
  * particular TEE. Its content is entirely implementation-defined.
  */
 typedef struct {
-    teec_context_impl_t imp;
+  teec_context_impl_t imp;
 } TEEC_Context;
 
 /* TEEC_Session
@@ -253,7 +253,7 @@ typedef struct {
  * particular Trusted Application. Its content is entirely implementation-defined.
  */
 typedef struct {
-    teec_session_impl_t imp;
+  teec_session_impl_t imp;
 } TEEC_Session;
 
 /* TEEC_SharedMemory
@@ -277,10 +277,10 @@ typedef struct {
  *          structure.
  */
 typedef struct {
-    void* buffer;
-    size_t size;
-    uint32_t flags;
-    teec_shared_memory_impl_t imp;
+  void* buffer;
+  size_t size;
+  uint32_t flags;
+  teec_shared_memory_impl_t imp;
 } TEEC_SharedMemory;
 
 /* TEEC_TempMemoryReference
@@ -297,8 +297,8 @@ typedef struct {
  * size     The size of the referenced memory region, in bytes.
  */
 typedef struct {
-    void* buffer;
-    size_t size;
+  void* buffer;
+  size_t size;
 } TEEC_TempMemoryReference;
 
 /* TEEC_RegisteredMemoryReference
@@ -322,9 +322,9 @@ typedef struct {
  *          Memory block.
  */
 typedef struct {
-    TEEC_SharedMemory* parent;
-    size_t size;
-    size_t offset;
+  TEEC_SharedMemory* parent;
+  size_t size;
+  size_t offset;
 } TEEC_RegisteredMemoryReference;
 
 /* TEEC_Value
@@ -338,8 +338,8 @@ typedef struct {
  * integers.
  */
 typedef struct {
-    uint32_t a;
-    uint32_t b;
+  uint32_t a;
+  uint32_t b;
 } TEEC_Value;
 
 /* TEEC_Parameter
@@ -349,9 +349,9 @@ typedef struct {
  * the type of the parameter specified in the paramTypes field of the TEEC_Operation structure.
  */
 typedef union {
-    TEEC_TempMemoryReference tmpref;
-    TEEC_RegisteredMemoryReference memref;
-    TEEC_Value value;
+  TEEC_TempMemoryReference tmpref;
+  TEEC_RegisteredMemoryReference memref;
+  TEEC_Value value;
 } TEEC_Parameter;
 
 /* TEEC_Operation
@@ -380,10 +380,10 @@ typedef union {
  *              structure.
  */
 typedef struct {
-    uint32_t started;
-    uint32_t paramTypes;
-    TEEC_Parameter params[TEEC_NUM_PARAMS_MAX];
-    teec_operation_impl_t imp;
+  uint32_t started;
+  uint32_t paramTypes;
+  TEEC_Parameter params[TEEC_NUM_PARAMS_MAX];
+  teec_operation_impl_t imp;
 } TEEC_Operation;
 
 __END_CDECLS

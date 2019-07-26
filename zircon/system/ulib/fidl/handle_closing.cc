@@ -44,8 +44,7 @@ Position StartingPoint::ToPosition() const { return Position{reinterpret_cast<vo
 class FidlHandleCloser final
     : public fidl::Visitor<fidl::MutatingVisitorTrait, StartingPoint, Position> {
  public:
-  FidlHandleCloser(const char** out_error_msg)
-     : out_error_msg_(out_error_msg) {}
+  FidlHandleCloser(const char** out_error_msg) : out_error_msg_(out_error_msg) {}
 
   using StartingPoint = StartingPoint;
 

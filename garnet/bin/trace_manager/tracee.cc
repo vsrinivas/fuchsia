@@ -17,8 +17,7 @@ namespace tracing {
 
 namespace {
 
-provider::BufferingMode EngineBufferingModeToProviderMode(
-    trace_buffering_mode_t mode) {
+provider::BufferingMode EngineBufferingModeToProviderMode(trace_buffering_mode_t mode) {
   switch (mode) {
     case TRACE_BUFFERING_MODE_ONESHOT:
       return provider::BufferingMode::ONESHOT;
@@ -51,10 +50,7 @@ uint64_t GetBufferWordsWritten(const uint64_t* buffer, uint64_t size_in_words) {
 }  // namespace
 
 Tracee::Tracee(const TraceSession* session, const TraceProviderBundle* bundle)
-    : session_(session),
-      bundle_(bundle),
-      wait_(this),
-      weak_ptr_factory_(this) {}
+    : session_(session), bundle_(bundle), wait_(this), weak_ptr_factory_(this) {}
 
 Tracee::~Tracee() {
   if (dispatcher_) {
@@ -64,13 +60,10 @@ Tracee::~Tracee() {
   }
 }
 
-bool Tracee::operator==(TraceProviderBundle* bundle) const {
-  return bundle_ == bundle;
-}
+bool Tracee::operator==(TraceProviderBundle* bundle) const { return bundle_ == bundle; }
 
 bool Tracee::Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
-                   provider::BufferingMode buffering_mode,
-                   fit::closure started_callback,
+                   provider::BufferingMode buffering_mode, fit::closure started_callback,
                    fit::closure stopped_callback) {
   FXL_DCHECK(state_ == State::kReady);
   FXL_DCHECK(!buffer_vmo_);
@@ -80,27 +73,24 @@ bool Tracee::Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
   zx::vmo buffer_vmo;
   zx_status_t status = zx::vmo::create(buffer_size, 0u, &buffer_vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << *bundle_
-                   << ": Failed to create trace buffer: status=" << status;
+    FXL_LOG(ERROR) << *bundle_ << ": Failed to create trace buffer: status=" << status;
     return false;
   }
 
   zx::vmo buffer_vmo_for_provider;
-  status = buffer_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP,
-                                &buffer_vmo_for_provider);
+  status =
+      buffer_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP, &buffer_vmo_for_provider);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_
-                   << ": Failed to duplicate trace buffer for provider: status="
-                   << status;
+                   << ": Failed to duplicate trace buffer for provider: status=" << status;
     return false;
   }
 
   zx::fifo fifo, fifo_for_provider;
-  status = zx::fifo::create(kFifoSizeInPackets, sizeof(trace_provider_packet_t),
-                            0u, &fifo, &fifo_for_provider);
+  status = zx::fifo::create(kFifoSizeInPackets, sizeof(trace_provider_packet_t), 0u, &fifo,
+                            &fifo_for_provider);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << *bundle_
-                   << ": Failed to create trace buffer fifo: status=" << status;
+    FXL_LOG(ERROR) << *bundle_ << ": Failed to create trace buffer fifo: status=" << status;
     return false;
   }
 
@@ -141,14 +131,12 @@ void Tracee::Stop() {
 }
 
 void Tracee::TransitionToState(State new_state) {
-  FXL_VLOG(2) << *bundle_ << ": Transitioning from " << state_ << " to "
-              << new_state;
+  FXL_VLOG(2) << *bundle_ << ": Transitioning from " << state_ << " to " << new_state;
   state_ = new_state;
 }
 
-void Tracee::OnHandleReady(async_dispatcher_t* dispatcher,
-                           async::WaitBase* wait, zx_status_t status,
-                           const zx_packet_signal_t* signal) {
+void Tracee::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                           zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     OnHandleError(status);
     return;
@@ -178,16 +166,12 @@ void Tracee::OnHandleReady(async_dispatcher_t* dispatcher,
   stopped_callback();
 }
 
-void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
-                            async::WaitBase* wait) {
+void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait) {
   trace_provider_packet_t packet;
-  auto status2 =
-      zx_fifo_read(wait_.object(), sizeof(packet), &packet, 1u, nullptr);
+  auto status2 = zx_fifo_read(wait_.object(), sizeof(packet), &packet, 1u, nullptr);
   FXL_DCHECK(status2 == ZX_OK);
   if (packet.data16 != 0) {
-    FXL_LOG(ERROR) << *bundle_
-                   << ": Received bad packet, non-zero data16 field: "
-                   << packet.data16;
+    FXL_LOG(ERROR) << *bundle_ << ": Received bad packet, non-zero data16 field: " << packet.data16;
     Stop();
     return;
   }
@@ -198,15 +182,13 @@ void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
       // startup.
       if (packet.data32 != TRACE_PROVIDER_FIFO_PROTOCOL_VERSION) {
         FXL_LOG(ERROR) << *bundle_
-                       << ": Received bad packet, unexpected version: "
-                       << packet.data32;
+                       << ": Received bad packet, unexpected version: " << packet.data32;
         Stop();
         break;
       }
       if (packet.data64 != 0) {
         FXL_LOG(ERROR) << *bundle_
-                       << ": Received bad packet, non-zero data64 field: "
-                       << packet.data64;
+                       << ": Received bad packet, non-zero data64 field: " << packet.data64;
         Stop();
         break;
       }
@@ -216,40 +198,33 @@ void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
         FXL_DCHECK(started_callback);
         started_callback();
       } else {
-        FXL_LOG(WARNING) << *bundle_
-                         << ": Received TRACE_PROVIDER_STARTED in state "
-                         << state_;
+        FXL_LOG(WARNING) << *bundle_ << ": Received TRACE_PROVIDER_STARTED in state " << state_;
       }
       break;
     case TRACE_PROVIDER_SAVE_BUFFER:
       if (buffering_mode_ != provider::BufferingMode::STREAMING) {
-        FXL_LOG(WARNING) << *bundle_
-                         << ": Received TRACE_PROVIDER_SAVE_BUFFER in mode "
+        FXL_LOG(WARNING) << *bundle_ << ": Received TRACE_PROVIDER_SAVE_BUFFER in mode "
                          << ModeName(buffering_mode_);
       } else if (state_ == State::kStarted || state_ == State::kStopping) {
         uint32_t wrapped_count = packet.data32;
         uint64_t durable_data_end = packet.data64;
         // Schedule the write with the main async loop.
         FXL_VLOG(2) << "Buffer save request from " << *bundle_
-                    << ", wrapped_count=" << wrapped_count
-                    << ", durable_data_end=0x" << std::hex << durable_data_end;
-        async::PostTask(dispatcher_, [weak = weak_ptr_factory_.GetWeakPtr(),
-                                      wrapped_count, durable_data_end] {
+                    << ", wrapped_count=" << wrapped_count << ", durable_data_end=0x" << std::hex
+                    << durable_data_end;
+        async::PostTask(dispatcher_, [weak = weak_ptr_factory_.GetWeakPtr(), wrapped_count,
+                                      durable_data_end] {
           if (weak) {
-            weak->TransferBuffer(weak->session_->destination(), wrapped_count,
-                                 durable_data_end);
+            weak->TransferBuffer(weak->session_->destination(), wrapped_count, durable_data_end);
           }
         });
       } else {
-        FXL_LOG(WARNING) << *bundle_
-                         << ": Received TRACE_PROVIDER_SAVE_BUFFER in state "
-                         << state_;
+        FXL_LOG(WARNING) << *bundle_ << ": Received TRACE_PROVIDER_SAVE_BUFFER in state " << state_;
       }
       break;
     case TRACE_PROVIDER_STOPPED:
       if (packet.data16 != 0 || packet.data32 != 0 || packet.data64 != 0) {
-        FXL_LOG(ERROR) << *bundle_
-                       << ": Received bad packet, non-zero data fields";
+        FXL_LOG(ERROR) << *bundle_ << ": Received bad packet, non-zero data fields";
         Stop();
         break;
       }
@@ -259,14 +234,11 @@ void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
       } else {
         // This could be a problem in the provider or it could just be slow.
         // TODO(dje): Disconnect it and force it to reconnect?
-        FXL_LOG(WARNING) << *bundle_
-                         << ": Received TRACE_PROVIDER_STOPPED in state "
-                         << state_;
+        FXL_LOG(WARNING) << *bundle_ << ": Received TRACE_PROVIDER_STOPPED in state " << state_;
       }
       break;
     default:
-      FXL_LOG(ERROR) << *bundle_ << ": Received bad packet, unknown request: "
-                     << packet.request;
+      FXL_LOG(ERROR) << *bundle_ << ": Received bad packet, unknown request: " << packet.request;
       Stop();
       break;
   }
@@ -282,23 +254,21 @@ void Tracee::OnHandleError(zx_status_t status) {
   TransitionToState(State::kStopped);
 }
 
-bool Tracee::VerifyBufferHeader(
-    const trace::internal::BufferHeaderReader* header) const {
-  if (EngineBufferingModeToProviderMode(static_cast<trace_buffering_mode_t>(
-          header->buffering_mode())) != buffering_mode_) {
-    FXL_LOG(ERROR) << *bundle_ << ": header corrupt, wrong buffering mode: "
-                   << header->buffering_mode();
+bool Tracee::VerifyBufferHeader(const trace::internal::BufferHeaderReader* header) const {
+  if (EngineBufferingModeToProviderMode(
+          static_cast<trace_buffering_mode_t>(header->buffering_mode())) != buffering_mode_) {
+    FXL_LOG(ERROR) << *bundle_
+                   << ": header corrupt, wrong buffering mode: " << header->buffering_mode();
     return false;
   }
 
   return true;
 }
 
-TransferStatus Tracee::DoWriteChunk(const zx::socket& socket,
-                                    uint64_t vmo_offset, uint64_t size,
+TransferStatus Tracee::DoWriteChunk(const zx::socket& socket, uint64_t vmo_offset, uint64_t size,
                                     const char* name, bool by_size) const {
-  FXL_VLOG(2) << *bundle_ << ": Writing chunk for " << name << ": vmo offset 0x"
-              << std::hex << vmo_offset << ", size 0x" << std::hex << size
+  FXL_VLOG(2) << *bundle_ << ": Writing chunk for " << name << ": vmo offset 0x" << std::hex
+              << vmo_offset << ", size 0x" << std::hex << size
               << (by_size ? ", by-size" : ", by-record");
 
   // TODO(dje): Loop on smaller buffer.
@@ -319,8 +289,7 @@ TransferStatus Tracee::DoWriteChunk(const zx::socket& socket,
 
   uint64_t bytes_written;
   if (!by_size) {
-    uint64_t words_written =
-        GetBufferWordsWritten(buffer.data(), size_in_words);
+    uint64_t words_written = GetBufferWordsWritten(buffer.data(), size_in_words);
     bytes_written = trace::WordsToBytes(words_written);
   } else {
     bytes_written = size;
@@ -333,22 +302,18 @@ TransferStatus Tracee::DoWriteChunk(const zx::socket& socket,
   return status;
 }
 
-TransferStatus Tracee::WriteChunkByRecords(const zx::socket& socket,
-                                           uint64_t vmo_offset, uint64_t size,
-                                           const char* name) const {
+TransferStatus Tracee::WriteChunkByRecords(const zx::socket& socket, uint64_t vmo_offset,
+                                           uint64_t size, const char* name) const {
   return DoWriteChunk(socket, vmo_offset, size, name, false);
 }
 
-TransferStatus Tracee::WriteChunkBySize(const zx::socket& socket,
-                                        uint64_t vmo_offset, uint64_t size,
-                                        const char* name) const {
+TransferStatus Tracee::WriteChunkBySize(const zx::socket& socket, uint64_t vmo_offset,
+                                        uint64_t size, const char* name) const {
   return DoWriteChunk(socket, vmo_offset, size, name, true);
 }
 
-TransferStatus Tracee::WriteChunk(const zx::socket& socket, uint64_t offset,
-                                  uint64_t last, uint64_t end,
-                                  uint64_t buffer_size,
-                                  const char* name) const {
+TransferStatus Tracee::WriteChunk(const zx::socket& socket, uint64_t offset, uint64_t last,
+                                  uint64_t end, uint64_t buffer_size, const char* name) const {
   ZX_DEBUG_ASSERT(last <= buffer_size);
   ZX_DEBUG_ASSERT(end <= buffer_size);
   ZX_DEBUG_ASSERT(end == 0 || last <= end);
@@ -370,10 +335,8 @@ TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
 
   auto transfer_status = TransferStatus::kComplete;
 
-  if ((transfer_status = WriteProviderIdRecord(socket)) !=
-      TransferStatus::kComplete) {
-    FXL_LOG(ERROR) << *bundle_
-                   << ": Failed to write provider info record to trace.";
+  if ((transfer_status = WriteProviderIdRecord(socket)) != TransferStatus::kComplete) {
+    FXL_LOG(ERROR) << *bundle_ << ": Failed to write provider info record to trace.";
     return transfer_status;
   }
 
@@ -384,8 +347,8 @@ TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   }
 
   fbl::unique_ptr<trace::internal::BufferHeaderReader> header;
-  auto error = trace::internal::BufferHeaderReader::Create(
-      &header_buffer, buffer_vmo_size_, &header);
+  auto error =
+      trace::internal::BufferHeaderReader::Create(&header_buffer, buffer_vmo_size_, &header);
   if (error != "") {
     FXL_LOG(ERROR) << *bundle_ << ": header corrupt, " << error.c_str();
     return TransferStatus::kProviderError;
@@ -411,8 +374,7 @@ TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     uint64_t last = last_durable_data_end_;
     uint64_t end = header->durable_data_end();
     uint64_t buffer_size = header->durable_buffer_size();
-    if ((transfer_status =
-             WriteChunk(socket, offset, last, end, buffer_size, "durable")) !=
+    if ((transfer_status = WriteChunk(socket, offset, last, end, buffer_size, "durable")) !=
         TransferStatus::kComplete) {
       return transfer_status;
     }
@@ -432,8 +394,7 @@ TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   // is marked as valid use it. Otherwise run through the buffer to count the
   // records we see.
 
-  auto write_rolling_chunk = [this, &header,
-                              &socket](int buffer_number) -> TransferStatus {
+  auto write_rolling_chunk = [this, &header, &socket](int buffer_number) -> TransferStatus {
     uint64_t offset = header->GetRollingBufferOffset(buffer_number);
     uint64_t last = 0;
     uint64_t end = header->rolling_data_end(buffer_number);
@@ -464,12 +425,10 @@ TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     FXL_LOG(INFO) << *bundle_ << " trace stats";
     FXL_LOG(INFO) << "Wrapped count: " << header->wrapped_count();
     FXL_LOG(INFO) << "# records dropped: " << header->num_records_dropped();
-    FXL_LOG(INFO) << "Durable buffer: 0x" << std::hex
-                  << header->durable_data_end() << ", size 0x" << std::hex
-                  << header->durable_buffer_size();
-    FXL_LOG(INFO) << "Non-durable buffer: 0x" << std::hex
-                  << header->rolling_data_end(0) << ",0x" << std::hex
-                  << header->rolling_data_end(1) << ", size 0x" << std::hex
+    FXL_LOG(INFO) << "Durable buffer: 0x" << std::hex << header->durable_data_end() << ", size 0x"
+                  << std::hex << header->durable_buffer_size();
+    FXL_LOG(INFO) << "Non-durable buffer: 0x" << std::hex << header->rolling_data_end(0) << ",0x"
+                  << std::hex << header->rolling_data_end(1) << ", size 0x" << std::hex
                   << header->rolling_buffer_size();
   }
 
@@ -496,24 +455,19 @@ bool Tracee::DoTransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
   if (wrapped_count == 0 && last_wrapped_count_ == 0) {
     // ok
   } else if (wrapped_count != last_wrapped_count_ + 1) {
-    FXL_LOG(ERROR) << *bundle_ << ": unexpected wrapped_count from provider: "
-                   << wrapped_count;
+    FXL_LOG(ERROR) << *bundle_ << ": unexpected wrapped_count from provider: " << wrapped_count;
     return false;
-  } else if (durable_data_end < last_durable_data_end_ ||
-             (durable_data_end & 7) != 0) {
+  } else if (durable_data_end < last_durable_data_end_ || (durable_data_end & 7) != 0) {
     FXL_LOG(ERROR) << *bundle_
-                   << ": unexpected durable_data_end from provider: "
-                   << durable_data_end;
+                   << ": unexpected durable_data_end from provider: " << durable_data_end;
     return false;
   }
 
   auto transfer_status = TransferStatus::kComplete;
   int buffer_number = get_buffer_number(wrapped_count);
 
-  if ((transfer_status = WriteProviderIdRecord(socket)) !=
-      TransferStatus::kComplete) {
-    FXL_LOG(ERROR) << *bundle_
-                   << ": Failed to write provider section record to trace.";
+  if ((transfer_status = WriteProviderIdRecord(socket)) != TransferStatus::kComplete) {
+    FXL_LOG(ERROR) << *bundle_ << ": Failed to write provider section record to trace.";
     return false;
   }
 
@@ -524,8 +478,8 @@ bool Tracee::DoTransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
   }
 
   fbl::unique_ptr<trace::internal::BufferHeaderReader> header;
-  auto error = trace::internal::BufferHeaderReader::Create(
-      &header_buffer, buffer_vmo_size_, &header);
+  auto error =
+      trace::internal::BufferHeaderReader::Create(&header_buffer, buffer_vmo_size_, &header);
   if (error != "") {
     FXL_LOG(ERROR) << *bundle_ << ": header corrupt, " << error.c_str();
     return false;
@@ -536,12 +490,9 @@ bool Tracee::DoTransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
 
   // Don't use |header.durable_data_end| here, we want the value at the time
   // the message was sent.
-  if (durable_data_end < kInitRecordSizeBytes ||
-      durable_data_end > header->durable_buffer_size() ||
-      (durable_data_end & 7) != 0 ||
-      durable_data_end < last_durable_data_end_) {
-    FXL_LOG(ERROR) << *bundle_
-                   << ": bad durable_data_end: " << durable_data_end;
+  if (durable_data_end < kInitRecordSizeBytes || durable_data_end > header->durable_buffer_size() ||
+      (durable_data_end & 7) != 0 || durable_data_end < last_durable_data_end_) {
+    FXL_LOG(ERROR) << *bundle_ << ": bad durable_data_end: " << durable_data_end;
     return false;
   }
 
@@ -556,17 +507,15 @@ bool Tracee::DoTransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
   uint64_t durable_buffer_offset = header->get_durable_buffer_offset();
   if (durable_data_end > last_durable_data_end_) {
     uint64_t size = durable_data_end - last_durable_data_end_;
-    if ((transfer_status = WriteChunkBySize(
-             socket, durable_buffer_offset + last_durable_data_end_, size,
-             "durable")) != TransferStatus::kComplete) {
+    if ((transfer_status = WriteChunkBySize(socket, durable_buffer_offset + last_durable_data_end_,
+                                            size, "durable")) != TransferStatus::kComplete) {
       return false;
     }
   }
 
   uint64_t buffer_offset = header->GetRollingBufferOffset(buffer_number);
   auto name = buffer_number == 0 ? "rolling buffer 0" : "rolling buffer 1";
-  if ((transfer_status =
-           WriteChunkBySize(socket, buffer_offset, rolling_data_end, name)) !=
+  if ((transfer_status = WriteChunkBySize(socket, buffer_offset, rolling_data_end, name)) !=
       TransferStatus::kComplete) {
     return false;
   }
@@ -574,10 +523,8 @@ bool Tracee::DoTransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
   return true;
 }
 
-void Tracee::NotifyBufferSaved(uint32_t wrapped_count,
-                               uint64_t durable_data_end) {
-  FXL_VLOG(2) << "Buffer saved for " << *bundle_
-              << ", wrapped_count=" << wrapped_count
+void Tracee::NotifyBufferSaved(uint32_t wrapped_count, uint64_t durable_data_end) {
+  FXL_VLOG(2) << "Buffer saved for " << *bundle_ << ", wrapped_count=" << wrapped_count
               << ", durable_data_end=" << durable_data_end;
   trace_provider_packet_t packet{};
   packet.request = TRACE_PROVIDER_BUFFER_SAVED;
@@ -610,48 +557,43 @@ TransferStatus Tracee::WriteProviderInfoRecord(const zx::socket& socket) const {
                           // labels from the trace wire format altogether.
   size_t num_words = 1u + trace::BytesToWords(trace::Pad(label.size()));
   std::vector<uint64_t> record(num_words);
-  record[0] =
-      trace::ProviderInfoMetadataRecordFields::Type::Make(
-          trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
-      trace::ProviderInfoMetadataRecordFields::RecordSize::Make(num_words) |
-      trace::ProviderInfoMetadataRecordFields::MetadataType::Make(
-          trace::ToUnderlyingType(trace::MetadataType::kProviderInfo)) |
-      trace::ProviderInfoMetadataRecordFields::Id::Make(bundle_->id) |
-      trace::ProviderInfoMetadataRecordFields::NameLength::Make(label.size());
+  record[0] = trace::ProviderInfoMetadataRecordFields::Type::Make(
+                  trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
+              trace::ProviderInfoMetadataRecordFields::RecordSize::Make(num_words) |
+              trace::ProviderInfoMetadataRecordFields::MetadataType::Make(
+                  trace::ToUnderlyingType(trace::MetadataType::kProviderInfo)) |
+              trace::ProviderInfoMetadataRecordFields::Id::Make(bundle_->id) |
+              trace::ProviderInfoMetadataRecordFields::NameLength::Make(label.size());
   memcpy(&record[1], label.c_str(), label.size());
   return WriteBufferToSocket(socket, reinterpret_cast<uint8_t*>(record.data()),
                              trace::WordsToBytes(num_words));
 }
 
-TransferStatus Tracee::WriteProviderSectionRecord(
-    const zx::socket& socket) const {
+TransferStatus Tracee::WriteProviderSectionRecord(const zx::socket& socket) const {
   FXL_VLOG(2) << *bundle_ << ": writing provider section record";
   size_t num_words = 1u;
   std::vector<uint64_t> record(num_words);
-  record[0] =
-      trace::ProviderSectionMetadataRecordFields::Type::Make(
-          trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
-      trace::ProviderSectionMetadataRecordFields::RecordSize::Make(num_words) |
-      trace::ProviderSectionMetadataRecordFields::MetadataType::Make(
-          trace::ToUnderlyingType(trace::MetadataType::kProviderSection)) |
-      trace::ProviderSectionMetadataRecordFields::Id::Make(bundle_->id);
+  record[0] = trace::ProviderSectionMetadataRecordFields::Type::Make(
+                  trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
+              trace::ProviderSectionMetadataRecordFields::RecordSize::Make(num_words) |
+              trace::ProviderSectionMetadataRecordFields::MetadataType::Make(
+                  trace::ToUnderlyingType(trace::MetadataType::kProviderSection)) |
+              trace::ProviderSectionMetadataRecordFields::Id::Make(bundle_->id);
   return WriteBufferToSocket(socket, reinterpret_cast<uint8_t*>(record.data()),
                              trace::WordsToBytes(num_words));
 }
 
-TransferStatus Tracee::WriteProviderBufferOverflowEvent(
-    const zx::socket& socket) const {
+TransferStatus Tracee::WriteProviderBufferOverflowEvent(const zx::socket& socket) const {
   size_t num_words = 1u;
   std::vector<uint64_t> record(num_words);
-  record[0] =
-      trace::ProviderEventMetadataRecordFields::Type::Make(
-          trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
-      trace::ProviderEventMetadataRecordFields::RecordSize::Make(num_words) |
-      trace::ProviderEventMetadataRecordFields::MetadataType::Make(
-          trace::ToUnderlyingType(trace::MetadataType::kProviderEvent)) |
-      trace::ProviderEventMetadataRecordFields::Id::Make(bundle_->id) |
-      trace::ProviderEventMetadataRecordFields::Event::Make(
-          trace::ToUnderlyingType(trace::ProviderEventType::kBufferOverflow));
+  record[0] = trace::ProviderEventMetadataRecordFields::Type::Make(
+                  trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
+              trace::ProviderEventMetadataRecordFields::RecordSize::Make(num_words) |
+              trace::ProviderEventMetadataRecordFields::MetadataType::Make(
+                  trace::ToUnderlyingType(trace::MetadataType::kProviderEvent)) |
+              trace::ProviderEventMetadataRecordFields::Id::Make(bundle_->id) |
+              trace::ProviderEventMetadataRecordFields::Event::Make(
+                  trace::ToUnderlyingType(trace::ProviderEventType::kBufferOverflow));
   return WriteBufferToSocket(socket, reinterpret_cast<uint8_t*>(record.data()),
                              trace::WordsToBytes(num_words));
 }

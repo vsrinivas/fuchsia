@@ -163,8 +163,7 @@ class [[nodiscard]] Status final {
   Status(StatusCode code, std::string reason)
       : rep_(new status_impl::StatusRep{{1}, code, std::move(reason)}) {}
   ~Status() {
-    static_assert(sizeof(Status) == sizeof(void*),
-                  "sizeof(Status) should be one pointer");
+    static_assert(sizeof(Status) == sizeof(void*), "sizeof(Status) should be one pointer");
     if (is_code_only())
       return;
     if (rep_->refs.fetch_add(-1, std::memory_order_acq_rel) == 1)
@@ -193,13 +192,9 @@ class [[nodiscard]] Status final {
   static const Status& Cancelled() { return Static<>::Cancelled; }
   static const Status& Unavailable() { return Static<>::Unavailable; }
 
-  static Status Cancelled(std::string reason) {
-    return Status(StatusCode::CANCELLED, reason);
-  }
+  static Status Cancelled(std::string reason) { return Status(StatusCode::CANCELLED, reason); }
 
-  static Status Unknown(std::string reason) {
-    return Status(StatusCode::UNKNOWN, reason);
-  }
+  static Status Unknown(std::string reason) { return Status(StatusCode::UNKNOWN, reason); }
 
   static Status InvalidArgument(std::string reason) {
     return Status(StatusCode::INVALID_ARGUMENT, reason);
@@ -209,9 +204,7 @@ class [[nodiscard]] Status final {
     return Status(StatusCode::DEADLINE_EXCEEDED, reason);
   }
 
-  static Status NotFound(std::string reason) {
-    return Status(StatusCode::NOT_FOUND, reason);
-  }
+  static Status NotFound(std::string reason) { return Status(StatusCode::NOT_FOUND, reason); }
 
   static Status AlreadyExists(std::string reason) {
     return Status(StatusCode::ALREADY_EXISTS, reason);
@@ -233,29 +226,19 @@ class [[nodiscard]] Status final {
     return Status(StatusCode::FAILED_PRECONDITION, reason);
   }
 
-  static Status Aborted(std::string reason) {
-    return Status(StatusCode::ABORTED, reason);
-  }
+  static Status Aborted(std::string reason) { return Status(StatusCode::ABORTED, reason); }
 
-  static Status OutOfRange(std::string reason) {
-    return Status(StatusCode::OUT_OF_RANGE, reason);
-  }
+  static Status OutOfRange(std::string reason) { return Status(StatusCode::OUT_OF_RANGE, reason); }
 
   static Status Unimplemented(std::string reason) {
     return Status(StatusCode::UNIMPLEMENTED, reason);
   }
 
-  static Status Internal(std::string reason) {
-    return Status(StatusCode::INTERNAL, reason);
-  }
+  static Status Internal(std::string reason) { return Status(StatusCode::INTERNAL, reason); }
 
-  static Status Unavailable(std::string reason) {
-    return Status(StatusCode::UNAVAILABLE, reason);
-  }
+  static Status Unavailable(std::string reason) { return Status(StatusCode::UNAVAILABLE, reason); }
 
-  static Status DataLoss(std::string reason) {
-    return Status(StatusCode::DATA_LOSS, reason);
-  }
+  static Status DataLoss(std::string reason) { return Status(StatusCode::DATA_LOSS, reason); }
 
   const Status& OrCancelled() const {
     if (is_ok())
@@ -263,9 +246,7 @@ class [[nodiscard]] Status final {
     return *this;
   }
 
-  StatusCode code() const {
-    return is_code_only() ? static_cast<StatusCode>(code_) : rep_->code;
-  }
+  StatusCode code() const { return is_code_only() ? static_cast<StatusCode>(code_) : rep_->code; }
   bool is_ok() const { return code() == StatusCode::OK; }
   bool is_error() const { return !is_ok(); }
   const std::string& reason() const {
@@ -345,14 +326,12 @@ class [[nodiscard]] StatusOr final {
  public:
   using element_type = T;
 
-  template <typename U, typename = typename std::enable_if<
-                            !std::is_convertible<U, Status>::value &&
-                            !std::is_convertible<U, StatusOr>::value>::type>
-  StatusOr(U && value)
-      : code_(StatusCode::OK), storage_(std::forward<U>(value)) {}
+  template <typename U,
+            typename = typename std::enable_if<!std::is_convertible<U, Status>::value &&
+                                               !std::is_convertible<U, StatusOr>::value>::type>
+  StatusOr(U && value) : code_(StatusCode::OK), storage_(std::forward<U>(value)) {}
   StatusOr(StatusCode code, const std::string& description)
-      : code_(code),
-        storage_(new status_impl::StatusPayload{{1}, description}) {
+      : code_(code), storage_(new status_impl::StatusPayload{{1}, description}) {
     if (code_ == StatusCode::OK)
       abort();
   }

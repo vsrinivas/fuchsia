@@ -22,4 +22,4 @@ extern const RunTestFn PlatformRunTest;
 // TMPDIR if set, else that of /tmp.
 const char* TestFsRoot();
 
-} // namespace runtests
+}  // namespace runtests

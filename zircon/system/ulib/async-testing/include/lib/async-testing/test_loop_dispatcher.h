@@ -14,6 +14,6 @@ namespace async {
 // in |dispatcher| and the interface to control it in |loop|.
 void NewTestLoopDispatcher(async_dispatcher_t** dispatcher, async_test_subloop_t** loop);
 
-} // namespace async
+}  // namespace async
 
-#endif // LIB_ASYNC_TESTING_TEST_LOOP_DISPATCHER_H_
+#endif  // LIB_ASYNC_TESTING_TEST_LOOP_DISPATCHER_H_

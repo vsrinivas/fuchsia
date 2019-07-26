@@ -12,16 +12,13 @@
 namespace component {
 namespace testing {
 
-class DataFileReaderWriterUtil
-    : virtual public sys::testing::TestWithEnvironment {
+class DataFileReaderWriterUtil : virtual public sys::testing::TestWithEnvironment {
  protected:
-  fidl::StringPtr ReadFileSync(
-      const test::appmgr::integration::DataFileReaderWriterPtr& util,
-      std::string path);
+  fidl::StringPtr ReadFileSync(const test::appmgr::integration::DataFileReaderWriterPtr& util,
+                               std::string path);
 
-  zx_status_t WriteFileSync(
-      const test::appmgr::integration::DataFileReaderWriterPtr& util,
-      std::string path, std::string contents);
+  zx_status_t WriteFileSync(const test::appmgr::integration::DataFileReaderWriterPtr& util,
+                            std::string path, std::string contents);
 };
 
 }  // namespace testing

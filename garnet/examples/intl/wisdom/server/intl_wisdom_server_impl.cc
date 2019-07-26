@@ -35,9 +35,7 @@ const Locale LocaleIdToLocale(const std::string locale_id) {
   return Locale::createCanonical(locale_id.c_str());
 }
 
-const Locale LocaleIdToLocale(const LocaleId& locale_id) {
-  return LocaleIdToLocale(locale_id.id);
-}
+const Locale LocaleIdToLocale(const LocaleId& locale_id) { return LocaleIdToLocale(locale_id.id); }
 
 std::unique_ptr<TimeZone> TimeZoneIdToTimeZone(const TimeZoneId& time_zone_id) {
   return std::unique_ptr<TimeZone>(
@@ -49,27 +47,23 @@ std::unique_ptr<Calendar> CalendarIdToCalendar(const CalendarId& calendar_id,
   // Calendar ID strings are just locale IDs with an undefined language
   Locale as_locale = LocaleIdToLocale(calendar_id.id);
   UErrorCode error_code = U_ZERO_ERROR;
-  return std::unique_ptr<Calendar>(
-      Calendar::createInstance(time_zone, as_locale, error_code));
+  return std::unique_ptr<Calendar>(Calendar::createInstance(time_zone, as_locale, error_code));
 }
 }  // namespace
 
-IntlWisdomServerImpl::IntlWisdomServerImpl(
-    std::unique_ptr<sys::ComponentContext> startup_context)
+IntlWisdomServerImpl::IntlWisdomServerImpl(std::unique_ptr<sys::ComponentContext> startup_context)
     : startup_context_(std::move(startup_context)) {
   ZX_ASSERT(icu_data::Initialize() == ZX_OK);
   startup_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
-void IntlWisdomServerImpl::AskForWisdom(Profile intl_profile,
-                                        int64_t timestamp_ms,
+void IntlWisdomServerImpl::AskForWisdom(Profile intl_profile, int64_t timestamp_ms,
                                         AskForWisdomCallback callback) {
   // Parse the requested locale IDs
   auto& locale_ids = intl_profile.locales();
   std::vector<Locale> locales;
-  std::transform(
-      locale_ids.begin(), locale_ids.end(), std::back_inserter(locales),
-      [](LocaleId locale_id) { return LocaleIdToLocale(locale_id); });
+  std::transform(locale_ids.begin(), locale_ids.end(), std::back_inserter(locales),
+                 [](LocaleId locale_id) { return LocaleIdToLocale(locale_id); });
 
   std::unique_ptr<TimeZone> time_zone;
   if (intl_profile.time_zones().size() > 0) {
@@ -82,10 +76,9 @@ void IntlWisdomServerImpl::AskForWisdom(Profile intl_profile,
   // device timezone as a fallback).
   auto& calendar_ids = intl_profile.calendars();
   std::vector<std::unique_ptr<Calendar>> calendars;
-  std::transform(calendar_ids.begin(), calendar_ids.end(),
-                 std::back_inserter(calendars), [&](CalendarId calendar_id) {
-                   return CalendarIdToCalendar(calendar_id, *time_zone);
-                 });
+  std::transform(
+      calendar_ids.begin(), calendar_ids.end(), std::back_inserter(calendars),
+      [&](CalendarId calendar_id) { return CalendarIdToCalendar(calendar_id, *time_zone); });
   if (calendars.size() == 0) {
     UErrorCode error_code = U_ZERO_ERROR;
     calendars.push_back(std::unique_ptr<Calendar>(
@@ -105,9 +98,8 @@ std::string IntlWisdomServerImpl::BuildResponse(
 
   for (auto& locale : locales) {
     for (auto& calendar : calendars) {
-      auto date_format =
-          std::unique_ptr<DateFormat>(DateFormat::createDateTimeInstance(
-              DateFormat::kFull, DateFormat::kFull, locale));
+      auto date_format = std::unique_ptr<DateFormat>(
+          DateFormat::createDateTimeInstance(DateFormat::kFull, DateFormat::kFull, locale));
       ZX_ASSERT(date_format);
       date_format->setCalendar(*calendar);
       UnicodeString formatted;

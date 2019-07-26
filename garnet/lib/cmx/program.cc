@@ -16,8 +16,7 @@ constexpr char kArgs[] = "args";
 constexpr char kEnvVars[] = "env_vars";
 constexpr char kData[] = "data";
 
-bool ProgramMetadata::Parse(const rapidjson::Value& program_value,
-                            json::JSONParser* json_parser) {
+bool ProgramMetadata::Parse(const rapidjson::Value& program_value, json::JSONParser* json_parser) {
   binary_.clear();
   args_.clear();
   data_.clear();
@@ -32,8 +31,7 @@ bool ProgramMetadata::Parse(const rapidjson::Value& program_value,
   const bool parsed_binary = ParseBinary(program_value, json_parser);
   const bool parsed_data = ParseData(program_value, json_parser);
   if (!parsed_binary && !parsed_data) {
-    json_parser->ReportError(
-        "Both 'binary' and 'data' in program are missing.");
+    json_parser->ReportError("Both 'binary' and 'data' in program are missing.");
     return false;
   }
 

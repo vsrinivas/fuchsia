@@ -15,8 +15,7 @@ __BEGIN_CDECLS
 // contains the information from the packet, otherwise |data| is null.
 // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down.
 typedef void(async_exception_handler_t)(async_dispatcher_t* dispatcher,
-                                        async_exception_t* exception,
-                                        zx_status_t status,
+                                        async_exception_t* exception, zx_status_t status,
                                         const zx_port_packet_t* report);
 
 // Holds content for an exception packet receiver and its handler.
@@ -27,17 +26,17 @@ typedef void(async_exception_handler_t)(async_dispatcher_t* dispatcher,
 //
 // Multiple packets may be delivered to the same receiver concurrently.
 struct async_exception {
-    // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
-    async_state_t state;
+  // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
+  async_state_t state;
 
-    // The handler to invoke when a packet is received.
-    async_exception_handler_t* handler;
+  // The handler to invoke when a packet is received.
+  async_exception_handler_t* handler;
 
-    // The task we're watching.
-    zx_handle_t task;
+  // The task we're watching.
+  zx_handle_t task;
 
-    // The options to pass to zx_task_bind_exception_port().
-    uint32_t options;
+  // The options to pass to zx_task_bind_exception_port().
+  uint32_t options;
 };
 
 // Bind the async port to the task's exception port.
@@ -49,8 +48,7 @@ struct async_exception {
 // |zx_task_bind_exception_port()|.
 //
 // This operation is thread-safe.
-zx_status_t async_bind_exception_port(async_dispatcher_t* dispatcher,
-                                      async_exception_t* exception);
+zx_status_t async_bind_exception_port(async_dispatcher_t* dispatcher, async_exception_t* exception);
 
 // Unbind the async port from |task|'s exception port.
 //
@@ -75,8 +73,7 @@ zx_status_t async_unbind_exception_port(async_dispatcher_t* dispatcher,
 //
 // This operation is thread-safe.
 zx_status_t async_resume_from_exception(async_dispatcher_t* dispatcher,
-                                        async_exception_t* exception,
-                                        zx_handle_t task,
+                                        async_exception_t* exception, zx_handle_t task,
                                         uint32_t options);
 
 __END_CDECLS

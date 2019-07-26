@@ -31,13 +31,13 @@
  * struct ath_dfs_pool_stats - DFS Statistics for global pools
  */
 struct ath_dfs_pool_stats {
-    uint32_t pool_reference;
-    uint32_t pulse_allocated;
-    uint32_t pulse_alloc_error;
-    uint32_t pulse_used;
-    uint32_t pseq_allocated;
-    uint32_t pseq_alloc_error;
-    uint32_t pseq_used;
+  uint32_t pool_reference;
+  uint32_t pulse_allocated;
+  uint32_t pulse_alloc_error;
+  uint32_t pulse_used;
+  uint32_t pseq_allocated;
+  uint32_t pseq_alloc_error;
+  uint32_t pseq_used;
 };
 
 /**
@@ -49,11 +49,11 @@ struct ath_dfs_pool_stats {
  * @chirp: chirp detected in pulse
  */
 struct pulse_event {
-    uint64_t ts;
-    uint16_t freq;
-    uint8_t width;
-    uint8_t rssi;
-    bool chirp;
+  uint64_t ts;
+  uint16_t freq;
+  uint8_t width;
+  uint8_t rssi;
+  bool chirp;
 };
 
 /**
@@ -70,16 +70,16 @@ struct pulse_event {
  * @chirp: chirp required for the radar pattern
  */
 struct radar_detector_specs {
-    uint8_t type_id;
-    uint8_t width_min;
-    uint8_t width_max;
-    uint16_t pri_min;
-    uint16_t pri_max;
-    uint8_t num_pri;
-    uint8_t ppb;
-    uint8_t ppb_thresh;
-    uint8_t max_pri_tolerance;
-    bool chirp;
+  uint8_t type_id;
+  uint8_t width_min;
+  uint8_t width_max;
+  uint16_t pri_min;
+  uint16_t pri_max;
+  uint8_t num_pri;
+  uint8_t ppb;
+  uint8_t ppb_thresh;
+  uint8_t max_pri_tolerance;
+  bool chirp;
 };
 
 /**
@@ -94,19 +94,19 @@ struct radar_detector_specs {
  * @channel_detectors: list connecting channel_detector elements
  */
 struct dfs_pattern_detector {
-    void (*exit)(struct dfs_pattern_detector* dpd);
-    bool (*set_dfs_domain)(struct dfs_pattern_detector* dpd, enum nl80211_dfs_regions region);
-    bool (*add_pulse)(struct dfs_pattern_detector* dpd, struct pulse_event* pe);
+  void (*exit)(struct dfs_pattern_detector* dpd);
+  bool (*set_dfs_domain)(struct dfs_pattern_detector* dpd, enum nl80211_dfs_regions region);
+  bool (*add_pulse)(struct dfs_pattern_detector* dpd, struct pulse_event* pe);
 
-    struct ath_dfs_pool_stats (*get_stats)(struct dfs_pattern_detector* dpd);
-    enum nl80211_dfs_regions region;
-    uint8_t num_radar_types;
-    uint64_t last_pulse_ts;
-    /* needed for ath_dbg() */
-    struct ath_common* common;
+  struct ath_dfs_pool_stats (*get_stats)(struct dfs_pattern_detector* dpd);
+  enum nl80211_dfs_regions region;
+  uint8_t num_radar_types;
+  uint64_t last_pulse_ts;
+  /* needed for ath_dbg() */
+  struct ath_common* common;
 
-    const struct radar_detector_specs* radar_spec;
-    struct list_head channel_detectors;
+  const struct radar_detector_specs* radar_spec;
+  struct list_head channel_detectors;
 };
 
 /**

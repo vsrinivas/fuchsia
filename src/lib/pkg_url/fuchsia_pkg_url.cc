@@ -64,8 +64,7 @@ std::string FuchsiaPkgUrl::pkgfs_dir_path() const {
 }
 
 std::string FuchsiaPkgUrl::package_path() const {
-  return fxl::Substitute("fuchsia-pkg://$0/$1/$2", host_name_, package_name_,
-                         variant_);
+  return fxl::Substitute("fuchsia-pkg://$0/$1/$2", host_name_, package_name_, variant_);
 }
 
 const std::string& FuchsiaPkgUrl::ToString() const { return url_; }

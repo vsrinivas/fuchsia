@@ -45,8 +45,7 @@ void App::StartScanning() {
   ble::ScanFilterPtr filter = ble::ScanFilter::New();
   filter->connectable = fuchsia::bluetooth::Bool::New();
   filter->connectable->value = false;
-  central_->StartScan(std::move(filter),
-                      [](fuchsia::bluetooth::Status status) {});
+  central_->StartScan(std::move(filter), [](fuchsia::bluetooth::Status status) {});
 }
 
 // Called when the scan state changes, e.g. when a scan session terminates due

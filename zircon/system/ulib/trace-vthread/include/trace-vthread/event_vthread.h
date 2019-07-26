@@ -44,12 +44,10 @@
 //     TRACE_VTHREAD_DURATION_BEGIN("category", "name", "vthread", vthread_id,
 //                                  curr_ticks, "x", TA_INT32(42));
 //
-#define TRACE_VTHREAD_DURATION_BEGIN(category_literal, name_literal,       \
-                                         vthread_literal, vthread_id,      \
-                                         timestamp, args...)               \
-  TRACE_VTHREAD_INTERNAL_DURATION_BEGIN(                                   \
-      (category_literal), (name_literal), (vthread_literal), (vthread_id), \
-      (timestamp), args)
+#define TRACE_VTHREAD_DURATION_BEGIN(category_literal, name_literal, vthread_literal, vthread_id, \
+                                     timestamp, args...)                                          \
+  TRACE_VTHREAD_INTERNAL_DURATION_BEGIN((category_literal), (name_literal), (vthread_literal),    \
+                                        (vthread_id), (timestamp), args)
 
 // Writes a virtual thread duration end event.
 //
@@ -77,12 +75,10 @@
 //     TRACE_VTHREAD_DURATION_END("category", "name", "vthread", vthread_id,
 //                                curr_ticks, "x", TA_INT32(42));
 //
-#define TRACE_VTHREAD_DURATION_END(category_literal, name_literal,         \
-                                       vthread_literal, vthread_id,        \
-                                       timestamp, args...)                 \
-  TRACE_VTHREAD_INTERNAL_DURATION_END(                                     \
-      (category_literal), (name_literal), (vthread_literal), (vthread_id), \
-      (timestamp), args)
+#define TRACE_VTHREAD_DURATION_END(category_literal, name_literal, vthread_literal, vthread_id, \
+                                   timestamp, args...)                                          \
+  TRACE_VTHREAD_INTERNAL_DURATION_END((category_literal), (name_literal), (vthread_literal),    \
+                                      (vthread_id), (timestamp), args)
 
 // Writes a virtual thread flow begin event with the specified id.
 // This event may be followed by flow steps events and must be matched by
@@ -121,12 +117,10 @@
 //     TRACE_VTHREAD_FLOW_BEGIN("category", "name", "vthread", vthread_id,
 //                              flow_id, curr_ticks, "x", TA_INT32(42));
 //
-#define TRACE_VTHREAD_FLOW_BEGIN(category_literal, name_literal,           \
-                                     vthread_literal, vthread_id, flow_id, \
-                                     timestamp, args...)                   \
-  TRACE_VTHREAD_INTERNAL_FLOW_BEGIN(                                       \
-      (category_literal), (name_literal), (vthread_literal), (vthread_id), \
-      (flow_id), (timestamp), args)
+#define TRACE_VTHREAD_FLOW_BEGIN(category_literal, name_literal, vthread_literal, vthread_id, \
+                                 flow_id, timestamp, args...)                                 \
+  TRACE_VTHREAD_INTERNAL_FLOW_BEGIN((category_literal), (name_literal), (vthread_literal),    \
+                                    (vthread_id), (flow_id), (timestamp), args)
 
 // Writes a virtual thread flow step event with the specified id.
 //
@@ -163,12 +157,10 @@
 //     TRACE_VTHREAD_FLOW_STEP("category", "name", "vthread", vthread_id,
 //                             flow_id, curr_ticks, "x", TA_INT32(42));
 //
-#define TRACE_VTHREAD_FLOW_STEP(category_literal, name_literal,            \
-                                    vthread_literal, vthread_id, flow_id,  \
-                                    timestamp, args...)                    \
-  TRACE_VTHREAD_INTERNAL_FLOW_STEP(                                        \
-      (category_literal), (name_literal), (vthread_literal), (vthread_id), \
-      (flow_id), (timestamp), args)
+#define TRACE_VTHREAD_FLOW_STEP(category_literal, name_literal, vthread_literal, vthread_id, \
+                                flow_id, timestamp, args...)                                 \
+  TRACE_VTHREAD_INTERNAL_FLOW_STEP((category_literal), (name_literal), (vthread_literal),    \
+                                   (vthread_id), (flow_id), (timestamp), args)
 
 // Writes a virtual thread flow end event with the specified id.
 //
@@ -205,11 +197,9 @@
 //     TRACE_VTHREAD_FLOW_END("category", "name", "vthread", vthread_id,
 //                            flow_id, curr_ticks, "x", TA_INT32(42));
 //
-#define TRACE_VTHREAD_FLOW_END(category_literal, name_literal,             \
-                                   vthread_literal, vthread_id, flow_id,   \
-                                   timestamp, args...)                     \
-  TRACE_VTHREAD_INTERNAL_FLOW_END(                                         \
-      (category_literal), (name_literal), (vthread_literal), (vthread_id), \
-      (flow_id), (timestamp), args)
+#define TRACE_VTHREAD_FLOW_END(category_literal, name_literal, vthread_literal, vthread_id, \
+                               flow_id, timestamp, args...)                                 \
+  TRACE_VTHREAD_INTERNAL_FLOW_END((category_literal), (name_literal), (vthread_literal),    \
+                                  (vthread_id), (flow_id), (timestamp), args)
 
 #endif  // TRACE_VTHREAD_EVENT_VTHREAD_H_

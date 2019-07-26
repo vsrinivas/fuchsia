@@ -19,45 +19,45 @@
 namespace crypto {
 
 class Bytes final {
-public:
-    Bytes();
-    ~Bytes();
+ public:
+  Bytes();
+  ~Bytes();
 
-    // Accessors
-    const uint8_t* get() const { return buf_.get(); }
-    uint8_t* get() { return buf_.get(); }
-    size_t len() const { return len_; }
+  // Accessors
+  const uint8_t* get() const { return buf_.get(); }
+  uint8_t* get() { return buf_.get(); }
+  size_t len() const { return len_; }
 
-    // Resizes the underlying buffer to |len| bytes and fills it with random data.
-    zx_status_t Randomize() { return Randomize(len_); }
-    zx_status_t Randomize(size_t len);
+  // Resizes the underlying buffer to |len| bytes and fills it with random data.
+  zx_status_t Randomize() { return Randomize(len_); }
+  zx_status_t Randomize(size_t len);
 
-    // Resize the underlying buffer.  If the new length is shorter, the data is truncated.  If it is
-    // longer, it is padded with the given |fill| value.
-    zx_status_t Resize(size_t size, uint8_t fill = 0);
+  // Resize the underlying buffer.  If the new length is shorter, the data is truncated.  If it is
+  // longer, it is padded with the given |fill| value.
+  zx_status_t Resize(size_t size, uint8_t fill = 0);
 
-    // Copies |len| bytes from |src| to |dst_off| in the underlying buffer.  Resizes the buffer as
-    // needed, padding with zeros.
-    zx_status_t Copy(const void* src, size_t len, zx_off_t dst_off = 0);
-    zx_status_t Copy(const Bytes& src, zx_off_t dst_off = 0) {
-        return Copy(src.get(), src.len(), dst_off);
-    }
+  // Copies |len| bytes from |src| to |dst_off| in the underlying buffer.  Resizes the buffer as
+  // needed, padding with zeros.
+  zx_status_t Copy(const void* src, size_t len, zx_off_t dst_off = 0);
+  zx_status_t Copy(const Bytes& src, zx_off_t dst_off = 0) {
+    return Copy(src.get(), src.len(), dst_off);
+  }
 
-    // Array access operators.  Assert that |off| is not out of bounds.
-    const uint8_t& operator[](zx_off_t off) const;
-    uint8_t& operator[](zx_off_t off);
+  // Array access operators.  Assert that |off| is not out of bounds.
+  const uint8_t& operator[](zx_off_t off) const;
+  uint8_t& operator[](zx_off_t off);
 
-    // Comparison operators.  These are guaranteed to be constant-time.
-    bool operator==(const Bytes& other) const;
-    bool operator!=(const Bytes& other) const { return !(*this == other); }
+  // Comparison operators.  These are guaranteed to be constant-time.
+  bool operator==(const Bytes& other) const;
+  bool operator!=(const Bytes& other) const { return !(*this == other); }
 
-private:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Bytes);
+ private:
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Bytes);
 
-    // The underlying buffer.
-    fbl::unique_ptr<uint8_t[]> buf_;
-    // Length in bytes of memory currently allocated to the underlying buffer.
-    size_t len_;
+  // The underlying buffer.
+  fbl::unique_ptr<uint8_t[]> buf_;
+  // Length in bytes of memory currently allocated to the underlying buffer.
+  size_t len_;
 };
 
-} // namespace crypto
+}  // namespace crypto

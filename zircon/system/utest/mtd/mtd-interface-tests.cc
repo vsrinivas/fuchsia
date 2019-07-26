@@ -67,8 +67,7 @@ TEST_F(MtdInterfaceTest, ValidMtd) {
 
 TEST_F(MtdInterfaceTest, InvalidMtd) {
   // File does not exist.
-  std::unique_ptr<MtdInterface> nonexistant_mtd =
-      MtdInterface::Create("/dev/bad/mtd");
+  std::unique_ptr<MtdInterface> nonexistant_mtd = MtdInterface::Create("/dev/bad/mtd");
   EXPECT_EQ(nullptr, nonexistant_mtd);
 
   // File is not an MTD device.
@@ -170,10 +169,8 @@ TEST_F(MtdInterfaceTest, ReadWriteEraseTest) {
 TEST_F(MtdInterfaceTest, InvalidOffset) {
   const uint32_t nonPageOffset = kPageSize - 1;
 
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-            mtd_->WritePage(nonPageOffset, nullptr, nullptr));
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-            mtd_->ReadPage(nonPageOffset, nullptr, nullptr));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, mtd_->WritePage(nonPageOffset, nullptr, nullptr));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, mtd_->ReadPage(nonPageOffset, nullptr, nullptr));
 
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, mtd_->EraseBlock(nonPageOffset));
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, mtd_->IsBadBlock(nonPageOffset, nullptr));

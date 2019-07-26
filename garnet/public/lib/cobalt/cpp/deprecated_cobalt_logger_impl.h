@@ -14,13 +14,11 @@ namespace cobalt {
 
 class DeprecatedCobaltLoggerImpl : public BaseCobaltLoggerImpl {
  public:
-  DeprecatedCobaltLoggerImpl(async_dispatcher_t* dispatcher,
-                             component::StartupContext* context,
+  DeprecatedCobaltLoggerImpl(async_dispatcher_t* dispatcher, component::StartupContext* context,
                              fuchsia::cobalt::ProjectProfile profile);
 
  protected:
-  virtual fidl::InterfacePtr<fuchsia::cobalt::LoggerFactory>
-  ConnectToLoggerFactory() override;
+  virtual fidl::InterfacePtr<fuchsia::cobalt::LoggerFactory> ConnectToLoggerFactory() override;
 
  private:
   component::StartupContext* component_context_;

@@ -18,8 +18,7 @@
 namespace simple_camera {
 
 using OnShutdownCallback = fit::function<void()>;
-using OnFrameAvailableCallback =
-    fit::function<zx_status_t(fuchsia::camera::FrameAvailableEvent)>;
+using OnFrameAvailableCallback = fit::function<zx_status_t(fuchsia::camera::FrameAvailableEvent)>;
 
 class VideoDisplay {
  public:
@@ -29,10 +28,9 @@ class VideoDisplay {
   // Returns an error if the initial part of setup fails.  If ZX_OK is
   // returned, termination of communication is signalled by calling |callback|,
   // which may be done on an arbitrary thread.
-  zx_status_t ConnectToCamera(
-      component::StartupContext* context, uint32_t camera_id,
-      fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe,
-      OnShutdownCallback callback);
+  zx_status_t ConnectToCamera(component::StartupContext* context, uint32_t camera_id,
+                              fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe,
+                              OnShutdownCallback callback);
 
   void DisconnectFromCamera();
 
@@ -41,14 +39,12 @@ class VideoDisplay {
 
  private:
   // Called when the driver tells us a new frame is available:
-  zx_status_t IncomingBufferFilled(
-      const fuchsia::camera::FrameAvailableEvent& frame);
+  zx_status_t IncomingBufferFilled(const fuchsia::camera::FrameAvailableEvent& frame);
 
   // Called when a buffer is released by the consumer.
   void BufferReleased(uint32_t buffer_id);
 
-  zx_status_t SetupBuffers(
-      const fuchsia::sysmem::BufferCollectionInfo& buffer_collection);
+  zx_status_t SetupBuffers(const fuchsia::sysmem::BufferCollectionInfo& buffer_collection);
 
   // The number of buffers to allocate while setting up the camera stream.
   // This number has to be at least 2, since scenic will hold onto one buffer

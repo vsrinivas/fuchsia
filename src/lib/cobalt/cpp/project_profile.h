@@ -8,14 +8,11 @@
 
 namespace cobalt {
 
-fuchsia::cobalt::ProjectProfile ProjectProfileFromBase64String(
-    const std::string &cfg);
+fuchsia::cobalt::ProjectProfile ProjectProfileFromBase64String(const std::string &cfg);
 
-fuchsia::cobalt::ProjectProfile ProjectProfileFromString(
-    const std::string &cfg);
+fuchsia::cobalt::ProjectProfile ProjectProfileFromString(const std::string &cfg);
 
-fuchsia::cobalt::ProjectProfile ProjectProfileFromFile(
-    const std::string &filename);
+fuchsia::cobalt::ProjectProfile ProjectProfileFromFile(const std::string &filename);
 
 fuchsia::cobalt::ProjectProfile ProjectProfileFromVmo(fsl::SizedVmo vmo);
 

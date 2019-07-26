@@ -16,14 +16,14 @@ namespace rtl88xx {
 
 // This interface describes an instance of the MAC presented by a Realtek device.
 class WlanMac {
-   public:
-    virtual ~WlanMac() = 0;
+ public:
+  virtual ~WlanMac() = 0;
 
-    // Query this WlanMac instance.
-    virtual zx_status_t Query(wlanphy_impl_info_t* info) = 0;
+  // Query this WlanMac instance.
+  virtual zx_status_t Query(wlanphy_impl_info_t* info) = 0;
 
-    // Destroy this WlanMac instance.
-    virtual zx_status_t Destroy() = 0;
+  // Destroy this WlanMac instance.
+  virtual zx_status_t Destroy() = 0;
 };
 
 }  // namespace rtl88xx

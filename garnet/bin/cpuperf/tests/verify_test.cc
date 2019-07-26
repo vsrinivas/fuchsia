@@ -28,14 +28,12 @@
 #endif
 
 bool Verifier::VerifyIteration(uint32_t iter) {
-  auto get_file_name = [this, &iter] (uint32_t trace_num) -> std::string {
-      return session_result_spec_->GetTraceFilePath(iter, trace_num);
+  auto get_file_name = [this, &iter](uint32_t trace_num) -> std::string {
+    return session_result_spec_->GetTraceFilePath(iter, trace_num);
   };
 
   std::unique_ptr<perfmon::FileReader> reader;
-  if (!perfmon::FileReader::Create(get_file_name,
-                                   session_result_spec_->num_traces,
-                                   &reader)) {
+  if (!perfmon::FileReader::Create(get_file_name, session_result_spec_->num_traces, &reader)) {
     return false;
   }
 
@@ -46,64 +44,57 @@ bool Verifier::VerifyIteration(uint32_t iter) {
   uint32_t trace;
   perfmon::SampleRecord record;
   perfmon::ReaderStatus status;
-  while ((status = reader->ReadNextRecord(&trace, &record)) ==
-         perfmon::ReaderStatus::kOk) {
+  while ((status = reader->ReadNextRecord(&trace, &record)) == perfmon::ReaderStatus::kOk) {
     if (trace != current_trace) {
       current_trace = trace;
     }
 
     switch (record.type()) {
-    case perfmon::kRecordTypeTime:
-      ++counts.time_records;
-      break;
-    case perfmon::kRecordTypeTick:
-      ++counts.tick_records;
-      break;
-    case perfmon::kRecordTypeCount:
-      ++counts.count_records;
-      break;
-    case perfmon::kRecordTypeValue:
-      ++counts.value_records;
-      break;
-    case perfmon::kRecordTypePc:
-      ++counts.pc_records;
-      break;
-    case perfmon::kRecordTypeLastBranch:
-      ++counts.last_branch_records;
-      break;
-    default:
-      // The reader shouldn't be returning records of unknown types.
-      // But rather than FXL_DCHECK which will terminate the test, just
-      // flag an error.
-      FXL_LOG(ERROR) << "Unknown record type: " << record.type()
-                     << ", trace " << current_trace << ", offset "
-                     << reader->GetLastRecordOffset();
-      // Don't keep reading, we don't know what size the record is.
-      return false;
+      case perfmon::kRecordTypeTime:
+        ++counts.time_records;
+        break;
+      case perfmon::kRecordTypeTick:
+        ++counts.tick_records;
+        break;
+      case perfmon::kRecordTypeCount:
+        ++counts.count_records;
+        break;
+      case perfmon::kRecordTypeValue:
+        ++counts.value_records;
+        break;
+      case perfmon::kRecordTypePc:
+        ++counts.pc_records;
+        break;
+      case perfmon::kRecordTypeLastBranch:
+        ++counts.last_branch_records;
+        break;
+      default:
+        // The reader shouldn't be returning records of unknown types.
+        // But rather than FXL_DCHECK which will terminate the test, just
+        // flag an error.
+        FXL_LOG(ERROR) << "Unknown record type: " << record.type() << ", trace " << current_trace
+                       << ", offset " << reader->GetLastRecordOffset();
+        // Don't keep reading, we don't know what size the record is.
+        return false;
     }
 
     if (!VerifyRecord(record)) {
-      FXL_LOG(ERROR) << "Record verification failed: trace " << current_trace
-                     << ", offset " << reader->GetLastRecordOffset();
+      FXL_LOG(ERROR) << "Record verification failed: trace " << current_trace << ", offset "
+                     << reader->GetLastRecordOffset();
       // If one record is wrong there could a lot of them, reducing the
       // S/N ratio of the output. So just bail.
       return false;
     }
   }
 
-  FXL_LOG(INFO)
-    << fxl::StringPrintf("Counts: %zu time, %zu tick",
-                         counts.time_records, counts.tick_records);
-  FXL_LOG(INFO)
-    << fxl::StringPrintf("Counts: %zu count, %zu value",
-                         counts.count_records, counts.value_records);
-  FXL_LOG(INFO)
-    << fxl::StringPrintf("Counts: %zu pc",
-                         counts.pc_records);
+  FXL_LOG(INFO) << fxl::StringPrintf("Counts: %zu time, %zu tick", counts.time_records,
+                                     counts.tick_records);
+  FXL_LOG(INFO) << fxl::StringPrintf("Counts: %zu count, %zu value", counts.count_records,
+                                     counts.value_records);
+  FXL_LOG(INFO) << fxl::StringPrintf("Counts: %zu pc", counts.pc_records);
 
   if (status != perfmon::ReaderStatus::kNoMoreRecords) {
-    FXL_LOG(ERROR) << "Error occurred in record reader: "
-                   << perfmon::ReaderStatusToString(status);
+    FXL_LOG(ERROR) << "Error occurred in record reader: " << perfmon::ReaderStatusToString(status);
     return false;
   }
 
@@ -111,32 +102,26 @@ bool Verifier::VerifyIteration(uint32_t iter) {
 }
 
 void Verifier::Verify() {
-  for (size_t iter = 0;
-       iter < session_result_spec_->num_iterations;
-       ++iter) {
+  for (size_t iter = 0; iter < session_result_spec_->num_iterations; ++iter) {
     FXL_LOG(INFO) << "Verifying iteration " << iter;
     EXPECT_TRUE(VerifyIteration(iter));
   }
 }
 
-bool Verifier::LookupEventByName(const char* group_name,
-                                 const char* event_name,
+bool Verifier::LookupEventByName(const char* group_name, const char* event_name,
                                  const perfmon::EventDetails** out_details) {
   GetModelEventManager();
-  return model_event_manager_->LookupEventByName(group_name, event_name,
-                                                 out_details);
+  return model_event_manager_->LookupEventByName(group_name, event_name, out_details);
 }
 
 void Verifier::GetModelEventManager() {
   if (!model_event_manager_) {
-    model_event_manager_ = perfmon::ModelEventManager::Create(
-      session_result_spec_->model_name);
+    model_event_manager_ = perfmon::ModelEventManager::Create(session_result_spec_->model_name);
     ASSERT_TRUE(model_event_manager_);
   }
 }
 
-static std::unique_ptr<Verifier> LookupVerifier(
-    const cpuperf::SessionResultSpec* spec) {
+static std::unique_ptr<Verifier> LookupVerifier(const cpuperf::SessionResultSpec* spec) {
   for (size_t i = 0; i < kTestSpecCount; ++i) {
     const TestSpec* test = kTestSpecs[i];
     if (strcmp(spec->config_name.c_str(), test->config_name) == 0) {
@@ -154,8 +139,7 @@ void VerifySpec(const std::string& spec_file_path) {
   cpuperf::SessionSpec session_spec;
   ASSERT_TRUE(cpuperf::DecodeSessionSpec(content, &session_spec));
 
-  ASSERT_TRUE(files::ReadFileToString(session_spec.session_result_spec_path,
-                                      &content));
+  ASSERT_TRUE(files::ReadFileToString(session_spec.session_result_spec_path, &content));
   cpuperf::SessionResultSpec session_result_spec;
   ASSERT_TRUE(cpuperf::DecodeSessionResultSpec(content, &session_result_spec));
 

@@ -11,4 +11,4 @@ namespace devmgr {
 // value matches "0", "off", or "false", otherwise it returns true.
 bool getenv_bool(const char* key, bool default_value);
 
-} // namespace devmgr
+}  // namespace devmgr

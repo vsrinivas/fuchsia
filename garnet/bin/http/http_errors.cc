@@ -8,9 +8,7 @@
 
 namespace http {
 
-std::string ErrorToString(int error) {
-  return "http::" + ErrorToShortString(error);
-}
+std::string ErrorToString(int error) { return "http::" + ErrorToShortString(error); }
 
 std::string ErrorToShortString(int error) {
   if (error == 0)

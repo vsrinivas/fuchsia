@@ -93,105 +93,102 @@ namespace eth {
 class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
                     public ddk::EthernetImplProtocol<DWMacDevice, ddk::base_protocol>,
                     public ddk::EthMacProtocol<DWMacDevice> {
-public:
-    DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev, eth_board_protocol_t* eth_board);
+ public:
+  DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev, eth_board_protocol_t* eth_board);
 
-    static zx_status_t Create(void* ctx, zx_device_t* device);
+  static zx_status_t Create(void* ctx, zx_device_t* device);
 
-    void DdkRelease();
-    void DdkUnbind();
+  void DdkRelease();
+  void DdkUnbind();
 
-    // ZX_PROTOCOL_ETHERNET_IMPL ops.
-    zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
-    void EthernetImplStop() __TA_EXCLUDES(lock_);
-    zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc) __TA_EXCLUDES(lock_);
-    zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf)
-        __TA_EXCLUDES(lock_);
-    zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
-                                     size_t data_size);
-    void EthernetImplGetBti(zx::bti* bti);
+  // ZX_PROTOCOL_ETHERNET_IMPL ops.
+  zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
+  void EthernetImplStop() __TA_EXCLUDES(lock_);
+  zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc) __TA_EXCLUDES(lock_);
+  zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) __TA_EXCLUDES(lock_);
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+                                   size_t data_size);
+  void EthernetImplGetBti(zx::bti* bti);
 
-    // ZX_PROTOCOL_ETH_MAC ops.
-    zx_status_t EthMacMdioWrite(uint32_t reg, uint32_t val);
-    zx_status_t EthMacMdioRead(uint32_t reg, uint32_t* val);
-    zx_status_t EthMacRegisterCallbacks(const eth_mac_callbacks_t* callbacks);
+  // ZX_PROTOCOL_ETH_MAC ops.
+  zx_status_t EthMacMdioWrite(uint32_t reg, uint32_t val);
+  zx_status_t EthMacMdioRead(uint32_t reg, uint32_t* val);
+  zx_status_t EthMacRegisterCallbacks(const eth_mac_callbacks_t* callbacks);
 
+ private:
+  zx_status_t InitBuffers();
+  zx_status_t InitDevice();
+  zx_status_t DeInitDevice() __TA_REQUIRES(lock_);
+  zx_status_t InitPdev();
+  zx_status_t ShutDown() __TA_EXCLUDES(lock_);
 
-private:
+  void UpdateLinkStatus() __TA_REQUIRES(lock_);
+  void DumpRegisters();
+  void DumpStatus(uint32_t status);
+  void ReleaseBuffers();
+  void ProcRxBuffer(uint32_t int_status) __TA_EXCLUDES(lock_);
+  uint32_t DmaRxStatus();
 
-    zx_status_t InitBuffers();
-    zx_status_t InitDevice();
-    zx_status_t DeInitDevice() __TA_REQUIRES(lock_);
-    zx_status_t InitPdev();
-    zx_status_t ShutDown() __TA_EXCLUDES(lock_);
+  int Thread() __TA_EXCLUDES(lock_);
+  int WorkerThread();
 
-    void UpdateLinkStatus() __TA_REQUIRES(lock_);
-    void DumpRegisters();
-    void DumpStatus(uint32_t status);
-    void ReleaseBuffers();
-    void ProcRxBuffer(uint32_t int_status) __TA_EXCLUDES(lock_);
-    uint32_t DmaRxStatus();
+  zx_status_t GetMAC(zx_device_t* dev);
 
-    int Thread() __TA_EXCLUDES(lock_);
-    int WorkerThread();
+  // Number each of tx/rx transaction descriptors
+  static constexpr uint32_t kNumDesc = 32;
+  // Size of each transaction buffer
+  static constexpr uint32_t kTxnBufSize = 2048;
 
-    zx_status_t GetMAC(zx_device_t* dev);
+  dw_dmadescr_t* tx_descriptors_ = nullptr;
+  dw_dmadescr_t* rx_descriptors_ = nullptr;
 
-    //Number each of tx/rx transaction descriptors
-    static constexpr uint32_t kNumDesc = 32;
-    //Size of each transaction buffer
-    static constexpr uint32_t kTxnBufSize = 2048;
+  fbl::RefPtr<PinnedBuffer> txn_buffer_;
+  fbl::RefPtr<PinnedBuffer> desc_buffer_;
 
-    dw_dmadescr_t* tx_descriptors_ = nullptr;
-    dw_dmadescr_t* rx_descriptors_ = nullptr;
+  uint8_t* tx_buffer_ = nullptr;
+  uint32_t curr_tx_buf_ = 0;
+  uint8_t* rx_buffer_ = nullptr;
+  uint32_t curr_rx_buf_ = 0;
 
-    fbl::RefPtr<PinnedBuffer> txn_buffer_;
-    fbl::RefPtr<PinnedBuffer> desc_buffer_;
+  // designware mac options
+  uint32_t options_ = 0;
 
-    uint8_t* tx_buffer_ = nullptr;
-    uint32_t curr_tx_buf_ = 0;
-    uint8_t* rx_buffer_ = nullptr;
-    uint32_t curr_rx_buf_ = 0;
+  // ethermac fields
+  uint32_t features_ = 0;
+  uint32_t mtu_ = 0;
+  uint8_t mac_[MAC_ARRAY_LENGTH] = {};
+  uint16_t mii_addr_ = 0;
 
-    // designware mac options
-    uint32_t options_ = 0;
+  zx::bti bti_;
+  zx::interrupt dma_irq_;
 
-    // ethermac fields
-    uint32_t features_ = 0;
-    uint32_t mtu_ = 0;
-    uint8_t mac_[MAC_ARRAY_LENGTH] = {};
-    uint16_t mii_addr_ = 0;
+  ddk::PDev pdev_;
+  ddk::EthBoardProtocolClient eth_board_;
 
-    zx::bti bti_;
-    zx::interrupt dma_irq_;
+  std::optional<ddk::MmioBuffer> mmio_;
 
-    ddk::PDev pdev_;
-    ddk::EthBoardProtocolClient eth_board_;
+  fbl::Mutex lock_;
+  ddk::EthernetIfcProtocolClient ethernet_client_ __TA_GUARDED(lock_);
 
-    std::optional<ddk::MmioBuffer> mmio_;
+  // Only accessed from Thread, so not locked.
+  bool online_ = false;
 
-    fbl::Mutex lock_;
-    ddk::EthernetIfcProtocolClient ethernet_client_ __TA_GUARDED(lock_);
+  // statistics
+  uint32_t bus_errors_;
+  uint32_t tx_counter_ = 0;
+  uint32_t rx_packet_ = 0;
+  uint32_t loop_count_ = 0;
 
-    // Only accessed from Thread, so not locked.
-    bool online_ = false;
+  std::atomic<bool> running_;
 
-    //statistics
-    uint32_t bus_errors_;
-    uint32_t tx_counter_ = 0;
-    uint32_t rx_packet_ = 0;
-    uint32_t loop_count_ = 0;
+  thrd_t thread_;
+  thrd_t worker_thread_;
 
-    std::atomic<bool> running_;
+  // PHY callbacks.
+  eth_mac_callbacks_t cbs_;
 
-    thrd_t thread_;
-    thrd_t worker_thread_;
-
-    // PHY callbacks.
-    eth_mac_callbacks_t cbs_;
-
-    // Callbacks registered signal.
-    sync_completion_t cb_registered_signal_;
+  // Callbacks registered signal.
+  sync_completion_t cb_registered_signal_;
 };
 
-} // namespace eth
+}  // namespace eth

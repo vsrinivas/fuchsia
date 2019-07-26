@@ -21,8 +21,7 @@ namespace test_runner {
 
 class TestRunObserver {
  public:
-  virtual void SendMessage(const std::string& test_id,
-                           const std::string& operation,
+  virtual void SendMessage(const std::string& test_id, const std::string& operation,
                            const std::string& msg) = 0;
   virtual void Teardown(const std::string& test_id, bool success) = 0;
   virtual ~TestRunObserver();
@@ -35,8 +34,7 @@ class TestRunContext;
 // forwarded to and handled by TestRunContext.
 class TestRunnerImpl : public TestRunner {
  public:
-  TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
-                 TestRunContext* test_run_context);
+  TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request, TestRunContext* test_run_context);
 
   const std::string& program_name() const;
 
@@ -52,8 +50,7 @@ class TestRunnerImpl : public TestRunner {
 
  private:
   // |TestRunner|
-  void Identify(std::string program_name,
-                IdentifyCallback callback) override;
+  void Identify(std::string program_name, IdentifyCallback callback) override;
   // |TestRunner|
   void ReportResult(TestResult result) override;
   // |TestRunner|
@@ -88,8 +85,8 @@ class TestRunnerImpl : public TestRunner {
 class TestRunContext {
  public:
   TestRunContext(std::shared_ptr<component::StartupContext> app_context,
-                 TestRunObserver* connection, const std::string& test_id,
-                 const std::string& url, const std::vector<std::string>& args);
+                 TestRunObserver* connection, const std::string& test_id, const std::string& url,
+                 const std::vector<std::string>& args);
 
   // Called from TestRunnerImpl, the actual implemention of |TestRunner|.
   void StopTrackingClient(TestRunnerImpl* client, bool crashed);

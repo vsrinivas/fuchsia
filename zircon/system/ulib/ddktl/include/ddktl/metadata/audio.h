@@ -8,11 +8,11 @@
 namespace metadata {
 
 enum class Codec : uint32_t {
-    Tas5782,
-    Tas5805,
-    Tas5720x3,
+  Tas5782,
+  Tas5805,
+  Tas5720x3,
 };
 
-} // namespace metadata
+}  // namespace metadata
 
 #endif  // DDKTL_METADATA_AUDIO_H_

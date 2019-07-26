@@ -12,28 +12,26 @@
 #include "src/lib/fxl/macros.h"
 
 #if defined(__clang__)
-#define ALLOW_PESSIMIZING_MOVE(code_line)                                   \
-  _Pragma("clang diagnostic push")                                          \
-      _Pragma("clang diagnostic ignored \"-Wpessimizing-move\"") code_line; \
+#define ALLOW_PESSIMIZING_MOVE(code_line)                                                     \
+  _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wpessimizing-move\"") \
+      code_line;                                                                              \
   _Pragma("clang diagnostic pop")
 #else
 #define ALLOW_PESSIMIZING_MOVE(code_line) code_line;
 #endif
 
 #if defined(__clang__)
-#define ALLOW_SELF_MOVE(code_line)                                   \
-  _Pragma("clang diagnostic push")                                   \
-      _Pragma("clang diagnostic ignored \"-Wself-move\"") code_line; \
+#define ALLOW_SELF_MOVE(code_line)                                                                \
+  _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wself-move\"") code_line; \
   _Pragma("clang diagnostic pop")
 #else
 #define ALLOW_SELF_MOVE(code_line) code_line;
 #endif
 
 #if defined(__clang__)
-#define ALLOW_SELF_ASSIGN_OVERLOADED(code_line)                        \
-  _Pragma("clang diagnostic push")                                     \
-      _Pragma("clang diagnostic ignored \"-Wself-assign-overloaded\"") \
-          code_line;                                                   \
+#define ALLOW_SELF_ASSIGN_OVERLOADED(code_line)                                   \
+  _Pragma("clang diagnostic push")                                                \
+      _Pragma("clang diagnostic ignored \"-Wself-assign-overloaded\"") code_line; \
   _Pragma("clang diagnostic pop")
 #else
 #define ALLOW_SELF_ASSIGN_OVERLOADED(code_line) code_line;
@@ -44,8 +42,7 @@ namespace {
 
 class MyClass : public RefCountedThreadSafe<MyClass> {
  protected:
-  MyClass(MyClass** created, bool* was_destroyed)
-      : was_destroyed_(was_destroyed) {
+  MyClass(MyClass** created, bool* was_destroyed) : was_destroyed_(was_destroyed) {
     if (created)
       *created = this;
   }
@@ -68,8 +65,7 @@ class MySubclass final : public MyClass {
   FRIEND_REF_COUNTED_THREAD_SAFE(MySubclass);
   FRIEND_MAKE_REF_COUNTED(MySubclass);
 
-  MySubclass(MySubclass** created, bool* was_destroyed)
-      : MyClass(nullptr, was_destroyed) {
+  MySubclass(MySubclass** created, bool* was_destroyed) : MyClass(nullptr, was_destroyed) {
     if (created)
       *created = this;
   }
@@ -111,8 +107,8 @@ TEST(RefCountedTest, Constructors) {
     MyClass* created = nullptr;
     was_destroyed = false;
     // Adopt, then move.
-    ALLOW_PESSIMIZING_MOVE(RefPtr<MyClass> r(
-        std::move(MakeRefCounted<MyClass>(&created, &was_destroyed))))
+    ALLOW_PESSIMIZING_MOVE(
+        RefPtr<MyClass> r(std::move(MakeRefCounted<MyClass>(&created, &was_destroyed))))
     EXPECT_TRUE(created);
     EXPECT_EQ(created, r.get());
     EXPECT_TRUE(r);
@@ -166,8 +162,8 @@ TEST(RefCountedTest, Constructors) {
     MySubclass* created = nullptr;
     was_destroyed = false;
     // Adopt, then "move".
-    ALLOW_PESSIMIZING_MOVE(RefPtr<MyClass> r(
-        std::move(MakeRefCounted<MySubclass>(&created, &was_destroyed))))
+    ALLOW_PESSIMIZING_MOVE(
+        RefPtr<MyClass> r(std::move(MakeRefCounted<MySubclass>(&created, &was_destroyed))))
     EXPECT_TRUE(created);
     EXPECT_EQ(static_cast<MyClass*>(created), r.get());
     EXPECT_TRUE(r);
@@ -596,13 +592,10 @@ TEST(RefCountedTest, PublicCtorAndDtor) {
 class SaveValueInDestructor : public RefCountedThreadSafe<SaveValueInDestructor> {
  public:
   SaveValueInDestructor() = default;
-  ~SaveValueInDestructor() {
-    *output_ptr_ = save_ref_ptr_->get();
-  }
+  ~SaveValueInDestructor() { *output_ptr_ = save_ref_ptr_->get(); }
 
   // Call after constructing.
-  void SetToSave(RefPtr<SaveValueInDestructor>* to_save,
-                 SaveValueInDestructor** save_here) {
+  void SetToSave(RefPtr<SaveValueInDestructor>* to_save, SaveValueInDestructor** save_here) {
     save_ref_ptr_ = to_save;
     output_ptr_ = save_here;
   }

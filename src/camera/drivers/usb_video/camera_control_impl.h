@@ -21,10 +21,8 @@ namespace camera {
 
 class ControlImpl : public fuchsia::camera::Control {
  public:
-  ControlImpl(video::usb::UsbVideoStream* usb_video_stream,
-              fidl::InterfaceRequest<Control> control,
-              async_dispatcher_t* dispatcher,
-              fit::closure on_connection_closed);
+  ControlImpl(video::usb::UsbVideoStream* usb_video_stream, fidl::InterfaceRequest<Control> control,
+              async_dispatcher_t* dispatcher, fit::closure on_connection_closed);
 
   // Sent by the driver to the client when a frame is available for processing,
   // or an error occurred.
@@ -51,8 +49,7 @@ class ControlImpl : public fuchsia::camera::Control {
 
   class StreamImpl : public fuchsia::camera::Stream {
    public:
-    StreamImpl(ControlImpl& owner,
-               fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+    StreamImpl(ControlImpl& owner, fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
                zx::eventpair stream_token);
 
     ~StreamImpl();

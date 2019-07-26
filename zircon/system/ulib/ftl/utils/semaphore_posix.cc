@@ -16,14 +16,12 @@
 //
 // Returns: 0 if successful, else -1 with errno set to error code.
 int semPend(SEM sem, int wait_opt) {
-    ZX_DEBUG_ASSERT(wait_opt == WAIT_FOREVER);
-    return sem_wait(reinterpret_cast<sem_t*>(sem));
+  ZX_DEBUG_ASSERT(wait_opt == WAIT_FOREVER);
+  return sem_wait(reinterpret_cast<sem_t*>(sem));
 }
 
 // Returns a semaphore token, ensures not already released.
-void semPostBin(SEM sem) {
-    sem_post(reinterpret_cast<sem_t*>(sem));
-}
+void semPostBin(SEM sem) { sem_post(reinterpret_cast<sem_t*>(sem)); }
 
 // Creates and initialize semaphore.
 //
@@ -33,19 +31,19 @@ void semPostBin(SEM sem) {
 //
 // Returns: ID of new semaphore, or NULL if error
 SEM semCreate(const char name[8], int init_count, int mode) {
-    sem_t* semp = new sem_t;
-    if (sem_init(semp, 0, init_count) != 0) {
-        delete semp;
-        return NULL;
-    }
+  sem_t* semp = new sem_t;
+  if (sem_init(semp, 0, init_count) != 0) {
+    delete semp;
+    return NULL;
+  }
 
-    return reinterpret_cast<SEM>(semp);
+  return reinterpret_cast<SEM>(semp);
 }
 
 // Deletes specified semaphore, freeing its control block and any pending tasks.
 void semDelete(SEM* semp) {
-    sem_t* sem = reinterpret_cast<sem_t*>(*semp);
-    sem_destroy(sem);
-    delete sem;
-    *semp = nullptr;
+  sem_t* sem = reinterpret_cast<sem_t*>(*semp);
+  sem_destroy(sem);
+  delete sem;
+  *semp = nullptr;
 }

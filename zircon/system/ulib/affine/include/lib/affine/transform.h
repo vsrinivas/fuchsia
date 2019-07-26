@@ -50,101 +50,95 @@ namespace affine {
 // stage is undefined.
 //
 class Transform {
-public:
-    using Exact = Ratio::Exact;
-    enum class Saturate { No, Yes };
+ public:
+  using Exact = Ratio::Exact;
+  enum class Saturate { No, Yes };
 
-    // Applies a transformation from A -> B
-    template <Saturate SATURATE = Saturate::Yes>
-    static int64_t Apply(int64_t a_offset,
-                         int64_t b_offset,
-                         Ratio ratio,  // Ratio of B_scale:A_scale
-                         int64_t val) {
-        if constexpr (SATURATE == Saturate::Yes) {
-            return utils::ClampAdd(ratio.Scale(utils::ClampSub(val, a_offset)), b_offset);
-        } else {
-            // TODO(johngro) : the multiplication by the ratio operation here
-            // actually implements saturation behavior.  If we want this
-            // operation to actually perform no saturation checks at all, we
-            // need to make a Saturate::No version of Ratio::Scale.
-            return ((val - a_offset) * ratio) + b_offset;
-        }
+  // Applies a transformation from A -> B
+  template <Saturate SATURATE = Saturate::Yes>
+  static int64_t Apply(int64_t a_offset, int64_t b_offset,
+                       Ratio ratio,  // Ratio of B_scale:A_scale
+                       int64_t val) {
+    if constexpr (SATURATE == Saturate::Yes) {
+      return utils::ClampAdd(ratio.Scale(utils::ClampSub(val, a_offset)), b_offset);
+    } else {
+      // TODO(johngro) : the multiplication by the ratio operation here
+      // actually implements saturation behavior.  If we want this
+      // operation to actually perform no saturation checks at all, we
+      // need to make a Saturate::No version of Ratio::Scale.
+      return ((val - a_offset) * ratio) + b_offset;
     }
+  }
 
-    // Applies the inverse transformation B -> A
-    template <Saturate SATURATE = Saturate::Yes>
-    static int64_t ApplyInverse(int64_t a_offset,
-                                int64_t b_offset,
-                                Ratio ratio,  // Ratio of B_scale:A_scale
-                                int64_t val) {
-        return Apply<SATURATE>(b_offset, a_offset, ratio.Inverse(), val);
-    }
+  // Applies the inverse transformation B -> A
+  template <Saturate SATURATE = Saturate::Yes>
+  static int64_t ApplyInverse(int64_t a_offset, int64_t b_offset,
+                              Ratio ratio,  // Ratio of B_scale:A_scale
+                              int64_t val) {
+    return Apply<SATURATE>(b_offset, a_offset, ratio.Inverse(), val);
+  }
 
-    // Default construction is identity
-    Transform() = default;
+  // Default construction is identity
+  Transform() = default;
 
-    // Explicit construction
-    Transform(int64_t a_offset,
-              int64_t b_offset,
-              Ratio ratio) : a_offset_(a_offset), b_offset_(b_offset), ratio_(ratio) {}
+  // Explicit construction
+  Transform(int64_t a_offset, int64_t b_offset, Ratio ratio)
+      : a_offset_(a_offset), b_offset_(b_offset), ratio_(ratio) {}
 
-    // Construct a linear transformation (zero offsets) from a ratio
-    explicit Transform(Ratio ratio)
-        : a_offset_(0), b_offset_(0), ratio_(ratio) {}
+  // Construct a linear transformation (zero offsets) from a ratio
+  explicit Transform(Ratio ratio) : a_offset_(0), b_offset_(0), ratio_(ratio) {}
 
-    bool     invertible()  const { return ratio_.invertible(); }
-    int64_t  a_offset()    const { return a_offset_; }
-    int64_t  b_offset()    const { return b_offset_; }
-    Ratio    ratio()       const { return ratio_; }
-    uint32_t numerator()   const { return ratio_.numerator(); }
-    uint32_t denominator() const { return ratio_.denominator(); }
+  bool invertible() const { return ratio_.invertible(); }
+  int64_t a_offset() const { return a_offset_; }
+  int64_t b_offset() const { return b_offset_; }
+  Ratio ratio() const { return ratio_; }
+  uint32_t numerator() const { return ratio_.numerator(); }
+  uint32_t denominator() const { return ratio_.denominator(); }
 
-    // Construct and return a transform which is the inverse of this transform.
-    Transform Inverse() const {
-        return Transform(b_offset_, a_offset_, ratio_.Inverse());
-    }
+  // Construct and return a transform which is the inverse of this transform.
+  Transform Inverse() const { return Transform(b_offset_, a_offset_, ratio_.Inverse()); }
 
-    // Applies the transformation
-    template <Saturate SATURATE = Saturate::Yes>
-    int64_t Apply(int64_t val) const {
-        return Apply<SATURATE>(a_offset_, b_offset_, ratio_, val);
-    }
+  // Applies the transformation
+  template <Saturate SATURATE = Saturate::Yes>
+  int64_t Apply(int64_t val) const {
+    return Apply<SATURATE>(a_offset_, b_offset_, ratio_, val);
+  }
 
-    // Applies the inverse transformation
-    template <Saturate SATURATE = Saturate::Yes>
-    int64_t ApplyInverse(int64_t subject_input) const {
-        internal::DebugAssert(ratio_.denominator() != 0);
-        return ApplyInverse<SATURATE>(a_offset_, b_offset_, ratio_, subject_input);
-    }
+  // Applies the inverse transformation
+  template <Saturate SATURATE = Saturate::Yes>
+  int64_t ApplyInverse(int64_t subject_input) const {
+    internal::DebugAssert(ratio_.denominator() != 0);
+    return ApplyInverse<SATURATE>(a_offset_, b_offset_, ratio_, subject_input);
+  }
 
-    // Applies the transformation using functor operator notation.
-    template <Saturate SATURATE = Saturate::Yes>
-    int64_t operator()(int64_t val) const {
-        return Apply<SATURATE>(val);
-    }
+  // Applies the transformation using functor operator notation.
+  template <Saturate SATURATE = Saturate::Yes>
+  int64_t operator()(int64_t val) const {
+    return Apply<SATURATE>(val);
+  }
 
-    // Composes two timeline functions B->C and A->B producing A->C. If exact is
-    // Exact::Yes, DCHECKs on loss of precision.
-    //
-    // During composition, the saturation behavior is as follows
-    //
-    // 1) The intermediate offset (bc.a_offset - ab.b_offset) will be saturated
-    //    before distribution to the offsets ac.
-    // 2) Both offsets of ac will be saturated as ab.a_offset and bc.b_offset
-    //    are combined with the distributed intermediate offset.
-    //
-    static Transform Compose(const Transform& bc, const Transform& ab, Exact exact = Exact::Yes);
+  // Composes two timeline functions B->C and A->B producing A->C. If exact is
+  // Exact::Yes, DCHECKs on loss of precision.
+  //
+  // During composition, the saturation behavior is as follows
+  //
+  // 1) The intermediate offset (bc.a_offset - ab.b_offset) will be saturated
+  //    before distribution to the offsets ac.
+  // 2) Both offsets of ac will be saturated as ab.a_offset and bc.b_offset
+  //    are combined with the distributed intermediate offset.
+  //
+  static Transform Compose(const Transform& bc, const Transform& ab, Exact exact = Exact::Yes);
 
-private:
-    int64_t a_offset_ = 0;
-    int64_t b_offset_ = 0;
-    Ratio ratio_{1, 1};
+ private:
+  int64_t a_offset_ = 0;
+  int64_t b_offset_ = 0;
+  Ratio ratio_{1, 1};
 };
 
 // Composes two timeline functions B->C and A->B producing A->C. DCHECKs on
 // loss of precision.
 inline Transform operator*(const Transform& bc, const Transform& ab) {
-    return Transform::Compose(bc, ab);
+  return Transform::Compose(bc, ab);
 }
 
 }  // namespace affine

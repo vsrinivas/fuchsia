@@ -11,25 +11,25 @@
 
 static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                            zx_handle_t request) {
-    if (!strcmp(service_name, fuchsia_logger_LogSink_Name)) {
-        auto logger = new logger::LoggerImpl(zx::channel(request), STDOUT_FILENO);
+  if (!strcmp(service_name, fuchsia_logger_LogSink_Name)) {
+    auto logger = new logger::LoggerImpl(zx::channel(request), STDOUT_FILENO);
 
-        zx_status_t status = logger->Begin(dispatcher);
-        if (status != ZX_OK) {
-            delete logger;
-            return status;
-        }
-
-        logger->set_error_handler([logger](zx_status_t status) {
-            // If we encounter an error, we tear down the logger.
-            delete logger;
-        });
-
-        return ZX_OK;
+    zx_status_t status = logger->Begin(dispatcher);
+    if (status != ZX_OK) {
+      delete logger;
+      return status;
     }
 
-    zx_handle_close(request);
-    return ZX_ERR_NOT_SUPPORTED;
+    logger->set_error_handler([logger](zx_status_t status) {
+      // If we encounter an error, we tear down the logger.
+      delete logger;
+    });
+
+    return ZX_OK;
+  }
+
+  zx_handle_close(request);
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 static constexpr const char* logger_services[] = {
@@ -49,6 +49,4 @@ static constexpr zx_service_provider_t logger_service_provider = {
     .ops = &logger_ops,
 };
 
-const zx_service_provider_t* logger_get_service_provider() {
-    return &logger_service_provider;
-}
+const zx_service_provider_t* logger_get_service_provider() { return &logger_service_provider; }

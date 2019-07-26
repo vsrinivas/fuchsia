@@ -9,7 +9,7 @@
 
 __BEGIN_CDECLS
 
-typedef struct async_dispatcher async_dispatcher_t; // From <lib/async/dispatcher.h>
+typedef struct async_dispatcher async_dispatcher_t;  // From <lib/async/dispatcher.h>
 
 // These functions provide an implementation of the shared library loading
 // service.  See system/fidl/fuchsia-ldsvc/ldsvc.fidl for a definition of the protocol.
@@ -43,8 +43,7 @@ zx_status_t loader_service_create_fs(async_dispatcher_t* dispatcher, loader_serv
 // library will create a new thread and listen for requests on that thread.
 // Paths and objects will be loaded relative to |root_dir_fd|, and the loader
 // service will take ownership of |root_dir_fd|.
-zx_status_t loader_service_create_fd(async_dispatcher_t* dispatcher,
-                                     int root_dir_fd,
+zx_status_t loader_service_create_fd(async_dispatcher_t* dispatcher, int root_dir_fd,
                                      loader_service_t** out);
 
 // Returns a new dl_set_loader_service-compatible loader service channel.
@@ -55,29 +54,27 @@ zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out);
 zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t channel);
 
 typedef struct loader_service_ops {
-    // attempt to load a shared library from suitable library paths.
-    zx_status_t (*load_object)(void* ctx, const char* name, zx_handle_t* vmo);
+  // attempt to load a shared library from suitable library paths.
+  zx_status_t (*load_object)(void* ctx, const char* name, zx_handle_t* vmo);
 
-    // attempt to load a script interpreter or debug config file
-    zx_status_t (*load_abspath)(void* ctx, const char* path, zx_handle_t* vmo);
+  // attempt to load a script interpreter or debug config file
+  zx_status_t (*load_abspath)(void* ctx, const char* path, zx_handle_t* vmo);
 
-    // attempt to publish a data sink
-    // takes ownership of the provided vmo on both success and failure.
-    zx_status_t (*publish_data_sink)(void* ctx, const char* name, zx_handle_t vmo);
+  // attempt to publish a data sink
+  // takes ownership of the provided vmo on both success and failure.
+  zx_status_t (*publish_data_sink)(void* ctx, const char* name, zx_handle_t vmo);
 
-    // finalize the loader service (optional)
-    // called shortly before the loader service is destroyed
-    void (*finalizer)(void* ctx);
+  // finalize the loader service (optional)
+  // called shortly before the loader service is destroyed
+  void (*finalizer)(void* ctx);
 } loader_service_ops_t;
 
 // Create a loader service backed by custom loader ops.
 //
 // Requests will be processed on the given |async|. If |async| is NULL, this
 // library will create a new thread and listen for requests on that thread.
-zx_status_t loader_service_create(async_dispatcher_t* dispatcher,
-                                  const loader_service_ops_t* ops,
-                                  void* ctx,
-                                  loader_service_t** out);
+zx_status_t loader_service_create(async_dispatcher_t* dispatcher, const loader_service_ops_t* ops,
+                                  void* ctx, loader_service_t** out);
 
 // After this function returns, |svc| will destroy itself once there are no
 // longer any outstanding connections.

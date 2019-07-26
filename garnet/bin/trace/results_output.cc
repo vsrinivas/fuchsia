@@ -37,8 +37,7 @@ double StdDev(const std::vector<double>& samples, double average) {
   return std::sqrt(sum_of_squared_deltas / samples.size());
 }
 
-void OutputSamples(std::ostream& out, const std::vector<double>& values,
-                   const std::string& unit) {
+void OutputSamples(std::ostream& out, const std::vector<double>& values, const std::string& unit) {
   FXL_DCHECK(!values.empty());
   if (values.size() == 1) {
     out << values.front() << unit;
@@ -50,15 +49,13 @@ void OutputSamples(std::ostream& out, const std::vector<double>& values,
   double min = Min(values);
   double max = Max(values);
 
-  out << "avg " << average << unit << " out of " << values.size()
-      << " samples. "
+  out << "avg " << average << unit << " out of " << values.size() << " samples. "
       << "(std dev " << std_dev << ", min " << min << ", max " << max << ")";
 }
 
 }  // namespace
 
-void OutputResults(std::ostream& out,
-                   const std::vector<measure::Result>& results) {
+void OutputResults(std::ostream& out, const std::vector<measure::Result>& results) {
   out.precision(std::numeric_limits<double>::digits10);
 
   for (auto& result : results) {

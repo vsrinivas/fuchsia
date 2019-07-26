@@ -18,8 +18,7 @@ namespace fidl {
 
 class VirtualSourceFile : public SourceFile {
  public:
-  VirtualSourceFile(std::string filename)
-      : SourceFile(filename, "") {}
+  VirtualSourceFile(std::string filename) : SourceFile(filename, "") {}
 
   virtual ~VirtualSourceFile() = default;
 

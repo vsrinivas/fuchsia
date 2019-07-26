@@ -11,8 +11,7 @@
 
 namespace examples {
 
-SkiaGpuPainter::SkiaGpuPainter(Swapchain* swapchain)
-    : vk_swapchain_(swapchain) {
+SkiaGpuPainter::SkiaGpuPainter(Swapchain* swapchain) : vk_swapchain_(swapchain) {
   image_draw_resources_.resize(vk_swapchain_->GetNumberOfSwapchainImages());
   DrawImage();
 }
@@ -55,8 +54,7 @@ void SkiaGpuPainter::OnInputEvent(fuchsia::ui::input::InputEvent event) {
 }
 
 void SkiaGpuPainter::DrawImage() {
-  Swapchain::SwapchainImageResources* image =
-      vk_swapchain_->GetCurrentImageResources();
+  Swapchain::SwapchainImageResources* image = vk_swapchain_->GetCurrentImageResources();
   const uint32_t image_index = image->index;
 
   PrepareSkSurface(image);
@@ -88,12 +86,10 @@ void SkiaGpuPainter::DrawImage() {
 
 bool SkiaGpuPainter::HasPendingDraw() { return pending_draw_; }
 
-void SkiaGpuPainter::PrepareSkSurface(
-    Swapchain::SwapchainImageResources* image) {
+void SkiaGpuPainter::PrepareSkSurface(Swapchain::SwapchainImageResources* image) {
   auto& sk_surface = image_draw_resources_[image->index].sk_surface;
   if (!sk_surface) {
-    SkSurfaceProps surface_props =
-        SkSurfaceProps(0, SkSurfaceProps::kLegacyFontHost_InitType);
+    SkSurfaceProps surface_props = SkSurfaceProps(0, SkSurfaceProps::kLegacyFontHost_InitType);
     GrVkImageInfo vk_image_info;
     vk_image_info.fImage = image->image;
     vk_image_info.fAlloc = {VK_NULL_HANDLE, 0, 0, 0};
@@ -102,11 +98,9 @@ void SkiaGpuPainter::PrepareSkSurface(
     vk_image_info.fFormat = VK_FORMAT_B8G8R8A8_UNORM;
     vk_image_info.fLevelCount = 1;
     auto size = vk_swapchain_->GetImageSize();
-    GrBackendRenderTarget render_target(size.width, size.height, 0,
-                                        vk_swapchain_->protected_output()
-                                            ? GrProtected::kYes
-                                            : GrProtected::kNo,
-                                        vk_image_info);
+    GrBackendRenderTarget render_target(
+        size.width, size.height, 0,
+        vk_swapchain_->protected_output() ? GrProtected::kYes : GrProtected::kNo, vk_image_info);
     sk_surface = SkSurface::MakeFromBackendRenderTarget(
         vk_swapchain_->GetGrContext(), render_target, kTopLeft_GrSurfaceOrigin,
         kBGRA_8888_SkColorType, nullptr, &surface_props);
@@ -114,16 +108,14 @@ void SkiaGpuPainter::PrepareSkSurface(
     SkCanvas* canvas = sk_surface->getCanvas();
     canvas->clear(SK_ColorWHITE);
   } else {
-    auto backend = sk_surface->getBackendRenderTarget(
-        SkSurface::kFlushRead_BackendHandleAccess);
+    auto backend = sk_surface->getBackendRenderTarget(SkSurface::kFlushRead_BackendHandleAccess);
     backend.setVkImageLayout(static_cast<VkImageLayout>(image->layout));
   }
 }
 
 void SkiaGpuPainter::SetImageLayout(Swapchain::SwapchainImageResources* image) {
   auto& sk_surface = image_draw_resources_[image->index].sk_surface;
-  auto backend = sk_surface->getBackendRenderTarget(
-      SkSurface::kFlushRead_BackendHandleAccess);
+  auto backend = sk_surface->getBackendRenderTarget(SkSurface::kFlushRead_BackendHandleAccess);
   GrVkImageInfo vk_image_info;
   if (!backend.getVkImageInfo(&vk_image_info))
     FXL_CHECK(false) << "Failed to get image info";

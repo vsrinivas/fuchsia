@@ -1403,7 +1403,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
   auto filename = compound_identifier->location().source_file().filename();
   Library* dep_library = nullptr;
   if (dependencies_.LookupAndUse(filename, library_name, &dep_library)) {
-      return Name(dep_library, decl_name);
+    return Name(dep_library, decl_name);
   }
 
   // If the identifier is not found in the library it might refer to a
@@ -1420,7 +1420,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
 
   Library* member_dep_library = nullptr;
   if (dependencies_.LookupAndUse(filename, member_library_name, &member_dep_library)) {
-      return Name(member_dep_library, member_decl_name, std::string(member_name.data()));
+    return Name(member_dep_library, member_decl_name, std::string(member_name.data()));
   }
 
   std::string message("Unknown dependent library ");
@@ -1494,8 +1494,9 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
                                {name->maybe_location()->data()})) {
       std::string message = "Declaration name '";
       message.append(name->name_full());
-      message.append("' conflicts with a library import; consider using the "
-                     "'as' keyword to import the library under a different name.");
+      message.append(
+          "' conflicts with a library import; consider using the "
+          "'as' keyword to import the library under a different name.");
       return Fail(*name, message);
     }
   }
@@ -2112,13 +2113,13 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   const TypeConstructor* const_type_ctor;
   const ConstantValue* const_val;
   switch (decl->kind) {
-     case Decl::Kind::kConst: {
+    case Decl::Kind::kConst: {
       auto const_decl = static_cast<Const*>(decl);
       const_type_ctor = const_decl->type_ctor.get();
       const_val = &const_decl->value->Value();
       break;
-     }
-     case Decl::Kind::kEnum: {
+    }
+    case Decl::Kind::kEnum: {
       auto enum_decl = static_cast<Enum*>(decl);
       const_type_ctor = enum_decl->subtype_ctor.get();
       for (auto& member : enum_decl->members) {
@@ -2127,8 +2128,8 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         }
       }
       break;
-     }
-     case Decl::Kind::kBits:{
+    }
+    case Decl::Kind::kBits: {
       auto bits_decl = static_cast<Bits*>(decl);
       const_type_ctor = bits_decl->subtype_ctor.get();
       for (auto& member : bits_decl->members) {
@@ -2137,10 +2138,10 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         }
       }
       break;
-     }
-     default: {
+    }
+    default: {
       assert(false && "unexpected kind");
-     }
+    }
   }
 
   std::unique_ptr<ConstantValue> resolved_val;
@@ -3131,7 +3132,7 @@ bool Library::CompileService(Service* service_decl) {
       return Fail(member.name, "only protocol members are allowed");
     auto member_identifier_type = static_cast<const IdentifierType*>(member.type_ctor->type);
     if (member_identifier_type->type_decl->kind != Decl::Kind::kProtocol)
-        return Fail(member.name, "only protocol members are allowed");
+      return Fail(member.name, "only protocol members are allowed");
     if (member.type_ctor->nullability != types::Nullability::kNonnullable)
       return Fail(member.name, "service members cannot be nullable");
   }

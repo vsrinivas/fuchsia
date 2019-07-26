@@ -23,402 +23,408 @@
 #include <zircon/types.h>
 
 static uint64_t number(const char* str) {
-    char* end;
-    uint64_t n = strtoull(str, &end, 10);
+  char* end;
+  uint64_t n = strtoull(str, &end, 10);
 
-    uint64_t m = 1;
-    switch (*end) {
+  uint64_t m = 1;
+  switch (*end) {
     case 'G':
     case 'g':
-        m = 1024*1024*1024;
-        break;
+      m = 1024 * 1024 * 1024;
+      break;
     case 'M':
     case 'm':
-        m = 1024*1024;
-        break;
+      m = 1024 * 1024;
+      break;
     case 'K':
     case 'k':
-        m = 1024;
-        break;
-    }
-    return m * n;
+      m = 1024;
+      break;
+  }
+  return m * n;
 }
 
 static void bytes_per_second(uint64_t bytes, uint64_t nanos) {
-    double s = ((double)nanos) / ((double)1000000000);
-    double rate = ((double)bytes) / s;
+  double s = ((double)nanos) / ((double)1000000000);
+  double rate = ((double)bytes) / s;
 
-    const char* unit = "B";
-    if (rate > 1024*1024) {
-        unit = "MB";
-        rate /= 1024*1024;
-    } else if (rate > 1024) {
-        unit = "KB";
-        rate /= 1024;
-    }
-    fprintf(stderr, "%g %s/s\n", rate, unit);
+  const char* unit = "B";
+  if (rate > 1024 * 1024) {
+    unit = "MB";
+    rate /= 1024 * 1024;
+  } else if (rate > 1024) {
+    unit = "KB";
+    rate /= 1024;
+  }
+  fprintf(stderr, "%g %s/s\n", rate, unit);
 }
 
 static void ops_per_second(uint64_t count, uint64_t nanos) {
-    double s = ((double)nanos) / ((double)1000000000);
-    double rate = ((double)count) / s;
-    fprintf(stderr, "%g %s/s\n", rate, "ops");
+  double s = ((double)nanos) / ((double)1000000000);
+  double rate = ((double)count) / s;
+  fprintf(stderr, "%g %s/s\n", rate, "ops");
 }
 
 typedef struct {
-    int fd;
-    zx_handle_t vmo;
-    zx_handle_t fifo;
-    reqid_t reqid;
-    fuchsia_hardware_block_VmoID vmoid;
-    size_t bufsz;
-    fuchsia_hardware_block_BlockInfo info;
+  int fd;
+  zx_handle_t vmo;
+  zx_handle_t fifo;
+  reqid_t reqid;
+  fuchsia_hardware_block_VmoID vmoid;
+  size_t bufsz;
+  fuchsia_hardware_block_BlockInfo info;
 } blkdev_t;
 
 static void blkdev_close(blkdev_t* blk) {
-    if (blk->fd >= 0) {
-        close(blk->fd);
-    }
-    zx_handle_close(blk->vmo);
-    zx_handle_close(blk->fifo);
-    memset(blk, 0, sizeof(blkdev_t));
-    blk->fd = -1;
+  if (blk->fd >= 0) {
+    close(blk->fd);
+  }
+  zx_handle_close(blk->vmo);
+  zx_handle_close(blk->fifo);
+  memset(blk, 0, sizeof(blkdev_t));
+  blk->fd = -1;
 }
 
 static zx_status_t blkdev_open(int fd, const char* dev, size_t bufsz, blkdev_t* blk) {
-    memset(blk, 0, sizeof(blkdev_t));
-    blk->fd = fd;
-    blk->bufsz = bufsz;
+  memset(blk, 0, sizeof(blkdev_t));
+  blk->fd = fd;
+  blk->bufsz = bufsz;
 
-    auto cleanup = fit::defer([blk]() {
-        blkdev_close(blk);
-    });
+  auto cleanup = fit::defer([blk]() { blkdev_close(blk); });
 
-    fzl::UnownedFdioCaller caller(fd);
-    zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(),
-                                                                &status, &blk->info);
-    if (io_status != ZX_OK || status != ZX_OK) {
-        fprintf(stderr, "error: cannot get block device info for '%s'\n", dev);
-        return ZX_ERR_INTERNAL;
-    }
+  fzl::UnownedFdioCaller caller(fd);
+  zx_status_t status;
+  zx_status_t io_status =
+      fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &blk->info);
+  if (io_status != ZX_OK || status != ZX_OK) {
+    fprintf(stderr, "error: cannot get block device info for '%s'\n", dev);
+    return ZX_ERR_INTERNAL;
+  }
 
-    io_status = fuchsia_hardware_block_BlockGetFifo(caller.borrow_channel(), &status, &blk->fifo);
-    if (io_status != ZX_OK || status != ZX_OK) {
-        fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
-        return ZX_ERR_INTERNAL;
-    }
-    if ((status = zx_vmo_create(bufsz, 0, &blk->vmo)) != ZX_OK) {
-        fprintf(stderr, "error: out of memory %d\n", status);
-        return status;
-    }
+  io_status = fuchsia_hardware_block_BlockGetFifo(caller.borrow_channel(), &status, &blk->fifo);
+  if (io_status != ZX_OK || status != ZX_OK) {
+    fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
+    return ZX_ERR_INTERNAL;
+  }
+  if ((status = zx_vmo_create(bufsz, 0, &blk->vmo)) != ZX_OK) {
+    fprintf(stderr, "error: out of memory %d\n", status);
+    return status;
+  }
 
-    zx_handle_t dup;
-    if ((status = zx_handle_duplicate(blk->vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
-        fprintf(stderr, "error: cannot duplicate handle %d\n", status);
-        return status;
-    }
+  zx_handle_t dup;
+  if ((status = zx_handle_duplicate(blk->vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
+    fprintf(stderr, "error: cannot duplicate handle %d\n", status);
+    return status;
+  }
 
-    io_status = fuchsia_hardware_block_BlockAttachVmo(caller.borrow_channel(), dup, &status,
-                                                      &blk->vmoid);
-    if (io_status != ZX_OK || status != ZX_OK) {
-        fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);
-        return ZX_ERR_INTERNAL;
-    }
+  io_status =
+      fuchsia_hardware_block_BlockAttachVmo(caller.borrow_channel(), dup, &status, &blk->vmoid);
+  if (io_status != ZX_OK || status != ZX_OK) {
+    fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);
+    return ZX_ERR_INTERNAL;
+  }
 
-    cleanup.cancel();
-    return ZX_OK;
+  cleanup.cancel();
+  return ZX_OK;
 }
 
 typedef struct {
-    blkdev_t* blk;
-    size_t count;
-    size_t xfer;
-    uint64_t seed;
-    int max_pending;
-    bool write;
-    bool linear;
+  blkdev_t* blk;
+  size_t count;
+  size_t xfer;
+  uint64_t seed;
+  int max_pending;
+  bool write;
+  bool linear;
 
-    std::atomic<int> pending;
-    sync_completion_t signal;
+  std::atomic<int> pending;
+  sync_completion_t signal;
 } bio_random_args_t;
 
 std::atomic<reqid_t> next_reqid(0);
 
 static int bio_random_thread(void* arg) {
-    auto* a = reinterpret_cast<bio_random_args_t*>(arg);
+  auto* a = reinterpret_cast<bio_random_args_t*>(arg);
 
-    size_t off = 0;
-    size_t count = a->count;
-    size_t xfer = a->xfer;
+  size_t off = 0;
+  size_t count = a->count;
+  size_t xfer = a->xfer;
 
-    size_t blksize = a->blk->info.block_size;
-    size_t blkcount = ((count * xfer) / blksize) - (xfer / blksize);
+  size_t blksize = a->blk->info.block_size;
+  size_t blkcount = ((count * xfer) / blksize) - (xfer / blksize);
 
-    rand64_t r64 = RAND63SEED(a->seed);
+  rand64_t r64 = RAND63SEED(a->seed);
 
-    zx_handle_t fifo = a->blk->fifo;
-    size_t dev_off = 0;
+  zx_handle_t fifo = a->blk->fifo;
+  size_t dev_off = 0;
 
-    while (count > 0) {
-        while (a->pending.load() == a->max_pending) {
-            sync_completion_wait(&a->signal, ZX_TIME_INFINITE);
-            sync_completion_reset(&a->signal);
-        }
+  while (count > 0) {
+    while (a->pending.load() == a->max_pending) {
+      sync_completion_wait(&a->signal, ZX_TIME_INFINITE);
+      sync_completion_reset(&a->signal);
+    }
 
-        block_fifo_request_t req = {};
-        req.reqid = next_reqid.fetch_add(1);
-        req.vmoid = a->blk->vmoid.id;
-        req.opcode = a->write ? BLOCKIO_WRITE : BLOCKIO_READ;
-        req.length = static_cast<uint32_t>(xfer);
-        req.vmo_offset = off;
+    block_fifo_request_t req = {};
+    req.reqid = next_reqid.fetch_add(1);
+    req.vmoid = a->blk->vmoid.id;
+    req.opcode = a->write ? BLOCKIO_WRITE : BLOCKIO_READ;
+    req.length = static_cast<uint32_t>(xfer);
+    req.vmo_offset = off;
 
-        if (a->linear) {
-            req.dev_offset = dev_off;
-            dev_off += xfer;
-        } else {
-            req.dev_offset = (rand64(&r64) % blkcount) * blksize;
-        }
-        off += xfer;
-        if ((off + xfer) > a->blk->bufsz) {
-            off = 0;
-        }
+    if (a->linear) {
+      req.dev_offset = dev_off;
+      dev_off += xfer;
+    } else {
+      req.dev_offset = (rand64(&r64) % blkcount) * blksize;
+    }
+    off += xfer;
+    if ((off + xfer) > a->blk->bufsz) {
+      off = 0;
+    }
 
-        req.length /= static_cast<uint32_t>(blksize);
-        req.dev_offset /= blksize;
-        req.vmo_offset /= blksize;
+    req.length /= static_cast<uint32_t>(blksize);
+    req.dev_offset /= blksize;
+    req.vmo_offset /= blksize;
 
 #if 0
         fprintf(stderr, "IO tid=%u vid=%u op=%x len=%zu vof=%zu dof=%zu\n",
                 req.reqid, req.vmoid.id, req.opcode, req.length, req.vmo_offset, req.dev_offset);
 #endif
-        zx_status_t r = zx_fifo_write(fifo, sizeof(req), &req, 1, NULL);
-        if (r == ZX_ERR_SHOULD_WAIT) {
-            r = zx_object_wait_one(fifo, ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED,
-                                   ZX_TIME_INFINITE, NULL);
-            if (r != ZX_OK) {
-                fprintf(stderr, "failed waiting for fifo\n");
-                zx_handle_close(fifo);
-                return -1;
-            }
-            continue;
-        } else if (r < 0) {
-            fprintf(stderr, "error: failed writing fifo\n");
-            zx_handle_close(fifo);
-            return -1;
-        }
-
-        a->pending.fetch_add(1);
-        count--;
+    zx_status_t r = zx_fifo_write(fifo, sizeof(req), &req, 1, NULL);
+    if (r == ZX_ERR_SHOULD_WAIT) {
+      r = zx_object_wait_one(fifo, ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+      if (r != ZX_OK) {
+        fprintf(stderr, "failed waiting for fifo\n");
+        zx_handle_close(fifo);
+        return -1;
+      }
+      continue;
+    } else if (r < 0) {
+      fprintf(stderr, "error: failed writing fifo\n");
+      zx_handle_close(fifo);
+      return -1;
     }
-    return 0;
+
+    a->pending.fetch_add(1);
+    count--;
+  }
+  return 0;
 }
 
-
 static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_duration_t* _res) {
+  thrd_t t;
+  int r;
 
-    thrd_t t;
+  size_t count = a->count;
+  zx_handle_t fifo = a->blk->fifo;
+
+  zx_time_t t0 = zx_clock_get_monotonic();
+  thrd_create(&t, bio_random_thread, a);
+
+  auto cleanup = fit::defer([&a, &t]() {
     int r;
-
-    size_t count = a->count;
-    zx_handle_t fifo = a->blk->fifo;
-
-    zx_time_t t0 = zx_clock_get_monotonic();
-    thrd_create(&t, bio_random_thread, a);
-
-    auto cleanup = fit::defer([&a, &t]() {
-        int r;
-        zx_handle_close(a->blk->fifo);
-        thrd_join(t, &r);
-    });
-
-    while (count > 0) {
-        block_fifo_response_t resp;
-        zx_status_t r = zx_fifo_read(fifo, sizeof(resp), &resp, 1, NULL);
-        if (r == ZX_ERR_SHOULD_WAIT) {
-            r = zx_object_wait_one(fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
-                                   ZX_TIME_INFINITE, NULL);
-            if (r != ZX_OK) {
-                fprintf(stderr, "failed waiting for fifo: %d\n", r);
-                return r;
-            }
-            continue;
-        } else if (r < 0) {
-            fprintf(stderr, "error: failed reading fifo: %d\n", r);
-            return r;
-        }
-        if (resp.status != ZX_OK) {
-            fprintf(stderr, "error: io txn failed %d (%zu remaining)\n",
-                    resp.status, count);
-            return resp.status;
-        }
-        count--;
-        if (a->pending.fetch_sub(1) == a->max_pending) {
-            sync_completion_signal(&a->signal);
-        }
-    }
-
-    cleanup.cancel();
-
-    zx_time_t t1;
-    t1 = zx_clock_get_monotonic();
-
-    fprintf(stderr, "waiting for thread to exit...\n");
+    zx_handle_close(a->blk->fifo);
     thrd_join(t, &r);
+  });
 
-    *_res = zx_time_sub_time(t1, t0);
-    *_total = a->count * a->xfer;
-    return ZX_OK;
+  while (count > 0) {
+    block_fifo_response_t resp;
+    zx_status_t r = zx_fifo_read(fifo, sizeof(resp), &resp, 1, NULL);
+    if (r == ZX_ERR_SHOULD_WAIT) {
+      r = zx_object_wait_one(fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+      if (r != ZX_OK) {
+        fprintf(stderr, "failed waiting for fifo: %d\n", r);
+        return r;
+      }
+      continue;
+    } else if (r < 0) {
+      fprintf(stderr, "error: failed reading fifo: %d\n", r);
+      return r;
+    }
+    if (resp.status != ZX_OK) {
+      fprintf(stderr, "error: io txn failed %d (%zu remaining)\n", resp.status, count);
+      return resp.status;
+    }
+    count--;
+    if (a->pending.fetch_sub(1) == a->max_pending) {
+      sync_completion_signal(&a->signal);
+    }
+  }
+
+  cleanup.cancel();
+
+  zx_time_t t1;
+  t1 = zx_clock_get_monotonic();
+
+  fprintf(stderr, "waiting for thread to exit...\n");
+  thrd_join(t, &r);
+
+  *_res = zx_time_sub_time(t1, t0);
+  *_total = a->count * a->xfer;
+  return ZX_OK;
 }
 
 void usage(void) {
-    fprintf(stderr, "usage: biotime <option>* <device>\n"
-                    "\n"
-                    "args:  -bs <num>     transfer block size (multiple of 4K)\n"
-                    "       -total-bytes-to-transfer <num>  total amount to read or write\n"
-                    "       -iter <num-iterations> total number of iterations (0 stands for infinite)\n"
-                    "       -mo <num>     maximum outstanding ops (1..128)\n"
-                    "       -read         test reading from the block device (default)\n"
-                    "       -write        test writing to the block device\n"
-                    "       -live-dangerously  required if using \"-write\"\n"
-                    "       -linear       transfers in linear order (default)\n"
-                    "       -random       random transfers across total range\n"
-                    "       -output-file <filename>  destination file for "
-                    "writing results in JSON format\n"
-                    );
+  fprintf(stderr,
+          "usage: biotime <option>* <device>\n"
+          "\n"
+          "args:  -bs <num>     transfer block size (multiple of 4K)\n"
+          "       -total-bytes-to-transfer <num>  total amount to read or write\n"
+          "       -iter <num-iterations> total number of iterations (0 stands for infinite)\n"
+          "       -mo <num>     maximum outstanding ops (1..128)\n"
+          "       -read         test reading from the block device (default)\n"
+          "       -write        test writing to the block device\n"
+          "       -live-dangerously  required if using \"-write\"\n"
+          "       -linear       transfers in linear order (default)\n"
+          "       -random       random transfers across total range\n"
+          "       -output-file <filename>  destination file for "
+          "writing results in JSON format\n");
 }
 
-#define needparam() do { \
-    argc--; argv++; \
-    if (argc == 0) { \
-        fprintf(stderr, "error: option %s needs a parameter\n", argv[-1]); \
-        return -1; \
-    } } while (0)
-#define nextarg() do { argc--; argv++; } while (0)
-#define error(x...) do { fprintf(stderr, x); usage(); return -1; } while (0)
+#define needparam()                                                      \
+  do {                                                                   \
+    argc--;                                                              \
+    argv++;                                                              \
+    if (argc == 0) {                                                     \
+      fprintf(stderr, "error: option %s needs a parameter\n", argv[-1]); \
+      return -1;                                                         \
+    }                                                                    \
+  } while (0)
+#define nextarg() \
+  do {            \
+    argc--;       \
+    argv++;       \
+  } while (0)
+#define error(x...)     \
+  do {                  \
+    fprintf(stderr, x); \
+    usage();            \
+    return -1;          \
+  } while (0)
 
 int main(int argc, char** argv) {
-    blkdev_t blk;
+  blkdev_t blk;
 
-    bool live_dangerously = false;
-    bio_random_args_t a = {};
-    bool opt_write = false;
-    bool opt_linear = true;
-    int opt_max_pending = 128;
-    size_t opt_xfer_size = 32768;
-    uint64_t opt_num_iter = 1;
-    bool loop_forever = false;
+  bool live_dangerously = false;
+  bio_random_args_t a = {};
+  bool opt_write = false;
+  bool opt_linear = true;
+  int opt_max_pending = 128;
+  size_t opt_xfer_size = 32768;
+  uint64_t opt_num_iter = 1;
+  bool loop_forever = false;
 
-    a.blk = &blk;
-    a.seed = 7891263897612ULL;
-    const char* output_file = nullptr;
+  a.blk = &blk;
+  a.seed = 7891263897612ULL;
+  const char* output_file = nullptr;
 
-    size_t total = 0;
+  size_t total = 0;
 
+  nextarg();
+  while (argc > 0) {
+    if (argv[0][0] != '-') {
+      break;
+    }
+    if (!strcmp(argv[0], "-bs")) {
+      needparam();
+      opt_xfer_size = number(argv[0]);
+      if ((opt_xfer_size == 0) || (opt_xfer_size % 4096)) {
+        error("error: block size must be multiple of 4K\n");
+      }
+    } else if (!strcmp(argv[0], "-total-bytes-to-transfer")) {
+      needparam();
+      total = number(argv[0]);
+    } else if (!strcmp(argv[0], "-mo")) {
+      needparam();
+      size_t n = number(argv[0]);
+      if ((n < 1) || (n > 128)) {
+        error("error: max pending must be between 1 and 128\n");
+      }
+      opt_max_pending = static_cast<int>(n);
+    } else if (!strcmp(argv[0], "-read")) {
+      opt_write = false;
+    } else if (!strcmp(argv[0], "-write")) {
+      opt_write = true;
+    } else if (!strcmp(argv[0], "-live-dangerously")) {
+      live_dangerously = true;
+    } else if (!strcmp(argv[0], "-linear")) {
+      opt_linear = true;
+    } else if (!strcmp(argv[0], "-random")) {
+      opt_linear = false;
+    } else if (!strcmp(argv[0], "-output-file")) {
+      needparam();
+      output_file = argv[0];
+    } else if (!strcmp(argv[0], "-h")) {
+      usage();
+      return 0;
+    } else if (!strcmp(argv[0], "-iter")) {
+      needparam();
+      opt_num_iter = strtoull(argv[0], NULL, 10);
+      if (opt_num_iter == 0)
+        loop_forever = true;
+    } else {
+      error("error: unknown option: %s\n", argv[0]);
+    }
     nextarg();
-    while (argc > 0) {
-        if (argv[0][0] != '-') {
-            break;
-        }
-        if (!strcmp(argv[0], "-bs")) {
-            needparam();
-            opt_xfer_size = number(argv[0]);
-            if ((opt_xfer_size == 0) || (opt_xfer_size % 4096)) {
-                error("error: block size must be multiple of 4K\n");
-            }
-        } else if (!strcmp(argv[0], "-total-bytes-to-transfer")) {
-            needparam();
-            total = number(argv[0]);
-        } else if (!strcmp(argv[0], "-mo")) {
-            needparam();
-            size_t n = number(argv[0]);
-            if ((n < 1) || (n > 128)) {
-                error("error: max pending must be between 1 and 128\n");
-            }
-            opt_max_pending = static_cast<int>(n);
-        } else if (!strcmp(argv[0], "-read")) {
-            opt_write = false;
-        } else if (!strcmp(argv[0], "-write")) {
-            opt_write = true;
-        } else if (!strcmp(argv[0], "-live-dangerously")) {
-            live_dangerously = true;
-        } else if (!strcmp(argv[0], "-linear")) {
-            opt_linear = true;
-        } else if (!strcmp(argv[0], "-random")) {
-            opt_linear = false;
-        } else if (!strcmp(argv[0], "-output-file")) {
-            needparam();
-            output_file = argv[0];
-        } else if (!strcmp(argv[0], "-h")) {
-            usage();
-            return 0;
-        } else if (!strcmp(argv[0], "-iter")) {
-            needparam();
-            opt_num_iter = strtoull(argv[0], NULL, 10);
-            if (opt_num_iter == 0)
-                loop_forever = true;
-        } else {
-            error("error: unknown option: %s\n", argv[0]);
-        }
-        nextarg();
+  }
+  if (argc == 0) {
+    error("error: no device specified\n");
+  }
+  if (argc > 1) {
+    error("error: unexpected arguments\n");
+  }
+  if (a.write && !live_dangerously) {
+    error(
+        "error: the option \"-live-dangerously\" is required when using"
+        " \"-write\"\n");
+  }
+  const char* device_filename = argv[0];
+
+  do {
+    int fd;
+    a.xfer = opt_xfer_size;
+    a.max_pending = opt_max_pending;
+    a.write = opt_write;
+    a.linear = opt_linear;
+    if ((fd = open(device_filename, O_RDONLY)) < 0) {
+      fprintf(stderr, "error: cannot open '%s'\n", device_filename);
+      return -1;
     }
-    if (argc == 0) {
-        error("error: no device specified\n");
+    if (blkdev_open(fd, device_filename, 8 * 1024 * 1024, &blk) != ZX_OK) {
+      return -1;
     }
-    if (argc > 1) {
-        error("error: unexpected arguments\n");
+
+    size_t devtotal = blk.info.block_count * blk.info.block_size;
+
+    // default to entire device
+    if ((total == 0) || (total > devtotal)) {
+      total = devtotal;
     }
-    if (a.write && !live_dangerously) {
-        error("error: the option \"-live-dangerously\" is required when using"
-              " \"-write\"\n");
+    a.count = total / a.xfer;
+
+    zx_duration_t res = 0;
+    total = 0;
+    if (bio_random(&a, &total, &res) != ZX_OK) {
+      return -1;
     }
-    const char* device_filename = argv[0];
 
-    do {
-        int fd;
-        a.xfer = opt_xfer_size;
-        a.max_pending = opt_max_pending;
-        a.write = opt_write;
-        a.linear = opt_linear;
-        if ((fd = open(device_filename, O_RDONLY)) < 0) {
-            fprintf(stderr, "error: cannot open '%s'\n", device_filename);
-            return -1;
-        }
-        if (blkdev_open(fd, device_filename, 8*1024*1024, &blk) != ZX_OK) {
-            return -1;
-        }
+    fprintf(stderr, "%zu bytes in %zu ns: ", total, res);
+    bytes_per_second(total, res);
+    fprintf(stderr, "%zu ops in %zu ns: ", a.count, res);
+    ops_per_second(a.count, res);
 
-        size_t devtotal = blk.info.block_count * blk.info.block_size;
+    if (output_file) {
+      perftest::ResultsSet results;
+      auto* test_case =
+          results.AddTestCase("fuchsia.zircon", "BlockDeviceThroughput", "bytes/second");
+      double time_in_seconds = static_cast<double>(res) / 1e9;
+      test_case->AppendValue(static_cast<double>(total) / time_in_seconds);
+      if (!results.WriteJSONFile(output_file)) {
+        return 1;
+      }
+    }
+    blkdev_close(&blk);
+  } while (loop_forever || (--opt_num_iter > 0));
 
-        // default to entire device
-        if ((total == 0) || (total > devtotal)) {
-            total = devtotal;
-        }
-        a.count = total / a.xfer;
-
-        zx_duration_t res = 0;
-        total = 0;
-        if (bio_random(&a, &total, &res) != ZX_OK) {
-            return -1;
-        }
-
-        fprintf(stderr, "%zu bytes in %zu ns: ", total, res);
-        bytes_per_second(total, res);
-        fprintf(stderr, "%zu ops in %zu ns: ", a.count, res);
-        ops_per_second(a.count, res);
-
-        if (output_file) {
-            perftest::ResultsSet results;
-            auto* test_case = results.AddTestCase(
-                "fuchsia.zircon", "BlockDeviceThroughput", "bytes/second");
-            double time_in_seconds = static_cast<double>(res) / 1e9;
-            test_case->AppendValue(static_cast<double>(total) / time_in_seconds);
-            if (!results.WriteJSONFile(output_file)) {
-                return 1;
-            }
-        }
-        blkdev_close(&blk);
-    } while (loop_forever || (--opt_num_iter > 0));
-
-    return 0;
+  return 0;
 }

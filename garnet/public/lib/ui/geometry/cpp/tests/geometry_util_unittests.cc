@@ -19,17 +19,15 @@ Transform CreateTransformFromData(const std::array<float, 16>& data) {
 }
 
 Transform CreateTestTransform() {
-  return CreateTransformFromData(
-      {{0.34, 123.7, 89.22, 65.17, 871.12, 87.34, -0.3, -887, 76.2, 2.22222332,
-        11.00992, -19, 42, 42, 42, 42}});
+  return CreateTransformFromData({{0.34, 123.7, 89.22, 65.17, 871.12, 87.34, -0.3, -887, 76.2,
+                                   2.22222332, 11.00992, -19, 42, 42, 42, 42}});
 }
 
 void ExpectTransformsAreFloatEq(const Transform& lhs, const Transform& rhs) {
   for (size_t row = 0; row < 4; row++) {
     for (size_t col = 0; col < 4; col++) {
       size_t idx = row * 4 + col;
-      EXPECT_FLOAT_EQ(lhs.matrix.at(idx), rhs.matrix.at(idx))
-          << "row=" << row << ", col=" << col;
+      EXPECT_FLOAT_EQ(lhs.matrix.at(idx), rhs.matrix.at(idx)) << "row=" << row << ", col=" << col;
     }
   }
 }
@@ -101,8 +99,7 @@ TEST(PointTest, Comparisons) {
 }
 
 TEST(TransformFunctionsTest, SetIdentityTransform) {
-  Transform identity = CreateTransformFromData(
-      {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
+  Transform identity = CreateTransformFromData({{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
   Transform transform = CreateTestTransform();
 
   SetIdentityTransform(&transform);
@@ -114,8 +111,8 @@ TEST(TransformFunctionsTest, SetTranslationTransform) {
   const float y = 10.2;
   const float z = -1.5;
 
-  Transform translated = CreateTransformFromData(
-      {{1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1}});
+  Transform translated =
+      CreateTransformFromData({{1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1}});
   Transform transform = CreateTestTransform();
 
   SetTranslationTransform(&transform, x, y, z);
@@ -165,8 +162,7 @@ TEST(TransformFunctionsTest, Scale) {
 }
 
 TEST(TransformFunctionsTest, CreateIdentityTransform) {
-  Transform identity = CreateTransformFromData(
-      {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
+  Transform identity = CreateTransformFromData({{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
 
   ExpectTransformsAreFloatEq(identity, *CreateIdentityTransform());
 }
@@ -176,8 +172,8 @@ TEST(TransformFunctionsTest, CreateTranslationTransform) {
   const float y = 123.2;
   const float z = -9.2;
 
-  Transform translation = CreateTransformFromData(
-      {{1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1}});
+  Transform translation =
+      CreateTransformFromData({{1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1}});
 
   ExpectTransformsAreFloatEq(translation, *CreateTranslationTransform(x, y, z));
 }
@@ -187,8 +183,8 @@ TEST(TransformFunctionsTest, CreateScaleTransform) {
   const float y = 10.2;
   const float z = -1.5;
 
-  Transform translation = CreateTransformFromData(
-      {{x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1}});
+  Transform translation =
+      CreateTransformFromData({{x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1}});
 
   ExpectTransformsAreFloatEq(translation, *CreateScaleTransform(x, y, z));
 }

@@ -15,7 +15,7 @@ typedef void (*zxr_thread_entry_t)(void*);
 
 // size = 16 on all platforms
 typedef struct {
-    char internal[16];
+  char internal[16];
 } zxr_thread_t;
 
 // TODO(kulakowski) Document the possible zx_status_t values from these.
@@ -27,8 +27,8 @@ typedef struct {
 // If detached is true, then it's as if zxr_thread_detach were called
 // immediately after this returns (but it's more efficient, and can
 // never fail with ZX_ERR_BAD_STATE).
-zx_status_t zxr_thread_create(zx_handle_t proc_self, const char* name,
-                              bool detached, zxr_thread_t* thread);
+zx_status_t zxr_thread_create(zx_handle_t proc_self, const char* name, bool detached,
+                              zxr_thread_t* thread);
 
 // Fill in the given zxr_thread_t to describe a thread given its handle.
 // This takes ownership of the given thread handle.
@@ -39,7 +39,8 @@ zx_status_t zxr_thread_adopt(zx_handle_t handle, zxr_thread_t* thread);
 // mapping, and should be page aligned. The size of the stack should
 // be a multiple of PAGE_SIZE. When started, the thread will call
 // entry(arg).
-zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t stack_size, zxr_thread_entry_t entry, void* arg);
+zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t stack_size,
+                             zxr_thread_entry_t entry, void* arg);
 
 // Once started, threads can be either joined or detached. It is undefined
 // behavior to join a thread multiple times or to join a detached thread.
@@ -58,8 +59,7 @@ zx_status_t zxr_thread_join(zxr_thread_t* thread);
 // done after zxr_thread_join.  It is undefined behavior to detach
 // a thread that has already been joined or to detach an already detached
 // thread.
-zx_status_t zxr_thread_detach(zxr_thread_t* thread)
-    __attribute__((warn_unused_result));
+zx_status_t zxr_thread_detach(zxr_thread_t* thread) __attribute__((warn_unused_result));
 
 // Indicates whether the thread has been detached.  The result is undefined
 // if the thread is exiting or has exited.
@@ -69,8 +69,8 @@ bool zxr_thread_detached(zxr_thread_t* thread);
 // thread has been detached.  If it has been detached, then this does
 // zx_vmar_unmap(vmar, addr, len) first, but in a way that permits
 // unmapping the caller's own stack.
-__NO_RETURN void zxr_thread_exit_unmap_if_detached(
-    zxr_thread_t* thread, zx_handle_t vmar, uintptr_t addr, size_t len);
+__NO_RETURN void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread, zx_handle_t vmar,
+                                                   uintptr_t addr, size_t len);
 
 // Destroy a thread structure that is either created but unstarted or is
 // known to belong to a thread that has been zx_task_kill'd and has not been

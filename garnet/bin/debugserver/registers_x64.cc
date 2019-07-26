@@ -12,9 +12,9 @@
 
 namespace debugserver {
 
-constexpr int kFpRegisterNumber = 6; // rbp
-constexpr int kSpRegisterNumber = 7; // rsp
-constexpr int kPcRegisterNumber = 16; // rip
+constexpr int kFpRegisterNumber = 6;   // rbp
+constexpr int kSpRegisterNumber = 7;   // rsp
+constexpr int kPcRegisterNumber = 16;  // rip
 constexpr int kNumGeneralRegisters = 18;
 
 int GetFPRegisterNumber() { return kFpRegisterNumber; }
@@ -33,19 +33,17 @@ std::string GetRegsetAsString(Thread* thread, int regset) {
     FXL_LOG(ERROR) << "Unable to refresh general registers";
     return GetUninitializedGeneralRegistersAsString();
   }
-  const zx_thread_state_general_regs_t* gregs =
-    thread->registers()->GetGeneralRegisters();
+  const zx_thread_state_general_regs_t* gregs = thread->registers()->GetGeneralRegisters();
   const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(gregs);
   return debugger_utils::EncodeByteArrayString(greg_bytes, sizeof(*gregs));
 }
 
-bool SetRegsetFromString(Thread* thread, int regset,
-                         const fxl::StringView& value) {
+bool SetRegsetFromString(Thread* thread, int regset, const fxl::StringView& value) {
   FXL_DCHECK(regset == 0);
   auto bytes = debugger_utils::DecodeByteArrayString(value);
   if (bytes.size() != sizeof(zx_thread_state_general_regs_t)) {
-    FXL_LOG(ERROR) << "|value| doesn't match regset " << regset << " size of "
-                   << bytes.size() << ": " << value;
+    FXL_LOG(ERROR) << "|value| doesn't match regset " << regset << " size of " << bytes.size()
+                   << ": " << value;
     return false;
   }
   return SetRegsetHelper(thread, regset, bytes.data(), bytes.size());
@@ -60,8 +58,7 @@ std::string GetRegisterAsString(Thread* thread, int regno) {
     FXL_LOG(ERROR) << "Unable to refresh general registers";
     return std::string(sizeof(uint64_t) * 2, '0');
   }
-  const zx_thread_state_general_regs_t* gregs =
-    thread->registers()->GetGeneralRegisters();
+  const zx_thread_state_general_regs_t* gregs = thread->registers()->GetGeneralRegisters();
 
   const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(gregs);
   greg_bytes += regno * sizeof(uint64_t);

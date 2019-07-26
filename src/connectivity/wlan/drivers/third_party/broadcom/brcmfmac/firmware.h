@@ -32,8 +32,8 @@
 #define BRCMF_FW_DEFAULT_PATH ""
 
 struct brcmf_firmware {
-    size_t size;
-    void* data;
+  size_t size;
+  void* data;
 };
 
 /**
@@ -47,26 +47,26 @@ struct brcmf_firmware {
  * @nvram: name of nvram file.
  */
 struct brcmf_firmware_mapping {
-    uint32_t chipid;
-    uint32_t revmask;
-    const char* fw;
-    const char* nvram;
+  uint32_t chipid;
+  uint32_t revmask;
+  const char* fw;
+  const char* nvram;
 };
 
-#define BRCMF_FW_NVRAM_DEF(fw_nvram_name, fw, nvram)                                     \
-    static const char BRCM_##fw_nvram_name##_FIRMWARE_NAME[] = BRCMF_FW_DEFAULT_PATH fw; \
-    static const char BRCM_##fw_nvram_name##_NVRAM_NAME[] = BRCMF_FW_DEFAULT_PATH nvram; \
-    MODULE_FIRMWARE(BRCMF_FW_DEFAULT_PATH fw)
+#define BRCMF_FW_NVRAM_DEF(fw_nvram_name, fw, nvram)                                   \
+  static const char BRCM_##fw_nvram_name##_FIRMWARE_NAME[] = BRCMF_FW_DEFAULT_PATH fw; \
+  static const char BRCM_##fw_nvram_name##_NVRAM_NAME[] = BRCMF_FW_DEFAULT_PATH nvram; \
+  MODULE_FIRMWARE(BRCMF_FW_DEFAULT_PATH fw)
 
-#define BRCMF_FW_DEF(fw_name, fw)                                                  \
-    static const char BRCM_##fw_name##_FIRMWARE_NAME[] = BRCMF_FW_DEFAULT_PATH fw; \
-    MODULE_FIRMWARE(BRCMF_FW_DEFAULT_PATH fw)
+#define BRCMF_FW_DEF(fw_name, fw)                                                \
+  static const char BRCM_##fw_name##_FIRMWARE_NAME[] = BRCMF_FW_DEFAULT_PATH fw; \
+  MODULE_FIRMWARE(BRCMF_FW_DEFAULT_PATH fw)
 
 #define BRCMF_FW_NVRAM_ENTRY(chipid, mask, name) \
-    { chipid, mask, BRCM_##name##_FIRMWARE_NAME, BRCM_##name##_NVRAM_NAME }
+  { chipid, mask, BRCM_##name##_FIRMWARE_NAME, BRCM_##name##_NVRAM_NAME }
 
 #define BRCMF_FW_ENTRY(chipid, mask, name) \
-    { chipid, mask, BRCM_##name##_FIRMWARE_NAME, NULL }
+  { chipid, mask, BRCM_##name##_FIRMWARE_NAME, NULL }
 
 zx_status_t brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
                                       struct brcmf_firmware_mapping mapping_table[],
@@ -82,9 +82,8 @@ zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags
                                         const char* nvram,
                                         void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,
                                                       const struct brcmf_firmware* fw,
-                                                      void* nvram_image,
-                                                      uint32_t nvram_len),
-                                uint16_t domain_nr, uint16_t bus_nr);
+                                                      void* nvram_image, uint32_t nvram_len),
+                                        uint16_t domain_nr, uint16_t bus_nr);
 zx_status_t brcmf_fw_get_firmwares(struct brcmf_device* dev, uint16_t flags, const char* code,
                                    const char* nvram,
                                    void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,

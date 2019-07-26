@@ -27,7 +27,7 @@
 #include <string.h>
 #include <threads.h>
 
-enum {ADDRESSED_TO_MULTICAST = 1, ADDRESSED_TO_BROADCAST, ADDRESSED_TO_OTHER_HOST};
+enum { ADDRESSED_TO_MULTICAST = 1, ADDRESSED_TO_BROADCAST, ADDRESSED_TO_OTHER_HOST };
 
 // Purpose of this library:
 //
@@ -51,21 +51,21 @@ enum {ADDRESSED_TO_MULTICAST = 1, ADDRESSED_TO_BROADCAST, ADDRESSED_TO_OTHER_HOS
  * eth_header - Is set to the start of the Ethernet header
  */
 struct brcmf_netbuf {
-    uint16_t protocol;
-    int priority;
-    uint32_t len;
-    uint8_t* data;
-    list_node_t listnode;  // Do not access listnode fields directly.
-    // Workspace is a small area for use by the driver, on which a driver-specific struct can
-    // be superimposed. For example, see fwsignal.c for brcmf_netbuf_workspace.
-    // The driver uses it to associate state / information with the packet.
-    // Code above and below the driver, and the netbuf library, should not modify this area.
-    uint8_t workspace[48];
-    uint32_t pkt_type;
-    uint32_t ip_summed;
-    uint8_t* allocated_buffer;
-    uint32_t allocated_size;
-    void* eth_header;
+  uint16_t protocol;
+  int priority;
+  uint32_t len;
+  uint8_t* data;
+  list_node_t listnode;  // Do not access listnode fields directly.
+  // Workspace is a small area for use by the driver, on which a driver-specific struct can
+  // be superimposed. For example, see fwsignal.c for brcmf_netbuf_workspace.
+  // The driver uses it to associate state / information with the packet.
+  // Code above and below the driver, and the netbuf library, should not modify this area.
+  uint8_t workspace[48];
+  uint32_t pkt_type;
+  uint32_t ip_summed;
+  uint8_t* allocated_buffer;
+  uint32_t allocated_size;
+  void* eth_header;
 };
 
 // The list-head for queues of buffers.
@@ -144,7 +144,7 @@ static inline void brcmf_netbuf_list_add_after(struct brcmf_netbuf_list* list,
 
 // Unlink element from the list.
 static inline void brcmf_netbuf_list_remove(struct brcmf_netbuf_list* list,
-                                            struct brcmf_netbuf *element);
+                                            struct brcmf_netbuf* element);
 
 // Remove and return the first element of the list, or NULL if list is empty.
 static inline struct brcmf_netbuf* brcmf_netbuf_list_remove_head(struct brcmf_netbuf_list* list);
@@ -170,10 +170,10 @@ static inline struct brcmf_netbuf* brcmf_netbuf_list_peek_tail(struct brcmf_netb
 // that is not threadsafe (they're not atomic, so all accesses must be inside the list lock).
 
 struct brcmf_netbuf_list {
-    uint32_t priority;
-    mtx_t lock;
-    uint32_t qlen;
-    list_node_t listnode;
+  uint32_t priority;
+  mtx_t lock;
+  uint32_t qlen;
+  list_node_t listnode;
 };
 
 struct brcmf_netbuf* brcmf_netbuf_allocate(uint32_t size);
@@ -181,193 +181,191 @@ struct brcmf_netbuf* brcmf_netbuf_allocate(uint32_t size);
 void brcmf_netbuf_free(struct brcmf_netbuf* netbuf);
 
 static inline uint32_t brcmf_netbuf_head_space(struct brcmf_netbuf* netbuf) {
-    return netbuf->data - netbuf->allocated_buffer;
+  return netbuf->data - netbuf->allocated_buffer;
 }
 
 static inline uint32_t brcmf_netbuf_tail_space(struct brcmf_netbuf* netbuf) {
-    return netbuf->allocated_size - netbuf->len - brcmf_netbuf_head_space(netbuf);
+  return netbuf->allocated_size - netbuf->len - brcmf_netbuf_head_space(netbuf);
 }
 
 static inline void brcmf_netbuf_grow_tail(struct brcmf_netbuf* netbuf, uint32_t len) {
-    ZX_DEBUG_ASSERT(netbuf->data + netbuf->len + len <=
-                    netbuf->allocated_buffer + netbuf->allocated_size);
-    netbuf->len += len;
+  ZX_DEBUG_ASSERT(netbuf->data + netbuf->len + len <=
+                  netbuf->allocated_buffer + netbuf->allocated_size);
+  netbuf->len += len;
 }
 
 static inline void brcmf_netbuf_shrink_head(struct brcmf_netbuf* netbuf, uint32_t len) {
-    ZX_DEBUG_ASSERT(netbuf->len >= len);
-    netbuf->data += len;
-    netbuf->len -= len;
+  ZX_DEBUG_ASSERT(netbuf->len >= len);
+  netbuf->data += len;
+  netbuf->len -= len;
 }
 
 static inline void brcmf_netbuf_grow_head(struct brcmf_netbuf* netbuf, uint32_t len) {
-    ZX_DEBUG_ASSERT(brcmf_netbuf_head_space(netbuf) >= len);
-    netbuf->data -= len;
-    netbuf->len += len;
+  ZX_DEBUG_ASSERT(brcmf_netbuf_head_space(netbuf) >= len);
+  netbuf->data -= len;
+  netbuf->len += len;
 }
 
 static inline void brcmf_netbuf_set_length_to(struct brcmf_netbuf* netbuf, uint32_t len) {
-    ZX_DEBUG_ASSERT(netbuf->len + brcmf_netbuf_tail_space(netbuf) >= len);
-    netbuf->len = len;
+  ZX_DEBUG_ASSERT(netbuf->len + brcmf_netbuf_tail_space(netbuf) >= len);
+  netbuf->len = len;
 }
 
 static inline void brcmf_netbuf_reduce_length_to(struct brcmf_netbuf* netbuf, uint32_t len) {
-    if (len > netbuf->len) {
-        return;
-    }
-    ZX_DEBUG_ASSERT(netbuf->len + brcmf_netbuf_tail_space(netbuf) >= len);
-    netbuf->len = len;
+  if (len > netbuf->len) {
+    return;
+  }
+  ZX_DEBUG_ASSERT(netbuf->len + brcmf_netbuf_tail_space(netbuf) >= len);
+  netbuf->len = len;
 }
-
 
 static inline zx_status_t brcmf_netbuf_grow_realloc(struct brcmf_netbuf* netbuf, uint32_t head,
                                                     uint32_t tail) {
-    uint32_t old_data_offset = brcmf_netbuf_head_space(netbuf);
-    uint8_t* new_buffer = (uint8_t*)realloc(netbuf->allocated_buffer,
-                                            netbuf->allocated_size + head + tail);
-    if (new_buffer == NULL) {
-        return ZX_ERR_NO_MEMORY;
-    } else {
-        netbuf->allocated_buffer = new_buffer;
-    }
-    if (head != 0) {
-        // TODO(WLAN-1071): (for efficiency):
-        // 1) Do we have to copy the whole buffer, or just allocated_buffer..data+len?
-        // 2) Is it quicker to realloc and do a second copy, or malloc/free and trash extra cache?
-        memmove(netbuf->allocated_buffer + head, netbuf->allocated_buffer, netbuf->allocated_size);
-    }
-    netbuf->allocated_size += head + tail;
-    netbuf->data = netbuf->allocated_buffer + old_data_offset + head;
-    return ZX_OK;
+  uint32_t old_data_offset = brcmf_netbuf_head_space(netbuf);
+  uint8_t* new_buffer =
+      (uint8_t*)realloc(netbuf->allocated_buffer, netbuf->allocated_size + head + tail);
+  if (new_buffer == NULL) {
+    return ZX_ERR_NO_MEMORY;
+  } else {
+    netbuf->allocated_buffer = new_buffer;
+  }
+  if (head != 0) {
+    // TODO(WLAN-1071): (for efficiency):
+    // 1) Do we have to copy the whole buffer, or just allocated_buffer..data+len?
+    // 2) Is it quicker to realloc and do a second copy, or malloc/free and trash extra cache?
+    memmove(netbuf->allocated_buffer + head, netbuf->allocated_buffer, netbuf->allocated_size);
+  }
+  netbuf->allocated_size += head + tail;
+  netbuf->data = netbuf->allocated_buffer + old_data_offset + head;
+  return ZX_OK;
 }
 
 static inline void brcmf_netbuf_list_init(struct brcmf_netbuf_list* list) {
-    mtx_init(&list->lock, mtx_plain);
-    list->priority = 0;
-    list->qlen = 0;
-    list_initialize(&list->listnode);
+  mtx_init(&list->lock, mtx_plain);
+  list->priority = 0;
+  list->qlen = 0;
+  list_initialize(&list->listnode);
 }
 
 static inline bool brcmf_netbuf_maybe_in_list(struct brcmf_netbuf* netbuf) {
-    return netbuf->listnode.next != NULL;
+  return netbuf->listnode.next != NULL;
 }
 
 static inline uint32_t brcmf_netbuf_list_length(struct brcmf_netbuf_list* list) {
-    uint32_t length;
-    mtx_lock(&list->lock);
-    length = list->qlen;
-    mtx_unlock(&list->lock);
-    return length;
+  uint32_t length;
+  mtx_lock(&list->lock);
+  length = list->qlen;
+  mtx_unlock(&list->lock);
+  return length;
 }
 
 static inline bool brcmf_netbuf_list_is_empty(struct brcmf_netbuf_list* list) {
-    bool empty;
-    mtx_lock(&list->lock);
-    empty = list_is_empty(&list->listnode);
-    ZX_DEBUG_ASSERT(empty == (list->qlen == 0));
-    mtx_unlock(&list->lock);
-    return empty;
+  bool empty;
+  mtx_lock(&list->lock);
+  empty = list_is_empty(&list->listnode);
+  ZX_DEBUG_ASSERT(empty == (list->qlen == 0));
+  mtx_unlock(&list->lock);
+  return empty;
 }
 
 static inline void brcmf_netbuf_list_add_head(struct brcmf_netbuf_list* list,
                                               struct brcmf_netbuf* element) {
-    mtx_lock(&list->lock);
-    list_add_head(&list->listnode, &element->listnode);
-    list->qlen++;
-    mtx_unlock(&list->lock);
+  mtx_lock(&list->lock);
+  list_add_head(&list->listnode, &element->listnode);
+  list->qlen++;
+  mtx_unlock(&list->lock);
 }
 
 static inline struct brcmf_netbuf* brcmf_netbuf_list_prev(struct brcmf_netbuf_list* list,
                                                           struct brcmf_netbuf* element) {
-    struct brcmf_netbuf* netbuf;
-    mtx_lock(&list->lock);
-    netbuf = list_prev_type(&list->listnode, &element->listnode, struct brcmf_netbuf, listnode);
-    mtx_unlock(&list->lock);
-    return netbuf;
+  struct brcmf_netbuf* netbuf;
+  mtx_lock(&list->lock);
+  netbuf = list_prev_type(&list->listnode, &element->listnode, struct brcmf_netbuf, listnode);
+  mtx_unlock(&list->lock);
+  return netbuf;
 }
 
 static inline struct brcmf_netbuf* brcmf_netbuf_list_next(struct brcmf_netbuf_list* list,
                                                           struct brcmf_netbuf* element) {
-    struct brcmf_netbuf* netbuf;
-    mtx_lock(&list->lock);
-    netbuf = list_next_type(&list->listnode, &element->listnode, struct brcmf_netbuf, listnode);
-    mtx_unlock(&list->lock);
-    return netbuf;
+  struct brcmf_netbuf* netbuf;
+  mtx_lock(&list->lock);
+  netbuf = list_next_type(&list->listnode, &element->listnode, struct brcmf_netbuf, listnode);
+  mtx_unlock(&list->lock);
+  return netbuf;
 }
 
 static inline void brcmf_netbuf_list_add_tail(struct brcmf_netbuf_list* list,
                                               struct brcmf_netbuf* element) {
-    mtx_lock(&list->lock);
-    list_add_tail(&list->listnode, &element->listnode);
-    list->qlen++;
-    mtx_unlock(&list->lock);
+  mtx_lock(&list->lock);
+  list_add_tail(&list->listnode, &element->listnode);
+  list->qlen++;
+  mtx_unlock(&list->lock);
 }
 
 static inline void brcmf_netbuf_list_add_after(struct brcmf_netbuf_list* list,
-                                                      struct brcmf_netbuf* target,
-                                                      struct brcmf_netbuf* new_element) {
-    mtx_lock(&list->lock);
-    list_add_after(&target->listnode, &new_element->listnode);
-    list->qlen++;
-    mtx_unlock(&list->lock);
+                                               struct brcmf_netbuf* target,
+                                               struct brcmf_netbuf* new_element) {
+  mtx_lock(&list->lock);
+  list_add_after(&target->listnode, &new_element->listnode);
+  list->qlen++;
+  mtx_unlock(&list->lock);
 }
 
-static inline struct brcmf_netbuf* brcmf_netbuf_list_remove_head(
-        struct brcmf_netbuf_list* list) {
-    struct brcmf_netbuf* netbuf;
-    mtx_lock(&list->lock);
-    if (list->qlen == 0) {
-        netbuf = NULL;
-    } else {
-        list->qlen--;
-        netbuf = list_remove_head_type(&list->listnode, struct brcmf_netbuf, listnode);
-    }
-    mtx_unlock(&list->lock);
-    return netbuf;
+static inline struct brcmf_netbuf* brcmf_netbuf_list_remove_head(struct brcmf_netbuf_list* list) {
+  struct brcmf_netbuf* netbuf;
+  mtx_lock(&list->lock);
+  if (list->qlen == 0) {
+    netbuf = NULL;
+  } else {
+    list->qlen--;
+    netbuf = list_remove_head_type(&list->listnode, struct brcmf_netbuf, listnode);
+  }
+  mtx_unlock(&list->lock);
+  return netbuf;
 }
 
 static inline void brcmf_netbuf_list_remove(struct brcmf_netbuf_list* list,
-                                            struct brcmf_netbuf *element) {
-    mtx_lock(&list->lock);
-    ZX_DEBUG_ASSERT(list->qlen > 0);
-    list->qlen--;
-    list_delete(&element->listnode);
-    mtx_unlock(&list->lock);
+                                            struct brcmf_netbuf* element) {
+  mtx_lock(&list->lock);
+  ZX_DEBUG_ASSERT(list->qlen > 0);
+  list->qlen--;
+  list_delete(&element->listnode);
+  mtx_unlock(&list->lock);
 }
 
 static inline struct brcmf_netbuf* brcmf_netbuf_list_remove_tail(struct brcmf_netbuf_list* list) {
-    struct brcmf_netbuf* netbuf;
-    mtx_lock(&list->lock);
-    if (list->qlen == 0) {
-        netbuf = NULL;
-    } else {
-        list->qlen--;
-        netbuf = list_remove_tail_type(&list->listnode, struct brcmf_netbuf, listnode);
-    }
-    mtx_unlock(&list->lock);
-    return netbuf;
+  struct brcmf_netbuf* netbuf;
+  mtx_lock(&list->lock);
+  if (list->qlen == 0) {
+    netbuf = NULL;
+  } else {
+    list->qlen--;
+    netbuf = list_remove_tail_type(&list->listnode, struct brcmf_netbuf, listnode);
+  }
+  mtx_unlock(&list->lock);
+  return netbuf;
 }
 
 static inline struct brcmf_netbuf* brcmf_netbuf_list_peek_head(struct brcmf_netbuf_list* list) {
-    struct brcmf_netbuf* netbuf;
-    mtx_lock(&list->lock);
-    netbuf = list_peek_head_type(&list->listnode, struct brcmf_netbuf, listnode);
-    mtx_unlock(&list->lock);
-    return netbuf;
+  struct brcmf_netbuf* netbuf;
+  mtx_lock(&list->lock);
+  netbuf = list_peek_head_type(&list->listnode, struct brcmf_netbuf, listnode);
+  mtx_unlock(&list->lock);
+  return netbuf;
 }
 
 static inline struct brcmf_netbuf* brcmf_netbuf_list_peek_tail(struct brcmf_netbuf_list* list) {
-    struct brcmf_netbuf* buf;
-    mtx_lock(&list->lock);
-    buf = list_peek_tail_type(&list->listnode, struct brcmf_netbuf, listnode);
-    mtx_unlock(&list->lock);
-    return buf;
+  struct brcmf_netbuf* buf;
+  mtx_lock(&list->lock);
+  buf = list_peek_tail_type(&list->listnode, struct brcmf_netbuf, listnode);
+  mtx_unlock(&list->lock);
+  return buf;
 }
 
 #define brcmf_netbuf_list_for_every(buf_list, entry) \
-    list_for_every_entry(&((buf_list)->listnode), entry, struct brcmf_netbuf, listnode)
+  list_for_every_entry (&((buf_list)->listnode), entry, struct brcmf_netbuf, listnode)
 
 #define brcmf_netbuf_list_for_every_safe(buf_list, entry, temp) \
-    list_for_every_entry_safe(&((buf_list)->listnode), entry, temp, struct brcmf_netbuf, listnode)
+  list_for_every_entry_safe (&((buf_list)->listnode), entry, temp, struct brcmf_netbuf, listnode)
 
-#endif // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_

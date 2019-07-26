@@ -42,23 +42,17 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT zx_status_t InitDecoder();
 
   // VideoDecoder::Owner implementation.
-  __WARN_UNUSED_RESULT DosRegisterIo* dosbus() override {
-    return dosbus_.get();
-  }
+  __WARN_UNUSED_RESULT DosRegisterIo* dosbus() override { return dosbus_.get(); }
   __WARN_UNUSED_RESULT zx_handle_t bti() override { return bti_.get(); }
-  __WARN_UNUSED_RESULT DeviceType device_type() override {
-    return device_type_;
-  }
-  __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() override {
-    return firmware_.get();
-  }
-  __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(
-      io_buffer_t* io_buffer, uint32_t offset, uint32_t width, uint32_t height,
-      uint32_t wrap, uint32_t blockmode) override;
+  __WARN_UNUSED_RESULT DeviceType device_type() override { return device_type_; }
+  __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() override { return firmware_.get(); }
+  __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer,
+                                                                    uint32_t offset, uint32_t width,
+                                                                    uint32_t height, uint32_t wrap,
+                                                                    uint32_t blockmode) override;
 
   __WARN_UNUSED_RESULT DecoderCore* core() override { return core_; }
-  __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer,
-                                                    size_t size,
+  __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                                     uint32_t alignment_log2,
                                                     uint32_t flags) override;
   __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override
@@ -80,8 +74,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   // The pts manager has its own locking, so don't worry about the video decoder
   // lock.
-  __WARN_UNUSED_RESULT PtsManager* pts_manager()
-      __TA_NO_THREAD_SAFETY_ANALYSIS {
+  __WARN_UNUSED_RESULT PtsManager* pts_manager() __TA_NO_THREAD_SAFETY_ANALYSIS {
     ZX_DEBUG_ASSERT(video_decoder_);
     return video_decoder_->pts_manager();
   }
@@ -117,15 +110,10 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx_status_t WaitForParsingCompleted(zx_duration_t deadline);
   void CancelParsing();
   __WARN_UNUSED_RESULT
-  zx_status_t ProcessVideoNoParser(const void* data, uint32_t len,
-                                   uint32_t* written_out = nullptr);
+  zx_status_t ProcessVideoNoParser(const void* data, uint32_t len, uint32_t* written_out = nullptr);
 
-  __WARN_UNUSED_RESULT DecoderCore* hevc_core() const {
-    return hevc_core_.get();
-  }
-  __WARN_UNUSED_RESULT DecoderCore* vdec1_core() const {
-    return vdec1_core_.get();
-  }
+  __WARN_UNUSED_RESULT DecoderCore* hevc_core() const { return hevc_core_.get(); }
+  __WARN_UNUSED_RESULT DecoderCore* vdec1_core() const { return vdec1_core_.get(); }
 
   // Add the instance as a swapped-out decoder.
   void AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instance)
@@ -139,20 +127,16 @@ class AmlogicVideo final : public VideoDecoder::Owner,
     return &video_decoder_lock_;
   }
   __WARN_UNUSED_RESULT
-  VideoDecoder* video_decoder() __TA_REQUIRES(video_decoder_lock_) {
-    return video_decoder_;
-  }
+  VideoDecoder* video_decoder() __TA_REQUIRES(video_decoder_lock_) { return video_decoder_; }
 
   // This tries to schedule the next runnable decoder. It may leave the current
   // decoder scheduled if no other decoder is runnable.
   void TryToReschedule() __TA_REQUIRES(video_decoder_lock_);
-  void TryToRescheduleAssumeVideoDecoderLocked()
-      __TA_NO_THREAD_SAFETY_ANALYSIS {
+  void TryToRescheduleAssumeVideoDecoderLocked() __TA_NO_THREAD_SAFETY_ANALYSIS {
     TryToReschedule();
   }
 
-  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer,
-                                                        uint32_t size);
+  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size);
 
   // This gets started connecting to sysmem, but returns an InterfaceHandle
   // instead of InterfacePtr so that the caller can bind to the dispatcher.
@@ -167,8 +151,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void InitializeStreamInput(bool use_parser);
 
   __WARN_UNUSED_RESULT
-  zx_status_t ProcessVideoNoParserAtOffset(const void* data, uint32_t len,
-                                           uint32_t current_offset,
+  zx_status_t ProcessVideoNoParserAtOffset(const void* data, uint32_t len, uint32_t current_offset,
                                            uint32_t* written_out = nullptr);
   void InitializeInterrupts();
   void SwapOutCurrentInstance() __TA_REQUIRES(video_decoder_lock_);

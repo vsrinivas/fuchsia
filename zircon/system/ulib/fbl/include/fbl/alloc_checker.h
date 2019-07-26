@@ -25,37 +25,36 @@ namespace fbl {
 //         // handle allocation failure (obj will be null)
 //     }
 class AllocChecker {
-public:
-    AllocChecker();
-    ~AllocChecker();
-    void arm(size_t size, bool result);
-    bool check();
+ public:
+  AllocChecker();
+  ~AllocChecker();
+  void arm(size_t size, bool result);
+  bool check();
 
-private:
-    unsigned state_;
+ private:
+  unsigned state_;
 };
 
 namespace internal {
 
 template <typename T>
 struct unique_type {
-    using single = std::unique_ptr<T>;
+  using single = std::unique_ptr<T>;
 };
 
 template <typename T>
 struct unique_type<T[]> {
-    using incomplete_array = std::unique_ptr<T[]>;
+  using incomplete_array = std::unique_ptr<T[]>;
 };
 
-} // namespace internal
+}  // namespace internal
 
 template <typename T, typename... Args>
-typename internal::unique_type<T>::single
-make_unique_checked(AllocChecker* ac, Args&&... args) {
-    return std::unique_ptr<T>(new (ac) T(std::forward<Args>(args)...));
+typename internal::unique_type<T>::single make_unique_checked(AllocChecker* ac, Args&&... args) {
+  return std::unique_ptr<T>(new (ac) T(std::forward<Args>(args)...));
 }
 
-} // namespace fbl
+}  // namespace fbl
 
 void* operator new(size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept;
 void* operator new[](size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept;

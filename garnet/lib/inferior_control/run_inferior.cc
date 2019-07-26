@@ -20,17 +20,15 @@
 #include "server.h"
 
 const char kUsageString[] =
-  "Usage: run_inferior [options] [--] path [arg1 ...]\n"
-  "Options:\n"
-  "  --help    Duh.";
+    "Usage: run_inferior [options] [--] path [arg1 ...]\n"
+    "Options:\n"
+    "  --help    Duh.";
 
 class SampleServer final : public inferior_control::Server {
  public:
   SampleServer()
-      : Server(debugger_utils::GetDefaultJob(),
-               debugger_utils::GetDefaultJob(),
-               sys::ServiceDirectory::CreateFromNamespace()) {
-  }
+      : Server(debugger_utils::GetDefaultJob(), debugger_utils::GetDefaultJob(),
+               sys::ServiceDirectory::CreateFromNamespace()) {}
 
   bool Run() override {
     // Start the main loop.
@@ -41,8 +39,7 @@ class SampleServer final : public inferior_control::Server {
     return true;
   }
 
-  bool RunInferior(const std::string& path,
-                   const debugger_utils::Argv& argv) {
+  bool RunInferior(const std::string& path, const debugger_utils::Argv& argv) {
     // The exception port loop must be started before we attach to the
     // inferior.
     if (!exception_port_.Run()) {
@@ -64,8 +61,7 @@ class SampleServer final : public inferior_control::Server {
   }
 
  private:
-  bool StartInferior(const std::string& path,
-                     const debugger_utils::Argv& argv) {
+  bool StartInferior(const std::string& path, const debugger_utils::Argv& argv) {
     auto inferior = new inferior_control::Process(this, this);
     set_current_process(inferior);
 
@@ -93,7 +89,7 @@ class SampleServer final : public inferior_control::Server {
 
 static void PrintUsageString() { puts(kUsageString); }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(cl))
     return EXIT_FAILURE;
@@ -107,8 +103,7 @@ int main(int argc, char **argv) {
     FXL_LOG(ERROR) << "Missing program";
     return EXIT_FAILURE;
   }
-  debugger_utils::Argv inferior_argv{cl.positional_args().begin(),
-      cl.positional_args().end()};
+  debugger_utils::Argv inferior_argv{cl.positional_args().begin(), cl.positional_args().end()};
   const std::string& path = inferior_argv[0];
 
   FXL_LOG(INFO) << "Running: " << path;
@@ -121,8 +116,7 @@ int main(int argc, char **argv) {
 
   inferior_control::Process* inferior = server.current_process();
   if (inferior->return_code_is_set()) {
-    FXL_LOG(INFO) << "Process " << inferior->id() << " exited, rc "
-                  << inferior->return_code();
+    FXL_LOG(INFO) << "Process " << inferior->id() << " exited, rc " << inferior->return_code();
     return inferior->return_code();
   } else {
     FXL_LOG(INFO) << "Process " << inferior->id() << " crashed";

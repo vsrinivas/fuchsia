@@ -44,81 +44,81 @@
 // match the context where it is being used.
 #define MSG(type, base, hdr) type
 enum ath10k_msg_type {
-    ATH10K_MSG_TYPE_BASE,
+  ATH10K_MSG_TYPE_BASE,
 
-    // Instantiated from htc.h
-    HTC_MSGS,
+  // Instantiated from htc.h
+  HTC_MSGS,
 
-    // Instantiated from wmi.h
-    WMI_MSGS,
+  // Instantiated from wmi.h
+  WMI_MSGS,
 
-    // Instantiated from wmi-tlv.h
-    WMI_TLV_MSGS,
+  // Instantiated from wmi-tlv.h
+  WMI_TLV_MSGS,
 
-    // Instantiated from htt.h
-    HTT_MSGS,
+  // Instantiated from htt.h
+  HTT_MSGS,
 
-    // Must be last
-    ATH10K_MSG_TYPE_COUNT
+  // Must be last
+  ATH10K_MSG_TYPE_COUNT
 };
 #undef MSG
 
 enum ath10k_rx_mpdu_flags {
-    ATH10K_RX_MPDU_FAILED_FCS_CRC = 1 << 0,
-    ATH10K_RX_MPDU_MMIC_ERROR = 1 << 1,
-    ATH10K_RX_MPDU_DECRYPTED = 1 << 2,
-    ATH10K_RX_MPDU_IV_STRIPPED = 1 << 3,
-    ATH10K_RX_MPDU_MMIC_STRIPPED = 1 << 4,
+  ATH10K_RX_MPDU_FAILED_FCS_CRC = 1 << 0,
+  ATH10K_RX_MPDU_MMIC_ERROR = 1 << 1,
+  ATH10K_RX_MPDU_DECRYPTED = 1 << 2,
+  ATH10K_RX_MPDU_IV_STRIPPED = 1 << 3,
+  ATH10K_RX_MPDU_MMIC_STRIPPED = 1 << 4,
 };
 
 enum ath10k_tx_flags {
-    ATH10K_TX_BUF_PROTECTED = (1 << 0),
-    ATH10K_TX_BUF_QOS = (1 << 1),
+  ATH10K_TX_BUF_PROTECTED = (1 << 0),
+  ATH10K_TX_BUF_QOS = (1 << 1),
 };
 
 struct ath10k_msg_buf {
-    struct ath10k_msg_buf_state* state;
-    enum ath10k_msg_type type;
-    list_node_t listnode;
-    io_buffer_t buf;
-    void* vaddr;
-    zx_paddr_t paddr;
-    size_t capacity;
-    size_t used;
-    bool allocated;
+  struct ath10k_msg_buf_state* state;
+  enum ath10k_msg_type type;
+  list_node_t listnode;
+  io_buffer_t buf;
+  void* vaddr;
+  zx_paddr_t paddr;
+  size_t capacity;
+  size_t used;
+  bool allocated;
 
-    // Tx/Rx meta-data. They differ because Rx arrives from the target wrapped in an HTT
-    // packet, and Tx is passed to us from the wlan driver as a raw packet.
-    union {
-        struct {
-            // These tell us how to find the packet within the HTT message
-            size_t frame_offset;
-            size_t frame_size;
-            uint8_t mpdu_flags;  // ATH10K_RX_MPDU_*
-        } rx;
+  // Tx/Rx meta-data. They differ because Rx arrives from the target wrapped in an HTT
+  // packet, and Tx is passed to us from the wlan driver as a raw packet.
+  union {
+    struct {
+      // These tell us how to find the packet within the HTT message
+      size_t frame_offset;
+      size_t frame_size;
+      uint8_t mpdu_flags;  // ATH10K_RX_MPDU_*
+    } rx;
 
-        struct {
-            uint32_t flags;  // ATH10K_TX_BUF_*
-        } tx;
-    };
+    struct {
+      uint32_t flags;  // ATH10K_TX_BUF_*
+    } tx;
+  };
 
 #if DEBUG_MSG_BUF
-    // Fields used for analysis/debugging
-    const char* alloc_file_name;
-    size_t alloc_line_num;
-    list_node_t debug_listnode;
+  // Fields used for analysis/debugging
+  const char* alloc_file_name;
+  size_t alloc_line_num;
+  list_node_t debug_listnode;
 #endif
 };
 
 struct ath10k_msg_buf_state {
-    struct ath10k* ar;
-    mtx_t lock;
+  struct ath10k* ar;
+  mtx_t lock;
 
-    // Lists of previously-allocated buffers
-    list_node_t buf_pool;
+  // Lists of previously-allocated buffers
+  list_node_t buf_pool;
 
-    // Used for analysis/debugging
-    list_node_t bufs_in_use;
+  // Used for analysis/debugging
+  list_node_t bufs_in_use;
 };
 
 // Initialize the module
@@ -130,7 +130,7 @@ zx_status_t ath10k_msg_buf_alloc_internal(struct ath10k* ar, struct ath10k_msg_b
                                           bool force_new, const char* filename, size_t line_num);
 
 #define ath10k_msg_buf_alloc(ar, ptr, type, bytes) \
-    ath10k_msg_buf_alloc_internal(ar, ptr, type, bytes, false, __FILE__, __LINE__)
+  ath10k_msg_buf_alloc_internal(ar, ptr, type, bytes, false, __FILE__, __LINE__)
 
 void* ath10k_msg_buf_get_header(struct ath10k_msg_buf* msg_buf, enum ath10k_msg_type msg_type);
 

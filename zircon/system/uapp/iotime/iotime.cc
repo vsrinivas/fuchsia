@@ -22,214 +22,211 @@
 #include <zircon/types.h>
 
 static uint64_t number(const char* str) {
-    char* end;
-    uint64_t n = strtoull(str, &end, 10);
+  char* end;
+  uint64_t n = strtoull(str, &end, 10);
 
-    uint64_t m = 1;
-    switch (*end) {
+  uint64_t m = 1;
+  switch (*end) {
     case 'G':
     case 'g':
-        m = 1024*1024*1024;
-        break;
+      m = 1024 * 1024 * 1024;
+      break;
     case 'M':
     case 'm':
-        m = 1024*1024;
-        break;
+      m = 1024 * 1024;
+      break;
     case 'K':
     case 'k':
-        m = 1024;
-        break;
-    }
-    return m * n;
+      m = 1024;
+      break;
+  }
+  return m * n;
 }
 
 static void bytes_per_second(uint64_t bytes, uint64_t nanos) {
-    double s = ((double)nanos) / ((double)1000000000);
-    double rate = ((double)bytes) / s;
+  double s = ((double)nanos) / ((double)1000000000);
+  double rate = ((double)bytes) / s;
 
-    const char* unit = "B";
-    if (rate > 1024*1024) {
-        unit = "MB";
-        rate /= 1024*1024;
-    } else if (rate > 1024) {
-        unit = "KB";
-        rate /= 1024;
-    }
-    fprintf(stderr, "%g %s/s\n", rate, unit);
+  const char* unit = "B";
+  if (rate > 1024 * 1024) {
+    unit = "MB";
+    rate /= 1024 * 1024;
+  } else if (rate > 1024) {
+    unit = "KB";
+    rate /= 1024;
+  }
+  fprintf(stderr, "%g %s/s\n", rate, unit);
 }
 
 static zx_duration_t iotime_posix(int is_read, int fd, size_t total, size_t bufsz) {
-    void* buffer = malloc(bufsz);
-    if (buffer == NULL) {
-        fprintf(stderr, "error: out of memory\n");
-        return ZX_TIME_INFINITE;
-    }
+  void* buffer = malloc(bufsz);
+  if (buffer == NULL) {
+    fprintf(stderr, "error: out of memory\n");
+    return ZX_TIME_INFINITE;
+  }
 
-    zx_time_t t0 = zx_clock_get_monotonic();
-    size_t n = total;
-    const char* fn_name = is_read ? "read" : "write";
-    while (n > 0) {
-        size_t xfer = (n > bufsz) ? bufsz : n;
-        ssize_t r = is_read ? read(fd, buffer, xfer) : write(fd, buffer, xfer);
-        if (r < 0) {
-            fprintf(stderr, "error: %s() error %d\n", fn_name, errno);
-            return ZX_TIME_INFINITE;
-        }
-        if ((size_t)r != xfer) {
-            fprintf(stderr, "error: %s() %zu of %zu bytes processed\n", fn_name, r, xfer);
-            return ZX_TIME_INFINITE;
-        }
-        n -= xfer;
+  zx_time_t t0 = zx_clock_get_monotonic();
+  size_t n = total;
+  const char* fn_name = is_read ? "read" : "write";
+  while (n > 0) {
+    size_t xfer = (n > bufsz) ? bufsz : n;
+    ssize_t r = is_read ? read(fd, buffer, xfer) : write(fd, buffer, xfer);
+    if (r < 0) {
+      fprintf(stderr, "error: %s() error %d\n", fn_name, errno);
+      return ZX_TIME_INFINITE;
     }
-    zx_time_t t1 = zx_clock_get_monotonic();
+    if ((size_t)r != xfer) {
+      fprintf(stderr, "error: %s() %zu of %zu bytes processed\n", fn_name, r, xfer);
+      return ZX_TIME_INFINITE;
+    }
+    n -= xfer;
+  }
+  zx_time_t t1 = zx_clock_get_monotonic();
 
-    return zx_time_sub_time(t1, t0);
+  return zx_time_sub_time(t1, t0);
 }
 
-
 static zx_duration_t iotime_block(int is_read, int fd, size_t total, size_t bufsz) {
-    if ((total % 4096) || (bufsz % 4096)) {
-        fprintf(stderr, "error: total and buffer size must be multiples of 4K\n");
-        return ZX_TIME_INFINITE;
-    }
+  if ((total % 4096) || (bufsz % 4096)) {
+    fprintf(stderr, "error: total and buffer size must be multiples of 4K\n");
+    return ZX_TIME_INFINITE;
+  }
 
-    return iotime_posix(is_read, fd, total, bufsz);
+  return iotime_posix(is_read, fd, total, bufsz);
 }
 
 static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_t bufsz) {
-    zx_status_t status;
-    zx::vmo vmo;
-    if ((status = zx::vmo::create(bufsz, 0, &vmo)) != ZX_OK) {
-        fprintf(stderr, "error: out of memory %d\n", status);
-        return ZX_TIME_INFINITE;
+  zx_status_t status;
+  zx::vmo vmo;
+  if ((status = zx::vmo::create(bufsz, 0, &vmo)) != ZX_OK) {
+    fprintf(stderr, "error: out of memory %d\n", status);
+    return ZX_TIME_INFINITE;
+  }
+
+  fzl::UnownedFdioCaller disk_connection(fd);
+  zx::unowned_channel channel(disk_connection.borrow_channel());
+  fuchsia_hardware_block_BlockInfo info;
+
+  zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &info);
+  if (io_status != ZX_OK || status != ZX_OK) {
+    fprintf(stderr, "error: cannot get info for '%s'\n", dev);
+    return ZX_TIME_INFINITE;
+  }
+
+  zx::fifo fifo;
+  io_status =
+      fuchsia_hardware_block_BlockGetFifo(channel->get(), &status, fifo.reset_and_get_address());
+  if (io_status != ZX_OK || status != ZX_OK) {
+    fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
+    return ZX_TIME_INFINITE;
+  }
+
+  groupid_t group = 0;
+
+  zx::vmo dup;
+  if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
+    fprintf(stderr, "error: cannot duplicate handle %d\n", status);
+    return ZX_TIME_INFINITE;
+  }
+
+  fuchsia_hardware_block_VmoID vmoid;
+  io_status = fuchsia_hardware_block_BlockAttachVmo(channel->get(), dup.release(), &status, &vmoid);
+  if (io_status != ZX_OK || status != ZX_OK) {
+    fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);
+    return ZX_TIME_INFINITE;
+  }
+
+  fifo_client_t* client;
+  if ((status = block_fifo_create_client(fifo.release(), &client)) != ZX_OK) {
+    fprintf(stderr, "error: cannot create block client for '%s' %d\n", dev, status);
+    return ZX_TIME_INFINITE;
+  }
+
+  zx_time_t t0 = zx_clock_get_monotonic();
+  size_t n = total;
+  while (n > 0) {
+    size_t xfer = (n > bufsz) ? bufsz : n;
+    block_fifo_request_t request = {
+        .opcode = static_cast<uint32_t>(is_read ? BLOCKIO_READ : BLOCKIO_WRITE),
+        .reqid = 0,
+        .group = group,
+        .vmoid = vmoid.id,
+        .length = static_cast<uint32_t>(xfer / info.block_size),
+        .vmo_offset = 0,
+        .dev_offset = (total - n) / info.block_size,
+    };
+    if ((status = block_fifo_txn(client, &request, 1)) != ZX_OK) {
+      fprintf(stderr, "error: block_fifo_txn error %d\n", status);
+      return ZX_TIME_INFINITE;
     }
-
-    fzl::UnownedFdioCaller disk_connection(fd);
-    zx::unowned_channel channel(disk_connection.borrow_channel());
-    fuchsia_hardware_block_BlockInfo info;
-
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &info);
-    if (io_status != ZX_OK || status != ZX_OK) {
-        fprintf(stderr, "error: cannot get info for '%s'\n", dev);
-        return ZX_TIME_INFINITE;
-    }
-
-    zx::fifo fifo;
-    io_status = fuchsia_hardware_block_BlockGetFifo(channel->get(), &status,
-                                                    fifo.reset_and_get_address());
-    if (io_status != ZX_OK || status != ZX_OK) {
-        fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
-        return ZX_TIME_INFINITE;
-    }
-
-    groupid_t group = 0;
-
-    zx::vmo dup;
-    if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
-        fprintf(stderr, "error: cannot duplicate handle %d\n", status);
-        return ZX_TIME_INFINITE;
-    }
-
-    fuchsia_hardware_block_VmoID vmoid;
-    io_status = fuchsia_hardware_block_BlockAttachVmo(channel->get(), dup.release(), &status,
-                                                      &vmoid);
-    if (io_status != ZX_OK || status != ZX_OK) {
-        fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);
-        return ZX_TIME_INFINITE;
-    }
-
-    fifo_client_t* client;
-    if ((status = block_fifo_create_client(fifo.release(), &client)) != ZX_OK) {
-        fprintf(stderr, "error: cannot create block client for '%s' %d\n", dev, status);
-        return ZX_TIME_INFINITE;
-    }
-
-    zx_time_t t0 = zx_clock_get_monotonic();
-    size_t n = total;
-    while (n > 0) {
-        size_t xfer = (n > bufsz) ? bufsz : n;
-        block_fifo_request_t request = {
-            .opcode = static_cast<uint32_t>(is_read ? BLOCKIO_READ : BLOCKIO_WRITE),
-            .reqid = 0,
-            .group = group,
-            .vmoid = vmoid.id,
-            .length = static_cast<uint32_t>(xfer / info.block_size),
-            .vmo_offset = 0,
-            .dev_offset = (total - n) / info.block_size,
-        };
-        if ((status = block_fifo_txn(client, &request, 1)) != ZX_OK) {
-            fprintf(stderr, "error: block_fifo_txn error %d\n", status);
-            return ZX_TIME_INFINITE;
-        }
-        n -= xfer;
-    }
-    zx_time_t t1 = zx_clock_get_monotonic();
-    return zx_time_sub_time(t1, t0);
+    n -= xfer;
+  }
+  zx_time_t t1 = zx_clock_get_monotonic();
+  return zx_time_sub_time(t1, t0);
 }
 
 static int usage(void) {
-    fprintf(stderr,
-            "usage: iotime <read|write> <posix|block|fifo> <device|--ramdisk> <bytes> <bufsize>\n\n"
-            "        <bytes> and <bufsize> must be a multiple of 4k for block mode\n"
-            "        --ramdisk only supported for block mode\n");
-    return -1;
+  fprintf(stderr,
+          "usage: iotime <read|write> <posix|block|fifo> <device|--ramdisk> <bytes> <bufsize>\n\n"
+          "        <bytes> and <bufsize> must be a multiple of 4k for block mode\n"
+          "        --ramdisk only supported for block mode\n");
+  return -1;
 }
 
-
 int main(int argc, char** argv) {
-    if (argc != 6) {
-        return usage();
-    }
+  if (argc != 6) {
+    return usage();
+  }
 
-    int is_read = !strcmp(argv[1], "read");
-    size_t total = number(argv[4]);
-    size_t bufsz = number(argv[5]);
+  int is_read = !strcmp(argv[1], "read");
+  size_t total = number(argv[4]);
+  size_t bufsz = number(argv[5]);
 
-    int r = -1;
-    ramdisk_client_t* ramdisk = NULL;
-    int fd;
-    if (!strcmp(argv[3], "--ramdisk")) {
-        if (strcmp(argv[2], "block")) {
-            fprintf(stderr, "ramdisk only supported for block\n");
-            goto done;
-        }
-        zx_status_t status = ramdisk_create(512, total / 512, &ramdisk);
-        if (status != ZX_OK) {
-            fprintf(stderr, "error: cannot create %zu-byte ramdisk\n", total);
-            goto done;
-        }
-        fd = ramdisk_get_block_fd(ramdisk);
-    } else {
-        if ((fd = open(argv[3], is_read ? O_RDONLY : O_WRONLY)) < 0) {
-            fprintf(stderr, "error: cannot open '%s'\n", argv[3]);
-            goto done;
-        }
+  int r = -1;
+  ramdisk_client_t* ramdisk = NULL;
+  int fd;
+  if (!strcmp(argv[3], "--ramdisk")) {
+    if (strcmp(argv[2], "block")) {
+      fprintf(stderr, "ramdisk only supported for block\n");
+      goto done;
     }
+    zx_status_t status = ramdisk_create(512, total / 512, &ramdisk);
+    if (status != ZX_OK) {
+      fprintf(stderr, "error: cannot create %zu-byte ramdisk\n", total);
+      goto done;
+    }
+    fd = ramdisk_get_block_fd(ramdisk);
+  } else {
+    if ((fd = open(argv[3], is_read ? O_RDONLY : O_WRONLY)) < 0) {
+      fprintf(stderr, "error: cannot open '%s'\n", argv[3]);
+      goto done;
+    }
+  }
 
-    zx_duration_t res;
-    if (!strcmp(argv[2], "posix")) {
-        res = iotime_posix(is_read, fd, total, bufsz);
-    } else if (!strcmp(argv[2], "block")) {
-        res = iotime_block(is_read, fd, total, bufsz);
-    } else if (!strcmp(argv[2], "fifo")) {
-        res = iotime_fifo(argv[3], is_read, fd, total, bufsz);
-    } else {
-        fprintf(stderr, "error: unknown mode '%s'\n", argv[2]);
-        goto done;
-    }
+  zx_duration_t res;
+  if (!strcmp(argv[2], "posix")) {
+    res = iotime_posix(is_read, fd, total, bufsz);
+  } else if (!strcmp(argv[2], "block")) {
+    res = iotime_block(is_read, fd, total, bufsz);
+  } else if (!strcmp(argv[2], "fifo")) {
+    res = iotime_fifo(argv[3], is_read, fd, total, bufsz);
+  } else {
+    fprintf(stderr, "error: unknown mode '%s'\n", argv[2]);
+    goto done;
+  }
 
-    if (res != ZX_TIME_INFINITE) {
-        fprintf(stderr, "%s %zu bytes in %zu ns: ", is_read ? "read" : "write", total, res);
-        bytes_per_second(total, res);
-        r = 0;
-        goto done;
-    } else {
-        goto done;
-    }
+  if (res != ZX_TIME_INFINITE) {
+    fprintf(stderr, "%s %zu bytes in %zu ns: ", is_read ? "read" : "write", total, res);
+    bytes_per_second(total, res);
+    r = 0;
+    goto done;
+  } else {
+    goto done;
+  }
 
 done:
-    if (ramdisk != NULL) {
-        ramdisk_destroy(ramdisk);
-    }
-    return r;
+  if (ramdisk != NULL) {
+    ramdisk_destroy(ramdisk);
+  }
+  return r;
 }

@@ -10,11 +10,10 @@
 
 namespace debugger_utils {
 
-constexpr const uint8_t kX64BreakpointInstruction[] = { 0xcc };
+constexpr const uint8_t kX64BreakpointInstruction[] = {0xcc};
 
 // ARM64 break instruction (little-endian)
-constexpr const uint8_t kArm64BreakpointInstruction[] =
-  { 0x00, 0x00, 0x20, 0xd4 };
+constexpr const uint8_t kArm64BreakpointInstruction[] = {0x00, 0x00, 0x20, 0xd4};
 
 // For native debugging.
 static inline const uint8_t* GetBreakpointInstruction() {
@@ -45,9 +44,7 @@ static inline zx_vaddr_t X64DecrementPcAfterBreak(zx_vaddr_t pc) {
   return pc - sizeof(kX64BreakpointInstruction);
 }
 
-static inline zx_vaddr_t Arm64DecrementPcAfterBreak(zx_vaddr_t pc) {
-  return pc;
-}
+static inline zx_vaddr_t Arm64DecrementPcAfterBreak(zx_vaddr_t pc) { return pc; }
 
 // For native debugging.
 static inline zx_vaddr_t DecrementPcAfterBreak(zx_vaddr_t pc) {
@@ -63,12 +60,11 @@ static inline zx_vaddr_t DecrementPcAfterBreak(zx_vaddr_t pc) {
 // Given the reported PC after a s/w breakpoint instruction, return the
 // address of the next instruction.
 
-static inline zx_vaddr_t X64IncrementPcAfterBreak(zx_vaddr_t pc) {
-  return pc;
-}
+static inline zx_vaddr_t X64IncrementPcAfterBreak(zx_vaddr_t pc) { return pc; }
 
 static inline zx_vaddr_t Arm64IncrementPcAfterBreak(zx_vaddr_t pc) {
-  return pc + sizeof(kArm64BreakpointInstruction);;
+  return pc + sizeof(kArm64BreakpointInstruction);
+  ;
 }
 
 // For native debugging.
@@ -99,8 +95,7 @@ static void inline TriggerSoftwareBreakpoint() {
 
 // Resume |thread| after it has executed a s/w breakpoint instruction.
 
-zx_status_t ResumeAfterSoftwareBreakpointInstruction(zx_handle_t thread,
-                                                     zx_handle_t eport);
+zx_status_t ResumeAfterSoftwareBreakpointInstruction(zx_handle_t thread, zx_handle_t eport);
 
 #endif
 

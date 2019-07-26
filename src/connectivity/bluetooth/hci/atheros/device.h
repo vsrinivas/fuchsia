@@ -56,9 +56,9 @@ class Device {
   static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t channel);
 
   static constexpr fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops_ = {
-    .OpenCommandChannel = OpenCommandChannel,
-    .OpenAclDataChannel = OpenAclDataChannel,
-    .OpenSnoopChannel = OpenSnoopChannel,
+      .OpenCommandChannel = OpenCommandChannel,
+      .OpenAclDataChannel = OpenAclDataChannel,
+      .OpenSnoopChannel = OpenSnoopChannel,
   };
 
   // Removes the device and leaves an error on the kernel log
@@ -82,8 +82,7 @@ class Device {
   // Closing this handle will invalidate |fw_addr|, which
   // receives a pointer to the memory.
   // |fw_size| receives the size of the firmware if valid.
-  zx_handle_t MapFirmware(const char* name, uintptr_t* fw_addr,
-                          size_t* fw_size);
+  zx_handle_t MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw_size);
 
   zx_device_t* parent_;
   zx_device_t* zxdev_;

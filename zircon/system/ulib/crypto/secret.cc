@@ -29,46 +29,44 @@ namespace crypto {
 
 Secret::Secret() : buf_(nullptr), len_(0) {}
 
-Secret::~Secret() {
-    Clear();
-}
+Secret::~Secret() { Clear(); }
 
 zx_status_t Secret::Allocate(size_t len, uint8_t** out) {
-    ZX_ASSERT(len != 0 && out);
+  ZX_ASSERT(len != 0 && out);
 
-    Clear();
-    fbl::AllocChecker ac;
-    buf_.reset(new (&ac) uint8_t[len]);
-    if (!ac.check()) {
-        xprintf("failed to allocate %zu bytes\n", len);
-        return ZX_ERR_NO_MEMORY;
-    }
-    memset(buf_.get(), 0, len);
-    len_ = len;
+  Clear();
+  fbl::AllocChecker ac;
+  buf_.reset(new (&ac) uint8_t[len]);
+  if (!ac.check()) {
+    xprintf("failed to allocate %zu bytes\n", len);
+    return ZX_ERR_NO_MEMORY;
+  }
+  memset(buf_.get(), 0, len);
+  len_ = len;
 
-    *out = buf_.get();
-    return ZX_OK;
+  *out = buf_.get();
+  return ZX_OK;
 }
 
 zx_status_t Secret::Generate(size_t len) {
-    ZX_ASSERT(len != 0);
+  ZX_ASSERT(len != 0);
 
-    uint8_t* tmp = nullptr;
-    zx_status_t status = Allocate(len, &tmp);
-    if (status != ZX_OK) {
-        return status;
-    }
+  uint8_t* tmp = nullptr;
+  zx_status_t status = Allocate(len, &tmp);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    zx_cprng_draw(buf_.get(), len);
-    return ZX_OK;
+  zx_cprng_draw(buf_.get(), len);
+  return ZX_OK;
 }
 
 void Secret::Clear() {
-    if (buf_) {
-        mandatory_memset(buf_.get(), 0, len_);
-    }
-    buf_.reset();
-    len_ = 0;
+  if (buf_) {
+    mandatory_memset(buf_.get(), 0, len_);
+  }
+  buf_.reset();
+  len_ = 0;
 }
 
-} // namespace crypto
+}  // namespace crypto

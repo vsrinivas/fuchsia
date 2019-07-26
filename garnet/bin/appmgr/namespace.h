@@ -29,13 +29,10 @@ class Namespace : public fuchsia::sys::Environment,
                   public fuchsia::process::Resolver,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
-  const fbl::RefPtr<ServiceProviderDirImpl>& services() const {
-    return services_;
-  }
+  const fbl::RefPtr<ServiceProviderDirImpl>& services() const { return services_; }
   const fbl::RefPtr<JobProviderImpl>& job_provider() { return job_provider_; }
 
-  void AddBinding(
-      fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
 
   zx_status_t ServeServiceDirectory(zx::channel request);
 
@@ -44,8 +41,7 @@ class Namespace : public fuchsia::sys::Environment,
   //
   // fuchsia::process::Resolver implementation:
   //
-  void Resolve(std::string name,
-               fuchsia::process::Resolver::ResolveCallback callback) override;
+  void Resolve(std::string name, fuchsia::process::Resolver::ResolveCallback callback) override;
 
   //
   // fuchsia::sys::Environment implementation:
@@ -53,31 +49,27 @@ class Namespace : public fuchsia::sys::Environment,
 
   void CreateNestedEnvironment(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
-      fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-      std::string label, fuchsia::sys::ServiceListPtr additional_services,
+      fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller, std::string label,
+      fuchsia::sys::ServiceListPtr additional_services,
       fuchsia::sys::EnvironmentOptions options) override;
 
-  void GetLauncher(
-      fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher) override;
+  void GetLauncher(fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher) override;
 
-  void GetServices(
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override;
+  void GetServices(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override;
 
   void GetDirectory(zx::channel directory_request) override {
     ServeServiceDirectory(std::move(directory_request));
   }
 
-  void set_component_url(const std::string& url) {
-    services_->set_component_url(url);
-  }
+  void set_component_url(const std::string& url) { services_->set_component_url(url); }
 
   //
   // fuchsia::sys::Launcher implementation:
   //
 
-  void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
-                       fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-                           controller) override;
+  void CreateComponent(
+      fuchsia::sys::LaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);

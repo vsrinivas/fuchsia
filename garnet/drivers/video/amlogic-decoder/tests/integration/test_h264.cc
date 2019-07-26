@@ -12,8 +12,7 @@
 #include "tests/test_support.h"
 #include "vdec1.h"
 
-std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data,
-                                                uint32_t size) {
+std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data, uint32_t size) {
   std::vector<std::vector<uint8_t>> out_vector;
 
   const uint8_t* this_nal_start = start_data;
@@ -23,12 +22,11 @@ std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data,
     uint8_t start_code[3] = {0, 0, 1};
     // Add 2 to ensure the next start code found isn't the start of this nal
     // unit.
-    uint8_t* next_nal_start = static_cast<uint8_t*>(
-        memmem(this_nal_start + 2, size - 2, start_code, sizeof(start_code)));
+    uint8_t* next_nal_start =
+        static_cast<uint8_t*>(memmem(this_nal_start + 2, size - 2, start_code, sizeof(start_code)));
     if (next_nal_start && next_nal_start[-1] == 0)
       next_nal_start--;
-    uint32_t data_size =
-        next_nal_start ? next_nal_start - this_nal_start : size;
+    uint32_t data_size = next_nal_start ? next_nal_start - this_nal_start : size;
     if (data_size > 0) {
       std::vector<uint8_t> new_data(data_size);
       memcpy(new_data.data(), this_nal_start, data_size);
@@ -47,10 +45,9 @@ std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data,
 uint8_t GetNalUnitType(const std::vector<uint8_t>& nal_unit) {
   // Also works with 4-byte startcodes.
   uint8_t start_code[3] = {0, 0, 1};
-  uint8_t* next_start =
-      static_cast<uint8_t*>(memmem(nal_unit.data(), nal_unit.size(), start_code,
-                                   sizeof(start_code))) +
-      sizeof(start_code);
+  uint8_t* next_start = static_cast<uint8_t*>(memmem(nal_unit.data(), nal_unit.size(), start_code,
+                                                     sizeof(start_code))) +
+                        sizeof(start_code);
   return *next_start & 0xf;
 }
 
@@ -62,19 +59,16 @@ class TestH264 {
 
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
-    auto larger_h264 =
-        TestSupport::LoadFirmwareFile("video_test_data/test-25fps.h264");
+    auto larger_h264 = TestSupport::LoadFirmwareFile("video_test_data/test-25fps.h264");
     ASSERT_NE(nullptr, larger_h264);
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()),
-                                false);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()), false);
     }
-    status = video->InitializeStreamBuffer(
-        use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024);
+    status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024);
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> first_wait_valid;
@@ -90,8 +84,7 @@ class TestH264 {
           [&video, &frame_count, &first_wait_valid,
            &second_wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
-            DLOG("Got frame %d width: %d height: %d\n", frame_count,
-                 frame->width, frame->height);
+            DLOG("Got frame %d width: %d height: %d\n", frame_count, frame->width, frame->height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
@@ -109,8 +102,7 @@ class TestH264 {
       EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
     } else {
       video->core_->InitializeDirectInput();
-      EXPECT_EQ(ZX_OK,
-                video->ProcessVideoNoParser(bear_h264->ptr, bear_h264->size));
+      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(bear_h264->ptr, bear_h264->size));
     }
 
     EXPECT_EQ(std::future_status::ready,
@@ -120,8 +112,7 @@ class TestH264 {
       EXPECT_EQ(ZX_OK, video->ParseVideo(larger_h264->ptr, larger_h264->size));
       EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
     } else {
-      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(larger_h264->ptr,
-                                                   larger_h264->size));
+      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(larger_h264->ptr, larger_h264->size));
     }
 
     EXPECT_EQ(std::future_status::ready,
@@ -144,8 +135,7 @@ class TestH264 {
     ASSERT_NE(nullptr, bear_h264);
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()),
-                                false);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()), false);
     }
     status = video->InitializeStreamBuffer(false, PAGE_SIZE);
     video->InitializeInterrupts();
@@ -159,13 +149,11 @@ class TestH264 {
 
       uint32_t frame_count = 0;
       video->video_decoder_->SetFrameReadyNotifier(
-          [&frames_to_return, &frame_count,
-           &wait_valid](std::shared_ptr<VideoFrame> frame) {
+          [&frames_to_return, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             EXPECT_EQ(320u, frame->display_width);
             EXPECT_EQ(180u, frame->display_height);
-            DLOG("Got frame %d width: %d height: %d\n", frame_count,
-                 frame->width, frame->height);
+            DLOG("Got frame %d width: %d height: %d\n", frame_count, frame->width, frame->height);
             constexpr uint32_t kFirstVideoFrameCount = 26;
             if (frame_count == kFirstVideoFrameCount)
               wait_valid.set_value();
@@ -182,8 +170,7 @@ class TestH264 {
         uint32_t processed_data;
         EXPECT_EQ(ZX_OK,
                   video->ProcessVideoNoParser(data + current_offset,
-                                              bear_h264->size - current_offset,
-                                              &processed_data));
+                                              bear_h264->size - current_offset, &processed_data));
         current_offset += processed_data;
         if (current_offset == bear_h264->size)
           break;
@@ -200,8 +187,7 @@ class TestH264 {
         video->video_decoder_->ReturnFrame(frame);
       }
     }
-    EXPECT_EQ(std::future_status::ready,
-              wait_valid.get_future().wait_for(std::chrono::seconds(1)));
+    EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
     stop_parsing = true;
     as.wait();
@@ -219,11 +205,9 @@ class TestH264 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()),
-                                false);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()), false);
     }
-    status = video->InitializeStreamBuffer(
-        use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024);
+    status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024);
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> first_wait_valid;
@@ -237,8 +221,7 @@ class TestH264 {
           [&video, &frame_count, &first_wait_valid,
            &received_pts_set](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
-            DLOG("Got frame %d width: %d height: %d\n", frame_count,
-                 frame->width, frame->height);
+            DLOG("Got frame %d width: %d height: %d\n", frame_count, frame->width, frame->height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
@@ -299,8 +282,7 @@ class TestH264 {
  private:
   // This is called from the interrupt handler, which already holds the lock.
   static void ReturnFrame(AmlogicVideo* video,
-                          std::shared_ptr<VideoFrame> frame)
-      __TA_NO_THREAD_SAFETY_ANALYSIS {
+                          std::shared_ptr<VideoFrame> frame) __TA_NO_THREAD_SAFETY_ANALYSIS {
     video->video_decoder_->ReturnFrame(frame);
   }
 };

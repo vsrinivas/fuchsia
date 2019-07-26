@@ -45,24 +45,21 @@ Slice PacketStuffer::BuildPacket(LazySliceArgs args) {
         return fmt.str();
       }() : "nil");
   auto remaining_length = args.max_length;
-  auto add_serialized_msg = [&remaining_length, this](
-                                const RoutableMessage& wire,
-                                Slice payload) -> bool {
-    auto serialized =
-        wire.Write(my_node_id_, peer_node_id_, std::move(payload));
+  auto add_serialized_msg = [&remaining_length, this](const RoutableMessage& wire,
+                                                      Slice payload) -> bool {
+    auto serialized = wire.Write(my_node_id_, peer_node_id_, std::move(payload));
     const auto serialized_length = serialized.length();
     const auto length_length = varint::WireSizeFor(serialized_length);
     const auto segment_length = length_length + serialized_length;
     OVERNET_TRACE(DEBUG) << "AddMsg segment_length=" << segment_length
                          << " remaining_length=" << remaining_length
-                         << (segment_length > remaining_length ? "  => SKIP"
-                                                               : "")
+                         << (segment_length > remaining_length ? "  => SKIP" : "")
                          << "; serialized:" << serialized;
     if (segment_length > remaining_length) {
       return false;
     }
-    send_slices_.push_back(serialized.WithPrefix(
-        length_length, [length_length, serialized_length](uint8_t* p) {
+    send_slices_.push_back(
+        serialized.WithPrefix(length_length, [length_length, serialized_length](uint8_t* p) {
           varint::Write(serialized_length, length_length, p);
         }));
     remaining_length -= segment_length;
@@ -89,8 +86,7 @@ Slice PacketStuffer::BuildPacket(LazySliceArgs args) {
   while (!outgoing_.empty() && remaining_length > kMinMSS) {
     // Ensure there's space with the routing header included.
     Optional<size_t> max_len_before_prefix =
-        outgoing_.front().header.MaxPayloadLength(my_node_id_, peer_node_id_,
-                                                  remaining_length);
+        outgoing_.front().header.MaxPayloadLength(my_node_id_, peer_node_id_, remaining_length);
     if (!max_len_before_prefix.has_value() || *max_len_before_prefix <= 1) {
       break;
     }
@@ -100,9 +96,9 @@ Slice PacketStuffer::BuildPacket(LazySliceArgs args) {
     Message msg = std::move(outgoing_.front());
     outgoing_.pop();
     // Serialize it.
-    auto payload = msg.make_payload(LazySliceArgs{
-        Border::None(), std::min(msg.mss, static_cast<uint32_t>(max_len)),
-        args.has_other_content || !send_slices_.empty()});
+    auto payload = msg.make_payload(LazySliceArgs{Border::None(),
+                                                  std::min(msg.mss, static_cast<uint32_t>(max_len)),
+                                                  args.has_other_content || !send_slices_.empty()});
     if (payload.length() == 0) {
       continue;
     }
@@ -116,16 +112,14 @@ Slice PacketStuffer::BuildPacket(LazySliceArgs args) {
     }
   }
 
-  Slice send =
-      Slice::Join(send_slices_.begin(), send_slices_.end(),
-                  args.desired_border.WithAddedPrefix(SeqNum::kMaxWireLength));
+  Slice send = Slice::Join(send_slices_.begin(), send_slices_.end(),
+                           args.desired_border.WithAddedPrefix(SeqNum::kMaxWireLength));
   send_slices_.clear();
 
   return send;
 }
 
-Status PacketStuffer::ParseAndForwardTo(TimeStamp received, Slice packet,
-                                        Router* router) const {
+Status PacketStuffer::ParseAndForwardTo(TimeStamp received, Slice packet, Router* router) const {
   while (packet.length()) {
     const uint8_t* const begin = packet.begin();
     const uint8_t* p = begin;
@@ -140,14 +134,13 @@ Status PacketStuffer::ParseAndForwardTo(TimeStamp received, Slice packet,
       return Status::InvalidArgument("Message body extends past end of packet");
     }
     packet.TrimBegin(p - begin);
-    auto msg_status = RoutableMessage::Parse(
-        packet.TakeUntilOffset(serialized_length), my_node_id_, peer_node_id_);
+    auto msg_status = RoutableMessage::Parse(packet.TakeUntilOffset(serialized_length), my_node_id_,
+                                             peer_node_id_);
     if (msg_status.is_error()) {
       return msg_status.AsStatus();
     }
     router->Forward(Message::SimpleForwarder(std::move(msg_status->message),
-                                             std::move(msg_status->payload),
-                                             received));
+                                             std::move(msg_status->payload), received));
   }
   return Status::Ok();
 }

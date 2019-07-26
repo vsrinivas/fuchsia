@@ -15,8 +15,7 @@ namespace hcitool {
 
 class CommandData final {
  public:
-  CommandData(::bt::hci::CommandChannel* cmd_channel,
-              async_dispatcher_t* dispatcher)
+  CommandData(::bt::hci::CommandChannel* cmd_channel, async_dispatcher_t* dispatcher)
       : cmd_channel_(cmd_channel), dispatcher_(dispatcher) {}
 
   ::bt::hci::CommandChannel* cmd_channel() const { return cmd_channel_; }
@@ -27,8 +26,7 @@ class CommandData final {
   async_dispatcher_t* dispatcher_;
 };
 
-void RegisterCommands(const CommandData* data,
-                      ::bluetooth_tools::CommandDispatcher* dispatcher);
+void RegisterCommands(const CommandData* data, ::bluetooth_tools::CommandDispatcher* dispatcher);
 
 }  // namespace hcitool
 

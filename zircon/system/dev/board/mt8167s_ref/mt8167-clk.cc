@@ -13,16 +13,14 @@
 
 namespace board_mt8167 {
 
-constexpr pbus_mmio_t clock_mmios[] = {
-    {.base = MT8167_XO_BASE, .length = MT8167_XO_SIZE}
-};
+constexpr pbus_mmio_t clock_mmios[] = {{.base = MT8167_XO_BASE, .length = MT8167_XO_SIZE}};
 
 constexpr clock_id_t clock_ids[] = {
     // For thermal driver.
-    { kClkThem },
-    { kClkAuxAdc },
-    { kClkPmicwrapAp },
-    { kClkPmicwrap26m },
+    {kClkThem},
+    {kClkAuxAdc},
+    {kClkPmicwrapAp},
+    {kClkPmicwrap26m},
 };
 
 static const pbus_metadata_t clock_metadata[] = {
@@ -34,7 +32,6 @@ static const pbus_metadata_t clock_metadata[] = {
 };
 
 zx_status_t Mt8167::ClkInit() {
-
   pbus_dev_t clk_dev = {};
   clk_dev.name = "clk";
   clk_dev.vid = PDEV_VID_MEDIATEK;

@@ -111,26 +111,26 @@ static const zx_bind_inst_t clk4_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, board_mt8167::kClkPmicwrap26m),
 };
 static const device_component_part_t clk1_component[] = {
-    { countof(root_match), root_match },
-    { countof(clk1_match), clk1_match },
+    {countof(root_match), root_match},
+    {countof(clk1_match), clk1_match},
 };
 static const device_component_part_t clk2_component[] = {
-    { countof(root_match), root_match },
-    { countof(clk2_match), clk2_match },
+    {countof(root_match), root_match},
+    {countof(clk2_match), clk2_match},
 };
 static const device_component_part_t clk3_component[] = {
-    { countof(root_match), root_match },
-    { countof(clk3_match), clk3_match },
+    {countof(root_match), root_match},
+    {countof(clk3_match), clk3_match},
 };
 static const device_component_part_t clk4_component[] = {
-    { countof(root_match), root_match },
-    { countof(clk4_match), clk4_match },
+    {countof(root_match), root_match},
+    {countof(clk4_match), clk4_match},
 };
 static const device_component_t components[] = {
-    { countof(clk1_component), clk1_component },
-    { countof(clk2_component), clk2_component },
-    { countof(clk3_component), clk3_component },
-    { countof(clk4_component), clk4_component },
+    {countof(clk1_component), clk1_component},
+    {countof(clk2_component), clk2_component},
+    {countof(clk3_component), clk3_component},
+    {countof(clk4_component), clk4_component},
 };
 
 }  // namespace

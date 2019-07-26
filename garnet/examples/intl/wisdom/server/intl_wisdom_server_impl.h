@@ -26,17 +26,15 @@ class IntlWisdomServerImpl : fuchsia::examples::intl::wisdom::IntlWisdomServer {
   // |intl_profile|.
   virtual void AskForWisdom(
       fuchsia::intl::Profile intl_profile, int64_t timestamp_ms,
-      fuchsia::examples::intl::wisdom::IntlWisdomServer::AskForWisdomCallback
-          callback) override;
+      fuchsia::examples::intl::wisdom::IntlWisdomServer::AskForWisdomCallback callback) override;
 
  private:
   IntlWisdomServerImpl(const IntlWisdomServerImpl&) = delete;
   IntlWisdomServerImpl& operator=(const IntlWisdomServerImpl&) = delete;
 
   // Generates the actual response string.
-  std::string BuildResponse(
-      const long timestamp_ms, const std::vector<icu::Locale>& locales,
-      const std::vector<std::unique_ptr<icu::Calendar>>& calendars) const;
+  std::string BuildResponse(const long timestamp_ms, const std::vector<icu::Locale>& locales,
+                            const std::vector<std::unique_ptr<icu::Calendar>>& calendars) const;
 
   std::unique_ptr<sys::ComponentContext> startup_context_;
   fidl::BindingSet<fuchsia::examples::intl::wisdom::IntlWisdomServer> bindings_;

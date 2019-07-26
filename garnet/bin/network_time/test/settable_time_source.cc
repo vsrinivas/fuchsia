@@ -14,20 +14,16 @@ static constexpr unsigned int kUncertaintyMicros = 5'000'000;
 
 SettableTimeSource::SettableTimeSource() : SettableTimeSource(0) {}
 
-SettableTimeSource::SettableTimeSource(
-    roughtime::rough_time_t initial_time_micros)
+SettableTimeSource::SettableTimeSource(roughtime::rough_time_t initial_time_micros)
     : now_micros_(initial_time_micros) {}
-SettableTimeSource::SettableTimeSource(SettableTimeSource&& rhs) noexcept =
-    default;
+SettableTimeSource::SettableTimeSource(SettableTimeSource&& rhs) noexcept = default;
 
-SettableTimeSource& SettableTimeSource::operator=(
-    time_server::SettableTimeSource const& rhs) = default;
+SettableTimeSource& SettableTimeSource::operator=(time_server::SettableTimeSource const& rhs) =
+    default;
 
 SettableTimeSource::~SettableTimeSource() = default;
 
-void SettableTimeSource::SetTime(roughtime::rough_time_t now_micros) {
-  now_micros_ = now_micros;
-}
+void SettableTimeSource::SetTime(roughtime::rough_time_t now_micros) { now_micros_ = now_micros; }
 
 std::pair<roughtime::rough_time_t, uint32_t> SettableTimeSource::Now() {
   return std::make_pair(now_micros_, kUncertaintyMicros);

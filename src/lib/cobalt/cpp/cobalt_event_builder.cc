@@ -11,18 +11,15 @@ using fuchsia::cobalt::CountEvent;
 using fuchsia::cobalt::Event;
 using fuchsia::cobalt::HistogramBucket;
 
-CobaltEventBuilder::CobaltEventBuilder(uint32_t metric_id) {
-  event_.metric_id = metric_id;
-}
+CobaltEventBuilder::CobaltEventBuilder(uint32_t metric_id) { event_.metric_id = metric_id; }
 
-CobaltEventBuilder &CobaltEventBuilder::with_event_code(
-    const uint32_t event_code) {
+CobaltEventBuilder &CobaltEventBuilder::with_event_code(const uint32_t event_code) {
   event_.event_codes.push_back(event_code);
   return *this;
 }
 
-CobaltEventBuilder &CobaltEventBuilder::with_event_code_at(
-    const uint32_t index, const uint32_t event_code) {
+CobaltEventBuilder &CobaltEventBuilder::with_event_code_at(const uint32_t index,
+                                                           const uint32_t event_code) {
   while (event_.event_codes.size() <= index) {
     event_.event_codes.push_back(0);
   }
@@ -30,8 +27,7 @@ CobaltEventBuilder &CobaltEventBuilder::with_event_code_at(
   return *this;
 }
 
-CobaltEventBuilder &CobaltEventBuilder::with_event_codes(
-    std::vector<uint32_t> event_codes) {
+CobaltEventBuilder &CobaltEventBuilder::with_event_codes(std::vector<uint32_t> event_codes) {
   event_.event_codes = std::move(event_codes);
   return *this;
 }
@@ -47,8 +43,8 @@ CobaltEventBuilder CobaltEventBuilder::Clone() const {
   return builder;
 }
 
-CobaltEvent CobaltEventBuilder::as_count_event(
-    const int64_t period_duration_micros, const int64_t count) {
+CobaltEvent CobaltEventBuilder::as_count_event(const int64_t period_duration_micros,
+                                               const int64_t count) {
   CountEvent payload;
   payload.period_duration_micros = period_duration_micros;
   payload.count = count;
@@ -70,8 +66,7 @@ CobaltEvent CobaltEventBuilder::as_frame_rate(const float fps) {
   return std::move(event_);
 }
 
-CobaltEvent CobaltEventBuilder::as_memory_usage(
-    const int64_t memory_bytes_used) {
+CobaltEvent CobaltEventBuilder::as_memory_usage(const int64_t memory_bytes_used) {
   event_.payload.set_memory_bytes_used(memory_bytes_used);
 
   return std::move(event_);
@@ -83,8 +78,7 @@ CobaltEvent CobaltEventBuilder::as_string_event(std::string string_event) {
   return std::move(event_);
 }
 
-CobaltEvent CobaltEventBuilder::as_int_histogram(
-    std::vector<HistogramBucket> int_histogram) {
+CobaltEvent CobaltEventBuilder::as_int_histogram(std::vector<HistogramBucket> int_histogram) {
   event_.payload.set_int_histogram(std::move(int_histogram));
 
   return std::move(event_);

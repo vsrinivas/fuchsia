@@ -102,110 +102,42 @@ const RegisterInfo kRegisterInfo[] = {
 
     // Debug.
 
-    {.id = RegisterID::kARMv8_id_aa64dfr0_el1,
-     .name = "id_aa64dfr0_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_mdscr_el1,
-     .name = "mdscr_el1",
-     .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_id_aa64dfr0_el1, .name = "id_aa64dfr0_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_mdscr_el1, .name = "mdscr_el1", .arch = Arch::kArm64},
 
-    {.id = RegisterID::kARMv8_dbgbcr0_el1,
-     .name = "kARMv8_dbgbcr0_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr1_el1,
-     .name = "kARMv8_dbgbcr1_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr2_el1,
-     .name = "kARMv8_dbgbcr2_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr3_el1,
-     .name = "kARMv8_dbgbcr3_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr4_el1,
-     .name = "kARMv8_dbgbcr4_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr5_el1,
-     .name = "kARMv8_dbgbcr5_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr6_el1,
-     .name = "kARMv8_dbgbcr6_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr7_el1,
-     .name = "kARMv8_dbgbcr7_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr8_el1,
-     .name = "kARMv8_dbgbcr8_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr9_el1,
-     .name = "kARMv8_dbgbcr9_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr10_el1,
-     .name = "kARMv8_dbgbcr10_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr11_el1,
-     .name = "kARMv8_dbgbcr11_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr12_el1,
-     .name = "kARMv8_dbgbcr12_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr13_el1,
-     .name = "kARMv8_dbgbcr13_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr14_el1,
-     .name = "kARMv8_dbgbcr14_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbcr15_el1,
-     .name = "kARMv8_dbgbcr15_el1",
-     .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr0_el1, .name = "kARMv8_dbgbcr0_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr1_el1, .name = "kARMv8_dbgbcr1_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr2_el1, .name = "kARMv8_dbgbcr2_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr3_el1, .name = "kARMv8_dbgbcr3_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr4_el1, .name = "kARMv8_dbgbcr4_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr5_el1, .name = "kARMv8_dbgbcr5_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr6_el1, .name = "kARMv8_dbgbcr6_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr7_el1, .name = "kARMv8_dbgbcr7_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr8_el1, .name = "kARMv8_dbgbcr8_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr9_el1, .name = "kARMv8_dbgbcr9_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr10_el1, .name = "kARMv8_dbgbcr10_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr11_el1, .name = "kARMv8_dbgbcr11_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr12_el1, .name = "kARMv8_dbgbcr12_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr13_el1, .name = "kARMv8_dbgbcr13_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr14_el1, .name = "kARMv8_dbgbcr14_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbcr15_el1, .name = "kARMv8_dbgbcr15_el1", .arch = Arch::kArm64},
 
-    {.id = RegisterID::kARMv8_dbgbvr0_el1,
-     .name = "kARMv8_dbgbvr0_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr1_el1,
-     .name = "kARMv8_dbgbvr1_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr2_el1,
-     .name = "kARMv8_dbgbvr2_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr3_el1,
-     .name = "kARMv8_dbgbvr3_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr4_el1,
-     .name = "kARMv8_dbgbvr4_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr5_el1,
-     .name = "kARMv8_dbgbvr5_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr6_el1,
-     .name = "kARMv8_dbgbvr6_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr7_el1,
-     .name = "kARMv8_dbgbvr7_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr8_el1,
-     .name = "kARMv8_dbgbvr8_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr9_el1,
-     .name = "kARMv8_dbgbvr9_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr10_el1,
-     .name = "kARMv8_dbgbvr10_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr11_el1,
-     .name = "kARMv8_dbgbvr11_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr12_el1,
-     .name = "kARMv8_dbgbvr12_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr13_el1,
-     .name = "kARMv8_dbgbvr13_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr14_el1,
-     .name = "kARMv8_dbgbvr14_el1",
-     .arch = Arch::kArm64},
-    {.id = RegisterID::kARMv8_dbgbvr15_el1,
-     .name = "kARMv8_dbgbvr15_el1",
-     .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr0_el1, .name = "kARMv8_dbgbvr0_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr1_el1, .name = "kARMv8_dbgbvr1_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr2_el1, .name = "kARMv8_dbgbvr2_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr3_el1, .name = "kARMv8_dbgbvr3_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr4_el1, .name = "kARMv8_dbgbvr4_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr5_el1, .name = "kARMv8_dbgbvr5_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr6_el1, .name = "kARMv8_dbgbvr6_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr7_el1, .name = "kARMv8_dbgbvr7_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr8_el1, .name = "kARMv8_dbgbvr8_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr9_el1, .name = "kARMv8_dbgbvr9_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr10_el1, .name = "kARMv8_dbgbvr10_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr11_el1, .name = "kARMv8_dbgbvr11_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr12_el1, .name = "kARMv8_dbgbvr12_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr13_el1, .name = "kARMv8_dbgbvr13_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr14_el1, .name = "kARMv8_dbgbvr14_el1", .arch = Arch::kArm64},
+    {.id = RegisterID::kARMv8_dbgbvr15_el1, .name = "kARMv8_dbgbvr15_el1", .arch = Arch::kArm64},
 
     // x64
     // ---------------------------------------------------------------------
@@ -331,8 +263,8 @@ RegisterID DWARFToRegisterIDX64(uint32_t dwarf_reg_id) {
 
   // xmm0-15 register range.
   if (dwarf_reg_id >= 17 && dwarf_reg_id <= 32) {
-    return static_cast<RegisterID>(
-        static_cast<uint32_t>(RegisterID::kX64_xmm0) + (dwarf_reg_id - 17));
+    return static_cast<RegisterID>(static_cast<uint32_t>(RegisterID::kX64_xmm0) +
+                                   (dwarf_reg_id - 17));
   }
 
   switch (dwarf_reg_id) {
@@ -448,8 +380,7 @@ const char* RegisterIDToString(RegisterID id) {
   auto info = RegisterIDToInfo(id);
 
   if (!info) {
-    FXL_NOTREACHED() << "Unknown register requested: "
-                     << static_cast<uint32_t>(id);
+    FXL_NOTREACHED() << "Unknown register requested: " << static_cast<uint32_t>(id);
     return "";
   }
 
@@ -480,8 +411,7 @@ Arch GetArchForRegisterID(RegisterID id) {
   auto info = RegisterIDToInfo(id);
 
   if (!info) {
-    FXL_NOTREACHED() << "Arch for unknown register requested: "
-                     << static_cast<uint32_t>(id);
+    FXL_NOTREACHED() << "Arch for unknown register requested: " << static_cast<uint32_t>(id);
     return Arch::kUnknown;
   }
 
@@ -515,12 +445,9 @@ RegisterID DWARFToRegisterID(Arch arch, uint32_t dwarf_reg_id) {
 }
 
 bool IsGeneralRegister(RegisterID id) {
-  return (static_cast<uint32_t>(id) >=
-              static_cast<uint32_t>(kARMv8GeneralBegin) &&
-          static_cast<uint32_t>(id) <=
-              static_cast<uint32_t>(kARMv8GeneralEnd)) ||
-         (static_cast<uint32_t>(id) >=
-              static_cast<uint32_t>(kX64GeneralBegin) &&
+  return (static_cast<uint32_t>(id) >= static_cast<uint32_t>(kARMv8GeneralBegin) &&
+          static_cast<uint32_t>(id) <= static_cast<uint32_t>(kARMv8GeneralEnd)) ||
+         (static_cast<uint32_t>(id) >= static_cast<uint32_t>(kX64GeneralBegin) &&
           static_cast<uint32_t>(id) <= static_cast<uint32_t>(kX64GeneralEnd));
 }
 

@@ -40,8 +40,8 @@ static bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
   return true;
 }
 
-static bool VerifyTwoProvidersTwoEnginesTest(
-    const tracing::Spec& spec, const std::string& test_output_file) {
+static bool VerifyTwoProvidersTwoEnginesTest(const tracing::Spec& spec,
+                                             const std::string& test_output_file) {
   size_t num_events;
   if (!VerifyTestEvents(test_output_file, &num_events)) {
     return false;
@@ -50,8 +50,8 @@ static bool VerifyTwoProvidersTwoEnginesTest(
   // Both providers copy the "simple" test.
   size_t num_expected_events = 2 * kNumSimpleTestEvents;
   if (num_events != num_expected_events) {
-    FXL_LOG(ERROR) << "Incorrect number of events present, got " << num_events
-                   << ", expected " << num_expected_events;
+    FXL_LOG(ERROR) << "Incorrect number of events present, got " << num_events << ", expected "
+                   << num_expected_events;
     return false;
   }
 

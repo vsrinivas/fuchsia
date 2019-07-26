@@ -26,13 +26,11 @@ class Delegate {
 
   // Called when a new thread that is part of this process has been started.
   // This is indicated by ZX_EXCP_THREAD_STARTING.
-  virtual void OnThreadStarting(Process* process, Thread* thread,
-                                zx_handle_t eport,
+  virtual void OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
                                 const zx_exception_context_t& context);
 
   // Called when |thread| has exited (ZX_EXCP_THREAD_EXITING).
-  virtual void OnThreadExiting(Process* process, Thread* thread,
-                               zx_handle_t eport,
+  virtual void OnThreadExiting(Process* process, Thread* thread, zx_handle_t eport,
                                const zx_exception_context_t& context);
 
   // Called when |thread| suspends, resumes, and terminates.
@@ -46,16 +44,14 @@ class Delegate {
   virtual void OnProcessTermination(Process* process);
 
   // Called when the kernel reports an architectural exception.
-  virtual void OnArchitecturalException(
-      Process* process, Thread* thread, zx_handle_t eport,
-      zx_excp_type_t type, const zx_exception_context_t& context);
+  virtual void OnArchitecturalException(Process* process, Thread* thread, zx_handle_t eport,
+                                        zx_excp_type_t type, const zx_exception_context_t& context);
 
   // Called when |thread| has gets a synthetic exception
   // (e.g., ZX_EXCP_POLICY_ERROR) that is akin to an architectural
   // exception: the program got an error and by default crashes.
-  virtual void OnSyntheticException(
-      Process* process, Thread* thread, zx_handle_t eport,
-      zx_excp_type_t type, const zx_exception_context_t& context);
+  virtual void OnSyntheticException(Process* process, Thread* thread, zx_handle_t eport,
+                                    zx_excp_type_t type, const zx_exception_context_t& context);
 
  protected:
   // Non-owning.

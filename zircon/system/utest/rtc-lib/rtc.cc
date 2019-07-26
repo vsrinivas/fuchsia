@@ -245,7 +245,6 @@ TEST(RTCLibTest, rtc_backstop_seconds) {
   EXPECT_EQ(1563584646, rtc_backstop_seconds());
 }
 
-
 TEST(RTCLibTest, SanitizeRTCPreservesGoodValue) {
   backstop_clear();
   auto t0 = make_rtc(2018, 8, 4, 1, 19, 1);  // good value

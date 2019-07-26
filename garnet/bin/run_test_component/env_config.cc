@@ -15,24 +15,21 @@ using fxl::Substitute;
 
 }  // namespace
 
-void EnvironmentConfig::CreateMap(const std::string& environment_name,
-                                  EnvironmentType env_type,
+void EnvironmentConfig::CreateMap(const std::string& environment_name, EnvironmentType env_type,
                                   const rapidjson::Document& document) {
   if (!document.HasMember(environment_name)) {
-    json_parser_.ReportError(
-        Substitute("Environment '$0' not found.", environment_name));
+    json_parser_.ReportError(Substitute("Environment '$0' not found.", environment_name));
     return;
   }
   const rapidjson::Value& urls = document[environment_name];
   if (!urls.IsArray()) {
-    json_parser_.ReportError(
-        Substitute("'$0' section should be an array.", environment_name));
+    json_parser_.ReportError(Substitute("'$0' section should be an array.", environment_name));
     return;
   }
   for (const auto& url : urls.GetArray()) {
     if (!url.IsString()) {
-      json_parser_.ReportError(Substitute(
-          "'$0' section should be a string array.", environment_name));
+      json_parser_.ReportError(
+          Substitute("'$0' section should be a string array.", environment_name));
       return;
     }
     url_map_[url.GetString()] = env_type;

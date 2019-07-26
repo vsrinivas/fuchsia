@@ -12,8 +12,7 @@ namespace component {
 
 class HubInfo {
  public:
-  HubInfo(fbl::String label, fbl::String koid,
-          fbl::RefPtr<fs::PseudoDir> hub_dir);
+  HubInfo(fbl::String label, fbl::String koid, fbl::RefPtr<fs::PseudoDir> hub_dir);
   ~HubInfo();
 
   const fbl::String& label() const { return label_; }

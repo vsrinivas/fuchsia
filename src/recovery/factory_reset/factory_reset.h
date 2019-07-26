@@ -16,8 +16,7 @@ namespace factory_reset {
 // reboots.
 class FactoryReset : public fuchsia::recovery::FactoryReset {
  public:
-  FactoryReset(fbl::unique_fd dev_fd,
-               fuchsia::device::manager::AdministratorPtr admin);
+  FactoryReset(fbl::unique_fd dev_fd, fuchsia::device::manager::AdministratorPtr admin);
   // Performs the factory reset.
   void Reset(ResetCallback callback) override;
 

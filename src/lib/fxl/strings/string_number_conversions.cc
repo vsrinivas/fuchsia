@@ -45,8 +45,7 @@ bool GetDigitValue(const char s, Base base, NumberType* out_digit) {
 // Helper for |StringToNumberWithError()|. Note that this may modify |*number|
 // even on failure.
 template <typename NumberType>
-bool StringToPositiveNumberWithError(const char* s, size_t length, Base base,
-                                     NumberType* number) {
+bool StringToPositiveNumberWithError(const char* s, size_t length, Base base, NumberType* number) {
   const NumberType kBase = static_cast<NumberType>(base == Base::k10 ? 10 : 16);
   constexpr NumberType kMaxAllowed = std::numeric_limits<NumberType>::max();
 
@@ -73,8 +72,7 @@ bool StringToPositiveNumberWithError(const char* s, size_t length, Base base,
 // Helper for |StringToNumberWithError()|. Note that this may modify |*number|
 // even on failure.
 template <typename NumberType>
-bool StringToNegativeNumberWithError(const char* s, size_t length, Base base,
-                                     NumberType* number) {
+bool StringToNegativeNumberWithError(const char* s, size_t length, Base base, NumberType* number) {
   const NumberType kBase = static_cast<NumberType>(base == Base::k10 ? 10 : 16);
   constexpr NumberType kMinAllowed = std::numeric_limits<NumberType>::min();
 
@@ -111,9 +109,8 @@ std::string NumberToString(NumberType number, Base base) {
   // for n a negative int32_t, |static_cast<uint32_t>(n)| = 2^32 - n and for a
   // uint32_t m, |-m| = 2^32 - m.
   bool number_is_negative = (number < static_cast<NumberType>(0));
-  UnsignedNumberType abs_number = number_is_negative
-                                      ? -static_cast<UnsignedNumberType>(number)
-                                      : static_cast<UnsignedNumberType>(number);
+  UnsignedNumberType abs_number = number_is_negative ? -static_cast<UnsignedNumberType>(number)
+                                                     : static_cast<UnsignedNumberType>(number);
 
   char buf[50];  // Big enough to hold the result from even a 128-bit number.
   size_t i = sizeof(buf);
@@ -137,8 +134,7 @@ std::string NumberToString(NumberType number, Base base) {
 }
 
 template <typename NumberType>
-bool StringToNumberWithError(fxl::StringView string, NumberType* number,
-                             Base base) {
+bool StringToNumberWithError(fxl::StringView string, NumberType* number, Base base) {
   FXL_DCHECK(number);
 
   if (string.empty())
@@ -150,8 +146,7 @@ bool StringToNumberWithError(fxl::StringView string, NumberType* number,
   if (std::is_signed<NumberType>::value && string[0] == '-') {
     if (length < 2)
       return false;
-    if (!StringToNegativeNumberWithError<NumberType>(s + 1, length - 1u, base,
-                                                     &result))
+    if (!StringToNegativeNumberWithError<NumberType>(s + 1, length - 1u, base, &result))
       return false;
   } else {
     if (!StringToPositiveNumberWithError<NumberType>(s, length, base, &result))
@@ -172,21 +167,16 @@ template std::string NumberToString<int32_t>(int32_t number, Base base);
 template std::string NumberToString<uint32_t>(uint32_t number, Base base);
 template std::string NumberToString<int64_t>(int64_t number, Base base);
 template std::string NumberToString<uint64_t>(uint64_t number, Base base);
-template bool StringToNumberWithError<int8_t>(fxl::StringView string,
-                                              int8_t* number, Base base);
-template bool StringToNumberWithError<uint8_t>(fxl::StringView string,
-                                               uint8_t* number, Base base);
-template bool StringToNumberWithError<int16_t>(fxl::StringView string,
-                                               int16_t* number, Base base);
-template bool StringToNumberWithError<uint16_t>(fxl::StringView string,
-                                                uint16_t* number, Base base);
-template bool StringToNumberWithError<int32_t>(fxl::StringView string,
-                                               int32_t* number, Base base);
-template bool StringToNumberWithError<uint32_t>(fxl::StringView string,
-                                                uint32_t* number, Base base);
-template bool StringToNumberWithError<int64_t>(fxl::StringView string,
-                                               int64_t* number, Base base);
-template bool StringToNumberWithError<uint64_t>(fxl::StringView string,
-                                                uint64_t* number, Base base);
+template bool StringToNumberWithError<int8_t>(fxl::StringView string, int8_t* number, Base base);
+template bool StringToNumberWithError<uint8_t>(fxl::StringView string, uint8_t* number, Base base);
+template bool StringToNumberWithError<int16_t>(fxl::StringView string, int16_t* number, Base base);
+template bool StringToNumberWithError<uint16_t>(fxl::StringView string, uint16_t* number,
+                                                Base base);
+template bool StringToNumberWithError<int32_t>(fxl::StringView string, int32_t* number, Base base);
+template bool StringToNumberWithError<uint32_t>(fxl::StringView string, uint32_t* number,
+                                                Base base);
+template bool StringToNumberWithError<int64_t>(fxl::StringView string, int64_t* number, Base base);
+template bool StringToNumberWithError<uint64_t>(fxl::StringView string, uint64_t* number,
+                                                Base base);
 
 }  // namespace fxl

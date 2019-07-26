@@ -18,9 +18,7 @@ namespace runtests {
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
-std::unique_ptr<Result> PosixRunTest(const char* argv[],
-                                     const char* output_dir,
-                                     const char* output_filename,
-                                     const char* test_name);
+std::unique_ptr<Result> PosixRunTest(const char* argv[], const char* output_dir,
+                                     const char* output_filename, const char* test_name);
 
-} // namespace runtests
+}  // namespace runtests

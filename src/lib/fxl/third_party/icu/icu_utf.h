@@ -77,10 +77,9 @@ typedef int8_t UBool;
  * @return TRUE or FALSE
  * @stable ICU 2.4
  */
-#define FXL_U_IS_UNICODE_CHAR(c)                           \
-  ((uint32_t)(c) < 0xd800 ||                               \
-   ((uint32_t)(c) > 0xdfff && (uint32_t)(c) <= 0x10ffff && \
-    !FXL_U_IS_UNICODE_NONCHAR(c)))
+#define FXL_U_IS_UNICODE_CHAR(c) \
+  ((uint32_t)(c) < 0xd800 ||     \
+   ((uint32_t)(c) > 0xdfff && (uint32_t)(c) <= 0x10ffff && !FXL_U_IS_UNICODE_NONCHAR(c)))
 
 /**
  * Is this code point a surrogate (U+d800..U+dfff)?
@@ -108,8 +107,7 @@ extern const uint8_t utf8_countTrailBytes[256];
  * Count the trail bytes for a UTF-8 lead byte.
  * @internal
  */
-#define FXL_U8_COUNT_TRAIL_BYTES(leadByte) \
-  (fxl_icu::utf8_countTrailBytes[(uint8_t)leadByte])
+#define FXL_U8_COUNT_TRAIL_BYTES(leadByte) (fxl_icu::utf8_countTrailBytes[(uint8_t)leadByte])
 
 /**
  * Mask a UTF-8 lead byte, leave only the lower bits that form part of the code
@@ -150,16 +148,15 @@ extern const uint8_t utf8_countTrailBytes[256];
  * @return 1..4, or 0 if c is a surrogate or not a Unicode code point
  * @stable ICU 2.4
  */
-#define FXL_U8_LENGTH(c)                                                    \
-  ((uint32_t)(c) <= 0x7f                                                    \
-       ? 1                                                                  \
-       : ((uint32_t)(c) <= 0x7ff                                            \
-              ? 2                                                           \
-              : ((uint32_t)(c) <= 0xd7ff                                    \
-                     ? 3                                                    \
-                     : ((uint32_t)(c) <= 0xdfff || (uint32_t)(c) > 0x10ffff \
-                            ? 0                                             \
-                            : ((uint32_t)(c) <= 0xffff ? 3 : 4)))))
+#define FXL_U8_LENGTH(c)                                                                        \
+  ((uint32_t)(c) <= 0x7f                                                                        \
+       ? 1                                                                                      \
+       : ((uint32_t)(c) <= 0x7ff                                                                \
+              ? 2                                                                               \
+              : ((uint32_t)(c) <= 0xd7ff ? 3                                                    \
+                                         : ((uint32_t)(c) <= 0xdfff || (uint32_t)(c) > 0x10ffff \
+                                                ? 0                                             \
+                                                : ((uint32_t)(c) <= 0xffff ? 3 : 4)))))
 
 /**
  * The maximum number of UTF-8 code units (bytes) per Unicode code point
@@ -173,11 +170,7 @@ extern const uint8_t utf8_countTrailBytes[256];
  * Function for handling "next code point" with error-checking.
  * @internal
  */
-UChar32 utf8_nextCharSafeBody(const uint8_t* s,
-                              size_t* pi,
-                              size_t length,
-                              UChar32 c,
-                              UBool strict);
+UChar32 utf8_nextCharSafeBody(const uint8_t* s, size_t* pi, size_t length, UChar32 c, UBool strict);
 
 /**
  * Get a code point from a string at a code point boundary offset,
@@ -197,17 +190,16 @@ UChar32 utf8_nextCharSafeBody(const uint8_t* s,
  * @see FXL_U8_NEXT_UNSAFE
  * @stable ICU 2.4
  */
-#define FXL_U8_NEXT(s, i, length, c)                                   \
-  {                                                                    \
-    (c) = (s)[(i)++];                                                  \
-    if (((uint8_t)(c)) >= 0x80) {                                      \
-      if (FXL_U8_IS_LEAD(c)) {                                         \
-        (c) = fxl_icu::utf8_nextCharSafeBody((const uint8_t*)s, &(i),  \
-                                             (size_t)(length), c, -1); \
-      } else {                                                         \
-        (c) = FXL_U_SENTINEL;                                          \
-      }                                                                \
-    }                                                                  \
+#define FXL_U8_NEXT(s, i, length, c)                                                            \
+  {                                                                                             \
+    (c) = (s)[(i)++];                                                                           \
+    if (((uint8_t)(c)) >= 0x80) {                                                               \
+      if (FXL_U8_IS_LEAD(c)) {                                                                  \
+        (c) = fxl_icu::utf8_nextCharSafeBody((const uint8_t*)s, &(i), (size_t)(length), c, -1); \
+      } else {                                                                                  \
+        (c) = FXL_U_SENTINEL;                                                                   \
+      }                                                                                         \
+    }                                                                                           \
   }
 
 /**
@@ -306,8 +298,7 @@ UChar32 utf8_nextCharSafeBody(const uint8_t* s,
  * @stable ICU 2.4
  */
 #define FXL_U16_GET_SUPPLEMENTARY(lead, trail) \
-  (((fxl_icu::UChar32)(lead) << 10UL) +        \
-   (fxl_icu::UChar32)(trail)-FXL_U16_SURROGATE_OFFSET)
+  (((fxl_icu::UChar32)(lead) << 10UL) + (fxl_icu::UChar32)(trail)-FXL_U16_SURROGATE_OFFSET)
 
 /**
  * Get the lead surrogate (0xd800..0xdbff) for a
@@ -316,8 +307,7 @@ UChar32 utf8_nextCharSafeBody(const uint8_t* s,
  * @return lead surrogate (U+d800..U+dbff) for supplementary
  * @stable ICU 2.4
  */
-#define FXL_U16_LEAD(supplementary) \
-  (fxl_icu::UChar)(((supplementary) >> 10) + 0xd7c0)
+#define FXL_U16_LEAD(supplementary) (fxl_icu::UChar)(((supplementary) >> 10) + 0xd7c0)
 
 /**
  * Get the trail surrogate (0xdc00..0xdfff) for a
@@ -326,8 +316,7 @@ UChar32 utf8_nextCharSafeBody(const uint8_t* s,
  * @return trail surrogate (U+dc00..U+dfff) for supplementary
  * @stable ICU 2.4
  */
-#define FXL_U16_TRAIL(supplementary) \
-  (fxl_icu::UChar)(((supplementary)&0x3ff) | 0xdc00)
+#define FXL_U16_TRAIL(supplementary) (fxl_icu::UChar)(((supplementary)&0x3ff) | 0xdc00)
 
 /**
  * How many 16-bit code units are used to encode this Unicode code point? (1 or

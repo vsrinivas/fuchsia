@@ -23,9 +23,7 @@ class EnvironmentConfig {
   bool HasError() const { return json_parser_.HasError(); }
   std::string error_str() const { return json_parser_.error_str(); }
 
-  const std::unordered_map<std::string, EnvironmentType>& url_map() const {
-    return url_map_;
-  }
+  const std::unordered_map<std::string, EnvironmentType>& url_map() const { return url_map_; }
 
  private:
   void CreateMap(const std::string& environment_name, EnvironmentType env_type,

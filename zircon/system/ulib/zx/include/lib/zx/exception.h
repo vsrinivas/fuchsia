@@ -13,34 +13,31 @@
 namespace zx {
 
 class exception final : public object<exception> {
-public:
-    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_EXCEPTION;
+ public:
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_EXCEPTION;
 
-    constexpr exception() = default;
+  constexpr exception() = default;
 
-    explicit exception(zx_handle_t value)
-        : object(value) {}
+  explicit exception(zx_handle_t value) : object(value) {}
 
-    explicit exception(handle&& h)
-        : object(h.release()) {}
+  explicit exception(handle&& h) : object(h.release()) {}
 
-    exception(exception&& other)
-        : object(other.release()) {}
+  exception(exception&& other) : object(other.release()) {}
 
-    exception& operator=(exception&& other) {
-        reset(other.release());
-        return *this;
-    }
+  exception& operator=(exception&& other) {
+    reset(other.release());
+    return *this;
+  }
 
-    zx_status_t get_thread(thread* thread) const {
-        return zx_exception_get_thread(get(), thread->reset_and_get_address());
-    }
+  zx_status_t get_thread(thread* thread) const {
+    return zx_exception_get_thread(get(), thread->reset_and_get_address());
+  }
 
-    zx_status_t get_process(process* process) const {
-        return zx_exception_get_process(get(), process->reset_and_get_address());
-    }
+  zx_status_t get_process(process* process) const {
+    return zx_exception_get_process(get(), process->reset_and_get_address());
+  }
 };
 
-} // namespace zx
+}  // namespace zx
 
-#endif // LIB_ZX_EXCEPTION_H_
+#endif  // LIB_ZX_EXCEPTION_H_

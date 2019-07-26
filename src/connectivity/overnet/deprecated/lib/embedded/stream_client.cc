@@ -18,10 +18,8 @@ Status StreamClientBase::Start() {
       .Then([&] { return socket.Connect(target_); })
       .Then([&] {
         RegisterStreamSocketLink(
-            root(), std::move(socket), CreateFramer(), true,
-            TimeDelta::PositiveInf(), [app = root()] {
-              app->Exit(Status::Unavailable("Stream server disconnected"));
-            });
+            root(), std::move(socket), CreateFramer(), true, TimeDelta::PositiveInf(),
+            [app = root()] { app->Exit(Status::Unavailable("Stream server disconnected")); });
         return Status::Ok();
       });
 }

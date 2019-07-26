@@ -12,12 +12,12 @@
 
 zx_ticks_t _zx_ticks_get(void) {
 #if __aarch64__
-    // read the virtual counter
-    zx_ticks_t ticks;
-    __asm__ volatile("mrs %0, cntvct_el0" : "=r" (ticks));
-    return ticks;
+  // read the virtual counter
+  zx_ticks_t ticks;
+  __asm__ volatile("mrs %0, cntvct_el0" : "=r"(ticks));
+  return ticks;
 #elif __x86_64__
-    return __rdtsc();
+  return __rdtsc();
 #else
 #error Unsupported architecture
 #endif
@@ -27,6 +27,4 @@ VDSO_INTERFACE_FUNCTION(zx_ticks_get);
 
 // At boot time the kernel can decide to redirect the {_,}zx_ticks_get
 // dynamic symbol table entries to point to this instead.  See VDso::VDso.
-VDSO_KERNEL_EXPORT zx_ticks_t CODE_soft_ticks_get(void) {
-    return VDSO_zx_clock_get_monotonic();
-}
+VDSO_KERNEL_EXPORT zx_ticks_t CODE_soft_ticks_get(void) { return VDSO_zx_clock_get_monotonic(); }

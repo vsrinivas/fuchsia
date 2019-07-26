@@ -46,19 +46,17 @@ class DmaMgrTest : public zxtest::Test {
     local_mmio_buffer.offset = 0;
 
     ASSERT_OK(fake_bti_create(&bti_handle_));
-    ASSERT_OK(DmaManager::Create(
-        *zx::unowned_bti(bti_handle_), ddk::MmioView(local_mmio_buffer, 0),
-        DmaManager::Stream::FullResolution, &full_resolution_dma_));
-    ASSERT_OK(DmaManager::Create(
-        *zx::unowned_bti(bti_handle_), ddk::MmioView(local_mmio_buffer, 0),
-        DmaManager::Stream::Downscaled, &downscaled_dma_));
+    ASSERT_OK(DmaManager::Create(*zx::unowned_bti(bti_handle_), ddk::MmioView(local_mmio_buffer, 0),
+                                 DmaManager::Stream::FullResolution, &full_resolution_dma_));
+    ASSERT_OK(DmaManager::Create(*zx::unowned_bti(bti_handle_), ddk::MmioView(local_mmio_buffer, 0),
+                                 DmaManager::Stream::Downscaled, &downscaled_dma_));
     zx_status_t status = CreateContiguousBufferCollectionInfo(
-        &full_resolution_buffer_collection_, bti_handle_, kFullResWidth,
-        kFullResHeight, kFullResNumberOfBuffers);
+        &full_resolution_buffer_collection_, bti_handle_, kFullResWidth, kFullResHeight,
+        kFullResNumberOfBuffers);
     ASSERT_OK(status);
-    status = CreateContiguousBufferCollectionInfo(
-        &downscaled_buffer_collection_, bti_handle_, kDownscaledWidth,
-        kDownscaledHeight, kDownscaledNumberOfBuffers);
+    status = CreateContiguousBufferCollectionInfo(&downscaled_buffer_collection_, bti_handle_,
+                                                  kDownscaledWidth, kDownscaledHeight,
+                                                  kDownscaledNumberOfBuffers);
     mmio_view_.emplace(local_mmio_buffer, 0);
     ASSERT_OK(status);
   }
@@ -90,18 +88,14 @@ class DmaMgrTest : public zxtest::Test {
                     .ReadFrom(&(*mmio_view_))
                     .value(),
                 kMagicDmaAddressValue);
-      EXPECT_NE(ping::FullResolution::Uv::DmaWriter_Bank0Base::Get()
-                    .ReadFrom(&(*mmio_view_))
-                    .value(),
-                kMagicDmaAddressValue);
+      EXPECT_NE(
+          ping::FullResolution::Uv::DmaWriter_Bank0Base::Get().ReadFrom(&(*mmio_view_)).value(),
+          kMagicDmaAddressValue);
     } else {
-      EXPECT_NE(ping::DownScaled::Primary::DmaWriter_Bank0Base::Get()
-                    .ReadFrom(&(*mmio_view_))
-                    .value(),
-                kMagicDmaAddressValue);
-      EXPECT_NE(ping::DownScaled::Uv::DmaWriter_Bank0Base::Get()
-                    .ReadFrom(&(*mmio_view_))
-                    .value(),
+      EXPECT_NE(
+          ping::DownScaled::Primary::DmaWriter_Bank0Base::Get().ReadFrom(&(*mmio_view_)).value(),
+          kMagicDmaAddressValue);
+      EXPECT_NE(ping::DownScaled::Uv::DmaWriter_Bank0Base::Get().ReadFrom(&(*mmio_view_)).value(),
                 kMagicDmaAddressValue);
     }
   }
@@ -113,18 +107,14 @@ class DmaMgrTest : public zxtest::Test {
                     .ReadFrom(&(*mmio_view_))
                     .value(),
                 kMagicDmaAddressValue);
-      EXPECT_EQ(ping::FullResolution::Uv::DmaWriter_Bank0Base::Get()
-                    .ReadFrom(&(*mmio_view_))
-                    .value(),
-                kMagicDmaAddressValue);
+      EXPECT_EQ(
+          ping::FullResolution::Uv::DmaWriter_Bank0Base::Get().ReadFrom(&(*mmio_view_)).value(),
+          kMagicDmaAddressValue);
     } else {
-      EXPECT_EQ(ping::DownScaled::Primary::DmaWriter_Bank0Base::Get()
-                    .ReadFrom(&(*mmio_view_))
-                    .value(),
-                kMagicDmaAddressValue);
-      EXPECT_EQ(ping::DownScaled::Uv::DmaWriter_Bank0Base::Get()
-                    .ReadFrom(&(*mmio_view_))
-                    .value(),
+      EXPECT_EQ(
+          ping::DownScaled::Primary::DmaWriter_Bank0Base::Get().ReadFrom(&(*mmio_view_)).value(),
+          kMagicDmaAddressValue);
+      EXPECT_EQ(ping::DownScaled::Uv::DmaWriter_Bank0Base::Get().ReadFrom(&(*mmio_view_)).value(),
                 kMagicDmaAddressValue);
     }
   }
@@ -153,12 +143,10 @@ class DmaMgrTest : public zxtest::Test {
 
   void ConnectToStreams() {
     zx_status_t status = full_resolution_dma_->Configure(
-        full_resolution_buffer_collection_,
-        fit::bind_member(this, &DmaMgrTest::FullResCallback));
+        full_resolution_buffer_collection_, fit::bind_member(this, &DmaMgrTest::FullResCallback));
     EXPECT_OK(status);
-    status = downscaled_dma_->Configure(
-        downscaled_buffer_collection_,
-        fit::bind_member(this, &DmaMgrTest::DownScaledCallback));
+    status = downscaled_dma_->Configure(downscaled_buffer_collection_,
+                                        fit::bind_member(this, &DmaMgrTest::DownScaledCallback));
     EXPECT_OK(status);
     full_resolution_dma_->Enable();
     downscaled_dma_->Enable();
@@ -177,26 +165,18 @@ class DmaMgrTest : public zxtest::Test {
   fbl::unique_ptr<camera::DmaManager> downscaled_dma_;
   fuchsia_sysmem_BufferCollectionInfo full_resolution_buffer_collection_;
   fuchsia_sysmem_BufferCollectionInfo downscaled_buffer_collection_;
-  std::vector<fuchsia_camera_common_FrameAvailableEvent>
-      full_resolution_callbacks_;
+  std::vector<fuchsia_camera_common_FrameAvailableEvent> full_resolution_callbacks_;
   std::vector<fuchsia_camera_common_FrameAvailableEvent> downscaled_callbacks_;
 };
 
 TEST_F(DmaMgrTest, EnableDeathTest) {
   // We should die because we don't have a callback registered:
-  ASSERT_DEATH(([this]() {
-    full_resolution_dma_->Enable();
-  }));
+  ASSERT_DEATH(([this]() { full_resolution_dma_->Enable(); }));
   // But since we are not enabled, OnNewFrame does nothing.
-  ASSERT_NO_DEATH(([this]() {
-    full_resolution_dma_->OnNewFrame();
-  }));
+  ASSERT_NO_DEATH(([this]() { full_resolution_dma_->OnNewFrame(); }));
   ConnectToStreams();
-  ASSERT_NO_DEATH(([this]() {
-    full_resolution_dma_->Enable();
-  }));
+  ASSERT_NO_DEATH(([this]() { full_resolution_dma_->Enable(); }));
 }
-
 
 TEST_F(DmaMgrTest, BasicConnectionTest) {
   EXPECT_FALSE(CheckWriteEnabled(Stream::Downscaled));
@@ -277,8 +257,7 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
     full_resolution_dma_->OnFrameWritten();
     CheckNoDmaWriteAddress(Stream::FullResolution);
     EXPECT_EQ(full_resolution_callbacks_.size(), i + 1);
-    EXPECT_EQ(full_resolution_callbacks_.back().frame_status,
-              fuchsia_camera_common_FrameStatus_OK);
+    EXPECT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_common_FrameStatus_OK);
   }
   full_resolution_callbacks_.clear();
   // Now we should still not be able to get frames:
@@ -306,18 +285,12 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
 // OnNewFrame:
 TEST_F(DmaMgrTest, DieOnInvalidFrameWritten) {
   // We should not die because the dma is not enabled:
-  ASSERT_NO_DEATH(([this]() {
-    full_resolution_dma_->OnFrameWritten();
-  }));
+  ASSERT_NO_DEATH(([this]() { full_resolution_dma_->OnFrameWritten(); }));
   ConnectToStreams();
   // Now we should die because we don't have any frames that we are writing:
-  ASSERT_DEATH(([this]() {
-    full_resolution_dma_->OnFrameWritten();
-  }));
+  ASSERT_DEATH(([this]() { full_resolution_dma_->OnFrameWritten(); }));
   full_resolution_dma_->OnNewFrame();
-  ASSERT_NO_DEATH(([this]() {
-    full_resolution_dma_->OnFrameWritten();
-  }));
+  ASSERT_NO_DEATH(([this]() { full_resolution_dma_->OnFrameWritten(); }));
 }
 
 // Make sure we can switch the dma manager to a different BufferCollection:
@@ -336,16 +309,12 @@ TEST_F(DmaMgrTest, MultipleConfigureCalls) {
   ConnectToStreams();
 
   // Now we should die because we don't have any frames that we are writing:
-  ASSERT_DEATH(([this]() {
-    downscaled_dma_->OnFrameWritten();
-  }));
+  ASSERT_DEATH(([this]() { downscaled_dma_->OnFrameWritten(); }));
 
   // Releasing frames should also fail:
   ASSERT_EQ(full_resolution_callbacks_.size(), 1);
-  ASSERT_EQ(full_resolution_callbacks_.back().frame_status,
-            fuchsia_camera_common_FrameStatus_OK);
-  EXPECT_NOT_OK(full_resolution_dma_->ReleaseFrame(
-      full_resolution_callbacks_.back().buffer_id));
+  ASSERT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_common_FrameStatus_OK);
+  EXPECT_NOT_OK(full_resolution_dma_->ReleaseFrame(full_resolution_callbacks_.back().buffer_id));
 
   // But future operations will still work:
   full_resolution_callbacks_.clear();
@@ -355,15 +324,11 @@ TEST_F(DmaMgrTest, MultipleConfigureCalls) {
   EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
   CheckDmaWroteAddress(Stream::FullResolution);
   // Make sure we can mark the frame written.
-  ASSERT_NO_DEATH(([this]() {
-    full_resolution_dma_->OnFrameWritten();
-  }));
+  ASSERT_NO_DEATH(([this]() { full_resolution_dma_->OnFrameWritten(); }));
   // Make sure we can release the frame.
   ASSERT_EQ(full_resolution_callbacks_.size(), 1);
-  ASSERT_EQ(full_resolution_callbacks_.back().frame_status,
-            fuchsia_camera_common_FrameStatus_OK);
-  EXPECT_OK(full_resolution_dma_->ReleaseFrame(
-      full_resolution_callbacks_.back().buffer_id));
+  ASSERT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_common_FrameStatus_OK);
+  EXPECT_OK(full_resolution_dma_->ReleaseFrame(full_resolution_callbacks_.back().buffer_id));
 }
 
 }  // namespace

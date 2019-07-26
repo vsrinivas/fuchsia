@@ -47,11 +47,9 @@ std::string HexDump(const BufferView& buffer) {
 // A file mapped into memory that we can grab chunks from.
 class MemoryFile {
  public:
-  MemoryFile(const std::string& filename)
-      : fd_(open(filename.c_str(), O_RDONLY)) {
+  MemoryFile(const std::string& filename) : fd_(open(filename.c_str(), O_RDONLY)) {
     if (!bool(fd_)) {
-      std::cerr << "Failed to open file " << filename << " : "
-                << strerror(errno) << std::endl;
+      std::cerr << "Failed to open file " << filename << " : " << strerror(errno) << std::endl;
       return;
     }
 
@@ -62,8 +60,7 @@ class MemoryFile {
 
     void* mapped = mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd_.get(), 0);
     if (mapped == MAP_FAILED) {
-      std::cerr << "Failed to map file to memory: " << strerror(errno)
-                << std::endl;
+      std::cerr << "Failed to map file to memory: " << strerror(errno) << std::endl;
       mapped = nullptr;
     }
 
@@ -82,8 +79,7 @@ class MemoryFile {
 
   const uint8_t* at(size_t offset) const { return view_.data() + offset; }
 
-  BufferView view(size_t offset,
-                  size_t length = std::numeric_limits<size_t>::max()) const {
+  BufferView view(size_t offset, size_t length = std::numeric_limits<size_t>::max()) const {
     if (!is_valid()) {
       return BufferView();
     }
@@ -100,8 +96,7 @@ class MemoryFile {
 
 constexpr size_t kMaxSecureSendArgLen = 252;
 
-bool SecureSend(CommandChannel* channel, uint8_t type,
-                const BufferView& bytes) {
+bool SecureSend(CommandChannel* channel, uint8_t type, const BufferView& bytes) {
   size_t left = bytes.size();
   bool abort = false;
   while (left > 0 && !abort) {
@@ -114,8 +109,7 @@ bool SecureSend(CommandChannel* channel, uint8_t type,
     channel->SendCommandSync(cmd->view(), [&abort](const auto& event) {
       if (event.event_code() == ::bt::hci::kCommandCompleteEventCode) {
         const auto& event_params =
-            event.view()
-                .template payload<::bt::hci::CommandCompleteEventParams>();
+            event.view().template payload<::bt::hci::CommandCompleteEventParams>();
         if (le16toh(event_params.command_opcode) != kSecureSend) {
           std::cerr << "\nIntelFirmwareLoader: Received command complete for "
                        "something else!"
@@ -129,10 +123,8 @@ bool SecureSend(CommandChannel* channel, uint8_t type,
         }
         return;
       }
-      if (event.event_code() ==
-          ::bt::hci::kVendorDebugEventCode) {  // Vendor Event Code
-        const auto& params =
-            event.view().template payload<IntelSecureSendEventParams>();
+      if (event.event_code() == ::bt::hci::kVendorDebugEventCode) {  // Vendor Event Code
+        const auto& params = event.view().template payload<IntelSecureSendEventParams>();
         printf(
             "\nIntelFirmwareLoader: SecureSend result %x, opcode: %x, status: "
             "%x",
@@ -150,16 +142,15 @@ bool SecureSend(CommandChannel* channel, uint8_t type,
     left -= frag_len;
   }
   if (abort) {
-    printf("IntelFirmwareLoader: SecureSend failed at %lu / %zu\n",
-           bytes.size() - left, bytes.size());
+    printf("IntelFirmwareLoader: SecureSend failed at %lu / %zu\n", bytes.size() - left,
+           bytes.size());
   }
   return !abort;
 }
 
 }  // namespace
 
-IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
-    const std::string& filename) {
+IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(const std::string& filename) {
   MemoryFile file(filename);
 
   if (!file.is_valid()) {
@@ -193,8 +184,7 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
       patched = true;
     }
 
-    if ((file.size() - ptr <= sizeof(::bt::hci::EventHeader)) ||
-        (*file.at(ptr) != 0x02)) {
+    if ((file.size() - ptr <= sizeof(::bt::hci::EventHeader)) || (*file.at(ptr) != 0x02)) {
       std::cerr << "IntelFirmwareLoader: Error: malformed file, expected Event "
                    "Packet marker"
                 << std::endl;
@@ -203,8 +193,7 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
 
     // Assemble the expected events.
     std::deque<BufferView> events;
-    while ((file.size() - ptr > sizeof(::bt::hci::EventHeader)) &&
-           (*file.at(ptr) == 0x02)) {
+    while ((file.size() - ptr > sizeof(::bt::hci::EventHeader)) && (*file.at(ptr) == 0x02)) {
       ptr++;
       auto view = file.view(ptr);
       PacketView<::bt::hci::EventHeader> event(&view);
@@ -228,8 +217,8 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
   MemoryFile file(filename);
 
   if (file.size() < 644) {
-    std::cerr << "IntelFirmwareLoader: SFI file is too small: " << file.size()
-              << " < 644" << std::endl;
+    std::cerr << "IntelFirmwareLoader: SFI file is too small: " << file.size() << " < 644"
+              << std::endl;
     return false;
   }
 
@@ -252,8 +241,7 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
   ptr += 4;
   // [256 bytes signature info]
   if (!SecureSend(channel_, 0x02, file.view(ptr, 256))) {
-    std::cerr << "IntelFirmwareLoader: Failed sending signature Header!"
-              << std::endl;
+    std::cerr << "IntelFirmwareLoader: Failed sending signature Header!" << std::endl;
     return false;
   }
   ptr += 256;
@@ -264,8 +252,7 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
   while (ptr < file.size()) {
     auto next_cmd = file.view(ptr + frag_len);
     PacketView<::bt::hci::CommandHeader> header(&next_cmd);
-    size_t cmd_size =
-        sizeof(::bt::hci::CommandHeader) + header.header().parameter_total_size;
+    size_t cmd_size = sizeof(::bt::hci::CommandHeader) + header.header().parameter_total_size;
     frag_len += cmd_size;
     if ((frag_len % 4) == 0) {
       if (!SecureSend(channel_, 0x01, file.view(ptr, frag_len))) {
@@ -280,25 +267,22 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
   return false;
 }
 
-bool IntelFirmwareLoader::RunCommandAndExpect(
-    const PacketView<::bt::hci::CommandHeader>& command,
-    std::deque<BufferView>& events) {
+bool IntelFirmwareLoader::RunCommandAndExpect(const PacketView<::bt::hci::CommandHeader>& command,
+                                              std::deque<BufferView>& events) {
   bool failed = false;
   auto event_cb = [&events, &failed](const ::bt::hci::EventPacket& evt_packet) {
     auto expected = events.front();
     if (evt_packet.view().size() != expected.size()) {
       std::cerr << "IntelFirmwareLoader: event size mismatch! "
-                << "(expected: " << expected.size()
-                << ", got: " << evt_packet.view().size() << ")" << std::endl;
+                << "(expected: " << expected.size() << ", got: " << evt_packet.view().size() << ")"
+                << std::endl;
       failed = true;
       return;
     }
-    if (memcmp(evt_packet.view().data().data(), expected.data(),
-               expected.size()) != 0) {
+    if (memcmp(evt_packet.view().data().data(), expected.data(), expected.size()) != 0) {
       std::cerr << "IntelFirmwareLoader: event data mismatch! "
                 << "(expected: " << HexDump(expected)
-                << ", got: " << HexDump(evt_packet.view().data()) << ")"
-                << std::endl;
+                << ", got: " << HexDump(evt_packet.view().data()) << ")" << std::endl;
       failed = true;
       return;
     }
@@ -333,8 +317,7 @@ bool IntelFirmwareLoader::RunCommandAndExpect(
 
     // The expected event was not received in this iteration of the loop. Check
     // to see if this was due to a timeout.
-    zx_status_t status =
-        timeout.wait_one(ZX_TIMER_SIGNALED, zx::time(), nullptr);
+    zx_status_t status = timeout.wait_one(ZX_TIMER_SIGNALED, zx::time(), nullptr);
     if (status == ZX_OK) {
       std::cerr << "Timed out while waiting for event" << std::endl;
       return false;

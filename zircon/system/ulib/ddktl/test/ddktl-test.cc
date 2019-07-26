@@ -23,73 +23,72 @@ extern test_case_element* test_case_ddktl_ethernet_device;
 namespace {
 
 void ddktl_test_output_func(const char* line, int len, void* arg) {
-    zx_handle_t h = *static_cast<zx_handle_t*>(arg);
-    zx::unowned_socket s(h);
-    // len is not actually the number of bytes to output
-    s->write(0u, line, strlen(line), nullptr);
+  zx_handle_t h = *static_cast<zx_handle_t*>(arg);
+  zx::unowned_socket s(h);
+  // len is not actually the number of bytes to output
+  s->write(0u, line, strlen(line), nullptr);
 }
 
 static void inline update_test_report(bool success, test_report_t* report) {
-    report->n_tests++;
-    if (success) {
-        report->n_success++;
-    } else {
-        report->n_failed++;
-    }
+  report->n_tests++;
+  if (success) {
+    report->n_success++;
+  } else {
+    report->n_failed++;
+  }
 }
 
 zx_status_t ddktl_test_func(void* cookie, test_report_t* report) {
-    auto dev = static_cast<zx_device_t*>(cookie);
+  auto dev = static_cast<zx_device_t*>(cookie);
 
-    test_protocol_t proto;
-    auto status =
-        device_get_protocol(dev, ZX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
-    if (status != ZX_OK) {
-        return status;
-    }
+  test_protocol_t proto;
+  auto status = device_get_protocol(dev, ZX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    zx_handle_t output;
-    proto.ops->get_output_socket(proto.ctx, &output);
-    if (output != ZX_HANDLE_INVALID) {
-        unittest_set_output_function(ddktl_test_output_func, &output);
-    }
+  zx_handle_t output;
+  proto.ops->get_output_socket(proto.ctx, &output);
+  if (output != ZX_HANDLE_INVALID) {
+    unittest_set_output_function(ddktl_test_output_func, &output);
+  }
 
-    memset(report, 0, sizeof(*report));
-    update_test_report(unittest_run_one_test(test_case_ddktl_device, TEST_ALL), report);
-    update_test_report(unittest_run_one_test(test_case_ddktl_ethernet_device, TEST_ALL), report);
-    unittest_restore_output_function();
-    zx_handle_close(output);
-    return report->n_failed == 0 ? ZX_OK : ZX_ERR_INTERNAL;
+  memset(report, 0, sizeof(*report));
+  update_test_report(unittest_run_one_test(test_case_ddktl_device, TEST_ALL), report);
+  update_test_report(unittest_run_one_test(test_case_ddktl_ethernet_device, TEST_ALL), report);
+  unittest_restore_output_function();
+  zx_handle_close(output);
+  return report->n_failed == 0 ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
 class ChildDevice;
 using ChildDeviceType = ddk::Device<ChildDevice, ddk::Unbindable>;
 
 class ChildDevice : public ChildDeviceType {
-public:
-    ChildDevice(zx_device_t* parent) : ChildDeviceType(parent) {}
-    void DdkUnbind() { DdkRemove(); }
-    void DdkRelease() { delete this; }
+ public:
+  ChildDevice(zx_device_t* parent) : ChildDeviceType(parent) {}
+  void DdkUnbind() { DdkRemove(); }
+  void DdkRelease() { delete this; }
 };
 
-} // namespace
+}  // namespace
 
 extern "C" zx_status_t ddktl_test_bind(void* ctx, zx_device_t* parent) {
-    auto device = std::make_unique<ChildDevice>(parent);
-    zx_status_t status = device->DdkAdd("child", DEVICE_ADD_NON_BINDABLE);
-    if (status != ZX_OK) {
-        return status;
-    }
-    // devmgr now owns this
-    __UNUSED auto ptr = device.release();
+  auto device = std::make_unique<ChildDevice>(parent);
+  zx_status_t status = device->DdkAdd("child", DEVICE_ADD_NON_BINDABLE);
+  if (status != ZX_OK) {
+    return status;
+  }
+  // devmgr now owns this
+  __UNUSED auto ptr = device.release();
 
-    test_protocol_t proto;
-    status = device_get_protocol(parent, ZX_PROTOCOL_TEST, &proto);
-    if (status != ZX_OK) {
-        return status;
-    }
+  test_protocol_t proto;
+  status = device_get_protocol(parent, ZX_PROTOCOL_TEST, &proto);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    const test_func_t test = {ddktl_test_func, parent};
-    proto.ops->set_test_func(proto.ctx, &test);
-    return ZX_OK;
+  const test_func_t test = {ddktl_test_func, parent};
+  proto.ops->set_test_func(proto.ctx, &test);
+  return ZX_OK;
 }

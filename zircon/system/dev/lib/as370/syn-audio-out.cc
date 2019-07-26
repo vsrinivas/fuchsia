@@ -13,7 +13,7 @@
 namespace {
 constexpr uint64_t kPortKeyIrqMsg = 0x00;
 constexpr uint64_t kPortShutdown = 0x01;
-}
+}  // namespace
 
 std::unique_ptr<SynAudioOutDevice> SynAudioOutDevice::Create(ddk::MmioBuffer mmio_global,
                                                              ddk::MmioBuffer mmio_dhub,

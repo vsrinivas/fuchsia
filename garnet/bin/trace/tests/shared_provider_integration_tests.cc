@@ -33,14 +33,12 @@ TEST(SharedProvider, IntegrationTest) {
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
   zx::process child;
-  std::vector<std::string> argv{
-      kTracePath, "record", kCategoriesArg,
-      std::string("--output-file=") + kOutputFile, kAppUrl};
+  std::vector<std::string> argv{kTracePath, "record", kCategoriesArg,
+                                std::string("--output-file=") + kOutputFile, kAppUrl};
   ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
   int return_code;
-  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code),
-            ZX_OK);
+  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);
   EXPECT_EQ(return_code, 0);
 
   size_t num_events;

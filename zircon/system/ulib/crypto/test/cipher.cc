@@ -19,311 +19,310 @@ namespace testing {
 namespace {
 
 // See utils.h; the following macros allow reusing tests for each of the supported Ciphers.
-#define EACH_PARAM(OP, Test)                                                                       \
-    OP(Test, Cipher, AES256_XTS)
+#define EACH_PARAM(OP, Test) OP(Test, Cipher, AES256_XTS)
 
 bool TestGetLengths_Uninitialized(void) {
-    BEGIN_TEST;
-    size_t len;
-    EXPECT_ZX(Cipher::GetKeyLen(Cipher::kUninitialized, &len), ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(Cipher::GetIVLen(Cipher::kUninitialized, &len), ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(Cipher::GetIVLen(Cipher::kUninitialized, &len), ZX_ERR_INVALID_ARGS);
-    END_TEST;
+  BEGIN_TEST;
+  size_t len;
+  EXPECT_ZX(Cipher::GetKeyLen(Cipher::kUninitialized, &len), ZX_ERR_INVALID_ARGS);
+  EXPECT_ZX(Cipher::GetIVLen(Cipher::kUninitialized, &len), ZX_ERR_INVALID_ARGS);
+  EXPECT_ZX(Cipher::GetIVLen(Cipher::kUninitialized, &len), ZX_ERR_INVALID_ARGS);
+  END_TEST;
 }
 
 bool TestGetLengths_AES256_XTS(void) {
-    BEGIN_TEST;
-    size_t key_len;
-    EXPECT_ZX(Cipher::GetKeyLen(Cipher::kAES256_XTS, nullptr), ZX_ERR_INVALID_ARGS);
-    EXPECT_OK(Cipher::GetKeyLen(Cipher::kAES256_XTS, &key_len));
-    EXPECT_EQ(key_len, 64U);
+  BEGIN_TEST;
+  size_t key_len;
+  EXPECT_ZX(Cipher::GetKeyLen(Cipher::kAES256_XTS, nullptr), ZX_ERR_INVALID_ARGS);
+  EXPECT_OK(Cipher::GetKeyLen(Cipher::kAES256_XTS, &key_len));
+  EXPECT_EQ(key_len, 64U);
 
-    size_t iv_len;
-    EXPECT_ZX(Cipher::GetIVLen(Cipher::kAES256_XTS, nullptr), ZX_ERR_INVALID_ARGS);
-    EXPECT_OK(Cipher::GetIVLen(Cipher::kAES256_XTS, &iv_len));
-    EXPECT_EQ(iv_len, 16U);
+  size_t iv_len;
+  EXPECT_ZX(Cipher::GetIVLen(Cipher::kAES256_XTS, nullptr), ZX_ERR_INVALID_ARGS);
+  EXPECT_OK(Cipher::GetIVLen(Cipher::kAES256_XTS, &iv_len));
+  EXPECT_EQ(iv_len, 16U);
 
-    size_t block_size;
-    EXPECT_ZX(Cipher::GetIVLen(Cipher::kAES256_XTS, nullptr), ZX_ERR_INVALID_ARGS);
-    EXPECT_OK(Cipher::GetIVLen(Cipher::kAES256_XTS, &block_size));
-    EXPECT_EQ(block_size, 16U);
-    END_TEST;
+  size_t block_size;
+  EXPECT_ZX(Cipher::GetIVLen(Cipher::kAES256_XTS, nullptr), ZX_ERR_INVALID_ARGS);
+  EXPECT_OK(Cipher::GetIVLen(Cipher::kAES256_XTS, &block_size));
+  EXPECT_EQ(block_size, 16U);
+  END_TEST;
 }
 
 bool TestInitEncrypt_Uninitialized(void) {
-    BEGIN_TEST;
-    Cipher cipher;
-    Secret key;
-    Bytes iv;
-    EXPECT_ZX(cipher.InitEncrypt(Cipher::kUninitialized, key, iv), ZX_ERR_INVALID_ARGS);
-    END_TEST;
+  BEGIN_TEST;
+  Cipher cipher;
+  Secret key;
+  Bytes iv;
+  EXPECT_ZX(cipher.InitEncrypt(Cipher::kUninitialized, key, iv), ZX_ERR_INVALID_ARGS);
+  END_TEST;
 }
 
 bool TestInitEncrypt(Cipher::Algorithm cipher) {
-    BEGIN_TEST;
-    Cipher encrypt;
-    Secret key;
-    Bytes iv;
-    ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
+  BEGIN_TEST;
+  Cipher encrypt;
+  Secret key;
+  Bytes iv;
+  ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
 
-    // Bad key
-    Secret bad_key;
-    ASSERT_OK(bad_key.Generate(key.len() - 1));
-    EXPECT_ZX(encrypt.InitEncrypt(cipher, bad_key, iv), ZX_ERR_INVALID_ARGS);
+  // Bad key
+  Secret bad_key;
+  ASSERT_OK(bad_key.Generate(key.len() - 1));
+  EXPECT_ZX(encrypt.InitEncrypt(cipher, bad_key, iv), ZX_ERR_INVALID_ARGS);
 
-    // Bad IV
-    Bytes bad_iv;
-    ASSERT_OK(bad_iv.Copy(iv.get(), iv.len() - 1));
-    EXPECT_ZX(encrypt.InitEncrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
+  // Bad IV
+  Bytes bad_iv;
+  ASSERT_OK(bad_iv.Copy(iv.get(), iv.len() - 1));
+  EXPECT_ZX(encrypt.InitEncrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
 
-    // Bad alignment
-    EXPECT_ZX(encrypt.InitEncrypt(cipher, key, iv, PAGE_SIZE - 1), ZX_ERR_INVALID_ARGS);
+  // Bad alignment
+  EXPECT_ZX(encrypt.InitEncrypt(cipher, key, iv, PAGE_SIZE - 1), ZX_ERR_INVALID_ARGS);
 
-    // Valid with and without alignment
-    EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv));
-    EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv, PAGE_SIZE));
+  // Valid with and without alignment
+  EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv));
+  EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv, PAGE_SIZE));
 
-    END_TEST;
+  END_TEST;
 }
 DEFINE_EACH(TestInitEncrypt)
 
 bool TestInitDecrypt_Uninitialized(void) {
-    BEGIN_TEST;
-    Cipher decrypt;
-    Secret key;
-    Bytes iv;
-    EXPECT_ZX(decrypt.InitDecrypt(Cipher::kUninitialized, key, iv), ZX_ERR_INVALID_ARGS);
-    END_TEST;
+  BEGIN_TEST;
+  Cipher decrypt;
+  Secret key;
+  Bytes iv;
+  EXPECT_ZX(decrypt.InitDecrypt(Cipher::kUninitialized, key, iv), ZX_ERR_INVALID_ARGS);
+  END_TEST;
 }
 
 bool TestInitDecrypt(Cipher::Algorithm cipher) {
-    BEGIN_TEST;
-    Cipher decrypt;
-    Secret key;
-    Bytes iv;
-    ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
+  BEGIN_TEST;
+  Cipher decrypt;
+  Secret key;
+  Bytes iv;
+  ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
 
-    // Bad key
-    Secret bad_key;
-    ASSERT_OK(bad_key.Generate(key.len() - 1));
-    EXPECT_ZX(decrypt.InitDecrypt(cipher, bad_key, iv), ZX_ERR_INVALID_ARGS);
+  // Bad key
+  Secret bad_key;
+  ASSERT_OK(bad_key.Generate(key.len() - 1));
+  EXPECT_ZX(decrypt.InitDecrypt(cipher, bad_key, iv), ZX_ERR_INVALID_ARGS);
 
-    // Bad IV
-    Bytes bad_iv;
-    ASSERT_OK(bad_iv.Copy(iv.get(), iv.len() - 1));
-    EXPECT_ZX(decrypt.InitDecrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
+  // Bad IV
+  Bytes bad_iv;
+  ASSERT_OK(bad_iv.Copy(iv.get(), iv.len() - 1));
+  EXPECT_ZX(decrypt.InitDecrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
 
-    // Bad alignment
-    EXPECT_ZX(decrypt.InitDecrypt(cipher, key, iv, PAGE_SIZE - 1), ZX_ERR_INVALID_ARGS);
+  // Bad alignment
+  EXPECT_ZX(decrypt.InitDecrypt(cipher, key, iv, PAGE_SIZE - 1), ZX_ERR_INVALID_ARGS);
 
-    // Valid with and without tweak
-    EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv));
-    EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv, PAGE_SIZE));
+  // Valid with and without tweak
+  EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv));
+  EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv, PAGE_SIZE));
 
-    END_TEST;
+  END_TEST;
 }
 DEFINE_EACH(TestInitDecrypt)
 
 bool TestEncryptStream(Cipher::Algorithm cipher) {
-    BEGIN_TEST;
-    size_t len = PAGE_SIZE;
-    Secret key;
-    Bytes iv, ptext;
-    ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.Randomize(len));
-    uint8_t ctext[len];
+  BEGIN_TEST;
+  size_t len = PAGE_SIZE;
+  Secret key;
+  Bytes iv, ptext;
+  ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
+  ASSERT_OK(ptext.Randomize(len));
+  uint8_t ctext[len];
 
-    // Not initialized
-    Cipher encrypt;
-    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
-    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv));
+  // Not initialized
+  Cipher encrypt;
+  EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
+  ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv));
 
-    // Zero length
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), 0, ctext));
+  // Zero length
+  EXPECT_OK(encrypt.Encrypt(ptext.get(), 0, ctext));
 
-    // Bad texts
-    EXPECT_ZX(encrypt.Encrypt(nullptr, len, ctext), ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, nullptr), ZX_ERR_INVALID_ARGS);
+  // Bad texts
+  EXPECT_ZX(encrypt.Encrypt(nullptr, len, ctext), ZX_ERR_INVALID_ARGS);
+  EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, nullptr), ZX_ERR_INVALID_ARGS);
 
-    // Wrong mode
-    EXPECT_ZX(encrypt.Decrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
+  // Wrong mode
+  EXPECT_ZX(encrypt.Decrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
 
-    // Valid
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
+  // Valid
+  EXPECT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
 
-    // Reset
-    encrypt.Reset();
-    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
+  // Reset
+  encrypt.Reset();
+  EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
 
-    END_TEST;
+  END_TEST;
 }
 DEFINE_EACH(TestEncryptStream)
 
 bool TestEncryptRandomAccess(Cipher::Algorithm cipher) {
-    BEGIN_TEST;
-    size_t len = PAGE_SIZE;
-    Secret key;
-    Bytes iv, ptext;
-    ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.Randomize(len));
-    uint8_t ctext[len];
+  BEGIN_TEST;
+  size_t len = PAGE_SIZE;
+  Secret key;
+  Bytes iv, ptext;
+  ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
+  ASSERT_OK(ptext.Randomize(len));
+  uint8_t ctext[len];
 
-    // Not initialized
-    Cipher encrypt;
-    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
-    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv, len));
+  // Not initialized
+  Cipher encrypt;
+  EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
+  ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv, len));
 
-    // Zero length
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), 0, 0, ctext));
+  // Zero length
+  EXPECT_OK(encrypt.Encrypt(ptext.get(), 0, 0, ctext));
 
-    // Bad texts
-    EXPECT_ZX(encrypt.Encrypt(nullptr, 0, len, ctext), ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(encrypt.Encrypt(ptext.get(), 0, len, nullptr), ZX_ERR_INVALID_ARGS);
+  // Bad texts
+  EXPECT_ZX(encrypt.Encrypt(nullptr, 0, len, ctext), ZX_ERR_INVALID_ARGS);
+  EXPECT_ZX(encrypt.Encrypt(ptext.get(), 0, len, nullptr), ZX_ERR_INVALID_ARGS);
 
-    // Wrong mode
-    EXPECT_ZX(encrypt.Decrypt(ptext.get(), 0, len, ctext), ZX_ERR_BAD_STATE);
+  // Wrong mode
+  EXPECT_ZX(encrypt.Decrypt(ptext.get(), 0, len, ctext), ZX_ERR_BAD_STATE);
 
-    // Bad offset
-    EXPECT_ZX(encrypt.Encrypt(ptext.get(), 1, len, ctext), ZX_ERR_INVALID_ARGS);
+  // Bad offset
+  EXPECT_ZX(encrypt.Encrypt(ptext.get(), 1, len, ctext), ZX_ERR_INVALID_ARGS);
 
-    // Valid
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), len, len, ctext));
+  // Valid
+  EXPECT_OK(encrypt.Encrypt(ptext.get(), len, len, ctext));
 
-    // Reset
-    encrypt.Reset();
-    EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
+  // Reset
+  encrypt.Reset();
+  EXPECT_ZX(encrypt.Encrypt(ptext.get(), len, ctext), ZX_ERR_BAD_STATE);
 
-    END_TEST;
+  END_TEST;
 }
 DEFINE_EACH(TestEncryptRandomAccess)
 
 bool TestDecryptStream(Cipher::Algorithm cipher) {
-    BEGIN_TEST;
-    size_t len = PAGE_SIZE;
-    Secret key;
-    Bytes iv, ptext;
-    ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.Randomize(len));
-    uint8_t ctext[len];
-    uint8_t result[len];
-    Cipher encrypt;
-    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv));
-    ASSERT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
+  BEGIN_TEST;
+  size_t len = PAGE_SIZE;
+  Secret key;
+  Bytes iv, ptext;
+  ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
+  ASSERT_OK(ptext.Randomize(len));
+  uint8_t ctext[len];
+  uint8_t result[len];
+  Cipher encrypt;
+  ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv));
+  ASSERT_OK(encrypt.Encrypt(ptext.get(), len, ctext));
 
-    // Not initialized
-    Cipher decrypt;
-    EXPECT_ZX(decrypt.Decrypt(ctext, len, result), ZX_ERR_BAD_STATE);
-    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv));
+  // Not initialized
+  Cipher decrypt;
+  EXPECT_ZX(decrypt.Decrypt(ctext, len, result), ZX_ERR_BAD_STATE);
+  ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv));
 
-    // Zero length
-    EXPECT_OK(decrypt.Decrypt(ctext, 0, result));
+  // Zero length
+  EXPECT_OK(decrypt.Decrypt(ctext, 0, result));
 
-    // Bad texts
-    EXPECT_ZX(decrypt.Decrypt(nullptr, len, result), ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(decrypt.Decrypt(ctext, len, nullptr), ZX_ERR_INVALID_ARGS);
+  // Bad texts
+  EXPECT_ZX(decrypt.Decrypt(nullptr, len, result), ZX_ERR_INVALID_ARGS);
+  EXPECT_ZX(decrypt.Decrypt(ctext, len, nullptr), ZX_ERR_INVALID_ARGS);
 
-    // Wrong mode
-    EXPECT_ZX(decrypt.Encrypt(ctext, len, result), ZX_ERR_BAD_STATE);
+  // Wrong mode
+  EXPECT_ZX(decrypt.Encrypt(ctext, len, result), ZX_ERR_BAD_STATE);
 
-    // Valid
-    EXPECT_OK(decrypt.Decrypt(ctext, len, result));
-    EXPECT_EQ(memcmp(ptext.get(), result, len), 0);
+  // Valid
+  EXPECT_OK(decrypt.Decrypt(ctext, len, result));
+  EXPECT_EQ(memcmp(ptext.get(), result, len), 0);
 
-    // Mismatched key, iv
-    Secret bad_key;
-    Bytes bad_iv;
-    ASSERT_OK(GenerateKeyMaterial(cipher, &bad_key, &bad_iv));
+  // Mismatched key, iv
+  Secret bad_key;
+  Bytes bad_iv;
+  ASSERT_OK(GenerateKeyMaterial(cipher, &bad_key, &bad_iv));
 
-    ASSERT_OK(decrypt.InitDecrypt(cipher, bad_key, iv));
-    EXPECT_OK(decrypt.Decrypt(ctext, len, result));
-    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+  ASSERT_OK(decrypt.InitDecrypt(cipher, bad_key, iv));
+  EXPECT_OK(decrypt.Decrypt(ctext, len, result));
+  EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
-    ASSERT_OK(decrypt.InitDecrypt(cipher, key, bad_iv));
-    EXPECT_OK(decrypt.Decrypt(ctext, len, result));
-    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+  ASSERT_OK(decrypt.InitDecrypt(cipher, key, bad_iv));
+  EXPECT_OK(decrypt.Decrypt(ctext, len, result));
+  EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
-    // Bad stream order
-    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv));
-    EXPECT_OK(decrypt.Decrypt(ctext, len / 2, result + (len / 2)));
-    EXPECT_OK(decrypt.Decrypt(ctext + (len / 2), len / 2, result));
-    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+  // Bad stream order
+  ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv));
+  EXPECT_OK(decrypt.Decrypt(ctext, len / 2, result + (len / 2)));
+  EXPECT_OK(decrypt.Decrypt(ctext + (len / 2), len / 2, result));
+  EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
-    // Modified
-    ctext[0] ^= 1;
-    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv));
-    EXPECT_OK(decrypt.Decrypt(ctext, len, result));
-    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+  // Modified
+  ctext[0] ^= 1;
+  ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv));
+  EXPECT_OK(decrypt.Decrypt(ctext, len, result));
+  EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
-    // Reset
-    decrypt.Reset();
-    EXPECT_ZX(decrypt.Decrypt(ctext, len, result), ZX_ERR_BAD_STATE);
+  // Reset
+  decrypt.Reset();
+  EXPECT_ZX(decrypt.Decrypt(ctext, len, result), ZX_ERR_BAD_STATE);
 
-    END_TEST;
+  END_TEST;
 }
 DEFINE_EACH(TestDecryptStream)
 
 bool TestDecryptRandomAccess(Cipher::Algorithm cipher) {
-    BEGIN_TEST;
-    size_t len = PAGE_SIZE;
-    Secret key;
-    Bytes iv, ptext;
-    ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.Randomize(len));
-    uint8_t ctext[len];
-    uint8_t result[len];
-    Cipher encrypt;
-    ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv, len / 4));
-    ASSERT_OK(encrypt.Encrypt(ptext.get(), len, len, ctext));
+  BEGIN_TEST;
+  size_t len = PAGE_SIZE;
+  Secret key;
+  Bytes iv, ptext;
+  ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
+  ASSERT_OK(ptext.Randomize(len));
+  uint8_t ctext[len];
+  uint8_t result[len];
+  Cipher encrypt;
+  ASSERT_OK(encrypt.InitEncrypt(cipher, key, iv, len / 4));
+  ASSERT_OK(encrypt.Encrypt(ptext.get(), len, len, ctext));
 
-    // Not initialized
-    Cipher decrypt;
-    EXPECT_ZX(decrypt.Decrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
-    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv, len / 4));
+  // Not initialized
+  Cipher decrypt;
+  EXPECT_ZX(decrypt.Decrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
+  ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv, len / 4));
 
-    // Zero length
-    EXPECT_OK(decrypt.Decrypt(ctext, 0, 0, result));
+  // Zero length
+  EXPECT_OK(decrypt.Decrypt(ctext, 0, 0, result));
 
-    // Bad texts
-    EXPECT_ZX(decrypt.Decrypt(nullptr, 0, len, result), ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(decrypt.Decrypt(ctext, 0, len, nullptr), ZX_ERR_INVALID_ARGS);
+  // Bad texts
+  EXPECT_ZX(decrypt.Decrypt(nullptr, 0, len, result), ZX_ERR_INVALID_ARGS);
+  EXPECT_ZX(decrypt.Decrypt(ctext, 0, len, nullptr), ZX_ERR_INVALID_ARGS);
 
-    // Wrong mode
-    EXPECT_ZX(decrypt.Encrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
+  // Wrong mode
+  EXPECT_ZX(decrypt.Encrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
 
-    // Bad offset
-    EXPECT_ZX(decrypt.Decrypt(ctext, 1, len, result), ZX_ERR_INVALID_ARGS);
+  // Bad offset
+  EXPECT_ZX(decrypt.Decrypt(ctext, 1, len, result), ZX_ERR_INVALID_ARGS);
 
-    // Valid
-    EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
-    EXPECT_EQ(memcmp(ptext.get(), result, len), 0);
+  // Valid
+  EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
+  EXPECT_EQ(memcmp(ptext.get(), result, len), 0);
 
-    // Mismatched key, iv and offset
-    Secret bad_key;
-    Bytes bad_iv;
-    ASSERT_OK(GenerateKeyMaterial(cipher, &bad_key, &bad_iv));
+  // Mismatched key, iv and offset
+  Secret bad_key;
+  Bytes bad_iv;
+  ASSERT_OK(GenerateKeyMaterial(cipher, &bad_key, &bad_iv));
 
-    ASSERT_OK(decrypt.InitDecrypt(cipher, bad_key, iv, len / 4));
-    EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
-    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+  ASSERT_OK(decrypt.InitDecrypt(cipher, bad_key, iv, len / 4));
+  EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
+  EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
-    ASSERT_OK(decrypt.InitDecrypt(cipher, key, bad_iv, len / 4));
-    EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
-    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+  ASSERT_OK(decrypt.InitDecrypt(cipher, key, bad_iv, len / 4));
+  EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
+  EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
-    ASSERT_OK(decrypt.InitDecrypt(cipher, key, bad_iv, len / 4));
-    EXPECT_OK(decrypt.Decrypt(ctext, 0, len, result));
-    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+  ASSERT_OK(decrypt.InitDecrypt(cipher, key, bad_iv, len / 4));
+  EXPECT_OK(decrypt.Decrypt(ctext, 0, len, result));
+  EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
-    // Modified
-    ctext[0] ^= 1;
-    ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv, len / 4));
-    EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
-    EXPECT_NE(memcmp(ptext.get(), result, len), 0);
+  // Modified
+  ctext[0] ^= 1;
+  ASSERT_OK(decrypt.InitDecrypt(cipher, key, iv, len / 4));
+  EXPECT_OK(decrypt.Decrypt(ctext, len, len, result));
+  EXPECT_NE(memcmp(ptext.get(), result, len), 0);
 
-    // Reset
-    decrypt.Reset();
-    EXPECT_ZX(decrypt.Decrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
-    END_TEST;
+  // Reset
+  decrypt.Reset();
+  EXPECT_ZX(decrypt.Decrypt(ctext, 0, len, result), ZX_ERR_BAD_STATE);
+  END_TEST;
 }
 DEFINE_EACH(TestDecryptRandomAccess)
 
@@ -332,26 +331,26 @@ DEFINE_EACH(TestDecryptRandomAccess)
 // as a representative sample.
 bool TestSP800_TC(Cipher::Algorithm cipher, const char* xkey, const char* xiv, const char* xptext,
                   const char* xctext) {
-    BEGIN_TEST;
-    Secret key;
-    Bytes iv, ctext, ptext;
-    ASSERT_OK(HexToSecret(xkey, &key));
-    ASSERT_OK(HexToBytes(xiv, &iv));
-    ASSERT_OK(HexToBytes(xptext, &ptext));
-    ASSERT_OK(HexToBytes(xctext, &ctext));
-    size_t len = ctext.len();
-    uint8_t tmp[len];
+  BEGIN_TEST;
+  Secret key;
+  Bytes iv, ctext, ptext;
+  ASSERT_OK(HexToSecret(xkey, &key));
+  ASSERT_OK(HexToBytes(xiv, &iv));
+  ASSERT_OK(HexToBytes(xptext, &ptext));
+  ASSERT_OK(HexToBytes(xctext, &ctext));
+  size_t len = ctext.len();
+  uint8_t tmp[len];
 
-    Cipher encrypt;
-    EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv));
-    EXPECT_OK(encrypt.Encrypt(ptext.get(), len, tmp));
-    EXPECT_EQ(memcmp(tmp, ctext.get(), len), 0);
+  Cipher encrypt;
+  EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv));
+  EXPECT_OK(encrypt.Encrypt(ptext.get(), len, tmp));
+  EXPECT_EQ(memcmp(tmp, ctext.get(), len), 0);
 
-    Cipher decrypt;
-    EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv));
-    EXPECT_OK(decrypt.Decrypt(ctext.get(), len, tmp));
-    EXPECT_EQ(memcmp(tmp, ptext.get(), len), 0);
-    END_TEST;
+  Cipher decrypt;
+  EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv));
+  EXPECT_OK(decrypt.Decrypt(ctext.get(), len, tmp));
+  EXPECT_EQ(memcmp(tmp, ptext.get(), len), 0);
+  END_TEST;
 }
 
 // clang-format off
@@ -631,6 +630,6 @@ RUN_TEST(TestSP800_38E_TC190)
 RUN_TEST(TestSP800_38E_TC200)
 END_TEST_CASE(CipherTest)
 
-} // namespace
-} // namespace testing
-} // namespace crypto
+}  // namespace
+}  // namespace testing
+}  // namespace crypto

@@ -15,8 +15,7 @@ namespace {
 // until told to stop via a shared variable.
 void DoHandleValid(std::atomic<bool>* stop, zx::event* event) {
   while (!stop->load(std::memory_order_relaxed)) {
-    ZX_ASSERT(event->get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr,
-                              nullptr) == ZX_OK);
+    ZX_ASSERT(event->get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr) == ZX_OK);
   }
 }
 
@@ -44,8 +43,7 @@ bool HandleValid(perftest::RepeatState* state, uint32_t num_threads) {
   }
 
   while (state->KeepRunning()) {
-    ZX_ASSERT(event.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr,
-                             nullptr) == ZX_OK);
+    ZX_ASSERT(event.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr) == ZX_OK);
   }
 
   // Inform our worker threads to stop so we can nicely join them.

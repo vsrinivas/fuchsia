@@ -28,10 +28,8 @@ FidlChannelIO::FidlChannelIO(FidlChannel* parent, ClosedPtr<ZxChannel> channel)
 FidlChannelIO::~FidlChannelIO() { channel_->SetReader(nullptr); }
 
 void FidlChannelIO::Send(
-    const fidl_type_t* type,
-    fuchsia::overnet::protocol::ZirconChannelMessage message,
-    fit::function<zx_status_t(fuchsia::overnet::protocol::ZirconChannelMessage)>
-        callback) {
+    const fidl_type_t* type, fuchsia::overnet::protocol::ZirconChannelMessage message,
+    fit::function<zx_status_t(fuchsia::overnet::protocol::ZirconChannelMessage)> callback) {
   while (next_txid_ == 0 || pending_.count(next_txid_)) {
     next_txid_ = (next_txid_ + 1) & FIDL_ORD_SYSTEM_MASK;
   }
@@ -41,9 +39,8 @@ void FidlChannelIO::Send(
   Send(type, std::move(message));
 }
 
-void FidlChannelIO::Send(
-    const fidl_type_t* type,
-    fuchsia::overnet::protocol::ZirconChannelMessage message) {
+void FidlChannelIO::Send(const fidl_type_t* type,
+                         fuchsia::overnet::protocol::ZirconChannelMessage message) {
   channel_->Message(std::move(message));
 }
 
@@ -52,8 +49,7 @@ ClosedPtr<ZxChannel> FidlChannelIO::TakeChannel() {
   return std::move(channel_);
 }
 
-void FidlChannelIO::Message(
-    fuchsia::overnet::protocol::ZirconChannelMessage message) {
+void FidlChannelIO::Message(fuchsia::overnet::protocol::ZirconChannelMessage message) {
   fidl_message_header_t header;
   if (message.bytes.size() < sizeof(header)) {
     return;

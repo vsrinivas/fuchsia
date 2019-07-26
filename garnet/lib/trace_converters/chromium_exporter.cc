@@ -44,8 +44,8 @@ bool IsEventTypeSupported(trace::EventType type) {
   return false;
 }
 
-const trace::ArgumentValue* GetArgumentValue(
-    const fbl::Vector<trace::Argument>& arguments, const char* name) {
+const trace::ArgumentValue* GetArgumentValue(const fbl::Vector<trace::Argument>& arguments,
+                                             const char* name) {
   for (const auto& arg : arguments) {
     if (arg.name() == name)
       return &arg.value();
@@ -83,14 +83,11 @@ std::string CleanString(fbl::String str) {
 }  // namespace
 
 ChromiumExporter::ChromiumExporter(std::unique_ptr<std::ostream> stream_out)
-    : stream_out_(std::move(stream_out)),
-      wrapper_(*stream_out_),
-      writer_(wrapper_) {
+    : stream_out_(std::move(stream_out)), wrapper_(*stream_out_), writer_(wrapper_) {
   Start();
 }
 
-ChromiumExporter::ChromiumExporter(std::ostream& out)
-    : wrapper_(out), writer_(wrapper_) {
+ChromiumExporter::ChromiumExporter(std::ostream& out) : wrapper_(out), writer_(wrapper_) {
   Start();
 }
 
@@ -191,8 +188,7 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
     case trace::RecordType::kBlob: {
       const auto& blob = record.GetBlob();
       if (blob.type == TRACE_BLOB_TYPE_LAST_BRANCH) {
-        auto lbr =
-            reinterpret_cast<const perfmon::LastBranchRecordBlob*>(blob.blob);
+        auto lbr = reinterpret_cast<const perfmon::LastBranchRecordBlob*>(blob.blob);
         last_branch_records_.push_back(*lbr);
       }
       break;
@@ -254,9 +250,7 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
       writer_.String("C");
       if (event.data.GetCounter().id) {
         writer_.Key("id");
-        writer_.String(
-            fxl::StringPrintf("0x%" PRIx64, event.data.GetCounter().id)
-                .c_str());
+        writer_.String(fxl::StringPrintf("0x%" PRIx64, event.data.GetCounter().id).c_str());
       }
       break;
     case trace::EventType::kDurationBegin:
@@ -271,9 +265,7 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
       writer_.Key("ph");
       writer_.String("X");
       writer_.Key("dur");
-      writer_.Double(
-          (event.data.GetDurationComplete().end_time - event.timestamp) *
-          tick_scale_);
+      writer_.Double((event.data.GetDurationComplete().end_time - event.timestamp) * tick_scale_);
       break;
     case trace::EventType::kAsyncBegin:
       writer_.Key("ph");
@@ -352,14 +344,11 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
           break;
         case trace::ArgumentType::kPointer:
           writer_.Key(CleanString(arg.name()));
-          writer_.String(
-              fxl::StringPrintf("0x%" PRIx64, arg.value().GetPointer())
-                  .c_str());
+          writer_.String(fxl::StringPrintf("0x%" PRIx64, arg.value().GetPointer()).c_str());
           break;
         case trace::ArgumentType::kKoid:
           writer_.Key(CleanString(arg.name()));
-          writer_.String(
-              fxl::StringPrintf("#%" PRIu64, arg.value().GetKoid()).c_str());
+          writer_.String(fxl::StringPrintf("#%" PRIu64, arg.value().GetKoid()).c_str());
           break;
         default:
           break;
@@ -371,8 +360,7 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
   writer_.EndObject();
 }
 
-void ChromiumExporter::ExportKernelObject(
-    const trace::Record::KernelObject& kernel_object) {
+void ChromiumExporter::ExportKernelObject(const trace::Record::KernelObject& kernel_object) {
   // The same kernel objects may appear repeatedly within the trace as
   // they are logged by multiple trace providers.  Stash the best quality
   // information to be output at the end of the trace.  In particular, note
@@ -397,8 +385,7 @@ void ChromiumExporter::ExportKernelObject(
       auto process_it = threads_.find(process_koid);
       if (process_it == threads_.end()) {
         process_it = threads_
-                         .emplace(std::piecewise_construct,
-                                  std::forward_as_tuple(process_koid),
+                         .emplace(std::piecewise_construct, std::forward_as_tuple(process_koid),
                                   std::forward_as_tuple())
                          .first;
       }
@@ -415,8 +402,7 @@ void ChromiumExporter::ExportKernelObject(
   }
 }
 
-void ChromiumExporter::ExportLastBranchBlob(
-    const perfmon::LastBranchRecordBlob& lbr) {
+void ChromiumExporter::ExportLastBranchBlob(const perfmon::LastBranchRecordBlob& lbr) {
   writer_.StartObject();
   writer_.Key("cpu");
   writer_.Uint(lbr.cpu);
@@ -478,8 +464,7 @@ void ChromiumExporter::ExportMetadata(const trace::Record::Metadata& metadata) {
   }
 }
 
-void ChromiumExporter::ExportContextSwitch(
-    const trace::Record::ContextSwitch& context_switch) {
+void ChromiumExporter::ExportContextSwitch(const trace::Record::ContextSwitch& context_switch) {
   writer_.StartObject();
   writer_.Key("ph");
   writer_.String("k");

@@ -6,7 +6,7 @@
 
 #include <vector>
 
-//PMIC REGISTERS
+// PMIC REGISTERS
 
 constexpr uint32_t kPmicVprocCon5 = 0x0216;
 constexpr uint32_t kPmicVprocCon7 = 0x021A;
@@ -68,27 +68,27 @@ constexpr uint32_t kPmicDigLdoCon53 = 0x055E;
 constexpr uint32_t kMt8167NumPowerDomains = 23;
 
 enum Mt8167PowerDomains {
-    kBuckVProc,
-    kBuckVCore,
-    kBuckVSys,
-    kALdoVAud28,
-    kALdoVAud22,
-    kALdoVAdc18,
-    kALdoVXo22,
-    kALdoVCamA,
-    kVSysLdoVm,
-    kVSysLdoVcn18,
-    kVSysLdoVio18,
-    kVSysLdoVCamIo,
-    kVSysLdoVCamD,
-    kVDLdoVcn35,
-    kVDLdoVio28,
-    kVDLdoVemc33,
-    kVDLdoVmc,
-    kVDLdoVmch,
-    kVDLdoVUsb33,
-    kVDLdoVGp1,
-    kVDLdoVM25,
-    kVDLdoVGp2,
-    kVDLdoVCamAf,
+  kBuckVProc,
+  kBuckVCore,
+  kBuckVSys,
+  kALdoVAud28,
+  kALdoVAud22,
+  kALdoVAdc18,
+  kALdoVXo22,
+  kALdoVCamA,
+  kVSysLdoVm,
+  kVSysLdoVcn18,
+  kVSysLdoVio18,
+  kVSysLdoVCamIo,
+  kVSysLdoVCamD,
+  kVDLdoVcn35,
+  kVDLdoVio28,
+  kVDLdoVemc33,
+  kVDLdoVmc,
+  kVDLdoVmch,
+  kVDLdoVUsb33,
+  kVDLdoVGp1,
+  kVDLdoVM25,
+  kVDLdoVGp2,
+  kVDLdoVCamAf,
 };

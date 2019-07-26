@@ -55,13 +55,9 @@ class DeathStatement {
   void Execute();
 
   // Returns the current state of the statement.
-  State state() const {
-    return state_;
-  }
+  State state() const { return state_; }
 
-  const std::string_view error_message() const {
-    return error_message_;
-  }
+  const std::string_view error_message() const { return error_message_; }
 
  private:
   fit::function<void()> statement_;

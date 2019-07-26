@@ -39,13 +39,10 @@ class MeasureArgumentValue {
   // Returns the results of the measurements. The results are represented as a
   // map of measurement ids to lists of argument values of the matching trace
   // events.
-  const std::unordered_map<uint64_t, std::vector<uint64_t>>& results() {
-    return results_;
-  }
+  const std::unordered_map<uint64_t, std::vector<uint64_t>>& results() { return results_; }
 
  private:
-  bool RecordArgumentValue(const trace::Record::Event& event,
-                           const ArgumentValueSpec& spec);
+  bool RecordArgumentValue(const trace::Record::Event& event, const ArgumentValueSpec& spec);
   void AddResult(uint64_t spec_id, uint64_t argument_value);
 
   std::vector<ArgumentValueSpec> specs_;

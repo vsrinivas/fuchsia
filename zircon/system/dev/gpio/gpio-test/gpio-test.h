@@ -17,36 +17,35 @@ class GpioTest;
 using GpioTestType = ddk::Device<GpioTest>;
 
 class GpioTest : public GpioTestType {
-public:
-public:
-    explicit GpioTest(zx_device_t* parent)
-        : GpioTestType(parent) {}
+ public:
+ public:
+  explicit GpioTest(zx_device_t* parent) : GpioTestType(parent) {}
 
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    // Device protocol implementation.
-    void DdkRelease();
+  // Device protocol implementation.
+  void DdkRelease();
 
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(GpioTest);
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(GpioTest);
 
-    // GPIO indices
-    enum {
-        GPIO_LED,
-        GPIO_BUTTON,
-    };
+  // GPIO indices
+  enum {
+    GPIO_LED,
+    GPIO_BUTTON,
+  };
 
-    zx_status_t Init();
-    int OutputThread();
-    int InterruptThread();
+  zx_status_t Init();
+  int OutputThread();
+  int InterruptThread();
 
-    fbl::Array<ddk::GpioProtocolClient> gpios_;
+  fbl::Array<ddk::GpioProtocolClient> gpios_;
 
-    uint32_t gpio_count_;
-    thrd_t output_thread_;
-    thrd_t interrupt_thread_;
-    bool done_;
-    zx::interrupt interrupt_;
+  uint32_t gpio_count_;
+  thrd_t output_thread_;
+  thrd_t interrupt_thread_;
+  bool done_;
+  zx::interrupt interrupt_;
 };
 
-} // namespace gpio_test
+}  // namespace gpio_test

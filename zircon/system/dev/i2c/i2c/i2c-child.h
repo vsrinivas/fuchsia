@@ -18,26 +18,25 @@ namespace i2c {
 class I2cChild;
 using I2cChildType = ddk::Device<I2cChild, ddk::Unbindable>;
 
-class I2cChild : public I2cChildType,
-                 public ddk::I2cProtocol<I2cChild, ddk::base_protocol> {
-public:
-    I2cChild(zx_device_t* parent, ddk::I2cImplProtocolClient i2c, fbl::RefPtr<I2cBus> bus,
-             const i2c_channel_t* channel)
-        : I2cChildType(parent), bus_(bus), address_(channel->address) {}
+class I2cChild : public I2cChildType, public ddk::I2cProtocol<I2cChild, ddk::base_protocol> {
+ public:
+  I2cChild(zx_device_t* parent, ddk::I2cImplProtocolClient i2c, fbl::RefPtr<I2cBus> bus,
+           const i2c_channel_t* channel)
+      : I2cChildType(parent), bus_(bus), address_(channel->address) {}
 
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    void DdkUnbind();
-    void DdkRelease();
+  void DdkUnbind();
+  void DdkRelease();
 
-    void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-                     void* cookie);
-    zx_status_t I2cGetMaxTransferSize(size_t* out_size);
-    zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
+  void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
+                   void* cookie);
+  zx_status_t I2cGetMaxTransferSize(size_t* out_size);
+  zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
 
-private:
-    fbl::RefPtr<I2cBus> bus_;
-    const uint16_t address_;
+ private:
+  fbl::RefPtr<I2cBus> bus_;
+  const uint16_t address_;
 };
 
-} // namespace i2c
+}  // namespace i2c

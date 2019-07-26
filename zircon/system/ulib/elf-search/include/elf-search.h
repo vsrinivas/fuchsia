@@ -15,74 +15,59 @@
 // in fbl.
 template <class T>
 class ArrayRef {
-public:
-    ArrayRef() = default;
-    template <size_t N>
-    ArrayRef(const T (&arr)[N])
-        : ptr_(arr), sz_(N) {}
-    ArrayRef(const fbl::Array<T>& arr)
-        : ptr_(arr.get()), sz_(arr.size()) {}
-    ArrayRef(const T* ptr, size_t sz)
-        : ptr_(ptr), sz_(sz) {}
+ public:
+  ArrayRef() = default;
+  template <size_t N>
+  ArrayRef(const T (&arr)[N]) : ptr_(arr), sz_(N) {}
+  ArrayRef(const fbl::Array<T>& arr) : ptr_(arr.get()), sz_(arr.size()) {}
+  ArrayRef(const T* ptr, size_t sz) : ptr_(ptr), sz_(sz) {}
 
-    bool empty() const {
-        return sz_ == 0;
-    }
+  bool empty() const { return sz_ == 0; }
 
-    const T* get() const {
-        return ptr_;
-    }
+  const T* get() const { return ptr_; }
 
-    const T* begin() const {
-        return ptr_;
-    }
+  const T* begin() const { return ptr_; }
 
-    const T* end() const {
-        return ptr_ + sz_;
-    }
+  const T* end() const { return ptr_ + sz_; }
 
-    size_t size() const {
-        return sz_;
-    }
+  size_t size() const { return sz_; }
 
-    const T& operator[](size_t idx) const {
-        return ptr_[idx];
-    }
+  const T& operator[](size_t idx) const { return ptr_[idx]; }
 
-private:
-    const T* ptr_ = nullptr;
-    size_t sz_ = 0;
+ private:
+  const T* ptr_ = nullptr;
+  size_t sz_ = 0;
 };
 
 template <class T>
 bool operator==(ArrayRef<T> a, ArrayRef<T> b) {
-    if (a.size() != b.size()) {
-        return false;
+  if (a.size() != b.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < a.size(); ++i) {
+    if (a[i] != b[i]) {
+      return false;
     }
-    for (size_t i = 0; i < a.size(); ++i) {
-        if (a[i] != b[i]) {
-            return false;
-        }
-    }
-    return true;
+  }
+  return true;
 }
 
 template <typename T>
 ArrayRef<T> MakeArrayRef(const T* p, size_t sz) {
-    return {p, sz};
+  return {p, sz};
 }
 
 template <typename T, size_t N>
 ArrayRef<T> MakeArrayRef(const T (&arr)[N]) {
-    return {arr};
+  return {arr};
 }
 
 struct ModuleInfo {
-    fbl::StringPiece name;
-    uintptr_t vaddr;
-    ArrayRef<uint8_t> build_id;
-    const Elf64_Ehdr& ehdr;
-    ArrayRef<Elf64_Phdr> phdrs;
+  fbl::StringPiece name;
+  uintptr_t vaddr;
+  ArrayRef<uint8_t> build_id;
+  const Elf64_Ehdr& ehdr;
+  ArrayRef<Elf64_Phdr> phdrs;
 };
 
 #if defined(__aarch64__)

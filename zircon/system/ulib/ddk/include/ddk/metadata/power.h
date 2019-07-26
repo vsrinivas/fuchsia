@@ -6,7 +6,7 @@
 #define DDK_METADATA_POWER_H_
 
 typedef struct {
-    uint32_t index;
+  uint32_t index;
 } power_domain_t;
 
 #endif  // DDK_METADATA_POWER_H_

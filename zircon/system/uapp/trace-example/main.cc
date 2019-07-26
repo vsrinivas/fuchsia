@@ -13,36 +13,36 @@
 #include <trace/event.h>
 
 int main(int argc, char** argv) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    trace::TraceProviderWithFdio provider(loop.dispatcher());
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  trace::TraceProviderWithFdio provider(loop.dispatcher());
 
-    puts("Doing work for 30 seconds...");
+  puts("Doing work for 30 seconds...");
 
-    zx::time start_time = async::Now(loop.dispatcher());
-    zx::time quit_time = start_time + zx::sec(30);
+  zx::time start_time = async::Now(loop.dispatcher());
+  zx::time quit_time = start_time + zx::sec(30);
 
-    int iteration = 0;
-    async::TaskClosure task([&loop, &task, &iteration, quit_time] {
-        TRACE_DURATION("example", "Doing Work!", "iteration", ++iteration);
+  int iteration = 0;
+  async::TaskClosure task([&loop, &task, &iteration, quit_time] {
+    TRACE_DURATION("example", "Doing Work!", "iteration", ++iteration);
 
-        // Simulate some kind of workload.
-        puts("Doing work!");
-        zx::nanosleep(zx::deadline_after(zx::msec(500)));
+    // Simulate some kind of workload.
+    puts("Doing work!");
+    zx::nanosleep(zx::deadline_after(zx::msec(500)));
 
-        // Stop if quitting.
-        zx::time now = async::Now(loop.dispatcher());
-        if (now > quit_time) {
-            loop.Quit();
-            return;
-        }
+    // Stop if quitting.
+    zx::time now = async::Now(loop.dispatcher());
+    if (now > quit_time) {
+      loop.Quit();
+      return;
+    }
 
-        // Schedule more work in a little bit.
-        task.PostForTime(loop.dispatcher(), now + zx::msec(200));
-    });
-    task.PostForTime(loop.dispatcher(), start_time);
+    // Schedule more work in a little bit.
+    task.PostForTime(loop.dispatcher(), now + zx::msec(200));
+  });
+  task.PostForTime(loop.dispatcher(), start_time);
 
-    loop.Run();
+  loop.Run();
 
-    puts("Finished.");
-    return 0;
+  puts("Finished.");
+  return 0;
 }

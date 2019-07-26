@@ -27,11 +27,9 @@ class Util {
  public:
   static std::string GetLabelFromURL(const std::string& url);
 
-  static ExportedDirChannels BindDirectory(
-      fuchsia::sys::LaunchInfo* launch_info);
+  static ExportedDirChannels BindDirectory(fuchsia::sys::LaunchInfo* launch_info);
 
-  static std::string GetArgsString(
-      const ::fidl::VectorPtr<::std::string>& arguments);
+  static std::string GetArgsString(const ::fidl::VectorPtr<::std::string>& arguments);
 
   static zx::channel OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node);
 };

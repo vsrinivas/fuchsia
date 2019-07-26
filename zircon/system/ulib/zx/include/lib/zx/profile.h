@@ -12,28 +12,28 @@
 namespace zx {
 
 class profile final : public object<profile> {
-public:
-    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_PROFILE;
+ public:
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_PROFILE;
 
-    constexpr profile() = default;
+  constexpr profile() = default;
 
-    explicit profile(zx_handle_t value) : object(value) {}
+  explicit profile(zx_handle_t value) : object(value) {}
 
-    explicit profile(handle&& h) : object(h.release()) {}
+  explicit profile(handle&& h) : object(h.release()) {}
 
-    profile(profile&& other) : object(other.release()) {}
+  profile(profile&& other) : object(other.release()) {}
 
-    profile& operator=(profile&& other) {
-        reset(other.release());
-        return *this;
-    }
+  profile& operator=(profile&& other) {
+    reset(other.release());
+    return *this;
+  }
 
-    static zx_status_t create(
-        const job& job, uint32_t options, const zx_profile_info_t* info, profile* result);
+  static zx_status_t create(const job& job, uint32_t options, const zx_profile_info_t* info,
+                            profile* result);
 };
 
 using unowned_profile = unowned<profile>;
 
-} // namespace zx
+}  // namespace zx
 
 #endif  // LIB_ZX_PROFILE_H_

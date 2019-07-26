@@ -37,9 +37,7 @@ class MeasureDuration {
   // Returns the results of the measurements. The results are represented as a
   // map of measurement ids to lists of time deltas representing the durations
   // of the matching trace events.
-  const std::unordered_map<uint64_t, std::vector<uint64_t>>& results() {
-    return results_;
-  }
+  const std::unordered_map<uint64_t, std::vector<uint64_t>>& results() { return results_; }
 
  private:
   // Async and flow event ids are scoped to event names. To match "end" events

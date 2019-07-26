@@ -8,7 +8,7 @@
 #include <limits.h>
 #include <poll.h>
 #include <stdbool.h>
-#include <unistd.h> // for ssize_t
+#include <unistd.h>  // for ssize_t
 
 #include <zircon/types.h>
 #include <zircon/compiler.h>
@@ -36,10 +36,12 @@ zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* pending, zx_time_t d
 // and expected signals (signals_in/signals_out correspond to POLLIN/POLLOUT
 // events respectively). The handle will be closed when the fd is closed, unless
 // shared_handle is true.
-int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_out, bool shared_handle);
+int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_out,
+                   bool shared_handle);
 
 // invoke a raw fdio ioctl
-ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
+ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf,
+                   size_t out_len);
 
 // Creates a pipe. The first argument returns the file descriptor representing
 // the pipe, and the second argument returns the handle of the socket used to

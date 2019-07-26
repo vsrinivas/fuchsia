@@ -27,95 +27,62 @@
 namespace hisi_clock {
 
 constexpr Gate gates[] = {
-    Gate(0x0, 0, RegisterBank::Peri),
-    Gate(0x0, 21, RegisterBank::Peri),
-    Gate(0x0, 30, RegisterBank::Peri),
-    Gate(0x0, 31, RegisterBank::Peri),
-    Gate(0x10, 0, RegisterBank::Peri),
-    Gate(0x10, 1, RegisterBank::Peri),
-    Gate(0x10, 2, RegisterBank::Peri),
-    Gate(0x10, 3, RegisterBank::Peri),
-    Gate(0x10, 4, RegisterBank::Peri),
-    Gate(0x10, 5, RegisterBank::Peri),
-    Gate(0x10, 6, RegisterBank::Peri),
-    Gate(0x10, 7, RegisterBank::Peri),
-    Gate(0x10, 8, RegisterBank::Peri),
-    Gate(0x10, 9, RegisterBank::Peri),
-    Gate(0x10, 10, RegisterBank::Peri),
-    Gate(0x10, 11, RegisterBank::Peri),
-    Gate(0x10, 12, RegisterBank::Peri),
-    Gate(0x10, 13, RegisterBank::Peri),
-    Gate(0x10, 14, RegisterBank::Peri),
-    Gate(0x10, 15, RegisterBank::Peri),
-    Gate(0x10, 16, RegisterBank::Peri),
-    Gate(0x10, 17, RegisterBank::Peri),
-    Gate(0x10, 18, RegisterBank::Peri),
-    Gate(0x10, 19, RegisterBank::Peri),
-    Gate(0x10, 20, RegisterBank::Peri),
-    Gate(0x10, 21, RegisterBank::Peri),
-    Gate(0x10, 30, RegisterBank::Peri),
-    Gate(0x10, 31, RegisterBank::Peri),
-    Gate(0x20, 7, RegisterBank::Peri),
-    Gate(0x20, 9, RegisterBank::Peri),
-    Gate(0x20, 11, RegisterBank::Peri),
-    Gate(0x20, 12, RegisterBank::Peri),
-    Gate(0x20, 14, RegisterBank::Peri),
-    Gate(0x20, 15, RegisterBank::Peri),
-    Gate(0x20, 27, RegisterBank::Peri),
-    Gate(0x30, 1, RegisterBank::Peri),
-    Gate(0x30, 10, RegisterBank::Peri),
-    Gate(0x30, 11, RegisterBank::Peri),
-    Gate(0x30, 12, RegisterBank::Peri),
-    Gate(0x30, 13, RegisterBank::Peri),
-    Gate(0x30, 14, RegisterBank::Peri),
-    Gate(0x30, 15, RegisterBank::Peri),
-    Gate(0x30, 16, RegisterBank::Peri),
-    Gate(0x30, 17, RegisterBank::Peri),
-    Gate(0x30, 28, RegisterBank::Peri),
-    Gate(0x30, 29, RegisterBank::Peri),
-    Gate(0x30, 30, RegisterBank::Peri),
-    Gate(0x30, 31, RegisterBank::Peri),
-    Gate(0x40, 1, RegisterBank::Peri),
-    Gate(0x40, 4, RegisterBank::Peri),
-    Gate(0x40, 17, RegisterBank::Peri),
-    Gate(0x40, 19, RegisterBank::Peri),
-    Gate(0x50, 16, RegisterBank::Peri),
-    Gate(0x50, 17, RegisterBank::Peri),
-    Gate(0x50, 18, RegisterBank::Peri),
-    Gate(0x50, 21, RegisterBank::Peri),
-    Gate(0x50, 28, RegisterBank::Peri),
-    Gate(0x50, 29, RegisterBank::Peri),
-    Gate(0x420, 5, RegisterBank::Peri),
-    Gate(0x420, 7, RegisterBank::Peri),
-    Gate(0x420, 8, RegisterBank::Peri),
-    Gate(0x420, 9, RegisterBank::Peri),
+    Gate(0x0, 0, RegisterBank::Peri),     Gate(0x0, 21, RegisterBank::Peri),
+    Gate(0x0, 30, RegisterBank::Peri),    Gate(0x0, 31, RegisterBank::Peri),
+    Gate(0x10, 0, RegisterBank::Peri),    Gate(0x10, 1, RegisterBank::Peri),
+    Gate(0x10, 2, RegisterBank::Peri),    Gate(0x10, 3, RegisterBank::Peri),
+    Gate(0x10, 4, RegisterBank::Peri),    Gate(0x10, 5, RegisterBank::Peri),
+    Gate(0x10, 6, RegisterBank::Peri),    Gate(0x10, 7, RegisterBank::Peri),
+    Gate(0x10, 8, RegisterBank::Peri),    Gate(0x10, 9, RegisterBank::Peri),
+    Gate(0x10, 10, RegisterBank::Peri),   Gate(0x10, 11, RegisterBank::Peri),
+    Gate(0x10, 12, RegisterBank::Peri),   Gate(0x10, 13, RegisterBank::Peri),
+    Gate(0x10, 14, RegisterBank::Peri),   Gate(0x10, 15, RegisterBank::Peri),
+    Gate(0x10, 16, RegisterBank::Peri),   Gate(0x10, 17, RegisterBank::Peri),
+    Gate(0x10, 18, RegisterBank::Peri),   Gate(0x10, 19, RegisterBank::Peri),
+    Gate(0x10, 20, RegisterBank::Peri),   Gate(0x10, 21, RegisterBank::Peri),
+    Gate(0x10, 30, RegisterBank::Peri),   Gate(0x10, 31, RegisterBank::Peri),
+    Gate(0x20, 7, RegisterBank::Peri),    Gate(0x20, 9, RegisterBank::Peri),
+    Gate(0x20, 11, RegisterBank::Peri),   Gate(0x20, 12, RegisterBank::Peri),
+    Gate(0x20, 14, RegisterBank::Peri),   Gate(0x20, 15, RegisterBank::Peri),
+    Gate(0x20, 27, RegisterBank::Peri),   Gate(0x30, 1, RegisterBank::Peri),
+    Gate(0x30, 10, RegisterBank::Peri),   Gate(0x30, 11, RegisterBank::Peri),
+    Gate(0x30, 12, RegisterBank::Peri),   Gate(0x30, 13, RegisterBank::Peri),
+    Gate(0x30, 14, RegisterBank::Peri),   Gate(0x30, 15, RegisterBank::Peri),
+    Gate(0x30, 16, RegisterBank::Peri),   Gate(0x30, 17, RegisterBank::Peri),
+    Gate(0x30, 28, RegisterBank::Peri),   Gate(0x30, 29, RegisterBank::Peri),
+    Gate(0x30, 30, RegisterBank::Peri),   Gate(0x30, 31, RegisterBank::Peri),
+    Gate(0x40, 1, RegisterBank::Peri),    Gate(0x40, 4, RegisterBank::Peri),
+    Gate(0x40, 17, RegisterBank::Peri),   Gate(0x40, 19, RegisterBank::Peri),
+    Gate(0x50, 16, RegisterBank::Peri),   Gate(0x50, 17, RegisterBank::Peri),
+    Gate(0x50, 18, RegisterBank::Peri),   Gate(0x50, 21, RegisterBank::Peri),
+    Gate(0x50, 28, RegisterBank::Peri),   Gate(0x50, 29, RegisterBank::Peri),
+    Gate(0x420, 5, RegisterBank::Peri),   Gate(0x420, 7, RegisterBank::Peri),
+    Gate(0x420, 8, RegisterBank::Peri),   Gate(0x420, 9, RegisterBank::Peri),
 
-    Gate(0x258, 7, RegisterBank::Sctrl),
-    Gate(0x260, 11, RegisterBank::Sctrl),
-    Gate(0x260, 12, RegisterBank::Sctrl),
-    Gate(0x260, 13, RegisterBank::Sctrl),
+    Gate(0x258, 7, RegisterBank::Sctrl),  Gate(0x260, 11, RegisterBank::Sctrl),
+    Gate(0x260, 12, RegisterBank::Sctrl), Gate(0x260, 13, RegisterBank::Sctrl),
     Gate(0x268, 11, RegisterBank::Sctrl),
 };
 
 static_assert(HI3660_SEP_CLK_GATE_COUNT == countof(gates),
               "hi3660_clk_gates[] and hisi_3660_sep_gate_clk_idx count mismatch");
 
-} // namespace hisi_clock
+}  // namespace hisi_clock
 
 static const char hi3660_clk_name[] = "hi3660-clk";
 
 static zx_status_t hi3660_clk_bind(void* ctx, zx_device_t* parent) {
-    return hisi_clock::HisiClock::Create(hi3660_clk_name, hisi_clock::gates,
-                                         countof(hisi_clock::gates), parent);
+  return hisi_clock::HisiClock::Create(hi3660_clk_name, hisi_clock::gates,
+                                       countof(hisi_clock::gates), parent);
 }
 
 static const zx_driver_ops_t hi3660_clk_driver_ops = [] {
-    zx_driver_ops_t result = {};
+  zx_driver_ops_t result = {};
 
-    result.version = DRIVER_OPS_VERSION;
-    result.bind = hi3660_clk_bind;
+  result.version = DRIVER_OPS_VERSION;
+  result.bind = hi3660_clk_bind;
 
-    return result;
+  return result;
 }();
 
 // clang-format off

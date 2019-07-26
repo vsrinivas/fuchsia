@@ -27,34 +27,34 @@ namespace internal {
 // This class is thread-compatible.
 template <uint32_t num_buckets>
 class BaseHistogram {
-public:
-    using Count = uint64_t;
-    using Bucket = uint32_t;
+ public:
+  using Count = uint64_t;
+  using Bucket = uint32_t;
 
-    BaseHistogram() = default;
-    BaseHistogram(const BaseHistogram&) = delete;
-    BaseHistogram(BaseHistogram&&) = delete;
-    BaseHistogram& operator=(const BaseHistogram&) = delete;
-    BaseHistogram& operator=(BaseHistogram&&) = delete;
-    ~BaseHistogram() = default;
+  BaseHistogram() = default;
+  BaseHistogram(const BaseHistogram&) = delete;
+  BaseHistogram(BaseHistogram&&) = delete;
+  BaseHistogram& operator=(const BaseHistogram&) = delete;
+  BaseHistogram& operator=(BaseHistogram&&) = delete;
+  ~BaseHistogram() = default;
 
-    // Returns the number of buckets of this histogram.
-    constexpr uint32_t size() const { return num_buckets; }
+  // Returns the number of buckets of this histogram.
+  constexpr uint32_t size() const { return num_buckets; }
 
-    void IncrementCount(Bucket bucket, Count val = 1) {
-        ZX_DEBUG_ASSERT_MSG(bucket < size(), "IncrementCount bucket(%u) out of range(%u).", bucket,
-                            size());
-        buckets_[bucket].Increment(val);
-    }
+  void IncrementCount(Bucket bucket, Count val = 1) {
+    ZX_DEBUG_ASSERT_MSG(bucket < size(), "IncrementCount bucket(%u) out of range(%u).", bucket,
+                        size());
+    buckets_[bucket].Increment(val);
+  }
 
-    Count GetCount(uint32_t bucket) const {
-        ZX_DEBUG_ASSERT_MSG(bucket < size(), "GetCount bucket out of range.");
-        return buckets_[bucket].Load();
-    }
+  Count GetCount(uint32_t bucket) const {
+    ZX_DEBUG_ASSERT_MSG(bucket < size(), "GetCount bucket out of range.");
+    return buckets_[bucket].Load();
+  }
 
-protected:
-    // Counter for the abs frequency of every histogram bucket.
-    BaseCounter<uint64_t> buckets_[num_buckets];
+ protected:
+  // Counter for the abs frequency of every histogram bucket.
+  BaseCounter<uint64_t> buckets_[num_buckets];
 };
 
 // Free functions to move logic outside the templated class.
@@ -83,40 +83,40 @@ void HistogramUndoFlush(BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_
 // This class is thread-compatible.
 template <uint32_t num_buckets>
 class RemoteHistogram : public BaseHistogram<num_buckets>, public FlushInterface {
-public:
-    RemoteHistogram() = default;
-    RemoteHistogram(const RemoteMetricInfo& metric_info)
-        : BaseHistogram<num_buckets>(), metric_info_(metric_info) {
-        InitBucketBuffer(bucket_buffer_, num_buckets);
-    }
-    RemoteHistogram(const RemoteHistogram&) = delete;
-    RemoteHistogram(RemoteHistogram&&) = delete;
-    RemoteHistogram& operator=(const RemoteHistogram&) = delete;
-    RemoteHistogram& operator=(RemoteHistogram&&) = delete;
-    ~RemoteHistogram() override = default;
+ public:
+  RemoteHistogram() = default;
+  RemoteHistogram(const RemoteMetricInfo& metric_info)
+      : BaseHistogram<num_buckets>(), metric_info_(metric_info) {
+    InitBucketBuffer(bucket_buffer_, num_buckets);
+  }
+  RemoteHistogram(const RemoteHistogram&) = delete;
+  RemoteHistogram(RemoteHistogram&&) = delete;
+  RemoteHistogram& operator=(const RemoteHistogram&) = delete;
+  RemoteHistogram& operator=(RemoteHistogram&&) = delete;
+  ~RemoteHistogram() override = default;
 
-    void Initialize(const MetricOptions& options) {
-        InitLazily(options, bucket_buffer_, num_buckets, &metric_info_);
-    }
+  void Initialize(const MetricOptions& options) {
+    InitLazily(options, bucket_buffer_, num_buckets, &metric_info_);
+  }
 
-    bool Flush(Logger* logger) override {
-        return HistogramFlush(metric_info_, logger, this->buckets_, bucket_buffer_, num_buckets);
-    }
+  bool Flush(Logger* logger) override {
+    return HistogramFlush(metric_info_, logger, this->buckets_, bucket_buffer_, num_buckets);
+  }
 
-    void UndoFlush() override { HistogramUndoFlush(this->buckets_, bucket_buffer_, num_buckets); }
+  void UndoFlush() override { HistogramUndoFlush(this->buckets_, bucket_buffer_, num_buckets); }
 
-    // Returns the metric_id associated with this remote metric.
-    const RemoteMetricInfo& metric_info() const { return metric_info_; }
+  // Returns the metric_id associated with this remote metric.
+  const RemoteMetricInfo& metric_info() const { return metric_info_; }
 
-private:
-    // Buffer for out of line allocation for the data being sent
-    // through fidl. This buffer is rewritten on every flush, and contains
-    // an entry for each bucket.
-    HistogramBucket bucket_buffer_[num_buckets];
+ private:
+  // Buffer for out of line allocation for the data being sent
+  // through fidl. This buffer is rewritten on every flush, and contains
+  // an entry for each bucket.
+  HistogramBucket bucket_buffer_[num_buckets];
 
-    // Metric information such as metric_id, event_code and component.
-    RemoteMetricInfo metric_info_;
+  // Metric information such as metric_id, event_code and component.
+  RemoteMetricInfo metric_info_;
 };
 
-} // namespace internal
-} // namespace cobalt_client
+}  // namespace internal
+}  // namespace cobalt_client

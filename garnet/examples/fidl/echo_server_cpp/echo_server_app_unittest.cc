@@ -47,8 +47,7 @@ class EchoServerAppTest : public gtest::TestLoopFixture {
 TEST_F(EchoServerAppTest, EchoString_HelloWorld) {
   EchoPtr echo_ = echo();
   ::fidl::StringPtr message = "bogus";
-  echo_->EchoString("Hello World!",
-                    [&](::fidl::StringPtr retval) { message = retval; });
+  echo_->EchoString("Hello World!", [&](::fidl::StringPtr retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("Hello World!", message);
 }

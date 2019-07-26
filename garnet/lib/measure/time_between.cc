@@ -19,8 +19,7 @@ bool IsOfSupportedType(const trace::Record::Event& event) {
          event.type() == trace::EventType::kDurationComplete;
 }
 
-bool EventMatchesSpecWithAnchor(const trace::Record::Event& event,
-                                EventSpec spec, Anchor anchor) {
+bool EventMatchesSpecWithAnchor(const trace::Record::Event& event, EventSpec spec, Anchor anchor) {
   if (!EventMatchesSpec(event, spec)) {
     return false;
   }
@@ -56,8 +55,7 @@ bool MeasureTimeBetween::Process(const trace::Record::Event& event) {
   for (const TimeBetweenSpec& spec : specs_) {
     uint64_t key = spec.common.id;
 
-    if (EventMatchesSpecWithAnchor(event, spec.second_event,
-                                   spec.second_anchor) &&
+    if (EventMatchesSpecWithAnchor(event, spec.second_event, spec.second_anchor) &&
         pending_time_between_.count(key)) {
       if (spec.second_anchor == Anchor::End &&
           event.type() == trace::EventType::kDurationComplete) {
@@ -70,10 +68,8 @@ bool MeasureTimeBetween::Process(const trace::Record::Event& event) {
       pending_time_between_.erase(key);
     }
 
-    if (EventMatchesSpecWithAnchor(event, spec.first_event,
-                                   spec.first_anchor)) {
-      if (spec.first_anchor == Anchor::End &&
-          event.type() == trace::EventType::kDurationComplete) {
+    if (EventMatchesSpecWithAnchor(event, spec.first_event, spec.first_anchor)) {
+      if (spec.first_anchor == Anchor::End && event.type() == trace::EventType::kDurationComplete) {
         pending_time_between_[key] = event.data.GetDurationComplete().end_time;
       } else {
         pending_time_between_[key] = event.timestamp;
@@ -83,8 +79,7 @@ bool MeasureTimeBetween::Process(const trace::Record::Event& event) {
   return true;
 }
 
-void MeasureTimeBetween::AddResult(uint64_t spec_id, trace_ticks_t from,
-                                   trace_ticks_t to) {
+void MeasureTimeBetween::AddResult(uint64_t spec_id, trace_ticks_t from, trace_ticks_t to) {
   results_[spec_id].push_back(to - from);
 }
 

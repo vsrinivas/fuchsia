@@ -14,11 +14,9 @@
 namespace perfmon {
 namespace internal {
 
-void EventRegistry::RegisterEvents(const char* model_name,
-                                   const char* group_name,
+void EventRegistry::RegisterEvents(const char* model_name, const char* group_name,
                                    const EventDetails* events, size_t count) {
-  FXL_VLOG(1) << "Registering " << model_name << " " << group_name
-              << " events";
+  FXL_VLOG(1) << "Registering " << model_name << " " << group_name << " events";
 
   ModelEvents& model_events = (*this)[model_name];
   ModelEventManager::EventTable* table = nullptr;

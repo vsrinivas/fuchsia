@@ -13,17 +13,15 @@ namespace harvester {
 
 void GatherMemory::Gather() {
   zx_info_kmem_stats_t stats;
-  zx_status_t err = zx_object_get_info(
-      RootResource(), ZX_INFO_KMEM_STATS, &stats, sizeof(stats),
-      /*actual=*/nullptr, /*available=*/nullptr);
+  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_KMEM_STATS, &stats, sizeof(stats),
+                                       /*actual=*/nullptr, /*available=*/nullptr);
   if (err != ZX_OK) {
     FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS error " << zx_status_get_string(err);
     return;
   }
 
-  FXL_VLOG(1) << "free memory total " << stats.free_bytes << ", heap "
-              << stats.free_heap_bytes << ", vmo " << stats.vmo_bytes
-              << ", mmu " << stats.mmu_overhead_bytes << ", ipc "
+  FXL_VLOG(1) << "free memory total " << stats.free_bytes << ", heap " << stats.free_heap_bytes
+              << ", vmo " << stats.vmo_bytes << ", mmu " << stats.mmu_overhead_bytes << ", ipc "
               << stats.ipc_bytes;
 
   const std::string DEVICE_TOTAL = "memory:device_total_bytes";

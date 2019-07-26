@@ -18,7 +18,7 @@ template <typename... Ts>
 struct first;
 template <typename First, typename... Rest>
 struct first<First, Rest...> {
-    using type = First;
+  using type = First;
 };
 
 template <typename... Ts>
@@ -31,8 +31,8 @@ template <typename T, typename U>
 struct occurences_of<T, U> : std::integral_constant<size_t, std::is_same<T, U>::value> {};
 template <typename T, typename First, typename... Rest>
 struct occurences_of<T, First, Rest...>
-    : std::integral_constant<size_t, occurences_of<T, First>::value +
-                                         occurences_of<T, Rest...>::value> {};
+    : std::integral_constant<size_t,
+                             occurences_of<T, First>::value + occurences_of<T, Rest...>::value> {};
 
 template <typename T, typename... Ts>
 constexpr size_t occurences_of_v = occurences_of<T, Ts...>::value;
@@ -51,13 +51,12 @@ using requires_conditions = std::enable_if_t<conjunction_v<Conditions...>, bool>
 
 // Concept helper for assignment operators.
 template <typename Return, typename... Conditions>
-using assignment_requires_conditions = std::enable_if_t<conjunction_v<Conditions...>,
-                                                        std::add_lvalue_reference_t<Return>>;
+using assignment_requires_conditions =
+    std::enable_if_t<conjunction_v<Conditions...>, std::add_lvalue_reference_t<Return>>;
 
 // Evaluates to true when every element type of Ts is trivially destructible.
 template <typename... Ts>
-constexpr bool is_trivially_destructible_v =
-    conjunction_v<std::is_trivially_destructible<Ts>...>;
+constexpr bool is_trivially_destructible_v = conjunction_v<std::is_trivially_destructible<Ts>...>;
 
 // Evaluates to true when every element type of Ts is trivially copyable.
 template <typename... Ts>
@@ -74,13 +73,12 @@ constexpr bool is_trivially_movable_v =
 // Enable if relational operator is convertible to bool and the optional
 // conditions are true.
 template <typename Op, typename... Conditions>
-using enable_relop_t = std::enable_if_t<(std::is_convertible<Op, bool>::value &&
-                                         conjunction_v<Conditions...>),
-                                        bool>;
+using enable_relop_t =
+    std::enable_if_t<(std::is_convertible<Op, bool>::value && conjunction_v<Conditions...>), bool>;
 
 template <typename T>
 struct identity {
-    using type = T;
+  using type = T;
 };
 
 // Evaluates to true when T is an unbounded array.
@@ -90,15 +88,12 @@ struct is_unbounded_array : conjunction<std::is_array<T>, negation<std::extent<T
 // Returns true when T is a complete type or an unbounded array.
 template <typename T, size_t = sizeof(T)>
 constexpr bool is_complete_or_unbounded_array(identity<T>) {
-    return true;
+  return true;
 }
 template <typename Identity, typename T = typename Identity::type>
 constexpr bool is_complete_or_unbounded_array(Identity) {
-    return disjunction<
-        std::is_reference<T>,
-        std::is_function<T>,
-        std::is_void<T>,
-        is_unbounded_array<T>>::value;
+  return disjunction<std::is_reference<T>, std::is_function<T>, std::is_void<T>,
+                     is_unbounded_array<T>>::value;
 }
 
 // Using swap for ADL. This directive is contained within the fit::internal
@@ -110,30 +105,30 @@ using std::swap;
 // Evaluates to true when T is swappable.
 template <typename T, typename = void>
 struct is_swappable : std::false_type {
-    static_assert(is_complete_or_unbounded_array(identity<T>{}),
-                  "T must be a complete type or an unbounded array!");
+  static_assert(is_complete_or_unbounded_array(identity<T>{}),
+                "T must be a complete type or an unbounded array!");
 };
 template <typename T>
 struct is_swappable<T, void_t<decltype(swap(std::declval<T&>(), std::declval<T&>()))>>
     : std::true_type {
-    static_assert(is_complete_or_unbounded_array(identity<T>{}),
-                  "T must be a complete type or an unbounded array!");
+  static_assert(is_complete_or_unbounded_array(identity<T>{}),
+                "T must be a complete type or an unbounded array!");
 };
 
 // Evaluates to true when T is nothrow swappable.
 template <typename T, typename = void>
 struct is_nothrow_swappable : std::false_type {
-    static_assert(is_complete_or_unbounded_array(identity<T>{}),
-                  "T must be a complete type or an unbounded array!");
+  static_assert(is_complete_or_unbounded_array(identity<T>{}),
+                "T must be a complete type or an unbounded array!");
 };
 template <typename T>
 struct is_nothrow_swappable<T, void_t<decltype(swap(std::declval<T&>(), std::declval<T&>()))>>
     : std::integral_constant<bool, noexcept(swap(std::declval<T&>(), std::declval<T&>()))> {
-    static_assert(is_complete_or_unbounded_array(identity<T>{}),
-                  "T must be a complete type or an unbounded array!");
+  static_assert(is_complete_or_unbounded_array(identity<T>{}),
+                "T must be a complete type or an unbounded array!");
 };
 
-} // namespace internal
-} // namespace fit
+}  // namespace internal
+}  // namespace fit
 
-#endif //  LIB_FIT_UTILITY_INTERNAL_H_
+#endif  //  LIB_FIT_UTILITY_INTERNAL_H_

@@ -37,9 +37,7 @@ class TestDriverImpl : public TestDriver, public LifecycleObserver {
   bool Continue() const final;
 
   // Returns the status of the current test.
-  TestStatus Status() const final {
-    return status_;
-  }
+  TestStatus Status() const final { return status_; }
 
   // Reports before every test starts.
   void OnTestStart(const TestCase& test_case, const TestInfo& test) final;
@@ -60,15 +58,11 @@ class TestDriverImpl : public TestDriver, public LifecycleObserver {
   void Reset();
 
   // Returns whether the current test has any failures so far.
-  bool CurrentTestHasAnyFailures() const {
-    return current_test_has_any_failures_;
-  }
+  bool CurrentTestHasAnyFailures() const { return current_test_has_any_failures_; }
 
   // Returns whether any test driven by this instance had any test failure.
   // This is not cleared on |TestDriverImpl::Reset|.
-  bool HadAnyFailures() const {
-    return had_any_failures_;
-  }
+  bool HadAnyFailures() const { return had_any_failures_; }
 
  private:
   TestStatus status_ = TestStatus::kFailed;
@@ -180,9 +174,7 @@ class Runner {
   // List tests according to options.
   void List(const Options& options);
 
-  const RunnerSummary& summary() const {
-    return summary_;
-  }
+  const RunnerSummary& summary() const { return summary_; }
 
   const TestInfo& GetTestInfo(const TestRef& test_ref) {
     return test_cases_[test_ref.test_case_index].GetTestInfo(test_ref.test_index);
@@ -201,38 +193,24 @@ class Runner {
 
   // Returns true if the current test should be aborted. This happens as a result of a fatal
   // failure.
-  bool CurrentTestHasFatalFailures() const {
-    return !test_driver_.Continue();
-  }
+  bool CurrentTestHasFatalFailures() const { return !test_driver_.Continue(); }
 
   // Returns whether the current test has experienced any type of failure.
-  bool CurrentTestHasFailures() const {
-    return test_driver_.CurrentTestHasAnyFailures();
-  }
+  bool CurrentTestHasFailures() const { return test_driver_.CurrentTestHasAnyFailures(); }
 
-  int random_seed() const {
-    return options_ ? options_->seed : kDefaultOptions.seed;
-  }
+  int random_seed() const { return options_ ? options_->seed : kDefaultOptions.seed; }
 
-  void AddObserver(LifecycleObserver* observer) {
-    event_broadcaster_.Subscribe(observer);
-  }
+  void AddObserver(LifecycleObserver* observer) { event_broadcaster_.Subscribe(observer); }
 
   // Set of options currently in use. By default |Runner::kDefaultOptions| will be returned.
-  const Options& options() const {
-    return options_ ? *options_ : kDefaultOptions;
-  }
+  const Options& options() const { return options_ ? *options_ : kDefaultOptions; }
 
   // Notify the runner that the test is in a bad state, and should attempt to exit. This means
   // end test execution.
-  void NotifyFatalError() {
-    fatal_error_ = true;
-  }
+  void NotifyFatalError() { fatal_error_ = true; }
 
   // Returns a pointer to the |LogSink| where the |reporter_| is running to.
-  Reporter* mutable_reporter() {
-    return &reporter_;
-  }
+  Reporter* mutable_reporter() { return &reporter_; }
 
  private:
   TestRef RegisterTest(const fbl::String& test_case_name, const fbl::String& test_name,

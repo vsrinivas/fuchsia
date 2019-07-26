@@ -22,55 +22,53 @@ using UsbFunctionType = ddk::Device<UsbFunction>;
 // USB function drivers bind to this.
 class UsbFunction : public UsbFunctionType,
                     public ddk::UsbFunctionProtocol<UsbFunction, ddk::base_protocol>,
-                    public fbl::RefCounted<UsbFunction>  {
-public:
-    UsbFunction(zx_device_t* parent, UsbPeripheral* peripheral, FunctionDescriptor desc)
-        : UsbFunctionType(parent), peripheral_(peripheral), function_descriptor_(std::move(desc)) {}
+                    public fbl::RefCounted<UsbFunction> {
+ public:
+  UsbFunction(zx_device_t* parent, UsbPeripheral* peripheral, FunctionDescriptor desc)
+      : UsbFunctionType(parent), peripheral_(peripheral), function_descriptor_(std::move(desc)) {}
 
-    // Device protocol implementation.
-    void DdkRelease();
+  // Device protocol implementation.
+  void DdkRelease();
 
-    // UsbFunctionProtocol implementation.
-    zx_status_t UsbFunctionSetInterface(const usb_function_interface_protocol_t* interface);
-    zx_status_t UsbFunctionAllocInterface(uint8_t* out_intf_num);
-    zx_status_t UsbFunctionAllocEp(uint8_t direction, uint8_t* out_address);
-    zx_status_t UsbFunctionConfigEp(const usb_endpoint_descriptor_t* ep_desc,
-                                    const usb_ss_ep_comp_descriptor_t* ss_comp_desc);
-    zx_status_t UsbFunctionDisableEp(uint8_t address);
-    zx_status_t UsbFunctionAllocStringDesc(const char* str, uint8_t* out_index);
-    void UsbFunctionRequestQueue(usb_request_t* usb_request,
-                                 const usb_request_complete_t* complete_cb);
-    zx_status_t UsbFunctionEpSetStall(uint8_t ep_address);
-    zx_status_t UsbFunctionEpClearStall(uint8_t ep_address);
-    size_t UsbFunctionGetRequestSize();
+  // UsbFunctionProtocol implementation.
+  zx_status_t UsbFunctionSetInterface(const usb_function_interface_protocol_t* interface);
+  zx_status_t UsbFunctionAllocInterface(uint8_t* out_intf_num);
+  zx_status_t UsbFunctionAllocEp(uint8_t direction, uint8_t* out_address);
+  zx_status_t UsbFunctionConfigEp(const usb_endpoint_descriptor_t* ep_desc,
+                                  const usb_ss_ep_comp_descriptor_t* ss_comp_desc);
+  zx_status_t UsbFunctionDisableEp(uint8_t address);
+  zx_status_t UsbFunctionAllocStringDesc(const char* str, uint8_t* out_index);
+  void UsbFunctionRequestQueue(usb_request_t* usb_request,
+                               const usb_request_complete_t* complete_cb);
+  zx_status_t UsbFunctionEpSetStall(uint8_t ep_address);
+  zx_status_t UsbFunctionEpClearStall(uint8_t ep_address);
+  size_t UsbFunctionGetRequestSize();
 
-    zx_status_t SetConfigured(bool configured, usb_speed_t speed);
-    zx_status_t SetInterface(uint8_t interface, uint8_t alt_setting);
-    zx_status_t Control(const usb_setup_t* setup, const void* write_buffer, size_t write_size,
-                        void* read_buffer, size_t read_size, size_t* out_read_actual);
+  zx_status_t SetConfigured(bool configured, usb_speed_t speed);
+  zx_status_t SetInterface(uint8_t interface, uint8_t alt_setting);
+  zx_status_t Control(const usb_setup_t* setup, const void* write_buffer, size_t write_size,
+                      void* read_buffer, size_t read_size, size_t* out_read_actual);
 
-    inline const usb_descriptor_header_t* GetDescriptors(size_t* out_length) const {
-        *out_length = descriptors_.size();
-        return reinterpret_cast<usb_descriptor_header_t*>(descriptors_.get());
-    }
+  inline const usb_descriptor_header_t* GetDescriptors(size_t* out_length) const {
+    *out_length = descriptors_.size();
+    return reinterpret_cast<usb_descriptor_header_t*>(descriptors_.get());
+  }
 
-    inline const FunctionDescriptor& GetFunctionDescriptor() const { return function_descriptor_; }
+  inline const FunctionDescriptor& GetFunctionDescriptor() const { return function_descriptor_; }
 
-    inline uint8_t GetNumInterfaces() const {
-        return num_interfaces_;
-    }
+  inline uint8_t GetNumInterfaces() const { return num_interfaces_; }
 
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(UsbFunction);
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(UsbFunction);
 
-    UsbPeripheral* peripheral_;
-    ddk::UsbFunctionInterfaceProtocolClient function_intf_;
-    thrd_t thread_;
-    int CompletionThread();
-    const FunctionDescriptor function_descriptor_;
+  UsbPeripheral* peripheral_;
+  ddk::UsbFunctionInterfaceProtocolClient function_intf_;
+  thrd_t thread_;
+  int CompletionThread();
+  const FunctionDescriptor function_descriptor_;
 
-    uint8_t num_interfaces_ = 0;
-    fbl::Array<uint8_t> descriptors_;
+  uint8_t num_interfaces_ = 0;
+  fbl::Array<uint8_t> descriptors_;
 };
 
- } // namespace usb_peripheral
+}  // namespace usb_peripheral

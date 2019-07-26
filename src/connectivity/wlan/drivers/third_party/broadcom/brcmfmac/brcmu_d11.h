@@ -106,29 +106,29 @@
 // clang-format on
 
 enum brcmu_chan_bw {
-    BRCMU_CHAN_BW_20,
-    BRCMU_CHAN_BW_40,
-    BRCMU_CHAN_BW_80,
-    BRCMU_CHAN_BW_80P80,
-    BRCMU_CHAN_BW_160,
+  BRCMU_CHAN_BW_20,
+  BRCMU_CHAN_BW_40,
+  BRCMU_CHAN_BW_80,
+  BRCMU_CHAN_BW_80P80,
+  BRCMU_CHAN_BW_160,
 };
 
 enum brcmu_chan_sb {
-    BRCMU_CHAN_SB_NONE = -1,
-    BRCMU_CHAN_SB_LLL,
-    BRCMU_CHAN_SB_LLU,
-    BRCMU_CHAN_SB_LUL,
-    BRCMU_CHAN_SB_LUU,
-    BRCMU_CHAN_SB_ULL,
-    BRCMU_CHAN_SB_ULU,
-    BRCMU_CHAN_SB_UUL,
-    BRCMU_CHAN_SB_UUU,
-    BRCMU_CHAN_SB_L = BRCMU_CHAN_SB_LLL,
-    BRCMU_CHAN_SB_U = BRCMU_CHAN_SB_LLU,
-    BRCMU_CHAN_SB_LL = BRCMU_CHAN_SB_LLL,
-    BRCMU_CHAN_SB_LU = BRCMU_CHAN_SB_LLU,
-    BRCMU_CHAN_SB_UL = BRCMU_CHAN_SB_LUL,
-    BRCMU_CHAN_SB_UU = BRCMU_CHAN_SB_LUU,
+  BRCMU_CHAN_SB_NONE = -1,
+  BRCMU_CHAN_SB_LLL,
+  BRCMU_CHAN_SB_LLU,
+  BRCMU_CHAN_SB_LUL,
+  BRCMU_CHAN_SB_LUU,
+  BRCMU_CHAN_SB_ULL,
+  BRCMU_CHAN_SB_ULU,
+  BRCMU_CHAN_SB_UUL,
+  BRCMU_CHAN_SB_UUU,
+  BRCMU_CHAN_SB_L = BRCMU_CHAN_SB_LLL,
+  BRCMU_CHAN_SB_U = BRCMU_CHAN_SB_LLU,
+  BRCMU_CHAN_SB_LL = BRCMU_CHAN_SB_LLL,
+  BRCMU_CHAN_SB_LU = BRCMU_CHAN_SB_LLU,
+  BRCMU_CHAN_SB_UL = BRCMU_CHAN_SB_LUL,
+  BRCMU_CHAN_SB_UU = BRCMU_CHAN_SB_LUU,
 };
 
 /**
@@ -145,12 +145,12 @@ enum brcmu_chan_sb {
  * @sb: control sideband (location of control channel against the center one)
  */
 struct brcmu_chan {
-    uint16_t chspec;
-    uint8_t chnum;
-    uint8_t control_ch_num;
-    uint8_t band;
-    enum brcmu_chan_bw bw;
-    enum brcmu_chan_sb sb;
+  uint16_t chspec;
+  uint8_t chnum;
+  uint8_t control_ch_num;
+  uint8_t band;
+  enum brcmu_chan_bw bw;
+  enum brcmu_chan_sb sb;
 };
 
 /**
@@ -162,10 +162,10 @@ struct brcmu_chan {
  * @decchspec: decodes chanspec into generic info
  */
 struct brcmu_d11inf {
-    uint8_t io_type;
+  uint8_t io_type;
 
-    void (*encchspec)(struct brcmu_chan* ch);
-    void (*decchspec)(struct brcmu_chan* ch);
+  void (*encchspec)(struct brcmu_chan* ch);
+  void (*decchspec)(struct brcmu_chan* ch);
 };
 
 void brcmu_d11_attach(struct brcmu_d11inf* d11inf);

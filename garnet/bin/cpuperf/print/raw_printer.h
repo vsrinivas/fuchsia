@@ -23,9 +23,8 @@ class RawPrinter {
     std::string output_file_name;
   };
 
-  static bool Create(
-      const SessionResultSpec* session_result_spec, const Config& config,
-      std::unique_ptr<RawPrinter>* out_printer);
+  static bool Create(const SessionResultSpec* session_result_spec, const Config& config,
+                     std::unique_ptr<RawPrinter>* out_printer);
 
   ~RawPrinter();
 
@@ -34,8 +33,7 @@ class RawPrinter {
   uint64_t PrintFiles();
 
  private:
-  RawPrinter(FILE* output, const SessionResultSpec* session_result_spec,
-             const Config& config);
+  RawPrinter(FILE* output, const SessionResultSpec* session_result_spec, const Config& config);
 
   void Printf(const char* format, ...);
   uint64_t PrintOneTrace(uint32_t iter_num);

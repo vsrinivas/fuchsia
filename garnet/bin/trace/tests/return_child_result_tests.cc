@@ -14,27 +14,23 @@ constexpr const int kChildReturnCode = 1234;
 TEST(ReturnChildResult, False) {
   zx::job job{};  // -> default job
   zx::process child;
-  std::vector<std::string> argv{
-      kTracePath, "record", "--return-child-result=false", "--spawn",
-      kChildPath};
+  std::vector<std::string> argv{kTracePath, "record", "--return-child-result=false", "--spawn",
+                                kChildPath};
   ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
   int return_code;
-  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code),
-            ZX_OK);
+  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);
   EXPECT_EQ(return_code, 0);
 }
 
 TEST(ReturnChildResult, True) {
   zx::job job{};  // -> default job
   zx::process child;
-  std::vector<std::string> argv{
-      kTracePath, "record", "--return-child-result=true", "--spawn",
-      kChildPath};
+  std::vector<std::string> argv{kTracePath, "record", "--return-child-result=true", "--spawn",
+                                kChildPath};
   ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
   int return_code;
-  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code),
-            ZX_OK);
+  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);
   EXPECT_EQ(return_code, kChildReturnCode);
 }

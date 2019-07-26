@@ -36,8 +36,7 @@ class ResponseConsumer {
       zx_status_t result = body.read(0u, buf, num_bytes, &num_bytes);
 
       if (result == ZX_ERR_SHOULD_WAIT) {
-        body.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                      zx::time::infinite(), nullptr);
+        body.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(), nullptr);
       } else if (result == ZX_ERR_PEER_CLOSED) {
         // not an error
         break;
@@ -58,8 +57,7 @@ class MWGetApp {
  public:
   static constexpr int MAX_LOADERS = 100;
 
-  MWGetApp(async::Loop* loop)
-      : context_(sys::ComponentContext::Create()), loop_(loop) {
+  MWGetApp(async::Loop* loop) : context_(sys::ComponentContext::Create()), loop_(loop) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
     FXL_DCHECK(loop);
     FXL_DCHECK(http_service_);
@@ -90,17 +88,16 @@ class MWGetApp {
       request.method = "GET";
       request.auto_follow_redirects = true;
 
-      url_loader_[i]->Start(std::move(request),
-                            [this, i](http::URLResponse response) {
-                              ResponseConsumer consumer(i);
-                              consumer.Run(std::move(response));
-                              ++num_done_;
-                              printf("[%d] #%d done\n", num_done_, i);
-                              if (num_done_ == num_loaders_) {
-                                printf("All done!\n");
-                                loop_->Quit();
-                              }
-                            });
+      url_loader_[i]->Start(std::move(request), [this, i](http::URLResponse response) {
+        ResponseConsumer consumer(i);
+        consumer.Run(std::move(response));
+        ++num_done_;
+        printf("[%d] #%d done\n", num_done_, i);
+        if (num_done_ == num_loaders_) {
+          printf("All done!\n");
+          loop_->Quit();
+        }
+      });
     }
     return true;
   }

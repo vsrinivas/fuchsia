@@ -35,8 +35,7 @@ const char kRedirectUrl[] = "http://example.com/redirect";
 class FakeURLLoader : public http::URLLoader {
  public:
   FakeURLLoader(fidl::InterfaceRequest<http::URLLoader> request,
-                http::URLResponse response_to_return,
-                http::URLRequest* request_received)
+                http::URLResponse response_to_return, http::URLRequest* request_received)
       : binding_(this, std::move(request)),
         response_to_return_(std::move(response_to_return)),
         request_received_(request_received) {}
@@ -70,13 +69,10 @@ class FakeNetworkWrapper : public http::HttpService {
 
   http::URLRequest* GetRequest() { return &request_received_; }
 
-  void SetResponse(http::URLResponse response) {
-    response_to_return_ = std::move(response);
-  }
+  void SetResponse(http::URLResponse response) { response_to_return_ = std::move(response); }
 
   // NetworkService:
-  void CreateURLLoader(
-      fidl::InterfaceRequest<http::URLLoader> loader) override {
+  void CreateURLLoader(fidl::InterfaceRequest<http::URLLoader> loader) override {
     loaders_.push_back(std::make_unique<FakeURLLoader>(
         std::move(loader), std::move(response_to_return_), &request_received_));
   }
@@ -93,8 +89,7 @@ class FakeNetworkWrapper : public http::HttpService {
 class NetworkWrapperImplTest : public gtest::TestLoopFixture {
  public:
   NetworkWrapperImplTest()
-      : network_service_(dispatcher(),
-                         std::make_unique<backoff::TestBackoff>(zx::sec(0)),
+      : network_service_(dispatcher(), std::make_unique<backoff::TestBackoff>(zx::sec(0)),
                          [this] { return NewHttpService(); }) {}
 
   void SetSocketResponse(zx::socket body, uint32_t status_code) {
@@ -117,8 +112,7 @@ class NetworkWrapperImplTest : public gtest::TestLoopFixture {
     SetSocketResponse(fsl::WriteStringToSocket(body), status_code);
   }
 
-  http::URLRequest NewRequest(const std::string& method,
-                              const std::string& url) {
+  http::URLRequest NewRequest(const std::string& method, const std::string& url) {
     http::URLRequest request;
     request.method = method;
     request.url = url;
@@ -128,8 +122,7 @@ class NetworkWrapperImplTest : public gtest::TestLoopFixture {
  private:
   http::HttpServicePtr NewHttpService() {
     http::HttpServicePtr result;
-    fake_network_service_ =
-        std::make_unique<FakeNetworkWrapper>(result.NewRequest());
+    fake_network_service_ = std::make_unique<FakeNetworkWrapper>(result.NewRequest());
     if (response_) {
       fake_network_service_->SetResponse(std::move(*response_));
     }
@@ -150,8 +143,7 @@ TEST_F(NetworkWrapperImplTest, SimpleRequest) {
         SetStringResponse("Hello", 200);
         return NewRequest("GET", "http://example.com");
       },
-      [destroy_watcher =
-           fit::defer([&callback_destroyed] { callback_destroyed = true; }),
+      [destroy_watcher = fit::defer([&callback_destroyed] { callback_destroyed = true; }),
        &response](http::URLResponse received_response) {
         response = std::move(received_response);
       });
@@ -172,9 +164,7 @@ TEST_F(NetworkWrapperImplTest, CancelRequest) {
       },
       [&received_response, destroy_watcher = fit::defer([&callback_destroyed] {
                              callback_destroyed = true;
-                           })](http::URLResponse) {
-        received_response = true;
-      });
+                           })](http::URLResponse) { received_response = true; });
 
   async::PostTask(dispatcher(), [cancel] { cancel->Cancel(); });
   cancel = nullptr;

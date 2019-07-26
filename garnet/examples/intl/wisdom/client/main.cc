@@ -28,10 +28,9 @@ using icu::UnicodeString;
 constexpr char kDefaultTimeString[] = "2018-10-30T15:30:00-07:00";
 constexpr char kDefaultTimeZoneString[] = "Etc/Unknown";
 
-std::unique_ptr<TimeZone> ParseOrGetDefaultTimeZone(
-    const std::string& time_zone_id) {
-  auto time_zone = std::unique_ptr<TimeZone>(
-      TimeZone::createTimeZone(UnicodeString::fromUTF8(time_zone_id)));
+std::unique_ptr<TimeZone> ParseOrGetDefaultTimeZone(const std::string& time_zone_id) {
+  auto time_zone =
+      std::unique_ptr<TimeZone>(TimeZone::createTimeZone(UnicodeString::fromUTF8(time_zone_id)));
   if (TimeZone::getUnknown() == *time_zone) {
     time_zone = std::unique_ptr<TimeZone>(TimeZone::detectHostTimeZone());
   }
@@ -42,8 +41,7 @@ zx::time ParseTimestamp(const std::string& time_string) {
   UnicodeString time_string_unic = UnicodeString::fromUTF8(time_string);
 
   UErrorCode error_code = U_ZERO_ERROR;
-  SimpleDateFormat time_parser(UnicodeString("yyyy-MM-dd'T'HH:mm:ssXX"),
-                               error_code);
+  SimpleDateFormat time_parser(UnicodeString("yyyy-MM-dd'T'HH:mm:ssXX"), error_code);
   ZX_ASSERT(U_SUCCESS(error_code));
 
   // Uses the system time zone
@@ -65,12 +63,11 @@ zx::time ParseTimestamp(const std::string& time_string) {
 int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   const std::string server_url = command_line.GetOptionValueWithDefault(
-      "server",
-      "fuchsia-pkg://fuchsia.com/intl_wisdom#meta/intl_wisdom_server.cmx");
+      "server", "fuchsia-pkg://fuchsia.com/intl_wisdom#meta/intl_wisdom_server.cmx");
   const std::string time_string =
       command_line.GetOptionValueWithDefault("timestamp", kDefaultTimeString);
-  const std::string time_zone_id = command_line.GetOptionValueWithDefault(
-      "timezone", kDefaultTimeZoneString);
+  const std::string time_zone_id =
+      command_line.GetOptionValueWithDefault("timezone", kDefaultTimeZoneString);
 
   // We need to initialize ICU data in order to be able to parse |time_string|.
   ZX_ASSERT(icu_data::Initialize() == ZX_OK);

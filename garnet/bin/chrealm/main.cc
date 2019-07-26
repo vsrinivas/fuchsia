@@ -46,11 +46,9 @@ int main(int argc, const char** argv) {
 
   int64_t code;
   std::string error;
-  zx_status_t status =
-      chrealm::RunBinaryInRealm(positional_args[0], child_argv, &code, &error);
+  zx_status_t status = chrealm::RunBinaryInRealm(positional_args[0], child_argv, &code, &error);
   if (status != ZX_OK) {
-    fprintf(stderr, "chrealm returned %s: %s\n", zx_status_get_string(status),
-            error.c_str());
+    fprintf(stderr, "chrealm returned %s: %s\n", zx_status_get_string(status), error.c_str());
     return 1;
   }
   zx_process_exit(code);

@@ -7,8 +7,8 @@
 
 // Placeholder Driver ctx structure.  Not used for anything yet.
 class Driver {
-public:
-private:
+ public:
+ private:
 };
 
-#endif // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DRIVER_H_
+#endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DRIVER_H_

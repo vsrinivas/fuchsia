@@ -65,8 +65,7 @@ void WriteJson(FILE* fp, rapidjson::Document* doc) {
 // convenience wrappers.
 class JsonHelper {
  public:
-  explicit JsonHelper(rapidjson::Document::AllocatorType& alloc)
-      : alloc_(alloc) {}
+  explicit JsonHelper(rapidjson::Document::AllocatorType& alloc) : alloc_(alloc) {}
 
   rapidjson::Value MakeString(const char* string) {
     rapidjson::Value value;
@@ -74,9 +73,7 @@ class JsonHelper {
     return value;
   };
 
-  rapidjson::Value Copy(const rapidjson::Value& value) {
-    return rapidjson::Value(value, alloc_);
-  }
+  rapidjson::Value Copy(const rapidjson::Value& value) { return rapidjson::Value(value, alloc_); }
 
  private:
   rapidjson::Document::AllocatorType& alloc_;
@@ -89,8 +86,7 @@ void ConvertSpacesToUnderscores(std::string* string) {
   }
 }
 
-void ComputeStatistics(const std::vector<double>& vals,
-                       rapidjson::Value* output,
+void ComputeStatistics(const std::vector<double>& vals, rapidjson::Value* output,
                        rapidjson::Document::AllocatorType* alloc) {
   double sum = 0;
   double sum_of_logs = 0;
@@ -142,8 +138,7 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
       val /= 1e6;
     }
     return "ms_smallerIsBetter";
-  } else if (strcmp(input_unit, "milliseconds") == 0 ||
-             strcmp(input_unit, "ms") == 0) {
+  } else if (strcmp(input_unit, "milliseconds") == 0 || strcmp(input_unit, "ms") == 0) {
     return "ms_smallerIsBetter";
   } else if (strcmp(input_unit, "bytes/second") == 0) {
     // Convert from bytes/second to mebibytes/second.
@@ -171,11 +166,9 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
 }
 
 // Adds a Histogram to the given |output| Document.
-void AddHistogram(rapidjson::Document* output,
-                  rapidjson::Document::AllocatorType* alloc,
-                  const std::string& test_name, const char* input_unit,
-                  std::vector<double>&& vals, rapidjson::Value diagnostic_map,
-                  rapidjson::Value guid) {
+void AddHistogram(rapidjson::Document* output, rapidjson::Document::AllocatorType* alloc,
+                  const std::string& test_name, const char* input_unit, std::vector<double>&& vals,
+                  rapidjson::Value diagnostic_map, rapidjson::Value guid) {
   std::string catapult_unit = ConvertUnits(input_unit, &vals);
   rapidjson::Value stats;
   ComputeStatistics(vals, &stats, alloc);
@@ -190,8 +183,7 @@ void AddHistogram(rapidjson::Document* output,
   histogram.AddMember("guid", guid, *alloc);
 
   // This field is redundant with the "count" entry in "stats".
-  histogram.AddMember("maxNumSampleValues", static_cast<uint64_t>(vals.size()),
-                      *alloc);
+  histogram.AddMember("maxNumSampleValues", static_cast<uint64_t>(vals.size()), *alloc);
 
   // Assume for now that we didn't get any NaN values.
   histogram.AddMember("numNans", 0, *alloc);
@@ -230,8 +222,7 @@ void RandBytes(void* output, size_t output_length) {
 #else
   fxl::UniqueFD fd(open("/dev/urandom", O_RDONLY | O_CLOEXEC));
   FXL_CHECK(fd.is_valid());
-  const ssize_t len = fxl::ReadFileDescriptor(
-      fd.get(), static_cast<char*>(output), output_length);
+  const ssize_t len = fxl::ReadFileDescriptor(fd.get(), static_cast<char*>(output), output_length);
   FXL_CHECK(len >= 0 && static_cast<size_t>(len) == output_length);
 #endif
 }
@@ -258,16 +249,14 @@ std::string GenerateUuid() {
   bytes[1] &= 0x3fffffffffffffffULL;
   bytes[1] |= 0x8000000000000000ULL;
 
-  return fxl::StringPrintf(
-      "%08x-%04x-%04x-%04x-%012llx", static_cast<unsigned int>(bytes[0] >> 32),
-      static_cast<unsigned int>((bytes[0] >> 16) & 0x0000ffff),
-      static_cast<unsigned int>(bytes[0] & 0x0000ffff),
-      static_cast<unsigned int>(bytes[1] >> 48),
-      bytes[1] & 0x0000ffffffffffffULL);
+  return fxl::StringPrintf("%08x-%04x-%04x-%04x-%012llx", static_cast<unsigned int>(bytes[0] >> 32),
+                           static_cast<unsigned int>((bytes[0] >> 16) & 0x0000ffff),
+                           static_cast<unsigned int>(bytes[0] & 0x0000ffff),
+                           static_cast<unsigned int>(bytes[1] >> 48),
+                           bytes[1] & 0x0000ffffffffffffULL);
 }
 
-void Convert(rapidjson::Document* input, rapidjson::Document* output,
-             const ConverterArgs* args) {
+void Convert(rapidjson::Document* input, rapidjson::Document* output, const ConverterArgs* args) {
   rapidjson::Document::AllocatorType& alloc = output->GetAllocator();
   JsonHelper helper(alloc);
   output->SetArray();
@@ -338,8 +327,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
   };
 
   if (!input->IsArray()) {
-    fprintf(stderr,
-            "Expected input document to be of type array, and got %s instead\n",
+    fprintf(stderr, "Expected input document to be of type array, and got %s instead\n",
             TypeToString(input->GetType()));
     exit(1);
   }
@@ -350,8 +338,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
 
     // The "test_suite" field in the input becomes the "benchmarks"
     // diagnostic in the output.
-    rapidjson::Value test_suite_guid =
-        MakeGuidForTestSuiteName(element["test_suite"].GetString());
+    rapidjson::Value test_suite_guid = MakeGuidForTestSuiteName(element["test_suite"].GetString());
     rapidjson::Value diagnostic_map = helper.Copy(shared_diagnostic_map);
     diagnostic_map.AddMember("benchmarks", test_suite_guid, alloc);
 
@@ -373,8 +360,8 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
       // Create a histogram for the first sample value.
       std::string h1_name = name + "_samples_0_to_0";
       std::vector<double> h1_vals(vals.begin(), vals.begin() + 1);
-      AddHistogram(output, &alloc, h1_name, element["unit"].GetString(),
-                   std::move(h1_vals), helper.Copy(diagnostic_map), MakeUuid());
+      AddHistogram(output, &alloc, h1_name, element["unit"].GetString(), std::move(h1_vals),
+                   helper.Copy(diagnostic_map), MakeUuid());
 
       // Create a histogram for the remaining sample values, if any.
       if (vals.size() > 1) {
@@ -382,14 +369,13 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
         h2_name << name << "_samples_1_to_" << vals.size() - 1;
 
         std::vector<double> h2_vals(vals.begin() + 1, vals.end());
-        AddHistogram(output, &alloc, h2_name.str(), element["unit"].GetString(),
-                     std::move(h2_vals), helper.Copy(diagnostic_map),
-                     MakeUuid());
+        AddHistogram(output, &alloc, h2_name.str(), element["unit"].GetString(), std::move(h2_vals),
+                     helper.Copy(diagnostic_map), MakeUuid());
       }
     } else {
       // Create a histogram for all |vals|.
-      AddHistogram(output, &alloc, name, element["unit"].GetString(),
-                   std::move(vals), std::move(diagnostic_map), MakeUuid());
+      AddHistogram(output, &alloc, name, element["unit"].GetString(), std::move(vals),
+                   std::move(diagnostic_map), MakeUuid());
     }
   }
 }
@@ -502,9 +488,8 @@ int ConverterMain(int argc, char** argv) {
   rapidjson::Document input;
   rapidjson::ParseResult parse_result = input.ParseStream(input_stream);
   if (!parse_result) {
-    fprintf(stderr, "Failed to parse input file, \"%s\": %s (offset %zd)\n",
-            input_filename, rapidjson::GetParseError_En(parse_result.Code()),
-            parse_result.Offset());
+    fprintf(stderr, "Failed to parse input file, \"%s\": %s (offset %zd)\n", input_filename,
+            rapidjson::GetParseError_En(parse_result.Code()), parse_result.Offset());
     return 1;
   }
   fclose(fp);

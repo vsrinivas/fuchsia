@@ -13,22 +13,22 @@ enum class Fatal { No, Yes };
 }  // namespace
 
 TEST(TransformTestCase, Construction) {
-    // Default constructor should produce the identitiy transformation
-    {
-        affine::Transform transform;
-        ASSERT_EQ(transform.a_offset(), 0);
-        ASSERT_EQ(transform.b_offset(), 0);
-        ASSERT_EQ(transform.numerator(), 1);
-        ASSERT_EQ(transform.denominator(), 1);
-    }
+  // Default constructor should produce the identitiy transformation
+  {
+    affine::Transform transform;
+    ASSERT_EQ(transform.a_offset(), 0);
+    ASSERT_EQ(transform.b_offset(), 0);
+    ASSERT_EQ(transform.numerator(), 1);
+    ASSERT_EQ(transform.denominator(), 1);
+  }
 
-    struct TestVector {
-        int64_t a_offset, b_offset;
-        uint32_t N, D;
-        Fatal expect_fatal;
-    };
+  struct TestVector {
+    int64_t a_offset, b_offset;
+    uint32_t N, D;
+    Fatal expect_fatal;
+  };
 
-    // clang-format off
+  // clang-format off
     constexpr std::array TEST_VECTORS {
         TestVector{  12345,  98764,       3,       2, Fatal::No  },
         TestVector{ -12345,  98764,     247,     931, Fatal::No  },
@@ -37,47 +37,46 @@ TEST(TransformTestCase, Construction) {
         TestVector{  12345,  98764,       0, 1000000, Fatal::No  },
         TestVector{  12345,  98764, 1000007,       0, Fatal::Yes },
     };
-    // clang-format on
+  // clang-format on
 
-    for (const auto& V : TEST_VECTORS) {
-        // Check the linear form (no offsets)
-        if (V.expect_fatal == Fatal::No) {
-            affine::Ratio ratio{ V.N, V.D };
-            affine::Transform transform{ ratio };
+  for (const auto& V : TEST_VECTORS) {
+    // Check the linear form (no offsets)
+    if (V.expect_fatal == Fatal::No) {
+      affine::Ratio ratio{V.N, V.D};
+      affine::Transform transform{ratio};
 
-            ASSERT_EQ(transform.a_offset(), 0);
-            ASSERT_EQ(transform.b_offset(), 0);
-            ASSERT_EQ(transform.numerator(), ratio.numerator());
-            ASSERT_EQ(transform.denominator(), ratio.denominator());
-        } else {
-            ASSERT_DEATH(([&V]() { affine::Transform transform{ affine::Ratio{V.N, V.D} }; }));
-        }
-
-        // Check the affine form (yes offsets)
-        if (V.expect_fatal == Fatal::No) {
-            affine::Ratio ratio{ V.N, V.D };
-            affine::Transform transform{ V.a_offset, V.b_offset, ratio };
-
-            ASSERT_EQ(transform.a_offset(), V.a_offset);
-            ASSERT_EQ(transform.b_offset(), V.b_offset);
-            ASSERT_EQ(transform.numerator(), ratio.numerator());
-            ASSERT_EQ(transform.denominator(), ratio.denominator());
-        } else {
-            ASSERT_DEATH(([&V]() { affine::Transform transform{ V.a_offset,
-                                                                V.b_offset,
-                                                                affine::Ratio{V.N, V.D} };
-                                 }));
-        }
+      ASSERT_EQ(transform.a_offset(), 0);
+      ASSERT_EQ(transform.b_offset(), 0);
+      ASSERT_EQ(transform.numerator(), ratio.numerator());
+      ASSERT_EQ(transform.denominator(), ratio.denominator());
+    } else {
+      ASSERT_DEATH(([&V]() { affine::Transform transform{affine::Ratio{V.N, V.D}}; }));
     }
+
+    // Check the affine form (yes offsets)
+    if (V.expect_fatal == Fatal::No) {
+      affine::Ratio ratio{V.N, V.D};
+      affine::Transform transform{V.a_offset, V.b_offset, ratio};
+
+      ASSERT_EQ(transform.a_offset(), V.a_offset);
+      ASSERT_EQ(transform.b_offset(), V.b_offset);
+      ASSERT_EQ(transform.numerator(), ratio.numerator());
+      ASSERT_EQ(transform.denominator(), ratio.denominator());
+    } else {
+      ASSERT_DEATH(([&V]() {
+        affine::Transform transform{V.a_offset, V.b_offset, affine::Ratio{V.N, V.D}};
+      }));
+    }
+  }
 }
 
 TEST(TransformTestCase, Inverse) {
-    struct TestVector {
-        int64_t a_offset, b_offset;
-        uint32_t N, D;
-    };
+  struct TestVector {
+    int64_t a_offset, b_offset;
+    uint32_t N, D;
+  };
 
-    // clang-format off
+  // clang-format off
     constexpr std::array TEST_VECTORS {
         TestVector{  12345,  98764,       3,       2 },
         TestVector{ -12345,  98764,     247,     931 },
@@ -85,44 +84,44 @@ TEST(TransformTestCase, Inverse) {
         TestVector{  12345, -98764, 1000007, 1000000 },
         TestVector{  12345,  98764,       0, 1000000 },
     };
-    // clang-format on
+  // clang-format on
 
-    for (const auto& V : TEST_VECTORS) {
-        affine::Ratio ratio{ V.N, V.D };
-        affine::Transform transform{ V.a_offset, V.b_offset, ratio };
+  for (const auto& V : TEST_VECTORS) {
+    affine::Ratio ratio{V.N, V.D};
+    affine::Transform transform{V.a_offset, V.b_offset, ratio};
 
-        if (transform.invertible()) {
-            affine::Transform res = transform.Inverse();
-            ASSERT_EQ(transform.a_offset(), res.b_offset());
-            ASSERT_EQ(transform.b_offset(), res.a_offset());
-            ASSERT_EQ(transform.numerator(), res.denominator());
-            ASSERT_EQ(transform.denominator(), res.numerator());
-            ASSERT_TRUE(transform.ratio().Inverse().numerator() == res.ratio().numerator());
-            ASSERT_TRUE(transform.ratio().Inverse().denominator() == res.ratio().denominator());
-        } else {
-            ASSERT_DEATH(([&transform]() { transform.Inverse(); }));
-        }
+    if (transform.invertible()) {
+      affine::Transform res = transform.Inverse();
+      ASSERT_EQ(transform.a_offset(), res.b_offset());
+      ASSERT_EQ(transform.b_offset(), res.a_offset());
+      ASSERT_EQ(transform.numerator(), res.denominator());
+      ASSERT_EQ(transform.denominator(), res.numerator());
+      ASSERT_TRUE(transform.ratio().Inverse().numerator() == res.ratio().numerator());
+      ASSERT_TRUE(transform.ratio().Inverse().denominator() == res.ratio().denominator());
+    } else {
+      ASSERT_DEATH(([&transform]() { transform.Inverse(); }));
     }
+  }
 }
 
 TEST(TransformTestCase, Apply) {
-    using Transform = affine::Transform;
-    using Saturate = affine::Transform::Saturate;
+  using Transform = affine::Transform;
+  using Saturate = affine::Transform::Saturate;
 
-    enum class Method { Static = 0, Object, Operator };
-    enum class Ovfl { No = 0, Yes };
+  enum class Method { Static = 0, Object, Operator };
+  enum class Ovfl { No = 0, Yes };
 
-    struct TestVector {
-        int64_t a_offset, b_offset;
-        uint32_t N, D;
-        int64_t val;
-        int64_t expected;
-        Ovfl expect_ovfl;
-    };
+  struct TestVector {
+    int64_t a_offset, b_offset;
+    uint32_t N, D;
+    int64_t val;
+    int64_t expected;
+    Ovfl expect_ovfl;
+  };
 
-    constexpr int64_t kMinI64 = std::numeric_limits<int64_t>::min();
-    constexpr int64_t kMaxI64 = std::numeric_limits<int64_t>::max();
-    // clang-format off
+  constexpr int64_t kMinI64 = std::numeric_limits<int64_t>::min();
+  constexpr int64_t kMaxI64 = std::numeric_limits<int64_t>::max();
+  // clang-format off
     constexpr std::array TEST_VECTORS {
         TestVector{  0,   0,     1,     1, 12345, 12345, Ovfl::No },
         TestVector{ 50,   0,     1,     1, 12345, 12295, Ovfl::No },
@@ -148,172 +147,152 @@ TEST(TransformTestCase, Apply) {
         TestVector{ 0,  17, 1, 1, kMaxI64 - 10, kMaxI64, Ovfl::Yes },
         TestVector{ 0, -17, 1, 1, kMinI64 + 10, kMinI64, Ovfl::Yes },
     };
-    // clang-format on
+  // clang-format on
 
-    constexpr std::array METHODS {
-        Method::Static,
-        Method::Object,
-        Method::Operator,
-    };
+  constexpr std::array METHODS{
+      Method::Static,
+      Method::Object,
+      Method::Operator,
+  };
 
-    for (const auto& V : TEST_VECTORS) {
-        for (auto method : METHODS) {
-            // Test the forward transformation
-            Transform T{ V.a_offset, V.b_offset, { V.N, V.D } };
-            int64_t res_sat, res_nosat;
+  for (const auto& V : TEST_VECTORS) {
+    for (auto method : METHODS) {
+      // Test the forward transformation
+      Transform T{V.a_offset, V.b_offset, {V.N, V.D}};
+      int64_t res_sat, res_nosat;
 
-            switch (method) {
-            case Method::Static:
-                res_sat = Transform::Apply(T.a_offset(), T.b_offset(), T.ratio(), V.val);
-                res_nosat = Transform::Apply<Saturate::No>(T.a_offset(),
-                                                           T.b_offset(),
-                                                           T.ratio(),
-                                                           V.val);
-                break;
+      switch (method) {
+        case Method::Static:
+          res_sat = Transform::Apply(T.a_offset(), T.b_offset(), T.ratio(), V.val);
+          res_nosat = Transform::Apply<Saturate::No>(T.a_offset(), T.b_offset(), T.ratio(), V.val);
+          break;
 
-            case Method::Object:
-                res_sat = T.Apply(V.val);
-                res_nosat = T.Apply<Saturate::No>(V.val);
-                break;
+        case Method::Object:
+          res_sat = T.Apply(V.val);
+          res_nosat = T.Apply<Saturate::No>(V.val);
+          break;
 
-            case Method::Operator:
-                res_sat = T(V.val);
-                res_nosat = T.operator()<Saturate::No>(V.val);
-                break;
-            }
+        case Method::Operator:
+          res_sat = T(V.val);
+          res_nosat = T.operator()<Saturate::No>(V.val);
+          break;
+      }
 
-            auto CheckExpected = [&](int64_t actual,
-                                     const TestVector& V,
-                                     const Transform& T,
-                                     Method method) {
-                ASSERT_EQ(actual, V.expected,
-                          "((%ld - %ld) * (%u/%u)) + %ld should be %ld; "
-                          "got %ld instead (method %u)\n",
-                          V.val,
-                          T.a_offset(),
-                          T.numerator(),
-                          T.denominator(),
-                          T.b_offset(),
-                          V.expected,
-                          actual,
-                          static_cast<uint32_t>(method));
+      auto CheckExpected = [&](int64_t actual, const TestVector& V, const Transform& T,
+                               Method method) {
+        ASSERT_EQ(actual, V.expected,
+                  "((%ld - %ld) * (%u/%u)) + %ld should be %ld; "
+                  "got %ld instead (method %u)\n",
+                  V.val, T.a_offset(), T.numerator(), T.denominator(), T.b_offset(), V.expected,
+                  actual, static_cast<uint32_t>(method));
+      };
 
-            };
+      // Make sure the saturated result matches our expectations.
+      CheckExpected(res_sat, V, T, method);
 
-            // Make sure the saturated result matches our expectations.
-            CheckExpected(res_sat, V, T, method);
+      // If we don't expect this test vector to overflow, then check to
+      // make sure that the non-saturated result matches the saturated
+      // result.
+      if (V.expect_ovfl == Ovfl::No) {
+        CheckExpected(res_nosat, V, T, method);
+      }
 
-            // If we don't expect this test vector to overflow, then check to
-            // make sure that the non-saturated result matches the saturated
-            // result.
-            if (V.expect_ovfl == Ovfl::No) {
-                CheckExpected(res_nosat, V, T, method);
-            }
-
-            // Test inverse transformations operations, but only if the
-            // transformation is invertible.  Otherwise test for death.
-            fit::function<void()> func_sat;
-            fit::function<void()> func_nosat;
-            switch (method) {
-            case Method::Static:
-                func_sat = [&T, &V, &res_sat]() {
-                    if (T.invertible()) {
-                        auto T_inv = T.Inverse();
-                        res_sat = Transform::ApplyInverse(
-                                T_inv.a_offset(), T_inv.b_offset(), T_inv.ratio(), V.val);
-                    } else {
-                        Transform::ApplyInverse(
-                                T.a_offset(), T.b_offset(), T.ratio(), V.val);
-                    }
-                };
-
-                func_nosat = [&T, &V, &res_nosat]() {
-                    if (T.invertible()) {
-                        auto T_inv = T.Inverse();
-                        res_nosat = Transform::ApplyInverse<Saturate::No>(
-                                T_inv.a_offset(), T_inv.b_offset(), T_inv.ratio(), V.val);
-                    } else {
-                        Transform::ApplyInverse<Saturate::No>(
-                                T.a_offset(), T.b_offset(), T.ratio(), V.val);
-                    }
-                };
-                break;
-
-            case Method::Object:
-                func_sat = [&T, &V, &res_sat]() {
-                    if (T.invertible()) {
-                        auto T_inv = T.Inverse();
-                        res_sat = T_inv.ApplyInverse(V.val);
-                    } else {
-                        T.ApplyInverse(V.val);
-                    }
-                };
-
-                func_nosat = [&T, &V, &res_nosat]() {
-                    if (T.invertible()) {
-                        auto T_inv = T.Inverse();
-                        res_nosat = T_inv.ApplyInverse<Saturate::No>(V.val);
-                    } else {
-                        T.ApplyInverse<Saturate::No>(V.val);
-                    }
-                };
-                break;
-
-            // Note: that the functor operator method has no inverse, so we skip
-            // the test in that case.
-            case Method::Operator:
-                continue;
-            }
-
+      // Test inverse transformations operations, but only if the
+      // transformation is invertible.  Otherwise test for death.
+      fit::function<void()> func_sat;
+      fit::function<void()> func_nosat;
+      switch (method) {
+        case Method::Static:
+          func_sat = [&T, &V, &res_sat]() {
             if (T.invertible()) {
-                func_sat();
-                CheckExpected(res_sat, V, T, method);
-
-                if (V.expect_ovfl == Ovfl::No) {
-                    CheckExpected(res_nosat, V, T, method);
-                }
+              auto T_inv = T.Inverse();
+              res_sat =
+                  Transform::ApplyInverse(T_inv.a_offset(), T_inv.b_offset(), T_inv.ratio(), V.val);
             } else {
-                auto CheckDeath = [](fit::function<void()> func,
-                                     const TestVector& V,
-                                     const Transform& T,
-                                     Method method) {
-                    ASSERT_DEATH(std::move(func),
-                                 "((%ld - %ld) * (%u/%u)) + %ld should have resulted in death "
-                                 "(method %u)\n",
-                                 V.val,
-                                 T.a_offset(),
-                                 T.numerator(),
-                                 T.denominator(),
-                                 T.b_offset(),
-                                 static_cast<uint32_t>(method));
-                };
-                CheckDeath(std::move(func_sat), V, T, method);
-                CheckDeath(std::move(func_nosat), V, T, method);
+              Transform::ApplyInverse(T.a_offset(), T.b_offset(), T.ratio(), V.val);
             }
+          };
+
+          func_nosat = [&T, &V, &res_nosat]() {
+            if (T.invertible()) {
+              auto T_inv = T.Inverse();
+              res_nosat = Transform::ApplyInverse<Saturate::No>(T_inv.a_offset(), T_inv.b_offset(),
+                                                                T_inv.ratio(), V.val);
+            } else {
+              Transform::ApplyInverse<Saturate::No>(T.a_offset(), T.b_offset(), T.ratio(), V.val);
+            }
+          };
+          break;
+
+        case Method::Object:
+          func_sat = [&T, &V, &res_sat]() {
+            if (T.invertible()) {
+              auto T_inv = T.Inverse();
+              res_sat = T_inv.ApplyInverse(V.val);
+            } else {
+              T.ApplyInverse(V.val);
+            }
+          };
+
+          func_nosat = [&T, &V, &res_nosat]() {
+            if (T.invertible()) {
+              auto T_inv = T.Inverse();
+              res_nosat = T_inv.ApplyInverse<Saturate::No>(V.val);
+            } else {
+              T.ApplyInverse<Saturate::No>(V.val);
+            }
+          };
+          break;
+
+        // Note: that the functor operator method has no inverse, so we skip
+        // the test in that case.
+        case Method::Operator:
+          continue;
+      }
+
+      if (T.invertible()) {
+        func_sat();
+        CheckExpected(res_sat, V, T, method);
+
+        if (V.expect_ovfl == Ovfl::No) {
+          CheckExpected(res_nosat, V, T, method);
         }
+      } else {
+        auto CheckDeath = [](fit::function<void()> func, const TestVector& V, const Transform& T,
+                             Method method) {
+          ASSERT_DEATH(std::move(func),
+                       "((%ld - %ld) * (%u/%u)) + %ld should have resulted in death "
+                       "(method %u)\n",
+                       V.val, T.a_offset(), T.numerator(), T.denominator(), T.b_offset(),
+                       static_cast<uint32_t>(method));
+        };
+        CheckDeath(std::move(func_sat), V, T, method);
+        CheckDeath(std::move(func_nosat), V, T, method);
+      }
     }
+  }
 }
 
 TEST(TransformTestCase, Compose) {
-    using Transform = affine::Transform;
+  using Transform = affine::Transform;
 
-    enum class Method { Static = 0, Operator };
-    enum class Exact { No = 0, Yes };
+  enum class Method { Static = 0, Operator };
+  enum class Exact { No = 0, Yes };
 
-    constexpr int64_t kMinI64 = std::numeric_limits<int64_t>::min();
-    constexpr int64_t kMaxI64 = std::numeric_limits<int64_t>::max();
+  constexpr int64_t kMinI64 = std::numeric_limits<int64_t>::min();
+  constexpr int64_t kMaxI64 = std::numeric_limits<int64_t>::max();
 
-    struct TestVector {
-        Transform ab;
-        Transform bc;
-        Transform ac;
-        Exact is_exact;
-    };
+  struct TestVector {
+    Transform ab;
+    Transform bc;
+    Transform ac;
+    Exact is_exact;
+  };
 
-    // TODO(johngro) : If we ever make the Ratio/Transform constructors
-    // constexpr, then come back and make this constexpr.  Right now, they are
-    // not because of the assert-checking behavior in the Ratio constructor.
-    // clang-format off
+  // TODO(johngro) : If we ever make the Ratio/Transform constructors
+  // constexpr, then come back and make this constexpr.  Right now, they are
+  // not because of the assert-checking behavior in the Ratio constructor.
+  // clang-format off
     const std::array TEST_VECTORS {
         // Identity(Identity(a)) == Identity(a)
         TestVector{
@@ -418,63 +397,64 @@ TEST(TransformTestCase, Compose) {
             Exact::No
         },
     };
-    // clang-format on
+  // clang-format on
 
-    constexpr std::array METHODS {
-        Method::Static,
-        Method::Operator,
-    };
+  constexpr std::array METHODS{
+      Method::Static,
+      Method::Operator,
+  };
 
-    for (const auto& V : TEST_VECTORS) {
-        for (auto method : METHODS) {
-            fit::function<void()> func;
-            Transform result;
+  for (const auto& V : TEST_VECTORS) {
+    for (auto method : METHODS) {
+      fit::function<void()> func;
+      Transform result;
 
-            switch (method) {
-            case Method::Static:
-                func = [&result, &V]() { result = Transform::Compose(V.bc, V.ab); };
-                break;
-            case Method::Operator:
-                func = [&result, &V]() { result = V.bc * V.ab; };
-                break;
-            }
+      switch (method) {
+        case Method::Static:
+          func = [&result, &V]() { result = Transform::Compose(V.bc, V.ab); };
+          break;
+        case Method::Operator:
+          func = [&result, &V]() { result = V.bc * V.ab; };
+          break;
+      }
 
-            auto VerifyResult = [](const TestVector& V, const Transform& result, Method method) {
-                bool match = (result.a_offset() == V.ac.a_offset()) &&
-                             (result.b_offset() == V.ac.b_offset()) &&
-                             (result.numerator() == V.ac.numerator()) &&
-                             (result.denominator() == V.ac.denominator());
-                ASSERT_TRUE(match,
-                            "[ %ld : %u/%u : %ld ] <--> [ %ld : %u/%u : %ld ] should produce "
-                            "[ %ld : %u/%u : %ld ] ; got [ %ld : %u/%u : %ld ] instead (method %u)",
-                            V.ab.a_offset(), V.ab.numerator(), V.ab.denominator(), V.ab.b_offset(),
-                            V.bc.a_offset(), V.bc.numerator(), V.bc.denominator(), V.bc.b_offset(),
-                            V.ac.a_offset(), V.ac.numerator(), V.ac.denominator(), V.ac.b_offset(),
-                            result.a_offset(), result.numerator(), result.denominator(),
-                            result.b_offset(), static_cast<uint32_t>(method));
-            };
+      auto VerifyResult = [](const TestVector& V, const Transform& result, Method method) {
+        bool match = (result.a_offset() == V.ac.a_offset()) &&
+                     (result.b_offset() == V.ac.b_offset()) &&
+                     (result.numerator() == V.ac.numerator()) &&
+                     (result.denominator() == V.ac.denominator());
+        ASSERT_TRUE(match,
+                    "[ %ld : %u/%u : %ld ] <--> [ %ld : %u/%u : %ld ] should produce "
+                    "[ %ld : %u/%u : %ld ] ; got [ %ld : %u/%u : %ld ] instead (method %u)",
+                    V.ab.a_offset(), V.ab.numerator(), V.ab.denominator(), V.ab.b_offset(),
+                    V.bc.a_offset(), V.bc.numerator(), V.bc.denominator(), V.bc.b_offset(),
+                    V.ac.a_offset(), V.ac.numerator(), V.ac.denominator(), V.ac.b_offset(),
+                    result.a_offset(), result.numerator(), result.denominator(), result.b_offset(),
+                    static_cast<uint32_t>(method));
+      };
 
-            // If the composition is expected to produce an exact result, then
-            // compute and validate the result.  Otherwise, assert that the
-            // composition operation produces death as expected.
-            if (V.is_exact == Exact::Yes) {
-                func();
-                VerifyResult(V, result, method);
-            } else {
-                ASSERT_DEATH(std::move(func), "Expected death during composition : "
-                             "[ %ld : %u/%u : %ld ] <--> [ %ld : %u/%u : %ld ] (method %u)",
-                             V.ab.a_offset(), V.ab.numerator(), V.ab.denominator(), V.ab.b_offset(),
-                             V.bc.a_offset(), V.bc.numerator(), V.bc.denominator(), V.bc.b_offset(),
-                             static_cast<uint32_t>(method));
-            }
+      // If the composition is expected to produce an exact result, then
+      // compute and validate the result.  Otherwise, assert that the
+      // composition operation produces death as expected.
+      if (V.is_exact == Exact::Yes) {
+        func();
+        VerifyResult(V, result, method);
+      } else {
+        ASSERT_DEATH(std::move(func),
+                     "Expected death during composition : "
+                     "[ %ld : %u/%u : %ld ] <--> [ %ld : %u/%u : %ld ] (method %u)",
+                     V.ab.a_offset(), V.ab.numerator(), V.ab.denominator(), V.ab.b_offset(),
+                     V.bc.a_offset(), V.bc.numerator(), V.bc.denominator(), V.bc.b_offset(),
+                     static_cast<uint32_t>(method));
+      }
 
-            // If this is not the operator form of composition, test the inexact
-            // version of composition.  The expected result in the test vector
-            // should match the inexact result.
-            if (method == Method::Static) {
-                result = Transform::Compose(V.bc, V.ab, Transform::Exact::No);
-                VerifyResult(V, result, method);
-            }
-        }
+      // If this is not the operator form of composition, test the inexact
+      // version of composition.  The expected result in the test vector
+      // should match the inexact result.
+      if (method == Method::Static) {
+        result = Transform::Compose(V.bc, V.ab, Transform::Exact::No);
+        VerifyResult(V, result, method);
+      }
     }
+  }
 }

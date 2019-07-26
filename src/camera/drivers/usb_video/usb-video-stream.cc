@@ -39,11 +39,9 @@ static constexpr uint16_t USB_SOF_MASK = 0x7FF;
 
 fbl::unique_ptr<async::Loop> UsbVideoStream::fidl_dispatch_loop_ = nullptr;
 
-UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
-                               UvcFormatList format_list,
+UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb, UvcFormatList format_list,
                                fbl::Vector<UsbVideoStreamingSetting>* settings,
-                               UsbDeviceInfo device_info,
-                               size_t parent_req_size)
+                               UsbDeviceInfo device_info, size_t parent_req_size)
     : UsbVideoStreamBase(parent),
       usb_(*usb),
       format_list_(std::move(format_list)),
@@ -52,8 +50,7 @@ UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
       parent_req_size_(parent_req_size),
       device_info_(std::move(device_info)) {
   if (fidl_dispatch_loop_ == nullptr) {
-    fidl_dispatch_loop_ =
-        std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    fidl_dispatch_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     fidl_dispatch_loop_->StartThread();
   }
 }
@@ -62,33 +59,30 @@ UsbVideoStream::~UsbVideoStream() {
   // List may not have been initialized.
   if (free_reqs_.next) {
     while (!list_is_empty(&free_reqs_)) {
-      usb_request_release(
-          usb_req_list_remove_head(&free_reqs_, parent_req_size_));
+      usb_request_release(usb_req_list_remove_head(&free_reqs_, parent_req_size_));
     }
   }
 }
 
-void UsbVideoStream::RequestCompleteCallback(void* ctx,
-                                             usb_request_t* request) {
+void UsbVideoStream::RequestCompleteCallback(void* ctx, usb_request_t* request) {
   ZX_DEBUG_ASSERT(ctx != nullptr);
   reinterpret_cast<UsbVideoStream*>(ctx)->RequestComplete(request);
 }
 
 // static
-zx_status_t UsbVideoStream::Create(
-    zx_device_t* device, usb_protocol_t* usb, int index,
-    usb_interface_descriptor_t* intf, usb_video_vc_header_desc* control_header,
-    usb_video_vs_input_header_desc* input_header, UvcFormatList format_list,
-    fbl::Vector<UsbVideoStreamingSetting>* settings, UsbDeviceInfo device_info,
-    size_t parent_req_size) {
-  if (!usb || !intf || !control_header || !input_header || !settings ||
-      settings->size() == 0) {
+zx_status_t UsbVideoStream::Create(zx_device_t* device, usb_protocol_t* usb, int index,
+                                   usb_interface_descriptor_t* intf,
+                                   usb_video_vc_header_desc* control_header,
+                                   usb_video_vs_input_header_desc* input_header,
+                                   UvcFormatList format_list,
+                                   fbl::Vector<UsbVideoStreamingSetting>* settings,
+                                   UsbDeviceInfo device_info, size_t parent_req_size) {
+  if (!usb || !intf || !control_header || !input_header || !settings || settings->size() == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto dev = fbl::unique_ptr<UsbVideoStream>(
-      new UsbVideoStream(device, usb, std::move(format_list), settings,
-                         std::move(device_info), parent_req_size));
+  auto dev = fbl::unique_ptr<UsbVideoStream>(new UsbVideoStream(
+      device, usb, std::move(format_list), settings, std::move(device_info), parent_req_size));
 
   char name[ZX_DEVICE_NAME_MAX];
   snprintf(name, sizeof(name), "usb-video-source-%d", index);
@@ -101,8 +95,7 @@ zx_status_t UsbVideoStream::Create(
   return status;
 }
 
-zx_status_t UsbVideoStream::Bind(const char* devname,
-                                 usb_interface_descriptor_t* intf,
+zx_status_t UsbVideoStream::Bind(const char* devname, usb_interface_descriptor_t* intf,
                                  usb_video_vc_header_desc* control_header,
                                  usb_video_vs_input_header_desc* input_header) {
   iface_num_ = intf->bInterfaceNumber;
@@ -118,10 +111,8 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
 
     // The streaming settings should all be of the same type,
     // either all USB_ENDPOINT_BULK or all USB_ENDPOINT_ISOCHRONOUS.
-    if (streaming_ep_type_ != USB_ENDPOINT_INVALID &&
-        streaming_ep_type_ != setting.ep_type) {
-      zxlogf(ERROR, "mismatched EP types: %u and %u\n", streaming_ep_type_,
-             setting.ep_type);
+    if (streaming_ep_type_ != USB_ENDPOINT_INVALID && streaming_ep_type_ != setting.ep_type) {
+      zxlogf(ERROR, "mismatched EP types: %u and %u\n", streaming_ep_type_, setting.ep_type);
       return ZX_ERR_BAD_STATE;
     }
     streaming_ep_type_ = setting.ep_type;
@@ -130,8 +121,7 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
   // A video streaming interface containing a bulk endpoint for streaming
   // shall support only alternate setting zero.
   if (streaming_ep_type_ == USB_ENDPOINT_BULK &&
-      (streaming_settings_.size() > 1 ||
-       streaming_settings_.get()->alt_setting != 0)) {
+      (streaming_settings_.size() > 1 || streaming_settings_.get()->alt_setting != 0)) {
     zxlogf(ERROR, "invalid streaming settings for bulk endpoint\n");
     return ZX_ERR_BAD_STATE;
   }
@@ -167,12 +157,10 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
   }
   // Need to allocate new usb requests, release any existing ones.
   while (!list_is_empty(&free_reqs_)) {
-    usb_request_release(
-        usb_req_list_remove_head(&free_reqs_, parent_req_size_));
+    usb_request_release(usb_req_list_remove_head(&free_reqs_, parent_req_size_));
   }
 
-  zxlogf(TRACE, "allocating %d usb requests of size %lu\n",
-         MAX_OUTSTANDING_REQS, size);
+  zxlogf(TRACE, "allocating %d usb requests of size %lu\n", MAX_OUTSTANDING_REQS, size);
 
   uint64_t req_size = parent_req_size_ + sizeof(usb_req_internal_t);
   zx_status_t status;
@@ -193,8 +181,7 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
   return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index,
-                                            uint8_t frame_index,
+zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index, uint8_t frame_index,
                                             uint32_t default_frame_interval) {
   zxlogf(INFO, "trying format %u, frame desc %u\n", format_index, frame_index);
 
@@ -208,8 +195,7 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index,
   proposal.dwFrameInterval = default_frame_interval;
 
   usb_video_vc_probe_and_commit_controls result;
-  zx_status_t status =
-      usb_video_negotiate_probe(&usb_, iface_num_, &proposal, &result);
+  zx_status_t status = usb_video_negotiate_probe(&usb_, iface_num_, &proposal, &result);
   if (status != ZX_OK) {
     zxlogf(ERROR, "usb_video_negotiate_probe failed: %d\n", status);
     return status;
@@ -224,15 +210,13 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index,
   for (const auto& setting : streaming_settings_) {
     uint32_t bandwidth = setting_bandwidth(setting);
     // For bulk transfers, we use the first (and only) setting.
-    if (setting.ep_type == USB_ENDPOINT_BULK ||
-        bandwidth >= required_bandwidth) {
+    if (setting.ep_type == USB_ENDPOINT_BULK || bandwidth >= required_bandwidth) {
       best_setting = &setting;
       break;
     }
   }
   if (!best_setting) {
-    zxlogf(ERROR, "could not find a setting with bandwidth >= %u\n",
-           required_bandwidth);
+    zxlogf(ERROR, "could not find a setting with bandwidth >= %u\n", required_bandwidth);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -243,8 +227,7 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index,
   }
 
   // Negotiation succeeded, copy the results out.
-  memcpy(&negotiation_result_, &result,
-         sizeof(usb_video_vc_probe_and_commit_controls));
+  memcpy(&negotiation_result_, &result, sizeof(usb_video_vc_probe_and_commit_controls));
   cur_streaming_setting_ = best_setting;
 
   // Round frame size up to a whole number of pages, to allow mapping the frames
@@ -265,9 +248,9 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index,
     case USB_ENDPOINT_BULK: {
       // If the size of a payload is greater than the max usb request size,
       // we will have to split it up in multiple requests.
-      send_req_size_ = fbl::min(
-          usb_get_max_transfer_size(&usb_, usb_ep_addr_),
-          static_cast<uint64_t>(negotiation_result_.dwMaxPayloadTransferSize));
+      send_req_size_ =
+          fbl::min(usb_get_max_transfer_size(&usb_, usb_ep_addr_),
+                   static_cast<uint64_t>(negotiation_result_.dwMaxPayloadTransferSize));
       break;
     }
     default:
@@ -275,11 +258,9 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index,
       return ZX_ERR_BAD_STATE;
   }
 
-  zxlogf(INFO, "configured video: format index %u frame index %u\n",
-         format_index, frame_index);
+  zxlogf(INFO, "configured video: format index %u frame index %u\n", format_index, frame_index);
   zxlogf(INFO, "alternate setting %d, packet size %u transactions per mf %u\n",
-         cur_streaming_setting_->alt_setting,
-         cur_streaming_setting_->max_packet_size,
+         cur_streaming_setting_->alt_setting, cur_streaming_setting_->max_packet_size,
          cur_streaming_setting_->transactions_per_microframe);
 
   return AllocUsbRequestsLocked(send_req_size_);
@@ -298,11 +279,9 @@ zx_status_t UsbVideoStream::GetChannel(zx_handle_t handle) {
   if (handle == ZX_HANDLE_INVALID) {
     return ZX_ERR_INVALID_ARGS;
   }
-  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface(
-      std::move(channel));
+  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface(std::move(channel));
   camera_control_ = std::make_unique<camera::ControlImpl>(
-      this, std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
-      [this] {
+      this, std::move(control_interface), fidl_dispatch_loop_->dispatcher(), [this] {
         fbl::AutoLock lock(&lock_);
 
         camera_control_.reset();
@@ -310,16 +289,14 @@ zx_status_t UsbVideoStream::GetChannel(zx_handle_t handle) {
   return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::GetFormats(
-    fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats) {
+zx_status_t UsbVideoStream::GetFormats(fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats) {
   fbl::AutoLock lock(&lock_);
   format_list_.FillFormats(formats);
   return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::CreateStream(
-    fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-    fuchsia::camera::FrameRate frame_rate) {
+zx_status_t UsbVideoStream::CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+                                         fuchsia::camera::FrameRate frame_rate) {
   fbl::AutoLock lock(&lock_);
   fuchsia::camera::VideoFormat video_format;
   video_format.format = buffer_collection.format.image();
@@ -328,8 +305,8 @@ zx_status_t UsbVideoStream::CreateStream(
   // and frame descriptors.
   uint8_t format_index, frame_index;
   uint32_t default_frame_interval;
-  bool is_matched = format_list_.MatchFormat(
-      video_format, &format_index, &frame_index, &default_frame_interval);
+  bool is_matched =
+      format_list_.MatchFormat(video_format, &format_index, &frame_index, &default_frame_interval);
   if (!is_matched) {
     zxlogf(ERROR, "could not find a mapping for the requested format\n");
     return ZX_ERR_NOT_FOUND;
@@ -341,23 +318,21 @@ zx_status_t UsbVideoStream::CreateStream(
   }
 
   // Try setting the format on the device.
-  zx_status_t status =
-      TryFormatLocked(format_index, frame_index, default_frame_interval);
+  zx_status_t status = TryFormatLocked(format_index, frame_index, default_frame_interval);
   if (status != ZX_OK) {
     zxlogf(ERROR, "setting format failed, err: %d\n", status);
     return status;
   }
 
   if (max_frame_size_ > buffer_collection.vmo_size) {
-    zxlogf(ERROR, "buffer provided %lu is less than max size %u.\n",
-           buffer_collection.vmo_size, max_frame_size_);
+    zxlogf(ERROR, "buffer provided %lu is less than max size %u.\n", buffer_collection.vmo_size,
+           max_frame_size_);
     return ZX_ERR_INVALID_ARGS;
   }
 
   // TODO(garratt): Check if we should clear previous buffers
   // Now to set the buffers:
-  status = buffers_.Init(buffer_collection.vmos.data(),
-                         buffer_collection.buffer_count);
+  status = buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to initialize VmoPool, err: %d\n", status);
     return status;
@@ -384,8 +359,7 @@ zx_status_t UsbVideoStream::StartStreaming() {
   bulk_payload_bytes_ = 0;
   buffers_.Reset();
 
-  zx_status_t status =
-      usb_set_interface(&usb_, iface_num_, cur_streaming_setting_->alt_setting);
+  zx_status_t status = usb_set_interface(&usb_, iface_num_, cur_streaming_setting_->alt_setting);
   if (status != ZX_OK) {
     return status;
   }
@@ -434,37 +408,31 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
 
   if (streaming_state_ != StreamingState::STARTED) {
     // Stopped streaming so don't need to process the result.
-    zx_status_t status =
-        usb_req_list_add_head(&free_reqs_, req, parent_req_size_);
+    zx_status_t status = usb_req_list_add_head(&free_reqs_, req, parent_req_size_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     num_free_reqs_++;
     if (num_free_reqs_ == num_allocated_reqs_) {
-      zxlogf(TRACE, "setting video buffer as stopped, got %u frames\n",
-             num_frames_);
+      zxlogf(TRACE, "setting video buffer as stopped, got %u frames\n", num_frames_);
       streaming_state_ = StreamingState::STOPPED;
     }
     return;
   }
   ProcessPayloadLocked(req);
-  zx_status_t status =
-      usb_req_list_add_head(&free_reqs_, req, parent_req_size_);
+  zx_status_t status = usb_req_list_add_head(&free_reqs_, req, parent_req_size_);
   ZX_DEBUG_ASSERT(status == ZX_OK);
   num_free_reqs_++;
   QueueRequestLocked();
 }
 
 // Converts from device clock units to milliseconds.
-static inline double device_clock_to_ms(uint32_t clock_reading,
-                                        uint32_t clock_frequency_hz) {
-  return clock_frequency_hz != 0 ? clock_reading * 1000.0 / clock_frequency_hz
-                                 : 0;
+static inline double device_clock_to_ms(uint32_t clock_reading, uint32_t clock_frequency_hz) {
+  return clock_frequency_hz != 0 ? clock_reading * 1000.0 / clock_frequency_hz : 0;
 }
 
 void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
   // TODO(jocelyndang): handle other formats, the timestamp offset is variable.
   usb_video_vs_uncompressed_payload_header header = {};
-  usb_request_copy_from(req, &header,
-                        sizeof(usb_video_vs_uncompressed_payload_header), 0);
+  usb_request_copy_from(req, &header, sizeof(usb_video_vs_uncompressed_payload_header), 0);
 
   // PTS should stay the same for payloads of the same frame,
   // but it's probably not a critical error if they're different.
@@ -475,8 +443,8 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
     if (cur_frame_state_.pts == 0) {
       cur_frame_state_.pts = new_pts;
     } else if (new_pts != cur_frame_state_.pts) {
-      zxlogf(ERROR, "#%u: PTS changed between payloads, from %u to %u\n",
-             num_frames_, cur_frame_state_.pts, new_pts);
+      zxlogf(ERROR, "#%u: PTS changed between payloads, from %u to %u\n", num_frames_,
+             cur_frame_state_.pts, new_pts);
     }
   }
 
@@ -521,8 +489,7 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
 
   // Calculate the difference between when raw frame capture starts and ends.
   uint32_t device_delay = cur_frame_state_.stc - cur_frame_state_.pts;
-  double device_delay_ms =
-      device_clock_to_ms(device_delay, clock_frequency_hz_);
+  double device_delay_ms = device_clock_to_ms(device_delay, clock_frequency_hz_);
 
   // Calculate the delay caused by USB transport and processing. This will be
   // the time between raw frame capture ending and the driver receiving the
@@ -544,19 +511,16 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
   double total_video_delay = device_delay_ms + transport_delay_ms;
 
   // Start of raw frame capture as zx_time_t (nanoseconds).
-  zx_time_t capture_start_ns =
-      host_complete_time_ns - ZX_MSEC(total_video_delay);
+  zx_time_t capture_start_ns = host_complete_time_ns - ZX_MSEC(total_video_delay);
   // The capture time is specified in the camera interface as the midpoint of
   // the capture operation, not including USB transport time.
-  cur_frame_state_.capture_time =
-      capture_start_ns + ZX_MSEC(device_delay_ms) / 2;
+  cur_frame_state_.capture_time = capture_start_ns + ZX_MSEC(device_delay_ms) / 2;
 }
 
 zx_status_t UsbVideoStream::FrameNotifyLocked() {
   if (clock_frequency_hz_ != 0) {
-    zxlogf(TRACE,
-           "#%u: [%ld ns] PTS = %lfs, STC = %lfs, SOF = %u host SOF = %lu\n",
-           num_frames_, cur_frame_state_.capture_time,
+    zxlogf(TRACE, "#%u: [%ld ns] PTS = %lfs, STC = %lfs, SOF = %u host SOF = %lu\n", num_frames_,
+           cur_frame_state_.capture_time,
            cur_frame_state_.pts / static_cast<double>(clock_frequency_hz_),
            cur_frame_state_.stc / static_cast<double>(clock_frequency_hz_),
            cur_frame_state_.device_sof, cur_frame_state_.host_sof);
@@ -603,18 +567,16 @@ zx_status_t UsbVideoStream::FrameNotifyLocked() {
   return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(
-    usb_request_t* req, uint32_t* out_header_length) {
+zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
+                                                     uint32_t* out_header_length) {
   // Different payload types have different header types but always share
   // the same first two bytes.
   usb_video_vs_payload_header header;
-  size_t len = usb_request_copy_from(req, &header,
-                                     sizeof(usb_video_vs_payload_header), 0);
+  size_t len = usb_request_copy_from(req, &header, sizeof(usb_video_vs_payload_header), 0);
 
-  if (len != sizeof(usb_video_vs_payload_header) ||
-      header.bHeaderLength > req->response.actual) {
-    zxlogf(ERROR, "got invalid header bHeaderLength %u data length %lu\n",
-           header.bHeaderLength, req->response.actual);
+  if (len != sizeof(usb_video_vs_payload_header) || header.bHeaderLength > req->response.actual) {
+    zxlogf(ERROR, "got invalid header bHeaderLength %u data length %lu\n", header.bHeaderLength,
+           req->response.actual);
     return ZX_ERR_INTERNAL;
   }
 
@@ -634,8 +596,7 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(
     if (cur_frame_state_.fid >= 0 && !cur_frame_state_.eof) {
       zx_status_t status = FrameNotifyLocked();
       if (status != ZX_OK) {
-        zxlogf(ERROR, "failed to send notification to client, err: %d\n",
-               status);
+        zxlogf(ERROR, "failed to send notification to client, err: %d\n", status);
         // Even if we failed to send a notification, we should
         // probably continue processing the new frame.
       }
@@ -723,8 +684,8 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
   // Copy the data into the video buffer.
   uint32_t data_size = static_cast<uint32_t>(req->response.actual) - header_len;
   if (cur_frame_state_.bytes + data_size > max_frame_size_) {
-    zxlogf(ERROR, "invalid data size %u, cur frame bytes %u, frame size %u\n",
-           data_size, cur_frame_state_.bytes, max_frame_size_);
+    zxlogf(ERROR, "invalid data size %u, cur frame bytes %u, frame size %u\n", data_size,
+           cur_frame_state_.bytes, max_frame_size_);
     cur_frame_state_.error = true;
     return;
   }
@@ -733,8 +694,8 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
   uint64_t avail = current_buffer_.size() - cur_frame_state_.bytes;
   ZX_DEBUG_ASSERT(avail >= data_size);
 
-  uint8_t* dst = reinterpret_cast<uint8_t*>(current_buffer_.virtual_address()) +
-                 cur_frame_state_.bytes;
+  uint8_t* dst =
+      reinterpret_cast<uint8_t*>(current_buffer_.virtual_address()) + cur_frame_state_.bytes;
   usb_request_copy_from(req, dst, data_size, header_len);
 
   cur_frame_state_.bytes += data_size;

@@ -18,8 +18,7 @@ static zx_status_t bind(void* ctx, zx_device_t* device) {
   auto dev = std::make_unique<VirtualCameraDevice>();
   zx_status_t status = dev->Bind(device);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "*** virtual_camera: could not add device '%s': %d\n",
-           __func__, status);
+    zxlogf(ERROR, "*** virtual_camera: could not add device '%s': %d\n", __func__, status);
     return status;
   }
 
@@ -39,7 +38,5 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace virtual_camera
 
 // clang-format: off
-ZIRCON_DRIVER_BEGIN(virtual_camera, virtual_camera::driver_ops, "fuchsia",
-                    "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-    ZIRCON_DRIVER_END(virtual_camera)
+ZIRCON_DRIVER_BEGIN(virtual_camera, virtual_camera::driver_ops, "fuchsia", "0.1", 1)
+BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT), ZIRCON_DRIVER_END(virtual_camera)

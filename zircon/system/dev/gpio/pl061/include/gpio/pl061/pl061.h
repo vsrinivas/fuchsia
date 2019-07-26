@@ -12,13 +12,13 @@
 #include <threads.h>
 
 typedef struct {
-    list_node_t node;
-    mtx_t lock;
-    mmio_buffer_t buffer;
-    uint32_t gpio_start;
-    uint32_t gpio_count;
-    const uint32_t* irqs;
-    uint32_t irq_count;
+  list_node_t node;
+  mtx_t lock;
+  mmio_buffer_t buffer;
+  uint32_t gpio_start;
+  uint32_t gpio_count;
+  const uint32_t* irqs;
+  uint32_t irq_count;
 } pl061_gpios_t;
 
 // PL061 GPIO protocol ops uses pl061_gpios_t* for ctx

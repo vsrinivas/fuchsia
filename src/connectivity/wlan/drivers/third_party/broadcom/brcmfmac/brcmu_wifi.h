@@ -94,7 +94,7 @@
 #define WLC_BW_CAP_40MHZ (WLC_BW_40MHZ_BIT | WLC_BW_20MHZ_BIT)
 #define WLC_BW_CAP_80MHZ (WLC_BW_80MHZ_BIT | WLC_BW_40MHZ_BIT | WLC_BW_20MHZ_BIT)
 #define WLC_BW_CAP_160MHZ \
-    (WLC_BW_160MHZ_BIT | WLC_BW_80MHZ_BIT | WLC_BW_40MHZ_BIT | WLC_BW_20MHZ_BIT)
+  (WLC_BW_160MHZ_BIT | WLC_BW_80MHZ_BIT | WLC_BW_40MHZ_BIT | WLC_BW_20MHZ_BIT)
 #define WLC_BW_CAP_UNRESTRICTED 0xFF
 
 /* band types */
@@ -127,34 +127,34 @@
 
 #define CHSPEC_SB_LOWER(chspec) (((chspec)&WL_CHANSPEC_CTL_SB_MASK) == WL_CHANSPEC_CTL_SB_LOWER)
 
-#define CHSPEC_CTL_CHAN(chspec)                                                  \
-    ((CHSPEC_SB_LOWER(chspec)) ? (lower_20_sb(((chspec)&WL_CHANSPEC_CHAN_MASK))) \
-                               : (upper_20_sb(((chspec)&WL_CHANSPEC_CHAN_MASK))))
+#define CHSPEC_CTL_CHAN(chspec)                                                \
+  ((CHSPEC_SB_LOWER(chspec)) ? (lower_20_sb(((chspec)&WL_CHANSPEC_CHAN_MASK))) \
+                             : (upper_20_sb(((chspec)&WL_CHANSPEC_CHAN_MASK))))
 
 #define CHSPEC2BAND(chspec) (CHSPEC_IS5G(chspec) ? BRCM_BAND_5G : BRCM_BAND_2G)
 
 #define CHANSPEC_STR_LEN 8
 
 static inline int lower_20_sb(int channel) {
-    return channel > CH_10MHZ_APART ? (channel - CH_10MHZ_APART) : 0;
+  return channel > CH_10MHZ_APART ? (channel - CH_10MHZ_APART) : 0;
 }
 
 static inline int upper_20_sb(int channel) {
-    return (channel < (MAXCHANNEL - CH_10MHZ_APART)) ? channel + CH_10MHZ_APART : 0;
+  return (channel < (MAXCHANNEL - CH_10MHZ_APART)) ? channel + CH_10MHZ_APART : 0;
 }
 
 static inline int chspec_bandunit(uint16_t chspec) {
-    return CHSPEC_IS5G(chspec) ? BAND_5G_INDEX : BAND_2G_INDEX;
+  return CHSPEC_IS5G(chspec) ? BAND_5G_INDEX : BAND_2G_INDEX;
 }
 
 static inline uint16_t ch20mhz_chspec(int channel) {
-    uint16_t rc = channel <= CH_MAX_2G_CHANNEL ? WL_CHANSPEC_BAND_2G : WL_CHANSPEC_BAND_5G;
+  uint16_t rc = channel <= CH_MAX_2G_CHANNEL ? WL_CHANSPEC_BAND_2G : WL_CHANSPEC_BAND_5G;
 
-    return (uint16_t)((uint16_t)channel | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE | rc);
+  return (uint16_t)((uint16_t)channel | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE | rc);
 }
 
 static inline int next_20mhz_chan(int channel) {
-    return channel < (MAXCHANNEL - CH_20MHZ_APART) ? channel + CH_20MHZ_APART : 0;
+  return channel < (MAXCHANNEL - CH_20MHZ_APART) ? channel + CH_20MHZ_APART : 0;
 }
 
 /* defined rate in 500kbps */
@@ -176,9 +176,7 @@ static inline int next_20mhz_chan(int channel) {
 
 #define MCSSET_LEN 16
 
-static inline bool ac_bitmap_tst(uint8_t bitmap, int prec) {
-    return (bitmap & (1 << (prec))) != 0;
-}
+static inline bool ac_bitmap_tst(uint8_t bitmap, int prec) { return (bitmap & (1 << (prec))) != 0; }
 
 /* Enumerate crypto algorithms */
 #define CRYPTO_ALGO_OFF 0

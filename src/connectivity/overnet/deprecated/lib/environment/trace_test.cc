@@ -29,8 +29,7 @@ TEST(Trace, Simple) {
 
   auto outputs = [&](Optional<const char*> message, auto fn) {
     if (message) {
-      EXPECT_CALL(sink_impl,
-                  Render(Field(&TraceOutput::message, StrEq(*message))));
+      EXPECT_CALL(sink_impl, Render(Field(&TraceOutput::message, StrEq(*message))));
     }
     fn();
     Mock::VerifyAndClearExpectations(&sink_impl);

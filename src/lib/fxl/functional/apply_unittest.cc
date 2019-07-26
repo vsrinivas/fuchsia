@@ -12,8 +12,7 @@ namespace fxl {
 namespace {
 
 TEST(Apply, SimpleCall) {
-  EXPECT_EQ(3,
-            Apply([](int i, int j) { return i + j; }, std::make_tuple(1, 2)));
+  EXPECT_EQ(3, Apply([](int i, int j) { return i + j; }, std::make_tuple(1, 2)));
 }
 
 TEST(Apply, NoReturnValue) {

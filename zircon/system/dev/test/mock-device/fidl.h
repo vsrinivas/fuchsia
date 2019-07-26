@@ -53,5 +53,4 @@ zx_status_t SendRemoveDeviceDoneFromThread(const zx::channel& c, uint64_t action
 zx_status_t WaitForPerformActions(const zx::channel& c,
                                   fbl::Array<const fuchsia_device_mock_Action>* actions_out);
 
-} // namespace mock_device
-
+}  // namespace mock_device

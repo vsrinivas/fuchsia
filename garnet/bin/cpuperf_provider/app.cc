@@ -25,11 +25,9 @@ namespace {
 
 // If only fxl string/number conversions supported 0x.
 
-bool ParseNumber(const char* name, const fxl::StringView& arg,
-                 uint64_t* value) {
+bool ParseNumber(const char* name, const fxl::StringView& arg, uint64_t* value) {
   if (arg.size() > 2 && arg[0] == '0' && (arg[1] == 'x' || arg[1] == 'X')) {
-    if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value,
-                                                fxl::Base::k16)) {
+    if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value, fxl::Base::k16)) {
       FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
       return false;
     }
@@ -44,8 +42,7 @@ bool ParseNumber(const char* name, const fxl::StringView& arg,
 
 bool GetBufferSizeInPages(uint32_t size_in_mb, uint32_t* out_num_pages) {
   const uint64_t kPagesPerMb = 1024 * 1024 / perfmon::Controller::kPageSize;
-  const uint64_t kMaxSizeInMb =
-      std::numeric_limits<uint32_t>::max() / kPagesPerMb;
+  const uint64_t kMaxSizeInMb = std::numeric_limits<uint32_t>::max() / kPagesPerMb;
   if (size_in_mb > kMaxSizeInMb) {
     return false;
   }
@@ -55,8 +52,7 @@ bool GetBufferSizeInPages(uint32_t size_in_mb, uint32_t* out_num_pages) {
 
 }  // namespace
 
-App::App(const fxl::CommandLine& command_line)
-    : startup_context_(sys::ComponentContext::Create()) {
+App::App(const fxl::CommandLine& command_line) : startup_context_(sys::ComponentContext::Create()) {
   if (command_line.HasOption("help")) {
     PrintHelp();
     exit(EXIT_SUCCESS);
@@ -83,12 +79,10 @@ App::App(const fxl::CommandLine& command_line)
 
   // The supported models and their names are determined by lib/perfmon.
   // These are defaults for now.
-  model_event_manager_ = perfmon::ModelEventManager::Create(
-    perfmon::GetDefaultModelName());
+  model_event_manager_ = perfmon::ModelEventManager::Create(perfmon::GetDefaultModelName());
   FXL_CHECK(model_event_manager_);
 
-  trace_observer_.Start(async_get_default_dispatcher(),
-                        [this] { UpdateState(); });
+  trace_observer_.Start(async_get_default_dispatcher(), [this] { UpdateState(); });
 }
 
 App::~App() {}
@@ -104,8 +98,7 @@ void App::PrintHelp() {
 void App::UpdateState() {
   if (trace_state() == TRACE_STARTED) {
     FXL_DCHECK(!IsTracing());
-    auto new_config = TraceConfig::Create(model_event_manager_.get(),
-                                          trace_is_category_enabled);
+    auto new_config = TraceConfig::Create(model_event_manager_.get(), trace_is_category_enabled);
     if (new_config != nullptr && new_config->is_enabled()) {
       StartTracing(std::move(new_config));
     }
@@ -126,8 +119,7 @@ void App::StartTracing(std::unique_ptr<TraceConfig> trace_config) {
   }
 
   std::unique_ptr<perfmon::Controller> controller;
-  if (!perfmon::Controller::Create(buffer_size_in_pages_, device_config,
-                                   &controller)) {
+  if (!perfmon::Controller::Create(buffer_size_in_pages_, device_config, &controller)) {
     FXL_LOG(ERROR) << "Perfmon controller failed to initialize";
     return;
   }
@@ -171,8 +163,7 @@ void App::StopTracing() {
 
   auto reader = controller_->GetReader();
   if (reader) {
-    Importer importer(buffer_context, trace_config_.get(),
-                      start_time_, stop_time_);
+    Importer importer(buffer_context, trace_config_.get(), start_time_, stop_time_);
     const perfmon::Config& config = controller_->config();
     if (!importer.Import(*reader, config)) {
       FXL_LOG(ERROR) << "Errors encountered while importing perfmon data";

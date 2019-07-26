@@ -50,9 +50,7 @@ void SocketServer::Run(ConnectionConfig config) {
   printf("Connection established.\n");
 }
 
-void SocketServer::Reset() {
-  connection_.reset();
-}
+void SocketServer::Reset() { connection_.reset(); }
 
 // SocketConnection --------------------------------------------------------------------------------
 
@@ -82,29 +80,29 @@ bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serv
   }
 
   // We need to post the agent initialization to the other thread.
-  main_thread_loop->PostTask(FROM_HERE, [this, debug_agent = debug_agent_,
-                                         client = std::move(client)]() mutable {
-    if (!buffer_.Init(std::move(client))) {
-      FXL_LOG(ERROR) << "Error waiting for data.";
-      debug_ipc::MessageLoop::Current()->QuitNow();
-      return;
-    }
+  main_thread_loop->PostTask(
+      FROM_HERE, [this, debug_agent = debug_agent_, client = std::move(client)]() mutable {
+        if (!buffer_.Init(std::move(client))) {
+          FXL_LOG(ERROR) << "Error waiting for data.";
+          debug_ipc::MessageLoop::Current()->QuitNow();
+          return;
+        }
 
-    // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
-    adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(debug_agent, &buffer_.stream());
+        // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
+        adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(debug_agent, &buffer_.stream());
 
-    buffer_.set_data_available_callback(
-        [adapter = adapter_.get()]() { adapter->OnStreamReadable(); });
+        buffer_.set_data_available_callback(
+            [adapter = adapter_.get()]() { adapter->OnStreamReadable(); });
 
-    // Exit the message loop on error.
-    buffer_.set_error_callback([]() {
-      DEBUG_LOG(Agent) << "Connection lost.";
-      debug_ipc::MessageLoop::Current()->QuitNow();
-    });
+        // Exit the message loop on error.
+        buffer_.set_error_callback([]() {
+          DEBUG_LOG(Agent) << "Connection lost.";
+          debug_ipc::MessageLoop::Current()->QuitNow();
+        });
 
-    // Connect the buffer into the agent.
-    debug_agent->Connect(&buffer_.stream());
-  });
+        // Connect the buffer into the agent.
+        debug_agent->Connect(&buffer_.stream());
+      });
 
   printf("Accepted connection.\n");
   connected_ = true;

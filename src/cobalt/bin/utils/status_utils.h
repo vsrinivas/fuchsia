@@ -5,7 +5,6 @@
 #ifndef GARNET_BIN_COBALT_UTILS_STATUS_UTILS_H_
 #define GARNET_BIN_COBALT_UTILS_STATUS_UTILS_H_
 
-
 namespace cobalt {
 
 std::string StatusToString(fuchsia::cobalt::Status status) {

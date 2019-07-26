@@ -43,17 +43,15 @@ class OvernetApp final {
   // Allows binding a zx::channel to some service denoted by an Introduction
   // object.
   class ServiceProvider;
-  using ServiceProviderMap =
-      std::unordered_map<std::string, std::unique_ptr<ServiceProvider>>;
+  using ServiceProviderMap = std::unordered_map<std::string, std::unique_ptr<ServiceProvider>>;
   class ServiceProvider : public overnet::RouterEndpoint::Service {
     friend class OvernetApp;
 
    public:
     ServiceProvider(OvernetApp* app, std::string fully_qualified_name,
-                    fuchsia::overnet::protocol::ReliabilityAndOrdering
-                        reliability_and_ordering)
-        : overnet::RouterEndpoint::Service(
-              &app->endpoint_, fully_qualified_name, reliability_and_ordering),
+                    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering)
+        : overnet::RouterEndpoint::Service(&app->endpoint_, fully_qualified_name,
+                                           reliability_and_ordering),
           app_(app) {}
     virtual ~ServiceProvider() {}
     virtual void Connect(zx::channel channel) = 0;
@@ -74,21 +72,17 @@ class OvernetApp final {
     // Keep pointer to sp even though we'll move it as an arg on the next line,
     // so we can assign where_am_i_
     auto sp_ptr = sp.get();
-    sp_ptr->where_am_i_ =
-        service_providers_.emplace(std::move(name), std::move(sp)).first;
+    sp_ptr->where_am_i_ = service_providers_.emplace(std::move(name), std::move(sp)).first;
   }
 
   // Bind 'channel' to a local overnet service.
-  void ConnectToLocalService(const std::string& service_name,
-                             zx::channel channel);
+  void ConnectToLocalService(const std::string& service_name, zx::channel channel);
 
   /////////////////////////////////////////////////////////////////////////////
   // Accessors for well known objects.
 
   overnet::RouterEndpoint* endpoint() { return &endpoint_; }
-  sys::ComponentContext* component_context() const {
-    return component_context_.get();
-  }
+  sys::ComponentContext* component_context() const { return component_context_.get(); }
   overnet::Timer* timer() { return timer_; }
   overnet::NodeId node_id() const { return node_id_; }
 

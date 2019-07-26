@@ -25,8 +25,7 @@ namespace gfx {
 // NOTE: fostr doesn't generate operator<< for union tags, so we explicitly add
 // our own where desired.
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::Value::Tag& tag);
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Value::Tag& tag);
 
 }  // namespace gfx
 }  // namespace ui

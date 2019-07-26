@@ -25,8 +25,7 @@ class CmxMetadata {
 
   // Initializes the CmxMetadata from a JSON file. Returns false if there were
   // any errors.
-  bool ParseFromFileAt(int dirfd, const std::string& file,
-                       json::JSONParser* json_parser);
+  bool ParseFromFileAt(int dirfd, const std::string& file, json::JSONParser* json_parser);
 
   bool ParseFromString(const std::string& data, const std::string& filename,
                        json::JSONParser* json_parser);
@@ -39,15 +38,11 @@ class CmxMetadata {
   const ProgramMetadata& program_meta() { return program_meta_; }
 
  private:
-  static std::string GetCmxPathFromPath(const std::regex& regex,
-                                        const std::string& path);
-  void ParseSandboxMetadata(const rapidjson::Document& document,
-                            json::JSONParser* json_parser);
-  void ParseProgramMetadata(const rapidjson::Document& document,
-                            json::JSONParser* json_parser);
+  static std::string GetCmxPathFromPath(const std::regex& regex, const std::string& path);
+  void ParseSandboxMetadata(const rapidjson::Document& document, json::JSONParser* json_parser);
+  void ParseProgramMetadata(const rapidjson::Document& document, json::JSONParser* json_parser);
 
-  bool ParseDocument(const rapidjson::Document& document,
-                     json::JSONParser* json_parser);
+  bool ParseDocument(const rapidjson::Document& document, json::JSONParser* json_parser);
 
   SandboxMetadata sandbox_meta_;
   RuntimeMetadata runtime_meta_;

@@ -37,122 +37,118 @@ typedef int64_t zx_ticks_t;
 // floating point math.
 
 __CONSTEXPR static inline zx_time_t zx_time_add_duration(zx_time_t time, zx_duration_t duration) {
-    zx_time_t x = 0;
-    if (unlikely(add_overflow(time, duration, &x))) {
-        if (x >= 0) {
-            return ZX_TIME_INFINITE_PAST;
-        } else {
-            return ZX_TIME_INFINITE;
-        }
+  zx_time_t x = 0;
+  if (unlikely(add_overflow(time, duration, &x))) {
+    if (x >= 0) {
+      return ZX_TIME_INFINITE_PAST;
+    } else {
+      return ZX_TIME_INFINITE;
     }
-    return x;
+  }
+  return x;
 }
 
 __CONSTEXPR static inline zx_time_t zx_time_sub_duration(zx_time_t time, zx_duration_t duration) {
-    zx_time_t x = 0;
-    if (unlikely(sub_overflow(time, duration, &x))) {
-        if (x >= 0) {
-            return ZX_TIME_INFINITE_PAST;
-        } else {
-            return ZX_TIME_INFINITE;
-        }
+  zx_time_t x = 0;
+  if (unlikely(sub_overflow(time, duration, &x))) {
+    if (x >= 0) {
+      return ZX_TIME_INFINITE_PAST;
+    } else {
+      return ZX_TIME_INFINITE;
     }
-    return x;
+  }
+  return x;
 }
 
 __CONSTEXPR static inline zx_duration_t zx_time_sub_time(zx_time_t time1, zx_time_t time2) {
-    zx_duration_t x = 0;
-    if (unlikely(sub_overflow(time1, time2, &x))) {
-        if (x >= 0) {
-            return ZX_TIME_INFINITE_PAST;
-        } else {
-            return ZX_TIME_INFINITE;
-        }
+  zx_duration_t x = 0;
+  if (unlikely(sub_overflow(time1, time2, &x))) {
+    if (x >= 0) {
+      return ZX_TIME_INFINITE_PAST;
+    } else {
+      return ZX_TIME_INFINITE;
     }
-    return x;
+  }
+  return x;
 }
 
 __CONSTEXPR static inline zx_duration_t zx_duration_add_duration(zx_duration_t dur1,
                                                                  zx_duration_t dur2) {
-    zx_duration_t x = 0;
-    if (unlikely(add_overflow(dur1, dur2, &x))) {
-        if (x >= 0) {
-            return ZX_TIME_INFINITE_PAST;
-        } else {
-            return ZX_TIME_INFINITE;
-        }
+  zx_duration_t x = 0;
+  if (unlikely(add_overflow(dur1, dur2, &x))) {
+    if (x >= 0) {
+      return ZX_TIME_INFINITE_PAST;
+    } else {
+      return ZX_TIME_INFINITE;
     }
-    return x;
+  }
+  return x;
 }
 
 __CONSTEXPR static inline zx_duration_t zx_duration_sub_duration(zx_duration_t dur1,
                                                                  zx_duration_t dur2) {
-    zx_duration_t x = 0;
-    if (unlikely(sub_overflow(dur1, dur2, &x))) {
-        if (x >= 0) {
-            return ZX_TIME_INFINITE_PAST;
-        } else {
-            return ZX_TIME_INFINITE;
-        }
+  zx_duration_t x = 0;
+  if (unlikely(sub_overflow(dur1, dur2, &x))) {
+    if (x >= 0) {
+      return ZX_TIME_INFINITE_PAST;
+    } else {
+      return ZX_TIME_INFINITE;
     }
-    return x;
+  }
+  return x;
 }
 
 __CONSTEXPR static inline zx_duration_t zx_duration_mul_int64(zx_duration_t duration,
                                                               int64_t multiplier) {
-    zx_duration_t x = 0;
-    if (unlikely(mul_overflow(duration, multiplier, &x))) {
-        if ((duration > 0 && multiplier > 0) || (duration < 0 && multiplier < 0)) {
-            return ZX_TIME_INFINITE;
-        } else {
-            return ZX_TIME_INFINITE_PAST;
-        }
+  zx_duration_t x = 0;
+  if (unlikely(mul_overflow(duration, multiplier, &x))) {
+    if ((duration > 0 && multiplier > 0) || (duration < 0 && multiplier < 0)) {
+      return ZX_TIME_INFINITE;
+    } else {
+      return ZX_TIME_INFINITE_PAST;
     }
-    return x;
+  }
+  return x;
 }
 
-__CONSTEXPR static inline int64_t zx_nsec_from_duration(zx_duration_t n) {
-    return n;
-}
+__CONSTEXPR static inline int64_t zx_nsec_from_duration(zx_duration_t n) { return n; }
 
 __CONSTEXPR static inline zx_duration_t zx_duration_from_nsec(int64_t n) {
-    return zx_duration_mul_int64(1, n);
+  return zx_duration_mul_int64(1, n);
 }
 
 __CONSTEXPR static inline zx_duration_t zx_duration_from_usec(int64_t n) {
-    return zx_duration_mul_int64(1000, n);
+  return zx_duration_mul_int64(1000, n);
 }
 
 __CONSTEXPR static inline zx_duration_t zx_duration_from_msec(int64_t n) {
-    return zx_duration_mul_int64(1000000, n);
+  return zx_duration_mul_int64(1000000, n);
 }
 
 __CONSTEXPR static inline zx_duration_t zx_duration_from_sec(int64_t n) {
-    return zx_duration_mul_int64(1000000000, n);
+  return zx_duration_mul_int64(1000000000, n);
 }
 
 __CONSTEXPR static inline zx_duration_t zx_duration_from_min(int64_t n) {
-    return zx_duration_mul_int64(60000000000, n);
+  return zx_duration_mul_int64(60000000000, n);
 }
 
 __CONSTEXPR static inline zx_duration_t zx_duration_from_hour(int64_t n) {
-    return zx_duration_mul_int64(3600000000000, n);
+  return zx_duration_mul_int64(3600000000000, n);
 }
 
 // Similar to the functions above, these macros perform overflow-safe unit conversion. Prefer to use
 // the functions above instead of these macros.
-#define ZX_NSEC(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(1LL * (n))) : (zx_duration_from_nsec(n)))
-#define ZX_USEC(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(1000LL * (n))) : (zx_duration_from_usec(n)))
+#define ZX_NSEC(n) (__ISCONSTANT(n) ? ((zx_duration_t)(1LL * (n))) : (zx_duration_from_nsec(n)))
+#define ZX_USEC(n) (__ISCONSTANT(n) ? ((zx_duration_t)(1000LL * (n))) : (zx_duration_from_usec(n)))
 #define ZX_MSEC(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(1000000LL * (n))) : (zx_duration_from_msec(n)))
+  (__ISCONSTANT(n) ? ((zx_duration_t)(1000000LL * (n))) : (zx_duration_from_msec(n)))
 #define ZX_SEC(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(1000000000LL * (n))) : (zx_duration_from_sec(n)))
+  (__ISCONSTANT(n) ? ((zx_duration_t)(1000000000LL * (n))) : (zx_duration_from_sec(n)))
 #define ZX_MIN(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(60LL * 1000000000LL * (n))) : (zx_duration_from_min(n)))
+  (__ISCONSTANT(n) ? ((zx_duration_t)(60LL * 1000000000LL * (n))) : (zx_duration_from_min(n)))
 #define ZX_HOUR(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(3600LL * 1000000000LL * (n))) : (zx_duration_from_hour(n)))
+  (__ISCONSTANT(n) ? ((zx_duration_t)(3600LL * 1000000000LL * (n))) : (zx_duration_from_hour(n)))
 
 __END_CDECLS
 

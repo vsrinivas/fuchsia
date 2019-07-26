@@ -10,46 +10,44 @@
 namespace {
 namespace example1 {
 fit::result<int, std::string> divide(int dividend, int divisor) {
-    if (divisor == 0)
-        return fit::error<std::string>("divide by zero");
-    return fit::ok(dividend / divisor);
+  if (divisor == 0)
+    return fit::error<std::string>("divide by zero");
+  return fit::ok(dividend / divisor);
 }
 
 int try_divide(int dividend, int divisor) {
-    auto result = divide(dividend, divisor);
-    if (result.is_ok()) {
-        printf("%d / %d = %d\n", dividend, divisor, result.value());
-        return result.value();
-    }
-    printf("%d / %d: ERROR %s\n", dividend, divisor, result.error().c_str());
-    return -999;
+  auto result = divide(dividend, divisor);
+  if (result.is_ok()) {
+    printf("%d / %d = %d\n", dividend, divisor, result.value());
+    return result.value();
+  }
+  printf("%d / %d: ERROR %s\n", dividend, divisor, result.error().c_str());
+  return -999;
 }
 
 fit::result<> open(std::string secret) {
-    printf("guessing \"%s\"\n", secret.c_str());
-    if (secret == "sesame") {
-        puts("yes!");
-        return fit::ok();
-    }
-    puts("no.");
-    return fit::error();
+  printf("guessing \"%s\"\n", secret.c_str());
+  if (secret == "sesame") {
+    puts("yes!");
+    return fit::ok();
+  }
+  puts("no.");
+  return fit::error();
 }
 
-bool guess_combination() {
-    return open("friend") || open("sesame") || open("I give up");
-}
+bool guess_combination() { return open("friend") || open("sesame") || open("I give up"); }
 
 bool test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    EXPECT_EQ(2, try_divide(5, 2));
-    EXPECT_EQ(-999, try_divide(5, 0));
-    EXPECT_TRUE(guess_combination());
+  EXPECT_EQ(2, try_divide(5, 2));
+  EXPECT_EQ(-999, try_divide(5, 0));
+  EXPECT_TRUE(guess_combination());
 
-    END_TEST;
+  END_TEST;
 }
-} // namespace example1
-} // namespace
+}  // namespace example1
+}  // namespace
 
 BEGIN_TEST_CASE(result_examples)
 RUN_TEST(example1::test)

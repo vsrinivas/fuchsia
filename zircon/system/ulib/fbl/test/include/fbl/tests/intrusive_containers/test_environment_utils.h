@@ -23,39 +23,39 @@ struct ContainerUtils;
 template <typename ContainerType>
 struct ContainerUtils<ContainerType,
                       typename std::enable_if<ContainerType::IsSequenced, void>::type> {
-    using PtrTraits = typename ContainerType::PtrTraits;
-    using PtrType   = typename PtrTraits::PtrType;
+  using PtrTraits = typename ContainerType::PtrTraits;
+  using PtrType = typename PtrTraits::PtrType;
 
-    static void MoveInto(ContainerType& container, PtrType&& ptr) {
-        container.push_front(std::move(ptr));
-    }
+  static void MoveInto(ContainerType& container, PtrType&& ptr) {
+    container.push_front(std::move(ptr));
+  }
 };
 
 template <typename ContainerType>
 struct ContainerUtils<ContainerType,
                       typename std::enable_if<ContainerType::IsAssociative, void>::type> {
-    using PtrTraits = typename ContainerType::PtrTraits;
-    using PtrType   = typename PtrTraits::PtrType;
+  using PtrTraits = typename ContainerType::PtrTraits;
+  using PtrType = typename PtrTraits::PtrType;
 
-    static void MoveInto(ContainerType& container, PtrType&& ptr) {
-        container.insert(std::move(ptr));
-    }
+  static void MoveInto(ContainerType& container, PtrType&& ptr) {
+    container.insert(std::move(ptr));
+  }
 };
 
 template <typename ContainerType, typename Enable = void>
 struct SizeUtils;
 
 template <typename ContainerType>
-struct SizeUtils<ContainerType,
-                 typename std::enable_if<ContainerType::SupportsConstantOrderSize == true, void>::type> {
-    static size_t size(const ContainerType& container) { return container.size(); }
+struct SizeUtils<ContainerType, typename std::enable_if<
+                                    ContainerType::SupportsConstantOrderSize == true, void>::type> {
+  static size_t size(const ContainerType& container) { return container.size(); }
 };
 
 template <typename ContainerType>
-struct SizeUtils<ContainerType,
-                 typename std::enable_if<ContainerType::SupportsConstantOrderSize == false,
-                                         void>::type> {
-    static size_t size(const ContainerType& container) { return container.size_slow(); }
+struct SizeUtils<
+    ContainerType,
+    typename std::enable_if<ContainerType::SupportsConstantOrderSize == false, void>::type> {
+  static size_t size(const ContainerType& container) { return container.size_slow(); }
 };
 
 }  // namespace intrusive_containers

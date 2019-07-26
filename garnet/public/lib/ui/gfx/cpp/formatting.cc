@@ -10,8 +10,7 @@ namespace fuchsia {
 namespace ui {
 namespace gfx {
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::Value::Tag& tag) {
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Value::Tag& tag) {
   using Value = fuchsia::ui::gfx::Value;
   switch (tag) {
     case Value::Tag::kVector1:

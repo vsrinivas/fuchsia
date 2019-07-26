@@ -43,8 +43,7 @@ class StartupContext {
   // The returned unique_ptr is never null.
   static std::unique_ptr<StartupContext> CreateFromStartupInfo();
 
-  static std::unique_ptr<StartupContext> CreateFrom(
-      fuchsia::sys::StartupInfo startup_info);
+  static std::unique_ptr<StartupContext> CreateFrom(fuchsia::sys::StartupInfo startup_info);
 
   // Gets the component's environment.
   //
@@ -57,16 +56,12 @@ class StartupContext {
   // May be null if the component does not have access to its environment.
   const fuchsia::sys::LauncherPtr& launcher() const;
 
-  const std::shared_ptr<Services>& incoming_services() const {
-    return incoming_services_;
-  }
+  const std::shared_ptr<Services>& incoming_services() const { return incoming_services_; }
   const Outgoing& outgoing() const { return outgoing_; }
 
   // Gets a service provider implementation by which the component can
   // provide outgoing services back to its creator.
-  ServiceNamespace* outgoing_services() {
-    return outgoing().deprecated_services();
-  }
+  ServiceNamespace* outgoing_services() { return outgoing().deprecated_services(); }
 
   // Connects to a service provided by the component's environment,
   // returning an interface pointer.
@@ -79,24 +74,20 @@ class StartupContext {
   // Connects to a service provided by the component's environment,
   // binding the service to an interface request.
   template <typename Interface>
-  void ConnectToEnvironmentService(
-      fidl::InterfaceRequest<Interface> request,
-      const std::string& interface_name = Interface::Name_) {
-    return incoming_services()->ConnectToService(std::move(request),
-                                                 interface_name);
+  void ConnectToEnvironmentService(fidl::InterfaceRequest<Interface> request,
+                                   const std::string& interface_name = Interface::Name_) {
+    return incoming_services()->ConnectToService(std::move(request), interface_name);
   }
 
   // Connects to a service provided by the component's environment,
   // binding the service to a channel.
-  void ConnectToEnvironmentService(const std::string& interface_name,
-                                   zx::channel channel);
+  void ConnectToEnvironmentService(const std::string& interface_name, zx::channel channel);
 
  private:
   std::shared_ptr<Services> incoming_services_;
   Outgoing outgoing_;
   mutable std::mutex services_mutex_;
-  mutable fuchsia::sys::EnvironmentPtr environment_
-      __TA_GUARDED(services_mutex_);
+  mutable fuchsia::sys::EnvironmentPtr environment_ __TA_GUARDED(services_mutex_);
   mutable fuchsia::sys::LauncherPtr launcher_ __TA_GUARDED(services_mutex_);
 };
 

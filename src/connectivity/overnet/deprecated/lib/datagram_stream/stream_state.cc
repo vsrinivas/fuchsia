@@ -10,8 +10,7 @@
 
 namespace overnet {
 
-StreamState::Kernel::Kernel(StreamStateListener* listener)
-    : listener_(listener) {}
+StreamState::Kernel::Kernel(StreamStateListener* listener) : listener_(listener) {}
 
 StreamState::Kernel::~Kernel() {
   assert(state_ == State::Quiesced);
@@ -26,8 +25,7 @@ StreamState::~StreamState() { assert(outstanding_ops_ == 0); }
 // Event handlers
 
 void StreamState::LocalClose(const Status& status, Callback<void> on_quiesced) {
-  OVERNET_TRACE(DEBUG) << "LocalClose: " << status
-                       << " state=" << Description();
+  OVERNET_TRACE(DEBUG) << "LocalClose: " << status << " state=" << Description();
   auto st = kernel_.state();
   kernel_.ScheduleQuiesceCallback(std::move(on_quiesced));
   switch (st) {
@@ -40,8 +38,7 @@ void StreamState::LocalClose(const Status& status, Callback<void> on_quiesced) {
       break;
     case State::LocalCloseRequestedOk:
       if (status.is_error()) {
-        kernel_.SetStateNoAck(
-            State::PendingLocalCloseRequestedWithErrorOnSendAck, status);
+        kernel_.SetStateNoAck(State::PendingLocalCloseRequestedWithErrorOnSendAck, status);
       }
       break;
     case State::LocalClosedOkDraining:
@@ -58,20 +55,17 @@ void StreamState::LocalClose(const Status& status, Callback<void> on_quiesced) {
       if (status.is_ok()) {
         kernel_.SetStateNoAck(State::RemoteClosedAndLocalCloseRequestedOk);
       } else {
-        kernel_.SetStateNoAck(
-            State::RemoteClosedAndLocalCloseRequestedWithError, status);
+        kernel_.SetStateNoAck(State::RemoteClosedAndLocalCloseRequestedWithError, status);
       }
       break;
     case State::RemoteClosedAndLocalCloseRequestedOk:
       if (status.is_error()) {
-        kernel_.SetStateNoAck(
-            State::PendingRemoteClosedAndLocalCloseRequestedWithError, status);
+        kernel_.SetStateNoAck(State::PendingRemoteClosedAndLocalCloseRequestedWithError, status);
       }
       break;
     case State::RemoteClosedOkAndLocalClosedOkDraining:
       if (status.is_error()) {
-        kernel_.SetStateNoAck(
-            State::RemoteClosedAndLocalCloseRequestedWithError, status);
+        kernel_.SetStateNoAck(State::RemoteClosedAndLocalCloseRequestedWithError, status);
       }
       break;
     case State::LocalCloseRequestedWithError:
@@ -87,8 +81,7 @@ void StreamState::LocalClose(const Status& status, Callback<void> on_quiesced) {
 }
 
 void StreamState::ForceClose(const Status& status) {
-  OVERNET_TRACE(DEBUG) << "LocalClose: " << status
-                       << " state=" << Description();
+  OVERNET_TRACE(DEBUG) << "LocalClose: " << status << " state=" << Description();
   switch (kernel_.state()) {
     case State::Open:
     case State::LocalClosedOkDraining:
@@ -116,8 +109,7 @@ void StreamState::ForceClose(const Status& status) {
 }
 
 void StreamState::SendCloseAck(const Status& status) {
-  OVERNET_TRACE(DEBUG) << "SendCloseAck: " << status
-                       << " state=" << Description();
+  OVERNET_TRACE(DEBUG) << "SendCloseAck: " << status << " state=" << Description();
   switch (kernel_.state()) {
     case State::LocalCloseRequestedOk:
       if (status.is_ok()) {
@@ -148,8 +140,7 @@ void StreamState::SendCloseAck(const Status& status) {
       kernel_.SetStateFromAck(State::LocalCloseRequestedWithError);
       break;
     case State::PendingRemoteClosedAndLocalCloseRequestedWithError:
-      kernel_.SetStateFromAck(
-          State::RemoteClosedAndLocalCloseRequestedWithError);
+      kernel_.SetStateFromAck(State::RemoteClosedAndLocalCloseRequestedWithError);
       break;
     case State::Open:
     case State::LocalClosedOkDraining:
@@ -164,8 +155,7 @@ void StreamState::SendCloseAck(const Status& status) {
 }
 
 void StreamState::RemoteClose(const Status& status) {
-  OVERNET_TRACE(DEBUG) << "RemoteClose: " << status
-                       << " state=" << Description();
+  OVERNET_TRACE(DEBUG) << "RemoteClose: " << status << " state=" << Description();
   switch (kernel_.state()) {
     case State::Open:
       if (status.is_ok()) {
@@ -183,8 +173,7 @@ void StreamState::RemoteClose(const Status& status) {
       break;
     case State::LocalCloseRequestedWithError:
       if (status.is_ok()) {
-        kernel_.SetStateNoAck(
-            State::RemoteClosedAndLocalCloseRequestedWithError);
+        kernel_.SetStateNoAck(State::RemoteClosedAndLocalCloseRequestedWithError);
       } else {
         kernel_.SetStateNoAck(State::PendingCloseOnSendAck);
       }
@@ -225,8 +214,7 @@ void StreamState::RemoteClose(const Status& status) {
       if (status.is_error()) {
         kernel_.SetStateNoAck(State::PendingCloseOnSendAck);
       } else {
-        kernel_.SetStateNoAck(
-            State::PendingRemoteClosedAndLocalCloseRequestedWithError);
+        kernel_.SetStateNoAck(State::PendingRemoteClosedAndLocalCloseRequestedWithError);
       }
       break;
     case State::PendingRemoteClosedAndLocalCloseRequestedWithError:
@@ -300,8 +288,7 @@ Status StreamState::GetSendStatus() const {
 ///////////////////////////////////////////////////////////////////////////////
 // Transition operations
 
-void StreamState::Kernel::SetState(State new_state, bool from_ack,
-                                   Optional<Status> status) {
+void StreamState::Kernel::SetState(State new_state, bool from_ack, Optional<Status> status) {
   const auto old_state = state_;
   state_ = new_state;
 
@@ -485,9 +472,7 @@ bool StreamState::StateIsClosed(State state) {
   }
 }
 
-bool StreamState::StateCanBeginOp(State state) {
-  return state != State::Quiesced;
-}
+bool StreamState::StateCanBeginOp(State state) { return state != State::Quiesced; }
 
 bool StreamState::StateIsSendAcked(State state) {
   switch (state) {

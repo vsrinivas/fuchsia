@@ -9,10 +9,10 @@
 #include <zircon/types.h>
 
 namespace qcom {
-    constexpr uint64_t kSmcInterrupted = 1;
-    constexpr uint64_t kSmcOk = 0;
-    constexpr uint64_t kSmcBusy = -13;
+constexpr uint64_t kSmcInterrupted = 1;
+constexpr uint64_t kSmcOk = 0;
+constexpr uint64_t kSmcBusy = -13;
 
-    zx_status_t SmcCall(zx_handle_t h, zx_smc_parameters_t* params, zx_smc_result_t* result);
+zx_status_t SmcCall(zx_handle_t h, zx_smc_parameters_t* params, zx_smc_result_t* result);
 
-} // namespace qcom
+}  // namespace qcom

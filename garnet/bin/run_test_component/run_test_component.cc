@@ -23,9 +23,8 @@ using fuchsia::sys::index::ComponentIndexSyncPtr;
 static constexpr char kComponentIndexerUrl[] =
     "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
 
-ParseArgsResult ParseArgs(
-    const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
-    const char** argv) {
+ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
+                          const char** argv) {
   ParseArgsResult result;
   result.error = false;
   if (argc < 2) {
@@ -38,8 +37,8 @@ ParseArgsResult ParseArgs(
   if (!component::FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
     fuchsia::sys::LaunchInfo index_launch_info;
     index_launch_info.url = kComponentIndexerUrl;
-    auto index_provider = sys::ServiceDirectory::CreateWithRequest(
-        &index_launch_info.directory_request);
+    auto index_provider =
+        sys::ServiceDirectory::CreateWithRequest(&index_launch_info.directory_request);
 
     // Connect to the Launcher service through our static environment.
     fuchsia::sys::LauncherSyncPtr launcher;
@@ -74,8 +73,8 @@ ParseArgsResult ParseArgs(
       std::vector<std::string> uris = fuzzy_search_result.response().uris;
       if (uris.size() == 0) {
         result.error = true;
-        result.error_msg = fxl::StringPrintf(
-            "\"%s\" did not match any components.\n", test_name.c_str());
+        result.error_msg =
+            fxl::StringPrintf("\"%s\" did not match any components.\n", test_name.c_str());
         return result;
       } else {
         for (auto& uri : uris) {

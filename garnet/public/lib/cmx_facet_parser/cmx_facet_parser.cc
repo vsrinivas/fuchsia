@@ -20,8 +20,7 @@ constexpr char kFacets[] = "facets";
 CmxFacetParser::CmxFacetParser() = default;
 CmxFacetParser::~CmxFacetParser() = default;
 
-bool CmxFacetParser::Parse(const rapidjson::Document& document,
-                           json::JSONParser* json_parser) {
+bool CmxFacetParser::Parse(const rapidjson::Document& document, json::JSONParser* json_parser) {
   auto facets = document.FindMember(kFacets);
   if (facets == document.MemberEnd()) {
     // Valid syntax, but no value.
@@ -57,8 +56,7 @@ bool CmxFacetParser::ParseFromFileAt(int dirfd, const std::string& file,
   return Parse(document, json_parser);
 }
 
-const rapidjson::Value& CmxFacetParser::GetSection(
-    const std::string& key) const {
+const rapidjson::Value& CmxFacetParser::GetSection(const std::string& key) const {
   auto map_entry = sections_.find(key);
   if (map_entry == sections_.end()) {
     return null_value_;

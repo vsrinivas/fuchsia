@@ -22,26 +22,20 @@ namespace {
 // which might reveal discontinuities in the actual sleep times.  The
 // perftest framework does not support this yet.
 bool SleepTest(perftest::RepeatState* state, zx_duration_t delay_ns) {
-    while (state->KeepRunning()) {
-        ZX_ASSERT(zx_nanosleep(zx_deadline_after(delay_ns)) == ZX_OK);
-    }
-    return true;
+  while (state->KeepRunning()) {
+    ZX_ASSERT(zx_nanosleep(zx_deadline_after(delay_ns)) == ZX_OK);
+  }
+  return true;
 }
 
 void RegisterTests() {
-    static const zx_duration_t kTimesNs[] = {
-        0,
-        1,
-        10,
-        100,
-        1000,
-        10000,
-    };
-    for (auto time_ns : kTimesNs) {
-        auto name = fbl::StringPrintf(
-            "Sleep/%lluns", static_cast<unsigned long long>(time_ns));
-        perftest::RegisterTest(name.c_str(), SleepTest, time_ns);
-    }
+  static const zx_duration_t kTimesNs[] = {
+      0, 1, 10, 100, 1000, 10000,
+  };
+  for (auto time_ns : kTimesNs) {
+    auto name = fbl::StringPrintf("Sleep/%lluns", static_cast<unsigned long long>(time_ns));
+    perftest::RegisterTest(name.c_str(), SleepTest, time_ns);
+  }
 }
 PERFTEST_CTOR(RegisterTests)
 

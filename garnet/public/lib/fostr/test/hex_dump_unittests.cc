@@ -65,8 +65,7 @@ TEST(HexDump, NormalMoreThanOneLine) {
   std::ostringstream os;
   static const char buffer[] = "cold turducken leftovers";
 
-  os << Indent
-     << "more than one line:" << fostr::HexDump(buffer, sizeof(buffer), 0);
+  os << Indent << "more than one line:" << fostr::HexDump(buffer, sizeof(buffer), 0);
 
   EXPECT_EQ(
       "more than one line:"
@@ -111,8 +110,7 @@ TEST(HexDump, HugeInitialAddress) {
   std::ostringstream os;
   static const char buffer[] = "turducken";
 
-  os << Indent
-     << "full:" << fostr::HexDump(buffer, sizeof(buffer), 0x123456789);
+  os << Indent << "full:" << fostr::HexDump(buffer, sizeof(buffer), 0x123456789);
 
   EXPECT_EQ(
       "full:"
@@ -140,8 +138,8 @@ TEST(HexDump, ActualAddress) {
 
   os_expected << "full:"
                  "\n    "
-              << std::hex << std::setw(address_width) << std::setfill('0')
-              << address << std::setfill(' ') << std::dec
+              << std::hex << std::setw(address_width) << std::setfill('0') << address
+              << std::setfill(' ') << std::dec
               << "  74 75 72 64 75 63 6b 65  6e 00                    "
                  "turducken.      ";
 

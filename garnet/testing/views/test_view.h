@@ -13,8 +13,7 @@ namespace scenic {
 class TestView {
  public:
   virtual ~TestView() = default;
-  virtual void set_present_callback(
-      Session::PresentCallback present_callback) = 0;
+  virtual void set_present_callback(Session::PresentCallback present_callback) = 0;
 };
 
 }  // namespace scenic

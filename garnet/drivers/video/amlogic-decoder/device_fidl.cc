@@ -27,8 +27,7 @@ DeviceFidl::~DeviceFidl() {
 }
 
 void DeviceFidl::ConnectChannelBoundCodecFactory(zx::channel request) {
-  std::unique_ptr<LocalCodecFactory> factory =
-      std::make_unique<LocalCodecFactory>(device_);
+  std::unique_ptr<LocalCodecFactory> factory = std::make_unique<LocalCodecFactory>(device_);
   factory->SetErrorHandler([this, raw_factory_ptr = factory.get()] {
     ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
     auto iter = factories_.find(raw_factory_ptr);
@@ -42,24 +41,21 @@ void DeviceFidl::ConnectChannelBoundCodecFactory(zx::channel request) {
   // factories_ only being touched from that thread, and secondarily to avoid
   // taking a dependency on Bind() working from a different thread (both in
   // Bind() and in DeviceFidl code).
-  device_->driver()->PostToSharedFidl([this, factory = std::move(factory),
-                                       server_endpoint =
-                                           std::move(request)]() mutable {
-    ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
-    LocalCodecFactory* raw_factory_ptr = factory.get();
-    auto insert_result =
-        factories_.insert(std::make_pair(raw_factory_ptr, std::move(factory)));
-    // insert success
-    ZX_DEBUG_ASSERT(insert_result.second);
-    insert_result.first->second->Bind(std::move(server_endpoint));
-  });
+  device_->driver()->PostToSharedFidl(
+      [this, factory = std::move(factory), server_endpoint = std::move(request)]() mutable {
+        ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
+        LocalCodecFactory* raw_factory_ptr = factory.get();
+        auto insert_result = factories_.insert(std::make_pair(raw_factory_ptr, std::move(factory)));
+        // insert success
+        ZX_DEBUG_ASSERT(insert_result.second);
+        insert_result.first->second->Bind(std::move(server_endpoint));
+      });
 }
 
 void DeviceFidl::BindCodecImpl(std::unique_ptr<CodecImpl> codec) {
   ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
   CodecImpl* raw_codec_ptr = codec.get();
-  auto insert_result =
-      codecs_.insert(std::make_pair(raw_codec_ptr, std::move(codec)));
+  auto insert_result = codecs_.insert(std::make_pair(raw_codec_ptr, std::move(codec)));
   // insert success
   ZX_DEBUG_ASSERT(insert_result.second);
   (*insert_result.first).second->BindAsync([this, raw_codec_ptr] {

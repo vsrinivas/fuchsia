@@ -38,17 +38,13 @@ constexpr char kStopAck[] = "vStopped";
 
 }  // namespace
 
-RspServer::PendingNotification::PendingNotification(
-    const fxl::StringView& name, const fxl::StringView& event,
-    const fxl::TimeDelta& timeout)
-    : name(name.data(), name.size()),
-      event(event.data(), event.size()),
-      timeout(timeout) {}
+RspServer::PendingNotification::PendingNotification(const fxl::StringView& name,
+                                                    const fxl::StringView& event,
+                                                    const fxl::TimeDelta& timeout)
+    : name(name.data(), name.size()), event(event.data(), event.size()), timeout(timeout) {}
 
-RspServer::RspServer(uint16_t port, zx_koid_t initial_attach_pid,
-                     debugger_utils::Argv argv)
-    : ServerWithIO(debugger_utils::GetRootJob(),
-                   debugger_utils::GetDefaultJob(),
+RspServer::RspServer(uint16_t port, zx_koid_t initial_attach_pid, debugger_utils::Argv argv)
+    : ServerWithIO(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob(),
                    sys::ServiceDirectory::CreateFromNamespace()),
       port_(port),
       initial_attach_pid_(initial_attach_pid),
@@ -100,8 +96,7 @@ bool RspServer::Run() {
   // |client_sock_| should be ready to be consumed now.
   FXL_DCHECK(client_sock_.is_valid());
 
-  io_loop_ =
-      std::make_unique<RspIOLoop>(client_sock_.get(), this, &message_loop_);
+  io_loop_ = std::make_unique<RspIOLoop>(client_sock_.get(), this, &message_loop_);
   io_loop_->Run();
 
   // Start the main loop.
@@ -115,26 +110,22 @@ bool RspServer::Run() {
   return run_status_;
 }
 
-void RspServer::QueueNotification(const fxl::StringView& name,
-                                  const fxl::StringView& event,
+void RspServer::QueueNotification(const fxl::StringView& name, const fxl::StringView& event,
                                   const fxl::TimeDelta& timeout) {
   // The GDB Remote protocol defines only the "Stop" notification
   FXL_DCHECK(name == kStopNotification);
 
   FXL_VLOG(1) << "Preparing notification: " << name << ":" << event;
 
-  notify_queue_.push(
-      std::make_unique<PendingNotification>(name, event, timeout));
+  notify_queue_.push(std::make_unique<PendingNotification>(name, event, timeout));
   TryPostNextNotification();
 }
 
-void RspServer::QueueStopNotification(const fxl::StringView& event,
-                                      const fxl::TimeDelta& timeout) {
+void RspServer::QueueStopNotification(const fxl::StringView& event, const fxl::TimeDelta& timeout) {
   QueueNotification(kStopNotification, event, timeout);
 }
 
-bool RspServer::SetParameter(const fxl::StringView& parameter,
-                             const fxl::StringView& value) {
+bool RspServer::SetParameter(const fxl::StringView& parameter, const fxl::StringView& value) {
   if (parameter == "verbosity") {
     int verbosity;
     if (!fxl::StringToNumberWithError<int>(value, &verbosity)) {
@@ -158,8 +149,7 @@ bool RspServer::SetParameter(const fxl::StringView& parameter,
   }
 }
 
-bool RspServer::GetParameter(const fxl::StringView& parameter,
-                             std::string* value) {
+bool RspServer::GetParameter(const fxl::StringView& parameter, std::string* value) {
   if (parameter == "verbosity") {
     *value = fxl::NumberToString<int>(fxl::GetMinLogLevel());
     return true;
@@ -203,8 +193,7 @@ bool RspServer::Listen() {
 
   // Reuse |addr| here for the destination address.
   socklen_t addrlen = sizeof(addr);
-  fxl::UniqueFD client_sock(
-      accept(server_sock.get(), (struct sockaddr*)&addr, &addrlen));
+  fxl::UniqueFD client_sock(accept(server_sock.get(), (struct sockaddr*)&addr, &addrlen));
   if (!client_sock.is_valid()) {
     FXL_LOG(ERROR) << "Accept failed"
                    << ", " << debugger_utils::ErrnoString(errno);
@@ -232,33 +221,29 @@ void RspServer::PostWriteTask(bool notify, const fxl::StringView& data) {
   FXL_DCHECK(data.size() + 4 < kMaxBufferSize);
 
   // Copy the data into a std::string to capture it in the closure.
-  async::PostTask(
-      message_loop_.dispatcher(), [this, data = data.ToString(), notify] {
-        int index = 0;
-        out_buffer_[index++] = notify ? '%' : '$';
-        memcpy(out_buffer_.data() + index, data.data(), data.size());
-        index += data.size();
-        out_buffer_[index++] = '#';
+  async::PostTask(message_loop_.dispatcher(), [this, data = data.ToString(), notify] {
+    int index = 0;
+    out_buffer_[index++] = notify ? '%' : '$';
+    memcpy(out_buffer_.data() + index, data.data(), data.size());
+    index += data.size();
+    out_buffer_[index++] = '#';
 
-        uint8_t checksum = 0;
-        for (uint8_t byte : data)
-          checksum += byte;
+    uint8_t checksum = 0;
+    for (uint8_t byte : data)
+      checksum += byte;
 
-        debugger_utils::EncodeByteString(checksum, out_buffer_.data() + index);
-        index += 2;
+    debugger_utils::EncodeByteString(checksum, out_buffer_.data() + index);
+    index += 2;
 
-        io_loop_->PostWriteTask(fxl::StringView(out_buffer_.data(), index));
-      });
+    io_loop_->PostWriteTask(fxl::StringView(out_buffer_.data(), index));
+  });
 }
 
-void RspServer::PostPacketWriteTask(const fxl::StringView& data) {
-  PostWriteTask(false, data);
-}
+void RspServer::PostPacketWriteTask(const fxl::StringView& data) { PostWriteTask(false, data); }
 
 void RspServer::PostPendingNotificationWriteTask() {
   FXL_DCHECK(pending_notification_);
-  std::string bytes(pending_notification_->name + ":" +
-                    pending_notification_->event);
+  std::string bytes(pending_notification_->name + ":" + pending_notification_->event);
   PostWriteTask(true, bytes);
 }
 
@@ -280,23 +265,22 @@ void RspServer::PostNotificationTimeoutHandler() {
   // Set up a timeout handler.
   // Continually resend the notification until the remote end acknowledges it,
   // or until the notification is removed (say because the process exits).
-  zx::duration delay =
-      zx::nsec((pending_notification_->timeout).ToNanoseconds());
-  async::PostDelayedTask(message_loop_.dispatcher(),
-                         [this, pending = pending_notification_.get()] {
-                           // If the notification that we set this timeout for
-                           // has already been acknowledged by the remote, then
-                           // we have nothing to do.
-                           // TODO(dje): sequence numbers?
-                           if (pending_notification_.get() != pending)
-                             return;
+  zx::duration delay = zx::nsec((pending_notification_->timeout).ToNanoseconds());
+  async::PostDelayedTask(
+      message_loop_.dispatcher(),
+      [this, pending = pending_notification_.get()] {
+        // If the notification that we set this timeout for
+        // has already been acknowledged by the remote, then
+        // we have nothing to do.
+        // TODO(dje): sequence numbers?
+        if (pending_notification_.get() != pending)
+          return;
 
-                           FXL_LOG(WARNING)
-                               << "Notification timed out; retrying";
-                           PostPendingNotificationWriteTask();
-                           PostNotificationTimeoutHandler();
-                         },
-                         delay);
+        FXL_LOG(WARNING) << "Notification timed out; retrying";
+        PostPendingNotificationWriteTask();
+        PostNotificationTimeoutHandler();
+      },
+      delay);
 }
 
 void RspServer::OnBytesRead(const fxl::StringView& bytes_read) {
@@ -331,8 +315,7 @@ void RspServer::OnBytesRead(const fxl::StringView& bytes_read) {
       // active until the queue is empty.
       // TODO(dje): Redo this.
       if (!notify_queue_.empty()) {
-        std::unique_ptr<PendingNotification> notif =
-            std::move(notify_queue_.front());
+        std::unique_ptr<PendingNotification> notif = std::move(notify_queue_.front());
         notify_queue_.pop();
         PostPacketWriteTask(notif->event);
       } else {
@@ -374,8 +357,7 @@ void RspServer::OnIOError() {
 }
 
 void RspServer::OnThreadStarting(inferior_control::Process* process,
-                                 inferior_control::Thread* thread,
-                                 zx_handle_t eport,
+                                 inferior_control::Thread* thread, zx_handle_t eport,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
 
@@ -405,8 +387,7 @@ void RspServer::OnThreadStarting(inferior_control::Process* process,
 }
 
 void RspServer::OnThreadExiting(inferior_control::Process* process,
-                                inferior_control::Thread* thread,
-                                zx_handle_t eport,
+                                inferior_control::Thread* thread, zx_handle_t eport,
                                 const zx_exception_context_t& context) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
@@ -435,35 +416,31 @@ void RspServer::OnProcessTermination(inferior_control::Process* process) {
   QueueStopNotification(fxl::StringView(packet.data(), packet.size()));
 }
 
-void RspServer::OnArchitecturalException(
-    inferior_control::Process* process, inferior_control::Thread* thread,
-    zx_handle_t eport, const zx_excp_type_t type,
-    const zx_exception_context_t& context) {
+void RspServer::OnArchitecturalException(inferior_control::Process* process,
+                                         inferior_control::Thread* thread, zx_handle_t eport,
+                                         const zx_excp_type_t type,
+                                         const zx_exception_context_t& context) {
   ExceptionHelper(process, thread, type, context);
 }
 
 void RspServer::OnSyntheticException(inferior_control::Process* process,
-                                     inferior_control::Thread* thread,
-                                     zx_handle_t eport, zx_excp_type_t type,
-                                     const zx_exception_context_t& context) {
+                                     inferior_control::Thread* thread, zx_handle_t eport,
+                                     zx_excp_type_t type, const zx_exception_context_t& context) {
   // These are basically equivalent to architectural exceptions
   // for our purposes. Handle them the same way.
   ExceptionHelper(process, thread, type, context);
 }
 
 void RspServer::ExceptionHelper(inferior_control::Process* process,
-                                inferior_control::Thread* thread,
-                                zx_excp_type_t type,
+                                inferior_control::Thread* thread, zx_excp_type_t type,
                                 const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
   if (ZX_EXCP_IS_ARCH(type)) {
-    FXL_VLOG(1) << "Architectural Exception: "
-                << debugger_utils::ExceptionNameAsString(type);
+    FXL_VLOG(1) << "Architectural Exception: " << debugger_utils::ExceptionNameAsString(type);
   } else {
-    FXL_VLOG(1) << "Synthetic Exception: "
-                << debugger_utils::ExceptionNameAsString(type);
+    FXL_VLOG(1) << "Synthetic Exception: " << debugger_utils::ExceptionNameAsString(type);
   }
 
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
@@ -485,17 +462,16 @@ void RspServer::ExceptionHelper(inferior_control::Process* process,
 
   // Registers.
   if (thread->registers()->RefreshGeneralRegisters()) {
-    std::array<int, 3> regnos{{GetFPRegisterNumber(),
-                               GetSPRegisterNumber(),
-                               GetPCRegisterNumber()}};
+    std::array<int, 3> regnos{
+        {GetFPRegisterNumber(), GetSPRegisterNumber(), GetPCRegisterNumber()}};
     for (int regno : regnos) {
       FXL_DCHECK(regno < std::numeric_limits<uint8_t>::max() && regno >= 0);
-      std::string regval = GetRegisterAsString(thread, regno); //thread->registers()->GetRegisterAsString(regno);
+      std::string regval =
+          GetRegisterAsString(thread, regno);  // thread->registers()->GetRegisterAsString(regno);
       stop_reply.AddRegisterValue(regno, regval);
     }
   } else {
-    FXL_LOG(WARNING)
-        << "Couldn't read thread registers while handling exception";
+    FXL_LOG(WARNING) << "Couldn't read thread registers while handling exception";
   }
 
   auto packet = stop_reply.Build();

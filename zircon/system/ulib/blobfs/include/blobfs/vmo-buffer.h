@@ -20,44 +20,44 @@ namespace blobfs {
 // This class is movable but not copyable.
 // This class is thread-compatible.
 class VmoBuffer {
-public:
-    VmoBuffer() = default;
-    VmoBuffer(const VmoBuffer&) = delete;
-    VmoBuffer& operator=(const VmoBuffer&) = delete;
-    VmoBuffer(VmoBuffer&& other);
-    VmoBuffer& operator=(VmoBuffer&& other);
-    ~VmoBuffer();
+ public:
+  VmoBuffer() = default;
+  VmoBuffer(const VmoBuffer&) = delete;
+  VmoBuffer& operator=(const VmoBuffer&) = delete;
+  VmoBuffer(VmoBuffer&& other);
+  VmoBuffer& operator=(VmoBuffer&& other);
+  ~VmoBuffer();
 
-    // Initializes the buffer VMO with |blocks| blocks of size kBlobfsBlockSize.
-    //
-    // Returns an error if the VMO cannot be created, mapped, or attached to the
-    // underlying storage device.
-    //
-    // Should only be called on VmoBuffers which have not been initialized already.
-    zx_status_t Initialize(VmoidRegistry* vmoid_registry, size_t blocks, const char* label);
+  // Initializes the buffer VMO with |blocks| blocks of size kBlobfsBlockSize.
+  //
+  // Returns an error if the VMO cannot be created, mapped, or attached to the
+  // underlying storage device.
+  //
+  // Should only be called on VmoBuffers which have not been initialized already.
+  zx_status_t Initialize(VmoidRegistry* vmoid_registry, size_t blocks, const char* label);
 
-    // Returns the total amount of pending blocks which may be buffered.
-    size_t capacity() const { return capacity_; }
+  // Returns the total amount of pending blocks which may be buffered.
+  size_t capacity() const { return capacity_; }
 
-    // Returns the vmoid of the underlying VmoBuffer.
-    vmoid_t vmoid() const { return vmoid_; }
+  // Returns the vmoid of the underlying VmoBuffer.
+  vmoid_t vmoid() const { return vmoid_; }
 
-    // Returns a const view of the underlying VMO.
-    const zx::vmo& vmo() const { return mapper_.vmo(); }
+  // Returns a const view of the underlying VMO.
+  const zx::vmo& vmo() const { return mapper_.vmo(); }
 
-    // Returns data starting at block |index| in the buffer.
-    void* Data(size_t index);
+  // Returns data starting at block |index| in the buffer.
+  void* Data(size_t index);
 
-    // Returns data starting at block |index| in the buffer.
-    const void* Data(size_t index) const;
+  // Returns data starting at block |index| in the buffer.
+  const void* Data(size_t index) const;
 
-private:
-    void Reset();
+ private:
+  void Reset();
 
-    VmoidRegistry* vmoid_registry_ = nullptr;
-    fzl::OwnedVmoMapper mapper_;
-    vmoid_t vmoid_ = VMOID_INVALID;
-    size_t capacity_ = 0;
+  VmoidRegistry* vmoid_registry_ = nullptr;
+  fzl::OwnedVmoMapper mapper_;
+  vmoid_t vmoid_ = VMOID_INVALID;
+  size_t capacity_ = 0;
 };
 
-} // namespace blobfs
+}  // namespace blobfs

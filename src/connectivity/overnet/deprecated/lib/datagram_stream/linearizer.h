@@ -42,14 +42,14 @@ class Linearizer final {
 
  private:
   void IntegratePush(Chunk chunk);
-  void AssertValid(const char* marker, const char* pretty_function,
-                   const char* file, int line) const;
+  void AssertValid(const char* marker, const char* pretty_function, const char* file,
+                   int line) const;
 
 #ifndef NDEBUG
   class CheckValid {
    public:
-    CheckValid(const Linearizer* linearizer, const char* pretty_function,
-               const char* file, int line)
+    CheckValid(const Linearizer* linearizer, const char* pretty_function, const char* file,
+               int line)
         : linearizer_(linearizer),
           pretty_function_(pretty_function),
           file_(file),

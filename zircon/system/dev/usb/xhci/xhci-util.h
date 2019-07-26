@@ -12,11 +12,11 @@
 namespace usb_xhci {
 
 typedef struct {
-    xhci_command_context_t context;
-    sync_completion_t completion;
-    // from command completion event TRB
-    uint32_t status;
-    uint32_t control;
+  xhci_command_context_t context;
+  sync_completion_t completion;
+  // from command completion event TRB
+  uint32_t status;
+  uint32_t control;
 } xhci_sync_command_t;
 
 void xhci_sync_command_init(xhci_sync_command_t* command);
@@ -25,7 +25,7 @@ void xhci_sync_command_init(xhci_sync_command_t* command);
 int xhci_sync_command_wait(xhci_sync_command_t* command);
 
 static inline int xhci_sync_command_slot_id(xhci_sync_command_t* command) {
-    return (command->control & XHCI_MASK(TRB_SLOT_ID_START, TRB_SLOT_ID_BITS)) >> TRB_SLOT_ID_START;
+  return (command->control & XHCI_MASK(TRB_SLOT_ID_START, TRB_SLOT_ID_BITS)) >> TRB_SLOT_ID_START;
 }
 
 // executes a command with a 1 second timeout
@@ -39,4 +39,4 @@ zx_status_t xhci_send_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint
 // match_cap_id: if non-null, only capabilities with this id will be returned.
 uint32_t* xhci_get_next_ext_cap(void* mmio, uint32_t* prev_cap, uint32_t* match_cap_id);
 
-} // namespace usb_xhci
+}  // namespace usb_xhci

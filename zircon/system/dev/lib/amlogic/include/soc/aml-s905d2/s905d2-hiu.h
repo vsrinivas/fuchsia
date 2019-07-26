@@ -107,57 +107,57 @@
 // clang-format on
 
 typedef enum {
-    GP0_PLL,
-    PCIE_PLL,
-    HIFI_PLL,
-    SYS_PLL,
+  GP0_PLL,
+  PCIE_PLL,
+  HIFI_PLL,
+  SYS_PLL,
 } hhi_plls_t;
 
 typedef struct {
-    uint64_t rate;
-    uint32_t n;
-    uint32_t m;
-    uint32_t frac;
-    uint32_t od;
+  uint64_t rate;
+  uint32_t n;
+  uint32_t m;
+  uint32_t frac;
+  uint32_t od;
 } hhi_pll_rate_t;
 
 typedef struct aml_hiu_dev {
-    mmio_buffer_t mmio;
-    uint8_t* regs_vaddr;
+  mmio_buffer_t mmio;
+  uint8_t* regs_vaddr;
 } aml_hiu_dev_t;
 
 typedef struct aml_pll_dev {
-    aml_hiu_dev_t* hiu;               // Pointer to the register control block.
-    const hhi_pll_rate_t* rate_table; // Pointer to this PLLs rate table.
-    uint32_t rate_idx;                // Index in rate table of current setting.
-    uint32_t frequency;               // Current operating frequency.
-    hhi_plls_t pll_num;               // Which pll is this
-    size_t rate_count;                // Number of entries in the rate table.
+  aml_hiu_dev_t* hiu;                // Pointer to the register control block.
+  const hhi_pll_rate_t* rate_table;  // Pointer to this PLLs rate table.
+  uint32_t rate_idx;                 // Index in rate table of current setting.
+  uint32_t frequency;                // Current operating frequency.
+  hhi_plls_t pll_num;                // Which pll is this
+  size_t rate_count;                 // Number of entries in the rate table.
 } aml_pll_dev_t;
 
 static inline uint32_t hiu_clk_get_reg(aml_hiu_dev_t* dev, uint32_t offset) {
-    return readl(dev->regs_vaddr + offset);
+  return readl(dev->regs_vaddr + offset);
 }
 
 static inline uint32_t hiu_clk_set_reg(aml_hiu_dev_t* dev, uint32_t offset, uint32_t value) {
-    writel(value, dev->regs_vaddr + offset);
-    return hiu_clk_get_reg(dev, offset);
+  writel(value, dev->regs_vaddr + offset);
+  return hiu_clk_get_reg(dev, offset);
 }
 
 static inline uint32_t hiu_get_pll_offs(aml_pll_dev_t* pll_dev) {
-    switch (pll_dev->pll_num) {
+  switch (pll_dev->pll_num) {
     case GP0_PLL:
-        return HHI_GP0_PLL_CNTL0;
+      return HHI_GP0_PLL_CNTL0;
     case PCIE_PLL:
-        return HHI_PCIE_PLL_CNTL0;
+      return HHI_PCIE_PLL_CNTL0;
     case HIFI_PLL:
-        return HHI_HIFI_PLL_CNTL0;
+      return HHI_HIFI_PLL_CNTL0;
     case SYS_PLL:
-        return HHI_SYS_PLL_CNTL0;
+      return HHI_SYS_PLL_CNTL0;
     default:
-        ZX_DEBUG_ASSERT(0);
-    }
-    return 0;
+      ZX_DEBUG_ASSERT(0);
+  }
+  return 0;
 }
 
 __BEGIN_CDECLS
@@ -195,7 +195,8 @@ bool s905d2_pll_disable(aml_pll_dev_t* pll_dev);
     Look for freq in pll rate table.  Returns ZX_ERR_NOT_SUPPORTED if the rate
     can not be found.
 */
-zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t* pll_dev, uint64_t freq, const hhi_pll_rate_t** pll_rate);
+zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t* pll_dev, uint64_t freq,
+                                  const hhi_pll_rate_t** pll_rate);
 
 /*
     Returns correct pll rate table for selected pll.

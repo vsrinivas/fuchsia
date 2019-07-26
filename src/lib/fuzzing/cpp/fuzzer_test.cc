@@ -14,9 +14,7 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 
-TEST(FuzzerTest, EmptyInput) {
-  EXPECT_EQ(0, LLVMFuzzerTestOneInput(nullptr, 0));
-}
+TEST(FuzzerTest, EmptyInput) { EXPECT_EQ(0, LLVMFuzzerTestOneInput(nullptr, 0)); }
 
 // TODO(aarongreen): Placeholder for now, until we figure out how we want to
 // plumb the corpora from CIPD through to images built for test in CQ.

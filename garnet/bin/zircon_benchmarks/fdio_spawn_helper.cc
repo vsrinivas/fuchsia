@@ -4,6 +4,4 @@
 
 // This is a no-op test executable used by the fdio_spawn.cc benchmark. It's
 // important that it does no work and simply exits.
-int main(int argc, char** argv) {
-  return 0;
-}
+int main(int argc, char** argv) { return 0; }

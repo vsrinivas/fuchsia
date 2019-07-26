@@ -8,30 +8,25 @@
 
 #include <mutex>
 
-void CodecAdmissionControl::TryAddCodec(
-    bool multi_instance,
-    fit::function<void(std::unique_ptr<CodecAdmission>)>
-        continue_after_previously_started_channel_closes_done) {
+void CodecAdmissionControl::TryAddCodec(bool multi_instance,
+                                        fit::function<void(std::unique_ptr<CodecAdmission>)>
+                                            continue_after_previously_started_channel_closes_done) {
   PostAfterPreviouslyStartedClosesDone(
       [this, multi_instance,
-       callback =
-           std::move(continue_after_previously_started_channel_closes_done)] {
+       callback = std::move(continue_after_previously_started_channel_closes_done)] {
         callback(TryAddCodecInternal(multi_instance));
       });
 }
 
-void CodecAdmissionControl::PostAfterPreviouslyStartedClosesDone(
-    fit::closure to_run) {
+void CodecAdmissionControl::PostAfterPreviouslyStartedClosesDone(fit::closure to_run) {
   // TODO(dustingreen): This post is a partial simulation of more robust fencing
   // of previously initiated closes before newly initiated create.  See TODO in
   // the header file.
-  zx_status_t result =
-      async::PostTask(shared_fidl_dispatcher_, std::move(to_run));
+  zx_status_t result = async::PostTask(shared_fidl_dispatcher_, std::move(to_run));
   ZX_ASSERT(result == ZX_OK);
 }
 
-std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal(
-    bool multi_instance) {
+std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal(bool multi_instance) {
   std::lock_guard<std::mutex> lock(lock_);
   if (multi_instance) {
     if (single_instance_codec_count_ > 0) {
@@ -54,12 +49,10 @@ std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal(
   }
   // private constructor so have to explicitly new, since friending
   // std::make_unique<> would allow any class to create one.
-  return std::unique_ptr<CodecAdmission>(
-      new CodecAdmission(this, multi_instance));
+  return std::unique_ptr<CodecAdmission>(new CodecAdmission(this, multi_instance));
 }
 
-CodecAdmissionControl::CodecAdmissionControl(
-    async_dispatcher_t* shared_fidl_dispatcher)
+CodecAdmissionControl::CodecAdmissionControl(async_dispatcher_t* shared_fidl_dispatcher)
     : shared_fidl_dispatcher_(shared_fidl_dispatcher),
       single_instance_codec_count_(0),
       multi_instance_codec_count_(0) {
@@ -78,13 +71,9 @@ void CodecAdmissionControl::RemoveCodec(bool multi_instance) {
   }
 }
 
-CodecAdmission::~CodecAdmission() {
-  codec_admission_control_->RemoveCodec(multi_instance_);
-}
+CodecAdmission::~CodecAdmission() { codec_admission_control_->RemoveCodec(multi_instance_); }
 
-CodecAdmission::CodecAdmission(CodecAdmissionControl* codec_admission_control,
-                               bool multi_instance)
-    : codec_admission_control_(codec_admission_control),
-      multi_instance_(multi_instance) {
+CodecAdmission::CodecAdmission(CodecAdmissionControl* codec_admission_control, bool multi_instance)
+    : codec_admission_control_(codec_admission_control), multi_instance_(multi_instance) {
   ZX_DEBUG_ASSERT(codec_admission_control_);
 }

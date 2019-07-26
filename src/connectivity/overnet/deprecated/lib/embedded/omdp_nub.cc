@@ -34,9 +34,8 @@ Status OmdpNub::Start() {
         return incoming_.Bind(addr);
       })
       .Then([&] {
-        return incoming_.SetOpt(
-            IPPROTO_IPV6, IPV6_JOIN_GROUP,
-            ipv6_mreq{kMulticastGroupAddr.ipv6.sin6_addr, 0});
+        return incoming_.SetOpt(IPPROTO_IPV6, IPV6_JOIN_GROUP,
+                                ipv6_mreq{kMulticastGroupAddr.ipv6.sin6_addr, 0});
       })
       .Then([&] {
         ScheduleBroadcast();
@@ -55,18 +54,14 @@ void OmdpNub::Broadcast(Slice data) {
   OVERNET_TRACE(DEBUG) << "BROADCAST " << data << " to " << kMulticastGroupAddr;
   std::vector<Status> failures;
   bool any_successes = false;
-  for (size_t i = 0;
-       interfaces[i].if_index != 0 || interfaces[i].if_name != nullptr; i++) {
-    if (auto status =
-            socket
-                .SetOpt(IPPROTO_IPV6, IPV6_MULTICAST_IF, interfaces[i].if_index)
-                .Then(
-                    [&] { return socket.SendTo(data, 0, kMulticastGroupAddr); })
-                .WithLazyContext([&] {
-                  std::ostringstream out;
-                  out << "On " << interfaces[i].if_name;
-                  return out.str();
-                });
+  for (size_t i = 0; interfaces[i].if_index != 0 || interfaces[i].if_name != nullptr; i++) {
+    if (auto status = socket.SetOpt(IPPROTO_IPV6, IPV6_MULTICAST_IF, interfaces[i].if_index)
+                          .Then([&] { return socket.SendTo(data, 0, kMulticastGroupAddr); })
+                          .WithLazyContext([&] {
+                            std::ostringstream out;
+                            out << "On " << interfaces[i].if_name;
+                            return out.str();
+                          });
         status.is_ok()) {
       any_successes = true;
     } else {
@@ -86,8 +81,7 @@ void OmdpNub::OnNewNode(uint64_t node_id, IpAddr addr) {
 }
 
 void OmdpNub::WaitForInbound() {
-  reactor_->OnRead(incoming_.get(),
-                   [this](const Status& status) { InboundReady(status); });
+  reactor_->OnRead(incoming_.get(), [this](const Status& status) { InboundReady(status); });
 }
 
 void OmdpNub::InboundReady(const Status& status) {
@@ -99,16 +93,14 @@ void OmdpNub::InboundReady(const Status& status) {
   if (data_and_addr.is_error()) {
     OVERNET_TRACE(ERROR) << data_and_addr.AsStatus();
     // Wait a bit before trying again to avoid spamming the log.
-    timer_->At(timer_->Now() + TimeDelta::FromSeconds(10),
-               [this] { WaitForInbound(); });
+    timer_->At(timer_->Now() + TimeDelta::FromSeconds(10), [this] { WaitForInbound(); });
     return;
   }
 
   ScopedOp scoped_op(Op::New(overnet::OpType::INCOMING_PACKET));
   OVERNET_TRACE(TRACE) << "Got omdp packet " << data_and_addr->data << " from "
                        << data_and_addr->addr;
-  if (auto status = Process(std::move(data_and_addr->addr),
-                            std::move(data_and_addr->data));
+  if (auto status = Process(std::move(data_and_addr->addr), std::move(data_and_addr->data));
       status.is_error()) {
     OVERNET_TRACE(ERROR) << "Omdp process failed: " << status;
   }

@@ -23,41 +23,41 @@ __BEGIN_CDECLS
 #define ACER12_Y_MAX 2064
 
 typedef struct acer12_finger {
-    uint8_t finger_id;
-    uint8_t width;
-    uint8_t height;
-    // Both X and Y are repeated twice in every report.
-    uint16_t x, xx;
-    uint16_t y, yy;
+  uint8_t finger_id;
+  uint8_t width;
+  uint8_t height;
+  // Both X and Y are repeated twice in every report.
+  uint16_t x, xx;
+  uint16_t y, yy;
 } __attribute__((packed)) acer12_finger_t;
 
 typedef struct acer12_touch {
-    uint8_t rpt_id;
-    acer12_finger_t fingers[5];
-    uint32_t scan_time;
-    uint8_t contact_count;  // will be zero for reports for fingers 6-10
+  uint8_t rpt_id;
+  acer12_finger_t fingers[5];
+  uint32_t scan_time;
+  uint8_t contact_count;  // will be zero for reports for fingers 6-10
 } __attribute__((packed)) acer12_touch_t;
 
 #define ACER12_STYLUS_STATUS_INRANGE 0x01
 #define ACER12_STYLUS_STATUS_TSWITCH 0x02
-#define ACER12_STYLUS_STATUS_BARREL  0x04
-#define ACER12_STYLUS_STATUS_INVERT  0x08
-#define ACER12_STYLUS_STATUS_ERASER  0x10
+#define ACER12_STYLUS_STATUS_BARREL 0x04
+#define ACER12_STYLUS_STATUS_INVERT 0x08
+#define ACER12_STYLUS_STATUS_ERASER 0x10
 #define acer12_stylus_status_inrange(b) (b & ACER12_STYLUS_STATUS_INRANGE)
 #define acer12_stylus_status_tswitch(b) (b & ACER12_STYLUS_STATUS_TSWITCH)
-#define acer12_stylus_status_barrel(b)  (b & ACER12_STYLUS_STATUS_BARREL)
-#define acer12_stylus_status_invert(b)  (b & ACER12_STYLUS_STATUS_INVERT)
-#define acer12_stylus_status_eraser(b)  (b & ACER12_STYLUS_STATUS_ERASER)
+#define acer12_stylus_status_barrel(b) (b & ACER12_STYLUS_STATUS_BARREL)
+#define acer12_stylus_status_invert(b) (b & ACER12_STYLUS_STATUS_INVERT)
+#define acer12_stylus_status_eraser(b) (b & ACER12_STYLUS_STATUS_ERASER)
 
 #define ACER12_STYLUS_X_MAX 4032
 #define ACER12_STYLUS_Y_MAX 2752
 
 typedef struct acer12_stylus {
-    uint8_t rpt_id;
-    uint8_t status;
-    uint16_t x;
-    uint16_t y;
-    uint16_t pressure;
+  uint8_t rpt_id;
+  uint8_t status;
+  uint16_t x;
+  uint16_t y;
+  uint16_t pressure;
 } __attribute__((packed)) acer12_stylus_t;
 
 const uint8_t* get_acer12_touch_report_desc(size_t* len);

@@ -20,8 +20,7 @@ class FidlStream {
   zx_status_t Process_(::fidl::Message message);
 
  protected:
-  void Send_(fidl::Message message,
-             fit::function<zx_status_t(fidl::Message)> callback) {
+  void Send_(fidl::Message message, fit::function<zx_status_t(fidl::Message)> callback) {
     Send_(AllocateCallback(std::move(callback)), std::move(message));
   }
   void Send_(zx_txid_t txid, fidl::Message message);
@@ -32,8 +31,7 @@ class FidlStream {
   // returning ZX_ERR_NOT_SUPPORTED.
   virtual zx_status_t Dispatch_(::fidl::Message *message) = 0;
 
-  zx_txid_t AllocateCallback(
-      fit::function<zx_status_t(fidl::Message)> callback);
+  zx_txid_t AllocateCallback(fit::function<zx_status_t(fidl::Message)> callback);
 
   std::map<zx_txid_t, fit::function<zx_status_t(fidl::Message)>> callbacks_;
   zx_txid_t next_txid_ = 1;

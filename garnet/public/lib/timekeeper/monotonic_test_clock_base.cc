@@ -22,8 +22,7 @@ MonotonicTestClockBase::MonotonicTestClockBase(fit::function<zx_time_t()> clock)
 
 MonotonicTestClockBase::~MonotonicTestClockBase() = default;
 
-zx_status_t MonotonicTestClockBase::GetTime(zx_clock_t clock_id,
-                                            zx_time_t* time) const {
+zx_status_t MonotonicTestClockBase::GetTime(zx_clock_t clock_id, zx_time_t* time) const {
   *time = GetClockStartingValue(clock_id) + GetMonotonicTime();
   return ZX_OK;
 }

@@ -45,8 +45,7 @@ class Meter {
     Flush(now);
     if (samples_.empty())
       return Bandwidth::Zero();
-    return Bandwidth::BytesPerTime(
-        sum_, std::max(window_, now - samples_.front().when));
+    return Bandwidth::BytesPerTime(sum_, std::max(window_, now - samples_.front().when));
   }
 
   size_t Samples() const { return samples_.size(); }
@@ -106,12 +105,8 @@ class Simulator : private TestTimer,
             this, [this] { return rng_(); }, mss, srtt),
         outgoing_meter_(TimeDelta::FromSeconds(5)) {}
 
-  void SetBottleneckBandwidth(Bandwidth bandwidth) {
-    bottleneck_.SetBandwidth(bandwidth);
-  }
-  void SetRoundTripTime(TimeDelta rtt) {
-    half_rtt_ = TimeDelta::FromMicroseconds(rtt.as_us() / 2);
-  }
+  void SetBottleneckBandwidth(Bandwidth bandwidth) { bottleneck_.SetBandwidth(bandwidth); }
+  void SetRoundTripTime(TimeDelta rtt) { half_rtt_ = TimeDelta::FromMicroseconds(rtt.as_us() / 2); }
   void SetBandwidthWindow(TimeDelta window) { bottleneck_window_ = window; }
   void SetAckDelay(TimeDelta ack_delay) { ack_delay_ = ack_delay; }
 
@@ -120,15 +115,13 @@ class Simulator : private TestTimer,
       SendPacket(packet_size, []() {});
     }
   }
-  void AddContinuousTraffic(int packet_size, Bandwidth bandwidth,
-                            TimeStamp end) {
+  void AddContinuousTraffic(int packet_size, Bandwidth bandwidth, TimeStamp end) {
     auto next_packet = Now() + bandwidth.SendTimeForBytes(packet_size);
     SendPacket(packet_size, [=]() {
       auto now = Now();
       if (now > end)
         return;
-      At(next_packet,
-         [=]() { AddContinuousTraffic(packet_size, bandwidth, end); });
+      At(next_packet, [=]() { AddContinuousTraffic(packet_size, bandwidth, end); });
     });
   }
 
@@ -139,9 +132,7 @@ class Simulator : private TestTimer,
 
   Bandwidth outgoing_bandwidth() { return outgoing_meter_.Evaluate(Now()); }
 
-  size_t outgoing_bandwidth_samples() const {
-    return outgoing_meter_.Samples();
-  }
+  size_t outgoing_bandwidth_samples() const { return outgoing_meter_.Samples(); }
 
   uint64_t packets_dropped() const { return packets_dropped_; }
   uint64_t packets_passed() const { return packets_passed_; }
@@ -152,15 +143,14 @@ class Simulator : private TestTimer,
   // Send a packet through the simulator, and call then() once it's sent.
   template <class F>
   void SendPacket(int packet_size, F then) {
-    transmit_request_.Reset(
-        &bbr_, StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
-          if (status.is_ok()) {
-            auto sent_packet = transmit_request_->Sent(
-                BBR::OutgoingPacket{next_seq_++, uint64_t(packet_size)});
-            then();
-            SimulatePacket(sent_packet);
-          }
-        }));
+    transmit_request_.Reset(&bbr_, StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
+      if (status.is_ok()) {
+        auto sent_packet =
+            transmit_request_->Sent(BBR::OutgoingPacket{next_seq_++, uint64_t(packet_size)});
+        then();
+        SimulatePacket(sent_packet);
+      }
+    }));
   }
 
   void SimulatePacket(BBR::SentPacket pkt) {
@@ -168,44 +158,41 @@ class Simulator : private TestTimer,
     outgoing_meter_.Push(now, pkt.outgoing.size);
     // Push the packet onto the bottleneck link, and wait for it to pass through
     // or be dropped.
-    bottleneck_.Push(
-        pkt.outgoing.size,
-        StatusCallback(ALLOCATED_CALLBACK, [this, pkt](const Status& status) {
-          bool allow = status.is_ok();
-          TimeStamp now = Now();
-          // Count statistics.
-          if (allow) {
-            packets_passed_++;
-          } else {
-            packets_dropped_++;
-          }
-          // After 1/2-rtt the packet will return to sender, notify the sender
-          // with an ack or nack.
-          At(now + half_rtt_, [this, pkt, allow]() {
-            (allow ? &ack_packets_ : &nack_packets_)->push_back(pkt);
-            // Batch up acks and nacks a little bit to simulate real networks.
-            if (!ack_packets_.empty() && !ack_scheduled_) {
-              ack_scheduled_ = true;
-              At(Now() + ack_delay_, [this]() {
-                ack_scheduled_ = false;
-                BBR::Ack ack{std::move(ack_packets_), std::move(nack_packets_)};
-                std::sort(
-                    ack.acked_packets.begin(), ack.acked_packets.end(),
-                    [](const BBR::SentPacket& a, const BBR::SentPacket& b) {
-                      return a.outgoing.sequence < b.outgoing.sequence;
-                    });
-                std::sort(
-                    ack.nacked_packets.begin(), ack.nacked_packets.end(),
-                    [](const BBR::SentPacket& a, const BBR::SentPacket& b) {
-                      return a.outgoing.sequence < b.outgoing.sequence;
-                    });
-                ack_packets_.clear();
-                nack_packets_.clear();
-                bbr_.OnAck(ack);
-              });
-            }
-          });
-        }));
+    bottleneck_.Push(pkt.outgoing.size,
+                     StatusCallback(ALLOCATED_CALLBACK, [this, pkt](const Status& status) {
+                       bool allow = status.is_ok();
+                       TimeStamp now = Now();
+                       // Count statistics.
+                       if (allow) {
+                         packets_passed_++;
+                       } else {
+                         packets_dropped_++;
+                       }
+                       // After 1/2-rtt the packet will return to sender, notify the sender
+                       // with an ack or nack.
+                       At(now + half_rtt_, [this, pkt, allow]() {
+                         (allow ? &ack_packets_ : &nack_packets_)->push_back(pkt);
+                         // Batch up acks and nacks a little bit to simulate real networks.
+                         if (!ack_packets_.empty() && !ack_scheduled_) {
+                           ack_scheduled_ = true;
+                           At(Now() + ack_delay_, [this]() {
+                             ack_scheduled_ = false;
+                             BBR::Ack ack{std::move(ack_packets_), std::move(nack_packets_)};
+                             std::sort(ack.acked_packets.begin(), ack.acked_packets.end(),
+                                       [](const BBR::SentPacket& a, const BBR::SentPacket& b) {
+                                         return a.outgoing.sequence < b.outgoing.sequence;
+                                       });
+                             std::sort(ack.nacked_packets.begin(), ack.nacked_packets.end(),
+                                       [](const BBR::SentPacket& a, const BBR::SentPacket& b) {
+                                         return a.outgoing.sequence < b.outgoing.sequence;
+                                       });
+                             ack_packets_.clear();
+                             nack_packets_.clear();
+                             bbr_.OnAck(ack);
+                           });
+                         }
+                       });
+                     }));
   }
 
   std::vector<BBR::SentPacket> ack_packets_;
@@ -245,30 +232,26 @@ struct SimulationArgs {
 
 // Some handy actions
 Action MeasureBandwidth(TimeDelta when, Bandwidth min, Bandwidth max) {
-  return Action{when,
-                [=](Simulator* sim) {
-                  EXPECT_THAT(sim->outgoing_bandwidth(),
-                              AllOf(Ge(min), Le(max)));
-                },
-                [=](std::ostream& out) { out << "measure@" << when; }};
+  return Action{
+      when,
+      [=](Simulator* sim) { EXPECT_THAT(sim->outgoing_bandwidth(), AllOf(Ge(min), Le(max))); },
+      [=](std::ostream& out) { out << "measure@" << when; }};
 }
 
-Action ContinuousTraffic(TimeDelta start, TimeDelta stop, Bandwidth amt,
-                         int packet_size) {
+Action ContinuousTraffic(TimeDelta start, TimeDelta stop, Bandwidth amt, int packet_size) {
   return Action{start,
                 [=](Simulator* sim) {
-                  sim->AddContinuousTraffic(
-                      packet_size, amt, sim->timer()->Now() + (stop - start));
+                  sim->AddContinuousTraffic(packet_size, amt, sim->timer()->Now() + (stop - start));
                 },
                 [=](std::ostream& out) {
-                  out << "output " << amt << ":" << packet_size << "@" << start
-                      << " for " << (stop - start);
+                  out << "output " << amt << ":" << packet_size << "@" << start << " for "
+                      << (stop - start);
                 }};
 }
 
 std::ostream& operator<<(std::ostream& out, const SimulationArgs& args) {
-  out << "Sim {btlbw=" << args.bottleneck_bandwidth << "; rtt=" << args.rtt
-      << "; mss=" << args.mss << "; srtt=" << args.srtt;
+  out << "Sim {btlbw=" << args.bottleneck_bandwidth << "; rtt=" << args.rtt << "; mss=" << args.mss
+      << "; srtt=" << args.srtt;
   for (const auto& a : args.actions) {
     out << "; ";
     a.explain(out);
@@ -312,9 +295,7 @@ TEST_P(SimulationTest, SimulationSucceeds) {
   switch (kCsvOutput) {
     case CsvOutput::Disk: {
       std::string name;
-      for (char c : std::string(::testing::UnitTest::GetInstance()
-                                    ->current_test_info()
-                                    ->name())) {
+      for (char c : std::string(::testing::UnitTest::GetInstance()->current_test_info()->name())) {
         if (c == '/')
           name += '.';
         else
@@ -348,23 +329,19 @@ std::vector<SimulationArgs> GenerateArguments() {
             {ContinuousTraffic(
                  TimeDelta::Zero(), TimeDelta::FromSeconds(20),
                  Bandwidth::FromKilobitsPerSecond(generate_traffic),
-                 std::max(
-                     uint64_t(1),
-                     std::min(mss, Bandwidth::FromKilobitsPerSecond(expect_bw)
-                                       .BytesSentForTime(
-                                           TimeDelta::FromMilliseconds(100))))),
-             MeasureBandwidth(
-                 TimeDelta::FromSeconds(19),
-                 Bandwidth::FromBitsPerSecond(expect_bw * 500),
-                 Bandwidth::FromBitsPerSecond(expect_bw * 2000))}});
+                 std::max(uint64_t(1),
+                          std::min(mss, Bandwidth::FromKilobitsPerSecond(expect_bw)
+                                            .BytesSentForTime(TimeDelta::FromMilliseconds(100))))),
+             MeasureBandwidth(TimeDelta::FromSeconds(19),
+                              Bandwidth::FromBitsPerSecond(expect_bw * 500),
+                              Bandwidth::FromBitsPerSecond(expect_bw * 2000))}});
       }
     }
   }
   return args;
 }
 
-INSTANTIATE_TEST_SUITE_P(BBR, SimulationTest,
-                         ::testing::ValuesIn(GenerateArguments()));
+INSTANTIATE_TEST_SUITE_P(BBR, SimulationTest, ::testing::ValuesIn(GenerateArguments()));
 
 }  // namespace bbr_test
 }  // namespace overnet

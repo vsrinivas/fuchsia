@@ -29,54 +29,51 @@ using DeviceType = ddk::Device<HidButtonsDevice, ddk::Unbindable>;
 
 class HidButtonsDevice : public DeviceType,
                          public ddk::HidbusProtocol<HidButtonsDevice, ddk::base_protocol> {
-public:
-    struct Gpio {
-        gpio_protocol_t gpio;
-        zx::interrupt irq;
-        buttons_gpio_config_t config;
-    };
+ public:
+  struct Gpio {
+    gpio_protocol_t gpio;
+    zx::interrupt irq;
+    buttons_gpio_config_t config;
+  };
 
-    explicit HidButtonsDevice(zx_device_t* device)
-        : DeviceType(device) {}
-    virtual ~HidButtonsDevice() = default;
+  explicit HidButtonsDevice(zx_device_t* device) : DeviceType(device) {}
+  virtual ~HidButtonsDevice() = default;
 
-    // Methods required by the ddk mixins.
-    zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) TA_EXCL(client_lock_);
-    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
-    void HidbusStop() TA_EXCL(client_lock_);
-    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
-                                size_t len, size_t* out_len) TA_EXCL(client_lock_);
-    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
-    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidbusGetProtocol(uint8_t* protocol);
-    zx_status_t HidbusSetProtocol(uint8_t protocol);
+  // Methods required by the ddk mixins.
+  zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) TA_EXCL(client_lock_);
+  zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
+  void HidbusStop() TA_EXCL(client_lock_);
+  zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+  zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+                              size_t* out_len) TA_EXCL(client_lock_);
+  zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+  zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+  zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+  zx_status_t HidbusGetProtocol(uint8_t* protocol);
+  zx_status_t HidbusSetProtocol(uint8_t protocol);
 
-    void DdkUnbind();
-    void DdkRelease();
+  void DdkUnbind();
+  void DdkRelease();
 
-    zx_status_t Bind(fbl::Array<Gpio> gpios,
-                     fbl::Array<buttons_button_config_t> buttons);
+  zx_status_t Bind(fbl::Array<Gpio> gpios, fbl::Array<buttons_button_config_t> buttons);
 
-protected:
-    // Protected for unit testing.
-    void ShutDown() TA_EXCL(client_lock_);
+ protected:
+  // Protected for unit testing.
+  void ShutDown() TA_EXCL(client_lock_);
 
-    zx::port port_;
+  zx::port port_;
 
-private:
+ private:
+  int Thread();
+  void ReconfigurePolarity(uint32_t idx, uint64_t int_port);
+  zx_status_t ConfigureInterrupt(uint32_t idx, uint64_t int_port);
+  bool MatrixScan(uint32_t row, uint32_t col, zx_duration_t delay);
 
-    int Thread();
-    void ReconfigurePolarity(uint32_t idx, uint64_t int_port);
-    zx_status_t ConfigureInterrupt(uint32_t idx, uint64_t int_port);
-    bool MatrixScan(uint32_t row, uint32_t col, zx_duration_t delay);
-
-    thrd_t thread_;
-    fbl::Mutex client_lock_;
-    ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_lock_);
-    fbl::Array<buttons_button_config_t> buttons_;
-    fbl::Array<Gpio> gpios_;
-    std::optional<uint8_t> fdr_gpio_;
+  thrd_t thread_;
+  fbl::Mutex client_lock_;
+  ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_lock_);
+  fbl::Array<buttons_button_config_t> buttons_;
+  fbl::Array<Gpio> gpios_;
+  std::optional<uint8_t> fdr_gpio_;
 };
-} // namespace buttons
+}  // namespace buttons

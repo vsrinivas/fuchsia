@@ -75,11 +75,10 @@ class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
 
   void RunTestCase(const std::string& filepath) {
     std::string golden_file;
-    ASSERT_TRUE(files::ReadFileToString(filepath, &golden_file))
-        << "Failed to open " << filepath;
+    ASSERT_TRUE(files::ReadFileToString(filepath, &golden_file)) << "Failed to open " << filepath;
 
-    auto golden_lines = fxl::SplitStringCopy(
-        golden_file, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll);
+    auto golden_lines =
+        fxl::SplitStringCopy(golden_file, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll);
     ASSERT_GE(golden_lines.size(), 1u);
 
     std::string command_line;
@@ -115,10 +114,8 @@ class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
 
     // Run:
     // iquery --dir=<hub> <args>
-    auto args = fxl::SplitStringCopy(command_line, " ", fxl::kKeepWhitespace,
-                                     fxl::kSplitWantAll);
-    args.insert(args.begin() + 1,
-                fxl::Substitute("--dir=$0", hub_directory_path_));
+    auto args = fxl::SplitStringCopy(command_line, " ", fxl::kKeepWhitespace, fxl::kSplitWantAll);
+    args.insert(args.begin() + 1, fxl::Substitute("--dir=$0", hub_directory_path_));
     auto command = fxl::Substitute("$0/$1", kBinPrefix, args[0]);
 
     const char* argv[args.size() + 1];
@@ -128,14 +125,13 @@ class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
     }
 
     zx_handle_t proc = ZX_HANDLE_INVALID;
-    auto status =
-        fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, command.c_str(),
-                       argv, NULL, 2, actions, &proc, nullptr);
+    auto status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, command.c_str(), argv,
+                                 NULL, 2, actions, &proc, nullptr);
     ASSERT_EQ(status, ZX_OK);
 
     zx_signals_t observed{};
-    zx_object_wait_one(proc, ZX_PROCESS_TERMINATED,
-                       zx::deadline_after(zx::sec(10)).get(), &observed);
+    zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, zx::deadline_after(zx::sec(10)).get(),
+                       &observed);
     ASSERT_TRUE(observed & ZX_PROCESS_TERMINATED);
 
     std::string output;
@@ -146,18 +142,16 @@ class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
     std::regex match_ids("\\/\\d+\\/");
     output = std::regex_replace(output, match_ids, "/*/");
 
-    auto output_lines = fxl::SplitStringCopy(output, "\n", fxl::kKeepWhitespace,
-                                             fxl::kSplitWantAll);
+    auto output_lines =
+        fxl::SplitStringCopy(output, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll);
 
     // Compare golden with output line by line.
     auto output_it = output_lines.begin();
     while (golden_it != golden_lines.end() && output_it != output_lines.end()) {
       ASSERT_EQ(std::string(output_it->data()), std::string(golden_it->data()))
           << CopyableOutput(output)
-          << fxl::StringPrintf(
-                 "%s:%d First difference:\nINPUT : %s\nGOLDEN: %s",
-                 filepath.c_str(), line, output_it->c_str(),
-                 golden_it->c_str());
+          << fxl::StringPrintf("%s:%d First difference:\nINPUT : %s\nGOLDEN: %s", filepath.c_str(),
+                               line, output_it->c_str(), golden_it->c_str());
       ++output_it;
       ++golden_it;
       ++line;
@@ -167,12 +161,10 @@ class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
     // Allow for the golden file to end with a blank line.
     ASSERT_TRUE(golden_it == golden_lines.end() ||
                 *golden_it == "" && ++golden_it == golden_lines.end())
-        << CopyableOutput(output)
-        << "Golden file had extra lines starting at line " << line << "\n"
+        << CopyableOutput(output) << "Golden file had extra lines starting at line " << line << "\n"
         << *golden_it;
     ASSERT_EQ(output_it, output_lines.end())
-        << CopyableOutput(output) << "Output had extra lines starting at line "
-        << line << "\n"
+        << CopyableOutput(output) << "Output had extra lines starting at line " << line << "\n"
         << *output_it;
   }
 
@@ -184,8 +176,7 @@ class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
 
 std::vector<std::string> GetGoldenFiles() {
   std::vector<std::string> ret;
-  for (const auto& filename :
-       files::Glob(fxl::Substitute("$0/*", kGoldenPath))) {
+  for (const auto& filename : files::Glob(fxl::Substitute("$0/*", kGoldenPath))) {
     ret.push_back(filename);
   }
   return ret;
@@ -218,7 +209,7 @@ std::string OutputTestName(const ::testing::TestParamInfo<std::string>& info) {
   return out;
 };
 
-INSTANTIATE_TEST_SUITE_P(AllFiles, IqueryGoldenTest,
-                         ::testing::ValuesIn(GetGoldenFiles()), OutputTestName);
+INSTANTIATE_TEST_SUITE_P(AllFiles, IqueryGoldenTest, ::testing::ValuesIn(GetGoldenFiles()),
+                         OutputTestName);
 
 }  // namespace

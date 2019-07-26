@@ -16,12 +16,9 @@ namespace {
 class CategoryTest : public ::testing::Test {
  public:
   CategoryTest()
-      : model_event_manager_(perfmon::ModelEventManager::Create(
-            perfmon::GetDefaultModelName())) {}
+      : model_event_manager_(perfmon::ModelEventManager::Create(perfmon::GetDefaultModelName())) {}
 
-  perfmon::ModelEventManager* model_event_manager() const {
-    return model_event_manager_.get();
-  }
+  perfmon::ModelEventManager* model_event_manager() const { return model_event_manager_.get(); }
 
  private:
   std::unique_ptr<perfmon::ModelEventManager> model_event_manager_;
@@ -97,8 +94,7 @@ TEST_F(CategoryTest, Timebase) {
   const std::unordered_set<std::string> categories {
     "cpu:pc",
 #if defined(__x86_64__)
-        "cpu:timebase:fixed:instructions_retired",
-        "cpu:fixed:instructions_retired",
+        "cpu:timebase:fixed:instructions_retired", "cpu:fixed:instructions_retired",
 #elif defined(__aarch64__)
         "cpu:timebase:fixed:cycle_counter", "cpu:fixed:cycle_counter",
 #endif

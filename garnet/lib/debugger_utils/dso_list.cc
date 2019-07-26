@@ -24,8 +24,7 @@ namespace debugger_utils {
 const char kDebugDirectory[] = "/boot/debug";
 const char kDebugSuffix[] = ".debug";
 
-static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name,
-                              uintptr_t base) {
+static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base) {
   size_t len = strlen(name);
   size_t alloc_bytes = sizeof(dsoinfo_t) + len + 1;
   auto dso = reinterpret_cast<dsoinfo_t*>(calloc(1, alloc_bytes));
@@ -51,8 +50,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name,
   return dso;
 }
 
-dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
-                          const char* name) {
+dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr, const char* name) {
   dsoinfo_t* dsolist = nullptr;
   // The first dso we see is the main executable.
   bool is_main_exec = true;
@@ -66,8 +64,7 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
 
     if (!bb->Read(lmap_addr, &lmap, sizeof(lmap)))
       break;
-    if (!ReadString(*bb, reinterpret_cast<zx_vaddr_t>(lmap.l_name), dsoname,
-                    sizeof(dsoname)))
+    if (!ReadString(*bb, reinterpret_cast<zx_vaddr_t>(lmap.l_name), dsoname, sizeof(dsoname)))
       break;
 
     const char* file_name = dsoname[0] ? dsoname : name;
@@ -76,16 +73,14 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
     std::unique_ptr<ElfReader> elf_reader;
     ElfError rc = ElfReader::Create(file_name, bb, 0, dso->base, &elf_reader);
     if (rc != ElfError::OK) {
-      FXL_LOG(ERROR) << "Unable to read ELF file: " << file_name
-                     << ": " << ElfErrorName(rc);
+      FXL_LOG(ERROR) << "Unable to read ELF file: " << file_name << ": " << ElfErrorName(rc);
       break;
     }
 
     auto hdr = elf_reader->header();
     rc = elf_reader->ReadSegmentHeaders();
     if (rc != ElfError::OK) {
-      FXL_LOG(ERROR) << "Error reading ELF segment headers: "
-                     << ElfErrorName(rc);
+      FXL_LOG(ERROR) << "Error reading ELF segment headers: " << ElfErrorName(rc);
     } else {
       size_t num_segments = elf_reader->GetNumSegments();
       uint32_t num_loadable_phdrs = 0;
@@ -99,8 +94,8 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
       // loadable phdrs.
       ElfSegmentHeader* loadable_phdrs = NULL;
       if (num_loadable_phdrs > 0) {
-        loadable_phdrs = reinterpret_cast<ElfSegmentHeader*>(
-            malloc(num_loadable_phdrs * hdr.e_phentsize));
+        loadable_phdrs =
+            reinterpret_cast<ElfSegmentHeader*>(malloc(num_loadable_phdrs * hdr.e_phentsize));
       }
       if (loadable_phdrs || num_loadable_phdrs == 0) {
         size_t j = 0;
@@ -166,15 +161,14 @@ dsoinfo_t* dso_get_main_exec(dsoinfo_t* dso_list) {
 
 void dso_print_list(FILE* out, const dsoinfo_t* dso_list) {
   for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
-    fprintf(out, "dso: id=%s base=%p name=%s\n", dso->buildid, (void*)dso->base,
-            dso->name);
+    fprintf(out, "dso: id=%s base=%p name=%s\n", dso->buildid, (void*)dso->base, dso->name);
   }
 }
 
 void dso_vlog_list(const dsoinfo_t* dso_list) {
   for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
-    FXL_VLOG(2) << fxl::StringPrintf("dso: id=%s base=%p name=%s", dso->buildid,
-                                     (void*)dso->base, dso->name);
+    FXL_VLOG(2) << fxl::StringPrintf("dso: id=%s base=%p name=%s", dso->buildid, (void*)dso->base,
+                                     dso->name);
   }
 }
 
@@ -199,8 +193,7 @@ zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   dso->debug_file_tried = true;
 
   char* path;
-  if (asprintf(&path, "%s/%s%s", kDebugDirectory, dso->buildid, kDebugSuffix) <
-      0) {
+  if (asprintf(&path, "%s/%s%s", kDebugDirectory, dso->buildid, kDebugSuffix) < 0) {
     FXL_VLOG(1) << "OOM building debug file path for dso " << dso->name;
     dso->debug_file_status = ZX_ERR_NO_MEMORY;
     return dso->debug_file_status;

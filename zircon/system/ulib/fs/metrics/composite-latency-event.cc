@@ -7,75 +7,70 @@
 namespace fs_metrics {
 
 namespace internal {
-cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>*
-SelectHistogram(const Event event, fs_metrics::VnodeMetrics* metrics) {
-    switch (event) {
+cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* SelectHistogram(
+    const Event event, fs_metrics::VnodeMetrics* metrics) {
+  switch (event) {
     case Event::kClose:
-        return &metrics->close;
+      return &metrics->close;
 
     case Event::kRead:
-        return &metrics->read;
+      return &metrics->read;
 
     case Event::kWrite:
-        return &metrics->write;
+      return &metrics->write;
 
     case Event::kAppend:
-        return &metrics->append;
+      return &metrics->append;
 
     case Event::kTruncate:
-        return &metrics->truncate;
+      return &metrics->truncate;
 
     case Event::kSetAttr:
-        return &metrics->set_attr;
+      return &metrics->set_attr;
 
     case Event::kGetAttr:
-        return &metrics->get_attr;
+      return &metrics->get_attr;
 
     case Event::kReadDir:
-        return &metrics->read_dir;
+      return &metrics->read_dir;
 
     case Event::kSync:
-        return &metrics->sync;
+      return &metrics->sync;
 
     case Event::kLookUp:
-        return &metrics->look_up;
+      return &metrics->look_up;
 
     case Event::kCreate:
-        return &metrics->create;
+      return &metrics->create;
 
     case Event::kLink:
-        return &metrics->link;
+      return &metrics->link;
 
     case Event::kUnlink:
-        return &metrics->unlink;
+      return &metrics->unlink;
 
     default:
-        return nullptr;
-    };
+      return nullptr;
+  };
 }
-} // namespace internal
+}  // namespace internal
 
 CompositeLatencyEvent::CompositeLatencyEvent(Event event,
                                              fs_metrics::Histograms* histogram_collection,
                                              fs_metrics::VnodeMetrics* metrics)
     : inspect_event_(histogram_collection, event) {
-
-    cobalt_histogram_ = internal::SelectHistogram(event, metrics);
+  cobalt_histogram_ = internal::SelectHistogram(event, metrics);
 }
 
 CompositeLatencyEvent::~CompositeLatencyEvent() {
-    if (cobalt_histogram_ != nullptr && inspect_event_.start().get() > 0) {
-        zx::ticks delta = zx::ticks::now() - inspect_event_.start();
-        cobalt_histogram_->Add(delta.get());
-    }
+  if (cobalt_histogram_ != nullptr && inspect_event_.start().get() > 0) {
+    zx::ticks delta = zx::ticks::now() - inspect_event_.start();
+    cobalt_histogram_->Add(delta.get());
+  }
 }
 
-void CompositeLatencyEvent::Cancel() {
-    inspect_event_.Cancel();
-}
+void CompositeLatencyEvent::Cancel() { inspect_event_.Cancel(); }
 
-void CompositeLatencyEvent::Reset() {
-    inspect_event_.Reset();
-}
+void CompositeLatencyEvent::Reset() { inspect_event_.Reset(); }
 
-} // namespace fs_metrics
+}  // namespace fs_metrics

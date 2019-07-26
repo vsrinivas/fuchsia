@@ -16,14 +16,14 @@ __BEGIN_CDECLS
 
 // wire format for datagram messages
 typedef struct fdio_socket_msg {
-    struct sockaddr_storage addr;
-    socklen_t addrlen;
-    int32_t flags;
-    char data[1]; // variable size
+  struct sockaddr_storage addr;
+  socklen_t addrlen;
+  int32_t flags;
+  char data[1];  // variable size
 } fdio_socket_msg_t;
 
 #define FDIO_SOCKET_MSG_HEADER_SIZE offsetof(fdio_socket_msg_t, data)
 
 __END_CDECLS
 
-#endif // LIB_ZXS_PROTOCOL_H_
+#endif  // LIB_ZXS_PROTOCOL_H_

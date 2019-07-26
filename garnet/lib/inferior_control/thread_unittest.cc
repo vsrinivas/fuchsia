@@ -25,11 +25,9 @@ class TryNextThreadTest : public TestServer {
   bool got_sw_breakpoint() const { return got_sw_breakpoint_; }
   bool got_unexpected_exception() const { return got_unexpected_exception_; }
 
-  void OnArchitecturalException(
-      Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
-      const zx_exception_context_t& context) {
-    FXL_LOG(INFO) << "Got exception "
-                  << debugger_utils::ExceptionNameAsString(type);
+  void OnArchitecturalException(Process* process, Thread* thread, zx_handle_t eport,
+                                zx_excp_type_t type, const zx_exception_context_t& context) {
+    FXL_LOG(INFO) << "Got exception " << debugger_utils::ExceptionNameAsString(type);
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       got_sw_breakpoint_ = true;
       thread->TryNext(eport);
@@ -50,8 +48,8 @@ class TryNextThreadTest : public TestServer {
 // FLK-229: disabled pending fix
 TEST_F(TryNextThreadTest, DISABLED_ResumeTryNextTest) {
   std::vector<std::string> argv{
-    kTestHelperPath,
-    "trigger-sw-bkpt-with-handler",
+      kTestHelperPath,
+      "trigger-sw-bkpt-with-handler",
   };
 
   zx::channel our_channel, their_channel;
@@ -86,17 +84,15 @@ class SuspendResumeThreadTest : public TestServer {
       // Must be the exception handling thread.
       FXL_CHECK(exception_handling_thread_id_ == ZX_KOID_INVALID);
       exception_handling_thread_id_ = thread->id();
-      FXL_LOG(INFO) << "Exception handling thread = "
-                    << exception_handling_thread_id_;
+      FXL_LOG(INFO) << "Exception handling thread = " << exception_handling_thread_id_;
     }
     TestServer::OnThreadStarting(process, thread, eport, context);
   }
 
-  void OnArchitecturalException(
-      Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
-      const zx_exception_context_t& context) override {
-    FXL_LOG(INFO) << "Got exception "
-                  << debugger_utils::ExceptionNameAsString(type);
+  void OnArchitecturalException(Process* process, Thread* thread, zx_handle_t eport,
+                                zx_excp_type_t type,
+                                const zx_exception_context_t& context) override {
+    FXL_LOG(INFO) << "Got exception " << debugger_utils::ExceptionNameAsString(type);
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       FXL_CHECK(thread->id() == main_thread_id_) << thread->id();
       got_sw_breakpoint_ = true;
@@ -118,8 +114,7 @@ class SuspendResumeThreadTest : public TestServer {
     // This should be the exception-handling thread. The thread that got the
     // s/w breakpoint should still be in the breakpoint.
     FXL_CHECK(thread->id() == exception_handling_thread_id_) << thread->id();
-    FXL_CHECK(debugger_utils::GetThreadOsState(thread->handle()) ==
-              ZX_THREAD_STATE_SUSPENDED);
+    FXL_CHECK(debugger_utils::GetThreadOsState(thread->handle()) == ZX_THREAD_STATE_SUSPENDED);
     Process* process = thread->process();
     Thread* mthread = process->FindThreadById(main_thread_id_);
     FXL_CHECK(mthread);
@@ -143,7 +138,7 @@ class SuspendResumeThreadTest : public TestServer {
         FXL_CHECK(mthread);
         FXL_CHECK(debugger_utils::GetThreadOsState(mthread->handle()) ==
                   ZX_THREAD_STATE_BLOCKED_EXCEPTION)
-          << debugger_utils::GetThreadOsState(mthread->handle());
+            << debugger_utils::GetThreadOsState(mthread->handle());
         mthread->TryNext(process->server()->exception_port_handle());
       }
     }
@@ -158,8 +153,8 @@ class SuspendResumeThreadTest : public TestServer {
 
 TEST_F(SuspendResumeThreadTest, SuspendResumeTest) {
   std::vector<std::string> argv{
-    kTestHelperPath,
-    "trigger-sw-bkpt-with-handler",
+      kTestHelperPath,
+      "trigger-sw-bkpt-with-handler",
   };
 
   zx::channel our_channel, their_channel;
@@ -183,19 +178,14 @@ class ResumeAfterSwBreakThreadTest : public TestServer {
 
   bool got_sw_breakpoint() const { return got_sw_breakpoint_; }
   bool got_unexpected_exception() const { return got_unexpected_exception_; }
-  bool resume_after_break_succeeded() const {
-    return resume_after_break_succeeded_;
-  }
+  bool resume_after_break_succeeded() const { return resume_after_break_succeeded_; }
 
-  void OnArchitecturalException(
-      Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
-      const zx_exception_context_t& context) {
-    FXL_LOG(INFO) << "Got exception "
-                  << debugger_utils::ExceptionNameAsString(type);
+  void OnArchitecturalException(Process* process, Thread* thread, zx_handle_t eport,
+                                zx_excp_type_t type, const zx_exception_context_t& context) {
+    FXL_LOG(INFO) << "Got exception " << debugger_utils::ExceptionNameAsString(type);
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       got_sw_breakpoint_ = true;
-      resume_after_break_succeeded_ =
-          thread->ResumeAfterSoftwareBreakpointInstruction(eport);
+      resume_after_break_succeeded_ = thread->ResumeAfterSoftwareBreakpointInstruction(eport);
     } else {
       // We shouldn't get here, test has failed.
       // Record the fact for the test, and terminate the inferior, we don't
@@ -213,8 +203,8 @@ class ResumeAfterSwBreakThreadTest : public TestServer {
 
 TEST_F(ResumeAfterSwBreakThreadTest, ResumeAfterSwBreakTest) {
   std::vector<std::string> argv{
-    kTestHelperPath,
-    "trigger-sw-bkpt",
+      kTestHelperPath,
+      "trigger-sw-bkpt",
   };
 
   zx::channel our_channel, their_channel;

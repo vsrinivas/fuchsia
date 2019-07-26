@@ -15,7 +15,7 @@
 // Flags for Wait-Option
 #define WAIT_FOREVER -1
 
-typedef struct scb* SEM;  /* Semaphore Control Block */
+typedef struct scb* SEM; /* Semaphore Control Block */
 
 __BEGIN_CDECLS
 

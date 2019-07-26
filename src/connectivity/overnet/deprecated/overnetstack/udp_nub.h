@@ -21,15 +21,13 @@ namespace overnetstack {
 
 static constexpr uint32_t kAssumedUDPPacketSize = 1500;
 
-using UdpNubBase = overnet::PacketNub<overnet::IpAddr, kAssumedUDPPacketSize,
-                                      overnet::HashIpAddr, overnet::EqIpAddr>;
+using UdpNubBase = overnet::PacketNub<overnet::IpAddr, kAssumedUDPPacketSize, overnet::HashIpAddr,
+                                      overnet::EqIpAddr>;
 
 class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
  public:
   explicit UdpNub(OvernetApp* app)
-      : UdpNubBase(app->endpoint()),
-        endpoint_(app->endpoint()),
-        timer_(app->timer()) {}
+      : UdpNubBase(app->endpoint()), endpoint_(app->endpoint()), timer_(app->timer()) {}
 
   overnet::Status Start() override {
     return CreateFD()
@@ -48,8 +46,7 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
 
   void SendTo(overnet::IpAddr addr, overnet::Slice slice) override {
     OVERNET_TRACE(TRACE) << "sending packet " << slice << " to " << addr;
-    if (auto status = socket_.SendTo(std::move(slice), 0, *addr.AsIpv6());
-        status.is_error()) {
+    if (auto status = socket_.SendTo(std::move(slice), 0, *addr.AsIpv6()); status.is_error()) {
       OVERNET_TRACE(WARNING) << "sendto fails: " << status;
     }
   }
@@ -73,9 +70,7 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
   void WaitForInbound() {
     assert(socket_.IsValid());
     if (!fd_waiter_.Wait(
-            [this](zx_status_t status, uint32_t events) {
-              InboundReady(status, events);
-            },
+            [this](zx_status_t status, uint32_t events) { InboundReady(status, events); },
             socket_.get(), POLLIN)) {
       OVERNET_TRACE(DEBUG) << "fd_waiter_.Wait() failed\n";
     }
@@ -89,15 +84,12 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
       OVERNET_TRACE(ERROR) << data_and_addr.AsStatus();
       // Wait a bit before trying again to avoid spamming the log.
       async::PostDelayedTask(
-          async_get_default_dispatcher(), [this]() { WaitForInbound(); },
-          zx::sec(10));
+          async_get_default_dispatcher(), [this]() { WaitForInbound(); }, zx::sec(10));
       return;
     }
 
-    overnet::ScopedOp scoped_op(
-        overnet::Op::New(overnet::OpType::INCOMING_PACKET));
-    OVERNET_TRACE(TRACE) << "Got packet " << data_and_addr->data << " from "
-                         << data_and_addr->addr;
+    overnet::ScopedOp scoped_op(overnet::Op::New(overnet::OpType::INCOMING_PACKET));
+    OVERNET_TRACE(TRACE) << "Got packet " << data_and_addr->data << " from " << data_and_addr->addr;
     Process(now, data_and_addr->addr, std::move(data_and_addr->data));
 
     WaitForInbound();
@@ -124,15 +116,13 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
     addr.sin6_family = AF_INET6;
     addr.sin6_addr = in6addr_any;
 
-    int result =
-        bind(socket_.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+    int result = bind(socket_.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
     if (result < 0) {
       return StatusFromErrno("Failed to bind() to in6addr_any");
     }
 
     socklen_t len = sizeof(addr);
-    result =
-        getsockname(socket_.get(), reinterpret_cast<sockaddr*>(&addr), &len);
+    result = getsockname(socket_.get(), reinterpret_cast<sockaddr*>(&addr), &len);
     if (result < 0) {
       return StatusFromErrno("Failed to getsockname() for new socket");
     }

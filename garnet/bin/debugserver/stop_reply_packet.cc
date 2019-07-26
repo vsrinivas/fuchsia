@@ -24,8 +24,7 @@ void InsertString(std::vector<char>& collection, const std::string& to_insert) {
   InsertChars<std::string>(collection, to_insert);
 }
 
-void InsertVector(std::vector<char>& collection,
-                  const std::vector<char>& to_insert) {
+void InsertVector(std::vector<char>& collection, const std::vector<char>& to_insert) {
   InsertChars<std::vector<char>>(collection, to_insert);
 }
 
@@ -33,17 +32,14 @@ void InsertVector(std::vector<char>& collection,
 
 StopReplyPacket::StopReplyPacket(Type type) : type_(type), signo_(0) {}
 
-void StopReplyPacket::SetSignalNumber(uint8_t signal_number) {
-  signo_ = signal_number;
-}
+void StopReplyPacket::SetSignalNumber(uint8_t signal_number) { signo_ = signal_number; }
 
 void StopReplyPacket::SetThreadId(zx_koid_t process_id, zx_koid_t thread_id) {
   FXL_DCHECK(type_ == Type::kReceivedSignal || type_ == Type::kThreadExited);
   tid_string_ = EncodeThreadId(process_id, thread_id);
 }
 
-void StopReplyPacket::AddRegisterValue(uint8_t register_number,
-                                       const fxl::StringView& value) {
+void StopReplyPacket::AddRegisterValue(uint8_t register_number, const fxl::StringView& value) {
   FXL_DCHECK(type_ == Type::kReceivedSignal);
   FXL_DCHECK(!value.empty());
 
@@ -132,8 +128,7 @@ std::vector<char> StopReplyPacket::Build() const {
 
 bool StopReplyPacket::HasParameters() const {
   FXL_DCHECK(type_ == Type::kReceivedSignal);
-  return !tid_string_.empty() || !register_values_.empty() ||
-         !stop_reason_.empty();
+  return !tid_string_.empty() || !register_values_.empty() || !stop_reason_.empty();
 }
 
 }  // namespace debugserver

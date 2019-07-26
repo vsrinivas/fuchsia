@@ -31,8 +31,7 @@ bool CreateDirectory(const std::string& path);
 bool CreateDirectoryAt(int root_fd, const std::string& path);
 
 // List the contents of a directory. If returns false, errno will be set.
-bool ReadDirContents(const std::string& path,
-                                std::vector<std::string>* out);
+bool ReadDirContents(const std::string& path, std::vector<std::string>* out);
 
 }  // namespace files
 

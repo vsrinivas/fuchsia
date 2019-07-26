@@ -11,8 +11,7 @@ ZxSocket::ZxSocket(uint32_t options) : options_(options) {
   new (&state_.unbound) Unbound;
 }
 
-ZxSocket::ZxSocket(uint32_t options, RouterEndpoint::NewStream new_stream)
-    : options_(options) {
+ZxSocket::ZxSocket(uint32_t options, RouterEndpoint::NewStream new_stream) : options_(options) {
   state_tag_ = StateTag::kBound;
   new (&state_.bound) Bound(std::move(new_stream));
 }
@@ -33,11 +32,9 @@ ZxSocket::~ZxSocket() {
   }
 }
 
-std::pair<ClosedPtr<ZxSocket>, ClosedPtr<ZxSocket>> ZxSocket::MakePair(
-    uint32_t options) {
+std::pair<ClosedPtr<ZxSocket>, ClosedPtr<ZxSocket>> ZxSocket::MakePair(uint32_t options) {
   auto p = std::pair<ClosedPtr<ZxSocket>, ClosedPtr<ZxSocket>>(
-      ClosedPtr<ZxSocket>(new ZxSocket(options)),
-      ClosedPtr<ZxSocket>(new ZxSocket(options)));
+      ClosedPtr<ZxSocket>(new ZxSocket(options)), ClosedPtr<ZxSocket>(new ZxSocket(options)));
   p.first->state_.unbound.peer = p.second.get();
   p.second->state_.unbound.peer = p.first.get();
   return p;
@@ -50,8 +47,7 @@ void ZxSocket::Message(std::vector<uint8_t> bytes) {
     case StateTag::kUnbound:
       ZX_ASSERT(state_.unbound.peer->state_tag_ == StateTag::kUnbound);
       ZX_ASSERT(state_.unbound.queued.empty());
-      state_.unbound.peer->state_.unbound.queued.emplace_back(
-          QueueSlot{std::move(bytes), {}});
+      state_.unbound.peer->state_.unbound.queued.emplace_back(QueueSlot{std::move(bytes), {}});
       break;
     case StateTag::kBound:
       state_.bound.proxy.Message(std::move(bytes));
@@ -65,12 +61,9 @@ void ZxSocket::Encode(internal::Encoder* encoder, size_t offset) {
   ZX_ASSERT(peer->state_tag_ == StateTag::kUnbound);
   ZX_ASSERT(peer->state_.unbound.queued.empty());
   auto stream = encoder->AppendHandle(
-      offset,
-      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
-      [options = options_](fuchsia::overnet::protocol::ZirconHandle* zh,
-                           StreamId stream_id) {
-        zh->set_socket(fuchsia::overnet::protocol::SocketHandle{
-            stream_id.as_fidl(), options});
+      offset, fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
+      [options = options_](fuchsia::overnet::protocol::ZirconHandle* zh, StreamId stream_id) {
+        zh->set_socket(fuchsia::overnet::protocol::SocketHandle{stream_id.as_fidl(), options});
       });
   peer->state_.unbound.~Unbound();
   peer->state_tag_ = StateTag::kBound;
@@ -84,16 +77,13 @@ void ZxSocket::Encode(internal::Encoder* encoder, size_t offset) {
   state_tag_ = StateTag::kDisconnected;
 }
 
-ClosedPtr<ZxSocket> ZxSocket::Decode(internal::Decoder* decoder,
-                                     size_t offset) {
+ClosedPtr<ZxSocket> ZxSocket::Decode(internal::Decoder* decoder, size_t offset) {
   uint32_t options;
   auto stream = decoder->ClaimHandle(
-      offset,
-      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
+      offset, fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
       [&options](fuchsia::overnet::protocol::ZirconHandle zh)
           -> Optional<fuchsia::overnet::protocol::StreamId> {
-        if (zh.Which() !=
-            fuchsia::overnet::protocol::ZirconHandle::Tag::kSocket) {
+        if (zh.Which() != fuchsia::overnet::protocol::ZirconHandle::Tag::kSocket) {
           return Nothing;
         }
         options = zh.socket().options;

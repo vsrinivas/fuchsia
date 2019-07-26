@@ -30,13 +30,10 @@ class StreamServerBase : public BasicOvernetEmbedded::Actor {
 template <class T>
 class StreamServer final : public StreamServerBase {
  public:
-  StreamServer(BasicOvernetEmbedded* app, IpAddr bind)
-      : StreamServerBase(app, bind) {}
+  StreamServer(BasicOvernetEmbedded* app, IpAddr bind) : StreamServerBase(app, bind) {}
 
  private:
-  virtual std::unique_ptr<StreamFramer> CreateFramer() {
-    return std::make_unique<T>();
-  }
+  virtual std::unique_ptr<StreamFramer> CreateFramer() { return std::make_unique<T>(); }
 };
 
 }  // namespace overnet

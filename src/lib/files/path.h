@@ -31,8 +31,7 @@ bool DeletePath(const std::string& path, bool recursive);
 // Delete the file or directory at the given path. If recursive is true, and
 // path is a directory, also delete the directory's content. If |path| is
 // relative, resolve it with |root_fd| as reference. See |openat(2)|.
-bool DeletePathAt(int root_fd, const std::string& path,
-                             bool recursive);
+bool DeletePathAt(int root_fd, const std::string& path, bool recursive);
 
 // Joins two paths together.
 // Regardless if |path1| has a trailing '/' or |path2| has a leading '/', there
@@ -51,8 +50,7 @@ bool DeletePathAt(int root_fd, const std::string& path,
 // JoinPath("foo",   "") -> "foo"
 // JoinPath("/foo/", "") -> "/foo/"
 // JoinPath("foo/",  "") -> "foo/"
-std::string JoinPath(const std::string& path1,
-                                const std::string& path2);
+std::string JoinPath(const std::string& path1, const std::string& path2);
 
 }  // namespace files
 

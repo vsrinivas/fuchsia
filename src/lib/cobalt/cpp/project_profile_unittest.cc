@@ -15,8 +15,6 @@ TEST(ProjectProfile, FromBase64String) {
   ProjectProfileFromBase64String(cobalt_test_metrics::kConfig);
 }
 
-TEST(ProjectProfile, FromFile) {
-  ProjectProfileFromFile("/pkg/data/test_metrics_registry.pb");
-}
+TEST(ProjectProfile, FromFile) { ProjectProfileFromFile("/pkg/data/test_metrics_registry.pb"); }
 
 }  // namespace cobalt

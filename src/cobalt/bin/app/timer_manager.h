@@ -45,9 +45,8 @@ struct TimerVal {
   std::string part_name;
 
   // Stores the start-related arguments in the given TimerVal.
-  void AddStart(uint32_t metric_id, uint32_t event_code,
-                const std::string& component, uint32_t encoding_id,
-                int64_t timestamp);
+  void AddStart(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                uint32_t encoding_id, int64_t timestamp);
 
   // Stores the end-related arguments in the given TimerVal.
   void AddEnd(int64_t timestamp, const std::string& part_name);
@@ -79,27 +78,23 @@ class TimerManager {
   // same timer_id and different start timestamp exists it returns
   // FAILED_PRECONDITION. If timer_ID or timeout_s is invalid, returns
   // INVALID_ARGUMENTS.
-  Status GetTimerValWithStart(uint32_t metric_id, uint32_t event_code,
-                              const std::string& component,
-                              uint32_t encoding_id, const std::string& timer_id,
-                              int64_t timestamp, uint32_t timeout_s,
-                              std::unique_ptr<TimerVal>* timer_val_ptr);
+  Status GetTimerValWithStart(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                              uint32_t encoding_id, const std::string& timer_id, int64_t timestamp,
+                              uint32_t timeout_s, std::unique_ptr<TimerVal>* timer_val_ptr);
 
   // Populates the TimerVal parameter with the timer's values if there is a
   // valid timer with the timer_id. If no valid timer exists it creates a new
   // timer with the end data and resets the TimerVal ptr. If a timer with the
   // same timer_id and different end timestamp exists it returns an error.
-  Status GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp,
-                            uint32_t timeout_s,
+  Status GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
                             std::unique_ptr<TimerVal>* timer_val_ptr);
 
   // Populates the TimerVal parameter with the timer's values if there is a
   // valid timer with the timer_id. If no valid timer exists it creates a new
   // timer with the end data and resets the TimerVal ptr. If a timer with the
   // same timer_id and different end timestamp exists it returns an error.
-  Status GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp,
-                            uint32_t timeout_s, const std::string& part_name,
-                            std::unique_ptr<TimerVal>* timer_val_ptr);
+  Status GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
+                            const std::string& part_name, std::unique_ptr<TimerVal>* timer_val_ptr);
 
  private:
   // Schedules a task which will delete the timer entries associated with
@@ -115,8 +110,7 @@ class TimerManager {
   // provided. It then deletes the data associated with it from the map, which
   // includes cancelling the pending expiry task.
   void MoveTimerToTimerVal(
-      std::unordered_map<std::string, std::unique_ptr<TimerVal>>::iterator*
-          timer_val_iter,
+      std::unordered_map<std::string, std::unique_ptr<TimerVal>>::iterator* timer_val_iter,
       std::unique_ptr<TimerVal>* timer_val_ptr);
 
   // Map from timer_id to the TimerVal values associated with it.

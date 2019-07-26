@@ -50,8 +50,7 @@ class CobaltLogger {
   //      always set this value to 1 and always set
   //     |period_duration| to 0 in order to achieve a semantics
   //     similar to the LogEvent() method, but with a |component|.
-  virtual void LogEventCount(uint32_t metric_id, uint32_t event_code,
-                             const std::string& component,
+  virtual void LogEventCount(uint32_t metric_id, uint32_t event_code, const std::string& component,
                              zx::duration period_duration, int64_t count) = 0;
 
   // Logs that an event lasted a given amount of time.
@@ -69,8 +68,7 @@ class CobaltLogger {
   //     component.
   //
   // |elapsed_time| The elapsed time of the event.
-  virtual void LogElapsedTime(uint32_t metric_id, uint32_t event_code,
-                              const std::string& component,
+  virtual void LogElapsedTime(uint32_t metric_id, uint32_t event_code, const std::string& component,
                               zx::duration elapsed_time) = 0;
 
   // Logs a measured average frame rate.
@@ -89,8 +87,8 @@ class CobaltLogger {
   //     notion of component.
   //
   // |fps| The average-frame rate in frames-per-second.
-  virtual void LogFrameRate(uint32_t metric_id, uint32_t event_code,
-                            const std::string& component, float fps) = 0;
+  virtual void LogFrameRate(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                            float fps) = 0;
 
   // Logs a measured memory usage.
   //
@@ -108,8 +106,8 @@ class CobaltLogger {
   //     component.
   //
   // |bytes| The memory used, in bytes.
-  virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
-                              const std::string& component, int64_t bytes) = 0;
+  virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                              int64_t bytes) = 0;
 
   // Logs the fact that a given string was used, in a specific context.
   // The semantics of the context and the string is specified in the
@@ -193,8 +191,7 @@ class CobaltLogger {
   //        will be forgotten.
   //     Any error returned by LogElapsedTime() may also be returned by this
   //     method.
-  virtual void StartTimer(uint32_t metric_id, uint32_t event_code,
-                          const std::string& component,
+  virtual void StartTimer(uint32_t metric_id, uint32_t event_code, const std::string& component,
                           const std::string& timer_id, zx::time timestamp,
                           zx::duration timeout) = 0;
 
@@ -249,8 +246,7 @@ class CobaltLogger {
   //        will be forgotten.
   //     Any error returned by LogElapsedTime() may also be returned by this
   //     method.
-  virtual void EndTimer(const std::string& timer_id, zx::time timestamp,
-                        zx::duration timeout) = 0;
+  virtual void EndTimer(const std::string& timer_id, zx::time timestamp, zx::duration timeout) = 0;
 
   // Logs a histogram over a set of integer buckets. The meaning of the
   // Metric and the buckets is specified in the Metric definition.
@@ -278,9 +274,9 @@ class CobaltLogger {
   // |histogram| The histogram to log. Each HistogramBucket gives the count
   //     for one bucket of the histogram. The definitions of the buckets is
   //     given in the Metric definition.
-  virtual void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_code, const std::string& component,
-      std::vector<fuchsia::cobalt::HistogramBucket> histogram) = 0;
+  virtual void LogIntHistogram(uint32_t metric_id, uint32_t event_code,
+                               const std::string& component,
+                               std::vector<fuchsia::cobalt::HistogramBucket> histogram) = 0;
 
   // Logs a custom Event. The semantics of the Metric are specified in the
   // Metric defintion.
@@ -292,9 +288,8 @@ class CobaltLogger {
   // |event_values| The values for the custom Event. There is one value for
   // each dimension of the Metric. The number and types of the values must
   // be consistent with the dimensions declared in the Metric definition.
-  virtual void LogCustomEvent(
-      uint32_t metric_id,
-      std::vector<fuchsia::cobalt::CustomEventValue> event_values) = 0;
+  virtual void LogCustomEvent(uint32_t metric_id,
+                              std::vector<fuchsia::cobalt::CustomEventValue> event_values) = 0;
 
   // Logs a CobaltEvent. This method offers an alternative API to Cobalt that
   // uses a single method with a variadic parameter instead of the multiple
@@ -306,8 +301,7 @@ class CobaltLogger {
   // Logs a list of CobaltEvents. This method is equivalent to invoking
   // LogCobaltEvent() multiple times but is more efficient as it requires only
   // a single FIDL call.
-  virtual void LogCobaltEvents(
-      std::vector<fuchsia::cobalt::CobaltEvent> event) = 0;
+  virtual void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> event) = 0;
 };
 
 // Returns a CobaltLogger initialized with the provided parameters.
@@ -338,8 +332,7 @@ class CobaltLogger {
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
     async_dispatcher_t* dispatcher, sys::ComponentContext* context,
     const std::string& registry_path,
-    fuchsia::cobalt::ReleaseStage release_stage =
-        fuchsia::cobalt::ReleaseStage::GA);
+    fuchsia::cobalt::ReleaseStage release_stage = fuchsia::cobalt::ReleaseStage::GA);
 
 // Returns a CobaltLogger initialized with the provided parameters.
 //
@@ -358,9 +351,9 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 // latest versions of the metric and report definitions to be used by the
 // returned CobaltLogger. This method allows the caller to provide updated
 // versions of those definitions.
-std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-    fuchsia::cobalt::ProjectProfile profile);
+std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
+                                              sys::ComponentContext* context,
+                                              fuchsia::cobalt::ProjectProfile profile);
 
 // Returns a CobaltLogger initialized with the provided parameters.
 //
@@ -384,10 +377,8 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 // CobaltLogger. The |project_name| should be the name of one of the projects in
 // that bundled registry.
 std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectName(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-    std::string project_name,
-    fuchsia::cobalt::ReleaseStage release_stage =
-        fuchsia::cobalt::ReleaseStage::GA);
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context, std::string project_name,
+    fuchsia::cobalt::ReleaseStage release_stage = fuchsia::cobalt::ReleaseStage::GA);
 
 }  // namespace cobalt
 

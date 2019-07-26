@@ -18,37 +18,37 @@ namespace driver_unit_test {
 // Tests can use RunZxTests to set up the logger instance, and in the tests retrieve
 // the instance via |GetInstance|. Drivers can then log custom messages using |SendLogMessage|.
 class Logger : public zxtest::LifecycleObserver {
-public:
-    // Populates |instance_| with a new logger instance.
-    static zx_status_t CreateInstance(zx::channel ch);
-    static Logger* GetInstance() { return instance_.get(); }
-    static void DeleteInstance() { instance_ = nullptr; }
+ public:
+  // Populates |instance_| with a new logger instance.
+  static zx_status_t CreateInstance(zx::channel ch);
+  static Logger* GetInstance() { return instance_.get(); }
+  static void DeleteInstance() { instance_ = nullptr; }
 
-    // Sends a log message to the channel.
-    static zx_status_t SendLogMessage(const char* msg);
+  // Sends a log message to the channel.
+  static zx_status_t SendLogMessage(const char* msg);
 
-    // LifecycleObserver methods.
-    void OnTestCaseStart(const zxtest::TestCase& test_case);
-    void OnTestCaseEnd(const zxtest::TestCase& test_case);
-    void OnTestSuccess(const zxtest::TestCase& test_case, const zxtest::TestInfo& test);
-    void OnTestFailure(const zxtest::TestCase& test_case, const zxtest::TestInfo& test);
-    void OnTestSkip(const zxtest::TestCase& test_case, const zxtest::TestInfo& test);
+  // LifecycleObserver methods.
+  void OnTestCaseStart(const zxtest::TestCase& test_case);
+  void OnTestCaseEnd(const zxtest::TestCase& test_case);
+  void OnTestSuccess(const zxtest::TestCase& test_case, const zxtest::TestInfo& test);
+  void OnTestFailure(const zxtest::TestCase& test_case, const zxtest::TestInfo& test);
+  void OnTestSkip(const zxtest::TestCase& test_case, const zxtest::TestInfo& test);
 
-private:
-    explicit Logger(zx::channel ch) : channel_(std::move(ch)) {}
+ private:
+  explicit Logger(zx::channel ch) : channel_(std::move(ch)) {}
 
-    // Sends the test case result to the channel.
-    zx_status_t SendLogTestCase();
+  // Sends the test case result to the channel.
+  zx_status_t SendLogTestCase();
 
-    // This is static so that the instance is accessible to the test cases.
-    static std::unique_ptr<Logger> instance_;
+  // This is static so that the instance is accessible to the test cases.
+  static std::unique_ptr<Logger> instance_;
 
-    // The channel to send FIDL messages to.
-    zx::channel channel_;
+  // The channel to send FIDL messages to.
+  zx::channel channel_;
 
-    // Current test case information.
-    fbl::String test_case_name_;
-    fuchsia_driver_test_TestCaseResult test_case_result_;
+  // Current test case information.
+  fbl::String test_case_name_;
+  fuchsia_driver_test_TestCaseResult test_case_result_;
 };
 
 }  // namespace driver_unit_test

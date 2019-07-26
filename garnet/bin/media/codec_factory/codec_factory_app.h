@@ -29,8 +29,7 @@ class CodecFactoryApp {
   //
   // This method can return nullptr if a HW decoder isn't found...
   const fuchsia::mediacodec::CodecFactoryPtr* FindHwDecoder(
-      fit::function<bool(const fuchsia::mediacodec::CodecDescription&)>
-          is_match);
+      fit::function<bool(const fuchsia::mediacodec::CodecDescription&)> is_match);
 
   async::Loop* loop() { return loop_; }
 

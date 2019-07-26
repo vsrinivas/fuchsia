@@ -41,8 +41,7 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger);
 
 bool TestLogCobaltEvent(CobaltTestAppLogger* logger);
 
-bool TestChannelFiltering(CobaltTestAppLogger* logger,
-                          uint32_t expect_more_than,
+bool TestChannelFiltering(CobaltTestAppLogger* logger, uint32_t expect_more_than,
                           fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                           uint32_t* num_added = nullptr);
 
@@ -63,20 +62,17 @@ bool TestChannelFiltering(CobaltTestAppLogger* logger,
 //
 // In addition, TestLogEventWithAggregation attempts to log an event with an
 // invalid event code and checks for failure.
-bool TestLogEventWithAggregation(
-    CobaltTestAppLogger* logger, util::ClockInterface* clock,
-    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-    const size_t backfill_days);
+bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, util::ClockInterface* clock,
+                                 fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                                 const size_t backfill_days);
 
-bool TestLogEventCountWithAggregation(
-    CobaltTestAppLogger* logger, util::ClockInterface* clock,
-    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-    const size_t backfill_days);
+bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, util::ClockInterface* clock,
+                                      fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                                      const size_t backfill_days);
 
-bool TestLogElapsedTimeWithAggregation(
-    CobaltTestAppLogger* logger, util::ClockInterface* clock,
-    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-    const size_t backfill_days);
+bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, util::ClockInterface* clock,
+                                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                                       const size_t backfill_days);
 
 }  // namespace testapp
 }  // namespace cobalt

@@ -12,7 +12,7 @@ namespace internal {
 
 zx_koid_t GetPid();
 
-} // namespace internal
-} // namespace trace
+}  // namespace internal
+}  // namespace trace
 
 #endif  // ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_UTILS_H_

@@ -23,9 +23,9 @@ using roughtime::Identity;
 using roughtime::SimpleServer;
 using roughtime::TimeSource;
 
-LocalRoughtimeServer::LocalRoughtimeServer(
-    SettableTimeSource* time_source,
-    std::unique_ptr<SimpleServer> simple_server, uint16_t port_number)
+LocalRoughtimeServer::LocalRoughtimeServer(SettableTimeSource* time_source,
+                                           std::unique_ptr<SimpleServer> simple_server,
+                                           uint16_t port_number)
     : time_source_(time_source),
       simple_server_(std::move(simple_server)),
       port_number_(port_number),
@@ -33,14 +33,11 @@ LocalRoughtimeServer::LocalRoughtimeServer(
 
 // static
 std::unique_ptr<LocalRoughtimeServer> LocalRoughtimeServer::MakeInstance(
-    const uint8_t private_key[roughtime::kPrivateKeyLength],
-    uint16_t preferred_port_number,
+    const uint8_t private_key[roughtime::kPrivateKeyLength], uint16_t preferred_port_number,
     roughtime::rough_time_t initial_time_micros) {
   constexpr roughtime::rough_time_t min_time_micros = 0;
-  constexpr roughtime::rough_time_t max_time_micros =
-      std::numeric_limits<uint64_t>::max();
-  auto identity =
-      SimpleServer::MakeIdentity(private_key, min_time_micros, max_time_micros);
+  constexpr roughtime::rough_time_t max_time_micros = std::numeric_limits<uint64_t>::max();
+  auto identity = SimpleServer::MakeIdentity(private_key, min_time_micros, max_time_micros);
   auto time_source = std::make_unique<SettableTimeSource>(initial_time_micros);
   // Capture a regular pointer here because |simple_server| needs to own the
   // unique_ptr.
@@ -52,12 +49,12 @@ std::unique_ptr<LocalRoughtimeServer> LocalRoughtimeServer::MakeInstance(
   EXPECT_NE(actual_port, 0);
   FXL_LOG(INFO) << "Starting LocalRoughtimeServer on port " << actual_port;
 
-  std::unique_ptr<SimpleServer> simple_server = std::make_unique<SimpleServer>(
-      std::move(identity), std::move(time_source), fd);
+  std::unique_ptr<SimpleServer> simple_server =
+      std::make_unique<SimpleServer>(std::move(identity), std::move(time_source), fd);
 
   // Using |new| instead of |make_unique| because constructor is private
-  return std::unique_ptr<LocalRoughtimeServer>(new LocalRoughtimeServer(
-      time_source_ptr, std::move(simple_server), actual_port));
+  return std::unique_ptr<LocalRoughtimeServer>(
+      new LocalRoughtimeServer(time_source_ptr, std::move(simple_server), actual_port));
 }
 
 void LocalRoughtimeServer::Start() {
@@ -76,8 +73,8 @@ void LocalRoughtimeServer::SetTime(roughtime::rough_time_t server_time_micros) {
   time_source_->SetTime(server_time_micros);
 }
 
-void LocalRoughtimeServer::SetTime(uint16_t year, uint8_t month, uint8_t day,
-                                   uint8_t hour, uint8_t min, uint8_t sec) {
+void LocalRoughtimeServer::SetTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour,
+                                   uint8_t min, uint8_t sec) {
   struct tm time = {.tm_year = year - 1900,
                     .tm_mon = month - 1,
                     .tm_mday = day,

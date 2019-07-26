@@ -23,10 +23,8 @@ namespace testing {
 // environment.
 class StartupContextForTest : public StartupContext {
  public:
-  StartupContextForTest(zx::channel service_root_client,
-                        zx::channel service_root_server,
-                        zx::channel directory_request_client,
-                        zx::channel directory_request_server);
+  StartupContextForTest(zx::channel service_root_client, zx::channel service_root_server,
+                        zx::channel directory_request_client, zx::channel directory_request_server);
   ~StartupContextForTest() override = default;
 
   static std::unique_ptr<StartupContextForTest> Create();
@@ -37,9 +35,7 @@ class StartupContextForTest : public StartupContext {
    public:
     // Returns a |Services| that sees all public services added to the
     // |StartupContextForTest|.
-    const Services& outgoing_public_services() const {
-      return context_->outgoing_public_services_;
-    }
+    const Services& outgoing_public_services() const { return context_->outgoing_public_services_; }
 
     // Adds the specified interface to the set of incoming services in mocked
     // context.
@@ -52,24 +48,21 @@ class StartupContextForTest : public StartupContext {
     //   AddService(foobar_bindings_.GetHandler(this));
     //
     template <typename Interface>
-    zx_status_t AddService(
-        fidl::InterfaceRequestHandler<Interface> handler,
-        const std::string& service_name = Interface::Name_) const {
+    zx_status_t AddService(fidl::InterfaceRequestHandler<Interface> handler,
+                           const std::string& service_name = Interface::Name_) const {
       return context_->service_root_dir_->AddEntry(
           service_name.c_str(),
-          fbl::AdoptRef(new fs::Service(
-              [handler = std::move(handler)](zx::channel channel) {
-                handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
-                return ZX_OK;
-              })));
+          fbl::AdoptRef(new fs::Service([handler = std::move(handler)](zx::channel channel) {
+            handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+            return ZX_OK;
+          })));
     }
 
     // Adds the specified interface to the set of incoming services in mocked
     // context.
     zx_status_t AddService(const fbl::RefPtr<fs::Service> service,
                            const std::string& service_name) const {
-      return context_->service_root_dir_->AddEntry(service_name.c_str(),
-                                                   service);
+      return context_->service_root_dir_->AddEntry(service_name.c_str(), service);
     }
 
     FakeLauncher& fake_launcher() const { return context_->fake_launcher_; }

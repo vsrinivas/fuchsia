@@ -28,29 +28,29 @@ class WAVLTreeChecker;
 // are not tallied in the overall promote/demote accounting.
 //
 struct DefaultWAVLTreeObserver {
-    static void RecordInsert()               { }
-    static void RecordInsertPromote()        { }
-    static void RecordInsertRotation()       { }
-    static void RecordInsertDoubleRotation() { }
+  static void RecordInsert() {}
+  static void RecordInsertPromote() {}
+  static void RecordInsertRotation() {}
+  static void RecordInsertDoubleRotation() {}
 
-    static void RecordErase()                { }
-    static void RecordEraseDemote()          { }
-    static void RecordEraseRotation()        { }
-    static void RecordEraseDoubleRotation()  { }
+  static void RecordErase() {}
+  static void RecordEraseDemote() {}
+  static void RecordEraseRotation() {}
+  static void RecordEraseDoubleRotation() {}
 
-    template <typename TreeType>
-    static bool VerifyRankRule(const TreeType& tree, typename TreeType::RawPtrType node) {
-        return true;
-    }
+  template <typename TreeType>
+  static bool VerifyRankRule(const TreeType& tree, typename TreeType::RawPtrType node) {
+    return true;
+  }
 
-    template <typename TreeType>
-    static bool VerifyBalance(const TreeType& tree, uint64_t depth) {
-        return true;
-    }
+  template <typename TreeType>
+  static bool VerifyBalance(const TreeType& tree, uint64_t depth) {
+    return true;
+  }
 };
 
-}  // namespace tests
 }  // namespace intrusive_containers
+}  // namespace tests
 
 using DefaultWAVLTreeRankType = bool;
 
@@ -66,18 +66,18 @@ using DefaultWAVLTreeRankType = bool;
 // which include a WAVLTreeNodeState<> to be standard layout types, provided
 // that they follow all of the other the rules as well.
 //
-template <typename PtrType, typename RankType>                            // Fwd decl
+template <typename PtrType, typename RankType>  // Fwd decl
 struct WAVLTreeNodeStateBase;
 template <typename PtrType, typename RankType = DefaultWAVLTreeRankType>  // Partial spec
 struct WAVLTreeNodeState;
 
 template <typename PtrType>
 struct WAVLTreeNodeState<PtrType, int32_t> : public WAVLTreeNodeStateBase<PtrType, int32_t> {
-    bool rank_parity() const   { return ((this->rank_ & 0x1) != 0); }
-    void promote_rank()        { this->rank_ += 1; }
-    void double_promote_rank() { this->rank_ += 2; }
-    void demote_rank()         { this->rank_ -= 1; }
-    void double_demote_rank()  { this->rank_ -= 2; }
+  bool rank_parity() const { return ((this->rank_ & 0x1) != 0); }
+  void promote_rank() { this->rank_ += 1; }
+  void double_promote_rank() { this->rank_ += 2; }
+  void demote_rank() { this->rank_ -= 1; }
+  void double_demote_rank() { this->rank_ -= 2; }
 };
 
 }  // namespace fbl

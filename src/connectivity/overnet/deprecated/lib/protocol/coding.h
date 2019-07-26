@@ -33,9 +33,8 @@ enum class Coding : uint8_t {
 
 // Given a coding and a size, how much border should be allocated for a message?
 inline Border BorderForSourceSize(Coding coding, size_t size) {
-  return kCodecVtable[static_cast<uint8_t>(coding)]
-      ->border_for_source_size(size)
-      .WithAddedPrefix(1);
+  return kCodecVtable[static_cast<uint8_t>(coding)]->border_for_source_size(size).WithAddedPrefix(
+      1);
 }
 
 // Given a coding enum, get a name for the codec (or 'Unknown')
@@ -63,8 +62,7 @@ StatusOr<Slice> Decode(Slice slice);
 
 // Encode some data with an auto-selected coding.
 inline StatusOr<Slice> Encode(Slice slice) {
-  return Encode(SliceCodingOracle().SetSize(slice.length()).SuggestCoding(),
-                slice);
+  return Encode(SliceCodingOracle().SetSize(slice.length()).SuggestCoding(), slice);
 }
 
 }  // namespace overnet

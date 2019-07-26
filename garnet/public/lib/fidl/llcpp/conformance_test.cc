@@ -12,14 +12,14 @@
 
 namespace llcpp_misc = ::llcpp::fidl::test::misc;
 
-bool ComparePayload(const uint8_t* actual, size_t actual_size,
-                    const uint8_t* expected, size_t expected_size) {
+bool ComparePayload(const uint8_t* actual, size_t actual_size, const uint8_t* expected,
+                    size_t expected_size) {
   bool pass = true;
   for (size_t i = 0; i < actual_size && i < expected_size; i++) {
     if (actual[i] != expected[i]) {
       pass = false;
-      std::cout << std::dec << "element[" << i << "]: " << std::hex
-                << "actual=0x" << +actual[i] << " "
+      std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
+                << " "
                 << "expected=0x" << +expected[i] << "\n";
     }
   }
@@ -44,10 +44,9 @@ TEST(InlineXUnionInStruct, Success) {
       'b',  'e',  'f',  'o',  'r',  'e',               // "before" string
       0x00, 0x00,                                      // 2 bytes of padding
       0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope content
-      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      'a',  'f',  't',  'e',  'r',                     // "after" string
-      0x00, 0x00, 0x00,                                // 3 bytes of padding
+      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 'a',  'f',  't',  'e',  'r',  // "after" string
+      0x00, 0x00, 0x00,                                           // 3 bytes of padding
   };
   std::string before("before");
   std::string after("after");
@@ -72,23 +71,21 @@ TEST(InlineXUnionInStruct, Success) {
     ASSERT_EQ(encode_result.status, ZX_OK);
 
     EXPECT_TRUE(ComparePayload(encode_result.message.bytes().begin(),
-                               encode_result.message.bytes().size(),
-                               &expected[0], expected.size()));
+                               encode_result.message.bytes().size(), &expected[0],
+                               expected.size()));
   }
 
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
     fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-        fidl::BytePart(&encoded_bytes[0],
-                       static_cast<uint32_t>(encoded_bytes.size()),
+        fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
                        static_cast<uint32_t>(encoded_bytes.size())));
     auto decode_result = fidl::Decode(std::move(encoded_msg));
     ASSERT_STREQ(decode_result.error, nullptr);
     ASSERT_EQ(decode_result.status, ZX_OK);
 
-    const llcpp_misc::InlineXUnionInStruct& msg =
-        *decode_result.message.message();
+    const llcpp_misc::InlineXUnionInStruct& msg = *decode_result.message.message();
     ASSERT_STREQ(msg.before.begin(), &before[0]);
     ASSERT_EQ(msg.before.size(), before.size());
     ASSERT_STREQ(msg.after.begin(), &after[0]);
@@ -137,23 +134,21 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     ASSERT_EQ(encode_result.status, ZX_OK);
 
     EXPECT_TRUE(ComparePayload(encode_result.message.bytes().begin(),
-                               encode_result.message.bytes().size(),
-                               &expected[0], expected.size()));
+                               encode_result.message.bytes().size(), &expected[0],
+                               expected.size()));
   }
 
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
     fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-        fidl::BytePart(&encoded_bytes[0],
-                       static_cast<uint32_t>(encoded_bytes.size()),
+        fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
                        static_cast<uint32_t>(encoded_bytes.size())));
     auto decode_result = fidl::Decode(std::move(encoded_msg));
     ASSERT_STREQ(decode_result.error, nullptr);
     ASSERT_EQ(decode_result.status, ZX_OK);
 
-    const llcpp_misc::InlineXUnionInStruct& msg =
-        *decode_result.message.message();
+    const llcpp_misc::InlineXUnionInStruct& msg = *decode_result.message.message();
     ASSERT_STREQ(msg.before.begin(), &before[0]);
     ASSERT_EQ(msg.before.size(), before.size());
     ASSERT_STREQ(msg.after.begin(), &after[0]);
@@ -192,8 +187,7 @@ TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-      fidl::BytePart(&encoded_bytes[0],
-                     static_cast<uint32_t>(encoded_bytes.size()),
+      fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
                      static_cast<uint32_t>(encoded_bytes.size())));
   auto decode_result = fidl::Decode(std::move(encoded_msg));
   EXPECT_STREQ(decode_result.error, "non-nullable xunion is absent");
@@ -216,12 +210,10 @@ TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-      fidl::BytePart(&encoded_bytes[0],
-                     static_cast<uint32_t>(encoded_bytes.size()),
+      fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
                      static_cast<uint32_t>(encoded_bytes.size())));
   auto decode_result = fidl::Decode(std::move(encoded_msg));
-  EXPECT_STREQ(decode_result.error,
-               "xunion with zero as ordinal must be empty");
+  EXPECT_STREQ(decode_result.error, "xunion with zero as ordinal must be empty");
   EXPECT_EQ(decode_result.status, ZX_ERR_INVALID_ARGS);
 }
 
@@ -235,21 +227,19 @@ TEST(InlineXUnionInStruct, FailToDecodeNonZeroPaddingXUnion) {
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data present
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // length of "after"
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "after" is present
-      'b',  'e',  'f',  'o',  'r',  'e',               // "before" string
+      'b', 'e', 'f', 'o', 'r', 'e',                    // "before" string
       0x00, 0x00,                                      // 2 bytes of padding
       0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope content
-      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      'a',  'f',  't',  'e',  'r',                     // "after" string
-      0x00, 0x00, 0x00,                                // 3 bytes of padding
+      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 'a', 'f', 't', 'e', 'r',  // "after" string
+      0x00, 0x00, 0x00,               // 3 bytes of padding
   };
   std::string before("before");
   std::string after("after");
 
   std::vector<uint8_t> encoded_bytes = expected;
   fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-      fidl::BytePart(&encoded_bytes[0],
-                     static_cast<uint32_t>(encoded_bytes.size()),
+      fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
                      static_cast<uint32_t>(encoded_bytes.size())));
   auto decode_result = fidl::Decode(std::move(encoded_msg));
   ASSERT_STREQ(decode_result.error, "non-zero padding bytes detected");

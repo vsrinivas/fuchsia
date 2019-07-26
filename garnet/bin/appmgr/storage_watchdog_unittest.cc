@@ -13,8 +13,7 @@
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
 
-#define EXAMPLE_PATH \
-  "/hippo_storage/cache/r/sys/fuchsia.com:cobalt:0#meta:cobalt.cmx"
+#define EXAMPLE_PATH "/hippo_storage/cache/r/sys/fuchsia.com:cobalt:0#meta:cobalt.cmx"
 #define EXAMPLE_TEST_PATH              \
   "/hippo_storage/cache/r/sys/r/test/" \
   "fuchsia.com:cobalt-unittest:0#meta:cobalt-unittest.cmx"
@@ -28,9 +27,8 @@ class StorageWatchdogTest : public ::testing::Test {
 
   void SetUp() override {
     testing::Test::SetUp();
-    ASSERT_EQ(ZX_OK,
-              memfs_create_filesystem_with_page_limit(
-                  loop_.dispatcher(), 5, &memfs_handle_, &memfs_root_handle_));
+    ASSERT_EQ(ZX_OK, memfs_create_filesystem_with_page_limit(loop_.dispatcher(), 5, &memfs_handle_,
+                                                             &memfs_root_handle_));
     ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&ns_));
     ASSERT_EQ(ZX_OK, fdio_ns_bind(ns_, "/hippo_storage", memfs_root_handle_));
 
@@ -58,19 +56,16 @@ TEST_F(StorageWatchdogTest, Basic) {
   files::CreateDirectory(EXAMPLE_PATH);
   files::CreateDirectory(EXAMPLE_TEST_PATH);
 
-  StorageWatchdog watchdog =
-      StorageWatchdog("/hippo_storage", "/hippo_storage/cache");
+  StorageWatchdog watchdog = StorageWatchdog("/hippo_storage", "/hippo_storage/cache");
   EXPECT_TRUE(95 > watchdog.GetStorageUsage());
 
   // Write to those directories until writes fail
   int counter = 0;
   while (true) {
     auto filename = std::to_string(counter++);
-    if (!files::WriteFile(files::JoinPath(EXAMPLE_PATH, filename), TMPDATA,
-                          TMPDATA_SIZE))
+    if (!files::WriteFile(files::JoinPath(EXAMPLE_PATH, filename), TMPDATA, TMPDATA_SIZE))
       break;
-    if (!files::WriteFile(files::JoinPath(EXAMPLE_TEST_PATH, filename), TMPDATA,
-                          TMPDATA_SIZE))
+    if (!files::WriteFile(files::JoinPath(EXAMPLE_TEST_PATH, filename), TMPDATA, TMPDATA_SIZE))
       break;
   }
 

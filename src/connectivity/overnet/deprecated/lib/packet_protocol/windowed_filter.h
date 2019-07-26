@@ -57,15 +57,12 @@ class WindowedFilter {
       : window_length_(window_length),
         zero_time_(zero_time),
         zero_value_(zero_value),
-        estimates_{{zero_time, zero_value},
-                   {zero_time, zero_value},
-                   {zero_time, zero_value}} {}
+        estimates_{{zero_time, zero_value}, {zero_time, zero_value}, {zero_time, zero_value}} {}
 
   void Update(Time time, Value value) {
     // Reset all estimates if they have not yet been initialized, if new sample
     // is a new best, or if the newest recorded estimate is too old.
-    if (estimates_[0].value == zero_value_ ||
-        Compare<Value>::Compare(value, estimates_[0].value) ||
+    if (estimates_[0].value == zero_value_ || Compare<Value>::Compare(value, estimates_[0].value) ||
         time - estimates_[2].time > window_length_) {
       Reset(time, value);
       return;

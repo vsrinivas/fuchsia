@@ -8,18 +8,18 @@
 
 __BEGIN_CDECLS
 
-#define LTR_578ALS_RPT_ID_INPUT   1
+#define LTR_578ALS_RPT_ID_INPUT 1
 #define LTR_578ALS_RPT_ID_FEATURE 2
 
 typedef struct ltr_578als_input_rpt {
-    uint8_t rpt_id;
-    uint32_t ambient_light;
-    uint16_t proximity;
+  uint8_t rpt_id;
+  uint32_t ambient_light;
+  uint16_t proximity;
 } __PACKED ltr_578als_input_rpt_t;
 
 typedef struct ltr_578als_feature_rpt {
-    uint8_t rpt_id;
-    uint32_t interval_ms;
+  uint8_t rpt_id;
+  uint32_t interval_ms;
 } __PACKED ltr_578als_feature_rpt_t;
 
 size_t get_ltr_578als_report_desc(const uint8_t** buf);

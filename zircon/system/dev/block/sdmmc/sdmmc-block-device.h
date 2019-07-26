@@ -28,94 +28,92 @@ using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::GetSizable, ddk:
 class SdmmcBlockDevice : public SdmmcBlockDeviceType,
                          public ddk::BlockImplProtocol<SdmmcBlockDevice, ddk::base_protocol>,
                          public fbl::RefCounted<SdmmcBlockDevice> {
-public:
-    using BlockOperation = block::BorrowedOperation<>;
+ public:
+  using BlockOperation = block::BorrowedOperation<>;
 
-    static constexpr size_t BlockOpSize() {
-        return BlockOperation::OperationSize(sizeof(block_op_t));
-    }
+  static constexpr size_t BlockOpSize() {
+    return BlockOperation::OperationSize(sizeof(block_op_t));
+  }
 
-    SdmmcBlockDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
-        : SdmmcBlockDeviceType(parent), sdmmc_(sdmmc) {
-        block_info_.max_transfer_size = static_cast<uint32_t>(sdmmc_.host_info().max_transfer_size);
-    }
-    virtual ~SdmmcBlockDevice() {
-        txn_list_.CompleteAll(ZX_ERR_INTERNAL);
-    }
+  SdmmcBlockDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
+      : SdmmcBlockDeviceType(parent), sdmmc_(sdmmc) {
+    block_info_.max_transfer_size = static_cast<uint32_t>(sdmmc_.host_info().max_transfer_size);
+  }
+  virtual ~SdmmcBlockDevice() { txn_list_.CompleteAll(ZX_ERR_INTERNAL); }
 
-    static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
-                              fbl::RefPtr<SdmmcBlockDevice>* out_dev);
+  static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
+                            fbl::RefPtr<SdmmcBlockDevice>* out_dev);
 
-    zx_status_t ProbeSd();
-    zx_status_t ProbeMmc();
+  zx_status_t ProbeSd();
+  zx_status_t ProbeMmc();
 
-    zx_status_t AddDevice();
+  zx_status_t AddDevice();
 
-    void DdkUnbind();
-    void DdkRelease();
+  void DdkUnbind();
+  void DdkRelease();
 
-    zx_off_t DdkGetSize();
+  zx_off_t DdkGetSize();
 
-    void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
-    void BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb, void* cookie);
+  void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
+  void BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb, void* cookie);
 
-    // Visible for testing.
-    zx_status_t StartWorkerThread();
-    void StopWorkerThread();
+  // Visible for testing.
+  zx_status_t StartWorkerThread();
+  void StopWorkerThread();
 
-    virtual void DoTxn(BlockOperation* txn);
+  virtual void DoTxn(BlockOperation* txn);
 
-protected:
-    virtual SdmmcDevice& sdmmc() { return sdmmc_; }
+ protected:
+  virtual SdmmcDevice& sdmmc() { return sdmmc_; }
 
-    virtual void BlockComplete(BlockOperation* txn, zx_status_t status, trace_async_id_t async_id);
+  virtual void BlockComplete(BlockOperation* txn, zx_status_t status, trace_async_id_t async_id);
 
-    virtual zx_status_t WaitForTran();
+  virtual zx_status_t WaitForTran();
 
-    block_info_t block_info_;
+  block_info_t block_info_;
 
-private:
-    int WorkerThread();
+ private:
+  int WorkerThread();
 
-    zx_status_t MmcDoSwitch(uint8_t index, uint8_t value);
-    zx_status_t MmcSetBusWidth(sdmmc_bus_width_t bus_width, uint8_t mmc_ext_csd_bus_width);
-    sdmmc_bus_width_t MmcSelectBusWidth();
-    zx_status_t MmcSwitchTiming(sdmmc_timing_t new_timing);
-    zx_status_t MmcSwitchFreq(uint32_t new_freq);
-    zx_status_t MmcDecodeExtCsd(const uint8_t* raw_ext_csd);
-    bool MmcSupportsHs();
-    bool MmcSupportsHsDdr();
-    bool MmcSupportsHs200();
-    bool MmcSupportsHs400();
+  zx_status_t MmcDoSwitch(uint8_t index, uint8_t value);
+  zx_status_t MmcSetBusWidth(sdmmc_bus_width_t bus_width, uint8_t mmc_ext_csd_bus_width);
+  sdmmc_bus_width_t MmcSelectBusWidth();
+  zx_status_t MmcSwitchTiming(sdmmc_timing_t new_timing);
+  zx_status_t MmcSwitchFreq(uint32_t new_freq);
+  zx_status_t MmcDecodeExtCsd(const uint8_t* raw_ext_csd);
+  bool MmcSupportsHs();
+  bool MmcSupportsHsDdr();
+  bool MmcSupportsHs200();
+  bool MmcSupportsHs400();
 
-    std::atomic<trace_async_id_t> async_id_;
+  std::atomic<trace_async_id_t> async_id_;
 
-    SdmmcDevice sdmmc_;
+  SdmmcDevice sdmmc_;
 
-    sdmmc_bus_width_t bus_width_;
-    sdmmc_timing_t timing_;
+  sdmmc_bus_width_t bus_width_;
+  sdmmc_timing_t timing_;
 
-    uint32_t clock_rate_;  // Bus clock rate
+  uint32_t clock_rate_;  // Bus clock rate
 
-    // mmc
-    uint32_t raw_cid_[4];
-    uint32_t raw_csd_[4];
-    uint8_t raw_ext_csd_[512];
+  // mmc
+  uint32_t raw_cid_[4];
+  uint32_t raw_csd_[4];
+  uint8_t raw_ext_csd_[512];
 
-    fbl::Mutex lock_;
-    fbl::ConditionVariable worker_event_ TA_GUARDED(lock_);
+  fbl::Mutex lock_;
+  fbl::ConditionVariable worker_event_ TA_GUARDED(lock_);
 
-    // blockio requests
-    block::BorrowedOperationQueue<> txn_list_ TA_GUARDED(lock_);
+  // blockio requests
+  block::BorrowedOperationQueue<> txn_list_ TA_GUARDED(lock_);
 
-    // outstanding request (1 right now)
-    sdmmc_req_t req_;
+  // outstanding request (1 right now)
+  sdmmc_req_t req_;
 
-    thrd_t worker_thread_ = 0;
+  thrd_t worker_thread_ = 0;
 
-    std::atomic<bool> dead_ = false;
+  std::atomic<bool> dead_ = false;
 
-    bool is_sd_ = false;
+  bool is_sd_ = false;
 };
 
 }  // namespace sdmmc

@@ -28,17 +28,14 @@ namespace usb {
 static constexpr int USB_ENDPOINT_INVALID = -1;
 
 class UsbVideoStream;
-using UsbVideoStreamBase =
-    ddk::Device<UsbVideoStream, ddk::Messageable, ddk::Unbindable>;
+using UsbVideoStreamBase = ddk::Device<UsbVideoStream, ddk::Messageable, ddk::Unbindable>;
 
-class UsbVideoStream : public UsbVideoStreamBase,
-                       public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
+class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
  public:
   static zx_status_t Create(zx_device_t* device, usb_protocol_t* usb, int index,
                             usb_interface_descriptor_t* intf,
                             usb_video_vc_header_desc* control_header,
-                            usb_video_vs_input_header_desc* input_header,
-                            UvcFormatList format_list,
+                            usb_video_vs_input_header_desc* input_header, UvcFormatList format_list,
                             fbl::Vector<UsbVideoStreamingSetting>* settings,
                             UsbDeviceInfo device_info, size_t parent_req_size);
 
@@ -46,8 +43,7 @@ class UsbVideoStream : public UsbVideoStreamBase,
   void DdkUnbind();
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_camera_Device_dispatch(this, txn, msg,
-                                                   &CAMERA_FIDL_THUNKS);
+    return fuchsia_hardware_camera_Device_dispatch(this, txn, msg, &CAMERA_FIDL_THUNKS);
   }
   ~UsbVideoStream();
 
@@ -61,10 +57,9 @@ class UsbVideoStream : public UsbVideoStreamBase,
   // Device FIDL implementation
   zx_status_t GetChannel(zx_handle_t handle);
 
-  UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
-                 UvcFormatList format_list,
-                 fbl::Vector<UsbVideoStreamingSetting>* settings,
-                 UsbDeviceInfo device_info, size_t parent_req_size);
+  UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb, UvcFormatList format_list,
+                 fbl::Vector<UsbVideoStreamingSetting>* settings, UsbDeviceInfo device_info,
+                 size_t parent_req_size);
 
   zx_status_t Bind(const char* devname, usb_interface_descriptor_t* intf,
                    usb_video_vc_header_desc* control_header,
@@ -80,20 +75,17 @@ class UsbVideoStream : public UsbVideoStreamBase,
   //
   // frame_desc may be NULL for non frame based formats.
   zx_status_t TryFormatLocked(uint8_t format_index, uint8_t frame_index,
-                              uint32_t default_frame_interval)
-      __TA_REQUIRES(lock_);
+                              uint32_t default_frame_interval) __TA_REQUIRES(lock_);
 
  public:
   // Interface with the FIDL Camera Driver
-  zx_status_t GetFormats(
-      fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats);
+  zx_status_t GetFormats(fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats);
 
   // Get the vendor and product information for this device.
   const UsbDeviceInfo& GetDeviceInfo() { return device_info_; }
 
-  zx_status_t CreateStream(
-      fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-      fuchsia::camera::FrameRate frame_rate);
+  zx_status_t CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+                           fuchsia::camera::FrameRate frame_rate);
 
   zx_status_t StartStreaming();
 
@@ -125,8 +117,7 @@ class UsbVideoStream : public UsbVideoStreamBase,
   // If the header is parsed successfully, ZX_OK is returned and the length
   // of the header stored in out_header_length.
   // Returns an error if the header is malformed.
-  zx_status_t ParsePayloadHeaderLocked(usb_request_t* req,
-                                       uint32_t* out_header_length)
+  zx_status_t ParsePayloadHeaderLocked(usb_request_t* req, uint32_t* out_header_length)
       __TA_REQUIRES(lock_);
   // Extracts the payload data from the usb request response,
   // and stores it in the video buffer.
@@ -190,8 +181,7 @@ class UsbVideoStream : public UsbVideoStreamBase,
 
   FrameState cur_frame_state_;
 
-  volatile StreamingState streaming_state_ __TA_GUARDED(lock_) =
-      StreamingState::STOPPED;
+  volatile StreamingState streaming_state_ __TA_GUARDED(lock_) = StreamingState::STOPPED;
 
   list_node_t free_reqs_ __TA_GUARDED(lock_);
   uint32_t num_free_reqs_ __TA_GUARDED(lock_);
@@ -210,8 +200,7 @@ class UsbVideoStream : public UsbVideoStreamBase,
   fbl::Mutex lock_;
 
   // CameraStream FIDL interface
-  fbl::unique_ptr<camera::ControlImpl> camera_control_ __TA_GUARDED(lock_) =
-      nullptr;
+  fbl::unique_ptr<camera::ControlImpl> camera_control_ __TA_GUARDED(lock_) = nullptr;
 
   static const fuchsia_hardware_camera_Device_ops_t CAMERA_FIDL_THUNKS;
   // Loop used to run the FIDL server

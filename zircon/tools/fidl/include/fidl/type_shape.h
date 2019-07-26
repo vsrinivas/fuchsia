@@ -19,8 +19,7 @@ class TypeShape {
         max_out_of_line_(max_out_of_line),
         has_padding_(has_padding) {}
 
-  constexpr TypeShape()
-      : TypeShape(0u, 0u, 0u, 0u, 0u, false) {}
+  constexpr TypeShape() : TypeShape(0u, 0u, 0u, 0u, 0u, false) {}
 
   TypeShape(const TypeShape&) = default;
   TypeShape& operator=(const TypeShape&) = default;
@@ -50,11 +49,9 @@ class FieldShape {
  public:
   // Constructs a |FieldShape| with zero offset and padding.
   // The offset and padding can be updated via |SetOffset| and |SetPadding| respectively.
-  explicit FieldShape(TypeShape typeshape)
-      : typeshape_(typeshape), offset_(0), padding_(0) {}
+  explicit FieldShape(TypeShape typeshape) : typeshape_(typeshape), offset_(0), padding_(0) {}
 
-  FieldShape()
-      : FieldShape(TypeShape()) {}
+  FieldShape() : FieldShape(TypeShape()) {}
 
   TypeShape& Typeshape() { return typeshape_; }
   const TypeShape& Typeshape() const { return typeshape_; }

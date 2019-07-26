@@ -5,9 +5,9 @@
 #ifndef SYSROOT_ZIRCON_FIDL_H_
 #define SYSROOT_ZIRCON_FIDL_H_
 
-#include <assert.h>   // NOLINT(modernize-deprecated-headers, foobar)
-#include <stdalign.h> // NOLINT(modernize-deprecated-headers)
-#include <stdint.h>   // NOLINT(modernize-*)
+#include <assert.h>    // NOLINT(modernize-deprecated-headers, foobar)
+#include <stdalign.h>  // NOLINT(modernize-deprecated-headers)
+#include <stdint.h>    // NOLINT(modernize-*)
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -119,11 +119,11 @@ typedef struct fidl_type fidl_type_t;
 // but is checked as part of validation.
 
 typedef struct fidl_string {
-    // Number of UTF-8 code units (bytes), must be 0 if |data| is null.
-    uint64_t size;
+  // Number of UTF-8 code units (bytes), must be 0 if |data| is null.
+  uint64_t size;
 
-    // Pointer to UTF-8 code units (bytes) or null
-    char* data;
+  // Pointer to UTF-8 code units (bytes) or null
+  char* data;
 } fidl_string_t;
 
 // When encoded, an absent nullable string is represented as a
@@ -169,11 +169,11 @@ typedef struct fidl_string {
 // but is checked as part of validation.
 
 typedef struct fidl_vector {
-    // Number of elements, must be 0 if |data| is null.
-    uint64_t count;
+  // Number of elements, must be 0 if |data| is null.
+  uint64_t count;
 
-    // Pointer to element data or null.
-    void* data;
+  // Pointer to element data or null.
+  void* data;
 } fidl_vector_t;
 
 // When encoded, an absent nullable vector is represented as a
@@ -210,23 +210,23 @@ typedef struct fidl_vector {
 // - <valid pointer> : envelope is non-null, |data| is at indicated memory address
 
 typedef struct {
-    // The size of the entire envelope contents, including any additional
-    // out-of-line objects that the envelope may contain. For example, a
-    // vector<string>'s num_bytes for ["hello", "world"] would include the
-    // string contents in the size, not just the outer vector. Always a multiple
-    // of 8; must be zero if envelope is null.
-    uint32_t num_bytes;
+  // The size of the entire envelope contents, including any additional
+  // out-of-line objects that the envelope may contain. For example, a
+  // vector<string>'s num_bytes for ["hello", "world"] would include the
+  // string contents in the size, not just the outer vector. Always a multiple
+  // of 8; must be zero if envelope is null.
+  uint32_t num_bytes;
 
-    // The number of handles in the envelope, including any additional
-    // out-of-line objects that the envelope contains. Must be zero if envelope is null.
-    uint32_t num_handles;
+  // The number of handles in the envelope, including any additional
+  // out-of-line objects that the envelope contains. Must be zero if envelope is null.
+  uint32_t num_handles;
 
-    // A pointer to the out-of-line envelope data in decoded form, or
-    // FIDL_ALLOC_(ABSENT|PRESENT) in encoded form.
-    union {
-        void* data;
-        uintptr_t presence;
-    };
+  // A pointer to the out-of-line envelope data in decoded form, or
+  // FIDL_ALLOC_(ABSENT|PRESENT) in encoded form.
+  union {
+    void* data;
+    uintptr_t presence;
+  };
 } fidl_envelope_t;
 
 // Handle types.
@@ -325,7 +325,7 @@ typedef uint32_t fidl_union_tag_t;
 // to guarantee a canonical representation.
 
 typedef struct {
-    fidl_vector_t envelopes;
+  fidl_vector_t envelopes;
 } fidl_table_t;
 
 // Extensible unions.
@@ -339,13 +339,13 @@ typedef struct {
 typedef uint32_t fidl_xunion_tag_t;
 
 enum {
-    kFidlXUnionEmptyTag = 0,  // The tag representing an empty xunion.
+  kFidlXUnionEmptyTag = 0,  // The tag representing an empty xunion.
 };
 
 typedef struct {
-    fidl_xunion_tag_t tag;
-    uint32_t padding; // Should always be zero.
-    fidl_envelope_t envelope;
+  fidl_xunion_tag_t tag;
+  uint32_t padding;  // Should always be zero.
+  fidl_envelope_t envelope;
 } fidl_xunion_t;
 
 // Messages.
@@ -353,10 +353,10 @@ typedef struct {
 // All fidl messages share a common 16 byte header.
 
 typedef struct fidl_message_header {
-    zx_txid_t txid;
-    // This reserved word is used by Epitaphs to represent an error value.
-    uint32_t reserved0;
-    uint64_t ordinal;
+  zx_txid_t txid;
+  // This reserved word is used by Epitaphs to represent an error value.
+  uint32_t reserved0;
+  uint64_t ordinal;
 } fidl_message_header_t;
 
 // Messages which do not have a response use zero as a special
@@ -370,40 +370,40 @@ typedef struct fidl_message_header {
 
 // A FIDL message.
 typedef struct fidl_msg {
-    // The bytes of the message.
-    //
-    // The bytes of the message might be in the encoded or decoded form.
-    // Functions that take a |fidl_msg_t| as an argument should document whether
-    // the expect encoded or decoded messages.
-    //
-    // See |num_bytes| for the number of bytes in the message.
-    void* bytes;
+  // The bytes of the message.
+  //
+  // The bytes of the message might be in the encoded or decoded form.
+  // Functions that take a |fidl_msg_t| as an argument should document whether
+  // the expect encoded or decoded messages.
+  //
+  // See |num_bytes| for the number of bytes in the message.
+  void* bytes;
 
-    // The handles of the message.
-    //
-    // See |num_bytes| for the number of bytes in the message.
-    zx_handle_t* handles;
+  // The handles of the message.
+  //
+  // See |num_bytes| for the number of bytes in the message.
+  zx_handle_t* handles;
 
-    // The number of bytes in |bytes|.
-    uint32_t num_bytes;
+  // The number of bytes in |bytes|.
+  uint32_t num_bytes;
 
-    // The number of handles in |handles|.
-    uint32_t num_handles;
+  // The number of handles in |handles|.
+  uint32_t num_handles;
 } fidl_msg_t;
 
 // An outstanding FIDL transaction.
 typedef struct fidl_txn fidl_txn_t;
 struct fidl_txn {
-    // Replies to the outstanding request and complete the FIDL transaction.
-    //
-    // Pass the |fidl_txn_t| object itself as the first parameter. The |msg|
-    // should already be encoded. This function always consumes any handles
-    // present in |msg|.
-    //
-    // Call |reply| only once for each |txn| object. After |reply| returns, the
-    // |txn| object is considered invalid and might have been freed or reused
-    // for another purpose.
-    zx_status_t (*reply)(fidl_txn_t* txn, const fidl_msg_t* msg);
+  // Replies to the outstanding request and complete the FIDL transaction.
+  //
+  // Pass the |fidl_txn_t| object itself as the first parameter. The |msg|
+  // should already be encoded. This function always consumes any handles
+  // present in |msg|.
+  //
+  // Call |reply| only once for each |txn| object. After |reply| returns, the
+  // |txn| object is considered invalid and might have been freed or reused
+  // for another purpose.
+  zx_status_t (*reply)(fidl_txn_t* txn, const fidl_msg_t* msg);
 };
 
 // An epitaph is a message that a server sends just prior to closing the
@@ -411,13 +411,13 @@ struct fidl_txn {
 // Epitaphs are defined in the FIDL wire format specification.  Once sent down
 // the wire, the channel should be closed.
 typedef struct fidl_epitaph {
-    FIDL_ALIGNDECL
+  FIDL_ALIGNDECL
 
-    // The error associated with this epitaph is stored in the reserved word of
-    // the message header.  System errors must be constants of type zx_status_t,
-    // which are all negative.  Positive numbers should be used for application
-    // errors.  A value of ZX_OK indicates no error.
-    fidl_message_header_t hdr;
+  // The error associated with this epitaph is stored in the reserved word of
+  // the message header.  System errors must be constants of type zx_status_t,
+  // which are all negative.  Positive numbers should be used for application
+  // errors.  A value of ZX_OK indicates no error.
+  fidl_message_header_t hdr;
 } fidl_epitaph_t;
 
 // This ordinal value is reserved for Epitaphs.
@@ -443,4 +443,4 @@ static_assert(alignof(fidl_message_header_t) <= FIDL_ALIGNMENT, "");
 
 __END_CDECLS
 
-#endif // SYSROOT_ZIRCON_FIDL_H_
+#endif  // SYSROOT_ZIRCON_FIDL_H_

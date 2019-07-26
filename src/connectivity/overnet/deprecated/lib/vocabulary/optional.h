@@ -171,8 +171,7 @@ class Optional {
 
 template <class T, class U>
 bool operator==(const Optional<T>& a, const Optional<U>& b) {
-  return a.has_value() ? (b.has_value() && a.value() == b.value())
-                       : !b.has_value();
+  return a.has_value() ? (b.has_value() && a.value() == b.value()) : !b.has_value();
 }
 
 template <class T>

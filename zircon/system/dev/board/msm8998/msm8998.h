@@ -16,30 +16,29 @@ using Msm8998Type = ddk::Device<Msm8998>;
 
 // This is the main class for the platform bus driver.
 class Msm8998 : public Msm8998Type {
-public:
-    explicit Msm8998(zx_device_t* parent, pbus_protocol_t* pbus)
-        : Msm8998Type(parent), pbus_(pbus) {}
+ public:
+  explicit Msm8998(zx_device_t* parent, pbus_protocol_t* pbus) : Msm8998Type(parent), pbus_(pbus) {}
 
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    // Device protocol implementation.
-    void DdkRelease();
+  // Device protocol implementation.
+  void DdkRelease();
 
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Msm8998);
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Msm8998);
 
-    zx_status_t Start();
-    int Thread();
-/*
-    zx_status_t GpioInit();
-    zx_status_t PilInit();
-    zx_status_t PowerInit();
-    zx_status_t Sdc1Init();
-    zx_status_t ClockInit();
-*/
+  zx_status_t Start();
+  int Thread();
+  /*
+      zx_status_t GpioInit();
+      zx_status_t PilInit();
+      zx_status_t PowerInit();
+      zx_status_t Sdc1Init();
+      zx_status_t ClockInit();
+  */
 
-    ddk::PBusProtocolClient pbus_;
-    thrd_t thread_;
+  ddk::PBusProtocolClient pbus_;
+  thrd_t thread_;
 };
 
-} // namespace board_msm8998
+}  // namespace board_msm8998

@@ -22,7 +22,7 @@ TEST(DebugLogTest, WriteRead) {
 
   // In-case the read bound isn't respected create a buffer large enough to hopefully
   // prevent corruption.
-  char buf[10240] {0};
+  char buf[10240]{0};
 
   // But only report a smaller size for the buffer.
   const size_t read_len = 3;
@@ -30,10 +30,10 @@ TEST(DebugLogTest, WriteRead) {
   ASSERT_EQ(read_len, status_or_size);
 
   // Ensure that only read_len bytes were written to our buffer.
-  const char empty[10] {0};
+  const char empty[10]{0};
   ASSERT_EQ(0, memcmp(buf + read_len, empty, sizeof(empty)));
 
   ASSERT_OK(zx_handle_close(log_handle));
 }
 
-} // namespace
+}  // namespace

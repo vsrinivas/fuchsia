@@ -9,8 +9,7 @@
 namespace debugserver {
 namespace {
 
-void ExpectPacketEquals(const std::vector<char>& packet,
-                        const fxl::StringView& expected) {
+void ExpectPacketEquals(const std::vector<char>& packet, const fxl::StringView& expected) {
   EXPECT_EQ(expected, fxl::StringView(packet.data(), packet.size()));
 }
 
@@ -28,16 +27,13 @@ TEST(StopReplyPacketTest, ReceivedSignal) {
   stop_reply.AddRegisterValue(6, "000102030405060708");
   stop_reply.AddRegisterValue(7, "090A0B0C0D0E0F1011");
   packet = stop_reply.Build();
-  ExpectPacketEquals(
-      packet,
-      "T0b06:000102030405060708;07:090A0B0C0D0E0F1011;thread:p3039.1A85;");
+  ExpectPacketEquals(packet, "T0b06:000102030405060708;07:090A0B0C0D0E0F1011;thread:p3039.1A85;");
 
   stop_reply.SetStopReason("swbreak");
   packet = stop_reply.Build();
-  ExpectPacketEquals(
-      packet,
-      "T0506:000102030405060708;07:090A0B0C0D0E0F1011;thread:p3039.1A85;"
-      "swbreak:;");
+  ExpectPacketEquals(packet,
+                     "T0506:000102030405060708;07:090A0B0C0D0E0F1011;thread:p3039.1A85;"
+                     "swbreak:;");
 }
 
 }  // namespace

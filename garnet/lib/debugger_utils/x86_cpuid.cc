@@ -20,14 +20,12 @@ namespace debugger_utils {
 
 // Trick to get a 1 of the right size.
 #define ONE(x) (1 + ((x) - (x)))
-#define BITS_SHIFT(x, high, low) \
-  (((x) >> (low)) & ((ONE(x) << ((high) - (low) + 1)) - 1))
+#define BITS_SHIFT(x, high, low) (((x) >> (low)) & ((ONE(x) << ((high) - (low) + 1)) - 1))
 
 // Note: cpuid state is constant once computed, and thus isn't guarded.
 
 static struct x86_cpuid_leaf cpuid[MAX_SUPPORTED_CPUID + 1];
-static struct x86_cpuid_leaf
-    cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
+static struct x86_cpuid_leaf cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
 static uint32_t max_cpuid = 0;
 static uint32_t max_ext_cpuid = 0;
 
@@ -39,8 +37,7 @@ static std::mutex cpuid_mutex;
 
 static bool initialized = false;  // TODO(dje): add guard annotation
 
-static const x86_cpuid_leaf* x86_get_cpuid_leaf_raw(
-    enum x86_cpuid_leaf_num leaf);
+static const x86_cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf);
 
 void x86_feature_init(void) {
   std::lock_guard<std::mutex> lock(cpuid_mutex);
@@ -78,8 +75,7 @@ void x86_feature_init(void) {
   }
 
   // test for extended cpuid count
-  __cpuid(X86_CPUID_EXT_BASE, cpuid_ext[0].a, cpuid_ext[0].b, cpuid_ext[0].c,
-          cpuid_ext[0].d);
+  __cpuid(X86_CPUID_EXT_BASE, cpuid_ext[0].a, cpuid_ext[0].b, cpuid_ext[0].c, cpuid_ext[0].d);
 
   max_ext_cpuid = cpuid_ext[0].a;
   if (max_ext_cpuid > MAX_SUPPORTED_CPUID_EXT)
@@ -88,13 +84,12 @@ void x86_feature_init(void) {
   // read in the extended cpuids
   for (uint32_t i = X86_CPUID_EXT_BASE + 1; i - 1 < max_ext_cpuid; i++) {
     uint32_t index = i - X86_CPUID_EXT_BASE;
-    __cpuid_count(i, 0, cpuid_ext[index].a, cpuid_ext[index].b,
-                  cpuid_ext[index].c, cpuid_ext[index].d);
+    __cpuid_count(i, 0, cpuid_ext[index].a, cpuid_ext[index].b, cpuid_ext[index].c,
+                  cpuid_ext[index].d);
   }
 
   // populate the model info
-  const struct x86_cpuid_leaf* leaf =
-      x86_get_cpuid_leaf_raw(X86_CPUID_MODEL_FEATURES);
+  const struct x86_cpuid_leaf* leaf = x86_get_cpuid_leaf_raw(X86_CPUID_MODEL_FEATURES);
   if (leaf) {
     model_info.processor_type = BITS_SHIFT(leaf->a, 13, 12);
     model_info.family = BITS_SHIFT(leaf->a, 11, 8);
@@ -129,8 +124,7 @@ bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num num, uint32_t subleaf,
   return true;
 }
 
-static const x86_cpuid_leaf* x86_get_cpuid_leaf_raw(
-    enum x86_cpuid_leaf_num leaf) {
+static const x86_cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf) {
   if (leaf < X86_CPUID_EXT_BASE) {
     if (leaf > max_cpuid)
       return nullptr;

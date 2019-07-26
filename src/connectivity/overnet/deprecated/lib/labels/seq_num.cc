@@ -11,14 +11,11 @@
 
 namespace overnet {
 
-std::ostream& operator<<(std::ostream& out, SeqNum seq_num) {
-  return out << seq_num.ToString();
-}
+std::ostream& operator<<(std::ostream& out, SeqNum seq_num) { return out << seq_num.ToString(); }
 
 std::string SeqNum::ToString() const {
   std::ostringstream tmp;
-  tmp << std::hex << std::setfill('0') << std::setw(wire_length() * 2)
-      << Reconstruct(0);
+  tmp << std::hex << std::setfill('0') << std::setw(wire_length() * 2) << Reconstruct(0);
   return tmp.str();
 }
 
@@ -62,8 +59,7 @@ StatusOr<SeqNum> SeqNum::Parse(const uint8_t** bytes, const uint8_t* end) {
   return r;
 
 fail:
-  return StatusOr<SeqNum>(StatusCode::INVALID_ARGUMENT,
-                          "Failed to parse sequence number");
+  return StatusOr<SeqNum>(StatusCode::INVALID_ARGUMENT, "Failed to parse sequence number");
 }
 
 uint64_t SeqNum::Reconstruct(uint64_t window_base) const {

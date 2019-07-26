@@ -30,8 +30,7 @@ void HostReactor::CancelIO(int fd) {
   }
 }
 
-void HostReactor::InitTimeout(overnet::Timeout* timeout,
-                              overnet::TimeStamp when) {
+void HostReactor::InitTimeout(overnet::Timeout* timeout, overnet::TimeStamp when) {
   if (shutting_down_) {
     FireTimeout(timeout, overnet::Status::Cancelled());
     return;
@@ -43,12 +42,10 @@ void HostReactor::InitTimeout(overnet::Timeout* timeout,
   pending_timeouts_.emplace(when, timeout);
 }
 
-void HostReactor::CancelTimeout(overnet::Timeout* timeout,
-                                overnet::Status status) {
+void HostReactor::CancelTimeout(overnet::Timeout* timeout, overnet::Status status) {
   assert(!status.is_ok());
 
-  auto rng = pending_timeouts_.equal_range(
-      *TimeoutStorage<overnet::TimeStamp>(timeout));
+  auto rng = pending_timeouts_.equal_range(*TimeoutStorage<overnet::TimeStamp>(timeout));
   for (auto it = rng.first; it != rng.second; ++it) {
     if (it->second == timeout) {
       pending_timeouts_.erase(it);
@@ -88,8 +85,7 @@ void HostReactor::Execute(F exit_condition) {
 
     // Run pending timers.
     bool ticked = false;
-    while (!pending_timeouts_.empty() &&
-           pending_timeouts_.begin()->first < now) {
+    while (!pending_timeouts_.empty() && pending_timeouts_.begin()->first < now) {
       auto it = pending_timeouts_.begin();
       auto* timeout = it->second;
       pending_timeouts_.erase(it);
@@ -156,8 +152,7 @@ void HostReactor::Execute(F exit_condition) {
         continue;
       }
       if (!exit_status_.has_value()) {
-        exit_status_ =
-            overnet::Status(overnet::StatusCode::INVALID_ARGUMENT, strerror(e));
+        exit_status_ = overnet::Status(overnet::StatusCode::INVALID_ARGUMENT, strerror(e));
       }
       return;
     }

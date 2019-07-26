@@ -18,47 +18,43 @@ namespace intel_hda {
 IntelHDAController::ControllerTree IntelHDAController::controllers_;
 
 static int ihda_dump_sdctl(const char* name, const void* base, size_t offset, bool crlf = true) {
-    uint32_t val = *reinterpret_cast<int32_t*>(reinterpret_cast<intptr_t>(base) + offset);
-    val &= 0xFFFFFF;
-    return printf("[%02zx] %10s : %06x   (%u)%s",
-                  offset, name, val, val, crlf ? "\n" : "");
+  uint32_t val = *reinterpret_cast<int32_t*>(reinterpret_cast<intptr_t>(base) + offset);
+  val &= 0xFFFFFF;
+  return printf("[%02zx] %10s : %06x   (%u)%s", offset, name, val, val, crlf ? "\n" : "");
 }
 
 static int ihda_dump32(const char* name, const void* base, size_t offset, bool crlf = true) {
-    uint32_t val = *reinterpret_cast<uint32_t*>(reinterpret_cast<intptr_t>(base) + offset);
-    return printf("[%02zx] %10s : %08x (%u)%s",
-                  offset, name, val, val, crlf ? "\n" : "");
+  uint32_t val = *reinterpret_cast<uint32_t*>(reinterpret_cast<intptr_t>(base) + offset);
+  return printf("[%02zx] %10s : %08x (%u)%s", offset, name, val, val, crlf ? "\n" : "");
 }
 
 static int ihda_dump16(const char* name, const void* base, size_t offset, bool crlf = true) {
-    uint16_t val = *reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(base) + offset);
-    return printf("[%02zx] %10s : %04hx     (%hu)%s",
-                  offset, name, val, val, crlf ? "\n" : "");
+  uint16_t val = *reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(base) + offset);
+  return printf("[%02zx] %10s : %04hx     (%hu)%s", offset, name, val, val, crlf ? "\n" : "");
 }
 
 static int ihda_dump8(const char* name, const void* base, size_t offset, bool crlf = true) {
-    uint8_t val = *reinterpret_cast<int8_t*>(reinterpret_cast<intptr_t>(base) + offset);
-    return printf("[%02zx] %10s : %02x       (%u)%s",
-                  offset, name, val, val, crlf ? "\n" : "");
+  uint8_t val = *reinterpret_cast<int8_t*>(reinterpret_cast<intptr_t>(base) + offset);
+  return printf("[%02zx] %10s : %02x       (%u)%s", offset, name, val, val, crlf ? "\n" : "");
 }
 
 static void pad(int done, int width) {
-    if (done < 0) return;
-    while (done < width) {
-        printf(" ");
-        done++;
-    }
+  if (done < 0)
+    return;
+  while (done < width) {
+    printf(" ");
+    done++;
+  }
 }
 
-static void ihda_dump_stream_regs(const char* name,
-                                  size_t count,
+static void ihda_dump_stream_regs(const char* name, size_t count,
                                   const hda_stream_desc_regs_t* regs) {
-    static const struct {
-        const char* name;
-        int (*dump_fn)(const char*, const void*, size_t, bool);
-        size_t offset;
-    } STREAM_REGS[] = {
-    // clang-format off
+  static const struct {
+    const char* name;
+    int (*dump_fn)(const char*, const void*, size_t, bool);
+    size_t offset;
+  } STREAM_REGS[] = {
+      // clang-format off
     { "CTL",   ihda_dump_sdctl, offsetof(hda_stream_desc_regs_t, ctl_sts.w) },
     { "STS",   ihda_dump8,      offsetof(hda_stream_desc_regs_t, ctl_sts.b.sts) },
     { "LPIB",  ihda_dump32,     offsetof(hda_stream_desc_regs_t, lpib) },
@@ -68,81 +64,78 @@ static void ihda_dump_stream_regs(const char* name,
     { "FMT",   ihda_dump16,     offsetof(hda_stream_desc_regs_t, fmt) },
     { "BDPL",  ihda_dump32,     offsetof(hda_stream_desc_regs_t, bdpl) },
     { "BDPU",  ihda_dump32,     offsetof(hda_stream_desc_regs_t, bdpu) },
-    // clang-format on
-    };
-    static const size_t COLUMNS = 4;
-    static const int    COLUMN_WIDTH = 40;
-    int done;
+      // clang-format on
+  };
+  static const size_t COLUMNS = 4;
+  static const int COLUMN_WIDTH = 40;
+  int done;
 
-    for (size_t i = 0; i < count; i += COLUMNS) {
-        size_t todo = count - i;
-        if (todo > COLUMNS)
-            todo = COLUMNS;
+  for (size_t i = 0; i < count; i += COLUMNS) {
+    size_t todo = count - i;
+    if (todo > COLUMNS)
+      todo = COLUMNS;
 
-        printf("\n");
-        for (size_t j = 0; j < todo; ++j) {
-            done = printf("%s %zu/%zu", name, i + j + 1, count);
-            if ((j + 1) < todo)
-                pad(done, COLUMN_WIDTH);
-        }
-        printf("\n");
-
-        for (size_t reg = 0; reg < fbl::count_of(STREAM_REGS); ++reg) {
-            for (size_t j = 0; j < todo; ++j) {
-                const hda_stream_desc_regs_t* r = regs + i + j;
-                done = STREAM_REGS[reg].dump_fn(STREAM_REGS[reg].name,
-                                                r,
-                                                STREAM_REGS[reg].offset,
-                                                false);
-                if ((j + 1) < todo)
-                    pad(done, COLUMN_WIDTH);
-            }
-            printf("\n");
-        }
+    printf("\n");
+    for (size_t j = 0; j < todo; ++j) {
+      done = printf("%s %zu/%zu", name, i + j + 1, count);
+      if ((j + 1) < todo)
+        pad(done, COLUMN_WIDTH);
     }
+    printf("\n");
+
+    for (size_t reg = 0; reg < fbl::count_of(STREAM_REGS); ++reg) {
+      for (size_t j = 0; j < todo; ++j) {
+        const hda_stream_desc_regs_t* r = regs + i + j;
+        done = STREAM_REGS[reg].dump_fn(STREAM_REGS[reg].name, r, STREAM_REGS[reg].offset, false);
+        if ((j + 1) < todo)
+          pad(done, COLUMN_WIDTH);
+      }
+      printf("\n");
+    }
+  }
 }
 
 zx_status_t IntelHDAController::Enumerate() {
-    static const char* const DEV_PATH = "/dev/class/intel-hda";
+  static const char* const DEV_PATH = "/dev/class/intel-hda";
 
-    zx_status_t res = ZirconDevice::Enumerate(nullptr, DEV_PATH,
-    [](void*, uint32_t id, const char* const dev_name) -> zx_status_t {
+  zx_status_t res = ZirconDevice::Enumerate(
+      nullptr, DEV_PATH, [](void*, uint32_t id, const char* const dev_name) -> zx_status_t {
         fbl::AllocChecker ac;
         fbl::unique_ptr<IntelHDAController> dev(new (&ac) IntelHDAController(id, dev_name));
         if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
+          return ZX_ERR_NO_MEMORY;
         }
 
         if (!controllers_.insert_or_find(std::move(dev)))
-            return ZX_ERR_INTERNAL;
+          return ZX_ERR_INTERNAL;
 
         return ZX_OK;
-    });
+      });
 
-    if (res != ZX_OK)
-        return res;
+  if (res != ZX_OK)
+    return res;
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 zx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
-    zx_status_t res = Connect();
+  zx_status_t res = Connect();
 
-    if (res != ZX_OK)
-        return res;
+  if (res != ZX_OK)
+    return res;
 
-    ihda_controller_snapshot_regs_req_t req;
-    ihda_controller_snapshot_regs_resp_t resp;
+  ihda_controller_snapshot_regs_req_t req;
+  ihda_controller_snapshot_regs_resp_t resp;
 
-    InitRequest(&req, IHDA_CONTROLLER_CMD_SNAPSHOT_REGS);
-    res = CallDevice(req, &resp);
-    if (res != ZX_OK)
-        return res;
+  InitRequest(&req, IHDA_CONTROLLER_CMD_SNAPSHOT_REGS);
+  res = CallDevice(req, &resp);
+  if (res != ZX_OK)
+    return res;
 
-    const auto  regs_ptr = reinterpret_cast<hda_registers_t*>(resp.snapshot);
-    const auto& regs     = *regs_ptr;
+  const auto regs_ptr = reinterpret_cast<hda_registers_t*>(resp.snapshot);
+  const auto& regs = *regs_ptr;
 
-    printf("Registers for Intel HDA Device #%u\n", id_);
+  printf("Registers for Intel HDA Device #%u\n", id_);
 
   // clang-format off
   ihda_dump16("GCAP",       &regs, offsetof(hda_registers_t, gcap));
@@ -181,18 +174,20 @@ zx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {
   ihda_dump32("DPIBUBASE",  &regs, offsetof(hda_registers_t, dpibubase));
   // clang-format on
 
-    uint16_t gcap = REG_RD(&regs.gcap);
-    unsigned int input_stream_cnt  = HDA_REG_GCAP_ISS(gcap);
-    unsigned int output_stream_cnt = HDA_REG_GCAP_OSS(gcap);
-    unsigned int bidir_stream_cnt  = HDA_REG_GCAP_BSS(gcap);
-    const hda_stream_desc_regs_t* sregs = regs.stream_desc;
+  uint16_t gcap = REG_RD(&regs.gcap);
+  unsigned int input_stream_cnt = HDA_REG_GCAP_ISS(gcap);
+  unsigned int output_stream_cnt = HDA_REG_GCAP_OSS(gcap);
+  unsigned int bidir_stream_cnt = HDA_REG_GCAP_BSS(gcap);
+  const hda_stream_desc_regs_t* sregs = regs.stream_desc;
 
-    ihda_dump_stream_regs("Input Stream",  input_stream_cnt,  sregs); sregs += input_stream_cnt;
-    ihda_dump_stream_regs("Output Stream", output_stream_cnt, sregs); sregs += output_stream_cnt;
-    ihda_dump_stream_regs("Bi-dir Stream", bidir_stream_cnt,  sregs);
+  ihda_dump_stream_regs("Input Stream", input_stream_cnt, sregs);
+  sregs += input_stream_cnt;
+  ihda_dump_stream_regs("Output Stream", output_stream_cnt, sregs);
+  sregs += output_stream_cnt;
+  ihda_dump_stream_regs("Bi-dir Stream", bidir_stream_cnt, sregs);
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-}  // namespace audio
 }  // namespace intel_hda
+}  // namespace audio

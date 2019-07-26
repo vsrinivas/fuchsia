@@ -15,77 +15,77 @@
 #include <zxtest/base/test-info.h>
 #include <zxtest/base/types.h>
 
-#define ITERATION_EVENT_OBSERVER(Event)                                                            \
-  class FakeObserver : public LifecycleObserver {                                                  \
-   public:                                                                                         \
-    void OnIteration##Event(const Runner& runner, int iter) final {                                \
-      on_notify(runner, iter);                                                                     \
-      called = true;                                                                               \
-    }                                                                                              \
-                                                                                                   \
-    fbl::Function<void(const Runner& runner, int iter)> on_notify;                                 \
-    bool called = false;                                                                           \
+#define ITERATION_EVENT_OBSERVER(Event)                             \
+  class FakeObserver : public LifecycleObserver {                   \
+   public:                                                          \
+    void OnIteration##Event(const Runner& runner, int iter) final { \
+      on_notify(runner, iter);                                      \
+      called = true;                                                \
+    }                                                               \
+                                                                    \
+    fbl::Function<void(const Runner& runner, int iter)> on_notify;  \
+    bool called = false;                                            \
   }
 
-#define ASSERTION_OBSERVER                                                                         \
-  class FakeObserver : public LifecycleObserver {                                                  \
-   public:                                                                                         \
-    void OnAssertion(const Assertion& assertion) final {                                           \
-      on_notify(assertion);                                                                        \
-      called = true;                                                                               \
-    }                                                                                              \
-                                                                                                   \
-    fbl::Function<void(const Assertion& assertion)> on_notify;                                     \
-    bool called = false;                                                                           \
+#define ASSERTION_OBSERVER                                     \
+  class FakeObserver : public LifecycleObserver {              \
+   public:                                                     \
+    void OnAssertion(const Assertion& assertion) final {       \
+      on_notify(assertion);                                    \
+      called = true;                                           \
+    }                                                          \
+                                                               \
+    fbl::Function<void(const Assertion& assertion)> on_notify; \
+    bool called = false;                                       \
   }
 
-#define RUNNER_EVENT_OBSERVER(Event)                                                               \
-  class FakeObserver : public LifecycleObserver {                                                  \
-   public:                                                                                         \
-    void On##Event(const Runner& runner) final {                                                   \
-      on_notify(runner);                                                                           \
-      called = true;                                                                               \
-    }                                                                                              \
-                                                                                                   \
-    fbl::Function<void(const Runner& runner)> on_notify;                                           \
-    bool called = false;                                                                           \
+#define RUNNER_EVENT_OBSERVER(Event)                     \
+  class FakeObserver : public LifecycleObserver {        \
+   public:                                               \
+    void On##Event(const Runner& runner) final {         \
+      on_notify(runner);                                 \
+      called = true;                                     \
+    }                                                    \
+                                                         \
+    fbl::Function<void(const Runner& runner)> on_notify; \
+    bool called = false;                                 \
   }
 
 // Defines a FakeObserver class which tracks call to OnTestCaseEvent methods.
-#define TESTCASE_EVENT_OBSERVER(Event)                                                             \
-  class FakeObserver : public LifecycleObserver {                                                  \
-   public:                                                                                         \
-    void OnTestCase##Event(const TestCase& test_case) final {                                      \
-      on_notify(test_case);                                                                        \
-      called = true;                                                                               \
-    }                                                                                              \
-                                                                                                   \
-    fbl::Function<void(const TestCase& test_case)> on_notify;                                      \
-    bool called = false;                                                                           \
+#define TESTCASE_EVENT_OBSERVER(Event)                        \
+  class FakeObserver : public LifecycleObserver {             \
+   public:                                                    \
+    void OnTestCase##Event(const TestCase& test_case) final { \
+      on_notify(test_case);                                   \
+      called = true;                                          \
+    }                                                         \
+                                                              \
+    fbl::Function<void(const TestCase& test_case)> on_notify; \
+    bool called = false;                                      \
   }
 
 // Defines a FakeObserver class which tracks call to OnTestEvent methods.
-#define TEST_EVENT_OBSERVER(Event)                                                                 \
-  class FakeObserver : public LifecycleObserver {                                                  \
-   public:                                                                                         \
-    void OnTest##Event(const TestCase& test_case, const TestInfo& info) final {                    \
-      on_notify(test_case, info);                                                                  \
-      called = true;                                                                               \
-    }                                                                                              \
-                                                                                                   \
-    fbl::Function<void(const TestCase& test_case, const TestInfo& info)> on_notify;                \
-    bool called = false;                                                                           \
+#define TEST_EVENT_OBSERVER(Event)                                                  \
+  class FakeObserver : public LifecycleObserver {                                   \
+   public:                                                                          \
+    void OnTest##Event(const TestCase& test_case, const TestInfo& info) final {     \
+      on_notify(test_case, info);                                                   \
+      called = true;                                                                \
+    }                                                                               \
+                                                                                    \
+    fbl::Function<void(const TestCase& test_case, const TestInfo& info)> on_notify; \
+    bool called = false;                                                            \
   }
 
 // Fills ObserverList with |kNumObservers| instances of |FakeObserver|, which should be defined
 // for the scope. And sets on_notify of each observer to on_notify_def and registers them
 // with |event_broadcaster|.
-#define REGISTER_OBSERVERS(observer_list, event_broadcaster, on_notify_def)                        \
-  for (int i = 0; i < kNumObservers; ++i) {                                                        \
-    observer_list.push_back({});                                                                   \
-    auto& observer = observer_list[observer_list.size() - 1];                                      \
-    observer.on_notify = on_notify_def;                                                            \
-    event_broadcaster.Subscribe(&observer);                                                        \
+#define REGISTER_OBSERVERS(observer_list, event_broadcaster, on_notify_def) \
+  for (int i = 0; i < kNumObservers; ++i) {                                 \
+    observer_list.push_back({});                                            \
+    auto& observer = observer_list[observer_list.size() - 1];               \
+    observer.on_notify = on_notify_def;                                     \
+    event_broadcaster.Subscribe(&observer);                                 \
   }
 
 namespace zxtest {
@@ -99,8 +99,7 @@ constexpr int kNumObservers = 100;
 
 const SourceLocation kLocation = {.filename = "filename", .line_number = 20};
 
-void Stub() {
-}
+void Stub() {}
 
 template <typename T>
 void ValidateAllObserversNotified(const T& observers) {
@@ -109,9 +108,7 @@ void ValidateAllObserversNotified(const T& observers) {
   }
 }
 
-Reporter MakeSilentReporter() {
-  return Reporter(std::make_unique<FileLogSink>(nullptr));
-}
+Reporter MakeSilentReporter() { return Reporter(std::make_unique<FileLogSink>(nullptr)); }
 
 }  // namespace
 

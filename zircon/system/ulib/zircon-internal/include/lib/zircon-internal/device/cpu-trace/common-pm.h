@@ -13,23 +13,23 @@ namespace perfmon {
 
 // H/W properties used by common code.
 struct PmuCommonProperties {
-    // The H/W Performance Monitor version.
-    uint16_t pm_version;
+  // The H/W Performance Monitor version.
+  uint16_t pm_version;
 
-    // The maximum number of fixed events that can be simultaneously
-    // supported, and their maximum width.
-    uint16_t max_num_fixed_events;
-    uint16_t max_fixed_counter_width;
+  // The maximum number of fixed events that can be simultaneously
+  // supported, and their maximum width.
+  uint16_t max_num_fixed_events;
+  uint16_t max_fixed_counter_width;
 
-    // The maximum number of programmable events that can be simultaneously
-    // supported, and their maximum width.
-    uint16_t max_num_programmable_events;
-    uint16_t max_programmable_counter_width;
+  // The maximum number of programmable events that can be simultaneously
+  // supported, and their maximum width.
+  uint16_t max_num_programmable_events;
+  uint16_t max_programmable_counter_width;
 
-    // The maximum number of misc events that can be simultaneously
-    // supported, and their maximum width.
-    uint16_t max_num_misc_events;
-    uint16_t max_misc_counter_width;
+  // The maximum number of misc events that can be simultaneously
+  // supported, and their maximum width.
+  uint16_t max_num_misc_events;
+  uint16_t max_misc_counter_width;
 };
 
 // Internal abstraction of event ids.
@@ -59,11 +59,11 @@ constexpr uint32_t kPmuConfigFlagUsesTimebase = 1 << 3;
 // TODO(dje): Provide knob to specify how many branches.
 constexpr uint32_t kPmuConfigFlagLastBranch = 1 << 4;
 
-} // namespace perfmon
+}  // namespace perfmon
 
 // This is for passing buffer specs to the kernel.
 typedef struct {
-    zx_handle_t vmo;
+  zx_handle_t vmo;
 } zx_pmu_buffer_t;
 
 #endif  // LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_COMMON_PM_H_

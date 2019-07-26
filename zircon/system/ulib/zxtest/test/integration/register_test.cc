@@ -9,28 +9,21 @@
 #include <zxtest/zxtest.h>
 
 namespace {
-TEST(Test, AutoRegister) {
-}
+TEST(Test, AutoRegister) {}
 
 class TestFixture : public zxtest::Test {
  public:
-  ~TestFixture() override {
-  }
+  ~TestFixture() override {}
 
-  static void SetUpTestCase() {
-  }
-  static void TearDownTestCase() {
-  }
+  static void SetUpTestCase() {}
+  static void TearDownTestCase() {}
 
  protected:
-  void SetUp() override {
-  }
-  void TearDown() override {
-  }
+  void SetUp() override {}
+  void TearDown() override {}
 };
 
-TEST_F(TestFixture, AutoRegister) {
-}
+TEST_F(TestFixture, AutoRegister) {}
 
 void Verify() {
   auto* runner = zxtest::Runner::GetInstance();
@@ -47,8 +40,6 @@ void Verify() {
 }
 
 void Register() __attribute__((constructor));
-void Register() {
-  zxtest::test::AddCheckFunction(&Verify);
-}
+void Register() { zxtest::test::AddCheckFunction(&Verify); }
 
 }  // namespace

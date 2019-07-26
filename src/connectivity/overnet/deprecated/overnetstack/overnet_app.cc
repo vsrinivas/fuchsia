@@ -34,32 +34,27 @@ overnet::Status OvernetApp::Start() {
   return overnet::Status::Ok();
 }
 
-void OvernetApp::BindChannel(overnet::RouterEndpoint::NewStream ns,
-                             zx::channel channel) {
+void OvernetApp::BindChannel(overnet::RouterEndpoint::NewStream ns, zx::channel channel) {
   ZX_ASSERT(channel.is_valid());
   zx_info_handle_basic_t info;
-  auto err = channel.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
-                              nullptr, nullptr);
+  auto err = channel.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   ZX_ASSERT(err == ZX_OK);
   ZX_ASSERT(info.type == ZX_OBJ_TYPE_CHANNEL);
   new BoundChannel(this, std::move(ns), std::move(channel));
   ZX_ASSERT(!channel.is_valid());
 }
 
-void OvernetApp::BindSocket(overnet::RouterEndpoint::NewStream ns,
-                            zx::socket socket) {
+void OvernetApp::BindSocket(overnet::RouterEndpoint::NewStream ns, zx::socket socket) {
   ZX_ASSERT(socket.is_valid());
   zx_info_handle_basic_t info;
-  auto err = socket.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
-                             nullptr);
+  auto err = socket.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   ZX_ASSERT(err == ZX_OK);
   ZX_ASSERT(info.type == ZX_OBJ_TYPE_SOCKET);
   new BoundSocket(this, std::move(ns), std::move(socket));
   ZX_ASSERT(!socket.is_valid());
 }
 
-void OvernetApp::ConnectToLocalService(const std::string& service_name,
-                                       zx::channel channel) {
+void OvernetApp::ConnectToLocalService(const std::string& service_name, zx::channel channel) {
   auto it = service_providers_.find(service_name);
   if (it == service_providers_.end()) {
     OVERNET_TRACE(DEBUG) << "Local service not found: " << service_name;
@@ -68,8 +63,7 @@ void OvernetApp::ConnectToLocalService(const std::string& service_name,
   it->second->Connect(std::move(channel));
 }
 
-void OvernetApp::ServiceProvider::AcceptStream(
-    overnet::RouterEndpoint::NewStream stream) {
+void OvernetApp::ServiceProvider::AcceptStream(overnet::RouterEndpoint::NewStream stream) {
   zx_handle_t a, b;
   auto err = zx_channel_create(0, &a, &b);
   if (err != ZX_OK) {

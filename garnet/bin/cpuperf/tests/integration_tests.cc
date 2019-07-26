@@ -18,26 +18,16 @@ static void RunAndVerify(const char* spec_path) {
 
 #ifdef __x86_64__
 
-TEST(Cpuperf, FixedCounters) {
-  RunAndVerify("/pkg/data/fixed_counters.cpspec");
-}
+TEST(Cpuperf, FixedCounters) { RunAndVerify("/pkg/data/fixed_counters.cpspec"); }
 
 // TODO(FLK-397): Re-enable.
-TEST(Cpuperf, DISABLED_OsFlag) {
-  RunAndVerify("/pkg/data/os_flag.cpspec");
-}
+TEST(Cpuperf, DISABLED_OsFlag) { RunAndVerify("/pkg/data/os_flag.cpspec"); }
 
-TEST(Cpuperf, ProgrammableCounters) {
-  RunAndVerify("/pkg/data/programmable_counters.cpspec");
-}
+TEST(Cpuperf, ProgrammableCounters) { RunAndVerify("/pkg/data/programmable_counters.cpspec"); }
 
-TEST(Cpuperf, UserFlag) {
-  RunAndVerify("/pkg/data/user_flag.cpspec");
-}
+TEST(Cpuperf, UserFlag) { RunAndVerify("/pkg/data/user_flag.cpspec"); }
 
-TEST(Cpuperf, ValueRecords) {
-  RunAndVerify("/pkg/data/value_records.cpspec");
-}
+TEST(Cpuperf, ValueRecords) { RunAndVerify("/pkg/data/value_records.cpspec"); }
 
 TEST(Cpuperf, LastBranchRecord) {
   perfmon::Properties properties;
@@ -53,9 +43,7 @@ TEST(Cpuperf, LastBranchRecord) {
 
 #endif  // __x86_64__
 
-TEST(Cpuperf, Tally) {
-  RunAndVerify("/pkg/data/tally.cpspec");
-}
+TEST(Cpuperf, Tally) { RunAndVerify("/pkg/data/tally.cpspec"); }
 
 // Provide our own main so that --verbose,etc. are recognized.
 // This is useful because our verbosity is passed on to each test.

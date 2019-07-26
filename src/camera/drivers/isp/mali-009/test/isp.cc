@@ -24,16 +24,15 @@ bool IsBoardName(const char* requested_board_name) {
     return false;
   }
   zx::channel channel;
-  if (fdio_get_service_handle(sysinfo.release(),
-                              channel.reset_and_get_address()) != ZX_OK) {
+  if (fdio_get_service_handle(sysinfo.release(), channel.reset_and_get_address()) != ZX_OK) {
     return false;
   }
 
   char board_name[ZX_MAX_NAME_LEN];
   zx_status_t status;
   size_t actual_size;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(
-      channel.get(), &status, board_name, sizeof(board_name), &actual_size);
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
+                                                               sizeof(board_name), &actual_size);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     return false;
   }
@@ -53,8 +52,8 @@ void IspTest::SetUp() {
   fbl::unique_fd devfs_root(open("/dev", O_RDWR));
   ASSERT_TRUE(devfs_root);
 
-  zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(
-      devfs_root, "class/isp-device-test/000", &fd_);
+  zx_status_t status =
+      devmgr_integration_test::RecursiveWaitForFile(devfs_root, "class/isp-device-test/000", &fd_);
   ASSERT_OK(status);
 
   status = fdio_get_service_handle(fd_.get(), &handle_);
@@ -64,8 +63,7 @@ void IspTest::SetUp() {
 TEST_F(IspTest, BasicConnectionTest) {
   fuchsia_camera_test_TestReport report;
   zx_status_t out_status;
-  zx_status_t status =
-      fuchsia_camera_test_IspTesterRunTests(handle_, &out_status, &report);
+  zx_status_t status = fuchsia_camera_test_IspTesterRunTests(handle_, &out_status, &report);
   ASSERT_OK(status);
   ASSERT_OK(out_status);
   EXPECT_EQ(1, report.test_count);

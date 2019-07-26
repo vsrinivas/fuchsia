@@ -28,9 +28,9 @@ class FbView : public fuchsia::ui::input::InputDeviceRegistry,
 
  private:
   // |fuchsia::ui::input::InputDeviceRegistry|
-  void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
-                      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-                          input_device) override;
+  void RegisterDevice(
+      fuchsia::ui::input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device) override;
 
   // |ui_input::InputDeviceImpl::Listener|
   void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) override;
@@ -44,8 +44,7 @@ class FbView : public fuchsia::ui::input::InputDeviceRegistry,
     std::unique_ptr<ui_input::InputDeviceImpl> device_impl;
     std::unique_ptr<ui_input::DeviceState> device_state;
   } InputDeviceTracker;
-  std::unordered_map<uint32_t /* device_id */, InputDeviceTracker>
-      input_devices_;
+  std::unordered_map<uint32_t /* device_id */, InputDeviceTracker> input_devices_;
 
   Swapchain vk_swapchain_;
   std::unique_ptr<SkiaGpuPainter> painter_;

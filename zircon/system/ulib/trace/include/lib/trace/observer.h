@@ -25,34 +25,34 @@ namespace trace {
 
 // Receives notifications when the trace state or set of enabled categories changes.
 class TraceObserver {
-public:
-    // Initializes the trace observer.
-    TraceObserver();
+ public:
+  // Initializes the trace observer.
+  TraceObserver();
 
-    // Stops watching for state changes and destroys the observer.
-    ~TraceObserver();
+  // Stops watching for state changes and destroys the observer.
+  ~TraceObserver();
 
-    // Starts watching for state changes.
-    //
-    // |async| the asynchronous dispatcher, must not be null.
-    // |callback| the callback which is invoked whenever a state change is observed.
-    void Start(async_dispatcher_t* dispatcher, fit::closure callback);
+  // Starts watching for state changes.
+  //
+  // |async| the asynchronous dispatcher, must not be null.
+  // |callback| the callback which is invoked whenever a state change is observed.
+  void Start(async_dispatcher_t* dispatcher, fit::closure callback);
 
-    // Stops watching for state changes.
-    void Stop();
+  // Stops watching for state changes.
+  void Stop();
 
-private:
-    void Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                const zx_packet_signal_t* signal);
-    void BeginWait(async_dispatcher_t* dispatcher);
+ private:
+  void Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+              const zx_packet_signal_t* signal);
+  void BeginWait(async_dispatcher_t* dispatcher);
 
-    fit::closure callback_;
-    zx::event event_;
-    async::WaitMethod<TraceObserver, &TraceObserver::Handle> wait_{this};
+  fit::closure callback_;
+  zx::event event_;
+  async::WaitMethod<TraceObserver, &TraceObserver::Handle> wait_{this};
 };
 
-} // namespace trace
+}  // namespace trace
 
-#endif // __cplusplus
+#endif  // __cplusplus
 
-#endif // ZIRCON_SYSTEM_ULIB_LIB_TRACE_OBSERVER_H_
+#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_OBSERVER_H_

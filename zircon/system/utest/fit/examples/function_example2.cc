@@ -11,28 +11,24 @@
 namespace function_example2 {
 
 class accumulator {
-public:
-    void add(int value) {
-        sum += value;
-    }
+ public:
+  void add(int value) { sum += value; }
 
-    int sum = 0;
+  int sum = 0;
 };
 
 void count_to_ten(fit::function<void(int)> fn) {
-    for (int i = 1; i <= 10; i++) {
-        fn(i);
-    }
+  for (int i = 1; i <= 10; i++) {
+    fn(i);
+  }
 }
 
 int sum_to_ten() {
-    accumulator accum;
-    count_to_ten(fit::bind_member(&accum, &accumulator::add));
-    return accum.sum;
+  accumulator accum;
+  count_to_ten(fit::bind_member(&accum, &accumulator::add));
+  return accum.sum;
 }
 
-void run() {
-    assert(sum_to_ten() == 55);
-}
+void run() { assert(sum_to_ten() == 55); }
 
-} // namespace function_example2
+}  // namespace function_example2

@@ -40,10 +40,8 @@ TEST(ChunkInputStream, ChunkBoundaries) {
     std::vector<std::pair<size_t, size_t>> packet_lengths_and_offsets;
     uint8_t* pos = buffer->buffer_base();
     while (pos < end) {
-      size_t packet_length =
-          std::min((rand() % 10) + 1, static_cast<int>(end - pos));
-      packet_lengths_and_offsets.push_back(
-          {packet_length, pos - buffer->buffer_base()});
+      size_t packet_length = std::min((rand() % 10) + 1, static_cast<int>(end - pos));
+      packet_lengths_and_offsets.push_back({packet_length, pos - buffer->buffer_base()});
       pos += packet_length;
     }
 
@@ -57,22 +55,20 @@ TEST(ChunkInputStream, ChunkBoundaries) {
     }
 
     size_t seen = 0;
-    auto input_block_processor =
-        [&seen, chunk_size](ChunkInputStream::InputBlock input_block) {
-          EXPECT_EQ(input_block.len, chunk_size);
-          EXPECT_EQ(input_block.non_padding_len, input_block.len);
-          EXPECT_FALSE(input_block.is_end_of_stream);
-          for (size_t i = 0; i < input_block.len; ++i) {
-            EXPECT_EQ(*(input_block.data + i), static_cast<uint8_t>(seen));
-            ++seen;
-          }
-          return ChunkInputStream::kContinue;
-        };
-    auto under_test = ChunkInputStream(chunk_size, TimestampExtrapolator(),
-                                       std::move(input_block_processor));
+    auto input_block_processor = [&seen, chunk_size](ChunkInputStream::InputBlock input_block) {
+      EXPECT_EQ(input_block.len, chunk_size);
+      EXPECT_EQ(input_block.non_padding_len, input_block.len);
+      EXPECT_FALSE(input_block.is_end_of_stream);
+      for (size_t i = 0; i < input_block.len; ++i) {
+        EXPECT_EQ(*(input_block.data + i), static_cast<uint8_t>(seen));
+        ++seen;
+      }
+      return ChunkInputStream::kContinue;
+    };
+    auto under_test =
+        ChunkInputStream(chunk_size, TimestampExtrapolator(), std::move(input_block_processor));
     for (size_t i = 0; i < packets.packets.size(); ++i) {
-      EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(i)),
-                ChunkInputStream::kOk);
+      EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(i)), ChunkInputStream::kOk);
     }
     EXPECT_EQ(seen, buffer_size) << "Failure on chunk size " << chunk_size;
   };
@@ -99,25 +95,23 @@ TEST(ChunkInputStream, FlushIncomplete) {
 
   bool was_called_for_input_block = false;
   bool flush_called = false;
-  auto input_block_processor =
-      [&was_called_for_input_block, &flush_called,
-       kChunkSize](ChunkInputStream::InputBlock input_block) {
-        if (input_block.is_end_of_stream) {
-          flush_called = true;
-          const size_t expected[kChunkSize] = {kExpectedByte};
-          EXPECT_EQ(input_block.len, kChunkSize);
-          EXPECT_EQ(input_block.non_padding_len, kPacketLen % kChunkSize);
-          EXPECT_TRUE(input_block.is_end_of_stream);
-          EXPECT_EQ(memcmp(input_block.data, expected, input_block.len), 0);
-          return ChunkInputStream::kContinue;
-        }
+  auto input_block_processor = [&was_called_for_input_block, &flush_called,
+                                kChunkSize](ChunkInputStream::InputBlock input_block) {
+    if (input_block.is_end_of_stream) {
+      flush_called = true;
+      const size_t expected[kChunkSize] = {kExpectedByte};
+      EXPECT_EQ(input_block.len, kChunkSize);
+      EXPECT_EQ(input_block.non_padding_len, kPacketLen % kChunkSize);
+      EXPECT_TRUE(input_block.is_end_of_stream);
+      EXPECT_EQ(memcmp(input_block.data, expected, input_block.len), 0);
+      return ChunkInputStream::kContinue;
+    }
 
-        was_called_for_input_block = true;
-        return ChunkInputStream::kContinue;
-      };
+    was_called_for_input_block = true;
+    return ChunkInputStream::kContinue;
+  };
 
-  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(),
-                                     input_block_processor);
+  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(), input_block_processor);
 
   // We load the stream with one packet that is too short to complete a block,
   // and expect no input blocks to come from it.
@@ -147,31 +141,29 @@ TEST(ChunkInputStream, FlushLeftover) {
 
   size_t input_block_call_count = 0;
   bool flush_called = false;
-  auto input_block_processor =
-      [&input_block_call_count, &flush_called, kChunkSize,
-       kExpectedBytes](ChunkInputStream::InputBlock input_block) {
-        if (input_block.is_end_of_stream) {
-          flush_called = true;
-          const uint8_t expected[kChunkSize] = {kExpectedBytes[kPacketLen - 2],
-                                                kExpectedBytes[kPacketLen - 1]};
-          EXPECT_EQ(input_block.len, kChunkSize);
-          EXPECT_EQ(input_block.non_padding_len, kPacketLen % kChunkSize);
-          EXPECT_TRUE(input_block.is_end_of_stream);
-          EXPECT_EQ(memcmp(input_block.data, expected, input_block.len), 0);
-          return ChunkInputStream::kContinue;
-        }
+  auto input_block_processor = [&input_block_call_count, &flush_called, kChunkSize,
+                                kExpectedBytes](ChunkInputStream::InputBlock input_block) {
+    if (input_block.is_end_of_stream) {
+      flush_called = true;
+      const uint8_t expected[kChunkSize] = {kExpectedBytes[kPacketLen - 2],
+                                            kExpectedBytes[kPacketLen - 1]};
+      EXPECT_EQ(input_block.len, kChunkSize);
+      EXPECT_EQ(input_block.non_padding_len, kPacketLen % kChunkSize);
+      EXPECT_TRUE(input_block.is_end_of_stream);
+      EXPECT_EQ(memcmp(input_block.data, expected, input_block.len), 0);
+      return ChunkInputStream::kContinue;
+    }
 
-        input_block_call_count += 1;
-        EXPECT_NE(input_block.data, nullptr);
-        EXPECT_EQ(input_block.len, kChunkSize);
-        EXPECT_EQ(input_block.non_padding_len, input_block.len);
-        EXPECT_FALSE(input_block.is_end_of_stream);
-        EXPECT_EQ(memcmp(input_block.data, kExpectedBytes, kChunkSize), 0);
-        return ChunkInputStream::kContinue;
-      };
+    input_block_call_count += 1;
+    EXPECT_NE(input_block.data, nullptr);
+    EXPECT_EQ(input_block.len, kChunkSize);
+    EXPECT_EQ(input_block.non_padding_len, input_block.len);
+    EXPECT_FALSE(input_block.is_end_of_stream);
+    EXPECT_EQ(memcmp(input_block.data, kExpectedBytes, kChunkSize), 0);
+    return ChunkInputStream::kContinue;
+  };
 
-  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(),
-                                     input_block_processor);
+  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(), input_block_processor);
 
   // We send a packet that is long enough for an input block and a little of the
   // next input block. We expect only one complete input block.
@@ -201,23 +193,21 @@ TEST(ChunkInputStream, TimestampsCarry) {
 
   bool was_called_for_input_block = false;
   bool flush_called = false;
-  auto input_block_processor =
-      [&was_called_for_input_block, &flush_called,
-       kExpectedTimestamp](ChunkInputStream::InputBlock input_block) {
-        if (input_block.is_end_of_stream) {
-          flush_called = true;
-          EXPECT_EQ(input_block.timestamp_ish.has_value(), false);
-          return ChunkInputStream::kContinue;
-        }
+  auto input_block_processor = [&was_called_for_input_block, &flush_called,
+                                kExpectedTimestamp](ChunkInputStream::InputBlock input_block) {
+    if (input_block.is_end_of_stream) {
+      flush_called = true;
+      EXPECT_EQ(input_block.timestamp_ish.has_value(), false);
+      return ChunkInputStream::kContinue;
+    }
 
-        was_called_for_input_block = true;
-        EXPECT_EQ(input_block.timestamp_ish.has_value(), true);
-        EXPECT_EQ(input_block.timestamp_ish.value_or(0), kExpectedTimestamp);
-        return ChunkInputStream::kContinue;
-      };
+    was_called_for_input_block = true;
+    EXPECT_EQ(input_block.timestamp_ish.has_value(), true);
+    EXPECT_EQ(input_block.timestamp_ish.value_or(0), kExpectedTimestamp);
+    return ChunkInputStream::kContinue;
+  };
 
-  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(),
-                                     input_block_processor);
+  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(), input_block_processor);
 
   // We expect our single timestamp to come in the first input block.
   EXPECT_EQ(under_test.ProcessInputPacket(packet), ChunkInputStream::kOk);
@@ -255,47 +245,43 @@ TEST(ChunkInputStream, TimestampsExtrapolate) {
   bool was_called_for_packet_1 = false;
   bool flush_called = false;
 
-  auto input_block_processor =
-      [&packet_index, &was_called_for_packet_0, &was_called_for_packet_1,
-       &flush_called,
-       kExpectedTimestamp](ChunkInputStream::InputBlock input_block) {
-        if (input_block.is_end_of_stream) {
-          flush_called = true;
-          EXPECT_EQ(input_block.timestamp_ish.has_value(), true);
-          EXPECT_EQ(input_block.timestamp_ish.value_or(0), kExpectedTimestamp);
-          return ChunkInputStream::kContinue;
-        }
+  auto input_block_processor = [&packet_index, &was_called_for_packet_0, &was_called_for_packet_1,
+                                &flush_called,
+                                kExpectedTimestamp](ChunkInputStream::InputBlock input_block) {
+    if (input_block.is_end_of_stream) {
+      flush_called = true;
+      EXPECT_EQ(input_block.timestamp_ish.has_value(), true);
+      EXPECT_EQ(input_block.timestamp_ish.value_or(0), kExpectedTimestamp);
+      return ChunkInputStream::kContinue;
+    }
 
-        switch (packet_index) {
-          case 0:
-            was_called_for_packet_0 = true;
-            return ChunkInputStream::kContinue;
-          case 1:
-            was_called_for_packet_1 = true;
-            EXPECT_EQ(input_block.timestamp_ish.has_value(), false);
-            return ChunkInputStream::kContinue;
-          default:
-            EXPECT_FALSE(true) << "This should not happen.";
-            return ChunkInputStream::kTerminate;
-        }
-      };
+    switch (packet_index) {
+      case 0:
+        was_called_for_packet_0 = true;
+        return ChunkInputStream::kContinue;
+      case 1:
+        was_called_for_packet_1 = true;
+        EXPECT_EQ(input_block.timestamp_ish.has_value(), false);
+        return ChunkInputStream::kContinue;
+      default:
+        EXPECT_FALSE(true) << "This should not happen.";
+        return ChunkInputStream::kTerminate;
+    }
+  };
 
-  auto under_test =
-      ChunkInputStream(kChunkSize, TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1)),
-                       input_block_processor);
+  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1)),
+                                     input_block_processor);
 
   // We send a short packet in that isn't a full input block to bring our
   // stream out of alignment. This one doesn't have a timestamp.
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)),
-            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)), ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_0);
 
   // We send in a packet to complete the first block. It should not have a
   // timestamp even though the new packet has one, because we only extrapolate
   // forward.
   packet_index += 1;
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)),
-            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)), ChunkInputStream::kOk);
   EXPECT_TRUE(was_called_for_packet_1);
 
   // We expect the flush to contain a timestamp extrapolated from the second
@@ -342,62 +328,54 @@ TEST(ChunkInputStream, TimestampsDropWhenInsideBlock) {
   bool was_called_for_packet_3 = false;
   bool flush_called = false;
 
-  auto input_block_processor = [&packet_index, &was_called_for_packet_0,
-                                &was_called_for_packet_1,
-                                &was_called_for_packet_2,
-                                &was_called_for_packet_3, kExpectedTimestamp,
-                                &flush_called, kExpectedExtrapolatedTimestamp](
-                                   ChunkInputStream::InputBlock input_block) {
-    if (input_block.is_end_of_stream) {
-      flush_called = true;
-      EXPECT_EQ(input_block.timestamp_ish.has_value(), true);
-      EXPECT_EQ(input_block.timestamp_ish.value_or(0),
-                kExpectedExtrapolatedTimestamp);
-      return ChunkInputStream::kContinue;
-    }
+  auto input_block_processor =
+      [&packet_index, &was_called_for_packet_0, &was_called_for_packet_1, &was_called_for_packet_2,
+       &was_called_for_packet_3, kExpectedTimestamp, &flush_called,
+       kExpectedExtrapolatedTimestamp](ChunkInputStream::InputBlock input_block) {
+        if (input_block.is_end_of_stream) {
+          flush_called = true;
+          EXPECT_EQ(input_block.timestamp_ish.has_value(), true);
+          EXPECT_EQ(input_block.timestamp_ish.value_or(0), kExpectedExtrapolatedTimestamp);
+          return ChunkInputStream::kContinue;
+        }
 
-    switch (packet_index) {
-      case 0:
-        was_called_for_packet_0 = true;
-        return ChunkInputStream::kContinue;
-      case 1:
-        was_called_for_packet_1 = true;
-        return ChunkInputStream::kContinue;
-      case 2:
-        was_called_for_packet_2 = true;
-        return ChunkInputStream::kContinue;
-      case 3:
-        was_called_for_packet_3 = true;
-        EXPECT_EQ(input_block.timestamp_ish.has_value(), true);
-        EXPECT_EQ(input_block.timestamp_ish.value_or(0), kExpectedTimestamp);
-        return ChunkInputStream::kContinue;
-      default:
-        EXPECT_FALSE(true) << "This should not happen.";
-        return ChunkInputStream::kTerminate;
-    }
-  };
+        switch (packet_index) {
+          case 0:
+            was_called_for_packet_0 = true;
+            return ChunkInputStream::kContinue;
+          case 1:
+            was_called_for_packet_1 = true;
+            return ChunkInputStream::kContinue;
+          case 2:
+            was_called_for_packet_2 = true;
+            return ChunkInputStream::kContinue;
+          case 3:
+            was_called_for_packet_3 = true;
+            EXPECT_EQ(input_block.timestamp_ish.has_value(), true);
+            EXPECT_EQ(input_block.timestamp_ish.value_or(0), kExpectedTimestamp);
+            return ChunkInputStream::kContinue;
+          default:
+            EXPECT_FALSE(true) << "This should not happen.";
+            return ChunkInputStream::kTerminate;
+        }
+      };
 
-  auto under_test =
-      ChunkInputStream(kChunkSize, TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1)),
-                       input_block_processor);
+  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1)),
+                                     input_block_processor);
 
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)),
-            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)), ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_0);
 
   packet_index += 1;
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)),
-            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)), ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_1);
 
   packet_index += 1;
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(2)),
-            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(2)), ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_2);
 
   packet_index += 1;
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(3)),
-            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(3)), ChunkInputStream::kOk);
   EXPECT_TRUE(was_called_for_packet_3);
 
   EXPECT_EQ(ChunkInputStream::kOk, under_test.Flush());
@@ -426,27 +404,24 @@ TEST(ChunkInputStream, ReportsErrorWhenMissingTimebase) {
                             // each packet.
   bool was_called_for_packet_0 = false;
   size_t calls_for_packet_2 = 0;
-  auto input_block_processor =
-      [&packet_index, &was_called_for_packet_0,
-       &calls_for_packet_2](ChunkInputStream::InputBlock input_block) {
-        switch (packet_index) {
-          case 0:
-            was_called_for_packet_0 = true;
-            return ChunkInputStream::kContinue;
-          case 1:
-            calls_for_packet_2 += 1;
-            return ChunkInputStream::kContinue;
-          default:
-            EXPECT_TRUE(false) << "This should not happen.";
-            return ChunkInputStream::kTerminate;
-        }
-      };
+  auto input_block_processor = [&packet_index, &was_called_for_packet_0,
+                                &calls_for_packet_2](ChunkInputStream::InputBlock input_block) {
+    switch (packet_index) {
+      case 0:
+        was_called_for_packet_0 = true;
+        return ChunkInputStream::kContinue;
+      case 1:
+        calls_for_packet_2 += 1;
+        return ChunkInputStream::kContinue;
+      default:
+        EXPECT_TRUE(false) << "This should not happen.";
+        return ChunkInputStream::kTerminate;
+    }
+  };
 
-  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(),
-                                     input_block_processor);
+  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(), input_block_processor);
 
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)),
-            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)), ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_0);
 
   packet_index += 1;
@@ -476,25 +451,21 @@ TEST(ChunkInputStream, ProvidesFlushTimestamp) {
   packets.ptr(1)->SetTimstampIsh(20);
 
   bool flush_called = false;
-  auto input_block_processor =
-      [&flush_called](ChunkInputStream::InputBlock input_block) {
-        if (input_block.is_end_of_stream) {
-          flush_called = true;
-          EXPECT_TRUE(input_block.flush_timestamp_ish.has_value());
-          return ChunkInputStream::kContinue;
-        }
+  auto input_block_processor = [&flush_called](ChunkInputStream::InputBlock input_block) {
+    if (input_block.is_end_of_stream) {
+      flush_called = true;
+      EXPECT_TRUE(input_block.flush_timestamp_ish.has_value());
+      return ChunkInputStream::kContinue;
+    }
 
-        return ChunkInputStream::kContinue;
-      };
+    return ChunkInputStream::kContinue;
+  };
 
-  auto under_test =
-      ChunkInputStream(kChunkSize, TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1)),
-                       input_block_processor);
+  auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1)),
+                                     input_block_processor);
 
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)),
-            ChunkInputStream::kOk);
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)),
-            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)), ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)), ChunkInputStream::kOk);
   EXPECT_EQ(under_test.Flush(), ChunkInputStream::kOk);
   EXPECT_TRUE(flush_called);
 }

@@ -17,9 +17,7 @@ fbl::Vector<void (*)()>* GetCheckFns() {
 
 }  // namespace
 
-void AddCheckFunction(void (*check)()) {
-  GetCheckFns()->push_back(check);
-}
+void AddCheckFunction(void (*check)()) { GetCheckFns()->push_back(check); }
 
 void CheckAll() {
   for (auto* fn : *GetCheckFns()) {
@@ -30,9 +28,7 @@ void CheckAll() {
 }  // namespace test
 }  // namespace zxtest
 
-void zxtest_add_check_function(void (*check)(void)) {
-  zxtest::test::AddCheckFunction(check);
-}
+void zxtest_add_check_function(void (*check)(void)) { zxtest::test::AddCheckFunction(check); }
 
 void verify_expectation(test_expectation_t* expectation) {
   if (expectation->expect_errors) {

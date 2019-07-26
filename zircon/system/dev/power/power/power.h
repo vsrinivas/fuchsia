@@ -16,26 +16,26 @@ using PowerDeviceType = ddk::Device<PowerDevice, ddk::Unbindable>;
 
 class PowerDevice : public PowerDeviceType,
                     public ddk::PowerProtocol<PowerDevice, ddk::base_protocol> {
-public:
-    PowerDevice(zx_device_t* parent, power_impl_protocol_t* power, uint32_t index)
-        : PowerDeviceType(parent), power_(power), index_(index) {}
+ public:
+  PowerDevice(zx_device_t* parent, power_impl_protocol_t* power, uint32_t index)
+      : PowerDeviceType(parent), power_(power), index_(index) {}
 
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    void DdkUnbind();
-    void DdkRelease();
+  void DdkUnbind();
+  void DdkRelease();
 
-    zx_status_t PowerEnablePowerDomain();
-    zx_status_t PowerDisablePowerDomain();
-    zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status);
-    zx_status_t PowerGetSupportedVoltageRange(uint32_t* min_voltage, uint32_t* max_voltage);
-    zx_status_t PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage);
-    zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
-    zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
+  zx_status_t PowerEnablePowerDomain();
+  zx_status_t PowerDisablePowerDomain();
+  zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status);
+  zx_status_t PowerGetSupportedVoltageRange(uint32_t* min_voltage, uint32_t* max_voltage);
+  zx_status_t PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage);
+  zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
+  zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
 
-private:
-    const ddk::PowerImplProtocolClient power_;
-    const uint32_t index_;
+ private:
+  const ddk::PowerImplProtocolClient power_;
+  const uint32_t index_;
 };
 
-} // namespace power
+}  // namespace power

@@ -54,19 +54,16 @@ int main(int argc, char** argv) {
     const auto& positional_args = command_line.positional_args();
     if (positional_args.size() < 1) {
       // TODO(smbug.com/30): Adhere to CLI tool requirements for --help.
-      std::cerr << "Please specify an IP:Port, such as localhost:50051"
-                << std::endl;
+      std::cerr << "Please specify an IP:Port, such as localhost:50051" << std::endl;
       exit(EXIT_CODE_GENERAL_ERROR);
     }
 
     // TODO(smbug.com/32): This channel isn't authenticated
     // (InsecureChannelCredentials()).
-    dockyard_proxy =
-        std::make_unique<harvester::DockyardProxyGrpc>(grpc::CreateChannel(
-            positional_args[0], grpc::InsecureChannelCredentials()));
+    dockyard_proxy = std::make_unique<harvester::DockyardProxyGrpc>(
+        grpc::CreateChannel(positional_args[0], grpc::InsecureChannelCredentials()));
 
-    if (!dockyard_proxy ||
-        dockyard_proxy->Init() != harvester::DockyardProxyStatus::OK) {
+    if (!dockyard_proxy || dockyard_proxy->Init() != harvester::DockyardProxyStatus::OK) {
       exit(EXIT_CODE_GENERAL_ERROR);
     }
   } else {
@@ -80,8 +77,7 @@ int main(int argc, char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  harvester::Harvester harvester(root_resource, loop.dispatcher(),
-                                 std::move(dockyard_proxy));
+  harvester::Harvester harvester(root_resource, loop.dispatcher(), std::move(dockyard_proxy));
   harvester.GatherData();
   loop.Run();
 

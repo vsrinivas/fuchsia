@@ -8,13 +8,13 @@
 #include <memory>
 
 class ThermalCli {
-public:
-    ThermalCli(zx::channel channel) : channel_(std::move(channel)) {}
+ public:
+  ThermalCli(zx::channel channel) : channel_(std::move(channel)) {}
 
-    zx_status_t PrintTemperature();
-    zx_status_t FanLevelCommand(const char* value);
-    int FrequencyCommand(uint32_t cluster, const char* value);
+  zx_status_t PrintTemperature();
+  zx_status_t FanLevelCommand(const char* value);
+  int FrequencyCommand(uint32_t cluster, const char* value);
 
-private:
-    zx::channel channel_;
+ private:
+  zx::channel channel_;
 };

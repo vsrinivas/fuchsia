@@ -14,40 +14,40 @@ WaitBase::WaitBase(zx_handle_t object, zx_signals_t trigger, async_wait_handler_
     : wait_{{ASYNC_STATE_INIT}, handler, object, trigger, 0} {}
 
 WaitBase::~WaitBase() {
-    if (dispatcher_) {
-        // Failure to cancel here may result in a dangling pointer...
-        zx_status_t status = async_cancel_wait(dispatcher_, &wait_);
-        ZX_ASSERT_MSG(status == ZX_OK, "status=%d", status);
-    }
+  if (dispatcher_) {
+    // Failure to cancel here may result in a dangling pointer...
+    zx_status_t status = async_cancel_wait(dispatcher_, &wait_);
+    ZX_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+  }
 }
 
 zx_status_t WaitBase::Begin(async_dispatcher_t* dispatcher, uint32_t options) {
-    if (dispatcher_)
-        return ZX_ERR_ALREADY_EXISTS;
+  if (dispatcher_)
+    return ZX_ERR_ALREADY_EXISTS;
 
-    dispatcher_ = dispatcher;
-    zx_status_t status = async_begin_wait_with_options(dispatcher, &wait_, options);
-    if (status != ZX_OK) {
-        dispatcher_ = nullptr;
-    }
-    return status;
+  dispatcher_ = dispatcher;
+  zx_status_t status = async_begin_wait_with_options(dispatcher, &wait_, options);
+  if (status != ZX_OK) {
+    dispatcher_ = nullptr;
+  }
+  return status;
 }
 
 zx_status_t WaitBase::Cancel() {
-    if (!dispatcher_)
-        return ZX_ERR_NOT_FOUND;
+  if (!dispatcher_)
+    return ZX_ERR_NOT_FOUND;
 
-    async_dispatcher_t* dispatcher = dispatcher_;
-    dispatcher_ = nullptr;
+  async_dispatcher_t* dispatcher = dispatcher_;
+  dispatcher_ = nullptr;
 
-    zx_status_t status = async_cancel_wait(dispatcher, &wait_);
-    // |dispatcher| is required to be single-threaded, Cancel() is
-    // only supposed to be called on |dispatcher|'s thread, and
-    // we verified that the wait was pending before calling
-    // async_cancel_wait(). Assuming that |dispatcher| never queues
-    // a wait, |wait_| must have been pending with |dispatcher|.
-    ZX_DEBUG_ASSERT(status != ZX_ERR_NOT_FOUND);
-    return status;
+  zx_status_t status = async_cancel_wait(dispatcher, &wait_);
+  // |dispatcher| is required to be single-threaded, Cancel() is
+  // only supposed to be called on |dispatcher|'s thread, and
+  // we verified that the wait was pending before calling
+  // async_cancel_wait(). Assuming that |dispatcher| never queues
+  // a wait, |wait_| must have been pending with |dispatcher|.
+  ZX_DEBUG_ASSERT(status != ZX_ERR_NOT_FOUND);
+  return status;
 }
 
 Wait::Wait(zx_handle_t object, zx_signals_t trigger, Handler handler)
@@ -55,10 +55,10 @@ Wait::Wait(zx_handle_t object, zx_signals_t trigger, Handler handler)
 
 Wait::~Wait() = default;
 
-void Wait::CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                       zx_status_t status, const zx_packet_signal_t* signal) {
-    auto self = Dispatch<Wait>(wait);
-    self->handler_(dispatcher, self, status, signal);
+void Wait::CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                       const zx_packet_signal_t* signal) {
+  auto self = Dispatch<Wait>(wait);
+  self->handler_(dispatcher, self, status, signal);
 }
 
-} // namespace async
+}  // namespace async

@@ -48,145 +48,139 @@ namespace fzl {
 // MapVmos and PinVmos functions.  After the buffers have been mapped/pinned,
 // the virtual/physical address can be accessed through the Buffer instances.
 class VmoPool {
-public:
-    // Options for pinning VMOs:
-    // Require contiguous memory:
-    enum class RequireContig : bool { No = false,
-                                      Yes };
-    // Require that the physical memory address be expressable as a 32bit
-    // unsigned integer:
-    enum class RequireLowMem : bool { No = false,
-                                      Yes };
+ public:
+  // Options for pinning VMOs:
+  // Require contiguous memory:
+  enum class RequireContig : bool { No = false, Yes };
+  // Require that the physical memory address be expressable as a 32bit
+  // unsigned integer:
+  enum class RequireLowMem : bool { No = false, Yes };
 
-    // Initializes the VmoPool with a set of vmos.
-    zx_status_t Init(const zx::vmo* vmos, size_t num_vmos);
+  // Initializes the VmoPool with a set of vmos.
+  zx_status_t Init(const zx::vmo* vmos, size_t num_vmos);
 
-    // Pin all the vmos to physical memory.  This must be called prior to
-    // requesting a physical address from any Buffer instance.
-    zx_status_t PinVmos(const zx::bti& bti,
-                        RequireContig req_contiguous,
-                        RequireLowMem req_low_memory);
+  // Pin all the vmos to physical memory.  This must be called prior to
+  // requesting a physical address from any Buffer instance.
+  zx_status_t PinVmos(const zx::bti& bti, RequireContig req_contiguous,
+                      RequireLowMem req_low_memory);
 
-    // Map the vmos to virtual memory. This must be called prior to
-    // requesting a virtual address from any Buffer instance.
-    zx_status_t MapVmos();
+  // Map the vmos to virtual memory. This must be called prior to
+  // requesting a virtual address from any Buffer instance.
+  zx_status_t MapVmos();
 
-    // Resets the buffer read and write locks.
-    void Reset();
+  // Resets the buffer read and write locks.
+  void Reset();
 
-    // Finds the next available buffer, locks that buffer for writing, and
-    // returns a Buffer instance to allow access to that buffer.
-    // If no buffers are available, returns an empty std::optional.
-    class Buffer;
-    std::optional<Buffer> LockBufferForWrite();
+  // Finds the next available buffer, locks that buffer for writing, and
+  // returns a Buffer instance to allow access to that buffer.
+  // If no buffers are available, returns an empty std::optional.
+  class Buffer;
+  std::optional<Buffer> LockBufferForWrite();
 
-    // Unlocks the buffer with the specified index and sets it as ready to be
-    // reused. Calling ReleaseBuffer with the index from
-    // buffer.ReleaseWriteLockAndGetIndex() is equivalent to calling
-    // buffer.Release().
-    // Returns ZX_OK if successful, or ZX_ERR_NOT_FOUND if no locked buffer
-    // was found with the given index. If the index is out of bounds,
-    // ZX_ERROR_INVALID_ARGS will be returned.
-    zx_status_t ReleaseBuffer(uint32_t buffer_index);
+  // Unlocks the buffer with the specified index and sets it as ready to be
+  // reused. Calling ReleaseBuffer with the index from
+  // buffer.ReleaseWriteLockAndGetIndex() is equivalent to calling
+  // buffer.Release().
+  // Returns ZX_OK if successful, or ZX_ERR_NOT_FOUND if no locked buffer
+  // was found with the given index. If the index is out of bounds,
+  // ZX_ERROR_INVALID_ARGS will be returned.
+  zx_status_t ReleaseBuffer(uint32_t buffer_index);
 
-    ~VmoPool();
+  ~VmoPool();
 
-    // The Buffer class offers an object-oriented way to accessing the buffers
-    // within VmoPool.  Retaining ownership of a valid Buffer corresponds to
-    // a write lock. To release the write lock, you can:
-    //  - Call ReleaseWriteLockAndGetIndex().  This releases the write
-    //    lock, and returns the index of the buffer, for use with fidl interfaces with
-    //    shared arrays of VMOs, such as ImagePipe, or camera::Stream::FrameAvailable.
-    //    The buffer is now read locked.
-    //  - Call Release().  This releases the buffer completely.
-    //  - Allow the Buffer object to go out of scope.  This is equivalent to calling
-    //    Release().
-    class Buffer {
-    public:
-        // Default constructor creates an invalid Buffer:
-        Buffer()
-            : Buffer(nullptr, 0) {}
+  // The Buffer class offers an object-oriented way to accessing the buffers
+  // within VmoPool.  Retaining ownership of a valid Buffer corresponds to
+  // a write lock. To release the write lock, you can:
+  //  - Call ReleaseWriteLockAndGetIndex().  This releases the write
+  //    lock, and returns the index of the buffer, for use with fidl interfaces with
+  //    shared arrays of VMOs, such as ImagePipe, or camera::Stream::FrameAvailable.
+  //    The buffer is now read locked.
+  //  - Call Release().  This releases the buffer completely.
+  //  - Allow the Buffer object to go out of scope.  This is equivalent to calling
+  //    Release().
+  class Buffer {
+   public:
+    // Default constructor creates an invalid Buffer:
+    Buffer() : Buffer(nullptr, 0) {}
 
-        ~Buffer();
+    ~Buffer();
 
-        // Only allow move constructors.
-        Buffer(Buffer&& other);
-        Buffer& operator=(Buffer&& other);
+    // Only allow move constructors.
+    Buffer(Buffer&& other);
+    Buffer& operator=(Buffer&& other);
 
-        // Release the buffer from its write lock, which puts the Buffer instance
-        // in the invalid state. If the Buffer was in a valid state before the call,
-        // this will return the index of the Buffer. Calling ReleaseBuffer with
-        // this index is now the only way to release the buffer.
-        // Asserts that the Buffer is valid.
-        uint32_t ReleaseWriteLockAndGetIndex();
+    // Release the buffer from its write lock, which puts the Buffer instance
+    // in the invalid state. If the Buffer was in a valid state before the call,
+    // this will return the index of the Buffer. Calling ReleaseBuffer with
+    // this index is now the only way to release the buffer.
+    // Asserts that the Buffer is valid.
+    uint32_t ReleaseWriteLockAndGetIndex();
 
-        // Releases buffer back to free pool.
-        zx_status_t Release();
+    // Releases buffer back to free pool.
+    zx_status_t Release();
 
-        // Returns the size of the buffer. Asserts that the Buffer instance is
-        // valid.
-        size_t size() const;
+    // Returns the size of the buffer. Asserts that the Buffer instance is
+    // valid.
+    size_t size() const;
 
-        // Return the virtual address to the start of the buffer.
-        // Asserts that the buffer is mapped, and that the Buffer instance
-        // is valid.
-        void* virtual_address() const;
+    // Return the virtual address to the start of the buffer.
+    // Asserts that the buffer is mapped, and that the Buffer instance
+    // is valid.
+    void* virtual_address() const;
 
-        // Return the physical address of the start of the buffer.a
-        //
-        // Asserts that the buffer is pinned, and that the Buffer instance is
-        // valid.
-        zx_paddr_t physical_address() const;
+    // Return the physical address of the start of the buffer.a
+    //
+    // Asserts that the buffer is pinned, and that the Buffer instance is
+    // valid.
+    zx_paddr_t physical_address() const;
 
-        bool valid() const { return pool_ != nullptr; }
+    bool valid() const { return pool_ != nullptr; }
 
-    private:
-        Buffer(VmoPool* pool, uint32_t index)
-            : pool_(pool), index_(index) {}
+   private:
+    Buffer(VmoPool* pool, uint32_t index) : pool_(pool), index_(index) {}
 
-        // Remove the copy and assignment constructor.
-        Buffer(const Buffer&) = delete;
-        void operator=(const Buffer&) = delete;
+    // Remove the copy and assignment constructor.
+    Buffer(const Buffer&) = delete;
+    void operator=(const Buffer&) = delete;
 
-        // The only function which should construct a Buffer from an index and
-        // a pool is VmoPool::LockBufferForWrite.
-        friend std::optional<Buffer> VmoPool::LockBufferForWrite();
+    // The only function which should construct a Buffer from an index and
+    // a pool is VmoPool::LockBufferForWrite.
+    friend std::optional<Buffer> VmoPool::LockBufferForWrite();
 
-        // The validity of the pool pointer indicates whether the buffer
-        // instance itself is valid.
-        VmoPool* pool_ = nullptr;
-        uint32_t index_ = 0;
-    };
+    // The validity of the pool pointer indicates whether the buffer
+    // instance itself is valid.
+    VmoPool* pool_ = nullptr;
+    uint32_t index_ = 0;
+  };
 
-    // Buffer is allowed to access the internals of VmoPool to access
-    // ListableBuffers.
-    friend class Buffer;
+  // Buffer is allowed to access the internals of VmoPool to access
+  // ListableBuffers.
+  friend class Buffer;
 
-private:
-    struct ListableBuffer : public fbl::SinglyLinkedListable<ListableBuffer*> {
-        // Get the start of the virtual memory address.
-        void* virtual_address() const;
-        // Get the start of the physical address.
-        zx_paddr_t physical_address() const;
+ private:
+  struct ListableBuffer : public fbl::SinglyLinkedListable<ListableBuffer*> {
+    // Get the start of the virtual memory address.
+    void* virtual_address() const;
+    // Get the start of the physical address.
+    zx_paddr_t physical_address() const;
 
-        zx_status_t PinVmo(const zx::bti& bti,
-                           RequireContig require_contiguous,
-                           RequireLowMem require_low_memory);
+    zx_status_t PinVmo(const zx::bti& bti, RequireContig require_contiguous,
+                       RequireLowMem require_low_memory);
 
-        zx_status_t MapVmo();
+    zx_status_t MapVmo();
 
-        VmoMapper mapped_buffer;
-        PinnedVmo pinned_buffer;
-        zx::vmo vmo;
-        uint64_t buffer_size = 0;
-        bool is_mapped = false;
-        bool is_pinned = false;
-    };
+    VmoMapper mapped_buffer;
+    PinnedVmo pinned_buffer;
+    zx::vmo vmo;
+    uint64_t buffer_size = 0;
+    bool is_mapped = false;
+    bool is_pinned = false;
+  };
 
-    // VMO / mapping / pinning backing each buffer.
-    fbl::Array<ListableBuffer> buffers_;
-    // The list of free buffers.
-    fbl::SinglyLinkedList<ListableBuffer*> free_buffers_;
+  // VMO / mapping / pinning backing each buffer.
+  fbl::Array<ListableBuffer> buffers_;
+  // The list of free buffers.
+  fbl::SinglyLinkedList<ListableBuffer*> free_buffers_;
 };
 
-} // namespace fzl
+}  // namespace fzl

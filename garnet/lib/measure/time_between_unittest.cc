@@ -15,12 +15,11 @@ namespace measure {
 namespace {
 
 TEST(MeasureTimeBetweenTest, Instant) {
-  std::vector<TimeBetweenSpec> specs = {
-      TimeBetweenSpec({42u,
-                       {"first_event", "category_foo"},
-                       Anchor::Begin,
-                       {"second_event", "category_foo"},
-                       Anchor::Begin})};
+  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec({42u,
+                                                         {"first_event", "category_foo"},
+                                                         Anchor::Begin,
+                                                         {"second_event", "category_foo"},
+                                                         Anchor::Begin})};
 
   MeasureTimeBetween measure(std::move(specs));
   measure.Process(test::Instant("first_event", "category_foo", 1u));
@@ -38,12 +37,8 @@ TEST(MeasureTimeBetweenTest, Instant) {
 // Verifies that we can measure the time between consecutive occurences of the
 // same event.
 TEST(MeasureTimeBetweenTest, SameEvent) {
-  std::vector<TimeBetweenSpec> specs = {
-      TimeBetweenSpec({42u,
-                       {"bar", "category_foo"},
-                       Anchor::Begin,
-                       {"bar", "category_foo"},
-                       Anchor::Begin})};
+  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec(
+      {42u, {"bar", "category_foo"}, Anchor::Begin, {"bar", "category_foo"}, Anchor::Begin})};
 
   MeasureTimeBetween measure(std::move(specs));
   measure.Process(test::Instant("bar", "category_foo", 1u));
@@ -57,12 +52,11 @@ TEST(MeasureTimeBetweenTest, SameEvent) {
 }
 
 TEST(MeasureTimeBetweenTest, AnchorsEndBegin) {
-  std::vector<TimeBetweenSpec> specs = {
-      TimeBetweenSpec({42u,
-                       {"first_event", "category_foo"},
-                       Anchor::End,
-                       {"second_event", "category_foo"},
-                       Anchor::Begin})};
+  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec({42u,
+                                                         {"first_event", "category_foo"},
+                                                         Anchor::End,
+                                                         {"second_event", "category_foo"},
+                                                         Anchor::Begin})};
 
   MeasureTimeBetween measure(std::move(specs));
   measure.Process(test::DurationBegin("first_event", "category_foo", 1u));
@@ -76,12 +70,11 @@ TEST(MeasureTimeBetweenTest, AnchorsEndBegin) {
 }
 
 TEST(MeasureTimeBetweenTest, AnchorsBeginEnd) {
-  std::vector<TimeBetweenSpec> specs = {
-      TimeBetweenSpec({42u,
-                       {"first_event", "category_foo"},
-                       Anchor::End,
-                       {"second_event", "category_foo"},
-                       Anchor::Begin})};
+  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec({42u,
+                                                         {"first_event", "category_foo"},
+                                                         Anchor::End,
+                                                         {"second_event", "category_foo"},
+                                                         Anchor::Begin})};
 
   MeasureTimeBetween measure(std::move(specs));
   measure.Process(test::DurationBegin("first_event", "category_foo", 1u));
@@ -95,12 +88,8 @@ TEST(MeasureTimeBetweenTest, AnchorsBeginEnd) {
 }
 
 TEST(MeasureTimeBetweenTest, AnchorsSameEvent) {
-  std::vector<TimeBetweenSpec> specs = {
-      TimeBetweenSpec({42u,
-                       {"bar", "category_foo"},
-                       Anchor::End,
-                       {"bar", "category_foo"},
-                       Anchor::Begin})};
+  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec(
+      {42u, {"bar", "category_foo"}, Anchor::End, {"bar", "category_foo"}, Anchor::Begin})};
 
   MeasureTimeBetween measure(std::move(specs));
   measure.Process(test::DurationBegin("bar", "category_foo", 1u));
@@ -116,12 +105,8 @@ TEST(MeasureTimeBetweenTest, AnchorsSameEvent) {
 }
 
 TEST(MeasureTimeBetweenTest, AnchorsSameEventCompleteEndToBegin) {
-  std::vector<TimeBetweenSpec> specs = {
-      TimeBetweenSpec({42u,
-                       {"bar", "category_foo"},
-                       Anchor::End,
-                       {"bar", "category_foo"},
-                       Anchor::Begin})};
+  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec(
+      {42u, {"bar", "category_foo"}, Anchor::End, {"bar", "category_foo"}, Anchor::Begin})};
 
   MeasureTimeBetween measure(std::move(specs));
   measure.Process(test::DurationComplete("bar", "category_foo", 1u, 3u));
@@ -134,12 +119,8 @@ TEST(MeasureTimeBetweenTest, AnchorsSameEventCompleteEndToBegin) {
 }
 
 TEST(MeasureTimeBetweenTest, AnchorsSameEventCompleteBeginToEnd) {
-  std::vector<TimeBetweenSpec> specs = {
-      TimeBetweenSpec({42u,
-                       {"bar", "category_foo"},
-                       Anchor::Begin,
-                       {"bar", "category_foo"},
-                       Anchor::End})};
+  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec(
+      {42u, {"bar", "category_foo"}, Anchor::Begin, {"bar", "category_foo"}, Anchor::End})};
 
   MeasureTimeBetween measure(std::move(specs));
   measure.Process(test::DurationComplete("bar", "category_foo", 1u, 3u));
@@ -151,13 +132,9 @@ TEST(MeasureTimeBetweenTest, AnchorsSameEventCompleteBeginToEnd) {
   EXPECT_EQ(std::vector<uint64_t>({7u, 16u}), results[42u]);
 }
 
-
 TEST(MeasureTimeBetweenTest, AsyncAndFlow) {
-  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec({42u,
-                                                         {"bar", "async_event"},
-                                                         Anchor::End,
-                                                         {"bar", "flow_event"},
-                                                         Anchor::Begin})};
+  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec(
+      {42u, {"bar", "async_event"}, Anchor::End, {"bar", "flow_event"}, Anchor::Begin})};
 
   MeasureTimeBetween measure(std::move(specs));
   measure.Process(test::AsyncBegin(1000u, "bar", "async_event", 1u));

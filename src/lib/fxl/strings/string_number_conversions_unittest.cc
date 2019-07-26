@@ -20,10 +20,8 @@ TEST(StringNumberConversionsTest, NumberToString_Basic) {
 
   EXPECT_EQ("0", NumberToString<uint32_t>(static_cast<uint32_t>(0)));
   EXPECT_EQ("123", NumberToString<uint32_t>(static_cast<uint32_t>(123)));
-  EXPECT_EQ("2309737967",
-            NumberToString<int64_t>(static_cast<int64_t>(2309737967)));
-  EXPECT_EQ("-2309737967",
-            NumberToString<int64_t>(static_cast<int64_t>(-2309737967ll)));
+  EXPECT_EQ("2309737967", NumberToString<int64_t>(static_cast<int64_t>(2309737967)));
+  EXPECT_EQ("-2309737967", NumberToString<int64_t>(static_cast<int64_t>(-2309737967ll)));
 
   EXPECT_EQ("0", NumberToString<int>(0));
   EXPECT_EQ("123", NumberToString<int>(123));
@@ -54,10 +52,8 @@ TEST(StringNumberConversionsTest, NumberToString_Basic) {
 
 TEST(StringNumberConversionsTest, NumberToString_Basic_Base16) {
   EXPECT_EQ("0", NumberToString<int32_t>(static_cast<int32_t>(0), Base::k16));
-  EXPECT_EQ("7B",
-            NumberToString<int32_t>(static_cast<int32_t>(123), Base::k16));
-  EXPECT_EQ("-1C8",
-            NumberToString<int32_t>(static_cast<int32_t>(-456), Base::k16));
+  EXPECT_EQ("7B", NumberToString<int32_t>(static_cast<int32_t>(123), Base::k16));
+  EXPECT_EQ("-1C8", NumberToString<int32_t>(static_cast<int32_t>(-456), Base::k16));
 
   EXPECT_EQ("0", NumberToString<uint32_t>(static_cast<uint32_t>(0)));
   EXPECT_EQ("123", NumberToString<uint32_t>(static_cast<uint32_t>(123)));
@@ -105,81 +101,59 @@ TEST(StringNumberConversionsTest, NumberToString_StdintTypes) {
   EXPECT_EQ("127", NumberToString<int8_t>(std::numeric_limits<int8_t>::max()));
   EXPECT_EQ("-128", NumberToString<int8_t>(std::numeric_limits<int8_t>::min()));
   EXPECT_EQ("0", NumberToString<int8_t>(static_cast<int8_t>(0), Base::k16));
-  EXPECT_EQ("7F", NumberToString<int8_t>(std::numeric_limits<int8_t>::max(),
-                                         Base::k16));
-  EXPECT_EQ("-80", NumberToString<int8_t>(std::numeric_limits<int8_t>::min(),
-                                          Base::k16));
+  EXPECT_EQ("7F", NumberToString<int8_t>(std::numeric_limits<int8_t>::max(), Base::k16));
+  EXPECT_EQ("-80", NumberToString<int8_t>(std::numeric_limits<int8_t>::min(), Base::k16));
 
   // uint8_t
   EXPECT_EQ("0", NumberToString<uint8_t>(static_cast<uint8_t>(0)));
-  EXPECT_EQ("255",
-            NumberToString<uint8_t>(std::numeric_limits<uint8_t>::max()));
+  EXPECT_EQ("255", NumberToString<uint8_t>(std::numeric_limits<uint8_t>::max()));
   EXPECT_EQ("0", NumberToString<uint8_t>(static_cast<uint8_t>(0), Base::k16));
-  EXPECT_EQ("FF", NumberToString<uint8_t>(std::numeric_limits<uint8_t>::max(),
-                                          Base::k16));
+  EXPECT_EQ("FF", NumberToString<uint8_t>(std::numeric_limits<uint8_t>::max(), Base::k16));
 
   // int16_t
   EXPECT_EQ("0", NumberToString<int16_t>(static_cast<int16_t>(0)));
-  EXPECT_EQ("32767",
-            NumberToString<int16_t>(std::numeric_limits<int16_t>::max()));
-  EXPECT_EQ("-32768",
-            NumberToString<int16_t>(std::numeric_limits<int16_t>::min()));
+  EXPECT_EQ("32767", NumberToString<int16_t>(std::numeric_limits<int16_t>::max()));
+  EXPECT_EQ("-32768", NumberToString<int16_t>(std::numeric_limits<int16_t>::min()));
   EXPECT_EQ("0", NumberToString<int16_t>(static_cast<int16_t>(0), Base::k16));
-  EXPECT_EQ("7FFF", NumberToString<int16_t>(std::numeric_limits<int16_t>::max(),
-                                            Base::k16));
-  EXPECT_EQ("-8000", NumberToString<int16_t>(
-                         std::numeric_limits<int16_t>::min(), Base::k16));
+  EXPECT_EQ("7FFF", NumberToString<int16_t>(std::numeric_limits<int16_t>::max(), Base::k16));
+  EXPECT_EQ("-8000", NumberToString<int16_t>(std::numeric_limits<int16_t>::min(), Base::k16));
 
   // uint16_t
   EXPECT_EQ("0", NumberToString<uint16_t>(static_cast<uint16_t>(0)));
-  EXPECT_EQ("65535",
-            NumberToString<uint16_t>(std::numeric_limits<uint16_t>::max()));
+  EXPECT_EQ("65535", NumberToString<uint16_t>(std::numeric_limits<uint16_t>::max()));
   EXPECT_EQ("0", NumberToString<uint16_t>(static_cast<uint16_t>(0), Base::k16));
-  EXPECT_EQ("FFFF", NumberToString<uint16_t>(
-                        std::numeric_limits<uint16_t>::max(), Base::k16));
+  EXPECT_EQ("FFFF", NumberToString<uint16_t>(std::numeric_limits<uint16_t>::max(), Base::k16));
 
   // int32_t
   EXPECT_EQ("0", NumberToString<int32_t>(static_cast<int32_t>(0)));
-  EXPECT_EQ("2147483647",
-            NumberToString<int32_t>(std::numeric_limits<int32_t>::max()));
-  EXPECT_EQ("-2147483648",
-            NumberToString<int32_t>(std::numeric_limits<int32_t>::min()));
+  EXPECT_EQ("2147483647", NumberToString<int32_t>(std::numeric_limits<int32_t>::max()));
+  EXPECT_EQ("-2147483648", NumberToString<int32_t>(std::numeric_limits<int32_t>::min()));
   EXPECT_EQ("0", NumberToString<int32_t>(static_cast<int32_t>(0), Base::k16));
-  EXPECT_EQ("7FFFFFFF", NumberToString<int32_t>(
-                            std::numeric_limits<int32_t>::max(), Base::k16));
-  EXPECT_EQ("-80000000", NumberToString<int32_t>(
-                             std::numeric_limits<int32_t>::min(), Base::k16));
+  EXPECT_EQ("7FFFFFFF", NumberToString<int32_t>(std::numeric_limits<int32_t>::max(), Base::k16));
+  EXPECT_EQ("-80000000", NumberToString<int32_t>(std::numeric_limits<int32_t>::min(), Base::k16));
 
   // uint32_t
   EXPECT_EQ("0", NumberToString<uint32_t>(static_cast<uint32_t>(0)));
-  EXPECT_EQ("4294967295",
-            NumberToString<uint32_t>(std::numeric_limits<uint32_t>::max()));
+  EXPECT_EQ("4294967295", NumberToString<uint32_t>(std::numeric_limits<uint32_t>::max()));
   EXPECT_EQ("0", NumberToString<uint32_t>(static_cast<uint32_t>(0), Base::k16));
-  EXPECT_EQ("FFFFFFFF", NumberToString<uint32_t>(
-                            std::numeric_limits<uint32_t>::max(), Base::k16));
+  EXPECT_EQ("FFFFFFFF", NumberToString<uint32_t>(std::numeric_limits<uint32_t>::max(), Base::k16));
 
   // int64_t
   EXPECT_EQ("0", NumberToString<int64_t>(static_cast<int64_t>(0)));
-  EXPECT_EQ("9223372036854775807",
-            NumberToString<int64_t>(std::numeric_limits<int64_t>::max()));
-  EXPECT_EQ("-9223372036854775808",
-            NumberToString<int64_t>(std::numeric_limits<int64_t>::min()));
+  EXPECT_EQ("9223372036854775807", NumberToString<int64_t>(std::numeric_limits<int64_t>::max()));
+  EXPECT_EQ("-9223372036854775808", NumberToString<int64_t>(std::numeric_limits<int64_t>::min()));
   EXPECT_EQ("0", NumberToString<int64_t>(static_cast<int64_t>(0), Base::k16));
-  EXPECT_EQ(
-      "7FFFFFFFFFFFFFFF",
-      NumberToString<int64_t>(std::numeric_limits<int64_t>::max(), Base::k16));
-  EXPECT_EQ(
-      "-8000000000000000",
-      NumberToString<int64_t>(std::numeric_limits<int64_t>::min(), Base::k16));
+  EXPECT_EQ("7FFFFFFFFFFFFFFF",
+            NumberToString<int64_t>(std::numeric_limits<int64_t>::max(), Base::k16));
+  EXPECT_EQ("-8000000000000000",
+            NumberToString<int64_t>(std::numeric_limits<int64_t>::min(), Base::k16));
 
   // uint64_t
   EXPECT_EQ("0", NumberToString<uint64_t>(static_cast<uint64_t>(0)));
-  EXPECT_EQ("18446744073709551615",
-            NumberToString<uint64_t>(std::numeric_limits<uint64_t>::max()));
+  EXPECT_EQ("18446744073709551615", NumberToString<uint64_t>(std::numeric_limits<uint64_t>::max()));
   EXPECT_EQ("0", NumberToString<uint64_t>(static_cast<uint64_t>(0), Base::k16));
   EXPECT_EQ("FFFFFFFFFFFFFFFF",
-            NumberToString<uint64_t>(std::numeric_limits<uint64_t>::max(),
-                                     Base::k16));
+            NumberToString<uint64_t>(std::numeric_limits<uint64_t>::max(), Base::k16));
 }
 
 TEST(StringNumberConversionsTest, StringToNumberWithError_Basic) {
@@ -197,8 +171,7 @@ TEST(StringNumberConversionsTest, StringToNumberWithError_Basic) {
     EXPECT_EQ(10, number);
     EXPECT_TRUE(StringToNumberWithError<int32_t>("abCDeF", &number, Base::k16));
     EXPECT_EQ(11259375, number);
-    EXPECT_TRUE(
-        StringToNumberWithError<int32_t>("-abCDeF", &number, Base::k16));
+    EXPECT_TRUE(StringToNumberWithError<int32_t>("-abCDeF", &number, Base::k16));
     EXPECT_EQ(-11259375, number);
   }
 
@@ -208,8 +181,7 @@ TEST(StringNumberConversionsTest, StringToNumberWithError_Basic) {
     EXPECT_EQ(0u, number);
     EXPECT_TRUE(StringToNumberWithError<uint32_t>("123", &number));
     EXPECT_EQ(123u, number);
-    EXPECT_TRUE(
-        StringToNumberWithError<uint32_t>("abCDeF", &number, Base::k16));
+    EXPECT_TRUE(StringToNumberWithError<uint32_t>("abCDeF", &number, Base::k16));
     EXPECT_EQ(11259375u, number);
   }
 
@@ -231,8 +203,7 @@ TEST(StringNumberConversionsTest, StringToNumberWithError_Basic) {
     EXPECT_EQ(0u, number);
     EXPECT_TRUE(StringToNumberWithError<unsigned>("123", &number));
     EXPECT_EQ(123u, number);
-    EXPECT_TRUE(
-        StringToNumberWithError<unsigned>("abCDeF", &number, Base::k16));
+    EXPECT_TRUE(StringToNumberWithError<unsigned>("abCDeF", &number, Base::k16));
     EXPECT_EQ(11259375u, number);
   }
 }
@@ -357,8 +328,7 @@ TEST(StringNumberConversionsTest, StringToNumberWithError_StdintTypes) {
     EXPECT_FALSE(StringToNumberWithError<int16_t>("32768", &number));
     EXPECT_FALSE(StringToNumberWithError<int16_t>("8000", &number, Base::k16));
     EXPECT_FALSE(StringToNumberWithError<int16_t>("-32769", &number));
-    EXPECT_FALSE(
-        StringToNumberWithError<int16_t>("-80001", &number, Base::k16));
+    EXPECT_FALSE(StringToNumberWithError<int16_t>("-80001", &number, Base::k16));
   }
 
   {
@@ -374,8 +344,7 @@ TEST(StringNumberConversionsTest, StringToNumberWithError_StdintTypes) {
     EXPECT_EQ(std::numeric_limits<uint16_t>::max(), number);
 
     EXPECT_FALSE(StringToNumberWithError<uint16_t>("65536", &number));
-    EXPECT_FALSE(
-        StringToNumberWithError<uint16_t>("10000", &number, Base::k16));
+    EXPECT_FALSE(StringToNumberWithError<uint16_t>("10000", &number, Base::k16));
     EXPECT_FALSE(StringToNumberWithError<uint16_t>("-1", &number));
     EXPECT_FALSE(StringToNumberWithError<uint16_t>("-1", &number, Base::k16));
   }
@@ -389,22 +358,18 @@ TEST(StringNumberConversionsTest, StringToNumberWithError_StdintTypes) {
 
     EXPECT_TRUE(StringToNumberWithError<int32_t>("2147483647", &number));
     EXPECT_EQ(std::numeric_limits<int32_t>::max(), number);
-    EXPECT_TRUE(
-        StringToNumberWithError<int32_t>("7FFFFFFF", &number, Base::k16));
+    EXPECT_TRUE(StringToNumberWithError<int32_t>("7FFFFFFF", &number, Base::k16));
     EXPECT_EQ(std::numeric_limits<int32_t>::max(), number);
 
     EXPECT_TRUE(StringToNumberWithError<int32_t>("-2147483648", &number));
     EXPECT_EQ(std::numeric_limits<int32_t>::min(), number);
-    EXPECT_TRUE(
-        StringToNumberWithError<int32_t>("-80000000", &number, Base::k16));
+    EXPECT_TRUE(StringToNumberWithError<int32_t>("-80000000", &number, Base::k16));
     EXPECT_EQ(std::numeric_limits<int32_t>::min(), number);
 
     EXPECT_FALSE(StringToNumberWithError<int32_t>("2147483648", &number));
-    EXPECT_FALSE(
-        StringToNumberWithError<int32_t>("80000000", &number, Base::k16));
+    EXPECT_FALSE(StringToNumberWithError<int32_t>("80000000", &number, Base::k16));
     EXPECT_FALSE(StringToNumberWithError<int32_t>("-2147483649", &number));
-    EXPECT_FALSE(
-        StringToNumberWithError<int32_t>("-80000001", &number, Base::k16));
+    EXPECT_FALSE(StringToNumberWithError<int32_t>("-80000001", &number, Base::k16));
   }
 
   {
@@ -416,13 +381,11 @@ TEST(StringNumberConversionsTest, StringToNumberWithError_StdintTypes) {
 
     EXPECT_TRUE(StringToNumberWithError<uint32_t>("4294967295", &number));
     EXPECT_EQ(std::numeric_limits<uint32_t>::max(), number);
-    EXPECT_TRUE(
-        StringToNumberWithError<uint32_t>("FFFFFFFF", &number, Base::k16));
+    EXPECT_TRUE(StringToNumberWithError<uint32_t>("FFFFFFFF", &number, Base::k16));
     EXPECT_EQ(std::numeric_limits<uint32_t>::max(), number);
 
     EXPECT_FALSE(StringToNumberWithError<uint32_t>("4294967296", &number));
-    EXPECT_FALSE(
-        StringToNumberWithError<uint32_t>("100000000", &number, Base::k16));
+    EXPECT_FALSE(StringToNumberWithError<uint32_t>("100000000", &number, Base::k16));
     EXPECT_FALSE(StringToNumberWithError<uint32_t>("-1", &number));
     EXPECT_FALSE(StringToNumberWithError<uint32_t>("-1", &number, Base::k16));
   }
@@ -434,28 +397,20 @@ TEST(StringNumberConversionsTest, StringToNumberWithError_StdintTypes) {
     EXPECT_TRUE(StringToNumberWithError<int64_t>("0", &number, Base::k16));
     EXPECT_EQ(0, number);
 
-    EXPECT_TRUE(
-        StringToNumberWithError<int64_t>("9223372036854775807", &number));
+    EXPECT_TRUE(StringToNumberWithError<int64_t>("9223372036854775807", &number));
     EXPECT_EQ(std::numeric_limits<int64_t>::max(), number);
-    EXPECT_TRUE(StringToNumberWithError<int64_t>("7FFFFFFFFFFFFFFF", &number,
-                                                 Base::k16));
+    EXPECT_TRUE(StringToNumberWithError<int64_t>("7FFFFFFFFFFFFFFF", &number, Base::k16));
     EXPECT_EQ(std::numeric_limits<int64_t>::max(), number);
 
-    EXPECT_TRUE(
-        StringToNumberWithError<int64_t>("-9223372036854775808", &number));
+    EXPECT_TRUE(StringToNumberWithError<int64_t>("-9223372036854775808", &number));
     EXPECT_EQ(std::numeric_limits<int64_t>::min(), number);
-    EXPECT_TRUE(StringToNumberWithError<int64_t>("-8000000000000000", &number,
-                                                 Base::k16));
+    EXPECT_TRUE(StringToNumberWithError<int64_t>("-8000000000000000", &number, Base::k16));
     EXPECT_EQ(std::numeric_limits<int64_t>::min(), number);
 
-    EXPECT_FALSE(
-        StringToNumberWithError<int64_t>("9223372036854775808", &number));
-    EXPECT_FALSE(StringToNumberWithError<int64_t>("8000000000000000", &number,
-                                                  Base::k16));
-    EXPECT_FALSE(
-        StringToNumberWithError<int64_t>("-9223372036854775809", &number));
-    EXPECT_FALSE(StringToNumberWithError<int64_t>("-8000000000000001", &number,
-                                                  Base::k16));
+    EXPECT_FALSE(StringToNumberWithError<int64_t>("9223372036854775808", &number));
+    EXPECT_FALSE(StringToNumberWithError<int64_t>("8000000000000000", &number, Base::k16));
+    EXPECT_FALSE(StringToNumberWithError<int64_t>("-9223372036854775809", &number));
+    EXPECT_FALSE(StringToNumberWithError<int64_t>("-8000000000000001", &number, Base::k16));
   }
 
   {
@@ -465,17 +420,13 @@ TEST(StringNumberConversionsTest, StringToNumberWithError_StdintTypes) {
     EXPECT_TRUE(StringToNumberWithError<uint64_t>("0", &number, Base::k16));
     EXPECT_EQ(0u, number);
 
-    EXPECT_TRUE(
-        StringToNumberWithError<uint64_t>("18446744073709551615", &number));
+    EXPECT_TRUE(StringToNumberWithError<uint64_t>("18446744073709551615", &number));
     EXPECT_EQ(std::numeric_limits<uint64_t>::max(), number);
-    EXPECT_TRUE(StringToNumberWithError<uint64_t>("FFFFFFFFFFFFFFFF", &number,
-                                                  Base::k16));
+    EXPECT_TRUE(StringToNumberWithError<uint64_t>("FFFFFFFFFFFFFFFF", &number, Base::k16));
     EXPECT_EQ(std::numeric_limits<uint64_t>::max(), number);
 
-    EXPECT_FALSE(
-        StringToNumberWithError<uint64_t>("18446744073709551616", &number));
-    EXPECT_FALSE(StringToNumberWithError<uint64_t>("80000000000000000", &number,
-                                                   Base::k16));
+    EXPECT_FALSE(StringToNumberWithError<uint64_t>("18446744073709551616", &number));
+    EXPECT_FALSE(StringToNumberWithError<uint64_t>("80000000000000000", &number, Base::k16));
     EXPECT_FALSE(StringToNumberWithError<uint64_t>("-1", &number));
     EXPECT_FALSE(StringToNumberWithError<uint64_t>("-1", &number, Base::k16));
   }

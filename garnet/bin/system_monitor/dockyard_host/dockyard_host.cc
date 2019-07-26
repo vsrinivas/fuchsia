@@ -29,8 +29,7 @@ std::vector<V> GetMapValues(std::map<K, V> input) {
 // Test a multi-step query. First the set of named kernel objects is collected,
 // then the IDs are determined, the IDs are translated into strings, and final
 // results are printed to the log.
-void TestFetchKoidNames(DockyardHost& dockyard_host,
-                        dockyard::Dockyard& dockyard) {
+void TestFetchKoidNames(DockyardHost& dockyard_host, dockyard::Dockyard& dockyard) {
   dockyard::DockyardPathToIdMap paths = dockyard.MatchPaths("koid:", ":name");
   auto names = dockyard_host.GetSampleStringsForIds(GetMapValues(paths));
   if (!names) {
@@ -54,9 +53,8 @@ DockyardHost::DockyardHost() : is_connected_(false) {
   // Set up callback handlers.
   dockyard_.SetConnectionHandler(
       std::bind(&DockyardHost::OnConnection, this, std::placeholders::_1));
-  dockyard_.SetDockyardPathsHandler(std::bind(&DockyardHost::OnPaths, this,
-                                              std::placeholders::_1,
-                                              std::placeholders::_2));
+  dockyard_.SetDockyardPathsHandler(
+      std::bind(&DockyardHost::OnPaths, this, std::placeholders::_1, std::placeholders::_2));
   dockyard_.SetStreamSetsHandler(
       std::bind(&DockyardHost::OnStreamSets, this, std::placeholders::_1));
 }
@@ -66,12 +64,12 @@ void DockyardHost::StartCollectingFrom(const std::string& device_name) {
   device_name_ = device_name;
 }
 
-std::optional<std::future<std::unique_ptr<AsyncQuery>>>
-DockyardHost::GetSamples(const std::vector<dockyard::DockyardId>& path_ids) {
+std::optional<std::future<std::unique_ptr<AsyncQuery>>> DockyardHost::GetSamples(
+    const std::vector<dockyard::DockyardId>& path_ids) {
   // Create a query instance.
   auto emplacement = std::make_unique<AsyncQuery>();
-  auto iter = request_id_to_async_query_.emplace(
-      emplacement->request.request_id(), std::move(emplacement));
+  auto iter =
+      request_id_to_async_query_.emplace(emplacement->request.request_id(), std::move(emplacement));
   if (!iter.second) {
     GT_LOG(ERROR) << "Failed to emplace query (might be out of"
                      " memory).";
@@ -83,8 +81,8 @@ DockyardHost::GetSamples(const std::vector<dockyard::DockyardId>& path_ids) {
   query->request.end_time_ns = dockyard_.LatestSampleTimeNs();
   query->request.sample_count = 1;
   query->request.render_style = dockyard::StreamSetsRequest::RECENT;
-  query->request.dockyard_ids.insert(query->request.dockyard_ids.begin(),
-                                     path_ids.begin(), path_ids.end());
+  query->request.dockyard_ids.insert(query->request.dockyard_ids.begin(), path_ids.begin(),
+                                     path_ids.end());
   // Issue the request for the data.
   dockyard_.GetStreamSets(&iter.first->second->request);
 
@@ -92,8 +90,7 @@ DockyardHost::GetSamples(const std::vector<dockyard::DockyardId>& path_ids) {
       iter.first->second->promise.get_future()};
 }
 
-std::optional<dockyard::SampleValue> DockyardHost::GetSampleValue(
-    const std::string& path) {
+std::optional<dockyard::SampleValue> DockyardHost::GetSampleValue(const std::string& path) {
   std::vector<dockyard::DockyardId> dockyard_ids;
   dockyard_ids.emplace_back(dockyard_.GetDockyardId(path));
   auto future = GetSamples(dockyard_ids);
@@ -103,8 +100,7 @@ std::optional<dockyard::SampleValue> DockyardHost::GetSampleValue(
   return future->get()->response.highest_value;
 }
 
-std::optional<std::string> DockyardHost::GetSampleString(
-    const std::string& path) {
+std::optional<std::string> DockyardHost::GetSampleString(const std::string& path) {
   std::vector<dockyard::DockyardId> dockyard_ids;
   dockyard_ids.emplace_back(dockyard_.GetDockyardId(path));
   auto future = GetSamples(dockyard_ids);
@@ -119,8 +115,7 @@ std::optional<std::string> DockyardHost::GetSampleString(
   return {};
 }
 
-std::optional<std::vector<const std::string>>
-DockyardHost::GetSampleStringsForIds(
+std::optional<std::vector<const std::string>> DockyardHost::GetSampleStringsForIds(
     const std::vector<dockyard::DockyardId> path_ids) {
   auto future = GetSamples(path_ids);
   if (!future) {
@@ -128,9 +123,7 @@ DockyardHost::GetSampleStringsForIds(
   }
   std::unique_ptr<AsyncQuery> query = future->get();
   GT_LOG(DEBUG) << "GetSampleStringsForIds query "
-                << dockyard::DebugPrintQuery(dockyard_, query->request,
-                                             query->response)
-                       .str();
+                << dockyard::DebugPrintQuery(dockyard_, query->request, query->response).str();
   std::vector<const std::string> result;
   for (const auto& sample_values : query->response.data_sets) {
     std::string string_as_path;
@@ -157,8 +150,7 @@ void DockyardHost::OnConnection(const std::string& device_name) {
     std::this_thread::sleep_for(std::chrono::seconds(4));
 
     // How much RAM does the Fuchsia device have.
-    GT_LOG(INFO) << "memory:device_total_bytes "
-                 << *GetSampleValue("memory:device_total_bytes");
+    GT_LOG(INFO) << "memory:device_total_bytes " << *GetSampleValue("memory:device_total_bytes");
 
     // Dump the dockyard state to a file.
     if (dump_state_) {

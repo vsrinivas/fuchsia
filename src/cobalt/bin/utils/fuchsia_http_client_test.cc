@@ -54,12 +54,10 @@ class CVBool {
 
 class TestFuchsiaHTTPClient : public FuchsiaHTTPClient {
  public:
-  TestFuchsiaHTTPClient(NetworkWrapper* network_wrapper,
-                        async_dispatcher_t* dispatcher)
+  TestFuchsiaHTTPClient(NetworkWrapper* network_wrapper, async_dispatcher_t* dispatcher)
       : FuchsiaHTTPClient(network_wrapper, dispatcher) {}
 
-  void HandleResponse(fxl::RefPtr<NetworkRequest> req,
-                      http::URLResponse fx_response) override {
+  void HandleResponse(fxl::RefPtr<NetworkRequest> req, http::URLResponse fx_response) override {
     FuchsiaHTTPClient::HandleResponse(req, std::move(fx_response));
     response_handled_.Notify();
   }
@@ -82,8 +80,7 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
       : ::gtest::TestLoopFixture(),
         network_wrapper_(dispatcher()),
         delete_after_post_(false),
-        http_client(
-            new TestFuchsiaHTTPClient(&network_wrapper_, dispatcher())) {}
+        http_client(new TestFuchsiaHTTPClient(&network_wrapper_, dispatcher())) {}
 
   void PrepareResponse(const std::string& body, uint32_t status_code = 200) {
     network_wrapper_.SetStringResponse(body, status_code);
@@ -96,8 +93,7 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
   std::future<StatusOr<HTTPResponse>> PostString(const std::string& body) {
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
     auto future = std::async(std::launch::async, [this, body, deadline] {
-      auto post_future =
-          http_client->Post(HTTPRequest("http://www.test.com", body), deadline);
+      auto post_future = http_client->Post(HTTPRequest("http://www.test.com", body), deadline);
       if (delete_after_post_) {
         delete_after_post_ = false;
         http_client.reset(nullptr);
@@ -113,15 +109,13 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
   }
 
   template <class F>
-  StatusOr<F> RunUntilReady(std::future<StatusOr<F>>* future,
-                            zx::duration max_wait,
+  StatusOr<F> RunUntilReady(std::future<StatusOr<F>>* future, zx::duration max_wait,
                             zx::duration increment = zx::msec(100)) {
     zx::duration elapsed;
     while (elapsed < max_wait) {
       elapsed += increment;
       RunLoopFor(increment);
-      if (std::future_status::ready ==
-          future->wait_for(std::chrono::milliseconds(1))) {
+      if (std::future_status::ready == future->wait_for(std::chrono::milliseconds(1))) {
         return future->get();
       }
     }
@@ -161,8 +155,7 @@ TEST_F(FuchsiaHTTPClientTest, TestTimeout) {
 
   auto response_or = response_future.get();
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(),
-            util::StatusCode::DEADLINE_EXCEEDED);
+  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
 }
 
 TEST_F(FuchsiaHTTPClientTest, WaitAfterRelease) {
@@ -179,8 +172,7 @@ TEST_F(FuchsiaHTTPClientTest, WaitAfterRelease) {
     size_t bytes_written;
     socket_out.write(0u, it, 1, &bytes_written);
     EXPECT_EQ(1u, bytes_written);
-    EXPECT_NE(std::future_status::ready,
-              response_future.wait_for(std::chrono::milliseconds(1)));
+    EXPECT_NE(std::future_status::ready, response_future.wait_for(std::chrono::milliseconds(1)));
   }
   socket_out.reset();
 

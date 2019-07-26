@@ -25,97 +25,97 @@ namespace digest {
 // This class represents a digest produced by a hash algorithm.
 // This class is not thread safe.
 class Digest final {
-public:
-    // The length of a digest in bytes; this matches sizeof(this->data).
-    static constexpr size_t kLength = DIGEST_LENGTH;
+ public:
+  // The length of a digest in bytes; this matches sizeof(this->data).
+  static constexpr size_t kLength = DIGEST_LENGTH;
 
-    Digest();
-    explicit Digest(const uint8_t* other);
-    Digest(Digest&& o);
-    Digest& operator=(Digest&& o);
-    Digest& operator=(const uint8_t* rhs);
-    ~Digest();
+  Digest();
+  explicit Digest(const uint8_t* other);
+  Digest(Digest&& o);
+  Digest& operator=(Digest&& o);
+  Digest& operator=(const uint8_t* rhs);
+  ~Digest();
 
-    // Initializes the hash algorithm context.  It must be called before Update,
-    // and after Final when reusing the Digest object.
-    zx_status_t Init();
+  // Initializes the hash algorithm context.  It must be called before Update,
+  // and after Final when reusing the Digest object.
+  zx_status_t Init();
 
-    // Adds data to be hashed.  This may be called multiple times between calls
-    // to |Init| and |Final|.  If A and B are byte sequences of length A_len and
-    // B_len, respectively, and AB is the concatenation of A and B, then
-    // "Update(A, A_len); Update(B, B_len);" and "Update(AB, A_len + B_len)"
-    // yield the same internal state and will produce the same digest when
-    // |Final| is called.
-    void Update(const void* data, size_t len);
+  // Adds data to be hashed.  This may be called multiple times between calls
+  // to |Init| and |Final|.  If A and B are byte sequences of length A_len and
+  // B_len, respectively, and AB is the concatenation of A and B, then
+  // "Update(A, A_len); Update(B, B_len);" and "Update(AB, A_len + B_len)"
+  // yield the same internal state and will produce the same digest when
+  // |Final| is called.
+  void Update(const void* data, size_t len);
 
-    // Completes the hash algorithm and returns the digest.  This must only be
-    // called after a call to |Init|; intervening calls to |Update| are
-    // optional.
-    const uint8_t* Final();
+  // Completes the hash algorithm and returns the digest.  This must only be
+  // called after a call to |Init|; intervening calls to |Update| are
+  // optional.
+  const uint8_t* Final();
 
-    // This convenience method performs the hash algorithm in "one shot": It
-    // calls |Init| and |Update(data, len)| before returning the result of
-    // calling |Final|.
-    const uint8_t* Hash(const void* data, size_t len);
+  // This convenience method performs the hash algorithm in "one shot": It
+  // calls |Init| and |Update(data, len)| before returning the result of
+  // calling |Final|.
+  const uint8_t* Hash(const void* data, size_t len);
 
-    // Converts a |hex| string to binary and stores it in this->data.  The
-    // string must contain at least |kLength| * 2 valid hex characters.
-    zx_status_t Parse(const char* hex, size_t len);
+  // Converts a |hex| string to binary and stores it in this->data.  The
+  // string must contain at least |kLength| * 2 valid hex characters.
+  zx_status_t Parse(const char* hex, size_t len);
 
-    // Writes the current digest to |out| as a null-terminated, hex-encoded
-    // string.  |out| must have room for (kLength * 2) + 1 characters to
-    // succeed.
-    zx_status_t ToString(char* out, size_t len) const;
+  // Writes the current digest to |out| as a null-terminated, hex-encoded
+  // string.  |out| must have room for (kLength * 2) + 1 characters to
+  // succeed.
+  zx_status_t ToString(char* out, size_t len) const;
 
-    // Write the current digest to |out|.  |len| must be at least kLength to
-    // succeed.
-    zx_status_t CopyTo(uint8_t* out, size_t len) const;
+  // Write the current digest to |out|.  |len| must be at least kLength to
+  // succeed.
+  zx_status_t CopyTo(uint8_t* out, size_t len) const;
 
-    // Returns a pointer to a buffer containing the current digest value.  This
-    // will always have |kLength| bytes.  Each call to |AcquireBytes| must have
-    // a corresponding call to |ReleaseBytes| before calling any other non-const
-    // method.
-    const uint8_t* AcquireBytes() const;
+  // Returns a pointer to a buffer containing the current digest value.  This
+  // will always have |kLength| bytes.  Each call to |AcquireBytes| must have
+  // a corresponding call to |ReleaseBytes| before calling any other non-const
+  // method.
+  const uint8_t* AcquireBytes() const;
 
-    // Indicates to this object that the caller is finished using the pointer
-    // returned by |AcquireBytes|.  It is an error to call any other non-const
-    // method after |AcquireBytes| without first calling |ReleaseBytes|.
-    void ReleaseBytes() const;
+  // Indicates to this object that the caller is finished using the pointer
+  // returned by |AcquireBytes|.  It is an error to call any other non-const
+  // method after |AcquireBytes| without first calling |ReleaseBytes|.
+  void ReleaseBytes() const;
 
-    // Equality operators.  Those that take |const uint8_t *| arguments will
-    // read |kLength| bytes; callers MUST ensure there are sufficient bytes
-    // present.
-    bool operator==(const Digest& rhs) const;
-    bool operator!=(const Digest& rhs) const;
-    bool operator==(const uint8_t* rhs) const;
-    bool operator!=(const uint8_t* rhs) const;
+  // Equality operators.  Those that take |const uint8_t *| arguments will
+  // read |kLength| bytes; callers MUST ensure there are sufficient bytes
+  // present.
+  bool operator==(const Digest& rhs) const;
+  bool operator!=(const Digest& rhs) const;
+  bool operator==(const uint8_t* rhs) const;
+  bool operator!=(const uint8_t* rhs) const;
 
-    // Check to see if this digest is currently valid.  A digest is defined as
-    // valid when it has a valid crypto context; so any time after a successful
-    // call to Init, but before the call to Final.  The following operations
-    // require a valid digest in order to execute.
-    //
-    // ++ Update
-    // ++ Final
-    //
-    bool is_valid() const { return ctx_ != nullptr; }
+  // Check to see if this digest is currently valid.  A digest is defined as
+  // valid when it has a valid crypto context; so any time after a successful
+  // call to Init, but before the call to Final.  The following operations
+  // require a valid digest in order to execute.
+  //
+  // ++ Update
+  // ++ Final
+  //
+  bool is_valid() const { return ctx_ != nullptr; }
 
-private:
-    // Opaque crypto implementation context.
-    struct Context;
+ private:
+  // Opaque crypto implementation context.
+  struct Context;
 
-    // Opaque pointer to the crypto implementation context.
-    fbl::unique_ptr<Context> ctx_;
-    // The raw bytes of the current digest.  This is filled in either by the
-    // assignment operators or the Parse and Final methods.
-    uint8_t bytes_[kLength];
-    // The number of outstanding calls to |AcquireBytes| without matching calls
-    // to |ReleaseBytes|.
-    mutable size_t ref_count_ = 0;
+  // Opaque pointer to the crypto implementation context.
+  fbl::unique_ptr<Context> ctx_;
+  // The raw bytes of the current digest.  This is filled in either by the
+  // assignment operators or the Parse and Final methods.
+  uint8_t bytes_[kLength];
+  // The number of outstanding calls to |AcquireBytes| without matching calls
+  // to |ReleaseBytes|.
+  mutable size_t ref_count_ = 0;
 };
 
-} // namespace digest
-#endif // __cplusplus
+}  // namespace digest
+#endif  // __cplusplus
 
 __BEGIN_CDECLS
 typedef struct digest_t digest_t;

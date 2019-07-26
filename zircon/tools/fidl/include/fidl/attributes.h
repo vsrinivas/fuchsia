@@ -15,8 +15,7 @@ namespace fidl {
 
 class AttributesBuilder {
  public:
-  AttributesBuilder(ErrorReporter* error_reporter)
-      : error_reporter_(error_reporter) {}
+  AttributesBuilder(ErrorReporter* error_reporter) : error_reporter_(error_reporter) {}
 
   AttributesBuilder(ErrorReporter* error_reporter, std::vector<raw::Attribute> attributes)
       : error_reporter_(error_reporter), attributes_(std::move(attributes)) {

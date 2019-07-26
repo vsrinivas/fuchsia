@@ -49,12 +49,9 @@ const char kUsageString[] =
     " 2 - ERROR\n"
     " 3 - FATAL\n";
 
-static void PrintUsageString(FILE* f) {
-  fputs(kUsageString, f);
-}
+static void PrintUsageString(FILE* f) { fputs(kUsageString, f); }
 
-static bool GetSessionSpecFromArgv(const fxl::CommandLine& cl,
-                                   cpuperf::SessionSpec* out_spec) {
+static bool GetSessionSpecFromArgv(const fxl::CommandLine& cl, cpuperf::SessionSpec* out_spec) {
   std::string arg;
 
   if (cl.GetOptionValue("spec-file", &arg)) {
@@ -83,20 +80,17 @@ static void DescribeEvent(FILE* f, const perfmon::EventDetails* details) {
   }
 }
 
-static void DescribeEvent(FILE* f,
-                          perfmon::ModelEventManager* model_event_manager,
+static void DescribeEvent(FILE* f, perfmon::ModelEventManager* model_event_manager,
                           const std::string& full_name) {
   std::vector<std::string> parts =
-    fxl::SplitStringCopy(full_name, ":", fxl::kTrimWhitespace,
-                         fxl::kSplitWantAll);
+      fxl::SplitStringCopy(full_name, ":", fxl::kTrimWhitespace, fxl::kSplitWantAll);
   if (parts.size() != 2) {
     FXL_LOG(ERROR) << "Usage: cpuperf --describe-event=group:name";
     exit(EXIT_FAILURE);
   }
 
   const perfmon::EventDetails* details;
-  if (!model_event_manager->LookupEventByName(
-        parts[0].c_str(), parts[1].c_str(), &details)) {
+  if (!model_event_manager->LookupEventByName(parts[0].c_str(), parts[1].c_str(), &details)) {
     FXL_LOG(ERROR) << "Unknown event: " << full_name;
     exit(EXIT_FAILURE);
   }
@@ -104,17 +98,14 @@ static void DescribeEvent(FILE* f,
   DescribeEvent(f, details);
 }
 
-static void PrintEventList(FILE* f,
-                           perfmon::ModelEventManager* model_event_manager) {
-  perfmon::ModelEventManager::GroupTable groups =
-    model_event_manager->GetAllGroups();
+static void PrintEventList(FILE* f, perfmon::ModelEventManager* model_event_manager) {
+  perfmon::ModelEventManager::GroupTable groups = model_event_manager->GetAllGroups();
 
   for (auto& group : groups) {
     std::sort(group.events.begin(), group.events.end(),
-              [] (const perfmon::EventDetails*& a,
-                  const perfmon::EventDetails*& b) {
-      return strcmp(a->name, b->name) < 0;
-    });
+              [](const perfmon::EventDetails*& a, const perfmon::EventDetails*& b) {
+                return strcmp(a->name, b->name) < 0;
+              });
     fprintf(f, "\nGroup %s\n", group.group_name.c_str());
     for (const auto& event : group.events) {
       DescribeEvent(f, event);
@@ -137,8 +128,7 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
       return;
     }
 
-    auto buffer = reinterpret_cast<const char*>(
-        reader->GetCurrentTraceBuffer());
+    auto buffer = reinterpret_cast<const char*>(reader->GetCurrentTraceBuffer());
     FXL_DCHECK(buffer);
     size_t size = reader->GetCurrentTraceSize();
     FXL_DCHECK(size > 0);
@@ -152,8 +142,7 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
 
   // Print a summary of this run.
   // In tally mode this is noise, but if verbosity is on sure.
-  if (controller->config().GetMode() != perfmon::CollectionMode::kTally ||
-      FXL_VLOG_IS_ON(1)) {
+  if (controller->config().GetMode() != perfmon::CollectionMode::kTally || FXL_VLOG_IS_ON(1)) {
     FXL_VLOG(1) << "Iteration " << iter << " summary";
     for (size_t trace = 0; trace < result_spec.num_traces; ++trace) {
       std::string path = result_spec.GetTraceFilePath(iter, trace);
@@ -170,19 +159,15 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
 static bool RunSession(const cpuperf::SessionSpec& spec,
                        const perfmon::ModelEventManager* model_event_manager,
                        perfmon::Controller* controller) {
-  cpuperf::SessionResultSpec result_spec{spec.config_name,
-                                         spec.model_name,
-                                         spec.num_iterations,
-                                         controller->num_traces(),
-                                         spec.output_path_prefix};
+  cpuperf::SessionResultSpec result_spec{spec.config_name, spec.model_name, spec.num_iterations,
+                                         controller->num_traces(), spec.output_path_prefix};
 
   for (size_t iter = 0; iter < spec.num_iterations; ++iter) {
     if (!controller->Start()) {
       return false;
     }
 
-    zx::nanosleep(zx::deadline_after(zx::duration(
-        spec.duration.ToNanoseconds())));
+    zx::nanosleep(zx::deadline_after(zx::duration(spec.duration.ToNanoseconds())));
 
     controller->Stop();
 
@@ -192,14 +177,12 @@ static bool RunSession(const cpuperf::SessionSpec& spec,
     }
 
     if (controller->config().GetMode() == perfmon::CollectionMode::kTally) {
-      PrintTallyResults(stdout, spec, result_spec, model_event_manager,
-                        controller);
+      PrintTallyResults(stdout, spec, result_spec, model_event_manager, controller);
     }
   }
 
   if (result_spec.save_results()) {
-    if (!cpuperf::WriteSessionResultSpec(spec.session_result_spec_path,
-                                         result_spec)) {
+    if (!cpuperf::WriteSessionResultSpec(spec.session_result_spec_path, result_spec)) {
       return false;
     }
   }
@@ -207,11 +190,9 @@ static bool RunSession(const cpuperf::SessionSpec& spec,
   return true;
 }
 
-static bool GetBufferSizeInPages(uint32_t size_in_mb,
-                                 uint32_t* out_num_pages) {
+static bool GetBufferSizeInPages(uint32_t size_in_mb, uint32_t* out_num_pages) {
   const uint64_t kPagesPerMb = 1024 * 1024 / perfmon::Controller::kPageSize;
-  const uint64_t kMaxSizeInMb =
-      std::numeric_limits<uint32_t>::max() / kPagesPerMb;
+  const uint64_t kMaxSizeInMb = std::numeric_limits<uint32_t>::max() / kPagesPerMb;
   if (size_in_mb > kMaxSizeInMb) {
     return false;
   }
@@ -229,12 +210,11 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
-  if (cl.HasOption("list-events", nullptr) ||
-      cl.HasOption("describe-event", nullptr)) {
+  if (cl.HasOption("list-events", nullptr) || cl.HasOption("describe-event", nullptr)) {
     // For list-events and describe-event, just support the default model
     // for now.
     std::unique_ptr<perfmon::ModelEventManager> model_event_manager =
-      perfmon::ModelEventManager::Create(perfmon::GetDefaultModelName());
+        perfmon::ModelEventManager::Create(perfmon::GetDefaultModelName());
     FXL_CHECK(model_event_manager);
 
     if (cl.HasOption("list-events", nullptr)) {
@@ -271,18 +251,15 @@ int main(int argc, char* argv[]) {
   }
 
   std::unique_ptr<perfmon::Controller> controller;
-  if (!perfmon::Controller::Create(buffer_size_in_pages,
-                                   spec.perfmon_config,
-                                   &controller)) {
+  if (!perfmon::Controller::Create(buffer_size_in_pages, spec.perfmon_config, &controller)) {
     return EXIT_FAILURE;
   }
 
   FXL_LOG(INFO) << "cpuperf control program starting";
-  FXL_LOG(INFO) << spec.num_iterations << " iteration(s), "
-                << spec.duration.ToSeconds() << " second(s) per iteration";
+  FXL_LOG(INFO) << spec.num_iterations << " iteration(s), " << spec.duration.ToSeconds()
+                << " second(s) per iteration";
 
-  bool success =
-    RunSession(spec, spec.model_event_manager.get(), controller.get());
+  bool success = RunSession(spec, spec.model_event_manager.get(), controller.get());
 
   if (!success) {
     FXL_LOG(INFO) << "cpuperf exiting with error";

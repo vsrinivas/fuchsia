@@ -19,15 +19,12 @@ Image* Context::CreateImage(uint32_t width, uint32_t height) {
 }
 
 Image* Context::CreateScalableImage(uint32_t width, uint32_t height) {
-  images_.push_back(
-      std::unique_ptr<Image>(new Image(runner_, width, height, true)));
+  images_.push_back(std::unique_ptr<Image>(new Image(runner_, width, height, true)));
   return images_[images_.size() - 1].get();
 }
 
-Image* Context::CreateAlphaImage(uint32_t width, uint32_t height, uint8_t alpha,
-                                 bool premultiply) {
-  images_.push_back(std::unique_ptr<Image>(
-      new Image(runner_, width, height, alpha, premultiply)));
+Image* Context::CreateAlphaImage(uint32_t width, uint32_t height, uint8_t alpha, bool premultiply) {
+  images_.push_back(std::unique_ptr<Image>(new Image(runner_, width, height, alpha, premultiply)));
   return images_[images_.size() - 1].get();
 }
 

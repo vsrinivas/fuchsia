@@ -13,19 +13,15 @@ class Dwc2Device;
 using Dwc2DeviceType = ddk::Device<Dwc2Device>;
 
 // Device for binding the DWC2 driver.
-class Dwc2Device : public Dwc2DeviceType,
-                   public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PHY> {
-public:
-    explicit Dwc2Device(zx_device_t* parent)
-        : Dwc2DeviceType(parent) {}
+class Dwc2Device : public Dwc2DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PHY> {
+ public:
+  explicit Dwc2Device(zx_device_t* parent) : Dwc2DeviceType(parent) {}
 
-    // Device protocol implementation.
-    void DdkRelease() {
-        delete this;
-    }
+  // Device protocol implementation.
+  void DdkRelease() { delete this; }
 
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Dwc2Device);
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Dwc2Device);
 };
 
-} // namespace as370_usb_phy
+}  // namespace as370_usb_phy

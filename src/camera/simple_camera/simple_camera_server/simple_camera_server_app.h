@@ -16,9 +16,8 @@ namespace simple_camera {
 class SimpleCameraApp : public fuchsia::simplecamera::SimpleCamera {
  public:
   SimpleCameraApp();
-  virtual void ConnectToCamera(
-      uint32_t camera_id,
-      fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
+  virtual void ConnectToCamera(uint32_t camera_id,
+                               fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
 
  private:
   SimpleCameraApp(const SimpleCameraApp&) = delete;

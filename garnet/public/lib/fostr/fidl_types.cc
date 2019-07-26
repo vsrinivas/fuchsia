@@ -22,10 +22,8 @@ std::ostream& operator<<(std::ostream& os, const VectorPtr<uint8_t>& value) {
     return os << fostr::HexDump(value.get());
   }
 
-  return os << fostr::HexDump(value.get().data(),
-                              fostr::internal::kTruncatedDumpSize, 0)
-            << fostr::NewLine << "(truncated, " << value.get().size()
-            << " bytes total)";
+  return os << fostr::HexDump(value.get().data(), fostr::internal::kTruncatedDumpSize, 0)
+            << fostr::NewLine << "(truncated, " << value.get().size() << " bytes total)";
 }
 
 template <>
@@ -42,10 +40,8 @@ std::ostream& operator<<(std::ostream& os, const VectorPtr<int8_t>& value) {
     return os << fostr::HexDump(value.get().data(), value.get().size(), 0);
   }
 
-  return os << fostr::HexDump(value.get().data(),
-                              fostr::internal::kTruncatedDumpSize, 0)
-            << fostr::NewLine << "(truncated, " << value.get().size()
-            << " bytes total)";
+  return os << fostr::HexDump(value.get().data(), fostr::internal::kTruncatedDumpSize, 0)
+            << fostr::NewLine << "(truncated, " << value.get().size() << " bytes total)";
 }
 
 }  // namespace fidl

@@ -31,11 +31,10 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
   }
 
   void SendViewPropertiesChangedEvent() {
-    fuchsia::ui::gfx::ViewPropertiesChangedEvent view_properties_changed_event =
-        {
-            .view_id = 0,
-            .properties = kViewProperties,
-        };
+    fuchsia::ui::gfx::ViewPropertiesChangedEvent view_properties_changed_event = {
+        .view_id = 0,
+        .properties = kViewProperties,
+    };
     fuchsia::ui::gfx::Event event;
     event.set_view_properties_changed(view_properties_changed_event);
 
@@ -65,15 +64,13 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
 
   void CreateSession(
       fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
-      override {
+      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override {
     mock_session_.Bind(std::move(session), listener.Bind());
   }
 
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler(
       async_dispatcher_t* dispatcher = nullptr) {
-    return [this, dispatcher](
-               fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
+    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
       bindings_.AddBinding(this, std::move(request), dispatcher);
     };
   }
@@ -90,12 +87,11 @@ class ImagePipeViewTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
     fake_scenic_ = std::make_unique<FakeScenic>();
-    provider_.service_directory_provider()->AddService(
-        fake_scenic_->GetHandler());
+    provider_.service_directory_provider()->AddService(fake_scenic_->GetHandler());
   }
 
-  static void OnViewPropertiesChanged(
-      ImagePipeView& view, fuchsia::ui::gfx::ViewProperties view_properties) {
+  static void OnViewPropertiesChanged(ImagePipeView& view,
+                                      fuchsia::ui::gfx::ViewProperties view_properties) {
     view.OnViewPropertiesChanged(std::move(view_properties));
   }
 
@@ -107,8 +103,7 @@ class ImagePipeViewTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(ImagePipeViewTest, Initialize) {
-  ImagePipeView::ResizeCallback resize_callback = [this](float width,
-                                                         float height) {
+  ImagePipeView::ResizeCallback resize_callback = [this](float width, float height) {
     width_ = width;
     height_ = height;
   };
@@ -116,9 +111,9 @@ TEST_F(ImagePipeViewTest, Initialize) {
   zx::eventpair view_token_0, view_token_1;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_token_0, &view_token_1));
 
-  auto view = ImagePipeView::Create(
-      provider_.context(), scenic::ToViewToken(std::move(view_token_0)),
-      std::move(resize_callback));
+  auto view =
+      ImagePipeView::Create(provider_.context(), scenic::ToViewToken(std::move(view_token_0)),
+                            std::move(resize_callback));
   ASSERT_TRUE(view);
 
   EXPECT_EQ(0.0, width_);
@@ -126,10 +121,6 @@ TEST_F(ImagePipeViewTest, Initialize) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(
-      kViewProperties.bounding_box.max.x - kViewProperties.bounding_box.min.x,
-      width_);
-  EXPECT_EQ(
-      kViewProperties.bounding_box.max.y - kViewProperties.bounding_box.min.y,
-      height_);
+  EXPECT_EQ(kViewProperties.bounding_box.max.x - kViewProperties.bounding_box.min.x, width_);
+  EXPECT_EQ(kViewProperties.bounding_box.max.y - kViewProperties.bounding_box.min.y, height_);
 }

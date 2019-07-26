@@ -25,8 +25,7 @@ namespace {
 class JSONParserTest : public ::testing::Test {
  protected:
   // ExpectFailedParse() will replace '$0' with the JSON filename, if present.
-  void ExpectFailedParse(JSONParser* parser, const std::string& json,
-                         std::string expected_error) {
+  void ExpectFailedParse(JSONParser* parser, const std::string& json, std::string expected_error) {
     props_found_ = 0;
     const std::string json_file = NewJSONFile(json);
     std::string error;
@@ -35,8 +34,7 @@ class JSONParserTest : public ::testing::Test {
     EXPECT_EQ(0, props_found_);
   }
 
-  bool ParseFromFile(JSONParser* parser, const std::string& file,
-                     std::string* error) {
+  bool ParseFromFile(JSONParser* parser, const std::string& file, std::string* error) {
     rapidjson::Document document = parser->ParseFromFile(file);
     if (!parser->HasError()) {
       InterpretDocument(parser, std::move(document));
@@ -45,8 +43,7 @@ class JSONParserTest : public ::testing::Test {
     return !parser->HasError();
   }
 
-  bool ParseFromFileAt(JSONParser* parser, int dirfd, const std::string& file,
-                       std::string* error) {
+  bool ParseFromFileAt(JSONParser* parser, int dirfd, const std::string& file, std::string* error) {
     rapidjson::Document document = parser->ParseFromFileAt(dirfd, file);
     if (!parser->HasError()) {
       InterpretDocument(parser, std::move(document));
@@ -55,11 +52,9 @@ class JSONParserTest : public ::testing::Test {
     return !parser->HasError();
   }
 
-  bool ParseFromDirectory(JSONParser* parser, const std::string& dir,
-                          std::string* error) {
+  bool ParseFromDirectory(JSONParser* parser, const std::string& dir, std::string* error) {
     fit::function<void(rapidjson::Document)> cb =
-        std::bind(&JSONParserTest::InterpretDocument, this, parser,
-                  std::placeholders::_1);
+        std::bind(&JSONParserTest::InterpretDocument, this, parser, std::placeholders::_1);
     parser->ParseFromDirectory(dir, std::move(cb));
     *error = parser->error_str();
     return !parser->HasError();
@@ -73,8 +68,7 @@ class JSONParserTest : public ::testing::Test {
     return json_file;
   }
 
-  std::string NewJSONFileInDir(const std::string& dir,
-                               const std::string& json) {
+  std::string NewJSONFileInDir(const std::string& dir, const std::string& json) {
     const std::string json_file =
         fxl::Concatenate({dir, "/json_file", std::to_string(unique_id_++)});
     if (!files::WriteFile(json_file, json.data(), json.size())) {
@@ -116,8 +110,7 @@ class JSONParserTest : public ::testing::Test {
 };
 
 TEST_F(JSONParserTest, ReadInvalidFile) {
-  const std::string invalid_path =
-      fxl::Substitute("$0/does_not_exist", tmp_dir_.path());
+  const std::string invalid_path = fxl::Substitute("$0/does_not_exist", tmp_dir_.path());
   std::string error;
   JSONParser parser;
   EXPECT_FALSE(ParseFromFile(&parser, invalid_path, &error));
@@ -144,8 +137,7 @@ TEST_F(JSONParserTest, ParseWithErrors) {
   "prop2": "wrong_type"
   })JSON";
     JSONParser parser;
-    ExpectFailedParse(&parser, json,
-                      "$0: prop1 has wrong type\n$0: prop2 has wrong type");
+    ExpectFailedParse(&parser, json, "$0: prop1 has wrong type\n$0: prop2 has wrong type");
   }
 }
 
@@ -244,9 +236,7 @@ TEST_F(JSONParserTest, ParseFromDirectoryWithErrors) {
   std::string error;
   JSONParser parser;
   EXPECT_FALSE(ParseFromDirectory(&parser, dir, &error));
-  EXPECT_EQ(error,
-            fxl::Concatenate(
-                {json_file1, ":1:2: Missing a name for object member."}));
+  EXPECT_EQ(error, fxl::Concatenate({json_file1, ":1:2: Missing a name for object member."}));
   EXPECT_EQ(1, props_found_);
 }
 

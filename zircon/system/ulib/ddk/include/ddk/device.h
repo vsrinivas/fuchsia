@@ -32,15 +32,15 @@ typedef struct fidl_txn fidl_txn_t;
 
 // TODO: temporary flags used by devcoord to communicate
 // with the system bus device.
-#define DEVICE_SUSPEND_FLAG_REBOOT      0xdcdc0100
-#define DEVICE_SUSPEND_FLAG_POWEROFF    0xdcdc0200
-#define DEVICE_SUSPEND_FLAG_MEXEC       0xdcdc0300
+#define DEVICE_SUSPEND_FLAG_REBOOT 0xdcdc0100
+#define DEVICE_SUSPEND_FLAG_POWEROFF 0xdcdc0200
+#define DEVICE_SUSPEND_FLAG_MEXEC 0xdcdc0300
 #define DEVICE_SUSPEND_FLAG_SUSPEND_RAM 0xdcdc0400
-#define DEVICE_SUSPEND_REASON_MASK      0xffffff00
+#define DEVICE_SUSPEND_REASON_MASK 0xffffff00
 
 // reboot modifiers
-#define DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER   (DEVICE_SUSPEND_FLAG_REBOOT | 0x01)
-#define DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY     (DEVICE_SUSPEND_FLAG_REBOOT | 0x02)
+#define DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER (DEVICE_SUSPEND_FLAG_REBOOT | 0x01)
+#define DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY (DEVICE_SUSPEND_FLAG_REBOOT | 0x02)
 
 //@doc(docs/ddk/device-ops.md)
 
@@ -54,154 +54,151 @@ typedef struct fidl_txn fidl_txn_t;
 // driver does not provide its own implementation.
 
 typedef struct zx_protocol_device {
-    //@ ## version
-    // This field must be set to `DEVICE_OPS_VERSION`
-    uint64_t version;
+  //@ ## version
+  // This field must be set to `DEVICE_OPS_VERSION`
+  uint64_t version;
 
-    zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
+  zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
 
-    //@ ## open
-    // The open hook is called when a device is opened via the device filesystem,
-    // or when an existing open connection to a device is cloned (for example,
-    // when a device fd is shared with another process).  The default open hook,
-    // if a driver does not implement one, simply returns **ZX_OK**.
-    //
-    // Drivers may want to implement open to disallow simultaneous access (by
-    // failing if the device is already open), or to return a new **device instance**
-    // instead.
-    //
-    // The optional *dev_out* parameter allows a device to create and return a
-    // **device instance** child device, which can be used to manage per-instance
-    // state instead of all client connections interacting with the device itself.
-    // A child created for return as an instance **must** be created with the
-    // **DEVICE_ADD_INSTANCE** flag set in the arguments to **device_add()**.
-    //
-    zx_status_t (*open)(void* ctx, zx_device_t** dev_out, uint32_t flags);
+  //@ ## open
+  // The open hook is called when a device is opened via the device filesystem,
+  // or when an existing open connection to a device is cloned (for example,
+  // when a device fd is shared with another process).  The default open hook,
+  // if a driver does not implement one, simply returns **ZX_OK**.
+  //
+  // Drivers may want to implement open to disallow simultaneous access (by
+  // failing if the device is already open), or to return a new **device instance**
+  // instead.
+  //
+  // The optional *dev_out* parameter allows a device to create and return a
+  // **device instance** child device, which can be used to manage per-instance
+  // state instead of all client connections interacting with the device itself.
+  // A child created for return as an instance **must** be created with the
+  // **DEVICE_ADD_INSTANCE** flag set in the arguments to **device_add()**.
+  //
+  zx_status_t (*open)(void* ctx, zx_device_t** dev_out, uint32_t flags);
 
-    //@ ## close
-    // The close hook is called when a connection to a device is closed. These
-    // calls will balance the calls to open.
-    //
-    // **Note:** If open returns a **device instance**, the balancing close hook
-    // that is called is the close hook on the **instance**, not the parent.
-    //
-    // The default close implementation returns **ZX_OK**.
-    zx_status_t (*close)(void* ctx, uint32_t flags);
+  //@ ## close
+  // The close hook is called when a connection to a device is closed. These
+  // calls will balance the calls to open.
+  //
+  // **Note:** If open returns a **device instance**, the balancing close hook
+  // that is called is the close hook on the **instance**, not the parent.
+  //
+  // The default close implementation returns **ZX_OK**.
+  zx_status_t (*close)(void* ctx, uint32_t flags);
 
-    //@ ## unbind
-    // The unbind hook is called when the parent of this device is being removed (due
-    // to hot unplug, fatal error, etc).  At the point unbind is called, it is not
-    // possible for further open calls to occur, but io operations, etc
-    // may continue until those client connections are closed.
-    //
-    // The driver should avoid further method calls to its parent device or any
-    // protocols obtained from that device, and expect that any further such calls
-    // will return with an error.
-    //
-    // The driver should adjust its state to encourage its client connections to close
-    // (cause IO to error out, etc), and call **device_remove()** on itself when ready.
-    //
-    // The driver must continue to handle all device hooks until the **release** hook
-    // is invoked.
-    //
-    void (*unbind)(void* ctx);
+  //@ ## unbind
+  // The unbind hook is called when the parent of this device is being removed (due
+  // to hot unplug, fatal error, etc).  At the point unbind is called, it is not
+  // possible for further open calls to occur, but io operations, etc
+  // may continue until those client connections are closed.
+  //
+  // The driver should avoid further method calls to its parent device or any
+  // protocols obtained from that device, and expect that any further such calls
+  // will return with an error.
+  //
+  // The driver should adjust its state to encourage its client connections to close
+  // (cause IO to error out, etc), and call **device_remove()** on itself when ready.
+  //
+  // The driver must continue to handle all device hooks until the **release** hook
+  // is invoked.
+  //
+  void (*unbind)(void* ctx);
 
-    //@ ## release
-    // The release hook is called after this device has been removed by **device_remove()**
-    // and all open client connections have been closed, and all child devices have been
-    // removed and released.
-    //
-    // At the point release is invoked, the driver will not receive any further calls
-    // and absolutely must not use the underlying **zx_device_t** or any protocols obtained
-    // from that device once this method returns.
-    //
-    // The driver must free all memory and release all resources related to this device
-    // before returning.
-    void (*release)(void* ctx);
+  //@ ## release
+  // The release hook is called after this device has been removed by **device_remove()**
+  // and all open client connections have been closed, and all child devices have been
+  // removed and released.
+  //
+  // At the point release is invoked, the driver will not receive any further calls
+  // and absolutely must not use the underlying **zx_device_t** or any protocols obtained
+  // from that device once this method returns.
+  //
+  // The driver must free all memory and release all resources related to this device
+  // before returning.
+  void (*release)(void* ctx);
 
-    //@ ## read
-    // The read hook is an attempt to do a non-blocking read operation.
-    //
-    // On success *actual* must be set to the number of bytes read (which may be less
-    // than the number requested in *count*), and return **ZX_OK**.
-    //
-    // A successful read of 0 bytes is generally treated as an End Of File notification
-    // by clients.
-    //
-    // If no data is available now, **ZX_ERR_SHOULD_WAIT** must be returned and when
-    // data becomes available `device_state_set(DEVICE_STATE_READABLE)` may be used to
-    // signal waiting clients.
-    //
-    // This hook **must not block**.
-    //
-    // The default read implementation returns **ZX_ERR_NOT_SUPPORTED**.
-    //
-    zx_status_t (*read)(void* ctx, void* buf, size_t count,
-                        zx_off_t off, size_t* actual);
+  //@ ## read
+  // The read hook is an attempt to do a non-blocking read operation.
+  //
+  // On success *actual* must be set to the number of bytes read (which may be less
+  // than the number requested in *count*), and return **ZX_OK**.
+  //
+  // A successful read of 0 bytes is generally treated as an End Of File notification
+  // by clients.
+  //
+  // If no data is available now, **ZX_ERR_SHOULD_WAIT** must be returned and when
+  // data becomes available `device_state_set(DEVICE_STATE_READABLE)` may be used to
+  // signal waiting clients.
+  //
+  // This hook **must not block**.
+  //
+  // The default read implementation returns **ZX_ERR_NOT_SUPPORTED**.
+  //
+  zx_status_t (*read)(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual);
 
-    //@ ## write
-    // The write hook is an attempt to do a non-blocking write operation.
-    //
-    // On success *actual* must be set to the number of bytes written (which may be
-    // less than the number requested in *count*), and **ZX_OK** should be returned.
-    //
-    // If it is not possible to write data at present **ZX_ERR_SHOULD_WAIT** must
-    // be returned and when it is again possible to write,
-    // `device_state_set(DEVICE_STATE_WRITABLE)` may be used to signal waiting clients.
-    //
-    // This hook **must not block**.
-    //
-    // The default write implementation returns **ZX_ERR_NOT_SUPPORTED**.
-    //
-    zx_status_t (*write)(void* ctx, const void* buf, size_t count,
-                         zx_off_t off, size_t* actual);
+  //@ ## write
+  // The write hook is an attempt to do a non-blocking write operation.
+  //
+  // On success *actual* must be set to the number of bytes written (which may be
+  // less than the number requested in *count*), and **ZX_OK** should be returned.
+  //
+  // If it is not possible to write data at present **ZX_ERR_SHOULD_WAIT** must
+  // be returned and when it is again possible to write,
+  // `device_state_set(DEVICE_STATE_WRITABLE)` may be used to signal waiting clients.
+  //
+  // This hook **must not block**.
+  //
+  // The default write implementation returns **ZX_ERR_NOT_SUPPORTED**.
+  //
+  zx_status_t (*write)(void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual);
 
-    //@ ## get_size
-    // If the device is seekable, the get_size hook should return the size of the device.
-    //
-    // This is the offset at which no more reads or writes are possible.
-    //
-    // The default implementation returns 0.
-    zx_off_t (*get_size)(void* ctx);
+  //@ ## get_size
+  // If the device is seekable, the get_size hook should return the size of the device.
+  //
+  // This is the offset at which no more reads or writes are possible.
+  //
+  // The default implementation returns 0.
+  zx_off_t (*get_size)(void* ctx);
 
-    // Stops the device and puts it in a low power mode
-    zx_status_t (*suspend)(void* ctx, uint32_t flags);
+  // Stops the device and puts it in a low power mode
+  zx_status_t (*suspend)(void* ctx, uint32_t flags);
 
-    // Restarts the device after being suspended
-    zx_status_t (*resume)(void* ctx, uint32_t flags);
+  // Restarts the device after being suspended
+  zx_status_t (*resume)(void* ctx, uint32_t flags);
 
-    //@ ## rxrpc
-    // Only called for bus devices.
-    // When the "shadow" of a busdev sends an rpc message, the
-    // device that is shadowing is notified by the rxrpc op and
-    // should attempt to read and respond to a single message on
-    // the provided channel.
-    //
-    // Any error return from this method will result in the channel
-    // being closed and the remote "shadow" losing its connection.
-    //
-    // This method is called with ZX_HANDLE_INVALID for the channel
-    // when a new client connects -- at which point any state from
-    // the previous client should be torn down.
-    zx_status_t (*rxrpc)(void* ctx, zx_handle_t channel);
+  //@ ## rxrpc
+  // Only called for bus devices.
+  // When the "shadow" of a busdev sends an rpc message, the
+  // device that is shadowing is notified by the rxrpc op and
+  // should attempt to read and respond to a single message on
+  // the provided channel.
+  //
+  // Any error return from this method will result in the channel
+  // being closed and the remote "shadow" losing its connection.
+  //
+  // This method is called with ZX_HANDLE_INVALID for the channel
+  // when a new client connects -- at which point any state from
+  // the previous client should be torn down.
+  zx_status_t (*rxrpc)(void* ctx, zx_handle_t channel);
 
-    //@ ## message
-    // Process a FIDL rpc message.  This is used to handle class or
-    // device specific messaging.  fuchsia.io.{Node,File,Device} are
-    // handles by the devhost itself.
-    //
-    // The entire message becomes the responsibility of the driver,
-    // including the handles.
-    //
-    // The txn provided to respond to the message is only valid for
-    // the duration of the message() call.  It must not be cached
-    // and used later.
-    //
-    // If this method returns anything other than ZX_OK, the underlying
-    // connection is closed.
-    zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
+  //@ ## message
+  // Process a FIDL rpc message.  This is used to handle class or
+  // device specific messaging.  fuchsia.io.{Node,File,Device} are
+  // handles by the devhost itself.
+  //
+  // The entire message becomes the responsibility of the driver,
+  // including the handles.
+  //
+  // The txn provided to respond to the message is only valid for
+  // the duration of the message() call.  It must not be cached
+  // and used later.
+  //
+  // If this method returns anything other than ZX_OK, the underlying
+  // connection is closed.
+  zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 } zx_protocol_device_t;
-
 
 // Device Accessors
 const char* device_get_name(zx_device_t* dev);
@@ -215,13 +212,11 @@ zx_device_t* device_get_parent(zx_device_t* dev);
 // } protocol_xyz_t;
 zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void* protocol);
 
-
 // Direct Device Ops Functions
-zx_status_t device_read(zx_device_t* dev, void* buf, size_t count,
-                        zx_off_t off, size_t* actual);
+zx_status_t device_read(zx_device_t* dev, void* buf, size_t count, zx_off_t off, size_t* actual);
 
-zx_status_t device_write(zx_device_t* dev, const void* buf, size_t count,
-                         zx_off_t off, size_t* actual);
+zx_status_t device_write(zx_device_t* dev, const void* buf, size_t count, zx_off_t off,
+                         size_t* actual);
 
 zx_off_t device_get_size(zx_device_t* dev);
 
@@ -239,7 +234,6 @@ zx_status_t device_get_metadata_size(zx_device_t* dev, uint32_t type, size_t* ou
 // Adds metadata to a specific device.
 zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* data, size_t length);
 
-
 // Adds metadata to be provided to future devices matching the specified topo path.
 // Drivers may use this to publish metadata to a driver with a topo path that matches
 // itself or one of its children. Only drivers running in the "sys" devhost may publish
@@ -254,19 +248,19 @@ zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t
 //{
 #define DEV_STATE_READABLE ZX_USER_SIGNAL_0
 #define DEV_STATE_WRITABLE ZX_USER_SIGNAL_2
-#define DEV_STATE_ERROR    ZX_USER_SIGNAL_3
-#define DEV_STATE_HANGUP   ZX_USER_SIGNAL_4
-#define DEV_STATE_OOB      ZX_USER_SIGNAL_1
+#define DEV_STATE_ERROR ZX_USER_SIGNAL_3
+#define DEV_STATE_HANGUP ZX_USER_SIGNAL_4
+#define DEV_STATE_OOB ZX_USER_SIGNAL_1
 //}
 
 void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag);
 
 //@ #### device_state_set
 static inline void device_state_set(zx_device_t* dev, zx_signals_t stateflag) {
-    device_state_clr_set(dev, 0, stateflag);
+  device_state_clr_set(dev, 0, stateflag);
 }
 static inline void device_state_clr(zx_device_t* dev, zx_signals_t stateflag) {
-    device_state_clr_set(dev, stateflag, 0);
+  device_state_clr_set(dev, stateflag, 0);
 }
 
 __END_CDECLS

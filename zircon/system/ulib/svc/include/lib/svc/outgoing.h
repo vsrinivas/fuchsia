@@ -12,26 +12,26 @@
 namespace svc {
 
 class Outgoing {
-public:
-    explicit Outgoing(async_dispatcher_t* dispatcher);
-    ~Outgoing();
+ public:
+  explicit Outgoing(async_dispatcher_t* dispatcher);
+  ~Outgoing();
 
-    const fbl::RefPtr<fs::PseudoDir>& root_dir() const { return root_dir_; }
-    const fbl::RefPtr<fs::PseudoDir>& svc_dir() const { return svc_dir_; }
+  const fbl::RefPtr<fs::PseudoDir>& root_dir() const { return root_dir_; }
+  const fbl::RefPtr<fs::PseudoDir>& svc_dir() const { return svc_dir_; }
 
-    // Start serving the root directory on the given channel.
-    zx_status_t Serve(zx::channel dir_request);
+  // Start serving the root directory on the given channel.
+  zx_status_t Serve(zx::channel dir_request);
 
-    // Start serving the root directory on the channel provided to this process at
-    // startup as PA_DIRECTORY_REQUEST.
-    //
-    // Takes ownership of the PA_DIRECTORY_REQUEST startup handle.
-    zx_status_t ServeFromStartupInfo();
+  // Start serving the root directory on the channel provided to this process at
+  // startup as PA_DIRECTORY_REQUEST.
+  //
+  // Takes ownership of the PA_DIRECTORY_REQUEST startup handle.
+  zx_status_t ServeFromStartupInfo();
 
-private:
-    fs::SynchronousVfs vfs_;
-    fbl::RefPtr<fs::PseudoDir> root_dir_;
-    fbl::RefPtr<fs::PseudoDir> svc_dir_;
+ private:
+  fs::SynchronousVfs vfs_;
+  fbl::RefPtr<fs::PseudoDir> root_dir_;
+  fbl::RefPtr<fs::PseudoDir> svc_dir_;
 };
 
-} // namespace svc
+}  // namespace svc

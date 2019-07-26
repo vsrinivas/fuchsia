@@ -31,143 +31,136 @@ namespace audio {
 namespace gauss {
 
 class TdmOutputStream;
-using TdmAudioStreamBase = ddk::Device<TdmOutputStream,
-                                       ddk::Messageable,
-                                       ddk::Unbindable>;
+using TdmAudioStreamBase = ddk::Device<TdmOutputStream, ddk::Messageable, ddk::Unbindable>;
 
 class TdmOutputStream : public TdmAudioStreamBase,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_OUTPUT>,
                         public fbl::RefCounted<TdmOutputStream> {
-public:
-    static zx_status_t Create(zx_device_t* parent);
+ public:
+  static zx_status_t Create(zx_device_t* parent);
 
-    //void PrintDebugPrefix() const;
+  // void PrintDebugPrefix() const;
 
-    // DDK device implementation
-    void DdkUnbind();
-    void DdkRelease();
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-        return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
-    }
+  // DDK device implementation
+  void DdkUnbind();
+  void DdkRelease();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
+  }
 
-private:
-    static int IrqThread(void* arg);
+ private:
+  static int IrqThread(void* arg);
 
-    friend class fbl::RefPtr<TdmOutputStream>;
+  friend class fbl::RefPtr<TdmOutputStream>;
 
-    // TODO(hollande) - the fifo bytes are adjustable on the audio fifos and should be scaled
-    //                  with the desired sample rate.  Since this first pass has a fixed sample
-    //                  sample rate we will set as constant for now.
-    //                  We are using fifo C at this stage, which is max of 128 (64-bit wide)
-    //                  Using 64 levels for now.
-    static constexpr uint8_t kFifoDepth = 0x40;
+  // TODO(hollande) - the fifo bytes are adjustable on the audio fifos and should be scaled
+  //                  with the desired sample rate.  Since this first pass has a fixed sample
+  //                  sample rate we will set as constant for now.
+  //                  We are using fifo C at this stage, which is max of 128 (64-bit wide)
+  //                  Using 64 levels for now.
+  static constexpr uint8_t kFifoDepth = 0x40;
 
-    TdmOutputStream(zx_device_t* parent,
-                   fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
-        : TdmAudioStreamBase(parent),
-          default_domain_(std::move(default_domain)),
-          create_time_(zx_clock_get_monotonic()) { }
+  TdmOutputStream(zx_device_t* parent, fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
+      : TdmAudioStreamBase(parent),
+        default_domain_(std::move(default_domain)),
+        create_time_(zx_clock_get_monotonic()) {}
 
-    virtual ~TdmOutputStream();
+  virtual ~TdmOutputStream();
 
-    // Device FIDL implementation
-    zx_status_t GetChannel(fidl_txn_t* txn);
+  // Device FIDL implementation
+  zx_status_t GetChannel(fidl_txn_t* txn);
 
-    zx_status_t Bind(const char* devname);
+  zx_status_t Bind(const char* devname);
 
-    void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
+  void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
 
-    zx_status_t AddFormats(fbl::Vector<audio_stream_format_range_t>* supported_formats);
+  zx_status_t AddFormats(fbl::Vector<audio_stream_format_range_t>* supported_formats);
 
-    // Thunks for dispatching stream channel events.
-    zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged);
-    void DeactivateStreamChannel(const dispatcher::Channel* channel);
+  // Thunks for dispatching stream channel events.
+  zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged);
+  void DeactivateStreamChannel(const dispatcher::Channel* channel);
 
-    zx_status_t OnGetStreamFormatsLocked(dispatcher::Channel* channel,
-                                         const audio_proto::StreamGetFmtsReq& req) const
-        __TA_REQUIRES(lock_);
-    zx_status_t OnSetStreamFormatLocked(dispatcher::Channel* channel,
-                                        const audio_proto::StreamSetFmtReq& req,
-                                        bool privileged)
-        __TA_REQUIRES(lock_);
-    zx_status_t OnGetGainLocked(dispatcher::Channel* channel,
-                                const audio_proto::GetGainReq& req) const
-        __TA_REQUIRES(lock_);
-    zx_status_t OnSetGainLocked(dispatcher::Channel* channel, const audio_proto::SetGainReq& req)
-        __TA_REQUIRES(lock_);
-    zx_status_t OnPlugDetectLocked(dispatcher::Channel* channel,
-                                   const audio_proto::PlugDetectReq& req) __TA_REQUIRES(lock_);
-    zx_status_t OnGetUniqueIdLocked(dispatcher::Channel* channel,
-                                    const audio_proto::GetUniqueIdReq& req) const
-        __TA_REQUIRES(lock_);
-    zx_status_t OnGetStringLocked(dispatcher::Channel* channel,
-                                  const audio_proto::GetStringReq& req) const
-        __TA_REQUIRES(lock_);
+  zx_status_t OnGetStreamFormatsLocked(dispatcher::Channel* channel,
+                                       const audio_proto::StreamGetFmtsReq& req) const
+      __TA_REQUIRES(lock_);
+  zx_status_t OnSetStreamFormatLocked(dispatcher::Channel* channel,
+                                      const audio_proto::StreamSetFmtReq& req, bool privileged)
+      __TA_REQUIRES(lock_);
+  zx_status_t OnGetGainLocked(dispatcher::Channel* channel,
+                              const audio_proto::GetGainReq& req) const __TA_REQUIRES(lock_);
+  zx_status_t OnSetGainLocked(dispatcher::Channel* channel, const audio_proto::SetGainReq& req)
+      __TA_REQUIRES(lock_);
+  zx_status_t OnPlugDetectLocked(dispatcher::Channel* channel,
+                                 const audio_proto::PlugDetectReq& req) __TA_REQUIRES(lock_);
+  zx_status_t OnGetUniqueIdLocked(dispatcher::Channel* channel,
+                                  const audio_proto::GetUniqueIdReq& req) const
+      __TA_REQUIRES(lock_);
+  zx_status_t OnGetStringLocked(dispatcher::Channel* channel,
+                                const audio_proto::GetStringReq& req) const __TA_REQUIRES(lock_);
 
-    // Thunks for dispatching ring buffer channel events.
-    zx_status_t ProcessRingBufferChannel(dispatcher::Channel * channel);
+  // Thunks for dispatching ring buffer channel events.
+  zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel);
 
-    void DeactivateRingBufferChannel(const dispatcher::Channel* channel);
+  void DeactivateRingBufferChannel(const dispatcher::Channel* channel);
 
-    zx_status_t SetModuleClocks();
+  zx_status_t SetModuleClocks();
 
-    zx_status_t ProcessRingNotification();
+  zx_status_t ProcessRingNotification();
 
-    // Stream command handlers
-    // Ring buffer command handlers
-    zx_status_t OnGetFifoDepthLocked(
-            dispatcher::Channel* channel,
-            const audio_proto::RingBufGetFifoDepthReq& req) const __TA_REQUIRES(lock_);
-    zx_status_t OnGetBufferLocked(dispatcher::Channel* channel,
-            const audio_proto::RingBufGetBufferReq& req) __TA_REQUIRES(lock_);
-    zx_status_t OnStartLocked(dispatcher::Channel* channel, const audio_proto::RingBufStartReq& req)
-        __TA_REQUIRES(lock_);
-    zx_status_t OnStopLocked(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
-        __TA_REQUIRES(lock_);
+  // Stream command handlers
+  // Ring buffer command handlers
+  zx_status_t OnGetFifoDepthLocked(dispatcher::Channel* channel,
+                                   const audio_proto::RingBufGetFifoDepthReq& req) const
+      __TA_REQUIRES(lock_);
+  zx_status_t OnGetBufferLocked(dispatcher::Channel* channel,
+                                const audio_proto::RingBufGetBufferReq& req) __TA_REQUIRES(lock_);
+  zx_status_t OnStartLocked(dispatcher::Channel* channel, const audio_proto::RingBufStartReq& req)
+      __TA_REQUIRES(lock_);
+  zx_status_t OnStopLocked(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
+      __TA_REQUIRES(lock_);
 
-    static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
+  static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
 
-    fbl::Mutex lock_;
-    fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);
+  fbl::Mutex lock_;
+  fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);
 
-    // Dispatcher framework state
-    fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
-    fbl::RefPtr<dispatcher::Channel> rb_channel_     __TA_GUARDED(lock_);
-    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
+  // Dispatcher framework state
+  fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
+  fbl::RefPtr<dispatcher::Channel> rb_channel_ __TA_GUARDED(lock_);
+  fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
+  // control registers for the tdm block
+  std::optional<ddk::MmioBuffer> mmio_;
 
-    // control registers for the tdm block
-    std::optional<ddk::MmioBuffer> mmio_;
+  fbl::RefPtr<dispatcher::Timer> notify_timer_;
 
-    fbl::RefPtr<dispatcher::Timer> notify_timer_;
+  // TODO(johngro) : support parsing and selecting from all of the format
+  // descriptors present for a stream, not just a single format (with multiple
+  // sample rates).
+  fbl::Vector<audio_stream_format_range_t> supported_formats_;
 
-    // TODO(johngro) : support parsing and selecting from all of the format
-    // descriptors present for a stream, not just a single format (with multiple
-    // sample rates).
-    fbl::Vector<audio_stream_format_range_t> supported_formats_;
+  pdev_protocol_t pdev_;
+  i2c_protocol_t i2c_;
 
-    pdev_protocol_t pdev_;
-    i2c_protocol_t i2c_;
+  fbl::unique_ptr<Tas57xx> left_sub_;
+  fbl::unique_ptr<Tas57xx> right_sub_;
+  fbl::unique_ptr<Tas57xx> tweeters_;
 
-    fbl::unique_ptr<Tas57xx> left_sub_;
-    fbl::unique_ptr<Tas57xx> right_sub_;
-    fbl::unique_ptr<Tas57xx> tweeters_;
+  float current_gain_ = -20.0;
 
-    float     current_gain_= -20.0;
+  uint32_t frame_size_;
+  uint32_t fifo_bytes_;
 
-    uint32_t frame_size_;
-    uint32_t fifo_bytes_;
+  const zx_time_t create_time_;
+  uint32_t us_per_notification_ = 0;
+  volatile bool running_;
 
-    const zx_time_t create_time_;
-    uint32_t us_per_notification_ = 0;
-    volatile bool running_;
-
-    zx::bti bti_;
-    io_buffer_t ring_buffer_;
-    void*    ring_buffer_virt_  = nullptr;
-    uint32_t ring_buffer_phys_  = 0;
-    uint32_t ring_buffer_size_  = 0;
+  zx::bti bti_;
+  io_buffer_t ring_buffer_;
+  void* ring_buffer_virt_ = nullptr;
+  uint32_t ring_buffer_phys_ = 0;
+  uint32_t ring_buffer_size_ = 0;
 };
 
-}  // namespace usb
+}  // namespace gauss
 }  // namespace audio

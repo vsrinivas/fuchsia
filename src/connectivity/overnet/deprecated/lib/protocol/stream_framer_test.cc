@@ -55,13 +55,12 @@ TestArg Test(Slice enframe) {
   return TestArg{[] { return std::make_unique<T>(); }, enframe};
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    StreamFramerSuite, StreamFramerTest,
-    ::testing::Values(Test<ReliableFramer>(Slice::FromContainer({1, 2, 3})),
-                      Test<UnreliableFramer>(Slice::FromContainer({1, 2, 3})),
-                      Test<ReliableFramer>(Slice::RepeatedChar(256, 'a')),
-                      Test<UnreliableFramer>(Slice::RepeatedChar(256, 'a')),
-                      Test<ReliableFramer>(Slice::RepeatedChar(65536, 'a'))));
+INSTANTIATE_TEST_SUITE_P(StreamFramerSuite, StreamFramerTest,
+                         ::testing::Values(Test<ReliableFramer>(Slice::FromContainer({1, 2, 3})),
+                                           Test<UnreliableFramer>(Slice::FromContainer({1, 2, 3})),
+                                           Test<ReliableFramer>(Slice::RepeatedChar(256, 'a')),
+                                           Test<UnreliableFramer>(Slice::RepeatedChar(256, 'a')),
+                                           Test<ReliableFramer>(Slice::RepeatedChar(65536, 'a'))));
 
 struct MultiArg {
   std::function<std::unique_ptr<StreamFramer>()> make_framer;
@@ -148,8 +147,7 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(Multi<ReliableFramer>({Slice::FromContainer({1, 2, 3}),
                                              Slice::FromContainer({1, 2, 3})}),
                       Multi<UnreliableFramer>({Slice::FromContainer({1, 2, 3}),
-                                               Slice::FromContainer({1, 2,
-                                                                     3})})));
+                                               Slice::FromContainer({1, 2, 3})})));
 
 }  // namespace stream_framer_test
 }  // namespace overnet

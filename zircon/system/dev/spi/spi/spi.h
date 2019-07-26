@@ -16,21 +16,21 @@ class SpiDevice;
 using SpiDeviceType = ddk::Device<SpiDevice, ddk::Unbindable>;
 
 class SpiDevice : public SpiDeviceType {
-public:
-    SpiDevice(zx_device_t* parent, const spi_impl_protocol_t* spi, uint32_t bus_id)
-        : SpiDeviceType(parent), spi_(spi), bus_id_(bus_id) {}
+ public:
+  SpiDevice(zx_device_t* parent, const spi_impl_protocol_t* spi, uint32_t bus_id)
+      : SpiDeviceType(parent), spi_(spi), bus_id_(bus_id) {}
 
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    void DdkUnbind();
-    void DdkRelease();
+  void DdkUnbind();
+  void DdkRelease();
 
-private:
-    void AddChildren();
+ private:
+  void AddChildren();
 
-    fbl::Vector<fbl::RefPtr<SpiChild>> children_;
-    const ddk::SpiImplProtocolClient spi_;
-    uint32_t bus_id_;
+  fbl::Vector<fbl::RefPtr<SpiChild>> children_;
+  const ddk::SpiImplProtocolClient spi_;
+  uint32_t bus_id_;
 };
 
-} // namespace spi
+}  // namespace spi

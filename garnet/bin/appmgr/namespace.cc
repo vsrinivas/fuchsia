@@ -30,34 +30,26 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
   // component namespaces ambiently without requiring proper routing between
   // realms, and this list should not be expanded.
   services_->AddService(
-      fuchsia::sys::Environment::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+      fuchsia::sys::Environment::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         environment_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<fuchsia::sys::Environment>(
-                      std::move(channel)));
+            this, fidl::InterfaceRequest<fuchsia::sys::Environment>(std::move(channel)));
         return ZX_OK;
       })));
+  services_->AddService(Launcher::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+                          launcher_bindings_.AddBinding(
+                              this, fidl::InterfaceRequest<Launcher>(std::move(channel)));
+                          return ZX_OK;
+                        })));
   services_->AddService(
-      Launcher::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        launcher_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<Launcher>(std::move(channel)));
-        return ZX_OK;
-      })));
-  services_->AddService(
-      fuchsia::process::Launcher::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+      fuchsia::process::Launcher::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         realm_->environment_services()->Connect(
-            fidl::InterfaceRequest<fuchsia::process::Launcher>(
-                std::move(channel)));
+            fidl::InterfaceRequest<fuchsia::process::Launcher>(std::move(channel)));
         return ZX_OK;
       })));
   services_->AddService(
-      fuchsia::process::Resolver::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+      fuchsia::process::Resolver::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         resolver_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<fuchsia::process::Resolver>(
-                      std::move(channel)));
+            this, fidl::InterfaceRequest<fuchsia::process::Resolver>(std::move(channel)));
         return ZX_OK;
       })));
   // WARNING! Do not add new services here! This makes services available in all
@@ -70,20 +62,18 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
     service_host_directory_ = std::move(additional_services->host_directory);
     for (auto& name : names) {
       if (service_host_directory_) {
-        services_->AddService(
-            name,
-            fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
-              fdio_service_connect_at(service_host_directory_.get(),
-                                      name.c_str(), channel.release());
-              return ZX_OK;
-            })));
+        services_->AddService(name,
+                              fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
+                                fdio_service_connect_at(service_host_directory_.get(), name.c_str(),
+                                                        channel.release());
+                                return ZX_OK;
+                              })));
       } else {
-        services_->AddService(
-            name,
-            fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
-              service_provider_->ConnectToService(name, std::move(channel));
-              return ZX_OK;
-            })));
+        services_->AddService(name,
+                              fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
+                                service_provider_->ConnectToService(name, std::move(channel));
+                                return ZX_OK;
+                              })));
       }
     }
   }
@@ -97,18 +87,15 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
 
 Namespace::~Namespace() {}
 
-void Namespace::AddBinding(
-    fidl::InterfaceRequest<fuchsia::sys::Environment> environment) {
+void Namespace::AddBinding(fidl::InterfaceRequest<fuchsia::sys::Environment> environment) {
   environment_bindings_.AddBinding(this, std::move(environment));
 }
 
 void Namespace::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
-    fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-    std::string label, fuchsia::sys::ServiceListPtr additional_services,
-    fuchsia::sys::EnvironmentOptions options) {
-  realm_->CreateNestedEnvironment(std::move(environment), std::move(controller),
-                                  std::move(label),
+    fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller, std::string label,
+    fuchsia::sys::ServiceListPtr additional_services, fuchsia::sys::EnvironmentOptions options) {
+  realm_->CreateNestedEnvironment(std::move(environment), std::move(controller), std::move(label),
                                   std::move(additional_services), options);
 }
 
@@ -116,8 +103,7 @@ void Namespace::GetLauncher(fidl::InterfaceRequest<Launcher> launcher) {
   launcher_bindings_.AddBinding(this, std::move(launcher));
 }
 
-void Namespace::GetServices(
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
+void Namespace::GetServices(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
   services_->AddBinding(std::move(services));
 }
 
@@ -129,21 +115,17 @@ void Namespace::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   auto cc_trace_id = TRACE_NONCE();
-  TRACE_ASYNC_BEGIN("appmgr", "Namespace::CreateComponent", cc_trace_id,
-                    "launch_info.url", launch_info.url);
-  realm_->CreateComponent(
-      std::move(launch_info), std::move(controller),
-      [cc_trace_id](std::weak_ptr<ComponentControllerImpl> component) {
-        TRACE_ASYNC_END("appmgr", "Namespace::CreateComponent", cc_trace_id);
-      });
+  TRACE_ASYNC_BEGIN("appmgr", "Namespace::CreateComponent", cc_trace_id, "launch_info.url",
+                    launch_info.url);
+  realm_->CreateComponent(std::move(launch_info), std::move(controller),
+                          [cc_trace_id](std::weak_ptr<ComponentControllerImpl> component) {
+                            TRACE_ASYNC_END("appmgr", "Namespace::CreateComponent", cc_trace_id);
+                          });
 }
 
-zx::channel Namespace::OpenServicesAsDirectory() {
-  return Util::OpenAsDirectory(&vfs_, services_);
-}
+zx::channel Namespace::OpenServicesAsDirectory() { return Util::OpenAsDirectory(&vfs_, services_); }
 
-void Namespace::Resolve(std::string name,
-                        fuchsia::process::Resolver::ResolveCallback callback) {
+void Namespace::Resolve(std::string name, fuchsia::process::Resolver::ResolveCallback callback) {
   realm_->Resolve(name, std::move(callback));
 }
 

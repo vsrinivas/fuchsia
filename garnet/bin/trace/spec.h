@@ -79,8 +79,7 @@ enum class BufferingMode {
 };
 
 // Returns true on success.
-bool GetBufferingMode(const std::string& buffering_mode_name,
-                      BufferingMode* out_mode);
+bool GetBufferingMode(const std::string& buffering_mode_name, BufferingMode* out_mode);
 
 bool DecodeSpec(const std::string& json, Spec* spec);
 

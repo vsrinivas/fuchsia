@@ -9,33 +9,33 @@
 namespace {
 
 class FakeClockAsync : public async::DispatcherStub {
-public:
-    zx::time Now() override { return current_time_; }
-    void SetTime(zx::time t) { current_time_ = t; }
+ public:
+  zx::time Now() override { return current_time_; }
+  void SetTime(zx::time t) { current_time_ = t; }
 
-private:
-    zx::time current_time_;
+ private:
+  zx::time current_time_;
 };
 
 bool time_telling_test() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    FakeClockAsync dispatcher;
-    EXPECT_EQ(0u, dispatcher.Now().get());
-    EXPECT_EQ(0u, async_now(&dispatcher));
+  FakeClockAsync dispatcher;
+  EXPECT_EQ(0u, dispatcher.Now().get());
+  EXPECT_EQ(0u, async_now(&dispatcher));
 
-    dispatcher.SetTime(zx::time(4u));
-    EXPECT_EQ(4u, dispatcher.Now().get());
-    EXPECT_EQ(4u, async_now(&dispatcher));
+  dispatcher.SetTime(zx::time(4u));
+  EXPECT_EQ(4u, dispatcher.Now().get());
+  EXPECT_EQ(4u, async_now(&dispatcher));
 
-    dispatcher.SetTime(zx::time(1853u));
-    EXPECT_EQ(1853u, dispatcher.Now().get());
-    EXPECT_EQ(1853u, async_now(&dispatcher));
+  dispatcher.SetTime(zx::time(1853u));
+  EXPECT_EQ(1853u, dispatcher.Now().get());
+  EXPECT_EQ(1853u, async_now(&dispatcher));
 
-    END_TEST;
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(time_tests)
 RUN_TEST(time_telling_test)

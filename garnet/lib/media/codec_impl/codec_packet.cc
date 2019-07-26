@@ -6,10 +6,8 @@
 #include <lib/media/codec_impl/codec_packet.h>
 #include <stdint.h>
 
-CodecPacket::CodecPacket(uint64_t buffer_lifetime_ordinal,
-                         uint32_t packet_index)
-    : buffer_lifetime_ordinal_(buffer_lifetime_ordinal),
-      packet_index_(packet_index) {
+CodecPacket::CodecPacket(uint64_t buffer_lifetime_ordinal, uint32_t packet_index)
+    : buffer_lifetime_ordinal_(buffer_lifetime_ordinal), packet_index_(packet_index) {
   // nothing else to do here
 }
 
@@ -17,9 +15,7 @@ CodecPacket::~CodecPacket() {
   // nothing else to do here
 }
 
-uint64_t CodecPacket::buffer_lifetime_ordinal() const {
-  return buffer_lifetime_ordinal_;
-}
+uint64_t CodecPacket::buffer_lifetime_ordinal() const { return buffer_lifetime_ordinal_; }
 
 uint32_t CodecPacket::packet_index() const { return packet_index_; }
 
@@ -27,13 +23,9 @@ void CodecPacket::SetBuffer(const CodecBuffer* buffer) { buffer_ = buffer; }
 
 const CodecBuffer* CodecPacket::buffer() const { return buffer_; }
 
-void CodecPacket::SetStartOffset(uint32_t start_offset) {
-  start_offset_ = start_offset;
-}
+void CodecPacket::SetStartOffset(uint32_t start_offset) { start_offset_ = start_offset; }
 
-bool CodecPacket::has_start_offset() const {
-  return start_offset_ != kStartOffsetNotSet;
-}
+bool CodecPacket::has_start_offset() const { return start_offset_ != kStartOffsetNotSet; }
 
 uint32_t CodecPacket::start_offset() const { return start_offset_; }
 
@@ -82,6 +74,4 @@ bool CodecPacket::is_new() const { return is_new_; }
 
 void CodecPacket::ClearStartOffset() { start_offset_ = kStartOffsetNotSet; }
 
-void CodecPacket::ClearValidLengthBytes() {
-  valid_length_bytes_ = kValidLengthBytesNotSet;
-}
+void CodecPacket::ClearValidLengthBytes() { valid_length_bytes_ = kValidLengthBytesNotSet; }

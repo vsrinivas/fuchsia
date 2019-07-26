@@ -32,18 +32,18 @@ bool zx_device::PopBindConn(fs::FidlConnection* conn) {
 }
 
 void zx_device::PushTestCompatibilityConn(const fs::FidlConnection& conn) {
-    fbl::AutoLock<fbl::Mutex> lock(&test_compatibility_conn_lock_);
-    test_compatibility_conn_.push_back(conn);
+  fbl::AutoLock<fbl::Mutex> lock(&test_compatibility_conn_lock_);
+  test_compatibility_conn_.push_back(conn);
 }
 
 bool zx_device::PopTestCompatibilityConn(fs::FidlConnection* conn) {
-    fbl::AutoLock<fbl::Mutex> lock(&test_compatibility_conn_lock_);
-    if (test_compatibility_conn_.is_empty()) {
-        return false;
-    }
-    *conn = test_compatibility_conn_[0];
-    test_compatibility_conn_.erase(0);
-    return true;
+  fbl::AutoLock<fbl::Mutex> lock(&test_compatibility_conn_lock_);
+  if (test_compatibility_conn_.is_empty()) {
+    return false;
+  }
+  *conn = test_compatibility_conn_[0];
+  test_compatibility_conn_.erase(0);
+  return true;
 }
 
 // We must disable thread-safety analysis due to not being able to statically

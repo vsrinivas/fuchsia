@@ -56,20 +56,19 @@ class OperationSerializer {
   template <class... C>
   void Serialize(
       fit::function<typename internal::Signature<C...>::CallbackType> callback,
-      fit::function<
-          void(fit::function<typename internal::Signature<C...>::CallbackType>)>
+      fit::function<void(fit::function<typename internal::Signature<C...>::CallbackType>)>
           operation) {
     auto closure = [this, callback = std::move(callback),
                     operation = std::move(operation)]() mutable {
-      operation([weak_ptr_ = weak_factory_.GetWeakPtr(),
-                 callback = std::move(callback)](C... args) {
-        // First run the callback and then, make sure this has not been deleted.
-        callback(std::forward<C>(args)...);
-        if (!weak_ptr_) {
-          return;
-        }
-        weak_ptr_->UpdateOperationsAndCallNext();
-      });
+      operation(
+          [weak_ptr_ = weak_factory_.GetWeakPtr(), callback = std::move(callback)](C... args) {
+            // First run the callback and then, make sure this has not been deleted.
+            callback(std::forward<C>(args)...);
+            if (!weak_ptr_) {
+              return;
+            }
+            weak_ptr_->UpdateOperationsAndCallNext();
+          });
     };
     queued_operations_.emplace(std::move(closure));
     if (queued_operations_.size() == 1) {

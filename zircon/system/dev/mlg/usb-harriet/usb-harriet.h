@@ -13,25 +13,21 @@ namespace usb_harriet {
 class Harriet;
 using HarrietBase = ddk::Device<Harriet, ddk::Unbindable>;
 
-class Harriet : public HarrietBase,
-                public ddk::EmptyProtocol<ZX_PROTOCOL_MLG> {
+class Harriet : public HarrietBase, public ddk::EmptyProtocol<ZX_PROTOCOL_MLG> {
+ public:
+  Harriet(zx_device_t* parent, const usb::UsbDevice& usb) : HarrietBase(parent), usb_(usb) {}
 
-public:
-    Harriet(zx_device_t* parent, const usb::UsbDevice& usb)
-        : HarrietBase(parent),
-          usb_(usb) {}
+  // Spawns device node based on parent node.
+  static zx_status_t Create(zx_device_t* parent);
 
-    // Spawns device node based on parent node.
-    static zx_status_t Create(zx_device_t* parent);
+  // Device protocol implementation.
+  void DdkUnbind() { DdkRemove(); }
+  void DdkRelease() { delete this; }
 
-    // Device protocol implementation.
-    void DdkUnbind() { DdkRemove(); }
-    void DdkRelease() { delete this; }
+ private:
+  zx_status_t Bind();
 
-private:
-    zx_status_t Bind();
-
-    usb::UsbDevice usb_;
+  usb::UsbDevice usb_;
 };
 
 }  // namespace usb_harriet

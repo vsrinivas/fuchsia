@@ -55,8 +55,7 @@ zx::channel OpenKTrace() {
     return zx::channel();
   }
   zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get " << kKTraceDev
                    << " channel: " << zx_status_get_string(status);
@@ -65,35 +64,30 @@ zx::channel OpenKTrace() {
   return channel;
 }
 
-void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status,
-                    zx_status_t rqst_status) {
+void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status, zx_status_t rqst_status) {
   if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace FIDL " << rqst_name
-                   << " failed: status=" << fidl_status;
+    FXL_LOG(ERROR) << "Ktrace FIDL " << rqst_name << " failed: status=" << fidl_status;
   } else if (rqst_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace " << rqst_name
-                   << " failed: status=" << rqst_status;
+    FXL_LOG(ERROR) << "Ktrace " << rqst_name << " failed: status=" << rqst_status;
   }
 }
 
 void RequestKtraceStop(const zx::channel& channel) {
   zx_status_t stop_status;
-  zx_status_t status =
-      fuchsia_tracing_kernel_ControllerStop(channel.get(), &stop_status);
+  zx_status_t status = fuchsia_tracing_kernel_ControllerStop(channel.get(), &stop_status);
   LogFidlFailure("stop", status, stop_status);
 }
 
 void RequestKtraceRewind(const zx::channel& channel) {
   zx_status_t rewind_status;
-  zx_status_t status =
-      fuchsia_tracing_kernel_ControllerRewind(channel.get(), &rewind_status);
+  zx_status_t status = fuchsia_tracing_kernel_ControllerRewind(channel.get(), &rewind_status);
   LogFidlFailure("rewind", status, rewind_status);
 }
 
 void RequestKtraceStart(const zx::channel& channel, uint32_t group_mask) {
   zx_status_t start_status;
-  zx_status_t status = fuchsia_tracing_kernel_ControllerStart(
-      channel.get(), group_mask, &start_status);
+  zx_status_t status =
+      fuchsia_tracing_kernel_ControllerStart(channel.get(), group_mask, &start_status);
   LogFidlFailure("start", status, start_status);
 }
 
@@ -101,8 +95,7 @@ void RequestKtraceStart(const zx::channel& channel, uint32_t group_mask) {
 
 App::App(const fxl::CommandLine& command_line)
     : component_context_(sys::ComponentContext::Create()) {
-  trace_observer_.Start(async_get_default_dispatcher(),
-                        [this] { UpdateState(); });
+  trace_observer_.Start(async_get_default_dispatcher(), [this] { UpdateState(); });
 }
 
 App::~App() {}

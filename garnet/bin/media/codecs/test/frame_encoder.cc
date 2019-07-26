@@ -15,13 +15,12 @@ namespace {
 // This code only has one stream_lifetime_ordinal which is 1.
 constexpr uint64_t kStreamLifetimeOrdinal = 1;
 
-std::vector<FrameEncoder::EncodedFrame> take_encoded_frames_from_codec(
-    CodecClient* client, bool expect_access_units) {
+std::vector<FrameEncoder::EncodedFrame> take_encoded_frames_from_codec(CodecClient* client,
+                                                                       bool expect_access_units) {
   std::vector<FrameEncoder::EncodedFrame> frames;
   std::unique_ptr<CodecOutput> output;
   FXL_VLOG(6) << "Waiting on output packets...";
-  while ((output = client->BlockingGetEmittedOutput()) &&
-         !output->end_of_stream()) {
+  while ((output = client->BlockingGetEmittedOutput()) && !output->end_of_stream()) {
     const auto& packet = output->packet();
     const auto& buffer = client->GetOutputBufferByIndex(packet.buffer_index());
 
@@ -30,14 +29,12 @@ std::vector<FrameEncoder::EncodedFrame> take_encoded_frames_from_codec(
       FXL_CHECK(packet.known_end_access_unit());
     }
 
-    FXL_VLOG(8) << "Got output packet with length: "
-                << packet.valid_length_bytes();
+    FXL_VLOG(8) << "Got output packet with length: " << packet.valid_length_bytes();
 
     std::vector<uint8_t> payload;
     payload.resize(packet.valid_length_bytes());
 
-    memcpy(payload.data(), buffer.base() + packet.start_offset(),
-           packet.valid_length_bytes());
+    memcpy(payload.data(), buffer.base() + packet.start_offset(), packet.valid_length_bytes());
 
     std::optional<uint64_t> timestamp_ish;
     if (packet.has_timestamp_ish()) {
@@ -57,8 +54,7 @@ std::vector<FrameEncoder::EncodedFrame> take_encoded_frames_from_codec(
   return frames;
 }
 
-void feed_raw_frames_into_codec(const FrameEncoder::Payload& payload,
-                                CodecClient* client) {
+void feed_raw_frames_into_codec(const FrameEncoder::Payload& payload, CodecClient* client) {
   auto payload_len = [&payload](size_t frame_index) -> size_t {
     if (frame_index >= payload.offsets.size()) {
       return 0;
@@ -68,8 +64,7 @@ void feed_raw_frames_into_codec(const FrameEncoder::Payload& payload,
       return payload.data.size() - payload.offsets[frame_index].position;
     }
 
-    return payload.offsets[frame_index + 1].position -
-           payload.offsets[frame_index].position;
+    return payload.offsets[frame_index + 1].position - payload.offsets[frame_index].position;
   };
 
   size_t frame = 0;
@@ -98,18 +93,16 @@ void feed_raw_frames_into_codec(const FrameEncoder::Payload& payload,
   FXL_VLOG(3) << "Finished sending frames and EOS to encoder.";
 }  // namespace
 
-void ConnectToCodec(
-    fidl::InterfaceRequest<fuchsia::media::StreamProcessor> request,
-    const fuchsia::media::FormatDetails& format,
-    component::StartupContext* startup_context) {
+void ConnectToCodec(fidl::InterfaceRequest<fuchsia::media::StreamProcessor> request,
+                    const fuchsia::media::FormatDetails& format,
+                    component::StartupContext* startup_context) {
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   codec_factory.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "codec_factory failed - unexpected; status: " << status;
   });
 
-  startup_context
-      ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
-          codec_factory.NewRequest());
+  startup_context->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
+      codec_factory.NewRequest());
 
   FXL_VLOG(3) << "Connected to CodecFactory service.";
 
@@ -126,8 +119,7 @@ std::vector<FrameEncoder::EncodedFrame> FrameEncoder::EncodeFrames(
     const Payload& payload, const fuchsia::media::FormatDetails& format,
     component::StartupContext* startup_context, bool expect_access_units) {
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
-  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
-      sysmem.NewRequest());
+  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToThread);
   auto client = std::make_unique<CodecClient>(&fidl_loop, std::move(sysmem));
@@ -140,13 +132,10 @@ std::vector<FrameEncoder::EncodedFrame> FrameEncoder::EncodeFrames(
 
   client->Start();
   auto consumer_thread = std::make_unique<std::thread>(
-      [&fidl_loop, &encoded_frames,
-       expect_access_units, client = client.get()] {
+      [&fidl_loop, &encoded_frames, expect_access_units, client = client.get()] {
         FXL_VLOG(3) << "Starting to receive frames from codec...";
-        encoded_frames =
-            take_encoded_frames_from_codec(client, expect_access_units);
-        async::PostTask(fidl_loop.dispatcher(),
-                        [&fidl_loop] { fidl_loop.Quit(); });
+        encoded_frames = take_encoded_frames_from_codec(client, expect_access_units);
+        async::PostTask(fidl_loop.dispatcher(), [&fidl_loop] { fidl_loop.Quit(); });
       });
 
   feed_raw_frames_into_codec(payload, client.get());

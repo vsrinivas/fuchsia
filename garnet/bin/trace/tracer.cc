@@ -22,10 +22,9 @@ Tracer::Tracer(controller::Controller* controller)
 
 Tracer::~Tracer() { CloseSocket(); }
 
-void Tracer::Start(controller::TraceOptions options, bool binary,
-                   BytesConsumer bytes_consumer, RecordConsumer record_consumer,
-                   ErrorHandler error_handler, fit::closure start_callback,
-                   fit::closure done_callback) {
+void Tracer::Start(controller::TraceOptions options, bool binary, BytesConsumer bytes_consumer,
+                   RecordConsumer record_consumer, ErrorHandler error_handler,
+                   fit::closure start_callback, fit::closure done_callback) {
   FXL_DCHECK(state_ == State::kStopped);
 
   state_ = State::kStarted;
@@ -45,8 +44,7 @@ void Tracer::Start(controller::TraceOptions options, bool binary,
 
   binary_ = binary;
   bytes_consumer_ = std::move(bytes_consumer);
-  reader_.reset(new trace::TraceReader(std::move(record_consumer),
-                                       std::move(error_handler)));
+  reader_.reset(new trace::TraceReader(std::move(record_consumer), std::move(error_handler)));
 
   dispatcher_ = async_get_default_dispatcher();
   wait_.set_object(socket_.get());
@@ -62,9 +60,8 @@ void Tracer::Stop() {
   }
 }
 
-void Tracer::OnHandleReady(async_dispatcher_t* dispatcher,
-                           async::WaitBase* wait, zx_status_t status,
-                           const zx_packet_signal_t* signal) {
+void Tracer::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                           zx_status_t status, const zx_packet_signal_t* signal) {
   FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
   if (status != ZX_OK) {
@@ -84,8 +81,8 @@ void Tracer::OnHandleReady(async_dispatcher_t* dispatcher,
 void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
   for (;;) {
     size_t actual;
-    zx_status_t status = socket_.read(0u, buffer_.data() + buffer_end_,
-                                      buffer_.size() - buffer_end_, &actual);
+    zx_status_t status =
+        socket_.read(0u, buffer_.data() + buffer_end_, buffer_.size() - buffer_end_, &actual);
     if (status == ZX_ERR_SHOULD_WAIT) {
       status = wait_.Begin(dispatcher);
       if (status != ZX_OK) {
@@ -118,8 +115,7 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
         Done();
         return;
       }
-      bytes_consumed =
-          bytes_available - trace::WordsToBytes(chunk.remaining_words());
+      bytes_consumed = bytes_available - trace::WordsToBytes(chunk.remaining_words());
     }
 
     bytes_available -= bytes_consumed;

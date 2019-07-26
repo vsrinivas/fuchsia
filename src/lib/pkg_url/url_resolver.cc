@@ -36,8 +36,6 @@ std::string GetPathFromURL(const std::string& url) {
   return std::string();
 }
 
-std::string GetURLFromPath(const std::string& path) {
-  return kFileUriPrefix + path;
-}
+std::string GetURLFromPath(const std::string& path) { return kFileUriPrefix + path; }
 
 }  // namespace component

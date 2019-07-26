@@ -17,8 +17,7 @@
 #include <vector>
 
 int main(int argc, const char** argv) {
-  std::string server_url =
-      "fuchsia-pkg://fuchsia.com/echo_server_llcpp#meta/echo_server_llcpp.cmx";
+  std::string server_url = "fuchsia-pkg://fuchsia.com/echo_server_llcpp#meta/echo_server_llcpp.cmx";
   std::string msg = "hello world";
 
   for (int i = 1; i < argc - 1; ++i) {
@@ -50,8 +49,8 @@ int main(int argc, const char** argv) {
   ::llcpp::fidl::examples::echo::Echo::SyncClient client(std::move(client_end));
   auto result = client.EchoString(fidl::StringView(msg.size(), &msg[0]));
   if (result.status() != ZX_OK) {
-    std::cerr << "Failed to call server: " << result.status() << " ("
-              << result.error() << ")" << std::endl;
+    std::cerr << "Failed to call server: " << result.status() << " (" << result.error() << ")"
+              << std::endl;
     return result.status();
   }
 

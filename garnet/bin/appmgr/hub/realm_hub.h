@@ -29,9 +29,7 @@ class RealmHub : public Hub {
   zx_status_t AddRealm(const HubInfo& hub_info);
   zx_status_t RemoveRealm(const HubInfo& hub_info);
 
-  zx_status_t AddServices(fbl::RefPtr<fs::Vnode> svc) {
-    return AddEntry("svc", std::move(svc));
-  }
+  zx_status_t AddServices(fbl::RefPtr<fs::Vnode> svc) { return AddEntry("svc", std::move(svc)); }
 
   zx_status_t AddJobProvider(fbl::RefPtr<fs::Service> job_provider) {
     return AddEntry("job", std::move(job_provider));

@@ -20,8 +20,7 @@ __BEGIN_CDECLS
 //   ZX_ERR_INVALID_ARGS: |type| or |out| is NULL.
 // Will fail if the calling process does not have the rights to access the root
 // job.
-zx_status_t get_task_by_koid(
-    zx_koid_t koid, zx_obj_type_t* type, zx_handle_t* out);
+zx_status_t get_task_by_koid(zx_koid_t koid, zx_obj_type_t* type, zx_handle_t* out);
 // TODO(dbort): Add a "desired type" so we don't walk every thread in the
 // system just to find a job.
 

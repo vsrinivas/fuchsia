@@ -13,8 +13,7 @@
 
 namespace perfmon {
 
-ReaderStatus BufferReader::Create(const std::string& name, const void* buffer,
-                                  size_t buffer_size,
+ReaderStatus BufferReader::Create(const std::string& name, const void* buffer, size_t buffer_size,
                                   std::unique_ptr<BufferReader>* out_reader) {
   auto header = reinterpret_cast<const BufferHeader*>(buffer);
   ReaderStatus status = AnalyzeHeader(header, buffer_size);
@@ -25,8 +24,7 @@ ReaderStatus BufferReader::Create(const std::string& name, const void* buffer,
   return ReaderStatus::kOk;
 }
 
-BufferReader::BufferReader(const std::string& name, const void* buffer,
-                           size_t capture_end)
+BufferReader::BufferReader(const std::string& name, const void* buffer, size_t capture_end)
     : name_(name),
       buffer_(reinterpret_cast<const uint8_t*>(buffer)),
       header_(reinterpret_cast<const BufferHeader*>(buffer)),
@@ -34,17 +32,16 @@ BufferReader::BufferReader(const std::string& name, const void* buffer,
       buffer_end_(buffer_ + capture_end),
       ticks_per_second_(header_->ticks_per_second) {}
 
-ReaderStatus BufferReader::AnalyzeHeader(const BufferHeader* header,
-                                         size_t buffer_size) {
-  FXL_VLOG(2) << "Reading header, buffer version " << header->version << ", "
-              << header->capture_end << " bytes";
+ReaderStatus BufferReader::AnalyzeHeader(const BufferHeader* header, size_t buffer_size) {
+  FXL_VLOG(2) << "Reading header, buffer version " << header->version << ", " << header->capture_end
+              << " bytes";
 
   // TODO(dje): check magic
 
   uint32_t expected_version = perfmon::kBufferVersion;
   if (header->version != expected_version) {
-    FXL_LOG(ERROR) << "Unsupported buffer version, got " << header->version
-                   << " instead of " << expected_version;
+    FXL_LOG(ERROR) << "Unsupported buffer version, got " << header->version << " instead of "
+                   << expected_version;
     return ReaderStatus::kHeaderError;
   }
 
@@ -88,8 +85,8 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
   auto record_type = GetRecordType(hdr);
   auto record_size = GetRecordSize(hdr);
   if (record_size == 0) {
-    FXL_LOG(ERROR) << name_ << ": Bad trace data, bad record type: "
-                   << static_cast<unsigned>(hdr->type);
+    FXL_LOG(ERROR) << name_
+                   << ": Bad trace data, bad record type: " << static_cast<unsigned>(hdr->type);
     return set_status(ReaderStatus::kRecordError);
   }
   if (next_record_ + record_size > buffer_end_) {
@@ -121,8 +118,7 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
       record->pc = reinterpret_cast<const PcRecord*>(next_record_);
       break;
     case kRecordTypeLastBranch:
-      record->last_branch =
-          reinterpret_cast<const LastBranchRecord*>(next_record_);
+      record->last_branch = reinterpret_cast<const LastBranchRecord*>(next_record_);
       break;
     default:
       // We shouldn't get here because RecordSize() should have returned

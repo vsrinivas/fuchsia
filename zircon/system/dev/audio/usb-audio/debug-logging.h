@@ -16,5 +16,5 @@
 constexpr size_t LOG_PREFIX_STORAGE = 32;
 
 #define GLOBAL_LOG(level, ...) zxlogf(level, "[USBAud] " __VA_ARGS__)
-#define LOG_EX(level, obj, fmt, ...) zxlogf(level, "[%s] " fmt, (obj).log_prefix(), ## __VA_ARGS__)
-#define LOG(level, fmt, ...) LOG_EX(level, *this, fmt, ## __VA_ARGS__)
+#define LOG_EX(level, obj, fmt, ...) zxlogf(level, "[%s] " fmt, (obj).log_prefix(), ##__VA_ARGS__)
+#define LOG(level, fmt, ...) LOG_EX(level, *this, fmt, ##__VA_ARGS__)

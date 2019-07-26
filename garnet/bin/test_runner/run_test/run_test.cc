@@ -42,8 +42,7 @@ int main(int argc, char** argv) {
   args.erase(args.begin());
 
   QuitObserver observer(&loop);
-  test_runner::TestRunContext context(app_context, &observer, "test", url,
-                                      args);
+  test_runner::TestRunContext context(app_context, &observer, "test", url, args);
 
   loop.Run();
   return !observer.success();

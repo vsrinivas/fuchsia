@@ -32,8 +32,8 @@ class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
     return out;
   }
 
-  fuchsia::sys::LaunchInfo CreateLaunchInfo(
-      const std::string& url, const std::vector<std::string>& args = {}) {
+  fuchsia::sys::LaunchInfo CreateLaunchInfo(const std::string& url,
+                                            const std::vector<std::string>& args = {}) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
     for (const auto& a : args) {
@@ -45,22 +45,19 @@ class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
   }
 
   static std::string UrlFromCmx(const std::string& cmx) {
-    return fxl::StringPrintf(
-        "fuchsia-pkg://fuchsia.com/components_binary_tests#meta/%s",
-        cmx.c_str());
+    return fxl::StringPrintf("fuchsia-pkg://fuchsia.com/components_binary_tests#meta/%s",
+                             cmx.c_str());
   }
 
-  void RunComponent(const std::string& url,
-                    const std::vector<std::string>& args = {}) {
+  void RunComponent(const std::string& url, const std::vector<std::string>& args = {}) {
     fuchsia::sys::ComponentControllerPtr controller;
-    environment_->CreateComponent(CreateLaunchInfo(url, std::move(args)),
-                                  controller.NewRequest());
+    environment_->CreateComponent(CreateLaunchInfo(url, std::move(args)), controller.NewRequest());
 
     int64_t return_code = INT64_MIN;
-    controller.events().OnTerminated =
-        [&return_code](int64_t code, fuchsia::sys::TerminationReason reason) {
-          return_code = code;
-        };
+    controller.events().OnTerminated = [&return_code](int64_t code,
+                                                      fuchsia::sys::TerminationReason reason) {
+      return_code = code;
+    };
     RunLoopUntil([&return_code] { return return_code != INT64_MIN; });
     EXPECT_EQ(0, return_code);
   }

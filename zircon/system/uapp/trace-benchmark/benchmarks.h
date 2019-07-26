@@ -9,12 +9,12 @@
 #include <trace-engine/types.h>
 
 struct BenchmarkSpec {
-    const char* name;
-    trace_buffering_mode_t mode;
-    size_t buffer_size;
-    // The number of iterations is a parameter to make it easier to
-    // experiment and debug.
-    unsigned num_iterations;
+  const char* name;
+  trace_buffering_mode_t mode;
+  size_t buffer_size;
+  // The number of iterations is a parameter to make it easier to
+  // experiment and debug.
+  unsigned num_iterations;
 };
 
 // Runs benchmarks which need tracing disabled.

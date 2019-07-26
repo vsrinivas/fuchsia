@@ -45,8 +45,7 @@ zx::handle GetRootResource() {
 size_t ReadCpuCount(const zx::handle& root_resource) {
   size_t actual, available;
 
-  zx_status_t err = root_resource.get_info(ZX_INFO_CPU_STATS, nullptr, 0,
-                                           &actual, &available);
+  zx_status_t err = root_resource.get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
 
   if (err != ZX_OK)
     return 0;
@@ -75,21 +74,18 @@ bool SystemLoadHeartModel::ReadMeasurement(Measurement* measurement) {
   const zx::time read_time = zx::clock::get_monotonic();
   zx::duration idle_sum;
   for (size_t i = 0; i < cpu_stats_.size(); i++) {
-    idle_sum +=
-        zx::duration(cpu_stats_[i].idle_time - last_cpu_stats_[i].idle_time);
-    energy_counter_ +=
-        cpu_stats_[i].context_switches - last_cpu_stats_[i].context_switches;
+    idle_sum += zx::duration(cpu_stats_[i].idle_time - last_cpu_stats_[i].idle_time);
+    energy_counter_ += cpu_stats_[i].context_switches - last_cpu_stats_[i].context_switches;
   }
 
   const zx::duration elapsed = read_time - last_read_time_;
 
-  const auto idle_percent =
-      (idle_sum.get() * 100) / (elapsed.get() * cpu_stats_.size());
+  const auto idle_percent = (idle_sum.get() * 100) / (elapsed.get() * cpu_stats_.size());
 
   measurement->contact = true;
   measurement->rate = 100 - idle_percent;
-  measurement->energy_expended = std::min<decltype(energy_counter_)>(
-      energy_counter_, std::numeric_limits<int>::max());
+  measurement->energy_expended =
+      std::min<decltype(energy_counter_)>(energy_counter_, std::numeric_limits<int>::max());
 
   last_read_time_ = read_time;
   last_cpu_stats_.swap(cpu_stats_);
@@ -100,9 +96,9 @@ bool SystemLoadHeartModel::ReadMeasurement(Measurement* measurement) {
 bool SystemLoadHeartModel::ReadCpuStats() {
   size_t actual, available;
 
-  zx_status_t err = root_resource_.get_info(
-      ZX_INFO_CPU_STATS, &cpu_stats_[0],
-      cpu_stats_.size() * sizeof(zx_info_cpu_stats), &actual, &available);
+  zx_status_t err =
+      root_resource_.get_info(ZX_INFO_CPU_STATS, &cpu_stats_[0],
+                              cpu_stats_.size() * sizeof(zx_info_cpu_stats), &actual, &available);
 
   return (err == ZX_OK && actual == available);
 }

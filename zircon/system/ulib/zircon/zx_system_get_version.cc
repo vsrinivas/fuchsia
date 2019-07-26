@@ -7,11 +7,11 @@
 #include "private.h"
 
 zx_status_t _zx_system_get_version(char* version, size_t len) {
-    if (len < sizeof(DATA_CONSTANTS.buildid))
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    for (size_t i = 0; i < sizeof(DATA_CONSTANTS.buildid); ++i)
-        version[i] = DATA_CONSTANTS.buildid[i];
-    return ZX_OK;
+  if (len < sizeof(DATA_CONSTANTS.buildid))
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  for (size_t i = 0; i < sizeof(DATA_CONSTANTS.buildid); ++i)
+    version[i] = DATA_CONSTANTS.buildid[i];
+  return ZX_OK;
 }
 
 VDSO_INTERFACE_FUNCTION(zx_system_get_version);

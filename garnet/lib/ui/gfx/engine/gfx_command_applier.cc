@@ -1049,9 +1049,9 @@ bool GfxCommandApplier::ApplyCreateImage(Session* session, ResourceId id,
 
 bool GfxCommandApplier::ApplyCreateImagePipe(Session* session, ResourceId id,
                                              fuchsia::ui::gfx::ImagePipeArgs args) {
-  auto image_pipe =
-      fxl::MakeRefCounted<ImagePipe>(session, id, std::move(args.image_pipe_request),
-                                     session->image_pipe_updater(), session->shared_error_reporter());
+  auto image_pipe = fxl::MakeRefCounted<ImagePipe>(session, id, std::move(args.image_pipe_request),
+                                                   session->image_pipe_updater(),
+                                                   session->shared_error_reporter());
   return session->resources()->AddResource(id, image_pipe);
 }
 
@@ -1322,8 +1322,7 @@ ResourcePtr GfxCommandApplier::CreateMemory(Session* session, ResourceId id,
 
 ResourcePtr GfxCommandApplier::CreateImage(Session* session, ResourceId id, MemoryPtr memory,
                                            fuchsia::ui::gfx::ImageArgs args) {
-  return Image::New(session, id, memory, args.info, args.memory_offset,
-                    session->error_reporter());
+  return Image::New(session, id, memory, args.info, args.memory_offset, session->error_reporter());
 }
 
 ResourcePtr GfxCommandApplier::CreateBuffer(Session* session, ResourceId id, MemoryPtr memory,
@@ -1337,10 +1336,10 @@ ResourcePtr GfxCommandApplier::CreateBuffer(Session* session, ResourceId id, Mem
   }
 
   // Make a pointer to a subregion of the memory, if necessary.
-  escher::GpuMemPtr gpu_mem = (memory_offset > 0 || num_bytes < memory->size())
-                                  ? memory->GetGpuMem(session->error_reporter())
-                                        ->Suballocate(num_bytes, memory_offset)
-                                  : memory->GetGpuMem(session->error_reporter());
+  escher::GpuMemPtr gpu_mem =
+      (memory_offset > 0 || num_bytes < memory->size())
+          ? memory->GetGpuMem(session->error_reporter())->Suballocate(num_bytes, memory_offset)
+          : memory->GetGpuMem(session->error_reporter());
 
   return fxl::MakeRefCounted<Buffer>(session, id, std::move(gpu_mem), std::move(memory));
 }

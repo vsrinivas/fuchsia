@@ -52,8 +52,8 @@ void fdio_unsafe_release(fdio_t* io);
 // This function is only safe to call on a fdio_t you
 // hold a reference to.  It is not required that fdio_unsafe_wait_end() be
 // called after this.
-void fdio_unsafe_wait_begin(fdio_t* io, uint32_t events,
-                            zx_handle_t* handle_out, zx_signals_t* signals_out);
+void fdio_unsafe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle_out,
+                            zx_signals_t* signals_out);
 
 // This given a set of signals observed on a handle obtained
 // from fdio_unsafe_wait_begin() returns a set of posix-style events

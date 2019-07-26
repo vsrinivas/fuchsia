@@ -12,11 +12,9 @@
 namespace backoff {
 
 ExponentialBackoff::ExponentialBackoff(fit::function<uint64_t()> seed_generator)
-    : ExponentialBackoff(zx::msec(100), 2u, zx::sec(60 * 60),
-                         std::move(seed_generator)) {}
+    : ExponentialBackoff(zx::msec(100), 2u, zx::sec(60 * 60), std::move(seed_generator)) {}
 
-ExponentialBackoff::ExponentialBackoff(zx::duration initial_delay,
-                                       uint32_t retry_factor,
+ExponentialBackoff::ExponentialBackoff(zx::duration initial_delay, uint32_t retry_factor,
                                        zx::duration max_delay,
                                        fit::function<uint64_t()> seed_generator)
     : initial_delay_(initial_delay),
@@ -39,16 +37,13 @@ uint64_t ExponentialBackoff::DefaultSeedGenerator() {
 
 zx::duration ExponentialBackoff::GetNext() {
   // Add a random component in [0, next_delay).
-  std::uniform_int_distribution<zx_duration_t> distribution(0u,
-                                                            next_delay_.get());
+  std::uniform_int_distribution<zx_duration_t> distribution(0u, next_delay_.get());
   zx::duration r(distribution(rng_));
-  zx::duration result =
-      max_delay_ - r >= next_delay_ ? next_delay_ + r : max_delay_;
+  zx::duration result = max_delay_ - r >= next_delay_ ? next_delay_ + r : max_delay_;
 
   // Calculate the next delay.
-  next_delay_ = next_delay_ <= max_delay_divided_by_factor_
-                    ? next_delay_ * retry_factor_
-                    : max_delay_;
+  next_delay_ =
+      next_delay_ <= max_delay_divided_by_factor_ ? next_delay_ * retry_factor_ : max_delay_;
   return result;
 }
 

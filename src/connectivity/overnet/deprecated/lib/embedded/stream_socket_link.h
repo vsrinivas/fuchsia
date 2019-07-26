@@ -12,8 +12,7 @@
 namespace overnet {
 
 void RegisterStreamSocketLink(BasicOvernetEmbedded* app, Socket socket,
-                              std::unique_ptr<StreamFramer> framer,
-                              bool eager_announce, TimeDelta read_timeout,
-                              Callback<void> destroyed);
+                              std::unique_ptr<StreamFramer> framer, bool eager_announce,
+                              TimeDelta read_timeout, Callback<void> destroyed);
 
 }  // namespace overnet

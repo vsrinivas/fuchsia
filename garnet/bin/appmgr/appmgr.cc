@@ -31,9 +31,9 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 
   // 1. Create root realm.
   RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
-      nullptr, kRootLabel, "/data", "/data/cache", "/tmp",
-      std::move(args.environment_services), args.run_virtual_console,
-      std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{});
+      nullptr, kRootLabel, "/data", "/data/cache", "/tmp", std::move(args.environment_services),
+      args.run_virtual_console, std::move(args.root_realm_services),
+      fuchsia::sys::EnvironmentOptions{});
   root_realm_ = Realm::Create(std::move(realm_args));
   FXL_CHECK(root_realm_) << "Cannot create root realm ";
 
@@ -46,8 +46,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     }));
     publish_dir_->AddEntry("hub", root_realm_->hub_dir());
     publish_dir_->AddEntry("svc", svc);
-    publish_vfs_.ServeDirectory(publish_dir_,
-                                zx::channel(args.pa_directory_request));
+    publish_vfs_.ServeDirectory(publish_dir_, zx::channel(args.pa_directory_request));
   }
 
   // 3. Run sysmgr
@@ -56,9 +55,8 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = sysmgr_url_;
     launch_info.arguments.reset(sysmgr_args_);
-    sysmgr_.events().OnTerminated = [this](
-                                        zx_status_t status,
-                                        TerminationReason termination_reason) {
+    sysmgr_.events().OnTerminated = [this](zx_status_t status,
+                                           TerminationReason termination_reason) {
       if (termination_reason != TerminationReason::EXITED) {
         FXL_LOG(ERROR) << "sysmgr launch failed: "
                        << sys::TerminationReasonToString(termination_reason);
@@ -83,8 +81,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 
     auto retry_handler = [this, dispatcher, run_sysmgr](zx_status_t error) {
       if (sysmgr_permanently_failed_) {
-        FXL_LOG(ERROR)
-            << "sysmgr permanently failed. Check system configuration.";
+        FXL_LOG(ERROR) << "sysmgr permanently failed. Check system configuration.";
         return;
       }
 

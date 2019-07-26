@@ -11,45 +11,37 @@
 namespace zx {
 
 class socket final : public object<socket> {
-public:
-    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_SOCKET;
+ public:
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_SOCKET;
 
-    constexpr socket() = default;
+  constexpr socket() = default;
 
-    explicit socket(zx_handle_t value)
-        : object(value) {}
+  explicit socket(zx_handle_t value) : object(value) {}
 
-    explicit socket(handle&& h)
-        : object(h.release()) {}
+  explicit socket(handle&& h) : object(h.release()) {}
 
-    socket(socket&& other)
-        : object(other.release()) {}
+  socket(socket&& other) : object(other.release()) {}
 
-    socket& operator=(socket&& other) {
-        reset(other.release());
-        return *this;
-    }
+  socket& operator=(socket&& other) {
+    reset(other.release());
+    return *this;
+  }
 
-    static zx_status_t create(uint32_t options, socket* endpoint0,
-                              socket* endpoint1);
+  static zx_status_t create(uint32_t options, socket* endpoint0, socket* endpoint1);
 
-    zx_status_t write(uint32_t options, const void* buffer, size_t len,
-                      size_t* actual) const {
-        return zx_socket_write(get(), options, buffer, len, actual);
-    }
+  zx_status_t write(uint32_t options, const void* buffer, size_t len, size_t* actual) const {
+    return zx_socket_write(get(), options, buffer, len, actual);
+  }
 
-    zx_status_t read(uint32_t options, void* buffer, size_t len,
-                     size_t* actual) const {
-        return zx_socket_read(get(), options, buffer, len, actual);
-    }
+  zx_status_t read(uint32_t options, void* buffer, size_t len, size_t* actual) const {
+    return zx_socket_read(get(), options, buffer, len, actual);
+  }
 
-    zx_status_t shutdown(uint32_t options) const {
-        return zx_socket_shutdown(get(), options);
-    }
+  zx_status_t shutdown(uint32_t options) const { return zx_socket_shutdown(get(), options); }
 };
 
 using unowned_socket = unowned<socket>;
 
-} // namespace zx
+}  // namespace zx
 
-#endif // LIB_ZX_SOCKET_H_
+#endif  // LIB_ZX_SOCKET_H_

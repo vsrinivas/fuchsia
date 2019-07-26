@@ -34,9 +34,8 @@ class CodecAdmissionControl {
   // everything shut down cleanly, the overall fencing isn't really there yet.
   //
   // TODO(dustingreen): std::optional<> instead when C++17.
-  void TryAddCodec(bool multi_instance,
-                   fit::function<void(std::unique_ptr<CodecAdmission>)>
-                       continue_after_previously_started_channel_closes_done);
+  void TryAddCodec(bool multi_instance, fit::function<void(std::unique_ptr<CodecAdmission>)>
+                                            continue_after_previously_started_channel_closes_done);
 
   // Anything posted here will run after any previously-posted items here or via
   // TryAddCodec().
@@ -81,8 +80,7 @@ class CodecAdmission {
 
  private:
   friend class CodecAdmissionControl;
-  CodecAdmission(CodecAdmissionControl* codec_admission_control,
-                 bool multi_instance);
+  CodecAdmission(CodecAdmissionControl* codec_admission_control, bool multi_instance);
 
   CodecAdmissionControl* codec_admission_control_ = nullptr;
   bool multi_instance_;

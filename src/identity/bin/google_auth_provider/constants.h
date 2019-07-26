@@ -11,16 +11,11 @@ namespace google_auth_provider {
 
 constexpr char kFuchsiaClientId[] =
     "934259141868-rejmm4ollj1bs7th1vg2ur6antpbug79.apps.googleusercontent.com";
-constexpr char kGoogleOAuthAuthEndpoint[] =
-    "https://accounts.google.com/o/oauth2/v2/auth";
-constexpr char kGoogleFuchsiaEndpoint[] =
-    "https://accounts.google.com/embedded/setup/fuchsia";
-constexpr char kGoogleOAuthTokenEndpoint[] =
-    "https://www.googleapis.com/oauth2/v4/token";
-constexpr char kGoogleRevokeTokenEndpoint[] =
-    "https://accounts.google.com/o/oauth2/revoke";
-constexpr char kGoogleUserInfoEndpoint[] =
-    "https://www.googleapis.com/oauth2/v3/userinfo";
+constexpr char kGoogleOAuthAuthEndpoint[] = "https://accounts.google.com/o/oauth2/v2/auth";
+constexpr char kGoogleFuchsiaEndpoint[] = "https://accounts.google.com/embedded/setup/fuchsia";
+constexpr char kGoogleOAuthTokenEndpoint[] = "https://www.googleapis.com/oauth2/v4/token";
+constexpr char kGoogleRevokeTokenEndpoint[] = "https://accounts.google.com/o/oauth2/revoke";
+constexpr char kGoogleUserInfoEndpoint[] = "https://www.googleapis.com/oauth2/v3/userinfo";
 constexpr char kFirebaseAuthEndpoint[] =
     "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
     "verifyAssertion";

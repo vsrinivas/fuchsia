@@ -17,33 +17,33 @@ namespace cobalt_client {
 // instantiating the collector through Collector(InMemoryLogger());
 // The class intentionally virtual and not final, to allow customization by unit tests.
 class InMemoryLogger : public internal::Logger {
-public:
-    using RemoteMetricInfo = internal::RemoteMetricInfo;
-    using HistogramBucket = internal::HistogramBucket;
+ public:
+  using RemoteMetricInfo = internal::RemoteMetricInfo;
+  using HistogramBucket = internal::HistogramBucket;
 
-    InMemoryLogger() = default;
-    InMemoryLogger(const InMemoryLogger&) = delete;
-    InMemoryLogger(InMemoryLogger&&) = delete;
-    InMemoryLogger& operator=(const InMemoryLogger&) = delete;
-    InMemoryLogger& operator=(InMemoryLogger&&) = delete;
-    ~InMemoryLogger() override;
+  InMemoryLogger() = default;
+  InMemoryLogger(const InMemoryLogger&) = delete;
+  InMemoryLogger(InMemoryLogger&&) = delete;
+  InMemoryLogger& operator=(const InMemoryLogger&) = delete;
+  InMemoryLogger& operator=(InMemoryLogger&&) = delete;
+  ~InMemoryLogger() override;
 
-    // Adds the contents of buckets and the required info to a buffer.
-    bool Log(const RemoteMetricInfo& remote_info, const HistogramBucket* buckets,
-             size_t num_buckets) override;
+  // Adds the contents of buckets and the required info to a buffer.
+  bool Log(const RemoteMetricInfo& remote_info, const HistogramBucket* buckets,
+           size_t num_buckets) override;
 
-    // Adds the count and the required info to a buffer.
-    bool Log(const RemoteMetricInfo& remote_info, int64_t count) override;
+  // Adds the count and the required info to a buffer.
+  bool Log(const RemoteMetricInfo& remote_info, int64_t count) override;
 
-    const std::map<uint64_t, Counter::Count>& counters() const { return persisted_counters_; }
+  const std::map<uint64_t, Counter::Count>& counters() const { return persisted_counters_; }
 
-    const std::map<uint64_t, std::map<uint32_t, Histogram<1>::Count>>& histograms() const {
-        return persisted_histograms_;
-    }
+  const std::map<uint64_t, std::map<uint32_t, Histogram<1>::Count>>& histograms() const {
+    return persisted_histograms_;
+  }
 
-protected:
-    std::map<uint64_t, Counter::Count> persisted_counters_;
-    std::map<uint64_t, std::map<uint32_t, Histogram<1>::Count>> persisted_histograms_;
+ protected:
+  std::map<uint64_t, Counter::Count> persisted_counters_;
+  std::map<uint64_t, std::map<uint32_t, Histogram<1>::Count>> persisted_histograms_;
 };
 
-} // namespace cobalt_client
+}  // namespace cobalt_client

@@ -19,11 +19,10 @@ zx_status_t Hub::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
 
 zx_status_t Hub::AddEntry(fbl::String name, fbl::String value) {
   return dir_->AddEntry(std::move(name),
-                        fbl::AdoptRef(new fs::UnbufferedPseudoFile(
-                            [value](fbl::String* output) {
-                              *output = value;
-                              return ZX_OK;
-                            })));
+                        fbl::AdoptRef(new fs::UnbufferedPseudoFile([value](fbl::String* output) {
+                          *output = value;
+                          return ZX_OK;
+                        })));
 }
 
 zx_status_t Hub::EnsureComponentDir() {
@@ -40,25 +39,23 @@ zx_status_t Hub::AddComponent(const HubInfo& hub_info) {
   }
   fbl::RefPtr<fs::PseudoDir> component_instance_dir;
   fbl::RefPtr<fs::Vnode> component_instance_vnode;
-  zx_status_t status =
-      component_dir_->Lookup(&component_instance_vnode, hub_info.label());
+  zx_status_t status = component_dir_->Lookup(&component_instance_vnode, hub_info.label());
   if (status == ZX_ERR_NOT_FOUND) {
     component_instance_dir = fbl::AdoptRef(new fs::PseudoDir());
     component_dir_->AddEntry(hub_info.label(), component_instance_dir);
   } else {
-    component_instance_dir = fbl::RefPtr<fs::PseudoDir>(
-        static_cast<fs::PseudoDir*>(component_instance_vnode.get()));
+    component_instance_dir =
+        fbl::RefPtr<fs::PseudoDir>(static_cast<fs::PseudoDir*>(component_instance_vnode.get()));
   }
   return component_instance_dir->AddEntry(hub_info.koid(), hub_info.hub_dir());
 }
 
 zx_status_t Hub::RemoveComponent(const HubInfo& hub_info) {
   fbl::RefPtr<fs::Vnode> component_instance_vnode;
-  zx_status_t status =
-      component_dir_->Lookup(&component_instance_vnode, hub_info.label());
+  zx_status_t status = component_dir_->Lookup(&component_instance_vnode, hub_info.label());
   if (status == ZX_OK) {
-    auto component_instance_dir = fbl::RefPtr<fs::PseudoDir>(
-        static_cast<fs::PseudoDir*>(component_instance_vnode.get()));
+    auto component_instance_dir =
+        fbl::RefPtr<fs::PseudoDir>(static_cast<fs::PseudoDir*>(component_instance_vnode.get()));
     status = component_instance_dir->RemoveEntry(hub_info.koid());
     if (component_instance_dir->IsEmpty()) {
       component_dir_->RemoveEntry(hub_info.label());

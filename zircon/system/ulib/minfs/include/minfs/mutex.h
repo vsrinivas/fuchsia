@@ -22,15 +22,16 @@ using AutoLock = fbl::AutoLock<fbl::Mutex>;
 using Mutex = std::mutex;
 
 class AutoLock {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoLock);
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(AutoLock);
 
-    AutoLock(std::mutex* mutex) : mutex_(mutex) { mutex_->lock(); }
-    ~AutoLock() { mutex_->unlock(); }
-private:
-    std::mutex* mutex_;
+  AutoLock(std::mutex* mutex) : mutex_(mutex) { mutex_->lock(); }
+  ~AutoLock() { mutex_->unlock(); }
+
+ private:
+  std::mutex* mutex_;
 };
 
 #endif
 
-} // namespace minfs
+}  // namespace minfs

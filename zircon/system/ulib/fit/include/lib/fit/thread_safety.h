@@ -7,8 +7,7 @@
 
 // Thread-safety annotations.
 // Currently these are only supported on Clang.
-#if defined(__clang__) &&                                \
-    defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS) && \
+#if defined(__clang__) && defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS) && \
     __has_attribute(acquire_capability)
 #define FIT_THREAD_ANNOTATION(x) __attribute__((x))
 #else
@@ -27,4 +26,4 @@
 #define FIT_SCOPED_CAPABILITY FIT_THREAD_ANNOTATION(__scoped_lockable__)
 #define FIT_NO_THREAD_SAFETY_ANALYSIS FIT_THREAD_ANNOTATION(__no_thread_safety_analysis__)
 
-#endif // LIB_FIT_THREAD_SAFETY_H_
+#endif  // LIB_FIT_THREAD_SAFETY_H_

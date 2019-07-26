@@ -14,17 +14,17 @@
 namespace sherlock {
 
 constexpr pbus_mmio_t sherlock_canvas_mmios[] = {
-  {
-    .base = T931_DMC_BASE,
-    .length = T931_DMC_LENGTH,
-  },
+    {
+        .base = T931_DMC_BASE,
+        .length = T931_DMC_LENGTH,
+    },
 };
 
 constexpr pbus_bti_t sherlock_canvas_btis[] = {
-  {
-    .iommu_index = 0,
-    .bti_id = BTI_CANVAS,
-  },
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_CANVAS,
+    },
 };
 
 constexpr pbus_dev_t canvas_dev = []() {

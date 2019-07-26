@@ -26,4 +26,4 @@
 
 #endif
 
-#endif // SYSROOT_ZIRCON_TLS_
+#endif  // SYSROOT_ZIRCON_TLS_

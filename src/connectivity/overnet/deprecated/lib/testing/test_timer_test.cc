@@ -18,8 +18,7 @@ class MockCallback {
   MOCK_METHOD1(Done, void(const Status&));
 
   StatusCallback New() {
-    return StatusCallback(ALLOCATED_CALLBACK,
-                          [this](const Status& status) { this->Done(status); });
+    return StatusCallback(ALLOCATED_CALLBACK, [this](const Status& status) { this->Done(status); });
   }
 };
 

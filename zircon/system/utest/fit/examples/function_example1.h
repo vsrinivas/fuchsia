@@ -7,6 +7,6 @@
 
 namespace function_example1 {
 void run();
-} // namespace function_example1
+}  // namespace function_example1
 
-#endif // ZIRCON_SYSTEM_UTEST_FIT_EXAMPLES_FUNCTION_EXAMPLE1_H_
+#endif  // ZIRCON_SYSTEM_UTEST_FIT_EXAMPLES_FUNCTION_EXAMPLE1_H_

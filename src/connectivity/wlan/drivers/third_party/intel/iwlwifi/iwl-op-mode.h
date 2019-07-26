@@ -182,9 +182,7 @@ struct iwl_op_mode {
   void* op_mode_specific;
 };
 
-static inline void iwl_op_mode_stop(struct iwl_op_mode* op_mode) {
-  op_mode->ops->stop(op_mode);
-}
+static inline void iwl_op_mode_stop(struct iwl_op_mode* op_mode) { op_mode->ops->stop(op_mode); }
 
 static inline void iwl_op_mode_rx(struct iwl_op_mode* op_mode, struct napi_struct* napi,
                                   struct iwl_rx_cmd_buffer* rxb) {

@@ -14,4 +14,3 @@
 #include <lockdep/lock_class_state.h>
 #include <lockdep/lock_policy.h>
 #include <lockdep/lock_traits.h>
-

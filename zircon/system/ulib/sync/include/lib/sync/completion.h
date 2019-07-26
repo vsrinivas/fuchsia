@@ -11,11 +11,10 @@
 __BEGIN_CDECLS
 
 typedef struct sync_completion {
-    zx_futex_t futex;
+  zx_futex_t futex;
 
 #ifdef __cplusplus
-    sync_completion()
-        : futex(0) {}
+  sync_completion() : futex(0) {}
 #endif
 } sync_completion_t;
 
@@ -48,8 +47,7 @@ void sync_completion_signal(sync_completion_t* completion);
 //
 // Intended to be used by libsync internally, e.g. the condition variable
 // implementation.
-void sync_completion_signal_requeue(sync_completion_t* completion,
-                                    zx_futex_t* requeue_target,
+void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* requeue_target,
                                     zx_handle_t requeue_target_owner);
 
 // Resets the completion's signaled state to unsignaled.
@@ -60,4 +58,4 @@ bool sync_completion_signaled(sync_completion_t* completion);
 
 __END_CDECLS
 
-#endif // LIB_SYNC_COMPLETION_H_
+#endif  // LIB_SYNC_COMPLETION_H_

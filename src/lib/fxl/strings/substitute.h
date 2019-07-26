@@ -26,29 +26,24 @@ namespace fxl {
 // This function is inspired by Abseil's strings/substitute.h.
 std::string Substitute(StringView format, StringView arg0);
 std::string Substitute(StringView format, StringView arg0, StringView arg1);
-std::string Substitute(StringView format, StringView arg0, StringView arg1,
-                       StringView arg2);
-std::string Substitute(StringView format, StringView arg0, StringView arg1,
-                       StringView arg2, StringView arg3);
-std::string Substitute(StringView format, StringView arg0, StringView arg1,
-                       StringView arg2, StringView arg3, StringView arg4);
-std::string Substitute(StringView format, StringView arg0, StringView arg1,
-                       StringView arg2, StringView arg3, StringView arg4,
-                       StringView arg5);
-std::string Substitute(StringView format, StringView arg0, StringView arg1,
-                       StringView arg2, StringView arg3, StringView arg4,
-                       StringView arg5, StringView arg6);
-std::string Substitute(StringView format, StringView arg0, StringView arg1,
-                       StringView arg2, StringView arg3, StringView arg4,
-                       StringView arg5, StringView arg6, StringView arg7);
-std::string Substitute(StringView format, StringView arg0, StringView arg1,
-                       StringView arg2, StringView arg3, StringView arg4,
-                       StringView arg5, StringView arg6, StringView arg7,
-                       StringView arg8);
-std::string Substitute(StringView format, StringView arg0, StringView arg1,
-                       StringView arg2, StringView arg3, StringView arg4,
-                       StringView arg5, StringView arg6, StringView arg7,
-                       StringView arg8, StringView arg9);
+std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2);
+std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
+                       StringView arg3);
+std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
+                       StringView arg3, StringView arg4);
+std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
+                       StringView arg3, StringView arg4, StringView arg5);
+std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
+                       StringView arg3, StringView arg4, StringView arg5, StringView arg6);
+std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
+                       StringView arg3, StringView arg4, StringView arg5, StringView arg6,
+                       StringView arg7);
+std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
+                       StringView arg3, StringView arg4, StringView arg5, StringView arg6,
+                       StringView arg7, StringView arg8);
+std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
+                       StringView arg3, StringView arg4, StringView arg5, StringView arg6,
+                       StringView arg7, StringView arg8, StringView arg9);
 
 }  // namespace fxl
 

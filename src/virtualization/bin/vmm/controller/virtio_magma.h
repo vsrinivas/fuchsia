@@ -17,8 +17,7 @@
 
 // Virtio Magma device.
 class VirtioMagma
-    : public VirtioComponentDevice<VIRTIO_ID_MAGMA, VIRTMAGMA_QUEUE_COUNT,
-                                   virtio_magma_config_t> {
+    : public VirtioComponentDevice<VIRTIO_ID_MAGMA, VIRTMAGMA_QUEUE_COUNT, virtio_magma_config_t> {
  public:
   explicit VirtioMagma(const PhysMem& phys_mem);
 
@@ -32,8 +31,8 @@ class VirtioMagma
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::virtualization::hardware::VirtioMagmaSyncPtr magma_;
 
-  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                             zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                             zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 };
 

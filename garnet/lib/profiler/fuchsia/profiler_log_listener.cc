@@ -21,8 +21,7 @@ ProfilerLogListener::ProfilerLogListener(fit::function<void()> all_done)
 
 ProfilerLogListener::~ProfilerLogListener() {}
 
-void ProfilerLogListener::LogMany(
-    ::std::vector<fuchsia::logger::LogMessage> logs) {
+void ProfilerLogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> logs) {
   for (auto&& log_entry : logs) {
     log_entry_kind token = parse_log_entry(std::move(log_entry.msg));
     if (token == DONE) {
@@ -35,8 +34,7 @@ static const char termination_message[] = "{{{done}}}";
 
 ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(
     const std::string& log_line) {
-  if (log_line.compare(0, 3, "{{{") == 0 &&
-      log_line.compare(log_line.size() - 3, 3, "}}}") == 0) {
+  if (log_line.compare(0, 3, "{{{") == 0 && log_line.compare(log_line.size() - 3, 3, "}}}") == 0) {
     const std::string s = log_line.substr(3, log_line.size() - 6);
 
     std::stringstream input_stringstream(s);
@@ -77,8 +75,7 @@ ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(
       tokens.push_back(item);
     }
     std::string id, base, name;
-    if (tokens[0].compare(0, 3, "id=") == 0 &&
-        tokens[1].compare(0, 5, "base=") == 0 &&
+    if (tokens[0].compare(0, 3, "id=") == 0 && tokens[1].compare(0, 5, "base=") == 0 &&
         tokens[2].compare(0, 5, "name=") == 0) {
       id = tokens[0].substr(3, s.size() - 3);
       base = tokens[1].substr(5, s.size() - 5);
@@ -98,22 +95,21 @@ ProfilerLogListener::log_entry_kind ProfilerLogListener::parse_log_entry(
       uintptr_t size = std::stoul(mmap[2], nullptr, 16);
       uintptr_t offset = std::stoul(mmap[6], nullptr, 16);
       uintptr_t module = std::stoul(mmap[4], nullptr, 16);
-      std::string access =
-          mmap[5].compare("r") == 0
-              ? "r--p"
-              : mmap[5].compare("rw") == 0
-                    ? "rw-p"
-                    : mmap[5].compare("rx") == 0
-                          ? "r-xp"
-                          : mmap[5].compare("rwx") == 0
-                                ? "rwxp"  // Can you actually do this?
-                                : "---p";
+      std::string access = mmap[5].compare("r") == 0
+                               ? "r--p"
+                               : mmap[5].compare("rw") == 0
+                                     ? "rw-p"
+                                     : mmap[5].compare("rx") == 0
+                                           ? "r-xp"
+                                           : mmap[5].compare("rwx") == 0
+                                                 ? "rwxp"  // Can you actually do this?
+                                                 : "---p";
 
-      log_os_ << std::hex << std::setfill('0') << std::setw(12) << address
-              << '-' << std::setw(12) << address + size << " " << access << " "
-              << std::setw(8) << std::setfill('0') << offset << " "
-              << "00:00" << std::setw(4) << std::setfill(' ') << std::dec
-              << module << " " << name << '\n';
+      log_os_ << std::hex << std::setfill('0') << std::setw(12) << address << '-' << std::setw(12)
+              << address + size << " " << access << " " << std::setw(8) << std::setfill('0')
+              << offset << " "
+              << "00:00" << std::setw(4) << std::setfill(' ') << std::dec << module << " " << name
+              << '\n';
     }
 
     mmap_entry_.clear();
@@ -133,8 +129,7 @@ void ProfilerLogListener::Log(fuchsia::logger::LogMessage log) {
 
 void ProfilerLogListener::Done() {}
 
-bool ProfilerLogListener::ConnectToLogger(
-    sys::ComponentContext* component_context, zx_koid_t pid) {
+bool ProfilerLogListener::ConnectToLogger(sys::ComponentContext* component_context, zx_koid_t pid) {
   if (!log_listener_) {
     return false;
   }
@@ -150,8 +145,8 @@ bool ProfilerLogListener::ConnectToLogger(
 
 static zx_koid_t GetKoid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
-  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
-                                          sizeof(info), nullptr, nullptr);
+  zx_status_t status =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
 }
 
@@ -175,8 +170,7 @@ std::string CollectProfilerLog() {
     });
 
     auto component_context = sys::ComponentContext::Create();
-    log_listener->ConnectToLogger(component_context.get(),
-                                  GetCurrentProcessKoid());
+    log_listener->ConnectToLogger(component_context.get(), GetCurrentProcessKoid());
 
     // Trigger mmap log
     __sanitizer_log_write(termination_message, sizeof(termination_message) - 1);

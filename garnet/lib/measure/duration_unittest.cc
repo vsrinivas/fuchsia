@@ -15,8 +15,7 @@ namespace measure {
 namespace {
 
 TEST(MeasureDurationTest, DurationBeginEnd) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
   // Add a matching begin event.
@@ -37,16 +36,13 @@ TEST(MeasureDurationTest, DurationBeginEnd) {
 }
 
 TEST(MeasureDurationTest, DurationComplete) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
 
   // Add nested complete events.
-  measure.Process(
-      test::DurationComplete("something_else", "category_bar", 12u, 14u));
-  measure.Process(
-      test::DurationComplete("event_foo", "category_bar", 10u, 16u));
+  measure.Process(test::DurationComplete("something_else", "category_bar", 12u, 14u));
+  measure.Process(test::DurationComplete("event_foo", "category_bar", 10u, 16u));
 
   auto results = measure.results();
   EXPECT_EQ(1u, results.size());
@@ -54,8 +50,7 @@ TEST(MeasureDurationTest, DurationComplete) {
 }
 
 TEST(MeasureDurationTest, DurationEmpty) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
   auto results = measure.results();
@@ -64,9 +59,8 @@ TEST(MeasureDurationTest, DurationEmpty) {
 
 // Verifies that two measurements can target the same trace event.
 TEST(MeasureDurationTest, DurationTwoMeasurements) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}}),
-      DurationSpec({43u, {"event_foo", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}}),
+                                     DurationSpec({43u, {"event_foo", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
   measure.Process(test::DurationBegin("event_foo", "category_bar", 10u));
@@ -79,8 +73,7 @@ TEST(MeasureDurationTest, DurationTwoMeasurements) {
 }
 
 TEST(MeasureDurationTest, DurationNestedBeginEnd) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
   // Add a matching begin event.
@@ -101,15 +94,12 @@ TEST(MeasureDurationTest, DurationNestedBeginEnd) {
 }
 
 TEST(MeasureDurationTest, DurationNestedComplete) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
 
-  measure.Process(
-      test::DurationComplete("event_foo", "category_bar", 12u, 14u));
-  measure.Process(
-      test::DurationComplete("event_foo", "category_bar", 10u, 16u));
+  measure.Process(test::DurationComplete("event_foo", "category_bar", 12u, 14u));
+  measure.Process(test::DurationComplete("event_foo", "category_bar", 10u, 16u));
 
   auto results = measure.results();
   EXPECT_EQ(1u, results.size());
@@ -117,8 +107,7 @@ TEST(MeasureDurationTest, DurationNestedComplete) {
 }
 
 TEST(MeasureDurationTest, Async) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
   // Add a begin event of id 1u.
@@ -139,8 +128,7 @@ TEST(MeasureDurationTest, Async) {
 }
 
 TEST(MeasureDurationTest, Flow) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
   // Add a begin event of id 1u.
@@ -161,9 +149,8 @@ TEST(MeasureDurationTest, Flow) {
 }
 
 TEST(MeasureDurationTest, DurationAsyncTwoMeasurements) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}}),
-      DurationSpec({43u, {"event_foo", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}}),
+                                     DurationSpec({43u, {"event_foo", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
   // Add a begin event of id 1u.
@@ -179,18 +166,15 @@ TEST(MeasureDurationTest, DurationAsyncTwoMeasurements) {
 }
 
 TEST(MeasureDurationTest, EventMatchingByNameAndCategory) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({40u, {"event_foo", "category_bar"}}),
-      DurationSpec({41u, {"event_foo", "category_bazinga"}}),
-      DurationSpec({42u, {"event_abc", "category_bazinga"}}),
-      DurationSpec({43u, {"event_abc", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({40u, {"event_foo", "category_bar"}}),
+                                     DurationSpec({41u, {"event_foo", "category_bazinga"}}),
+                                     DurationSpec({42u, {"event_abc", "category_bazinga"}}),
+                                     DurationSpec({43u, {"event_abc", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
   measure.Process(test::DurationComplete("event_foo", "category_bar", 0u, 1u));
-  measure.Process(
-      test::DurationComplete("event_foo", "category_bazinga", 0u, 2u));
-  measure.Process(
-      test::DurationComplete("event_abc", "category_bazinga", 0u, 3u));
+  measure.Process(test::DurationComplete("event_foo", "category_bazinga", 0u, 2u));
+  measure.Process(test::DurationComplete("event_abc", "category_bazinga", 0u, 3u));
   measure.Process(test::DurationComplete("event_abc", "category_bar", 0u, 4u));
 
   auto results = measure.results();
@@ -202,9 +186,8 @@ TEST(MeasureDurationTest, EventMatchingByNameAndCategory) {
 }
 
 TEST(MeasureDurationTest, AsyncNested) {
-  std::vector<DurationSpec> specs = {
-      DurationSpec({42u, {"event_foo", "category_bar"}}),
-      DurationSpec({43u, {"event_baz", "category_bar"}})};
+  std::vector<DurationSpec> specs = {DurationSpec({42u, {"event_foo", "category_bar"}}),
+                                     DurationSpec({43u, {"event_baz", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
   // Add a begin event for event_foo of id 0u.

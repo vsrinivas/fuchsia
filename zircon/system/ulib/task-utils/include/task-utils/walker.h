@@ -26,27 +26,22 @@ __BEGIN_CDECLS
 // If the callback returns a value other than ZX_OK, the job tree walk will
 // terminate without visiting any other node, and the zx_status_t value will be
 // returned by walk_job_tree().
-typedef zx_status_t(task_callback_t)(
-    void* context, int depth,
-    zx_handle_t task, zx_koid_t koid, zx_koid_t parent_koid);
+typedef zx_status_t(task_callback_t)(void* context, int depth, zx_handle_t task, zx_koid_t koid,
+                                     zx_koid_t parent_koid);
 
 // Walks the job/process/task tree rooted in root_job. Visits tasks in
 // depth-first pre order. Any callback arg may be NULL.
 // |context| is passed to all callbacks.
-zx_status_t walk_job_tree(zx_handle_t root_job,
-                          task_callback_t job_callback,
-                          task_callback_t process_callback,
-                          task_callback_t thread_callback,
+zx_status_t walk_job_tree(zx_handle_t root_job, task_callback_t job_callback,
+                          task_callback_t process_callback, task_callback_t thread_callback,
                           void* context);
 
 // Calls walk_job_tree() on the system's root job. Will fail if the calling
 // process does not have the rights to access the root job.
 // TODO(dbort): Add a different lib/API to get the system root job and remove
 // this function.
-zx_status_t walk_root_job_tree(task_callback_t job_callback,
-                               task_callback_t process_callback,
-                               task_callback_t thread_callback,
-                               void* context);
+zx_status_t walk_root_job_tree(task_callback_t job_callback, task_callback_t process_callback,
+                               task_callback_t thread_callback, void* context);
 
 __END_CDECLS
 
@@ -54,42 +49,41 @@ __END_CDECLS
 #ifdef __cplusplus
 // Interface for walking a job tree.
 class TaskEnumerator {
-public:
-    // Each of these methods visits the corresponding task type. If any On*()
-    // method returns a value other than ZX_OK, the enumeration stops. See
-    // |task_callback_t| for a description of parameters.
-    virtual zx_status_t OnJob(
-        int depth, zx_handle_t job, zx_koid_t koid, zx_koid_t parent_koid) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    virtual zx_status_t OnProcess(
-        int depth, zx_handle_t process, zx_koid_t koid, zx_koid_t parent_koid) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    virtual zx_status_t OnThread(
-        int depth, zx_handle_t process, zx_koid_t koid, zx_koid_t parent_koid) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+ public:
+  // Each of these methods visits the corresponding task type. If any On*()
+  // method returns a value other than ZX_OK, the enumeration stops. See
+  // |task_callback_t| for a description of parameters.
+  virtual zx_status_t OnJob(int depth, zx_handle_t job, zx_koid_t koid, zx_koid_t parent_koid) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  virtual zx_status_t OnProcess(int depth, zx_handle_t process, zx_koid_t koid,
+                                zx_koid_t parent_koid) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  virtual zx_status_t OnThread(int depth, zx_handle_t process, zx_koid_t koid,
+                               zx_koid_t parent_koid) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    // Walks the job/process/task tree rooted in root_job. Visits tasks in
-    // depth-first pre order.
-    zx_status_t WalkJobTree(zx_handle_t root_job);
+  // Walks the job/process/task tree rooted in root_job. Visits tasks in
+  // depth-first pre order.
+  zx_status_t WalkJobTree(zx_handle_t root_job);
 
-    // Calls WalkJobTree() on the system's root job. Will fail if the calling
-    // process does not have the rights to access the root job.
-    // TODO(dbort): Add a different lib/API to get the system root job and
-    // remove this function.
-    zx_status_t WalkRootJobTree();
+  // Calls WalkJobTree() on the system's root job. Will fail if the calling
+  // process does not have the rights to access the root job.
+  // TODO(dbort): Add a different lib/API to get the system root job and
+  // remove this function.
+  zx_status_t WalkRootJobTree();
 
-protected:
-    TaskEnumerator() = default;
-    virtual ~TaskEnumerator() = default;
+ protected:
+  TaskEnumerator() = default;
+  virtual ~TaskEnumerator() = default;
 
-    // Subclasses must overload these to indicate which task types to actually
-    // visit. Avoids, e.g., visiting every thread in the system when a caller
-    // only cares about jobs.
-    virtual bool has_on_job() const { return false; }
-    virtual bool has_on_process() const { return false; }
-    virtual bool has_on_thread() const { return false; }
+  // Subclasses must overload these to indicate which task types to actually
+  // visit. Avoids, e.g., visiting every thread in the system when a caller
+  // only cares about jobs.
+  virtual bool has_on_job() const { return false; }
+  virtual bool has_on_process() const { return false; }
+  virtual bool has_on_thread() const { return false; }
 };
-#endif // __cplusplus
+#endif  // __cplusplus

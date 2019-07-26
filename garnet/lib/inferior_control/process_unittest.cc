@@ -47,8 +47,7 @@ class AttachTest : public TestServer {
       DoDetachAttach(true);
       // Do the test twice, once at THREAD_STARTING, prior to seeing the
       // ld.so breakpoint, and once later after we've gone past it.
-      async::PostTask(message_loop().dispatcher(),
-                      [this] { DoDetachAttach(false); });
+      async::PostTask(message_loop().dispatcher(), [this] { DoDetachAttach(false); });
       // Since we detached there's no need to resume the thread, the kernel
       // will for us when the eport is unbound.
     } else {
@@ -64,15 +63,12 @@ class AttachTest : public TestServer {
       // The inferior will send us a packet. Wait for it so that we know it has
       // gone past the ld.so breakpoint.
       zx_signals_t pending;
-      EXPECT_EQ(channel_.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
-                                  &pending),
-                ZX_OK);
+      EXPECT_EQ(channel_.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending), ZX_OK);
     }
 
     // Make a copy of the process handle, we use it to re-attach to shortly.
     zx::process dup;
-    ASSERT_EQ(inferior->process().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup),
-              ZX_OK);
+    ASSERT_EQ(inferior->process().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
 
     EXPECT_TRUE(inferior->Detach());
     EXPECT_FALSE(inferior->IsAttached());
@@ -169,26 +165,22 @@ class LdsoBreakpointTest : public TestServer {
   bool libc_present() const { return libc_present_; }
   bool exec_present() const { return exec_present_; }
 
-  void OnArchitecturalException(
-      Process* process, Thread* thread, zx_handle_t eport,
-      const zx_excp_type_t type, const zx_exception_context_t& context)
-      override {
-    FXL_LOG(INFO) << "Got exception "
-                  << debugger_utils::ExceptionNameAsString(type);
+  void OnArchitecturalException(Process* process, Thread* thread, zx_handle_t eport,
+                                const zx_excp_type_t type,
+                                const zx_exception_context_t& context) override {
+    FXL_LOG(INFO) << "Got exception " << debugger_utils::ExceptionNameAsString(type);
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       // The shared libraries should have been loaded by now.
       if (process->DsosLoaded()) {
         dsos_loaded_ = true;
 
         // Libc and the main executable should be present.
-        for (debugger_utils::dsoinfo_t* dso = process->GetDsos(); dso;
-             dso = dso->next) {
+        for (debugger_utils::dsoinfo_t* dso = process->GetDsos(); dso; dso = dso->next) {
           FXL_VLOG(2) << "Have dso " << dso->name;
           // The main executable's name might either be recorded as "" or
           // a potentially clipped version of the path in which case
           // "inferior_control_tests" should still be present.
-          if (strcmp(dso->name, "") == 0 ||
-              strstr(dso->name, kTestHelperDsoName) != nullptr) {
+          if (strcmp(dso->name, "") == 0 || strstr(dso->name, kTestHelperDsoName) != nullptr) {
             exec_present_ = true;
           } else if (strcmp(dso->name, "libc.so") == 0) {
             libc_present_ = true;
@@ -219,8 +211,8 @@ class LdsoBreakpointTest : public TestServer {
 
 TEST_F(LdsoBreakpointTest, LdsoBreakpoint) {
   std::vector<std::string> argv{
-    kTestHelperPath,
-    "trigger-sw-bkpt",
+      kTestHelperPath,
+      "trigger-sw-bkpt",
   };
 
   zx::channel our_channel, their_channel;
@@ -334,8 +326,7 @@ TEST_F(RefreshTest, RefreshWithNewThreads) {
 
     // Make a copy of the process handle, we use it to re-attach to shortly.
     zx::process dup;
-    ASSERT_EQ(inferior->process().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup),
-              ZX_OK);
+    ASSERT_EQ(inferior->process().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
 
     // Detaching and re-attaching will cause us to discard the previously
     // collected set of threads.

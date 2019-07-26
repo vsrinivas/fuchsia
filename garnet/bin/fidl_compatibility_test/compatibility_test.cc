@@ -43,8 +43,7 @@ constexpr uint8_t kArbitraryVectorSize = 3;
 // This is used as a literal constant in compatibility_test_service.fidl.
 constexpr uint8_t kArbitraryConstant = 2;
 
-constexpr char kUsage[] =
-    ("Usage:\n  fidl_compatibility_test foo_server bar_server\n");
+constexpr char kUsage[] = ("Usage:\n  fidl_compatibility_test foo_server bar_server\n");
 
 class DataGenerator {
  public:
@@ -70,8 +69,7 @@ class DataGenerator {
   }
 
   template <typename T>
-  std::enable_if_t<std::is_same_v<T, std::string>, T> next(
-      size_t count = kArbitraryConstant) {
+  std::enable_if_t<std::is_same_v<T, std::string>, T> next(size_t count = kArbitraryConstant) {
     std::string random_string;
     random_string.reserve(count);
     do {
@@ -102,17 +100,14 @@ class DataGenerator {
   }
 
   template <typename T>
-  std::enable_if_t<std::is_same_v<T, fidl::StringPtr>, T> next(
-      size_t count = kArbitraryConstant) {
-    return nullable<fidl::StringPtr>(
-        fidl::StringPtr(), [this, count]() -> fidl::StringPtr {
-          return fidl::StringPtr(next<std::string>(count));
-        });
+  std::enable_if_t<std::is_same_v<T, fidl::StringPtr>, T> next(size_t count = kArbitraryConstant) {
+    return nullable<fidl::StringPtr>(fidl::StringPtr(), [this, count]() -> fidl::StringPtr {
+      return fidl::StringPtr(next<std::string>(count));
+    });
   }
 
   template <typename T>
-  std::enable_if_t<std::is_same_v<T, zx::handle>, T> next(
-      bool nullable = false) {
+  std::enable_if_t<std::is_same_v<T, zx::handle>, T> next(bool nullable = false) {
     if (!nullable || next<bool>()) {
       zx_handle_t raw_event;
       const zx_status_t status = zx_event_create(0u, &raw_event);
@@ -132,11 +127,9 @@ class DataGenerator {
   }
 
   template <typename T>
-  std::enable_if_t<std::is_same_v<T, std::unique_ptr<this_is_a_struct>>, T>
-  next() {
-    return nullable<std::unique_ptr<this_is_a_struct>>(nullptr, [this]() {
-      return std::make_unique<this_is_a_struct>(next<this_is_a_struct>());
-    });
+  std::enable_if_t<std::is_same_v<T, std::unique_ptr<this_is_a_struct>>, T> next() {
+    return nullable<std::unique_ptr<this_is_a_struct>>(
+        nullptr, [this]() { return std::make_unique<this_is_a_struct>(next<this_is_a_struct>()); });
   }
 
   template <typename T>
@@ -158,11 +151,9 @@ class DataGenerator {
   }
 
   template <typename T>
-  std::enable_if_t<std::is_same_v<T, std::unique_ptr<this_is_a_union>>, T>
-  next() {
-    return nullable<std::unique_ptr<this_is_a_union>>(nullptr, [this]() {
-      return std::make_unique<this_is_a_union>(next<this_is_a_union>());
-    });
+  std::enable_if_t<std::is_same_v<T, std::unique_ptr<this_is_a_union>>, T> next() {
+    return nullable<std::unique_ptr<this_is_a_union>>(
+        nullptr, [this]() { return std::make_unique<this_is_a_union>(next<this_is_a_union>()); });
   }
 
   template <typename T>
@@ -196,34 +187,29 @@ zx::handle Handle() {
   return zx::handle(raw_event);
 }
 
-::testing::AssertionResult HandlesEq(const zx::object_base& a,
-                                     const zx::object_base& b) {
+::testing::AssertionResult HandlesEq(const zx::object_base& a, const zx::object_base& b) {
   if (a.is_valid() != b.is_valid()) {
     return ::testing::AssertionFailure()
-           << "Handles are not equally valid :" << a.is_valid() << " vs "
-           << b.is_valid();
+           << "Handles are not equally valid :" << a.is_valid() << " vs " << b.is_valid();
   }
   if (!a.is_valid()) {
     return ::testing::AssertionSuccess() << "Both handles invalid";
   }
   zx_info_handle_basic_t a_info, b_info;
-  zx_status_t status = zx_object_get_info(
-      a.get(), ZX_INFO_HANDLE_BASIC, &a_info, sizeof(a_info), nullptr, nullptr);
+  zx_status_t status =
+      zx_object_get_info(a.get(), ZX_INFO_HANDLE_BASIC, &a_info, sizeof(a_info), nullptr, nullptr);
   if (ZX_OK != status) {
-    return ::testing::AssertionFailure()
-           << "zx_object_get_info(a) returned " << status;
+    return ::testing::AssertionFailure() << "zx_object_get_info(a) returned " << status;
   }
-  status = zx_object_get_info(b.get(), ZX_INFO_HANDLE_BASIC, &b_info,
-                              sizeof(b_info), nullptr, nullptr);
+  status =
+      zx_object_get_info(b.get(), ZX_INFO_HANDLE_BASIC, &b_info, sizeof(b_info), nullptr, nullptr);
   if (ZX_OK != status) {
-    return ::testing::AssertionFailure()
-           << "zx_object_get_info(b) returned " << status;
+    return ::testing::AssertionFailure() << "zx_object_get_info(b) returned " << status;
   }
   if (a_info.koid != b_info.koid) {
-    return ::testing::AssertionFailure()
-           << std::endl
-           << "a_info.koid is: " << a_info.koid << std::endl
-           << "b_info.koid is: " << b_info.koid;
+    return ::testing::AssertionFailure() << std::endl
+                                         << "a_info.koid is: " << a_info.koid << std::endl
+                                         << "b_info.koid is: " << b_info.koid;
   }
   return ::testing::AssertionSuccess();
 }
@@ -283,8 +269,7 @@ void ExpectEq(const Struct& a, const Struct& b) {
       EXPECT_EQ(a.arrays_2d.u64[i][j], b.arrays_2d.u64[i][j]);
       EXPECT_EQ(a.arrays_2d.f32[i][j], b.arrays_2d.f32[i][j]);
       EXPECT_EQ(a.arrays_2d.f64[i][j], b.arrays_2d.f64[i][j]);
-      EXPECT_TRUE(HandlesEq(a.arrays_2d.handle_handle[i][j],
-                            b.arrays_2d.handle_handle[i][j]));
+      EXPECT_TRUE(HandlesEq(a.arrays_2d.handle_handle[i][j], b.arrays_2d.handle_handle[i][j]));
     }
   }
   // vectors
@@ -316,8 +301,7 @@ void ExpectEq(const Struct& a, const Struct& b) {
     EXPECT_EQ(a.vectors.f32_1[i], b.vectors.f32_1[i]);
     EXPECT_EQ(a.vectors.f64_1[i], b.vectors.f64_1[i]);
     for (uint8_t j = 0; j < kArbitraryConstant; ++j) {
-      EXPECT_TRUE(
-          HandlesEq(a.vectors.handle_1[i][j], b.vectors.handle_1[i][j]));
+      EXPECT_TRUE(HandlesEq(a.vectors.handle_1[i][j], b.vectors.handle_1[i][j]));
     }
   }
 
@@ -332,8 +316,7 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_EQ(a.vectors.u64_sized_0, b.vectors.u64_sized_0);
   EXPECT_EQ(a.vectors.f32_sized_0, b.vectors.f32_sized_0);
   EXPECT_EQ(a.vectors.f64_sized_0, b.vectors.f64_sized_0);
-  EXPECT_TRUE(
-      HandlesEq(a.vectors.handle_sized_0[0], b.vectors.handle_sized_0[0]));
+  EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_0[0], b.vectors.handle_sized_0[0]));
 
   EXPECT_EQ(a.vectors.b_sized_1, b.vectors.b_sized_1);
   EXPECT_EQ(a.vectors.i8_sized_1, b.vectors.i8_sized_1);
@@ -347,8 +330,7 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_EQ(a.vectors.f32_sized_1, b.vectors.f32_sized_1);
   EXPECT_EQ(a.vectors.f64_sized_1, b.vectors.f64_sized_1);
   for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
-    EXPECT_TRUE(
-        HandlesEq(a.vectors.handle_sized_1[i], b.vectors.handle_sized_1[i]));
+    EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_1[i], b.vectors.handle_sized_1[i]));
   }
 
   for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
@@ -364,142 +346,83 @@ void ExpectEq(const Struct& a, const Struct& b) {
     EXPECT_EQ(a.vectors.f32_sized_2[i], b.vectors.f32_sized_2[i]);
     EXPECT_EQ(a.vectors.f64_sized_2[i], b.vectors.f64_sized_2[i]);
     for (uint8_t j = 0; j < kArbitraryConstant; ++j) {
-      EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_2[i][j],
-                            b.vectors.handle_sized_2[i][j]));
+      EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_2[i][j], b.vectors.handle_sized_2[i][j]));
     }
   }
 
   EXPECT_EQ(a.vectors.b_nullable_0.is_null(), b.vectors.b_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_0.is_null(),
-            b.vectors.i8_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_0.is_null(),
-            b.vectors.i16_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_0.is_null(),
-            b.vectors.i32_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_0.is_null(),
-            b.vectors.i64_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_0.is_null(),
-            b.vectors.u8_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_0.is_null(),
-            b.vectors.u16_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_0.is_null(),
-            b.vectors.u32_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_0.is_null(),
-            b.vectors.u64_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_0.is_null(),
-            b.vectors.f32_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_0.is_null(),
-            b.vectors.f64_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.handle_nullable_0.is_null(),
-            b.vectors.handle_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.i8_nullable_0.is_null(), b.vectors.i8_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.i16_nullable_0.is_null(), b.vectors.i16_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.i32_nullable_0.is_null(), b.vectors.i32_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.i64_nullable_0.is_null(), b.vectors.i64_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.u8_nullable_0.is_null(), b.vectors.u8_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.u16_nullable_0.is_null(), b.vectors.u16_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.u32_nullable_0.is_null(), b.vectors.u32_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.u64_nullable_0.is_null(), b.vectors.u64_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.f32_nullable_0.is_null(), b.vectors.f32_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.f64_nullable_0.is_null(), b.vectors.f64_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.handle_nullable_0.is_null(), b.vectors.handle_nullable_0.is_null());
 
   EXPECT_EQ(a.vectors.b_nullable_1.is_null(), b.vectors.b_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_1.is_null(),
-            b.vectors.i8_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_1.is_null(),
-            b.vectors.i16_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_1.is_null(),
-            b.vectors.i32_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_1.is_null(),
-            b.vectors.i64_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_1.is_null(),
-            b.vectors.u8_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_1.is_null(),
-            b.vectors.u16_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_1.is_null(),
-            b.vectors.u32_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_1.is_null(),
-            b.vectors.u64_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_1.is_null(),
-            b.vectors.f32_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_1.is_null(),
-            b.vectors.f64_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.handle_nullable_1.is_null(),
-            b.vectors.handle_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.i8_nullable_1.is_null(), b.vectors.i8_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.i16_nullable_1.is_null(), b.vectors.i16_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.i32_nullable_1.is_null(), b.vectors.i32_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.i64_nullable_1.is_null(), b.vectors.i64_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.u8_nullable_1.is_null(), b.vectors.u8_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.u16_nullable_1.is_null(), b.vectors.u16_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.u32_nullable_1.is_null(), b.vectors.u32_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.u64_nullable_1.is_null(), b.vectors.u64_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.f32_nullable_1.is_null(), b.vectors.f32_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.f64_nullable_1.is_null(), b.vectors.f64_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.handle_nullable_1.is_null(), b.vectors.handle_nullable_1.is_null());
 
   for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-    EXPECT_EQ(a.vectors.i8_nullable_1.get()[i],
-              b.vectors.i8_nullable_1.get()[i]);
+    EXPECT_EQ(a.vectors.i8_nullable_1.get()[i], b.vectors.i8_nullable_1.get()[i]);
   }
 
-  EXPECT_EQ(a.vectors.b_nullable_sized_0.is_null(),
-            b.vectors.b_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_sized_0.is_null(),
-            b.vectors.i8_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_sized_0.is_null(),
-            b.vectors.i16_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_sized_0.is_null(),
-            b.vectors.i32_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_sized_0.is_null(),
-            b.vectors.i64_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_sized_0.is_null(),
-            b.vectors.u8_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_sized_0.is_null(),
-            b.vectors.u16_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_sized_0.is_null(),
-            b.vectors.u32_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_sized_0.is_null(),
-            b.vectors.u64_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_sized_0.is_null(),
-            b.vectors.f32_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_sized_0.is_null(),
-            b.vectors.f64_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.b_nullable_sized_0.is_null(), b.vectors.b_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.i8_nullable_sized_0.is_null(), b.vectors.i8_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.i16_nullable_sized_0.is_null(), b.vectors.i16_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.i32_nullable_sized_0.is_null(), b.vectors.i32_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.i64_nullable_sized_0.is_null(), b.vectors.i64_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.u8_nullable_sized_0.is_null(), b.vectors.u8_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.u16_nullable_sized_0.is_null(), b.vectors.u16_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.u32_nullable_sized_0.is_null(), b.vectors.u32_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.u64_nullable_sized_0.is_null(), b.vectors.u64_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.f32_nullable_sized_0.is_null(), b.vectors.f32_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.f64_nullable_sized_0.is_null(), b.vectors.f64_nullable_sized_0.is_null());
   EXPECT_EQ(a.vectors.handle_nullable_sized_0.is_null(),
             b.vectors.handle_nullable_sized_0.is_null());
 
-  EXPECT_EQ(a.vectors.i16_nullable_sized_0.get(),
-            b.vectors.i16_nullable_sized_0.get());
+  EXPECT_EQ(a.vectors.i16_nullable_sized_0.get(), b.vectors.i16_nullable_sized_0.get());
 
-  EXPECT_EQ(a.vectors.b_nullable_sized_1.is_null(),
-            b.vectors.b_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_sized_1.is_null(),
-            b.vectors.i8_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_sized_1.is_null(),
-            b.vectors.i16_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_sized_1.is_null(),
-            b.vectors.i32_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_sized_1.is_null(),
-            b.vectors.i64_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_sized_1.is_null(),
-            b.vectors.u8_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_sized_1.is_null(),
-            b.vectors.u16_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_sized_1.is_null(),
-            b.vectors.u32_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_sized_1.is_null(),
-            b.vectors.u64_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_sized_1.is_null(),
-            b.vectors.f32_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_sized_1.is_null(),
-            b.vectors.f64_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.b_nullable_sized_1.is_null(), b.vectors.b_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.i8_nullable_sized_1.is_null(), b.vectors.i8_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.i16_nullable_sized_1.is_null(), b.vectors.i16_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.i32_nullable_sized_1.is_null(), b.vectors.i32_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.i64_nullable_sized_1.is_null(), b.vectors.i64_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.u8_nullable_sized_1.is_null(), b.vectors.u8_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.u16_nullable_sized_1.is_null(), b.vectors.u16_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.u32_nullable_sized_1.is_null(), b.vectors.u32_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.u64_nullable_sized_1.is_null(), b.vectors.u64_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.f32_nullable_sized_1.is_null(), b.vectors.f32_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.f64_nullable_sized_1.is_null(), b.vectors.f64_nullable_sized_1.is_null());
   EXPECT_EQ(a.vectors.handle_nullable_sized_1.is_null(),
             b.vectors.handle_nullable_sized_1.is_null());
 
-  EXPECT_EQ(a.vectors.f64_nullable_sized_1.get(),
-            b.vectors.f64_nullable_sized_1.get());
+  EXPECT_EQ(a.vectors.f64_nullable_sized_1.get(), b.vectors.f64_nullable_sized_1.get());
 
-  EXPECT_EQ(a.vectors.b_nullable_sized_2.is_null(),
-            b.vectors.b_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_sized_2.is_null(),
-            b.vectors.i8_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_sized_2.is_null(),
-            b.vectors.i16_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_sized_2.is_null(),
-            b.vectors.i32_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_sized_2.is_null(),
-            b.vectors.i64_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_sized_2.is_null(),
-            b.vectors.u8_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_sized_2.is_null(),
-            b.vectors.u16_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_sized_2.is_null(),
-            b.vectors.u32_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_sized_2.is_null(),
-            b.vectors.u64_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_sized_2.is_null(),
-            b.vectors.f32_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_sized_2.is_null(),
-            b.vectors.f64_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.b_nullable_sized_2.is_null(), b.vectors.b_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.i8_nullable_sized_2.is_null(), b.vectors.i8_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.i16_nullable_sized_2.is_null(), b.vectors.i16_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.i32_nullable_sized_2.is_null(), b.vectors.i32_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.i64_nullable_sized_2.is_null(), b.vectors.i64_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.u8_nullable_sized_2.is_null(), b.vectors.u8_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.u16_nullable_sized_2.is_null(), b.vectors.u16_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.u32_nullable_sized_2.is_null(), b.vectors.u32_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.u64_nullable_sized_2.is_null(), b.vectors.u64_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.f32_nullable_sized_2.is_null(), b.vectors.f32_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.f64_nullable_sized_2.is_null(), b.vectors.f64_nullable_sized_2.is_null());
   EXPECT_EQ(a.vectors.handle_nullable_sized_2.is_null(),
             b.vectors.handle_nullable_sized_2.is_null());
 
@@ -519,51 +442,33 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_TRUE(HandlesEq(a.handles.port_handle, b.handles.port_handle));
   EXPECT_TRUE(HandlesEq(a.handles.log_handle, b.handles.log_handle));
   EXPECT_TRUE(HandlesEq(a.handles.socket_handle, b.handles.socket_handle));
-  EXPECT_TRUE(
-      HandlesEq(a.handles.eventpair_handle, b.handles.eventpair_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.eventpair_handle, b.handles.eventpair_handle));
   EXPECT_TRUE(HandlesEq(a.handles.job_handle, b.handles.job_handle));
   EXPECT_TRUE(HandlesEq(a.handles.vmar_handle, b.handles.vmar_handle));
   EXPECT_TRUE(HandlesEq(a.handles.fifo_handle, b.handles.fifo_handle));
   EXPECT_TRUE(HandlesEq(a.handles.timer_handle, b.handles.timer_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_handle_handle,
-                        b.handles.nullable_handle_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_process_handle,
-                        b.handles.nullable_process_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_thread_handle,
-                        b.handles.nullable_thread_handle));
-  EXPECT_TRUE(
-      HandlesEq(a.handles.nullable_vmo_handle, b.handles.nullable_vmo_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_channel_handle,
-                        b.handles.nullable_channel_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_event_handle,
-                        b.handles.nullable_event_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_port_handle,
-                        b.handles.nullable_port_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_interrupt_handle,
-                        b.handles.nullable_interrupt_handle));
-  EXPECT_TRUE(
-      HandlesEq(a.handles.nullable_log_handle, b.handles.nullable_log_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_socket_handle,
-                        b.handles.nullable_socket_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_eventpair_handle,
-                        b.handles.nullable_eventpair_handle));
-  EXPECT_TRUE(
-      HandlesEq(a.handles.nullable_job_handle, b.handles.nullable_job_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_vmar_handle,
-                        b.handles.nullable_vmar_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_fifo_handle,
-                        b.handles.nullable_fifo_handle));
-  EXPECT_TRUE(HandlesEq(a.handles.nullable_timer_handle,
-                        b.handles.nullable_timer_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_handle_handle, b.handles.nullable_handle_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_process_handle, b.handles.nullable_process_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_thread_handle, b.handles.nullable_thread_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_vmo_handle, b.handles.nullable_vmo_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_channel_handle, b.handles.nullable_channel_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_event_handle, b.handles.nullable_event_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_port_handle, b.handles.nullable_port_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_interrupt_handle, b.handles.nullable_interrupt_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_log_handle, b.handles.nullable_log_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_socket_handle, b.handles.nullable_socket_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_eventpair_handle, b.handles.nullable_eventpair_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_job_handle, b.handles.nullable_job_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_vmar_handle, b.handles.nullable_vmar_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_fifo_handle, b.handles.nullable_fifo_handle));
+  EXPECT_TRUE(HandlesEq(a.handles.nullable_timer_handle, b.handles.nullable_timer_handle));
 
   // strings
   EXPECT_EQ(a.strings.s, b.strings.s);
   EXPECT_EQ(a.strings.size_0_s, b.strings.size_0_s);
   EXPECT_EQ(a.strings.size_1_s, b.strings.size_1_s);
-  EXPECT_EQ(a.strings.nullable_size_0_s.get(),
-            b.strings.nullable_size_0_s.get());
-  EXPECT_EQ(a.strings.nullable_size_1_s.is_null(),
-            b.strings.nullable_size_1_s.is_null());
+  EXPECT_EQ(a.strings.nullable_size_0_s.get(), b.strings.nullable_size_0_s.get());
+  EXPECT_EQ(a.strings.nullable_size_1_s.is_null(), b.strings.nullable_size_1_s.is_null());
 
   // enums
   EXPECT_EQ(a.default_enum, b.default_enum);
@@ -653,8 +558,7 @@ void InitializeStruct(Struct* s) {
   std::uniform_int_distribution<uint64_t> uint64_distribution;
   std::uniform_real_distribution<float> float_distribution;
   std::uniform_real_distribution<double> double_distribution;
-  std::string random_string =
-      RandomUTF8(fidl::test::compatibility::strings_size, rand_engine);
+  std::string random_string = RandomUTF8(fidl::test::compatibility::strings_size, rand_engine);
   std::string random_short_string = RandomUTF8(kArbitraryConstant, rand_engine);
 
   // primitive_types
@@ -718,28 +622,28 @@ void InitializeStruct(Struct* s) {
   }
 
   // vectors
-  s->vectors.b_0 = VectorPtr<bool>(
-      std::vector<bool>(kArbitraryVectorSize, bool_distribution(rand_engine)));
-  s->vectors.i8_0 = VectorPtr<int8_t>(std::vector<int8_t>(
-      kArbitraryVectorSize, int8_distribution(rand_engine)));
-  s->vectors.i16_0 = VectorPtr<int16_t>(std::vector<int16_t>(
-      kArbitraryVectorSize, int16_distribution(rand_engine)));
-  s->vectors.i32_0 = VectorPtr<int32_t>(std::vector<int32_t>(
-      kArbitraryVectorSize, int32_distribution(rand_engine)));
-  s->vectors.i64_0 = VectorPtr<int64_t>(std::vector<int64_t>(
-      kArbitraryVectorSize, int64_distribution(rand_engine)));
-  s->vectors.u8_0 = VectorPtr<uint8_t>(std::vector<uint8_t>(
-      kArbitraryVectorSize, uint8_distribution(rand_engine)));
-  s->vectors.u16_0 = VectorPtr<uint16_t>(std::vector<uint16_t>(
-      kArbitraryVectorSize, uint16_distribution(rand_engine)));
-  s->vectors.u32_0 = VectorPtr<uint32_t>(std::vector<uint32_t>(
-      kArbitraryVectorSize, uint32_distribution(rand_engine)));
-  s->vectors.u64_0 = VectorPtr<uint64_t>(std::vector<uint64_t>(
-      kArbitraryVectorSize, uint64_distribution(rand_engine)));
-  s->vectors.f32_0 = VectorPtr<float>(std::vector<float>(
-      kArbitraryVectorSize, float_distribution(rand_engine)));
-  s->vectors.f64_0 = VectorPtr<double>(std::vector<double>(
-      kArbitraryVectorSize, double_distribution(rand_engine)));
+  s->vectors.b_0 =
+      VectorPtr<bool>(std::vector<bool>(kArbitraryVectorSize, bool_distribution(rand_engine)));
+  s->vectors.i8_0 =
+      VectorPtr<int8_t>(std::vector<int8_t>(kArbitraryVectorSize, int8_distribution(rand_engine)));
+  s->vectors.i16_0 = VectorPtr<int16_t>(
+      std::vector<int16_t>(kArbitraryVectorSize, int16_distribution(rand_engine)));
+  s->vectors.i32_0 = VectorPtr<int32_t>(
+      std::vector<int32_t>(kArbitraryVectorSize, int32_distribution(rand_engine)));
+  s->vectors.i64_0 = VectorPtr<int64_t>(
+      std::vector<int64_t>(kArbitraryVectorSize, int64_distribution(rand_engine)));
+  s->vectors.u8_0 = VectorPtr<uint8_t>(
+      std::vector<uint8_t>(kArbitraryVectorSize, uint8_distribution(rand_engine)));
+  s->vectors.u16_0 = VectorPtr<uint16_t>(
+      std::vector<uint16_t>(kArbitraryVectorSize, uint16_distribution(rand_engine)));
+  s->vectors.u32_0 = VectorPtr<uint32_t>(
+      std::vector<uint32_t>(kArbitraryVectorSize, uint32_distribution(rand_engine)));
+  s->vectors.u64_0 = VectorPtr<uint64_t>(
+      std::vector<uint64_t>(kArbitraryVectorSize, uint64_distribution(rand_engine)));
+  s->vectors.f32_0 =
+      VectorPtr<float>(std::vector<float>(kArbitraryVectorSize, float_distribution(rand_engine)));
+  s->vectors.f64_0 = VectorPtr<double>(
+      std::vector<double>(kArbitraryVectorSize, double_distribution(rand_engine)));
 
   {
     std::vector<zx::handle> underlying_vec;
@@ -763,132 +667,100 @@ void InitializeStruct(Struct* s) {
     std::vector<std::vector<double>> double_outer_vector;
     std::vector<std::vector<zx::handle>> handle_outer_vector;
     for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-      bool_outer_vector.emplace_back(std::vector<bool>(std::vector<bool>(
-          kArbitraryConstant, bool_distribution(rand_engine))));
-      int8_outer_vector.emplace_back(std::vector<int8_t>(std::vector<int8_t>(
-          kArbitraryConstant, int8_distribution(rand_engine))));
-      int16_outer_vector.emplace_back(std::vector<int16_t>(std::vector<int16_t>(
-          kArbitraryConstant, int16_distribution(rand_engine))));
-      int32_outer_vector.emplace_back(std::vector<int32_t>(std::vector<int32_t>(
-          kArbitraryConstant, int32_distribution(rand_engine))));
-      int64_outer_vector.emplace_back(std::vector<int64_t>(std::vector<int64_t>(
-          kArbitraryConstant, int64_distribution(rand_engine))));
-      uint8_outer_vector.emplace_back(std::vector<uint8_t>(std::vector<uint8_t>(
-          kArbitraryConstant, uint8_distribution(rand_engine))));
-      uint16_outer_vector.emplace_back(
-          std::vector<uint16_t>(std::vector<uint16_t>(
-              kArbitraryConstant, uint16_distribution(rand_engine))));
-      uint32_outer_vector.emplace_back(
-          std::vector<uint32_t>(std::vector<uint32_t>(
-              kArbitraryConstant, uint32_distribution(rand_engine))));
-      uint64_outer_vector.emplace_back(
-          std::vector<uint64_t>(std::vector<uint64_t>(
-              kArbitraryConstant, uint64_distribution(rand_engine))));
-      float_outer_vector.emplace_back(std::vector<float>(std::vector<float>(
-          kArbitraryConstant, float_distribution(rand_engine))));
-      double_outer_vector.emplace_back(std::vector<double>(std::vector<double>(
-          kArbitraryConstant, double_distribution(rand_engine))));
+      bool_outer_vector.emplace_back(
+          std::vector<bool>(std::vector<bool>(kArbitraryConstant, bool_distribution(rand_engine))));
+      int8_outer_vector.emplace_back(std::vector<int8_t>(
+          std::vector<int8_t>(kArbitraryConstant, int8_distribution(rand_engine))));
+      int16_outer_vector.emplace_back(std::vector<int16_t>(
+          std::vector<int16_t>(kArbitraryConstant, int16_distribution(rand_engine))));
+      int32_outer_vector.emplace_back(std::vector<int32_t>(
+          std::vector<int32_t>(kArbitraryConstant, int32_distribution(rand_engine))));
+      int64_outer_vector.emplace_back(std::vector<int64_t>(
+          std::vector<int64_t>(kArbitraryConstant, int64_distribution(rand_engine))));
+      uint8_outer_vector.emplace_back(std::vector<uint8_t>(
+          std::vector<uint8_t>(kArbitraryConstant, uint8_distribution(rand_engine))));
+      uint16_outer_vector.emplace_back(std::vector<uint16_t>(
+          std::vector<uint16_t>(kArbitraryConstant, uint16_distribution(rand_engine))));
+      uint32_outer_vector.emplace_back(std::vector<uint32_t>(
+          std::vector<uint32_t>(kArbitraryConstant, uint32_distribution(rand_engine))));
+      uint64_outer_vector.emplace_back(std::vector<uint64_t>(
+          std::vector<uint64_t>(kArbitraryConstant, uint64_distribution(rand_engine))));
+      float_outer_vector.emplace_back(std::vector<float>(
+          std::vector<float>(kArbitraryConstant, float_distribution(rand_engine))));
+      double_outer_vector.emplace_back(std::vector<double>(
+          std::vector<double>(kArbitraryConstant, double_distribution(rand_engine))));
       std::vector<zx::handle> handle_inner_vector;
       for (uint8_t i = 0; i < kArbitraryConstant; ++i) {
         handle_inner_vector.emplace_back(Handle());
       }
-      handle_outer_vector.emplace_back(
-          std::vector<zx::handle>(std::move(handle_inner_vector)));
+      handle_outer_vector.emplace_back(std::vector<zx::handle>(std::move(handle_inner_vector)));
     }
-    s->vectors.b_1 =
-        std::vector<std::vector<bool>>(std::move(bool_outer_vector));
-    s->vectors.i8_1 =
-        std::vector<std::vector<int8_t>>(std::move(int8_outer_vector));
-    s->vectors.i16_1 =
-        std::vector<std::vector<int16_t>>(std::move(int16_outer_vector));
-    s->vectors.i32_1 =
-        std::vector<std::vector<int32_t>>(std::move(int32_outer_vector));
-    s->vectors.i64_1 =
-        std::vector<std::vector<int64_t>>(std::move(int64_outer_vector));
-    s->vectors.u8_1 =
-        std::vector<std::vector<uint8_t>>(std::move(uint8_outer_vector));
-    s->vectors.u16_1 =
-        std::vector<std::vector<uint16_t>>(std::move(uint16_outer_vector));
-    s->vectors.u32_1 =
-        std::vector<std::vector<uint32_t>>(std::move(uint32_outer_vector));
-    s->vectors.u64_1 =
-        std::vector<std::vector<uint64_t>>(std::move(uint64_outer_vector));
-    s->vectors.f32_1 =
-        std::vector<std::vector<float>>(std::move(float_outer_vector));
-    s->vectors.f64_1 =
-        std::vector<std::vector<double>>(std::move(double_outer_vector));
-    s->vectors.handle_1 =
-        std::vector<std::vector<zx::handle>>(std::move(handle_outer_vector));
+    s->vectors.b_1 = std::vector<std::vector<bool>>(std::move(bool_outer_vector));
+    s->vectors.i8_1 = std::vector<std::vector<int8_t>>(std::move(int8_outer_vector));
+    s->vectors.i16_1 = std::vector<std::vector<int16_t>>(std::move(int16_outer_vector));
+    s->vectors.i32_1 = std::vector<std::vector<int32_t>>(std::move(int32_outer_vector));
+    s->vectors.i64_1 = std::vector<std::vector<int64_t>>(std::move(int64_outer_vector));
+    s->vectors.u8_1 = std::vector<std::vector<uint8_t>>(std::move(uint8_outer_vector));
+    s->vectors.u16_1 = std::vector<std::vector<uint16_t>>(std::move(uint16_outer_vector));
+    s->vectors.u32_1 = std::vector<std::vector<uint32_t>>(std::move(uint32_outer_vector));
+    s->vectors.u64_1 = std::vector<std::vector<uint64_t>>(std::move(uint64_outer_vector));
+    s->vectors.f32_1 = std::vector<std::vector<float>>(std::move(float_outer_vector));
+    s->vectors.f64_1 = std::vector<std::vector<double>>(std::move(double_outer_vector));
+    s->vectors.handle_1 = std::vector<std::vector<zx::handle>>(std::move(handle_outer_vector));
   }
 
-  s->vectors.b_sized_0 =
-      VectorPtr<bool>(std::vector<bool>{bool_distribution(rand_engine)});
-  s->vectors.i8_sized_0 =
-      VectorPtr<int8_t>(std::vector<int8_t>{int8_distribution(rand_engine)});
+  s->vectors.b_sized_0 = VectorPtr<bool>(std::vector<bool>{bool_distribution(rand_engine)});
+  s->vectors.i8_sized_0 = VectorPtr<int8_t>(std::vector<int8_t>{int8_distribution(rand_engine)});
   s->vectors.i16_sized_0 =
       VectorPtr<int16_t>(std::vector<int16_t>{int16_distribution(rand_engine)});
   s->vectors.i32_sized_0 =
       VectorPtr<int32_t>(std::vector<int32_t>{int32_distribution(rand_engine)});
   s->vectors.i64_sized_0 =
       VectorPtr<int64_t>(std::vector<int64_t>{int64_distribution(rand_engine)});
-  s->vectors.u8_sized_0 =
-      VectorPtr<uint8_t>(std::vector<uint8_t>{uint8_distribution(rand_engine)});
-  s->vectors.u16_sized_0 = VectorPtr<uint16_t>(
-      std::vector<uint16_t>{uint16_distribution(rand_engine)});
-  s->vectors.u32_sized_0 = VectorPtr<uint32_t>(
-      std::vector<uint32_t>{uint32_distribution(rand_engine)});
-  s->vectors.u64_sized_0 = VectorPtr<uint64_t>(
-      std::vector<uint64_t>{uint64_distribution(rand_engine)});
-  s->vectors.f32_sized_0 =
-      VectorPtr<float>(std::vector<float>{float_distribution(rand_engine)});
-  s->vectors.f64_sized_0 =
-      VectorPtr<double>(std::vector<double>{double_distribution(rand_engine)});
+  s->vectors.u8_sized_0 = VectorPtr<uint8_t>(std::vector<uint8_t>{uint8_distribution(rand_engine)});
+  s->vectors.u16_sized_0 =
+      VectorPtr<uint16_t>(std::vector<uint16_t>{uint16_distribution(rand_engine)});
+  s->vectors.u32_sized_0 =
+      VectorPtr<uint32_t>(std::vector<uint32_t>{uint32_distribution(rand_engine)});
+  s->vectors.u64_sized_0 =
+      VectorPtr<uint64_t>(std::vector<uint64_t>{uint64_distribution(rand_engine)});
+  s->vectors.f32_sized_0 = VectorPtr<float>(std::vector<float>{float_distribution(rand_engine)});
+  s->vectors.f64_sized_0 = VectorPtr<double>(std::vector<double>{double_distribution(rand_engine)});
 
   {
     std::vector<zx::handle> underlying_vec;
     underlying_vec.emplace_back(Handle());
-    s->vectors.handle_sized_0 =
-        std::vector<zx::handle>(std::move(underlying_vec));
+    s->vectors.handle_sized_0 = std::vector<zx::handle>(std::move(underlying_vec));
   }
 
-  s->vectors.b_sized_1 = VectorPtr<bool>(std::vector<bool>(
-      fidl::test::compatibility::vectors_size, bool_distribution(rand_engine)));
-  s->vectors.i8_sized_1 = VectorPtr<int8_t>(std::vector<int8_t>(
-      fidl::test::compatibility::vectors_size, int8_distribution(rand_engine)));
-  s->vectors.i16_sized_1 = VectorPtr<int16_t>(
-      std::vector<int16_t>(fidl::test::compatibility::vectors_size,
-                           int16_distribution(rand_engine)));
-  s->vectors.i32_sized_1 = VectorPtr<int32_t>(
-      std::vector<int32_t>(fidl::test::compatibility::vectors_size,
-                           int32_distribution(rand_engine)));
-  s->vectors.i64_sized_1 = VectorPtr<int64_t>(
-      std::vector<int64_t>(fidl::test::compatibility::vectors_size,
-                           int64_distribution(rand_engine)));
-  s->vectors.u8_sized_1 = VectorPtr<uint8_t>(
-      std::vector<uint8_t>(fidl::test::compatibility::vectors_size,
-                           uint8_distribution(rand_engine)));
-  s->vectors.u16_sized_1 = VectorPtr<uint16_t>(
-      std::vector<uint16_t>(fidl::test::compatibility::vectors_size,
-                            uint16_distribution(rand_engine)));
-  s->vectors.u32_sized_1 = VectorPtr<uint32_t>(
-      std::vector<uint32_t>(fidl::test::compatibility::vectors_size,
-                            uint32_distribution(rand_engine)));
-  s->vectors.u64_sized_1 = VectorPtr<uint64_t>(
-      std::vector<uint64_t>(fidl::test::compatibility::vectors_size,
-                            uint64_distribution(rand_engine)));
+  s->vectors.b_sized_1 = VectorPtr<bool>(
+      std::vector<bool>(fidl::test::compatibility::vectors_size, bool_distribution(rand_engine)));
+  s->vectors.i8_sized_1 = VectorPtr<int8_t>(
+      std::vector<int8_t>(fidl::test::compatibility::vectors_size, int8_distribution(rand_engine)));
+  s->vectors.i16_sized_1 = VectorPtr<int16_t>(std::vector<int16_t>(
+      fidl::test::compatibility::vectors_size, int16_distribution(rand_engine)));
+  s->vectors.i32_sized_1 = VectorPtr<int32_t>(std::vector<int32_t>(
+      fidl::test::compatibility::vectors_size, int32_distribution(rand_engine)));
+  s->vectors.i64_sized_1 = VectorPtr<int64_t>(std::vector<int64_t>(
+      fidl::test::compatibility::vectors_size, int64_distribution(rand_engine)));
+  s->vectors.u8_sized_1 = VectorPtr<uint8_t>(std::vector<uint8_t>(
+      fidl::test::compatibility::vectors_size, uint8_distribution(rand_engine)));
+  s->vectors.u16_sized_1 = VectorPtr<uint16_t>(std::vector<uint16_t>(
+      fidl::test::compatibility::vectors_size, uint16_distribution(rand_engine)));
+  s->vectors.u32_sized_1 = VectorPtr<uint32_t>(std::vector<uint32_t>(
+      fidl::test::compatibility::vectors_size, uint32_distribution(rand_engine)));
+  s->vectors.u64_sized_1 = VectorPtr<uint64_t>(std::vector<uint64_t>(
+      fidl::test::compatibility::vectors_size, uint64_distribution(rand_engine)));
   s->vectors.f32_sized_1 = VectorPtr<float>(
-      std::vector<float>(fidl::test::compatibility::vectors_size,
-                         float_distribution(rand_engine)));
-  s->vectors.f64_sized_1 = VectorPtr<double>(
-      std::vector<double>(fidl::test::compatibility::vectors_size,
-                          double_distribution(rand_engine)));
+      std::vector<float>(fidl::test::compatibility::vectors_size, float_distribution(rand_engine)));
+  s->vectors.f64_sized_1 = VectorPtr<double>(std::vector<double>(
+      fidl::test::compatibility::vectors_size, double_distribution(rand_engine)));
   {
     std::vector<zx::handle> underlying_vec;
     for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
       underlying_vec.emplace_back(Handle());
     }
-    s->vectors.handle_sized_1 =
-        std::vector<zx::handle>(std::move(underlying_vec));
+    s->vectors.handle_sized_1 = std::vector<zx::handle>(std::move(underlying_vec));
   }
   {
     std::vector<std::vector<bool>> bool_outer_vector;
@@ -904,82 +776,64 @@ void InitializeStruct(Struct* s) {
     std::vector<std::vector<double>> double_outer_vector;
     std::vector<std::vector<zx::handle>> handle_outer_vector;
     for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
-      bool_outer_vector.emplace_back(std::vector<bool>(std::vector<bool>(
-          kArbitraryConstant, bool_distribution(rand_engine))));
-      int8_outer_vector.emplace_back(std::vector<int8_t>(std::vector<int8_t>(
-          kArbitraryConstant, int8_distribution(rand_engine))));
-      int16_outer_vector.emplace_back(std::vector<int16_t>(std::vector<int16_t>(
-          kArbitraryConstant, int16_distribution(rand_engine))));
-      int32_outer_vector.emplace_back(std::vector<int32_t>(std::vector<int32_t>(
-          kArbitraryConstant, int32_distribution(rand_engine))));
-      int64_outer_vector.emplace_back(std::vector<int64_t>(std::vector<int64_t>(
-          kArbitraryConstant, int64_distribution(rand_engine))));
-      uint8_outer_vector.emplace_back(std::vector<uint8_t>(std::vector<uint8_t>(
-          kArbitraryConstant, uint8_distribution(rand_engine))));
-      uint16_outer_vector.emplace_back(
-          std::vector<uint16_t>(std::vector<uint16_t>(
-              kArbitraryConstant, uint16_distribution(rand_engine))));
-      uint32_outer_vector.emplace_back(
-          std::vector<uint32_t>(std::vector<uint32_t>(
-              kArbitraryConstant, uint32_distribution(rand_engine))));
-      uint64_outer_vector.emplace_back(
-          std::vector<uint64_t>(std::vector<uint64_t>(
-              kArbitraryConstant, uint64_distribution(rand_engine))));
-      float_outer_vector.emplace_back(std::vector<float>(std::vector<float>(
-          kArbitraryConstant, float_distribution(rand_engine))));
-      double_outer_vector.emplace_back(std::vector<double>(std::vector<double>(
-          kArbitraryConstant, double_distribution(rand_engine))));
+      bool_outer_vector.emplace_back(
+          std::vector<bool>(std::vector<bool>(kArbitraryConstant, bool_distribution(rand_engine))));
+      int8_outer_vector.emplace_back(std::vector<int8_t>(
+          std::vector<int8_t>(kArbitraryConstant, int8_distribution(rand_engine))));
+      int16_outer_vector.emplace_back(std::vector<int16_t>(
+          std::vector<int16_t>(kArbitraryConstant, int16_distribution(rand_engine))));
+      int32_outer_vector.emplace_back(std::vector<int32_t>(
+          std::vector<int32_t>(kArbitraryConstant, int32_distribution(rand_engine))));
+      int64_outer_vector.emplace_back(std::vector<int64_t>(
+          std::vector<int64_t>(kArbitraryConstant, int64_distribution(rand_engine))));
+      uint8_outer_vector.emplace_back(std::vector<uint8_t>(
+          std::vector<uint8_t>(kArbitraryConstant, uint8_distribution(rand_engine))));
+      uint16_outer_vector.emplace_back(std::vector<uint16_t>(
+          std::vector<uint16_t>(kArbitraryConstant, uint16_distribution(rand_engine))));
+      uint32_outer_vector.emplace_back(std::vector<uint32_t>(
+          std::vector<uint32_t>(kArbitraryConstant, uint32_distribution(rand_engine))));
+      uint64_outer_vector.emplace_back(std::vector<uint64_t>(
+          std::vector<uint64_t>(kArbitraryConstant, uint64_distribution(rand_engine))));
+      float_outer_vector.emplace_back(std::vector<float>(
+          std::vector<float>(kArbitraryConstant, float_distribution(rand_engine))));
+      double_outer_vector.emplace_back(std::vector<double>(
+          std::vector<double>(kArbitraryConstant, double_distribution(rand_engine))));
       std::vector<zx::handle> handle_inner_vector;
       for (uint8_t i = 0; i < kArbitraryConstant; ++i) {
         handle_inner_vector.emplace_back(Handle());
       }
-      handle_outer_vector.emplace_back(
-          std::vector<zx::handle>(std::move(handle_inner_vector)));
+      handle_outer_vector.emplace_back(std::vector<zx::handle>(std::move(handle_inner_vector)));
     }
-    s->vectors.b_sized_2 =
-        std::vector<std::vector<bool>>(std::move(bool_outer_vector));
-    s->vectors.i8_sized_2 =
-        std::vector<std::vector<int8_t>>(std::move(int8_outer_vector));
-    s->vectors.i16_sized_2 =
-        std::vector<std::vector<int16_t>>(std::move(int16_outer_vector));
-    s->vectors.i32_sized_2 =
-        std::vector<std::vector<int32_t>>(std::move(int32_outer_vector));
-    s->vectors.i64_sized_2 =
-        std::vector<std::vector<int64_t>>(std::move(int64_outer_vector));
-    s->vectors.u8_sized_2 =
-        std::vector<std::vector<uint8_t>>(std::move(uint8_outer_vector));
-    s->vectors.u16_sized_2 =
-        std::vector<std::vector<uint16_t>>(std::move(uint16_outer_vector));
-    s->vectors.u32_sized_2 =
-        std::vector<std::vector<uint32_t>>(std::move(uint32_outer_vector));
-    s->vectors.u64_sized_2 =
-        std::vector<std::vector<uint64_t>>(std::move(uint64_outer_vector));
-    s->vectors.f32_sized_2 =
-        std::vector<std::vector<float>>(std::move(float_outer_vector));
-    s->vectors.f64_sized_2 =
-        std::vector<std::vector<double>>(std::move(double_outer_vector));
+    s->vectors.b_sized_2 = std::vector<std::vector<bool>>(std::move(bool_outer_vector));
+    s->vectors.i8_sized_2 = std::vector<std::vector<int8_t>>(std::move(int8_outer_vector));
+    s->vectors.i16_sized_2 = std::vector<std::vector<int16_t>>(std::move(int16_outer_vector));
+    s->vectors.i32_sized_2 = std::vector<std::vector<int32_t>>(std::move(int32_outer_vector));
+    s->vectors.i64_sized_2 = std::vector<std::vector<int64_t>>(std::move(int64_outer_vector));
+    s->vectors.u8_sized_2 = std::vector<std::vector<uint8_t>>(std::move(uint8_outer_vector));
+    s->vectors.u16_sized_2 = std::vector<std::vector<uint16_t>>(std::move(uint16_outer_vector));
+    s->vectors.u32_sized_2 = std::vector<std::vector<uint32_t>>(std::move(uint32_outer_vector));
+    s->vectors.u64_sized_2 = std::vector<std::vector<uint64_t>>(std::move(uint64_outer_vector));
+    s->vectors.f32_sized_2 = std::vector<std::vector<float>>(std::move(float_outer_vector));
+    s->vectors.f64_sized_2 = std::vector<std::vector<double>>(std::move(double_outer_vector));
     s->vectors.handle_sized_2 =
         std::vector<std::vector<zx::handle>>(std::move(handle_outer_vector));
   }
 
   // intentionally leave most of the nullable vectors as null, just set one
   // from each category.
-  s->vectors.b_nullable_0 =
-      VectorPtr<bool>(std::vector<bool>{bool_distribution(rand_engine)});
+  s->vectors.b_nullable_0 = VectorPtr<bool>(std::vector<bool>{bool_distribution(rand_engine)});
   {
     std::vector<std::vector<int8_t>> int8_outer_vector;
     for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-      int8_outer_vector.emplace_back(VectorPtr<int8_t>(std::vector<int8_t>(
-          kArbitraryConstant, int8_distribution(rand_engine))));
+      int8_outer_vector.emplace_back(VectorPtr<int8_t>(
+          std::vector<int8_t>(kArbitraryConstant, int8_distribution(rand_engine))));
     }
-    s->vectors.i8_nullable_1 =
-        VectorPtr<std::vector<int8_t>>(std::move(int8_outer_vector));
+    s->vectors.i8_nullable_1 = VectorPtr<std::vector<int8_t>>(std::move(int8_outer_vector));
   }
   s->vectors.i16_nullable_sized_0 =
       VectorPtr<int16_t>(std::vector<int16_t>{int16_distribution(rand_engine)});
-  s->vectors.f64_nullable_sized_1 = VectorPtr<double>(
-      std::vector<double>(fidl::test::compatibility::vectors_size,
-                          double_distribution(rand_engine)));
+  s->vectors.f64_nullable_sized_1 = VectorPtr<double>(std::vector<double>(
+      fidl::test::compatibility::vectors_size, double_distribution(rand_engine)));
   {
     std::vector<std::vector<zx::handle>> handle_outer_vector;
     for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
@@ -987,8 +841,7 @@ void InitializeStruct(Struct* s) {
       for (uint8_t i = 0; i < kArbitraryConstant; ++i) {
         handle_inner_vector.emplace_back(Handle());
       }
-      handle_outer_vector.emplace_back(
-          std::vector<zx::handle>(std::move(handle_inner_vector)));
+      handle_outer_vector.emplace_back(std::vector<zx::handle>(std::move(handle_inner_vector)));
     }
     s->vectors.handle_nullable_sized_2 =
         VectorPtr<std::vector<zx::handle>>(std::move(handle_outer_vector));
@@ -997,38 +850,31 @@ void InitializeStruct(Struct* s) {
   // handles
   s->handles.handle_handle = Handle();
 
-  ASSERT_EQ(ZX_OK, zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS,
-                                                  &s->handles.process_handle));
   ASSERT_EQ(ZX_OK,
-            zx::thread::create(*zx::unowned_process(zx::process::self()),
-                               "dummy", 5u, 0u, &s->handles.thread_handle));
+            zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &s->handles.process_handle));
+  ASSERT_EQ(ZX_OK, zx::thread::create(*zx::unowned_process(zx::process::self()), "dummy", 5u, 0u,
+                                      &s->handles.thread_handle));
   ASSERT_EQ(ZX_OK, zx::vmo::create(0u, 0u, &s->handles.vmo_handle));
   ASSERT_EQ(ZX_OK, zx::event::create(0u, &s->handles.event_handle));
   ASSERT_EQ(ZX_OK, zx::port::create(0u, &s->handles.port_handle));
-  ASSERT_EQ(ZX_OK,
-            zx::debuglog::create(zx::resource(), 0u, &s->handles.log_handle));
+  ASSERT_EQ(ZX_OK, zx::debuglog::create(zx::resource(), 0u, &s->handles.log_handle));
 
   zx::socket socket1;
   ASSERT_EQ(ZX_OK, zx::socket::create(0u, &s->handles.socket_handle, &socket1));
 
   zx::eventpair eventpair1;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0u, &s->handles.eventpair_handle,
-                                         &eventpair1));
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0u, &s->handles.eventpair_handle, &eventpair1));
 
-  ASSERT_EQ(ZX_OK, zx::job::create(*zx::job::default_job(), 0u,
-                                   &s->handles.job_handle));
+  ASSERT_EQ(ZX_OK, zx::job::create(*zx::job::default_job(), 0u, &s->handles.job_handle));
 
   uintptr_t vmar_addr;
-  ASSERT_EQ(ZX_OK, zx::vmar::root_self()->allocate(
-                       0u, getpagesize(), ZX_VM_CAN_MAP_READ,
-                       &s->handles.vmar_handle, &vmar_addr));
+  ASSERT_EQ(ZX_OK, zx::vmar::root_self()->allocate(0u, getpagesize(), ZX_VM_CAN_MAP_READ,
+                                                   &s->handles.vmar_handle, &vmar_addr));
 
   zx::fifo fifo1;
-  ASSERT_EQ(ZX_OK,
-            zx::fifo::create(1u, 1u, 0u, &s->handles.fifo_handle, &fifo1));
+  ASSERT_EQ(ZX_OK, zx::fifo::create(1u, 1u, 0u, &s->handles.fifo_handle, &fifo1));
 
-  ASSERT_EQ(ZX_OK, zx::timer::create(0u, ZX_CLOCK_MONOTONIC,
-                                     &s->handles.timer_handle));
+  ASSERT_EQ(ZX_OK, zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &s->handles.timer_handle));
 
   // For the nullable ones, just set one of them.
   s->handles.nullable_handle_handle = Handle();
@@ -1085,9 +931,8 @@ void InitializeArraysStruct(ArraysStruct* value, DataGenerator& gen) {
     value->float32s[i] = gen.next<float>();
     value->float64s[i] = gen.next<double>();
 
-    value->enums[i] =
-        gen.choose(fidl::test::compatibility::default_enum::kOne,
-                   fidl::test::compatibility::default_enum::kZero);
+    value->enums[i] = gen.choose(fidl::test::compatibility::default_enum::kOne,
+                                 fidl::test::compatibility::default_enum::kZero);
     value->bits[i] = gen.choose(fidl::test::compatibility::default_bits::kOne,
                                 fidl::test::compatibility::default_bits::kTwo);
 
@@ -1171,12 +1016,10 @@ void InitializeVectorsStruct(VectorsStruct* value, DataGenerator& gen) {
     value->float32s.push_back(gen.next<float>());
     value->float64s.push_back(gen.next<double>());
 
-    value->enums.push_back(
-        gen.choose(fidl::test::compatibility::default_enum::kOne,
-                   fidl::test::compatibility::default_enum::kZero));
-    value->bits.push_back(
-        gen.choose(fidl::test::compatibility::default_bits::kOne,
-                   fidl::test::compatibility::default_bits::kTwo));
+    value->enums.push_back(gen.choose(fidl::test::compatibility::default_enum::kOne,
+                                      fidl::test::compatibility::default_enum::kZero));
+    value->bits.push_back(gen.choose(fidl::test::compatibility::default_bits::kOne,
+                                     fidl::test::compatibility::default_bits::kTwo));
 
     value->handles.push_back(gen.next<zx::handle>());
     value->nullable_handles.push_back(gen.next<zx::handle>(true));
@@ -1192,11 +1035,9 @@ void InitializeVectorsStruct(VectorsStruct* value, DataGenerator& gen) {
     }
 
     value->unions.push_back(gen.next<this_is_a_union>());
-    value->nullable_unions.push_back(
-        gen.next<std::unique_ptr<this_is_a_union>>());
+    value->nullable_unions.push_back(gen.next<std::unique_ptr<this_is_a_union>>());
 
-    value->arrays.push_back(
-        std::array<uint32_t, fidl::test::compatibility::vectors_size>{});
+    value->arrays.push_back(std::array<uint32_t, fidl::test::compatibility::vectors_size>{});
     value->vectors.push_back(std::vector<uint32_t>{});
     for (size_t j = 0; j < fidl::test::compatibility::vectors_size; j++) {
       value->arrays.back()[j] = gen.next<uint32_t>();
@@ -1263,12 +1104,10 @@ void InitializeAllTypesTable(AllTypesTable* value, DataGenerator& gen) {
   value->set_uint64_member(gen.next<uint64_t>());
   value->set_float32_member(gen.next<float>());
   value->set_float64_member(gen.next<double>());
-  value->set_enum_member(
-      gen.choose(fidl::test::compatibility::default_enum::kOne,
-                 fidl::test::compatibility::default_enum::kZero));
-  value->set_bits_member(
-      gen.choose(fidl::test::compatibility::default_bits::kOne,
-                 fidl::test::compatibility::default_bits::kTwo));
+  value->set_enum_member(gen.choose(fidl::test::compatibility::default_enum::kOne,
+                                    fidl::test::compatibility::default_enum::kZero));
+  value->set_bits_member(gen.choose(fidl::test::compatibility::default_bits::kOne,
+                                    fidl::test::compatibility::default_bits::kTwo));
   value->set_handle_member(gen.next<zx::handle>());
   value->set_string_member(gen.next<std::string>());
   value->set_struct_member(gen.next<this_is_a_struct>());
@@ -1314,8 +1153,7 @@ void ExpectAllTypesTableEq(const AllTypesTable& a, const AllTypesTable& b) {
   EXPECT_TRUE(fidl::Equals(a.xunion_member(), b.xunion_member()));
 }
 
-void InitializeAllTypesXunions(std::vector<AllTypesXunion>* value,
-                               DataGenerator& gen) {
+void InitializeAllTypesXunions(std::vector<AllTypesXunion>* value, DataGenerator& gen) {
   for (size_t i = 1; true; i++) {
     AllTypesXunion xu{};
     switch (i) {
@@ -1353,14 +1191,12 @@ void InitializeAllTypesXunions(std::vector<AllTypesXunion>* value,
         xu.set_float64_member(gen.next<double>());
         break;
       case 12:
-        xu.set_enum_member(
-            gen.choose(fidl::test::compatibility::default_enum::kOne,
-                       fidl::test::compatibility::default_enum::kZero));
+        xu.set_enum_member(gen.choose(fidl::test::compatibility::default_enum::kOne,
+                                      fidl::test::compatibility::default_enum::kZero));
         break;
       case 13:
-        xu.set_bits_member(
-            gen.choose(fidl::test::compatibility::default_bits::kOne,
-                       fidl::test::compatibility::default_bits::kTwo));
+        xu.set_bits_member(gen.choose(fidl::test::compatibility::default_bits::kOne,
+                                      fidl::test::compatibility::default_bits::kTwo));
         break;
       case 14:
         xu.set_handle_member(gen.next<zx::handle>());
@@ -1395,8 +1231,7 @@ void ExpectAllTypesXunionsEq(const std::vector<AllTypesXunion>& a,
   }
 }
 
-class CompatibilityTest
-    : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {
+class CompatibilityTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {
  protected:
   void SetUp() override {
     proxy_url_ = ::testing::get<0>(GetParam());
@@ -1412,8 +1247,7 @@ class CompatibilityTest
 
 std::vector<std::string> servers;
 
-using TestBody = std::function<void(async::Loop& loop,
-                                    fidl::test::compatibility::EchoPtr& proxy,
+using TestBody = std::function<void(async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                                     const std::string& server_url)>;
 using AllowServer = std::function<bool(const std::string& server_url)>;
 
@@ -1430,14 +1264,12 @@ void ForSomeServers(AllowServer allow, TestBody body) {
       async::Loop loop(&kAsyncLoopConfigAttachToThread);
       fidl::test::compatibility::EchoClientApp proxy;
       bool test_completed = false;
-      proxy.echo().set_error_handler(
-          [&proxy_url, &loop, &test_completed](zx_status_t status) {
-            if (!test_completed) {
-              loop.Quit();
-              FAIL() << "Connection to " << proxy_url
-                     << " failed unexpectedly: " << status;
-            }
-          });
+      proxy.echo().set_error_handler([&proxy_url, &loop, &test_completed](zx_status_t status) {
+        if (!test_completed) {
+          loop.Quit();
+          FAIL() << "Connection to " << proxy_url << " failed unexpectedly: " << status;
+        }
+      });
       proxy.Start(proxy_url);
 
       body(loop, proxy.echo(), server_url);
@@ -1471,12 +1303,11 @@ TEST(Compatibility, EchoStruct) {
     sent.Clone(&sent_clone);
     Struct resp_clone;
     bool called_back = false;
-    proxy->EchoStruct(std::move(sent), server_url,
-                      [&loop, &resp_clone, &called_back](Struct resp) {
-                        ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
-                        called_back = true;
-                        loop.Quit();
-                      });
+    proxy->EchoStruct(std::move(sent), server_url, [&loop, &resp_clone, &called_back](Struct resp) {
+      ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+      called_back = true;
+      loop.Quit();
+    });
 
     loop.Run();
     ASSERT_TRUE(called_back);
@@ -1487,9 +1318,8 @@ TEST(Compatibility, EchoStruct) {
 TEST(Compatibility, EchoStructNoRetval) {
   ForSomeServers(
       // See: FIDL-644
-      Exclude({"rust"}),
-      [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-         const std::string& server_url) {
+      Exclude({"rust"}), [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url) {
         Struct sent;
         InitializeStruct(&sent);
 
@@ -1497,8 +1327,7 @@ TEST(Compatibility, EchoStructNoRetval) {
         sent.Clone(&sent_clone);
         fidl::test::compatibility::Struct resp_clone;
         bool event_received = false;
-        proxy.events().EchoEvent = [&loop, &resp_clone,
-                                    &event_received](Struct resp) {
+        proxy.events().EchoEvent = [&loop, &resp_clone, &event_received](Struct resp) {
           resp.Clone(&resp_clone);
           event_received = true;
           loop.Quit();
@@ -1511,71 +1340,66 @@ TEST(Compatibility, EchoStructNoRetval) {
 }
 
 TEST(Compatibility, EchoArrays) {
-  ForAllServers(
-      [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-         const std::string& server_url) {
-        // Using randomness to avoid having to come up with varied values by
-        // hand. Seed deterministically so that this function's outputs are
-        // predictable.
-        DataGenerator generator(0xF1D7);
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url) {
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0xF1D7);
 
-        ArraysStruct sent;
-        InitializeArraysStruct(&sent, generator);
+    ArraysStruct sent;
+    InitializeArraysStruct(&sent, generator);
 
-        ArraysStruct sent_clone;
-        sent.Clone(&sent_clone);
-        ArraysStruct resp_clone;
-        bool called_back = false;
-        proxy->EchoArrays(
-            std::move(sent), server_url,
-            [&loop, &resp_clone, &called_back](ArraysStruct resp) {
-              ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
-              called_back = true;
-              loop.Quit();
-            });
+    ArraysStruct sent_clone;
+    sent.Clone(&sent_clone);
+    ArraysStruct resp_clone;
+    bool called_back = false;
+    proxy->EchoArrays(std::move(sent), server_url,
+                      [&loop, &resp_clone, &called_back](ArraysStruct resp) {
+                        ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+                        called_back = true;
+                        loop.Quit();
+                      });
 
-        loop.Run();
-        ASSERT_TRUE(called_back);
-        ExpectArraysStructEq(sent_clone, resp_clone);
-      });
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectArraysStructEq(sent_clone, resp_clone);
+  });
 }
 
 TEST(Compatibility, EchoVectors) {
-  ForAllServers(
-      [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-         const std::string& server_url) {
-        // Using randomness to avoid having to come up with varied values by
-        // hand. Seed deterministically so that this function's outputs are
-        // predictable.
-        DataGenerator generator(0x1234);
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url) {
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0x1234);
 
-        VectorsStruct sent;
-        InitializeVectorsStruct(&sent, generator);
+    VectorsStruct sent;
+    InitializeVectorsStruct(&sent, generator);
 
-        VectorsStruct sent_clone;
-        sent.Clone(&sent_clone);
-        VectorsStruct resp_clone;
-        bool called_back = false;
-        proxy->EchoVectors(
-            std::move(sent), server_url,
-            [&loop, &resp_clone, &called_back](VectorsStruct resp) {
-              ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
-              called_back = true;
-              loop.Quit();
-            });
+    VectorsStruct sent_clone;
+    sent.Clone(&sent_clone);
+    VectorsStruct resp_clone;
+    bool called_back = false;
+    proxy->EchoVectors(std::move(sent), server_url,
+                       [&loop, &resp_clone, &called_back](VectorsStruct resp) {
+                         ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+                         called_back = true;
+                         loop.Quit();
+                       });
 
-        loop.Run();
-        ASSERT_TRUE(called_back);
-        ExpectVectorsStructEq(sent_clone, resp_clone);
-      });
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectVectorsStructEq(sent_clone, resp_clone);
+  });
 }
 
 TEST(Compatibility, EchoTable) {
   ForSomeServers(
       // See: FIDL-644
-      Exclude({"rust"}),
-      [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-         const std::string& server_url) {
+      Exclude({"rust"}), [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url) {
         // Using randomness to avoid having to come up with varied values by
         // hand. Seed deterministically so that this function's outputs are
         // predictable.
@@ -1588,13 +1412,12 @@ TEST(Compatibility, EchoTable) {
         sent.Clone(&sent_clone);
         AllTypesTable resp_clone;
         bool called_back = false;
-        proxy->EchoTable(
-            std::move(sent), server_url,
-            [&loop, &resp_clone, &called_back](AllTypesTable resp) {
-              ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
-              called_back = true;
-              loop.Quit();
-            });
+        proxy->EchoTable(std::move(sent), server_url,
+                         [&loop, &resp_clone, &called_back](AllTypesTable resp) {
+                           ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+                           called_back = true;
+                           loop.Quit();
+                         });
 
         loop.Run();
         ASSERT_TRUE(called_back);
@@ -1603,33 +1426,31 @@ TEST(Compatibility, EchoTable) {
 }
 
 TEST(Compatibility, EchoXunions) {
-  ForAllServers(
-      [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-         const std::string& server_url) {
-        // Using randomness to avoid having to come up with varied values by
-        // hand. Seed deterministically so that this function's outputs are
-        // predictable.
-        DataGenerator generator(0x1234);
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url) {
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0x1234);
 
-        std::vector<AllTypesXunion> sent;
-        InitializeAllTypesXunions(&sent, generator);
+    std::vector<AllTypesXunion> sent;
+    InitializeAllTypesXunions(&sent, generator);
 
-        std::vector<AllTypesXunion> sent_clone;
-        fidl::Clone(sent, &sent_clone);
-        std::vector<AllTypesXunion> resp_clone;
-        bool called_back = false;
-        proxy->EchoXunions(std::move(sent), server_url,
-                           [&loop, &resp_clone,
-                            &called_back](std::vector<AllTypesXunion> resp) {
-                             ASSERT_EQ(ZX_OK, fidl::Clone(resp, &resp_clone));
-                             called_back = true;
-                             loop.Quit();
-                           });
+    std::vector<AllTypesXunion> sent_clone;
+    fidl::Clone(sent, &sent_clone);
+    std::vector<AllTypesXunion> resp_clone;
+    bool called_back = false;
+    proxy->EchoXunions(std::move(sent), server_url,
+                       [&loop, &resp_clone, &called_back](std::vector<AllTypesXunion> resp) {
+                         ASSERT_EQ(ZX_OK, fidl::Clone(resp, &resp_clone));
+                         called_back = true;
+                         loop.Quit();
+                       });
 
-        loop.Run();
-        ASSERT_TRUE(called_back);
-        ExpectAllTypesXunionsEq(sent_clone, resp_clone);
-      });
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectAllTypesXunionsEq(sent_clone, resp_clone);
+  });
 }
 
 }  // namespace

@@ -24,8 +24,8 @@ class LogMessageVoidify {
 
 class LogMessage {
  public:
-  LogMessage(fx_log_severity_t severity, const char* file, int line,
-             const char* tag, zx_status_t status, const char* condition);
+  LogMessage(fx_log_severity_t severity, const char* file, int line, const char* tag,
+             zx_status_t status, const char* condition);
   ~LogMessage();
 
   std::ostream& stream() { return stream_; }
@@ -73,49 +73,42 @@ zx_status_t InitLogger();
 
 }  // namespace syslog
 
-#define _FX_LOG_STREAM(severity, tag, status)                           \
-  ::syslog::internal::LogMessage((severity), __FILE__, __LINE__, (tag), \
-                                 (status), nullptr)                     \
-      .stream()
+#define _FX_LOG_STREAM(severity, tag, status) \
+  ::syslog::internal::LogMessage((severity), __FILE__, __LINE__, (tag), (status), nullptr).stream()
 
-#define FX_LOG_STREAM(severity, tag, status) \
-  _FX_LOG_STREAM(FX_LOG_##severity, (tag), (status))
+#define FX_LOG_STREAM(severity, tag, status) _FX_LOG_STREAM(FX_LOG_##severity, (tag), (status))
 
 #define FX_LOG_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::syslog::internal::LogMessageVoidify() & (stream)
 
-#define _FX_EAT_STREAM_PARAMETERS(ignored, tag)                              \
-  true || (ignored) || (tag) != nullptr                                      \
-      ? (void)0                                                              \
-      : FX_LOG_LAZY_STREAM(                                                  \
-            ::syslog::internal::LogMessage(FX_LOG_FATAL, __FILE__, __LINE__, \
-                                           tag, INT32_MAX, #ignored)         \
-                .stream(),                                                   \
-            !(ignored))
+#define _FX_EAT_STREAM_PARAMETERS(ignored, tag)                                                  \
+  true || (ignored) || (tag) != nullptr                                                          \
+      ? (void)0                                                                                  \
+      : FX_LOG_LAZY_STREAM(::syslog::internal::LogMessage(FX_LOG_FATAL, __FILE__, __LINE__, tag, \
+                                                          INT32_MAX, #ignored)                   \
+                               .stream(),                                                        \
+                           !(ignored))
 
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
-#define FX_LOGST(severity, tag)                                 \
-  FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, (tag), INT32_MAX), \
-                     FX_LOG_IS_ENABLED(severity))
+#define FX_LOGST(severity, tag) \
+  FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, (tag), INT32_MAX), FX_LOG_IS_ENABLED(severity))
 
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
 // |status| is a zx_status_t which will be appended in decimal and string forms
 // after the message.
-#define FX_PLOGST(severity, tag, status)                       \
-  FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, (tag), (status)), \
-                     FX_LOG_IS_ENABLED(severity))
+#define FX_PLOGST(severity, tag, status) \
+  FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, (tag), (status)), FX_LOG_IS_ENABLED(severity))
 
 // Writes a message to the global logger.
 // |severity| is one of FX_LOG_DEBUG, FX_LOG_INFO, FX_LOG_WARNING,
 // FX_LOG_ERROR, FX_LOG_FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
-#define FX_LOGST_WITH_SEVERITY(severity, tag)                      \
-  FX_LOG_LAZY_STREAM(_FX_LOG_STREAM((severity), (tag), INT32_MAX), \
-                     fx_log_is_enabled((severity)))
+#define FX_LOGST_WITH_SEVERITY(severity, tag) \
+  FX_LOG_LAZY_STREAM(_FX_LOG_STREAM((severity), (tag), INT32_MAX), fx_log_is_enabled((severity)))
 
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
@@ -148,27 +141,24 @@ zx_status_t InitLogger();
 // the inner for loop doesn't execute twice.
 #define FX_LOGS_FIRST_N(severity, n) FX_LOGST_FIRST_N(severity, n, nullptr)
 
-#define FX_LOGST_FIRST_N(severity, n, tag)                              \
-  for (bool syslog_internal_do_log = true; syslog_internal_do_log;      \
-       syslog_internal_do_log = false)                                  \
-    for (static syslog::internal::LogFirstNState syslog_internal_state; \
-         syslog_internal_do_log && syslog_internal_state.ShouldLog(n);  \
-         syslog_internal_do_log = false)                                \
+#define FX_LOGST_FIRST_N(severity, n, tag)                                                         \
+  for (bool syslog_internal_do_log = true; syslog_internal_do_log; syslog_internal_do_log = false) \
+    for (static syslog::internal::LogFirstNState syslog_internal_state;                            \
+         syslog_internal_do_log && syslog_internal_state.ShouldLog(n);                             \
+         syslog_internal_do_log = false)                                                           \
   FX_LOGST(severity, (tag))
 
 // Writes a message to the global logger.
 // |severity| is one of FX_LOG_DEBUG, FX_LOG_INFO, FX_LOG_WARNING,
 // FX_LOG_ERROR, FX_LOG_FATAL
-#define FX_LOGS_WITH_SEVERITY(severity) \
-  FX_LOGST_WITH_SEVERITY((severity), nullptr)
+#define FX_LOGS_WITH_SEVERITY(severity) FX_LOGST_WITH_SEVERITY((severity), nullptr)
 
 // Writes error message to the global logger if |condition| fails.
 // |tag| is a tag to associated with the message, or NULL if none.
-#define FX_CHECKT(condition, tag)                                           \
-  FX_LOG_LAZY_STREAM(                                                       \
-      ::syslog::internal::LogMessage(FX_LOG_FATAL, __FILE__, __LINE__, tag, \
-                                     INT32_MAX, #condition)                 \
-          .stream(),                                                        \
+#define FX_CHECKT(condition, tag)                                                                  \
+  FX_LOG_LAZY_STREAM(                                                                              \
+      ::syslog::internal::LogMessage(FX_LOG_FATAL, __FILE__, __LINE__, tag, INT32_MAX, #condition) \
+          .stream(),                                                                               \
       !(condition))
 
 // Writes error message to the global logger if |condition| fails.
@@ -185,9 +175,8 @@ zx_status_t InitLogger();
 #endif
 
 // VLOG macros log with negative verbosities.
-#define FX_VLOG_STREAM(verbose_level, tag, status)                            \
-  ::syslog::internal::LogMessage(-(verbose_level), __FILE__, __LINE__, (tag), \
-                                 (status), nullptr)                           \
+#define FX_VLOG_STREAM(verbose_level, tag, status)                                               \
+  ::syslog::internal::LogMessage(-(verbose_level), __FILE__, __LINE__, (tag), (status), nullptr) \
       .stream()
 
 #define FX_VLOGST(verbose_level, tag)                                   \
@@ -200,7 +189,6 @@ zx_status_t InitLogger();
 
 #define FX_VLOGS(verbose_level) FX_VLOGST((verbose_level), nullptr)
 
-#define FX_VPLOGS(verbose_level, status) \
-  FX_VPLOGST((verbose_level), nullptr, status)
+#define FX_VPLOGS(verbose_level, status) FX_VPLOGST((verbose_level), nullptr, status)
 
 #endif  // LIB_SYSLOG_CPP_LOGGER_H_

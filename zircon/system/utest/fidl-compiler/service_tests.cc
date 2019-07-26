@@ -55,20 +55,14 @@ service SomeService {
 
   EXPECT_EQ(service->members.size(), 3);
   const auto& member0 = service->members[0];
-  EXPECT_STR_EQ(std::string(member0.name.data()).c_str(),
-                "some_protocol_first_first");
-  EXPECT_STR_EQ(fidl::NameFlatName(member0.type_ctor->name).c_str(),
-                "example/SomeProtocol1");
+  EXPECT_STR_EQ(std::string(member0.name.data()).c_str(), "some_protocol_first_first");
+  EXPECT_STR_EQ(fidl::NameFlatName(member0.type_ctor->name).c_str(), "example/SomeProtocol1");
   const auto& member1 = service->members[1];
-  EXPECT_STR_EQ(std::string(member1.name.data()).c_str(),
-                "some_protocol_first_second");
-  EXPECT_STR_EQ(fidl::NameFlatName(member1.type_ctor->name).c_str(),
-                "example/SomeProtocol1");
+  EXPECT_STR_EQ(std::string(member1.name.data()).c_str(), "some_protocol_first_second");
+  EXPECT_STR_EQ(fidl::NameFlatName(member1.type_ctor->name).c_str(), "example/SomeProtocol1");
   const auto& member2 = service->members[2];
-  EXPECT_STR_EQ(std::string(member2.name.data()).c_str(),
-                "some_protocol_second");
-  EXPECT_STR_EQ(fidl::NameFlatName(member2.type_ctor->name).c_str(),
-                "example/SomeProtocol2");
+  EXPECT_STR_EQ(std::string(member2.name.data()).c_str(), "some_protocol_second");
+  EXPECT_STR_EQ(fidl::NameFlatName(member2.type_ctor->name).c_str(), "example/SomeProtocol2");
 
   END_TEST;
 }
@@ -91,8 +85,7 @@ service SomeService {
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "multiple service members with the same name");
+  ASSERT_STR_STR(errors[0].c_str(), "multiple service members with the same name");
 
   END_TEST;
 }
@@ -113,8 +106,7 @@ service SomeService {
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "cannot be nullable");
+  ASSERT_STR_STR(errors[0].c_str(), "cannot be nullable");
 
   END_TEST;
 }
@@ -135,8 +127,7 @@ service SomeService {
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "only protocol members are allowed");
+  ASSERT_STR_STR(errors[0].c_str(), "only protocol members are allowed");
 
   END_TEST;
 }

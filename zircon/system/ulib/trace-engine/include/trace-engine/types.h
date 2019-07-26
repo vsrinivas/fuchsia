@@ -9,4 +9,4 @@
 
 #include <lib/trace-engine/types.h>
 
-#endif // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_TYPES_H_
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_TYPES_H_

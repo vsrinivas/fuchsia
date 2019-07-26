@@ -57,18 +57,18 @@ static const pbus_metadata_t bt_uart_metadata[] = {
 };
 
 static pbus_dev_t bt_uart_dev = [] {
-    pbus_dev_t dev = {};
-    dev.name = "bt-uart";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_GENERIC;
-    dev.did = PDEV_DID_AMLOGIC_UART;
-    dev.mmio_list = bt_uart_mmios;
-    dev.mmio_count = countof(bt_uart_mmios);
-    dev.irq_list = bt_uart_irqs;
-    dev.irq_count = countof(bt_uart_irqs);
-    dev.metadata_list = bt_uart_metadata;
-    dev.metadata_count = countof(bt_uart_metadata);
-    return dev;
+  pbus_dev_t dev = {};
+  dev.name = "bt-uart";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_GENERIC;
+  dev.did = PDEV_DID_AMLOGIC_UART;
+  dev.mmio_list = bt_uart_mmios;
+  dev.mmio_count = countof(bt_uart_mmios);
+  dev.irq_list = bt_uart_irqs;
+  dev.irq_count = countof(bt_uart_irqs);
+  dev.metadata_list = bt_uart_metadata;
+  dev.metadata_count = countof(bt_uart_metadata);
+  return dev;
 }();
 
 #if UART_TEST
@@ -89,9 +89,9 @@ static const pbus_irq_t header_uart_irqs[] = {
 };
 
 static const serial_port_info_t header_serial_info = []() {
-    serial_port_info_t serial_port_info;
-    serial_port_info.serial_class = fuchsia_hardware_serial_Class_GENERIC;
-    return serial_port_info;
+  serial_port_info_t serial_port_info;
+  serial_port_info.serial_class = fuchsia_hardware_serial_Class_GENERIC;
+  return serial_port_info;
 }();
 
 static const pbus_metadata_t header_metadata[] = {
@@ -103,100 +103,100 @@ static const pbus_metadata_t header_metadata[] = {
 };
 
 static pbus_dev_t header_uart_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "header-uart";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_GENERIC;
-    dev.did = PDEV_DID_AMLOGIC_UART;
-    dev.mmio_list = header_uart_mmios;
-    dev.mmio_count = countof(header_uart_mmios);
-    dev.irq_list = header_uart_irqs;
-    dev.irq_count = countof(header_uart_irqs);
-    dev.metadata_list = header_metadata;
-    dev.metadata_count = countof(header_metadata);
-    return dev;
+  pbus_dev_t dev = {};
+  dev.name = "header-uart";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_GENERIC;
+  dev.did = PDEV_DID_AMLOGIC_UART;
+  dev.mmio_list = header_uart_mmios;
+  dev.mmio_count = countof(header_uart_mmios);
+  dev.irq_list = header_uart_irqs;
+  dev.irq_count = countof(header_uart_irqs);
+  dev.metadata_list = header_metadata;
+  dev.metadata_count = countof(header_metadata);
+  return dev;
 }();
 #endif
 
 // Enables and configures PWM_E on the WIFI_32K line for the Wifi/Bluetooth module
 zx_status_t Vim::EnableWifi32K() {
-    // Configure WIFI_32K pin for PWM_E
-    zx_status_t status = gpio_impl_.SetAltFunction(WIFI_32K, 1);
-    if (status != ZX_OK)
-        return status;
+  // Configure WIFI_32K pin for PWM_E
+  zx_status_t status = gpio_impl_.SetAltFunction(WIFI_32K, 1);
+  if (status != ZX_OK)
+    return status;
 
-    mmio_buffer_t buffer;
-    // Please do not use get_root_resource() in new code. See ZX-1467.
-    status = mmio_buffer_init_physical(&buffer, S912_PWM_BASE, 0x10000, get_root_resource(),
-                                       ZX_CACHE_POLICY_UNCACHED_DEVICE);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d\n", status);
-        return status;
-    }
-    uint32_t* regs = (uint32_t*)buffer.vaddr;
+  mmio_buffer_t buffer;
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  status = mmio_buffer_init_physical(&buffer, S912_PWM_BASE, 0x10000, get_root_resource(),
+                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d\n", status);
+    return status;
+  }
+  uint32_t* regs = (uint32_t*)buffer.vaddr;
 
-    // these magic numbers were gleaned by instrumenting drivers/amlogic/pwm/pwm_meson.c
-    // TODO(voydanoff) write a proper PWM driver
-    writel(0x016d016e, regs + S912_PWM_PWM_E);
-    writel(0x016d016d, regs + S912_PWM_E2);
-    writel(0x0a0a0609, regs + S912_PWM_TIME_EF);
-    writel(0x02808003, regs + S912_PWM_MISC_REG_EF);
+  // these magic numbers were gleaned by instrumenting drivers/amlogic/pwm/pwm_meson.c
+  // TODO(voydanoff) write a proper PWM driver
+  writel(0x016d016e, regs + S912_PWM_PWM_E);
+  writel(0x016d016d, regs + S912_PWM_E2);
+  writel(0x0a0a0609, regs + S912_PWM_TIME_EF);
+  writel(0x02808003, regs + S912_PWM_MISC_REG_EF);
 
-    mmio_buffer_release(&buffer);
+  mmio_buffer_release(&buffer);
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 zx_status_t Vim::UartInit() {
-    zx_status_t status;
+  zx_status_t status;
 
-    // set alternate functions to enable UART_A and UART_AO_B
-    status = gpio_impl_.SetAltFunction(S912_UART_TX_A, S912_UART_TX_A_FN);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_.SetAltFunction(S912_UART_RX_A, S912_UART_RX_A_FN);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_.SetAltFunction(S912_UART_CTS_A, S912_UART_CTS_A_FN);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_.SetAltFunction(S912_UART_RTS_A, S912_UART_RTS_A_FN);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_.SetAltFunction(S912_UART_TX_AO_B, S912_UART_TX_AO_B_FN);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_.SetAltFunction(S912_UART_RX_AO_B, S912_UART_RX_AO_B_FN);
-    if (status != ZX_OK)
-        return status;
+  // set alternate functions to enable UART_A and UART_AO_B
+  status = gpio_impl_.SetAltFunction(S912_UART_TX_A, S912_UART_TX_A_FN);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_.SetAltFunction(S912_UART_RX_A, S912_UART_RX_A_FN);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_.SetAltFunction(S912_UART_CTS_A, S912_UART_CTS_A_FN);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_.SetAltFunction(S912_UART_RTS_A, S912_UART_RTS_A_FN);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_.SetAltFunction(S912_UART_TX_AO_B, S912_UART_TX_AO_B_FN);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_.SetAltFunction(S912_UART_RX_AO_B, S912_UART_RX_AO_B_FN);
+  if (status != ZX_OK)
+    return status;
 
-    // Configure the WIFI_32K PWM, which is needed for the Bluetooth module to work properly
-    status = EnableWifi32K();
-    if (status != ZX_OK) {
-        return status;
-    }
+  // Configure the WIFI_32K PWM, which is needed for the Bluetooth module to work properly
+  status = EnableWifi32K();
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    // set GPIO to reset Bluetooth module
-    gpio_impl_.ConfigOut(BT_EN, 0);
-    usleep(10 * 1000);
-    gpio_impl_.Write(BT_EN, 1);
+  // set GPIO to reset Bluetooth module
+  gpio_impl_.ConfigOut(BT_EN, 0);
+  usleep(10 * 1000);
+  gpio_impl_.Write(BT_EN, 1);
 
-    // Bind UART for Bluetooth HCI
-    status = pbus_.DeviceAdd(&bt_uart_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "UartInit: pbus_device_add failed: %d\n", status);
-        return status;
-    }
+  // Bind UART for Bluetooth HCI
+  status = pbus_.DeviceAdd(&bt_uart_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "UartInit: pbus_device_add failed: %d\n", status);
+    return status;
+  }
 
 #if UART_TEST
-    // Bind UART for 40-pin header
-    status = pbus_.DeviceAdd(&header_uart_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "UartInit: pbus_device_add failed: %d\n", status);
-        return status;
-    }
+  // Bind UART for 40-pin header
+  status = pbus_.DeviceAdd(&header_uart_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "UartInit: pbus_device_add failed: %d\n", status);
+    return status;
+  }
 #endif
 
-    return ZX_OK;
+  return ZX_OK;
 }
-} //namespace vim
+}  // namespace vim

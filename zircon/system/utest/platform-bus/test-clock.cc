@@ -28,24 +28,24 @@ static const pbus_metadata_t clock_metadata[] = {
         .data_size = sizeof(clock_ids),
     },
 };
-} // namespace
+}  // namespace
 
 zx_status_t TestBoard::ClockInit() {
-    pbus_dev_t clock_dev = {};
-    clock_dev.name = "clock";
-    clock_dev.vid = PDEV_VID_TEST;
-    clock_dev.pid = PDEV_PID_PBUS_TEST;
-    clock_dev.did = PDEV_DID_TEST_CLOCK;
-    clock_dev.metadata_list = clock_metadata;
-    clock_dev.metadata_count = countof(clock_metadata);
+  pbus_dev_t clock_dev = {};
+  clock_dev.name = "clock";
+  clock_dev.vid = PDEV_VID_TEST;
+  clock_dev.pid = PDEV_PID_PBUS_TEST;
+  clock_dev.did = PDEV_DID_TEST_CLOCK;
+  clock_dev.metadata_list = clock_metadata;
+  clock_dev.metadata_count = countof(clock_metadata);
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clock_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
-        return status;
-    }
+  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clock_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-} // namespace board_test
+}  // namespace board_test

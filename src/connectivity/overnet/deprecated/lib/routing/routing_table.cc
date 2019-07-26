@@ -45,8 +45,7 @@ RoutingTable::~RoutingTable() {
 
 void RoutingTable::ProcessUpdate(
     std::initializer_list<fuchsia::overnet::protocol::NodeStatus> nodes,
-    std::initializer_list<fuchsia::overnet::protocol::LinkStatus> links,
-    bool flush_old_nodes) {
+    std::initializer_list<fuchsia::overnet::protocol::LinkStatus> links, bool flush_old_nodes) {
   if (nodes.size() == 0 && links.size() == 0 && !flush_old_nodes)
     return;
   std::unique_lock<std::mutex> lock(mu_);
@@ -60,9 +59,8 @@ void RoutingTable::ProcessUpdate(
     return;
   if (processing_changes_)
     return;
-  auto process_changes = [this, changes = std::move(change_log_),
-                          flush = flush_requested_, now = last_update_,
-                          renderer = ScopedRenderer::current(),
+  auto process_changes = [this, changes = std::move(change_log_), flush = flush_requested_,
+                          now = last_update_, renderer = ScopedRenderer::current(),
                           severity = ScopedSeverity::current()]() mutable {
     ScopedRenderer scoped_renderer(renderer);
     ScopedSeverity scoped_severity(severity);
@@ -107,8 +105,7 @@ void RoutingTable::ProcessUpdate(
   }
 }
 
-void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
-                                bool flush) {
+void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes, bool flush) {
   bool new_gossip_version = false;
 
   // Update all metrics from changelogs.
@@ -118,8 +115,7 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
     if (it == nodes_.end()) {
       if (m.version != fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE) {
         new_gossip_version = true;
-        nodes_.emplace(std::piecewise_construct,
-                       std::forward_as_tuple(NodeId(m.id)),
+        nodes_.emplace(std::piecewise_construct, std::forward_as_tuple(NodeId(m.id)),
                        std::forward_as_tuple(now, fidl::Clone(m)));
         log_verb = "new";
       }
@@ -134,9 +130,8 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
   for (const auto& m : changes.links) {
     auto report_drop = [&m](const char* why) {
       (void)m;
-      OVERNET_TRACE(DEBUG) << "Drop link info: from=" << m.from
-                           << " to=" << m.to << " label=" << m.local_id
-                           << " version=" << m.version << ": " << why;
+      OVERNET_TRACE(DEBUG) << "Drop link info: from=" << m.from << " to=" << m.to
+                           << " label=" << m.local_id << " version=" << m.version << ": " << why;
     };
     // Cannot add a link if the relevant nodes are unknown.
     auto from_node = nodes_.find(NodeId(m.from));
@@ -153,14 +148,12 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
     // Add the link.
     const FullLinkLabel key = {NodeId(m.from), NodeId(m.to), m.local_id};
     auto it = links_.find(key);
-    if (it == links_.end() &&
-        m.version != fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE) {
+    if (it == links_.end() && m.version != fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE) {
       new_gossip_version = true;
       it = links_
                .emplace(
                    std::piecewise_construct, std::forward_as_tuple(key),
-                   std::forward_as_tuple(now, fidl::Clone(m),
-                                         &from_node->second, &to_node->second))
+                   std::forward_as_tuple(now, fidl::Clone(m), &from_node->second, &to_node->second))
                .first;
       from_node->second.outgoing_links.PushBack(&it->second);
       to_node->second.incoming_links.PushBack(&it->second);
@@ -183,8 +176,7 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
   // Remove anything old if we've been asked to.
   if (flush) {
     for (auto it = nodes_.begin(); it != nodes_.end();) {
-      if (it->first != root_node_ &&
-          it->second.last_updated >= now + EntryExpiry()) {
+      if (it->first != root_node_ && it->second.last_updated >= now + EntryExpiry()) {
         RemoveOutgoingLinks(&it->second);
         RemoveIncomingLinks(&it->second);
         it = nodes_.erase(it);
@@ -219,16 +211,16 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
 void RoutingTable::RemoveOutgoingLinks(Node* node) {
   while (Link* link = node->outgoing_links.PopFront()) {
     link->to_node->incoming_links.Remove(link);
-    links_.erase(FullLinkLabel{NodeId(link->status.from),
-                               NodeId(link->status.to), link->status.local_id});
+    links_.erase(
+        FullLinkLabel{NodeId(link->status.from), NodeId(link->status.to), link->status.local_id});
   }
 }
 
 void RoutingTable::RemoveIncomingLinks(Node* node) {
   while (Link* link = node->incoming_links.PopFront()) {
     link->from_node->outgoing_links.Remove(link);
-    links_.erase(FullLinkLabel{NodeId(link->status.from),
-                               NodeId(link->status.to), link->status.local_id});
+    links_.erase(
+        FullLinkLabel{NodeId(link->status.from), NodeId(link->status.to), link->status.local_id});
   }
 }
 
@@ -275,44 +267,37 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
     Node* src = todo.PopFront();
     src->queued = false;
     for (auto link : src->outgoing_links) {
-      if (link->status.version ==
-          fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE)
+      if (link->status.version == fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE)
         continue;
-      TimeDelta rtt = std::min(
-          TimeDelta::FromHours(1),
-          src->best_rtt +
-              (src->status.metrics.has_forwarding_time()
-                   ? TimeDelta::FromMicroseconds(
-                         src->status.metrics.forwarding_time())
-                   : TimeDelta::PositiveInf()) +
-              (link->status.metrics.has_rtt()
-                   ? TimeDelta::FromMicroseconds(link->status.metrics.rtt())
-                   : TimeDelta::PositiveInf()));
+      TimeDelta rtt =
+          std::min(TimeDelta::FromHours(1),
+                   src->best_rtt +
+                       (src->status.metrics.has_forwarding_time()
+                            ? TimeDelta::FromMicroseconds(src->status.metrics.forwarding_time())
+                            : TimeDelta::PositiveInf()) +
+                       (link->status.metrics.has_rtt()
+                            ? TimeDelta::FromMicroseconds(link->status.metrics.rtt())
+                            : TimeDelta::PositiveInf()));
       Node* dst = link->to_node;
       // For now we order by RTT.
-      OVERNET_TRACE(DEBUG) << "RB[" << root_node_
-                           << "]: src=" << node_id_of(src)
+      OVERNET_TRACE(DEBUG) << "RB[" << root_node_ << "]: src=" << node_id_of(src)
                            << " dst=" << node_id_of(dst)
-                           << " dst->last_path_finding_run="
-                           << dst->last_path_finding_run
+                           << " dst->last_path_finding_run=" << dst->last_path_finding_run
                            << " path_finding_run=" << path_finding_run_
                            << " src->best_rtt=" << src->best_rtt
-                           << " dst->best_rtt=" << dst->best_rtt
-                           << " rtt=" << rtt << " src->mss=" << src->mss
-                           << " link->mss="
+                           << " dst->best_rtt=" << dst->best_rtt << " rtt=" << rtt
+                           << " src->mss=" << src->mss << " link->mss="
                            << (link->status.metrics.has_mss()
                                    ? link->status.metrics.mss()
                                    : std::numeric_limits<uint32_t>::max());
-      if (dst->last_path_finding_run != path_finding_run_ ||
-          dst->best_rtt > rtt) {
+      if (dst->last_path_finding_run != path_finding_run_ || dst->best_rtt > rtt) {
         dst->last_path_finding_run = path_finding_run_;
         dst->best_rtt = rtt;
         dst->best_from = src;
         dst->best_link = link;
-        dst->mss =
-            std::min(src->mss, link->status.metrics.has_mss()
-                                   ? link->status.metrics.mss()
-                                   : std::numeric_limits<uint32_t>::max());
+        dst->mss = std::min(src->mss, link->status.metrics.has_mss()
+                                          ? link->status.metrics.mss()
+                                          : std::numeric_limits<uint32_t>::max());
         enqueue(dst);
       }
     }
@@ -325,8 +310,7 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
       continue;
     }
     if (node_it->second.last_path_finding_run != path_finding_run_) {
-      OVERNET_TRACE(DEBUG) << "RB[" << root_node_ << "]: " << node_it->first
-                           << " unreachable";
+      OVERNET_TRACE(DEBUG) << "RB[" << root_node_ << "]: " << node_it->first << " unreachable";
       continue;  // Unreachable
     }
     Node* n = &node_it->second;
@@ -335,9 +319,8 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
     }
     Link* link = n->best_link;
     assert(link->status.from == root_node_);
-    selected_links.emplace(node_it->first,
-                           SelectedLink{link->status.to, link->status.local_id,
-                                        node_it->second.mss});
+    selected_links.emplace(
+        node_it->first, SelectedLink{link->status.to, link->status.local_id, node_it->second.mss});
   }
 
   return selected_links;
@@ -365,8 +348,7 @@ uint64_t RoutingTable::SendUpdate(fuchsia::overnet::protocol::Peer_Proxy* peer,
 
   for (const auto& m : shared_link_status_) {
     OVERNET_TRACE(DEBUG) << "Consider link: " << m;
-    if (NodeId(m.from) == exclude_node ||
-        version_zero_nodes.count(NodeId(m.from)) > 0 ||
+    if (NodeId(m.from) == exclude_node || version_zero_nodes.count(NodeId(m.from)) > 0 ||
         version_zero_nodes.count(NodeId(m.to)) > 0) {
       continue;
     }

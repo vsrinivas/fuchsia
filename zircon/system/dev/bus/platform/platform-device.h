@@ -35,53 +35,53 @@ using PlatformDeviceType = ddk::Device<PlatformDevice, ddk::Rxrpcable>;
 // calls the platform bus protocol method pbus_device_add().
 
 class PlatformDevice : public PlatformDeviceType {
-public:
-    // Creates a new PlatformDevice instance.
-    // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
-    static zx_status_t Create(const pbus_dev_t* pdev, zx_device_t* parent, PlatformBus* bus,
-                              fbl::unique_ptr<platform_bus::PlatformDevice>* out);
+ public:
+  // Creates a new PlatformDevice instance.
+  // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
+  static zx_status_t Create(const pbus_dev_t* pdev, zx_device_t* parent, PlatformBus* bus,
+                            fbl::unique_ptr<platform_bus::PlatformDevice>* out);
 
-    inline uint32_t vid() const { return vid_; }
-    inline uint32_t pid() const { return pid_; }
-    inline uint32_t did() const { return did_; }
+  inline uint32_t vid() const { return vid_; }
+  inline uint32_t pid() const { return pid_; }
+  inline uint32_t did() const { return did_; }
 
-    // Device protocol implementation.
-    void DdkRelease();
-    zx_status_t DdkRxrpc(zx_handle_t channel);
+  // Device protocol implementation.
+  void DdkRelease();
+  zx_status_t DdkRxrpc(zx_handle_t channel);
 
-    // Starts the underlying devmgr device.
-    zx_status_t Start();
+  // Starts the underlying devmgr device.
+  zx_status_t Start();
 
-private:
-    // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
-    explicit PlatformDevice(zx_device_t* parent, PlatformBus* bus, const pbus_dev_t* pdev);
-    zx_status_t Init(const pbus_dev_t* pdev);
+ private:
+  // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
+  explicit PlatformDevice(zx_device_t* parent, PlatformBus* bus, const pbus_dev_t* pdev);
+  zx_status_t Init(const pbus_dev_t* pdev);
 
-    // Handlers for RPCs from PlatformProxy.
-    zx_status_t RpcGetMmio(uint32_t index, zx_paddr_t* out_paddr, size_t* out_length,
-                           zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcGetInterrupt(uint32_t index, uint32_t* out_irq, uint32_t* out_mode,
-                                zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcGetBti(uint32_t index, zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcGetSmc(uint32_t index, zx_handle_t* out_handle, uint32_t* out_handle_count);
-    zx_status_t RpcGetDeviceInfo(pdev_device_info_t* out_info);
-    zx_status_t RpcGetMetadata(uint32_t index, uint32_t* out_type, uint8_t* buf, uint32_t buf_size,
-                               uint32_t* actual);
-    zx_status_t RpcClockEnable(uint32_t index);
-    zx_status_t RpcClockDisable(uint32_t index);
-    zx_status_t RpcClockIsEnabled(uint32_t index, bool* result);
-    zx_status_t RpcClockSetRate(uint32_t index, uint64_t rate);
-    zx_status_t RpcClockQuerySupportedRate(uint32_t index, uint64_t max_rate, uint64_t* out_rate);
-    zx_status_t RpcClockGetRate(uint32_t index, uint64_t* out_current_rate);
+  // Handlers for RPCs from PlatformProxy.
+  zx_status_t RpcGetMmio(uint32_t index, zx_paddr_t* out_paddr, size_t* out_length,
+                         zx_handle_t* out_handle, uint32_t* out_handle_count);
+  zx_status_t RpcGetInterrupt(uint32_t index, uint32_t* out_irq, uint32_t* out_mode,
+                              zx_handle_t* out_handle, uint32_t* out_handle_count);
+  zx_status_t RpcGetBti(uint32_t index, zx_handle_t* out_handle, uint32_t* out_handle_count);
+  zx_status_t RpcGetSmc(uint32_t index, zx_handle_t* out_handle, uint32_t* out_handle_count);
+  zx_status_t RpcGetDeviceInfo(pdev_device_info_t* out_info);
+  zx_status_t RpcGetMetadata(uint32_t index, uint32_t* out_type, uint8_t* buf, uint32_t buf_size,
+                             uint32_t* actual);
+  zx_status_t RpcClockEnable(uint32_t index);
+  zx_status_t RpcClockDisable(uint32_t index);
+  zx_status_t RpcClockIsEnabled(uint32_t index, bool* result);
+  zx_status_t RpcClockSetRate(uint32_t index, uint64_t rate);
+  zx_status_t RpcClockQuerySupportedRate(uint32_t index, uint64_t max_rate, uint64_t* out_rate);
+  zx_status_t RpcClockGetRate(uint32_t index, uint64_t* out_current_rate);
 
-    PlatformBus* bus_;
-    char name_[ZX_DEVICE_NAME_MAX + 1];
-    const uint32_t vid_;
-    const uint32_t pid_;
-    const uint32_t did_;
+  PlatformBus* bus_;
+  char name_[ZX_DEVICE_NAME_MAX + 1];
+  const uint32_t vid_;
+  const uint32_t pid_;
+  const uint32_t did_;
 
-    // Platform bus resources for this device
-    DeviceResources resources_;
+  // Platform bus resources for this device
+  DeviceResources resources_;
 };
 
-} // namespace platform_bus
+}  // namespace platform_bus

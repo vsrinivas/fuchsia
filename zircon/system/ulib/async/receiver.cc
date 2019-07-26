@@ -13,8 +13,9 @@ ReceiverBase::ReceiverBase(async_receiver_handler_t* handler)
 
 ReceiverBase::~ReceiverBase() = default;
 
-zx_status_t ReceiverBase::QueuePacket(async_dispatcher_t* dispatcher, const zx_packet_user_t* data) {
-    return async_queue_packet(dispatcher, &receiver_, data);
+zx_status_t ReceiverBase::QueuePacket(async_dispatcher_t* dispatcher,
+                                      const zx_packet_user_t* data) {
+  return async_queue_packet(dispatcher, &receiver_, data);
 }
 
 Receiver::Receiver(Handler handler)
@@ -24,8 +25,8 @@ Receiver::~Receiver() = default;
 
 void Receiver::CallHandler(async_dispatcher_t* dispatcher, async_receiver_t* receiver,
                            zx_status_t status, const zx_packet_user_t* data) {
-    auto self = Dispatch<Receiver>(receiver);
-    self->handler_(dispatcher, self, status, data);
+  auto self = Dispatch<Receiver>(receiver);
+  self->handler_(dispatcher, self, status, data);
 }
 
-} // namespace async
+}  // namespace async

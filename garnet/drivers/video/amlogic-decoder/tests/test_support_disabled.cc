@@ -14,8 +14,6 @@ static zx_device_t* g_parent_device;
 // driver.
 zx_device_t* TestSupport::parent_device() { return g_parent_device; }
 
-void TestSupport::set_parent_device(zx_device_t* handle) {
-  g_parent_device = handle;
-}
+void TestSupport::set_parent_device(zx_device_t* handle) { g_parent_device = handle; }
 
 void TestSupport::RunAllTests() {}

@@ -29,17 +29,14 @@ class CmxMetadataTest : public ::testing::Test {
       CmxMetadata cmx;
       json::JSONParser json_parser;
       std::string json_basename;
-      EXPECT_FALSE(
-          ParseFrom(&cmx, &json_parser, json, &json_basename, create_file));
+      EXPECT_FALSE(ParseFrom(&cmx, &json_parser, json, &json_basename, create_file));
       EXPECT_TRUE(json_parser.HasError());
-      EXPECT_THAT(json_parser.error_str(),
-                  ::testing::HasSubstr(expected_error));
+      EXPECT_THAT(json_parser.error_str(), ::testing::HasSubstr(expected_error));
     }
   }
 
-  bool ParseFrom(CmxMetadata* cmx, json::JSONParser* json_parser,
-                 const std::string& json, std::string* json_basename,
-                 bool create_tmp_file) {
+  bool ParseFrom(CmxMetadata* cmx, json::JSONParser* json_parser, const std::string& json,
+                 std::string* json_basename, bool create_tmp_file) {
     if (create_tmp_file) {
       std::string json_path;
       if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
@@ -86,8 +83,7 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
     EXPECT_THAT(sandbox.dev(), ::testing::ElementsAre("class/input"));
     EXPECT_TRUE(sandbox.HasFeature("feature_a"));
     EXPECT_FALSE(sandbox.HasFeature("feature_b"));
-    EXPECT_THAT(sandbox.services(),
-                ::testing::ElementsAre("fuchsia.MyService"));
+    EXPECT_THAT(sandbox.services(), ::testing::ElementsAre("fuchsia.MyService"));
 
     EXPECT_FALSE(cmx.runtime_meta().IsNull());
     EXPECT_EQ(cmx.runtime_meta().runner(), "dart_runner");
@@ -130,10 +126,8 @@ TEST_F(CmxMetadataTest, ParseWithErrors) {
   std::string error;
   ExpectFailedParse(R"JSON({ ,,, })JSON", "Missing a name for object member.");
   ExpectFailedParse(R"JSON(3)JSON", "File is not a JSON object.");
-  ExpectFailedParse(R"JSON({ "sandbox" : 3})JSON",
-                    "'sandbox' is not an object.");
-  ExpectFailedParse(R"JSON({ "sandbox" : {"dev": "notarray"} })JSON",
-                    "'dev' is not an array.");
+  ExpectFailedParse(R"JSON({ "sandbox" : 3})JSON", "'sandbox' is not an object.");
+  ExpectFailedParse(R"JSON({ "sandbox" : {"dev": "notarray"} })JSON", "'dev' is not an array.");
   ExpectFailedParse(R"JSON({ "runner" : 3 })JSON", "'runner' is not a string.");
   ExpectFailedParse(R"JSON({ "program" : { "binary": 3 } })JSON",
                     "'binary' in program is not a string.");

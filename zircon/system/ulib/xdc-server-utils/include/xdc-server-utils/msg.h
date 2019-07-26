@@ -13,14 +13,14 @@
 #define XDC_NOTIFY_STREAM_STATE 0x01
 
 typedef struct {
-    uint32_t stream_id;
-    bool online;
+  uint32_t stream_id;
+  bool online;
 } xdc_notify_stream_state_t;
 
 // Messages sent over the XDC_MSG_STREAM.
 typedef struct {
-    uint8_t opcode;
-    union {
-        xdc_notify_stream_state_t notify_stream_state;
-    };
+  uint8_t opcode;
+  union {
+    xdc_notify_stream_state_t notify_stream_state;
+  };
 } xdc_msg_t;

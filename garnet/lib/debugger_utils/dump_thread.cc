@@ -22,7 +22,7 @@ namespace {
 // How much memory to dump, in bytes.
 constexpr size_t kMemoryDumpSizeBytes = 256;
 
-} // namespace
+}  // namespace
 
 void DumpThread(zx_handle_t process, zx_handle_t thread, bool in_exception) {
   // TODO(dje): There's a bit of inefficiency here in the dso list is
@@ -67,24 +67,21 @@ void DumpThread(zx_handle_t process, zx_handle_t thread, bool in_exception) {
     thread_name = "unknown";
   }
 
-  printf("<== Process %s[%lu] Thread %s[%lu] ==>\n",
-         process_name.c_str(), pid, thread_name.c_str(), tid);
+  printf("<== Process %s[%lu] Thread %s[%lu] ==>\n", process_name.c_str(), pid, thread_name.c_str(),
+         tid);
   printf("arch: %s\n", arch);
 
   zx_exception_report_t report;
   const inspector_excp_data_t* excp_data = nullptr;
   if (in_exception) {
-    zx_status_t status =
-      zx_object_get_info(thread, ZX_INFO_THREAD_EXCEPTION_REPORT,
-                         &report, sizeof(report), nullptr, nullptr);
+    zx_status_t status = zx_object_get_info(thread, ZX_INFO_THREAD_EXCEPTION_REPORT, &report,
+                                            sizeof(report), nullptr, nullptr);
     if (status != ZX_OK) {
-        printf("failed to get exception report for [%lu.%lu]: error %d\n",
-               pid, tid, status);
-        return;
+      printf("failed to get exception report for [%lu.%lu]: error %d\n", pid, tid, status);
+      return;
     }
 
-    printf("<== %s, PC at 0x%lx\n",
-           ExceptionNameAsString(report.header.type).c_str(), pc);
+    printf("<== %s, PC at 0x%lx\n", ExceptionNameAsString(report.header.type).c_str(), pc);
 
 #if defined(__x86_64__)
     excp_data = &report.context.arch.u.x86_64;
@@ -98,8 +95,8 @@ void DumpThread(zx_handle_t process, zx_handle_t thread, bool in_exception) {
 #if defined(__aarch64__)
   // Only output the Fault address register and ESR if there's a data fault.
   if (in_exception && report.header.type == ZX_EXCP_FATAL_PAGE_FAULT) {
-    printf(" far %#18lx esr %#18x\n",
-           report.context.arch.u.arm_64.far, report.context.arch.u.arm_64.esr);
+    printf(" far %#18lx esr %#18x\n", report.context.arch.u.arm_64.far,
+           report.context.arch.u.arm_64.esr);
   }
 #endif
 
@@ -112,8 +109,7 @@ void DumpThread(zx_handle_t process, zx_handle_t thread, bool in_exception) {
   inspector_print_markup_context(stdout, process);
 
   bool use_libunwind = true;
-  inspector_print_backtrace_markup(stdout, process, thread,
-                                   dso_list, pc, sp, fp, use_libunwind);
+  inspector_print_backtrace_markup(stdout, process, thread, dso_list, pc, sp, fp, use_libunwind);
 }
 
-} // namespace debugger_utils
+}  // namespace debugger_utils

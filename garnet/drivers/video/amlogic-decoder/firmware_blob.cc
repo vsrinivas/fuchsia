@@ -15,8 +15,8 @@ FirmwareBlob::~FirmwareBlob() {
 }
 
 zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
-  zx_status_t status = load_firmware(device, "amlogic_video_ucode.bin",
-                                     vmo_.reset_and_get_address(), &fw_size_);
+  zx_status_t status =
+      load_firmware(device, "amlogic_video_ucode.bin", vmo_.reset_and_get_address(), &fw_size_);
   if (status != ZX_OK) {
     DECODE_ERROR("Couldn't load amlogic firmware\n");
     return status;
@@ -78,13 +78,11 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
       return ZX_ERR_NO_MEMORY;
     }
 
-    FirmwareHeader* firmware_data =
-        reinterpret_cast<FirmwareHeader*>(data + offset);
+    FirmwareHeader* firmware_data = reinterpret_cast<FirmwareHeader*>(data + offset);
     uint32_t firmware_length = firmware_data->data.data_size;
-    if (static_cast<uint64_t>(firmware_length) + sizeof(FirmwareHeader) >
-        package_length) {
-      DECODE_ERROR("Firmware data doesn't fit in data %d %ld %d\n",
-                   firmware_length, sizeof(FirmwareHeader), package_length);
+    if (static_cast<uint64_t>(firmware_length) + sizeof(FirmwareHeader) > package_length) {
+      DECODE_ERROR("Firmware data doesn't fit in data %d %ld %d\n", firmware_length,
+                   sizeof(FirmwareHeader), package_length);
       return ZX_ERR_NO_MEMORY;
     }
 
@@ -120,8 +118,7 @@ std::string FirmwareTypeToName(FirmwareBlob::FirmwareType type) {
   }
 }
 }  // namespace
-zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type,
-                                          uint8_t** data_out,
+zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type, uint8_t** data_out,
                                           uint32_t* size_out) {
   std::string format_name = FirmwareTypeToName(firmware_type);
   if (format_name == "")
@@ -136,8 +133,8 @@ zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type,
   return ZX_OK;
 }
 
-void FirmwareBlob::LoadFakeFirmwareForTesting(FirmwareType firmware_type,
-                                              uint8_t* data, uint32_t size) {
+void FirmwareBlob::LoadFakeFirmwareForTesting(FirmwareType firmware_type, uint8_t* data,
+                                              uint32_t size) {
   std::string format_name = FirmwareTypeToName(firmware_type);
   assert(ptr_ == 0);
 

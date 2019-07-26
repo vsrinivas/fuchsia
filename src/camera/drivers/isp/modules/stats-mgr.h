@@ -25,15 +25,12 @@ namespace camera {
 class StatsManager {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(StatsManager);
-  StatsManager(fbl::unique_ptr<camera::Sensor> sensor,
-               sync_completion_t frame_processing_signal)
-      : sensor_(std::move(sensor)),
-        frame_processing_signal_(frame_processing_signal) {}
+  StatsManager(fbl::unique_ptr<camera::Sensor> sensor, sync_completion_t frame_processing_signal)
+      : sensor_(std::move(sensor)), frame_processing_signal_(frame_processing_signal) {}
 
-  static fbl::unique_ptr<StatsManager> Create(
-      ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
-      ddk::CameraSensorProtocolClient camera_sensor,
-      sync_completion_t frame_processing_signal);
+  static fbl::unique_ptr<StatsManager> Create(ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
+                                              ddk::CameraSensorProtocolClient camera_sensor,
+                                              sync_completion_t frame_processing_signal);
   ~StatsManager();
 
   void SensorStartStreaming() { sensor_->StartStreaming(); }

@@ -7,7 +7,7 @@
 namespace devmgr {
 
 class EncryptedVolumeInterface {
-public:
+ public:
   virtual ~EncryptedVolumeInterface() = default;
 
   // Does everything it can to ensure that by the time this function returns,
@@ -16,7 +16,7 @@ public:
   // reformat the backing store to make *some* storage available.
   zx_status_t EnsureUnsealedAndFormatIfNeeded();
 
-private:
+ private:
   // Attempt to unseal the underlying volume.
   virtual zx_status_t Unseal() = 0;
 
@@ -26,5 +26,4 @@ private:
   virtual zx_status_t Format() = 0;
 };
 
-} // namespace devmgr
-
+}  // namespace devmgr

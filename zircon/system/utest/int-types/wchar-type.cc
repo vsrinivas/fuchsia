@@ -7,7 +7,6 @@
 
 // As such, do not include any other header in this file.
 
-
 // Exact values etc. are checked in the other file where access to
 // other constants is easy.
 #include <wchar.h>

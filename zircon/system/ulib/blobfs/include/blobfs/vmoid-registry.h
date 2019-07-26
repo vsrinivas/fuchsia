@@ -12,14 +12,14 @@ namespace blobfs {
 
 // An interface which controls attaching and detaching VMOs with the underlying device.
 class VmoidRegistry {
-public:
-    virtual ~VmoidRegistry() = default;
+ public:
+  virtual ~VmoidRegistry() = default;
 
-    // Allocates a vmoid registering a VMO with the underlying block device.
-    virtual zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) = 0;
+  // Allocates a vmoid registering a VMO with the underlying block device.
+  virtual zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) = 0;
 
-    // Releases an allocated vmoid.
-    virtual zx_status_t DetachVmo(vmoid_t vmoid) = 0;
+  // Releases an allocated vmoid.
+  virtual zx_status_t DetachVmo(vmoid_t vmoid) = 0;
 };
 
-} // namespace blobfs
+}  // namespace blobfs

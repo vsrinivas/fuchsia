@@ -73,25 +73,25 @@ static const pbus_irq_t gpio_irqs[] = {
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
-    { S905D2_WIFI_SDIO_WAKE_HOST },
+    {S905D2_WIFI_SDIO_WAKE_HOST},
     // For display.
-    { GPIO_PANEL_DETECT },
-    { GPIO_LCD_RESET },
+    {GPIO_PANEL_DETECT},
+    {GPIO_LCD_RESET},
     // For touch screen.
-    { GPIO_TOUCH_INTERRUPT },
-    { GPIO_TOUCH_RESET },
+    {GPIO_TOUCH_INTERRUPT},
+    {GPIO_TOUCH_RESET},
     // For light sensor.
-    { GPIO_LIGHT_INTERRUPT },
+    {GPIO_LIGHT_INTERRUPT},
     // For audio.
-    { GPIO_AUDIO_SOC_FAULT_L },
-    { GPIO_SOC_AUDIO_EN },
+    {GPIO_AUDIO_SOC_FAULT_L},
+    {GPIO_SOC_AUDIO_EN},
     // For buttons.
-    { GPIO_VOLUME_UP },
-    { GPIO_VOLUME_DOWN },
-    { GPIO_VOLUME_BOTH },
-    { GPIO_MIC_PRIVACY },
+    {GPIO_VOLUME_UP},
+    {GPIO_VOLUME_DOWN},
+    {GPIO_VOLUME_BOTH},
+    {GPIO_MIC_PRIVACY},
     // For SDIO.
-    { GPIO_SD_EMMC_RESET },
+    {GPIO_SD_EMMC_RESET},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
@@ -103,69 +103,67 @@ static const pbus_metadata_t gpio_metadata[] = {
 };
 
 static pbus_dev_t gpio_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "gpio";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    dev.did = PDEV_DID_AMLOGIC_GPIO;
-    dev.mmio_list = gpio_mmios;
-    dev.mmio_count = countof(gpio_mmios);
-    dev.irq_list = gpio_irqs;
-    dev.irq_count = countof(gpio_irqs);
-    dev.metadata_list = gpio_metadata;
-    dev.metadata_count = countof(gpio_metadata);
-    return dev;
+  pbus_dev_t dev = {};
+  dev.name = "gpio";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_S905D2;
+  dev.did = PDEV_DID_AMLOGIC_GPIO;
+  dev.mmio_list = gpio_mmios;
+  dev.mmio_count = countof(gpio_mmios);
+  dev.irq_list = gpio_irqs;
+  dev.irq_count = countof(gpio_irqs);
+  dev.metadata_list = gpio_metadata;
+  dev.metadata_count = countof(gpio_metadata);
+  return dev;
 }();
 
 zx_status_t Astro::GpioInit() {
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n", __func__, status);
-        return status;
-    }
+  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n", __func__, status);
+    return status;
+  }
 
-    gpio_impl_ = ddk::GpioImplProtocolClient(parent());
-    if (!gpio_impl_.is_valid()) {
-        zxlogf(ERROR, "%s: GpioImplProtocolClient failed %d\n", __func__, status);
-        return ZX_ERR_INTERNAL;
-    }
+  gpio_impl_ = ddk::GpioImplProtocolClient(parent());
+  if (!gpio_impl_.is_valid()) {
+    zxlogf(ERROR, "%s: GpioImplProtocolClient failed %d\n", __func__, status);
+    return ZX_ERR_INTERNAL;
+  }
 
-    // Enable mute LED so it will be controlled by mute switch.
-    status = gpio_impl_.ConfigOut(S905D2_GPIOAO(11), 1);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
-    }
+  // Enable mute LED so it will be controlled by mute switch.
+  status = gpio_impl_.ConfigOut(S905D2_GPIOAO(11), 1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
+  }
 
 #ifdef GPIO_TEST
-    static const pbus_gpio_t gpio_test_gpios[] = {
-        {
-            // SYS_LED
-            .gpio = S905D2_GPIOAO(11),
-        },
-        {
-            // JTAG Adapter Pin
-            .gpio = S905D2_GPIOAO(6),
-        }
-    };
+  static const pbus_gpio_t gpio_test_gpios[] = {{
+                                                    // SYS_LED
+                                                    .gpio = S905D2_GPIOAO(11),
+                                                },
+                                                {
+                                                    // JTAG Adapter Pin
+                                                    .gpio = S905D2_GPIOAO(6),
+                                                }};
 
-    const pbus_dev_t gpio_test_dev = []() {
-	pbus_dev_t dev = {};
-        dev.name = "astro-gpio-test";
-        dev.vid = PDEV_VID_GENERIC;
-        dev.pid = PDEV_PID_GENERIC;
-        dev.did = PDEV_DID_GPIO_TEST;
-        dev.gpio_list = gpio_test_gpios;
-        dev.gpio_count = countof(gpio_test_gpios);
-        return dev;
-    }();
+  const pbus_dev_t gpio_test_dev = []() {
+    pbus_dev_t dev = {};
+    dev.name = "astro-gpio-test";
+    dev.vid = PDEV_VID_GENERIC;
+    dev.pid = PDEV_PID_GENERIC;
+    dev.did = PDEV_DID_GPIO_TEST;
+    dev.gpio_list = gpio_test_gpios;
+    dev.gpio_count = countof(gpio_test_gpios);
+    return dev;
+  }();
 
-    if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd gpio_test failed: %d\n", __func__, status);
-        return status;
-    }
+  if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd gpio_test failed: %d\n", __func__, status);
+    return status;
+  }
 #endif
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-} // namespace astro
+}  // namespace astro

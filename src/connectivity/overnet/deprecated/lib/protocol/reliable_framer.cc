@@ -27,8 +27,7 @@ StatusOr<Optional<Slice>> ReliableFramer::Pop() {
   OVERNET_TRACE(DEBUG) << "ReliableFramer.Pop: have " << (end - p) << " bytes";
 
   if (end - p < 2) {
-    OVERNET_TRACE(DEBUG)
-        << "ReliableFramer.Pop: insufficient bytes to see header";
+    OVERNET_TRACE(DEBUG) << "ReliableFramer.Pop: insufficient bytes to see header";
     return Nothing;
   }
   uint16_t hdr;
@@ -36,8 +35,8 @@ StatusOr<Optional<Slice>> ReliableFramer::Pop() {
   p += 2;
 
   const ssize_t segment_length = ssize_t(hdr) + 1;
-  OVERNET_TRACE(DEBUG) << "ReliableFramer.Pop: hdr=" << hdr
-                       << " => segment_length " << segment_length;
+  OVERNET_TRACE(DEBUG) << "ReliableFramer.Pop: hdr=" << hdr << " => segment_length "
+                       << segment_length;
 
   if (end - p < segment_length) {
     return Sts(Nothing);
@@ -47,9 +46,7 @@ StatusOr<Optional<Slice>> ReliableFramer::Pop() {
   return Sts(buffered_input_.TakeUntilOffset(segment_length));
 }
 
-bool ReliableFramer::InputEmpty() const {
-  return buffered_input_.length() == 0;
-}
+bool ReliableFramer::InputEmpty() const { return buffered_input_.length() == 0; }
 
 Optional<Slice> ReliableFramer::SkipNoise() { return Nothing; }
 

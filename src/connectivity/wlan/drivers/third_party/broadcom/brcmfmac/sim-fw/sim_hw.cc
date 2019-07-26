@@ -19,6 +19,6 @@
 #include <cstring>
 
 zx_status_t SimHardware::setMacAddr(uint8_t* macAddr) {
-    std::memcpy(macAddr_, macAddr, ETH_ALEN);
-    return ZX_OK;
+  std::memcpy(macAddr_, macAddr, ETH_ALEN);
+  return ZX_OK;
 }

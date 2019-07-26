@@ -24,8 +24,7 @@ class OvernetApp;
 // - ensure system messages are never propagated.
 class BoundChannel {
  public:
-  BoundChannel(OvernetApp* app, overnet::RouterEndpoint::NewStream ns,
-               zx::channel channel);
+  BoundChannel(OvernetApp* app, overnet::RouterEndpoint::NewStream ns, zx::channel channel);
 
  private:
   ~BoundChannel() = default;
@@ -38,13 +37,12 @@ class BoundChannel {
     }
   }
 
-  overnet::StatusOr<fuchsia::overnet::protocol::ZirconChannelMessage>
-  EncodeMessage(fidl::Message message);
+  overnet::StatusOr<fuchsia::overnet::protocol::ZirconChannelMessage> EncodeMessage(
+      fidl::Message message);
   // Calls `then` with a fidl::Message; the decoded fidl::Message may point into
   // message.
-  overnet::Status DecodeMessageThen(
-      fuchsia::overnet::protocol::ZirconChannelMessage* message,
-      fit::function<overnet::Status(fidl::Message)> then);
+  overnet::Status DecodeMessageThen(fuchsia::overnet::protocol::ZirconChannelMessage* message,
+                                    fit::function<overnet::Status(fidl::Message)> then);
   void WriteToChannelAndStartNextRead(fidl::Message message);
 
   void StartChannelRead();
@@ -54,11 +52,11 @@ class BoundChannel {
     BoundChannel* stream;
   };
 
-  static void SendReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal);
+  static void SendReady(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
   void OnSendReady(zx_status_t status, const zx_packet_signal_t* signal);
-  static void RecvReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal);
+  static void RecvReady(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
   void OnRecvReady(zx_status_t status, const zx_packet_signal_t* signal);
 
   class Proxy final : public fuchsia::overnet::protocol::ZirconChannel_Proxy {
@@ -77,8 +75,7 @@ class BoundChannel {
 
     void Send_(fidl::Message message) override { abort(); }
 
-    void Message(
-        fuchsia::overnet::protocol::ZirconChannelMessage message) override;
+    void Message(fuchsia::overnet::protocol::ZirconChannelMessage message) override;
 
    private:
     BoundChannel* const channel_;
@@ -95,12 +92,9 @@ class BoundChannel {
   overnet::Optional<overnet::RouterEndpoint::Stream::ReceiveOp> net_recv_;
   std::vector<uint8_t> pending_chan_bytes_;
   std::vector<zx::handle> pending_chan_handles_;
-  BoundWait wait_send_{{{ASYNC_STATE_INIT},
-                        &BoundChannel::SendReady,
-                        zx_channel_.get(),
-                        ZX_CHANNEL_WRITABLE,
-                        0},
-                       this};
+  BoundWait wait_send_{
+      {{ASYNC_STATE_INIT}, &BoundChannel::SendReady, zx_channel_.get(), ZX_CHANNEL_WRITABLE, 0},
+      this};
   BoundWait wait_recv_{{{ASYNC_STATE_INIT},
                         &BoundChannel::RecvReady,
                         zx_channel_.get(),

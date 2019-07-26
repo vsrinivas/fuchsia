@@ -31,49 +31,49 @@ class Allocator;
 // This class is thread-compatible.
 // This class is not assignable, copyable, or moveable.
 class AllocatorPromise {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorPromise);
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorPromise);
 
-    AllocatorPromise() {}
-    ~AllocatorPromise();
+  AllocatorPromise() {}
+  ~AllocatorPromise();
 
-    // Returns |ZX_OK| when |allocator| reserves |reserved| elements and |this| is successfully
-    // initialized. Returns an error if not enough elements are available for reservation,
-    // |allocator| is null, or |this| was previously initialized.
-    zx_status_t Initialize(WriteTxn* txn, size_t reserved, Allocator* allocator);
+  // Returns |ZX_OK| when |allocator| reserves |reserved| elements and |this| is successfully
+  // initialized. Returns an error if not enough elements are available for reservation,
+  // |allocator| is null, or |this| was previously initialized.
+  zx_status_t Initialize(WriteTxn* txn, size_t reserved, Allocator* allocator);
 
-    bool IsInitialized() const { return allocator_ != nullptr; }
+  bool IsInitialized() const { return allocator_ != nullptr; }
 
-    // Allocate a new item in allocator_. Return the index of the newly allocated item.
-    // A call to Allocate() is effectively the same as a call to Swap(0) + SwapCommit(), but under
-    // the hood completes these operations more efficiently as additional state doesn't need to be
-    // stored between the two.
-    size_t Allocate(WriteTxn* txn);
+  // Allocate a new item in allocator_. Return the index of the newly allocated item.
+  // A call to Allocate() is effectively the same as a call to Swap(0) + SwapCommit(), but under
+  // the hood completes these operations more efficiently as additional state doesn't need to be
+  // stored between the two.
+  size_t Allocate(WriteTxn* txn);
 
-    // Unreserve all currently reserved items.
-    void Cancel();
+  // Unreserve all currently reserved items.
+  void Cancel();
 
 #ifdef __Fuchsia__
-    // Swap the element currently allocated at |old_index| for a new index.
-    // If |old_index| is 0, a new block will still be allocated, but no blocks will be de-allocated.
-    // The swap will not be persisted until a call to SwapCommit is made.
-    size_t Swap(size_t old_index);
+  // Swap the element currently allocated at |old_index| for a new index.
+  // If |old_index| is 0, a new block will still be allocated, but no blocks will be de-allocated.
+  // The swap will not be persisted until a call to SwapCommit is made.
+  size_t Swap(size_t old_index);
 
-    // Commit any pending swaps, allocating new indices and de-allocating old indices.
-    void SwapCommit(WriteTxn* txn);
+  // Commit any pending swaps, allocating new indices and de-allocating old indices.
+  void SwapCommit(WriteTxn* txn);
 
-    // Remove |requested| reserved elements and give them to |other_promise|.
-    // The reserved count belonging to the Allocator does not change.
-    void GiveBlocks(size_t requested, AllocatorPromise* other_promise);
+  // Remove |requested| reserved elements and give them to |other_promise|.
+  // The reserved count belonging to the Allocator does not change.
+  void GiveBlocks(size_t requested, AllocatorPromise* other_promise);
 
-    size_t GetReserved() const { return reserved_; }
+  size_t GetReserved() const { return reserved_; }
 #endif
-private:
-    Allocator* allocator_ = nullptr;
-    size_t reserved_ = 0;
+ private:
+  Allocator* allocator_ = nullptr;
+  size_t reserved_ = 0;
 
-    // TODO(planders): Optionally store swap info in AllocatorPromise,
-    //                 to ensure we only swap the current promise's blocks on SwapCommit.
+  // TODO(planders): Optionally store swap info in AllocatorPromise,
+  //                 to ensure we only swap the current promise's blocks on SwapCommit.
 };
 
-} // namespace minfs
+}  // namespace minfs

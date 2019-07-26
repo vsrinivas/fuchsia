@@ -11,14 +11,11 @@
 
 namespace debugger_utils {
 
-zx_status_t ReadGeneralRegisters(zx_handle_t thread,
-                                 zx_thread_state_general_regs_t* regs);
+zx_status_t ReadGeneralRegisters(zx_handle_t thread, zx_thread_state_general_regs_t* regs);
 
-zx_status_t WriteGeneralRegisters(zx_handle_t thread,
-                                  const zx_thread_state_general_regs_t* regs);
+zx_status_t WriteGeneralRegisters(zx_handle_t thread, const zx_thread_state_general_regs_t* regs);
 
-static inline zx_vaddr_t GetPcFromGeneralRegisters(
-    const zx_thread_state_general_regs_t* regs) {
+static inline zx_vaddr_t GetPcFromGeneralRegisters(const zx_thread_state_general_regs_t* regs) {
 #if defined(__x86_64__)
   return regs->rip;
 #elif defined(__aarch64__)
@@ -28,8 +25,7 @@ static inline zx_vaddr_t GetPcFromGeneralRegisters(
 #endif
 }
 
-static inline void SetPcInGeneralRegisters(
-    zx_thread_state_general_regs_t* regs, zx_vaddr_t pc) {
+static inline void SetPcInGeneralRegisters(zx_thread_state_general_regs_t* regs, zx_vaddr_t pc) {
 #if defined(__x86_64__)
   regs->rip = pc;
 #elif defined(__aarch64__)
@@ -39,8 +35,7 @@ static inline void SetPcInGeneralRegisters(
 #endif
 }
 
-static inline zx_vaddr_t GetSpFromGeneralRegisters(
-    const zx_thread_state_general_regs_t* regs) {
+static inline zx_vaddr_t GetSpFromGeneralRegisters(const zx_thread_state_general_regs_t* regs) {
 #if defined(__x86_64__)
   return regs->rsp;
 #elif defined(__aarch64__)
@@ -50,8 +45,7 @@ static inline zx_vaddr_t GetSpFromGeneralRegisters(
 #endif
 }
 
-static inline void SetSpInGeneralRegisters(
-    zx_thread_state_general_regs_t* regs, zx_vaddr_t sp) {
+static inline void SetSpInGeneralRegisters(zx_thread_state_general_regs_t* regs, zx_vaddr_t sp) {
 #if defined(__x86_64__)
   regs->rsp = sp;
 #elif defined(__aarch64__)
@@ -61,8 +55,7 @@ static inline void SetSpInGeneralRegisters(
 #endif
 }
 
-static inline zx_vaddr_t GetFpFromGeneralRegisters(
-    const zx_thread_state_general_regs_t* regs) {
+static inline zx_vaddr_t GetFpFromGeneralRegisters(const zx_thread_state_general_regs_t* regs) {
 #if defined(__x86_64__)
   return regs->rbp;
 #elif defined(__aarch64__)
@@ -72,8 +65,7 @@ static inline zx_vaddr_t GetFpFromGeneralRegisters(
 #endif
 }
 
-static inline void SetFpInGeneralRegisters(
-    zx_thread_state_general_regs_t* regs, zx_vaddr_t fp) {
+static inline void SetFpInGeneralRegisters(zx_thread_state_general_regs_t* regs, zx_vaddr_t fp) {
 #if defined(__x86_64__)
   regs->rbp = fp;
 #elif defined(__aarch64__)

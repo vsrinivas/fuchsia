@@ -116,16 +116,16 @@
  */
 
 #define PCI_REQUIRE_REFCOUNTED \
-    virtual void Adopt() = 0;  \
-    virtual void AddRef() = 0; \
-    virtual bool Release() = 0
+  virtual void Adopt() = 0;    \
+  virtual void AddRef() = 0;   \
+  virtual bool Release() = 0
 
-#define PCI_IMPLEMENT_REFCOUNTED                                                    \
-private:                                                                            \
-    fbl::RefCounted<void> ref_count_impl_;                                          \
-                                                                                    \
-public:                                                                             \
-    void Adopt() final { ref_count_impl_.Adopt(); }                                 \
-    void AddRef() final { ref_count_impl_.AddRef(); }                               \
-    bool Release() final __WARN_UNUSED_RESULT { return ref_count_impl_.Release(); } \
-    using __force_semicolon = int
+#define PCI_IMPLEMENT_REFCOUNTED                                                  \
+ private:                                                                         \
+  fbl::RefCounted<void> ref_count_impl_;                                          \
+                                                                                  \
+ public:                                                                          \
+  void Adopt() final { ref_count_impl_.Adopt(); }                                 \
+  void AddRef() final { ref_count_impl_.AddRef(); }                               \
+  bool Release() final __WARN_UNUSED_RESULT { return ref_count_impl_.Release(); } \
+  using __force_semicolon = int

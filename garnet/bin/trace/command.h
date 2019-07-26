@@ -25,8 +25,7 @@ class Command {
   // running. It takes as argument the return code to exit the process with.
   using OnDoneCallback = fit::function<void(int32_t)>;
   struct Info {
-    using CommandFactory =
-        fit::function<std::unique_ptr<Command>(sys::ComponentContext*)>;
+    using CommandFactory = fit::function<std::unique_ptr<Command>(sys::ComponentContext*)>;
 
     CommandFactory factory;
     std::string name;

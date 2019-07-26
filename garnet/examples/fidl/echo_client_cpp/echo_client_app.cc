@@ -8,8 +8,7 @@
 
 namespace echo {
 
-EchoClientApp::EchoClientApp()
-    : EchoClientApp(sys::ComponentContext::Create()) {}
+EchoClientApp::EchoClientApp() : EchoClientApp(sys::ComponentContext::Create()) {}
 
 EchoClientApp::EchoClientApp(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {}

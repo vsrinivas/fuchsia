@@ -70,8 +70,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto hci_dev =
-      std::make_unique<::bt::hci::FidlDeviceWrapper>(std::move(local));
+  auto hci_dev = std::make_unique<::bt::hci::FidlDeviceWrapper>(std::move(local));
   auto hci = ::bt::hci::Transport::Create(std::move(hci_dev));
   if (!hci->Initialize()) {
     return EXIT_FAILURE;
@@ -94,8 +93,7 @@ int main(int argc, char* argv[]) {
   auto complete_cb = [&] { loop.Shutdown(); };
 
   bool cmd_found;
-  if (!dispatcher.ExecuteCommand(cl.positional_args(), complete_cb,
-                                 &cmd_found)) {
+  if (!dispatcher.ExecuteCommand(cl.positional_args(), complete_cb, &cmd_found)) {
     if (!cmd_found)
       std::cout << "Unknown command: " << cl.positional_args()[0] << std::endl;
     return EXIT_FAILURE;

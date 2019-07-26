@@ -32,4 +32,4 @@ fdio_t* fd_to_socket(int fd, zxs_socket_t** out_socket);
 
 __END_CDECLS
 
-#endif // ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
+#endif  // ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_

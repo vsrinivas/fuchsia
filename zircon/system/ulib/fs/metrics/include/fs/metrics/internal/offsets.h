@@ -26,7 +26,7 @@ template <typename OperationInfo>
 constexpr uint64_t CalculateRelativeOffset(const typename OperationInfo::AttributeData& attributes,
                                            uint64_t aggregated_offset,
                                            uint64_t accumulated_dimensions) {
-    return aggregated_offset;
+  return aggregated_offset;
 }
 
 // Recursive step, for every attribute in the argument pack, or |AttributeList| calculate and
@@ -35,31 +35,30 @@ template <typename OperationInfo, typename Attribute, typename... RemainingAttri
 constexpr uint64_t CalculateRelativeOffset(const typename OperationInfo::AttributeData& attributes,
                                            uint64_t aggregated_offset,
                                            uint64_t accumulated_dimensions) {
+  if constexpr (std::is_base_of<Attribute, OperationInfo>::value) {
+    uint64_t offset = Attribute::OffsetOf(attributes.*Attribute::kAttributeValue);
+    aggregated_offset += offset * accumulated_dimensions;
+    accumulated_dimensions *= Attribute::kSize;
+  }
 
-    if constexpr (std::is_base_of<Attribute, OperationInfo>::value) {
-        uint64_t offset = Attribute::OffsetOf(attributes.*Attribute::kAttributeValue);
-        aggregated_offset += offset * accumulated_dimensions;
-        accumulated_dimensions *= Attribute::kSize;
-    }
-
-    return CalculateRelativeOffset<OperationInfo, RemainingAttributes...>(
-        attributes, aggregated_offset, accumulated_dimensions);
+  return CalculateRelativeOffset<OperationInfo, RemainingAttributes...>(
+      attributes, aggregated_offset, accumulated_dimensions);
 }
 
 template <typename OperationInfo>
 constexpr uint64_t CountInstances(uint64_t accumulated_count) {
-    return accumulated_count;
+  return accumulated_count;
 }
 
 template <typename OperationInfo, typename Attribute, typename... RemainingAttributes>
 constexpr uint64_t CountInstances(uint64_t accumulated_count) {
-    if constexpr (std::is_base_of<Attribute, OperationInfo>::value) {
-        accumulated_count *= Attribute::kSize;
-    }
+  if constexpr (std::is_base_of<Attribute, OperationInfo>::value) {
+    accumulated_count *= Attribute::kSize;
+  }
 
-    return CountInstances<OperationInfo, RemainingAttributes...>(accumulated_count);
+  return CountInstances<OperationInfo, RemainingAttributes...>(accumulated_count);
 }
-} // namespace internal
+}  // namespace internal
 
 // Provides specialiazation based on the parameter pack, keeping it consistent across calls and
 // a single point of update for adding and changing attribtues.
@@ -67,36 +66,35 @@ constexpr uint64_t CountInstances(uint64_t accumulated_count) {
 // using MyOffsets = fs_metrics::MyOffsets<Attribute_1, Attribute_2, ...>;
 template <typename... AttributeList>
 struct Offsets {
+  template <typename OperationInfo>
+  static constexpr uint64_t RelativeOffset(
+      const typename OperationInfo::AttributeData& attributes) {
+    return internal::CalculateRelativeOffset<OperationInfo, AttributeList...>(attributes, 0, 1);
+  }
 
-    template <typename OperationInfo>
-    static constexpr uint64_t
-    RelativeOffset(const typename OperationInfo::AttributeData& attributes) {
-        return internal::CalculateRelativeOffset<OperationInfo, AttributeList...>(attributes, 0, 1);
-    }
+  template <typename OperationInfo>
+  static constexpr uint64_t AbsoluteOffset(
+      const typename OperationInfo::AttributeData& attributes) {
+    return OperationInfo::kStart + RelativeOffset<OperationInfo>(attributes);
+  }
 
-    template <typename OperationInfo>
-    static constexpr uint64_t
-    AbsoluteOffset(const typename OperationInfo::AttributeData& attributes) {
-        return OperationInfo::kStart + RelativeOffset<OperationInfo>(attributes);
-    }
+  // Returns the number of objects that are being tracked for a single OperationInfo. This is how
+  // many different objects can be mapped to all possible attribute values in AttributeData for a
+  // specific element.
+  template <typename OperationInfo>
+  static constexpr uint64_t Count() {
+    return internal::CountInstances<OperationInfo, AttributeList...>(1);
+  }
 
-    // Returns the number of objects that are being tracked for a single OperationInfo. This is how
-    // many different objects can be mapped to all possible attribute values in AttributeData for a
-    // specific element.
-    template <typename OperationInfo>
-    static constexpr uint64_t Count() {
-        return internal::CountInstances<OperationInfo, AttributeList...>(1);
-    }
+  template <typename OperationInfo>
+  static constexpr uint64_t Begin() {
+    return OperationInfo::kStart;
+  }
 
-    template <typename OperationInfo>
-    static constexpr uint64_t Begin() {
-        return OperationInfo::kStart;
-    }
-
-    template <typename OperationInfo>
-    static constexpr uint64_t End() {
-        return OperationInfo::kStart + Count<OperationInfo>();
-    }
+  template <typename OperationInfo>
+  static constexpr uint64_t End() {
+    return OperationInfo::kStart + Count<OperationInfo>();
+  }
 };
 
-} // namespace fs_metrics
+}  // namespace fs_metrics

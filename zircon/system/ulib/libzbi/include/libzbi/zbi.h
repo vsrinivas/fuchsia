@@ -29,24 +29,22 @@
 __BEGIN_CDECLS
 
 typedef enum zbi_result {
-    ZBI_RESULT_OK,
+  ZBI_RESULT_OK,
 
-    ZBI_RESULT_ERROR,
-    ZBI_RESULT_BAD_TYPE,
-    ZBI_RESULT_BAD_MAGIC,
-    ZBI_RESULT_BAD_VERSION,
-    ZBI_RESULT_BAD_CRC,
-    ZBI_RESULT_ERR_TRUNCATED,
+  ZBI_RESULT_ERROR,
+  ZBI_RESULT_BAD_TYPE,
+  ZBI_RESULT_BAD_MAGIC,
+  ZBI_RESULT_BAD_VERSION,
+  ZBI_RESULT_BAD_CRC,
+  ZBI_RESULT_ERR_TRUNCATED,
 
-    ZBI_RESULT_TOO_BIG,
+  ZBI_RESULT_TOO_BIG,
 
-    ZBI_RESULT_INCOMPLETE_KERNEL,
-    ZBI_RESULT_INCOMPLETE_BOOTFS,
+  ZBI_RESULT_INCOMPLETE_KERNEL,
+  ZBI_RESULT_INCOMPLETE_BOOTFS,
 } zbi_result_t;
 
-typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr,
-                                         void* payload,
-                                         void* cookie);
+typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr, void* payload, void* cookie);
 
 // Creates an empty ZBI container in buffer.
 zbi_result_t zbi_init(void* buffer, size_t length);
@@ -71,8 +69,7 @@ zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err);
 //
 // cookie will be passed transparently to each cb and is available for the
 // client to pass data back from each of the callbacks.
-zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb,
-                          void* cookie);
+zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb, void* cookie);
 
 // Creates a new ZBI section and appends it to the end of the ZBI pointed to by
 // `base`. Assumes that the buffer at `base` has a length of `capacity` which
@@ -86,16 +83,12 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb,
 //
 // CRC computation is not currently supported and setting the ZBI_FLAG_CRC32
 // flag will yield an error.
-zbi_result_t zbi_append_section(void* base, size_t capacity,
-                                uint32_t section_length, uint32_t type,
-                                uint32_t extra, uint32_t flags,
-                                const void* payload);
+zbi_result_t zbi_append_section(void* base, size_t capacity, uint32_t section_length, uint32_t type,
+                                uint32_t extra, uint32_t flags, const void* payload);
 
 // Create a new ZBI section and returns a pointer to the payload.
-zbi_result_t zbi_create_section(void* base, size_t capacity,
-                                uint32_t section_length, uint32_t type,
-                                uint32_t extra, uint32_t flags,
-                                void** payload);
+zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_length, uint32_t type,
+                                uint32_t extra, uint32_t flags, void** payload);
 
 // Extend dst by appending src to the end of it.
 zbi_result_t zbi_extend(void* dst, size_t capacity, const void* src);

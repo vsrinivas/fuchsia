@@ -26,11 +26,11 @@ typedef struct ndp_n_hdr_t ndp_n_hdr;
 #define UDP_HDR_LEN 8
 
 struct mac_addr_t {
-    uint8_t x[ETH_ADDR_LEN];
+  uint8_t x[ETH_ADDR_LEN];
 } __attribute__((packed));
 
 struct ip6_addr_t {
-    uint8_t x[IP6_ADDR_LEN];
+  uint8_t x[IP6_ADDR_LEN];
 } __attribute__((packed));
 
 extern const ip6_addr ip6_ll_all_nodes;
@@ -50,19 +50,19 @@ extern const ip6_addr ip6_ll_all_routers;
 #define HDR_DST_OPT 60
 
 struct ip6_hdr_t {
-    uint32_t ver_tc_flow;
-    uint16_t length;
-    uint8_t next_header;
-    uint8_t hop_limit;
-    uint8_t src[IP6_ADDR_LEN];
-    uint8_t dst[IP6_ADDR_LEN];
+  uint32_t ver_tc_flow;
+  uint16_t length;
+  uint8_t next_header;
+  uint8_t hop_limit;
+  uint8_t src[IP6_ADDR_LEN];
+  uint8_t dst[IP6_ADDR_LEN];
 } __attribute__((packed));
 
 struct udp_hdr_t {
-    uint16_t src_port;
-    uint16_t dst_port;
-    uint16_t length;
-    uint16_t checksum;
+  uint16_t src_port;
+  uint16_t dst_port;
+  uint16_t length;
+  uint16_t checksum;
 } __attribute__((packed));
 
 #define ICMP6_DEST_UNREACHABLE 1
@@ -77,18 +77,18 @@ struct udp_hdr_t {
 #define ICMP6_NDP_N_ADVERTISE 136
 
 struct icmp6_hdr_t {
-    uint8_t type;
-    uint8_t code;
-    uint16_t checksum;
+  uint8_t type;
+  uint8_t code;
+  uint16_t checksum;
 } __attribute__((packed));
 
 struct ndp_n_hdr_t {
-    uint8_t type;
-    uint8_t code;
-    uint16_t checksum;
-    uint32_t flags;
-    uint8_t target[IP6_ADDR_LEN];
-    uint8_t options[0];
+  uint8_t type;
+  uint8_t code;
+  uint16_t checksum;
+  uint32_t flags;
+  uint8_t target[IP6_ADDR_LEN];
+  uint8_t options[0];
 } __attribute__((packed));
 
 #define NDP_N_SRC_LL_ADDR 1
@@ -100,17 +100,14 @@ struct ndp_n_hdr_t {
 #ifndef ntohs
 #define ntohs(n) _swap16(n)
 #define htons(n) _swap16(n)
-static inline uint16_t _swap16(uint16_t n) {
-    return (n >> 8) | (n << 8);
-}
+static inline uint16_t _swap16(uint16_t n) { return (n >> 8) | (n << 8); }
 #endif
 
 #ifndef ntohl
 #define ntohl(n) _swap32(n)
 #define htonl(n) _swap32(n)
 static inline uint32_t _swap32(uint32_t n) {
-    return (n >> 24) | ((n >> 8) & 0xFF00) |
-           ((n & 0xFF00) << 8) | (n << 24);
+  return (n >> 24) | ((n >> 8) & 0xFF00) | ((n & 0xFF00) << 8) | (n << 24);
 }
 #endif
 
@@ -131,16 +128,14 @@ int eth_send(void* data, size_t len);
 int eth_add_mcast_filter(const mac_addr* addr);
 
 // call to transmit a UDP packet
-int udp6_send(const void* data, size_t len,
-              const ip6_addr* daddr, uint16_t dport,
-              uint16_t sport);
+int udp6_send(const void* data, size_t len, const ip6_addr* daddr, uint16_t dport, uint16_t sport);
 
 // handle a netboot UDP packet
 void netboot_recv(void* data, size_t len, const ip6_addr* saddr, uint16_t sport);
 
 // handle a TFTP (over UDP) packet
-void tftp_recv (void* data, size_t len, const ip6_addr* daddr, uint16_t dport,
-                const ip6_addr* saddr, uint16_t sport);
+void tftp_recv(void* data, size_t len, const ip6_addr* daddr, uint16_t dport, const ip6_addr* saddr,
+               uint16_t sport);
 
 // NOTES
 //

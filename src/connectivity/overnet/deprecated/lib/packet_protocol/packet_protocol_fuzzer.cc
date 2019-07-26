@@ -30,13 +30,11 @@ bool PacketProtocolFuzzer::BeginSend(uint8_t sender_idx, Slice data) {
 
 bool PacketProtocolFuzzer::CompleteSend(uint8_t sender_idx, uint8_t status) {
   Optional<Sender::PendingSend> send =
-      sender(sender_idx).Then([](Sender* sender) {
-        return sender->CompleteSend();
-      });
+      sender(sender_idx).Then([](Sender* sender) { return sender->CompleteSend(); });
   if (!send)
     return false;
-  auto slice = send->data(LazySliceArgs{
-      Border::None(), std::numeric_limits<uint32_t>::max(), false});
+  auto slice =
+      send->data(LazySliceArgs{Border::None(), std::numeric_limits<uint32_t>::max(), false});
   if (status == 0 && slice.length() > 0) {
     (*packet_protocol(3 - sender_idx))
         ->Process(timer_.Now(), send->seq, slice, [](auto process_status) {});
@@ -44,8 +42,7 @@ bool PacketProtocolFuzzer::CompleteSend(uint8_t sender_idx, uint8_t status) {
   return true;
 }
 
-Optional<PacketProtocolFuzzer::Sender*> PacketProtocolFuzzer::sender(
-    uint8_t idx) {
+Optional<PacketProtocolFuzzer::Sender*> PacketProtocolFuzzer::sender(uint8_t idx) {
   switch (idx) {
     case 1:
       return &sender1_;
@@ -71,8 +68,7 @@ void PacketProtocolFuzzer::Sender::SendPacket(SeqNum seq, LazySlice data) {
   pending_sends_.emplace(next_send_id_++, PendingSend{seq, std::move(data)});
 }
 
-Optional<PacketProtocolFuzzer::Sender::PendingSend>
-PacketProtocolFuzzer::Sender::CompleteSend() {
+Optional<PacketProtocolFuzzer::Sender::PendingSend> PacketProtocolFuzzer::Sender::CompleteSend() {
   auto it = pending_sends_.begin();
   if (it == pending_sends_.end())
     return Nothing;

@@ -21,23 +21,23 @@ using VirtualCameraFactoryType = ddk::Device<VirtualCameraFactory, ddk::Unbindab
 class VirtualCameraFactory : public VirtualCameraFactoryType,
                              public llcpp::fuchsia::camera::common::VirtualCameraFactory::Interface,
                              public ddk::EmptyProtocol<ZX_PROTOCOL_VCAM_FACTORY> {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VirtualCameraFactory);
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(VirtualCameraFactory);
 
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    VirtualCameraFactory(zx_device_t* parent)
-        : VirtualCameraFactoryType(parent) {}
+  VirtualCameraFactory(zx_device_t* parent) : VirtualCameraFactoryType(parent) {}
 
-    ~VirtualCameraFactory() {}
+  ~VirtualCameraFactory() {}
 
-    void DdkRelease();
+  void DdkRelease();
 
-    void DdkUnbind();
+  void DdkUnbind();
 
-    void CreateDevice(
-        ::llcpp::fuchsia::camera::common::VirtualCameraConfig config,
-        ::llcpp::fuchsia::camera::common::VirtualCameraFactory::Interface::CreateDeviceCompleter::Sync completer);
+  void CreateDevice(
+      ::llcpp::fuchsia::camera::common::VirtualCameraConfig config,
+      ::llcpp::fuchsia::camera::common::VirtualCameraFactory::Interface::CreateDeviceCompleter::Sync
+          completer);
 };
 
-} // namespace virtual_camera
+}  // namespace virtual_camera

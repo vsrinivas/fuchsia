@@ -46,8 +46,7 @@ bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file,
   return ParseDocument(document, json_parser);
 }
 
-bool CmxMetadata::ParseFromString(const std::string& data,
-                                  const std::string& filename,
+bool CmxMetadata::ParseFromString(const std::string& data, const std::string& filename,
                                   json::JSONParser* json_parser) {
   TRACE_DURATION("cmx", "CmxMetadata::ParseFromString");
   rapidjson::Document document = json_parser->ParseFromString(data, filename);

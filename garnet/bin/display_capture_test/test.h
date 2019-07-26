@@ -8,8 +8,7 @@
 #include <vector>
 #include "context.h"
 
-#define DISPLAY_TEST(name, test_fn) \
-  static bool name = display_test::RegisterTest(#name, test_fn)
+#define DISPLAY_TEST(name, test_fn) static bool name = display_test::RegisterTest(#name, test_fn)
 
 namespace display_test {
 

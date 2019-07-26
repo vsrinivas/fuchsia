@@ -35,13 +35,9 @@ bool ParseJson(fxl::StringView json, rapidjson::Document* document) {
   return !document->HasParseError();
 }
 
-TEST(RapidJsonValidation, InvalidSchema) {
-  EXPECT_FALSE(InitSchema(kInvalidSchema));
-}
+TEST(RapidJsonValidation, InvalidSchema) { EXPECT_FALSE(InitSchema(kInvalidSchema)); }
 
-TEST(RapidJsonValidation, ValidSchema) {
-  EXPECT_TRUE(InitSchema(kValidSchema));
-}
+TEST(RapidJsonValidation, ValidSchema) { EXPECT_TRUE(InitSchema(kValidSchema)); }
 
 TEST(RapidJsonValidation, ValidJson) {
   auto schema = InitSchema(kValidSchema);

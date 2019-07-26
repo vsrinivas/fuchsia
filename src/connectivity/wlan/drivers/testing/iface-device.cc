@@ -21,85 +21,83 @@ static zx_protocol_device_t wlanmac_test_device_ops = {
 
 static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     .query = [](void* ctx, uint32_t options, wlanmac_info_t* info) -> zx_status_t {
-        return DEV(ctx)->Query(options, info);
+      return DEV(ctx)->Query(options, info);
     },
-    .start = [](void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie) 
-            -> zx_status_t {
-        return DEV(ctx)->Start(ifc, out_sme_channel, cookie);
-    },
+    .start = [](void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie)
+        -> zx_status_t { return DEV(ctx)->Start(ifc, out_sme_channel, cookie); },
     .stop = [](void* ctx) { DEV(ctx)->Stop(); },
     .queue_tx = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
-        return ZX_OK;
+      return ZX_OK;
     },
     .set_channel = [](void* ctx, uint32_t options, wlan_channel_t* chan) -> zx_status_t {
-        return DEV(ctx)->SetChannel(options, chan);
+      return DEV(ctx)->SetChannel(options, chan);
     },
     .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
-        return ZX_OK;
+      return ZX_OK;
     },
     .enable_beaconing = [](void* ctx, uint32_t options, wlan_bcn_config_t* bcn_cfg) -> zx_status_t {
-        return ZX_OK;
+      return ZX_OK;
     },
     .configure_beacon = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
-        return ZX_OK;
+      return ZX_OK;
     },
     .set_key = [](void* ctx, uint32_t options, wlan_key_config_t* key_config) -> zx_status_t {
-        return ZX_OK;
+      return ZX_OK;
     },
     .configure_assoc = [](void* ctx, uint32_t options, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
-        return ZX_OK;
+      return ZX_OK;
     },
-    .clear_assoc = [](void* ctx, uint32_t options, const uint8_t*) -> zx_status_t {
-        return ZX_OK;
-    },
+    .clear_assoc = [](void* ctx, uint32_t options, const uint8_t*) -> zx_status_t { return ZX_OK; },
 };
 #undef DEV
 
 IfaceDevice::IfaceDevice(zx_device_t* device, uint16_t role) : parent_(device), role_(role) {}
 
 zx_status_t IfaceDevice::Bind() {
-    zxlogf(INFO, "wlan::testing::IfaceDevice::Bind()\n");
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Bind()\n");
 
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "wlanmac-test";
-    args.ctx = this;
-    args.ops = &wlanmac_test_device_ops;
-    args.proto_id = ZX_PROTOCOL_WLANMAC;
-    args.proto_ops = &wlanmac_test_protocol_ops;
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = "wlanmac-test";
+  args.ctx = this;
+  args.ops = &wlanmac_test_device_ops;
+  args.proto_id = ZX_PROTOCOL_WLANMAC;
+  args.proto_ops = &wlanmac_test_protocol_ops;
 
-    zx_status_t status = device_add(parent_, &args, &zxdev_);
-    if (status != ZX_OK) { zxlogf(INFO, "wlan-test: could not add test device: %d\n", status); }
-    return status;
+  zx_status_t status = device_add(parent_, &args, &zxdev_);
+  if (status != ZX_OK) {
+    zxlogf(INFO, "wlan-test: could not add test device: %d\n", status);
+  }
+  return status;
 }
 
 void IfaceDevice::Unbind() {
-    zxlogf(INFO, "wlan::testing::IfaceDevice::Unbind()\n");
-    device_remove(zxdev_);
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Unbind()\n");
+  device_remove(zxdev_);
 }
 
 void IfaceDevice::Release() {
-    zxlogf(INFO, "wlan::testing::IfaceDevice::Release()\n");
-    delete this;
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Release()\n");
+  delete this;
 }
 
 zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
-    zxlogf(INFO, "wlan::testing::IfaceDevice::Query()\n");
-    memset(info, 0, sizeof(*info));
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Query()\n");
+  memset(info, 0, sizeof(*info));
 
-    wlan_info_t* ifc_info = &info->ifc_info;
+  wlan_info_t* ifc_info = &info->ifc_info;
 
-    static uint8_t mac[ETH_MAC_SIZE] = {0x02, 0x02, 0x02, 0x03, 0x03, 0x03};
-    std::memcpy(ifc_info->mac_addr, mac, ETH_MAC_SIZE);
+  static uint8_t mac[ETH_MAC_SIZE] = {0x02, 0x02, 0x02, 0x03, 0x03, 0x03};
+  std::memcpy(ifc_info->mac_addr, mac, ETH_MAC_SIZE);
 
-    // Fill out a minimal set of wlan device capabilities
-    ifc_info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
-                               WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
-    ifc_info->driver_features = WLAN_INFO_DRIVER_FEATURE_SYNTH;
-    ifc_info->mac_role = role_;
-    ifc_info->caps = 0;
-    ifc_info->bands_count = 2;
-    // clang-format off
+  // Fill out a minimal set of wlan device capabilities
+  ifc_info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
+                             WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
+  ifc_info->driver_features = WLAN_INFO_DRIVER_FEATURE_SYNTH;
+  ifc_info->mac_role = role_;
+  ifc_info->caps = 0;
+  ifc_info->bands_count = 2;
+  // clang-format off
     ifc_info->bands[0] = {
         .band = WLAN_INFO_BAND_2GHZ,
         .ht_supported = false,
@@ -126,34 +124,34 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
                 .channels = {36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165},
             },
     };
-    // clang-format on
+  // clang-format on
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 void IfaceDevice::Stop() {
-    zxlogf(INFO, "wlan::testing::IfaceDevice::Stop()\n");
-    std::lock_guard<std::mutex> lock(lock_);
-    ifc_ = nullptr;
-    ifc_cookie_ = nullptr;
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Stop()\n");
+  std::lock_guard<std::mutex> lock(lock_);
+  ifc_ = nullptr;
+  ifc_cookie_ = nullptr;
 }
 
 zx_status_t IfaceDevice::Start(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie) {
-    zxlogf(INFO, "wlan::testing::IfaceDevice::Start()\n");
-    std::lock_guard<std::mutex> lock(lock_);
-    *out_sme_channel = ZX_HANDLE_INVALID;
-    if (ifc_ != nullptr) {
-        return ZX_ERR_ALREADY_BOUND;
-    } else {
-        ifc_ = ifc;
-        ifc_cookie_ = cookie;
-    }
-    return ZX_OK;
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Start()\n");
+  std::lock_guard<std::mutex> lock(lock_);
+  *out_sme_channel = ZX_HANDLE_INVALID;
+  if (ifc_ != nullptr) {
+    return ZX_ERR_ALREADY_BOUND;
+  } else {
+    ifc_ = ifc;
+    ifc_cookie_ = cookie;
+  }
+  return ZX_OK;
 }
 
 zx_status_t IfaceDevice::SetChannel(uint32_t options, wlan_channel_t* chan) {
-    zxlogf(INFO, "wlan::testing::IfaceDevice::SetChannel()  chan=%u\n", chan->primary);
-    return ZX_OK;
+  zxlogf(INFO, "wlan::testing::IfaceDevice::SetChannel()  chan=%u\n", chan->primary);
+  return ZX_OK;
 }
 
 }  // namespace testing

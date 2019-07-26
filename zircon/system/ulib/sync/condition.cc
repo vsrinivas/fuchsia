@@ -10,47 +10,43 @@
 
 template <>
 struct condition_impl_internal::MutexOps<sync_mutex_t> {
-    static zx_futex_t* get_futex(sync_mutex_t* mutex) {
-        return &mutex->futex;
-    }
+  static zx_futex_t* get_futex(sync_mutex_t* mutex) { return &mutex->futex; }
 
-    static zx_status_t lock(sync_mutex_t* mutex, int* mutex_lock_err) __TA_ACQUIRE(mutex) {
-        sync_mutex_lock(mutex);
-        return ZX_OK;
-    }
+  static zx_status_t lock(sync_mutex_t* mutex, int* mutex_lock_err) __TA_ACQUIRE(mutex) {
+    sync_mutex_lock(mutex);
+    return ZX_OK;
+  }
 
-    static zx_status_t lock_with_waiters(
-        sync_mutex_t* mutex, int waiters_delta, int* mutex_lock_err) __TA_ACQUIRE(mutex) {
-        sync_mutex_lock_with_waiter(mutex);
-        return ZX_OK;
-    }
+  static zx_status_t lock_with_waiters(sync_mutex_t* mutex, int waiters_delta, int* mutex_lock_err)
+      __TA_ACQUIRE(mutex) {
+    sync_mutex_lock_with_waiter(mutex);
+    return ZX_OK;
+  }
 
-    static void unlock(sync_mutex_t* mutex) __TA_RELEASE(mutex) {
-        sync_mutex_unlock(mutex);
-    }
+  static void unlock(sync_mutex_t* mutex) __TA_RELEASE(mutex) { sync_mutex_unlock(mutex); }
 
-    static void signal_requeue(sync_completion_t* completion, sync_mutex_t* mutex) {
-        zx_futex_storage_t mutex_val = __atomic_load_n(&mutex->futex, __ATOMIC_ACQUIRE);
-        sync_completion_signal_requeue(completion,
-                                       &mutex->futex,
-                                       libsync_mutex_make_owner_from_state(mutex_val));
-    }
+  static void signal_requeue(sync_completion_t* completion, sync_mutex_t* mutex) {
+    zx_futex_storage_t mutex_val = __atomic_load_n(&mutex->futex, __ATOMIC_ACQUIRE);
+    sync_completion_signal_requeue(completion, &mutex->futex,
+                                   libsync_mutex_make_owner_from_state(mutex_val));
+  }
 };
 
 void sync_condition_wait(sync_condition_t* condition, sync_mutex_t* mutex) {
-    __UNUSED zx_status_t status = condition_impl_internal::timedwait(
-        condition, mutex, ZX_TIME_INFINITE, nullptr);
-    assert(status == ZX_OK);
+  __UNUSED zx_status_t status =
+      condition_impl_internal::timedwait(condition, mutex, ZX_TIME_INFINITE, nullptr);
+  assert(status == ZX_OK);
 }
 
-zx_status_t sync_condition_timedwait(sync_condition_t* condition, sync_mutex_t* mutex, zx_time_t deadline) {
-    return condition_impl_internal::timedwait(condition, mutex, deadline, nullptr);
+zx_status_t sync_condition_timedwait(sync_condition_t* condition, sync_mutex_t* mutex,
+                                     zx_time_t deadline) {
+  return condition_impl_internal::timedwait(condition, mutex, deadline, nullptr);
 }
 
 void sync_condition_signal(sync_condition_t* condition) {
-    return condition_impl_internal::signal(condition, 1);
+  return condition_impl_internal::signal(condition, 1);
 }
 
 void sync_condition_broadcast(sync_condition_t* condition) {
-    condition_impl_internal::signal(condition, -1);
+  condition_impl_internal::signal(condition, -1);
 }

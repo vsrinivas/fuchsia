@@ -21,8 +21,7 @@ constexpr char kServiceRootPath[] = "/svc";
 
 }  // namespace
 
-StartupContext::StartupContext(zx::channel service_root,
-                               zx::channel directory_request)
+StartupContext::StartupContext(zx::channel service_root, zx::channel directory_request)
     : incoming_services_(std::make_shared<Services>()) {
   incoming_services_->Bind(std::move(service_root));
   outgoing_.Serve(std::move(directory_request));
@@ -33,12 +32,11 @@ StartupContext::~StartupContext() = default;
 // static
 std::unique_ptr<StartupContext> StartupContext::CreateFromStartupInfo() {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
-  return std::make_unique<StartupContext>(
-      subtle::CreateStaticServiceRootHandle(), zx::channel(directory_request));
+  return std::make_unique<StartupContext>(subtle::CreateStaticServiceRootHandle(),
+                                          zx::channel(directory_request));
 }
 
-std::unique_ptr<StartupContext> StartupContext::CreateFrom(
-    fuchsia::sys::StartupInfo startup_info) {
+std::unique_ptr<StartupContext> StartupContext::CreateFrom(fuchsia::sys::StartupInfo startup_info) {
   fuchsia::sys::FlatNamespace& flat = startup_info.flat_namespace;
   if (flat.paths.size() != flat.directories.size())
     return nullptr;
@@ -51,9 +49,8 @@ std::unique_ptr<StartupContext> StartupContext::CreateFrom(
     }
   }
 
-  return std::make_unique<StartupContext>(
-      std::move(service_root),
-      std::move(startup_info.launch_info.directory_request));
+  return std::make_unique<StartupContext>(std::move(service_root),
+                                          std::move(startup_info.launch_info.directory_request));
 }
 
 const fuchsia::sys::EnvironmentPtr& StartupContext::environment() const {
@@ -72,8 +69,8 @@ const fuchsia::sys::LauncherPtr& StartupContext::launcher() const {
   return launcher_;
 }
 
-void StartupContext::ConnectToEnvironmentService(
-    const std::string& interface_name, zx::channel channel) {
+void StartupContext::ConnectToEnvironmentService(const std::string& interface_name,
+                                                 zx::channel channel) {
   incoming_services()->ConnectToService(std::move(channel), interface_name);
 }
 

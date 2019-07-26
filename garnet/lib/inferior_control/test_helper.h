@@ -20,4 +20,4 @@ constexpr uint64_t kUint64MagicPacketValue = 0x0123456789abcdeful;
 
 }  // namespace inferior_control
 
-#endif // GARNET_LIB_INFERIOR_CONTROL_TEST_HELPER_H_
+#endif  // GARNET_LIB_INFERIOR_CONTROL_TEST_HELPER_H_

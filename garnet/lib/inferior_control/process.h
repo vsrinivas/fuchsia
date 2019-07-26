@@ -209,9 +209,7 @@ class Process final {
 
   zx_vaddr_t debug_addr_property() const { return debug_addr_property_; }
 
-  bool ldso_debug_data_has_initialized() const {
-    return ldso_debug_data_has_initialized_;
-  }
+  bool ldso_debug_data_has_initialized() const { return ldso_debug_data_has_initialized_; }
 
   zx_vaddr_t ldso_debug_break_addr() const { return ldso_debug_break_addr_; }
 

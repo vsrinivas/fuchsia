@@ -17,9 +17,8 @@ namespace trace_testing {
 // Compare the pretty-printed form of |records| with |expected|.
 // Comparison begins |start_records| in and continues for |max_num_records|.
 // Returns true on success.
-bool CompareRecords(const fbl::Vector<trace::Record>& records,
-                    size_t start_record, size_t max_num_records,
-                    const char* expected);
+bool CompareRecords(const fbl::Vector<trace::Record>& records, size_t start_record,
+                    size_t max_num_records, const char* expected);
 
 // Compare the pretty-printed form of |records| with |expected|.
 // |records| is assumed to have been created with ReadRecords().
@@ -29,14 +28,12 @@ bool CompareRecords(const fbl::Vector<trace::Record>& records,
 // administrative records emitted at the start by the tracing system.
 // |max_num_records| does *not* include these leading administrative records.
 // Returns true on success.
-bool ComparePartialBuffer(const fbl::Vector<trace::Record>& records,
-                          size_t max_num_records, const char* expected,
-                          size_t* out_leading_to_skip);
+bool ComparePartialBuffer(const fbl::Vector<trace::Record>& records, size_t max_num_records,
+                          const char* expected, size_t* out_leading_to_skip);
 
 // Compare the pretty-printed form of |records| with |expected|.
 // |records| is assumed to have been created with ReadRecords().
 // Returns true on success.
-bool CompareBuffer(const fbl::Vector<trace::Record>& records,
-                   const char* expected);
+bool CompareBuffer(const fbl::Vector<trace::Record>& records, const char* expected);
 
 }  // namespace trace_testing

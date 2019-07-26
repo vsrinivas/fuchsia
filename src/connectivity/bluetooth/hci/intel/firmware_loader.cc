@@ -25,8 +25,7 @@ namespace btintel {
 using ::bt::BufferView;
 using ::bt::PacketView;
 
-FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
-                                                    const size_t& len) {
+FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware, const size_t& len) {
   BufferView file(firmware, len);
 
   size_t offset = 0;
@@ -50,25 +49,22 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
     offset++;
     BufferView command_view = file.view(offset);
     PacketView<bt::hci::CommandHeader> command(&command_view);
-    command = PacketView<bt::hci::CommandHeader>(
-        &command_view, command.header().parameter_total_size);
+    command =
+        PacketView<bt::hci::CommandHeader>(&command_view, command.header().parameter_total_size);
     offset += command.size();
     if (!patched && le16toh(command.header().opcode) == kLoadPatch) {
       patched = true;
     }
-    if ((file.size() - offset <= sizeof(bt::hci::EventHeader)) ||
-        (file[offset] != 0x02)) {
+    if ((file.size() - offset <= sizeof(bt::hci::EventHeader)) || (file[offset] != 0x02)) {
       errorf("FirmwareLoader: Error: expected event packet\n");
       return LoadStatus::kError;
     }
     std::deque<BufferView> events;
-    while ((file.size() - offset > sizeof(bt::hci::EventHeader)) &&
-           (file[offset] == 0x02)) {
+    while ((file.size() - offset > sizeof(bt::hci::EventHeader)) && (file[offset] == 0x02)) {
       offset++;
       BufferView event_view = file.view(offset);
       PacketView<bt::hci::EventHeader> event(&event_view);
-      size_t event_size =
-          sizeof(bt::hci::EventHeader) + event.header().parameter_total_size;
+      size_t event_size = sizeof(bt::hci::EventHeader) + event.header().parameter_total_size;
       events.emplace_back(file.view(offset, event_size));
       offset += event_size;
     }
@@ -81,8 +77,7 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
   return patched ? LoadStatus::kPatched : LoadStatus::kComplete;
 }
 
-FirmwareLoader::LoadStatus FirmwareLoader::LoadSfi(const void* firmware,
-                                                   const size_t& len) {
+FirmwareLoader::LoadStatus FirmwareLoader::LoadSfi(const void* firmware, const size_t& len) {
   BufferView file(firmware, len);
 
   if (file.size() < 644) {
@@ -120,8 +115,7 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadSfi(const void* firmware,
   while (offset < file.size()) {
     auto next_cmd = file.view(offset + frag_len);
     PacketView<bt::hci::CommandHeader> header(&next_cmd);
-    size_t cmd_size =
-        sizeof(bt::hci::CommandHeader) + header.header().parameter_total_size;
+    size_t cmd_size = sizeof(bt::hci::CommandHeader) + header.header().parameter_total_size;
     frag_len += cmd_size;
     if ((frag_len % 4) == 0) {
       if (!hci_acl_.SendSecureSend(0x01, file.view(offset, frag_len))) {

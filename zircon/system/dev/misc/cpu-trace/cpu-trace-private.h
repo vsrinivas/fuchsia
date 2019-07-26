@@ -13,7 +13,7 @@
 
 zx_status_t insntrace_bind(void* ctx, zx_device_t* parent);
 
-#endif // __x86_64__
+#endif  // __x86_64__
 
 // Performance Monitor
 // This driver accesses the PMU of the chip as well as various other

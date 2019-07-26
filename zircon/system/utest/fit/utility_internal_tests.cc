@@ -32,101 +32,81 @@ using fit::internal::not_same_type;
 static_assert(!not_same_type<int, const volatile int&>::value, "");
 
 struct trivially_destructible {
-    ~trivially_destructible() = default;
+  ~trivially_destructible() = default;
 };
 struct non_trivially_destructible {
-    ~non_trivially_destructible() {}
+  ~non_trivially_destructible() {}
 };
 
 using fit::internal::is_trivially_destructible_v;
 static_assert(is_trivially_destructible_v<> == true, "");
 static_assert(is_trivially_destructible_v<trivially_destructible> == true, "");
-static_assert(is_trivially_destructible_v<trivially_destructible,
-                                          trivially_destructible> == true,
+static_assert(is_trivially_destructible_v<trivially_destructible, trivially_destructible> == true,
               "");
 static_assert(is_trivially_destructible_v<non_trivially_destructible> == false, "");
-static_assert(is_trivially_destructible_v<non_trivially_destructible,
-                                          non_trivially_destructible> == false,
+static_assert(is_trivially_destructible_v<non_trivially_destructible, non_trivially_destructible> ==
+                  false,
               "");
-static_assert(is_trivially_destructible_v<trivially_destructible,
-                                          non_trivially_destructible> == false,
+static_assert(is_trivially_destructible_v<trivially_destructible, non_trivially_destructible> ==
+                  false,
               "");
-static_assert(is_trivially_destructible_v<non_trivially_destructible,
-                                          trivially_destructible> == false,
+static_assert(is_trivially_destructible_v<non_trivially_destructible, trivially_destructible> ==
+                  false,
               "");
 
 struct trivially_copyable {
-    trivially_copyable() = default;
-    trivially_copyable(const trivially_copyable&) = default;
-    trivially_copyable& operator=(const trivially_copyable&) = default;
-    ~trivially_copyable() = default;
+  trivially_copyable() = default;
+  trivially_copyable(const trivially_copyable&) = default;
+  trivially_copyable& operator=(const trivially_copyable&) = default;
+  ~trivially_copyable() = default;
 };
 
 struct non_trivially_copyable {
-    non_trivially_copyable() {}
-    non_trivially_copyable(const trivially_copyable&) {}
-    non_trivially_copyable& operator=(const trivially_copyable&) { return *this; }
-    ~non_trivially_copyable() {}
+  non_trivially_copyable() {}
+  non_trivially_copyable(const trivially_copyable&) {}
+  non_trivially_copyable& operator=(const trivially_copyable&) { return *this; }
+  ~non_trivially_copyable() {}
 };
 
 using fit::internal::is_trivially_copyable_v;
 static_assert(is_trivially_copyable_v<> == true, "");
 static_assert(is_trivially_copyable_v<trivially_copyable> == true, "");
-static_assert(is_trivially_copyable_v<trivially_copyable,
-                                      trivially_copyable> == true,
-              "");
+static_assert(is_trivially_copyable_v<trivially_copyable, trivially_copyable> == true, "");
 static_assert(is_trivially_copyable_v<non_trivially_copyable> == false, "");
-static_assert(is_trivially_copyable_v<non_trivially_copyable,
-                                      non_trivially_copyable> == false,
-              "");
-static_assert(is_trivially_copyable_v<trivially_copyable,
-                                      non_trivially_copyable> == false,
-              "");
-static_assert(is_trivially_copyable_v<non_trivially_copyable,
-                                      trivially_copyable> == false,
-              "");
+static_assert(is_trivially_copyable_v<non_trivially_copyable, non_trivially_copyable> == false, "");
+static_assert(is_trivially_copyable_v<trivially_copyable, non_trivially_copyable> == false, "");
+static_assert(is_trivially_copyable_v<non_trivially_copyable, trivially_copyable> == false, "");
 
 struct trivially_movable {
-    trivially_movable() = default;
-    trivially_movable(trivially_movable&&) = default;
-    trivially_movable& operator=(trivially_movable&&) = default;
-    ~trivially_movable() = default;
+  trivially_movable() = default;
+  trivially_movable(trivially_movable&&) = default;
+  trivially_movable& operator=(trivially_movable&&) = default;
+  ~trivially_movable() = default;
 };
 
 struct non_trivially_movable {
-    non_trivially_movable() {}
-    non_trivially_movable(trivially_movable&&) {}
-    non_trivially_movable& operator=(trivially_movable&&) { return *this; }
-    ~non_trivially_movable() {}
+  non_trivially_movable() {}
+  non_trivially_movable(trivially_movable&&) {}
+  non_trivially_movable& operator=(trivially_movable&&) { return *this; }
+  ~non_trivially_movable() {}
 };
 
 using fit::internal::is_trivially_movable_v;
 static_assert(is_trivially_movable_v<> == true, "");
 static_assert(is_trivially_movable_v<trivially_movable> == true, "");
-static_assert(is_trivially_movable_v<trivially_movable,
-                                     trivially_movable> == true,
-              "");
+static_assert(is_trivially_movable_v<trivially_movable, trivially_movable> == true, "");
 static_assert(is_trivially_movable_v<non_trivially_movable> == false, "");
-static_assert(is_trivially_movable_v<non_trivially_movable,
-                                     non_trivially_movable> == false,
-              "");
-static_assert(is_trivially_movable_v<trivially_movable,
-                                     non_trivially_movable> == false,
-              "");
-static_assert(is_trivially_movable_v<non_trivially_movable,
-                                     trivially_movable> == false,
-              "");
+static_assert(is_trivially_movable_v<non_trivially_movable, non_trivially_movable> == false, "");
+static_assert(is_trivially_movable_v<trivially_movable, non_trivially_movable> == false, "");
+static_assert(is_trivially_movable_v<non_trivially_movable, trivially_movable> == false, "");
 
 using fit::internal::enable_relop_t;
 template <typename T, typename U, typename... Conditions,
-          enable_relop_t<decltype(std::declval<T>() == std::declval<U>()),
-                         Conditions...> = true>
+          enable_relop_t<decltype(std::declval<T>() == std::declval<U>()), Conditions...> = true>
 constexpr bool is_comparable(T&&, U&&, Conditions&&...) {
-    return true;
+  return true;
 }
-constexpr bool is_comparable(...) {
-    return false;
-}
+constexpr bool is_comparable(...) { return false; }
 
 struct comparable_a {};
 struct comparable_b {};
@@ -134,23 +114,13 @@ struct comparable_c {};
 struct not_bool {};
 
 // A and B are comparable to themselves and each other.
-constexpr bool operator==(const comparable_a&, const comparable_a&) {
-    return true;
-}
-constexpr bool operator==(const comparable_b&, const comparable_b&) {
-    return true;
-}
-constexpr bool operator==(const comparable_a&, const comparable_b&) {
-    return true;
-}
-constexpr bool operator==(const comparable_b&, const comparable_a&) {
-    return true;
-}
+constexpr bool operator==(const comparable_a&, const comparable_a&) { return true; }
+constexpr bool operator==(const comparable_b&, const comparable_b&) { return true; }
+constexpr bool operator==(const comparable_a&, const comparable_b&) { return true; }
+constexpr bool operator==(const comparable_b&, const comparable_a&) { return true; }
 
 // C is comparable with itself but the result is not convertible to bool.
-constexpr not_bool operator==(const comparable_c&, const comparable_c&) {
-    return {};
-}
+constexpr not_bool operator==(const comparable_c&, const comparable_c&) { return {}; }
 
 static_assert(is_comparable(comparable_a{}, comparable_a{}), "");
 static_assert(is_comparable(comparable_b{}, comparable_b{}), "");
@@ -168,4 +138,4 @@ static_assert(!is_comparable(comparable_b{}, comparable_c{}), "");
 static_assert(!is_comparable(comparable_c{}, comparable_b{}), "");
 static_assert(!is_comparable(comparable_c{}, comparable_c{}), "");
 
-} // anonymous namespace
+}  // anonymous namespace

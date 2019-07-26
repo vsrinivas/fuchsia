@@ -15,14 +15,14 @@ namespace ddk {
 
 template <uint32_t PROTO_ID>
 class EmptyProtocol : public internal::base_protocol {
-public:
-    EmptyProtocol() {
-        // Can only inherit from one base_protocol implementation
-        ZX_ASSERT(this->ddk_proto_id_ == 0);
-        ddk_proto_id_ = PROTO_ID;
-    }
+ public:
+  EmptyProtocol() {
+    // Can only inherit from one base_protocol implementation
+    ZX_ASSERT(this->ddk_proto_id_ == 0);
+    ddk_proto_id_ = PROTO_ID;
+  }
 };
 
-} // namespace ddk
+}  // namespace ddk
 
 #endif  // DDKTL_PROTOCOL_EMPTY_PROTOCOL_H_

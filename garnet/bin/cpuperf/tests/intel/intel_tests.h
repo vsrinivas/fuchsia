@@ -17,4 +17,4 @@ extern const TestSpec kTallySpec;
 extern const TestSpec kUserFlagSpec;
 extern const TestSpec kValueRecordsSpec;
 
-#endif // GARNET_BIN_CPUPERF_TESTS_INTEL_TESTS_H_
+#endif  // GARNET_BIN_CPUPERF_TESTS_INTEL_TESTS_H_

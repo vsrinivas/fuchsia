@@ -23,8 +23,7 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
 
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler(
       async_dispatcher_t* dispatcher = nullptr) {
-    return [this, dispatcher](
-               fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
+    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
       bindings_.AddBinding(this, std::move(request), dispatcher);
     };
   }
@@ -43,9 +42,7 @@ class TilesTest : public component::testing::TestWithContext {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
     auto startup_context = TakeContext();
-    auto scenic =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    auto scenic = startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
@@ -57,8 +54,8 @@ class TilesTest : public component::testing::TestWithContext {
 
     view_holder_token_ = std::move(view_holder_token);
     startup_context_ = std::move(startup_context);
-    tiles_ = std::make_unique<tiles::Tiles>(std::move(view_context),
-                                            std::vector<std::string>(), 10);
+    tiles_ =
+        std::make_unique<tiles::Tiles>(std::move(view_context), std::vector<std::string>(), 10);
   }
 
   fuchsia::developer::tiles::Controller* tiles() const { return tiles_.get(); }
@@ -74,16 +71,14 @@ TEST_F(TilesTest, Trivial) {}
 
 TEST_F(TilesTest, AddFromURL) {
   uint32_t key = 0;
-  tiles()->AddTileFromURL("test_tile", /* allow_focus */ true, {},
-                          [&key](uint32_t cb_key) {
-                            EXPECT_NE(0u, cb_key) << "Key should be nonzero";
-                            key = cb_key;
-                          });
+  tiles()->AddTileFromURL("test_tile", /* allow_focus */ true, {}, [&key](uint32_t cb_key) {
+    EXPECT_NE(0u, cb_key) << "Key should be nonzero";
+    key = cb_key;
+  });
 
   ASSERT_NE(0u, key) << "Key should be nonzero";
 
-  tiles()->ListTiles([key](std::vector<uint32_t> keys,
-                           std::vector<std::string> urls,
+  tiles()->ListTiles([key](std::vector<uint32_t> keys, std::vector<std::string> urls,
                            std::vector<fuchsia::ui::gfx::vec3> sizes,
                            std::vector<bool> focusabilities) {
     ASSERT_EQ(1u, keys.size());
@@ -97,8 +92,7 @@ TEST_F(TilesTest, AddFromURL) {
 
   tiles()->RemoveTile(key);
 
-  tiles()->ListTiles([](std::vector<uint32_t> keys,
-                        std::vector<std::string> urls,
+  tiles()->ListTiles([](std::vector<uint32_t> keys, std::vector<std::string> urls,
                         std::vector<fuchsia::ui::gfx::vec3> sizes,
                         std::vector<bool> focusabilities) {
     EXPECT_EQ(0u, keys.size());
@@ -107,12 +101,10 @@ TEST_F(TilesTest, AddFromURL) {
     EXPECT_EQ(0u, focusabilities.size());
   });
 
-  tiles()->AddTileFromURL("test_nofocus_tile", /* allow_focus */ false, {},
-                          [](uint32_t _cb_key) {
-                            // noop
-                          });
-  tiles()->ListTiles([](std::vector<uint32_t> keys,
-                        std::vector<std::string> urls,
+  tiles()->AddTileFromURL("test_nofocus_tile", /* allow_focus */ false, {}, [](uint32_t _cb_key) {
+    // noop
+  });
+  tiles()->ListTiles([](std::vector<uint32_t> keys, std::vector<std::string> urls,
                         std::vector<fuchsia::ui::gfx::vec3> sizes,
                         std::vector<bool> focusabilities) {
     EXPECT_EQ(1u, keys.size());

@@ -21,10 +21,10 @@
 #include "netbuf.h"
 
 struct brcmf_proto_bcdc_dcmd {
-    uint32_t cmd;       /* dongle command value */
-    uint32_t len;       /* input/output buflen (excludes header) */
-    uint32_t flags;     /* flag defns given below */
-    int32_t status;     /* status code returned from the device */
+  uint32_t cmd;   /* dongle command value */
+  uint32_t len;   /* input/output buflen (excludes header) */
+  uint32_t flags; /* flag defns given below */
+  int32_t status; /* status code returned from the device */
 };
 
 // clang-format off

@@ -59,13 +59,9 @@ class TestCase {
   void Run(LifecycleObserver* lifecycle_observer, internal::TestDriver* driver);
 
   // Returns the name of test case.
-  const fbl::String& name() const {
-    return name_;
-  }
+  const fbl::String& name() const { return name_; }
 
-  const TestInfo& GetTestInfo(size_t index) const {
-    return test_infos_[index];
-  }
+  const TestInfo& GetTestInfo(size_t index) const { return test_infos_[index]; }
 
   // Returns TestInfo of the registered test that matches the filter, at a given
   // offset. If All tests match the filter, then it is equivalent to |TestCase::GetTestInfo|.

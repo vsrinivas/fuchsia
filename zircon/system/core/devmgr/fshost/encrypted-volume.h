@@ -12,14 +12,15 @@
 namespace devmgr {
 
 class EncryptedVolume final : public EncryptedVolumeInterface {
-public:
+ public:
   EncryptedVolume(fbl::unique_fd fd, fbl::unique_fd devfs_root);
 
   zx_status_t Unseal();
   zx_status_t Format();
-private:
+
+ private:
   fbl::unique_fd fd_;
   fbl::unique_fd devfs_root_;
 };
 
-} // namespace devmgr
+}  // namespace devmgr

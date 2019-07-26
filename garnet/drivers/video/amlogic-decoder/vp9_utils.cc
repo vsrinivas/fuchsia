@@ -9,8 +9,7 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
-std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data,
-                                               uint32_t frame_size) {
+std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data, uint32_t frame_size) {
   std::vector<uint32_t> frame_sizes;
   if (frame_size < 1)
     return frame_sizes;
@@ -50,15 +49,13 @@ std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data,
         sub_frame_size = reinterpret_cast<const uint32_t*>(index_data)[i];
         break;
       default:
-        zxlogf(ERROR, "Unsupported bytes_per_framesize: %d\n",
-               bytes_per_framesize);
+        zxlogf(ERROR, "Unsupported bytes_per_framesize: %d\n", bytes_per_framesize);
         frame_sizes.clear();
         return frame_sizes;
     }
     total_size += sub_frame_size;
     if (total_size > frame_size) {
-      zxlogf(ERROR, "Total superframe size too large: %u > %u\n", total_size,
-             frame_size);
+      zxlogf(ERROR, "Total superframe size too large: %u > %u\n", total_size, frame_size);
       frame_sizes.clear();
       return frame_sizes;
     }
@@ -67,11 +64,9 @@ std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data,
   return frame_sizes;
 }
 
-void SplitSuperframe(const uint8_t* data, uint32_t frame_size,
-                     std::vector<uint8_t>* output_vector,
+void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8_t>* output_vector,
                      std::vector<uint32_t>* superframe_byte_sizes) {
-  std::vector<uint32_t> frame_sizes =
-      TryParseSuperframeHeader(data, frame_size);
+  std::vector<uint32_t> frame_sizes = TryParseSuperframeHeader(data, frame_size);
 
   if (frame_sizes.empty())
     frame_sizes.push_back(frame_size);
@@ -85,8 +80,7 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size,
   // This can be called multiple times on the same output_vector overall, but
   // should be amortized O(1), since resizing larger inserts elements at the end
   // and inserting elements at the end is amortized O(1) for std::vector.
-  output_vector->resize(output_offset + total_frame_bytes +
-                        kOutputHeaderSize * frame_sizes.size());
+  output_vector->resize(output_offset + total_frame_bytes + kOutputHeaderSize * frame_sizes.size());
   uint8_t* output = &(*output_vector)[output_offset];
   for (auto& size : frame_sizes) {
     ZX_DEBUG_ASSERT(output + kOutputHeaderSize - output_vector->data() <=
@@ -113,6 +107,5 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size,
       superframe_byte_sizes->push_back(size + kOutputHeaderSize);
     }
   }
-  ZX_DEBUG_ASSERT(output - output_vector->data() ==
-                  static_cast<int64_t>(output_vector->size()));
+  ZX_DEBUG_ASSERT(output - output_vector->data() == static_cast<int64_t>(output_vector->size()));
 }

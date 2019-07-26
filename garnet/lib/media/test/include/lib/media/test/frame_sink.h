@@ -37,18 +37,16 @@ class FrameSink {
   // |main_loop| must out-last the FrameSink
   // |frames_per_second| if not exactly 0.0, the frames per second, else use the
   //     built-in default frames per second.
-  static std::unique_ptr<FrameSink> Create(
-      component::StartupContext* startup_context, async::Loop* main_loop,
-      double frames_per_second,
-      fit::function<void(FrameSink*)> view_connected_callback);
+  static std::unique_ptr<FrameSink> Create(component::StartupContext* startup_context,
+                                           async::Loop* main_loop, double frames_per_second,
+                                           fit::function<void(FrameSink*)> view_connected_callback);
 
   ~FrameSink();
 
   // The on_done will get called on main_loop_'s thread.  If the callee
   // wants/needs to, the callee can post to a different thread.
   void PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_offset,
-                std::shared_ptr<const fuchsia::media::StreamOutputFormat>
-                    output_format,
+                std::shared_ptr<const fuchsia::media::StreamOutputFormat> output_format,
                 fit::closure on_done);
 
   // (Quickly) cause all frames to eventually be returned (assuming the rest of
@@ -58,8 +56,7 @@ class FrameSink {
   //
   // The on_frames_returned gets called on main_loop_'s thread.  If the callee
   // wants/needs to, the callee can post to a different thread.
-  void PutEndOfStreamThenWaitForFramesReturnedAsync(
-      fit::closure on_frames_returned);
+  void PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_frames_returned);
 
   void AddFrameSinkView(FrameSinkView* view);
   void RemoveFrameSinkView(FrameSinkView* view);
@@ -67,13 +64,11 @@ class FrameSink {
   // This is not used for any calls to PutFrame(), rather only internally
   // within calls to PutEndOfStreamThenWaitForFramesReturnedAsync().  This is
   // public only so that FrameSinkView can see it.
-  constexpr static uint32_t kBlankFrameImageId =
-      std::numeric_limits<uint32_t>::max();
+  constexpr static uint32_t kBlankFrameImageId = std::numeric_limits<uint32_t>::max();
 
  private:
   FrameSink(component::StartupContext* startup_context, async::Loop* main_loop,
-            double frames_per_second,
-            fit::function<void(FrameSink*)> view_connected_callback);
+            double frames_per_second, fit::function<void(FrameSink*)> view_connected_callback);
 
   void CheckIfAllFramesReturned();
 

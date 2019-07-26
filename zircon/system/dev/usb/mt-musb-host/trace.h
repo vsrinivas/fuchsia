@@ -8,4 +8,4 @@ namespace mt_usb_hci {
 
 #define TRACE() zxlogf(TRACE, "[TRACE] %s\n", __PRETTY_FUNCTION__)
 
-} // namespace mt_usb_hci
+}  // namespace mt_usb_hci

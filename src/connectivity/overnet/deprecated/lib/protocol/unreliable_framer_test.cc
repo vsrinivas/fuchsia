@@ -82,33 +82,27 @@ TEST_P(UnreliableFramerTest, UnframesCorrectly_OneByteAtATime) {
       }
     }
   }
-  EXPECT_EQ(size_t(expect_it - GetParam().output.begin()),
-            GetParam().output.size());
+  EXPECT_EQ(size_t(expect_it - GetParam().output.begin()), GetParam().output.size());
 }
 
 INSTANTIATE_TEST_SUITE_P(
     UnreliableFramerSuite, UnreliableFramerTest,
     ::testing::Values(
         // Simple correct frame
-        Param{Slice::FromContainer({'\n', 2, 'a', 'b', 'c', 0xc2, 0x41, 0x24,
-                                    0x35}),
+        Param{Slice::FromContainer({'\n', 2, 'a', 'b', 'c', 0xc2, 0x41, 0x24, 0x35}),
               {Slice::FromContainer({'a', 'b', 'c'})}},
         // Correct frame prefixed with noise, and suffixed with noise
-        Param{Slice::FromContainer({'h', 'e', 'l', 'l', 'o', '\n', 2, 'a', 'b',
-                                    'c', 0xc2, 0x41, 0x24, 0x35, '\n'}),
+        Param{Slice::FromContainer({'h', 'e', 'l', 'l', 'o', '\n', 2, 'a', 'b', 'c', 0xc2, 0x41,
+                                    0x24, 0x35, '\n'}),
               {Slice::FromContainer({'a', 'b', 'c'})}},
         // Badly formed frame (incorrect CRC)
-        Param{Slice::FromContainer({'\n', 2, 'a', 'b', 'c', 0xc2, 0x41, 0x00,
-                                    0x35}),
-              {}},
+        Param{Slice::FromContainer({'\n', 2, 'a', 'b', 'c', 0xc2, 0x41, 0x00, 0x35}), {}},
         // Correct frame prefixed with noise, and suffixed with noise, then a
         // new frame
-        Param{Slice::FromContainer({'h',  'e', 'l',  'l',  'o',  '\n', 2,
-                                    'a',  'b', 'c',  0xc2, 0x41, 0x24, 0x35,
-                                    '\n', 'b', 'o',  'b',  '\n', 2,    'a',
-                                    'b',  'c', 0xc2, 0x41, 0x24, 0x35}),
-              {Slice::FromContainer({'a', 'b', 'c'}),
-               Slice::FromContainer({'a', 'b', 'c'})}}));
+        Param{Slice::FromContainer({'h',  'e',  'l',  'l',  'o',  '\n', 2,    'a',  'b',
+                                    'c',  0xc2, 0x41, 0x24, 0x35, '\n', 'b',  'o',  'b',
+                                    '\n', 2,    'a',  'b',  'c',  0xc2, 0x41, 0x24, 0x35}),
+              {Slice::FromContainer({'a', 'b', 'c'}), Slice::FromContainer({'a', 'b', 'c'})}}));
 
 }  // namespace unreliable_framer_test
 }  // namespace overnet

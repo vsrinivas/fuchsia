@@ -48,8 +48,7 @@ inline std::ostream& operator<<(std::ostream& out, FullLinkLabel lbl) {
 namespace std {
 template <>
 struct hash<overnet::routing_table_impl::FullLinkLabel> {
-  size_t operator()(
-      const overnet::routing_table_impl::FullLinkLabel& id) const {
+  size_t operator()(const overnet::routing_table_impl::FullLinkLabel& id) const {
     return id.from.Hash() ^ id.to.Hash() ^ id.link_label;
   }
 };
@@ -78,12 +77,9 @@ class RoutingTable {
   };
   using SelectedLinks = std::unordered_map<NodeId, SelectedLink>;
 
-  void ProcessUpdate(
-      std::initializer_list<fuchsia::overnet::protocol::NodeStatus>
-          node_updates,
-      std::initializer_list<fuchsia::overnet::protocol::LinkStatus>
-          link_updates,
-      bool flush_old_nodes);
+  void ProcessUpdate(std::initializer_list<fuchsia::overnet::protocol::NodeStatus> node_updates,
+                     std::initializer_list<fuchsia::overnet::protocol::LinkStatus> link_updates,
+                     bool flush_old_nodes);
 
   // Returns true if this update concludes any changes begun by all prior
   // Update() calls.
@@ -169,12 +165,8 @@ class RoutingTable {
   struct Node;
 
   struct Link {
-    Link(TimeStamp now, fuchsia::overnet::protocol::LinkStatus initial_status,
-         Node* from, Node* to)
-        : status(std::move(initial_status)),
-          last_updated(now),
-          from_node(from),
-          to_node(to) {}
+    Link(TimeStamp now, fuchsia::overnet::protocol::LinkStatus initial_status, Node* from, Node* to)
+        : status(std::move(initial_status)), last_updated(now), from_node(from), to_node(to) {}
     fuchsia::overnet::protocol::LinkStatus status;
     TimeStamp last_updated;
     InternalListNode<Link> outgoing_link;

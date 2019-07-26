@@ -20,8 +20,7 @@ TEST(URLResolver, GetSchemeFromURL) {
   EXPECT_EQ("", GetSchemeFromURL("abc"));
   EXPECT_EQ("abc", GetSchemeFromURL("abc:efg"));
   EXPECT_EQ("abc", GetSchemeFromURL("AbC:EfG"));
-  EXPECT_EQ(" sdkfj kjfd @($*) ",
-            GetSchemeFromURL(" sdkfj KJfd @($*) : foo baedf"));
+  EXPECT_EQ(" sdkfj kjfd @($*) ", GetSchemeFromURL(" sdkfj KJfd @($*) : foo baedf"));
 }
 
 TEST(URLResolver, GetPathFromURL) {

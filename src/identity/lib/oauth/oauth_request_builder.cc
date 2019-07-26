@@ -28,8 +28,7 @@ std::string UrlEncode(const std::string& value) {
 
   for (char c : value) {
     // Keep alphanumeric and other accepted characters intact
-    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '=' ||
-        c == '&' || c == '+') {
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '=' || c == '&' || c == '+') {
       escaped << c;
       continue;
     }
@@ -45,8 +44,7 @@ std::string UrlEncode(const std::string& value) {
 
 }  // namespace
 
-OAuthRequestBuilder::OAuthRequestBuilder(const std::string& url,
-                                         const std::string& method)
+OAuthRequestBuilder::OAuthRequestBuilder(const std::string& url, const std::string& method)
     : url_(url), method_(method) {
   FXL_CHECK(!url_.empty());
   FXL_CHECK(!method_.empty());
@@ -54,15 +52,13 @@ OAuthRequestBuilder::OAuthRequestBuilder(const std::string& url,
 
 OAuthRequestBuilder::~OAuthRequestBuilder() {}
 
-OAuthRequestBuilder& OAuthRequestBuilder::SetAuthorizationHeader(
-    const std::string& token) {
+OAuthRequestBuilder& OAuthRequestBuilder::SetAuthorizationHeader(const std::string& token) {
   FXL_DCHECK(!token.empty());
   http_headers_["Authorization"] = "Bearer " + token;
   return *this;
 }
 
-OAuthRequestBuilder& OAuthRequestBuilder::SetUrlEncodedBody(
-    const std::string& body) {
+OAuthRequestBuilder& OAuthRequestBuilder::SetUrlEncodedBody(const std::string& body) {
   http_headers_["content-type"] = "application/x-www-form-urlencoded";
 
   if (body.empty()) {
@@ -107,8 +103,7 @@ http::URLRequest OAuthRequestBuilder::Build() const {
   return request;
 }
 
-OAuthRequestBuilder& OAuthRequestBuilder::SetRequestBody(
-    const std::string& body) {
+OAuthRequestBuilder& OAuthRequestBuilder::SetRequestBody(const std::string& body) {
   request_body_ = body;
 
   uint64_t data_size = request_body_.length();

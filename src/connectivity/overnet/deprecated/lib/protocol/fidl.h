@@ -16,8 +16,7 @@ template <class T, class CodingSelector>
 StatusOr<Slice> Encode(CodingSelector coding_selector, T* object) {
   std::vector<uint8_t> output;
   const char* error_msg;
-  if (zx_status_t status = fidl::EncodeObject(object, &output, &error_msg);
-      status != ZX_OK) {
+  if (zx_status_t status = fidl::EncodeObject(object, &output, &error_msg); status != ZX_OK) {
     return Status::FromZx(status, error_msg);
   }
   const auto coding = coding_selector(output.size());
@@ -34,10 +33,7 @@ StatusOr<Slice> Encode(Coding coding, T* object) {
 template <class T>
 StatusOr<Slice> Encode(T* object) {
   return fidl_impl::Encode(
-      [](size_t size) {
-        return SliceCodingOracle().SetSize(size).SuggestCoding();
-      },
-      object);
+      [](size_t size) { return SliceCodingOracle().SetSize(size).SuggestCoding(); }, object);
 }
 
 template <class T>
@@ -49,8 +45,7 @@ StatusOr<T> Decode(Slice update) {
   std::vector<uint8_t> copy(decoded->begin(), decoded->end());
   const char* error_msg;
   T out;
-  if (zx_status_t status =
-          fidl::DecodeObject(copy.data(), copy.size(), &out, &error_msg);
+  if (zx_status_t status = fidl::DecodeObject(copy.data(), copy.size(), &out, &error_msg);
       status != ZX_OK) {
     return Status::FromZx(status, error_msg);
   }

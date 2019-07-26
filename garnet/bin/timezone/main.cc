@@ -16,8 +16,7 @@ constexpr char kTzIdPath[] = "/data/tz_id";
 
 class MainService {
  public:
-  MainService()
-      : timezone_(sys::ComponentContext::Create(), kIcuDataPath, kTzIdPath) {}
+  MainService() : timezone_(sys::ComponentContext::Create(), kIcuDataPath, kTzIdPath) {}
 
  private:
   TimezoneImpl timezone_;

@@ -64,8 +64,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
     // For paranoia's sake, watch for embedded NULs.
     size_t n = strlen(line);
     if (static_cast<ssize_t>(n) != line_len) {
-      FXL_LOG(WARNING) << "Line contains embedded NULs: "
-                       << std::string(line, line_len);
+      FXL_LOG(WARNING) << "Line contains embedded NULs: " << std::string(line, line_len);
       continue;
     }
     if (n > 0 && line[n - 1] == '\n')
@@ -158,9 +157,8 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
 }
 
 void LoadMapTable::AddLoadMap(const LoadMap& map) {
-  FXL_VLOG(2) << fxl::StringPrintf(
-      "Adding map entry, pid %" PRIu64 " %s 0x%" PRIx64 "-0x%" PRIx64, map.pid,
-      map.name.c_str(), map.load_addr, map.end_addr);
+  FXL_VLOG(2) << fxl::StringPrintf("Adding map entry, pid %" PRIu64 " %s 0x%" PRIx64 "-0x%" PRIx64,
+                                   map.pid, map.name.c_str(), map.load_addr, map.end_addr);
   maps_.push_back(map);
 }
 

@@ -75,28 +75,22 @@ namespace fxl_icu {
  * lead bytes above 0xf4 are illegal.
  * We keep them in this table for skipping long ISO 10646-UTF-8 sequences.
  */
-const uint8_t utf8_countTrailBytes[256] =
-    {
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+const uint8_t utf8_countTrailBytes[256] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3,
-        3, 3,       /* illegal in Unicode */
-        4, 4, 4, 4, /* illegal in Unicode */
-        5, 5,       /* illegal in Unicode */
-        0, 0        /* illegal bytes 0xfe and 0xff */
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, /* illegal in Unicode */
+    4, 4, 4, 4,                                                             /* illegal in Unicode */
+    5, 5,                                                                   /* illegal in Unicode */
+    0, 0 /* illegal bytes 0xfe and 0xff */
 };
 
 static const UChar32 utf8_minLegal[4] = {0, 0x80, 0x800, 0x10000};
@@ -130,10 +124,7 @@ static const UChar32 utf8_errorValue[6] = {FXL_UTF8_ERROR_VALUE_1,
  *
  * Note that a UBool is the same as an int8_t.
  */
-UChar32 utf8_nextCharSafeBody(const uint8_t* s,
-                              size_t* pi,
-                              size_t length,
-                              UChar32 c,
+UChar32 utf8_nextCharSafeBody(const uint8_t* s, size_t* pi, size_t length, UChar32 c,
                               UBool strict) {
   size_t i = *pi;
   uint8_t count = FXL_U8_COUNT_TRAIL_BYTES(c);
@@ -192,8 +183,7 @@ UChar32 utf8_nextCharSafeBody(const uint8_t* s,
 
     /* correct sequence - all trail bytes have (b7..b6)==(10)? */
     /* illegal is also set if count>=4 */
-    if (illegal || (c) < utf8_minLegal[count] ||
-        (FXL_U_IS_SURROGATE(c) && strict != -2)) {
+    if (illegal || (c) < utf8_minLegal[count] || (FXL_U_IS_SURROGATE(c) && strict != -2)) {
       /* error handling */
       uint8_t errorCount = count;
       /* don't go beyond this sequence */

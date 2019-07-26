@@ -12,9 +12,7 @@ UnreliableFramer::UnreliableFramer() : StreamFramer(Border{2, 4}, 256) {}
 
 UnreliableFramer::~UnreliableFramer() = default;
 
-void UnreliableFramer::Push(Slice data) {
-  buffered_input_.Append(std::move(data));
-}
+void UnreliableFramer::Push(Slice data) { buffered_input_.Append(std::move(data)); }
 
 StatusOr<Optional<Slice>> UnreliableFramer::Pop() {
   using Sts = StatusOr<Optional<Slice>>;
@@ -57,9 +55,7 @@ StatusOr<Optional<Slice>> UnreliableFramer::Pop() {
   return Sts(Nothing);
 }
 
-bool UnreliableFramer::InputEmpty() const {
-  return buffered_input_.length() == 0;
-}
+bool UnreliableFramer::InputEmpty() const { return buffered_input_.length() == 0; }
 
 Optional<Slice> UnreliableFramer::SkipNoise() {
   const uint8_t *const begin = buffered_input_.begin();

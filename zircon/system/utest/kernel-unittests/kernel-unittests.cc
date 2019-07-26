@@ -16,45 +16,45 @@
 namespace {
 
 zx_status_t connect_to_service(const char* service, zx_handle_t* channel) {
-    zx_handle_t channel_local, channel_remote;
-    zx_status_t status = zx_channel_create(0, &channel_local, &channel_remote);
-    if (status != ZX_OK) {
-        fprintf(stderr, "failed to create channel: %d\n", status);
-        return ZX_ERR_INTERNAL;
-    }
+  zx_handle_t channel_local, channel_remote;
+  zx_status_t status = zx_channel_create(0, &channel_local, &channel_remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "failed to create channel: %d\n", status);
+    return ZX_ERR_INTERNAL;
+  }
 
-    status = fdio_service_connect(service, channel_remote);
-    if (status != ZX_OK) {
-        zx_handle_close(channel_local);
-        fprintf(stderr, "failed to connect to service: %d\n", status);
-        return ZX_ERR_INTERNAL;
-    }
+  status = fdio_service_connect(service, channel_remote);
+  if (status != ZX_OK) {
+    zx_handle_close(channel_local);
+    fprintf(stderr, "failed to connect to service: %d\n", status);
+    return ZX_ERR_INTERNAL;
+  }
 
-    *channel = channel_local;
-    return ZX_OK;
+  *channel = channel_local;
+  return ZX_OK;
 }
 
 // Ask the kernel to run its unit tests.
 bool run_kernel_unittests() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    constexpr char command[] = "ut all";
+  constexpr char command[] = "ut all";
 
-    zx_handle_t channel;
-    zx_status_t status = connect_to_service("/svc/fuchsia.kernel.DebugBroker", &channel);
-    ASSERT_EQ(status, ZX_OK);
+  zx_handle_t channel;
+  zx_status_t status = connect_to_service("/svc/fuchsia.kernel.DebugBroker", &channel);
+  ASSERT_EQ(status, ZX_OK);
 
-    zx_status_t call_status;
-    status = fuchsia_kernel_DebugBrokerSendDebugCommand(channel, command,
-                                                    strlen(command), &call_status);
-    zx_handle_close(channel);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(call_status, ZX_OK);
+  zx_status_t call_status;
+  status =
+      fuchsia_kernel_DebugBrokerSendDebugCommand(channel, command, strlen(command), &call_status);
+  zx_handle_close(channel);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(call_status, ZX_OK);
 
-    END_TEST;
+  END_TEST;
 }
 
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(kernel_unittests)
 RUN_TEST(run_kernel_unittests)

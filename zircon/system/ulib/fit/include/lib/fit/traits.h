@@ -34,7 +34,9 @@ inline constexpr bool negation_v = std::negation_v<Ts...>;
 #else
 
 template <typename... T>
-struct make_void { typedef void type; };
+struct make_void {
+  typedef void type;
+};
 template <typename... T>
 using void_t = typename make_void<T...>::type;
 
@@ -84,10 +86,10 @@ constexpr bool negation_v = negation<T>::value;
 //  }
 template <typename... T>
 struct parameter_pack {
-    static constexpr size_t size = sizeof...(T);
+  static constexpr size_t size = sizeof...(T);
 
-    template <size_t i>
-    using at = typename std::tuple_element_t<i, std::tuple<T...>>;
+  template <size_t i>
+  using at = typename std::tuple_element_t<i, std::tuple<T...>>;
 };
 
 // |callable_traits| captures elements of interest from function-like types (functions, function
@@ -118,41 +120,36 @@ struct callable_traits<ReturnType (FunctorType::*)(ArgTypes...)>
 template <typename FunctorType, typename ReturnType, typename... ArgTypes>
 struct callable_traits<ReturnType (FunctorType::*)(ArgTypes...) const>
     : public callable_traits<ReturnType (*)(ArgTypes...)> {
-
-    using type = FunctorType;
+  using type = FunctorType;
 };
 
 // Function pointer specialization.
 template <typename ReturnType, typename... ArgTypes>
 struct callable_traits<ReturnType (*)(ArgTypes...)>
     : public callable_traits<ReturnType(ArgTypes...)> {
-
-    using type = ReturnType (*)(ArgTypes...);
+  using type = ReturnType (*)(ArgTypes...);
 };
 
 // Base specialization.
 template <typename ReturnType, typename... ArgTypes>
 struct callable_traits<ReturnType(ArgTypes...)> {
-    using signature = ReturnType(ArgTypes...);
-    using return_type = ReturnType;
-    using args = parameter_pack<ArgTypes...>;
+  using signature = ReturnType(ArgTypes...);
+  using return_type = ReturnType;
+  using args = parameter_pack<ArgTypes...>;
 
-    callable_traits() = delete;
+  callable_traits() = delete;
 };
 
 // Determines whether a type has an operator() that can be invoked.
 template <typename T, typename = void_t<>>
 struct is_callable : public std::false_type {};
 template <typename ReturnType, typename... ArgTypes>
-struct is_callable<ReturnType (*)(ArgTypes...)>
-    : public std::true_type {};
+struct is_callable<ReturnType (*)(ArgTypes...)> : public std::true_type {};
 template <typename FunctorType, typename ReturnType, typename... ArgTypes>
-struct is_callable<ReturnType (FunctorType::*)(ArgTypes...)>
-    : public std::true_type {};
+struct is_callable<ReturnType (FunctorType::*)(ArgTypes...)> : public std::true_type {};
 template <typename T>
-struct is_callable<T, void_t<decltype(&T::operator())>>
-    : public std::true_type {};
+struct is_callable<T, void_t<decltype(&T::operator())>> : public std::true_type {};
 
-} // namespace fit
+}  // namespace fit
 
-#endif // LIB_FIT_TRAITS_H_
+#endif  // LIB_FIT_TRAITS_H_

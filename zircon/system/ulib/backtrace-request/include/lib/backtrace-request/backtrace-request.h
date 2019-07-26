@@ -13,28 +13,27 @@
 
 // Prints a backtrace, resuming the thread without killing the process.
 static inline void backtrace_request(void) {
-    // Two instructions: one that sets a software breakpoint ("int3" on x64,
-    // "brk" on arm64) and one that writes the "magic" value in the first
-    // register ("a" on x64, "x0" on arm64).
-    //
-    // We set a software breakpoint to trigger the exception handling in
-    // crashsvc, which will print the debug info, including the backtrace.
-    //
-    // We write the "magic" value in the first register so that the exception
-    // handler can check for it and resume the thread if present.
+  // Two instructions: one that sets a software breakpoint ("int3" on x64,
+  // "brk" on arm64) and one that writes the "magic" value in the first
+  // register ("a" on x64, "x0" on arm64).
+  //
+  // We set a software breakpoint to trigger the exception handling in
+  // crashsvc, which will print the debug info, including the backtrace.
+  //
+  // We write the "magic" value in the first register so that the exception
+  // handler can check for it and resume the thread if present.
 #ifdef __x86_64__
-    __asm__("int3"
-            :
-            : "a"(BACKTRACE_REQUEST_MAGIC));
+  __asm__("int3" : : "a"(BACKTRACE_REQUEST_MAGIC));
 #endif
 #ifdef __aarch64__
-    // This is what gdb uses.
-    __asm__("mov x0, %0\n"
-            "\tbrk 0"
-            :
-            : "r"(BACKTRACE_REQUEST_MAGIC)
-            : "x0");
+  // This is what gdb uses.
+  __asm__(
+      "mov x0, %0\n"
+      "\tbrk 0"
+      :
+      : "r"(BACKTRACE_REQUEST_MAGIC)
+      : "x0");
 #endif
 }
 
-#endif // BACKTRACE_REQUEST_BACKTRACE_REQUEST_H_
+#endif  // BACKTRACE_REQUEST_BACKTRACE_REQUEST_H_

@@ -9,8 +9,7 @@ namespace internal {
 
 using ::fuchsia::perfmon::cpu::PropertyFlags;
 
-void FidlToPerfmonProperties(const FidlPerfmonProperties& props,
-                             Properties* out_props) {
+void FidlToPerfmonProperties(const FidlPerfmonProperties& props, Properties* out_props) {
   *out_props = {};
 
   out_props->api_version = props.api_version;
@@ -22,8 +21,7 @@ void FidlToPerfmonProperties(const FidlPerfmonProperties& props,
   out_props->max_fixed_counter_width = props.max_fixed_counter_width;
 
   out_props->max_num_programmable_events = props.max_num_programmable_events;
-  out_props->max_programmable_counter_width =
-      props.max_programmable_counter_width;
+  out_props->max_programmable_counter_width = props.max_programmable_counter_width;
 
   out_props->max_num_misc_events = props.max_num_misc_events;
   out_props->max_misc_counter_width = props.max_misc_counter_width;

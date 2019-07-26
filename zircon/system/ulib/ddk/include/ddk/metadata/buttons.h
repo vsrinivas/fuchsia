@@ -29,25 +29,25 @@
 // clang-format on
 
 typedef struct ButtonConfig {
-    uint8_t type;      // e.g. BUTTONS_TYPE_DIRECT.
-    uint8_t id;        // e.g. BUTTONS_ID_VOLUME_UP.
-    uint8_t gpioA_idx; // For BUTTONS_TYPE_DIRECT only gpioA used and must be
-                       // BUTTONS_GPIO_TYPE_INTERRUPT.
-    uint8_t gpioB_idx; // For BUTTONS_TYPE_MATRIX gpioB (column) must be
-                       // BUTTONS_GPIO_TYPE_MATRIX_OUTPUT (is driven most of the time) and
-                       // gpioA (row) must be BUTTONS_GPIO_TYPE_INTERRUPT (triggers an
-                       // interrupt most of the time).
-                       // During matrix scans columns are floated and rows are read.
-    zx_duration_t gpio_delay; // For settling during matrix scan.
+  uint8_t type;              // e.g. BUTTONS_TYPE_DIRECT.
+  uint8_t id;                // e.g. BUTTONS_ID_VOLUME_UP.
+  uint8_t gpioA_idx;         // For BUTTONS_TYPE_DIRECT only gpioA used and must be
+                             // BUTTONS_GPIO_TYPE_INTERRUPT.
+  uint8_t gpioB_idx;         // For BUTTONS_TYPE_MATRIX gpioB (column) must be
+                             // BUTTONS_GPIO_TYPE_MATRIX_OUTPUT (is driven most of the time) and
+                             // gpioA (row) must be BUTTONS_GPIO_TYPE_INTERRUPT (triggers an
+                             // interrupt most of the time).
+                             // During matrix scans columns are floated and rows are read.
+  zx_duration_t gpio_delay;  // For settling during matrix scan.
 } buttons_button_config_t;
 
 typedef struct GpioConfig {
-    uint8_t type;  // e.g. BUTTONS_GPIO_TYPE_INTERRUPT.
-    uint8_t flags; // e.g. BUTTONS_GPIO_FLAG_INVERTED.
-    union {
-        uint32_t internal_pull; // Only applicable to BUTTONS_GPIO_TYPE_INTERRUPT.
-        uint8_t output_value;   // Only applicable to BUTTONS_GPIO_TYPE_MATRIX_OUTPUT.
-    };
+  uint8_t type;   // e.g. BUTTONS_GPIO_TYPE_INTERRUPT.
+  uint8_t flags;  // e.g. BUTTONS_GPIO_FLAG_INVERTED.
+  union {
+    uint32_t internal_pull;  // Only applicable to BUTTONS_GPIO_TYPE_INTERRUPT.
+    uint8_t output_value;    // Only applicable to BUTTONS_GPIO_TYPE_MATRIX_OUTPUT.
+  };
 } buttons_gpio_config_t;
 
 #endif  // DDK_METADATA_BUTTONS_H_

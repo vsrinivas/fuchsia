@@ -39,23 +39,19 @@ bool IsVulkanSupported() {
   FXL_CHECK(pipe_status == 0);
 
   std::vector<fdio_spawn_action_t> actions = {
-      {.action = FDIO_SPAWN_ACTION_CLONE_FD,
-       .fd = {.local_fd = pipefd[1], .target_fd = 1}}};
+      {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = pipefd[1], .target_fd = 1}}};
 
   zx::handle subprocess;
-  zx_status_t status = fdio_spawn_etc(
-      ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, raw_command[0],
-      raw_command.data(), nullptr, actions.size(), actions.data(),
-      subprocess.reset_and_get_address(), nullptr);
+  zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, raw_command[0],
+                                      raw_command.data(), nullptr, actions.size(), actions.data(),
+                                      subprocess.reset_and_get_address(), nullptr);
   FXL_CHECK(status == ZX_OK);
 
   zx_signals_t signals_observed = 0;
-  status = subprocess.wait_one(ZX_TASK_TERMINATED, zx::time(ZX_TIME_INFINITE),
-                               &signals_observed);
+  status = subprocess.wait_one(ZX_TASK_TERMINATED, zx::time(ZX_TIME_INFINITE), &signals_observed);
   FXL_CHECK(status == ZX_OK);
   zx_info_process_t proc_info;
-  status = subprocess.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info),
-                               nullptr, nullptr);
+  status = subprocess.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
   FXL_CHECK(status == ZX_OK);
 
   FXL_CHECK(proc_info.return_code == 0);

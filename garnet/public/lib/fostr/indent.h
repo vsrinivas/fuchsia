@@ -68,16 +68,13 @@ inline std::ostream& operator<<(std::ostream& os, const IndentBy& value) {
 // the product of the indent level and the 'indent by' setting.
 // e.g. os << fostr::BeginLine << "appears after indentation";
 inline std::ostream& BeginLine(std::ostream& os) {
-  return os << std::setw(internal::IndentLevel::Value(os) *
-                         internal::IndentBy::Value(os))
+  return os << std::setw(internal::IndentLevel::Value(os) * internal::IndentBy::Value(os))
             << std::setfill(' ') << "" << std::setw(0);
 }
 
 // Inserts a newline and a BeginLine.
 // e.g. os << fostr::NewLine << "appears on a new indented line";
-inline std::ostream& NewLine(std::ostream& os) {
-  return os << "\n" << BeginLine;
-}
+inline std::ostream& NewLine(std::ostream& os) { return os << "\n" << BeginLine; }
 
 // As an ostream manipulator, increments the indentation level.
 // e.g. os << fostr::Indent;
@@ -95,22 +92,16 @@ inline std::ostream& Outdent(std::ostream& os) {
 
 // As an ostream manipulator, sets the indentation level.
 // e.g. os << fostr::IdentLevel(3);
-inline internal::IndentLevel IdentLevel(long level) {
-  return internal::IndentLevel(level);
-}
+inline internal::IndentLevel IdentLevel(long level) { return internal::IndentLevel(level); }
 
 // Gets the current indentation level.
 // e.g. long current_level = fostr::GetIdentLevel(os);
-inline long GetIdentLevel(std::ostream& os) {
-  return internal::IndentLevel::Value(os);
-}
+inline long GetIdentLevel(std::ostream& os) { return internal::IndentLevel::Value(os); }
 
 // As an ostream manipulator, sets the number of spaces to indent by for each
 // indentation level. The default 'indent by' value is 4.
 // e.g. os << fostr::IdentBy(2);
-inline internal::IndentBy IdentBy(long spaces) {
-  return internal::IndentBy(spaces);
-}
+inline internal::IndentBy IdentBy(long spaces) { return internal::IndentBy(spaces); }
 
 }  // namespace fostr
 

@@ -32,8 +32,7 @@ class Verifier {
 
  protected:
   Verifier(const cpuperf::SessionResultSpec* session_result_spec)
-      : session_result_spec_(session_result_spec) {
-  }
+      : session_result_spec_(session_result_spec) {}
 
   virtual bool VerifyRecord(const perfmon::SampleRecord& record) = 0;
   virtual bool VerifyTrace(const RecordCounts& counts) = 0;
@@ -57,8 +56,7 @@ class Verifier {
   std::unique_ptr<perfmon::ModelEventManager> model_event_manager_;
 };
 
-using MakeVerifier = std::unique_ptr<Verifier>(
-    const cpuperf::SessionResultSpec* spec);
+using MakeVerifier = std::unique_ptr<Verifier>(const cpuperf::SessionResultSpec* spec);
 
 struct TestSpec {
   const char* config_name;

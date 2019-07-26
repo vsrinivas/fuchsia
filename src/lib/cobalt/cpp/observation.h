@@ -40,11 +40,9 @@ class ValuePart {
   }
 
   // Returns a distribution value part.
-  static const ValuePart MakeDistribution(
-      const std::map<uint32_t, int64_t>& value) {
+  static const ValuePart MakeDistribution(const std::map<uint32_t, int64_t>& value) {
     Value val;
-    val.distribution =
-        new std::map<uint32_t, int64_t>(value.begin(), value.end());
+    val.distribution = new std::map<uint32_t, int64_t>(value.begin(), value.end());
     return ValuePart(DISTRIBUTION, val);
   }
 
@@ -76,9 +74,7 @@ class ValuePart {
 
   // Returns the distribution value of a distribution value part. If the value
   // part is not a distribution, the behavior is undefined.
-  const std::map<uint32_t, int64_t>& GetDistribution() const {
-    return *value_.distribution;
-  }
+  const std::map<uint32_t, int64_t>& GetDistribution() const { return *value_.distribution; }
 
   ~ValuePart() {
     if (IsDistribution()) {
@@ -86,8 +82,7 @@ class ValuePart {
     }
   }
 
-  ValuePart(const ValuePart& value)
-      : type_(value.type_), value_(value.CopyValue()) {}
+  ValuePart(const ValuePart& value) : type_(value.type_), value_(value.CopyValue()) {}
 
  private:
   union Value {
@@ -101,8 +96,8 @@ class ValuePart {
     Value value = value_;
     if (IsDistribution()) {
       // If we're copying a distribution, we have to copy the map.
-      value.distribution = new std::map<uint32_t, int64_t>(
-          value_.distribution->begin(), value_.distribution->end());
+      value.distribution =
+          new std::map<uint32_t, int64_t>(value_.distribution->begin(), value_.distribution->end());
     }
     return value;
   }
@@ -116,12 +111,8 @@ class ValuePart {
 // An ObservationPart represents a collected observation part. It currently
 // only supports integers.
 struct ObservationPart {
-  ObservationPart(std::string part_name, uint32_t encoding_id, ValuePart value,
-                  UndoFunction undo)
-      : part_name(part_name),
-        encoding_id(encoding_id),
-        value(value),
-        undo(undo) {}
+  ObservationPart(std::string part_name, uint32_t encoding_id, ValuePart value, UndoFunction undo)
+      : part_name(part_name), encoding_id(encoding_id), value(value), undo(undo) {}
 
   std::string part_name;
   uint32_t encoding_id;

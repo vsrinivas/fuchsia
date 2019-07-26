@@ -22,18 +22,15 @@ class LoggerImplTest : public ::testing::Test {
  public:
   LoggerImplTest()
       : encoder_(encoder::ClientSecret::GenerateNewSecret(), nullptr),
-        local_aggregate_proto_store_("/tmp/a",
-                                     std::make_unique<util::PosixFileSystem>()),
-        obs_history_proto_store_("/tmp/b",
-                                 std::make_unique<util::PosixFileSystem>()),
+        local_aggregate_proto_store_("/tmp/a", std::make_unique<util::PosixFileSystem>()),
+        obs_history_proto_store_("/tmp/b", std::make_unique<util::PosixFileSystem>()),
         observation_writer_(nullptr, nullptr, nullptr),
-        event_aggregator_(&encoder_, &observation_writer_,
-                          &local_aggregate_proto_store_,
+        event_aggregator_(&encoder_, &observation_writer_, &local_aggregate_proto_store_,
                           &obs_history_proto_store_),
         logger_impl_(std::make_unique<logger::ProjectContext>(
                          1, "test", std::make_unique<cobalt::ProjectConfig>()),
-                     &encoder_, &event_aggregator_, &observation_writer_,
-                     nullptr, nullptr, &fake_logger_),
+                     &encoder_, &event_aggregator_, &observation_writer_, nullptr, nullptr,
+                     &fake_logger_),
         logger_(&logger_impl_) {}
 
  private:

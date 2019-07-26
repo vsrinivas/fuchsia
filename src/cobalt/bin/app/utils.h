@@ -17,8 +17,7 @@
 namespace cobalt {
 
 // Maps an ObservationStore::StoreStatus to a fuchsia::cobalt::Status.
-fuchsia::cobalt::Status ToCobaltStatus(
-    encoder::ObservationStore::StoreStatus s);
+fuchsia::cobalt::Status ToCobaltStatus(encoder::ObservationStore::StoreStatus s);
 
 fuchsia::cobalt::Status ToCobaltStatus(logger::Status s);
 

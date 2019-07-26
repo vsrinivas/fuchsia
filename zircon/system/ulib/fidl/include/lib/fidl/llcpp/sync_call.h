@@ -23,9 +23,7 @@ template <uint32_t kSize>
 struct AlignedBuffer {
   AlignedBuffer() {}
 
-  fidl::BytePart view() {
-    return fidl::BytePart(&data[0], kSize);
-  }
+  fidl::BytePart view() { return fidl::BytePart(&data[0], kSize); }
 
  private:
   FIDL_ALIGNDECL uint8_t data[kSize];
@@ -134,8 +132,8 @@ class SyncCallBase : private StatusAndError {
   SyncCallBase(const SyncCallBase&) = delete;
   SyncCallBase& operator=(const SyncCallBase&) = delete;
 
-  using StatusAndError::status;
   using StatusAndError::error;
+  using StatusAndError::status;
 
   // Convenience accessor for the FIDL response message pointer.
   // The returned pointer is never null, unless the object is moved.
@@ -152,9 +150,9 @@ class SyncCallBase : private StatusAndError {
   SyncCallBase(SyncCallBase&& other) = default;
   SyncCallBase& operator=(SyncCallBase&& other) = default;
 
+  using StatusAndError::error_;
   using StatusAndError::SetFailure;
   using StatusAndError::status_;
-  using StatusAndError::error_;
 
   // Initialize ourself from the DecodeResult corresponding to the response.
   void SetResult(fidl::DecodeResult<ResponseType> decode_result) {
@@ -183,6 +181,7 @@ template <typename ResponseType>
 class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
   using Super = SyncCallBase<ResponseType>;
   using ResponseStorageType = ResponseStorage<ResponseType>;
+
  public:
   OwnedSyncCallBase(const OwnedSyncCallBase&) = delete;
   OwnedSyncCallBase& operator=(const OwnedSyncCallBase&) = delete;
@@ -200,8 +199,8 @@ class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
     return *this;
   }
 
-  using Super::status;
   using Super::error;
+  using Super::status;
   using Super::Unwrap;
 
  protected:
@@ -240,9 +239,9 @@ class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
         // If there are pointers, they need to be patched.
         // Otherwise, we get away with a memcpy.
         if constexpr (NeedsEncodeDecode<ResponseType>::value && ResponseType::MaxOutOfLine > 0) {
-          auto result = fidl::Linearize(other.Super::decoded_message().message(),
-                                        response_buffer());
-          (void) other.Super::decoded_message().Release();
+          auto result =
+              fidl::Linearize(other.Super::decoded_message().message(), response_buffer());
+          (void)other.Super::decoded_message().Release();
           ZX_DEBUG_ASSERT(result.status == ZX_OK);
           Super::decoded_message() = std::move(result.message);
         } else {

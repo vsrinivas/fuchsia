@@ -38,8 +38,7 @@ TestRunnerConfig::TestRunnerConfig(const std::string& json_path) {
     FXL_CHECK(!test.HasMember("disabled") || test["disabled"].IsBool());
 
     std::string test_name = test["name"].GetString();
-    bool test_is_disabled = test.HasMember("disabled") &&
-                            test["disabled"].GetBool();
+    bool test_is_disabled = test.HasMember("disabled") && test["disabled"].GetBool();
     if (test_is_disabled) {
       disabled_test_names_.push_back(test_name);
       continue;
@@ -47,9 +46,8 @@ TestRunnerConfig::TestRunnerConfig(const std::string& json_path) {
     test_names_.push_back(test_name);
     if (test["exec"].IsString()) {
       std::string test_exec = test["exec"].GetString();
-      std::vector<std::string> test_exec_args = fxl::SplitStringCopy(
-          test_exec, " ",
-          fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+      std::vector<std::string> test_exec_args =
+          fxl::SplitStringCopy(test_exec, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
 
       FXL_CHECK(!test_exec_args.empty()) << test_name << ": " << test_exec;
       test_commands_[test_name] = test_exec_args;

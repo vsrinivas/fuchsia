@@ -18,9 +18,7 @@ TestSupport::FirmwareFile::~FirmwareFile() {
 
 zx_device_t* TestSupport::parent_device() { return g_parent_device; }
 
-void TestSupport::set_parent_device(zx_device_t* handle) {
-  g_parent_device = handle;
-}
+void TestSupport::set_parent_device(zx_device_t* handle) { g_parent_device = handle; }
 
 void TestSupport::RunAllTests() {
   const int kArgc = 1;
@@ -29,19 +27,16 @@ void TestSupport::RunAllTests() {
   (void)RUN_ALL_TESTS();
 }
 
-std::unique_ptr<TestSupport::FirmwareFile> TestSupport::LoadFirmwareFile(
-    const char* name) {
+std::unique_ptr<TestSupport::FirmwareFile> TestSupport::LoadFirmwareFile(const char* name) {
   auto firmware_file = std::make_unique<FirmwareFile>();
   zx::vmo test_file;
   size_t test_file_size;
-  zx_status_t status =
-      load_firmware(TestSupport::parent_device(), name,
-                    test_file.reset_and_get_address(), &test_file_size);
+  zx_status_t status = load_firmware(TestSupport::parent_device(), name,
+                                     test_file.reset_and_get_address(), &test_file_size);
   if (status != ZX_OK)
     return nullptr;
   uint64_t ptr;
-  status = zx::vmar::root_self()->map(0, test_file, 0, test_file_size,
-                                      ZX_VM_PERM_READ, &ptr);
+  status = zx::vmar::root_self()->map(0, test_file, 0, test_file_size, ZX_VM_PERM_READ, &ptr);
   if (status != ZX_OK)
     return nullptr;
   firmware_file->vmo = std::move(test_file);

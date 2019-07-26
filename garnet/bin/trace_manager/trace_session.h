@@ -39,12 +39,9 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   //
   // |abort_handler| is invoked whenever the session encounters
   // unrecoverable errors that render the session dead.
-  explicit TraceSession(zx::socket destination,
-                        std::vector<std::string> categories,
-                        size_t trace_buffer_size_megabytes,
-                        provider::BufferingMode buffering_mode,
-                        TraceProviderSpecMap&& provider_specs,
-                        fit::closure abort_handler);
+  explicit TraceSession(zx::socket destination, std::vector<std::string> categories,
+                        size_t trace_buffer_size_megabytes, provider::BufferingMode buffering_mode,
+                        TraceProviderSpecMap&& provider_specs, fit::closure abort_handler);
   // Frees all allocated resources and closes the outgoing
   // connection.
   ~TraceSession();
@@ -85,10 +82,10 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
 
   void TransitionToState(State state);
 
-  void SessionStartTimeout(async_dispatcher_t* dispatcher,
-                           async::TaskBase* task, zx_status_t status);
-  void SessionFinalizeTimeout(async_dispatcher_t* dispatcher,
-                              async::TaskBase* task, zx_status_t status);
+  void SessionStartTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                           zx_status_t status);
+  void SessionFinalizeTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                              zx_status_t status);
 
   State state_ = State::kReady;
   zx::socket destination_;
@@ -97,10 +94,9 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   provider::BufferingMode buffering_mode_;
   TraceProviderSpecMap provider_specs_;
   std::list<std::unique_ptr<Tracee>> tracees_;
-  async::TaskMethod<TraceSession, &TraceSession::SessionStartTimeout>
-      session_start_timeout_{this};
-  async::TaskMethod<TraceSession, &TraceSession::SessionFinalizeTimeout>
-      session_finalize_timeout_{this};
+  async::TaskMethod<TraceSession, &TraceSession::SessionStartTimeout> session_start_timeout_{this};
+  async::TaskMethod<TraceSession, &TraceSession::SessionFinalizeTimeout> session_finalize_timeout_{
+      this};
   fit::closure start_callback_;
   fit::closure done_callback_;
   fit::closure abort_handler_;

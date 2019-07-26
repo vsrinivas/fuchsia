@@ -208,8 +208,7 @@ const char kArgumentUnitKey[] = "argument_unit";
 bool DecodeEnvironmentSpecs(const rapidjson::Value& specs, Spec* result) {
   FXL_DCHECK(result);
   FXL_DCHECK(specs.HasMember(kNameKey));
-  result->environment_name =
-      std::make_unique<std::string>(specs[kNameKey].GetString());
+  result->environment_name = std::make_unique<std::string>(specs[kNameKey].GetString());
   return true;
 }
 
@@ -227,15 +226,13 @@ bool DecodeProviderSpecs(const rapidjson::Value& specs, Spec* result) {
   return true;
 }
 
-bool DecodeMeasureDuration(const rapidjson::Value& value,
-                           measure::DurationSpec* result) {
+bool DecodeMeasureDuration(const rapidjson::Value& value, measure::DurationSpec* result) {
   result->event.name = value[kEventNameKey].GetString();
   result->event.category = value[kEventCategoryKey].GetString();
   return true;
 }
 
-bool DecodeMeasureArgumentValue(const rapidjson::Value& value,
-                                measure::ArgumentValueSpec* result) {
+bool DecodeMeasureArgumentValue(const rapidjson::Value& value, measure::ArgumentValueSpec* result) {
   result->event.name = value[kEventNameKey].GetString();
   result->event.category = value[kEventCategoryKey].GetString();
   result->argument_name = value[kArgumentNameKey].GetString();
@@ -243,8 +240,7 @@ bool DecodeMeasureArgumentValue(const rapidjson::Value& value,
   return true;
 }
 
-bool DecodeAnchor(std::string anchor_str, const char* key,
-                  measure::Anchor* result) {
+bool DecodeAnchor(std::string anchor_str, const char* key, measure::Anchor* result) {
   if (anchor_str == kAnchorBegin) {
     *result = measure::Anchor::Begin;
   } else if (anchor_str == kAnchorEnd) {
@@ -257,21 +253,20 @@ bool DecodeAnchor(std::string anchor_str, const char* key,
   return true;
 }
 
-bool DecodeMeasureTimeBetween(const rapidjson::Value& value,
-                              measure::TimeBetweenSpec* result) {
+bool DecodeMeasureTimeBetween(const rapidjson::Value& value, measure::TimeBetweenSpec* result) {
   result->first_event.name = value[kFirstEventNameKey].GetString();
   result->first_event.category = value[kFirstEventCategoryKey].GetString();
   if (value.HasMember(kFirstEventAnchorKey)) {
-    if (!DecodeAnchor(value[kFirstEventAnchorKey].GetString(),
-                      kFirstEventAnchorKey, &result->first_anchor)) {
+    if (!DecodeAnchor(value[kFirstEventAnchorKey].GetString(), kFirstEventAnchorKey,
+                      &result->first_anchor)) {
       return false;
     }
   }
   result->second_event.name = value[kSecondEventNameKey].GetString();
   result->second_event.category = value[kSecondEventCategoryKey].GetString();
   if (value.HasMember(kSecondEventAnchorKey)) {
-    if (!DecodeAnchor(value[kSecondEventAnchorKey].GetString(),
-                      kSecondEventAnchorKey, &result->second_anchor)) {
+    if (!DecodeAnchor(value[kSecondEventAnchorKey].GetString(), kSecondEventAnchorKey,
+                      &result->second_anchor)) {
       return false;
     }
   }
@@ -285,10 +280,8 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   auto root_schema = rapidjson_utils::InitSchema(kRootSchema);
   auto duration_schema = rapidjson_utils::InitSchema(kDurationSchema);
   auto time_between_schema = rapidjson_utils::InitSchema(kTimeBetweenSchema);
-  auto argument_value_schema =
-      rapidjson_utils::InitSchema(kArgumentValueSchema);
-  if (!root_schema || !duration_schema || !time_between_schema ||
-      !argument_value_schema) {
+  auto argument_value_schema = rapidjson_utils::InitSchema(kArgumentValueSchema);
+  if (!root_schema || !duration_schema || !time_between_schema || !argument_value_schema) {
     return false;
   }
 
@@ -298,8 +291,8 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   if (document.HasParseError()) {
     auto offset = document.GetErrorOffset();
     auto code = document.GetParseError();
-    FXL_LOG(ERROR) << "Couldn't parse the tracing spec file: offset " << offset
-                   << ", " << GetParseError_En(code);
+    FXL_LOG(ERROR) << "Couldn't parse the tracing spec file: offset " << offset << ", "
+                   << GetParseError_En(code);
     return false;
   }
   if (!rapidjson_utils::ValidateSchema(document, *root_schema)) {
@@ -307,8 +300,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   }
 
   if (document.HasMember(kTestNameKey)) {
-    result.test_name =
-        std::make_unique<std::string>(document[kTestNameKey].GetString());
+    result.test_name = std::make_unique<std::string>(document[kTestNameKey].GetString());
   }
 
   if (document.HasMember(kAppKey)) {
@@ -340,13 +332,11 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   }
 
   if (document.HasMember(kBufferingModeKey)) {
-    result.buffering_mode =
-        std::make_unique<std::string>(document[kBufferingModeKey].GetString());
+    result.buffering_mode = std::make_unique<std::string>(document[kBufferingModeKey].GetString());
   }
 
   if (document.HasMember(kBufferSizeInMbKey)) {
-    result.buffer_size_in_mb =
-        std::make_unique<size_t>(document[kBufferSizeInMbKey].GetUint());
+    result.buffer_size_in_mb = std::make_unique<size_t>(document[kBufferSizeInMbKey].GetUint());
   }
 
   if (document.HasMember(kProviderSpecsKey)) {
@@ -361,8 +351,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   }
 
   if (document.HasMember(kTestSuiteNameKey)) {
-    result.test_suite_name =
-        std::make_unique<std::string>(document[kTestSuiteNameKey].GetString());
+    result.test_suite_name = std::make_unique<std::string>(document[kTestSuiteNameKey].GetString());
   }
 
   if (!document.HasMember(kMeasurementsKey)) {
@@ -388,8 +377,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     }
 
     if (measurement.HasMember(kExpectedSampleCountKey)) {
-      common.expected_sample_count =
-          measurement[kExpectedSampleCountKey].GetUint();
+      common.expected_sample_count = measurement[kExpectedSampleCountKey].GetUint();
     }
 
     if (type == kMeasureDurationType) {
@@ -411,8 +399,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else if (type == kMeasureArgumentValueType) {
       measure::ArgumentValueSpec spec;
       spec.common = std::move(common);
-      if (!rapidjson_utils::ValidateSchema(measurement,
-                                           *argument_value_schema) ||
+      if (!rapidjson_utils::ValidateSchema(measurement, *argument_value_schema) ||
           !DecodeMeasureArgumentValue(measurement, &spec)) {
         return false;
       }
@@ -428,8 +415,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   return true;
 }
 
-bool GetBufferingMode(const std::string& buffering_mode_name,
-                      BufferingMode* out_mode) {
+bool GetBufferingMode(const std::string& buffering_mode_name, BufferingMode* out_mode) {
   if (buffering_mode_name == "oneshot") {
     *out_mode = BufferingMode::kOneshot;
   } else if (buffering_mode_name == "circular") {

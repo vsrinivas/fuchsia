@@ -38,4 +38,4 @@ void log_destroy_textfile_writer(log_writer_t* writer);
 }
 #endif
 
-#endif // LIB_LOG_WRITER_TEXTFILE_LOG_WRITER_TEXTFILE_H_
+#endif  // LIB_LOG_WRITER_TEXTFILE_LOG_WRITER_TEXTFILE_H_

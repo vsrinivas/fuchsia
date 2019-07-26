@@ -14,18 +14,18 @@
 
 // For expressions that return a zx_status_t, this macro will print the symbolic names when a
 // mismatch is encountered.  Don't use this directly; use the wrappers below.
-#define UT_ZX(lhs, rhs, ret)                                                                       \
-    do {                                                                                           \
-        UT_ASSERT_VALID_TEST_STATE;                                                                \
-        zx_status_t _lhs_val = (lhs);                                                              \
-        zx_status_t _rhs_val = (rhs);                                                              \
-        if (_lhs_val != _rhs_val) {                                                                \
-            UNITTEST_FAIL_TRACEF("%s returned %s; expected %s\n", #lhs,                            \
-                                 zx_status_get_string(_lhs_val), zx_status_get_string(_rhs_val));  \
-            current_test_info->all_ok = false;                                                     \
-            ret;                                                                                   \
-        }                                                                                          \
-    } while (0)
+#define UT_ZX(lhs, rhs, ret)                                                                      \
+  do {                                                                                            \
+    UT_ASSERT_VALID_TEST_STATE;                                                                   \
+    zx_status_t _lhs_val = (lhs);                                                                 \
+    zx_status_t _rhs_val = (rhs);                                                                 \
+    if (_lhs_val != _rhs_val) {                                                                   \
+      UNITTEST_FAIL_TRACEF("%s returned %s; expected %s\n", #lhs, zx_status_get_string(_lhs_val), \
+                           zx_status_get_string(_rhs_val));                                       \
+      current_test_info->all_ok = false;                                                          \
+      ret;                                                                                        \
+    }                                                                                             \
+  } while (0)
 
 // Wrappers for UT_ZX.
 #define EXPECT_ZX(expr, status) UT_ZX(expr, status, DONOT_RET)
@@ -53,8 +53,9 @@
 //   BEGIN_TEST_CASE(SomeTest)
 //   RUN_EACH(TestSomething)
 //   END_TEST_CASE(SomeTest)
-#define DEFINE_TEST_PARAM(Test, Class, Param) bool Test ## _ ## Param(void) { return Test(Class::k ## Param); }
-#define RUN_TEST_PARAM(Test, Class, Param) RUN_TEST(Test ## _ ## Param)
+#define DEFINE_TEST_PARAM(Test, Class, Param) \
+  bool Test##_##Param(void) { return Test(Class::k##Param); }
+#define RUN_TEST_PARAM(Test, Class, Param) RUN_TEST(Test##_##Param)
 #define DEFINE_EACH(Test) EACH_PARAM(DEFINE_TEST_PARAM, Test)
 #define RUN_EACH(Test) EACH_PARAM(RUN_TEST_PARAM, Test)
 
@@ -73,5 +74,5 @@ zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Secret* key, Bytes* iv
 //|AEAD::GetIVLen| for the given |aead|. |iv| may be null.
 zx_status_t GenerateKeyMaterial(AEAD::Algorithm aead, Secret* key, Bytes* iv);
 
-} // namespace testing
-} // namespace crypto
+}  // namespace testing
+}  // namespace crypto

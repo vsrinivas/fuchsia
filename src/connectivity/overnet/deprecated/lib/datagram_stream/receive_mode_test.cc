@@ -13,18 +13,13 @@ namespace receive_mode_test {
 
 // Wrapper to allow testing parameterized modes without needing to add
 // constructor variants everywhere
-template <
-    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering>
+template <fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering>
 class ParameterizedWrapper final : public ReceiveMode {
  public:
   ParameterizedWrapper() : mode_(reliability_and_ordering) {}
 
-  void Begin(uint64_t seq, BeginCallback ready) override {
-    mode_.Begin(seq, std::move(ready));
-  }
-  void Completed(uint64_t seq, const Status& status) override {
-    mode_.Completed(seq, status);
-  }
+  void Begin(uint64_t seq, BeginCallback ready) override { mode_.Begin(seq, std::move(ready)); }
+  void Completed(uint64_t seq, const Status& status) override { mode_.Completed(seq, status); }
   void Close(const Status& status) override { mode_.Close(status); }
 
  private:
@@ -38,13 +33,11 @@ class ReceiveModeTest : public ::testing::Test {
     auto cb = StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
       auto it = expected_begin_cbs_.find(seq);
       if (it == expected_begin_cbs_.end()) {
-        FAIL() << "Unexpected Begin callback: seq=" << seq
-               << " status=" << status;
+        FAIL() << "Unexpected Begin callback: seq=" << seq << " status=" << status;
       }
       if (status.code() != it->second) {
-        FAIL() << "Unexpected status for Begin callback: seq=" << seq
-               << " expected " << StatusCodeString(it->second) << " but got "
-               << status;
+        FAIL() << "Unexpected status for Begin callback: seq=" << seq << " expected "
+               << StatusCodeString(it->second) << " but got " << status;
       }
       expected_begin_cbs_.erase(it);
     });
@@ -56,14 +49,11 @@ class ReceiveModeTest : public ::testing::Test {
     expected_begin_cbs_[seq] = expect;
   }
 
-  void Completed(uint64_t seq, const Status& status) {
-    type_.Completed(seq, status);
-  }
+  void Completed(uint64_t seq, const Status& status) { type_.Completed(seq, status); }
 
   ~ReceiveModeTest() {
     for (auto exp : expected_begin_cbs_) {
-      ADD_FAILURE() << "Expected seq " << exp.first
-                    << " to complete with status "
+      ADD_FAILURE() << "Expected seq " << exp.first << " to complete with status "
                     << StatusCodeString(exp.second) << " but got nothing";
     }
   }
@@ -78,18 +68,12 @@ class ReceiveModeTest : public ::testing::Test {
 // Generic tests
 
 typedef ::testing::Types<
-    ReliableOrdered, ReliableUnordered, UnreliableOrdered, UnreliableUnordered,
-    TailReliable,
-    ParameterizedWrapper<
-        fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered>,
-    ParameterizedWrapper<
-        fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered>,
-    ParameterizedWrapper<
-        fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableOrdered>,
-    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::
-                             UnreliableUnordered>,
-    ParameterizedWrapper<
-        fuchsia::overnet::protocol::ReliabilityAndOrdering::TailReliable>>
+    ReliableOrdered, ReliableUnordered, UnreliableOrdered, UnreliableUnordered, TailReliable,
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered>,
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered>,
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableOrdered>,
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableUnordered>,
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::TailReliable>>
     ReceiveModeTypes;
 TYPED_TEST_SUITE(ReceiveModeTest, ReceiveModeTypes);
 
@@ -140,8 +124,7 @@ template <class T>
 using ReliableOrderedTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
     ReliableOrdered,
-    ParameterizedWrapper<
-        fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered>>
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered>>
     ReliableOrderedTypes;
 TYPED_TEST_SUITE(ReliableOrderedTest, ReliableOrderedTypes);
 
@@ -161,8 +144,7 @@ template <class T>
 using ReliableUnorderedTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
     ReliableUnordered,
-    ParameterizedWrapper<
-        fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered>>
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered>>
     ReliableUnorderedTypes;
 TYPED_TEST_SUITE(ReliableUnorderedTest, ReliableUnorderedTypes);
 
@@ -182,8 +164,7 @@ template <class T>
 using UnreliableOrderedTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
     UnreliableOrdered,
-    ParameterizedWrapper<
-        fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableOrdered>>
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableOrdered>>
     UnreliableOrderedTypes;
 TYPED_TEST_SUITE(UnreliableOrderedTest, UnreliableOrderedTypes);
 
@@ -214,8 +195,7 @@ template <class T>
 using UnreliableUnorderedTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
     UnreliableUnordered,
-    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::
-                             UnreliableUnordered>>
+    ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableUnordered>>
     UnreliableUnorderedTypes;
 TYPED_TEST_SUITE(UnreliableUnorderedTest, UnreliableUnorderedTypes);
 
@@ -237,8 +217,8 @@ TYPED_TEST(UnreliableUnorderedTest, AnythingGoesReally) {
 template <class T>
 using ErrorTest = ReceiveModeTest<T>;
 typedef ::testing::Types<
-    Error, ParameterizedWrapper<static_cast<
-               fuchsia::overnet::protocol::ReliabilityAndOrdering>(255)>>
+    Error,
+    ParameterizedWrapper<static_cast<fuchsia::overnet::protocol::ReliabilityAndOrdering>(255)>>
     ErrorTypes;
 TYPED_TEST_SUITE(ErrorTest, ErrorTypes);
 

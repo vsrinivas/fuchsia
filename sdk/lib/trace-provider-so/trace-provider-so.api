@@ -1,5 +1,5 @@
 {
   "pkg/trace-provider-so/include/lib/trace-provider/fdio_connect.h": "adcd38936903d9266f706749db7c451f",
-  "pkg/trace-provider-so/include/lib/trace-provider/handler.h": "8f28ad3141e321ac855c5f5b9f4c5d8b",
-  "pkg/trace-provider-so/include/lib/trace-provider/provider.h": "20ff08efa9e93c2b9b382482cca795af"
+  "pkg/trace-provider-so/include/lib/trace-provider/handler.h": "cdca36057d1a20ed08885c0369f370b0",
+  "pkg/trace-provider-so/include/lib/trace-provider/provider.h": "6d797b75c13e0199ed6dec5b4eceebac"
 }

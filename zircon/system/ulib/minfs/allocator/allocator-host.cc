@@ -18,30 +18,28 @@ namespace minfs {
 Allocator::~Allocator() {}
 
 zx_status_t Allocator::LoadStorage(fs::ReadTxn* txn) {
-    storage_->Load(txn, GetMapDataLocked());
-    return ZX_OK;
+  storage_->Load(txn, GetMapDataLocked());
+  return ZX_OK;
 }
 
 size_t Allocator::GetAvailableLocked() const {
-    ZX_DEBUG_ASSERT(storage_->PoolAvailable() >= reserved_);
-    return storage_->PoolAvailable() - reserved_;
+  ZX_DEBUG_ASSERT(storage_->PoolAvailable() >= reserved_);
+  return storage_->PoolAvailable() - reserved_;
 }
 
-WriteData Allocator::GetMapDataLocked() const {
-    return map_.StorageUnsafe()->GetData();
-}
+WriteData Allocator::GetMapDataLocked() const { return map_.StorageUnsafe()->GetData(); }
 
 size_t Allocator::FindLocked() const {
-    ZX_DEBUG_ASSERT(reserved_ > 0);
-    size_t start = first_free_;
+  ZX_DEBUG_ASSERT(reserved_ > 0);
+  size_t start = first_free_;
 
-    while (true) {
-        // Search for first free element in the map.
-        size_t index;
-        ZX_ASSERT(map_.Find(false, start, map_.size(), 1, &index) == ZX_OK);
+  while (true) {
+    // Search for first free element in the map.
+    size_t index;
+    ZX_ASSERT(map_.Find(false, start, map_.size(), 1, &index) == ZX_OK);
 
-        return index;
-    }
+    return index;
+  }
 }
 
-} // namespace minfs
+}  // namespace minfs

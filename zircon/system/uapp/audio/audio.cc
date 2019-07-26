@@ -34,16 +34,16 @@ static constexpr audio_sample_format_t AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT =
                                        AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED);
 
 enum class Command {
-    INVALID,
-    INFO,
-    MUTE,
-    UNMUTE,
-    AGC,
-    GAIN,
-    PLUG_MONITOR,
-    TONE,
-    PLAY,
-    RECORD,
+  INVALID,
+  INFO,
+  MUTE,
+  UNMUTE,
+  AGC,
+  GAIN,
+  PLUG_MONITOR,
+  TONE,
+  PLAY,
+  RECORD,
 };
 
 void usage(const char* prog_name) {
@@ -96,214 +96,210 @@ void usage(const char* prog_name) {
 }
 
 void dump_format_range(size_t ndx, const audio_stream_format_range_t& range) {
-    printf("[%2zu] Sample Format :", ndx);
+  printf("[%2zu] Sample Format :", ndx);
 
-    struct {
-        audio_sample_format_t flag;
-        const char* name;
-    } SF_FLAG_LUT[] = {
-        { AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED, "Unsigned" },
-        { AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN , "Inv Endian" },
-    };
+  struct {
+    audio_sample_format_t flag;
+    const char* name;
+  } SF_FLAG_LUT[] = {
+      {AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED, "Unsigned"},
+      {AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN, "Inv Endian"},
+  };
 
-    for (const auto& sf : SF_FLAG_LUT) {
-        if (range.sample_formats & sf.flag) {
-            printf(" %s", sf.name);
-        }
+  for (const auto& sf : SF_FLAG_LUT) {
+    if (range.sample_formats & sf.flag) {
+      printf(" %s", sf.name);
+    }
+  }
+
+  struct {
+    audio_sample_format_t flag;
+    const char* name;
+  } SF_FORMAT_LUT[] = {
+      {AUDIO_SAMPLE_FORMAT_BITSTREAM, "Bitstream"},
+      {AUDIO_SAMPLE_FORMAT_8BIT, "8"},
+      {AUDIO_SAMPLE_FORMAT_16BIT, "16"},
+      {AUDIO_SAMPLE_FORMAT_20BIT_PACKED, "20-packed"},
+      {AUDIO_SAMPLE_FORMAT_24BIT_PACKED, "24-packed"},
+      {AUDIO_SAMPLE_FORMAT_20BIT_IN32, "20-in-32"},
+      {AUDIO_SAMPLE_FORMAT_24BIT_IN32, "24-in-32"},
+      {AUDIO_SAMPLE_FORMAT_32BIT, "32"},
+      {AUDIO_SAMPLE_FORMAT_32BIT_FLOAT, "Float 32"},
+  };
+
+  bool first = true;
+  printf(" [");
+  for (const auto& sf : SF_FORMAT_LUT) {
+    if (range.sample_formats & sf.flag) {
+      printf("%s%s", first ? "" : ", ", sf.name);
+      first = false;
+    }
+  }
+  printf("]\n");
+
+  printf("     Channel Count : [%u, %u]\n", range.min_channels, range.max_channels);
+  printf("     Frame Rates   :");
+  if (range.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS) {
+    printf(" [%u, %u] Hz continuous\n", range.min_frames_per_second, range.max_frames_per_second);
+  } else {
+    audio::utils::FrameRateEnumerator enumerator(range);
+
+    first = true;
+    for (uint32_t rate : enumerator) {
+      printf("%s%u", first ? " " : ", ", rate);
+      first = false;
     }
 
-    struct {
-        audio_sample_format_t flag;
-        const char* name;
-    } SF_FORMAT_LUT[] = {
-        { AUDIO_SAMPLE_FORMAT_BITSTREAM, "Bitstream" },
-        { AUDIO_SAMPLE_FORMAT_8BIT, "8" },
-        { AUDIO_SAMPLE_FORMAT_16BIT, "16" },
-        { AUDIO_SAMPLE_FORMAT_20BIT_PACKED, "20-packed" },
-        { AUDIO_SAMPLE_FORMAT_24BIT_PACKED, "24-packed" },
-        { AUDIO_SAMPLE_FORMAT_20BIT_IN32, "20-in-32" },
-        { AUDIO_SAMPLE_FORMAT_24BIT_IN32, "24-in-32" },
-        { AUDIO_SAMPLE_FORMAT_32BIT, "32" },
-        { AUDIO_SAMPLE_FORMAT_32BIT_FLOAT, "Float 32" },
-    };
-
-    bool first = true;
-    printf(" [");
-    for (const auto& sf : SF_FORMAT_LUT) {
-        if (range.sample_formats & sf.flag) {
-            printf("%s%s", first ? "" : ", ", sf.name);
-            first = false;
-        }
-    }
-    printf("]\n");
-
-    printf("     Channel Count : [%u, %u]\n", range.min_channels, range.max_channels);
-    printf("     Frame Rates   :");
-    if (range.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS) {
-        printf(" [%u, %u] Hz continuous\n",
-                range.min_frames_per_second, range.max_frames_per_second);
-    } else {
-        audio::utils::FrameRateEnumerator enumerator(range);
-
-        first = true;
-        for (uint32_t rate : enumerator) {
-            printf("%s%u", first ? " " : ", ", rate);
-            first = false;
-        }
-
-        printf(" Hz\n");
-    }
+    printf(" Hz\n");
+  }
 }
 
 static void FixupStringRequest(audio_stream_cmd_get_string_resp_t* resp, zx_status_t res) {
-    if (res != ZX_OK) {
-        snprintf(reinterpret_cast<char*>(resp->str), sizeof(resp->str), "<err %d>", res);
-        return;
+  if (res != ZX_OK) {
+    snprintf(reinterpret_cast<char*>(resp->str), sizeof(resp->str), "<err %d>", res);
+    return;
+  }
+
+  if (resp->strlen > sizeof(resp->str)) {
+    snprintf(reinterpret_cast<char*>(resp->str), sizeof(resp->str), "<bad strllen %u>",
+             resp->strlen);
+    return;
+  }
+
+  // We are going to display this string using ASCII, but it is encoded using
+  // UTF8.  Go over the string and replace unprintable characters with
+  // something else.  Also replace embedded nulls with a space.  Finally,
+  // ensure that the string is null terminated.
+  uint32_t len = fbl::min<uint32_t>(sizeof(resp->str) - 1, resp->strlen);
+  uint32_t i;
+  for (i = 0; i < len; ++i) {
+    if (resp->str[i] == 0) {
+      resp->str[i] = ' ';
+    } else if (!isprint(resp->str[i])) {
+      resp->str[i] = '?';
     }
+  }
 
-    if (resp->strlen > sizeof(resp->str)) {
-        snprintf(reinterpret_cast<char*>(resp->str), sizeof(resp->str),
-                 "<bad strllen %u>", resp->strlen);
-        return;
-    }
-
-    // We are going to display this string using ASCII, but it is encoded using
-    // UTF8.  Go over the string and replace unprintable characters with
-    // something else.  Also replace embedded nulls with a space.  Finally,
-    // ensure that the string is null terminated.
-    uint32_t len = fbl::min<uint32_t>(sizeof(resp->str) - 1, resp->strlen);
-    uint32_t i;
-    for (i = 0; i < len; ++i) {
-        if (resp->str[i] == 0) {
-            resp->str[i] = ' ';
-        } else if (!isprint(resp->str[i])) {
-            resp->str[i] = '?';
-        }
-
-    }
-
-    resp->str[i] = 0;
+  resp->str[i] = 0;
 }
 
 zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
-    zx_status_t res;
-    printf("Info for audio %s at \"%s\"\n",
-            stream.input() ? "input" : "output", stream.name());
+  zx_status_t res;
+  printf("Info for audio %s at \"%s\"\n", stream.input() ? "input" : "output", stream.name());
 
-    // Grab and display some of the interesting properties of the device,
-    // including its unique ID, its manufacturer name, and its product name.
-    audio_stream_cmd_get_unique_id_resp_t uid_resp;
-    res = stream.GetUniqueId(&uid_resp);
-    if (res != ZX_OK) {
-        printf("Failed to fetch unique ID! (res %d)\n", res);
-        return res;
-    }
+  // Grab and display some of the interesting properties of the device,
+  // including its unique ID, its manufacturer name, and its product name.
+  audio_stream_cmd_get_unique_id_resp_t uid_resp;
+  res = stream.GetUniqueId(&uid_resp);
+  if (res != ZX_OK) {
+    printf("Failed to fetch unique ID! (res %d)\n", res);
+    return res;
+  }
 
-    const auto& uid = uid_resp.unique_id.data;
-    static_assert(sizeof(uid) == 16, "Unique ID is not 16 bytes long!\n");
-    printf("  Unique ID    : %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
-            uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7],
-            uid[8], uid[9], uid[10], uid[11], uid[12], uid[13], uid[14], uid[15]);
+  const auto& uid = uid_resp.unique_id.data;
+  static_assert(sizeof(uid) == 16, "Unique ID is not 16 bytes long!\n");
+  printf("  Unique ID    : %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+         uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7], uid[8], uid[9], uid[10],
+         uid[11], uid[12], uid[13], uid[14], uid[15]);
 
-    audio_stream_cmd_get_string_resp_t str_resp;
-    res = stream.GetString(AUDIO_STREAM_STR_ID_MANUFACTURER, &str_resp);
-    FixupStringRequest(&str_resp, res);
-    printf("  Manufacturer : %s\n", str_resp.str);
+  audio_stream_cmd_get_string_resp_t str_resp;
+  res = stream.GetString(AUDIO_STREAM_STR_ID_MANUFACTURER, &str_resp);
+  FixupStringRequest(&str_resp, res);
+  printf("  Manufacturer : %s\n", str_resp.str);
 
-    res = stream.GetString(AUDIO_STREAM_STR_ID_PRODUCT, &str_resp);
-    FixupStringRequest(&str_resp, res);
-    printf("  Product      : %s\n", str_resp.str);
+  res = stream.GetString(AUDIO_STREAM_STR_ID_PRODUCT, &str_resp);
+  FixupStringRequest(&str_resp, res);
+  printf("  Product      : %s\n", str_resp.str);
 
-    // Fetch and print the current gain settings for this audio stream.
-    audio_stream_cmd_get_gain_resp gain_state;
-    res = stream.GetGain(&gain_state);
-    if (res != ZX_OK) {
-        printf("Failed to fetch gain information! (res %d)\n", res);
-        return res;
-    }
+  // Fetch and print the current gain settings for this audio stream.
+  audio_stream_cmd_get_gain_resp gain_state;
+  res = stream.GetGain(&gain_state);
+  if (res != ZX_OK) {
+    printf("Failed to fetch gain information! (res %d)\n", res);
+    return res;
+  }
 
-    printf("  Current Gain : %.2f dB (%smuted%s)\n",
-            gain_state.cur_gain,
-            gain_state.cur_mute ? "" : "un",
-            gain_state.can_agc ? (gain_state.cur_agc ? ", AGC on" : ", AGC off") : "");
-    printf("  Gain Caps    : ");
-    if ((gain_state.min_gain == gain_state.max_gain) && (gain_state.min_gain == 0.0f)) {
-        printf("fixed 0 dB gain");
-    } else
-    if (gain_state.gain_step == 0.0f) {
-        printf("gain range [%.2f, %.2f] dB (continuous)", gain_state.min_gain, gain_state.max_gain);
-    } else {
-        printf("gain range [%.2f, %.2f] in %.2f dB steps",
-                gain_state.min_gain, gain_state.max_gain, gain_state.gain_step);
-    }
-    printf("; %s mute", gain_state.can_mute ? "can" : "cannot");
-    printf("; %s AGC\n", gain_state.can_agc ? "can" : "cannot");
+  printf("  Current Gain : %.2f dB (%smuted%s)\n", gain_state.cur_gain,
+         gain_state.cur_mute ? "" : "un",
+         gain_state.can_agc ? (gain_state.cur_agc ? ", AGC on" : ", AGC off") : "");
+  printf("  Gain Caps    : ");
+  if ((gain_state.min_gain == gain_state.max_gain) && (gain_state.min_gain == 0.0f)) {
+    printf("fixed 0 dB gain");
+  } else if (gain_state.gain_step == 0.0f) {
+    printf("gain range [%.2f, %.2f] dB (continuous)", gain_state.min_gain, gain_state.max_gain);
+  } else {
+    printf("gain range [%.2f, %.2f] in %.2f dB steps", gain_state.min_gain, gain_state.max_gain,
+           gain_state.gain_step);
+  }
+  printf("; %s mute", gain_state.can_mute ? "can" : "cannot");
+  printf("; %s AGC\n", gain_state.can_agc ? "can" : "cannot");
 
-    // Fetch and print the current pluged/unplugged state for this audio stream.
-    audio_stream_cmd_plug_detect_resp plug_state;
-    res = stream.GetPlugState(&plug_state);
-    if (res != ZX_OK) {
-        printf("Failed to fetch plug state information! (res %d)\n", res);
-        return res;
-    }
+  // Fetch and print the current pluged/unplugged state for this audio stream.
+  audio_stream_cmd_plug_detect_resp plug_state;
+  res = stream.GetPlugState(&plug_state);
+  if (res != ZX_OK) {
+    printf("Failed to fetch plug state information! (res %d)\n", res);
+    return res;
+  }
 
-    printf("  Plug State   : %splugged\n", plug_state.flags & AUDIO_PDNF_PLUGGED ? "" : "un");
-    printf("  Plug Time    : %lu\n", plug_state.plug_state_time);
-    printf("  PD Caps      : %s\n", (plug_state.flags & AUDIO_PDNF_HARDWIRED)
-                                    ? "hardwired"
-                                    : ((plug_state.flags & AUDIO_PDNF_CAN_NOTIFY)
-                                        ? "dynamic (async)"
-                                        : "dynamic (synchronous)"));
+  printf("  Plug State   : %splugged\n", plug_state.flags & AUDIO_PDNF_PLUGGED ? "" : "un");
+  printf("  Plug Time    : %lu\n", plug_state.plug_state_time);
+  printf("  PD Caps      : %s\n",
+         (plug_state.flags & AUDIO_PDNF_HARDWIRED)
+             ? "hardwired"
+             : ((plug_state.flags & AUDIO_PDNF_CAN_NOTIFY) ? "dynamic (async)"
+                                                           : "dynamic (synchronous)"));
 
-    // Fetch and print the currently supported audio formats for this audio stream.
-    fbl::Vector<audio_stream_format_range_t> fmts;
-    res = stream.GetSupportedFormats(&fmts);
-    if (res != ZX_OK) {
-        printf("Failed to fetch supported formats! (res %d)\n", res);
-        return res;
-    }
+  // Fetch and print the currently supported audio formats for this audio stream.
+  fbl::Vector<audio_stream_format_range_t> fmts;
+  res = stream.GetSupportedFormats(&fmts);
+  if (res != ZX_OK) {
+    printf("Failed to fetch supported formats! (res %d)\n", res);
+    return res;
+  }
 
-    printf("\nStream supports %zu format range%s\n", fmts.size(), fmts.size() == 1 ? "" : "s");
-    for (size_t i = 0; i < fmts.size(); ++i)
-        dump_format_range(i, fmts[i]);
+  printf("\nStream supports %zu format range%s\n", fmts.size(), fmts.size() == 1 ? "" : "s");
+  for (size_t i = 0; i < fmts.size(); ++i)
+    dump_format_range(i, fmts[i]);
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 int main(int argc, const char** argv) {
-    bool input = false;
-    uint32_t dev_id = 0;
-    uint32_t frame_rate = DEFAULT_FRAME_RATE;
-    uint32_t bits_per_sample = DEFAULT_BITS_PER_SAMPLE;
-    uint32_t channels = DEFAULT_CHANNELS;
-    uint32_t active = DEFAULT_ACTIVE_CHANNELS;
-    Command cmd = Command::INVALID;
-    auto print_usage = fbl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
-    int arg = 1;
+  bool input = false;
+  uint32_t dev_id = 0;
+  uint32_t frame_rate = DEFAULT_FRAME_RATE;
+  uint32_t bits_per_sample = DEFAULT_BITS_PER_SAMPLE;
+  uint32_t channels = DEFAULT_CHANNELS;
+  uint32_t active = DEFAULT_ACTIVE_CHANNELS;
+  Command cmd = Command::INVALID;
+  auto print_usage = fbl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
+  int arg = 1;
 
-    if (arg >= argc) return -1;
+  if (arg >= argc)
+    return -1;
 
-    struct {
-        const char* name;
-        const char* tag;
-        uint32_t*   val;
-    } UINT_OPTIONS[] = {
-    // clang-format off
+  struct {
+    const char* name;
+    const char* tag;
+    uint32_t* val;
+  } UINT_OPTIONS[] = {
+      // clang-format off
     { .name = "-d", .tag = "device ID",   .val = &dev_id },
     { .name = "-r", .tag = "frame rate",  .val = &frame_rate },
     { .name = "-b", .tag = "bits/sample", .val = &bits_per_sample },
     { .name = "-c", .tag = "channels",    .val = &channels },
     { .name = "-a", .tag = "active",      .val = &active },
-    // clang-format on
-    };
+      // clang-format on
+  };
 
-    static const struct {
-        const char* name;
-        Command cmd;
-        bool force_out;
-        bool force_in;
-    } COMMANDS[] = {
-    // clang-format off
+  static const struct {
+    const char* name;
+    Command cmd;
+    bool force_out;
+    bool force_in;
+  } COMMANDS[] = {
+      // clang-format off
     { "info",   Command::INFO,          false, false },
     { "mute",   Command::MUTE,          false, false },
     { "unmute", Command::UNMUTE,        false, false },
@@ -313,262 +309,284 @@ int main(int argc, const char** argv) {
     { "tone",   Command::TONE,          true,  false },
     { "play",   Command::PLAY,          true,  false },
     { "record", Command::RECORD,        false, true  },
-    // clang-format on
-    };
+      // clang-format on
+  };
 
-    while (arg < argc) {
-        // Check to see if this is an integer option
-        bool parsed_option = false;
-        for (const auto& o : UINT_OPTIONS) {
-            if (!strcmp(o.name, argv[arg])) {
-                // Looks like this is an integer argument we care about.
-                // Attempt to parse it.
-                if (++arg >= argc) return -1;
-                if (sscanf(argv[arg], "%u", o.val) != 1) {
-                    printf("Failed to parse %s option, \"%s\"\n", o.tag, argv[arg]);
-                    return -1;
-                }
-                ++arg;
-                parsed_option = true;
-                break;
-            }
+  while (arg < argc) {
+    // Check to see if this is an integer option
+    bool parsed_option = false;
+    for (const auto& o : UINT_OPTIONS) {
+      if (!strcmp(o.name, argv[arg])) {
+        // Looks like this is an integer argument we care about.
+        // Attempt to parse it.
+        if (++arg >= argc)
+          return -1;
+        if (sscanf(argv[arg], "%u", o.val) != 1) {
+          printf("Failed to parse %s option, \"%s\"\n", o.tag, argv[arg]);
+          return -1;
         }
-
-        // If we successfully parse an integer option, continue on to the next
-        // argument (if any).
-        if (parsed_option)
-            continue;
-
-        // Was this the device type flag?
-        if (!strcmp("-t", argv[arg])) {
-            if (++arg >= argc) return -1;
-            if (!strcmp("input", argv[arg])) {
-                input = true;
-            } else
-            if (!strcmp("output", argv[arg])) {
-                input = false;
-            } else {
-                printf("Invalid input/output specifier \"%s\".\n", argv[arg]);
-                return -1;
-            }
-            ++arg;
-            continue;
-        }
-
-        // Well, this didn't look like an option we understand, so it must be a
-        // command.  Attempt to figure out what command it was.
-        for (const auto& entry : COMMANDS) {
-            if (!strcmp(entry.name, argv[arg])) {
-                cmd = entry.cmd;
-                parsed_option = true;
-                arg++;
-
-                if (entry.force_out) input = false;
-                if (entry.force_in)  input = true;
-
-                break;
-            }
-        }
-
-        if (!parsed_option) {
-            printf("Failed to parse command ID \"%s\"\n", argv[arg]);
-            return -1;
-        }
-
+        ++arg;
+        parsed_option = true;
         break;
+      }
     }
 
-    if (cmd == Command::INVALID) {
-        printf("Failed to find valid command ID.\n");
+    // If we successfully parse an integer option, continue on to the next
+    // argument (if any).
+    if (parsed_option)
+      continue;
+
+    // Was this the device type flag?
+    if (!strcmp("-t", argv[arg])) {
+      if (++arg >= argc)
         return -1;
-    }
-
-    audio_sample_format_t sample_format;
-    switch (bits_per_sample) {
-    case 8:  sample_format = AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT; break;
-    case 16: sample_format = AUDIO_SAMPLE_FORMAT_16BIT; break;
-    case 20: sample_format = AUDIO_SAMPLE_FORMAT_20BIT_IN32; break;
-    case 24: sample_format = AUDIO_SAMPLE_FORMAT_24BIT_IN32; break;
-    case 32: sample_format = AUDIO_SAMPLE_FORMAT_32BIT; break;
-    default:
-        printf("Unsupported number of bits per sample (%u)\n", bits_per_sample);
+      if (!strcmp("input", argv[arg])) {
+        input = true;
+      } else if (!strcmp("output", argv[arg])) {
+        input = false;
+      } else {
+        printf("Invalid input/output specifier \"%s\".\n", argv[arg]);
         return -1;
+      }
+      ++arg;
+      continue;
     }
 
-    float tone_freq = 440.0;
-    float duration;
-    const char* wav_filename = nullptr;
-    float target_gain = -100.0;
-    bool enb_agc = false;
-
-    // Parse any additional arguments
-    switch (cmd) {
-    case Command::GAIN:
-        if (arg >= argc) return -1;
-        if (sscanf(argv[arg], "%f", &target_gain) != 1) {
-            printf("Failed to parse gain \"%s\"\n", argv[arg]);
-            return -1;
-        }
+    // Well, this didn't look like an option we understand, so it must be a
+    // command.  Attempt to figure out what command it was.
+    for (const auto& entry : COMMANDS) {
+      if (!strcmp(entry.name, argv[arg])) {
+        cmd = entry.cmd;
+        parsed_option = true;
         arg++;
+
+        if (entry.force_out)
+          input = false;
+        if (entry.force_in)
+          input = true;
+
         break;
+      }
+    }
+
+    if (!parsed_option) {
+      printf("Failed to parse command ID \"%s\"\n", argv[arg]);
+      return -1;
+    }
+
+    break;
+  }
+
+  if (cmd == Command::INVALID) {
+    printf("Failed to find valid command ID.\n");
+    return -1;
+  }
+
+  audio_sample_format_t sample_format;
+  switch (bits_per_sample) {
+    case 8:
+      sample_format = AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT;
+      break;
+    case 16:
+      sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
+      break;
+    case 20:
+      sample_format = AUDIO_SAMPLE_FORMAT_20BIT_IN32;
+      break;
+    case 24:
+      sample_format = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
+      break;
+    case 32:
+      sample_format = AUDIO_SAMPLE_FORMAT_32BIT;
+      break;
+    default:
+      printf("Unsupported number of bits per sample (%u)\n", bits_per_sample);
+      return -1;
+  }
+
+  float tone_freq = 440.0;
+  float duration;
+  const char* wav_filename = nullptr;
+  float target_gain = -100.0;
+  bool enb_agc = false;
+
+  // Parse any additional arguments
+  switch (cmd) {
+    case Command::GAIN:
+      if (arg >= argc)
+        return -1;
+      if (sscanf(argv[arg], "%f", &target_gain) != 1) {
+        printf("Failed to parse gain \"%s\"\n", argv[arg]);
+        return -1;
+      }
+      arg++;
+      break;
 
     case Command::AGC:
-        if (arg >= argc) return -1;
-        if (strcasecmp(argv[arg], "on") == 0) {
-            enb_agc = true;
-        } else
-        if (strcasecmp(argv[arg], "off") == 0) {
-            enb_agc = false;
-        } else {
-            printf("Failed to parse agc setting \"%s\"\n", argv[arg]);
-            return -1;
-        }
-        arg++;
-        break;
+      if (arg >= argc)
+        return -1;
+      if (strcasecmp(argv[arg], "on") == 0) {
+        enb_agc = true;
+      } else if (strcasecmp(argv[arg], "off") == 0) {
+        enb_agc = false;
+      } else {
+        printf("Failed to parse agc setting \"%s\"\n", argv[arg]);
+        return -1;
+      }
+      arg++;
+      break;
 
     case Command::PLUG_MONITOR:
-        duration = DEFAULT_PLUG_MONITOR_DURATION;
-        if (arg < argc) {
-            if (sscanf(argv[arg], "%f", &duration) != 1) {
-                printf("Failed to parse plug monitor duration \"%s\"\n", argv[arg]);
-                return -1;
-            }
-            arg++;
-            duration = fbl::max(duration, MIN_PLUG_MONITOR_DURATION);
+      duration = DEFAULT_PLUG_MONITOR_DURATION;
+      if (arg < argc) {
+        if (sscanf(argv[arg], "%f", &duration) != 1) {
+          printf("Failed to parse plug monitor duration \"%s\"\n", argv[arg]);
+          return -1;
         }
-        break;
+        arg++;
+        duration = fbl::max(duration, MIN_PLUG_MONITOR_DURATION);
+      }
+      break;
 
     case Command::TONE:
-        duration = DEFAULT_TONE_DURATION;
-        if (arg < argc) {
-            if (sscanf(argv[arg], "%f", &tone_freq) != 1) {
-                printf("Failed to parse tone frequency \"%s\"\n", argv[arg]);
-                return -1;
-            }
-            arg++;
-
-            if (arg < argc) {
-                if (sscanf(argv[arg], "%f", &duration) != 1) {
-                    printf("Failed to parse tone duration \"%s\"\n", argv[arg]);
-                    return -1;
-                }
-                arg++;
-            }
-
-            tone_freq = fbl::clamp(tone_freq, 15.0f, 20000.0f);
-            duration = fbl::max(duration, MIN_TONE_DURATION);
+      duration = DEFAULT_TONE_DURATION;
+      if (arg < argc) {
+        if (sscanf(argv[arg], "%f", &tone_freq) != 1) {
+          printf("Failed to parse tone frequency \"%s\"\n", argv[arg]);
+          return -1;
         }
-        break;
+        arg++;
+
+        if (arg < argc) {
+          if (sscanf(argv[arg], "%f", &duration) != 1) {
+            printf("Failed to parse tone duration \"%s\"\n", argv[arg]);
+            return -1;
+          }
+          arg++;
+        }
+
+        tone_freq = fbl::clamp(tone_freq, 15.0f, 20000.0f);
+        duration = fbl::max(duration, MIN_TONE_DURATION);
+      }
+      break;
 
     case Command::PLAY:
     case Command::RECORD:
-        if (arg >= argc) return -1;
-        wav_filename = argv[arg];
-        arg++;
+      if (arg >= argc)
+        return -1;
+      wav_filename = argv[arg];
+      arg++;
 
-        if (cmd == Command::RECORD) {
-            duration = DEFAULT_RECORD_DURATION;
-            if (arg < argc) {
-                if (sscanf(argv[arg], "%f", &duration) != 1) {
-                    printf("Failed to parse record duration \"%s\"\n", argv[arg]);
-                    return -1;
-                }
-                arg++;
-            }
+      if (cmd == Command::RECORD) {
+        duration = DEFAULT_RECORD_DURATION;
+        if (arg < argc) {
+          if (sscanf(argv[arg], "%f", &duration) != 1) {
+            printf("Failed to parse record duration \"%s\"\n", argv[arg]);
+            return -1;
+          }
+          arg++;
         }
+      }
 
-        break;
+      break;
 
     default:
-        break;
-    }
+      break;
+  }
 
-    if (arg != argc) {
-        printf("Invalid number of arguments.\n");
-        return -1;
-    }
+  if (arg != argc) {
+    printf("Invalid number of arguments.\n");
+    return -1;
+  }
 
-    // Argument parsing is done, we can cancel the usage dump.
-    print_usage.cancel();
+  // Argument parsing is done, we can cancel the usage dump.
+  print_usage.cancel();
 
-    // Open the selected stream.
-    fbl::unique_ptr<audio::utils::AudioDeviceStream> stream;
-    if (input) stream = audio::utils::AudioInput::Create(dev_id);
-    else       stream = audio::utils::AudioOutput::Create(dev_id);
-    if (stream == nullptr) {
-        printf("Out of memory!\n");
-        return ZX_ERR_NO_MEMORY;
-    }
+  // Open the selected stream.
+  fbl::unique_ptr<audio::utils::AudioDeviceStream> stream;
+  if (input)
+    stream = audio::utils::AudioInput::Create(dev_id);
+  else
+    stream = audio::utils::AudioOutput::Create(dev_id);
+  if (stream == nullptr) {
+    printf("Out of memory!\n");
+    return ZX_ERR_NO_MEMORY;
+  }
 
-    // No need to log in the case of failure.  Open has already done so.
-    zx_status_t res = stream->Open();
-    if (res != ZX_OK)
-        return res;
+  // No need to log in the case of failure.  Open has already done so.
+  zx_status_t res = stream->Open();
+  if (res != ZX_OK)
+    return res;
 
-    // Execute the chosen command.
-    switch (cmd) {
-    case Command::INFO:         return dump_stream_info(*stream);
-    case Command::MUTE:         return stream->SetMute(true);
-    case Command::UNMUTE:       return stream->SetMute(false);
-    case Command::GAIN:         return stream->SetGain(target_gain);
-    case Command::AGC:          return stream->SetAgc(enb_agc);
-    case Command::PLUG_MONITOR: return stream->PlugMonitor(duration);
+  // Execute the chosen command.
+  switch (cmd) {
+    case Command::INFO:
+      return dump_stream_info(*stream);
+    case Command::MUTE:
+      return stream->SetMute(true);
+    case Command::UNMUTE:
+      return stream->SetMute(false);
+    case Command::GAIN:
+      return stream->SetGain(target_gain);
+    case Command::AGC:
+      return stream->SetAgc(enb_agc);
+    case Command::PLUG_MONITOR:
+      return stream->PlugMonitor(duration);
 
     case Command::TONE: {
-        if (stream->input()) {
-            printf("The \"tone\" command can only be used on output streams.\n");
-            return -1;
-        }
+      if (stream->input()) {
+        printf("The \"tone\" command can only be used on output streams.\n");
+        return -1;
+      }
 
-        SineSource sine_source;
-        res = sine_source.Init(tone_freq, 1.0, duration, frame_rate, channels, active,
-                               sample_format);
-        if (res != ZX_OK) {
-            printf("Failed to initialize sine wav generator (res %d)\n", res);
-            return res;
-        }
+      SineSource sine_source;
+      res = sine_source.Init(tone_freq, 1.0, duration, frame_rate, channels, active, sample_format);
+      if (res != ZX_OK) {
+        printf("Failed to initialize sine wav generator (res %d)\n", res);
+        return res;
+      }
 
-        printf("Playing %.2f Hz tone for %.2f seconds\n", tone_freq, duration);
-        return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(sine_source);
+      printf("Playing %.2f Hz tone for %.2f seconds\n", tone_freq, duration);
+      return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(sine_source);
     }
 
     case Command::PLAY: {
-        if (stream->input()) {
-            printf("The \"play\" command can only be used on output streams.\n");
-            return -1;
-        }
+      if (stream->input()) {
+        printf("The \"play\" command can only be used on output streams.\n");
+        return -1;
+      }
 
-        WAVSource wav_source;
-        res = wav_source.Initialize(wav_filename);
-        if (res != ZX_OK)
-            return res;
+      WAVSource wav_source;
+      res = wav_source.Initialize(wav_filename);
+      if (res != ZX_OK)
+        return res;
 
-        return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(wav_source);
+      return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(wav_source);
     }
 
     case Command::RECORD: {
-        if (!stream->input()) {
-            printf("The \"record\" command can only be used on input streams.\n");
-            return -1;
-        }
+      if (!stream->input()) {
+        printf("The \"record\" command can only be used on input streams.\n");
+        return -1;
+      }
 
-        res = stream->SetFormat(frame_rate, static_cast<uint16_t>(channels), sample_format);
-        if (res != ZX_OK) {
-            printf("Failed to set format (rate %u, chan %u, fmt 0x%08x, res %d)\n",
-                    frame_rate, channels, sample_format, res);
-            return -1;
-        }
+      res = stream->SetFormat(frame_rate, static_cast<uint16_t>(channels), sample_format);
+      if (res != ZX_OK) {
+        printf("Failed to set format (rate %u, chan %u, fmt 0x%08x, res %d)\n", frame_rate,
+               channels, sample_format, res);
+        return -1;
+      }
 
-        WAVSink wav_sink;
-        res = wav_sink.Initialize(wav_filename);
-        if (res != ZX_OK)
-            return res;
+      WAVSink wav_sink;
+      res = wav_sink.Initialize(wav_filename);
+      if (res != ZX_OK)
+        return res;
 
-        return static_cast<audio::utils::AudioInput*>(stream.get())->Record(wav_sink, duration);
+      return static_cast<audio::utils::AudioInput*>(stream.get())->Record(wav_sink, duration);
     }
 
     default:
-        ZX_DEBUG_ASSERT(false);
-        return -1;
-    }
+      ZX_DEBUG_ASSERT(false);
+      return -1;
+  }
 }

@@ -23,12 +23,10 @@ class CobaltAppForTest {
  public:
   CobaltAppForTest(std::unique_ptr<sys::ComponentContext> context)
       : system_data_("test", "test"), context_(std::move(context)) {
-    system_data_updater_impl_.reset(
-        new SystemDataUpdaterImpl(&system_data_, "/tmp/test_"));
+    system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_, "/tmp/test_"));
 
     context_->outgoing()->AddPublicService(
-        system_data_updater_bindings_.GetHandler(
-            system_data_updater_impl_.get()));
+        system_data_updater_bindings_.GetHandler(system_data_updater_impl_.get()));
   }
 
   void ClearData() { system_data_updater_impl_->ClearData(); }
@@ -41,8 +39,7 @@ class CobaltAppForTest {
   std::unique_ptr<sys::ComponentContext> context_;
 
   std::unique_ptr<SystemDataUpdaterImpl> system_data_updater_impl_;
-  fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater>
-      system_data_updater_bindings_;
+  fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater> system_data_updater_bindings_;
 };
 
 class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
@@ -73,8 +70,8 @@ class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
     return cobalt_app_->system_make_data().system_profile().channel();
   }
 
-  VectorPtr<fuchsia::cobalt::Experiment> ExperimentVectorWithIdAndArmId(
-      int64_t experiment_id, int64_t arm_id) {
+  VectorPtr<fuchsia::cobalt::Experiment> ExperimentVectorWithIdAndArmId(int64_t experiment_id,
+                                                                        int64_t arm_id) {
     VectorPtr<fuchsia::cobalt::Experiment> vector;
 
     fuchsia::cobalt::Experiment experiment;
@@ -96,8 +93,8 @@ TEST_F(SystemDataUpdaterImplTests, SetExperimentStateFromNull) {
 
   EXPECT_TRUE(experiments().empty());
 
-  system_data_updater->SetExperimentState(
-      ExperimentVectorWithIdAndArmId(kExperimentId, kArmId), [&](Status s) {});
+  system_data_updater->SetExperimentState(ExperimentVectorWithIdAndArmId(kExperimentId, kArmId),
+                                          [&](Status s) {});
 
   RunLoopUntilIdle();
 
@@ -114,8 +111,7 @@ TEST_F(SystemDataUpdaterImplTests, UpdateExperimentState) {
   SystemDataUpdaterPtr system_data_updater = GetSystemDataUpdater();
 
   system_data_updater->SetExperimentState(
-      ExperimentVectorWithIdAndArmId(kInitialExperimentId, kInitialArmId),
-      [&](Status s) {});
+      ExperimentVectorWithIdAndArmId(kInitialExperimentId, kInitialArmId), [&](Status s) {});
   RunLoopUntilIdle();
 
   EXPECT_FALSE(experiments().empty());
@@ -123,8 +119,7 @@ TEST_F(SystemDataUpdaterImplTests, UpdateExperimentState) {
   EXPECT_EQ(experiments().front().arm_id(), kInitialArmId);
 
   system_data_updater->SetExperimentState(
-      ExperimentVectorWithIdAndArmId(kUpdatedExperimentId, kUpdatedArmId),
-      [&](Status s) {});
+      ExperimentVectorWithIdAndArmId(kUpdatedExperimentId, kUpdatedArmId), [&](Status s) {});
   RunLoopUntilIdle();
 
   EXPECT_FALSE(experiments().empty());
@@ -150,9 +145,7 @@ TEST_F(SystemDataUpdaterImplTests, SetChannel) {
 
 namespace {
 
-std::unique_ptr<SystemData> make_data() {
-  return std::make_unique<SystemData>("test", "test");
-}
+std::unique_ptr<SystemData> make_data() { return std::make_unique<SystemData>("test", "test"); }
 
 std::unique_ptr<SystemDataUpdaterImpl> make_updater(SystemData* data) {
   return std::make_unique<SystemDataUpdaterImpl>(data, "/tmp/test_");

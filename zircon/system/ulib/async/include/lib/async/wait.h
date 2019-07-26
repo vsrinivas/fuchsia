@@ -14,10 +14,8 @@ __BEGIN_CDECLS
 // The |status| is |ZX_OK| if the wait was satisfied and |signal| is non-null.
 // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
 // the task's handler ran or the task was canceled.
-typedef void(async_wait_handler_t)(async_dispatcher_t* dispatcher,
-                                   async_wait_t* wait,
-                                   zx_status_t status,
-                                   const zx_packet_signal_t* signal);
+typedef void(async_wait_handler_t)(async_dispatcher_t* dispatcher, async_wait_t* wait,
+                                   zx_status_t status, const zx_packet_signal_t* signal);
 
 // Holds context for an asynchronous wait operation and its handler.
 //
@@ -26,21 +24,21 @@ typedef void(async_wait_handler_t)(async_dispatcher_t* dispatcher,
 // is successfully canceled, or the dispatcher shuts down.  Thereafter, the wait
 // may be started begun or destroyed.
 struct async_wait {
-    // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
-    async_state_t state;
+  // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
+  async_state_t state;
 
-    // The wait's handler function.
-    async_wait_handler_t* handler;
+  // The wait's handler function.
+  async_wait_handler_t* handler;
 
-    // The object to wait for signals on.
-    zx_handle_t object;
+  // The object to wait for signals on.
+  zx_handle_t object;
 
-    // The set of signals to wait for.
-    zx_signals_t trigger;
+  // The set of signals to wait for.
+  zx_signals_t trigger;
 
-    // Wait options, see zx_object_wait_async().
-    // Not yet functional, will replace async_begin_wait_with_options() soon.
-    uint32_t options;
+  // Wait options, see zx_object_wait_async().
+  // Not yet functional, will replace async_begin_wait_with_options() soon.
+  uint32_t options;
 };
 
 // Begins asynchronously waiting for an object to receive one or more signals
@@ -97,4 +95,4 @@ zx_status_t async_cancel_wait(async_dispatcher_t* dispatcher, async_wait_t* wait
 
 __END_CDECLS
 
-#endif // LIB_ASYNC_WAIT_H_
+#endif  // LIB_ASYNC_WAIT_H_

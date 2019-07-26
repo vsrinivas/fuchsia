@@ -38,8 +38,7 @@ class TestServer : public Server, public ::testing::Test {
   // Server overrides
   bool Run() override;
 
-  bool SetupInferior(const std::vector<std::string>& argv,
-                     zx::channel channel);
+  bool SetupInferior(const std::vector<std::string>& argv, zx::channel channel);
   bool RunHelperProgram();
   bool TestSuccessfulExit();
   bool TestFailureExit();
@@ -51,12 +50,11 @@ class TestServer : public Server, public ::testing::Test {
   void OnThreadExiting(Process* process, Thread* thread, zx_handle_t eport,
                        const zx_exception_context_t& context) override;
   void OnProcessTermination(Process* process) override;
-  void OnArchitecturalException(Process* process, Thread* thread,
-                                zx_handle_t eport, const zx_excp_type_t type,
+  void OnArchitecturalException(Process* process, Thread* thread, zx_handle_t eport,
+                                const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;
-  void OnSyntheticException(Process* process, Thread* thread,
-                            zx_handle_t eport, zx_excp_type_t type,
-                            const zx_exception_context_t& context) override;
+  void OnSyntheticException(Process* process, Thread* thread, zx_handle_t eport,
+                            zx_excp_type_t type, const zx_exception_context_t& context) override;
 
  private:
   // exception_port_.Quit() can only be called after a successful call to

@@ -36,8 +36,7 @@ class CodecAdapterEvents {
   // followed by any more output (including EndOfStream) until the associated
   // output re-config is completed by a call to
   // CoreCodecMidStreamOutputBufferReConfigFinish().
-  virtual void onCoreCodecMidStreamOutputConstraintsChange(
-      bool output_re_config_required) = 0;
+  virtual void onCoreCodecMidStreamOutputConstraintsChange(bool output_re_config_required) = 0;
 
   // When the core codec calls this method, the CodecImpl will note that the
   // format has changed, and on next onCoreCodecOutputPacket(), the CodecImpl
@@ -51,8 +50,7 @@ class CodecAdapterEvents {
 
   virtual void onCoreCodecInputPacketDone(CodecPacket* packet) = 0;
 
-  virtual void onCoreCodecOutputPacket(CodecPacket* packet,
-                                       bool error_detected_before,
+  virtual void onCoreCodecOutputPacket(CodecPacket* packet, bool error_detected_before,
                                        bool error_detected_during) = 0;
 
   virtual void onCoreCodecOutputEndOfStream(bool error_detected_before) = 0;

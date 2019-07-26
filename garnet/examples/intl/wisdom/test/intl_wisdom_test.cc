@@ -59,14 +59,11 @@ class IntlWisdomTest : public TestWithEnvironment {
 
   // Read the contents of the file at |path| into |contents|.
   void ReadFile(const std::string& path, std::string& contents) {
-    ASSERT_TRUE(files::ReadFileToString(path, &contents))
-        << "Could not read file " << path;
+    ASSERT_TRUE(files::ReadFileToString(path, &contents)) << "Could not read file " << path;
   }
 
   // Read the contents of the file at |out_file_path_| into |contents|.
-  void ReadStdOutFile(std::string& contents) {
-    ReadFile(out_file_path_, contents);
-  }
+  void ReadStdOutFile(std::string& contents) { ReadFile(out_file_path_, contents); }
 
   ComponentControllerPtr LaunchClientWithServer() {
     LaunchInfo launch_info{
@@ -78,8 +75,7 @@ class IntlWisdomTest : public TestWithEnvironment {
     launch_info.arguments.push_back("--timezone=America/Los_Angeles");
 
     ComponentControllerPtr controller;
-    CreateComponentInCurrentEnvironment(std::move(launch_info),
-                                        controller.NewRequest());
+    CreateComponentInCurrentEnvironment(std::move(launch_info), controller.NewRequest());
     return controller;
   }
 

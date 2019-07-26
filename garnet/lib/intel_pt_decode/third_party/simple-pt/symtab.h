@@ -41,12 +41,8 @@ using Symbol = debugger_utils::ElfSymbol;
 
 class SymbolTable : public debugger_utils::ElfSymbolTable {
  public:
-  SymbolTable(debugger_utils::ElfReader* reader,
-              const std::string& contents,
-              uint64_t cr3,
-              uint64_t base,
-              uint64_t offset,
-              bool is_kernel);
+  SymbolTable(debugger_utils::ElfReader* reader, const std::string& contents, uint64_t cr3,
+              uint64_t base, uint64_t offset, bool is_kernel);
 
   const Symbol* FindSymbol(uint64_t addr) const;
 
@@ -69,16 +65,13 @@ class SymbolTable : public debugger_utils::ElfSymbolTable {
 
 using SymbolTableTable = std::vector<std::unique_ptr<SymbolTable>>;
 
-const SymbolTable* FindSymbolTable(const SymbolTableTable& symtabs,
-                                   uint64_t cr3, uint64_t pc);
+const SymbolTable* FindSymbolTable(const SymbolTableTable& symtabs, uint64_t cr3, uint64_t pc);
 
-const Symbol* FindSymbol(const SymbolTableTable& symtabs,
-                         uint64_t cr3, uint64_t pc,
+const Symbol* FindSymbol(const SymbolTableTable& symtabs, uint64_t cr3, uint64_t pc,
                          const SymbolTable** out_symtab);
 
-const char* FindPcFileName(const SymbolTableTable& symtabs,
-                           uint64_t cr3, uint64_t pc);
+const char* FindPcFileName(const SymbolTableTable& symtabs, uint64_t cr3, uint64_t pc);
 
 bool SeenCr3(const SymbolTableTable& symtabs, uint64_t cr3);
 
-}  // simple_pt
+}  // namespace simple_pt

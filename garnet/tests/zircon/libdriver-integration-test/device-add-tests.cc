@@ -14,73 +14,78 @@
 namespace libdriver_integration_test {
 
 class DeviceAddTest : public IntegrationTest {
-protected:
-    Promise<void> CreateDevice(
-            std::initializer_list<zx_device_prop_t> props, zx_status_t expected_status,
-            std::unique_ptr<RootMockDevice>* root_device,
-            std::unique_ptr<MockDevice>* child_device) {
-        // Copy from props into a vector owned by the lambda, since a capture "by
-        // value" of props does not copy deeply.
-        std::vector<zx_device_prop_t> properties(props);
-        return ExpectBind(root_device,
-            [=, properties=std::move(properties)](HookInvocation record,
-                                                  Completer<void> completer) {
-                ActionList actions;
-                actions.AppendAddMockDevice(loop_.dispatcher(), (*root_device)->path(),
-                                            "first_child", std::move(properties),
-                                            expected_status, std::move(completer), child_device);
-                actions.AppendReturnStatus(expected_status);
-                return actions;
-            });
-    }
+ protected:
+  Promise<void> CreateDevice(std::initializer_list<zx_device_prop_t> props,
+                             zx_status_t expected_status,
+                             std::unique_ptr<RootMockDevice>* root_device,
+                             std::unique_ptr<MockDevice>* child_device) {
+    // Copy from props into a vector owned by the lambda, since a capture "by
+    // value" of props does not copy deeply.
+    std::vector<zx_device_prop_t> properties(props);
+    return ExpectBind(root_device, [=, properties = std::move(properties)](
+                                       HookInvocation record, Completer<void> completer) {
+      ActionList actions;
+      actions.AppendAddMockDevice(loop_.dispatcher(), (*root_device)->path(), "first_child",
+                                  std::move(properties), expected_status, std::move(completer),
+                                  child_device);
+      actions.AppendReturnStatus(expected_status);
+      return actions;
+    });
+  }
 };
 
 // This test checks what happens when only one topological properties is
 // specified
 TEST_F(DeviceAddTest, OneTopologicalProperty) {
-    std::unique_ptr<RootMockDevice> root_device;
-    std::unique_ptr<MockDevice> child_device;
+  std::unique_ptr<RootMockDevice> root_device;
+  std::unique_ptr<MockDevice> child_device;
 
-    auto promise = CreateDevice({
-        (zx_device_prop_t){ BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0) },
-        (zx_device_prop_t){ BIND_PCI_VID, 0, 1234 },
-    }, ZX_OK, &root_device, &child_device
-    ).and_then([&]() -> Promise<void> {
-        // Destroy the test device.  This should cause an unbind of the child
-        // device.
-        root_device.reset();
-        return ExpectUnbindThenRelease(child_device);
-    });
+  auto promise = CreateDevice(
+                     {
+                         (zx_device_prop_t){BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0)},
+                         (zx_device_prop_t){BIND_PCI_VID, 0, 1234},
+                     },
+                     ZX_OK, &root_device, &child_device)
+                     .and_then([&]() -> Promise<void> {
+                       // Destroy the test device.  This should cause an unbind of the child
+                       // device.
+                       root_device.reset();
+                       return ExpectUnbindThenRelease(child_device);
+                     });
 
-    RunPromise(std::move(promise));
+  RunPromise(std::move(promise));
 }
 
 // This test checks what happens when two different topological properties are
 // specified
 TEST_F(DeviceAddTest, TooManyTopologicalProperties) {
-    std::unique_ptr<RootMockDevice> root_device;
-    std::unique_ptr<MockDevice> child_device;
+  std::unique_ptr<RootMockDevice> root_device;
+  std::unique_ptr<MockDevice> child_device;
 
-    auto promise = CreateDevice({
-        (zx_device_prop_t){ BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0) },
-        (zx_device_prop_t){ BIND_TOPO_I2C, 0, BIND_TOPO_I2C_PACK(1) },
-        (zx_device_prop_t){ BIND_PCI_VID, 0, 1234 },
-    }, ZX_ERR_INVALID_ARGS, &root_device, &child_device);
-    RunPromise(std::move(promise));
+  auto promise = CreateDevice(
+      {
+          (zx_device_prop_t){BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0)},
+          (zx_device_prop_t){BIND_TOPO_I2C, 0, BIND_TOPO_I2C_PACK(1)},
+          (zx_device_prop_t){BIND_PCI_VID, 0, 1234},
+      },
+      ZX_ERR_INVALID_ARGS, &root_device, &child_device);
+  RunPromise(std::move(promise));
 }
 
 // This test checks what happens when the same topological property is
 // specified twice
 TEST_F(DeviceAddTest, TooManyTopologicalPropertiesDuplicated) {
-    std::unique_ptr<RootMockDevice> root_device;
-    std::unique_ptr<MockDevice> child_device;
+  std::unique_ptr<RootMockDevice> root_device;
+  std::unique_ptr<MockDevice> child_device;
 
-    auto promise = CreateDevice({
-        (zx_device_prop_t){ BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0) },
-        (zx_device_prop_t){ BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 1) },
-        (zx_device_prop_t){ BIND_PCI_VID, 0, 1234 },
-    }, ZX_ERR_INVALID_ARGS, &root_device, &child_device);
-    RunPromise(std::move(promise));
+  auto promise = CreateDevice(
+      {
+          (zx_device_prop_t){BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0)},
+          (zx_device_prop_t){BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 1)},
+          (zx_device_prop_t){BIND_PCI_VID, 0, 1234},
+      },
+      ZX_ERR_INVALID_ARGS, &root_device, &child_device);
+  RunPromise(std::move(promise));
 }
 
-} // namespace libdriver_integration_test
+}  // namespace libdriver_integration_test

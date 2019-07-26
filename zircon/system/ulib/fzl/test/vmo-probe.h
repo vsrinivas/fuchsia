@@ -17,4 +17,4 @@ bool probe_access(void* addr, AccessType access_type, bool expect_can_access);
 // |start| + |size|.
 bool probe_verify_region(void* start, size_t size, uint32_t access);
 
-} // namespace vmo_probe
+}  // namespace vmo_probe

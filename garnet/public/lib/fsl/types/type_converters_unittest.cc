@@ -16,9 +16,7 @@ struct MyInteger {
   int i;
 };
 
-static inline bool operator==(const MyInteger& lhs, const MyInteger& rhs) {
-  return lhs.i == rhs.i;
-}
+static inline bool operator==(const MyInteger& lhs, const MyInteger& rhs) { return lhs.i == rhs.i; }
 }  // namespace
 
 namespace fidl {
@@ -97,8 +95,7 @@ TEST(TypeConversionTest, Array_Vector_DifferentTypes) {
     array[i] = kOriginal[i];
   }
 
-  fidl::VectorPtr<MyInteger> vecptr =
-      fidl::To<fidl::VectorPtr<MyInteger>>(array);
+  fidl::VectorPtr<MyInteger> vecptr = fidl::To<fidl::VectorPtr<MyInteger>>(array);
   for (size_t i = 0; i < kSize; ++i) {
     EXPECT_EQ(MyInteger(kOriginal[i]), (*vecptr)[i]);
   }

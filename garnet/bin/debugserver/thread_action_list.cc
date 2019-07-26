@@ -16,8 +16,7 @@
 
 namespace debugserver {
 
-ThreadActionList::Entry::Entry(ThreadActionList::Action action, zx_koid_t pid,
-                               zx_koid_t tid)
+ThreadActionList::Entry::Entry(ThreadActionList::Action action, zx_koid_t pid, zx_koid_t tid)
     : action_(action), pid_(pid), tid_(tid) {
   FXL_DCHECK(pid_ != 0);
   // A tid value of zero is ok.
@@ -44,8 +43,7 @@ bool ThreadActionList::Entry::Contains(zx_koid_t pid, zx_koid_t tid) const {
   return true;
 }
 
-bool ThreadActionList::DecodeAction(char c,
-                                    ThreadActionList::Action* out_action) {
+bool ThreadActionList::DecodeAction(char c, ThreadActionList::Action* out_action) {
   switch (c) {
     case 'c':
       *out_action = Action::kContinue;
@@ -75,8 +73,7 @@ const char* ThreadActionList::ActionToString(ThreadActionList::Action action) {
   return "(unknown)";
 }
 
-ThreadActionList::ThreadActionList(const fxl::StringView& str,
-                                   zx_koid_t cur_proc) {
+ThreadActionList::ThreadActionList(const fxl::StringView& str, zx_koid_t cur_proc) {
   size_t len = str.size();
   size_t s = 0;
   Action default_action = Action::kNone;
@@ -126,8 +123,7 @@ ThreadActionList::ThreadActionList(const fxl::StringView& str,
         FXL_LOG(ERROR) << "All processes and one thread: " << str;
         return;
       }
-      actions_.push_back(
-          Entry(action, pid == -1 ? kAll : pid, tid == -1 ? kAll : tid));
+      actions_.push_back(Entry(action, pid == -1 ? kAll : pid, tid == -1 ? kAll : tid));
     } else {
       FXL_LOG(ERROR) << "Syntax error in action: " << str;
       return;
@@ -142,8 +138,7 @@ ThreadActionList::ThreadActionList(const fxl::StringView& str,
   valid_ = true;
 }
 
-ThreadActionList::Action ThreadActionList::GetAction(zx_koid_t pid,
-                                                     zx_koid_t tid) const {
+ThreadActionList::Action ThreadActionList::GetAction(zx_koid_t pid, zx_koid_t tid) const {
   FXL_DCHECK(pick_ones_resolved_);
 
   for (auto e : actions_) {

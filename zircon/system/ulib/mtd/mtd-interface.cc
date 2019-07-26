@@ -12,7 +12,6 @@
 #include <lib/log/log.h>
 #include <lib/mtd/mtd-interface.h>
 
-
 // Some chips report a spare size that is not capable of being read and/or
 // written usually due to reserved bits for ECC or limits set by a NAND
 // controller. Allow the spare size to be set based on a build flag to account
@@ -39,8 +38,7 @@ std::unique_ptr<MtdInterface> MtdInterface::Create(const std::string& path) {
 
   // Cannot use make_unique with a private constructor, so create MtdInterface
   // using new explicitly and wrap it in a unique_ptr immediately.
-  return std::unique_ptr<MtdInterface>(
-      new MtdInterface(std::move(fd), mtd_info));
+  return std::unique_ptr<MtdInterface>(new MtdInterface(std::move(fd), mtd_info));
 }
 
 MtdInterface::MtdInterface(fbl::unique_fd fd, const mtd_info_t& mtd_info)
@@ -50,14 +48,11 @@ uint32_t MtdInterface::PageSize() { return mtd_info_.writesize; }
 
 uint32_t MtdInterface::BlockSize() { return mtd_info_.erasesize; }
 
-uint32_t MtdInterface::OobSize() {
-  return SPARE_SIZE > 0 ? SPARE_SIZE : mtd_info_.oobsize;
-}
+uint32_t MtdInterface::OobSize() { return SPARE_SIZE > 0 ? SPARE_SIZE : mtd_info_.oobsize; }
 
 uint32_t MtdInterface::Size() { return mtd_info_.size; }
 
-zx_status_t MtdInterface::ReadPage(uint32_t byte_offset, void* data_bytes,
-                                   uint32_t* actual) {
+zx_status_t MtdInterface::ReadPage(uint32_t byte_offset, void* data_bytes, uint32_t* actual) {
   if (byte_offset % PageSize() != 0) {
     LOG(ERROR, "MtdInterface")("byte_offset must be set to the start of a page");
     return ZX_ERR_INVALID_ARGS;
@@ -67,7 +62,8 @@ zx_status_t MtdInterface::ReadPage(uint32_t byte_offset, void* data_bytes,
 
   ssize_t ret = read(fd_.get(), data_bytes, PageSize());
   if (ret != PageSize()) {
-    LOGF(ERROR, "MtdInterface")("Failed to read page at offset %u: %s", byte_offset, strerror(errno));
+    LOGF(ERROR, "MtdInterface")
+    ("Failed to read page at offset %u: %s", byte_offset, strerror(errno));
     // TODO(mbrunson): Return more specific error.
     return ZX_ERR_IO;
   }
@@ -82,12 +78,12 @@ zx_status_t MtdInterface::ReadOob(uint32_t byte_offset, void* oob_bytes) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  struct mtd_oob_buf oob = {byte_offset, OobSize(),
-                            static_cast<unsigned char*>(oob_bytes)};
+  struct mtd_oob_buf oob = {byte_offset, OobSize(), static_cast<unsigned char*>(oob_bytes)};
 
   int ret = ioctl(fd_.get(), MEMREADOOB, &oob);
   if (ret < 0) {
-    LOGF(ERROR, "MtdInterface")("Failed to read OOB at offset %u: %s", byte_offset, strerror(errno));
+    LOGF(ERROR, "MtdInterface")
+    ("Failed to read OOB at offset %u: %s", byte_offset, strerror(errno));
     // TODO(mbrunson): Return more specific error.
     return ZX_ERR_IO;
   }
@@ -95,8 +91,7 @@ zx_status_t MtdInterface::ReadOob(uint32_t byte_offset, void* oob_bytes) {
   return ZX_OK;
 }
 
-zx_status_t MtdInterface::WritePage(uint32_t byte_offset,
-                                    const void* data_bytes,
+zx_status_t MtdInterface::WritePage(uint32_t byte_offset, const void* data_bytes,
                                     const void* oob_bytes) {
   if (byte_offset % PageSize() != 0) {
     LOG(ERROR, "MtdInterface")("byte_offset must be set to the start of a page.");
@@ -111,13 +106,13 @@ zx_status_t MtdInterface::WritePage(uint32_t byte_offset,
   // on a build flag.
 #ifdef MEMWRITE_NOT_SUPPORTED
   if (oob_bytes) {
-    struct mtd_oob_buf oob_req = {
-        byte_offset, OobSize(),
-        reinterpret_cast<unsigned char*>(const_cast<void*>(oob_bytes))};
+    struct mtd_oob_buf oob_req = {byte_offset, OobSize(),
+                                  reinterpret_cast<unsigned char*>(const_cast<void*>(oob_bytes))};
 
     ret = ioctl(fd_.get(), MEMWRITEOOB, &oob_req);
     if (ret < 0) {
-      LOGF(ERROR, "MtdInterface")("Failed to write page at offset %d: %s", byte_offset, strerror(errno));
+      LOGF(ERROR, "MtdInterface")
+      ("Failed to write page at offset %d: %s", byte_offset, strerror(errno));
       return ZX_ERR_IO;
     }
   }
@@ -131,13 +126,15 @@ zx_status_t MtdInterface::WritePage(uint32_t byte_offset,
     ret = write(fd_.get(), data_bytes, PageSize());
     LOGF(INFO, "MtdInterface")("write: %d", ret);
     if (ret != PageSize()) {
-      LOGF(ERROR, "MtdInterface")("Failed to write page at offset %d: %s", byte_offset, strerror(errno));
+      LOGF(ERROR, "MtdInterface")
+      ("Failed to write page at offset %d: %s", byte_offset, strerror(errno));
       return ZX_ERR_IO;
     }
 
     if (static_cast<size_t>(ret) != PageSize()) {
-      LOGF(ERROR, "MtdInterface")("Wrote unexpected number of bytes. Expected %lu, wrote %d: %s",
-          PageSize(), ret, strerror(errno));
+      LOGF(ERROR, "MtdInterface")
+      ("Wrote unexpected number of bytes. Expected %lu, wrote %d: %s", PageSize(), ret,
+       strerror(errno));
       return ZX_ERR_IO_DATA_LOSS;
     }
   }
@@ -152,7 +149,8 @@ zx_status_t MtdInterface::WritePage(uint32_t byte_offset,
 
   ret = ioctl(fd_.get(), MEMWRITE, &req);
   if (ret < 0) {
-    LOGF(ERROR, "MtdInterface")("Failed to write page at offset %d: %s", byte_offset, strerror(errno));
+    LOGF(ERROR, "MtdInterface")
+    ("Failed to write page at offset %d: %s", byte_offset, strerror(errno));
     // TODO(mbrunson): Return more specific error.
     return ZX_ERR_IO;
   }
@@ -188,7 +186,8 @@ zx_status_t MtdInterface::IsBadBlock(uint32_t byte_offset, bool* is_bad_block) {
 
   int ret = ioctl(fd_.get(), MEMGETBADBLOCK, &seek);
   if (ret < 0) {
-    LOGF(ERROR, "MtdInterface")("Failed to get bad block info at offset %d: %s", byte_offset, strerror(errno));
+    LOGF(ERROR, "MtdInterface")
+    ("Failed to get bad block info at offset %d: %s", byte_offset, strerror(errno));
     // TODO(mbrunson): Return more specific error.
     return ZX_ERR_IO;
   }

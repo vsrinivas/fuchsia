@@ -102,19 +102,16 @@ class IptServer final : public inferior_control::Server {
   bool DumpResults();
 
   // Process::Delegate overrides.
-  void OnThreadStarting(inferior_control::Process* process,
-                        inferior_control::Thread* thread, zx_handle_t eport,
-                        const zx_exception_context_t& context) override;
-  void OnThreadExiting(inferior_control::Process* process,
-                       inferior_control::Thread* thread, zx_handle_t eport,
-                       const zx_exception_context_t& context) override;
+  void OnThreadStarting(inferior_control::Process* process, inferior_control::Thread* thread,
+                        zx_handle_t eport, const zx_exception_context_t& context) override;
+  void OnThreadExiting(inferior_control::Process* process, inferior_control::Thread* thread,
+                       zx_handle_t eport, const zx_exception_context_t& context) override;
   void OnProcessTermination(inferior_control::Process* process) override;
   void OnArchitecturalException(inferior_control::Process* process,
-                                inferior_control::Thread* thread,
-                                zx_handle_t eport, const zx_excp_type_t type,
+                                inferior_control::Thread* thread, zx_handle_t eport,
+                                const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;
-  void OnSyntheticException(inferior_control::Process* process,
-                            inferior_control::Thread* thread,
+  void OnSyntheticException(inferior_control::Process* process, inferior_control::Thread* thread,
                             zx_handle_t eport, zx_excp_type_t type,
                             const zx_exception_context_t& context) override;
 

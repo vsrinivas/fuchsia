@@ -20,9 +20,7 @@ namespace {
 
 class EnvironmentConfigTest : public ::testing::Test {
  protected:
-  void SetUp() override {
-    ASSERT_NE("", tmp_dir_.path()) << "Cannot acccess /tmp";
-  }
+  void SetUp() override { ASSERT_NE("", tmp_dir_.path()) << "Cannot acccess /tmp"; }
 
   bool ParseFrom(EnvironmentConfig* config, const std::string& json) {
     std::string json_path;
@@ -42,8 +40,7 @@ TEST_F(EnvironmentConfigTest, InvalidJson) {
   const std::string json = R"JSON({,,,})JSON";
   EnvironmentConfig config;
   EXPECT_FALSE(ParseFrom(&config, json));
-  EXPECT_THAT(config.error_str(),
-              ::testing::HasSubstr("Missing a name for object member."));
+  EXPECT_THAT(config.error_str(), ::testing::HasSubstr("Missing a name for object member."));
 }
 
 TEST_F(EnvironmentConfigTest, NoSysElement) {
@@ -51,8 +48,7 @@ TEST_F(EnvironmentConfigTest, NoSysElement) {
   })JSON";
   EnvironmentConfig config;
   EXPECT_FALSE(ParseFrom(&config, json));
-  EXPECT_THAT(config.error_str(),
-              ::testing::HasSubstr("Environment 'sys' not found."));
+  EXPECT_THAT(config.error_str(), ::testing::HasSubstr("Environment 'sys' not found."));
   EXPECT_EQ(0u, config.url_map().size());
 }
 
@@ -63,8 +59,7 @@ TEST_F(EnvironmentConfigTest, InvalidSection) {
     })JSON";
     EnvironmentConfig config;
     EXPECT_FALSE(ParseFrom(&config, json));
-    EXPECT_THAT(config.error_str(),
-                ::testing::HasSubstr("'sys' section should be an array."));
+    EXPECT_THAT(config.error_str(), ::testing::HasSubstr("'sys' section should be an array."));
   }
 }
 

@@ -13,8 +13,7 @@ namespace component {
 CacheControl::CacheControl() = default;
 CacheControl::~CacheControl() = default;
 
-void CacheControl::AddBinding(
-    fidl::InterfaceRequest<fuchsia::sys::test::CacheControl> request) {
+void CacheControl::AddBinding(fidl::InterfaceRequest<fuchsia::sys::test::CacheControl> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

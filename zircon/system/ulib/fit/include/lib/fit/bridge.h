@@ -134,32 +134,31 @@ namespace fit {
 // See documentation of |fit::promise| for more information.
 template <typename V, typename E>
 class bridge final {
-public:
-    using value_type = V;
-    using error_type = E;
-    using result_type = result<value_type, error_type>;
-    using completer_type = ::fit::completer<V, E>;
-    using consumer_type = ::fit::consumer<V, E>;
+ public:
+  using value_type = V;
+  using error_type = E;
+  using result_type = result<value_type, error_type>;
+  using completer_type = ::fit::completer<V, E>;
+  using consumer_type = ::fit::consumer<V, E>;
 
-    // Creates a bridge representing a new asynchronous task formed by the
-    // association of a completer and consumer.
-    bridge() {
-        ::fit::internal::bridge_state<V, E>::create(
-            &completer.completion_ref_,
-            &consumer.consumption_ref_);
-    }
-    bridge(bridge&& other) = default;
-    bridge(const bridge& other) = delete;
-    ~bridge() = default;
+  // Creates a bridge representing a new asynchronous task formed by the
+  // association of a completer and consumer.
+  bridge() {
+    ::fit::internal::bridge_state<V, E>::create(&completer.completion_ref_,
+                                                &consumer.consumption_ref_);
+  }
+  bridge(bridge&& other) = default;
+  bridge(const bridge& other) = delete;
+  ~bridge() = default;
 
-    bridge& operator=(bridge&& other) = default;
-    bridge& operator=(const bridge& other) = delete;
+  bridge& operator=(bridge&& other) = default;
+  bridge& operator=(const bridge& other) = delete;
 
-    // The bridge's completer capability.
-    completer_type completer;
+  // The bridge's completer capability.
+  completer_type completer;
 
-    // The bridge's consumer capability.
-    consumer_type consumer;
+  // The bridge's consumer capability.
+  consumer_type consumer;
 };
 
 // Provides a result upon completion of an asynchronous task.
@@ -184,130 +183,121 @@ public:
 // Defaults to |void|.
 template <typename V, typename E>
 class completer final {
-    using bridge_state = ::fit::internal::bridge_state<V, E>;
-    using completion_ref = typename bridge_state::completion_ref;
+  using bridge_state = ::fit::internal::bridge_state<V, E>;
+  using completion_ref = typename bridge_state::completion_ref;
 
-public:
-    using value_type = V;
-    using error_type = E;
-    using result_type = ::fit::result<V, E>;
+ public:
+  using value_type = V;
+  using error_type = E;
+  using result_type = ::fit::result<V, E>;
 
-    completer() = default;
-    completer(completer&& other) = default;
-    ~completer() = default;
+  completer() = default;
+  completer(completer&& other) = default;
+  ~completer() = default;
 
-    completer& operator=(completer&& other) = default;
+  completer& operator=(completer&& other) = default;
 
-    // Returns true if this instance currently owns the unique capability for
-    // reporting completion of the task.
-    explicit operator bool() const { return !!completion_ref_; }
+  // Returns true if this instance currently owns the unique capability for
+  // reporting completion of the task.
+  explicit operator bool() const { return !!completion_ref_; }
 
-    // Returns true if the associated |consumer| has canceled the task.
-    // This method returns a snapshot of the current cancellation state.
-    // Note that the task may be canceled concurrently at any time.
-    bool was_canceled() const {
-        assert(completion_ref_);
-        return completion_ref_.get()->was_canceled();
-    }
+  // Returns true if the associated |consumer| has canceled the task.
+  // This method returns a snapshot of the current cancellation state.
+  // Note that the task may be canceled concurrently at any time.
+  bool was_canceled() const {
+    assert(completion_ref_);
+    return completion_ref_.get()->was_canceled();
+  }
 
-    // Explicitly abandons the task, meaning that it will never be completed.
-    // See |fit::bridge| for details about abandonment.
-    void abandon() {
-        assert(completion_ref_);
-        completion_ref_ = completion_ref();
-    }
+  // Explicitly abandons the task, meaning that it will never be completed.
+  // See |fit::bridge| for details about abandonment.
+  void abandon() {
+    assert(completion_ref_);
+    completion_ref_ = completion_ref();
+  }
 
-    // Reports that the task has completed successfully.
-    // This method takes no arguments if |value_type| is void, otherwise it
-    // takes one argument which must be assignable to |value_type|.
-    template <typename VV = value_type,
-              typename = std::enable_if_t<std::is_void<VV>::value>>
-    void complete_ok() {
-        assert(completion_ref_);
-        bridge_state* state = completion_ref_.get();
-        state->complete_or_abandon(std::move(completion_ref_),
-                                   ::fit::ok());
-    }
-    template <typename VV = value_type,
-              typename = std::enable_if_t<!std::is_void<VV>::value>>
-    void complete_ok(VV value) {
-        assert(completion_ref_);
-        bridge_state* state = completion_ref_.get();
-        state->complete_or_abandon(std::move(completion_ref_),
-                                   ::fit::ok<value_type>(std::forward<VV>(value)));
-    }
+  // Reports that the task has completed successfully.
+  // This method takes no arguments if |value_type| is void, otherwise it
+  // takes one argument which must be assignable to |value_type|.
+  template <typename VV = value_type, typename = std::enable_if_t<std::is_void<VV>::value>>
+  void complete_ok() {
+    assert(completion_ref_);
+    bridge_state* state = completion_ref_.get();
+    state->complete_or_abandon(std::move(completion_ref_), ::fit::ok());
+  }
+  template <typename VV = value_type, typename = std::enable_if_t<!std::is_void<VV>::value>>
+  void complete_ok(VV value) {
+    assert(completion_ref_);
+    bridge_state* state = completion_ref_.get();
+    state->complete_or_abandon(std::move(completion_ref_),
+                               ::fit::ok<value_type>(std::forward<VV>(value)));
+  }
 
-    // Reports that the task has completed with an error.
-    // This method takes no arguments if |error_type| is void, otherwise it
-    // takes one argument which must be assignable to |error_type|.
-    template <typename EE = error_type,
-              typename = std::enable_if_t<std::is_void<EE>::value>>
-    void complete_error() {
-        assert(completion_ref_);
-        bridge_state* state = completion_ref_.get();
-        state->complete_or_abandon(std::move(completion_ref_),
-                                   ::fit::error());
-    }
-    template <typename EE = error_type,
-              typename = std::enable_if_t<!std::is_void<EE>::value>>
-    void complete_error(EE error) {
-        assert(completion_ref_);
-        bridge_state* state = completion_ref_.get();
-        state->complete_or_abandon(std::move(completion_ref_),
-                                   ::fit::error<error_type>(std::forward<EE>(error)));
-    }
+  // Reports that the task has completed with an error.
+  // This method takes no arguments if |error_type| is void, otherwise it
+  // takes one argument which must be assignable to |error_type|.
+  template <typename EE = error_type, typename = std::enable_if_t<std::is_void<EE>::value>>
+  void complete_error() {
+    assert(completion_ref_);
+    bridge_state* state = completion_ref_.get();
+    state->complete_or_abandon(std::move(completion_ref_), ::fit::error());
+  }
+  template <typename EE = error_type, typename = std::enable_if_t<!std::is_void<EE>::value>>
+  void complete_error(EE error) {
+    assert(completion_ref_);
+    bridge_state* state = completion_ref_.get();
+    state->complete_or_abandon(std::move(completion_ref_),
+                               ::fit::error<error_type>(std::forward<EE>(error)));
+  }
 
-    // Reports that the task has completed or been abandoned.
-    // See |fit::bridge| for details about abandonment.
-    //
-    // The result state determines the task's final disposition.
-    // - |fit::result_state::ok|: The task completed successfully.
-    // - |fit::result_state::error|: The task completed with an error.
-    // - |fit::result_state::pending|: The task was abandoned.
-    void complete_or_abandon(result_type result) {
-        assert(completion_ref_);
-        bridge_state* state = completion_ref_.get();
-        state->complete_or_abandon(std::move(completion_ref_),
-                                   std::move(result));
-    }
+  // Reports that the task has completed or been abandoned.
+  // See |fit::bridge| for details about abandonment.
+  //
+  // The result state determines the task's final disposition.
+  // - |fit::result_state::ok|: The task completed successfully.
+  // - |fit::result_state::error|: The task completed with an error.
+  // - |fit::result_state::pending|: The task was abandoned.
+  void complete_or_abandon(result_type result) {
+    assert(completion_ref_);
+    bridge_state* state = completion_ref_.get();
+    state->complete_or_abandon(std::move(completion_ref_), std::move(result));
+  }
 
-    // Returns a callback that reports completion of the asynchronous task along
-    // with its result when invoked.  This method is typically used to bind
-    // completion of a task to a callback that has zero or one argument.
-    //
-    // If |value_type| is void, the returned callback's signature is: void(void)
-    // Otherwise, the returned callback's signature is: void(value_type).
-    //
-    // The returned callback is thread-safe and move-only.
-    ::fit::internal::bridge_bind_callback<V, E> bind() {
-        assert(completion_ref_);
-        return ::fit::internal::bridge_bind_callback<V, E>(
-            std::move(completion_ref_));
-    }
+  // Returns a callback that reports completion of the asynchronous task along
+  // with its result when invoked.  This method is typically used to bind
+  // completion of a task to a callback that has zero or one argument.
+  //
+  // If |value_type| is void, the returned callback's signature is: void(void)
+  // Otherwise, the returned callback's signature is: void(value_type).
+  //
+  // The returned callback is thread-safe and move-only.
+  ::fit::internal::bridge_bind_callback<V, E> bind() {
+    assert(completion_ref_);
+    return ::fit::internal::bridge_bind_callback<V, E>(std::move(completion_ref_));
+  }
 
-    // A variant of |bind()| that can be used to bind a completion of a task
-    // to a callback that has zero or more arguments by wrapping the callback's
-    // arguments into a tuple when producing the task's result.
-    //
-    // The |value_type| must be a tuple type.
-    // Given a |value_type| of std::tuple<Args...>, the returned callback's
-    // signature is: void(Args...).  Note that the tuple's fields are
-    // unpacked as individual arguments of the callback.
-    //
-    // The returned callback is thread-safe and move-only.
-    ::fit::internal::bridge_bind_tuple_callback<V, E> bind_tuple() {
-        assert(completion_ref_);
-        return ::fit::internal::bridge_bind_tuple_callback<V, E>(
-            std::move(completion_ref_));
-    }
+  // A variant of |bind()| that can be used to bind a completion of a task
+  // to a callback that has zero or more arguments by wrapping the callback's
+  // arguments into a tuple when producing the task's result.
+  //
+  // The |value_type| must be a tuple type.
+  // Given a |value_type| of std::tuple<Args...>, the returned callback's
+  // signature is: void(Args...).  Note that the tuple's fields are
+  // unpacked as individual arguments of the callback.
+  //
+  // The returned callback is thread-safe and move-only.
+  ::fit::internal::bridge_bind_tuple_callback<V, E> bind_tuple() {
+    assert(completion_ref_);
+    return ::fit::internal::bridge_bind_tuple_callback<V, E>(std::move(completion_ref_));
+  }
 
-    completer(const completer& other) = delete;
-    completer& operator=(const completer& other) = delete;
+  completer(const completer& other) = delete;
+  completer& operator=(const completer& other) = delete;
 
-private:
-    friend class bridge<V, E>;
+ private:
+  friend class bridge<V, E>;
 
-    completion_ref completion_ref_;
+  completion_ref completion_ref_;
 };
 
 // Consumes the result of an asynchronous task.
@@ -332,81 +322,78 @@ private:
 // Defaults to |void|.
 template <typename V, typename E>
 class consumer final {
-    using bridge_state = ::fit::internal::bridge_state<V, E>;
-    using consumption_ref = typename bridge_state::consumption_ref;
+  using bridge_state = ::fit::internal::bridge_state<V, E>;
+  using consumption_ref = typename bridge_state::consumption_ref;
 
-public:
-    using value_type = V;
-    using error_type = E;
-    using result_type = ::fit::result<V, E>;
+ public:
+  using value_type = V;
+  using error_type = E;
+  using result_type = ::fit::result<V, E>;
 
-    consumer() = default;
-    consumer(consumer&& other) = default;
-    ~consumer() = default;
+  consumer() = default;
+  consumer(consumer&& other) = default;
+  ~consumer() = default;
 
-    consumer& operator=(consumer&& other) = default;
+  consumer& operator=(consumer&& other) = default;
 
-    // Returns true if this instance currently owns the unique capability for
-    // consuming the result of the task upon its completion.
-    explicit operator bool() const { return !!consumption_ref_; }
+  // Returns true if this instance currently owns the unique capability for
+  // consuming the result of the task upon its completion.
+  explicit operator bool() const { return !!consumption_ref_; }
 
-    // Explicitly cancels the task, meaning that its result will never be consumed.
-    // See |fit::bridge| for details about cancellation.
-    void cancel() {
-        assert(consumption_ref_);
-        consumption_ref_ = consumption_ref();
-    }
+  // Explicitly cancels the task, meaning that its result will never be consumed.
+  // See |fit::bridge| for details about cancellation.
+  void cancel() {
+    assert(consumption_ref_);
+    consumption_ref_ = consumption_ref();
+  }
 
-    // Returns true if the associated |completer| has abandoned the task.
-    // This method returns a snapshot of the current abandonment state.
-    // Note that the task may be abandoned concurrently at any time.
-    bool was_abandoned() const {
-        assert(consumption_ref_);
-        return consumption_ref_.get()->was_abandoned();
-    }
+  // Returns true if the associated |completer| has abandoned the task.
+  // This method returns a snapshot of the current abandonment state.
+  // Note that the task may be abandoned concurrently at any time.
+  bool was_abandoned() const {
+    assert(consumption_ref_);
+    return consumption_ref_.get()->was_abandoned();
+  }
 
-    // Returns an unboxed promise which resumes execution once this task has
-    // completed.  If the task is abandoned by its completer, the promise
-    // will not produce a result, thereby causing subsequent tasks associated
-    // with the promise to also be abandoned and eventually destroyed if
-    // they cannot make progress without the promised result.
-    promise_impl<typename bridge_state::promise_continuation>
-    promise() {
-        assert(consumption_ref_);
-        return make_promise_with_continuation(
-            typename bridge_state::promise_continuation(
-                std::move(consumption_ref_)));
-    }
+  // Returns an unboxed promise which resumes execution once this task has
+  // completed.  If the task is abandoned by its completer, the promise
+  // will not produce a result, thereby causing subsequent tasks associated
+  // with the promise to also be abandoned and eventually destroyed if
+  // they cannot make progress without the promised result.
+  promise_impl<typename bridge_state::promise_continuation> promise() {
+    assert(consumption_ref_);
+    return make_promise_with_continuation(
+        typename bridge_state::promise_continuation(std::move(consumption_ref_)));
+  }
 
-    // A variant of |promise()| that allows a default result to be provided when
-    // the task is abandoned by its completer.  Typically this is used to cause
-    // the promise to return an error when the task is abandoned instead of
-    // causing subsequent tasks associated with the promise to also be abandoned.
-    //
-    // The state of |result_if_abandoned| determines the promise's behavior
-    // in case of abandonment.
-    //
-    // - |fit::result_state::ok|: Reports a successful result.
-    // - |fit::result_state::error|: Reports a failure result.
-    // - |fit::result_state::pending|: Does not report a result, thereby
-    //   causing subsequent tasks associated with the promise to also be
-    //   abandoned and eventually destroyed if they cannot make progress
-    //   without the promised result.
-    promise_impl<typename bridge_state::promise_continuation>
-    promise_or(result_type result_if_abandoned) {
-        assert(consumption_ref_);
-        return make_promise_with_continuation(
-            typename bridge_state::promise_continuation(
-                std::move(consumption_ref_), std::move(result_if_abandoned)));
-    }
+  // A variant of |promise()| that allows a default result to be provided when
+  // the task is abandoned by its completer.  Typically this is used to cause
+  // the promise to return an error when the task is abandoned instead of
+  // causing subsequent tasks associated with the promise to also be abandoned.
+  //
+  // The state of |result_if_abandoned| determines the promise's behavior
+  // in case of abandonment.
+  //
+  // - |fit::result_state::ok|: Reports a successful result.
+  // - |fit::result_state::error|: Reports a failure result.
+  // - |fit::result_state::pending|: Does not report a result, thereby
+  //   causing subsequent tasks associated with the promise to also be
+  //   abandoned and eventually destroyed if they cannot make progress
+  //   without the promised result.
+  promise_impl<typename bridge_state::promise_continuation> promise_or(
+      result_type result_if_abandoned) {
+    assert(consumption_ref_);
+    return make_promise_with_continuation(typename bridge_state::promise_continuation(
+        std::move(consumption_ref_), std::move(result_if_abandoned)));
+  }
 
-    consumer(const consumer& other) = delete;
-    consumer& operator=(const consumer& other) = delete;
+  consumer(const consumer& other) = delete;
+  consumer& operator=(const consumer& other) = delete;
 
-private:
-    friend class bridge<V, E>;
+ private:
+  friend class bridge<V, E>;
 
-    consumption_ref consumption_ref_;
+  consumption_ref consumption_ref_;
 };
 
 // Schedules |promise| to run on |executor| and returns a |consumer| which
@@ -458,21 +445,18 @@ private:
 //     }
 //
 template <typename Promise>
-inline consumer<typename Promise::value_type, typename Promise::error_type>
-schedule_for_consumer(fit::executor* executor, Promise promise) {
-    assert(executor);
-    assert(promise);
-    fit::bridge<typename Promise::value_type,
-                typename Promise::error_type>
-        bridge;
-    executor->schedule_task(
-        promise.then([completer = std::move(bridge.completer)](
-                         typename Promise::result_type& result) mutable {
-            completer.complete_or_abandon(std::move(result));
-        }));
-    return std::move(bridge.consumer);
+inline consumer<typename Promise::value_type, typename Promise::error_type> schedule_for_consumer(
+    fit::executor* executor, Promise promise) {
+  assert(executor);
+  assert(promise);
+  fit::bridge<typename Promise::value_type, typename Promise::error_type> bridge;
+  executor->schedule_task(promise.then(
+      [completer = std::move(bridge.completer)](typename Promise::result_type& result) mutable {
+        completer.complete_or_abandon(std::move(result));
+      }));
+  return std::move(bridge.consumer);
 }
 
-} // namespace fit
+}  // namespace fit
 
-#endif // LIB_FIT_BRIDGE_H_
+#endif  // LIB_FIT_BRIDGE_H_

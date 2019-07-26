@@ -9,37 +9,33 @@
 #include <zxtest/zxtest.h>
 
 namespace {
-    zx_device_t* parent_device = nullptr;
+zx_device_t* parent_device = nullptr;
 }  // namespace
 
 namespace driver_unit_test {
 
-void SetParent(zx_device_t* parent) {
-    parent_device = parent;
-}
+void SetParent(zx_device_t* parent) { parent_device = parent; }
 
-zx_device_t* GetParent() {
-    return parent_device;
-}
+zx_device_t* GetParent() { return parent_device; }
 
 bool RunZxTests(const char* name, zx_device_t* parent, zx_handle_t handle) {
-    zx::channel channel(handle);
-    SetParent(parent);
+  zx::channel channel(handle);
+  SetParent(parent);
 
-    auto cleanup = fbl::MakeAutoCall([]() {
-        SetParent(nullptr);
-        Logger::DeleteInstance();
-    });
+  auto cleanup = fbl::MakeAutoCall([]() {
+    SetParent(nullptr);
+    Logger::DeleteInstance();
+  });
 
-    if (channel) {
-        zx_status_t status = Logger::CreateInstance(std::move(channel));
-        if (status == ZX_OK) {
-            zxtest::Runner::GetInstance()->AddObserver(driver_unit_test::Logger::GetInstance());
-        }
+  if (channel) {
+    zx_status_t status = Logger::CreateInstance(std::move(channel));
+    if (status == ZX_OK) {
+      zxtest::Runner::GetInstance()->AddObserver(driver_unit_test::Logger::GetInstance());
     }
-    const int kArgc = 1;
-    const char* argv[kArgc] = {name};
-    return RUN_ALL_TESTS(kArgc, const_cast<char**>(argv)) == 0;
+  }
+  const int kArgc = 1;
+  const char* argv[kArgc] = {name};
+  return RUN_ALL_TESTS(kArgc, const_cast<char**>(argv)) == 0;
 }
 
 }  // namespace driver_unit_test

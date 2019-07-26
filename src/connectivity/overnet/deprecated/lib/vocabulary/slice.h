@@ -28,13 +28,9 @@ struct Border {
   static Border Suffix(size_t size) { return Border{0, size}; }
   static Border None() { return Border{0, 0}; }
 
-  Border WithAddedPrefix(size_t size) const {
-    return Border{prefix + size, suffix};
-  }
+  Border WithAddedPrefix(size_t size) const { return Border{prefix + size, suffix}; }
 
-  Border WithAddedSuffix(size_t size) const {
-    return Border{size, suffix + size};
-  }
+  Border WithAddedSuffix(size_t size) const { return Border{size, suffix + size}; }
 
   size_t Total() const { return prefix + suffix; }
 };
@@ -44,8 +40,7 @@ class Slice final {
   static constexpr size_t kSmallSliceMaxLength = 3 * sizeof(void*) - 1;
   union Data {
     Data() {}
-    Data(void* control, const uint8_t* begin, const uint8_t* end)
-        : general{control, begin, end} {}
+    Data(void* control, const uint8_t* begin, const uint8_t* end) : general{control, begin, end} {}
     struct {
       void* control;
       const uint8_t* begin;
@@ -64,22 +59,18 @@ class Slice final {
     void (*ref)(Data* data);
     void (*unref)(Data* data);
     void (*trim)(Data* data, size_t trim_left, size_t trim_right);
-    uint8_t* (*maybe_add_borders)(const Data* data, Border border,
-                                  Data* new_slice_data);
+    uint8_t* (*maybe_add_borders)(const Data* data, Border border, Data* new_slice_data);
     const char* name;
   };
 
-  Slice(const VTable* vtable, void* control, const uint8_t* begin,
-        const uint8_t* end)
+  Slice(const VTable* vtable, void* control, const uint8_t* begin, const uint8_t* end)
       : vtable_(vtable), data_(control, begin, end) {}
 
   Slice() : Slice(&Static<>::small_vtable_) { data_.small.length = 0; }
 
   ~Slice() { vtable_->unref(&data_); }
 
-  Slice(const Slice& other) : vtable_(other.vtable_), data_(other.data_) {
-    vtable_->ref(&data_);
-  }
+  Slice(const Slice& other) : vtable_(other.vtable_), data_(other.data_) { vtable_->ref(&data_); }
 
   Slice(Slice&& other) : vtable_(other.vtable_), data_(other.data_) {
     other.vtable_ = &Static<>::small_vtable_;
@@ -101,8 +92,7 @@ class Slice final {
     std::swap(data_, other->data_);
   }
 
-  static Optional<Slice> JoinIfSameUnderlyingMemory(const Slice& a,
-                                                    const Slice& b) {
+  static Optional<Slice> JoinIfSameUnderlyingMemory(const Slice& a, const Slice& b) {
     if (a.vtable_ != b.vtable_) {
       return Nothing;
     }
@@ -168,8 +158,7 @@ class Slice final {
     return copy;
   }
 
-  static Slice Join(std::initializer_list<Slice> slices,
-                    Border desired_border = Border::None()) {
+  static Slice Join(std::initializer_list<Slice> slices, Border desired_border = Border::None()) {
     return Join(slices.begin(), slices.end(), desired_border);
   }
 
@@ -188,14 +177,14 @@ class Slice final {
       total_length += it->length();
     }
 
-    return Slice::WithInitializerAndBorders(
-        total_length, desired_border, [begin, end](uint8_t* out) {
-          size_t offset = 0;
-          for (auto it = begin; it != end; ++it) {
-            memcpy(out + offset, it->begin(), it->length());
-            offset += it->length();
-          }
-        });
+    return Slice::WithInitializerAndBorders(total_length, desired_border,
+                                            [begin, end](uint8_t* out) {
+                                              size_t offset = 0;
+                                              for (auto it = begin; it != end; ++it) {
+                                                memcpy(out + offset, it->begin(), it->length());
+                                                offset += it->length();
+                                              }
+                                            });
   }
 
   void Append(Slice slice) {
@@ -223,15 +212,15 @@ class Slice final {
       total_length += it->length();
     }
 
-    return Slice::WithInitializerAndBorders(
-        total_length, Border::None(), [begin, end](uint8_t* out) {
-          assert(IsAligned(out));
-          size_t offset = 0;
-          for (auto it = begin; it != end; ++it) {
-            memcpy(out + offset, it->begin(), it->length());
-            offset += it->length();
-          }
-        });
+    return Slice::WithInitializerAndBorders(total_length, Border::None(),
+                                            [begin, end](uint8_t* out) {
+                                              assert(IsAligned(out));
+                                              size_t offset = 0;
+                                              for (auto it = begin; it != end; ++it) {
+                                                memcpy(out + offset, it->begin(), it->length());
+                                                offset += it->length();
+                                              }
+                                            });
   }
 
   static Slice Aligned(Slice input) {
@@ -240,11 +229,10 @@ class Slice final {
       return input;
     }
     const size_t length = input.length();
-    return Slice::WithInitializerAndBorders(length, Border::None(),
-                                            [begin, length](uint8_t* out) {
-                                              assert(IsAligned(out));
-                                              memcpy(out, begin, length);
-                                            });
+    return Slice::WithInitializerAndBorders(length, Border::None(), [begin, length](uint8_t* out) {
+      assert(IsAligned(out));
+      memcpy(out, begin, length);
+    });
   }
 
   template <class F>
@@ -255,19 +243,18 @@ class Slice final {
   template <class F>
   Slice WithBorders(Border border, F initializer) const {
     Data new_slice_data;
-    if (uint8_t* prefix =
-            vtable_->maybe_add_borders(&data_, border, &new_slice_data)) {
+    if (uint8_t* prefix = vtable_->maybe_add_borders(&data_, border, &new_slice_data)) {
       initializer(prefix);
       return Slice{vtable_, new_slice_data};
     } else {
       size_t own_length = this->length();
       const uint8_t* begin = this->begin();
-      return WithInitializer(own_length + border.prefix + border.suffix,
-                             [add_prefix = border.prefix, own_length,
-                              initializer, begin](uint8_t* p) {
-                               memcpy(p + add_prefix, begin, own_length);
-                               initializer(p);
-                             });
+      return WithInitializer(
+          own_length + border.prefix + border.suffix,
+          [add_prefix = border.prefix, own_length, initializer, begin](uint8_t* p) {
+            memcpy(p + add_prefix, begin, own_length);
+            initializer(p);
+          });
     }
   }
 
@@ -290,14 +277,12 @@ class Slice final {
 
   template <class I>
   static Slice ReferencingContainer(I begin, I end) {
-    return Slice(&Static<>::const_vtable_, nullptr,
-                 static_cast<const uint8_t*>(begin),
+    return Slice(&Static<>::const_vtable_, nullptr, static_cast<const uint8_t*>(begin),
                  static_cast<const uint8_t*>(end));
   }
 
   static Slice FromCopiedBuffer(const void* data, size_t length) {
-    return WithInitializer(
-        length, [data, length](void* p) { memcpy(p, data, length); });
+    return WithInitializer(length, [data, length](void* p) { memcpy(p, data, length); });
   }
 
   template <class C>
@@ -322,8 +307,7 @@ class Slice final {
   }
 
   template <class F>
-  static Slice WithInitializerAndBorders(size_t length, Border border,
-                                         F&& initializer) {
+  static Slice WithInitializerAndBorders(size_t length, Border border, F&& initializer) {
     if (length <= kSmallSliceMaxLength) {
       // Ignore prefix/suffix request if this is small enough (we'll maybe
       // allocate later, but that's ok - we didn't here).
@@ -334,16 +318,14 @@ class Slice final {
     } else {
       auto* block = BHNew(length + border.prefix + border.suffix);
       std::forward<F>(initializer)(block->bytes + border.prefix);
-      return Slice(&Static<>::block_vtable_, block,
-                   block->bytes + border.prefix,
+      return Slice(&Static<>::block_vtable_, block, block->bytes + border.prefix,
                    block->bytes + border.prefix + length);
     }
   }
 
   template <class F>
   static Slice WithInitializer(size_t length, F&& initializer) {
-    return WithInitializerAndBorders(length, Border::None(),
-                                     std::forward<F>(initializer));
+    return WithInitializerAndBorders(length, Border::None(), std::forward<F>(initializer));
   }
 
   static Slice RepeatedChar(size_t count, char c) {
@@ -391,23 +373,15 @@ class Slice final {
 
   static void NoOpRef(Data*) {}
 
-  static const uint8_t* GeneralBegin(const Data* data) {
-    return data->general.begin;
-  }
-  static const uint8_t* GeneralEnd(const Data* data) {
-    return data->general.end;
-  }
-  static size_t GeneralLength(const Data* data) {
-    return data->general.end - data->general.begin;
-  }
+  static const uint8_t* GeneralBegin(const Data* data) { return data->general.begin; }
+  static const uint8_t* GeneralEnd(const Data* data) { return data->general.end; }
+  static size_t GeneralLength(const Data* data) { return data->general.end - data->general.begin; }
   static void GeneralTrim(Data* data, size_t trim_left, size_t trim_right) {
     data->general.begin += trim_left;
     data->general.end -= trim_right;
   }
 
-  static const uint8_t* SmallBegin(const Data* data) {
-    return data->small.bytes;
-  }
+  static const uint8_t* SmallBegin(const Data* data) { return data->small.bytes; }
   static const uint8_t* SmallEnd(const Data* data) {
     return data->small.bytes + data->small.length;
   }
@@ -415,18 +389,13 @@ class Slice final {
   static void SmallTrim(Data* data, size_t trim_left, size_t trim_right) {
     data->small.length -= trim_right + trim_left;
     if (trim_left) {
-      memmove(data->small.bytes, data->small.bytes + trim_left,
-              data->small.length);
+      memmove(data->small.bytes, data->small.bytes + trim_left, data->small.length);
     }
   }
-  static uint8_t* SmallAddBorders(const Data* data, Border border,
-                                  Data* new_slice_data) {
-    if (data->small.length + border.prefix + border.suffix <
-        kSmallSliceMaxLength) {
-      new_slice_data->small.length =
-          data->small.length + border.prefix + border.suffix;
-      memcpy(new_slice_data->small.bytes + border.prefix, data->small.bytes,
-             data->small.length);
+  static uint8_t* SmallAddBorders(const Data* data, Border border, Data* new_slice_data) {
+    if (data->small.length + border.prefix + border.suffix < kSmallSliceMaxLength) {
+      new_slice_data->small.length = data->small.length + border.prefix + border.suffix;
+      memcpy(new_slice_data->small.bytes + border.prefix, data->small.bytes, data->small.length);
       return new_slice_data->small.bytes;
     }
     return nullptr;
@@ -443,34 +412,28 @@ class Slice final {
     out->refs = 1;
     return out;
   }
-  static void BHRef(Data* data) {
-    static_cast<BlockHeader*>(data->general.control)->refs++;
-  }
+  static void BHRef(Data* data) { static_cast<BlockHeader*>(data->general.control)->refs++; }
   static void BHUnref(Data* data) {
     if (0 == --static_cast<BlockHeader*>(data->general.control)->refs) {
       free(data->general.control);
     }
   }
-  static uint8_t* BHAddBorders(const Data* data, Border border,
-                               Data* new_slice_data) {
+  static uint8_t* BHAddBorders(const Data* data, Border border, Data* new_slice_data) {
     auto* hdr = static_cast<BlockHeader*>(data->general.control);
     if (hdr->refs != 1)
       return nullptr;
     assert(data->general.begin - hdr->bytes >= 0);
-    if (static_cast<size_t>(data->general.begin - hdr->bytes) >=
-            border.prefix &&
-        static_cast<size_t>(hdr->bytes + hdr->block_length -
-                            data->general.end) >= border.suffix) {
+    if (static_cast<size_t>(data->general.begin - hdr->bytes) >= border.prefix &&
+        static_cast<size_t>(hdr->bytes + hdr->block_length - data->general.end) >= border.suffix) {
       hdr->refs++;
-      *new_slice_data = Data(hdr, data->general.begin - border.prefix,
-                             data->general.end + border.suffix);
+      *new_slice_data =
+          Data(hdr, data->general.begin - border.prefix, data->general.end + border.suffix);
       return const_cast<uint8_t*>(new_slice_data->general.begin);
     }
     return nullptr;
   }
 
-  static uint8_t* NoAddBorders(const Data* data, Border border,
-                               Data* new_slice_data) {
+  static uint8_t* NoAddBorders(const Data* data, Border border, Data* new_slice_data) {
     return nullptr;
   }
 
@@ -562,21 +525,18 @@ struct Chunk final {
   }
 
   Chunk TakeFromSliceOffset(size_t slice_offset) {
-    Chunk out{offset + slice_offset, end_of_message,
-              slice.TakeFromOffset(slice_offset)};
+    Chunk out{offset + slice_offset, end_of_message, slice.TakeFromOffset(slice_offset)};
     end_of_message = false;
     return out;
   }
 
-  static Optional<Chunk> JoinIfSameUnderlyingMemory(const Chunk& a,
-                                                    const Chunk& b) {
+  static Optional<Chunk> JoinIfSameUnderlyingMemory(const Chunk& a, const Chunk& b) {
     if (a.offset + a.slice.length() != b.offset) {
       return Nothing;
     }
 
     return Slice::JoinIfSameUnderlyingMemory(a.slice, b.slice)
-        .Map([offset = a.offset,
-              end_of_message = b.end_of_message](Slice slice) {
+        .Map([offset = a.offset, end_of_message = b.end_of_message](Slice slice) {
           return Chunk{offset, end_of_message, std::move(slice)};
         });
   }

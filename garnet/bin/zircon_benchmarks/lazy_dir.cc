@@ -29,8 +29,7 @@ class TestLazyDir : public fs::LazyDir {
     }
   }
 
-  zx_status_t GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id,
-                      fbl::String name) override {
+  zx_status_t GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id, fbl::String name) override {
     // Do nothing to benchmark obtaining id and name.
     return ZX_OK;
   }
@@ -68,8 +67,7 @@ bool TestLookup(perftest::RepeatState* state, size_t file_count) {
 
 // Measure the time taken to read directory entries from a LazyDir of
 // a given size using a given sized buffer.
-bool TestReaddir(perftest::RepeatState* state, size_t file_count,
-                 size_t buffer_size) {
+bool TestReaddir(perftest::RepeatState* state, size_t file_count, size_t buffer_size) {
   auto file_names = util::MakeDeterministicNamesList(file_count);
   std::vector<char> buffer(buffer_size);
 
@@ -83,8 +81,7 @@ bool TestReaddir(perftest::RepeatState* state, size_t file_count,
   while (state->KeepRunning()) {
     fs::vdircookie_t cookie;
     size_t real_len = 0;
-    while (dir->Readdir(&cookie, buffer.data(), buffer_size, &real_len) !=
-           ZX_OK) {
+    while (dir->Readdir(&cookie, buffer.data(), buffer_size, &real_len) != ZX_OK) {
       ZX_ASSERT(real_len != 0);
     }
   }
@@ -102,8 +99,7 @@ void RegisterTests() {
 
   for (auto size : kSizes) {
     for (auto buffer : kBuffers) {
-      auto name =
-          fbl::StringPrintf("LazyDir/Readdir/size:%zd/buf:%zd", size, buffer);
+      auto name = fbl::StringPrintf("LazyDir/Readdir/size:%zd/buf:%zd", size, buffer);
       perftest::RegisterTest(name.c_str(), TestReaddir, size, buffer);
     }
   }

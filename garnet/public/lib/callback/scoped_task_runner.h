@@ -88,13 +88,11 @@ class SimpleTaskController : public TaskController {
 // manage FIDL calls.
 class ScopedTaskRunner {
  public:
-  explicit ScopedTaskRunner(
-      async_dispatcher_t* dispatcher = async_get_default_dispatcher());
+  explicit ScopedTaskRunner(async_dispatcher_t* dispatcher = async_get_default_dispatcher());
 
   template <class Controller>
-  ScopedTaskRunner(
-      typename TaskController::Tag<Controller> controller_type,
-      async_dispatcher_t* dispatcher = async_get_default_dispatcher())
+  ScopedTaskRunner(typename TaskController::Tag<Controller> controller_type,
+                   async_dispatcher_t* dispatcher = async_get_default_dispatcher())
       : dispatcher_(dispatcher), controller_(std::make_shared<Controller>()) {}
 
   ~ScopedTaskRunner();
@@ -127,8 +125,7 @@ class ScopedTaskRunner {
   // current dispatch cycle as well as periodically. Otherwise, the first
   // invocation of the task will be as soon as possible after the specified
   // |interval|.
-  void PostPeriodicTask(fit::closure task, zx::duration interval,
-                        bool invoke_now = true);
+  void PostPeriodicTask(fit::closure task, zx::duration interval, bool invoke_now = true);
 
   // Scopes a task to the current task runner without scheduling it. This means
   // that the given function will be called when the returned function is called
@@ -137,21 +134,18 @@ class ScopedTaskRunner {
   // implementation; the default implementation is unsynchronized.
   template <class Task, class... Args>
   auto MakeScoped(Task task, fit::parameter_pack<Args...>) {
-    return [controller = controller_,
-            task = std::move(task)](Args... args) mutable {
+    return [controller = controller_, task = std::move(task)](Args... args) mutable {
       // This differs from |callback::MakeScoped| in that |controller| is aware
       // of the task from start to finish, as opposed to |callback::MakeScoped|
       // which only consults |witness| when the task begins.
-      return controller->RunTask([task = std::move(task), &args...]() mutable {
-        task(std::forward<Args>(args)...);
-      });
+      return controller->RunTask(
+          [task = std::move(task), &args...]() mutable { task(std::forward<Args>(args)...); });
     };
   }
 
   template <class Task>
   auto MakeScoped(Task task) {
-    return MakeScoped(std::move(task),
-                      typename fit::function_traits<Task>::args{});
+    return MakeScoped(std::move(task), typename fit::function_traits<Task>::args{});
   }
 
  private:

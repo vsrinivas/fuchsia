@@ -8,19 +8,16 @@
 
 namespace simple_camera {
 
-SimpleCameraApp::SimpleCameraApp()
-    : context_(component::StartupContext::CreateFromStartupInfo()) {
+SimpleCameraApp::SimpleCameraApp() : context_(component::StartupContext::CreateFromStartupInfo()) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
 void SimpleCameraApp::ConnectToCamera(
-    uint32_t camera_id,
-    fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
+    uint32_t camera_id, fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
   // If we fail to connect, disconnect from the client.  We only have one
   // client, so we just call CloseAll.
   zx_status_t status = video_display_.ConnectToCamera(
-      context_.get(), camera_id, std::move(image_pipe),
-      [this]() { this->bindings_.CloseAll(); });
+      context_.get(), camera_id, std::move(image_pipe), [this]() { this->bindings_.CloseAll(); });
   if (status != ZX_OK) {
     bindings_.CloseAll();
   }

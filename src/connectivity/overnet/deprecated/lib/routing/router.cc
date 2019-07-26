@@ -11,26 +11,22 @@
 
 namespace overnet {
 
-static constexpr TimeDelta kPollLinkChangeTimeout =
-    TimeDelta::FromMilliseconds(100);
+static constexpr TimeDelta kPollLinkChangeTimeout = TimeDelta::FromMilliseconds(100);
 
 Router::Router(Timer* timer, NodeId node_id, bool allow_non_determinism)
     : timer_(timer),
       node_id_(node_id),
-      primary_rng_(
-          allow_non_determinism
-              ? fit::function<uint64_t()>(
-                    [rng = std::make_unique<std::random_device>(),
-                     dist =
-                         std::uniform_int_distribution<uint64_t>()]() mutable {
-                      return dist(*rng);
-                    })
-              : fit::function<uint64_t()>(
-                    [rng = std::make_unique<std::mt19937_64>(node_id.get()),
-                     dist =
-                         std::uniform_int_distribution<uint64_t>()]() mutable {
-                      return dist(*rng);
-                    })),
+      primary_rng_(allow_non_determinism
+                       ? fit::function<uint64_t()>(
+                             [rng = std::make_unique<std::random_device>(),
+                              dist = std::uniform_int_distribution<uint64_t>()]() mutable {
+                               return dist(*rng);
+                             })
+                       : fit::function<uint64_t()>(
+                             [rng = std::make_unique<std::mt19937_64>(node_id.get()),
+                              dist = std::uniform_int_distribution<uint64_t>()]() mutable {
+                               return dist(*rng);
+                             })),
       rng_(primary_rng_()),
       routing_table_(node_id, timer, allow_non_determinism),
       own_node_status_{node_id.as_fidl(), 1} {
@@ -52,8 +48,7 @@ void Router::Close(Callback<void> quiesced) {
 }
 
 void Router::CloseLinks(Callback<void> quiesced) {
-  OVERNET_TRACE(DEBUG) << node_id_
-                       << " CloseLinks remaining=" << owned_links_.size();
+  OVERNET_TRACE(DEBUG) << node_id_ << " CloseLinks remaining=" << owned_links_.size();
   if (owned_links_.empty()) {
     CloseStreams(std::move(quiesced));
     return;
@@ -61,12 +56,11 @@ void Router::CloseLinks(Callback<void> quiesced) {
   auto it = owned_links_.begin();
   auto p = it->second.release();
   owned_links_.erase(it);
-  p->Close(Callback<void>(ALLOCATED_CALLBACK,
-                          [this, p, quiesced = std::move(quiesced)]() mutable {
-                            ScopedModule<Router> scoped_module(this);
-                            delete p;
-                            CloseLinks(std::move(quiesced));
-                          }));
+  p->Close(Callback<void>(ALLOCATED_CALLBACK, [this, p, quiesced = std::move(quiesced)]() mutable {
+    ScopedModule<Router> scoped_module(this);
+    delete p;
+    CloseLinks(std::move(quiesced));
+  }));
 }
 
 void Router::CloseStreams(Callback<void> quiesced) {
@@ -76,11 +70,10 @@ void Router::CloseStreams(Callback<void> quiesced) {
   }
   auto it = streams_.begin();
   auto id = it->first;
-  OVERNET_TRACE(DEBUG) << node_id_
-                       << " CloseStreams remaining=" << streams_.size()
+  OVERNET_TRACE(DEBUG) << node_id_ << " CloseStreams remaining=" << streams_.size()
                        << " next=" << id.peer << "/" << id.stream_id;
-  it->second.Close(Callback<void>(
-      ALLOCATED_CALLBACK, [this, id, quiesced = std::move(quiesced)]() mutable {
+  it->second.Close(
+      Callback<void>(ALLOCATED_CALLBACK, [this, id, quiesced = std::move(quiesced)]() mutable {
         ScopedModule<Router> scoped_module(this);
         auto it = streams_.find(id);
         if (it != streams_.end()) {
@@ -94,8 +87,7 @@ void Router::CloseStreams(Callback<void> quiesced) {
 
 void Router::Forward(Message message) {
   ScopedModule<Router> scoped_module(this);
-  OVERNET_TRACE(DEBUG) << "Forward " << message.header
-                       << " shutting_down=" << shutting_down_;
+  OVERNET_TRACE(DEBUG) << "Forward " << message.header << " shutting_down=" << shutting_down_;
   if (shutting_down_) {
     return;
   }
@@ -117,14 +109,12 @@ void Router::Forward(Message message) {
     case 1: {
       // Single destination... it could be either a local stream or need to be
       // forwarded to a remote node over some link.
-      const RoutableMessage::Destination& dst =
-          message.header.destinations()[0];
+      const RoutableMessage::Destination& dst = message.header.destinations()[0];
       if (dst.dst() == node_id_) {
         if (!stream_holder(message.header.src(), dst.stream_id())
                  ->HandleMessage(dst.seq(), message.received,
                                  message.make_payload(LazySliceArgs{
-                                     Border::None(),
-                                     std::numeric_limits<uint32_t>::max()}))) {
+                                     Border::None(), std::numeric_limits<uint32_t>::max()}))) {
           OnUnknownStream(message.header.src(), dst.stream_id());
         }
       } else {
@@ -139,19 +129,16 @@ void Router::Forward(Message message) {
       //      our destinations, keep the multicast group together for that set.
       //   2. Separate the multicast if next hops are different.
       //   3. Separate the multicast if we do not know about next hops yet.
-      std::unordered_map<Link*, std::vector<RoutableMessage::Destination>>
-          group_forward;
-      std::vector<std::pair<RoutableMessage::Destination, LinkHolder*>>
-          disconnected_holders;
-      Optional<std::pair<RoutableMessage::Destination, StreamHolder*>>
-          handle_locally;
+      std::unordered_map<Link*, std::vector<RoutableMessage::Destination>> group_forward;
+      std::vector<std::pair<RoutableMessage::Destination, LinkHolder*>> disconnected_holders;
+      Optional<std::pair<RoutableMessage::Destination, StreamHolder*>> handle_locally;
       uint32_t overall_mss = std::numeric_limits<uint32_t>::max();
       for (const auto& dst : message.header.destinations()) {
         if (dst.dst() == node_id_) {
           // Locally handled stream
           if (!handle_locally.has_value()) {
-            handle_locally = std::make_pair(
-                dst, stream_holder(message.header.src(), dst.stream_id()));
+            handle_locally =
+                std::make_pair(dst, stream_holder(message.header.src(), dst.stream_id()));
           }
         } else {
           // Remote destination
@@ -173,25 +160,20 @@ void Router::Forward(Message message) {
         return;
       }
       overall_mss -= max_header_length;
-      Slice payload =
-          message.make_payload(LazySliceArgs{Border::None(), overall_mss});
+      Slice payload = message.make_payload(LazySliceArgs{Border::None(), overall_mss});
       // Forward any grouped messages now that we've examined all destinations
       for (auto& grp : group_forward) {
         grp.first->Forward(Message::SimpleForwarder(
-            message.header.WithDestinations(std::move(grp.second)), payload,
-            message.received));
+            message.header.WithDestinations(std::move(grp.second)), payload, message.received));
       }
       for (auto& lh : disconnected_holders) {
-        lh.second->Forward(Message::SimpleForwarder(
-            message.header.WithDestinations({lh.first}), payload,
-            message.received));
+        lh.second->Forward(Message::SimpleForwarder(message.header.WithDestinations({lh.first}),
+                                                    payload, message.received));
       }
       if (handle_locally.has_value()) {
-        if (!handle_locally->second->HandleMessage(handle_locally->first.seq(),
-                                                   message.received,
+        if (!handle_locally->second->HandleMessage(handle_locally->first.seq(), message.received,
                                                    std::move(payload))) {
-          OnUnknownStream(message.header.src(),
-                          handle_locally->first.stream_id());
+          OnUnknownStream(message.header.src(), handle_locally->first.stream_id());
         }
       }
     } break;
@@ -203,8 +185,7 @@ void Router::UpdateRoutingTable(
     std::initializer_list<fuchsia::overnet::protocol::LinkStatus> link_updates,
     bool flush_old_nodes) {
   ScopedModule<Router> scoped_module(this);
-  routing_table_.ProcessUpdate(std::move(node_updates), std::move(link_updates),
-                               flush_old_nodes);
+  routing_table_.ProcessUpdate(std::move(node_updates), std::move(link_updates), flush_old_nodes);
   MaybeStartPollingLinkChanges();
 }
 
@@ -214,8 +195,7 @@ void Router::MaybeStartPollingLinkChanges() {
     return;
   }
   poll_link_changes_timeout_.Reset(
-      timer_, timer_->Now() + kPollLinkChangeTimeout,
-      [this](const Status& status) {
+      timer_, timer_->Now() + kPollLinkChangeTimeout, [this](const Status& status) {
         if (status.is_ok()) {
           poll_link_changes_timeout_.Reset();
           const bool keep_polling = !routing_table_.PollLinkUpdates(
@@ -228,14 +208,11 @@ void Router::MaybeStartPollingLinkChanges() {
                 }
                 // Set routing information for other links.
                 for (const auto& sl : selected_links) {
-                  OVERNET_TRACE(DEBUG)
-                      << node_id() << " Select: dest=" << sl.first << " link"
-                      << sl.second.target_node << "#" << sl.second.link_id
-                      << " (route_mss=" << sl.second.route_mss << ")";
-                  auto it = owned_links_.find(
-                      OwnedLabel{sl.second.target_node, sl.second.link_id});
-                  auto* link =
-                      it == owned_links_.end() ? nullptr : it->second.get();
+                  OVERNET_TRACE(DEBUG) << node_id() << " Select: dest=" << sl.first << " link"
+                                       << sl.second.target_node << "#" << sl.second.link_id
+                                       << " (route_mss=" << sl.second.route_mss << ")";
+                  auto it = owned_links_.find(OwnedLabel{sl.second.target_node, sl.second.link_id});
+                  auto* link = it == owned_links_.end() ? nullptr : it->second.get();
                   link_holder(sl.first)->SetLink(
                       link, sl.second.route_mss,
                       link ? link->GetLinkStatus().to == sl.first : false);
@@ -253,8 +230,7 @@ void Router::MaybeStartFlushingOldEntries() {
   ScopedModule<Router> scoped_module(this);
   if (flush_old_nodes_timeout_)
     return;
-  flush_old_nodes_timeout_.Reset(timer_,
-                                 timer_->Now() + routing_table_.EntryExpiry(),
+  flush_old_nodes_timeout_.Reset(timer_, timer_->Now() + routing_table_.EntryExpiry(),
                                  [this](const Status& status) {
                                    if (status.is_ok()) {
                                      flush_old_nodes_timeout_.Reset();
@@ -263,11 +239,9 @@ void Router::MaybeStartFlushingOldEntries() {
                                  });
 }
 
-Status Router::RegisterStream(NodeId peer, StreamId stream_id,
-                              StreamHandler* stream_handler) {
+Status Router::RegisterStream(NodeId peer, StreamId stream_id, StreamHandler* stream_handler) {
   ScopedModule<Router> scoped_module(this);
-  OVERNET_TRACE(DEBUG) << "RegisterStream: " << peer << "/" << stream_id
-                       << " at " << stream_handler
+  OVERNET_TRACE(DEBUG) << "RegisterStream: " << peer << "/" << stream_id << " at " << stream_handler
                        << " shutting_down=" << shutting_down_;
   if (shutting_down_) {
     return Status::FailedPrecondition("Router shutting down");
@@ -275,12 +249,10 @@ Status Router::RegisterStream(NodeId peer, StreamId stream_id,
   return stream_holder(peer, stream_id)->SetHandler(stream_handler);
 }
 
-Status Router::UnregisterStream(NodeId peer, StreamId stream_id,
-                                StreamHandler* stream_handler) {
+Status Router::UnregisterStream(NodeId peer, StreamId stream_id, StreamHandler* stream_handler) {
   ScopedModule<Router> scoped_module(this);
-  OVERNET_TRACE(DEBUG) << "UnregisterStream: " << peer << "/" << stream_id
-                       << " at " << stream_handler
-                       << " shutting_down=" << shutting_down_;
+  OVERNET_TRACE(DEBUG) << "UnregisterStream: " << peer << "/" << stream_id << " at "
+                       << stream_handler << " shutting_down=" << shutting_down_;
   auto it = streams_.find(LocalStreamId{peer, stream_id});
   if (it == streams_.end()) {
     return Status::FailedPrecondition("Stream not registered");
@@ -295,8 +267,7 @@ Optional<NodeId> Router::SelectGossipPeer() {
   const uint64_t gossip_version = routing_table_.gossip_version();
   std::vector<NodeId> eligible_nodes;
   for (const auto& peer : links_) {
-    if (peer.second.has_direct_link() &&
-        peer.second.last_gossip_version() < gossip_version) {
+    if (peer.second.has_direct_link() && peer.second.last_gossip_version() < gossip_version) {
       eligible_nodes.push_back(peer.first);
     }
   }
@@ -307,11 +278,9 @@ Optional<NodeId> Router::SelectGossipPeer() {
   return eligible_nodes[dis(rng_)];
 }
 
-void Router::SendGossipUpdate(fuchsia::overnet::protocol::Peer_Proxy* peer,
-                              NodeId target) {
+void Router::SendGossipUpdate(fuchsia::overnet::protocol::Peer_Proxy* peer, NodeId target) {
   ScopedModule<Router> scoped_module(this);
-  link_holder(target)->set_last_gossip_version(
-      routing_table_.SendUpdate(peer, target));
+  link_holder(target)->set_last_gossip_version(routing_table_.SendUpdate(peer, target));
 }
 
 namespace {
@@ -334,18 +303,15 @@ void Router::RegisterLink(LinkPtr<> link) {
   UpdateRoutingTable({{target, 0}}, {std::move(status)}, false);
 }
 
-bool Router::StreamHolder::HandleMessage(SeqNum seq, TimeStamp received,
-                                         Slice payload) {
+bool Router::StreamHolder::HandleMessage(SeqNum seq, TimeStamp received, Slice payload) {
   if (handler_ == nullptr) {
     if (!buffered_ || buffered_->seq.Reconstruct(1) < seq.Reconstruct(1)) {
-      OVERNET_TRACE(DEBUG) << "Buffer message: peer=" << peer_
-                           << " stream=" << stream_ << " seq=" << seq
-                           << " message=" << payload;
+      OVERNET_TRACE(DEBUG) << "Buffer message: peer=" << peer_ << " stream=" << stream_
+                           << " seq=" << seq << " message=" << payload;
       buffered_.reset(new BufferedPacket{seq, received, std::move(payload)});
     } else {
-      OVERNET_TRACE(DEBUG) << "Drop message: peer=" << peer_
-                           << " stream=" << stream_ << " seq=" << seq
-                           << " message=" << payload;
+      OVERNET_TRACE(DEBUG) << "Drop message: peer=" << peer_ << " stream=" << stream_
+                           << " seq=" << seq << " message=" << payload;
     }
     return false;
   } else {
@@ -384,8 +350,7 @@ void Router::LinkHolder::Forward(Message message) {
   }
 }
 
-void Router::LinkHolder::SetLink(Link* link, uint32_t path_mss,
-                                 bool is_direct) {
+void Router::LinkHolder::SetLink(Link* link, uint32_t path_mss, bool is_direct) {
   link_ = link;
   is_direct_ = is_direct;
   path_mss_ = path_mss;

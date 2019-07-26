@@ -7,7 +7,7 @@
 namespace ktrace_provider {
 
 TestReader::TestReader(const void* trace_data, size_t trace_data_size)
-  : Reader(reinterpret_cast<const char*>(trace_data), trace_data_size) {
+    : Reader(reinterpret_cast<const char*>(trace_data), trace_data_size) {
   // Mark the end of "read" data.
   marker_ = end_;
 }

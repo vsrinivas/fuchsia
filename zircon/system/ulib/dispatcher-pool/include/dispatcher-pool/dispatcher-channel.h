@@ -97,84 +97,75 @@ namespace dispatcher {
 // }
 //
 class Channel : public EventSource {
-public:
-    // Definitions of process and deactivation handlers.
-    static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
-    using ProcessHandler =
-        fbl::InlineFunction<zx_status_t(Channel*), MAX_HANDLER_CAPTURE_SIZE>;
-    using ChannelClosedHandler =
-        fbl::InlineFunction<void(const Channel*), MAX_HANDLER_CAPTURE_SIZE>;
+ public:
+  // Definitions of process and deactivation handlers.
+  static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
+  using ProcessHandler = fbl::InlineFunction<zx_status_t(Channel*), MAX_HANDLER_CAPTURE_SIZE>;
+  using ChannelClosedHandler = fbl::InlineFunction<void(const Channel*), MAX_HANDLER_CAPTURE_SIZE>;
 
-    // Create
-    //
-    // General method handles construction/initialization of a Channel subclass.
-    // Given an implementation called 'MyChannel', invocation should look like:
-    //
-    //   auto my_channel = Channel::Create<MyChannel>(arg1, arg2, ...);
-    //
-    // Note: Implementers are encouraged to keep their constructor/destructor
-    // protected/private. In order to do so, they should make sure to specify
-    // 'friend class Channel' and 'friend class fbl::RefPtr<T>'.
-    template <typename T = Channel, typename... ConstructorSignature>
-    static fbl::RefPtr<T> Create(ConstructorSignature&&... args) {
-        static_assert(std::is_base_of<Channel, T>::value, "Class must derive from Channel!");
+  // Create
+  //
+  // General method handles construction/initialization of a Channel subclass.
+  // Given an implementation called 'MyChannel', invocation should look like:
+  //
+  //   auto my_channel = Channel::Create<MyChannel>(arg1, arg2, ...);
+  //
+  // Note: Implementers are encouraged to keep their constructor/destructor
+  // protected/private. In order to do so, they should make sure to specify
+  // 'friend class Channel' and 'friend class fbl::RefPtr<T>'.
+  template <typename T = Channel, typename... ConstructorSignature>
+  static fbl::RefPtr<T> Create(ConstructorSignature&&... args) {
+    static_assert(std::is_base_of<Channel, T>::value, "Class must derive from Channel!");
 
-        fbl::AllocChecker ac;
-        auto ptr = fbl::AdoptRef(new (&ac) T(std::forward<ConstructorSignature>(args)...));
+    fbl::AllocChecker ac;
+    auto ptr = fbl::AdoptRef(new (&ac) T(std::forward<ConstructorSignature>(args)...));
 
-        if (!ac.check()) {
-            return nullptr;
-        }
-
-        return ptr;
+    if (!ac.check()) {
+      return nullptr;
     }
 
-    // Activate a channel, creating the channel pair and retuning the client's
-    // channel endpoint in the process.
-    //
-    // This operation binds the Channel object to an ExecutionDomain, a
-    // processing handler, and an optional deactivation handler.  The operation
-    // will fail if the Channel has already been bound, or either the domain
-    // reference or processing handler is invalid.
-    zx_status_t Activate(zx::channel* client_channel_out,
-                         fbl::RefPtr<ExecutionDomain> domain,
-                         ProcessHandler process_handler,
-                         ChannelClosedHandler channel_closed_handler = nullptr)
-        __TA_EXCLUDES(obj_lock_);
+    return ptr;
+  }
 
-    // Activate a channel, binding to the user supplied channel endpoint in the
-    // process.
-    zx_status_t Activate(zx::channel channel,
-                         fbl::RefPtr<ExecutionDomain> domain,
-                         ProcessHandler process_handler,
-                         ChannelClosedHandler channel_closed_handler = nullptr)
-        __TA_EXCLUDES(obj_lock_);
+  // Activate a channel, creating the channel pair and retuning the client's
+  // channel endpoint in the process.
+  //
+  // This operation binds the Channel object to an ExecutionDomain, a
+  // processing handler, and an optional deactivation handler.  The operation
+  // will fail if the Channel has already been bound, or either the domain
+  // reference or processing handler is invalid.
+  zx_status_t Activate(zx::channel* client_channel_out, fbl::RefPtr<ExecutionDomain> domain,
+                       ProcessHandler process_handler,
+                       ChannelClosedHandler channel_closed_handler = nullptr)
+      __TA_EXCLUDES(obj_lock_);
 
-    void Deactivate() __TA_EXCLUDES(obj_lock_) override;
+  // Activate a channel, binding to the user supplied channel endpoint in the
+  // process.
+  zx_status_t Activate(zx::channel channel, fbl::RefPtr<ExecutionDomain> domain,
+                       ProcessHandler process_handler,
+                       ChannelClosedHandler channel_closed_handler = nullptr)
+      __TA_EXCLUDES(obj_lock_);
 
-    zx_status_t Read(void* buf,
-                     uint32_t buf_len,
-                     uint32_t* bytes_read_out,
-                     zx::handle* rxed_handle = nullptr)
-        __TA_EXCLUDES(obj_lock_);
+  void Deactivate() __TA_EXCLUDES(obj_lock_) override;
 
-    zx_status_t Write(const void* buf,
-                      uint32_t buf_len,
-                      zx::handle&& tx_handle = zx::handle())
-        __TA_EXCLUDES(obj_lock_);
+  zx_status_t Read(void* buf, uint32_t buf_len, uint32_t* bytes_read_out,
+                   zx::handle* rxed_handle = nullptr) __TA_EXCLUDES(obj_lock_);
 
-protected:
-    Channel() : EventSource(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) { }
-    friend class fbl::RefPtr<Channel>;
+  zx_status_t Write(const void* buf, uint32_t buf_len, zx::handle&& tx_handle = zx::handle())
+      __TA_EXCLUDES(obj_lock_);
 
-    void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) override;
+ protected:
+  Channel() : EventSource(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {}
+  friend class fbl::RefPtr<Channel>;
 
-private:
-    zx_status_t ActivateLocked(zx::channel channel, fbl::RefPtr<ExecutionDomain> domain)
-        __TA_REQUIRES(obj_lock_);
+  void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) override;
 
-    ProcessHandler       process_handler_;
-    ChannelClosedHandler channel_closed_handler_;
+ private:
+  zx_status_t ActivateLocked(zx::channel channel, fbl::RefPtr<ExecutionDomain> domain)
+      __TA_REQUIRES(obj_lock_);
+
+  ProcessHandler process_handler_;
+  ChannelClosedHandler channel_closed_handler_;
 };
 
 }  // namespace dispatcher

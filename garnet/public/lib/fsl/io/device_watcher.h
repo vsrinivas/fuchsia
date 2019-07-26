@@ -28,8 +28,7 @@ class FXL_EXPORT DeviceWatcher {
   // Callback function which is invoked whenever a device is found.
   // |dir_fd| is the file descriptor of the directory (use for openat()).
   // |filename| is the name of the file relative to the directory.
-  using ExistsCallback =
-      fit::function<void(int dir_fd, const std::string& filename)>;
+  using ExistsCallback = fit::function<void(int dir_fd, const std::string& filename)>;
   // Callback function which is invoked after the existing files have been
   // reported via ExistsCallback, and before newly-arriving files are delivered
   // via ExistsCallback.
@@ -50,8 +49,8 @@ class FXL_EXPORT DeviceWatcher {
   //
   // |exists_callback| gets called with each existing or new filename, or with
   // an empty string after existing files if empty_after_existing is true.
-  static std::unique_ptr<DeviceWatcher> Create(
-      const std::string& directory_path, ExistsCallback exists_callback);
+  static std::unique_ptr<DeviceWatcher> Create(const std::string& directory_path,
+                                               ExistsCallback exists_callback);
 
   // Creates a device watcher associated with the current message loop.
   //
@@ -74,18 +73,18 @@ class FXL_EXPORT DeviceWatcher {
   // any subsequently-added devices.
   // |idle_callback| will be deleted after it is called, so captured context
   // is guaranteed to not be retained.
-  static std::unique_ptr<DeviceWatcher> CreateWithIdleCallback(
-      const std::string& directory_path, ExistsCallback exists_callback,
-      IdleCallback idle_callback);
+  static std::unique_ptr<DeviceWatcher> CreateWithIdleCallback(const std::string& directory_path,
+                                                               ExistsCallback exists_callback,
+                                                               IdleCallback idle_callback);
 
  private:
-  DeviceWatcher(fxl::UniqueFD dir_fd, zx::channel dir_watch,
-                ExistsCallback exists_callback, IdleCallback idle_callback);
+  DeviceWatcher(fxl::UniqueFD dir_fd, zx::channel dir_watch, ExistsCallback exists_callback,
+                IdleCallback idle_callback);
 
   static void ListDevices(fxl::WeakPtr<DeviceWatcher> weak, int dir_fd);
 
-  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-               zx_status_t status, const zx_packet_signal* signal);
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+               const zx_packet_signal* signal);
 
   fxl::UniqueFD dir_fd_;
   zx::channel dir_watch_;

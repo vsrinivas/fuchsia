@@ -15,7 +15,6 @@
 #include <GLFW/glfw3.h>
 #endif
 
-
 class VulkanInstance {
  public:
   VulkanInstance() : initialized_(false) {}

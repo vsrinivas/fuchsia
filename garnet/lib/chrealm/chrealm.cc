@@ -31,25 +31,23 @@
 
 namespace chrealm {
 
-zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv,
-                             int64_t* return_code, std::string* error) {
+zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv, int64_t* return_code,
+                             std::string* error) {
   *return_code = -1;
   zx_handle_t proc;
-  zx_status_t status = SpawnBinaryInRealmAsync(
-      realm_path, argv, ZX_HANDLE_INVALID,
-      FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE, {}, &proc, error);
+  zx_status_t status =
+      SpawnBinaryInRealmAsync(realm_path, argv, ZX_HANDLE_INVALID,
+                              FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE, {}, &proc, error);
   if (status != ZX_OK) {
     return status;
   }
-  status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE,
-                              nullptr);
+  status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, nullptr);
   if (status != ZX_OK) {
     *error = "Could not wait for command";
     return status;
   }
   zx_info_process_t info;
-  status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info),
-                              nullptr, nullptr);
+  status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     *error = "Could not get result of command";
     return status;
@@ -59,10 +57,10 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv,
   return ZX_OK;
 }
 
-zx_status_t SpawnBinaryInRealmAsync(
-    const std::string& realm_path, const char** argv, zx_handle_t job,
-    int32_t flags, const std::vector<fdio_spawn_action_t>& additional_actions,
-    zx_handle_t* proc, std::string* error) {
+zx_status_t SpawnBinaryInRealmAsync(const std::string& realm_path, const char** argv,
+                                    zx_handle_t job, int32_t flags,
+                                    const std::vector<fdio_spawn_action_t>& additional_actions,
+                                    zx_handle_t* proc, std::string* error) {
   if (flags & FDIO_SPAWN_CLONE_NAMESPACE) {
     *error = "chrealm does not support FDIO_SPAWN_CLONE_NAMESPACE";
     return ZX_ERR_INVALID_ARGS;
@@ -76,12 +74,10 @@ zx_status_t SpawnBinaryInRealmAsync(
     *error = "Could not create channel";
     return status;
   }
-  status = fdio_open(realm_path.c_str(),
-                     ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+  status = fdio_open(realm_path.c_str(), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
                      realm_hub_server.release());
   if (status != ZX_OK) {
-    *error = fxl::StringPrintf("Could not open hub in realm: %s",
-                               realm_path.c_str());
+    *error = fxl::StringPrintf("Could not open hub in realm: %s", realm_path.c_str());
     return status;
   }
 
@@ -93,12 +89,10 @@ zx_status_t SpawnBinaryInRealmAsync(
     return status;
   }
   const std::string svc_path = fxl::Concatenate({realm_path, "/svc"});
-  status = fdio_open(svc_path.c_str(),
-                     ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+  status = fdio_open(svc_path.c_str(), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
                      realm_svc_server.release());
   if (status != ZX_OK) {
-    *error =
-        fxl::StringPrintf("Could not open svc in realm: %s", svc_path.c_str());
+    *error = fxl::StringPrintf("Could not open svc in realm: %s", svc_path.c_str());
     return status;
   }
 
@@ -106,12 +100,10 @@ zx_status_t SpawnBinaryInRealmAsync(
   if (!job) {
     // Open the realm's job.
     fuchsia::sys::JobProviderSyncPtr job_provider;
-    status = fdio_service_connect_at(
-        realm_hub_dir.get(), "job",
-        job_provider.NewRequest().TakeChannel().release());
+    status = fdio_service_connect_at(realm_hub_dir.get(), "job",
+                                     job_provider.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
-      *error = fxl::StringPrintf("Could not connect to job provider: %s",
-                                 svc_path.c_str());
+      *error = fxl::StringPrintf("Could not connect to job provider: %s", svc_path.c_str());
       return status;
     }
     status = job_provider->GetJob(&realm_job);
@@ -132,9 +124,7 @@ zx_status_t SpawnBinaryInRealmAsync(
     *error = "Could not flatten namespace";
     return status;
   }
-  auto cleanup = fit::defer([&flat_ns]() {
-    fdio_ns_free_flat_ns(flat_ns);
-  });
+  auto cleanup = fit::defer([&flat_ns]() { fdio_ns_free_flat_ns(flat_ns); });
 
   size_t action_count = flat_ns->count + additional_actions.size();
   fdio_spawn_action_t actions[action_count];
@@ -164,9 +154,8 @@ zx_status_t SpawnBinaryInRealmAsync(
   // Launch the binary.
   const char* binary_path = argv[0];
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  status =
-      fdio_spawn_etc(job, flags & ~FDIO_SPAWN_CLONE_NAMESPACE, binary_path,
-                     argv, nullptr, action_count, actions, proc, err_msg);
+  status = fdio_spawn_etc(job, flags & ~FDIO_SPAWN_CLONE_NAMESPACE, binary_path, argv, nullptr,
+                          action_count, actions, proc, err_msg);
   if (status != ZX_OK) {
     *error = fxl::StringPrintf("Failed to launch command: %s", err_msg);
     return status;

@@ -13,21 +13,18 @@
 namespace {
 
 // See fdio_spawn_helper.cc.
-constexpr const char* kPath =
-    "/pkgfs/packages/zircon_benchmarks/0/test/fdio_spawn_helper";
+constexpr const char* kPath = "/pkgfs/packages/zircon_benchmarks/0/test/fdio_spawn_helper";
 constexpr const char* const kArgv[]{kPath, nullptr};
 
 // Benchmark |fdio_spawn| by spawning a process that simply exits.
 bool SpawnTest(perftest::RepeatState* state) {
   while (state->KeepRunning()) {
     zx::handle process;
-    ZX_ASSERT(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC, kPath,
-                         kArgv, process.reset_and_get_address()) == ZX_OK);
-    ZX_ASSERT(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(),
-                               nullptr) == ZX_OK);
+    ZX_ASSERT(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC, kPath, kArgv,
+                         process.reset_and_get_address()) == ZX_OK);
+    ZX_ASSERT(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr) == ZX_OK);
     zx_info_process_t info;
-    ZX_ASSERT(process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr,
-                               nullptr) == ZX_OK);
+    ZX_ASSERT(process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr) == ZX_OK);
     ZX_ASSERT(info.exited);
     ZX_ASSERT(info.return_code == 0);
   }

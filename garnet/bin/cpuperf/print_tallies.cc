@@ -54,14 +54,13 @@ using TraceResults = std::unordered_map<perfmon::EventId, EventResult>;
 // Indexed by trace number.
 using SessionResults = std::vector<TraceResults>;
 
-using IterateFunc = std::function<void(perfmon::EventId event,
-                                       const perfmon::EventDetails* details)>;
+using IterateFunc =
+    std::function<void(perfmon::EventId event, const perfmon::EventDetails* details)>;
 
 void IterateOverEventIds(const cpuperf::SessionSpec& spec,
-                         const perfmon::ModelEventManager* model_event_manager,
-                         IterateFunc func) {
-  perfmon::Config::IterateFunc iterate_helper =
-    [&model_event_manager, &func](const perfmon::Config::EventConfig& event) {
+                         const perfmon::ModelEventManager* model_event_manager, IterateFunc func) {
+  perfmon::Config::IterateFunc iterate_helper = [&model_event_manager,
+                                                 &func](const perfmon::Config::EventConfig& event) {
     const perfmon::EventDetails* details = nullptr;
     if (!model_event_manager->EventIdToEventDetails(event.event, &details)) {
       // This shouldn't happen, but let |func| decide what to do.
@@ -71,28 +70,26 @@ void IterateOverEventIds(const cpuperf::SessionSpec& spec,
   spec.perfmon_config.IterateOverEvents(iterate_helper);
 }
 
-static SessionColumns BuildSessionColumns(
-    const cpuperf::SessionSpec& spec,
-    const perfmon::ModelEventManager* model_event_manager) {
+static SessionColumns BuildSessionColumns(const cpuperf::SessionSpec& spec,
+                                          const perfmon::ModelEventManager* model_event_manager) {
   SessionColumns columns;
 
   IterateOverEventIds(spec, model_event_manager,
-                      [&columns] (perfmon::EventId id,
-                                  const perfmon::EventDetails* details) {
-    const char* name;
-    if (details) {
-      name = details->name;
-    } else {
-      // This shouldn't happen, but better to print what we have.
-      name = "Unknown";
-    }
-    size_t len = strlen(name);
-    FXL_DCHECK(len <= std::numeric_limits<int>::max());
-    int int_len = static_cast<int>(len);
-    int width = std::max(int_len, kMinColumnWidth);
+                      [&columns](perfmon::EventId id, const perfmon::EventDetails* details) {
+                        const char* name;
+                        if (details) {
+                          name = details->name;
+                        } else {
+                          // This shouldn't happen, but better to print what we have.
+                          name = "Unknown";
+                        }
+                        size_t len = strlen(name);
+                        FXL_DCHECK(len <= std::numeric_limits<int>::max());
+                        int int_len = static_cast<int>(len);
+                        int width = std::max(int_len, kMinColumnWidth);
 
-    columns[id] = EventColumn{ .name = name, .width = width };
-  });
+                        columns[id] = EventColumn{.name = name, .width = width};
+                      });
 
   return columns;
 }
@@ -104,13 +101,12 @@ static void PrintColumnTitles(FILE* f, const cpuperf::SessionSpec& spec,
   fprintf(f, "%*s", kTraceNameColumnWidth, "");
 
   IterateOverEventIds(spec, model_event_manager,
-                      [&] (perfmon::EventId id,
-                           const perfmon::EventDetails* details) {
-    auto iter = columns.find(id);
-    FXL_DCHECK(iter != columns.end());
-    const EventColumn& column = iter->second;
-    fprintf(f, "|%*s", column.width, column.name);
-  });
+                      [&](perfmon::EventId id, const perfmon::EventDetails* details) {
+                        auto iter = columns.find(id);
+                        FXL_DCHECK(iter != columns.end());
+                        const EventColumn& column = iter->second;
+                        fprintf(f, "|%*s", column.width, column.name);
+                      });
 
   fprintf(f, "\n");
 }
@@ -125,29 +121,28 @@ static void PrintTrace(FILE* f, const cpuperf::SessionSpec& spec,
   fprintf(f, "%-*s", kTraceNameColumnWidth, label);
 
   IterateOverEventIds(spec, model_event_manager,
-                      [&] (perfmon::EventId id,
-                           const perfmon::EventDetails* details) {
-    auto column_iter = columns.find(id);
-    FXL_DCHECK(column_iter != columns.end());
-    const EventColumn& column = column_iter->second;
-    auto result_iter = results.find(id);
-    if (result_iter != results.end()) {
-      const EventResult& result = result_iter->second;
-      std::stringstream ss;
-      // Print 123456 as 123,456 (locale appropriate).
-      struct threes : std::numpunct<char> {
-        std::string do_grouping() const { return "\3"; }
-      };
-      ss.imbue(std::locale(ss.getloc(), new threes));
-      ss << result.value_or_count;
-      fprintf(f, "|%*s", column.width, ss.str().c_str());
-    } else {
-      // Misc events might not be present in all traces.
-      // Just print blanks.
-      // TODO(dje): Distinguish such properties in EventDetails?
-      fprintf(f, "|%*s", column.width, "");
-    }
-  });
+                      [&](perfmon::EventId id, const perfmon::EventDetails* details) {
+                        auto column_iter = columns.find(id);
+                        FXL_DCHECK(column_iter != columns.end());
+                        const EventColumn& column = column_iter->second;
+                        auto result_iter = results.find(id);
+                        if (result_iter != results.end()) {
+                          const EventResult& result = result_iter->second;
+                          std::stringstream ss;
+                          // Print 123456 as 123,456 (locale appropriate).
+                          struct threes : std::numpunct<char> {
+                            std::string do_grouping() const { return "\3"; }
+                          };
+                          ss.imbue(std::locale(ss.getloc(), new threes));
+                          ss << result.value_or_count;
+                          fprintf(f, "|%*s", column.width, ss.str().c_str());
+                        } else {
+                          // Misc events might not be present in all traces.
+                          // Just print blanks.
+                          // TODO(dje): Distinguish such properties in EventDetails?
+                          fprintf(f, "|%*s", column.width, "");
+                        }
+                      });
 
   fprintf(f, "\n");
 }
@@ -174,8 +169,7 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
   uint32_t trace;
   perfmon::SampleRecord record;
   perfmon::ReaderStatus status;
-  while ((status = reader->ReadNextRecord(&trace, &record)) ==
-         perfmon::ReaderStatus::kOk) {
+  while ((status = reader->ReadNextRecord(&trace, &record)) == perfmon::ReaderStatus::kOk) {
     if (trace != current_trace) {
       current_trace = trace;
     }
@@ -185,27 +179,25 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
     perfmon::EventId id = record.header->event;
     const perfmon::EventDetails* details;
     if (!model_event_manager->EventIdToEventDetails(id, &details)) {
-      FXL_LOG(WARNING) << "Unknown event: 0x" << std::hex
-                       << record.header->event;
+      FXL_LOG(WARNING) << "Unknown event: 0x" << std::hex << record.header->event;
       continue;
     }
 
     switch (record.type()) {
-    case perfmon::kRecordTypeCount:
-      results[current_trace][id] = EventResult{record.count->count};
-      break;
-    case perfmon::kRecordTypeValue:
-      results[current_trace][id] = EventResult{record.value->value};
-      break;
-    default:
-      break;
+      case perfmon::kRecordTypeCount:
+        results[current_trace][id] = EventResult{record.count->count};
+        break;
+      case perfmon::kRecordTypeValue:
+        results[current_trace][id] = EventResult{record.value->value};
+        break;
+      default:
+        break;
     }
   }
 
   PrintColumnTitles(f, spec, model_event_manager, columns);
 
   for (uint32_t i = 0; i < result_spec.num_traces; ++i) {
-    PrintTrace(f, spec, result_spec, model_event_manager, columns, i,
-               results[i]);
+    PrintTrace(f, spec, result_spec, model_event_manager, columns, i, results[i]);
   }
 }

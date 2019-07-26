@@ -14,14 +14,13 @@ using fuchsia::cobalt::ProjectProfile;
 
 namespace cobalt {
 
-std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-    const std::string& config_path,
-    fuchsia::cobalt::ReleaseStage release_stage) {
+std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
+                                              sys::ComponentContext* context,
+                                              const std::string& config_path,
+                                              fuchsia::cobalt::ReleaseStage release_stage) {
   fsl::SizedVmo config_vmo;
   if (!fsl::VmoFromFilename(config_path, &config_vmo)) {
-    FX_LOGST(ERROR, "cobalt_lib")
-        << "Could not find config file at " << config_path;
+    FX_LOGST(ERROR, "cobalt_lib") << "Could not find config file at " << config_path;
     return nullptr;
   }
 
@@ -34,15 +33,14 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
                                               sys::ComponentContext* context,
                                               ProjectProfile profile) {
-  return std::make_unique<CobaltLoggerImpl>(dispatcher, context,
-                                            std::move(profile));
+  return std::make_unique<CobaltLoggerImpl>(dispatcher, context, std::move(profile));
 }
 
 std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectName(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage) {
-  return std::make_unique<CobaltLoggerImpl>(
-      dispatcher, context, std::move(project_name), release_stage);
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context, std::string project_name,
+    fuchsia::cobalt::ReleaseStage release_stage) {
+  return std::make_unique<CobaltLoggerImpl>(dispatcher, context, std::move(project_name),
+                                            release_stage);
 }
 
 }  // namespace cobalt

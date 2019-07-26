@@ -17,8 +17,7 @@ class SandboxMetadata {
  public:
   // Returns true if parsing succeeded. |json_parser| is used to report any
   // errors.
-  bool Parse(const rapidjson::Value& sandbox_value,
-             json::JSONParser* json_parser);
+  bool Parse(const rapidjson::Value& sandbox_value, json::JSONParser* json_parser);
 
   bool HasFeature(const std::string& feature) const;
   void AddFeature(std::string feature);

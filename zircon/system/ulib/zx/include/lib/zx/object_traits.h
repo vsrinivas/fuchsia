@@ -30,90 +30,102 @@ class exception;
 // - resource
 // - timer
 // - iommu
-template <typename T> struct object_traits {
-    static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = true;
-    static constexpr bool supports_wait = true;
-    static constexpr bool has_peer_handle = false;
+template <typename T>
+struct object_traits {
+  static constexpr bool supports_duplication = true;
+  static constexpr bool supports_user_signal = true;
+  static constexpr bool supports_wait = true;
+  static constexpr bool has_peer_handle = false;
 };
 
-template <> struct object_traits<channel> {
-    static constexpr bool supports_duplication = false;
-    static constexpr bool supports_user_signal = true;
-    static constexpr bool supports_wait = true;
-    static constexpr bool has_peer_handle = true;
+template <>
+struct object_traits<channel> {
+  static constexpr bool supports_duplication = false;
+  static constexpr bool supports_user_signal = true;
+  static constexpr bool supports_wait = true;
+  static constexpr bool has_peer_handle = true;
 };
 
-template <> struct object_traits<eventpair> {
-    static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = true;
-    static constexpr bool supports_wait = true;
-    static constexpr bool has_peer_handle = true;
+template <>
+struct object_traits<eventpair> {
+  static constexpr bool supports_duplication = true;
+  static constexpr bool supports_user_signal = true;
+  static constexpr bool supports_wait = true;
+  static constexpr bool has_peer_handle = true;
 };
 
-template <> struct object_traits<fifo> {
-    static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = true;
-    static constexpr bool supports_wait = true;
-    static constexpr bool has_peer_handle = true;
+template <>
+struct object_traits<fifo> {
+  static constexpr bool supports_duplication = true;
+  static constexpr bool supports_user_signal = true;
+  static constexpr bool supports_wait = true;
+  static constexpr bool has_peer_handle = true;
 };
 
-template <> struct object_traits<log> {
-    static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = true;
-    static constexpr bool supports_wait = true;
-    static constexpr bool has_peer_handle = false;
+template <>
+struct object_traits<log> {
+  static constexpr bool supports_duplication = true;
+  static constexpr bool supports_user_signal = true;
+  static constexpr bool supports_wait = true;
+  static constexpr bool has_peer_handle = false;
 };
 
-template <> struct object_traits<pmt> {
-    static constexpr bool supports_duplication = false;
-    static constexpr bool supports_user_signal = false;
-    static constexpr bool supports_wait = false;
-    static constexpr bool has_peer_handle = false;
+template <>
+struct object_traits<pmt> {
+  static constexpr bool supports_duplication = false;
+  static constexpr bool supports_user_signal = false;
+  static constexpr bool supports_wait = false;
+  static constexpr bool has_peer_handle = false;
 };
 
-template <> struct object_traits<socket> {
-    static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = true;
-    static constexpr bool supports_wait = true;
-    static constexpr bool has_peer_handle = true;
+template <>
+struct object_traits<socket> {
+  static constexpr bool supports_duplication = true;
+  static constexpr bool supports_user_signal = true;
+  static constexpr bool supports_wait = true;
+  static constexpr bool has_peer_handle = true;
 };
 
-template <> struct object_traits<port> {
-    static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = false;
-    static constexpr bool supports_wait = false;
-    static constexpr bool has_peer_handle = false;
+template <>
+struct object_traits<port> {
+  static constexpr bool supports_duplication = true;
+  static constexpr bool supports_user_signal = false;
+  static constexpr bool supports_wait = false;
+  static constexpr bool has_peer_handle = false;
 };
 
-template <> struct object_traits<vmar> {
-    static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = false;
-    static constexpr bool supports_wait = false;
-    static constexpr bool has_peer_handle = false;
+template <>
+struct object_traits<vmar> {
+  static constexpr bool supports_duplication = true;
+  static constexpr bool supports_user_signal = false;
+  static constexpr bool supports_wait = false;
+  static constexpr bool has_peer_handle = false;
 };
 
-template <> struct object_traits<interrupt> {
-    static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = false;
-    static constexpr bool supports_wait = true;
-    static constexpr bool has_peer_handle = false;
+template <>
+struct object_traits<interrupt> {
+  static constexpr bool supports_duplication = true;
+  static constexpr bool supports_user_signal = false;
+  static constexpr bool supports_wait = true;
+  static constexpr bool has_peer_handle = false;
 };
 
-template <> struct object_traits<guest> {
-    static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = false;
-    static constexpr bool supports_wait = false;
-    static constexpr bool has_peer_handle = false;
+template <>
+struct object_traits<guest> {
+  static constexpr bool supports_duplication = true;
+  static constexpr bool supports_user_signal = false;
+  static constexpr bool supports_wait = false;
+  static constexpr bool has_peer_handle = false;
 };
 
-template <> struct object_traits<exception> {
-    static constexpr bool supports_duplication = false;
-    static constexpr bool supports_user_signal = false;
-    static constexpr bool supports_wait = false;
-    static constexpr bool has_peer_handle = false;
+template <>
+struct object_traits<exception> {
+  static constexpr bool supports_duplication = false;
+  static constexpr bool supports_user_signal = false;
+  static constexpr bool supports_wait = false;
+  static constexpr bool has_peer_handle = false;
 };
 
-} // namespace zx
+}  // namespace zx
 
 #endif  // LIB_ZX_OBJECT_TRAITS_H_

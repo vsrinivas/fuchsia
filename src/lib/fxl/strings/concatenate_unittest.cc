@@ -10,9 +10,7 @@ namespace {
 
 // Creates correct std::strings from C-style string constants with \0 bytes
 // inside.
-std::string operator"" _s(const char* str, size_t size) {
-  return std::string(str, size);
-}
+std::string operator"" _s(const char* str, size_t size) { return std::string(str, size); }
 
 TEST(StringUtil, Concatenate) {
   EXPECT_EQ("", Concatenate({}));

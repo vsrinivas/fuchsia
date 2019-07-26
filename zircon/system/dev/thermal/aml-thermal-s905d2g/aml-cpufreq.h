@@ -17,39 +17,38 @@ namespace thermal {
 // This class handles the dynamic changing of
 // CPU frequency.
 class AmlCpuFrequency {
+ public:
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpuFrequency);
+  AmlCpuFrequency() {}
+  ~AmlCpuFrequency() = default;
+  zx_status_t SetFrequency(uint32_t rate);
+  zx_status_t Init(zx_device_t* parent);
+  uint32_t GetFrequency();
 
-public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpuFrequency);
-    AmlCpuFrequency(){}
-    ~AmlCpuFrequency() = default;
-    zx_status_t SetFrequency(uint32_t rate);
-    zx_status_t Init(zx_device_t* parent);
-    uint32_t GetFrequency();
+ private:
+  // CLK indexes.
+  enum {
+    kSysPllDiv16,
+    kSysCpuClkDiv16,
+    kClockCount,
+  };
 
-private:
-    // CLK indexes.
-    enum {
-        kSysPllDiv16,
-        kSysCpuClkDiv16,
-        kClockCount,
-    };
+  zx_status_t WaitForBusy();
+  zx_status_t ConfigureSysPLL(uint32_t new_rate);
+  zx_status_t ConfigureFixedPLL(uint32_t new_rate);
 
-    zx_status_t WaitForBusy();
-    zx_status_t ConfigureSysPLL(uint32_t new_rate);
-    zx_status_t ConfigureFixedPLL(uint32_t new_rate);
-
-    // Protocols.
-    ddk::ClockProtocolClient clks_[kClockCount];
-    // MMIOS.
-    std::optional<ddk::MmioBuffer> hiu_mmio_;
-    // BTI handle.
-    zx::bti bti_;
-    // HIU Handle.
-    aml_hiu_dev_t hiu_;
-    // Sys PLL.
-    aml_pll_dev_t sys_pll_;
-    // Current Frequency, default is 1.2GHz,
-    // which is set by u-boot while booting up.
-    uint32_t current_rate_ = 1200000000;
+  // Protocols.
+  ddk::ClockProtocolClient clks_[kClockCount];
+  // MMIOS.
+  std::optional<ddk::MmioBuffer> hiu_mmio_;
+  // BTI handle.
+  zx::bti bti_;
+  // HIU Handle.
+  aml_hiu_dev_t hiu_;
+  // Sys PLL.
+  aml_pll_dev_t sys_pll_;
+  // Current Frequency, default is 1.2GHz,
+  // which is set by u-boot while booting up.
+  uint32_t current_rate_ = 1200000000;
 };
-} // namespace thermal
+}  // namespace thermal

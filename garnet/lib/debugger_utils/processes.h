@@ -46,32 +46,29 @@ namespace debugger_utils {
 // which is currently the only non-racy way to build the list of all the
 // threads.
 zx_status_t GetProcessThreadKoids(const zx_handle_t process, size_t try_count,
-                                  size_t max_num_new_threads,
-                                  std::vector<zx_koid_t>* out_threads,
+                                  size_t max_num_new_threads, std::vector<zx_koid_t>* out_threads,
                                   size_t* out_num_available_threads);
 zx_status_t GetProcessThreadKoids(const zx::process& process, size_t try_count,
-                                  size_t max_num_new_threads,
-                                  std::vector<zx_koid_t>* out_threads,
+                                  size_t max_num_new_threads, std::vector<zx_koid_t>* out_threads,
                                   size_t* out_num_available_threads);
 
 // Helper function for testing purposes.
-zx_status_t TryGetProcessThreadKoidsForTesting(
-    const zx::process& process, size_t try_count, size_t initial_num_threads,
-    size_t max_num_new_threads, std::vector<zx_koid_t>* out_threads,
-    size_t* out_num_available_threads);
+zx_status_t TryGetProcessThreadKoidsForTesting(const zx::process& process, size_t try_count,
+                                               size_t initial_num_threads,
+                                               size_t max_num_new_threads,
+                                               std::vector<zx_koid_t>* out_threads,
+                                               size_t* out_num_available_threads);
 
-zx_status_t CreateProcessBuilder(
-    const zx::job& job, const std::string& path,
-    const debugger_utils::Argv& argv,
-    std::shared_ptr<sys::ServiceDirectory> services,
-    std::unique_ptr<process::ProcessBuilder>* out_builder);
+zx_status_t CreateProcessBuilder(const zx::job& job, const std::string& path,
+                                 const debugger_utils::Argv& argv,
+                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                 std::unique_ptr<process::ProcessBuilder>* out_builder);
 
 // Fetch the return code of an exited process.
 // It is the caller's responsibility to only call this when the process
 // has exited.
 zx_status_t GetProcessReturnCode(zx_handle_t process, int* out_return_code);
-zx_status_t GetProcessReturnCode(const zx::process& process,
-                                 int* out_return_code);
+zx_status_t GetProcessReturnCode(const zx::process& process, int* out_return_code);
 
 }  // namespace debugger_utils
 

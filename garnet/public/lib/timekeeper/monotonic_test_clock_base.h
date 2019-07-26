@@ -24,8 +24,7 @@ class MonotonicTestClockBase : public Clock {
   zx_time_t GetMonotonicTime() const final;
 
   fit::function<zx_time_t()> clock_;
-  mutable zx_time_t last_returned_value_ =
-      std::numeric_limits<zx_time_t>::min();
+  mutable zx_time_t last_returned_value_ = std::numeric_limits<zx_time_t>::min();
 };
 
 }  // namespace timekeeper

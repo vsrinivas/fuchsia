@@ -110,7 +110,7 @@ struct LinearizeResult final : internal::FromFailureMixin<LinearizeResult<FidlTy
   LinearizeResult() = default;
 
   LinearizeResult(zx_status_t status, const char* error,
-               DecodedMessage<FidlType> message = DecodedMessage<FidlType>())
+                  DecodedMessage<FidlType> message = DecodedMessage<FidlType>())
       : status(status), error(error), message(std::move(message)) {
     ZX_DEBUG_ASSERT(status != ZX_OK || this->message.is_valid());
   }

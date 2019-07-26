@@ -133,8 +133,7 @@ class VendorHci {
   void SendCommand(const bt::PacketView<bt::hci::CommandHeader>& command) const;
 
   std::unique_ptr<bt::hci::EventPacket> WaitForEventPacket(
-      zx::duration timeout = zx::sec(5),
-      bt::hci::EventCode expected_event = 0) const;
+      zx::duration timeout = zx::sec(5), bt::hci::EventCode expected_event = 0) const;
 };
 
 }  // namespace btintel

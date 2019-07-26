@@ -11,37 +11,40 @@ namespace fbl {
 namespace {
 
 bool EmptySignalTest() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    ConditionVariable cvar;
-    cvar.Signal();
-    cvar.Broadcast();
+  ConditionVariable cvar;
+  cvar.Signal();
+  cvar.Broadcast();
 
-    END_TEST;
+  END_TEST;
 }
 
 bool WaitTest() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    struct State {
-        Mutex mutex;
-        ConditionVariable cvar;
-    } state;
+  struct State {
+    Mutex mutex;
+    ConditionVariable cvar;
+  } state;
 
-    thrd_t thread;
-    AutoLock lock(&state.mutex);
+  thrd_t thread;
+  AutoLock lock(&state.mutex);
 
-    thrd_create(&thread, [](void* arg) {
+  thrd_create(
+      &thread,
+      [](void* arg) {
         auto state = reinterpret_cast<State*>(arg);
         AutoLock lock(&state->mutex);
         state->cvar.Signal();
         return 0;
-    }, &state);
+      },
+      &state);
 
-    state.cvar.Wait(&state.mutex);
-    thrd_join(thread, NULL);
+  state.cvar.Wait(&state.mutex);
+  thrd_join(thread, NULL);
 
-    END_TEST;
+  END_TEST;
 }
 
 }  // namespace

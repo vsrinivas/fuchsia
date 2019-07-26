@@ -50,51 +50,54 @@ typedef uint64_t __be64;
 #define GENMASK1(val) ((1UL << (val)) - 1)
 #define GENMASK(start, end) ((GENMASK1((start) + 1) & ~GENMASK1(end)))
 
-#define WARN(cond, msg)                                                           \
-    ({  bool ret_cond = cond;                                                     \
-        if (ret_cond) {                                                           \
-            BRCMF_WARN("brcmfmac: unexpected condition %s warns %s at %s:%d\n",   \
-                       #cond, msg, __FILE__, __LINE__);                           \
-        }                                                                         \
-        ret_cond;                                                                 \
-    })
+#define WARN(cond, msg)                                                                         \
+  ({                                                                                            \
+    bool ret_cond = cond;                                                                       \
+    if (ret_cond) {                                                                             \
+      BRCMF_WARN("brcmfmac: unexpected condition %s warns %s at %s:%d\n", #cond, msg, __FILE__, \
+                 __LINE__);                                                                     \
+    }                                                                                           \
+    ret_cond;                                                                                   \
+  })
 
 // TODO(cphoenix): Looks like these evaluate cond multiple times. And maybe should
 // pass cond, not #cond, into WARN.
-#define WARN_ON(cond)                          \
-    ({                                         \
-        if (cond) { WARN(#cond, "it's bad"); } \
-        cond;                                  \
-    })
+#define WARN_ON(cond)          \
+  ({                           \
+    if (cond) {                \
+      WARN(#cond, "it's bad"); \
+    }                          \
+    cond;                      \
+  })
 
-#define WARN_ON_ONCE(cond)                               \
-    ({                                                   \
-        static bool warn_next = true;                    \
-        if (cond && warn_next) {                         \
-            WARN(#cond, "(future warnings suppressed)"); \
-            warn_next = false;                           \
-        }                                                \
-        cond;                                            \
-    })
+#define WARN_ON_ONCE(cond)                         \
+  ({                                               \
+    static bool warn_next = true;                  \
+    if (cond && warn_next) {                       \
+      WARN(#cond, "(future warnings suppressed)"); \
+      warn_next = false;                           \
+    }                                              \
+    cond;                                          \
+  })
 
-#define iowrite32(value, addr)                              \
-    do {                                                    \
-        (*(volatile uint32_t*)(uintptr_t)(addr)) = (value); \
-    } while (0)
+#define iowrite32(value, addr)                          \
+  do {                                                  \
+    (*(volatile uint32_t*)(uintptr_t)(addr)) = (value); \
+  } while (0)
 
 #define ioread32(addr) (*(volatile uint32_t*)(uintptr_t)(addr))
 
-#define iowrite16(value, addr)                              \
-    do {                                                    \
-        (*(volatile uint16_t*)(uintptr_t)(addr)) = (value); \
-    } while (0)
+#define iowrite16(value, addr)                          \
+  do {                                                  \
+    (*(volatile uint16_t*)(uintptr_t)(addr)) = (value); \
+  } while (0)
 
 #define ioread16(addr) (*(volatile uint16_t*)(uintptr_t)(addr))
 
-#define iowrite8(value, addr)                              \
-    do {                                                    \
-        (*(volatile uint8_t*)(uintptr_t)(addr)) = (value); \
-    } while (0)
+#define iowrite8(value, addr)                          \
+  do {                                                 \
+    (*(volatile uint8_t*)(uintptr_t)(addr)) = (value); \
+  } while (0)
 
 #define ioread8(addr) (*(volatile uint8_t*)(uintptr_t)(addr))
 
@@ -105,16 +108,16 @@ typedef uint64_t __be64;
 
 #define roundup(n, m) (((n) % (m) == 0) ? (n) : (n) + ((m) - ((n) % (m))))
 
-#define LINUX_FUNC(name, paramtype, rettype)                            \
-    static inline rettype name(paramtype foo, ...) {                                           \
-        /*BRCMF_LOGF(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);   */ \
-        return (rettype)0;                                                                     \
-    }
-#define LINUX_FUNCX(name)                                                                      \
-    static inline int name() {                                                                 \
-        /*BRCMF_LOGF(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);   */ \
-        return 0;                                                                              \
-    }
+#define LINUX_FUNC(name, paramtype, rettype)                                               \
+  static inline rettype name(paramtype foo, ...) {                                         \
+    /*BRCMF_LOGF(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);   */ \
+    return (rettype)0;                                                                     \
+  }
+#define LINUX_FUNCX(name)                                                                  \
+  static inline int name() {                                                               \
+    /*BRCMF_LOGF(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);   */ \
+    return 0;                                                                              \
+  }
 
 // clang-format off
 #define LINUX_FUNCII(name) LINUX_FUNC(name, int, int)

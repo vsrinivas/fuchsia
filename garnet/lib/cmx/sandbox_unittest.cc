@@ -16,8 +16,7 @@ namespace {
 
 class SandboxMetadataTest : public ::testing::Test {
  protected:
-  void ExpectFailedParse(const std::string& json,
-                         const std::string& expected_error) {
+  void ExpectFailedParse(const std::string& json, const std::string& expected_error) {
     std::string error;
     SandboxMetadata sandbox;
     EXPECT_FALSE(ParseFrom(&sandbox, json, &error));
@@ -25,8 +24,7 @@ class SandboxMetadataTest : public ::testing::Test {
     EXPECT_THAT(error, ::testing::HasSubstr(expected_error));
   }
 
-  bool ParseFrom(SandboxMetadata* sandbox, const std::string& json,
-                 std::string* error) {
+  bool ParseFrom(SandboxMetadata* sandbox, const std::string& json, std::string* error) {
     json::JSONParser parser;
     rapidjson::Document document = parser.ParseFromString(json, "test_file");
     EXPECT_FALSE(parser.HasError());
@@ -76,8 +74,7 @@ TEST_F(SandboxMetadataTest, Parse) {
     EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
-    EXPECT_THAT(sandbox.services(),
-                ::testing::ElementsAre("fuchsia.sys.Launcher"));
+    EXPECT_THAT(sandbox.services(), ::testing::ElementsAre("fuchsia.sys.Launcher"));
   }
 
   // pkgfs

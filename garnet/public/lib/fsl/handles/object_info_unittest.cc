@@ -17,9 +17,7 @@
 namespace fsl {
 namespace {
 
-TEST(ObjectInfo, GetKoidOfInvalidHandle) {
-  EXPECT_EQ(ZX_KOID_INVALID, GetKoid(ZX_HANDLE_INVALID));
-}
+TEST(ObjectInfo, GetKoidOfInvalidHandle) { EXPECT_EQ(ZX_KOID_INVALID, GetKoid(ZX_HANDLE_INVALID)); }
 
 TEST(ObjectInfo, GetKoidOfDistinctObjects) {
   zx::event event1, event2;
@@ -84,8 +82,7 @@ TEST(ObjectInfo, GetRelatedKoidOfEvent) {
 }
 
 TEST(ObjectInfo, GetKoidsOfInvalidHandle) {
-  constexpr std::pair<zx_koid_t, zx_koid_t> invalid_koids(ZX_KOID_INVALID,
-                                                          ZX_KOID_INVALID);
+  constexpr std::pair<zx_koid_t, zx_koid_t> invalid_koids(ZX_KOID_INVALID, ZX_KOID_INVALID);
 
   EXPECT_EQ(invalid_koids, GetKoids(ZX_HANDLE_INVALID));
 }
@@ -94,10 +91,8 @@ TEST(ObjectInfo, GetKoidsOfChannel) {
   zx::channel channel1, channel2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &channel1, &channel2));
 
-  const std::pair<zx_koid_t, zx_koid_t> channel1_koids =
-      GetKoids(channel1.get());
-  const std::pair<zx_koid_t, zx_koid_t> channel2_koids =
-      GetKoids(channel2.get());
+  const std::pair<zx_koid_t, zx_koid_t> channel1_koids = GetKoids(channel1.get());
+  const std::pair<zx_koid_t, zx_koid_t> channel2_koids = GetKoids(channel2.get());
   EXPECT_NE(ZX_KOID_INVALID, channel1_koids.first);
   EXPECT_NE(ZX_KOID_INVALID, channel2_koids.first);
   EXPECT_EQ(channel1_koids.first, channel2_koids.second);
@@ -113,10 +108,8 @@ TEST(ObjectInfo, GetKoidsOfChannelWithClosedEndpoint) {
     invalid_channel2_handle = channel2.get();
   }
 
-  const std::pair<zx_koid_t, zx_koid_t> channel1_koids =
-      GetKoids(channel1.get());
-  const std::pair<zx_koid_t, zx_koid_t> channel2_koids =
-      GetKoids(invalid_channel2_handle);
+  const std::pair<zx_koid_t, zx_koid_t> channel1_koids = GetKoids(channel1.get());
+  const std::pair<zx_koid_t, zx_koid_t> channel2_koids = GetKoids(invalid_channel2_handle);
   EXPECT_NE(ZX_KOID_INVALID, channel1_koids.first);
   EXPECT_NE(ZX_KOID_INVALID, channel1_koids.second);
   EXPECT_EQ(ZX_KOID_INVALID, channel2_koids.first);
@@ -140,9 +133,7 @@ TEST(ObjectInfo, SetNameOfInvalidHandle) {
   EXPECT_EQ(ZX_ERR_BAD_HANDLE, SetObjectName(ZX_HANDLE_INVALID, "foo"));
 }
 
-TEST(ObjectInfo, GetCurrentProcessKoid) {
-  EXPECT_NE(ZX_KOID_INVALID, GetCurrentProcessKoid());
-}
+TEST(ObjectInfo, GetCurrentProcessKoid) { EXPECT_NE(ZX_KOID_INVALID, GetCurrentProcessKoid()); }
 
 TEST(ObjectInfo, GetAndSetNameOfCurrentProcess) {
   zx_handle_t process_handle = zx_process_self();

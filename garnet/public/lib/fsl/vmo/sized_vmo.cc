@@ -10,8 +10,7 @@ namespace fsl {
 
 SizedVmo::SizedVmo(std::nullptr_t) : vmo_(), size_(0u) {}
 
-SizedVmo::SizedVmo(zx::vmo vmo, uint64_t size)
-    : vmo_(std::move(vmo)), size_(size) {
+SizedVmo::SizedVmo(zx::vmo vmo, uint64_t size) : vmo_(std::move(vmo)), size_(size) {
   FXL_DCHECK(vmo_ && IsSizeValid(vmo_, size_));
 }
 
@@ -36,8 +35,7 @@ bool SizedVmo::IsSizeValid(const zx::vmo& vmo, uint64_t size) {
   return vmo_size >= size;
 }
 
-SizedVmo::SizedVmo(SizedVmo&& other)
-    : vmo_(std::move(other.vmo_)), size_(other.size_) {
+SizedVmo::SizedVmo(SizedVmo&& other) : vmo_(std::move(other.vmo_)), size_(other.size_) {
   other.size_ = 0;
 }
 

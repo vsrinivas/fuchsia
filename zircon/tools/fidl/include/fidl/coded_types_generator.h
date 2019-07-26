@@ -16,8 +16,7 @@ namespace fidl {
 
 template <typename T>
 struct WithContext {
-  WithContext(coded::CodingContext c, T* t)
-     : context(c), type(t) {}
+  WithContext(coded::CodingContext c, T* t) : context(c), type(t) {}
 
   const coded::CodingContext context;
   const T* type;
@@ -40,8 +39,7 @@ struct WithContextCompare {
 
 class CodedTypesGenerator {
  public:
-  explicit CodedTypesGenerator(const flat::Library* library)
-      : library_(library) {}
+  explicit CodedTypesGenerator(const flat::Library* library) : library_(library) {}
 
   void CompileCodedTypes();
 

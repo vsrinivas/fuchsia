@@ -33,18 +33,12 @@ static const pbus_mmio_t mailbox_mmios[] = {
 
 // IRQ for Mailbox
 static const pbus_irq_t mailbox_irqs[] = {
-    {.irq = S912_MBOX_IRQ_RECEIV0,
-     .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
-    {.irq = S912_MBOX_IRQ_RECEIV1,
-     .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
-    {.irq = S912_MBOX_IRQ_RECEIV2,
-     .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
-    {.irq = S912_MBOX_IRQ_SEND3,
-     .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
-    {.irq = S912_MBOX_IRQ_SEND4,
-     .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
-    {.irq = S912_MBOX_IRQ_SEND5,
-     .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
+    {.irq = S912_MBOX_IRQ_RECEIV0, .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
+    {.irq = S912_MBOX_IRQ_RECEIV1, .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
+    {.irq = S912_MBOX_IRQ_RECEIV2, .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
+    {.irq = S912_MBOX_IRQ_SEND3, .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
+    {.irq = S912_MBOX_IRQ_SEND4, .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
+    {.irq = S912_MBOX_IRQ_SEND5, .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
 };
 
 /* ACTIVE COOLING - For VIM2, we assume that all devices
@@ -86,94 +80,93 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo aml_vim2_config = {
     .num_trip_points = 8,
     .big_little = true,
     .critical_temp = 81,
-    .trip_point_info = {
+    .trip_point_info =
         {
-            // This is the initial thermal setup of the device
-            // Fan set to OFF
-            // CPU freq set to a known stable MAX
+            {
+                // This is the initial thermal setup of the device
+                // Fan set to OFF
+                // CPU freq set to a known stable MAX
 
-            //c++ initialization error
-            .up_temp = 2,
-            .down_temp = 0,
-            //c++ initialization error
-            .fan_level = 0,
-            .big_cluster_dvfs_opp = 6,
-            .little_cluster_dvfs_opp = 4,
-            .gpu_clk_freq_source = 3,
+                // c++ initialization error
+                .up_temp = 2,
+                .down_temp = 0,
+                // c++ initialization error
+                .fan_level = 0,
+                .big_cluster_dvfs_opp = 6,
+                .little_cluster_dvfs_opp = 4,
+                .gpu_clk_freq_source = 3,
+            },
+            {
+                .up_temp = 65,
+                .down_temp = 63,
+                .fan_level = 1,
+                .big_cluster_dvfs_opp = 6,
+                .little_cluster_dvfs_opp = 4,
+                .gpu_clk_freq_source = 3,
+            },
+            {
+                .up_temp = 70,
+                .down_temp = 68,
+                .fan_level = 2,
+                .big_cluster_dvfs_opp = 6,
+                .little_cluster_dvfs_opp = 4,
+                .gpu_clk_freq_source = 3,
+            },
+            {
+                .up_temp = 75,
+                .down_temp = 73,
+                .fan_level = 3,
+                .big_cluster_dvfs_opp = 6,
+                .little_cluster_dvfs_opp = 4,
+                .gpu_clk_freq_source = 3,
+            },
+            {
+                .up_temp = 82,
+                .down_temp = 79,
+                .fan_level = 3,
+                .big_cluster_dvfs_opp = 5,
+                .little_cluster_dvfs_opp = 4,
+                .gpu_clk_freq_source = 2,
+            },
+            {
+                .up_temp = 87,
+                .down_temp = 84,
+                .fan_level = 3,
+                .big_cluster_dvfs_opp = 4,
+                .little_cluster_dvfs_opp = 4,
+                .gpu_clk_freq_source = 2,
+            },
+            {
+                .up_temp = 92,
+                .down_temp = 89,
+                .fan_level = 3,
+                .big_cluster_dvfs_opp = 3,
+                .little_cluster_dvfs_opp = 3,
+                .gpu_clk_freq_source = 1,
+            },
+            {
+                .up_temp = 96,
+                .down_temp = 93,
+                .fan_level = 3,
+                .big_cluster_dvfs_opp = 2,
+                .little_cluster_dvfs_opp = 2,
+                .gpu_clk_freq_source = 0,
+            },
         },
-        {
-            .up_temp = 65,
-            .down_temp = 63,
-            .fan_level = 1,
-            .big_cluster_dvfs_opp = 6,
-            .little_cluster_dvfs_opp = 4,
-            .gpu_clk_freq_source = 3,
-        },
-        {
-            .up_temp = 70,
-            .down_temp = 68,
-            .fan_level = 2,
-            .big_cluster_dvfs_opp = 6,
-            .little_cluster_dvfs_opp = 4,
-            .gpu_clk_freq_source = 3,
-        },
-        {
-            .up_temp = 75,
-            .down_temp = 73,
-            .fan_level = 3,
-            .big_cluster_dvfs_opp = 6,
-            .little_cluster_dvfs_opp = 4,
-            .gpu_clk_freq_source = 3,
-        },
-        {
-            .up_temp = 82,
-            .down_temp = 79,
-            .fan_level = 3,
-            .big_cluster_dvfs_opp = 5,
-            .little_cluster_dvfs_opp = 4,
-            .gpu_clk_freq_source = 2,
-        },
-        {
-            .up_temp = 87,
-            .down_temp = 84,
-            .fan_level = 3,
-            .big_cluster_dvfs_opp = 4,
-            .little_cluster_dvfs_opp = 4,
-            .gpu_clk_freq_source = 2,
-        },
-        {
-            .up_temp = 92,
-            .down_temp = 89,
-            .fan_level = 3,
-            .big_cluster_dvfs_opp = 3,
-            .little_cluster_dvfs_opp = 3,
-            .gpu_clk_freq_source = 1,
-        },
-        {
-            .up_temp = 96,
-            .down_temp = 93,
-            .fan_level = 3,
-            .big_cluster_dvfs_opp = 2,
-            .little_cluster_dvfs_opp = 2,
-            .gpu_clk_freq_source = 0,
-        },
-    },
     .opps = {},
 };
 
-static const pbus_metadata_t vim_thermal_metadata[] = {
-    {
-        .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &aml_vim2_config,
-        .data_size = sizeof(aml_vim2_config),
-    }
-};
+static const pbus_metadata_t vim_thermal_metadata[] = {{
+    .type = DEVICE_METADATA_THERMAL_CONFIG,
+    .data_buffer = &aml_vim2_config,
+    .data_size = sizeof(aml_vim2_config),
+}};
 
 // Composite binding rules for thermal driver.
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
-static const zx_bind_inst_t scpi_match[]  = {
+static const zx_bind_inst_t scpi_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SCPI),
 };
@@ -186,56 +179,56 @@ static const zx_bind_inst_t fan1_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_THERMAL_FAN_1),
 };
 static const device_component_part_t scpi_component[] = {
-    { fbl::count_of(root_match), root_match },
-    { fbl::count_of(scpi_match), scpi_match },
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(scpi_match), scpi_match},
 };
 static const device_component_part_t fan0_gpio_component[] = {
-    { fbl::count_of(root_match), root_match },
-    { fbl::count_of(fan0_gpio_match), fan0_gpio_match },
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(fan0_gpio_match), fan0_gpio_match},
 };
 static const device_component_part_t fan1_gpio_component[] = {
-    { fbl::count_of(root_match), root_match },
-    { fbl::count_of(fan1_gpio_match), fan1_gpio_match },
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(fan1_gpio_match), fan1_gpio_match},
 };
 static const device_component_t components[] = {
-    { fbl::count_of(scpi_component), scpi_component },
-    { fbl::count_of(fan0_gpio_component), fan0_gpio_component },
-    { fbl::count_of(fan1_gpio_component), fan1_gpio_component },
+    {fbl::count_of(scpi_component), scpi_component},
+    {fbl::count_of(fan0_gpio_component), fan0_gpio_component},
+    {fbl::count_of(fan1_gpio_component), fan1_gpio_component},
 };
 
 zx_status_t Vim::ThermalInit() {
-    pbus_dev_t mailbox_dev = {};
-    mailbox_dev.name = "mailbox";
-    mailbox_dev.vid = PDEV_VID_AMLOGIC;
-    mailbox_dev.pid = PDEV_PID_AMLOGIC_S912;
-    mailbox_dev.did = PDEV_DID_AMLOGIC_MAILBOX;
-    mailbox_dev.mmio_list = mailbox_mmios;
-    mailbox_dev.mmio_count = countof(mailbox_mmios);
-    mailbox_dev.irq_list = mailbox_irqs;
-    mailbox_dev.irq_count = countof(mailbox_irqs);
-    mailbox_dev.metadata_list = vim_thermal_metadata;
-    mailbox_dev.metadata_count = countof(vim_thermal_metadata);
+  pbus_dev_t mailbox_dev = {};
+  mailbox_dev.name = "mailbox";
+  mailbox_dev.vid = PDEV_VID_AMLOGIC;
+  mailbox_dev.pid = PDEV_PID_AMLOGIC_S912;
+  mailbox_dev.did = PDEV_DID_AMLOGIC_MAILBOX;
+  mailbox_dev.mmio_list = mailbox_mmios;
+  mailbox_dev.mmio_count = countof(mailbox_mmios);
+  mailbox_dev.irq_list = mailbox_irqs;
+  mailbox_dev.irq_count = countof(mailbox_irqs);
+  mailbox_dev.metadata_list = vim_thermal_metadata;
+  mailbox_dev.metadata_count = countof(vim_thermal_metadata);
 
-    zx_status_t status = pbus_.DeviceAdd(&mailbox_dev);
+  zx_status_t status = pbus_.DeviceAdd(&mailbox_dev);
 
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ThermalInit: pbus_device_add failed: %d\n", status);
-        return status;
-    }
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ThermalInit: pbus_device_add failed: %d\n", status);
+    return status;
+  }
 
-    // Add a composite device for thermal driver.
-    constexpr zx_device_prop_t props[] = {
-        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC },
-        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_S912 },
-        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_THERMAL },
-    };
+  // Add a composite device for thermal driver.
+  constexpr zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_S912},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_THERMAL},
+  };
 
-    status = DdkAddComposite("vim-thermal", props, fbl::count_of(props), components,
-                             fbl::count_of(components), 0);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
-        return status;
-    }
-    return ZX_OK;
+  status = DdkAddComposite("vim-thermal", props, fbl::count_of(props), components,
+                           fbl::count_of(components), 0);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
+    return status;
+  }
+  return ZX_OK;
 }
-} //namespace vim
+}  // namespace vim

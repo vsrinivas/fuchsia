@@ -70,10 +70,8 @@ bool x86_feature_test(x86_cpuid_bit bit);
 // TODO(dje): Switch to iostreams later, maybe.
 void x86_feature_debug(FILE* out);
 
-#define X86_CPUID_BIT(leaf, word, bit)                          \
-  (::debugger_utils::x86_cpuid_bit) {                           \
-    (::debugger_utils::x86_cpuid_leaf_num)(leaf), (word), (bit) \
-  }
+#define X86_CPUID_BIT(leaf, word, bit) \
+  (::debugger_utils::x86_cpuid_bit) { (::debugger_utils::x86_cpuid_leaf_num)(leaf), (word), (bit) }
 
 // add feature bits to test here
 #define X86_FEATURE_SSE3 X86_CPUID_BIT(0x1, 2, 0)

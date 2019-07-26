@@ -19,21 +19,17 @@ namespace scenic {
 // exposes the present callback.
 //
 // See also lib/ui/base_view.
-class BackgroundView : public TestView,
-                       private fuchsia::ui::scenic::SessionListener {
+class BackgroundView : public TestView, private fuchsia::ui::scenic::SessionListener {
  public:
   static constexpr float kBackgroundElevation = 0.f;
-  static constexpr Color kBackgroundColor = {0x67, 0x3a, 0xb7,
-                                             0xff};  // Deep Purple 500
+  static constexpr Color kBackgroundColor = {0x67, 0x3a, 0xb7, 0xff};  // Deep Purple 500
 
-  BackgroundView(ViewContext context,
-                 const std::string& debug_name = "BackgroundView");
+  BackgroundView(ViewContext context, const std::string& debug_name = "BackgroundView");
 
   // |TestView|
   void set_present_callback(Session::PresentCallback present_callback) override;
 
-  void SetHostImage(zx::vmo vmo, uint64_t size,
-                    fuchsia::images::ImageInfo info);
+  void SetHostImage(zx::vmo vmo, uint64_t size, fuchsia::images::ImageInfo info);
 
  protected:
   Session* session() { return &session_; }

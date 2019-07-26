@@ -59,8 +59,7 @@ FXL_EXPORT std::string GetObjectName(zx_handle_t handle);
 
 // Sets the name of a kernel object.
 // Note: The kernel truncates names to |ZX_MAX_NAME_LEN|.
-FXL_EXPORT zx_status_t SetObjectName(zx_handle_t handle,
-                                     const std::string& name);
+FXL_EXPORT zx_status_t SetObjectName(zx_handle_t handle, const std::string& name);
 
 // Gets the kernel object id of the current process.
 FXL_EXPORT zx_koid_t GetCurrentProcessKoid();

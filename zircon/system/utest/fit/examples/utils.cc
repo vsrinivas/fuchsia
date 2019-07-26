@@ -14,21 +14,21 @@
 namespace utils {
 
 fit::promise<> sleep_for_a_little_while() {
-    // This is a rather inefficient way to wait for time to pass but it
-    // is sufficient for our examples.
-    return fit::make_promise([waited = false](fit::context& context) mutable {
-        if (waited)
-            return;
-        waited = true;
-        resume_in_a_little_while(context.suspend_task());
-    });
+  // This is a rather inefficient way to wait for time to pass but it
+  // is sufficient for our examples.
+  return fit::make_promise([waited = false](fit::context& context) mutable {
+    if (waited)
+      return;
+    waited = true;
+    resume_in_a_little_while(context.suspend_task());
+  });
 }
 
 void resume_in_a_little_while(fit::suspended_task task) {
-    std::thread([task]() mutable {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        task.resume_task();
-    }).detach();
+  std::thread([task]() mutable {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    task.resume_task();
+  }).detach();
 }
 
-} // namespace utils
+}  // namespace utils

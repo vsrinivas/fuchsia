@@ -10,8 +10,7 @@
 namespace overnet {
 
 namespace {
-std::vector<std::pair<uint8_t, size_t>> RLE(const uint8_t* begin,
-                                            const uint8_t* end) {
+std::vector<std::pair<uint8_t, size_t>> RLE(const uint8_t* begin, const uint8_t* end) {
   uint16_t cur = 256;
   size_t count = 0;
   std::vector<std::pair<uint8_t, size_t>> out;
@@ -52,8 +51,7 @@ std::ostream& operator<<(std::ostream& out, const Slice& slice) {
   for (auto b : rle) {
     if (!first)
       temp << ' ';
-    temp << std::hex << std::setfill('0') << std::setw(2)
-         << static_cast<unsigned>(b.first);
+    temp << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned>(b.first);
     if (b.second != 1) {
       assert(b.second != 0);
       temp << '*' << std::dec << b.second;

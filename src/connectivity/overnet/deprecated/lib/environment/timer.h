@@ -51,8 +51,7 @@ class Timeout {
   // Initialize a timeout for timestamp when. cb will be called when the timeout
   // expires (with status OK) or when the timeout is cancelled (with non-OK
   // status).
-  Timeout(Timer* timer, TimeStamp when, StatusCallback cb)
-      : timer_(timer), cb_(std::move(cb)) {
+  Timeout(Timer* timer, TimeStamp when, StatusCallback cb) : timer_(timer), cb_(std::move(cb)) {
     assert(!cb_.empty());
     timer_->InitTimeout(this, when);
   }
@@ -96,12 +95,11 @@ inline void Timer::FireTimeout(Timeout* timeout, Status status) {
 
 template <class F>
 void Timer::At(TimeStamp t, F f) {
-  At(t, StatusCallback(ALLOCATED_CALLBACK,
-                       [f = std::move(f)](const Status& status) mutable {
-                         if (status.is_ok()) {
-                           f();
-                         }
-                       }));
+  At(t, StatusCallback(ALLOCATED_CALLBACK, [f = std::move(f)](const Status& status) mutable {
+       if (status.is_ok()) {
+         f();
+       }
+     }));
 }
 
 }  // namespace overnet

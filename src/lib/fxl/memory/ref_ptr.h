@@ -247,8 +247,7 @@ inline RefPtr<T> Ref(T* ptr) {
 // (|my_foo| will be of type |RefPtr<Foo>|.)
 template <typename T, typename... Args>
 RefPtr<T> MakeRefCounted(Args&&... args) {
-  return internal::MakeRefCountedHelper<T>::MakeRefCounted(
-      std::forward<Args>(args)...);
+  return internal::MakeRefCountedHelper<T>::MakeRefCounted(std::forward<Args>(args)...);
 }
 
 }  // namespace fxl
@@ -260,9 +259,7 @@ struct hash<fxl::RefPtr<T>> {
   using argument_type = fxl::RefPtr<T>;
   using result_type = std::size_t;
 
-  result_type operator()(const argument_type& ptr) const {
-    return std::hash<T*>()(ptr.get());
-  }
+  result_type operator()(const argument_type& ptr) const { return std::hash<T*>()(ptr.get()); }
 };
 }  // namespace std
 

@@ -15,24 +15,24 @@ namespace rtl88xx {
 
 // This implementation of the Device interface supports the Realtek 8821C chipset.
 class Rtl8821cDevice : public Device {
-   public:
-    // Factory function for Rtl8821cDevice instances.
-    static zx_status_t Create(std::unique_ptr<Bus> bus, std::unique_ptr<Device>* device);
-    ~Rtl8821cDevice() override;
+ public:
+  // Factory function for Rtl8821cDevice instances.
+  static zx_status_t Create(std::unique_ptr<Bus> bus, std::unique_ptr<Device>* device);
+  ~Rtl8821cDevice() override;
 
-    // Device implementation.
-    zx_status_t CreateWlanMac(zx_device_t* parent_device, WlanMac** wlan_mac) override;
+  // Device implementation.
+  zx_status_t CreateWlanMac(zx_device_t* parent_device, WlanMac** wlan_mac) override;
 
-   private:
-    Rtl8821cDevice();
-    Rtl8821cDevice(const Rtl8821cDevice& other) = delete;
-    Rtl8821cDevice(Rtl8821cDevice&& other) = delete;
-    Rtl8821cDevice& operator=(Rtl8821cDevice other) = delete;
+ private:
+  Rtl8821cDevice();
+  Rtl8821cDevice(const Rtl8821cDevice& other) = delete;
+  Rtl8821cDevice(Rtl8821cDevice&& other) = delete;
+  Rtl8821cDevice& operator=(Rtl8821cDevice other) = delete;
 
-    // Halmac-style configuration functions.
-    zx_status_t PreInitSystemCfg88xx();
+  // Halmac-style configuration functions.
+  zx_status_t PreInitSystemCfg88xx();
 
-    std::unique_ptr<Bus> bus_;
+  std::unique_ptr<Bus> bus_;
 };
 
 }  // namespace rtl88xx

@@ -32,19 +32,18 @@ namespace {
 // Locale IDs, for the given time zone.
 std::string GetShortTimeZoneKey(const TimeZone& time_zone) {
   UErrorCode error_code = U_ZERO_ERROR;
-  auto format = std::unique_ptr<TimeZoneFormat>(
-      TimeZoneFormat::createInstance(Locale::getUS(), error_code));
+  auto format =
+      std::unique_ptr<TimeZoneFormat>(TimeZoneFormat::createInstance(Locale::getUS(), error_code));
   UnicodeString output;
-  format->format(UTimeZoneFormatStyle::UTZFMT_STYLE_ZONE_ID_SHORT, time_zone,
-                 Calendar::getNow(), output);
+  format->format(UTimeZoneFormatStyle::UTZFMT_STYLE_ZONE_ID_SHORT, time_zone, Calendar::getNow(),
+                 output);
   std::string output_utf8;
   output.toUTF8String(output_utf8);
   return output_utf8;
 }
 }  // namespace
 
-IntlWisdomClient::IntlWisdomClient(
-    std::unique_ptr<sys::ComponentContext> startup_context)
+IntlWisdomClient::IntlWisdomClient(std::unique_ptr<sys::ComponentContext> startup_context)
     : startup_context_(std::move(startup_context)) {}
 
 void IntlWisdomClient::Start(std::string server_url) {
@@ -67,26 +66,22 @@ ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {
   fidl::VectorPtr<LocaleId> locales;
   {
     LocaleId locale_id;
-    locale_id.id =
-        "fr-FR-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
+    locale_id.id = "fr-FR-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
     locales.push_back(locale_id);
   }
   {
     LocaleId locale_id;
-    locale_id.id =
-        "es-MX-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
+    locale_id.id = "es-MX-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
     locales.push_back(locale_id);
   }
   {
     LocaleId locale_id;
-    locale_id.id =
-        "ru-PT-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
+    locale_id.id = "ru-PT-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
     locales.push_back(locale_id);
   }
   {
     LocaleId locale_id;
-    locale_id.id =
-        "ar-AU-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
+    locale_id.id = "ar-AU-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
     locales.push_back(locale_id);
   }
   intl_profile->set_locales(std::move(locales));
@@ -126,13 +121,11 @@ ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {
   return intl_profile;
 }
 
-void IntlWisdomClient::SendRequest(
-    zx::time timestamp, const TimeZone& time_zone,
-    IntlWisdomServer::AskForWisdomCallback callback) const {
+void IntlWisdomClient::SendRequest(zx::time timestamp, const TimeZone& time_zone,
+                                   IntlWisdomServer::AskForWisdomCallback callback) const {
   ProfilePtr intl_profile = MakeIntlProfile(time_zone);
   printf("Asking for wisdom...\n");
-  server()->AskForWisdom(std::move(*intl_profile), timestamp.get(),
-                         std::move(callback));
+  server()->AskForWisdom(std::move(*intl_profile), timestamp.get(), std::move(callback));
 }
 
 }  // namespace intl_wisdom

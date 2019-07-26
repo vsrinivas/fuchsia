@@ -70,8 +70,7 @@ DriverCtx::DriverCtx() {
   // We use kAsyncLoopConfigNoAttachToThread here, because we don't really want
   // to be setting the default async_t for the thread that creates the
   // DriverCtx.  We'll plumb async_t(s) explicitly instead.
-  shared_fidl_loop_ =
-      std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  shared_fidl_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
   shared_fidl_loop_->StartThread("shared_fidl_thread", &shared_fidl_thread_);
 }
 
@@ -97,8 +96,7 @@ void DriverCtx::FatalError(const char* format, ...) {
   std::unique_ptr<char[]> buffer(new char[buffer_bytes]);
 
   va_start(args, format);
-  size_t buffer_bytes_2 =
-      vsnprintf(buffer.get(), buffer_bytes, format, args) + 1;
+  size_t buffer_bytes_2 = vsnprintf(buffer.get(), buffer_bytes, format, args) + 1;
   (void)buffer_bytes_2;
   // sanity check; should match so go ahead and assert that it does.
   assert(buffer_bytes == buffer_bytes_2);
@@ -116,8 +114,7 @@ void DriverCtx::FatalError(const char* format, ...) {
 }
 
 // Run to_run on given dispatcher, in order.
-void DriverCtx::PostSerial(async_dispatcher_t* dispatcher,
-                           fit::closure to_run) {
+void DriverCtx::PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
   zx_status_t post_result = async::PostTask(dispatcher, std::move(to_run));
   if (post_result != ZX_OK) {
     FatalError("async::PostTask() failed - result: %d", post_result);
@@ -127,6 +124,5 @@ void DriverCtx::PostSerial(async_dispatcher_t* dispatcher,
 // Run to_run_on_shared_fidl_thread on shared_fidl_thread().
 void DriverCtx::PostToSharedFidl(fit::closure to_run_on_shared_fidl_thread) {
   // Switch the implementation here to fit::function when possible.
-  PostSerial(shared_fidl_loop()->dispatcher(),
-             std::move(to_run_on_shared_fidl_thread));
+  PostSerial(shared_fidl_loop()->dispatcher(), std::move(to_run_on_shared_fidl_thread));
 }

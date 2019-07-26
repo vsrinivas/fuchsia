@@ -23,104 +23,104 @@ namespace {
 // This board driver knows how to interpret the metadata for which devices to
 // spawn.
 const zbi_platform_id_t kPlatformId = []() {
-    zbi_platform_id_t plat_id = {};
-    plat_id.vid = PDEV_VID_TEST;
-    plat_id.pid = PDEV_PID_INTEGRATION_TEST;
-    strcpy(plat_id.board_name, "driver-integration-test");
-    return plat_id;
+  zbi_platform_id_t plat_id = {};
+  plat_id.vid = PDEV_VID_TEST;
+  plat_id.pid = PDEV_PID_INTEGRATION_TEST;
+  strcpy(plat_id.board_name, "driver-integration-test");
+  return plat_id;
 }();
 
 // This function is responsible for serializing driver data. It must be kept
 // updated with the function that deserialized the data. This function
 // is TestBoard::FetchAndDeserialize.
-zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries,
-                        uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
-    zx::vmo vmo;
-    switch (type) {
+zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, uint32_t type,
+                        uint32_t extra, zx::vmo* out, uint32_t* length) {
+  zx::vmo vmo;
+  switch (type) {
     case ZBI_TYPE_PLATFORM_ID: {
-        zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
-        if (status != ZX_OK) {
-            return status;
-        }
-        status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
-        if (status != ZX_OK) {
-            return status;
-        }
-        *length = sizeof(kPlatformId);
-        break;
+      zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
+      if (status != ZX_OK) {
+        return status;
+      }
+      status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
+      if (status != ZX_OK) {
+        return status;
+      }
+      *length = sizeof(kPlatformId);
+      break;
     }
     case ZBI_TYPE_DRV_BOARD_PRIVATE: {
-        size_t list_size = sizeof(board_test::DeviceList);
-        size_t entry_size = entries.size() * sizeof(board_test::DeviceEntry);
+      size_t list_size = sizeof(board_test::DeviceList);
+      size_t entry_size = entries.size() * sizeof(board_test::DeviceEntry);
 
-        size_t metadata_size = 0;
-        for (board_test::DeviceEntry& entry : entries) {
-            metadata_size += entry.metadata_size;
-        }
+      size_t metadata_size = 0;
+      for (board_test::DeviceEntry& entry : entries) {
+        metadata_size += entry.metadata_size;
+      }
 
-        zx_status_t status = zx::vmo::create(list_size + entry_size + metadata_size, 0, &vmo);
+      zx_status_t status = zx::vmo::create(list_size + entry_size + metadata_size, 0, &vmo);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      // Write DeviceList to vmo.
+      board_test::DeviceList list{.count = entries.size()};
+      status = vmo.write(&list, 0, sizeof(list));
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      // Write DeviceEntries to vmo.
+      status = vmo.write(entries.get(), list_size, entry_size);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      // Write Metadata to vmo.
+      size_t write_offset = list_size + entry_size;
+      for (board_test::DeviceEntry& entry : entries) {
+        status = vmo.write(entry.metadata, write_offset, entry.metadata_size);
         if (status != ZX_OK) {
-            return status;
+          return status;
         }
+        write_offset += entry.metadata_size;
+      }
 
-        // Write DeviceList to vmo.
-        board_test::DeviceList list{.count = entries.size()};
-        status = vmo.write(&list, 0, sizeof(list));
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        // Write DeviceEntries to vmo.
-        status = vmo.write(entries.get(), list_size, entry_size);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        // Write Metadata to vmo.
-        size_t write_offset = list_size + entry_size;
-        for (board_test::DeviceEntry& entry : entries) {
-            status = vmo.write(entry.metadata, write_offset, entry.metadata_size);
-            if (status != ZX_OK) {
-                return status;
-            }
-            write_offset += entry.metadata_size;
-        }
-
-        *length = static_cast<uint32_t>(list_size + entry_size + metadata_size);
-        break;
+      *length = static_cast<uint32_t>(list_size + entry_size + metadata_size);
+      break;
     }
     default:
-        break;
-    }
-    *out = std::move(vmo);
-    return ZX_OK;
+      break;
+  }
+  *out = std::move(vmo);
+  return ZX_OK;
 }
 
-} // namespace
+}  // namespace
 
 zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* out) {
-    IsolatedDevmgr devmgr;
+  IsolatedDevmgr devmgr;
 
-    devmgr_launcher::Args devmgr_args;
-    devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
-    devmgr_args.driver_search_paths.swap(args->driver_search_paths);
-    devmgr_args.load_drivers.swap(args->load_drivers);
-    devmgr_args.flat_namespace = std::move(args->flat_namespace);
-    devmgr_args.disable_block_watcher = args->disable_block_watcher;
-    devmgr_args.disable_netsvc = args->disable_netsvc;
-    devmgr_args.get_boot_item = [args](uint32_t type, uint32_t extra, zx::vmo* out,
-                                       uint32_t* length) {
-        return GetBootItem(args->device_list, type, extra, out, length);
-    };
+  devmgr_launcher::Args devmgr_args;
+  devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
+  devmgr_args.driver_search_paths.swap(args->driver_search_paths);
+  devmgr_args.load_drivers.swap(args->load_drivers);
+  devmgr_args.flat_namespace = std::move(args->flat_namespace);
+  devmgr_args.disable_block_watcher = args->disable_block_watcher;
+  devmgr_args.disable_netsvc = args->disable_netsvc;
+  devmgr_args.get_boot_item = [args](uint32_t type, uint32_t extra, zx::vmo* out,
+                                     uint32_t* length) {
+    return GetBootItem(args->device_list, type, extra, out, length);
+  };
 
-    zx_status_t status =
-        devmgr_integration_test::IsolatedDevmgr::Create(std::move(devmgr_args), &devmgr.devmgr_);
-    if (status != ZX_OK) {
-        return status;
-    }
+  zx_status_t status =
+      devmgr_integration_test::IsolatedDevmgr::Create(std::move(devmgr_args), &devmgr.devmgr_);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    *out = std::move(devmgr);
-    return ZX_OK;
+  *out = std::move(devmgr);
+  return ZX_OK;
 }
 
-} // namespace driver_integration_test
+}  // namespace driver_integration_test

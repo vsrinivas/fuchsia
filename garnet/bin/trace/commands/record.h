@@ -43,8 +43,7 @@ class RecordCommand : public CommandWithController {
     std::optional<std::string> environment_name;
     uint32_t buffer_size_megabytes = 4;
     std::vector<ProviderSpec> provider_specs;
-    controller::BufferingMode buffering_mode =
-        controller::BufferingMode::ONESHOT;
+    controller::BufferingMode buffering_mode = controller::BufferingMode::ONESHOT;
     bool binary = false;
     bool compress = false;
     std::string output_file_name = "/tmp/trace.json";
@@ -68,16 +67,15 @@ class RecordCommand : public CommandWithController {
   void LaunchComponentApp();
   void LaunchSpawnedApp();
   void StartTimer();
-  void OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal);
+  void OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
   void KillSpawnedApp();
 
   async_dispatcher_t* dispatcher_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
   fuchsia::sys::EnvironmentControllerPtr environment_controller_;
   zx::process spawned_app_;
-  async::WaitMethod<RecordCommand, &RecordCommand::OnSpawnedAppExit>
-      wait_spawned_app_;
+  async::WaitMethod<RecordCommand, &RecordCommand::OnSpawnedAppExit> wait_spawned_app_;
   std::unique_ptr<std::ostream> binary_out_;
   // TODO(PT-113): Remove |exporter_|.
   std::unique_ptr<ChromiumExporter> exporter_;

@@ -9,8 +9,7 @@ using namespace overnet;
 namespace {
 class InputStream {
  public:
-  InputStream(const uint8_t* data, size_t size)
-      : cur_(data), end_(data + size) {}
+  InputStream(const uint8_t* data, size_t size) : cur_(data), end_(data + size) {}
 
   uint64_t Next64() {
     uint64_t out;
@@ -28,12 +27,11 @@ class InputStream {
   Slice NextSlice() {
     auto len = NextByte();
     auto prefix = NextByte();
-    return Slice::WithInitializerAndBorders(
-        len, Border::Prefix(prefix), [this, len](uint8_t* p) {
-          for (uint8_t i = 0; i < len; i++) {
-            *p++ = NextByte();
-          }
-        });
+    return Slice::WithInitializerAndBorders(len, Border::Prefix(prefix), [this, len](uint8_t* p) {
+      for (uint8_t i = 0; i < len; i++) {
+        *p++ = NextByte();
+      }
+    });
   }
 
  private:

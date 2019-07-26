@@ -37,8 +37,7 @@ struct Sink {
          std::make_move_iterator(obs->end()) != iter; iter++) {
       // Randomly fail to "send" some observations.
       if (with_errors && std::rand() % 5 == 0) {
-        errors.push_back(
-            std::distance(std::make_move_iterator(obs->begin()), iter));
+        errors.push_back(std::distance(std::make_move_iterator(obs->begin()), iter));
         continue;
       }
       observations.push_back(*iter);
@@ -57,8 +56,8 @@ TEST(Counter, Normal) {
   // Metric id.
   const int64_t kMetricId = 10;
   Sink sink(true);
-  ObservationsCollector collector(
-      std::bind(&Sink::SendObservations, &sink, std::placeholders::_1), 1);
+  ObservationsCollector collector(std::bind(&Sink::SendObservations, &sink, std::placeholders::_1),
+                                  1);
   auto counter = collector.MakeCounter(kMetricId, "part_name");
 
   // Each thread will add kPeriodSize * kPeriodCount to the counter.
@@ -83,8 +82,7 @@ TEST(Counter, Normal) {
 
   // Add up all the observations in the sink.
   int64_t actual = 0;
-  for (auto iter = sink.observations.begin(); sink.observations.end() != iter;
-       iter++) {
+  for (auto iter = sink.observations.begin(); sink.observations.end() != iter; iter++) {
     actual += (*iter).parts[0].value.GetIntValue();
   }
 
@@ -114,13 +112,12 @@ TEST(IntegerSampler, IntegerAverage) {
   // Metric id.
   const int64_t kMetricId = 10;
   Sink sink(false);
-  ObservationsCollector collector(
-      std::bind(&Sink::SendObservations, &sink, std::placeholders::_1), 1);
+  ObservationsCollector collector(std::bind(&Sink::SendObservations, &sink, std::placeholders::_1),
+                                  1);
 
   // The IntegerSampler will collect at most 100 elements at a time.
   size_t sample_size = 100;
-  auto int_sampler =
-      collector.MakeIntegerSampler(kMetricId, "part_name", sample_size);
+  auto int_sampler = collector.MakeIntegerSampler(kMetricId, "part_name", sample_size);
 
   // Each thread will log kPeriodSize * kPeriodCount times to the
   // IntegerSampler.
@@ -146,13 +143,11 @@ TEST(IntegerSampler, IntegerAverage) {
   // is 2*10^9. This comfortably fits in a 64 bits signed integer.
   int64_t total = 0;
   int64_t num_obs = 0;
-  for (auto iter = sink.observations.begin(); sink.observations.end() != iter;
-       iter++) {
+  for (auto iter = sink.observations.begin(); sink.observations.end() != iter; iter++) {
     num_obs++;
     total += (*iter).parts[0].value.GetIntValue();
   }
-  double sample_mean =
-      static_cast<double>(total) / static_cast<double>(num_obs);
+  double sample_mean = static_cast<double>(total) / static_cast<double>(num_obs);
 
   // We sample num_obs elements from the uniform distribution
   // [0...kSamplerMaxInt]. The central limit theorem tells us the average of
@@ -160,8 +155,7 @@ TEST(IntegerSampler, IntegerAverage) {
   // the uniform distribution and a variance equal to 1/num_obs times the
   // uniform distribution's variance.
   double expected_mean = kSamplerMaxInt / 2;
-  double expected_stddev =
-      std::sqrt((kSamplerMaxInt + 1) * (kSamplerMaxInt) / 12.0 / num_obs);
+  double expected_stddev = std::sqrt((kSamplerMaxInt + 1) * (kSamplerMaxInt) / 12.0 / num_obs);
   // We test to see if the sample mean is within 4.5 standard deviations of
   // the expected mean. This should prevent false positives at least 99.999% of
   // the time.
@@ -174,13 +168,12 @@ TEST(IntegerSampler, CheckUniformity) {
   // Metric id.
   const int64_t kMetricId = 10;
   Sink sink(false);
-  ObservationsCollector collector(
-      std::bind(&Sink::SendObservations, &sink, std::placeholders::_1), 1);
+  ObservationsCollector collector(std::bind(&Sink::SendObservations, &sink, std::placeholders::_1),
+                                  1);
 
   // The IntegerSampler will collect at most 100 elements at a time.
   size_t sample_size = 100;
-  auto int_sampler =
-      collector.MakeIntegerSampler(kMetricId, "part_name", sample_size);
+  auto int_sampler = collector.MakeIntegerSampler(kMetricId, "part_name", sample_size);
 
   // We log integers in increasing order. This is to check that the ordering of
   // the logged observations is not related to the distribution of the sampled
@@ -195,13 +188,11 @@ TEST(IntegerSampler, CheckUniformity) {
 
   int64_t total = 0;
   int64_t num_obs = 0;
-  for (auto iter = sink.observations.begin(); sink.observations.end() != iter;
-       iter++) {
+  for (auto iter = sink.observations.begin(); sink.observations.end() != iter; iter++) {
     num_obs++;
     total += (*iter).parts[0].value.GetIntValue();
   }
-  double sample_mean =
-      static_cast<double>(total) / static_cast<double>(num_obs);
+  double sample_mean = static_cast<double>(total) / static_cast<double>(num_obs);
 
   // We sample num_obs elements from the uniform distribution
   // [0...kSamplerMaxInt]. The central limit theorem tells us the average of
@@ -209,8 +200,7 @@ TEST(IntegerSampler, CheckUniformity) {
   // the uniform distribution and a variance equal to 1/num_obs times the
   // uniform distribution's variance.
   double expected_mean = kSamplerMaxInt / 2;
-  double expected_stddev =
-      std::sqrt((kSamplerMaxInt + 1) * (kSamplerMaxInt) / 12.0 / num_obs);
+  double expected_stddev = std::sqrt((kSamplerMaxInt + 1) * (kSamplerMaxInt) / 12.0 / num_obs);
   // We test to see if the sample mean is within 4.5 standard deviations of
   // the expected mean. This should prevent false positives at least 99.999% of
   // the time.
@@ -240,10 +230,10 @@ TEST(EventLogger, Normal) {
       << "kThreadNum must be divisible by the number of statuses.";
   size_t samples = 100;
   Sink sink(false);
-  ObservationsCollector collector(
-      std::bind(&Sink::SendObservations, &sink, std::placeholders::_1), 1);
-  auto logger = collector.MakeEventLogger(kEventMetricId, kMaxStatus,
-                                          kEventTimingMetricId, samples);
+  ObservationsCollector collector(std::bind(&Sink::SendObservations, &sink, std::placeholders::_1),
+                                  1);
+  auto logger =
+      collector.MakeEventLogger(kEventMetricId, kMaxStatus, kEventTimingMetricId, samples);
 
   std::vector<std::thread> threads;
   for (int i = 0; i < kThreadNum; i++) {
@@ -264,25 +254,21 @@ TEST(EventLogger, Normal) {
 
   // We sum up the distributions and check the sum is as expected.
   int64_t histogram[kMaxStatus + 1] = {0, 0, 0, 0, 0};
-  for (auto iter = sink.observations.begin(); sink.observations.end() != iter;
-       iter++) {
+  for (auto iter = sink.observations.begin(); sink.observations.end() != iter; iter++) {
     if (iter->metric_id != kEventMetricId)
       continue;
 
-    for (auto part_iter = iter->parts.begin(); iter->parts.end() != part_iter;
-         part_iter++) {
+    for (auto part_iter = iter->parts.begin(); iter->parts.end() != part_iter; part_iter++) {
       if (part_iter->part_name == "status") {
         auto dist = part_iter->value.GetDistribution();
-        for (auto status_iter = dist.begin(); dist.end() != status_iter;
-             status_iter++) {
+        for (auto status_iter = dist.begin(); dist.end() != status_iter; status_iter++) {
           histogram[status_iter->first] += status_iter->second;
         }
       }
     }
   }
 
-  int64_t expected_histogram_value =
-      kThreadNum / (kMaxStatus + 1) * kPeriodSize * kPeriodCount;
+  int64_t expected_histogram_value = kThreadNum / (kMaxStatus + 1) * kPeriodSize * kPeriodCount;
   for (size_t status = 0; status <= kMaxStatus; status++) {
     EXPECT_EQ(histogram[status], expected_histogram_value);
   }

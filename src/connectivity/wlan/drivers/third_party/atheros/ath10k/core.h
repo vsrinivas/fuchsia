@@ -99,56 +99,56 @@
 struct ath10k;
 
 enum ath10k_bus {
-    ATH10K_BUS_PCI,
-    ATH10K_BUS_AHB,
-    ATH10K_BUS_SDIO,
+  ATH10K_BUS_PCI,
+  ATH10K_BUS_AHB,
+  ATH10K_BUS_SDIO,
 };
 
 static inline const char* ath10k_bus_str(enum ath10k_bus bus) {
-    switch (bus) {
+  switch (bus) {
     case ATH10K_BUS_PCI:
-        return "pci";
+      return "pci";
     case ATH10K_BUS_AHB:
-        return "ahb";
+      return "ahb";
     case ATH10K_BUS_SDIO:
-        return "sdio";
-    }
+      return "sdio";
+  }
 
-    return "unknown";
+  return "unknown";
 }
 
 static inline uint32_t host_interest_item_address(uint32_t item_offset) {
-    return QCA988X_HOST_INTEREST_ADDRESS + item_offset;
+  return QCA988X_HOST_INTEREST_ADDRESS + item_offset;
 }
 
 struct ath10k_bmi {
-    bool done_sent;
+  bool done_sent;
 };
 
 struct ath10k_mem_chunk {
-    io_buffer_t handle;
-    void* vaddr;
-    zx_paddr_t paddr;
-    uint32_t len;
-    uint32_t req_id;
+  io_buffer_t handle;
+  void* vaddr;
+  zx_paddr_t paddr;
+  uint32_t len;
+  uint32_t req_id;
 };
 
 struct ath10k_wmi {
-    enum ath10k_htc_ep_id eid;
-    sync_completion_t service_ready;
-    sync_completion_t unified_ready;
-    sync_completion_t barrier;
-    zx_handle_t tx_credits_event;
-    BITARR(svc_map, WMI_SERVICE_MAX);
-    struct wmi_cmd_map* cmd;
-    struct wmi_vdev_param_map* vdev_param;
-    struct wmi_pdev_param_map* pdev_param;
-    const struct wmi_ops* ops;
-    const struct wmi_peer_flags_map* peer_flags;
+  enum ath10k_htc_ep_id eid;
+  sync_completion_t service_ready;
+  sync_completion_t unified_ready;
+  sync_completion_t barrier;
+  zx_handle_t tx_credits_event;
+  BITARR(svc_map, WMI_SERVICE_MAX);
+  struct wmi_cmd_map* cmd;
+  struct wmi_vdev_param_map* vdev_param;
+  struct wmi_pdev_param_map* pdev_param;
+  const struct wmi_ops* ops;
+  const struct wmi_peer_flags_map* peer_flags;
 
-    uint32_t num_mem_chunks;
-    uint32_t rx_decap_mode;
-    struct ath10k_mem_chunk mem_chunks[WMI_MAX_MEM_REQS];
+  uint32_t num_mem_chunks;
+  uint32_t rx_decap_mode;
+  struct ath10k_mem_chunk mem_chunks[WMI_MAX_MEM_REQS];
 };
 
 #if 0  // NEEDS PORTING
@@ -303,20 +303,20 @@ struct ath10k_dfs_stats {
 #define ATH10K_MAX_NUM_PEER_IDS (1 << 11) /* htt rx_desc limit */
 
 struct ath10k_peer {
-    list_node_t listnode;
+  list_node_t listnode;
 #if 0   // NEEDS PORTING
     struct ieee80211_vif* vif;
     struct ieee80211_sta* sta;
 #endif  // NEEDS PORTING
 
-    bool removed;
-    uint32_t vdev_id;
-    uint8_t addr[ETH_ALEN];
-    BITARR(peer_ids, ATH10K_MAX_NUM_PEER_IDS);
+  bool removed;
+  uint32_t vdev_id;
+  uint8_t addr[ETH_ALEN];
+  BITARR(peer_ids, ATH10K_MAX_NUM_PEER_IDS);
 
-    size_t num_wlan_cfg;
-    /* protected by ar->data_lock */
-    wlan_key_config_t wlan_cfg[WMI_MAX_KEY_INDEX];  // Save the config for deletion.
+  size_t num_wlan_cfg;
+  /* protected by ar->data_lock */
+  wlan_key_config_t wlan_cfg[WMI_MAX_KEY_INDEX];  // Save the config for deletion.
 };
 
 #if 0  // NEEDS PORTING
@@ -344,39 +344,39 @@ struct ath10k_sta {
 #define ATH10K_VDEV_SETUP_TIMEOUT (ZX_SEC(5))
 
 enum ath10k_beacon_state {
-    ATH10K_BEACON_SENT = 0,
-    ATH10K_BEACON_SCHEDULED,
-    ATH10K_BEACON_SENDING,
+  ATH10K_BEACON_SENT = 0,
+  ATH10K_BEACON_SCHEDULED,
+  ATH10K_BEACON_SENDING,
 };
 
 struct ath10k_vif_iter {
-    uint32_t vdev_id;
-    struct ath10k_vif* arvif;
+  uint32_t vdev_id;
+  struct ath10k_vif* arvif;
 };
 
 /* Copy Engine register dump, protected by ce-lock */
 struct ath10k_ce_crash_data {
-    uint32_t base_addr;
-    uint32_t src_wr_idx;
-    uint32_t src_r_idx;
-    uint32_t dst_wr_idx;
-    uint32_t dst_r_idx;
+  uint32_t base_addr;
+  uint32_t src_wr_idx;
+  uint32_t src_r_idx;
+  uint32_t dst_wr_idx;
+  uint32_t dst_r_idx;
 };
 
 struct ath10k_ce_crash_hdr {
-    uint32_t ce_count;
-    uint32_t reserved[3]; /* for future use */
-    struct ath10k_ce_crash_data entries[];
+  uint32_t ce_count;
+  uint32_t reserved[3]; /* for future use */
+  struct ath10k_ce_crash_data entries[];
 };
 
 /* used for crash-dump storage, protected by data-lock */
 struct ath10k_fw_crash_data {
-    bool crashed_since_read;
+  bool crashed_since_read;
 
-    uint8_t uuid[16];
-    struct timespec timestamp;
-    uint32_t registers[REG_DUMP_COUNT_QCA988X];
-    struct ath10k_ce_crash_data ce_crash_data[CE_COUNT_MAX];
+  uint8_t uuid[16];
+  struct timespec timestamp;
+  uint32_t registers[REG_DUMP_COUNT_QCA988X];
+  struct ath10k_ce_crash_data ce_crash_data[CE_COUNT_MAX];
 };
 
 #if 0   // NEEDS PORTING
@@ -410,257 +410,257 @@ struct ath10k_debug {
 #endif  // NEEDS PORTING
 
 enum ath10k_state {
-    ATH10K_STATE_OFF = 0,
-    ATH10K_STATE_ON,
+  ATH10K_STATE_OFF = 0,
+  ATH10K_STATE_ON,
 
-    /* When doing firmware recovery the device is first powered down.
-     * mac80211 is supposed to call in to start() hook later on. It is
-     * however possible that driver unloading and firmware crash overlap.
-     * mac80211 can wait on conf_mutex in stop() while the device is
-     * stopped in ath10k_core_restart() work holding conf_mutex. The state
-     * RESTARTED means that the device is up and mac80211 has started hw
-     * reconfiguration. Once mac80211 is done with the reconfiguration we
-     * set the state to STATE_ON in reconfig_complete().
-     */
-    ATH10K_STATE_RESTARTING,
-    ATH10K_STATE_RESTARTED,
+  /* When doing firmware recovery the device is first powered down.
+   * mac80211 is supposed to call in to start() hook later on. It is
+   * however possible that driver unloading and firmware crash overlap.
+   * mac80211 can wait on conf_mutex in stop() while the device is
+   * stopped in ath10k_core_restart() work holding conf_mutex. The state
+   * RESTARTED means that the device is up and mac80211 has started hw
+   * reconfiguration. Once mac80211 is done with the reconfiguration we
+   * set the state to STATE_ON in reconfig_complete().
+   */
+  ATH10K_STATE_RESTARTING,
+  ATH10K_STATE_RESTARTED,
 
-    /* The device has crashed while restarting hw. This state is like ON
-     * but commands are blocked in HTC and -ECOMM response is given. This
-     * prevents completion timeouts and makes the driver more responsive to
-     * userspace commands. This is also prevents recursive recovery.
-     */
-    ATH10K_STATE_WEDGED,
+  /* The device has crashed while restarting hw. This state is like ON
+   * but commands are blocked in HTC and -ECOMM response is given. This
+   * prevents completion timeouts and makes the driver more responsive to
+   * userspace commands. This is also prevents recursive recovery.
+   */
+  ATH10K_STATE_WEDGED,
 
-    /* factory tests */
-    ATH10K_STATE_UTF,
+  /* factory tests */
+  ATH10K_STATE_UTF,
 };
 
 enum ath10k_firmware_mode {
-    /* the default mode, standard 802.11 functionality */
-    ATH10K_FIRMWARE_MODE_NORMAL,
+  /* the default mode, standard 802.11 functionality */
+  ATH10K_FIRMWARE_MODE_NORMAL,
 
-    /* factory tests etc */
-    ATH10K_FIRMWARE_MODE_UTF,
+  /* factory tests etc */
+  ATH10K_FIRMWARE_MODE_UTF,
 };
 
 enum ath10k_fw_features {
-    /* wmi_mgmt_rx_hdr contains extra RSSI information */
-    ATH10K_FW_FEATURE_EXT_WMI_MGMT_RX = 0,
+  /* wmi_mgmt_rx_hdr contains extra RSSI information */
+  ATH10K_FW_FEATURE_EXT_WMI_MGMT_RX = 0,
 
-    /* Firmware from 10X branch. Deprecated, don't use in new code. */
-    ATH10K_FW_FEATURE_WMI_10X = 1,
+  /* Firmware from 10X branch. Deprecated, don't use in new code. */
+  ATH10K_FW_FEATURE_WMI_10X = 1,
 
-    /* firmware support tx frame management over WMI, otherwise it's HTT */
-    ATH10K_FW_FEATURE_HAS_WMI_MGMT_TX = 2,
+  /* firmware support tx frame management over WMI, otherwise it's HTT */
+  ATH10K_FW_FEATURE_HAS_WMI_MGMT_TX = 2,
 
-    /* Firmware does not support P2P */
-    ATH10K_FW_FEATURE_NO_P2P = 3,
+  /* Firmware does not support P2P */
+  ATH10K_FW_FEATURE_NO_P2P = 3,
 
-    /* Firmware 10.2 feature bit. The ATH10K_FW_FEATURE_WMI_10X feature
-     * bit is required to be set as well. Deprecated, don't use in new
-     * code.
-     */
-    ATH10K_FW_FEATURE_WMI_10_2 = 4,
+  /* Firmware 10.2 feature bit. The ATH10K_FW_FEATURE_WMI_10X feature
+   * bit is required to be set as well. Deprecated, don't use in new
+   * code.
+   */
+  ATH10K_FW_FEATURE_WMI_10_2 = 4,
 
-    /* Some firmware revisions lack proper multi-interface client powersave
-     * implementation. Enabling PS could result in connection drops,
-     * traffic stalls, etc.
-     */
-    ATH10K_FW_FEATURE_MULTI_VIF_PS_SUPPORT = 5,
+  /* Some firmware revisions lack proper multi-interface client powersave
+   * implementation. Enabling PS could result in connection drops,
+   * traffic stalls, etc.
+   */
+  ATH10K_FW_FEATURE_MULTI_VIF_PS_SUPPORT = 5,
 
-    /* Some firmware revisions have an incomplete WoWLAN implementation
-     * despite WMI service bit being advertised. This feature flag is used
-     * to distinguish whether WoWLAN is really supported or not.
-     */
-    ATH10K_FW_FEATURE_WOWLAN_SUPPORT = 6,
+  /* Some firmware revisions have an incomplete WoWLAN implementation
+   * despite WMI service bit being advertised. This feature flag is used
+   * to distinguish whether WoWLAN is really supported or not.
+   */
+  ATH10K_FW_FEATURE_WOWLAN_SUPPORT = 6,
 
-    /* Don't trust error code from otp.bin */
-    ATH10K_FW_FEATURE_IGNORE_OTP_RESULT = 7,
+  /* Don't trust error code from otp.bin */
+  ATH10K_FW_FEATURE_IGNORE_OTP_RESULT = 7,
 
-    /* Some firmware revisions pad 4th hw address to 4 byte boundary making
-     * it 8 bytes long in Native Wifi Rx decap.
-     */
-    ATH10K_FW_FEATURE_NO_NWIFI_DECAP_4ADDR_PADDING = 8,
+  /* Some firmware revisions pad 4th hw address to 4 byte boundary making
+   * it 8 bytes long in Native Wifi Rx decap.
+   */
+  ATH10K_FW_FEATURE_NO_NWIFI_DECAP_4ADDR_PADDING = 8,
 
-    /* Firmware supports bypassing PLL setting on init. */
-    ATH10K_FW_FEATURE_SUPPORTS_SKIP_CLOCK_INIT = 9,
+  /* Firmware supports bypassing PLL setting on init. */
+  ATH10K_FW_FEATURE_SUPPORTS_SKIP_CLOCK_INIT = 9,
 
-    /* Raw mode support. If supported, FW supports receiving and trasmitting
-     * frames in raw mode.
-     */
-    ATH10K_FW_FEATURE_RAW_MODE_SUPPORT = 10,
+  /* Raw mode support. If supported, FW supports receiving and trasmitting
+   * frames in raw mode.
+   */
+  ATH10K_FW_FEATURE_RAW_MODE_SUPPORT = 10,
 
-    /* Firmware Supports Adaptive CCA*/
-    ATH10K_FW_FEATURE_SUPPORTS_ADAPTIVE_CCA = 11,
+  /* Firmware Supports Adaptive CCA*/
+  ATH10K_FW_FEATURE_SUPPORTS_ADAPTIVE_CCA = 11,
 
-    /* Firmware supports management frame protection */
-    ATH10K_FW_FEATURE_MFP_SUPPORT = 12,
+  /* Firmware supports management frame protection */
+  ATH10K_FW_FEATURE_MFP_SUPPORT = 12,
 
-    /* Firmware supports pull-push model where host shares it's software
-     * queue state with firmware and firmware generates fetch requests
-     * telling host which queues to dequeue tx from.
-     *
-     * Primary function of this is improved MU-MIMO performance with
-     * multiple clients.
-     */
-    ATH10K_FW_FEATURE_PEER_FLOW_CONTROL = 13,
+  /* Firmware supports pull-push model where host shares it's software
+   * queue state with firmware and firmware generates fetch requests
+   * telling host which queues to dequeue tx from.
+   *
+   * Primary function of this is improved MU-MIMO performance with
+   * multiple clients.
+   */
+  ATH10K_FW_FEATURE_PEER_FLOW_CONTROL = 13,
 
-    /* Firmware supports BT-Coex without reloading firmware via pdev param.
-     * To support Bluetooth coexistence pdev param, WMI_COEX_GPIO_SUPPORT of
-     * extended resource config should be enabled always. This firmware IE
-     * is used to configure WMI_COEX_GPIO_SUPPORT.
-     */
-    ATH10K_FW_FEATURE_BTCOEX_PARAM = 14,
+  /* Firmware supports BT-Coex without reloading firmware via pdev param.
+   * To support Bluetooth coexistence pdev param, WMI_COEX_GPIO_SUPPORT of
+   * extended resource config should be enabled always. This firmware IE
+   * is used to configure WMI_COEX_GPIO_SUPPORT.
+   */
+  ATH10K_FW_FEATURE_BTCOEX_PARAM = 14,
 
-    /* Unused flag and proven to be not working, enable this if you want
-     * to experiment sending NULL func data frames in HTT TX
-     */
-    ATH10K_FW_FEATURE_SKIP_NULL_FUNC_WAR = 15,
+  /* Unused flag and proven to be not working, enable this if you want
+   * to experiment sending NULL func data frames in HTT TX
+   */
+  ATH10K_FW_FEATURE_SKIP_NULL_FUNC_WAR = 15,
 
-    /* Firmware allow other BSS mesh broadcast/multicast frames without
-     * creating monitor interface. Appropriate rxfilters are programmed for
-     * mesh vdev by firmware itself. This feature flags will be used for
-     * not creating monitor vdev while configuring mesh node.
-     */
-    ATH10K_FW_FEATURE_ALLOWS_MESH_BCAST = 16,
+  /* Firmware allow other BSS mesh broadcast/multicast frames without
+   * creating monitor interface. Appropriate rxfilters are programmed for
+   * mesh vdev by firmware itself. This feature flags will be used for
+   * not creating monitor vdev while configuring mesh node.
+   */
+  ATH10K_FW_FEATURE_ALLOWS_MESH_BCAST = 16,
 
-    /* keep last */
-    ATH10K_FW_FEATURE_COUNT,
+  /* keep last */
+  ATH10K_FW_FEATURE_COUNT,
 };
 
 enum ath10k_dev_flags {
-    /* Indicates that ath10k device is during CAC phase of DFS */
-    ATH10K_CAC_RUNNING,
-    ATH10K_FLAG_CORE_REGISTERED,
+  /* Indicates that ath10k device is during CAC phase of DFS */
+  ATH10K_CAC_RUNNING,
+  ATH10K_FLAG_CORE_REGISTERED,
 
-    /* Device has crashed and needs to restart. This indicates any pending
-     * waiters should immediately cancel instead of waiting for a time out.
-     */
-    ATH10K_FLAG_CRASH_FLUSH,
+  /* Device has crashed and needs to restart. This indicates any pending
+   * waiters should immediately cancel instead of waiting for a time out.
+   */
+  ATH10K_FLAG_CRASH_FLUSH,
 
-    /* Use Raw mode instead of native WiFi Tx/Rx encap mode.
-     * Raw mode supports both hardware and software crypto. Native WiFi only
-     * supports hardware crypto.
-     */
-    ATH10K_FLAG_RAW_MODE,
+  /* Use Raw mode instead of native WiFi Tx/Rx encap mode.
+   * Raw mode supports both hardware and software crypto. Native WiFi only
+   * supports hardware crypto.
+   */
+  ATH10K_FLAG_RAW_MODE,
 
-    /* Disable HW crypto engine */
-    ATH10K_FLAG_HW_CRYPTO_DISABLED,
+  /* Disable HW crypto engine */
+  ATH10K_FLAG_HW_CRYPTO_DISABLED,
 
-    /* Bluetooth coexistance enabled */
-    ATH10K_FLAG_BTCOEX,
+  /* Bluetooth coexistance enabled */
+  ATH10K_FLAG_BTCOEX,
 
-    /* Per Station statistics service */
-    ATH10K_FLAG_PEER_STATS,
+  /* Per Station statistics service */
+  ATH10K_FLAG_PEER_STATS,
 
-    /* keep last */
-    ATH10K_FLAG_MAX,
+  /* keep last */
+  ATH10K_FLAG_MAX,
 };
 
 enum ath10k_cal_mode {
-    ATH10K_CAL_MODE_FILE,
-    ATH10K_CAL_MODE_OTP,
-    ATH10K_CAL_MODE_DT,
-    ATH10K_PRE_CAL_MODE_FILE,
-    ATH10K_PRE_CAL_MODE_DT,
-    ATH10K_CAL_MODE_EEPROM,
+  ATH10K_CAL_MODE_FILE,
+  ATH10K_CAL_MODE_OTP,
+  ATH10K_CAL_MODE_DT,
+  ATH10K_PRE_CAL_MODE_FILE,
+  ATH10K_PRE_CAL_MODE_DT,
+  ATH10K_CAL_MODE_EEPROM,
 };
 
 enum ath10k_crypt_mode {
-    /* Only use hardware crypto engine */
-    ATH10K_CRYPT_MODE_HW,
-    /* Only use software crypto engine */
-    ATH10K_CRYPT_MODE_SW,
+  /* Only use hardware crypto engine */
+  ATH10K_CRYPT_MODE_HW,
+  /* Only use software crypto engine */
+  ATH10K_CRYPT_MODE_SW,
 };
 
 static inline const char* ath10k_cal_mode_str(enum ath10k_cal_mode mode) {
-    switch (mode) {
+  switch (mode) {
     case ATH10K_CAL_MODE_FILE:
-        return "file";
+      return "file";
     case ATH10K_CAL_MODE_OTP:
-        return "otp";
+      return "otp";
     case ATH10K_CAL_MODE_DT:
-        return "dt";
+      return "dt";
     case ATH10K_PRE_CAL_MODE_FILE:
-        return "pre-cal-file";
+      return "pre-cal-file";
     case ATH10K_PRE_CAL_MODE_DT:
-        return "pre-cal-dt";
+      return "pre-cal-dt";
     case ATH10K_CAL_MODE_EEPROM:
-        return "eeprom";
-    }
+      return "eeprom";
+  }
 
-    return "unknown";
+  return "unknown";
 }
 
 struct ath10k_firmware {
-    zx_handle_t vmo;
-    uint8_t* data;
-    size_t size;
+  zx_handle_t vmo;
+  uint8_t* data;
+  size_t size;
 };
 
 enum ath10k_scan_state {
-    ATH10K_SCAN_IDLE,
-    ATH10K_SCAN_STARTING,
-    ATH10K_SCAN_RUNNING,
-    ATH10K_SCAN_ABORTING,
+  ATH10K_SCAN_IDLE,
+  ATH10K_SCAN_STARTING,
+  ATH10K_SCAN_RUNNING,
+  ATH10K_SCAN_ABORTING,
 };
 
 static inline const char* ath10k_scan_state_str(enum ath10k_scan_state state) {
-    switch (state) {
+  switch (state) {
     case ATH10K_SCAN_IDLE:
-        return "idle";
+      return "idle";
     case ATH10K_SCAN_STARTING:
-        return "starting";
+      return "starting";
     case ATH10K_SCAN_RUNNING:
-        return "running";
+      return "running";
     case ATH10K_SCAN_ABORTING:
-        return "aborting";
-    }
+      return "aborting";
+  }
 
-    return "unknown";
+  return "unknown";
 }
 
 enum ath10k_tx_pause_reason {
-    ATH10K_TX_PAUSE_Q_FULL,
-    ATH10K_TX_PAUSE_MAX,
+  ATH10K_TX_PAUSE_Q_FULL,
+  ATH10K_TX_PAUSE_MAX,
 };
 
 struct ath10k_fw_file {
-    struct ath10k_firmware firmware;
+  struct ath10k_firmware firmware;
 
-    char fw_version[ATH10K_FW_VER_LEN];
+  char fw_version[ATH10K_FW_VER_LEN];
 
-    BITARR(fw_features, ATH10K_FW_FEATURE_COUNT);
+  BITARR(fw_features, ATH10K_FW_FEATURE_COUNT);
 
-    enum ath10k_fw_wmi_op_version wmi_op_version;
-    enum ath10k_fw_htt_op_version htt_op_version;
+  enum ath10k_fw_wmi_op_version wmi_op_version;
+  enum ath10k_fw_htt_op_version htt_op_version;
 
-    const void* firmware_data;
-    size_t firmware_len;
+  const void* firmware_data;
+  size_t firmware_len;
 
-    const void* otp_data;
-    size_t otp_len;
+  const void* otp_data;
+  size_t otp_len;
 
-    const void* codeswap_data;
-    size_t codeswap_len;
+  const void* codeswap_data;
+  size_t codeswap_len;
 
-    /* The original idea of struct ath10k_fw_file was that it only
-     * contains struct firmware and pointers to various parts (actual
-     * firmware binary, otp, metadata etc) of the file. This seg_info
-     * is actually created separate but as this is used similarly as
-     * the other firmware components it's more convenient to have it
-     * here.
-     */
-    struct ath10k_swap_code_seg_info* firmware_swap_code_seg_info;
+  /* The original idea of struct ath10k_fw_file was that it only
+   * contains struct firmware and pointers to various parts (actual
+   * firmware binary, otp, metadata etc) of the file. This seg_info
+   * is actually created separate but as this is used similarly as
+   * the other firmware components it's more convenient to have it
+   * here.
+   */
+  struct ath10k_swap_code_seg_info* firmware_swap_code_seg_info;
 };
 
 struct ath10k_fw_components {
-    struct ath10k_firmware board;
-    const void* board_data;
-    size_t board_len;
+  struct ath10k_firmware board;
+  const void* board_data;
+  size_t board_len;
 
-    struct ath10k_fw_file fw_file;
+  struct ath10k_fw_file fw_file;
 };
 
 #if 0   // NEEDS PORTING
@@ -681,154 +681,154 @@ struct ath10k_per_peer_tx_stats {
 #endif  // NEEDS PORTING
 
 struct ath10k_vif {
-    uint32_t vdev_id;
-    uint16_t peer_id;
-    enum wmi_vdev_type vdev_type;  // WMI_VDEV_TYPE_* defined by Atheros.
-    uint32_t beacon_interval;
-    uint32_t dtim_period;
-    enum ath10k_beacon_state beacon_state;
-    struct ath10k_msg_buf* beacon_buf;
-    unsigned long tx_paused; /* arbitrary values defined by target */
+  uint32_t vdev_id;
+  uint16_t peer_id;
+  enum wmi_vdev_type vdev_type;  // WMI_VDEV_TYPE_* defined by Atheros.
+  uint32_t beacon_interval;
+  uint32_t dtim_period;
+  enum ath10k_beacon_state beacon_state;
+  struct ath10k_msg_buf* beacon_buf;
+  unsigned long tx_paused; /* arbitrary values defined by target */
 
-    struct ath10k* ar;
+  struct ath10k* ar;
 
-    bool is_started;
-    bool is_up;
-    bool spectral_enabled;
-    bool ps;
-    uint32_t aid;
-    uint8_t bssid[ETH_ALEN];
+  bool is_started;
+  bool is_up;
+  bool spectral_enabled;
+  bool ps;
+  uint32_t aid;
+  uint8_t bssid[ETH_ALEN];
 
-    uint16_t tx_seq_no;
+  uint16_t tx_seq_no;
 
-    union {
-        struct {
-            uint32_t uapsd;
-        } sta;
-        struct {
-            /* 512 stations */
-            uint8_t tim_bitmap[64];
-            uint8_t tim_len;
-            uint32_t ssid_len;
-            uint8_t ssid[IEEE80211_SSID_LEN_MAX];
-            bool hidden_ssid;
-            /* P2P_IE with NoA attribute for P2P_GO case */
-            uint32_t noa_len;
-            uint8_t* noa_data;
-        } ap;
-    } u;
+  union {
+    struct {
+      uint32_t uapsd;
+    } sta;
+    struct {
+      /* 512 stations */
+      uint8_t tim_bitmap[64];
+      uint8_t tim_len;
+      uint32_t ssid_len;
+      uint8_t ssid[IEEE80211_SSID_LEN_MAX];
+      bool hidden_ssid;
+      /* P2P_IE with NoA attribute for P2P_GO case */
+      uint32_t noa_len;
+      uint8_t* noa_data;
+    } ap;
+  } u;
 
-    bool use_cts_prot;
-    bool nohwcrypt;
-    int num_legacy_stations;
-    int txpower;
-    struct wmi_wmm_params_all_arg wmm_params;
+  bool use_cts_prot;
+  bool nohwcrypt;
+  int num_legacy_stations;
+  int txpower;
+  struct wmi_wmm_params_all_arg wmm_params;
 
-    // For beacon template.
-    uint8_t bcn_tmpl_data[ATH10K_MAX_BCN_TMPL_SIZE];
-    size_t bcn_tmpl_len;
-    size_t tim_ie_offset;
-    bool bcn_tmpl_changed;
+  // For beacon template.
+  uint8_t bcn_tmpl_data[ATH10K_MAX_BCN_TMPL_SIZE];
+  size_t bcn_tmpl_len;
+  size_t tim_ie_offset;
+  bool bcn_tmpl_changed;
 };
 
 struct ath10k {
-    zx_device_t* zxdev;  // Or 'zxdev_phy', which binds to the hardware device.
-    zx_device_t* zxdev_mac;
-    uint8_t mac_addr[ETH_ALEN];
+  zx_device_t* zxdev;  // Or 'zxdev_phy', which binds to the hardware device.
+  zx_device_t* zxdev_mac;
+  uint8_t mac_addr[ETH_ALEN];
 
-    enum ath10k_hw_rev hw_rev;
-    uint16_t dev_id;
-    uint32_t chip_id;
-    uint32_t target_version;
-    uint8_t fw_version_major;
-    uint32_t fw_version_minor;
-    uint16_t fw_version_release;
-    uint16_t fw_version_build;
-    uint32_t fw_stats_req_mask;
-    uint32_t phy_capability;
-    uint32_t hw_min_tx_power;
-    uint32_t hw_max_tx_power;
-    uint32_t hw_eeprom_rd;
-    uint32_t ht_cap_info;
-    uint32_t vht_cap_info;
-    uint32_t num_rf_chains;
-    uint32_t max_spatial_stream;
-    /* protected by conf_mutex */
-    uint32_t low_5ghz_chan;
-    uint32_t high_5ghz_chan;
-    bool ani_enabled;
+  enum ath10k_hw_rev hw_rev;
+  uint16_t dev_id;
+  uint32_t chip_id;
+  uint32_t target_version;
+  uint8_t fw_version_major;
+  uint32_t fw_version_minor;
+  uint16_t fw_version_release;
+  uint16_t fw_version_build;
+  uint32_t fw_stats_req_mask;
+  uint32_t phy_capability;
+  uint32_t hw_min_tx_power;
+  uint32_t hw_max_tx_power;
+  uint32_t hw_eeprom_rd;
+  uint32_t ht_cap_info;
+  uint32_t vht_cap_info;
+  uint32_t num_rf_chains;
+  uint32_t max_spatial_stream;
+  /* protected by conf_mutex */
+  uint32_t low_5ghz_chan;
+  uint32_t high_5ghz_chan;
+  bool ani_enabled;
 
-    bool p2p;
+  bool p2p;
 
-    struct {
-        enum ath10k_bus bus;
-        const struct ath10k_hif_ops* ops;
-    } hif;
+  struct {
+    enum ath10k_bus bus;
+    const struct ath10k_hif_ops* ops;
+  } hif;
 
-    struct {
-        wlanmac_ifc_t* ifc;
-        void* cookie;
-    } wlanmac;
+  struct {
+    wlanmac_ifc_t* ifc;
+    void* cookie;
+  } wlanmac;
 
-    // Now we only support one interface. Need to review the below variables when supporting
-    // multiple interfaces. TODO(WLAN-641)
-    uint16_t mac_role;        // Either WLAN_MAC_ROLE_CLIENT or WLAN_MAC_ROLE_AP passed from MLME
-    uint16_t num_mac_ifaces;  // Number of MAC interfaces created.
-    uint16_t iface_id;        // The ID being in use.
+  // Now we only support one interface. Need to review the below variables when supporting
+  // multiple interfaces. TODO(WLAN-641)
+  uint16_t mac_role;        // Either WLAN_MAC_ROLE_CLIENT or WLAN_MAC_ROLE_AP passed from MLME
+  uint16_t num_mac_ifaces;  // Number of MAC interfaces created.
+  uint16_t iface_id;        // The ID being in use.
 
-    sync_completion_t target_suspend;
+  sync_completion_t target_suspend;
 
-    const struct ath10k_hw_regs* regs;
-    const struct ath10k_hw_ce_regs* hw_ce_regs;
-    const struct ath10k_hw_values* hw_values;
-    struct ath10k_bmi bmi;
-    struct ath10k_wmi wmi;
-    struct ath10k_htc htc;
-    struct ath10k_htt htt;
+  const struct ath10k_hw_regs* regs;
+  const struct ath10k_hw_ce_regs* hw_ce_regs;
+  const struct ath10k_hw_values* hw_values;
+  struct ath10k_bmi bmi;
+  struct ath10k_wmi wmi;
+  struct ath10k_htc htc;
+  struct ath10k_htt htt;
 
-    struct ath10k_hw_params hw_params;
+  struct ath10k_hw_params hw_params;
 
-    /* contains the firmware images used with ATH10K_FIRMWARE_MODE_NORMAL */
-    struct ath10k_fw_components normal_mode_fw;
+  /* contains the firmware images used with ATH10K_FIRMWARE_MODE_NORMAL */
+  struct ath10k_fw_components normal_mode_fw;
 
-    /* READ-ONLY images of the running firmware, which can be either
-     * normal or UTF. Do not modify, release etc!
-     */
-    const struct ath10k_fw_components* running_fw;
+  /* READ-ONLY images of the running firmware, which can be either
+   * normal or UTF. Do not modify, release etc!
+   */
+  const struct ath10k_fw_components* running_fw;
 
-    struct ath10k_firmware pre_cal_file;
-    struct ath10k_firmware cal_file;
+  struct ath10k_firmware pre_cal_file;
+  struct ath10k_firmware cal_file;
 
-    struct {
-        uint32_t vendor;
-        uint32_t device;
-        uint32_t subsystem_vendor;
-        uint32_t subsystem_device;
+  struct {
+    uint32_t vendor;
+    uint32_t device;
+    uint32_t subsystem_vendor;
+    uint32_t subsystem_device;
 
-        bool bmi_ids_valid;
-        uint8_t bmi_board_id;
-        uint8_t bmi_chip_id;
+    bool bmi_ids_valid;
+    uint8_t bmi_board_id;
+    uint8_t bmi_chip_id;
 
-        char bdf_ext[ATH10K_SMBIOS_BDF_EXT_STR_LENGTH];
-    } id;
+    char bdf_ext[ATH10K_SMBIOS_BDF_EXT_STR_LENGTH];
+  } id;
 
-    int fw_api;
-    int bd_api;
-    enum ath10k_cal_mode cal_mode;
+  int fw_api;
+  int bd_api;
+  enum ath10k_cal_mode cal_mode;
 
-    struct {
-        sync_completion_t started;
-        sync_completion_t completed;
-        sync_completion_t on_channel;
+  struct {
+    sync_completion_t started;
+    sync_completion_t completed;
+    sync_completion_t on_channel;
 #if 0   // NEEDS PORTING
         struct delayed_work timeout;
 #endif  // NEEDS PORTING
-        enum ath10k_scan_state state;
-        bool is_roc;
-        int vdev_id;
-        int roc_freq;
-        bool roc_notify;
-    } scan;
+    enum ath10k_scan_state state;
+    bool is_roc;
+    int vdev_id;
+    int roc_freq;
+    bool roc_notify;
+  } scan;
 
 #if 0   // NEEDS PORTING
     struct {
@@ -836,8 +836,8 @@ struct ath10k {
     } mac;
 #endif  // NEEDS PORTING
 
-    /* should never be NULL; needed for regular htt rx */
-    wlan_channel_t rx_channel;
+  /* should never be NULL; needed for regular htt rx */
+  wlan_channel_t rx_channel;
 
 #if 0   // NEEDS PORTING
     /* current operating channel definition */
@@ -847,29 +847,29 @@ struct ath10k {
     struct ieee80211_channel* tgt_oper_chan;
 #endif  // NEEDS PORTING
 
-    unsigned long long free_vdev_map;
-    bool arvif_created;
-    struct ath10k_vif arvif;
-    struct ath10k_vif* monitor_arvif;
-    bool monitor;
-    int monitor_vdev_id;
-    bool monitor_started;
-    unsigned int filter_flags;
+  unsigned long long free_vdev_map;
+  bool arvif_created;
+  struct ath10k_vif arvif;
+  struct ath10k_vif* monitor_arvif;
+  bool monitor;
+  int monitor_vdev_id;
+  bool monitor_started;
+  unsigned int filter_flags;
 
-    BITARR(dev_flags, ATH10K_FLAG_MAX);
-    bool dfs_block_radar_events;
+  BITARR(dev_flags, ATH10K_FLAG_MAX);
+  bool dfs_block_radar_events;
 
-    /* protected by conf_mutex */
-    bool radar_enabled;
-    int num_started_vdevs;
+  /* protected by conf_mutex */
+  bool radar_enabled;
+  int num_started_vdevs;
 
-    /* Protected by conf-mutex */
-    uint8_t cfg_tx_chainmask;
-    uint8_t cfg_rx_chainmask;
+  /* Protected by conf-mutex */
+  uint8_t cfg_tx_chainmask;
+  uint8_t cfg_rx_chainmask;
 
-    sync_completion_t install_key_done;
+  sync_completion_t install_key_done;
 
-    sync_completion_t vdev_setup_done;
+  sync_completion_t vdev_setup_done;
 
 #if 0   // NEEDS PORTING
     struct workqueue_struct* workqueue;
@@ -877,37 +877,37 @@ struct ath10k {
     struct workqueue_struct* workqueue_aux;
 #endif  // NEEDS PORTING
 
-    /* prevents concurrent FW reconfiguration */
-    mtx_t conf_mutex;
+  /* prevents concurrent FW reconfiguration */
+  mtx_t conf_mutex;
 
-    /* protects shared structure data */
-    mtx_t data_lock;
-    /* protects: ar->txqs, artxq->list */
-    mtx_t txqs_lock;
+  /* protects shared structure data */
+  mtx_t data_lock;
+  /* protects: ar->txqs, artxq->list */
+  mtx_t txqs_lock;
 
-    /* protects: interfaces creation/deletion */
-    mtx_t iface_lock;
+  /* protects: interfaces creation/deletion */
+  mtx_t iface_lock;
 
-    list_node_t txqs;
-    list_node_t arvifs;
-    list_node_t peers;
-    struct ath10k_peer* peer_map[ATH10K_MAX_NUM_PEER_IDS];
-    cnd_t peer_mapping_cnd;
+  list_node_t txqs;
+  list_node_t arvifs;
+  list_node_t peers;
+  struct ath10k_peer* peer_map[ATH10K_MAX_NUM_PEER_IDS];
+  cnd_t peer_mapping_cnd;
 
-    /* protected by conf_mutex */
-    int num_peers;
-    int num_stations;
+  /* protected by conf_mutex */
+  int num_peers;
+  int num_stations;
 
-    int max_num_peers;
-    int max_num_stations;
-    int max_num_vdevs;
-    int max_num_tdls_vdevs;
-    int num_active_peers;
-    int num_tids;
+  int max_num_peers;
+  int max_num_stations;
+  int max_num_vdevs;
+  int max_num_tdls_vdevs;
+  int num_active_peers;
+  int num_tids;
 
-    struct ath10k_msg_buf* svc_rdy_buf;
+  struct ath10k_msg_buf* svc_rdy_buf;
 
-    struct ath10k_msg_buf_state msg_buf_state;
+  struct ath10k_msg_buf_state msg_buf_state;
 
 #if 0   // NEEDS PORTING
     struct work_struct offchan_tx_work;
@@ -919,13 +919,13 @@ struct ath10k {
     struct sk_buff_head wmi_mgmt_tx_queue;
 #endif  // NEEDS PORTING
 
-    enum ath10k_state state;
+  enum ath10k_state state;
 
-    thrd_t isr_thread;
-    thrd_t register_work;
-    thrd_t restart_work;
+  thrd_t isr_thread;
+  thrd_t register_work;
+  thrd_t restart_work;
 #if DEBUG_MSG_BUF
-    thrd_t monitor_thread;
+  thrd_t monitor_thread;
 #endif
 
 #if 0   // NEEDS PORTING
@@ -937,14 +937,14 @@ struct ath10k {
     struct survey_info survey[ATH10K_NUM_CHANS];
 #endif  // NEEDS PORTING
 
-    /* Channel info events are expected to come in pairs without and with
-     * COMPLETE flag set respectively for each channel visit during scan.
-     *
-     * However there are deviations from this rule. This flag is used to
-     * avoid reporting garbage data.
-     */
-    bool ch_info_can_report_survey;
-    sync_completion_t bss_survey_done;
+  /* Channel info events are expected to come in pairs without and with
+   * COMPLETE flag set respectively for each channel visit during scan.
+   *
+   * However there are deviations from this rule. This flag is used to
+   * avoid reporting garbage data.
+   */
+  bool ch_info_can_report_survey;
+  sync_completion_t bss_survey_done;
 
 #if 0  // NEEDS PORTING
     struct dfs_pattern_detector* dfs_detector;
@@ -972,15 +972,15 @@ struct ath10k {
     } testmode;
 #endif  // NEEDS PORTING
 
-    struct {
-        /* protected by data_lock */
-        uint32_t fw_crash_counter;
-        uint32_t fw_warm_reset_counter;
-        uint32_t fw_cold_reset_counter;
-    } stats;
+  struct {
+    /* protected by data_lock */
+    uint32_t fw_crash_counter;
+    uint32_t fw_warm_reset_counter;
+    uint32_t fw_cold_reset_counter;
+  } stats;
 
-    struct ath10k_thermal thermal;
-    struct ath10k_wow wow;
+  struct ath10k_thermal thermal;
+  struct ath10k_wow wow;
 #if 0   // NEEDS PORTING
     struct ath10k_per_peer_tx_stats peer_tx_stats;
 
@@ -1002,17 +1002,17 @@ struct ath10k {
     } fw_coverage;
 #endif  // NEEDS PORTING
 
-    /* must be last */
-    void* drv_priv;
+  /* must be last */
+  void* drv_priv;
 };
 
 static inline bool ath10k_peer_stats_enabled(struct ath10k* ar) {
-    if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_PEER_STATS) &&
-        BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_PEER_STATS)) {
-        return true;
-    }
+  if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_PEER_STATS) &&
+      BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_PEER_STATS)) {
+    return true;
+  }
 
-    return false;
+  return false;
 }
 
 zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size, enum ath10k_bus bus,

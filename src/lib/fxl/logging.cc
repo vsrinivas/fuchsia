@@ -21,8 +21,7 @@
 namespace fxl {
 namespace {
 
-const char* const kLogSeverityNames[LOG_NUM_SEVERITIES] = {"INFO", "WARNING",
-                                                           "ERROR", "FATAL"};
+const char* const kLogSeverityNames[LOG_NUM_SEVERITIES] = {"INFO", "WARNING", "ERROR", "FATAL"};
 
 const char* GetNameForLogSeverity(LogSeverity severity) {
   if (severity >= LOG_INFO && severity < LOG_NUM_SEVERITIES)
@@ -46,8 +45,7 @@ const char* StripPath(const char* path) {
 
 }  // namespace
 
-LogMessage::LogMessage(LogSeverity severity, const char* file, int line,
-                       const char* condition
+LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const char* condition
 #if defined(__Fuchsia__)
                        ,
                        zx_status_t status
@@ -66,8 +64,8 @@ LogMessage::LogMessage(LogSeverity severity, const char* file, int line,
     stream_ << GetNameForLogSeverity(severity);
   else
     stream_ << "VERBOSE" << -severity;
-  stream_ << ":" << (severity > LOG_INFO ? StripDots(file_) : StripPath(file_))
-          << "(" << line_ << ")] ";
+  stream_ << ":" << (severity > LOG_INFO ? StripDots(file_) : StripPath(file_)) << "(" << line_
+          << ")] ";
 
   if (condition)
     stream_ << "Check failed: " << condition << ". ";
@@ -82,8 +80,7 @@ LogMessage::~LogMessage() {
   stream_ << std::endl;
 
 #if defined(OS_ANDROID)
-  android_LogPriority priority =
-      (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
+  android_LogPriority priority = (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
   switch (severity_) {
     case LOG_INFO:
       priority = ANDROID_LOG_INFO;
@@ -112,8 +109,6 @@ LogMessage::~LogMessage() {
 
 int GetVlogVerbosity() { return std::max(-1, LOG_INFO - GetMinLogLevel()); }
 
-bool ShouldCreateLogMessage(LogSeverity severity) {
-  return severity >= GetMinLogLevel();
-}
+bool ShouldCreateLogMessage(LogSeverity severity) { return severity >= GetMinLogLevel(); }
 
 }  // namespace fxl

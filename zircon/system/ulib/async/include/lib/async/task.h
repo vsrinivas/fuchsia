@@ -14,8 +14,7 @@ __BEGIN_CDECLS
 // The |status| is |ZX_OK| if the task's deadline elapsed and the task should run.
 // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
 // the task's handler ran or the task was canceled.
-typedef void(async_task_handler_t)(async_dispatcher_t* dispatcher,
-                                   async_task_t* task,
+typedef void(async_task_handler_t)(async_dispatcher_t* dispatcher, async_task_t* task,
                                    zx_status_t status);
 
 // Holds context for a task and its handler.
@@ -25,16 +24,16 @@ typedef void(async_task_handler_t)(async_dispatcher_t* dispatcher,
 // is successfully canceled, or the dispatcher shuts down.  Thereafter, the task
 // may be posted again or destroyed.
 struct async_task {
-    // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
-    async_state_t state;
+  // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
+  async_state_t state;
 
-    // The task's handler function.
-    async_task_handler_t* handler;
+  // The task's handler function.
+  async_task_handler_t* handler;
 
-    // The task's deadline must be expressed in the time base used by the asynchronous
-    // dispatcher (usually |ZX_CLOCK_MONOTONIC| except in unit tests).
-    // See |async_now()| for details.
-    zx_time_t deadline;
+  // The task's deadline must be expressed in the time base used by the asynchronous
+  // dispatcher (usually |ZX_CLOCK_MONOTONIC| except in unit tests).
+  // See |async_now()| for details.
+  zx_time_t deadline;
 };
 
 // Posts a task to run on or after its deadline following all posted

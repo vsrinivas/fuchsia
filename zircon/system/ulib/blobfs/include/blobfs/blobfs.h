@@ -65,224 +65,222 @@ using block_client::BlockDevice;
 using digest::Digest;
 
 enum class Writability {
-    // Do not write to persistent storage under any circumstances whatsoever.
-    ReadOnlyDisk,
-    // Do not allow users of the filesystem to mutate filesystem state. This
-    // state allows the journal to replay while initializing writeback.
-    ReadOnlyFilesystem,
-    // Permit all operations.
-    Writable,
+  // Do not write to persistent storage under any circumstances whatsoever.
+  ReadOnlyDisk,
+  // Do not allow users of the filesystem to mutate filesystem state. This
+  // state allows the journal to replay while initializing writeback.
+  ReadOnlyFilesystem,
+  // Permit all operations.
+  Writable,
 };
 
 // Toggles that may be set on blobfs during initialization.
 struct MountOptions {
-    Writability writability = Writability::Writable;
-    bool metrics = false;
-    bool journal = false;
-    CachePolicy cache_policy = CachePolicy::EvictImmediately;
+  Writability writability = Writability::Writable;
+  bool metrics = false;
+  bool journal = false;
+  CachePolicy cache_policy = CachePolicy::EvictImmediately;
 };
 
 class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public TransactionManager {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
-    ////////////////
-    // fs::ManagedVfs interface.
+  ////////////////
+  // fs::ManagedVfs interface.
 
-    void Shutdown(fs::Vfs::ShutdownCallback closure) final;
+  void Shutdown(fs::Vfs::ShutdownCallback closure) final;
 
-    ////////////////
-    // TransactionManager's fs::TransactionHandler interface.
-    //
-    // Allows transmitting read and write transactions directly to the underlying storage.
+  ////////////////
+  // TransactionManager's fs::TransactionHandler interface.
+  //
+  // Allows transmitting read and write transactions directly to the underlying storage.
 
-    uint32_t FsBlockSize() const final { return kBlobfsBlockSize; }
+  uint32_t FsBlockSize() const final { return kBlobfsBlockSize; }
 
-    uint32_t DeviceBlockSize() const final { return block_info_.block_size; }
+  uint32_t DeviceBlockSize() const final { return block_info_.block_size; }
 
-    groupid_t BlockGroupID() final {
-        thread_local groupid_t group_ = next_group_.fetch_add(1);
-        ZX_ASSERT_MSG(group_ < MAX_TXN_GROUP_COUNT, "Too many threads accessing block device");
-        return group_;
+  groupid_t BlockGroupID() final {
+    thread_local groupid_t group_ = next_group_.fetch_add(1);
+    ZX_ASSERT_MSG(group_ < MAX_TXN_GROUP_COUNT, "Too many threads accessing block device");
+    return group_;
+  }
+
+  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+    TRACE_DURATION("blobfs", "Blobfs::Transaction", "count", count);
+    return block_device_->FifoTransaction(requests, count);
+  }
+
+  ////////////////
+  // TransactionManager's SpaceManager interface.
+  //
+  // Allows viewing and controlling the size of the underlying volume.
+
+  const Superblock& Info() const final { return info_; }
+  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
+  zx_status_t DetachVmo(vmoid_t vmoid) final;
+  zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final;
+  zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
+
+  ////////////////
+  // TransactionManager interface.
+  //
+  // Allows attaching VMOs, controlling the underlying volume, and sending transactions to the
+  // underlying storage (optionally through the journal).
+
+  BlobfsMetrics& Metrics() final { return metrics_; }
+  size_t WritebackCapacity() const final;
+  zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final;
+  zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final;
+
+  ////////////////
+  // Other methods.
+
+  uint64_t DataStart() const { return DataStartBlock(info_); }
+
+  bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
+                            uint64_t* first_unset = nullptr) const {
+    return allocator_->CheckBlocksAllocated(start_block, end_block, first_unset);
+  }
+  AllocatedExtentIterator GetExtents(uint32_t node_index) {
+    return AllocatedExtentIterator(allocator_.get(), node_index);
+  }
+
+  Allocator* GetAllocator() { return allocator_.get(); }
+
+  Inode* GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
+  zx_status_t ReserveBlocks(size_t num_blocks, fbl::Vector<ReservedExtent>* out_extents) {
+    return allocator_->ReserveBlocks(num_blocks, out_extents);
+  }
+  zx_status_t ReserveNodes(size_t num_nodes, fbl::Vector<ReservedNode>* out_node) {
+    return allocator_->ReserveNodes(num_nodes, out_node);
+  }
+
+  static zx_status_t Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
+                            std::unique_ptr<Blobfs>* out);
+
+  void CollectMetrics() { collecting_metrics_ = true; }
+  bool CollectingMetrics() const { return collecting_metrics_; }
+  void DisableMetrics() { collecting_metrics_ = false; }
+  void DumpMetrics() const {
+    if (collecting_metrics_) {
+      metrics_.Dump();
     }
+  }
 
-    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-        TRACE_DURATION("blobfs", "Blobfs::Transaction", "count", count);
-        return block_device_->FifoTransaction(requests, count);
-    }
+  void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
 
-    ////////////////
-    // TransactionManager's SpaceManager interface.
-    //
-    // Allows viewing and controlling the size of the underlying volume.
+  // Initializes the WritebackQueue and Journal, replaying any existing journal entries
+  // if requested.
+  //
+  // If the underlying block device is read-only, the journal may not be
+  // replayed, and this function returns ZX_ERR_ACCESS_DENIED.
+  // If the filesystem is to be mounted read-only or read + write, the journal may be replayed.
+  zx_status_t InitializeWriteback(Writability writability, bool journal_enabled);
 
-    const Superblock& Info() const final { return info_; }
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
-    zx_status_t DetachVmo(vmoid_t vmoid) final;
-    zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final;
-    zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
+  virtual ~Blobfs();
 
-    ////////////////
-    // TransactionManager interface.
-    //
-    // Allows attaching VMOs, controlling the underlying volume, and sending transactions to the
-    // underlying storage (optionally through the journal).
+  // Invokes "open" on the root directory.
+  // Acts as a special-case to bootstrap filesystem mounting.
+  zx_status_t OpenRootNode(fbl::RefPtr<Directory>* out);
 
-    BlobfsMetrics& Metrics() final { return metrics_; }
-    size_t WritebackCapacity() const final;
-    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final;
-    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final;
+  BlobCache& Cache() { return blob_cache_; }
 
-    ////////////////
-    // Other methods.
+  zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
-    uint64_t DataStart() const { return DataStartBlock(info_); }
+  BlockDevice* Device() const { return block_device_.get(); }
 
-    bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
-                              uint64_t* first_unset = nullptr) const {
-        return allocator_->CheckBlocksAllocated(start_block, end_block, first_unset);
-    }
-    AllocatedExtentIterator GetExtents(uint32_t node_index) {
-        return AllocatedExtentIterator(allocator_.get(), node_index);
-    }
+  // Returns an unique identifier for this instance.
+  uint64_t GetFsId() const { return fs_id_; }
 
-    Allocator* GetAllocator() { return allocator_.get(); }
+  using SyncCallback = fs::Vnode::SyncCallback;
+  void Sync(SyncCallback closure);
 
-    Inode* GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
-    zx_status_t ReserveBlocks(size_t num_blocks, fbl::Vector<ReservedExtent>* out_extents) {
-        return allocator_->ReserveBlocks(num_blocks, out_extents);
-    }
-    zx_status_t ReserveNodes(size_t num_nodes, fbl::Vector<ReservedNode>* out_node) {
-        return allocator_->ReserveNodes(num_nodes, out_node);
-    }
+  // Frees an inode, from both the reserved map and the inode table. If the
+  // inode was allocated in the inode table, write the deleted inode out to
+  // disk.
+  void FreeInode(WritebackWork* wb, uint32_t node_index);
 
-    static zx_status_t Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
-                              std::unique_ptr<Blobfs>* out);
+  // Does a single pass of all blobs, creating uninitialized Vnode
+  // objects for them all.
+  //
+  // By executing this function at mount, we can quickly assert
+  // either the presence or absence of a blob on the system without
+  // further scanning.
+  zx_status_t InitializeVnodes();
 
-    void CollectMetrics() { collecting_metrics_ = true; }
-    bool CollectingMetrics() const { return collecting_metrics_; }
-    void DisableMetrics() { collecting_metrics_ = false; }
-    void DumpMetrics() const {
-        if (collecting_metrics_) {
-            metrics_.Dump();
-        }
-    }
+  // Writes node data to the inode table and updates disk.
+  void PersistNode(WritebackWork* wb, uint32_t node_index);
 
-    void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
+  // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
+  void PersistBlocks(WritebackWork* wb, const ReservedExtent& extent);
 
-    // Initializes the WritebackQueue and Journal, replaying any existing journal entries
-    // if requested.
-    //
-    // If the underlying block device is read-only, the journal may not be
-    // replayed, and this function returns ZX_ERR_ACCESS_DENIED.
-    // If the filesystem is to be mounted read-only or read + write, the journal may be replayed.
-    zx_status_t InitializeWriteback(Writability writability, bool journal_enabled);
+  // Record the location and size of all non-free block regions.
+  fbl::Vector<BlockRegion> GetAllocatedRegions() const { return allocator_->GetAllocatedRegions(); }
 
-    virtual ~Blobfs();
+ private:
+  friend class BlobfsChecker;
 
-    // Invokes "open" on the root directory.
-    // Acts as a special-case to bootstrap filesystem mounting.
-    zx_status_t OpenRootNode(fbl::RefPtr<Directory>* out);
+  Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info);
 
-    BlobCache& Cache() { return blob_cache_; }
+  // Reloads metadata from disk. Useful when metadata on disk
+  // may have changed due to journal playback.
+  zx_status_t Reload();
 
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
+  // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
+  void FreeExtent(WritebackWork* wb, const Extent& extent);
 
-    BlockDevice* Device() const { return block_device_.get(); }
+  // Free a single node. Doesn't attempt to parse the type / traverse nodes;
+  // this function just deletes a single node.
+  void FreeNode(WritebackWork* wb, uint32_t node_index);
 
-    // Returns an unique identifier for this instance.
-    uint64_t GetFsId() const { return fs_id_; }
+  // Given a contiguous number of blocks after a starting block,
+  // write out the bitmap to disk for the corresponding blocks.
+  // Should only be called by PersistBlocks and FreeExtent.
+  void WriteBitmap(WritebackWork* wb, uint64_t nblocks, uint64_t start_block);
 
-    using SyncCallback = fs::Vnode::SyncCallback;
-    void Sync(SyncCallback closure);
+  // Given a node within the node map at an index, write it to disk.
+  // Should only be called by AllocateNode and FreeNode.
+  void WriteNode(WritebackWork* wb, uint32_t map_index);
 
-    // Frees an inode, from both the reserved map and the inode table. If the
-    // inode was allocated in the inode table, write the deleted inode out to
-    // disk.
-    void FreeInode(WritebackWork* wb, uint32_t node_index);
+  // Enqueues an update for allocated inode/block counts.
+  void WriteInfo(WritebackWork* wb);
 
-    // Does a single pass of all blobs, creating uninitialized Vnode
-    // objects for them all.
-    //
-    // By executing this function at mount, we can quickly assert
-    // either the presence or absence of a blob on the system without
-    // further scanning.
-    zx_status_t InitializeVnodes();
+  // When will flush the metrics in the calling thread and will schedule itself
+  // to flush again in the future.
+  void ScheduleMetricFlush();
 
-    // Writes node data to the inode table and updates disk.
-    void PersistNode(WritebackWork* wb, uint32_t node_index);
+  // Creates an unique identifier for this instance. This is to be called only during
+  // "construction".
+  zx_status_t CreateFsId();
 
-    // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-    void PersistBlocks(WritebackWork* wb, const ReservedExtent& extent);
+  // Verifies that the contents of a blob are valid.
+  zx_status_t VerifyBlob(uint32_t node_index);
 
-    // Record the location and size of all non-free block regions.
-    fbl::Vector<BlockRegion> GetAllocatedRegions() const {
-        return allocator_->GetAllocatedRegions();
-    }
+  fbl::unique_ptr<WritebackQueue> writeback_;
+  fbl::unique_ptr<Journal> journal_;
+  Superblock info_;
 
-private:
-    friend class BlobfsChecker;
+  BlobCache blob_cache_;
 
-    Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info);
+  std::unique_ptr<BlockDevice> block_device_;
+  fuchsia_hardware_block_BlockInfo block_info_ = {};
+  std::atomic<groupid_t> next_group_ = {};
 
-    // Reloads metadata from disk. Useful when metadata on disk
-    // may have changed due to journal playback.
-    zx_status_t Reload();
+  fbl::unique_ptr<Allocator> allocator_;
 
-    // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
-    void FreeExtent(WritebackWork* wb, const Extent& extent);
+  fzl::ResizeableVmoMapper info_mapping_;
+  vmoid_t info_vmoid_ = {};
 
-    // Free a single node. Doesn't attempt to parse the type / traverse nodes;
-    // this function just deletes a single node.
-    void FreeNode(WritebackWork* wb, uint32_t node_index);
+  uint64_t fs_id_ = 0;
 
-    // Given a contiguous number of blocks after a starting block,
-    // write out the bitmap to disk for the corresponding blocks.
-    // Should only be called by PersistBlocks and FreeExtent.
-    void WriteBitmap(WritebackWork* wb, uint64_t nblocks, uint64_t start_block);
+  bool collecting_metrics_ = false;
+  BlobfsMetrics metrics_ = {};
 
-    // Given a node within the node map at an index, write it to disk.
-    // Should only be called by AllocateNode and FreeNode.
-    void WriteNode(WritebackWork* wb, uint32_t map_index);
+  fbl::Closure on_unmount_ = {};
 
-    // Enqueues an update for allocated inode/block counts.
-    void WriteInfo(WritebackWork* wb);
-
-    // When will flush the metrics in the calling thread and will schedule itself
-    // to flush again in the future.
-    void ScheduleMetricFlush();
-
-    // Creates an unique identifier for this instance. This is to be called only during
-    // "construction".
-    zx_status_t CreateFsId();
-
-    // Verifies that the contents of a blob are valid.
-    zx_status_t VerifyBlob(uint32_t node_index);
-
-    fbl::unique_ptr<WritebackQueue> writeback_;
-    fbl::unique_ptr<Journal> journal_;
-    Superblock info_;
-
-    BlobCache blob_cache_;
-
-    std::unique_ptr<BlockDevice> block_device_;
-    fuchsia_hardware_block_BlockInfo block_info_ = {};
-    std::atomic<groupid_t> next_group_ = {};
-
-    fbl::unique_ptr<Allocator> allocator_;
-
-    fzl::ResizeableVmoMapper info_mapping_;
-    vmoid_t info_vmoid_ = {};
-
-    uint64_t fs_id_ = 0;
-
-    bool collecting_metrics_ = false;
-    BlobfsMetrics metrics_ = {};
-
-    fbl::Closure on_unmount_ = {};
-
-    // Loop for flushing the collector periodically.
-    async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
+  // Loop for flushing the collector periodically.
+  async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
 };
 
 // Begins serving requests to the filesystem using |dispatch|, by parsing
@@ -299,4 +297,4 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> d
 // Formats the underlying device with an empty Blobfs partition.
 zx_status_t FormatFilesystem(BlockDevice* device);
 
-} // namespace blobfs
+}  // namespace blobfs

@@ -18,19 +18,16 @@ namespace component {
 
 ServiceProviderBridge::ServiceProviderBridge()
     : vfs_(async_get_default_dispatcher()), weak_factory_(this) {
-  directory_ =
-      fbl::AdoptRef(new ServiceProviderDir(weak_factory_.GetWeakPtr()));
+  directory_ = fbl::AdoptRef(new ServiceProviderDir(weak_factory_.GetWeakPtr()));
 }
 
 ServiceProviderBridge::~ServiceProviderBridge() = default;
 
-void ServiceProviderBridge::AddBinding(
-    fidl::InterfaceRequest<ServiceProvider> request) {
+void ServiceProviderBridge::AddBinding(fidl::InterfaceRequest<ServiceProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-ServiceProviderBridge::AddBinding() {
+fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> ServiceProviderBridge::AddBinding() {
   return bindings_.AddBinding(this);
 }
 
@@ -65,16 +62,14 @@ int ServiceProviderBridge::OpenAsFileDescriptor() {
   return fd;
 }
 
-void ServiceProviderBridge::ConnectToService(std::string service_name,
-                                             zx::channel channel) {
+void ServiceProviderBridge::ConnectToService(std::string service_name, zx::channel channel) {
   auto it = name_to_service_connector_.find(service_name);
   if (it != name_to_service_connector_.end())
     it->second(std::move(channel));
   else if (backend_)
     backend_->ConnectToService(service_name, std::move(channel));
   else if (backing_dir_)
-    fdio_service_connect_at(backing_dir_.get(), service_name.c_str(),
-                            channel.release());
+    fdio_service_connect_at(backing_dir_.get(), service_name.c_str(), channel.release());
 }
 
 ServiceProviderBridge::ServiceProviderDir::ServiceProviderDir(
@@ -83,11 +78,10 @@ ServiceProviderBridge::ServiceProviderDir::ServiceProviderDir(
 
 ServiceProviderBridge::ServiceProviderDir::~ServiceProviderDir() = default;
 
-zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(
-    fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out,
+                                                              fbl::StringPiece name) {
   *out = fbl::AdoptRef(new fs::Service(
-      [bridge = bridge_,
-       name = std::string(name.data(), name.length())](zx::channel channel) {
+      [bridge = bridge_, name = std::string(name.data(), name.length())](zx::channel channel) {
         if (bridge) {
           bridge->ConnectToService(name, std::move(channel));
           return ZX_OK;
@@ -104,12 +98,10 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
-bool ServiceProviderBridge::ServiceProviderDir::IsDirectory() const {
-  return true;
-}
+bool ServiceProviderBridge::ServiceProviderDir::IsDirectory() const { return true; }
 
-zx_status_t ServiceProviderBridge::ServiceProviderDir::GetNodeInfo(
-    uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t ServiceProviderBridge::ServiceProviderDir::GetNodeInfo(uint32_t flags,
+                                                                   fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_directory;
   return ZX_OK;
 }

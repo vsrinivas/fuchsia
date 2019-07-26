@@ -54,9 +54,7 @@ typedef struct trace_prolonged_context trace_prolonged_context_t;
 // |category_literal| must be a null-terminated static string constant.
 //
 // This function is thread-safe.
-bool trace_context_is_category_enabled(
-    trace_context_t* context,
-    const char* category_literal);
+bool trace_context_is_category_enabled(trace_context_t* context, const char* category_literal);
 
 // Registers a copy of a string into the string table.
 //
@@ -69,19 +67,17 @@ bool trace_context_is_category_enabled(
 // |out_ref| points to where the registered string reference should be returned.
 //
 // This function is thread-safe.
-void trace_context_register_string_copy(
-    trace_context_t* context,
-    const char* string, size_t length,
-    trace_string_ref_t* out_ref);
+void trace_context_register_string_copy(trace_context_t* context, const char* string, size_t length,
+                                        trace_string_ref_t* out_ref);
 
 // Registers a copy of a string and returns its string ref.
 // Helper for |trace_context_register_thread()|.
-static inline trace_string_ref_t trace_context_make_registered_string_copy(
-    trace_context_t* context,
-    const char* string, size_t length) {
-    trace_string_ref_t ref;
-    trace_context_register_string_copy(context, string, length, &ref);
-    return ref;
+static inline trace_string_ref_t trace_context_make_registered_string_copy(trace_context_t* context,
+                                                                           const char* string,
+                                                                           size_t length) {
+  trace_string_ref_t ref;
+  trace_context_register_string_copy(context, string, length, &ref);
+  return ref;
 }
 
 // Registers a string literal into the string table keyed by its address in memory.
@@ -98,19 +94,16 @@ static inline trace_string_ref_t trace_context_make_registered_string_copy(
 // |out_ref| points to where the registered string reference should be returned.
 //
 // This function is thread-safe.
-void trace_context_register_string_literal(
-    trace_context_t* context,
-    const char* string_literal,
-    trace_string_ref_t* out_ref);
+void trace_context_register_string_literal(trace_context_t* context, const char* string_literal,
+                                           trace_string_ref_t* out_ref);
 
 // Registers a string literal and returns its string ref.
 // Helper for |trace_context_register_string_literal()|.
 static inline trace_string_ref_t trace_context_make_registered_string_literal(
-    trace_context_t* context,
-    const char* string_literal) {
-    trace_string_ref_t ref;
-    trace_context_register_string_literal(context, string_literal, &ref);
-    return ref;
+    trace_context_t* context, const char* string_literal) {
+  trace_string_ref_t ref;
+  trace_context_register_string_literal(context, string_literal, &ref);
+  return ref;
 }
 
 // Registers a category into the string table, if it is enabled, keyed by its
@@ -131,10 +124,8 @@ static inline trace_string_ref_t trace_context_make_registered_string_literal(
 // returns false and does not modify |*out_ref|.
 //
 // This function is thread-safe.
-bool trace_context_register_category_literal(
-    trace_context_t* context,
-    const char* category_literal,
-    trace_string_ref_t* out_ref);
+bool trace_context_register_category_literal(trace_context_t* context, const char* category_literal,
+                                             trace_string_ref_t* out_ref);
 
 // Registers the current thread into the thread table.
 //
@@ -148,9 +139,7 @@ bool trace_context_register_category_literal(
 // |out_ref| points to where the registered thread reference should be returned.
 //
 // This function is thread-safe.
-void trace_context_register_current_thread(
-    trace_context_t* context,
-    trace_thread_ref_t* out_ref);
+void trace_context_register_current_thread(trace_context_t* context, trace_thread_ref_t* out_ref);
 
 // Registers the virtual thread into the thread table.
 //
@@ -167,12 +156,9 @@ void trace_context_register_current_thread(
 // |out_ref| points to where the registered thread reference should be returned.
 //
 // This function is thread-safe.
-void trace_context_register_vthread(
-    trace_context_t* context,
-    zx_koid_t process_koid,
-    const char* vthread_literal,
-    trace_vthread_id_t vthread_id,
-    trace_thread_ref_t* out_ref);
+void trace_context_register_vthread(trace_context_t* context, zx_koid_t process_koid,
+                                    const char* vthread_literal, trace_vthread_id_t vthread_id,
+                                    trace_thread_ref_t* out_ref);
 
 // Registers the specified thread into the thread table.
 //
@@ -191,19 +177,17 @@ void trace_context_register_vthread(
 // |out_ref| points to where the registered thread reference should be returned.
 //
 // This function is thread-safe.
-void trace_context_register_thread(
-    trace_context_t* context,
-    zx_koid_t process_koid, zx_koid_t thread_koid,
-    trace_thread_ref_t* out_ref);
+void trace_context_register_thread(trace_context_t* context, zx_koid_t process_koid,
+                                   zx_koid_t thread_koid, trace_thread_ref_t* out_ref);
 
 // Registers a thread and returns its thread ref.
 // Helper for |trace_context_register_thread()|.
-static inline trace_thread_ref_t trace_context_make_registered_thread(
-    trace_context_t* context,
-    zx_koid_t process_koid, zx_koid_t thread_koid) {
-    trace_thread_ref_t ref;
-    trace_context_register_thread(context, process_koid, thread_koid, &ref);
-    return ref;
+static inline trace_thread_ref_t trace_context_make_registered_thread(trace_context_t* context,
+                                                                      zx_koid_t process_koid,
+                                                                      zx_koid_t thread_koid) {
+  trace_thread_ref_t ref;
+  trace_context_register_thread(context, process_koid, thread_koid, &ref);
+  return ref;
 }
 
 // Allocate space for a blob and write its header.
@@ -217,11 +201,8 @@ static inline trace_thread_ref_t trace_context_make_registered_thread(
 // |blob_size| is the size of the binary data to write.
 // The caller is required to fill in the blob after we return.
 // There is no need to zero out any padding, that has already been done.
-void* trace_context_begin_write_blob_record(
-    trace_context_t* context,
-    trace_blob_type_t type,
-    const trace_string_ref_t* name_ref,
-    size_t blob_size);
+void* trace_context_begin_write_blob_record(trace_context_t* context, trace_blob_type_t type,
+                                            const trace_string_ref_t* name_ref, size_t blob_size);
 
 // Write a blob of binary data into the trace buffer.
 // Discards the record if it cannot be written.
@@ -230,11 +211,9 @@ void* trace_context_begin_write_blob_record(
 // |name_ref| is the name of the blob.
 // |blob| is the binary data to write.
 // |blob_size| is the size of the binary data to write.
-void trace_context_write_blob_record(
-    trace_context_t* context,
-    trace_blob_type_t type,
-    const trace_string_ref_t* name_ref,
-    const void* blob, size_t blob_size);
+void trace_context_write_blob_record(trace_context_t* context, trace_blob_type_t type,
+                                     const trace_string_ref_t* name_ref, const void* blob,
+                                     size_t blob_size);
 
 // Writes a kernel object record for the object reference by the specified handle
 // into the trace buffer.  Discards the record if it cannot be written.
@@ -246,10 +225,9 @@ void trace_context_write_blob_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_kernel_object_record_for_handle(
-    trace_context_t* context,
-    zx_handle_t handle,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_kernel_object_record_for_handle(trace_context_t* context,
+                                                         zx_handle_t handle,
+                                                         const trace_arg_t* args, size_t num_args);
 
 // Writes a kernel object record for the specified process into the trace buffer.
 // Discards the record if it cannot be written.
@@ -259,10 +237,8 @@ void trace_context_write_kernel_object_record_for_handle(
 // |process_name_ref| is the name of the process.
 //
 // This function is thread-safe.
-void trace_context_write_process_info_record(
-    trace_context_t* context,
-    zx_koid_t process_koid,
-    const trace_string_ref_t* process_name_ref);
+void trace_context_write_process_info_record(trace_context_t* context, zx_koid_t process_koid,
+                                             const trace_string_ref_t* process_name_ref);
 
 // Writes a kernel object record for the specified thread into the trace buffer.
 // Discards the record if it cannot be written.
@@ -273,10 +249,9 @@ void trace_context_write_process_info_record(
 // |thread_name_ref| is the name of the thread.
 //
 // This function is thread-safe.
-void trace_context_write_thread_info_record(
-    trace_context_t* context,
-    zx_koid_t process_koid, zx_koid_t thread_koid,
-    const trace_string_ref_t* thread_name_ref);
+void trace_context_write_thread_info_record(trace_context_t* context, zx_koid_t process_koid,
+                                            zx_koid_t thread_koid,
+                                            const trace_string_ref_t* thread_name_ref);
 
 // Writes a context switch record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -289,15 +264,13 @@ void trace_context_write_thread_info_record(
 // |incoming_thread_ref| is the thread which was scheduled on the CPU.
 //
 // This function is thread-safe.
-void trace_context_write_context_switch_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    trace_cpu_number_t cpu_number,
-    trace_thread_state_t outgoing_thread_state,
-    const trace_thread_ref_t* outgoing_thread_ref,
-    const trace_thread_ref_t* incoming_thread_ref,
-    trace_thread_priority_t outgoing_thread_priority,
-    trace_thread_priority_t incoming_thread_priority);
+void trace_context_write_context_switch_record(trace_context_t* context, trace_ticks_t event_time,
+                                               trace_cpu_number_t cpu_number,
+                                               trace_thread_state_t outgoing_thread_state,
+                                               const trace_thread_ref_t* outgoing_thread_ref,
+                                               const trace_thread_ref_t* incoming_thread_ref,
+                                               trace_thread_priority_t outgoing_thread_priority,
+                                               trace_thread_priority_t incoming_thread_priority);
 
 // Writes a log record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -309,12 +282,9 @@ void trace_context_write_context_switch_record(
 // |log_message_length| is the length of the log message.
 //
 // This function is thread-safe.
-void trace_context_write_log_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const char* log_message,
-    size_t log_message_length);
+void trace_context_write_log_record(trace_context_t* context, trace_ticks_t event_time,
+                                    const trace_thread_ref_t* thread_ref, const char* log_message,
+                                    size_t log_message_length);
 
 // Writes an instant event record with arguments into the trace buffer.
 // Discards the record if it cannot be written.
@@ -328,14 +298,12 @@ void trace_context_write_log_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_instant_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    trace_scope_t scope,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_instant_event_record(trace_context_t* context, trace_ticks_t event_time,
+                                              const trace_thread_ref_t* thread_ref,
+                                              const trace_string_ref_t* category_ref,
+                                              const trace_string_ref_t* name_ref,
+                                              trace_scope_t scope, const trace_arg_t* args,
+                                              size_t num_args);
 
 // Writes a counter event record with arguments into the trace buffer.
 // Discards the record if it cannot be written.
@@ -350,14 +318,12 @@ void trace_context_write_instant_event_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_counter_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    trace_counter_id_t counter_id,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_counter_event_record(trace_context_t* context, trace_ticks_t event_time,
+                                              const trace_thread_ref_t* thread_ref,
+                                              const trace_string_ref_t* category_ref,
+                                              const trace_string_ref_t* name_ref,
+                                              trace_counter_id_t counter_id,
+                                              const trace_arg_t* args, size_t num_args);
 
 // Writes a duration begin event record and a duration end event record with
 // arguments into the trace buffer.
@@ -372,14 +338,12 @@ void trace_context_write_counter_event_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_duration_event_record(
-    trace_context_t* context,
-    trace_ticks_t start_time,
-    trace_ticks_t end_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_duration_event_record(trace_context_t* context, trace_ticks_t start_time,
+                                               trace_ticks_t end_time,
+                                               const trace_thread_ref_t* thread_ref,
+                                               const trace_string_ref_t* category_ref,
+                                               const trace_string_ref_t* name_ref,
+                                               const trace_arg_t* args, size_t num_args);
 
 // Writes a duration begin event record with arguments into the trace buffer.
 // Discards the record if it cannot be written.
@@ -392,13 +356,12 @@ void trace_context_write_duration_event_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_duration_begin_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_duration_begin_event_record(trace_context_t* context,
+                                                     trace_ticks_t event_time,
+                                                     const trace_thread_ref_t* thread_ref,
+                                                     const trace_string_ref_t* category_ref,
+                                                     const trace_string_ref_t* name_ref,
+                                                     const trace_arg_t* args, size_t num_args);
 
 // Writes a duration end event record with arguments into the trace buffer.
 // Discards the record if it cannot be written.
@@ -411,13 +374,12 @@ void trace_context_write_duration_begin_event_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_duration_end_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_duration_end_event_record(trace_context_t* context,
+                                                   trace_ticks_t event_time,
+                                                   const trace_thread_ref_t* thread_ref,
+                                                   const trace_string_ref_t* category_ref,
+                                                   const trace_string_ref_t* name_ref,
+                                                   const trace_arg_t* args, size_t num_args);
 
 // Writes an asynchronous begin event record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -433,13 +395,9 @@ void trace_context_write_duration_end_event_record(
 //
 // This function is thread-safe.
 void trace_context_write_async_begin_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    trace_async_id_t async_id,
-    const trace_arg_t* args, size_t num_args);
+    trace_context_t* context, trace_ticks_t event_time, const trace_thread_ref_t* thread_ref,
+    const trace_string_ref_t* category_ref, const trace_string_ref_t* name_ref,
+    trace_async_id_t async_id, const trace_arg_t* args, size_t num_args);
 
 // Writes an asynchronous instant event record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -455,13 +413,9 @@ void trace_context_write_async_begin_event_record(
 //
 // This function is thread-safe.
 void trace_context_write_async_instant_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    trace_async_id_t async_id,
-    const trace_arg_t* args, size_t num_args);
+    trace_context_t* context, trace_ticks_t event_time, const trace_thread_ref_t* thread_ref,
+    const trace_string_ref_t* category_ref, const trace_string_ref_t* name_ref,
+    trace_async_id_t async_id, const trace_arg_t* args, size_t num_args);
 
 // Writes an asynchronous end event record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -476,14 +430,12 @@ void trace_context_write_async_instant_event_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_async_end_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    trace_async_id_t async_id,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_async_end_event_record(trace_context_t* context, trace_ticks_t event_time,
+                                                const trace_thread_ref_t* thread_ref,
+                                                const trace_string_ref_t* category_ref,
+                                                const trace_string_ref_t* name_ref,
+                                                trace_async_id_t async_id, const trace_arg_t* args,
+                                                size_t num_args);
 
 // Writes a flow begin event record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -498,14 +450,12 @@ void trace_context_write_async_end_event_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_flow_begin_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    trace_flow_id_t flow_id,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_flow_begin_event_record(trace_context_t* context, trace_ticks_t event_time,
+                                                 const trace_thread_ref_t* thread_ref,
+                                                 const trace_string_ref_t* category_ref,
+                                                 const trace_string_ref_t* name_ref,
+                                                 trace_flow_id_t flow_id, const trace_arg_t* args,
+                                                 size_t num_args);
 
 // Writes a flow step event record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -520,14 +470,12 @@ void trace_context_write_flow_begin_event_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_flow_step_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    trace_flow_id_t flow_id,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_flow_step_event_record(trace_context_t* context, trace_ticks_t event_time,
+                                                const trace_thread_ref_t* thread_ref,
+                                                const trace_string_ref_t* category_ref,
+                                                const trace_string_ref_t* name_ref,
+                                                trace_flow_id_t flow_id, const trace_arg_t* args,
+                                                size_t num_args);
 
 // Writes a flow end event record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -542,14 +490,12 @@ void trace_context_write_flow_step_event_record(
 // |args| contains |num_args| key/value pairs to include in the record, or NULL if none.
 //
 // This function is thread-safe.
-void trace_context_write_flow_end_event_record(
-    trace_context_t* context,
-    trace_ticks_t event_time,
-    const trace_thread_ref_t* thread_ref,
-    const trace_string_ref_t* category_ref,
-    const trace_string_ref_t* name_ref,
-    trace_flow_id_t flow_id,
-    const trace_arg_t* args, size_t num_args);
+void trace_context_write_flow_end_event_record(trace_context_t* context, trace_ticks_t event_time,
+                                               const trace_thread_ref_t* thread_ref,
+                                               const trace_string_ref_t* category_ref,
+                                               const trace_string_ref_t* name_ref,
+                                               trace_flow_id_t flow_id, const trace_arg_t* args,
+                                               size_t num_args);
 
 // Writes an initialization record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -558,9 +504,8 @@ void trace_context_write_flow_end_event_record(
 // |ticks_per_second| is the number of |trace_ticks_t| per second used in the trace.
 //
 // This function is thread-safe.
-void trace_context_write_initialization_record(
-    trace_context_t* context,
-    zx_ticks_t ticks_per_second);
+void trace_context_write_initialization_record(trace_context_t* context,
+                                               zx_ticks_t ticks_per_second);
 
 // Writes a string record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -573,9 +518,8 @@ void trace_context_write_initialization_record(
 //          than |TRACE_ENCODED_STRING_REF_MAX_LENGTH|.
 //
 // This function is thread-safe.
-void trace_context_write_string_record(
-    trace_context_t* context,
-    trace_string_index_t index, const char* string, size_t length);
+void trace_context_write_string_record(trace_context_t* context, trace_string_index_t index,
+                                       const char* string, size_t length);
 
 // Writes a thread record into the trace buffer.
 // Discards the record if it cannot be written.
@@ -587,11 +531,8 @@ void trace_context_write_string_record(
 // |thread_koid| is the koid of the thread being described.
 //
 // This function is thread-safe.
-void trace_context_write_thread_record(
-    trace_context_t* context,
-    trace_thread_index_t index,
-    zx_koid_t process_koid,
-    zx_koid_t thread_koid);
+void trace_context_write_thread_record(trace_context_t* context, trace_thread_index_t index,
+                                       zx_koid_t process_koid, zx_koid_t thread_koid);
 
 // Allocates space for a record in the trace buffer.
 //
@@ -607,4 +548,4 @@ void* trace_context_alloc_record(trace_context_t* context, size_t num_bytes);
 
 __END_CDECLS
 
-#endif // ZIRCON_SYSTEM_ULIB_LIB_TRACE_ENGINE_CONTEXT_H_
+#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_ENGINE_CONTEXT_H_

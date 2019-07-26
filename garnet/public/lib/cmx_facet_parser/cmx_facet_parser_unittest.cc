@@ -22,8 +22,7 @@ class CmxFacetParserTest : public ::testing::Test {
   // Returns true for a valid cmx manifest represented by |json|.
   bool ParseFrom(const std::string& json) {
     json::JSONParser json_parser;
-    rapidjson::Document document =
-        json_parser.ParseFromString(json, "test_file");
+    rapidjson::Document document = json_parser.ParseFromString(json, "test_file");
     EXPECT_FALSE(json_parser.HasError());
 
     EXPECT_TRUE(facet_parser().Parse(document, &json_parser));
@@ -47,9 +46,7 @@ class CmxFacetParserTest : public ::testing::Test {
   CmxFacetParser facet_parser_;
 };
 
-TEST_F(CmxFacetParserTest, ParseEmpty) {
-  EXPECT_TRUE(ParseFrom(R"JSON({})JSON"));
-}
+TEST_F(CmxFacetParserTest, ParseEmpty) { EXPECT_TRUE(ParseFrom(R"JSON({})JSON")); }
 
 TEST_F(CmxFacetParserTest, ParseSection) {
   EXPECT_TRUE(ParseFrom(R"JSON({"facets":

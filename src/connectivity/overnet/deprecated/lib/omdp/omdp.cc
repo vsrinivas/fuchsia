@@ -49,34 +49,30 @@ Status Omdp::RegisterComplaint(IpAddr from, Status status) {
   assert(!InBlockList(from));
   blocked_.emplace(
       std::piecewise_construct, std::forward_as_tuple(from),
-      std::forward_as_tuple(
-          timer_, timer_->Now() + TimeDelta::FromSeconds(kBlockTimeSeconds),
-          StatusCallback(ALLOCATED_CALLBACK,
-                         [this, from](const Status& status) {
-                           if (status.is_ok()) {
-                             blocked_.erase(from);
-                           }
-                         })));
+      std::forward_as_tuple(timer_, timer_->Now() + TimeDelta::FromSeconds(kBlockTimeSeconds),
+                            StatusCallback(ALLOCATED_CALLBACK, [this, from](const Status& status) {
+                              if (status.is_ok()) {
+                                blocked_.erase(from);
+                              }
+                            })));
   return status;
 }
 
 void Omdp::ScheduleBroadcast() {
   auto last_action = std::max(last_received_broadcast_, last_sent_broadcast_);
   auto square = [](int a) { return a * a; };
-  auto delay = TimeDelta::FromMilliseconds(square(broadcasts_sent_ + 1) *
-                                               kPublishDelayMillis +
+  auto delay = TimeDelta::FromMilliseconds(square(broadcasts_sent_ + 1) * kPublishDelayMillis +
                                            rng_() % kPublishDelayMillis);
   OVERNET_TRACE(DEBUG) << "Schedule broadcast for: " << (last_action + delay);
-  broadcast_timeout_.Reset(timer_, last_action + delay,
-                           [this](const Status& status) {
-                             if (status.is_error()) {
-                               return;
-                             }
-                             broadcasts_sent_++;
-                             last_sent_broadcast_ = timer_->Now();
-                             Broadcast(MakeBeacon());
-                             ScheduleBroadcast();
-                           });
+  broadcast_timeout_.Reset(timer_, last_action + delay, [this](const Status& status) {
+    if (status.is_error()) {
+      return;
+    }
+    broadcasts_sent_++;
+    last_sent_broadcast_ = timer_->Now();
+    Broadcast(MakeBeacon());
+    ScheduleBroadcast();
+  });
 }
 
 Slice Omdp::MakeBeacon() {

@@ -23,7 +23,7 @@
 #include <ddk/debug.h>
 
 enum ath10k_debug_mask {
-    // clang-format off
+  // clang-format off
     ATH10K_DBG_PCI          = 0x00000001,
     ATH10K_DBG_WMI          = 0x00000002,
     ATH10K_DBG_HTC          = 0x00000004,
@@ -43,24 +43,24 @@ enum ath10k_debug_mask {
     ATH10K_DBG_SDIO         = 0x00010000,
     ATH10K_DBG_SDIO_DUMP    = 0x00020000,
     ATH10K_DBG_ANY          = 0xffffffff,
-    // clang-format on
+  // clang-format on
 };
 
 enum ath10k_pktlog_filter {
-    // clang-format off
+  // clang-format off
     ATH10K_PKTLOG_RX         = 0x000000001,
     ATH10K_PKTLOG_TX         = 0x000000002,
     ATH10K_PKTLOG_RCFIND     = 0x000000004,
     ATH10K_PKTLOG_RCUPDATE   = 0x000000008,
     ATH10K_PKTLOG_DBG_PRINT  = 0x000000010,
     ATH10K_PKTLOG_ANY        = 0x00000001f,
-    // clang-format on
+  // clang-format on
 };
 
 enum ath10k_dbg_aggr_mode {
-    ATH10K_DBG_AGGR_MODE_AUTO,
-    ATH10K_DBG_AGGR_MODE_MANUAL,
-    ATH10K_DBG_AGGR_MODE_MAX,
+  ATH10K_DBG_AGGR_MODE_AUTO,
+  ATH10K_DBG_AGGR_MODE_MANUAL,
+  ATH10K_DBG_AGGR_MODE_MAX,
 };
 
 /* FIXME: How to calculate the buffer size sanely? */
@@ -105,30 +105,24 @@ void ath10k_debug_get_et_stats(struct ieee80211_hw* hw, struct ieee80211_vif* vi
                                struct ethtool_stats* stats, uint64_t* data);
 
 static inline uint64_t ath10k_debug_get_fw_dbglog_mask(struct ath10k* ar) {
-    return ar->debug.fw_dbglog_mask;
+  return ar->debug.fw_dbglog_mask;
 }
 
 static inline uint32_t ath10k_debug_get_fw_dbglog_level(struct ath10k* ar) {
-    return ar->debug.fw_dbglog_level;
+  return ar->debug.fw_dbglog_level;
 }
 
 #else
 
-static inline int ath10k_debug_start(struct ath10k* ar) {
-    return 0;
-}
+static inline int ath10k_debug_start(struct ath10k* ar) { return 0; }
 
 static inline void ath10k_debug_stop(struct ath10k* ar) {}
 
-static inline int ath10k_debug_create(struct ath10k* ar) {
-    return 0;
-}
+static inline int ath10k_debug_create(struct ath10k* ar) { return 0; }
 
 static inline void ath10k_debug_destroy(struct ath10k* ar) {}
 
-static inline int ath10k_debug_register(struct ath10k* ar) {
-    return 0;
-}
+static inline int ath10k_debug_register(struct ath10k* ar) { return 0; }
 
 static inline void ath10k_debug_unregister(struct ath10k* ar) {}
 
@@ -146,24 +140,18 @@ static inline void ath10k_debug_tpc_stats_process(struct ath10k* ar,
 static inline void ath10k_debug_dbglog_add(struct ath10k* ar, uint8_t* buffer, int len) {}
 
 static inline struct ath10k_fw_crash_data* ath10k_debug_get_new_fw_crash_data(struct ath10k* ar) {
-    return NULL;
+  return NULL;
 }
 
-static inline uint64_t ath10k_debug_get_fw_dbglog_mask(struct ath10k* ar) {
-    return 0;
-}
+static inline uint64_t ath10k_debug_get_fw_dbglog_mask(struct ath10k* ar) { return 0; }
 
-static inline uint32_t ath10k_debug_get_fw_dbglog_level(struct ath10k* ar) {
-    return 0;
-}
+static inline uint32_t ath10k_debug_get_fw_dbglog_level(struct ath10k* ar) { return 0; }
 
-static inline int ath10k_debug_fw_devcoredump(struct ath10k* ar) {
-    return 0;
-}
+static inline int ath10k_debug_fw_devcoredump(struct ath10k* ar) { return 0; }
 
 #define ATH10K_DFS_STAT_INC(ar, c) \
-    do {                           \
-    } while (0)
+  do {                             \
+  } while (0)
 
 #define ath10k_debug_get_et_strings NULL
 #define ath10k_debug_get_et_sset_count NULL
@@ -194,7 +182,7 @@ void ath10k_dbg_dump(struct ath10k* ar, enum ath10k_debug_mask mask, const char*
 
 static inline int ath10k_dbg(struct ath10k* ar, enum ath10k_debug_mask dbg_mask, const char* fmt,
                              ...) {
-    return 0;
+  return 0;
 }
 
 static inline void ath10k_dbg_dump(struct ath10k* ar, enum ath10k_debug_mask mask, const char* msg,

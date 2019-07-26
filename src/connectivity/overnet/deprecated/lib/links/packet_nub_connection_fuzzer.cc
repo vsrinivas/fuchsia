@@ -31,9 +31,7 @@ class Nub final : public NubStuff, public PacketNub<int, 256> {
   Nub(Fuzzer* fuzzer, uint8_t index);
 
   void SendTo(int dest, Slice slice) override;
-  void Publish(LinkPtr<> link) override {
-    router()->RegisterLink(std::move(link));
-  }
+  void Publish(LinkPtr<> link) override { router()->RegisterLink(std::move(link)); }
 
  private:
   Fuzzer* const fuzzer_;
@@ -46,8 +44,7 @@ class Fuzzer {
 
   Timer* timer() { return &timer_; }
   bool IsDone() {
-    return nub1_.router()->HasRouteTo(NodeId(2)) &&
-           nub2_.router()->HasRouteTo(NodeId(1));
+    return nub1_.router()->HasRouteTo(NodeId(2)) && nub2_.router()->HasRouteTo(NodeId(1));
   }
   bool StepTime() { return timer_.StepUntilNextEvent(); }
   bool StepTime(uint64_t us) { return timer_.Step(us); }
@@ -84,10 +81,7 @@ NubStuff::NubStuff(Fuzzer* fuzzer, uint8_t index)
     : router_(fuzzer->timer(), NodeId(index), false) {}
 
 Nub::Nub(Fuzzer* fuzzer, uint8_t index)
-    : NubStuff(fuzzer, index),
-      PacketNub(router()),
-      fuzzer_(fuzzer),
-      index_(index) {}
+    : NubStuff(fuzzer, index), PacketNub(router()), fuzzer_(fuzzer), index_(index) {}
 
 void Nub::SendTo(int dest, Slice slice) {
   assert(dest != 0);
@@ -100,8 +94,7 @@ void Fuzzer::Initiate1() { nub1_.Initiate({2}, NodeId(2)); }
 void Fuzzer::Initiate2() { nub2_.Initiate({1}, NodeId(1)); }
 
 void Fuzzer::QueueSend(int src, int dest, Slice slice) {
-  packets_.emplace_back(
-      Packet{src, dest, PacketState::QUEUED, std::move(slice)});
+  packets_.emplace_back(Packet{src, dest, PacketState::QUEUED, std::move(slice)});
 }
 
 bool Fuzzer::FlushPackets() {
@@ -158,8 +151,7 @@ void Fuzzer::Close() {
 
 class InputStream {
  public:
-  InputStream(const uint8_t* data, size_t size)
-      : cur_(data), end_(data + size) {}
+  InputStream(const uint8_t* data, size_t size) : cur_(data), end_(data + size) {}
 
   uint64_t Next64() {
     uint64_t out;

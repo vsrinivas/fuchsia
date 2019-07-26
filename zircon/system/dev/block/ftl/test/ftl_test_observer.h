@@ -11,21 +11,21 @@ constexpr char kTestDevice[] = "/fake/dev/misc/nand-ctl/ram-nand-0/ftl/block";
 
 // Performs process-wide setup for the integration test.
 class FtlTestObserver {
-  public:
-    FtlTestObserver();
-    ~FtlTestObserver() {}
+ public:
+  FtlTestObserver();
+  ~FtlTestObserver() {}
 
-    void OnProgramStart();
+  void OnProgramStart();
 
-    // Returns true if the setup was successful.
-    explicit operator bool() const { return ok_; }
+  // Returns true if the setup was successful.
+  explicit operator bool() const { return ok_; }
 
-  private:
-    void CreateDevice();
-    zx_status_t WaitForBlockDevice();
+ private:
+  void CreateDevice();
+  zx_status_t WaitForBlockDevice();
 
-    const fbl::unique_fd& devfs_root() { return ram_nand_->devfs_root(); }
+  const fbl::unique_fd& devfs_root() { return ram_nand_->devfs_root(); }
 
-    std::optional<ramdevice_client::RamNand> ram_nand_;
-    bool ok_ = false;
+  std::optional<ramdevice_client::RamNand> ram_nand_;
+  bool ok_ = false;
 };

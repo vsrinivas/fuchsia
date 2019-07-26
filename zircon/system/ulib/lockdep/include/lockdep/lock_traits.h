@@ -15,58 +15,55 @@ class LockDep;
 
 // Flags to specify which rules to apply to a lock class during validation.
 enum LockFlags : uint8_t {
-    // Apply only common rules that apply to all locks.
-    LockFlagsNone = 0,
+  // Apply only common rules that apply to all locks.
+  LockFlagsNone = 0,
 
-    // Apply the irq-safety rules in addition to the common rules for all locks.
-    LockFlagsIrqSafe = (1 << 0),
+  // Apply the irq-safety rules in addition to the common rules for all locks.
+  LockFlagsIrqSafe = (1 << 0),
 
-    // Apply the nestable rules in addition to the common rules for all locks.
-    LockFlagsNestable = (1 << 1),
+  // Apply the nestable rules in addition to the common rules for all locks.
+  LockFlagsNestable = (1 << 1),
 
-    // Do not report validation errors. This flag prevents recursive validation
-    // of locks that are acquired by reporting routines.
-    LockFlagsReportingDisabled = (1 << 2),
+  // Do not report validation errors. This flag prevents recursive validation
+  // of locks that are acquired by reporting routines.
+  LockFlagsReportingDisabled = (1 << 2),
 
-    // There is only one member of this locks class.
-    LockFlagsSingletonLock = (1 << 3),
+  // There is only one member of this locks class.
+  LockFlagsSingletonLock = (1 << 3),
 
-    // Abort the program with an error if a lock is improperly acquired more
-    // than once in the same context.
-    LockFlagsReAcquireFatal = (1 << 4),
+  // Abort the program with an error if a lock is improperly acquired more
+  // than once in the same context.
+  LockFlagsReAcquireFatal = (1 << 4),
 
-    // Do not add this acquisition to the active list. This may be required for
-    // locks that are used to protect context switching logic.
-    LockFlagsActiveListDisabled = (1 << 5),
+  // Do not add this acquisition to the active list. This may be required for
+  // locks that are used to protect context switching logic.
+  LockFlagsActiveListDisabled = (1 << 5),
 
-    // Do not track this lock.
-    LockFlagsTrackingDisabled = (1 << 6),
+  // Do not track this lock.
+  LockFlagsTrackingDisabled = (1 << 6),
 };
 
 // Prevent implicit conversion to int of bitwise-or expressions involving
 // LockFlags.
 constexpr inline LockFlags operator|(LockFlags a, LockFlags b) {
-    return static_cast<LockFlags>(
-        static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+  return static_cast<LockFlags>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
 }
 
 // Prevent implicit conversion to int of bitwise-and expressions involving
 // LockFlags.
 constexpr inline LockFlags operator&(LockFlags a, LockFlags b) {
-    return static_cast<LockFlags>(
-        static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
+  return static_cast<LockFlags>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
 }
 
 namespace internal {
 
 // Receives the optional lock flags in the macros below and injects the
 // singleton lock flag.
-constexpr inline LockFlags SingletonLockFlags(
-    LockFlags flags = LockFlagsNone) {
-    return flags | LockFlagsSingletonLock;
+constexpr inline LockFlags SingletonLockFlags(LockFlags flags = LockFlagsNone) {
+  return flags | LockFlagsSingletonLock;
 }
 
-} // namespace internal
+}  // namespace internal
 
 //
 // The following macros are used to instrument locks and lock types for runtime
@@ -87,7 +84,7 @@ constexpr inline LockFlags SingletonLockFlags(
 //      // ...
 //  };
 #define LOCK_DEP_INSTRUMENT(containing_type, lock_type) \
-    ::lockdep::LockDep<containing_type, lock_type, __LINE__>
+  ::lockdep::LockDep<containing_type, lock_type, __LINE__>
 
 // Defines a singleton lock with the given name and type. The singleton
 // instance may be retrieved using the static Get() method provided by the base
@@ -113,9 +110,9 @@ constexpr inline LockFlags SingletonLockFlags(
 //      // Mutate g_foo ...
 //  }
 #define LOCK_DEP_SINGLETON_LOCK(name, lock_type, ...) \
-    struct name : ::lockdep::SingletonLockDep<        \
-                      name, lock_type,                \
-                      ::lockdep::internal::SingletonLockFlags(__VA_ARGS__)> {}
+  struct name                                         \
+      : ::lockdep::SingletonLockDep<name, lock_type,  \
+                                    ::lockdep::internal::SingletonLockFlags(__VA_ARGS__)> {}
 
 // Defines a singleton lock with the given name that wraps a raw global lock.
 // The singleton behaves similarly to the version above, except the raw global
@@ -142,17 +139,13 @@ constexpr inline LockFlags SingletonLockFlags(
 //      Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 //      // ...
 //  }
-#define LOCK_DEP_SINGLETON_LOCK_WRAPPER(name, global_lock, ...)                             \
-    struct name : public ::lockdep::SingletonLockDep<                                       \
-                      name, ::lockdep::GlobalReference<decltype(global_lock), global_lock>, \
-                      ::lockdep::internal::SingletonLockFlags(__VA_ARGS__)> {               \
-        auto& capability() __TA_RETURN_CAPABILITY(global_lock) {                            \
-            return global_lock;                                                             \
-        }                                                                                   \
-        const auto& capability() const __TA_RETURN_CAPABILITY(global_lock) {                \
-            return global_lock;                                                             \
-        }                                                                                   \
-    }
+#define LOCK_DEP_SINGLETON_LOCK_WRAPPER(name, global_lock, ...)                                \
+  struct name : public ::lockdep::SingletonLockDep<                                            \
+                    name, ::lockdep::GlobalReference<decltype(global_lock), global_lock>,      \
+                    ::lockdep::internal::SingletonLockFlags(__VA_ARGS__)> {                    \
+    auto& capability() __TA_RETURN_CAPABILITY(global_lock) { return global_lock; }             \
+    const auto& capability() const __TA_RETURN_CAPABILITY(global_lock) { return global_lock; } \
+  }
 
 // Tags the given lock type with the given lock state flags value. This informs
 // the validator about the properties of the lock to enforce during validation.
@@ -179,13 +172,13 @@ constexpr inline LockFlags SingletonLockFlags(
 //
 //  }  // MyNamespace
 //
-#define LOCK_DEP_TRAITS(lock_type, lock_flags)                      \
-    template <typename>                                             \
-    struct LOCK_DEP_TRAITS;                                         \
-    template <>                                                     \
-    struct LOCK_DEP_TRAITS<lock_type> {                             \
-        static constexpr ::lockdep::LockFlags Flags = (lock_flags); \
-    };                                                              \
-    LOCK_DEP_TRAITS<lock_type> LOCK_DEP_GetLockTraits(lock_type*)
+#define LOCK_DEP_TRAITS(lock_type, lock_flags)                  \
+  template <typename>                                           \
+  struct LOCK_DEP_TRAITS;                                       \
+  template <>                                                   \
+  struct LOCK_DEP_TRAITS<lock_type> {                           \
+    static constexpr ::lockdep::LockFlags Flags = (lock_flags); \
+  };                                                            \
+  LOCK_DEP_TRAITS<lock_type> LOCK_DEP_GetLockTraits(lock_type*)
 
-} // namespace lockdep
+}  // namespace lockdep

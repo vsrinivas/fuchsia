@@ -36,88 +36,84 @@ static constexpr uint32_t kSpmiCmdRegReadOpcode = 0x01;
 #define PMIC_ARB_CHANNEL_CMD_RDATA1_OFFSET(n) ((0x8000 * (n)) + 0x4 + 0x18)
 
 class PmicArbVersion : public hwreg::RegisterBase<PmicArbVersion, uint32_t> {
-public:
-    static auto Get() {
-        return hwreg::RegisterAddr<PmicArbVersion>(kPmicArbVersionOffset);
-    }
+ public:
+  static auto Get() { return hwreg::RegisterAddr<PmicArbVersion>(kPmicArbVersionOffset); }
 
-    DEF_FIELD(31, 0, arb_version);
+  DEF_FIELD(31, 0, arb_version);
 };
 
 class PmicArbCoreChannelInfo : public hwreg::RegisterBase<PmicArbCoreChannelInfo, uint32_t> {
-public:
-    static auto Get(uint32_t chnl_offset) {
-        return hwreg::RegisterAddr<PmicArbCoreChannelInfo>(chnl_offset);
-    }
+ public:
+  static auto Get(uint32_t chnl_offset) {
+    return hwreg::RegisterAddr<PmicArbCoreChannelInfo>(chnl_offset);
+  }
 
-    DEF_FIELD(19, 16, slave_id);
-    DEF_FIELD(15, 8, periph_id);
+  DEF_FIELD(19, 16, slave_id);
+  DEF_FIELD(15, 8, periph_id);
 };
 
 class PmicArbCoreChannelCmdInfo : public hwreg::RegisterBase<PmicArbCoreChannelCmdInfo, uint32_t> {
-public:
-    static auto Get(uint32_t chnl_cmd_offset) {
-        return hwreg::RegisterAddr<PmicArbCoreChannelCmdInfo>(chnl_cmd_offset);
-    }
-    DEF_FIELD(31, 27, opcode);
-    DEF_BIT(26, priority);
-    DEF_FIELD(23, 20, slave_id);
-    DEF_FIELD(19, 12, periph_id);
-    DEF_FIELD(11, 4, reg_offset_addr);
-    DEF_FIELD(3, 0, byte_cnt);
+ public:
+  static auto Get(uint32_t chnl_cmd_offset) {
+    return hwreg::RegisterAddr<PmicArbCoreChannelCmdInfo>(chnl_cmd_offset);
+  }
+  DEF_FIELD(31, 27, opcode);
+  DEF_BIT(26, priority);
+  DEF_FIELD(23, 20, slave_id);
+  DEF_FIELD(19, 12, periph_id);
+  DEF_FIELD(11, 4, reg_offset_addr);
+  DEF_FIELD(3, 0, byte_cnt);
 };
 
-class PmicArbCoreChannelCmdConfig : public hwreg::RegisterBase<PmicArbCoreChannelCmdConfig,
-                                                               uint32_t> {
-public:
-    static auto Get(uint32_t chnl_cmd_cfg_offset) {
-        return hwreg::RegisterAddr<PmicArbCoreChannelCmdConfig>(chnl_cmd_cfg_offset);
-    }
+class PmicArbCoreChannelCmdConfig
+    : public hwreg::RegisterBase<PmicArbCoreChannelCmdConfig, uint32_t> {
+ public:
+  static auto Get(uint32_t chnl_cmd_cfg_offset) {
+    return hwreg::RegisterAddr<PmicArbCoreChannelCmdConfig>(chnl_cmd_cfg_offset);
+  }
 
-    DEF_FIELD(31, 0, intr);
+  DEF_FIELD(31, 0, intr);
 };
 
-class PmicArbCoreChannelCmdWData : public hwreg::RegisterBase<PmicArbCoreChannelCmdWData,
-                                                              uint32_t> {
-public:
-    static auto Get(uint32_t chnl_cmd_wdata_offset) {
-        return hwreg::RegisterAddr<PmicArbCoreChannelCmdWData>(chnl_cmd_wdata_offset);
-    }
+class PmicArbCoreChannelCmdWData
+    : public hwreg::RegisterBase<PmicArbCoreChannelCmdWData, uint32_t> {
+ public:
+  static auto Get(uint32_t chnl_cmd_wdata_offset) {
+    return hwreg::RegisterAddr<PmicArbCoreChannelCmdWData>(chnl_cmd_wdata_offset);
+  }
 
-    DEF_FIELD(31, 0, data);
+  DEF_FIELD(31, 0, data);
 };
 
-class PmicArbCoreChannelCmdRData : public hwreg::RegisterBase<PmicArbCoreChannelCmdRData,
-                                                              uint32_t> {
-public:
-    static auto Get(uint32_t chnl_cmd_rdata_offset) {
-        return hwreg::RegisterAddr<PmicArbCoreChannelCmdWData>(chnl_cmd_rdata_offset);
-    }
+class PmicArbCoreChannelCmdRData
+    : public hwreg::RegisterBase<PmicArbCoreChannelCmdRData, uint32_t> {
+ public:
+  static auto Get(uint32_t chnl_cmd_rdata_offset) {
+    return hwreg::RegisterAddr<PmicArbCoreChannelCmdWData>(chnl_cmd_rdata_offset);
+  }
 
-    DEF_FIELD(31, 0, data);
+  DEF_FIELD(31, 0, data);
 };
 
-class PmicArbCoreChannelCmdStatus : public hwreg::RegisterBase<PmicArbCoreChannelCmdStatus,
-                                                               uint32_t> {
-public:
-    static constexpr uint32_t kPmicArbCmdDone = 0x00000001;
-    static constexpr uint32_t kPmicArbCmdFailure = 0x00000002;
-    static constexpr uint32_t kPmicArbCmdDenied = 0x00000004;
-    static constexpr uint32_t kPmicArbCmdDropped = 0x00000008;
+class PmicArbCoreChannelCmdStatus
+    : public hwreg::RegisterBase<PmicArbCoreChannelCmdStatus, uint32_t> {
+ public:
+  static constexpr uint32_t kPmicArbCmdDone = 0x00000001;
+  static constexpr uint32_t kPmicArbCmdFailure = 0x00000002;
+  static constexpr uint32_t kPmicArbCmdDenied = 0x00000004;
+  static constexpr uint32_t kPmicArbCmdDropped = 0x00000008;
 
-    static auto Get(uint32_t chnl_cmd_status_offset) {
-        return hwreg::RegisterAddr<PmicArbCoreChannelCmdStatus>(chnl_cmd_status_offset);
-    }
-    DEF_FIELD(31, 0, status);
+  static auto Get(uint32_t chnl_cmd_status_offset) {
+    return hwreg::RegisterAddr<PmicArbCoreChannelCmdStatus>(chnl_cmd_status_offset);
+  }
+  DEF_FIELD(31, 0, status);
 };
 
 class PmicRegAddr : public hwreg::RegisterBase<PmicRegAddr, uint32_t> {
-public:
-    static auto Get() {
-        return hwreg::RegisterAddr<PmicRegAddr>(0);
-    }
+ public:
+  static auto Get() { return hwreg::RegisterAddr<PmicRegAddr>(0); }
 
-    DEF_FIELD(19, 16, slave_id);
-    DEF_FIELD(15, 8, periph_id);
-    DEF_FIELD(7, 0, reg_offset);
+  DEF_FIELD(19, 16, slave_id);
+  DEF_FIELD(15, 8, periph_id);
+  DEF_FIELD(7, 0, reg_offset);
 };

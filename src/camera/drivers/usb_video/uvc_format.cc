@@ -46,8 +46,7 @@ fuchsia::camera::VideoFormat ToFidl(const UvcFormat& format_in) {
       .format.layers = 1,
       // The frame descriptor frame interval is expressed in 100ns units.
       // e.g. a frame interval of 333333 is equivalent to 30fps (1e7 / 333333).
-      .rate.frames_per_sec_numerator =
-          NANOSECS_IN_SEC / 100,  // static_cast<uint32_t>(1e7),
+      .rate.frames_per_sec_numerator = NANOSECS_IN_SEC / 100,  // static_cast<uint32_t>(1e7),
       .rate.frames_per_sec_denominator = format_in.default_frame_interval};
   ret.format.planes[0].bytes_per_row = format_in.stride;
   // Convert Pixel Format:
@@ -79,23 +78,21 @@ fuchsia::camera::VideoFormat ToFidl(const UvcFormat& format_in) {
 bool Compare(const fuchsia::camera::VideoFormat& vf, const UvcFormat& uf) {
   fuchsia::camera::VideoFormat uvf = ToFidl(uf);
 
-  bool has_equal_frame_rate =
-      (static_cast<uint64_t>(vf.rate.frames_per_sec_numerator) *
-       uvf.rate.frames_per_sec_denominator) ==
-      (static_cast<uint64_t>(vf.rate.frames_per_sec_numerator) *
-       uvf.rate.frames_per_sec_denominator);
+  bool has_equal_frame_rate = (static_cast<uint64_t>(vf.rate.frames_per_sec_numerator) *
+                               uvf.rate.frames_per_sec_denominator) ==
+                              (static_cast<uint64_t>(vf.rate.frames_per_sec_numerator) *
+                               uvf.rate.frames_per_sec_denominator);
 
   for (uint32_t i = 0; i < uvf.format.planes.size(); i++) {
     if (vf.format.planes[i].byte_offset != uvf.format.planes[i].byte_offset ||
-        vf.format.planes[i].bytes_per_row !=
-            uvf.format.planes[i].bytes_per_row) {
+        vf.format.planes[i].bytes_per_row != uvf.format.planes[i].bytes_per_row) {
       return false;
     }
   }
 
   if (fidl::Equals(vf.format.pixel_format, uvf.format.pixel_format) &&
-      vf.format.width == uvf.format.width &&
-      vf.format.height == uvf.format.height && has_equal_frame_rate) {
+      vf.format.width == uvf.format.width && vf.format.height == uvf.format.height &&
+      has_equal_frame_rate) {
     return true;
   }
   return false;
@@ -103,8 +100,8 @@ bool Compare(const fuchsia::camera::VideoFormat& vf, const UvcFormat& uf) {
 
 // Parses the payload format descriptor and any corresponding frame descriptors.
 // The result is stored in out_format.
-zx_status_t UvcFormatList::ParseUsbDescriptor(
-    usb_video_vc_desc_header* format_desc, usb_desc_iter_t* iter) {
+zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_desc,
+                                              usb_desc_iter_t* iter) {
   uint8_t want_frame_type = 0;
   int want_num_frame_descs = 0;
 
@@ -120,8 +117,7 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(
       zxlogf(TRACE,
              "USB_VIDEO_VS_FORMAT_UNCOMPRESSED bNumFrameDescriptors %u "
              "bBitsPerPixel %u\n",
-             uncompressed_desc->bNumFrameDescriptors,
-             uncompressed_desc->bBitsPerPixel);
+             uncompressed_desc->bNumFrameDescriptors, uncompressed_desc->bBitsPerPixel);
 
       want_frame_type = USB_VIDEO_VS_FRAME_UNCOMPRESSED;
       format_index = uncompressed_desc->bFormatIndex;
@@ -132,10 +128,8 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(
       break;
     }
     case USB_VIDEO_VS_FORMAT_MJPEG: {
-      usb_video_vs_mjpeg_format_desc* mjpeg_desc =
-          (usb_video_vs_mjpeg_format_desc*)format_desc;
-      zxlogf(TRACE,
-             "USB_VIDEO_VS_FORMAT_MJPEG bNumFrameDescriptors %u bmFlags %d\n",
+      usb_video_vs_mjpeg_format_desc* mjpeg_desc = (usb_video_vs_mjpeg_format_desc*)format_desc;
+      zxlogf(TRACE, "USB_VIDEO_VS_FORMAT_MJPEG bNumFrameDescriptors %u bmFlags %d\n",
              mjpeg_desc->bNumFrameDescriptors, mjpeg_desc->bmFlags);
 
       want_frame_type = USB_VIDEO_VS_FRAME_MJPEG;
@@ -148,8 +142,7 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(
     }
     // TODO(jocelyndang): handle other formats.
     default:
-      zxlogf(ERROR, "unsupported format bDescriptorSubtype %u\n",
-             format_desc->bDescriptorSubtype);
+      zxlogf(ERROR, "unsupported format bDescriptorSubtype %u\n", format_desc->bDescriptorSubtype);
       return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -180,12 +173,11 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(
 
         // Intervals are specified in 100 ns units.
         double framesPerSec = 1 / (desc->dwDefaultFrameInterval * 100 / 1e9);
-        zxlogf(
-            TRACE, "%s (%u x %u) %.2f frames / sec\n",
-            format_desc->bDescriptorSubtype == USB_VIDEO_VS_FRAME_UNCOMPRESSED
-                ? "USB_VIDEO_VS_FRAME_UNCOMPRESSED"
-                : "USB_VIDEO_VS_FRAME_MJPEG",
-            desc->wWidth, desc->wHeight, framesPerSec);
+        zxlogf(TRACE, "%s (%u x %u) %.2f frames / sec\n",
+               format_desc->bDescriptorSubtype == USB_VIDEO_VS_FRAME_UNCOMPRESSED
+                   ? "USB_VIDEO_VS_FRAME_UNCOMPRESSED"
+                   : "USB_VIDEO_VS_FRAME_MJPEG",
+               desc->wWidth, desc->wHeight, framesPerSec);
 
         video::usb::UvcFormat frame_desc = {
             .format_index = format_index,
@@ -200,16 +192,14 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(
         formats_.push_back(frame_desc);
       } break;
       default:
-        zxlogf(ERROR, "unhandled frame type: %u\n",
-               format_desc->bDescriptorSubtype);
+        zxlogf(ERROR, "unhandled frame type: %u\n", format_desc->bDescriptorSubtype);
         return ZX_ERR_NOT_SUPPORTED;
     }
     header = usb_desc_iter_next(iter);
     num_frame_descs_found++;
   }
   if (num_frame_descs_found != want_num_frame_descs) {
-    zxlogf(ERROR, "missing %u frame descriptors\n",
-           want_num_frame_descs - num_frame_descs_found);
+    zxlogf(ERROR, "missing %u frame descriptors\n", want_num_frame_descs - num_frame_descs_found);
     return ZX_ERR_INTERNAL;
   }
   // TODO(jocelyndang); parse still image frame and color matching descriptors.

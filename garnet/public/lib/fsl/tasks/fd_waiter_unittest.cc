@@ -32,8 +32,7 @@ TEST(FDWaiter, DISABLED_WaitStdOut) {
 TEST(FDWaiter, WaitFailed) {
   async::TestLoop loop;
   FDWaiter waiter;
-  EXPECT_FALSE(
-      waiter.Wait([](zx_status_t status, uint32_t events) {}, -1, POLLOUT));
+  EXPECT_FALSE(waiter.Wait([](zx_status_t status, uint32_t events) {}, -1, POLLOUT));
 }
 
 }  // namespace

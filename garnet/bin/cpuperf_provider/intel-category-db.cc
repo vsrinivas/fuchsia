@@ -29,30 +29,28 @@ namespace cpuperf_provider {
 extern const CategorySpec kTargetCategories[] = {
 
 // Fixed events.
-#define DEF_FIXED_CATEGORY(symbol, name, events...)                     \
-  {"cpu:" name, CategoryGroup::kFixedArch, 0, arraysize(symbol##_events), \
-   &symbol##_events[0]},
+#define DEF_FIXED_CATEGORY(symbol, name, events...) \
+  {"cpu:" name, CategoryGroup::kFixedArch, 0, arraysize(symbol##_events), &symbol##_events[0]},
 #include "intel-pm-categories.inc"
 
 // Architecturally specified programmable events.
-#define DEF_ARCH_CATEGORY(symbol, name, events...)                             \
+#define DEF_ARCH_CATEGORY(symbol, name, events...)                               \
   {"cpu:" name, CategoryGroup::kProgrammableArch, 0, arraysize(symbol##_events), \
    &symbol##_events[0]},
 #include "intel-pm-categories.inc"
 
 // Model-specific misc events
-#define DEF_MISC_SKL_CATEGORY(symbol, name, events...)                   \
-  {"cpu:" name, CategoryGroup::kFixedModel, 0, arraysize(symbol##_events), \
-   &symbol##_events[0]},
+#define DEF_MISC_SKL_CATEGORY(symbol, name, events...) \
+  {"cpu:" name, CategoryGroup::kFixedModel, 0, arraysize(symbol##_events), &symbol##_events[0]},
 #include "skylake-misc-categories.inc"
 
 // Model-specific programmable events.
-#define DEF_SKL_CATEGORY(symbol, name, events...)     \
-  {"cpu:" name, CategoryGroup::kProgrammableModel, 0, \
-   arraysize(symbol##_events), &symbol##_events[0]},
+#define DEF_SKL_CATEGORY(symbol, name, events...)                                 \
+  {"cpu:" name, CategoryGroup::kProgrammableModel, 0, arraysize(symbol##_events), \
+   &symbol##_events[0]},
 #include "skylake-pm-categories.inc"
 
-}; // kTargetCategories
+};  // kTargetCategories
 
 extern const size_t kNumTargetCategories = arraysize(kTargetCategories);
 

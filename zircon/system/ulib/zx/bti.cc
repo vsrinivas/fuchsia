@@ -9,7 +9,7 @@
 namespace zx {
 
 zx_status_t bti::create(const iommu& iommu, uint32_t options, uint64_t bti_id, bti* result) {
-    return zx_bti_create(iommu.get(), options, bti_id, result->reset_and_get_address());
+  return zx_bti_create(iommu.get(), options, bti_id, result->reset_and_get_address());
 }
 
-} // namespace zx
+}  // namespace zx

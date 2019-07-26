@@ -68,13 +68,12 @@ class TracingLambda {
       TRACE_ASYNC_END(category_, name_, id_);
       TRACE_ASYNC_BEGIN(category_, callback_name_, id_);
     }
-    auto guard =
-        fit::defer([trace_enabled = trace_enabled_, id = id_,
-                    category = category_, callback_name = callback_name_] {
-          if (trace_enabled) {
-            TRACE_ASYNC_END(category, callback_name, id);
-          }
-        });
+    auto guard = fit::defer([trace_enabled = trace_enabled_, id = id_, category = category_,
+                             callback_name = callback_name_] {
+      if (trace_enabled) {
+        TRACE_ASYNC_END(category, callback_name, id);
+      }
+    });
 
     return callback_(std::forward<ArgType>(args)...);
   }
@@ -94,13 +93,11 @@ class TracingLambda {
 // NOLINT suppresses check about 'args' being unused. It might be used in the
 // future if TRACE_CALLBACK (see below) is used providing additional arguments.
 template <typename C, typename... ArgType>
-auto TraceCallback(C callback, const char* category, const char* name,
-                   const char* callback_name,
+auto TraceCallback(C callback, const char* category, const char* name, const char* callback_name,
                    ArgType... args) {  // NOLINT
   uint64_t id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN(category, name, id, std::forward<ArgType>(args)...);
-  return TracingLambda<C>(std::move(callback), id, category, name,
-                          callback_name);
+  return TracingLambda<C>(std::move(callback), id, category, name, callback_name);
 }
 
 template <typename C>
@@ -121,20 +118,17 @@ constexpr const char* CheckConstantCString(const char* value) {
 // Wraps the given callback so that it's traced using async tracing from the
 // time it's wrapped to the time it completes. Can be used only for callbacks
 // that will be called at most once.
-#define TRACE_CALLBACK(cb, category, name, args...)                            \
-  ([&]() mutable {                                                             \
-    auto trace_local_cb__ = cb;                                                \
-    return (                                                                   \
-        TRACE_ENABLED()                                                        \
-            ? ::callback::internal::TraceCallback(                             \
-                  std::move(trace_local_cb__),                                 \
-                  ::callback::internal::CheckConstantCString<__builtin_strlen( \
-                      category)>(category),                                    \
-                  ::callback::internal::CheckConstantCString<__builtin_strlen( \
-                      name)>(name),                                            \
-                  name "_callback", ##args)                                    \
-            : ::callback::internal::TraceCallback(                             \
-                  std::move(trace_local_cb__)));                               \
+#define TRACE_CALLBACK(cb, category, name, args...)                                             \
+  ([&]() mutable {                                                                              \
+    auto trace_local_cb__ = cb;                                                                 \
+    return (TRACE_ENABLED()                                                                     \
+                ? ::callback::internal::TraceCallback(                                          \
+                      std::move(trace_local_cb__),                                              \
+                      ::callback::internal::CheckConstantCString<__builtin_strlen(category)>(   \
+                          category),                                                            \
+                      ::callback::internal::CheckConstantCString<__builtin_strlen(name)>(name), \
+                      name "_callback", ##args)                                                 \
+                : ::callback::internal::TraceCallback(std::move(trace_local_cb__)));            \
   }())
 
 #endif  // LIB_CALLBACK_TRACE_CALLBACK_H_

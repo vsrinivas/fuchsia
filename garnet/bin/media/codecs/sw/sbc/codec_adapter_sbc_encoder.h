@@ -17,24 +17,18 @@
 // that conflict with the SBC types.
 #include <sbc_encoder.h>
 
-class CodecAdapterSbcEncoder
-    : public CodecAdapterSW<fit::deferred_action<fit::closure>> {
+class CodecAdapterSbcEncoder : public CodecAdapterSW<fit::deferred_action<fit::closure>> {
  public:
-  CodecAdapterSbcEncoder(std::mutex& lock,
-                         CodecAdapterEvents* codec_adapter_events);
+  CodecAdapterSbcEncoder(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
   ~CodecAdapterSbcEncoder();
 
-  fuchsia::sysmem::BufferCollectionConstraints
-  CoreCodecGetBufferCollectionConstraints(
-      CodecPort port,
-      const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
-      const fuchsia::media::StreamBufferPartialSettings& partial_settings)
-      override;
+  fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
+      CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
 
   void CoreCodecSetBufferCollectionInfo(
       CodecPort port,
-      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info)
-      override;
+      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override;
 
  protected:
   // Processes input in a loop. Should only execute on input_processing_thread_.
@@ -43,8 +37,7 @@ class CodecAdapterSbcEncoder
 
   void CleanUpAfterStream() override;
 
-  std::pair<fuchsia::media::FormatDetails, size_t> OutputFormatDetails()
-      override;
+  std::pair<fuchsia::media::FormatDetails, size_t> OutputFormatDetails() override;
 
  private:
   struct Context {
@@ -57,20 +50,17 @@ class CodecAdapterSbcEncoder
       switch (settings.channel_mode) {
         case fuchsia::media::SbcChannelMode::MONO:
         case fuchsia::media::SbcChannelMode::DUAL:
-          return part + static_cast<size_t>(
-                            ceil(static_cast<double>(params.s16NumOfBlocks) *
-                                 static_cast<double>(channel_count()) *
-                                 static_cast<double>(params.s16BitPool) / 8.0));
+          return part + static_cast<size_t>(ceil(static_cast<double>(params.s16NumOfBlocks) *
+                                                 static_cast<double>(channel_count()) *
+                                                 static_cast<double>(params.s16BitPool) / 8.0));
         case fuchsia::media::SbcChannelMode::JOINT_STEREO:
-          return part + static_cast<size_t>(
-                            ceil((static_cast<double>(params.s16NumOfSubBands) +
-                                  static_cast<double>(params.s16NumOfBlocks) *
-                                      static_cast<double>(params.s16BitPool)) /
-                                 8.0));
+          return part + static_cast<size_t>(ceil((static_cast<double>(params.s16NumOfSubBands) +
+                                                  static_cast<double>(params.s16NumOfBlocks) *
+                                                      static_cast<double>(params.s16BitPool)) /
+                                                 8.0));
         case fuchsia::media::SbcChannelMode::STEREO:
-          return part + static_cast<size_t>(
-                            ceil(static_cast<double>(params.s16NumOfBlocks) *
-                                 static_cast<double>(params.s16BitPool) / 8.0));
+          return part + static_cast<size_t>(ceil(static_cast<double>(params.s16NumOfBlocks) *
+                                                 static_cast<double>(params.s16BitPool) / 8.0));
         default:
           FXL_LOG(FATAL) << "Channel mode enum became invalid value: "
                          << static_cast<int>(settings.channel_mode);
@@ -81,13 +71,9 @@ class CodecAdapterSbcEncoder
       return params.s16NumOfBlocks * params.s16NumOfSubBands;
     }
 
-    size_t pcm_frame_size() const {
-      return input_format.bits_per_sample / 8 * channel_count();
-    }
+    size_t pcm_frame_size() const { return input_format.bits_per_sample / 8 * channel_count(); }
 
-    size_t pcm_batch_size() const {
-      return pcm_frame_size() * pcm_frames_per_sbc_frame();
-    }
+    size_t pcm_batch_size() const { return pcm_frame_size() * pcm_frames_per_sbc_frame(); }
 
     size_t channel_count() const { return input_format.channel_map.size(); }
   };
@@ -99,8 +85,7 @@ class CodecAdapterSbcEncoder
 
   // Attempts to create a context from format details. Reports failures through
   // `events_`.
-  InputLoopStatus CreateContext(
-      const fuchsia::media::FormatDetails& format_details);
+  InputLoopStatus CreateContext(const fuchsia::media::FormatDetails& format_details);
 
   // Attempts to encode input packet. Reports failures through `events_`.
   InputLoopStatus EncodeInput(CodecPacket* input_packet);

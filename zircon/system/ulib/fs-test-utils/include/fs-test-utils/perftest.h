@@ -20,74 +20,74 @@ namespace fs_test_utils {
 
 // Options that define how a performance test is run.
 struct PerformanceTestOptions {
-    // Returns options which allow fast execution. No measurements will
-    // be recorded.
-    static PerformanceTestOptions UnitTest() {
-        PerformanceTestOptions options;
-        options.result_path = "";
-        options.summary_path = "";
-        options.sample_count = 1;
-        options.print_statistics = false;
-        options.is_unittest = true;
-        return options;
-    }
+  // Returns options which allow fast execution. No measurements will
+  // be recorded.
+  static PerformanceTestOptions UnitTest() {
+    PerformanceTestOptions options;
+    options.result_path = "";
+    options.summary_path = "";
+    options.sample_count = 1;
+    options.print_statistics = false;
+    options.is_unittest = true;
+    return options;
+  }
 
-    static PerformanceTestOptions PerformanceTest() {
-        PerformanceTestOptions options = UnitTest();
-        options.is_unittest = false;
-        return options;
-    }
+  static PerformanceTestOptions PerformanceTest() {
+    PerformanceTestOptions options = UnitTest();
+    options.is_unittest = false;
+    return options;
+  }
 
-    // Returns true if the current set of options is valid.
-    bool IsValid(fbl::String* err) const;
+  // Returns true if the current set of options is valid.
+  bool IsValid(fbl::String* err) const;
 
-    // Path to output file.
-    fbl::String result_path;
+  // Path to output file.
+  fbl::String result_path;
 
-    // Path to summary statistics file.
-    fbl::String summary_path;
+  // Path to summary statistics file.
+  fbl::String summary_path;
 
-    // Number of times to sample each operation. An operation is either a test or a stage that
-    // will be executed multiple times.
-    uint32_t sample_count;
+  // Number of times to sample each operation. An operation is either a test or a stage that
+  // will be executed multiple times.
+  uint32_t sample_count;
 
-    // Whether summary statistics should be printed or not.
-    bool print_statistics;
+  // Whether summary statistics should be printed or not.
+  bool print_statistics;
 
-    // True if we are running in unittest mode.
-    // Benchmark tests are required to be implemented in such a way, that unittest mode validates
-    // that the workflow is correct, and exit quickly.
-    bool is_unittest;
+  // True if we are running in unittest mode.
+  // Benchmark tests are required to be implemented in such a way, that unittest mode validates
+  // that the workflow is correct, and exit quickly.
+  bool is_unittest;
 };
 
 struct TestInfo {
-    // Function that executes the test.
-    fbl::Function<bool(perftest::RepeatState*, Fixture*)> test_fn;
+  // Function that executes the test.
+  fbl::Function<bool(perftest::RepeatState*, Fixture*)> test_fn;
 
-    // Name of the test.
-    fbl::String name;
+  // Name of the test.
+  fbl::String name;
 
-    // Estimation of the required disk space for this test. If set to 0, will
-    // always be executed (may lead to OOS or OOM(ramdisk) errors.
-    // This is optional.
-    size_t required_disk_space = 0;
+  // Estimation of the required disk space for this test. If set to 0, will
+  // always be executed (may lead to OOS or OOM(ramdisk) errors.
+  // This is optional.
+  size_t required_disk_space = 0;
 };
 
 struct TestCaseInfo {
-    // Ordered list of tests be executed as part of this test case.
-    fbl::Vector<TestInfo> tests;
+  // Ordered list of tests be executed as part of this test case.
+  fbl::Vector<TestInfo> tests;
 
-    // TestCase name.
-    fbl::String name;
+  // TestCase name.
+  fbl::String name;
 
-    // Whether there should be teardown between each test. If your tests depend
-    // on the leftover state in the underlying FS from previous state, set this to false.
-    bool teardown;
+  // Whether there should be teardown between each test. If your tests depend
+  // on the leftover state in the underlying FS from previous state, set this to false.
+  bool teardown;
 
-    // Number of times to run each test. Will overwrite |PerformanceTestOptions::sample_count|
-    // if set and will be ignored if in unittest mode.
-    // This is optional.
-    uint32_t sample_count = 0;
+  // Number of times to run each test. Will overwrite |PerformanceTestOptions::sample_count|
+  // if set and will be ignored if in unittest mode.
+  // This is optional.
+  uint32_t sample_count = 0;
 };
 
 // Returns true if the parsed args should trigger a test run. The usage information is
@@ -104,4 +104,4 @@ bool RunTestCases(const FixtureOptions& fixture_options,
                   const PerformanceTestOptions& performance_test_options,
                   const fbl::Vector<TestCaseInfo>& test_case, FILE* out = stdout);
 
-} // namespace fs_test_utils
+}  // namespace fs_test_utils

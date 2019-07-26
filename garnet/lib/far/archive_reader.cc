@@ -39,8 +39,7 @@ bool ArchiveReader::Extract(fxl::StringView output_dir) const {
   for (const auto& entry : directory_table_) {
     std::string path = fxl::Concatenate({output_dir, "/", GetPathView(entry)});
     std::string dir = files::GetDirectoryName(path);
-    if (!dir.empty() && !files::IsDirectory(dir) &&
-        !files::CreateDirectory(dir)) {
+    if (!dir.empty() && !files::IsDirectory(dir) && !files::CreateDirectory(dir)) {
       fprintf(stderr, "error: Failed to create directory '%s'.\n", dir.c_str());
       return false;
     }
@@ -56,8 +55,7 @@ bool ArchiveReader::Extract(fxl::StringView output_dir) const {
   return true;
 }
 
-bool ArchiveReader::ExtractFile(fxl::StringView archive_path,
-                                const char* output_path) const {
+bool ArchiveReader::ExtractFile(fxl::StringView archive_path, const char* output_path) const {
   DirectoryTableEntry entry;
   if (!GetDirectoryEntryByPath(archive_path, &entry))
     return false;
@@ -87,8 +85,7 @@ bool ArchiveReader::CopyFile(fxl::StringView archive_path, int dst_fd) const {
   return true;
 }
 
-bool ArchiveReader::GetDirectoryEntryByIndex(uint64_t index,
-                                             DirectoryTableEntry* entry) const {
+bool ArchiveReader::GetDirectoryEntryByIndex(uint64_t index, DirectoryTableEntry* entry) const {
   if (index >= directory_table_.size())
     return false;
   *entry = directory_table_[index];
@@ -98,17 +95,15 @@ bool ArchiveReader::GetDirectoryEntryByIndex(uint64_t index,
 bool ArchiveReader::GetDirectoryEntryByPath(fxl::StringView archive_path,
                                             DirectoryTableEntry* entry) const {
   uint64_t index = 0;
-  return GetDirectoryIndexByPath(archive_path, &index) &&
-         GetDirectoryEntryByIndex(index, entry);
+  return GetDirectoryIndexByPath(archive_path, &index) && GetDirectoryEntryByIndex(index, entry);
 }
 
-bool ArchiveReader::GetDirectoryIndexByPath(fxl::StringView archive_path,
-                                            uint64_t* index) const {
+bool ArchiveReader::GetDirectoryIndexByPath(fxl::StringView archive_path, uint64_t* index) const {
   PathComparator comparator;
   comparator.reader = this;
 
-  auto it = std::lower_bound(directory_table_.begin(), directory_table_.end(),
-                             archive_path, comparator);
+  auto it =
+      std::lower_bound(directory_table_.begin(), directory_table_.end(), archive_path, comparator);
   if (it == directory_table_.end() || GetPathView(*it) != archive_path)
     return false;
   *index = it - directory_table_.begin();
@@ -117,10 +112,8 @@ bool ArchiveReader::GetDirectoryIndexByPath(fxl::StringView archive_path,
 
 fxl::UniqueFD ArchiveReader::TakeFileDescriptor() { return std::move(fd_); }
 
-fxl::StringView ArchiveReader::GetPathView(
-    const DirectoryTableEntry& entry) const {
-  return fxl::StringView(path_data_.data() + entry.name_offset,
-                         entry.name_length);
+fxl::StringView ArchiveReader::GetPathView(const DirectoryTableEntry& entry) const {
+  return fxl::StringView(path_data_.data() + entry.name_offset, entry.name_length);
 }
 
 bool ArchiveReader::ReadIndex() {
@@ -131,20 +124,17 @@ bool ArchiveReader::ReadIndex() {
 
   IndexChunk index_chunk;
   if (!ReadObject(fd_.get(), &index_chunk)) {
-    fprintf(stderr,
-            "error: Failed read index chunk. Is this file an archive?\n");
+    fprintf(stderr, "error: Failed read index chunk. Is this file an archive?\n");
     return false;
   }
 
   if (index_chunk.magic != kMagic) {
-    fprintf(stderr,
-            "error: Index chunk missing magic. Is this file an archive?\n");
+    fprintf(stderr, "error: Index chunk missing magic. Is this file an archive?\n");
     return false;
   }
 
   if (index_chunk.length % sizeof(IndexEntry) != 0 ||
-      index_chunk.length >
-          std::numeric_limits<uint64_t>::max() - sizeof(IndexChunk)) {
+      index_chunk.length > std::numeric_limits<uint64_t>::max() - sizeof(IndexChunk)) {
     fprintf(stderr, "error: Invalid index chunk length.\n");
     return false;
   }
@@ -158,22 +148,16 @@ bool ArchiveReader::ReadIndex() {
   uint64_t next_offset = sizeof(IndexChunk) + index_chunk.length;
   for (const auto& entry : index_) {
     if (entry.offset != next_offset) {
-      fprintf(stderr,
-              "error: Chunk at offset %" PRIu64 " not tightly packed.\n",
-              entry.offset);
+      fprintf(stderr, "error: Chunk at offset %" PRIu64 " not tightly packed.\n", entry.offset);
       return false;
     }
     if (entry.length % 8 != 0) {
-      fprintf(stderr,
-              "error: Chunk length %" PRIu64
-              " not aligned to 8 byte boundary.\n",
+      fprintf(stderr, "error: Chunk length %" PRIu64 " not aligned to 8 byte boundary.\n",
               entry.length);
       return false;
     }
     if (entry.length > std::numeric_limits<uint64_t>::max() - entry.offset) {
-      fprintf(stderr,
-              "error: Chunk length %" PRIu64
-              " overflowed total archive size.\n",
+      fprintf(stderr, "error: Chunk length %" PRIu64 " overflowed total archive size.\n",
               entry.length);
       return false;
     }
@@ -190,8 +174,7 @@ bool ArchiveReader::ReadDirectory() {
     return false;
   }
   if (dir_entry->length % sizeof(DirectoryTableEntry) != 0) {
-    fprintf(stderr, "error: Invalid directory chunk length: %" PRIu64 ".\n",
-            dir_entry->length);
+    fprintf(stderr, "error: Invalid directory chunk length: %" PRIu64 ".\n", dir_entry->length);
     return false;
   }
   uint64_t file_count = dir_entry->length / sizeof(DirectoryTableEntry);

@@ -31,8 +31,7 @@ TEST(File, ReadWriteFileAt) {
   std::string content = "content";
   fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
 
-  EXPECT_TRUE(files::WriteFileAt(dirfd.get(), filename, content.c_str(),
-                                 content.size()));
+  EXPECT_TRUE(files::WriteFileAt(dirfd.get(), filename, content.c_str(), content.size()));
 
   std::string read_content;
   EXPECT_TRUE(files::ReadFileToStringAt(dirfd.get(), filename, &read_content));

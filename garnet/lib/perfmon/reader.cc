@@ -9,12 +9,9 @@
 
 namespace perfmon {
 
-Reader::Reader(uint32_t num_traces)
-    : num_traces_(num_traces) {
-}
+Reader::Reader(uint32_t num_traces) : num_traces_(num_traces) {}
 
-Reader::~Reader() {
-}
+Reader::~Reader() {}
 
 ReaderStatus Reader::SetTrace(uint32_t trace_num) {
   if (trace_num >= num_traces_) {
@@ -53,8 +50,7 @@ size_t Reader::GetLastRecordOffset() const {
   return 0;
 }
 
-ReaderStatus Reader::ReadNextRecord(uint32_t* trace_num,
-                                    SampleRecord* record) {
+ReaderStatus Reader::ReadNextRecord(uint32_t* trace_num, SampleRecord* record) {
   if (status_ != ReaderStatus::kOk) {
     return status_;
   }

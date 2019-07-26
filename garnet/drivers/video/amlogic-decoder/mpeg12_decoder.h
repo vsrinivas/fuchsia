@@ -25,8 +25,8 @@ class Mpeg12Decoder : public VideoDecoder {
   void HandleInterrupt() override;
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> video_frame) override;
-  void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width,
-                         uint32_t height, uint32_t stride) override;
+  void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
+                         uint32_t stride) override;
 
  private:
   struct ReferenceFrame {

@@ -70,8 +70,7 @@ class RealLoopFixture : public ::testing::Test {
   // that |condition| will be made true by a task running on the loop. This will
   // generally be the case unless |condition| is made true on a different
   // thread.
-  void RunLoopUntil(fit::function<bool()> condition,
-                    zx::duration step = zx::msec(10));
+  void RunLoopUntil(fit::function<bool()> condition, zx::duration step = zx::msec(10));
 
   // Runs the loop until the condition returns true or the timeout is reached.
   // Returns |true| if the condition was met, and |false| if the timeout was
@@ -84,8 +83,7 @@ class RealLoopFixture : public ::testing::Test {
   // that |condition| will be made true by a task running on the loop. This will
   // generally be the case unless |condition| is made true on a different
   // thread.
-  bool RunLoopWithTimeoutOrUntil(fit::function<bool()> condition,
-                                 zx::duration timeout = zx::sec(1),
+  bool RunLoopWithTimeoutOrUntil(fit::function<bool()> condition, zx::duration timeout = zx::sec(1),
                                  zx::duration step = zx::msec(10));
 
   // Runs the message loop until idle.

@@ -30,8 +30,7 @@ class FakeLauncher : public fuchsia::sys::Launcher {
   FakeLauncher& operator=(const FakeLauncher&) = delete;
 
   using ComponentConnector = fit::function<void(
-      fuchsia::sys::LaunchInfo,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController>)>;
+      fuchsia::sys::LaunchInfo, fidl::InterfaceRequest<fuchsia::sys::ComponentController>)>;
 
   // Registers a component located at "url" with a connector. When someone
   // tries to CreateComponent() with this |url|, the supplied |connector| is
@@ -45,9 +44,9 @@ class FakeLauncher : public fuchsia::sys::Launcher {
   // associated one exists. If one is not registered for |launch_info.url|, then
   // this call is dropped.
   // TODO(CP-57): this needs to be idempotent.
-  void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
-                       fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-                           controller) override;
+  void CreateComponent(
+      fuchsia::sys::LaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
   fidl::InterfaceRequestHandler<fuchsia::sys::Launcher> GetHandler();
 

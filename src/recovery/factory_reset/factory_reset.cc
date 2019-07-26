@@ -34,8 +34,7 @@ zx_status_t WriteRandomBlock(int fd, ssize_t block_size) {
   zx_cprng_draw(buf.get(), block_size);
   ssize_t res;
   if ((res = write(fd, buf.get(), block_size)) < block_size) {
-    fprintf(stderr, "write(%d, %p, %zu) failed: %s\n ", fd, buf.get(),
-            block_size, strerror(errno));
+    fprintf(stderr, "write(%d, %p, %zu) failed: %s\n ", fd, buf.get(), block_size, strerror(errno));
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -49,8 +48,8 @@ zx_status_t FindBlockSize(int fd, ssize_t* block_size) {
     return ZX_ERR_BAD_STATE;
   }
   fuchsia_hardware_block_BlockInfo block_info;
-  if ((rc = fuchsia_hardware_block_BlockGetInfo(
-           caller.borrow_channel(), &call_status, &block_info)) != ZX_OK) {
+  if ((rc = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &call_status,
+                                                &block_info)) != ZX_OK) {
     return rc;
   }
   if (call_status != ZX_OK) {
@@ -89,8 +88,7 @@ FactoryReset::FactoryReset(fbl::unique_fd dev_fd,
 }
 
 zx_status_t FactoryReset::Shred() const {
-  fbl::unique_fd block_dir(
-      openat(dev_fd_.get(), kBlockPath, O_RDONLY | O_DIRECTORY));
+  fbl::unique_fd block_dir(openat(dev_fd_.get(), kBlockPath, O_RDONLY | O_DIRECTORY));
   if (!block_dir) {
     fprintf(stderr, "Error opening %s\n", kBlockPath);
     return ZX_ERR_NOT_FOUND;
@@ -100,12 +98,10 @@ zx_status_t FactoryReset::Shred() const {
   // Attempts to shred every zxcrypt volume found.
   while ((de = readdir(dir)) != nullptr) {
     fbl::unique_fd block_fd(openat(dirfd(dir), de->d_name, O_RDWR));
-    if (!block_fd ||
-        detect_disk_format(block_fd.get()) != DISK_FORMAT_ZXCRYPT) {
+    if (!block_fd || detect_disk_format(block_fd.get()) != DISK_FORMAT_ZXCRYPT) {
       continue;
     }
-    zx_status_t status =
-        ShredBlockDevice(std::move(block_fd), kNumZxcryptSuperblocks);
+    zx_status_t status = ShredBlockDevice(std::move(block_fd), kNumZxcryptSuperblocks);
     if (status != ZX_OK) {
       return status;
     }
@@ -122,8 +118,7 @@ void FactoryReset::Reset(ResetCallback callback) {
   }
 
   // Reboot to initiate the recovery.
-  admin_->Suspend(fuchsia::device::manager::SUSPEND_FLAG_REBOOT,
-                  std::move(callback));
+  admin_->Suspend(fuchsia::device::manager::SUSPEND_FLAG_REBOOT, std::move(callback));
 }
 
 }  // namespace factory_reset

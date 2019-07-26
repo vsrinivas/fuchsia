@@ -12,32 +12,29 @@
 namespace async {
 
 struct DispatcherStub : public async_dispatcher_t {
-public:
-    DispatcherStub();
-    virtual ~DispatcherStub();
+ public:
+  DispatcherStub();
+  virtual ~DispatcherStub();
 
-    DispatcherStub(const DispatcherStub&) = delete;
-    DispatcherStub& operator=(const DispatcherStub&) = delete;
+  DispatcherStub(const DispatcherStub&) = delete;
+  DispatcherStub& operator=(const DispatcherStub&) = delete;
 
-    DispatcherStub(DispatcherStub&&) = delete;
-    DispatcherStub& operator=(DispatcherStub&&) = delete;
+  DispatcherStub(DispatcherStub&&) = delete;
+  DispatcherStub& operator=(DispatcherStub&&) = delete;
 
-    virtual zx::time Now();
-    virtual zx_status_t BeginWait(async_wait_t* wait, uint32_t options = 0u);
-    virtual zx_status_t CancelWait(async_wait_t* wait);
-    virtual zx_status_t PostTask(async_task_t* task);
-    virtual zx_status_t CancelTask(async_task_t* task);
-    virtual zx_status_t QueuePacket(async_receiver_t* receiver,
-                                    const zx_packet_user_t* data);
-    virtual zx_status_t SetGuestBellTrap(async_guest_bell_trap_t* trap,
-                                         const zx::guest& guest,
-                                         zx_vaddr_t addr, size_t length);
-    virtual zx_status_t BindExceptionPort(async_exception_t* exception);
-    virtual zx_status_t UnbindExceptionPort(async_exception_t* exception);
-    virtual zx_status_t ResumeFromException(async_exception_t* exception,
-                                            uint32_t options);
+  virtual zx::time Now();
+  virtual zx_status_t BeginWait(async_wait_t* wait, uint32_t options = 0u);
+  virtual zx_status_t CancelWait(async_wait_t* wait);
+  virtual zx_status_t PostTask(async_task_t* task);
+  virtual zx_status_t CancelTask(async_task_t* task);
+  virtual zx_status_t QueuePacket(async_receiver_t* receiver, const zx_packet_user_t* data);
+  virtual zx_status_t SetGuestBellTrap(async_guest_bell_trap_t* trap, const zx::guest& guest,
+                                       zx_vaddr_t addr, size_t length);
+  virtual zx_status_t BindExceptionPort(async_exception_t* exception);
+  virtual zx_status_t UnbindExceptionPort(async_exception_t* exception);
+  virtual zx_status_t ResumeFromException(async_exception_t* exception, uint32_t options);
 };
 
-} // namespace async
+}  // namespace async
 
-#endif // LIB_ASYNC_TESTING_DISPATCHER_STUB_H_
+#endif  // LIB_ASYNC_TESTING_DISPATCHER_STUB_H_

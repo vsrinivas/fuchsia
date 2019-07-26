@@ -26,12 +26,12 @@ namespace internal {
 namespace {
 
 #define STRING(x) #x
-#define MAKE_MESSAGE(reason, line)                                                                 \
+#define MAKE_MESSAGE(reason, line) \
   "Death Test Internal Error at " __FILE__ ":" STRING(line) " " reason
 
-#define SET_ERROR(var, msg)                                                                        \
-  do {                                                                                             \
-    var = MAKE_MESSAGE(msg, __LINE__);                                                             \
+#define SET_ERROR(var, msg)            \
+  do {                                 \
+    var = MAKE_MESSAGE(msg, __LINE__); \
   } while (0)
 
 // Keys used to filter exception ports.
@@ -84,12 +84,12 @@ void SendError(const zx::port& port, const char* message) {
 }
 
 // Try to exit cleanly, if not just kill the entire process.
-#define SEND_ERROR_AND_RETURN(port, message)                                                       \
-  do {                                                                                             \
-    const char* error_message;                                                                     \
-    SET_ERROR(error_message, message);                                                             \
-    SendError(port, error_message);                                                                \
-    return -1;                                                                                     \
+#define SEND_ERROR_AND_RETURN(port, message) \
+  do {                                       \
+    const char* error_message;               \
+    SET_ERROR(error_message, message);       \
+    SendError(port, error_message);          \
+    return -1;                               \
   } while (0)
 
 // Even though it is a separate thread, it is stalling the main thread, until it completes,

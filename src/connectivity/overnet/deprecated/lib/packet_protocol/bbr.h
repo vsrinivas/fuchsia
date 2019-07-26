@@ -73,9 +73,7 @@ class BBR final {
 
   uint64_t mss() const { return mss_; }
 
-  Bandwidth bottleneck_bandwidth() const {
-    return bottleneck_bandwidth_filter_.best_estimate();
-  }
+  Bandwidth bottleneck_bandwidth() const { return bottleneck_bandwidth_filter_.best_estimate(); }
 
   TimeDelta rtt() const { return rtprop_; }
 
@@ -91,12 +89,9 @@ class BBR final {
     reporter->Put("now", timer_->Now())
         .Put("state", StateString(state_))
         .Put("recovery", RecoveryString(recovery_))
-        .Put("bottleneck_bandwidth",
-             bottleneck_bandwidth_filter_.best_estimate())
-        .Put("bottleneck_bandwidth_2",
-             bottleneck_bandwidth_filter_.second_best_estimate())
-        .Put("bottleneck_bandwidth_3",
-             bottleneck_bandwidth_filter_.third_best_estimate())
+        .Put("bottleneck_bandwidth", bottleneck_bandwidth_filter_.best_estimate())
+        .Put("bottleneck_bandwidth_2", bottleneck_bandwidth_filter_.second_best_estimate())
+        .Put("bottleneck_bandwidth_3", bottleneck_bandwidth_filter_.third_best_estimate())
         .Put("cwnd", cwnd_bytes_)
         .Put("rtprop", rtprop_)
         .Put("rtprop_stamp", rtprop_stamp_)
@@ -132,16 +127,13 @@ class BBR final {
   }
 
  private:
-  InternalList<TransmitRequest, &TransmitRequest::active_transmits_link_>
-      active_transmits_;
+  InternalList<TransmitRequest, &TransmitRequest::active_transmits_link_> active_transmits_;
 
   struct Gain {
     uint16_t numerator;
     uint16_t denominator;
 
-    constexpr uint64_t operator*(uint64_t x) const {
-      return numerator * x / denominator;
-    }
+    constexpr uint64_t operator*(uint64_t x) const { return numerator * x / denominator; }
     constexpr Bandwidth operator*(Bandwidth x) const {
       return Bandwidth::FromBitsPerSecond(*this * x.bits_per_second());
     }
@@ -206,8 +198,7 @@ class BBR final {
   bool IsNextCyclePhase(TimeStamp now, const Ack& ack) const;
   Bandwidth PacingRate() const;
 
-  RateSample SampleBandwidth(TimeStamp now,
-                             const SentPacket& acked_sent_packet);
+  RateSample SampleBandwidth(TimeStamp now, const SentPacket& acked_sent_packet);
 
   void SaveCwnd();
   void RestoreCwnd();
@@ -270,8 +261,8 @@ class BBR final {
   }
 
   const uint32_t mss_;
-  WindowedFilter<uint64_t, Bandwidth, MaxFilter> bottleneck_bandwidth_filter_{
-      10, 0, Bandwidth::Zero()};
+  WindowedFilter<uint64_t, Bandwidth, MaxFilter> bottleneck_bandwidth_filter_{10, 0,
+                                                                              Bandwidth::Zero()};
   TransmitRequest* transmit_request_ = nullptr;
   Gain pacing_gain_ = HighGain();
   Gain cwnd_gain_ = HighGain();

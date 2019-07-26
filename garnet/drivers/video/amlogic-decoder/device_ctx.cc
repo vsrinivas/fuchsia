@@ -15,14 +15,12 @@ const fuchsia_hardware_mediacodec_Device_ops_t kFidlOps = {
     .GetCodecFactory =
         [](void* ctx, zx_handle_t handle) {
           zx::channel request(handle);
-          reinterpret_cast<DeviceCtx*>(ctx)->GetCodecFactory(
-              std::move(request));
+          reinterpret_cast<DeviceCtx*>(ctx)->GetCodecFactory(std::move(request));
           return ZX_OK;
         },
 };
 
-static zx_status_t amlogic_video_message(void* ctx, fidl_msg_t* msg,
-                                         fidl_txn_t* txn) {
+static zx_status_t amlogic_video_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_mediacodec_Device_dispatch(ctx, txn, msg, &kFidlOps);
 }
 
@@ -36,8 +34,7 @@ static zx_protocol_device_t amlogic_video_device_ops = {
 }  // namespace
 
 DeviceCtx::DeviceCtx(DriverCtx* driver)
-    : driver_(driver),
-      codec_admission_control_(driver->shared_fidl_loop()->dispatcher()) {
+    : driver_(driver), codec_admission_control_(driver->shared_fidl_loop()->dispatcher()) {
   video_ = std::make_unique<AmlogicVideo>();
   device_fidl_ = std::make_unique<DeviceFidl>(this);
 }

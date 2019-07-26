@@ -59,8 +59,7 @@ TEST_F(ConfigTest, ParseWithErrors) {
   ExpectFailedParse(json, "Config file is not a JSON object.");
 
   // Bad services.
-  constexpr char kBadServiceError[] =
-      "'$0' must be a string or a non-empty array of strings.";
+  constexpr char kBadServiceError[] = "'$0' must be a string or a non-empty array of strings.";
   json = R"json({
   "services": {
     "chrome": 3,
@@ -73,12 +72,12 @@ TEST_F(ConfigTest, ParseWithErrors) {
     const std::string json_file = NewJSONFile(dir, json);
     Config config;
     EXPECT_FALSE(config.ParseFromDirectory(dir));
-    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(fxl::Substitute(
-                                        kBadServiceError, "services.chrome")));
-    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(fxl::Substitute(
-                                        kBadServiceError, "services.appmgr")));
-    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(fxl::Substitute(
-                                        kBadServiceError, "services.other")));
+    EXPECT_THAT(config.error_str(),
+                ::testing::HasSubstr(fxl::Substitute(kBadServiceError, "services.chrome")));
+    EXPECT_THAT(config.error_str(),
+                ::testing::HasSubstr(fxl::Substitute(kBadServiceError, "services.appmgr")));
+    EXPECT_THAT(config.error_str(),
+                ::testing::HasSubstr(fxl::Substitute(kBadServiceError, "services.other")));
   }
 
   // Bad apps.
@@ -117,8 +116,7 @@ TEST_F(ConfigTest, Parse) {
   EXPECT_EQ(config.error_str(), "");
 
   auto services = config.TakeServices();
-  EXPECT_THAT(services, UnorderedElementsAre(Key("fuchsia.Debug"),
-                                             Key("fuchsia.logger.Log")));
+  EXPECT_THAT(services, UnorderedElementsAre(Key("fuchsia.Debug"), Key("fuchsia.logger.Log")));
   EXPECT_THAT(*services["fuchsia.Debug"]->arguments, ElementsAre("arg1"));
 
   auto apps = config.TakeApps();
@@ -130,8 +128,7 @@ TEST_F(ConfigTest, Parse) {
   EXPECT_THAT(startup_services, ElementsAre("fuchsia.logger.Log"));
 
   auto optional_services = config.TakeOptionalServices();
-  EXPECT_THAT(optional_services,
-              ElementsAre("fuchsia.tracing.controller.Controller"));
+  EXPECT_THAT(optional_services, ElementsAre("fuchsia.tracing.controller.Controller"));
 }
 
 }  // namespace

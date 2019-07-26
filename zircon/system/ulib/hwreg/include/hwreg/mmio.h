@@ -13,32 +13,31 @@ namespace hwreg {
 // Wrap MMIO for easier testing of device drivers
 
 class RegisterIo {
-public:
-    RegisterIo(volatile void* mmio) : mmio_(reinterpret_cast<uintptr_t>(mmio)) {
-    }
+ public:
+  RegisterIo(volatile void* mmio) : mmio_(reinterpret_cast<uintptr_t>(mmio)) {}
 
-    // Write |val| to the |sizeof(IntType)| byte field located |offset| bytes from
-    // |base()|.
-    template <class IntType> void Write(IntType val, uint32_t offset) {
-        static_assert(internal::IsSupportedInt<IntType>::value,
-                      "unsupported register access width");
-        auto ptr = reinterpret_cast<volatile IntType*>(mmio_ + offset);
-        *ptr = val;
-    }
+  // Write |val| to the |sizeof(IntType)| byte field located |offset| bytes from
+  // |base()|.
+  template <class IntType>
+  void Write(IntType val, uint32_t offset) {
+    static_assert(internal::IsSupportedInt<IntType>::value, "unsupported register access width");
+    auto ptr = reinterpret_cast<volatile IntType*>(mmio_ + offset);
+    *ptr = val;
+  }
 
-    // Read the value of the |sizeof(IntType)| byte field located |offset| bytes from
-    // |base()|.
-    template <class IntType> IntType Read(uint32_t offset) {
-        static_assert(internal::IsSupportedInt<IntType>::value,
-                      "unsupported register access width");
-        auto ptr = reinterpret_cast<volatile IntType*>(mmio_ + offset);
-        return *ptr;
-    }
+  // Read the value of the |sizeof(IntType)| byte field located |offset| bytes from
+  // |base()|.
+  template <class IntType>
+  IntType Read(uint32_t offset) {
+    static_assert(internal::IsSupportedInt<IntType>::value, "unsupported register access width");
+    auto ptr = reinterpret_cast<volatile IntType*>(mmio_ + offset);
+    return *ptr;
+  }
 
-    uintptr_t base() const { return mmio_; }
+  uintptr_t base() const { return mmio_; }
 
-private:
-    const uintptr_t mmio_;
+ private:
+  const uintptr_t mmio_;
 };
 
-} // namespace hwreg
+}  // namespace hwreg

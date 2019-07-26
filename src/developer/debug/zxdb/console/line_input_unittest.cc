@@ -127,7 +127,7 @@ TEST(LineInput, CtrlD) {
   // "ab|cd"
   EXPECT_EQ(2u, input.pos());
 
-  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // "ab|d"
   EXPECT_EQ("abd", input.line());
   EXPECT_EQ(2u, input.pos());
@@ -137,7 +137,7 @@ TEST(LineInput, CtrlD) {
   EXPECT_EQ(3u, input.pos());
   EXPECT_EQ("abd", input.line());
 
-  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // No change when hit Ctrl+D at the end of the line.
   EXPECT_EQ("abd", input.line());
   EXPECT_EQ(3u, input.pos());
@@ -148,24 +148,24 @@ TEST(LineInput, CtrlD) {
   // "|abd"
   EXPECT_EQ(0u, input.pos());
 
-  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // "|bd"
   EXPECT_EQ("bd", input.line());
   EXPECT_EQ(0u, input.pos());
 
-  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // "|d"
   EXPECT_EQ("d", input.line());
   EXPECT_EQ(0u, input.pos());
 
-  EXPECT_FALSE(input.OnInput(4)); // Ctrl+D
+  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // "|"
   EXPECT_EQ("", input.line());
   EXPECT_EQ(0u, input.pos());
 
   // Ctrl+D on an empty line is exit.
 
-  EXPECT_TRUE(input.OnInput(4)); // Ctrl+D
+  EXPECT_TRUE(input.OnInput(4));  // Ctrl+D
   EXPECT_TRUE(input.eof());
 }
 

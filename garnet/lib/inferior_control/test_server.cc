@@ -27,8 +27,7 @@ namespace inferior_control {
 
 TestServer::TestServer()
     : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob(),
-             sys::ServiceDirectory::CreateFromNamespace()) {
-}
+             sys::ServiceDirectory::CreateFromNamespace()) {}
 
 void TestServer::SetUp() {
   ASSERT_TRUE(exception_port_.Run());
@@ -56,15 +55,13 @@ bool TestServer::Run() {
   // Start the main loop.
   zx_status_t status = message_loop_.Run();
 
-  FXL_LOG(INFO) << "Main loop exited, status "
-                << debugger_utils::ZxErrorString(status);
+  FXL_LOG(INFO) << "Main loop exited, status " << debugger_utils::ZxErrorString(status);
 
   // |run_status_| is checked by TearDown().
   return true;
 }
 
-bool TestServer::SetupInferior(const std::vector<std::string>& argv,
-                               zx::channel channel) {
+bool TestServer::SetupInferior(const std::vector<std::string>& argv, zx::channel channel) {
   FXL_LOG(INFO) << "Initializing program: " << argv[0];
 
   auto inferior = new Process(this, this);
@@ -167,8 +164,7 @@ bool TestServer::TestFailureExit() {
   return true;
 }
 
-void TestServer::OnThreadStarting(Process* process, Thread* thread,
-                                  zx_handle_t eport,
+void TestServer::OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
                                   const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -184,8 +180,7 @@ void TestServer::OnThreadStarting(Process* process, Thread* thread,
   thread->ResumeFromException(eport);
 }
 
-void TestServer::OnThreadExiting(Process* process, Thread* thread,
-                                 zx_handle_t eport,
+void TestServer::OnThreadExiting(Process* process, Thread* thread, zx_handle_t eport,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -198,26 +193,24 @@ void TestServer::OnThreadExiting(Process* process, Thread* thread,
 void TestServer::OnProcessTermination(Process* process) {
   FXL_DCHECK(process);
 
-  FXL_LOG(INFO) << fxl::StringPrintf("Process %s is gone, rc %d",
-                                     process->GetName().c_str(),
+  FXL_LOG(INFO) << fxl::StringPrintf("Process %s is gone, rc %d", process->GetName().c_str(),
                                      process->return_code());
 
   // Process is gone, exit main loop.
   PostQuitMessageLoop(true);
 }
 
-void TestServer::OnArchitecturalException(
-    Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
-    const zx_exception_context_t& context) {
+void TestServer::OnArchitecturalException(Process* process, Thread* thread, zx_handle_t eport,
+                                          zx_excp_type_t type,
+                                          const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
   PostQuitMessageLoop(true);
 }
 
-void TestServer::OnSyntheticException(
-    Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
-    const zx_exception_context_t& context) {
+void TestServer::OnSyntheticException(Process* process, Thread* thread, zx_handle_t eport,
+                                      zx_excp_type_t type, const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 

@@ -10,8 +10,7 @@
 
 namespace debug_ipc {
 
-MessageReader::MessageReader(std::vector<char> message)
-    : message_(std::move(message)) {}
+MessageReader::MessageReader(std::vector<char> message) : message_(std::move(message)) {}
 MessageReader::~MessageReader() {}
 
 bool MessageReader::ReadBytes(uint32_t len, void* output) {
@@ -22,18 +21,10 @@ bool MessageReader::ReadBytes(uint32_t len, void* output) {
   return true;
 }
 
-bool MessageReader::ReadInt32(int32_t* output) {
-  return ReadBytes(sizeof(int32_t), output);
-}
-bool MessageReader::ReadUint32(uint32_t* output) {
-  return ReadBytes(sizeof(uint32_t), output);
-}
-bool MessageReader::ReadInt64(int64_t* output) {
-  return ReadBytes(sizeof(int64_t), output);
-}
-bool MessageReader::ReadUint64(uint64_t* output) {
-  return ReadBytes(sizeof(uint64_t), output);
-}
+bool MessageReader::ReadInt32(int32_t* output) { return ReadBytes(sizeof(int32_t), output); }
+bool MessageReader::ReadUint32(uint32_t* output) { return ReadBytes(sizeof(uint32_t), output); }
+bool MessageReader::ReadInt64(int64_t* output) { return ReadBytes(sizeof(int64_t), output); }
+bool MessageReader::ReadUint64(uint64_t* output) { return ReadBytes(sizeof(uint64_t), output); }
 
 bool MessageReader::ReadString(std::string* output) {
   // Size header.

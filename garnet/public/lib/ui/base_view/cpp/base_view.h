@@ -48,9 +48,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   Session* session() { return &session_; }
   component::StartupContext* startup_context() { return startup_context_; }
 
-  fuchsia::ui::gfx::ViewProperties view_properties() const {
-    return view_properties_;
-  }
+  fuchsia::ui::gfx::ViewProperties view_properties() const { return view_properties_; }
 
   // Returns true if the view has a non-empty size in logical pixels.
   bool has_logical_size() const {
@@ -75,8 +73,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
 
   // Returns true if the view has received metrics from its session.
   bool has_metrics() const {
-    return metrics_.scale_x > 0.f && metrics_.scale_y > 0.f &&
-           metrics_.scale_z > 0.f;
+    return metrics_.scale_x > 0.f && metrics_.scale_y > 0.f && metrics_.scale_z > 0.f;
   }
 
   // Gets the view's metrics.
@@ -98,8 +95,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   // invalidation.  The new contents are presented once this function returns.
   //
   // The default implementation does nothing.
-  virtual void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) {}
+  virtual void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {}
 
   // Called when the view's properties have changed.
   //
@@ -108,8 +104,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   // the view then update accordingly.
   //
   // The default implementation does nothing.
-  virtual void OnPropertiesChanged(
-      fuchsia::ui::gfx::ViewProperties old_properties) {}
+  virtual void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) {}
 
   // Called when the view's metrics have changed.
   //
@@ -144,13 +139,9 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   // scene contents before calling this method.
   void PresentScene();
 
-  fuchsia::sys::ServiceProviderPtr& incoming_services() {
-    return incoming_services_;
-  }
+  fuchsia::sys::ServiceProviderPtr& incoming_services() { return incoming_services_; }
 
-  component::ServiceNamespace& outgoing_services() {
-    return outgoing_services_;
-  }
+  component::ServiceNamespace& outgoing_services() { return outgoing_services_; }
 
  private:
   // |scenic::SessionListener|
@@ -164,9 +155,8 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   void OnScenicEvent(::std::vector<fuchsia::ui::scenic::Event> events) override;
 
   // |fuchsia::ui::input::InputMethodEditorClient|
-  void DidUpdateState(
-      fuchsia::ui::input::TextInputState state,
-      std::unique_ptr<fuchsia::ui::input::InputEvent> event) override;
+  void DidUpdateState(fuchsia::ui::input::TextInputState state,
+                      std::unique_ptr<fuchsia::ui::input::InputEvent> event) override;
 
   // |fuchsia::ui::input::InputMethodEditorClient|
   void OnAction(fuchsia::ui::input::InputMethodAction action) override;

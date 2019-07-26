@@ -109,8 +109,7 @@ const char kOutputPathPrefixKey[] = "output_path_prefix";
 const char kSessionResultSpecPathKey[] = "session_result_spec_path";
 
 template <typename T>
-bool DecodeEvents(T events,
-                  const perfmon::ModelEventManager* model_event_manager,
+bool DecodeEvents(T events, const perfmon::ModelEventManager* model_event_manager,
                   SessionSpec* out_spec) {
   FXL_VLOG(1) << "Processing " << events.Size() << " events";
 
@@ -125,8 +124,7 @@ bool DecodeEvents(T events,
     const std::string& group_name = event[kGroupNameKey].GetString();
     const std::string& event_name = event[kEventNameKey].GetString();
     const perfmon::EventDetails* details;
-    if (!model_event_manager->LookupEventByName(group_name.c_str(),
-                                                event_name.c_str(), &details)) {
+    if (!model_event_manager->LookupEventByName(group_name.c_str(), event_name.c_str(), &details)) {
       FXL_LOG(ERROR) << "Unknown event: " << group_name << ":" << event_name;
       return false;
     }
@@ -153,19 +151,17 @@ bool DecodeEvents(T events,
         } else if (flag_name == "last_branch") {
           flags |= perfmon::Config::kFlagLastBranch;
         } else {
-          FXL_LOG(ERROR) << "Unknown flag for event " << group_name << ":"
-                         << event_name << ": " << flag_name;
+          FXL_LOG(ERROR) << "Unknown flag for event " << group_name << ":" << event_name << ": "
+                         << flag_name;
           return false;
         }
       }
     }
 
-    FXL_VLOG(2) << "Found event: " << group_name << ":" << event_name
-                << ", id 0x" << std::hex << id << ", rate " << std::dec << rate
-                << ", flags 0x" << std::hex << flags;
+    FXL_VLOG(2) << "Found event: " << group_name << ":" << event_name << ", id 0x" << std::hex << id
+                << ", rate " << std::dec << rate << ", flags 0x" << std::hex << flags;
 
-    perfmon::Config::Status status =
-        out_spec->perfmon_config.AddEvent(id, rate, flags);
+    perfmon::Config::Status status = out_spec->perfmon_config.AddEvent(id, rate, flags);
     if (status != perfmon::Config::Status::OK) {
       FXL_LOG(ERROR) << "Error processing event configuration: "
                      << perfmon::Config::StatusToString(status);
@@ -191,12 +187,11 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   if (document.HasParseError()) {
     auto offset = document.GetErrorOffset();
     auto code = document.GetParseError();
-    FXL_LOG(ERROR) << "Couldn't parse the session config file: offset "
-                   << offset << ", " << GetParseError_En(code);
+    FXL_LOG(ERROR) << "Couldn't parse the session config file: offset " << offset << ", "
+                   << GetParseError_En(code);
     return false;
   }
-  if (!rapidjson_utils::ValidateSchema(document, *root_schema,
-                                       "session config")) {
+  if (!rapidjson_utils::ValidateSchema(document, *root_schema, "session config")) {
     return false;
   }
 
@@ -234,8 +229,7 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   }
 
   if (document.HasMember(kDurationKey)) {
-    result.duration =
-        fxl::TimeDelta::FromSeconds(document[kDurationKey].GetUint());
+    result.duration = fxl::TimeDelta::FromSeconds(document[kDurationKey].GetUint());
   }
 
   if (document.HasMember(kNumIterationsKey)) {
@@ -247,8 +241,7 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   }
 
   if (document.HasMember(kSessionResultSpecPathKey)) {
-    result.session_result_spec_path =
-        document[kSessionResultSpecPathKey].GetString();
+    result.session_result_spec_path = document[kSessionResultSpecPathKey].GetString();
   }
 
   *out_spec = std::move(result);
@@ -258,8 +251,7 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
 
 const char SessionSpec::kDefaultModelName[] = "default";
 const char SessionSpec::kDefaultOutputPathPrefix[] = "/tmp/cpuperf";
-const char SessionSpec::kDefaultSessionResultSpecPath[] =
-    "/tmp/cpuperf.cpsession";
+const char SessionSpec::kDefaultSessionResultSpecPath[] = "/tmp/cpuperf.cpsession";
 
 SessionSpec::SessionSpec()
     : model_name(kDefaultModelName),

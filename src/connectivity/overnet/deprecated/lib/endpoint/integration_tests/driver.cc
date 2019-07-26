@@ -42,14 +42,11 @@ class HappyDelivery : public PacketPacer {
  public:
   HappyDelivery(uint32_t mss) : mss_(mss) {}
 
-  Optional<TimeDelta> ChoosePacketDelivery(LinkState link_state,
-                                           size_t slice_size) const override {
+  Optional<TimeDelta> ChoosePacketDelivery(LinkState link_state, size_t slice_size) const override {
     return TimeDelta::FromMicroseconds(1);
   }
 
-  std::string name() const override {
-    return "HappyDelivery(" + std::to_string(mss_) + ")";
-  }
+  std::string name() const override { return "HappyDelivery(" + std::to_string(mss_) + ")"; }
 
   Bandwidth SimulatedBandwidth() const override {
     return Bandwidth::FromKilobitsPerSecond(1024 * 1024);
@@ -67,8 +64,7 @@ class WindowedDelivery : public PacketPacer {
   WindowedDelivery(int max_outstanding, TimeDelta window, uint32_t mss)
       : max_outstanding_(max_outstanding), window_(window), mss_(mss) {}
 
-  Optional<TimeDelta> ChoosePacketDelivery(LinkState link_state,
-                                           size_t slice_size) const override {
+  Optional<TimeDelta> ChoosePacketDelivery(LinkState link_state, size_t slice_size) const override {
     if (link_state.outstanding_packets >= max_outstanding_)
       return Nothing;
     return window_;
@@ -76,15 +72,13 @@ class WindowedDelivery : public PacketPacer {
 
   std::string name() const override {
     std::ostringstream out;
-    out << "WindowedDelivery(" << max_outstanding_
-        << ", TimeDelta::FromMicroseconds(" << window_.as_us() << "), " << mss_
-        << ")";
+    out << "WindowedDelivery(" << max_outstanding_ << ", TimeDelta::FromMicroseconds("
+        << window_.as_us() << "), " << mss_ << ")";
     return out.str();
   }
 
   Bandwidth SimulatedBandwidth() const override {
-    return Bandwidth::BytesPerTime(MaximumSegmentSize() * max_outstanding_,
-                                   window_);
+    return Bandwidth::BytesPerTime(MaximumSegmentSize() * max_outstanding_, window_);
   }
 
   virtual uint32_t MaximumSegmentSize() const override { return mss_; }
@@ -95,14 +89,12 @@ class WindowedDelivery : public PacketPacer {
   const uint32_t mss_;
 };
 
-class InProcessPacketLinkImpl final
-    : public PacketLink,
-      public std::enable_shared_from_this<InProcessPacketLinkImpl> {
+class InProcessPacketLinkImpl final : public PacketLink,
+                                      public std::enable_shared_from_this<InProcessPacketLinkImpl> {
  public:
-  InProcessPacketLinkImpl(RouterEndpoint* src, RouterEndpoint* dest,
-                          uint64_t link_id, const PacketPacer* simulator)
-      : PacketLink(src, dest->node_id(), simulator->MaximumSegmentSize(),
-                   link_id),
+  InProcessPacketLinkImpl(RouterEndpoint* src, RouterEndpoint* dest, uint64_t link_id,
+                          const PacketPacer* simulator)
+      : PacketLink(src, dest->node_id(), simulator->MaximumSegmentSize(), link_id),
         timer_(dest->timer()),
         link_id_(link_id),
         simulator_(simulator),
@@ -125,32 +117,28 @@ class InProcessPacketLinkImpl final
   void Emit(Slice packet) {
     const auto now = timer_->Now();
     if (now.after_epoch() == TimeDelta::PositiveInf()) {
-      OVERNET_TRACE(DEBUG)
-          << "Packet sim is infinitely in the future: drop packet";
+      OVERNET_TRACE(DEBUG) << "Packet sim is infinitely in the future: drop packet";
       return;
     }
 
-    auto delay = simulator_->ChoosePacketDelivery(
-        LinkState{link_id_, outstanding_packets_}, packet.length());
+    auto delay = simulator_->ChoosePacketDelivery(LinkState{link_id_, outstanding_packets_},
+                                                  packet.length());
     OVERNET_TRACE(DEBUG) << "Packet sim says " << delay << " for " << packet;
     if (!delay.has_value()) {
       return;
     }
     outstanding_packets_++;
     const auto at = now + *delay;
-    timer_->At(
-        at, Callback<void>(
-                ALLOCATED_CALLBACK, [self = shared_from_this(), packet, at]() {
-                  ScopedOp scoped_op(Op::New(OpType::INCOMING_PACKET));
-                  auto strong_partner = self->partner_.lock();
-                  OVERNET_TRACE(DEBUG)
-                      << (strong_partner == nullptr ? "DROP" : "EMIT")
-                      << " PACKET from " << self->from_ << " " << packet;
-                  self->outstanding_packets_--;
-                  if (strong_partner) {
-                    strong_partner->Process(at, packet);
-                  }
-                }));
+    timer_->At(at, Callback<void>(ALLOCATED_CALLBACK, [self = shared_from_this(), packet, at]() {
+                 ScopedOp scoped_op(Op::New(OpType::INCOMING_PACKET));
+                 auto strong_partner = self->partner_.lock();
+                 OVERNET_TRACE(DEBUG) << (strong_partner == nullptr ? "DROP" : "EMIT")
+                                      << " PACKET from " << self->from_ << " " << packet;
+                 self->outstanding_packets_--;
+                 if (strong_partner) {
+                   strong_partner->Process(at, packet);
+                 }
+               }));
   }
 
  private:
@@ -167,8 +155,8 @@ class InProcessStreamLinkImpl final
     : public StreamLink,
       public std::enable_shared_from_this<InProcessStreamLinkImpl<Framer>> {
  public:
-  InProcessStreamLinkImpl(RouterEndpoint* src, RouterEndpoint* dest,
-                          uint64_t link_id, Bandwidth bandwidth)
+  InProcessStreamLinkImpl(RouterEndpoint* src, RouterEndpoint* dest, uint64_t link_id,
+                          Bandwidth bandwidth)
       : StreamLink(src, dest->node_id(), std::make_unique<Framer>(), link_id),
         timer_(src->timer()),
         bandwidth_(bandwidth),
@@ -193,8 +181,7 @@ class InProcessStreamLinkImpl final
  private:
   void SendNext() {
     auto max_delivery =
-        std::max(uint64_t(1),
-                 bandwidth_.BytesSentForTime(TimeDelta::FromMicroseconds(100)));
+        std::max(uint64_t(1), bandwidth_.BytesSentForTime(TimeDelta::FromMicroseconds(100)));
     Slice chunk;
     StatusCallback cb;
     if (max_delivery >= send_op_->slice.length()) {
@@ -206,14 +193,13 @@ class InProcessStreamLinkImpl final
     }
 
     auto now = timer_->Now();
-    next_send_completes_ = std::max(now, next_send_completes_) +
-                           bandwidth_.SendTimeForBytes(chunk.length());
-    timer_->At(next_send_completes_, [chunk = std::move(chunk),
-                                      at = next_send_completes_,
+    next_send_completes_ =
+        std::max(now, next_send_completes_) + bandwidth_.SendTimeForBytes(chunk.length());
+    timer_->At(next_send_completes_, [chunk = std::move(chunk), at = next_send_completes_,
                                       self = this->shared_from_this()] {
       auto strong_partner = self->partner_.lock();
-      OVERNET_TRACE(DEBUG) << (strong_partner == nullptr ? "DROP" : "EMIT")
-                           << " BYTES from " << self->from_ << " " << chunk;
+      OVERNET_TRACE(DEBUG) << (strong_partner == nullptr ? "DROP" : "EMIT") << " BYTES from "
+                           << self->from_ << " " << chunk;
       if (strong_partner) {
         strong_partner->Process(at, chunk);
       }
@@ -240,15 +226,12 @@ class InProcessStreamLinkImpl final
 
 class PacketLinkSimulator final : public Simulator {
  public:
-  PacketLinkSimulator(std::unique_ptr<PacketPacer> pacer)
-      : pacer_(std::move(pacer)) {}
+  PacketLinkSimulator(std::unique_ptr<PacketPacer> pacer) : pacer_(std::move(pacer)) {}
 
   void MakeLinks(RouterEndpoint* ep1, RouterEndpoint* ep2, uint64_t id1,
                  uint64_t id2) const override {
-    auto link1 = MakeLink<InProcessLink<InProcessPacketLinkImpl>>(ep1, ep2, id1,
-                                                                  pacer_.get());
-    auto link2 = MakeLink<InProcessLink<InProcessPacketLinkImpl>>(ep2, ep1, id2,
-                                                                  pacer_.get());
+    auto link1 = MakeLink<InProcessLink<InProcessPacketLinkImpl>>(ep1, ep2, id1, pacer_.get());
+    auto link2 = MakeLink<InProcessLink<InProcessPacketLinkImpl>>(ep2, ep1, id2, pacer_.get());
     link1->get()->Partner(link2->get());
     ep1->RegisterLink(std::move(link1));
     ep2->RegisterLink(std::move(link2));
@@ -258,13 +241,9 @@ class PacketLinkSimulator final : public Simulator {
   std::unique_ptr<PacketPacer> pacer_;
 };
 
-const char* FramerName(const ReliableFramer& framer) {
-  return "ReliableFramer";
-};
+const char* FramerName(const ReliableFramer& framer) { return "ReliableFramer"; };
 
-const char* FramerName(const UnreliableFramer& framer) {
-  return "UnreliableFramer";
-};
+const char* FramerName(const UnreliableFramer& framer) { return "UnreliableFramer"; };
 
 template <class Framer>
 class StreamLinkSimulator final : public Simulator {
@@ -273,10 +252,10 @@ class StreamLinkSimulator final : public Simulator {
 
   void MakeLinks(RouterEndpoint* ep1, RouterEndpoint* ep2, uint64_t id1,
                  uint64_t id2) const override {
-    auto link1 = MakeLink<InProcessLink<InProcessStreamLinkImpl<Framer>>>(
-        ep1, ep2, id1, bandwidth_);
-    auto link2 = MakeLink<InProcessLink<InProcessStreamLinkImpl<Framer>>>(
-        ep2, ep1, id2, bandwidth_);
+    auto link1 =
+        MakeLink<InProcessLink<InProcessStreamLinkImpl<Framer>>>(ep1, ep2, id1, bandwidth_);
+    auto link2 =
+        MakeLink<InProcessLink<InProcessStreamLinkImpl<Framer>>>(ep2, ep1, id2, bandwidth_);
     link1->get()->Partner(link2->get());
     ep1->RegisterLink(std::move(link1));
     ep2->RegisterLink(std::move(link2));
@@ -286,16 +265,11 @@ class StreamLinkSimulator final : public Simulator {
   const Bandwidth bandwidth_;
 };
 
-class RouterEndpoint_IntegrationEnv : public ::testing::TestWithParam<MakeEnv> {
-};
+class RouterEndpoint_IntegrationEnv : public ::testing::TestWithParam<MakeEnv> {};
 
-std::ostream& operator<<(std::ostream& out, MakeEnv env) {
-  return out << env->name();
-}
+std::ostream& operator<<(std::ostream& out, MakeEnv env) { return out << env->name(); }
 
-Optional<Severity> Logging() {
-  return FLAGS_verbose ? Severity::DEBUG : Severity::INFO;
-}
+Optional<Severity> Logging() { return FLAGS_verbose ? Severity::DEBUG : Severity::INFO; }
 
 TEST_P(RouterEndpoint_IntegrationEnv, NoOp) {
   std::cout << "Param: " << GetParam() << std::endl;
@@ -343,32 +317,29 @@ std::ostream& operator<<(std::ostream& out, OneMessageArgs args) {
   return out << args.make_env->name();
 }
 
-class RouterEndpoint_OneMessageIntegration
-    : public ::testing::TestWithParam<OneMessageArgs> {};
+class RouterEndpoint_OneMessageIntegration : public ::testing::TestWithParam<OneMessageArgs> {};
 
 TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
   std::cout << "Param: " << GetParam() << std::endl;
   auto env = GetParam().make_env->Make(Logging());
 
-  auto times =
-      OneMessageSrcToDest(env.get(), GetParam().body,
-                          TimeDelta::FromSeconds(GetParam().allowed_time) +
-                              TimeDelta::FromHours(1));
+  auto times = OneMessageSrcToDest(
+      env.get(), GetParam().body,
+      TimeDelta::FromSeconds(GetParam().allowed_time) + TimeDelta::FromHours(1));
 
   auto taken_time = env->timer()->Now() - times.connected;
   auto taken_seconds = (taken_time.as_us() + 999999) / 1000000;
   EXPECT_EQ(taken_seconds, GetParam().allowed_time)
       << "sed -i 's/" << GetParam().make_env->name() << "/"
-      << EscapeChars("&",
-                     ChangeArg(GetParam().make_env->name(), 2, taken_seconds))
-      << "/g' " << __FILE__;
+      << EscapeChars("&", ChangeArg(GetParam().make_env->name(), 2, taken_seconds)) << "/g' "
+      << __FILE__;
 
   env->DumpAllStats();
 
   EXPECT_EQ(env->IncomingPacketsAtDestination(), GetParam().expected_packets)
       << "sed -i 's/" << GetParam().make_env->name() << "/"
-      << EscapeChars("&", ChangeArg(GetParam().make_env->name(), 3,
-                                    env->IncomingPacketsAtDestination()))
+      << EscapeChars("&",
+                     ChangeArg(GetParam().make_env->name(), 3, env->IncomingPacketsAtDestination()))
       << "/g' " << __FILE__;
 }
 
@@ -390,18 +361,16 @@ TEST_P(RouterEndpoint_RequestResponseIntegration, Works) {
   std::cout << "Param: " << GetParam() << std::endl;
   auto env = GetParam().make_env->Make(Logging());
 
-  auto times = RequestResponse(env.get(), GetParam().request_body,
-                               GetParam().response_body,
-                               TimeDelta::FromSeconds(GetParam().allowed_time) +
-                                   TimeDelta::FromHours(1));
+  auto times =
+      RequestResponse(env.get(), GetParam().request_body, GetParam().response_body,
+                      TimeDelta::FromSeconds(GetParam().allowed_time) + TimeDelta::FromHours(1));
 
   auto taken_time = env->timer()->Now() - times.connected;
   auto taken_seconds = (taken_time.as_us() + 999999) / 1000000;
   EXPECT_EQ(taken_seconds, GetParam().allowed_time)
       << "sed -i 's/" << GetParam().make_env->name() << "/"
-      << EscapeChars("&",
-                     ChangeArg(GetParam().make_env->name(), 3, taken_seconds))
-      << "/g' " << __FILE__;
+      << EscapeChars("&", ChangeArg(GetParam().make_env->name(), 3, taken_seconds)) << "/g' "
+      << __FILE__;
 
   env->DumpAllStats();
 }
@@ -410,156 +379,147 @@ template <class T, class... Arg>
 MakeEnv MakeMakeEnv(const char* name, Arg&&... args) {
   class Impl final : public MakeEnvInterface {
    public:
-    Impl(const char* name, std::tuple<Arg...> args)
-        : name_(name), args_(args) {}
+    Impl(const char* name, std::tuple<Arg...> args) : name_(name), args_(args) {}
     const char* name() const { return name_.c_str(); }
     std::shared_ptr<Env> Make(Optional<Severity> logging) const {
-      return std::apply(
-          [logging](Arg... args) {
-            return std::make_shared<T>(logging, args...);
-          },
-          args_);
+      return std::apply([logging](Arg... args) { return std::make_shared<T>(logging, args...); },
+                        args_);
     }
 
    private:
     const std::string name_;
     const std::tuple<Arg...> args_;
   };
-  return MakeEnv(
-      new Impl(name, std::tuple<Arg...>(std::forward<Arg>(args)...)));
+  return MakeEnv(new Impl(name, std::tuple<Arg...>(std::forward<Arg>(args)...)));
 }
 
 // Simulators get abbreviations here because otherwise the environment names get
 // too difficult to communicate.
-#define DECL_SIM(name, inst) \
-  const NamedSimulator name{#name, std::unique_ptr<Simulator>(inst)};
+#define DECL_SIM(name, inst) const NamedSimulator name{#name, std::unique_ptr<Simulator>(inst)};
 
 DECL_SIM(Happy, new PacketLinkSimulator(std::make_unique<HappyDelivery>(1500)));
-DECL_SIM(Win_3_3, new PacketLinkSimulator(std::make_unique<WindowedDelivery>(
-                      3, TimeDelta::FromMilliseconds(3), 256)));
-DECL_SIM(ReliableStream, new StreamLinkSimulator<ReliableFramer>(
-                             Bandwidth::FromKilobitsPerSecond(1000)));
-DECL_SIM(UnreliableStream, new StreamLinkSimulator<UnreliableFramer>(
-                               Bandwidth::FromKilobitsPerSecond(115)));
+DECL_SIM(Win_3_3, new PacketLinkSimulator(
+                      std::make_unique<WindowedDelivery>(3, TimeDelta::FromMilliseconds(3), 256)));
+DECL_SIM(ReliableStream,
+         new StreamLinkSimulator<ReliableFramer>(Bandwidth::FromKilobitsPerSecond(1000)));
+DECL_SIM(UnreliableStream,
+         new StreamLinkSimulator<UnreliableFramer>(Bandwidth::FromKilobitsPerSecond(115)));
 
 #define MAKE_MAKE_ENV(env, ...) \
   MakeMakeEnv<env>("MAKE_MAKE_ENV(" #env ", " #__VA_ARGS__ ")", __VA_ARGS__)
 
 INSTANTIATE_TEST_SUITE_P(
     RouterEndpoint_IntegrationEnv_Instance, RouterEndpoint_IntegrationEnv,
-    ::testing::Values(
-        MAKE_MAKE_ENV(TwoNode, &Happy, 1, 2),
-        MAKE_MAKE_ENV(TwoNode, &Happy, 2, 1),
-        MAKE_MAKE_ENV(TwoNode, &Win_3_3, 1, 2),
-        MAKE_MAKE_ENV(TwoNode, &Win_3_3, 2, 1),
-        MAKE_MAKE_ENV(TwoNode, &ReliableStream, 1, 2),
-        MAKE_MAKE_ENV(TwoNode, &ReliableStream, 2, 1),
-        MAKE_MAKE_ENV(TwoNode, &UnreliableStream, 1, 2),
-        MAKE_MAKE_ENV(TwoNode, &UnreliableStream, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 3, 2, 1),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 1, 2, 3),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 1, 3, 2),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 2, 1, 3),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 2, 3, 1),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 3, 1, 2),
-        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 3, 2,
-                      1)));
+    ::testing::Values(MAKE_MAKE_ENV(TwoNode, &Happy, 1, 2), MAKE_MAKE_ENV(TwoNode, &Happy, 2, 1),
+                      MAKE_MAKE_ENV(TwoNode, &Win_3_3, 1, 2),
+                      MAKE_MAKE_ENV(TwoNode, &Win_3_3, 2, 1),
+                      MAKE_MAKE_ENV(TwoNode, &ReliableStream, 1, 2),
+                      MAKE_MAKE_ENV(TwoNode, &ReliableStream, 2, 1),
+                      MAKE_MAKE_ENV(TwoNode, &UnreliableStream, 1, 2),
+                      MAKE_MAKE_ENV(TwoNode, &UnreliableStream, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 3, 2, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 1, 2, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 1, 3, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 2, 1, 3),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 2, 3, 1),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 3, 1, 2),
+                      MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 3, 2, 1)));
 
-#define ONE_MESSAGE_TEST(length, allowed_time, expected_packets, env, ...)   \
-  OneMessageArgs {                                                           \
-    MakeMakeEnv<env>("ONE_MESSAGE_TEST(" #length ", " #allowed_time          \
-                     ", " #expected_packets ", " #env ", " #__VA_ARGS__ ")", \
-                     __VA_ARGS__),                                           \
-        Slice::RepeatedChar(length, 'a'), allowed_time, expected_packets     \
+#define ONE_MESSAGE_TEST(length, allowed_time, expected_packets, env, ...)                 \
+  OneMessageArgs {                                                                         \
+    MakeMakeEnv<env>("ONE_MESSAGE_TEST(" #length ", " #allowed_time ", " #expected_packets \
+                     ", " #env ", " #__VA_ARGS__ ")",                                      \
+                     __VA_ARGS__),                                                         \
+        Slice::RepeatedChar(length, 'a'), allowed_time, expected_packets                   \
   }
 
 // clang-format off
@@ -672,15 +632,13 @@ INSTANTIATE_TEST_SUITE_P(
         ONE_MESSAGE_TEST(1048576, 86, 4890, ThreeNode, &UnreliableStream, &UnreliableStream, 1, 2, 3)));
 // clang-format on
 
-#define REQUEST_RESPONSE_TEST(request_length, response_length, allowed_time, \
-                              env, ...)                                      \
-  RequestResponseArgs {                                                      \
-    MakeMakeEnv<env>("REQUEST_RESPONSE_TEST(" #request_length                \
-                     ", " #response_length ", " #allowed_time ", " #env      \
-                     ", " #__VA_ARGS__ ")",                                  \
-                     __VA_ARGS__),                                           \
-        Slice::RepeatedChar(request_length, 'a'),                            \
-        Slice::RepeatedChar(response_length, 'b'), allowed_time              \
+#define REQUEST_RESPONSE_TEST(request_length, response_length, allowed_time, env, ...)       \
+  RequestResponseArgs {                                                                      \
+    MakeMakeEnv<env>("REQUEST_RESPONSE_TEST(" #request_length ", " #response_length          \
+                     ", " #allowed_time ", " #env ", " #__VA_ARGS__ ")",                     \
+                     __VA_ARGS__),                                                           \
+        Slice::RepeatedChar(request_length, 'a'), Slice::RepeatedChar(response_length, 'b'), \
+        allowed_time                                                                         \
   }
 
 // clang-format off

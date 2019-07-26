@@ -38,33 +38,25 @@ class ImagePipeSurface {
 
   virtual ~ImagePipeSurface() = default;
 
-  SupportedImageProperties& supported_image_properties() {
-    return supported_image_properties_;
-  }
+  SupportedImageProperties& supported_image_properties() { return supported_image_properties_; }
 
   VkFlags SupportedUsage() {
-    return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-           VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-           VK_IMAGE_USAGE_SAMPLED_BIT;
+    return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+           VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
   }
 
   virtual bool Init() { return true; }
   virtual bool CanPresentPendingImage() { return true; }
 
-  virtual bool GetSize(uint32_t* width_out, uint32_t* height_out) {
-    return false;
-  }
+  virtual bool GetSize(uint32_t* width_out, uint32_t* height_out) { return false; }
 
-  virtual bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
-                           VkFormat format, VkImageUsageFlags usage,
-                           VkSwapchainCreateFlagsKHR swapchain_flags,
-                           fuchsia::images::ImageInfo image_info,
-                           uint32_t image_count,
+  virtual bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
+                           VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
+                           fuchsia::images::ImageInfo image_info, uint32_t image_count,
                            const VkAllocationCallbacks* pAllocator,
                            std::vector<ImageInfo>* image_info_out) = 0;
   virtual void RemoveImage(uint32_t image_id) = 0;
-  virtual void PresentImage(uint32_t image_id,
-                            std::vector<zx::event> acquire_fences,
+  virtual void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
                             std::vector<zx::event> release_fences) = 0;
 
  protected:

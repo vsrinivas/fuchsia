@@ -57,8 +57,7 @@ extern thread_local Scopes g_trace_scopes;
 template <class T>
 class ScopedModule {
  public:
-  explicit ScopedModule(T* instance)
-      : prev_(g_trace_scopes.SetScope(T::kModule, instance)) {}
+  explicit ScopedModule(T* instance) : prev_(g_trace_scopes.SetScope(T::kModule, instance)) {}
   ~ScopedModule() { g_trace_scopes.SetScope(T::kModule, prev_); }
   ScopedModule(const ScopedModule&) = delete;
   ScopedModule& operator=(const ScopedModule&) = delete;
@@ -100,8 +99,7 @@ class Op {
 
  private:
   Op(OpType type, uint64_t id)
-      : id_((id & 0x00ff'ffff'ffff'ffff) |
-            (static_cast<uint64_t>(type) << 56)) {}
+      : id_((id & 0x00ff'ffff'ffff'ffff) | (static_cast<uint64_t>(type) << 56)) {}
 
   static uint64_t AllocateId() {
     static std::atomic<uint64_t> ctr;
@@ -143,9 +141,7 @@ class TraceRenderer {
 
 class ScopedRenderer {
  public:
-  explicit ScopedRenderer(TraceRenderer* renderer) : prev_(current_) {
-    current_ = renderer;
-  }
+  explicit ScopedRenderer(TraceRenderer* renderer) : prev_(current_) { current_ = renderer; }
   ~ScopedRenderer() { current_ = prev_; }
   ScopedRenderer(const ScopedRenderer&) = delete;
   ScopedRenderer& operator=(const ScopedRenderer&) = delete;
@@ -180,9 +176,8 @@ class Trace : public std::ostringstream {
   Trace(const char* file, int line, Severity severity)
       : file_(file), line_(line), severity_(severity) {}
   ~Trace() {
-    ScopedRenderer::current()->Render(TraceOutput{ScopedOp::current(),
-                                                  str().c_str(), g_trace_scopes,
-                                                  file_, line_, severity_});
+    ScopedRenderer::current()->Render(
+        TraceOutput{ScopedOp::current(), str().c_str(), g_trace_scopes, file_, line_, severity_});
   }
 
  private:
@@ -205,20 +200,17 @@ inline Op Op::New(OpType type) {
 #ifdef NDEBUG
 // If we have NDEBUG set, we add an if constexpr to eliminate DEBUG level traces
 // entirely from the build.
-#define OVERNET_TRACE(trace_severity)                  \
-  if constexpr (::overnet::Severity::trace_severity == \
-                ::overnet::Severity::DEBUG)            \
-    ;                                                  \
-  else if (::overnet::ScopedSeverity::current() >      \
-           ::overnet::Severity::trace_severity)        \
-    ;                                                  \
-  else                                                 \
+#define OVERNET_TRACE(trace_severity)                                                  \
+  if constexpr (::overnet::Severity::trace_severity == ::overnet::Severity::DEBUG)     \
+    ;                                                                                  \
+  else if (::overnet::ScopedSeverity::current() > ::overnet::Severity::trace_severity) \
+    ;                                                                                  \
+  else                                                                                 \
     ::overnet::Trace(__FILE__, __LINE__, ::overnet::Severity::trace_severity)
 #else
-#define OVERNET_TRACE(trace_severity)        \
-  if (::overnet::ScopedSeverity::current() > \
-      ::overnet::Severity::trace_severity)   \
-    ;                                        \
-  else                                       \
+#define OVERNET_TRACE(trace_severity)                                             \
+  if (::overnet::ScopedSeverity::current() > ::overnet::Severity::trace_severity) \
+    ;                                                                             \
+  else                                                                            \
     ::overnet::Trace(__FILE__, __LINE__, ::overnet::Severity::trace_severity)
 #endif

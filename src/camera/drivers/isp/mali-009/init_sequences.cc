@@ -95,10 +95,7 @@ void ArmIspDevice::IspLoadSeq_settings() {
       .set_hc_start1(0)
       .WriteTo(&isp_mmio_);
 
-  IspGlobal_Config0::Get()
-      .ReadFrom(&isp_mmio_)
-      .set_global_fsm_reset(0)
-      .WriteTo(&isp_mmio_);
+  IspGlobal_Config0::Get().ReadFrom(&isp_mmio_).set_global_fsm_reset(0).WriteTo(&isp_mmio_);
 
   InputPort_VerticalCrop1::Get()
       .ReadFrom(&isp_mmio_)
@@ -186,15 +183,9 @@ void ArmIspDevice::IspLoadSeq_settings() {
       .set_input_port_safely_stopped(0x1)
       .WriteTo(&isp_mmio_);
 
-  IspGlobalInterrupt_PulseMode::Get()
-      .ReadFrom(&isp_mmio_)
-      .set_value(0x1)
-      .WriteTo(&isp_mmio_);
+  IspGlobalInterrupt_PulseMode::Get().ReadFrom(&isp_mmio_).set_value(0x1).WriteTo(&isp_mmio_);
 
-  IspGlobalInterrupt_Clear::Get()
-      .ReadFrom(&isp_mmio_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_);
+  IspGlobalInterrupt_Clear::Get().ReadFrom(&isp_mmio_).set_value(0).WriteTo(&isp_mmio_);
 
   IspGlobalInterrupt_StatusVector::Get()
       .ReadFrom(&isp_mmio_)
@@ -385,10 +376,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_uu_slope(0xb2)
       .WriteTo(&isp_mmio_local_);
 
-  ping::MeteringAexp_Hist1::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_local_);
+  ping::MeteringAexp_Hist1::Get().ReadFrom(&isp_mmio_local_).set_value(0).WriteTo(&isp_mmio_local_);
 
   ping::ChromaticAberrationCorrection_Config::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -615,10 +603,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_value(0)
       .WriteTo(&isp_mmio_local_);
 
-  ping::Iridix_WbOffset::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_local_);
+  ping::Iridix_WbOffset::Get().ReadFrom(&isp_mmio_local_).set_value(0).WriteTo(&isp_mmio_local_);
 
   ping::FrameStitch_LmMcMag::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -688,10 +673,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_mcoff_vs_max(0xdac)
       .WriteTo(&isp_mmio_local_);
 
-  ping::Iridix_ContextNo::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_local_);
+  ping::Iridix_ContextNo::Get().ReadFrom(&isp_mmio_local_).set_value(0).WriteTo(&isp_mmio_local_);
 
   ping::FrameStitch_McoffScaler0::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -865,10 +847,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_roi_hor_end(0xffff)
       .WriteTo(&isp_mmio_local_);
 
-  ping::IridixGain_Offset::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_local_);
+  ping::IridixGain_Offset::Get().ReadFrom(&isp_mmio_local_).set_value(0).WriteTo(&isp_mmio_local_);
 
   ping::Top_ActiveDim::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -916,10 +895,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_dp_threshold(0xfc3)
       .WriteTo(&isp_mmio_local_);
 
-  ping::MeteringAwb_Bg::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0xc4)
-      .WriteTo(&isp_mmio_local_);
+  ping::MeteringAwb_Bg::Get().ReadFrom(&isp_mmio_local_).set_value(0xc4).WriteTo(&isp_mmio_local_);
 
   ping::ColorNoiseReduction_UvVar1Slope::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -1258,10 +1234,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_value(0x8ffff)
       .WriteTo(&isp_mmio_local_);
 
-  ping::Iridix_GtmSelect::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_local_);
+  ping::Iridix_GtmSelect::Get().ReadFrom(&isp_mmio_local_).set_value(0).WriteTo(&isp_mmio_local_);
 
   ping::VideoTestGenCh0_GForegnd::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -1343,10 +1316,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_frame_write_on(0)
       .WriteTo(&isp_mmio_local_);
 
-  ping::Iridix_BlackLevel::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_local_);
+  ping::Iridix_BlackLevel::Get().ReadFrom(&isp_mmio_local_).set_value(0).WriteTo(&isp_mmio_local_);
 
   ping::VideoTestGenCh1_Select::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -1460,10 +1430,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_value(0x4000)
       .WriteTo(&isp_mmio_local_);
 
-  ping::MeteringAwb_Rg::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0xc7)
-      .WriteTo(&isp_mmio_local_);
+  ping::MeteringAwb_Rg::Get().ReadFrom(&isp_mmio_local_).set_value(0xc7).WriteTo(&isp_mmio_local_);
 
   ping::VideoTestGenCh1_RgbGradientStart::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -1705,10 +1672,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_nodes_used_vert(0x21)
       .WriteTo(&isp_mmio_local_);
 
-  ping::Iridix_DarkEnh::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0x400)
-      .WriteTo(&isp_mmio_local_);
+  ping::Iridix_DarkEnh::Get().ReadFrom(&isp_mmio_local_).set_value(0x400).WriteTo(&isp_mmio_local_);
 
   ping::VideoTestGenCh3_RBackgnd::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -1808,10 +1772,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_value(0x4000)
       .WriteTo(&isp_mmio_local_);
 
-  ping::MeteringAexp_Hist0::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_local_);
+  ping::MeteringAexp_Hist0::Get().ReadFrom(&isp_mmio_local_).set_value(0).WriteTo(&isp_mmio_local_);
 
   ping::VideoTestGenCh3_RgbGradientStart::Get()
       .ReadFrom(&isp_mmio_local_)
@@ -2389,10 +2350,7 @@ void ArmIspDevice::IspLoadCustomSequence() {
       .set_bypass_pf_correction(1)
       .WriteTo(&isp_mmio_local_);
 
-  InputPort_Config0::Get()
-      .ReadFrom(&isp_mmio_)
-      .set_preset(1)
-      .WriteTo(&isp_mmio_);
+  InputPort_Config0::Get().ReadFrom(&isp_mmio_).set_preset(1).WriteTo(&isp_mmio_);
 
   ping::Sqrt_BlackLevelIn::Get()
       .ReadFrom(&isp_mmio_local_)

@@ -14,9 +14,7 @@
 #include <trace/event.h>
 
 namespace {
-int64_t InputEventTimestampNow() {
-  return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
-}
+int64_t InputEventTimestampNow() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
 // TODO(SCN-1278): Remove this.
 // Turn 64-bit id into two floats: high bits and low bits.
 void PointerTraceHACK(trace_async_id_t id, float* fa, float* fb) {
@@ -34,29 +32,24 @@ constexpr zx::duration kKeyRepeatSlow = zx::msec(250);
 constexpr zx::duration kKeyRepeatFast = zx::msec(75);
 
 KeyboardState::KeyboardState(DeviceState* device_state)
-    : device_state_(device_state),
-      keymap_(qwerty_map),
-      weak_ptr_factory_(this) {
+    : device_state_(device_state), keymap_(qwerty_map), weak_ptr_factory_(this) {
   char* keys = getenv("gfxconsole.keymap");
   if (keys && !strcmp(keys, "dvorak")) {
     keymap_ = dvorak_map;
   }
 }
 
-void KeyboardState::SendEvent(fuchsia::ui::input::KeyboardEventPhase phase,
-                              uint32_t key, uint64_t modifiers,
-                              uint64_t timestamp) {
+void KeyboardState::SendEvent(fuchsia::ui::input::KeyboardEventPhase phase, uint32_t key,
+                              uint64_t modifiers, uint64_t timestamp) {
   fuchsia::ui::input::InputEvent ev;
   fuchsia::ui::input::KeyboardEvent kb;
   kb.phase = phase;
   kb.event_time = timestamp;
   kb.device_id = device_state_->device_id();
   kb.hid_usage = key;
-  kb.code_point =
-      hid_map_key(key,
-                  modifiers & (fuchsia::ui::input::kModifierShift |
-                               fuchsia::ui::input::kModifierCapsLock),
-                  keymap_);
+  kb.code_point = hid_map_key(
+      key, modifiers & (fuchsia::ui::input::kModifierShift | fuchsia::ui::input::kModifierCapsLock),
+      keymap_);
   kb.modifiers = modifiers;
   ev.set_keyboard(std::move(kb));
   device_state_->callback()(std::move(ev));
@@ -81,8 +74,7 @@ void KeyboardState::Update(fuchsia::ui::input::InputReport input_report) {
       continue;
     }
 
-    SendEvent(fuchsia::ui::input::KeyboardEventPhase::PRESSED, key, modifiers_,
-              now);
+    SendEvent(fuchsia::ui::input::KeyboardEventPhase::PRESSED, key, modifiers_, now);
 
     uint64_t modifiers = modifiers_;
     switch (key) {
@@ -126,8 +118,7 @@ void KeyboardState::Update(fuchsia::ui::input::InputReport input_report) {
   }
 
   for (uint32_t key : old_keys) {
-    SendEvent(fuchsia::ui::input::KeyboardEventPhase::RELEASED, key, modifiers_,
-              now);
+    SendEvent(fuchsia::ui::input::KeyboardEventPhase::RELEASED, key, modifiers_, now);
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
@@ -179,8 +170,7 @@ void KeyboardState::Repeat(uint64_t sequence) {
   }
   uint64_t now = InputEventTimestampNow();
   for (uint32_t key : repeat_keys_) {
-    SendEvent(fuchsia::ui::input::KeyboardEventPhase::REPEAT, key, modifiers_,
-              now);
+    SendEvent(fuchsia::ui::input::KeyboardEventPhase::REPEAT, key, modifiers_, now);
   }
   ScheduleRepeat(sequence, kKeyRepeatFast);
 }
@@ -200,8 +190,7 @@ void MouseState::OnRegistered() {}
 void MouseState::OnUnregistered() {}
 
 void MouseState::SendEvent(float rel_x, float rel_y, int64_t timestamp,
-                           fuchsia::ui::input::PointerEventPhase phase,
-                           uint32_t buttons) {
+                           fuchsia::ui::input::PointerEventPhase phase, uint32_t buttons) {
   fuchsia::ui::input::InputEvent ev;
   fuchsia::ui::input::PointerEvent pt;
   pt.event_time = timestamp;
@@ -224,41 +213,35 @@ void MouseState::Update(fuchsia::ui::input::InputReport input_report,
 
   FXL_DCHECK(input_report.mouse);
   uint64_t now = input_report.event_time;
-  uint8_t pressed = (input_report.mouse->pressed_buttons ^ buttons_) &
-                    input_report.mouse->pressed_buttons;
-  uint8_t released =
-      (input_report.mouse->pressed_buttons ^ buttons_) & buttons_;
+  uint8_t pressed =
+      (input_report.mouse->pressed_buttons ^ buttons_) & input_report.mouse->pressed_buttons;
+  uint8_t released = (input_report.mouse->pressed_buttons ^ buttons_) & buttons_;
   buttons_ = input_report.mouse->pressed_buttons;
 
   // TODO(jpoichet) Update once we have an API to capture mouse.
   // TODO(SCN-385): Quantize the mouse value to the range [0, display_width -
   // mouse_resolution]
-  position_.x =
-      std::max(0.0f, std::min(position_.x + input_report.mouse->rel_x,
-                              static_cast<float>(display_size.width)));
-  position_.y =
-      std::max(0.0f, std::min(position_.y + input_report.mouse->rel_y,
-                              static_cast<float>(display_size.height)));
+  position_.x = std::max(0.0f, std::min(position_.x + input_report.mouse->rel_x,
+                                        static_cast<float>(display_size.width)));
+  position_.y = std::max(0.0f, std::min(position_.y + input_report.mouse->rel_y,
+                                        static_cast<float>(display_size.height)));
 
   if (!pressed && !released) {
-    SendEvent(position_.x, position_.y, now,
-              fuchsia::ui::input::PointerEventPhase::MOVE, buttons_);
+    SendEvent(position_.x, position_.y, now, fuchsia::ui::input::PointerEventPhase::MOVE, buttons_);
   } else {
     if (pressed) {
-      SendEvent(position_.x, position_.y, now,
-                fuchsia::ui::input::PointerEventPhase::DOWN, pressed);
+      SendEvent(position_.x, position_.y, now, fuchsia::ui::input::PointerEventPhase::DOWN,
+                pressed);
     }
     if (released) {
-      SendEvent(position_.x, position_.y, now,
-                fuchsia::ui::input::PointerEventPhase::UP, released);
+      SendEvent(position_.x, position_.y, now, fuchsia::ui::input::PointerEventPhase::UP, released);
     }
   }
 }
 
-void StylusState::SendEvent(int64_t timestamp,
-                            fuchsia::ui::input::PointerEventPhase phase,
-                            fuchsia::ui::input::PointerEventType type, float x,
-                            float y, uint32_t buttons) {
+void StylusState::SendEvent(int64_t timestamp, fuchsia::ui::input::PointerEventPhase phase,
+                            fuchsia::ui::input::PointerEventType type, float x, float y,
+                            uint32_t buttons) {
   fuchsia::ui::input::PointerEvent pt;
   pt.event_time = timestamp;
   pt.device_id = device_state_->device_id();
@@ -283,8 +266,7 @@ void StylusState::Update(fuchsia::ui::input::InputReport input_report,
 
   FXL_DCHECK(input_report.stylus);
 
-  fuchsia::ui::input::StylusDescriptor* descriptor =
-      device_state_->stylus_descriptor();
+  fuchsia::ui::input::StylusDescriptor* descriptor = device_state_->stylus_descriptor();
   FXL_DCHECK(descriptor);
 
   const bool previous_stylus_down = stylus_down_;
@@ -292,8 +274,7 @@ void StylusState::Update(fuchsia::ui::input::InputReport input_report,
   stylus_down_ = input_report.stylus->is_in_contact;
   stylus_in_range_ = input_report.stylus->in_range;
 
-  fuchsia::ui::input::PointerEventPhase phase =
-      fuchsia::ui::input::PointerEventPhase::DOWN;
+  fuchsia::ui::input::PointerEventPhase phase = fuchsia::ui::input::PointerEventPhase::DOWN;
   if (stylus_down_) {
     if (previous_stylus_down) {
       phase = fuchsia::ui::input::PointerEventPhase::MOVE;
@@ -319,41 +300,34 @@ void StylusState::Update(fuchsia::ui::input::InputReport input_report,
 
   if (phase == fuchsia::ui::input::PointerEventPhase::UP) {
     SendEvent(now, phase,
-              inverted_stylus_
-                  ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
-                  : fuchsia::ui::input::PointerEventType::STYLUS,
+              inverted_stylus_ ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
+                               : fuchsia::ui::input::PointerEventType::STYLUS,
               stylus_.x, stylus_.y, stylus_.buttons);
   } else {
     // Quantize the value to [0, 1) based on the resolution.
     float x_denominator =
-        (1 +
-         static_cast<float>(descriptor->x.range.max - descriptor->x.range.min) /
-             static_cast<float>(descriptor->x.resolution)) *
+        (1 + static_cast<float>(descriptor->x.range.max - descriptor->x.range.min) /
+                 static_cast<float>(descriptor->x.resolution)) *
         static_cast<float>(descriptor->x.resolution);
-    float x =
-        static_cast<float>(display_size.width *
-                           (input_report.stylus->x - descriptor->x.range.min)) /
-        x_denominator;
+    float x = static_cast<float>(display_size.width *
+                                 (input_report.stylus->x - descriptor->x.range.min)) /
+              x_denominator;
 
     float y_denominator =
-        (1 +
-         static_cast<float>(descriptor->y.range.max - descriptor->y.range.min) /
-             static_cast<float>(descriptor->y.resolution)) *
+        (1 + static_cast<float>(descriptor->y.range.max - descriptor->y.range.min) /
+                 static_cast<float>(descriptor->y.resolution)) *
         static_cast<float>(descriptor->y.resolution);
-    float y =
-        static_cast<float>(display_size.height *
-                           (input_report.stylus->y - descriptor->y.range.min)) /
-        y_denominator;
+    float y = static_cast<float>(display_size.height *
+                                 (input_report.stylus->y - descriptor->y.range.min)) /
+              y_denominator;
 
     uint32_t buttons = 0;
-    if (input_report.stylus->pressed_buttons &
-        fuchsia::ui::input::kStylusBarrel) {
+    if (input_report.stylus->pressed_buttons & fuchsia::ui::input::kStylusBarrel) {
       buttons |= fuchsia::ui::input::kStylusPrimaryButton;
     }
     SendEvent(now, phase,
-              inverted_stylus_
-                  ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
-                  : fuchsia::ui::input::PointerEventType::STYLUS,
+              inverted_stylus_ ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
+                               : fuchsia::ui::input::PointerEventType::STYLUS,
               x, y, buttons);
   }
 }
@@ -364,8 +338,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
   TRACE_FLOW_END("input", "report_to_device_state", input_report.trace_id);
 
   FXL_DCHECK(input_report.touchscreen);
-  fuchsia::ui::input::TouchscreenDescriptor* descriptor =
-      device_state_->touchscreen_descriptor();
+  fuchsia::ui::input::TouchscreenDescriptor* descriptor = device_state_->touchscreen_descriptor();
   FXL_DCHECK(descriptor);
 
   std::vector<fuchsia::ui::input::PointerEvent> old_pointers = pointers_;
@@ -394,23 +367,19 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
     // The large number of casts here are so the multiplications don't cause
     // overflows.
     float x_denominator =
-        (1 +
-         static_cast<float>(descriptor->x.range.max - descriptor->x.range.min) /
-             static_cast<float>(descriptor->x.resolution)) *
+        (1 + static_cast<float>(descriptor->x.range.max - descriptor->x.range.min) /
+                 static_cast<float>(descriptor->x.resolution)) *
         static_cast<float>(descriptor->x.resolution);
-    float x = static_cast<float>(
-                  display_size.width *
-                  static_cast<float>(touch.x - descriptor->x.range.min)) /
+    float x = static_cast<float>(display_size.width *
+                                 static_cast<float>(touch.x - descriptor->x.range.min)) /
               x_denominator;
 
     float y_denominator =
-        (1 +
-         static_cast<float>(descriptor->y.range.max - descriptor->y.range.min) /
-             static_cast<float>(descriptor->y.resolution)) *
+        (1 + static_cast<float>(descriptor->y.range.max - descriptor->y.range.min) /
+                 static_cast<float>(descriptor->y.resolution)) *
         static_cast<float>(descriptor->y.resolution);
-    float y = static_cast<float>(
-                  display_size.height *
-                  static_cast<float>(touch.y - descriptor->y.range.min)) /
+    float y = static_cast<float>(display_size.height *
+                                 static_cast<float>(touch.y - descriptor->y.range.min)) /
               y_denominator;
 
     pt.x = x;
@@ -484,8 +453,7 @@ void SensorState::Update(fuchsia::ui::input::InputReport input_report) {
   FXL_DCHECK(input_report.sensor);
   FXL_DCHECK(device_state_->sensor_descriptor());
   // Every sensor report gets routed via unique device_id.
-  device_state_->sensor_callback()(device_state_->device_id(),
-                                   std::move(input_report));
+  device_state_->sensor_callback()(device_state_->device_id(), std::move(input_report));
 }
 
 void MediaButtonState::Update(fuchsia::ui::input::InputReport report) {
@@ -494,8 +462,7 @@ void MediaButtonState::Update(fuchsia::ui::input::InputReport report) {
   device_state_->media_buttons_callback()(std::move(report));
 }
 
-DeviceState::DeviceState(uint32_t device_id,
-                         fuchsia::ui::input::DeviceDescriptor* descriptor,
+DeviceState::DeviceState(uint32_t device_id, fuchsia::ui::input::DeviceDescriptor* descriptor,
                          OnEventCallback callback)
     : device_id_(device_id),
       descriptor_(descriptor),
@@ -509,8 +476,7 @@ DeviceState::DeviceState(uint32_t device_id,
       media_buttons_callback_(nullptr),
       media_buttons_(this) {}
 
-DeviceState::DeviceState(uint32_t device_id,
-                         fuchsia::ui::input::DeviceDescriptor* descriptor,
+DeviceState::DeviceState(uint32_t device_id, fuchsia::ui::input::DeviceDescriptor* descriptor,
                          OnSensorEventCallback callback)
     : device_id_(device_id),
       descriptor_(descriptor),
@@ -524,8 +490,7 @@ DeviceState::DeviceState(uint32_t device_id,
       media_buttons_callback_(nullptr),
       media_buttons_(this) {}
 
-DeviceState::DeviceState(uint32_t device_id,
-                         fuchsia::ui::input::DeviceDescriptor* descriptor,
+DeviceState::DeviceState(uint32_t device_id, fuchsia::ui::input::DeviceDescriptor* descriptor,
                          OnMediaButtonsEventCallback callback)
     : device_id_(device_id),
       descriptor_(descriptor),

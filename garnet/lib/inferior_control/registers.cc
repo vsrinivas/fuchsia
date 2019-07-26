@@ -31,17 +31,11 @@ bool Registers::WriteRegset(int regset) {
   return WriteRegsetHelper(regset, &general_regs_, sizeof(general_regs_));
 }
 
-bool Registers::RefreshGeneralRegisters() {
-  return RefreshRegset(ZX_THREAD_STATE_GENERAL_REGS);
-}
+bool Registers::RefreshGeneralRegisters() { return RefreshRegset(ZX_THREAD_STATE_GENERAL_REGS); }
 
-bool Registers::WriteGeneralRegisters() {
-  return WriteRegset(ZX_THREAD_STATE_GENERAL_REGS);
-}
+bool Registers::WriteGeneralRegisters() { return WriteRegset(ZX_THREAD_STATE_GENERAL_REGS); }
 
-zx_thread_state_general_regs_t* Registers::GetGeneralRegisters() {
-  return &general_regs_;
-}
+zx_thread_state_general_regs_t* Registers::GetGeneralRegisters() { return &general_regs_; }
 
 bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
   // We report all zeros for the registers if the thread was just created.
@@ -50,8 +44,7 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
     return true;
   }
 
-  zx_status_t status =
-      zx_thread_read_state(thread()->handle(), regset, buf, buf_size);
+  zx_status_t status = zx_thread_read_state(thread()->handle(), regset, buf, buf_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to read regset " << regset << ": "
                    << debugger_utils::ZxErrorString(status);
@@ -62,10 +55,8 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
   return true;
 }
 
-bool Registers::WriteRegsetHelper(int regset, const void* buf,
-                                  size_t buf_size) {
-  zx_status_t status =
-      zx_thread_write_state(thread()->handle(), regset, buf, buf_size);
+bool Registers::WriteRegsetHelper(int regset, const void* buf, size_t buf_size) {
+  zx_status_t status = zx_thread_write_state(thread()->handle(), regset, buf, buf_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to write regset " << regset << ": "
                    << debugger_utils::ZxErrorString(status);

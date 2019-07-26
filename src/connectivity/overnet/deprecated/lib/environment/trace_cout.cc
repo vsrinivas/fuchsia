@@ -61,8 +61,7 @@ void TraceCout::Render(TraceOutput output) {
   });
 
   std::cout << pfx << padded(-40, [=](auto& out) { out << file << ":"; })
-            << padded(4, [=](auto& out) { out << output.line; }) << ": "
-            << output.message;
+            << padded(4, [=](auto& out) { out << output.line; }) << ": " << output.message;
   bool opened_tags = false;
   auto maybe_open_tags = [&] {
     if (!opened_tags) {

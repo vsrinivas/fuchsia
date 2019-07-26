@@ -42,4 +42,4 @@ zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadli
 
 __END_CDECLS
 
-#endif // LIB_FDIO_WATCHER_H_
+#endif  // LIB_FDIO_WATCHER_H_

@@ -38,37 +38,37 @@ typedef zx_status_t (*two_path_op)(fdio_t* io, const char* src, size_t srclen,
                                    zx_handle_t dst_token, const char* dst, size_t dstlen);
 
 typedef struct fdio_ops {
-    zx_status_t (*close)(fdio_t* io);
-    zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
-    zx_status_t (*clone)(fdio_t* io, zx_handle_t* out_handle);
-    zx_status_t (*unwrap)(fdio_t* io, zx_handle_t* out_handle);
-    void (*wait_begin)(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* signals);
-    void (*wait_end)(fdio_t* io, zx_signals_t signals, uint32_t* events);
-    ssize_t (*ioctl)(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                     size_t out_len);
-    zx_status_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
-    zx_status_t (*get_vmo)(fdio_t* io, int flags, zx_handle_t* out);
-    zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
-    zx_status_t (*get_attr)(fdio_t* io, llcpp::fuchsia::io::NodeAttributes* out);
-    zx_status_t (*set_attr)(fdio_t* io, uint32_t flags,
-                            const llcpp::fuchsia::io::NodeAttributes* attr);
-    zx_status_t (*readdir)(fdio_t* io, void* ptr, size_t max, size_t* actual);
-    zx_status_t (*rewind)(fdio_t* io);
-    zx_status_t (*unlink)(fdio_t* io, const char* path, size_t len);
-    zx_status_t (*truncate)(fdio_t* io, off_t off);
-    two_path_op rename;
-    two_path_op link;
-    zx_status_t (*get_flags)(fdio_t* io, uint32_t* out_flags);
-    zx_status_t (*set_flags)(fdio_t* io, uint32_t flags);
-    ssize_t (*recvfrom)(fdio_t* io, void* data, size_t len, int flags,
-                        struct sockaddr* __restrict addr, socklen_t* __restrict addrlen);
-    ssize_t (*sendto)(fdio_t* io, const void* data, size_t len, int flags,
-                      const struct sockaddr* addr, socklen_t addrlen);
-    ssize_t (*recvmsg)(fdio_t* io, struct msghdr* msg, int flags);
-    ssize_t (*sendmsg)(fdio_t* io, const struct msghdr* msg, int flags);
-    zx_status_t (*shutdown)(fdio_t* io, int how);
-    zx_duration_t (*get_rcvtimeo)(fdio_t* io);
-    zx_duration_t (*get_sndtimeo)(fdio_t* io);
+  zx_status_t (*close)(fdio_t* io);
+  zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
+  zx_status_t (*clone)(fdio_t* io, zx_handle_t* out_handle);
+  zx_status_t (*unwrap)(fdio_t* io, zx_handle_t* out_handle);
+  void (*wait_begin)(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* signals);
+  void (*wait_end)(fdio_t* io, zx_signals_t signals, uint32_t* events);
+  ssize_t (*ioctl)(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                   size_t out_len);
+  zx_status_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
+  zx_status_t (*get_vmo)(fdio_t* io, int flags, zx_handle_t* out);
+  zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
+  zx_status_t (*get_attr)(fdio_t* io, llcpp::fuchsia::io::NodeAttributes* out);
+  zx_status_t (*set_attr)(fdio_t* io, uint32_t flags,
+                          const llcpp::fuchsia::io::NodeAttributes* attr);
+  zx_status_t (*readdir)(fdio_t* io, void* ptr, size_t max, size_t* actual);
+  zx_status_t (*rewind)(fdio_t* io);
+  zx_status_t (*unlink)(fdio_t* io, const char* path, size_t len);
+  zx_status_t (*truncate)(fdio_t* io, off_t off);
+  two_path_op rename;
+  two_path_op link;
+  zx_status_t (*get_flags)(fdio_t* io, uint32_t* out_flags);
+  zx_status_t (*set_flags)(fdio_t* io, uint32_t flags);
+  ssize_t (*recvfrom)(fdio_t* io, void* data, size_t len, int flags,
+                      struct sockaddr* __restrict addr, socklen_t* __restrict addrlen);
+  ssize_t (*sendto)(fdio_t* io, const void* data, size_t len, int flags,
+                    const struct sockaddr* addr, socklen_t addrlen);
+  ssize_t (*recvmsg)(fdio_t* io, struct msghdr* msg, int flags);
+  ssize_t (*sendmsg)(fdio_t* io, const struct msghdr* msg, int flags);
+  zx_status_t (*shutdown)(fdio_t* io, int how);
+  zx_duration_t (*get_rcvtimeo)(fdio_t* io);
+  zx_duration_t (*get_sndtimeo)(fdio_t* io);
 } fdio_ops_t;
 
 // fdio_t ioflag values
@@ -266,17 +266,17 @@ zx_status_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out);
 
 typedef struct {
-    mtx_t lock;
-    mtx_t cwd_lock;
-    mode_t umask;
-    fdio_t* root;
-    fdio_t* cwd;
-    // fdtab contains either NULL, or a reference to fdio_reserved_io, or a
-    // valid fdio_t pointer. fdio_reserved_io must never be returned for
-    // operations.
-    fdio_t* fdtab[FDIO_MAX_FD];
-    fdio_ns_t* ns;
-    char cwd_path[PATH_MAX];
+  mtx_t lock;
+  mtx_t cwd_lock;
+  mode_t umask;
+  fdio_t* root;
+  fdio_t* cwd;
+  // fdtab contains either NULL, or a reference to fdio_reserved_io, or a
+  // valid fdio_t pointer. fdio_reserved_io must never be returned for
+  // operations.
+  fdio_t* fdtab[FDIO_MAX_FD];
+  fdio_ns_t* ns;
+  char cwd_path[PATH_MAX];
 } fdio_state_t;
 
 extern fdio_state_t __fdio_global_state;

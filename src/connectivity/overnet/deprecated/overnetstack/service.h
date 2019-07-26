@@ -12,8 +12,7 @@
 
 namespace overnetstack {
 
-class Service final : public fuchsia::overnet::Overnet,
-                      public OvernetApp::Actor {
+class Service final : public fuchsia::overnet::Overnet, public OvernetApp::Actor {
  public:
   Service(OvernetApp* app);
 
@@ -22,13 +21,11 @@ class Service final : public fuchsia::overnet::Overnet,
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Method implementations
 
-  void ListPeers(uint64_t last_seen_version,
-                 ListPeersCallback callback) override;
+  void ListPeers(uint64_t last_seen_version, ListPeersCallback callback) override;
   void RegisterService(std::string service_name,
-                       fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider>
-                           provider) override;
-  void ConnectToService(fuchsia::overnet::protocol::NodeId node,
-                        std::string service_name, zx::channel channel) override;
+                       fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> provider) override;
+  void ConnectToService(fuchsia::overnet::protocol::NodeId node, std::string service_name,
+                        zx::channel channel) override;
 
  private:
   OvernetApp* const app_;

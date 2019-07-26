@@ -28,8 +28,7 @@ bool is_opaque(uint32_t val) { return (val & 0xff000000) == 0xff000000; }
 // Src is always premultipled
 uint32_t multiply_component(uint32_t dest, uint32_t src, uint8_t offset) {
   uint32_t alpha_comp = src >> 24;
-  uint32_t dest_val =
-      ((((dest >> offset) & 0xff) * (255 - alpha_comp)) + 254) / 255;
+  uint32_t dest_val = ((((dest >> offset) & 0xff) * (255 - alpha_comp)) + 254) / 255;
   uint32_t ret = dest_val + ((src >> offset) & 0xff);
   if (ret > 255) {
     ret = 255;
@@ -42,13 +41,11 @@ uint32_t multiply(uint32_t dest, uint32_t src) {
     return src;
   }
 
-  return 0xff000000 | multiply_component(dest, src, 16) |
-         multiply_component(dest, src, 8) | multiply_component(dest, src, 0);
+  return 0xff000000 | multiply_component(dest, src, 16) | multiply_component(dest, src, 8) |
+         multiply_component(dest, src, 0);
 }
 
-uint8_t clip(float in) {
-  return in < 0 ? 0 : (in > 255 ? 255 : static_cast<uint8_t>(in + .5));
-}
+uint8_t clip(float in) { return in < 0 ? 0 : (in > 255 ? 255 : static_cast<uint8_t>(in + .5)); }
 
 // Takes 4 bytes of YUY2 and writes 8 bytes of RGBA
 // TODO(stevensd): RGBA -> YUY2 might be more reliable/efficient
@@ -82,8 +79,7 @@ static bool compare_component(uint32_t argb1, uint32_t argb2, uint32_t offset) {
 }
 
 static bool compare_colors(uint32_t argb1, uint32_t argb2) {
-  return compare_component(argb1, argb2, 0) &&
-         compare_component(argb1, argb2, 1) &&
+  return compare_component(argb1, argb2, 0) && compare_component(argb1, argb2, 1) &&
          compare_component(argb1, argb2, 2);
 }
 
@@ -96,10 +92,9 @@ zx_status_t Runner::Start(const char* display_name) {
 
   display_name_ = display_name;
 
-  camera_watcher_ = fsl::DeviceWatcher::Create(
-      kCameraDir, fit::bind_member(this, &Runner::OnCameraAvailable));
-  camera_stream_.events().OnFrameAvailable =
-      fit::bind_member(this, &Runner::FrameNotifyCallback);
+  camera_watcher_ =
+      fsl::DeviceWatcher::Create(kCameraDir, fit::bind_member(this, &Runner::OnCameraAvailable));
+  camera_stream_.events().OnFrameAvailable = fit::bind_member(this, &Runner::FrameNotifyCallback);
 
   status = loop_->Run();
   if (!display_id_ || !camera_setup_ || !display_ownership_) {
@@ -122,8 +117,8 @@ void Runner::OnCameraAvailable(int dir_fd, std::string filename) {
   FXL_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
 
   fzl::FdioCaller dev(std::move(fd));
-  zx_status_t res = fuchsia_hardware_camera_DeviceGetChannel(
-      dev.borrow_channel(), remote.release());
+  zx_status_t res =
+      fuchsia_hardware_camera_DeviceGetChannel(dev.borrow_channel(), remote.release());
   if (res != ZX_OK) {
     printf("Failed to obtain channel for camera %s\n", filename.c_str());
     return;
@@ -131,8 +126,7 @@ void Runner::OnCameraAvailable(int dir_fd, std::string filename) {
 
   camera_control_.Bind(std::move(local), loop_->dispatcher());
 
-  camera_control_->GetFormats(
-      0, fit::bind_member(this, &Runner::GetFormatCallback));
+  camera_control_->GetFormats(0, fit::bind_member(this, &Runner::GetFormatCallback));
 }
 
 void Runner::GetFormatCallback(::std::vector<fuchsia::camera::VideoFormat> fmts,
@@ -140,14 +134,13 @@ void Runner::GetFormatCallback(::std::vector<fuchsia::camera::VideoFormat> fmts,
   uint32_t idx;
   for (idx = 0; idx < fmts.size(); idx++) {
     auto& format = fmts[idx];
-    uint32_t capture_fps = round(1.0 * format.rate.frames_per_sec_numerator /
-                                 format.rate.frames_per_sec_denominator);
+    uint32_t capture_fps =
+        round(1.0 * format.rate.frames_per_sec_numerator / format.rate.frames_per_sec_denominator);
     if (capture_fps != kDisplayRate) {
       continue;
     }
 
-    if (format.format.pixel_format.type ==
-        fuchsia::sysmem::PixelFormatType::YUY2) {
+    if (format.format.pixel_format.type == fuchsia::sysmem::PixelFormatType::YUY2) {
       break;
     }
 
@@ -170,8 +163,8 @@ void Runner::GetFormatCallback(::std::vector<fuchsia::camera::VideoFormat> fmts,
   height_ = format.format.height;
 
   fuchsia::sysmem::BufferCollectionInfo buffer_collection;
-  size_t buffer_size = fbl::round_up(
-      format.format.height * format.format.planes[0].bytes_per_row, 4096u);
+  size_t buffer_size =
+      fbl::round_up(format.format.height * format.format.planes[0].bytes_per_row, 4096u);
   buffer_collection.buffer_count = kMaxFrames;
   buffer_collection.vmo_size = buffer_size;
   buffer_collection.format.set_image(std::move(format.format));
@@ -182,9 +175,8 @@ void Runner::GetFormatCallback(::std::vector<fuchsia::camera::VideoFormat> fmts,
     status = zx::vmo::create(buffer_size, 0, &vmo);
     ZX_ASSERT(status == ZX_OK);
 
-    status = zx::vmar::root_self()->map(
-        0, vmo, 0, buffer_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-        reinterpret_cast<zx_vaddr_t*>(camera_buffers_ + i));
+    status = zx::vmar::root_self()->map(0, vmo, 0, buffer_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                        reinterpret_cast<zx_vaddr_t*>(camera_buffers_ + i));
     ZX_ASSERT(status == ZX_OK);
 
     buffer_collection.vmos[i] = std::move(vmo);
@@ -195,8 +187,7 @@ void Runner::GetFormatCallback(::std::vector<fuchsia::camera::VideoFormat> fmts,
   ZX_ASSERT(status == ZX_OK);
 
   camera_control_->CreateStream(std::move(buffer_collection), format.rate,
-                                camera_stream_.NewRequest(),
-                                std::move(driver_token));
+                                camera_stream_.NewRequest(), std::move(driver_token));
 
   camera_stream_->Start();
   camera_setup_ = true;
@@ -220,14 +211,12 @@ void Runner::InitDisplay() {
   zx::channel dc_server, dc_client;
   status = zx::channel::create(0, &dc_server, &dc_client);
   if (status != ZX_OK) {
-    ZX_ASSERT_MSG(false, "Failed to get create controller channel %d\n",
-                  status);
+    ZX_ASSERT_MSG(false, "Failed to get create controller channel %d\n", status);
   }
 
   fzl::FdioCaller dev(std::move(fd));
   zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
-      dev.borrow_channel(), device_server.release(), dc_server.release(),
-      &status);
+      dev.borrow_channel(), device_server.release(), dc_server.release(), &status);
   if (fidl_status != ZX_OK) {
     ZX_ASSERT_MSG(false, "Failed to call service handle %d\n", status);
   }
@@ -237,18 +226,15 @@ void Runner::InitDisplay() {
 
   display_controller_conn_ = std::move(device_client);
 
-  if ((status = display_controller_.Bind(std::move(dc_client),
-                                         loop_->dispatcher())) != ZX_OK) {
+  if ((status = display_controller_.Bind(std::move(dc_client), loop_->dispatcher())) != ZX_OK) {
     ZX_ASSERT_MSG(false, "Failed to bind to display controller %d\n", status);
   }
-  display_controller_.events().DisplaysChanged =
-      fit::bind_member(this, &Runner::OnDisplaysChanged);
+  display_controller_.events().DisplaysChanged = fit::bind_member(this, &Runner::OnDisplaysChanged);
   display_controller_.events().ClientOwnershipChange =
       fit::bind_member(this, &Runner::OnClientOwnershipChange);
   display_controller_.events().Vsync = fit::bind_member(this, &Runner::OnVsync);
-  display_controller_.set_error_handler([](zx_status_t status) {
-    ZX_ASSERT_MSG(false, "Display controller failure");
-  });
+  display_controller_.set_error_handler(
+      [](zx_status_t status) { ZX_ASSERT_MSG(false, "Display controller failure"); });
 
   calibration_image_a_ = runner_context_.CreateImage(width_, height_);
   calibration_image_b_ = runner_context_.CreateImage(width_, height_);
@@ -256,17 +242,15 @@ void Runner::InitDisplay() {
   runner_context_.SetLayers(std::vector<Layer*>({calibration_layer_}));
 }
 
-void Runner::OnDisplaysChanged(
-    ::std::vector<fuchsia::hardware::display::Info> added,
-    ::std::vector<uint64_t> removed) {
+void Runner::OnDisplaysChanged(::std::vector<fuchsia::hardware::display::Info> added,
+                               ::std::vector<uint64_t> removed) {
   ZX_ASSERT_MSG(!display_id_, "Display change while tests are running");
   for (auto& info : added) {
     if (strcmp(info.monitor_name.c_str(), display_name_)) {
       continue;
     }
     for (auto& mode : info.modes) {
-      if (mode.horizontal_resolution != width_ ||
-          mode.vertical_resolution != height_ ||
+      if (mode.horizontal_resolution != width_ || mode.vertical_resolution != height_ ||
           mode.refresh_rate_e2 != kDisplayRate * 100) {
         continue;
       }
@@ -368,17 +352,16 @@ void Runner::SendFrameConfig(uint32_t frame_idx) {
     layer_ids.push_back(layer.first->id());
     layer.first->SendState(layer.second);
   }
-  display_controller_->SetDisplayLayers(
-      display_id_, fidl::VectorPtr<uint64_t>(std::move(layer_ids)));
+  display_controller_->SetDisplayLayers(display_id_,
+                                        fidl::VectorPtr<uint64_t>(std::move(layer_ids)));
 }
 
 void Runner::CheckFrameConfig(uint32_t frame_idx) {
   SendFrameConfig(frame_idx);
   display_controller_->CheckConfig(
       frame_idx == frames_.size() - 1,
-      [this, frame_idx](
-          fuchsia::hardware::display::ConfigResult result,
-          ::std::vector<fuchsia::hardware::display::ClientCompositionOp>) {
+      [this, frame_idx](fuchsia::hardware::display::ConfigResult result,
+                        ::std::vector<fuchsia::hardware::display::ClientCompositionOp>) {
         if (result == fuchsia::hardware::display::ConfigResult::OK) {
           if (frame_idx + 1 < frames_.size()) {
             CheckFrameConfig(frame_idx + 1);
@@ -396,8 +379,7 @@ void Runner::ApplyFrame(uint32_t frame_idx) {
   display_controller_->ApplyConfig();
 }
 
-void Runner::OnVsync(uint64_t display_id, uint64_t timestamp,
-                     ::std::vector<uint64_t> image_ids) {
+void Runner::OnVsync(uint64_t display_id, uint64_t timestamp, ::std::vector<uint64_t> image_ids) {
   if (!test_running_ || image_ids.empty()) {
     return;
   }
@@ -423,8 +405,7 @@ void Runner::OnVsync(uint64_t display_id, uint64_t timestamp,
   }
 }
 
-void Runner::FrameNotifyCallback(
-    const fuchsia::camera::FrameAvailableEvent& resp) {
+void Runner::FrameNotifyCallback(const fuchsia::camera::FrameAvailableEvent& resp) {
   static int64_t last_timestamp = 0;
   last_timestamp = resp.metadata.timestamp;
   if (test_running_) {
@@ -478,8 +459,7 @@ bool Runner::CheckFrame(uint32_t frame_idx, uint8_t* capture_ptr, bool quick) {
     for (auto layer : frames_[frame_idx]) {
       bool layer_skip;
       uint32_t layer_color;
-      bool has_pixel =
-          layer.first->GetPixel(layer.second, x, y, &layer_color, &layer_skip);
+      bool has_pixel = layer.first->GetPixel(layer.second, x, y, &layer_color, &layer_skip);
       if (!has_pixel) {
         continue;
       }
@@ -504,14 +484,13 @@ bool Runner::CheckFrame(uint32_t frame_idx, uint8_t* capture_ptr, bool quick) {
     if (!skip) {
       uint32_t actual_rgb1, actual_rgb2;
       // 2 bytes per pixel, so offset by x * 2
-      yuy2_to_bgra(capture_ptr + (y * camera_stride_) + (x * 2), &actual_rgb1,
-                   &actual_rgb2);
+      yuy2_to_bgra(capture_ptr + (y * camera_stride_) + (x * 2), &actual_rgb1, &actual_rgb2);
 
       if (!compare_colors(expected_rgb, actual_rgb1) ||
           !compare_colors(expected_rgb, actual_rgb2)) {
         if (!quick) {
-          printf("Mismatch (%d, %d) %08x=%08x,%08x\n", x, y, expected_rgb,
-                 actual_rgb1, actual_rgb2);
+          printf("Mismatch (%d, %d) %08x=%08x,%08x\n", x, y, expected_rgb, actual_rgb1,
+                 actual_rgb2);
         }
         return false;
       }

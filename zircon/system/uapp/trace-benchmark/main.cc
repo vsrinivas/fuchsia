@@ -18,50 +18,50 @@ static constexpr size_t kLargeBufferSizeBytes = 16 * 1024 * 1024;
 // between large and small.
 static constexpr size_t kSmallBufferSizeBytes = 16 * 1024;
 
-} // namespace
+}  // namespace
 
 int main(int argc, char** argv) {
-    RunTracingDisabledBenchmarks();
-    RunNoTraceBenchmarks();
+  RunTracingDisabledBenchmarks();
+  RunNoTraceBenchmarks();
 
-    static const BenchmarkSpec specs[] = {
-        {
-            // Note: The buffer is not allowed to fill in oneshot mode.
-            "oneshot, 16MB buffer",
-            TRACE_BUFFERING_MODE_ONESHOT,
-            kLargeBufferSizeBytes,
-            kDefaultRunIterations,
-        },
-        {
-            "streaming, 16MB buffer",
-            TRACE_BUFFERING_MODE_STREAMING,
-            kLargeBufferSizeBytes,
-            kDefaultRunIterations,
-        },
-        {
-            "circular, 16MB buffer",
-            TRACE_BUFFERING_MODE_CIRCULAR,
-            kLargeBufferSizeBytes,
-            kDefaultRunIterations,
-        },
-        {
-            "streaming, 16K buffer",
-            TRACE_BUFFERING_MODE_STREAMING,
-            kSmallBufferSizeBytes,
-            kDefaultRunIterations,
-        },
-        {
-            "circular, 16K buffer",
-            TRACE_BUFFERING_MODE_CIRCULAR,
-            kSmallBufferSizeBytes,
-            kDefaultRunIterations,
-        },
-    };
+  static const BenchmarkSpec specs[] = {
+      {
+          // Note: The buffer is not allowed to fill in oneshot mode.
+          "oneshot, 16MB buffer",
+          TRACE_BUFFERING_MODE_ONESHOT,
+          kLargeBufferSizeBytes,
+          kDefaultRunIterations,
+      },
+      {
+          "streaming, 16MB buffer",
+          TRACE_BUFFERING_MODE_STREAMING,
+          kLargeBufferSizeBytes,
+          kDefaultRunIterations,
+      },
+      {
+          "circular, 16MB buffer",
+          TRACE_BUFFERING_MODE_CIRCULAR,
+          kLargeBufferSizeBytes,
+          kDefaultRunIterations,
+      },
+      {
+          "streaming, 16K buffer",
+          TRACE_BUFFERING_MODE_STREAMING,
+          kSmallBufferSizeBytes,
+          kDefaultRunIterations,
+      },
+      {
+          "circular, 16K buffer",
+          TRACE_BUFFERING_MODE_CIRCULAR,
+          kSmallBufferSizeBytes,
+          kDefaultRunIterations,
+      },
+  };
 
-    for (const auto& spec : specs) {
-        RunTracingEnabledBenchmarks(&spec);
-    }
+  for (const auto& spec : specs) {
+    RunTracingEnabledBenchmarks(&spec);
+  }
 
-    printf("\nTracing benchmarks completed.\n");
-    return 0;
+  printf("\nTracing benchmarks completed.\n");
+  return 0;
 }

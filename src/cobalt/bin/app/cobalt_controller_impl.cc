@@ -14,11 +14,10 @@ namespace cobalt {
 
 using encoder::ShippingManager;
 
-CobaltControllerImpl::CobaltControllerImpl(
-    async_dispatcher_t* dispatcher,
-    std::vector<encoder::ShippingManager*> shipping_managers,
-    logger::EventAggregator* event_aggregator,
-    encoder::ObservationStore* observation_store)
+CobaltControllerImpl::CobaltControllerImpl(async_dispatcher_t* dispatcher,
+                                           std::vector<encoder::ShippingManager*> shipping_managers,
+                                           logger::EventAggregator* event_aggregator,
+                                           encoder::ObservationStore* observation_store)
     : dispatcher_(dispatcher),
       shipping_managers_(std::move(shipping_managers)),
       event_aggregator_(event_aggregator),
@@ -38,11 +37,9 @@ CobaltControllerImpl::CobaltControllerImpl(
 // on the main thread with the final result which is the conjunction of each
 // of the success bools.
 struct RequestSendSoonCoordinator {
-  explicit RequestSendSoonCoordinator(
-      size_t num_to_wait_for,
-      CobaltControllerImpl::RequestSendSoonCallback result_callback)
-      : callbacks_waiting(num_to_wait_for),
-        result_callback(std::move(result_callback)) {}
+  explicit RequestSendSoonCoordinator(size_t num_to_wait_for,
+                                      CobaltControllerImpl::RequestSendSoonCallback result_callback)
+      : callbacks_waiting(num_to_wait_for), result_callback(std::move(result_callback)) {}
   // How many callbacks are we waiting for?
   const size_t callbacks_waiting;
 
@@ -61,19 +58,16 @@ struct RequestSendSoonCoordinator {
 
 void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
   std::shared_ptr<RequestSendSoonCoordinator> coordinator(
-      new RequestSendSoonCoordinator(shipping_managers_.size(),
-                                     std::move(callback)));
+      new RequestSendSoonCoordinator(shipping_managers_.size(), std::move(callback)));
   for (auto* shipping_manager : shipping_managers_) {
-    shipping_manager->RequestSendSoon([coordinator,
-                                       dispatcher = dispatcher_](bool s) {
+    shipping_manager->RequestSendSoon([coordinator, dispatcher = dispatcher_](bool s) {
       std::lock_guard<std::mutex> lock(coordinator->mu);
       coordinator->callbacks_completed++;
       coordinator->result &= s;
       if (coordinator->callbacks_completed == coordinator->callbacks_waiting) {
         // Invoke the final result callback on the main thread.
-        async::PostTask(dispatcher,
-                        [callback = std::move(coordinator->result_callback),
-                         success = coordinator->result] { callback(success); });
+        async::PostTask(dispatcher, [callback = std::move(coordinator->result_callback),
+                                     success = coordinator->result] { callback(success); });
       }
     });
   }
@@ -87,8 +81,7 @@ void CobaltControllerImpl::BlockUntilEmpty(uint32_t max_wait_seconds,
   callback();
 }
 
-void CobaltControllerImpl::GetNumSendAttempts(
-    GetNumSendAttemptsCallback callback) {
+void CobaltControllerImpl::GetNumSendAttempts(GetNumSendAttemptsCallback callback) {
   int num_send_attempts = 0;
   for (auto* shipping_manager : shipping_managers_) {
     num_send_attempts += shipping_manager->num_send_attempts();
@@ -96,8 +89,7 @@ void CobaltControllerImpl::GetNumSendAttempts(
   callback(num_send_attempts);
 }
 
-void CobaltControllerImpl::GetFailedSendAttempts(
-    GetFailedSendAttemptsCallback callback) {
+void CobaltControllerImpl::GetFailedSendAttempts(GetFailedSendAttemptsCallback callback) {
   int num_failed_attempts = 0;
   for (auto* shipping_manager : shipping_managers_) {
     num_failed_attempts += shipping_manager->num_failed_attempts();
@@ -105,8 +97,7 @@ void CobaltControllerImpl::GetFailedSendAttempts(
   callback(num_failed_attempts);
 }
 
-void CobaltControllerImpl::GetNumObservationsAdded(
-    GetNumObservationsAddedCallback callback) {
+void CobaltControllerImpl::GetNumObservationsAdded(GetNumObservationsAddedCallback callback) {
   callback(observation_store_->num_observations_added());
 }
 

@@ -25,14 +25,12 @@ class MessageFragment {
   MessageFragment(const MessageFragment&) = delete;
   MessageFragment& operator=(const MessageFragment&) = delete;
 
-  MessageFragment(uint64_t message, Chunk chunk)
-      : message_(message), type_(Type::Chunk) {
+  MessageFragment(uint64_t message, Chunk chunk) : message_(message), type_(Type::Chunk) {
     assert(message > 0);
     new (&payload_.chunk) Chunk(std::move(chunk));
   }
 
-  MessageFragment(MessageFragment&& other)
-      : message_(other.message_), type_(other.type_) {
+  MessageFragment(MessageFragment&& other) : message_(other.message_), type_(other.type_) {
     switch (type_) {
       case Type::Chunk:
         new (&payload_.chunk) Chunk(std::move(other.payload_.chunk));
@@ -109,8 +107,7 @@ class MessageFragment {
   static constexpr uint8_t kReservedFlags =
       static_cast<uint8_t>(~(kFlagTypeMask | kFlagEndOfMessage));
 
-  MessageFragment(uint64_t message, Type type, Status status)
-      : message_(message), type_(type) {
+  MessageFragment(uint64_t message, Type type, Status status) : message_(message), type_(type) {
     assert(type == Type::MessageCancel || type == Type::StreamEnd);
     assert(message != 0);
     new (&payload_.status) Status(std::move(status));
@@ -133,16 +130,15 @@ class DatagramStream : private Router::StreamHandler,
                        private PacketProtocol::PacketSender {
   class IncomingMessage {
    public:
-    inline static constexpr auto kModule =
-        Module::DATAGRAM_STREAM_INCOMING_MESSAGE;
+    inline static constexpr auto kModule = Module::DATAGRAM_STREAM_INCOMING_MESSAGE;
 
     IncomingMessage(DatagramStream* stream, uint64_t msg_id)
         : protocol_(&stream->packet_protocol_),
           // TODO(ctiller): What should the bound be here? 4*mss is a guess,
           // nothing more.
-          linearizer_(std::max(uint64_t(4 * protocol_->maximum_send_size()),
-                               protocol_->bdp_estimate()),
-                      &stream->stream_stats_),
+          linearizer_(
+              std::max(uint64_t(4 * protocol_->maximum_send_size()), protocol_->bdp_estimate()),
+              &stream->stream_stats_),
           msg_id_(msg_id) {}
 
     void Pull(StatusOrCallback<Optional<Slice>>&& done) {
@@ -151,8 +147,7 @@ class DatagramStream : private Router::StreamHandler,
     }
     void PullAll(StatusOrCallback<Optional<std::vector<Slice>>>&& done) {
       ScopedModule<IncomingMessage> in_im(this);
-      linearizer_.PullAll(
-          std::forward<StatusOrCallback<Optional<std::vector<Slice>>>>(done));
+      linearizer_.PullAll(std::forward<StatusOrCallback<Optional<std::vector<Slice>>>>(done));
     }
 
     [[nodiscard]] bool Push(Chunk&& chunk) {
@@ -197,17 +192,13 @@ class DatagramStream : private Router::StreamHandler,
       assert(stream_);
       stream_->stream_state_.BeginOp();
     }
-    StreamRef(const StreamRef& other) : stream_(other.stream_) {
-      stream_->stream_state_.BeginOp();
-    }
+    StreamRef(const StreamRef& other) : stream_(other.stream_) { stream_->stream_state_.BeginOp(); }
     StreamRef& operator=(const StreamRef& other) {
       StreamRef copy(other);
       Swap(&copy);
       return *this;
     }
-    StreamRef(StreamRef&& other) : stream_(other.stream_) {
-      other.stream_ = nullptr;
-    }
+    StreamRef(StreamRef&& other) : stream_(other.stream_) { other.stream_ = nullptr; }
     StreamRef& operator=(StreamRef&& other) {
       std::swap(stream_, other.stream_);
       return *this;
@@ -237,13 +228,11 @@ class DatagramStream : private Router::StreamHandler,
   class SendStateRef {
    public:
     SendStateRef() = delete;
-    SendStateRef(DatagramStream* stream, SendStateIt op)
-        : stream_(stream), op_(op) {
+    SendStateRef(DatagramStream* stream, SendStateIt op) : stream_(stream), op_(op) {
       stream_->stream_state_.BeginSend();
       op_->second.refs++;
     }
-    SendStateRef(const SendStateRef& other)
-        : stream_(other.stream_), op_(other.op_) {
+    SendStateRef(const SendStateRef& other) : stream_(other.stream_), op_(other.op_) {
       stream_->stream_state_.BeginSend();
       op_->second.refs++;
     }
@@ -252,8 +241,7 @@ class DatagramStream : private Router::StreamHandler,
       Swap(&copy);
       return *this;
     }
-    SendStateRef(SendStateRef&& other)
-        : stream_(other.stream_), op_(other.op_) {
+    SendStateRef(SendStateRef&& other) : stream_(other.stream_), op_(other.op_) {
       other.stream_ = nullptr;
     }
     SendStateRef& operator=(SendStateRef&& other) {
@@ -304,8 +292,7 @@ class DatagramStream : private Router::StreamHandler,
   inline static constexpr auto kModule = Module::DATAGRAM_STREAM;
 
   DatagramStream(Router* router, NodeId peer,
-                 fuchsia::overnet::protocol::ReliabilityAndOrdering
-                     reliability_and_ordering,
+                 fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
                  StreamId stream_id);
   ~DatagramStream();
 
@@ -315,9 +302,7 @@ class DatagramStream : private Router::StreamHandler,
   DatagramStream& operator=(DatagramStream&&) = delete;
 
   virtual void Close(const Status& status, Callback<void> quiesced);
-  void Close(Callback<void> quiesced) {
-    Close(Status::Ok(), std::move(quiesced));
-  }
+  void Close(Callback<void> quiesced) { Close(Status::Ok(), std::move(quiesced)); }
   void RouterClose(Callback<void> quiesced) override final {
     Close(Status::Cancelled(), std::move(quiesced));
   }
@@ -346,9 +331,8 @@ class DatagramStream : private Router::StreamHandler,
     explicit ReceiveOp(DatagramStream* stream);
     ~ReceiveOp() {
       if (!closed_) {
-        Close(incoming_message_ && incoming_message_->IsComplete()
-                  ? Status::Ok()
-                  : Status::Cancelled());
+        Close(incoming_message_ && incoming_message_->IsComplete() ? Status::Ok()
+                                                                   : Status::Cancelled());
       }
       assert(closed_);
     }
@@ -403,8 +387,7 @@ class DatagramStream : private Router::StreamHandler,
   Router* const router_;
   const NodeId peer_;
   const StreamId stream_id_;
-  const fuchsia::overnet::protocol::ReliabilityAndOrdering
-      reliability_and_ordering_;
+  const fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering_;
   uint64_t next_message_id_ = 1;
   uint64_t largest_incoming_message_id_seen_ = 0;
   receive_mode::ParameterizedReceiveMode receive_mode_;
@@ -430,8 +413,7 @@ class DatagramStream : private Router::StreamHandler,
   // TODO(ctiller): a custom allocator here would be worthwhile, especially one
   // that could remove allocations for the common case of few entries.
   std::unordered_map<uint64_t, IncomingMessage> messages_;
-  InternalList<IncomingMessage, &IncomingMessage::incoming_link>
-      unclaimed_messages_;
+  InternalList<IncomingMessage, &IncomingMessage::incoming_link> unclaimed_messages_;
   InternalList<ReceiveOp, &ReceiveOp::waiting_link_> unclaimed_receives_;
 };
 

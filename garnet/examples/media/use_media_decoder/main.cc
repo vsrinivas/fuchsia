@@ -29,8 +29,7 @@ int main(int argc, char* argv[]) {
     printf("fxl::SetLogSettingsFromCommandLine() failed\n");
     exit(-1);
   }
-  if (command_line.positional_args().size() < 1 ||
-      command_line.positional_args().size() > 2) {
+  if (command_line.positional_args().size() < 1 || command_line.positional_args().size() > 2) {
     usage(command_line.argv0().c_str());
     exit(-1);
   }
@@ -46,13 +45,11 @@ int main(int argc, char* argv[]) {
 
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
-  startup_context
-      ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
-          codec_factory.NewRequest());
+  startup_context->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
+      codec_factory.NewRequest());
 
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
-  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
-      sysmem.NewRequest());
+  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   std::string input_file = command_line.positional_args()[0];
   std::string output_file;
@@ -79,8 +76,7 @@ int main(int argc, char* argv[]) {
     char* str_end;
     errno = 0;
     frames_per_second = std::strtod(str_begin, &str_end);
-    if (str_end == str_begin ||
-        (frames_per_second == HUGE_VAL && errno == ERANGE)) {
+    if (str_end == str_begin || (frames_per_second == HUGE_VAL && errno == ERANGE)) {
       printf("fps parse error\n");
       usage(command_line.argv0().c_str());
       exit(-1);
@@ -96,44 +92,38 @@ int main(int argc, char* argv[]) {
     // assumption of setup/binding code.
     // TODO(turnage): Rework to catch the first few frames using view connected
     //                callback.
-    frame_sink =
-        FrameSink::Create(startup_context.get(), &main_loop, frames_per_second,
-                          [](FrameSink* _frame_sink) {});
+    frame_sink = FrameSink::Create(startup_context.get(), &main_loop, frames_per_second,
+                                   [](FrameSink* _frame_sink) {});
   }
   // We set up a closure here just to avoid forcing the two decoder types to
   // take the same parameters, but still be able to share the
   // drive_decoder_thread code below.
   fit::closure use_decoder;
   if (command_line.HasOption("aac_adts")) {
-    use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
-                   sysmem = std::move(sysmem), input_file, output_file,
-                   &md]() mutable {
-      use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem),
-                      input_file, output_file, md);
+    use_decoder = [&main_loop, codec_factory = std::move(codec_factory), sysmem = std::move(sysmem),
+                   input_file, output_file, &md]() mutable {
+      use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
+                      output_file, md);
     };
   } else if (command_line.HasOption("h264")) {
-    use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
-                   sysmem = std::move(sysmem), input_file, output_file, &md,
-                   frame_sink = frame_sink.get()]() mutable {
-      use_h264_decoder(&main_loop, std::move(codec_factory), std::move(sysmem),
-                       input_file, output_file, md, nullptr, nullptr,
-                       frame_sink);
+    use_decoder = [&main_loop, codec_factory = std::move(codec_factory), sysmem = std::move(sysmem),
+                   input_file, output_file, &md, frame_sink = frame_sink.get()]() mutable {
+      use_h264_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
+                       output_file, md, nullptr, nullptr, frame_sink);
     };
   } else if (command_line.HasOption("vp9")) {
-    use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
-                   sysmem = std::move(sysmem), input_file, output_file, &md,
-                   frame_sink = frame_sink.get()]() mutable {
-      use_vp9_decoder(&main_loop, std::move(codec_factory), std::move(sysmem),
-                      input_file, output_file, md, nullptr, nullptr,
-                      frame_sink);
+    use_decoder = [&main_loop, codec_factory = std::move(codec_factory), sysmem = std::move(sysmem),
+                   input_file, output_file, &md, frame_sink = frame_sink.get()]() mutable {
+      use_vp9_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
+                      output_file, md, nullptr, nullptr, frame_sink);
     };
   } else {
     usage(command_line.argv0().c_str());
     return -1;
   }
 
-  auto drive_decoder_thread = std::make_unique<std::thread>(
-      [use_decoder = std::move(use_decoder), &main_loop] {
+  auto drive_decoder_thread =
+      std::make_unique<std::thread>([use_decoder = std::move(use_decoder), &main_loop] {
         use_decoder();
         main_loop.Quit();
       });

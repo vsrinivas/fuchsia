@@ -12,23 +12,23 @@ FileSizeRecorder::FileSizeRecorder() = default;
 FileSizeRecorder::~FileSizeRecorder() = default;
 
 bool FileSizeRecorder::OpenSizeFile(const char* const path) {
-    std::lock_guard<std::mutex> lock(sizes_file_lock_);
-    if (sizes_file_)
-        return false;
-    sizes_file_.reset(open(path, O_CREAT|O_TRUNC|O_WRONLY, 0644));
-    return bool{sizes_file_};
+  std::lock_guard<std::mutex> lock(sizes_file_lock_);
+  if (sizes_file_)
+    return false;
+  sizes_file_.reset(open(path, O_CREAT | O_TRUNC | O_WRONLY, 0644));
+  return bool{sizes_file_};
 }
 
 bool FileSizeRecorder::AppendSizeInformation(const char* const name, size_t size) {
-    std::lock_guard<std::mutex> lock(sizes_file_lock_);
+  std::lock_guard<std::mutex> lock(sizes_file_lock_);
 
-    if (!sizes_file_) {
-        return true;
-    }
-
-    if (dprintf(sizes_file_.get(), "%s=%zu\n", name, size) < 0) {
-        fprintf(stderr, "error: sizes file append error\n");
-        return false;
-    }
+  if (!sizes_file_) {
     return true;
+  }
+
+  if (dprintf(sizes_file_.get(), "%s=%zu\n", name, size) < 0) {
+    fprintf(stderr, "error: sizes file append error\n");
+    return false;
+  }
+  return true;
 }

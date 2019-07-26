@@ -9,18 +9,18 @@
 namespace sdhci {
 
 class CoreHcMode : public hwreg::RegisterBase<CoreHcMode, uint32_t> {
-public:
-    static auto Get() { return hwreg::RegisterAddr<CoreHcMode>(0x078); }
+ public:
+  static auto Get() { return hwreg::RegisterAddr<CoreHcMode>(0x078); }
 
-    DEF_BIT(13, ff_clk_sw_rst_disable);
-    DEF_BIT(0, hc_mode_en);
+  DEF_BIT(13, ff_clk_sw_rst_disable);
+  DEF_BIT(0, hc_mode_en);
 };
 
 class HcVendorSpec3 : public hwreg::RegisterBase<HcVendorSpec3, uint32_t> {
-public:
-    static auto Get() { return hwreg::RegisterAddr<HcVendorSpec3>(0x1b0); }
+ public:
+  static auto Get() { return hwreg::RegisterAddr<HcVendorSpec3>(0x1b0); }
 
-    DEF_BIT(10, alt_fifo_en);
+  DEF_BIT(10, alt_fifo_en);
 };
 
 }  // namespace sdhci

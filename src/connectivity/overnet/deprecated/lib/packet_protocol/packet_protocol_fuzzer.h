@@ -32,8 +32,7 @@ class PacketProtocolFuzzer {
   // Step time forward.
   // Return true if the fuzzer should continue.
   bool StepTime(int64_t microseconds) {
-    return timer_.Step(
-               std::min(microseconds, TimeDelta::FromSeconds(10).as_us())) &&
+    return timer_.Step(std::min(microseconds, TimeDelta::FromSeconds(10).as_us())) &&
            timer_.Now().after_epoch() != TimeDelta::PositiveInf();
   }
 
@@ -79,11 +78,9 @@ class PacketProtocolFuzzer {
   std::mt19937 rng_{12345};
   const PacketProtocol::Codec* const codec_;
   ClosedPtr<PacketProtocol> pp1_ = MakeClosedPtr<PacketProtocol>(
-      &timer_, [this] { return rng_(); }, &sender1_, codec_, kMaxSegmentSize,
-      true);
+      &timer_, [this] { return rng_(); }, &sender1_, codec_, kMaxSegmentSize, true);
   ClosedPtr<PacketProtocol> pp2_ = MakeClosedPtr<PacketProtocol>(
-      &timer_, [this] { return rng_(); }, &sender2_, codec_, kMaxSegmentSize,
-      true);
+      &timer_, [this] { return rng_(); }, &sender2_, codec_, kMaxSegmentSize, true);
 };
 
 }  // namespace overnet

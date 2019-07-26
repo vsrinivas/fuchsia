@@ -37,18 +37,15 @@ TEST(Callback, CallingEmptyCallbackCrashes) {
 TEST(StatusCallback, NotCalledCallsCancel) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusCallback cb(
-      [&mock](const Status& status) { mock.CallbackStatus(status); });
+  StatusCallback cb([&mock](const Status& status) { mock.CallbackStatus(status); });
 
-  EXPECT_CALL(mock,
-              CallbackStatus(Property(&Status::code, StatusCode::CANCELLED)));
+  EXPECT_CALL(mock, CallbackStatus(Property(&Status::code, StatusCode::CANCELLED)));
 }
 
 TEST(StatusCallback, CalledWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusCallback cb(
-      [&mock](const Status& status) { mock.CallbackStatus(status); });
+  StatusCallback cb([&mock](const Status& status) { mock.CallbackStatus(status); });
 
   EXPECT_CALL(mock, CallbackStatus(Property(&Status::is_ok, true)));
   cb(Status::Ok());
@@ -58,8 +55,7 @@ TEST(StatusCallback, CalledWorks) {
 TEST(StatusCallback, MoveWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusCallback cb(
-      [&mock](const Status& status) { mock.CallbackStatus(status); });
+  StatusCallback cb([&mock](const Status& status) { mock.CallbackStatus(status); });
 
   StatusCallback cb2 = std::move(cb);
   EXPECT_DEATH_IF_SUPPORTED(cb(Status::Ok()), "");
@@ -71,8 +67,7 @@ TEST(StatusCallback, MoveWorks) {
 TEST(StatusCallback, MoveAssignWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusCallback cb(
-      [&mock](const Status& status) { mock.CallbackStatus(status); });
+  StatusCallback cb([&mock](const Status& status) { mock.CallbackStatus(status); });
 
   StatusCallback cb2 = std::move(cb);
   EXPECT_DEATH_IF_SUPPORTED(cb(Status::Ok()), "");
@@ -90,23 +85,19 @@ TEST(StatusCallback, MoveAssignWorks) {
 TEST(StatusOrCallback, NotCalledCallsCancel) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusOrCallback<BoxedInt> cb([&mock](const StatusOr<BoxedInt>& status) {
-    mock.CallbackStatusOr(status);
-  });
+  StatusOrCallback<BoxedInt> cb(
+      [&mock](const StatusOr<BoxedInt>& status) { mock.CallbackStatusOr(status); });
 
-  EXPECT_CALL(mock, CallbackStatusOr(Property(&StatusOr<BoxedInt>::code,
-                                              StatusCode::CANCELLED)));
+  EXPECT_CALL(mock, CallbackStatusOr(Property(&StatusOr<BoxedInt>::code, StatusCode::CANCELLED)));
 }
 
 TEST(StatusOrCallback, CalledWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusOrCallback<BoxedInt> cb([&mock](const StatusOr<BoxedInt>& status) {
-    mock.CallbackStatusOr(status);
-  });
+  StatusOrCallback<BoxedInt> cb(
+      [&mock](const StatusOr<BoxedInt>& status) { mock.CallbackStatusOr(status); });
 
-  EXPECT_CALL(mock,
-              CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
+  EXPECT_CALL(mock, CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
   cb(boxed_int());
   EXPECT_DEATH_IF_SUPPORTED(cb(boxed_int()), "");
 }
@@ -114,24 +105,21 @@ TEST(StatusOrCallback, CalledWorks) {
 TEST(StatusOrCallback, MoveWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusOrCallback<BoxedInt> cb([&mock](const StatusOr<BoxedInt>& status) {
-    mock.CallbackStatusOr(status);
-  });
+  StatusOrCallback<BoxedInt> cb(
+      [&mock](const StatusOr<BoxedInt>& status) { mock.CallbackStatusOr(status); });
 
   StatusOrCallback<BoxedInt> cb2 = std::move(cb);
   EXPECT_DEATH_IF_SUPPORTED(cb(boxed_int()), "");
 
-  EXPECT_CALL(mock,
-              CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
+  EXPECT_CALL(mock, CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
   cb2(boxed_int());
 }
 
 TEST(StatusOrCallback, MoveAssignWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusOrCallback<BoxedInt> cb([&mock](const StatusOr<BoxedInt>& status) {
-    mock.CallbackStatusOr(status);
-  });
+  StatusOrCallback<BoxedInt> cb(
+      [&mock](const StatusOr<BoxedInt>& status) { mock.CallbackStatusOr(status); });
 
   StatusOrCallback<BoxedInt> cb2 = std::move(cb);
   EXPECT_DEATH_IF_SUPPORTED(cb(boxed_int()), "");
@@ -139,8 +127,7 @@ TEST(StatusOrCallback, MoveAssignWorks) {
   cb = std::move(cb2);
   EXPECT_DEATH_IF_SUPPORTED(cb2(boxed_int()), "");
 
-  EXPECT_CALL(mock,
-              CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
+  EXPECT_CALL(mock, CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
   cb(boxed_int());
 }
 

@@ -40,13 +40,10 @@ class NetworkWrapperImpl::RunningRequest {
 
   void set_callback(fit::function<void(http::URLResponse)> callback) {
     // Once this class calls its callback, it must notify its container.
-    callback_ = [this, callback = std::move(callback)](
-                    http::URLResponse response) mutable {
+    callback_ = [this, callback = std::move(callback)](http::URLResponse response) mutable {
       FXL_DCHECK(on_empty_callback_);
       if (destruction_sentinel_.DestructedWhile(
-              [callback = std::move(callback), &response] {
-                callback(std::move(response));
-              })) {
+              [callback = std::move(callback), &response] { callback(std::move(response)); })) {
         return;
       }
       on_empty_callback_();
@@ -97,8 +94,7 @@ class NetworkWrapperImpl::RunningRequest {
               callback_(std::move(response));
               return;
             },
-            "network_wrapper", "network_url_loader_start", "url", url, "method",
-            method));
+            "network_wrapper", "network_url_loader_start", "url", url, "method", method));
 
     url_loader_.set_error_handler([this](zx_status_t status) {
       // If the connection to the url loader failed, restart the request.
@@ -115,8 +111,7 @@ class NetworkWrapperImpl::RunningRequest {
       if (fxl::EqualsCaseInsensitiveASCII(header.name, "location")) {
         ++redirect_count_;
         if (redirect_count_ >= kMaxRedirectCount) {
-          callback_(NewErrorResponse(kTooManyRedirectErrorCode,
-                                     "Too many redirects."));
+          callback_(NewErrorResponse(kTooManyRedirectErrorCode, "Too many redirects."));
           return;
         }
 
@@ -127,8 +122,7 @@ class NetworkWrapperImpl::RunningRequest {
     }
 
     // Return an error otherwise.
-    callback_(
-        NewErrorResponse(kInvalidResponseErrorCode, "No Location header."));
+    callback_(NewErrorResponse(kInvalidResponseErrorCode, "No Location header."));
     // |this| might be deleted withing the callback, don't reference member
     // variables afterwards.
   }
@@ -151,9 +145,9 @@ class NetworkWrapperImpl::RunningRequest {
   callback::DestructionSentinel destruction_sentinel_;
 };
 
-NetworkWrapperImpl::NetworkWrapperImpl(
-    async_dispatcher_t* dispatcher, std::unique_ptr<backoff::Backoff> backoff,
-    fit::function<http::HttpServicePtr()> http_service_factory)
+NetworkWrapperImpl::NetworkWrapperImpl(async_dispatcher_t* dispatcher,
+                                       std::unique_ptr<backoff::Backoff> backoff,
+                                       fit::function<http::HttpServicePtr()> http_service_factory)
     : backoff_(std::move(backoff)),
       http_service_factory_(std::move(http_service_factory)),
       task_runner_(dispatcher) {}
@@ -163,14 +157,12 @@ NetworkWrapperImpl::~NetworkWrapperImpl() {}
 fxl::RefPtr<callback::Cancellable> NetworkWrapperImpl::Request(
     fit::function<http::URLRequest()> request_factory,
     fit::function<void(http::URLResponse)> callback) {
-  RunningRequest& request =
-      running_requests_.emplace(std::move(request_factory));
+  RunningRequest& request = running_requests_.emplace(std::move(request_factory));
 
-  auto cancellable =
-      callback::CancellableImpl::Create([&request]() { request.Cancel(); });
+  auto cancellable = callback::CancellableImpl::Create([&request]() { request.Cancel(); });
 
-  request.set_callback(cancellable->WrapCallback(TRACE_CALLBACK(
-      std::move(callback), "network_wrapper", "network_request")));
+  request.set_callback(cancellable->WrapCallback(
+      TRACE_CALLBACK(std::move(callback), "network_wrapper", "network_request")));
   if (!in_backoff_) {
     request.SetHttpService(GetHttpService());
   }
@@ -190,8 +182,7 @@ http::HttpService* NetworkWrapperImpl::GetHttpService() {
         request.SetHttpService(nullptr);
       }
       http_service_.Unbind();
-      task_runner_.PostDelayedTask([this] { RetryGetHttpService(); },
-                                   backoff_->GetNext());
+      task_runner_.PostDelayedTask([this] { RetryGetHttpService(); }, backoff_->GetNext());
     });
   }
 

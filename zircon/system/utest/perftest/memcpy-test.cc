@@ -12,31 +12,31 @@ namespace {
 
 // Test performance of memcpy() on a block of the given size.
 bool MemcpyTest(perftest::RepeatState* state, size_t size) {
-    state->SetBytesProcessedPerRun(size);
+  state->SetBytesProcessedPerRun(size);
 
-    fbl::unique_ptr<char[]> src(new char[size]);
-    fbl::unique_ptr<char[]> dest(new char[size]);
-    // Initialize src so that we are not copying from uninitialized memory.
-    memset(src.get(), 0, size);
+  fbl::unique_ptr<char[]> src(new char[size]);
+  fbl::unique_ptr<char[]> dest(new char[size]);
+  // Initialize src so that we are not copying from uninitialized memory.
+  memset(src.get(), 0, size);
 
-    while (state->KeepRunning()) {
-        memcpy(dest.get(), src.get(), size);
-        // Stop the compiler from optimizing away the memcpy() call.
-        perftest::DoNotOptimize(src.get());
-        perftest::DoNotOptimize(dest.get());
-    }
-    return true;
+  while (state->KeepRunning()) {
+    memcpy(dest.get(), src.get(), size);
+    // Stop the compiler from optimizing away the memcpy() call.
+    perftest::DoNotOptimize(src.get());
+    perftest::DoNotOptimize(dest.get());
+  }
+  return true;
 }
 
 void RegisterTests() {
-    static const size_t kSizesBytes[] = {
-        1000,
-        100000,
-    };
-    for (auto size : kSizesBytes) {
-        auto name = fbl::StringPrintf("Memcpy/%zubytes", size);
-        perftest::RegisterTest(name.c_str(), MemcpyTest, size);
-    }
+  static const size_t kSizesBytes[] = {
+      1000,
+      100000,
+  };
+  for (auto size : kSizesBytes) {
+    auto name = fbl::StringPrintf("Memcpy/%zubytes", size);
+    perftest::RegisterTest(name.c_str(), MemcpyTest, size);
+  }
 }
 PERFTEST_CTOR(RegisterTests)
 

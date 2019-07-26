@@ -10,17 +10,14 @@
 
 class TallyVerifier : public Verifier {
  public:
-  static std::unique_ptr<Verifier> Create(
-      const cpuperf::SessionResultSpec* spec) {
+  static std::unique_ptr<Verifier> Create(const cpuperf::SessionResultSpec* spec) {
     return std::make_unique<TallyVerifier>(spec);
   }
 
-  TallyVerifier(const cpuperf::SessionResultSpec* spec)
-      : Verifier(spec) {
+  TallyVerifier(const cpuperf::SessionResultSpec* spec) : Verifier(spec) {
     const perfmon::EventDetails* details;
 
-    bool rc __UNUSED =
-      LookupEventByName("arch", "inst_retired", &details);
+    bool rc __UNUSED = LookupEventByName("arch", "inst_retired", &details);
     FXL_DCHECK(rc);
     instructions_retired_id_ = details->id;
   }
@@ -50,6 +47,6 @@ class TallyVerifier : public Verifier {
 };
 
 const TestSpec kTallySpec = {
-  "tally",
-  &TallyVerifier::Create,
+    "tally",
+    &TallyVerifier::Create,
 };

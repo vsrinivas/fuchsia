@@ -54,10 +54,8 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   // fuchsia::bluetooth::test::HciEmulator overrides:
   void Publish(fuchsia::bluetooth::test::EmulatorSettings settings,
                PublishCallback callback) override;
-  void AddPeer(fuchsia::bluetooth::test::FakePeer peer,
-               AddPeerCallback callback) override;
-  void RemovePeer(fuchsia::bluetooth::PeerId id,
-                  RemovePeerCallback callback) override;
+  void AddPeer(fuchsia::bluetooth::test::FakePeer peer, AddPeerCallback callback) override;
+  void RemovePeer(fuchsia::bluetooth::PeerId id, RemovePeerCallback callback) override;
   void WatchLeScanState(WatchLeScanStateCallback callback) override;
 
   static constexpr fuchsia_hardware_bluetooth_Hci_ops_t hci_fidl_ops_ = {
@@ -73,8 +71,7 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   std::mutex device_lock_;
 
   async::Loop loop_ __TA_GUARDED(device_lock_);
-  fbl::RefPtr<bt::testing::FakeController> fake_device_
-      __TA_GUARDED(device_lock_);
+  fbl::RefPtr<bt::testing::FakeController> fake_device_ __TA_GUARDED(device_lock_);
 
   zx_device_t* parent_;
 
@@ -85,8 +82,7 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   zx_device_t* emulator_dev_;
 
   // Binding for fuchsia.bluetooth.test.HciEmulator channel.
-  fidl::Binding<fuchsia::bluetooth::test::HciEmulator> binding_
-      __TA_GUARDED(device_lock_);
+  fidl::Binding<fuchsia::bluetooth::test::HciEmulator> binding_ __TA_GUARDED(device_lock_);
 };
 
 }  // namespace bt_hci_emulator

@@ -42,8 +42,7 @@ bool TestTimer::Step(uint64_t microseconds) {
   }
   bool ticked = false;
   while (!pending_timeouts_.empty() &&
-         pending_timeouts_.begin()->first <=
-             (std::lock_guard<std::mutex>(mu), now_)) {
+         pending_timeouts_.begin()->first <= (std::lock_guard<std::mutex>(mu), now_)) {
     ticked = true;
     auto it = pending_timeouts_.begin();
     auto* timeout = it->second;
@@ -56,8 +55,7 @@ bool TestTimer::Step(uint64_t microseconds) {
 bool TestTimer::StepUntilNextEvent(Optional<TimeDelta> max_step) {
   if (pending_timeouts_.empty())
     return false;
-  int64_t step = (std::lock_guard<std::mutex>(mu),
-                  pending_timeouts_.begin()->first - now_);
+  int64_t step = (std::lock_guard<std::mutex>(mu), pending_timeouts_.begin()->first - now_);
   if (step < 0) {
     step = 0;
   }

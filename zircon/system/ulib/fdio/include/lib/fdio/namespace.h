@@ -67,10 +67,10 @@ zx_status_t fdio_ns_chdir(fdio_ns_t* ns);
 zx_status_t fdio_ns_get_installed(fdio_ns_t** ns);
 
 typedef struct fdio_flat_namespace {
-    size_t count;
-    zx_handle_t* handle;
-    uint32_t* type;
-    const char* const* path;
+  size_t count;
+  zx_handle_t* handle;
+  uint32_t* type;
+  const char* const* path;
 } fdio_flat_namespace_t;
 
 // On success the caller takes ownership of a fdio_flat_namespace_t
@@ -87,8 +87,7 @@ zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out);
 // or passed to the remote service on success.
 // The path must be an absolute path starting with / and containing
 // no ".." or "." or empty segments.
-zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path,
-                            uint32_t zxflags, zx_handle_t h);
+zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t zxflags, zx_handle_t h);
 
 // Frees a flat namespace.
 // Closes all handles contained within |ns|.

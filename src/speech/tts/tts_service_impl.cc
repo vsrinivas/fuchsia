@@ -10,8 +10,7 @@
 
 namespace tts {
 
-TtsServiceImpl::TtsServiceImpl(
-    std::unique_ptr<sys::ComponentContext> startup_context)
+TtsServiceImpl::TtsServiceImpl(std::unique_ptr<sys::ComponentContext> startup_context)
     : startup_context_(std::move(startup_context)) {
   FXL_DCHECK(startup_context_);
 
@@ -37,8 +36,7 @@ zx_status_t TtsServiceImpl::Init() {
   return ZX_OK;
 }
 
-TtsServiceImpl::Client::Client(TtsServiceImpl* owner,
-                               fidl::InterfaceRequest<TtsService> request)
+TtsServiceImpl::Client::Client(TtsServiceImpl* owner, fidl::InterfaceRequest<TtsService> request)
     : owner_(owner), binding_(this, std::move(request)) {
   binding_.set_error_handler([this](zx_status_t status) { Shutdown(); });
 }
@@ -58,8 +56,7 @@ void TtsServiceImpl::Client::Shutdown() {
   owner_->clients_.erase(owner_->clients_.find(this));
 }
 
-void TtsServiceImpl::Client::Say(std::string words, uint64_t token,
-                                 SayCallback cbk) {
+void TtsServiceImpl::Client::Say(std::string words, uint64_t token, SayCallback cbk) {
   auto cleanup = fit::defer([this] { Shutdown(); });
   auto speaker = std::make_shared<TtsSpeaker>(owner_->dispatcher_);
 
@@ -67,13 +64,11 @@ void TtsServiceImpl::Client::Say(std::string words, uint64_t token,
     return;
   }
 
-  fit::closure on_speak_complete = [this, speaker, token,
-                                    say_callback = std::move(cbk)]() mutable {
+  fit::closure on_speak_complete = [this, speaker, token, say_callback = std::move(cbk)]() mutable {
     OnSpeakComplete(std::move(speaker), token, std::move(say_callback));
   };
 
-  zx_status_t res =
-      speaker->Speak(std::move(words), std::move(on_speak_complete));
+  zx_status_t res = speaker->Speak(std::move(words), std::move(on_speak_complete));
   if (res == ZX_OK) {
     active_speakers_.insert(std::move(speaker));
   } else {
@@ -84,9 +79,8 @@ void TtsServiceImpl::Client::Say(std::string words, uint64_t token,
   cleanup.cancel();
 }
 
-void TtsServiceImpl::Client::OnSpeakComplete(
-    const std::shared_ptr<TtsSpeaker>& speaker, uint64_t token,
-    SayCallback cbk) {
+void TtsServiceImpl::Client::OnSpeakComplete(const std::shared_ptr<TtsSpeaker>& speaker,
+                                             uint64_t token, SayCallback cbk) {
   auto iter = active_speakers_.find(speaker);
 
   if (iter == active_speakers_.end()) {

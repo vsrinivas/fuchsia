@@ -26,11 +26,9 @@ constexpr float kInitialWindowYPos = 240;
 // dispatcher's single thread.
 class Frame {
  public:
-  Frame(async_dispatcher_t* dispatcher, ::zx::eventpair& release_eventpair,
-        fit::closure on_done)
+  Frame(async_dispatcher_t* dispatcher, ::zx::eventpair& release_eventpair, fit::closure on_done)
       : wait_(this), on_done_(std::move(on_done)) {
-    zx_status_t status =
-        release_eventpair.duplicate(ZX_RIGHT_SAME_RIGHTS, &release_eventpair_);
+    zx_status_t status = release_eventpair.duplicate(ZX_RIGHT_SAME_RIGHTS, &release_eventpair_);
     if (status != ZX_OK) {
       FXL_PLOG(FATAL, status) << "::zx::event::duplicate() failed";
       FXL_NOTREACHED();
@@ -62,15 +60,14 @@ class Frame {
   // Normally this runs when the remote end of the eventpair is closed.  In
   // addition, when the dispatcher shuts down, if this Frame is still waiting,
   // this callback runs and is passed status ZX_ERR_CANCELED.
-  void WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                   zx_status_t status, const zx_packet_signal_t* signal) {
+  void WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                   const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
       if (status == ZX_ERR_CANCELED) {
         // Probably normal if this is not happening until dispatcher shutdown.
         //
         // TODO(dustingreen): Mute this output if |dispatcher| is shutting down.
-        FXL_LOG(INFO)
-            << "WaitHandler() sees ZX_ERR_CANCELED (normal if shutting down)";
+        FXL_LOG(INFO) << "WaitHandler() sees ZX_ERR_CANCELED (normal if shutting down)";
       } else {
         FXL_PLOG(INFO, status) << "WaitHandler() sees failure";
       }
@@ -95,23 +92,20 @@ class Frame {
 
 }  // namespace
 
-std::unique_ptr<FrameSinkView> FrameSinkView::Create(
-    scenic::ViewContext context, FrameSink* parent, async::Loop* main_loop) {
-  return std::unique_ptr<FrameSinkView>(
-      new FrameSinkView(std::move(context), parent, main_loop));
+std::unique_ptr<FrameSinkView> FrameSinkView::Create(scenic::ViewContext context, FrameSink* parent,
+                                                     async::Loop* main_loop) {
+  return std::unique_ptr<FrameSinkView>(new FrameSinkView(std::move(context), parent, main_loop));
 }
 
 FrameSinkView::~FrameSinkView() { parent_->RemoveFrameSinkView(this); }
 
-void FrameSinkView::PutFrame(
-    uint32_t image_id, zx_time_t present_time, const zx::vmo& vmo,
-    uint64_t vmo_offset,
-    const fuchsia::media::VideoUncompressedFormat& video_format,
-    fit::closure on_done) {
+void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx::vmo& vmo,
+                             uint64_t vmo_offset,
+                             const fuchsia::media::VideoUncompressedFormat& video_format,
+                             fit::closure on_done) {
   FXL_DCHECK((image_id != FrameSink::kBlankFrameImageId) || !on_done);
 
-  fuchsia::images::PixelFormat pixel_format =
-      fuchsia::images::PixelFormat::BGRA_8;
+  fuchsia::images::PixelFormat pixel_format = fuchsia::images::PixelFormat::BGRA_8;
   uint32_t fourcc = video_format.fourcc;
   switch (fourcc) {
     case make_fourcc('N', 'V', '1', '2'):
@@ -124,9 +118,8 @@ void FrameSinkView::PutFrame(
       pixel_format = fuchsia::images::PixelFormat::YV12;
       break;
     default:
-      FXL_CHECK(false) << "fourcc conversion not implemented - fourcc: "
-                       << fourcc_to_string(fourcc) << " in hex: 0x" << std::hex
-                       << std::setw(8) << fourcc;
+      FXL_CHECK(false) << "fourcc conversion not implemented - fourcc: " << fourcc_to_string(fourcc)
+                       << " in hex: 0x" << std::hex << std::setw(8) << fourcc;
       FXL_NOTREACHED();
       pixel_format = fuchsia::images::PixelFormat::BGRA_8;
       break;
@@ -139,8 +132,7 @@ void FrameSinkView::PutFrame(
   };
 
   FXL_VLOG(3) << "#### image_id: " << image_id << " width: " << image_info.width
-              << " height: " << image_info.height
-              << " stride: " << image_info.stride;
+              << " height: " << image_info.height << " stride: " << image_info.stride;
 
   ::zx::vmo image_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_vmo);
@@ -156,14 +148,12 @@ void FrameSinkView::PutFrame(
     FXL_NOTREACHED();
   }
 
-  image_pipe_->AddImage(image_id, image_info, std::move(image_vmo), vmo_offset,
-                        image_vmo_size,
+  image_pipe_->AddImage(image_id, image_info, std::move(image_vmo), vmo_offset, image_vmo_size,
                         fuchsia::images::MemoryType::HOST_MEMORY);
 
   ::zx::eventpair release_frame_client;
   ::zx::eventpair release_frame_server;
-  status =
-      ::zx::eventpair::create(0, &release_frame_client, &release_frame_server);
+  status = ::zx::eventpair::create(0, &release_frame_client, &release_frame_server);
   if (status != ZX_OK) {
     FXL_PLOG(FATAL, status) << "::zx::eventpair::create() failed";
     FXL_NOTREACHED();
@@ -207,9 +197,8 @@ void FrameSinkView::PutFrame(
     image_pipe_->RemoveImage(image_id);
     on_done();
   };
-  auto frame =
-      std::make_unique<Frame>(main_loop_->dispatcher(), release_frame_client,
-                              std::move(on_done_wrapper));
+  auto frame = std::make_unique<Frame>(main_loop_->dispatcher(), release_frame_client,
+                                       std::move(on_done_wrapper));
 
   // TODO(dustingreen): When release_frame_server_hack is gone, change these to
   // use "auto".  For now, we'll leave the types explicit to make the temp hack
@@ -223,13 +212,11 @@ void FrameSinkView::PutFrame(
   // of how fast they're decoding - it's fairly useless for determining the max
   // presentation frame rate - that's not the point here.
   image_pipe_->PresentImage(
-      image_id, present_time, std::move(acquire_fences),
-      std::move(release_fences),
+      image_id, present_time, std::move(acquire_fences), std::move(release_fences),
       [image_id](fuchsia::images::PresentationInfo presentation_info) {
         FXL_VLOG(3) << "PresentImageCallback() called - presentation_time: "
                     << presentation_info.presentation_time
-                    << " presenation_interval: "
-                    << presentation_info.presentation_interval
+                    << " presenation_interval: " << presentation_info.presentation_interval
                     << " image_id: " << image_id;
       });
 
@@ -237,8 +224,7 @@ void FrameSinkView::PutFrame(
   (void)frame.release();
 }
 
-FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent,
-                             async::Loop* main_loop)
+FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent, async::Loop* main_loop)
     : BaseView(std::move(context), "FrameSinkView"),
       parent_(parent),
       main_loop_(main_loop),
@@ -269,8 +255,7 @@ FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent,
   parent_->AddFrameSinkView(this);
 }
 
-void FrameSinkView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
+void FrameSinkView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size()) {
     return;
   }

@@ -36,105 +36,96 @@ constexpr const char* const kAllowedEnvironmentVars[] = {
     TEST_ENV_NAME,
 };
 
-} // namespace
+}  // namespace
 
 std::unique_ptr<Result> PosixRunTest(const char* argv[],
-                                     const char*, // output_dir
-                                     const char* output_filename,
-                                     const char* test_name) {
-    int status;
-    const char* path = argv[0];
-    FILE* output_file = nullptr;
+                                     const char*,  // output_dir
+                                     const char* output_filename, const char* test_name) {
+  int status;
+  const char* path = argv[0];
+  FILE* output_file = nullptr;
 
-    // Initialize |file_actions|, which dictate what I/O will be performed in the
-    // launched process, and ensure its destruction on function exit.
-    posix_spawn_file_actions_t file_actions;
-    if ((status = posix_spawn_file_actions_init(&file_actions))) {
-        fprintf(stderr, "FAILURE: posix_spawn_file_actions_init failed: %s\n",
-               strerror(status));
-        return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
-    }
+  // Initialize |file_actions|, which dictate what I/O will be performed in the
+  // launched process, and ensure its destruction on function exit.
+  posix_spawn_file_actions_t file_actions;
+  if ((status = posix_spawn_file_actions_init(&file_actions))) {
+    fprintf(stderr, "FAILURE: posix_spawn_file_actions_init failed: %s\n", strerror(status));
+    return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
+  }
 
-    auto auto_tidy = fbl::MakeAutoCall([&] {
-        posix_spawn_file_actions_destroy(&file_actions);
-        if (output_file != nullptr) {
-            fclose(output_file);
-        }
-    });
+  auto auto_tidy = fbl::MakeAutoCall([&] {
+    posix_spawn_file_actions_destroy(&file_actions);
+    if (output_file != nullptr) {
+      fclose(output_file);
+    }
+  });
 
-    // Construct the array of allowed environment variable strings of the
-    // form "<name>=<value>".  The env_strings array just keeps the underlying
-    // std::string objects alive so the envp pointers remain valid.
-    std::string env_strings[fbl::count_of(kAllowedEnvironmentVars)];
-    const char* envp[fbl::count_of(env_strings) + 1];  // +1 for null terminator.
-    size_t i = 0;
-    for (const char* var : kAllowedEnvironmentVars) {
-        const char* val = getenv(var);
-        if (val) {
-            env_strings[i] = std::string(var) + "=" + val;
-            envp[i] = env_strings[i].c_str();
-            ++i;
-        }
+  // Construct the array of allowed environment variable strings of the
+  // form "<name>=<value>".  The env_strings array just keeps the underlying
+  // std::string objects alive so the envp pointers remain valid.
+  std::string env_strings[fbl::count_of(kAllowedEnvironmentVars)];
+  const char* envp[fbl::count_of(env_strings) + 1];  // +1 for null terminator.
+  size_t i = 0;
+  for (const char* var : kAllowedEnvironmentVars) {
+    const char* val = getenv(var);
+    if (val) {
+      env_strings[i] = std::string(var) + "=" + val;
+      envp[i] = env_strings[i].c_str();
+      ++i;
     }
-    envp[i] = nullptr;
+  }
+  envp[i] = nullptr;
 
-    // Tee output.
-    if (output_filename != nullptr) {
-        output_file = fopen(output_filename, "w");
-        if (output_file == nullptr) {
-            return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0, 0);
-        }
-        if ((status = posix_spawn_file_actions_addopen(
-                 &file_actions, STDOUT_FILENO, output_filename,
-                 O_WRONLY | O_CREAT | O_TRUNC, 0644))) {
-            fprintf(stderr, "FAILURE: posix_spawn_file_actions_addopen failed: %s\n",
-                   strerror(status));
-            return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
-        }
-        if ((status = posix_spawn_file_actions_adddup2(&file_actions, STDOUT_FILENO,
-                                                       STDERR_FILENO))) {
-            fprintf(stderr, "FAILURE: posix_spawn_file_actions_adddup2 failed: %s\n",
-                   strerror(status));
-            return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
-        }
+  // Tee output.
+  if (output_filename != nullptr) {
+    output_file = fopen(output_filename, "w");
+    if (output_file == nullptr) {
+      return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0, 0);
     }
+    if ((status = posix_spawn_file_actions_addopen(&file_actions, STDOUT_FILENO, output_filename,
+                                                   O_WRONLY | O_CREAT | O_TRUNC, 0644))) {
+      fprintf(stderr, "FAILURE: posix_spawn_file_actions_addopen failed: %s\n", strerror(status));
+      return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
+    }
+    if ((status = posix_spawn_file_actions_adddup2(&file_actions, STDOUT_FILENO, STDERR_FILENO))) {
+      fprintf(stderr, "FAILURE: posix_spawn_file_actions_adddup2 failed: %s\n", strerror(status));
+      return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
+    }
+  }
 
-    // Launch the test subprocess.
-    pid_t test_pid;
+  // Launch the test subprocess.
+  pid_t test_pid;
 
-    const auto start_time = std::chrono::steady_clock::now();
-    if ((status = posix_spawn(&test_pid, path, &file_actions, nullptr,
-                              const_cast<char**>(argv),
-                              const_cast<char**>(envp)))) {
-        fprintf(stderr, "FAILURE: posix_spawn failed: %s\n", strerror(status));
-        return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
-    }
+  const auto start_time = std::chrono::steady_clock::now();
+  if ((status = posix_spawn(&test_pid, path, &file_actions, nullptr, const_cast<char**>(argv),
+                            const_cast<char**>(envp)))) {
+    fprintf(stderr, "FAILURE: posix_spawn failed: %s\n", strerror(status));
+    return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
+  }
 
-    if (waitpid(test_pid, &status, WUNTRACED | WCONTINUED) == -1) {
-        fprintf(stderr, "FAILURE: waitpid failed: %s\n", strerror(errno));
-        return std::make_unique<Result>(test_name, FAILED_TO_WAIT, 0, 0);
-    }
-    if (WIFEXITED(status)) {
-        int return_code = WEXITSTATUS(status);
-        LaunchStatus launch_status =
-            return_code ? FAILED_NONZERO_RETURN_CODE : SUCCESS;
-        const auto end_time = std::chrono::steady_clock::now();
-        const auto duration = end_time - start_time;
-        const int64_t millis =
-            std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-        return std::make_unique<Result>(test_name, launch_status, return_code, millis);
-    }
-    if (WIFSIGNALED(status)) {
-        fprintf(stderr, "FAILURE: test process killed by signal %d\n", WTERMSIG(status));
-        return std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, 1, 0);
-    }
-    if (WIFSTOPPED(status)) {
-        fprintf(stderr, "FAILURE: test process stopped by signal %d\n", WSTOPSIG(status));
-        return std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, 1, 0);
-    }
+  if (waitpid(test_pid, &status, WUNTRACED | WCONTINUED) == -1) {
+    fprintf(stderr, "FAILURE: waitpid failed: %s\n", strerror(errno));
+    return std::make_unique<Result>(test_name, FAILED_TO_WAIT, 0, 0);
+  }
+  if (WIFEXITED(status)) {
+    int return_code = WEXITSTATUS(status);
+    LaunchStatus launch_status = return_code ? FAILED_NONZERO_RETURN_CODE : SUCCESS;
+    const auto end_time = std::chrono::steady_clock::now();
+    const auto duration = end_time - start_time;
+    const int64_t millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    return std::make_unique<Result>(test_name, launch_status, return_code, millis);
+  }
+  if (WIFSIGNALED(status)) {
+    fprintf(stderr, "FAILURE: test process killed by signal %d\n", WTERMSIG(status));
+    return std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, 1, 0);
+  }
+  if (WIFSTOPPED(status)) {
+    fprintf(stderr, "FAILURE: test process stopped by signal %d\n", WSTOPSIG(status));
+    return std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, 1, 0);
+  }
 
-    fprintf(stderr, "FAILURE: test process with unexpected status: %#x", status);
-    return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0, 0);
+  fprintf(stderr, "FAILURE: test process with unexpected status: %#x", status);
+  return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0, 0);
 }
 
-} // namespace runtests
+}  // namespace runtests

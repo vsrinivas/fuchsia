@@ -15,8 +15,7 @@ namespace sshd_host {
 constexpr zx_rights_t kChildJobRights =
     ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_DESTROY | ZX_RIGHT_MANAGE_JOB;
 
-zx_status_t make_child_job(const zx::job& parent, std::string name,
-                           zx::job* job);
+zx_status_t make_child_job(const zx::job& parent, std::string name, zx::job* job);
 
 // Service relies on the default async dispatcher and is not thread safe.
 class Service {

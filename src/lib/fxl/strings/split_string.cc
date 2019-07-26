@@ -20,9 +20,7 @@ std::string PieceToOutputType<std::string>(StringView view) {
   return view.ToString();
 }
 
-size_t FindFirstOf(StringView view, char c, size_t pos) {
-  return view.find(c, pos);
-}
+size_t FindFirstOf(StringView view, char c, size_t pos) { return view.find(c, pos); }
 
 size_t FindFirstOf(StringView view, StringView one_of, size_t pos) {
   return view.find_first_of(one_of, pos);
@@ -30,8 +28,7 @@ size_t FindFirstOf(StringView view, StringView one_of, size_t pos) {
 
 template <typename Str, typename OutputStringType, typename DelimiterType>
 std::vector<OutputStringType> SplitStringT(Str src, DelimiterType delimiter,
-                                           WhiteSpaceHandling whitespace,
-                                           SplitResult result_type) {
+                                           WhiteSpaceHandling whitespace, SplitResult result_type) {
   std::vector<OutputStringType> result;
   if (src.empty())
     return result;
@@ -60,26 +57,23 @@ std::vector<OutputStringType> SplitStringT(Str src, DelimiterType delimiter,
 
 }  // namespace
 
-std::vector<std::string> SplitStringCopy(StringView input,
-                                         StringView separators,
-                                         WhiteSpaceHandling whitespace,
-                                         SplitResult result_type) {
+std::vector<std::string> SplitStringCopy(StringView input, StringView separators,
+                                         WhiteSpaceHandling whitespace, SplitResult result_type) {
   if (separators.size() == 1) {
-    return SplitStringT<StringView, std::string, char>(input, separators[0],
-                                                       whitespace, result_type);
+    return SplitStringT<StringView, std::string, char>(input, separators[0], whitespace,
+                                                       result_type);
   }
-  return SplitStringT<StringView, std::string, StringView>(
-      input, separators, whitespace, result_type);
+  return SplitStringT<StringView, std::string, StringView>(input, separators, whitespace,
+                                                           result_type);
 }
 std::vector<StringView> SplitString(StringView input, StringView separators,
-                                    WhiteSpaceHandling whitespace,
-                                    SplitResult result_type) {
+                                    WhiteSpaceHandling whitespace, SplitResult result_type) {
   if (separators.size() == 1) {
-    return SplitStringT<StringView, StringView, char>(input, separators[0],
-                                                      whitespace, result_type);
+    return SplitStringT<StringView, StringView, char>(input, separators[0], whitespace,
+                                                      result_type);
   }
-  return SplitStringT<StringView, StringView, StringView>(
-      input, separators, whitespace, result_type);
+  return SplitStringT<StringView, StringView, StringView>(input, separators, whitespace,
+                                                          result_type);
 }
 
 }  // namespace fxl

@@ -18,22 +18,22 @@ class I2cDevice;
 using I2cDeviceType = ddk::Device<I2cDevice, ddk::Unbindable>;
 
 class I2cDevice : public I2cDeviceType {
-public:
-    I2cDevice(zx_device_t* parent, const i2c_impl_protocol_t* i2c)
-        : I2cDeviceType(parent), i2c_(i2c) {}
+ public:
+  I2cDevice(zx_device_t* parent, const i2c_impl_protocol_t* i2c)
+      : I2cDeviceType(parent), i2c_(i2c) {}
 
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    void DdkUnbind();
-    void DdkRelease();
+  void DdkUnbind();
+  void DdkRelease();
 
-private:
-    zx_status_t Init(ddk::I2cImplProtocolClient i2c);
-    void AddChildren();
+ private:
+  zx_status_t Init(ddk::I2cImplProtocolClient i2c);
+  void AddChildren();
 
-    const ddk::I2cImplProtocolClient i2c_;
-    // List of I2C buses.
-    fbl::Vector<fbl::RefPtr<I2cBus>> i2c_buses_;
+  const ddk::I2cImplProtocolClient i2c_;
+  // List of I2C buses.
+  fbl::Vector<fbl::RefPtr<I2cBus>> i2c_buses_;
 };
 
-} // namespace i2c
+}  // namespace i2c

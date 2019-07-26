@@ -15,45 +15,45 @@ constexpr uint64_t kVPartition = 15;
 constexpr uint64_t kVSlice = 25;
 
 TEST(SliceEntryTest, DefaultsToUnallocatedAndZeroed) {
-    SliceEntry entry = SliceEntry::Create();
-    ASSERT_FALSE(entry.IsAllocated());
-    ASSERT_TRUE(entry.IsFree());
-    ASSERT_EQ(entry.VPartition(), 0);
-    ASSERT_EQ(entry.VSlice(), 0);
+  SliceEntry entry = SliceEntry::Create();
+  ASSERT_FALSE(entry.IsAllocated());
+  ASSERT_TRUE(entry.IsFree());
+  ASSERT_EQ(entry.VPartition(), 0);
+  ASSERT_EQ(entry.VSlice(), 0);
 }
 
 TEST(SliceEntryTest, CreateAllocatesAndSetsVSliceAndVPartition) {
-    SliceEntry entry = SliceEntry::Create(kVPartition, kVSlice);
-    EXPECT_TRUE(entry.IsAllocated());
-    EXPECT_FALSE(entry.IsFree());
-    EXPECT_EQ(entry.VPartition(), kVPartition);
-    EXPECT_EQ(entry.VSlice(), kVSlice);
+  SliceEntry entry = SliceEntry::Create(kVPartition, kVSlice);
+  EXPECT_TRUE(entry.IsAllocated());
+  EXPECT_FALSE(entry.IsFree());
+  EXPECT_EQ(entry.VPartition(), kVPartition);
+  EXPECT_EQ(entry.VSlice(), kVSlice);
 }
 
 TEST(SliceEntryTest, SetAllocatesAndSetsVSliceAndVPartition) {
-    SliceEntry entry = SliceEntry::Create();
-    ASSERT_TRUE(entry.IsFree());
-    ASSERT_EQ(entry.VPartition(), 0);
-    ASSERT_EQ(entry.VSlice(), 0);
+  SliceEntry entry = SliceEntry::Create();
+  ASSERT_TRUE(entry.IsFree());
+  ASSERT_EQ(entry.VPartition(), 0);
+  ASSERT_EQ(entry.VSlice(), 0);
 
-    entry.Set(kVPartition, kVSlice);
+  entry.Set(kVPartition, kVSlice);
 
-    EXPECT_TRUE(entry.IsAllocated());
-    EXPECT_FALSE(entry.IsFree());
-    EXPECT_EQ(entry.VPartition(), kVPartition);
-    EXPECT_EQ(entry.VSlice(), kVSlice);
+  EXPECT_TRUE(entry.IsAllocated());
+  EXPECT_FALSE(entry.IsFree());
+  EXPECT_EQ(entry.VPartition(), kVPartition);
+  EXPECT_EQ(entry.VSlice(), kVSlice);
 }
 
 TEST(SliceEntryTest, ReleaseZeroesAndDeallocates) {
-    SliceEntry entry = SliceEntry::Create(kVPartition, kVSlice);
+  SliceEntry entry = SliceEntry::Create(kVPartition, kVSlice);
 
-    entry.Release();
+  entry.Release();
 
-    ASSERT_FALSE(entry.IsAllocated());
-    ASSERT_TRUE(entry.IsFree());
-    ASSERT_EQ(entry.VPartition(), 0);
-    ASSERT_EQ(entry.VSlice(), 0);
+  ASSERT_FALSE(entry.IsAllocated());
+  ASSERT_TRUE(entry.IsFree());
+  ASSERT_EQ(entry.VPartition(), 0);
+  ASSERT_EQ(entry.VSlice(), 0);
 }
 
-} // namespace
-} // namespace fvm
+}  // namespace
+}  // namespace fvm

@@ -25,9 +25,9 @@
 #include <zircon/types.h>
 
 enum {
-    FT_INT_PIN,
-    FT_RESET_PIN,
-    FT_PIN_COUNT,
+  FT_INT_PIN,
+  FT_RESET_PIN,
+  FT_PIN_COUNT,
 };
 
 // clang-format off
@@ -63,65 +63,64 @@ enum {
 namespace ft {
 class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
                  public ddk::HidbusProtocol<FtDevice, ddk::base_protocol> {
-public:
-    FtDevice(zx_device_t* device);
+ public:
+  FtDevice(zx_device_t* device);
 
-    static zx_status_t Create(void* ctx, zx_device_t* device);
+  static zx_status_t Create(void* ctx, zx_device_t* device);
 
-    void DdkRelease();
-    void DdkUnbind() __TA_EXCLUDES(client_lock_);
+  void DdkRelease();
+  void DdkUnbind() __TA_EXCLUDES(client_lock_);
 
-    // Hidbus required methods
-    void HidbusStop();
-    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
-                                size_t len, size_t* out_len);
-    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
-                                size_t len);
-    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidbusGetProtocol(uint8_t* protocol);
-    zx_status_t HidbusSetProtocol(uint8_t protocol);
-    zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) __TA_EXCLUDES(client_lock_);
-    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(client_lock_);
+  // Hidbus required methods
+  void HidbusStop();
+  zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+  zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+                              size_t* out_len);
+  zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+  zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+  zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+  zx_status_t HidbusGetProtocol(uint8_t* protocol);
+  zx_status_t HidbusSetProtocol(uint8_t protocol);
+  zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) __TA_EXCLUDES(client_lock_);
+  zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(client_lock_);
 
-private:
-    /* Note: the focaltouch device is connected via i2c and is NOT a HID
-        device.  This driver reads a collection of data from the data and
-        parses it into a message which will be sent up the stack.  This message
-        complies with a HID descriptor that manually scripted (i.e. - not
-        reported by the device iteself).
-    */
-    // Number of touch points this device can report simultaneously
-    static constexpr uint32_t kMaxPoints = 5;
-    // Size of each individual touch record (note: there are kMaxPoints of
-    //  them) on the i2c bus.  This is not the HID report size.
-    static constexpr uint32_t kFingerRptSize = 6;
+ private:
+  /* Note: the focaltouch device is connected via i2c and is NOT a HID
+      device.  This driver reads a collection of data from the data and
+      parses it into a message which will be sent up the stack.  This message
+      complies with a HID descriptor that manually scripted (i.e. - not
+      reported by the device iteself).
+  */
+  // Number of touch points this device can report simultaneously
+  static constexpr uint32_t kMaxPoints = 5;
+  // Size of each individual touch record (note: there are kMaxPoints of
+  //  them) on the i2c bus.  This is not the HID report size.
+  static constexpr uint32_t kFingerRptSize = 6;
 
-    static constexpr size_t kMaxI2cTransferLength = 8;
+  static constexpr size_t kMaxI2cTransferLength = 8;
 
-    zx_status_t Init();
-    zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
+  zx_status_t Init();
+  zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
 
-    uint8_t Read(uint8_t addr);
-    zx_status_t Read(uint8_t addr, uint8_t* buf, size_t len);
+  uint8_t Read(uint8_t addr);
+  zx_status_t Read(uint8_t addr, uint8_t* buf, size_t len);
 
-    int Thread();
+  int Thread();
 
-    ft3x27_touch_t ft_rpt_ __TA_GUARDED(client_lock_);
-    void ParseReport(ft3x27_finger_t* rpt, uint8_t* buf);
+  ft3x27_touch_t ft_rpt_ __TA_GUARDED(client_lock_);
+  void ParseReport(ft3x27_finger_t* rpt, uint8_t* buf);
 
-    gpio_protocol_t gpios_[FT_PIN_COUNT];
-    zx::interrupt irq_;
-    i2c_protocol_t i2c_;
+  gpio_protocol_t gpios_[FT_PIN_COUNT];
+  zx::interrupt irq_;
+  i2c_protocol_t i2c_;
 
-    thrd_t thread_;
-    std::atomic<bool> running_;
+  thrd_t thread_;
+  std::atomic<bool> running_;
 
-    fbl::Mutex client_lock_;
-    ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(client_lock_);
+  fbl::Mutex client_lock_;
+  ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(client_lock_);
 
-    const uint8_t* descriptor_ = nullptr;
-    size_t descriptor_len_ = 0;
+  const uint8_t* descriptor_ = nullptr;
+  size_t descriptor_len_ = 0;
 };
-}
+}  // namespace ft

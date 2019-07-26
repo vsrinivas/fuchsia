@@ -19,13 +19,9 @@ CommandLine::CommandLine(const CommandLine& from) = default;
 
 CommandLine::CommandLine(CommandLine&& from) = default;
 
-CommandLine::CommandLine(const std::string& argv0,
-                         const std::vector<Option>& options,
+CommandLine::CommandLine(const std::string& argv0, const std::vector<Option>& options,
                          const std::vector<std::string>& positional_args)
-    : has_argv0_(true),
-      argv0_(argv0),
-      options_(options),
-      positional_args_(positional_args) {
+    : has_argv0_(true), argv0_(argv0), options_(options), positional_args_(positional_args) {
   for (size_t i = 0; i < options_.size(); i++)
     option_index_[options_[i].name] = i;
 }
@@ -53,8 +49,7 @@ bool CommandLine::GetOptionValue(StringView name, std::string* value) const {
   return true;
 }
 
-std::vector<fxl::StringView> CommandLine::GetOptionValues(
-    StringView name) const {
+std::vector<fxl::StringView> CommandLine::GetOptionValues(StringView name) const {
   std::vector<fxl::StringView> ret;
   for (const auto& option : options_) {
     if (option.name == name)
@@ -63,8 +58,8 @@ std::vector<fxl::StringView> CommandLine::GetOptionValues(
   return ret;
 }
 
-std::string CommandLine::GetOptionValueWithDefault(
-    StringView name, StringView default_value) const {
+std::string CommandLine::GetOptionValueWithDefault(StringView name,
+                                                   StringView default_value) const {
   size_t index;
   if (!HasOption(name, &index))
     return default_value.ToString();
@@ -116,8 +111,8 @@ bool CommandLineBuilder::ProcessArg(const std::string& arg) {
     return false;
   }
 
-  options_.push_back(CommandLine::Option(arg.substr(2u, equals_pos - 2u),
-                                         arg.substr(equals_pos + 1u)));
+  options_.push_back(
+      CommandLine::Option(arg.substr(2u, equals_pos - 2u), arg.substr(equals_pos + 1u)));
   return false;
 }
 
@@ -135,8 +130,7 @@ std::vector<std::string> CommandLineToArgv(const CommandLine& command_line) {
 
   std::vector<std::string> argv;
   const std::vector<CommandLine::Option>& options = command_line.options();
-  const std::vector<std::string>& positional_args =
-      command_line.positional_args();
+  const std::vector<std::string>& positional_args = command_line.positional_args();
   // Reserve space for argv[0], options, maybe a "--" (if needed), and the
   // positional arguments.
   argv.reserve(1u + options.size() + 1u + positional_args.size());

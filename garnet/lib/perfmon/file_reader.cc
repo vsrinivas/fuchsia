@@ -15,18 +15,14 @@
 
 namespace perfmon {
 
-bool FileReader::Create(FileNameProducer file_name_producer,
-                        uint32_t num_traces,
+bool FileReader::Create(FileNameProducer file_name_producer, uint32_t num_traces,
                         std::unique_ptr<FileReader>* out_reader) {
   out_reader->reset(new FileReader(std::move(file_name_producer), num_traces));
   return true;
 }
 
-FileReader::FileReader(FileNameProducer file_name_producer,
-                       uint32_t num_traces)
-    : Reader(num_traces),
-      file_name_producer_(std::move(file_name_producer)) {
-}
+FileReader::FileReader(FileNameProducer file_name_producer, uint32_t num_traces)
+    : Reader(num_traces), file_name_producer_(std::move(file_name_producer)) {}
 
 bool FileReader::MapBuffer(const std::string& name, uint32_t trace_num) {
   if (!UnmapBuffer()) {
@@ -36,8 +32,8 @@ bool FileReader::MapBuffer(const std::string& name, uint32_t trace_num) {
   std::string file_name = file_name_producer_(trace_num);
   int raw_fd = open(file_name.c_str(), O_RDONLY);
   if (raw_fd < 0) {
-    FXL_LOG(ERROR) << name << ": Unable to open buffer file: " << file_name
-                   << ": " << strerror(errno);
+    FXL_LOG(ERROR) << name << ": Unable to open buffer file: " << file_name << ": "
+                   << strerror(errno);
     return false;
   }
   fxl::UniqueFD fd(raw_fd);
@@ -49,21 +45,18 @@ bool FileReader::MapBuffer(const std::string& name, uint32_t trace_num) {
 #else
   void* buffer = mmap(nullptr, file_size_, PROT_READ, MAP_PRIVATE, raw_fd, 0);
   if (buffer == reinterpret_cast<void*>(-1)) {
-    FXL_VLOG(2) << name << ": Unable to map buffer file: " << file_name
-                << ": " << strerror(errno);
+    FXL_VLOG(2) << name << ": Unable to map buffer file: " << file_name << ": " << strerror(errno);
   }
 #endif
   if (buffer == reinterpret_cast<void*>(-1)) {
     // Workaround this by just reading in the file.
-    std::pair<uint8_t*, intptr_t> bytes =
-      files::ReadFileDescriptorToBytes(raw_fd);
+    std::pair<uint8_t*, intptr_t> bytes = files::ReadFileDescriptorToBytes(raw_fd);
     if (bytes.first == nullptr) {
       FXL_LOG(ERROR) << "Error reading: " << file_name;
       return false;
     }
     if (static_cast<size_t>(bytes.second) != file_size_) {
-      FXL_LOG(ERROR) << "Error reading: " << file_name
-                     << ": got " << bytes.second
+      FXL_LOG(ERROR) << "Error reading: " << file_name << ": got " << bytes.second
                      << " bytes instead of expected " << file_size_;
       return false;
     }
@@ -74,8 +67,7 @@ bool FileReader::MapBuffer(const std::string& name, uint32_t trace_num) {
   }
   buffer_contents_ = buffer;
 
-  ReaderStatus status = BufferReader::Create(name, buffer_contents_,
-                                             file_size_, &buffer_reader_);
+  ReaderStatus status = BufferReader::Create(name, buffer_contents_, file_size_, &buffer_reader_);
   if (status != ReaderStatus::kOk) {
     return false;
   }

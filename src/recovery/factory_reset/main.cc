@@ -17,13 +17,10 @@ int main(int argc, const char** argv) {
   fbl::unique_fd dev_fd;
   dev_fd.reset(open("/dev", O_RDONLY | O_DIRECTORY));
 
-  std::unique_ptr<sys::ComponentContext> context =
-      sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
-  auto admin =
-      context->svc()->Connect<fuchsia::device::manager::Administrator>();
-  factory_reset::FactoryReset factory_reset(std::move(dev_fd),
-                                            std::move(admin));
+  auto admin = context->svc()->Connect<fuchsia::device::manager::Administrator>();
+  factory_reset::FactoryReset factory_reset(std::move(dev_fd), std::move(admin));
   fidl::BindingSet<fuchsia::recovery::FactoryReset> bindings;
   context->outgoing()->AddPublicService(bindings.GetHandler(&factory_reset));
   loop.Run();

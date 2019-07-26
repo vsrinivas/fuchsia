@@ -18,15 +18,14 @@ constexpr uint32_t kBufferLifetimeOrdinal = 1;
 
 class CodecPacketForTest : public CodecPacket {
  public:
-  CodecPacketForTest(uint32_t index)
-      : CodecPacket(kBufferLifetimeOrdinal, index) {}
+  CodecPacketForTest(uint32_t index) : CodecPacket(kBufferLifetimeOrdinal, index) {}
 };
 
 fuchsia::media::StreamBuffer StreamBufferOfSize(size_t size, uint32_t index) {
   zx::vmo vmo_handle;
   fzl::VmoMapper mapper;
-  zx_status_t err = mapper.CreateAndMap(
-      size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo_handle);
+  zx_status_t err =
+      mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo_handle);
   FXL_CHECK(err == ZX_OK) << "Failed to create and map vmo: " << err;
 
   fuchsia::media::StreamBufferDataVmo vmo;
@@ -48,8 +47,7 @@ fuchsia::media::StreamBuffer StreamBufferOfSize(size_t size, uint32_t index) {
 class CodecBufferForTest : public CodecBuffer {
  public:
   CodecBufferForTest(size_t size, uint32_t index)
-      : CodecBuffer(/*parent=*/nullptr, kOutputPort,
-                    StreamBufferOfSize(size, index)) {
+      : CodecBuffer(/*parent=*/nullptr, kOutputPort, StreamBufferOfSize(size, index)) {
     Init();
   }
 };
@@ -75,8 +73,7 @@ struct TestBuffers {
 TestBuffers Buffers(std::vector<size_t> sizes) {
   TestBuffers buffers;
   for (size_t i = 0; i < sizes.size(); ++i) {
-    buffers.buffers.push_back(
-        std::make_unique<CodecBufferForTest>(sizes[i], i));
+    buffers.buffers.push_back(std::make_unique<CodecBufferForTest>(sizes[i], i));
   }
   return buffers;
 }

@@ -51,8 +51,7 @@ TEST(BaseTypes, StreamId) {
   EXPECT_EQ((BinVec{2}), EncodeVarint(two));
 }
 
-static void RoundTrip(const RoutableMessage& rh, NodeId sender, NodeId receiver,
-                      Slice payload) {
+static void RoundTrip(const RoutableMessage& rh, NodeId sender, NodeId receiver, Slice payload) {
   auto enc = rh.Write(sender, receiver, payload);
   auto prs_status = RoutableMessage::Parse(enc, receiver, sender);
   EXPECT_TRUE(prs_status.is_ok()) << prs_status.AsStatus();
@@ -61,8 +60,8 @@ static void RoundTrip(const RoutableMessage& rh, NodeId sender, NodeId receiver,
 }
 
 TEST(RoutableMessage, PayloadWrite1) {
-  auto rh = std::move(RoutableMessage(NodeId(1)).AddDestination(
-      NodeId(2), StreamId(1), SeqNum(1, 10)));
+  auto rh =
+      std::move(RoutableMessage(NodeId(1)).AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10)));
   auto body = Slice::FromContainer({1, 2, 3});
   // encode locally
   EXPECT_EQ(Slice::FromContainer({// flags
@@ -81,8 +80,8 @@ TEST(RoutableMessage, PayloadWrite1) {
 }
 
 TEST(RoutableMessage, PayloadWrite2) {
-  auto rh = std::move(RoutableMessage(NodeId(1)).AddDestination(
-      NodeId(2), StreamId(1), SeqNum(1, 10)));
+  auto rh =
+      std::move(RoutableMessage(NodeId(1)).AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10)));
   auto body = Slice::FromContainer({1, 2, 3});
   // encode along a different route
   EXPECT_EQ(Slice::FromContainer({// flags
@@ -105,10 +104,9 @@ TEST(RoutableMessage, PayloadWrite2) {
 }
 
 TEST(RoutableMessage, PayloadWrite3) {
-  auto rh =
-      std::move(RoutableMessage(NodeId(1))
-                    .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10))
-                    .AddDestination(NodeId(3), StreamId(42), SeqNum(7, 10)));
+  auto rh = std::move(RoutableMessage(NodeId(1))
+                          .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10))
+                          .AddDestination(NodeId(3), StreamId(42), SeqNum(7, 10)));
   auto body = Slice::FromContainer({7, 8, 9});
   EXPECT_EQ(Slice::FromContainer({// flags
                                   (2 << 4),

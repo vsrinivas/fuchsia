@@ -26,8 +26,7 @@ std::atomic_int g_num_threads_running = 0;
 static void WaitPeerClosed(const zx::channel& channel) {
   // Wait for the test to close the channel.
   zx_signals_t pending;
-  zx_status_t status =
-      channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending);
+  zx_status_t status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Test helper: wait peer closed failed: "
                    << debugger_utils::ZxErrorString(status);
@@ -52,8 +51,7 @@ static void StartNThreadsThreadFunc(zx_handle_t eventpair, int num_threads) {
 
   // The main thread will close its side of |eventpair| when it's done.
   zx_signals_t pending;
-  status = zx_object_wait_one(eventpair, ZX_EVENTPAIR_PEER_CLOSED,
-                              ZX_TIME_INFINITE, &pending);
+  status = zx_object_wait_one(eventpair, ZX_EVENTPAIR_PEER_CLOSED, ZX_TIME_INFINITE, &pending);
   FXL_CHECK(status == ZX_OK);
 }
 
@@ -65,14 +63,12 @@ static int StartNThreads(zx::channel channel, int num_threads) {
   FXL_CHECK(zx::eventpair::create(0, &our_event, &their_event) == ZX_OK);
 
   for (int i = 0; i < num_threads; ++i) {
-    threads.emplace_back(std::thread{
-        StartNThreadsThreadFunc, their_event.get(), num_threads});
+    threads.emplace_back(std::thread{StartNThreadsThreadFunc, their_event.get(), num_threads});
   }
 
   // Wait for all threads to start.
   zx_signals_t pending;
-  zx_status_t status =
-      our_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &pending);
+  zx_status_t status = our_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &pending);
   FXL_CHECK(status == ZX_OK);
 
   // Notify test all threads are running.
@@ -138,8 +134,7 @@ int main(int argc, char* argv[]) {
       return EXIT_FAILURE;
     }
     int num_threads = 0;
-    if (!fxl::StringToNumberWithError(args[1], &num_threads) ||
-        num_threads < 1) {
+    if (!fxl::StringToNumberWithError(args[1], &num_threads) || num_threads < 1) {
       FXL_LOG(ERROR) << "Error parsing number of threads";
       return EXIT_FAILURE;
     }

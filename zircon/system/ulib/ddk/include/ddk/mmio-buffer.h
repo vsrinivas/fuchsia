@@ -10,18 +10,18 @@
 __BEGIN_CDECLS
 
 typedef struct {
-    // |vaddr| points to the content starting at |offset| in |vmo|.
-    void* vaddr;
-    zx_off_t offset;
-    size_t size;
-    zx_handle_t vmo;
+  // |vaddr| points to the content starting at |offset| in |vmo|.
+  void* vaddr;
+  zx_off_t offset;
+  size_t size;
+  zx_handle_t vmo;
 } mmio_buffer_t;
 
 typedef struct {
-    const mmio_buffer_t* mmio;
-    zx_handle_t pmt;
-    // |paddr| points to the content starting at |mmio->offset| in |mmio->vmo|.
-    zx_paddr_t paddr;
+  const mmio_buffer_t* mmio;
+  zx_handle_t pmt;
+  // |paddr| points to the content starting at |mmio->offset| in |mmio->vmo|.
+  zx_paddr_t paddr;
 } mmio_pinned_buffer_t;
 
 // Takes raw mmio resources, and maps it into address space. |offset| is the
@@ -29,8 +29,8 @@ typedef struct {
 // specifies the size of the mmio region. |offset| + |size| must be less than
 // or equal to the size of |vmo|.
 // Always consumes |vmo|, including in error cases.
-zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size,
-                             zx_handle_t vmo, uint32_t cache_policy);
+zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size, zx_handle_t vmo,
+                             uint32_t cache_policy);
 
 // Takes a physical region, and maps it into address space. |base| and |size|
 // must be page aligned.

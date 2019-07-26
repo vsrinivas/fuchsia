@@ -10,8 +10,7 @@ namespace ble = fuchsia::bluetooth::le;
 
 namespace bt_beacon_reader {
 
-std::unique_ptr<IBeaconDetection> IBeaconDetection::Create(
-    const ble::RemoteDevice& device) {
+std::unique_ptr<IBeaconDetection> IBeaconDetection::Create(const ble::RemoteDevice& device) {
   if (!device.advertising_data ||
       device.advertising_data->manufacturer_specific_data->size() != 1) {
     return nullptr;
@@ -45,8 +44,7 @@ void IBeaconDetection::Read(const std::vector<uint8_t>& data) {
   }
 }
 
-std::unique_ptr<TiltDetection> TiltDetection::Create(
-    const ble::RemoteDevice& device) {
+std::unique_ptr<TiltDetection> TiltDetection::Create(const ble::RemoteDevice& device) {
   std::unique_ptr<IBeaconDetection> beacon = IBeaconDetection::Create(device);
   if (!beacon) {
     return nullptr;
@@ -67,8 +65,7 @@ std::unique_ptr<TiltDetection> TiltDetection::Create(
 }
 
 void TiltDetection::Print() {
-  printf("Tilt %s: Temp: %dF, Gravity: %1.3f\n", color_string_.c_str(),
-         temperature_F_, gravity_);
+  printf("Tilt %s: Temp: %dF, Gravity: %1.3f\n", color_string_.c_str(), temperature_F_, gravity_);
 }
 
 void TiltDetection::Read(const std::unique_ptr<IBeaconDetection>& beacon) {

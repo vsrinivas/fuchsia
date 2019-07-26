@@ -5,7 +5,7 @@
 #pragma once
 
 // GPIO ranges for test drivers
-#define TEST_GPIO_1         0
-#define TEST_GPIO_2         1
-#define TEST_GPIO_3         2
-#define TEST_GPIO_4         3
+#define TEST_GPIO_1 0
+#define TEST_GPIO_2 1
+#define TEST_GPIO_3 2
+#define TEST_GPIO_4 3

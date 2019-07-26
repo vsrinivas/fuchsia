@@ -7,6 +7,6 @@
 
 namespace promise_example1 {
 void run();
-} // namespace promise_example1
+}  // namespace promise_example1
 
-#endif // ZIRCON_SYSTEM_UTEST_FIT_EXAMPLES_PROMISE_EXAMPLE1_H_
+#endif  // ZIRCON_SYSTEM_UTEST_FIT_EXAMPLES_PROMISE_EXAMPLE1_H_

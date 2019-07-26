@@ -58,9 +58,9 @@ namespace lockdep {
 //      }
 //  };
 //
-#define LOCK_DEP_POLICY_OPTION(lock_type, option_name, lock_policy)           \
-    ::lockdep::AmbiguousOption LOCK_DEP_GetLockPolicyType(lock_type*, void*); \
-    lock_policy LOCK_DEP_GetLockPolicyType(lock_type*, option_name*)
+#define LOCK_DEP_POLICY_OPTION(lock_type, option_name, lock_policy)         \
+  ::lockdep::AmbiguousOption LOCK_DEP_GetLockPolicyType(lock_type*, void*); \
+  lock_policy LOCK_DEP_GetLockPolicyType(lock_type*, option_name*)
 
 // Tags the given lock type with the given policy type. Like the macro above
 // the policy type describes how to acquire and release the lock and whether or
@@ -81,16 +81,14 @@ namespace lockdep {
 // the macro above.
 //
 #define LOCK_DEP_POLICY(lock_type, lock_policy) \
-    lock_policy LOCK_DEP_GetLockPolicyType(lock_type*, void*)
+  lock_policy LOCK_DEP_GetLockPolicyType(lock_type*, void*)
 
 // Looks up the lock policy for the given lock type and optional option type, as
 // specified by the macros above. This utility resolves the tagged types across
 // namespaces using ADL.
 template <typename Lock, typename Option = void>
-using LookupLockPolicy =
-    decltype(LOCK_DEP_GetLockPolicyType(
-        static_cast<RemoveGlobalReference<Lock>*>(nullptr),
-        static_cast<Option*>(nullptr)));
+using LookupLockPolicy = decltype(LOCK_DEP_GetLockPolicyType(
+    static_cast<RemoveGlobalReference<Lock>*>(nullptr), static_cast<Option*>(nullptr)));
 
 namespace internal {
 
@@ -109,36 +107,36 @@ using EnableIfHasAssertHeld = std::enable_if_t<HasAssertHeld<T>::value>;
 // Default lock policy type that describes how to acquire and release a basic
 // mutex with no additional state or flags.
 struct DefaultLockPolicy {
-    // This policy does not specify any additional state for a lock acquisition.
-    struct State {};
+  // This policy does not specify any additional state for a lock acquisition.
+  struct State {};
 
-    // Acquires the lock by calling its Acquire method. The extra state argument
-    // is unused.
-    template <typename Lock>
-    static bool Acquire(Lock* lock, State*) __TA_ACQUIRE(lock) {
-        lock->Acquire();
-        return true;
-    }
+  // Acquires the lock by calling its Acquire method. The extra state argument
+  // is unused.
+  template <typename Lock>
+  static bool Acquire(Lock* lock, State*) __TA_ACQUIRE(lock) {
+    lock->Acquire();
+    return true;
+  }
 
-    // Releases the lock by calling its Release method. The extra state argument
-    // is unused.
-    template <typename Lock>
-    static void Release(Lock* lock, State*) __TA_RELEASE(lock) {
-        lock->Release();
-    }
+  // Releases the lock by calling its Release method. The extra state argument
+  // is unused.
+  template <typename Lock>
+  static void Release(Lock* lock, State*) __TA_RELEASE(lock) {
+    lock->Release();
+  }
 
-    // Assert that the given lock is exclusively held by the current thread.
-    //
-    // Can be used both for runtime debugging checks, and also to help when
-    // thread safety analysis can't prove you are holding a lock. The underlying
-    // lock implementation may optimize away asserts in release builds.
-    //
-    // This will typically be invoked by users through the function
-    // "AssertHeld()" declared in "guard.h".
-    template <typename Lock, typename = internal::EnableIfHasAssertHeld<Lock>>
-    static void AssertHeld(const Lock& lock) __TA_ASSERT(lock) {
-        lock.AssertHeld();
-    }
+  // Assert that the given lock is exclusively held by the current thread.
+  //
+  // Can be used both for runtime debugging checks, and also to help when
+  // thread safety analysis can't prove you are holding a lock. The underlying
+  // lock implementation may optimize away asserts in release builds.
+  //
+  // This will typically be invoked by users through the function
+  // "AssertHeld()" declared in "guard.h".
+  template <typename Lock, typename = internal::EnableIfHasAssertHeld<Lock>>
+  static void AssertHeld(const Lock& lock) __TA_ASSERT(lock) {
+    lock.AssertHeld();
+  }
 };
 
 // Sentinel type used to prevent mixing LOCK_DEP_POLICY_OPTION and
@@ -150,14 +148,14 @@ struct AmbiguousOption {};
 // default policy applied to any lock that is not tagged with the macros above.
 template <typename Lock, typename Option = void, typename Enabled = void>
 struct LockPolicyType {
-    using Type = DefaultLockPolicy;
+  using Type = DefaultLockPolicy;
 };
 
 // Specialization that returns the lock policy type for the combination of
 // |Lock| and |Option| tagged by the macros above.
 template <typename Lock, typename Option>
 struct LockPolicyType<Lock, Option, std::void_t<LookupLockPolicy<Lock, Option>>> {
-    using Type = LookupLockPolicy<Lock, Option>;
+  using Type = LookupLockPolicy<Lock, Option>;
 };
 
 // Alias that selects the lock policy for the given |Lock| and optional
@@ -166,4 +164,4 @@ struct LockPolicyType<Lock, Option, std::void_t<LookupLockPolicy<Lock, Option>>>
 template <typename Lock, typename Option = void>
 using LockPolicy = typename LockPolicyType<Lock, Option>::Type;
 
-} // namespace lockdep
+}  // namespace lockdep

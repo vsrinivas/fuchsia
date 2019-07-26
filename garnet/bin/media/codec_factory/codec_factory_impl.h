@@ -17,23 +17,19 @@ namespace codec_factory {
 // implementation of this class to be stateful.
 class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
  public:
-  static void CreateSelfOwned(CodecFactoryApp* app,
-                              component::StartupContext* startup_context,
+  static void CreateSelfOwned(CodecFactoryApp* app, component::StartupContext* startup_context,
                               zx::channel request);
 
   // See .fidl file comments.
-  void CreateDecoder(
-      fuchsia::mediacodec::CreateDecoder_Params params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder) override;
+  void CreateDecoder(fuchsia::mediacodec::CreateDecoder_Params params,
+                     fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder) override;
 
   virtual void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
-      override;
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) override;
 
  private:
-  CodecFactoryImpl(CodecFactoryApp* app,
-                   component::StartupContext* startup_context,
+  CodecFactoryImpl(CodecFactoryApp* app, component::StartupContext* startup_context,
                    zx::channel channel);
   void OwnSelf(std::unique_ptr<CodecFactoryImpl> self);
 
@@ -56,8 +52,7 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
   //
   // TODO(dustingreen): Cover both cases mentioned above.  May have to punt a
   // stage of deletion to the async::Loop perhaps if this doesn't work.
-  typedef fidl::Binding<fuchsia::mediacodec::CodecFactory,
-                        std::unique_ptr<CodecFactoryImpl>>
+  typedef fidl::Binding<fuchsia::mediacodec::CodecFactory, std::unique_ptr<CodecFactoryImpl>>
       BindingType;
   std::unique_ptr<BindingType> binding_;
 };

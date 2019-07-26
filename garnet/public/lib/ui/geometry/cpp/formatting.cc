@@ -20,24 +20,22 @@ std::ostream& operator<<(std::ostream& os, const PointF& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Point3F& value) {
-  return os << "{x=" << value.x << ", y=" << value.y << ", z=" << value.z
-            << "}";
+  return os << "{x=" << value.x << ", y=" << value.y << ", z=" << value.z << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const Rect& value) {
-  return os << "{x=" << value.x << ", y=" << value.y
-            << ", width=" << value.width << ", height=" << value.height << "}";
+  return os << "{x=" << value.x << ", y=" << value.y << ", width=" << value.width
+            << ", height=" << value.height << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const RectF& value) {
-  return os << "{x=" << value.x << ", y=" << value.y
-            << ", width=" << value.width << ", height=" << value.height << "}";
+  return os << "{x=" << value.x << ", y=" << value.y << ", width=" << value.width
+            << ", height=" << value.height << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const RRectF& value) {
-  return os << "{x=" << value.x << ", y=" << value.y
-            << ", width=" << value.width << ", height=" << value.height
-            << ", top_left_radius_x=" << value.top_left_radius_x
+  return os << "{x=" << value.x << ", y=" << value.y << ", width=" << value.width
+            << ", height=" << value.height << ", top_left_radius_x=" << value.top_left_radius_x
             << ", top_left_radius_y=" << value.top_left_radius_y
             << ", top_right_radius_x=" << value.top_right_radius_x
             << ", top_right_radius_y=" << value.top_right_radius_y
@@ -56,13 +54,13 @@ std::ostream& operator<<(std::ostream& os, const SizeF& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Inset& value) {
-  return os << "{left=" << value.left << ", top=" << value.top
-            << ", right=" << value.right << ", bottom=" << value.bottom << "}";
+  return os << "{left=" << value.left << ", top=" << value.top << ", right=" << value.right
+            << ", bottom=" << value.bottom << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const InsetF& value) {
-  return os << "{left=" << value.left << ", top=" << value.top
-            << ", right=" << value.right << ", bottom=" << value.bottom << "}";
+  return os << "{left=" << value.left << ", top=" << value.top << ", right=" << value.right
+            << ", bottom=" << value.bottom << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const Transform& value) {

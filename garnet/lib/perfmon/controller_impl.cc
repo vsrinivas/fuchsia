@@ -14,19 +14,15 @@
 namespace perfmon {
 namespace internal {
 
-ControllerImpl::ControllerImpl(ControllerSyncPtr controller_ptr,
-                               uint32_t num_traces,
+ControllerImpl::ControllerImpl(ControllerSyncPtr controller_ptr, uint32_t num_traces,
                                uint32_t buffer_size_in_pages, Config config)
     : controller_ptr_(std::move(controller_ptr)),
       num_traces_(num_traces),
       buffer_size_in_pages_(buffer_size_in_pages),
       config_(std::move(config)),
-      weak_ptr_factory_(this) {
-}
+      weak_ptr_factory_(this) {}
 
-ControllerImpl::~ControllerImpl() {
-  Reset();
-}
+ControllerImpl::~ControllerImpl() { Reset(); }
 
 bool ControllerImpl::Start() {
   if (started_) {
@@ -96,13 +92,12 @@ void ControllerImpl::Reset() {
   Terminate();
 }
 
-bool ControllerImpl::GetBufferHandle(const std::string& name,
-                                     uint32_t trace_num, zx::vmo* out_vmo) {
+bool ControllerImpl::GetBufferHandle(const std::string& name, uint32_t trace_num,
+                                     zx::vmo* out_vmo) {
   uint32_t descriptor = trace_num;
   zx_status_t status = controller_ptr_->GetBufferHandle(descriptor, out_vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Getting buffer handle failed: status="
-                   << status;
+    FXL_LOG(ERROR) << "Getting buffer handle failed: status=" << status;
     return false;
   }
   if (!*out_vmo) {
@@ -114,8 +109,7 @@ bool ControllerImpl::GetBufferHandle(const std::string& name,
 
 std::unique_ptr<Reader> ControllerImpl::GetReader() {
   std::unique_ptr<Reader> reader;
-  if (DeviceReader::Create(weak_ptr_factory_.GetWeakPtr(),
-                           buffer_size_in_pages_, &reader)) {
+  if (DeviceReader::Create(weak_ptr_factory_.GetWeakPtr(), buffer_size_in_pages_, &reader)) {
     return reader;
   }
   return nullptr;

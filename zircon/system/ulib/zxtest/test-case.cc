@@ -30,13 +30,9 @@ TestCase::TestCase(const fbl::String& name, SetUpTestCaseFn set_up, TearDownTest
 TestCase::TestCase(TestCase&& other) = default;
 TestCase::~TestCase() = default;
 
-size_t TestCase::TestCount() const {
-  return test_infos_.size();
-}
+size_t TestCase::TestCount() const { return test_infos_.size(); }
 
-size_t TestCase::MatchingTestCount() const {
-  return selected_indexes_.size();
-}
+size_t TestCase::MatchingTestCount() const { return selected_indexes_.size(); }
 
 void TestCase::Filter(TestCase::FilterFn filter) {
   fbl::Vector<unsigned long> filtered_indexes;

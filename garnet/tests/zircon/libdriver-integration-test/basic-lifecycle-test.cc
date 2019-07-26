@@ -13,21 +13,20 @@
 
 namespace libdriver_integration_test {
 
-class BasicLifecycleTest : public IntegrationTest {
-};
+class BasicLifecycleTest : public IntegrationTest {};
 
 // This test checks what happens when a driver returns an error from bind.
 TEST_F(BasicLifecycleTest, BindError) {
-    std::unique_ptr<RootMockDevice> root_mock_device;
+  std::unique_ptr<RootMockDevice> root_mock_device;
 
-    auto promise = ExpectBind(&root_mock_device,
-        [](HookInvocation record, Completer<void> completer) {
-            completer.complete_ok();
-            ActionList actions;
-            actions.AppendReturnStatus(ZX_ERR_NOT_SUPPORTED);
-            return actions;
-        });
-    RunPromise(std::move(promise));
+  auto promise =
+      ExpectBind(&root_mock_device, [](HookInvocation record, Completer<void> completer) {
+        completer.complete_ok();
+        ActionList actions;
+        actions.AppendReturnStatus(ZX_ERR_NOT_SUPPORTED);
+        return actions;
+      });
+  RunPromise(std::move(promise));
 }
 
 // This test confirms that after a device has been added:
@@ -35,18 +34,18 @@ TEST_F(BasicLifecycleTest, BindError) {
 // 2) If the device calls device_remove() in the unbind() callback, its
 //    release() callback gets called later.
 TEST_F(BasicLifecycleTest, BindThenUnbindAndRemove) {
-    std::unique_ptr<RootMockDevice> root_mock_device;
-    std::unique_ptr<MockDevice> mock_child_device;
+  std::unique_ptr<RootMockDevice> root_mock_device;
+  std::unique_ptr<MockDevice> mock_child_device;
 
-    auto promise = CreateFirstChild(&root_mock_device, &mock_child_device
-    ).and_then([&]() -> Promise<void> {
+  auto promise =
+      CreateFirstChild(&root_mock_device, &mock_child_device).and_then([&]() -> Promise<void> {
         // Destroy the test device.  This should cause an unbind of the child
         // device.
         root_mock_device.reset();
         return ExpectUnbindThenRelease(mock_child_device);
-    });
+      });
 
-    RunPromise(std::move(promise));
+  RunPromise(std::move(promise));
 }
 
 // This test confirms that after a device has been added:
@@ -54,85 +53,94 @@ TEST_F(BasicLifecycleTest, BindThenUnbindAndRemove) {
 // 2) We can close the opened connection, and its close() hook gets called.
 // 3) Invoking device_remove causes the release hook to run.
 TEST_F(BasicLifecycleTest, BindThenOpenCloseAndRemove) {
-    std::unique_ptr<RootMockDevice> root_mock_device;
-    std::unique_ptr<MockDevice> mock_child_device;
-    fidl::InterfacePtr<fuchsia::io::Node> client;
+  std::unique_ptr<RootMockDevice> root_mock_device;
+  std::unique_ptr<MockDevice> mock_child_device;
+  fidl::InterfacePtr<fuchsia::io::Node> client;
 
-    auto promise = CreateFirstChild(&root_mock_device, &mock_child_device
-    ).and_then([&]() {
-        // Do the open and wait for acknowledgement that it was successful.
-        auto wait_for_open = DoOpen(mock_child_device->path(), &client);
-        auto expect_open = ExpectOpen(mock_child_device,
-            [](HookInvocation record, uint32_t flags, Completer<void> completer) {
-                completer.complete_ok();
-                ActionList actions;
-                actions.AppendReturnStatus(ZX_OK);
-                return actions;
+  auto promise =
+      CreateFirstChild(&root_mock_device, &mock_child_device)
+          .and_then([&]() {
+            // Do the open and wait for acknowledgement that it was successful.
+            auto wait_for_open = DoOpen(mock_child_device->path(), &client);
+            auto expect_open =
+                ExpectOpen(mock_child_device,
+                           [](HookInvocation record, uint32_t flags, Completer<void> completer) {
+                             completer.complete_ok();
+                             ActionList actions;
+                             actions.AppendReturnStatus(ZX_OK);
+                             return actions;
+                           });
+            return expect_open.and_then(std::move(wait_for_open));
+          })
+          .and_then([&]() {
+            // Close the newly opened connection
+            client.Unbind();
+            return ExpectClose(mock_child_device, [](HookInvocation record, uint32_t flags,
+                                                     Completer<void> completer) {
+              completer.complete_ok();
+              ActionList actions;
+              actions.AppendReturnStatus(ZX_OK);
+              return actions;
             });
-        return expect_open.and_then(std::move(wait_for_open));
-    }).and_then([&]() {
-        // Close the newly opened connection
-        client.Unbind();
-        return ExpectClose(mock_child_device,
-            [](HookInvocation record, uint32_t flags, Completer<void> completer) {
-                completer.complete_ok();
-                ActionList actions;
-                actions.AppendReturnStatus(ZX_OK);
-                return actions;
-            });
-    }).and_then([&]() -> Promise<void> {
-        // Destroy the test device.  This should cause an unbind of the child
-        // device.
-        root_mock_device.reset();
-        return ExpectUnbindThenRelease(mock_child_device);
-    });
+          })
+          .and_then([&]() -> Promise<void> {
+            // Destroy the test device.  This should cause an unbind of the child
+            // device.
+            root_mock_device.reset();
+            return ExpectUnbindThenRelease(mock_child_device);
+          });
 
-    RunPromise(std::move(promise));
+  RunPromise(std::move(promise));
 }
 
 // This test confirms that after a device has been added and opened, it won't be
 // released until after its been closed.
 TEST_F(BasicLifecycleTest, BindThenOpenRemoveThenClose) {
-    std::unique_ptr<RootMockDevice> root_mock_device;
-    std::unique_ptr<MockDevice> mock_child_device;
-    fidl::InterfacePtr<fuchsia::io::Node> client;
+  std::unique_ptr<RootMockDevice> root_mock_device;
+  std::unique_ptr<MockDevice> mock_child_device;
+  fidl::InterfacePtr<fuchsia::io::Node> client;
 
-    auto promise = CreateFirstChild(&root_mock_device, &mock_child_device
-    ).and_then([&]() {
-        // Do the open and wait for acknowledgement that it was successful.
-        auto wait_for_open = DoOpen(mock_child_device->path(), &client);
-        auto expect_open = ExpectOpen(mock_child_device,
-            [](HookInvocation record, uint32_t flags, Completer<void> completer) {
-                completer.complete_ok();
-                ActionList actions;
-                actions.AppendReturnStatus(ZX_OK);
-                return actions;
+  auto promise =
+      CreateFirstChild(&root_mock_device, &mock_child_device)
+          .and_then([&]() {
+            // Do the open and wait for acknowledgement that it was successful.
+            auto wait_for_open = DoOpen(mock_child_device->path(), &client);
+            auto expect_open =
+                ExpectOpen(mock_child_device,
+                           [](HookInvocation record, uint32_t flags, Completer<void> completer) {
+                             completer.complete_ok();
+                             ActionList actions;
+                             actions.AppendReturnStatus(ZX_OK);
+                             return actions;
+                           });
+            return expect_open.and_then(std::move(wait_for_open));
+          })
+          .and_then([&]() -> Promise<void> {
+            // Destroy the test device.  This should cause an unbind of the child
+            // device.
+            root_mock_device.reset();
+            return ExpectUnbind(mock_child_device,
+                                [](HookInvocation record, Completer<void> completer) {
+                                  ActionList actions;
+                                  actions.AppendRemoveDevice(std::move(completer));
+                                  return actions;
+                                });
+          })
+          .and_then([&]() {
+            // Close the newly opened connection.  Release shouldn't be able to
+            // happen until then.
+            client.Unbind();
+            return ExpectClose(mock_child_device, [](HookInvocation record, uint32_t flags,
+                                                     Completer<void> completer) {
+              completer.complete_ok();
+              ActionList actions;
+              actions.AppendReturnStatus(ZX_OK);
+              return actions;
             });
-        return expect_open.and_then(std::move(wait_for_open));
-    }).and_then([&]() -> Promise<void> {
-        // Destroy the test device.  This should cause an unbind of the child
-        // device.
-        root_mock_device.reset();
-        return ExpectUnbind(mock_child_device,
-            [](HookInvocation record, Completer<void> completer) {
-                ActionList actions;
-                actions.AppendRemoveDevice(std::move(completer));
-                return actions;
-            });
-    }).and_then([&]() {
-        // Close the newly opened connection.  Release shouldn't be able to
-        // happen until then.
-        client.Unbind();
-        return ExpectClose(mock_child_device,
-            [](HookInvocation record, uint32_t flags, Completer<void> completer) {
-                completer.complete_ok();
-                ActionList actions;
-                actions.AppendReturnStatus(ZX_OK);
-                return actions;
-            });
-    }).and_then(ExpectRelease(mock_child_device));
+          })
+          .and_then(ExpectRelease(mock_child_device));
 
-    RunPromise(std::move(promise));
+  RunPromise(std::move(promise));
 }
 
-} // namespace libdriver_integration_test
+}  // namespace libdriver_integration_test

@@ -38,8 +38,7 @@ class Id_Revision : public hwreg::RegisterBase<Id_Revision, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<Id_Revision>(0xc); }
 };
 
-class IspGlobal_Config0
-    : public hwreg::RegisterBase<IspGlobal_Config0, uint32_t> {
+class IspGlobal_Config0 : public hwreg::RegisterBase<IspGlobal_Config0, uint32_t> {
  public:
   // [0]    : check bid
   // [1]    : check rid
@@ -85,8 +84,7 @@ class IspGlobal_Config0
   static auto Get() { return hwreg::RegisterAddr<IspGlobal_Config0>(0x10); }
 };
 
-class IspGlobal_Config1
-    : public hwreg::RegisterBase<IspGlobal_Config1, uint32_t> {
+class IspGlobal_Config1 : public hwreg::RegisterBase<IspGlobal_Config1, uint32_t> {
  public:
   //  Horizontal blanking interval during regeneration (0=measured
   //   input interval)
@@ -101,8 +99,7 @@ class IspGlobal_Config1
   static auto Get() { return hwreg::RegisterAddr<IspGlobal_Config1>(0x14); }
 };
 
-class IspGlobal_Config2
-    : public hwreg::RegisterBase<IspGlobal_Config2, uint32_t> {
+class IspGlobal_Config2 : public hwreg::RegisterBase<IspGlobal_Config2, uint32_t> {
  public:
   //  Minimun H-blank. The frame monitor will checke the frame geometry
   //   against this value
@@ -119,13 +116,10 @@ class IspGlobal_WatchdogTimerMaxCount
   //  Max count after which watchdog timer should give an interrupt.
   //   this count is between frame start and frame end
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobal_WatchdogTimerMaxCount>(0x1c);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobal_WatchdogTimerMaxCount>(0x1c); }
 };
 
-class IspGlobal_Config3
-    : public hwreg::RegisterBase<IspGlobal_Config3, uint32_t> {
+class IspGlobal_Config3 : public hwreg::RegisterBase<IspGlobal_Config3, uint32_t> {
  public:
   //  mcu override config select. When this bit is set, MCU takes
   //   control of the ISP ping-pong config swap.
@@ -157,8 +151,7 @@ class IspGlobal_Config3
   static auto Get() { return hwreg::RegisterAddr<IspGlobal_Config3>(0x20); }
 };
 
-class IspGlobal_Config4
-    : public hwreg::RegisterBase<IspGlobal_Config4, uint32_t> {
+class IspGlobal_Config4 : public hwreg::RegisterBase<IspGlobal_Config4, uint32_t> {
  public:
   //  context swap status. when a address space is locked, all write to
   //   that address space will be rejected internally
@@ -199,16 +192,13 @@ class IspGlobal_Config4
   static auto Get() { return hwreg::RegisterAddr<IspGlobal_Config4>(0x24); }
 };
 
-class IspGlobalMeteringBaseAddr
-    : public hwreg::RegisterBase<IspGlobalMeteringBaseAddr, uint32_t> {
+class IspGlobalMeteringBaseAddr : public hwreg::RegisterBase<IspGlobalMeteringBaseAddr, uint32_t> {
  public:
   // base address for AWB stats. Value is set for 33x33 max zones
   DEF_FIELD(15, 0, awb);
   // base address for AF stats. Value is set for 33x33 max zones
   DEF_FIELD(31, 16, af);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalMeteringBaseAddr>(0x28);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalMeteringBaseAddr>(0x28); }
 };
 
 class IspGlobalMeteringBaseAddr_MaxAddr
@@ -216,9 +206,7 @@ class IspGlobalMeteringBaseAddr_MaxAddr
  public:
   // max address for metering stats mem. Value is set for 33x33 max zones
   DEF_FIELD(15, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalMeteringBaseAddr_MaxAddr>(0x2c);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalMeteringBaseAddr_MaxAddr>(0x2c); }
 };
 
 class IspGlobalInterrupt_MaskVector
@@ -277,9 +265,7 @@ class IspGlobalInterrupt_MaskVector
     return *this;
   }
 
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalInterrupt_MaskVector>(0x30);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalInterrupt_MaskVector>(0x30); }
 };
 
 class IspGlobalInterrupt_ClearVector
@@ -309,14 +295,11 @@ class IspGlobalInterrupt_ClearVector
   DEF_BIT(21, luma_variance_done);
   DEF_BIT(22, dma_error_interrupt);
   DEF_BIT(23, input_port_safely_stopped);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalInterrupt_ClearVector>(0x34);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalInterrupt_ClearVector>(0x34); }
 };
 
 class IspGlobalInterrupt_ShadowDisableVector
-    : public hwreg::RegisterBase<IspGlobalInterrupt_ShadowDisableVector,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<IspGlobalInterrupt_ShadowDisableVector, uint32_t> {
  public:
   DEF_BIT(0, isp_start);
   DEF_BIT(1, isp_done);
@@ -342,9 +325,7 @@ class IspGlobalInterrupt_ShadowDisableVector
   DEF_BIT(21, luma_variance_done);
   DEF_BIT(22, dma_error_interrupt);
   DEF_BIT(23, input_port_safely_stopped);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalInterrupt_ShadowDisableVector>(0x38);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalInterrupt_ShadowDisableVector>(0x38); }
 };
 
 class IspGlobalInterrupt_PulseMode
@@ -353,25 +334,19 @@ class IspGlobalInterrupt_PulseMode
   //  When set to 1, the output interrupt will be a pulse. Otherwise it
   //   should be level.
   DEF_BIT(0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalInterrupt_PulseMode>(0x3c);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalInterrupt_PulseMode>(0x3c); }
 };
 
-class IspGlobalInterrupt_Clear
-    : public hwreg::RegisterBase<IspGlobalInterrupt_Clear, uint32_t> {
+class IspGlobalInterrupt_Clear : public hwreg::RegisterBase<IspGlobalInterrupt_Clear, uint32_t> {
  public:
   //  Interrupt clear vector register qualifier. First the vector must
   //   be written. Then this bit must be set to 1 and then cleared
   DEF_BIT(0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalInterrupt_Clear>(0x40);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalInterrupt_Clear>(0x40); }
 };
 
 class IspGlobalInterrupt_StatusVector
-    : public hwreg::RegisterBase<IspGlobalInterrupt_StatusVector, uint32_t,
-                                 hwreg::EnablePrinter> {
+    : public hwreg::RegisterBase<IspGlobalInterrupt_StatusVector, uint32_t, hwreg::EnablePrinter> {
  public:
   DEF_BIT(0, isp_start);
   DEF_BIT(1, isp_done);
@@ -399,18 +374,14 @@ class IspGlobalInterrupt_StatusVector
   DEF_BIT(23, input_port_safely_stopped);
 
   bool has_errors() const {
-    return (broken_frame_error() || frame_collision_error() ||
-            dma_error_interrupt() || ctx_management_error() ||
-            wdg_timer_timed_out());
+    return (broken_frame_error() || frame_collision_error() || dma_error_interrupt() ||
+            ctx_management_error() || wdg_timer_timed_out());
   }
 
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalInterrupt_StatusVector>(0x44);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalInterrupt_StatusVector>(0x44); }
 };
 
-class IspGlobalLp_ClockDisable
-    : public hwreg::RegisterBase<IspGlobalLp_ClockDisable, uint32_t> {
+class IspGlobalLp_ClockDisable : public hwreg::RegisterBase<IspGlobalLp_ClockDisable, uint32_t> {
  public:
   //  When set, the output Y/RGB/YUV DMA writer in FR channel will be
   //   clock gated. This is applicable
@@ -443,9 +414,7 @@ class IspGlobalLp_ClockDisable
   //  This signal gates the clock for all temper write and read dma.
   //   This should be used only when Temper is not used.
   DEF_BIT(4, clk_dis_temper_dma);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalLp_ClockDisable>(0x48);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalLp_ClockDisable>(0x48); }
 };
 
 class IspGlobalLp_ClockGateDisable
@@ -494,14 +463,11 @@ class IspGlobalLp_ClockGateDisable
   //  when set, this will disable V-blank Clock gating for sharpen in
   //   DS pipeline.
   DEF_BIT(18, cg_dis_sharpen_ds);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalLp_ClockGateDisable>(0x4c);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalLp_ClockGateDisable>(0x4c); }
 };
 
 class IspGlobalMonitor_Status
-    : public hwreg::RegisterBase<IspGlobalMonitor_Status, uint32_t,
-                                 hwreg::EnablePrinter> {
+    : public hwreg::RegisterBase<IspGlobalMonitor_Status, uint32_t, hwreg::EnablePrinter> {
  public:
   // bit[0] : active width mismatch
   //     bit[1] : active_height mismatch
@@ -516,14 +482,11 @@ class IspGlobalMonitor_Status
   //         0: ISP main pipeline (excluding metering) is free
   //         1: ISP main pipeline (excluding metering) is busy
   DEF_BIT(16, fr_pipeline_busy);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalMonitor_Status>(0x50);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalMonitor_Status>(0x50); }
 };
 
 class IspGlobalMonitor_Failures
-    : public hwreg::RegisterBase<IspGlobalMonitor_Failures, uint32_t,
-                                 hwreg::EnablePrinter> {
+    : public hwreg::RegisterBase<IspGlobalMonitor_Failures, uint32_t, hwreg::EnablePrinter> {
  public:
   DEF_BIT(0, fr_y_dma_wfifo_fail_full);
   DEF_BIT(1, fr_y_dma_wfifo_fail_empty);
@@ -554,10 +517,7 @@ class IspGlobalMonitor_Failures
   DEF_BIT(28, ds_uv_dma_frame_dropped);
   DEF_BIT(29, ds_y_dma_frame_dropped);
 
-
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalMonitor_Failures>(0x54);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalMonitor_Failures>(0x54); }
 };
 
 class IspGlobalMonitor_ClearError
@@ -591,26 +551,20 @@ class IspGlobalMonitor_ClearError
   //     step-1: set this bit to 1
   //     step-2: Read back the alarm signals
   DEF_BIT(3, temper_dma_clr_alarm);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalMonitor_ClearError>(0x58);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalMonitor_ClearError>(0x58); }
 };
 
 class IspGlobalMonitor_MaxAddressDelayLine
-    : public hwreg::RegisterBase<IspGlobalMonitor_MaxAddressDelayLine,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<IspGlobalMonitor_MaxAddressDelayLine, uint32_t> {
  public:
   // Delay line max address value for the full resolution ISP set outside ISP
   DEF_FIELD(15, 0, max_address_delay_line_fr);
   // Delay line max address value for the DS pipeline set outside ISP
   DEF_FIELD(31, 16, max_address_delay_line_ds);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalMonitor_MaxAddressDelayLine>(0x60);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalMonitor_MaxAddressDelayLine>(0x60); }
 };
 
-class IspGlobalChickenBit
-    : public hwreg::RegisterBase<IspGlobalChickenBit, uint32_t> {
+class IspGlobalChickenBit : public hwreg::RegisterBase<IspGlobalChickenBit, uint32_t> {
  public:
   //  0: Only ISP main pipeline, ds pipeline and iridix filtering is
   //      used to generate the frame_done interrupt
@@ -650,8 +604,7 @@ class IspGlobalChickenBit
   static auto Get() { return hwreg::RegisterAddr<IspGlobalChickenBit>(0x64); }
 };
 
-class IspGlobalParameterStatus
-    : public hwreg::RegisterBase<IspGlobalParameterStatus, uint32_t> {
+class IspGlobalParameterStatus : public hwreg::RegisterBase<IspGlobalParameterStatus, uint32_t> {
  public:
   // 0: Demosaic RGBIr is present in the design
   //     1: Demodaic RGBIr is statically removed from the ISP.
@@ -696,9 +649,7 @@ class IspGlobalParameterStatus
   // 0: SINTER2.5 used
   //     1: SINTER3 used
   DEF_BIT(4, sinter_version);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalParameterStatus>(0x68);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalParameterStatus>(0x68); }
 };
 
 class IspGlobalDbg : public hwreg::RegisterBase<IspGlobalDbg, uint32_t> {
@@ -711,52 +662,39 @@ class IspGlobalDbg : public hwreg::RegisterBase<IspGlobalDbg, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<IspGlobalDbg>(0x6c); }
 };
 
-class IspGlobalDbg_FrameCntCtx0
-    : public hwreg::RegisterBase<IspGlobalDbg_FrameCntCtx0, uint32_t> {
+class IspGlobalDbg_FrameCntCtx0 : public hwreg::RegisterBase<IspGlobalDbg_FrameCntCtx0, uint32_t> {
  public:
   //  when debug mode is enabled, this register will show the frame
   //   count in context-0
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalDbg_FrameCntCtx0>(0x70);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalDbg_FrameCntCtx0>(0x70); }
 };
 
-class IspGlobalDbg_FrameCntCtx1
-    : public hwreg::RegisterBase<IspGlobalDbg_FrameCntCtx1, uint32_t> {
+class IspGlobalDbg_FrameCntCtx1 : public hwreg::RegisterBase<IspGlobalDbg_FrameCntCtx1, uint32_t> {
  public:
   //  when debug mode is enabled, this register will show the frame
   //   count in context-1
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalDbg_FrameCntCtx1>(0x74);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalDbg_FrameCntCtx1>(0x74); }
 };
 
-class IspGlobalDbg_FrameCntCtx2
-    : public hwreg::RegisterBase<IspGlobalDbg_FrameCntCtx2, uint32_t> {
+class IspGlobalDbg_FrameCntCtx2 : public hwreg::RegisterBase<IspGlobalDbg_FrameCntCtx2, uint32_t> {
  public:
   //  when debug mode is enabled, this register will show the frame
   //   count in context-2
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalDbg_FrameCntCtx2>(0x78);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalDbg_FrameCntCtx2>(0x78); }
 };
 
-class IspGlobalDbg_FrameCntCtx3
-    : public hwreg::RegisterBase<IspGlobalDbg_FrameCntCtx3, uint32_t> {
+class IspGlobalDbg_FrameCntCtx3 : public hwreg::RegisterBase<IspGlobalDbg_FrameCntCtx3, uint32_t> {
  public:
   //  when debug mode is enabled, this register will show the frame
   //   count in context-3
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<IspGlobalDbg_FrameCntCtx3>(0x7c);
-  }
+  static auto Get() { return hwreg::RegisterAddr<IspGlobalDbg_FrameCntCtx3>(0x7c); }
 };
 
-class InputPort_Config0
-    : public hwreg::RegisterBase<InputPort_Config0, uint32_t> {
+class InputPort_Config0 : public hwreg::RegisterBase<InputPort_Config0, uint32_t> {
  public:
   //  Allows selection of various input port presets for standard
   //   sensor inputs.  See ISP Guide for details of available presets.
@@ -803,8 +741,7 @@ class InputPort_Config0
   static auto Get() { return hwreg::RegisterAddr<InputPort_Config0>(0x80); }
 };
 
-class InputPort_Config1
-    : public hwreg::RegisterBase<InputPort_Config1, uint32_t> {
+class InputPort_Config1 : public hwreg::RegisterBase<InputPort_Config1, uint32_t> {
  public:
   // 0=don't invert field_i for field gate, 1=invert field_i for field gate
   DEF_BIT(0, field_polarity);
@@ -845,57 +782,44 @@ class InputPort_Config1
   static auto Get() { return hwreg::RegisterAddr<InputPort_Config1>(0x84); }
 };
 
-class InputPort_HorizontalCrop0
-    : public hwreg::RegisterBase<InputPort_HorizontalCrop0, uint32_t> {
+class InputPort_HorizontalCrop0 : public hwreg::RegisterBase<InputPort_HorizontalCrop0, uint32_t> {
  public:
   //  horizontal counter limit value (counts:
   //   0,1,...hc_limit-1,hc_limit,0,1,...)
   DEF_FIELD(15, 0, hc_limit);
   // window0 start for ACL gate.  See ISP guide for further details.
   DEF_FIELD(31, 16, hc_start0);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPort_HorizontalCrop0>(0x88);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPort_HorizontalCrop0>(0x88); }
 };
 
-class InputPort_HorizontalCrop1
-    : public hwreg::RegisterBase<InputPort_HorizontalCrop1, uint32_t> {
+class InputPort_HorizontalCrop1 : public hwreg::RegisterBase<InputPort_HorizontalCrop1, uint32_t> {
  public:
   // window0 size for ACL gate.  See ISP guide for further details.
   DEF_FIELD(15, 0, hc_size0);
   // window1 start for HS gate.  See ISP guide for further details.
   DEF_FIELD(31, 16, hc_start1);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPort_HorizontalCrop1>(0x8c);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPort_HorizontalCrop1>(0x8c); }
 };
 
-class InputPort_VerticalCrop0
-    : public hwreg::RegisterBase<InputPort_VerticalCrop0, uint32_t> {
+class InputPort_VerticalCrop0 : public hwreg::RegisterBase<InputPort_VerticalCrop0, uint32_t> {
  public:
   // window1 size for HS gate.  See ISP guide for further details.
   DEF_FIELD(15, 0, hc_size1);
   // vertical counter limit value (counts: 0,1,...vc_limit-1,vc_limit,0,1,...)
   DEF_FIELD(31, 16, vc_limit);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPort_VerticalCrop0>(0x90);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPort_VerticalCrop0>(0x90); }
 };
 
-class InputPort_VerticalCrop1
-    : public hwreg::RegisterBase<InputPort_VerticalCrop1, uint32_t> {
+class InputPort_VerticalCrop1 : public hwreg::RegisterBase<InputPort_VerticalCrop1, uint32_t> {
  public:
   // window2 start for ACL gate.  See ISP guide for further details.
   DEF_FIELD(15, 0, vc_start);
   // window2 size for ACL gate.  See ISP guide for further details.
   DEF_FIELD(31, 16, vc_size);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPort_VerticalCrop1>(0x94);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPort_VerticalCrop1>(0x94); }
 };
 
-class InputPort_FrameDim
-    : public hwreg::RegisterBase<InputPort_FrameDim, uint32_t> {
+class InputPort_FrameDim : public hwreg::RegisterBase<InputPort_FrameDim, uint32_t> {
  public:
   // detected frame width.  Read only value.
   DEF_FIELD(15, 0, frame_width);
@@ -904,8 +828,7 @@ class InputPort_FrameDim
   static auto Get() { return hwreg::RegisterAddr<InputPort_FrameDim>(0x98); }
 };
 
-class InputPort_Config3
-    : public hwreg::RegisterBase<InputPort_Config3, uint32_t> {
+class InputPort_Config3 : public hwreg::RegisterBase<InputPort_Config3, uint32_t> {
  public:
   // Used to stop and start input port.  See ISP guide for further details.
   //   Only modes-0 and 1 are used. all other values are reserved
@@ -919,8 +842,7 @@ class InputPort_Config3
   static auto Get() { return hwreg::RegisterAddr<InputPort_Config3>(0x9c); }
 };
 
-class InputPort_ModeStatus
-    : public hwreg::RegisterBase<InputPort_ModeStatus, uint32_t> {
+class InputPort_ModeStatus : public hwreg::RegisterBase<InputPort_ModeStatus, uint32_t> {
  public:
   //  Used to monitor input port status:       bit 0: 1=running,
   //   0=stopped, bits 1,2-reserved
@@ -934,9 +856,7 @@ class InputPortFrameStats_StatsReset
   //  Resets the frame statistics registers and starts the sampling
   //   period. Note all the frame statistics saturate at 2^31
   DEF_BIT(0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_StatsReset>(0xa4);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_StatsReset>(0xa4); }
 };
 
 class InputPortFrameStats_StatsHold
@@ -946,9 +866,7 @@ class InputPortFrameStats_StatsHold
   //   This should be used prior to reading out the register values so
   //   as to ensure consistent values
   DEF_BIT(0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_StatsHold>(0xa8);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_StatsHold>(0xa8); }
 };
 
 class InputPortFrameStats_ActiveWidthMin
@@ -957,9 +875,7 @@ class InputPortFrameStats_ActiveWidthMin
   //  The minimum number of active pixels observed in a line within the
   //   sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_ActiveWidthMin>(0xb4);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_ActiveWidthMin>(0xb4); }
 };
 
 class InputPortFrameStats_ActiveWidthMax
@@ -968,9 +884,7 @@ class InputPortFrameStats_ActiveWidthMax
   //  The maximum number of active pixels observed in a line within the
   //   sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_ActiveWidthMax>(0xb8);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_ActiveWidthMax>(0xb8); }
 };
 
 class InputPortFrameStats_ActiveWidthSum
@@ -979,9 +893,7 @@ class InputPortFrameStats_ActiveWidthSum
   //  The total number of the active pixels values observed in a line
   //   within the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_ActiveWidthSum>(0xbc);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_ActiveWidthSum>(0xbc); }
 };
 
 class InputPortFrameStats_ActiveWidthNum
@@ -989,56 +901,42 @@ class InputPortFrameStats_ActiveWidthNum
  public:
   // The number of lines observed within the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_ActiveWidthNum>(0xc0);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_ActiveWidthNum>(0xc0); }
 };
 
 class InputPortFrameStats_ActiveHeightMin
-    : public hwreg::RegisterBase<InputPortFrameStats_ActiveHeightMin,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<InputPortFrameStats_ActiveHeightMin, uint32_t> {
  public:
   //  The minimum number of active lines in the frames observed within
   //   the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_ActiveHeightMin>(0xc4);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_ActiveHeightMin>(0xc4); }
 };
 
 class InputPortFrameStats_ActiveHeightMax
-    : public hwreg::RegisterBase<InputPortFrameStats_ActiveHeightMax,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<InputPortFrameStats_ActiveHeightMax, uint32_t> {
  public:
   //  The maximum number of active lines in the frames observed within
   //   the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_ActiveHeightMax>(0xc8);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_ActiveHeightMax>(0xc8); }
 };
 
 class InputPortFrameStats_ActiveHeightSum
-    : public hwreg::RegisterBase<InputPortFrameStats_ActiveHeightSum,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<InputPortFrameStats_ActiveHeightSum, uint32_t> {
  public:
   //  The total number of active lines in the frames observed within
   //   the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_ActiveHeightSum>(0xcc);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_ActiveHeightSum>(0xcc); }
 };
 
 class InputPortFrameStats_ActiveHeightNum
-    : public hwreg::RegisterBase<InputPortFrameStats_ActiveHeightNum,
-                                 uint32_t> {
+    : public hwreg::RegisterBase<InputPortFrameStats_ActiveHeightNum, uint32_t> {
  public:
   // The total number of frames observed within the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_ActiveHeightNum>(0xd0);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_ActiveHeightNum>(0xd0); }
 };
 
 class InputPortFrameStats_HblankMin
@@ -1047,9 +945,7 @@ class InputPortFrameStats_HblankMin
   //  The minimum number of horizontal blanking samples observed within
   //   the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_HblankMin>(0xd4);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_HblankMin>(0xd4); }
 };
 
 class InputPortFrameStats_HblankMax
@@ -1058,9 +954,7 @@ class InputPortFrameStats_HblankMax
   //  The maximum number of horizontal blanking samples observed within
   //   the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_HblankMax>(0xd8);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_HblankMax>(0xd8); }
 };
 
 class InputPortFrameStats_HblankSum
@@ -1069,9 +963,7 @@ class InputPortFrameStats_HblankSum
   //  The total number of the horizontal blanking samples observed
   //   within the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_HblankSum>(0xdc);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_HblankSum>(0xdc); }
 };
 
 class InputPortFrameStats_HblankNum
@@ -1079,9 +971,7 @@ class InputPortFrameStats_HblankNum
  public:
   // The total number of the lines observed within the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_HblankNum>(0xe0);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_HblankNum>(0xe0); }
 };
 
 class InputPortFrameStats_VblankMin
@@ -1090,9 +980,7 @@ class InputPortFrameStats_VblankMin
   //  The minimum number of vertical blanking samples observed within
   //   the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_VblankMin>(0xe4);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_VblankMin>(0xe4); }
 };
 
 class InputPortFrameStats_VblankMax
@@ -1101,9 +989,7 @@ class InputPortFrameStats_VblankMax
   //  The maximum number of vertical blanking samples observed within
   //   the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_VblankMax>(0xe8);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_VblankMax>(0xe8); }
 };
 
 class InputPortFrameStats_VblankSum
@@ -1112,9 +998,7 @@ class InputPortFrameStats_VblankSum
   //  The total number of the vertical blanking samples observed within
   //   the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_VblankSum>(0xec);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_VblankSum>(0xec); }
 };
 
 class InputPortFrameStats_VblankNum
@@ -1122,9 +1006,7 @@ class InputPortFrameStats_VblankNum
  public:
   // The total number of frames observed within the sampling period
   DEF_FIELD(31, 0, value);
-  static auto Get() {
-    return hwreg::RegisterAddr<InputPortFrameStats_VblankNum>(0xf0);
-  }
+  static auto Get() { return hwreg::RegisterAddr<InputPortFrameStats_VblankNum>(0xf0); }
 };
 
 }  // namespace camera

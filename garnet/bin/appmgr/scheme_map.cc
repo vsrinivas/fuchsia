@@ -19,9 +19,7 @@ const char SchemeMap::kConfigDirPath[] = "/pkgfs/packages/config-data/0/data/app
 
 bool SchemeMap::ParseFromDirectory(const std::string& path) {
   internal_map_.clear();
-  auto cb = [this](rapidjson::Document document) {
-    ParseDocument(std::move(document));
-  };
+  auto cb = [this](rapidjson::Document document) { ParseDocument(std::move(document)); };
   json_parser_.ParseFromDirectory(path, cb);
   return !json_parser_.HasError();
 }
@@ -41,22 +39,21 @@ void SchemeMap::ParseDocument(rapidjson::Document document) {
     return;
   }
 
-  for (auto it = launchers->value.MemberBegin();
-       it != launchers->value.MemberEnd(); ++it) {
+  for (auto it = launchers->value.MemberBegin(); it != launchers->value.MemberEnd(); ++it) {
     const std::string& launcher = it->name.GetString();
     if (!it->value.IsArray()) {
-      json_parser_.ReportError(fxl::StringPrintf(
-          "Schemes for '%s' are not a list.", launcher.c_str()));
+      json_parser_.ReportError(
+          fxl::StringPrintf("Schemes for '%s' are not a list.", launcher.c_str()));
       return;
     }
     for (const auto& scheme : it->value.GetArray()) {
       if (!scheme.IsString()) {
-        json_parser_.ReportError(fxl::StringPrintf(
-            "Scheme for '%s' is not a string.", launcher.c_str()));
+        json_parser_.ReportError(
+            fxl::StringPrintf("Scheme for '%s' is not a string.", launcher.c_str()));
       } else {
         if (internal_map_.count(scheme.GetString()) > 0) {
-          json_parser_.ReportError(fxl::StringPrintf(
-              "Scheme '%s' is assigned to two launchers.", scheme.GetString()));
+          json_parser_.ReportError(
+              fxl::StringPrintf("Scheme '%s' is assigned to two launchers.", scheme.GetString()));
         }
         internal_map_[scheme.GetString()] = launcher;
       }

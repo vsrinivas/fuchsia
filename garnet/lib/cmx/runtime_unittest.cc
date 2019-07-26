@@ -27,8 +27,8 @@ class RuntimeMetadataTest : public ::testing::Test {
     EXPECT_THAT(error, ::testing::HasSubstr(expected_error));
   }
 
-  bool ParseFrom(RuntimeMetadata* runtime, const std::string& json,
-                 std::string* error, std::string* json_basename) {
+  bool ParseFrom(RuntimeMetadata* runtime, const std::string& json, std::string* error,
+                 std::string* json_basename) {
     EXPECT_TRUE(runtime->IsNull());
     json::JSONParser parser;
     std::string json_path;
@@ -37,8 +37,7 @@ class RuntimeMetadataTest : public ::testing::Test {
     }
     *json_basename = files::GetBaseName(json_path);
     const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
-    const bool ret =
-        runtime->ParseFromFileAt(dirfd, files::GetBaseName(json_path), &parser);
+    const bool ret = runtime->ParseFromFileAt(dirfd, files::GetBaseName(json_path), &parser);
     if (parser.HasError()) {
       *error = parser.error_str();
     }
@@ -65,18 +64,16 @@ TEST_F(RuntimeMetadataTest, Parse) {
     RuntimeMetadata runtime;
     std::string error;
     std::string file_unused;
-    EXPECT_TRUE(ParseFrom(&runtime, R"JSON({ "runner": "dart_runner" })JSON",
-                          &error, &file_unused));
+    EXPECT_TRUE(
+        ParseFrom(&runtime, R"JSON({ "runner": "dart_runner" })JSON", &error, &file_unused));
     EXPECT_FALSE(runtime.IsNull());
     EXPECT_EQ("dart_runner", runtime.runner());
   }
 }
 
 TEST_F(RuntimeMetadataTest, ParseWithErrors) {
-  ExpectFailedParse(R"JSON({,,,})JSON",
-                    "Missing a name for object member.");
-  ExpectFailedParse(R"JSON({ "runner": 10 })JSON",
-                    "'runner' is not a string.");
+  ExpectFailedParse(R"JSON({,,,})JSON", "Missing a name for object member.");
+  ExpectFailedParse(R"JSON({ "runner": 10 })JSON", "'runner' is not a string.");
 }
 
 }  // namespace

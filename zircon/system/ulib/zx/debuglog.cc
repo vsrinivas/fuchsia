@@ -9,7 +9,7 @@
 namespace zx {
 
 zx_status_t debuglog::create(const resource& resource, uint32_t options, debuglog* result) {
-    return zx_debuglog_create(resource.get(), options, result->reset_and_get_address());
+  return zx_debuglog_create(resource.get(), options, result->reset_and_get_address());
 }
 
-} // namespace zx
+}  // namespace zx

@@ -33,14 +33,14 @@ extern struct ath_dfs_pool_stats global_dfs_pool_stats;
  * @deadline_ts: deadline when this sequence becomes invalid (first_ts + dur)
  */
 struct pri_sequence {
-    struct list_head head;
-    uint32_t pri;
-    uint32_t dur;
-    uint32_t count;
-    uint32_t count_falses;
-    uint64_t first_ts;
-    uint64_t last_ts;
-    uint64_t deadline_ts;
+  struct list_head head;
+  uint32_t pri;
+  uint32_t dur;
+  uint32_t count;
+  uint32_t count_falses;
+  uint64_t first_ts;
+  uint64_t last_ts;
+  uint64_t deadline_ts;
 };
 
 /**
@@ -57,18 +57,18 @@ struct pri_sequence {
  * @window_size: window size back from newest pulse time stamp in usecs
  */
 struct pri_detector {
-    void (*exit)(struct pri_detector* de);
-    struct pri_sequence* (*add_pulse)(struct pri_detector* de, struct pulse_event* e);
-    void (*reset)(struct pri_detector* de, uint64_t ts);
+  void (*exit)(struct pri_detector* de);
+  struct pri_sequence* (*add_pulse)(struct pri_detector* de, struct pulse_event* e);
+  void (*reset)(struct pri_detector* de, uint64_t ts);
 
-    /* private: internal use only */
-    const struct radar_detector_specs* rs;
-    uint64_t last_ts;
-    struct list_head sequences;
-    struct list_head pulses;
-    uint32_t count;
-    uint32_t max_count;
-    uint32_t window_size;
+  /* private: internal use only */
+  const struct radar_detector_specs* rs;
+  uint64_t last_ts;
+  struct list_head sequences;
+  struct list_head pulses;
+  uint32_t count;
+  uint32_t max_count;
+  uint32_t window_size;
 };
 
 struct pri_detector* pri_detector_init(const struct radar_detector_specs* rs);

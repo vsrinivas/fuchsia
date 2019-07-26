@@ -21,35 +21,33 @@
 #define CONTESTED_BIT ((zx_futex_storage_t)1)
 
 static_assert(sizeof(zx_handle_t) <= sizeof(zx_futex_storage_t),
-        "mutex implementation requires futex storage to be "
-        "large enough to hold a zircon handle");
+              "mutex implementation requires futex storage to be "
+              "large enough to hold a zircon handle");
 
 static_assert((CONTESTED_BIT & ZX_HANDLE_FIXED_BITS_MASK) == CONTESTED_BIT,
-        "mutex implementation requires that it's contested state storage "
-        "bit be one of the zx_handle_t's guaranteed-to-be-one bits.");
+              "mutex implementation requires that it's contested state storage "
+              "bit be one of the zx_handle_t's guaranteed-to-be-one bits.");
 
 static_assert((~CONTESTED_BIT & ZX_HANDLE_FIXED_BITS_MASK) != 0,
-        "mutex implementation requires at least two guaranteed-to-be-one "
-        "bits in zx_handle_t's");
+              "mutex implementation requires at least two guaranteed-to-be-one "
+              "bits in zx_handle_t's");
 
 static inline zx_futex_storage_t libsync_mutex_locked_and_uncontested(void) {
-    return ((zx_futex_storage_t)zx_thread_self());
+  return ((zx_futex_storage_t)zx_thread_self());
 }
 
 static inline bool libsync_mutex_is_contested(zx_futex_storage_t val) {
-    return ((val & CONTESTED_BIT) == 0);
+  return ((val & CONTESTED_BIT) == 0);
 }
 
 static inline zx_futex_storage_t libsync_mutex_make_contested(zx_futex_storage_t val) {
-    return (val & ~CONTESTED_BIT);
+  return (val & ~CONTESTED_BIT);
 }
 
 static inline zx_handle_t libsync_mutex_make_owner_from_state(zx_futex_storage_t val) {
-    return (val != LIB_SYNC_MUTEX_UNLOCKED)
-        ? (zx_handle_t)(val | CONTESTED_BIT)
-        : ZX_HANDLE_INVALID;
+  return (val != LIB_SYNC_MUTEX_UNLOCKED) ? (zx_handle_t)(val | CONTESTED_BIT) : ZX_HANDLE_INVALID;
 }
 
 #undef CONTESTED_BIT
 
-#endif // LIB_SYNC_INTERNAL_MUTEX_INTERNAL_H_
+#endif  // LIB_SYNC_INTERNAL_MUTEX_INTERNAL_H_

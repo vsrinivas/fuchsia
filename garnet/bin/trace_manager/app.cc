@@ -9,13 +9,10 @@
 namespace tracing {
 
 TraceManagerApp::TraceManagerApp(const Config& config)
-    : context_(sys::ComponentContext::Create()),
-      trace_manager_(context_.get(), config) {
-  context_->outgoing()->AddPublicService(
-      trace_registry_bindings_.GetHandler(&trace_manager_));
+    : context_(sys::ComponentContext::Create()), trace_manager_(context_.get(), config) {
+  context_->outgoing()->AddPublicService(trace_registry_bindings_.GetHandler(&trace_manager_));
 
-  context_->outgoing()->AddPublicService(
-      trace_controller_bindings_.GetHandler(&trace_manager_));
+  context_->outgoing()->AddPublicService(trace_controller_bindings_.GetHandler(&trace_manager_));
 }
 
 TraceManagerApp::~TraceManagerApp() = default;

@@ -17,65 +17,62 @@
 //
 // This class is thread-safe.
 struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
-public:
-    using LocalVnode = fdio_internal::LocalVnode;
+ public:
+  using LocalVnode = fdio_internal::LocalVnode;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(fdio_namespace);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(fdio_namespace);
 
-    static fbl::RefPtr<fdio_namespace> Create() {
-        return fbl::AdoptRef(new fdio_namespace());
-    }
-    ~fdio_namespace();
+  static fbl::RefPtr<fdio_namespace> Create() { return fbl::AdoptRef(new fdio_namespace()); }
+  ~fdio_namespace();
 
-    // Create a new |fdio_t| object referring to the root of this namespace.
-    //
-    // Returns |nullptr| on failure.
-    fdio_t* OpenRoot() const;
+  // Create a new |fdio_t| object referring to the root of this namespace.
+  //
+  // Returns |nullptr| on failure.
+  fdio_t* OpenRoot() const;
 
-    // Export all remote references and their paths in a flat format.
-    zx_status_t Export(fdio_flat_namespace_t** out) const;
+  // Export all remote references and their paths in a flat format.
+  zx_status_t Export(fdio_flat_namespace_t** out) const;
 
-    // Reads the contents of |vn|'s children into a flattened buffer.
-    // The buffer is filled with entries of variable-length type |vdirent_t|.
-    zx_status_t Readdir(const LocalVnode& vn, void* buffer, size_t length,
-                        size_t* out_actual) const;
+  // Reads the contents of |vn|'s children into a flattened buffer.
+  // The buffer is filled with entries of variable-length type |vdirent_t|.
+  zx_status_t Readdir(const LocalVnode& vn, void* buffer, size_t length, size_t* out_actual) const;
 
-    // Create a new |fdio_t| object referring to the object at |path|.
-    //
-    // This object may represent either a local node, or a remote object.
-    zx_status_t Open(fbl::RefPtr<const LocalVnode> vn, const char* path,
-                     uint32_t flags, uint32_t mode, fdio_t** out) const;
+  // Create a new |fdio_t| object referring to the object at |path|.
+  //
+  // This object may represent either a local node, or a remote object.
+  zx_status_t Open(fbl::RefPtr<const LocalVnode> vn, const char* path, uint32_t flags,
+                   uint32_t mode, fdio_t** out) const;
 
-    // Connect to a remote object within the namespace.
-    //
-    // Returns an error if |path| does not exist.
-    // Returns an error if |path| references a non-remote object.
-    zx_status_t Connect(const char* path, uint32_t flags, zx::channel channel) const;
+  // Connect to a remote object within the namespace.
+  //
+  // Returns an error if |path| does not exist.
+  // Returns an error if |path| references a non-remote object.
+  zx_status_t Connect(const char* path, uint32_t flags, zx::channel channel) const;
 
-    // Attaches |remote| to |path| within the current namespace.
-    zx_status_t Bind(const char* path, zx::channel remote);
+  // Attaches |remote| to |path| within the current namespace.
+  zx_status_t Bind(const char* path, zx::channel remote);
 
-    // Detaches a remote object from |path| within the current namespace.
-    //
-    // Returns ZX_ERR_NOT_FOUND if |path| does not correspond with a bound remote.
-    // Returns ZX_ERR_NOT_SUPPORTED if |path| is the root of the namespace.
-    // Returns ZX_ERR_INVALID_ARGS for an unsupported |path|.
-    zx_status_t Unbind(const char* path);
+  // Detaches a remote object from |path| within the current namespace.
+  //
+  // Returns ZX_ERR_NOT_FOUND if |path| does not correspond with a bound remote.
+  // Returns ZX_ERR_NOT_SUPPORTED if |path| is the root of the namespace.
+  // Returns ZX_ERR_INVALID_ARGS for an unsupported |path|.
+  zx_status_t Unbind(const char* path);
 
-private:
-    fdio_namespace();
+ private:
+  fdio_namespace();
 
-    // Creates a local |fdio_t| object with a connection to a vnode.
-    // This object will increase the number of references to the namespace by
-    // one.
-    fdio_t* CreateConnection(fbl::RefPtr<const LocalVnode> vn) const;
+  // Creates a local |fdio_t| object with a connection to a vnode.
+  // This object will increase the number of references to the namespace by
+  // one.
+  fdio_t* CreateConnection(fbl::RefPtr<const LocalVnode> vn) const;
 
-    // Lookup repeatedly to traverse vnodes within the local filesystem.
-    //
-    // |vn| and |path| are input and output parameters.
-    zx_status_t WalkLocked(fbl::RefPtr<const LocalVnode>* vn,
-                           const char** path) const __TA_REQUIRES(lock_);
+  // Lookup repeatedly to traverse vnodes within the local filesystem.
+  //
+  // |vn| and |path| are input and output parameters.
+  zx_status_t WalkLocked(fbl::RefPtr<const LocalVnode>* vn, const char** path) const
+      __TA_REQUIRES(lock_);
 
-    mutable fbl::Mutex lock_;
-    fbl::RefPtr<LocalVnode> root_ __TA_GUARDED(lock_);
+  mutable fbl::Mutex lock_;
+  fbl::RefPtr<LocalVnode> root_ __TA_GUARDED(lock_);
 };

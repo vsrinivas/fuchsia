@@ -26,13 +26,10 @@ class StreamClientBase : public BasicOvernetEmbedded::Actor {
 template <class T>
 class StreamClient final : public StreamClientBase {
  public:
-  StreamClient(BasicOvernetEmbedded* app, IpAddr target)
-      : StreamClientBase(app, target) {}
+  StreamClient(BasicOvernetEmbedded* app, IpAddr target) : StreamClientBase(app, target) {}
 
  private:
-  std::unique_ptr<StreamFramer> CreateFramer() const override {
-    return std::make_unique<T>();
-  }
+  std::unique_ptr<StreamFramer> CreateFramer() const override { return std::make_unique<T>(); }
 };
 
 }  // namespace overnet

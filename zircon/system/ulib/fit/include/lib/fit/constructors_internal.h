@@ -19,7 +19,7 @@ template <typename T, bool = std::is_default_constructible<T>::value>
 struct modulate_default_constructor {};
 template <typename T>
 struct modulate_default_constructor<T, false> {
-    constexpr modulate_default_constructor() = delete;
+  constexpr modulate_default_constructor() = delete;
 };
 
 // Mixin that implicitly deletes the subclass copy constructor when type T is
@@ -28,11 +28,11 @@ template <size_t Index, typename T, bool = std::is_copy_constructible<T>::value>
 struct modulate_copy_constructor {};
 template <size_t Index, typename T>
 struct modulate_copy_constructor<Index, T, false> {
-    constexpr modulate_copy_constructor() = default;
-    constexpr modulate_copy_constructor(const modulate_copy_constructor&) = delete;
-    constexpr modulate_copy_constructor& operator=(const modulate_copy_constructor&) = default;
-    constexpr modulate_copy_constructor(modulate_copy_constructor&&) = default;
-    constexpr modulate_copy_constructor& operator=(modulate_copy_constructor&&) = default;
+  constexpr modulate_copy_constructor() = default;
+  constexpr modulate_copy_constructor(const modulate_copy_constructor&) = delete;
+  constexpr modulate_copy_constructor& operator=(const modulate_copy_constructor&) = default;
+  constexpr modulate_copy_constructor(modulate_copy_constructor&&) = default;
+  constexpr modulate_copy_constructor& operator=(modulate_copy_constructor&&) = default;
 };
 
 // Mixin that implicitly deletes the subclass copy assignment operator when type
@@ -41,11 +41,11 @@ template <size_t Index, typename T, bool = std::is_copy_assignable<T>::value>
 struct modulate_copy_assignment {};
 template <size_t Index, typename T>
 struct modulate_copy_assignment<Index, T, false> {
-    constexpr modulate_copy_assignment() = default;
-    constexpr modulate_copy_assignment(const modulate_copy_assignment&) = default;
-    constexpr modulate_copy_assignment& operator=(const modulate_copy_assignment&) = delete;
-    constexpr modulate_copy_assignment(modulate_copy_assignment&&) = default;
-    constexpr modulate_copy_assignment& operator=(modulate_copy_assignment&&) = default;
+  constexpr modulate_copy_assignment() = default;
+  constexpr modulate_copy_assignment(const modulate_copy_assignment&) = default;
+  constexpr modulate_copy_assignment& operator=(const modulate_copy_assignment&) = delete;
+  constexpr modulate_copy_assignment(modulate_copy_assignment&&) = default;
+  constexpr modulate_copy_assignment& operator=(modulate_copy_assignment&&) = default;
 };
 
 // Mixin that implicitly deletes the subclass move constructor when type T is
@@ -54,11 +54,11 @@ template <size_t Index, typename T, bool = std::is_move_constructible<T>::value>
 struct modulate_move_constructor {};
 template <size_t Index, typename T>
 struct modulate_move_constructor<Index, T, false> {
-    constexpr modulate_move_constructor() = default;
-    constexpr modulate_move_constructor(const modulate_move_constructor&) = default;
-    constexpr modulate_move_constructor& operator=(const modulate_move_constructor&) = default;
-    constexpr modulate_move_constructor(modulate_move_constructor&&) = delete;
-    constexpr modulate_move_constructor& operator=(modulate_move_constructor&&) = default;
+  constexpr modulate_move_constructor() = default;
+  constexpr modulate_move_constructor(const modulate_move_constructor&) = default;
+  constexpr modulate_move_constructor& operator=(const modulate_move_constructor&) = default;
+  constexpr modulate_move_constructor(modulate_move_constructor&&) = delete;
+  constexpr modulate_move_constructor& operator=(modulate_move_constructor&&) = default;
 };
 
 // Mixin that implicitly deletes the subclass move assignment operator when type
@@ -67,11 +67,11 @@ template <size_t Index, typename T, bool = std::is_move_assignable<T>::value>
 struct modulate_move_assignment {};
 template <size_t Index, typename T>
 struct modulate_move_assignment<Index, T, false> {
-    constexpr modulate_move_assignment() = default;
-    constexpr modulate_move_assignment(const modulate_move_assignment&) = default;
-    constexpr modulate_move_assignment& operator=(const modulate_move_assignment&) = default;
-    constexpr modulate_move_assignment(modulate_move_assignment&&) = default;
-    constexpr modulate_move_assignment& operator=(modulate_move_assignment&&) = delete;
+  constexpr modulate_move_assignment() = default;
+  constexpr modulate_move_assignment(const modulate_move_assignment&) = default;
+  constexpr modulate_move_assignment& operator=(const modulate_move_assignment&) = default;
+  constexpr modulate_move_assignment(modulate_move_assignment&&) = default;
+  constexpr modulate_move_assignment& operator=(modulate_move_assignment&&) = delete;
 };
 
 // Utility that takes an index sequence and an equally sized parameter pack and
@@ -95,7 +95,7 @@ template <typename... Ts>
 struct modulate_copy_and_move
     : modulate_copy_and_move_index<std::index_sequence_for<Ts...>, Ts...> {};
 
-} // namespace internal
-} // namespace fit
+}  // namespace internal
+}  // namespace fit
 
-#endif //  LIB_FIT_CONSTRUCTORS_INTERNAL_H_
+#endif  //  LIB_FIT_CONSTRUCTORS_INTERNAL_H_

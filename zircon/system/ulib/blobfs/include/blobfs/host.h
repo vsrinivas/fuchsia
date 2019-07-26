@@ -43,187 +43,174 @@ namespace blobfs {
 
 // Merkle Tree information associated with a file.
 struct MerkleInfo {
-    // Merkle-Tree related information.
-    digest::Digest digest;
-    fbl::Array<uint8_t> merkle;
+  // Merkle-Tree related information.
+  digest::Digest digest;
+  fbl::Array<uint8_t> merkle;
 
-    // The path which generated this file, and a cached file length.
-    fbl::String path;
-    uint64_t length = 0;
+  // The path which generated this file, and a cached file length.
+  fbl::String path;
+  uint64_t length = 0;
 
-    // Compressed blob data, if the blob is compressible.
-    fbl::unique_ptr<uint8_t[]> compressed_data;
-    uint64_t compressed_length = 0;
-    bool compressed = false;
+  // Compressed blob data, if the blob is compressible.
+  fbl::unique_ptr<uint8_t[]> compressed_data;
+  uint64_t compressed_length = 0;
+  bool compressed = false;
 
-    uint64_t GetDataBlocks() const {
-        uint64_t blob_size = compressed ? compressed_length : length;
-        return fbl::round_up(blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
-    }
+  uint64_t GetDataBlocks() const {
+    uint64_t blob_size = compressed ? compressed_length : length;
+    return fbl::round_up(blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
+  }
 };
 
 // A mapping of a file. Does not own the file.
 class FileMapping {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(FileMapping);
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(FileMapping);
 
-    FileMapping() : data_(nullptr), length_(0) {}
+  FileMapping() : data_(nullptr), length_(0) {}
 
-    ~FileMapping() {
-        reset();
+  ~FileMapping() { reset(); }
+
+  void reset() {
+    if (data_ != nullptr) {
+      munmap(data_, length_);
+      data_ = nullptr;
     }
+  }
 
-    void reset() {
-        if (data_ != nullptr) {
-            munmap(data_, length_);
-            data_ = nullptr;
-        }
+  zx_status_t Map(int fd) {
+    reset();
+
+    struct stat s;
+    if (fstat(fd, &s) < 0) {
+      return ZX_ERR_BAD_STATE;
     }
-
-    zx_status_t Map(int fd) {
-        reset();
-
-        struct stat s;
-        if (fstat(fd, &s) < 0) {
-            return ZX_ERR_BAD_STATE;
-        }
-        data_ = mmap(nullptr, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-        if (data_ == nullptr) {
-            return ZX_ERR_BAD_STATE;
-        }
-        length_ = s.st_size;
-        return ZX_OK;
+    data_ = mmap(nullptr, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (data_ == nullptr) {
+      return ZX_ERR_BAD_STATE;
     }
+    length_ = s.st_size;
+    return ZX_OK;
+  }
 
-    void* data() const {
-        return data_;
-    }
+  void* data() const { return data_; }
 
-    uint64_t length() const {
-        return length_;
-    }
+  uint64_t length() const { return length_; }
 
-private:
-    void* data_;
-    uint64_t length_;
+ private:
+  void* data_;
+  uint64_t length_;
 };
 
 typedef union {
-    uint8_t block[kBlobfsBlockSize];
-    Superblock info;
+  uint8_t block[kBlobfsBlockSize];
+  Superblock info;
 } info_block_t;
 
 // Stores pointer to an inode's metadata and the matching block number
 class InodeBlock {
-public:
-    InodeBlock(size_t bno, Inode* inode, const Digest& digest)
-        : bno_(bno) {
-        inode_ = inode;
-        digest.CopyTo(inode_->merkle_root_hash, sizeof(inode_->merkle_root_hash));
-    }
+ public:
+  InodeBlock(size_t bno, Inode* inode, const Digest& digest) : bno_(bno) {
+    inode_ = inode;
+    digest.CopyTo(inode_->merkle_root_hash, sizeof(inode_->merkle_root_hash));
+  }
 
-    size_t GetBno() const {
-        return bno_;
-    }
+  size_t GetBno() const { return bno_; }
 
-    Inode* GetInode() {
-        return inode_;
-    }
+  Inode* GetInode() { return inode_; }
 
-private:
-    size_t bno_;
-    Inode* inode_;
+ private:
+  size_t bno_;
+  Inode* inode_;
 };
 
 class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
-    // Creates an instance of Blobfs from the file at |blockfd|.
-    // The blobfs partition is expected to start at |offset| bytes into the file.
-    static zx_status_t Create(fbl::unique_fd blockfd, off_t offset, const info_block_t& info_block,
-                              const fbl::Array<size_t>& extent_lengths,
-                              fbl::unique_ptr<Blobfs>* out);
+  // Creates an instance of Blobfs from the file at |blockfd|.
+  // The blobfs partition is expected to start at |offset| bytes into the file.
+  static zx_status_t Create(fbl::unique_fd blockfd, off_t offset, const info_block_t& info_block,
+                            const fbl::Array<size_t>& extent_lengths, fbl::unique_ptr<Blobfs>* out);
 
-    ~Blobfs() {}
+  ~Blobfs() {}
 
-    // Checks to see if a blob already exists, and if not allocates a new node
-    zx_status_t NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* out);
+  // Checks to see if a blob already exists, and if not allocates a new node
+  zx_status_t NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* out);
 
-    // Allocate |nblocks| starting at |*blkno_out| in memory
-    zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
+  // Allocate |nblocks| starting at |*blkno_out| in memory
+  zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
 
-    zx_status_t WriteData(Inode* inode, const void* merkle_data,
-                          const void* blob_data);
-    zx_status_t WriteBitmap(size_t nblocks, size_t start_block);
-    zx_status_t WriteNode(fbl::unique_ptr<InodeBlock> ino_block);
-    zx_status_t WriteInfo();
+  zx_status_t WriteData(Inode* inode, const void* merkle_data, const void* blob_data);
+  zx_status_t WriteBitmap(size_t nblocks, size_t start_block);
+  zx_status_t WriteNode(fbl::unique_ptr<InodeBlock> ino_block);
+  zx_status_t WriteInfo();
 
-    // Access the |node_index|-th inode
-    Inode* GetNode(uint32_t node_index) final;
+  // Access the |node_index|-th inode
+  Inode* GetNode(uint32_t node_index) final;
 
-    AllocatedExtentIterator GetExtents(uint32_t node_index) {
-        return AllocatedExtentIterator(this, node_index);
+  AllocatedExtentIterator GetExtents(uint32_t node_index) {
+    return AllocatedExtentIterator(this, node_index);
+  }
+
+  // TODO(smklein): Consider deduplicating the host and target allocation systems.
+  bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
+                            uint64_t* first_unset = nullptr) const {
+    size_t unset_bit;
+    bool allocated = block_map_.Get(start_block, end_block, &unset_bit);
+    if (!allocated && first_unset != nullptr) {
+      *first_unset = static_cast<uint64_t>(unset_bit);
     }
+    return allocated;
+  }
 
-    // TODO(smklein): Consider deduplicating the host and target allocation systems.
-    bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
-                              uint64_t* first_unset = nullptr) const {
-        size_t unset_bit;
-        bool allocated = block_map_.Get(start_block, end_block, &unset_bit);
-        if (!allocated && first_unset != nullptr) {
-            *first_unset = static_cast<uint64_t>(unset_bit);
-        }
-        return allocated;
-    }
+ private:
+  struct BlockCache {
+    size_t bno;
+    uint8_t blk[kBlobfsBlockSize];
+  };
 
-private:
-    struct BlockCache {
-        size_t bno;
-        uint8_t blk[kBlobfsBlockSize];
-    };
+  friend class BlobfsChecker;
 
-    friend class BlobfsChecker;
+  Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
+         const fbl::Array<size_t>& extent_lengths);
+  zx_status_t LoadBitmap();
 
-    Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
-           const fbl::Array<size_t>& extent_lengths);
-    zx_status_t LoadBitmap();
+  // Read data from block |bno| into the block cache.
+  // If the block cache already contains data from the specified bno, nothing happens.
+  // Cannot read while a dirty block is pending.
+  zx_status_t ReadBlock(size_t bno);
 
-    // Read data from block |bno| into the block cache.
-    // If the block cache already contains data from the specified bno, nothing happens.
-    // Cannot read while a dirty block is pending.
-    zx_status_t ReadBlock(size_t bno);
+  // Write |data| into block |bno|
+  zx_status_t WriteBlock(size_t bno, const void* data);
 
-    // Write |data| into block |bno|
-    zx_status_t WriteBlock(size_t bno, const void* data);
+  zx_status_t ResetCache();
 
-    zx_status_t ResetCache();
+  zx_status_t VerifyBlob(uint32_t node_index);
 
-    zx_status_t VerifyBlob(uint32_t node_index);
+  RawBitmap block_map_{};
 
-    RawBitmap block_map_{};
+  fbl::unique_fd blockfd_;
+  bool dirty_;
+  off_t offset_;
 
-    fbl::unique_fd blockfd_;
-    bool dirty_;
-    off_t offset_;
+  size_t block_map_start_block_;
+  size_t node_map_start_block_;
+  size_t journal_start_block_;
+  size_t data_start_block_;
 
-    size_t block_map_start_block_;
-    size_t node_map_start_block_;
-    size_t journal_start_block_;
-    size_t data_start_block_;
+  size_t block_map_block_count_;
+  size_t node_map_block_count_;
+  size_t journal_block_count_;
+  size_t data_block_count_;
 
-    size_t block_map_block_count_;
-    size_t node_map_block_count_;
-    size_t journal_block_count_;
-    size_t data_block_count_;
+  union {
+    Superblock info_;
+    uint8_t info_block_[kBlobfsBlockSize];
+  };
 
-    union {
-        Superblock info_;
-        uint8_t info_block_[kBlobfsBlockSize];
-    };
-
-    // Caches the most recent block read from disk
-    BlockCache cache_;
+  // Caches the most recent block read from disk
+  BlockCache cache_;
 };
 
 // Reads block |bno| into |data| from |fd|.
@@ -272,7 +259,8 @@ zx_status_t blobfs_preprocess(int data_fd, bool compress, MerkleInfo* out_info);
 zx_status_t blobfs_add_blob(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd);
 
 // Identical to blobfs_add_blob, but uses a precomputed Merkle Tree and digest.
-zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd, const MerkleInfo& info);
+zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd,
+                                        const MerkleInfo& info);
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
                         const fbl::Vector<size_t>& extent_lengths);
@@ -284,4 +272,4 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 // the superblock, block bitmap, inode table, and data blocks.
 zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
                                  off_t end, const fbl::Vector<size_t>& extent_lengths);
-} // namespace blobfs
+}  // namespace blobfs

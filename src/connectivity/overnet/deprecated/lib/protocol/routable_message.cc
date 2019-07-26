@@ -9,8 +9,7 @@ namespace overnet {
 static const uint64_t kMaxDestCount = 128;
 static const uint64_t kDestCountFlagsShift = 4;
 
-size_t RoutableMessage::HeaderLength(NodeId writer, NodeId target,
-                                     HeaderInfo* hinf) const {
+size_t RoutableMessage::HeaderLength(NodeId writer, NodeId target, HeaderInfo* hinf) const {
   // Measure the size of the serialized message, consisting of:
   //   flags: varint64
   //   source: NodeId if !local
@@ -20,8 +19,7 @@ size_t RoutableMessage::HeaderLength(NodeId writer, NodeId target,
   //   stream: StreamId
   //   sequence: SeqNum if !control
   size_t header_length = 0;
-  const bool is_local =
-      (src_ == writer && dsts_.size() == 1 && dsts_[0].dst() == target);
+  const bool is_local = (src_ == writer && dsts_.size() == 1 && dsts_[0].dst() == target);
   const uint64_t dst_count = is_local ? 0 : dsts_.size();
   const uint64_t flags = (dst_count << kDestCountFlagsShift);
   const auto flags_length = varint::WireSizeFor(flags);
@@ -47,8 +45,8 @@ size_t RoutableMessage::HeaderLength(NodeId writer, NodeId target,
   return header_length;
 }
 
-Optional<size_t> RoutableMessage::MaxPayloadLength(
-    NodeId writer, NodeId target, size_t remaining_space) const {
+Optional<size_t> RoutableMessage::MaxPayloadLength(NodeId writer, NodeId target,
+                                                   size_t remaining_space) const {
   auto hlen = HeaderLength(writer, target, nullptr);
   if (hlen + 1 > remaining_space) {
     return Nothing;
@@ -56,27 +54,24 @@ Optional<size_t> RoutableMessage::MaxPayloadLength(
   return varint::MaximumLengthWithPrefix(remaining_space - hlen);
 }
 
-Slice RoutableMessage::Write(NodeId writer, NodeId target,
-                             Slice payload) const {
+Slice RoutableMessage::Write(NodeId writer, NodeId target, Slice payload) const {
   HeaderInfo hinf;
   // Serialize the message.
-  return payload.WithPrefix(
-      HeaderLength(writer, target, &hinf), [this, &hinf](uint8_t* data) {
-        uint8_t* p = data;
-        p = varint::Write(hinf.flags, hinf.flags_length, p);
-        if (!hinf.is_local)
-          p = src_.Write(p);
-        for (size_t i = 0; i < dsts_.size(); i++) {
-          if (!hinf.is_local)
-            p = dsts_[i].dst().Write(p);
-          p = dsts_[i].stream_id().Write(hinf.stream_id_len[i], p);
-          p = dsts_[i].seq().Write(p);
-        }
-      });
+  return payload.WithPrefix(HeaderLength(writer, target, &hinf), [this, &hinf](uint8_t* data) {
+    uint8_t* p = data;
+    p = varint::Write(hinf.flags, hinf.flags_length, p);
+    if (!hinf.is_local)
+      p = src_.Write(p);
+    for (size_t i = 0; i < dsts_.size(); i++) {
+      if (!hinf.is_local)
+        p = dsts_[i].dst().Write(p);
+      p = dsts_[i].stream_id().Write(hinf.stream_id_len[i], p);
+      p = dsts_[i].seq().Write(p);
+    }
+  });
 }
 
-StatusOr<MessageWithPayload> RoutableMessage::Parse(Slice data, NodeId reader,
-                                                    NodeId writer) {
+StatusOr<MessageWithPayload> RoutableMessage::Parse(Slice data, NodeId reader, NodeId writer) {
   uint64_t flags;
   const uint8_t* bytes = data.begin();
   const uint8_t* end = data.end();
@@ -89,9 +84,8 @@ StatusOr<MessageWithPayload> RoutableMessage::Parse(Slice data, NodeId reader,
   if (is_local)
     dst_count++;
   if (dst_count > kMaxDestCount) {
-    return StatusOr<MessageWithPayload>(
-        StatusCode::INVALID_ARGUMENT,
-        "Destination count too high in routing header");
+    return StatusOr<MessageWithPayload>(StatusCode::INVALID_ARGUMENT,
+                                        "Destination count too high in routing header");
   }
   uint64_t src;
   if (!is_local) {
@@ -116,9 +110,8 @@ StatusOr<MessageWithPayload> RoutableMessage::Parse(Slice data, NodeId reader,
     }
     uint64_t stream_id;
     if (!varint::Read(&bytes, end, &stream_id)) {
-      return StatusOr<MessageWithPayload>(
-          StatusCode::INVALID_ARGUMENT,
-          "Failed to parse stream id from routing header");
+      return StatusOr<MessageWithPayload>(StatusCode::INVALID_ARGUMENT,
+                                          "Failed to parse stream id from routing header");
     }
     auto seq_num = SeqNum::Parse(&bytes, end);
     if (seq_num.is_error()) {
@@ -126,9 +119,8 @@ StatusOr<MessageWithPayload> RoutableMessage::Parse(Slice data, NodeId reader,
     }
     destinations.emplace_back(NodeId(dst), StreamId(stream_id), *seq_num.get());
   }
-  return MessageWithPayload{
-      RoutableMessage(NodeId(src), std::move(destinations)),
-      data.FromPointer(bytes)};
+  return MessageWithPayload{RoutableMessage(NodeId(src), std::move(destinations)),
+                            data.FromPointer(bytes)};
 }
 
 std::ostream& operator<<(std::ostream& out, const RoutableMessage& h) {
@@ -137,8 +129,8 @@ std::ostream& operator<<(std::ostream& out, const RoutableMessage& h) {
   for (const auto& dst : h.destinations()) {
     if (i)
       out << " ";
-    out << "[" << (i++) << "] dst:" << dst.dst()
-        << " stream_id:" << dst.stream_id() << " seq:" << dst.seq();
+    out << "[" << (i++) << "] dst:" << dst.dst() << " stream_id:" << dst.stream_id()
+        << " seq:" << dst.seq();
   }
   return out << "}}";
 }

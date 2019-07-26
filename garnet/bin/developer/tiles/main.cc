@@ -41,14 +41,11 @@ int main(int argc, const char** argv) {
 
   if (command_line.HasOption("input_path", nullptr)) {
     // Ease users off this flag.
-    FXL_LOG(ERROR)
-        << "The --input_path= flag is DEPRECATED. Flag will be removed.";
+    FXL_LOG(ERROR) << "The --input_path= flag is DEPRECATED. Flag will be removed.";
   }
 
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
-  auto scenic =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  auto scenic = startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
 
   // Create tiles with a token for its root view.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -60,13 +57,10 @@ int main(int argc, const char** argv) {
       .outgoing_services = {},
       .startup_context = startup_context.get(),
   };
-  tiles::Tiles tiles(std::move(view_context), command_line.positional_args(),
-                     border);
+  tiles::Tiles tiles(std::move(view_context), command_line.positional_args(), border);
 
   // Ask the presenter to display it.
-  auto presenter =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+  auto presenter = startup_context->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   presenter->PresentView(std::move(view_holder_token), nullptr);
 
   loop.Run();

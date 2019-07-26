@@ -115,12 +115,10 @@ int main(int argc, char* argv[]) {
   }
 
   if (command == "run") {
-    FXL_LOG(INFO) << "Running subprogram for test " << spec_file_path << ":\""
-                  << test_name << "\"";
+    FXL_LOG(INFO) << "Running subprogram for test " << spec_file_path << ":\"" << test_name << "\"";
     return RunTest(spec, test->run);
   } else {
-    FXL_LOG(INFO) << "Verifying test " << spec_file_path << ":\"" << test_name
-                  << "\"";
+    FXL_LOG(INFO) << "Verifying test " << spec_file_path << ":\"" << test_name << "\"";
     const std::string& trace_output_file = args[2];
     return VerifyTest(spec, test->verify, trace_output_file);
   }

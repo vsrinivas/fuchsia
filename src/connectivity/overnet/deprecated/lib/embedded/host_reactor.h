@@ -71,9 +71,7 @@ class HostReactor final : public Timer {
       return true;
     }
     bool timeout_hit = false;
-    Timeout timeout(this, until, [&timeout_hit](const Status& status) {
-      timeout_hit = true;
-    });
+    Timeout timeout(this, until, [&timeout_hit](const Status& status) { timeout_hit = true; });
     while (!timeout_hit) {
       Step();
       if (succeeds()) {

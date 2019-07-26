@@ -14,60 +14,60 @@ namespace internal {
 namespace {
 
 class FakeClock {
-public:
-    static FakeClock& GetInstance() {
-        static FakeClock clock;
-        return clock;
-    }
+ public:
+  static FakeClock& GetInstance() {
+    static FakeClock clock;
+    return clock;
+  }
 
-    static zx::ticks now() { return GetInstance().current(); }
+  static zx::ticks now() { return GetInstance().current(); }
 
-    zx::ticks current() const { return current_; }
+  zx::ticks current() const { return current_; }
 
-    void set_current(uint32_t current) { current_ = zx::ticks(current); }
+  void set_current(uint32_t current) { current_ = zx::ticks(current); }
 
-private:
-    zx::ticks current_ = zx::ticks(0);
+ private:
+  zx::ticks current_ = zx::ticks(0);
 };
 
 bool TestCollecting() {
-    BEGIN_TEST;
-    FakeClock::GetInstance().set_current(1);
-    TimerBase<FakeClock> timer(true);
-    FakeClock::GetInstance().set_current(4);
-    ASSERT_EQ(timer.End().to_nsecs(), fzl::TicksToNs(zx::ticks(3)).to_nsecs());
-    END_TEST;
+  BEGIN_TEST;
+  FakeClock::GetInstance().set_current(1);
+  TimerBase<FakeClock> timer(true);
+  FakeClock::GetInstance().set_current(4);
+  ASSERT_EQ(timer.End().to_nsecs(), fzl::TicksToNs(zx::ticks(3)).to_nsecs());
+  END_TEST;
 }
 
 bool TestNotCollecting() {
-    BEGIN_TEST;
-    FakeClock::GetInstance().set_current(1);
-    TimerBase<FakeClock> timer(false);
-    FakeClock::GetInstance().set_current(4);
-    ASSERT_EQ(timer.End().to_nsecs(), fzl::TicksToNs(zx::ticks(0)).to_nsecs());
-    END_TEST;
+  BEGIN_TEST;
+  FakeClock::GetInstance().set_current(1);
+  TimerBase<FakeClock> timer(false);
+  FakeClock::GetInstance().set_current(4);
+  ASSERT_EQ(timer.End().to_nsecs(), fzl::TicksToNs(zx::ticks(0)).to_nsecs());
+  END_TEST;
 }
 
 bool TestReset() {
-    BEGIN_TEST;
-    FakeClock::GetInstance().set_current(1);
-    TimerBase<FakeClock> timer(true);
-    FakeClock::GetInstance().set_current(4);
-    timer.Reset();
-    FakeClock::GetInstance().set_current(8);
-    ASSERT_EQ(timer.End().to_nsecs(), fzl::TicksToNs(zx::ticks(4)).to_nsecs());
-    END_TEST;
+  BEGIN_TEST;
+  FakeClock::GetInstance().set_current(1);
+  TimerBase<FakeClock> timer(true);
+  FakeClock::GetInstance().set_current(4);
+  timer.Reset();
+  FakeClock::GetInstance().set_current(8);
+  ASSERT_EQ(timer.End().to_nsecs(), fzl::TicksToNs(zx::ticks(4)).to_nsecs());
+  END_TEST;
 }
 
 bool TestResetNotCollecting() {
-    BEGIN_TEST;
-    FakeClock::GetInstance().set_current(1);
-    TimerBase<FakeClock> timer(false);
-    FakeClock::GetInstance().set_current(4);
-    timer.Reset();
-    FakeClock::GetInstance().set_current(8);
-    ASSERT_EQ(timer.End().to_nsecs(), fzl::TicksToNs(zx::ticks(0)).to_nsecs());
-    END_TEST;
+  BEGIN_TEST;
+  FakeClock::GetInstance().set_current(1);
+  TimerBase<FakeClock> timer(false);
+  FakeClock::GetInstance().set_current(4);
+  timer.Reset();
+  FakeClock::GetInstance().set_current(8);
+  ASSERT_EQ(timer.End().to_nsecs(), fzl::TicksToNs(zx::ticks(0)).to_nsecs());
+  END_TEST;
 }
 
 BEGIN_TEST_CASE(TimerTest)
@@ -77,6 +77,6 @@ RUN_TEST(TestReset)
 RUN_TEST(TestResetNotCollecting)
 END_TEST_CASE(TimerTest)
 
-} // namespace
-} // namespace internal
-} // namespace cobalt_client
+}  // namespace
+}  // namespace internal
+}  // namespace cobalt_client

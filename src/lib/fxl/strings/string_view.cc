@@ -61,13 +61,9 @@ bool operator<(StringView lhs, StringView rhs) { return lhs.compare(rhs) < 0; }
 
 bool operator>(StringView lhs, StringView rhs) { return lhs.compare(rhs) > 0; }
 
-bool operator<=(StringView lhs, StringView rhs) {
-  return lhs.compare(rhs) <= 0;
-}
+bool operator<=(StringView lhs, StringView rhs) { return lhs.compare(rhs) <= 0; }
 
-bool operator>=(StringView lhs, StringView rhs) {
-  return lhs.compare(rhs) >= 0;
-}
+bool operator>=(StringView lhs, StringView rhs) { return lhs.compare(rhs) >= 0; }
 
 std::ostream& operator<<(std::ostream& o, StringView string_view) {
   o.write(string_view.data(), static_cast<std::streamsize>(string_view.size()));

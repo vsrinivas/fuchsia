@@ -22,85 +22,85 @@
 constexpr char kFileName[] = "nand_image";
 
 static std::string image_path() {
-    const char* root_dir = getenv("TEST_ROOT_DIR");
-    if (root_dir == nullptr) {
-      root_dir = "";
-    }
-    return std::string(root_dir) + "/testdata/zbi-bootfs/test-image.zbi";
+  const char* root_dir = getenv("TEST_ROOT_DIR");
+  if (root_dir == nullptr) {
+    root_dir = "";
+  }
+  return std::string(root_dir) + "/testdata/zbi-bootfs/test-image.zbi";
 }
 
 static bool ZbiInit(void) {
-    BEGIN_TEST;
-    zbi_bootfs::ZbiBootfsParser image;
-    size_t byte_offset = 0;
-    const std::string input = image_path();
+  BEGIN_TEST;
+  zbi_bootfs::ZbiBootfsParser image;
+  size_t byte_offset = 0;
+  const std::string input = image_path();
 
-    // Check good input
-    zx::vmo vmo_out;
-    ASSERT_EQ(ZX_OK, image.Init(input.c_str(), byte_offset));
+  // Check good input
+  zx::vmo vmo_out;
+  ASSERT_EQ(ZX_OK, image.Init(input.c_str(), byte_offset));
 
-    END_TEST;
+  END_TEST;
 }
 
 static bool ZbiInitBadInput(void) {
-    BEGIN_TEST;
-    zbi_bootfs::ZbiBootfsParser image;
+  BEGIN_TEST;
+  zbi_bootfs::ZbiBootfsParser image;
 
-    // Check bad input
-    const char* input = nullptr;
-    size_t byte_offset = 0;
-    ASSERT_EQ(ZX_ERR_IO, image.Init(input, byte_offset));
+  // Check bad input
+  const char* input = nullptr;
+  size_t byte_offset = 0;
+  ASSERT_EQ(ZX_ERR_IO, image.Init(input, byte_offset));
 
-    END_TEST;
+  END_TEST;
 }
 
 static bool ZbiProcessSuccess(void) {
-    BEGIN_TEST;
-    zbi_bootfs::ZbiBootfsParser image;
-    const std::string input = image_path();
-    const char* filename = kFileName;
-    size_t byte_offset = 0;
+  BEGIN_TEST;
+  zbi_bootfs::ZbiBootfsParser image;
+  const std::string input = image_path();
+  const char* filename = kFileName;
+  size_t byte_offset = 0;
 
-    zbi_bootfs::Entry entry;
+  zbi_bootfs::Entry entry;
 
-    ASSERT_EQ(ZX_OK, image.Init(input.c_str(), byte_offset));
+  ASSERT_EQ(ZX_OK, image.Init(input.c_str(), byte_offset));
 
-    // Check bootfs filename
-    // This will return a list of Bootfs entires, plus details of "filename" entry
-    ASSERT_EQ(ZX_OK, image.ProcessZbi(filename, &entry));
-    END_TEST;
+  // Check bootfs filename
+  // This will return a list of Bootfs entires, plus details of "filename" entry
+  ASSERT_EQ(ZX_OK, image.ProcessZbi(filename, &entry));
+  END_TEST;
 }
 
 static bool ZbiProcessBadOffset(void) {
-    BEGIN_TEST;
-    zbi_bootfs::ZbiBootfsParser image;
-    const std::string input = image_path();
-    const char* filename = kFileName;
-    zbi_bootfs::Entry entry;
+  BEGIN_TEST;
+  zbi_bootfs::ZbiBootfsParser image;
+  const std::string input = image_path();
+  const char* filename = kFileName;
+  zbi_bootfs::Entry entry;
 
-    // Check loading zbi with bad offset value and then try processing it
-    // This should return an error
-    size_t byte_offset = 1;
-    ASSERT_EQ(ZX_OK, image.Init(input.c_str(), byte_offset));
-    ASSERT_EQ(ZX_ERR_BAD_STATE, image.ProcessZbi(filename, &entry));
+  // Check loading zbi with bad offset value and then try processing it
+  // This should return an error
+  size_t byte_offset = 1;
+  ASSERT_EQ(ZX_OK, image.Init(input.c_str(), byte_offset));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, image.ProcessZbi(filename, &entry));
 
-    END_TEST;
+  END_TEST;
 }
 
 static bool ZbiProcessBadFile(void) {
-    BEGIN_TEST;
-    zbi_bootfs::ZbiBootfsParser image;
-    const std::string input = image_path();
-    size_t byte_offset = 0;
-    zbi_bootfs::Entry entry;
+  BEGIN_TEST;
+  zbi_bootfs::ZbiBootfsParser image;
+  const std::string input = image_path();
+  size_t byte_offset = 0;
+  zbi_bootfs::Entry entry;
 
-    ASSERT_EQ(ZX_OK, image.Init(input.c_str(), byte_offset));
-    // Check bad payload filename
-    // This will return a list of payload (Bootfs) entires
-    const char* filename = "";
-    ASSERT_EQ(ZX_ERR_NOT_FOUND, image.ProcessZbi(filename, &entry));
+  ASSERT_EQ(ZX_OK, image.Init(input.c_str(), byte_offset));
+  // Check bad payload filename
+  // This will return a list of payload (Bootfs) entires
+  const char* filename = "";
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, image.ProcessZbi(filename, &entry));
 
-    END_TEST;
+  END_TEST;
 }
 
 BEGIN_TEST_CASE(zbi_tests)

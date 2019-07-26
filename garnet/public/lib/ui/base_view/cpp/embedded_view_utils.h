@@ -55,9 +55,9 @@ struct EmbeddedViewInfo {
 // For example, an interface to a ViewProvider is obtained, a pair of
 // zx::eventpairs is created, CreateView is called, etc.  This encapsulates
 // the boilerplate the the client would otherwise write themselves.
-EmbeddedViewInfo LaunchComponentAndCreateView(
-    const fuchsia::sys::LauncherPtr& launcher, const std::string& component_url,
-    const std::vector<std::string>& component_args = {});
+EmbeddedViewInfo LaunchComponentAndCreateView(const fuchsia::sys::LauncherPtr& launcher,
+                                              const std::string& component_url,
+                                              const std::vector<std::string>& component_args = {});
 
 }  // namespace scenic
 

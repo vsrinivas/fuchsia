@@ -10,14 +10,12 @@
 
 namespace debug_ipc {
 
-bool Equals(const debug_ipc::AddressRange& lhs,
-            const debug_ipc::AddressRange& rhs) {
+bool Equals(const debug_ipc::AddressRange& lhs, const debug_ipc::AddressRange& rhs) {
   return lhs.begin == rhs.begin && lhs.end == rhs.end;
 }
 
 std::string AddressRangeToString(const debug_ipc::AddressRange& range) {
-  return fxl::StringPrintf("Begin: 0x%" PRIx64 ", End 0x%" PRIx64, range.begin,
-                           range.end);
+  return fxl::StringPrintf("Begin: 0x%" PRIx64 ", End 0x%" PRIx64, range.begin, range.end);
 }
 
 // Used only for testing, collisions are bound to be very unlikely.

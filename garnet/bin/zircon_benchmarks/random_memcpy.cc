@@ -16,8 +16,7 @@
 
 namespace {
 
-constexpr size_t kCacheSizeMB =
-    16;  // Larger than last-level cache on common CPUs.
+constexpr size_t kCacheSizeMB = 16;  // Larger than last-level cache on common CPUs.
 constexpr size_t kBufferSizeMB = 128;
 // A pragmatic upper-bound on the length of a random access-sequence, to limit
 // the amount of time we spend generating the sequence.
@@ -36,13 +35,11 @@ constexpr size_t kMaxAccessSequenceLen = 100000;
 //   disabled, and repeatedly copies the same source to the same destination
 // * MemcpyTest in //zircon, which runs in userspace, and repeatedly copies the
 //   same source to the same destination
-bool RandomMemcpy(perftest::RepeatState* state, size_t block_size_bytes,
-                  size_t buffer_size_mb) {
+bool RandomMemcpy(perftest::RepeatState* state, size_t block_size_bytes, size_t buffer_size_mb) {
   const size_t buffer_size_bytes = buffer_size_mb * 1024 * 1024;
   if (block_size_bytes >= buffer_size_bytes) {
-    std::cerr
-        << "Invalid configuration: block_size_bytes >= buffer_size_bytes ("
-        << block_size_bytes << " >= " << buffer_size_bytes << ")" << std::endl;
+    std::cerr << "Invalid configuration: block_size_bytes >= buffer_size_bytes ("
+              << block_size_bytes << " >= " << buffer_size_bytes << ")" << std::endl;
     return false;
   }
 
@@ -52,14 +49,11 @@ bool RandomMemcpy(perftest::RepeatState* state, size_t block_size_bytes,
 
   // Prepare the random source and destination addresses.
   const size_t cache_size_bytes = kCacheSizeMB * 1024 * 1024;
-  const size_t num_blocks_to_overflow_cache =
-      cache_size_bytes / block_size_bytes + 1;
-  const size_t access_sequence_len =
-      std::min(num_blocks_to_overflow_cache, kMaxAccessSequenceLen);
+  const size_t num_blocks_to_overflow_cache = cache_size_bytes / block_size_bytes + 1;
+  const size_t access_sequence_len = std::min(num_blocks_to_overflow_cache, kMaxAccessSequenceLen);
   std::random_device rand_dev;
   std::uniform_int_distribution rand_offset_gen(
-      size_t(0), buffer_size_bytes -
-                     block_size_bytes  // Ensure end of block is within buffer.
+      size_t(0), buffer_size_bytes - block_size_bytes  // Ensure end of block is within buffer.
   );
   std::vector<char*> src_addrs(access_sequence_len);
   std::vector<char*> dst_addrs(access_sequence_len);
@@ -72,8 +66,8 @@ bool RandomMemcpy(perftest::RepeatState* state, size_t block_size_bytes,
   state->SetBytesProcessedPerRun(block_size_bytes);
   for (size_t i = 0; state->KeepRunning(); ++i) {
     // The blocks might overlap, so we use memmove() instead of memcpy().
-    memmove(dst_addrs[i % access_sequence_len],
-            src_addrs[i % access_sequence_len], block_size_bytes);
+    memmove(dst_addrs[i % access_sequence_len], src_addrs[i % access_sequence_len],
+            block_size_bytes);
   }
 
   return true;
@@ -82,18 +76,16 @@ bool RandomMemcpy(perftest::RepeatState* state, size_t block_size_bytes,
 void RegisterTest(size_t block_size_bytes, size_t buffer_size_mb) {
   fbl::String test_name;
   if (block_size_bytes < 1024) {
-    test_name = fbl::StringPrintf("RandomMemcpy/%zubytes/%zuMbytes",
-                                  block_size_bytes, buffer_size_mb);
-  } else if (block_size_bytes < 1024 * 1024) {
-    test_name = fbl::StringPrintf("RandomMemcpy/%zuKbytes/%zuMbytes",
-                                  block_size_bytes / 1024, buffer_size_mb);
-  } else {
     test_name =
-        fbl::StringPrintf("RandomMemcpy/%zuMbytes/%zuMbytes",
-                          block_size_bytes / 1024 / 1024, buffer_size_mb);
+        fbl::StringPrintf("RandomMemcpy/%zubytes/%zuMbytes", block_size_bytes, buffer_size_mb);
+  } else if (block_size_bytes < 1024 * 1024) {
+    test_name = fbl::StringPrintf("RandomMemcpy/%zuKbytes/%zuMbytes", block_size_bytes / 1024,
+                                  buffer_size_mb);
+  } else {
+    test_name = fbl::StringPrintf("RandomMemcpy/%zuMbytes/%zuMbytes",
+                                  block_size_bytes / 1024 / 1024, buffer_size_mb);
   }
-  perftest::RegisterTest(test_name.c_str(), RandomMemcpy, block_size_bytes,
-                         buffer_size_mb);
+  perftest::RegisterTest(test_name.c_str(), RandomMemcpy, block_size_bytes, buffer_size_mb);
 }
 
 void RegisterTests() {

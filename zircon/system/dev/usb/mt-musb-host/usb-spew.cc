@@ -10,10 +10,10 @@
 namespace mt_usb_hci {
 
 void SpewUsbDeviceDescriptor(const usb_device_descriptor_t& d) {
-    // Here and below, used until std::string is fully available.
-    char buf[100];
+  // Here and below, used until std::string is fully available.
+  char buf[100];
 
-    // clang-format off
+  // clang-format off
     switch (d.bDeviceClass) {
     case USB_CLASS_AUDIO:                snprintf(buf, 100, "AUDIO"); break;
     case USB_CLASS_COMM:                 snprintf(buf, 100, "COMM"); break;
@@ -51,20 +51,20 @@ void SpewUsbDeviceDescriptor(const usb_device_descriptor_t& d) {
     zxlogf(SPEW, "               .iProduct = 0x%02x\n", d.iProduct);
     zxlogf(SPEW, "               .iSerialNumber = 0x%02x\n", d.iSerialNumber);
     zxlogf(SPEW, "               .bNumConfigurations = %d\n", d.bNumConfigurations);
-    // clang-format on
+  // clang-format on
 }
 
 void SpewUsbEndpointDescriptor(const usb_endpoint_descriptor_t& d) {
-    int off;
-    char addr_buf[100];
-    // Decode the endpoint address and direction.
-    off = snprintf(addr_buf, 100, "ep=%d,", usb_ep_num(&d));
-    off = snprintf(addr_buf + off, 100 - off, "%s", usb_ep_direction(&d) ? "IN" : "OUT");
+  int off;
+  char addr_buf[100];
+  // Decode the endpoint address and direction.
+  off = snprintf(addr_buf, 100, "ep=%d,", usb_ep_num(&d));
+  off = snprintf(addr_buf + off, 100 - off, "%s", usb_ep_direction(&d) ? "IN" : "OUT");
 
-    // Decode the endpoint type.
-    char attr_buf[100];
+  // Decode the endpoint type.
+  char attr_buf[100];
 
-    // clang-format off
+  // clang-format off
     switch (static_cast<uint8_t>(usb_ep_type(&d))) {
     case USB_ENDPOINT_CONTROL:     snprintf(attr_buf, 100, "CONTROL"); break;
     case USB_ENDPOINT_ISOCHRONOUS: snprintf(attr_buf, 100, "ISOCHRONOUS"); break;
@@ -80,13 +80,13 @@ void SpewUsbEndpointDescriptor(const usb_endpoint_descriptor_t& d) {
     zxlogf(SPEW, "               .bmAttributes = 0x%02x <%s>\n", d.bmAttributes, attr_buf);
     zxlogf(SPEW, "               .wMaxPacketSize = 0x%04x\n", d.wMaxPacketSize);
     zxlogf(SPEW, "               .bInterval = %d\n", d.bInterval);
-    // clang-format on
+  // clang-format on
 }
 
 void SpewUsbRequest(const usb_request_t& req) {
-    char buf[100];
+  char buf[100];
 
-    // clang-format off
+  // clang-format off
     switch (req.setup.bRequest) {
     case USB_REQ_GET_STATUS:        snprintf(buf, 100, "GET_STATUS"); break;
     case USB_REQ_CLEAR_FEATURE:     snprintf(buf, 100, "CLEAR_FEATURE"); break;
@@ -114,7 +114,7 @@ void SpewUsbRequest(const usb_request_t& req) {
     zxlogf(SPEW, "               .wValue = 0x%04x\n", req.setup.wValue);
     zxlogf(SPEW, "               .wIndex = 0x%04x\n", req.setup.wIndex);
     zxlogf(SPEW, "               .wLength = %d\n", req.setup.wLength);
-    // clang-format on
+  // clang-format on
 }
 
-} // namespace mt_usb_hci
+}  // namespace mt_usb_hci

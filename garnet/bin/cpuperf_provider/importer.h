@@ -22,16 +22,15 @@ namespace cpuperf_provider {
 
 class Importer {
  public:
-  Importer(trace_context* context, const TraceConfig* trace_config,
-           trace_ticks_t start_time, trace_ticks_t stop_time);
+  Importer(trace_context* context, const TraceConfig* trace_config, trace_ticks_t start_time,
+           trace_ticks_t stop_time);
   ~Importer();
 
   bool Import(perfmon::Reader& reader, const perfmon::Config& perfmon_config);
 
  private:
   static constexpr size_t kMaxNumCpus = 32;
-  static_assert(kMaxNumCpus <= TRACE_ENCODED_THREAD_REF_MAX_INDEX,
-                "bad value for kMaxNumCpus");
+  static_assert(kMaxNumCpus <= TRACE_ENCODED_THREAD_REF_MAX_INDEX, "bad value for kMaxNumCpus");
 
   class EventTracker final {
    public:
@@ -107,36 +106,28 @@ class Importer {
     EventData data_;
   };
 
-  uint64_t ImportRecords(perfmon::Reader& reader,
-                         const perfmon::Config& perfmon_config);
+  uint64_t ImportRecords(perfmon::Reader& reader, const perfmon::Config& perfmon_config);
 
-  void ImportSampleRecord(trace_cpu_number_t cpu,
-                          const perfmon::SampleRecord& record,
-                          trace_ticks_t previous_time,
-                          trace_ticks_t current_time, uint64_t ticks_per_second,
-                          uint64_t event_value);
+  void ImportSampleRecord(trace_cpu_number_t cpu, const perfmon::SampleRecord& record,
+                          trace_ticks_t previous_time, trace_ticks_t current_time,
+                          uint64_t ticks_per_second, uint64_t event_value);
 
-  void EmitSampleRecord(trace_cpu_number_t cpu,
-                        const perfmon::EventDetails* details,
-                        const perfmon::SampleRecord& record,
-                        trace_ticks_t start_time, trace_ticks_t end_time,
-                        uint64_t ticks_per_second, uint64_t value);
+  void EmitSampleRecord(trace_cpu_number_t cpu, const perfmon::EventDetails* details,
+                        const perfmon::SampleRecord& record, trace_ticks_t start_time,
+                        trace_ticks_t end_time, uint64_t ticks_per_second, uint64_t value);
 
-  void EmitLastBranchRecordBlob(trace_cpu_number_t cpu,
-                                const perfmon::SampleRecord& record,
+  void EmitLastBranchRecordBlob(trace_cpu_number_t cpu, const perfmon::SampleRecord& record,
                                 trace_ticks_t time);
 
-  void EmitTallyCounts(perfmon::Reader& reader,
-                       const perfmon::Config& perfmon_config,
+  void EmitTallyCounts(perfmon::Reader& reader, const perfmon::Config& perfmon_config,
                        const EventTracker& event_data);
 
-  void EmitTallyRecord(trace_cpu_number_t cpu, perfmon::EventId event_id,
-                       trace_ticks_t time, bool is_value, uint64_t value);
+  void EmitTallyRecord(trace_cpu_number_t cpu, perfmon::EventId event_id, trace_ticks_t time,
+                       bool is_value, uint64_t value);
 
   trace_string_ref_t GetCpuNameRef(trace_cpu_number_t cpu);
 
-  trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu,
-                                     perfmon::EventId id);
+  trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu, perfmon::EventId id);
 
   trace_context* const context_;
   const TraceConfig* trace_config_;

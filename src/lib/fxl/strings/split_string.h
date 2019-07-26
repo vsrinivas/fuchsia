@@ -28,16 +28,13 @@ enum SplitResult {
 
 // Split the given string on ANY of the given separators, returning copies of
 // the result
-std::vector<std::string> SplitStringCopy(StringView input,
-                                         StringView separators,
-                                         WhiteSpaceHandling whitespace,
-                                         SplitResult result_type);
+std::vector<std::string> SplitStringCopy(StringView input, StringView separators,
+                                         WhiteSpaceHandling whitespace, SplitResult result_type);
 
 // Like SplitStringCopy above except it returns a vector of StringViews which
 // reference the original buffer without copying.
 std::vector<StringView> SplitString(StringView input, StringView separators,
-                                    WhiteSpaceHandling whitespace,
-                                    SplitResult result_type);
+                                    WhiteSpaceHandling whitespace, SplitResult result_type);
 
 }  // namespace fxl
 

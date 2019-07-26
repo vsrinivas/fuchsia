@@ -63,10 +63,8 @@ size_t RawVideoWriter<enabled>::WriteUint32LittleEndian(uint32_t number) {
 }
 
 template <bool enabled>
-size_t RawVideoWriter<enabled>::WriteNv12(uint32_t width_pixels,
-                                          uint32_t height_pixels,
-                                          uint32_t stride_bytes,
-                                          const uint8_t* const y_base,
+size_t RawVideoWriter<enabled>::WriteNv12(uint32_t width_pixels, uint32_t height_pixels,
+                                          uint32_t stride_bytes, const uint8_t* const y_base,
                                           uint32_t uv_offset) {
   // Despite the copy cost, for now let's perform the write as one big write, to
   // maximize the chance of getting a frame written or not written as a unit in
@@ -182,8 +180,8 @@ void RawVideoWriter<enabled>::Initialize() {
   }
   file_.reset(::open(file_name_.c_str(), O_CREAT | O_WRONLY | O_TRUNC));
   if (!file_.is_valid()) {
-    FXL_LOG(WARNING) << "::open failed for " << std::quoted(file_name_)
-                     << ", returned " << file_.get() << ", errno " << errno;
+    FXL_LOG(WARNING) << "::open failed for " << std::quoted(file_name_) << ", returned "
+                     << file_.get() << ", errno " << errno;
     Fail();
     return;
   }
@@ -208,8 +206,7 @@ void RawVideoWriter<enabled>::WriteData(const uint8_t* to_write, size_t size) {
     return;
   }
   if (is_done_) {
-    FXL_LOG(WARNING)
-        << "RawVideoWriter write requested after Close() or Delete()";
+    FXL_LOG(WARNING) << "RawVideoWriter write requested after Close() or Delete()";
     Fail();
     return;
   }

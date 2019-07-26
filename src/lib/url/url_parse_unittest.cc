@@ -88,8 +88,7 @@ struct FileSystemURLParseCase {
   const char* ref;
 };
 
-bool ComponentMatches(const char* input, const char* reference,
-                      const Component& component) {
+bool ComponentMatches(const char* input, const char* reference, const Component& component) {
   // If the component is nonexistent, it should begin at 0.
   EXPECT_TRUE(component.is_valid() || component.begin == 0);
 
@@ -208,8 +207,8 @@ TEST(URLParser, CountCharactersBefore) {
     else
       ParseStandardURL(count_case.url, length, &parsed);
 
-    int chars_before = parsed.CountCharactersBefore(
-        count_case.component, count_case.include_delimiter);
+    int chars_before =
+        parsed.CountCharactersBefore(count_case.component, count_case.include_delimiter);
     EXPECT_EQ(count_case.expected_count, chars_before);
   }
 }
@@ -430,34 +429,27 @@ TEST(URLParser, ParseFileURL) {
     int port = ParsePort(url, parsed.port);
 
     EXPECT_TRUE(ComponentMatches(url, file_case.scheme, parsed.scheme))
-        << " [" << url << "] " << parsed.scheme.begin << ", "
-        << parsed.scheme.len();
+        << " [" << url << "] " << parsed.scheme.begin << ", " << parsed.scheme.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_case.username, parsed.username))
-        << " [" << url << "] " << parsed.username.begin << ", "
-        << parsed.username.len();
+        << " [" << url << "] " << parsed.username.begin << ", " << parsed.username.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_case.password, parsed.password))
-        << " [" << url << "] " << parsed.password.begin << ", "
-        << parsed.password.len();
+        << " [" << url << "] " << parsed.password.begin << ", " << parsed.password.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_case.host, parsed.host))
-        << " [" << url << "] " << parsed.host.begin << ", "
-        << parsed.host.len();
+        << " [" << url << "] " << parsed.host.begin << ", " << parsed.host.len();
 
     EXPECT_EQ(file_case.port, port) << " [ " << url << "] " << port;
 
     EXPECT_TRUE(ComponentMatches(url, file_case.path, parsed.path))
-        << " [" << url << "] " << parsed.path.begin << ", "
-        << parsed.path.len();
+        << " [" << url << "] " << parsed.path.begin << ", " << parsed.path.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_case.query, parsed.query))
-        << " [" << url << "] " << parsed.query.begin << ", "
-        << parsed.query.len();
+        << " [" << url << "] " << parsed.query.begin << ", " << parsed.query.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_case.ref, parsed.ref))
-        << " [ " << url << "] " << parsed.query.begin << ", "
-        << parsed.scheme.len();
+        << " [ " << url << "] " << parsed.query.begin << ", " << parsed.scheme.len();
   }
 }
 
@@ -500,8 +492,7 @@ TEST(URLParser, ExtractFileName) {
 // Returns true if the parameter with index |parameter| in the given URL's
 // query string. The expected key can be NULL to indicate no such key index
 // should exist. The parameter number is 1-based.
-static bool NthParameterIs(const char* url, int parameter,
-                           const char* expected_key,
+static bool NthParameterIs(const char* url, int parameter, const char* expected_key,
                            const char* expected_value) {
   Parsed parsed;
   ParseStandardURL(url, strlen(url), &parsed);

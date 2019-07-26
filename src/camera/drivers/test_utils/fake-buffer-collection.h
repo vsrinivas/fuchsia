@@ -22,9 +22,8 @@ namespace camera {
 // @Return: ZX_OK if allocation works, otherwise returns status from
 //          failed zx_vmo_create_contiguous.
 zx_status_t CreateContiguousBufferCollectionInfo(
-    fuchsia_sysmem_BufferCollectionInfo* buffer_collection,
-    zx_handle_t bti_handle, uint32_t width, uint32_t height,
-    uint32_t num_buffers);
+    fuchsia_sysmem_BufferCollectionInfo* buffer_collection, zx_handle_t bti_handle, uint32_t width,
+    uint32_t height, uint32_t num_buffers);
 
 }  // namespace camera
 

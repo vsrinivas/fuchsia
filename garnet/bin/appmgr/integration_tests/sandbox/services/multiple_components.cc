@@ -26,17 +26,15 @@ TEST_F(NamespaceTest, MultipleComponents) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = test_url;
     fuchsia::sys::ComponentControllerPtr controller;
-    CreateComponentInCurrentEnvironment(std::move(launch_info),
-                                        controller.NewRequest());
-    controller.events().OnTerminated =
-        [test_url, &num_running](
-            int64_t return_code,
-            fuchsia::sys::TerminationReason termination_reason) {
-          EXPECT_EQ(return_code, 0) << test_url << " exited with non-ok status";
-          EXPECT_EQ(termination_reason, fuchsia::sys::TerminationReason::EXITED)
-              << test_url << " exited unexpectedly";
-          --num_running;
-        };
+    CreateComponentInCurrentEnvironment(std::move(launch_info), controller.NewRequest());
+    controller.events().OnTerminated = [test_url, &num_running](
+                                           int64_t return_code,
+                                           fuchsia::sys::TerminationReason termination_reason) {
+      EXPECT_EQ(return_code, 0) << test_url << " exited with non-ok status";
+      EXPECT_EQ(termination_reason, fuchsia::sys::TerminationReason::EXITED)
+          << test_url << " exited unexpectedly";
+      --num_running;
+    };
     controllers.push_back(std::move(controller));
   }
 

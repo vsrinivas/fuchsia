@@ -53,10 +53,9 @@ bool WriteFile(const std::string& path, const char* data, ssize_t size) {
   return WriteFileAt(AT_FDCWD, path, data, size);
 }
 
-bool WriteFileAt(int dirfd, const std::string& path, const char* data,
-                 ssize_t size) {
-  fxl::UniqueFD fd(HANDLE_EINTR(openat(
-      dirfd, path.c_str(), O_CREAT | O_TRUNC | O_WRONLY, FILE_CREATE_MODE)));
+bool WriteFileAt(int dirfd, const std::string& path, const char* data, ssize_t size) {
+  fxl::UniqueFD fd(
+      HANDLE_EINTR(openat(dirfd, path.c_str(), O_CREAT | O_TRUNC | O_WRONLY, FILE_CREATE_MODE)));
   if (!fd.is_valid())
     return false;
   return fxl::WriteFileDescriptor(fd.get(), data, size);
@@ -90,8 +89,7 @@ bool ReadFileDescriptorToString(int fd, std::string* result) {
   return ReadFileDescriptor(fd, result);
 }
 
-bool ReadFileToStringAt(int dirfd, const std::string& path,
-                        std::string* result) {
+bool ReadFileToStringAt(int dirfd, const std::string& path, std::string* result) {
   fxl::UniqueFD fd(openat(dirfd, path.c_str(), O_RDONLY));
   return ReadFileDescriptor(fd.get(), result);
 }

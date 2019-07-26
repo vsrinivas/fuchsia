@@ -20,8 +20,8 @@ void elf_load_destroy(elf_load_info_t* info);
 // Check if the ELF file has a PT_INTERP header.  On success, *interp
 // is NULL if it had none or a malloc'd string of the contents;
 // *interp_len is strlen(*interp).
-zx_status_t elf_load_get_interp(elf_load_info_t* info, zx_handle_t vmo,
-                                char** interp, size_t* interp_len);
+zx_status_t elf_load_get_interp(elf_load_info_t* info, zx_handle_t vmo, char** interp,
+                                size_t* interp_len);
 
 // Check if the ELF file has a PT_GNU_STACK header, and return its p_memsz.
 // Returns zero if no header was found.
@@ -30,7 +30,5 @@ size_t elf_load_get_stack_size(elf_load_info_t* info);
 // Load the file's segments into the process.
 // If this fails, the state of the process address space is unspecified.
 // Regardless of success/failure this does not consume |vmo|.
-zx_status_t elf_load_finish(zx_handle_t vmar, elf_load_info_t* info,
-                            zx_handle_t vmo,
-                            zx_handle_t* segments_vmar,
-                            zx_vaddr_t* base, zx_vaddr_t* entry);
+zx_status_t elf_load_finish(zx_handle_t vmar, elf_load_info_t* info, zx_handle_t vmo,
+                            zx_handle_t* segments_vmar, zx_vaddr_t* base, zx_vaddr_t* entry);

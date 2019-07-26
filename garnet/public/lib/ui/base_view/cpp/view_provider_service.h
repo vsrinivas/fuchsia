@@ -16,8 +16,7 @@
 namespace scenic {
 
 // A callback to create a view when given a context.
-using ViewFactory =
-    fit::function<std::unique_ptr<BaseView>(ViewContext context)>;
+using ViewFactory = fit::function<std::unique_ptr<BaseView>(ViewContext context)>;
 
 // Publishes a view provider as an outgoing service of the application.
 // The views created by the view provider are owned by it and will be destroyed
@@ -32,11 +31,9 @@ class ViewProviderService : private fuchsia::ui::app::ViewProvider {
   ~ViewProviderService();
 
   // |fuchsia::ui::app::ViewProvider|
-  void CreateView(
-      zx::eventpair view_token,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
-      override;
+  void CreateView(zx::eventpair view_token,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
  private:
   ViewProviderService(component::StartupContext* startup_context,

@@ -4,5 +4,4 @@
 
 #include "netsvc.h"
 
-void netboot_run_cmd(const char* cmd) {
-}
+void netboot_run_cmd(const char* cmd) {}

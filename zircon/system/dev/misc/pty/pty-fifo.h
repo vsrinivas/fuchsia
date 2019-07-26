@@ -14,20 +14,18 @@
 #define PTY_FIFO_SIZE (4096)
 
 typedef struct pty_fifo {
-    uint32_t head;
-    uint32_t tail;
-    uint8_t data[PTY_FIFO_SIZE];
+  uint32_t head;
+  uint32_t tail;
+  uint8_t data[PTY_FIFO_SIZE];
 } pty_fifo_t;
 
 size_t pty_fifo_read(pty_fifo_t* fifo, void* data, size_t len);
 size_t pty_fifo_write(pty_fifo_t* fifo, const void* data, size_t len, bool atomic);
 
-static inline bool pty_fifo_is_empty(pty_fifo_t* fifo) {
-    return fifo->head == fifo->tail;
-}
+static inline bool pty_fifo_is_empty(pty_fifo_t* fifo) { return fifo->head == fifo->tail; }
 
 static inline bool pty_fifo_is_full(pty_fifo_t* fifo) {
-    return (fifo->head - fifo->tail) == PTY_FIFO_SIZE;
+  return (fifo->head - fifo->tail) == PTY_FIFO_SIZE;
 }
 
-#endif // ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_FIFO_H_
+#endif  // ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_FIFO_H_

@@ -11,4 +11,4 @@ namespace devmgr {
 // Launches pkgfs from within blobfs by parsing environment variables.
 void LaunchBlobInit(FilesystemMounter* filesystems);
 
-} // namespace devmgr
+}  // namespace devmgr

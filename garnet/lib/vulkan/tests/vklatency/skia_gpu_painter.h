@@ -31,8 +31,7 @@ class SkiaGpuPainter {
   typedef struct {
     sk_sp<SkSurface> sk_surface;
     std::vector<SkPath> complete_paths;
-    std::map<uint32_t /* pointer_id */, SkPath /* path in progress */>
-        paths_in_progress;
+    std::map<uint32_t /* pointer_id */, SkPath /* path in progress */> paths_in_progress;
   } ImageDrawResources;
   std::vector<ImageDrawResources> image_draw_resources_;
   bool pending_draw_ = false;

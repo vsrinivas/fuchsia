@@ -12,46 +12,46 @@ static_assert((PTY_FIFO_SIZE & (PTY_FIFO_SIZE - 1)) == 0, "fifo size not power o
 #define PTY_FIFO_MASK (PTY_FIFO_SIZE - 1)
 
 size_t pty_fifo_write(pty_fifo_t* fifo, const void* data, size_t len, bool atomic) {
-    size_t avail = PTY_FIFO_SIZE - (fifo->head - fifo->tail);
-    if (avail < len) {
-        if (atomic) {
-            return 0;
-        }
-        len = avail;
+  size_t avail = PTY_FIFO_SIZE - (fifo->head - fifo->tail);
+  if (avail < len) {
+    if (atomic) {
+      return 0;
     }
+    len = avail;
+  }
 
-    size_t offset = fifo->head & PTY_FIFO_MASK;
+  size_t offset = fifo->head & PTY_FIFO_MASK;
 
-    avail = PTY_FIFO_SIZE - offset;
-    if (len <= avail) {
-        memcpy(fifo->data + offset, data, len);
-    } else {
-        memcpy(fifo->data + offset, data, avail);
-        auto p = static_cast<const uint8_t*>(data);
-        memcpy(fifo->data, p + avail, len - avail);
-    }
+  avail = PTY_FIFO_SIZE - offset;
+  if (len <= avail) {
+    memcpy(fifo->data + offset, data, len);
+  } else {
+    memcpy(fifo->data + offset, data, avail);
+    auto p = static_cast<const uint8_t*>(data);
+    memcpy(fifo->data, p + avail, len - avail);
+  }
 
-    fifo->head += static_cast<uint32_t>(len);
-    return len;
+  fifo->head += static_cast<uint32_t>(len);
+  return len;
 }
 
 size_t pty_fifo_read(pty_fifo_t* fifo, void* data, size_t len) {
-    size_t avail = fifo->head - fifo->tail;
-    if (avail < len) {
-        len = avail;
-    }
+  size_t avail = fifo->head - fifo->tail;
+  if (avail < len) {
+    len = avail;
+  }
 
-    size_t offset = fifo->tail & PTY_FIFO_MASK;
+  size_t offset = fifo->tail & PTY_FIFO_MASK;
 
-    avail = PTY_FIFO_SIZE - offset;
-    if (len <= avail) {
-        memcpy(data, fifo->data + offset, len);
-    } else {
-        memcpy(data, fifo->data + offset, avail);
-        auto p = static_cast<uint8_t*>(data);
-        memcpy(p + avail, fifo->data, len - avail);
-    }
+  avail = PTY_FIFO_SIZE - offset;
+  if (len <= avail) {
+    memcpy(data, fifo->data + offset, len);
+  } else {
+    memcpy(data, fifo->data + offset, avail);
+    auto p = static_cast<uint8_t*>(data);
+    memcpy(p + avail, fifo->data, len - avail);
+  }
 
-    fifo->tail += static_cast<uint32_t>(len);
-    return len;
+  fifo->tail += static_cast<uint32_t>(len);
+  return len;
 }

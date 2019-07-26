@@ -87,9 +87,12 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
     fuchsia::modular::ModuleControllerPtr controller;
   };
 
-  FakeModuleInfo parent_module{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("parent_module")};
-  FakeModuleInfo child_module1{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("child_module1")};
-  FakeModuleInfo child_module2{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("child_module2")};
+  FakeModuleInfo parent_module{
+      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("parent_module")};
+  FakeModuleInfo child_module1{
+      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("child_module1")};
+  FakeModuleInfo child_module2{
+      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("child_module2")};
 
   builder.InterceptComponent(
       parent_module.component.GetOnCreateHandler(),

@@ -23,15 +23,11 @@ class CodecBuffer {
   // In this example, we're using one buffer per packet mode, so each buffer has
   // a corresponding packet.
   static std::unique_ptr<CodecBuffer> Allocate(
-      uint32_t buffer_index,
-      const fuchsia::media::StreamBufferConstraints& constraints);
+      uint32_t buffer_index, const fuchsia::media::StreamBufferConstraints& constraints);
 
-  static std::unique_ptr<CodecBuffer> CreateFromVmo(
-      uint32_t buffer_index,
-      zx::vmo vmo,
-      uint32_t vmo_usable_start,
-      uint32_t vmo_usable_size,
-      bool need_write);
+  static std::unique_ptr<CodecBuffer> CreateFromVmo(uint32_t buffer_index, zx::vmo vmo,
+                                                    uint32_t vmo_usable_start,
+                                                    uint32_t vmo_usable_size, bool need_write);
 
   // Each successful call to this method dups the VMO handle, with basic rights
   // + read + optional write depending on is_for_write.
@@ -48,10 +44,10 @@ class CodecBuffer {
 
  private:
   explicit CodecBuffer(uint32_t buffer_index, size_t size_bytes);
-  void SetPhysicallyContiguousRequired(
-      const ::zx::handle& very_temp_kludge_bti_handle);
+  void SetPhysicallyContiguousRequired(const ::zx::handle& very_temp_kludge_bti_handle);
   bool AllocateInternal();
-  bool CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start, uint32_t vmo_usable_size, bool need_write);
+  bool CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start, uint32_t vmo_usable_size,
+                             bool need_write);
 
   uint32_t buffer_index_ = 0;
   size_t size_bytes_ = 0;

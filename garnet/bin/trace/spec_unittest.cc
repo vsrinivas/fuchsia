@@ -15,21 +15,17 @@ bool operator==(const measure::EventSpec& lhs, const measure::EventSpec& rhs) {
   return lhs.name == rhs.name && lhs.category == rhs.category;
 }
 
-bool operator==(const measure::DurationSpec& lhs,
-                const measure::DurationSpec& rhs) {
+bool operator==(const measure::DurationSpec& lhs, const measure::DurationSpec& rhs) {
   return lhs.common.id == rhs.common.id && lhs.event == rhs.event;
 }
 
-bool operator==(const measure::ArgumentValueSpec& lhs,
-                const measure::ArgumentValueSpec& rhs) {
+bool operator==(const measure::ArgumentValueSpec& lhs, const measure::ArgumentValueSpec& rhs) {
   return lhs.common.id == rhs.common.id && lhs.event == rhs.event;
 }
 
-bool operator==(const measure::TimeBetweenSpec& lhs,
-                const measure::TimeBetweenSpec& rhs) {
+bool operator==(const measure::TimeBetweenSpec& lhs, const measure::TimeBetweenSpec& rhs) {
   return lhs.common.id == rhs.common.id && lhs.first_event == rhs.first_event &&
-         lhs.first_anchor == rhs.first_anchor &&
-         lhs.second_event == rhs.second_event &&
+         lhs.first_anchor == rhs.first_anchor && lhs.second_event == rhs.second_event &&
          lhs.second_anchor == rhs.second_anchor;
 }
 
@@ -218,11 +214,10 @@ TEST(Spec, DecodeBufferSizeInMb) {
 }
 
 TEST(Spec, DecodeProviderSpecs) {
-  std::string json =
-    R"({"provider_specs": [)"
-    R"(  {"name": "x", "buffer_size_in_mb": 1},)"
-    R"(  {"name": "y", "buffer_size_in_mb": 2})"
-    R"(]})";
+  std::string json = R"({"provider_specs": [)"
+                     R"(  {"name": "x", "buffer_size_in_mb": 1},)"
+                     R"(  {"name": "y", "buffer_size_in_mb": 2})"
+                     R"(]})";
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
@@ -239,8 +234,7 @@ TEST(Spec, DecodeDuration) {
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
-  EXPECT_EQ(fxl::TimeDelta::FromSeconds(42).ToNanoseconds(),
-            result.duration->ToNanoseconds());
+  EXPECT_EQ(fxl::TimeDelta::FromSeconds(42).ToNanoseconds(), result.duration->ToNanoseconds());
   EXPECT_TRUE(result.duration);
 }
 
@@ -281,8 +275,7 @@ TEST(Spec, DecodeMeasureDuration) {
   EXPECT_EQ(2u, result.measurements->duration.size());
   EXPECT_EQ(measure::DurationSpec({0u, {"initialization", "bazinga"}}),
             result.measurements->duration[0]);
-  EXPECT_EQ(measure::DurationSpec({1u, {"startup", "foo"}}),
-            result.measurements->duration[1]);
+  EXPECT_EQ(measure::DurationSpec({1u, {"startup", "foo"}}), result.measurements->duration[1]);
 }
 
 TEST(Spec, DecodeMeasureArgumentValue) {
@@ -310,8 +303,7 @@ TEST(Spec, DecodeMeasureArgumentValue) {
   EXPECT_EQ(2u, result.measurements->argument_value.size());
   EXPECT_EQ(measure::ArgumentValueSpec({0u, {"startup", "foo"}, "bytes", "b"}),
             result.measurements->argument_value[0]);
-  EXPECT_EQ(measure::ArgumentValueSpec(
-                {1u, {"shutdown", "benchmark"}, "n_handles", "handles"}),
+  EXPECT_EQ(measure::ArgumentValueSpec({1u, {"shutdown", "benchmark"}, "n_handles", "handles"}),
             result.measurements->argument_value[1]);
 }
 
@@ -333,11 +325,8 @@ TEST(Spec, DecodeMeasureTimeBetween) {
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
   EXPECT_EQ(1u, result.measurements->time_between.size());
-  EXPECT_EQ(measure::TimeBetweenSpec({0u,
-                                      {"e1", "c1"},
-                                      measure::Anchor::Begin,
-                                      {"e2", "c2"},
-                                      measure::Anchor::End}),
+  EXPECT_EQ(measure::TimeBetweenSpec(
+                {0u, {"e1", "c1"}, measure::Anchor::Begin, {"e2", "c2"}, measure::Anchor::End}),
             result.measurements->time_between[0]);
 }
 

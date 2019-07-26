@@ -100,15 +100,13 @@ bool ArchiveWriter::Write(int fd) {
 
     struct stat info;
     if (stat(entry.src_path.c_str(), &info) != 0) {
-      fprintf(stderr, "error: Failed to read length of file: %s\n",
-              entry.src_path.c_str());
+      fprintf(stderr, "error: Failed to read length of file: %s\n", entry.src_path.c_str());
       return false;
     }
     uint64_t data_length = info.st_size;
 
     if (data_length > std::numeric_limits<uint64_t>::max() - data_offset) {
-      fprintf(stderr, "error: File overflowed total archive size: %s\n",
-              entry.src_path.c_str());
+      fprintf(stderr, "error: File overflowed total archive size: %s\n", entry.src_path.c_str());
       return false;
     }
 
@@ -146,10 +144,8 @@ bool ArchiveWriter::Write(int fd) {
       fprintf(stderr, "error: Failed to seek to data offset.\n");
       return false;
     }
-    if (!CopyPathToFile(entry.src_path.c_str(), fd,
-                        directory_entry.data_length)) {
-      fprintf(stderr, "error: Failed to write file data: %s\n",
-              entry.src_path.c_str());
+    if (!CopyPathToFile(entry.src_path.c_str(), fd, directory_entry.data_length)) {
+      fprintf(stderr, "error: Failed to write file data: %s\n", entry.src_path.c_str());
       return false;
     }
   }
@@ -169,8 +165,7 @@ bool ArchiveWriter::Write(int fd) {
 bool ArchiveWriter::HasDuplicateEntries() {
   for (size_t i = 0; i + 1 < entries_.size(); ++i) {
     if (entries_[i].dst_path == entries_[i + 1].dst_path) {
-      fprintf(stderr, "error: Archive has duplicate path: '%s'\n",
-              entries_[i].dst_path.c_str());
+      fprintf(stderr, "error: Archive has duplicate path: '%s'\n", entries_[i].dst_path.c_str());
       return true;
     }
   }

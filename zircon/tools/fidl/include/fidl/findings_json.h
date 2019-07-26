@@ -39,8 +39,7 @@ class FindingsJson : public utils::JsonWriter<FindingsJson> {
     Suggestion suggestion;
   };
 
-  explicit FindingsJson(const Findings& findings)
-      : JsonWriter(json_file_), findings_(findings) {}
+  explicit FindingsJson(const Findings& findings) : JsonWriter(json_file_), findings_(findings) {}
 
   ~FindingsJson() = default;
 

@@ -7,10 +7,7 @@
 namespace camera {
 
 void GammaRgbRegisters::WriteRegisters() {
-  register_defs_.enable()
-      .ReadFrom(&mmio_local_)
-      .set_value(enable_)
-      .WriteTo(&mmio_local_);
+  register_defs_.enable().ReadFrom(&mmio_local_).set_value(enable_).WriteTo(&mmio_local_);
 
   register_defs_.gain_rg()
       .ReadFrom(&mmio_local_)
@@ -18,10 +15,7 @@ void GammaRgbRegisters::WriteRegisters() {
       .set_gain_g(gain_g_)
       .WriteTo(&mmio_local_);
 
-  register_defs_.gain_b()
-      .ReadFrom(&mmio_local_)
-      .set_value(gain_b_)
-      .WriteTo(&mmio_local_);
+  register_defs_.gain_b().ReadFrom(&mmio_local_).set_value(gain_b_).WriteTo(&mmio_local_);
 
   register_defs_.offset_rg()
       .ReadFrom(&mmio_local_)
@@ -29,10 +23,7 @@ void GammaRgbRegisters::WriteRegisters() {
       .set_offset_g(offset_g_)
       .WriteTo(&mmio_local_);
 
-  register_defs_.offset_b()
-      .ReadFrom(&mmio_local_)
-      .set_value(offset_b_)
-      .WriteTo(&mmio_local_);
+  register_defs_.offset_b().ReadFrom(&mmio_local_).set_value(offset_b_).WriteTo(&mmio_local_);
 }
 
 }  // namespace camera

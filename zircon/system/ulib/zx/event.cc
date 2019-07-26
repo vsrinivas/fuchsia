@@ -9,7 +9,7 @@
 namespace zx {
 
 zx_status_t event::create(uint32_t options, event* result) {
-    return zx_event_create(options, result->reset_and_get_address());
+  return zx_event_create(options, result->reset_and_get_address());
 }
 
-} // namespace zx
+}  // namespace zx

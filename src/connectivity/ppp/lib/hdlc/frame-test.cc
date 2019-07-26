@@ -18,8 +18,7 @@ TEST(FrameTestCase, SerializeFrameEmpty) {
       0x7e, 0xff, 0x7d, 0x23, 0xc2, 0x23, 0xeb, 0x3c, 0x7e,
   };
 
-  const ppp::FrameView frame(ppp::Protocol::ChallengeHandshakeAuthentication,
-                             information);
+  const ppp::FrameView frame(ppp::Protocol::ChallengeHandshakeAuthentication, information);
   const std::vector<uint8_t> raw_frame = ppp::SerializeFrame(frame);
 
   ASSERT_EQ(raw_frame.size(), expect.size());
@@ -29,12 +28,10 @@ TEST(FrameTestCase, SerializeFrameEmpty) {
 TEST(FrameTestCase, SerializeFrameNoEscape) {
   const std::vector<uint8_t> information = {0x89, 0xab, 0xde};
   const std::vector<uint8_t> expect = {
-      0x7e, 0xff, 0x7d, 0x23, 0xc0, 0x23, 0x89,
-      0xab, 0xde, 0x7d, 0x37, 0x7d, 0x2b, 0x7e,
+      0x7e, 0xff, 0x7d, 0x23, 0xc0, 0x23, 0x89, 0xab, 0xde, 0x7d, 0x37, 0x7d, 0x2b, 0x7e,
   };
 
-  const ppp::FrameView frame(ppp::Protocol::PasswordAuthentication,
-                             information);
+  const ppp::FrameView frame(ppp::Protocol::PasswordAuthentication, information);
   const std::vector<uint8_t> raw_frame = ppp::SerializeFrame(frame);
 
   ASSERT_EQ(raw_frame.size(), expect.size());
@@ -44,8 +41,7 @@ TEST(FrameTestCase, SerializeFrameNoEscape) {
 TEST(FrameTestCase, SerializeFrameEscapeFlagSequence) {
   const std::vector<uint8_t> information = {0xaa, 0x7e, 0xaa};
   const std::vector<uint8_t> expect = {
-      0x7e, 0xff, 0x7d, 0x23, 0x80, 0x57, 0xaa,
-      0x7d, 0x5e, 0xaa, 0xe3, 0x7d, 0x3a, 0x7e,
+      0x7e, 0xff, 0x7d, 0x23, 0x80, 0x57, 0xaa, 0x7d, 0x5e, 0xaa, 0xe3, 0x7d, 0x3a, 0x7e,
   };
 
   const ppp::FrameView frame(ppp::Protocol::Ipv6Control, information);
@@ -58,8 +54,7 @@ TEST(FrameTestCase, SerializeFrameEscapeFlagSequence) {
 TEST(FrameTestCase, SerializeFrameEscapeEscaped) {
   const std::vector<uint8_t> information = {0x7d, 0x5e};
   const std::vector<uint8_t> expect = {
-      0x7e, 0xff, 0x7d, 0x23, 0x7d, 0x20, 0x21,
-      0x7d, 0x5d, 0x5e, 0xc9, 0xb5, 0x7e,
+      0x7e, 0xff, 0x7d, 0x23, 0x7d, 0x20, 0x21, 0x7d, 0x5d, 0x5e, 0xc9, 0xb5, 0x7e,
   };
 
   const ppp::FrameView frame(ppp::Protocol::Ipv4, information);
@@ -88,8 +83,7 @@ TEST(FrameTestCase, DeserializeFrameEmpty) {
       0x7e, 0xff, 0x7d, 0x23, 0xc2, 0x23, 0xeb, 0x3c, 0x7e,
   };
   const std::vector<uint8_t> expect_information = {};
-  const ppp::Protocol expect_protocol =
-      ppp::Protocol::ChallengeHandshakeAuthentication;
+  const ppp::Protocol expect_protocol = ppp::Protocol::ChallengeHandshakeAuthentication;
 
   auto result = ppp::DeserializeFrame(raw_frame);
 
@@ -99,14 +93,12 @@ TEST(FrameTestCase, DeserializeFrameEmpty) {
   ASSERT_EQ(frame.protocol, expect_protocol);
 
   ASSERT_EQ(frame.information.size(), expect_information.size());
-  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(),
-                  expect_information.size());
+  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(), expect_information.size());
 }
 
 TEST(FrameTestCase, DeserializeFrameNoEscape) {
   const std::vector<uint8_t> raw_frame = {
-      0x7e, 0xff, 0x7d, 0x23, 0xc0, 0x23, 0x89,
-      0xab, 0xde, 0x7d, 0x37, 0x7d, 0x2b, 0x7e,
+      0x7e, 0xff, 0x7d, 0x23, 0xc0, 0x23, 0x89, 0xab, 0xde, 0x7d, 0x37, 0x7d, 0x2b, 0x7e,
   };
   const std::vector<uint8_t> expect_information = {0x89, 0xab, 0xde};
   const ppp::Protocol expect_protocol = ppp::Protocol::PasswordAuthentication;
@@ -119,14 +111,12 @@ TEST(FrameTestCase, DeserializeFrameNoEscape) {
   ASSERT_EQ(frame.protocol, expect_protocol);
 
   ASSERT_EQ(frame.information.size(), expect_information.size());
-  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(),
-                  expect_information.size());
+  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(), expect_information.size());
 }
 
 TEST(FrameTestCase, DeserializeFrameEscapeFlagSequence) {
   const std::vector<uint8_t> raw_frame = {
-      0x7e, 0xff, 0x7d, 0x23, 0x80, 0x57, 0xaa,
-      0x7d, 0x5e, 0xaa, 0xe3, 0x7d, 0x3a, 0x7e,
+      0x7e, 0xff, 0x7d, 0x23, 0x80, 0x57, 0xaa, 0x7d, 0x5e, 0xaa, 0xe3, 0x7d, 0x3a, 0x7e,
   };
   const std::vector<uint8_t> expect_information = {0xaa, 0x7e, 0xaa};
   const ppp::Protocol expect_protocol = ppp::Protocol::Ipv6Control;
@@ -139,14 +129,12 @@ TEST(FrameTestCase, DeserializeFrameEscapeFlagSequence) {
   ASSERT_EQ(frame.protocol, expect_protocol);
 
   ASSERT_EQ(frame.information.size(), expect_information.size());
-  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(),
-                  expect_information.size());
+  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(), expect_information.size());
 }
 
 TEST(FrameTestCase, DeserializeFrameEscapeEscaped) {
   const std::vector<uint8_t> raw_frame = {
-      0x7e, 0xff, 0x7d, 0x23, 0x7d, 0x20, 0x21,
-      0x7d, 0x5d, 0x5e, 0xc9, 0xb5, 0x7e,
+      0x7e, 0xff, 0x7d, 0x23, 0x7d, 0x20, 0x21, 0x7d, 0x5d, 0x5e, 0xc9, 0xb5, 0x7e,
   };
   const std::vector<uint8_t> expect_information = {0x7d, 0x5e};
   const ppp::Protocol expect_protocol = ppp::Protocol::Ipv4;
@@ -159,8 +147,7 @@ TEST(FrameTestCase, DeserializeFrameEscapeEscaped) {
   ASSERT_EQ(frame.protocol, expect_protocol);
 
   ASSERT_EQ(frame.information.size(), expect_information.size());
-  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(),
-                  expect_information.size());
+  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(), expect_information.size());
 }
 
 TEST(FrameTestCase, DeserializeFrameEscapeAll) {
@@ -168,8 +155,7 @@ TEST(FrameTestCase, DeserializeFrameEscapeAll) {
       0x7e, 0xff, 0x7d, 0x23, 0xc0, 0x25, 0x7d, 0x5e, 0x7d, 0x5e, 0x7d,
       0x5e, 0x7d, 0x5d, 0x7d, 0x5d, 0x7d, 0x5d, 0x6c, 0x43, 0x7e,
   };
-  const std::vector<uint8_t> expect_information = {0x7e, 0x7e, 0x7e,
-                                                   0x7d, 0x7d, 0x7d};
+  const std::vector<uint8_t> expect_information = {0x7e, 0x7e, 0x7e, 0x7d, 0x7d, 0x7d};
   const ppp::Protocol expect_protocol = ppp::Protocol::LinkQualityReport;
 
   auto result = ppp::DeserializeFrame(raw_frame);
@@ -180,8 +166,7 @@ TEST(FrameTestCase, DeserializeFrameEscapeAll) {
   ASSERT_EQ(frame.protocol, expect_protocol);
 
   ASSERT_EQ(frame.information.size(), expect_information.size());
-  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(),
-                  expect_information.size());
+  ASSERT_BYTES_EQ(frame.information.data(), expect_information.data(), expect_information.size());
 }
 
 TEST(FrameTestCase, DeserializeFrameTooSmall) {
@@ -253,8 +238,7 @@ TEST(FrameTestCase, DeserializeFrameBadFrameCheckSequence) {
 
   ASSERT_TRUE(result.is_error());
 
-  ASSERT_EQ(result.error(),
-            ppp::DeserializationError::FailedFrameCheckSequence);
+  ASSERT_EQ(result.error(), ppp::DeserializationError::FailedFrameCheckSequence);
 }
 
 }  // namespace

@@ -36,60 +36,58 @@ zx_koid_t CurrentThreadKoid();
 // sequencing thread behavior which would typically just be a bunch of timing
 // races in real code.
 class Event {
-public:
-    Event() = default;
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Event);
+ public:
+  Event() = default;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Event);
 
-    zx_status_t Wait(zx_duration_t timeout);
-    void Signal();
-    void Reset();
+  zx_status_t Wait(zx_duration_t timeout);
+  void Signal();
+  void Reset();
 
-private:
-    fbl::futex_t signaled_ = {0};
+ private:
+  fbl::futex_t signaled_ = {0};
 };
 
 // A lightweight wrapper for threads which allow us to create threads and have
 // then run a quick lambda, while automating much of the boilerplate we need for
 // the ownership tests (things like fetching a thread's KOID)
 class Thread {
-  public:
-    using Thunk = fbl::InlineFunction<int(void), kMaxLambdaStorage>;
+ public:
+  using Thunk = fbl::InlineFunction<int(void), kMaxLambdaStorage>;
 
-    enum class State : uint32_t {
-        WAITING_TO_START,
-        RUNNING,
-        WAITING_TO_STOP,
-        STOPPED,
-    };
+  enum class State : uint32_t {
+    WAITING_TO_START,
+    RUNNING,
+    WAITING_TO_STOP,
+    STOPPED,
+  };
 
-    Thread() { Reset(); }
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Thread);
+  Thread() { Reset(); }
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Thread);
 
-    void Start(const char* name, Thunk thunk);
-    zx_status_t Stop();
-    zx_status_t GetRunState(uint32_t* run_state) const;
+  void Start(const char* name, Thunk thunk);
+  zx_status_t Stop();
+  zx_status_t GetRunState(uint32_t* run_state) const;
 
-    const zx::thread& handle() const { return handle_; }
-    zx_koid_t koid() const { return koid_; }
-    State state() const { return state_.load(); }
+  const zx::thread& handle() const { return handle_; }
+  zx_koid_t koid() const { return koid_; }
+  State state() const { return state_.load(); }
 
-  private:
-    static constexpr zx_duration_t THREAD_TIMEOUT = ZX_SEC(15);
-    static constexpr zx_duration_t THREAD_POLL_INTERVAL = ZX_MSEC(1);
+ private:
+  static constexpr zx_duration_t THREAD_TIMEOUT = ZX_SEC(15);
+  static constexpr zx_duration_t THREAD_POLL_INTERVAL = ZX_MSEC(1);
 
-    void SetState(State state) {
-        state_.store(state);
-    }
+  void SetState(State state) { state_.store(state); }
 
-    void Reset();
+  void Reset();
 
-    thrd_t thread_;
-    zx::thread handle_;
-    zx_koid_t koid_;
-    Event started_evt_;
-    Event stop_evt_;
-    std::atomic<State> state_{State::STOPPED};
-    Thunk thunk_;
+  thrd_t thread_;
+  zx::thread handle_;
+  zx_koid_t koid_;
+  Event started_evt_;
+  Event stop_evt_;
+  std::atomic<State> state_{State::STOPPED};
+  Thunk thunk_;
 };
 
 // A small wrapper used to launch a process which creates a thread and sends us
@@ -97,24 +95,24 @@ class Thread {
 // allows us to test the requirement that a process is not allowed to declare a
 // thread from another process as the owner of one of its mutexes.
 class ExternalThread {
-public:
-    static void SetProgramName(const char* program_name) { program_name_ = program_name; }
-    static int DoHelperThread();
-    static const char* helper_flag() { return helper_flag_; }
+ public:
+  static void SetProgramName(const char* program_name) { program_name_ = program_name; }
+  static int DoHelperThread();
+  static const char* helper_flag() { return helper_flag_; }
 
-    ExternalThread() = default;
-    ~ExternalThread() { Stop(); }
-    DISALLOW_COPY_ASSIGN_AND_MOVE(ExternalThread);
+  ExternalThread() = default;
+  ~ExternalThread() { Stop(); }
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ExternalThread);
 
-    void Start();
-    void Stop();
+  void Start();
+  void Stop();
 
-    const zx::thread& thread() const { return external_thread_; }
+  const zx::thread& thread() const { return external_thread_; }
 
-private:
-    static const char* program_name_;
-    static const char* helper_flag_;
+ private:
+  static const char* program_name_;
+  static const char* helper_flag_;
 
-    zx::thread external_thread_;
-    zx::channel control_channel_;
+  zx::thread external_thread_;
+  zx::channel control_channel_;
 };

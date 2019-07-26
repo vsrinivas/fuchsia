@@ -47,8 +47,7 @@ constexpr zx::duration kTimeout = zx::min(5);
 class MinimalClientView : public scenic::BaseView {
  public:
   MinimalClientView(scenic::ViewContext context, async_dispatcher_t* dispatcher)
-      : scenic::BaseView(std::move(context), "MinimalClientView"),
-        dispatcher_(dispatcher) {
+      : scenic::BaseView(std::move(context), "MinimalClientView"), dispatcher_(dispatcher) {
     FXL_CHECK(dispatcher_);
   }
 
@@ -83,8 +82,7 @@ class MinimalClientView : public scenic::BaseView {
     observed_.push_back(std::move(event));
   }
 
-  void SetOnTerminateCallback(
-      fit::function<void(const std::vector<InputEvent>&)> on_terminate) {
+  void SetOnTerminateCallback(fit::function<void(const std::vector<InputEvent>&)> on_terminate) {
     on_terminate_ = std::move(on_terminate);
   }
 
@@ -110,11 +108,9 @@ class MinimalInputTest : public gtest::RealLoopFixture {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
     // Connect to Scenic, create a View.
-    scenic_ =
-        g_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    scenic_ = g_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(FATAL) << "Lost connection to Scenic: "
-                     << zx_status_get_string(status);
+      FXL_LOG(FATAL) << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
     scenic::ViewContext view_context = {
         .session_and_listener_request =
@@ -124,16 +120,12 @@ class MinimalInputTest : public gtest::RealLoopFixture {
         .outgoing_services = nullptr,
         .startup_context = g_context,
     };
-    view_ = std::make_unique<MinimalClientView>(std::move(view_context),
-                                                dispatcher());
+    view_ = std::make_unique<MinimalClientView>(std::move(view_context), dispatcher());
 
     // Connect to RootPresenter, create a ViewHolder.
-    root_presenter_ =
-        g_context
-            ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+    root_presenter_ = g_context->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
     root_presenter_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(FATAL) << "Lost connection to RootPresenter: "
-                     << zx_status_get_string(status);
+      FXL_LOG(FATAL) << "Lost connection to RootPresenter: " << zx_status_get_string(status);
     });
     root_presenter_->PresentView(std::move(view_holder_token), nullptr);
 
@@ -143,31 +135,25 @@ class MinimalInputTest : public gtest::RealLoopFixture {
       display_height_ = display_info.height_in_px;
 
       FXL_CHECK(display_width_ > 0 && display_height_ > 0)
-          << "Display size unsuitable for this test: (" << display_width_
-          << ", " << display_height_ << ").";
+          << "Display size unsuitable for this test: (" << display_width_ << ", " << display_height_
+          << ").";
 
       view_->CreateScene(display_width_, display_height_);
-      view_->session()->Present(
-          zx_clock_get_monotonic(),
-          [this](fuchsia::images::PresentationInfo info) {
-            inject_input_();       // Display up, content ready. Send in input.
-            test_was_run_ = true;  // Actually did work for this test.
-          });
+      view_->session()->Present(zx_clock_get_monotonic(),
+                                [this](fuchsia::images::PresentationInfo info) {
+                                  inject_input_();  // Display up, content ready. Send in input.
+                                  test_was_run_ = true;  // Actually did work for this test.
+                                });
     });
 
     // Post a "just in case" quit task, if the test hangs.
     async::PostDelayedTask(
         dispatcher(),
-        [] {
-          FXL_LOG(FATAL)
-              << "\n\n>> Test did not complete in time, terminating. <<\n\n";
-        },
+        [] { FXL_LOG(FATAL) << "\n\n>> Test did not complete in time, terminating. <<\n\n"; },
         kTimeout);
   }
 
-  ~MinimalInputTest() override {
-    FXL_CHECK(test_was_run_) << "Oops, didn't actually do anything.";
-  }
+  ~MinimalInputTest() override { FXL_CHECK(test_was_run_) << "Oops, didn't actually do anything."; }
 
   void InjectInput(std::vector<const char*> args) {
     // Start with process name, end with nullptr.
@@ -176,26 +162,20 @@ class MinimalInputTest : public gtest::RealLoopFixture {
 
     // Start the /bin/input process.
     zx_handle_t proc;
-    zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                                    "/bin/input", args.data(), &proc);
-    FXL_CHECK(status == ZX_OK)
-        << "fdio_spawn: " << zx_status_get_string(status);
+    zx_status_t status =
+        fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/bin/input", args.data(), &proc);
+    FXL_CHECK(status == ZX_OK) << "fdio_spawn: " << zx_status_get_string(status);
 
     // Wait for termination.
     status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED,
-                                (zx::clock::get_monotonic() + kTimeout).get(),
-                                nullptr);
-    FXL_CHECK(status == ZX_OK)
-        << "zx_object_wait_one: " << zx_status_get_string(status);
+                                (zx::clock::get_monotonic() + kTimeout).get(), nullptr);
+    FXL_CHECK(status == ZX_OK) << "zx_object_wait_one: " << zx_status_get_string(status);
 
     // Check termination status.
     zx_info_process_t info;
-    status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info),
-                                nullptr, nullptr);
-    FXL_CHECK(status == ZX_OK)
-        << "zx_object_get_info: " << zx_status_get_string(status);
-    FXL_CHECK(info.return_code == 0)
-        << "info.return_code: " << info.return_code;
+    status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+    FXL_CHECK(status == ZX_OK) << "zx_object_get_info: " << zx_status_get_string(status);
+    FXL_CHECK(info.return_code == 0) << "info.return_code: " << info.return_code;
   }
 
   void SetInjectInputCallback(fit::function<void()> inject_input) {
@@ -222,25 +202,24 @@ TEST_F(MinimalInputTest, Tap) {
   });
 
   // Set up expectations. Fires when we see the "quit" message.
-  view_->SetOnTerminateCallback(
-      [this](const std::vector<InputEvent>& observed) {
-        if (FXL_VLOG_IS_ON(2)) {
-          for (const auto& event : observed) {
-            FXL_LOG(INFO) << "Input event observed: " << event;
-          }
-        }
+  view_->SetOnTerminateCallback([this](const std::vector<InputEvent>& observed) {
+    if (FXL_VLOG_IS_ON(2)) {
+      for (const auto& event : observed) {
+        FXL_LOG(INFO) << "Input event observed: " << event;
+      }
+    }
 
-        EXPECT_EQ(observed.size(), 5u);
+    EXPECT_EQ(observed.size(), 5u);
 
-        EXPECT_EQ(observed[0].pointer().phase, Phase::ADD);
-        EXPECT_TRUE(observed[1].focus().focused);
-        EXPECT_EQ(observed[2].pointer().phase, Phase::DOWN);
-        EXPECT_EQ(observed[3].pointer().phase, Phase::UP);
-        EXPECT_EQ(observed[4].pointer().phase, Phase::REMOVE);
+    EXPECT_EQ(observed[0].pointer().phase, Phase::ADD);
+    EXPECT_TRUE(observed[1].focus().focused);
+    EXPECT_EQ(observed[2].pointer().phase, Phase::DOWN);
+    EXPECT_EQ(observed[3].pointer().phase, Phase::UP);
+    EXPECT_EQ(observed[4].pointer().phase, Phase::REMOVE);
 
-        QuitLoop();
-        // TODO(SCN-1449): Cleanly break the View/ViewHolder connection.
-      });
+    QuitLoop();
+    // TODO(SCN-1449): Cleanly break the View/ViewHolder connection.
+  });
 
   RunLoop();  // Go!
 }

@@ -94,8 +94,7 @@ static constexpr char kUsageString[] =
 
 static void Usage(FILE* f) { fprintf(f, "%s", kUsageString); }
 
-static bool ParseOption(const char* arg, fxl::StringView* out_name,
-                        const char** out_value) {
+static bool ParseOption(const char* arg, fxl::StringView* out_name, const char** out_value) {
   size_t len = strlen(arg);
   if (len < 2u || arg[0] != '-' || arg[1] != '-')
     return false;
@@ -183,8 +182,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
         FXL_LOG(ERROR) << "Empty PT file name";
         return -1;
       }
-      if (decoder_config->pt_file_name != "" ||
-          decoder_config->pt_list_file_name != "") {
+      if (decoder_config->pt_file_name != "" || decoder_config->pt_list_file_name != "") {
         FXL_LOG(ERROR) << "Only one of --pt/--pt-list supported";
         return -1;
       }
@@ -197,8 +195,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
         FXL_LOG(ERROR) << "Empty PT-list file name";
         return -1;
       }
-      if (decoder_config->pt_file_name != "" ||
-          decoder_config->pt_list_file_name != "") {
+      if (decoder_config->pt_file_name != "" || decoder_config->pt_list_file_name != "") {
         FXL_LOG(ERROR) << "Only one of --pt/--pt-list supported";
         return -1;
       }
@@ -222,8 +219,8 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
     }
 
     if (option == "id") {
-      if (!fxl::StringToNumberWithError<uint32_t>(
-              fxl::StringView(value), &printer_config->id, fxl::Base::k16)) {
+      if (!fxl::StringToNumberWithError<uint32_t>(fxl::StringView(value), &printer_config->id,
+                                                  fxl::Base::k16)) {
         FXL_LOG(ERROR) << "Not a hex number: " << value;
         return -1;
       }
@@ -253,8 +250,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
 
     if (option == "kernel-cr3") {
       if (!fxl::StringToNumberWithError<uint64_t>(fxl::StringView(value),
-                                                  &decoder_config->kernel_cr3,
-                                                  fxl::Base::k16)) {
+                                                  &decoder_config->kernel_cr3, fxl::Base::k16)) {
         FXL_LOG(ERROR) << "Not a valid cr3 number: " << value;
         return -1;
       }
@@ -301,8 +297,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
     ++n;
   }
 
-  if (decoder_config->pt_file_name == "" &&
-      decoder_config->pt_list_file_name == "") {
+  if (decoder_config->pt_file_name == "" && decoder_config->pt_list_file_name == "") {
     FXL_LOG(ERROR) << "One of --pt=FILE, --pt-list=FILE must be specified";
     return -1;
   }
@@ -351,16 +346,14 @@ int main(int argc, char** argv) {
 
   uint64_t total_insns;
   if (printer_config.output_format == OutputFormat::kRaw) {
-    auto printer =
-        RawPrinter::Create(decoder.get(), printer_config.ToRawPrinterConfig());
+    auto printer = RawPrinter::Create(decoder.get(), printer_config.ToRawPrinterConfig());
     if (!printer) {
       FXL_LOG(ERROR) << "Error creating printer";
       return EXIT_FAILURE;
     }
     total_insns = printer->PrintFiles();
   } else if (printer_config.output_format == OutputFormat::kCalls) {
-    auto printer = CallPrinter::Create(decoder.get(),
-                                       printer_config.ToCallPrinterConfig());
+    auto printer = CallPrinter::Create(decoder.get(), printer_config.ToCallPrinterConfig());
     if (!printer) {
       FXL_LOG(ERROR) << "Error creating printer";
       return EXIT_FAILURE;
@@ -374,9 +367,9 @@ int main(int argc, char** argv) {
   fxl::TimeDelta delta = stop_watch.Elapsed();
   int64_t seconds = delta.ToSeconds();
   int milliseconds = delta.ToMilliseconds() % 1000;
-  FXL_LOG(INFO) << fxl::StringPrintf(
-      "%" PRIu64 " instructions processed in %" PRId64 ".%03d seconds\n",
-      total_insns, seconds, milliseconds);
+  FXL_LOG(INFO) << fxl::StringPrintf("%" PRIu64 " instructions processed in %" PRId64
+                                     ".%03d seconds\n",
+                                     total_insns, seconds, milliseconds);
 
   return EXIT_SUCCESS;
 }

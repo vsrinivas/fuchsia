@@ -20,8 +20,7 @@ zx::channel CloneChannelFromFileDescriptor(int fd) {
     return zx::channel();
 
   zx_info_handle_basic_t info = {};
-  status =
-      handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+  status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
 
   if (status != ZX_OK || info.type != ZX_OBJ_TYPE_CHANNEL)
     return zx::channel();

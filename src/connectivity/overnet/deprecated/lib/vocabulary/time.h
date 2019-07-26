@@ -19,21 +19,11 @@ class TimeDelta {
     return TimeDelta(std::numeric_limits<int64_t>::min());
   }
   static constexpr TimeDelta Zero() { return TimeDelta(0); }
-  static constexpr TimeDelta FromMicroseconds(int64_t delta) {
-    return TimeDelta(delta);
-  }
-  static constexpr TimeDelta FromMilliseconds(int64_t delta) {
-    return TimeDelta(delta * kUsPerMs);
-  }
-  static constexpr TimeDelta FromSeconds(int64_t delta) {
-    return TimeDelta(delta * kUsPerSec);
-  }
-  static constexpr TimeDelta FromMinutes(int64_t delta) {
-    return FromSeconds(delta * 60);
-  }
-  static constexpr TimeDelta FromHours(int64_t delta) {
-    return FromMinutes(delta * 60);
-  }
+  static constexpr TimeDelta FromMicroseconds(int64_t delta) { return TimeDelta(delta); }
+  static constexpr TimeDelta FromMilliseconds(int64_t delta) { return TimeDelta(delta * kUsPerMs); }
+  static constexpr TimeDelta FromSeconds(int64_t delta) { return TimeDelta(delta * kUsPerSec); }
+  static constexpr TimeDelta FromMinutes(int64_t delta) { return FromSeconds(delta * 60); }
+  static constexpr TimeDelta FromHours(int64_t delta) { return FromMinutes(delta * 60); }
 
   constexpr int64_t as_us() const { return delta_; }
 
@@ -55,13 +45,9 @@ class TimeStamp {
   TimeDelta td_;
 };
 
-inline constexpr bool operator==(TimeDelta a, TimeDelta b) {
-  return a.as_us() == b.as_us();
-}
+inline constexpr bool operator==(TimeDelta a, TimeDelta b) { return a.as_us() == b.as_us(); }
 
-inline constexpr bool operator!=(TimeDelta a, TimeDelta b) {
-  return a.as_us() != b.as_us();
-}
+inline constexpr bool operator!=(TimeDelta a, TimeDelta b) { return a.as_us() != b.as_us(); }
 
 inline std::ostream& operator<<(std::ostream& out, TimeDelta a) {
   if (a == TimeDelta::PositiveInf())
@@ -81,8 +67,7 @@ inline std::ostream& operator<<(std::ostream& out, TimeStamp ts) {
 }
 
 inline constexpr TimeDelta operator+(TimeDelta a, TimeDelta b) {
-  if (a == TimeDelta::PositiveInf() || a == TimeDelta::NegativeInf() ||
-      b == TimeDelta::Zero()) {
+  if (a == TimeDelta::PositiveInf() || a == TimeDelta::NegativeInf() || b == TimeDelta::Zero()) {
     return a;
   }
   if (b == TimeDelta::PositiveInf())
@@ -90,13 +75,11 @@ inline constexpr TimeDelta operator+(TimeDelta a, TimeDelta b) {
   if (b == TimeDelta::NegativeInf())
     return b;
   if (b.as_us() > 0) {
-    if (a.as_us() > 0 &&
-        b.as_us() > TimeDelta::PositiveInf().as_us() - a.as_us()) {
+    if (a.as_us() > 0 && b.as_us() > TimeDelta::PositiveInf().as_us() - a.as_us()) {
       return TimeDelta::PositiveInf();
     }
   } else {
-    if (a.as_us() < 0 &&
-        b.as_us() < TimeDelta::NegativeInf().as_us() - a.as_us()) {
+    if (a.as_us() < 0 && b.as_us() < TimeDelta::NegativeInf().as_us() - a.as_us()) {
       return TimeDelta::NegativeInf();
     }
   }
@@ -111,25 +94,15 @@ inline constexpr TimeDelta operator-(TimeDelta x) {
   return TimeDelta::FromMicroseconds(-x.as_us());
 }
 
-inline constexpr TimeDelta operator-(TimeDelta a, TimeDelta b) {
-  return a + (-b);
-}
+inline constexpr TimeDelta operator-(TimeDelta a, TimeDelta b) { return a + (-b); }
 
-inline constexpr bool operator>(TimeDelta a, TimeDelta b) {
-  return a.as_us() > b.as_us();
-}
+inline constexpr bool operator>(TimeDelta a, TimeDelta b) { return a.as_us() > b.as_us(); }
 
-inline constexpr bool operator<(TimeDelta a, TimeDelta b) {
-  return a.as_us() < b.as_us();
-}
+inline constexpr bool operator<(TimeDelta a, TimeDelta b) { return a.as_us() < b.as_us(); }
 
-inline constexpr bool operator>=(TimeDelta a, TimeDelta b) {
-  return a.as_us() >= b.as_us();
-}
+inline constexpr bool operator>=(TimeDelta a, TimeDelta b) { return a.as_us() >= b.as_us(); }
 
-inline constexpr bool operator<=(TimeDelta a, TimeDelta b) {
-  return a.as_us() <= b.as_us();
-}
+inline constexpr bool operator<=(TimeDelta a, TimeDelta b) { return a.as_us() <= b.as_us(); }
 
 inline constexpr TimeDelta operator-(TimeStamp a, TimeStamp b) {
   return a.after_epoch() - b.after_epoch();

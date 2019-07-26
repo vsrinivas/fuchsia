@@ -102,12 +102,12 @@ TEST(AutoCleanableMap, ClearsOnEmpty) {
   AutoCleanableMap<int, Cleanable> map;
   EXPECT_TRUE(map.empty());
 
-  auto& p1 = map.emplace(std::piecewise_construct, std::forward_as_tuple(0),
-                         std::forward_as_tuple())
-                 .first->second;
-  auto& p2 = map.emplace(std::piecewise_construct, std::forward_as_tuple(1),
-                         std::forward_as_tuple())
-                 .first->second;
+  auto& p1 =
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple())
+          .first->second;
+  auto& p2 =
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple())
+          .first->second;
 
   EXPECT_FALSE(map.empty());
 
@@ -125,9 +125,9 @@ TEST(AutoCleanableMap, CallsOnEmpty) {
 
   EXPECT_FALSE(empty_called);
 
-  auto& p1 = map.emplace(std::piecewise_construct, std::forward_as_tuple(0),
-                         std::forward_as_tuple())
-                 .first->second;
+  auto& p1 =
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple())
+          .first->second;
   EXPECT_FALSE(empty_called);
 
   p1.Clean();
@@ -139,18 +139,18 @@ TEST(AutoCleanableMap, GetSize) {
 
   EXPECT_EQ(0u, map.size());
 
-  auto& p1 = map.emplace(std::piecewise_construct, std::forward_as_tuple(0),
-                         std::forward_as_tuple())
-                 .first->second;
+  auto& p1 =
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple())
+          .first->second;
   EXPECT_EQ(1u, map.size());
 
-  auto& p2 = map.emplace(std::piecewise_construct, std::forward_as_tuple(1),
-                         std::forward_as_tuple())
-                 .first->second;
+  auto& p2 =
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple())
+          .first->second;
 
-  auto& p3 = map.emplace(std::piecewise_construct, std::forward_as_tuple(2),
-                         std::forward_as_tuple())
-                 .first->second;
+  auto& p3 =
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(2), std::forward_as_tuple())
+          .first->second;
 
   EXPECT_EQ(3u, map.size());
 
@@ -164,13 +164,11 @@ TEST(AutoCleanableMap, GetBegin) {
   AutoCleanableMap<int, Cleanable> map;
 
   const auto& p1 =
-      map.emplace(std::piecewise_construct, std::forward_as_tuple(0),
-                  std::forward_as_tuple())
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple())
           .first;
 
   const auto& p2 =
-      map.emplace(std::piecewise_construct, std::forward_as_tuple(1),
-                  std::forward_as_tuple())
+      map.emplace(std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple())
           .first;
 
   const AutoCleanableMap<int, Cleanable>::iterator it1 = map.begin();

@@ -6,8 +6,7 @@ namespace ui_input {
 
 InputDeviceImpl::InputDeviceImpl(
     uint32_t id, fuchsia::ui::input::DeviceDescriptor descriptor,
-    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-        input_device_request,
+    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request,
     Listener* listener)
     : id_(id),
       descriptor_(std::move(descriptor)),

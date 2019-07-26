@@ -45,9 +45,7 @@ typedef int16_t tran_low_t;
 
 typedef int16_t tran_coef_t;
 
-static INLINE uint8_t clip_pixel(int val) {
-  return (val > 255) ? 255 : (val < 0) ? 0 : val;
-}
+static INLINE uint8_t clip_pixel(int val) { return (val > 255) ? 255 : (val < 0) ? 0 : val; }
 
 static INLINE int clamp(int value, int low, int high) {
   return value < low ? low : (value > high ? high : value);
@@ -60,9 +58,12 @@ static INLINE double fclamp(double value, double low, double high) {
 static INLINE uint16_t clip_pixel_highbd(int val, int bd) {
   switch (bd) {
     case 8:
-    default: return (uint16_t)clamp(val, 0, 255);
-    case 10: return (uint16_t)clamp(val, 0, 1023);
-    case 12: return (uint16_t)clamp(val, 0, 4095);
+    default:
+      return (uint16_t)clamp(val, 0, 255);
+    case 10:
+      return (uint16_t)clamp(val, 0, 1023);
+    case 12:
+      return (uint16_t)clamp(val, 0, 4095);
   }
 }
 

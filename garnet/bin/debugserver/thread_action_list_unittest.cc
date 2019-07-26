@@ -36,11 +36,7 @@ const ActionTest basic_tests[] = {
     {true, "c:p1.1", NONE, 1, {{CONTINUE, 1, 1}}},
     {true, "c:3", NONE, 1, {{CONTINUE, kCurProc, 3}}},
     {true, "c:p-1.-1", NONE, 1, {{CONTINUE, kMinusOne, kMinusOne}}},
-    {true,
-     "c;c:p1.-1;c:p2.3",
-     CONTINUE,
-     2,
-     {{CONTINUE, 1, kMinusOne}, {CONTINUE, 2, 3}}},
+    {true, "c;c:p1.-1;c:p2.3", CONTINUE, 2, {{CONTINUE, 1, kMinusOne}, {CONTINUE, 2, 3}}},
     {true, "c:p0.0", NONE, 1, {{CONTINUE, kCurProc, 0}}},
 
     {false, "", NONE, 0, {}},

@@ -14,11 +14,11 @@
 #include "private.h"
 
 struct fdio {
-    const fdio_ops_t* ops;
-    std::atomic_int_fast32_t refcount;
-    int32_t dupcount;
-    uint32_t ioflag;
-    zxio_storage_t storage;
+  const fdio_ops_t* ops;
+  std::atomic_int_fast32_t refcount;
+  int32_t dupcount;
+  uint32_t ioflag;
+  zxio_storage_t storage;
 };
 
 // fdio_reserved_io is a globally shared fdio_t that is used to represent a
@@ -32,63 +32,39 @@ static fdio_t fdio_reserved_io = {
     // TODO(raggi): It may be ideal to replace these operations with ones that
     // more directly encode the result that a user must have implemented a race
     // in order to invoke them.
-    .ops = NULL,
-    .refcount = 1,
-    .dupcount = 1,
-    .ioflag = 0,
-    .storage = {},
+    .ops = NULL, .refcount = 1, .dupcount = 1, .ioflag = 0, .storage = {},
 };
 
-fdio_t* fdio_get_reserved_io(void) {
-    return &fdio_reserved_io;
-}
+fdio_t* fdio_get_reserved_io(void) { return &fdio_reserved_io; }
 
-zxio_t* fdio_get_zxio(fdio_t* io) {
-    return &io->storage.io;
-}
+zxio_t* fdio_get_zxio(fdio_t* io) { return &io->storage.io; }
 
-const fdio_ops_t* fdio_get_ops(const fdio_t* io) {
-    return io->ops;
-}
+const fdio_ops_t* fdio_get_ops(const fdio_t* io) { return io->ops; }
 
-int32_t fdio_get_dupcount(const fdio_t* io) {
-    return io->dupcount;
-}
+int32_t fdio_get_dupcount(const fdio_t* io) { return io->dupcount; }
 
-void fdio_dupcount_acquire(fdio_t* io) {
-    io->dupcount++;
-}
+void fdio_dupcount_acquire(fdio_t* io) { io->dupcount++; }
 
-void fdio_dupcount_release(fdio_t* io) {
-    io->dupcount--;
-}
+void fdio_dupcount_release(fdio_t* io) { io->dupcount--; }
 
-uint32_t* fdio_get_ioflag(fdio_t* io) {
-    return &io->ioflag;
-}
+uint32_t* fdio_get_ioflag(fdio_t* io) { return &io->ioflag; }
 
-zxio_storage_t* fdio_get_zxio_storage(fdio_t* io) {
-    return &io->storage;
-}
+zxio_storage_t* fdio_get_zxio_storage(fdio_t* io) { return &io->storage; }
 
 fdio_t* fdio_alloc(const fdio_ops_t* ops) {
-    fdio_t* io = (fdio_t*) calloc(1, sizeof(fdio_t));
-    io->ops = ops;
-    io->refcount.store(1);
-    return io;
+  fdio_t* io = (fdio_t*)calloc(1, sizeof(fdio_t));
+  io->ops = ops;
+  io->refcount.store(1);
+  return io;
 }
 
-void fdio_acquire(fdio_t* io) {
-    io->refcount.fetch_add(1);
-}
+void fdio_acquire(fdio_t* io) { io->refcount.fetch_add(1); }
 
 void fdio_release(fdio_t* io) {
-    if (io->refcount.fetch_sub(1) == 1) {
-        io->ops = NULL;
-        free(io);
-    }
+  if (io->refcount.fetch_sub(1) == 1) {
+    io->ops = NULL;
+    free(io);
+  }
 }
 
-bool fdio_is_last_reference(fdio_t* io) {
-    return io->refcount.load() == 1;
-}
+bool fdio_is_last_reference(fdio_t* io) { return io->refcount.load() == 1; }

@@ -33,8 +33,7 @@ class IBeaconDetection {
 // Represents the detection of a Tilt Hydrometer beacon
 class TiltDetection {
  public:
-  static std::unique_ptr<TiltDetection> Create(
-      const fuchsia::bluetooth::le::RemoteDevice& device);
+  static std::unique_ptr<TiltDetection> Create(const fuchsia::bluetooth::le::RemoteDevice& device);
 
   void Print();
 

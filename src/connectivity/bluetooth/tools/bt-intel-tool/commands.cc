@@ -36,13 +36,10 @@ namespace {
 
 class MfgModeEnabler {
  public:
-  MfgModeEnabler(CommandChannel* channel)
-      : channel_(channel), patch_reset_needed_(false) {
+  MfgModeEnabler(CommandChannel* channel) : channel_(channel), patch_reset_needed_(false) {
     auto packet = MakeMfgModePacket(true);
     channel_->SendCommandSync(packet->view(), [](const auto& evt) {
-      std::cout << fxl::StringPrintf(
-                       "Mfg mode enable complete (status: 0x%02x)",
-                       evt.event_code())
+      std::cout << fxl::StringPrintf("Mfg mode enable complete (status: 0x%02x)", evt.event_code())
                 << std::endl;
     });
   }
@@ -56,9 +53,7 @@ class MfgModeEnabler {
 
     auto packet = MakeMfgModePacket(false, disable_mode);
     channel_->SendCommandSync(packet->view(), [](const auto& evt) {
-      std::cout << fxl::StringPrintf(
-                       "Mfg mode disable complete (status: 0x%02x)",
-                       evt.event_code())
+      std::cout << fxl::StringPrintf("Mfg mode disable complete (status: 0x%02x)", evt.event_code())
                 << std::endl;
     });
   }
@@ -71,26 +66,20 @@ class MfgModeEnabler {
 
   std::unique_ptr<CommandPacket> MakeMfgModePacket(
       bool enable, MfgDisableMode disable_mode = MfgDisableMode::kNoPatches) {
-    auto packet = CommandPacket::New(kMfgModeChange,
-                                     sizeof(IntelMfgModeChangeCommandParams));
-    auto params = packet->mutable_view()
-                      ->mutable_payload<IntelMfgModeChangeCommandParams>();
-    params->enable =
-        enable ? GenericEnableParam::kEnable : GenericEnableParam::kDisable;
+    auto packet = CommandPacket::New(kMfgModeChange, sizeof(IntelMfgModeChangeCommandParams));
+    auto params = packet->mutable_view()->mutable_payload<IntelMfgModeChangeCommandParams>();
+    params->enable = enable ? GenericEnableParam::kEnable : GenericEnableParam::kDisable;
     params->disable_mode = disable_mode;
     return packet;
   }
 };
 
 void LogCommandComplete(StatusCode status) {
-  std::cout << "  Command Complete - status: "
-            << fxl::StringPrintf("0x%02x", status) << std::endl;
+  std::cout << "  Command Complete - status: " << fxl::StringPrintf("0x%02x", status) << std::endl;
 }
 
 // Prints a byte in decimal and hex forms
-std::string PrintByte(uint8_t byte) {
-  return fxl::StringPrintf("%u (0x%02x)", byte, byte);
-}
+std::string PrintByte(uint8_t byte) { return fxl::StringPrintf("%u (0x%02x)", byte, byte); }
 
 std::string EnableParamToString(GenericEnableParam param) {
   return (param == GenericEnableParam::kEnable) ? "enabled" : "disabled";
@@ -108,8 +97,7 @@ std::string FirmwareVariantToString(uint8_t fw_variant) {
   return "UNKNOWN";
 }
 
-bool HandleReadVersion(CommandChannel* cmd_channel,
-                       const fxl::CommandLine& cmd_line,
+bool HandleReadVersion(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
                        const fit::closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: read-version [--verbose]" << std::endl;
@@ -123,32 +111,22 @@ bool HandleReadVersion(CommandChannel* cmd_channel,
     std::cout << fxl::StringPrintf(
         "  Firmware Summary: variant=%s - revision %u.%u build no: %u (week "
         "%u, year %u)",
-        FirmwareVariantToString(params->fw_variant).c_str(),
-        params->fw_revision >> 4, params->fw_revision & 0x0F,
-        params->fw_build_num, params->fw_build_week,
+        FirmwareVariantToString(params->fw_variant).c_str(), params->fw_revision >> 4,
+        params->fw_revision & 0x0F, params->fw_build_num, params->fw_build_week,
         2000 + params->fw_build_year);
     std::cout << std::endl;
 
     if (cmd_line.HasOption("verbose")) {
       std::cout << "  Intel Read Version:" << std::endl;
-      std::cout << "    Hardware Platform: " << PrintByte(params->hw_platform)
-                << std::endl;
-      std::cout << "    Hardware Variant:  " << PrintByte(params->hw_variant)
-                << std::endl;
-      std::cout << "    Hardware Revision: " << PrintByte(params->hw_revision)
-                << std::endl;
-      std::cout << "    Firmware Variant:  " << PrintByte(params->fw_variant)
-                << std::endl;
-      std::cout << "    Firmware Revision: " << PrintByte(params->fw_revision)
-                << std::endl;
-      std::cout << "    Firmware Build No: " << PrintByte(params->fw_build_num)
-                << std::endl;
-      std::cout << "    Firmware Build Week: "
-                << PrintByte(params->fw_build_week) << std::endl;
-      std::cout << "    Firmware Build Year: "
-                << PrintByte(params->fw_build_year) << std::endl;
-      std::cout << "    Firmware Patch No: " << PrintByte(params->fw_patch_num)
-                << std::endl;
+      std::cout << "    Hardware Platform: " << PrintByte(params->hw_platform) << std::endl;
+      std::cout << "    Hardware Variant:  " << PrintByte(params->hw_variant) << std::endl;
+      std::cout << "    Hardware Revision: " << PrintByte(params->hw_revision) << std::endl;
+      std::cout << "    Firmware Variant:  " << PrintByte(params->fw_variant) << std::endl;
+      std::cout << "    Firmware Revision: " << PrintByte(params->fw_revision) << std::endl;
+      std::cout << "    Firmware Build No: " << PrintByte(params->fw_build_num) << std::endl;
+      std::cout << "    Firmware Build Week: " << PrintByte(params->fw_build_week) << std::endl;
+      std::cout << "    Firmware Build Year: " << PrintByte(params->fw_build_year) << std::endl;
+      std::cout << "    Firmware Patch No: " << PrintByte(params->fw_patch_num) << std::endl;
     }
   };
 
@@ -159,8 +137,7 @@ bool HandleReadVersion(CommandChannel* cmd_channel,
   return false;
 }
 
-bool HandleReadBootParams(CommandChannel* cmd_channel,
-                          const fxl::CommandLine& cmd_line,
+bool HandleReadBootParams(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
                           fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-boot-params" << std::endl;
@@ -172,25 +149,16 @@ bool HandleReadBootParams(CommandChannel* cmd_channel,
     LogCommandComplete(params->status);
 
     std::cout << "  Intel Boot Parameters:" << std::endl;
-    std::cout << "    Device Revision:  " << le16toh(params->dev_revid)
-              << std::endl;
-    std::cout << "    Secure Boot:      "
-              << EnableParamToString(params->secure_boot) << std::endl;
-    std::cout << "    OTP Lock:         "
-              << EnableParamToString(params->otp_lock) << std::endl;
-    std::cout << "    API Lock:         "
-              << EnableParamToString(params->api_lock) << std::endl;
-    std::cout << "    Debug Lock:       "
-              << EnableParamToString(params->debug_lock) << std::endl;
-    std::cout << "    Limited CCE:      "
-              << EnableParamToString(params->limited_cce) << std::endl;
-    std::cout << "    OTP BD_ADDR:      " << params->otp_bdaddr.ToString()
-              << std::endl;
+    std::cout << "    Device Revision:  " << le16toh(params->dev_revid) << std::endl;
+    std::cout << "    Secure Boot:      " << EnableParamToString(params->secure_boot) << std::endl;
+    std::cout << "    OTP Lock:         " << EnableParamToString(params->otp_lock) << std::endl;
+    std::cout << "    API Lock:         " << EnableParamToString(params->api_lock) << std::endl;
+    std::cout << "    Debug Lock:       " << EnableParamToString(params->debug_lock) << std::endl;
+    std::cout << "    Limited CCE:      " << EnableParamToString(params->limited_cce) << std::endl;
+    std::cout << "    OTP BD_ADDR:      " << params->otp_bdaddr.ToString() << std::endl;
     std::cout << "    Minimum Firmware Build: "
-              << fxl::StringPrintf("build no: %u (week %u, year %u)",
-                                   params->min_fw_build_num,
-                                   params->min_fw_build_week,
-                                   2000 + params->min_fw_build_year)
+              << fxl::StringPrintf("build no: %u (week %u, year %u)", params->min_fw_build_num,
+                                   params->min_fw_build_week, 2000 + params->min_fw_build_year)
               << std::endl;
   };
 
@@ -209,8 +177,7 @@ bool HandleReset(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
   }
 
   auto packet = CommandPacket::New(kReset, sizeof(IntelResetCommandParams));
-  auto params =
-      packet->mutable_view()->mutable_payload<IntelResetCommandParams>();
+  auto params = packet->mutable_view()->mutable_payload<IntelResetCommandParams>();
   params->data[0] = 0x00;
   params->data[1] = 0x01;
   params->data[2] = 0x00;
@@ -233,8 +200,7 @@ bool HandleReset(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
   return false;
 }
 
-bool HandleLoadBseq(CommandChannel* cmd_channel,
-                    const fxl::CommandLine& cmd_line,
+bool HandleLoadBseq(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
                     fit::closure complete_cb) {
   if (cmd_line.positional_args().size() != 1) {
     std::cout << "  Usage: load-bseq [--verbose] <filename>" << std::endl;
@@ -258,8 +224,7 @@ bool HandleLoadBseq(CommandChannel* cmd_channel,
   return false;
 }
 
-bool HandleLoadSecure(CommandChannel* cmd_channel,
-                      const fxl::CommandLine& cmd_line,
+bool HandleLoadSecure(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
                       fit::closure complete_cb) {
   if (cmd_line.positional_args().size() != 1) {
     std::cout << "  Usage: load-sfi [--verbose] <filename>" << std::endl;
@@ -277,19 +242,14 @@ bool HandleLoadSecure(CommandChannel* cmd_channel,
 
 }  // namespace
 
-void RegisterCommands(CommandChannel* data,
-                      ::bluetooth_tools::CommandDispatcher* dispatcher) {
-#define BIND(handler) \
-  std::bind(&handler, data, std::placeholders::_1, std::placeholders::_2)
+void RegisterCommands(CommandChannel* data, ::bluetooth_tools::CommandDispatcher* dispatcher) {
+#define BIND(handler) std::bind(&handler, data, std::placeholders::_1, std::placeholders::_2)
 
-  dispatcher->RegisterHandler("read-version",
-                              "Read hardware version information",
+  dispatcher->RegisterHandler("read-version", "Read hardware version information",
                               BIND(HandleReadVersion));
-  dispatcher->RegisterHandler("read-boot-params",
-                              "Read hardware boot parameters",
+  dispatcher->RegisterHandler("read-boot-params", "Read hardware boot parameters",
                               BIND(HandleReadBootParams));
-  dispatcher->RegisterHandler("load-bseq", "Load bseq file onto device",
-                              BIND(HandleLoadBseq));
+  dispatcher->RegisterHandler("load-bseq", "Load bseq file onto device", BIND(HandleLoadBseq));
   dispatcher->RegisterHandler("load-sfi", "Load Secure Firmware onto device",
                               BIND(HandleLoadSecure));
   dispatcher->RegisterHandler("reset", "Reset firmware", BIND(HandleReset));

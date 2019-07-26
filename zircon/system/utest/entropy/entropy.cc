@@ -9,17 +9,17 @@
 #if ENABLE_ENTROPY_COLLECTOR_TEST
 
 bool entropy_file_exists() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    FILE* file = fopen("/boot/kernel/debug/entropy.bin", "rb");
-    ASSERT_NONNULL(file, "entropy file doesn't exist");
+  FILE* file = fopen("/boot/kernel/debug/entropy.bin", "rb");
+  ASSERT_NONNULL(file, "entropy file doesn't exist");
 
-    char buf[32];
-    size_t read = fread(buf, 1, sizeof(buf), file);
+  char buf[32];
+  size_t read = fread(buf, 1, sizeof(buf), file);
 
-    EXPECT_LT(0, read, "entropy file contains no data or not readable");
+  EXPECT_LT(0, read, "entropy file contains no data or not readable");
 
-    END_TEST;
+  END_TEST;
 }
 
 BEGIN_TEST_CASE(entropy_tests)

@@ -23,8 +23,7 @@ constexpr uint32_t kMaxBufferSizeMegabytes = 64;
 // These defaults are copied from fuchsia.tracing/trace_controller.fidl.
 constexpr uint32_t kDefaultBufferSizeMegabytesHint = 4;
 constexpr uint32_t kDefaultStartTimeoutMilliseconds = 5000;
-constexpr controller::BufferingMode kDefaultBufferingMode =
-    controller::BufferingMode::ONESHOT;
+constexpr controller::BufferingMode kDefaultBufferingMode = controller::BufferingMode::ONESHOT;
 
 uint32_t ConstrainBufferSize(uint32_t buffer_size_megabytes) {
   return std::min(std::max(buffer_size_megabytes, kMinBufferSizeMegabytes),
@@ -44,9 +43,8 @@ TraceManager::TraceManager(sys::ComponentContext* context, const Config& config)
 
 TraceManager::~TraceManager() = default;
 
-void TraceManager::StartTracing(
-    controller::TraceOptions options, zx::socket output,
-    StartTracingCallback start_callback) {
+void TraceManager::StartTracing(controller::TraceOptions options, zx::socket output,
+                                StartTracingCallback start_callback) {
   if (session_) {
     FXL_LOG(ERROR) << "Trace already in progress";
     return;
@@ -61,8 +59,7 @@ void TraceManager::StartTracing(
   TraceProviderSpecMap provider_specs;
   if (options.has_provider_specs()) {
     for (const auto& it : options.provider_specs()) {
-      provider_specs[it.name()] =
-          TraceProviderSpec{it.buffer_size_megabytes_hint()};
+      provider_specs[it.name()] = TraceProviderSpec{it.buffer_size_megabytes_hint()};
     }
   }
 
@@ -86,8 +83,7 @@ void TraceManager::StartTracing(
       mode_name = "streaming";
       break;
     default:
-      FXL_LOG(ERROR) << "Invalid buffering mode: "
-                     << static_cast<unsigned>(tracing_buffering_mode);
+      FXL_LOG(ERROR) << "Invalid buffering mode: " << static_cast<unsigned>(tracing_buffering_mode);
       return;
   }
 
@@ -96,8 +92,7 @@ void TraceManager::StartTracing(
   if (provider_specs.size() > 0) {
     FXL_LOG(INFO) << "Provider overrides:";
     for (const auto& it : provider_specs) {
-      FXL_LOG(INFO) << it.first << ": buffer size "
-                    << it.second.buffer_size_megabytes << " MB";
+      FXL_LOG(INFO) << it.first << ": buffer size " << it.second.buffer_size_megabytes << " MB";
     }
   }
 
@@ -107,8 +102,7 @@ void TraceManager::StartTracing(
   }
   session_ = fxl::MakeRefCounted<TraceSession>(
       std::move(output), std::move(categories), default_buffer_size_megabytes,
-      provider_buffering_mode, std::move(provider_specs),
-      [this]() { session_ = nullptr; });
+      provider_buffering_mode, std::move(provider_specs), [this]() { session_ = nullptr; });
 
   session_->QueueTraceInfo();
   for (auto& bundle : providers_) {
@@ -142,19 +136,16 @@ void TraceManager::StopTracing() {
 void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
   fidl::VectorPtr<controller::KnownCategory> known_categories;
   for (const auto& it : config_.known_categories()) {
-    known_categories.push_back(
-        controller::KnownCategory{it.first, it.second});
+    known_categories.push_back(controller::KnownCategory{it.first, it.second});
   }
   callback(std::move(known_categories));
 }
 
-void TraceManager::RegisterProviderWorker(
-    fidl::InterfaceHandle<provider::Provider> provider, uint64_t pid,
-    fidl::StringPtr name) {
+void TraceManager::RegisterProviderWorker(fidl::InterfaceHandle<provider::Provider> provider,
+                                          uint64_t pid, fidl::StringPtr name) {
   FXL_VLOG(2) << "Registering provider {" << pid << ":" << name.get() << "}";
-  auto it = providers_.emplace(
-      providers_.end(),
-      provider.Bind(), next_provider_id_++, pid, name.get());
+  auto it =
+      providers_.emplace(providers_.end(), provider.Bind(), next_provider_id_++, pid, name.get());
 
   it->provider.set_error_handler([this, it](zx_status_t status) {
     if (session_)
@@ -166,15 +157,14 @@ void TraceManager::RegisterProviderWorker(
     session_->AddProvider(&(*it));
 }
 
-void TraceManager::RegisterProvider(
-    fidl::InterfaceHandle<provider::Provider> provider, uint64_t pid,
-    std::string name) {
+void TraceManager::RegisterProvider(fidl::InterfaceHandle<provider::Provider> provider,
+                                    uint64_t pid, std::string name) {
   RegisterProviderWorker(std::move(provider), pid, std::move(name));
 }
 
-void TraceManager::RegisterProviderSynchronously(
-    fidl::InterfaceHandle<provider::Provider> provider, uint64_t pid,
-    std::string name, RegisterProviderSynchronouslyCallback callback) {
+void TraceManager::RegisterProviderSynchronously(fidl::InterfaceHandle<provider::Provider> provider,
+                                                 uint64_t pid, std::string name,
+                                                 RegisterProviderSynchronouslyCallback callback) {
   RegisterProviderWorker(std::move(provider), pid, std::move(name));
   callback(ZX_OK, trace_running_);
 }

@@ -6,8 +6,7 @@
 
 #include <zircon/assert.h>
 
-TimestampExtrapolator::TimestampExtrapolator(uint64_t timebase,
-                                             uint64_t bytes_per_second)
+TimestampExtrapolator::TimestampExtrapolator(uint64_t timebase, uint64_t bytes_per_second)
     : timebase_(timebase), bytes_per_second_(bytes_per_second) {}
 
 TimestampExtrapolator::TimestampExtrapolator() {}
@@ -25,8 +24,8 @@ std::optional<uint64_t> TimestampExtrapolator::Extrapolate(size_t offset) {
   last_information_.reset();
 
   ZX_DEBUG_ASSERT_MSG(last_information.offset <= offset,
-                      "offset %lu behind last informed timestamp's offset %lu",
-                      offset, last_information.offset);
+                      "offset %lu behind last informed timestamp's offset %lu", offset,
+                      last_information.offset);
 
   if (!timebase_) {
     if (offset == last_information_->offset) {
@@ -37,6 +36,5 @@ std::optional<uint64_t> TimestampExtrapolator::Extrapolate(size_t offset) {
   }
 
   uint64_t delta = offset - last_information.offset;
-  return {last_information.timestamp +
-          delta * (*timebase_) / bytes_per_second_};
+  return {last_information.timestamp + delta * (*timebase_) / bytes_per_second_};
 }

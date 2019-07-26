@@ -34,23 +34,23 @@
 __BEGIN_CDECLS
 
 typedef struct virtio_blk_geometry {
-    uint16_t cylinders;
-    uint8_t heads;
-    uint8_t sectors;
+  uint16_t cylinders;
+  uint8_t heads;
+  uint8_t sectors;
 } __PACKED virtio_blk_geometry_t;
 
 typedef struct virtio_blk_config {
-    uint64_t capacity;
-    uint32_t size_max;
-    uint32_t seg_max;
-    virtio_blk_geometry_t geometry;
-    uint32_t blk_size;
+  uint64_t capacity;
+  uint32_t size_max;
+  uint32_t seg_max;
+  virtio_blk_geometry_t geometry;
+  uint32_t blk_size;
 } __PACKED virtio_blk_config_t;
 
 typedef struct virtio_blk_req {
-    uint32_t type;
-    uint32_t ioprio;
-    uint64_t sector;
+  uint32_t type;
+  uint32_t ioprio;
+  uint64_t sector;
 } __PACKED virtio_blk_req_t;
 
 __END_CDECLS

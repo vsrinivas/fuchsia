@@ -11,48 +11,48 @@ namespace netsvc {
 
 PayloadStreamer::PayloadStreamer(zx::channel chan, ReadCallback callback)
     : read_(std::move(callback)) {
-      fidl::Bind(async_get_default_dispatcher(), std::move(chan), this);
+  fidl::Bind(async_get_default_dispatcher(), std::move(chan), this);
 }
 
 void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer) {
-    if (vmo_) {
-        vmo_.reset();
-        mapper_.Unmap();
-    }
+  if (vmo_) {
+    vmo_.reset();
+    mapper_.Unmap();
+  }
 
-    vmo_ = std::move(vmo);
-    auto status = mapper_.Map(vmo_, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
-    completer.Reply(status);
+  vmo_ = std::move(vmo);
+  auto status = mapper_.Map(vmo_, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  completer.Reply(status);
 }
 
 void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
-    using ::llcpp::fuchsia::paver::ReadResult;
-    ReadResult result;
-    if (!vmo_) {
-        result.set_err(ZX_ERR_BAD_STATE);
-        completer.Reply(std::move(result));
-        return;
-    }
-    if (eof_reached_) {
-        result.set_eof(true);
-        completer.Reply(std::move(result));
-        return;
-    }
-
-    size_t actual;
-    auto status = read_(mapper_.start(), read_offset_, mapper_.size(), &actual);
-    if (status != ZX_OK) {
-        result.set_err(status);
-    } else if (actual == 0) {
-        eof_reached_ = true;
-        result.set_eof(true);
-    } else {
-        result.mutable_info().offset = 0;
-        result.mutable_info().size = actual;
-        read_offset_ += actual;
-    }
-
+  using ::llcpp::fuchsia::paver::ReadResult;
+  ReadResult result;
+  if (!vmo_) {
+    result.set_err(ZX_ERR_BAD_STATE);
     completer.Reply(std::move(result));
+    return;
+  }
+  if (eof_reached_) {
+    result.set_eof(true);
+    completer.Reply(std::move(result));
+    return;
+  }
+
+  size_t actual;
+  auto status = read_(mapper_.start(), read_offset_, mapper_.size(), &actual);
+  if (status != ZX_OK) {
+    result.set_err(status);
+  } else if (actual == 0) {
+    eof_reached_ = true;
+    result.set_eof(true);
+  } else {
+    result.mutable_info().offset = 0;
+    result.mutable_info().size = actual;
+    read_offset_ += actual;
+  }
+
+  completer.Reply(std::move(result));
 }
 
-} // namespace netsvc
+}  // namespace netsvc

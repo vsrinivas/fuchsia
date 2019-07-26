@@ -34,78 +34,78 @@ using block_client::BlockDevice;
 // invoked on transaction completion.
 // This class is thread-safe.
 class MockTransactionManager : public TransactionManager {
-public:
-    MockTransactionManager() {
-        ASSERT_OK(WritebackQueue::Create(this, kWritebackCapacity, &writeback_));
-    }
+ public:
+  MockTransactionManager() {
+    ASSERT_OK(WritebackQueue::Create(this, kWritebackCapacity, &writeback_));
+  }
 
-    ~MockTransactionManager() = default;
+  ~MockTransactionManager() = default;
 
-    // Sets the |callback| to be invoked for each request on calls to Transaction().
-    void SetTransactionCallback(TransactionCallback callback) {
-        fbl::AutoLock lock(&lock_);
-        transaction_callback_ = std::move(callback);
-    }
+  // Sets the |callback| to be invoked for each request on calls to Transaction().
+  void SetTransactionCallback(TransactionCallback callback) {
+    fbl::AutoLock lock(&lock_);
+    transaction_callback_ = std::move(callback);
+  }
 
-    uint32_t FsBlockSize() const final { return kBlockSize; }
+  uint32_t FsBlockSize() const final { return kBlockSize; }
 
-    groupid_t BlockGroupID() final { return kGroupID; }
+  groupid_t BlockGroupID() final { return kGroupID; }
 
-    uint32_t DeviceBlockSize() const final { return kDeviceBlockSize; }
+  uint32_t DeviceBlockSize() const final { return kDeviceBlockSize; }
 
-    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override;
+  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override;
 
-    const Superblock& Info() const final { return superblock_; }
+  const Superblock& Info() const final { return superblock_; }
 
-    Superblock& MutableInfo() { return superblock_; }
+  Superblock& MutableInfo() { return superblock_; }
 
-    zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final { return ZX_ERR_NOT_SUPPORTED; }
 
-    zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final { return ZX_ERR_NOT_SUPPORTED; }
 
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
+  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
 
-    zx_status_t DetachVmo(vmoid_t vmoid) final;
+  zx_status_t DetachVmo(vmoid_t vmoid) final;
 
-    BlobfsMetrics& Metrics() final { return metrics_; }
+  BlobfsMetrics& Metrics() final { return metrics_; }
 
-    size_t WritebackCapacity() const final { return kWritebackCapacity; }
+  size_t WritebackCapacity() const final { return kWritebackCapacity; }
 
-    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final {
-        ZX_ASSERT(out != nullptr);
-        ZX_ASSERT(vnode == nullptr);
+  zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final {
+    ZX_ASSERT(out != nullptr);
+    ZX_ASSERT(vnode == nullptr);
 
-        out->reset(new WritebackWork(this));
-        return ZX_OK;
-    }
+    out->reset(new WritebackWork(this));
+    return ZX_OK;
+  }
 
-    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final {
-        ZX_ASSERT(type == EnqueueType::kData);
-        return writeback_->Enqueue(std::move(work));
-    }
+  zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final {
+    ZX_ASSERT(type == EnqueueType::kData);
+    return writeback_->Enqueue(std::move(work));
+  }
 
-private:
-    fbl::unique_ptr<WritebackQueue> writeback_{};
-    BlobfsMetrics metrics_{};
-    Superblock superblock_{};
-    fbl::Vector<std::optional<zx::vmo>> attached_vmos_ __TA_GUARDED(lock_);
-    TransactionCallback transaction_callback_ __TA_GUARDED(lock_);
-    fbl::Mutex lock_;
+ private:
+  fbl::unique_ptr<WritebackQueue> writeback_{};
+  BlobfsMetrics metrics_{};
+  Superblock superblock_{};
+  fbl::Vector<std::optional<zx::vmo>> attached_vmos_ __TA_GUARDED(lock_);
+  TransactionCallback transaction_callback_ __TA_GUARDED(lock_);
+  fbl::Mutex lock_;
 };
 
 // A trivial space manager, incapable of resizing.
 class MockSpaceManager : public SpaceManager {
-public:
-    Superblock& MutableInfo() { return superblock_; }
+ public:
+  Superblock& MutableInfo() { return superblock_; }
 
-    const Superblock& Info() const final { return superblock_; }
-    zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final { return ZX_ERR_NOT_SUPPORTED; }
-    zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final { return ZX_ERR_NOT_SUPPORTED; }
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final { return ZX_ERR_NOT_SUPPORTED; }
-    zx_status_t DetachVmo(vmoid_t vmoid) final { return ZX_ERR_NOT_SUPPORTED; }
+  const Superblock& Info() const final { return superblock_; }
+  zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t DetachVmo(vmoid_t vmoid) final { return ZX_ERR_NOT_SUPPORTED; }
 
-private:
-    Superblock superblock_{};
+ private:
+  Superblock superblock_{};
 };
 
 // Create a block and node map of the requested size, update the superblock of
@@ -131,4 +131,4 @@ void DeviceBlockRead(BlockDevice* device, void* buf, size_t size, uint64_t dev_o
 // Expects |size| and |dev_offset| to be multiple of |device| block size.
 void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_t dev_offset);
 
-} // namespace blobfs
+}  // namespace blobfs

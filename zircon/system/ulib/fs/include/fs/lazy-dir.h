@@ -19,39 +19,39 @@ namespace fs {
 // implementation of this class is thread-safe, but it is up to implementers
 // to ensure their implementations are thread safe as well.
 class LazyDir : public Vnode {
-public:
-    // Structure storing a single entry in the directory.
-    struct LazyEntry {
-        // Non-zero ID for this entry, must remain stable across calls.
-        // IDs do not necessarily need to be unique, however, non-unique
-        // IDs may cause duplication in directory listings.
-        uint64_t id;
-        fbl::String name;
-        uint32_t type;
-    };
-    using LazyEntryVector = fbl::Vector<LazyEntry>;
+ public:
+  // Structure storing a single entry in the directory.
+  struct LazyEntry {
+    // Non-zero ID for this entry, must remain stable across calls.
+    // IDs do not necessarily need to be unique, however, non-unique
+    // IDs may cause duplication in directory listings.
+    uint64_t id;
+    fbl::String name;
+    uint32_t type;
+  };
+  using LazyEntryVector = fbl::Vector<LazyEntry>;
 
-    LazyDir();
-    virtual ~LazyDir();
+  LazyDir();
+  virtual ~LazyDir();
 
-    // |Vnode| implementation.
-    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
-    zx_status_t Getattr(vnattr_t* out_attr) final;
-    // Read the directory contents. Note that cookie->p is used to denote
-    // if the "." entry has been returned. All IDs other than 0 are valid.
-    zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out_vnode, fbl::StringPiece name) final;
-    bool IsDirectory() const final { return true; }
-    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  // |Vnode| implementation.
+  zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+  zx_status_t Getattr(vnattr_t* out_attr) final;
+  // Read the directory contents. Note that cookie->p is used to denote
+  // if the "." entry has been returned. All IDs other than 0 are valid.
+  zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) final;
+  zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out_vnode, fbl::StringPiece name) final;
+  bool IsDirectory() const final { return true; }
+  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
-protected:
-    // Get the contents of the directory in an output vector.
-    virtual void GetContents(LazyEntryVector* out_vector) = 0;
-    // Get the reference to a single file. The id and name of the entry as
-    // returned from GetContents are passed in to assist locating the file.
-    virtual zx_status_t GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id, fbl::String name) = 0;
+ protected:
+  // Get the contents of the directory in an output vector.
+  virtual void GetContents(LazyEntryVector* out_vector) = 0;
+  // Get the reference to a single file. The id and name of the entry as
+  // returned from GetContents are passed in to assist locating the file.
+  virtual zx_status_t GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id, fbl::String name) = 0;
 };
 
-} // namespace fs
+}  // namespace fs
 
-#endif // FS_LAZY_DIR_H_
+#endif  // FS_LAZY_DIR_H_

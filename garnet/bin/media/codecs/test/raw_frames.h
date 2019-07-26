@@ -43,8 +43,8 @@ class RawFrames {
   size_t frame_count() const;
 
  private:
-  RawFrames(Layout layout, zx::vmo frames, fzl::VmoMapper mapper,
-            size_t frame_stored_size, size_t frame_count);
+  RawFrames(Layout layout, zx::vmo frames, fzl::VmoMapper mapper, size_t frame_stored_size,
+            size_t frame_count);
 
   Layout layout_;
   zx::vmo frames_;

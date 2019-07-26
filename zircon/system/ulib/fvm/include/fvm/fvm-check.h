@@ -18,113 +18,104 @@ namespace fvm {
 // Checker defines a class which may be used to validate an FVM
 // (provided as either a regular file or a raw block device).
 class Checker {
-public:
-    Checker();
-    Checker(fbl::unique_fd fd, uint32_t block_size, bool silent);
-    ~Checker();
+ public:
+  Checker();
+  Checker(fbl::unique_fd fd, uint32_t block_size, bool silent);
+  ~Checker();
 
-    // Sets the path of the block device / image to read the FVM from.
-    void SetDevice(fbl::unique_fd fd) {
-        fd_ = std::move(fd);
-    }
+  // Sets the path of the block device / image to read the FVM from.
+  void SetDevice(fbl::unique_fd fd) { fd_ = std::move(fd); }
 
-    // Sets the block size of the provided device. Not automatically queried from the underlying
-    // device, since this checker may operate on a regular file, which does not have an
-    // attached block size.
-    void SetBlockSize(uint32_t block_size) {
-        block_size_ = block_size;
-    }
+  // Sets the block size of the provided device. Not automatically queried from the underlying
+  // device, since this checker may operate on a regular file, which does not have an
+  // attached block size.
+  void SetBlockSize(uint32_t block_size) { block_size_ = block_size; }
+
+  // Toggles the output of future calls to |Log|.
+  void SetSilent(bool silent) { logger_.SetSilent(silent); }
+
+  // Read from and validate the provided device, logging information if requested.
+  bool Validate() const;
+
+ private:
+  class Logger {
+   public:
+    Logger() : silent_(false) {}
+    explicit Logger(bool silent) : silent_(silent) {}
 
     // Toggles the output of future calls to |Log|.
-    void SetSilent(bool silent) {
-        logger_.SetSilent(silent);
+    void SetSilent(bool silent) { silent_ = silent; }
+
+    // Prints the format string and arguments to stderr.
+    void Error(const char* format, ...) const {
+      va_list arg;
+      va_start(arg, format);
+      vprintf(format, arg);
+      va_end(arg);
     }
 
-    // Read from and validate the provided device, logging information if requested.
-    bool Validate() const;
+    // Prints the format string and arguments to stdout, unless explicitly silenced.
+    void Log(const char* format, ...) const {
+      va_list arg;
+      if (!silent_) {
+        va_start(arg, format);
+        vprintf(format, arg);
+        va_end(arg);
+      }
+    }
 
-private:
-    class Logger {
-    public:
-        Logger() : silent_(false) {}
-        explicit Logger(bool silent) : silent_(silent) {}
+   private:
+    bool silent_;
+  };
 
-        // Toggles the output of future calls to |Log|.
-        void SetSilent(bool silent) {
-            silent_ = silent;
-        }
+  // Cached information from loading and validating the FVM.
+  struct FvmInfo {
+    // Contains both copies of metadata.
+    fbl::Array<uint8_t> metadata;
+    size_t valid_metadata_offset;
+    const uint8_t* valid_metadata;
+    const uint8_t* invalid_metadata;
+    size_t block_size;
+    size_t block_count;
+    size_t device_size;
+    size_t slice_size;
+  };
 
-        // Prints the format string and arguments to stderr.
-        void Error(const char* format, ...) const {
-            va_list arg;
-            va_start(arg, format);
-            vprintf(format, arg);
-            va_end(arg);
-        }
+  struct Slice {
+    uint64_t virtual_partition;
+    uint64_t virtual_slice;
+    uint64_t physical_slice;
+  };
 
-        // Prints the format string and arguments to stdout, unless explicitly silenced.
-        void Log(const char* format, ...) const {
-            va_list arg;
-            if (!silent_) {
-                va_start(arg, format);
-                vprintf(format, arg);
-                va_end(arg);
-            }
-        }
+  struct Partition {
+    bool Allocated() const { return entry != nullptr; }
 
-    private:
-        bool silent_;
-    };
+    const fvm::vpart_entry_t* entry = nullptr;
+    fbl::Vector<Slice> slices;
+  };
 
-    // Cached information from loading and validating the FVM.
-    struct FvmInfo {
-        // Contains both copies of metadata.
-        fbl::Array<uint8_t> metadata;
-        size_t valid_metadata_offset;
-        const uint8_t* valid_metadata;
-        const uint8_t* invalid_metadata;
-        size_t block_size;
-        size_t block_count;
-        size_t device_size;
-        size_t slice_size;
-    };
+  // Parses the FVM info from the device, and validate it (minimally).
+  bool LoadFVM(FvmInfo* out) const;
 
-    struct Slice {
-        uint64_t virtual_partition;
-        uint64_t virtual_slice;
-        uint64_t physical_slice;
-    };
+  // Outputs and checks information about the FVM, optionally logging parsed information.
+  bool CheckFVM(const FvmInfo& info) const;
 
-    struct Partition {
-        bool Allocated() const { return entry != nullptr; }
+  // Acquires a list of slices and partitions while parsing the FVM.
+  //
+  // Returns false if the FVM contains contradictory or invalid data.
+  bool LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_table,
+                      const fvm::vpart_entry_t* vpart_table, fbl::Vector<Slice>* out_slices,
+                      fbl::Array<Partition>* out_partitions) const;
 
-        const fvm::vpart_entry_t* entry = nullptr;
-        fbl::Vector<Slice> slices;
-    };
+  // Displays information about |slices|, assuming they are sorted in physical slice order.
+  void DumpSlices(const fbl::Vector<Slice>& slices) const;
 
+  // Confirms the Checker has received necessary arguments before beginning validation.
+  bool ValidateOptions() const;
 
-    // Parses the FVM info from the device, and validate it (minimally).
-    bool LoadFVM(FvmInfo* out) const;
-
-    // Outputs and checks information about the FVM, optionally logging parsed information.
-    bool CheckFVM(const FvmInfo& info) const;
-
-    // Acquires a list of slices and partitions while parsing the FVM.
-    //
-    // Returns false if the FVM contains contradictory or invalid data.
-    bool LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_table,
-                        const fvm::vpart_entry_t* vpart_table, fbl::Vector<Slice>* out_slices,
-                        fbl::Array<Partition>* out_partitions) const;
-
-    // Displays information about |slices|, assuming they are sorted in physical slice order.
-    void DumpSlices(const fbl::Vector<Slice>& slices) const;
-
-    // Confirms the Checker has received necessary arguments before beginning validation.
-    bool ValidateOptions() const;
-
-    fbl::unique_fd fd_;
-    uint32_t block_size_ = 512;
-    Logger logger_;
+  fbl::unique_fd fd_;
+  uint32_t block_size_ = 512;
+  Logger logger_;
 };
 
-} // namespace fvm
+}  // namespace fvm

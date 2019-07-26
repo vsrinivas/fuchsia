@@ -41,8 +41,7 @@ std::string GetUninitializedGeneralRegistersAsString() {
 
 static void TranslateToRsp(const zx_thread_state_general_regs_t* gregs,
                            RspArm64GeneralRegs* out_rsp_gregs) {
-  static_assert(arraysize(out_rsp_gregs->r) == arraysize(gregs->r),
-                "gregs_.r size");
+  static_assert(arraysize(out_rsp_gregs->r) == arraysize(gregs->r), "gregs_.r size");
   memcpy(&out_rsp_gregs->r[0], &gregs->r[0], arraysize(gregs->r));
   out_rsp_gregs->lr = gregs->lr;
   out_rsp_gregs->sp = gregs->sp;
@@ -52,8 +51,7 @@ static void TranslateToRsp(const zx_thread_state_general_regs_t* gregs,
 
 static void TranslateFromRsp(const RspArm64GeneralRegs* rsp_gregs,
                              zx_thread_state_general_regs_t* out_gregs) {
-  static_assert(arraysize(rsp_gregs->r) == arraysize(out_gregs->r),
-                "gregs->r size");
+  static_assert(arraysize(rsp_gregs->r) == arraysize(out_gregs->r), "gregs->r size");
   memcpy(&out_gregs->r[0], &rsp_gregs->r[0], arraysize(out_gregs->r));
   out_gregs->lr = rsp_gregs->lr;
   out_gregs->sp = rsp_gregs->sp;
@@ -67,22 +65,20 @@ std::string GetRegsetAsString(Thread* thread, int regset) {
     FXL_LOG(ERROR) << "Unable to refresh general registers";
     return GetUninitializedGeneralRegistersAsString();
   }
-  const zx_thread_state_general_regs_t* gregs =
-    thread->registers()->GetGeneralRegisters();
+  const zx_thread_state_general_regs_t* gregs = thread->registers()->GetGeneralRegisters();
   RspArm64GeneralRegs rsp_gregs;
   TranslateToRsp(gregs, &rsp_gregs);
   const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(&rsp_gregs);
   return debugger_utils::EncodeByteArrayString(greg_bytes, sizeof(rsp_gregs));
 }
 
-bool SetRegsetFromString(Thread* thread, int regset,
-                         const fxl::StringView& value) {
+bool SetRegsetFromString(Thread* thread, int regset, const fxl::StringView& value) {
   FXL_DCHECK(regset == 0);
   RspArm64GeneralRegs rsp_gregs;
   auto bytes = debugger_utils::DecodeByteArrayString(value);
   if (bytes.size() != sizeof(RspArm64GeneralRegs)) {
-    FXL_LOG(ERROR) << "|value| doesn't match regset " << regset << " size of "
-                   << bytes.size() << ": " << value;
+    FXL_LOG(ERROR) << "|value| doesn't match regset " << regset << " size of " << bytes.size()
+                   << ": " << value;
     return false;
   }
   memcpy(&rsp_gregs, bytes.data(), bytes.size());
@@ -100,8 +96,7 @@ std::string GetRegisterAsString(Thread* thread, int regno) {
     FXL_LOG(ERROR) << "Unable to refresh general registers";
     return std::string(sizeof(uint64_t) * 2, '0');
   }
-  const zx_thread_state_general_regs_t* gregs =
-    thread->registers()->GetGeneralRegisters();
+  const zx_thread_state_general_regs_t* gregs = thread->registers()->GetGeneralRegisters();
 
   const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(gregs);
   greg_bytes += regno * sizeof(uint64_t);

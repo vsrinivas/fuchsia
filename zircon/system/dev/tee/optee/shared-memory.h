@@ -50,163 +50,159 @@ namespace optee {
 class SharedMemoryView;
 
 class SharedMemoryRangeTraits {
-public:
-    constexpr zx_vaddr_t vaddr() const { return vaddr_; }
-    constexpr zx_paddr_t paddr() const { return paddr_; }
-    constexpr size_t size() const { return size_; }
+ public:
+  constexpr zx_vaddr_t vaddr() const { return vaddr_; }
+  constexpr zx_paddr_t paddr() const { return paddr_; }
+  constexpr size_t size() const { return size_; }
 
-    constexpr bool ContainsVaddr(zx_vaddr_t vaddr) const {
-        return vaddr >= this->vaddr() && vaddr < this->vaddr() + size();
-    }
+  constexpr bool ContainsVaddr(zx_vaddr_t vaddr) const {
+    return vaddr >= this->vaddr() && vaddr < this->vaddr() + size();
+  }
 
-    constexpr bool ContainsPaddr(zx_paddr_t paddr) const {
-        return paddr >= this->paddr() && paddr < this->paddr() + size();
-    }
+  constexpr bool ContainsPaddr(zx_paddr_t paddr) const {
+    return paddr >= this->paddr() && paddr < this->paddr() + size();
+  }
 
-    // Gets a subslice of the memory spanning a specified range of virtual addresses.
-    //
-    // Parameters:
-    //  * start: The starting virtual address of the subslice (inclusive).
-    //  * end:   The ending virtual address of the subslice (exclusive).
-    //
-    // Returns:
-    //  * If the given range is valid, an initialized `std::optional` containing the
-    //    `SharedMemoryView` subslice.
-    //  * Otherwise, an uninitialized `std::optional`.
-    std::optional<SharedMemoryView> SliceByVaddr(zx_vaddr_t start, zx_vaddr_t end) const;
+  // Gets a subslice of the memory spanning a specified range of virtual addresses.
+  //
+  // Parameters:
+  //  * start: The starting virtual address of the subslice (inclusive).
+  //  * end:   The ending virtual address of the subslice (exclusive).
+  //
+  // Returns:
+  //  * If the given range is valid, an initialized `std::optional` containing the
+  //    `SharedMemoryView` subslice.
+  //  * Otherwise, an uninitialized `std::optional`.
+  std::optional<SharedMemoryView> SliceByVaddr(zx_vaddr_t start, zx_vaddr_t end) const;
 
-    // Gets a subslice of the memory spanning a specified range of physical addresses.
-    //
-    // Parameters:
-    //  * start: The starting physical address of the subslice (inclusive).
-    //  * end:   The ending physical address of the subslice (exclusive).
-    //
-    // Returns:
-    //  * If the given range is valid, an initialized `std::optional` containing the
-    //    `SharedMemoryView` subslice.
-    //  * Otherwise, an uninitialized `std::optional`.
-    std::optional<SharedMemoryView> SliceByPaddr(zx_paddr_t start, zx_paddr_t end) const;
+  // Gets a subslice of the memory spanning a specified range of physical addresses.
+  //
+  // Parameters:
+  //  * start: The starting physical address of the subslice (inclusive).
+  //  * end:   The ending physical address of the subslice (exclusive).
+  //
+  // Returns:
+  //  * If the given range is valid, an initialized `std::optional` containing the
+  //    `SharedMemoryView` subslice.
+  //  * Otherwise, an uninitialized `std::optional`.
+  std::optional<SharedMemoryView> SliceByPaddr(zx_paddr_t start, zx_paddr_t end) const;
 
-protected:
-    constexpr explicit SharedMemoryRangeTraits(zx_vaddr_t vaddr, zx_paddr_t paddr, size_t size)
-        : vaddr_(vaddr), paddr_(paddr), size_(size) {}
+ protected:
+  constexpr explicit SharedMemoryRangeTraits(zx_vaddr_t vaddr, zx_paddr_t paddr, size_t size)
+      : vaddr_(vaddr), paddr_(paddr), size_(size) {}
 
-    zx_vaddr_t vaddr_;
-    zx_paddr_t paddr_;
-    size_t size_;
+  zx_vaddr_t vaddr_;
+  zx_paddr_t paddr_;
+  size_t size_;
 };
 
 class SharedMemory : public SharedMemoryRangeTraits,
                      public fbl::DoublyLinkedListable<fbl::unique_ptr<SharedMemory>> {
-public:
-    using RegionPtr = RegionAllocator::Region::UPtr;
+ public:
+  using RegionPtr = RegionAllocator::Region::UPtr;
 
-    explicit SharedMemory(zx_vaddr_t base_vaddr, zx_paddr_t base_paddr, RegionPtr region)
-        : SharedMemoryRangeTraits(base_vaddr + region->base,
-                                  base_paddr + region->base,
-                                  region->size),
-          region_(std::move(region)) {}
+  explicit SharedMemory(zx_vaddr_t base_vaddr, zx_paddr_t base_paddr, RegionPtr region)
+      : SharedMemoryRangeTraits(base_vaddr + region->base, base_paddr + region->base, region->size),
+        region_(std::move(region)) {}
 
-    // Move only type
-    SharedMemory(SharedMemory&&) = default;
-    SharedMemory& operator=(SharedMemory&&) = default;
+  // Move only type
+  SharedMemory(SharedMemory&&) = default;
+  SharedMemory& operator=(SharedMemory&&) = default;
 
-private:
-    // Upon destruction of the SharedMemory object, the RegionPtr will be recycled back to the
-    // RegionAllocator by it's destructor.
-    RegionPtr region_;
+ private:
+  // Upon destruction of the SharedMemory object, the RegionPtr will be recycled back to the
+  // RegionAllocator by it's destructor.
+  RegionPtr region_;
 };
 
 // SharedMemoryView
 //
 // A non-owning view of a slice of `SharedMemory`.
 class SharedMemoryView : public SharedMemoryRangeTraits {
-public:
-    explicit SharedMemoryView(const SharedMemoryView&) = default;
-    explicit SharedMemoryView(const SharedMemory& shared_memory)
-        : SharedMemoryRangeTraits(shared_memory.vaddr(),
-                                  shared_memory.paddr(),
-                                  shared_memory.size()) {}
+ public:
+  explicit SharedMemoryView(const SharedMemoryView&) = default;
+  explicit SharedMemoryView(const SharedMemory& shared_memory)
+      : SharedMemoryRangeTraits(shared_memory.vaddr(), shared_memory.paddr(),
+                                shared_memory.size()) {}
 
-private:
-    friend class SharedMemoryRangeTraits;
+ private:
+  friend class SharedMemoryRangeTraits;
 
-    using SharedMemoryRangeTraits::SharedMemoryRangeTraits; // Inherit constructors
+  using SharedMemoryRangeTraits::SharedMemoryRangeTraits;  // Inherit constructors
 };
 
 template <typename SharedMemoryPoolTraits>
 class SharedMemoryPool {
-public:
-    explicit SharedMemoryPool(zx_vaddr_t vaddr, zx_paddr_t paddr, size_t size)
-        : vaddr_(vaddr),
-          paddr_(paddr),
-          region_allocator_(
-              RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())) {
-        region_allocator_.AddRegion({.base = 0, .size = size});
+ public:
+  explicit SharedMemoryPool(zx_vaddr_t vaddr, zx_paddr_t paddr, size_t size)
+      : vaddr_(vaddr),
+        paddr_(paddr),
+        region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())) {
+    region_allocator_.AddRegion({.base = 0, .size = size});
+  }
+
+  zx_status_t Allocate(size_t size, fbl::unique_ptr<SharedMemory>* out_shared_memory) {
+    // The RegionAllocator provides thread safety around allocations, so we currently don't
+    // require any additional locking.
+
+    // Let's try to carve off a region first.
+    auto region = region_allocator_.GetRegion(size, kAlignment);
+    if (!region) {
+      return ZX_ERR_NO_RESOURCES;
     }
 
-    zx_status_t Allocate(size_t size, fbl::unique_ptr<SharedMemory>* out_shared_memory) {
-        // The RegionAllocator provides thread safety around allocations, so we currently don't
-        // require any additional locking.
-
-        // Let's try to carve off a region first.
-        auto region = region_allocator_.GetRegion(size, kAlignment);
-        if (!region) {
-            return ZX_ERR_NO_RESOURCES;
-        }
-
-        fbl::AllocChecker ac;
-        auto shared_memory = fbl::make_unique_checked<SharedMemory>(
-            &ac, vaddr_, paddr_, std::move(region));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        *out_shared_memory = std::move(shared_memory);
-        return ZX_OK;
+    fbl::AllocChecker ac;
+    auto shared_memory =
+        fbl::make_unique_checked<SharedMemory>(&ac, vaddr_, paddr_, std::move(region));
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
     }
 
-private:
-    static constexpr uint64_t kAlignment = SharedMemoryPoolTraits::kAlignment;
+    *out_shared_memory = std::move(shared_memory);
+    return ZX_OK;
+  }
 
-    const zx_vaddr_t vaddr_;
-    const zx_paddr_t paddr_;
-    RegionAllocator region_allocator_;
+ private:
+  static constexpr uint64_t kAlignment = SharedMemoryPoolTraits::kAlignment;
+
+  const zx_vaddr_t vaddr_;
+  const zx_paddr_t paddr_;
+  RegionAllocator region_allocator_;
 };
 
 class SharedMemoryManager {
-public:
-    struct DriverPoolTraits {
-        static constexpr uint64_t kAlignment = 8;
-    };
+ public:
+  struct DriverPoolTraits {
+    static constexpr uint64_t kAlignment = 8;
+  };
 
-    struct ClientPoolTraits {
-        static constexpr uint64_t kAlignment = PAGE_SIZE;
-    };
+  struct ClientPoolTraits {
+    static constexpr uint64_t kAlignment = PAGE_SIZE;
+  };
 
-    using DriverMemoryPool = SharedMemoryPool<DriverPoolTraits>;
-    using ClientMemoryPool = SharedMemoryPool<ClientPoolTraits>;
+  using DriverMemoryPool = SharedMemoryPool<DriverPoolTraits>;
+  using ClientMemoryPool = SharedMemoryPool<ClientPoolTraits>;
 
-    static zx_status_t Create(zx_paddr_t shared_mem_start, size_t shared_mem_size,
-                              ddk::MmioBuffer secure_world_memory, zx::bti bti,
-                              fbl::unique_ptr<SharedMemoryManager>* out_manager);
-    ~SharedMemoryManager() = default;
+  static zx_status_t Create(zx_paddr_t shared_mem_start, size_t shared_mem_size,
+                            ddk::MmioBuffer secure_world_memory, zx::bti bti,
+                            fbl::unique_ptr<SharedMemoryManager>* out_manager);
+  ~SharedMemoryManager() = default;
 
-    DriverMemoryPool* driver_pool() { return &driver_pool_; }
-    ClientMemoryPool* client_pool() { return &client_pool_; }
+  DriverMemoryPool* driver_pool() { return &driver_pool_; }
+  ClientMemoryPool* client_pool() { return &client_pool_; }
 
-private:
-    static constexpr size_t kNumDriverSharedMemoryPages = 4;
-    static constexpr size_t kDriverPoolSize = 4 * PAGE_SIZE;
+ private:
+  static constexpr size_t kNumDriverSharedMemoryPages = 4;
+  static constexpr size_t kDriverPoolSize = 4 * PAGE_SIZE;
 
-    explicit SharedMemoryManager(zx_vaddr_t base_vaddr, zx_paddr_t base_paddr, size_t total_size,
-                                 ddk::MmioBuffer secure_world_memory,
-                                 ddk::MmioPinnedBuffer secure_world_memory_pin);
+  explicit SharedMemoryManager(zx_vaddr_t base_vaddr, zx_paddr_t base_paddr, size_t total_size,
+                               ddk::MmioBuffer secure_world_memory,
+                               ddk::MmioPinnedBuffer secure_world_memory_pin);
 
-    ddk::MmioBuffer secure_world_memory_;
-    ddk::MmioPinnedBuffer secure_world_memory_pin_;
-    DriverMemoryPool driver_pool_;
-    ClientMemoryPool client_pool_;
+  ddk::MmioBuffer secure_world_memory_;
+  ddk::MmioPinnedBuffer secure_world_memory_pin_;
+  DriverMemoryPool driver_pool_;
+  ClientMemoryPool client_pool_;
 };
 
-} // namespace optee
+}  // namespace optee

@@ -30,20 +30,19 @@ namespace fbl {
 // not possible via internal::RefCountedBase since the ctor and dtor are
 // protected.
 //
-template <typename T,
-          bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
+template <typename T, bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
 class RefCounted : private internal::RefCountedBase<EnableAdoptionValidator> {
-public:
-    RefCounted() {}
-    ~RefCounted() {}
+ public:
+  RefCounted() {}
+  ~RefCounted() {}
 
-    using internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
-    using internal::RefCountedBase<EnableAdoptionValidator>::Release;
-    using internal::RefCountedBase<EnableAdoptionValidator>::Adopt;
-    using internal::RefCountedBase<EnableAdoptionValidator>::ref_count_debug;
+  using internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
+  using internal::RefCountedBase<EnableAdoptionValidator>::Release;
+  using internal::RefCountedBase<EnableAdoptionValidator>::Adopt;
+  using internal::RefCountedBase<EnableAdoptionValidator>::ref_count_debug;
 
-    // RefCounted<> instances may not be copied, assigned or moved.
-    DISALLOW_COPY_ASSIGN_AND_MOVE(RefCounted);
+  // RefCounted<> instances may not be copied, assigned or moved.
+  DISALLOW_COPY_ASSIGN_AND_MOVE(RefCounted);
 };
 
 }  // namespace fbl

@@ -11,27 +11,27 @@
 namespace zx {
 
 class event final : public object<event> {
-public:
-    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_EVENT;
+ public:
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_EVENT;
 
-    constexpr event() = default;
+  constexpr event() = default;
 
-    explicit event(zx_handle_t value) : object(value) {}
+  explicit event(zx_handle_t value) : object(value) {}
 
-    explicit event(handle&& h) : object(h.release()) {}
+  explicit event(handle&& h) : object(h.release()) {}
 
-    event(event&& other) : object(other.release()) {}
+  event(event&& other) : object(other.release()) {}
 
-    event& operator=(event&& other) {
-        reset(other.release());
-        return *this;
-    }
+  event& operator=(event&& other) {
+    reset(other.release());
+    return *this;
+  }
 
-    static zx_status_t create(uint32_t options, event* result);
+  static zx_status_t create(uint32_t options, event* result);
 };
 
 using unowned_event = unowned<event>;
 
-} // namespace zx
+}  // namespace zx
 
 #endif  // LIB_ZX_EVENT_H_

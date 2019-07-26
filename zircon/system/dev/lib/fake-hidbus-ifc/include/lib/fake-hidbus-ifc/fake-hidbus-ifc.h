@@ -44,8 +44,7 @@ class FakeHidbusIfc : public ddk::HidbusIfcProtocol<FakeHidbusIfc> {
   // Waits until a report is seen, then puts a copy of the report in |report|.
   // Will timeout eventually if no reports are sent.
   zx_status_t WaitUntilNextReport(std::vector<uint8_t>* report) {
-    zx_status_t status =
-        sync_completion_wait_deadline(&report_queued_, zx::time::infinite().get());
+    zx_status_t status = sync_completion_wait_deadline(&report_queued_, zx::time::infinite().get());
     if (status == ZX_OK) {
       fbl::AutoLock lock(&report_lock_);
       *report = last_report_;

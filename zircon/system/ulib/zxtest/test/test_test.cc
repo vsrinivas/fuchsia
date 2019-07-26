@@ -34,9 +34,7 @@ class FakeTest : public zxtest::Test {
     run_setup = true;
   }
 
-  void TearDown() final {
-    run_teardown = true;
-  }
+  void TearDown() final { run_teardown = true; }
 
   void TestBody() final {
     if (FailOnTestBody) {

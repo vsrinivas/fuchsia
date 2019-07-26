@@ -8,15 +8,12 @@ namespace component {
 namespace testing {
 
 TestWithContext::TestWithContext()
-    : context_(StartupContextForTest::Create()),
-      controller_(&context_->controller()) {
+    : context_(StartupContextForTest::Create()), controller_(&context_->controller()) {
   // Take the real StartupContext to prevent code under test from having it
   component::StartupContext::CreateFromStartupInfo();
 }
 
-std::unique_ptr<StartupContext> TestWithContext::TakeContext() {
-  return std::move(context_);
-}
+std::unique_ptr<StartupContext> TestWithContext::TakeContext() { return std::move(context_); }
 
 }  // namespace testing
 }  // namespace component

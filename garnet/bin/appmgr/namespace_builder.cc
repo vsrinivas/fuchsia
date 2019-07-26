@@ -69,9 +69,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
         FXL_NOTREACHED() << "IsolatedCachePathFactory unexpectedly used";
         return "";
       },
-      [] {
-        return "/tmp";
-      });
+      [] { return "/tmp"; });
 }
 
 void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,

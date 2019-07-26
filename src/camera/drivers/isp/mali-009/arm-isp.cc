@@ -86,100 +86,86 @@ void ArmIspDevice::PowerUpIsp() {
   hiu_mmio_.ClearBits32(kClkMuxMask, HHI_MIPI_ISP_CLK_CNTL);
   // set the divisor = 1 (writing (1-1) to div field)
   // source for the unused mux = S905D2_FCLK_DIV3   = 3 // 666.7 MHz
-  hiu_mmio_.SetBits32(((1 << kClockEnableShift) | 4 << 9),
-                      HHI_MIPI_ISP_CLK_CNTL);
+  hiu_mmio_.SetBits32(((1 << kClockEnableShift) | 4 << 9), HHI_MIPI_ISP_CLK_CNTL);
 }
 
 void ArmIspDevice::HandleDmaError() {
-    auto global_mon_status = IspGlobalMonitor_Status::Get()
-                                 .ReadFrom(&isp_mmio_);
+  auto global_mon_status = IspGlobalMonitor_Status::Get().ReadFrom(&isp_mmio_);
 
-    auto global_mon_failures = IspGlobalMonitor_Failures::Get()
-                                   .ReadFrom(&isp_mmio_);
+  auto global_mon_failures = IspGlobalMonitor_Failures::Get().ReadFrom(&isp_mmio_);
 
-    global_mon_status.Print();
-    global_mon_failures.Print();
+  global_mon_status.Print();
+  global_mon_failures.Print();
 
-    IspGlobalMonitor_ClearError::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_output_dma_clr_alarm(1)
-        .set_temper_dma_clr_alarm(1)
-        .WriteTo(&isp_mmio_);
+  IspGlobalMonitor_ClearError::Get()
+      .ReadFrom(&isp_mmio_)
+      .set_output_dma_clr_alarm(1)
+      .set_temper_dma_clr_alarm(1)
+      .WriteTo(&isp_mmio_);
 
-    IspGlobalMonitor_ClearError::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_output_dma_clr_alarm(1)
-        .WriteTo(&isp_mmio_);
+  IspGlobalMonitor_ClearError::Get()
+      .ReadFrom(&isp_mmio_)
+      .set_output_dma_clr_alarm(1)
+      .WriteTo(&isp_mmio_);
 
-    // Now read the alarms:
-    global_mon_status = IspGlobalMonitor_Status::Get()
-                            .ReadFrom(&isp_mmio_);
-    global_mon_failures = IspGlobalMonitor_Failures::Get()
-                              .ReadFrom(&isp_mmio_);
+  // Now read the alarms:
+  global_mon_status = IspGlobalMonitor_Status::Get().ReadFrom(&isp_mmio_);
+  global_mon_failures = IspGlobalMonitor_Failures::Get().ReadFrom(&isp_mmio_);
 
-    global_mon_status.Print();
-    global_mon_failures.Print();
+  global_mon_status.Print();
+  global_mon_failures.Print();
 
-    zxlogf(INFO, "DMA Writer statuses:\n");
-    full_resolution_dma_->PrintStatus(&isp_mmio_);
-    downscaled_dma_->PrintStatus(&isp_mmio_);
+  zxlogf(INFO, "DMA Writer statuses:\n");
+  full_resolution_dma_->PrintStatus(&isp_mmio_);
+  downscaled_dma_->PrintStatus(&isp_mmio_);
 
-    zxlogf(INFO, "Clearing dma alarm\n");
-    IspGlobalMonitor_ClearError::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_output_dma_clr_alarm(0)
-        .set_temper_dma_clr_alarm(0)
-        .WriteTo(&isp_mmio_);
+  zxlogf(INFO, "Clearing dma alarm\n");
+  IspGlobalMonitor_ClearError::Get()
+      .ReadFrom(&isp_mmio_)
+      .set_output_dma_clr_alarm(0)
+      .set_temper_dma_clr_alarm(0)
+      .WriteTo(&isp_mmio_);
 
-    IspGlobalMonitor_ClearError::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_output_dma_clr_alarm(0)
-        .WriteTo(&isp_mmio_);
+  IspGlobalMonitor_ClearError::Get()
+      .ReadFrom(&isp_mmio_)
+      .set_output_dma_clr_alarm(0)
+      .WriteTo(&isp_mmio_);
 }
 
 zx_status_t ArmIspDevice::ErrorRoutine() {
-    // Mask all IRQs
-    IspGlobalInterrupt_MaskVector::Get()
-        .ReadFrom(&isp_mmio_)
-        .mask_all()
-        .WriteTo(&isp_mmio_);
+  // Mask all IRQs
+  IspGlobalInterrupt_MaskVector::Get().ReadFrom(&isp_mmio_).mask_all().WriteTo(&isp_mmio_);
 
-    zx_status_t status = SetPort(kSafeStop);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Stopping ISP failed \n", __func__);
-        return status;
-    }
-
-    IspGlobal_Config0::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_global_fsm_reset(1)
-        .WriteTo(&isp_mmio_);
-
-    IspGlobal_Config0::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_global_fsm_reset(0)
-        .WriteTo(&isp_mmio_);
-
-    IspGlobalInterrupt_MaskVector::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_isp_start(0)
-        .set_ctx_management_error(0)
-        .set_broken_frame_error(0)
-        .set_wdg_timer_timed_out(0)
-        .set_frame_collision_error(0)
-        .set_dma_error_interrupt(0)
-        .set_fr_y_dma_write_done(0)
-        .set_fr_uv_dma_write_done(0)
-        .set_ds_y_dma_write_done(0)
-        .set_ds_uv_dma_write_done(0)
-        .WriteTo(&isp_mmio_);
-
-    status = SetPort(kSafeStart);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Starting ISP failed \n", __func__);
-        return status;
-    }
+  zx_status_t status = SetPort(kSafeStop);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Stopping ISP failed \n", __func__);
     return status;
+  }
+
+  IspGlobal_Config0::Get().ReadFrom(&isp_mmio_).set_global_fsm_reset(1).WriteTo(&isp_mmio_);
+
+  IspGlobal_Config0::Get().ReadFrom(&isp_mmio_).set_global_fsm_reset(0).WriteTo(&isp_mmio_);
+
+  IspGlobalInterrupt_MaskVector::Get()
+      .ReadFrom(&isp_mmio_)
+      .set_isp_start(0)
+      .set_ctx_management_error(0)
+      .set_broken_frame_error(0)
+      .set_wdg_timer_timed_out(0)
+      .set_frame_collision_error(0)
+      .set_dma_error_interrupt(0)
+      .set_fr_y_dma_write_done(0)
+      .set_fr_uv_dma_write_done(0)
+      .set_ds_y_dma_write_done(0)
+      .set_ds_uv_dma_write_done(0)
+      .WriteTo(&isp_mmio_);
+
+  status = SetPort(kSafeStart);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Starting ISP failed \n", __func__);
+    return status;
+  }
+  return status;
 }
 
 // Interrupt handler for the ISP.
@@ -193,40 +179,29 @@ int ArmIspDevice::IspIrqHandler() {
       return status;
     }
 
-    auto irq_status =
-        IspGlobalInterrupt_StatusVector::Get().ReadFrom(&isp_mmio_);
+    auto irq_status = IspGlobalInterrupt_StatusVector::Get().ReadFrom(&isp_mmio_);
 
     IspGlobalInterrupt_ClearVector::Get()
-      .ReadFrom(&isp_mmio_)
-      .set_reg_value(0xFFFFFFFF)
-      .WriteTo(&isp_mmio_);
+        .ReadFrom(&isp_mmio_)
+        .set_reg_value(0xFFFFFFFF)
+        .WriteTo(&isp_mmio_);
 
     // Clear IRQ Vector
-    IspGlobalInterrupt_Clear::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_value(0)
-        .WriteTo(&isp_mmio_);
+    IspGlobalInterrupt_Clear::Get().ReadFrom(&isp_mmio_).set_value(0).WriteTo(&isp_mmio_);
 
-    IspGlobalInterrupt_Clear::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_value(1)
-        .WriteTo(&isp_mmio_);
+    IspGlobalInterrupt_Clear::Get().ReadFrom(&isp_mmio_).set_value(1).WriteTo(&isp_mmio_);
 
-    IspGlobalInterrupt_Clear::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_value(0)
-        .WriteTo(&isp_mmio_);
-
+    IspGlobalInterrupt_Clear::Get().ReadFrom(&isp_mmio_).set_value(0).WriteTo(&isp_mmio_);
 
     if (irq_status.has_errors()) {
       zxlogf(ERROR, "%s ISP Error Occured, resetting ISP\n", __func__);
       if (irq_status.dma_error_interrupt()) {
-         HandleDmaError();
+        HandleDmaError();
       } else {
-          status = ErrorRoutine();
-          if (status != ZX_OK) {
-              return status;
-          }
+        status = ErrorRoutine();
+        if (status != ZX_OK) {
+          return status;
+        }
       }
       continue;
     }
@@ -237,10 +212,7 @@ int ArmIspDevice::IspIrqHandler() {
       auto current_config = IspGlobal_Config4::Get().ReadFrom(&isp_mmio_);
       if (current_config.is_pong()) {
         // Use PING for next frame
-        IspGlobal_Config3::Get()
-            .ReadFrom(&isp_mmio_)
-            .select_config_ping()
-            .WriteTo(&isp_mmio_);
+        IspGlobal_Config3::Get().ReadFrom(&isp_mmio_).select_config_ping().WriteTo(&isp_mmio_);
 
         if (IsFrameProcessingInProgress()) {
           // TODO: (braval): Handle dropped frame
@@ -257,10 +229,7 @@ int ArmIspDevice::IspIrqHandler() {
       } else {
         // CURRENT CONFIG IS PING
         // Use PONG for next frame
-        IspGlobal_Config3::Get()
-            .ReadFrom(&isp_mmio_)
-            .select_config_pong()
-            .WriteTo(&isp_mmio_);
+        IspGlobal_Config3::Get().ReadFrom(&isp_mmio_).select_config_pong().WriteTo(&isp_mmio_);
 
         if (IsFrameProcessingInProgress()) {
           // TODO: (braval): Handle dropped frame
@@ -299,12 +268,10 @@ void ArmIspDevice::CopyContextInfo(uint8_t config_space, uint8_t direction) {
 
   if (direction == kCopyToIsp) {
     // Copy to ISP from Local Config Buffer
-    isp_mmio_.CopyFrom32(isp_mmio_local_, kDecompander0PingOffset,
-                         device_offset, kConfigSize / 4);
+    isp_mmio_.CopyFrom32(isp_mmio_local_, kDecompander0PingOffset, device_offset, kConfigSize / 4);
   } else {
     // Copy from ISP to Local Config Buffer
-    isp_mmio_local_.CopyFrom32(isp_mmio_, device_offset,
-                               kDecompander0PingOffset, kConfigSize / 4);
+    isp_mmio_local_.CopyFrom32(isp_mmio_, device_offset, kDecompander0PingOffset, kConfigSize / 4);
   }
 }
 
@@ -320,10 +287,8 @@ void ArmIspDevice::CopyMeteringInfo(uint8_t config_space) {
   }
 
   // Copy from ISP to Local Config Buffer
-  isp_mmio_local_.CopyFrom32(isp_mmio_, kAexpHistStatsOffset,
-                             kAexpHistStatsOffset, kHistSize / 4);
-  isp_mmio_local_.CopyFrom32(isp_mmio_, device_offset, kPingMeteringStatsOffset,
-                             kMeteringSize / 4);
+  isp_mmio_local_.CopyFrom32(isp_mmio_, kAexpHistStatsOffset, kAexpHistStatsOffset, kHistSize / 4);
+  isp_mmio_local_.CopyFrom32(isp_mmio_, device_offset, kPingMeteringStatsOffset, kMeteringSize / 4);
 }
 
 zx_status_t ArmIspDevice::IspContextInit() {
@@ -333,24 +298,21 @@ zx_status_t ArmIspDevice::IspContextInit() {
   // This is being written to the local_config_buffer_
   IspLoadSeq_settings_context();
 
-  statsMgr_ =
-      camera::StatsManager::Create(isp_mmio_.View(0), isp_mmio_local_,
-                                   camera_sensor_, frame_processing_signal_);
+  statsMgr_ = camera::StatsManager::Create(isp_mmio_.View(0), isp_mmio_local_, camera_sensor_,
+                                           frame_processing_signal_);
   if (statsMgr_ == nullptr) {
     zxlogf(ERROR, "%s: Unable to start StatsManager \n", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status = DmaManager::Create(bti_, isp_mmio_local_,
-                                          DmaManager::Stream::FullResolution,
+  zx_status_t status = DmaManager::Create(bti_, isp_mmio_local_, DmaManager::Stream::FullResolution,
                                           &full_resolution_dma_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Unable to start Full Resolution DMA Module \n",
-           __func__);
+    zxlogf(ERROR, "%s: Unable to start Full Resolution DMA Module \n", __func__);
     return status;
   }
-  status = DmaManager::Create(bti_, isp_mmio_local_,
-                              DmaManager::Stream::Downscaled, &downscaled_dma_);
+  status =
+      DmaManager::Create(bti_, isp_mmio_local_, DmaManager::Stream::Downscaled, &downscaled_dma_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Unable to start Downscaled DMA Module \n", __func__);
     return status;
@@ -378,10 +340,8 @@ ArmIspRegisterDump ArmIspDevice::DumpRegisters() {
   }
   // Then ping and pong:
   for (size_t i = 0; i < kContextConfigSize; i++) {
-    dump.ping_config[i] =
-        isp_mmio_.Read<uint32_t>(kPingContextConfigOffset + 4 * i);
-    dump.pong_config[i] =
-        isp_mmio_.Read<uint32_t>(kPongContextConfigOffset + 4 * i);
+    dump.ping_config[i] = isp_mmio_.Read<uint32_t>(kPingContextConfigOffset + 4 * i);
+    dump.pong_config[i] = isp_mmio_.Read<uint32_t>(kPongContextConfigOffset + 4 * i);
   }
   return dump;
 }
@@ -401,8 +361,7 @@ zx_status_t ArmIspDevice::InitIsp() {
 
   sync_completion_reset(&frame_processing_signal_);
   running_.store(true);
-  int rc =
-      thrd_create_with_name(&irq_thread_, start_thread, this, "isp_irq_thread");
+  int rc = thrd_create_with_name(&irq_thread_, start_thread, this, "isp_irq_thread");
   if (rc != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
@@ -416,10 +375,7 @@ zx_status_t ArmIspDevice::InitIsp() {
   }
 
   // Mask all IRQs
-  IspGlobalInterrupt_MaskVector::Get()
-      .ReadFrom(&isp_mmio_)
-      .mask_all()
-      .WriteTo(&isp_mmio_);
+  IspGlobalInterrupt_MaskVector::Get().ReadFrom(&isp_mmio_).mask_all().WriteTo(&isp_mmio_);
 
   // Now copy all ping config settings & metering settings and store it.
   CopyContextInfo(kPing, kCopyFromIsp);
@@ -434,18 +390,11 @@ zx_status_t ArmIspDevice::InitIsp() {
   CopyContextInfo(kPing, kCopyToIsp);
   CopyContextInfo(kPong, kCopyToIsp);
 
-  while (
-      IspGlobalInterrupt_StatusVector::Get().ReadFrom(&isp_mmio_).reg_value()) {
+  while (IspGlobalInterrupt_StatusVector::Get().ReadFrom(&isp_mmio_).reg_value()) {
     // driver is initialized. we can start processing interrupts
     // wait until irq mask is cleared and start processing
-    IspGlobalInterrupt_Clear::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_value(0)
-        .WriteTo(&isp_mmio_);
-    IspGlobalInterrupt_Clear::Get()
-        .ReadFrom(&isp_mmio_)
-        .set_value(1)
-        .WriteTo(&isp_mmio_);
+    IspGlobalInterrupt_Clear::Get().ReadFrom(&isp_mmio_).set_value(0).WriteTo(&isp_mmio_);
+    IspGlobalInterrupt_Clear::Get().ReadFrom(&isp_mmio_).set_value(1).WriteTo(&isp_mmio_);
   }
 
   IspGlobalInterrupt_MaskVector::Get()
@@ -477,10 +426,7 @@ zx_status_t ArmIspDevice::SetPort(uint8_t kMode) {
   constexpr uint32_t kDeadline = ZX_USEC(500);
 
   // Input port safe stop or stop
-  InputPort_Config3::Get()
-      .ReadFrom(&isp_mmio_)
-      .set_mode_request(kMode)
-      .WriteTo(&isp_mmio_);
+  InputPort_Config3::Get().ReadFrom(&isp_mmio_).set_mode_request(kMode).WriteTo(&isp_mmio_);
 
   // timeout 100ms
   zx_time_t deadline = zx_deadline_after(kTimeout);
@@ -515,8 +461,7 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::CameraSensorProtocolClient camera_sensor(
-      components[COMPONENT_CAMERA_SENSOR]);
+  ddk::CameraSensorProtocolClient camera_sensor(components[COMPONENT_CAMERA_SENSOR]);
   if (!camera_sensor.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_CAMERA_SENSOR not available\n", __FILE__);
     return ZX_ERR_NO_RESOURCES;
@@ -576,8 +521,7 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   mmio_buffer_t local_mmio_buffer;
   local_mmio_buffer.vaddr =
-      new (static_cast<std::align_val_t>(alignof(uint32_t)),
-           &ac) char[kLocalBufferSize];
+      new (static_cast<std::align_val_t>(alignof(uint32_t)), &ac) char[kLocalBufferSize];
   local_mmio_buffer.size = kLocalBufferSize;
   local_mmio_buffer.vmo = ZX_HANDLE_INVALID;
   if (!ac.check()) {
@@ -585,10 +529,9 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
   }
 
   auto isp_device = std::unique_ptr<ArmIspDevice>(new (&ac) ArmIspDevice(
-      parent, std::move(*hiu_mmio), std::move(*power_mmio),
-      std::move(*memory_pd_mmio), std::move(*reset_mmio), std::move(*isp_mmio),
-      local_mmio_buffer, std::move(isp_irq), std::move(bti),
-      components[COMPONENT_CAMERA_SENSOR]));
+      parent, std::move(*hiu_mmio), std::move(*power_mmio), std::move(*memory_pd_mmio),
+      std::move(*reset_mmio), std::move(*isp_mmio), local_mmio_buffer, std::move(isp_irq),
+      std::move(bti), components[COMPONENT_CAMERA_SENSOR]));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -618,8 +561,7 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
   // Hold the unbind lock so we do not become unbound while the
   // ArmIspDeviceTester is being created:
   fbl::AutoLock guard(&isp_device->unbind_lock_);
-  status = ArmIspDeviceTester::Create(isp_device.get(),
-                                      &(isp_device->on_isp_unbind_));
+  status = ArmIspDeviceTester::Create(isp_device.get(), &(isp_device->on_isp_unbind_));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to create ISP Tester\n", __func__);
     return status;
@@ -631,7 +573,7 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-DmaManager *ArmIspDevice::GetStream(stream_type_t type) {
+DmaManager* ArmIspDevice::GetStream(stream_type_t type) {
   // Ignore anything that is not FullFrame or Downscaled:
   switch (type) {
     case STREAM_TYPE_FULL_RESOLUTION:
@@ -643,7 +585,6 @@ DmaManager *ArmIspDevice::GetStream(stream_type_t type) {
   }
   return nullptr;
 }
-
 
 // Functions that the isp_stream_protocol calls:
 zx_status_t ArmIspDevice::ReleaseFrame(uint32_t buffer_id, stream_type_t type) {
@@ -666,7 +607,7 @@ zx_status_t ArmIspDevice::StartStream(stream_type_t type) {
   if (!streaming_) {
     auto status = StartStreaming();
     if (status == ZX_OK) {
-        streaming_ = true;
+      streaming_ = true;
     }
     return status;
   }
@@ -682,8 +623,7 @@ zx_status_t ArmIspDevice::StopStream(stream_type_t type) {
 
   stream->Disable();
 
-  if (streaming_ && !full_resolution_dma_->enabled() &&
-      !downscaled_dma_->enabled()) {
+  if (streaming_ && !full_resolution_dma_->enabled() && !downscaled_dma_->enabled()) {
     auto status = StopStreaming();
     if (status == ZX_OK) {
       streaming_ = false;
@@ -695,13 +635,10 @@ zx_status_t ArmIspDevice::StopStream(stream_type_t type) {
 
 zx_status_t ArmIspDevice::StartStreaming() {
   if (streaming_) {
-      return ZX_OK;
+    return ZX_OK;
   }
   // At reset we use PING config
-  IspGlobal_Config3::Get()
-      .ReadFrom(&isp_mmio_)
-      .select_config_ping()
-      .WriteTo(&isp_mmio_);
+  IspGlobal_Config3::Get().ReadFrom(&isp_mmio_).select_config_ping().WriteTo(&isp_mmio_);
 
   // Grab a new frame for whichever dma is streaming:
   downscaled_dma_->OnNewFrame();
@@ -727,7 +664,7 @@ zx_status_t ArmIspDevice::StartStreaming() {
 
 zx_status_t ArmIspDevice::StopStreaming() {
   if (!streaming_) {
-      return ZX_OK;
+    return ZX_OK;
   }
   statsMgr_->SensorStopStreaming();
   zx_status_t status = SetPort(kSafeStop);
@@ -738,10 +675,10 @@ zx_status_t ArmIspDevice::StopStreaming() {
   return ZX_OK;
 }
 
-zx_status_t ArmIspDevice::IspCreateOutputStream(
-    const buffer_collection_info_t* buffer_collection, const frame_rate_t* rate,
-    stream_type_t type, const output_stream_callback_t* stream,
-    output_stream_protocol_t* out_s) {
+zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* buffer_collection,
+                                                const frame_rate_t* rate, stream_type_t type,
+                                                const output_stream_callback_t* stream,
+                                                output_stream_protocol_t* out_s) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

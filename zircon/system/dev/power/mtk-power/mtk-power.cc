@@ -27,285 +27,278 @@ const fbl::Vector<uint32_t> kSupportedVoltageList7{1200000, 1300000, 1500000, 18
 const fbl::Vector<uint32_t> kSupportedVoltageList8{1800000, 2000000};
 
 void MtkRegulator::WaitForIdle() {
-    while (PmicWacs2RData::Get().ReadFrom(&pmic_mmio_).wacs2_fsm() !=
-           PmicWacs2RData::kFsmStateIdle) {
-    }
+  while (PmicWacs2RData::Get().ReadFrom(&pmic_mmio_).wacs2_fsm() != PmicWacs2RData::kFsmStateIdle) {
+  }
 }
 
 void MtkRegulator::WaitForValidClear() {
-    while (PmicWacs2RData::Get().ReadFrom(&pmic_mmio_).wacs2_fsm() !=
-           PmicWacs2RData::kFsmStateWfVldClear) {
-    }
+  while (PmicWacs2RData::Get().ReadFrom(&pmic_mmio_).wacs2_fsm() !=
+         PmicWacs2RData::kFsmStateWfVldClear) {
+  }
 }
 
 zx_status_t MtkRegulator::ReadPMICReg(uint32_t reg_addr, uint32_t* reg_value) {
-    WaitForIdle();
-    PmicWacs2Cmd::Get()
-        .FromValue(0)
-        .set_wacs2_write(0)
-        .set_wacs2_addr(reg_addr >> 1)
-        .WriteTo(&pmic_mmio_);
-    // Wait for data to be available.
-    WaitForValidClear();
+  WaitForIdle();
+  PmicWacs2Cmd::Get()
+      .FromValue(0)
+      .set_wacs2_write(0)
+      .set_wacs2_addr(reg_addr >> 1)
+      .WriteTo(&pmic_mmio_);
+  // Wait for data to be available.
+  WaitForValidClear();
 
-    *reg_value = PmicWacs2RData::Get().ReadFrom(&pmic_mmio_).wacs2_rdata();
+  *reg_value = PmicWacs2RData::Get().ReadFrom(&pmic_mmio_).wacs2_rdata();
 
-    // Data is read. clear the valid flag.
-    PmicWacs2VldClear::Get().ReadFrom(&pmic_mmio_).set_wacs2_vldclr(1).WriteTo(&pmic_mmio_);
-    return ZX_OK;
+  // Data is read. clear the valid flag.
+  PmicWacs2VldClear::Get().ReadFrom(&pmic_mmio_).set_wacs2_vldclr(1).WriteTo(&pmic_mmio_);
+  return ZX_OK;
 }
 
 zx_status_t MtkRegulator::WritePMICReg(uint32_t reg_addr, uint32_t value) {
-    WaitForIdle();
-    PmicWacs2Cmd::Get()
-        .FromValue(0)
-        .set_wacs2_write(1)
-        .set_wacs2_addr(reg_addr >> 1)
-        .set_wacs2_data(value)
-        .WriteTo(&pmic_mmio_);
-    return ZX_OK;
+  WaitForIdle();
+  PmicWacs2Cmd::Get()
+      .FromValue(0)
+      .set_wacs2_write(1)
+      .set_wacs2_addr(reg_addr >> 1)
+      .set_wacs2_data(value)
+      .WriteTo(&pmic_mmio_);
+  return ZX_OK;
 }
 
 zx_status_t MtkRegulator::Enable() {
-    if (enabled_) {
-        return ZX_OK;
-    }
-    uint32_t cur_val;
-    zx_status_t status = ReadPMICReg(enable_register_, &cur_val);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-    status = WritePMICReg(enable_register_, (cur_val | 1 << enable_bit_));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    enabled_ = true;
+  if (enabled_) {
     return ZX_OK;
+  }
+  uint32_t cur_val;
+  zx_status_t status = ReadPMICReg(enable_register_, &cur_val);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
+  status = WritePMICReg(enable_register_, (cur_val | 1 << enable_bit_));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  enabled_ = true;
+  return ZX_OK;
 }
 
 zx_status_t MtkRegulator::Disable() {
-    if (!enabled_) {
-        return ZX_ERR_BAD_STATE;
-    }
-    uint32_t cur_val;
-    zx_status_t status = ReadPMICReg(enable_register_, &cur_val);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-    status = WritePMICReg(enable_register_, (cur_val &= ~(1 << enable_bit_)));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
+  if (!enabled_) {
+    return ZX_ERR_BAD_STATE;
+  }
+  uint32_t cur_val;
+  zx_status_t status = ReadPMICReg(enable_register_, &cur_val);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
+  status = WritePMICReg(enable_register_, (cur_val &= ~(1 << enable_bit_)));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
 
-    enabled_ = false;
-    return ZX_OK;
+  enabled_ = false;
+  return ZX_OK;
 }
 
 zx_status_t MtkBuckRegulator::SetVoltageSelReg() {
-    uint32_t ctrl_reg_val;
-    zx_status_t status = ReadPMICReg(buck_voltage_ctrl_reg_, &ctrl_reg_val);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
+  uint32_t ctrl_reg_val;
+  zx_status_t status = ReadPMICReg(buck_voltage_ctrl_reg_, &ctrl_reg_val);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
 
-    if (ctrl_reg_val & (1 << 1)) {
-        voltage_sel_reg_ = buck_voltage_on_reg_;
-    }
-    return ZX_OK;
+  if (ctrl_reg_val & (1 << 1)) {
+    voltage_sel_reg_ = buck_voltage_on_reg_;
+  }
+  return ZX_OK;
 }
 
 zx_status_t MtkBuckRegulator::GetVoltageSelector(uint32_t set_voltage, uint32_t* actual_voltage,
                                                  uint16_t* selector) {
-    if (!step_size_) {
-        return ZX_ERR_BAD_STATE;
-    }
-    if (set_voltage < min_voltage_) {
-        zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (set_voltage > max_voltage_) {
-        zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    uint16_t sel = static_cast<uint16_t>((set_voltage - min_voltage_) / step_size_);
-    *actual_voltage = min_voltage_ + (sel * step_size_);
-    *selector = sel;
-    return ZX_OK;
+  if (!step_size_) {
+    return ZX_ERR_BAD_STATE;
+  }
+  if (set_voltage < min_voltage_) {
+    zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (set_voltage > max_voltage_) {
+    zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  uint16_t sel = static_cast<uint16_t>((set_voltage - min_voltage_) / step_size_);
+  *actual_voltage = min_voltage_ + (sel * step_size_);
+  *selector = sel;
+  return ZX_OK;
 }
 
 zx_status_t MtkBuckRegulator::RequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
-    uint16_t selector = 0;
-    zx_status_t status = GetVoltageSelector(voltage, actual_voltage, &selector);
-    if (status != ZX_OK) {
-        return status;
-    }
+  uint16_t selector = 0;
+  zx_status_t status = GetVoltageSelector(voltage, actual_voltage, &selector);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    if (cur_voltage_ == *actual_voltage) {
-        return ZX_OK;
-    }
-    uint32_t cur_val;
-    status = ReadPMICReg(voltage_sel_reg_, &cur_val);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    cur_val &= ~voltage_sel_mask_;
-    cur_val |= (selector & voltage_sel_mask_);
-
-    status = WritePMICReg(voltage_sel_reg_, cur_val);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    cur_voltage_ = *actual_voltage;
+  if (cur_voltage_ == *actual_voltage) {
     return ZX_OK;
+  }
+  uint32_t cur_val;
+  status = ReadPMICReg(voltage_sel_reg_, &cur_val);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  cur_val &= ~voltage_sel_mask_;
+  cur_val |= (selector & voltage_sel_mask_);
+
+  status = WritePMICReg(voltage_sel_reg_, cur_val);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  cur_voltage_ = *actual_voltage;
+  return ZX_OK;
 }
 
 zx_status_t MtkLdoRegulator::GetVoltageSelector(uint32_t set_voltage, uint32_t* actual_voltage,
                                                 uint16_t* selector) {
-    size_t num_voltages = supported_voltages_.size();
-    if (num_voltages == 0) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    if (set_voltage < supported_voltages_[0] ||
-        set_voltage > supported_voltages_[num_voltages - 1]) {
-        zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    for (size_t i = 0; i < num_voltages; i++) {
-        uint32_t voltage = supported_voltages_[i];
-        if (voltage == set_voltage) {
-            *selector = static_cast<uint16_t>(i);
-            *actual_voltage = voltage;
-            return ZX_OK;
-        }
-        if (set_voltage > voltage && set_voltage < supported_voltages_[i + 1]) {
-            *selector = static_cast<uint16_t>(i);
-            *actual_voltage = voltage;
-            return ZX_OK;
-        }
-    }
+  size_t num_voltages = supported_voltages_.size();
+  if (num_voltages == 0) {
     return ZX_ERR_BAD_STATE;
+  }
+
+  if (set_voltage < supported_voltages_[0] || set_voltage > supported_voltages_[num_voltages - 1]) {
+    zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  for (size_t i = 0; i < num_voltages; i++) {
+    uint32_t voltage = supported_voltages_[i];
+    if (voltage == set_voltage) {
+      *selector = static_cast<uint16_t>(i);
+      *actual_voltage = voltage;
+      return ZX_OK;
+    }
+    if (set_voltage > voltage && set_voltage < supported_voltages_[i + 1]) {
+      *selector = static_cast<uint16_t>(i);
+      *actual_voltage = voltage;
+      return ZX_OK;
+    }
+  }
+  return ZX_ERR_BAD_STATE;
 }
 
 zx_status_t MtkLdoRegulator::RequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
-    uint16_t selector = 0;
-    zx_status_t status = GetVoltageSelector(voltage, actual_voltage, &selector);
-    if (status != ZX_OK) {
-        return status;
-    }
+  uint16_t selector = 0;
+  zx_status_t status = GetVoltageSelector(voltage, actual_voltage, &selector);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    if (cur_voltage_ == *actual_voltage) {
-        return ZX_OK;
-    }
-    uint32_t cur_val;
-    status = ReadPMICReg(voltage_sel_reg_, &cur_val);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    cur_val &= ~voltage_sel_mask_;
-    cur_val |= ((selector << voltage_sel_shift_) & voltage_sel_mask_);
-
-    status = WritePMICReg(voltage_sel_reg_, cur_val);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    cur_voltage_ = *actual_voltage;
+  if (cur_voltage_ == *actual_voltage) {
     return ZX_OK;
+  }
+  uint32_t cur_val;
+  status = ReadPMICReg(voltage_sel_reg_, &cur_val);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  cur_val &= ~voltage_sel_mask_;
+  cur_val |= ((selector << voltage_sel_shift_) & voltage_sel_mask_);
+
+  status = WritePMICReg(voltage_sel_reg_, cur_val);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  cur_voltage_ = *actual_voltage;
+  return ZX_OK;
 }
 
 zx_status_t MtkPower::PowerImplDisablePowerDomain(uint32_t index) {
-    if (index >= kMt8167NumPowerDomains) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    zx_status_t status = power_domains_[index]->Disable();
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Disable power domain %d failed. Status: %d\n", __FUNCTION__, index,
-               status);
-        return status;
-    }
+  if (index >= kMt8167NumPowerDomains) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  zx_status_t status = power_domains_[index]->Disable();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Disable power domain %d failed. Status: %d\n", __FUNCTION__, index, status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 zx_status_t MtkPower::PowerImplEnablePowerDomain(uint32_t index) {
-    if (index >= kMt8167NumPowerDomains) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return power_domains_[index]->Enable();
+  if (index >= kMt8167NumPowerDomains) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  return power_domains_[index]->Enable();
 }
 
 zx_status_t MtkPower::PowerImplGetPowerDomainStatus(uint32_t index,
                                                     power_domain_status_t* out_status) {
-    if (index >= kMt8167NumPowerDomains) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    *out_status = power_domains_[index]->enabled() ? POWER_DOMAIN_STATUS_ENABLED
-                                                   : POWER_DOMAIN_STATUS_DISABLED;
-    return ZX_OK;
+  if (index >= kMt8167NumPowerDomains) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  *out_status =
+      power_domains_[index]->enabled() ? POWER_DOMAIN_STATUS_ENABLED : POWER_DOMAIN_STATUS_DISABLED;
+  return ZX_OK;
 }
 
 zx_status_t MtkPower::PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t* min_voltage,
                                                         uint32_t* max_voltage) {
-    if (index >= kMt8167NumPowerDomains) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return power_domains_[index]->GetSupportedVoltageRange(min_voltage, max_voltage);
+  if (index >= kMt8167NumPowerDomains) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  return power_domains_[index]->GetSupportedVoltageRange(min_voltage, max_voltage);
 }
 
 zx_status_t MtkPower::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
                                               uint32_t* actual_voltage) {
-    if (index >= kMt8167NumPowerDomains) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return power_domains_[index]->RequestVoltage(voltage, actual_voltage);
+  if (index >= kMt8167NumPowerDomains) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  return power_domains_[index]->RequestVoltage(voltage, actual_voltage);
 }
 
 zx_status_t MtkPower::PowerImplWritePmicCtrlReg(uint32_t index, uint32_t reg_addr, uint32_t value) {
-    return ZX_ERR_NOT_SUPPORTED;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t MtkPower::PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr, uint32_t* value) {
-    return ZX_ERR_NOT_SUPPORTED;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
-void MtkPower::DdkRelease() {
-    delete this;
-}
+void MtkPower::DdkRelease() { delete this; }
 
-void MtkPower::DdkUnbind() {
-    DdkRemove();
-}
+void MtkPower::DdkUnbind() { DdkRemove(); }
 
 enum MtkRegulatorType { BUCK = 1, LDO, FIXED };
 
 struct MtkRegulatorParams {
-    uint8_t type;
-    uint32_t enable_register = 0;
-    uint8_t enable_bit = 0;
-    uint32_t select_register = 0;
-    uint32_t select_mask = 0;
-    uint32_t select_shift = 0;
-    uint32_t buck_voltage_control_register = 0;
-    uint32_t buck_voltage_on_register = 0;
-    uint32_t min_voltage = 0;
-    uint32_t max_voltage = 0;
-    uint32_t default_voltage = 0;
-    uint32_t step_size = 0;
-    const fbl::Vector<uint32_t>& supported_voltage = kSupportedVoltageList1;
+  uint8_t type;
+  uint32_t enable_register = 0;
+  uint8_t enable_bit = 0;
+  uint32_t select_register = 0;
+  uint32_t select_mask = 0;
+  uint32_t select_shift = 0;
+  uint32_t buck_voltage_control_register = 0;
+  uint32_t buck_voltage_on_register = 0;
+  uint32_t min_voltage = 0;
+  uint32_t max_voltage = 0;
+  uint32_t default_voltage = 0;
+  uint32_t step_size = 0;
+  const fbl::Vector<uint32_t>& supported_voltage = kSupportedVoltageList1;
 };
 
 MtkRegulatorParams kMtkRegulatorParams[] = {
@@ -494,104 +487,102 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
 };
 
 void MtkPower::InitializePowerDomains() {
-    for (size_t i = 0; i < kMt8167NumPowerDomains; i++) {
-        auto& reg_params = kMtkRegulatorParams[i];
-        if (reg_params.type == BUCK) {
-            power_domains_[i] = std::make_unique<MtkBuckRegulator>(
-                pmic_mmio_.View(0), reg_params.enable_register, reg_params.enable_bit,
-                reg_params.select_register, reg_params.select_mask, reg_params.select_shift,
-                reg_params.buck_voltage_control_register, reg_params.buck_voltage_on_register,
-                reg_params.min_voltage, reg_params.max_voltage, reg_params.step_size);
-            MtkBuckRegulator* buck = static_cast<MtkBuckRegulator*>(power_domains_[i].get());
-            buck->SetVoltageSelReg();
-        } else if (reg_params.type == FIXED) {
-            power_domains_[i] = std::make_unique<MtkFixedRegulator>(
-                pmic_mmio_.View(0), reg_params.default_voltage, reg_params.enable_register,
-                reg_params.enable_bit);
-        } else if (reg_params.type == LDO) {
-            power_domains_[i] = std::make_unique<MtkLdoRegulator>(
-                pmic_mmio_.View(0), reg_params.enable_register, reg_params.enable_bit,
-                reg_params.select_register, reg_params.select_mask, reg_params.select_shift,
-                reg_params.supported_voltage);
-        }
+  for (size_t i = 0; i < kMt8167NumPowerDomains; i++) {
+    auto& reg_params = kMtkRegulatorParams[i];
+    if (reg_params.type == BUCK) {
+      power_domains_[i] = std::make_unique<MtkBuckRegulator>(
+          pmic_mmio_.View(0), reg_params.enable_register, reg_params.enable_bit,
+          reg_params.select_register, reg_params.select_mask, reg_params.select_shift,
+          reg_params.buck_voltage_control_register, reg_params.buck_voltage_on_register,
+          reg_params.min_voltage, reg_params.max_voltage, reg_params.step_size);
+      MtkBuckRegulator* buck = static_cast<MtkBuckRegulator*>(power_domains_[i].get());
+      buck->SetVoltageSelReg();
+    } else if (reg_params.type == FIXED) {
+      power_domains_[i] =
+          std::make_unique<MtkFixedRegulator>(pmic_mmio_.View(0), reg_params.default_voltage,
+                                              reg_params.enable_register, reg_params.enable_bit);
+    } else if (reg_params.type == LDO) {
+      power_domains_[i] = std::make_unique<MtkLdoRegulator>(
+          pmic_mmio_.View(0), reg_params.enable_register, reg_params.enable_bit,
+          reg_params.select_register, reg_params.select_mask, reg_params.select_shift,
+          reg_params.supported_voltage);
     }
+  }
 }
 
 zx_status_t MtkPower::Init() {
-    // TODO(ravoorir): Check if bootloader did not init the PMIC and
-    // do the needful.
-    InitializePowerDomains();
-    return ZX_OK;
+  // TODO(ravoorir): Check if bootloader did not init the PMIC and
+  // do the needful.
+  InitializePowerDomains();
+  return ZX_OK;
 }
 
 zx_status_t MtkPower::Bind() {
-    pbus_protocol_t pbus;
-    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s failed to get ZX_PROTOCOL_PBUS, %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    power_impl_protocol_t power_proto = {
-        .ops = &power_impl_protocol_ops_,
-        .ctx = this,
-    };
-
-    status =
-        pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL, &power_proto, sizeof(power_proto));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pbus_register_protocol failed: %d\n", __FUNCTION__, status);
-        return status;
-    }
-    status = DdkAdd("mtk-power");
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
-    }
-
+  pbus_protocol_t pbus;
+  zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to get ZX_PROTOCOL_PBUS, %d\n", __FUNCTION__, status);
     return status;
+  }
+
+  power_impl_protocol_t power_proto = {
+      .ops = &power_impl_protocol_ops_,
+      .ctx = this,
+  };
+
+  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL, &power_proto, sizeof(power_proto));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s pbus_register_protocol failed: %d\n", __FUNCTION__, status);
+    return status;
+  }
+  status = DdkAdd("mtk-power");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
+  }
+
+  return status;
 }
 
 zx_status_t MtkPower::Create(void* ctx, zx_device_t* parent) {
-    zx_status_t status = ZX_OK;
+  zx_status_t status = ZX_OK;
 
-    ddk::PDev pdev(parent);
-    if (!pdev.is_valid()) {
-        zxlogf(ERROR, "%s Could not get pdev: %d\n", __FUNCTION__, status);
-        return ZX_ERR_NO_RESOURCES;
-    }
+  ddk::PDev pdev(parent);
+  if (!pdev.is_valid()) {
+    zxlogf(ERROR, "%s Could not get pdev: %d\n", __FUNCTION__, status);
+    return ZX_ERR_NO_RESOURCES;
+  }
 
-    std::optional<ddk::MmioBuffer> mmio;
-    status = pdev.MapMmio(0, &mmio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Failed to get mmio: %d\n", __FUNCTION__, status);
-        return status;
-    }
-    auto dev = std::make_unique<MtkPower>(parent, *std::move(mmio));
+  std::optional<ddk::MmioBuffer> mmio;
+  status = pdev.MapMmio(0, &mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Failed to get mmio: %d\n", __FUNCTION__, status);
+    return status;
+  }
+  auto dev = std::make_unique<MtkPower>(parent, *std::move(mmio));
 
-    if ((status = dev->Init()) != ZX_OK) {
-        return status;
-    }
+  if ((status = dev->Init()) != ZX_OK) {
+    return status;
+  }
 
-    if ((status = dev->Bind()) != ZX_OK) {
-        return status;
-    }
+  if ((status = dev->Bind()) != ZX_OK) {
+    return status;
+  }
 
-    // devmgr is now in charge of the device.
-    __UNUSED auto* dummy = dev.release();
-    return ZX_OK;
+  // devmgr is now in charge of the device.
+  __UNUSED auto* dummy = dev.release();
+  return ZX_OK;
 }
 
 static constexpr zx_driver_ops_t mtk_power_driver_ops = []() {
-    zx_driver_ops_t driver_ops = {};
-    driver_ops.version = DRIVER_OPS_VERSION;
-    driver_ops.bind = MtkPower::Create;
-    return driver_ops;
+  zx_driver_ops_t driver_ops = {};
+  driver_ops.version = DRIVER_OPS_VERSION;
+  driver_ops.bind = MtkPower::Create;
+  return driver_ops;
 }();
 
-} // namespace power
+}  // namespace power
 
 ZIRCON_DRIVER_BEGIN(mtk_power, power::mtk_power_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_POWER),
-ZIRCON_DRIVER_END(mtk_power)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_POWER), ZIRCON_DRIVER_END(mtk_power)

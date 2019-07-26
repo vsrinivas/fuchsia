@@ -22,10 +22,8 @@ constexpr size_t kSize = MB(1);
 
 struct Helper {
   Helper() {
-    ZX_ASSERT(zx::vmar::root_self()->allocate(
-                  0, GB(1),
-                  ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC, &vmar,
-                  &vmar_base) == ZX_OK);
+    ZX_ASSERT(zx::vmar::root_self()->allocate(0, GB(1), ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC,
+                                              &vmar, &vmar_base) == ZX_OK);
 
     ZX_ASSERT(zx::vmo::create(MB(4), 0, &vmo) == ZX_OK);
   }
@@ -36,16 +34,14 @@ struct Helper {
   // of vmar, starting from offset 0.   Mapping is done |chunk_size| bytes at a
   // time.  |chunk_size| and |length| must be multiples of PAGE_SIZE. As a
   // precondition, |vmar| should be empty.
-  zx_status_t MapInChunks(size_t chunk_size, size_t length,
-                          bool force_into_mmu);
+  zx_status_t MapInChunks(size_t chunk_size, size_t length, bool force_into_mmu);
 
   zx::vmar vmar;
   zx::vmo vmo;
   uintptr_t vmar_base;
 };
 
-zx_status_t Helper::MapInChunks(size_t chunk_size, size_t length,
-                                bool force_into_mmu) {
+zx_status_t Helper::MapInChunks(size_t chunk_size, size_t length, bool force_into_mmu) {
   zx_status_t status;
   zx_vm_option_t flags = ZX_VM_SPECIFIC | ZX_VM_PERM_READ;
   if (force_into_mmu) {

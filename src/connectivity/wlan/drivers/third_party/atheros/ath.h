@@ -36,85 +36,85 @@
 static const uint8_t ath_bcast_mac[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 struct ath_ani {
-    bool caldone;
-    unsigned int longcal_timer;
-    unsigned int shortcal_timer;
-    unsigned int resetcal_timer;
-    unsigned int checkani_timer;
-    struct timer_list timer;
+  bool caldone;
+  unsigned int longcal_timer;
+  unsigned int shortcal_timer;
+  unsigned int resetcal_timer;
+  unsigned int checkani_timer;
+  struct timer_list timer;
 };
 
 struct ath_cycle_counters {
-    uint32_t cycles;
-    uint32_t rx_busy;
-    uint32_t rx_frame;
-    uint32_t tx_frame;
+  uint32_t cycles;
+  uint32_t rx_busy;
+  uint32_t rx_frame;
+  uint32_t tx_frame;
 };
 
 enum ath_device_state {
-    ATH_HW_UNAVAILABLE,
-    ATH_HW_INITIALIZED,
+  ATH_HW_UNAVAILABLE,
+  ATH_HW_INITIALIZED,
 };
 
 enum ath_op_flags {
-    ATH_OP_INVALID,
-    ATH_OP_BEACONS,
-    ATH_OP_ANI_RUN,
-    ATH_OP_PRIM_STA_VIF,
-    ATH_OP_HW_RESET,
-    ATH_OP_SCANNING,
-    ATH_OP_MULTI_CHANNEL,
-    ATH_OP_WOW_ENABLED,
+  ATH_OP_INVALID,
+  ATH_OP_BEACONS,
+  ATH_OP_ANI_RUN,
+  ATH_OP_PRIM_STA_VIF,
+  ATH_OP_HW_RESET,
+  ATH_OP_SCANNING,
+  ATH_OP_MULTI_CHANNEL,
+  ATH_OP_WOW_ENABLED,
 };
 
 enum ath_bus_type {
-    ATH_PCI,
-    ATH_AHB,
-    ATH_USB,
+  ATH_PCI,
+  ATH_AHB,
+  ATH_USB,
 };
 
 struct reg_dmn_pair_mapping {
-    uint16_t reg_domain;
-    uint16_t reg_5ghz_ctl;
-    uint16_t reg_2ghz_ctl;
+  uint16_t reg_domain;
+  uint16_t reg_5ghz_ctl;
+  uint16_t reg_2ghz_ctl;
 };
 
 struct ath_regulatory {
-    char alpha2[2];
-    enum nl80211_dfs_regions region;
-    uint16_t country_code;
-    uint16_t max_power_level;
-    uint16_t current_rd;
-    int16_t power_limit;
-    struct reg_dmn_pair_mapping* regpair;
+  char alpha2[2];
+  enum nl80211_dfs_regions region;
+  uint16_t country_code;
+  uint16_t max_power_level;
+  uint16_t current_rd;
+  int16_t power_limit;
+  struct reg_dmn_pair_mapping* regpair;
 };
 
 enum ath_crypt_caps {
-    // clang-format off
+  // clang-format off
     ATH_CRYPT_CAP_CIPHER_AESCCM     = BIT(0),
     ATH_CRYPT_CAP_MIC_COMBINED      = BIT(1),
-    // clang-format on
+  // clang-format on
 };
 
 struct ath_keyval {
-    uint8_t kv_type;
-    uint8_t kv_pad;
-    uint16_t kv_len;
-    uint8_t kv_val[16];  /* TK */
-    uint8_t kv_mic[8];   /* Michael MIC key */
-    uint8_t kv_txmic[8]; /* Michael MIC TX key (used only if the hardware
-                          * supports both MIC keys in the same key cache entry;
-                          * in that case, kv_mic is the RX key) */
+  uint8_t kv_type;
+  uint8_t kv_pad;
+  uint16_t kv_len;
+  uint8_t kv_val[16];  /* TK */
+  uint8_t kv_mic[8];   /* Michael MIC key */
+  uint8_t kv_txmic[8]; /* Michael MIC TX key (used only if the hardware
+                        * supports both MIC keys in the same key cache entry;
+                        * in that case, kv_mic is the RX key) */
 };
 
 enum ath_cipher {
-    ATH_CIPHER_WEP = 0,
-    ATH_CIPHER_AES_OCB = 1,
-    ATH_CIPHER_AES_CCM = 2,
-    ATH_CIPHER_CKIP = 3,
-    ATH_CIPHER_TKIP = 4,
-    ATH_CIPHER_CLR = 5,
-    ATH_CIPHER_MIC = 127
+  ATH_CIPHER_WEP = 0,
+  ATH_CIPHER_AES_OCB = 1,
+  ATH_CIPHER_AES_CCM = 2,
+  ATH_CIPHER_CKIP = 3,
+  ATH_CIPHER_TKIP = 4,
+  ATH_CIPHER_CLR = 5,
+  ATH_CIPHER_MIC = 127
 };
 
 /**
@@ -127,70 +127,70 @@ enum ath_cipher {
  * @write_flush: flush buffered register writes and disable buffering
  */
 struct ath_ops {
-    unsigned int (*read)(void*, uint32_t reg_offset);
-    void (*multi_read)(void*, uint32_t* addr, uint32_t* val, uint16_t count);
-    void (*write)(void*, uint32_t val, uint32_t reg_offset);
-    void (*enable_write_buffer)(void*);
-    void (*write_flush)(void*);
-    uint32_t (*rmw)(void*, uint32_t reg_offset, uint32_t set, uint32_t clr);
-    void (*enable_rmw_buffer)(void*);
-    void (*rmw_flush)(void*);
+  unsigned int (*read)(void*, uint32_t reg_offset);
+  void (*multi_read)(void*, uint32_t* addr, uint32_t* val, uint16_t count);
+  void (*write)(void*, uint32_t val, uint32_t reg_offset);
+  void (*enable_write_buffer)(void*);
+  void (*write_flush)(void*);
+  uint32_t (*rmw)(void*, uint32_t reg_offset, uint32_t set, uint32_t clr);
+  void (*enable_rmw_buffer)(void*);
+  void (*rmw_flush)(void*);
 };
 
 struct ath_common;
 struct ath_bus_ops;
 
 struct ath_ps_ops {
-    void (*wakeup)(struct ath_common* common);
-    void (*restore)(struct ath_common* common);
+  void (*wakeup)(struct ath_common* common);
+  void (*restore)(struct ath_common* common);
 };
 
 struct ath_common {
-    void* ah;
-    void* priv;
-    struct ieee80211_hw* hw;
-    int debug_mask;
-    enum ath_device_state state;
-    unsigned long op_flags;
+  void* ah;
+  void* priv;
+  struct ieee80211_hw* hw;
+  int debug_mask;
+  enum ath_device_state state;
+  unsigned long op_flags;
 
-    struct ath_ani ani;
+  struct ath_ani ani;
 
-    uint16_t cachelsz;
-    uint16_t curaid;
-    uint8_t macaddr[ETH_ALEN];
-    uint8_t curbssid[ETH_ALEN] __aligned(2);
-    uint8_t bssidmask[ETH_ALEN];
+  uint16_t cachelsz;
+  uint16_t curaid;
+  uint8_t macaddr[ETH_ALEN];
+  uint8_t curbssid[ETH_ALEN] __aligned(2);
+  uint8_t bssidmask[ETH_ALEN];
 
-    uint32_t rx_bufsize;
+  uint32_t rx_bufsize;
 
-    uint32_t keymax;
-    DECLARE_BITMAP(keymap, ATH_KEYMAX);
-    DECLARE_BITMAP(tkip_keymap, ATH_KEYMAX);
-    DECLARE_BITMAP(ccmp_keymap, ATH_KEYMAX);
-    enum ath_crypt_caps crypt_caps;
+  uint32_t keymax;
+  DECLARE_BITMAP(keymap, ATH_KEYMAX);
+  DECLARE_BITMAP(tkip_keymap, ATH_KEYMAX);
+  DECLARE_BITMAP(ccmp_keymap, ATH_KEYMAX);
+  enum ath_crypt_caps crypt_caps;
 
-    unsigned int clockrate;
+  unsigned int clockrate;
 
-    spinlock_t cc_lock;
-    struct ath_cycle_counters cc_ani;
-    struct ath_cycle_counters cc_survey;
+  spinlock_t cc_lock;
+  struct ath_cycle_counters cc_ani;
+  struct ath_cycle_counters cc_survey;
 
-    struct ath_regulatory regulatory;
-    struct ath_regulatory reg_world_copy;
-    const struct ath_ops* ops;
-    const struct ath_bus_ops* bus_ops;
-    const struct ath_ps_ops* ps_ops;
+  struct ath_regulatory regulatory;
+  struct ath_regulatory reg_world_copy;
+  const struct ath_ops* ops;
+  const struct ath_bus_ops* bus_ops;
+  const struct ath_ps_ops* ps_ops;
 
-    bool btcoex_enabled;
-    bool disable_ani;
-    bool bt_ant_diversity;
+  bool btcoex_enabled;
+  bool disable_ani;
+  bool bt_ant_diversity;
 
-    int last_rssi;
-    struct ieee80211_supported_band sbands[NUM_NL80211_BANDS];
+  int last_rssi;
+  struct ieee80211_supported_band sbands[NUM_NL80211_BANDS];
 };
 
 static inline const struct ath_ps_ops* ath_ps_ops(struct ath_common* common) {
-    return common->ps_ops;
+  return common->ps_ops;
 }
 
 struct sk_buff* ath_rxbuf_alloc(struct ath_common* common, uint32_t len, gfp_t gfp_mask);
@@ -249,7 +249,7 @@ __printf(3, 4) void ath_printk(const char* level, const struct ath_common* commo
  * entry.
  */
 enum ATH_DEBUG {
-    // clang-format off
+  // clang-format off
     ATH_DBG_RESET         = 0x00000001,
     ATH_DBG_QUEUE         = 0x00000002,
     ATH_DBG_EEPROM        = 0x00000004,
@@ -272,7 +272,7 @@ enum ATH_DEBUG {
     ATH_DBG_DYNACK        = 0x00080000,
     ATH_DBG_SPECTRAL_SCAN = 0x00100000,
     ATH_DBG_ANY           = 0xffffffff
-    // clang-format on
+  // clang-format on
 };
 
 #define ATH_DBG_DEFAULT (ATH_DBG_FATAL)
@@ -280,11 +280,11 @@ enum ATH_DEBUG {
 
 #ifdef CONFIG_ATH_DEBUG
 
-#define ath_dbg(common, dbg_mask, fmt, ...)                     \
-    do {                                                        \
-        if ((common)->debug_mask & ATH_DBG_##dbg_mask)          \
-            ath_printk(KERN_DEBUG, common, fmt, ##__VA_ARGS__); \
-    } while (0)
+#define ath_dbg(common, dbg_mask, fmt, ...)               \
+  do {                                                    \
+    if ((common)->debug_mask & ATH_DBG_##dbg_mask)        \
+      ath_printk(KERN_DEBUG, common, fmt, ##__VA_ARGS__); \
+  } while (0)
 
 #define ATH_DBG_WARN(foo, arg...) WARN(foo, arg)
 #define ATH_DBG_WARN_ON_ONCE(foo) WARN_ON_ONCE(foo)
@@ -297,13 +297,13 @@ static inline __attribute__((format(printf, 3, 4))) void _ath_dbg(struct ath_com
 #define ath_dbg(common, dbg_mask, fmt, ...) _ath_dbg(common, ATH_DBG_##dbg_mask, fmt, ##__VA_ARGS__)
 
 #define ATH_DBG_WARN(foo, arg...) \
-    do {                          \
-    } while (0)
-#define ATH_DBG_WARN_ON_ONCE(foo)      \
-    ({                                 \
-        int __ret_warn_once = !!(foo); \
-        unlikely(__ret_warn_once);     \
-    })
+  do {                            \
+  } while (0)
+#define ATH_DBG_WARN_ON_ONCE(foo)  \
+  ({                               \
+    int __ret_warn_once = !!(foo); \
+    unlikely(__ret_warn_once);     \
+  })
 
 #endif /* CONFIG_ATH_DEBUG */
 
@@ -311,14 +311,12 @@ static inline __attribute__((format(printf, 3, 4))) void _ath_dbg(struct ath_com
 #ifdef CONFIG_ATH_DEBUG
 const char* ath_opmode_to_string(enum nl80211_iftype opmode);
 #else
-static inline const char* ath_opmode_to_string(enum nl80211_iftype opmode) {
-    return "UNKNOWN";
-}
+static inline const char* ath_opmode_to_string(enum nl80211_iftype opmode) { return "UNKNOWN"; }
 #endif
 
 extern const char* ath_bus_type_strings[];
 static inline const char* ath_bus_type_to_string(enum ath_bus_type bustype) {
-    return ath_bus_type_strings[bustype];
+  return ath_bus_type_strings[bustype];
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH_H_

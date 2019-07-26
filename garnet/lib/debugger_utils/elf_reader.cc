@@ -32,13 +32,10 @@ const char* ElfErrorName(ElfError err) {
   }
 }
 
-ElfError ElfReader::Create(const std::string& file_name,
-                           std::shared_ptr<ByteBlock> byte_block,
-                           uint32_t options, uint64_t base,
-                           std::unique_ptr<ElfReader>* out) {
+ElfError ElfReader::Create(const std::string& file_name, std::shared_ptr<ByteBlock> byte_block,
+                           uint32_t options, uint64_t base, std::unique_ptr<ElfReader>* out) {
   FXL_DCHECK(options == 0);
-  FXL_VLOG(1) << "Creating ELF reader for: " << file_name
-              << ": base 0x" << std::hex << base;
+  FXL_VLOG(1) << "Creating ELF reader for: " << file_name << ": base 0x" << std::hex << base;
   ElfReader* er = new ElfReader(file_name, byte_block, base);
   if (!ReadHeader(*byte_block, base, &er->header_)) {
     delete er;
@@ -52,8 +49,8 @@ ElfError ElfReader::Create(const std::string& file_name,
   return ElfError::OK;
 }
 
-ElfReader::ElfReader(const std::string& file_name,
-                     std::shared_ptr<ByteBlock> byte_block, uint64_t base)
+ElfReader::ElfReader(const std::string& file_name, std::shared_ptr<ByteBlock> byte_block,
+                     uint64_t base)
     : file_name_(file_name), byte_block_(byte_block), base_(base) {}
 
 ElfReader::~ElfReader() {
@@ -69,9 +66,8 @@ bool ElfReader::ReadHeader(const ByteBlock& m, uint64_t base, ElfHeader* hdr) {
 // static
 bool ElfReader::VerifyHeader(const ElfHeader* hdr) {
   if (memcmp(hdr->e_ident, ELFMAG, SELFMAG)) {
-    FXL_VLOG(2) << fxl::StringPrintf("Bad ELF magic: %02x %02x %02x %02x",
-                                     hdr->e_ident[0], hdr->e_ident[1],
-                                     hdr->e_ident[2], hdr->e_ident[3]);
+    FXL_VLOG(2) << fxl::StringPrintf("Bad ELF magic: %02x %02x %02x %02x", hdr->e_ident[0],
+                                     hdr->e_ident[1], hdr->e_ident[2], hdr->e_ident[3]);
     return false;
   }
   // TODO(dje): Support larger entries.
@@ -155,9 +151,8 @@ const ElfSectionHeader* ElfReader::GetSectionHeaderByType(unsigned type) {
   return nullptr;
 }
 
-ElfError ElfReader::GetSectionContents(
-    const ElfSectionHeader& sh,
-    std::unique_ptr<ElfSectionContents>* out_contents) {
+ElfError ElfReader::GetSectionContents(const ElfSectionHeader& sh,
+                                       std::unique_ptr<ElfSectionContents>* out_contents) {
   void* buffer = malloc(sh.sh_size);
   if (!buffer) {
     FXL_LOG(ERROR) << "OOM getting space for section contents";
@@ -207,8 +202,7 @@ ElfError ElfReader::ReadBuildId(char* buf, size_t buf_size) {
       uint64_t payload_vaddr = vaddr + offset;
       offset += payload_size;
       size -= payload_size;
-      if (note.hdr.n_type != NT_GNU_BUILD_ID ||
-          note.hdr.n_namesz != sizeof("GNU") ||
+      if (note.hdr.n_type != NT_GNU_BUILD_ID || note.hdr.n_namesz != sizeof("GNU") ||
           memcmp(note.name, "GNU", sizeof("GNU")) != 0) {
         continue;
       }
@@ -231,8 +225,7 @@ ElfError ElfReader::ReadBuildId(char* buf, size_t buf_size) {
   return ElfError::OK;
 }
 
-ElfSectionContents::ElfSectionContents(const ElfSectionHeader& header,
-                                       void* contents)
+ElfSectionContents::ElfSectionContents(const ElfSectionHeader& header, void* contents)
     : header_(header), contents_(contents) {
   FXL_DCHECK(contents);
 }

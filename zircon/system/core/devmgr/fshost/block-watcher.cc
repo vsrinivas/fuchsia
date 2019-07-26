@@ -50,36 +50,36 @@ namespace {
 constexpr char kPathBlockDeviceRoot[] = "/dev/class/block";
 
 zx_status_t BlockDeviceCallback(int dirfd, int event, const char* name, void* cookie) {
-    if (event != WATCH_EVENT_ADD_FILE) {
-        return ZX_OK;
-    }
-    fbl::unique_fd device_fd(openat(dirfd, name, O_RDWR));
-    if (!device_fd) {
-        return ZX_OK;
-    }
-
-    auto mounter = static_cast<FilesystemMounter*>(cookie);
-    BlockDevice device(mounter, std::move(device_fd));
-    zx_status_t rc = device.Add();
-    if (rc != ZX_OK) {
-        // This callback has to return ZX_OK for resiliency reasons, or we'll
-        // stop getting subsequent callbacks, but we should log loudly that we
-        // tried to do something and that failed.
-        fprintf(stderr, "fshost: (%s/%s) failed: %s\n", kPathBlockDeviceRoot,
-                name, zx_status_get_string(rc));
-    }
+  if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
+  }
+  fbl::unique_fd device_fd(openat(dirfd, name, O_RDWR));
+  if (!device_fd) {
+    return ZX_OK;
+  }
+
+  auto mounter = static_cast<FilesystemMounter*>(cookie);
+  BlockDevice device(mounter, std::move(device_fd));
+  zx_status_t rc = device.Add();
+  if (rc != ZX_OK) {
+    // This callback has to return ZX_OK for resiliency reasons, or we'll
+    // stop getting subsequent callbacks, but we should log loudly that we
+    // tried to do something and that failed.
+    fprintf(stderr, "fshost: (%s/%s) failed: %s\n", kPathBlockDeviceRoot, name,
+            zx_status_get_string(rc));
+  }
+  return ZX_OK;
 }
 
-} // namespace
+}  // namespace
 
 void BlockDeviceWatcher(std::unique_ptr<FsManager> fshost, bool netboot, bool check_filesystems) {
-    FilesystemMounter mounter(std::move(fshost), netboot, check_filesystems);
+  FilesystemMounter mounter(std::move(fshost), netboot, check_filesystems);
 
-    fbl::unique_fd dirfd(open(kPathBlockDeviceRoot, O_DIRECTORY | O_RDONLY));
-    if (dirfd) {
-        fdio_watch_directory(dirfd.get(), BlockDeviceCallback, ZX_TIME_INFINITE, &mounter);
-    }
+  fbl::unique_fd dirfd(open(kPathBlockDeviceRoot, O_DIRECTORY | O_RDONLY));
+  if (dirfd) {
+    fdio_watch_directory(dirfd.get(), BlockDeviceCallback, ZX_TIME_INFINITE, &mounter);
+  }
 }
 
-} // namespace devmgr
+}  // namespace devmgr

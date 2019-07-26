@@ -44,10 +44,9 @@ void RspIOLoop::OnReadTask() {
   // into the closure as |in_buffer_| can get modified before the closure
   // runs.
   // TODO(armansito): Pass a weakptr to |delegate_|?
-  async::PostTask(origin_dispatcher(),
-                  [bytes_read = bytes_read.ToString(), this] {
-                    delegate()->OnBytesRead(bytes_read);
-                  });
+  async::PostTask(origin_dispatcher(), [bytes_read = bytes_read.ToString(), this] {
+    delegate()->OnBytesRead(bytes_read);
+  });
 
   if (!quit_called()) {
     async::PostTask(read_dispatcher(), std::bind(&RspIOLoop::OnReadTask, this));

@@ -20,9 +20,8 @@ struct ParseArgsResult {
 };
 
 // Parses args.
-ParseArgsResult ParseArgs(
-    const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
-    const char** argv);
+ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
+                          const char** argv);
 
 }  // namespace run
 

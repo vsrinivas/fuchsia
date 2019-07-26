@@ -20,9 +20,7 @@ class Service : public ::test::sysmgr::Interface {
 
   ~Service() = default;
 
-  void Ping(PingCallback callback) override {
-    callback("test_sysmgr_service_startup");
-  }
+  void Ping(PingCallback callback) override { callback("test_sysmgr_service_startup"); }
 
  private:
   std::unique_ptr<sys::ComponentContext> context_;

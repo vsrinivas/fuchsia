@@ -61,219 +61,211 @@ namespace fit {
 //     }
 //
 class scope final {
-public:
-    // Creates a new scope.
-    scope();
+ public:
+  // Creates a new scope.
+  scope();
 
-    // Exits the scope and destroys all of its wrapped promises.
-    // Asserts that no promises are currently running.
-    ~scope();
+  // Exits the scope and destroys all of its wrapped promises.
+  // Asserts that no promises are currently running.
+  ~scope();
 
-    // Returns true if the scope has been exited.
-    //
-    // This method is thread-safe.
-    bool exited() const { return state_->exited(); }
+  // Returns true if the scope has been exited.
+  //
+  // This method is thread-safe.
+  bool exited() const { return state_->exited(); }
 
-    // Exits the scope and destroys all of its wrapped promises.
-    // Assets that no promises are currently running.
-    //
-    // This method is thread-safe.
-    void exit() { return state_->exit(false /*scope_was_destroyed*/); }
+  // Exits the scope and destroys all of its wrapped promises.
+  // Assets that no promises are currently running.
+  //
+  // This method is thread-safe.
+  void exit() { return state_->exit(false /*scope_was_destroyed*/); }
 
-    // Returns a promise which wraps the specified |promise| and binds the
-    // promise to this scope.
-    //
-    // The specified promise will automatically be destroyed when its wrapper
-    // is destroyed or when the scope is exited.  If the scope has already
-    // exited then the wrapped promise will be immediately destroyed.
-    //
-    // When the returned promise is invoked before the scope is exited,
-    // the promise that it wraps will be invoked as usual.  However, when
-    // the returned promise is invoked after the scope is exited, it
-    // immediately returns a pending result (since the promise that it
-    // previously wrapped has already been destroyed).  By returning a
-    // pending result, the return promise effectively indicates to the
-    // executor that the task has been "abandoned" due to the scope being
-    // exited.
-    //
-    // This method is thread-safe.
-    template <typename Promise>
-    decltype(auto) wrap(Promise promise) {
-        assert(promise);
-        return fit::make_promise_with_continuation(
-            scoped_continuation<Promise>(
-                state_->adopt_promise(
-                    new promise_holder<Promise>(std::move(promise)))));
+  // Returns a promise which wraps the specified |promise| and binds the
+  // promise to this scope.
+  //
+  // The specified promise will automatically be destroyed when its wrapper
+  // is destroyed or when the scope is exited.  If the scope has already
+  // exited then the wrapped promise will be immediately destroyed.
+  //
+  // When the returned promise is invoked before the scope is exited,
+  // the promise that it wraps will be invoked as usual.  However, when
+  // the returned promise is invoked after the scope is exited, it
+  // immediately returns a pending result (since the promise that it
+  // previously wrapped has already been destroyed).  By returning a
+  // pending result, the return promise effectively indicates to the
+  // executor that the task has been "abandoned" due to the scope being
+  // exited.
+  //
+  // This method is thread-safe.
+  template <typename Promise>
+  decltype(auto) wrap(Promise promise) {
+    assert(promise);
+    return fit::make_promise_with_continuation(scoped_continuation<Promise>(
+        state_->adopt_promise(new promise_holder<Promise>(std::move(promise)))));
+  }
+
+  scope(const scope&) = delete;
+  scope(scope&&) = delete;
+  scope& operator=(const scope&) = delete;
+  scope& operator=(scope&&) = delete;
+
+ private:
+  class state;
+  class promise_holder_base;
+
+  // Holds a reference to a promise that is owned by the state.
+  class promise_handle final {
+   public:
+    promise_handle() = default;
+
+   private:
+    // |state| and |promise_holder| belong to the state object.
+    // Invariant: If |promise_holder| is non-null then |state| is
+    // also non-null.
+    friend state;
+    promise_handle(state* state, promise_holder_base* promise_holder)
+        : state_(state), promise_holder_(promise_holder) {}
+
+    state* state_ = nullptr;
+    promise_holder_base* promise_holder_ = nullptr;
+  };
+
+  // Holds the shared state of the scope.
+  // This object is destroyed once the scope and all of its promises
+  // have been destroyed.
+  class state final {
+   public:
+    state();
+    ~state();
+
+    // The following methods are called from the |scope|.
+
+    bool exited() const;
+    void exit(bool scope_was_destroyed);
+
+    // The following methods are called from the |scoped_continuation|.
+
+    // Links a promise to the scope's lifecycle such that it will be
+    // destroyed when the scope is exited.  Returns a handle that may
+    // be used to access the promise later.
+    // The state takes ownership of the promise.
+    promise_handle adopt_promise(promise_holder_base* promise_holder);
+
+    // Unlinks a promise from the scope's lifecycle given its handle
+    // and causes the underlying promise to be destroyed if it hasn't
+    // already been destroyed due to the scope exiting.
+    // Does nothing if the handle was default-initialized.
+    static void drop_promise(promise_handle promise_handle);
+
+    // Acquires a promise given its handle.
+    // Returns nullptr if the handle was default-initialized or if
+    // the scope exited, meaning that the promise was not acquired.
+    // The promise must be released before it can be acquired again.
+    static promise_holder_base* try_acquire_promise(promise_handle promise_handle);
+
+    // Releases a promise that was successfully acquired.
+    static void release_promise(promise_handle promise_handle);
+
+    state(const state&) = delete;
+    state(state&&) = delete;
+    state& operator=(const state&) = delete;
+    state& operator=(state&&) = delete;
+
+   private:
+    bool should_delete_self() const FIT_REQUIRES(mutex_) {
+      return scope_was_destroyed_ && promise_handle_count_ == 0;
     }
 
-    scope(const scope&) = delete;
-    scope(scope&&) = delete;
-    scope& operator=(const scope&) = delete;
-    scope& operator=(scope&&) = delete;
+    static constexpr uint64_t scope_exited = static_cast<uint64_t>(1u) << 63;
 
-private:
-    class state;
-    class promise_holder_base;
+    // Tracks of the number of promises currently running ("acquired").
+    // The top bit is set when the scope is exited, at which point no
+    // new promises can be acquired.  After exiting, the count can
+    // be incremented transiently but is immediately decremented again
+    // until all promise handles have been released.  Once no promise
+    // handles remain, the count will equal |scope_exited| and will not
+    // change again.
+    std::atomic_uint64_t acquired_promise_count_{0};
 
-    // Holds a reference to a promise that is owned by the state.
-    class promise_handle final {
-    public:
-        promise_handle() = default;
+    mutable std::mutex mutex_;
+    bool scope_was_destroyed_ FIT_GUARDED(mutex_) = false;
+    uint64_t promise_handle_count_ FIT_GUARDED(mutex_) = 0;
+    promise_holder_base* head_promise_holder_ FIT_GUARDED(mutex_) = nullptr;
+  };
 
-    private:
-        // |state| and |promise_holder| belong to the state object.
-        // Invariant: If |promise_holder| is non-null then |state| is
-        // also non-null.
-        friend state;
-        promise_handle(state* state, promise_holder_base* promise_holder)
-            : state_(state), promise_holder_(promise_holder) {}
+  // Base type for managing the lifetime of a promise of any type.
+  // It is owned by the state and retained indirectly by the continuation
+  // using a |promise_handle|.
+  class promise_holder_base {
+   public:
+    promise_holder_base() = default;
+    virtual ~promise_holder_base() = default;
 
-        state* state_ = nullptr;
-        promise_holder_base* promise_holder_ = nullptr;
-    };
+    promise_holder_base(const promise_holder_base&) = delete;
+    promise_holder_base(promise_holder_base&&) = delete;
+    promise_holder_base& operator=(const promise_holder_base&) = delete;
+    promise_holder_base& operator=(promise_holder_base&&) = delete;
 
-    // Holds the shared state of the scope.
-    // This object is destroyed once the scope and all of its promises
-    // have been destroyed.
-    class state final {
-    public:
-        state();
-        ~state();
+   private:
+    // |next| and |prev| belong to the state object.
+    friend class state;
+    promise_holder_base* next = nullptr;
+    promise_holder_base* prev = nullptr;
+  };
 
-        // The following methods are called from the |scope|.
+  // Holder for a promise of a particular type.
+  template <typename Promise>
+  class promise_holder final : public promise_holder_base {
+   public:
+    explicit promise_holder(Promise promise) : promise(std::move(promise)) {}
+    ~promise_holder() override = default;
 
-        bool exited() const;
-        void exit(bool scope_was_destroyed);
+    Promise promise;
+  };
 
-        // The following methods are called from the |scoped_continuation|.
+  // Wraps a promise whose lifetime is managed by the scope.
+  template <typename Promise>
+  class scoped_continuation final {
+   public:
+    explicit scoped_continuation(promise_handle promise_handle) : promise_handle_(promise_handle) {}
 
-        // Links a promise to the scope's lifecycle such that it will be
-        // destroyed when the scope is exited.  Returns a handle that may
-        // be used to access the promise later.
-        // The state takes ownership of the promise.
-        promise_handle adopt_promise(promise_holder_base* promise_holder);
+    scoped_continuation(scoped_continuation&& other) : promise_handle_(other.promise_handle_) {
+      other.promise_handle_ = promise_handle{};
+    }
 
-        // Unlinks a promise from the scope's lifecycle given its handle
-        // and causes the underlying promise to be destroyed if it hasn't
-        // already been destroyed due to the scope exiting.
-        // Does nothing if the handle was default-initialized.
-        static void drop_promise(promise_handle promise_handle);
+    ~scoped_continuation() { state::drop_promise(promise_handle_); }
 
-        // Acquires a promise given its handle.
-        // Returns nullptr if the handle was default-initialized or if
-        // the scope exited, meaning that the promise was not acquired.
-        // The promise must be released before it can be acquired again.
-        static promise_holder_base* try_acquire_promise(
-            promise_handle promise_handle);
+    typename Promise::result_type operator()(context& context) {
+      typename Promise::result_type result;
+      auto holder =
+          static_cast<promise_holder<Promise>*>(state::try_acquire_promise(promise_handle_));
+      if (holder) {
+        result = holder->promise(context);
+        state::release_promise(promise_handle_);
+      }
+      return result;
+    }
 
-        // Releases a promise that was successfully acquired.
-        static void release_promise(promise_handle promise_handle);
+    scoped_continuation& operator=(scoped_continuation&& other) {
+      if (this != &other) {
+        state::drop_promise(promise_handle_);
+        promise_handle_ = other.promise_handle_;
+        other.promise_handle_ = promise_handle{};
+      }
+      return *this;
+    }
 
-        state(const state&) = delete;
-        state(state&&) = delete;
-        state& operator=(const state&) = delete;
-        state& operator=(state&&) = delete;
+    scoped_continuation(const scoped_continuation&) = delete;
+    scoped_continuation& operator=(const scoped_continuation&) = delete;
 
-    private:
-        bool should_delete_self() const FIT_REQUIRES(mutex_) {
-            return scope_was_destroyed_ && promise_handle_count_ == 0;
-        }
+   private:
+    promise_handle promise_handle_;
+  };
 
-        static constexpr uint64_t scope_exited = static_cast<uint64_t>(1u) << 63;
-
-        // Tracks of the number of promises currently running ("acquired").
-        // The top bit is set when the scope is exited, at which point no
-        // new promises can be acquired.  After exiting, the count can
-        // be incremented transiently but is immediately decremented again
-        // until all promise handles have been released.  Once no promise
-        // handles remain, the count will equal |scope_exited| and will not
-        // change again.
-        std::atomic_uint64_t acquired_promise_count_{0};
-
-        mutable std::mutex mutex_;
-        bool scope_was_destroyed_ FIT_GUARDED(mutex_) = false;
-        uint64_t promise_handle_count_ FIT_GUARDED(mutex_) = 0;
-        promise_holder_base* head_promise_holder_ FIT_GUARDED(mutex_) = nullptr;
-    };
-
-    // Base type for managing the lifetime of a promise of any type.
-    // It is owned by the state and retained indirectly by the continuation
-    // using a |promise_handle|.
-    class promise_holder_base {
-    public:
-        promise_holder_base() = default;
-        virtual ~promise_holder_base() = default;
-
-        promise_holder_base(const promise_holder_base&) = delete;
-        promise_holder_base(promise_holder_base&&) = delete;
-        promise_holder_base& operator=(const promise_holder_base&) = delete;
-        promise_holder_base& operator=(promise_holder_base&&) = delete;
-
-    private:
-        // |next| and |prev| belong to the state object.
-        friend class state;
-        promise_holder_base* next = nullptr;
-        promise_holder_base* prev = nullptr;
-    };
-
-    // Holder for a promise of a particular type.
-    template <typename Promise>
-    class promise_holder final : public promise_holder_base {
-    public:
-        explicit promise_holder(Promise promise)
-            : promise(std::move(promise)) {}
-        ~promise_holder() override = default;
-
-        Promise promise;
-    };
-
-    // Wraps a promise whose lifetime is managed by the scope.
-    template <typename Promise>
-    class scoped_continuation final {
-    public:
-        explicit scoped_continuation(promise_handle promise_handle)
-            : promise_handle_(promise_handle) {}
-
-        scoped_continuation(scoped_continuation&& other)
-            : promise_handle_(other.promise_handle_) {
-            other.promise_handle_ = promise_handle{};
-        }
-
-        ~scoped_continuation() {
-            state::drop_promise(promise_handle_);
-        }
-
-        typename Promise::result_type operator()(context& context) {
-            typename Promise::result_type result;
-            auto holder = static_cast<promise_holder<Promise>*>(
-                state::try_acquire_promise(promise_handle_));
-            if (holder) {
-                result = holder->promise(context);
-                state::release_promise(promise_handle_);
-            }
-            return result;
-        }
-
-        scoped_continuation& operator=(scoped_continuation&& other) {
-            if (this != &other) {
-                state::drop_promise(promise_handle_);
-                promise_handle_ = other.promise_handle_;
-                other.promise_handle_ = promise_handle{};
-            }
-            return *this;
-        }
-
-        scoped_continuation(const scoped_continuation&) = delete;
-        scoped_continuation& operator=(const scoped_continuation&) = delete;
-
-    private:
-        promise_handle promise_handle_;
-    };
-
-    // The scope's shared state.
-    state* const state_;
+  // The scope's shared state.
+  state* const state_;
 };
 
-} // namespace fit
+}  // namespace fit
 
-#endif // LIB_FIT_SCOPE_H_
+#endif  // LIB_FIT_SCOPE_H_

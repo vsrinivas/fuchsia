@@ -36,11 +36,9 @@ namespace simple_pt {
 const char* InsnClassName(enum pt_insn_class iclass) {
   // Note: The output expects this to be 7 chars or less.
   static const char* const class_name[] = {
-          [ptic_error] = "error",    [ptic_other] = "other",
-          [ptic_call] = "call",      [ptic_return] = "return",
-          [ptic_jump] = "jump",      [ptic_cond_jump] = "cjump",
-          [ptic_far_call] = "fcall", [ptic_far_return] = "freturn",
-          [ptic_far_jump] = "fjump",
+      [ptic_error] = "error",    [ptic_other] = "other",        [ptic_call] = "call",
+      [ptic_return] = "return",  [ptic_jump] = "jump",          [ptic_cond_jump] = "cjump",
+      [ptic_far_call] = "fcall", [ptic_far_return] = "freturn", [ptic_far_jump] = "fjump",
   };
   if (iclass >= arraysize(class_name))
     return ";;;";

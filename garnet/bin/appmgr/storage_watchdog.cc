@@ -98,19 +98,18 @@ size_t StorageWatchdog::GetStorageUsage() {
   fbl::unique_fd fd;
   fd.reset(open(path_to_watch_.c_str(), O_RDONLY));
   if (!fd) {
-    FXL_LOG(WARNING) << "storage_watchdog: could not open target: "
-                     << path_to_watch_;
+    FXL_LOG(WARNING) << "storage_watchdog: could not open target: " << path_to_watch_;
     return 0;
   }
 
   fuchsia_io_FilesystemInfo info;
   zx_status_t status;
   fzl::FdioCaller caller(std::move(fd));
-  zx_status_t io_status = fuchsia_io_DirectoryAdminQueryFilesystem(
-      caller.borrow_channel(), &status, &info);
+  zx_status_t io_status =
+      fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info);
   if (io_status != ZX_OK || status != ZX_OK) {
-    FXL_LOG(WARNING) << "storage_watchdog: cannot query filesystem: "
-                     << io_status << " OR " << status;
+    FXL_LOG(WARNING) << "storage_watchdog: cannot query filesystem: " << io_status << " OR "
+                     << status;
     return 0;
   }
   info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
@@ -136,19 +135,16 @@ void StorageWatchdog::CheckStorage(async_dispatcher_t* dispatcher) {
   size_t use_percentage = this->GetStorageUsage();
 
   if (use_percentage >= 95) {
-    FXL_LOG(INFO)
-        << "storage usage has reached " << use_percentage
-        << "%% capacity, purging the cache now";
+    FXL_LOG(INFO) << "storage usage has reached " << use_percentage
+                  << "%% capacity, purging the cache now";
     this->PurgeCache();
   }
   async::PostDelayedTask(
-      dispatcher, [this, dispatcher] { this->CheckStorage(dispatcher); },
-      zx::sec(60));
+      dispatcher, [this, dispatcher] { this->CheckStorage(dispatcher); }, zx::sec(60));
 }
 
 void StorageWatchdog::Run(async_dispatcher_t* dispatcher) {
-  async::PostTask(dispatcher,
-                  [this, dispatcher] { this->CheckStorage(dispatcher); });
+  async::PostTask(dispatcher, [this, dispatcher] { this->CheckStorage(dispatcher); });
 }
 
 // PurgeCache will remove cache items from this.path_to_clean_.
@@ -166,7 +162,6 @@ void StorageWatchdog::PurgeCache() {
   }
   PurgeCacheIn(dir_fd);
   size_t use_percentage = this->GetStorageUsage();
-  FXL_LOG(INFO)
-    << "cache purge is complete, new storage usage is at "
-    << use_percentage << "%% capacity";
+  FXL_LOG(INFO) << "cache purge is complete, new storage usage is at " << use_percentage
+                << "%% capacity";
 }

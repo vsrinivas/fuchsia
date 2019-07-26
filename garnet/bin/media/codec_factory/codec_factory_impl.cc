@@ -31,8 +31,7 @@ struct EncoderSupportSpec {
   std::vector<std::string> mime_types;
   std::function<bool(const fuchsia::media::EncoderSettings&)> supports_settings;
   bool supports_mime_type(const std::string& mime_type) const {
-    return std::find(mime_types.begin(), mime_types.end(), mime_type) !=
-           mime_types.end();
+    return std::find(mime_types.begin(), mime_types.end(), mime_type) != mime_types.end();
   }
   bool supports(const std::string& mime_type,
                 const fuchsia::media::EncoderSettings& settings) const {
@@ -44,22 +43,18 @@ const EncoderSupportSpec kSbcEncoderSupportSpec = {
     .isolate_url = kIsolateUrlSbc,
     .mime_types = {"audio/pcm"},
     .supports_settings =
-        [](const fuchsia::media::EncoderSettings& settings) {
-          return settings.is_sbc();
-        },
+        [](const fuchsia::media::EncoderSettings& settings) { return settings.is_sbc(); },
 };
 
 const EncoderSupportSpec kAacEncoderSupportSpec = {
     .isolate_url = kIsolateUrlAac,
     .mime_types = {"audio/pcm"},
     .supports_settings =
-        [](const fuchsia::media::EncoderSettings& settings) {
-          return settings.is_aac();
-        },
+        [](const fuchsia::media::EncoderSettings& settings) { return settings.is_aac(); },
 };
 
-const std::vector<EncoderSupportSpec> supported_encoders = {
-    kSbcEncoderSupportSpec, kAacEncoderSupportSpec};
+const std::vector<EncoderSupportSpec> supported_encoders = {kSbcEncoderSupportSpec,
+                                                            kAacEncoderSupportSpec};
 
 const std::vector<std::string> kFfmpegDecoderMimeTypes = {"video/h264"};
 
@@ -73,14 +68,12 @@ bool FfmpegDecoderSupportsFormat(std::string mime_type) {
   return false;
 }
 
-std::optional<std::string> FindEncoder(
-    const std::string& mime_type,
-    const fuchsia::media::EncoderSettings& settings) {
-  auto encoder =
-      std::find_if(supported_encoders.begin(), supported_encoders.end(),
-                   [&mime_type, &settings](const EncoderSupportSpec& encoder) {
-                     return encoder.supports(mime_type, settings);
-                   });
+std::optional<std::string> FindEncoder(const std::string& mime_type,
+                                       const fuchsia::media::EncoderSettings& settings) {
+  auto encoder = std::find_if(supported_encoders.begin(), supported_encoders.end(),
+                              [&mime_type, &settings](const EncoderSupportSpec& encoder) {
+                                return encoder.supports(mime_type, settings);
+                              });
 
   if (encoder == supported_encoders.end()) {
     return std::nullopt;
@@ -89,27 +82,24 @@ std::optional<std::string> FindEncoder(
   return {encoder->isolate_url};
 }
 
-void ForwardToIsolate(
-    std::string component_url, component::StartupContext* startup_context,
-    std::function<void(fuchsia::mediacodec::CodecFactoryPtr)> connect_func) {
+void ForwardToIsolate(std::string component_url, component::StartupContext* startup_context,
+                      std::function<void(fuchsia::mediacodec::CodecFactoryPtr)> connect_func) {
   fuchsia::sys::ComponentControllerPtr component_controller;
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{};
   launch_info.url = component_url;
   launch_info.directory_request = services.NewRequest();
-  startup_context->launcher()->CreateComponent(
-      std::move(launch_info), component_controller.NewRequest());
+  startup_context->launcher()->CreateComponent(std::move(launch_info),
+                                               component_controller.NewRequest());
   component_controller.set_error_handler([component_url](zx_status_t status) {
-    FXL_LOG(ERROR) << "app_controller_ error connecting to CodecFactoryImpl of "
-                   << component_url;
+    FXL_LOG(ERROR) << "app_controller_ error connecting to CodecFactoryImpl of " << component_url;
   });
   fuchsia::mediacodec::CodecFactoryPtr factory_delegate;
-  services.ConnectToService(
-      factory_delegate.NewRequest().TakeChannel(),
-      // TODO(dustingreen): Might be helpful (for debugging maybe) to change
-      // this name to distinguish these delegate CodecFactory(s) from the main
-      // CodecFactory service.
-      fuchsia::mediacodec::CodecFactory::Name_);
+  services.ConnectToService(factory_delegate.NewRequest().TakeChannel(),
+                            // TODO(dustingreen): Might be helpful (for debugging maybe) to change
+                            // this name to distinguish these delegate CodecFactory(s) from the main
+                            // CodecFactory service.
+                            fuchsia::mediacodec::CodecFactory::Name_);
 
   // Forward the request to the factory_delegate_ as-is.  This avoids conversion
   // to command-line parameters and back, and avoids creating a separate
@@ -143,9 +133,9 @@ namespace codec_factory {
 // of CodecFactory won't spam CodecFactory channel creation.  Rather than trying
 // to mitigate that problem locally in this class, it seems better to intergrate
 // with a more general-purpose request spam mitigation mechanism.
-void CodecFactoryImpl::CreateSelfOwned(
-    CodecFactoryApp* app, component::StartupContext* startup_context,
-    zx::channel request) {
+void CodecFactoryImpl::CreateSelfOwned(CodecFactoryApp* app,
+                                       component::StartupContext* startup_context,
+                                       zx::channel request) {
   // I considered just doing "new CodecFactoryImpl(...)" here and declaring that
   // it always inherently owns itself (and implementing it that way), but that
   // seems less flexible for testing purposes and also not necessarily as safe
@@ -161,21 +151,17 @@ void CodecFactoryImpl::CreateSelfOwned(
   assert(!self);
 }
 
-CodecFactoryImpl::CodecFactoryImpl(CodecFactoryApp* app,
-                                   component::StartupContext* startup_context,
+CodecFactoryImpl::CodecFactoryImpl(CodecFactoryApp* app, component::StartupContext* startup_context,
                                    zx::channel channel)
-    : app_(app),
-      startup_context_(startup_context),
-      channel_temp_(std::move(channel)) {}
+    : app_(app), startup_context_(startup_context), channel_temp_(std::move(channel)) {}
 
 // TODO(dustingreen): Seems simpler to avoid channel_temp_ and OwnSelf() and
 // just have CreateSelfOwned() directly create the binding.
 void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
-  binding_ = std::make_unique<BindingType>(
-      std::move(self), std::move(channel_temp_), app_->loop()->dispatcher());
+  binding_ = std::make_unique<BindingType>(std::move(self), std::move(channel_temp_),
+                                           app_->loop()->dispatcher());
   binding_->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "CodecFactoryImpl channel failed (INFO) - status: "
-                  << status;
+    FXL_LOG(INFO) << "CodecFactoryImpl channel failed (INFO) - status: " << status;
     // this will also ~this
     binding_.reset();
   });
@@ -199,17 +185,15 @@ void CodecFactoryImpl::CreateDecoder(
   // Instead, we find where to delegate the request to.
 
   // First, try to find a hw-accelerated codec to satisfy the request.
-  const fuchsia::mediacodec::CodecFactoryPtr* factory =
-      app_->FindHwDecoder([&params](const fuchsia::mediacodec::CodecDescription&
-                                        hw_codec_description) -> bool {
+  const fuchsia::mediacodec::CodecFactoryPtr* factory = app_->FindHwDecoder(
+      [&params](const fuchsia::mediacodec::CodecDescription& hw_codec_description) -> bool {
         // TODO(dustingreen): pay attention to the bool constraints of the
         // params vs. the hw_codec_description bools.  For the moment we just
         // match the codec_type, mime_type.
         constexpr fuchsia::mediacodec::CodecType codec_type =
             fuchsia::mediacodec::CodecType::DECODER;
         return (codec_type == hw_codec_description.codec_type) &&
-               (params.input_details().mime_type() ==
-                hw_codec_description.mime_type);
+               (params.input_details().mime_type() == hw_codec_description.mime_type);
       });
   if (factory) {
     // prefer HW-accelerated
@@ -235,8 +219,7 @@ void CodecFactoryImpl::CreateDecoder(
 
   ForwardToIsolate(
       url, startup_context_,
-      [&params, &decoder](
-          fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
+      [&params, &decoder](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
         // Forward the request to the factory_delegate_ as-is. This
         // avoids conversion to command-line parameters and back,
         // and avoids creating a separate interface definition for
@@ -272,22 +255,19 @@ void CodecFactoryImpl::CreateEncoder(
     return;
   }
 
-  auto maybe_encoder_isolate_url =
-      FindEncoder(encoder_params.input_details().mime_type(),
-                  encoder_params.input_details().encoder_settings());
+  auto maybe_encoder_isolate_url = FindEncoder(encoder_params.input_details().mime_type(),
+                                               encoder_params.input_details().encoder_settings());
   if (!maybe_encoder_isolate_url) {
-    FXL_LOG(WARNING) << "No encoder supports "
-                     << encoder_params.input_details().mime_type()
+    FXL_LOG(WARNING) << "No encoder supports " << encoder_params.input_details().mime_type()
                      << " input with these settings.";
     return;
   }
 
   ForwardToIsolate(
       *maybe_encoder_isolate_url, startup_context_,
-      [&encoder_params, &encoder_request](
-          fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
-        factory_delegate->CreateEncoder(std::move(encoder_params),
-                                        std::move(encoder_request));
+      [&encoder_params,
+       &encoder_request](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
+        factory_delegate->CreateEncoder(std::move(encoder_params), std::move(encoder_request));
       });
 }
 

@@ -16,8 +16,7 @@ namespace isolated_devmgr {
 
 zx_status_t IsolatedDevmgr::WaitForFile(const char* path) {
   fbl::unique_fd out;
-  return devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                       path, &out);
+  return devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), path, &out);
 }
 
 void IsolatedDevmgr::Connect(zx::channel req) {
@@ -25,29 +24,25 @@ void IsolatedDevmgr::Connect(zx::channel req) {
   fdio_service_clone_to(fd.borrow_channel(), req.release());
 }
 
-void IsolatedDevmgr::DevmgrException(async_dispatcher_t* dispatcher,
-                                     async::WaitBase* wait,
-                                     zx_status_t status,
-                                     const zx_packet_signal_t* signal) {
+void IsolatedDevmgr::DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                     zx_status_t status, const zx_packet_signal_t* signal) {
   if (exception_callback_) {
     exception_callback_();
   }
 }
 
-std::unique_ptr<IsolatedDevmgr> IsolatedDevmgr::Create(
-    devmgr_launcher::Args args, async_dispatcher_t* dispatcher) {
+std::unique_ptr<IsolatedDevmgr> IsolatedDevmgr::Create(devmgr_launcher::Args args,
+                                                       async_dispatcher_t* dispatcher) {
   if (dispatcher == nullptr) {
     dispatcher = async_get_default_dispatcher();
   }
   devmgr_integration_test::IsolatedDevmgr devmgr;
 
-  auto status =
-      devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
+  auto status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
   if (status == ZX_OK) {
     return std::make_unique<IsolatedDevmgr>(dispatcher, std::move(devmgr));
   } else {
-    FXL_LOG(ERROR) << "Failed to create devmgr: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Failed to create devmgr: " << zx_status_get_string(status);
     return nullptr;
   }
 }

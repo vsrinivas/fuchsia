@@ -54,11 +54,9 @@ class VectorBuffer {
   __attribute__((no_sanitize("cfi-unrelated-cast", "vptr")))
 #endif
   VectorBuffer(size_t count)
-      : buffer_(reinterpret_cast<T*>(malloc(sizeof(T) * count))),
-        capacity_(count) {
+      : buffer_(reinterpret_cast<T*>(malloc(sizeof(T) * count))), capacity_(count) {
   }
-  VectorBuffer(VectorBuffer&& other) noexcept
-      : buffer_(other.buffer_), capacity_(other.capacity_) {
+  VectorBuffer(VectorBuffer&& other) noexcept : buffer_(other.buffer_), capacity_(other.capacity_) {
     other.buffer_ = nullptr;
     other.capacity_ = 0;
   }
@@ -99,15 +97,13 @@ class VectorBuffer {
 
   // Trivially destructible objects need not have their destructors called.
   template <typename T2 = T,
-            typename std::enable_if<std::is_trivially_destructible<T2>::value,
-                                    int>::type = 0>
+            typename std::enable_if<std::is_trivially_destructible<T2>::value, int>::type = 0>
   void DestructRange(T* begin, T* end) {}
 
   // Non-trivially destructible objects must have their destructors called
   // individually.
   template <typename T2 = T,
-            typename std::enable_if<!std::is_trivially_destructible<T2>::value,
-                                    int>::type = 0>
+            typename std::enable_if<!std::is_trivially_destructible<T2>::value, int>::type = 0>
   void DestructRange(T* begin, T* end) {
     assert(begin <= end);
     while (begin != end) {
@@ -128,21 +124,18 @@ class VectorBuffer {
   // Trivially copyable types can use memcpy. trivially copyable implies
   // that there is a trivial destructor as we don't have to call it.
   template <typename T2 = T,
-            typename std::enable_if<std::is_trivially_copyable<T2>::value,
-                                    int>::type = 0>
+            typename std::enable_if<std::is_trivially_copyable<T2>::value, int>::type = 0>
   static void MoveRange(T* from_begin, T* from_end, T* to) {
     assert(!RangesOverlap(from_begin, from_end, to));
     memcpy(to, from_begin,
-           safemath::CheckSub(get_uintptr(from_end), get_uintptr(from_begin))
-               .ValueOrDie());
+           safemath::CheckSub(get_uintptr(from_end), get_uintptr(from_begin)).ValueOrDie());
   }
 
   // Not trivially copyable, but movable: call the move constructor and
   // destruct the original.
-  template <typename T2 = T,
-            typename std::enable_if<std::is_move_constructible<T2>::value &&
-                                    !std::is_trivially_copyable<T2>::value,
-                                    int>::type = 0>
+  template <typename T2 = T, typename std::enable_if<std::is_move_constructible<T2>::value &&
+                                                         !std::is_trivially_copyable<T2>::value,
+                                                     int>::type = 0>
   static void MoveRange(T* from_begin, T* from_end, T* to) {
     assert(!RangesOverlap(from_begin, from_end, to));
     while (from_begin != from_end) {
@@ -155,10 +148,9 @@ class VectorBuffer {
 
   // Not movable, not trivially copyable: call the copy constructor and
   // destruct the original.
-  template <typename T2 = T,
-            typename std::enable_if<!std::is_move_constructible<T2>::value &&
-                                    !std::is_trivially_copyable<T2>::value,
-                                    int>::type = 0>
+  template <typename T2 = T, typename std::enable_if<!std::is_move_constructible<T2>::value &&
+                                                         !std::is_trivially_copyable<T2>::value,
+                                                     int>::type = 0>
   static void MoveRange(T* from_begin, T* from_end, T* to) {
     assert(!RangesOverlap(from_begin, from_end, to));
     while (from_begin != from_end) {
@@ -170,15 +162,12 @@ class VectorBuffer {
   }
 
  private:
-  static bool RangesOverlap(const T* from_begin,
-                            const T* from_end,
-                            const T* to) {
+  static bool RangesOverlap(const T* from_begin, const T* from_end, const T* to) {
     const auto from_begin_uintptr = get_uintptr(from_begin);
     const auto from_end_uintptr = get_uintptr(from_end);
     const auto to_uintptr = get_uintptr(to);
     return !(to >= from_end ||
-             CheckAdd(to_uintptr,
-                      safemath::CheckSub(from_end_uintptr, from_begin_uintptr))
+             CheckAdd(to_uintptr, safemath::CheckSub(from_end_uintptr, from_begin_uintptr))
                      .ValueOrDie() <= from_begin_uintptr);
   }
 

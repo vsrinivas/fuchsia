@@ -27,4 +27,4 @@ zx_status_t xhci_disable_endpoint(xhci_t* xhci, uint32_t slot_id,
 zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed,
                                const usb_hub_descriptor_t* descriptor);
 
-} // namespace usb_xhci
+}  // namespace usb_xhci

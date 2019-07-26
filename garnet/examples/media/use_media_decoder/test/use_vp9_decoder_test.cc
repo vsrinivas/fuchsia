@@ -33,6 +33,6 @@ const std::map<uint32_t, const char*> GoldenSha256s = {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount,
-                                use_vp9_decoder, GoldenSha256s);
+  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_vp9_decoder,
+                                GoldenSha256s);
 }

@@ -40,20 +40,18 @@ bool CpuStatsFetcherImpl::FetchCpuStats() {
   }
   size_t actual, available;
   cpu_fetch_time_ = std::chrono::high_resolution_clock::now();
-  zx_status_t err = zx_object_get_info(
-      root_resource_handle_, ZX_INFO_CPU_STATS, &cpu_stats_[0],
-      cpu_stats_.size() * sizeof(zx_info_cpu_stats_t), &actual, &available);
+  zx_status_t err =
+      zx_object_get_info(root_resource_handle_, ZX_INFO_CPU_STATS, &cpu_stats_[0],
+                         cpu_stats_.size() * sizeof(zx_info_cpu_stats_t), &actual, &available);
   if (err != ZX_OK) {
     FX_LOGS(ERROR) << "CpuStatsFetcherImpl: Fetching "
-                   << "ZX_INFO_CPU_STATS through syscall returns "
-                   << zx_status_get_string(err);
+                   << "ZX_INFO_CPU_STATS through syscall returns " << zx_status_get_string(err);
     return false;
   }
   if (actual < available) {
     FX_LOGS(WARNING) << "CpuStatsFetcherImpl:  actual CPUs reported " << actual
                      << " is less than available CPUs " << available
-                     << ". Please increase zx_info_cpu_stats_t vector size!"
-                     << sizeof(cpu_stats_);
+                     << ". Please increase zx_info_cpu_stats_t vector size!" << sizeof(cpu_stats_);
     return false;
   }
   if (num_cpu_cores_ == 0) {
@@ -66,21 +64,20 @@ bool CpuStatsFetcherImpl::CalculateCpuPercentage(double *cpu_percentage) {
   if (last_cpu_stats_.empty()) {
     return false;
   }
-  auto elapsed_time = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                          cpu_fetch_time_ - last_cpu_fetch_time_)
-                          .count();
+  auto elapsed_time =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(cpu_fetch_time_ - last_cpu_fetch_time_)
+          .count();
   double cpu_percentage_sum = 0;
   for (size_t i = 0; i < num_cpu_cores_; i++) {
-    zx_duration_t delta_idle_time = zx_duration_sub_duration(
-        cpu_stats_[i].idle_time, last_cpu_stats_[i].idle_time);
+    zx_duration_t delta_idle_time =
+        zx_duration_sub_duration(cpu_stats_[i].idle_time, last_cpu_stats_[i].idle_time);
     zx_duration_t delta_busy_time =
         (delta_idle_time > elapsed_time ? 0 : elapsed_time - delta_idle_time);
-    cpu_percentage_sum += static_cast<double>(delta_busy_time) * 100 /
-                          static_cast<double>(elapsed_time);
+    cpu_percentage_sum +=
+        static_cast<double>(delta_busy_time) * 100 / static_cast<double>(elapsed_time);
   }
   *cpu_percentage = cpu_percentage_sum / static_cast<double>(num_cpu_cores_);
-  TRACE_COUNTER("system_metrics", "cpu_usage", 0, "average_cpu_percentage",
-                *cpu_percentage);
+  TRACE_COUNTER("system_metrics", "cpu_usage", 0, "average_cpu_percentage", *cpu_percentage);
   return true;
 }
 
@@ -96,20 +93,17 @@ void CpuStatsFetcherImpl::InitializeRootResourceHandle() {
   static const char kRootResourceSvc[] = "/svc/fuchsia.boot.RootResource";
   status = fdio_service_connect(kRootResourceSvc, remote.release());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-        << "Cannot open fuchsia.boot.RootResource: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
+                   << "Cannot open fuchsia.boot.RootResource: " << zx_status_get_string(status);
     return;
   }
   zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local.get(), &root_resource_handle_);
   if (fidl_status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-        << zx_status_get_string(fidl_status);
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
+                   << zx_status_get_string(fidl_status);
     return;
   } else if (root_resource_handle_ == ZX_HANDLE_INVALID) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: Failed to get root_resource_handle_.";
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Failed to get root_resource_handle_.";
     return;
   }
 }

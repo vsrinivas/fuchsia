@@ -56,33 +56,28 @@
 #endif
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
-#define container_of(ptr, type, member) \
-  ((type*)((char*)(ptr)-offsetof(type, member)))
+#define container_of(ptr, type, member) ((type*)((char*)(ptr)-offsetof(type, member)))
 
 namespace simple_pt {
 
 // The number of instructions we process at a time.
 constexpr uint32_t kInsnsPerIteration = 256u;
 
-std::unique_ptr<CallPrinter> CallPrinter::Create(DecoderState* state,
-                                                 const Config& config) {
+std::unique_ptr<CallPrinter> CallPrinter::Create(DecoderState* state, const Config& config) {
   FILE* f = stdout;
   if (config.output_file_name != "") {
     f = fopen(config.output_file_name.c_str(), "w");
     if (!f) {
-      FXL_LOG(ERROR) << "Unable to open file for writing: "
-                     << config.output_file_name;
+      FXL_LOG(ERROR) << "Unable to open file for writing: " << config.output_file_name;
       return nullptr;
     }
   }
 
-  auto printer =
-      std::unique_ptr<CallPrinter>(new CallPrinter(f, state, config));
+  auto printer = std::unique_ptr<CallPrinter>(new CallPrinter(f, state, config));
   return printer;
 }
 
-CallPrinter::CallPrinter(FILE* output, DecoderState* state,
-                         const Config& config)
+CallPrinter::CallPrinter(FILE* output, DecoderState* state, const Config& config)
     : out_file_(output), state_(state), config_(config) {}
 
 CallPrinter::~CallPrinter() {
@@ -97,8 +92,8 @@ void CallPrinter::Printf(const char* format, ...) {
   va_end(args);
 }
 
-void CallPrinter::PrintPc(const SymbolTable* symtab, const Symbol* sym,
-                          uint64_t pc, uint64_t cr3, bool print_cr3) {
+void CallPrinter::PrintPc(const SymbolTable* symtab, const Symbol* sym, uint64_t pc, uint64_t cr3,
+                          bool print_cr3) {
   if (sym) {
     Printf("%s", sym->name);
     uint64_t sym_addr = sym->addr + symtab->offset();
@@ -150,8 +145,7 @@ static bool HasSpeculativeEvent(const Instruction* insn) {
   return insn->speculative || insn->aborted || insn->committed;
 }
 
-void CallPrinter::PrintSpeculativeEvent(const Instruction* insn,
-                                        int* prev_spec, int* indent) {
+void CallPrinter::PrintSpeculativeEvent(const Instruction* insn, int* prev_spec, int* indent) {
   if (insn->speculative != *prev_spec) {
     *prev_spec = insn->speculative;
     Printf("%*stransaction\n", *indent, "");
@@ -169,16 +163,11 @@ void CallPrinter::PrintSpeculativeEvent(const Instruction* insn,
     *indent = 0;
 }
 
-void CallPrinter::PrintTic(uint64_t tic) {
-  Printf("[%8" PRIu64 "] ", tic);
-}
+void CallPrinter::PrintTic(uint64_t tic) { Printf("[%8" PRIu64 "] ", tic); }
 
-void CallPrinter::PrintTimeIndent() {
-  Printf("%*s", 24, "");
-}
+void CallPrinter::PrintTimeIndent() { Printf("%*s", 24, ""); }
 
-void CallPrinter::PrintTime(uint64_t ts,
-                            uint64_t* first_ts, uint64_t* last_ts) {
+void CallPrinter::PrintTime(uint64_t ts, uint64_t* first_ts, uint64_t* last_ts) {
   if (!*first_ts && !config_.abstime)
     *first_ts = ts;
   if (!*last_ts)
@@ -186,8 +175,7 @@ void CallPrinter::PrintTime(uint64_t ts,
   uint64_t relative_time = ts - *first_ts;
   uint64_t delta_time = ts - *last_ts;
   Printf("%-24s",
-         fxl::StringPrintf("%-9" PRIu64 " [%-" PRIu64 "]",
-                           relative_time, delta_time).c_str());
+         fxl::StringPrintf("%-9" PRIu64 " [%-" PRIu64 "]", relative_time, delta_time).c_str());
   *last_ts = ts;
 }
 
@@ -225,13 +213,12 @@ static void InitDis(struct dis* d) {}
 
 #define NUM_WIDTH 35
 
-void CallPrinter::PrintInsn(const struct pt_insn* insn,
-                            uint64_t total_insn_count,
-                            uint64_t ts, struct dis* d, uint64_t cr3) {
+void CallPrinter::PrintInsn(const struct pt_insn* insn, uint64_t total_insn_count, uint64_t ts,
+                            struct dis* d, uint64_t cr3) {
   int i;
   int n;
-  Printf("[%8" PRIu64 "] %" PRIx64 " %" PRIu64 " %7s: ",
-         total_insn_count, insn->ip, ts, InsnClassName(insn->iclass));
+  Printf("[%8" PRIu64 "] %" PRIx64 " %" PRIu64 " %7s: ", total_insn_count, insn->ip, ts,
+         InsnClassName(insn->iclass));
   n = 0;
   for (i = 0; i < insn->size; i++) {
     Printf("%02x ", insn->raw[i]);
@@ -264,8 +251,7 @@ void CallPrinter::PrintInsn(const struct pt_insn* insn,
 #endif
 }
 
-void CallPrinter::PrintKernelMarker(const Instruction* insn,
-                                    const SymbolTable* symtab) {
+void CallPrinter::PrintKernelMarker(const Instruction* insn, const SymbolTable* symtab) {
   if (symtab) {
     if (symtab->is_kernel())
       Printf(" K");
@@ -283,8 +269,7 @@ void CallPrinter::PrintKernelMarker(const Instruction* insn,
   }
 }
 
-void CallPrinter::PrintInsnTime(const Instruction* insn,
-                                GlobalPrintState* gps) {
+void CallPrinter::PrintInsnTime(const Instruction* insn, GlobalPrintState* gps) {
   if (insn->ts)
     PrintTime(insn->ts, &gps->first_ts, &gps->last_ts);
   else
@@ -300,8 +285,8 @@ void CallPrinter::ReportLost(const Instruction* insn) {
   }
 }
 
-void CallPrinter::PrintOutput(const Instruction* insnbuf, uint32_t count,
-                              GlobalPrintState* gps, LocalPrintState* lps) {
+void CallPrinter::PrintOutput(const Instruction* insnbuf, uint32_t count, GlobalPrintState* gps,
+                              LocalPrintState* lps) {
   for (uint32_t i = 0; i < count; i++) {
     const Instruction* insn = &insnbuf[i];
 
@@ -311,8 +296,8 @@ void CallPrinter::PrintOutput(const Instruction* insnbuf, uint32_t count,
     }
     if (HasSpeculativeEvent(insn))
       PrintSpeculativeEvent(insn, &lps->prev_speculative, &lps->indent);
-    if (insn->enabled || insn->disabled || insn->resumed || insn->interrupted ||
-        insn->resynced || insn->stopped)
+    if (insn->enabled || insn->disabled || insn->resumed || insn->interrupted || insn->resynced ||
+        insn->stopped)
       PrintEvent(insn);
 
     // Note: For accurate output, the collection of instructions we do
@@ -379,8 +364,8 @@ void CallPrinter::PrintOutput(const Instruction* insnbuf, uint32_t count,
 
 void CallPrinter::PrintHeader(uint64_t id) {
   Printf("PT dump for id %" PRIu64 "\n", id);
-  Printf("%-10s %-9s %-13s %-7s %c %-7s %s\n", "REF#", "TIME", "DELTA", "INSNs",
-         '@', "ICLASS", "LOCATION");
+  Printf("%-10s %-9s %-13s %-7s %c %-7s %s\n", "REF#", "TIME", "DELTA", "INSNs", '@', "ICLASS",
+         "LOCATION");
 }
 
 uint64_t CallPrinter::PrintOneFile(const PtFile& pt_file) {
@@ -388,9 +373,7 @@ uint64_t CallPrinter::PrintOneFile(const PtFile& pt_file) {
     FXL_LOG(ERROR) << "Unable to open pt file: " << pt_file.file;
     return 0;
   }
-  auto free_decoder = fit::defer([&]() {
-      state_->FreeDecoder();
-    });
+  auto free_decoder = fit::defer([&]() { state_->FreeDecoder(); });
 
   struct pt_insn_decoder* pt_decoder = state_->decoder();
   GlobalPrintState gps = {};
@@ -422,8 +405,7 @@ uint64_t CallPrinter::PrintOneFile(const PtFile& pt_file) {
     if (err < 0) {
       uint64_t pos;
       pt_insn_get_offset(pt_decoder, &pos);
-      Printf("%" PRIx64 ": sync forward: %s\n",
-             pos, pt_errstr(pt_errcode(err)));
+      Printf("%" PRIx64 ": sync forward: %s\n", pos, pt_errstr(pt_errcode(err)));
       break;
     }
 
@@ -524,8 +506,7 @@ uint64_t CallPrinter::PrintOneFile(const PtFile& pt_file) {
           }
           peeked_ahead = true;
           insn->dst = raw_insn.ip;
-        } else if (raw_insn.iclass == ptic_return ||
-                   raw_insn.iclass == ptic_far_return ||
+        } else if (raw_insn.iclass == ptic_return || raw_insn.iclass == ptic_far_return ||
                    // Always print if we have a time (for now).
                    insn->ts) {
           insn->tic = total_insn_count;
@@ -535,8 +516,8 @@ uint64_t CallPrinter::PrintOneFile(const PtFile& pt_file) {
           ++count;
           TransferEvents(insn, &raw_insn);
         } else if (raw_insn.enabled || raw_insn.disabled || raw_insn.resumed ||
-                   raw_insn.interrupted || raw_insn.resynced
-                   || raw_insn.stopped || raw_insn.aborted) {
+                   raw_insn.interrupted || raw_insn.resynced || raw_insn.stopped ||
+                   raw_insn.aborted) {
 #if 0  // TODO(dje): experiment to get accurate instruction counts in output
           insn->tic = total_insn_count;
           insn->pc = raw_insn.ip;
@@ -565,8 +546,8 @@ uint64_t CallPrinter::PrintOneFile(const PtFile& pt_file) {
     {
       uint64_t pos;
       pt_insn_get_offset(pt_decoder, &pos);
-      Printf("[%8" PRIu64 "] %" PRIx64 ":%" PRIx64 ":%" PRIx64 ": error %s\n",
-             total_insn_count, pos, errcr3, errip, pt_errstr(pt_errcode(err)));
+      Printf("[%8" PRIu64 "] %" PRIx64 ":%" PRIx64 ":%" PRIx64 ": error %s\n", total_insn_count,
+             pos, errcr3, errip, pt_errstr(pt_errcode(err)));
     }
   }
 

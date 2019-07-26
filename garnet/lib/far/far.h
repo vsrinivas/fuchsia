@@ -30,15 +30,15 @@ bool far_reader_read_fd(far_reader_t reader, int fd);
 
 bool far_reader_get_count(far_reader_t reader, uint64_t* count);
 
-bool far_reader_get_index(far_reader_t reader, const char* path,
-                          size_t path_length, uint64_t* index);
+bool far_reader_get_index(far_reader_t reader, const char* path, size_t path_length,
+                          uint64_t* index);
 
 // The memory pointed to by path is valid until |reader| is destroyed.
 bool far_reader_get_path(far_reader_t reader, uint64_t index, const char** path,
                          size_t* path_length);
 
-bool far_reader_get_content(far_reader_t reader, uint64_t index,
-                            uint64_t* offset, uint64_t* length);
+bool far_reader_get_content(far_reader_t reader, uint64_t index, uint64_t* offset,
+                            uint64_t* length);
 
 #ifdef __cplusplus
 }

@@ -35,15 +35,13 @@ void GTestListener::OnTestEnd(const ::testing::TestInfo& info) {
   for (int i = 0; i < part_count; i++) {
     auto part_result = gtest_result->GetTestPartResult(i);
     if (part_result.failed()) {
-      message << part_result.file_name() << ":" << part_result.line_number()
-              << "\n"
+      message << part_result.file_name() << ":" << part_result.line_number() << "\n"
               << part_result.message() << "\n";
     }
   }
 
   if (failed) {
-    message << "\nTo reproduce failure:\n"
-            << executable_ << " --gtest_filter=" << name << "\n";
+    message << "\nTo reproduce failure:\n" << executable_ << " --gtest_filter=" << name << "\n";
   }
 
   TestResultPtr result = TestResult::New();

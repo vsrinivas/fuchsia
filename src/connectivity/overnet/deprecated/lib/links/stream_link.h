@@ -14,8 +14,7 @@ class StreamLink : public Link {
  public:
   static inline constexpr auto kModule = Module::LINK;
 
-  StreamLink(Router* router, NodeId peer, std::unique_ptr<StreamFramer> framer,
-             uint64_t label);
+  StreamLink(Router* router, NodeId peer, std::unique_ptr<StreamFramer> framer, uint64_t label);
 
   void Close(Callback<void> quiesced) override;
   void Forward(Message message) override final;

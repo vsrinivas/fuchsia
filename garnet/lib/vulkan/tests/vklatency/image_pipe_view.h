@@ -26,8 +26,7 @@ class ImagePipeView : public scenic::BaseView {
  private:
   // |scenic::BaseView|
   void Initialize();
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
   void OnScenicError(::std::string error) override;
 

@@ -12,8 +12,7 @@ template <class T, class Enable = void>
 struct ToEmbeddedTraits;
 
 template <class T>
-struct ToEmbeddedTraits<T,
-                        typename std::enable_if<IsPrimitive<T>::value>::type> {
+struct ToEmbeddedTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
   static T Lift(T value) { return value; }
 };
 
@@ -24,8 +23,8 @@ struct ToEmbeddedTraits<std::string> {
 
 template <class T>
 struct ToEmbeddedTraits<std::vector<T>> {
-  using EmbeddedT = typename std::decay<decltype(
-      ToEmbeddedTraits<T>::Lift(std::declval<T>()))>::type;
+  using EmbeddedT =
+      typename std::decay<decltype(ToEmbeddedTraits<T>::Lift(std::declval<T>()))>::type;
   static auto Lift(const std::vector<T>& value) -> std::vector<EmbeddedT> {
     std::vector<EmbeddedT> out;
     for (const auto& in : value) {
@@ -37,8 +36,8 @@ struct ToEmbeddedTraits<std::vector<T>> {
 
 template <class T, int N>
 struct ToEmbeddedTraits<std::array<T, N>> {
-  using EmbeddedT = typename std::decay<decltype(
-      ToEmbeddedTraits<T>::Lift(std::declval<T>()))>::type;
+  using EmbeddedT =
+      typename std::decay<decltype(ToEmbeddedTraits<T>::Lift(std::declval<T>()))>::type;
   static auto Lift(const std::array<T, N>& value) -> std::array<EmbeddedT, N> {
     std::array<EmbeddedT, N> out;
     for (size_t i = 0; i < N; i++) {

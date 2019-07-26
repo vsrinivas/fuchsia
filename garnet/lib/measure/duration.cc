@@ -9,8 +9,7 @@
 namespace tracing {
 namespace measure {
 
-MeasureDuration::MeasureDuration(std::vector<DurationSpec> specs)
-    : specs_(std::move(specs)) {}
+MeasureDuration::MeasureDuration(std::vector<DurationSpec> specs) : specs_(std::move(specs)) {}
 
 bool MeasureDuration::Process(const trace::Record::Event& event) {
   switch (event.type()) {
@@ -31,8 +30,7 @@ bool MeasureDuration::Process(const trace::Record::Event& event) {
   }
 }
 
-MeasureDuration::PendingBeginKey MeasureDuration::MakeKey(
-    const trace::Record::Event& event) {
+MeasureDuration::PendingBeginKey MeasureDuration::MakeKey(const trace::Record::Event& event) {
   PendingBeginKey key;
   key.category = event.category;
   key.name = event.name;
@@ -59,12 +57,10 @@ MeasureDuration::PendingBeginKey MeasureDuration::MakeKey(
   return key;
 }
 
-bool MeasureDuration::ProcessAsyncOrFlowBegin(
-    const trace::Record::Event& event) {
+bool MeasureDuration::ProcessAsyncOrFlowBegin(const trace::Record::Event& event) {
   const PendingBeginKey key = MakeKey(event);
   if (pending_begins_.count(key)) {
-    FXL_LOG(WARNING)
-        << "Ignoring a trace event: duplicate async or flow begin event";
+    FXL_LOG(WARNING) << "Ignoring a trace event: duplicate async or flow begin event";
     return false;
   }
   pending_begins_[key] = event.timestamp;
@@ -74,8 +70,7 @@ bool MeasureDuration::ProcessAsyncOrFlowBegin(
 bool MeasureDuration::ProcessAsyncOrFlowEnd(const trace::Record::Event& event) {
   const PendingBeginKey key = MakeKey(event);
   if (pending_begins_.count(key) == 0) {
-    FXL_LOG(WARNING)
-        << "Ignoring a trace event: async or flow end not preceded by begin.";
+    FXL_LOG(WARNING) << "Ignoring a trace event: async or flow end not preceded by begin.";
     return false;
   }
 
@@ -101,10 +96,9 @@ bool MeasureDuration::ProcessDurationEnd(const trace::Record::Event& event) {
   FXL_DCHECK(event.type() == trace::EventType::kDurationEnd);
   const auto key = event.process_thread;
   if (duration_stacks_.count(key) == 0 || duration_stacks_[key].empty()) {
-    FXL_LOG(WARNING)
-        << "Ignoring trace event " << event.category.c_str() << ":"
-        << event.name.c_str() << " @" << event.timestamp
-        << ": duration end not matched by a previous duration begin.";
+    FXL_LOG(WARNING) << "Ignoring trace event " << event.category.c_str() << ":"
+                     << event.name.c_str() << " @" << event.timestamp
+                     << ": duration end not matched by a previous duration begin.";
     return false;
   }
 
@@ -123,26 +117,22 @@ bool MeasureDuration::ProcessDurationEnd(const trace::Record::Event& event) {
   return true;
 }
 
-bool MeasureDuration::ProcessDurationComplete(
-    const trace::Record::Event& event) {
+bool MeasureDuration::ProcessDurationComplete(const trace::Record::Event& event) {
   FXL_DCHECK(event.type() == trace::EventType::kDurationComplete);
   for (const DurationSpec& spec : specs_) {
     if (!EventMatchesSpec(event, spec.event)) {
       continue;
     }
-    AddResult(spec.common.id, event.timestamp,
-              event.data.GetDurationComplete().end_time);
+    AddResult(spec.common.id, event.timestamp, event.data.GetDurationComplete().end_time);
   }
   return true;
 }
 
-void MeasureDuration::AddResult(uint64_t spec_id, trace_ticks_t from,
-                                trace_ticks_t to) {
+void MeasureDuration::AddResult(uint64_t spec_id, trace_ticks_t from, trace_ticks_t to) {
   results_[spec_id].push_back(to - from);
 }
 
-bool MeasureDuration::PendingBeginKey::operator<(
-    const PendingBeginKey& other) const {
+bool MeasureDuration::PendingBeginKey::operator<(const PendingBeginKey& other) const {
   if (type != other.type) {
     return type < other.type;
   }

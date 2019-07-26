@@ -49,8 +49,7 @@ class WeakPtr {
   WeakPtr(WeakPtr<T>&& r) = default;
 
   template <typename U>
-  WeakPtr(WeakPtr<U>&& r)
-      : ptr_(std::exchange(r.ptr_, nullptr)), flag_(std::move(r.flag_)) {}
+  WeakPtr(WeakPtr<U>&& r) : ptr_(std::exchange(r.ptr_, nullptr)), flag_(std::move(r.flag_)) {}
 
   ~WeakPtr() = default;
 
@@ -144,8 +143,7 @@ class WeakPtrFactory {
   explicit WeakPtrFactory(T* ptr) : ptr_(ptr) { FXL_DCHECK(ptr_); }
   ~WeakPtrFactory() {
     InvalidateWeakPtrs();
-    FXL_DCHECK(*reinterpret_cast<uintptr_t volatile*>(const_cast<T**>(&ptr_)) =
-                   kPoisonedPointer);
+    FXL_DCHECK(*reinterpret_cast<uintptr_t volatile*>(const_cast<T**>(&ptr_)) = kPoisonedPointer);
   }
 
   // Gets a new weak pointer, which will be valid until either

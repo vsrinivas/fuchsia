@@ -19,8 +19,7 @@ namespace fsl {
 // be read from source before the error occurred.
 FXL_EXPORT bool BlockingCopyToString(zx::socket source, std::string* contents);
 
-FXL_EXPORT bool BlockingCopyFromString(fxl::StringView source,
-                                       const zx::socket& destination);
+FXL_EXPORT bool BlockingCopyFromString(fxl::StringView source, const zx::socket& destination);
 
 // Copies the string |source| to a temporary socket and returns the
 // consumer handle.

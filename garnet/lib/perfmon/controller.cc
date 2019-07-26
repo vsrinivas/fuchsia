@@ -30,21 +30,19 @@ static uint32_t RoundUpToPages(uint32_t value) {
   return size >> Controller::kLog2PageSize;
 }
 
-static uint32_t GetBufferSizeInPages(CollectionMode mode,
-                                     uint32_t requested_size_in_pages) {
+static uint32_t GetBufferSizeInPages(CollectionMode mode, uint32_t requested_size_in_pages) {
   switch (mode) {
-  case CollectionMode::kSample:
-    return requested_size_in_pages;
-  case CollectionMode::kTally: {
-    // For tally mode we just need something large enough to hold
-    // the header + records for each event.
-    unsigned num_events = kMaxNumEvents;
-    uint32_t size = (sizeof(BufferHeader) +
-                     num_events * sizeof(ValueRecord));
-    return RoundUpToPages(size);
-  }
-  default:
-    __UNREACHABLE;
+    case CollectionMode::kSample:
+      return requested_size_in_pages;
+    case CollectionMode::kTally: {
+      // For tally mode we just need something large enough to hold
+      // the header + records for each event.
+      unsigned num_events = kMaxNumEvents;
+      uint32_t size = (sizeof(BufferHeader) + num_events * sizeof(ValueRecord));
+      return RoundUpToPages(size);
+    }
+    default:
+      __UNREACHABLE;
   }
 }
 
@@ -58,11 +56,10 @@ bool Controller::IsSupported() {
 
 bool Controller::GetProperties(Properties* props) {
   ::fuchsia::perfmon::cpu::ControllerSyncPtr controller_ptr;
-  zx_status_t status = fdio_service_connect(
-      kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
+  zx_status_t status =
+      fdio_service_connect(kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << kPerfMonDev << ": "
-                   << status;
+    FXL_LOG(ERROR) << "Error connecting to " << kPerfMonDev << ": " << status;
     return false;
   }
 
@@ -77,14 +74,13 @@ bool Controller::GetProperties(Properties* props) {
   return true;
 }
 
-static bool Initialize(
-    ::fuchsia::perfmon::cpu::ControllerSyncPtr* controller_ptr,
-    uint32_t num_traces, uint32_t buffer_size_in_pages) {
+static bool Initialize(::fuchsia::perfmon::cpu::ControllerSyncPtr* controller_ptr,
+                       uint32_t num_traces, uint32_t buffer_size_in_pages) {
   FidlPerfmonAllocation allocation;
   allocation.num_buffers = num_traces;
   allocation.buffer_size_in_pages = buffer_size_in_pages;
-  FXL_VLOG(2) << fxl::StringPrintf("num_buffers=%u, buffer_size_in_pages=0x%x",
-                                   num_traces, buffer_size_in_pages);
+  FXL_VLOG(2) << fxl::StringPrintf("num_buffers=%u, buffer_size_in_pages=0x%x", num_traces,
+                                   buffer_size_in_pages);
 
   ::fuchsia::perfmon::cpu::Controller_Initialize_Result result;
   zx_status_t status = (*controller_ptr)->Initialize(allocation, &result);
@@ -131,17 +127,15 @@ static bool Initialize(
 bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
                         std::unique_ptr<Controller>* out_controller) {
   if (buffer_size_in_pages > kMaxBufferSizeInPages) {
-    FXL_LOG(ERROR) << "Buffer size is too large, max " << kMaxBufferSizeInPages
-                   << " pages";
+    FXL_LOG(ERROR) << "Buffer size is too large, max " << kMaxBufferSizeInPages << " pages";
     return false;
   }
 
   ::fuchsia::perfmon::cpu::ControllerSyncPtr controller_ptr;
-  zx_status_t status = fdio_service_connect(
-      kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
+  zx_status_t status =
+      fdio_service_connect(kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << kPerfMonDev << ": "
-                   << status;
+    FXL_LOG(ERROR) << "Error connecting to " << kPerfMonDev << ": " << status;
     return false;
   }
 
@@ -149,17 +143,14 @@ bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
   uint32_t num_traces = zx_system_get_num_cpus();
   // For "tally" mode we only need a small fixed amount, so toss what the
   // caller provided and use our own value.
-  uint32_t actual_buffer_size_in_pages =
-      GetBufferSizeInPages(mode, buffer_size_in_pages);
+  uint32_t actual_buffer_size_in_pages = GetBufferSizeInPages(mode, buffer_size_in_pages);
 
-  if (!Initialize(&controller_ptr, num_traces,
-                  actual_buffer_size_in_pages)) {
+  if (!Initialize(&controller_ptr, num_traces, actual_buffer_size_in_pages)) {
     return false;
   }
 
-  out_controller->reset(new internal::ControllerImpl(
-      std::move(controller_ptr), num_traces, buffer_size_in_pages,
-      std::move(config)));
+  out_controller->reset(new internal::ControllerImpl(std::move(controller_ptr), num_traces,
+                                                     buffer_size_in_pages, std::move(config)));
   return true;
 }
 

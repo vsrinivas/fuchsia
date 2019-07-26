@@ -59,26 +59,17 @@ class RegistersX64 final : public Registers {
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(greg_bytes, value, value_size);
     FXL_VLOG(2) << "Set register " << regno << " = "
-                << debugger_utils::EncodeByteArrayString(greg_bytes,
-                                                         value_size);
+                << debugger_utils::EncodeByteArrayString(greg_bytes, value_size);
     return true;
   }
 
-  zx_vaddr_t GetPC() override {
-    return general_regs_.rip;
-  }
+  zx_vaddr_t GetPC() override { return general_regs_.rip; }
 
-  zx_vaddr_t GetSP() override {
-    return general_regs_.rsp;
-  }
+  zx_vaddr_t GetSP() override { return general_regs_.rsp; }
 
-  zx_vaddr_t GetFP() override {
-    return general_regs_.rbp;
-  }
+  zx_vaddr_t GetFP() override { return general_regs_.rbp; }
 
-  void SetPC(zx_vaddr_t pc) override {
-    general_regs_.rip = pc;
-  }
+  void SetPC(zx_vaddr_t pc) override { general_regs_.rip = pc; }
 
   bool SetSingleStep(bool enable) override {
     if (enable)
@@ -101,20 +92,19 @@ class RegistersX64 final : public Registers {
     std::string result;
     const zx_thread_state_general_regs_t* gr = &general_regs_;
 
-    result += fxl::StringPrintf("  CS: %#18llx RIP: %#18" PRIx64
-                                " EFL: %#18" PRIx64 "\n",
-                                0ull, gr->rip, gr->rflags);
-    result += fxl::StringPrintf(" RAX: %#18" PRIx64 " RBX: %#18" PRIx64
-                                " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
+    result += fxl::StringPrintf("  CS: %#18llx RIP: %#18" PRIx64 " EFL: %#18" PRIx64 "\n", 0ull,
+                                gr->rip, gr->rflags);
+    result += fxl::StringPrintf(" RAX: %#18" PRIx64 " RBX: %#18" PRIx64 " RCX: %#18" PRIx64
+                                " RDX: %#18" PRIx64 "\n",
                                 gr->rax, gr->rbx, gr->rcx, gr->rdx);
-    result += fxl::StringPrintf(" RSI: %#18" PRIx64 " RDI: %#18" PRIx64
-                                " RBP: %#18" PRIx64 " RSP: %#18" PRIx64 "\n",
+    result += fxl::StringPrintf(" RSI: %#18" PRIx64 " RDI: %#18" PRIx64 " RBP: %#18" PRIx64
+                                " RSP: %#18" PRIx64 "\n",
                                 gr->rsi, gr->rdi, gr->rbp, gr->rsp);
-    result += fxl::StringPrintf("  R8: %#18" PRIx64 "  R9: %#18" PRIx64
-                                " R10: %#18" PRIx64 " R11: %#18" PRIx64 "\n",
+    result += fxl::StringPrintf("  R8: %#18" PRIx64 "  R9: %#18" PRIx64 " R10: %#18" PRIx64
+                                " R11: %#18" PRIx64 "\n",
                                 gr->r8, gr->r9, gr->r10, gr->r11);
-    result += fxl::StringPrintf(" R12: %#18" PRIx64 " R13: %#18" PRIx64
-                                " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
+    result += fxl::StringPrintf(" R12: %#18" PRIx64 " R13: %#18" PRIx64 " R14: %#18" PRIx64
+                                " R15: %#18" PRIx64 "\n",
                                 gr->r12, gr->r13, gr->r14, gr->r15);
 
     return result;

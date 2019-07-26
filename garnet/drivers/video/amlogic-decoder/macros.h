@@ -10,11 +10,9 @@
 #include <chrono>
 #include <thread>
 
-#define DECODE_ERROR(fmt, ...) \
-  zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DECODE_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
-#define DECODE_INFO(fmt, ...) \
-  zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DECODE_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
 #ifndef AMLOGIC_DLOG_ENABLE
 #define AMLOGIC_DLOG_ENABLE 0
@@ -37,8 +35,7 @@ template <typename DurationType, typename T>
 bool WaitForRegister(DurationType timeout, T condition) {
   auto start = std::chrono::high_resolution_clock::now();
   auto cast_timeout =
-      std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
-          timeout);
+      std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(timeout);
   while (!condition()) {
     if (std::chrono::high_resolution_clock::now() - start >= cast_timeout) {
       return false;
@@ -49,12 +46,10 @@ bool WaitForRegister(DurationType timeout, T condition) {
 }
 
 template <typename DurationType, typename T>
-__WARN_UNUSED_RESULT bool SpinWaitForRegister(DurationType timeout,
-                                              T condition) {
+__WARN_UNUSED_RESULT bool SpinWaitForRegister(DurationType timeout, T condition) {
   auto start = std::chrono::high_resolution_clock::now();
   auto cast_timeout =
-      std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
-          timeout);
+      std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(timeout);
   while (!condition()) {
     if (std::chrono::high_resolution_clock::now() - start >= cast_timeout) {
       return condition();

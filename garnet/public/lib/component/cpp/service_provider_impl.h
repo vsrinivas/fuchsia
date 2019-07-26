@@ -61,8 +61,7 @@ class ServiceProviderImpl : public fuchsia::sys::ServiceProvider {
 
   // Adds a supported service with the given |service_name|, using the given
   // |service_connector|.
-  void AddServiceForName(ServiceConnector connector,
-                         const std::string& service_name);
+  void AddServiceForName(ServiceConnector connector, const std::string& service_name);
 
   // Adds a supported service with the given |service_name|, using the given
   // |interface_request_handler|, which should remain valid for the lifetime of
@@ -111,8 +110,7 @@ class ServiceProviderImpl : public fuchsia::sys::ServiceProvider {
 
  private:
   // Overridden from |ServiceProvider|:
-  void ConnectToService(std::string service_name,
-                        zx::channel client_handle) override;
+  void ConnectToService(std::string service_name, zx::channel client_handle) override;
 
   fidl::BindingSet<fuchsia::sys::ServiceProvider> bindings_;
 

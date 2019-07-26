@@ -20,8 +20,7 @@ OpacityView::OpacityView(ViewContext context, const std::string& debug_name)
       foreground_node_(&session_),
       foreground_material_(&session_) {
   binding_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(FATAL) << "Session listener binding: "
-                   << zx_status_get_string(status);
+    FXL_LOG(FATAL) << "Session listener binding: " << zx_status_get_string(status);
   });
 
   background_node_.SetMaterial(background_material_);
@@ -34,15 +33,12 @@ OpacityView::OpacityView(ViewContext context, const std::string& debug_name)
   session_.Present(0, [](auto) {});
 }
 
-void OpacityView::set_present_callback(
-    Session::PresentCallback present_callback) {
+void OpacityView::set_present_callback(Session::PresentCallback present_callback) {
   FXL_CHECK(present_callback && !present_callback_);
   present_callback_ = std::move(present_callback);
 }
 
-void OpacityView::set_foreground_opacity(float opacity) {
-  opacity_node_.SetOpacity(opacity);
-}
+void OpacityView::set_foreground_opacity(float opacity) { opacity_node_.SetOpacity(opacity); }
 
 void OpacityView::set_background_color(uint8_t r, uint8_t g, uint8_t b) {
   background_material_.SetColor(r, g, b, 0xff);
@@ -65,16 +61,13 @@ void OpacityView::Present() {
       0, present_callback_ ? std::move(present_callback_) : [](auto) {});
 }
 
-void OpacityView::OnScenicEvent(
-    std::vector<fuchsia::ui::scenic::Event> events) {
+void OpacityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   FXL_LOG(INFO) << "OnScenicEvent";
   for (const auto& event : events) {
     if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-        event.gfx().Which() ==
-            fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
+        event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
       const auto& evt = event.gfx().view_properties_changed();
-      fuchsia::ui::gfx::BoundingBox layout_box =
-          ViewPropertiesLayoutBox(evt.properties);
+      fuchsia::ui::gfx::BoundingBox layout_box = ViewPropertiesLayoutBox(evt.properties);
 
       const auto sz = Max(layout_box.max - layout_box.min, 0.f);
       OnViewPropertiesChanged(sz);
@@ -82,9 +75,7 @@ void OpacityView::OnScenicEvent(
   }
 }
 
-void OpacityView::OnScenicError(std::string error) {
-  FXL_LOG(FATAL) << "OnScenicError: " << error;
-}
+void OpacityView::OnScenicError(std::string error) { FXL_LOG(FATAL) << "OnScenicError: " << error; }
 
 void OpacityView::OnViewPropertiesChanged(const fuchsia::ui::gfx::vec3& sz) {
   FXL_LOG(INFO) << "Metrics: " << sz.x << "x" << sz.y << "x" << sz.z;

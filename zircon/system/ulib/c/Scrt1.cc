@@ -4,6 +4,4 @@
 
 #include "crt1.h"
 
-[[noreturn]] void _start(zx_handle_t bootstrap) {
-  __libc_start_main(bootstrap, &main);
-}
+[[noreturn]] void _start(zx_handle_t bootstrap) { __libc_start_main(bootstrap, &main); }

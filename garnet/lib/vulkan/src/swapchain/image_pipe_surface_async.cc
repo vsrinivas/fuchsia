@@ -8,12 +8,12 @@
 
 namespace image_pipe_swapchain {
 
-bool ImagePipeSurfaceAsync::CreateImage(
-    VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
-    VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
-    fuchsia::images::ImageInfo image_info, uint32_t image_count,
-    const VkAllocationCallbacks* pAllocator,
-    std::vector<ImageInfo>* image_info_out) {
+bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
+                                        VkFormat format, VkImageUsageFlags usage,
+                                        VkSwapchainCreateFlagsKHR swapchain_flags,
+                                        fuchsia::images::ImageInfo image_info, uint32_t image_count,
+                                        const VkAllocationCallbacks* pAllocator,
+                                        std::vector<ImageInfo>* image_info_out) {
   uint32_t image_flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
   if (swapchain_flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR)
     image_flags |= VK_IMAGE_CREATE_PROTECTED_BIT;
@@ -22,8 +22,7 @@ bool ImagePipeSurfaceAsync::CreateImage(
     VkExternalMemoryImageCreateInfo external_image_create_info{
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
         .pNext = nullptr,
-        .handleTypes =
-            VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
     };
     uint32_t width = image_info.width;
     uint32_t height = image_info.height;
@@ -46,8 +45,7 @@ bool ImagePipeSurfaceAsync::CreateImage(
     };
 
     VkImage image;
-    VkResult result =
-        pDisp->CreateImage(device, &create_info, pAllocator, &image);
+    VkResult result = pDisp->CreateImage(device, &create_info, pAllocator, &image);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "VkCreateImage failed: %d", result);
       return false;
@@ -57,8 +55,7 @@ bool ImagePipeSurfaceAsync::CreateImage(
     pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
 
     // Find lowest usable index.
-    uint32_t memory_type_index = __builtin_ctz(
-        memory_requirements.memoryTypeBits);
+    uint32_t memory_type_index = __builtin_ctz(memory_requirements.memoryTypeBits);
 
     VkMemoryDedicatedAllocateInfo dedicated_allocate_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
@@ -68,8 +65,7 @@ bool ImagePipeSurfaceAsync::CreateImage(
     VkExportMemoryAllocateInfoKHR export_allocate_info = {
         .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
         .pNext = &dedicated_allocate_info,
-        .handleTypes =
-            VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
 
     VkMemoryAllocateInfo alloc_info{
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -91,11 +87,11 @@ bool ImagePipeSurfaceAsync::CreateImage(
     zx::vmo vmo;
     // Export the vkDeviceMemory to a VMO.
     VkMemoryGetZirconHandleInfoFUCHSIA get_handle_info = {
-        VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA, nullptr,
-        memory, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
+        VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA, nullptr, memory,
+        VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
 
-    result = pDisp->GetMemoryZirconHandleFUCHSIA(device, &get_handle_info,
-                                                 vmo.reset_and_get_address());
+    result =
+        pDisp->GetMemoryZirconHandleFUCHSIA(device, &get_handle_info, vmo.reset_and_get_address());
     if (result != VK_SUCCESS) {
       fprintf(stderr, "GetMemoryZirconHandleFUCHSIA failed: %d", result);
       return false;
@@ -108,9 +104,8 @@ bool ImagePipeSurfaceAsync::CreateImage(
     };
     image_info_out->push_back(info);
     std::lock_guard<std::mutex> lock(mutex_);
-    image_pipe_->AddImage(info.image_id, std::move(image_info), std::move(vmo),
-                          0, memory_requirements.size,
-                          fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
+    image_pipe_->AddImage(info.image_id, std::move(image_info), std::move(vmo), 0,
+                          memory_requirements.size, fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   }
   return true;
 }
@@ -134,12 +129,10 @@ void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id) {
   image_pipe_->RemoveImage(image_id);
 }
 
-void ImagePipeSurfaceAsync::PresentImage(
-    uint32_t image_id, std::vector<zx::event> acquire_fences,
-    std::vector<zx::event> release_fences) {
+void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
+                                         std::vector<zx::event> release_fences) {
   std::lock_guard<std::mutex> lock(mutex_);
-  queue_.push_back(
-      {image_id, std::move(acquire_fences), std::move(release_fences)});
+  queue_.push_back({image_id, std::move(acquire_fences), std::move(release_fences)});
   if (!present_pending_) {
     PresentNextImageLocked();
   }
@@ -158,8 +151,7 @@ void ImagePipeSurfaceAsync::PresentNextImageLocked() {
   uint64_t presentation_time = zx_clock_get_monotonic();
 
   auto& present = queue_.front();
-  image_pipe_->PresentImage(present.image_id, presentation_time,
-                            std::move(present.acquire_fences),
+  image_pipe_->PresentImage(present.image_id, presentation_time, std::move(present.acquire_fences),
                             std::move(present.release_fences),
                             // This callback happening in a separate thread.
                             [this](fuchsia::images::PresentationInfo pinfo) {

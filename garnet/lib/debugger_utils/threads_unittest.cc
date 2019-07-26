@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #ifndef _ALL_SOURCE
-#define _ALL_SOURCE // Enables thrd_create_with_name in <threads.h>.
+#define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #endif
 
 #include <stddef.h>
@@ -39,8 +39,7 @@ int ThreadFunction(void* arg) {
   return 0;
 }
 
-void ShutdownThreads(const std::vector<thrd_t>& threads,
-                     std::atomic_bool* keep_running) {
+void ShutdownThreads(const std::vector<thrd_t>& threads, std::atomic_bool* keep_running) {
   *keep_running = false;
   for (auto& thread : threads) {
     int result = thrd_join(thread, NULL);
@@ -54,8 +53,7 @@ bool CreateThreads(size_t num_threads, std::vector<thrd_t>* threads,
     char name[sizeof("thread") + 10];
     snprintf(name, sizeof(name), "thread%zu", i);
     thrd_t thread;
-    if (thrd_create_with_name(&thread, ThreadFunction, keep_running, name) !=
-        thrd_success) {
+    if (thrd_create_with_name(&thread, ThreadFunction, keep_running, name) != thrd_success) {
       goto Fail;
     }
     threads->push_back(thread);
@@ -63,7 +61,7 @@ bool CreateThreads(size_t num_threads, std::vector<thrd_t>* threads,
 
   return true;
 
- Fail:
+Fail:
   ShutdownThreads(*threads, keep_running);
   return false;
 }
@@ -75,16 +73,14 @@ void CheckThreadSuspended(const zx::thread& thread, const char* msg) {
 void CheckThreadRunning(const zx::thread& thread, const char* msg) {
   uint32_t state = GetThreadOsState(thread);
   // Our threads are either running or sleeping.
-  EXPECT_TRUE(state == ZX_THREAD_STATE_RUNNING ||
-              state == ZX_THREAD_STATE_BLOCKED_SLEEPING) << msg;
+  EXPECT_TRUE(state == ZX_THREAD_STATE_RUNNING || state == ZX_THREAD_STATE_BLOCKED_SLEEPING) << msg;
 }
 
-void WaitThreadsRunning(const std::vector<zx::thread>& threads,
-                        const char* msg) {
+void WaitThreadsRunning(const std::vector<zx::thread>& threads, const char* msg) {
   for (const auto& thread : threads) {
     EXPECT_EQ(ZX_OK, thread.wait_one(ZX_THREAD_RUNNING | ZX_THREAD_TERMINATED,
-                                     zx::deadline_after(kThreadRunningTimeout),
-                                     nullptr)) << msg;
+                                     zx::deadline_after(kThreadRunningTimeout), nullptr))
+        << msg;
     CheckThreadRunning(thread, msg);
   }
 }
@@ -100,10 +96,10 @@ TEST(Threads, WithThreadSuspended) {
   WaitThreadsRunning(zx_threads, "pre-suspend");
 
   EXPECT_EQ(ZX_OK, WithThreadSuspended(zx_threads[0], kThreadSuspendTimeout,
-                                       [] (const zx::thread& thread) -> zx_status_t {
-    CheckThreadSuspended(thread, "inside WithThreadSuspended");
-    return ZX_OK;
-  }));
+                                       [](const zx::thread& thread) -> zx_status_t {
+                                         CheckThreadSuspended(thread, "inside WithThreadSuspended");
+                                         return ZX_OK;
+                                       }));
 
   // When a thread's suspend token is closed it does not necessarily
   // return to the RUNNING state immediately,
@@ -127,14 +123,14 @@ TEST(Threads, WithAllThreadsSuspended) {
   }
   WaitThreadsRunning(zx_threads, "pre-suspend");
 
-  EXPECT_EQ(ZX_OK, WithAllThreadsSuspended(
-      zx_threads, kThreadSuspendTimeout,
-      [&zx_threads] (const zx::thread& thread) -> zx_status_t {
-    for (const auto& t : zx_threads) {
-      CheckThreadSuspended(t, "inside WithAllThreadsSuspended");
-    }
-    return ZX_OK;
-  }));
+  EXPECT_EQ(ZX_OK, WithAllThreadsSuspended(zx_threads, kThreadSuspendTimeout,
+                                           [&zx_threads](const zx::thread& thread) -> zx_status_t {
+                                             for (const auto& t : zx_threads) {
+                                               CheckThreadSuspended(
+                                                   t, "inside WithAllThreadsSuspended");
+                                             }
+                                             return ZX_OK;
+                                           }));
 
   // When a thread's suspend token is closed it does not necessarily
   // return to the RUNNING state immediately.

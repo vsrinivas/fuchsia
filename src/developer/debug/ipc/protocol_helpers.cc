@@ -6,29 +6,17 @@
 
 namespace debug_ipc {
 
-void Serialize(const std::string& s, MessageWriter* writer) {
-  writer->WriteString(s);
-}
+void Serialize(const std::string& s, MessageWriter* writer) { writer->WriteString(s); }
 
-bool Deserialize(MessageReader* reader, std::string* s) {
-  return reader->ReadString(s);
-}
+bool Deserialize(MessageReader* reader, std::string* s) { return reader->ReadString(s); }
 
-void Serialize(uint64_t data, MessageWriter* writer) {
-  writer->WriteUint64(data);
-}
+void Serialize(uint64_t data, MessageWriter* writer) { writer->WriteUint64(data); }
 
-bool Deserialize(MessageReader* reader, uint64_t* data) {
-  return reader->ReadUint64(data);
-}
+bool Deserialize(MessageReader* reader, uint64_t* data) { return reader->ReadUint64(data); }
 
-void Serialize(int32_t data, MessageWriter* writer) {
-  writer->WriteInt32(data);
-}
+void Serialize(int32_t data, MessageWriter* writer) { writer->WriteInt32(data); }
 
-bool Deserialize(MessageReader* reader, int32_t* data) {
-  return reader->ReadInt32(data);
-}
+bool Deserialize(MessageReader* reader, int32_t* data) { return reader->ReadInt32(data); }
 
 void Serialize(const Register& reg, MessageWriter* writer) {
   writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg.id));

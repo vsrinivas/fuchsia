@@ -40,64 +40,64 @@ namespace goodix {
 
 class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
                      public ddk::HidbusProtocol<Gt92xxDevice, ddk::base_protocol> {
-public:
-    Gt92xxDevice(zx_device_t* device, ddk::I2cChannel i2c,
-                 ddk::GpioProtocolClient intr, ddk::GpioProtocolClient reset)
-        : ddk::Device<Gt92xxDevice, ddk::Unbindable>(device),
-          i2c_(std::move(i2c)), int_gpio_(std::move(intr)),
-          reset_gpio_(std::move(reset)){}
+ public:
+  Gt92xxDevice(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient intr,
+               ddk::GpioProtocolClient reset)
+      : ddk::Device<Gt92xxDevice, ddk::Unbindable>(device),
+        i2c_(std::move(i2c)),
+        int_gpio_(std::move(intr)),
+        reset_gpio_(std::move(reset)) {}
 
-    static zx_status_t Create(zx_device_t* device);
+  static zx_status_t Create(zx_device_t* device);
 
-    void DdkRelease();
-    void DdkUnbind() __TA_EXCLUDES(client_lock_);
+  void DdkRelease();
+  void DdkUnbind() __TA_EXCLUDES(client_lock_);
 
-    // Hidbus required methods
-    void HidbusStop();
-    zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
-                                size_t len, size_t* out_len);
-    zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
-                                size_t len);
-    zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
-    zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
-    zx_status_t HidbusGetProtocol(uint8_t* protocol);
-    zx_status_t HidbusSetProtocol(uint8_t protocol);
-    zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) __TA_EXCLUDES(client_lock_);
-    zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(client_lock_);
+  // Hidbus required methods
+  void HidbusStop();
+  zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+  zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+                              size_t* out_len);
+  zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+  zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
+  zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
+  zx_status_t HidbusGetProtocol(uint8_t* protocol);
+  zx_status_t HidbusSetProtocol(uint8_t protocol);
+  zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) __TA_EXCLUDES(client_lock_);
+  zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(client_lock_);
 
-private:
-    // Format of data as it is read from the device
-    struct FingerReport {
-        uint8_t id;
-        uint16_t x;
-        uint16_t y;
-        uint16_t size;
-        uint8_t reserved;
-    } __PACKED;
+ private:
+  // Format of data as it is read from the device
+  struct FingerReport {
+    uint8_t id;
+    uint16_t x;
+    uint16_t y;
+    uint16_t size;
+    uint8_t reserved;
+  } __PACKED;
 
-    static constexpr uint32_t kMaxPoints = 5;
+  static constexpr uint32_t kMaxPoints = 5;
 
-    zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
-    // performs hardware reset using gpio
-    void HWReset();
-    zx_status_t Init();
+  zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
+  // performs hardware reset using gpio
+  void HWReset();
+  zx_status_t Init();
 
-    uint8_t Read(uint16_t addr);
-    zx_status_t Read(uint16_t addr, uint8_t* buf, uint8_t len);
-    zx_status_t Write(uint16_t addr, uint8_t val);
+  uint8_t Read(uint16_t addr);
+  zx_status_t Read(uint16_t addr, uint8_t* buf, uint8_t len);
+  zx_status_t Write(uint16_t addr, uint8_t val);
 
-    int Thread();
+  int Thread();
 
-    ddk::I2cChannel i2c_;
-    ddk::GpioProtocolClient int_gpio_;
-    ddk::GpioProtocolClient reset_gpio_;
+  ddk::I2cChannel i2c_;
+  ddk::GpioProtocolClient int_gpio_;
+  ddk::GpioProtocolClient reset_gpio_;
 
-    gt92xx_touch_t gt_rpt_ __TA_GUARDED(client_lock_);
-    zx::interrupt irq_;
-    thrd_t thread_;
-    std::atomic<bool> running_;
-    fbl::Mutex client_lock_;
-    ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(client_lock_);
+  gt92xx_touch_t gt_rpt_ __TA_GUARDED(client_lock_);
+  zx::interrupt irq_;
+  thrd_t thread_;
+  std::atomic<bool> running_;
+  fbl::Mutex client_lock_;
+  ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(client_lock_);
 };
-}
+}  // namespace goodix

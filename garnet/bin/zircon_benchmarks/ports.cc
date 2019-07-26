@@ -29,9 +29,7 @@ bool PortQueueWaitTest(perftest::RepeatState* state) {
   return true;
 }
 
-void RegisterTests() {
-  perftest::RegisterTest("Port/QueueWait", PortQueueWaitTest);
-}
+void RegisterTests() { perftest::RegisterTest("Port/QueueWait", PortQueueWaitTest); }
 PERFTEST_CTOR(RegisterTests);
 
 }  // namespace

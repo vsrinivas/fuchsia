@@ -7,35 +7,25 @@
 #include <lib/sync/condition.h>
 
 struct MutexWrapper {
-    sync_mutex_t mtx;
+  sync_mutex_t mtx;
 
-    void lock() __TA_ACQUIRE(mtx) {
-        sync_mutex_lock(&mtx);
-    }
+  void lock() __TA_ACQUIRE(mtx) { sync_mutex_lock(&mtx); }
 
-    void unlock() __TA_RELEASE(mtx) {
-        sync_mutex_unlock(&mtx);
-    }
+  void unlock() __TA_RELEASE(mtx) { sync_mutex_unlock(&mtx); }
 };
 
 struct ConditionWrapper {
-    sync_condition_t condition;
+  sync_condition_t condition;
 
-    void signal() {
-        sync_condition_signal(&condition);
-    }
+  void signal() { sync_condition_signal(&condition); }
 
-    void broadcast() {
-        sync_condition_broadcast(&condition);
-    }
+  void broadcast() { sync_condition_broadcast(&condition); }
 
-    void wait(MutexWrapper* mtx) {
-        sync_condition_wait(&condition, &mtx->mtx);
-    }
+  void wait(MutexWrapper* mtx) { sync_condition_wait(&condition, &mtx->mtx); }
 
-    zx_status_t timedwait(MutexWrapper* mtx, zx_duration_t timeout) {
-        return sync_condition_timedwait(&condition, &mtx->mtx, zx_deadline_after(timeout));
-    }
+  zx_status_t timedwait(MutexWrapper* mtx, zx_duration_t timeout) {
+    return sync_condition_timedwait(&condition, &mtx->mtx, zx_deadline_after(timeout));
+  }
 };
 
 using Condition = GenericConditionTest<MutexWrapper, ConditionWrapper>;

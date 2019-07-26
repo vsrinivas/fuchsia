@@ -41,8 +41,7 @@ class JSONParser {
   // reports errors in error_str(). |file| is not read, but it is used as the
   // prefix for lines in error_str(). May be called multiple times, for example
   // on multiple files, in which case any previous errors will be retained.
-  rapidjson::Document ParseFromString(const std::string& data,
-                                      const std::string& file);
+  rapidjson::Document ParseFromString(const std::string& data, const std::string& file);
 
   // Initialize multiple documents from files in a directory. |cb| is
   // called for each file that parses. The traversal is not recursive, and all
@@ -51,8 +50,7 @@ class JSONParser {
   // wishing to identify such a state should stat the path themselves.
   //
   // It is up to the caller to decide how to merge multiple documents.
-  void ParseFromDirectory(const std::string& path,
-                          fit::function<void(rapidjson::Document)> cb);
+  void ParseFromDirectory(const std::string& path, fit::function<void(rapidjson::Document)> cb);
 
   // Copies the string values from a |name|d |value| to the |out| vector.
   // Clears |out| and calls ReportError() if |value| does not refer to an array,

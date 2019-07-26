@@ -18,9 +18,8 @@ constexpr char kGoldenSha[SHA256_DIGEST_LENGTH * 2 + 1] =
     "67fdc1fed9bfbf9d1852137ba51bbda661fbf3483f5f47a553a44895de76de98";
 
 // TODO(turnage): Unify media hashing functions in test library.
-void SHA256_Update_VideoPlane(SHA256_CTX* sha256_ctx, uint8_t* start,
-                              uint32_t width, uint32_t stride,
-                              uint32_t height) {
+void SHA256_Update_VideoPlane(SHA256_CTX* sha256_ctx, uint8_t* start, uint32_t width,
+                              uint32_t stride, uint32_t height) {
   uint8_t* src = start;
   for (uint32_t row = 0; row < height; ++row) {
     SHA256_Update(sha256_ctx, src, width);
@@ -45,28 +44,25 @@ int HashFrames(RawFrames&& raw_frames) {
   std::optional<RawFrames::Image> frame;
   while ((frame = raw_frames.Frame(i++))) {
     // Y
-    SHA256_Update_VideoPlane(
-        &sha256_ctx,
-        /*start=*/frame->image_start + frame->format.primary_start_offset,
-        frame->format.primary_width_pixels,
-        frame->format.primary_line_stride_bytes,
-        frame->format.primary_height_pixels);
+    SHA256_Update_VideoPlane(&sha256_ctx,
+                             /*start=*/frame->image_start + frame->format.primary_start_offset,
+                             frame->format.primary_width_pixels,
+                             frame->format.primary_line_stride_bytes,
+                             frame->format.primary_height_pixels);
 
     // V
-    SHA256_Update_VideoPlane(
-        &sha256_ctx,
-        /*start=*/frame->image_start + frame->format.secondary_start_offset,
-        frame->format.secondary_width_pixels,
-        frame->format.secondary_line_stride_bytes,
-        frame->format.secondary_height_pixels);
+    SHA256_Update_VideoPlane(&sha256_ctx,
+                             /*start=*/frame->image_start + frame->format.secondary_start_offset,
+                             frame->format.secondary_width_pixels,
+                             frame->format.secondary_line_stride_bytes,
+                             frame->format.secondary_height_pixels);
 
     // U
-    SHA256_Update_VideoPlane(
-        &sha256_ctx,
-        /*start=*/frame->image_start + frame->format.tertiary_start_offset,
-        frame->format.secondary_width_pixels,
-        frame->format.secondary_line_stride_bytes,
-        frame->format.secondary_height_pixels);
+    SHA256_Update_VideoPlane(&sha256_ctx,
+                             /*start=*/frame->image_start + frame->format.tertiary_start_offset,
+                             frame->format.secondary_width_pixels,
+                             frame->format.secondary_line_stride_bytes,
+                             frame->format.secondary_height_pixels);
   }
 
   char digest_str[SHA256_DIGEST_LENGTH * 2 + 1];
@@ -90,20 +86,17 @@ int SendFramesToScenic(RawFrames&& raw_frames) {
     size_t frames_sent = 0;
     while ((frame = raw_frames.Frame(frames_sent++))) {
       auto format = std::make_shared<fuchsia::media::StreamOutputFormat>();
-      format->mutable_format_details()
-          ->mutable_domain()
-          ->video()
-          .set_uncompressed(std::move(frame->format));
-      frame_sink->PutFrame(frames_sent, frame->vmo, frame->vmo_offset, format,
-                           [] {});
+      format->mutable_format_details()->mutable_domain()->video().set_uncompressed(
+          std::move(frame->format));
+      frame_sink->PutFrame(frames_sent, frame->vmo, frame->vmo_offset, format, [] {});
     }
 
     frame_sink->PutEndOfStreamThenWaitForFramesReturnedAsync(
         [&main_loop] { main_loop.Shutdown(); });
   };
 
-  auto frame_sink = FrameSink::Create(startup_context.get(), &main_loop, 24.0,
-                                      std::move(send_frames));
+  auto frame_sink =
+      FrameSink::Create(startup_context.get(), &main_loop, 24.0, std::move(send_frames));
   if (!frame_sink) {
     FXL_LOG(FATAL) << "Failed to create FrameSink.";
   }
@@ -126,13 +119,12 @@ int main(int argc, char** argv) {
     FXL_LOG(FATAL) << "Failed to parse log settings.";
   }
 
-  auto raw_frames =
-      RawFrames::FromI420File(kInputFilePath, {
-                                                  .width = 320,
-                                                  .height = 192,
-                                                  .stride = 320,
-                                                  .frame_alignment = 1024 * 4,
-                                              });
+  auto raw_frames = RawFrames::FromI420File(kInputFilePath, {
+                                                                .width = 320,
+                                                                .height = 192,
+                                                                .stride = 320,
+                                                                .frame_alignment = 1024 * 4,
+                                                            });
   if (!raw_frames) {
     FXL_LOG(FATAL) << "Failed to parse raw frames from file.";
   }

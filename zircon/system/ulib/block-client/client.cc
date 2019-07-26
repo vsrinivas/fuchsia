@@ -19,40 +19,38 @@ Client::Client(fifo_client_t* client) : client_(client) {}
 Client::Client(Client&& other) : client_(other.Release()) {}
 
 Client& Client::operator=(Client&& other) {
-    Reset(other.Release());
-    return *this;
+  Reset(other.Release());
+  return *this;
 }
 
-Client::~Client() {
-    Reset();
-}
+Client::~Client() { Reset(); }
 
 zx_status_t Client::Create(zx::fifo fifo, Client* out) {
-    fifo_client_t* client;
-    zx_status_t status = block_fifo_create_client(fifo.release(), &client);
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out = Client(client);
-    return ZX_OK;
+  fifo_client_t* client;
+  zx_status_t status = block_fifo_create_client(fifo.release(), &client);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out = Client(client);
+  return ZX_OK;
 }
 
 zx_status_t Client::Transaction(block_fifo_request_t* requests, size_t count) const {
-    ZX_DEBUG_ASSERT(client_ != nullptr);
-    return block_fifo_txn(client_, requests, count);
+  ZX_DEBUG_ASSERT(client_ != nullptr);
+  return block_fifo_txn(client_, requests, count);
 }
 
 void Client::Reset(fifo_client_t* client) {
-    if (client_ != nullptr) {
-        block_fifo_release_client(client_);
-    }
-    client_ = client;
+  if (client_ != nullptr) {
+    block_fifo_release_client(client_);
+  }
+  client_ = client;
 }
 
 fifo_client_t* Client::Release() {
-    fifo_client_t* client = client_;
-    client_ = nullptr;
-    return client;
+  fifo_client_t* client = client_;
+  client_ = nullptr;
+  return client;
 }
 
 }  // namespace block_client

@@ -19,53 +19,52 @@
 #include "event.h"
 
 class Thread {
-  public:
-    using Thunk = fbl::InlineFunction<void(), sizeof(void*) * 4>;
+ public:
+  using Thunk = fbl::InlineFunction<void(), sizeof(void*) * 4>;
 
-    explicit Thread(uint32_t prio);
-    ~Thread() { Exit(); }
+  explicit Thread(uint32_t prio);
+  ~Thread() { Exit(); }
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Thread);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(Thread);
 
-    static zx_status_t ConnectSchedulerService();
-    uint32_t prio() const { return prio_; }
-    const char* name() const { return name_; }
+  static zx_status_t ConnectSchedulerService();
+  uint32_t prio() const { return prio_; }
+  const char* name() const { return name_; }
 
-    zx_status_t Start(Thunk thunk);
-    zx_status_t WaitForReset() { return WaitForState(State::WAITING_TO_START); }
+  zx_status_t Start(Thunk thunk);
+  zx_status_t WaitForReset() { return WaitForState(State::WAITING_TO_START); }
 
-  private:
-    enum class State { INIT, WAITING_TO_START, RUNNING, EXITED };
+ private:
+  enum class State { INIT, WAITING_TO_START, RUNNING, EXITED };
 
-    static constexpr zx::duration THREAD_TIMEOUT = zx::msec(1000);
-    static constexpr zx::duration THREAD_POLL_INTERVAL = zx::msec(1);
-    static constexpr uint32_t PRIORITY_LEVELS = 32;
+  static constexpr zx::duration THREAD_TIMEOUT = zx::msec(1000);
+  static constexpr zx::duration THREAD_POLL_INTERVAL = zx::msec(1);
+  static constexpr uint32_t PRIORITY_LEVELS = 32;
 
-    static zx_status_t EnsureProfile(uint32_t prio_level);
+  static zx_status_t EnsureProfile(uint32_t prio_level);
 
-    int EntryPoint();
-    void Exit();
-    void Kill() {
-        if (handle_.is_valid()) {
-            handle_.kill();
-            handle_.reset();
-        }
+  int EntryPoint();
+  void Exit();
+  void Kill() {
+    if (handle_.is_valid()) {
+      handle_.kill();
+      handle_.reset();
     }
+  }
 
-    zx_status_t WaitForState(State target_state);
+  zx_status_t WaitForState(State target_state);
 
-    static zx::channel scheduler_service_;
-    static std::array<zx::profile, PRIORITY_LEVELS> profiles_;
+  static zx::channel scheduler_service_;
+  static std::array<zx::profile, PRIORITY_LEVELS> profiles_;
 
-    const uint32_t prio_;
-    char name_[ZX_MAX_NAME_LEN];
+  const uint32_t prio_;
+  char name_[ZX_MAX_NAME_LEN];
 
-    fbl::Mutex thunk_lock_;
-    Thunk thunk_ TA_GUARDED(thunk_lock_);
+  fbl::Mutex thunk_lock_;
+  Thunk thunk_ TA_GUARDED(thunk_lock_);
 
-    thrd_t thread_;
-    zx::thread handle_;
-    Event barrier_;
-    std::atomic<State> state_{State::INIT};
+  thrd_t thread_;
+  zx::thread handle_;
+  Event barrier_;
+  std::atomic<State> state_{State::INIT};
 };
-

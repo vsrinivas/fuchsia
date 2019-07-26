@@ -54,130 +54,133 @@ namespace {
 constexpr size_t kTestMemorySize = 8;
 constexpr uint8_t kTestDataAdjust = 0x10;
 
-} // namespace
+}  // namespace
 
 bool test_prep_and_segv() {
-    uint8_t test_data[kTestMemorySize];
-    for (unsigned i = 0; i < sizeof(test_data); ++i)
-        test_data[i] = static_cast<uint8_t>(i);
+  uint8_t test_data[kTestMemorySize];
+  for (unsigned i = 0; i < sizeof(test_data); ++i)
+    test_data[i] = static_cast<uint8_t>(i);
 
 #ifdef __x86_64__
-    void* segv_pc;
-    // Note: Fuchsia is always PIC.
-    __asm__("leaq .Lsegv_here(%%rip),%0" : "=r"(segv_pc));
-    unittest_printf("About to segv, pc %p\n", segv_pc);
+  void* segv_pc;
+  // Note: Fuchsia is always PIC.
+  __asm__("leaq .Lsegv_here(%%rip),%0" : "=r"(segv_pc));
+  unittest_printf("About to segv, pc %p\n", segv_pc);
 
-    // Set r9 to point to test_data so we can easily access it
-    // from the parent process.  Likewise set r10 to segv_pc
-    // so the parent process can verify it matches the fault PC.
-    __asm__("\
+  // Set r9 to point to test_data so we can easily access it
+  // from the parent process.  Likewise set r10 to segv_pc
+  // so the parent process can verify it matches the fault PC.
+  __asm__(
+      "\
         movq %[zero],%%r8\n\
         movq %[test_data],%%r9\n\
         movq %[pc],%%r10\n\
 .Lsegv_here:\n\
         movq (%%r8),%%rax\
 "
-            :
-            : [zero] "g"(0), [test_data] "g"(&test_data[0]), [pc] "g"(segv_pc)
-            : "rax", "r8", "r9", "r10");
+      :
+      : [ zero ] "g"(0), [ test_data ] "g"(&test_data[0]), [ pc ] "g"(segv_pc)
+      : "rax", "r8", "r9", "r10");
 #endif
 
 #ifdef __aarch64__
-    void* segv_pc;
-    // Note: Fuchsia is always PIC.
-    __asm__("adrp %0, .Lsegv_here\n"
-            "add %0, %0, :lo12:.Lsegv_here"
-            : "=r"(segv_pc));
-    unittest_printf("About to segv, pc %p\n", segv_pc);
+  void* segv_pc;
+  // Note: Fuchsia is always PIC.
+  __asm__(
+      "adrp %0, .Lsegv_here\n"
+      "add %0, %0, :lo12:.Lsegv_here"
+      : "=r"(segv_pc));
+  unittest_printf("About to segv, pc %p\n", segv_pc);
 
-    // Set r9 to point to test_data so we can easily access it
-    // from the parent process.  Likewise set r10 to segv_pc
-    // so the parent process can verify it matches the fault PC.
-    __asm__("\
+  // Set r9 to point to test_data so we can easily access it
+  // from the parent process.  Likewise set r10 to segv_pc
+  // so the parent process can verify it matches the fault PC.
+  __asm__(
+      "\
         mov x8,xzr\n\
         mov x9,%[test_data]\n\
         mov x10,%[pc]\n\
 .Lsegv_here:\n\
         ldr x0,[x8]\
 "
-            :
-            : [test_data] "r"(&test_data[0]), [pc] "r"(segv_pc)
-            : "x0", "x8", "x9", "x10");
+      :
+      : [ test_data ] "r"(&test_data[0]), [ pc ] "r"(segv_pc)
+      : "x0", "x8", "x9", "x10");
 #endif
 
-    // On resumption test_data should have had kTestDataAdjust added to each element.
-    // Note: This is the inferior process, it's not running under the test harness.
-    for (unsigned i = 0; i < sizeof(test_data); ++i) {
-        if (test_data[i] != i + kTestDataAdjust) {
-            unittest_printf("TestPrepAndSegv: bad data on resumption, test_data[%u] = 0x%x\n", i,
-                            test_data[i]);
-            return false;
-        }
+  // On resumption test_data should have had kTestDataAdjust added to each element.
+  // Note: This is the inferior process, it's not running under the test harness.
+  for (unsigned i = 0; i < sizeof(test_data); ++i) {
+    if (test_data[i] != i + kTestDataAdjust) {
+      unittest_printf("TestPrepAndSegv: bad data on resumption, test_data[%u] = 0x%x\n", i,
+                      test_data[i]);
+      return false;
     }
+  }
 
-    unittest_printf("Inferior successfully resumed!\n");
+  unittest_printf("Inferior successfully resumed!\n");
 
-    return true;
+  return true;
 }
 
 bool test_segv_pc(zx_handle_t thread) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    zx_thread_state_general_regs_t regs;
-    read_inferior_gregs(thread, &regs);
+  zx_thread_state_general_regs_t regs;
+  read_inferior_gregs(thread, &regs);
 
 #if defined(__x86_64__)
-    ASSERT_EQ(regs.rip, regs.r10, "fault PC does not match r10");
+  ASSERT_EQ(regs.rip, regs.r10, "fault PC does not match r10");
 #elif defined(__aarch64__)
-    ASSERT_EQ(regs.pc, regs.r[10], "fault PC does not match x10");
+  ASSERT_EQ(regs.pc, regs.r[10], "fault PC does not match x10");
 #endif
 
-    END_HELPER;
+  END_HELPER;
 }
 
 bool test_memory_ops(zx_handle_t inferior, zx_handle_t thread) {
-    BEGIN_HELPER;
+  BEGIN_HELPER;
 
-    uint64_t test_data_addr = 0;
-    uint8_t test_data[kTestMemorySize];
+  uint64_t test_data_addr = 0;
+  uint8_t test_data[kTestMemorySize];
 
-    zx_thread_state_general_regs_t regs;
-    read_inferior_gregs(thread, &regs);
+  zx_thread_state_general_regs_t regs;
+  read_inferior_gregs(thread, &regs);
 
 #if defined(__x86_64__)
-    test_data_addr = regs.r9;
+  test_data_addr = regs.r9;
 #elif defined(__aarch64__)
-    test_data_addr = regs.r[9];
+  test_data_addr = regs.r[9];
 #endif
 
-    size_t size = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
-    EXPECT_EQ(size, sizeof(test_data), "read_inferior_memory: short read");
+  size_t size = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
+  EXPECT_EQ(size, sizeof(test_data), "read_inferior_memory: short read");
 
-    for (unsigned i = 0; i < sizeof(test_data); ++i) {
-        EXPECT_EQ(test_data[i], i, "test_memory_ops");
-    }
+  for (unsigned i = 0; i < sizeof(test_data); ++i) {
+    EXPECT_EQ(test_data[i], i, "test_memory_ops");
+  }
 
-    for (unsigned i = 0; i < sizeof(test_data); ++i) {
-        test_data[i] = static_cast<uint8_t>(test_data[i] + kTestDataAdjust);
-    }
+  for (unsigned i = 0; i < sizeof(test_data); ++i) {
+    test_data[i] = static_cast<uint8_t>(test_data[i] + kTestDataAdjust);
+  }
 
-    size = write_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
-    EXPECT_EQ(size, sizeof(test_data), "write_inferior_memory: short write");
+  size = write_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
+  EXPECT_EQ(size, sizeof(test_data), "write_inferior_memory: short write");
 
-    // Note: Verification of the write is done in the inferior.
-    END_HELPER;
+  // Note: Verification of the write is done in the inferior.
+  END_HELPER;
 }
 
 void fix_inferior_segv(zx_handle_t thread) {
-    unittest_printf("Fixing inferior segv\n");
+  unittest_printf("Fixing inferior segv\n");
 
-    // The segv was because r8 == 0, change it to a usable value. See TestPrepAndSegv.
-    zx_thread_state_general_regs_t regs;
-    read_inferior_gregs(thread, &regs);
+  // The segv was because r8 == 0, change it to a usable value. See TestPrepAndSegv.
+  zx_thread_state_general_regs_t regs;
+  read_inferior_gregs(thread, &regs);
 #if defined(__x86_64__)
-    regs.r8 = regs.rsp;
+  regs.r8 = regs.rsp;
 #elif defined(__aarch64__)
-    regs.r[8] = regs.sp;
+  regs.r[8] = regs.sp;
 #endif
-    write_inferior_gregs(thread, &regs);
+  write_inferior_gregs(thread, &regs);
 }

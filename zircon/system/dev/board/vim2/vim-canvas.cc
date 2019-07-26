@@ -25,23 +25,22 @@ static const pbus_bti_t vim_canvas_btis[] = {
 };
 
 zx_status_t Vim::CanvasInit() {
+  pbus_dev_t canvas_dev = {};
+  canvas_dev.name = "canvas";
+  canvas_dev.vid = PDEV_VID_AMLOGIC;
+  canvas_dev.pid = PDEV_PID_GENERIC;
+  canvas_dev.did = PDEV_DID_AMLOGIC_CANVAS;
+  canvas_dev.mmio_list = vim_canvas_mmios;
+  canvas_dev.mmio_count = countof(vim_canvas_mmios);
+  canvas_dev.bti_list = vim_canvas_btis;
+  canvas_dev.bti_count = countof(vim_canvas_btis);
 
-    pbus_dev_t canvas_dev = {};
-    canvas_dev.name = "canvas";
-    canvas_dev.vid = PDEV_VID_AMLOGIC;
-    canvas_dev.pid = PDEV_PID_GENERIC;
-    canvas_dev.did = PDEV_DID_AMLOGIC_CANVAS;
-    canvas_dev.mmio_list = vim_canvas_mmios;
-    canvas_dev.mmio_count = countof(vim_canvas_mmios);
-    canvas_dev.bti_list = vim_canvas_btis;
-    canvas_dev.bti_count = countof(vim_canvas_btis);
-
-    zx_status_t status = pbus_.DeviceAdd(&canvas_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "CanvasInit: DeviceAdd Canvas failed: %d\n", status);
-        return status;
-    }
-    return ZX_OK;
+  zx_status_t status = pbus_.DeviceAdd(&canvas_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "CanvasInit: DeviceAdd Canvas failed: %d\n", status);
+    return status;
+  }
+  return ZX_OK;
 }
 
-} //namespace vim
+}  // namespace vim

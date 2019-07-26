@@ -45,7 +45,6 @@ typedef struct launchpad launchpad_t;
 // handles, etc, which are passed to the new process.  They are
 // described in detail below.
 
-
 // CREATION: one launchpad_create*() below must be called to create
 // a launchpad before any other operations may be one with it.
 // ----------------------------------------------------------------
@@ -58,8 +57,7 @@ typedef struct launchpad launchpad_t;
 // the running process is used, if it exists (zx_job_default()).
 //
 // The job used will be cloned and given to the new process.
-zx_status_t launchpad_create(zx_handle_t job, const char* name,
-                             launchpad_t** lp);
+zx_status_t launchpad_create(zx_handle_t job, const char* name, launchpad_t** lp);
 
 // Create a new process and a launchpad that will set it up.
 // The creation_job handle is used to create the process but is
@@ -68,10 +66,8 @@ zx_status_t launchpad_create(zx_handle_t job, const char* name,
 // The transferred_job handle is optional.  If non-zero, it is
 // consumed by the launchpad and will be passed to the new process
 // on successful launch or closed on failure.
-zx_status_t launchpad_create_with_jobs(zx_handle_t creation_job,
-                                       zx_handle_t transferred_job,
-                                       const char* name,
-                                       launchpad_t** result);
+zx_status_t launchpad_create_with_jobs(zx_handle_t creation_job, zx_handle_t transferred_job,
+                                       const char* name, launchpad_t** result);
 
 // LAUNCHING or ABORTING:
 // ----------------------------------------------------------------
@@ -96,29 +92,29 @@ zx_status_t launchpad_go(launchpad_t* lp, zx_handle_t* proc, const char** errmsg
 // When using |launchpad_ready_set|, complete the process launch by passing
 // these parameters to |zx_process_start|.
 typedef struct launchpad_start_data {
-    // The process that was created.
-    zx_handle_t process;
+  // The process that was created.
+  zx_handle_t process;
 
-    // The vmar object that was created when the process was created.
-    zx_handle_t root_vmar;
+  // The vmar object that was created when the process was created.
+  zx_handle_t root_vmar;
 
-    // The initial thread for the process.
-    zx_handle_t thread;
+  // The initial thread for the process.
+  zx_handle_t thread;
 
-    // The address of the initial entry point in the process.
-    zx_vaddr_t entry;
+  // The address of the initial entry point in the process.
+  zx_vaddr_t entry;
 
-    // The stack pointer value for the initial thread of the process.
-    zx_vaddr_t stack;
+  // The stack pointer value for the initial thread of the process.
+  zx_vaddr_t stack;
 
-    // The bootstrap channel to pass to the process on startup.
-    zx_handle_t bootstrap;
+  // The bootstrap channel to pass to the process on startup.
+  zx_handle_t bootstrap;
 
-    // The base address of the vDSO to pass to the process on startup.
-    zx_vaddr_t vdso_base;
+  // The base address of the vDSO to pass to the process on startup.
+  zx_vaddr_t vdso_base;
 
-    // The base load address of the ELF file loaded.
-    zx_vaddr_t base;
+  // The base load address of the ELF file loaded.
+  zx_vaddr_t base;
 } launchpad_start_data_t;
 
 // If none of the launchpad_*() calls against this launchpad have failed,
@@ -137,8 +133,7 @@ typedef struct launchpad_start_data {
 // The launchpad is destroyed (via launchpad_destroy()) before this returns,
 // all resources are reclaimed, handles are closed, and may not be accessed
 // again.
-zx_status_t launchpad_ready_set(launchpad_t* lp,
-                                launchpad_start_data_t* data_out,
+zx_status_t launchpad_ready_set(launchpad_t* lp, launchpad_start_data_t* data_out,
                                 const char** errmsg_out);
 
 // Clean up a launchpad_t, freeing all resources stored therein.
@@ -159,7 +154,6 @@ void launchpad_abort(launchpad_t* lp, zx_status_t status, const char* msg);
 const char* launchpad_error_message(launchpad_t* lp);
 zx_status_t launchpad_get_status(launchpad_t* lp);
 
-
 // SIMPLIFIED BINARY LOADING
 // These functions are convenience wrappers around the more powerful
 // Advanced Binary Loading functions described below.  They cover the
@@ -172,7 +166,6 @@ zx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path);
 // Load an ELF PIE binary from vmo
 zx_status_t launchpad_load_from_vmo(launchpad_t* lp, zx_handle_t vmo);
 
-
 // ADDING ARGUMENTS, ENVIRONMENT, AND HANDLES
 // These functions setup arguments, environment, or handles to be
 // passed to the new process via the processargs protocol.
@@ -182,12 +175,9 @@ zx_status_t launchpad_load_from_vmo(launchpad_t* lp, zx_handle_t vmo);
 // bootstrap message.  All the strings are copied into the launchpad
 // by this call, with no pointers to these argument strings retained.
 // Successive calls replace the previous values.
-zx_status_t launchpad_set_args(launchpad_t* lp,
-                               int argc, const char* const* argv);
+zx_status_t launchpad_set_args(launchpad_t* lp, int argc, const char* const* argv);
 zx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp);
-zx_status_t launchpad_set_nametable(launchpad_t* lp,
-                                    size_t count, const char* const* names);
-
+zx_status_t launchpad_set_nametable(launchpad_t* lp, size_t count, const char* const* names);
 
 // Add one or more handles to be passed in the bootstrap message.
 // The launchpad takes ownership of the handles; they will be closed
@@ -196,15 +186,14 @@ zx_status_t launchpad_set_nametable(launchpad_t* lp,
 // send is cleared only by a successful launchpad_go call.
 // It is an error to add a handle of 0 (ZX_HANDLE_INVALID)
 zx_status_t launchpad_add_handle(launchpad_t* lp, zx_handle_t h, uint32_t id);
-zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
-                                  const zx_handle_t h[], const uint32_t id[]);
+zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n, const zx_handle_t h[],
+                                  const uint32_t id[]);
 
 // ADDING FDIO FILE DESCRIPTORS
 // These functions configure the initial file descriptors, root directory,
 // and current working directory for processes which use libfdio for the
 // posix-style io api (open/close/read/write/...)
 // --------------------------------------------------------------------
-
 
 // This function allows some or all of the environment of the
 // running process to be shared with the process being launched.
@@ -217,15 +206,14 @@ zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 //
 // It is *not* an error if any of the above requested items don't
 // exist (eg, fd0 is closed)
-#define LP_CLONE_FDIO_NAMESPACE  (0x0001u)
-#define LP_CLONE_FDIO_STDIO      (0x0004u)
-#define LP_CLONE_FDIO_ALL        (0x00FFu)
-#define LP_CLONE_ENVIRON         (0x0100u)
-#define LP_CLONE_DEFAULT_JOB     (0x0200u)
-#define LP_CLONE_ALL             (0xFFFFu)
+#define LP_CLONE_FDIO_NAMESPACE (0x0001u)
+#define LP_CLONE_FDIO_STDIO (0x0004u)
+#define LP_CLONE_FDIO_ALL (0x00FFu)
+#define LP_CLONE_ENVIRON (0x0100u)
+#define LP_CLONE_DEFAULT_JOB (0x0200u)
+#define LP_CLONE_ALL (0xFFFFu)
 
 zx_status_t launchpad_clone(launchpad_t* lp, uint32_t what);
-
 
 // ACCESSORS for internal state
 // --------------------------------------------------------------------
@@ -237,7 +225,6 @@ zx_handle_t launchpad_get_process_handle(launchpad_t* lp);
 // Fetch the process's root VMAR handle.  The launchpad still owns this handle
 // and callers must not close it or transfer it away.
 zx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp);
-
 
 // ADVANCED BINARY LOADING
 // These functions provide advanced control over binary loading.
@@ -272,8 +259,8 @@ zx_status_t launchpad_elf_load(launchpad_t* lp, zx_handle_t vmo);
 // launchpad_go.  Instead, if base is not NULL, it's filled with
 // the address at which the image was loaded; if entry is not NULL,
 // it's filled with the image's entrypoint address.
-zx_status_t launchpad_elf_load_extra(launchpad_t* lp, zx_handle_t vmo,
-                                     zx_vaddr_t* base, zx_vaddr_t* entry);
+zx_status_t launchpad_elf_load_extra(launchpad_t* lp, zx_handle_t vmo, zx_vaddr_t* base,
+                                     zx_vaddr_t* entry);
 
 // Load an executable file into memory. If the file is an ELF file, it
 // will be loaded as per launchpad_elf_load. If it is a script (the

@@ -55,10 +55,10 @@ zx_status_t bt_atheros_bind(void* ctx, zx_device_t* device) {
 }
 
 static constexpr zx_driver_ops_t bt_atheros_driver_ops = []() {
-    zx_driver_ops_t ops = {};
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = bt_atheros_bind;
-    return ops;
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = bt_atheros_bind;
+  return ops;
 }();
 
 // clang-format off

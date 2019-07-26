@@ -32,14 +32,12 @@ VideoDeviceClient::~VideoDeviceClient() {
   camera_control_.Unbind();
 }
 
-std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
-    int dir_fd, const std::string& name) {
+std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(int dir_fd, const std::string& name) {
   // Open the device node.
   fbl::unique_fd dev_node{openat(dir_fd, name.c_str(), O_RDONLY)};
   if (!dev_node.is_valid()) {
-    FXL_LOG(WARNING) << "VideoDeviceClient failed to open device node at \""
-                     << name << "\". (" << strerror(errno) << " : " << errno
-                     << ")";
+    FXL_LOG(WARNING) << "VideoDeviceClient failed to open device node at \"" << name << "\". ("
+                     << strerror(errno) << " : " << errno << ")";
     return nullptr;
   }
 
@@ -48,8 +46,8 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
   FXL_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
 
   fzl::FdioCaller dev(std::move(dev_node));
-  zx_status_t res = fuchsia_hardware_camera_DeviceGetChannel(
-      dev.borrow_channel(), remote.release());
+  zx_status_t res =
+      fuchsia_hardware_camera_DeviceGetChannel(dev.borrow_channel(), remote.release());
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to obtain channel (res " << res << ")";
     return nullptr;
@@ -61,15 +59,13 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
   return device;
 }
 
-void VideoDeviceClient::OnGetFormatsResp(
-    std::vector<fuchsia::camera::VideoFormat> formats,
-    uint32_t total_format_count, zx_status_t device_status) {
+void VideoDeviceClient::OnGetFormatsResp(std::vector<fuchsia::camera::VideoFormat> formats,
+                                         uint32_t total_format_count, zx_status_t device_status) {
   auto& new_formats = formats;
   formats_.insert(formats_.end(), new_formats.begin(), new_formats.end());
   if (formats_.size() < total_format_count) {
-    camera_control_->GetFormats(
-        formats.size(),
-        fbl::BindMember(this, &VideoDeviceClient::OnGetFormatsResp));
+    camera_control_->GetFormats(formats.size(),
+                                fbl::BindMember(this, &VideoDeviceClient::OnGetFormatsResp));
   } else {
     ready_callback_->Signal(ReadyCallbackHandler::kFormatsReady);
   }
@@ -80,24 +76,21 @@ void VideoDeviceClient::Startup(StartupCallback callback) {
   // device info are retrieved.  When both bits of info come back,
   // signal that the device is ready.
   // A timeout is also given which will call the callback with an error.
-  ready_callback_ = std::make_unique<ReadyCallbackHandler>(
-      std::move(callback), zx::sec(kDriverStartupTimeoutSec));
-  camera_control_->GetFormats(
-      0, fbl::BindMember(this, &VideoDeviceClient::OnGetFormatsResp));
-  camera_control_->GetDeviceInfo(
-      [this](fuchsia::camera::DeviceInfo device_info) {
-        // Save the camera id, because that is assigned by this class.
-        device_info.camera_id = id();
-        device_info_ = device_info;
-        ready_callback_->Signal(ReadyCallbackHandler::kDeviceInfoReady);
-      });
+  ready_callback_ = std::make_unique<ReadyCallbackHandler>(std::move(callback),
+                                                           zx::sec(kDriverStartupTimeoutSec));
+  camera_control_->GetFormats(0, fbl::BindMember(this, &VideoDeviceClient::OnGetFormatsResp));
+  camera_control_->GetDeviceInfo([this](fuchsia::camera::DeviceInfo device_info) {
+    // Save the camera id, because that is assigned by this class.
+    device_info.camera_id = id();
+    device_info_ = device_info;
+    ready_callback_->Signal(ReadyCallbackHandler::kDeviceInfoReady);
+  });
 }
 
-void VideoDeviceClient::CreateStream(
-    fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-    fuchsia::camera::FrameRate frame_rate,
-    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
-    zx::eventpair client_token) {
+void VideoDeviceClient::CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+                                     fuchsia::camera::FrameRate frame_rate,
+                                     fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+                                     zx::eventpair client_token) {
   /*
     NOTE: Why do we want to do this in the first place?
     Why don't we let the driver police its own streams instead of doing double
@@ -110,9 +103,8 @@ void VideoDeviceClient::CreateStream(
   // types of streams.
   // TODO(CAM-14): Add more logic around when we can create a stream.
   if (active_streams_.size() >= device_info_.max_stream_count) {
-    FXL_LOG(ERROR) << "Failed to creat stream: active streams ("
-                   << active_streams_.size() << ") >= max_stream_count ("
-                   << device_info_.max_stream_count << ")";
+    FXL_LOG(ERROR) << "Failed to creat stream: active streams (" << active_streams_.size()
+                   << ") >= max_stream_count (" << device_info_.max_stream_count << ")";
     // If we deny the request, we just return.  That drops the InterfaceRequest
     // on the floor, so no connection is made.
     return;
@@ -132,25 +124,21 @@ void VideoDeviceClient::CreateStream(
   // which will then turn around and try to delete the VideoStream
   // from active_streams_.
   active_streams_.push_back(std::move(video_stream));
-  camera_control_->CreateStream(std::move(buffer_collection), frame_rate,
-                                std::move(stream), std::move(client_token));
+  camera_control_->CreateStream(std::move(buffer_collection), frame_rate, std::move(stream),
+                                std::move(client_token));
 }
 
-const std::vector<fuchsia::camera::VideoFormat>* VideoDeviceClient::GetFormats()
-    const {
+const std::vector<fuchsia::camera::VideoFormat>* VideoDeviceClient::GetFormats() const {
   return &formats_;
 }
 
 // static
-std::unique_ptr<VideoDeviceClient::VideoStream>
-VideoDeviceClient::VideoStream::Create(VideoDeviceClient* owner,
-                                       zx::eventpair* driver_token) {
-  auto stream = std::unique_ptr<VideoDeviceClient::VideoStream>(
-      new VideoDeviceClient::VideoStream);
+std::unique_ptr<VideoDeviceClient::VideoStream> VideoDeviceClient::VideoStream::Create(
+    VideoDeviceClient* owner, zx::eventpair* driver_token) {
+  auto stream = std::unique_ptr<VideoDeviceClient::VideoStream>(new VideoDeviceClient::VideoStream);
   // Create stream token.  The stream token is used to close the stream,
   // since the camera manager does not retain control of the stream channel.
-  zx_status_t status =
-      zx::eventpair::create(0, &stream->stream_token_, driver_token);
+  zx_status_t status = zx::eventpair::create(0, &stream->stream_token_, driver_token);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't create driver token. status: " << status;
     return nullptr;
@@ -165,15 +153,13 @@ VideoDeviceClient::VideoStream::Create(VideoDeviceClient* owner,
   stream->stream_token_waiter_ = std::make_unique<async::Wait>(
       stream->stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED,
       std::bind([owner, stream_ptr = stream.get()]() {
-        FXL_LOG(INFO)
-            << "ZX_EVENTPAIR_PEER_CLOSED received, removing active stream.";
+        FXL_LOG(INFO) << "ZX_EVENTPAIR_PEER_CLOSED received, removing active stream.";
         owner->RemoveActiveStream(stream_ptr);
       }));
 
   status = stream->stream_token_waiter_->Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't begin stream_token_waiter_ wait. status: "
-                   << status;
+    FXL_LOG(ERROR) << "Couldn't begin stream_token_waiter_ wait. status: " << status;
     return nullptr;
   }
 
@@ -182,8 +168,7 @@ VideoDeviceClient::VideoStream::Create(VideoDeviceClient* owner,
 
 // The stream was shut down in the driver.
 void VideoDeviceClient::RemoveActiveStream(VideoStream* stream) {
-  for (auto iter = active_streams_.begin(); iter != active_streams_.end();
-       ++iter) {
+  for (auto iter = active_streams_.begin(); iter != active_streams_.end(); ++iter) {
     if (iter->get() == stream) {
       active_streams_.erase(iter);
       return;

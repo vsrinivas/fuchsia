@@ -8,6 +8,4 @@
 // We can't easily verify the backtrace contents, but this at least checks
 // that we properly resume after requesting a backtrace. If we either hang
 // or get killed the unittest runner will detect it and report a failure.
-TEST(BacktraceRequest, RequestResumes) {
-    backtrace_request();
-}
+TEST(BacktraceRequest, RequestResumes) { backtrace_request(); }

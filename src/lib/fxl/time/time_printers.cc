@@ -9,9 +9,7 @@
 
 namespace fxl {
 
-void PrintTo(const TimeDelta& time_delta, ::std::ostream* os) {
-  *os << time_delta.ToNanoseconds();
-}
+void PrintTo(const TimeDelta& time_delta, ::std::ostream* os) { *os << time_delta.ToNanoseconds(); }
 
 void PrintTo(const TimePoint& time_point, ::std::ostream* os) {
   *os << (time_point - TimePoint()).ToNanoseconds();

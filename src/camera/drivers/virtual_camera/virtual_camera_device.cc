@@ -24,8 +24,7 @@ static zx_protocol_device_t virtual_camera_device_ops = {
 
 VirtualCameraDevice::VirtualCameraDevice() {
   if (fidl_dispatch_loop_ == nullptr) {
-    fidl_dispatch_loop_ =
-        std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    fidl_dispatch_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     fidl_dispatch_loop_->StartThread();
   }
 }
@@ -51,8 +50,7 @@ void VirtualCameraDevice::Unbind() {
 void VirtualCameraDevice::Release() { delete this; }
 
 zx_status_t VirtualCameraDevice::Message(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_camera_Device_dispatch(this, txn, msg,
-                                                 &CAMERA_FIDL_THUNKS);
+  return fuchsia_hardware_camera_Device_dispatch(this, txn, msg, &CAMERA_FIDL_THUNKS);
 }
 
 zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
@@ -61,8 +59,7 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
   }
 
   // CameraStream FIDL interface
-  static std::unique_ptr<VirtualCameraControlImpl>
-      virtual_camera_camera_control_server_ = nullptr;
+  static std::unique_ptr<VirtualCameraControlImpl> virtual_camera_camera_control_server_ = nullptr;
 
   if (virtual_camera_camera_control_server_ != nullptr) {
     FXL_LOG(ERROR) << "Camera Control already running";
@@ -71,14 +68,12 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
   }
 
   zx::channel channel(handle);
-  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface(
-      std::move(channel));
+  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface(std::move(channel));
 
   if (control_interface.is_valid()) {
-    virtual_camera_camera_control_server_ =
-        std::make_unique<VirtualCameraControlImpl>(
-            std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
-            [] { virtual_camera_camera_control_server_.reset(); });
+    virtual_camera_camera_control_server_ = std::make_unique<VirtualCameraControlImpl>(
+        std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
+        [] { virtual_camera_camera_control_server_.reset(); });
 
     return ZX_OK;
   } else {
@@ -86,12 +81,10 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
   }
 }
 
-const fuchsia_hardware_camera_Device_ops_t
-    VirtualCameraDevice::CAMERA_FIDL_THUNKS{
-        .GetChannel = [](void* ctx, zx_handle_t handle) -> zx_status_t {
-          return reinterpret_cast<VirtualCameraDevice*>(ctx)->GetChannel(
-              handle);
-        },
-    };
+const fuchsia_hardware_camera_Device_ops_t VirtualCameraDevice::CAMERA_FIDL_THUNKS{
+    .GetChannel = [](void* ctx, zx_handle_t handle) -> zx_status_t {
+      return reinterpret_cast<VirtualCameraDevice*>(ctx)->GetChannel(handle);
+    },
+};
 
 }  // namespace virtual_camera

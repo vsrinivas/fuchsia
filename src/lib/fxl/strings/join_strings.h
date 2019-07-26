@@ -16,8 +16,7 @@ namespace fxl {
 // size()) as defined in the Containers library (see:
 // http://en.cppreference.com/w/cpp/container).
 template <typename StringContainer>
-std::string JoinStrings(const StringContainer& strings,
-                        const std::string& separator = "") {
+std::string JoinStrings(const StringContainer& strings, const std::string& separator = "") {
   size_t output_length = 0;
   // Add up the sizes of the strings.
   for (const auto& i : strings) {

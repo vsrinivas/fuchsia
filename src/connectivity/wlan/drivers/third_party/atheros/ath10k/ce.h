@@ -51,75 +51,75 @@ struct ath10k_ce_pipe;
 // clang-format on
 
 struct ce_desc {
-    uint32_t addr;
-    uint16_t nbytes;
-    uint16_t flags; /* %CE_DESC_FLAGS_ */
+  uint32_t addr;
+  uint16_t nbytes;
+  uint16_t flags; /* %CE_DESC_FLAGS_ */
 };
 
 struct ath10k_ce_ring {
-    /* Number of entries in this ring; must be power of 2 */
-    unsigned int nentries;
-    unsigned int nentries_mask;
+  /* Number of entries in this ring; must be power of 2 */
+  unsigned int nentries;
+  unsigned int nentries_mask;
 
-    /*
-     * For dest ring, this is the next index to be processed
-     * by software after it was/is received into.
-     *
-     * For src ring, this is the last descriptor that was sent
-     * and completion processed by software.
-     *
-     * Regardless of src or dest ring, this is an invariant
-     * (modulo ring size):
-     *     write index >= read index >= sw_index
-     */
-    unsigned int sw_index;
-    /* cached copy */
-    unsigned int write_index;
-    /*
-     * For src ring, this is the next index not yet processed by HW.
-     * This is a cached copy of the real HW index (read index), used
-     * for avoiding reading the HW index register more often than
-     * necessary.
-     * This extends the invariant:
-     *     write index >= read index >= hw_index >= sw_index
-     *
-     * For dest ring, this is currently unused.
-     */
-    /* cached copy */
-    unsigned int hw_index;
+  /*
+   * For dest ring, this is the next index to be processed
+   * by software after it was/is received into.
+   *
+   * For src ring, this is the last descriptor that was sent
+   * and completion processed by software.
+   *
+   * Regardless of src or dest ring, this is an invariant
+   * (modulo ring size):
+   *     write index >= read index >= sw_index
+   */
+  unsigned int sw_index;
+  /* cached copy */
+  unsigned int write_index;
+  /*
+   * For src ring, this is the next index not yet processed by HW.
+   * This is a cached copy of the real HW index (read index), used
+   * for avoiding reading the HW index register more often than
+   * necessary.
+   * This extends the invariant:
+   *     write index >= read index >= hw_index >= sw_index
+   *
+   * For dest ring, this is currently unused.
+   */
+  /* cached copy */
+  unsigned int hw_index;
 
-    /* Start of DMA-coherent area reserved for descriptors */
-    io_buffer_t iobuf;
+  /* Start of DMA-coherent area reserved for descriptors */
+  io_buffer_t iobuf;
 
-    /*
-     * Actual start of descriptors.
-     * Aligned to descriptor-size boundary.
-     * Points into reserved DMA-coherent area, above.
-     */
-    /* Host address space */
-    void* base_addr_owner_space;
+  /*
+   * Actual start of descriptors.
+   * Aligned to descriptor-size boundary.
+   * Points into reserved DMA-coherent area, above.
+   */
+  /* Host address space */
+  void* base_addr_owner_space;
 
-    /* CE address space */
-    zx_paddr_t base_addr_ce_space;
+  /* CE address space */
+  zx_paddr_t base_addr_ce_space;
 
-    /* keep last */
-    void* per_transfer_context[0];
+  /* keep last */
+  void* per_transfer_context[0];
 };
 
 struct ath10k_ce_pipe {
-    struct ath10k* ar;
-    unsigned int id;
+  struct ath10k* ar;
+  unsigned int id;
 
-    unsigned int attr_flags;
+  unsigned int attr_flags;
 
-    uint32_t ctrl_addr;
+  uint32_t ctrl_addr;
 
-    void (*send_cb)(struct ath10k_ce_pipe*);
-    void (*recv_cb)(struct ath10k_ce_pipe*);
+  void (*send_cb)(struct ath10k_ce_pipe*);
+  void (*recv_cb)(struct ath10k_ce_pipe*);
 
-    unsigned int src_sz_max;
-    struct ath10k_ce_ring* src_ring;
-    struct ath10k_ce_ring* dest_ring;
+  unsigned int src_sz_max;
+  struct ath10k_ce_ring* src_ring;
+  struct ath10k_ce_ring* dest_ring;
 };
 
 /* Copy Engine settable attributes */
@@ -236,27 +236,27 @@ void ath10k_ce_dump_registers(struct ath10k* ar, struct ath10k_fw_crash_data* cr
 
 /* Attributes of an instance of a Copy Engine */
 struct ce_attr {
-    /* CE_ATTR_* values */
-    unsigned int flags;
+  /* CE_ATTR_* values */
+  unsigned int flags;
 
-    /* #entries in source ring - Must be a power of 2 */
-    unsigned int src_nentries;
+  /* #entries in source ring - Must be a power of 2 */
+  unsigned int src_nentries;
 
-    /*
-     * Max source send size for this CE.
-     * This is also the minimum size of a destination buffer.
-     */
-    unsigned int src_sz_max;
+  /*
+   * Max source send size for this CE.
+   * This is also the minimum size of a destination buffer.
+   */
+  unsigned int src_sz_max;
 
-    /* #entries in destination ring - Must be a power of 2 */
-    unsigned int dest_nentries;
+  /* #entries in destination ring - Must be a power of 2 */
+  unsigned int dest_nentries;
 
-    void (*send_cb)(struct ath10k_ce_pipe*);
-    void (*recv_cb)(struct ath10k_ce_pipe*);
+  void (*send_cb)(struct ath10k_ce_pipe*);
+  void (*recv_cb)(struct ath10k_ce_pipe*);
 };
 
 static inline uint32_t ath10k_ce_base_address(struct ath10k* ar, unsigned int ce_id) {
-    return CE0_BASE_ADDRESS + (CE1_BASE_ADDRESS - CE0_BASE_ADDRESS) * ce_id;
+  return CE0_BASE_ADDRESS + (CE1_BASE_ADDRESS - CE0_BASE_ADDRESS) * ce_id;
 }
 
 #define CE_SRC_RING_TO_DESC(baddr, idx) (&(((struct ce_desc*)baddr)[idx]))
@@ -265,7 +265,7 @@ static inline uint32_t ath10k_ce_base_address(struct ath10k* ar, unsigned int ce
 
 /* Ring arithmetic (modulus number of entries in ring, which is a pwr of 2). */
 #define CE_RING_DELTA(nentries_mask, fromidx, toidx) \
-    (((int)(toidx) - (int)(fromidx)) & (nentries_mask))
+  (((int)(toidx) - (int)(fromidx)) & (nentries_mask))
 
 #define CE_RING_IDX_INCR(nentries_mask, idx) (((idx) + 1) & (nentries_mask))
 #define CE_RING_IDX_ADD(nentries_mask, idx, num) (((idx) + (num)) & (nentries_mask))
@@ -273,11 +273,11 @@ static inline uint32_t ath10k_ce_base_address(struct ath10k* ar, unsigned int ce
 #define CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_LSB ar->regs->ce_wrap_intr_sum_host_msi_lsb
 #define CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_MASK ar->regs->ce_wrap_intr_sum_host_msi_mask
 #define CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_GET(x) \
-    (((x)&CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_MASK) >> CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_LSB)
+  (((x)&CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_MASK) >> CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_LSB)
 #define CE_WRAPPER_INTERRUPT_SUMMARY_ADDRESS 0x0000
 
-#define CE_INTERRUPT_SUMMARY(ar)               \
-    CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_GET( \
-        ath10k_pci_read32((ar), CE_WRAPPER_BASE_ADDRESS + CE_WRAPPER_INTERRUPT_SUMMARY_ADDRESS))
+#define CE_INTERRUPT_SUMMARY(ar)             \
+  CE_WRAPPER_INTERRUPT_SUMMARY_HOST_MSI_GET( \
+      ath10k_pci_read32((ar), CE_WRAPPER_BASE_ADDRESS + CE_WRAPPER_INTERRUPT_SUMMARY_ADDRESS))
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_CE_H_

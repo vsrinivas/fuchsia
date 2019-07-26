@@ -8,18 +8,16 @@
 
 namespace zx {
 
-zx_status_t eventpair::create(uint32_t flags, eventpair* endpoint0,
-                              eventpair* endpoint1) {
-    // Ensure aliasing of both out parameters to the same container
-    // has a well-defined result, and does not leak.
-    eventpair h0;
-    eventpair h1;
-    zx_status_t status = zx_eventpair_create(
-        flags, h0.reset_and_get_address(),
-        h1.reset_and_get_address());
-    endpoint0->reset(h0.release());
-    endpoint1->reset(h1.release());
-    return status;
+zx_status_t eventpair::create(uint32_t flags, eventpair* endpoint0, eventpair* endpoint1) {
+  // Ensure aliasing of both out parameters to the same container
+  // has a well-defined result, and does not leak.
+  eventpair h0;
+  eventpair h1;
+  zx_status_t status =
+      zx_eventpair_create(flags, h0.reset_and_get_address(), h1.reset_and_get_address());
+  endpoint0->reset(h0.release());
+  endpoint1->reset(h1.release());
+  return status;
 }
 
-} // namespace zx
+}  // namespace zx

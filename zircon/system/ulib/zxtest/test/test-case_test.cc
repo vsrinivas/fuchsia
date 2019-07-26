@@ -20,25 +20,21 @@ namespace {
 
 constexpr char kTestCaseName[] = "TestCase";
 
-void Stub() {
-}
+void Stub() {}
 
 class FakeTest : public zxtest::Test {
  public:
   fbl::Function<void()> body = &Stub;
 
  private:
-  void TestBody() final {
-    body();
-  }
+  void TestBody() final { body(); }
 };
 
 // Lifecycle observer that verifies that callbacks are executed correctly within
 // zxtest::TestCase.
 class FakeLifecycleObserver : public LifecycleObserver {
  public:
-  ~FakeLifecycleObserver() final {
-  }
+  ~FakeLifecycleObserver() final {}
 
   // Reports before every TestCase is set up.
   void OnTestCaseStart(const TestCase& test_case) final {

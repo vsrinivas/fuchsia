@@ -169,8 +169,7 @@ struct Completer final {
   //
   class Async final : public Base {
    public:
-    Async()
-        : Base() {}
+    Async() : Base() {}
 
     explicit Async(std::unique_ptr<Transaction> owned_transaction)
         : Base(owned_transaction.release(), true /*owned*/, kExpectingReply) {}

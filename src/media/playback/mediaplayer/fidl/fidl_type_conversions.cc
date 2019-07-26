@@ -340,8 +340,7 @@ TypeConverter<fuchsia::media::FormatDetailsPtr, media_player::StreamType>::Conve
     case media_player::StreamType::Medium::kVideo:
       if (input.encoding() == media_player::StreamType::kVideoEncodingH264) {
         mime_type = kVideoMimeTypeH264;
-      } else if (input.encoding() ==
-                 media_player::StreamType::kVideoEncodingVp9) {
+      } else if (input.encoding() == media_player::StreamType::kVideoEncodingVp9) {
         mime_type = kVideoMimeTypeVp9;
       }
       break;

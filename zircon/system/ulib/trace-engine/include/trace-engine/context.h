@@ -9,4 +9,4 @@
 
 #include <lib/trace-engine/context.h>
 
-#endif // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_CONTEXT_H_
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_CONTEXT_H_

@@ -7,4 +7,4 @@
 
 #include <lib/trace/observer.h>
 
-#endif // ZIRCON_SYSTEM_ULIB_TRACE_OBSERVER_H_
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_OBSERVER_H_

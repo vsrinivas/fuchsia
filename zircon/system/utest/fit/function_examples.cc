@@ -10,17 +10,17 @@
 namespace {
 
 bool example1() {
-    BEGIN_TEST;
-    function_example1::run();
-    END_TEST;
+  BEGIN_TEST;
+  function_example1::run();
+  END_TEST;
 }
 
 bool example2() {
-    BEGIN_TEST;
-    function_example2::run();
-    END_TEST;
+  BEGIN_TEST;
+  function_example2::run();
+  END_TEST;
 }
-} // namespace
+}  // namespace
 
 BEGIN_TEST_CASE(function_examples)
 RUN_TEST(example1);

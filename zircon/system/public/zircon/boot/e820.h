@@ -15,9 +15,9 @@
 #define E820_UNUSABLE 5
 
 typedef struct e820entry {
-    uint64_t addr;
-    uint64_t size;
-    uint32_t type;
+  uint64_t addr;
+  uint64_t size;
+  uint32_t type;
 } __PACKED e820entry_t;
 
 #endif  // SYSROOT_ZIRCON_BOOT_E820_H_

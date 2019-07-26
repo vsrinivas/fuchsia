@@ -14,16 +14,16 @@ namespace intrusive_containers {
 
 template <typename ContainerStateType>
 struct OtherListTraits {
-    using PtrTraits = typename ContainerStateType::PtrTraits;
-    static ContainerStateType& node_state(typename PtrTraits::RefType obj) {
-        return obj.other_container_state_;
-    }
+  using PtrTraits = typename ContainerStateType::PtrTraits;
+  static ContainerStateType& node_state(typename PtrTraits::RefType obj) {
+    return obj.other_container_state_;
+  }
 };
 
 template <typename PtrType>
 class SLLTraits {
-public:
-// clang-format off
+ public:
+  // clang-format off
     using TestObjBaseType         = TestObjBase;
 
     using ContainerType           = SinglyLinkedList<PtrType>;
@@ -46,22 +46,22 @@ public:
     using TaggedType1 = TaggedSinglyLinkedList<PtrType, Tag1>;
     using TaggedType2 = TaggedSinglyLinkedList<PtrType, Tag2>;
     using TaggedType3 = TaggedSinglyLinkedList<PtrType, Tag3>;
-// clang-format on
+  // clang-format on
 };
 
 // Just a sanity check so we know our metaprogramming nonsense is
 // doing what we expect:
-static_assert(std::is_same_v<typename SLLTraits<int*>::TaggedContainableBaseClasses::TagTypes,
-                             std::tuple<typename SLLTraits<int*>::Tag1,
-                                        typename SLLTraits<int*>::Tag2,
-                                        typename SLLTraits<int*>::Tag3>>);
+static_assert(
+    std::is_same_v<typename SLLTraits<int*>::TaggedContainableBaseClasses::TagTypes,
+                   std::tuple<typename SLLTraits<int*>::Tag1, typename SLLTraits<int*>::Tag2,
+                              typename SLLTraits<int*>::Tag3>>);
 
 DEFINE_TEST_OBJECTS(SLL);
-using UMTE    = DEFINE_TEST_THUNK(Sequence, SLL, Unmanaged);
-using UPTE    = DEFINE_TEST_THUNK(Sequence, SLL, UniquePtr);
+using UMTE = DEFINE_TEST_THUNK(Sequence, SLL, Unmanaged);
+using UPTE = DEFINE_TEST_THUNK(Sequence, SLL, UniquePtr);
 using SUPDDTE = DEFINE_TEST_THUNK(Sequence, SLL, StdUniquePtrDefaultDeleter);
 using SUPCDTE = DEFINE_TEST_THUNK(Sequence, SLL, StdUniquePtrCustomDeleter);
-using RPTE    = DEFINE_TEST_THUNK(Sequence, SLL, RefPtr);
+using RPTE = DEFINE_TEST_THUNK(Sequence, SLL, RefPtr);
 
 // clang-format off
 BEGIN_TEST_CASE(single_linked_list_tests)

@@ -19,4 +19,3 @@
 #define readl(a) (*REG32(a))
 #define writell(v, a) (*REG64(a) = (v))
 #define readll(a) (*REG64(a))
-

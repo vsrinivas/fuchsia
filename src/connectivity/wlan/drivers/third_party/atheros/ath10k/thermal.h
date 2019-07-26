@@ -27,16 +27,16 @@
 // clang-format on
 
 struct ath10k_thermal {
-    struct thermal_cooling_device* cdev;
-    sync_completion_t wmi_sync;
+  struct thermal_cooling_device* cdev;
+  sync_completion_t wmi_sync;
 
-    /* protected by conf_mutex */
-    uint32_t throttle_state;
-    uint32_t quiet_period;
-    /* temperature value in Celcius degree
-     * protected by data_lock
-     */
-    int temperature;
+  /* protected by conf_mutex */
+  uint32_t throttle_state;
+  uint32_t quiet_period;
+  /* temperature value in Celcius degree
+   * protected by data_lock
+   */
+  int temperature;
 };
 
 #if CONFIG_THERMAL
@@ -45,9 +45,7 @@ void ath10k_thermal_unregister(struct ath10k* ar);
 void ath10k_thermal_event_temperature(struct ath10k* ar, int temperature);
 void ath10k_thermal_set_throttling(struct ath10k* ar);
 #else
-static inline int ath10k_thermal_register(struct ath10k* ar) {
-    return 0;
-}
+static inline int ath10k_thermal_register(struct ath10k* ar) { return 0; }
 
 static inline void ath10k_thermal_unregister(struct ath10k* ar) {}
 

@@ -21,8 +21,7 @@ class Task : public fbl::RefCounted<Task> {
  public:
   using Completion = fit::function<void(zx_status_t)>;
 
-  Task(async_dispatcher_t* dispatcher, Completion completion = nullptr,
-      bool post_on_create = true);
+  Task(async_dispatcher_t* dispatcher, Completion completion = nullptr, bool post_on_create = true);
 
   bool is_completed() const { return std::holds_alternative<zx_status_t>(status_); }
   zx_status_t status() const {

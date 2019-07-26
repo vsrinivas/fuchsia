@@ -17,45 +17,43 @@
 namespace fzl {
 
 class PinnedVmo {
-  public:
-    struct Region {
-        zx_paddr_t phys_addr;
-        uint64_t   size;
-    };
+ public:
+  struct Region {
+    zx_paddr_t phys_addr;
+    uint64_t size;
+  };
 
-    PinnedVmo() = default;
-    ~PinnedVmo() { Unpin(); }
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(PinnedVmo);
+  PinnedVmo() = default;
+  ~PinnedVmo() { Unpin(); }
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(PinnedVmo);
 
-    // Move support
-    PinnedVmo(PinnedVmo&& other) {
-        *this = std::move(other);
-    }
+  // Move support
+  PinnedVmo(PinnedVmo&& other) { *this = std::move(other); }
 
-    PinnedVmo& operator=(PinnedVmo&& other) {
-        pmt_ = std::move(other.pmt_);
-        regions_ = std::move(other.regions_);
-        region_count_ = other.region_count_;
-        other.region_count_ = 0;
-        return *this;
-    }
+  PinnedVmo& operator=(PinnedVmo&& other) {
+    pmt_ = std::move(other.pmt_);
+    regions_ = std::move(other.regions_);
+    region_count_ = other.region_count_;
+    other.region_count_ = 0;
+    return *this;
+  }
 
-    zx_status_t Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t options);
-    void Unpin();
+  zx_status_t Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t options);
+  void Unpin();
 
-    uint32_t region_count() const { return region_count_; }
-    const Region& region(uint32_t ndx) const {
-        ZX_DEBUG_ASSERT(ndx < region_count_);
-        ZX_DEBUG_ASSERT(regions_ != nullptr);
-        return regions_[ndx];
-    }
+  uint32_t region_count() const { return region_count_; }
+  const Region& region(uint32_t ndx) const {
+    ZX_DEBUG_ASSERT(ndx < region_count_);
+    ZX_DEBUG_ASSERT(regions_ != nullptr);
+    return regions_[ndx];
+  }
 
-  private:
-    void UnpinInternal();
+ private:
+  void UnpinInternal();
 
-    zx::pmt pmt_;
-    fbl::unique_ptr<Region[]> regions_;
-    uint32_t region_count_ = 0;
+  zx::pmt pmt_;
+  fbl::unique_ptr<Region[]> regions_;
+  uint32_t region_count_ = 0;
 };
 
 }  // namespace fzl

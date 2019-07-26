@@ -88,8 +88,7 @@ void CameraManagerImpl::OnDeviceFound(int dir_fd, std::string filename) {
   }
 }
 
-void CameraManagerImpl::AddDevice(
-    std::unique_ptr<VideoDeviceClient> video_device) {
+void CameraManagerImpl::AddDevice(std::unique_ptr<VideoDeviceClient> video_device) {
   // Initially add the device to the inactive devices until we get all
   // the information we need from it.
   inactive_devices_.push_back(std::move(video_device));
@@ -99,18 +98,15 @@ void CameraManagerImpl::AddDevice(
       });
 }
 
-void CameraManagerImpl::OnDeviceStartupComplete(uint64_t camera_id,
-                                                zx_status_t status) {
-  for (auto iter = inactive_devices_.begin(); iter != inactive_devices_.end();
-       iter++) {
+void CameraManagerImpl::OnDeviceStartupComplete(uint64_t camera_id, zx_status_t status) {
+  for (auto iter = inactive_devices_.begin(); iter != inactive_devices_.end(); iter++) {
     if ((*iter)->id() == camera_id) {
       // Now that we found the device, either put it in the active list,
       // or shut it down, depending on the status.
       if (status == ZX_OK) {
         // We put the newly active device in the front of active_devices_,
         // but it doesn't really matter what order the devices are stored in.
-        active_devices_.splice(active_devices_.begin(), inactive_devices_,
-                               iter);
+        active_devices_.splice(active_devices_.begin(), inactive_devices_, iter);
       } else {
         inactive_devices_.erase(iter);
       }
@@ -137,26 +133,23 @@ void CameraManagerImpl::GetFormats(uint64_t camera_id, uint32_t index,
     }
   }
 
-  size_t min_index =
-      std::max((size_t)0, std::min((size_t)index, formats->size() - 1));
+  size_t min_index = std::max((size_t)0, std::min((size_t)index, formats->size() - 1));
   size_t max_index =
-      std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1,
-               formats->size() - 1);
+      std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1, formats->size() - 1);
 
-  callback(std::vector<fuchsia::camera::VideoFormat>(
-               &(*formats)[min_index], &(*formats)[max_index + 1]),
-           formats->size());
+  callback(
+      std::vector<fuchsia::camera::VideoFormat>(&(*formats)[min_index], &(*formats)[max_index + 1]),
+      formats->size());
 }
 
-void CameraManagerImpl::CreateStream(
-    fuchsia::camera::VideoStream request,
-    fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
-    zx::eventpair client_token) {
+void CameraManagerImpl::CreateStream(fuchsia::camera::VideoStream request,
+                                     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
+                                     fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+                                     zx::eventpair client_token) {
   for (auto& device : active_devices_) {
     if (device->id() == request.camera_id) {
-      device->CreateStream(std::move(buffer_collection), request.format.rate,
-                           std::move(stream), std::move(client_token));
+      device->CreateStream(std::move(buffer_collection), request.format.rate, std::move(stream),
+                           std::move(client_token));
       break;
     }
   }

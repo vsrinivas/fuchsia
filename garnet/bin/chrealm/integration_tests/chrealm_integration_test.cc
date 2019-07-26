@@ -41,8 +41,7 @@ const char kRealm[] = "chrealmtest";
 class ChrealmTest : public sys::testing::TestWithEnvironment,
                     public fuchsia::testing::chrealm::TestService {
  public:
-  void GetMessage(
-      fuchsia::testing::chrealm::TestService::GetMessageCallback cb) override {
+  void GetMessage(fuchsia::testing::chrealm::TestService::GetMessageCallback cb) override {
     cb(kMessage);
   }
 
@@ -68,8 +67,8 @@ class ChrealmTest : public sys::testing::TestWithEnvironment,
 
   void KillRealm() {
     enclosing_env_->Kill();
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this] { return !enclosing_env_->is_running(); }, zx::sec(10)));
+    ASSERT_TRUE(
+        RunLoopWithTimeoutOrUntil([this] { return !enclosing_env_->is_running(); }, zx::sec(10)));
   }
 
   void RunCommand(const std::vector<const char*>& argv, std::string* out) {
@@ -82,29 +81,25 @@ class ChrealmTest : public sys::testing::TestWithEnvironment,
     zx_handle_t proc = ZX_HANDLE_INVALID;
     RunCommandAsync(argv, outfd, &proc);
     bool proc_terminated = false;
-    async::Wait async_wait(
-        proc, ZX_PROCESS_TERMINATED,
-        [&proc_terminated](async_dispatcher_t* dispatcher,
-                           async::WaitBase* wait, zx_status_t status,
-                           const zx_packet_signal* signal) {
-          proc_terminated = true;
-        });
+    async::Wait async_wait(proc, ZX_PROCESS_TERMINATED,
+                           [&proc_terminated](async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                              zx_status_t status, const zx_packet_signal* signal) {
+                             proc_terminated = true;
+                           });
     ASSERT_EQ(ZX_OK, async_wait.Begin(dispatcher()));
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&proc_terminated] { return proc_terminated; }, zx::sec(10)));
+    ASSERT_TRUE(
+        RunLoopWithTimeoutOrUntil([&proc_terminated] { return proc_terminated; }, zx::sec(10)));
     zx_info_process_t info;
-    zx_status_t status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info,
-                                            sizeof(info), nullptr, nullptr);
+    zx_status_t status =
+        zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
     ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(info.return_code, 0)
-        << "Command failed with code " << info.return_code;
+    ASSERT_EQ(info.return_code, 0) << "Command failed with code " << info.return_code;
 
     ASSERT_TRUE(files::ReadFileDescriptorToString(outfd, out));
     close(outfd);
   }
 
-  static void RunCommandAsync(const std::vector<const char*>& argv, int outfd,
-                              zx_handle_t* proc) {
+  static void RunCommandAsync(const std::vector<const char*>& argv, int outfd, zx_handle_t* proc) {
     std::vector<const char*> normalized_argv = argv;
     normalized_argv.push_back(nullptr);
 
@@ -117,10 +112,9 @@ class ChrealmTest : public sys::testing::TestWithEnvironment,
         {.action = FDIO_SPAWN_ACTION_CLONE_FD,
          .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}}};
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-    zx_status_t status = fdio_spawn_etc(
-        ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO,
-        argv[0], normalized_argv.data(), nullptr, arraysize(actions), actions,
-        proc, err_msg);
+    zx_status_t status =
+        fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO, argv[0],
+                       normalized_argv.data(), nullptr, arraysize(actions), actions, proc, err_msg);
     ASSERT_EQ(status, ZX_OK) << "Failed to spawn command: " << err_msg;
   }
 
@@ -140,10 +134,10 @@ TEST_F(ChrealmTest, ConnectToService) {
     // only finds the built-in services.
     std::string svc_contents;
     std::string hub_contents;
-    const std::vector<const char*> lssvc_args = {
-        "/bin/chrealm", realm_path.c_str(), "--", "/bin/ls", "/svc"};
-    const std::vector<const char*> lshub_args = {
-        "/bin/chrealm", realm_path.c_str(), "--", "/bin/ls", "/hub/svc"};
+    const std::vector<const char*> lssvc_args = {"/bin/chrealm", realm_path.c_str(), "--",
+                                                 "/bin/ls", "/svc"};
+    const std::vector<const char*> lshub_args = {"/bin/chrealm", realm_path.c_str(), "--",
+                                                 "/bin/ls", "/hub/svc"};
     RunCommand(lssvc_args, &svc_contents);
     RunCommand(lshub_args, &hub_contents);
     EXPECT_EQ(svc_contents, hub_contents);
@@ -167,8 +161,7 @@ TEST_F(ChrealmTest, CreatedUnderRealmJob) {
   CreateRealm(&realm_path);
 
   zx_handle_t proc = ZX_HANDLE_INVALID;
-  const std::vector<const char*> args = {"/bin/chrealm", realm_path.c_str(),
-                                         "--", "/bin/yes"};
+  const std::vector<const char*> args = {"/bin/chrealm", realm_path.c_str(), "--", "/bin/yes"};
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
   RunCommandAsync(args, pipefd[1], &proc);
@@ -181,8 +174,8 @@ TEST_F(ChrealmTest, CreatedUnderRealmJob) {
   // killed.
   KillRealm();
 
-  zx_status_t status = zx_object_wait_one(
-      proc, ZX_PROCESS_TERMINATED, zx_deadline_after(ZX_SEC(10)), nullptr);
+  zx_status_t status =
+      zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, zx_deadline_after(ZX_SEC(10)), nullptr);
   ASSERT_EQ(ZX_OK, status);
 }
 

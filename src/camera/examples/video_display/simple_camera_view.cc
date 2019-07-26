@@ -29,15 +29,13 @@ static const std::string kSimpleCameraServiceUrl =
 static const uint32_t camera_id = 0;  // 0 -> fake camera, 1 -> real camera
 
 SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
-    : BaseView(std::move(view_context), "Video Display Example"),
-      node_(session()) {
+    : BaseView(std::move(view_context), "Video Display Example"), node_(session()) {
   FXL_VLOG(4) << "Creating video_display View";
 
   // Create an ImagePipe and pass one end to the Session:
   fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe_handle;
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic::NewCreateImagePipeCmd(
-      image_pipe_id, image_pipe_handle.NewRequest()));
+  session()->Enqueue(scenic::NewCreateImagePipeCmd(image_pipe_id, image_pipe_handle.NewRequest()));
 
   // Create a material that has our image pipe mapped onto it:
   scenic::Material material(session());
@@ -48,12 +46,10 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kSimpleCameraServiceUrl;
   launch_info.directory_request = simple_camera_provider_.NewRequest();
-  startup_context()->launcher()->CreateComponent(std::move(launch_info),
-                                                 controller_.NewRequest());
+  startup_context()->launcher()->CreateComponent(std::move(launch_info), controller_.NewRequest());
 
-  simple_camera_provider_.ConnectToService(
-      simple_camera_.NewRequest().TakeChannel(),
-      fuchsia::simplecamera::SimpleCamera::Name_);
+  simple_camera_provider_.ConnectToService(simple_camera_.NewRequest().TakeChannel(),
+                                           fuchsia::simplecamera::SimpleCamera::Name_);
 
   // Now pass the other end of the image pipe to the simple camera interface:
   simple_camera_->ConnectToCamera(camera_id, std::move(image_pipe_handle));
@@ -64,8 +60,7 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
   });
 
   // Create a rounded-rect shape to display the camera image on.
-  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80, 80,
-                                 80, 80);
+  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80, 80, 80, 80);
 
   node_.SetShape(shape);
   node_.SetMaterial(material);
@@ -75,15 +70,13 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
   InvalidateScene();
 }
 
-void SimpleCameraView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
+void SimpleCameraView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size()) {
     return;
   }
 
   // Compute the amount of time that has elapsed since the view was created.
-  double seconds =
-      static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
+  double seconds = static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
 
   const float kHalfWidth = logical_size().x * 0.5f;
   const float kHalfHeight = logical_size().y * 0.5f;
@@ -92,8 +85,7 @@ void SimpleCameraView::OnSceneInvalidated(
   // Why do this?  Well, this is an example of what a View can do, and it helps
   // debug the camera to know if scenic is still running.
   node_.SetTranslation(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
-                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)),
-                       -kDisplayHeight);
+                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)), -kDisplayHeight);
 
   // The rounded-rectangles are constantly animating; invoke InvalidateScene()
   // to guarantee that OnSceneInvalidated() will be called again.

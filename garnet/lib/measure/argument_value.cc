@@ -12,8 +12,8 @@ namespace measure {
 MeasureArgumentValue::MeasureArgumentValue(std::vector<ArgumentValueSpec> specs)
     : specs_(std::move(specs)) {}
 
-bool MeasureArgumentValue::RecordArgumentValue(
-    const trace::Record::Event& event, const ArgumentValueSpec& spec) {
+bool MeasureArgumentValue::RecordArgumentValue(const trace::Record::Event& event,
+                                               const ArgumentValueSpec& spec) {
   for (const trace::Argument& argument : event.arguments) {
     if ((argument.name() == spec.argument_name) &&
         (argument.value().type() == trace::ArgumentType::kUint64)) {
@@ -26,16 +26,14 @@ bool MeasureArgumentValue::RecordArgumentValue(
 
 bool MeasureArgumentValue::Process(const trace::Record::Event& event) {
   for (const ArgumentValueSpec& spec : specs_) {
-    if (EventMatchesSpec(event, spec.event) &&
-        RecordArgumentValue(event, spec)) {
+    if (EventMatchesSpec(event, spec.event) && RecordArgumentValue(event, spec)) {
       return true;
     }
   }
   return false;
 }
 
-void MeasureArgumentValue::AddResult(uint64_t spec_id,
-                                     uint64_t argument_value) {
+void MeasureArgumentValue::AddResult(uint64_t spec_id, uint64_t argument_value) {
   results_[spec_id].push_back(argument_value);
 }
 

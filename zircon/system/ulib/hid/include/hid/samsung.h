@@ -23,22 +23,21 @@ __BEGIN_CDECLS
 #define SAMSUNG_Y_MAX 32767
 
 typedef struct samsung_finger {
-    uint8_t finger_id;
-    uint8_t width;
-    uint8_t height;
-    uint16_t x;
-    uint16_t y;
+  uint8_t finger_id;
+  uint8_t width;
+  uint8_t height;
+  uint16_t x;
+  uint16_t y;
 } __attribute__((packed)) samsung_finger_t;
 
 typedef struct samsung_touch {
-    uint8_t rpt_id;
-    samsung_finger_t fingers[10];
-    uint16_t scan_time;
-    uint8_t contact_count;
+  uint8_t rpt_id;
+  samsung_finger_t fingers[10];
+  uint16_t scan_time;
+  uint8_t contact_count;
 } __attribute__((packed)) samsung_touch_t;
 
 bool is_samsung_touch_report_desc(const uint8_t* data, size_t len);
 zx_status_t setup_samsung_touch(int fd);
 
 __END_CDECLS
-

@@ -12,6 +12,6 @@ namespace zx {
 using handle = object<void>;
 using unowned_handle = unowned<handle>;
 
-} // namespace zx
+}  // namespace zx
 
 #endif  // LIB_ZX_HANDLE_H_

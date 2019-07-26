@@ -20,17 +20,17 @@
 
 #define CORE_CC_REG(base, field) (base + offsetof(struct chipcregs, field))
 
-#define CHIPSET_ARM_CM3_CORE      0x82a
+#define CHIPSET_ARM_CM3_CORE 0x82a
 #define CHIPSET_INTERNAL_MEM_CORE 0x80e
-#define CHIPSET_ARM_CR4_CORE      0x83e
-#define CHIPSET_ARM_CA7_CORE      0x847
-#define CHIPSET_80211_CORE        0x812
-#define CHIPSET_PCIE2_CORE        0x83c
-#define CHIPSET_SDIO_DEV_CORE     0x829
-#define CHIPSET_CHIPCOMMON_CORE   0x800
-#define CHIPSET_SYS_MEM_CORE      0x849
-#define CHIPSET_PMU_CORE          0x827
-#define CHIPSET_SIM_DEV_CORE      0x4a43
+#define CHIPSET_ARM_CR4_CORE 0x83e
+#define CHIPSET_ARM_CA7_CORE 0x847
+#define CHIPSET_80211_CORE 0x812
+#define CHIPSET_PCIE2_CORE 0x83c
+#define CHIPSET_SDIO_DEV_CORE 0x829
+#define CHIPSET_CHIPCOMMON_CORE 0x800
+#define CHIPSET_SYS_MEM_CORE 0x849
+#define CHIPSET_PMU_CORE 0x827
+#define CHIPSET_SIM_DEV_CORE 0x4a43
 
 /**
  * struct brcmf_chip - chip level information.
@@ -47,16 +47,16 @@
  * @name: string representation of the chip identifier.
  */
 struct brcmf_chip {
-    uint32_t chip;
-    uint32_t chiprev;
-    uint32_t cc_caps;
-    uint32_t cc_caps_ext;
-    uint32_t pmucaps;
-    uint32_t pmurev;
-    uint32_t rambase;
-    uint32_t ramsize;
-    uint32_t srsize;
-    char name[8];
+  uint32_t chip;
+  uint32_t chiprev;
+  uint32_t cc_caps;
+  uint32_t cc_caps_ext;
+  uint32_t pmucaps;
+  uint32_t pmurev;
+  uint32_t rambase;
+  uint32_t ramsize;
+  uint32_t srsize;
+  char name[8];
 };
 
 /**
@@ -67,9 +67,9 @@ struct brcmf_chip {
  * @base: base address of core register space.
  */
 struct brcmf_core {
-    uint16_t id;
-    uint16_t rev;
-    uint32_t base;
+  uint16_t id;
+  uint16_t rev;
+  uint32_t base;
 };
 
 /**
@@ -83,12 +83,12 @@ struct brcmf_core {
  *  The callback should use the provided @rstvec when non-zero.
  */
 struct brcmf_buscore_ops {
-    uint32_t (*read32)(void* ctx, uint32_t addr);
-    void (*write32)(void* ctx, uint32_t addr, uint32_t value);
-    zx_status_t (*prepare)(void* ctx);
-    int (*reset)(void* ctx, struct brcmf_chip* chip);
-    int (*setup)(void* ctx, struct brcmf_chip* chip);
-    void (*activate)(void* ctx, struct brcmf_chip* chip, uint32_t rstvec);
+  uint32_t (*read32)(void* ctx, uint32_t addr);
+  void (*write32)(void* ctx, uint32_t addr, uint32_t value);
+  zx_status_t (*prepare)(void* ctx);
+  int (*reset)(void* ctx, struct brcmf_chip* chip);
+  int (*setup)(void* ctx, struct brcmf_chip* chip);
+  void (*activate)(void* ctx, struct brcmf_chip* chip, uint32_t rstvec);
 };
 
 zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,

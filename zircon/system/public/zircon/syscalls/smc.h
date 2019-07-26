@@ -18,26 +18,26 @@ __BEGIN_CDECLS
 #define ARM_SMC_SERVICE_CALL_NUM_MASK 0x3F
 #define ARM_SMC_SERVICE_CALL_NUM_SHIFT 24
 #define ARM_SMC_GET_SERVICE_CALL_NUM_FROM_FUNC_ID(func_id) \
-    (((func_id) >> ARM_SMC_SERVICE_CALL_NUM_SHIFT) & ARM_SMC_SERVICE_CALL_NUM_MASK)
+  (((func_id) >> ARM_SMC_SERVICE_CALL_NUM_SHIFT) & ARM_SMC_SERVICE_CALL_NUM_MASK)
 
 typedef struct zx_smc_parameters {
-    uint32_t func_id;
-    uint64_t arg1;
-    uint64_t arg2;
-    uint64_t arg3;
-    uint64_t arg4;
-    uint64_t arg5;
-    uint64_t arg6;
-    uint16_t client_id;
-    uint16_t secure_os_id;
+  uint32_t func_id;
+  uint64_t arg1;
+  uint64_t arg2;
+  uint64_t arg3;
+  uint64_t arg4;
+  uint64_t arg5;
+  uint64_t arg6;
+  uint16_t client_id;
+  uint16_t secure_os_id;
 } zx_smc_parameters_t;
 
 typedef struct zx_smc_result {
-    uint64_t arg0;
-    uint64_t arg1;
-    uint64_t arg2;
-    uint64_t arg3;
-    uint64_t arg6; // at least one implementation uses it as a way to return session_id.
+  uint64_t arg0;
+  uint64_t arg1;
+  uint64_t arg2;
+  uint64_t arg3;
+  uint64_t arg6;  // at least one implementation uses it as a way to return session_id.
 } zx_smc_result_t;
 
 __END_CDECLS

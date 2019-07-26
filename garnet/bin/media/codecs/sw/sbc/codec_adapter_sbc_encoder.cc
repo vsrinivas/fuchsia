@@ -21,8 +21,8 @@ constexpr char kSbcMimeType[] = "audio/sbc";
 
 }  // namespace
 
-CodecAdapterSbcEncoder::CodecAdapterSbcEncoder(
-    std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
+CodecAdapterSbcEncoder::CodecAdapterSbcEncoder(std::mutex& lock,
+                                               CodecAdapterEvents* codec_adapter_events)
     : CodecAdapterSW(lock, codec_adapter_events) {}
 
 CodecAdapterSbcEncoder::~CodecAdapterSbcEncoder() = default;
@@ -33,8 +33,7 @@ void CodecAdapterSbcEncoder::ProcessInputLoop() {
     CodecInputItem input_item = std::move(maybe_input_item.value());
     if (input_item.is_format_details()) {
       if (context_) {
-        events_->onCoreCodecFailCodec(
-            "Midstream input format change is not supported.");
+        events_->onCoreCodecFailCodec("Midstream input format change is not supported.");
         return;
       }
 
@@ -65,8 +64,7 @@ void CodecAdapterSbcEncoder::ProcessInputLoop() {
 
 void CodecAdapterSbcEncoder::CleanUpAfterStream() { context_ = std::nullopt; }
 
-std::pair<fuchsia::media::FormatDetails, size_t>
-CodecAdapterSbcEncoder::OutputFormatDetails() {
+std::pair<fuchsia::media::FormatDetails, size_t> CodecAdapterSbcEncoder::OutputFormatDetails() {
   FXL_DCHECK(context_);
   fuchsia::media::AudioCompressedFormatSbc sbc;
   fuchsia::media::AudioCompressedFormat compressed_format;
@@ -84,8 +82,7 @@ CodecAdapterSbcEncoder::OutputFormatDetails() {
 
 fuchsia::sysmem::BufferCollectionConstraints
 CodecAdapterSbcEncoder::CoreCodecGetBufferCollectionConstraints(
-    CodecPort port,
-    const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+    CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
   std::lock_guard<std::mutex> lock(lock_);
 
@@ -104,8 +101,8 @@ CodecAdapterSbcEncoder::CoreCodecGetBufferCollectionConstraints(
 
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-  uint32_t packet_count = partial_settings.packet_count_for_server() +
-                          partial_settings.packet_count_for_client();
+  uint32_t packet_count =
+      partial_settings.packet_count_for_server() + partial_settings.packet_count_for_client();
 
   // For now this is true - when we plumb more flexible buffer count range this
   // will change to account for a range.
@@ -123,8 +120,7 @@ CodecAdapterSbcEncoder::CoreCodecGetBufferCollectionConstraints(
   // be just the buffers needed for camping and maybe 1 for shared slack.  If
   // the client wants more buffers the client can demand buffers in its own
   // fuchsia::sysmem::BufferCollection::SetConstraints().
-  result.min_buffer_count_for_camping =
-      partial_settings.packet_count_for_server();
+  result.min_buffer_count_for_camping = partial_settings.packet_count_for_server();
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
   // TODO: Uncap max_buffer_count, have both sides infer that packet count is
@@ -197,15 +193,12 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
       sampling_freq = SBC_sf16000;
       break;
     default:
-      events_->onCoreCodecFailCodec(
-          "SBC Encoder received input with unsupported frequency.");
+      events_->onCoreCodecFailCodec("SBC Encoder received input with unsupported frequency.");
       return kShouldTerminate;
   }
 
-  if (!format_details.has_encoder_settings() ||
-      !format_details.encoder_settings().is_sbc()) {
-    events_->onCoreCodecFailCodec(
-        "SBC Encoder received input without encoder settings.");
+  if (!format_details.has_encoder_settings() || !format_details.encoder_settings().is_sbc()) {
+    events_->onCoreCodecFailCodec("SBC Encoder received input without encoder settings.");
     return kShouldTerminate;
   }
   auto& settings = format_details.encoder_settings().sbc();
@@ -239,12 +232,10 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
   // SBC_Encoder_Init.
   params.s16BitPool = settings.bit_pool;
 
-  const uint64_t bytes_per_second = input_format.frames_per_second *
-                                    sizeof(uint16_t) *
-                                    input_format.channel_map.size();
-  context_ = {{.input_format = std::move(input_format),
-               .settings = std::move(settings),
-               .params = params}};
+  const uint64_t bytes_per_second =
+      input_format.frames_per_second * sizeof(uint16_t) * input_format.channel_map.size();
+  context_ = {
+      {.input_format = std::move(input_format), .settings = std::move(settings), .params = params}};
   chunk_input_stream_.emplace(
       context_->pcm_batch_size(),
       format_details.has_timebase()
@@ -256,8 +247,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
         }
 
         if (output_packet_ == nullptr) {
-          std::optional<CodecPacket*> maybe_output_packet =
-              free_output_packets_.WaitForElement();
+          std::optional<CodecPacket*> maybe_output_packet = free_output_packets_.WaitForElement();
           if (!maybe_output_packet) {
             // The stream is ending.
             return ChunkInputStream::kTerminate;
@@ -277,13 +267,10 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
         }
         FXL_DCHECK(output_buffer_);
 
-        SBC_Encode(
-            &context_->params,
-            reinterpret_cast<int16_t*>(const_cast<uint8_t*>(input_block.data)),
-            output);
+        SBC_Encode(&context_->params,
+                   reinterpret_cast<int16_t*>(const_cast<uint8_t*>(input_block.data)), output);
 
-        if (output_offset_ + context_->sbc_frame_length() >
-                output_buffer_->buffer_size() ||
+        if (output_offset_ + context_->sbc_frame_length() > output_buffer_->buffer_size() ||
             input_block.is_end_of_stream) {
           FXL_DCHECK(output_packet_ != nullptr);
 
@@ -337,8 +324,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::EncodeInput(
 
 void CodecAdapterSbcEncoder::SendOutputPacket(CodecPacket* output_packet) {
   {
-    fit::closure free_buffer = [this,
-                                base = output_packet->buffer()->buffer_base()] {
+    fit::closure free_buffer = [this, base = output_packet->buffer()->buffer_base()] {
       output_buffer_pool_.FreeBuffer(base);
     };
     std::lock_guard<std::mutex> lock(lock_);
@@ -371,10 +357,8 @@ uint8_t* CodecAdapterSbcEncoder::NextOutputBlock() {
 }
 
 void CodecAdapterSbcEncoder::CoreCodecSetBufferCollectionInfo(
-    CodecPort port,
-    const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
+    CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
   // TODO: Should uncap max_buffer_count and stop asserting this, or assert
   // instead that buffer_count >= buffers for camping + dedicated slack.
-  ZX_DEBUG_ASSERT(port != kOutputPort ||
-                  buffer_collection_info.buffer_count == kOutputPacketCount);
+  ZX_DEBUG_ASSERT(port != kOutputPort || buffer_collection_info.buffer_count == kOutputPacketCount);
 }

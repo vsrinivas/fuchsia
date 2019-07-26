@@ -24,8 +24,7 @@ TEST(SshdHostTest, TestMakeChildJob) {
   size_t num_children;
 
   s = parent.get_info(ZX_INFO_JOB_CHILDREN, (void*)&children,
-                      sizeof(zx_koid_t) * children.max_size(), &num_children,
-                      nullptr);
+                      sizeof(zx_koid_t) * children.max_size(), &num_children, nullptr);
   ASSERT_EQ(s, ZX_OK);
 
   ASSERT_EQ(num_children, (size_t)0);
@@ -33,17 +32,15 @@ TEST(SshdHostTest, TestMakeChildJob) {
   zx::job job;
   ASSERT_EQ(sshd_host::make_child_job(parent, std::string("test job"), &job), ZX_OK);
 
-  s = parent.get_info(ZX_INFO_JOB_CHILDREN, (void*)&children,
-                      sizeof(zx_koid_t) * children.size(), &num_children,
-                      nullptr);
+  s = parent.get_info(ZX_INFO_JOB_CHILDREN, (void*)&children, sizeof(zx_koid_t) * children.size(),
+                      &num_children, nullptr);
   ASSERT_EQ(s, ZX_OK);
 
   ASSERT_EQ(num_children, (size_t)1);
 
   zx_info_handle_basic_t info = {};
 
-  s = job.get_info(ZX_INFO_HANDLE_BASIC, (void*)&info, sizeof(info),
-                   nullptr, nullptr);
+  s = job.get_info(ZX_INFO_HANDLE_BASIC, (void*)&info, sizeof(info), nullptr, nullptr);
   ASSERT_EQ(s, ZX_OK);
 
   ASSERT_EQ(info.rights, kChildJobRights);

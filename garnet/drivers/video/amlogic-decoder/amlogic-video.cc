@@ -100,29 +100,23 @@ AmlogicVideo::~AmlogicVideo() {
 
 // TODO: Remove once we can add single-instance decoders through
 // AddNewDecoderInstance.
-void AmlogicVideo::SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder,
-                                      bool hevc) {
+void AmlogicVideo::SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder, bool hevc) {
   DecoderCore* core = hevc ? hevc_core_.get() : vdec1_core_.get();
   assert(!stream_buffer_);
   assert(!current_instance_);
-  current_instance_ =
-      std::make_unique<DecoderInstance>(std::move(decoder), core);
+  current_instance_ = std::make_unique<DecoderInstance>(std::move(decoder), core);
   video_decoder_ = current_instance_->decoder();
   stream_buffer_ = current_instance_->stream_buffer();
   core_ = core;
   core_->PowerOn();
 }
 
-void AmlogicVideo::AddNewDecoderInstance(
-    std::unique_ptr<DecoderInstance> instance) {
+void AmlogicVideo::AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instance) {
   swapped_out_instances_.push_back(std::move(instance));
 }
 
 void AmlogicVideo::UngateClocks() {
-  HhiGclkMpeg0::Get()
-      .ReadFrom(hiubus_.get())
-      .set_dos(true)
-      .WriteTo(hiubus_.get());
+  HhiGclkMpeg0::Get().ReadFrom(hiubus_.get()).set_dos(true).WriteTo(hiubus_.get());
   HhiGclkMpeg1::Get()
       .ReadFrom(hiubus_.get())
       .set_u_parser_top(true)
@@ -130,10 +124,7 @@ void AmlogicVideo::UngateClocks() {
       .set_demux(true)
       .set_audio_in(true)
       .WriteTo(hiubus_.get());
-  HhiGclkMpeg2::Get()
-      .ReadFrom(hiubus_.get())
-      .set_vpu_interrupt(true)
-      .WriteTo(hiubus_.get());
+  HhiGclkMpeg2::Get().ReadFrom(hiubus_.get()).set_vpu_interrupt(true).WriteTo(hiubus_.get());
 }
 
 void AmlogicVideo::GateClocks() {
@@ -145,10 +136,7 @@ void AmlogicVideo::GateClocks() {
       .set_demux(false)
       .set_audio_in(false)
       .WriteTo(hiubus_.get());
-  HhiGclkMpeg0::Get()
-      .ReadFrom(hiubus_.get())
-      .set_dos(false)
-      .WriteTo(hiubus_.get());
+  HhiGclkMpeg0::Get().ReadFrom(hiubus_.get()).set_dos(false).WriteTo(hiubus_.get());
 }
 
 void AmlogicVideo::ClearDecoderInstance() {
@@ -174,8 +162,7 @@ void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
     TryToReschedule();
     return;
   }
-  for (auto it = swapped_out_instances_.begin();
-       it != swapped_out_instances_.end(); ++it) {
+  for (auto it = swapped_out_instances_.begin(); it != swapped_out_instances_.end(); ++it) {
     if ((*it)->decoder() != decoder)
       continue;
     swapped_out_instances_.erase(it);
@@ -183,36 +170,31 @@ void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
   }
 }
 
-zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer,
-                                               uint32_t size) {
-  zx_status_t status = io_buffer_init(buffer->buffer(), bti_.get(), size,
-                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
+zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size) {
+  zx_status_t status =
+      io_buffer_init(buffer->buffer(), bti_.get(), size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make video fifo: %d", status);
     return status;
   }
 
-  io_buffer_cache_flush(buffer->buffer(), 0,
-                        io_buffer_size(buffer->buffer(), 0));
+  io_buffer_cache_flush(buffer->buffer(), 0, io_buffer_size(buffer->buffer(), 0));
   return ZX_OK;
 }
 
 void AmlogicVideo::InitializeStreamInput(bool use_parser) {
-  uint32_t buffer_address =
-      truncate_to_32(io_buffer_phys(stream_buffer_->buffer()));
+  uint32_t buffer_address = truncate_to_32(io_buffer_phys(stream_buffer_->buffer()));
   core_->InitializeStreamInput(use_parser, buffer_address,
                                io_buffer_size(stream_buffer_->buffer(), 0));
 }
 
-zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser,
-                                                 uint32_t size) {
+zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser, uint32_t size) {
   zx_status_t status = AllocateStreamBuffer(stream_buffer_, size);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser,
-                        false);
+  status = SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, false);
   if (status != ZX_OK) {
     return status;
   }
@@ -221,9 +203,9 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser,
   return ZX_OK;
 }
 
-std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(
-    io_buffer_t* io_buffer, uint32_t offset, uint32_t width, uint32_t height,
-    uint32_t wrap, uint32_t blockmode) {
+std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(io_buffer_t* io_buffer, uint32_t offset,
+                                                           uint32_t width, uint32_t height,
+                                                           uint32_t wrap, uint32_t blockmode) {
   assert(width % 8 == 0);
   assert(offset % 8 == 0);
   canvas_info_t info;
@@ -238,8 +220,7 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(
     kSwapQuadwords = 8,
   };
   info.endianness =
-      kSwapBytes | kSwapWords |
-      kSwapDoublewords;  // 64-bit big-endian to little-endian conversion.
+      kSwapBytes | kSwapWords | kSwapDoublewords;  // 64-bit big-endian to little-endian conversion.
   info.flags = CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE;
 
   zx::unowned_vmo vmo(io_buffer->vmo_handle);
@@ -250,8 +231,7 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(
     return nullptr;
   }
   uint8_t idx;
-  status =
-      amlogic_canvas_config(&canvas_, dup_vmo.release(), offset, &info, &idx);
+  status = amlogic_canvas_config(&canvas_, dup_vmo.release(), offset, &info, &idx);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to configure canvas, status: %d\n", status);
     return nullptr;
@@ -265,32 +245,18 @@ void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) {
 }
 
 zx_status_t AmlogicVideo::AllocateIoBuffer(io_buffer_t* buffer, size_t size,
-                                           uint32_t alignment_log2,
-                                           uint32_t flags) {
-  return io_buffer_init_aligned(buffer, bti_.get(), size, alignment_log2,
-                                flags);
+                                           uint32_t alignment_log2, uint32_t flags) {
+  return io_buffer_init_aligned(buffer, bti_.get(), size, alignment_log2, flags);
 }
 
 // This parser handles MPEG elementary streams.
 zx_status_t AmlogicVideo::InitializeEsParser() {
   Reset1Register::Get().FromValue(0).set_parser(true).WriteTo(reset_.get());
   FecInputControl::Get().FromValue(0).WriteTo(demux_.get());
-  TsHiuCtl::Get()
-      .ReadFrom(demux_.get())
-      .set_use_hi_bsf_interface(false)
-      .WriteTo(demux_.get());
-  TsHiuCtl2::Get()
-      .ReadFrom(demux_.get())
-      .set_use_hi_bsf_interface(false)
-      .WriteTo(demux_.get());
-  TsHiuCtl3::Get()
-      .ReadFrom(demux_.get())
-      .set_use_hi_bsf_interface(false)
-      .WriteTo(demux_.get());
-  TsFileConfig::Get()
-      .ReadFrom(demux_.get())
-      .set_ts_hiu_enable(false)
-      .WriteTo(demux_.get());
+  TsHiuCtl::Get().ReadFrom(demux_.get()).set_use_hi_bsf_interface(false).WriteTo(demux_.get());
+  TsHiuCtl2::Get().ReadFrom(demux_.get()).set_use_hi_bsf_interface(false).WriteTo(demux_.get());
+  TsHiuCtl3::Get().ReadFrom(demux_.get()).set_use_hi_bsf_interface(false).WriteTo(demux_.get());
+  TsFileConfig::Get().ReadFrom(demux_.get()).set_ts_hiu_enable(false).WriteTo(demux_.get());
   ParserConfig::Get()
       .FromValue(0)
       .set_pfifo_empty_cnt(10)
@@ -301,9 +267,7 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
   PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
   constexpr uint32_t kEsStartCodePattern = 0x00000100;
   constexpr uint32_t kEsStartCodeMask = 0x0000ff00;
-  ParserSearchPattern::Get()
-      .FromValue(kEsStartCodePattern)
-      .WriteTo(parser_.get());
+  ParserSearchPattern::Get().FromValue(kEsStartCodePattern).WriteTo(parser_.get());
   ParserSearchMask::Get().FromValue(kEsStartCodeMask).WriteTo(parser_.get());
 
   ParserConfig::Get()
@@ -315,17 +279,13 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
       .set_pfifo_access_width(ParserConfig::kWidth8)
       .WriteTo(parser_.get());
 
-  ParserControl::Get()
-      .FromValue(ParserControl::kAutoSearch)
-      .WriteTo(parser_.get());
+  ParserControl::Get().FromValue(ParserControl::kAutoSearch).WriteTo(parser_.get());
 
   // Set up output fifo.
-  uint32_t buffer_address =
-      truncate_to_32(io_buffer_phys(stream_buffer_->buffer()));
+  uint32_t buffer_address = truncate_to_32(io_buffer_phys(stream_buffer_->buffer()));
   ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(parser_.get());
   ParserVideoEndPtr::Get()
-      .FromValue(buffer_address + io_buffer_size(stream_buffer_->buffer(), 0) -
-                 8)
+      .FromValue(buffer_address + io_buffer_size(stream_buffer_->buffer(), 0) - 8)
       .WriteTo(parser_.get());
 
   ParserEsControl::Get()
@@ -337,9 +297,8 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
 
   // 512 bytes includes some padding to force the parser to read it completely.
   constexpr uint32_t kSearchPatternSize = 512;
-  zx_status_t status =
-      io_buffer_init(&search_pattern_, bti_.get(), kSearchPatternSize,
-                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_status_t status = io_buffer_init(&search_pattern_, bti_.get(), kSearchPatternSize,
+                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to create search pattern buffer");
     return status;
@@ -347,8 +306,7 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
 
   uint8_t input_search_pattern[kSearchPatternSize] = {0, 0, 1, 0xff};
 
-  memcpy(io_buffer_virt(&search_pattern_), input_search_pattern,
-         kSearchPatternSize);
+  memcpy(io_buffer_virt(&search_pattern_), input_search_pattern, kSearchPatternSize);
   io_buffer_cache_flush(&search_pattern_, 0, kSearchPatternSize);
 
   // This check exists so we can call InitializeEsParser() more than once, when
@@ -358,8 +316,7 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
       DLOG("Starting parser thread\n");
       while (true) {
         zx_time_t time;
-        zx_status_t zx_status =
-            zx_interrupt_wait(parser_interrupt_handle_.get(), &time);
+        zx_status_t zx_status = zx_interrupt_wait(parser_interrupt_handle_.get(), &time);
         if (zx_status != ZX_OK)
           return;
 
@@ -382,10 +339,7 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
   }
 
   ParserIntStatus::Get().FromValue(0xffff).WriteTo(parser_.get());
-  ParserIntEnable::Get()
-      .FromValue(0)
-      .set_host_en_start_code_found(true)
-      .WriteTo(parser_.get());
+  ParserIntEnable::Get().FromValue(0).set_host_en_start_code_found(true).WriteTo(parser_.get());
 
   return ZX_OK;
 }
@@ -401,8 +355,8 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
       parser_input_ = nullptr;
     }
     parser_input_ = std::make_unique<io_buffer_t>();
-    zx_status_t status = io_buffer_init(parser_input_.get(), bti_.get(), len,
-                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t status =
+        io_buffer_init(parser_input_.get(), bti_.get(), len, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       parser_input_.reset();
       DECODE_ERROR("Failed to create input file");
@@ -412,10 +366,7 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
 
   PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
   PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
-  ParserControl::Get()
-      .ReadFrom(parser_.get())
-      .set_es_pack_size(len)
-      .WriteTo(parser_.get());
+  ParserControl::Get().ReadFrom(parser_.get()).set_es_pack_size(len).WriteTo(parser_.get());
   ParserControl::Get()
       .ReadFrom(parser_.get())
       .set_type(0)
@@ -431,16 +382,14 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   ParserFetchAddr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(parser_input_.get())))
       .WriteTo(parser_.get());
-  ParserFetchCmd::Get().FromValue(0).set_len(len).set_fetch_endian(7).WriteTo(
-      parser_.get());
+  ParserFetchCmd::Get().FromValue(0).set_len(len).set_fetch_endian(7).WriteTo(parser_.get());
 
   // The parser finished interrupt shouldn't be signalled until after
   // es_pack_size data has been read.  The parser cancellation bit should not
   // be set because that bit is never set while parser_running_ is false
   // (ignoring transients while under parser_running_lock_).
   assert(ZX_ERR_TIMED_OUT ==
-         parser_finished_event_.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
-                                         zx::time(), nullptr));
+         parser_finished_event_.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, zx::time(), nullptr));
 
   ParserFetchAddr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&search_pattern_)))
@@ -479,8 +428,7 @@ zx_status_t AmlogicVideo::WaitForParsingCompleted(zx_duration_t deadline) {
   }
   zx_signals_t observed;
   zx_status_t status = parser_finished_event_.wait_one(
-      ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
-      zx::deadline_after(zx::duration(deadline)), &observed);
+      ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, zx::deadline_after(zx::duration(deadline)), &observed);
   if (status != ZX_OK) {
     return status;
   }
@@ -533,12 +481,10 @@ void AmlogicVideo::CancelParsing() {
 
 zx_status_t AmlogicVideo::ProcessVideoNoParser(const void* data, uint32_t len,
                                                uint32_t* written_out) {
-  return ProcessVideoNoParserAtOffset(data, len, core_->GetStreamInputOffset(),
-                                      written_out);
+  return ProcessVideoNoParserAtOffset(data, len, core_->GetStreamInputOffset(), written_out);
 }
 
-zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data,
-                                                       uint32_t len,
+zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_t len,
                                                        uint32_t write_offset,
                                                        uint32_t* written_out) {
   uint32_t read_offset = core_->GetReadOffset();
@@ -546,8 +492,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data,
   if (read_offset > write_offset) {
     available_space = read_offset - write_offset;
   } else {
-    available_space = io_buffer_size(stream_buffer_->buffer(), 0) -
-                      write_offset + read_offset;
+    available_space = io_buffer_size(stream_buffer_->buffer(), 0) - write_offset + read_offset;
   }
   // Subtract 8 to ensure the read pointer doesn't become equal to the write
   // pointer, as that means the buffer is empty.
@@ -568,8 +513,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data,
     uint32_t write_length = len;
     if (write_offset + len > io_buffer_size(stream_buffer_->buffer(), 0))
       write_length = io_buffer_size(stream_buffer_->buffer(), 0) - write_offset;
-    memcpy(static_cast<uint8_t*>(io_buffer_virt(stream_buffer_->buffer())) +
-               write_offset,
+    memcpy(static_cast<uint8_t*>(io_buffer_virt(stream_buffer_->buffer())) + write_offset,
            static_cast<const uint8_t*>(data) + input_offset, write_length);
     io_buffer_cache_flush(stream_buffer_->buffer(), write_offset, write_length);
     write_offset += write_length;
@@ -579,8 +523,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data,
     input_offset += write_length;
   }
   BarrierAfterFlush();
-  core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) +
-                            write_offset);
+  core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) + write_offset);
   return ZX_OK;
 }
 
@@ -594,8 +537,7 @@ void AmlogicVideo::SwapOutCurrentInstance() {
   // restore.
   if (!current_instance_->input_context()) {
     current_instance_->InitializeInputContext();
-    if (core_->InitializeInputContext(current_instance_->input_context()) !=
-        ZX_OK) {
+    if (core_->InitializeInputContext(current_instance_->input_context()) != ZX_OK) {
       // TODO: exit cleanly
       exit(-1);
     }
@@ -665,21 +607,17 @@ void AmlogicVideo::SwapInCurrentInstance() {
     // Generally data will only be added after this decoder is swapped in, so
     // RestoreInputContext will handle that state.
     core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) +
-                              stream_buffer_->data_size() +
-                              stream_buffer_->padding_size());
+                              stream_buffer_->data_size() + stream_buffer_->padding_size());
   } else {
     core_->RestoreInputContext(current_instance_->input_context());
   }
   video_decoder_->SwappedIn();
 }
 
-fidl::InterfaceHandle<fuchsia::sysmem::Allocator>
-AmlogicVideo::ConnectToSysmem() {
+fidl::InterfaceHandle<fuchsia::sysmem::Allocator> AmlogicVideo::ConnectToSysmem() {
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> client_end;
-  fidl::InterfaceRequest<fuchsia::sysmem::Allocator> server_end =
-      client_end.NewRequest();
-  zx_status_t connect_status =
-      sysmem_connect(&sysmem_, server_end.TakeChannel().release());
+  fidl::InterfaceRequest<fuchsia::sysmem::Allocator> server_end = client_end.NewRequest();
+  zx_status_t connect_status = sysmem_connect(&sysmem_, server_end.TakeChannel().release());
   if (connect_status != ZX_OK) {
     // failure
     return fidl::InterfaceHandle<fuchsia::sysmem::Allocator>();
@@ -716,18 +654,15 @@ constexpr uint8_t kCallConvShift = 30;
 constexpr uint8_t kServiceMask = ARM_SMC_SERVICE_CALL_NUM_MASK;
 constexpr uint8_t kServiceShift = ARM_SMC_SERVICE_CALL_NUM_SHIFT;
 
-static constexpr uint32_t CreateFunctionId(CallType call_type,
-                                           CallConvention call_conv,
-                                           Service service,
-                                           uint16_t function_num) {
+static constexpr uint32_t CreateFunctionId(CallType call_type, CallConvention call_conv,
+                                           Service service, uint16_t function_num) {
   return (((call_type & kCallTypeMask) << kCallTypeShift) |
           ((call_conv & kCallConvMask) << kCallConvShift) |
           ((service & kServiceMask) << kServiceShift) | function_num);
 }
 }  // namespace tee_smc
 
-zx_status_t AmlogicVideo::SetProtected(ProtectableHardwareUnit unit,
-                                       bool protect) {
+zx_status_t AmlogicVideo::SetProtected(ProtectableHardwareUnit unit, bool protect) {
   if (!secure_monitor_)
     return protect ? ZX_ERR_INVALID_ARGS : ZX_OK;
 
@@ -736,20 +671,19 @@ zx_status_t AmlogicVideo::SetProtected(ProtectableHardwareUnit unit,
   zx_smc_parameters_t params = {};
   zx_smc_result_t result = {};
   constexpr uint32_t kFuncIdConfigDeviceSecure = 14;
-  params.func_id = tee_smc::CreateFunctionId(
-      tee_smc::kFastCall, tee_smc::kSmc32CallConv, tee_smc::kTrustedOsService,
-      kFuncIdConfigDeviceSecure);
+  params.func_id = tee_smc::CreateFunctionId(tee_smc::kFastCall, tee_smc::kSmc32CallConv,
+                                             tee_smc::kTrustedOsService, kFuncIdConfigDeviceSecure);
   params.arg1 = static_cast<uint32_t>(unit);
   params.arg2 = static_cast<uint32_t>(protect);
   zx_status_t status = zx_smc_call(secure_monitor_.get(), &params, &result);
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed to set unit %ld protected status %ld code: %d",
-                 params.arg1, params.arg2, status);
+    DECODE_ERROR("Failed to set unit %ld protected status %ld code: %d", params.arg1, params.arg2,
+                 status);
     return status;
   }
   if (result.arg0 != 0) {
-    DECODE_ERROR("Failed to set unit %ld protected status %ld: %lx",
-                 params.arg1, params.arg2, result.arg0);
+    DECODE_ERROR("Failed to set unit %ld protected status %ld: %lx", params.arg1, params.arg2,
+                 result.arg0);
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
@@ -761,8 +695,8 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   composite_protocol_t composite;
   auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-      DECODE_ERROR("Could not get composite protocol\n");
-      return status;
+    DECODE_ERROR("Could not get composite protocol\n");
+    return status;
   }
 
   zx_device_t* components[kComponentCount];
@@ -814,8 +748,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   }
 
   static constexpr uint32_t kTrustedOsSmcIndex = 0;
-  status = pdev_get_smc(&pdev_, kTrustedOsSmcIndex,
-                        secure_monitor_.reset_and_get_address());
+  status = pdev_get_smc(&pdev_, kTrustedOsSmcIndex, secure_monitor_.reset_and_get_address());
   if (status != ZX_OK) {
     // On systems where there's no protected memory it's fine if we can't get
     // a handle to the secure monitor.
@@ -825,56 +758,51 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   }
 
   mmio_buffer_t cbus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                &cbus_mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &cbus_mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map cbus");
     return ZX_ERR_NO_MEMORY;
   }
   cbus_ = std::make_unique<CbusRegisterIo>(cbus_mmio);
   mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kDosbus,
-                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kDosbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dosbus");
     return ZX_ERR_NO_MEMORY;
   }
   dosbus_ = std::make_unique<DosRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer(&pdev_, kHiubus,
-                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kHiubus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map hiubus");
     return ZX_ERR_NO_MEMORY;
   }
   hiubus_ = std::make_unique<HiuRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map aobus");
     return ZX_ERR_NO_MEMORY;
   }
   aobus_ = std::make_unique<AoRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dmc");
     return ZX_ERR_NO_MEMORY;
   }
   dmc_ = std::make_unique<DmcRegisterIo>(mmio);
-  status = pdev_get_interrupt(&pdev_, kParserIrq, 0,
-                              parser_interrupt_handle_.reset_and_get_address());
+  status =
+      pdev_get_interrupt(&pdev_, kParserIrq, 0, parser_interrupt_handle_.reset_and_get_address());
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get parser interrupt");
     return ZX_ERR_NO_MEMORY;
   }
-  status = pdev_get_interrupt(&pdev_, kDosMbox0Irq, 0,
-                              vdec0_interrupt_handle_.reset_and_get_address());
+  status =
+      pdev_get_interrupt(&pdev_, kDosMbox0Irq, 0, vdec0_interrupt_handle_.reset_and_get_address());
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get vdec0 interrupt");
     return ZX_ERR_NO_MEMORY;
   }
-  status = pdev_get_interrupt(&pdev_, kDosMbox1Irq, 0,
-                              vdec1_interrupt_handle_.reset_and_get_address());
+  status =
+      pdev_get_interrupt(&pdev_, kDosMbox1Irq, 0, vdec1_interrupt_handle_.reset_and_get_address());
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get vdec interrupt");
     return ZX_ERR_NO_MEMORY;
@@ -895,11 +823,10 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     demux_register_offset = (0x1800 - 0x1600) * 4;
   }
   reset_ = std::make_unique<ResetRegisterIo>(cbus_mmio, reset_register_offset);
-  parser_ =
-      std::make_unique<ParserRegisterIo>(cbus_mmio, parser_register_offset);
+  parser_ = std::make_unique<ParserRegisterIo>(cbus_mmio, parser_register_offset);
   demux_ = std::make_unique<DemuxRegisterIo>(cbus_mmio, demux_register_offset);
-  registers_ = std::unique_ptr<MmioRegisters>(new MmioRegisters{
-      dosbus_.get(), aobus_.get(), dmc_.get(), hiubus_.get(), reset_.get()});
+  registers_ = std::unique_ptr<MmioRegisters>(
+      new MmioRegisters{dosbus_.get(), aobus_.get(), dmc_.get(), hiubus_.get(), reset_.get()});
 
   firmware_ = std::make_unique<FirmwareBlob>();
   status = firmware_->LoadFirmware(parent_);
@@ -915,8 +842,7 @@ void AmlogicVideo::InitializeInterrupts() {
   vdec0_interrupt_thread_ = std::thread([this]() {
     while (true) {
       zx_time_t time;
-      zx_status_t status =
-          zx_interrupt_wait(vdec0_interrupt_handle_.get(), &time);
+      zx_status_t status = zx_interrupt_wait(vdec0_interrupt_handle_.get(), &time);
       if (status != ZX_OK)
         return;
       std::lock_guard<std::mutex> lock(video_decoder_lock_);
@@ -928,8 +854,7 @@ void AmlogicVideo::InitializeInterrupts() {
   vdec1_interrupt_thread_ = std::thread([this]() {
     while (true) {
       zx_time_t time;
-      zx_status_t status =
-          zx_interrupt_wait(vdec1_interrupt_handle_.get(), &time);
+      zx_status_t status = zx_interrupt_wait(vdec1_interrupt_handle_.get(), &time);
       if (status == ZX_ERR_CANCELED) {
         // expected when zx_interrupt_destroy() is called
         return;

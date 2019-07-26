@@ -4,6 +4,4 @@
 
 #include "src/developer/debug/zxdb/console/console_main.h"
 
-int main(int argc, char* argv[]) {
-  return zxdb::ConsoleMain(argc, const_cast<const char**>(argv));
-}
+int main(int argc, char* argv[]) { return zxdb::ConsoleMain(argc, const_cast<const char**>(argv)); }

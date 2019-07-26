@@ -51,8 +51,7 @@ class Breakpoint {
 
 class ProcessBreakpoint : public Breakpoint {
  protected:
-  ProcessBreakpoint(zx_vaddr_t address, size_t size,
-                    ProcessBreakpointSet* owner);
+  ProcessBreakpoint(zx_vaddr_t address, size_t size, ProcessBreakpointSet* owner);
   ProcessBreakpointSet* owner() const { return owner_; }
 
  private:

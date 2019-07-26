@@ -13,35 +13,33 @@
 namespace zx {
 
 class timer final : public object<timer> {
-public:
-    static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_TIMER;
+ public:
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_TIMER;
 
-    constexpr timer() = default;
+  constexpr timer() = default;
 
-    explicit timer(zx_handle_t value) : object(value) {}
+  explicit timer(zx_handle_t value) : object(value) {}
 
-    explicit timer(handle&& h) : object(h.release()) {}
+  explicit timer(handle&& h) : object(h.release()) {}
 
-    timer(timer&& other) : object(other.release()) {}
+  timer(timer&& other) : object(other.release()) {}
 
-    timer& operator=(timer&& other) {
-        reset(other.release());
-        return *this;
-    }
+  timer& operator=(timer&& other) {
+    reset(other.release());
+    return *this;
+  }
 
-    static zx_status_t create(uint32_t options, zx_clock_t clock_id, timer* result);
+  static zx_status_t create(uint32_t options, zx_clock_t clock_id, timer* result);
 
-    zx_status_t set(zx::time deadline, zx::duration slack) const {
-        return zx_timer_set(get(), deadline.get(), slack.get());
-    }
+  zx_status_t set(zx::time deadline, zx::duration slack) const {
+    return zx_timer_set(get(), deadline.get(), slack.get());
+  }
 
-    zx_status_t cancel() const {
-        return zx_timer_cancel(get());
-    }
+  zx_status_t cancel() const { return zx_timer_cancel(get()); }
 };
 
 using unowned_timer = unowned<timer>;
 
-} // namespace zx
+}  // namespace zx
 
 #endif  // LIB_ZX_TIMER_H_

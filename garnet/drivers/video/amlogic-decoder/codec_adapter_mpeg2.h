@@ -12,8 +12,7 @@ class DeviceCtx;
 class AmlogicVideo;
 class CodecAdapterMpeg2 : public CodecAdapter {
  public:
-  explicit CodecAdapterMpeg2(std::mutex& lock,
-                             CodecAdapterEvents* codec_adapter_events,
+  explicit CodecAdapterMpeg2(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                              DeviceCtx* device);
   ~CodecAdapterMpeg2();
 
@@ -21,35 +20,26 @@ class CodecAdapterMpeg2 : public CodecAdapter {
   bool IsCoreCodecMappedBufferNeeded(CodecPort port) override;
   bool IsCoreCodecHwBased() override;
 
-  void CoreCodecInit(const fuchsia::media::FormatDetails&
-                         initial_input_format_details) override;
-  fuchsia::sysmem::BufferCollectionConstraints
-  CoreCodecGetBufferCollectionConstraints(
-      CodecPort port,
-      const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
-      const fuchsia::media::StreamBufferPartialSettings& partial_settings)
-      override;
+  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
+  fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
+      CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
   void CoreCodecSetBufferCollectionInfo(
       CodecPort port,
-      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info)
-      override;
+      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override;
   void CoreCodecStartStream() override;
   void CoreCodecQueueInputFormatDetails(
-      const fuchsia::media::FormatDetails& per_stream_override_format_details)
-      override;
+      const fuchsia::media::FormatDetails& per_stream_override_format_details) override;
   void CoreCodecQueueInputPacket(CodecPacket* packet) override;
   void CoreCodecQueueInputEndOfStream() override;
   void CoreCodecStopStream() override;
   void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override;
-  void CoreCodecConfigureBuffers(
-      CodecPort port,
-      const std::vector<std::unique_ptr<CodecPacket>>& packets) override;
+  void CoreCodecConfigureBuffers(CodecPort port,
+                                 const std::vector<std::unique_ptr<CodecPacket>>& packets) override;
   void CoreCodecRecycleOutputPacket(CodecPacket* packet) override;
   void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override;
-  std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
-  CoreCodecBuildNewOutputConstraints(
-      uint64_t stream_lifetime_ordinal,
-      uint64_t new_output_buffer_constraints_version_ordinal,
+  std::unique_ptr<const fuchsia::media::StreamOutputConstraints> CoreCodecBuildNewOutputConstraints(
+      uint64_t stream_lifetime_ordinal, uint64_t new_output_buffer_constraints_version_ordinal,
       bool buffer_constraints_action_required) override;
   fuchsia::media::StreamOutputFormat CoreCodecGetOutputFormat(
       uint64_t stream_lifetime_ordinal,
