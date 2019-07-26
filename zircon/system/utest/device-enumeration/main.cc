@@ -204,6 +204,7 @@ TEST_F(DeviceEnumerationTest, CleoTest) {
       "touch/focaltouch HidDevice/hid-device-000",
       "thermal/mtk-thermal",
       "mt8167-i2c",
+      "mt8167s_gpu/mt8167s-gpu"
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

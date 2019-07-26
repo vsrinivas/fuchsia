@@ -17,10 +17,14 @@ constexpr pbus_mmio_t clock_mmios[] = {{.base = MT8167_XO_BASE, .length = MT8167
 
 constexpr clock_id_t clock_ids[] = {
     // For thermal driver.
-    {kClkThem},
-    {kClkAuxAdc},
-    {kClkPmicwrapAp},
-    {kClkPmicwrap26m},
+    { kClkThem },
+    { kClkAuxAdc },
+    { kClkPmicwrapAp },
+    { kClkPmicwrap26m },
+    // For GPU driver.
+    { kClkRgSlowMfg },
+    { kClkRgAxiMfg },
+    { kClkMfgMm },
 };
 
 static const pbus_metadata_t clock_metadata[] = {

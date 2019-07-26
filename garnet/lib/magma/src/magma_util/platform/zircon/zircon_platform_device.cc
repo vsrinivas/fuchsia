@@ -11,6 +11,7 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -97,6 +98,18 @@ std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle) {
 
   pdev_protocol_t pdev;
   zx_status_t status = device_get_protocol(zx_device, ZX_PROTOCOL_PDEV, &pdev);
+  if (status != ZX_OK) {
+    // if ZX_PROTOCOL_PDEV is not available, try using composite protocol.
+    composite_protocol_t composite;
+    if (device_get_protocol(zx_device, ZX_PROTOCOL_COMPOSITE, &composite) == ZX_OK) {
+      zx_device_t* pdev_device;
+      size_t actual;
+      composite_get_components(&composite, &pdev_device, 1, &actual);
+      if (actual == 1) {
+        status = device_get_protocol(pdev_device, ZX_PROTOCOL_PDEV, &pdev);
+      }
+    }
+  }
   switch (status) {
     case ZX_OK:
       return std::unique_ptr<PlatformDevice>(new ZirconPlatformDevice(zx_device, pdev));

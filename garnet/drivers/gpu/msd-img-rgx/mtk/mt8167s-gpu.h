@@ -16,7 +16,6 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <hw/reg.h>
-#include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>

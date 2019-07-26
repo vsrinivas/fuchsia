@@ -12,7 +12,9 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <fbl/algorithm.h>
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <hw/reg.h>
 #include <lib/device-protocol/pdev.h>
@@ -322,25 +324,31 @@ zx_status_t Mt8167sGpu::PowerDown() {
 }
 
 zx_status_t Mt8167sGpu::Bind() {
-  pdev_protocol_t pdev_proto;
-  zx_status_t status;
-
-  if ((status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev_proto)) != ZX_OK) {
-    GPU_ERROR("ZX_PROTOCOL_PDEV not available\n");
-    return status;
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
+    GPU_ERROR("ZX_PROTOCOL_COMPOSITE not available\n");
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PDev pdev(&pdev_proto);
+  // Zeroth component is pdev
+  zx_device_t* components[kClockCount + 1];
+  size_t actual;
+  composite.GetComponents(components, fbl::count_of(components), &actual);
+  if (actual != fbl::count_of(components)) {
+    GPU_ERROR("could not retrieve all our components\n");
+    return ZX_ERR_INTERNAL;
+  }
 
   for (unsigned i = 0; i < kClockCount; i++) {
-    clks_[i] = pdev.GetClk(i);
+    clks_[i] = components[i + 1];
     if (!clks_[i].is_valid()) {
-      zxlogf(ERROR, "%s GetClk failed %d\n", __func__, status);
-      return status;
+      zxlogf(ERROR, "%s could not get clock\n", __func__);
+      return ZX_ERR_INTERNAL;
     }
   }
 
-  status = pdev.MapMmio(kMfgMmioIndex, &real_gpu_buffer_);
+  ddk::PDev pdev(components[0]);
+  auto status = pdev.MapMmio(kMfgMmioIndex, &real_gpu_buffer_);
   if (status != ZX_OK) {
     GPU_ERROR("pdev_map_mmio_buffer failed\n");
     return status;
@@ -489,7 +497,7 @@ static constexpr zx_driver_ops_t mt8167s_gpu_driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(mt8167s_gpu, mt8167s_gpu_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_GPU),
 ZIRCON_DRIVER_END(mt8167s_gpu)
