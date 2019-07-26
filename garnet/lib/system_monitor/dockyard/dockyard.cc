@@ -458,8 +458,7 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
           ComputeSmoothed(dockyard_id, sample_stream, request, &samples);
           break;
         case StreamSetsRequest::LOWEST_PER_COLUMN:
-          ComputeLowestPerColumn(dockyard_id, sample_stream, request,
-                                 &samples);
+          ComputeLowestPerColumn(dockyard_id, sample_stream, request, &samples);
           break;
         case StreamSetsRequest::HIGHEST_PER_COLUMN:
           ComputeHighestPerColumn(dockyard_id, sample_stream, request,

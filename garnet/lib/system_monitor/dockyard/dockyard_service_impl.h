@@ -5,9 +5,9 @@
 #ifndef GARNET_LIB_SYSTEM_MONITOR_DOCKYARD_DOCKYARD_SERVICE_IMPL_H_
 #define GARNET_LIB_SYSTEM_MONITOR_DOCKYARD_DOCKYARD_SERVICE_IMPL_H_
 
-#include <grpc++/grpc++.h>
-
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
+
+#include <grpc++/grpc++.h>
 
 namespace dockyard {
 class Dockyard;

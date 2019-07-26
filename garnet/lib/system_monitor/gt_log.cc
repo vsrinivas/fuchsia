@@ -16,8 +16,7 @@ bool SetUpLogging(int argc, const char* const* argv) {
     if (strcmp("--quiet", argv[i]) == 0) {
       // It's okay if this goes outside of the enum range.
       ++log_level;
-    }
-    else if (strcmp("--verbose", argv[i]) == 0) {
+    } else if (strcmp("--verbose", argv[i]) == 0) {
       // It's okay if this goes outside of the enum range.
       --log_level;
     }

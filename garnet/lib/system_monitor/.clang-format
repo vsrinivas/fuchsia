@@ -1,0 +1,35 @@
+# Important:
+#
+# Do not imitate this use of a private .clang-format file. There is a
+# Fuchsia-wide .clang-format at the root (use that). The code in this directory
+# is migrating out of Fuchsia. This is a short-term hack to make the code more
+# similar to where the code is moving to. When the code is moved, it will be
+# deleted, along with this .clang-format file.
+
+
+
+# http://clang.llvm.org/docs/ClangFormatStyleOptions.html
+Language: Cpp
+BasedOnStyle: Google
+Standard: Cpp11
+SortIncludes: true
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+DerivePointerAlignment: true
+PointerAlignment: Left
+ColumnLimit: 80
+ForEachMacros: ['list_for_every_entry','list_for_every_entry_safe']
+IncludeBlocks: Regroup
+IncludeCategories:
+  # C Header: <foo.h>, <net/foo.h>, etc
+  - Regex:           '^(<((zircon/|lib/|fuchsia/|arpa/|net/|netinet/|sys/)[a-zA-Z0-9_/-]+\.h|[a-zA-Z0-9_-]+\.h)>)'
+    Priority:        1
+  # Cpp Header: <foo> and <experimental/foo>
+  - Regex:           '^(<(experimental/)*[a-zA-Z0-9_-]+>)'
+    Priority:        2
+  # Libraries: <foo/bar.h>
+  - Regex:           '^(<[a-zA-Z0-9_/-]+\.h>)'
+    Priority:        3
+  # Local headers: "foo/bar.h"
+  - Regex:           '^("[.a-zA-Z0-9_/-]+\.h")'
+    Priority:        4
