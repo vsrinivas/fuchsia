@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include "protocol_test_driver.h"
-#include "../../common.h"
-#include "../../config.h"
-#include "../fakes/test_device.h"
+
+#include <fuchsia/device/test/c/fidl.h>
+#include <lib/zx/object.h>
+#include <stdio.h>
+#include <zircon/hw/pci.h>
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/pci.h>
-#include <fuchsia/device/test/c/fidl.h>
-#include <lib/zx/object.h>
-#include <stdio.h>
-#include <zircon/hw/pci.h>
+
+#include "../../common.h"
+#include "../../config.h"
+#include "../fakes/test_device.h"
 
 ProtocolTestDriver* ProtocolTestDriver::instance_;
 
@@ -254,6 +256,72 @@ TEST_F(PciProtocolTests, GetBar5) {
 #else
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, pci().GetBar(5, &info));
 #endif
+}
+
+TEST_F(PciProtocolTests, GetCapabilities) {
+  uint8_t offsetA = 0;
+  uint8_t offsetB = 0;
+  uint8_t val8 = 0;
+
+  // First Power Management Capability is at 0x60.
+  ASSERT_OK(pci().GetFirstCapability(PCI_CAP_ID_PCI_PWR_MGMT, &offsetA));
+  ASSERT_EQ(0x60, offsetA);
+  ASSERT_OK(pci().ConfigRead8(offsetA, &val8));
+  ASSERT_EQ(PCI_CAP_ID_PCI_PWR_MGMT, val8);
+
+  // Second Power Management Capability is at 0xA0.
+  ASSERT_OK(pci().GetNextCapability(PCI_CAP_ID_PCI_PWR_MGMT, offsetA, &offsetB));
+  ASSERT_EQ(0xA0, offsetB);
+  ASSERT_OK(pci().ConfigRead8(offsetB, &val8));
+  ASSERT_EQ(PCI_CAP_ID_PCI_PWR_MGMT, val8);
+
+  // There is no third Power Management Capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetNextCapability(PCI_CAP_ID_PCI_PWR_MGMT, offsetB, &offsetA));
+
+  // First Pci Express Capability is at 0x78.
+  ASSERT_OK(pci().GetFirstCapability(PCI_CAP_ID_PCI_EXPRESS, &offsetA));
+  ASSERT_EQ(0x78, offsetA);
+  ASSERT_OK(pci().ConfigRead8(offsetA, &val8));
+  ASSERT_EQ(PCI_CAP_ID_PCI_EXPRESS, val8);
+
+  // There is no second Pci Express Capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetNextCapability(PCI_CAP_ID_PCI_EXPRESS, offsetA, &offsetB));
+
+  // First MSI Capability is at 0x68.
+  ASSERT_OK(pci().GetFirstCapability(PCI_CAP_ID_MSI, &offsetA));
+  ASSERT_EQ(0x68, offsetA);
+  ASSERT_OK(pci().ConfigRead8(offsetA, &val8));
+  ASSERT_EQ(PCI_CAP_ID_MSI, val8);
+
+  // There is no second MSI Capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetNextCapability(PCI_CAP_ID_MSI, offsetA, &offsetB));
+
+  // First Vendor Capability is at 0xC4.
+  ASSERT_OK(pci().GetFirstCapability(PCI_CAP_ID_VENDOR, &offsetA));
+  ASSERT_EQ(0xC4, offsetA);
+  ASSERT_OK(pci().ConfigRead8(offsetA, &val8));
+  ASSERT_EQ(PCI_CAP_ID_VENDOR, val8);
+
+  // Second Vendor Capability is at 0xC8.
+  ASSERT_OK(pci().GetNextCapability(PCI_CAP_ID_VENDOR, offsetA, &offsetB));
+  ASSERT_EQ(0xC8, offsetB);
+  ASSERT_OK(pci().ConfigRead8(offsetB, &val8));
+  ASSERT_EQ(PCI_CAP_ID_VENDOR, val8);
+
+  // Third Vendor Capability is at 0xD0.
+  ASSERT_OK(pci().GetNextCapability(PCI_CAP_ID_VENDOR, offsetB, &offsetA));
+  ASSERT_EQ(0xD0, offsetA);
+  ASSERT_OK(pci().ConfigRead8(offsetA, &val8));
+  ASSERT_EQ(PCI_CAP_ID_VENDOR, val8);
+
+  // Fourth Vendor Capability is at 0xE8.
+  ASSERT_OK(pci().GetNextCapability(PCI_CAP_ID_VENDOR, offsetA, &offsetB));
+  ASSERT_EQ(0xE8, offsetB);
+  ASSERT_OK(pci().ConfigRead8(offsetB, &val8));
+  ASSERT_EQ(PCI_CAP_ID_VENDOR, val8);
+
+  // There is no fifth Vendor Capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetNextCapability(PCI_CAP_ID_VENDOR, offsetB, &offsetA));
 }
 
 TEST_F(PciProtocolTests, GetDeviceInfo) {

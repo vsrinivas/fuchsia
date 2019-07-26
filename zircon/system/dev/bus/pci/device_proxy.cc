@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include "device_proxy.h"
-#include "common.h"
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+
+#include "common.h"
 
 #define RPC_ENTRY pci_tracef("[%s] %s: entry\n", cfg_->addr(), __func__)
 
@@ -210,11 +212,30 @@ zx_status_t DeviceProxy::PciConfigWrite32(uint16_t offset, uint32_t value) {
 }
 
 zx_status_t DeviceProxy::PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset) {
-  DEVICE_PROXY_UNIMPLEMENTED;
+  return PciGetNextCapability(cap_id, kPciCapOffsetFirst, out_offset);
 }
 
 zx_status_t DeviceProxy::PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset) {
-  DEVICE_PROXY_UNIMPLEMENTED;
+  PciRpcMsg req = {};
+  PciRpcMsg resp = {};
+
+  if (!out_offset) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  req.cap.id = cap_id;
+  if (offset == kPciCapOffsetFirst) {
+    req.cap.is_first = true;
+    req.cap.offset = 0;
+  } else {
+    req.cap.offset = offset;
+  }
+
+  zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, nullptr, &req, &resp);
+  if (st == ZX_OK) {
+    *out_offset = static_cast<uint8_t>(resp.cap.offset);
+  }
+  return st;
 }
 
 // TODO(ZX-3146): These methods need to be deleted, or refactored.

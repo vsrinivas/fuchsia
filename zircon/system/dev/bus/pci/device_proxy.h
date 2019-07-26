@@ -1,13 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_DEVICE_PROXY_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_DEVICE_PROXY_H_
 
-#include <ddktl/device.h>
-#include <ddktl/protocol/pci.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <sys/types.h>
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/pci.h>
 
 namespace pci {
 
@@ -56,17 +58,18 @@ struct PciMsgIrq {
   };
 };
 
-constexpr uint16_t kPciCapabilityOffsetFirst = 4907u;
-struct PciMsgCapaility {
+struct PciMsgCapability {
   uint16_t id;
   uint16_t offset;
+  bool is_first;
   bool is_extended;
 };
 
-// Outside the range of both standard and extended capailities, this
-// exists to give a value to allow GetNextCapaility and GetFirstCapability
+// The max value for each int type is an invalid capability offset we
+// can use to provide a value to allow GetNextCapaility and GetFirstCapability
 // to be served by the same impl on the other end of RPC.
-const uint16_t PciCapOffsetFirst = 4097u;
+const uint16_t kPciCapOffsetFirst = UINT8_MAX;
+const uint16_t kPciExtCapOffsetFirst = UINT16_MAX;
 
 // TODO(ZX-3927): port this to non-zx_pcie structures
 using PciMsgDeviceInfo = zx_pcie_device_info_t;
@@ -83,7 +86,7 @@ struct PciRpcMsg {
     PciMsgIrq irq;
     PciMsgBar bar;
     PciMsgDeviceInfo info;
-    PciMsgCapaility cap;
+    PciMsgCapability cap;
     uint8_t data[ZX_PAGE_SIZE - 24u];
     uint32_t bti_index;
     zx_handle_t handle;
@@ -132,3 +135,5 @@ class DeviceProxy : public PciDeviceProxyType, public ddk::PciProtocol<pci::Devi
 };
 
 }  // namespace pci
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_DEVICE_PROXY_H_

@@ -37,6 +37,7 @@ enum PciCapId : uint8 {
     SATA_DATA_NDX_CFG = 0x12;
     ADVANCED_FEATURES = 0x13;
     ENHANCED_ALLOCATION = 0x14;
+    FLATTENING_PORTAL_BRIDGE = 0x15;
 };
 
 /// ZX-3927: Remove the zx_pcie types and implement them here
