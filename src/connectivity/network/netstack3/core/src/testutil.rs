@@ -7,6 +7,7 @@
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
+use std::num::NonZeroU16;
 use std::ops;
 use std::sync::Once;
 use std::time::Duration;
@@ -23,11 +24,16 @@ use crate::device::ethernet::EtherType;
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{IpParseResult, ParseError, ParseResult};
 use crate::ip::icmp::IcmpEventDispatcher;
-use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpPacket, IpProto, IPV6_MIN_MTU};
+use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpProto, IPV6_MIN_MTU};
+use crate::transport::tcp::TcpOption;
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
 use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpParseArgs};
+use crate::wire::ipv4::Ipv4Packet;
+use crate::wire::ipv6::Ipv6Packet;
+use crate::wire::tcp::TcpSegment;
+use crate::wire::udp::UdpPacket;
 use crate::{handle_timeout, Context, EventDispatcher, Instant, StackStateBuilder, TimerId};
 
 use specialize_ip_macro::specialize_ip_address;
@@ -232,6 +238,150 @@ pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(
     }
 }
 
+/// Metadata of an Ethernet frame.
+pub(crate) struct EthernetFrameMetadata {
+    pub(crate) src_mac: Mac,
+    pub(crate) dst_mac: Mac,
+    pub(crate) ethertype: Option<EtherType>,
+}
+
+/// Metadata of an IPv4 packet.
+pub(crate) struct Ipv4PacketMetadata {
+    pub(crate) dscp: u8,
+    pub(crate) ecn: u8,
+    pub(crate) id: u16,
+    pub(crate) dont_fragment: bool,
+    pub(crate) more_fragments: bool,
+    pub(crate) fragment_offset: u16,
+    pub(crate) ttl: u8,
+    pub(crate) proto: IpProto,
+    pub(crate) src_ip: Ipv4Addr,
+    pub(crate) dst_ip: Ipv4Addr,
+}
+
+/// Metadata of an IPv6 packet.
+pub(crate) struct Ipv6PacketMetadata {
+    pub(crate) ds: u8,
+    pub(crate) ecn: u8,
+    pub(crate) flowlabel: u32,
+    pub(crate) hop_limit: u8,
+    pub(crate) src_ip: Ipv6Addr,
+    pub(crate) dst_ip: Ipv6Addr,
+}
+
+/// Metadata of a TCP segment.
+pub(crate) struct TcpSegmentMetadata {
+    pub(crate) src_port: u16,
+    pub(crate) dst_port: u16,
+    pub(crate) seq_num: u32,
+    pub(crate) ack_num: Option<u32>,
+    pub(crate) flags: u16,
+    pub(crate) psh: bool,
+    pub(crate) rst: bool,
+    pub(crate) syn: bool,
+    pub(crate) fin: bool,
+    pub(crate) window_size: u16,
+    pub(crate) options: &'static [TcpOption<'static>],
+}
+
+/// Metadata of a UDP packet.
+pub(crate) struct UdpPacketMetadata {
+    pub(crate) src_port: u16,
+    pub(crate) dst_port: u16,
+}
+
+/// Represents a packet (usually from a live capture) used for testing.
+///
+/// Includes the raw bytes, metadata of the packet (currently just fields from the packet header)
+/// and the range which indicates where the body is.
+pub(crate) struct TestPacket<M> {
+    pub(crate) bytes: &'static [u8],
+    pub(crate) metadata: M,
+    pub(crate) body_range: ops::Range<usize>,
+}
+
+/// Verify that a parsed Ethernet frame is as expected.
+///
+/// Ensures the parsed packet's header fields and body are equal to those in the test packet.
+pub(crate) fn verify_ethernet_frame(
+    frame: &EthernetFrame<&[u8]>,
+    expected: TestPacket<EthernetFrameMetadata>,
+) {
+    assert_eq!(frame.src_mac(), expected.metadata.src_mac);
+    assert_eq!(frame.dst_mac(), expected.metadata.dst_mac);
+    assert_eq!(frame.ethertype(), expected.metadata.ethertype);
+    assert_eq!(frame.body(), &expected.bytes[expected.body_range]);
+}
+
+/// Verify that a parsed IPv4 packet is as expected.
+///
+/// Ensures the parsed packet's header fields and body are equal to those in the test packet.
+pub(crate) fn verify_ipv4_packet(
+    packet: &Ipv4Packet<&[u8]>,
+    expected: TestPacket<Ipv4PacketMetadata>,
+) {
+    use crate::wire::ipv4::Ipv4Header;
+
+    assert_eq!(packet.dscp(), expected.metadata.dscp);
+    assert_eq!(packet.ecn(), expected.metadata.ecn);
+    assert_eq!(packet.id(), expected.metadata.id);
+    assert_eq!(packet.df_flag(), expected.metadata.dont_fragment);
+    assert_eq!(packet.mf_flag(), expected.metadata.more_fragments);
+    assert_eq!(packet.fragment_offset(), expected.metadata.fragment_offset);
+    assert_eq!(packet.ttl(), expected.metadata.ttl);
+    assert_eq!(packet.proto(), expected.metadata.proto);
+    assert_eq!(packet.src_ip(), expected.metadata.src_ip);
+    assert_eq!(packet.dst_ip(), expected.metadata.dst_ip);
+    assert_eq!(packet.body(), &expected.bytes[expected.body_range]);
+}
+
+/// Verify that a parsed IPv6 packet is as expected.
+///
+/// Ensures the parsed packet's header fields and body are equal to those in the test packet.
+pub(crate) fn verify_ipv6_packet(
+    packet: &Ipv6Packet<&[u8]>,
+    expected: TestPacket<Ipv6PacketMetadata>,
+) {
+    assert_eq!(packet.ds(), expected.metadata.ds);
+    assert_eq!(packet.ecn(), expected.metadata.ecn);
+    assert_eq!(packet.flowlabel(), expected.metadata.flowlabel);
+    assert_eq!(packet.hop_limit(), expected.metadata.hop_limit);
+    assert_eq!(packet.src_ip(), expected.metadata.src_ip);
+    assert_eq!(packet.dst_ip(), expected.metadata.dst_ip);
+    assert_eq!(packet.body(), &expected.bytes[expected.body_range]);
+}
+
+/// Verify that a parsed UDP packet is as expected.
+///
+/// Ensures the parsed packet's header fields and body are equal to those in the test packet.
+pub(crate) fn verify_udp_packet(
+    packet: &UdpPacket<&[u8]>,
+    expected: TestPacket<UdpPacketMetadata>,
+) {
+    assert_eq!(packet.src_port().map(NonZeroU16::get).unwrap_or(0), expected.metadata.src_port);
+    assert_eq!(packet.dst_port().get(), expected.metadata.dst_port);
+    assert_eq!(packet.body(), &expected.bytes[expected.body_range]);
+}
+
+/// Verify that a parsed TCP segment is as expected.
+///
+/// Ensures the parsed packet's header fields and body are equal to those in the test packet.
+pub(crate) fn verify_tcp_segment(
+    segment: &TcpSegment<&[u8]>,
+    expected: TestPacket<TcpSegmentMetadata>,
+) {
+    assert_eq!(segment.src_port().get(), expected.metadata.src_port);
+    assert_eq!(segment.dst_port().get(), expected.metadata.dst_port);
+    assert_eq!(segment.seq_num(), expected.metadata.seq_num);
+    assert_eq!(segment.ack_num(), expected.metadata.ack_num);
+    assert_eq!(segment.rst(), expected.metadata.rst);
+    assert_eq!(segment.syn(), expected.metadata.syn);
+    assert_eq!(segment.fin(), expected.metadata.fin);
+    assert_eq!(segment.window_size(), expected.metadata.window_size);
+    assert_eq!(segment.iter_options().collect::<Vec<_>>().as_slice(), expected.metadata.options);
+    assert_eq!(segment.body(), &expected.bytes[expected.body_range]);
+}
+
 /// Parse an ethernet frame.
 ///
 /// `parse_ethernet_frame` parses an ethernet frame, returning the body along
@@ -254,6 +404,8 @@ pub(crate) fn parse_ethernet_frame(
 pub(crate) fn parse_ip_packet<I: Ip>(
     mut buf: &[u8],
 ) -> IpParseResult<I, (&[u8], I::Addr, I::Addr, IpProto)> {
+    use crate::ip::IpPacket;
+
     let packet = (&mut buf).parse::<<I as IpExtByteSlice<_>>::Packet>()?;
     let src_ip = packet.src_ip();
     let dst_ip = packet.dst_ip();
@@ -1193,12 +1345,13 @@ mod tests {
 
     #[test]
     fn test_parse_ethernet_frame() {
-        use crate::wire::testdata::ARP_REQUEST;
-        let (body, src_mac, dst_mac, ethertype) = parse_ethernet_frame(ARP_REQUEST).unwrap();
-        assert_eq!(body, &ARP_REQUEST[14..]);
-        assert_eq!(src_mac, Mac::new([20, 171, 197, 116, 32, 52]));
-        assert_eq!(dst_mac, Mac::new([255, 255, 255, 255, 255, 255]));
-        assert_eq!(ethertype, Some(EtherType::Arp));
+        use crate::wire::testdata::arp_request::*;
+        let (body, src_mac, dst_mac, ethertype) =
+            parse_ethernet_frame(ETHERNET_FRAME.bytes).unwrap();
+        assert_eq!(body, &ETHERNET_FRAME.bytes[14..]);
+        assert_eq!(src_mac, ETHERNET_FRAME.metadata.src_mac);
+        assert_eq!(dst_mac, ETHERNET_FRAME.metadata.dst_mac);
+        assert_eq!(ethertype, ETHERNET_FRAME.metadata.ethertype);
     }
 
     #[test]
@@ -1223,13 +1376,13 @@ mod tests {
     fn test_parse_ip_packet_in_ethernet_frame() {
         use crate::wire::testdata::tls_client_hello_v4::*;
         let (body, src_mac, dst_mac, src_ip, dst_ip, proto) =
-            parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME_BYTES).unwrap();
-        assert_eq!(body, &(ETHERNET_FRAME_BYTES[ETHERNET_BODY_RANGE])[IP_BODY_RANGE]);
-        assert_eq!(src_mac, ETHERNET_SRC_MAC);
-        assert_eq!(dst_mac, ETHERNET_DST_MAC);
-        assert_eq!(src_ip, IP_SRC_IP);
-        assert_eq!(dst_ip, IP_DST_IP);
-        assert_eq!(proto, IpProto::Tcp);
+            parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME.bytes).unwrap();
+        assert_eq!(body, &IPV4_PACKET.bytes[IPV4_PACKET.body_range]);
+        assert_eq!(src_mac, ETHERNET_FRAME.metadata.src_mac);
+        assert_eq!(dst_mac, ETHERNET_FRAME.metadata.dst_mac);
+        assert_eq!(src_ip, IPV4_PACKET.metadata.src_ip);
+        assert_eq!(dst_ip, IPV4_PACKET.metadata.dst_ip);
+        assert_eq!(proto, IPV4_PACKET.metadata.proto);
     }
 
     #[test]

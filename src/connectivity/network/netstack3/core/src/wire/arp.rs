@@ -364,6 +364,7 @@ mod tests {
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::*;
+    use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
 
     const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
@@ -373,18 +374,19 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full() {
-        use crate::wire::testdata::*;
+        use crate::wire::testdata::arp_request::*;
 
-        let mut req = &ARP_REQUEST[..];
-        let frame = req.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.ethertype(), Some(EtherType::Arp));
+        let mut buf = ETHERNET_FRAME.bytes;
+        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let (hw, proto) = peek_arp_types(frame.body()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
+
         let mut body = frame.body();
         let arp = body.parse::<ArpPacket<_, Mac, Ipv4Addr>>().unwrap();
-        assert_eq!(arp.operation(), ArpOp::Request);
+        assert_eq!(arp.operation(), ARP_OPERATION);
         assert_eq!(frame.src_mac(), arp.sender_hardware_address());
 
         let frame_bytes = arp
@@ -393,7 +395,7 @@ mod tests {
             .encapsulate(frame.builder())
             .serialize_vec_outer()
             .unwrap();
-        assert_eq!(frame_bytes.as_ref(), ARP_REQUEST);
+        assert_eq!(frame_bytes.as_ref(), ETHERNET_FRAME.bytes);
     }
 
     fn header_to_bytes(header: Header) -> [u8; ARP_HDR_LEN] {

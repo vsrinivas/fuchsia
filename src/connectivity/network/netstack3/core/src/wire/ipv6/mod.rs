@@ -694,8 +694,8 @@ mod tests {
 
     use super::ext_hdrs::*;
     use super::*;
-    use crate::device::ethernet::EtherType;
     use crate::ip::Ipv6ExtHdrType;
+    use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
 
     const DEFAULT_SRC_IP: Ipv6Addr =
@@ -707,20 +707,13 @@ mod tests {
     fn test_parse_serialize_full_tcp() {
         use crate::wire::testdata::syn_v6::*;
 
-        let mut buf = &ETHERNET_FRAME_BYTES[..];
+        let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
-        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
-        assert_eq!(frame.ethertype(), Some(EtherType::Ipv6));
+        verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv6Packet<_>>().unwrap();
-        assert_eq!(packet.ds(), IPV6_DS);
-        assert_eq!(packet.ecn(), IPV6_ECN);
-        assert_eq!(packet.flowlabel(), IPV6_FLOWLABEL);
-        assert_eq!(packet.hop_limit(), IPV6_HOP_LIMIT);
-        assert_eq!(packet.src_ip(), IPV6_SRC_IP);
-        assert_eq!(packet.dst_ip(), IPV6_DST_IP);
+        verify_ipv6_packet(&packet, IPV6_PACKET);
 
         let buffer = packet
             .body()
@@ -729,27 +722,20 @@ mod tests {
             .encapsulate(frame.builder())
             .serialize_vec_outer()
             .unwrap();
-        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME.bytes);
     }
 
     #[test]
     fn test_parse_serialize_full_udp() {
         use crate::wire::testdata::dns_request_v6::*;
 
-        let mut buf = &ETHERNET_FRAME_BYTES[..];
+        let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
-        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
-        assert_eq!(frame.ethertype(), Some(EtherType::Ipv6));
+        verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv6Packet<_>>().unwrap();
-        assert_eq!(packet.ds(), IPV6_DS);
-        assert_eq!(packet.ecn(), IPV6_ECN);
-        assert_eq!(packet.flowlabel(), IPV6_FLOWLABEL);
-        assert_eq!(packet.hop_limit(), IPV6_HOP_LIMIT);
-        assert_eq!(packet.src_ip(), IPV6_SRC_IP);
-        assert_eq!(packet.dst_ip(), IPV6_DST_IP);
+        verify_ipv6_packet(&packet, IPV6_PACKET);
 
         let buffer = packet
             .body()
@@ -758,7 +744,7 @@ mod tests {
             .encapsulate(frame.builder())
             .serialize_vec_outer()
             .unwrap();
-        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME.bytes);
     }
 
     fn fixed_hdr_to_bytes(fixed_hdr: FixedHeader) -> [u8; IPV6_FIXED_HDR_LEN] {

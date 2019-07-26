@@ -746,6 +746,7 @@ mod tests {
     use super::*;
     use crate::device::ethernet::EtherType;
     use crate::ip::IpExt;
+    use crate::testutil::*;
     use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 
     const DEFAULT_SRC_MAC: Mac = Mac::new([1, 2, 3, 4, 5, 6]);
@@ -757,24 +758,13 @@ mod tests {
     fn test_parse_serialize_full_tcp() {
         use crate::wire::testdata::tls_client_hello_v4::*;
 
-        let mut buf = &ETHERNET_FRAME_BYTES[..];
+        let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
-        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
-        assert_eq!(frame.ethertype(), Some(EtherType::Ipv4));
+        verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv4Packet<_>>().unwrap();
-        assert_eq!(packet.proto(), IpProto::Tcp);
-        assert_eq!(packet.dscp(), IP_DSCP);
-        assert_eq!(packet.ecn(), IP_ECN);
-        assert_eq!(packet.df_flag(), IP_DONT_FRAGMENT);
-        assert_eq!(packet.mf_flag(), IP_MORE_FRAGMENTS);
-        assert_eq!(packet.fragment_offset(), IP_FRAGMENT_OFFSET);
-        assert_eq!(packet.id(), IP_ID);
-        assert_eq!(packet.ttl(), IP_TTL);
-        assert_eq!(packet.src_ip(), IP_SRC_IP);
-        assert_eq!(packet.dst_ip(), IP_DST_IP);
+        verify_ipv4_packet(&packet, IPV4_PACKET);
 
         let buffer = packet
             .body()
@@ -783,31 +773,20 @@ mod tests {
             .encapsulate(frame.builder())
             .serialize_vec_outer()
             .unwrap();
-        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME.bytes);
     }
 
     #[test]
     fn test_parse_serialize_full_udp() {
         use crate::wire::testdata::dns_request_v4::*;
 
-        let mut buf = &ETHERNET_FRAME_BYTES[..];
+        let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
-        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
-        assert_eq!(frame.ethertype(), Some(EtherType::Ipv4));
+        verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv4Packet<_>>().unwrap();
-        assert_eq!(packet.proto(), IpProto::Udp);
-        assert_eq!(packet.dscp(), IP_DSCP);
-        assert_eq!(packet.ecn(), IP_ECN);
-        assert_eq!(packet.df_flag(), IP_DONT_FRAGMENT);
-        assert_eq!(packet.mf_flag(), IP_MORE_FRAGMENTS);
-        assert_eq!(packet.fragment_offset(), IP_FRAGMENT_OFFSET);
-        assert_eq!(packet.id(), IP_ID);
-        assert_eq!(packet.ttl(), IP_TTL);
-        assert_eq!(packet.src_ip(), IP_SRC_IP);
-        assert_eq!(packet.dst_ip(), IP_DST_IP);
+        verify_ipv4_packet(&packet, IPV4_PACKET);
 
         let buffer = packet
             .body()
@@ -816,7 +795,7 @@ mod tests {
             .encapsulate(frame.builder())
             .serialize_vec_outer()
             .unwrap();
-        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME.bytes);
     }
 
     fn hdr_prefix_to_bytes(hdr_prefix: HeaderPrefix) -> [u8; 20] {

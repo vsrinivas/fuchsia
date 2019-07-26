@@ -403,9 +403,8 @@ mod tests {
     use std::num::NonZeroU16;
 
     use super::*;
-    use crate::device::ethernet::EtherType;
     use crate::testutil::benchmarks::{black_box, Bencher};
-    use crate::testutil::parse_ip_packet_in_ethernet_frame;
+    use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::ipv4::{Ipv4Header, Ipv4Packet};
     use crate::wire::ipv6::Ipv6Packet;
@@ -421,24 +420,13 @@ mod tests {
     fn test_parse_serialize_full_ipv4() {
         use crate::wire::testdata::dns_request_v4::*;
 
-        let mut buf = &ETHERNET_FRAME_BYTES[..];
+        let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
-        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
-        assert_eq!(frame.ethertype(), Some(EtherType::Ipv4));
+        verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
         let ip_packet = body.parse::<Ipv4Packet<_>>().unwrap();
-        assert_eq!(ip_packet.proto(), IpProto::Udp);
-        assert_eq!(ip_packet.dscp(), IP_DSCP);
-        assert_eq!(ip_packet.ecn(), IP_ECN);
-        assert_eq!(ip_packet.df_flag(), IP_DONT_FRAGMENT);
-        assert_eq!(ip_packet.mf_flag(), IP_MORE_FRAGMENTS);
-        assert_eq!(ip_packet.fragment_offset(), IP_FRAGMENT_OFFSET);
-        assert_eq!(ip_packet.id(), IP_ID);
-        assert_eq!(ip_packet.ttl(), IP_TTL);
-        assert_eq!(ip_packet.src_ip(), IP_SRC_IP);
-        assert_eq!(ip_packet.dst_ip(), IP_DST_IP);
+        verify_ipv4_packet(&ip_packet, IPV4_PACKET);
 
         let mut body = ip_packet.body();
         let udp_packet = body
@@ -447,9 +435,7 @@ mod tests {
                 ip_packet.dst_ip(),
             ))
             .unwrap();
-        assert_eq!(udp_packet.src_port().map(NonZeroU16::get).unwrap_or(0), UDP_SRC_PORT);
-        assert_eq!(udp_packet.dst_port().get(), UDP_DST_PORT);
-        assert_eq!(udp_packet.body(), UDP_BODY);
+        verify_udp_packet(&udp_packet, UDP_PACKET);
 
         let buffer = udp_packet
             .body()
@@ -459,45 +445,39 @@ mod tests {
             .encapsulate(frame.builder())
             .serialize_vec_outer()
             .unwrap();
-        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME.bytes);
     }
 
     #[test]
     fn test_parse_serialize_full_ipv6() {
         use crate::wire::testdata::dns_request_v6::*;
 
-        let mut buf = &ETHERNET_FRAME_BYTES[..];
+        let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
-        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
-        assert_eq!(frame.ethertype(), Some(EtherType::Ipv6));
+        verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
-        let packet = body.parse::<Ipv6Packet<_>>().unwrap();
-        assert_eq!(packet.ds(), IPV6_DS);
-        assert_eq!(packet.ecn(), IPV6_ECN);
-        assert_eq!(packet.flowlabel(), IPV6_FLOWLABEL);
-        assert_eq!(packet.hop_limit(), IPV6_HOP_LIMIT);
-        assert_eq!(packet.src_ip(), IPV6_SRC_IP);
-        assert_eq!(packet.dst_ip(), IPV6_DST_IP);
+        let ip_packet = body.parse::<Ipv6Packet<_>>().unwrap();
+        verify_ipv6_packet(&ip_packet, IPV6_PACKET);
 
-        let mut body = packet.body();
-        let datagram = body
-            .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(packet.src_ip(), packet.dst_ip()))
+        let mut body = ip_packet.body();
+        let udp_packet = body
+            .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(
+                ip_packet.src_ip(),
+                ip_packet.dst_ip(),
+            ))
             .unwrap();
-        assert_eq!(datagram.src_port().map(NonZeroU16::get).unwrap_or(0), UDP_SRC_PORT);
-        assert_eq!(datagram.dst_port().get(), UDP_DST_PORT);
-        assert_eq!(datagram.body(), UDP_BODY);
+        verify_udp_packet(&udp_packet, UDP_PACKET);
 
-        let buffer = datagram
+        let buffer = udp_packet
             .body()
             .into_serializer()
-            .encapsulate(datagram.builder(packet.src_ip(), packet.dst_ip()))
-            .encapsulate(packet.builder())
+            .encapsulate(udp_packet.builder(ip_packet.src_ip(), ip_packet.dst_ip()))
+            .encapsulate(ip_packet.builder())
             .encapsulate(frame.builder())
             .serialize_vec_outer()
             .unwrap();
-        assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME.bytes);
     }
 
     #[test]
@@ -754,13 +734,16 @@ mod tests {
 
     fn bench_parse_inner<B: Bencher>(b: &mut B) {
         use crate::wire::testdata::dns_request_v4::*;
-        let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME_BYTES).unwrap().0;
+        let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME.bytes).unwrap().0;
 
         b.iter(|| {
             let mut buf = bytes;
             black_box(
                 black_box(buf)
-                    .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(IP_SRC_IP, IP_DST_IP))
+                    .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(
+                        IPV4_PACKET.metadata.src_ip,
+                        IPV4_PACKET.metadata.dst_ip,
+                    ))
                     .unwrap(),
             );
         })
@@ -771,15 +754,15 @@ mod tests {
     fn bench_serialize_inner<B: Bencher>(b: &mut B) {
         use crate::wire::testdata::dns_request_v4::*;
         let builder = UdpPacketBuilder::new(
-            IP_SRC_IP,
-            IP_DST_IP,
+            IPV4_PACKET.metadata.src_ip,
+            IPV4_PACKET.metadata.dst_ip,
             None,
-            NonZeroU16::new(UDP_DST_PORT).unwrap(),
+            NonZeroU16::new(UDP_PACKET.metadata.dst_port).unwrap(),
         );
         let header_len = builder.constraints().header_len();
-        let total_len = header_len + UDP_BODY.len();
+        let total_len = header_len + UDP_PACKET.bytes[UDP_PACKET.body_range].len();
         let mut buf = vec![0; total_len];
-        buf[header_len..].copy_from_slice(UDP_BODY);
+        buf[header_len..].copy_from_slice(&UDP_PACKET.bytes[UDP_PACKET.body_range]);
 
         b.iter(|| {
             black_box(
