@@ -12,7 +12,8 @@
     "sandbox": {
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.pkg.PackageResolver"
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.test.hub.HubReport"
         ],
         "features": [
             "deprecated-ambient-replace-as-executable"

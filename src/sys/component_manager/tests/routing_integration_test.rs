@@ -4,10 +4,7 @@
 
 #![feature(async_await, await_macro)]
 
-use {
-    fuchsia_async as fasync,
-    test_utils,
-};
+use {fuchsia_async as fasync, test_utils};
 
 #[fasync::run_singlethreaded(test)]
 async fn test() {
