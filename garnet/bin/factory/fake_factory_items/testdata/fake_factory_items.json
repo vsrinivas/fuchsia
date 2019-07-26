@@ -1,0 +1,16 @@
+{
+  "manifest": [
+    {
+      "path": "/pkg/data/empty",
+      "extra": 0
+    },
+    {
+      "path": "/pkg/data/random1",
+      "extra": 1
+    },
+    {
+      "path": "/pkg/data/random2",
+      "extra": 2
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.boot.FactoryItems": "fuchsia-pkg://fuchsia.com/fake_factory_items_tests#meta/fake_factory_items.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/fake_factory_items_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.FactoryItems"
+        ]
+    }
+}

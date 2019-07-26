@@ -1,0 +1,105 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "fake_factory_items"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:structopt",
+    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot-rustc",
+  ]
+}
+
+package("fake_factory_items") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "fake_factory_items"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/fake_factory_items.cmx")
+      dest = "fake_factory_items.cmx"
+    },
+  ]
+}
+
+rustc_test("fake_factory_items_test") {
+  edition = "2018"
+  source_root = "tests/fake_factory_items_test.rs"
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot-rustc",
+  ]
+}
+
+test_package("fake_factory_items_tests") {
+  deps = [
+    ":bin",
+    ":fake_factory_items_test",
+  ]
+
+  binaries = [
+    {
+      name = "fake_factory_items"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/fake_factory_items.cmx")
+      dest = "fake_factory_items.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("testdata/empty")
+      dest = "empty"
+    },
+    {
+      path = rebase_path("testdata/random1")
+      dest = "random1"
+    },
+    {
+      path = rebase_path("testdata/random2")
+      dest = "random2"
+    },
+    {
+      path = rebase_path("testdata/fake_factory_items.json")
+      dest = "fake_factory_items.json"
+    },
+  ]
+
+  tests = [
+    {
+      name = "fake_factory_items_test"
+    },
+  ]
+}

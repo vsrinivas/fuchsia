@@ -5,6 +5,7 @@
 import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-boot") {
+  sdk = true
   sources = [
     "arguments.fidl",
     "factory-items.fidl",
