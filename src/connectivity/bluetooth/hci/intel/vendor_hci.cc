@@ -4,12 +4,13 @@
 
 #include "vendor_hci.h"
 
-#include <fbl/algorithm.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/object.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <fbl/algorithm.h>
 
 #include "logging.h"
 
@@ -76,7 +77,7 @@ bt::hci::StatusCode VendorHci::SendHciReset() const {
 
 void VendorHci::SendVendorReset() const {
   auto packet = CommandPacket::New(kReset, sizeof(ResetCommandParams));
-  auto params = packet->mutable_view()->mutable_payload<ResetCommandParams>();
+  auto params = packet->mutable_payload<ResetCommandParams>();
   params->data[0] = 0x00;
   params->data[1] = 0x01;
   params->data[2] = 0x00;
@@ -102,14 +103,13 @@ bool VendorHci::SendSecureSend(uint8_t type, const bt::BufferView& bytes) const 
     data.Write(bytes.view(bytes.size() - left, frag_len), 1);
 
     SendCommand(cmd->view());
-    auto event = WaitForEventPacket();
+    std::unique_ptr<bt::hci::EventPacket> event = WaitForEventPacket();
     if (!event) {
       errorf("VendorHci: SecureSend: Error reading response!\n");
       return false;
     }
     if (event->event_code() == bt::hci::kCommandCompleteEventCode) {
-      const auto& event_params =
-          event->view().template payload<bt::hci::CommandCompleteEventParams>();
+      const auto& event_params = event->view().payload<bt::hci::CommandCompleteEventParams>();
       if (le16toh(event_params.command_opcode) != kSecureSend) {
         errorf("VendorHci: Received command complete for something else!\n");
       } else if (event_params.return_parameters[0] != 0x00) {
@@ -157,7 +157,7 @@ void VendorHci::EnterManufacturerMode() {
     return;
 
   auto packet = CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
-  auto params = packet->mutable_view()->mutable_payload<MfgModeChangeCommandParams>();
+  auto params = packet->mutable_payload<MfgModeChangeCommandParams>();
   params->enable = bt::hci::GenericEnableParam::kEnable;
   params->disable_mode = MfgDisableMode::kNoPatches;
 
@@ -178,7 +178,7 @@ bool VendorHci::ExitManufacturerMode(MfgDisableMode mode) {
   manufacturer_ = false;
 
   auto packet = CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
-  auto params = packet->mutable_view()->mutable_payload<MfgModeChangeCommandParams>();
+  auto params = packet->mutable_payload<MfgModeChangeCommandParams>();
   params->enable = bt::hci::GenericEnableParam::kDisable;
   params->disable_mode = mode;
 

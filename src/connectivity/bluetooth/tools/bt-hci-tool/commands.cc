@@ -300,9 +300,7 @@ bool HandleWriteLocalName(const CommandData* cmd_data, const fxl::CommandLine& c
 
   const std::string& name = cmd_line.positional_args()[0];
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kWriteLocalName, name.length() + 1);
-  std::strcpy((char*)packet->mutable_view()
-                  ->mutable_payload<::bt::hci::WriteLocalNameCommandParams>()
-                  ->local_name,
+  std::strcpy((char*)packet->mutable_payload<::bt::hci::WriteLocalNameCommandParams>()->local_name,
               name.c_str());
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
@@ -331,8 +329,7 @@ bool HandleSetEventMask(const CommandData* cmd_data, const fxl::CommandLine& cmd
 
   constexpr size_t kPayloadSize = sizeof(::bt::hci::SetEventMaskCommandParams);
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kSetEventMask, kPayloadSize);
-  packet->mutable_view()->mutable_payload<::bt::hci::SetEventMaskCommandParams>()->event_mask =
-      htole64(mask);
+  packet->mutable_payload<::bt::hci::SetEventMaskCommandParams>()->event_mask = htole64(mask);
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
@@ -363,9 +360,8 @@ bool HandleLESetAdvEnable(const CommandData* cmd_data, const fxl::CommandLine& c
   constexpr size_t kPayloadSize = sizeof(::bt::hci::LESetAdvertisingEnableCommandParams);
 
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetAdvertisingEnable, kPayloadSize);
-  packet->mutable_view()
-      ->mutable_payload<::bt::hci::LESetAdvertisingEnableCommandParams>()
-      ->advertising_enable = value;
+  packet->mutable_payload<::bt::hci::LESetAdvertisingEnableCommandParams>()->advertising_enable =
+      value;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
@@ -414,8 +410,7 @@ bool HandleLESetAdvParams(const CommandData* cmd_data, const fxl::CommandLine& c
 
   constexpr size_t kPayloadSize = sizeof(::bt::hci::LESetAdvertisingParametersCommandParams);
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetAdvertisingParameters, kPayloadSize);
-  auto params =
-      packet->mutable_view()->mutable_payload<::bt::hci::LESetAdvertisingParametersCommandParams>();
+  auto params = packet->mutable_payload<::bt::hci::LESetAdvertisingParametersCommandParams>();
   params->adv_interval_min = htole16(::bt::hci::kLEAdvertisingIntervalDefault);
   params->adv_interval_max = htole16(::bt::hci::kLEAdvertisingIntervalDefault);
   params->adv_type = adv_type;
@@ -461,16 +456,13 @@ bool HandleLESetAdvData(const CommandData* cmd_data, const fxl::CommandLine& cmd
       return false;
     }
 
-    auto params =
-        packet->mutable_view()->mutable_payload<::bt::hci::LESetAdvertisingDataCommandParams>();
+    auto params = packet->mutable_payload<::bt::hci::LESetAdvertisingDataCommandParams>();
     params->adv_data_length = adv_data_len;
     params->adv_data[0] = adv_data_len - 1;
     params->adv_data[1] = 0x09;  // Complete Local Name
     std::strncpy((char*)params->adv_data + 2, name.c_str(), name.length());
   } else {
-    packet->mutable_view()
-        ->mutable_payload<::bt::hci::LESetAdvertisingDataCommandParams>()
-        ->adv_data_length = 0;
+    packet->mutable_payload<::bt::hci::LESetAdvertisingDataCommandParams>()->adv_data_length = 0;
   }
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
@@ -513,8 +505,7 @@ bool HandleLESetScanParams(const CommandData* cmd_data, const fxl::CommandLine& 
   constexpr size_t kPayloadSize = sizeof(::bt::hci::LESetScanParametersCommandParams);
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetScanParameters, kPayloadSize);
 
-  auto params =
-      packet->mutable_view()->mutable_payload<::bt::hci::LESetScanParametersCommandParams>();
+  auto params = packet->mutable_payload<::bt::hci::LESetScanParametersCommandParams>();
   params->scan_type = scan_type;
   params->scan_interval = htole16(::bt::hci::kLEScanIntervalDefault);
   params->scan_window = htole16(::bt::hci::kLEScanIntervalDefault);
@@ -581,7 +572,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   constexpr size_t kPayloadSize = sizeof(::bt::hci::LESetScanEnableCommandParams);
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetScanEnable, kPayloadSize);
 
-  auto params = packet->mutable_view()->mutable_payload<::bt::hci::LESetScanEnableCommandParams>();
+  auto params = packet->mutable_payload<::bt::hci::LESetScanEnableCommandParams>();
   params->scanning_enabled = ::bt::hci::GenericEnableParam::kEnable;
   params->filter_duplicates = filter_duplicates;
 
@@ -619,8 +610,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   auto scan_disable_cb = [cleanup_cb = cleanup_cb.share(), final_cb = std::move(final_cb),
                           cmd_data]() mutable {
     auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetScanEnable, kPayloadSize);
-    auto params =
-        packet->mutable_view()->mutable_payload<::bt::hci::LESetScanEnableCommandParams>();
+    auto params = packet->mutable_payload<::bt::hci::LESetScanEnableCommandParams>();
     params->scanning_enabled = ::bt::hci::GenericEnableParam::kDisable;
     params->filter_duplicates = ::bt::hci::GenericEnableParam::kDisable;
 
@@ -709,7 +699,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
 
   constexpr size_t kPayloadSize = sizeof(::bt::hci::InquiryCommandParams);
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kInquiry, kPayloadSize);
-  auto params = packet->mutable_view()->mutable_payload<::bt::hci::InquiryCommandParams>();
+  auto params = packet->mutable_payload<::bt::hci::InquiryCommandParams>();
 
   params->lap = ::bt::hci::kGIAC;
   // Always use the maximum inquiry length, we will time it more accurately.
@@ -868,8 +858,7 @@ bool HandleWritePageScanActivity(const CommandData* cmd_data, const fxl::Command
 
   constexpr size_t kPayloadSize = sizeof(::bt::hci::WritePageScanActivityCommandParams);
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kWritePageScanActivity, kPayloadSize);
-  auto params =
-      packet->mutable_view()->mutable_payload<::bt::hci::WritePageScanActivityCommandParams>();
+  auto params = packet->mutable_payload<::bt::hci::WritePageScanActivityCommandParams>();
   params->page_scan_interval = page_scan_interval;
   params->page_scan_window = page_scan_window;
 
@@ -939,9 +928,8 @@ bool HandleWritePageScanType(const CommandData* cmd_data, const fxl::CommandLine
   constexpr size_t kPayloadSize = sizeof(::bt::hci::WritePageScanTypeCommandParams);
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kWritePageScanType, kPayloadSize);
 
-  packet->mutable_view()
-      ->mutable_payload<::bt::hci::WritePageScanTypeCommandParams>()
-      ->page_scan_type = page_scan_type;
+  packet->mutable_payload<::bt::hci::WritePageScanTypeCommandParams>()->page_scan_type =
+      page_scan_type;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
@@ -1016,8 +1004,7 @@ bool HandleWriteScanEnable(const CommandData* cmd_data, const fxl::CommandLine& 
   constexpr size_t kPayloadSize = sizeof(::bt::hci::WriteScanEnableCommandParams);
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kWriteScanEnable, kPayloadSize);
 
-  packet->mutable_view()->mutable_payload<::bt::hci::WriteScanEnableCommandParams>()->scan_enable =
-      scan_enable;
+  packet->mutable_payload<::bt::hci::WriteScanEnableCommandParams>()->scan_enable = scan_enable;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 

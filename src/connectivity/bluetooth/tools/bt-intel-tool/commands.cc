@@ -5,11 +5,13 @@
 #include "commands.h"
 
 #include <endian.h>
-
 #include <sys/mman.h>
+
 #include <cstring>
 #include <iostream>
 
+#include "bt_intel.h"
+#include "intel_firmware_loader.h"
 #include "src/connectivity/bluetooth/core/bt-host/common/manufacturer_names.h"
 #include "src/connectivity/bluetooth/core/bt-host/gap/advertising_data.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/advertising_report_parser.h"
@@ -19,9 +21,6 @@
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/time/time_delta.h"
-
-#include "bt_intel.h"
-#include "intel_firmware_loader.h"
 
 using bt::hci::CommandPacket;
 using bt::hci::EventPacket;
@@ -67,7 +66,7 @@ class MfgModeEnabler {
   std::unique_ptr<CommandPacket> MakeMfgModePacket(
       bool enable, MfgDisableMode disable_mode = MfgDisableMode::kNoPatches) {
     auto packet = CommandPacket::New(kMfgModeChange, sizeof(IntelMfgModeChangeCommandParams));
-    auto params = packet->mutable_view()->mutable_payload<IntelMfgModeChangeCommandParams>();
+    auto params = packet->mutable_payload<IntelMfgModeChangeCommandParams>();
     params->enable = enable ? GenericEnableParam::kEnable : GenericEnableParam::kDisable;
     params->disable_mode = disable_mode;
     return packet;
@@ -177,7 +176,7 @@ bool HandleReset(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
   }
 
   auto packet = CommandPacket::New(kReset, sizeof(IntelResetCommandParams));
-  auto params = packet->mutable_view()->mutable_payload<IntelResetCommandParams>();
+  auto params = packet->mutable_payload<IntelResetCommandParams>();
   params->data[0] = 0x00;
   params->data[1] = 0x01;
   params->data[2] = 0x00;
