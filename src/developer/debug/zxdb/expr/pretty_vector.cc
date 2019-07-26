@@ -115,24 +115,4 @@ void PrettyStdVector::Format(FormatNode* node, const FormatOptions& options,
   FormatArrayNode(node, begin, item_count, options, context, std::move(cb));
 }
 
-// Rust vec::Vec -----------------------------------------------------------------------------------
-
-// Implements:
-//   array(buf.ptr.pointer, len)
-void PrettyRustVec::Format(FormatNode* node, const FormatOptions& options,
-                           fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
-  // pointer
-  ExprValue pointer;
-  if (Err err = ExtractMember(context, node->value(), {"buf", "ptr", "pointer"}, &pointer);
-      err.has_error())
-    return node->SetDescribedError(err);
-
-  // len
-  uint64_t len;
-  if (Err err = Extract64BitMember(context, node->value(), {"len"}, &len); err.has_error())
-    return node->SetDescribedError(err);
-
-  FormatArrayNode(node, pointer, len, options, context, std::move(cb));
-}
-
 }  // namespace zxdb

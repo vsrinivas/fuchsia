@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {

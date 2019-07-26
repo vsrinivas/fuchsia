@@ -28,7 +28,7 @@ PrettyType* PrettyTypeManager::GetForType(const Type* type) const {
       static PrettyRustString pretty_rust_string;
       return &pretty_rust_string;
     } else if (StringBeginsWith(type_name, "alloc::vec::Vec<")) {
-      static PrettyRustVec pretty_rust_vec;
+      static PrettyArray pretty_rust_vec("buf.ptr.pointer", "len");
       return &pretty_rust_vec;
     }
   } else {

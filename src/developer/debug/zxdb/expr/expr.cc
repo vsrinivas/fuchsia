@@ -8,8 +8,44 @@
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
+
+namespace {
+
+class MultiEvalTracking {
+ public:
+  using OutputVector = std::vector<std::pair<Err, ExprValue>>;
+  using Completion = fit::callback<void(OutputVector)>;
+
+  MultiEvalTracking(size_t count, Completion cb) : remaining_(count), completion_(std::move(cb)) {
+    data_.resize(count);
+  }
+
+  void SetResult(size_t index, const Err& err, ExprValue val) {
+    FXL_DCHECK(index < data_.size());
+    FXL_DCHECK(remaining_ > 0);
+
+    // Nothing should be set on this slot yet.
+    FXL_DCHECK(!data_[index].first.has_error());
+    FXL_DCHECK(data_[index].second == ExprValue());
+
+    data_[index].first = err;
+    data_[index].second = std::move(val);
+
+    remaining_--;
+    if (remaining_ == 0)
+      completion_(std::move(data_));
+  }
+
+ private:
+  size_t remaining_;  // # callbacks remaining before completion.
+  OutputVector data_;
+  Completion completion_;
+};
+
+}  // namespace
 
 void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
                     bool follow_references,
@@ -41,6 +77,20 @@ void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
     node->Eval(context, std::move(cb));
   else
     node->EvalFollowReferences(context, std::move(cb));
+}
+
+void EvalExpressions(const std::vector<std::string>& inputs, fxl::RefPtr<EvalContext> context,
+                     bool follow_references,
+                     fit::callback<void(std::vector<std::pair<Err, ExprValue>>)> cb) {
+  FXL_DCHECK(!inputs.empty());
+
+  auto tracking = std::make_shared<MultiEvalTracking>(inputs.size(), std::move(cb));
+  for (size_t i = 0; i < inputs.size(); i++) {
+    EvalExpression(inputs[i], context, follow_references,
+                   [tracking, i](const Err& err, ExprValue value) {
+                     tracking->SetResult(i, err, std::move(value));
+                   });
+  }
 }
 
 }  // namespace zxdb

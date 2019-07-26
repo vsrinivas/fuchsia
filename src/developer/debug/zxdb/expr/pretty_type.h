@@ -28,6 +28,12 @@ class PrettyType {
                       fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) = 0;
 
  protected:
+  // Evaluates the given expression in the context of the given object. The object's members will
+  // be injected into the active scope.
+  void EvalExpressionOn(fxl::RefPtr<EvalContext> context, const ExprValue& object,
+                        const std::string& expression,
+                        fit::callback<void(const Err&, ExprValue result)>);
+
   // Extracts a structure member with the given name. Pass one name to extract a single
   // member, pass a sequence of names to recursively extract values from nested structs.
   static Err ExtractMember(fxl::RefPtr<EvalContext> context, const ExprValue& value,
@@ -36,6 +42,19 @@ class PrettyType {
   // Like ExtractMember but it attempts to convert the result to a 64-bit number.
   static Err Extract64BitMember(fxl::RefPtr<EvalContext> context, const ExprValue& value,
                                 std::initializer_list<std::string> names, uint64_t* extracted);
+};
+
+class PrettyArray : public PrettyType {
+ public:
+  PrettyArray(const std::string& ptr_expr, const std::string& size_expr)
+      : ptr_expr_(ptr_expr), size_expr_(size_expr) {}
+
+  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
+              fit::deferred_callback cb) override;
+
+ private:
+  const std::string ptr_expr_;   // Expression to compute array start pointer.
+  const std::string size_expr_;  // Expression to compute array size.
 };
 
 }  // namespace zxdb

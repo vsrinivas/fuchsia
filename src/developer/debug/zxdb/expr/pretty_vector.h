@@ -19,16 +19,6 @@ class PrettyStdVector : public PrettyType {
               fit::deferred_callback cb) override;
 };
 
-// Rust vec::Vec.
-class PrettyRustVec : public PrettyType {
- public:
-  PrettyRustVec() = default;
-
-  // PrettyType implementation.
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
-};
-
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_VECTOR_H_
