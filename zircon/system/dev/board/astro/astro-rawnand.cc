@@ -53,13 +53,20 @@ static const nand_config_t config = {
             .table_end_block = 23,
         },
     },
-    .extra_partition_config_count = 1,
+    .extra_partition_config_count = 2,
     .extra_partition_config = {
         {
             .type_guid = GUID_BOOTLOADER_VALUE,
             .copy_count = 4,
             .copy_byte_offset = 0,
         },
+        {
+            .type_guid = GUID_SYS_CONFIG_VALUE,
+            .copy_count = 4,
+            .copy_byte_offset = 0,
+        },
+
+
     },
 };
 
