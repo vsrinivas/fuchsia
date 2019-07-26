@@ -254,9 +254,13 @@ static zx_status_t fidl_directory_watch(void* ctx, uint32_t mask, uint32_t optio
     return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INTERNAL);
   }
 
-  zx_status_t call_status;
-  zx_status_t status = fuchsia::device::manager::Coordinator::Call::DirectoryWatch_Deprecated(
-      zx::unowned_channel(rpc.get()), mask, options, std::move(watcher), &call_status);
+  auto response = fuchsia::device::manager::Coordinator::Call::DirectoryWatch(
+      zx::unowned_channel(rpc.get()), mask, options, std::move(watcher));
+  zx_status_t status = response.status();
+  zx_status_t call_status = ZX_OK;
+  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
+    call_status = response.Unwrap()->result.err();
+  }
 
   return fuchsia_io_DirectoryWatch_reply(txn, status != ZX_OK ? status : call_status);
 }

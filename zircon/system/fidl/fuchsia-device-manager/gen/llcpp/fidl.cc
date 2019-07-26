@@ -1281,6 +1281,832 @@ void DevhostController::Interface::CreateCompositeDeviceCompleterBase::Reply(::f
 }
 
 
+::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::Coordinator_AddDevice_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::~Coordinator_AddDevice_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_AddDevice_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::MoveImpl_(Coordinator_AddDevice_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result) == ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::PrimarySize);
+}
+
+
+Coordinator_AddDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_AddDevice_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::Coordinator_AddDeviceInvisible_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::~Coordinator_AddDeviceInvisible_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_AddDeviceInvisible_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::MoveImpl_(Coordinator_AddDeviceInvisible_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result) == ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::PrimarySize);
+}
+
+
+Coordinator_AddDeviceInvisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_AddDeviceInvisible_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::Coordinator_RunCompatibilityTests_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::~Coordinator_RunCompatibilityTests_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_RunCompatibilityTests_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::MoveImpl_(Coordinator_RunCompatibilityTests_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result) == ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::PrimarySize);
+}
+
+
+Coordinator_RunCompatibilityTests_Response& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_RunCompatibilityTests_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::Coordinator_RemoveDevice_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::~Coordinator_RemoveDevice_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_RemoveDevice_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::MoveImpl_(Coordinator_RemoveDevice_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result) == ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::PrimarySize);
+}
+
+
+Coordinator_RemoveDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_RemoveDevice_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_RemoveDevice_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::Coordinator_PublishMetadata_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::~Coordinator_PublishMetadata_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_PublishMetadata_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::MoveImpl_(Coordinator_PublishMetadata_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result) == ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::PrimarySize);
+}
+
+
+Coordinator_PublishMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_PublishMetadata_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::Coordinator_MakeVisible_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::~Coordinator_MakeVisible_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_MakeVisible_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::MoveImpl_(Coordinator_MakeVisible_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result) == ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::PrimarySize);
+}
+
+
+Coordinator_MakeVisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_MakeVisible_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::Coordinator_LoadFirmware_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::~Coordinator_LoadFirmware_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_LoadFirmware_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::MoveImpl_(Coordinator_LoadFirmware_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result) == ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::PrimarySize);
+}
+
+
+Coordinator_LoadFirmware_Response& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_LoadFirmware_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::Coordinator_GetTopologicalPath_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::~Coordinator_GetTopologicalPath_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_GetTopologicalPath_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::MoveImpl_(Coordinator_GetTopologicalPath_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result) == ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::PrimarySize);
+}
+
+
+Coordinator_GetTopologicalPath_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_GetTopologicalPath_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::Coordinator_GetMetadata_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::~Coordinator_GetMetadata_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_GetMetadata_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::MoveImpl_(Coordinator_GetMetadata_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result) == ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::PrimarySize);
+}
+
+
+Coordinator_GetMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_GetMetadata_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::Coordinator_GetMetadataSize_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::~Coordinator_GetMetadataSize_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_GetMetadataSize_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::MoveImpl_(Coordinator_GetMetadataSize_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result) == ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::PrimarySize);
+}
+
+
+Coordinator_GetMetadataSize_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_GetMetadataSize_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::Coordinator_DirectoryWatch_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::~Coordinator_DirectoryWatch_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_DirectoryWatch_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::MoveImpl_(Coordinator_DirectoryWatch_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result) == ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::PrimarySize);
+}
+
+
+Coordinator_DirectoryWatch_Response& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_DirectoryWatch_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::Coordinator_BindDevice_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::~Coordinator_BindDevice_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_BindDevice_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::MoveImpl_(Coordinator_BindDevice_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result) == ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::PrimarySize);
+}
+
+
+Coordinator_BindDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_BindDevice_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::Coordinator_AddMetadata_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::~Coordinator_AddMetadata_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_AddMetadata_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::MoveImpl_(Coordinator_AddMetadata_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result) == ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::PrimarySize);
+}
+
+
+Coordinator_AddMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_AddMetadata_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::Coordinator_AddCompositeDevice_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::~Coordinator_AddCompositeDevice_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Coordinator_AddCompositeDevice_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::MoveImpl_(Coordinator_AddCompositeDevice_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result) == ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::PrimarySize);
+}
+
+
+Coordinator_AddCompositeDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Coordinator_AddCompositeDevice_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 namespace {
 
 [[maybe_unused]]
@@ -2261,11 +3087,11 @@ Coordinator::UnownedResultOf::AddDevice Coordinator::Call::AddDevice(zx::unowned
   return UnownedResultOf::AddDevice(std::move(_client_end), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::AddDevice_Deprecated(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id) {
-  return Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), out_status, out_local_device_id);
+zx_status_t Coordinator::SyncClient::AddDevice_Deprecated(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, Coordinator_AddDevice_Result* out_result) {
+  return Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), out_result);
 }
 
-zx_status_t Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id) {
+zx_status_t Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, Coordinator_AddDevice_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -2302,16 +3128,15 @@ zx_status_t Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel _client_
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_local_device_id = std::move(_response.local_device_id);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::AddDeviceResponse> Coordinator::SyncClient::AddDevice_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id) {
-  return Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), std::move(_response_buffer), out_status, out_local_device_id);
+::fidl::DecodeResult<Coordinator::AddDeviceResponse> Coordinator::SyncClient::AddDevice_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, Coordinator_AddDevice_Result* out_result) {
+  return Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::AddDeviceResponse> Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id) {
+::fidl::DecodeResult<Coordinator::AddDeviceResponse> Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, Coordinator_AddDevice_Result* out_result) {
   if (_request_buffer.capacity() < AddDeviceRequest::PrimarySize) {
     return ::fidl::DecodeResult<AddDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -2344,8 +3169,7 @@ zx_status_t Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel _client_
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_local_device_id = std::move(_response.local_device_id);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -2429,11 +3253,11 @@ Coordinator::UnownedResultOf::AddDeviceInvisible Coordinator::Call::AddDeviceInv
   return UnownedResultOf::AddDeviceInvisible(std::move(_client_end), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::AddDeviceInvisible_Deprecated(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id) {
-  return Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel(this->channel_), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), out_status, out_local_device_id);
+zx_status_t Coordinator::SyncClient::AddDeviceInvisible_Deprecated(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, Coordinator_AddDeviceInvisible_Result* out_result) {
+  return Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel(this->channel_), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), out_result);
 }
 
-zx_status_t Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id) {
+zx_status_t Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, Coordinator_AddDeviceInvisible_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceInvisibleRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -2469,16 +3293,15 @@ zx_status_t Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_local_device_id = std::move(_response.local_device_id);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::AddDeviceInvisibleResponse> Coordinator::SyncClient::AddDeviceInvisible_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id) {
-  return Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), std::move(_response_buffer), out_status, out_local_device_id);
+::fidl::DecodeResult<Coordinator::AddDeviceInvisibleResponse> Coordinator::SyncClient::AddDeviceInvisible_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, Coordinator_AddDeviceInvisible_Result* out_result) {
+  return Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::AddDeviceInvisibleResponse> Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_local_device_id) {
+::fidl::DecodeResult<Coordinator::AddDeviceInvisibleResponse> Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer, Coordinator_AddDeviceInvisible_Result* out_result) {
   if (_request_buffer.capacity() < AddDeviceInvisibleRequest::PrimarySize) {
     return ::fidl::DecodeResult<AddDeviceInvisibleResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -2510,8 +3333,7 @@ zx_status_t Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_local_device_id = std::move(_response.local_device_id);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -2797,11 +3619,11 @@ Coordinator::UnownedResultOf::RemoveDevice Coordinator::Call::RemoveDevice(zx::u
   return UnownedResultOf::RemoveDevice(std::move(_client_end), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::RemoveDevice_Deprecated(int32_t* out_status) {
-  return Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Coordinator::SyncClient::RemoveDevice_Deprecated(Coordinator_RemoveDevice_Result* out_result) {
+  return Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel(this->channel_), out_result);
 }
 
-zx_status_t Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel _client_end, Coordinator_RemoveDevice_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDeviceRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<RemoveDeviceRequest*>(_write_bytes);
@@ -2825,15 +3647,15 @@ zx_status_t Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel _clie
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::RemoveDeviceResponse> Coordinator::SyncClient::RemoveDevice_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Coordinator::RemoveDeviceResponse> Coordinator::SyncClient::RemoveDevice_Deprecated(::fidl::BytePart _response_buffer, Coordinator_RemoveDevice_Result* out_result) {
+  return Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::RemoveDeviceResponse> Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Coordinator::RemoveDeviceResponse> Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Coordinator_RemoveDevice_Result* out_result) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RemoveDeviceRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<RemoveDeviceRequest*>(_request_buffer.data());
@@ -2854,7 +3676,7 @@ zx_status_t Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel _clie
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -2920,11 +3742,11 @@ Coordinator::UnownedResultOf::MakeVisible Coordinator::Call::MakeVisible(zx::uno
   return UnownedResultOf::MakeVisible(std::move(_client_end), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::MakeVisible_Deprecated(int32_t* out_status) {
-  return Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Coordinator::SyncClient::MakeVisible_Deprecated(Coordinator_MakeVisible_Result* out_result) {
+  return Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel(this->channel_), out_result);
 }
 
-zx_status_t Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel _client_end, Coordinator_MakeVisible_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MakeVisibleRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MakeVisibleRequest*>(_write_bytes);
@@ -2948,15 +3770,15 @@ zx_status_t Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel _clien
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::MakeVisibleResponse> Coordinator::SyncClient::MakeVisible_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Coordinator::MakeVisibleResponse> Coordinator::SyncClient::MakeVisible_Deprecated(::fidl::BytePart _response_buffer, Coordinator_MakeVisible_Result* out_result) {
+  return Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::MakeVisibleResponse> Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Coordinator::MakeVisibleResponse> Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Coordinator_MakeVisible_Result* out_result) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(MakeVisibleRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<MakeVisibleRequest*>(_request_buffer.data());
@@ -2977,7 +3799,7 @@ zx_status_t Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel _clien
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -3054,11 +3876,11 @@ Coordinator::UnownedResultOf::BindDevice Coordinator::Call::BindDevice(zx::unown
   return UnownedResultOf::BindDevice(std::move(_client_end), std::move(_request_buffer), std::move(driver_path), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::BindDevice_Deprecated(::fidl::StringView driver_path, int32_t* out_status) {
-  return Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(driver_path), out_status);
+zx_status_t Coordinator::SyncClient::BindDevice_Deprecated(::fidl::StringView driver_path, Coordinator_BindDevice_Result* out_result) {
+  return Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(driver_path), out_result);
 }
 
-zx_status_t Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView driver_path, int32_t* out_status) {
+zx_status_t Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView driver_path, Coordinator_BindDevice_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDeviceRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -3088,15 +3910,15 @@ zx_status_t Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel _client
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::BindDeviceResponse> Coordinator::SyncClient::BindDevice_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver_path), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Coordinator::BindDeviceResponse> Coordinator::SyncClient::BindDevice_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer, Coordinator_BindDevice_Result* out_result) {
+  return Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver_path), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::BindDeviceResponse> Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Coordinator::BindDeviceResponse> Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer, Coordinator_BindDevice_Result* out_result) {
   if (_request_buffer.capacity() < BindDeviceRequest::PrimarySize) {
     return ::fidl::DecodeResult<BindDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -3122,7 +3944,7 @@ zx_status_t Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel _client
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -3183,11 +4005,11 @@ Coordinator::UnownedResultOf::GetTopologicalPath Coordinator::Call::GetTopologic
   return UnownedResultOf::GetTopologicalPath(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Coordinator::GetTopologicalPathResponse> Coordinator::SyncClient::GetTopologicalPath_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path) {
-  return Coordinator::Call::GetTopologicalPath_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_path);
+::fidl::DecodeResult<Coordinator::GetTopologicalPathResponse> Coordinator::SyncClient::GetTopologicalPath_Deprecated(::fidl::BytePart _response_buffer, Coordinator_GetTopologicalPath_Result* out_result) {
+  return Coordinator::Call::GetTopologicalPath_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::GetTopologicalPathResponse> Coordinator::Call::GetTopologicalPath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path) {
+::fidl::DecodeResult<Coordinator::GetTopologicalPathResponse> Coordinator::Call::GetTopologicalPath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Coordinator_GetTopologicalPath_Result* out_result) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTopologicalPathRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetTopologicalPathRequest*>(_request_buffer.data());
@@ -3208,8 +4030,7 @@ Coordinator::UnownedResultOf::GetTopologicalPath Coordinator::Call::GetTopologic
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_path = std::move(_response.path);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -3286,11 +4107,11 @@ Coordinator::UnownedResultOf::LoadFirmware Coordinator::Call::LoadFirmware(zx::u
   return UnownedResultOf::LoadFirmware(std::move(_client_end), std::move(_request_buffer), std::move(fw_path), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::LoadFirmware_Deprecated(::fidl::StringView fw_path, int32_t* out_status, ::zx::vmo* out_vmo, uint64_t* out_size) {
-  return Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel(this->channel_), std::move(fw_path), out_status, out_vmo, out_size);
+zx_status_t Coordinator::SyncClient::LoadFirmware_Deprecated(::fidl::StringView fw_path, Coordinator_LoadFirmware_Result* out_result) {
+  return Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel(this->channel_), std::move(fw_path), out_result);
 }
 
-zx_status_t Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView fw_path, int32_t* out_status, ::zx::vmo* out_vmo, uint64_t* out_size) {
+zx_status_t Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView fw_path, Coordinator_LoadFirmware_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadFirmwareRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -3320,17 +4141,15 @@ zx_status_t Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel _clie
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_vmo = std::move(_response.vmo);
-  *out_size = std::move(_response.size);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::LoadFirmwareResponse> Coordinator::SyncClient::LoadFirmware_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::vmo* out_vmo, uint64_t* out_size) {
-  return Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(fw_path), std::move(_response_buffer), out_status, out_vmo, out_size);
+::fidl::DecodeResult<Coordinator::LoadFirmwareResponse> Coordinator::SyncClient::LoadFirmware_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer, Coordinator_LoadFirmware_Result* out_result) {
+  return Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(fw_path), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::LoadFirmwareResponse> Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::vmo* out_vmo, uint64_t* out_size) {
+::fidl::DecodeResult<Coordinator::LoadFirmwareResponse> Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer, Coordinator_LoadFirmware_Result* out_result) {
   if (_request_buffer.capacity() < LoadFirmwareRequest::PrimarySize) {
     return ::fidl::DecodeResult<LoadFirmwareResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -3356,9 +4175,7 @@ zx_status_t Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel _clie
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_vmo = std::move(_response.vmo);
-  *out_size = std::move(_response.size);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -3425,11 +4242,11 @@ Coordinator::UnownedResultOf::GetMetadata Coordinator::Call::GetMetadata(zx::uno
   return UnownedResultOf::GetMetadata(std::move(_client_end), std::move(_request_buffer), std::move(key), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Coordinator::GetMetadataResponse> Coordinator::SyncClient::GetMetadata_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data) {
-  return Coordinator::Call::GetMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(_response_buffer), out_status, out_data);
+::fidl::DecodeResult<Coordinator::GetMetadataResponse> Coordinator::SyncClient::GetMetadata_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, Coordinator_GetMetadata_Result* out_result) {
+  return Coordinator::Call::GetMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::GetMetadataResponse> Coordinator::Call::GetMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data) {
+::fidl::DecodeResult<Coordinator::GetMetadataResponse> Coordinator::Call::GetMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, Coordinator_GetMetadata_Result* out_result) {
   if (_request_buffer.capacity() < GetMetadataRequest::PrimarySize) {
     return ::fidl::DecodeResult<GetMetadataResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -3452,8 +4269,7 @@ Coordinator::UnownedResultOf::GetMetadata Coordinator::Call::GetMetadata(zx::uno
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_data = std::move(_response.data);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -3520,11 +4336,11 @@ Coordinator::UnownedResultOf::GetMetadataSize Coordinator::Call::GetMetadataSize
   return UnownedResultOf::GetMetadataSize(std::move(_client_end), std::move(_request_buffer), std::move(key), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::GetMetadataSize_Deprecated(uint32_t key, int32_t* out_status, uint64_t* out_size) {
-  return Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel(this->channel_), std::move(key), out_status, out_size);
+zx_status_t Coordinator::SyncClient::GetMetadataSize_Deprecated(uint32_t key, Coordinator_GetMetadataSize_Result* out_result) {
+  return Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel(this->channel_), std::move(key), out_result);
 }
 
-zx_status_t Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel _client_end, uint32_t key, int32_t* out_status, uint64_t* out_size) {
+zx_status_t Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel _client_end, uint32_t key, Coordinator_GetMetadataSize_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMetadataSizeRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetMetadataSizeRequest*>(_write_bytes);
@@ -3549,16 +4365,15 @@ zx_status_t Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel _c
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_size = std::move(_response.size);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::GetMetadataSizeResponse> Coordinator::SyncClient::GetMetadataSize_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_size) {
-  return Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(_response_buffer), out_status, out_size);
+::fidl::DecodeResult<Coordinator::GetMetadataSizeResponse> Coordinator::SyncClient::GetMetadataSize_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, Coordinator_GetMetadataSize_Result* out_result) {
+  return Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::GetMetadataSizeResponse> Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_size) {
+::fidl::DecodeResult<Coordinator::GetMetadataSizeResponse> Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, Coordinator_GetMetadataSize_Result* out_result) {
   if (_request_buffer.capacity() < GetMetadataSizeRequest::PrimarySize) {
     return ::fidl::DecodeResult<GetMetadataSizeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -3581,8 +4396,7 @@ zx_status_t Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel _c
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_size = std::move(_response.size);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -3656,11 +4470,11 @@ Coordinator::UnownedResultOf::AddMetadata Coordinator::Call::AddMetadata(zx::uno
   return UnownedResultOf::AddMetadata(std::move(_client_end), std::move(_request_buffer), std::move(key), std::move(data), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::AddMetadata_Deprecated(uint32_t key, ::fidl::VectorView<uint8_t> data, int32_t* out_status) {
-  return Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(key), std::move(data), out_status);
+zx_status_t Coordinator::SyncClient::AddMetadata_Deprecated(uint32_t key, ::fidl::VectorView<uint8_t> data, Coordinator_AddMetadata_Result* out_result) {
+  return Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(key), std::move(data), out_result);
 }
 
-zx_status_t Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel _client_end, uint32_t key, ::fidl::VectorView<uint8_t> data, int32_t* out_status) {
+zx_status_t Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel _client_end, uint32_t key, ::fidl::VectorView<uint8_t> data, Coordinator_AddMetadata_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddMetadataRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -3691,15 +4505,15 @@ zx_status_t Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel _clien
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::AddMetadataResponse> Coordinator::SyncClient::AddMetadata_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(data), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Coordinator::AddMetadataResponse> Coordinator::SyncClient::AddMetadata_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, Coordinator_AddMetadata_Result* out_result) {
+  return Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(data), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::AddMetadataResponse> Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Coordinator::AddMetadataResponse> Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, Coordinator_AddMetadata_Result* out_result) {
   if (_request_buffer.capacity() < AddMetadataRequest::PrimarySize) {
     return ::fidl::DecodeResult<AddMetadataResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -3726,7 +4540,7 @@ zx_status_t Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel _clien
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -3802,11 +4616,11 @@ Coordinator::UnownedResultOf::PublishMetadata Coordinator::Call::PublishMetadata
   return UnownedResultOf::PublishMetadata(std::move(_client_end), std::move(_request_buffer), std::move(device_path), std::move(key), std::move(data), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::PublishMetadata_Deprecated(::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, int32_t* out_status) {
-  return Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(device_path), std::move(key), std::move(data), out_status);
+zx_status_t Coordinator::SyncClient::PublishMetadata_Deprecated(::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, Coordinator_PublishMetadata_Result* out_result) {
+  return Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(device_path), std::move(key), std::move(data), out_result);
 }
 
-zx_status_t Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, int32_t* out_status) {
+zx_status_t Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, Coordinator_PublishMetadata_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishMetadataRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -3838,15 +4652,15 @@ zx_status_t Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel _c
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::PublishMetadataResponse> Coordinator::SyncClient::PublishMetadata_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(device_path), std::move(key), std::move(data), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Coordinator::PublishMetadataResponse> Coordinator::SyncClient::PublishMetadata_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, Coordinator_PublishMetadata_Result* out_result) {
+  return Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(device_path), std::move(key), std::move(data), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::PublishMetadataResponse> Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Coordinator::PublishMetadataResponse> Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, Coordinator_PublishMetadata_Result* out_result) {
   if (_request_buffer.capacity() < PublishMetadataRequest::PrimarySize) {
     return ::fidl::DecodeResult<PublishMetadataResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -3874,7 +4688,7 @@ zx_status_t Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel _c
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -3952,11 +4766,11 @@ Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::Call::AddComposite
   return UnownedResultOf::AddCompositeDevice(std::move(_client_end), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::AddCompositeDevice_Deprecated(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, int32_t* out_status) {
-  return Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), out_status);
+zx_status_t Coordinator::SyncClient::AddCompositeDevice_Deprecated(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, Coordinator_AddCompositeDevice_Result* out_result) {
+  return Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), out_result);
 }
 
-zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, int32_t* out_status) {
+zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, Coordinator_AddCompositeDevice_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddCompositeDeviceRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -3989,15 +4803,15 @@ zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse> Coordinator::SyncClient::AddCompositeDevice_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse> Coordinator::SyncClient::AddCompositeDevice_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, Coordinator_AddCompositeDevice_Result* out_result) {
+  return Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse> Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse> Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, Coordinator_AddCompositeDevice_Result* out_result) {
   if (_request_buffer.capacity() < AddCompositeDeviceRequest::PrimarySize) {
     return ::fidl::DecodeResult<AddCompositeDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -4026,7 +4840,7 @@ zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -4097,11 +4911,11 @@ Coordinator::UnownedResultOf::DirectoryWatch Coordinator::Call::DirectoryWatch(z
   return UnownedResultOf::DirectoryWatch(std::move(_client_end), std::move(_request_buffer), std::move(mask), std::move(options), std::move(watcher), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::DirectoryWatch_Deprecated(uint32_t mask, uint32_t options, ::zx::channel watcher, int32_t* out_s) {
-  return Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel(this->channel_), std::move(mask), std::move(options), std::move(watcher), out_s);
+zx_status_t Coordinator::SyncClient::DirectoryWatch_Deprecated(uint32_t mask, uint32_t options, ::zx::channel watcher, Coordinator_DirectoryWatch_Result* out_result) {
+  return Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel(this->channel_), std::move(mask), std::move(options), std::move(watcher), out_result);
 }
 
-zx_status_t Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher, int32_t* out_s) {
+zx_status_t Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher, Coordinator_DirectoryWatch_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DirectoryWatchRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DirectoryWatchRequest*>(_write_bytes);
@@ -4128,15 +4942,15 @@ zx_status_t Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel _cl
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::DirectoryWatchResponse> Coordinator::SyncClient::DirectoryWatch_Deprecated(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mask), std::move(options), std::move(watcher), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Coordinator::DirectoryWatchResponse> Coordinator::SyncClient::DirectoryWatch_Deprecated(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, Coordinator_DirectoryWatch_Result* out_result) {
+  return Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mask), std::move(options), std::move(watcher), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::DirectoryWatchResponse> Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Coordinator::DirectoryWatchResponse> Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer, Coordinator_DirectoryWatch_Result* out_result) {
   if (_request_buffer.capacity() < DirectoryWatchRequest::PrimarySize) {
     return ::fidl::DecodeResult<DirectoryWatchResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -4161,7 +4975,7 @@ zx_status_t Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel _cl
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -4228,11 +5042,11 @@ Coordinator::UnownedResultOf::RunCompatibilityTests Coordinator::Call::RunCompat
   return UnownedResultOf::RunCompatibilityTests(std::move(_client_end), std::move(_request_buffer), std::move(hook_wait_time), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::RunCompatibilityTests_Deprecated(int64_t hook_wait_time, int32_t* out_status) {
-  return Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel(this->channel_), std::move(hook_wait_time), out_status);
+zx_status_t Coordinator::SyncClient::RunCompatibilityTests_Deprecated(int64_t hook_wait_time, Coordinator_RunCompatibilityTests_Result* out_result) {
+  return Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel(this->channel_), std::move(hook_wait_time), out_result);
 }
 
-zx_status_t Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel _client_end, int64_t hook_wait_time, int32_t* out_status) {
+zx_status_t Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel _client_end, int64_t hook_wait_time, Coordinator_RunCompatibilityTests_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<RunCompatibilityTestsRequest*>(_write_bytes);
@@ -4257,15 +5071,15 @@ zx_status_t Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_chan
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::RunCompatibilityTestsResponse> Coordinator::SyncClient::RunCompatibilityTests_Deprecated(::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(hook_wait_time), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Coordinator::RunCompatibilityTestsResponse> Coordinator::SyncClient::RunCompatibilityTests_Deprecated(::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer, Coordinator_RunCompatibilityTests_Result* out_result) {
+  return Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(hook_wait_time), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Coordinator::RunCompatibilityTestsResponse> Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Coordinator::RunCompatibilityTestsResponse> Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer, Coordinator_RunCompatibilityTests_Result* out_result) {
   if (_request_buffer.capacity() < RunCompatibilityTestsRequest::PrimarySize) {
     return ::fidl::DecodeResult<RunCompatibilityTestsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -4288,7 +5102,7 @@ zx_status_t Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_chan
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
+  *out_result = std::move(_response.result);
   return _decode_result;
 }
 
@@ -4533,26 +5347,24 @@ bool Coordinator::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
 }
 
 
-void Coordinator::Interface::AddDeviceCompleterBase::Reply(int32_t status, uint64_t local_device_id) {
+void Coordinator::Interface::AddDeviceCompleterBase::Reply(Coordinator_AddDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddDeviceResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_AddDevice_Ordinal;
-  _response.status = std::move(status);
-  _response.local_device_id = std::move(local_device_id);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, uint64_t local_device_id) {
+void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddDevice_Result result) {
   if (_buffer.capacity() < AddDeviceResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<AddDeviceResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_AddDevice_Ordinal;
-  _response.status = std::move(status);
-  _response.local_device_id = std::move(local_device_id);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceResponse>(std::move(_buffer)));
 }
@@ -4564,26 +5376,24 @@ void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::DecodedMessag
 }
 
 
-void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(int32_t status, uint64_t local_device_id) {
+void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(Coordinator_AddDeviceInvisible_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceInvisibleResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddDeviceInvisibleResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
-  _response.status = std::move(status);
-  _response.local_device_id = std::move(local_device_id);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceInvisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceInvisibleResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, uint64_t local_device_id) {
+void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddDeviceInvisible_Result result) {
   if (_buffer.capacity() < AddDeviceInvisibleResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<AddDeviceInvisibleResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
-  _response.status = std::move(status);
-  _response.local_device_id = std::move(local_device_id);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddDeviceInvisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceInvisibleResponse>(std::move(_buffer)));
 }
@@ -4595,24 +5405,24 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::Deco
 }
 
 
-void Coordinator::Interface::RemoveDeviceCompleterBase::Reply(int32_t status) {
+void Coordinator::Interface::RemoveDeviceCompleterBase::Reply(Coordinator_RemoveDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDeviceResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RemoveDeviceResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_RemoveDevice_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDeviceResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::RemoveDeviceCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void Coordinator::Interface::RemoveDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_RemoveDevice_Result result) {
   if (_buffer.capacity() < RemoveDeviceResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<RemoveDeviceResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_RemoveDevice_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(RemoveDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDeviceResponse>(std::move(_buffer)));
 }
@@ -4624,24 +5434,24 @@ void Coordinator::Interface::RemoveDeviceCompleterBase::Reply(::fidl::DecodedMes
 }
 
 
-void Coordinator::Interface::MakeVisibleCompleterBase::Reply(int32_t status) {
+void Coordinator::Interface::MakeVisibleCompleterBase::Reply(Coordinator_MakeVisible_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MakeVisibleResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MakeVisibleResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MakeVisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MakeVisibleResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_MakeVisible_Result result) {
   if (_buffer.capacity() < MakeVisibleResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<MakeVisibleResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(MakeVisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MakeVisibleResponse>(std::move(_buffer)));
 }
@@ -4653,24 +5463,24 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-void Coordinator::Interface::BindDeviceCompleterBase::Reply(int32_t status) {
+void Coordinator::Interface::BindDeviceCompleterBase::Reply(Coordinator_BindDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDeviceResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<BindDeviceResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_BindDevice_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(BindDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindDeviceResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_BindDevice_Result result) {
   if (_buffer.capacity() < BindDeviceResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<BindDeviceResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_BindDevice_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(BindDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindDeviceResponse>(std::move(_buffer)));
 }
@@ -4682,14 +5492,13 @@ void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
-void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(int32_t status, ::fidl::StringView path) {
+void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(Coordinator_GetTopologicalPath_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathResponse>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetTopologicalPathResponse _response = {};
   _response._hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
-  _response.status = std::move(status);
-  _response.path = std::move(path);
+  _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
   if (_linearize_result.status != ZX_OK) {
@@ -4699,15 +5508,14 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(int32_t stat
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::StringView path) {
+void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_GetTopologicalPath_Result result) {
   if (_buffer.capacity() < GetTopologicalPathResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   GetTopologicalPathResponse _response = {};
   _response._hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
-  _response.status = std::move(status);
-  _response.path = std::move(path);
+  _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
@@ -4723,28 +5531,24 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::Deco
 }
 
 
-void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(int32_t status, ::zx::vmo vmo, uint64_t size) {
+void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(Coordinator_LoadFirmware_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadFirmwareResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadFirmwareResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
-  _response.status = std::move(status);
-  _response.vmo = std::move(vmo);
-  _response.size = std::move(size);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadFirmwareResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadFirmwareResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::zx::vmo vmo, uint64_t size) {
+void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_LoadFirmware_Result result) {
   if (_buffer.capacity() < LoadFirmwareResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<LoadFirmwareResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
-  _response.status = std::move(status);
-  _response.vmo = std::move(vmo);
-  _response.size = std::move(size);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(LoadFirmwareResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadFirmwareResponse>(std::move(_buffer)));
 }
@@ -4756,14 +5560,13 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::DecodedMes
 }
 
 
-void Coordinator::Interface::GetMetadataCompleterBase::Reply(int32_t status, ::fidl::VectorView<uint8_t> data) {
+void Coordinator::Interface::GetMetadataCompleterBase::Reply(Coordinator_GetMetadata_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMetadataResponse>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetMetadataResponse _response = {};
   _response._hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
-  _response.status = std::move(status);
-  _response.data = std::move(data);
+  _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
   if (_linearize_result.status != ZX_OK) {
@@ -4773,15 +5576,14 @@ void Coordinator::Interface::GetMetadataCompleterBase::Reply(int32_t status, ::f
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::VectorView<uint8_t> data) {
+void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_GetMetadata_Result result) {
   if (_buffer.capacity() < GetMetadataResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   GetMetadataResponse _response = {};
   _response._hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
-  _response.status = std::move(status);
-  _response.data = std::move(data);
+  _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
@@ -4797,26 +5599,24 @@ void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(int32_t status, uint64_t size) {
+void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(Coordinator_GetMetadataSize_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMetadataSizeResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetMetadataSizeResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
-  _response.status = std::move(status);
-  _response.size = std::move(size);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMetadataSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMetadataSizeResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, uint64_t size) {
+void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_GetMetadataSize_Result result) {
   if (_buffer.capacity() < GetMetadataSizeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<GetMetadataSizeResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
-  _response.status = std::move(status);
-  _response.size = std::move(size);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetMetadataSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMetadataSizeResponse>(std::move(_buffer)));
 }
@@ -4828,24 +5628,24 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::Decoded
 }
 
 
-void Coordinator::Interface::AddMetadataCompleterBase::Reply(int32_t status) {
+void Coordinator::Interface::AddMetadataCompleterBase::Reply(Coordinator_AddMetadata_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddMetadataResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddMetadataResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddMetadataResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddMetadata_Result result) {
   if (_buffer.capacity() < AddMetadataResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<AddMetadataResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddMetadataResponse>(std::move(_buffer)));
 }
@@ -4857,24 +5657,24 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-void Coordinator::Interface::PublishMetadataCompleterBase::Reply(int32_t status) {
+void Coordinator::Interface::PublishMetadataCompleterBase::Reply(Coordinator_PublishMetadata_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishMetadataResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<PublishMetadataResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(PublishMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<PublishMetadataResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_PublishMetadata_Result result) {
   if (_buffer.capacity() < PublishMetadataResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<PublishMetadataResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(PublishMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<PublishMetadataResponse>(std::move(_buffer)));
 }
@@ -4886,24 +5686,24 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::Decoded
 }
 
 
-void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(int32_t status) {
+void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(Coordinator_AddCompositeDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddCompositeDeviceResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddCompositeDeviceResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddCompositeDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddCompositeDeviceResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddCompositeDevice_Result result) {
   if (_buffer.capacity() < AddCompositeDeviceResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<AddCompositeDeviceResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddCompositeDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddCompositeDeviceResponse>(std::move(_buffer)));
 }
@@ -4915,24 +5715,24 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::Deco
 }
 
 
-void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(int32_t s) {
+void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(Coordinator_DirectoryWatch_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DirectoryWatchResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DirectoryWatchResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
-  _response.s = std::move(s);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DirectoryWatchResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DirectoryWatchResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_DirectoryWatch_Result result) {
   if (_buffer.capacity() < DirectoryWatchResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<DirectoryWatchResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
-  _response.s = std::move(s);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(DirectoryWatchResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DirectoryWatchResponse>(std::move(_buffer)));
 }
@@ -4944,24 +5744,24 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::DecodedM
 }
 
 
-void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(int32_t status) {
+void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(Coordinator_RunCompatibilityTests_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RunCompatibilityTestsResponse*>(_write_bytes);
   _response._hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RunCompatibilityTestsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RunCompatibilityTestsResponse>(std::move(_response_bytes)));
 }
 
-void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_RunCompatibilityTests_Result result) {
   if (_buffer.capacity() < RunCompatibilityTestsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<RunCompatibilityTestsResponse*>(_buffer.data());
   _response._hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
-  _response.status = std::move(status);
+  _response.result = std::move(result);
   _buffer.set_actual(sizeof(RunCompatibilityTestsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RunCompatibilityTestsResponse>(std::move(_buffer)));
 }
