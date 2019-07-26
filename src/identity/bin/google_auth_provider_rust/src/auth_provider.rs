@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::constants::{AUTHORIZE_URI, DEFAULT_SCOPES, FUCHSIA_CLIENT_ID, REDIRECT_URI};
+use crate::constants::{
+    FUCHSIA_CLIENT_ID, OAUTH_AUTHORIZE_URI, OAUTH_DEFAULT_SCOPES, REDIRECT_URI,
+};
 use crate::error::{AuthProviderError, ResultExt};
 use crate::http::HttpClient;
 use crate::oauth::{
@@ -267,7 +269,7 @@ where
 
     fn authorize_url(user_profile_id: Option<String>) -> AuthProviderResult<Url> {
         let mut params = vec![
-            ("scope", DEFAULT_SCOPES.as_str()),
+            ("scope", OAUTH_DEFAULT_SCOPES.as_str()),
             ("glif", "false"), // TODO(satsukiu): add a command line parameter to set this
             ("response_type", "code"),
             ("redirect_uri", REDIRECT_URI.as_str()),
@@ -277,7 +279,7 @@ where
             params.push(("login_hint", user));
         }
 
-        Url::parse_with_params(AUTHORIZE_URI.as_str(), &params)
+        Url::parse_with_params(OAUTH_AUTHORIZE_URI.as_str(), &params)
             .auth_provider_status(AuthProviderStatus::InternalError)
     }
 

@@ -15,7 +15,7 @@ pub const FUCHSIA_CLIENT_ID: &str =
 
 lazy_static! {
     /// Default scopes requested for Oauth tokens.
-    pub static ref DEFAULT_SCOPES: String = vec![
+    pub static ref OAUTH_DEFAULT_SCOPES: String = vec![
         // Used by google_auth_provider for retrieving unique user profile id.
         "openid",
         // Used by a variety of client components.
@@ -30,10 +30,10 @@ lazy_static! {
     pub static ref REDIRECT_URI: Url =
         Url::parse("https://localhost/fuchsiaoauth2redirect").unwrap();
     /// Entry point URL for authentication with Google.
-    pub static ref AUTHORIZE_URI: Url =
+    pub static ref OAUTH_AUTHORIZE_URI: Url =
         Url::parse("https://accounts.google.com/o/oauth2/v2/auth").unwrap();
     /// URL for OAuth token exchange requests.
-    pub static ref OAUTH_URI: Url =
+    pub static ref OAUTH_TOKEN_EXCHANGE_URI: Url =
         Url::parse("https://www.googleapis.com/oauth2/v4/token").unwrap();
     /// URL for OAuth token revocation requests.
     pub static ref OAUTH_REVOCATION_URI: Url =

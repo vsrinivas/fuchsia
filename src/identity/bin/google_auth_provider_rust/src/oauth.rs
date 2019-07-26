@@ -5,7 +5,9 @@
 //! This module contains methods for creating OAuth requests and interpreting
 //! responses.
 
-use crate::constants::{FUCHSIA_CLIENT_ID, OAUTH_REVOCATION_URI, OAUTH_URI, REDIRECT_URI};
+use crate::constants::{
+    FUCHSIA_CLIENT_ID, OAUTH_REVOCATION_URI, OAUTH_TOKEN_EXCHANGE_URI, REDIRECT_URI,
+};
 use crate::error::{AuthProviderError, ResultExt};
 use crate::http::{HttpRequest, HttpRequestBuilder};
 
@@ -57,7 +59,7 @@ pub fn build_request_with_auth_code(auth_code: AuthCode) -> AuthProviderResult<H
         .append_pair("grant_type", "authorization_code")
         .finish();
 
-    HttpRequestBuilder::new(OAUTH_URI.as_str(), "POST")
+    HttpRequestBuilder::new(OAUTH_TOKEN_EXCHANGE_URI.as_str(), "POST")
         .with_header("content-type", "application/x-www-form-urlencoded")
         .set_body(&request_body)
         .finish()
@@ -77,7 +79,7 @@ pub fn build_request_with_refresh_token(
         .append_pair("scope", &scopes.join(" "))
         .finish();
 
-    HttpRequestBuilder::new(OAUTH_URI.as_str(), "POST")
+    HttpRequestBuilder::new(OAUTH_TOKEN_EXCHANGE_URI.as_str(), "POST")
         .with_header("content-type", "application/x-www-form-urlencoded")
         .set_body(&request_body)
         .finish()
