@@ -4,15 +4,16 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <inttypes.h>
-#include <platform.h>
-#include <trace.h>
-
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <arch/x86/acpi.h>
 #include <arch/x86/bootstrap16.h>
 #include <arch/x86/feature.h>
+#include <bits.h>
+#include <platform.h>
+#include <trace.h>
+
+#include <arch/x86/platform_access.h>
 #include <fbl/auto_call.h>
 #include <kernel/timer.h>
 #include <vm/vm_aspace.h>
@@ -24,7 +25,10 @@ extern "C" {
 #include <acpica/acpi.h>
 }
 
+#include <pow2.h>
 #define LOCAL_TRACE 0
+
+#define MAX_LONG_TERM_POWER_LIMIT 0x7FFF
 
 namespace {
 
@@ -96,7 +100,7 @@ zx_status_t suspend_thread(void* raw_arg) {
   return ZX_OK;
 }
 
-zx_status_t x86_set_pkg_pl1(const zx_system_powerctl_arg_t* arg) {
+zx_status_t x86_set_pkg_pl1(const zx_system_powerctl_arg_t* arg, MsrAccess* msr) {
   if ((x86_microarch != X86_MICROARCH_INTEL_SANDY_BRIDGE) &&
       (x86_microarch != X86_MICROARCH_INTEL_SILVERMONT) &&
       (x86_microarch != X86_MICROARCH_INTEL_BROADWELL) &&
@@ -110,38 +114,59 @@ zx_status_t x86_set_pkg_pl1(const zx_system_powerctl_arg_t* arg) {
   uint8_t clamp = arg->x86_power_limit.clamp;
   uint8_t enable = arg->x86_power_limit.enable;
 
-  uint64_t u = read_msr(X86_MSR_RAPL_POWER_UNIT);
-  uint64_t v = read_msr(X86_MSR_PKG_POWER_LIMIT);
+  // MSR_RAPL_POWER_UNIT provides the following information across all
+  // RAPL domains
+  // Power Units[3:0]: power info (in watts) is based on the multiplier,
+  // 1/2^PU where PU is an unsigned integer represented by bits [3:0]
+  // Time Units[19:16]: Time info (in seconds) is based on miltiplier,
+  // 1/2^TU where TU is an uint represented by bits[19:16]
+  // Based on Intel Software Manual vol 3, chapter 14.9
 
-  uint64_t pu = 1 << (u & 0xf);
+  uint64_t rapl_unit = msr->read_msr(X86_MSR_RAPL_POWER_UNIT);
 
-  // TODO(ZX-1429) time window is not currently supported
+  // zx_system_powerctl_arg_t is in mW, hence the math below
+  uint32_t power_units = 1000 / (1 << BITS(rapl_unit, 15, 0));
 
-  v &= ~0x7fff;
+  // MSR_PKG_POWER_LIMIT allows SW to define power limit from package domain
+  // power limit is defined in terms of avg power over a time window
+  // Power limit 1[14:0]: sets avg power limit of package domain corresponding
+  // to time window 1. Unit is in MSR_RAPL_POWER_UNIT
+  // Enable power limit[15]: 0-disabled, 1-enabled
+  // Package clamp limit1[16]: Allow going below OS requested p/t states
+  // Time window[23:17]: Time limit = 2^Y * (1.0 + Z/4.0) * Time_Unit
+  // Based on Intel Software Manual vol 3, chapter 14.9
+
+  uint64_t rapl = msr->read_msr(X86_MSR_PKG_POWER_LIMIT);
+
+  rapl &= ~BITMAP_LAST_WORD_MASK(15);
+
   if (power_limit > 0) {
-    uint64_t n = (power_limit * pu / 1000);
-    if (n > 0x7fff) {
+    uint64_t raw_msr = power_limit / power_units;
+    if (raw_msr > MAX_LONG_TERM_POWER_LIMIT) {
       return ZX_ERR_INVALID_ARGS;
     }
-    v |= n;
+
+    rapl |= BITS(raw_msr, 15, 0);
   } else {
-    // set to default if 0
-    v |= read_msr(X86_MSR_PKG_POWER_INFO) & 0x7fff;
+    // MSR_PKG_POWER_INFO is a RO MSR that reports package power range for RAPL
+    // Thermal Spec power[14:0]: The value here is the equivalent of thermal spec power
+    // of package domain. Setting to this thermal spec power if input is 0
+    rapl |= BITS_SHIFT(msr->read_msr(X86_MSR_PKG_POWER_INFO), 15, 0);
   }
 
   if (clamp) {
-    v |= X86_MSR_PKG_POWER_LIMIT_PL1_CLAMP;
+    rapl |= X86_MSR_PKG_POWER_LIMIT_PL1_CLAMP;
   } else {
-    v &= ~X86_MSR_PKG_POWER_LIMIT_PL1_CLAMP;
+    rapl &= ~X86_MSR_PKG_POWER_LIMIT_PL1_CLAMP;
   }
 
   if (enable) {
-    v |= X86_MSR_PKG_POWER_LIMIT_PL1_ENABLE;
+    rapl |= X86_MSR_PKG_POWER_LIMIT_PL1_ENABLE;
   } else {
-    v &= ~X86_MSR_PKG_POWER_LIMIT_PL1_ENABLE;
+    rapl &= ~X86_MSR_PKG_POWER_LIMIT_PL1_ENABLE;
   }
 
-  write_msr(X86_MSR_PKG_POWER_LIMIT, v);
+  msr->write_msr(X86_MSR_PKG_POWER_LIMIT, rapl);
   return ZX_OK;
 }
 
@@ -199,12 +224,13 @@ zx_status_t acpi_transition_s_state(const zx_system_powerctl_arg_t* arg) {
 
 }  // namespace
 
-zx_status_t arch_system_powerctl(uint32_t cmd, const zx_system_powerctl_arg_t* arg) {
+zx_status_t arch_system_powerctl(uint32_t cmd, const zx_system_powerctl_arg_t* arg,
+                                 MsrAccess* msr) {
   switch (cmd) {
     case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE:
       return acpi_transition_s_state(arg);
     case ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1:
-      return x86_set_pkg_pl1(arg);
+      return x86_set_pkg_pl1(arg, msr);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

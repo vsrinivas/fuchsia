@@ -6,13 +6,13 @@
 
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PLATFORM_ACCESS_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PLATFORM_ACCESS_H_
-
+#include <arch/x86.h>
 #include <sys/types.h>
 
-// Lightweight class to wrap MSR (x86 Model Specific Register) accesses.
-//
-// MSR access functions are virtual; a test can pass a fake or mock accessor to intercept
-// read_msr/write_msr.
+          // Lightweight class to wrap MSR (x86 Model Specific Register) accesses.
+          //
+          // MSR access functions are virtual; a test can pass a fake or mock accessor to intercept
+          // read_msr/write_msr.
 class MsrAccess {
  public:
   virtual uint64_t read_msr(uint32_t msr_index) { return ::read_msr(msr_index); }
