@@ -199,8 +199,8 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
   }
 
   parameter_set.count = static_cast<uint16_t>(count);
-  for (size_t i = starting_param_index; i < header()->num_params; i++) {
-    const MessageParam& optee_param = params()[i];
+  for (size_t i = 0; i < count; i++) {
+    const MessageParam& optee_param = params()[i + starting_param_index];
     fuchsia_tee_Parameter& zx_param = parameter_set.parameters[i];
 
     switch (optee_param.attribute) {
