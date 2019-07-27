@@ -42,7 +42,7 @@ table Message {
     /// For example it can be a registration token, a topic name, a IID or
     /// project ID.
     ///
-    /// For upstream messages, PROJECT_ID@gcm.googleapis.com or the more general
+    /// For upstream messages, `PROJECT_ID@gcm.googleapis.com` or the more general
     /// IID format are accepted.
     1: string to;
 

@@ -374,8 +374,9 @@ void SystemImpl::NotifyFailedToFindDebugSymbols(const Err& err, const std::strin
       continue;
 
     for (const auto& status : process->GetSymbols()->GetStatus()) {
-      if (status.build_id != build_id)
+      if (status.build_id != build_id) {
         continue;
+      }
 
       if (!err.has_error()) {
         if (file_type == DebugSymbolFileType::kDebugInfo) {

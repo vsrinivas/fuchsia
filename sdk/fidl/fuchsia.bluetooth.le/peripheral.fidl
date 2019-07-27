@@ -36,7 +36,7 @@ enum AdvertisingModeHint : uint8 {
     /// coded PHY.
     VERY_FAST = 1;
 
-    /// Advertise with a short interval and window that uses less power than VERY_FAST.
+    /// Advertise with a short interval and window that uses less power than `VERY_FAST`.
     /// This corresponds to a 100-150ms interval on the 1M PHYs and 300-450ms on the coded PHY.
     FAST = 2;
 

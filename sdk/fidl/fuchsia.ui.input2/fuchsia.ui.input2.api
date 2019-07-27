@@ -2,5 +2,5 @@
   "fidl/fuchsia.ui.input2/events.fidl": "f9876b5b94799244badef49dcdf58984",
   "fidl/fuchsia.ui.input2/keyboard.fidl": "eb1d11cb872467a3f764b59902033b22",
   "fidl/fuchsia.ui.input2/keys.fidl": "c4993e805b736b22a0a7933ce2edb077",
-  "fidl/fuchsia.ui.input2/modifiers.fidl": "aed938e46e1728fe9e5c3c0d1a1c8fc8"
+  "fidl/fuchsia.ui.input2/modifiers.fidl": "607159b519ce3f32283fd27fa479a499"
 }

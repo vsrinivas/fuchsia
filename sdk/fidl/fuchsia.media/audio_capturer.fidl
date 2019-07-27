@@ -79,7 +79,7 @@ using fuchsia.media.audio;
 /// If a user has supplied regions to be filled by the AudioCapturer instance in
 /// the past, but wishes to reclaim those regions, they may do so using the
 /// DiscardAllPackets method.  Calling the DiscardAllPackets method will cause
-/// all pending regions to be returned, but with NO_TIMESTAMP as their
+/// all pending regions to be returned, but with `NO_TIMESTAMP` as their
 /// StreamPacket's PTS.  See "Timing and Overflows", below, for a discussion of
 /// timestamps and discontinuity flags. After a DiscardAllPackets operation,
 /// an OnEndOfStream event will be produced.  While an AudioCapturer will never
@@ -150,13 +150,13 @@ using fuchsia.media.audio;
 ///
 /// All media packets produced by an AudioCapturer instance will have their PTS
 /// field filled out with the capture time of the audio expressed as a timestamp
-/// given by the CLOCK_MONOTONIC timeline.  Note: this timestamp is actually a
+/// given by the `CLOCK_MONOTONIC` timeline.  Note: this timestamp is actually a
 /// capture timestamp, not a presentation timestamp (it is more of a CTS than a
 /// PTS) and is meant to represent the underlying system's best estimate of the
 /// capture time of the first frame of audio, including all outboard and hardware
 /// introduced buffering delay.  As a result, all timestamps produced by an
 /// AudioCapturer should be expected to be in the past relative to 'now' on the
-/// CLOCK_MONOTONIC timeline.
+/// `CLOCK_MONOTONIC` timeline.
 ///
 // TODO(mpuryear): Specify the way in which timestamps relative to a different
 // clock (such as an audio domain clock) may be delivered to a client.
@@ -166,7 +166,7 @@ using fuchsia.media.audio;
 /// packets have no data in them, but FIDL demands that all pending
 /// method-return-value callbacks be executed.  Because of this, the regions will
 /// be returned to the user, but their timestamps will be set to
-/// NO_TIMESTAMP, and their payload sizes will be set to zero.  Any
+/// `NO_TIMESTAMP`, and their payload sizes will be set to zero.  Any
 /// partially filled payload will have a valid timestamp, but a payload size
 /// smaller than originally requested.  The final discarded payload (if there
 /// were any to discard) will be followed by an OnEndOfStream event.
@@ -183,7 +183,7 @@ using fuchsia.media.audio;
 /// instead of simply using the raw capture timestamps.  This is because the
 /// explicit timestamps written on continuous packets may have a small amount of
 /// rounding error based on whether or not the units of the capture timeline
-/// (CLOCK_MONOTONIC) are divisible by the chosen audio frame rate.
+/// (`CLOCK_MONOTONIC`) are divisible by the chosen audio frame rate.
 ///
 /// Users should always expect the first StreamPacket produced by an
 /// AudioCapturer to have the discontinuous flag set on it (as there is no

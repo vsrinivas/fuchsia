@@ -5068,10 +5068,10 @@ class BufferCollection final {
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
     // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    // see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
     // client hasn't already seen that message).  If on the other hand the
     // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    // OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
     // particpant will typically use this when the participant receives a new
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
@@ -5082,10 +5082,10 @@ class BufferCollection final {
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
     // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    // see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
     // client hasn't already seen that message).  If on the other hand the
     // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    // OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
     // particpant will typically use this when the participant receives a new
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
@@ -5096,10 +5096,10 @@ class BufferCollection final {
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
     // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    // see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
     // client hasn't already seen that message).  If on the other hand the
     // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    // OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
     // particpant will typically use this when the participant receives a new
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
@@ -5109,10 +5109,10 @@ class BufferCollection final {
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
     // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    // see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
     // client hasn't already seen that message).  If on the other hand the
     // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    // OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
     // particpant will typically use this when the participant receives a new
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
@@ -5656,10 +5656,10 @@ class BufferCollection final {
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
     // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    // see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
     // client hasn't already seen that message).  If on the other hand the
     // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    // OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
     // particpant will typically use this when the participant receives a new
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
@@ -5670,10 +5670,10 @@ class BufferCollection final {
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
     // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    // see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
     // client hasn't already seen that message).  If on the other hand the
     // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    // OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
     // particpant will typically use this when the participant receives a new
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
@@ -5684,10 +5684,10 @@ class BufferCollection final {
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
     // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    // see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
     // client hasn't already seen that message).  If on the other hand the
     // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    // OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
     // particpant will typically use this when the participant receives a new
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
@@ -5697,10 +5697,10 @@ class BufferCollection final {
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
     // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    // see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
     // client hasn't already seen that message).  If on the other hand the
     // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    // OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
     // particpant will typically use this when the participant receives a new
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
@@ -5860,10 +5860,10 @@ class BufferCollection final {
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
     // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    // see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
     // client hasn't already seen that message).  If on the other hand the
     // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    // OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
     // particpant will typically use this when the participant receives a new
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the

@@ -19,7 +19,7 @@ protocol CloudControllerFactory {
 
 /// Possible network states.
 enum NetworkState : int32 {
-    /// The cloud answers NETWORK_ERROR to requests on pages.
+    /// The cloud answers `NETWORK_ERROR` to requests on pages.
     /// Until LE-438 is fixed, the cloud should return OK for SetWatcher.
     DISCONNECTED = 1;
     /// The cloud behaves normally.

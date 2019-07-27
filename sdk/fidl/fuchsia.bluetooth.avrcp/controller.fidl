@@ -19,28 +19,28 @@ protocol PeerManager {
 bits Notifications : uint32 {
     // AVRCP native notifications
 
-    /// AVRCP EVENT_PLAYBACK_STATUS_CHANGED Notification
+    /// AVRCP `EVENT_PLAYBACK_STATUS_CHANGED` Notification
     PLAYBACK_STATUS = 0x1;
 
-    /// AVRCP EVENT_TRACK_CHANGED Notification
+    /// AVRCP `EVENT_TRACK_CHANGED` Notification
     TRACK = 0x2;
 
-    /// AVRCP EVENT_TRACK_POS_CHANGED Notification
+    /// AVRCP `EVENT_TRACK_POS_CHANGED` Notification
     TRACK_POS = 0x4;
 
-    /// AVRCP EVENT_BATT_STATUS_CHANGED Notification
+    /// AVRCP `EVENT_BATT_STATUS_CHANGED` Notification
     BATT_STATUS = 0x8;
 
-    /// AVRCP EVENT_SYSTEM_STATUS_CHANGED Notification
+    /// AVRCP `EVENT_SYSTEM_STATUS_CHANGED` Notification
     SYSTEM_STATUS = 0x10;
 
-    /// AVRCP EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED Notification
+    /// AVRCP `EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED` Notification
     PLAYER_APPLICATION_SETTINGS = 0x20;
 
-    /// AVRCP EVENT_ADDRESSED_PLAYER_CHANGED Notification
+    /// AVRCP `EVENT_ADDRESSED_PLAYER_CHANGED` Notification
     ADDRESSED_PLAYER = 0x40;
 
-    /// AVRCP EVENT_VOLUME_CHANGED Notification
+    /// AVRCP `EVENT_VOLUME_CHANGED` Notification
     VOLUME = 0x80;
 
     // Internal notifications
@@ -51,31 +51,31 @@ bits Notifications : uint32 {
 
 /// Event data from incoming target notifications.
 table Notification {
-    /// EVENT_PLAYBACK_STATUS_CHANGED event data
+    /// `EVENT_PLAYBACK_STATUS_CHANGED` event data
     1: PlaybackStatus status;
 
-    /// EVENT_TRACK_CHANGED event data
+    /// `EVENT_TRACK_CHANGED` event data
     2: uint64 track_id;
 
-    /// EVENT_TRACK_POS_CHANGED event data
+    /// `EVENT_TRACK_POS_CHANGED` event data
     3: uint32 pos;
 
-    /// EVENT_BATT_STATUS_CHANGED event data
+    /// `EVENT_BATT_STATUS_CHANGED` event data
     4: BatteryStatus battery_status;
 
-    /// EVENT_SYSTEM_STATUS_CHANGED event data
+    /// `EVENT_SYSTEM_STATUS_CHANGED` event data
     5: SystemStatus system_status;
 
-    /// EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED event data
+    /// `EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED` event data
     6: PlayerApplicationSettings application_settings;
 
-    /// EVENT_ADDRESSED_PLAYER_CHANGED event data
+    /// `EVENT_ADDRESSED_PLAYER_CHANGED` event data
     7: uint16 player_id;
 
-    /// EVENT_VOLUME_CHANGED event data
+    /// `EVENT_VOLUME_CHANGED` event data
     8: uint8 volume;
 
-    /// CONNECTION_CHANGE event data
+    /// `CONNECTION_CHANGE` event data
     9: bool device_connected;
 };
 
@@ -106,8 +106,8 @@ protocol Controller {
     /// notification types to post their current value to [`OnNotification`] immediately.
     ///
     /// The `position_change_interval` argument is used to set the interval in seconds that the
-    /// controller client would like to be notified of TRACK_POS_CHANGED events.
-    /// `position_change_interval` is ignored if TRACK_POS is not set. The position change interval
+    /// controller client would like to be notified of `TRACK_POS_CHANGED` events.
+    /// `position_change_interval` is ignored if `TRACK_POS` is not set. The position change interval
     /// is best effort and not a guarantee and events may arrive more frequently or less frequently
     /// than requested.
     SetNotificationFilter(Notifications notifications, uint32 position_change_interval);

@@ -16,7 +16,7 @@ struct EnvironmentOptions {
     /// in this environment for components.
     bool allow_parent_runners;
     /// True if this environment should be killed first in out of memory
-    /// situations by setting the ZX_PROP_JOB_KILL_ON_OOM property on this
+    /// situations by setting the `ZX_PROP_JOB_KILL_ON_OOM` property on this
     /// environment's job.
     bool kill_on_oom;
     /// True if "persistent" storage requested by components in this environment should not actually

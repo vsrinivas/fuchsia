@@ -25,7 +25,7 @@ protocol AudioRenderer {
     compose StreamSink;
 
     /// Sets the type of the stream to be delivered by the client. Using this
-    /// method implies that the stream encoding is AUDIO_ENCODING_LPCM.
+    /// method implies that the stream encoding is `AUDIO_ENCODING_LPCM`.
     SetPcmStreamType(AudioStreamType type);
 
     /// Sets the stream type to be delivered by the client. This method is used
@@ -156,7 +156,7 @@ protocol AudioRenderer {
     ///
     /// Users, depending on their use case, may optionally choose not to specify
     /// one or both of these timestamps. A timestamp may be omitted by supplying
-    /// the special value 'NO_TIMESTAMP'. The AudioRenderer automatically deduces
+    /// the special value '`NO_TIMESTAMP`'. The AudioRenderer automatically deduces
     /// any omitted timestamp value using the following rules:
     ///
     /// Reference Time

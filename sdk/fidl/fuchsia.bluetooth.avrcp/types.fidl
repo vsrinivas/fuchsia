@@ -42,7 +42,7 @@ enum TargetEvent : uint8 {
 };
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
-/// Format for EVENT_SYSTEM_STATUS_CHANGED.
+/// Format for `EVENT_SYSTEM_STATUS_CHANGED`.
 enum SystemStatus : uint8 {
     POWER_ON = 0x00;
     POWER_OFF = 0x01;
@@ -50,7 +50,7 @@ enum SystemStatus : uint8 {
 };
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
-/// Format for EVENT_PLAYBACK_STATUS_CHANGED.
+/// Format for `EVENT_PLAYBACK_STATUS_CHANGED`.
 enum PlaybackStatus : uint8 {
     STOPPED = 0x00;
     PLAYING = 0x01;
@@ -61,7 +61,7 @@ enum PlaybackStatus : uint8 {
 };
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
-/// Format for EVENT_BATT_STATUS_CHANGED.
+/// Format for `EVENT_BATT_STATUS_CHANGED`.
 /// Same encoding also defined by 6.5.8 (InformBatteryStatusOfCT).
 enum BatteryStatus : uint8 {
     NORMAL = 0x00;

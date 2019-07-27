@@ -36,7 +36,7 @@ table PointerEvent {
     /// The point of this pointer event in global screen coordinates.
     6: fuchsia.math.PointF global_point;
     /// The viewref koid of the top most view hit for this pointer event.
-    /// This field is set to ZX_KOID_INVALID when there is no view hit and
+    /// This field is set to `ZX_KOID_INVALID` when there is no view hit and
     /// `local_point` is undefined.
     7: zx.koid viewref_koid;
     /// The point of this pointer event in local view coordinates.

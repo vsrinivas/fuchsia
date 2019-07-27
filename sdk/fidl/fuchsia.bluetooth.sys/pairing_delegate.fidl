@@ -61,11 +61,11 @@ protocol PairingDelegate {
     /// event has already been sent for `peer`.
     ///
     /// The `displayed_passkey` parameter should be displayed to the user if `method` equals
-    /// PairingMethod.PASSKEY_DISPLAY or PairingMethod.PASSKEY_COMPARISON. Otherwise, this parameter
+    /// `PairingMethod.PASSKEY_DISPLAY` or `PairingMethod.PASSKEY_COMPARISON`. Otherwise, this parameter
     /// has no meaning and should be ignored.
     ///
     /// The `entered_passkey` parameter only has meaning if `method` equals
-    /// PairingMethod.PASSKEY_ENTRY. It will be ignored otherwise.
+    /// `PairingMethod.PASSKEY_ENTRY`. It will be ignored otherwise.
     OnPairingRequest(Peer peer, PairingMethod method, uint32 displayed_passkey)
         -> (bool accept, uint32 entered_passkey);
 
@@ -75,7 +75,7 @@ protocol PairingDelegate {
     OnPairingComplete(bt.PeerId id, bool success);
 
     /// Called to notify keypresses from the peer device during pairing using
-    /// PairingMethod.PASSKEY_DISPLAY.
+    /// `PairingMethod.PASSKEY_DISPLAY`.
     ///
     /// This event is used to provide key press events to the delegate for a responsive user
     /// experience as the user types the passkey on the peer device. This event will be called
@@ -83,6 +83,6 @@ protocol PairingDelegate {
     OnRemoteKeypress(bt.PeerId id, PairingKeypress keypress);
 
     /// The delegate can send this event to notify the peer of local keypresses
-    /// during pairing using PairingMethod.PASSKEY_ENTRY.
+    /// during pairing using `PairingMethod.PASSKEY_ENTRY`.
     -> OnLocalKeypress(bt.PeerId id, PairingKeypress keypress);
 };

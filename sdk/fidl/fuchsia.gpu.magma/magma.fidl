@@ -80,7 +80,7 @@ protocol Primary {
     GetError() -> (int32 magma_status);
 
     /// Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's
-    /// address space at `gpu_va`.  `flags` is a set of flags from MAGMA_GPU_MAP_FLAGS that
+    /// address space at `gpu_va`.  `flags` is a set of flags from `MAGMA_GPU_MAP_FLAGS` that
     /// specify how the GPU can access the buffer.
     MapBufferGpu(zx.koid buffer_id, uint64 gpu_va, uint64 page_offset,
                  uint64 page_count, uint64 flags);

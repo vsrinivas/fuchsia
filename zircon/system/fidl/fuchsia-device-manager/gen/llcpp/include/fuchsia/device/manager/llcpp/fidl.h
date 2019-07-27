@@ -631,21 +631,21 @@ class Administrator final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Suspend Suspend(uint32_t flags);
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Suspend Suspend(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     zx_status_t Suspend_Deprecated(uint32_t flags, int32_t* out_status);
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
@@ -660,21 +660,21 @@ class Administrator final {
    public:
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, uint32_t flags);
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     static zx_status_t Suspend_Deprecated(zx::unowned_channel _client_end, uint32_t flags, int32_t* out_status);
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SuspendResponse> Suspend_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
@@ -688,7 +688,7 @@ class Administrator final {
    public:
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
-    // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
     static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
 
   };
@@ -1482,7 +1482,7 @@ struct Coordinator_AddDeviceInvisible_Result {
 // Maximum number of bytes in a path
 constexpr uint32_t DEVICE_PATH_MAX = 1024u;
 
-// This definition must match ZX_DEVICE_NAME_MAX and is checked by a static assert.
+// This definition must match `ZX_DEVICE_NAME_MAX` and is checked by a static assert.
 constexpr uint32_t DEVICE_NAME_MAX = 31u;
 
 // Maximum instructions in a match program

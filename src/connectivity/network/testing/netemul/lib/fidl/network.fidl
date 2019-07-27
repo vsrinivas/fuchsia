@@ -153,7 +153,7 @@ protocol NetworkContext {
     GetNetworkManager(request<NetworkManager> net_manager);
     GetEndpointManager(request<EndpointManager> endp_manager);
     /// Creates a collection of networks described by `networks`.
-    /// `status` is ZX_OK for success
+    /// `status` is `ZX_OK` for success
     /// `setup_handle` is a resource that references and maintains the lifecycle of
     ///                the created networks and endpoints.
     Setup(vector<NetworkSetup> networks) -> (zx.status status, SetupHandle? setup_handle);

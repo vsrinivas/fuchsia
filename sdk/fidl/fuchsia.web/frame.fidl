@@ -80,8 +80,8 @@ protocol Frame {
     /// the script in arbitrary or unpredictable ways.
     ///
     /// If an error occured, the FrameError will be set to one of these values:
-    /// BUFFER_NOT_UTF8: `script` is not UTF-8 encoded.
-    /// INVALID_ORIGIN: The Frame's current URL does not match any of the
+    /// `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
+    /// `INVALID_ORIGIN`: The Frame's current URL does not match any of the
     ///                 values in `origins` or `origins` is an empty vector.
     // TODO(crbug.com/900391): Investigate if we can run the scripts in
     // isolated JS worlds.
@@ -115,8 +115,8 @@ protocol Frame {
     /// evaluated for all documents.
     ///
     /// If an error occured, the FrameError will be set to one of these values:
-    /// BUFFER_NOT_UTF8: `script` is not UTF-8 encoded.
-    /// INVALID_ORIGIN: `origins` is an empty vector.
+    /// `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
+    /// `INVALID_ORIGIN`: `origins` is an empty vector.
     AddBeforeLoadJavaScript(
         uint64 id,
         vector<Url> origins,
@@ -136,11 +136,11 @@ protocol Frame {
     /// for more details on how the target origin policy is applied.
     ///
     /// If an error occured, the FrameError will be set to one of these values:
-    /// INTERNAL_ERROR: The WebEngine failed to create a message pipe.
-    /// BUFFER_NOT_UTF8: The script in `message`'s `data` property is not
+    /// `INTERNAL_ERROR`: The WebEngine failed to create a message pipe.
+    /// `BUFFER_NOT_UTF8`: The script in `message`'s `data` property is not
     ///                  UTF-8 encoded.
-    /// INVALID_ORIGIN: `origins` is an empty vector.
-    /// NO_DATA_IN_MESSAGE: The `data` property is missing in `message`.
+    /// `INVALID_ORIGIN`: `origins` is an empty vector.
+    /// `NO_DATA_IN_MESSAGE`: The `data` property is missing in `message`.
     PostMessage(Url target_origin, WebMessage message)
         -> () error FrameError;
 
@@ -171,7 +171,7 @@ protocol Frame {
     /// channel for `provider` must remain open for the entirety of the Frame
     /// lifetime.
     /// Invalid usage will result in closure of the Frame channel with
-    /// ERR_INVALID_ARGS.
+    /// `ERR_INVALID_ARGS`.
     [Transitional]
     SetAdditionalHeadersProvider(AdditionalHeadersProvider provider) -> ();
 };
@@ -217,9 +217,9 @@ protocol MessagePort {
     /// callback before calling PostMessage() again.
     ///
     /// If an error occured, the FrameError will be set to this value:
-    /// BUFFER_NOT_UTF8: The script in `message`'s `data` property is not
+    /// `BUFFER_NOT_UTF8`: The script in `message`'s `data` property is not
     ///                  UTF-8 encoded.
-    /// NO_DATA_IN_MESSAGE: The `data` property is missing in `message`.
+    /// `NO_DATA_IN_MESSAGE`: The `data` property is missing in `message`.
     PostMessage(WebMessage message) -> () error FrameError;
 
     /// Asynchronously reads the next message from the channel.

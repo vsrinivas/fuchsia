@@ -758,7 +758,7 @@ class Control final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -766,7 +766,7 @@ class Control final {
     ResultOf::GetFormats GetFormats(uint32_t index);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -774,14 +774,14 @@ class Control final {
     UnownedResultOf::GetFormats GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
     zx_status_t GetFormats_Deprecated(uint32_t index, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -822,7 +822,7 @@ class Control final {
    public:
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -830,7 +830,7 @@ class Control final {
     static ResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, uint32_t index);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -838,14 +838,14 @@ class Control final {
     static UnownedResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
     static zx_status_t GetFormats_Deprecated(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -885,7 +885,7 @@ class Control final {
    public:
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -1147,7 +1147,7 @@ class ControlV2 final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -1155,7 +1155,7 @@ class ControlV2 final {
     ResultOf::GetFormats GetFormats(uint32_t index);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -1163,14 +1163,14 @@ class ControlV2 final {
     UnownedResultOf::GetFormats GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
     zx_status_t GetFormats_Deprecated(uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -1211,7 +1211,7 @@ class ControlV2 final {
    public:
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -1219,7 +1219,7 @@ class ControlV2 final {
     static ResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, uint32_t index);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -1227,14 +1227,14 @@ class ControlV2 final {
     static UnownedResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
     static zx_status_t GetFormats_Deprecated(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
@@ -1274,7 +1274,7 @@ class ControlV2 final {
    public:
 
     // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.

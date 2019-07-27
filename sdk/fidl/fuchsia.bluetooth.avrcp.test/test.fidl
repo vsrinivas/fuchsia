@@ -63,7 +63,7 @@ protocol ControllerExt {
     IsConnected() -> (bool connected);
 
     /// Queries the target and returns what events are supported for notification.
-    /// Sends GetCapabilties(0x03 (EVENTS_SUPPORTED)) command for all events supported by
+    /// Sends GetCapabilties(0x03 (`EVENTS_SUPPORTED`)) command for all events supported by
     /// the negoitated version of AVRCP.
     GetEventsSupported() -> (vector<fuchsia.bluetooth.avrcp.TargetEvent> events_supported) error fuchsia.bluetooth.avrcp.ControllerError;
 

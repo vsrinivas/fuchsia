@@ -60,6 +60,6 @@ protocol ComponentController {
     /// Event that is triggered when the component's output directory is mounted.
     ///
     /// This event will not be triggered for every component, only those that
-    /// serve a directory over their PA_DIRECTORY_REQUEST handle.
+    /// serve a directory over their `PA_DIRECTORY_REQUEST` handle.
     -> OnDirectoryReady();
 };

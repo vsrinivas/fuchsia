@@ -29,7 +29,7 @@ table OauthAccessToken {
     // where token size exceeds a few kilobytes so exceeding the maximum size of
     // a FIDL message is very unlikely.
     1: string content;
-    /// The time on ZX_CLOCK_UTC at which the token will expire. If the field is
+    /// The time on `ZX_CLOCK_UTC` at which the token will expire. If the field is
     /// absent the token does not have a fixed expiry time.
     2: zx.time expiry_time;
 };
@@ -42,7 +42,7 @@ table OpenIdToken {
     // exceeds a few kilobytes so exceeding the maximum size of a FIDL message
     // is very unlikely.
     1: string content;
-    /// The time on ZX_CLOCK_UTC at which the token will expire. If the field is
+    /// The time on `ZX_CLOCK_UTC` at which the token will expire. If the field is
     /// absent the token does not have a fixed expiry time.
     2: zx.time expiry_time;
 };

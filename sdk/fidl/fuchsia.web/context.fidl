@@ -69,7 +69,7 @@ protocol Context {
     GetCookieManager(request<CookieManager> manager);
 
     /// Returns the port used for remote debugging.
-    /// The ContextError will be set to REMOTE_DEBUGGING_PORT_NOT_OPENED if
+    /// The ContextError will be set to `REMOTE_DEBUGGING_PORT_NOT_OPENED` if
     /// |remote_debugging_port| was not set in CreateContextParams or the
     /// remote debugging service failed to start.
     [Transitional]

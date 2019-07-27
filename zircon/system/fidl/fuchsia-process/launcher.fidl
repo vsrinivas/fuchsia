@@ -121,7 +121,7 @@ protocol Launcher {
     /// After processing this message, the `Launcher` is reset to its initial
     /// state and is ready to launch another process.
     ///
-    /// `process` is present if, and only if, `status` is ZX_OK.
+    /// `process` is present if, and only if, `status` is `ZX_OK`.
     Launch(LaunchInfo info) -> (zx.status status, handle<process>? process);
 
     /// Creates the process described by `info` but does not start it.
@@ -132,7 +132,7 @@ protocol Launcher {
     /// The caller is responsible for calling `zx_process_start` using the data
     /// in `ProcessStartData` to actually start the process.
     ///
-    /// `data` is present if, and only if, `status` is ZX_OK.
+    /// `data` is present if, and only if, `status` is `ZX_OK`.
     CreateWithoutStarting(LaunchInfo info) -> (zx.status status,
                                                ProcessStartData? data);
 

@@ -19,7 +19,7 @@ enum SegmentType {
 
 /// Segment header for a serialized SlaveTransfer.
 /// TODO(ZX-3029): Avoid requiring serialization and have SlaveTransfer take an argument of
-/// vector<Segment>:MAX_SEGMENTS instead once we have better support in the C bindings or for C++.
+/// `vector<Segment>:MAX_SEGMENTS` instead once we have better support in the C bindings or for C++.
 struct Segment {
     uint32 type;
     uint32 len;

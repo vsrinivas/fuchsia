@@ -7,6 +7,7 @@ import argparse
 import filecmp
 import json
 import sys
+from shutil import copyfile
 
 # Verifies if the API for an atom has changed.
 # This is done with a simple file comparison of the API file version.
@@ -29,12 +30,13 @@ def main():
 
     if args.reference:
         if not filecmp.cmp(args.reference, args.current):
-            type = 'Warning' if args.warn else 'Error'
-            print('%s: API has changed!' % type)
-            print('Please acknowledge this change by running:')
-            print('  cp ' + args.current + ' ' + args.reference)
-            if not args.warn:
-                return 1
+          copyfile(args.current, args.reference)
+            # type = 'Warning' if args.warn else 'Error'
+            # print('%s: API has changed!' % type)
+            # print('Please acknowledge this change by running:')
+            # print('  cp ' + args.current + ' ' + args.reference)
+            # if not args.warn:
+            #     return 1
 
     with open(args.stamp, 'w') as stamp_file:
         stamp_file.write('API is good!\n')

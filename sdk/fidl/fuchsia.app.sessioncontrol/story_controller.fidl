@@ -31,7 +31,7 @@ enum Error {
 /// to observation of that model's new state.
 ///
 /// Any invalid calls to methods on StoryController result in the StoryController channel closing
-/// with ZX_ERR_INVALID_ARGS.
+/// with `ZX_ERR_INVALID_ARGS`.
 protocol StoryController {
     /// Assigns the module identified by `id` to handle `intent`. Modules within a story are
     /// a set: calling AddModule() with the same `id` updates the module in place, while calling
@@ -47,19 +47,19 @@ protocol StoryController {
     /// At least one of `intent.handler` or `intent.action` are required.  `composition`, if not
     /// provided, uses the default (`composition.arrangement` is set to SurfaceArrangement.NONE).
     ///
-    /// Returns Error.ERR_NO_MODULE_FOUND on error.
+    /// Returns Error.`ERR_NO_MODULE_FOUND` on error.
     AddModule(ModuleId id, fuchsia.app.Intent intent, ModuleCompositionSettings composition) -> () error Error;
 
     /// Permanently removes the module identified by `id`. Calling for a module that doesn't exist,
     /// or was already removed either by this agent or by an agent on another device, is a no-op.
     ///
-    /// Returns Error.ERR_MODULE_ID_NOT_FOUND on error.
+    /// Returns Error.`ERR_MODULE_ID_NOT_FOUND` on error.
     RemoveModule(ModuleId id) -> () error Error;
 
     /// Instructs the story shell to bring this module into focus. Calling for a non-existent
     /// module is a no-op.
     ///
-    /// Returns Error.ERR_MODULE_ID_NOT_FOUND on error.
+    /// Returns Error.`ERR_MODULE_ID_NOT_FOUND` on error.
     FocusModule(ModuleId id) -> () error Error;
 };
 

@@ -102,7 +102,7 @@ protocol TextField {
 
     /// If the transaction's revision number (from BeginEdit) is still current,
     /// runs all edit commands queued in this transaction. If not, returns
-    /// BAD_REVISION.
+    /// `BAD_REVISION`.
     CommitEdit() -> (Error error);
 
     /// Discards the current transaction.

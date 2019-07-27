@@ -6,7 +6,7 @@ library fuchsia.time;
 using zx;
 
 /// Emits `UtcUpdated` events when the serving program changes the UTC offset tracked by
-/// ZX_CLOCK_UTC.
+/// `ZX_CLOCK_UTC`.
 ///
 /// Do not take this API as a dependency, it will be deleted in the near future.
 protocol DeprecatedNetworkSync {

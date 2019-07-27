@@ -1116,7 +1116,7 @@ class Paver final {
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
     //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WriteAsset WriteAsset(Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
 
@@ -1124,7 +1124,7 @@ class Paver final {
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
     //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::WriteAsset WriteAsset(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
 
@@ -1132,14 +1132,14 @@ class Paver final {
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
     //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     zx_status_t WriteAsset_Deprecated(Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
     //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WriteAssetResponse> WriteAsset_Deprecated(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
@@ -1325,7 +1325,7 @@ class Paver final {
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
     //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WriteAsset WriteAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
 
@@ -1333,7 +1333,7 @@ class Paver final {
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
     //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::WriteAsset WriteAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
 
@@ -1341,14 +1341,14 @@ class Paver final {
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
     //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     static zx_status_t WriteAsset_Deprecated(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
     //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WriteAssetResponse> WriteAsset_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
@@ -1466,7 +1466,7 @@ class Paver final {
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
     //
-    // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     static ::fidl::DecodeResult<WriteAssetResponse> WriteAsset(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer);
 
     // Writes FVM with data from streamed via `payload`. This potentially affects all

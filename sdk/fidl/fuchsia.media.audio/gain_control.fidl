@@ -31,8 +31,8 @@ protocol GainControl {
     ///
     /// Usage example (using time in seconds):
     ///  Time 0
-    ///      SetGainWithRamp(MUTED_GAIN_DB, 0, SCALE_LINEAR)         // Ramp 1
-    ///      SetGainWithRamp(0.0f, ZX_SEC(4), SCALE_LINEAR)          // Ramp 2
+    ///      SetGainWithRamp(`MUTED_GAIN_DB`, 0, SCALE_LINEAR)         // Ramp 1
+    ///      SetGainWithRamp(0.0f, `ZX_SEC`(4), SCALE_LINEAR)          // Ramp 2
     ///  Time 3
     ///      PlayNoReply(kNoTimestamp, any_media_time)
     ///  Time 4
@@ -40,19 +40,19 @@ protocol GainControl {
     ///  Time 7
     ///      PlayNoReply(kNoTimestamp, any_media_time)
     ///  Time 8
-    ///      SetGainWithRamp(MUTED_GAIN_DB, ZX_SEC(1), SCALE_LINEAR) // Ramp 3
+    ///      SetGainWithRamp(`MUTED_GAIN_DB`, ZX_SEC(1), SCALE_LINEAR) // Ramp 3
     ///
     ///
-    /// Time 0: Ramp 1 completes immediately, changing the gain to MUTED_GAIN_DB.
+    /// Time 0: Ramp 1 completes immediately, changing the gain to `MUTED_GAIN_DB`.
     ///         Ramp 2 is pending, since we are not in playback.
-    /// Time 3, Ramp 2 begins ramping from MUTED_GAIN_DB to 0 dB
+    /// Time 3, Ramp 2 begins ramping from `MUTED_GAIN_DB` to 0 dB
     ///         (scale 0.0=>1.0).
-    /// Time 4: Ramp 2 pauses (3s remain). Per SCALE_LINEAR, scale is approx.
+    /// Time 4: Ramp 2 pauses (3s remain). Per `SCALE_LINEAR`, scale is approx.
     ///         0.25.
     /// Time 7: Ramp 2 resumes from most recent value toward the target.
     /// Time 8: Ramp 3 replaces Ramp 2 and starts from current scale
     ///         (approx 0.5).
-    /// Time 9: Ramp 3 completes; current scale value is now 0.0 (MUTED_GAIN_DB).
+    /// Time 9: Ramp 3 completes; current scale value is now 0.0 (`MUTED_GAIN_DB`).
     ///
     SetGainWithRamp(float32 gain_db,
                     zx.duration duration,

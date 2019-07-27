@@ -270,7 +270,7 @@ protocol PageSnapshot {
         -> (vector<Entry>:NO_LINT entries, Token? next_token);
 
     /// Same as `GetEntries()`. The connection will be closed with a
-    /// ZX_ERR_BAD_STATE epitaph if a value does not fit in a FIDL message.
+    /// `ZX_ERR_BAD_STATE` epitaph if a value does not fit in a FIDL message.
     [Deprecated]
     GetEntriesInline(Key key_start, Token? token)
         -> (vector<InlinedEntry>:NO_LINT entries, Token? next_token);
@@ -294,7 +294,7 @@ protocol PageSnapshot {
     Get(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
 
     /// Returns the value of a given key if it fits in a FIDL message.
-    /// The connection will be closed with a ZX_ERR_BAD_STATE epitaph if the
+    /// The connection will be closed with a `ZX_ERR_BAD_STATE` epitaph if the
     /// value does not fit in a FIDL message.
     /// See `Get()` for additional information.
     GetInline(Key key) -> (InlinedValue value) error Error;

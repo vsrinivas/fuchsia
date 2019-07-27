@@ -77,7 +77,7 @@ table ParameterMapping {
     1: string name;
 
     /// The path in the intent parameter to get that name.
-    /// PARAMETER_PROPERTY = string | string . PARAMETER_PROPERTY
+    /// `PARAMETER_PROPERTY` = string | string . `PARAMETER_PROPERTY`
     /// The first string in the dot-separated string is the name of the intent
     /// parameter and the following are nested subfields.
     2: string parameter_property;

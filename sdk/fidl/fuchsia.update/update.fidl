@@ -73,7 +73,7 @@ enum SetChannelDataError {
 [Discoverable]
 protocol Manager {
     /// Immediately check for an update.
-    ///  `options`:  Did a user initiate this request? (USER_INITIATED) This changes
+    ///  `options`:  Did a user initiate this request? (`USER_INITIATED`) This changes
     ///              some parameters about aggressiveness of retries and throttling.
     ///  `monitor`:  An interface on which to receive the status events for this update check.
     ///               It's only valid for a single update check, after that it won't receive any
@@ -118,6 +118,7 @@ enum Initiator {
     SERVICE = 1;
 };
 
+/// ```
 /// The various states that the manager can be in.
 ///
 ///     +----------------------+
@@ -143,6 +144,7 @@ enum Initiator {
 /// +---|  FINALIZING_UPDATE   |---->|  ENCOUNTERED_ERROR   |----+
 ///     +----------------------+     +----------------------+
 ///
+/// ```
 enum ManagerState {
     /// The Manager is currently idle (in between updates).
     ///

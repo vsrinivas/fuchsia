@@ -35,7 +35,7 @@ protocol NavigationController {
     ///           loaded (e.g. cookies, HTTP headers, etc.)
     ///
     /// If an error occured, the NavigationControllerError will be set:
-    /// INVALID_URL: The `url` parameter is invalid.
+    /// `INVALID_URL`: The `url` parameter is invalid.
     LoadUrl(Url url, LoadUrlParams params)
         -> () error NavigationControllerError;
 

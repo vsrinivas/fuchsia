@@ -30,7 +30,7 @@ enum LeAddressType {
 
 /// Represents a peer that a FakeController can be configured to emulate.
 table FakePeer {
-    /// The LE identity address and/or BD_ADDR of the peer. This field is mandatory.
+    /// The LE identity address and/or `BD_ADDR` of the peer. This field is mandatory.
     1: bt.Address address;
 
     /// Parameters used by this peer on the Low Energy transport. This field is optional. The peer
@@ -118,10 +118,10 @@ struct AclBufferSettings {
 
 /// Controller settings used by the emulator.
 table EmulatorSettings {
-    /// The BD_ADDR (BR/EDR) or LE Public Device Address. Defaults to "00:00:00:00:00:00".
+    /// The `BD_ADDR` (BR/EDR) or LE Public Device Address. Defaults to "00:00:00:00:00:00".
     1: bt.Address address;
 
-    /// Supported HCI command configuration. Defaults to "DUAL_MODE".
+    /// Supported HCI command configuration. Defaults to "`DUAL_MODE`".
     2: HciConfig hci_config;
 
     /// True if the 5.0 extended advertising features are supported. Defaults to "false".
@@ -130,7 +130,7 @@ table EmulatorSettings {
     /// The ACL-U data buffer settings. Defaults to
     ///    data_packet_length: 1024
     ///    total_num_data_packets: 5
-    /// IF `hci_config` is set to DUAL_MODE. Defaults to null otherwise.
+    /// IF `hci_config` is set to `DUAL_MODE`. Defaults to null otherwise.
     4: AclBufferSettings acl_buffer_settings;
 
     /// The LE-U ACL data buffer settings. Defaults to
@@ -143,7 +143,7 @@ table EmulatorSettings {
 [Discoverable]
 protocol HciEmulator {
     /// Publish a bt-hci device using the provided `settings`. Each HciEmulator instance can only
-    /// manage a single bt-hci device. Returns Emulator.HCI_ALREADY_PUBLISHED if the device has
+    /// manage a single bt-hci device. Returns Emulator.`HCI_ALREADY_PUBLISHED` if the device has
     /// already been published.
     Publish(EmulatorSettings settings) -> () error EmulatorError;
 
@@ -152,7 +152,7 @@ protocol HciEmulator {
     /// can be used to refer to the created peer.
     AddPeer(FakePeer peer) -> (bt.PeerId id) error EmulatorPeerError;
 
-    /// Remove a previously inserted peer. Returns EmulatorPeerError.NOT_FOUND if `id` is not
+    /// Remove a previously inserted peer. Returns EmulatorPeerError.`NOT_FOUND` if `id` is not
     /// recognized.
     RemovePeer(bt.PeerId id) -> () error EmulatorPeerError;
 

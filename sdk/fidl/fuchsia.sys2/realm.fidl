@@ -32,11 +32,11 @@ protocol Realm {
     /// returns, it may return `INSTANCE_NOT_FOUND`.
     ///
     /// Errors:
-    /// - INVALID_ARGUMENTS: `child` is not a valid child reference.  -
-    /// - INSTANCE_NOT_FOUND: `child` does not exist.
-    /// - INSTANCE_CANNOT_START: `child` was not running and there was an error
+    /// - `INVALID_ARGUMENTS`: `child` is not a valid child reference.  -
+    /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
+    /// - `INSTANCE_CANNOT_START`: `child` was not running and there was an error
     ///   starting it.
-    /// - INSTANCE_CANNOT_RESOLVE: `child`'s component declaration failed to resolve.
+    /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve.
     BindChild(ChildRef child,
               request<fuchsia.io.Directory> exposed_dir) -> () error Error;
 
@@ -44,11 +44,11 @@ protocol Realm {
     /// returns successfully, the instance exists, but it may not be running.
     ///
     /// Errors:
-    /// - INVALID_ARGUMENTS: `collection` is not a valid reference or `child`
+    /// - `INVALID_ARGUMENTS`: `collection` is not a valid reference or `child`
     ///   is not a valid declaration.
-    /// - COLLECTION_NOT_FOUND: `collection` does not exist.
-    /// - INSTANCE_ALREADY_EXISTS: `decl.name` already exists in `collection`.
-    /// - NO_SPACE: Could not allocate storage for the new instance.
+    /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
+    /// - `INSTANCE_ALREADY_EXISTS`: `decl.name` already exists in `collection`.
+    /// - `NO_SPACE`: Could not allocate storage for the new instance.
     CreateChild(CollectionRef collection, ChildDecl decl) -> () error Error;
 
     /// Destroys a dynamically-created component instance. When this function
@@ -58,10 +58,10 @@ protocol Realm {
     /// function returns.
     ///
     /// Errors:
-    /// - INVALID_ARGUMENTS: `child` is not a valid reference or does not refer
+    /// - `INVALID_ARGUMENTS`: `child` is not a valid reference or does not refer
     ///   to a dynamic instance.
-    /// - INSTANCE_NOT_FOUND: `child` does not exist.
-    /// - COLLECTION_NOT_FOUND: `collection` does not exist.
+    /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
+    /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
     DestroyChild(ChildRef child) -> () error Error;
 
     /// Returns an iterator that lists all instances in a collection.
@@ -71,8 +71,8 @@ protocol Realm {
     /// won't be observed by the iterator after this method returns.
     ///
     /// Errors:
-    /// - INVALID_ARGUMENTS: `collection` is not a valid reference.
-    /// - COLLECTION_NOT_FOUND: `collection` does not exist.
+    /// - `INVALID_ARGUMENTS`: `collection` is not a valid reference.
+    /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
     ListChildren(CollectionRef collection, request<ChildIterator> iter) -> ()
         error Error;
 };

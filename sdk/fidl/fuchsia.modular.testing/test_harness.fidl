@@ -20,10 +20,10 @@ using fuchsia.sys;
 /// including the modular runtime running under it.
 ///
 /// On error, this connection is closed with the following epitaphs:
-/// * ZX_ERR_INVALID_ARGS: Run() failed to execute succesfully.
-/// * ZX_ERR_BAD_STATE: Other methods are called before Run() is called.
-/// * ZX_ERR_ALREADY_BOUND: Run() was already called.
-/// * ZX_ERR_ALREADY_EXISTS: The same environment service is being provided
+/// * `ZX_ERR_INVALID_ARGS`: Run() failed to execute succesfully.
+/// * `ZX_ERR_BAD_STATE`: Other methods are called before Run() is called.
+/// * `ZX_ERR_ALREADY_BOUND`: Run() was already called.
+/// * `ZX_ERR_ALREADY_EXISTS`: The same environment service is being provided
 ///   twice.
 [Discoverable]
 protocol TestHarness {
@@ -33,10 +33,10 @@ protocol TestHarness {
     ///
     /// This protocol connection is closed if Run() fails, with the following
     /// epitaphs:
-    ///  * ZX_ERR_INVALID_ARGS: `spec` is mal-formed.
-    ///  * ZX_ERR_ALREADY_EXISTS: The same environment service is being provided
+    ///  * `ZX_ERR_INVALID_ARGS`: `spec` is mal-formed.
+    ///  * `ZX_ERR_ALREADY_EXISTS`: The same environment service is being provided
     ///    twice in `spec.env_services`
-    ///  * ZX_ERR_ALREADY_BOUND: Run() was already called.
+    ///  * `ZX_ERR_ALREADY_BOUND`: Run() was already called.
     Run(TestHarnessSpec spec);
 
     /// This event is sent when a component specified in
@@ -55,9 +55,9 @@ protocol TestHarness {
     /// names).
     ///
     /// This protocol connection is closed with the following epitaphs:
-    ///  * ZX_ERR_BAD_STATE: if `ConnectToModularService()` is called before
+    ///  * `ZX_ERR_BAD_STATE`: if `ConnectToModularService()` is called before
     ///   `Run()`.
-    ///  * ZX_ERR_INVALID_ARGS: if `service` is not set to a value.
+    ///  * `ZX_ERR_INVALID_ARGS`: if `service` is not set to a value.
     ConnectToModularService(ModularService service);
 
     /// Connects to environment services injected into the TestHarness
@@ -96,7 +96,7 @@ protocol InterceptedComponent {
 /// Defines the setup of an environment running an instance of the modular
 /// framework used for testing purposes. This table is supplied to
 /// `TestHarness.Run()`. A malformed `TestHarnessSpec` will cause `TestHarness`
-/// connection to close with an epitaph of ZX_ERR_INVALID_ARGS.
+/// connection to close with an epitaph of `ZX_ERR_INVALID_ARGS`.
 ///
 /// By default, the following services are made available to the hermetic
 /// environment:
@@ -161,7 +161,7 @@ table TestHarnessSpec {
 /// Options for configuring the test harness environment with services.
 ///
 /// If the same service is provided in more than one place, `TestHarness`
-/// connection is closed with a ZX_ERR_ALREADY_EXISTS epitaph.
+/// connection is closed with a `ZX_ERR_ALREADY_EXISTS` epitaph.
 table EnvironmentServicesSpec {
     /// A directory of services to be provided to the test harness environment.
     ///

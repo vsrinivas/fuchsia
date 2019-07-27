@@ -230,7 +230,9 @@ class Light final {
       GetName_Impl& operator=(GetName_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetCount_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -242,7 +244,9 @@ class Light final {
       GetCount_Impl& operator=(GetCount_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class HasCapability_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -254,7 +258,9 @@ class Light final {
       HasCapability_Impl& operator=(HasCapability_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetSimpleValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -266,7 +272,9 @@ class Light final {
       GetSimpleValue_Impl& operator=(GetSimpleValue_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetSimpleValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -278,7 +286,9 @@ class Light final {
       SetSimpleValue_Impl& operator=(SetSimpleValue_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetRgbValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -290,7 +300,9 @@ class Light final {
       GetRgbValue_Impl& operator=(GetRgbValue_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetRgbValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -302,7 +314,9 @@ class Light final {
       SetRgbValue_Impl& operator=(SetRgbValue_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -330,7 +344,9 @@ class Light final {
       GetName_Impl& operator=(GetName_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetCount_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -342,7 +358,9 @@ class Light final {
       GetCount_Impl& operator=(GetCount_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class HasCapability_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -354,7 +372,9 @@ class Light final {
       HasCapability_Impl& operator=(HasCapability_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetSimpleValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -366,7 +386,9 @@ class Light final {
       GetSimpleValue_Impl& operator=(GetSimpleValue_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetSimpleValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -378,7 +400,9 @@ class Light final {
       SetSimpleValue_Impl& operator=(SetSimpleValue_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetRgbValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -390,7 +414,9 @@ class Light final {
       GetRgbValue_Impl& operator=(GetRgbValue_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetRgbValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -402,7 +428,9 @@ class Light final {
       SetRgbValue_Impl& operator=(SetRgbValue_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

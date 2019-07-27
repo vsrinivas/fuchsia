@@ -336,7 +336,7 @@ struct EncryptionPattern {
 /// changed, but not an error if the same value is repeated.
 table EncryptedFormat {
     /// `mode` specifies which encryption scheme to use, such as
-    /// fuchsia.media.ENCRYPTION_MODE_CENC.
+    /// `fuchsia.media.ENCRYPTION_MODE_CENC`.
     /// Usage:
     ///  - It is required to be set prior to delivery of input packets.
     ///  - This should only be changed at the beginning of a data stream.

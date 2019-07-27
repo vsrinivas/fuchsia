@@ -17,7 +17,7 @@ union SimpleUnion {
 [Layout = "Simple"]
 protocol TestInterface {
     /// Verifies that all the handles are valid channels, then returns
-    /// ZX_OK and loops back the field member. Otherwise, returns an error.
+    /// `ZX_OK` and loops back the field member. Otherwise, returns an error.
     ConsumeSimpleStruct(SimpleStruct arg) -> (zx.status status, int32 field);
 
     /// Loops back the field which is set, along with its index.

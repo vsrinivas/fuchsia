@@ -646,18 +646,18 @@ class Controller final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
 
-    // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetEventHandle GetEventHandle();
 
-    // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetEventHandle GetEventHandle(::fidl::BytePart _response_buffer);
 
-    // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     zx_status_t GetEventHandle_Deprecated(int32_t* out_status, ::zx::event* out_event);
 
-    // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::event* out_event);
@@ -849,18 +849,18 @@ class Controller final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
 
-    // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetEventHandle GetEventHandle(zx::unowned_channel _client_end);
 
-    // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetEventHandle GetEventHandle(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     static zx_status_t GetEventHandle_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::event* out_event);
 
-    // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::event* out_event);
@@ -989,7 +989,7 @@ class Controller final {
     // Return the topological path for this device
     static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     static ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Return the current logging flags for this device's driver

@@ -25,7 +25,7 @@ enum Error {
 
     /// The method request was not valid or was malformed in some way, such as
     /// omitting required fields. Invalid requests for unsupported operations
-    /// will return UNSUPPORTED_OPERATION.
+    /// will return `UNSUPPORTED_OPERATION`.
     INVALID_REQUEST = 5;
 
     /// A local resource error occurred such as an I/O, FIDL, or memory

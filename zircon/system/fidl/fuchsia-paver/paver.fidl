@@ -74,7 +74,7 @@ protocol Paver {
     /// Will zero out rest of the partition if `payload` is smaller than the size of the partition
     /// being written.
     ///
-    /// Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    /// Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     WriteAsset(Configuration configuration, Asset asset, fuchsia.mem.Buffer payload) -> (zx.status status);
 
     /// Writes FVM with data from streamed via `payload`. This potentially affects all

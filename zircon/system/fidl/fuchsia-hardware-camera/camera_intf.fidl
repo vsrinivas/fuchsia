@@ -87,7 +87,7 @@ struct VideoFormat {
 [Layout = "Simple"]
 protocol Control {
     /// Get the available format types for this device
-    /// NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    /// NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     /// GetFormats need to be issued until total_format_count are received.
     /// `actual_format_count` is the number of valid formats in this response.
     /// `total_format_count` is the total number of formats supported by the camera.
@@ -111,7 +111,7 @@ protocol Control {
 [Layout = "Simple"]
 protocol ControlV2 {
     /// Get the available format types for this device
-    /// NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    /// NOTE: The formats are paginated to `MAX_FORMATS_PER_RESPONSE`, multiple
     /// GetFormats need to be issued until total_format_count are received.
     /// `actual_format_count` is the number of valid formats in this response.
     /// `total_format_count` is the total number of formats supported by the camera.

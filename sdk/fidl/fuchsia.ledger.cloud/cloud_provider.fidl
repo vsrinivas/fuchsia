@@ -61,8 +61,8 @@ protocol DeviceSet {
     /// The returned status is:
     ///
     ///   - OK, if setting the watcher succeeded,
-    ///   - NOT_FOUND, if the fingerprint was not found in the cloud
-    ///   - NETWORK_ERROR, if the watcher couldn't be set due to a network error
+    ///   - `NOT_FOUND`, if the fingerprint was not found in the cloud
+    ///   - `NETWORK_ERROR`, if the watcher couldn't be set due to a network error
     ///
     /// If the returned status is not OK, the corresponding error call is also made
     /// on the watcher.
@@ -82,8 +82,8 @@ protocol DeviceSetWatcher {
     OnCloudErased();
 
     /// Called when an error occured. Most common errors are:
-    ///   - NOT_FOUND, if the fingerprint was not found in the cloud when registering the watcher.
-    ///   - NETWORK_ERROR if the network connection is lost.
+    ///   - `NOT_FOUND`, if the fingerprint was not found in the cloud when registering the watcher.
+    ///   - `NETWORK_ERROR` if the network connection is lost.
     ///
     /// No further calls are made on the watcher after this is called.
     OnError(Status status);
@@ -210,8 +210,8 @@ protocol PageCloudWatcher {
     ///
     /// The status is one of:
     ///
-    ///   - AUTH_ERROR, if the auth token needs a refresh
-    ///   - NETWORK_ERROR, if the connection was dropped
-    ///   - PARSE_ERROR, if an invalid server notification was received
+    ///   - `AUTH_ERROR`, if the auth token needs a refresh
+    ///   - `NETWORK_ERROR`, if the connection was dropped
+    ///   - `PARSE_ERROR`, if an invalid server notification was received
     OnError(Status status);
 };

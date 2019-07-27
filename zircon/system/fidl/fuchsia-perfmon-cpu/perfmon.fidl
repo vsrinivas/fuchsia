@@ -32,7 +32,7 @@ bits PropertyFlags : uint64 {
 
 /// The properties of this system.
 struct Properties {
-    /// S/W API version = API_VERSION.
+    /// S/W API version = `API_VERSION`.
     uint16 api_version;
 
     /// The H/W Performance Monitor version.

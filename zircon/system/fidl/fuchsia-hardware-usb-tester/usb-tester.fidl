@@ -74,11 +74,11 @@ protocol Device {
     SetModeFwloader() -> (zx.status s);
 
     /// Performs a data loopback on the bulk endpoint of the test device.
-    /// Returns ZX_OK if the loopback succeeded.
+    /// Returns `ZX_OK` if the loopback succeeded.
     BulkLoopback(BulkTestParams params, SgList? out_ep_sg, SgList? in_ep_sg) -> (zx.status s);
 
     /// Performs a data loopback on the isochronous endpoint of the test device.
-    /// Returns ZX_OK if no fatal error occurred during the loopback, and also returns the result
+    /// Returns `ZX_OK` if no fatal error occurred during the loopback, and also returns the result
     /// of the transfers. Isochronous transfers are not guaranteed to all succeed.
     IsochLoopback(IsochTestParams params) -> (zx.status s, IsochResult result);
 

@@ -42,7 +42,7 @@ protocol Device {
     Destroy();
 };
 
-/// Maximum device name len.  This value must match ZX_DEVICE_NAME_MAX.
+/// Maximum device name len.  This value must match `ZX_DEVICE_NAME_MAX`.
 const uint32 MAX_DEVICE_NAME_LEN = 31;
 
 /// Maximum device path len

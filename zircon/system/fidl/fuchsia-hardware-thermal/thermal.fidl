@@ -21,7 +21,7 @@ const uint32 THERMAL_STATE_NORMAL = 0;
 const uint32 THERMAL_STATE_TRIP_VIOLATION = 1;
 
 /// Devices with big-little architecture may have different operating points for each cluster.
-/// Other devices use BIG_CLUSTER_POWER_DOMAIN for getting/setting the operating point.
+/// Other devices use `BIG_CLUSTER_POWER_DOMAIN` for getting/setting the operating point.
 enum PowerDomain : uint32 {
     BIG_CLUSTER_POWER_DOMAIN = 0;
     LITTLE_CLUSTER_POWER_DOMAIN = 1;
@@ -47,7 +47,7 @@ struct OperatingPointEntry {
 
 /// Temperature units are in 10th of a degree Kelvin.
 struct ThermalInfo {
-    /// State is a bitmask of THERMAL_STATE_* values.
+    /// State is a bitmask of `THERMAL_STATE_`* values.
     uint32 state;
     /// The sensor temperature at which the system should activate passive cooling policy.
     uint32 passive_temp;
@@ -108,7 +108,7 @@ protocol Device {
     /// Get the current temperature.
     GetTemperature() -> (zx.status status, uint32 temp);
 
-    /// Get an event to get trip point notifications on. ZX_USER_SIGNAL_0 is changed when either
+    /// Get an event to get trip point notifications on. `ZX_USER_SIGNAL_`0 is changed when either
     /// trip point is reached. It is deasserted when the state is read via GetInfo.
     GetStateChangeEvent() -> (zx.status status, handle<event>? handle);
 

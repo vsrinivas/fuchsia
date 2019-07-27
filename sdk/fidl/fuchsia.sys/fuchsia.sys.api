@@ -1,10 +1,10 @@
 {
-  "fidl/fuchsia.sys/component_controller.fidl": "2e2d1138cdd064408b85625a3f4ee55d",
-  "fidl/fuchsia.sys/environment.fidl": "56ff7f3a61bac8b882c47a847a7aeb96",
+  "fidl/fuchsia.sys/component_controller.fidl": "21393a623b2370ebea99d461be9f70b6",
+  "fidl/fuchsia.sys/environment.fidl": "a6a7f1c727b3e46b3de3ea605ac11a4e",
   "fidl/fuchsia.sys/environment_controller.fidl": "dd88f5ab0fe6f9c0a2434632fae4de92",
   "fidl/fuchsia.sys/flat_namespace.fidl": "54bede8543298fd672cd7fd753a09806",
   "fidl/fuchsia.sys/job_provider.fidl": "6ceefe6e15fc8e7479701f285ca3b1d8",
-  "fidl/fuchsia.sys/launcher.fidl": "01cea675a2feeee356d83644c3696048",
+  "fidl/fuchsia.sys/launcher.fidl": "f2a4d782040fa81a35581110496f2268",
   "fidl/fuchsia.sys/loader.fidl": "f613de058a2ec5fd5a4a94e2693cef64",
   "fidl/fuchsia.sys/runner.fidl": "730d75328f0f9705e069d9cbab9b65a6",
   "fidl/fuchsia.sys/service_provider.fidl": "8d746934cb1f505d79062492ddf28519",

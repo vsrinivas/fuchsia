@@ -18,7 +18,7 @@ protocol Context {
     /// that the agent endpoint is not terminated.
     ///
     /// Failure to provide all required fields in `request` will close the
-    /// Context channel with an ZX_ERR_INVALID_ARGS.
+    /// Context channel with an `ZX_ERR_INVALID_ARGS`.
     ConnectToAgent(AgentConnectionRequest request);
 };
 

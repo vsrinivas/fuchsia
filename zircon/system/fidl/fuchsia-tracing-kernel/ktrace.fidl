@@ -20,6 +20,6 @@ protocol Controller {
     Rewind() -> (zx.status status);
 
     /// Get the number of bytes written to the trace buffer.
-    /// `size` is valid if, and only if, `status` is ZX_OK.
+    /// `size` is valid if, and only if, `status` is `ZX_OK`.
     GetBytesWritten() -> (zx.status status, uint64 size);
 };

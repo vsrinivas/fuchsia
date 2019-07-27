@@ -29,9 +29,9 @@ protocol ComponentContext {
     ///
     /// If an error is encountered, the `request.channel` will be closed with
     /// a status code, such as:
-    ///   * ZX_ERR_NOT_FOUND -- if a `request.handler` agent URL is not
+    ///   * `ZX_ERR_NOT_FOUND` -- if a `request.handler` agent URL is not
     ///     specified, and an agent for the `request.service_name` is not found
-    ///   * ZX_ERR_PEER_CLOSED -- if `request.service_name` is not available from
+    ///   * `ZX_ERR_PEER_CLOSED` -- if `request.service_name` is not available from
     ///     the agent (either specified or discovered)
     [Transitional]
     ConnectToAgentService(AgentServiceRequest request);

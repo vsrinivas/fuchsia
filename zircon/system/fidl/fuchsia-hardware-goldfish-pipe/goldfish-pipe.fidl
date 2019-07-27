@@ -43,17 +43,17 @@ protocol Pipe {
     GetBuffer() -> (zx.status res, handle<vmo>? vmo);
 
     /// Attempt to read up to count bytes into IO buffer at specified offset.
-    /// Returns ZX_ERR_SHOULD_WAIT if pipe device is not readable.
+    /// Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not readable.
     Read(uint64 count, uint64 offset) -> (zx.status res, uint64 actual);
 
     /// Writes up to count bytes from the IO buffer at specified offset.
-    /// Returns ZX_ERR_SHOULD_WAIT if pipe device is not writable.
+    /// Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not writable.
     Write(uint64 count, uint64 offset) -> (zx.status res, uint64 actual);
 
     /// Writes count bytes from the IO buffer at specified write
     /// offset. Blocks if pipe device is not writable. Subsequently reads
     /// read_count bytes into the IO buffer at specified read offset.
-    /// Returns ZX_ERR_SHOULD_WAIT if pipe device is not readable.
+    /// Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not readable.
     Call(uint64 count, uint64 offset, uint64 read_count, uint64 read_offset)
         -> (zx.status res, uint64 actual);
 };

@@ -87,8 +87,8 @@ protocol Access {
     /// LE transports depending on the technologies that the peer is known to support.
     ///
     /// + request `id` The id of the peer to connect.
-    /// * error Reports Error.FAILED if a connection to the peer cannot be initiated.
-    /// * error Reports Error.PEER_NOT_FOUND if `id` is not recognized.
+    /// * error Reports `Error.FAILED` if a connection to the peer cannot be initiated.
+    /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
     Connect(bt.PeerId id) -> () error Error;
 
     /// Disconnect all logical links to the peer with the given `id`. This includes LE and
@@ -96,13 +96,13 @@ protocol Access {
     /// instances.
     ///
     /// + request `id` The id of the peer to disconnect.
-    /// * error Reports Error.PEER_NOT_FOUND if `id` is not recognized.
+    /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
     Disconnect(bt.PeerId id) -> () error Error;
 
     /// Removes all bonding information and disconnects any existing links with the peer with the
     /// given `id`.
     ///
     /// + request `id` The id of the peer to forget.
-    /// * error Reports Error.PEER_NOT_FOUND if `id` is not recognized.
+    /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
     Forget(bt.PeerId id) -> () error Error;
 };

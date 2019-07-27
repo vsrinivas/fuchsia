@@ -24,16 +24,16 @@ protocol DeviceManager {
     /// the correct key for this slot, then the device node responding to this
     /// protocol will create an unsealed zxcrypt device as a child of itself in
     /// the device tree before returning success.
-    /// Returns ZX_ERR_INVALID_ARGS if `slot` is invalid.
-    /// Returns ZX_ERR_BAD_STATE and keeps the device open if the device is already unsealed.
+    /// Returns `ZX_ERR_INVALID_ARGS` if `slot` is invalid.
+    /// Returns `ZX_ERR_BAD_STATE` and keeps the device open if the device is already unsealed.
     /// Returns other errors if operations on the underlying block device return errors.
-    /// Returns ZX_OK on success.
+    /// Returns `ZX_OK` on success.
     Unseal(bytes:MAX_KEY_SIZE key, uint8 slot) -> (zx.status status);
 
     /// Seals the device, causing any previously-created child zxcrypt Device to
     /// be removed some time later.  (Someday we'd like this to only return once
     /// the unsealed child device is removed, but that's not straightforward today.)
-    /// Returns ZX_ERR_BAD_STATE if the device is already sealed.
-    /// Returns ZX_OK on success.
+    /// Returns `ZX_ERR_BAD_STATE` if the device is already sealed.
+    /// Returns `ZX_OK` on success.
     Seal() -> (zx.status status);
 };

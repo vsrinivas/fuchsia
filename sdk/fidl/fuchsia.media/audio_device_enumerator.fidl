@@ -60,7 +60,7 @@ protocol AudioDeviceEnumerator {
     /// target the proper input/output.
     ///
     /// The Get command returns the device_token of the device whose gain is
-    /// being reported, or ZX_KOID_INVALID in the case that the requested
+    /// being reported, or `ZX_KOID_INVALID` in the case that the requested
     /// device_token was invalid or the device had been removed from the system
     /// before the Get command could be processed.
     ///
@@ -82,7 +82,7 @@ protocol AudioDeviceEnumerator {
     /// Default Device
     ///
     /// Fetch the device ID of the current default input or output device, or
-    /// ZX_KOID_INVALID if no such device exists.
+    /// `ZX_KOID_INVALID` if no such device exists.
     //
     // TODO(mpuryear): solidify the concept of "default" device. Right now, it
     // basically means the device which would be chosen as the destination of an

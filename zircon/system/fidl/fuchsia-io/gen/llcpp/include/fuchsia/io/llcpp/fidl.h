@@ -68,28 +68,28 @@ struct WatchedEvent {
   ::fidl::VectorView<uint8_t> name = {};
 };
 
-// Used by Directory::Watch. Requests transmission of WATCH_EVENT_REMOVED.
+// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_REMOVED`.
 constexpr uint32_t WATCH_MASK_REMOVED = 4u;
 
-// Used by Directory::Watch. Requests transmission of WATCH_EVENT_IDLE.
+// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_IDLE`.
 constexpr uint32_t WATCH_MASK_IDLE = 16u;
 
-// Used by Directory::Watch. Requests transmission of WATCH_EVENT_EXISTING.
+// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_EXISTING`.
 constexpr uint32_t WATCH_MASK_EXISTING = 8u;
 
-// Used by Directory::Watch. Requests transmission of WATCH_EVENT_DELETED.
+// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_DELETED`.
 constexpr uint32_t WATCH_MASK_DELETED = 1u;
 
 // Used by Directory::Watch. Requests transmission of all watcher events.
 constexpr uint32_t WATCH_MASK_ALL = 31u;
 
-// Used by Directory::Watch. Requests transmission of WATCH_EVENT_ADDED.
+// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_ADDED`.
 constexpr uint32_t WATCH_MASK_ADDED = 2u;
 
 // Identifies a node has been removed (either deleted or moved) from the directory.
 constexpr uint8_t WATCH_EVENT_REMOVED = 2u;
 
-// Identifies that no more WATCH_EVENT_EXISTING events will be sent.
+// Identifies that no more `WATCH_EVENT_EXISTING` events will be sent.
 constexpr uint8_t WATCH_EVENT_IDLE = 4u;
 
 // Identifies a node already existed in the directory when watching started.
@@ -132,7 +132,7 @@ constexpr uint32_t VMO_FLAG_READ = 1u;
 
 // Require a copy-on-write clone of the underlying VMO.
 // The request should fail if the VMO is not cloned.
-// May not be supplied with fuchsia_io_VMO_FLAG_EXACT.
+// May not be supplied with fuchsia_io_`VMO_FLAG_EXACT`.
 constexpr uint32_t VMO_FLAG_PRIVATE = 65536u;
 
 // Requests that the VMO be executable.
@@ -140,7 +140,7 @@ constexpr uint32_t VMO_FLAG_EXEC = 4u;
 
 // Require an exact (non-cloned) handle to the underlying VMO.
 // The request should fail if a handle to the exact VMO is not returned.
-// May not be supplied with VMO_FLAG_PRIVATE.
+// May not be supplied with `VMO_FLAG_PRIVATE`.
 constexpr uint32_t VMO_FLAG_EXACT = 131072u;
 
 extern "C" const fidl_type_t fuchsia_io_TtyTable;
@@ -362,7 +362,7 @@ constexpr uint32_t OPEN_FLAG_TRUNCATE = 262144u;
 // Specify this flag to request POSIX-compatibility. Currently, it affects permission handling.
 // During Open:
 // - If the target path is a directory, the rights on the new connection expands to include
-//   OPEN_RIGHT_WRITABLE if and only if the current connection and all intermediate mount points
+//   `OPEN_RIGHT_WRITABLE` if and only if the current connection and all intermediate mount points
 //   are writable.
 // - Otherwise, this flag is ignored. It is an access denied error to request more rights
 //   than those on the current connection, or any intermediate mount points.
@@ -385,10 +385,10 @@ constexpr uint32_t OPEN_FLAG_NO_REMOTE = 2097152u;
 constexpr uint32_t OPEN_FLAG_NOT_DIRECTORY = 33554432u;
 
 // Open a reference to the object, not the object itself.
-// It is ONLY valid to pass the following flags together with OPEN_FLAG_NODE_REFERENCE:
-// - OPEN_FLAG_DIRECTORY
-// - OPEN_FLAG_NOT_DIRECTORY
-// - OPEN_FLAG_DESCRIBE
+// It is ONLY valid to pass the following flags together with `OPEN_FLAG_NODE_REFERENCE`:
+// - `OPEN_FLAG_DIRECTORY`
+// - `OPEN_FLAG_NOT_DIRECTORY`
+// - `OPEN_FLAG_DESCRIBE`
 // otherwise an error is returned.
 // If an object is opened or cloned using this method, the resulting connection does not carry
 // any permission flags.
@@ -413,8 +413,8 @@ constexpr uint32_t OPEN_FLAG_CREATE = 65536u;
 // Seek to the end of the object before all writes.
 constexpr uint32_t OPEN_FLAG_APPEND = 1048576u;
 
-// Binary OR of OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_DESCRIBE, and
-// OPEN_FLAG_NODE_REFERENCE. Flags used when opening a node reference must fall within this mask.
+// Binary OR of `OPEN_FLAG_DIRECTORY`, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_DESCRIBE, and
+// `OPEN_FLAG_NODE_REFERENCE`. Flags used when opening a node reference must fall within this mask.
 constexpr uint32_t OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE = 46661632u;
 
 extern "C" const fidl_type_t fuchsia_io_NodeAttributesTable;
@@ -463,7 +463,7 @@ constexpr uint32_t MODE_TYPE_SERVICE = 65536u;
 
 // Bits indicating node type. The canonical mechanism to check
 // for a node type is to take 'mode', bitwise AND it with the
-// MODE_TYPE_MASK, and check exact equality against a mode type.
+// `MODE_TYPE_MASK`, and check exact equality against a mode type.
 constexpr uint32_t MODE_TYPE_MASK = 1044480u;
 
 constexpr uint32_t MODE_TYPE_FILE = 32768u;
@@ -473,7 +473,7 @@ constexpr uint32_t MODE_TYPE_DIRECTORY = 16384u;
 constexpr uint32_t MODE_TYPE_BLOCK_DEVICE = 24576u;
 
 // Bits reserved for posix protections. Native fuchsia filesystems
-// are not required to set bits contained within MODE_PROTECTION_MASK,
+// are not required to set bits contained within `MODE_PROTECTION_MASK`,
 // but filesystems that wish to do so may refer to sys/stat.h for their
 // definitions.
 constexpr uint32_t MODE_PROTECTION_MASK = 4095u;
@@ -554,7 +554,7 @@ struct FileObject {
   // the capability granted to client: this event may be signalled "readable" on a
   // connection that does not have the capability to read.
   //
-  // The "FILE_SIGNAL_" values may be observed on this event.
+  // The "`FILE_SIGNAL_`" values may be observed on this event.
   ::zx::event event = {};
 };
 
@@ -589,7 +589,7 @@ struct Device {
 
   // An optional event which transmits information about a device's state.
   //
-  // The "DEVICE_SIGNAL_" values may be observed on this event.
+  // The "`DEVICE_SIGNAL_`" values may be observed on this event.
   ::zx::eventpair event = {};
 };
 
@@ -1187,75 +1187,75 @@ class Node final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     zx_status_t Clone_Deprecated(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1360,29 +1360,29 @@ class Node final {
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t SetAttr_Deprecated(uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -1418,75 +1418,75 @@ class Node final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1591,29 +1591,29 @@ class Node final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t SetAttr_Deprecated(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -1648,19 +1648,19 @@ class Node final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -1685,9 +1685,9 @@ class Node final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -2704,75 +2704,75 @@ class File final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     zx_status_t Clone_Deprecated(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -2877,29 +2877,29 @@ class File final {
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t SetAttr_Deprecated(uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -2921,14 +2921,14 @@ class File final {
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::Read Read(uint64_t count);
 
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Read Read(::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer);
 
@@ -2936,7 +2936,7 @@ class File final {
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ReadResponse> Read_Deprecated(::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
@@ -2944,14 +2944,14 @@ class File final {
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::ReadAt ReadAt(uint64_t count, uint64_t offset);
 
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ReadAt ReadAt(::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer);
 
@@ -2959,7 +2959,7 @@ class File final {
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ReadAtResponse> ReadAt_Deprecated(::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
@@ -2967,27 +2967,27 @@ class File final {
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Write Write(::fidl::VectorView<uint8_t> data);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Write Write(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t Write_Deprecated(::fidl::VectorView<uint8_t> data, int32_t* out_s, uint64_t* out_actual);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WriteResponse> Write_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
@@ -2995,27 +2995,27 @@ class File final {
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::WriteAt WriteAt(::fidl::VectorView<uint8_t> data, uint64_t offset);
 
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::WriteAt WriteAt(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer);
 
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t WriteAt_Deprecated(::fidl::VectorView<uint8_t> data, uint64_t offset, int32_t* out_s, uint64_t* out_actual);
 
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<WriteAtResponse> WriteAt_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
@@ -3050,24 +3050,24 @@ class File final {
 
     // Shrinks the file size to 'length' bytes.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Truncate Truncate(uint64_t length);
 
     // Shrinks the file size to 'length' bytes.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Truncate Truncate(::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer);
 
     // Shrinks the file size to 'length' bytes.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t Truncate_Deprecated(uint64_t length, int32_t* out_s);
 
     // Shrinks the file size to 'length' bytes.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<TruncateResponse> Truncate_Deprecated(::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -3098,7 +3098,7 @@ class File final {
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
+    // - `OPEN_FLAG_APPEND`
     //
     // This method does not require any rights.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
@@ -3106,7 +3106,7 @@ class File final {
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
+    // - `OPEN_FLAG_APPEND`
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3114,14 +3114,14 @@ class File final {
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
+    // - `OPEN_FLAG_APPEND`
     //
     // This method does not require any rights.
     zx_status_t SetFlags_Deprecated(uint32_t flags, int32_t* out_s);
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
+    // - `OPEN_FLAG_APPEND`
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3131,22 +3131,22 @@ class File final {
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // `flags` may be any of VMO_FLAG_*.
+    // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
+    // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetBuffer GetBuffer(uint32_t flags);
 
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // `flags` may be any of VMO_FLAG_*.
+    // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
+    // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetBuffer GetBuffer(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
@@ -3154,11 +3154,11 @@ class File final {
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // `flags` may be any of VMO_FLAG_*.
+    // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
+    // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetBufferResponse> GetBuffer_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::mem::Buffer** out_buffer);
@@ -3180,75 +3180,75 @@ class File final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -3353,29 +3353,29 @@ class File final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t SetAttr_Deprecated(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -3397,14 +3397,14 @@ class File final {
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::Read Read(zx::unowned_channel _client_end, uint64_t count);
 
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Read Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer);
 
@@ -3412,7 +3412,7 @@ class File final {
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ReadResponse> Read_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
@@ -3420,14 +3420,14 @@ class File final {
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::ReadAt ReadAt(zx::unowned_channel _client_end, uint64_t count, uint64_t offset);
 
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ReadAt ReadAt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer);
 
@@ -3435,7 +3435,7 @@ class File final {
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ReadAtResponse> ReadAt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<uint8_t>* out_data);
@@ -3443,27 +3443,27 @@ class File final {
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t Write_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data, int32_t* out_s, uint64_t* out_actual);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WriteResponse> Write_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
@@ -3471,27 +3471,27 @@ class File final {
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::WriteAt WriteAt(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data, uint64_t offset);
 
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::WriteAt WriteAt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer);
 
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t WriteAt_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data, uint64_t offset, int32_t* out_s, uint64_t* out_actual);
 
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<WriteAtResponse> WriteAt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, uint64_t offset, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_actual);
@@ -3526,24 +3526,24 @@ class File final {
 
     // Shrinks the file size to 'length' bytes.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Truncate Truncate(zx::unowned_channel _client_end, uint64_t length);
 
     // Shrinks the file size to 'length' bytes.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Truncate Truncate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer);
 
     // Shrinks the file size to 'length' bytes.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t Truncate_Deprecated(zx::unowned_channel _client_end, uint64_t length, int32_t* out_s);
 
     // Shrinks the file size to 'length' bytes.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<TruncateResponse> Truncate_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -3574,7 +3574,7 @@ class File final {
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
+    // - `OPEN_FLAG_APPEND`
     //
     // This method does not require any rights.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
@@ -3582,7 +3582,7 @@ class File final {
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
+    // - `OPEN_FLAG_APPEND`
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3590,14 +3590,14 @@ class File final {
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
+    // - `OPEN_FLAG_APPEND`
     //
     // This method does not require any rights.
     static zx_status_t SetFlags_Deprecated(zx::unowned_channel _client_end, uint32_t flags, int32_t* out_s);
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
+    // - `OPEN_FLAG_APPEND`
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3607,22 +3607,22 @@ class File final {
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // `flags` may be any of VMO_FLAG_*.
+    // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
+    // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetBuffer GetBuffer(zx::unowned_channel _client_end, uint32_t flags);
 
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // `flags` may be any of VMO_FLAG_*.
+    // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
+    // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetBuffer GetBuffer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
@@ -3630,11 +3630,11 @@ class File final {
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // `flags` may be any of VMO_FLAG_*.
+    // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
+    // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetBufferResponse> GetBuffer_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::mem::Buffer** out_buffer);
@@ -3655,19 +3655,19 @@ class File final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -3692,9 +3692,9 @@ class File final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -3703,25 +3703,25 @@ class File final {
     // Reads 'count' bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
 
     // Reads 'count' bytes at the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_READABLE.
+    // This method requires following rights: `OPEN_RIGHT_READABLE`.
     static ::fidl::DecodeResult<ReadAtResponse> ReadAt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadAtRequest> params, ::fidl::BytePart response_buffer);
 
     // Writes data at the seek offset.
     // The seek offset is moved forward by the number of bytes written.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
 
     // Writes data to the provided offset.
     // Does not affect the seek offset.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<WriteAtResponse> WriteAt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAtRequest> params, ::fidl::BytePart response_buffer);
 
     // Moves the offset at which the next invocation of `Read()` or `Write()` will
@@ -3732,7 +3732,7 @@ class File final {
 
     // Shrinks the file size to 'length' bytes.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<TruncateResponse> Truncate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TruncateRequest> params, ::fidl::BytePart response_buffer);
 
     // Acquires the Directory::Open rights and flags used to access this file.
@@ -3742,7 +3742,7 @@ class File final {
 
     // Changes the Directory::Open flags used to access the file.
     // Supported flags which can be turned on / off:
-    // - OPEN_FLAG_APPEND
+    // - `OPEN_FLAG_APPEND`
     //
     // This method does not require any rights.
     static ::fidl::DecodeResult<SetFlagsResponse> SetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetFlagsRequest> params, ::fidl::BytePart response_buffer);
@@ -3750,11 +3750,11 @@ class File final {
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // `flags` may be any of VMO_FLAG_*.
+    // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
+    // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     static ::fidl::DecodeResult<GetBufferResponse> GetBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);
 
   };
@@ -4815,75 +4815,75 @@ class Directory final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     zx_status_t Clone_Deprecated(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -4988,29 +4988,29 @@ class Directory final {
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t SetAttr_Deprecated(uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -5034,14 +5034,14 @@ class Directory final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -5049,8 +5049,8 @@ class Directory final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Request is heap-allocated.
     ResultOf::Open Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -5059,14 +5059,14 @@ class Directory final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -5074,8 +5074,8 @@ class Directory final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Open Open(::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -5084,14 +5084,14 @@ class Directory final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -5099,8 +5099,8 @@ class Directory final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     zx_status_t Open_Deprecated(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Opens a new object relative to this directory object.
@@ -5108,14 +5108,14 @@ class Directory final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -5123,8 +5123,8 @@ class Directory final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Open_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -5145,16 +5145,16 @@ class Directory final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Unlink Unlink(::fidl::StringView path);
 
@@ -5175,16 +5175,16 @@ class Directory final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Unlink Unlink(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer);
 
@@ -5205,16 +5205,16 @@ class Directory final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t Unlink_Deprecated(::fidl::StringView path, int32_t* out_s);
 
     // Detaches an object from this directory object.
@@ -5234,16 +5234,16 @@ class Directory final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -5260,7 +5260,7 @@ class Directory final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -5283,7 +5283,7 @@ class Directory final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -5307,7 +5307,7 @@ class Directory final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -5346,27 +5346,27 @@ class Directory final {
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetToken GetToken();
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetToken GetToken(::fidl::BytePart _response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t GetToken_Deprecated(int32_t* out_s, ::zx::handle* out_token);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
@@ -5374,43 +5374,43 @@ class Directory final {
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Rename Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Rename Rename(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t Rename_Deprecated(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, int32_t* out_s);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -5419,12 +5419,12 @@ class Directory final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Link Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
@@ -5432,12 +5432,12 @@ class Directory final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Link Link(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
@@ -5445,24 +5445,24 @@ class Directory final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t Link_Deprecated(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, int32_t* out_s);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<LinkResponse> Link_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -5564,75 +5564,75 @@ class Directory final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -5737,29 +5737,29 @@ class Directory final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t SetAttr_Deprecated(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -5783,14 +5783,14 @@ class Directory final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -5798,8 +5798,8 @@ class Directory final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Request is heap-allocated.
     static ResultOf::Open Open(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -5808,14 +5808,14 @@ class Directory final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -5823,8 +5823,8 @@ class Directory final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Open Open(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -5833,14 +5833,14 @@ class Directory final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -5848,8 +5848,8 @@ class Directory final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     static zx_status_t Open_Deprecated(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Opens a new object relative to this directory object.
@@ -5857,14 +5857,14 @@ class Directory final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -5872,8 +5872,8 @@ class Directory final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Open_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -5894,16 +5894,16 @@ class Directory final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Unlink Unlink(zx::unowned_channel _client_end, ::fidl::StringView path);
 
@@ -5924,16 +5924,16 @@ class Directory final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Unlink Unlink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer);
 
@@ -5954,16 +5954,16 @@ class Directory final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t Unlink_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView path, int32_t* out_s);
 
     // Detaches an object from this directory object.
@@ -5983,16 +5983,16 @@ class Directory final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -6009,7 +6009,7 @@ class Directory final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -6032,7 +6032,7 @@ class Directory final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -6056,7 +6056,7 @@ class Directory final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -6095,27 +6095,27 @@ class Directory final {
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetToken GetToken(zx::unowned_channel _client_end);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetToken GetToken(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t GetToken_Deprecated(zx::unowned_channel _client_end, int32_t* out_s, ::zx::handle* out_token);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
@@ -6123,43 +6123,43 @@ class Directory final {
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Rename Rename(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Rename Rename(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t Rename_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, int32_t* out_s);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -6168,12 +6168,12 @@ class Directory final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Link Link(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
@@ -6181,12 +6181,12 @@ class Directory final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Link Link(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
@@ -6194,24 +6194,24 @@ class Directory final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t Link_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, int32_t* out_s);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<LinkResponse> Link_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -6312,19 +6312,19 @@ class Directory final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -6349,9 +6349,9 @@ class Directory final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -6362,14 +6362,14 @@ class Directory final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -6377,8 +6377,8 @@ class Directory final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     static ::fidl::internal::StatusAndError Open(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params);
 
     // Detaches an object from this directory object.
@@ -6398,16 +6398,16 @@ class Directory final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<UnlinkResponse> Unlink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Reads a collection of variably sized dirents into a buffer.
@@ -6422,7 +6422,7 @@ class Directory final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -6440,29 +6440,29 @@ class Directory final {
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<GetTokenResponse> GetToken(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<RenameResponse> Rename(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<LinkResponse> Link(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Watches a directory, receiving events of added messages on the
@@ -7804,75 +7804,75 @@ class DirectoryAdmin final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     zx_status_t Clone_Deprecated(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -7977,29 +7977,29 @@ class DirectoryAdmin final {
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t SetAttr_Deprecated(uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -8023,14 +8023,14 @@ class DirectoryAdmin final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -8038,8 +8038,8 @@ class DirectoryAdmin final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Request is heap-allocated.
     ResultOf::Open Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -8048,14 +8048,14 @@ class DirectoryAdmin final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -8063,8 +8063,8 @@ class DirectoryAdmin final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Open Open(::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -8073,14 +8073,14 @@ class DirectoryAdmin final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -8088,8 +8088,8 @@ class DirectoryAdmin final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     zx_status_t Open_Deprecated(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Opens a new object relative to this directory object.
@@ -8097,14 +8097,14 @@ class DirectoryAdmin final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -8112,8 +8112,8 @@ class DirectoryAdmin final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Open_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -8134,16 +8134,16 @@ class DirectoryAdmin final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Unlink Unlink(::fidl::StringView path);
 
@@ -8164,16 +8164,16 @@ class DirectoryAdmin final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Unlink Unlink(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer);
 
@@ -8194,16 +8194,16 @@ class DirectoryAdmin final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t Unlink_Deprecated(::fidl::StringView path, int32_t* out_s);
 
     // Detaches an object from this directory object.
@@ -8223,16 +8223,16 @@ class DirectoryAdmin final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -8249,7 +8249,7 @@ class DirectoryAdmin final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -8272,7 +8272,7 @@ class DirectoryAdmin final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -8296,7 +8296,7 @@ class DirectoryAdmin final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -8335,27 +8335,27 @@ class DirectoryAdmin final {
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetToken GetToken();
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetToken GetToken(::fidl::BytePart _response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t GetToken_Deprecated(int32_t* out_s, ::zx::handle* out_token);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
@@ -8363,43 +8363,43 @@ class DirectoryAdmin final {
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Rename Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Rename Rename(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t Rename_Deprecated(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, int32_t* out_s);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -8408,12 +8408,12 @@ class DirectoryAdmin final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Link Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
@@ -8421,12 +8421,12 @@ class DirectoryAdmin final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Link Link(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
@@ -8434,24 +8434,24 @@ class DirectoryAdmin final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t Link_Deprecated(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, int32_t* out_s);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<LinkResponse> Link_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -8539,27 +8539,27 @@ class DirectoryAdmin final {
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
+    // should be opened with `OPEN_FLAG_NO_REMOTE`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Mount Mount(::zx::channel remote);
 
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
+    // should be opened with `OPEN_FLAG_NO_REMOTE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Mount Mount(::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer);
 
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
+    // should be opened with `OPEN_FLAG_NO_REMOTE`.
     zx_status_t Mount_Deprecated(::zx::channel remote, int32_t* out_s);
 
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
+    // should be opened with `OPEN_FLAG_NO_REMOTE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<MountResponse> Mount_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -8669,75 +8669,75 @@ class DirectoryAdmin final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -8842,29 +8842,29 @@ class DirectoryAdmin final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t SetAttr_Deprecated(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -8888,14 +8888,14 @@ class DirectoryAdmin final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -8903,8 +8903,8 @@ class DirectoryAdmin final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Request is heap-allocated.
     static ResultOf::Open Open(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -8913,14 +8913,14 @@ class DirectoryAdmin final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -8928,8 +8928,8 @@ class DirectoryAdmin final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Open Open(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -8938,14 +8938,14 @@ class DirectoryAdmin final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -8953,8 +8953,8 @@ class DirectoryAdmin final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     static zx_status_t Open_Deprecated(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Opens a new object relative to this directory object.
@@ -8962,14 +8962,14 @@ class DirectoryAdmin final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -8977,8 +8977,8 @@ class DirectoryAdmin final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Open_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
@@ -8999,16 +8999,16 @@ class DirectoryAdmin final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Unlink Unlink(zx::unowned_channel _client_end, ::fidl::StringView path);
 
@@ -9029,16 +9029,16 @@ class DirectoryAdmin final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Unlink Unlink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer);
 
@@ -9059,16 +9059,16 @@ class DirectoryAdmin final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t Unlink_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView path, int32_t* out_s);
 
     // Detaches an object from this directory object.
@@ -9088,16 +9088,16 @@ class DirectoryAdmin final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<UnlinkResponse> Unlink_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -9114,7 +9114,7 @@ class DirectoryAdmin final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -9137,7 +9137,7 @@ class DirectoryAdmin final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -9161,7 +9161,7 @@ class DirectoryAdmin final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -9200,27 +9200,27 @@ class DirectoryAdmin final {
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetToken GetToken(zx::unowned_channel _client_end);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetToken GetToken(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t GetToken_Deprecated(zx::unowned_channel _client_end, int32_t* out_s, ::zx::handle* out_token);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetTokenResponse> GetToken_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::handle* out_token);
@@ -9228,43 +9228,43 @@ class DirectoryAdmin final {
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Rename Rename(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Rename Rename(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t Rename_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, int32_t* out_s);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RenameResponse> Rename_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -9273,12 +9273,12 @@ class DirectoryAdmin final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Link Link(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
@@ -9286,12 +9286,12 @@ class DirectoryAdmin final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Link Link(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
@@ -9299,24 +9299,24 @@ class DirectoryAdmin final {
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t Link_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, int32_t* out_s);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<LinkResponse> Link_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -9404,27 +9404,27 @@ class DirectoryAdmin final {
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
+    // should be opened with `OPEN_FLAG_NO_REMOTE`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Mount Mount(zx::unowned_channel _client_end, ::zx::channel remote);
 
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
+    // should be opened with `OPEN_FLAG_NO_REMOTE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Mount Mount(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer);
 
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
+    // should be opened with `OPEN_FLAG_NO_REMOTE`.
     static zx_status_t Mount_Deprecated(zx::unowned_channel _client_end, ::zx::channel remote, int32_t* out_s);
 
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
+    // should be opened with `OPEN_FLAG_NO_REMOTE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<MountResponse> Mount_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel remote, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -9533,19 +9533,19 @@ class DirectoryAdmin final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -9570,9 +9570,9 @@ class DirectoryAdmin final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -9583,14 +9583,14 @@ class DirectoryAdmin final {
     // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
+    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
@@ -9598,8 +9598,8 @@ class DirectoryAdmin final {
     // Exceeding those rights causes an access denied error to be transmitted in the
     // `OnOpen` event if applicable, and the `object` connection closed.
     //
-    // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
-    // the OPEN_FLAG_NODE_REFERENCE flag.
+    // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    // the `OPEN_FLAG_NODE_REFERENCE` flag.
     static ::fidl::internal::StatusAndError Open(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params);
 
     // Detaches an object from this directory object.
@@ -9619,16 +9619,16 @@ class DirectoryAdmin final {
     // originally accessed Directory.
     //
     // Returns:
-    //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    //   `ZX_ERR_ACCESS_DENIED` if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if `path` is ".".
+    //   `ZX_ERR_INVALID_ARGS` if `path` contains ".." segments.
+    //   `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    //   `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point, containing a remote channel.
+    //   `ZX_ERR_UNAVAILABLE` if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<UnlinkResponse> Unlink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Reads a collection of variably sized dirents into a buffer.
@@ -9643,7 +9643,7 @@ class DirectoryAdmin final {
     //   // Describes the length of the dirent name.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use DIRENT_TYPE_* constants.
+    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
@@ -9661,29 +9661,29 @@ class DirectoryAdmin final {
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<GetTokenResponse> GetToken(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
     // `src/dst` must be resolved object names. Including "/" in any position
-    // other than the end of the string will return ZX_ERR_INVALID_ARGS.
+    // other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
     // Returning "/" at the end of either string implies that it must be a
-    // directory, or else ZX_ERR_NOT_DIR should be returned.
+    // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<RenameResponse> Rename(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
     // `src` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
     // `dst` must be a resolved object name. Including "/" in the string will
-    // return ZX_ERR_INVALID_ARGS.
+    // return `ZX_ERR_INVALID_ARGS`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<LinkResponse> Link(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Watches a directory, receiving events of added messages on the
@@ -9708,7 +9708,7 @@ class DirectoryAdmin final {
     // Mount a channel representing a remote filesystem onto this directory.
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
-    // should be opened with OPEN_FLAG_NO_REMOTE.
+    // should be opened with `OPEN_FLAG_NO_REMOTE`.
     static ::fidl::DecodeResult<MountResponse> Mount(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MountRequest> params, ::fidl::BytePart response_buffer);
 
     // Atomically create a directory with a provided path, and mount the
@@ -10093,7 +10093,7 @@ constexpr uint32_t DEVICE_SIGNAL_ERROR = 67108864u;
 
 // When used during clone, the new connection inherits the rights on the source connection,
 // regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.
-// It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+// It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
 constexpr uint32_t CLONE_FLAG_SAME_RIGHTS = 67108864u;
 
 }  // namespace io

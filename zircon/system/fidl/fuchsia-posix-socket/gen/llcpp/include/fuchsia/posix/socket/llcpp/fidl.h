@@ -1089,75 +1089,75 @@ class Control final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     zx_status_t Clone_Deprecated(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1262,29 +1262,29 @@ class Control final {
     ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     zx_status_t SetAttr_Deprecated(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -1460,75 +1460,75 @@ class Control final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1633,29 +1633,29 @@ class Control final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static zx_status_t SetAttr_Deprecated(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
@@ -1830,19 +1830,19 @@ class Control final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
-    // - OPEN_RIGHT_*
-    // - OPEN_FLAG_APPEND
-    // - OPEN_FLAG_NO_REMOTE
-    // - OPEN_FLAG_DESCRIBE
-    // - CLONE_FLAG_SAME_RIGHTS
+    // - `OPEN_RIGHT_*`
+    // - `OPEN_FLAG_APPEND`
+    // - `OPEN_FLAG_NO_REMOTE`
+    // - `OPEN_FLAG_DESCRIBE`
+    // - `CLONE_FLAG_SAME_RIGHTS`
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
-    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
-    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -1867,9 +1867,9 @@ class Control final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
-    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.

@@ -32,7 +32,7 @@ protocol Resolver {
     ///
     /// If present, the `executable` is suitable for use as the `executable`
     /// property of `LaunchInfo`. If present, the `ldsvc` is suitable for use as
-    /// the PA_LDSVC_LOADER handle when launching the process.
+    /// the `PA_LDSVC_LOADER` handle when launching the process.
     ///
     /// For example, the resolver might locate the given `name` inside a package
     /// and return the executable binary from the package as well as a shared

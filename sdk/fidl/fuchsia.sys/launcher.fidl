@@ -7,7 +7,7 @@ library fuchsia.sys;
 /// An FDIO file descriptor.
 // TODO(abarth): Use the real FDIO declaration once FDIO converts to FIDL2.
 struct FileDescriptor {
-    /// The FDIO types of the handle (e.g., FA_FDIO_REMOTE).
+    /// The FDIO types of the handle (e.g., `FA_FDIO_REMOTE`).
     int32 type0;
     int32 type1;
     int32 type2;

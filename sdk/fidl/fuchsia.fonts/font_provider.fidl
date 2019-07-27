@@ -36,7 +36,7 @@ struct Request {
     /// case-insensitive. In case when there is no specified family or the
     /// specified family doesn't have glyph for the requested `character` then
     /// a font from another family may be returned. This behavior can be disabled
-    /// using REQUEST_FLAG_NO_FALLBACK.
+    /// using `REQUEST_FLAG_NO_FALLBACK`.
     string:MAX_FAMILY_NAME_LENGTH? family;
 
     /// For example, 400 is normal, 700 is bold.
