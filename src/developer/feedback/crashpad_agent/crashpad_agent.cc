@@ -266,10 +266,6 @@ fit::promise<void> CrashpadAgent::OnNativeException(zx::process process, zx::thr
             /*user_stream_data_sources=*/nullptr);
         crashpad::UUID local_report_id;
         if (!exception_handler.HandleException(process, thread, &local_report_id)) {
-          // TODO(DX-1659): remove bogus call (no report has been created so attempting to skip its
-          // upload results in a failure) once we can test this code path.
-          database_->SkipReportUpload(
-              local_report_id, crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
           // TODO(DX-1654): attempt to generate a crash report without a minidump instead of just
           // bailing.
           FX_LOGS(ERROR) << "error writing local crash report";
