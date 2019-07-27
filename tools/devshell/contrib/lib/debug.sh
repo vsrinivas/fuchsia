@@ -4,7 +4,6 @@
 # found in the LICENSE file.
 
 fx-config-read
-source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 get-fuchsia-device-addr-or-die() {
   got=$(get-fuchsia-device-addr)

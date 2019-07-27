@@ -4,7 +4,6 @@
 # found in the LICENSE file.
 
 fx-config-read
-source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 if ! which socat > /dev/null 2>&1; then
   fx-error "The command \`socat\` was not found!"

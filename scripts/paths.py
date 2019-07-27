@@ -7,7 +7,6 @@ import platform
 
 FUCHSIA_DIR = os.environ["FUCHSIA_DIR"]
 ZIRCON_ROOT = os.path.join(FUCHSIA_DIR, "zircon")
-BUILDTOOLS_ROOT = os.path.join(FUCHSIA_DIR, "buildtools")
 
 FUCHSIA_BUILD_DIR = os.environ["FUCHSIA_BUILD_DIR"]
 

@@ -66,8 +66,8 @@ SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
 MAC="52:54:00$SUFFIX"
 
 FUCHSIA_DIR=$(fx exec bash -c 'echo $FUCHSIA_DIR')
-source "${FUCHSIA_DIR}/buildtools/vars.sh"
-QEMU_DIR="${BUILDTOOLS_QEMU_DIR}/bin"
+source "${FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh"
+QEMU_DIR="${PREBUILT_QEMU_DIR}/bin"
 
 set -u
 

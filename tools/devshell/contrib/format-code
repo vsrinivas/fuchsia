@@ -111,7 +111,7 @@ while [ $# -gt 0 ]; do
     --target=*)
       GET_FILES=:
       FILES=$(canonicalize "${FUCHSIA_DIR}" \
-        $(fx-buildtool-run gn desc \
+        $(fx-gn desc \
             "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) &&
         RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
             $(fx rustfmt --print-sources ${ARG#--target=})) ;;
@@ -137,27 +137,15 @@ if [[ -n "${VERBOSE}" ]]; then
   printf "Files to be formatted:\n%s\n" "${FILES}"
 fi
 
-declare BUILDTOOLS_ROOT="${FUCHSIA_DIR}"/buildtools
-declare HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
-
-[[ "${HOST_OS}" == "darwin" ]] && HOST_OS="mac"
-case $(uname -m) in
-  x86_64) HOST_ARCH="x64" ;;
-  aarch64) HOST_ARCH="arm64" ;;
-  *) echo "Unknown arch $(uname -m)" && exit 1 ;;
-esac
-
-declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
-
-declare CLANG_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
-declare DART_CMD="${FUCHSIA_DIR}/prebuilt/third_party/dart/${HOST_PLATFORM}/bin/dartfmt -w"
+declare CLANG_CMD="${PREBUILT_CLANG_DIR}/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
+declare DART_CMD="${PREBUILT_DART_DIR}/bin/dartfmt -w"
 declare FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
 declare FIDL_CMD="${FIDL_BIN} -i"
-declare GN_CMD="${BUILDTOOLS_ROOT}/gn format"
-declare GO_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/gofmt -s -w"
+declare GN_CMD="${PREBUILT_GN} format"
+declare GO_CMD="${PREBUILT_GO_DIR}/bin/gofmt -s -w"
 declare JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
-declare RUST_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
-declare RUST_ENTRY_POINT_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
+declare RUST_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
+declare RUST_ENTRY_POINT_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
 
 declare FIX_HEADER_GUARDS_CMD="${FUCHSIA_DIR}/scripts/style/check-header-guards.py --fix"
 

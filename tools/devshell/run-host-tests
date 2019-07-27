@@ -53,7 +53,7 @@ function main {
       "--manifest" "${FUCHSIA_BUILD_DIR}/tests.json"\
       "--names" "${TEST_NAMES[@]}"\
       "--build-dir" "${FUCHSIA_BUILD_DIR}"\
-      "--ninja" "${FUCHSIA_DIR}/buildtools/ninja"\
+      "--ninja" "${PREBUILT_NINJA}" \
       "--"\
       "$@"
   fi

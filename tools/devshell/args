@@ -15,5 +15,5 @@ fx-config-read
 
 set -ex
 
-"${FUCHSIA_DIR}/buildtools/gn" args "$FUCHSIA_BUILD_DIR" "$@"
+fx-gn args "$FUCHSIA_BUILD_DIR" "$@"
 

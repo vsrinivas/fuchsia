@@ -15,5 +15,5 @@ fx-config-read
 
 set -ex
 
-"${FUCHSIA_DIR}/buildtools/gn" clean "$ZIRCON_BUILDROOT"
-"${FUCHSIA_DIR}/buildtools/gn" clean "$FUCHSIA_BUILD_DIR"
+fx-gn clean "$ZIRCON_BUILDROOT"
+fx-gn clean "$FUCHSIA_BUILD_DIR"
