@@ -29,12 +29,12 @@ bool _isNullOrEmpty(String str) => str == null || str.isEmpty;
 
 /// Handles the SL4F server and communication with it.
 class Sl4f {
-  static const diagnostics = [
-    'top -n 1',
-    'kstats -c -m -n 1',
-    'iquery --report',
-    'ps -T'
-  ];
+  static const diagnostics = {
+    'top': 'top -n 1',
+    'kstats': 'kstats -c -m -n 1',
+    'iquery': 'iquery --report',
+    'ps': 'ps -T',
+  };
   static const _sl4fComponentUrl =
       'fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx';
   static const _sl4fComponentName = 'sl4f.cmx';
@@ -213,8 +213,10 @@ class Sl4f {
   Future<void> dumpDiagnostics(String dumpName, {Dump dump}) async {
     final dumper = dump ?? Dump();
     if (dumper.hasDumpDirectory) {
-      await Future.wait(diagnostics.map((command) => _dumpDiagnostic(command,
-          '$dumpName-diagnostic-${command.split(' ').first}', dumper)));
+      // Lists the threads as seen by the kernel (including priority numbers).
+      await ssh.run('k thread list');
+      await Future.wait(diagnostics.entries.map((diag) => _dumpDiagnostic(
+          diag.value, '$dumpName-diagnostic-${diag.key}', dumper)));
     }
   }
 

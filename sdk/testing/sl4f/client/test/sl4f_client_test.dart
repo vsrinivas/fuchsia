@@ -45,8 +45,8 @@ void main() {
 
       await sl4f.dumpDiagnostics('dump', dump: dump);
       expect(dumps, hasLength(Sl4f.diagnostics.length));
-      expect(
-          await Future.wait(dumps.values), unorderedEquals(Sl4f.diagnostics));
+      expect(await Future.wait(dumps.values),
+          unorderedEquals(Sl4f.diagnostics.values));
     });
 
     test('are skipped if dump is not enabled', () async {
