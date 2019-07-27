@@ -4,13 +4,14 @@
 
 #include "as370.h"
 
+#include <zircon/status.h>
+#include <zircon/threads.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/status.h>
-#include <zircon/threads.h>
 
 namespace board_as370 {
 
@@ -78,10 +79,13 @@ int As370::Thread() {
     zxlogf(ERROR, "%s: AudioInit() failed\n", __func__);
     // In case of error report it and keep going.
   }
+  if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_VISALIA) {
+    if (LightInit() != ZX_OK) {
+    }
+  }
 
   return 0;
 }
-
 }  // namespace board_as370
 
 static constexpr zx_driver_ops_t driver_ops = []() {

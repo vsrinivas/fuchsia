@@ -21,6 +21,7 @@ zx_status_t As370::GpioInit() {
 
   const gpio_pin_t gpio_pins[] = {
       {17},  // AMP_EN.
+      {4},   // LED_RESET
   };
 
   const pbus_metadata_t gpio_metadata[] = {{

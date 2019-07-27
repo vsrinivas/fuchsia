@@ -1,0 +1,52 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("lp50xx-light") {
+  sources = [
+    "lp50xx-light.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/device-protocol-i2c",
+    "$zx/system/fidl/fuchsia-hardware-light:llcpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("lp50xx-light-test") {
+  output_name = "lp50xx-light-test"
+  sources = [
+    "lp50xx-light-test.cc",
+    "lp50xx-light.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/device-protocol-i2c",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-i2c",
+    "$zx/system/fidl/fuchsia-hardware-light:llcpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

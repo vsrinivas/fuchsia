@@ -39,6 +39,7 @@ class As370 : public ddk::Device<As370> {
   zx_status_t UsbInit();
   zx_status_t AudioInit();
   zx_status_t ClockInit();
+  zx_status_t LightInit();
 
   const ddk::PBusProtocolClient pbus_;
   const pdev_board_info_t board_info_;
