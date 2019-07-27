@@ -13,7 +13,7 @@ pub use self::udp::UdpSocket;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
 use futures::task::{AtomicWaker, Context};
-use futures::{try_ready, Poll};
+use futures::{ready, Poll};
 use libc;
 
 use std::io::{Read, Write};
@@ -259,7 +259,7 @@ impl<T: AsRawFd + Read> AsyncRead for EventedFd<T> {
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<Result<usize, io::Error>> {
-        try_ready!(EventedFd::poll_readable(&*self, cx));
+        ready!(EventedFd::poll_readable(&*self, cx))?;
         let res = (&mut *self).as_mut().read(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {
@@ -279,7 +279,7 @@ impl<T: AsRawFd + Write> AsyncWrite for EventedFd<T> {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
-        try_ready!(EventedFd::poll_writable(&*self, cx));
+        ready!(EventedFd::poll_writable(&*self, cx))?;
         let res = (&mut *self).as_mut().write(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {
@@ -317,7 +317,7 @@ where
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<Result<usize, io::Error>> {
-        try_ready!(EventedFd::poll_readable(&*self, cx));
+        ready!(EventedFd::poll_readable(&*self, cx))?;
         let res = (&*self).as_ref().read(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {
@@ -339,7 +339,7 @@ where
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
-        try_ready!(EventedFd::poll_writable(&*self, cx));
+        ready!(EventedFd::poll_writable(&*self, cx))?;
         let res = (&*self).as_ref().write(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {

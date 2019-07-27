@@ -4,9 +4,7 @@ use futures_core::future::{Future, FutureObj};
 use futures_core::task::{Context, Poll, Spawn, SpawnError};
 use futures_util::future::FutureExt;
 use futures_util::task::{ArcWake, waker_ref};
-use num_cpus;
 use std::io;
-use std::prelude::v1::*;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
@@ -297,7 +295,7 @@ struct WakeHandle {
 impl Task {
     /// Actually run the task (invoking `poll` on the future) on the current
     /// thread.
-    pub fn run(self) {
+    fn run(self) {
         let Task { mut future, wake_handle, mut exec } = self;
         let waker = waker_ref(&wake_handle);
         let mut cx = Context::from_waker(&waker);

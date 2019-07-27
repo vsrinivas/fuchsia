@@ -1,11 +1,12 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`map`](super::StreamExt::map) method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Map<St, F> {
     stream: St,
@@ -13,6 +14,17 @@ pub struct Map<St, F> {
 }
 
 impl<St: Unpin, F> Unpin for Map<St, F> {}
+
+impl<St, F> fmt::Debug for Map<St, F>
+where
+    St: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Map")
+            .field("stream", &self.stream)
+            .finish()
+    }
+}
 
 impl<St, T, F> Map<St, F>
     where St: Stream,
@@ -74,17 +86,20 @@ impl<St, F, T> Stream for Map<St, F>
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<T>> {
-        let option = ready!(self.as_mut().stream().poll_next(cx));
-        Poll::Ready(option.map(self.as_mut().f()))
+        self.as_mut()
+            .stream()
+            .poll_next(cx)
+            .map(|opt| opt.map(|x| self.as_mut().f()(x)))
     }
 }
 
 // Forwarding impl of Sink from the underlying stream
+#[cfg(feature = "sink")]
 impl<S, F, T, Item> Sink<Item> for Map<S, F>
     where S: Stream + Sink<Item>,
           F: FnMut(S::Item) -> T,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

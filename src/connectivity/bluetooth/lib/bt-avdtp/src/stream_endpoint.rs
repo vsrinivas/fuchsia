@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
-
 use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon::{DurationNum, Signals, Status},

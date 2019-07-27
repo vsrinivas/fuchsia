@@ -6,7 +6,6 @@
 
 #![feature(async_await, await_macro)]
 #![deny(missing_docs)]
-#![deny(warnings)]
 
 #[macro_use]
 pub mod encoding;

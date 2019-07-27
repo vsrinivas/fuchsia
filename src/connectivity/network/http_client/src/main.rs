@@ -126,7 +126,7 @@ fn spawn_old_url_loader(server: ServerEnd<oldhttp::UrlLoaderMarker>) {
             let client = fhyper::new_client();
             let c = &client;
             let stream = server.into_stream()?;
-            await!(stream.err_into().try_for_each_concurrent(None, async move |message| {
+            await!(stream.err_into().try_for_each_concurrent(None, |message| async move {
                 match message {
                     oldhttp::UrlLoaderRequest::Start { request, responder } => {
                         let mut builder = hyper::Request::builder();
@@ -165,7 +165,7 @@ fn spawn_old_url_loader(server: ServerEnd<oldhttp::UrlLoaderMarker>) {
 fn spawn_old_server(stream: oldhttp::HttpServiceRequestStream) {
     fasync::spawn(
         async move {
-            await!(stream.err_into().try_for_each_concurrent(None, async move |message| {
+            await!(stream.err_into().try_for_each_concurrent(None, |message| async move {
                 let oldhttp::HttpServiceRequest::CreateUrlLoader { loader, .. } = message;
                 spawn_old_url_loader(loader);
                 Ok(())

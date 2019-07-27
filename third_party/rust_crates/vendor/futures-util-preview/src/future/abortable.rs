@@ -8,7 +8,7 @@ use alloc::sync::Arc;
 
 /// A future which can be remotely short-circuited using an `AbortHandle`.
 #[derive(Debug, Clone)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Abortable<Fut> {
     future: Fut,
     inner: Arc<AbortInner>,
@@ -29,13 +29,15 @@ impl<Fut> Abortable<Fut> where Fut: Future {
     /// Example:
     ///
     /// ```
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future::{ready, Abortable, AbortHandle, Aborted};
-    /// use futures::executor::block_on;
     ///
     /// let (abort_handle, abort_registration) = AbortHandle::new_pair();
     /// let future = Abortable::new(ready(2), abort_registration);
     /// abort_handle.abort();
-    /// assert_eq!(block_on(future), Err(Aborted));
+    /// assert_eq!(future.await, Err(Aborted));
+    /// # });
     /// ```
     pub fn new(future: Fut, reg: AbortRegistration) -> Self {
         Abortable {
@@ -68,13 +70,16 @@ impl AbortHandle {
     /// Example:
     ///
     /// ```
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future::{ready, Abortable, AbortHandle, Aborted};
-    /// use futures::executor::block_on;
     ///
     /// let (abort_handle, abort_registration) = AbortHandle::new_pair();
     /// let future = Abortable::new(ready(2), abort_registration);
     /// abort_handle.abort();
-    /// assert_eq!(block_on(future), Err(Aborted));
+    /// assert_eq!(future.await, Err(Aborted));
+    /// # });
+    /// ```
     pub fn new_pair() -> (Self, AbortRegistration) {
         let inner = Arc::new(AbortInner {
             waker: AtomicWaker::new(),
@@ -104,6 +109,9 @@ struct AbortInner {
 ///
 /// This function is a convenient (but less flexible) alternative to calling
 /// `AbortHandle::new` and `Abortable::new` manually.
+///
+/// This function is only available when the `std` or `alloc` feature of this
+/// library is activated, and it is activated by default.
 pub fn abortable<Fut>(future: Fut) -> (Abortable<Fut>, AbortHandle)
     where Fut: Future
 {

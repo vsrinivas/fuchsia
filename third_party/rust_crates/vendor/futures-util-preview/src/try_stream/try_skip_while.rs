@@ -1,13 +1,14 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::future::TryFuture;
 use futures_core::stream::{Stream, TryStream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`try_skip_while`](super::TryStreamExt::try_skip_while)
 /// method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct TrySkipWhile<St, Fut, F> where St: TryStream {
     stream: St,
@@ -19,12 +20,33 @@ pub struct TrySkipWhile<St, Fut, F> where St: TryStream {
 
 impl<St: Unpin + TryStream, Fut: Unpin, F> Unpin for TrySkipWhile<St, Fut, F> {}
 
+impl<St, Fut, F> fmt::Debug for TrySkipWhile<St, Fut, F>
+where
+    St: TryStream + fmt::Debug,
+    St::Ok: fmt::Debug,
+    Fut: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TrySkipWhile")
+            .field("stream", &self.stream)
+            .field("pending_fut", &self.pending_fut)
+            .field("pending_item", &self.pending_item)
+            .field("done_skipping", &self.done_skipping)
+            .finish()
+    }
+}
+
+impl<St, Fut, F> TrySkipWhile<St, Fut, F>
+    where St: TryStream,
+{
+    unsafe_pinned!(stream: St);
+}
+
 impl<St, Fut, F> TrySkipWhile<St, Fut, F>
     where St: TryStream,
           F: FnMut(&St::Ok) -> Fut,
           Fut: TryFuture<Ok = bool, Error = St::Error>,
 {
-    unsafe_pinned!(stream: St);
     unsafe_unpinned!(f: F);
     unsafe_pinned!(pending_fut: Option<Fut>);
     unsafe_unpinned!(pending_item: Option<St::Ok>);
@@ -112,12 +134,11 @@ impl<St, Fut, F> Stream for TrySkipWhile<St, Fut, F>
 }
 
 // Forwarding impl of Sink from the underlying stream
-impl<S, Fut, F, Item> Sink<Item> for TrySkipWhile<S, Fut, F>
-    where S: TryStream + Sink<Item>,
-          F: FnMut(&S::Ok) -> Fut,
-          Fut: TryFuture<Ok = bool, Error = S::Error>,
+#[cfg(feature = "sink")]
+impl<S, Fut, F, Item, E> Sink<Item> for TrySkipWhile<S, Fut, F>
+    where S: TryStream + Sink<Item, Error = E>,
 {
-    type SinkError = S::SinkError;
+    type Error = E;
 
     delegate_sink!(stream, Item);
 }

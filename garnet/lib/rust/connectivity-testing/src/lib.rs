@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
 
 /// The connectivity-testing crate provides a set of helper functions intended to be used by
 /// testing and diagnostic tools and infrastructure.  Each service type is intended to have

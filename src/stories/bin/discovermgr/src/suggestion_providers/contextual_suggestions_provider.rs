@@ -77,7 +77,7 @@ impl<'a> ActionMatching<'a> {
 
     pub async fn suggestions(self) -> impl Iterator<Item = Suggestion> + 'a {
         let action = &self.action;
-        let futs = all_matches(self.parameters).map(async move |parameters| {
+        let futs = all_matches(self.parameters).map(|parameters| async move {
             let mut intent = Intent::new().with_action(&action.name);
             if let Some(ref fulfillment) = action.fuchsia_fulfillment {
                 intent = intent.with_handler(&fulfillment.component_url);

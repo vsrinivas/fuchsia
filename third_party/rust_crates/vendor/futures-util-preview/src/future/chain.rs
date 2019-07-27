@@ -2,7 +2,7 @@ use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::task::{Context, Poll};
 
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 #[derive(Debug)]
 pub(crate) enum Chain<Fut1, Fut2, Data> {
     First(Fut1, Option<Data>),
@@ -34,15 +34,13 @@ impl<Fut1, Fut2, Data> Chain<Fut1, Fut2, Data>
         let mut f = Some(f);
 
         // Safe to call `get_unchecked_mut` because we won't move the futures.
-        let this = unsafe { Pin::get_unchecked_mut(self) };
+        let this = unsafe { self.get_unchecked_mut() };
 
         loop {
             let (output, data) = match this {
                 Chain::First(fut1, data) => {
-                    match unsafe { Pin::new_unchecked(fut1) }.poll(cx) {
-                        Poll::Pending => return Poll::Pending,
-                        Poll::Ready(output) => (output, data.take().unwrap()),
-                    }
+                    let output = ready!(unsafe { Pin::new_unchecked(fut1) }.poll(cx));
+                    (output, data.take().unwrap())
                 }
                 Chain::Second(fut2) => {
                     return unsafe { Pin::new_unchecked(fut2) }.poll(cx);

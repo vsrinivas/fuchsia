@@ -271,7 +271,7 @@ impl App {
             })?;
         }
 
-        executor.run_singlethreaded(future::empty::<()>());
+        executor.run_singlethreaded(future::pending::<()>());
 
         Ok(())
     }

@@ -5,7 +5,6 @@
 //! System service for wireless networking
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
 #![deny(missing_docs)]
 #![recursion_limit = "256"]
 

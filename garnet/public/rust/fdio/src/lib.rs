@@ -4,8 +4,6 @@
 
 //! Bindings for the Zircon fdio library
 
-#![deny(warnings)]
-
 #[allow(bad_style)]
 pub mod fdio_sys;
 pub use self::fdio_sys::fdio_ioctl as ioctl_raw;

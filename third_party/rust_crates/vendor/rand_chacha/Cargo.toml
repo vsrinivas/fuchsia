@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -12,22 +12,30 @@
 
 [package]
 name = "rand_chacha"
-version = "0.1.1"
-authors = ["The Rand Project Developers", "The Rust Project Developers"]
+version = "0.2.0"
+authors = ["The Rand Project Developers", "The Rust Project Developers", "The CryptoCorrosion Contributors"]
 build = "build.rs"
 description = "ChaCha random number generator\n"
 homepage = "https://crates.io/crates/rand_chacha"
-documentation = "https://rust-random.github.io/rand/rand_chacha"
+documentation = "https://rust-random.github.io/rand/rand_chacha/"
 readme = "README.md"
 keywords = ["random", "rng", "chacha"]
 categories = ["algorithms", "no-std"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/rust-random/rand"
-[dependencies.rand_core]
-version = ">=0.2, <0.4"
+[dependencies.c2-chacha]
+version = "0.2.2"
 default-features = false
+
+[dependencies.rand_core]
+version = "0.5"
 [build-dependencies.autocfg]
 version = "0.1"
+
+[features]
+default = ["std", "simd"]
+simd = ["c2-chacha/simd"]
+std = ["c2-chacha/std"]
 [badges.appveyor]
 repository = "rust-random/rand"
 

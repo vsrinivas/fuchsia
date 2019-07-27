@@ -1,3 +1,4 @@
+use crate::stream::StreamExt;
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::Stream;
@@ -5,7 +6,7 @@ use futures_core::task::{Context, Poll};
 
 /// Future for the [`into_future`](super::StreamExt::into_future) method.
 #[derive(Debug)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct StreamFuture<St> {
     stream: Option<St>,
 }
@@ -53,7 +54,7 @@ impl<St: Stream + Unpin> StreamFuture<St> {
     /// in order to return it to the caller of `Future::poll` if the stream yielded
     /// an element.
     pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Option<Pin<&'a mut St>> {
-        Pin::new(&mut Pin::get_mut(self).stream).as_pin_mut()
+        Pin::new(&mut self.get_mut().stream).as_pin_mut()
     }
 
     /// Consumes this combinator, returning the underlying stream.
@@ -85,7 +86,7 @@ impl<St: Stream + Unpin> Future for StreamFuture<St> {
     ) -> Poll<Self::Output> {
         let item = {
             let s = self.stream.as_mut().expect("polling StreamFuture twice");
-            ready!(Pin::new(s).poll_next(cx))
+            ready!(s.poll_next_unpin(cx))
         };
         let stream = self.stream.take().unwrap();
         Poll::Ready((item, stream))

@@ -57,7 +57,7 @@ fn iter_pin_mut<T>(slice: Pin<&mut [T]>) -> impl Iterator<Item = Pin<&mut T>> {
 }
 
 /// Future for the [`join_all`] function.
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct JoinAll<F>
 where
     F: Future,
@@ -70,8 +70,8 @@ where
     F: Future + fmt::Debug,
     F::Output: fmt::Debug,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("JoinAll")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("JoinAll")
             .field("elems", &self.elems)
             .finish()
     }
@@ -83,6 +83,9 @@ where
 /// The returned future will drive execution for all of its underlying futures,
 /// collecting the results into a destination `Vec<T>` in the same order as they
 /// were provided.
+///
+/// This function is only available when the `std` or `alloc` feature of this
+/// library is activated, and it is activated by default.
 ///
 /// # See Also
 ///
@@ -99,7 +102,7 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro)]
+/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future::{join_all};
 ///
@@ -107,7 +110,7 @@ where
 ///
 /// let futures = vec![foo(1), foo(2), foo(3)];
 ///
-/// assert_eq!(await!(join_all(futures)), [1, 2, 3]);
+/// assert_eq!(join_all(futures).await, [1, 2, 3]);
 /// # });
 /// ```
 pub fn join_all<I>(i: I) -> JoinAll<I::Item>

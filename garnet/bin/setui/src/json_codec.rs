@@ -22,20 +22,20 @@ const KEY_DATA: &str = "data";
 impl SettingCodec<Value> for JsonCodec {
     fn encode(&self, data: SettingData) -> Result<Value, Error> {
         if let Some(setting_type) = get_type(&data) {
-            let mut data_value;
+            let data_value;
             match setting_type {
                 TYPE_STRING_VALUE => {
-                    data_value = Some(encode_string_value(&data)?);
+                    data_value = encode_string_value(&data)?;
                 }
                 TYPE_ACCOUNT_VALUE => {
-                    data_value = Some(encode_account_settings(&data)?);
+                    data_value = encode_account_settings(&data)?;
                 }
                 _ => {
                     return Err(format_err!("type encoding not available"));
                 }
             }
 
-            return Ok(json!({KEY_TYPE: setting_type, KEY_DATA: data_value.unwrap()}));
+            return Ok(json!({KEY_TYPE: setting_type, KEY_DATA: data_value}));
         } else {
             return Err(format_err!("unhandled data type"));
         }

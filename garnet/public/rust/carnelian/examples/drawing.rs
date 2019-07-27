@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
 
 use carnelian::{
     AnimationMode, App, AppAssistant, Canvas, Color, Coord, MappingPixelSink, Point, Rect, Size,

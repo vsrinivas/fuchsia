@@ -184,7 +184,7 @@ impl<T> BiLock<T> {
 
 impl<T: Unpin> Inner<T> {
     unsafe fn into_value(mut self) -> T {
-        mem::replace(&mut self.value, None).unwrap().into_inner()
+        self.value.take().unwrap().into_inner()
     }
 }
 
@@ -199,25 +199,21 @@ impl<T> Drop for Inner<T> {
 pub struct ReuniteError<T>(pub BiLock<T>, pub BiLock<T>);
 
 impl<T> fmt::Debug for ReuniteError<T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_tuple("ReuniteError")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("ReuniteError")
             .field(&"...")
             .finish()
     }
 }
 
 impl<T> fmt::Display for ReuniteError<T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "tried to reunite two BiLocks that don't form a pair")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "tried to reunite two BiLocks that don't form a pair")
     }
 }
 
 #[cfg(feature = "std")]
-impl<T: Any> Error for ReuniteError<T> {
-    fn description(&self) -> &str {
-        "tried to reunite two BiLocks that don't form a pair"
-    }
-}
+impl<T: Any> Error for ReuniteError<T> {}
 
 /// Returned RAII guard from the `poll_lock` method.
 ///
@@ -259,7 +255,7 @@ impl<T> Drop for BiLockGuard<'_, T> {
 
 /// Future returned by `BiLock::lock` which will resolve when the lock is
 /// acquired.
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 #[derive(Debug)]
 pub struct BiLockAcquire<'a, T> {
     bilock: &'a BiLock<T>,

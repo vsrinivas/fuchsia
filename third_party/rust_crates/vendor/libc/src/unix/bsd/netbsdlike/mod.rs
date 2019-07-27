@@ -1,20 +1,28 @@
-use dox::mem;
-
 pub type time_t = i64;
 pub type mode_t = u32;
-pub type nlink_t = ::uint32_t;
-pub type ino_t = ::uint64_t;
+pub type nlink_t = u32;
+pub type ino_t = u64;
 pub type pthread_key_t = ::c_int;
 pub type rlim_t = u64;
 pub type speed_t = ::c_uint;
 pub type tcflag_t = ::c_uint;
 pub type nl_item = c_long;
 pub type clockid_t = ::c_int;
-pub type id_t = ::uint32_t;
+pub type id_t = u32;
 pub type sem_t = *mut sem;
 
+#[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum timezone {}
+impl ::Copy for timezone {}
+impl ::Clone for timezone {
+    fn clone(&self) -> timezone { *self }
+}
+#[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum sem {}
+impl ::Copy for sem {}
+impl ::Clone for sem {
+    fn clone(&self) -> sem { *self }
+}
 
 s! {
     pub struct sigaction {
@@ -27,14 +35,6 @@ s! {
         pub ss_sp: *mut ::c_void,
         pub ss_size: ::size_t,
         pub ss_flags: ::c_int,
-    }
-
-    pub struct sockaddr_in {
-        pub sin_len: u8,
-        pub sin_family: ::sa_family_t,
-        pub sin_port: ::in_port_t,
-        pub sin_addr: ::in_addr,
-        pub sin_zero: [::int8_t; 8],
     }
 
     pub struct in6_pktinfo {
@@ -595,58 +595,16 @@ pub const SF_APPEND:        ::c_ulong = 0x00040000;
 
 pub const TIMER_ABSTIME: ::c_int = 1;
 
-fn _ALIGN(p: usize) -> usize {
-    (p + _ALIGNBYTES) & !_ALIGNBYTES
-}
-
-f! {
-    pub fn CMSG_DATA(cmsg: *const ::cmsghdr) -> *mut ::c_uchar {
-        (cmsg as *mut ::c_uchar)
-            .offset(_ALIGN(mem::size_of::<::cmsghdr>()) as isize)
-    }
-
-    pub fn CMSG_LEN(length: ::c_uint) -> ::c_uint {
-        _ALIGN(mem::size_of::<::cmsghdr>()) as ::c_uint + length
-    }
-
-    pub fn CMSG_NXTHDR(mhdr: *const ::msghdr, cmsg: *const ::cmsghdr)
-        -> *mut ::cmsghdr
-    {
-        if cmsg.is_null() {
-            return ::CMSG_FIRSTHDR(mhdr);
-        };
-        let next = cmsg as usize + _ALIGN((*cmsg).cmsg_len as usize)
-            + _ALIGN(mem::size_of::<::cmsghdr>());
-        let max = (*mhdr).msg_control as usize
-            + (*mhdr).msg_controllen as usize;
-        if next > max {
-            0 as *mut ::cmsghdr
-        } else {
-            (cmsg as usize + _ALIGN((*cmsg).cmsg_len as usize))
-                as *mut ::cmsghdr
-        }
-    }
-
-    pub fn CMSG_SPACE(length: ::c_uint) -> ::c_uint {
-        (_ALIGN(mem::size_of::<::cmsghdr>()) + _ALIGN(length as usize))
-            as ::c_uint
-    }
-
-    pub fn WSTOPSIG(status: ::c_int) -> ::c_int {
-        status >> 8
-    }
-
-    pub fn WIFSIGNALED(status: ::c_int) -> bool {
-        (status & 0o177) != 0o177 && (status & 0o177) != 0
-    }
-
-    pub fn WIFSTOPPED(status: ::c_int) -> bool {
-        (status & 0o177) == 0o177
-    }
-}
-
 #[link(name = "util")]
 extern {
+    pub fn setgrent();
+    pub fn sem_destroy(sem: *mut sem_t) -> ::c_int;
+    pub fn sem_init(sem: *mut sem_t,
+                    pshared: ::c_int,
+                    value: ::c_uint)
+                    -> ::c_int;
+
+    pub fn daemon(nochdir: ::c_int, noclose: ::c_int) -> ::c_int;
     pub fn mincore(addr: *mut ::c_void, len: ::size_t,
                    vec: *mut ::c_char) -> ::c_int;
     #[cfg_attr(target_os = "netbsd", link_name = "__clock_getres50")]
@@ -686,6 +644,7 @@ extern {
                    name: *mut ::c_char,
                    termp: *mut termios,
                    winp: *mut ::winsize) -> ::pid_t;
+    pub fn login_tty(fd: ::c_int) -> ::c_int;
     pub fn getpriority(which: ::c_int, who: ::id_t) -> ::c_int;
     pub fn setpriority(which: ::c_int, who: ::id_t, prio: ::c_int) -> ::c_int;
 
@@ -718,9 +677,9 @@ cfg_if! {
     if #[cfg(target_os = "netbsd")] {
         mod netbsd;
         pub use self::netbsd::*;
-    } else if #[cfg(any(target_os = "openbsd", target_os = "bitrig"))] {
-        mod openbsdlike;
-        pub use self::openbsdlike::*;
+    } else if #[cfg(target_os = "openbsd")] {
+        mod openbsd;
+        pub use self::openbsd::*;
     } else {
         // Unknown target_os
     }

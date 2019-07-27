@@ -1,4 +1,7 @@
 //! An unbounded set of futures.
+//!
+//! This module is only available when the `std` or `alloc` feature of this
+//! library is activated, and it is activated by default.
 
 use crate::task::{AtomicWaker};
 use futures_core::future::{Future, FutureObj, LocalFutureObj};
@@ -13,7 +16,6 @@ use core::pin::Pin;
 use core::ptr;
 use core::sync::atomic::Ordering::SeqCst;
 use core::sync::atomic::{AtomicPtr, AtomicBool};
-use core::usize;
 use alloc::sync::{Arc, Weak};
 
 mod abort;
@@ -53,6 +55,9 @@ const TERMINATED_SENTINEL_LENGTH: usize = usize::max_value();
 /// Note that you can create a ready-made [`FuturesUnordered`] via the
 /// [`collect`](Iterator::collect) method, or you can start with an empty set
 /// with the [`FuturesUnordered::new`] constructor.
+///
+/// This type is only available when the `std` or `alloc` feature of this
+/// library is activated, and it is activated by default.
 #[must_use = "streams do nothing unless polled"]
 pub struct FuturesUnordered<Fut> {
     ready_to_run_queue: Arc<ReadyToRunQueue<Fut>>,
@@ -158,7 +163,7 @@ impl<Fut> FuturesUnordered<Fut> {
     /// Push a future into the set.
     ///
     /// This method adds the given future to the set. This method will not
-    /// call [`poll`](Future::poll) on the submitted future. The caller must
+    /// call [`poll`](core::future::Future::poll) on the submitted future. The caller must
     /// ensure that [`FuturesUnordered::poll_next`](Stream::poll_next) is called
     /// in order to receive wake-up notifications for the given future.
     pub fn push(&mut self, future: Fut) {
@@ -425,8 +430,8 @@ impl<Fut: Future> Stream for FuturesUnordered<Fut> {
 }
 
 impl<Fut> Debug for FuturesUnordered<Fut> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "FuturesUnordered {{ ... }}")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FuturesUnordered {{ ... }}")
     }
 }
 

@@ -8,7 +8,9 @@ use alloc::sync::Arc;
 /// can be converted into `Waker` objects.
 /// Those Wakers can be used to signal executors that a task it owns
 /// is ready to be `poll`ed again.
-pub trait ArcWake {
+// Note: Send + Sync required because `Arc<T>` doesn't automatically imply
+// those bounds, but `Waker` implements them.
+pub trait ArcWake: Send + Sync {
     /// Indicates that the associated task is ready to make progress and should
     /// be `poll`ed.
     ///
@@ -81,54 +83,4 @@ pub(super) unsafe fn wake_by_ref_arc_raw<T: ArcWake>(data: *const ()) {
     let arc: Arc<T> = Arc::from_raw(data as *const T);
     ArcWake::wake_by_ref(&arc);
     mem::forget(arc);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Mutex;
-
-    struct CountingWaker {
-        nr_wake: Mutex<i32>,
-    }
-
-    impl CountingWaker {
-        fn new() -> CountingWaker {
-            CountingWaker {
-                nr_wake: Mutex::new(0),
-            }
-        }
-
-        pub fn wakes(&self) -> i32 {
-            *self.nr_wake.lock().unwrap()
-        }
-    }
-
-    impl ArcWake for CountingWaker {
-        fn wake_by_ref(arc_self: &Arc<Self>) {
-            let mut lock = arc_self.nr_wake.lock().unwrap();
-            *lock += 1;
-        }
-    }
-
-    #[test]
-    fn create_waker_from_arc() {
-        let some_w = Arc::new(CountingWaker::new());
-
-        let w1: Waker = ArcWake::into_waker(some_w.clone());
-        assert_eq!(2, Arc::strong_count(&some_w));
-        w1.wake_by_ref();
-        assert_eq!(1, some_w.wakes());
-
-        let w2 = w1.clone();
-        assert_eq!(3, Arc::strong_count(&some_w));
-
-        w2.wake_by_ref();
-        assert_eq!(2, some_w.wakes());
-
-        drop(w2);
-        assert_eq!(2, Arc::strong_count(&some_w));
-        drop(w1);
-        assert_eq!(1, Arc::strong_count(&some_w));
-    }
 }

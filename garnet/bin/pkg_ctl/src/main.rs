@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
 
 use {
     crate::args::{Command, RepoCommand, RuleCommand, RuleConfigInputType},
@@ -160,7 +159,7 @@ fn main() -> Result<(), failure::Error> {
                         }
                     }
                     RuleCommand::Clear => {
-                        await!(do_transaction(engine, async move |transaction| {
+                        await!(do_transaction(engine, |transaction| async move {
                             transaction.reset_all()?;
                             Ok(transaction)
                         }))?;
@@ -173,7 +172,7 @@ fn main() -> Result<(), failure::Error> {
                             RuleConfigInputType::Json { config } => config,
                         };
 
-                        await!(do_transaction(engine, async move |transaction| {
+                        await!(do_transaction(engine, |transaction| async move {
                             transaction.reset_all()?;
                             // add() inserts rules as highest priority, so iterate over our
                             // prioritized list of rules so they end up in the right order.

@@ -1,14 +1,5 @@
 //! Switch C type definitions
 
-pub type int8_t = i8;
-pub type int16_t = i16;
-pub type int32_t = i32;
-pub type int64_t = i64;
-pub type uint8_t = u8;
-pub type uint16_t = u16;
-pub type uint32_t = u32;
-pub type uint64_t = u64;
-
 pub type c_schar = i8;
 pub type c_uchar = u8;
 pub type c_short = i16;
@@ -38,13 +29,15 @@ pub const INT_MIN: c_int = -2147483648;
 pub const INT_MAX: c_int = 2147483647;
 
 cfg_if! {
-    if #[cfg(core_cvoid)] {
-        pub use core::ffi::c_void;
+    if #[cfg(libc_core_cvoid)] {
+        pub use ::ffi::c_void;
     } else {
         // Use repr(u8) as LLVM expects `void*` to be the same as `i8*` to help
         // enable more optimization opportunities around it recognizing things
         // like malloc/free.
         #[repr(u8)]
+        #[allow(missing_copy_implementations)]
+        #[allow(missing_debug_implementations)]
         pub enum c_void {
             // Two dummy variants so the #[repr] attribute can be used.
             #[doc(hidden)]

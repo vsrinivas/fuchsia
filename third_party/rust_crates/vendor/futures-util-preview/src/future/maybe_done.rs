@@ -27,15 +27,15 @@ impl<Fut: Future + Unpin> Unpin for MaybeDone<Fut> {}
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro)]
+/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
-/// use pin_utils::pin_mut;
+/// use futures::pin_mut;
 ///
 /// let future = future::maybe_done(future::ready(5));
 /// pin_mut!(future);
 /// assert_eq!(future.as_mut().take_output(), None);
-/// let () = await!(future.as_mut());
+/// let () = future.as_mut().await;
 /// assert_eq!(future.as_mut().take_output(), Some(5));
 /// assert_eq!(future.as_mut().take_output(), None);
 /// # });
@@ -52,7 +52,7 @@ impl<Fut: Future> MaybeDone<Fut> {
     #[inline]
     pub fn output_mut<'a>(self: Pin<&'a mut Self>) -> Option<&'a mut Fut::Output> {
         unsafe {
-            let this = Pin::get_unchecked_mut(self);
+            let this = self.get_unchecked_mut();
             match this {
                 MaybeDone::Done(res) => Some(res),
                 _ => None,
@@ -65,7 +65,7 @@ impl<Fut: Future> MaybeDone<Fut> {
     #[inline]
     pub fn take_output(self: Pin<&mut Self>) -> Option<Fut::Output> {
         unsafe {
-            let this = Pin::get_unchecked_mut(self);
+            let this = self.get_unchecked_mut();
             match this {
                 MaybeDone::Done(_) => {},
                 MaybeDone::Future(_) | MaybeDone::Gone => return None,
@@ -93,14 +93,8 @@ impl<Fut: Future> Future for MaybeDone<Fut> {
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let res = unsafe {
-            match Pin::get_unchecked_mut(self.as_mut()) {
-                MaybeDone::Future(a) => {
-                    if let Poll::Ready(res) = Pin::new_unchecked(a).poll(cx) {
-                        res
-                    } else {
-                        return Poll::Pending
-                    }
-                }
+            match self.as_mut().get_unchecked_mut() {
+                MaybeDone::Future(a) => ready!(Pin::new_unchecked(a).poll(cx)),
                 MaybeDone::Done(_) => return Poll::Ready(()),
                 MaybeDone::Gone => panic!("MaybeDone polled after value taken"),
             }

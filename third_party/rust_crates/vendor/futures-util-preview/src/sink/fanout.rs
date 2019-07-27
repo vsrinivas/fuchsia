@@ -8,6 +8,7 @@ use pin_utils::unsafe_pinned;
 ///
 /// Backpressure from any downstream sink propagates up, which means that this sink
 /// can only process items as fast as its _slowest_ downstream sink.
+#[must_use = "sinks do nothing unless polled"]
 pub struct Fanout<Si1, Si2> {
     sink1: Si1,
     sink2: Si2
@@ -35,7 +36,7 @@ impl<Si1, Si2> Fanout<Si1, Si2> {
     pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> (Pin<&'a mut Si1>, Pin<&'a mut Si2>)
         where Si1: Unpin, Si2: Unpin,
     {
-        let Self { sink1, sink2 } = Pin::get_mut(self);
+        let Self { sink1, sink2 } = self.get_mut();
         (Pin::new(sink1), Pin::new(sink2))
     }
 
@@ -60,14 +61,14 @@ impl<Si1: Debug, Si2: Debug> Debug for Fanout<Si1, Si2> {
 impl<Si1, Si2, Item> Sink<Item> for Fanout<Si1, Si2>
     where Si1: Sink<Item>,
           Item: Clone,
-          Si2: Sink<Item, SinkError=Si1::SinkError>
+          Si2: Sink<Item, Error=Si1::Error>
 {
-    type SinkError = Si1::SinkError;
+    type Error = Si1::Error;
 
     fn poll_ready(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    ) -> Poll<Result<(), Self::Error>> {
         let sink1_ready = self.as_mut().sink1().poll_ready(cx)?.is_ready();
         let sink2_ready = self.as_mut().sink2().poll_ready(cx)?.is_ready();
         let ready = sink1_ready && sink2_ready;
@@ -77,7 +78,7 @@ impl<Si1, Si2, Item> Sink<Item> for Fanout<Si1, Si2>
     fn start_send(
         mut self: Pin<&mut Self>,
         item: Item,
-    ) -> Result<(), Self::SinkError> {
+    ) -> Result<(), Self::Error> {
         self.as_mut().sink1().start_send(item.clone())?;
         self.as_mut().sink2().start_send(item)?;
         Ok(())
@@ -86,7 +87,7 @@ impl<Si1, Si2, Item> Sink<Item> for Fanout<Si1, Si2>
     fn poll_flush(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    ) -> Poll<Result<(), Self::Error>> {
         let sink1_ready = self.as_mut().sink1().poll_flush(cx)?.is_ready();
         let sink2_ready = self.as_mut().sink2().poll_flush(cx)?.is_ready();
         let ready = sink1_ready && sink2_ready;
@@ -96,41 +97,10 @@ impl<Si1, Si2, Item> Sink<Item> for Fanout<Si1, Si2>
     fn poll_close(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    ) -> Poll<Result<(), Self::Error>> {
         let sink1_ready = self.as_mut().sink1().poll_close(cx)?.is_ready();
         let sink2_ready = self.as_mut().sink2().poll_close(cx)?.is_ready();
         let ready = sink1_ready && sink2_ready;
         if ready { Poll::Ready(Ok(())) } else { Poll::Pending }
-    }
-}
-
-#[cfg(test)]
-#[cfg(feature = "std")]
-mod tests {
-    use crate::future::join3;
-    use crate::sink::SinkExt;
-    use crate::stream::{self, StreamExt};
-    use futures_executor::block_on;
-    use futures_channel::mpsc;
-    use std::iter::Iterator;
-    use std::vec::Vec;
-
-    #[test]
-    fn it_works() {
-        let (tx1, rx1) = mpsc::channel(1);
-        let (tx2, rx2) = mpsc::channel(2);
-        let tx = tx1.fanout(tx2).sink_map_err(|_| ());
-
-        let src = stream::iter((0..10).map(|x| Ok(x)));
-        let fwd = src.forward(tx);
-
-        let collect_fut1 = rx1.collect::<Vec<_>>();
-        let collect_fut2 = rx2.collect::<Vec<_>>();
-        let (_, vec1, vec2) = block_on(join3(fwd, collect_fut1, collect_fut2));
-
-        let expected = (0..10).collect::<Vec<_>>();
-
-        assert_eq!(vec1, expected);
-        assert_eq!(vec2, expected);
     }
 }

@@ -10,7 +10,6 @@
 //! The AccountManager is the most powerful interface in the authentication
 //! system and is intended only for use by the most trusted parts of the system.
 
-#![deny(warnings)]
 #![deny(missing_docs)]
 #![feature(async_await, await_macro)]
 

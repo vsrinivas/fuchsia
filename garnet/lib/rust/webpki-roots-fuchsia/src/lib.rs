@@ -1,4 +1,3 @@
-#![deny(warnings)]
 extern crate base64;
 extern crate untrusted;
 extern crate webpki;

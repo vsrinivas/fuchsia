@@ -1,15 +1,29 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream, TryStream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`map_ok`](super::TryStreamExt::map_ok) method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct MapOk<St, F> {
     stream: St,
     f: F,
+}
+
+impl<St: Unpin, F> Unpin for MapOk<St, F> {}
+
+impl<St, F> fmt::Debug for MapOk<St, F>
+where
+    St: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MapOk")
+            .field("stream", &self.stream)
+            .finish()
+    }
 }
 
 impl<St, F> MapOk<St, F> {
@@ -54,8 +68,6 @@ impl<St, F> MapOk<St, F> {
     }
 }
 
-impl<St: Unpin, F> Unpin for MapOk<St, F> {}
-
 impl<St: FusedStream, F> FusedStream for MapOk<St, F> {
     fn is_terminated(&self) -> bool {
         self.stream.is_terminated()
@@ -69,26 +81,24 @@ where
 {
     type Item = Result<T, St::Error>;
 
-    #[allow(clippy::redundant_closure)] // https://github.com/rust-lang-nursery/rust-clippy/issues/1439
     fn poll_next(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        match self.as_mut().stream().try_poll_next(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(opt) =>
-                Poll::Ready(opt.map(|res| res.map(|x| self.as_mut().f()(x)))),
-        }
+        self.as_mut()
+            .stream()
+            .try_poll_next(cx)
+            .map(|opt| opt.map(|res| res.map(|x| self.as_mut().f()(x))))
     }
 }
 
 // Forwarding impl of Sink from the underlying stream
-impl<S, F, T, Item> Sink<Item> for MapOk<S, F>
+#[cfg(feature = "sink")]
+impl<S, F, Item> Sink<Item> for MapOk<S, F>
 where
-    S: TryStream + Sink<Item>,
-    F: FnMut(S::Ok) -> T,
+    S: Sink<Item>,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

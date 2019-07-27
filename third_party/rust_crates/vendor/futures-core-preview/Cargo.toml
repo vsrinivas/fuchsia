@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "futures-core-preview"
-version = "0.3.0-alpha.15"
+version = "0.3.0-alpha.17"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "The core traits and types in for the `futures` library.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.15/futures_core"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures_core"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang-nursery/futures-rs"
 

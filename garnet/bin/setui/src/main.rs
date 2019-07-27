@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![feature(async_await, await_macro, vec_remove_item)]
+#![feature(async_await, await_macro)]
 // TODO(brycelee): Remove once switchboard is fully integrated. Here to allow for
 // test code.
 #![allow(dead_code)]

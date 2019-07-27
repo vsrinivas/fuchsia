@@ -13,35 +13,42 @@
 [package]
 edition = "2018"
 name = "futures-util-preview"
-version = "0.3.0-alpha.15"
+version = "0.3.0-alpha.17"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "Common utilities and extension traits for the futures-rs library.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.15/futures_util"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures_util"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang-nursery/futures-rs"
+[package.metadata.docs.rs]
+all-features = true
 
 [lib]
 name = "futures_util"
 [dependencies.futures-channel-preview]
-version = "=0.3.0-alpha.15"
+version = "=0.3.0-alpha.17"
+features = ["std"]
+optional = true
 default-features = false
 
 [dependencies.futures-core-preview]
-version = "=0.3.0-alpha.15"
+version = "=0.3.0-alpha.17"
 default-features = false
 
 [dependencies.futures-io-preview]
-version = "=0.3.0-alpha.15"
+version = "=0.3.0-alpha.17"
+features = ["std"]
+optional = true
 default-features = false
 
 [dependencies.futures-select-macro-preview]
-version = "=0.3.0-alpha.15"
+version = "=0.3.0-alpha.17"
 optional = true
 default-features = false
 
 [dependencies.futures-sink-preview]
-version = "=0.3.0-alpha.15"
+version = "=0.3.0-alpha.17"
+optional = true
 default-features = false
 
 [dependencies.futures_01]
@@ -65,11 +72,7 @@ version = "0.1.2"
 optional = true
 
 [dependencies.rand]
-version = "0.6.4"
-optional = true
-
-[dependencies.rand_core]
-version = ">=0.2.2, <0.4"
+version = "0.7.0"
 optional = true
 
 [dependencies.slab]
@@ -81,13 +84,16 @@ version = "0.1.9"
 optional = true
 
 [features]
-alloc = ["futures-core-preview/alloc", "futures-sink-preview/alloc"]
-async-await = ["std", "futures-select-macro-preview", "proc-macro-hack", "proc-macro-nested", "rand", "rand_core"]
+alloc = ["futures-core-preview/alloc"]
+async-await = ["std"]
 bench = []
 cfg-target-has-atomic = ["futures-core-preview/cfg-target-has-atomic"]
+channel = ["std", "futures-channel-preview"]
 compat = ["std", "futures_01"]
 default = ["std"]
-io-compat = ["compat", "tokio-io"]
-never-type = []
-nightly = ["futures-core-preview/nightly", "futures-sink-preview/nightly"]
-std = ["alloc", "futures-core-preview/std", "futures-io-preview/std", "futures-sink-preview/std", "slab", "memchr"]
+io = ["std", "futures-io-preview", "memchr"]
+io-compat = ["io", "compat", "tokio-io"]
+nightly = ["futures-core-preview/nightly"]
+select-macro = ["async-await", "futures-select-macro-preview", "proc-macro-hack", "proc-macro-nested", "rand"]
+sink = ["futures-sink-preview"]
+std = ["alloc", "futures-core-preview/std", "slab"]

@@ -106,7 +106,7 @@ pub fn watch(path: impl Into<PathBuf>) -> Result<BoxStream<'static, PathEvent>, 
 fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Error> {
     let mut watcher = Watcher::new(&File::open(&path)?)?;
 
-    let (mut tx, rx) = channel(0);
+    let (mut tx, rx) = channel(1);
     let path_future = async move {
         while let Ok(message) = await!(watcher.try_next()) {
             let message = match message {
@@ -166,7 +166,7 @@ fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Error> {
 ///
 /// The stream ends when the given path is deleted.
 pub fn watch_recursive(path: impl Into<PathBuf>) -> BoxStream<'static, Result<PathEvent, Error>> {
-    let (tx, rx) = channel(0);
+    let (tx, rx) = channel(1);
 
     fasync::spawn(inner_watch_recursive(tx, path.into(), true));
 

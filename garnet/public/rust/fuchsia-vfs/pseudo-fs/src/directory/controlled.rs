@@ -362,7 +362,7 @@ pub fn controlled<'entries, Entry: 'entries>(
 where
     Entry: Controllable<'entries>,
 {
-    let (sender, receiver) = mpsc::channel(0);
+    let (sender, receiver) = mpsc::channel(1);
     (
         Controller { controlled: sender },
         Controlled { controller: receiver, controllable: Box::new(controllable) },

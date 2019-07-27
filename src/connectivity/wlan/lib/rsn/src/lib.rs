@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(test)]
-#![feature(drain_filter)]
-#![deny(warnings)]
+#![cfg_attr(feature = "benchmarks", feature(test))]
 // Remove once Cipher and AKM *_bits() were replaced with *_len() calls.
 #![allow(deprecated)]
 

@@ -1,15 +1,29 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream, TryStream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`map_err`](super::TryStreamExt::map_err) method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct MapErr<St, F> {
     stream: St,
     f: F,
+}
+
+impl<St: Unpin, F> Unpin for MapErr<St, F> {}
+
+impl<St, F> fmt::Debug for MapErr<St, F>
+where
+    St: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MapErr")
+            .field("stream", &self.stream)
+            .finish()
+    }
 }
 
 impl<St, F> MapErr<St, F> {
@@ -54,8 +68,6 @@ impl<St, F> MapErr<St, F> {
     }
 }
 
-impl<St: Unpin, F> Unpin for MapErr<St, F> {}
-
 impl<St: FusedStream, F> FusedStream for MapErr<St, F> {
     fn is_terminated(&self) -> bool {
         self.stream.is_terminated()
@@ -69,26 +81,24 @@ where
 {
     type Item = Result<St::Ok, E>;
 
-    #[allow(clippy::redundant_closure)] // https://github.com/rust-lang-nursery/rust-clippy/issues/1439
     fn poll_next(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        match self.as_mut().stream().try_poll_next(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(opt) =>
-                Poll::Ready(opt.map(|res| res.map_err(|e| self.as_mut().f()(e)))),
-        }
+        self.as_mut()
+            .stream()
+            .try_poll_next(cx)
+            .map(|opt| opt.map(|res| res.map_err(|e| self.as_mut().f()(e))))
     }
 }
 
 // Forwarding impl of Sink from the underlying stream
-impl<S, F, E, Item> Sink<Item> for MapErr<S, F>
+#[cfg(feature = "sink")]
+impl<S, F, Item> Sink<Item> for MapErr<S, F>
 where
-    S: TryStream + Sink<Item>,
-    F: FnMut(S::Error) -> E,
+    S: Sink<Item>,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

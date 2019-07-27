@@ -6,7 +6,7 @@ use futures_core::task::{Context, Poll};
 use pin_utils::unsafe_pinned;
 
 /// Future for the [`flatten`](super::FutureExt::flatten) method.
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Flatten<Fut>
     where Fut: Future,
           Fut::Output: Future,
@@ -31,8 +31,8 @@ impl<Fut> fmt::Debug for Flatten<Fut>
     where Fut: Future + fmt::Debug,
           Fut::Output: Future + fmt::Debug,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("Flatten")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Flatten")
             .field("state", &self.state)
             .finish()
     }

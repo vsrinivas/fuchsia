@@ -15,7 +15,6 @@ use {
         ready,
         stream::{Stream, StreamExt},
         task::{Context, Poll},
-        try_ready,
     },
     pin_utils::unsafe_pinned,
     std::{
@@ -124,7 +123,7 @@ where
             WriteState::Writing { a, buf, pos } => {
                 let buf = buf.as_ref();
                 while *pos < buf.len() {
-                    let n = try_ready!(Pin::new(&mut *a).poll_write(cx, &buf[*pos..]));
+                    let n = ready!(Pin::new(&mut *a).poll_write(cx, &buf[*pos..]))?;
                     *pos += n;
                     if n == 0 {
                         return Poll::Ready(Err(zero_write()));
@@ -242,7 +241,7 @@ where
                 // If we get `Ok`, then we know the stream hit EOF and we're done. If we
                 // hit "would block" then all the read data so far is in our buffer, and
                 // otherwise we propagate errors
-                try_ready!(read_to_end_internal(a, cx, buf));
+                ready!(read_to_end_internal(a, cx, buf))?;
             }
             State::Empty => panic!("poll ReadToEnd after it's done"),
         }

@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 //! # Reading, Writing and Listing Fuchsia Archives (FAR) Data
 //!
 //! This crate is a Rust port of the

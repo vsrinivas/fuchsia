@@ -4,7 +4,7 @@
 //! code:
 //!
 //! - [Futures](crate::future::Future) are single eventual values produced by
-//!   asychronous computations. Some programming languages (e.g. JavaScript)
+//!   asynchronous computations. Some programming languages (e.g. JavaScript)
 //!   call this concept "promise".
 //! - [Streams](crate::stream::Stream) represent a series of values
 //!   produced asynchronously.
@@ -22,13 +22,17 @@
 //! completion, but *do not block* the thread running them.
 
 #![cfg_attr(feature = "cfg-target-has-atomic", feature(cfg_target_has_atomic))]
-#![cfg_attr(feature = "never-type", feature(never_type))]
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
+#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms, unreachable_pub)]
+// It cannot be included in the published code because this lints have false positives in the minimum required version.
+#![cfg_attr(test, warn(single_use_lifetimes))]
+#![warn(clippy::all)]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.15/futures")]
+#![doc(test(attr(deny(warnings), allow(dead_code, unused_assignments, unused_variables))))]
+
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures")]
 
 #[cfg(all(feature = "async-await", not(feature = "nightly")))]
 compile_error!("The `async-await` feature requires the `nightly` feature as an explicit opt-in to unstable features");
@@ -36,10 +40,7 @@ compile_error!("The `async-await` feature requires the `nightly` feature as an e
 #[cfg(all(feature = "cfg-target-has-atomic", not(feature = "nightly")))]
 compile_error!("The `cfg-target-has-atomic` feature requires the `nightly` feature as an explicit opt-in to unstable features");
 
-#[cfg(all(feature = "never-type", not(feature = "nightly")))]
-compile_error!("The `never-type` feature requires the `nightly` feature as an explicit opt-in to unstable features");
-
-#[doc(hidden)] pub use futures_util::core_reexport;
+#[doc(hidden)] pub use futures_core::core_reexport;
 
 #[doc(hidden)] pub use futures_core::future::Future;
 #[doc(hidden)] pub use futures_core::future::TryFuture;
@@ -54,13 +55,18 @@ compile_error!("The `never-type` feature requires the `nightly` feature as an ex
 #[doc(hidden)] pub use futures_sink::Sink;
 #[doc(hidden)] pub use futures_util::sink::SinkExt;
 
+#[cfg(feature = "std")]
+#[doc(hidden)] pub use futures_io::{AsyncRead, AsyncWrite, AsyncSeek, AsyncBufRead};
+#[cfg(feature = "std")]
+#[doc(hidden)] pub use futures_util::{AsyncReadExt, AsyncWriteExt, AsyncSeekExt, AsyncBufReadExt};
+
 #[doc(hidden)] pub use futures_core::task::Poll;
 
+#[doc(hidden)] pub use futures_core::never::Never;
+
 // Macro reexports
-pub use futures_util::{
-    // Error/readiness propagation
-    try_ready, ready,
-};
+pub use futures_core::ready; // Readiness propagation
+pub use futures_util::pin_mut;
 #[cfg(feature = "async-await")]
 pub use futures_util::{
     // Async-await
@@ -79,6 +85,9 @@ pub mod channel {
     //! - [mpsc](crate::channel::mpsc), a multi-producer, single-consumer
     //!   channel for sending values between tasks, analogous to the
     //!   similarly-named structure in the standard library.
+    //!
+    //! This module is only available when the `std` feature of this
+    //! library is activated, and it is activated by default.
 
     pub use futures_channel::{oneshot, mpsc};
 }
@@ -86,6 +95,9 @@ pub mod channel {
 #[cfg(feature = "compat")]
 pub mod compat {
     //! Interop between `futures` 0.1 and 0.3.
+    //!
+    //! This module is only available when the `compat` feature of this
+    //! library is activated.
 
     pub use futures_util::compat::{
         Compat,
@@ -115,6 +127,9 @@ pub mod executor {
     //! capable of spawning futures as tasks. This module provides several
     //! built-in executors, as well as tools for building your own.
     //!
+    //! This module is only available when the `std` feature of this
+    //! library is activated, and it is activated by default.
+    //!
     //! # Using a thread pool (M:N task scheduling)
     //!
     //! Most of the time tasks should be executed on a [thread
@@ -128,7 +143,7 @@ pub mod executor {
     //!
     //! ```
     //! use futures::executor::ThreadPool;
-    //! # use futures::future::{Future, lazy};
+    //! # use futures::future::lazy;
     //! # let my_app = lazy(|_| 42);
     //!
     //! // assuming `my_app: Future`
@@ -154,7 +169,7 @@ pub mod executor {
     //! [`LocalPool`](crate::executor::LocalPool) executor. Aside from cutting
     //! down on synchronization costs, this executor also makes it possible to
     //! spawn non-`Send` tasks, via
-    //! [`spawn_local_obj`](crate::executor::LocalSpawn::spawn_local_obj).
+    //! [`spawn_local_obj`](crate::task::LocalSpawn::spawn_local_obj).
     //! The `LocalPool` is best suited for running I/O-bound tasks that do
     //! relatively little work between I/O operations.
     //!
@@ -194,9 +209,9 @@ pub mod future {
     pub use futures_core::future::BoxFuture;
 
     pub use futures_util::future::{
-        empty, Empty,
         lazy, Lazy,
         maybe_done, MaybeDone,
+        pending, Pending,
         poll_fn, PollFn,
         ready, ok, err, Ready,
         select, Select,
@@ -208,6 +223,7 @@ pub mod future {
 
         FutureExt,
         FlattenStream, Flatten, Fuse, Inspect, IntoStream, Map, Then, UnitError,
+        NeverError,
     };
 
     #[cfg(feature = "alloc")]
@@ -230,25 +246,22 @@ pub mod future {
         Remote, RemoteHandle,
         // For FutureExt:
         CatchUnwind, Shared,
-
-        // ToDo: SelectOk, select_ok
     };
 
     pub use futures_util::try_future::{
         try_join, try_join3, try_join4, try_join5,
         TryJoin, TryJoin3, TryJoin4, TryJoin5,
+        try_select, TrySelect,
 
         TryFutureExt,
         AndThen, ErrInto, FlattenSink, IntoFuture, MapErr, MapOk, OrElse,
-        UnwrapOrElse,
+        InspectOk, InspectErr, TryFlattenStream, UnwrapOrElse,
     };
-
-    #[cfg(feature = "never-type")]
-    pub use futures_util::future::NeverError;
 
     #[cfg(feature = "alloc")]
     pub use futures_util::try_future::{
         try_join_all, TryJoinAll,
+        select_ok, SelectOk,
     };
 }
 
@@ -257,33 +270,47 @@ pub mod io {
     //! Asynchronous I/O.
     //!
     //! This module is the asynchronous version of `std::io`. It defines two
-    //! traits, [`AsyncRead`](crate::io::AsyncRead) and
-    //! [`AsyncWrite`](crate::io::AsyncWrite), which mirror the `Read` and
-    //! `Write` traits of the standard library. However, these traits integrate
+    //! traits, [`AsyncRead`](crate::io::AsyncRead),
+    //! [`AsyncWrite`](crate::io::AsyncWrite),
+    //! [`AsyncSeek`](crate::io::AsyncSeek), and
+    //! [`AsyncBufRead`](crate::io::AsyncBufRead), which mirror the `Read`,
+    //! `Write`, `Seek`, and `BufRead` traits of the standard library. However,
+    //! these traits integrate
     //! with the asynchronous task system, so that if an I/O object isn't ready
     //! for reading (or writing), the thread is not blocked, and instead the
     //! current task is queued to be woken when I/O is ready.
     //!
-    //! In addition, the [`AsyncReadExt`](crate::io::AsyncReadExt) and
-    //! [`AsyncWriteExt`](crate::io::AsyncWriteExt) extension traits offer a
+    //! In addition, the [`AsyncReadExt`](crate::io::AsyncReadExt),
+    //! [`AsyncWriteExt`](crate::io::AsyncWriteExt),
+    //! [`AsyncSeekExt`](crate::io::AsyncSeekExt), and
+    //! [`AsyncBufReadExt`](crate::io::AsyncBufReadExt) extension traits offer a
     //! variety of useful combinators for operating with asynchronous I/O
     //! objects, including ways to work with them using futures, streams and
     //! sinks.
+    //!
+    //! This module is only available when the `std` feature of this
+    //! library is activated, and it is activated by default.
 
     pub use futures_io::{
         AsyncRead, AsyncWrite, AsyncSeek, AsyncBufRead, Error, ErrorKind,
-        Initializer, IoVec, Result, SeekFrom,
+        Initializer, IoSlice, IoSliceMut, Result, SeekFrom,
     };
+
     pub use futures_util::io::{
         AsyncReadExt, AsyncWriteExt, AsyncSeekExt, AsyncBufReadExt, AllowStdIo,
-        Close, CopyInto, Flush, Read, ReadExact, ReadHalf, ReadToEnd, ReadUntil,
-        Seek, Window, WriteAll, WriteHalf,
+        BufReader, BufWriter, Close, CopyInto, CopyBufInto, Flush, Lines, Read,
+        ReadExact, ReadHalf, ReadLine, ReadToEnd, ReadUntil, ReadVectored, Seek,
+        Window, Write, WriteAll, WriteHalf, WriteVectored,
     };
 }
 
 #[cfg(feature = "std")]
 pub mod lock {
     //! Futures-powered synchronization primitives.
+    //!
+    //! This module is only available when the `std` feature of this
+    //! library is activated, and it is activated by default.
+
     pub use futures_util::lock::{Mutex, MutexLockFuture, MutexGuard};
 }
 
@@ -295,17 +322,33 @@ pub mod prelude {
     //! standard library's prelude you'll have to do so manually:
     //!
     //! ```
+    //! # #[allow(unused_imports)]
     //! use futures::prelude::*;
     //! ```
     //!
     //! The prelude may grow over time as additional items see ubiquitous use.
 
-    pub use crate::future::{self, Future, TryFuture, FutureExt, TryFutureExt};
-    pub use crate::stream::{self, Stream, TryStream, StreamExt, TryStreamExt};
-    pub use crate::sink::{self, Sink, SinkExt};
+    pub use crate::future::{self, Future, TryFuture};
+    pub use crate::stream::{self, Stream, TryStream};
+    pub use crate::sink::{self, Sink};
+
+    #[doc(no_inline)]
+    pub use crate::future::{FutureExt as _, TryFutureExt as _};
+    #[doc(no_inline)]
+    pub use crate::stream::{StreamExt as _, TryStreamExt as _};
+    #[doc(no_inline)]
+    pub use crate::sink::SinkExt as _;
 
     #[cfg(feature = "std")]
-    pub use crate::io::{ AsyncRead, AsyncWrite, AsyncReadExt, AsyncWriteExt };
+    pub use crate::io::{
+        AsyncRead, AsyncWrite, AsyncSeek, AsyncBufRead,
+    };
+
+    #[cfg(feature = "std")]
+    #[doc(no_inline)]
+    pub use crate::io::{
+        AsyncReadExt as _, AsyncWriteExt as _, AsyncSeekExt as _, AsyncBufReadExt as _,
+    };
 }
 
 pub mod sink {
@@ -322,7 +365,7 @@ pub mod sink {
 
     pub use futures_util::sink::{
         Close, Flush, Send, SendAll, SinkErrInto, SinkMapErr, With,
-        SinkExt, Fanout, Drain, DrainError, drain,
+        SinkExt, Fanout, Drain, drain,
         WithFlatMap,
     };
 
@@ -353,6 +396,7 @@ pub mod stream {
         iter, Iter,
         repeat, Repeat,
         empty, Empty,
+        pending, Pending,
         once, Once,
         poll_fn, PollFn,
         select, Select,
@@ -396,10 +440,10 @@ pub mod stream {
     pub use futures_util::try_stream::{
         TryStreamExt,
         AndThen, ErrInto, MapOk, MapErr, OrElse,
+        InspectOk, InspectErr,
         TryNext, TryForEach, TryFilterMap,
         TryCollect, TryFold, TrySkipWhile,
         IntoStream,
-        // ToDo: InspectErr
     };
 
     #[cfg_attr(
@@ -454,6 +498,14 @@ pub mod task {
         cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
     )]
     pub use futures_util::task::AtomicWaker;
+}
+
+pub mod never {
+    //! This module contains the `Never` type.
+    //!
+    //! Values of this type can never be created and will never exist.
+
+    pub use futures_core::never::Never;
 }
 
 // `select!` re-export --------------------------------------

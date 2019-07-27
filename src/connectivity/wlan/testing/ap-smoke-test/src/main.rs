@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
 
 // Explicitly added due to conflict using custom_attribute and async_await above.
 #[macro_use]

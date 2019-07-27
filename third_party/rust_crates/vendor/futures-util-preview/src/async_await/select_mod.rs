@@ -7,7 +7,8 @@ use proc_macro_hack::proc_macro_hack;
 macro_rules! document_select_macro {
     ($item:item) => {
         /// Polls multiple futures and streams simultaneously, executing the branch
-        /// for the future that finishes first. Futures passed to
+        /// for the future that finishes first. If multiple futures are ready,
+        /// one will be pseudo-randomly selected at runtime. Futures passed to
         /// `select!` must be `Unpin` and implement `FusedFuture`.
         /// Futures and streams which are not already fused can be fused using the
         /// `.fuse()` method. Note, though, that fusing a future or stream directly
@@ -20,16 +21,18 @@ macro_rules! document_select_macro {
         /// branch has to have the same return type.
         ///
         /// This macro is only usable inside of async functions, closures, and blocks.
+        /// It is also gated behind the `async-await` feature of this library, which is
+        /// _not_ activated by default.
         ///
         /// # Examples
         ///
         /// ```
-        /// #![feature(async_await, await_macro)]
+        /// #![feature(async_await)]
         /// # futures::executor::block_on(async {
-        /// use futures::future::{self, FutureExt};
+        /// use futures::future;
         /// use futures::select;
         /// let mut a = future::ready(4);
-        /// let mut b = future::empty::<()>();
+        /// let mut b = future::pending::<()>();
         ///
         /// let res = select! {
         ///     a_res = a => a_res + 1,
@@ -40,13 +43,13 @@ macro_rules! document_select_macro {
         /// ```
         ///
         /// ```
-        /// #![feature(async_await, await_macro)]
+        /// #![feature(async_await)]
         /// # futures::executor::block_on(async {
-        /// use futures::future::{self, FutureExt};
+        /// use futures::future;
         /// use futures::stream::{self, StreamExt};
         /// use futures::select;
         /// let mut st = stream::iter(vec![2]).fuse();
-        /// let mut fut = future::empty::<()>();
+        /// let mut fut = future::pending::<()>();
         ///
         /// select! {
         ///     x = st.next() => assert_eq!(Some(2), x),
@@ -62,9 +65,9 @@ macro_rules! document_select_macro {
         /// the case where all futures have completed.
         ///
         /// ```
-        /// #![feature(async_await, await_macro)]
+        /// #![feature(async_await)]
         /// # futures::executor::block_on(async {
-        /// use futures::future::{self, FutureExt};
+        /// use futures::future;
         /// use futures::select;
         /// let mut a_fut = future::ready(4);
         /// let mut b_fut = future::ready(6);

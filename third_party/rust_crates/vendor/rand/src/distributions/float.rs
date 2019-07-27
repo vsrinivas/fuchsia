@@ -9,9 +9,9 @@
 //! Basic floating-point number distributions
 
 use core::mem;
-use Rng;
-use distributions::{Distribution, Standard};
-use distributions::utils::FloatSIMDUtils;
+use crate::Rng;
+use crate::distributions::{Distribution, Standard};
+use crate::distributions::utils::FloatSIMDUtils;
 #[cfg(feature="simd_support")]
 use packed_simd::*;
 
@@ -69,7 +69,9 @@ pub struct OpenClosed01;
 pub struct Open01;
 
 
-pub(crate) trait IntoFloat {
+// This trait is needed by both this lib and rand_distr hence is a hidden export
+#[doc(hidden)]
+pub trait IntoFloat {
     type F;
 
     /// Helper method to combine the fraction and a contant exponent into a
@@ -168,9 +170,9 @@ float_impls! { f64x8, u64x8, f64, u64, 52, 1023 }
 
 #[cfg(test)]
 mod tests {
-    use Rng;
-    use distributions::{Open01, OpenClosed01};
-    use rngs::mock::StepRng;
+    use crate::Rng;
+    use crate::distributions::{Open01, OpenClosed01};
+    use crate::rngs::mock::StepRng;
     #[cfg(feature="simd_support")]
     use packed_simd::*;
 

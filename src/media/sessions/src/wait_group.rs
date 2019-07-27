@@ -4,13 +4,13 @@
 
 #![allow(unused)]
 
-use futures::future::{self, AbortHandle, Abortable, Empty};
+use futures::future::{self, AbortHandle, Abortable, Pending};
 
 enum Never {}
 
 /// A futures-aware wait group so one task can await the completion of many others.
 pub struct WaitGroup {
-    members: Vec<Abortable<Empty<Never>>>,
+    members: Vec<Abortable<Pending<Never>>>,
 }
 
 /// A member of a `WaitGroup` that each task should hold, and drop when it is complete.
@@ -30,7 +30,7 @@ impl WaitGroup {
     }
 
     pub fn new_waiter(&mut self) -> Waiter {
-        let (fut, handle) = future::abortable(future::empty::<Never>());
+        let (fut, handle) = future::abortable(future::pending::<Never>());
         self.members.push(fut);
         Waiter { handle }
     }

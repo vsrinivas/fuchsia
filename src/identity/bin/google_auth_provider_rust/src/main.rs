@@ -6,7 +6,6 @@
 //! that communicates with the Google identity system to perform authentication
 //! for and issue tokens for Google accounts.
 
-#![deny(warnings)]
 #![deny(missing_docs)]
 #![feature(async_await, await_macro)]
 

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
-
 #[cfg(test)]
 mod test {
     use fuchsia_wayland_core::{Arg, Enum, Fixed, FromArgs, IntoMessage};

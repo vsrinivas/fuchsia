@@ -335,12 +335,12 @@ impl ElfRunner {
             .launcher_connector
             .connect()
             .context("failed to connect to launcher service")
-            .map_err(|e| RunnerError::component_load_error(resolved_url.as_ref(), e))?;
+            .map_err(|e| RunnerError::component_load_error(&*resolved_url, e))?;
 
         // Load the component
         let (runtime_dir, mut launch_info) =
             await!(self.load_launch_info(&resolved_url, start_info, &launcher))
-                .map_err(|e| RunnerError::component_load_error(resolved_url.as_ref(), e))?;
+                .map_err(|e| RunnerError::component_load_error(&*resolved_url, e))?;
 
         let job_koid = launch_info
             .job

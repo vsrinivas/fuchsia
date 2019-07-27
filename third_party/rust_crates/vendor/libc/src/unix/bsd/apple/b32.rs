@@ -5,11 +5,6 @@ pub type c_ulong = u32;
 pub type boolean_t = ::c_int;
 
 s! {
-    pub struct pthread_attr_t {
-        __sig: c_long,
-        __opaque: [::c_char; 36]
-    }
-
     pub struct if_data {
         pub ifi_type: ::c_uchar,
         pub ifi_typelen: ::c_uchar,
@@ -44,9 +39,45 @@ s! {
 
     pub struct bpf_hdr {
         pub bh_tstamp: ::timeval,
-        pub bh_caplen: ::uint32_t,
-        pub bh_datalen: ::uint32_t,
+        pub bh_caplen: u32,
+        pub bh_datalen: u32,
         pub bh_hdrlen: ::c_ushort,
+    }
+}
+
+s_no_extra_traits!{
+    pub struct pthread_attr_t {
+        __sig: c_long,
+        __opaque: [::c_char; 36]
+    }
+}
+
+cfg_if! {
+    if #[cfg(feature = "extra_traits")] {
+        impl PartialEq for pthread_attr_t {
+            fn eq(&self, other: &pthread_attr_t) -> bool {
+                self.__sig == other.__sig
+                    && self.__opaque
+                    .iter()
+                    .zip(other.__opaque.iter())
+                    .all(|(a,b)| a == b)
+            }
+        }
+        impl Eq for pthread_attr_t {}
+        impl ::fmt::Debug for pthread_attr_t {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("pthread_attr_t")
+                    .field("__sig", &self.__sig)
+                // FIXME: .field("__opaque", &self.__opaque)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for pthread_attr_t {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.__sig.hash(state);
+                self.__opaque.hash(state);
+            }
+        }
     }
 }
 

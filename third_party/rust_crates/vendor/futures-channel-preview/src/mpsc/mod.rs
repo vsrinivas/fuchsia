@@ -88,11 +88,12 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
-use std::usize;
 
 use crate::mpsc::queue::Queue;
 
 mod queue;
+#[cfg(feature = "sink")]
+mod sink_impl;
 
 #[derive(Debug)]
 struct SenderInner<T> {
@@ -169,24 +170,16 @@ pub struct TryRecvError {
 }
 
 impl fmt::Display for SendError {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_full() {
-            write!(fmt, "send failed because channel is full")
+            write!(f, "send failed because channel is full")
         } else {
-            write!(fmt, "send failed because receiver is gone")
+            write!(f, "send failed because receiver is gone")
         }
     }
 }
 
-impl Error for SendError {
-    fn description(&self) -> &str {
-        if self.is_full() {
-            "send failed because channel is full"
-        } else {
-            "send failed because receiver is gone"
-        }
-    }
-}
+impl Error for SendError {}
 
 impl SendError {
     /// Returns true if this error is a result of the channel being full.
@@ -207,32 +200,24 @@ impl SendError {
 }
 
 impl<T> fmt::Debug for TrySendError<T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("TrySendError")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TrySendError")
             .field("kind", &self.err.kind)
             .finish()
     }
 }
 
 impl<T> fmt::Display for TrySendError<T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_full() {
-            write!(fmt, "send failed because channel is full")
+            write!(f, "send failed because channel is full")
         } else {
-            write!(fmt, "send failed because receiver is gone")
+            write!(f, "send failed because receiver is gone")
         }
     }
 }
 
-impl<T: Any> Error for TrySendError<T> {
-    fn description(&self) -> &str {
-        if self.is_full() {
-            "send failed because channel is full"
-        } else {
-            "send failed because receiver is gone"
-        }
-    }
-}
+impl<T: Any> Error for TrySendError<T> {}
 
 impl<T> TrySendError<T> {
     /// Returns true if this error is a result of the channel being full.
@@ -257,23 +242,19 @@ impl<T> TrySendError<T> {
 }
 
 impl fmt::Debug for TryRecvError {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_tuple("TryRecvError")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("TryRecvError")
             .finish()
     }
 }
 
 impl fmt::Display for TryRecvError {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.write_str(self.description())
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "receiver channel is empty")
     }
 }
 
-impl Error for TryRecvError {
-    fn description(&self) -> &str {
-        "receiver channel is empty"
-    }
-}
+impl Error for TryRecvError {}
 
 #[derive(Debug)]
 struct Inner<T> {
@@ -308,13 +289,13 @@ struct State {
 }
 
 // The `is_open` flag is stored in the left-most bit of `Inner::state`
-const OPEN_MASK: usize = usize::MAX - (usize::MAX >> 1);
+const OPEN_MASK: usize = usize::max_value() - (usize::max_value() >> 1);
 
 // When a new channel is created, it is created in the open state with no
 // pending messages.
 const INIT_STATE: usize = OPEN_MASK;
 
-// The maximum number of messages that a channel can track is `usize::MAX >> 1`
+// The maximum number of messages that a channel can track is `usize::max_value() >> 1`
 const MAX_CAPACITY: usize = !(OPEN_MASK);
 
 // The maximum requested buffer size must be less than the maximum capacity of
@@ -567,6 +548,11 @@ impl<T> SenderInner<T> {
         self.poll_unparked(Some(cx)).map(Ok)
     }
 
+    /// Returns whether the senders send to the same receiver.
+    fn same_receiver(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.inner, &other.inner)
+    }
+
     /// Returns whether this channel is closed without needing a context.
     fn is_closed(&self) -> bool {
         !decode_state(self.inner.state.load(SeqCst)).is_open
@@ -673,6 +659,14 @@ impl<T> Sender<T> {
     pub fn disconnect(&mut self) {
         self.0 = None;
     }
+
+    /// Returns whether the senders send to the same receiver.
+    pub fn same_receiver(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (Some(inner), Some(other)) => inner.same_receiver(other),
+            _ => false,
+        }
+    }
 }
 
 impl<T> UnboundedSender<T> {
@@ -737,6 +731,14 @@ impl<T> UnboundedSender<T> {
     /// receive messages.
     pub fn unbounded_send(&self, msg: T) -> Result<(), TrySendError<T>> {
         self.do_send_nb(msg)
+    }
+
+    /// Returns whether the senders send to the same receiver.
+    pub fn same_receiver(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (Some(inner), Some(other)) => inner.same_receiver(other),
+            _ => false,
+        }
     }
 }
 

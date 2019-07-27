@@ -5,7 +5,7 @@ use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Future for the [`map_ok`](super::TryFutureExt::map_ok) method.
 #[derive(Debug)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct MapOk<Fut, F> {
     future: Fut,
     f: Option<F>,
@@ -39,13 +39,13 @@ impl<Fut, F, T> Future for MapOk<Fut, F>
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
-        match self.as_mut().future().try_poll(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(result) => {
+        self.as_mut()
+            .future()
+            .try_poll(cx)
+            .map(|result| {
                 let op = self.as_mut().f().take()
                     .expect("MapOk must not be polled after it returned `Poll::Ready`");
-                Poll::Ready(result.map(op))
-            }
-        }
+                result.map(op)
+            })
     }
 }

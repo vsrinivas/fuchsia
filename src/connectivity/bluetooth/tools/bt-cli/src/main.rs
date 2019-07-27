@@ -381,7 +381,7 @@ async fn handle_cmd(
 /// that rustyline should handle the next line of input.
 fn cmd_stream(
     state: Arc<Mutex<State>>,
-) -> (impl Stream<Item = String>, impl Sink<(), SinkError = SendError>) {
+) -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>) {
     // Editor thread and command processing thread must be synchronized so that output
     // is printed in the correct order.
     let (mut cmd_sender, cmd_receiver) = channel(512);

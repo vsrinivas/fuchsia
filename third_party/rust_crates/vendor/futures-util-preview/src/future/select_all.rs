@@ -1,3 +1,4 @@
+use crate::future::FutureExt;
 use core::iter::FromIterator;
 use core::mem;
 use core::pin::Pin;
@@ -7,7 +8,7 @@ use futures_core::task::{Context, Poll};
 
 /// Future for the [`select_all`] function.
 #[derive(Debug)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct SelectAll<Fut> {
     inner: Vec<Fut>,
 }
@@ -19,6 +20,9 @@ impl<Fut: Unpin> Unpin for SelectAll<Fut> {}
 /// The returned future will wait for any future within `iter` to be ready. Upon
 /// completion the item resolved will be returned, along with the index of the
 /// future that was ready and the list of all the remaining futures.
+///
+/// This function is only available when the `std` or `alloc` feature of this
+/// library is activated, and it is activated by default.
 ///
 /// # Panics
 ///
@@ -39,7 +43,7 @@ impl<Fut: Future + Unpin> Future for SelectAll<Fut> {
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let item = self.inner.iter_mut().enumerate().find_map(|(i, f)| {
-            match Pin::new(f).poll(cx) {
+            match f.poll_unpin(cx) {
                 Poll::Pending => None,
                 Poll::Ready(e) => Some((i, e)),
             }

@@ -90,7 +90,7 @@ mod tests {
         let (sequential_sender, sender_future) = SequentialSender::new();
 
         // The channel which is used to verify the execution order of the futures.
-        let (result_sender, result_receiver) = channel::<&str>(0);
+        let (result_sender, result_receiver) = channel::<&str>(1);
 
         // The first future will send `first_expected_message` via `first_sender`.
         let mut first_sender = result_sender.clone();
@@ -143,7 +143,7 @@ mod tests {
         let (delay_sender, delay_receiver) = oneshot::channel();
 
         // The channel which is used to verify the execution order of the futures.
-        let (result_sender, result_receiver) = channel::<&str>(0);
+        let (result_sender, result_receiver) = channel::<&str>(1);
 
         // The first future will send `first_future_started_message` when it begins executing, and
         // `first_future_completed_message` when it completes, via `first_sender`.
@@ -217,7 +217,7 @@ mod tests {
         let (delay_sender, delay_receiver) = oneshot::channel();
 
         // The channel which is used to verify the execution order of the futures.
-        let (result_sender, result_receiver) = channel::<&str>(0);
+        let (result_sender, result_receiver) = channel::<&str>(1);
 
         // The first future will send `first_expected_message` via `first_sender`.
         let mut first_sender = result_sender.clone();

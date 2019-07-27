@@ -13,26 +13,21 @@
 [package]
 edition = "2018"
 name = "futures-sink-preview"
-version = "0.3.0-alpha.15"
+version = "0.3.0-alpha.17"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "The asynchronous `Sink` trait for the futures-rs library.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.15/futures_sink"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures_sink"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang-nursery/futures-rs"
 
 [lib]
 name = "futures_sink"
-[dependencies.futures-channel-preview]
-version = "=0.3.0-alpha.15"
-default-features = false
-
 [dependencies.futures-core-preview]
-version = "=0.3.0-alpha.15"
+version = "=0.3.0-alpha.17"
 default-features = false
 
 [features]
 alloc = ["futures-core-preview/alloc"]
 default = ["std"]
-nightly = ["futures-core-preview/nightly"]
-std = ["alloc", "futures-core-preview/std", "futures-channel-preview/std"]
+std = ["alloc", "futures-core-preview/std"]

@@ -6,7 +6,7 @@ use pin_utils::{unsafe_pinned, unsafe_unpinned};
 /// Future for the [`unwrap_or_else`](super::TryFutureExt::unwrap_or_else)
 /// method.
 #[derive(Debug)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct UnwrapOrElse<Fut, F> {
     future: Fut,
     f: Option<F>,
@@ -40,13 +40,13 @@ impl<Fut, F> Future for UnwrapOrElse<Fut, F>
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
-        match self.as_mut().future().try_poll(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(result) => {
+        self.as_mut()
+            .future()
+            .try_poll(cx)
+            .map(|result| {
                 let op = self.as_mut().f().take()
                     .expect("UnwrapOrElse already returned `Poll::Ready` before");
-                Poll::Ready(result.unwrap_or_else(op))
-            }
-        }
+                result.unwrap_or_else(op)
+            })
     }
 }

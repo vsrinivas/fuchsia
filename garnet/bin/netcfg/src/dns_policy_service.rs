@@ -6,7 +6,7 @@ use {
     fidl_fuchsia_net_dns::{DnsConfig, DnsPolicyRequest, DnsPolicyRequestStream, NetError, Status},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
-    futures::{prelude::*, TryFutureExt},
+    futures::prelude::*,
 };
 
 pub fn spawn_net_dns_fidl_server(

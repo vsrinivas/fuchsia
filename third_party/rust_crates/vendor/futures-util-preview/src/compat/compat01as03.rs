@@ -3,21 +3,25 @@ use futures_01::executor::{
     Spawn as Spawn01, UnsafeNotify as UnsafeNotify01,
 };
 use futures_01::{
-    Async as Async01, AsyncSink as AsyncSink01, Future as Future01,
-    Sink as Sink01, Stream as Stream01,
+    Async as Async01, Future as Future01,
+    Stream as Stream01,
 };
+#[cfg(feature = "sink")]
+use futures_01::{AsyncSink as AsyncSink01, Sink as Sink01};
 use futures_core::{task as task03, Future as Future03, Stream as Stream03};
 use std::pin::Pin;
 use std::task::Context;
+#[cfg(feature = "sink")]
 use futures_sink::Sink as Sink03;
 
 #[cfg(feature = "io-compat")]
+#[allow(unreachable_pub)] // https://github.com/rust-lang/rust/issues/57411
 pub use io::{AsyncRead01CompatExt, AsyncWrite01CompatExt};
 
 /// Converts a futures 0.1 Future, Stream, AsyncRead, or AsyncWrite
 /// object to a futures 0.3-compatible version,
 #[derive(Debug)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Compat01As03<T> {
     pub(crate) inner: Spawn01<T>,
 }
@@ -44,22 +48,22 @@ impl<T> Compat01As03<T> {
     }
 }
 
-/// Extension trait for futures 0.1 [`Future`](futures::future::Future)
+/// Extension trait for futures 0.1 [`Future`](futures_01::future::Future)
 pub trait Future01CompatExt: Future01 {
     /// Converts a futures 0.1
-    /// [`Future<Item = T, Error = E>`](futures::future::Future)
+    /// [`Future<Item = T, Error = E>`](futures_01::future::Future)
     /// into a futures 0.3
     /// [`Future<Output = Result<T, E>>`](futures_core::future::Future).
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// # // TODO: These should be all using `futures::compat`, but that runs up against Cargo
     /// # // feature issues
     /// use futures_util::compat::Future01CompatExt;
     ///
     /// let future = futures_01::future::ok::<u32, ()>(1);
-    /// assert_eq!(await!(future.compat()), Ok(1));
+    /// assert_eq!(future.compat().await, Ok(1));
     /// # });
     /// ```
     fn compat(self) -> Compat01As03<Self>
@@ -71,23 +75,23 @@ pub trait Future01CompatExt: Future01 {
 }
 impl<Fut: Future01> Future01CompatExt for Fut {}
 
-/// Extension trait for futures 0.1 [`Stream`](futures::stream::Stream)
+/// Extension trait for futures 0.1 [`Stream`](futures_01::stream::Stream)
 pub trait Stream01CompatExt: Stream01 {
     /// Converts a futures 0.1
-    /// [`Stream<Item = T, Error = E>`](futures::stream::Stream)
+    /// [`Stream<Item = T, Error = E>`](futures_01::stream::Stream)
     /// into a futures 0.3
     /// [`Stream<Item = Result<T, E>>`](futures_core::stream::Stream).
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::StreamExt;
     /// use futures_util::compat::Stream01CompatExt;
     ///
     /// let stream = futures_01::stream::once::<u32, ()>(Ok(1));
     /// let mut stream = stream.compat();
-    /// assert_eq!(await!(stream.next()), Some(Ok(1)));
-    /// assert_eq!(await!(stream.next()), None);
+    /// assert_eq!(stream.next().await, Some(Ok(1)));
+    /// assert_eq!(stream.next().await, None);
     /// # });
     /// ```
     fn compat(self) -> Compat01As03<Self>
@@ -99,15 +103,16 @@ pub trait Stream01CompatExt: Stream01 {
 }
 impl<St: Stream01> Stream01CompatExt for St {}
 
-/// Extension trait for futures 0.1 [`Sink`](futures::sink::Sink)
+/// Extension trait for futures 0.1 [`Sink`](futures_01::sink::Sink)
+#[cfg(feature = "sink")]
 pub trait Sink01CompatExt: Sink01 {
     /// Converts a futures 0.1
-    /// [`Sink<SinkItem = T, SinkError = E>`](futures::sink::Sink)
+    /// [`Sink<SinkItem = T, SinkError = E>`](futures_01::sink::Sink)
     /// into a futures 0.3
-    /// [`Sink<SinkItem = T, SinkError = E>`](futures_sink::sink::Sink).
+    /// [`Sink<T, Error = E>`](futures_sink::Sink).
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::{sink::SinkExt, stream::StreamExt};
     /// use futures_util::compat::{Stream01CompatExt, Sink01CompatExt};
@@ -115,10 +120,10 @@ pub trait Sink01CompatExt: Sink01 {
     /// let (tx, rx) = futures_01::unsync::mpsc::channel(1);
     /// let (mut tx, mut rx) = (tx.sink_compat(), rx.compat());
     ///
-    /// await!(tx.send(1)).unwrap();
+    /// tx.send(1).await.unwrap();
     /// drop(tx);
-    /// assert_eq!(await!(rx.next()), Some(Ok(1)));
-    /// assert_eq!(await!(rx.next()), None);
+    /// assert_eq!(rx.next().await, Some(Ok(1)));
+    /// assert_eq!(rx.next().await, None);
     /// # });
     /// ```
     fn sink_compat(self) -> Compat01As03Sink<Self, Self::SinkItem>
@@ -128,13 +133,13 @@ pub trait Sink01CompatExt: Sink01 {
         Compat01As03Sink::new(self)
     }
 }
+#[cfg(feature = "sink")]
 impl<Si: Sink01> Sink01CompatExt for Si {}
 
 fn poll_01_to_03<T, E>(x: Result<Async01<T>, E>) -> task03::Poll<Result<T, E>> {
-    match x {
-        Ok(Async01::Ready(t)) => task03::Poll::Ready(Ok(t)),
-        Ok(Async01::NotReady) => task03::Poll::Pending,
-        Err(e) => task03::Poll::Ready(Err(e)),
+    match x? {
+        Async01::Ready(t) => task03::Poll::Ready(Ok(t)),
+        Async01::NotReady => task03::Poll::Pending,
     }
 }
 
@@ -156,16 +161,16 @@ impl<St: Stream01> Stream03 for Compat01As03<St> {
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> task03::Poll<Option<Self::Item>> {
-        match self.in_notify(cx, Stream01::poll) {
-            Ok(Async01::Ready(Some(t))) => task03::Poll::Ready(Some(Ok(t))),
-            Ok(Async01::Ready(None)) => task03::Poll::Ready(None),
-            Ok(Async01::NotReady) => task03::Poll::Pending,
-            Err(e) => task03::Poll::Ready(Some(Err(e))),
+        match self.in_notify(cx, Stream01::poll)? {
+            Async01::Ready(Some(t)) => task03::Poll::Ready(Some(Ok(t))),
+            Async01::Ready(None) => task03::Poll::Ready(None),
+            Async01::NotReady => task03::Poll::Pending,
         }
     }
 }
 
 /// Converts a futures 0.1 Sink object to a futures 0.3-compatible version
+#[cfg(feature = "sink")]
 #[derive(Debug)]
 #[must_use = "sinks do nothing unless polled"]
 pub struct Compat01As03Sink<S, SinkItem> {
@@ -174,8 +179,10 @@ pub struct Compat01As03Sink<S, SinkItem> {
     pub(crate) close_started: bool,
 }
 
+#[cfg(feature = "sink")]
 impl<S, SinkItem> Unpin for Compat01As03Sink<S, SinkItem> {}
 
+#[cfg(feature = "sink")]
 impl<S, SinkItem> Compat01As03Sink<S, SinkItem> {
     /// Wraps a futures 0.1 Sink object in a futures 0.3-compatible wrapper.
     pub fn new(inner: S) -> Compat01As03Sink<S, SinkItem> {
@@ -201,6 +208,7 @@ impl<S, SinkItem> Compat01As03Sink<S, SinkItem> {
     }
 }
 
+#[cfg(feature = "sink")]
 impl<S, SinkItem> Stream03 for Compat01As03Sink<S, SinkItem>
 where
     S: Stream01,
@@ -211,25 +219,25 @@ where
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> task03::Poll<Option<Self::Item>> {
-        match self.in_notify(cx, Stream01::poll) {
-            Ok(Async01::Ready(Some(t))) => task03::Poll::Ready(Some(Ok(t))),
-            Ok(Async01::Ready(None)) => task03::Poll::Ready(None),
-            Ok(Async01::NotReady) => task03::Poll::Pending,
-            Err(e) => task03::Poll::Ready(Some(Err(e))),
+        match self.in_notify(cx, Stream01::poll)? {
+            Async01::Ready(Some(t)) => task03::Poll::Ready(Some(Ok(t))),
+            Async01::Ready(None) => task03::Poll::Ready(None),
+            Async01::NotReady => task03::Poll::Pending,
         }
     }
 }
 
+#[cfg(feature = "sink")]
 impl<S, SinkItem> Sink03<SinkItem> for Compat01As03Sink<S, SinkItem>
 where
     S: Sink01<SinkItem = SinkItem>,
 {
-    type SinkError = S::SinkError;
+    type Error = S::SinkError;
 
     fn start_send(
         mut self: Pin<&mut Self>,
         item: SinkItem,
-    ) -> Result<(), Self::SinkError> {
+    ) -> Result<(), Self::Error> {
         debug_assert!(self.buffer.is_none());
         self.buffer = Some(item);
         Ok(())
@@ -238,15 +246,14 @@ where
     fn poll_ready(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> task03::Poll<Result<(), Self::SinkError>> {
+    ) -> task03::Poll<Result<(), Self::Error>> {
         match self.buffer.take() {
-            Some(item) => match self.in_notify(cx, |f| f.start_send(item)) {
-                Ok(AsyncSink01::Ready) => task03::Poll::Ready(Ok(())),
-                Ok(AsyncSink01::NotReady(i)) => {
+            Some(item) => match self.in_notify(cx, |f| f.start_send(item))? {
+                AsyncSink01::Ready => task03::Poll::Ready(Ok(())),
+                AsyncSink01::NotReady(i) => {
                     self.buffer = Some(i);
                     task03::Poll::Pending
                 }
-                Err(e) => task03::Poll::Ready(Err(e)),
             },
             None => task03::Poll::Ready(Ok(())),
         }
@@ -255,31 +262,29 @@ where
     fn poll_flush(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> task03::Poll<Result<(), Self::SinkError>> {
+    ) -> task03::Poll<Result<(), Self::Error>> {
         let item = self.buffer.take();
         match self.in_notify(cx, |f| match item {
-            Some(i) => match f.start_send(i) {
-                Ok(AsyncSink01::Ready) => f.poll_complete().map(|i| (i, None)),
-                Ok(AsyncSink01::NotReady(t)) => {
+            Some(i) => match f.start_send(i)? {
+                AsyncSink01::Ready => f.poll_complete().map(|i| (i, None)),
+                AsyncSink01::NotReady(t) => {
                     Ok((Async01::NotReady, Some(t)))
                 }
-                Err(e) => Err(e),
             },
             None => f.poll_complete().map(|i| (i, None)),
-        }) {
-            Ok((Async01::Ready(_), _)) => task03::Poll::Ready(Ok(())),
-            Ok((Async01::NotReady, item)) => {
+        })? {
+            (Async01::Ready(_), _) => task03::Poll::Ready(Ok(())),
+            (Async01::NotReady, item) => {
                 self.buffer = item;
                 task03::Poll::Pending
             }
-            Err(e) => task03::Poll::Ready(Err(e)),
         }
     }
 
     fn poll_close(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> task03::Poll<Result<(), Self::SinkError>> {
+    ) -> task03::Poll<Result<(), Self::Error>> {
         let item = self.buffer.take();
         let close_started = self.close_started;
 
@@ -299,20 +304,20 @@ where
             Ok((<S as Sink01>::close(f)?, None, true))
         });
 
-        match result {
-            Ok((Async01::Ready(_), _, _)) => task03::Poll::Ready(Ok(())),
-            Ok((Async01::NotReady, item, close_started)) => {
+        match result? {
+            (Async01::Ready(_), _, _) => task03::Poll::Ready(Ok(())),
+            (Async01::NotReady, item, close_started) => {
                 self.buffer = item;
                 self.close_started = close_started;
                 task03::Poll::Pending
             }
-            Err(e) => task03::Poll::Ready(Err(e)),
         }
     }
 }
 
 struct NotifyWaker(task03::Waker);
 
+#[allow(missing_debug_implementations)] // false positive: this is private type
 #[derive(Clone)]
 struct WakerToHandle<'a>(&'a task03::Waker);
 
@@ -356,7 +361,7 @@ mod io {
         /// [`AsyncRead`](futures_io::AsyncRead).
         ///
         /// ```
-        /// #![feature(async_await, await_macro, impl_trait_in_bindings)]
+        /// #![feature(async_await, impl_trait_in_bindings)]
         /// # futures::executor::block_on(async {
         /// use futures::io::AsyncReadExt;
         /// use futures_util::compat::AsyncRead01CompatExt;
@@ -366,7 +371,7 @@ mod io {
         /// let mut reader: impl futures::io::AsyncRead + Unpin = reader.compat();
         ///
         /// let mut output = Vec::with_capacity(12);
-        /// await!(reader.read_to_end(&mut output)).unwrap();
+        /// reader.read_to_end(&mut output).await.unwrap();
         /// assert_eq!(output, input);
         /// # });
         /// ```
@@ -385,7 +390,7 @@ mod io {
         /// [`AsyncWrite`](futures_io::AsyncWrite).
         ///
         /// ```
-        /// #![feature(async_await, await_macro, impl_trait_in_bindings)]
+        /// #![feature(async_await, impl_trait_in_bindings)]
         /// # futures::executor::block_on(async {
         /// use futures::io::AsyncWriteExt;
         /// use futures_util::compat::AsyncWrite01CompatExt;
@@ -394,7 +399,7 @@ mod io {
         /// let mut cursor = std::io::Cursor::new(Vec::with_capacity(12));
         ///
         /// let mut writer = (&mut cursor).compat();
-        /// await!(writer.write_all(input)).unwrap();
+        /// writer.write_all(input).await.unwrap();
         ///
         /// assert_eq!(cursor.into_inner(), input);
         /// # });

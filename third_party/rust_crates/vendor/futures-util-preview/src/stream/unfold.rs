@@ -1,3 +1,4 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::stream::{FusedStream, Stream};
@@ -30,11 +31,12 @@ use pin_utils::{unsafe_pinned, unsafe_unpinned};
 /// # Example
 ///
 /// ```
-/// use futures::executor::block_on;
+/// #![feature(async_await)]
+/// # futures::executor::block_on(async {
 /// use futures::future;
 /// use futures::stream::{self, StreamExt};
 ///
-/// let mut stream = stream::unfold(0, |state| {
+/// let stream = stream::unfold(0, |state| {
 ///     if state <= 2 {
 ///         let next_state = state + 1;
 ///         let yielded = state  * 2;
@@ -44,8 +46,9 @@ use pin_utils::{unsafe_pinned, unsafe_unpinned};
 ///     }
 /// });
 ///
-/// let result = block_on(stream.collect::<Vec<i32>>());
+/// let result = stream.collect::<Vec<i32>>().await;
 /// assert_eq!(result, vec![0, 2, 4]);
+/// # });
 /// ```
 pub fn unfold<T, F, Fut, It>(init: T, f: F) -> Unfold<T, F, Fut>
     where F: FnMut(T) -> Fut,
@@ -59,7 +62,6 @@ pub fn unfold<T, F, Fut, It>(init: T, f: F) -> Unfold<T, F, Fut>
 }
 
 /// Stream for the [`unfold`] function.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Unfold<T, F, Fut> {
     f: F,
@@ -68,6 +70,19 @@ pub struct Unfold<T, F, Fut> {
 }
 
 impl<T, F, Fut: Unpin> Unpin for Unfold<T, F, Fut> {}
+
+impl<T, F, Fut> fmt::Debug for Unfold<T, F, Fut>
+where
+    T: fmt::Debug,
+    Fut: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Unfold")
+            .field("state", &self.state)
+            .field("fut", &self.fut)
+            .finish()
+    }
+}
 
 impl<T, F, Fut> Unfold<T, F, Fut> {
     unsafe_unpinned!(f: F);
@@ -101,9 +116,9 @@ impl<T, F, Fut, It> Stream for Unfold<T, F, Fut>
 
         if let Some((item, next_state)) = step {
             *self.as_mut().state() = Some(next_state);
-            return Poll::Ready(Some(item))
+            Poll::Ready(Some(item))
         } else {
-            return Poll::Ready(None)
+            Poll::Ready(None)
         }
     }
 }

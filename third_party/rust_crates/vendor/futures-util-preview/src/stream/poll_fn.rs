@@ -1,11 +1,11 @@
 //! Definition of the `PollFn` combinator
 
+use core::fmt;
 use core::pin::Pin;
 use futures_core::stream::Stream;
 use futures_core::task::{Context, Poll};
 
 /// Stream for the [`poll_fn`] function.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct PollFn<F> {
     f: F,
@@ -13,9 +13,15 @@ pub struct PollFn<F> {
 
 impl<F> Unpin for PollFn<F> {}
 
-/// Creates a new stream wrapping around a function returning `Poll`.
+impl<F> fmt::Debug for PollFn<F> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PollFn").finish()
+    }
+}
+
+/// Creates a new stream wrapping a function returning `Poll<Option<T>>`.
 ///
-/// Polling the returned stream delegates to the wrapped function.
+/// Polling the returned stream calls the wrapped function.
 ///
 /// # Examples
 ///

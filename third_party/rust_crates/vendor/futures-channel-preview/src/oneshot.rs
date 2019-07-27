@@ -13,8 +13,8 @@ use crate::lock::Lock;
 
 /// A future for a value that will be provided by another asynchronous task.
 ///
-/// This is created by the [`channel`](channel) function.
-#[must_use = "futures do nothing unless polled"]
+/// This is created by the [`channel`] function.
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 #[derive(Debug)]
 pub struct Receiver<T> {
     inner: Arc<Inner<T>>,
@@ -22,7 +22,7 @@ pub struct Receiver<T> {
 
 /// A means of transmitting a single value to another task.
 ///
-/// This is created by the [`channel`](channel) function.
+/// This is created by the [`channel`] function.
 #[derive(Debug)]
 pub struct Sender<T> {
     inner: Arc<Inner<T>>,
@@ -382,16 +382,12 @@ impl<T> Drop for Sender<T> {
 pub struct Canceled;
 
 impl fmt::Display for Canceled {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "oneshot canceled")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "oneshot canceled")
     }
 }
 
-impl Error for Canceled {
-    fn description(&self) -> &str {
-        "oneshot canceled"
-    }
-}
+impl Error for Canceled {}
 
 impl<T> Receiver<T> {
     /// Gracefully close this receiver, preventing any subsequent attempts to
@@ -399,7 +395,7 @@ impl<T> Receiver<T> {
     ///
     /// Any `send` operation which happens after this method returns is
     /// guaranteed to fail. After calling this method, you can use
-    /// [`Receiver::poll`](Future::poll) to determine whether a
+    /// [`Receiver::poll`](core::future::Future::poll) to determine whether a
     /// message had previously been sent.
     pub fn close(&mut self) {
         self.inner.close_rx()

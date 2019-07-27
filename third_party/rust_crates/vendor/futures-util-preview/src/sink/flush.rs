@@ -6,7 +6,7 @@ use futures_sink::Sink;
 
 /// Future for the [`flush`](super::SinkExt::flush) method.
 #[derive(Debug)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Flush<'a, Si: Sink<Item> + Unpin + ?Sized, Item> {
     sink: &'a mut Si,
     _phantom: PhantomData<fn(Item)>,
@@ -31,7 +31,7 @@ impl<'a, Si: Sink<Item> + Unpin + ?Sized, Item> Flush<'a, Si, Item> {
 }
 
 impl<Si: Sink<Item> + Unpin + ?Sized, Item> Future for Flush<'_, Si, Item> {
-    type Output = Result<(), Si::SinkError>;
+    type Output = Result<(), Si::Error>;
 
     fn poll(
         mut self: Pin<&mut Self>,

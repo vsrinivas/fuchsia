@@ -5,8 +5,11 @@
 
 use core::pin::Pin;
 use futures_core::future::Future;
-use futures_core::stream::{FusedStream, Stream, TryStream};
+use futures_core::stream::{FusedStream, Stream};
+#[cfg(feature = "sink")]
+use futures_core::stream::TryStream;
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
@@ -45,7 +48,9 @@ pub use self::flatten::Flatten;
 mod fold;
 pub use self::fold::Fold;
 
+#[cfg(feature = "sink")]
 mod forward;
+#[cfg(feature = "sink")]
 pub use self::forward::Forward;
 
 mod for_each;
@@ -58,6 +63,7 @@ mod into_future;
 pub use self::into_future::StreamFuture;
 
 mod inspect;
+pub(crate) use self::inspect::inspect; // used by `TryStreamExt::{inspect_ok, inspect_err}`
 pub use self::inspect::Inspect;
 
 mod map;
@@ -74,6 +80,9 @@ pub use self::once::{once, Once};
 
 mod peek;
 pub use self::peek::Peekable;
+
+mod pending;
+pub use self::pending::{pending, Pending};
 
 mod poll_fn;
 pub use self::poll_fn::{poll_fn, PollFn};
@@ -134,8 +143,10 @@ cfg_target_has_atomic! {
     #[doc(inline)]
     pub use self::futures_unordered::FuturesUnordered;
 
+    #[cfg(feature = "sink")]
     #[cfg(feature = "alloc")]
     mod split;
+    #[cfg(feature = "sink")]
     #[cfg(feature = "alloc")]
     pub use self::split::{SplitStream, SplitSink, ReuniteError};
 
@@ -167,18 +178,20 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
     /// let mut stream = stream::iter(1..=3);
     ///
-    /// assert_eq!(block_on(stream.next()), Some(1));
-    /// assert_eq!(block_on(stream.next()), Some(2));
-    /// assert_eq!(block_on(stream.next()), Some(3));
-    /// assert_eq!(block_on(stream.next()), None);
+    /// assert_eq!(stream.next().await, Some(1));
+    /// assert_eq!(stream.next().await, Some(2));
+    /// assert_eq!(stream.next().await, Some(3));
+    /// assert_eq!(stream.next().await, None);
+    /// # });
     /// ```
     fn next(&mut self) -> Next<'_, Self>
-        where Self: Sized + Unpin,
+        where Self: Unpin,
     {
         Next::new(self)
     }
@@ -199,16 +212,18 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream = stream::iter(1..=3);
     ///
-    /// let (item, stream) = block_on(stream.into_future());
+    /// let (item, stream) = stream.into_future().await;
     /// assert_eq!(Some(1), item);
     ///
-    /// let (item, stream) = block_on(stream.into_future());
+    /// let (item, stream) = stream.into_future().await;
     /// assert_eq!(Some(2), item);
+    /// # });
     /// ```
     fn into_future(self) -> StreamFuture<Self>
         where Self: Sized + Unpin,
@@ -230,13 +245,15 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream = stream::iter(1..=3);
     /// let stream = stream.map(|x| x + 3);
     ///
-    /// assert_eq!(vec![4, 5, 6], block_on(stream.collect::<Vec<_>>()));
+    /// assert_eq!(vec![4, 5, 6], stream.collect::<Vec<_>>().await);
+    /// # });
     /// ```
     fn map<T, F>(self, f: F) -> Map<Self, F>
         where F: FnMut(Self::Item) -> T,
@@ -270,7 +287,7 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -278,10 +295,10 @@ pub trait StreamExt: Stream {
     ///
     /// let mut stream = stream.enumerate();
     ///
-    /// assert_eq!(await!(stream.next()), Some((0, 'a')));
-    /// assert_eq!(await!(stream.next()), Some((1, 'b')));
-    /// assert_eq!(await!(stream.next()), Some((2, 'c')));
-    /// assert_eq!(await!(stream.next()), None);
+    /// assert_eq!(stream.next().await, Some((0, 'a')));
+    /// assert_eq!(stream.next().await, Some((1, 'b')));
+    /// assert_eq!(stream.next().await, Some((2, 'c')));
+    /// assert_eq!(stream.next().await, None);
     /// # });
     /// ```
     fn enumerate(self) -> Enumerate<Self>
@@ -306,14 +323,16 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream = stream::iter(1..=10);
     /// let evens = stream.filter(|x| future::ready(x % 2 == 0));
     ///
-    /// assert_eq!(vec![2, 4, 6, 8, 10], block_on(evens.collect::<Vec<_>>()));
+    /// assert_eq!(vec![2, 4, 6, 8, 10], evens.collect::<Vec<_>>().await);
+    /// # });
     /// ```
     fn filter<Fut, F>(self, f: F) -> Filter<Self, Fut, F>
         where F: FnMut(&Self::Item) -> Fut,
@@ -337,7 +356,8 @@ pub trait StreamExt: Stream {
     ///
     /// # Examples
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
@@ -347,7 +367,8 @@ pub trait StreamExt: Stream {
     ///     future::ready(ret)
     /// });
     ///
-    /// assert_eq!(vec![3, 5, 7, 9, 11], block_on(evens.collect::<Vec<_>>()));
+    /// assert_eq!(vec![3, 5, 7, 9, 11], evens.collect::<Vec<_>>().await);
+    /// # });
     /// ```
     fn filter_map<Fut, T, F>(self, f: F) -> FilterMap<Self, Fut, F>
         where F: FnMut(Self::Item) -> Fut,
@@ -370,14 +391,16 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream = stream::iter(1..=3);
     /// let stream = stream.then(|x| future::ready(x + 3));
     ///
-    /// assert_eq!(vec![4, 5, 6], block_on(stream.collect::<Vec<_>>()));
+    /// assert_eq!(vec![4, 5, 6], stream.collect::<Vec<_>>().await);
+    /// # });
     /// ```
     fn then<Fut, F>(self, f: F) -> Then<Self, Fut, F>
         where F: FnMut(Self::Item) -> Fut,
@@ -395,21 +418,23 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
-    /// use futures::executor::block_on;
     /// use futures::stream::StreamExt;
     /// use std::thread;
     ///
     /// let (tx, rx) = mpsc::unbounded();
     ///
     /// thread::spawn(move || {
-    ///     for i in (1..=5) {
+    ///     for i in 1..=5 {
     ///         tx.unbounded_send(i).unwrap();
     ///     }
     /// });
     ///
-    /// let output = block_on(rx.collect::<Vec<i32>>());
+    /// let output = rx.collect::<Vec<i32>>().await;
     /// assert_eq!(output, vec![1, 2, 3, 4, 5]);
+    /// # });
     /// ```
     fn collect<C: Default + Extend<Self::Item>>(self) -> Collect<Self, C>
         where Self: Sized
@@ -430,8 +455,9 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
-    /// use futures::executor::block_on;
     /// use futures::stream::StreamExt;
     /// use std::thread;
     ///
@@ -444,9 +470,10 @@ pub trait StreamExt: Stream {
     ///     }
     /// });
     ///
-    /// let result = block_on(rx.concat());
+    /// let result = rx.concat().await;
     ///
     /// assert_eq!(result, vec![7, 8, 9, 4, 5, 6, 1, 2, 3]);
+    /// # });
     /// ```
     fn concat(self) -> Concat<Self>
     where Self: Sized,
@@ -468,13 +495,15 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
     /// let number_stream = stream::iter(0..6);
     /// let sum = number_stream.fold(0, |acc, x| future::ready(acc + x));
-    /// assert_eq!(block_on(sum), 15);
+    /// assert_eq!(sum.await, 15);
+    /// # });
     /// ```
     fn fold<T, Fut, F>(self, init: T, f: F) -> Fold<Self, Fut, T, F>
         where F: FnMut(T, Self::Item) -> Fut,
@@ -489,8 +518,9 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
-    /// use futures::executor::block_on;
     /// use futures::stream::StreamExt;
     /// use std::thread;
     ///
@@ -511,8 +541,9 @@ pub trait StreamExt: Stream {
     ///     tx3.unbounded_send(rx2).unwrap();
     /// });
     ///
-    /// let output = block_on(rx3.flatten().collect::<Vec<i32>>());
+    /// let output = rx3.flatten().collect::<Vec<i32>>().await;
     /// assert_eq!(output, vec![1, 2, 3, 4]);
+    /// # });
     /// ```
     fn flatten(self) -> Flatten<Self>
         where Self::Item: Stream,
@@ -532,7 +563,8 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
@@ -540,7 +572,8 @@ pub trait StreamExt: Stream {
     ///
     /// let stream = stream.skip_while(|x| future::ready(*x <= 5));
     ///
-    /// assert_eq!(vec![6, 7, 8, 9, 10], block_on(stream.collect::<Vec<_>>()));
+    /// assert_eq!(vec![6, 7, 8, 9, 10], stream.collect::<Vec<_>>().await);
+    /// # });
     /// ```
     fn skip_while<Fut, F>(self, f: F) -> SkipWhile<Self, Fut, F>
         where F: FnMut(&Self::Item) -> Fut,
@@ -560,7 +593,8 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
@@ -568,7 +602,8 @@ pub trait StreamExt: Stream {
     ///
     /// let stream = stream.take_while(|x| future::ready(*x <= 5));
     ///
-    /// assert_eq!(vec![1, 2, 3, 4, 5], block_on(stream.collect::<Vec<_>>()));
+    /// assert_eq!(vec![1, 2, 3, 4, 5], stream.collect::<Vec<_>>().await);
+    /// # });
     /// ```
     fn take_while<Fut, F>(self, f: F) -> TakeWhile<Self, Fut, F>
         where F: FnMut(&Self::Item) -> Fut,
@@ -594,7 +629,8 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
@@ -605,10 +641,11 @@ pub trait StreamExt: Stream {
     ///         x += item;
     ///         future::ready(())
     ///     });
-    ///     block_on(fut);
+    ///     fut.await;
     /// }
     ///
     /// assert_eq!(x, 3);
+    /// # });
     /// ```
     fn for_each<Fut, F>(self, f: F) -> ForEach<Self, Fut, F>
         where F: FnMut(Self::Item) -> Fut,
@@ -637,13 +674,13 @@ pub trait StreamExt: Stream {
     /// `Some(10)`, or just `10`. Note: a limit of zero is interpreted as
     /// no limit at all, and will have the same result as passing in `None`.
     ///
-    /// This method is only available when the `std` feature of this
+    /// This method is only available when the `std` or `alloc` feature of this
     /// library is activated, and it is activated by default.
     ///
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt};
@@ -655,13 +692,13 @@ pub trait StreamExt: Stream {
     /// let fut = stream::iter(vec![rx1, rx2, rx3]).for_each_concurrent(
     ///     /* limit */ 2,
     ///     async move |rx| {
-    ///         await!(rx).unwrap();
+    ///         rx.await.unwrap();
     ///     }
     /// );
     /// tx1.send(()).unwrap();
     /// tx2.send(()).unwrap();
     /// tx3.send(()).unwrap();
-    /// await!(fut);
+    /// fut.await;
     /// # })
     /// ```
     #[cfg_attr(
@@ -689,12 +726,14 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream = stream::iter(1..=10).take(3);
     ///
-    /// assert_eq!(vec![1, 2, 3], block_on(stream.collect::<Vec<_>>()));
+    /// assert_eq!(vec![1, 2, 3], stream.collect::<Vec<_>>().await);
+    /// # });
     /// ```
     fn take(self, n: u64) -> Take<Self>
         where Self: Sized
@@ -710,12 +749,14 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream = stream::iter(1..=10).skip(5);
     ///
-    /// assert_eq!(vec![6, 7, 8, 9, 10], block_on(stream.collect::<Vec<_>>()));
+    /// assert_eq!(vec![6, 7, 8, 9, 10], stream.collect::<Vec<_>>().await);
+    /// # });
     /// ```
     fn skip(self, n: u64) -> Skip<Self>
         where Self: Sized
@@ -776,24 +817,27 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
     /// let mut stream = stream::iter(1..5);
     ///
-    /// let sum = block_on(stream.by_ref()
-    ///                          .take(2)
-    ///                          .fold(0, |a, b| future::ready(a + b)));
+    /// let sum = stream.by_ref()
+    ///                 .take(2)
+    ///                 .fold(0, |a, b| future::ready(a + b))
+    ///                 .await;
     /// assert_eq!(sum, 3);
     ///
     /// // You can use the stream again
-    /// let sum = block_on(stream.take(2).fold(0, |a, b| future::ready(a + b)));
+    /// let sum = stream.take(2)
+    ///                 .fold(0, |a, b| future::ready(a + b))
+    ///                 .await;
     /// assert_eq!(sum, 7);
+    /// # });
     /// ```
-    fn by_ref(&mut self) -> &mut Self
-        where Self: Sized
-    {
+    fn by_ref(&mut self) -> &mut Self {
         self
     }
 
@@ -819,7 +863,8 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream = stream::iter(vec![Some(10), None, Some(11)]);
@@ -828,13 +873,14 @@ pub trait StreamExt: Stream {
     /// // Collect all the results
     /// let stream = stream_panicking.catch_unwind();
     ///
-    /// let results: Vec<Result<i32, _>> = block_on(stream.collect());
+    /// let results: Vec<Result<i32, _>> = stream.collect().await;
     /// match results[0] {
     ///     Ok(10) => {}
     ///     _ => panic!("unexpected result!"),
     /// }
     /// assert!(results[1].is_err());
     /// assert_eq!(results.len(), 2);
+    /// # });
     /// ```
     #[cfg(feature = "std")]
     fn catch_unwind(self) -> CatchUnwind<Self>
@@ -844,6 +890,9 @@ pub trait StreamExt: Stream {
     }
 
     /// Wrap the stream in a Box, pinning it.
+    ///
+    /// This method is only available when the `std` or `alloc` feature of this
+    /// library is activated, and it is activated by default.
     #[cfg(feature = "alloc")]
     fn boxed(self) -> Pin<Box<Self>>
         where Self: Sized
@@ -861,7 +910,7 @@ pub trait StreamExt: Stream {
     ///
     /// The returned stream will be a stream of each future's output.
     ///
-    /// This method is only available when the `std` feature of this
+    /// This method is only available when the `std` or `alloc` feature of this
     /// library is activated, and it is activated by default.
     #[cfg_attr(
         feature = "cfg-target-has-atomic",
@@ -885,13 +934,13 @@ pub trait StreamExt: Stream {
     ///
     /// The returned stream will be a stream of each future's output.
     ///
-    /// This method is only available when the `std` feature of this
+    /// This method is only available when the `std` or `alloc` feature of this
     /// library is activated, and it is activated by default.
     ///
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt};
@@ -902,14 +951,14 @@ pub trait StreamExt: Stream {
     /// let stream_of_futures = stream::iter(vec![recv_one, recv_two]);
     /// let mut buffered = stream_of_futures.buffer_unordered(10);
     ///
-    /// send_two.send(2i32);
-    /// assert_eq!(await!(buffered.next()), Some(Ok(2i32)));
+    /// send_two.send(2i32)?;
+    /// assert_eq!(buffered.next().await, Some(Ok(2i32)));
     ///
-    /// send_one.send(1i32);
-    /// assert_eq!(await!(buffered.next()), Some(Ok(1i32)));
+    /// send_one.send(1i32)?;
+    /// assert_eq!(buffered.next().await, Some(Ok(1i32)));
     ///
-    /// assert_eq!(await!(buffered.next()), None);
-    /// # })
+    /// assert_eq!(buffered.next().await, None);
+    /// # Ok::<(), i32>(()) }).unwrap();
     /// ```
     #[cfg_attr(
         feature = "cfg-target-has-atomic",
@@ -932,15 +981,18 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream1 = stream::iter(1..=3);
     /// let stream2 = stream::iter(5..=10);
     ///
-    /// let vec = block_on(stream1.zip(stream2)
-    ///                           .collect::<Vec<_>>());
+    /// let vec = stream1.zip(stream2)
+    ///                  .collect::<Vec<_>>()
+    ///                  .await;
     /// assert_eq!(vec![(1, 5), (2, 6), (3, 7)], vec);
+    /// # });
     /// ```
     ///
     fn zip<St>(self, other: St) -> Zip<Self, St>
@@ -956,7 +1008,8 @@ pub trait StreamExt: Stream {
     /// first stream reaches the end, emits the elements from the second stream.
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream1 = stream::iter(vec![Ok(10), Err(false)]);
@@ -964,13 +1017,14 @@ pub trait StreamExt: Stream {
     ///
     /// let stream = stream1.chain(stream2);
     ///
-    /// let result: Vec<_> = block_on(stream.collect());
+    /// let result: Vec<_> = stream.collect().await;
     /// assert_eq!(result, vec![
     ///     Ok(10),
     ///     Err(false),
     ///     Err(true),
     ///     Ok(20),
     /// ]);
+    /// # });
     /// ```
     fn chain<St>(self, other: St) -> Chain<Self, St>
         where St: Stream<Item = Self::Item>,
@@ -1000,12 +1054,12 @@ pub trait StreamExt: Stream {
     /// from the underlying stream then the currently buffered items will be
     /// yielded.
     ///
-    /// This method is only available when the `std` feature of this
+    /// This method is only available when the `std` or `alloc` feature of this
     /// library is activated, and it is activated by default.
     ///
     /// # Panics
     ///
-    /// This method will panic of `capacity` is zero.
+    /// This method will panic if `capacity` is zero.
     #[cfg(feature = "alloc")]
     fn chunks(self, capacity: usize) -> Chunks<Self>
         where Self: Sized
@@ -1019,11 +1073,15 @@ pub trait StreamExt: Stream {
     /// This future will drive the stream to keep producing items until it is
     /// exhausted, sending each item to the sink. It will complete once the
     /// stream is exhausted, the sink has received and flushed all items, and
-    /// the sink is closed.
+    /// the sink is closed. Note that neither the original stream nor provided
+    /// sink will be output by this future.  Pass the sink by `Pin<&mut S>`
+    /// (for example, via `forward(&mut sink)` inside an `async` fn/block) in
+    /// order to preserve access to the Sink.
+    #[cfg(feature = "sink")]
     fn forward<S>(self, sink: S) -> Forward<Self, S>
     where
         S: Sink<<Self as TryStream>::Ok>,
-        Self: TryStream<Error = S::SinkError> + Sized,
+        Self: TryStream<Error = S::Error> + Sized,
     {
         Forward::new(self, sink)
     }
@@ -1035,8 +1093,9 @@ pub trait StreamExt: Stream {
     /// allow direct interaction between the two objects (e.g. via
     /// `Sink::send_all`).
     ///
-    /// This method is only available when the `std` feature of this
+    /// This method is only available when the `std` or `alloc` feature of this
     /// library is activated, and it is activated by default.
+    #[cfg(feature = "sink")]
     #[cfg_attr(
         feature = "cfg-target-has-atomic",
         cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
@@ -1090,7 +1149,7 @@ pub trait StreamExt: Stream {
         &mut self,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>>
-    where Self: Unpin + Sized
+    where Self: Unpin
     {
         Pin::new(self).poll_next(cx)
     }
@@ -1100,7 +1159,7 @@ pub trait StreamExt: Stream {
     ///
     /// This is similar to the [`next`][StreamExt::next] method, but it won't
     /// resolve to [`None`] if used on an empty [`Stream`]. Instead, the
-    /// returned future type will return [`true`] from
+    /// returned future type will return `true` from
     /// [`FusedFuture::is_terminated`][] when the [`Stream`] is empty, allowing
     /// [`select_next_some`][StreamExt::select_next_some] to be easily used with
     /// the [`select!`] macro.
@@ -1115,7 +1174,7 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::{future, select};
     /// use futures::stream::{StreamExt, FuturesUnordered};
@@ -1144,7 +1203,7 @@ pub trait StreamExt: Stream {
     /// assert_eq!(total, 6);
     /// # });
     /// ```
-    fn select_next_some(&mut self) -> SelectNextSome<'_, Self> where Self: Sized + Unpin + FusedStream {
+    fn select_next_some(&mut self) -> SelectNextSome<'_, Self> where Self: Unpin + FusedStream {
         SelectNextSome::new(self)
     }
 }

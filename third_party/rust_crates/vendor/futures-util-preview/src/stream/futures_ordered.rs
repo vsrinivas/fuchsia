@@ -1,15 +1,15 @@
-use crate::stream::FuturesUnordered;
+use crate::stream::{FuturesUnordered, StreamExt};
 use futures_core::future::Future;
 use futures_core::stream::Stream;
 use futures_core::task::{Context, Poll};
 use pin_utils::unsafe_pinned;
-use core::cmp::{Eq, PartialEq, PartialOrd, Ord, Ordering};
+use core::cmp::Ordering;
 use core::fmt::{self, Debug};
 use core::iter::FromIterator;
 use core::pin::Pin;
 use alloc::collections::binary_heap::{BinaryHeap, PeekMut};
 
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 #[derive(Debug)]
 struct OrderWrapper<T> {
     data: T, // A future or a future's output
@@ -87,6 +87,9 @@ impl<T> Future for OrderWrapper<T>
 /// Note that you can create a ready-made `FuturesOrdered` via the
 /// [`collect`](Iterator::collect) method, or you can start with an empty queue
 /// with the `FuturesOrdered::new` constructor.
+///
+/// This type is only available when the `std` or `alloc` feature of this
+/// library is activated, and it is activated by default.
 #[must_use = "streams do nothing unless polled"]
 pub struct FuturesOrdered<T: Future> {
     in_progress_queue: FuturesUnordered<OrderWrapper<T>>,
@@ -165,8 +168,8 @@ impl<Fut: Future> Stream for FuturesOrdered<Fut> {
         }
 
         loop {
-            match Pin::new(&mut this.in_progress_queue).poll_next(cx) {
-                Poll::Ready(Some(output)) => {
+            match ready!(this.in_progress_queue.poll_next_unpin(cx)) {
+                Some(output) => {
                     if output.index == this.next_outgoing_index {
                         this.next_outgoing_index += 1;
                         return Poll::Ready(Some(output.data));
@@ -174,16 +177,15 @@ impl<Fut: Future> Stream for FuturesOrdered<Fut> {
                         this.queued_outputs.push(output)
                     }
                 }
-                Poll::Ready(None) => return Poll::Ready(None),
-                Poll::Pending => return Poll::Pending,
+                None => return Poll::Ready(None),
             }
         }
     }
 }
 
 impl<Fut: Future> Debug for FuturesOrdered<Fut> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "FuturesOrdered {{ ... }}")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FuturesOrdered {{ ... }}")
     }
 }
 

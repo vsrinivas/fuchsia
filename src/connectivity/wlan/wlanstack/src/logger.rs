@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
-
 const LOG_LEVEL: log::Level = log::Level::Debug;
 
 pub struct Logger;

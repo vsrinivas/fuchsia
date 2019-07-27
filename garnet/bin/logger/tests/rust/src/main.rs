@@ -4,8 +4,6 @@
 
 #![feature(async_await, await_macro)]
 
-#![deny(warnings)]
-
 // dummy main. We do not copy this binary to fuchsia, only tests.
 fn main() {}
 

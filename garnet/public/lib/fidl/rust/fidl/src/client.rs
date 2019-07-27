@@ -617,7 +617,7 @@ mod tests {
         fuchsia_zircon::DurationNum,
         futures::{future::join, FutureExt, StreamExt},
         futures_test::task::new_count_waker,
-        std::{io, thread},
+        std::thread,
     };
 
     #[rustfmt::skip]
@@ -747,13 +747,13 @@ mod tests {
         let sender = client
             .send_query::<u8, u8>(&mut 55, 42)
             .map_ok(|x| assert_eq!(x, 55))
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, &*format!("fidl error: {:?}", e)));
+            .unwrap_or_else(|e| panic!("fidl error: {:?}", e));
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let sender = sender
             .on_timeout(300.millis().after_now(), || panic!("did not receive response in time!"));
 
-        executor.run_singlethreaded(join(receiver, sender));
+        let ((), ()) =  executor.run_singlethreaded(join(receiver, sender));
     }
 
     #[test]
@@ -847,7 +847,7 @@ mod tests {
         send_transaction(TransactionHeader { tx_id: 0, flags: 0, ordinal: 5 }, &server_end);
 
         // get event loop to deliver readiness notifications to channels
-        let _ = executor.run_until_stalled(&mut future::empty::<()>());
+        let _ = executor.run_until_stalled(&mut future::pending::<()>());
 
         // either response_waker or event_waker should be woken
         assert_eq!(response_waker_count.get() + event_waker_count.get(), 1);
@@ -863,7 +863,7 @@ mod tests {
         );
 
         // get event loop to deliver readiness notifications to channels
-        let _ = executor.run_until_stalled(&mut future::empty::<()>());
+        let _ = executor.run_until_stalled(&mut future::pending::<()>());
 
         // response waker should have been woken again
         assert_eq!(response_waker_count.get(), last_response_waker_count + 1);

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![cfg(test)]
-#![deny(warnings)]
 #![feature(async_await, await_macro)]
 
 use failure::ResultExt;
@@ -178,7 +177,7 @@ async fn add_ethernet_device() -> Result {
 
     await!(with_netstack_and_device::<_, _, fidl_fuchsia_netstack::NetstackMarker>(
         name,
-        async move |netstack, device| -> Result {
+        |netstack, device| async move {
             let id = await!(netstack.add_ethernet_device(
                 name,
                 &mut fidl_fuchsia_netstack::InterfaceConfig {
@@ -200,7 +199,7 @@ async fn add_ethernet_device() -> Result {
                 0
             );
             assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
-            Ok(())
+            Ok::<(), failure::Error>(())
         },
     ))
 }
@@ -211,7 +210,7 @@ async fn add_ethernet_interface() -> Result {
 
     await!(with_netstack_and_device::<_, _, fidl_fuchsia_net_stack::StackMarker>(
         name,
-        async move |stack, device| -> Result {
+        |stack, device| async move {
             let (error, id) = await!(stack.add_ethernet_interface(name, device))
                 .context("failed to add ethernet interface")?;
             assert_eq!(error, None);

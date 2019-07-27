@@ -13,7 +13,6 @@
 //! NOTE: Once `account_manager` provides token management for Fuchsia accounts this
 //! `token_manager_factory` may be downscoped to only handle tokens that are independent of user.
 
-#![deny(warnings)]
 #![deny(missing_docs)]
 #![feature(async_await, await_macro)]
 

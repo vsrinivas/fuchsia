@@ -61,7 +61,7 @@ enum FinalState<E = ()> {
 }
 
 /// Future for the [`try_join_all`] function.
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct TryJoinAll<F>
 where
     F: TryFuture,
@@ -75,8 +75,8 @@ where
     F::Ok: fmt::Debug,
     F::Error: fmt::Debug,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("TryJoinAll")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TryJoinAll")
             .field("elems", &self.elems)
             .finish()
     }
@@ -94,10 +94,13 @@ where
 /// however, then the returned future will succeed with a `Vec` of all the
 /// successful results.
 ///
+/// This function is only available when the `std` or `alloc` feature of this
+/// library is activated, and it is activated by default.
+///
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro)]
+/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future::{self, try_join_all};
 ///
@@ -107,7 +110,7 @@ where
 ///     future::ok::<u32, u32>(3),
 /// ];
 ///
-/// assert_eq!(await!(try_join_all(futures)), Ok(vec![1, 2, 3]));
+/// assert_eq!(try_join_all(futures).await, Ok(vec![1, 2, 3]));
 ///
 /// let futures = vec![
 ///     future::ok::<u32, u32>(1),
@@ -115,7 +118,7 @@ where
 ///     future::ok::<u32, u32>(3),
 /// ];
 ///
-/// assert_eq!(await!(try_join_all(futures)), Err(2));
+/// assert_eq!(try_join_all(futures).await, Err(2));
 /// # });
 /// ```
 pub fn try_join_all<I>(i: I) -> TryJoinAll<I::Item>

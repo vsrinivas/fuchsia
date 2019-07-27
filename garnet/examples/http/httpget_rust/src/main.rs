@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
 #![feature(async_await, await_macro)]
 
 use {
@@ -83,7 +82,7 @@ async fn http_get(url: String) -> Result<(), Error> {
     }
     print_headers(&resp);
 
-    let mut socket = match resp.body.map(|x| *x) {
+    let socket = match resp.body.map(|x| *x) {
         Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
         _ => return Err(Error::from(zx::Status::BAD_STATE)),
     };

@@ -1,13 +1,12 @@
 #![recursion_limit="128"]
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
-use futures::{Poll, pending, poll, join, try_join, select};
+use futures::{Poll, pending, pin_mut, poll, join, try_join, select};
 use futures::channel::{mpsc, oneshot};
 use futures::executor::block_on;
 use futures::future::{self, FutureExt};
 use futures::stream::StreamExt;
 use futures::sink::SinkExt;
-use pin_utils::pin_mut;
 
 #[test]
 fn poll_and_pending() {
@@ -72,8 +71,8 @@ fn select_streams() {
             _ = rx1.next() => panic!(),
             _ = rx2.next() => panic!(),
             default => {
-                await!(tx1.send(2)).unwrap();
-                await!(tx2.send(3)).unwrap();
+                tx1.send(2).await.unwrap();
+                tx2.send(3).await.unwrap();
                 tx1_opt = Some(tx1);
                 tx2_opt = Some(tx2);
             }
@@ -113,12 +112,12 @@ fn select_can_move_uncompleted_futures() {
         select! {
             res = rx1 => {
                 assert_eq!(Ok(1), res);
-                assert_eq!(Ok(2), await!(rx2));
+                assert_eq!(Ok(2), rx2.await);
                 ran = true;
             },
             res = rx2 => {
                 assert_eq!(Ok(2), res);
-                assert_eq!(Ok(1), await!(rx1));
+                assert_eq!(Ok(1), rx1.await);
                 ran = true;
             },
         }
@@ -176,7 +175,7 @@ fn join_size() {
         let ready2 = future::ready(0i32);
         join!(ready1, ready2)
     };
-    assert_eq!(::std::mem::size_of_val(&fut), 44);
+    assert_eq!(::std::mem::size_of_val(&fut), 32);
 }
 
 #[test]
@@ -192,7 +191,7 @@ fn try_join_size() {
         let ready2 = future::ready(Ok::<i32, i32>(0));
         try_join!(ready1, ready2)
     };
-    assert_eq!(::std::mem::size_of_val(&fut), 44);
+    assert_eq!(::std::mem::size_of_val(&fut), 32);
 }
 
 

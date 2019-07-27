@@ -19,8 +19,7 @@ use zx;
 
 use super::*;
 use crate::eventloop::util::{FidlCompatible, IntoFidlExt};
-use future::{Future, FutureExt};
-use futures::StreamExt;
+use futures::{future, Future, FutureExt, StreamExt};
 
 /// log::Log implementation that uses stdout.
 ///
@@ -103,7 +102,7 @@ impl TestStack {
         let (snd, rcv) = mpsc::unbounded();
         self.set_event_listener(snd);
 
-        let mut rcv = rcv.filter_map(async move |e| match e {
+        let mut rcv = rcv.filter_map(|e| future::ready(match e {
             TestEvent::DeviceStatusChanged { id, status } => {
                 if if_id == id && status.contains(EthernetStatus::ONLINE) {
                     Some(())
@@ -112,7 +111,7 @@ impl TestStack {
                 }
             }
             _ => None,
-        });
+        }));
         pin_mut!(rcv);
         let () = await!(self.event_loop.run_until(rcv.next()))
             .expect("Wait for interface signal")
@@ -268,7 +267,7 @@ impl TestSetup {
         // let all stacks run concurrently:
         let stacks_fut = futures::stream::iter(stacks).for_each_concurrent(
             None,
-            async move |(mut rcv, stack)| {
+            |(mut rcv, stack)| async move {
                 await!(stack.event_loop.run_until(rcv.next())).expect("Stack loop run error");
             },
         );
@@ -532,10 +531,10 @@ async fn test_ping() {
 
     t.get(0).set_event_listener(sender);
 
-    let mut recv = recv.filter_map(async move |f| match f {
+    let mut recv = recv.filter_map(|f| future::ready(match f {
         TestEvent::IcmpEchoReply { conn, seq_num, data } => Some((conn, seq_num, data)),
         _ => None,
-    });
+    }));
     pin_mut!(recv);
 
     // alice will ping bob 4 times:

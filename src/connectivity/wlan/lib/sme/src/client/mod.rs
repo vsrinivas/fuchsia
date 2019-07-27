@@ -407,7 +407,6 @@ mod tests {
     use fuchsia_inspect as finspect;
     use info::ConnectionMilestone;
     use maplit::hashmap;
-    use std::error::Error;
     use wlan_common::{assert_variant, RadioConfig};
 
     use super::info::DiscoveryStats;
@@ -689,7 +688,7 @@ mod tests {
                     _ => (),
                 },
                 Err(e) => {
-                    assert_eq!(e.description(), "receiver channel is empty");
+                    assert_eq!(e.to_string(), "receiver channel is empty");
                     break;
                 }
             }
@@ -730,7 +729,7 @@ mod tests {
                     _ => (),
                 },
                 Err(e) => {
-                    assert_eq!(e.description(), "receiver channel is empty");
+                    assert_eq!(e.to_string(), "receiver channel is empty");
                     break;
                 }
             }
@@ -769,7 +768,7 @@ mod tests {
                     _ => (),
                 },
                 Err(e) => {
-                    assert_eq!(e.description(), "receiver channel is empty");
+                    assert_eq!(e.to_string(), "receiver channel is empty");
                     break;
                 }
             }

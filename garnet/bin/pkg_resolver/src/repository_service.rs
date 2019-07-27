@@ -15,7 +15,6 @@ use fuchsia_syslog::fx_log_err;
 use fuchsia_url::pkg_url::RepoUrl;
 use fuchsia_zircon::Status;
 use futures::prelude::*;
-use futures::TryFutureExt;
 use parking_lot::RwLock;
 use std::convert::TryFrom;
 use std::sync::Arc;

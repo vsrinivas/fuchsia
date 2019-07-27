@@ -2,6 +2,9 @@
 //!
 //! This module contains a number of functions for working with `Sink`s,
 //! including the `SinkExt` trait which adds methods to `Sink` types.
+//!
+//! This module is only available when the `sink` feature of this
+//! library is activated, and it is activated by default.
 
 use futures_core::future::Future;
 use futures_core::stream::Stream;
@@ -15,7 +18,7 @@ mod close;
 pub use self::close::Close;
 
 mod drain;
-pub use self::drain::{drain, Drain, DrainError};
+pub use self::drain::{drain, Drain};
 
 mod fanout;
 pub use self::fanout::Fanout;
@@ -65,7 +68,7 @@ pub trait SinkExt<Item>: Sink<Item> {
     fn with<U, Fut, F, E>(self, f: F) -> With<Self, Item, U, Fut, F>
         where F: FnMut(U) -> Fut,
               Fut: Future<Output = Result<Item, E>>,
-              E: From<Self::SinkError>,
+              E: From<Self::Error>,
               Self: Sized
     {
         With::new(self, f)
@@ -86,8 +89,9 @@ pub trait SinkExt<Item>: Sink<Item> {
     /// # Examples
     ///
     /// ```
+    /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
-    /// use futures::executor::block_on;
     /// use futures::sink::SinkExt;
     /// use futures::stream::StreamExt;
     /// use std::collections::VecDeque;
@@ -98,14 +102,15 @@ pub trait SinkExt<Item>: Sink<Item> {
     ///     VecDeque::from(vec![Ok(42); x])
     /// });
     ///
-    /// block_on(tx.send(5)).unwrap();
+    /// tx.send(5).await.unwrap();
     /// drop(tx);
-    /// let received: Vec<i32> = block_on(rx.collect());
+    /// let received: Vec<i32> = rx.collect().await;
     /// assert_eq!(received, vec![42, 42, 42, 42, 42]);
+    /// # });
     /// ```
     fn with_flat_map<U, St, F>(self, f: F) -> WithFlatMap<Self, Item, U, St, F>
         where F: FnMut(U) -> St,
-              St: Stream<Item = Result<Item, Self::SinkError>>,
+              St: Stream<Item = Result<Item, Self::Error>>,
               Self: Sized
     {
         WithFlatMap::new(self, f)
@@ -127,7 +132,7 @@ pub trait SinkExt<Item>: Sink<Item> {
 
     /// Transforms the error returned by the sink.
     fn sink_map_err<E, F>(self, f: F) -> SinkMapErr<Self, F>
-        where F: FnOnce(Self::SinkError) -> E,
+        where F: FnOnce(Self::Error) -> E,
               Self: Sized,
     {
         SinkMapErr::new(self, f)
@@ -138,7 +143,7 @@ pub trait SinkExt<Item>: Sink<Item> {
     /// If wanting to map errors of a `Sink + Stream`, use `.sink_err_into().err_into()`.
     fn sink_err_into<E>(self) -> err_into::SinkErrInto<Self, Item, E>
         where Self: Sized,
-              Self::SinkError: Into<E>,
+              Self::Error: Into<E>,
     {
         SinkErrInto::new(self)
     }
@@ -154,7 +159,7 @@ pub trait SinkExt<Item>: Sink<Item> {
     /// Note that this function consumes the given sink, returning a wrapped
     /// version, much like `Iterator::map`.
     ///
-    /// This method is only available when the `std` feature of this
+    /// This method is only available when the `std` or `alloc` feature of this
     /// library is activated, and it is activated by default.
     #[cfg(feature = "alloc")]
     fn buffer(self, capacity: usize) -> Buffer<Self, Item>
@@ -177,7 +182,7 @@ pub trait SinkExt<Item>: Sink<Item> {
     fn fanout<Si>(self, other: Si) -> Fanout<Self, Si>
         where Self: Sized,
               Item: Clone,
-              Si: Sink<Item, SinkError=Self::SinkError>
+              Si: Sink<Item, Error=Self::Error>
     {
         Fanout::new(self, other)
     }
@@ -231,7 +236,7 @@ pub trait SinkExt<Item>: Sink<Item> {
     /// This can be used in combination with the `right_sink` method to write `if`
     /// statements that evaluate to different streams in different branches.
     fn left_sink<Si2>(self) -> Either<Self, Si2>
-        where Si2: Sink<Item, SinkError = Self::SinkError>,
+        where Si2: Sink<Item, Error = Self::Error>,
               Self: Sized
     {
         Either::Left(self)
@@ -243,7 +248,7 @@ pub trait SinkExt<Item>: Sink<Item> {
     /// This can be used in combination with the `left_sink` method to write `if`
     /// statements that evaluate to different streams in different branches.
     fn right_sink<Si1>(self) -> Either<Si1, Self>
-        where Si1: Sink<Item, SinkError = Self::SinkError>,
+        where Si1: Sink<Item, Error = Self::Error>,
               Self: Sized
     {
         Either::Right(self)

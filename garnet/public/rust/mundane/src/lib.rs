@@ -41,7 +41,6 @@
 
 #![doc(html_root_url = "https://joshlf.com/rustdoc/mundane")]
 #![deny(missing_docs)]
-#![deny(warnings)]
 // just in case we forget to add #[forbid(unsafe_code)] on new module
 // definitions
 #![deny(unsafe_code)]

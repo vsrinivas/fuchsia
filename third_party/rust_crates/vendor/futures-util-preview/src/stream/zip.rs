@@ -14,7 +14,13 @@ pub struct Zip<St1: Stream, St2: Stream> {
     queued2: Option<St2::Item>,
 }
 
-impl<St1: Stream + Unpin, St2: Stream + Unpin> Unpin for Zip<St1, St2> {}
+impl<St1, St2> Unpin for Zip<St1, St2>
+where
+    St1: Stream,
+    Fuse<St1>: Unpin,
+    St2: Stream,
+    Fuse<St2>: Unpin,
+{}
 
 impl<St1: Stream, St2: Stream> Zip<St1, St2> {
     unsafe_pinned!(stream1: Fuse<St1>);
@@ -54,7 +60,7 @@ impl<St1: Stream, St2: Stream> Zip<St1, St2> {
     pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> (Pin<&'a mut St1>, Pin<&'a mut St2>)
         where St1: Unpin, St2: Unpin,
     {
-        let Self { stream1, stream2, .. } = Pin::get_mut(self);
+        let Self { stream1, stream2, .. } = self.get_mut();
         (Pin::new(stream1.get_mut()), Pin::new(stream2.get_mut()))
     }
 

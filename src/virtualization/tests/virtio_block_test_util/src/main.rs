@@ -1,7 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![deny(warnings)]
 
 use fdio::clone_channel;
 use fidl_fuchsia_hardware_block::BlockSynchronousProxy;

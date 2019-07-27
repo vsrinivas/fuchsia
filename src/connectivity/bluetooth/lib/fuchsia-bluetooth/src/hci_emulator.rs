@@ -194,8 +194,8 @@ mod tests {
         // lifetime of the Emulator instance we create below.
         let mut hci_watcher: DeviceWatcher;
         let mut emul_watcher: DeviceWatcher;
-        let mut hci_dev: DeviceFile;
-        let mut emul_dev: DeviceFile;
+        let hci_dev: DeviceFile;
+        let emul_dev: DeviceFile;
 
         {
             let fake_dev =

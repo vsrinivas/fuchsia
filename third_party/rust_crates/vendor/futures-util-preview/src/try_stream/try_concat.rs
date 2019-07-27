@@ -1,4 +1,3 @@
-use core::default::Default;
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::stream::TryStream;
@@ -7,7 +6,7 @@ use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Future for the [`try_concat`](super::TryStreamExt::try_concat) method.
 #[derive(Debug)]
-#[must_use = "streams do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct TryConcat<St: TryStream> {
     stream: St,
     accum: Option<St::Ok>,
@@ -40,8 +39,8 @@ where
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
-            match ready!(self.as_mut().stream().try_poll_next(cx)) {
-                Some(Ok(x)) => {
+            match ready!(self.as_mut().stream().try_poll_next(cx)?) {
+                Some(x) => {
                     let accum = self.as_mut().accum();
                     if let Some(a) = accum {
                         a.extend(x)
@@ -49,7 +48,6 @@ where
                         *accum = Some(x)
                     }
                 },
-                Some(Err(e)) => return Poll::Ready(Err(e)),
                 None => {
                     return Poll::Ready(Ok(self.as_mut().accum().take().unwrap_or_default()))
                 }

@@ -1,10 +1,10 @@
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::task::{Context, Poll};
-use crate::future::Either;
+use crate::future::{Either, FutureExt};
 
-/// Future for the [`select`](super::FutureExt::select) function.
-#[must_use = "futures do nothing unless polled"]
+/// Future for the [`select()`] function.
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 #[derive(Debug)]
 pub struct Select<A: Unpin, B: Unpin> {
     inner: Option<(A, B)>,
@@ -55,9 +55,9 @@ impl<A: Unpin, B: Unpin> Future for Select<A, B> where A: Future, B: Future {
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let (mut a, mut b) = self.inner.take().expect("cannot poll Select twice");
-        match Pin::new(&mut a).poll(cx) {
+        match a.poll_unpin(cx) {
             Poll::Ready(x) => Poll::Ready(Either::Left((x, b))),
-            Poll::Pending => match Pin::new(&mut b).poll(cx) {
+            Poll::Pending => match b.poll_unpin(cx) {
                 Poll::Ready(x) => Poll::Ready(Either::Right((x, a))),
                 Poll::Pending => {
                     self.inner = Some((a, b));

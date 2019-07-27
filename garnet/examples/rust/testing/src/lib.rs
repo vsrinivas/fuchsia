@@ -5,8 +5,6 @@
 // See the test section of the Rust Book
 // https://doc.rust-lang.org/book/second-edition/ch11-03-test-organization.html
 
-#![deny(warnings)]
-
 pub fn mult_two(a: i32) -> i32 {
     a * 2
 }

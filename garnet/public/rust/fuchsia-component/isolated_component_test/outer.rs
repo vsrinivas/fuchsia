@@ -21,7 +21,7 @@ use {
 fn echo_exposed_server(stream: EchoExposedByParentRequestStream) -> impl Future<Output = ()> {
     stream
         .err_into::<failure::Error>()
-        .try_for_each(async move |EchoExposedByParentRequest::Echo { value, responder }| {
+        .try_for_each(|EchoExposedByParentRequest::Echo { value, responder }| async move {
             responder.send(value).context("sending response")?;
             Ok(())
         })
@@ -31,7 +31,7 @@ fn echo_exposed_server(stream: EchoExposedByParentRequestStream) -> impl Future<
 fn echo_hidden_server(stream: EchoHiddenByParentRequestStream) -> impl Future<Output = ()> {
     stream
         .err_into::<failure::Error>()
-        .try_for_each(async move |EchoHiddenByParentRequest::Echo { value, responder }| {
+        .try_for_each(|EchoHiddenByParentRequest::Echo { value, responder }| async move {
             responder.send(value).context("sending response")?;
             Ok(())
         })

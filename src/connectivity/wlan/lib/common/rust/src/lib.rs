@@ -5,7 +5,7 @@
 //! Crate wlan-common hosts common libraries
 //! to be used for WLAN SME, MLME, and binaries written in Rust.
 
-#![feature(test)]
+#![cfg_attr(feature = "benchmark", feature(test))]
 pub mod appendable;
 pub mod big_endian;
 pub mod buffer_reader;

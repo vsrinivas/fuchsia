@@ -61,7 +61,7 @@ async fn run_root(model: Arc<Model>) {
             // TODO: Exit the component manager when the root component's binding is lost
             // (when it terminates) or perhaps attempt to rebind automatically.
             // For now, the component manager just runs forever.
-            await!(future::empty::<()>())
+            await!(future::pending::<()>())
         }
         Err(error) => {
             error!("Failed to bind to root component: {:?}", error);

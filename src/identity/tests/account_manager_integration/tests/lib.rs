@@ -6,7 +6,6 @@
 //! AccountHandler components.
 
 #![cfg(test)]
-#![deny(warnings)]
 #![deny(missing_docs)]
 #![feature(async_await, await_macro)]
 

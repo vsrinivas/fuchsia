@@ -80,7 +80,7 @@ macro_rules! create_service  {
                     $setting_type(stream) => {
                         await!(stream
                             .err_into::<failure::Error>()
-                            .try_for_each(async move |req| {
+                            .try_for_each(|req| async move {
                                 match req {
                                     $($request => $callback)*
                                     _ => panic!("Incorrect command to service"),
@@ -217,7 +217,7 @@ fn serve_check_login_override_mutate(
 ) -> impl Future<Output = ()> {
     stream
         .err_into::<failure::Error>()
-        .try_for_each(async move |req| {
+        .try_for_each(move |req| async move {
             match req {
                 fidl_fuchsia_setui::SetUiServiceRequest::Mutate {
                     setting_type,

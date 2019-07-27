@@ -11,7 +11,6 @@
 //! - we need verify a packet or not
 //! - it needs extra IO
 //! - how to verify
-#![deny(warnings)]
 
 use {
     crate::generator::ActiveCommands,

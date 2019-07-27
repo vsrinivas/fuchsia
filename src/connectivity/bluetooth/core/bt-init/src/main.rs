@@ -28,7 +28,7 @@ fn main() -> Result<(), Error> {
     let cfg = config::Config::load()?;
 
     // Start bt-snoop service before anything else and hold onto the connection until bt-init exits.
-    let mut snoop_connection;
+    let snoop_connection;
     if cfg.autostart_snoop() {
         snoop_connection = client::connect_to_service::<SnoopMarker>();
         if let Err(e) = snoop_connection {

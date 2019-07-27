@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //! AuthCache manages an in-memory cache of recently used short-lived authentication tokens.
-#![deny(warnings)]
 #![deny(missing_docs)]
 
 use chrono::offset::Utc;

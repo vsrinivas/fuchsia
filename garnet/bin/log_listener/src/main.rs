@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[deny(warnings)]
 use chrono::TimeZone;
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
@@ -414,7 +413,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                         tag, MAX_TAG_LEN_BYTES
                     ));
                 }
-                options.filter.tags.push(String::from(tag.as_ref()));
+                options.filter.tags.push(tag.to_owned());
                 if options.filter.tags.len() > MAX_TAGS as usize {
                     return Err(format!("Max tags allowed: {}", MAX_TAGS));
                 }
@@ -427,7 +426,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                         tag, MAX_TAG_LEN_BYTES
                     ));
                 }
-                options.local.ignore_tags.insert(String::from(tag.as_ref()));
+                options.local.ignore_tags.insert(tag.to_owned());
             }
             "--only" => {
                 options.local.only.extend(args[i + 1].split(",").map(String::from));

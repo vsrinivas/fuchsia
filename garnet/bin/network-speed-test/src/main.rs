@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
 
 // Explicitly added due to conflict using custom_attribute and async_await above.
 #[macro_use]
@@ -125,7 +124,7 @@ async fn fetch_and_discard_url(http_service: HttpServiceProxy,
         bail!("UrlLoaderProxy error - code:{} ({})", e.code, e.description.unwrap_or("".into()))
     }
 
-    let mut socket = match response.body.map(|x| *x) {
+    let socket = match response.body.map(|x| *x) {
         Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
         _ => {
             bail!("failed to read UrlBody from the stream - error: {}", zx::Status::BAD_STATE);

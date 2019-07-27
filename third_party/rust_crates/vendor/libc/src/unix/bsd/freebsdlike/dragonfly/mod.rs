@@ -1,3 +1,5 @@
+pub type dev_t = u32;
+pub type c_char = i8;
 pub type clock_t = u64;
 pub type ino_t = u64;
 pub type lwpid_t = i32;
@@ -15,32 +17,29 @@ pub type uuid_t = ::uuid;
 pub type fsblkcnt_t = u64;
 pub type fsfilcnt_t = u64;
 
+pub type mqd_t = ::c_int;
 pub type sem_t = *mut sem;
 
+#[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum sem {}
+impl ::Copy for sem {}
+impl ::Clone for sem {
+    fn clone(&self) -> sem { *self }
+}
 
 s! {
+    pub struct kevent {
+        pub ident: ::uintptr_t,
+        pub filter: ::c_short,
+        pub flags: ::c_ushort,
+        pub fflags: ::c_uint,
+        pub data: ::intptr_t,
+        pub udata: *mut ::c_void,
+    }
 
     pub struct exit_status {
         pub e_termination: u16,
         pub e_exit: u16
-    }
-
-    pub struct utmpx {
-        pub ut_name: [::c_char; 32],
-        pub ut_id: [::c_char; 4],
-
-        pub ut_line: [::c_char; 32],
-        pub ut_host: [::c_char; 256],
-
-        pub ut_unused: [u8; 16],
-        pub ut_session: u16,
-        pub ut_type: u16,
-        pub ut_pid: ::pid_t,
-        ut_exit: exit_status,
-        ut_ss: ::sockaddr_storage,
-        pub ut_tv: ::timeval,
-        pub ut_unused2: [u8; 16],
     }
 
     pub struct aiocb {
@@ -53,15 +52,6 @@ s! {
         pub aio_reqprio: ::c_int,
         _aio_val: ::c_int,
         _aio_err: ::c_int
-    }
-
-    pub struct dirent {
-        pub d_fileno: ::ino_t,
-        pub d_namlen: u16,
-        pub d_type: u8,
-        __unused1: u8,
-        __unused2: u32,
-        pub d_name: [::c_char; 256],
     }
 
     pub struct uuid {
@@ -78,19 +68,6 @@ s! {
         pub mq_maxmsg: ::c_long,
         pub mq_msgsize: ::c_long,
         pub mq_curmsgs: ::c_long,
-    }
-
-    pub struct sigevent {
-        pub sigev_notify: ::c_int,
-        // The union is 8-byte in size, so it is aligned at a 8-byte offset.
-        #[cfg(target_pointer_width = "64")]
-        __unused1: ::c_int,
-        pub sigev_signo: ::c_int,       //actually a union
-        // pad the union
-        #[cfg(target_pointer_width = "64")]
-        __unused2: ::c_int,
-        pub sigev_value: ::sigval,
-        __unused3: *mut ::c_void        //actually a function pointer
     }
 
     pub struct statvfs {
@@ -115,33 +92,12 @@ s! {
         pub f_uid_uuid: ::uuid_t,
     }
 
-    pub struct statfs {
-        pub f_bsize: ::c_long,
-        pub f_iosize: ::c_long,
-        pub f_blocks: ::c_long,
-        pub f_bfree: ::c_long,
-        pub f_bavail: ::c_long,
-        pub f_files: ::c_long,
-        pub f_ffree: ::c_long,
-        pub f_fsid: ::fsid_t,
-        pub f_owner: ::uid_t,
-        pub f_type: ::int32_t,
-        pub f_flags: ::int32_t,
-        pub f_syncwrites: ::c_long,
-        pub f_asyncwrites: ::c_long,
-        pub f_fstypename: [::c_char; 16],
-        pub f_mntonname: [::c_char; 90],
-        pub f_syncreads: ::c_long,
-        pub f_asyncreads: ::c_long,
-        pub f_mntfromname: [::c_char; 90],
-    }
-
     pub struct stat {
         pub st_ino: ::ino_t,
         pub st_nlink: ::nlink_t,
         pub st_dev: ::dev_t,
         pub st_mode: ::mode_t,
-        pub st_padding1: ::uint16_t,
+        pub st_padding1: u16,
         pub st_uid: ::uid_t,
         pub st_gid: ::gid_t,
         pub st_rdev: ::dev_t,
@@ -152,13 +108,13 @@ s! {
         pub st_ctime: ::time_t,
         pub st_ctime_nsec: ::c_long,
         pub st_size: ::off_t,
-        pub st_blocks: ::int64_t,
-        pub st_blksize: ::uint32_t,
-        pub st_flags: ::uint32_t,
-        pub st_gen: ::uint32_t,
-        pub st_lspare: ::int32_t,
-        pub st_qspare1: ::int64_t,
-        pub st_qspare2: ::int64_t,
+        pub st_blocks: i64,
+        pub st_blksize: u32,
+        pub st_flags: u32,
+        pub st_gen: u32,
+        pub st_lspare: i32,
+        pub st_qspare1: i64,
+        pub st_qspare2: i64,
     }
 
     pub struct if_data {
@@ -215,6 +171,269 @@ s! {
         pub ss_sp: *mut ::c_char,
         pub ss_size: ::size_t,
         pub ss_flags: ::c_int,
+    }
+}
+
+s_no_extra_traits! {
+    pub struct utmpx {
+        pub ut_name: [::c_char; 32],
+        pub ut_id: [::c_char; 4],
+
+        pub ut_line: [::c_char; 32],
+        pub ut_host: [::c_char; 256],
+
+        pub ut_unused: [u8; 16],
+        pub ut_session: u16,
+        pub ut_type: u16,
+        pub ut_pid: ::pid_t,
+        ut_exit: exit_status,
+        ut_ss: ::sockaddr_storage,
+        pub ut_tv: ::timeval,
+        pub ut_unused2: [u8; 16],
+    }
+
+    pub struct dirent {
+        pub d_fileno: ::ino_t,
+        pub d_namlen: u16,
+        pub d_type: u8,
+        __unused1: u8,
+        __unused2: u32,
+        pub d_name: [::c_char; 256],
+    }
+
+    pub struct statfs {
+        pub f_bsize: ::c_long,
+        pub f_iosize: ::c_long,
+        pub f_blocks: ::c_long,
+        pub f_bfree: ::c_long,
+        pub f_bavail: ::c_long,
+        pub f_files: ::c_long,
+        pub f_ffree: ::c_long,
+        pub f_fsid: ::fsid_t,
+        pub f_owner: ::uid_t,
+        pub f_type: i32,
+        pub f_flags: i32,
+        pub f_syncwrites: ::c_long,
+        pub f_asyncwrites: ::c_long,
+        pub f_fstypename: [::c_char; 16],
+        pub f_mntonname: [::c_char; 90],
+        pub f_syncreads: ::c_long,
+        pub f_asyncreads: ::c_long,
+        pub f_mntfromname: [::c_char; 90],
+    }
+
+    pub struct sigevent {
+        pub sigev_notify: ::c_int,
+        // The union is 8-byte in size, so it is aligned at a 8-byte offset.
+        #[cfg(target_pointer_width = "64")]
+        __unused1: ::c_int,
+        pub sigev_signo: ::c_int,       //actually a union
+        // pad the union
+        #[cfg(target_pointer_width = "64")]
+        __unused2: ::c_int,
+        pub sigev_value: ::sigval,
+        __unused3: *mut ::c_void        //actually a function pointer
+    }
+
+}
+
+cfg_if! {
+    if #[cfg(feature = "extra_traits")] {
+        impl PartialEq for utmpx {
+            fn eq(&self, other: &utmpx) -> bool {
+                self.ut_name == other.ut_name
+                    && self.ut_id == other.ut_id
+                    && self.ut_line == other.ut_line
+                    && self
+                    .ut_host
+                    .iter()
+                    .zip(other.ut_host.iter())
+                    .all(|(a,b)| a == b)
+                    && self.ut_unused == other.ut_unused
+                    && self.ut_session == other.ut_session
+                    && self.ut_type == other.ut_type
+                    && self.ut_pid == other.ut_pid
+                    && self.ut_exit == other.ut_exit
+                    && self.ut_ss == other.ut_ss
+                    && self.ut_tv == other.ut_tv
+                    && self.ut_unused2 == other.ut_unused2
+            }
+        }
+        impl Eq for utmpx {}
+        impl ::fmt::Debug for utmpx {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("utmpx")
+                    .field("ut_name", &self.ut_name)
+                    .field("ut_id", &self.ut_id)
+                    .field("ut_line", &self.ut_line)
+                    // FIXME: .field("ut_host", &self.ut_host)
+                    .field("ut_unused", &self.ut_unused)
+                    .field("ut_session", &self.ut_session)
+                    .field("ut_type", &self.ut_type)
+                    .field("ut_pid", &self.ut_pid)
+                    .field("ut_exit", &self.ut_exit)
+                    .field("ut_ss", &self.ut_ss)
+                    .field("ut_tv", &self.ut_tv)
+                    .field("ut_unused2", &self.ut_unused2)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for utmpx {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.ut_name.hash(state);
+                self.ut_id.hash(state);
+                self.ut_line.hash(state);
+                self.ut_host.hash(state);
+                self.ut_unused.hash(state);
+                self.ut_session.hash(state);
+                self.ut_type.hash(state);
+                self.ut_pid.hash(state);
+                self.ut_exit.hash(state);
+                self.ut_ss.hash(state);
+                self.ut_tv.hash(state);
+                self.ut_unused2.hash(state);
+            }
+        }
+
+        impl PartialEq for dirent {
+            fn eq(&self, other: &dirent) -> bool {
+                self.d_fileno == other.d_fileno
+                    && self.d_namlen == other.d_namlen
+                    && self.d_type == other.d_type
+                    // Ignore __unused1
+                    // Ignore __unused2
+                    && self
+                    .d_name
+                    .iter()
+                    .zip(other.d_name.iter())
+                    .all(|(a,b)| a == b)
+            }
+        }
+        impl Eq for dirent {}
+        impl ::fmt::Debug for dirent {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("dirent")
+                    .field("d_fileno", &self.d_fileno)
+                    .field("d_namlen", &self.d_namlen)
+                    .field("d_type", &self.d_type)
+                    // Ignore __unused1
+                    // Ignore __unused2
+                    // FIXME: .field("d_name", &self.d_name)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for dirent {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.d_fileno.hash(state);
+                self.d_namlen.hash(state);
+                self.d_type.hash(state);
+                    // Ignore __unused1
+                    // Ignore __unused2
+                self.d_name.hash(state);
+            }
+        }
+
+        impl PartialEq for statfs {
+            fn eq(&self, other: &statfs) -> bool {
+                self.f_bsize == other.f_bsize
+                    && self.f_iosize == other.f_iosize
+                    && self.f_blocks == other.f_blocks
+                    && self.f_bfree == other.f_bfree
+                    && self.f_bavail == other.f_bavail
+                    && self.f_files == other.f_files
+                    && self.f_ffree == other.f_ffree
+                    && self.f_fsid == other.f_fsid
+                    && self.f_owner == other.f_owner
+                    && self.f_type == other.f_type
+                    && self.f_flags == other.f_flags
+                    && self.f_syncwrites == other.f_syncwrites
+                    && self.f_asyncwrites == other.f_asyncwrites
+                    && self.f_fstypename == other.f_fstypename
+                    && self
+                    .f_mntonname
+                    .iter()
+                    .zip(other.f_mntonname.iter())
+                    .all(|(a,b)| a == b)
+                    && self.f_syncreads == other.f_syncreads
+                    && self.f_asyncreads == other.f_asyncreads
+                    && self
+                    .f_mntfromname
+                    .iter()
+                    .zip(other.f_mntfromname.iter())
+                    .all(|(a,b)| a == b)
+            }
+        }
+        impl Eq for statfs {}
+        impl ::fmt::Debug for statfs {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("statfs")
+                    .field("f_bsize", &self.f_bsize)
+                    .field("f_iosize", &self.f_iosize)
+                    .field("f_blocks", &self.f_blocks)
+                    .field("f_bfree", &self.f_bfree)
+                    .field("f_bavail", &self.f_bavail)
+                    .field("f_files", &self.f_files)
+                    .field("f_ffree", &self.f_ffree)
+                    .field("f_fsid", &self.f_fsid)
+                    .field("f_owner", &self.f_owner)
+                    .field("f_type", &self.f_type)
+                    .field("f_flags", &self.f_flags)
+                    .field("f_syncwrites", &self.f_syncwrites)
+                    .field("f_asyncwrites", &self.f_asyncwrites)
+                    // FIXME: .field("f_mntonname", &self.f_mntonname)
+                    .field("f_syncreads", &self.f_syncreads)
+                    .field("f_asyncreads", &self.f_asyncreads)
+                    // FIXME: .field("f_mntfromname", &self.f_mntfromname)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for statfs {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.f_bsize.hash(state);
+                self.f_iosize.hash(state);
+                self.f_blocks.hash(state);
+                self.f_bfree.hash(state);
+                self.f_bavail.hash(state);
+                self.f_files.hash(state);
+                self.f_ffree.hash(state);
+                self.f_fsid.hash(state);
+                self.f_owner.hash(state);
+                self.f_type.hash(state);
+                self.f_flags.hash(state);
+                self.f_syncwrites.hash(state);
+                self.f_asyncwrites.hash(state);
+                self.f_fstypename.hash(state);
+                self.f_mntonname.hash(state);
+                self.f_syncreads.hash(state);
+                self.f_asyncreads.hash(state);
+                self.f_mntfromname.hash(state);
+            }
+        }
+
+        impl PartialEq for sigevent {
+            fn eq(&self, other: &sigevent) -> bool {
+                self.sigev_notify == other.sigev_notify
+                    && self.sigev_signo == other.sigev_signo
+                    && self.sigev_value == other.sigev_value
+            }
+        }
+        impl Eq for sigevent {}
+        impl ::fmt::Debug for sigevent {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("sigevent")
+                    .field("sigev_notify", &self.sigev_notify)
+                    .field("sigev_signo", &self.sigev_signo)
+                    .field("sigev_value", &self.sigev_value)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for sigevent {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.sigev_notify.hash(state);
+                self.sigev_signo.hash(state);
+                self.sigev_value.hash(state);
+            }
+        }
     }
 }
 
@@ -384,55 +603,55 @@ pub const CTL_P1003_1B_SIGQUEUE_MAX: ::c_int = 24;
 pub const CTL_P1003_1B_TIMER_MAX: ::c_int = 25;
 pub const CTL_P1003_1B_MAXID: ::c_int = 26;
 
-pub const EVFILT_READ: ::int16_t = -1;
-pub const EVFILT_WRITE: ::int16_t = -2;
-pub const EVFILT_AIO: ::int16_t = -3;
-pub const EVFILT_VNODE: ::int16_t = -4;
-pub const EVFILT_PROC: ::int16_t = -5;
-pub const EVFILT_SIGNAL: ::int16_t = -6;
-pub const EVFILT_TIMER: ::int16_t = -7;
-pub const EVFILT_EXCEPT: ::int16_t = -8;
-pub const EVFILT_USER: ::int16_t = -9;
-pub const EVFILT_FS: ::int16_t = -10;
+pub const EVFILT_READ: i16 = -1;
+pub const EVFILT_WRITE: i16 = -2;
+pub const EVFILT_AIO: i16 = -3;
+pub const EVFILT_VNODE: i16 = -4;
+pub const EVFILT_PROC: i16 = -5;
+pub const EVFILT_SIGNAL: i16 = -6;
+pub const EVFILT_TIMER: i16 = -7;
+pub const EVFILT_EXCEPT: i16 = -8;
+pub const EVFILT_USER: i16 = -9;
+pub const EVFILT_FS: i16 = -10;
 
-pub const EV_ADD: ::uint16_t = 0x1;
-pub const EV_DELETE: ::uint16_t = 0x2;
-pub const EV_ENABLE: ::uint16_t = 0x4;
-pub const EV_DISABLE: ::uint16_t = 0x8;
-pub const EV_ONESHOT: ::uint16_t = 0x10;
-pub const EV_CLEAR: ::uint16_t = 0x20;
-pub const EV_RECEIPT: ::uint16_t = 0x40;
-pub const EV_DISPATCH: ::uint16_t = 0x80;
-pub const EV_NODATA: ::uint16_t = 0x1000;
-pub const EV_FLAG1: ::uint16_t = 0x2000;
-pub const EV_ERROR: ::uint16_t = 0x4000;
-pub const EV_EOF: ::uint16_t = 0x8000;
-pub const EV_SYSFLAGS: ::uint16_t = 0xf000;
+pub const EV_ADD: u16 = 0x1;
+pub const EV_DELETE: u16 = 0x2;
+pub const EV_ENABLE: u16 = 0x4;
+pub const EV_DISABLE: u16 = 0x8;
+pub const EV_ONESHOT: u16 = 0x10;
+pub const EV_CLEAR: u16 = 0x20;
+pub const EV_RECEIPT: u16 = 0x40;
+pub const EV_DISPATCH: u16 = 0x80;
+pub const EV_NODATA: u16 = 0x1000;
+pub const EV_FLAG1: u16 = 0x2000;
+pub const EV_ERROR: u16 = 0x4000;
+pub const EV_EOF: u16 = 0x8000;
+pub const EV_SYSFLAGS: u16 = 0xf000;
 
-pub const NOTE_TRIGGER: ::uint32_t = 0x01000000;
-pub const NOTE_FFNOP: ::uint32_t = 0x00000000;
-pub const NOTE_FFAND: ::uint32_t = 0x40000000;
-pub const NOTE_FFOR: ::uint32_t = 0x80000000;
-pub const NOTE_FFCOPY: ::uint32_t = 0xc0000000;
-pub const NOTE_FFCTRLMASK: ::uint32_t = 0xc0000000;
-pub const NOTE_FFLAGSMASK: ::uint32_t = 0x00ffffff;
-pub const NOTE_LOWAT: ::uint32_t = 0x00000001;
-pub const NOTE_OOB: ::uint32_t = 0x00000002;
-pub const NOTE_DELETE: ::uint32_t = 0x00000001;
-pub const NOTE_WRITE: ::uint32_t = 0x00000002;
-pub const NOTE_EXTEND: ::uint32_t = 0x00000004;
-pub const NOTE_ATTRIB: ::uint32_t = 0x00000008;
-pub const NOTE_LINK: ::uint32_t = 0x00000010;
-pub const NOTE_RENAME: ::uint32_t = 0x00000020;
-pub const NOTE_REVOKE: ::uint32_t = 0x00000040;
-pub const NOTE_EXIT: ::uint32_t = 0x80000000;
-pub const NOTE_FORK: ::uint32_t = 0x40000000;
-pub const NOTE_EXEC: ::uint32_t = 0x20000000;
-pub const NOTE_PDATAMASK: ::uint32_t = 0x000fffff;
-pub const NOTE_PCTRLMASK: ::uint32_t = 0xf0000000;
-pub const NOTE_TRACK: ::uint32_t = 0x00000001;
-pub const NOTE_TRACKERR: ::uint32_t = 0x00000002;
-pub const NOTE_CHILD: ::uint32_t = 0x00000004;
+pub const NOTE_TRIGGER: u32 = 0x01000000;
+pub const NOTE_FFNOP: u32 = 0x00000000;
+pub const NOTE_FFAND: u32 = 0x40000000;
+pub const NOTE_FFOR: u32 = 0x80000000;
+pub const NOTE_FFCOPY: u32 = 0xc0000000;
+pub const NOTE_FFCTRLMASK: u32 = 0xc0000000;
+pub const NOTE_FFLAGSMASK: u32 = 0x00ffffff;
+pub const NOTE_LOWAT: u32 = 0x00000001;
+pub const NOTE_OOB: u32 = 0x00000002;
+pub const NOTE_DELETE: u32 = 0x00000001;
+pub const NOTE_WRITE: u32 = 0x00000002;
+pub const NOTE_EXTEND: u32 = 0x00000004;
+pub const NOTE_ATTRIB: u32 = 0x00000008;
+pub const NOTE_LINK: u32 = 0x00000010;
+pub const NOTE_RENAME: u32 = 0x00000020;
+pub const NOTE_REVOKE: u32 = 0x00000040;
+pub const NOTE_EXIT: u32 = 0x80000000;
+pub const NOTE_FORK: u32 = 0x40000000;
+pub const NOTE_EXEC: u32 = 0x20000000;
+pub const NOTE_PDATAMASK: u32 = 0x000fffff;
+pub const NOTE_PCTRLMASK: u32 = 0xf0000000;
+pub const NOTE_TRACK: u32 = 0x00000001;
+pub const NOTE_TRACKERR: u32 = 0x00000002;
+pub const NOTE_CHILD: u32 = 0x00000004;
 
 pub const SO_SNDSPACE: ::c_int = 0x100a;
 pub const SO_CPUHINT: ::c_int = 0x1030;
@@ -698,10 +917,8 @@ pub const TCP_FASTKEEP:   ::c_int = 128;
 pub const AF_BLUETOOTH: ::c_int = 33;
 pub const AF_MPLS: ::c_int = 34;
 pub const AF_IEEE80211: ::c_int = 35;
-pub const AF_MAX: ::c_int = 36;
 
 pub const PF_BLUETOOTH: ::c_int = AF_BLUETOOTH;
-pub const PF_MAX: ::c_int = AF_MAX;
 
 pub const NET_RT_DUMP: ::c_int = 1;
 pub const NET_RT_FLAGS: ::c_int = 2;
@@ -709,9 +926,6 @@ pub const NET_RT_IFLIST: ::c_int = 3;
 pub const NET_RT_MAXID: ::c_int = 4;
 
 pub const SOMAXOPT_SIZE: ::c_int = 65536;
-
-#[doc(hidden)]
-pub const NET_MAXID: ::c_int = AF_MAX;
 
 pub const MSG_UNUSED09: ::c_int = 0x00000200;
 pub const MSG_NOSIGNAL: ::c_int = 0x00000400;
@@ -795,33 +1009,37 @@ fn _CMSG_ALIGN(n: usize) -> usize {
 f! {
     pub fn CMSG_DATA(cmsg: *const ::cmsghdr) -> *mut ::c_uchar {
         (cmsg as *mut ::c_uchar)
-            .offset(_CMSG_ALIGN(mem::size_of::<::cmsghdr>()) as isize)
+            .offset(_CMSG_ALIGN(::mem::size_of::<::cmsghdr>()) as isize)
     }
 
     pub fn CMSG_LEN(length: ::c_uint) -> ::c_uint {
-        _CMSG_ALIGN(mem::size_of::<::cmsghdr>()) + length as usize
+        (_CMSG_ALIGN(::mem::size_of::<::cmsghdr>()) + length as usize)
+            as ::c_uint
     }
 
     pub fn CMSG_NXTHDR(mhdr: *const ::msghdr, cmsg: *const ::cmsghdr)
         -> *mut ::cmsghdr
     {
-        let next = cmsg as usize + _CMSG_ALIGN((*cmsg).cmsg_len)
-            + _CMSG_ALIGN(mem::size_of::<::cmsghdr>());
+        let next = cmsg as usize + _CMSG_ALIGN((*cmsg).cmsg_len as usize)
+            + _CMSG_ALIGN(::mem::size_of::<::cmsghdr>());
         let max = (*mhdr).msg_control as usize
             + (*mhdr).msg_controllen as usize;
         if next <= max {
-            (cmsg as usize + _CMSG_ALIGN((*cmsg).cmsg_len)) as *mut ::cmsghdr
+            (cmsg as usize + _CMSG_ALIGN((*cmsg).cmsg_len as usize))
+                as *mut ::cmsghdr
         } else {
             0 as *mut ::cmsghdr
         }
     }
 
     pub fn CMSG_SPACE(length: ::c_uint) -> ::c_uint {
-        _CMSG_ALIGN(mem::size_of::<::cmsghdr>()) + _CMSG_ALIGN(length as usize)
+        (_CMSG_ALIGN(::mem::size_of::<::cmsghdr>()) +
+            _CMSG_ALIGN(length as usize)) as ::c_uint
     }
 }
 
 extern {
+    pub fn setgrent();
     pub fn mprotect(addr: *mut ::c_void, len: ::size_t, prot: ::c_int)
                     -> ::c_int;
     pub fn clock_getres(clk_id: ::clockid_t, tp: *mut ::timespec) -> ::c_int;
@@ -841,4 +1059,11 @@ extern {
     pub fn statfs(path: *const ::c_char, buf: *mut statfs) -> ::c_int;
     pub fn fstatfs(fd: ::c_int, buf: *mut statfs) -> ::c_int;
     pub fn uname(buf: *mut ::utsname) -> ::c_int;
+}
+
+cfg_if! {
+    if #[cfg(libc_thread_local)] {
+        mod errno;
+        pub use self::errno::*;
+    }
 }

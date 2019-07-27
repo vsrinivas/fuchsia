@@ -64,7 +64,7 @@ pub async fn listen_central_events(state: CentralStatePtr) {
     const MAX_CONCURRENT: usize = 1000;
     let evt_stream = state.read().get_svc().take_event_stream();
     let state = &state;
-    let for_each_fut = evt_stream.try_for_each_concurrent(MAX_CONCURRENT, async move |evt| {
+    let for_each_fut = evt_stream.try_for_each_concurrent(MAX_CONCURRENT, move |evt| async move {
         match evt {
             CentralEvent::OnScanStateChanged { scanning } => {
                 eprintln!("  scan state changed: {}", scanning);

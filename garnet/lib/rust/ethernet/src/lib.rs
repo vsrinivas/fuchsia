@@ -12,7 +12,7 @@ use fidl_fuchsia_hardware_ethernet as sys;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef};
-use futures::{ready, task::{Context, Waker}, try_ready, FutureExt, Poll, Stream};
+use futures::{ready, task::{Context, Waker}, FutureExt, Poll, Stream};
 
 use std::fs::File;
 use std::marker::Unpin;
@@ -312,7 +312,7 @@ impl ClientInner {
     ///
     /// These changes are signaled on the rx fifo.
     fn poll_status(&self, cx: &mut Context<'_>) -> Poll<Result<zx::Signals, zx::Status>> {
-        let signals = try_ready!(self.signals.lock().unwrap().poll_unpin(cx));
+        let signals = ready!(self.signals.lock().unwrap().poll_unpin(cx))?;
         self.register_signals();
         Poll::Ready(Ok(signals))
     }
@@ -339,7 +339,7 @@ impl ClientInner {
     ///
     /// Returns the flags indicating success or failure.
     fn poll_complete_tx(&self, cx: &mut Context<'_>) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
-        match try_ready!(self.tx_fifo.try_read(cx)) {
+        match ready!(self.tx_fifo.try_read(cx))? {
             Some(buffer::FifoEntry { offset, flags, .. }) => {
                 self.pool.lock().unwrap().release_tx_buffer(offset as usize);
                 Poll::Ready(Ok(EthernetQueueFlags::from_bits_truncate(flags)))
@@ -350,7 +350,7 @@ impl ClientInner {
 
     /// Queue an available receive buffer to the rx fifo.
     fn poll_queue_rx(&self, cx: &mut Context<'_>) -> Poll<Result<(), zx::Status>> {
-        try_ready!(self.rx_fifo.poll_write(cx));
+        ready!(self.rx_fifo.poll_write(cx))?;
         let mut pool_guard = self.pool.lock().unwrap();
         match pool_guard.alloc_rx_buffer() {
             None => Poll::Pending,
@@ -372,7 +372,7 @@ impl ClientInner {
         &self,
         cx: &mut Context<'_>,
     ) -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
-        Poll::Ready(match try_ready!(self.rx_fifo.try_read(cx)) {
+        Poll::Ready(match ready!(self.rx_fifo.try_read(cx))? {
             Some(entry) => {
                 let mut pool_guard = self.pool.lock().unwrap();
                 let buf = pool_guard.map_rx_buffer(entry.offset as usize, entry.length as usize);

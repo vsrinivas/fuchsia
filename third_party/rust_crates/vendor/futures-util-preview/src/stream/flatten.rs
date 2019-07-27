@@ -1,6 +1,7 @@
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::unsafe_pinned;
 
@@ -97,11 +98,12 @@ impl<St> Stream for Flatten<St>
 }
 
 // Forwarding impl of Sink from the underlying stream
+#[cfg(feature = "sink")]
 impl<S, Item> Sink<Item> for Flatten<S>
     where S: Stream + Sink<Item>,
           S::Item: Stream,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

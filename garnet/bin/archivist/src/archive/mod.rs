@@ -544,7 +544,7 @@ mod tests {
 
     #[test]
     fn archive_open() {
-        let mut path: PathBuf;
+        let path: PathBuf;
         {
             let dir = tempfile::tempdir().unwrap();
             path = dir.path().to_path_buf();

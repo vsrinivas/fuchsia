@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
-
 use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_wlan_device as wlan;
 use fuchsia_async as fasync;

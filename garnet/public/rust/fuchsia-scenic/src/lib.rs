@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
-
 mod cmd;
 mod view_token_pair;
 pub use self::view_token_pair::*;

@@ -24,8 +24,8 @@ clap = "2.33"
 criterion = { version = "0.2", default-features = false }
 csv = "1.0.7"
 failure = "0.1.1"
-futures-preview = { version = "=0.3.0-alpha.15", features = ["async-await", "io-compat", "nightly"] }
-futures-test-preview = "=0.3.0-alpha.15"
+futures-preview = { version = "=0.3.0-alpha.17", features = ["async-await", "io-compat", "nightly"] }
+futures-test-preview = "=0.3.0-alpha.17"
 heck = "0.3.1"
 json5 = "0.2.4"
 lazy_static = "1"

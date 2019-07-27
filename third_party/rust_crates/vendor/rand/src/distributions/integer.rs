@@ -8,8 +8,10 @@
 
 //! The implementations of the `Standard` distribution for integer types.
 
-use {Rng};
-use distributions::{Distribution, Standard};
+use crate::{Rng};
+use crate::distributions::{Distribution, Standard};
+use core::num::{NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroUsize};
+#[cfg(not(target_os = "emscripten"))] use core::num::NonZeroU128;
 #[cfg(feature="simd_support")]
 use packed_simd::*;
 #[cfg(all(target_arch = "x86", feature="nightly"))]
@@ -45,7 +47,7 @@ impl Distribution<u64> for Standard {
     }
 }
 
-#[cfg(all(rustc_1_26, not(target_os = "emscripten")))]
+#[cfg(not(target_os = "emscripten"))]
 impl Distribution<u128> for Standard {
     #[inline]
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> u128 {
@@ -85,8 +87,29 @@ impl_int_from_uint! { i8, u8 }
 impl_int_from_uint! { i16, u16 }
 impl_int_from_uint! { i32, u32 }
 impl_int_from_uint! { i64, u64 }
-#[cfg(all(rustc_1_26, not(target_os = "emscripten")))] impl_int_from_uint! { i128, u128 }
+#[cfg(not(target_os = "emscripten"))] impl_int_from_uint! { i128, u128 }
 impl_int_from_uint! { isize, usize }
+
+macro_rules! impl_nzint {
+    ($ty:ty, $new:path) => {
+        impl Distribution<$ty> for Standard {
+            fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> $ty {
+                loop {
+                    if let Some(nz) = $new(rng.gen()) {
+                        break nz;
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl_nzint!(NonZeroU8, NonZeroU8::new);
+impl_nzint!(NonZeroU16, NonZeroU16::new);
+impl_nzint!(NonZeroU32, NonZeroU32::new);
+impl_nzint!(NonZeroU64, NonZeroU64::new);
+#[cfg(not(target_os = "emscripten"))] impl_nzint!(NonZeroU128, NonZeroU128::new);
+impl_nzint!(NonZeroUsize, NonZeroUsize::new);
 
 #[cfg(feature="simd_support")]
 macro_rules! simd_impl {
@@ -135,19 +158,19 @@ simd_impl!((__m64, u8x8), (__m128i, u8x16), (__m256i, u8x32),);
 
 #[cfg(test)]
 mod tests {
-    use Rng;
-    use distributions::{Standard};
+    use crate::Rng;
+    use crate::distributions::{Standard};
     
     #[test]
     fn test_integers() {
-        let mut rng = ::test::rng(806);
+        let mut rng = crate::test::rng(806);
         
         rng.sample::<isize, _>(Standard);
         rng.sample::<i8, _>(Standard);
         rng.sample::<i16, _>(Standard);
         rng.sample::<i32, _>(Standard);
         rng.sample::<i64, _>(Standard);
-        #[cfg(all(rustc_1_26, not(target_os = "emscripten")))]
+        #[cfg(not(target_os = "emscripten"))]
         rng.sample::<i128, _>(Standard);
         
         rng.sample::<usize, _>(Standard);
@@ -155,7 +178,7 @@ mod tests {
         rng.sample::<u16, _>(Standard);
         rng.sample::<u32, _>(Standard);
         rng.sample::<u64, _>(Standard);
-        #[cfg(all(rustc_1_26, not(target_os = "emscripten")))]
+        #[cfg(not(target_os = "emscripten"))]
         rng.sample::<u128, _>(Standard);
     }
 }

@@ -1,3 +1,4 @@
+use core::fmt;
 use core::marker::PhantomData;
 use core::mem;
 use core::pin::Pin;
@@ -8,17 +9,32 @@ use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Sink for the [`with`](super::SinkExt::with) method.
-#[derive(Debug)]
 #[must_use = "sinks do nothing unless polled"]
-pub struct With<Si, Item, U, Fut, F>
-    where Si: Sink<Item>,
-          F: FnMut(U) -> Fut,
-          Fut: Future,
-{
+pub struct With<Si, Item, U, Fut, F> {
     sink: Si,
     f: F,
     state: State<Fut, Item>,
     _phantom: PhantomData<fn(U)>,
+}
+
+impl<Si, Item, U, Fut, F> Unpin for With<Si, Item, U, Fut, F>
+where
+    Si: Unpin,
+    Fut: Unpin,
+{}
+
+impl<Si, Item, U, Fut, F> fmt::Debug for With<Si, Item, U, Fut, F>
+where
+    Si: fmt::Debug,
+    Fut: fmt::Debug,
+    Item: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("With")
+            .field("sink", &self.sink)
+            .field("state", &self.state)
+            .finish()
+    }
 }
 
 impl<Si, Item, U, Fut, F> With<Si, Item, U, Fut, F>
@@ -33,7 +49,7 @@ where Si: Sink<Item>,
     pub(super) fn new<E>(sink: Si, f: F) -> Self
         where
             Fut: Future<Output = Result<Item, E>>,
-            E: From<Si::SinkError>,
+            E: From<Si::Error>,
     {
         With {
             state: State::Empty,
@@ -43,12 +59,6 @@ where Si: Sink<Item>,
         }
     }
 }
-
-impl<Si, Item, U, Fut, F> Unpin for With<Si, Item, U, Fut, F>
-where Si: Sink<Item> + Unpin,
-      F: FnMut(U) -> Fut,
-      Fut: Future + Unpin,
-{}
 
 #[derive(Debug)]
 enum State<Fut, T> {
@@ -63,7 +73,7 @@ impl<Fut, T> State<Fut, T> {
         self: Pin<&'a mut Self>,
     ) -> State<Pin<&'a mut Fut>, Pin<&'a mut T>> {
         unsafe {
-            match Pin::get_unchecked_mut(self) {
+            match self.get_unchecked_mut() {
                 State::Empty =>
                     State::Empty,
                 State::Process(fut) =>
@@ -95,7 +105,7 @@ impl<Si, Item, U, Fut, F, E> With<Si, Item, U, Fut, F>
     where Si: Sink<Item>,
           F: FnMut(U) -> Fut,
           Fut: Future<Output = Result<Item, E>>,
-          E: From<Si::SinkError>,
+          E: From<Si::Error>,
 {
     /// Get a shared reference to the inner sink.
     pub fn get_ref(&self) -> &Si {
@@ -126,13 +136,13 @@ impl<Si, Item, U, Fut, F, E> With<Si, Item, U, Fut, F>
     ) -> Poll<Result<(), E>> {
         let buffered = match self.as_mut().state().as_pin_mut() {
             State::Empty => return Poll::Ready(Ok(())),
-            State::Process(fut) => Some(try_ready!(fut.poll(cx))),
+            State::Process(fut) => Some(ready!(fut.poll(cx))?),
             State::Buffered(_) => None,
         };
         if let Some(buffered) = buffered {
             self.as_mut().state().set(State::Buffered(buffered));
         }
-        if let State::Buffered(item) = unsafe { mem::replace(Pin::get_unchecked_mut(self.as_mut().state()), State::Empty) } {
+        if let State::Buffered(item) = unsafe { mem::replace(self.as_mut().state().get_unchecked_mut(), State::Empty) } {
             Poll::Ready(self.as_mut().sink().start_send(item).map_err(Into::into))
         } else {
             unreachable!()
@@ -144,21 +154,21 @@ impl<Si, Item, U, Fut, F, E> Sink<U> for With<Si, Item, U, Fut, F>
     where Si: Sink<Item>,
           F: FnMut(U) -> Fut,
           Fut: Future<Output = Result<Item, E>>,
-          E: From<Si::SinkError>,
+          E: From<Si::Error>,
 {
-    type SinkError = E;
+    type Error = E;
 
     fn poll_ready(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    ) -> Poll<Result<(), Self::Error>> {
         self.poll(cx)
     }
 
     fn start_send(
         mut self: Pin<&mut Self>,
         item: U,
-    ) -> Result<(), Self::SinkError> {
+    ) -> Result<(), Self::Error> {
         let item = (self.as_mut().f())(item);
         self.as_mut().state().set(State::Process(item));
         Ok(())
@@ -167,18 +177,18 @@ impl<Si, Item, U, Fut, F, E> Sink<U> for With<Si, Item, U, Fut, F>
     fn poll_flush(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
-        try_ready!(self.as_mut().poll(cx));
-        try_ready!(self.as_mut().sink().poll_flush(cx));
+    ) -> Poll<Result<(), Self::Error>> {
+        ready!(self.as_mut().poll(cx))?;
+        ready!(self.as_mut().sink().poll_flush(cx))?;
         Poll::Ready(Ok(()))
     }
 
     fn poll_close(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
-        try_ready!(self.as_mut().poll(cx));
-        try_ready!(self.as_mut().sink().poll_close(cx));
+    ) -> Poll<Result<(), Self::Error>> {
+        ready!(self.as_mut().poll(cx))?;
+        ready!(self.as_mut().sink().poll_close(cx))?;
         Poll::Ready(Ok(()))
     }
 }

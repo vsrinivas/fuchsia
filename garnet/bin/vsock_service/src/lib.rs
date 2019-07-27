@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
 #![recursion_limit="512"]
 
 mod addr;
@@ -219,7 +218,9 @@ mod tests {
             .request(&mut *addr::Vsock::new(9000, 80, 4))?;
         let (_data_socket, _client_end, _con) = make_con()?;
 
-        unwrap_msg!(AcceptorRequest::Accept{addr, responder} from acceptor_client);
+        let (_addr, responder) =
+            unwrap_msg!(AcceptorRequest::Accept{addr, responder} from acceptor_client);
+        drop(responder); // don't bother responding, we're done
 
         Ok(())
     }

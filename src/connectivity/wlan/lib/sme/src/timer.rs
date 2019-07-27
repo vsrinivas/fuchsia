@@ -69,7 +69,6 @@ pub trait TimeoutDuration {
 mod tests {
     use super::*;
     use fuchsia_zircon::prelude::DurationNum;
-    use std::error::Error;
     use wlan_common::assert_variant;
 
     type Event = u32;
@@ -98,7 +97,7 @@ mod tests {
         assert_eq!(event2.event, 9);
 
         assert_variant!(time_stream.try_next(), Err(e) => {
-            assert_eq!(e.description(), "receiver channel is empty")
+            assert_eq!(e.to_string(), "receiver channel is empty")
         });
     }
 

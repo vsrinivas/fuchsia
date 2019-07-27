@@ -1,5 +1,3 @@
-use dox::{mem, Option};
-
 pub type rlim_t = ::uintptr_t;
 pub type sa_family_t = u8;
 pub type pthread_key_t = ::c_int;
@@ -31,9 +29,23 @@ pub type nl_item = ::c_int;
 pub type id_t = i32;
 pub type idtype_t = ::c_uint;
 
+#[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum timezone {}
+impl ::Copy for timezone {}
+impl ::Clone for timezone {
+    fn clone(&self) -> timezone { *self }
+}
 
 s! {
+    pub struct in_addr {
+        pub s_addr: ::in_addr_t,
+    }
+
+    pub struct ip_mreq {
+        pub imr_multiaddr: in_addr,
+        pub imr_interface: in_addr,
+    }
+
     pub struct sockaddr {
         pub sa_len: u8,
         pub sa_family: sa_family_t,
@@ -55,20 +67,6 @@ s! {
         pub sin6_flowinfo: u32,
         pub sin6_addr: ::in6_addr,
         pub sin6_scope_id: u32,
-    }
-
-    pub struct sockaddr_un {
-        pub sun_len: u8,
-        pub sun_family: sa_family_t,
-        pub sun_path: [::c_char; 126]
-    }
-
-    pub struct sockaddr_storage {
-        pub ss_len: u8,
-        pub ss_family: sa_family_t,
-        __ss_pad1: [u8; 6],
-        __ss_pad2: u64,
-        __ss_pad3: [u8; 112],
     }
 
     pub struct addrinfo {
@@ -199,15 +197,6 @@ s! {
         pub st_blocks: blkcnt_t,
     }
 
-    pub struct dirent {
-        pub d_dev: dev_t,
-        pub d_pdev: dev_t,
-        pub d_ino: ino_t,
-        pub d_pino: i64,
-        pub d_reclen: ::c_ushort,
-        pub d_name: [::c_char; 1024], // Max length is _POSIX_PATH_MAX
-    }
-
     pub struct glob_t {
         pub gl_pathc: ::size_t,
         __unused1: ::size_t,
@@ -298,14 +287,6 @@ s! {
         sa_userdata: *mut ::c_void,
     }
 
-    pub struct sigevent {
-        pub sigev_notify: ::c_int,
-        pub sigev_signo: ::c_int,
-        pub sigev_value: ::sigval,
-        __unused1: *mut ::c_void, // actually a function pointer
-        pub sigev_notify_attributes: *mut ::pthread_attr_t,
-    }
-
     pub struct sem_t {
         pub se_type: i32,
         pub se_named_id: i32, // this is actually a union
@@ -316,6 +297,177 @@ s! {
     pub struct pthread_condattr_t {
         pub process_shared: bool,
         pub clock_id: i32,
+    }
+}
+
+s_no_extra_traits! {
+    pub struct sockaddr_un {
+        pub sun_len: u8,
+        pub sun_family: sa_family_t,
+        pub sun_path: [::c_char; 126]
+    }
+    pub struct sockaddr_storage {
+        pub ss_len: u8,
+        pub ss_family: sa_family_t,
+        __ss_pad1: [u8; 6],
+        __ss_pad2: u64,
+        __ss_pad3: [u8; 112],
+    }
+    pub struct dirent {
+        pub d_dev: dev_t,
+        pub d_pdev: dev_t,
+        pub d_ino: ino_t,
+        pub d_pino: i64,
+        pub d_reclen: ::c_ushort,
+        pub d_name: [::c_char; 1024], // Max length is _POSIX_PATH_MAX
+    }
+
+    pub struct sigevent {
+        pub sigev_notify: ::c_int,
+        pub sigev_signo: ::c_int,
+        pub sigev_value: ::sigval,
+        __unused1: *mut ::c_void, // actually a function pointer
+        pub sigev_notify_attributes: *mut ::pthread_attr_t,
+    }
+}
+
+cfg_if! {
+    if #[cfg(feature = "extra_traits")] {
+        impl PartialEq for sockaddr_un {
+            fn eq(&self, other: &sockaddr_un) -> bool {
+                self.sun_len == other.sun_len
+                    && self.sun_family == other.sun_family
+                    && self
+                    .sun_path
+                    .iter()
+                    .zip(other.sun_path.iter())
+                    .all(|(a,b)| a == b)
+            }
+        }
+        impl Eq for sockaddr_un {}
+        impl ::fmt::Debug for sockaddr_un {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("sockaddr_un")
+                    .field("sun_len", &self.sun_len)
+                    .field("sun_family", &self.sun_family)
+                    // FIXME: .field("sun_path", &self.sun_path)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for sockaddr_un {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.sun_len.hash(state);
+                self.sun_family.hash(state);
+                self.sun_path.hash(state);
+            }
+        }
+
+        impl PartialEq for sockaddr_storage {
+            fn eq(&self, other: &sockaddr_storage) -> bool {
+                self.ss_len == other.ss_len
+                    && self.ss_family == other.ss_family
+                    && self
+                    .__ss_pad1
+                    .iter()
+                    .zip(other.__ss_pad1.iter())
+                    .all(|(a, b)| a == b)
+                    && self.__ss_pad2 == other.__ss_pad2
+                    && self
+                    .__ss_pad3
+                    .iter()
+                    .zip(other.__ss_pad3.iter())
+                    .all(|(a, b)| a == b)
+            }
+        }
+        impl Eq for sockaddr_storage {}
+        impl ::fmt::Debug for sockaddr_storage {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("sockaddr_storage")
+                    .field("ss_len", &self.ss_len)
+                    .field("ss_family", &self.ss_family)
+                    .field("__ss_pad1", &self.__ss_pad1)
+                    .field("__ss_pad2", &self.__ss_pad2)
+                    // FIXME: .field("__ss_pad3", &self.__ss_pad3)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for sockaddr_storage {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.ss_len.hash(state);
+                self.ss_family.hash(state);
+                self.__ss_pad1.hash(state);
+                self.__ss_pad2.hash(state);
+                self.__ss_pad3.hash(state);
+            }
+        }
+
+        impl PartialEq for dirent {
+            fn eq(&self, other: &dirent) -> bool {
+                self.d_dev == other.d_dev
+                    && self.d_pdev == other.d_pdev
+                    && self.d_ino == other.d_ino
+                    && self.d_pino == other.d_pino
+                    && self.d_reclen == other.d_reclen
+                    && self
+                    .d_name
+                    .iter()
+                    .zip(other.d_name.iter())
+                    .all(|(a,b)| a == b)
+            }
+        }
+        impl Eq for dirent {}
+        impl ::fmt::Debug for dirent {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("dirent")
+                    .field("d_dev", &self.d_dev)
+                    .field("d_pdev", &self.d_pdev)
+                    .field("d_ino", &self.d_ino)
+                    .field("d_pino", &self.d_pino)
+                    .field("d_reclen", &self.d_reclen)
+                    // FIXME: .field("d_name", &self.d_name)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for dirent {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.d_dev.hash(state);
+                self.d_pdev.hash(state);
+                self.d_ino.hash(state);
+                self.d_pino.hash(state);
+                self.d_reclen.hash(state);
+                self.d_name.hash(state);
+            }
+        }
+
+        impl PartialEq for sigevent {
+            fn eq(&self, other: &sigevent) -> bool {
+                self.sigev_notify == other.sigev_notify
+                    && self.sigev_signo == other.sigev_signo
+                    && self.sigev_value == other.sigev_value
+                    && self.sigev_notify_attributes
+                        == other.sigev_notify_attributes
+            }
+        }
+        impl Eq for sigevent {}
+        impl ::fmt::Debug for sigevent {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("sigevent")
+                    .field("sigev_notify", &self.sigev_notify)
+                    .field("sigev_signo", &self.sigev_signo)
+                    .field("sigev_value", &self.sigev_value)
+                    .field("sigev_notify_attributes",
+                           &self.sigev_notify_attributes)
+                    .finish()
+            }
+        }
+        impl ::hash::Hash for sigevent {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.sigev_notify.hash(state);
+                self.sigev_signo.hash(state);
+                self.sigev_value.hash(state);
+                self.sigev_notify_attributes.hash(state);
+            }
+        }
     }
 }
 
@@ -648,7 +800,6 @@ pub const AF_NOTIFY: ::c_int = 8;
 pub const AF_LOCAL: ::c_int = 9;
 pub const AF_UNIX: ::c_int = AF_LOCAL;
 pub const AF_BLUETOOTH: ::c_int = 10;
-pub const AF_MAX: ::c_int = 11;
 
 pub const IP_OPTIONS: ::c_int = 1;
 pub const IP_HDRINCL: ::c_int = 2;
@@ -1025,23 +1176,48 @@ pub const TCIFLUSH: ::c_int = 0x01;
 pub const TCOFLUSH: ::c_int = 0x02;
 pub const TCIOFLUSH: ::c_int = 0x03;
 
+pub const TCGETA:      ::c_int = 0x8000;
+pub const TCSETA:      ::c_int = TCGETA + 1;
+pub const TCSETAF:     ::c_int = TCGETA + 2;
+pub const TCSETAW:     ::c_int = TCGETA + 3;
+pub const TCWAITEVENT: ::c_int = TCGETA + 4;
+pub const TCSBRK:      ::c_int = TCGETA + 5;
+pub const TCFLSH:      ::c_int = TCGETA + 6;
+pub const TCXONC:      ::c_int = TCGETA + 7;
+pub const TCQUERYCONNECTED: ::c_int = TCGETA + 8;
+pub const TCGETBITS:   ::c_int = TCGETA + 9;
+pub const TCSETDTR:    ::c_int = TCGETA + 10;
+pub const TCSETRTS:    ::c_int = TCGETA + 11;
+pub const TIOCGWINSZ:  ::c_int = TCGETA + 12;
+pub const TIOCSWINSZ:  ::c_int = TCGETA + 13;
+pub const TCVTIME:     ::c_int = TCGETA + 14;
+pub const TIOCGPGRP:   ::c_int = TCGETA + 15;
+pub const TIOCSPGRP:   ::c_int = TCGETA + 16;
+pub const TIOCSCTTY:   ::c_int = TCGETA + 17;
+pub const TIOCMGET:    ::c_int = TCGETA + 18;
+pub const TIOCMSET:    ::c_int = TCGETA + 19;
+pub const TIOCSBRK:    ::c_int = TCGETA + 20;
+pub const TIOCCBRK:    ::c_int = TCGETA + 21;
+pub const TIOCMBIS:    ::c_int = TCGETA + 22;
+pub const TIOCMBIC:    ::c_int = TCGETA + 23;
+
 f! {
     pub fn FD_CLR(fd: ::c_int, set: *mut fd_set) -> () {
         let fd = fd as usize;
-        let size = mem::size_of_val(&(*set).fds_bits[0]) * 8;
+        let size = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         (*set).fds_bits[fd / size] &= !(1 << (fd % size));
         return
     }
 
     pub fn FD_ISSET(fd: ::c_int, set: *mut fd_set) -> bool {
         let fd = fd as usize;
-        let size = mem::size_of_val(&(*set).fds_bits[0]) * 8;
+        let size = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         return ((*set).fds_bits[fd / size] & (1 << (fd % size))) != 0
     }
 
     pub fn FD_SET(fd: ::c_int, set: *mut fd_set) -> () {
         let fd = fd as usize;
-        let size = mem::size_of_val(&(*set).fds_bits[0]) * 8;
+        let size = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         (*set).fds_bits[fd / size] |= 1 << (fd % size);
         return
     }
@@ -1087,6 +1263,12 @@ f! {
 }
 
 extern {
+    pub fn getrlimit(resource: ::c_int, rlim: *mut ::rlimit) -> ::c_int;
+    pub fn setrlimit(resource: ::c_int, rlim: *const ::rlimit) -> ::c_int;
+    pub fn strerror_r(errnum: ::c_int, buf: *mut c_char,
+                      buflen: ::size_t) -> ::c_int;
+    pub fn _errnop() -> *mut ::c_int;
+
     pub fn abs(i: ::c_int) -> ::c_int;
     pub fn atof(s: *const ::c_char) -> ::c_double;
     pub fn labs(i: ::c_long) -> ::c_long;
@@ -1096,6 +1278,12 @@ extern {
 
 #[link(name = "bsd")]
 extern {
+    pub fn sem_destroy(sem: *mut sem_t) -> ::c_int;
+    pub fn sem_init(sem: *mut sem_t,
+                    pshared: ::c_int,
+                    value: ::c_uint)
+                    -> ::c_int;
+
     pub fn clock_gettime(clk_id: ::c_int, tp: *mut ::timespec) -> ::c_int;
     pub fn clock_settime(clk_id: ::c_int, tp: *const ::timespec) -> ::c_int;
     pub fn pthread_create(thread: *mut ::pthread_t,
@@ -1132,11 +1320,12 @@ extern {
 
     pub fn glob(pattern: *const ::c_char,
                 flags: ::c_int,
-                errfunc: Option<extern fn(epath: *const ::c_char,
+                errfunc: ::Option<extern fn(epath: *const ::c_char,
                                           errno: ::c_int) -> ::c_int>,
                 pglob: *mut ::glob_t) -> ::c_int;
     pub fn globfree(pglob: *mut ::glob_t);
-
+    pub fn gettimeofday(tp: *mut ::timeval,
+                        tz: *mut ::c_void) -> ::c_int;
     pub fn posix_madvise(addr: *mut ::c_void, len: ::size_t, advice: ::c_int)
                          -> ::c_int;
 
@@ -1178,7 +1367,7 @@ extern {
     pub fn execvpe(file: *const ::c_char, argv: *const *const ::c_char,
                    environment: *const *const ::c_char) -> ::c_int;
     #[cfg_attr(target_os = "solaris", link_name = "__posix_getgrgid_r")]
-    pub fn getgrgid_r(uid: ::uid_t,
+    pub fn getgrgid_r(gid: ::gid_t,
                       grp: *mut ::group,
                       buf: *mut ::c_char,
                       buflen: ::size_t,
@@ -1224,9 +1413,9 @@ extern {
     #[cfg_attr(target_os = "solaris", link_name = "__posix_sigwait")]
     pub fn sigwait(set: *const sigset_t,
                    sig: *mut ::c_int) -> ::c_int;
-    pub fn pthread_atfork(prepare: Option<unsafe extern fn()>,
-                          parent: Option<unsafe extern fn()>,
-                          child: Option<unsafe extern fn()>) -> ::c_int;
+    pub fn pthread_atfork(prepare: ::Option<unsafe extern fn()>,
+                          parent: ::Option<unsafe extern fn()>,
+                          child: ::Option<unsafe extern fn()>) -> ::c_int;
     pub fn getgrgid(gid: ::gid_t) -> *mut ::group;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
                link_name = "popen$UNIX2003")]

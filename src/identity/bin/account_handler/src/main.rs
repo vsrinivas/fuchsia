@@ -6,7 +6,6 @@
 //! device, and provides access to authentication tokens for Service Provider accounts associated
 //! with the Fuchsia account.
 
-#![deny(warnings)]
 #![deny(missing_docs)]
 #![feature(async_await, await_macro)]
 

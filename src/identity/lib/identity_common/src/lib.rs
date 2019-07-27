@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //! Types that are shared across more than one crate in the Fuchsia identity stack.
-#![deny(warnings)]
 #![deny(missing_docs)]
 #![feature(async_await, await_macro)]
 

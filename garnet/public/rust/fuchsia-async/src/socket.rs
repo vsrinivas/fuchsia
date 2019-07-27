@@ -9,7 +9,7 @@ use futures::{
     future::poll_fn,
     stream::Stream,
     task::{AtomicWaker, Context},
-    try_ready, Poll,
+    ready, Poll,
 };
 use std::fmt;
 use std::pin::Pin;
@@ -203,7 +203,7 @@ impl Socket {
     // Private helper for reading without `&mut` self.
     // This is used in the impls of `Read` for `Socket` and `&Socket`.
     fn read_nomut(&self, buf: &mut [u8], cx: &mut Context<'_>) -> Poll<Result<usize, zx::Status>> {
-        let clear_closed = try_ready!(self.poll_read_task(cx));
+        let clear_closed = ready!(self.poll_read_task(cx))?;
         let res = self.handle.read(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
             self.need_read(cx, clear_closed)?;
@@ -218,7 +218,7 @@ impl Socket {
     // Private helper for writing without `&mut` self.
     // This is used in the impls of `Write` for `Socket` and `&Socket`.
     fn write_nomut(&self, buf: &[u8], cx: &mut Context<'_>) -> Poll<Result<usize, zx::Status>> {
-        let clear_closed = try_ready!(self.poll_write_task(cx));
+        let clear_closed = ready!(self.poll_write_task(cx))?;
         let res = self.handle.write(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
             self.need_write(cx, clear_closed)?;
@@ -236,7 +236,7 @@ impl Socket {
         cx: &mut Context<'_>,
         out: &mut Vec<u8>,
     ) -> Poll<Result<usize, zx::Status>> {
-        let clear_closed = try_ready!(self.poll_read_task(cx));
+        let clear_closed = ready!(self.poll_read_task(cx))?;
         let avail = self.handle.outstanding_read_bytes()?;
         let len = out.len();
         out.resize(len + avail, 0);

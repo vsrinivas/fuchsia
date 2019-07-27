@@ -1,7 +1,8 @@
-use crate::stream::{Fuse, FuturesOrdered};
+use crate::stream::{Fuse, FuturesOrdered, StreamExt};
 use futures_core::future::Future;
 use futures_core::stream::Stream;
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 use core::fmt;
@@ -30,8 +31,8 @@ where
     St: Stream + fmt::Debug,
     St::Item: Future,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("Buffered")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Buffered")
             .field("stream", &self.stream)
             .field("in_progress_queue", &self.in_progress_queue)
             .field("max", &self.max)
@@ -109,7 +110,7 @@ where
         }
 
         // Attempt to pull the next value from the in_progress_queue
-        let res = Pin::new(self.as_mut().in_progress_queue()).poll_next(cx);
+        let res = self.as_mut().in_progress_queue().poll_next_unpin(cx);
         if let Some(val) = ready!(res) {
             return Poll::Ready(Some(val))
         }
@@ -124,12 +125,13 @@ where
 }
 
 // Forwarding impl of Sink from the underlying stream
+#[cfg(feature = "sink")]
 impl<S, Item> Sink<Item> for Buffered<S>
 where
     S: Stream + Sink<Item>,
     S::Item: Future,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

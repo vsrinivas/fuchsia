@@ -1,7 +1,8 @@
+use crate::try_stream::TryStreamExt;
 use core::pin::Pin;
 use futures_core::stream::TryStream;
 use futures_core::task::{Context, Poll};
-use futures_io::AsyncRead;
+use futures_io::{AsyncRead, AsyncBufRead};
 use std::cmp;
 use std::io::{Error, Result};
 
@@ -72,13 +73,14 @@ where
                     return Poll::Ready(Ok(len));
                 }
                 ReadState::PendingChunk => {
-                    match ready!(Pin::new(&mut self.stream).try_poll_next(cx)) {
+                    match ready!(self.stream.try_poll_next_unpin(cx)) {
                         Some(Ok(chunk)) => {
-                            self.state = ReadState::Ready {
-                                chunk,
-                                chunk_start: 0,
-                            };
-                            continue;
+                            if !chunk.as_ref().is_empty() {
+                                self.state = ReadState::Ready {
+                                    chunk,
+                                    chunk_start: 0,
+                                };
+                            }
                         }
                         Some(Err(err)) => {
                             self.state = ReadState::Eof;
@@ -98,54 +100,59 @@ where
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use futures::stream::{self, StreamExt, TryStreamExt};
-    use futures_io::AsyncRead;
-    use futures_test::task::noop_context;
-
-    macro_rules! assert_read {
-        ($reader:expr, $buf:expr, $item:expr) => {
-            let mut cx = noop_context();
-            match Pin::new(&mut $reader).poll_read(&mut cx, $buf) {
-                Poll::Ready(Ok(x)) => {
-                    assert_eq!(x, $item);
+impl<St> AsyncBufRead for IntoAsyncRead<St>
+where
+    St: TryStream<Error = Error> + Unpin,
+    St::Ok: AsRef<[u8]>,
+{
+    fn poll_fill_buf<'a>(
+        mut self: Pin<&'a mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<&'a [u8]>> {
+        while let ReadState::PendingChunk = self.state {
+            match ready!(self.stream.try_poll_next_unpin(cx)) {
+                Some(Ok(chunk)) => {
+                    if !chunk.as_ref().is_empty() {
+                        self.state = ReadState::Ready {
+                            chunk,
+                            chunk_start: 0,
+                        };
+                    }
                 }
-                Poll::Ready(Err(err)) => {
-                    panic!("assertion failed: expected value but got {}", err);
+                Some(Err(err)) => {
+                    self.state = ReadState::Eof;
+                    return Poll::Ready(Err(err));
                 }
-                Poll::Pending => {
-                    panic!("assertion failed: reader was not ready");
+                None => {
+                    self.state = ReadState::Eof;
+                    return Poll::Ready(Ok(&[]));
                 }
             }
-        };
+        }
+
+        if let ReadState::Ready { ref chunk, chunk_start } = self.into_ref().get_ref().state {
+            let chunk = chunk.as_ref();
+            return Poll::Ready(Ok(&chunk[chunk_start..]));
+        }
+
+        // To get to this point we must be in ReadState::Eof
+        Poll::Ready(Ok(&[]))
     }
 
-    #[test]
-    fn test_into_async_read() {
-        let stream = stream::iter(1..=3).map(|_| Ok(vec![1, 2, 3, 4, 5]));
-        let mut reader = stream.into_async_read();
-        let mut buf = vec![0; 3];
-
-        assert_read!(reader, &mut buf, 3);
-        assert_eq!(&buf, &[1, 2, 3]);
-
-        assert_read!(reader, &mut buf, 2);
-        assert_eq!(&buf[..2], &[4, 5]);
-
-        assert_read!(reader, &mut buf, 3);
-        assert_eq!(&buf, &[1, 2, 3]);
-
-        assert_read!(reader, &mut buf, 2);
-        assert_eq!(&buf[..2], &[4, 5]);
-
-        assert_read!(reader, &mut buf, 3);
-        assert_eq!(&buf, &[1, 2, 3]);
-
-        assert_read!(reader, &mut buf, 2);
-        assert_eq!(&buf[..2], &[4, 5]);
-
-        assert_read!(reader, &mut buf, 0);
+    fn consume(
+        mut self: Pin<&mut Self>,
+        amount: usize,
+    ) {
+         // https://github.com/rust-lang-nursery/futures-rs/pull/1556#discussion_r281644295
+        if amount == 0 { return }
+        if let ReadState::Ready { chunk, chunk_start } = &mut self.state {
+            *chunk_start += amount;
+            debug_assert!(*chunk_start <= chunk.as_ref().len());
+            if *chunk_start >= chunk.as_ref().len() {
+                self.state = ReadState::PendingChunk;
+            }
+        } else {
+            debug_assert!(false, "Attempted to consume from IntoAsyncRead without chunk");
+        }
     }
 }

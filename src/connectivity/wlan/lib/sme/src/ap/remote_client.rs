@@ -212,10 +212,7 @@ mod tests {
     };
     use {
         futures::channel::mpsc,
-        std::{
-            error::Error,
-            sync::{Arc, Mutex},
-        },
+        std::sync::{Arc, Mutex},
         wlan_common::assert_variant,
     };
 
@@ -345,7 +342,7 @@ mod tests {
 
         // Since EssSa was already established, timeout did not trigger.
         assert_variant!(mlme_stream.try_next(), Err(e) => {
-            assert_eq!(e.description(), "receiver channel is empty")
+            assert_eq!(e.to_string(), "receiver channel is empty")
         });
     }
 

@@ -5,10 +5,9 @@ use futures_core::task::{Context, Poll, Spawn, LocalSpawn, SpawnError};
 use futures_util::task::{waker_ref, ArcWake};
 use futures_util::stream::FuturesUnordered;
 use futures_util::stream::StreamExt;
-use pin_utils::pin_mut;
+use futures_util::pin_mut;
 use std::cell::{RefCell};
 use std::ops::{Deref, DerefMut};
-use std::prelude::v1::*;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use std::thread::{self, Thread};
@@ -23,7 +22,7 @@ use std::thread::{self, Thread};
 /// [`Spawn`](futures_core::task::Spawn), use the
 /// [`spawner()`](LocalPool::spawner) method. Because the executor is
 /// single-threaded, it supports a special form of task spawning for non-`Send`
-/// futures, via [`spawn_local_obj`](LocalSpawner::spawn_local_obj).
+/// futures, via [`spawn_local_obj`](futures_core::task::LocalSpawn::spawn_local_obj).
 #[derive(Debug)]
 pub struct LocalPool {
     pool: FuturesUnordered<LocalFutureObj<'static, ()>>,
@@ -171,21 +170,21 @@ impl LocalPool {
     /// ```
     /// use futures::executor::LocalPool;
     /// use futures::task::LocalSpawnExt;
-    /// use futures::future::{ready, empty};
+    /// use futures::future::{ready, pending};
     ///
     /// let mut pool = LocalPool::new();
     /// let mut spawner = pool.spawner();
     ///
-    /// spawner.spawn_local(ready(()));
-    /// spawner.spawn_local(ready(()));
-    /// spawner.spawn_local(empty());
+    /// spawner.spawn_local(ready(())).unwrap();
+    /// spawner.spawn_local(ready(())).unwrap();
+    /// spawner.spawn_local(pending()).unwrap();
     ///
     /// // Run the two ready tasks and return true for them.
     /// pool.try_run_one(); // returns true after completing one of the ready futures
     /// pool.try_run_one(); // returns true after completing the other ready future
     ///
     /// // the remaining task can not be completed
-    /// pool.try_run_one(); // returns false
+    /// assert!(!pool.try_run_one()); // returns false
     /// ```
     ///
     /// This function will not block the calling thread and will return the moment
@@ -211,14 +210,14 @@ impl LocalPool {
     /// ```
     /// use futures::executor::LocalPool;
     /// use futures::task::LocalSpawnExt;
-    /// use futures::future::{ready, empty};
+    /// use futures::future::{ready, pending};
     ///
     /// let mut pool = LocalPool::new();
     /// let mut spawner = pool.spawner();
     ///
-    /// spawner.spawn_local(ready(()));
-    /// spawner.spawn_local(ready(()));
-    /// spawner.spawn_local(empty());
+    /// spawner.spawn_local(ready(())).unwrap();
+    /// spawner.spawn_local(ready(())).unwrap();
+    /// spawner.spawn_local(pending()).unwrap();
     ///
     /// // Runs the two ready task and returns.
     /// // The empty task remains in the pool.

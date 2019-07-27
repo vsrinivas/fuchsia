@@ -15,7 +15,7 @@ use {
 fn echo_sibling_server(stream: EchoExposedBySiblingRequestStream) -> impl Future<Output = ()> {
     stream
         .err_into::<failure::Error>()
-        .try_for_each(async move |EchoExposedBySiblingRequest::Echo { value, responder }| {
+        .try_for_each(|EchoExposedBySiblingRequest::Echo { value, responder }| async move {
             responder.send(value * 2).context("sending response")?;
             Ok(())
         })

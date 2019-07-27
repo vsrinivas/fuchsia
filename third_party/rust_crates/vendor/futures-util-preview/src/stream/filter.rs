@@ -1,22 +1,42 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`filter`](super::StreamExt::filter) method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Filter<St, Fut, F>
     where St: Stream,
-          F: FnMut(&St::Item) -> Fut,
-          Fut: Future<Output = bool>,
 {
     stream: St,
     f: F,
     pending_fut: Option<Fut>,
     pending_item: Option<St::Item>,
+}
+
+impl<St, Fut, F> Unpin for Filter<St, Fut, F>
+where
+    St: Stream + Unpin,
+    Fut: Unpin,
+{}
+
+impl<St, Fut, F> fmt::Debug for Filter<St, Fut, F>
+where
+    St: Stream + fmt::Debug,
+    St::Item: fmt::Debug,
+    Fut: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Filter")
+            .field("stream", &self.stream)
+            .field("pending_fut", &self.pending_fut)
+            .field("pending_item", &self.pending_item)
+            .finish()
+    }
 }
 
 impl<St, Fut, F> Filter<St, Fut, F>
@@ -71,12 +91,6 @@ where St: Stream,
     }
 }
 
-impl<St, Fut, F> Unpin for Filter<St, Fut, F>
-    where St: Stream + Unpin,
-          F: FnMut(&St::Item) -> Fut,
-          Fut: Future<Output = bool> + Unpin,
-{}
-
 impl<St, Fut, F> FusedStream for Filter<St, Fut, F>
     where St: Stream + FusedStream,
           F: FnMut(&St::Item) -> Fut,
@@ -121,12 +135,13 @@ impl<St, Fut, F> Stream for Filter<St, Fut, F>
 }
 
 // Forwarding impl of Sink from the underlying stream
+#[cfg(feature = "sink")]
 impl<S, Fut, F, Item> Sink<Item> for Filter<S, Fut, F>
     where S: Stream + Sink<Item>,
           F: FnMut(&S::Item) -> Fut,
           Fut: Future<Output = bool>,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

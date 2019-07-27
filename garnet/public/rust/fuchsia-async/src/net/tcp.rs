@@ -11,7 +11,6 @@ use {
         ready,
         stream::Stream,
         task::{Context, Poll},
-        try_ready,
     },
     net2::{TcpBuilder, TcpStreamExt},
     std::{
@@ -71,8 +70,7 @@ impl TcpListener {
         &mut self,
         cx: &mut Context<'_>,
     ) -> Poll<io::Result<(TcpStream, SocketAddr)>> {
-        try_ready!(EventedFd::poll_readable(&self.0, cx));
-
+        ready!(EventedFd::poll_readable(&self.0, cx))?;
         match self.0.as_ref().accept() {
             Err(e) => {
                 if e.kind() == io::ErrorKind::WouldBlock {
@@ -103,7 +101,7 @@ impl Future for Acceptor {
         let (stream, addr);
         {
             let listener = self.0.as_mut().expect("polled an Acceptor after completion");
-            let (s, a) = try_ready!(listener.async_accept(cx));
+            let (s, a) = ready!(listener.async_accept(cx))?;
             stream = s;
             addr = a;
         }
@@ -293,7 +291,7 @@ impl Future for Connector {
         let this = &mut *self;
         {
             let stream = this.stream.as_mut().expect("polled a Connector after completion");
-            try_ready!(stream.async_connect(&this.addr, cx));
+            ready!(stream.async_connect(&this.addr, cx))?;
         }
         let stream = this.stream.take().unwrap();
         Poll::Ready(Ok(stream))

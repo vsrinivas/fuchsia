@@ -1,13 +1,14 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::future::{TryFuture};
 use futures_core::stream::{Stream, TryStream, FusedStream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`try_filter_map`](super::TryStreamExt::try_filter_map)
 /// method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct TryFilterMap<St, Fut, F> {
     stream: St,
@@ -18,6 +19,19 @@ pub struct TryFilterMap<St, Fut, F> {
 impl<St, Fut, F> Unpin for TryFilterMap<St, Fut, F>
     where St: Unpin, Fut: Unpin,
 {}
+
+impl<St, Fut, F> fmt::Debug for TryFilterMap<St, Fut, F>
+where
+    St: fmt::Debug,
+    Fut: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TryFilterMap")
+            .field("stream", &self.stream)
+            .field("pending", &self.pending)
+            .finish()
+    }
+}
 
 impl<St, Fut, F> TryFilterMap<St, Fut, F> {
     unsafe_pinned!(stream: St);
@@ -84,9 +98,8 @@ impl<St, Fut, F, T> Stream for TryFilterMap<St, Fut, F>
     ) -> Poll<Option<Result<T, St::Error>>> {
         loop {
             if self.pending.is_none() {
-                let item = match ready!(self.as_mut().stream().try_poll_next(cx)) {
-                    Some(Ok(x)) => x,
-                    Some(Err(e)) => return Poll::Ready(Some(Err(e))),
+                let item = match ready!(self.as_mut().stream().try_poll_next(cx)?) {
+                    Some(x) => x,
                     None => return Poll::Ready(None),
                 };
                 let fut = (self.as_mut().f())(item);
@@ -95,22 +108,19 @@ impl<St, Fut, F, T> Stream for TryFilterMap<St, Fut, F>
 
             let result = ready!(self.as_mut().pending().as_pin_mut().unwrap().try_poll(cx));
             self.as_mut().pending().set(None);
-            match result {
-                Ok(Some(x)) => return Poll::Ready(Some(Ok(x))),
-                Err(e) => return Poll::Ready(Some(Err(e))),
-                Ok(None) => {},
+            if let Some(x) = result? {
+                return Poll::Ready(Some(Ok(x)));
             }
         }
     }
 }
 
 // Forwarding impl of Sink from the underlying stream
-impl<S, Fut, F, T, Item> Sink<Item> for TryFilterMap<S, Fut, F>
-    where S: TryStream + Sink<Item>,
-          Fut: TryFuture<Ok = Option<T>, Error = S::Error>,
-          F: FnMut(S::Ok) -> Fut,
+#[cfg(feature = "sink")]
+impl<S, Fut, F, Item> Sink<Item> for TryFilterMap<S, Fut, F>
+    where S: Sink<Item>,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

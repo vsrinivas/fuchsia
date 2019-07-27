@@ -573,7 +573,7 @@ mod tests {
         let data_dir = TempDir::new().unwrap();
         request_stream_test(
             AccountManager::new(data_dir.path().into(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap(),
-            async move |proxy, _| {
+            |proxy, _| async move {
                 assert_eq!(await!(proxy.get_account_ids())?, vec![]);
                 assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
                 Ok(())
@@ -586,7 +586,7 @@ mod tests {
         let data_dir = TempDir::new().unwrap();
         request_stream_test(
             create_accounts(vec![], data_dir.path()),
-            async move |proxy, test_object| {
+            |proxy, test_object| async move {
                 assert_eq!(await!(proxy.get_account_ids())?, vec![]);
                 assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
                 assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 0);
@@ -603,7 +603,7 @@ mod tests {
         let stored_account_list =
             StoredAccountList::new(vec![StoredAccountMetadata::new(LocalAccountId::new(1))]);
         stored_account_list.save(data_dir.path()).unwrap();
-        request_stream_test(read_accounts(data_dir.path()), async move |proxy, test_object| {
+        request_stream_test(read_accounts(data_dir.path()), |proxy, test_object| async move {
             // Try to delete a very different account from the one we added.
             assert_eq!(
                 await!(proxy.remove_account(LocalAccountId::new(42).as_mut(), FORCE_REMOVE_ON))?,
@@ -626,7 +626,7 @@ mod tests {
 
         let data_dir = TempDir::new().unwrap();
         // TODO(dnordstrom): Use run_until_stalled macro instead.
-        request_stream_test(create_accounts(vec![1, 2], data_dir.path()), async move |proxy, _| {
+        request_stream_test(create_accounts(vec![1, 2], data_dir.path()), |proxy, _| async move {
             let (client_end, mut stream) =
                 create_request_stream::<AccountListenerMarker>().unwrap();
             let serve_fut = async move {

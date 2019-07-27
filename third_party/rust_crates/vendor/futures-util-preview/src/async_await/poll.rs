@@ -1,3 +1,4 @@
+use crate::future::FutureExt;
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::task::{Context, Poll};
@@ -6,10 +7,12 @@ use futures_core::task::{Context, Poll};
 /// current `async` context.
 ///
 /// This macro is only usable inside of `async` functions, closures, and blocks.
+/// It is also gated behind the `async-await` feature of this library, which is
+/// _not_ activated by default.
 #[macro_export]
 macro_rules! poll {
     ($x:expr) => {
-        await!($crate::async_await::poll($x))
+        $crate::async_await::poll($x).await
     }
 }
 
@@ -27,6 +30,6 @@ pub struct PollOnce<F: Future + Unpin> {
 impl<F: Future + Unpin> Future for PollOnce<F> {
     type Output = Poll<F::Output>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        Poll::Ready(Pin::new(&mut self.future).poll(cx))
+        Poll::Ready(self.future.poll_unpin(cx))
     }
 }

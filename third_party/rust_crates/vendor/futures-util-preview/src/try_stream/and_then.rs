@@ -1,12 +1,13 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::future::TryFuture;
 use futures_core::stream::{Stream, TryStream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`and_then`](super::TryStreamExt::and_then) method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct AndThen<St, Fut, F> {
     stream: St,
@@ -16,15 +17,30 @@ pub struct AndThen<St, Fut, F> {
 
 impl<St: Unpin, Fut: Unpin, F> Unpin for AndThen<St, Fut, F> {}
 
+impl<St, Fut, F> fmt::Debug for AndThen<St, Fut, F>
+where
+    St: fmt::Debug,
+    Fut: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AndThen")
+            .field("stream", &self.stream)
+            .field("future", &self.future)
+            .finish()
+    }
+}
+
+impl<St, Fut, F> AndThen<St, Fut, F> {
+    unsafe_pinned!(stream: St);
+    unsafe_pinned!(future: Option<Fut>);
+    unsafe_unpinned!(f: F);
+}
+
 impl<St, Fut, F> AndThen<St, Fut, F>
     where St: TryStream,
           F: FnMut(St::Ok) -> Fut,
           Fut: TryFuture<Error = St::Error>,
 {
-    unsafe_pinned!(stream: St);
-    unsafe_pinned!(future: Option<Fut>);
-    unsafe_unpinned!(f: F);
-
     pub(super) fn new(stream: St, f: F) -> Self {
         Self { stream, future: None, f }
     }
@@ -82,27 +98,18 @@ impl<St, Fut, F> Stream for AndThen<St, Fut, F>
             self.as_mut().future().set(Some(fut));
         }
 
-        assert!(self.future.is_some());
-        match ready!(self.as_mut().future().as_pin_mut().unwrap().try_poll(cx)) {
-            Ok(e) => {
-                self.as_mut().future().set(None);
-                Poll::Ready(Some(Ok(e)))
-            }
-            Err(e) => {
-                self.as_mut().future().set(None);
-                Poll::Ready(Some(Err(e)))
-            }
-        }
+        let e = ready!(self.as_mut().future().as_pin_mut().unwrap().try_poll(cx));
+        self.as_mut().future().set(None);
+        Poll::Ready(Some(e))
     }
 }
 
 // Forwarding impl of Sink from the underlying stream
+#[cfg(feature = "sink")]
 impl<S, Fut, F, Item> Sink<Item> for AndThen<S, Fut, F>
-    where S: TryStream + Sink<Item>,
-          F: FnMut(S::Ok) -> Fut,
-          Fut: TryFuture<Error = S::Error>,
+    where S: Sink<Item>,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

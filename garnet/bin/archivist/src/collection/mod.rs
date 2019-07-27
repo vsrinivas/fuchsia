@@ -375,7 +375,7 @@ impl HubCollector {
 
         // The incoming path is relative to the hub, we need to rejoin with the hub path to get an
         // absolute path.
-        fasync::spawn(collector.collect(self.path.join(path)).then(async move |_| ()));
+        fasync::spawn(collector.collect(self.path.join(path)).then(|_| futures::future::ready(())));
     }
 
     fn check_if_out_directory(path: &Path) -> Option<ComponentEventData> {
@@ -571,7 +571,7 @@ mod tests {
         let mut collector = HubCollector::new(path.clone()).unwrap();
         let mut component_events = collector.component_events().unwrap();
 
-        fasync::spawn(collector.start().then(async move |_| ()));
+        fasync::spawn(collector.start().then(|_| futures::future::ready(())));
 
         fs::create_dir_all(path.join("c/my_component.cmx/10/out")).unwrap();
 

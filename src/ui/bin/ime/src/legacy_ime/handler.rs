@@ -111,7 +111,7 @@ impl LegacyIme {
                 Ok(())
             }
                 .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e))
-                .then(async move |()| {
+                .then(|()| async move {
                     // this runs when IME stream closes
                     // clone to ensure we only hold one lock at a time
                     let ime_service = await!(self_clone_2.0.lock()).ime_service.clone();

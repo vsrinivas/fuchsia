@@ -332,7 +332,7 @@ mod test {
         // Checks that if a task doesn't complete, cancel stalls forever
         let mut executor = fasync::Executor::new().expect("Failed to create executor");
         let complete = |_cancel| future::ready(());
-        let never_complete = |_cancel| future::empty();
+        let never_complete = |_cancel| future::pending();
         let tg = TaskGroup::new();
         let tg_clone = tg.clone();
         let spawn_fut = &mut async move {
@@ -359,7 +359,7 @@ mod test {
                 sender_1.send(10).expect("sending failed");
 
                 // if fut is pending, and cancel is (or soon becomes) ready, cancel wins
-                assert!(await!(cancel_or(&cancel, future::empty::<i64>())).is_none());
+                assert!(await!(cancel_or(&cancel, future::pending::<i64>())).is_none());
 
                 // if both fut and cancel is ready, cancel wins
                 assert!(await!(cancel_or(&cancel, future::ready(9001))).is_none());

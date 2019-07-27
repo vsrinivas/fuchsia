@@ -7,7 +7,7 @@ use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Future for the [`try_collect`](super::TryStreamExt::try_collect) method.
 #[derive(Debug)]
-#[must_use = "streams do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct TryCollect<St, C> {
     stream: St,
     items: C,
@@ -47,9 +47,8 @@ impl<St, C> Future for TryCollect<St, C>
         cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
         loop {
-            match ready!(self.as_mut().stream().try_poll_next(cx)) {
-                Some(Ok(x)) => self.as_mut().items().extend(Some(x)),
-                Some(Err(e)) => return Poll::Ready(Err(e)),
+            match ready!(self.as_mut().stream().try_poll_next(cx)?) {
+                Some(x) => self.as_mut().items().extend(Some(x)),
                 None => return Poll::Ready(Ok(self.as_mut().finish())),
             }
         }

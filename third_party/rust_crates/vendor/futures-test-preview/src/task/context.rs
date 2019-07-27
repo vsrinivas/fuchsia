@@ -26,9 +26,9 @@ pub fn panic_context() -> Context<'static> {
 /// use futures::future::Future;
 /// use futures::task::Poll;
 /// use futures_test::task::noop_context;
-/// use pin_utils::pin_mut;
+/// use futures::pin_mut;
 ///
-/// let mut future = async { 5 };
+/// let future = async { 5 };
 /// pin_mut!(future);
 ///
 /// assert_eq!(future.poll(&mut noop_context()), Poll::Ready(5));

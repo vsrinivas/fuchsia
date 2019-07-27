@@ -4,7 +4,7 @@ use futures_core::task::{Context, Poll};
 
 /// Future for the [`lazy`] function.
 #[derive(Debug)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Lazy<F> {
     f: Option<F>
 }
@@ -19,12 +19,12 @@ impl<F> Unpin for Lazy<F> {}
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro)]
+/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
 /// let a = future::lazy(|_| 1);
-/// assert_eq!(await!(a), 1);
+/// assert_eq!(a.await, 1);
 ///
 /// let b = future::lazy(|_| -> i32 {
 ///     panic!("oh no!")

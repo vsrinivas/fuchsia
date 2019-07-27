@@ -14,7 +14,7 @@ use {
     },
     fidl_fuchsia_mem as fuchsia_mem,
     fuchsia_component::client::connect_to_service,
-    futures::{channel::mpsc, prelude::*, StreamExt},
+    futures::{channel::mpsc, prelude::*},
     log::error,
     std::{borrow::Cow, fs::File, io::Seek},
 };

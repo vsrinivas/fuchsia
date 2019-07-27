@@ -161,7 +161,7 @@ mod test {
 
         // get event loop to deliver readiness notifications to channels
         // this fixes race condition when test is executed before listeners is registered.
-        let _ = executor.run_until_stalled(&mut future::empty::<()>());
+        let _ = executor.run_until_stalled(&mut future::pending::<()>());
 
         let test = async move {
             // Process key event that *does not* trigger a shortcut.

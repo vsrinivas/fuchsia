@@ -12,12 +12,12 @@ use {
         task::{Context, Poll},
         Stream,
     },
-    libc::{c_char, c_int, uint32_t, uint64_t, uint8_t},
+    libc::{c_char, c_int},
     std::{cell::RefCell, marker::Unpin, mem, pin::Pin, str},
 };
 
 type FxLogSeverityT = c_int;
-type ZxKoid = uint64_t;
+type ZxKoid = u64;
 
 pub const FX_LOG_MAX_DATAGRAM_LEN: usize = 2032;
 pub const FX_LOG_MAX_TAGS: usize = 5;
@@ -30,7 +30,7 @@ pub struct fx_log_metadata_t {
     pub tid: ZxKoid,
     pub time: zx::sys::zx_time_t,
     pub severity: FxLogSeverityT,
-    pub dropped_logs: uint32_t,
+    pub dropped_logs: u32,
 }
 
 pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
@@ -76,7 +76,7 @@ impl LoggerStream {
 
 fn convert_to_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
     // Check that data has metadata and first 1 byte is integer and last byte is NULL.
-    if bytes.len() < METADATA_SIZE + mem::size_of::<uint8_t>() || bytes[bytes.len() - 1] != 0 {
+    if bytes.len() < METADATA_SIZE + mem::size_of::<u8>() || bytes[bytes.len() - 1] != 0 {
         return None;
     }
 
@@ -173,7 +173,7 @@ mod tests {
         pub tid: ZxKoid,
         pub time: zx::sys::zx_time_t,
         pub severity: FxLogSeverityT,
-        pub dropped_logs: uint32_t,
+        pub dropped_logs: u32,
     }
 
     #[repr(C, packed)]

@@ -1,7 +1,10 @@
 use futures_01::{
-    task as task01, Async as Async01, AsyncSink as AsyncSink01,
-    Future as Future01, Poll as Poll01, Sink as Sink01,
-    StartSend as StartSend01, Stream as Stream01,
+    task as task01, Async as Async01, Future as Future01, Poll as Poll01,
+    Stream as Stream01,
+};
+#[cfg(feature = "sink")]
+use futures_01::{
+    AsyncSink as AsyncSink01, Sink as Sink01, StartSend as StartSend01,
 };
 use futures_core::{
     task::{
@@ -12,10 +15,12 @@ use futures_core::{
     TryFuture as TryFuture03,
     TryStream as TryStream03,
 };
+#[cfg(feature = "sink")]
 use futures_sink::Sink as Sink03;
 use crate::task::{ArcWake as ArcWake03, WakerRef};
+#[cfg(feature = "sink")]
+use std::marker::PhantomData;
 use std::{
-    marker::PhantomData,
     mem,
     pin::Pin,
     sync::Arc,
@@ -25,16 +30,17 @@ use std::{
 /// Converts a futures 0.3 [`TryFuture`](futures_core::future::TryFuture),
 /// [`TryStream`](futures_core::stream::TryStream) or
 /// [`Sink`](futures_sink::Sink) into a futures 0.1
-/// [`Future`](futures::future::Future),
-/// [`Stream`](futures::stream::Stream) or
-/// [`Sink`](futures::sink::Sink).
+/// [`Future`](futures_01::future::Future),
+/// [`Stream`](futures_01::stream::Stream) or
+/// [`Sink`](futures_01::sink::Sink).
 #[derive(Debug, Clone, Copy)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Compat<T> {
     pub(crate) inner: T,
 }
 
 /// Converts a futures 0.3 Sink object to a futures 0.1-compatible version
+#[cfg(feature = "sink")]
 #[derive(Debug)]
 #[must_use = "sinks do nothing unless polled"]
 pub struct CompatSink<T, Item> {
@@ -56,8 +62,15 @@ impl<T> Compat<T> {
     pub fn new(inner: T) -> Compat<T> {
         Compat { inner }
     }
+
+    /// Get a reference to 0.3 Future, Stream, AsyncRead, or AsyncWrite object
+    /// contained within.
+    pub fn get_ref(&self) -> &T {
+        &self.inner
+    }
 }
 
+#[cfg(feature = "sink")]
 impl<T, Item> CompatSink<T, Item> {
     /// Returns the inner item.
     pub fn into_inner(self) -> T {
@@ -76,10 +89,9 @@ impl<T, Item> CompatSink<T, Item> {
 fn poll_03_to_01<T, E>(x: task03::Poll<Result<T, E>>)
     -> Result<Async01<T>, E>
 {
-    match x {
-        task03::Poll::Ready(Ok(t)) => Ok(Async01::Ready(t)),
+    match x? {
+        task03::Poll::Ready(t) => Ok(Async01::Ready(t)),
         task03::Poll::Pending => Ok(Async01::NotReady),
-        task03::Poll::Ready(Err(e)) => Err(e),
     }
 }
 
@@ -103,33 +115,32 @@ where
     type Error = St::Error;
 
     fn poll(&mut self) -> Poll01<Option<Self::Item>, Self::Error> {
-        with_context(self, |inner, cx| match inner.try_poll_next(cx) {
+        with_context(self, |inner, cx| match inner.try_poll_next(cx)? {
             task03::Poll::Ready(None) => Ok(Async01::Ready(None)),
-            task03::Poll::Ready(Some(Ok(t))) => Ok(Async01::Ready(Some(t))),
+            task03::Poll::Ready(Some(t)) => Ok(Async01::Ready(Some(t))),
             task03::Poll::Pending => Ok(Async01::NotReady),
-            task03::Poll::Ready(Some(Err(e))) => Err(e),
         })
     }
 }
 
+#[cfg(feature = "sink")]
 impl<T, Item> Sink01 for CompatSink<T, Item>
 where
     T: Sink03<Item> + Unpin,
 {
     type SinkItem = Item;
-    type SinkError = T::SinkError;
+    type SinkError = T::Error;
 
     fn start_send(
         &mut self,
         item: Self::SinkItem,
     ) -> StartSend01<Self::SinkItem, Self::SinkError> {
         with_sink_context(self, |mut inner, cx| {
-            match inner.as_mut().poll_ready(cx) {
-                task03::Poll::Ready(Ok(())) => {
+            match inner.as_mut().poll_ready(cx)? {
+                task03::Poll::Ready(()) => {
                     inner.start_send(item).map(|()| AsyncSink01::Ready)
                 }
                 task03::Poll::Pending => Ok(AsyncSink01::NotReady(item)),
-                task03::Poll::Ready(Err(e)) => Err(e),
             }
         })
     }
@@ -198,6 +209,7 @@ where
     f(Pin::new(&mut compat.inner), &mut cx)
 }
 
+#[cfg(feature = "sink")]
 fn with_sink_context<T, Item, R, F>(compat: &mut CompatSink<T, Item>, f: F) -> R
 where
     T: Unpin,

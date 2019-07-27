@@ -1,10 +1,11 @@
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// Stream for the [`enumerate`](super::EnumerateExt::enumerate) method.
+/// Stream for the [`enumerate`](super::StreamExt::enumerate) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Enumerate<St: Stream> {
@@ -83,11 +84,12 @@ impl<St: Stream> Stream for Enumerate<St> {
 }
 
 // Forwarding impl of Sink from the underlying stream
+#[cfg(feature = "sink")]
 impl<S, Item> Sink<Item> for Enumerate<S>
 where
     S: Stream + Sink<Item>,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

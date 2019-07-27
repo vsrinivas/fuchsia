@@ -3,17 +3,6 @@
 //! More functions and definitions can be found in the more specific modules
 //! according to the platform in question.
 
-use dox::Option;
-
-pub type int8_t = i8;
-pub type int16_t = i16;
-pub type int32_t = i32;
-pub type int64_t = i64;
-pub type uint8_t = u8;
-pub type uint16_t = u16;
-pub type uint32_t = u32;
-pub type uint64_t = u64;
-
 pub type c_schar = i8;
 pub type c_uchar = u8;
 pub type c_short = i16;
@@ -41,8 +30,13 @@ pub type in_port_t = u16;
 pub type sighandler_t = ::size_t;
 pub type cc_t = ::c_uchar;
 
+#[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum DIR {}
-pub enum locale_t {}
+impl ::Copy for DIR {}
+impl ::Clone for DIR {
+    fn clone(&self) -> DIR { *self }
+}
+pub type locale_t = *mut :: c_void;
 
 s! {
     pub struct group {
@@ -125,23 +119,6 @@ s! {
 
         #[cfg(any(target_env = "musl", target_os = "emscripten"))]
         __reserved: [c_long; 16],
-    }
-
-    #[cfg_attr(target_os = "netbsd", repr(packed))]
-    pub struct in_addr {
-        pub s_addr: in_addr_t,
-    }
-
-    #[cfg_attr(feature = "align", repr(align(4)))]
-    pub struct in6_addr {
-        pub s6_addr: [u8; 16],
-        #[cfg(not(feature = "align"))]
-        __align: [u32; 0],
-    }
-
-    pub struct ip_mreq {
-        pub imr_multiaddr: in_addr,
-        pub imr_interface: in_addr,
     }
 
     pub struct ipv6_mreq {
@@ -232,16 +209,20 @@ pub const DT_REG: u8 = 8;
 pub const DT_LNK: u8 = 10;
 pub const DT_SOCK: u8 = 12;
 
-pub const FD_CLOEXEC: ::c_int = 0x1;
+cfg_if! {
+    if #[cfg(not(target_os = "redox"))] {
+        pub const FD_CLOEXEC: ::c_int = 0x1;
+    }
+}
 
 pub const USRQUOTA: ::c_int = 0;
 pub const GRPQUOTA: ::c_int = 1;
 
 pub const SIGIOT: ::c_int = 6;
 
-pub const S_ISUID: ::c_int = 0x800;
-pub const S_ISGID: ::c_int = 0x400;
-pub const S_ISVTX: ::c_int = 0x200;
+pub const S_ISUID: ::mode_t = 0x800;
+pub const S_ISGID: ::mode_t = 0x400;
+pub const S_ISVTX: ::mode_t = 0x200;
 
 pub const IF_NAMESIZE: ::size_t = 16;
 pub const IFNAMSIZ: ::size_t = IF_NAMESIZE;
@@ -310,11 +291,9 @@ pub const ATF_PUBL: ::c_int = 0x08;
 pub const ATF_USETRAILERS: ::c_int = 0x10;
 
 cfg_if! {
-    if #[cfg(cross_platform_docs)] {
-        // on dox builds don't pull in anything
-    } else if #[cfg(target_os = "l4re")] {
+    if #[cfg(target_os = "l4re")] {
         // required libraries for L4Re are linked externally, ATM
-    } else if #[cfg(feature = "use_std")] {
+    } else if #[cfg(feature = "std")] {
         // cargo build, don't pull in anything extra as the libstd dep
         // already pulls in all libs.
     } else if #[cfg(target_env = "musl")] {
@@ -338,8 +317,7 @@ cfg_if! {
     } else if #[cfg(any(target_os = "macos",
                         target_os = "ios",
                         target_os = "android",
-                        target_os = "openbsd",
-                        target_os = "bitrig"))] {
+                        target_os = "openbsd"))] {
         #[link(name = "c")]
         #[link(name = "m")]
         extern {}
@@ -356,6 +334,17 @@ cfg_if! {
         // to "pthread" needs to be added.
         #[link(name = "pthread")]
         extern {}
+    } else if #[cfg(target_env = "illumos")] {
+        #[link(name = "c")]
+        #[link(name = "m")]
+        extern {}
+    } else if #[cfg(target_os = "redox")] {
+        #[cfg_attr(feature = "rustc-dep-of-std",
+                   link(name = "c", kind = "static-nobundle",
+                        cfg(target_feature = "crt-static")))]
+        #[cfg_attr(feature = "rustc-dep-of-std",
+                   link(name = "c", cfg(not(target_feature = "crt-static"))))]
+        extern {}
     } else {
         #[link(name = "c")]
         #[link(name = "m")]
@@ -365,8 +354,18 @@ cfg_if! {
     }
 }
 
+#[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum FILE {}
+impl ::Copy for FILE {}
+impl ::Clone for FILE {
+    fn clone(&self) -> FILE { *self }
+}
+#[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum fpos_t {} // TODO: fill this out with a struct
+impl ::Copy for fpos_t {}
+impl ::Clone for fpos_t {
+    fn clone(&self) -> fpos_t { *self }
+}
 
 extern {
     pub fn isalnum(c: c_int) -> c_int;
@@ -509,20 +508,26 @@ extern {
     pub fn snprintf(s: *mut ::c_char, n: ::size_t,
                     format: *const ::c_char, ...) -> ::c_int;
     pub fn sprintf(s: *mut ::c_char, format: *const ::c_char, ...) -> ::c_int;
+    #[cfg_attr(target_os = "linux", link_name = "__isoc99_fscanf")]
     pub fn fscanf(stream: *mut ::FILE, format: *const ::c_char, ...) -> ::c_int;
+    #[cfg_attr(target_os = "linux", link_name = "__isoc99_scanf")]
     pub fn scanf(format: *const ::c_char, ...) -> ::c_int;
+    #[cfg_attr(target_os = "linux", link_name = "__isoc99_sscanf")]
     pub fn sscanf(s: *const ::c_char, format: *const ::c_char, ...) -> ::c_int;
     pub fn getchar_unlocked() -> ::c_int;
     pub fn putchar_unlocked(c: ::c_int) -> ::c_int;
 
     #[cfg_attr(target_os = "netbsd", link_name = "__socket30")]
+    #[cfg_attr(target_os = "illumos", link_name = "__xnet_socket")]
     pub fn socket(domain: ::c_int, ty: ::c_int, protocol: ::c_int) -> ::c_int;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
                link_name = "connect$UNIX2003")]
+    #[cfg_attr(target_os = "illumos", link_name = "__xnet_connect")]
     pub fn connect(socket: ::c_int, address: *const sockaddr,
                    len: socklen_t) -> ::c_int;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
                link_name = "listen$UNIX2003")]
+    #[cfg_attr(target_os = "illumos", link_name = "__xnet_listen")]
     pub fn listen(socket: ::c_int, backlog: ::c_int) -> ::c_int;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
                link_name = "accept$UNIX2003")]
@@ -541,10 +546,12 @@ extern {
                       option_len: socklen_t) -> ::c_int;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
                link_name = "socketpair$UNIX2003")]
+    #[cfg_attr(target_os = "illumos", link_name = "__xnet_socketpair")]
     pub fn socketpair(domain: ::c_int, type_: ::c_int, protocol: ::c_int,
                       socket_vector: *mut ::c_int) -> ::c_int;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
                link_name = "sendto$UNIX2003")]
+    #[cfg_attr(target_os = "illumos", link_name = "__xnet_sendto")]
     pub fn sendto(socket: ::c_int, buf: *const ::c_void, len: ::size_t,
                   flags: ::c_int, addr: *const sockaddr,
                   addrlen: socklen_t) -> ::ssize_t;
@@ -559,14 +566,20 @@ extern {
 
     #[cfg_attr(target_os = "macos", link_name = "fstat$INODE64")]
     #[cfg_attr(target_os = "netbsd", link_name = "__fstat50")]
-    #[cfg_attr(target_os = "freebsd", link_name = "fstat@FBSD_1.0")]
+    #[cfg_attr(
+        all(target_os = "freebsd", not(freebsd12)),
+        link_name = "fstat@FBSD_1.0"
+    )]
     pub fn fstat(fildes: ::c_int, buf: *mut stat) -> ::c_int;
 
     pub fn mkdir(path: *const c_char, mode: mode_t) -> ::c_int;
 
     #[cfg_attr(target_os = "macos", link_name = "stat$INODE64")]
     #[cfg_attr(target_os = "netbsd", link_name = "__stat50")]
-    #[cfg_attr(target_os = "freebsd", link_name = "stat@FBSD_1.0")]
+    #[cfg_attr(
+        all(target_os = "freebsd", not(freebsd12)),
+        link_name = "stat@FBSD_1.0"
+    )]
     pub fn stat(path: *const c_char, buf: *mut stat) -> ::c_int;
 
     pub fn pclose(stream: *mut ::FILE) -> ::c_int;
@@ -600,12 +613,23 @@ extern {
 
     #[cfg_attr(target_os = "macos", link_name = "readdir$INODE64")]
     #[cfg_attr(target_os = "netbsd", link_name = "__readdir30")]
-    #[cfg_attr(target_os = "freebsd", link_name = "readdir@FBSD_1.0")]
+    #[cfg_attr(
+        all(target_os = "freebsd", not(freebsd12)),
+        link_name = "readdir@FBSD_1.0"
+    )]
     pub fn readdir(dirp: *mut ::DIR) -> *mut ::dirent;
     #[cfg_attr(target_os = "macos", link_name = "readdir_r$INODE64")]
     #[cfg_attr(target_os = "netbsd", link_name = "__readdir_r30")]
-    #[cfg_attr(target_os = "solaris", link_name = "__posix_readdir_r")]
-    #[cfg_attr(target_os = "freebsd", link_name = "readdir_r@FBSD_1.0")]
+    #[cfg_attr(
+        all(target_os = "freebsd", not(freebsd12)),
+        link_name = "readdir_r@FBSD_1.0"
+    )]
+    /// The 64-bit libc on Solaris and illumos only has readdir_r.  If a
+    /// 32-bit Solaris or illumos target is ever created, it should use
+    /// __posix_readdir_r.  See libc(3LIB) on Solaris or illumos:
+    /// https://illumos.org/man/3lib/libc
+    /// https://docs.oracle.com/cd/E36784_01/html/E36873/libc-3lib.html
+    /// https://www.unix.com/man-page/opensolaris/3LIB/libc/
     pub fn readdir_r(dirp: *mut ::DIR, entry: *mut ::dirent,
                      result: *mut *mut ::dirent) -> ::c_int;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
@@ -628,7 +652,10 @@ extern {
                     owner: ::uid_t, group: ::gid_t,
                     flags: ::c_int) -> ::c_int;
     #[cfg_attr(target_os = "macos", link_name = "fstatat$INODE64")]
-    #[cfg_attr(target_os = "freebsd", link_name = "fstatat@FBSD_1.1")]
+    #[cfg_attr(
+        all(target_os = "freebsd", not(freebsd12)),
+        link_name = "fstatat@FBSD_1.1"
+    )]
     pub fn fstatat(dirfd: ::c_int, pathname: *const ::c_char,
                    buf: *mut stat, flags: ::c_int) -> ::c_int;
     pub fn linkat(olddirfd: ::c_int, oldpath: *const ::c_char,
@@ -727,6 +754,10 @@ extern {
     pub fn tcgetpgrp(fd: ::c_int) -> pid_t;
     pub fn tcsetpgrp(fd: ::c_int, pgrp: ::pid_t) -> ::c_int;
     pub fn ttyname(fd: ::c_int) -> *mut c_char;
+    #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
+               link_name = "ttyname_r$UNIX2003")]
+    pub fn ttyname_r(fd: ::c_int,
+                     buf: *mut c_char, buflen: ::size_t) -> ::c_int;
     pub fn unlink(c: *const c_char) -> ::c_int;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
                link_name = "wait$UNIX2003")]
@@ -783,7 +814,10 @@ extern {
 
     #[cfg_attr(target_os = "macos", link_name = "lstat$INODE64")]
     #[cfg_attr(target_os = "netbsd", link_name = "__lstat50")]
-    #[cfg_attr(target_os = "freebsd", link_name = "lstat@FBSD_1.0")]
+    #[cfg_attr(
+        all(target_os = "freebsd", not(freebsd12)),
+        link_name = "lstat@FBSD_1.0"
+    )]
     pub fn lstat(path: *const c_char, buf: *mut stat) -> ::c_int;
 
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
@@ -807,12 +841,6 @@ extern {
 
     pub fn signal(signum: ::c_int, handler: sighandler_t) -> sighandler_t;
 
-    #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
-               link_name = "getrlimit$UNIX2003")]
-    pub fn getrlimit(resource: ::c_int, rlim: *mut rlimit) -> ::c_int;
-    #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
-               link_name = "setrlimit$UNIX2003")]
-    pub fn setrlimit(resource: ::c_int, rlim: *const rlimit) -> ::c_int;
     #[cfg_attr(target_os = "netbsd", link_name = "__getrusage50")]
     pub fn getrusage(resource: ::c_int, usage: *mut rusage) -> ::c_int;
 
@@ -823,9 +851,6 @@ extern {
 
     pub fn flock(fd: ::c_int, operation: ::c_int) -> ::c_int;
 
-    #[cfg_attr(target_os = "netbsd", link_name = "__gettimeofday50")]
-    pub fn gettimeofday(tp: *mut ::timeval,
-                        tz: *mut ::c_void) -> ::c_int;
     #[cfg_attr(target_os = "netbsd", link_name = "__times13")]
     pub fn times(buf: *mut ::tms) -> ::clock_t;
 
@@ -845,7 +870,7 @@ extern {
     #[cfg_attr(target_os = "netbsd", link_name = "__libc_thr_yield")]
     pub fn sched_yield() -> ::c_int;
     pub fn pthread_key_create(key: *mut pthread_key_t,
-                              dtor: Option<unsafe extern fn(*mut ::c_void)>)
+                              dtor: ::Option<unsafe extern fn(*mut ::c_void)>)
                               -> ::c_int;
     pub fn pthread_key_delete(key: pthread_key_t) -> ::c_int;
     pub fn pthread_getspecific(key: pthread_key_t) -> *mut ::c_void;
@@ -908,11 +933,8 @@ extern {
     pub fn pthread_rwlockattr_init(attr: *mut pthread_rwlockattr_t) -> ::c_int;
     pub fn pthread_rwlockattr_destroy(attr: *mut pthread_rwlockattr_t)
                                       -> ::c_int;
-    #[cfg_attr(all(target_os = "linux", not(target_env = "musl")),
-               link_name = "__xpg_strerror_r")]
-    pub fn strerror_r(errnum: ::c_int, buf: *mut c_char,
-                      buflen: ::size_t) -> ::c_int;
 
+    #[cfg_attr(target_os = "illumos", link_name = "__xnet_getsockopt")]
     pub fn getsockopt(sockfd: ::c_int,
                       level: ::c_int,
                       optname: ::c_int,
@@ -969,7 +991,10 @@ extern {
     pub fn difftime(time1: time_t, time0: time_t) -> ::c_double;
 
     #[cfg_attr(target_os = "netbsd", link_name = "__mknod50")]
-    #[cfg_attr(target_os = "freebsd", link_name = "mknod@FBSD_1.0")]
+    #[cfg_attr(
+        all(target_os = "freebsd", not(freebsd12)),
+        link_name = "mknod@FBSD_1.0"
+    )]
     pub fn mknod(pathname: *const ::c_char, mode: ::mode_t,
                  dev: ::dev_t) -> ::c_int;
     pub fn gethostname(name: *mut ::c_char, len: ::size_t) -> ::c_int;
@@ -1011,16 +1036,11 @@ extern {
                      locale: *const ::c_char) -> *mut ::c_char;
     pub fn localeconv() -> *mut lconv;
 
-    pub fn sem_destroy(sem: *mut sem_t) -> ::c_int;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
                link_name = "sem_wait$UNIX2003")]
     pub fn sem_wait(sem: *mut sem_t) -> ::c_int;
     pub fn sem_trywait(sem: *mut sem_t) -> ::c_int;
     pub fn sem_post(sem: *mut sem_t) -> ::c_int;
-    pub fn sem_init(sem: *mut sem_t,
-                    pshared: ::c_int,
-                    value: ::c_uint)
-                    -> ::c_int;
     pub fn statvfs(path: *const c_char, buf: *mut statvfs) -> ::c_int;
     pub fn fstatvfs(fd: ::c_int, buf: *mut statvfs) -> ::c_int;
 
@@ -1077,10 +1097,8 @@ extern {
     pub fn tcdrain(fd: ::c_int) -> ::c_int;
     pub fn cfgetispeed(termios: *const ::termios) -> ::speed_t;
     pub fn cfgetospeed(termios: *const ::termios) -> ::speed_t;
-    pub fn cfmakeraw(termios: *mut ::termios);
     pub fn cfsetispeed(termios: *mut ::termios, speed: ::speed_t) -> ::c_int;
     pub fn cfsetospeed(termios: *mut ::termios, speed: ::speed_t) -> ::c_int;
-    pub fn cfsetspeed(termios: *mut ::termios, speed: ::speed_t) -> ::c_int;
     pub fn tcgetattr(fd: ::c_int, termios: *mut ::termios) -> ::c_int;
     pub fn tcsetattr(fd: ::c_int,
                      optional_actions: ::c_int,
@@ -1114,6 +1132,16 @@ extern {
 }
 
 cfg_if! {
+   if #[cfg(not(any(target_os = "solaris", target_os = "illumos")))] {
+        extern {
+            pub fn cfmakeraw(termios: *mut ::termios);
+            pub fn cfsetspeed(termios: *mut ::termios,
+                              speed: ::speed_t) -> ::c_int;
+        }
+   }
+}
+
+cfg_if! {
     if #[cfg(target_env = "uclibc")] {
         mod uclibc;
         pub use self::uclibc::*;
@@ -1123,39 +1151,44 @@ cfg_if! {
     } else if #[cfg(any(target_os = "linux",
                         target_os = "android",
                         target_os = "emscripten"))] {
-        mod notbsd;
-        pub use self::notbsd::*;
+        mod linux_like;
+        pub use self::linux_like::*;
     } else if #[cfg(any(target_os = "macos",
                         target_os = "ios",
                         target_os = "freebsd",
                         target_os = "dragonfly",
                         target_os = "openbsd",
-                        target_os = "netbsd",
-                        target_os = "bitrig"))] {
+                        target_os = "netbsd"))] {
         mod bsd;
         pub use self::bsd::*;
-    } else if #[cfg(target_os = "solaris")] {
-        mod solaris;
-        pub use self::solaris::*;
+    } else if #[cfg(any(target_os = "solaris",
+                        target_os = "illumos"))] {
+        mod solarish;
+        pub use self::solarish::*;
     } else if #[cfg(target_os = "haiku")] {
         mod haiku;
         pub use self::haiku::*;
     } else if #[cfg(target_os = "hermit")] {
         mod hermit;
         pub use self::hermit::*;
+    } else if #[cfg(target_os = "redox")] {
+        mod redox;
+        pub use self::redox::*;
     } else {
         // Unknown target_os
     }
 }
 
 cfg_if! {
-    if #[cfg(core_cvoid)] {
-        pub use core::ffi::c_void;
+    if #[cfg(libc_core_cvoid)] {
+        pub use ::ffi::c_void;
     } else {
         // Use repr(u8) as LLVM expects `void*` to be the same as `i8*` to help
         // enable more optimization opportunities around it recognizing things
         // like malloc/free.
         #[repr(u8)]
+        #[allow(missing_copy_implementations)]
+        #[allow(missing_debug_implementations)]
         pub enum c_void {
             // Two dummy variants so the #[repr] attribute can be used.
             #[doc(hidden)]
@@ -1163,5 +1196,15 @@ cfg_if! {
             #[doc(hidden)]
             __variant2,
         }
+    }
+}
+
+cfg_if! {
+    if #[cfg(libc_align)] {
+        mod align;
+        pub use self::align::*;
+    } else {
+        mod no_align;
+        pub use self::no_align::*;
     }
 }

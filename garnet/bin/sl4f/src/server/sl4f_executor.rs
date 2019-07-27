@@ -41,7 +41,7 @@ pub async fn run_fidl_loop(
     const CONCURRENT_REQ_LIMIT: usize = 10; // TODO(CONN-6) figure out a good parallel value for this
 
     let session = &sl4f_session;
-    let handler = async move |request| {
+    let handler = |request| async move {
         await!(handle_request(Arc::clone(session), request)).unwrap();
     };
 

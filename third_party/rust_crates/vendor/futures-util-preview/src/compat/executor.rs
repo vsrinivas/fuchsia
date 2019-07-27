@@ -11,19 +11,18 @@ use futures_core::task::{Spawn as Spawn03, SpawnError as SpawnError03};
 use futures_core::future::FutureObj;
 
 /// A future that can run on a futures 0.1
-/// [`Executor`](futures::future::Executor).
+/// [`Executor`](futures_01::future::Executor).
 pub type Executor01Future = Compat<UnitError<FutureObj<'static, ()>>>;
 
-/// Extension trait for futures 0.1 [`Executor`](futures::future::Executor).
+/// Extension trait for futures 0.1 [`Executor`](futures_01::future::Executor).
 pub trait Executor01CompatExt: Executor01<Executor01Future> +
                                Clone + Send + 'static
 {
-    /// Converts a futures 0.1 [`Executor`](futures::future::Executor) into a
+    /// Converts a futures 0.1 [`Executor`](futures_01::future::Executor) into a
     /// futures 0.3 [`Spawn`](futures_core::task::Spawn).
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
-    /// use futures::Future;
+    /// #![feature(async_await)]
     /// use futures::task::SpawnExt;
     /// use futures::future::{FutureExt, TryFutureExt};
     /// use futures_util::compat::Executor01CompatExt;
@@ -59,9 +58,9 @@ where Ex: Executor01<Executor01Future> + Clone + Send + 'static
     }
 }
 
-/// Converts a futures 0.1 [`Executor`](futures::future::Executor) into a
+/// Converts a futures 0.1 [`Executor`](futures_01::future::Executor) into a
 /// futures 0.3 [`Spawn`](futures_core::task::Spawn).
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Executor01As03<Ex> {
     executor01: Ex
 }
@@ -82,6 +81,7 @@ where Ex: Executor01<Executor01Future>,
     }
 }
 
+#[allow(single_use_lifetimes)] // https://github.com/rust-lang/rust/issues/55058
 impl<Sp, Fut> Executor01<Fut> for Compat<Sp>
 where
     for<'a> &'a Sp: Spawn03,

@@ -6,7 +6,7 @@ use fidl_fuchsia_ledger_cloud_test::{
     CloudControllerFactoryRequest, CloudControllerFactoryRequestStream, CloudControllerRequest,
     CloudControllerRequestStream, NetworkState,
 };
-use futures::future::{FutureExt, LocalFutureObj};
+use futures::future::LocalFutureObj;
 use futures::prelude::*;
 use futures::select;
 use futures::stream::FuturesUnordered;

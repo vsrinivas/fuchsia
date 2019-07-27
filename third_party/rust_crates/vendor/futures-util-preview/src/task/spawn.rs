@@ -2,6 +2,7 @@ use futures_core::task::{LocalSpawn, Spawn};
 
 #[cfg(feature = "compat")] use crate::compat::Compat;
 
+#[cfg(feature = "channel")]
 #[cfg(feature = "std")]
 use crate::future::{FutureExt, RemoteHandle};
 #[cfg(feature = "alloc")]
@@ -32,7 +33,7 @@ pub trait SpawnExt: Spawn {
     /// today. Feel free to use this method in the meantime.
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// use futures::executor::ThreadPool;
     /// use futures::task::SpawnExt;
     ///
@@ -52,12 +53,12 @@ pub trait SpawnExt: Spawn {
     /// Spawns a task that polls the given future to completion and returns a
     /// future that resolves to the spawned future's output.
     ///
-    /// This method returns a [`Result`] that contains a [`RemoteHandle`], or, if
-    /// spawning fails, a [`SpawnError`]. [`RemoteHandle`] is a future that
+    /// This method returns a [`Result`] that contains a [`RemoteHandle`](crate::future::RemoteHandle), or, if
+    /// spawning fails, a [`SpawnError`]. [`RemoteHandle`](crate::future::RemoteHandle) is a future that
     /// resolves to the output of the spawned future.
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// use futures::executor::ThreadPool;
     /// use futures::future;
     /// use futures::task::SpawnExt;
@@ -68,6 +69,7 @@ pub trait SpawnExt: Spawn {
     /// let join_handle_fut = executor.spawn_with_handle(future).unwrap();
     /// assert_eq!(executor.run(join_handle_fut), 1);
     /// ```
+    #[cfg(feature = "channel")]
     #[cfg(feature = "std")]
     fn spawn_with_handle<Fut>(
         &mut self,
@@ -110,7 +112,7 @@ pub trait LocalSpawnExt: LocalSpawn {
     /// today. Feel free to use this method in the meantime.
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// use futures::executor::LocalPool;
     /// use futures::task::LocalSpawnExt;
     ///
@@ -131,12 +133,12 @@ pub trait LocalSpawnExt: LocalSpawn {
     /// Spawns a task that polls the given future to completion and returns a
     /// future that resolves to the spawned future's output.
     ///
-    /// This method returns a [`Result`] that contains a [`RemoteHandle`], or, if
-    /// spawning fails, a [`SpawnError`]. [`RemoteHandle`] is a future that
+    /// This method returns a [`Result`] that contains a [`RemoteHandle`](crate::future::RemoteHandle), or, if
+    /// spawning fails, a [`SpawnError`]. [`RemoteHandle`](crate::future::RemoteHandle) is a future that
     /// resolves to the output of the spawned future.
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await)]
     /// use futures::executor::LocalPool;
     /// use futures::future;
     /// use futures::task::LocalSpawnExt;
@@ -148,6 +150,7 @@ pub trait LocalSpawnExt: LocalSpawn {
     /// let join_handle_fut = spawner.spawn_local_with_handle(future).unwrap();
     /// assert_eq!(executor.run_until(join_handle_fut), 1);
     /// ```
+    #[cfg(feature = "channel")]
     #[cfg(feature = "std")]
     fn spawn_local_with_handle<Fut>(
         &mut self,

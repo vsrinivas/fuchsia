@@ -1,5 +1,3 @@
-use dox::{mem, Option};
-
 pub type wchar_t = i32;
 pub type off_t = i64;
 pub type useconds_t = u32;
@@ -23,12 +21,6 @@ s! {
         pub sin6_flowinfo: u32,
         pub sin6_addr: ::in6_addr,
         pub sin6_scope_id: u32,
-    }
-
-    pub struct sockaddr_un {
-        pub sun_len: u8,
-        pub sun_family: sa_family_t,
-        pub sun_path: [c_char; 104]
     }
 
     pub struct passwd {
@@ -85,6 +77,39 @@ s! {
         pub tm_zone: *mut ::c_char,
     }
 
+    pub struct msghdr {
+        pub msg_name: *mut ::c_void,
+        pub msg_namelen: ::socklen_t,
+        pub msg_iov: *mut ::iovec,
+        pub msg_iovlen: ::c_int,
+        pub msg_control: *mut ::c_void,
+        pub msg_controllen: ::socklen_t,
+        pub msg_flags: ::c_int,
+    }
+
+    pub struct cmsghdr {
+        pub cmsg_len: ::socklen_t,
+        pub cmsg_level: ::c_int,
+        pub cmsg_type: ::c_int,
+    }
+
+    pub struct fsid_t {
+        __fsid_val: [i32; 2],
+    }
+
+    pub struct if_nameindex {
+        pub if_index: ::c_uint,
+        pub if_name: *mut ::c_char,
+    }
+}
+
+s_no_extra_traits!{
+    pub struct sockaddr_un {
+        pub sun_len: u8,
+        pub sun_family: sa_family_t,
+        pub sun_path: [c_char; 104]
+    }
+
     pub struct utsname {
         #[cfg(not(target_os = "dragonfly"))]
         pub sysname: [::c_char; 256],
@@ -108,29 +133,94 @@ s! {
         pub machine: [::c_char; 32],
     }
 
-    pub struct msghdr {
-        pub msg_name: *mut ::c_void,
-        pub msg_namelen: ::socklen_t,
-        pub msg_iov: *mut ::iovec,
-        pub msg_iovlen: ::c_int,
-        pub msg_control: *mut ::c_void,
-        pub msg_controllen: ::socklen_t,
-        pub msg_flags: ::c_int,
-    }
+}
 
-    pub struct cmsghdr {
-        pub cmsg_len: ::socklen_t,
-        pub cmsg_level: ::c_int,
-        pub cmsg_type: ::c_int,
-    }
+cfg_if! {
+    if #[cfg(feature = "extra_traits")] {
+        impl PartialEq for sockaddr_un {
+            fn eq(&self, other: &sockaddr_un) -> bool {
+                self.sun_len == other.sun_len
+                    && self.sun_family == other.sun_family
+                    && self
+                    .sun_path
+                    .iter()
+                    .zip(other.sun_path.iter())
+                    .all(|(a,b)| a == b)
+            }
+        }
 
-    pub struct fsid_t {
-        __fsid_val: [::int32_t; 2],
-    }
+        impl Eq for sockaddr_un {}
 
-    pub struct if_nameindex {
-        pub if_index: ::c_uint,
-        pub if_name: *mut ::c_char,
+        impl ::fmt::Debug for sockaddr_un {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("sockaddr_un")
+                    .field("sun_len", &self.sun_len)
+                    .field("sun_family", &self.sun_family)
+                // FIXME: .field("sun_path", &self.sun_path)
+                    .finish()
+            }
+        }
+
+        impl ::hash::Hash for sockaddr_un {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.sun_len.hash(state);
+                self.sun_family.hash(state);
+                self.sun_path.hash(state);
+            }
+        }
+
+        impl PartialEq for utsname {
+            fn eq(&self, other: &utsname) -> bool {
+                self.sysname
+                    .iter()
+                    .zip(other.sysname.iter())
+                    .all(|(a,b)| a == b)
+                    && self
+                    .nodename
+                    .iter()
+                    .zip(other.nodename.iter())
+                    .all(|(a,b)| a == b)
+                    && self
+                    .release
+                    .iter()
+                    .zip(other.release.iter())
+                    .all(|(a,b)| a == b)
+                    && self
+                    .version
+                    .iter()
+                    .zip(other.version.iter())
+                    .all(|(a,b)| a == b)
+                    && self
+                    .machine
+                    .iter()
+                    .zip(other.machine.iter())
+                    .all(|(a,b)| a == b)
+            }
+        }
+
+        impl Eq for utsname {}
+
+        impl ::fmt::Debug for utsname {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                f.debug_struct("utsname")
+                // FIXME: .field("sysname", &self.sysname)
+                // FIXME: .field("nodename", &self.nodename)
+                // FIXME: .field("release", &self.release)
+                // FIXME: .field("version", &self.version)
+                // FIXME: .field("machine", &self.machine)
+                    .finish()
+            }
+        }
+
+        impl ::hash::Hash for utsname {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                self.sysname.hash(state);
+                self.nodename.hash(state);
+                self.release.hash(state);
+                self.version.hash(state);
+                self.machine.hash(state);
+            }
+        }
     }
 }
 
@@ -143,7 +233,12 @@ pub const LC_TIME: ::c_int = 5;
 pub const LC_MESSAGES: ::c_int = 6;
 
 pub const FIOCLEX: ::c_ulong = 0x20006601;
+pub const FIONCLEX: ::c_ulong = 0x20006602;
+pub const FIONREAD: ::c_ulong = 0x4004667f;
 pub const FIONBIO: ::c_ulong = 0x8004667e;
+pub const FIOASYNC: ::c_ulong = 0x8004667d;
+pub const FIOSETOWN: ::c_ulong = 0x8004667c;
+pub const FIOGETOWN: ::c_ulong = 0x4004667b;
 
 pub const PATH_MAX: ::c_int = 1024;
 
@@ -343,7 +438,7 @@ pub const POLLWRBAND: ::c_short = 0x100;
 
 f! {
     pub fn CMSG_FIRSTHDR(mhdr: *const ::msghdr) -> *mut ::cmsghdr {
-        if (*mhdr).msg_controllen as usize >= mem::size_of::<::cmsghdr>() {
+        if (*mhdr).msg_controllen as usize >= ::mem::size_of::<::cmsghdr>() {
             (*mhdr).msg_control as *mut ::cmsghdr
         } else {
             0 as *mut ::cmsghdr
@@ -351,20 +446,20 @@ f! {
     }
 
     pub fn FD_CLR(fd: ::c_int, set: *mut fd_set) -> () {
-        let bits = mem::size_of_val(&(*set).fds_bits[0]) * 8;
+        let bits = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         let fd = fd as usize;
         (*set).fds_bits[fd / bits] &= !(1 << (fd % bits));
         return
     }
 
     pub fn FD_ISSET(fd: ::c_int, set: *mut fd_set) -> bool {
-        let bits = mem::size_of_val(&(*set).fds_bits[0]) * 8;
+        let bits = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         let fd = fd as usize;
         return ((*set).fds_bits[fd / bits] & (1 << (fd % bits))) != 0
     }
 
     pub fn FD_SET(fd: ::c_int, set: *mut fd_set) -> () {
-        let bits = mem::size_of_val(&(*set).fds_bits[0]) * 8;
+        let bits = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         let fd = fd as usize;
         (*set).fds_bits[fd / bits] |= 1 << (fd % bits);
         return
@@ -398,6 +493,15 @@ f! {
 }
 
 extern {
+    #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
+               link_name = "getrlimit$UNIX2003")]
+    pub fn getrlimit(resource: ::c_int, rlim: *mut ::rlimit) -> ::c_int;
+    #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
+               link_name = "setrlimit$UNIX2003")]
+    pub fn setrlimit(resource: ::c_int, rlim: *const ::rlimit) -> ::c_int;
+
+    pub fn strerror_r(errnum: ::c_int, buf: *mut c_char,
+                      buflen: ::size_t) -> ::c_int;
     pub fn abs(i: ::c_int) -> ::c_int;
     pub fn atof(s: *const ::c_char) -> ::c_double;
     pub fn labs(i: ::c_long) -> ::c_long;
@@ -416,7 +520,6 @@ extern {
     pub fn getpwent() -> *mut passwd;
     pub fn setpwent();
     pub fn endpwent();
-    pub fn setgrent();
     pub fn endgrent();
     pub fn getgrent() -> *mut ::group;
 
@@ -432,14 +535,20 @@ extern {
 
     #[cfg_attr(target_os = "macos", link_name = "glob$INODE64")]
     #[cfg_attr(target_os = "netbsd", link_name = "__glob30")]
-    #[cfg_attr(target_os = "freebsd", link_name = "glob@FBSD_1.0")]
+    #[cfg_attr(
+        all(target_os = "freebsd", not(freebsd12)),
+        link_name = "glob@FBSD_1.0"
+    )]
     pub fn glob(pattern: *const ::c_char,
                 flags: ::c_int,
-                errfunc: Option<extern fn(epath: *const ::c_char,
+                errfunc: ::Option<extern fn(epath: *const ::c_char,
                                           errno: ::c_int) -> ::c_int>,
                 pglob: *mut ::glob_t) -> ::c_int;
     #[cfg_attr(target_os = "netbsd", link_name = "__globfree30")]
-    #[cfg_attr(target_os = "freebsd", link_name = "globfree@FBSD_1.0")]
+    #[cfg_attr(
+        all(target_os = "freebsd", not(freebsd12)),
+        link_name = "globfree@FBSD_1.0"
+    )]
     pub fn globfree(pglob: *mut ::glob_t);
 
     pub fn posix_madvise(addr: *mut ::c_void, len: ::size_t, advice: ::c_int)
@@ -504,7 +613,7 @@ extern {
 
     pub fn sync();
     #[cfg_attr(target_os = "solaris", link_name = "__posix_getgrgid_r")]
-    pub fn getgrgid_r(uid: ::uid_t,
+    pub fn getgrgid_r(gid: ::gid_t,
                       grp: *mut ::group,
                       buf: *mut ::c_char,
                       buflen: ::size_t,
@@ -533,7 +642,6 @@ extern {
     pub fn pthread_cancel(thread: ::pthread_t) -> ::c_int;
     pub fn pthread_kill(thread: ::pthread_t, sig: ::c_int) -> ::c_int;
     pub fn sem_unlink(name: *const ::c_char) -> ::c_int;
-    pub fn daemon(nochdir: ::c_int, noclose: ::c_int) -> ::c_int;
     #[cfg_attr(target_os = "netbsd", link_name = "__getpwnam_r50")]
     #[cfg_attr(target_os = "solaris", link_name = "__posix_getpwnam_r")]
     pub fn getpwnam_r(name: *const ::c_char,
@@ -553,9 +661,9 @@ extern {
     #[cfg_attr(target_os = "solaris", link_name = "__posix_sigwait")]
     pub fn sigwait(set: *const sigset_t,
                    sig: *mut ::c_int) -> ::c_int;
-    pub fn pthread_atfork(prepare: Option<unsafe extern fn()>,
-                          parent: Option<unsafe extern fn()>,
-                          child: Option<unsafe extern fn()>) -> ::c_int;
+    pub fn pthread_atfork(prepare: ::Option<unsafe extern fn()>,
+                          parent: ::Option<unsafe extern fn()>,
+                          child: ::Option<unsafe extern fn()>) -> ::c_int;
     pub fn getgrgid(gid: ::gid_t) -> *mut ::group;
     #[cfg_attr(all(target_os = "macos", target_arch = "x86"),
                link_name = "popen$UNIX2003")]
@@ -574,8 +682,7 @@ cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "ios"))] {
         mod apple;
         pub use self::apple::*;
-    } else if #[cfg(any(target_os = "openbsd", target_os = "netbsd",
-                        target_os = "bitrig"))] {
+    } else if #[cfg(any(target_os = "openbsd", target_os = "netbsd"))] {
         mod netbsdlike;
         pub use self::netbsdlike::*;
     } else if #[cfg(any(target_os = "freebsd", target_os = "dragonfly"))] {

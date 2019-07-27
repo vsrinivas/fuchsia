@@ -57,7 +57,7 @@ mod mock {
                 // No more expected durations left, blocking the Timer forever.
                 // Users of MockTimer are expected to use run_until_stalled()
                 // if timer is used in an infinite loop.
-                future::empty().boxed()
+                future::pending().boxed()
             }
         }
     }

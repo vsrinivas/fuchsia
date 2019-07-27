@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "futures-test-preview"
-version = "0.3.0-alpha.15"
+version = "0.3.0-alpha.17"
 authors = ["Wim Looman <wim@nemo157.com>"]
 description = "Common utilities for testing components built off futures-rs.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
@@ -24,21 +24,29 @@ repository = "https://github.com/rust-lang-nursery/futures-rs"
 [lib]
 name = "futures_test"
 [dependencies.futures-core-preview]
-version = "=0.3.0-alpha.15"
+version = "=0.3.0-alpha.17"
 default-features = false
 
 [dependencies.futures-executor-preview]
-version = "=0.3.0-alpha.15"
+version = "=0.3.0-alpha.17"
+default-features = false
+
+[dependencies.futures-io-preview]
+version = "=0.3.0-alpha.17"
 default-features = false
 
 [dependencies.futures-util-preview]
-version = "=0.3.0-alpha.15"
+version = "=0.3.0-alpha.17"
 default-features = false
 
 [dependencies.pin-utils]
 version = "0.1.0-alpha.4"
 default-features = false
+[dev-dependencies.futures-preview]
+version = "=0.3.0-alpha.17"
+features = ["std"]
+default-features = false
 
 [features]
 default = ["std"]
-std = ["futures-core-preview/std", "futures-util-preview/std", "futures-executor-preview/std"]
+std = ["futures-core-preview/std", "futures-io-preview/std", "futures-util-preview/std", "futures-util-preview/io", "futures-executor-preview/std"]

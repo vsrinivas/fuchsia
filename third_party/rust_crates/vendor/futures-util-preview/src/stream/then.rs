@@ -1,12 +1,13 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`then`](super::StreamExt::then) method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Then<St, Fut, F> {
     stream: St,
@@ -16,14 +17,29 @@ pub struct Then<St, Fut, F> {
 
 impl<St: Unpin, Fut: Unpin, F> Unpin for Then<St, Fut, F> {}
 
+impl<St, Fut, F> fmt::Debug for Then<St, Fut, F>
+where
+    St: fmt::Debug,
+    Fut: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Then")
+            .field("stream", &self.stream)
+            .field("future", &self.future)
+            .finish()
+    }
+}
+
+impl<St, Fut, F> Then<St, Fut, F> {
+    unsafe_pinned!(stream: St);
+    unsafe_pinned!(future: Option<Fut>);
+    unsafe_unpinned!(f: F);
+}
+
 impl<St, Fut, F> Then<St, Fut, F>
     where St: Stream,
           F: FnMut(St::Item) -> Fut,
 {
-    unsafe_pinned!(stream: St);
-    unsafe_pinned!(future: Option<Fut>);
-    unsafe_unpinned!(f: F);
-
     pub(super) fn new(stream: St, f: F) -> Then<St, Fut, F> {
         Then {
             stream,
@@ -98,12 +114,11 @@ impl<St, Fut, F> Stream for Then<St, Fut, F>
 }
 
 // Forwarding impl of Sink from the underlying stream
+#[cfg(feature = "sink")]
 impl<S, Fut, F, Item> Sink<Item> for Then<S, Fut, F>
-    where S: Stream + Sink<Item>,
-          F: FnMut(S::Item) -> Fut,
-          Fut: Future,
+    where S: Sink<Item>,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

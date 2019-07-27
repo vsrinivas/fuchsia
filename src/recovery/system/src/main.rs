@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
 
 use carnelian::{
     measure_text, Canvas, Color, FontDescription, FontFace, IntSize, MappingPixelSink, Paint,

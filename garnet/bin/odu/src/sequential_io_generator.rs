@@ -6,7 +6,6 @@
 //! IOs will be of different size. Every next IO will start where previous one
 //! end in a non overlapping way. When generator reaches end of allowed range,
 //! the next offset will wrap around and starts from the beginning of the range.
-#![deny(warnings)]
 
 use {
     crate::generator::Generator,

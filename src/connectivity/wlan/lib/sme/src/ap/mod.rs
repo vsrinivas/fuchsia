@@ -523,7 +523,6 @@ fn create_start_request(
 mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
-    use std::error::Error;
     use wlan_common::{
         assert_variant,
         channel::{Cbw, Phy},
@@ -591,7 +590,7 @@ mod tests {
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
 
         assert_variant!(mlme_stream.try_next(), Err(e) => {
-            assert_eq!(e.description(), "receiver channel is empty");
+            assert_eq!(e.to_string(), "receiver channel is empty");
         });
     }
 
@@ -749,7 +748,7 @@ mod tests {
             fake_event.id += 1;
             sme.on_timeout(fake_event);
             assert_variant!(mlme_stream.try_next(), Err(e) => {
-                assert_eq!(e.description(), "receiver channel is empty")
+                assert_eq!(e.to_string(), "receiver channel is empty")
             });
             sme.on_timeout(event);
         }

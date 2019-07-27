@@ -1,18 +1,30 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`inspect`](super::StreamExt::inspect) method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
-pub struct Inspect<St, F> where St: Stream {
+pub struct Inspect<St, F> {
     stream: St,
     f: F,
 }
 
-impl<St: Stream + Unpin, F> Unpin for Inspect<St, F> {}
+impl<St: Unpin, F> Unpin for Inspect<St, F> {}
+
+impl<St, F> fmt::Debug for Inspect<St, F>
+where
+    St: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Inspect")
+            .field("stream", &self.stream)
+            .finish()
+    }
+}
 
 impl<St, F> Inspect<St, F>
     where St: Stream,
@@ -64,6 +76,13 @@ impl<St: Stream + FusedStream, F> FusedStream for Inspect<St, F> {
     }
 }
 
+// used by `TryStreamExt::{inspect_ok, inspect_err}`
+#[inline]
+pub(crate) fn inspect<T, F: FnMut(&T)>(x: T, mut f: F) -> T {
+    f(&x);
+    x
+}
+
 impl<St, F> Stream for Inspect<St, F>
     where St: Stream,
           F: FnMut(&St::Item),
@@ -74,20 +93,20 @@ impl<St, F> Stream for Inspect<St, F>
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<St::Item>> {
-        let item = ready!(self.as_mut().stream().poll_next(cx));
-        Poll::Ready(item.map(|e| {
-            (self.as_mut().f())(&e);
-            e
-        }))
+        self.as_mut()
+            .stream()
+            .poll_next(cx)
+            .map(|opt| opt.map(|e| inspect(e, self.as_mut().f())))
     }
 }
 
 // Forwarding impl of Sink from the underlying stream
+#[cfg(feature = "sink")]
 impl<S, F, Item> Sink<Item> for Inspect<S, F>
     where S: Stream + Sink<Item>,
           F: FnMut(&S::Item),
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

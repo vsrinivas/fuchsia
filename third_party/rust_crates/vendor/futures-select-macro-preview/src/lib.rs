@@ -1,7 +1,10 @@
 //! The futures-rs `select! macro implementation.
 
 #![recursion_limit="128"]
-#![warn(rust_2018_idioms)]
+#![warn(rust_2018_idioms, unreachable_pub)]
+// It cannot be included in the published code because this lints have false positives in the minimum required version.
+#![cfg_attr(test, warn(single_use_lifetimes))]
+#![warn(clippy::all)]
 
 extern crate proc_macro;
 
@@ -246,7 +249,7 @@ pub fn select(input: TokenStream) -> TokenStream {
         }
     } else {
         quote! {
-            match r#await!(#futures_crate::future::poll_fn(__poll_fn)) {
+            match #futures_crate::future::poll_fn(__poll_fn).await {
                 #branches
             }
         }
@@ -262,7 +265,7 @@ pub fn select(input: TokenStream) -> TokenStream {
             #( #poll_functions )*
 
             let mut __select_arr = [#( #variant_names ),*];
-            <[_] as #rand_crate::prelude::SliceRandom>::shuffle(
+            <[_] as #rand_crate::SliceRandom>::shuffle(
                 &mut __select_arr,
                 &mut #rand_crate::thread_rng(),
             );

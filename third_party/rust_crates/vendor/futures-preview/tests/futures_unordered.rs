@@ -1,11 +1,38 @@
 use futures::channel::oneshot;
 use futures::executor::{block_on, block_on_stream};
-use futures::future::{self, join, FutureExt};
-use futures::stream::{StreamExt, FuturesUnordered};
+use futures::future::{self, join, Future, FutureExt};
+use futures::stream::{FusedStream, FuturesUnordered, StreamExt};
 use futures::task::Poll;
-use futures_test::{assert_stream_done, assert_stream_next};
 use futures_test::future::FutureTestExt;
 use futures_test::task::noop_context;
+use futures_test::{assert_stream_done, assert_stream_next};
+
+#[test]
+fn is_terminated() {
+    let mut cx = noop_context();
+    let mut tasks = FuturesUnordered::new();
+
+    assert_eq!(tasks.is_terminated(), false);
+    assert_eq!(tasks.poll_next_unpin(&mut cx), Poll::Ready(None));
+    assert_eq!(tasks.is_terminated(), true);
+
+    // Test that the sentinel value doesn't leak
+    assert_eq!(tasks.is_empty(), true);
+    assert_eq!(tasks.len(), 0);
+    assert_eq!(tasks.iter_mut().len(), 0);
+
+    tasks.push(future::ready(1));
+
+    assert_eq!(tasks.is_empty(), false);
+    assert_eq!(tasks.len(), 1);
+    assert_eq!(tasks.iter_mut().len(), 1);
+
+    assert_eq!(tasks.is_terminated(), false);
+    assert_eq!(tasks.poll_next_unpin(&mut cx), Poll::Ready(Some(1)));
+    assert_eq!(tasks.is_terminated(), false);
+    assert_eq!(tasks.poll_next_unpin(&mut cx), Poll::Ready(None));
+    assert_eq!(tasks.is_terminated(), true);
+}
 
 #[test]
 fn works_1() {
@@ -13,7 +40,11 @@ fn works_1() {
     let (b_tx, b_rx) = oneshot::channel::<i32>();
     let (c_tx, c_rx) = oneshot::channel::<i32>();
 
-    let mut iter = block_on_stream(vec![a_rx, b_rx, c_rx].into_iter().collect::<FuturesUnordered<_>>());
+    let mut iter = block_on_stream(
+        vec![a_rx, b_rx, c_rx]
+            .into_iter()
+            .collect::<FuturesUnordered<_>>(),
+    );
 
     b_tx.send(99).unwrap();
     assert_eq!(Some(Ok(99)), iter.next());
@@ -34,7 +65,9 @@ fn works_2() {
     let mut stream = vec![
         a_rx.boxed(),
         join(b_rx, c_rx).map(|(a, b)| Ok(a? + b?)).boxed(),
-    ].into_iter().collect::<FuturesUnordered<_>>();
+    ]
+    .into_iter()
+    .collect::<FuturesUnordered<_>>();
 
     a_tx.send(9).unwrap();
     b_tx.send(10).unwrap();
@@ -51,13 +84,14 @@ fn from_iterator() {
     let stream = vec![
         future::ready::<i32>(1),
         future::ready::<i32>(2),
-        future::ready::<i32>(3)
-    ].into_iter().collect::<FuturesUnordered<_>>();
+        future::ready::<i32>(3),
+    ]
+    .into_iter()
+    .collect::<FuturesUnordered<_>>();
     assert_eq!(stream.len(), 3);
-    assert_eq!(block_on(stream.collect::<Vec<_>>()), vec![1,2,3]);
+    assert_eq!(block_on(stream.collect::<Vec<_>>()), vec![1, 2, 3]);
 }
 
-/* ToDo: This requires FutureExt::select to be implemented
 #[test]
 fn finished_future() {
     let (_a_tx, a_rx) = oneshot::channel::<i32>();
@@ -65,22 +99,23 @@ fn finished_future() {
     let (c_tx, c_rx) = oneshot::channel::<i32>();
 
     let mut stream = vec![
-        a_rx.boxed(),
-        b_rx.select(c_rx).boxed(),
-    ].into_iter().collect::<FuturesUnordered<_>>();
+        Box::new(a_rx) as Box<dyn Future<Output = Result<_, _>> + Unpin>,
+        Box::new(future::select(b_rx, c_rx).map(|e| e.factor_first().0)) as _,
+    ]
+    .into_iter()
+    .collect::<FuturesUnordered<_>>();
 
-    support::with_noop_waker_context(f)(|cx| {
-        for _ in 0..10 {
-            assert!(stream.poll_next_unpin(cx).is_pending());
-        }
+    let cx = &mut noop_context();
+    for _ in 0..10 {
+        assert!(stream.poll_next_unpin(cx).is_pending());
+    }
 
-        b_tx.send(12).unwrap();
-        assert!(stream.poll_next_unpin(cx).is_ready());
-        c_tx.send(3).unwrap();
-        assert!(stream.poll_next_unpin(cx).is_pending());
-        assert!(stream.poll_next_unpin(cx).is_pending());
-    })
-}*/
+    b_tx.send(12).unwrap();
+    c_tx.send(3).unwrap();
+    assert!(stream.poll_next_unpin(cx).is_ready());
+    assert!(stream.poll_next_unpin(cx).is_pending());
+    assert!(stream.poll_next_unpin(cx).is_pending());
+}
 
 #[test]
 fn iter_mut_cancel() {
@@ -88,7 +123,9 @@ fn iter_mut_cancel() {
     let (b_tx, b_rx) = oneshot::channel::<i32>();
     let (c_tx, c_rx) = oneshot::channel::<i32>();
 
-    let mut stream = vec![a_rx, b_rx, c_rx].into_iter().collect::<FuturesUnordered<_>>();
+    let mut stream = vec![a_rx, b_rx, c_rx]
+        .into_iter()
+        .collect::<FuturesUnordered<_>>();
 
     for rx in stream.iter_mut() {
         rx.close();
@@ -109,10 +146,12 @@ fn iter_mut_cancel() {
 #[test]
 fn iter_mut_len() {
     let mut stream = vec![
-        future::empty::<()>(),
-        future::empty::<()>(),
-        future::empty::<()>()
-    ].into_iter().collect::<FuturesUnordered<_>>();
+        future::pending::<()>(),
+        future::pending::<()>(),
+        future::pending::<()>(),
+    ]
+    .into_iter()
+    .collect::<FuturesUnordered<_>>();
 
     let mut iter_mut = stream.iter_mut();
     assert_eq!(iter_mut.len(), 3);

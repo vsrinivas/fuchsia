@@ -189,6 +189,6 @@ async fn main() -> Result<(), Error> {
     // from outside. We want enclosed_runner to keep alive so we will have
     // the test environment alive as well so we can chrealm into it, or just
     // observe netstack3.
-    let () = await!(futures::future::empty());
+    let () = await!(futures::future::pending());
     Ok(())
 }

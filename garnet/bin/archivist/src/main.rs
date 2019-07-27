@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
 #![allow(dead_code)]
 
 use {
@@ -57,7 +56,7 @@ fn main() -> Result<(), Error> {
     );
     fs.take_and_serve_directory_handle()?;
 
-    executor.run(future::join(fs.collect::<()>(), run_archivist()), NUM_THREADS);
+    executor.run(future::try_join(fs.collect::<()>().map(Ok), run_archivist()), NUM_THREADS)?;
     Ok(())
 }
 
@@ -122,7 +121,7 @@ async fn run_archivist() -> Result<(), Error> {
     let mut events = collector.component_events().unwrap();
 
     let collector_state = state.clone();
-    fasync::spawn(collector.start().then(async move |e| {
+    fasync::spawn(collector.start().then(|e| async move {
         let mut state = collector_state.lock().unwrap();
         component::health().set_unhealthy("Collection loop stopped");
         inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));

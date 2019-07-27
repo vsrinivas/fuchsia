@@ -7,6 +7,7 @@ use std::pin::Pin;
 
 /// Future for the [`write_all`](super::AsyncWriteExt::write_all) method.
 #[derive(Debug)]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct WriteAll<'a, W: ?Sized + Unpin> {
     writer: &'a mut W,
     buf: &'a [u8],
@@ -26,7 +27,7 @@ impl<W: AsyncWrite + ?Sized + Unpin> Future for WriteAll<'_, W> {
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         let this = &mut *self;
         while !this.buf.is_empty() {
-            let n = try_ready!(Pin::new(&mut this.writer).poll_write(cx, this.buf));
+            let n = ready!(Pin::new(&mut this.writer).poll_write(cx, this.buf))?;
             {
                 let (_, rest) = mem::replace(&mut this.buf, &[]).split_at(n);
                 this.buf = rest;

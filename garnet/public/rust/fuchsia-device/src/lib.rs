@@ -5,8 +5,6 @@
 //! Rust bindings to common Fuchsia device libraries
 //! Currently pty only implemented, others to follow
 
-#![deny(warnings)]
-//#![deny(missing_docs)]
 #![allow(dead_code)]
 
 pub mod pty;

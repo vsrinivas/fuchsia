@@ -1,34 +1,44 @@
 //! Asynchronous I/O
 //!
-//! This crate contains the `AsyncRead` and `AsyncWrite` traits, the
-//! asynchronous analogs to `std::io::{Read, Write}`. The primary difference is
+//! This crate contains the `AsyncRead`, `AsyncWrite`, `AsyncSeek`, and
+//! `AsyncBufRead` traits, the asynchronous analogs to
+//! `std::io::{Read, Write, Seek, BufRead}`. The primary difference is
 //! that these traits integrate with the asynchronous task system.
+//!
+//! All items of this library are only available when the `std` feature of this
+//! library is activated, and it is activated by default.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
+#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms, unreachable_pub)]
+// It cannot be included in the published code because this lints have false positives in the minimum required version.
+#![cfg_attr(test, warn(single_use_lifetimes))]
+#![warn(clippy::all)]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.15/futures_io")]
+#![doc(test(attr(deny(warnings), allow(dead_code, unused_assignments, unused_variables))))]
+
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures_io")]
 
 #[cfg(feature = "std")]
 mod if_std {
-    use futures_core::task::{Context, Poll};
-    use std::boxed::Box;
     use std::cmp;
-    use std::io as StdIo;
+    use std::io;
     use std::ops::DerefMut;
     use std::pin::Pin;
     use std::ptr;
-
-    // Re-export IoVec for convenience
-    pub use iovec::IoVec;
+    use std::task::{Context, Poll};
 
     // Re-export some types from `std::io` so that users don't have to deal
     // with conflicts when `use`ing `futures::io` and `std::io`.
-    pub use self::StdIo::Error as Error;
-    pub use self::StdIo::ErrorKind as ErrorKind;
-    pub use self::StdIo::Result as Result;
-    pub use self::StdIo::SeekFrom as SeekFrom;
+    #[allow(unreachable_pub)] // https://github.com/rust-lang/rust/issues/57411
+    pub use io::{
+        Error as Error,
+        ErrorKind as ErrorKind,
+        Result as Result,
+        IoSlice as IoSlice,
+        IoSliceMut as IoSliceMut,
+        SeekFrom as SeekFrom,
+    };
 
     /// A type used to conditionally initialize buffers passed to `AsyncRead`
     /// methods, modeled after `std`.
@@ -112,7 +122,7 @@ mod if_std {
         fn poll_read(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8])
             -> Poll<Result<usize>>;
 
-        /// Attempt to read from the `AsyncRead` into `vec` using vectored
+        /// Attempt to read from the `AsyncRead` into `bufs` using vectored
         /// IO operations.
         ///
         /// This method is similar to `poll_read`, but allows data to be read
@@ -125,7 +135,7 @@ mod if_std {
         /// `cx.waker().wake_by_ref()`) to receive a notification when the object becomes
         /// readable or is closed.
         /// By default, this method delegates to using `poll_read` on the first
-        /// buffer in `vec`. Objects which support vectored IO should override
+        /// buffer in `bufs`. Objects which support vectored IO should override
         /// this method.
         ///
         /// # Implementation
@@ -134,13 +144,13 @@ mod if_std {
         /// `Interrupted`.  Implementations must convert `WouldBlock` into
         /// `Poll::Pending` and either internally retry or convert
         /// `Interrupted` into another error kind.
-        fn poll_vectored_read(self: Pin<&mut Self>, cx: &mut Context<'_>, vec: &mut [&mut IoVec])
+        fn poll_read_vectored(self: Pin<&mut Self>, cx: &mut Context<'_>, bufs: &mut [IoSliceMut<'_>])
             -> Poll<Result<usize>>
         {
-            if let Some(ref mut first_iovec) = vec.get_mut(0) {
-                self.poll_read(cx, first_iovec)
+            if let Some(first_iovec) = bufs.get_mut(0) {
+                self.poll_read(cx, &mut **first_iovec)
             } else {
-                // `vec` is empty.
+                // `bufs` is empty.
                 Poll::Ready(Ok(0))
             }
         }
@@ -161,7 +171,7 @@ mod if_std {
         /// If the object is not ready for writing, the method returns
         /// `Poll::Pending` and arranges for the current task (via
         /// `cx.waker().wake_by_ref()`) to receive a notification when the object becomes
-        /// readable or is closed.
+        /// writable or is closed.
         ///
         /// # Implementation
         ///
@@ -172,7 +182,7 @@ mod if_std {
         fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8])
             -> Poll<Result<usize>>;
 
-        /// Attempt to write bytes from `vec` into the object using vectored
+        /// Attempt to write bytes from `bufs` into the object using vectored
         /// IO operations.
         ///
         /// This method is similar to `poll_write`, but allows data from multiple buffers to be written
@@ -183,10 +193,10 @@ mod if_std {
         /// If the object is not ready for writing, the method returns
         /// `Poll::Pending` and arranges for the current task (via
         /// `cx.waker().wake_by_ref()`) to receive a notification when the object becomes
-        /// readable or is closed.
+        /// writable or is closed.
         ///
         /// By default, this method delegates to using `poll_write` on the first
-        /// buffer in `vec`. Objects which support vectored IO should override
+        /// buffer in `bufs`. Objects which support vectored IO should override
         /// this method.
         ///
         /// # Implementation
@@ -195,13 +205,13 @@ mod if_std {
         /// `Interrupted`.  Implementations must convert `WouldBlock` into
         /// `Poll::Pending` and either internally retry or convert
         /// `Interrupted` into another error kind.
-        fn poll_vectored_write(self: Pin<&mut Self>, cx: &mut Context<'_>, vec: &[&IoVec])
+        fn poll_write_vectored(self: Pin<&mut Self>, cx: &mut Context<'_>, bufs: &[IoSlice<'_>])
             -> Poll<Result<usize>>
         {
-            if let Some(ref first_iovec) = vec.get(0) {
-                self.poll_write(cx, &*first_iovec)
+            if let Some(first_iovec) = bufs.get(0) {
+                self.poll_write(cx, &**first_iovec)
             } else {
-                // `vec` is empty.
+                // `bufs` is empty.
                 Poll::Ready(Ok(0))
             }
         }
@@ -262,6 +272,13 @@ mod if_std {
         /// # Errors
         ///
         /// Seeking to a negative offset is considered an error.
+        ///
+        /// # Implementation
+        ///
+        /// This function may not return errors of kind `WouldBlock` or
+        /// `Interrupted`.  Implementations must convert `WouldBlock` into
+        /// `Poll::Pending` and either internally retry or convert
+        /// `Interrupted` into another error kind.
         fn poll_seek(self: Pin<&mut Self>, cx: &mut Context<'_>, pos: SeekFrom)
             -> Poll<Result<u64>>;
     }
@@ -335,10 +352,10 @@ mod if_std {
                 Pin::new(&mut **self).poll_read(cx, buf)
             }
 
-            fn poll_vectored_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, vec: &mut [&mut IoVec])
+            fn poll_read_vectored(mut self: Pin<&mut Self>, cx: &mut Context<'_>, bufs: &mut [IoSliceMut<'_>])
                 -> Poll<Result<usize>>
             {
-                Pin::new(&mut **self).poll_vectored_read(cx, vec)
+                Pin::new(&mut **self).poll_read_vectored(cx, bufs)
             }
         }
     }
@@ -363,17 +380,17 @@ mod if_std {
         fn poll_read(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8])
             -> Poll<Result<usize>>
         {
-            Pin::get_mut(self).as_mut().poll_read(cx, buf)
+            self.get_mut().as_mut().poll_read(cx, buf)
         }
 
-        fn poll_vectored_read(self: Pin<&mut Self>, cx: &mut Context<'_>, vec: &mut [&mut IoVec])
+        fn poll_read_vectored(self: Pin<&mut Self>, cx: &mut Context<'_>, bufs: &mut [IoSliceMut<'_>])
             -> Poll<Result<usize>>
         {
-            Pin::get_mut(self).as_mut().poll_vectored_read(cx, vec)
+            self.get_mut().as_mut().poll_read_vectored(cx, bufs)
         }
     }
 
-    /// `unsafe` because the `StdIo::Read` type must not access the buffer
+    /// `unsafe` because the `io::Read` type must not access the buffer
     /// before reading data into it.
     macro_rules! unsafe_delegate_async_read_to_stdio {
         () => {
@@ -384,7 +401,13 @@ mod if_std {
             fn poll_read(mut self: Pin<&mut Self>, _: &mut Context<'_>, buf: &mut [u8])
                 -> Poll<Result<usize>>
             {
-                Poll::Ready(StdIo::Read::read(&mut *self, buf))
+                Poll::Ready(io::Read::read(&mut *self, buf))
+            }
+
+            fn poll_read_vectored(mut self: Pin<&mut Self>, _: &mut Context<'_>, bufs: &mut [IoSliceMut<'_>])
+                -> Poll<Result<usize>>
+            {
+                Poll::Ready(io::Read::read_vectored(&mut *self, bufs))
             }
         }
     }
@@ -393,15 +416,15 @@ mod if_std {
         unsafe_delegate_async_read_to_stdio!();
     }
 
-    impl AsyncRead for StdIo::Repeat {
+    impl AsyncRead for io::Repeat {
         unsafe_delegate_async_read_to_stdio!();
     }
 
-    impl AsyncRead for StdIo::Empty {
+    impl AsyncRead for io::Empty {
         unsafe_delegate_async_read_to_stdio!();
     }
 
-    impl<T: AsRef<[u8]> + Unpin> AsyncRead for StdIo::Cursor<T> {
+    impl<T: AsRef<[u8]> + Unpin> AsyncRead for io::Cursor<T> {
         unsafe_delegate_async_read_to_stdio!();
     }
 
@@ -413,10 +436,10 @@ mod if_std {
                 Pin::new(&mut **self).poll_write(cx, buf)
             }
 
-            fn poll_vectored_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, vec: &[&IoVec])
+            fn poll_write_vectored(mut self: Pin<&mut Self>, cx: &mut Context<'_>, bufs: &[IoSlice<'_>])
                 -> Poll<Result<usize>>
             {
-                Pin::new(&mut **self).poll_vectored_write(cx, vec)
+                Pin::new(&mut **self).poll_write_vectored(cx, bufs)
             }
 
             fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
@@ -445,21 +468,21 @@ mod if_std {
         fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8])
             -> Poll<Result<usize>>
         {
-            Pin::get_mut(self).as_mut().poll_write(cx, buf)
+            self.get_mut().as_mut().poll_write(cx, buf)
         }
 
-        fn poll_vectored_write(self: Pin<&mut Self>, cx: &mut Context<'_>, vec: &[&IoVec])
+        fn poll_write_vectored(self: Pin<&mut Self>, cx: &mut Context<'_>, bufs: &[IoSlice<'_>])
             -> Poll<Result<usize>>
         {
-            Pin::get_mut(self).as_mut().poll_vectored_write(cx, vec)
+            self.get_mut().as_mut().poll_write_vectored(cx, bufs)
         }
 
         fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-            Pin::get_mut(self).as_mut().poll_flush(cx)
+            self.get_mut().as_mut().poll_flush(cx)
         }
 
         fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-            Pin::get_mut(self).as_mut().poll_close(cx)
+            self.get_mut().as_mut().poll_close(cx)
         }
     }
 
@@ -468,11 +491,17 @@ mod if_std {
             fn poll_write(mut self: Pin<&mut Self>, _: &mut Context<'_>, buf: &[u8])
                 -> Poll<Result<usize>>
             {
-                Poll::Ready(StdIo::Write::write(&mut *self, buf))
+                Poll::Ready(io::Write::write(&mut *self, buf))
+            }
+
+            fn poll_write_vectored(mut self: Pin<&mut Self>, _: &mut Context<'_>, bufs: &[IoSlice<'_>])
+                -> Poll<Result<usize>>
+            {
+                Poll::Ready(io::Write::write_vectored(&mut *self, bufs))
             }
 
             fn poll_flush(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<()>> {
-                Poll::Ready(StdIo::Write::flush(&mut *self))
+                Poll::Ready(io::Write::flush(&mut *self))
             }
 
             fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
@@ -481,7 +510,7 @@ mod if_std {
         }
     }
 
-    impl<T: AsMut<[u8]> + Unpin> AsyncWrite for StdIo::Cursor<T> {
+    impl<T: AsMut<[u8]> + Unpin> AsyncWrite for io::Cursor<T> {
         fn poll_write(
             mut self: Pin<&mut Self>,
             _: &mut Context<'_>,
@@ -491,7 +520,7 @@ mod if_std {
             let result = {
                 let out = (&mut *self).get_mut().as_mut();
                 let pos = cmp::min(out.len() as u64, position) as usize;
-                StdIo::Write::write(&mut &mut out[pos..], buf)
+                io::Write::write(&mut &mut out[pos..], buf)
             };
             if let Ok(offset) = result {
                 self.get_mut().set_position(position + offset as u64);
@@ -499,8 +528,14 @@ mod if_std {
             Poll::Ready(result)
         }
 
+        fn poll_write_vectored(self: Pin<&mut Self>, _: &mut Context<'_>, bufs: &[IoSlice<'_>])
+            -> Poll<Result<usize>>
+        {
+            Poll::Ready(io::Write::write_vectored(&mut self.get_mut().get_mut().as_mut(), bufs))
+        }
+
         fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<()>> {
-            Poll::Ready(StdIo::Write::flush(&mut self.get_mut().get_mut().as_mut()))
+            Poll::Ready(io::Write::flush(&mut self.get_mut().get_mut().as_mut()))
         }
 
         fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
@@ -512,7 +547,7 @@ mod if_std {
         delegate_async_write_to_stdio!();
     }
 
-    impl AsyncWrite for StdIo::Sink {
+    impl AsyncWrite for io::Sink {
         delegate_async_write_to_stdio!();
     }
 
@@ -534,7 +569,6 @@ mod if_std {
         deref_async_seek!();
     }
 
-
     impl<P> AsyncSeek for Pin<P>
     where
         P: DerefMut + Unpin,
@@ -552,12 +586,12 @@ mod if_std {
             fn poll_seek(mut self: Pin<&mut Self>, _: &mut Context<'_>, pos: SeekFrom)
             -> Poll<Result<u64>>
             {
-                Poll::Ready(StdIo::Seek::seek(&mut *self, pos))
+                Poll::Ready(io::Seek::seek(&mut *self, pos))
             }
         }
     }
 
-    impl<T: AsRef<[u8]> + Unpin> AsyncSeek for StdIo::Cursor<T> {
+    impl<T: AsRef<[u8]> + Unpin> AsyncSeek for io::Cursor<T> {
         delegate_async_seek_to_stdio!();
     }
 
@@ -569,8 +603,8 @@ mod if_std {
                 Pin::new(&mut **self.get_mut()).poll_fill_buf(cx)
             }
 
-            fn consume(self: Pin<&mut Self>, amt: usize) {
-                Pin::new(&mut **self.get_mut()).consume(amt)
+            fn consume(mut self: Pin<&mut Self>, amt: usize) {
+                Pin::new(&mut **self).consume(amt)
             }
         }
     }
@@ -604,11 +638,11 @@ mod if_std {
             fn poll_fill_buf<'a>(self: Pin<&'a mut Self>, _: &mut Context<'_>)
                 -> Poll<Result<&'a [u8]>>
             {
-                Poll::Ready(StdIo::BufRead::fill_buf(self.get_mut()))
+                Poll::Ready(io::BufRead::fill_buf(self.get_mut()))
             }
 
             fn consume(self: Pin<&mut Self>, amt: usize) {
-                StdIo::BufRead::consume(self.get_mut(), amt)
+                io::BufRead::consume(self.get_mut(), amt)
             }
         }
     }
@@ -617,11 +651,11 @@ mod if_std {
         delegate_async_buf_read_to_stdio!();
     }
 
-    impl AsyncBufRead for StdIo::Empty {
+    impl AsyncBufRead for io::Empty {
         delegate_async_buf_read_to_stdio!();
     }
 
-    impl<T: AsRef<[u8]> + Unpin> AsyncBufRead for StdIo::Cursor<T> {
+    impl<T: AsRef<[u8]> + Unpin> AsyncBufRead for io::Cursor<T> {
         delegate_async_buf_read_to_stdio!();
     }
 }

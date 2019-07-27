@@ -10,6 +10,8 @@ use futures_core::future::Future;
 use futures_executor;
 use std::thread;
 
+pub use crate::interleave_pending::InterleavePending;
+
 /// Additional combinators for testing futures.
 pub trait FutureTestExt: Future {
     /// Asserts that the given is not moved after being polled.
@@ -38,7 +40,7 @@ pub trait FutureTestExt: Future {
     /// use futures::future::FutureExt;
     /// use futures_test::task::noop_context;
     /// use futures_test::future::FutureTestExt;
-    /// use pin_utils::pin_mut;
+    /// use futures::pin_mut;
     ///
     /// let future = (async { 5 }).pending_once();
     /// pin_mut!(future);
@@ -52,7 +54,7 @@ pub trait FutureTestExt: Future {
     where
         Self: Sized,
     {
-        pending_once::PendingOnce::new(self)
+        PendingOnce::new(self)
     }
 
     /// Runs this future on a dedicated executor running in a background thread.
@@ -61,15 +63,16 @@ pub trait FutureTestExt: Future {
     ///
     /// ```
     /// #![feature(async_await)]
+    /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
-    /// use futures::executor::block_on;
     /// use futures_test::future::FutureTestExt;
     ///
     /// let (tx, rx) = oneshot::channel::<i32>();
     ///
     /// (async { tx.send(5).unwrap() }).run_in_background();
     ///
-    /// assert_eq!(block_on(rx), Ok(5));
+    /// assert_eq!(rx.await, Ok(5));
+    /// # });
     /// ```
     fn run_in_background(self)
     where
@@ -77,6 +80,34 @@ pub trait FutureTestExt: Future {
         Self::Output: Send,
     {
         thread::spawn(|| futures_executor::block_on(self));
+    }
+
+    /// Introduces an extra [`Poll::Pending`](futures_core::task::Poll::Pending)
+    /// in between each call to poll.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// #![feature(async_await)]
+    /// use futures::task::Poll;
+    /// use futures::future::{self, Future};
+    /// use futures_test::task::noop_context;
+    /// use futures_test::future::FutureTestExt;
+    /// use futures::pin_mut;
+    ///
+    /// let future = future::ready(1).interleave_pending();
+    /// pin_mut!(future);
+    ///
+    /// let mut cx = noop_context();
+    ///
+    /// assert_eq!(future.as_mut().poll(&mut cx), Poll::Pending);
+    /// assert_eq!(future.as_mut().poll(&mut cx), Poll::Ready(1));
+    /// ```
+    fn interleave_pending(self) -> InterleavePending<Self>
+    where
+        Self: Sized,
+    {
+        InterleavePending::new(self)
     }
 }
 

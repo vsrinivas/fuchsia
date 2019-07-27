@@ -706,10 +706,10 @@ mod sys {
 
     #[repr(C)]
     pub union trace_arg_union_t {
-        pub int32_value: libc::int32_t,
-        pub uint32_value: libc::uint32_t,
-        pub int64_value: libc::int64_t,
-        pub uint64_value: libc::uint64_t,
+        pub int32_value: i32,
+        pub uint32_value: u32,
+        pub int64_value: i64,
+        pub uint64_value: u64,
         pub double_value: libc::c_double,
         pub string_value_ref: trace_string_ref_t,
         pub pointer_value: libc::uintptr_t,

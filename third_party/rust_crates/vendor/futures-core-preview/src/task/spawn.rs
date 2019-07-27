@@ -27,7 +27,7 @@ pub trait Spawn {
     }
 }
 
-/// The `LocalSpawn` is similar to `[Spawn]`, but allows spawning futures
+/// The `LocalSpawn` is similar to [`Spawn`], but allows spawning futures
 /// that don't implement `Send`.
 pub trait LocalSpawn {
     /// Spawns a future that will be run to completion.
@@ -65,6 +65,15 @@ impl fmt::Debug for SpawnError {
             .finish()
     }
 }
+
+impl fmt::Display for SpawnError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Executor is shutdown")
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for SpawnError {}
 
 impl SpawnError {
     /// Spawning failed because the executor has been shut down.

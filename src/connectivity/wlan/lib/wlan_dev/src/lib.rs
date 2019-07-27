@@ -4,7 +4,6 @@
 
 //! Wlan device objects
 
-#![deny(warnings)]
 #![deny(missing_docs)]
 
 use {

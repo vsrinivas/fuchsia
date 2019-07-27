@@ -5,7 +5,7 @@ use futures_sink::Sink;
 
 /// Future for the [`send`](super::SinkExt::send) method.
 #[derive(Debug)]
-#[must_use = "futures do nothing unless polled"]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Send<'a, Si: Sink<Item> + Unpin + ?Sized, Item> {
     sink: &'a mut Si,
     item: Option<Item>,
@@ -24,7 +24,7 @@ impl<'a, Si: Sink<Item> + Unpin + ?Sized, Item> Send<'a, Si, Item> {
 }
 
 impl<Si: Sink<Item> + Unpin + ?Sized, Item> Future for Send<'_, Si, Item> {
-    type Output = Result<(), Si::SinkError>;
+    type Output = Result<(), Si::Error>;
 
     fn poll(
         mut self: Pin<&mut Self>,
@@ -33,13 +33,8 @@ impl<Si: Sink<Item> + Unpin + ?Sized, Item> Future for Send<'_, Si, Item> {
         let this = &mut *self;
         if let Some(item) = this.item.take() {
             let mut sink = Pin::new(&mut this.sink);
-            match sink.as_mut().poll_ready(cx) {
-                Poll::Ready(Ok(())) => {
-                    if let Err(e) = sink.as_mut().start_send(item) {
-                        return Poll::Ready(Err(e));
-                    }
-                }
-                Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
+            match sink.as_mut().poll_ready(cx)? {
+                Poll::Ready(()) => sink.as_mut().start_send(item)?,
                 Poll::Pending => {
                     this.item = Some(item);
                     return Poll::Pending;
@@ -49,7 +44,7 @@ impl<Si: Sink<Item> + Unpin + ?Sized, Item> Future for Send<'_, Si, Item> {
 
         // we're done sending the item, but want to block on flushing the
         // sink
-        try_ready!(Pin::new(&mut this.sink).poll_flush(cx));
+        ready!(Pin::new(&mut this.sink).poll_flush(cx))?;
 
         Poll::Ready(Ok(()))
     }

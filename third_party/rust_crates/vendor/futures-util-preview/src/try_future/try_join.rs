@@ -14,7 +14,7 @@ macro_rules! generate {
         ($Join:ident, <Fut1, $($Fut:ident),*>),
     )*) => ($(
         $(#[$doc])*
-        #[must_use = "futures do nothing unless polled"]
+        #[must_use = "futures do nothing unless you `.await` or poll them"]
         pub struct $Join<Fut1: TryFuture, $($Fut: TryFuture),*> {
             Fut1: MaybeDone<IntoFuture<Fut1>>,
             $($Fut: MaybeDone<IntoFuture<$Fut>>,)*
@@ -31,8 +31,8 @@ macro_rules! generate {
                 $Fut::Error: fmt::Debug,
             )*
         {
-            fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-                fmt.debug_struct(stringify!($Join))
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct(stringify!($Join))
                     .field("Fut1", &self.Fut1)
                     $(.field(stringify!($Fut), &self.$Fut))*
                     .finish()
@@ -133,7 +133,7 @@ generate! {
 /// [`Ok`] of a tuple of the values:
 ///
 /// ```
-/// #![feature(async_await, await_macro)]
+/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -141,7 +141,7 @@ generate! {
 /// let b = future::ready(Ok::<i32, i32>(2));
 /// let pair = future::try_join(a, b);
 ///
-/// assert_eq!(await!(pair), Ok((1, 2)));
+/// assert_eq!(pair.await, Ok((1, 2)));
 /// # });
 /// ```
 ///
@@ -149,7 +149,7 @@ generate! {
 /// that error:
 ///
 /// ```
-/// #![feature(async_await, await_macro)]
+/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -157,7 +157,7 @@ generate! {
 /// let b = future::ready(Err::<i32, i32>(2));
 /// let pair = future::try_join(a, b);
 ///
-/// assert_eq!(await!(pair), Err(2));
+/// assert_eq!(pair.await, Err(2));
 /// # });
 /// ```
 pub fn try_join<Fut1, Fut2>(future1: Fut1, future2: Fut2) -> TryJoin<Fut1, Fut2>
@@ -173,7 +173,7 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro)]
+/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -182,7 +182,7 @@ where
 /// let c = future::ready(Ok::<i32, i32>(3));
 /// let tuple = future::try_join3(a, b, c);
 ///
-/// assert_eq!(await!(tuple), Ok((1, 2, 3)));
+/// assert_eq!(tuple.await, Ok((1, 2, 3)));
 /// # });
 /// ```
 pub fn try_join3<Fut1, Fut2, Fut3>(
@@ -203,7 +203,7 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro)]
+/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -213,7 +213,7 @@ where
 /// let d = future::ready(Ok::<i32, i32>(4));
 /// let tuple = future::try_join4(a, b, c, d);
 ///
-/// assert_eq!(await!(tuple), Ok((1, 2, 3, 4)));
+/// assert_eq!(tuple.await, Ok((1, 2, 3, 4)));
 /// # });
 /// ```
 pub fn try_join4<Fut1, Fut2, Fut3, Fut4>(
@@ -236,7 +236,7 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro)]
+/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -247,7 +247,7 @@ where
 /// let e = future::ready(Ok::<i32, i32>(5));
 /// let tuple = future::try_join5(a, b, c, d, e);
 ///
-/// assert_eq!(await!(tuple), Ok((1, 2, 3, 4, 5)));
+/// assert_eq!(tuple.await, Ok((1, 2, 3, 4, 5)));
 /// # });
 /// ```
 pub fn try_join5<Fut1, Fut2, Fut3, Fut4, Fut5>(

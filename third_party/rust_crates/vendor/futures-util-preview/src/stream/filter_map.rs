@@ -1,28 +1,38 @@
+use core::fmt;
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "sink")]
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// Stream for the [`filter_map`](super::StreamExt::filter_map) method.
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
-pub struct FilterMap<St, Fut, F>
-    where St: Stream,
-          F: FnMut(St::Item) -> Fut,
-          Fut: Future,
-{
+pub struct FilterMap<St, Fut, F> {
     stream: St,
     f: F,
     pending: Option<Fut>,
 }
 
 impl<St, Fut, F> Unpin for FilterMap<St, Fut, F>
-    where St: Stream + Unpin,
-          F: FnMut(St::Item) -> Fut,
-          Fut: Future + Unpin,
+where
+    St: Unpin,
+    Fut: Unpin,
 {}
+
+impl<St, Fut, F> fmt::Debug for FilterMap<St, Fut, F>
+where
+    St: fmt::Debug,
+    Fut: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FilterMap")
+            .field("stream", &self.stream)
+            .field("pending", &self.pending)
+            .finish()
+    }
+}
 
 impl<St, Fut, F> FilterMap<St, Fut, F>
     where St: Stream,
@@ -111,12 +121,13 @@ impl<St, Fut, F, T> Stream for FilterMap<St, Fut, F>
 }
 
 // Forwarding impl of Sink from the underlying stream
+#[cfg(feature = "sink")]
 impl<S, Fut, F, Item> Sink<Item> for FilterMap<S, Fut, F>
     where S: Stream + Sink<Item>,
           F: FnMut(S::Item) -> Fut,
           Fut: Future,
 {
-    type SinkError = S::SinkError;
+    type Error = S::Error;
 
     delegate_sink!(stream, Item);
 }

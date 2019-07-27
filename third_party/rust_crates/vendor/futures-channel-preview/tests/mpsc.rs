@@ -1,13 +1,13 @@
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use futures::channel::{mpsc, oneshot};
 use futures::executor::{block_on, block_on_stream};
-use futures::future::{join, poll_fn};
+use futures::future::{FutureExt, poll_fn};
 use futures::stream::{Stream, StreamExt};
 use futures::sink::{Sink, SinkExt};
-use futures::task::Poll;
-use futures_test::task::noop_context;
-use pin_utils::pin_mut;
+use futures::task::{Context, Poll};
+use futures::pin_mut;
+use futures_test::task::{new_count_waker, noop_context};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
@@ -92,24 +92,14 @@ fn send_recv_threads() {
 #[test]
 fn send_recv_threads_no_capacity() {
     let (mut tx, rx) = mpsc::channel::<i32>(0);
-    let mut rx = block_on_stream(rx);
 
-    let (readytx, readyrx) = mpsc::channel::<()>(2);
-    let mut readyrx = block_on_stream(readyrx);
     let t = thread::spawn(move || {
-        let mut readytx = readytx.sink_map_err(|_| panic!());
-        let (send_res_1, send_res_2) = block_on(join(tx.send(1), readytx.send(())));
-        send_res_1.unwrap();
-        send_res_2.unwrap();
-        block_on(join(tx.send(2), readytx.send(())));
+        block_on(tx.send(1)).unwrap();
+        block_on(tx.send(2)).unwrap();
     });
 
-    readyrx.next();
-    assert_eq!(rx.next(), Some(1));
-    readyrx.next();
-    drop(readyrx);
-    assert_eq!(rx.next(), Some(2));
-    drop(rx);
+    let v: Vec<_> = block_on(rx.collect());
+    assert_eq!(v, vec![1, 2]);
 
     t.join().unwrap();
 }
@@ -357,7 +347,7 @@ fn stress_drop_sender() {
 
 async fn send_one_two_three(mut tx: mpsc::Sender<i32>) {
     for i in 1..=3 {
-        await!(tx.send(i)).unwrap();
+        tx.send(i).await.unwrap();
     }
 }
 
@@ -403,7 +393,7 @@ fn stress_close_receiver() {
 
 async fn stress_poll_ready_sender(mut sender: mpsc::Sender<u32>, count: u32) {
     for i in (1..=count).rev() {
-        await!(sender.send(i)).unwrap();
+        sender.send(i).await.unwrap();
     }
 }
 
@@ -520,4 +510,66 @@ fn try_send_recv() {
     tx.try_send("hello").unwrap();
     rx.try_next().unwrap();
     rx.try_next().unwrap_err(); // should be empty
+}
+
+#[test]
+fn same_receiver() {
+    let (mut txa1, _) = mpsc::channel::<i32>(1);
+    let txa2 = txa1.clone();
+
+    let (mut txb1, _) = mpsc::channel::<i32>(1);
+    let txb2 = txb1.clone();
+
+    assert!(txa1.same_receiver(&txa2));
+    assert!(txb1.same_receiver(&txb2));
+    assert!(!txa1.same_receiver(&txb1));
+
+    txa1.disconnect();
+    txb1.close_channel();
+
+    assert!(!txa1.same_receiver(&txa2));
+    assert!(txb1.same_receiver(&txb2));
+}
+
+#[test]
+fn send_backpressure() {
+    let (waker, counter) = new_count_waker();
+    let mut cx = Context::from_waker(&waker);
+
+    let (mut tx, mut rx) = mpsc::channel(1);
+    block_on(tx.send(1)).unwrap();
+
+    let mut task = tx.send(2);
+    assert_eq!(task.poll_unpin(&mut cx), Poll::Pending);
+    assert_eq!(counter, 0);
+
+    let item = block_on(rx.next()).unwrap();
+    assert_eq!(item, 1);
+    assert_eq!(counter, 1);
+    assert_eq!(task.poll_unpin(&mut cx), Poll::Ready(Ok(())));
+
+    let item = block_on(rx.next()).unwrap();
+    assert_eq!(item, 2);
+}
+
+#[test]
+fn send_backpressure_multi_senders() {
+    let (waker, counter) = new_count_waker();
+    let mut cx = Context::from_waker(&waker);
+
+    let (mut tx1, mut rx) = mpsc::channel(1);
+    let mut tx2 = tx1.clone();
+    block_on(tx1.send(1)).unwrap();
+
+    let mut task = tx2.send(2);
+    assert_eq!(task.poll_unpin(&mut cx), Poll::Pending);
+    assert_eq!(counter, 0);
+
+    let item = block_on(rx.next()).unwrap();
+    assert_eq!(item, 1);
+    assert_eq!(counter, 1);
+    assert_eq!(task.poll_unpin(&mut cx), Poll::Ready(Ok(())));
+
+    let item = block_on(rx.next()).unwrap();
+    assert_eq!(item, 2);
 }
