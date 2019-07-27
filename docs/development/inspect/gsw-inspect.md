@@ -8,9 +8,10 @@ information in an abstract, language-independent format for the use of
 other programs and services.
 
 This document is a "Getting Started" guide to give you:
-* an overview of what the Inspect API does and how it works,
-* an introduction to what your program needs to provide in order to work with the API, and
-* some use-cases to fire your imagination.
+
+ * an overview of what the Inspect API does and how it works,
+ * an introduction to what your program needs to provide in order to work with the API, and
+ * some use-cases to fire your imagination.
 
 It includes two "quick starts" as well, for
 [writing a new component](#i_m-writing_a_new_component) and
@@ -53,15 +54,15 @@ accessible to Inspect (and that it's organized in a logical manner).
 
 ## An employee management system
 
-Our example program is an employee management system.
-The program manages its own state.
+Our example program is an employee management system. The program manages its own state.
 
-The system keeps track of a corporation's employees.
-Each employee has a record that contains the following data:
-* employee's name,
-* employee's email address,
-* a list of tasks (if any).
-* a list of direct reports (if any).
+The system keeps track of a corporation's employees. Each employee has a record that
+contains the following data:
+
+ * employee's name,
+ * employee's email address,
+ * a list of tasks (if any).
+ * a list of direct reports (if any).
 
 > Note that the email address is used as a key, and is unique.
 
@@ -112,24 +113,26 @@ Or, visually:
 
 We've divided the `Employee` class into two parts (separated by the dashed line in the diagram);
 the part on the right contains the "native database" members, and consists of:
-* `name_` (`[E04]`) &mdash; the employee's name (`std::string`),
-* `email_` (`[E05]`) &mdash; the employee's email (`std::string`),
-* `tasks_` (`[E08]`) &mdash; a list of tasks assigned to the employee
-  (`vector<std:unique_ptr<Task>>`), and
-* `reports_` (`[E11]`) &mdash; a hierarchy of direct reports
-  (`vector<std::unique_ptr<Employee>>`).
+
+ * `name_` (`[E04]`) &mdash; the employee's name (`std::string`),
+ * `email_` (`[E05]`) &mdash; the employee's email (`std::string`),
+ * `tasks_` (`[E08]`) &mdash; a list of tasks assigned to the employee
+   (`vector<std:unique_ptr<Task>>`), and
+ * `reports_` (`[E11]`) &mdash; a hierarchy of direct reports
+   (`vector<std::unique_ptr<Employee>>`).
 
 The part on the left consists of the Inspect members:
-* `node_` (`[E14]` &mdash; binding for the Inspect framework (`inspect::Node`),
-* `name_property_` (`[E17]`) &mdash; the employee's name as an inspect "string"
-  property (`inspect::StringProperty`),
-* `email_property_` (`[E18]`) &mdash; the employee's email (`inspect::StringProperty`),
-* `task_node_` (`[E21]`) &mdash; Inspect framework binding to subordinate tasks
-  (`inspect::Node`),
-* `report_node_` (`[E24]`) &mdash; Inspect framework binding to subordinate
-  reports (`inspect::Node`), and
-* `lazy_metrics_` (`[E27]`) &mdash; information about the employee's metrics
- (`vector<inspect::LazyMetric>`).
+
+ * `node_` (`[E14]` &mdash; binding for the Inspect framework (`inspect::Node`),
+ * `name_property_` (`[E17]`) &mdash; the employee's name as an inspect "string"
+   property (`inspect::StringProperty`),
+ * `email_property_` (`[E18]`) &mdash; the employee's email (`inspect::StringProperty`),
+ * `task_node_` (`[E21]`) &mdash; Inspect framework binding to subordinate tasks
+   (`inspect::Node`),
+ * `report_node_` (`[E24]`) &mdash; Inspect framework binding to subordinate
+   reports (`inspect::Node`), and
+ * `lazy_metrics_` (`[E27]`) &mdash; information about the employee's metrics
+  (`vector<inspect::LazyMetric>`).
 
 We'll forgo discussing the "native database" part of the implementation in depth; it's standard C++.
 
