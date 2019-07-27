@@ -81,9 +81,45 @@ foreach(case, default_stack_size_cases) {
   }
 }
 
+executable("debugdata-test-helper") {
+  testonly = true
+  sources = [
+    "debugdata-test-helper.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("debugdata") {
+  test_group = "c"
+  sources = [
+    "debugdata.cc",
+  ]
+  data_deps = [
+    ":debugdata-test-helper",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-debugdata:llcpp",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
 group("test") {
   testonly = true
   deps = [
+    ":debugdata",
     ":noop-tests.instrumented",
   ]
   foreach(case, default_stack_size_cases) {

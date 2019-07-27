@@ -51,6 +51,27 @@ static void start_main(const struct start_params* p) {
         argv = __environ = NULL;
     }
 
+    for (uint32_t n = 0; n < p->nhandles; n++) {
+        unsigned arg = PA_HND_ARG(p->handle_info[n]);
+        zx_handle_t h = p->handles[n];
+
+        switch (PA_HND_TYPE(p->handle_info[n])) {
+            case PA_NS_DIR:
+                if (strcmp(names[arg], "/svc") == 0) {
+                  // TODO(phosek): We should ideally duplicate the handle since
+                  // higher layers might consume it and we want to have a guarantee
+                  // that it stays alive, but that's typically possible since
+                  // channel handles don't have ZX_RIGHT_DUPLICATE right.
+                  //
+                  // TODO(phosek): What if the program uses bind to replace its
+                  // /svc, should the subsequent invocations to __sanitizer_*
+                  // use the startup value or reflect the live changes?
+                  __zircon_namespace_svc = h;
+                }
+                continue;
+        }
+    }
+
     __sanitizer_startup_hook(argc, argv, __environ,
                              p->td->safe_stack.iov_base,
                              p->td->safe_stack.iov_len);

@@ -4,11 +4,14 @@
 
 source_set("sanitizers") {
   deps = [
+    "$zx/system/fidl/fuchsia-debugdata:c.headers",
+    "$zx/system/fidl/fuchsia-io:c.headers",
     "$zx/third_party/ulib/musl:musl_internal",
   ]
   sources = [
     "__asan_early_init.c",
     "asan-stubs.c",
+    "debugdata.cc",
     "hooks.c",
     "log.c",
     "ubsan-stubs.cc",

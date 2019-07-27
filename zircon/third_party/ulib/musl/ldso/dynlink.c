@@ -2352,7 +2352,7 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint64_t ordinal,
     // Use a static buffer rather than one on the stack to avoid growing
     // the stack size too much.  Calls to this function are always
     // serialized anyway, so there is no danger of collision.
-    ldmsg_req_t req;
+    static ldmsg_req_t req;
 
     memset(&req.header, 0, sizeof(req.header));
     req.header.ordinal = ordinal;
@@ -2578,36 +2578,6 @@ __NO_SAFESTACK static void error(const char* fmt, ...) {
     }
     __dl_vseterr(fmt, ap);
     va_end(ap);
-}
-
-// We piggy-back on the loader service to publish data from sanitizers.
-void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
-    pthread_rwlock_rdlock(&lock);
-    zx_status_t status = loader_svc_rpc(LDMSG_OP_DEBUG_PUBLISH_DATA_SINK,
-                                        sink_name, strlen(sink_name),
-                                        vmo, NULL);
-    if (status != ZX_OK) {
-        // TODO(mcgrathr): Send this whereever sanitizer logging goes.
-        debugmsg("Failed to publish data sink \"%s\" (%s): %s\n",
-                 sink_name, _zx_status_get_string(status), dlerror());
-    }
-    pthread_rwlock_unlock(&lock);
-}
-
-// ... and to get configuration files for them.
-zx_status_t __sanitizer_get_configuration(const char* name,
-                                          zx_handle_t *out_vmo) {
-    pthread_rwlock_rdlock(&lock);
-    zx_status_t status = loader_svc_rpc(LDMSG_OP_DEBUG_LOAD_CONFIG,
-                                        name, strlen(name),
-                                        ZX_HANDLE_INVALID, out_vmo);
-    if (status != ZX_OK) {
-        // TODO(mcgrathr): Send this whereever sanitizer logging goes.
-        debugmsg("Failed to get configuration file \"%s\" (%s): %s\n",
-                 name, _zx_status_get_string(status), dlerror());
-    }
-    pthread_rwlock_unlock(&lock);
-    return status;
 }
 
 zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len,
