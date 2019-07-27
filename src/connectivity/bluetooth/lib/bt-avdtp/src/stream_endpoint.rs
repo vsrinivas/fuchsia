@@ -146,11 +146,11 @@ impl StreamEndpoint {
         // Should only replace the capabilities that have been reconfigured. See Section 8.11.2
         let to_replace: std::vec::Vec<_> =
             capabilities.iter().map(|x| std::mem::discriminant(x)).collect();
-        self.capabilities.retain(|x| {
+        self.configuration.retain(|x| {
             let disc = std::mem::discriminant(x);
             !to_replace.contains(&disc)
         });
-        self.capabilities.append(&mut capabilities);
+        self.configuration.append(&mut capabilities);
         Ok(())
     }
 
@@ -160,7 +160,7 @@ impl StreamEndpoint {
     /// Used for the Steam Get Configuration Procedure, see Section 6.10
     pub fn get_configuration(&self) -> Result<Vec<ServiceCapability>> {
         if self.state.configured() {
-            Ok(self.capabilities.clone())
+            Ok(self.configuration.clone())
         } else {
             Err(Error::InvalidState)
         }
@@ -389,7 +389,7 @@ mod tests {
                 ServiceCapability::MediaCodec {
                     media_type: MediaType::Audio,
                     codec_type: MediaCodecType::new(0x40),
-                    codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
+                    codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF], // Meaningless test data.
                 },
             ],
         )
@@ -410,14 +410,15 @@ mod tests {
                     ServiceCapability::MediaCodec {
                         media_type: MediaType::Audio,
                         codec_type: MediaCodecType::new(0x40),
-                        codec_extra: vec![0x0C, 0x0D, 0x0E, 0x0F],
+                        // Change the codec_extra which is typical, ex. SBC (A2DP Spec 4.3.2.6)
+                        codec_extra: vec![0x0C, 0x0D, 0x02, 0x51],
                     }
                 ]
             )
         );
 
-        // Note: we allow devices to be configured (and reconfigured) again when they are
-        // just configured, even though this is probably not allowed per the spec.
+        // Note: we allow endpoints to be configured (and reconfigured) again when they
+        // are only configured, even though this is probably not allowed per the spec.
 
         // Can't configure while open
         establish_stream(&mut s);
@@ -427,15 +428,21 @@ mod tests {
             s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
         );
 
+        let reconfiguration = vec![ServiceCapability::MediaCodec {
+            media_type: MediaType::Audio,
+            codec_type: MediaCodecType::new(0x40),
+            // Reconfigure to yet another different codec_extra value.
+            codec_extra: vec![0x0C, 0x0D, 0x0E, 0x0F],
+        }];
+
+        // The new configuration should match the previous one, but with the reconfigured
+        // capabilities updated.
+        let new_configuration = vec![ServiceCapability::MediaTransport, reconfiguration[0].clone()];
+
         // Reconfiguring while open is fine though.
-        assert_eq!(
-            Ok(()),
-            s.reconfigure(vec![ServiceCapability::MediaCodec {
-                media_type: MediaType::Audio,
-                codec_type: MediaCodecType::new(0x40),
-                codec_extra: vec![0x0C, 0x0D, 0x0E, 0x0F],
-            }])
-        );
+        assert_eq!(Ok(()), s.reconfigure(reconfiguration.clone()));
+
+        assert_eq!(Ok(new_configuration), s.get_configuration());
 
         // Can't reconfigure non-application types
         assert_eq!(Err(Error::OutOfRange), s.reconfigure(vec![ServiceCapability::MediaTransport]));
@@ -448,26 +455,12 @@ mod tests {
             s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
         );
 
-        assert_eq!(
-            Err(Error::InvalidState),
-            s.reconfigure(vec![ServiceCapability::MediaCodec {
-                media_type: MediaType::Audio,
-                codec_type: MediaCodecType::new(0x40),
-                codec_extra: vec![0x0C, 0x0D, 0x0E, 0x0F],
-            }])
-        );
+        assert_eq!(Err(Error::InvalidState), s.reconfigure(reconfiguration.clone()));
 
         assert_eq!(Ok(()), s.suspend());
 
         // Reconfigure should be fine again in open state.
-        assert_eq!(
-            Ok(()),
-            s.reconfigure(vec![ServiceCapability::MediaCodec {
-                media_type: MediaType::Audio,
-                codec_type: MediaCodecType::new(0x40),
-                codec_extra: vec![0x0C, 0x0D, 0x0E, 0x0F],
-            }])
-        );
+        assert_eq!(Ok(()), s.reconfigure(reconfiguration.clone()));
 
         // Configure is still not allowed.
         assert_eq!(
@@ -670,9 +663,11 @@ mod tests {
             EndpointType::Sink,
             vec![
                 ServiceCapability::MediaTransport,
+                ServiceCapability::Reporting,
                 ServiceCapability::MediaCodec {
                     media_type: MediaType::Audio,
                     codec_type: MediaCodecType::new(0),
+                    // Nonesense codec information elements.
                     codec_extra: vec![0x60, 0x0D, 0xF0, 0x0D],
                 },
             ],
@@ -687,7 +682,8 @@ mod tests {
             ServiceCapability::MediaCodec {
                 media_type: MediaType::Audio,
                 codec_type: MediaCodecType::new(0),
-                codec_extra: vec![0x60, 0x0D, 0xF0, 0x0D],
+                // Change the codec_extra which is typical, ex. SBC (A2DP Spec 4.3.2.6)
+                codec_extra: vec![0x60, 0x0D, 0x02, 0x55],
             },
         ];
 
