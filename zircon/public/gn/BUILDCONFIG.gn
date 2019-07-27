@@ -1523,6 +1523,15 @@ template("host_tool") {
         # List of tool binaries that could be presented to users' command line.
         tool_executables = [ install_file ]
 
+        # For the //:tool_paths build_api_module().
+        tool_paths = [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            name = output_name
+            path = run_file
+          },
+        ]
+
         # See host_tool_action().
         host_tool_barrier = []
         host_tool_rspfile = [

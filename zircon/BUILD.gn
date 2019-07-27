@@ -4,6 +4,7 @@
 
 import("$zx/public/gn/build_api_module.gni")
 import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/prebuilt.gni")
 import("$zx/public/gn/test/zbi_test.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
@@ -366,8 +367,12 @@ build_api_module("api") {
   testonly = true
   data_keys = [ "build_api_modules" ]
   deps = [
+    ":binaries",
     ":buildargs",
+    ":generated_sources",
     ":images",
+    ":packages",
+    ":tool_paths",
   ]
 }
 
@@ -468,6 +473,9 @@ build_api_module("legacy_images") {
   }
 }
 
+# TODO(BLD-353): This is just for the legacy build and is not really a
+# proper build API module.  In the unified build, this string will just be
+# directly embedded inside test metadata.
 build_api_module("zbi_test_success_string") {
   contents = zbi_test_success_string
 }
@@ -691,5 +699,37 @@ if (current_toolchain == default_toolchain) {
       "tools($default_toolchain)",
     ]
     data_keys = [ "elf_link_output" ]
+  }
+}
+
+build_api_module("tool_paths") {
+  testonly = true
+  deps = [
+    ":tool_paths.metadata",
+    "$zx/public/gn/toolchain:llvm-tools",
+    "tools",
+  ]
+  data_keys = [ "tool_paths" ]
+}
+
+group("tool_paths.metadata") {
+  visibility = [ ":tool_paths" ]
+  _eponymous_3p_tools = [
+    "gn",
+    "ninja",
+  ]
+  metadata = {
+    tool_paths = []
+    foreach(tool, _eponymous_3p_tools) {
+      tool_paths += [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = tool
+          path = rebase_path(
+                  "$prebuilt_dir/third_party/$tool/$host_platform/$tool",
+                  root_build_dir)
+        },
+      ]
+    }
   }
 }
