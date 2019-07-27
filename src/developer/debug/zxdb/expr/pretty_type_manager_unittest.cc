@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/template_parameter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
@@ -35,13 +36,21 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
                                                 });
 
   auto int32_type = MakeInt32Type();
+  auto uint64_type = MakeUint64Type();
   auto int32_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, int32_type);
   auto allocator_type =
       MakeCollectionType(DwarfTag::kClassType, "std::__2::allocator<int32_t>", {});
 
+  // Put the type in the correct namespace. This is important so the identifier for the type name
+  // comes out with the correct parsing.
+  auto std_namespace = fxl::MakeRefCounted<Namespace>("std");
+  auto v2_namespace = fxl::MakeRefCounted<Namespace>("__2");
+  v2_namespace->set_parent(std_namespace);
+
   auto vector_type = MakeCollectionType(
-      DwarfTag::kClassType, "std::__2::vector<int32_t, std::__2::allocator<int32_t> >",
+      DwarfTag::kClassType, "vector<int32_t, std::__2::allocator<int32_t> >",
       {{"__begin_", int32_ptr_type}, {"__end_", int32_ptr_type}, {"__end_cap_", int32_ptr_type}});
+  vector_type->set_parent(v2_namespace);
 
   auto int32_param = fxl::MakeRefCounted<TemplateParameter>("T", int32_type, false);
   auto allocator_param = fxl::MakeRefCounted<TemplateParameter>("allocator", allocator_type, false);
@@ -69,6 +78,42 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
   ASSERT_EQ(2u, node.children().size());
   EXPECT_EQ(1, node.children()[0]->value().GetAs<int32_t>());
   EXPECT_EQ(99, node.children()[1]->value().GetAs<int32_t>());
+
+  // Test vector<bool>. Currently this is unimplemented which generates some errors. The important
+  // thing is that this doesn't match the normal vector printer. When vector<bool> is implemented
+  // this expected result will change.
+  //
+  // This matches the member names of vector<bool> but the types aren't necessarily correct.
+  auto vector_bool_type =
+      MakeCollectionType(DwarfTag::kClassType, "vector<bool, std::__2::allocator<bool> >",
+                         {{"__begin_", int32_ptr_type},
+                          {"__size_", uint64_type},
+                          {"__cap_alloc_", int32_type},
+                          {"__bits_per_word", int32_type}});
+  vector_bool_type->set_parent(v2_namespace);
+
+  ExprValue vec_bool_value(vector_bool_type, {
+                                                 0x00, 0x11, 0x22, 0, 0, 0, 0, 0,  // __begin_
+                                                 9,    0,    0,    0, 0, 0, 0, 0,  // __size_
+                                                 0x16, 0,    0,    0,              // __cap_alloc_
+                                                 64,   0,    0,    0,  // __bits_per_word
+                                             });
+
+  PrettyType* pretty_vector_bool = manager.GetForType(vector_bool_type.get());
+  ASSERT_TRUE(pretty_vector_bool);
+
+  FormatNode bool_node("value", vec_bool_value);
+
+  called = false;
+  pretty_vector_bool->Format(
+      &bool_node, FormatOptions(), context,
+      fit::defer_callback([&called, loop = &loop()]() { called = true, loop->QuitNow(); }));
+  ASSERT_TRUE(called);  // Current error case is sync.
+
+  EXPECT_EQ("Not found", bool_node.err().msg());
+
+  // Since this is an error, it should have no children.
+  ASSERT_EQ(0u, bool_node.children().size());
 }
 
 TEST_F(PrettyTypeManagerTest, RustStrings) {

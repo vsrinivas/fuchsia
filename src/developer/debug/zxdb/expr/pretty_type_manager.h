@@ -10,6 +10,7 @@
 
 #include "lib/fit/defer.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
+#include "src/developer/debug/zxdb/expr/type_glob.h"
 #include "src/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -44,12 +45,10 @@ class PrettyTypeManager {
   void AddDefaultCppPrettyTypes();
   void AddDefaultRustPrettyTypes();
 
-  // These map prefixes of full type names to a pretty-printer for that prefix. In the future we
-  // may need more general glob support. It would also be nice to have an optimized prefix match
-  // to avoid the brute-force search (even if we support globs) since that will be the common case.
-  //
-  // This will pick the longest match.
-  using PrefixPrettyType = std::pair<std::string, std::unique_ptr<PrettyType>>;
+  // These map globs of full type names to a pretty-printer for that prefix. In the future it might
+  // be nice to have some kind of trie structure that would allow faster prefix lookup for the
+  // non-varying parts of the globs.
+  using PrefixPrettyType = std::pair<TypeGlob, std::unique_ptr<PrettyType>>;
   std::vector<PrefixPrettyType> cpp_;
   std::vector<PrefixPrettyType> rust_;
 

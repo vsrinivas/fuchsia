@@ -83,7 +83,12 @@ namespace zxdb {
 
 class TypeGlob {
  public:
+  // Call Init() to initialize with a parsed identifier.
   TypeGlob() = default;
+
+  // Specify a pre-parsed identifier. This also allows expressing some patterns that won't parse as
+  // normal identifiers (they may be expressed in DWARF).
+  explicit TypeGlob(ParsedIdentifier input) : parsed_(std::move(input)) {}
 
   // An error is returned if the glob could not be parsed. It must be syntactially valid.
   Err Init(const std::string& glob);
