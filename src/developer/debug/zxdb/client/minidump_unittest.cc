@@ -486,6 +486,38 @@ TEST_F(MinidumpTest, ReadMemory) {
   EXPECT_EQ(1u, block.data[260440]);
 }
 
+TEST_F(MinidumpTest, ReadMemory_Short) {
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  const uint32_t kOverReadSize = kTestExampleMinidumpStackSize + 36;
+
+  Err err;
+  debug_ipc::ReadMemoryRequest request;
+  debug_ipc::ReadMemoryReply reply;
+
+  request.process_koid = kTestExampleMinidumpKOID;
+  request.address = kTestExampleMinidumpStackAddr;
+  request.size = kOverReadSize;
+
+  DoRequest(request, reply, err, &RemoteAPI::ReadMemory);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  ASSERT_EQ(2u, reply.blocks.size());
+  const auto& block = reply.blocks.front();
+
+  EXPECT_EQ(kTestExampleMinidumpStackAddr, block.address);
+  EXPECT_EQ(kTestExampleMinidumpStackSize, block.size);
+  ASSERT_TRUE(block.valid);
+  ASSERT_EQ(block.size, block.data.size());
+
+  const auto& bad_block = reply.blocks.back();
+
+  EXPECT_EQ(kTestExampleMinidumpStackAddr + kTestExampleMinidumpStackSize, bad_block.address);
+  EXPECT_EQ(kOverReadSize - kTestExampleMinidumpStackSize, bad_block.size);
+  ASSERT_FALSE(bad_block.valid);
+  ASSERT_EQ(0u, bad_block.data.size());
+}
+
 TEST_F(MinidumpTest, SysInfo) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 

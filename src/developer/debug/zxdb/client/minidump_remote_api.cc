@@ -797,44 +797,48 @@ void MinidumpRemoteAPI::ReadMemory(const debug_ipc::ReadMemoryRequest& request,
   uint64_t loc = request.address;
   uint64_t end = request.address + request.size;
 
-  if (static_cast<pid_t>(request.process_koid) != minidump_->ProcessID()) {
-    Succeed(std::move(cb), reply);
-    return;
-  }
-
-  for (const auto& reg : memory_) {
-    if (loc == end) {
-      break;
-    }
-
-    if (reg->start + reg->size <= loc) {
-      continue;
-    }
-
-    if (reg->start > loc) {
-      uint64_t stop = std::min(reg->start, end);
-      reply.blocks.emplace_back();
-
-      reply.blocks.back().address = loc;
-      reply.blocks.back().valid = false;
-      reply.blocks.back().size = static_cast<uint32_t>(stop - loc);
-
-      loc = stop;
-
+  if (static_cast<pid_t>(request.process_koid) == minidump_->ProcessID()) {
+    for (const auto& reg : memory_) {
       if (loc == end) {
         break;
       }
+
+      if (reg->start + reg->size <= loc) {
+        continue;
+      }
+
+      if (reg->start > loc) {
+        uint64_t stop = std::min(reg->start, end);
+        reply.blocks.emplace_back();
+
+        reply.blocks.back().address = loc;
+        reply.blocks.back().valid = false;
+        reply.blocks.back().size = static_cast<uint32_t>(stop - loc);
+
+        loc = stop;
+
+        if (loc == end) {
+          break;
+        }
+      }
+
+      uint64_t stop = std::min(reg->start + reg->size, end);
+      auto data = reg->Read(loc - reg->start, stop - loc);
+      reply.blocks.emplace_back();
+      reply.blocks.back().address = loc;
+      reply.blocks.back().valid = !!data;
+      reply.blocks.back().size = static_cast<uint32_t>(stop - loc);
+      reply.blocks.back().data = std::move(*data);
+
+      loc += reply.blocks.back().size;
     }
+  }
 
-    uint64_t stop = std::min(reg->start + reg->size, end);
-    auto data = reg->Read(loc - reg->start, stop - loc);
-    reply.blocks.emplace_back();
+  if (loc != end) {
+    auto block = reply.blocks.emplace_back();
     reply.blocks.back().address = loc;
-    reply.blocks.back().valid = !!data;
-    reply.blocks.back().size = static_cast<uint32_t>(stop - loc);
-    reply.blocks.back().data = std::move(*data);
-
-    loc += reply.blocks.back().size;
+    reply.blocks.back().valid = false;
+    reply.blocks.back().size = static_cast<uint32_t>(end - loc);
   }
 
   Succeed(std::move(cb), reply);
