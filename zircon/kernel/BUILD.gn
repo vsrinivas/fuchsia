@@ -229,6 +229,13 @@ if (current_toolchain == default_toolchain) {
       "-Wl,-T," + rebase_path("kernel.ld", root_build_dir),
       "-Wl,--emit-relocs",
     ]
+    if (toolchain.tags + [ "lto" ] - [ "lto" ] != toolchain.tags) {
+      # (Thin)LTO linker driver overrides the PIC/PIE metadata embedded in the
+      # IR and will choose the relocation model based on the output which for
+      # the kernel would be static rather than PIE. We need to explicitly
+      # override the relocation via linker flag.
+      ldflags += [ "-Wl,-mllvm,-relocation-model=pic" ]
+    }
     inputs = [
       "kernel.ld",
     ]

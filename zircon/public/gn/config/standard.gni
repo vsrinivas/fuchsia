@@ -292,12 +292,14 @@ standard_variants += [
     variant = {
       name = "lto"
       configs = [ "$zx/public/gn/config/lto" ]
+      tags = [ "lto" ]
     }
   },
   {
     variant = {
       name = "thinlto"
       configs = [ "$zx/public/gn/config/lto:thinlto" ]
+      tags = [ "lto" ]
     }
   },
   {
