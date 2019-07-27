@@ -57,6 +57,7 @@ class PlatformDevice {
     return nullptr;
   }
 
+  // Ownership of |device_handle| is *not* transferred to the PlatformDevice.
   static std::unique_ptr<PlatformDevice> Create(void* device_handle);
 };
 

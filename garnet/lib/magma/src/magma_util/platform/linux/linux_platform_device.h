@@ -17,6 +17,9 @@ class LinuxPlatformDevice : public PlatformDevice {
  public:
   LinuxPlatformDevice(LinuxPlatformHandle handle) : handle_(handle.release()) {}
 
+  // Don't close the handle because we don't own it.
+  ~LinuxPlatformDevice() { handle_.release(); }
+
   void* GetDeviceHandle() override { return reinterpret_cast<void*>(handle_.get()); }
 
   std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
