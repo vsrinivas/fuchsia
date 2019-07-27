@@ -59,6 +59,8 @@ std::string TestSymbolModule::GetCheckedInTestFileName() {
   return path + "libsymbol_test_so.targetso";
 }
 
+std::string TestSymbolModule::GetCheckedInTestFileBuildID() { return "be807a2ad9b56020"; }
+
 std::string TestSymbolModule::GetStrippedCheckedInTestFileName() {
   std::string path = GetTestFilePath(kRelativeTestDataPath);
   return path + "libsymbol_test_so_stripped.targetso";

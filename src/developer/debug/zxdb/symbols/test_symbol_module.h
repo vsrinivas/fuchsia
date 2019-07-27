@@ -60,6 +60,9 @@ class TestSymbolModule {
   // between architectures, the file is compiled offline and remains the same.
   static std::string GetCheckedInTestFileName();
 
+  // Returns the Build ID for the checked in .so returned by GetCheckedInTestFileName.
+  static std::string GetCheckedInTestFileBuildID();
+
   // Returns a stripped version of the file returned by
   // GetCheckedInTestFileName().
   static std::string GetStrippedCheckedInTestFileName();

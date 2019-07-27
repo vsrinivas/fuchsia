@@ -27,14 +27,17 @@ std::optional<std::string> FindInRepoFolder(const std::string& build_id,
   auto tail = build_id.substr(2);
   auto name = tail;
 
-  if (file_type == DebugSymbolFileType::kDebugInfo) {
-    name += ".debug";
-  }
+  for (int i = 0; i < 2; i++) {
+    auto direct = path / prefix / name;
 
-  std::error_code ec;
-  auto direct = path / prefix / name;
-  if (std::filesystem::exists(direct, ec)) {
-    return direct;
+    if (auto elf = elflib::ElfLib::Create(direct)) {
+      if (file_type == DebugSymbolFileType::kDebugInfo && elf->ProbeHasDebugInfo())
+        return direct;
+      if (file_type == DebugSymbolFileType::kBinary && elf->ProbeHasProgramBits())
+        return direct;
+    }
+
+    name += ".debug";
   }
 
   return std::nullopt;
@@ -76,8 +79,9 @@ std::string BuildIDIndex::SearchRepoSources(const std::string& build_id,
   return std::string();
 }
 
-void BuildIDIndex::AddBuildIDMapping(const std::string& build_id, const std::string& file_name,
-                                     DebugSymbolFileType file_type) {
+void BuildIDIndex::AddBuildIDMappingForTest(const std::string& build_id,
+                                            const std::string& file_name,
+                                            DebugSymbolFileType file_type) {
   if (file_type == DebugSymbolFileType::kDebugInfo) {
     // This map saves the manual mapping across cache updates.
     manual_mappings_[build_id].debug_info = file_name;
@@ -87,6 +91,10 @@ void BuildIDIndex::AddBuildIDMapping(const std::string& build_id, const std::str
     manual_mappings_[build_id].binary = file_name;
     build_id_to_files_[build_id].binary = file_name;
   }
+}
+
+bool BuildIDIndex::AddOneFile(const std::string& file_name) {
+  return IndexOneSourceFile(file_name, true);
 }
 
 void BuildIDIndex::AddBuildIDMappingFile(const std::string& id_file_name) {
@@ -247,7 +255,7 @@ void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
   }
 }
 
-bool BuildIDIndex::IndexOneSourceFile(const std::string& file_path) {
+bool BuildIDIndex::IndexOneSourceFile(const std::string& file_path, bool preserve) {
   auto elf = elflib::ElfLib::Create(file_path);
   if (!elf)
     return false;
@@ -265,6 +273,10 @@ bool BuildIDIndex::IndexOneSourceFile(const std::string& file_path) {
   if (elf->ProbeHasProgramBits()) {
     build_id_to_files_[build_id].binary = file_path;
     ret = true;
+  }
+
+  if (ret && preserve) {
+    manual_mappings_[build_id] = build_id_to_files_[build_id];
   }
 
   return ret;

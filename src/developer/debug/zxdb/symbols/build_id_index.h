@@ -47,9 +47,14 @@ class BuildIDIndex {
   // info, or the actual binary.
   std::string FileForBuildID(const std::string& build_id, DebugSymbolFileType file_type);
 
-  // Manually inserts a mapping of a build ID to a file name.
-  void AddBuildIDMapping(const std::string& build_id, const std::string& file_name,
-                         DebugSymbolFileType file_type);
+  // Manually inserts a mapping of a build ID to a file name. The file is
+  // probed for its build ID and type, and if not found or not a valid ELF
+  // file, it is ignored and we return false.
+  bool AddOneFile(const std::string& file_name);
+
+  // Manually inserts a mapping of a build ID to a file name with the given type.
+  void AddBuildIDMappingForTest(const std::string& build_id, const std::string& file_name,
+                                DebugSymbolFileType file_type);
 
   // Adds an "ids.txt" file that maps build ID to file paths.
   // Will verify that the path is already there and ignore it if so.
@@ -101,8 +106,10 @@ class BuildIDIndex {
   void IndexOneSourcePath(const std::string& path);
 
   // Indexes one ELF file and adds it to the index. Returns true if it was an
-  // ELF file and it was added to the index.
-  bool IndexOneSourceFile(const std::string& file_path);
+  // ELF file and it was added to the index. If preserve is set to true, the
+  // indexing result will be cached in manual_mappings_, so it will remain
+  // across cache clears.
+  bool IndexOneSourceFile(const std::string& file_path, bool preserve = false);
 
   // Search the repo sources.
   std::string SearchRepoSources(const std::string& build_id, DebugSymbolFileType file_type);
