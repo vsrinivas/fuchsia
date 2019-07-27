@@ -64,7 +64,7 @@ Defines the `//:default` target: what `ninja` with no arguments does.
 
 **Current value (from the default):** `[":build-tests", ":ids", ":images", "tools"]`
 
-From //BUILD.gn:20
+From //BUILD.gn:21
 
 ### detailed_scheduler_tracing
 Enable detailed scheduler traces.
@@ -265,7 +265,7 @@ to be pared down.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:17
+From //BUILD.gn:18
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.

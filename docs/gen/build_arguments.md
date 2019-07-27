@@ -2568,6 +2568,13 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 From //BUILD.gn:58
 
+### zvb_partition_name
+Partition name from where image will be verified
+
+**Current value (from the default):** `"zircon"`
+
+From //build/images/vbmeta.gni:28
+
 ### zxcrypt_key_source
 This argument specifies from where the system should obtain the zxcrypt
 master key to the system data partition.
