@@ -175,13 +175,6 @@ void Stack::SyncFrames(fit::callback<void(const Err&)> callback) {
 
 void Stack::SetFrames(debug_ipc::ThreadRecord::StackAmount amount,
                       const std::vector<debug_ipc::StackFrame>& new_frames) {
-#ifndef NDEBUG
-  // Validate the CFAs are consistent with the previous frames' SP.
-  for (int i = 0; i < static_cast<int>(new_frames.size()) - 1; i++) {
-    FXL_DCHECK(new_frames[i].cfa == new_frames[i + 1].sp);
-  }
-#endif
-
   // See if the new frames are an extension of the existing frames or are a replacement.
   size_t appending_from = 0;  // First index in new_frames to append.
   for (size_t i = 0; i < frames_.size(); i++) {
