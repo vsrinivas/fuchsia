@@ -65,27 +65,32 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     InspectManager* inspect_manager) {
   Config config;
 
+  // We use the default config included in the package of this component if no override config was
+  // specified or if we failed to parse the override config.
+  bool use_default_config = true;
+
   if (files::IsFile(kOverrideConfigPath)) {
-    const zx_status_t status = ParseConfig(kOverrideConfigPath, &config);
-    if (status == ZX_OK) {
-      return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config),
-                                      inspect_manager);
+    use_default_config = false;
+    if (const zx_status_t status = ParseConfig(kOverrideConfigPath, &config); status != ZX_OK) {
+      // We failed to parse the override config: fall back to the default config.
+      use_default_config = true;
+      FX_PLOGS(ERROR, status) << "Failed to read override config file at " << kOverrideConfigPath
+                              << " - falling back to default config file";
     }
-    FX_PLOGS(ERROR, status) << "Failed to read override config file at " << kOverrideConfigPath
-                            << " - falling back to default config file";
   }
 
-  // We try to load the default config included in the package if no override config was specified
-  // or we failed to parse it.
-  const zx_status_t status = ParseConfig(kDefaultConfigPath, &config);
-  if (status == ZX_OK) {
-    return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config),
-                                    inspect_manager);
-  }
-  FX_PLOGS(ERROR, status) << "Failed to read default config file at " << kDefaultConfigPath;
+  // Either there was no override config or we failed to parse it.
+  if (use_default_config) {
+    if (const zx_status_t status = ParseConfig(kDefaultConfigPath, &config); status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to read default config file at " << kDefaultConfigPath;
 
-  FX_LOGS(FATAL) << "Failed to set up crash analyzer";
-  return nullptr;
+      FX_LOGS(FATAL) << "Failed to set up crash analyzer";
+      return nullptr;
+    }
+  }
+
+  return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config),
+                                  inspect_manager);
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
