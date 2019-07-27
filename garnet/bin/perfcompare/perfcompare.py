@@ -195,6 +195,13 @@ def ComparePerf(args, out_fh):
     labels = set(results_maps[0].iterkeys())
     labels.update(results_maps[1].iterkeys())
 
+    counts = {
+        'added': 0,
+        'removed': 0,
+        'faster': 0,
+        'slower': 0,
+        'no_sig_diff': 0,
+    }
     rows = [['Test case', 'Improve/regress?', 'Factor change',
              'Mean before', 'Mean after']]
     for label in sorted(labels):
@@ -223,12 +230,28 @@ def ComparePerf(args, out_fh):
             before_range = stats[0].FormatConfidenceInterval()
             after_range = stats[1].FormatConfidenceInterval()
             factor_range = '%.3f-%.3f' % (factor_min, factor_max)
+        counts[result] += 1
         rows.append([
             label,
             result,
             factor_range,
             before_range,
             after_range])
+
+    def FormatCount(count, text):
+        noun = 'test case' if count == 1 else 'test cases'
+        out_fh.write('  %d %s %s\n' % (count, noun, text))
+
+    out_fh.write('Summary counts:\n')
+    FormatCount(len(labels), 'in total')
+    FormatCount(counts['no_sig_diff'],
+                'had no significant difference (no_sig_diff)')
+    FormatCount(counts['faster'], 'got faster')
+    FormatCount(counts['slower'], 'got slower')
+    FormatCount(counts['added'], 'added')
+    FormatCount(counts['removed'], 'removed')
+    out_fh.write('\n')
+
     FormatTable(rows, out_fh)
 
 

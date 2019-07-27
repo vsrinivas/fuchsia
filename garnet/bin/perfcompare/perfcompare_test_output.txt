@@ -1,6 +1,14 @@
 
 
 ### adding_test
+Summary counts:
+  2 test cases in total
+  1 test case had no significant difference (no_sig_diff)
+  0 test cases got faster
+  0 test cases got slower
+  1 test case added
+  0 test cases removed
+
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
 ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
@@ -8,6 +16,14 @@ SecondExample        added             -              -            1975 +/- 78
 
 
 ### comparison_improvement
+Summary counts:
+  2 test cases in total
+  1 test case had no significant difference (no_sig_diff)
+  1 test case got faster
+  0 test cases got slower
+  0 test cases added
+  0 test cases removed
+
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
 ClockGetTimeExample  faster            0.900-0.967    1491 +/- 26  1391 +/- 26
@@ -15,6 +31,14 @@ SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### comparison_improvement_small
+Summary counts:
+  2 test cases in total
+  2 test cases had no significant difference (no_sig_diff)
+  0 test cases got faster
+  0 test cases got slower
+  0 test cases added
+  0 test cases removed
+
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
 ClockGetTimeExample  no_sig_diff       0.933-1.002    1491 +/- 26  1441 +/- 26
@@ -22,6 +46,14 @@ SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### comparison_no_change
+Summary counts:
+  2 test cases in total
+  2 test cases had no significant difference (no_sig_diff)
+  0 test cases got faster
+  0 test cases got slower
+  0 test cases added
+  0 test cases removed
+
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
 ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
@@ -29,6 +61,14 @@ SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### comparison_regression
+Summary counts:
+  2 test cases in total
+  1 test case had no significant difference (no_sig_diff)
+  0 test cases got faster
+  1 test case got slower
+  0 test cases added
+  0 test cases removed
+
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
 ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26  1591 +/- 26
@@ -36,6 +76,14 @@ SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### removing_test
+Summary counts:
+  2 test cases in total
+  1 test case had no significant difference (no_sig_diff)
+  0 test cases got faster
+  0 test cases got slower
+  0 test cases added
+  1 test case removed
+
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  ----------
 ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
