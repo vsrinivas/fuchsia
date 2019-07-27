@@ -4,7 +4,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
-#include <lib/fzl/memory-probe.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
@@ -1141,141 +1140,6 @@ bool clone_split_commit_test() {
   END_TEST;
 }
 
-// Resizing a cloned VMO causes a fault.
-bool clone_resize_clone_hazard() {
-  BEGIN_TEST;
-
-  UserPager pager;
-
-  ASSERT_TRUE(pager.Init());
-
-  static constexpr uint64_t kSize = 2 * ZX_PAGE_SIZE;
-  Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(2, &vmo));
-  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
-
-  zx::vmo clone_vmo;
-  EXPECT_EQ(ZX_OK, vmo->vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY | ZX_VMO_CHILD_RESIZABLE,
-                                           0, kSize, &clone_vmo));
-
-  uintptr_t ptr_rw;
-  EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(0, clone_vmo, 0, kSize,
-                                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr_rw));
-
-  auto int_arr = reinterpret_cast<int*>(ptr_rw);
-  EXPECT_EQ(int_arr[1], 0);
-
-  EXPECT_EQ(ZX_OK, clone_vmo.set_size(0u));
-
-  EXPECT_EQ(false, probe_for_read(&int_arr[1]), "read probe");
-  EXPECT_EQ(false, probe_for_write(&int_arr[1]), "write probe");
-
-  EXPECT_EQ(ZX_OK, zx::vmar::root_self()->unmap(ptr_rw, kSize), "unmap");
-  END_TEST;
-}
-
-// Resizing the parent VMO and accessing via a mapped VMO is ok.
-bool clone_resize_parent_ok() {
-  BEGIN_TEST;
-
-  UserPager pager;
-
-  ASSERT_TRUE(pager.Init());
-
-  static constexpr uint64_t kSize = 2 * ZX_PAGE_SIZE;
-  Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(2, &vmo));
-  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
-
-  zx::vmo clone_vmo;
-  ASSERT_EQ(ZX_OK, vmo->vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, kSize, &clone_vmo));
-
-  uintptr_t ptr_rw;
-  EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(0, clone_vmo, 0, kSize,
-                                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr_rw));
-
-  auto int_arr = reinterpret_cast<int*>(ptr_rw);
-  EXPECT_EQ(int_arr[1], 0);
-
-  EXPECT_TRUE(vmo->Resize(0u));
-
-  EXPECT_EQ(true, probe_for_read(&int_arr[1]), "read probe");
-  EXPECT_EQ(true, probe_for_write(&int_arr[1]), "write probe");
-
-  EXPECT_EQ(ZX_OK, zx::vmar::root_self()->unmap(ptr_rw, kSize), "unmap");
-  END_TEST;
-}
-
-// Pages exposed by growing the parent after shrinking it aren't visible to the child.
-bool clone_shrink_grow_parent() {
-  BEGIN_TEST;
-
-  struct {
-    uint64_t vmo_size;
-    uint64_t clone_offset;
-    uint64_t clone_size;
-    uint64_t clone_test_offset;
-    uint64_t resize_size;
-  } configs[3] = {
-      // Aligned, truncate to parent offset.
-      {ZX_PAGE_SIZE, 0, ZX_PAGE_SIZE, 0, 0},
-      // Offset, truncate to before parent offset.
-      {2 * ZX_PAGE_SIZE, ZX_PAGE_SIZE, ZX_PAGE_SIZE, 0, 0},
-      // Offset, truncate to partway through clone.
-      {3 * ZX_PAGE_SIZE, ZX_PAGE_SIZE, 2 * ZX_PAGE_SIZE, ZX_PAGE_SIZE, 2 * ZX_PAGE_SIZE},
-  };
-
-  for (auto& config : configs) {
-    UserPager pager;
-
-    ASSERT_TRUE(pager.Init());
-
-    Vmo* vmo;
-    ASSERT_TRUE(pager.CreateVmo(config.vmo_size / ZX_PAGE_SIZE, &vmo));
-
-    zx::vmo aux;
-    ASSERT_EQ(ZX_OK, zx::vmo::create(config.vmo_size, 0, &aux));
-    ASSERT_EQ(ZX_OK, aux.op_range(ZX_VMO_OP_COMMIT, 0, config.vmo_size, nullptr, 0));
-    ASSERT_TRUE(pager.SupplyPages(vmo, 0, config.vmo_size / ZX_PAGE_SIZE, std::move(aux)));
-
-    zx::vmo clone_vmo;
-    ASSERT_EQ(ZX_OK, vmo->vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, config.clone_offset,
-                                             config.vmo_size, &clone_vmo));
-
-    uintptr_t ptr_ro;
-    EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(0, clone_vmo, 0, config.clone_size, ZX_VM_PERM_READ,
-                                                &ptr_ro));
-
-    auto ptr = reinterpret_cast<int*>(ptr_ro + config.clone_test_offset);
-    EXPECT_EQ(0, *ptr);
-
-    uint32_t data = 1;
-    const uint64_t vmo_offset = config.clone_offset + config.clone_test_offset;
-    EXPECT_EQ(ZX_OK, vmo->vmo().write(&data, vmo_offset, sizeof(data)));
-
-    EXPECT_EQ(1, *ptr);
-
-    EXPECT_TRUE(vmo->Resize(0u));
-
-    EXPECT_EQ(0, *ptr);
-
-    EXPECT_TRUE(vmo->Resize(config.vmo_size / ZX_PAGE_SIZE));
-
-    ASSERT_EQ(ZX_OK, zx::vmo::create(config.vmo_size, 0, &aux));
-    ASSERT_EQ(ZX_OK, aux.op_range(ZX_VMO_OP_COMMIT, 0, config.vmo_size, nullptr, 0));
-    ASSERT_TRUE(pager.SupplyPages(vmo, 0, config.vmo_size / ZX_PAGE_SIZE, std::move(aux)));
-
-    data = 2;
-    EXPECT_EQ(ZX_OK, vmo->vmo().write(&data, vmo_offset, sizeof(data)));
-
-    EXPECT_EQ(0, *ptr);
-
-    EXPECT_EQ(ZX_OK, zx::vmar::root_self()->unmap(ptr_ro, config.clone_size));
-  }
-
-  END_TEST;
-}
-
 // Tests that a commit properly populates the whole range.
 bool simple_commit_test() {
   BEGIN_TEST;
@@ -1951,9 +1815,6 @@ RUN_TEST(clone_write_to_clone_test);
 RUN_TEST(clone_detach_test);
 RUN_TEST(clone_commit_test);
 RUN_TEST(clone_split_commit_test);
-RUN_TEST(clone_resize_clone_hazard);
-RUN_TEST(clone_resize_parent_ok);
-RUN_TEST(clone_shrink_grow_parent);
 END_TEST_CASE(clone_tests)
 
 // Tests focused on commit/decommit.
