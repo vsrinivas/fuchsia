@@ -414,9 +414,11 @@ class MinidumpUnwindMemory : public unwindstack::Memory {
 
 }  // namespace
 
-MinidumpRemoteAPI::MinidumpRemoteAPI(Session* session) : session_(session) {}
+MinidumpRemoteAPI::MinidumpRemoteAPI(Session* session) : session_(session) {
+  session_->AddDownloadObserver(this);
+}
 
-MinidumpRemoteAPI::~MinidumpRemoteAPI() = default;
+MinidumpRemoteAPI::~MinidumpRemoteAPI() { session_->RemoveDownloadObserver(this); }
 
 std::string MinidumpRemoteAPI::ProcessName() {
   if (!minidump_) {
@@ -507,6 +509,8 @@ std::unique_ptr<unwindstack::Regs> MinidumpRemoteAPI::GetUnwindRegsX86_64(
 }
 
 void MinidumpRemoteAPI::CollectMemory() {
+  memory_.clear();
+
   for (const auto& thread : minidump_->Threads()) {
     const auto& stack = thread->Stack();
 
@@ -554,6 +558,13 @@ void MinidumpRemoteAPI::CollectMemory() {
                const std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>& b) {
               return a->start < b->start;
             });
+}
+
+void MinidumpRemoteAPI::OnDownloadsStopped(size_t num_succeeded, size_t num_failed) {
+  // If we just downloaded new binary files, more memory information might be available than when we
+  // last collected memory.
+  if (minidump_)
+    CollectMemory();
 }
 
 Err MinidumpRemoteAPI::Open(const std::string& path) {

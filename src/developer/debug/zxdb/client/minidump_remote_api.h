@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "garnet/third_party/libunwindstack/include/unwindstack/Regs.h"
+#include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "third_party/crashpad/snapshot/cpu_context.h"
@@ -22,7 +23,7 @@ namespace zxdb {
 class Session;
 
 // An implementation of RemoteAPI for Session that accesses a minidump file.
-class MinidumpRemoteAPI : public RemoteAPI {
+class MinidumpRemoteAPI : public RemoteAPI, public DownloadObserver {
  public:
   explicit MinidumpRemoteAPI(Session* session);
   ~MinidumpRemoteAPI();
@@ -75,6 +76,9 @@ class MinidumpRemoteAPI : public RemoteAPI {
   virtual void WriteMemory(
       const debug_ipc::WriteMemoryRequest& request,
       fit::callback<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
+
+  // DownloadObserver implementation.
+  void OnDownloadsStopped(size_t num_succeeded, size_t num_failed) override;
 
   class MemoryRegion {
    public:
