@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+library fuchsia.feedback;
+
+using fuchsia.mem;
+
+/// An attachment and its plain ASCII string key.
+/// Attachments are larger objects, e.g., log files. They may be binary or text data.
+struct Attachment {
+    string:128 key;
+    fuchsia.mem.Buffer value;
+};

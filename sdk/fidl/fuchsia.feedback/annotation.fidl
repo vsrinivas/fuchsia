@@ -1,0 +1,11 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+library fuchsia.feedback;
+
+/// An annotation and its plain ASCII string key.
+/// Annotations are short strings, e.g., the board name or the build version.
+struct Annotation {
+    string:128 key;
+    string:1024 value;
+};

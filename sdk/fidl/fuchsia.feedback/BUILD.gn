@@ -1,6 +1,5 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
 
@@ -8,6 +7,9 @@ fidl("fuchsia.feedback") {
   sdk_category = "partner"
 
   sources = [
+    "annotation.fidl",
+    "attachment.fidl",
+    "crash_reporter.fidl",
     "data_provider.fidl",
   ]
 

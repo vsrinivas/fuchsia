@@ -1,0 +1,67 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+library fuchsia.feedback;
+
+using fuchsia.mem;
+using zx;
+
+/// Provides the ability to file crash reports.
+[Discoverable]
+protocol CrashReporter {
+    /// Files a crash `report`.
+    ///
+    /// This could mean generating a crash report in a local crash report database or uploading the
+    /// crash report to a remote crash server depending on the FIDL server's configuration.
+    File(CrashReport report) -> () error zx.status;
+};
+
+/// Represents a crash report.
+///
+/// Add a new member when the server needs to special case how it handles certain annotations and
+/// attachments for a given type of crashes, e.g., a `RuntimeCrashReport` for Javascript.
+xunion CrashReport {
+    /// Intended for arbitrary crashes, e.g., OOM, out-of-disk.
+    GenericCrashReport generic;
+
+    /// Intended for a native exception.
+    NativeCrashReport native;
+
+    /// Intended for a Dart exception.
+    RuntimeCrashReport dart;
+};
+
+/// Represents a generic crash report.
+table GenericCrashReport {
+    /// The name of the program that crashed, e.g., the process or component's name.
+    1: string:1024 program_name;
+
+    /// A vector of key-value string pairs representing arbitrary data that should be attached to a
+    /// crash report. Keys should be unique.
+    2: vector<Annotation>:32 annotations;
+
+    /// A vector of key-value string-to-VMO pairs representing arbitrary data that should be
+    /// attached to a crash report. Keys should be unique.
+    3: vector<Attachment>:16 attachments;
+};
+
+/// Represents a crash report for a native exception out of which the client has built a minidump.
+table NativeCrashReport {
+    1: GenericCrashReport base_report;
+
+    2: fuchsia.mem.Buffer minidump;
+};
+
+/// Represents a crash report for a runtime exception, applicable to most languages.
+table RuntimeCrashReport {
+    1: GenericCrashReport base_report;
+
+    /// Exception type, e.g., "FileSystemException".
+    2: string:128 type;
+
+    /// Exception message, e.g., "cannot open file".
+    3: string:1024 message;
+
+    /// Text representation of the stack trace.
+    4: fuchsia.mem.Buffer stack_trace;
+};
