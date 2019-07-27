@@ -143,6 +143,36 @@ where
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn get_aggregate_stats() -> Result {
+    let name = stringify!(get_aggregate_stats);
+
+    let sandbox = fuchsia_component::client::connect_to_service::<
+        fidl_fuchsia_netemul_sandbox::SandboxMarker,
+    >()
+    .context("failed to connect to sandbox")?;
+    let managed_environment = create_netstack_environment(&sandbox, name.to_string())
+        .context("failed to create netstack environment")?;
+    let netstack_proxy =
+        connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>(&managed_environment)
+            .context("failed to connect to netstack")?;
+
+    let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>()
+        .context("failed to create node proxy")?;
+    let () = netstack_proxy.get_aggregate_stats(server).context("failed to get aggregate stats")?;
+    let client = io_util::node_to_directory(client).context("failed to get directory proxy")?;
+    let dir_entries =
+        await!(files_async::readdir_recursive(client)).context("failed to readdir")?;
+    let path_segments: std::collections::hash_set::HashSet<usize> = dir_entries
+        .iter()
+        .map(|dir_entry| 1 + dir_entry.name.matches(std::path::MAIN_SEPARATOR).count())
+        .collect();
+    // TODO(tamird): use into_iter after
+    // https://github.com/rust-lang/rust/issues/25725.
+    assert_eq!(path_segments, [1, 2, 3].iter().cloned().collect());
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn add_ethernet_device() -> Result {
     let name = stringify!(add_ethernet_device);
 

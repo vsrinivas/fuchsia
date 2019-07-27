@@ -7,6 +7,7 @@ package context
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"runtime"
 	"strings"
@@ -236,7 +237,16 @@ func (dirState *directoryState) ReadDirents(maxOut uint64) (int32, []uint8, erro
 			dirent := syscall.Dirent{
 				Ino:  attr.Id,
 				Size: uint8(len(name)),
-				Type: uint8(attr.Mode & fidlio.ModeTypeMask),
+			}
+			switch modeType := attr.Mode & fidlio.ModeTypeMask; modeType {
+			case fidlio.ModeTypeDirectory:
+				dirent.Type = fidlio.DirentTypeDirectory
+			case fidlio.ModeTypeFile:
+				dirent.Type = fidlio.DirentTypeFile
+			case fidlio.ModeTypeService:
+				dirent.Type = fidlio.DirentTypeService
+			default:
+				panic(fmt.Sprintf("unknown mode type: %b", modeType))
 			}
 			if err := binary.Write(&dirState.dirents, binary.LittleEndian, dirent); err != nil {
 				panic(err)

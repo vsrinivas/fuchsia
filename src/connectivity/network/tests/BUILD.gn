@@ -12,6 +12,8 @@ rustc_test("netstack_fidl_integration_test") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -24,6 +26,7 @@ rustc_test("netstack_fidl_integration_test") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
     "//zircon/public/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
@@ -110,9 +113,9 @@ test("netstack_no_network_test") {
   ]
 
   deps = [
+    ":device_name_provider",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/fidl/fuchsia-device",
-    ":device_name_provider",
   ]
 }
 
