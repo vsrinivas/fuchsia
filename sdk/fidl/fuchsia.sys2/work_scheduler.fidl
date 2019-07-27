@@ -1,0 +1,71 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source Error is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+using zx;
+
+const uint32 MAX_WORK_ID_LENGTH = 100;
+using WorkId = string:MAX_WORK_ID_LENGTH;
+
+/// Different ways to specify when to schedule a work item for the first time.
+xunion Start {
+    /// A non-negative delay to wait before scheduling work.
+    zx.duration delay;
+    /// A fixed point in time to start scheduling work, interpreted like `ZX_CLOCK_UTC`: number of
+    /// wall clock nanoseconds since the Unix epoch (midnight on January 1 1970) in UTC.
+    zx.time utc_time;
+};
+
+/// Parameters for a new piece of work to be scheduled.
+table WorkRequest {
+    /// Time when corresponding work item should be _first_ scheduled.
+    1: Start start;
+    /// Delay between repeated schedulings of corresponding work item. This is left unspecified for
+    /// one-shot work that should not repeat. Repeating work items are rescheduled indefinitely
+    /// until it is canceled.
+    2: zx.duration period;
+};
+
+/// Framework service: API for scheduling, inspecting, and canceling work. Each component instance
+/// can access work items that it has scheduled (but not others' scheduled work items). Work items
+/// are scheduled _roughly_ at the specified time and frequency; the service implementation may
+/// specify its notion of _roughly_, and may provide a configuration API to tune this notion.
+///
+/// Each scheduled work item is identified by a client-provided `WorkId`. Each scheduled work item
+/// has a `WorkId` that is unique with respect to scheduled work items belonging to the same
+/// component instance.
+protocol WorkScheduler {
+    /// Schedule a new work item identified by `work_id`. The work item is to be scheduled roughly
+    /// at the time corresponding to `work_request.start`. When `work_request.period` is specified,
+    /// reschedule work roughly every `work_request.period` until the the work item is canceled.
+    ScheduleWork(WorkId work_id, WorkRequest work_request) -> () error Error;
+
+    /// Get the current status of the scheduled work item identified by `work_id`. Note that
+    /// canceled work items, and work items that do not repeat and has already run are not
+    /// considered scheduled (and cannot be queried via this method).
+    GetWorkById(WorkId work_id) -> (WorkStatus work_status) error Error;
+
+    /// Cancel the scheduled work item specified by `work_id`.
+    CancelWork(WorkId work_id) -> () error Error;
+};
+
+/// Component-exposed service: Work scheduler connects to this service to invoke scheduled work item
+/// callbacks. The service implementation is responsible for invoking the code that corresponds to
+/// the scheduled work item identified by `work_id`.
+///
+/// Note: The intent of exposing this service is to expose it to the `WorkScheduler` service
+/// provider (i.e., the framework) and no one else.
+protocol Worker {
+    DoWork(WorkId work_id) -> () error Error;
+};
+
+/// Snapshot of the status of a scheduled work item.
+table WorkStatus {
+    /// Estimated next time to run this work item, interpreted like `ZX_CLOCK_UTC`: number of wall
+    /// clock nanoseconds since the Unix epoch (midnight on January 1 1970) in UTC.
+    1: zx.time next_run_utc_time;
+    /// Period for rerunning work; unspecified when work is one-shot instead of repeating.
+    2: zx.duration period;
+};

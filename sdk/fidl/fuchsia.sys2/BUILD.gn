@@ -32,5 +32,6 @@ fidl("fuchsia.sys2") {
     "runtime/component_runner.fidl",
     "runtime/package.fidl",
     "types.fidl",
+    "work_scheduler.fidl",
   ]
 }
