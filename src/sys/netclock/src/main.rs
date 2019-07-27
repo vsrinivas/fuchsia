@@ -217,6 +217,8 @@ mod tests {
         assert!(test_backstop < after_test_backstop);
     }
 
+    // Disabled because test is flaky. See FLK-445.
+    #[ignore]
     #[test]
     fn current_backstop_check() {
         assert_backstop_time_correct();
