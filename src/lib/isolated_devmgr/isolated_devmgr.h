@@ -11,7 +11,10 @@
 
 #include <memory>
 
+#include <ddk/metadata/test.h>
+
 namespace isolated_devmgr {
+
 class IsolatedDevmgr {
  public:
   using ExceptionCallback = fit::function<void()>;
@@ -28,13 +31,22 @@ class IsolatedDevmgr {
 
   int root() { return devmgr_.devfs_root().get(); }
 
+  const fbl::unique_fd& devfs_root() { return devmgr_.devfs_root(); }
+
   void Connect(zx::channel req);
   zx_status_t WaitForFile(const char* path);
 
   void SetExceptionCallback(ExceptionCallback cb) { exception_callback_ = std::move(cb); }
 
-  static std::unique_ptr<IsolatedDevmgr> Create(devmgr_launcher::Args args,
-                                                async_dispatcher_t* dispatcher = nullptr);
+  struct ExtraArgs {
+    // A list of vid/pid/did triplets to spawn in their own devhosts.
+    fbl::Vector<board_test::DeviceEntry> device_list;
+  };
+
+  static std::unique_ptr<IsolatedDevmgr> Create(
+      devmgr_launcher::Args args,
+      std::unique_ptr<fbl::Vector<board_test::DeviceEntry>> device_list_unique_ptr = nullptr,
+      async_dispatcher_t* dispatcher = nullptr);
 
  private:
   void DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
