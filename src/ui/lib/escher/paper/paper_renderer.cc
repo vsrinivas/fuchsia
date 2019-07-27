@@ -329,6 +329,20 @@ void PaperRenderer::DrawHLine(escher::DebugRects::Color kColor, int32_t y_coord,
   frame_data_->lines.push_back({kColor, rect});
 }
 
+void PaperRenderer::DrawDebugGraph(std::string x_label, std::string y_label,
+                                   DebugRects::Color lineColor) {
+  int32_t width = frame_data_->output_image->width();
+  int32_t height = frame_data_->output_image->height();
+  int32_t height_padding = 100;
+  int32_t width_padding = 150;
+
+  DrawVLine(lineColor, width_padding, height_padding, height - height_padding, 10);
+  DrawHLine(lineColor, height - height_padding, width_padding, width - width_padding, 10);
+
+  DrawDebugText(x_label, {5, height / 2}, 5);
+  DrawDebugText(y_label, {width / 2, height - (height_padding - 25)}, 5);
+}
+
 void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {
   auto* cmd_buf = frame_data_->frame->cmds();
   for (UniformBinding& binding : frame_data_->scene_uniform_bindings) {
@@ -516,8 +530,6 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
   }
   cmd_buf->EndRenderPass();
   frame->AddTimestamp("finished no-shadows render pass");
-
-  GenerateDebugCommands(frame_data_->frame->cmds());
 }
 
 void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
@@ -665,8 +677,6 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
 
   cmd_buf->EndRenderPass();
   frame->AddTimestamp("finished shadow_volume render pass");
-
-  GenerateDebugCommands(cmd_buf);
 }
 
 void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {

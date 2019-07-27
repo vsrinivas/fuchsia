@@ -153,6 +153,12 @@ class PaperRenderer final : public Renderer {
   void DrawHLine(DebugRects::Color kColor, int32_t y_coord, int32_t x_start, uint32_t x_end,
                  int32_t thickness);
 
+  // Draws a graph onto the screen using DrawDebugText and Draw Line calls. The graph corners are:
+  // (150, 100)                                          (width - 150, 100)
+  //
+  // (150, height - 100)                        (width - 150, height - 100)
+  void DrawDebugGraph(std::string x_label, std::string y_label, DebugRects::Color lineColor);
+
  private:
   explicit PaperRenderer(EscherWeakPtr escher, const PaperRendererConfig& config);
   PaperRenderer(const PaperRenderer&) = delete;
