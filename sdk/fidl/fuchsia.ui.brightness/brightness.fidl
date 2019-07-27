@@ -1,0 +1,51 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.brightness;
+
+/// A normalized relative brightness adjustment in the range
+/// 0.0 (off/minimum) to 1.0 (maximum).
+using brightness = float32;
+
+/// Control provides an interface to manage the brightness component.
+[Discoverable]
+protocol Control {
+    /// Turns the auto-brightness mode on.
+    /// SetManualBrightness will turn it off.
+    SetAutoBrightness();
+
+    /// Requests the current auto-brightness mode.
+    /// This call implements the Hanging Get protocol as detailed in
+    /// https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md#delay-responses-using-hanging-gets
+    WatchAutoBrightness() -> (bool enabled);
+
+    /// Turns auto-brightness mode off.
+    /// Used by e.g. Settings to set manual brightness using a slider
+    /// Value is in the range 0.0 to 1.0 representing min to max.
+    SetManualBrightness(brightness value);
+
+    /// Gets the current brightness in the range 0.0 to 1.0.
+    /// This result is valid for both manual and auto-brightness modes and is typically used
+    /// to show the current brightness on a slider.
+    /// This call implements the Hanging Get protocol as detailed in
+    /// https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md#delay-responses-using-hanging-gets
+    WatchCurrentBrightness() -> (brightness value);
+
+    /// Sets the brightness curve as a set of points.
+    /// This will override the built-in brightness curve.
+    SetBrightnessTable(BrightnessTable table);
+};
+
+
+/// A tuple representing a point on the auto-brightness curve
+struct BrightnessPoint {
+    float32 ambient_lux;
+    float32 display_nits;
+};
+
+/// A set of points defining the auto-brightness curve.
+/// They should be ordered in increasing ambient_lux
+struct BrightnessTable {
+    vector<BrightnessPoint>:50 points;
+};
