@@ -136,6 +136,9 @@ source_set("magma_platform_hardware_tests") {
     "test_platform_bus_mapper.cc",
     "test_platform_interrupt.cc",
   ]
+  if (is_linux) {
+    sources += [ "test_platform_iommu.cc" ]
+  }
 
   deps = [
     ":magma_platform_device_test",
@@ -144,6 +147,7 @@ source_set("magma_platform_hardware_tests") {
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:bus_mapper",
     "$magma_build_root/src/magma_util/platform:device",
+    "$magma_build_root/src/magma_util/platform:iommu",
     "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",

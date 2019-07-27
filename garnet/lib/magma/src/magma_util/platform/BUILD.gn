@@ -131,6 +131,31 @@ source_set("handle") {
   }
 }
 
+source_set("iommu_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":bus_mapper",
+    "$magma_build_root/src/magma_util:common",
+  ]
+
+  sources = [
+    "platform_iommu.h",
+  ]
+}
+
+source_set("iommu") {
+  public_deps = [
+    ":iommu_header",
+  ]
+
+  if (is_linux) {
+    deps = [
+      "linux:iommu",
+    ]
+  }
+}
+
 source_set("mmio_header") {
   public_configs = [ ":platform_include_config" ]
 

@@ -55,19 +55,36 @@ struct magma_map_page_range_bus {
   __u64* bus_addr;
 };
 
+struct magma_map_gpu {
+  /* IN */
+  int map;
+  __u64 gpu_addr;
+  __u64 token;
+};
+
 #define DRM_MAGMA_GET_PARAM 0x20
 #define DRM_MAGMA_MAP_PAGE_RANGE_BUS 0x21
+#define DRM_MAGMA_MAP_GPU 0x22
 
 #define DRM_IOCTL_MAGMA_GET_PARAM \
   DRM_IOWR(DRM_COMMAND_BASE + DRM_MAGMA_GET_PARAM, struct magma_param)
 #define DRM_IOCTL_MAGMA_MAP_PAGE_RANGE_BUS \
   DRM_IOWR(DRM_COMMAND_BASE + DRM_MAGMA_MAP_PAGE_RANGE_BUS, struct magma_map_page_range_bus)
+#define DRM_IOCTL_MAGMA_MAP_GPU DRM_IOWR(DRM_COMMAND_BASE + DRM_MAGMA_MAP_GPU, struct magma_map_gpu)
 
 }  // namespace
 
 namespace magma {
 
 std::unique_ptr<PlatformHandle> LinuxPlatformDevice::GetBusTransactionInitiator() const {
+  int fd = dup(handle_.get());
+  if (fd < 0)
+    return DRETP(nullptr, "dup failed: %d", errno);
+
+  return std::make_unique<LinuxPlatformHandle>(fd);
+}
+
+std::unique_ptr<PlatformHandle> LinuxPlatformDevice::GetIommuConnector() const {
   int fd = dup(handle_.get());
   if (fd < 0)
     return DRETP(nullptr, "dup failed: %d", errno);
@@ -103,6 +120,15 @@ bool LinuxPlatformDevice::MagmaMapPageRangeBus(int device_fd, int dma_buf_fd,
     return DRETF(false, "ioctl failed: %d", errno);
 
   *token_out = param.token;
+  return true;
+}
+
+bool LinuxPlatformDevice::MagmaMapGpu(int device_fd, bool map, uint64_t gpu_addr, uint32_t token) {
+  struct magma_map_gpu param = {.map = map ? 1 : 0, .gpu_addr = gpu_addr, .token = token};
+
+  if (ioctl(device_fd, DRM_IOCTL_MAGMA_MAP_GPU, &param) != 0)
+    return DRETF(false, "ioctl failed: %d", errno);
+
   return true;
 }
 

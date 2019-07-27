@@ -26,6 +26,8 @@ class LinuxPlatformDevice : public PlatformDevice {
 
   std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override;
 
+  std::unique_ptr<PlatformHandle> GetIommuConnector() const override;
+
   Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
                       uint64_t* size_out) const override;
 
@@ -48,6 +50,9 @@ class LinuxPlatformDevice : public PlatformDevice {
   static bool MagmaMapPageRangeBus(int device_fd, int dma_buf_fd, uint64_t start_page_index,
                                    uint64_t page_count, uint64_t* token_out,
                                    uint64_t* bus_addr_out);
+
+  // Maps if |map| is true; unmaps otherwise
+  static bool MagmaMapGpu(int device_fd, bool map, uint64_t gpu_addr, uint32_t token);
 
  private:
   LinuxPlatformHandle handle_;

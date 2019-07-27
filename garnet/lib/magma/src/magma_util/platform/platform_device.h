@@ -37,6 +37,10 @@ class PlatformDevice {
   virtual std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
                                                               const char* name) const = 0;
 
+  virtual std::unique_ptr<PlatformHandle> GetIommuConnector() const {
+    return DRETP(nullptr, "GetIommuConnector not implemented");
+  }
+
   virtual Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
                               uint64_t* size_out) const = 0;
 
