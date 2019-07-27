@@ -1,0 +1,477 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+BT_MOCKED_TOOLS=(
+  tools/devshell/test/a_tool
+)
+
+a_function() {
+  :
+}
+
+unset -f not_a_function
+
+#######################################
+# Compare the error message from an expected test failure to a given
+# expected result. This is used to test a failed test. It both
+# validates the expected error message, and suppresses writing that
+# message to the terminal (which would otherwise appear as a test
+# failure even though the failure is expected).
+#
+#   IMPORTANT: There is no straightforward way to fail the test function
+#   itself simply because the messages didn't match. The primary reason
+#   for this approach is to suppress the failure message. Testing the
+#   message content is beneficial side effect. Tests may still pass even
+#   if the error messages themselves don't match expected content, but
+#   the failures will be visible in test output logs, and when run
+#   interactively.
+#
+# To use the 'expect_fail' function, redirect the BT_EXPECT_* or
+# BT_ASSERT_* stdout to 'expect_fail' via 'process substitution':
+#
+#   BT_EXPECT_EQ not same \
+#       > >(expect_fail "(BT_EXPECT_EQ) 'not' != 'same'")
+#   BT_ASSERT_BAD_STATUS $?
+#
+# Process substitution, as in 'command > >(next_comand)' is conceptually
+# similar to piping the output (like 'command | next_command'), but process
+# substitution does not force the initial 'command' to run in a
+# subshell. This is important because subshells can cause undesired
+# side-effects with the bash_test_framework.
+#
+# Expected framework errors can also be redirected via |expect_error|. (Note
+# that the bash_test_framework typically outputs framework errors to stderr
+# but test failure messages to stdout.):
+#
+#   btf::some_function called badly \
+#       2> >(expect_error "Something wrong with file {BT_TEMP_DIR}/some/path."
+#   BT_ASSERT_BAD_STATUS $?
+#
+# Note, if an error message includes a reference to a full (absolute) file path
+# under the test's temporary directory (a variable path value), the value of
+# ${BT_TEMP_DIR} will be replaced by the string '{BT_TEMP_DIR}' (including the
+# curly braces).
+#
+# Inputs:
+#   The message piped from a BT_EXPECT_* or BT_ASSERT_* function that
+#   failed its test.
+# Arguments
+#   [$1] - (optional "ERROR" if from expect_error(), and message will start with "ERROR:")
+#   remaining args - the string expected from stdin (multiple unquoted args
+#   are also supported)
+# Returns:
+#   0 if the stdin matches the argument
+#######################################
+expect_fail() {
+  local stdin="$(cat)"
+  if [[ "${stdin}" == "" ]]; then
+    return 0
+  fi
+
+  local prefix=FAIL
+  if [[ "$1" == "ERROR" ]]; then
+    prefix="$1"; shift
+  fi
+  local expected=\
+"${prefix}: ${_BTF_HOST_SCRIPT_DIR#$BT_TEMP_DIR/}/${_BTF_HOST_SCRIPT_NAME}:{BASH_LINENO}: $*"
+
+  local -r strip_escape_sequences=$'s/\033\[[0-9;]*m//g'
+  local -r replace_line_numbers='s/:[0-9]*:/:{BASH_LINENO}:/'
+  local -r replace_temp_dir="s#/private${BT_TEMP_DIR}#{BT_TEMP_DIR}#g;s#${BT_TEMP_DIR}#{BT_TEMP_DIR}#g"
+  local -r strip_private_from_tmp="s#/private/tmp#/tmp#g"  # Mac OS result from btf::realpath
+  local -r delete_assert_abort_message_lines="/${_BTF_ASSERT_ERROR_COUNT_MESSAGE_PREFIX}/d"
+  local -r delete_blank_lines='/^[ \t]*$/d'
+  local -r delete_eot_marker_from_assert='/^EOT$/d'
+  local -r strip_anomolous_eol_blank='s/ $//'
+
+  local actual="$(echo "${stdin}" \
+    | sed "${strip_escape_sequences}
+           ${replace_line_numbers}
+           ${replace_temp_dir}
+           ${strip_private_from_tmp}
+           ${delete_assert_abort_message_lines}
+           ${delete_blank_lines}
+           ${delete_eot_marker_from_assert}
+           ${strip_anomolous_eol_blank}")"
+
+  BT_EXPECT_EQ "${expected}" "${actual}" "Actual ${prefix} message did not match expected:
+  expected: '${expected}'
+    actual: '${actual}'"
+}
+
+expect_error() {
+  expect_fail "ERROR" "$@"
+}
+
+TEST_eq() {
+  BT_EXPECT_EQ same same
+  BT_ASSERT_EQ same same
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    _btf_test_error_count=0
+    BT_EXPECT_EQ not same \
+        > >(expect_fail "(BT_EXPECT_EQ) 'not' != 'same'")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_EQ not same \
+        > >(expect_fail "(BT_ASSERT_EQ) 'not' != 'same'")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_expect() {
+  BT_EXPECT "( exit 0 )"
+  BT_EXPECT_FAIL "( exit 1 )"
+
+  BT_EXPECT true
+  BT_ASSERT true
+  BT_EXPECT_FAIL false
+  BT_ASSERT_FAIL false
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT "( exit 1 )" \
+        > >(expect_fail "(BT_EXPECT) Exit code: 1; expected 0 status from: ( exit 1 )")
+    BT_ASSERT_FAIL "( exit 0 )" \
+        > >(expect_fail "(BT_ASSERT_FAIL) Exit code: 0; expected non-zero status from: ( exit 0 )")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+
+  expect=5
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_FAIL "BT_EXPECT_EQ not same \
+        > >(expect_fail \"(BT_EXPECT_EQ) 'not' != 'same'\")"
+    BT_EXPECT_FAIL "BT_EXPECT_EQ same same" \
+        > >(expect_fail "(BT_EXPECT_FAIL) Exit code: 0; expected non-zero status from: BT_EXPECT_EQ same same")
+    BT_EXPECT "BT_EXPECT_EQ not same > >(expect_fail \"(BT_EXPECT_EQ) 'not' != 'same'\")" \
+        > >(expect_fail "(BT_EXPECT) Exit code: 1; expected 0 status from: BT_EXPECT_EQ not same > >(expect_fail \"(BT_EXPECT_EQ) 'not' != 'same'\")")
+    BT_ASSERT_EQ not same \
+        > >(expect_fail "(BT_ASSERT_EQ) 'not' != 'same'")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+
+  BT_EXPECT [[ same == same ]]
+  BT_EXPECT_FAIL [[ not == same ]]
+
+  expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT [[ same != same ]] \
+        > >(expect_fail "(BT_EXPECT) Exit code: 1; expected 0 status from: [[ same != same ]]")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_FAIL "[[ not != same ]]" \
+        > >(expect_fail "(BT_ASSERT_FAIL) Exit code: 0; expected non-zero status from: [[ not != same ]]")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_eq_output() {
+  local expect=2
+  local stdout=$(
+    (
+      _btf_test_error_count=0
+      BT_EXPECT_EQ not same
+      BT_ASSERT_BAD_STATUS $?
+      BT_ASSERT_EQ not same
+      exit 0 # not reached
+    )
+    BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+  )  # <-- This LINENO matches $LINENO value of the first line in command substitution
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$stdout" \
+    "tools/devshell/test/bash_test_framework_test:$((LINENO+2)): (BT_EXPECT_EQ) 'not' != 'same'"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$stdout" \
+    "tools/devshell/test/bash_test_framework_test:$((LINENO+2)): (BT_ASSERT_EQ) 'not' != 'same'"
+}
+
+TEST_success() {
+  BT_EXPECT_GOOD_STATUS 0
+  BT_ASSERT_GOOD_STATUS 0
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_GOOD_STATUS 42 \
+        > >(expect_fail "(BT_EXPECT_GOOD_STATUS) Returned status '42' is not a success")
+    BT_ASSERT_EQ $? 42
+    BT_ASSERT_GOOD_STATUS 42 \
+        > >(expect_fail "(BT_ASSERT_GOOD_STATUS) Returned status '42' is not a success")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_empty() {
+  BT_EXPECT_EMPTY ""
+  BT_ASSERT_EMPTY ""
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_EMPTY "This ain't empty" \
+        > >(expect_fail "(BT_EXPECT_EMPTY) String 'This ain't empty' is not empty")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_EMPTY "This ain't empty" \
+        > >(expect_fail "(BT_ASSERT_EMPTY) String 'This ain't empty' is not empty")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_file_exists() {
+  touch "a_file.txt"
+  BT_EXPECT_FILE_EXISTS "a_file.txt"
+  BT_ASSERT_FILE_EXISTS "a_file.txt"
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_FILE_EXISTS "not_a_file.txt" \
+        > >(expect_fail "(BT_EXPECT_FILE_EXISTS) File 'not_a_file.txt' not found")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_FILE_EXISTS "not_a_file.txt" \
+        > >(expect_fail "(BT_ASSERT_FILE_EXISTS) File 'not_a_file.txt' not found")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_file_does_not_exist() {
+  touch "a_file.txt"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "not_a_file.txt"
+  BT_ASSERT_FILE_DOES_NOT_EXIST "not_a_file.txt"
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_FILE_DOES_NOT_EXIST "a_file.txt" \
+        > >(expect_fail "(BT_EXPECT_FILE_DOES_NOT_EXIST) Existing file 'a_file.txt' should not exist")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_FILE_DOES_NOT_EXIST "a_file.txt" \
+        > >(expect_fail "(BT_ASSERT_FILE_DOES_NOT_EXIST) Existing file 'a_file.txt' should not exist")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_file_contains() {
+  local content="$(cat << EOF
+This file
+has this content.
+EOF
+)"
+  printf "%s" "${content}" > "a_file.txt"
+  BT_EXPECT_FILE_CONTAINS "a_file.txt" "${content}"
+  BT_ASSERT_FILE_CONTAINS "a_file.txt" "${content}"
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_FILE_CONTAINS "a_file.txt" "this content" \
+        > >(expect_fail "(BT_EXPECT_FILE_CONTAINS) File 'a_file.txt' content does not match expected content:
+expected: 'this content'
+  actual: 'This file
+has this content.'")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_FILE_CONTAINS "a_file.txt" "this content" \
+        > >(expect_fail "(BT_ASSERT_FILE_CONTAINS) File 'a_file.txt' content does not match expected content:
+expected: 'this content'
+  actual: 'This file
+has this content.'")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+
+  expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_FILE_CONTAINS "not_a_file.txt" "${content}" \
+        > >(expect_fail "(BT_EXPECT_FILE_CONTAINS) File 'not_a_file.txt' not found")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_FILE_CONTAINS "not_a_file.txt" "${content}" \
+        > >(expect_fail "(BT_ASSERT_FILE_CONTAINS) File 'not_a_file.txt' not found")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_file_contains_substring() {
+  cat > a_file.txt <<EOF
+This file
+has this content.
+EOF
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "a_file.txt" "this content"
+  BT_ASSERT_FILE_CONTAINS_SUBSTRING "a_file.txt" "this content"
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_FILE_CONTAINS_SUBSTRING "a_file.txt" "different content" \
+        > >(expect_fail "(BT_EXPECT_FILE_CONTAINS_SUBSTRING) Substring 'different content' not found in file 'a_file.txt'
+actual file content: 'This file
+has this content.'")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_FILE_CONTAINS_SUBSTRING "a_file.txt" "different content" \
+        > >(expect_fail "(BT_ASSERT_FILE_CONTAINS_SUBSTRING) Substring 'different content' not found in file 'a_file.txt'
+actual file content: 'This file
+has this content.'")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+
+  expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_FILE_CONTAINS_SUBSTRING "not_a_file.txt" "this content" \
+        > >(expect_fail "(BT_EXPECT_FILE_CONTAINS_SUBSTRING) File 'not_a_file.txt' not found")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_FILE_CONTAINS_SUBSTRING "not_a_file.txt" "this content" \
+        > >(expect_fail "(BT_ASSERT_FILE_CONTAINS_SUBSTRING) File 'not_a_file.txt' not found")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_directory_contains_substring() {
+  local parent_dir="a_directory"
+  local target_dir="${parent_dir}/subdir"
+  mkdir -p "${target_dir}"
+  cat > "${target_dir}/a_file.txt" <<EOF
+This file
+has this content.
+EOF
+  BT_EXPECT_DIRECTORY_CONTAINS_SUBSTRING "${parent_dir}" "this content"
+  BT_ASSERT_DIRECTORY_CONTAINS_SUBSTRING "${parent_dir}" "this content"
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_DIRECTORY_CONTAINS_SUBSTRING "${parent_dir}" "different content" \
+        > >(expect_fail "(BT_EXPECT_DIRECTORY_CONTAINS_SUBSTRING) Substring 'different content' not found in directory 'a_directory'")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_DIRECTORY_CONTAINS_SUBSTRING "${parent_dir}" "different content" \
+        > >(expect_fail "(BT_ASSERT_DIRECTORY_CONTAINS_SUBSTRING) Substring 'different content' not found in directory 'a_directory'")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+
+  expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_DIRECTORY_CONTAINS_SUBSTRING "no_dir" "this content" \
+        > >(expect_fail "(BT_EXPECT_DIRECTORY_CONTAINS_SUBSTRING) Directory 'no_dir' not found")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_DIRECTORY_CONTAINS_SUBSTRING "no_dir" "this content" \
+        > >(expect_fail "(BT_ASSERT_DIRECTORY_CONTAINS_SUBSTRING) Directory 'no_dir' not found")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+
+  touch not_a_dir.txt
+
+  expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_DIRECTORY_CONTAINS_SUBSTRING "not_a_dir.txt" "this content" \
+        > >(expect_fail "(BT_EXPECT_DIRECTORY_CONTAINS_SUBSTRING) File 'not_a_dir.txt' is not a directory")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_DIRECTORY_CONTAINS_SUBSTRING "not_a_dir.txt" "this content" \
+        > >(expect_fail "(BT_ASSERT_DIRECTORY_CONTAINS_SUBSTRING) File 'not_a_dir.txt' is not a directory")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_string_contains_substring() {
+  local string="$(cat << EOF
+This string
+has this content.
+EOF
+)"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${string}" "this content"
+  BT_ASSERT_STRING_CONTAINS_SUBSTRING "${string}" "this content"
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_STRING_CONTAINS_SUBSTRING "${string}" "different content" \
+        > >(expect_fail "(BT_EXPECT_STRING_CONTAINS_SUBSTRING) Substring 'different content' not found in string 'This string
+has this content.'")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_STRING_CONTAINS_SUBSTRING "${string}" "different content" \
+        > >(expect_fail "(BT_ASSERT_STRING_CONTAINS_SUBSTRING) Substring 'different content' not found in string 'This string
+has this content.'")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_function_exists() {
+  BT_EXPECT_FUNCTION_EXISTS a_function
+  BT_ASSERT_FUNCTION_EXISTS a_function
+
+  local expect=2
+  (
+    _btf_test_error_count=0
+    BT_EXPECT_FUNCTION_EXISTS not_a_function \
+        > >(expect_fail "(BT_EXPECT_FUNCTION_EXISTS) Function 'not_a_function' not found")
+    BT_ASSERT_BAD_STATUS $?
+    BT_ASSERT_FUNCTION_EXISTS not_a_function \
+        > >(expect_fail "(BT_ASSERT_FUNCTION_EXISTS) Function 'not_a_function' not found")
+    exit 0 # not reached
+  )
+  BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
+}
+
+TEST_mocked_tool() {
+  BT_ASSERT_FILE_EXISTS a_tool
+  BT_EXPECT_FILE_DOES_NOT_EXIST a_tool.mock_state
+
+  BT_EXPECT ./a_tool arg1 arg2
+
+  BT_ASSERT_FILE_EXISTS a_tool.mock_state
+  source a_tool.mock_state
+  BT_EXPECT_EQ \
+      "${BT_MOCK_ARGS[*]}" \
+      "./a_tool arg1 arg2"
+  rm a_tool.mock_state
+
+  local a_file_expected_from_tool="${BT_TEMP_DIR}/created_by_mocked_side_effect.txt"
+  echo "touch ${a_file_expected_from_tool}" > a_tool.mock_side_effects
+  echo "mocked output" > a_tool.mock_stdout
+  echo "mocked error" > a_tool.mock_stderr
+  local -i mock_status=200
+  echo ${mock_status} > a_tool.mock_status
+
+  mkdir results
+  BT_EXPECT_FILE_DOES_NOT_EXIST "touch ${a_file_expected_from_tool}"
+  ./a_tool arg3 arg4 > results/stdout 2> results/stderr
+  BT_EXPECT_EQ $? ${mock_status}
+  BT_EXPECT_FILE_EXISTS "${a_file_expected_from_tool}"
+  BT_EXPECT_FILE_CONTAINS results/stdout "mocked output"
+  BT_EXPECT_FILE_CONTAINS results/stderr "mocked error"
+
+  BT_ASSERT_FILE_EXISTS a_tool.mock_state
+  source a_tool.mock_state
+  BT_EXPECT_EQ $? ${mock_status}
+  BT_EXPECT_EQ \
+      "${BT_MOCK_ARGS[*]}" \
+      "./a_tool arg3 arg4"
+}
+
+TEST_error_message() {
+  btf::make_mock /tmp/baddie.expect_fail \
+      2> >(expect_error "mocked executable path '/tmp/baddie.expect_fail',
+is outside the BT_TEMP_DIR root directory '{BT_TEMP_DIR}'.")
+  BT_ASSERT_BAD_STATUS $?
+}
+
+BT_RUN_TESTS "$@"
