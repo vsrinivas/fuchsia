@@ -79,7 +79,7 @@ namespace magma {
 std::unique_ptr<PlatformHandle> LinuxPlatformDevice::GetBusTransactionInitiator() const {
   int fd = dup(handle_.get());
   if (fd < 0)
-    return DRETP(nullptr, "dup failed: %d", errno);
+    return DRETP(nullptr, "dup failed: %s", strerror(errno));
 
   return std::make_unique<LinuxPlatformHandle>(fd);
 }
@@ -87,7 +87,7 @@ std::unique_ptr<PlatformHandle> LinuxPlatformDevice::GetBusTransactionInitiator(
 std::unique_ptr<PlatformHandle> LinuxPlatformDevice::GetIommuConnector() const {
   int fd = dup(handle_.get());
   if (fd < 0)
-    return DRETP(nullptr, "dup failed: %d", errno);
+    return DRETP(nullptr, "dup failed: %s", strerror(errno));
 
   return std::make_unique<LinuxPlatformHandle>(fd);
 }
@@ -101,7 +101,7 @@ bool LinuxPlatformDevice::UdmabufCreate(int udmabuf_fd, int mem_fd, uint64_t pag
 
   int dma_buf_fd = ioctl(udmabuf_fd, UDMABUF_CREATE, &create);
   if (dma_buf_fd < 0)
-    return DRETF(false, "ioctl failed: %d", errno);
+    return DRETF(false, "ioctl failed: %s", strerror(errno));
 
   *dma_buf_fd_out = dma_buf_fd;
   return true;
@@ -117,7 +117,7 @@ bool LinuxPlatformDevice::MagmaMapPageRangeBus(int device_fd, int dma_buf_fd,
                                            .bus_addr = bus_addr_out};
 
   if (ioctl(device_fd, DRM_IOCTL_MAGMA_MAP_PAGE_RANGE_BUS, &param) != 0)
-    return DRETF(false, "ioctl failed: %d", errno);
+    return DRETF(false, "ioctl failed: %s", strerror(errno));
 
   *token_out = param.token;
   return true;
@@ -127,7 +127,7 @@ bool LinuxPlatformDevice::MagmaMapGpu(int device_fd, bool map, uint64_t gpu_addr
   struct magma_map_gpu param = {.map = map ? 1 : 0, .gpu_addr = gpu_addr, .token = token};
 
   if (ioctl(device_fd, DRM_IOCTL_MAGMA_MAP_GPU, &param) != 0)
-    return DRETF(false, "ioctl failed: %d", errno);
+    return DRETF(false, "ioctl failed: %s", strerror(errno));
 
   return true;
 }
@@ -136,7 +136,7 @@ bool LinuxPlatformDevice::MagmaGetParam(int device_fd, MagmaGetParamKey key, uin
   struct magma_param param = {.key = static_cast<uint64_t>(key)};
 
   if (ioctl(device_fd, DRM_IOCTL_MAGMA_GET_PARAM, &param) != 0)
-    return false;
+    return DRETF(false, "ioctl failed: %s", strerror(errno));
 
   *value_out = param.value;
   return true;
@@ -167,7 +167,7 @@ Status LinuxPlatformDevice::LoadFirmware(const char* filename,
                                          uint64_t* size_out) const {
   int fd = open(filename, O_RDONLY);
   if (fd < 0)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Open firmware failed: %d", errno);
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Open firmware failed: %s", strerror(errno));
 
   LinuxPlatformHandle firmware(fd);
 

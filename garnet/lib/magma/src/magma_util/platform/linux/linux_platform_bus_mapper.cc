@@ -19,7 +19,7 @@ std::unique_ptr<PlatformBusMapper::BusMapping> LinuxPlatformBusMapper::MapPageRa
 
   int udmabuf_fd = open("/dev/udmabuf", O_RDWR);
   if (udmabuf_fd < 0)
-    return DRETP(nullptr, "Couldn't open /dev/udmabuf: %d", errno);
+    return DRETP(nullptr, "Couldn't open /dev/udmabuf: %s", strerror(errno));
 
   LinuxPlatformHandle udmabuf_device(udmabuf_fd);
 
