@@ -706,6 +706,7 @@ group("pkg_ctl") {
   public_deps = [
     "//garnet/bin/pkg_ctl:pkg_ctl_tests",
     "//garnet/packages/prod:pkg_ctl",
+    "//garnet/tests/pkgctl:pkgctl-integration-tests",
   ]
 }
 

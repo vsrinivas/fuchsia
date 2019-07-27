@@ -9,7 +9,8 @@ use {
     crate::args::{Command, RepoCommand, RuleCommand, RuleConfigInputType},
     failure::{self, Fail, ResultExt},
     fidl_fuchsia_pkg::{
-        PackageCacheMarker, PackageResolverMarker, RepositoryManagerMarker, UpdatePolicy,
+        PackageCacheMarker, PackageResolverMarker, RepositoryManagerMarker, RepositoryManagerProxy,
+        UpdatePolicy,
     },
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
@@ -112,24 +113,18 @@ fn main() -> Result<(), failure::Error> {
                     }
 
                     RepoCommand::List => {
-                        let (iter, server_end) = fidl::endpoints::create_proxy()?;
-                        repo_manager.list(server_end)?;
-                        let mut repos = vec![];
+                        let repos = await!(fetch_repos(repo_manager))?;
 
-                        loop {
-                            let chunk = await!(iter.next())?;
-                            if chunk.is_empty() {
-                                break;
-                            }
-                            repos.extend(chunk);
-                        }
+                        let mut urls =
+                            repos.into_iter().map(|r| r.repo_url().to_string()).collect::<Vec<_>>();
+                        urls.sort_unstable();
+                        urls.into_iter().for_each(|url| println!("{}", url));
 
-                        let repos = repos
-                            .into_iter()
-                            .map(|repo| {
-                                RepositoryConfig::try_from(repo).expect("valid repo config")
-                            })
-                            .collect::<Vec<_>>();
+                        Ok(())
+                    }
+
+                    RepoCommand::ListVerbose => {
+                        let repos = await!(fetch_repos(repo_manager))?;
 
                         let s = serde_json::to_string_pretty(&repos).expect("valid json");
                         println!("{}", s);
@@ -244,4 +239,25 @@ where
     }
 
     Err(EditTransactionError::CommitError(zx::Status::UNAVAILABLE))
+}
+
+async fn fetch_repos(
+    repo_manager: RepositoryManagerProxy,
+) -> Result<Vec<RepositoryConfig>, failure::Error> {
+    let (iter, server_end) = fidl::endpoints::create_proxy()?;
+    repo_manager.list(server_end)?;
+    let mut repos = vec![];
+
+    loop {
+        let chunk = await!(iter.next())?;
+        if chunk.is_empty() {
+            break;
+        }
+        repos.extend(chunk);
+    }
+
+    repos
+        .into_iter()
+        .map(|repo| RepositoryConfig::try_from(repo).map_err(|e| failure::Error::from(e)))
+        .collect()
 }

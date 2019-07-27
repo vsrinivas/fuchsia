@@ -34,43 +34,46 @@ ARGS:
 ";
 
 const HELP_REPO: &str = "\
-repo subcommands
+The repo command manages one or more known repositories.
+
+A fuchsia package URL contains a repository hostname to identify the package's source. Example repository hostnames are:
+
+fuchsia.com
+mycorp.com
+
+Without any arguments the command outputs the list of configured repository URLs.
 
 USAGE:
-    pkgctl repo <SUBCOMMAND>
+    pkgctl repo [-v|--verbose|<SUBCOMMAND>]
 
 SUBCOMMANDS:
-    add       add a repository
-    help      prints this message or the help of the given subcommand(s)
-    list      list repositories
-    remove    remove a repository
+    add       add a source repository configuration
+    help      prints this message or the help of the given subcommand
+    rm        remove a source repository configuration
 ";
 
 const HELP_REPO_ADD: &str = "\
-add a repository
+The add command allows you to add a source repository.
+
+The input file format is a json file that contains the different repository metadata and URLs.
 
 USAGE:
-    pkgctl repo add <file>
+    pkgctl repo add -f|--file <file>
 
-OPTIONS:
-    -f, --file <file>    path to a repository config file
+ARGS:
+    <file>    path to a repository config file
 ";
 
-const HELP_REPO_LIST: &str = "\
-list repositories
+const HELP_REPO_RM: &str = "\
+The rm command allows you to remove a configured source repository.
+
+The full repository URL needs to be passed as an argument. This can be obtained using `pkgctl repo`.
 
 USAGE:
-    pkgctl repo list
-";
+    pkgctl repo rm <URL>
 
-const HELP_REPO_REMOVE: &str = "\
-remove a repository
-
-USAGE:
-    pkgctl repo remove --repo-url <repo_url>
-
-OPTIONS:
-        --repo-url <repo_url>    the repository url to remove
+ARGS:
+    <URL>    the repository url to remove
 ";
 
 const HELP_RESOLVE: &str = "\
@@ -151,6 +154,7 @@ pub enum RepoCommand {
     Add { file: PathBuf },
     Remove { repo_url: String },
     List,
+    ListVerbose,
 }
 
 #[derive(Debug, PartialEq)]
@@ -211,8 +215,7 @@ where
                 Some("repo") => match iter.next() {
                     None => HELP_REPO,
                     Some("add") => done!(HELP_REPO_ADD),
-                    Some("list") => done!(HELP_REPO_LIST),
-                    Some("remove") => done!(HELP_REPO_REMOVE),
+                    Some("rm") => done!(HELP_REPO_RM),
                     Some(arg) => unrecognized!(arg),
                 },
                 Some("resolve") => done!(HELP_RESOLVE),
@@ -247,16 +250,17 @@ where
             Ok(Command::Resolve { pkg_url: pkg_url.to_string(), selectors })
         }
         "repo" => match iter.next() {
-            None => Err(Error::MissingCommand),
-            Some("list") => done!(Ok(RepoCommand::List.into())),
+            None => Ok(RepoCommand::List.into()),
+            Some("-v") | Some("--verbose") => done!(Ok(RepoCommand::ListVerbose.into())),
             Some("add") => match iter.next() {
-                None => Err(Error::MissingArgument("file")),
+                None => Err(Error::MissingArgument("--file")),
                 Some("-f") | Some("--file") => {
                     let file = iter.next().ok_or_else(|| Error::MissingArgument("file"))?;
                     done!(Ok(RepoCommand::Add { file: file.into() }.into()))
                 }
                 Some(arg) => unrecognized!(arg),
             },
+            // TODO(PKG-847) delete "remove" in favor of "rm"
             Some("remove") => match iter.next() {
                 None => Err(Error::MissingArgument("repo-url")),
                 Some("--repo-url") => {
@@ -264,6 +268,10 @@ where
                     done!(Ok(RepoCommand::Remove { repo_url: repo_url.to_string() }.into()))
                 }
                 Some(arg) => unrecognized!(arg),
+            },
+            Some("rm") => match iter.next() {
+                None => Err(Error::MissingArgument("repo-url")),
+                Some(url) => done!(Ok(RepoCommand::Remove { repo_url: url.to_string() }.into())),
             },
             Some(arg) => unrecognized!(arg),
         },
@@ -319,8 +327,7 @@ mod tests {
             &["help"],
             &["help", "repo"],
             &["help", "repo", "add"],
-            &["help", "repo", "list"],
-            &["help", "repo", "remove"],
+            &["help", "repo", "rm"],
             &["help", "rule"],
             &["help", "rule", "clear"],
             &["help", "rule", "list"],
@@ -331,9 +338,11 @@ mod tests {
             &["repo", "add"],
             &["repo", "add", "-f", "foo"],
             &["repo", "add", "--file", "foo"],
-            &["repo", "list"],
             &["repo", "remove"],
             &["repo", "remove", "--repo-url", REPO_URL],
+            &["repo", "rm", REPO_URL],
+            &["repo", "-v"],
+            &["repo", "--verbose"],
             &["repo"],
             &["rule", "clear"],
             &["rule", "list"],
@@ -367,8 +376,7 @@ mod tests {
         check(&["help", "open"], HELP_OPEN);
         check(&["help", "repo"], HELP_REPO);
         check(&["help", "repo", "add"], HELP_REPO_ADD);
-        check(&["help", "repo", "list"], HELP_REPO_LIST);
-        check(&["help", "repo", "remove"], HELP_REPO_REMOVE);
+        check(&["help", "repo", "rm"], HELP_REPO_RM);
         check(&["help", "resolve"], HELP_RESOLVE);
         check(&["help", "rule"], HELP_RULE);
         check(&["help", "rule", "clear"], HELP_RULE_CLEAR);
@@ -442,7 +450,9 @@ mod tests {
             };
         }
 
-        check(&["repo", "list"], RepoCommand::List);
+        check(&["repo"], RepoCommand::List);
+        check(&["repo", "-v"], RepoCommand::ListVerbose);
+        check(&["repo", "--verbose"], RepoCommand::ListVerbose);
         check(&["repo", "add", "-f", "foo"], RepoCommand::Add { file: "foo".into() });
         check(&["repo", "add", "--file", "foo"], RepoCommand::Add { file: "foo".into() });
 
@@ -450,6 +460,7 @@ mod tests {
             &["repo", "remove", "--repo-url", REPO_URL],
             RepoCommand::Remove { repo_url: REPO_URL.to_string() },
         );
+        check(&["repo", "rm", REPO_URL], RepoCommand::Remove { repo_url: REPO_URL.to_string() });
     }
 
     #[test]

@@ -1,0 +1,403 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#![feature(async_await, await_macro)]
+#![cfg(test)]
+use {
+    failure::Error,
+    fidl_fuchsia_pkg::{
+        PackageCacheRequestStream, PackageResolverRequestStream, RepositoryIteratorRequest,
+        RepositoryManagerRequest, RepositoryManagerRequestStream,
+    },
+    fidl_fuchsia_pkg_ext::{
+        MirrorConfig, MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig,
+        RepositoryConfigBuilder, RepositoryKey,
+    },
+    fidl_fuchsia_pkg_rewrite::EngineRequestStream,
+    fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
+    fuchsia_async as fasync,
+    fuchsia_component::{
+        client::{AppBuilder, Output},
+        server::{NestedEnvironment, ServiceFs},
+    },
+    fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
+    fuchsia_zircon::Status,
+    futures::prelude::*,
+    parking_lot::Mutex,
+    std::{
+        convert::TryFrom,
+        fs::{create_dir, File},
+        iter::FusedIterator,
+        path::PathBuf,
+        sync::Arc,
+    },
+    tempfile::TempDir,
+};
+
+struct TestEnv {
+    env: NestedEnvironment,
+    repository_manager: Arc<MockRepositoryManagerService>,
+    package_cache: Arc<MockPackageCacheService>,
+    package_resolver: Arc<MockPackageResolverService>,
+    rewrite_engine: Arc<MockRewriteEngineService>,
+    _test_dir: TempDir,
+    repo_config_arg_path: PathBuf,
+}
+
+impl TestEnv {
+    fn launcher(&self) -> &LauncherProxy {
+        self.env.launcher()
+    }
+
+    fn new() -> Self {
+        let mut fs = ServiceFs::new();
+
+        let package_resolver = Arc::new(MockPackageResolverService::new());
+        let package_resolver_clone = package_resolver.clone();
+        fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
+            let package_resolver_clone = package_resolver_clone.clone();
+            fasync::spawn(
+                package_resolver_clone
+                    .run_service(stream)
+                    .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
+            )
+        });
+
+        let package_cache = Arc::new(MockPackageCacheService::new());
+        let package_cache_clone = package_cache.clone();
+        fs.add_fidl_service(move |stream: PackageCacheRequestStream| {
+            let package_cache_clone = package_cache_clone.clone();
+            fasync::spawn(
+                package_cache_clone
+                    .run_service(stream)
+                    .unwrap_or_else(|e| panic!("error running cache service: {:?}", e)),
+            )
+        });
+
+        let rewrite_engine = Arc::new(MockRewriteEngineService::new());
+        let rewrite_engine_clone = rewrite_engine.clone();
+        fs.add_fidl_service(move |stream: EngineRequestStream| {
+            let rewrite_engine_clone = rewrite_engine_clone.clone();
+            fasync::spawn(
+                rewrite_engine_clone
+                    .run_service(stream)
+                    .unwrap_or_else(|e| panic!("error running rewrite service: {:?}", e)),
+            )
+        });
+
+        let repository_manager = Arc::new(MockRepositoryManagerService::new());
+        let repository_manager_clone = repository_manager.clone();
+        fs.add_fidl_service(move |stream: RepositoryManagerRequestStream| {
+            let repository_manager_clone = repository_manager_clone.clone();
+            fasync::spawn(
+                repository_manager_clone
+                    .run_service(stream)
+                    .unwrap_or_else(|e| panic!("error running repository service: {:?}", e)),
+            )
+        });
+
+        let _test_dir = TempDir::new().expect("create test tempdir");
+
+        let repo_config_arg_path = _test_dir.path().join("repo_config");
+        create_dir(&repo_config_arg_path).expect("create repo_config_arg dir");
+
+        let env = fs
+            .create_salted_nested_environment("pkgctl_env")
+            .expect("nested environment to create successfully");
+        fasync::spawn(fs.collect());
+
+        Self {
+            env,
+            repository_manager,
+            package_cache,
+            package_resolver,
+            rewrite_engine,
+            _test_dir,
+            repo_config_arg_path,
+        }
+    }
+
+    async fn run_pkgctl<'a>(&'a self, args: Vec<&'a str>) -> Output {
+        let launcher = self.launcher();
+        let repo_config_arg_dir =
+            File::open(&self.repo_config_arg_path).expect("open repo_config_arg dir");
+
+        let pkgctl =
+            AppBuilder::new("fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl.cmx")
+                .args(args)
+                .add_dir_to_namespace("/repo-configs".to_string(), repo_config_arg_dir)
+                .expect("pkgctl app");
+
+        let output = await!(pkgctl.output(launcher).expect("pkgctl to launch"))
+            .expect("no errors while waiting for exit");
+        assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
+        output
+    }
+
+    fn add_repository(&self, repo_config: RepositoryConfig) {
+        self.repository_manager.repos.lock().push(repo_config);
+    }
+
+    fn assert_only_repository_manager_called_with(
+        &self,
+        expected_args: Vec<CapturedRepositoryManagerRequest>,
+    ) {
+        assert_eq!(*self.package_cache.call_count.lock(), 0);
+        assert_eq!(*self.package_resolver.call_count.lock(), 0);
+        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(*self.repository_manager.captured_args.lock(), expected_args);
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum CapturedRepositoryManagerRequest {
+    Add { repo: RepositoryConfig },
+    Remove { repo_url: String },
+    AddMirror { repo_url: String, mirror: MirrorConfig },
+    RemoveMirror { repo_url: String, mirror_url: String },
+    List,
+}
+
+struct MockRepositoryManagerService {
+    captured_args: Mutex<Vec<CapturedRepositoryManagerRequest>>,
+    repos: Mutex<Vec<RepositoryConfig>>,
+}
+
+impl MockRepositoryManagerService {
+    fn new() -> Self {
+        Self { captured_args: Mutex::new(vec![]), repos: Mutex::new(vec![]) }
+    }
+    async fn run_service(
+        self: Arc<Self>,
+        mut stream: RepositoryManagerRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(req) = await!(stream.try_next())? {
+            match req {
+                RepositoryManagerRequest::Add { repo, responder } => {
+                    self.captured_args.lock().push(CapturedRepositoryManagerRequest::Add {
+                        repo: RepositoryConfig::try_from(repo).expect("valid repo config"),
+                    });
+                    responder.send(Status::OK.into_raw()).expect("send ok");
+                }
+                RepositoryManagerRequest::Remove { repo_url, responder } => {
+                    self.captured_args
+                        .lock()
+                        .push(CapturedRepositoryManagerRequest::Remove { repo_url });
+                    responder.send(Status::OK.into_raw()).expect("send ok");
+                }
+                RepositoryManagerRequest::AddMirror { repo_url, mirror, responder } => {
+                    self.captured_args.lock().push(CapturedRepositoryManagerRequest::AddMirror {
+                        repo_url,
+                        mirror: MirrorConfig::try_from(mirror).expect("valid mirror config"),
+                    });
+                    responder.send(Status::OK.into_raw()).expect("send ok");
+                }
+                RepositoryManagerRequest::RemoveMirror { repo_url, mirror_url, responder } => {
+                    self.captured_args.lock().push(
+                        CapturedRepositoryManagerRequest::RemoveMirror { repo_url, mirror_url },
+                    );
+                    responder.send(Status::OK.into_raw()).expect("send ok");
+                }
+                RepositoryManagerRequest::List { iterator, control_handle: _control_handle } => {
+                    self.captured_args.lock().push(CapturedRepositoryManagerRequest::List);
+                    let mut stream = iterator.into_stream().expect("list iterator into_stream");
+                    let mut repos = self.repos.lock().clone().into_iter().map(|r| r.into());
+                    // repos must be fused b/c the Next() fidl method should return an empty vector
+                    // forever after iteration is complete
+                    let _: &FusedIterator<Item = _> = &repos;
+                    while let Some(RepositoryIteratorRequest::Next { responder }) =
+                        await!(stream.try_next())?
+                    {
+                        responder.send(&mut repos.by_ref().take(5)).expect("next send")
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+struct MockPackageResolverService {
+    call_count: Mutex<u32>,
+}
+
+impl MockPackageResolverService {
+    fn new() -> Self {
+        Self { call_count: Mutex::new(0) }
+    }
+    async fn run_service(
+        self: Arc<Self>,
+        mut stream: PackageResolverRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(_req) = await!(stream.try_next())? {
+            *self.call_count.lock() += 1;
+        }
+        Ok(())
+    }
+}
+
+struct MockPackageCacheService {
+    call_count: Mutex<u32>,
+}
+
+impl MockPackageCacheService {
+    fn new() -> Self {
+        Self { call_count: Mutex::new(0) }
+    }
+    async fn run_service(
+        self: Arc<Self>,
+        mut stream: PackageCacheRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(_req) = await!(stream.try_next())? {
+            *self.call_count.lock() += 1;
+        }
+        Ok(())
+    }
+}
+
+struct MockRewriteEngineService {
+    call_count: Mutex<u32>,
+}
+
+impl MockRewriteEngineService {
+    fn new() -> Self {
+        Self { call_count: Mutex::new(0) }
+    }
+    async fn run_service(self: Arc<Self>, mut stream: EngineRequestStream) -> Result<(), Error> {
+        while let Some(_req) = await!(stream.try_next())? {
+            *self.call_count.lock() += 1;
+        }
+        Ok(())
+    }
+}
+
+fn assert_no_errors(output: &Output) {
+    assert_eq!(std::str::from_utf8(output.stderr.as_slice()).expect("stdout valid utf8"), "");
+    assert!(output.exit_status.success());
+}
+
+fn assert_stdout(output: &Output, expected: &str) {
+    assert_no_errors(output);
+    assert_eq!(std::str::from_utf8(output.stdout.as_slice()).expect("stdout utf8"), expected);
+}
+
+fn make_test_repo_config() -> RepositoryConfig {
+    RepositoryConfigBuilder::new(RepoUrl::new("example.com".to_string()).expect("valid url"))
+        .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
+        .add_mirror(
+            MirrorConfigBuilder::new("example.org")
+                .blob_key(RepositoryBlobKey::Aes(vec![1u8]))
+                .build(),
+        )
+        .update_package_url(
+            PkgUrl::parse("fuchsia-pkg://update.example.com/update").expect("valid PkgUrl"),
+        )
+        .build()
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_repo() {
+    let env = TestEnv::new();
+    env.add_repository(
+        RepositoryConfigBuilder::new(RepoUrl::new("example.com".to_string()).expect("valid url"))
+            .build(),
+    );
+
+    let output = await!(env.run_pkgctl(vec!["repo"]));
+
+    assert_stdout(&output, "fuchsia-pkg://example.com\n");
+    env.assert_only_repository_manager_called_with(vec![CapturedRepositoryManagerRequest::List]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_repo_sorts_lines() {
+    let env = TestEnv::new();
+    env.add_repository(
+        RepositoryConfigBuilder::new(RepoUrl::new("z.com".to_string()).expect("valid url")).build(),
+    );
+    env.add_repository(
+        RepositoryConfigBuilder::new(RepoUrl::new("a.com".to_string()).expect("valid url")).build(),
+    );
+
+    let output = await!(env.run_pkgctl(vec!["repo"]));
+
+    assert_stdout(&output, "fuchsia-pkg://a.com\nfuchsia-pkg://z.com\n");
+}
+
+macro_rules! repo_verbose_tests {
+    ($($test_name:ident: $flag:expr,)*) => {
+        $(
+            #[fasync::run_singlethreaded(test)]
+            async fn $test_name() {
+                let env = TestEnv::new();
+                let repo_config = make_test_repo_config();
+                env.add_repository(repo_config.clone());
+
+                let output = await!(env.run_pkgctl(vec!["repo", $flag]));
+
+                assert_no_errors(&output);
+                let round_trip_repo_configs: Vec<RepositoryConfig> =
+                    serde_json::from_slice(output.stdout.as_slice()).expect("valid json");
+                assert_eq!(round_trip_repo_configs, vec![repo_config]);
+                env.assert_only_repository_manager_called_with(vec![CapturedRepositoryManagerRequest::List]);
+            }
+        )*
+    }
+}
+
+repo_verbose_tests! {
+    test_repo_verbose_short: "-v",
+    test_repo_verbose_long: "--verbose",
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_repo_rm() {
+    let env = TestEnv::new();
+
+    let output = await!(env.run_pkgctl(vec!["repo", "rm", "the-url"]));
+
+    assert_stdout(&output, "");
+    env.assert_only_repository_manager_called_with(vec![
+        CapturedRepositoryManagerRequest::Remove { repo_url: "the-url".to_string() },
+    ]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_repo_remove() {
+    let env = TestEnv::new();
+
+    let output = await!(env.run_pkgctl(vec!["repo", "remove", "--repo-url", "the-url"]));
+
+    assert_stdout(&output, "");
+    env.assert_only_repository_manager_called_with(vec![
+        CapturedRepositoryManagerRequest::Remove { repo_url: "the-url".to_string() },
+    ]);
+}
+
+macro_rules! repo_add_tests {
+    ($($test_name:ident: $flag:expr,)*) => {
+        $(
+            #[fasync::run_singlethreaded(test)]
+            async fn $test_name() {
+                let env = TestEnv::new();
+                let repo_config = make_test_repo_config();
+                let f =
+                    File::create(env.repo_config_arg_path.join("the-config")).expect("create repo config file");
+                serde_json::to_writer(f, &repo_config).expect("write RepositoryConfig json");
+
+                let output = await!(env.run_pkgctl(vec!["repo", "add", $flag, "/repo-configs/the-config"]));
+
+                assert_stdout(&output, "");
+                env.assert_only_repository_manager_called_with(vec![CapturedRepositoryManagerRequest::Add {
+                    repo: repo_config,
+                }]);
+            }
+        )*
+    }
+}
+
+repo_add_tests! {
+    test_repo_add_short: "-f",
+    test_repo_add_long: "--file",
+}
