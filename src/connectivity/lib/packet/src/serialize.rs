@@ -1244,41 +1244,12 @@ pub fn try_reuse_buffer<B: BufferMut>(
         // requirements, so we need to move the body within the buffer.
         buffer.reset();
 
-        // Temporarily mock the `copy_within` method on slices until that method
-        // is stable.
-        trait CopyWithinExt {
-            // copy the range [src_start, src_end)
-            fn copy_within_tmp(&mut self, src_start: usize, src_end: usize, dest: usize);
-        }
-
-        impl<T: Copy> CopyWithinExt for [T] {
-            fn copy_within_tmp(&mut self, src_start: usize, src_end: usize, dest: usize) {
-                let len = src_end - src_start;
-                if src_start == dest {
-                    return;
-                } else if src_start > dest {
-                    // Move the range forward. Copy the bytes front-to-back in
-                    // order to avoid clobbering anything.
-                    for i in 0..len {
-                        self[dest + i] = self[src_start + i];
-                    }
-                } else {
-                    // Move the range backward. Copy the bytes back-to-front in
-                    // order to avoid clobbering anything.
-                    for i in 0..len {
-                        let i = len - 1 - i;
-                        self[dest + i] = self[src_start + i];
-                    }
-                }
-            }
-        }
-
         // Copy the original body range to a point starting immediatley
         // after `prefix`. This satisfies the `prefix` constraint by
         // definition, and satisfies the `suffix` constraint since we know
         // that the total buffer capacity is sufficient to hold the total
         // length of the prefix, body, and suffix.
-        buffer.as_mut().copy_within_tmp(have_prefix, have_prefix + have_body, need_prefix);
+        buffer.as_mut().copy_within(have_prefix..(have_prefix + have_body), need_prefix);
         buffer.shrink(need_prefix..(need_prefix + have_body));
         debug_assert_eq!(buffer.prefix_len(), need_prefix);
         debug_assert!(buffer.suffix_len() >= need_suffix);
