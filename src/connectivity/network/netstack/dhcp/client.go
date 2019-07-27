@@ -99,11 +99,13 @@ func (c *Client) runOnce(ctx context.Context, requestedAddr tcpip.Address) (Conf
 	if err := ep.SetSockOpt(tcpip.BroadcastOption(1)); err != nil {
 		return Config{}, fmt.Errorf("SetSockOpt(BroadcastOption): %s", err)
 	}
-	if err := ep.Bind(tcpip.FullAddress{
+	addr := tcpip.FullAddress{
 		Addr: tcpipHeader.IPv4Any,
 		Port: ClientPort,
 		NIC:  c.nicid,
-	}); err != nil {
+	}
+	if err := ep.Bind(addr); err != nil {
+		syslog.WarnTf(tag, "NET-2434: could not start dhcp client: ep.Bind(%+v) = %s", addr, err)
 		return Config{}, fmt.Errorf("Bind(): %s", err)
 	}
 
