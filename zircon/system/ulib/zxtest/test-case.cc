@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/assert.h>
+
 #include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <utility>
 
 #include <fbl/auto_call.h>
-#include <zircon/assert.h>
 #include <zxtest/base/test-case.h>
+#include <zxtest/base/types.h>
 
 namespace zxtest {
 
@@ -94,9 +96,15 @@ void TestCase::Run(LifecycleObserver* event_broadcaster, TestDriver* driver) {
 
   for (unsigned long i = 0; i < selected_indexes_.size(); ++i) {
     const auto& test_info = test_infos_[selected_indexes_[i]];
-    std::unique_ptr<Test> test = test_info.Instantiate(driver);
-    event_broadcaster->OnTestStart(*this, test_info);
-    test->Run();
+    {
+      // This block enforces that the destructor is called before
+      // completing the test, for accurate error reporting.
+      // This prevents buggy destructors from crashing after a test completed,
+      // marking it as a success.
+      event_broadcaster->OnTestStart(*this, test_info);
+      std::unique_ptr<Test> test = test_info.Instantiate(driver);
+      test->Run();
+    }
     switch (driver->Status()) {
       case TestStatus::kPassed:
         event_broadcaster->OnTestSuccess(*this, test_info);

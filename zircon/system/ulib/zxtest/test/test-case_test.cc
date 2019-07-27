@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test-registry.h"
+#include <zircon/assert.h>
 
+#include <cstdint>
 #include <cstring>
 
 #include <fbl/function.h>
-#include <zircon/assert.h>
 #include <zxtest/base/observer.h>
 #include <zxtest/base/test-case.h>
 #include <zxtest/base/test-driver.h>
 #include <zxtest/base/test.h>
+
+#include "test-registry.h"
 
 namespace zxtest {
 using internal::TestDriver;
@@ -105,30 +107,67 @@ void TestCaseRegisterTest() {
                 "TestCase expected TestInfo name is incorrect.");
 }
 
+struct OperationOrders {
+  uint64_t set_up_test_case = 0;
+  uint64_t constructor = 0;
+  uint64_t set_up = 0;
+  uint64_t body = 0;
+  uint64_t tear_down = 0;
+  uint64_t destructor = 0;
+  uint64_t tear_down_test_case = 0;
+};
+
+template <auto* order, auto* operation_order>
+class TestRunOrderTest : public zxtest::Test {
+ public:
+  TestRunOrderTest() { operation_order->constructor = ++(*order); }
+  ~TestRunOrderTest() override { operation_order->destructor = ++(*order); }
+
+  void SetUp() override { operation_order->set_up = ++(*order); }
+  void TearDown() override { operation_order->tear_down = ++(*order); }
+
+ private:
+  void TestBody() override { operation_order->body = ++(*order); }
+};
+
 void TestCaseRun() {
   TestDriverStub driver;
-  int order = 0;
-  int set_up;
-  int tear_down;
-  int test;
+  static int order = 0;
+  static OperationOrders operations = {};
+  // Reset so every run starts from a clean slate.
+  order = 0;
+  operations = {};
+
   TestCase test_case(
-      kTestCaseName, [&order, &set_up]() { set_up = order++; },
-      [&order, &tear_down]() { tear_down = order++; });
+      kTestCaseName, []() { operations.set_up_test_case = ++order; },
+      []() { operations.tear_down_test_case = ++order; });
   const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
   const fbl::String kTestName = "TestName";
 
-  ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation,
-                                       [&order, &test](TestDriver* driver) {
-                                         auto test_ptr = Test::Create<FakeTest>(driver);
-                                         test_ptr->body = [&order, &test]() { test = order++; };
-                                         return test_ptr;
-                                       }),
+  ZX_ASSERT_MSG(test_case.RegisterTest(
+                    kTestName, kLocation,
+                    [](TestDriver* driver) {
+                      auto test_ptr = Test::Create<TestRunOrderTest<&order, &operations>>(driver);
+                      return test_ptr;
+                    }),
                 "TestCase failed to register a test.");
   FakeLifecycleObserver observer;
   test_case.Run(&observer, &driver);
 
-  ZX_ASSERT_MSG(set_up < test, "Test executed before Test::SetUpTestCase\n");
-  ZX_ASSERT_MSG(test < tear_down, "Test::TearDownTestCase executed before Test/\n ");
+  ZX_ASSERT_MSG(order == 7, "Number of operations exceeds value");
+
+  ZX_ASSERT_MSG(operations.set_up_test_case < operations.constructor,
+                "Test::Test() executed before Test::SetUpTestCase\n");
+  ZX_ASSERT_MSG(operations.constructor < operations.set_up,
+                "Test::SetUp executed before Test::SetUpTestCase\n");
+  ZX_ASSERT_MSG(operations.set_up < operations.body,
+                "Test::TestBody executed before Test::SetUp\n");
+  ZX_ASSERT_MSG(operations.body < operations.tear_down,
+                "Test::TearDowm executed before Test::TestBody\n");
+  ZX_ASSERT_MSG(operations.tear_down < operations.destructor,
+                "Test::~Test executed before Test::TearDown\n");
+  ZX_ASSERT_MSG(operations.destructor < operations.tear_down_test_case,
+                "Test::TearDownTestCase executed before Test::~Test\n");
 }
 
 void TestCaseRegisterDuplicatedTestFails() {
