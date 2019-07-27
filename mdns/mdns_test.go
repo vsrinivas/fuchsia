@@ -96,8 +96,20 @@ func TestRecord(t *testing.T) {
 	}
 }
 
+func TestIpToDnsRecordType(t *testing.T) {
+	ip1 := "224.0.0.251"
+	if addrType := IpToDnsRecordType(net.ParseIP(ip1)); addrType != A {
+		t.Errorf("IpToDnsRecordType(%s) mismatch %v, wanted %v", ip1, addrType, A)
+	}
+	ip2 := "ff2e::fb"
+	if addrType := IpToDnsRecordType(net.ParseIP(ip2)); addrType != AAAA {
+		t.Errorf("IpToDnsRecordType(%s) mismatch %v, wanted %v", ip2, addrType, AAAA)
+	}
+}
+
 func TestSetAddress(t *testing.T) {
 	m := NewMDNS()
+	m.EnableIPv4()
 	got := m.ipToSend()
 	// Should send to the default address.
 	want := net.ParseIP("224.0.0.251")
@@ -105,11 +117,33 @@ func TestSetAddress(t *testing.T) {
 		t.Errorf("ipToSend (default): mismatch (-want +got)\n%s", d)
 	}
 
-	m.SetAddress("11.22.33.44")
+	if err := m.SetAddress("11.22.33.44"); err != nil {
+		t.Errorf("SetAddress() returned error: %s", err)
+	} else {
+		got = m.ipToSend()
+		// Should send to the given custom address.
+		want = net.ParseIP("11.22.33.44")
+		if d := cmp.Diff(want, got); d != "" {
+			t.Errorf("ipToSend (custom): mismatch (-want +got)\n%s", d)
+		}
+	}
+
+	m = NewMDNS()
+	m.EnableIPv6()
 	got = m.ipToSend()
-	// Should send to the given custom address.
-	want = net.ParseIP("11.22.33.44")
+	want = net.ParseIP("ff02::fb")
 	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("ipToSend (custom): mismatch (-want +got)\n%s", d)
+		t.Errorf("ipToSend (default): mismatch (-want +got)\n%s", d)
+	}
+
+	if err := m.SetAddress("11:22::33:44"); err != nil {
+		t.Errorf("SetAddress() returned error: %s", err)
+	} else {
+		got = m.ipToSend()
+		// Should send to the given custom address.
+		want = net.ParseIP("11:22::33:44")
+		if d := cmp.Diff(want, got); d != "" {
+			t.Errorf("ipToSend (custom): mismatch (-want +got)\n%s", d)
+		}
 	}
 }

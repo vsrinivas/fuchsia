@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
 	"golang.org/x/sys/unix"
 )
 
@@ -388,12 +389,27 @@ const (
 	IN = 1
 )
 
+// IpToDnsRecordType returns either A or AAAA based on the type of ip.
+func IpToDnsRecordType(ip net.IP) uint16 {
+	if ip4 := ip.To4(); ip4 != nil {
+		return A
+	} else {
+		return AAAA
+	}
+}
+
 // MDNS is the central interface through which requests are sent and received.
 // This implementation is agnostic to use case and asynchronous.
 // To handle various responses add Handlers. To send a packet you may use
 // either SendTo (generally used for unicast) or Send (generally used for
 // multicast).
 type MDNS interface {
+	// EnableIPv4 enables listening on IPv4 network interfaces.
+	EnableIPv4()
+
+	// EnableIPv6 enables listening on IPv6 network interfaces.
+	EnableIPv6()
+
 	// SetAddress sets a non-default listen address.
 	SetAddress(address string) error
 
@@ -447,14 +463,6 @@ type mDNSConnBase struct {
 	senders []net.PacketConn
 }
 
-func (c *mDNSConnBase) SetIp(ip net.IP) error {
-	if ip4 := ip.To4(); ip4 == nil {
-		panic(fmt.Errorf("Not an IPv-4 address: %v", ip))
-	}
-	c.dst.IP = ip
-	return nil
-}
-
 func (c *mDNSConnBase) getIp() net.IP {
 	return c.dst.IP
 }
@@ -483,6 +491,14 @@ func newMDNSConn4() mDNSConn {
 	c := mDNSConn4{}
 	c.SetIp(defaultMDNSMulticastIPv4)
 	return &c
+}
+
+func (c *mDNSConn4) SetIp(ip net.IP) error {
+	if ip4 := ip.To4(); ip4 == nil {
+		panic(fmt.Errorf("Not an IPv-4 address: %v", ip))
+	}
+	c.dst.IP = ip
+	return nil
 }
 
 func (c *mDNSConn4) Close() error {
@@ -537,22 +553,119 @@ func (c *mDNSConn4) ReadFrom(buf []byte) (size int, iface *net.Interface, src ne
 	return
 }
 
+type mDNSConn6 struct {
+	mDNSConnBase
+	conn *ipv6.PacketConn
+}
+
+var defaultMDNSMulticastIPv6 = net.ParseIP("ff02::fb")
+
+func newMDNSConn6() mDNSConn {
+	c := mDNSConn6{}
+	c.SetIp(defaultMDNSMulticastIPv6)
+	return &c
+}
+
+func (c *mDNSConn6) SetIp(ip net.IP) error {
+	if ip6 := ip.To16(); ip6 == nil {
+		panic(fmt.Errorf("Not an IPv6 address: %v", ip))
+	}
+	c.dst.IP = ip
+	return nil
+}
+
+func (c *mDNSConn6) Close() error {
+	if c.conn != nil {
+		err := c.conn.Close()
+		c.conn = nil
+		return err
+	}
+	return nil
+}
+
+func (c *mDNSConn6) Listen(port int) error {
+	c.dst.Port = port
+	conn, err := net.ListenUDP("udp6", &c.dst)
+	if err != nil {
+		return err
+	}
+	// Now we need a low level ipv4 packet connection.
+	c.conn = ipv6.NewPacketConn(conn)
+	c.conn.SetControlMessage(ipv6.FlagDst|ipv6.FlagInterface, true)
+	return nil
+}
+
+// This allows us to listen on this specific interface.
+func (c *mDNSConn6) JoinGroup(iface net.Interface) error {
+	if err := c.conn.JoinGroup(&iface, &c.dst); err != nil {
+		c.Close()
+		return fmt.Errorf("joining %v%%%v: %v", iface, c.dst, err)
+	}
+	return nil
+}
+
+func (c *mDNSConn6) ConnectTo(port int, ip net.IP, iface *net.Interface) error {
+	ip6 := ip.To16()
+	if ip6 == nil {
+		return fmt.Errorf("Not a valid IPv6 address: %v", ip)
+	}
+	conn, err := makeUdpSocketWithReusePort(port, ip6, iface)
+	if err != nil {
+		return err
+	}
+	c.senders = append(c.senders, conn)
+	return nil
+}
+
+func (c *mDNSConn6) ReadFrom(buf []byte) (size int, iface *net.Interface, src net.Addr, err error) {
+	var cm *ipv6.ControlMessage
+	size, cm, src, err = c.conn.ReadFrom(buf)
+	if err == nil {
+		iface, err = net.InterfaceByIndex(cm.IfIndex)
+	}
+	return
+}
+
 type mDNS struct {
 	conn4     mDNSConn
+	conn6     mDNSConn
 	port      int
 	pHandlers []func(net.Interface, net.Addr, Packet)
 	wHandlers []func(net.Addr, error)
 	eHandlers []func(error)
 }
 
+// NewMDNS creates a new object implementing the MDNS interface. Do not forget
+// to call EnableIPv4() or EnableIPv6() to enable listening on interfaces of
+// the corresponding type, or nothing will work.
 func NewMDNS() MDNS {
 	m := mDNS{}
-	m.conn4 = newMDNSConn4()
+	m.conn4 = nil
+	m.conn6 = nil
 	return &m
 }
 
+func (m *mDNS) EnableIPv4() {
+	if m.conn4 == nil {
+		m.conn4 = newMDNSConn4()
+	}
+}
+
+func (m *mDNS) EnableIPv6() {
+	if m.conn6 == nil {
+		m.conn6 = newMDNSConn6()
+	}
+}
+
 func (m *mDNS) Close() {
-	m.conn4.Close()
+	if m.conn4 != nil {
+		m.conn4.Close()
+		m.conn4 = nil
+	}
+	if m.conn6 != nil {
+		m.conn6.Close()
+		m.conn6 = nil
+	}
 }
 
 func (m *mDNS) SetAddress(address string) error {
@@ -560,11 +673,27 @@ func (m *mDNS) SetAddress(address string) error {
 	if ip == nil {
 		return fmt.Errorf("Not a valid IP address: %v", address)
 	}
-	return m.conn4.SetIp(ip)
+	if ip4 := ip.To4(); ip4 != nil {
+		if m.conn4 == nil {
+			return fmt.Errorf("mDNS IPv4 support is disabled")
+		}
+		return m.conn4.SetIp(ip4)
+	} else {
+		if m.conn6 == nil {
+			return fmt.Errorf("mDNS IPv6 support is disabled")
+		}
+		return m.conn6.SetIp(ip.To16())
+	}
 }
 
 func (m *mDNS) ipToSend() net.IP {
-	return m.conn4.getIp()
+	if m.conn4 != nil {
+		return m.conn4.getIp()
+	}
+	if m.conn6 != nil {
+		return m.conn6.getIp()
+	}
+	return nil
 }
 
 // AddHandler calls f on every Packet received.
@@ -594,7 +723,19 @@ func (m *mDNS) SendTo(packet Packet, dst *net.UDPAddr) error {
 	if err := packet.serialize(&buf); err != nil {
 		return err
 	}
-	return m.conn4.SendTo(buf, dst)
+	if dst.IP.To4() != nil {
+		if m.conn4 != nil {
+			return m.conn4.SendTo(buf, dst)
+		} else {
+			return fmt.Errorf("IPv4 was not enabled!")
+		}
+	} else {
+		if m.conn6 != nil {
+			return m.conn6.SendTo(buf, dst)
+		} else {
+			return fmt.Errorf("IPv6 was not enabled!")
+		}
+	}
 }
 
 // Send serializes and sends packet out as a multicast to all interfaces
@@ -606,7 +747,18 @@ func (m *mDNS) Send(packet Packet) error {
 	if err := packet.serialize(&buf); err != nil {
 		return err
 	}
-	return m.conn4.Send(buf)
+	var err4 error
+	if m.conn4 != nil {
+		err4 = m.conn4.Send(buf)
+	}
+	var err6 error
+	if m.conn6 != nil {
+		err6 = m.conn6.Send(buf)
+	}
+	if err4 != nil {
+		return err4
+	}
+	return err6
 }
 
 func makeUdpSocketWithReusePort(port int, ip net.IP, iface *net.Interface) (net.PacketConn, error) {
@@ -642,11 +794,55 @@ func makeUdpSocketWithReusePort(port int, ip net.IP, iface *net.Interface) (net.
 	return listenConfig.ListenPacket(context.Background(), network, address)
 }
 
+// receivedPacket is a small struct used to send received UDP packets and
+// information about their interface / source address through a channel.
+type receivedPacket struct {
+	data  []byte
+	iface *net.Interface
+	src   net.Addr
+	err   error
+}
+
+// startListenLoop returns a channel of receivedPacket items, after starting
+// a goroutine that listens for packets on conn, and writes then to the channel
+// in a loop. The goroutine will stop when it cannot read anymore from conn,
+// which will happen in case of error (e.g. when the connection is closed).
+// In this case, it will send a final receivedPacket instance with the error
+// code only before exiting.
+func startListenLoop(conn mDNSConn) <-chan receivedPacket {
+	channel := make(chan receivedPacket, 1)
+	go func() {
+		payloadBuf := make([]byte, 1<<16)
+		for {
+			size, iface, src, err := conn.ReadFrom(payloadBuf)
+			if err != nil {
+				channel <- receivedPacket{err: err}
+				return
+			}
+			data := make([]byte, size)
+			copy(data, payloadBuf[:size])
+			channel <- receivedPacket{
+				data:  data,
+				iface: iface,
+				src:   src,
+				err:   nil}
+		}
+	}()
+	return channel
+}
+
 // Start causes m to start listening for MDNS packets on all interfaces on
 // the specified port. Listening will stop if ctx is done.
 func (m *mDNS) Start(ctx context.Context, port int) error {
-	if err := m.conn4.Listen(port); err != nil {
-		return err
+	if m.conn4 != nil {
+		if err := m.conn4.Listen(port); err != nil {
+			return err
+		}
+	}
+	if m.conn6 != nil {
+		if err := m.conn6.Listen(port); err != nil {
+			return err
+		}
 	}
 	// Now we need to join this connection to every interface that supports
 	// Multicast.
@@ -660,14 +856,24 @@ func (m *mDNS) Start(ctx context.Context, port int) error {
 		if iface.Flags&net.FlagMulticast == 0 || iface.Flags&net.FlagUp == 0 {
 			continue
 		}
-		if err := m.conn4.JoinGroup(iface); err != nil {
-			m.Close()
-			return fmt.Errorf("joining %v: %v", iface, err)
+		if m.conn4 != nil {
+			if err := m.conn4.JoinGroup(iface); err != nil {
+				m.Close()
+				return fmt.Errorf("joining %v: %v", iface, err)
+			}
+		}
+		if m.conn6 != nil {
+			if err := m.conn6.JoinGroup(iface); err != nil {
+				m.Close()
+				return fmt.Errorf("joining %v: %v", iface, err)
+			}
 		}
 		addrs, err := iface.Addrs()
 		if err != nil {
 			return fmt.Errorf("getting addresses of %v: %v", iface, err)
 		}
+		// When both IPv4 and IPv6 are enabled, only connect to the interface
+		// through its IPv6 address if it doesn't have an IPv4 one.
 		for _, addr := range addrs {
 			var ip net.IP
 			switch v := addr.(type) {
@@ -676,43 +882,67 @@ func (m *mDNS) Start(ctx context.Context, port int) error {
 			case *net.IPAddr:
 				ip = v.IP
 			}
-			if ip == nil || ip.To4() == nil {
+			if ip == nil {
 				continue
 			}
-			err := m.conn4.ConnectTo(port, ip.To4(), &iface)
-			if err != nil {
-				return fmt.Errorf("creating socket for %v via %v: %v", iface, ip, err)
+			ip4 := ip.To4()
+			if m.conn4 != nil && ip4 != nil {
+				if err := m.conn4.ConnectTo(port, ip4, &iface); err != nil {
+					return fmt.Errorf("creating socket for %v via %v: %v", iface, ip, err)
+				}
+				break
 			}
-			break
+			if m.conn6 != nil && ip4 == nil {
+				if err := m.conn6.ConnectTo(port, ip, &iface); err != nil {
+					return fmt.Errorf("creating socket for %v via %v: %v", iface, ip, err)
+				}
+				break
+			}
 		}
 	}
 	go func() {
+		// NOTE: This defer statement will close connections, which will force
+		// the goroutines started by startListenLoop() to exit.
 		defer m.Close()
-		// Now that we've joined every possible interface we can handle the main loop.
-		payloadBuf := make([]byte, 1<<16)
+
+		var chan4 <-chan receivedPacket
+		var chan6 <-chan receivedPacket
+
+		if m.conn4 != nil {
+			chan4 = startListenLoop(m.conn4)
+		}
+		if m.conn6 != nil {
+			chan6 = startListenLoop(m.conn6)
+		}
 		for {
+			var received receivedPacket
+
 			select {
 			case <-ctx.Done():
 				return
-			default:
+			case received = <-chan4:
+				break
+			case received = <-chan6:
+				break
 			}
-			size, iface, src, err := m.conn4.ReadFrom(payloadBuf)
-			if err != nil {
+
+			if received.err != nil {
 				for _, e := range m.eHandlers {
-					go e(err)
+					go e(received.err)
 				}
 				return
 			}
+
 			var packet Packet
-			data := payloadBuf[:size]
-			if err := packet.deserialize(data, bytes.NewBuffer(data)); err != nil {
+			if err := packet.deserialize(received.data, bytes.NewBuffer(received.data)); err != nil {
 				for _, w := range m.wHandlers {
-					go w(src, err)
+					go w(received.src, err)
 				}
 				continue
 			}
+
 			for _, p := range m.pHandlers {
-				go p(*iface, src, packet)
+				go p(*received.iface, received.src, packet)
 			}
 		}
 	}()
@@ -723,8 +953,14 @@ func (m *mDNS) Start(ctx context.Context, port int) error {
 // requests the ip address associated with domain.
 func QuestionPacket(domain string) Packet {
 	return Packet{
-		Header: Header{QDCount: 1},
+		Header: Header{QDCount: 2},
 		Questions: []Question{
+			Question{
+				Domain:  domain,
+				Type:    AAAA,
+				Class:   IN,
+				Unicast: false,
+			},
 			Question{
 				Domain:  domain,
 				Type:    A,
@@ -743,7 +979,7 @@ func AnswerPacket(domain string, ip net.IP) Packet {
 		Answers: []Record{
 			Record{
 				Domain: domain,
-				Type:   A,
+				Type:   IpToDnsRecordType(ip),
 				Class:  IN,
 				Flush:  false,
 				Data:   []byte(ip),

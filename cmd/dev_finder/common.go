@@ -93,7 +93,7 @@ type fuchsiaDevice struct {
 
 func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.json, "json", false, "Outputs in JSON format.")
-	f.StringVar(&cmd.mdnsAddrs, "addr", "224.0.0.251,224.0.0.250", "Comma separated list of addresses to issue mDNS queries to.")
+	f.StringVar(&cmd.mdnsAddrs, "addr", "224.0.0.251,224.0.0.250,ff02::fb", "Comma separated list of addresses to issue mDNS queries to.")
 	f.StringVar(&cmd.mdnsPorts, "port", "5353,5356", "Comma separated list of ports to issue mDNS queries to.")
 	f.IntVar(&cmd.timeout, "timeout", 2000, "The number of milliseconds before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
@@ -125,6 +125,12 @@ func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 		return cmd.newMDNSFunc(address)
 	}
 	m := mdns.NewMDNS()
+	ip := net.ParseIP(address)
+	if ip.To4() != nil {
+		m.EnableIPv4()
+	} else {
+		m.EnableIPv6()
+	}
 	m.SetAddress(address)
 	return m
 }

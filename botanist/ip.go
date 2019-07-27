@@ -27,6 +27,7 @@ func getLocalDomain(nodename string) string {
 // TODO(joshuaseaton): Refactor dev_finder to share 'resolve' logic with botanist.
 func ResolveIPv4(ctx context.Context, nodename string, timeout time.Duration) (net.IP, error) {
 	m := mdns.NewMDNS()
+	m.EnableIPv4()
 	out := make(chan net.IP)
 	domain := getLocalDomain(nodename)
 	m.AddHandler(func(iface net.Interface, addr net.Addr, packet mdns.Packet) {

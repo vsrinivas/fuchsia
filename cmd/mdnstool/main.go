@@ -23,11 +23,16 @@ import (
 // 5353 but you're allowed to specify via port.
 func mDNSResolve(ctx context.Context, domain string, port int, dur time.Duration) (net.IP, error) {
 	m := mdns.NewMDNS()
+	m.EnableIPv4()
+	m.EnableIPv6()
 	out := make(chan net.IP)
 	// Add all of our handlers
 	m.AddHandler(func(iface net.Interface, addr net.Addr, packet mdns.Packet) {
 		for _, a := range packet.Answers {
-			if a.Class == mdns.IN && a.Type == mdns.A && a.Domain == domain {
+			if a.Class != mdns.IN || a.Domain != domain {
+				continue
+			}
+			if a.Type == mdns.A || a.Type == mdns.AAAA {
 				out <- net.IP(a.Data)
 				return
 			}
@@ -62,15 +67,19 @@ func mDNSResolve(ctx context.Context, domain string, port int, dur time.Duration
 
 // TODO(jakehehrlich): Add support for unicast.
 // mDNSPublish will respond to requests for the ip of domain by responding with ip.
-// It is assumed that ip is an ipv4 address. You can stop the server by canceling
-// ctx. Even though mDNS is generally on 5353 you can specify any port via port.
+// Note that this responds on both IPv4 and IPv6 interfaces, independent on the type
+// of ip itself. You can stop the server by canceling ctx. Even though mDNS is
+// generally on 5353 you can specify any port via port.
 func mDNSPublish(ctx context.Context, domain string, port int, ip net.IP) error {
 	// Now create and mDNS server
 	m := mdns.NewMDNS()
+	m.EnableIPv4()
+	m.EnableIPv6()
+	addrType := mdns.IpToDnsRecordType(ip)
 	m.AddHandler(func(iface net.Interface, addr net.Addr, packet mdns.Packet) {
 		log.Printf("from %v packet %v", addr, packet)
 		for _, q := range packet.Questions {
-			if q.Class == mdns.IN && q.Type == mdns.A && q.Domain == domain {
+			if q.Class == mdns.IN && q.Type == addrType && q.Domain == domain {
 				// We ignore the Unicast bit here but in theory this could be handled via SendTo and addr.
 				m.Send(mdns.AnswerPacket(domain, ip))
 			}
@@ -99,7 +108,8 @@ func mDNSPublish(ctx context.Context, domain string, port int, ip net.IP) error 
 // This function makes a faulty assumption. It assumes that the first
 // multicast interface it finds with an ipv4 address will be the
 // address the user wants. There isn't really a way to guess exactly
-// the address that the user will want.
+// the address that the user will want. If an IPv6 address is needed, then
+// using the -ip <address> option is required.
 func getMulticastIP() net.IP {
 	ifaces, err := net.Interfaces()
 	if err != nil {
@@ -132,7 +142,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&ipAddr, "ip", "", "the ip to respond with when servering.")
+	flag.StringVar(&ipAddr, "ip", "", "the ip to respond with when serving.")
 	flag.IntVar(&port, "port", 5353, "the port your mDNS servers operate on")
 	flag.IntVar(&timeout, "timeout", 2000, "the number of milliseconds before declaring a timeout")
 }
