@@ -125,18 +125,12 @@ impl<D: EventDispatcher> IpLayerState<D> {
         &mut self,
         device_id: usize,
     ) -> &mut IgmpInterface<D::Instant> {
-        if let None = self.igmp.get(device_id) {
-            self.igmp.insert(device_id, IgmpInterface::default());
-        }
-        self.igmp.get_mut(device_id).unwrap()
+        self.igmp.entry(device_id).or_insert(IgmpInterface::default())
     }
 
     /// Get the MLD state associated with the device.
     pub(crate) fn get_mld_state_mut(&mut self, device_id: usize) -> &mut MldInterface<D::Instant> {
-        if let None = self.mld.get(device_id) {
-            self.mld.insert(device_id, MldInterface::default());
-        }
-        self.mld.get_mut(device_id).unwrap()
+        self.mld.entry(device_id).or_insert(MldInterface::default())
     }
 }
 
