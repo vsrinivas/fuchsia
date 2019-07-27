@@ -679,7 +679,9 @@ class NameLookup final {
       LookupIp_Impl& operator=(LookupIp_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class LookupHostname_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -691,7 +693,9 @@ class NameLookup final {
       LookupHostname_Impl& operator=(LookupHostname_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -714,7 +718,9 @@ class NameLookup final {
       LookupIp_Impl& operator=(LookupIp_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class LookupHostname_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -726,7 +732,9 @@ class NameLookup final {
       LookupHostname_Impl& operator=(LookupHostname_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1003,7 +1011,9 @@ class SocketProvider final {
       GetAddrInfo_Impl& operator=(GetAddrInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1025,7 +1035,9 @@ class SocketProvider final {
       GetAddrInfo_Impl& operator=(GetAddrInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

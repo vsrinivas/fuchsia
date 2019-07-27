@@ -149,7 +149,9 @@ class SkipBlock final {
       GetPartitionInfo_Impl& operator=(GetPartitionInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -161,7 +163,9 @@ class SkipBlock final {
       Read_Impl& operator=(Read_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Write_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -173,7 +177,9 @@ class SkipBlock final {
       Write_Impl& operator=(Write_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -197,7 +203,9 @@ class SkipBlock final {
       GetPartitionInfo_Impl& operator=(GetPartitionInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -209,7 +217,9 @@ class SkipBlock final {
       Read_Impl& operator=(Read_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Write_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -221,7 +231,9 @@ class SkipBlock final {
       Write_Impl& operator=(Write_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

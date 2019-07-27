@@ -80,6 +80,7 @@ class DebugData final {
       Publish_Impl& operator=(Publish_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class LoadConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -91,7 +92,9 @@ class DebugData final {
       LoadConfig_Impl& operator=(LoadConfig_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -113,6 +116,7 @@ class DebugData final {
       Publish_Impl& operator=(Publish_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class LoadConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -124,7 +128,9 @@ class DebugData final {
       LoadConfig_Impl& operator=(LoadConfig_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

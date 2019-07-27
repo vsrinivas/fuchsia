@@ -133,7 +133,9 @@ class Device final {
       GetClass_Impl& operator=(GetClass_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -145,7 +147,9 @@ class Device final {
       SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -168,7 +172,9 @@ class Device final {
       GetClass_Impl& operator=(GetClass_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -180,7 +186,9 @@ class Device final {
       SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

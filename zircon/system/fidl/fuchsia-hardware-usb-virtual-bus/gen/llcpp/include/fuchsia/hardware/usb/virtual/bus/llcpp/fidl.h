@@ -96,7 +96,9 @@ class Bus final {
       Enable_Impl& operator=(Enable_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Disable_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -108,7 +110,9 @@ class Bus final {
       Disable_Impl& operator=(Disable_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Connect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -120,7 +124,9 @@ class Bus final {
       Connect_Impl& operator=(Connect_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Disconnect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -132,7 +138,9 @@ class Bus final {
       Disconnect_Impl& operator=(Disconnect_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -157,7 +165,9 @@ class Bus final {
       Enable_Impl& operator=(Enable_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Disable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -169,7 +179,9 @@ class Bus final {
       Disable_Impl& operator=(Disable_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Connect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -181,7 +193,9 @@ class Bus final {
       Connect_Impl& operator=(Connect_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Disconnect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -193,7 +207,9 @@ class Bus final {
       Disconnect_Impl& operator=(Disconnect_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

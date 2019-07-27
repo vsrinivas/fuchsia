@@ -155,8 +155,10 @@ class {{ .Name }} final {
       {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       {{- if .HasResponse }}
       using Super::Unwrap;
+      using Super::value;
       {{- end }}
     };
     {{- end }}
@@ -190,8 +192,10 @@ class {{ .Name }} final {
       {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       {{- if .HasResponse }}
       using Super::Unwrap;
+      using Super::value;
       {{- end }}
     };
     {{- end }}

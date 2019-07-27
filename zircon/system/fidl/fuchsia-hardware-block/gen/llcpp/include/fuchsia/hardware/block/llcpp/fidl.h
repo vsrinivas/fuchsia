@@ -99,7 +99,9 @@ class Ftl final {
       Format_Impl& operator=(Format_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -121,7 +123,9 @@ class Ftl final {
       Format_Impl& operator=(Format_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -352,7 +356,9 @@ class Block final {
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetStats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -364,7 +370,9 @@ class Block final {
       GetStats_Impl& operator=(GetStats_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -376,7 +384,9 @@ class Block final {
       GetFifo_Impl& operator=(GetFifo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AttachVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -388,7 +398,9 @@ class Block final {
       AttachVmo_Impl& operator=(AttachVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class CloseFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -400,7 +412,9 @@ class Block final {
       CloseFifo_Impl& operator=(CloseFifo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class RebindDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -412,7 +426,9 @@ class Block final {
       RebindDevice_Impl& operator=(RebindDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -439,7 +455,9 @@ class Block final {
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetStats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -451,7 +469,9 @@ class Block final {
       GetStats_Impl& operator=(GetStats_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -463,7 +483,9 @@ class Block final {
       GetFifo_Impl& operator=(GetFifo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AttachVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -475,7 +497,9 @@ class Block final {
       AttachVmo_Impl& operator=(AttachVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class CloseFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -487,7 +511,9 @@ class Block final {
       CloseFifo_Impl& operator=(CloseFifo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class RebindDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -499,7 +525,9 @@ class Block final {
       RebindDevice_Impl& operator=(RebindDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

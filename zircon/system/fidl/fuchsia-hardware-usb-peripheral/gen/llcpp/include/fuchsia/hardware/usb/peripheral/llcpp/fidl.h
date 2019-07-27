@@ -48,7 +48,9 @@ class Events final {
       FunctionRegistered_Impl& operator=(FunctionRegistered_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -70,7 +72,9 @@ class Events final {
       FunctionRegistered_Impl& operator=(FunctionRegistered_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -382,7 +386,9 @@ class Device final {
       SetDeviceDescriptor_Impl& operator=(SetDeviceDescriptor_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AllocStringDesc_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -394,7 +400,9 @@ class Device final {
       AllocStringDesc_Impl& operator=(AllocStringDesc_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AddFunction_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -406,7 +414,9 @@ class Device final {
       AddFunction_Impl& operator=(AddFunction_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class BindFunctions_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -418,7 +428,9 @@ class Device final {
       BindFunctions_Impl& operator=(BindFunctions_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ClearFunctions_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -430,7 +442,9 @@ class Device final {
       ClearFunctions_Impl& operator=(ClearFunctions_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetMode_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -442,7 +456,9 @@ class Device final {
       GetMode_Impl& operator=(GetMode_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetMode_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -454,7 +470,9 @@ class Device final {
       SetMode_Impl& operator=(SetMode_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class SetStateChangeListener_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -465,6 +483,7 @@ class Device final {
       SetStateChangeListener_Impl& operator=(SetStateChangeListener_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -493,7 +512,9 @@ class Device final {
       SetDeviceDescriptor_Impl& operator=(SetDeviceDescriptor_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AllocStringDesc_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -505,7 +526,9 @@ class Device final {
       AllocStringDesc_Impl& operator=(AllocStringDesc_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AddFunction_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -517,7 +540,9 @@ class Device final {
       AddFunction_Impl& operator=(AddFunction_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class BindFunctions_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -529,7 +554,9 @@ class Device final {
       BindFunctions_Impl& operator=(BindFunctions_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ClearFunctions_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -541,7 +568,9 @@ class Device final {
       ClearFunctions_Impl& operator=(ClearFunctions_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetMode_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -553,7 +582,9 @@ class Device final {
       GetMode_Impl& operator=(GetMode_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetMode_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -565,7 +596,9 @@ class Device final {
       SetMode_Impl& operator=(SetMode_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class SetStateChangeListener_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -576,6 +609,7 @@ class Device final {
       SetStateChangeListener_Impl& operator=(SetStateChangeListener_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:

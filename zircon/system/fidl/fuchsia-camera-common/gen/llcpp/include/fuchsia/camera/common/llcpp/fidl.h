@@ -146,6 +146,7 @@ class Stream final {
       Start_Impl& operator=(Start_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class Stop_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -156,6 +157,7 @@ class Stream final {
       Stop_Impl& operator=(Stop_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class ReleaseFrame_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -166,6 +168,7 @@ class Stream final {
       ReleaseFrame_Impl& operator=(ReleaseFrame_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -188,6 +191,7 @@ class Stream final {
       Start_Impl& operator=(Start_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class Stop_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -198,6 +202,7 @@ class Stream final {
       Stop_Impl& operator=(Stop_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class ReleaseFrame_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -208,6 +213,7 @@ class Stream final {
       ReleaseFrame_Impl& operator=(ReleaseFrame_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -575,6 +581,7 @@ class VirtualCameraFactory final {
       CreateDevice_Impl& operator=(CreateDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -595,6 +602,7 @@ class VirtualCameraFactory final {
       CreateDevice_Impl& operator=(CreateDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:

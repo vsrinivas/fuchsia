@@ -116,7 +116,9 @@ class Device final {
       Transmit_Impl& operator=(Transmit_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Receive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -128,7 +130,9 @@ class Device final {
       Receive_Impl& operator=(Receive_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Exchange_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -140,7 +144,9 @@ class Device final {
       Exchange_Impl& operator=(Exchange_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -164,7 +170,9 @@ class Device final {
       Transmit_Impl& operator=(Transmit_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Receive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -176,7 +184,9 @@ class Device final {
       Receive_Impl& operator=(Receive_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Exchange_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -188,7 +198,9 @@ class Device final {
       Exchange_Impl& operator=(Exchange_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

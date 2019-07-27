@@ -240,6 +240,7 @@ class KitchenSink final {
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class MethodB_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -251,7 +252,9 @@ class KitchenSink final {
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MutateSocket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -263,7 +266,9 @@ class KitchenSink final {
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -286,6 +291,7 @@ class KitchenSink final {
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class MethodB_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -297,7 +303,9 @@ class KitchenSink final {
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MutateSocket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -309,7 +317,9 @@ class KitchenSink final {
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -601,6 +611,7 @@ class ChannelProtocol final {
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class MethodB_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -612,7 +623,9 @@ class ChannelProtocol final {
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MutateSocket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -624,7 +637,9 @@ class ChannelProtocol final {
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -647,6 +662,7 @@ class ChannelProtocol final {
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class MethodB_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -658,7 +674,9 @@ class ChannelProtocol final {
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MutateSocket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -670,7 +688,9 @@ class ChannelProtocol final {
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -962,6 +982,7 @@ class OvernetInternalProtocol final {
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class MethodB_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -973,7 +994,9 @@ class OvernetInternalProtocol final {
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MutateSocket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -985,7 +1008,9 @@ class OvernetInternalProtocol final {
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1008,6 +1033,7 @@ class OvernetInternalProtocol final {
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class MethodB_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1019,7 +1045,9 @@ class OvernetInternalProtocol final {
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MutateSocket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1031,7 +1059,9 @@ class OvernetInternalProtocol final {
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1334,6 +1364,7 @@ class WithAndWithoutRequestResponse final {
       NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class NoRequestEmptyResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1345,7 +1376,9 @@ class WithAndWithoutRequestResponse final {
       NoRequestEmptyResponse_Impl& operator=(NoRequestEmptyResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class NoRequestWithResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1357,7 +1390,9 @@ class WithAndWithoutRequestResponse final {
       NoRequestWithResponse_Impl& operator=(NoRequestWithResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class WithRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1368,6 +1403,7 @@ class WithAndWithoutRequestResponse final {
       WithRequestNoResponse_Impl& operator=(WithRequestNoResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class WithRequestEmptyResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1379,7 +1415,9 @@ class WithAndWithoutRequestResponse final {
       WithRequestEmptyResponse_Impl& operator=(WithRequestEmptyResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WithRequestWithResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1391,7 +1429,9 @@ class WithAndWithoutRequestResponse final {
       WithRequestWithResponse_Impl& operator=(WithRequestWithResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1417,6 +1457,7 @@ class WithAndWithoutRequestResponse final {
       NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class NoRequestEmptyResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1428,7 +1469,9 @@ class WithAndWithoutRequestResponse final {
       NoRequestEmptyResponse_Impl& operator=(NoRequestEmptyResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class NoRequestWithResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1440,7 +1483,9 @@ class WithAndWithoutRequestResponse final {
       NoRequestWithResponse_Impl& operator=(NoRequestWithResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class WithRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1451,6 +1496,7 @@ class WithAndWithoutRequestResponse final {
       WithRequestNoResponse_Impl& operator=(WithRequestNoResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class WithRequestEmptyResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1462,7 +1508,9 @@ class WithAndWithoutRequestResponse final {
       WithRequestEmptyResponse_Impl& operator=(WithRequestEmptyResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WithRequestWithResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1474,7 +1522,9 @@ class WithAndWithoutRequestResponse final {
       WithRequestWithResponse_Impl& operator=(WithRequestWithResponse_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1881,7 +1931,9 @@ class WithErrorSyntax final {
       ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ErrorAsEnum_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1893,7 +1945,9 @@ class WithErrorSyntax final {
       ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1916,7 +1970,9 @@ class WithErrorSyntax final {
       ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ErrorAsEnum_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1928,7 +1984,9 @@ class WithErrorSyntax final {
       ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

@@ -232,7 +232,9 @@ class PayloadStream final {
       RegisterVmo_Impl& operator=(RegisterVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ReadData_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -244,7 +246,9 @@ class PayloadStream final {
       ReadData_Impl& operator=(ReadData_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -267,7 +271,9 @@ class PayloadStream final {
       RegisterVmo_Impl& operator=(RegisterVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ReadData_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -279,7 +285,9 @@ class PayloadStream final {
       ReadData_Impl& operator=(ReadData_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -736,7 +744,9 @@ class Paver final {
       QueryActiveConfiguration_Impl& operator=(QueryActiveConfiguration_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetActiveConfiguration_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -748,7 +758,9 @@ class Paver final {
       SetActiveConfiguration_Impl& operator=(SetActiveConfiguration_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MarkActiveConfigurationSuccessful_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -760,7 +772,9 @@ class Paver final {
       MarkActiveConfigurationSuccessful_Impl& operator=(MarkActiveConfigurationSuccessful_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ForceRecoveryConfiguration_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -772,7 +786,9 @@ class Paver final {
       ForceRecoveryConfiguration_Impl& operator=(ForceRecoveryConfiguration_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteAsset_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -784,7 +800,9 @@ class Paver final {
       WriteAsset_Impl& operator=(WriteAsset_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteVolumes_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -796,7 +814,9 @@ class Paver final {
       WriteVolumes_Impl& operator=(WriteVolumes_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteBootloader_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -808,7 +828,9 @@ class Paver final {
       WriteBootloader_Impl& operator=(WriteBootloader_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteDataFile_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -820,7 +842,9 @@ class Paver final {
       WriteDataFile_Impl& operator=(WriteDataFile_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WipeVolumes_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -832,7 +856,9 @@ class Paver final {
       WipeVolumes_Impl& operator=(WipeVolumes_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -862,7 +888,9 @@ class Paver final {
       QueryActiveConfiguration_Impl& operator=(QueryActiveConfiguration_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetActiveConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -874,7 +902,9 @@ class Paver final {
       SetActiveConfiguration_Impl& operator=(SetActiveConfiguration_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MarkActiveConfigurationSuccessful_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -886,7 +916,9 @@ class Paver final {
       MarkActiveConfigurationSuccessful_Impl& operator=(MarkActiveConfigurationSuccessful_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ForceRecoveryConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -898,7 +930,9 @@ class Paver final {
       ForceRecoveryConfiguration_Impl& operator=(ForceRecoveryConfiguration_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteAsset_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -910,7 +944,9 @@ class Paver final {
       WriteAsset_Impl& operator=(WriteAsset_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteVolumes_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -922,7 +958,9 @@ class Paver final {
       WriteVolumes_Impl& operator=(WriteVolumes_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteBootloader_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -934,7 +972,9 @@ class Paver final {
       WriteBootloader_Impl& operator=(WriteBootloader_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteDataFile_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -946,7 +986,9 @@ class Paver final {
       WriteDataFile_Impl& operator=(WriteDataFile_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WipeVolumes_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -958,7 +1000,9 @@ class Paver final {
       WipeVolumes_Impl& operator=(WipeVolumes_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

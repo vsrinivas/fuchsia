@@ -86,7 +86,9 @@ class DeviceManager final {
       Unseal_Impl& operator=(Unseal_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Seal_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -98,7 +100,9 @@ class DeviceManager final {
       Seal_Impl& operator=(Seal_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -121,7 +125,9 @@ class DeviceManager final {
       Unseal_Impl& operator=(Unseal_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Seal_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -133,7 +139,9 @@ class DeviceManager final {
       Seal_Impl& operator=(Seal_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

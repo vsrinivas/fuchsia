@@ -75,7 +75,9 @@ class Provider final {
       Socket_Impl& operator=(Socket_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -97,7 +99,9 @@ class Provider final {
       Socket_Impl& operator=(Socket_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -593,6 +597,7 @@ class Control final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -604,7 +609,9 @@ class Control final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -616,7 +623,9 @@ class Control final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -628,7 +637,9 @@ class Control final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -640,7 +651,9 @@ class Control final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -652,7 +665,9 @@ class Control final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -664,7 +679,9 @@ class Control final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Bind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -676,7 +693,9 @@ class Control final {
       Bind_Impl& operator=(Bind_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Connect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -688,7 +707,9 @@ class Control final {
       Connect_Impl& operator=(Connect_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Listen_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -700,7 +721,9 @@ class Control final {
       Listen_Impl& operator=(Listen_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Accept_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -712,7 +735,9 @@ class Control final {
       Accept_Impl& operator=(Accept_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetSockName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -724,7 +749,9 @@ class Control final {
       GetSockName_Impl& operator=(GetSockName_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetPeerName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -736,7 +763,9 @@ class Control final {
       GetPeerName_Impl& operator=(GetPeerName_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetSockOpt_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -748,7 +777,9 @@ class Control final {
       SetSockOpt_Impl& operator=(SetSockOpt_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetSockOpt_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -760,7 +791,9 @@ class Control final {
       GetSockOpt_Impl& operator=(GetSockOpt_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class IoctlPOSIX_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -772,7 +805,9 @@ class Control final {
       IoctlPOSIX_Impl& operator=(IoctlPOSIX_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -808,6 +843,7 @@ class Control final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -819,7 +855,9 @@ class Control final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -831,7 +869,9 @@ class Control final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -843,7 +883,9 @@ class Control final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -855,7 +897,9 @@ class Control final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -867,7 +911,9 @@ class Control final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -879,7 +925,9 @@ class Control final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Bind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -891,7 +939,9 @@ class Control final {
       Bind_Impl& operator=(Bind_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Connect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -903,7 +953,9 @@ class Control final {
       Connect_Impl& operator=(Connect_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Listen_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -915,7 +967,9 @@ class Control final {
       Listen_Impl& operator=(Listen_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Accept_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -927,7 +981,9 @@ class Control final {
       Accept_Impl& operator=(Accept_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetSockName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -939,7 +995,9 @@ class Control final {
       GetSockName_Impl& operator=(GetSockName_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetPeerName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -951,7 +1009,9 @@ class Control final {
       GetPeerName_Impl& operator=(GetPeerName_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetSockOpt_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -963,7 +1023,9 @@ class Control final {
       SetSockOpt_Impl& operator=(SetSockOpt_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetSockOpt_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -975,7 +1037,9 @@ class Control final {
       GetSockOpt_Impl& operator=(GetSockOpt_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class IoctlPOSIX_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -987,7 +1051,9 @@ class Control final {
       IoctlPOSIX_Impl& operator=(IoctlPOSIX_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

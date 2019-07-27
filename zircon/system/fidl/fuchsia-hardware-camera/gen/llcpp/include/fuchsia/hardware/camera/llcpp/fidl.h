@@ -72,6 +72,7 @@ class Device final {
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -92,6 +93,7 @@ class Device final {
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -315,6 +317,7 @@ class Stream final {
       Start_Impl& operator=(Start_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class Stop_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -325,6 +328,7 @@ class Stream final {
       Stop_Impl& operator=(Stop_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class ReleaseFrame_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -335,6 +339,7 @@ class Stream final {
       ReleaseFrame_Impl& operator=(ReleaseFrame_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -357,6 +362,7 @@ class Stream final {
       Start_Impl& operator=(Start_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class Stop_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -367,6 +373,7 @@ class Stream final {
       Stop_Impl& operator=(Stop_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class ReleaseFrame_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -377,6 +384,7 @@ class Stream final {
       ReleaseFrame_Impl& operator=(ReleaseFrame_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -651,7 +659,9 @@ class Control final {
       GetFormats_Impl& operator=(GetFormats_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CreateStream_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -662,6 +672,7 @@ class Control final {
       CreateStream_Impl& operator=(CreateStream_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class GetDeviceInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -673,7 +684,9 @@ class Control final {
       GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -697,7 +710,9 @@ class Control final {
       GetFormats_Impl& operator=(GetFormats_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CreateStream_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -708,6 +723,7 @@ class Control final {
       CreateStream_Impl& operator=(CreateStream_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class GetDeviceInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -719,7 +735,9 @@ class Control final {
       GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1030,7 +1048,9 @@ class ControlV2 final {
       GetFormats_Impl& operator=(GetFormats_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CreateStream_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1041,6 +1061,7 @@ class ControlV2 final {
       CreateStream_Impl& operator=(CreateStream_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class GetDeviceInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1052,7 +1073,9 @@ class ControlV2 final {
       GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1076,7 +1099,9 @@ class ControlV2 final {
       GetFormats_Impl& operator=(GetFormats_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CreateStream_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1087,6 +1112,7 @@ class ControlV2 final {
       CreateStream_Impl& operator=(CreateStream_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class GetDeviceInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1098,7 +1124,9 @@ class ControlV2 final {
       GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

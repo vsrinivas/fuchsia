@@ -231,7 +231,9 @@ class DebugDumper final {
       DumpTree_Impl& operator=(DumpTree_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class DumpDrivers_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -243,7 +245,9 @@ class DebugDumper final {
       DumpDrivers_Impl& operator=(DumpDrivers_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class DumpBindingProperties_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -255,7 +259,9 @@ class DebugDumper final {
       DumpBindingProperties_Impl& operator=(DumpBindingProperties_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -279,7 +285,9 @@ class DebugDumper final {
       DumpTree_Impl& operator=(DumpTree_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class DumpDrivers_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -291,7 +299,9 @@ class DebugDumper final {
       DumpDrivers_Impl& operator=(DumpDrivers_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class DumpBindingProperties_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -303,7 +313,9 @@ class DebugDumper final {
       DumpBindingProperties_Impl& operator=(DumpBindingProperties_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -574,7 +586,9 @@ class Administrator final {
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -596,7 +610,9 @@ class Administrator final {
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -810,6 +826,7 @@ class DevhostController final {
       CreateDeviceStub_Impl& operator=(CreateDeviceStub_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class CreateDevice_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -820,6 +837,7 @@ class DevhostController final {
       CreateDevice_Impl& operator=(CreateDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class CreateCompositeDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -831,7 +849,9 @@ class DevhostController final {
       CreateCompositeDevice_Impl& operator=(CreateCompositeDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -854,6 +874,7 @@ class DevhostController final {
       CreateDeviceStub_Impl& operator=(CreateDeviceStub_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class CreateDevice_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -864,6 +885,7 @@ class DevhostController final {
       CreateDevice_Impl& operator=(CreateDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class CreateCompositeDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -875,7 +897,9 @@ class DevhostController final {
       CreateCompositeDevice_Impl& operator=(CreateCompositeDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -2713,7 +2737,9 @@ class DeviceController final {
       BindDriver_Impl& operator=(BindDriver_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class ConnectProxy_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2724,6 +2750,7 @@ class DeviceController final {
       ConnectProxy_Impl& operator=(ConnectProxy_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class Unbind_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2734,6 +2761,7 @@ class DeviceController final {
       Unbind_Impl& operator=(Unbind_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class CompleteRemoval_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2744,6 +2772,7 @@ class DeviceController final {
       CompleteRemoval_Impl& operator=(CompleteRemoval_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class RemoveDevice_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2754,6 +2783,7 @@ class DeviceController final {
       RemoveDevice_Impl& operator=(RemoveDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Suspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2765,7 +2795,9 @@ class DeviceController final {
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CompleteCompatibilityTests_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2776,6 +2808,7 @@ class DeviceController final {
       CompleteCompatibilityTests_Impl& operator=(CompleteCompatibilityTests_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -2803,7 +2836,9 @@ class DeviceController final {
       BindDriver_Impl& operator=(BindDriver_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class ConnectProxy_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2814,6 +2849,7 @@ class DeviceController final {
       ConnectProxy_Impl& operator=(ConnectProxy_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class Unbind_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2824,6 +2860,7 @@ class DeviceController final {
       Unbind_Impl& operator=(Unbind_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class CompleteRemoval_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2834,6 +2871,7 @@ class DeviceController final {
       CompleteRemoval_Impl& operator=(CompleteRemoval_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class RemoveDevice_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2844,6 +2882,7 @@ class DeviceController final {
       RemoveDevice_Impl& operator=(RemoveDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Suspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2855,7 +2894,9 @@ class DeviceController final {
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CompleteCompatibilityTests_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2866,6 +2907,7 @@ class DeviceController final {
       CompleteCompatibilityTests_Impl& operator=(CompleteCompatibilityTests_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -3662,7 +3704,9 @@ class Coordinator final {
       AddDevice_Impl& operator=(AddDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AddDeviceInvisible_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3674,7 +3718,9 @@ class Coordinator final {
       AddDeviceInvisible_Impl& operator=(AddDeviceInvisible_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class ScheduleRemove_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3685,6 +3731,7 @@ class Coordinator final {
       ScheduleRemove_Impl& operator=(ScheduleRemove_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class ScheduleUnbindChildren_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3695,6 +3742,7 @@ class Coordinator final {
       ScheduleUnbindChildren_Impl& operator=(ScheduleUnbindChildren_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class UnbindDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3705,6 +3753,7 @@ class Coordinator final {
       UnbindDone_Impl& operator=(UnbindDone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class RemoveDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3716,7 +3765,9 @@ class Coordinator final {
       RemoveDevice_Impl& operator=(RemoveDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MakeVisible_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3728,7 +3779,9 @@ class Coordinator final {
       MakeVisible_Impl& operator=(MakeVisible_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class BindDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3740,7 +3793,9 @@ class Coordinator final {
       BindDevice_Impl& operator=(BindDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetTopologicalPath_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3752,7 +3807,9 @@ class Coordinator final {
       GetTopologicalPath_Impl& operator=(GetTopologicalPath_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class LoadFirmware_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3764,7 +3821,9 @@ class Coordinator final {
       LoadFirmware_Impl& operator=(LoadFirmware_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetMetadata_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3776,7 +3835,9 @@ class Coordinator final {
       GetMetadata_Impl& operator=(GetMetadata_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetMetadataSize_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3788,7 +3849,9 @@ class Coordinator final {
       GetMetadataSize_Impl& operator=(GetMetadataSize_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AddMetadata_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3800,7 +3863,9 @@ class Coordinator final {
       AddMetadata_Impl& operator=(AddMetadata_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class PublishMetadata_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3812,7 +3877,9 @@ class Coordinator final {
       PublishMetadata_Impl& operator=(PublishMetadata_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AddCompositeDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3824,7 +3891,9 @@ class Coordinator final {
       AddCompositeDevice_Impl& operator=(AddCompositeDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class DirectoryWatch_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3836,7 +3905,9 @@ class Coordinator final {
       DirectoryWatch_Impl& operator=(DirectoryWatch_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class RunCompatibilityTests_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3848,7 +3919,9 @@ class Coordinator final {
       RunCompatibilityTests_Impl& operator=(RunCompatibilityTests_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -3886,7 +3959,9 @@ class Coordinator final {
       AddDevice_Impl& operator=(AddDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AddDeviceInvisible_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -3898,7 +3973,9 @@ class Coordinator final {
       AddDeviceInvisible_Impl& operator=(AddDeviceInvisible_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class ScheduleRemove_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3909,6 +3986,7 @@ class Coordinator final {
       ScheduleRemove_Impl& operator=(ScheduleRemove_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class ScheduleUnbindChildren_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3919,6 +3997,7 @@ class Coordinator final {
       ScheduleUnbindChildren_Impl& operator=(ScheduleUnbindChildren_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class UnbindDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3929,6 +4008,7 @@ class Coordinator final {
       UnbindDone_Impl& operator=(UnbindDone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class RemoveDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -3940,7 +4020,9 @@ class Coordinator final {
       RemoveDevice_Impl& operator=(RemoveDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MakeVisible_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -3952,7 +4034,9 @@ class Coordinator final {
       MakeVisible_Impl& operator=(MakeVisible_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class BindDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -3964,7 +4048,9 @@ class Coordinator final {
       BindDevice_Impl& operator=(BindDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetTopologicalPath_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -3976,7 +4062,9 @@ class Coordinator final {
       GetTopologicalPath_Impl& operator=(GetTopologicalPath_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class LoadFirmware_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -3988,7 +4076,9 @@ class Coordinator final {
       LoadFirmware_Impl& operator=(LoadFirmware_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetMetadata_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4000,7 +4090,9 @@ class Coordinator final {
       GetMetadata_Impl& operator=(GetMetadata_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetMetadataSize_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4012,7 +4104,9 @@ class Coordinator final {
       GetMetadataSize_Impl& operator=(GetMetadataSize_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AddMetadata_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4024,7 +4118,9 @@ class Coordinator final {
       AddMetadata_Impl& operator=(AddMetadata_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class PublishMetadata_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4036,7 +4132,9 @@ class Coordinator final {
       PublishMetadata_Impl& operator=(PublishMetadata_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class AddCompositeDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4048,7 +4146,9 @@ class Coordinator final {
       AddCompositeDevice_Impl& operator=(AddCompositeDevice_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class DirectoryWatch_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4060,7 +4160,9 @@ class Coordinator final {
       DirectoryWatch_Impl& operator=(DirectoryWatch_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class RunCompatibilityTests_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4072,7 +4174,9 @@ class Coordinator final {
       RunCompatibilityTests_Impl& operator=(RunCompatibilityTests_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

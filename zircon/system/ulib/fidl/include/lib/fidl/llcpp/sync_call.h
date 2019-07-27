@@ -105,6 +105,7 @@ class StatusAndError : public FromFailureMixin<StatusAndError> {
 
   [[nodiscard]] zx_status_t status() const { return status_; }
   [[nodiscard]] const char* error() const { return error_; }
+  [[nodiscard]] bool ok() const { return status_ == ZX_OK; }
 
  protected:
   StatusAndError(StatusAndError&&) = default;
@@ -133,6 +134,7 @@ class SyncCallBase : private StatusAndError {
   SyncCallBase& operator=(const SyncCallBase&) = delete;
 
   using StatusAndError::error;
+  using StatusAndError::ok;
   using StatusAndError::status;
 
   // Convenience accessor for the FIDL response message pointer.
@@ -141,6 +143,15 @@ class SyncCallBase : private StatusAndError {
   ResponseType* Unwrap() {
     ZX_ASSERT(status_ == ZX_OK);
     return message_.message();
+  }
+
+  // Convenience accessor for the FIDL response message pointer.
+  // Asserts that the object was not moved.
+  // Asserts that the call was successful.
+  ResponseType& value() {
+    ZX_ASSERT(status_ == ZX_OK);
+    ZX_ASSERT(message_.message() != nullptr);
+    return *message_.message();
   }
 
  protected:
@@ -174,6 +185,7 @@ class SyncCallBase : private StatusAndError {
 //
 // Holds a |DecodedMessage<ResponseType>| in addition to providing status() and error().
 // If status() is ZX_OK, Unwrap() returns a valid decoded message of type ResponseType.
+// If status() is ZX_OK, value() returns a valid decoded message of type ResponseType.
 // Otherwise, error() contains a human-readable string for debugging purposes.
 //
 // Note: this class does not add new members on top of |SyncCallBase|.
@@ -200,8 +212,10 @@ class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
   }
 
   using Super::error;
+  using Super::ok;
   using Super::status;
   using Super::Unwrap;
+  using Super::value;
 
  protected:
   OwnedSyncCallBase() = default;
@@ -266,6 +280,7 @@ class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
 //
 // Holds a |DecodedMessage<ResponseType>| in addition to providing status() and error().
 // If status() is ZX_OK, Unwrap() returns a valid decoded message of type ResponseType.
+// If status() is ZX_OK, value() returns a valid decoded message of type ResponseType.
 // Otherwise, error() contains a human-readable string for debugging purposes.
 template <typename ResponseType>
 using UnownedSyncCallBase = SyncCallBase<ResponseType>;

@@ -155,6 +155,7 @@ class Interface final {
       Method_Impl& operator=(Method_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -175,6 +176,7 @@ class Interface final {
       Method_Impl& operator=(Method_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:

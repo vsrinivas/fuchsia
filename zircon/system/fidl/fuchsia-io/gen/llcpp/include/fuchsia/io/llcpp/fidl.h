@@ -191,6 +191,7 @@ class DirectoryWatcher final {
       OnEvent_Impl& operator=(OnEvent_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -211,6 +212,7 @@ class DirectoryWatcher final {
       OnEvent_Impl& operator=(OnEvent_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -963,6 +965,7 @@ class Node final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -974,7 +977,9 @@ class Node final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -986,7 +991,9 @@ class Node final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -998,7 +1005,9 @@ class Node final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1010,7 +1019,9 @@ class Node final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1022,7 +1033,9 @@ class Node final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1034,7 +1047,9 @@ class Node final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1061,6 +1076,7 @@ class Node final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1072,7 +1088,9 @@ class Node final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1084,7 +1102,9 @@ class Node final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1096,7 +1116,9 @@ class Node final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1108,7 +1130,9 @@ class Node final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1120,7 +1144,9 @@ class Node final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1132,7 +1158,9 @@ class Node final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -2184,6 +2212,7 @@ class File final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2195,7 +2224,9 @@ class File final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2207,7 +2238,9 @@ class File final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2219,7 +2252,9 @@ class File final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2231,7 +2266,9 @@ class File final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2243,7 +2280,9 @@ class File final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2255,7 +2294,9 @@ class File final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2267,7 +2308,9 @@ class File final {
       Read_Impl& operator=(Read_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ReadAt_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2279,7 +2322,9 @@ class File final {
       ReadAt_Impl& operator=(ReadAt_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Write_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2291,7 +2336,9 @@ class File final {
       Write_Impl& operator=(Write_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteAt_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2303,7 +2350,9 @@ class File final {
       WriteAt_Impl& operator=(WriteAt_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Seek_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2315,7 +2364,9 @@ class File final {
       Seek_Impl& operator=(Seek_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Truncate_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2327,7 +2378,9 @@ class File final {
       Truncate_Impl& operator=(Truncate_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2339,7 +2392,9 @@ class File final {
       GetFlags_Impl& operator=(GetFlags_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2351,7 +2406,9 @@ class File final {
       SetFlags_Impl& operator=(SetFlags_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetBuffer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2363,7 +2420,9 @@ class File final {
       GetBuffer_Impl& operator=(GetBuffer_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -2399,6 +2458,7 @@ class File final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2410,7 +2470,9 @@ class File final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2422,7 +2484,9 @@ class File final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2434,7 +2498,9 @@ class File final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2446,7 +2512,9 @@ class File final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2458,7 +2526,9 @@ class File final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2470,7 +2540,9 @@ class File final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2482,7 +2554,9 @@ class File final {
       Read_Impl& operator=(Read_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ReadAt_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2494,7 +2568,9 @@ class File final {
       ReadAt_Impl& operator=(ReadAt_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Write_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2506,7 +2582,9 @@ class File final {
       Write_Impl& operator=(Write_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class WriteAt_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2518,7 +2596,9 @@ class File final {
       WriteAt_Impl& operator=(WriteAt_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Seek_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2530,7 +2610,9 @@ class File final {
       Seek_Impl& operator=(Seek_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Truncate_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2542,7 +2624,9 @@ class File final {
       Truncate_Impl& operator=(Truncate_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2554,7 +2638,9 @@ class File final {
       GetFlags_Impl& operator=(GetFlags_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2566,7 +2652,9 @@ class File final {
       SetFlags_Impl& operator=(SetFlags_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetBuffer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -2578,7 +2666,9 @@ class File final {
       GetBuffer_Impl& operator=(GetBuffer_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -4269,6 +4359,7 @@ class Directory final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4280,7 +4371,9 @@ class Directory final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4292,7 +4385,9 @@ class Directory final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4304,7 +4399,9 @@ class Directory final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4316,7 +4413,9 @@ class Directory final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4328,7 +4427,9 @@ class Directory final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4340,7 +4441,9 @@ class Directory final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4351,6 +4454,7 @@ class Directory final {
       Open_Impl& operator=(Open_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Unlink_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4362,7 +4466,9 @@ class Directory final {
       Unlink_Impl& operator=(Unlink_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ReadDirents_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4374,7 +4480,9 @@ class Directory final {
       ReadDirents_Impl& operator=(ReadDirents_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Rewind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4386,7 +4494,9 @@ class Directory final {
       Rewind_Impl& operator=(Rewind_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetToken_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4398,7 +4508,9 @@ class Directory final {
       GetToken_Impl& operator=(GetToken_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Rename_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4410,7 +4522,9 @@ class Directory final {
       Rename_Impl& operator=(Rename_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Link_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4422,7 +4536,9 @@ class Directory final {
       Link_Impl& operator=(Link_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Watch_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4434,7 +4550,9 @@ class Directory final {
       Watch_Impl& operator=(Watch_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -4469,6 +4587,7 @@ class Directory final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4480,7 +4599,9 @@ class Directory final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4492,7 +4613,9 @@ class Directory final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4504,7 +4627,9 @@ class Directory final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4516,7 +4641,9 @@ class Directory final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4528,7 +4655,9 @@ class Directory final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4540,7 +4669,9 @@ class Directory final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4551,6 +4682,7 @@ class Directory final {
       Open_Impl& operator=(Open_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Unlink_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4562,7 +4694,9 @@ class Directory final {
       Unlink_Impl& operator=(Unlink_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ReadDirents_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4574,7 +4708,9 @@ class Directory final {
       ReadDirents_Impl& operator=(ReadDirents_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Rewind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4586,7 +4722,9 @@ class Directory final {
       Rewind_Impl& operator=(Rewind_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetToken_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4598,7 +4736,9 @@ class Directory final {
       GetToken_Impl& operator=(GetToken_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Rename_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4610,7 +4750,9 @@ class Directory final {
       Rename_Impl& operator=(Rename_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Link_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4622,7 +4764,9 @@ class Directory final {
       Link_Impl& operator=(Link_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Watch_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4634,7 +4778,9 @@ class Directory final {
       Watch_Impl& operator=(Watch_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -7022,6 +7168,7 @@ class DirectoryAdmin final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7033,7 +7180,9 @@ class DirectoryAdmin final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7045,7 +7194,9 @@ class DirectoryAdmin final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7057,7 +7208,9 @@ class DirectoryAdmin final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7069,7 +7222,9 @@ class DirectoryAdmin final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7081,7 +7236,9 @@ class DirectoryAdmin final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7093,7 +7250,9 @@ class DirectoryAdmin final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -7104,6 +7263,7 @@ class DirectoryAdmin final {
       Open_Impl& operator=(Open_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Unlink_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7115,7 +7275,9 @@ class DirectoryAdmin final {
       Unlink_Impl& operator=(Unlink_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ReadDirents_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7127,7 +7289,9 @@ class DirectoryAdmin final {
       ReadDirents_Impl& operator=(ReadDirents_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Rewind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7139,7 +7303,9 @@ class DirectoryAdmin final {
       Rewind_Impl& operator=(Rewind_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetToken_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7151,7 +7317,9 @@ class DirectoryAdmin final {
       GetToken_Impl& operator=(GetToken_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Rename_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7163,7 +7331,9 @@ class DirectoryAdmin final {
       Rename_Impl& operator=(Rename_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Link_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7175,7 +7345,9 @@ class DirectoryAdmin final {
       Link_Impl& operator=(Link_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Watch_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7187,7 +7359,9 @@ class DirectoryAdmin final {
       Watch_Impl& operator=(Watch_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Mount_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7199,7 +7373,9 @@ class DirectoryAdmin final {
       Mount_Impl& operator=(Mount_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MountAndCreate_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7211,7 +7387,9 @@ class DirectoryAdmin final {
       MountAndCreate_Impl& operator=(MountAndCreate_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Unmount_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7223,7 +7401,9 @@ class DirectoryAdmin final {
       Unmount_Impl& operator=(Unmount_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class UnmountNode_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7235,7 +7415,9 @@ class DirectoryAdmin final {
       UnmountNode_Impl& operator=(UnmountNode_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class QueryFilesystem_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7247,7 +7429,9 @@ class DirectoryAdmin final {
       QueryFilesystem_Impl& operator=(QueryFilesystem_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetDevicePath_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -7259,7 +7443,9 @@ class DirectoryAdmin final {
       GetDevicePath_Impl& operator=(GetDevicePath_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -7300,6 +7486,7 @@ class DirectoryAdmin final {
       Clone_Impl& operator=(Clone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7311,7 +7498,9 @@ class DirectoryAdmin final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7323,7 +7512,9 @@ class DirectoryAdmin final {
       Describe_Impl& operator=(Describe_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7335,7 +7526,9 @@ class DirectoryAdmin final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7347,7 +7540,9 @@ class DirectoryAdmin final {
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7359,7 +7554,9 @@ class DirectoryAdmin final {
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7371,7 +7568,9 @@ class DirectoryAdmin final {
       Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -7382,6 +7581,7 @@ class DirectoryAdmin final {
       Open_Impl& operator=(Open_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Unlink_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7393,7 +7593,9 @@ class DirectoryAdmin final {
       Unlink_Impl& operator=(Unlink_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class ReadDirents_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7405,7 +7607,9 @@ class DirectoryAdmin final {
       ReadDirents_Impl& operator=(ReadDirents_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Rewind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7417,7 +7621,9 @@ class DirectoryAdmin final {
       Rewind_Impl& operator=(Rewind_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetToken_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7429,7 +7635,9 @@ class DirectoryAdmin final {
       GetToken_Impl& operator=(GetToken_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Rename_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7441,7 +7649,9 @@ class DirectoryAdmin final {
       Rename_Impl& operator=(Rename_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Link_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7453,7 +7663,9 @@ class DirectoryAdmin final {
       Link_Impl& operator=(Link_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Watch_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7465,7 +7677,9 @@ class DirectoryAdmin final {
       Watch_Impl& operator=(Watch_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Mount_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7477,7 +7691,9 @@ class DirectoryAdmin final {
       Mount_Impl& operator=(Mount_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class MountAndCreate_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7489,7 +7705,9 @@ class DirectoryAdmin final {
       MountAndCreate_Impl& operator=(MountAndCreate_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class Unmount_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7501,7 +7719,9 @@ class DirectoryAdmin final {
       Unmount_Impl& operator=(Unmount_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class UnmountNode_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7513,7 +7733,9 @@ class DirectoryAdmin final {
       UnmountNode_Impl& operator=(UnmountNode_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class QueryFilesystem_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7525,7 +7747,9 @@ class DirectoryAdmin final {
       QueryFilesystem_Impl& operator=(QueryFilesystem_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetDevicePath_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -7537,7 +7761,9 @@ class DirectoryAdmin final {
       GetDevicePath_Impl& operator=(GetDevicePath_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

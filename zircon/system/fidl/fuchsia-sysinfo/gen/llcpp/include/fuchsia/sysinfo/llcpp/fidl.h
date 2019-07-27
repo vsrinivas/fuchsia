@@ -122,7 +122,9 @@ class Device final {
       GetRootJob_Impl& operator=(GetRootJob_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetRootResource_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -134,7 +136,9 @@ class Device final {
       GetRootResource_Impl& operator=(GetRootResource_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetHypervisorResource_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -146,7 +150,9 @@ class Device final {
       GetHypervisorResource_Impl& operator=(GetHypervisorResource_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetBoardName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -158,7 +164,9 @@ class Device final {
       GetBoardName_Impl& operator=(GetBoardName_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetInterruptControllerInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -170,7 +178,9 @@ class Device final {
       GetInterruptControllerInfo_Impl& operator=(GetInterruptControllerInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -196,7 +206,9 @@ class Device final {
       GetRootJob_Impl& operator=(GetRootJob_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetRootResource_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -208,7 +220,9 @@ class Device final {
       GetRootResource_Impl& operator=(GetRootResource_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetHypervisorResource_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -220,7 +234,9 @@ class Device final {
       GetHypervisorResource_Impl& operator=(GetHypervisorResource_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetBoardName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -232,7 +248,9 @@ class Device final {
       GetBoardName_Impl& operator=(GetBoardName_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class GetInterruptControllerInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -244,7 +262,9 @@ class Device final {
       GetInterruptControllerInfo_Impl& operator=(GetInterruptControllerInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:

@@ -55,6 +55,7 @@ class SwitchingOrdinals final {
       OrdinalFive_Impl& operator=(OrdinalFive_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class OnlyGeneratedOrdinal_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -65,6 +66,7 @@ class SwitchingOrdinals final {
       OnlyGeneratedOrdinal_Impl& operator=(OnlyGeneratedOrdinal_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -86,6 +88,7 @@ class SwitchingOrdinals final {
       OrdinalFive_Impl& operator=(OrdinalFive_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class OnlyGeneratedOrdinal_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -96,6 +99,7 @@ class SwitchingOrdinals final {
       OnlyGeneratedOrdinal_Impl& operator=(OnlyGeneratedOrdinal_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:

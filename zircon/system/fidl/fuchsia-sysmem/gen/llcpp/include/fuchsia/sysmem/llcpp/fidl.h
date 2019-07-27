@@ -189,6 +189,7 @@ class BufferCollectionToken final {
       Duplicate_Impl& operator=(Duplicate_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -200,7 +201,9 @@ class BufferCollectionToken final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class Close_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -211,6 +214,7 @@ class BufferCollectionToken final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -233,6 +237,7 @@ class BufferCollectionToken final {
       Duplicate_Impl& operator=(Duplicate_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -244,7 +249,9 @@ class BufferCollectionToken final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class Close_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -255,6 +262,7 @@ class BufferCollectionToken final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -1085,7 +1093,9 @@ class Heap final {
       AllocateVmo_Impl& operator=(AllocateVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class CreateResource_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1097,7 +1107,9 @@ class Heap final {
       CreateResource_Impl& operator=(CreateResource_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class DestroyResource_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1109,7 +1121,9 @@ class Heap final {
       DestroyResource_Impl& operator=(DestroyResource_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1133,7 +1147,9 @@ class Heap final {
       AllocateVmo_Impl& operator=(AllocateVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class CreateResource_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1145,7 +1161,9 @@ class Heap final {
       CreateResource_Impl& operator=(CreateResource_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class DestroyResource_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1157,7 +1175,9 @@ class Heap final {
       DestroyResource_Impl& operator=(DestroyResource_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1722,6 +1742,7 @@ class DriverConnector final {
       Connect_Impl& operator=(Connect_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class GetProtectedMemoryInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1733,7 +1754,9 @@ class DriverConnector final {
       GetProtectedMemoryInfo_Impl& operator=(GetProtectedMemoryInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -1755,6 +1778,7 @@ class DriverConnector final {
       Connect_Impl& operator=(Connect_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class GetProtectedMemoryInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1766,7 +1790,9 @@ class DriverConnector final {
       GetProtectedMemoryInfo_Impl& operator=(GetProtectedMemoryInfo_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
 
    public:
@@ -2006,6 +2032,7 @@ class Allocator final {
       AllocateNonSharedCollection_Impl& operator=(AllocateNonSharedCollection_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class AllocateSharedCollection_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2016,6 +2043,7 @@ class Allocator final {
       AllocateSharedCollection_Impl& operator=(AllocateSharedCollection_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class BindSharedCollection_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2026,6 +2054,7 @@ class Allocator final {
       BindSharedCollection_Impl& operator=(BindSharedCollection_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -2048,6 +2077,7 @@ class Allocator final {
       AllocateNonSharedCollection_Impl& operator=(AllocateNonSharedCollection_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class AllocateSharedCollection_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2058,6 +2088,7 @@ class Allocator final {
       AllocateSharedCollection_Impl& operator=(AllocateSharedCollection_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class BindSharedCollection_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2068,6 +2099,7 @@ class Allocator final {
       BindSharedCollection_Impl& operator=(BindSharedCollection_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -3337,6 +3369,7 @@ class BufferCollectionEvents final {
       OnDuplicatedTokensKnownByServer_Impl& operator=(OnDuplicatedTokensKnownByServer_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class OnBuffersAllocated_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3347,6 +3380,7 @@ class BufferCollectionEvents final {
       OnBuffersAllocated_Impl& operator=(OnBuffersAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class OnAllocateSingleBufferDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3357,6 +3391,7 @@ class BufferCollectionEvents final {
       OnAllocateSingleBufferDone_Impl& operator=(OnAllocateSingleBufferDone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -3379,6 +3414,7 @@ class BufferCollectionEvents final {
       OnDuplicatedTokensKnownByServer_Impl& operator=(OnDuplicatedTokensKnownByServer_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class OnBuffersAllocated_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3389,6 +3425,7 @@ class BufferCollectionEvents final {
       OnBuffersAllocated_Impl& operator=(OnBuffersAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class OnAllocateSingleBufferDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3399,6 +3436,7 @@ class BufferCollectionEvents final {
       OnAllocateSingleBufferDone_Impl& operator=(OnAllocateSingleBufferDone_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -4244,6 +4282,7 @@ class BufferCollection final {
       SetEventSink_Impl& operator=(SetEventSink_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4255,7 +4294,9 @@ class BufferCollection final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class SetConstraints_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4266,6 +4307,7 @@ class BufferCollection final {
       SetConstraints_Impl& operator=(SetConstraints_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class WaitForBuffersAllocated_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4277,7 +4319,9 @@ class BufferCollection final {
       WaitForBuffersAllocated_Impl& operator=(WaitForBuffersAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class CheckBuffersAllocated_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4289,7 +4333,9 @@ class BufferCollection final {
       CheckBuffersAllocated_Impl& operator=(CheckBuffersAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CloseSingleBuffer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4300,6 +4346,7 @@ class BufferCollection final {
       CloseSingleBuffer_Impl& operator=(CloseSingleBuffer_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class AllocateSingleBuffer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4310,6 +4357,7 @@ class BufferCollection final {
       AllocateSingleBuffer_Impl& operator=(AllocateSingleBuffer_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class WaitForSingleBufferAllocated_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4321,7 +4369,9 @@ class BufferCollection final {
       WaitForSingleBufferAllocated_Impl& operator=(WaitForSingleBufferAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CheckSingleBufferAllocated_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4332,6 +4382,7 @@ class BufferCollection final {
       CheckSingleBufferAllocated_Impl& operator=(CheckSingleBufferAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class Close_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4342,6 +4393,7 @@ class BufferCollection final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
@@ -4371,6 +4423,7 @@ class BufferCollection final {
       SetEventSink_Impl& operator=(SetEventSink_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4382,7 +4435,9 @@ class BufferCollection final {
       Sync_Impl& operator=(Sync_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class SetConstraints_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4393,6 +4448,7 @@ class BufferCollection final {
       SetConstraints_Impl& operator=(SetConstraints_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class WaitForBuffersAllocated_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4404,7 +4460,9 @@ class BufferCollection final {
       WaitForBuffersAllocated_Impl& operator=(WaitForBuffersAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     template <typename ResponseType>
     class CheckBuffersAllocated_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4416,7 +4474,9 @@ class BufferCollection final {
       CheckBuffersAllocated_Impl& operator=(CheckBuffersAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CloseSingleBuffer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4427,6 +4487,7 @@ class BufferCollection final {
       CloseSingleBuffer_Impl& operator=(CloseSingleBuffer_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class AllocateSingleBuffer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4437,6 +4498,7 @@ class BufferCollection final {
       AllocateSingleBuffer_Impl& operator=(AllocateSingleBuffer_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     template <typename ResponseType>
     class WaitForSingleBufferAllocated_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4448,7 +4510,9 @@ class BufferCollection final {
       WaitForSingleBufferAllocated_Impl& operator=(WaitForSingleBufferAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
     };
     class CheckSingleBufferAllocated_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4459,6 +4523,7 @@ class BufferCollection final {
       CheckSingleBufferAllocated_Impl& operator=(CheckSingleBufferAllocated_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
     class Close_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4469,6 +4534,7 @@ class BufferCollection final {
       Close_Impl& operator=(Close_Impl&& other) = default;
       using Super::status;
       using Super::error;
+      using Super::ok;
     };
 
    public:
