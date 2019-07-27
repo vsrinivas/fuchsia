@@ -64,6 +64,8 @@ library("blobfs") {
       "iterator/node-populator.cc",
       "journal-entry.cc",
       "journal.cc",
+      "journal/entry-view.cc",
+      "journal/superblock.cc",
       "metrics.cc",
       "mount.cc",
       "operation.cc",

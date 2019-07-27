@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/ring-buffer.h>
-
 #include <algorithm>
 #include <utility>
 
 #include <blobfs/format.h>
+#include <blobfs/ring-buffer.h>
 #include <fbl/auto_lock.h>
 #include <fs/trace.h>
 
@@ -119,7 +118,7 @@ void RingBufferReservation::Reset() {
     buffer_->Free(*this);
   }
   buffer_ = nullptr;
-  view_ = VmoBufferView();
+  view_ = BlockBufferView();
   ZX_DEBUG_ASSERT(!Reserved());
 }
 

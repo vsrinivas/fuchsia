@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BLOBFS_VMO_BUFFER_H_
+#define BLOBFS_VMO_BUFFER_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
 
+#include <lib/fzl/owned-vmo-mapper.h>
+
 #include <utility>
 
+#include <blobfs/block-buffer.h>
 #include <blobfs/vmoid-registry.h>
-#include <lib/fzl/owned-vmo-mapper.h>
 
 namespace blobfs {
 
@@ -19,7 +22,7 @@ namespace blobfs {
 //
 // This class is movable but not copyable.
 // This class is thread-compatible.
-class VmoBuffer {
+class VmoBuffer final : public BlockBuffer {
  public:
   VmoBuffer() = default;
   VmoBuffer(const VmoBuffer&) = delete;
@@ -36,20 +39,18 @@ class VmoBuffer {
   // Should only be called on VmoBuffers which have not been initialized already.
   zx_status_t Initialize(VmoidRegistry* vmoid_registry, size_t blocks, const char* label);
 
-  // Returns the total amount of pending blocks which may be buffered.
-  size_t capacity() const { return capacity_; }
-
-  // Returns the vmoid of the underlying VmoBuffer.
-  vmoid_t vmoid() const { return vmoid_; }
-
   // Returns a const view of the underlying VMO.
   const zx::vmo& vmo() const { return mapper_.vmo(); }
 
-  // Returns data starting at block |index| in the buffer.
-  void* Data(size_t index);
+  // BlockBuffer interface:
 
-  // Returns data starting at block |index| in the buffer.
-  const void* Data(size_t index) const;
+  size_t capacity() const final { return capacity_; }
+
+  vmoid_t vmoid() const final { return vmoid_; }
+
+  void* Data(size_t index) final;
+
+  const void* Data(size_t index) const final;
 
  private:
   void Reset();
@@ -61,3 +62,5 @@ class VmoBuffer {
 };
 
 }  // namespace blobfs
+
+#endif  // BLOBFS_VMO_BUFFER_H_

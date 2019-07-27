@@ -5,9 +5,9 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
 
-#include <blobfs/format.h>
-
 #include <cstddef>
+
+#include <blobfs/format.h>
 
 // This file tests the on-disk structures of Blobfs.
 
@@ -107,6 +107,33 @@ static_assert(PADDING_LENGTH(CommitBlock, timestamp,        checksum) ==        
 static_assert(sizeof(CommitBlock) ==
               offsetof(CommitBlock, checksum) + sizeof(CommitBlock{}.checksum) + 4);
 
+// Ensure that the members don't change their offsets within the structure.
+static_assert(offsetof(JournalPrefix, magic) ==                0x0);
+static_assert(offsetof(JournalPrefix, sequence_number) ==      0x8);
+static_assert(offsetof(JournalPrefix, flags) ==                0x10);
+
+// Ensure that the padding between members doesn't change.
+static_assert(PADDING_LENGTH(JournalPrefix, magic,           sequence_number) ==  0);
+static_assert(PADDING_LENGTH(JournalPrefix, sequence_number, flags) ==            0);
+
+// Ensure that the members don't change their offsets within the structure.
+static_assert(offsetof(JournalHeaderBlock, prefix) ==          0x0);
+static_assert(offsetof(JournalHeaderBlock, payload_blocks) ==  0x20);
+static_assert(offsetof(JournalHeaderBlock, target_blocks) ==   0x28);
+static_assert(offsetof(JournalHeaderBlock, target_flags)  ==   0x1560);
+
+// Ensure that the padding between members doesn't change.
+static_assert(PADDING_LENGTH(JournalHeaderBlock, prefix,     payload_blocks)   ==  0);
+static_assert(PADDING_LENGTH(JournalHeaderBlock, payload_blocks, target_blocks) == 0);
+static_assert(PADDING_LENGTH(JournalHeaderBlock, target_blocks, target_flags) ==   0);
+
+// Ensure that the members don't change their offsets within the structure.
+static_assert(offsetof(JournalCommitBlock, prefix) ==   0x0);
+static_assert(offsetof(JournalCommitBlock, checksum) == 0x20);
+
+// Ensure that the padding between members doesn't change.
+static_assert(PADDING_LENGTH(JournalCommitBlock, prefix, checksum) == 0);
+
 
 // Ensure that the members don't change their offsets within the structure
 static_assert(offsetof(NodePrelude, flags) ==               0x0);
@@ -120,7 +147,6 @@ static_assert(PADDING_LENGTH(NodePrelude, version,      next_node) ==       0);
 // Ensure that the padding at the end of structure doesn't change
 static_assert(sizeof(NodePrelude) ==
               offsetof(NodePrelude, next_node) + sizeof(NodePrelude{}.next_node));
-
 
 // Ensure that the members don't change their offsets within the structure
 static_assert(offsetof(Inode, header) == 0x00);

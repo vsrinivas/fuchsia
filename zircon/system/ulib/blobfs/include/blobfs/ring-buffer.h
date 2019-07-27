@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BLOBFS_RING_BUFFER_H_
+#define BLOBFS_RING_BUFFER_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
 
+#include <lib/fzl/owned-vmo-mapper.h>
+
 #include <utility>
 
+#include <blobfs/block-buffer-view.h>
 #include <blobfs/operation.h>
 #include <blobfs/vmo-buffer.h>
-#include <blobfs/vmo-buffer-view.h>
 #include <fbl/mutex.h>
-#include <lib/fzl/owned-vmo-mapper.h>
 
 namespace blobfs {
 
@@ -136,7 +138,7 @@ class RingBufferReservation {
   zx_status_t CopyRequests(const fbl::Vector<UnbufferedOperation>& requests, size_t offset,
                            fbl::Vector<BufferedOperation>* out);
 
-  VmoBufferView buffer_view() { return view_; }
+  BlockBufferView buffer_view() { return view_; }
 
   // The first reservation block, relative to the start of |RingBuffer|.
   size_t start() const { return view_.start(); }
@@ -165,7 +167,7 @@ class RingBufferReservation {
 
  private:
   internal::RingBufferState* buffer_ = nullptr;
-  VmoBufferView view_;
+  BlockBufferView view_;
 };
 
 // In-memory circular buffer.
@@ -227,3 +229,5 @@ class RingBufferRequests {
 };
 
 }  // namespace blobfs
+
+#endif  // BLOBFS_RING_BUFFER_H_

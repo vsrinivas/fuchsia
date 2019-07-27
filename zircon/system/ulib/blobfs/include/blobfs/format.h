@@ -4,20 +4,21 @@
 
 // This file describes the on-disk structure of Blobfs.
 
-#pragma once
+#ifndef BLOBFS_FORMAT_H_
+#define BLOBFS_FORMAT_H_
+
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <zircon/types.h>
+
+#include <algorithm>
+#include <limits>
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
-#include <zircon/types.h>
-
-#include <assert.h>
-#include <limits>
-#include <stdbool.h>
-#include <stdint.h>
-
-#include <algorithm>
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
@@ -52,7 +53,9 @@ constexpr size_t kFVMDataStart      = 0x40000;
 // Number of metadata blocks allocated for the whole journal: 1 info block.
 constexpr uint32_t kJournalMetadataBlocks = 1;
 // Number of metadata blocks allocated for each entry: 2 (header block, commit block).
-constexpr uint32_t kEntryMetadataBlocks = 2;
+constexpr uint32_t kJournalEntryHeaderBlocks = 1;
+constexpr uint32_t kJournalEntryCommitBlocks = 1;
+constexpr uint32_t kEntryMetadataBlocks = kJournalEntryHeaderBlocks + kJournalEntryCommitBlocks;
 // Maximum number of data blocks possible for a single entry:
 // - Blobfs Superblock
 // - Inode Table Blocks
@@ -113,16 +116,17 @@ struct Superblock {
 
 static_assert(sizeof(Superblock) == kBlobfsBlockSize, "Invalid blobfs superblock size");
 
-// TODO(ZX-2729): Use counter instead of timestamp (for journal info block and entries).
 struct JournalInfo {
     uint64_t magic;
-    uint64_t start_block; // Block at which the first journal entry starts.
-    uint64_t num_blocks; // Number of valid blocks currently contained in the journal.
-    uint64_t timestamp; // Timestamp (in ticks) at which the info block was last written.
+    uint64_t start_block; // Block of first journal entry (relative to entries start).
+    uint64_t num_blocks; // TODO(smklein): This will become unused with the new implementation.
+    uint64_t timestamp; // Timestamp at which the info block was last written.
     uint32_t checksum; // crc32 checksum of the preceding contents of the info block.
 };
 
 static_assert(sizeof(JournalInfo) <= kBlobfsBlockSize, "Journal info size is too large");
+
+// Journal V1 Structures:
 
 struct HeaderBlock {
     uint64_t magic;
@@ -142,6 +146,79 @@ struct CommitBlock {
 
 static_assert(sizeof(CommitBlock) <= kBlobfsBlockSize, "CommitBlock size is too large");
 
+// End Journal V1 Structures.
+
+// Journal V2 Structures:
+
+constexpr uint64_t kJournalEntryMagic = 0x696d616a75726e6cULL;
+
+constexpr uint64_t kJournalPrefixFlagHeader = 1;
+constexpr uint64_t kJournalPrefixFlagCommit = 2;
+constexpr uint64_t kJournalPrefixFlagRevocation = 3;
+constexpr uint64_t kJournalPrefixFlagMask = 0xF;
+
+enum class JournalObjectType {
+    kUnknown = 0,
+    kHeader,
+    kCommit,
+    kRevocation,
+};
+
+// The prefix structure on both header blocks and commit blocks.
+struct JournalPrefix {
+    JournalObjectType ObjectType() const {
+        switch (flags & kJournalPrefixFlagMask) {
+        case kJournalPrefixFlagHeader:
+            return JournalObjectType::kHeader;
+        case kJournalPrefixFlagCommit:
+            return JournalObjectType::kCommit;
+        case kJournalPrefixFlagRevocation:
+            return JournalObjectType::kRevocation;
+        default:
+            return JournalObjectType::kUnknown;
+        }
+    }
+
+    // Must be |kJournalMagic|.
+    uint64_t magic;
+    // A monotonically increasing value. This entry will only be replayed if the JournalInfo
+    // block contains a sequence number less than or equal to this value.
+    uint64_t sequence_number;
+    // Identifies the type of this journal object. See |GetJournalObjectType()|.
+    uint64_t flags;
+    uint64_t reserved;
+};
+
+// The maximum number of blocks which fit within a |JournalHeaderBlock|.
+constexpr uint32_t kMaxBlockDescriptors = 679;
+
+// Flags for JournalHeaderBlock.target_flags:
+
+// Identifies that the journaled block begins with |kJournalEntryMagic|, which are replaced
+// with zeros to avoid confusing replay logic.
+constexpr uint32_t kJournalBlockDescriptorFlagEscapedBlock = 1;
+
+struct JournalHeaderBlock {
+    JournalPrefix prefix;
+    // The number of blocks between this header and the following commit block.
+    // [0, payload_blocks) are valid indices for |target_blocks| and |target_flags|.
+    uint64_t payload_blocks;
+    // The final location of the blocks within the payload.
+    uint64_t target_blocks[kMaxBlockDescriptors];
+    // Flags about each block within the payload.
+    uint32_t target_flags[kMaxBlockDescriptors];
+    uint32_t reserved;
+};
+static_assert(sizeof(JournalHeaderBlock) == kBlobfsBlockSize, "Invalid Header Block size");
+
+struct JournalCommitBlock {
+    JournalPrefix prefix;
+    // CRC32 checksum of all prior blocks (not including commit block itself).
+    uint32_t checksum;
+};
+static_assert(sizeof(JournalCommitBlock) <= kBlobfsBlockSize, "Commit Block is too large");
+
+// End Journal V2 Structures.
 
 constexpr uint64_t SuperblockBlocks(const Superblock& info) {
     return kBlobfsSuperblockBlocks;
@@ -344,3 +421,5 @@ constexpr uint64_t BlobDataBlocks(const Inode& blobNode) {
 }
 
 } // namespace blobfs
+
+#endif  // BLOBFS_FORMAT_H_
