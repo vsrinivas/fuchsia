@@ -11,7 +11,6 @@ set -eo pipefail
 SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ZIRCON_DIR="${SCRIPTS_DIR}/.."
 
-USE_AVB=
 BOARD=
 BUILD_DIR=
 CMDLINE=
@@ -31,7 +30,6 @@ RAMDISK_TYPE="dummy"
 
 function HELP {
     echo "help:"
-    echo "-a                                : use AVB to sign image"
     echo "-b <board>                        : board name"
     echo "-B <build-dir>                    : path to zircon build directory"
     echo "-c <cmd line>                     : Extra command line options for the ZBI"
@@ -57,7 +55,6 @@ BOOT_PARTITION_SIZE=33554432
 
 while getopts "ab:B:c:C::d:D:ghK:lmM:o:r:v:z:" FLAG; do
     case $FLAG in
-        a) USE_AVB=true;;
         b) BOARD="${OPTARG}";;
         B) BUILD_DIR="${OPTARG}";;
         c) CMDLINE+="${OPTARG}";;
@@ -112,12 +109,6 @@ MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
 MKKDTB="${BUILD_DIR}/tools/mkkdtb"
 ZBI="${BUILD_DIR}/tools/zbi"
 
-# AVB support
-AVB_DIR="${ZIRCON_DIR}/third_party/tools/android/avb"
-AVBTOOL="${AVB_DIR}/avbtool"
-AVB_KEY="${AVB_DIR}/test/data/testkey_atx_psk.pem"
-AVB_PUBLIC_KEY_METADATA="${AVB_DIR}/test/data/atx_metadata.bin"
-
 # zircon image built by the Zircon build system
 if [[ -z "${ZIRCON_BOOTIMAGE}" ]]; then
     ZIRCON_BOOTIMAGE="${BUILD_DIR}/arm64.zbi"
@@ -132,11 +123,6 @@ SHIMMED_ZIRCON_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.shim"
 # Final packaged Android style boot.img
 if [[ -z "${BOOT_IMG}" ]]; then
     BOOT_IMG="${BUILD_DIR}/${BOARD}-boot.img"
-fi
-
-# AVB vbmeta.img
-if [[ -z "${VBMETA_IMG}" ]]; then
-    VBMETA_IMG="${BUILD_DIR}/${BOARD}-vbmeta.img"
 fi
 
 # PACKAGING STEPS BEGIN HERE
@@ -206,17 +192,3 @@ fi
     --cmdline "${MKBOOTIMG_CMDLINE}" \
     ${MKBOOTIMG_ARGS} \
     -o "${BOOT_IMG}"
-
-# optionally sign with AVB tools
-if [[ ${USE_AVB} == true ]]; then
-    "${AVBTOOL}" add_hash_footer \
-        --image "${BOOT_IMG}" \
-        --partition_size ${BOOT_PARTITION_SIZE} \
-        --partition_name boot
-
-    "${AVBTOOL}" make_vbmeta_image \
-        --include_descriptors_from_image "${BOOT_IMG}" \
-        --algorithm SHA512_RSA4096 --key "${AVB_KEY}" \
-        --public_key_metadata "${AVB_PUBLIC_KEY_METADATA}" \
-        --padding_size 4096 --output "${VBMETA_IMG}"
-fi
