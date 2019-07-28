@@ -31,6 +31,7 @@ mod macros;
 
 #[cfg(test)]
 mod benchmarks;
+mod context;
 mod data_structures;
 mod device;
 mod error;
