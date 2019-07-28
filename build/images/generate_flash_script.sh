@@ -65,7 +65,7 @@ case $i in
 esac
 done
 
-VBMETA_IMAGE="${ZIRCON_IMAGE}.vbmeta"
+VBMETA_IMAGE="${ZIRCON_IMAGE%.*}.vbmeta"
 
 if [[ "${SIGNED_IMAGE}" == "true" ]]; then
   ZIRCON_IMAGE="${ZIRCON_IMAGE}.signed"
