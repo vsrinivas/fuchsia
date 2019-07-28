@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":host_perfcompare_test($host_toolchain)",
+  ]
+}
+
+go_library("host_perfcompare_test_lib") {
+  name = "perfcompare"
+}
+
+# Wrapper for running the Python unit tests in perfcompare_test.py.
+go_test("host_perfcompare_test") {
+  gopackage = "perfcompare"
+  deps = [
+    ":host_perfcompare_test_lib",
+  ]
+}
