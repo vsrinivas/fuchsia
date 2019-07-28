@@ -14,7 +14,6 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fvm.sh || exit $?
-source "${FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh"
 
 for arg in "$@"; do
   if [[ "$arg" = "-h" || "$arg" = "--help" ]]; then

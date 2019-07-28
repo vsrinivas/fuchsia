@@ -6,7 +6,6 @@
 ### start fuchsia in qemu via netboot
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
-source "${FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh"
 
 qemu_dir="${PREBUILT_QEMU_DIR}/bin"
 
