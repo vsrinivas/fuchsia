@@ -13,7 +13,6 @@ host_tool("blobfs") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs-host",
-    "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/uboringssl",
   ]
 }

@@ -23,7 +23,6 @@ executable("blobfs") {
     "$zx/system/ulib/trace-provider:trace-provider-with-fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/uboringssl",
   ]
 }
