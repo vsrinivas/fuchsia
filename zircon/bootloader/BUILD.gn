@@ -27,8 +27,6 @@ if (current_toolchain == default_toolchain) {
 
       tags = [ "standalone" ]
       exclude_variant_tags = [
-        "instrumented",
-
         # There isn't a GCC toolchain that supports the Windows target
         # directly the way we use it.
         "gcc",
@@ -52,7 +50,7 @@ if (current_toolchain == default_toolchain) {
 
     # The compiler predefines _MSC_VER for compatibility with the Windows
     # compiler.  But then some compiler-provided headers like <stddef.h>
-    # test _MSC_VER and except some Windows API headers to exist if it's
+    # test _MSC_VER and expect some Windows API headers to exist if it's
     # set.  We use the "windows-msvc" compiler target for EFI because it's
     # right wrt calling conventions and object file format, but this EFI
     # compilation environment does not use a Windows-style API.
@@ -74,6 +72,10 @@ if (current_toolchain == default_toolchain) {
     ldflags = [
       "-Wl,/subsystem:efi_application",
       "-Wl,/entry:efi_main",
+
+      # These only really affect instrumented builds but are always harmless.
+      "-noprofilelib",
+      "-Wl,/nodefaultlib",
     ]
 
     # For the //:images build_api_module().

@@ -128,6 +128,31 @@ template("c_toolchain") {
   use_gcc = defined(invoker.gcc) && invoker.gcc
   use_strip = defined(invoker.strip) && invoker.strip != false
 
+  # These are used in some, but not all, of the if branches below.
+  if (clang_tool_dir == "") {
+    clangxx_exec_inputs = []
+    clangxx_exec_command = "clang++"
+  } else {
+    clangxx_exec_inputs = [ "${clang_tool_dir}/clang++" ]
+    clangxx_exec_command = rebase_path(clangxx_exec_inputs[0], root_build_dir)
+  }
+  clangxx_args = [
+    clangxx_exec_command,
+    "--target=$tc_target",
+
+    # This affects the multilib selection so that we get the right
+    # libc++.a binary.  It's not really proper that we have to encode here
+    # the multilib-affecting switches we presume all configs actually will
+    # use in the toolchain being defined.  But since everything in this
+    # codebase (certainly everything we support being compiled by GCC) is
+    # definitely compiled with -fno-exceptions, we can live with it.  An
+    # alternative would be to add the lib_dirs in a config() instead and
+    # then somehow tie it to exceptions vs no-exceptions configs, but we
+    # have no present need for any such complexity.
+    "-fno-exceptions",
+  ]
+  not_needed([ "clangxx_args" ])
+
   # If either $tool_dir or $tool_prefix is supplied then both must be supplied.
   if (defined(invoker.tool_dir) || defined(invoker.tool_prefix)) {
     tc = {
@@ -145,30 +170,6 @@ template("c_toolchain") {
         }
       }
     } else {
-      if (clang_tool_dir == "") {
-        clangxx_exec_inputs = []
-        clangxx_exec_command = "clang++"
-      } else {
-        clangxx_exec_inputs = [ "${clang_tool_dir}/clang++" ]
-        clangxx_exec_command =
-            rebase_path(clangxx_exec_inputs[0], root_build_dir)
-      }
-      clangxx_args = [
-        clangxx_exec_command,
-        "--target=$tc_target",
-
-        # This affects the multilib selection so that we get the right
-        # libc++.a binary.  It's not really proper that we have to encode here
-        # the multilib-affecting switches we presume all configs actually will
-        # use in the toolchain being defined.  But since everything in this
-        # codebase (certainly everything we support being compiled by GCC) is
-        # definitely compiled with -fno-exceptions, we can live with it.  An
-        # alternative would be to add the lib_dirs in a config() instead and
-        # then somehow tie it to exceptions vs no-exceptions configs, but we
-        # have no present need for any such complexity.
-        "-fno-exceptions",
-      ]
-
       tc = {
         tool_dir = gcc_tool_dir
         tool_prefix = "${tc_cpu}-elf-"
@@ -197,6 +198,19 @@ template("c_toolchain") {
       tool_dir = clang_tool_dir
       tool_prefix = "llvm-"
       version_string = clang_version_string
+
+      # TODO(TC-605): The MSVC target in the clang driver never uses the
+      # -stdlib=libc++ switch or the toolchain's own libc++ include path.
+      if (invoker.os == "win") {
+        include_dirs = [ rebase_path(
+                exec_script(
+                    "/usr/bin/env",
+                    clangxx_args + [ "-print-file-name=include/c++/v1" ],
+                    "trim string",
+                    clangxx_exec_inputs),
+                "",
+                root_build_dir) ]
+      }
     }
   }
 

@@ -19,5 +19,8 @@ source_set("lib") {
   ]
   deps = [
     "$zx/kernel/lib/efi",
+
+    # This only actually adds anything to the profile build.
+    "$zx/kernel/lib/instrumentation:profile",
   ]
 }
