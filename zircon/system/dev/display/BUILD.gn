@@ -12,7 +12,6 @@ group("display") {
     "dummy",
     "goldfish-display",
     "hikey-display",
-    "led2472g",
     "mt8167s-display",
     "simple",
     "ssd1306",
