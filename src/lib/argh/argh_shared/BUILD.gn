@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("argh_shared") {
+  visibility = [
+    "//src/lib/argh/argh_derive",
+    "//src/lib/argh/argh",
+  ]
+  if (current_os == host_os) {
+    name = "argh_shared_for_host"
+  }
+  edition = "2018"
+  deps = []
+}
