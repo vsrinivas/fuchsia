@@ -17,3 +17,5 @@ toc:
   path: /fuchsia-src/best-practices/documentation_style_guide
 - title: "Fuchsia Flake Policy"
   path: /fuchsia-src/best-practices/test_flake_policy
+- title: "Respectful Code Policy"
+  path: /fuchsia-src/best-practices/respectful_code
