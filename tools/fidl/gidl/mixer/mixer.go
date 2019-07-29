@@ -16,15 +16,25 @@ import (
 // ExtractDeclaration extract the top-level declaration for the provided value,
 // and ensures the value conforms to the schema.
 func ExtractDeclaration(value interface{}, fidl fidlir.Root) (Declaration, error) {
+	decl, err := ExtractDeclarationUnsafe(value, fidl)
+	if err != nil {
+		return nil, err
+	}
+	if err := decl.conforms(value); err != nil {
+		return nil, err
+	}
+	return decl, nil
+}
+
+// ExtractDeclarationUnsafe extract the top-level declaration for the provided value,
+// but does not ensure the value conforms to the schema. This is used in cases where
+// conformance is too strict (e.g. failure cases).
+func ExtractDeclarationUnsafe(value interface{}, fidl fidlir.Root) (Declaration, error) {
 	switch value := value.(type) {
 	case gidlir.Object:
 		decl, ok := schema(fidl).LookupDeclByName(value.Name)
 		if !ok {
 			return nil, fmt.Errorf("unknown declaration %s", value.Name)
-		}
-		err := decl.conforms(value)
-		if err != nil {
-			return nil, err
 		}
 		return decl, nil
 	default:

@@ -20,38 +20,89 @@ var tmpl = template.Must(template.New("tmpls").Parse(`
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:fidl/fidl.dart' as fidl;
 
 import 'conformance_test_types.dart';
 import 'gidl.dart';
 
 void main() {
 	group('conformance', () {
-{{ range .SuccessCases }}
-SuccessCase.run(
-	{{.Name}},
-	{{.Value}},
-	{{.ValueType}},
-	{{.Bytes}});
-{{ end }}
+		group('success cases', () {
+	{{ range .SuccessCases }}
+	SuccessCase.run(
+		{{.Name}},
+		{{.Value}},
+		{{.ValueType}},
+		{{.Bytes}});
+	{{ end }}
+		});
+
+		group('encode failure cases', () {
+	{{ range .EncodeFailureCases }}
+	EncodeFailureCase.run(
+		{{.Name}},
+		{{.Value}},
+		{{.ValueType}},
+		{{.ErrorCode}});
+	{{ end }}
+		});
+
+		group('decode failure cases', () {
+	{{ range .DecodeFailureCases }}
+	DecodeFailureCase.run(
+		{{.Name}},
+		{{.ValueType}},
+		{{.Bytes}},
+		{{.ErrorCode}});
+	{{ end }}
+		});
 	});
+
+
 }
 `))
 
 type tmplInput struct {
-	SuccessCases []successCase
+	SuccessCases       []successCase
+	EncodeFailureCases []encodeFailureCase
+	DecodeFailureCases []decodeFailureCase
 }
 
 type successCase struct {
 	Name, Value, ValueType, Bytes string
 }
 
+type encodeFailureCase struct {
+	Name, Value, ValueType, ErrorCode string
+}
+
+type decodeFailureCase struct {
+	Name, ValueType, Bytes, ErrorCode string
+}
+
 // Generate generates dart tests.
 func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
-	var successCases []successCase
-	for _, success := range gidl.Success {
+	successCases, err := successCases(gidl.Success, fidl)
+	if err != nil {
+		return err
+	}
+	encodeFailureCases, err := encodeFailureCases(gidl.FailsToEncode, fidl)
+	if err != nil {
+		return err
+	}
+	decodeFailureCases := decodeFailureCases(gidl.FailsToDecode)
+	return tmpl.Execute(wr, tmplInput{
+		SuccessCases:       successCases,
+		EncodeFailureCases: encodeFailureCases,
+		DecodeFailureCases: decodeFailureCases,
+	})
+}
+
+func successCases(gidlSuccesses []gidlir.Success, fidl fidlir.Root) (successCases []successCase, err error) {
+	for _, success := range gidlSuccesses {
 		decl, err := gidlmixer.ExtractDeclaration(success.Value, fidl)
 		if err != nil {
-			return fmt.Errorf("success %s: %s", success.Name, err)
+			return nil, fmt.Errorf("success %s: %s", success.Name, err)
 		}
 		valueStr := visit(success.Value, decl)
 		successCases = append(successCases, successCase{
@@ -61,13 +112,50 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 			Bytes:     bytesBuilder(success.Bytes),
 		})
 	}
-	return tmpl.Execute(wr, tmplInput{SuccessCases: successCases})
+	return
+}
+
+func encodeFailureCases(gidlEncodeFailures []gidlir.FailsToEncode, fidl fidlir.Root) (encodeFailureCases []encodeFailureCase, err error) {
+	for _, encodeFailure := range gidlEncodeFailures {
+		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
+		if err != nil {
+			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
+		}
+		valueStr := visit(encodeFailure.Value, decl)
+		encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
+			Name:      singleQuote(encodeFailure.Name),
+			Value:     valueStr,
+			ValueType: typeName(decl.(*gidlmixer.StructDecl)),
+			ErrorCode: dartErrorCode(encodeFailure.Err),
+		})
+	}
+	return
+}
+
+func decodeFailureCases(gidlDecodeFailures []gidlir.FailsToDecode) (decodeFailureCases []decodeFailureCase) {
+	for _, decodeFailure := range gidlDecodeFailures {
+		decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
+			Name:      singleQuote(decodeFailure.Name),
+			ValueType: dartTypeName(decodeFailure.Type),
+			Bytes:     bytesBuilder(decodeFailure.Bytes),
+			ErrorCode: dartErrorCode(decodeFailure.Err),
+		})
+	}
+	return
 }
 
 func typeName(decl *gidlmixer.StructDecl) string {
 	parts := strings.Split(string(decl.Name), "/")
 	lastPart := parts[len(parts)-1]
-	return fmt.Sprintf("k%s_Type", lastPart)
+	return dartTypeName(lastPart)
+}
+
+func dartTypeName(inputType string) string {
+	return fmt.Sprintf("k%s_Type", inputType)
+}
+
+func dartErrorCode(code string) string {
+	return fmt.Sprintf("fidl.FidlErrorCode.%s", snakeCaseToLowerCamelCase(code))
 }
 
 func bytesBuilder(bytes []byte) string {
@@ -134,9 +222,16 @@ func snakeCaseToLowerCamelCase(snakeString string) string {
 	parts := strings.Split(snakeString, "_")
 	parts[0] = strings.ToLower(parts[0])
 	for i := 1; i < len(parts); i++ {
-		parts[i] = strings.Title(parts[i])
+		parts[i] = upperFirstRune(strings.ToLower(parts[i]))
 	}
 	return strings.Join(parts, "")
+}
+
+func upperFirstRune(s string) string {
+	for _, r := range s {
+		return strings.ToUpper(string(r)) + s[len(string(r)):]
+	}
+	return ""
 }
 
 func singleQuote(s string) string {

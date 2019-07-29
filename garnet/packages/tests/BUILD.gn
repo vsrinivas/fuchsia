@@ -602,6 +602,7 @@ group("fidl") {
     "//sdk/lib/fidl/cpp:fidl_cpp_host_conformance_test($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_cpp_host_unittests($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_tests",
+    "//tools/fidl/gidl:gidl_dart_test($host_toolchain)",
     "//tools/fidl/gidl:gidl_parser_test($host_toolchain)",
   ]
 }

@@ -39,3 +39,11 @@ go_test("gidl_parser_test") {
     ":lib",
   ]
 }
+
+go_test("gidl_dart_test") {
+  gopackage = "gidl/dart"
+
+  deps = [
+    ":lib",
+  ]
+}
