@@ -713,6 +713,10 @@ impl EventDispatcher for EventLoopInner {
         self.timers.cancel_timer(&id)
     }
 
+    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+        self.timers.cancel_timers_with(f);
+    }
+
     type Rng = OsRng;
 
     fn rng(&mut self) -> &mut OsRng {

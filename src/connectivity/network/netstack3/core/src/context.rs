@@ -102,6 +102,12 @@ pub(crate) trait TimerContext<Id>: InstantContext {
     /// If a timer with the given ID exists, it is canceled and the instant at
     /// which it was scheduled to fire is returned.
     fn cancel_timer(&mut self, id: &Id) -> Option<Self::Instant>;
+
+    /// Cancel all timers which satisfy a predicate.
+    ///
+    /// `cancel_timers_with` calls `f` on each scheduled timer, and cancels any
+    /// timer for which `f` returns true.
+    fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, f: F);
 }
 
 /// A handler for timer firing events.
@@ -365,6 +371,10 @@ pub(crate) mod testutil {
                 .into();
             r
         }
+
+        fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, mut f: F) {
+            self.timers = self.timers.drain().filter(|t| f(&t.1)).collect::<Vec<_>>().into();
+        }
     }
 
     pub(crate) trait DummyTimerContextExt<Id>: AsMut<DummyTimerContext<Id>> + Sized {
@@ -426,6 +436,10 @@ pub(crate) mod testutil {
 
         fn cancel_timer(&mut self, id: &Id) -> Option<DummyInstant> {
             self.as_mut().cancel_timer(id)
+        }
+
+        fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, f: F) {
+            self.as_mut().cancel_timers_with(f);
         }
     }
 

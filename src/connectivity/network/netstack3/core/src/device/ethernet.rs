@@ -21,7 +21,7 @@ use crate::device::ndp::{self, NdpState};
 use crate::device::{DeviceId, DeviceLayerTimerId, FrameDestination, Tentative};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
-use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId};
+use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
@@ -539,6 +539,13 @@ impl<D: EventDispatcher> TimerContext<ArpTimerId<usize, Ipv4Addr>> for Context<D
 
     fn cancel_timer(&mut self, id: &ArpTimerId<usize, Ipv4Addr>) -> Option<D::Instant> {
         self.dispatcher_mut().cancel_timeout(TimerId::from(DeviceLayerTimerId::from(id.clone())))
+    }
+
+    fn cancel_timers_with<F: FnMut(&ArpTimerId<usize, Ipv4Addr>) -> bool>(&mut self, mut f: F) {
+        self.dispatcher_mut().cancel_timeouts_with(|id| match id {
+            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(id))) => f(id),
+            _ => false,
+        })
     }
 }
 

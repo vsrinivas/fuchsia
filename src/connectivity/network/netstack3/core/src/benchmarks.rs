@@ -78,6 +78,10 @@ impl EventDispatcher for BenchmarkEventDispatcher {
         None
     }
 
+    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+        unimplemented!()
+    }
+
     type Rng = FakeCryptoRng<XorShiftRng>;
 
     fn rng(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {

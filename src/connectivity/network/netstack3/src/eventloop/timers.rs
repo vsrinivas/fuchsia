@@ -139,6 +139,20 @@ where
         }
     }
 
+    /// Cancels all timers with given filter.
+    ///
+    /// `f` will be called sequentially for all the currently scheduled timers.
+    /// If `f(id)` returns `true`, the timer with `id` will be cancelled.
+    pub(super) fn cancel_timers_with<F: FnMut(&T) -> bool>(&mut self, mut f: F) {
+        self.timers.retain(|id, info| {
+            let discard = f(&id);
+            if discard {
+                info.abort_handle.abort();
+            }
+            !discard
+        });
+    }
+
     /// Retrieves the internal timer value of a [`TimerEvent`].
     ///
     /// `commit_timer` will "commit" `event` for consumption, if `event` is
@@ -266,6 +280,28 @@ mod tests {
         assert_eq!(d.commit_timer(t.0).unwrap(), 1);
 
         // ... and timer 2:
+        let t = await!(rcv.next()).unwrap();
+        assert_eq!(t.0.inner, 2);
+        assert_eq!(d.commit_timer(t.0).unwrap(), 2);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cancel_with() {
+        let (snd, mut rcv) = mpsc::unbounded();
+        let mut d = TimerDispatcher::<usize, OuterEvent>::new(snd);
+
+        // schedule 4 timers:
+        assert!(d.schedule_timer(1, nanos_from_now(1)).is_none());
+        assert!(d.schedule_timer(2, nanos_from_now(2)).is_none());
+        assert!(d.schedule_timer(3, nanos_from_now(3)).is_none());
+        assert!(d.schedule_timer(4, nanos_from_now(4)).is_none());
+
+        // cancel timers 1, 3, and 4.
+        d.cancel_timers_with(|id| *id != 2);
+        // check that only one timer remains
+        assert_eq!(d.timers.len(), 1);
+
+        // get the timer and assert that it is the timer with id == 2.
         let t = await!(rcv.next()).unwrap();
         assert_eq!(t.0.inner, 2);
         assert_eq!(d.commit_timer(t.0).unwrap(), 2);

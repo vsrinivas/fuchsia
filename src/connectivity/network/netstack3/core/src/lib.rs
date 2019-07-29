@@ -357,6 +357,12 @@ pub trait EventDispatcher:
     /// for the given ID.
     fn cancel_timeout(&mut self, id: TimerId) -> Option<Self::Instant>;
 
+    /// Cancel all timeouts which satisfy a predicate.
+    ///
+    /// `cancel_timeouts_with` calls `f` on each scheduled timer, and cancels
+    /// any timeout for which `f` returns true.
+    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F);
+
     // TODO(joshlf): If the CSPRNG requirement becomes a performance problem,
     // introduce a second, non-cryptographically secure, RNG.
 
