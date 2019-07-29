@@ -91,6 +91,11 @@ class Stats(object):
     def FormatConfidenceInterval(self):
         return '%d +/- %d' % (self._mean, self._offset)
 
+    # Returns the relative CI width, which is the width of the confidence
+    # interval divided by the mean.
+    def RelativeConfidenceIntervalWidth(self):
+        return self._offset * 2 / self._mean
+
 
 def ReadJsonFile(filename):
     with open(filename, 'r') as fh:
@@ -298,9 +303,16 @@ def ValidatePerfCompare(args, out_fh):
         out_fh.write('%f %s\n' % (mismatch_rate, label))
         mismatch_rates.append(mismatch_rate)
 
+    mean_relative_ci_width = Mean([
+        stats.RelativeConfidenceIntervalWidth()
+        for results_map in results_maps
+        for stats in results_map.itervalues()])
+
     out_fh.write('\n')
     mean_val = Mean(mismatch_rates)
     out_fh.write('Mean mismatch rate: %f\n' % mean_val)
+    out_fh.write('Mean relative confidence interval width: %f\n'
+                 % mean_relative_ci_width)
     out_fh.write('Number of test cases: %d\n' % len(mismatch_rates))
     out_fh.write('Number of result sets: %d groups of %d boots each'
                  ' (ignoring %d leftover boots)\n'

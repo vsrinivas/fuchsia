@@ -142,6 +142,7 @@ Rate of mismatches (non-intersections) of confidence intervals for each test:
 0.000000 SecondExample
 
 Mean mismatch rate: 0.256410
+Mean relative confidence interval width: 0.432586
 Number of test cases: 2
 Number of result sets: 40 groups of 5 boots each (ignoring 0 leftover boots)
 Expected number of test cases with mismatches: 0.512821
