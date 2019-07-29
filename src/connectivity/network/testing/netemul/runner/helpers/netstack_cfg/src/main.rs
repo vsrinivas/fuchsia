@@ -7,6 +7,7 @@
 use {
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_net,
+    fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
     fuchsia_async as fasync,
@@ -26,6 +27,9 @@ struct Opt {
     #[structopt(short = "i")]
     /// Static ip address to assign (don't forget /prefix termination). Omit to use DHCP.
     ip: Option<String>,
+    #[structopt(short = "g")]
+    /// Ip address of the default gateway (useful when DHCP is not used).
+    gateway: Option<String>,
     #[structopt(long = "skip-up-check")]
     /// netstack_cfg will by default wait until it sees the interface be reported as "Up",
     /// skip-up-check will override that behavior.
@@ -100,6 +104,33 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     };
 
     fx_log_info!("Configured nic address.");
+
+    if let Some(gateway) = opt.gateway {
+        let gw_addr: fidl_fuchsia_net::IpAddress = fidl_fuchsia_net_ext::IpAddress(
+            gateway.parse::<std::net::IpAddr>().context("failed to parse gateway address")?,
+        )
+        .into();
+        let unspec_addr: fidl_fuchsia_net::IpAddress = match gw_addr {
+            fidl_fuchsia_net::IpAddress::Ipv4(..) => fidl_fuchsia_net_ext::IpAddress(
+                std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED),
+            ),
+            fidl_fuchsia_net::IpAddress::Ipv6(..) => fidl_fuchsia_net_ext::IpAddress(
+                std::net::IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED),
+            ),
+        }
+        .into();
+
+        let stack = client::connect_to_service::<StackMarker>()?;
+        let error =
+            await!(stack.add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                subnet: fidl_fuchsia_net::Subnet { addr: unspec_addr, prefix_len: 0 },
+                destination: fidl_fuchsia_net_stack::ForwardingDestination::NextHop(gw_addr),
+            }))
+            .context("failed to call add_forward_entry for gateway")?;
+        assert_eq!(error.as_ref(), None);
+
+        fx_log_info!("Configured the default route with gateway address.");
+    }
 
     fx_log_info!("Waiting for interface up...");
     let (if_id, hwaddr) = await!(if_changed.try_next())

@@ -8,6 +8,7 @@
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.net.SocketProvider",
+            "fuchsia.net.stack.Stack",
             "fuchsia.netemul.sync.SyncManager"
         ]
     }

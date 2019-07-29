@@ -13,7 +13,9 @@
                                     "-e",
                                     "client-ep",
                                     "-i",
-                                    "192.168.0.2/24"
+                                    "192.168.0.2/24",
+                                    "-g",
+                                    "192.168.0.1"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
                             }
@@ -21,7 +23,9 @@
                         "test": [
                             {
                                 "arguments": [
-                                    "-c"
+                                    "-c",
+                                    "-g",
+                                    "192.168.0.1"
                                 ]
                             }
                         ]
@@ -30,6 +34,7 @@
                 "name": "server",
                 "services": {
                     "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
                 },

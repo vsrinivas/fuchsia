@@ -9,6 +9,8 @@ rustc_binary("easy_netstack_cfg") {
   name = "easy_netstack_cfg"
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/fidl_fuchsia_net_ext",
+    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -18,5 +20,7 @@ rustc_binary("easy_netstack_cfg") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:structopt",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }

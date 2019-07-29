@@ -23,5 +23,6 @@ rustc_binary("netstack_cfg") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:structopt",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
