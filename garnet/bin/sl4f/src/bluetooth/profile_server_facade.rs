@@ -4,9 +4,9 @@
 
 use failure::Error;
 use fidl_fuchsia_bluetooth_bredr::{
-    DataElement, DataElementData, DataElementType, Information, ProfileDescriptor, ProfileEvent,
-    ProfileEventStream, ProfileMarker, ProfileProxy, ProtocolDescriptor, ProtocolIdentifier,
-    SecurityLevel, ServiceClassProfileIdentifier, ServiceDefinition,
+    Attribute, DataElement, DataElementData, DataElementType, Information, ProfileDescriptor,
+    ProfileEvent, ProfileEventStream, ProfileMarker, ProfileProxy, ProtocolDescriptor,
+    ProtocolIdentifier, SecurityLevel, ServiceClassProfileIdentifier, ServiceDefinition,
 };
 use fuchsia_async as fasync;
 use fuchsia_component as component;
@@ -156,17 +156,21 @@ impl ProfileServerFacade {
                 },
                 None => fx_err_and_bail!(&with_line!(tag), "Value 'protocol' not found."),
             };
-            let raw_params = match raw_protocol_descriptor["params"].as_array() {
-                Some(p) => p,
-                None => fx_err_and_bail!(&with_line!(tag), "Value 'params' not found."),
+
+            let raw_params = if let Some(p) = raw_protocol_descriptor["params"].as_array() {
+                p
+            } else {
+                fx_err_and_bail!(&with_line!(tag), "Value 'params' not found or invalid type.")
             };
 
             let mut params = Vec::new();
             for param in raw_params {
-                let data = match param["data"].as_u64() {
-                    Some(d) => d as i64,
-                    None => fx_err_and_bail!(&with_line!(tag), "Value 'data' not found."),
+                let data = if let Some(d) = param["data"].as_u64() {
+                    d as i64
+                } else {
+                    fx_err_and_bail!(&with_line!(tag), "Value 'data' not found or invalid type.")
                 };
+
                 params.push(DataElement {
                     type_: DataElementType::UnsignedInteger,
                     size: 2,
@@ -203,39 +207,36 @@ impl ProfileServerFacade {
         let tag = "ProfileServerFacade::generate_profile_descriptors";
         let mut profile_descriptor_list = Vec::new();
         for raw_profile_descriptor in profile_descriptors.into_iter() {
-            let raw_profile_id = match raw_profile_descriptor.get("profile_id") {
-                Some(r) => r,
-                None => {
-                    let log_err = "Invalid SDP search input. Missing 'profile_id'";
-                    fx_err_and_bail!(&with_line!(tag), log_err)
+            let profile_id = if let Some(r) = raw_profile_descriptor.get("profile_id") {
+                match self.get_service_class_profile_identifier_from_id(r) {
+                    Ok(id) => id,
+                    Err(e) => fx_err_and_bail!(&with_line!(tag), e),
                 }
+            } else {
+                let log_err = "Invalid SDP search input. Missing 'profile_id'";
+                fx_err_and_bail!(&with_line!(tag), log_err)
             };
-            let profile_id = match self.get_service_class_profile_identifier_from_id(raw_profile_id)
+
+            let minor_version = if let Some(num) = raw_profile_descriptor["minor_version"].as_u64()
             {
-                Ok(r) => r,
-                Err(e) => fx_err_and_bail!(&with_line!(tag), e),
+                num as u8
+            } else {
+                let log_err = "Type of 'minor_version' incorrect or incorrect type.";
+                fx_err_and_bail!(&with_line!(tag), log_err)
             };
 
-            let minor_version = match raw_profile_descriptor["minor_version"].as_u64() {
-                Some(num) => num as u8,
-                None => {
-                    let log_err = format!("Type of 'minor_version' incorrect.");
-                    fx_err_and_bail!(&with_line!(tag), log_err)
-                }
-            };
-
-            let major_version = match raw_profile_descriptor["major_version"].as_u64() {
-                Some(num) => num as u8,
-                None => {
-                    let log_err = format!("Type of 'major_version' incorrect.");
-                    fx_err_and_bail!(&with_line!(tag), log_err)
-                }
+            let major_version = if let Some(num) = raw_profile_descriptor["major_version"].as_u64()
+            {
+                num as u8
+            } else {
+                let log_err = "Type of 'major_version' incorrect or incorrect type.";
+                fx_err_and_bail!(&with_line!(tag), log_err)
             };
 
             profile_descriptor_list.push(ProfileDescriptor {
-                profile_id: profile_id,
-                minor_version: minor_version,
-                major_version: major_version,
+                profile_id,
+                minor_version,
+                major_version,
             });
         }
         Ok(profile_descriptor_list)
@@ -259,34 +260,81 @@ impl ProfileServerFacade {
         let tag = "ProfileServerFacade::generate_information";
         let mut info_list = Vec::new();
         for raw_information in information_list {
-            let language = match raw_information["language"].as_str() {
-                Some(v) => v.to_string(),
-                None => {
-                    let log_err = format!("Type of 'language' incorrect.");
-                    fx_err_and_bail!(&with_line!(tag), log_err)
-                }
-            };
-            let name = match raw_information["name"].as_str() {
-                Some(v) => Some(v.to_string()),
-                None => None,
-            };
-            let description = match raw_information["description"].as_str() {
-                Some(v) => Some(v.to_string()),
-                None => None,
-            };
-            let provider = match raw_information["provider"].as_str() {
-                Some(v) => Some(v.to_string()),
-                None => None,
+            let language = if let Some(v) = raw_information["language"].as_str() {
+                v.to_string()
+            } else {
+                let log_err = "Type of 'language' incorrect of invalid type.";
+                fx_err_and_bail!(&with_line!(tag), log_err)
             };
 
-            info_list.push(Information {
-                language: language,
-                name: name,
-                description: description,
-                provider: provider,
-            });
+            let name = if let Some(v) = raw_information["name"].as_str() {
+                Some(v.to_string())
+            } else {
+                None
+            };
+
+            let description = if let Some(v) = raw_information["description"].as_str() {
+                Some(v.to_string())
+            } else {
+                None
+            };
+
+            let provider = if let Some(v) = raw_information["provider"].as_str() {
+                Some(v.to_string())
+            } else {
+                None
+            };
+
+            info_list.push(Information { language, name, description, provider });
         }
         Ok(info_list)
+    }
+
+    /// Returns a list of Attributes from a Serde JSON input.
+    ///
+    /// # Arguments
+    /// * `additional_attributes_list`: A Json Representation of the Attribute objects.
+    ///  Example:
+    ///    'additional_attributes': [{
+    ///         'id': 201,
+    ///         'element': {
+    ///             'data': int(sig_uuid_constants['AVDTP'], 16)
+    ///         }
+    ///    }]
+    pub fn generate_additional_attributes(
+        &self,
+        additional_attributes_list: &Vec<Value>,
+    ) -> Result<Vec<Attribute>, Error> {
+        let tag = "ProfileServerFacade::generate_additional_attributes";
+        let mut attribute_list = Vec::new();
+        for raw_attribute in additional_attributes_list {
+            let id = if let Some(v) = raw_attribute["id"].as_u64() {
+                v as u16
+            } else {
+                let log_err = "Type of 'id' incorrect or invalid type.";
+                fx_err_and_bail!(&with_line!(tag), log_err)
+            };
+
+            let raw_element = if let Some(e) = raw_attribute.get("element") {
+                e
+            } else {
+                let log_err = "Type of 'element' incorrect.";
+                fx_err_and_bail!(&with_line!(tag), log_err)
+            };
+
+            let data_element = if let Some(d) = raw_element["data"].as_u64() {
+                DataElement {
+                    type_: DataElementType::UnsignedInteger,
+                    size: 2,
+                    data: DataElementData::Integer(d as i64),
+                }
+            } else {
+                fx_err_and_bail!(&with_line!(tag), "Value 'data' not found.")
+            };
+
+            attribute_list.push(Attribute { id: id, element: data_element })
+        }
+        Ok(attribute_list)
     }
 
     /// A function to monitor incoming events from the ProfileEventStream.
@@ -365,21 +413,25 @@ impl ProfileServerFacade {
     ///        'description': "Advanced Audio Distribution Profile",
     ///        'provider': "Fuchsia"
     ///    }],
-    ///    'additional_attributes': None
+    ///    'additional_attributes': [{
+    ///         'id': 201,
+    ///         'element': {
+    ///             'data': int(sig_uuid_constants['AVDTP'], 16)
+    ///         }
+    ///    }]
     ///}
     pub async fn add_service(&self, args: Value) -> Result<(), Error> {
         let tag = "ProfileServerFacade::write_sdp_record";
         fx_log_info!(tag: &with_line!(tag), "Writing SDP record");
-        let record_description = match args.get("record") {
-            Some(r) => r,
-            None => {
-                let log_err = "Invalid SDP record input. Missing 'record'";
-                fx_err_and_bail!(&with_line!(tag), log_err)
-            }
+
+        let record_description = if let Some(r) = args.get("record") {
+            r
+        } else {
+            let log_err = "Invalid SDP record input. Missing 'record'";
+            fx_err_and_bail!(&with_line!(tag), log_err)
         };
 
-        let service_class_uuid_list = if let Some(v) = record_description.get("service_class_uuids")
-        {
+        let service_class_uuids = if let Some(v) = record_description.get("service_class_uuids") {
             if let Some(r) = v.as_array() {
                 self.generate_service_class_uuids(r)?
             } else {
@@ -416,15 +468,15 @@ impl ProfileServerFacade {
         };
 
         let raw_additional_protocol_descriptors =
-            match record_description.get("additional_protocol_descriptors") {
-                Some(value) => match value.as_array() {
-                    Some(v) => Some(self.generate_protocol_descriptors(v)?),
-                    None => {
-                        let log_err = "Invalid type for protocol_descriptors in record input.";
-                        fx_err_and_bail!(&with_line!(tag), log_err)
-                    }
-                },
-                None => None,
+            if let Some(v) = record_description.get("additional_protocol_descriptors") {
+                if let Some(arr) = v.as_array() {
+                    Some(self.generate_protocol_descriptors(arr)?)
+                } else {
+                    let log_err = "Invalid type for protocol_descriptors in record input.";
+                    fx_err_and_bail!(&with_line!(tag), log_err)
+                }
+            } else {
+                None
             };
 
         let information = if let Some(v) = record_description.get("information") {
@@ -439,16 +491,28 @@ impl ProfileServerFacade {
             fx_err_and_bail!(&with_line!(tag), log_err)
         };
 
+        let additional_attributes = if let Some(v) = record_description.get("additional_attributes")
+        {
+            if let Some(r) = v.as_array() {
+                Some(self.generate_additional_attributes(r)?)
+            } else {
+                None
+            }
+        } else {
+            let log_err = "Invalid SDP record input. Missing 'additional_attributes'";
+            fx_err_and_bail!(&with_line!(tag), log_err)
+        };
+
         let mut service_def = ServiceDefinition {
-            service_class_uuids: service_class_uuid_list,
-            protocol_descriptors: protocol_descriptors,
-            profile_descriptors: profile_descriptors,
+            service_class_uuids,
+            protocol_descriptors,
+            profile_descriptors,
             additional_protocol_descriptors: match raw_additional_protocol_descriptors {
                 Some(d) => Some(vec![d]),
                 None => None,
             },
-            information: information,
-            additional_attributes: None,
+            information,
+            additional_attributes,
         };
 
         let add_service_future = match &self.inner.read().profile_server_proxy {
@@ -544,11 +608,11 @@ impl ProfileServerFacade {
                 r
             } else {
                 let log_err = "Expected 'attribute_list' as an array.";
-                    fx_err_and_bail!(&with_line!(tag), log_err)
+                fx_err_and_bail!(&with_line!(tag), log_err)
             }
         } else {
             let log_err = "Invalid SDP search input. Missing 'attribute_list'";
-                fx_err_and_bail!(&with_line!(tag), log_err)
+            fx_err_and_bail!(&with_line!(tag), log_err)
         };
 
         let mut attribute_list = Vec::new();
@@ -562,18 +626,15 @@ impl ProfileServerFacade {
             };
         }
 
-        let profile_id = match args.get("profile_id") {
-            Some(r) => self.get_service_class_profile_identifier_from_id(r)?,
-            None => {
-                let log_err = "Invalid SDP search input. Missing 'profile_id'";
-                fx_err_and_bail!(&with_line!(tag), log_err)
-            }
+        let profile_id = if let Some(r) = args.get("profile_id") {
+            self.get_service_class_profile_identifier_from_id(r)?
+        } else {
+            let log_err = "Invalid SDP search input. Missing 'profile_id'";
+            fx_err_and_bail!(&with_line!(tag), log_err)
         };
 
         match &self.inner.read().profile_server_proxy {
-            Some(server) => {
-                server.add_search(profile_id, &mut attribute_list.into_iter())?
-            }
+            Some(server) => server.add_search(profile_id, &mut attribute_list.into_iter())?,
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
 
