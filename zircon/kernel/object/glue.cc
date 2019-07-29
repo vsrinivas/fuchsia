@@ -30,69 +30,85 @@ fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() { return root_job; }
 // Kernel-owned event that is used to signal userspace before taking action in OOM situation.
 static fbl::RefPtr<EventDispatcher> low_mem_event;
 // Event used for communicating lowmem state between the lowmem callback and the oom thread.
-static Event low_mem_signal;
+static Event mem_state_signal(EVENT_FLAG_AUTOUNSIGNAL);
+static ktl::atomic<uint8_t> mem_event_idx = 1;
 
 fbl::RefPtr<EventDispatcher> GetLowMemEvent() { return low_mem_event; }
 
 // Callback used with |pmm_init_reclamation|.
+// This is a very minimal save idx and signal an event as we are called under the pmm lock and must
+// avoid causing any additional allocations.
 static void mem_avail_state_updated_cb(uint8_t idx) {
-  zx_status_t status;
-  printf("OOM: memory availability state %u\n", idx);
+  mem_event_idx = idx;
+  mem_state_signal.Signal();
+}
 
-  if (idx == 0) {
-    status = low_mem_event->user_signal_self(0, ZX_EVENT_SIGNALED);
-    low_mem_signal.Signal();
-  } else {
-    status = low_mem_event->user_signal_self(ZX_EVENT_SIGNALED, 0);
-    low_mem_signal.Unsignal();
+// Helper called by the oom thread when low memory mode is entered.
+static void on_lowmem() {
+#if defined(ENABLE_KERNEL_DEBUGGING_FEATURES)
+  // See ZX-3637 for the product details on when this path vs. the reboot
+  // should be used.
+
+  bool found = false;
+  JobDispatcher::ForEachJob([&found](JobDispatcher* job) {
+    if (job->get_kill_on_oom()) {
+      // The traversal order of ForEachJob() is going to favor killing newer
+      // jobs, this helps in case more than one is eligible.
+      if (job->Kill(ZX_TASK_RETCODE_OOM_KILL)) {
+        found = true;
+        char name[ZX_MAX_NAME_LEN];
+        job->get_name(name);
+        printf("OOM: killing job %6" PRIu64 " '%s'\n", job->get_koid(), name);
+        return ZX_ERR_STOP;
+      }
+    }
+    return ZX_OK;
+  });
+
+  if (!found) {
+    printf("OOM: no alive job has a kill bit\n");
   }
+
+  // Since killing is asynchronous, sleep for a short period for the system to quiesce. This
+  // prevents us from rapidly killing more jobs than necessary. And if we don't find a
+  // killable job, don't just spin since the next iteration probably won't find a one either.
+  thread_sleep_relative(ZX_MSEC(500));
+#else
+  const int kSleepSeconds = 8;
+  printf("OOM: pausing for %ds after low mem signal\n", kSleepSeconds);
+  zx_status_t status = thread_sleep_relative(ZX_SEC(kSleepSeconds));
   if (status != ZX_OK) {
-    printf("OOM: signal low mem failed: %d\n", status);
+    printf("OOM: sleep failed: %d\n", status);
   }
+  printf("OOM: rebooting\n");
+  platform_graceful_halt_helper(HALT_ACTION_REBOOT);
+#endif
 }
 
 static int oom_thread(void* unused) {
   while (true) {
-    low_mem_signal.Wait(Deadline::infinite());
-
-#if defined(ENABLE_KERNEL_DEBUGGING_FEATURES)
-    // See ZX-3637 for the product details on when this path vs. the reboot
-    // should be used.
-
-    bool found = false;
-    JobDispatcher::ForEachJob([&found](JobDispatcher* job) {
-      if (job->get_kill_on_oom()) {
-        // The traversal order of ForEachJob() is going to favor killing newer
-        // jobs, this helps in case more than one is eligible.
-        if (job->Kill(ZX_TASK_RETCODE_OOM_KILL)) {
-          found = true;
-          char name[ZX_MAX_NAME_LEN];
-          job->get_name(name);
-          printf("OOM: killing job %6" PRIu64 " '%s'\n", job->get_koid(), name);
-          return ZX_ERR_STOP;
-        }
+    // Check if the current index is 0. After observing this we know that if it should change to
+    // zero that the event will get signaled and we would immediately wake back up.
+    if (mem_event_idx != 0) {
+      zx_status_t status = low_mem_event->user_signal_self(ZX_EVENT_SIGNALED, 0);
+      if (status != ZX_OK) {
+        printf("OOM: unsignal low mem failed: %d\n", status);
       }
-      return ZX_OK;
-    });
-
-    if (!found) {
-      printf("OOM: no alive job has a kill bit\n");
+      mem_state_signal.Wait(Deadline::infinite());
     }
+    // get local copy of the atomic. It's possible by the time we read this that we've already
+    // exited low mem mode, but that's fine as we're happy to not have to invoke the oom killer.
+    uint8_t idx = mem_event_idx;
+    printf("OOM: memory availability state %u\n", idx);
 
-    // Since killing is asynchronous, sleep for a short period for the system to quiesce. This
-    // prevents us from rapidly killing more jobs than necessary. And if we don't find a
-    // killable job, don't just spin since the next iteration probably won't find a one either.
-    thread_sleep_relative(ZX_MSEC(500));
-#else
-    const int kSleepSeconds = 8;
-    printf("OOM: pausing for %ds after low mem signal\n", kSleepSeconds);
-    zx_status_t status = thread_sleep_relative(ZX_SEC(kSleepSeconds));
-    if (status != ZX_OK) {
-      printf("OOM: sleep failed: %d\n", status);
+    if (idx == 0) {
+      // Tell the user we're in low memory mode and then run our oom handler
+      zx_status_t status = low_mem_event->user_signal_self(0, ZX_EVENT_SIGNALED);
+      if (status != ZX_OK) {
+        printf("OOM: signal low mem failed: %d\n", status);
+      }
+      on_lowmem();
     }
-    printf("OOM: rebooting\n");
-    platform_graceful_halt_helper(HALT_ACTION_REBOOT);
-#endif
   }
 }
 
