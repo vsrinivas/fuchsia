@@ -144,7 +144,7 @@ config_data("ermine_fonts") {
                            "RobotoMono-Regular.ttf",
                          ],
                          "",
-                         "//garnet/bin/fonts/third_party/robotomono/")
+                         "//prebuilt/third_party/fonts/robotomono/")
 
   outputs = [
     "fonts/{{source_file_part}}",
