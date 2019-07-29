@@ -3,7 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [],
+        "features": [
+            "system-temp"
+        ],
         "services": [
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.sys.Loader",

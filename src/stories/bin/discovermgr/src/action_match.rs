@@ -125,6 +125,11 @@ mod tests {
         let matches = action_match("Listen", &actions, &types);
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0], 0);
+
+        // match an action with no parameter types
+        let types = vec![];
+        let matches = action_match("nouns", &actions, &types);
+        assert_eq!(matches.len(), 1);
     }
 
     #[test]

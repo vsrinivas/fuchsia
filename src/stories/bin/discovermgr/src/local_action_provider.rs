@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
 use crate::indexing::load_module_facet;
 use crate::models::{Action, FuchsiaFulfillment, Parameter};
+use failure::Error;
 use fidl_fuchsia_sys_index::{ComponentIndexMarker, ComponentIndexProxy};
 use fuchsia_component::client::{launch, launcher, App};
 use fuchsia_syslog::macros::*;
-use {failure::Error, fuchsia_async as fasync};
 
 const COMPONENT_INDEX_URL: &str =
     "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
@@ -65,7 +64,7 @@ pub async fn get_local_actions() -> Result<Vec<Action>, Error> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, fuchsia_async as fasync};
 
     const TEST_COMPONENT_URL: &str =
         "fuchsia-pkg://fuchsia.com/discovermgr_tests#meta/discovermgr_bin_test.cmx";
@@ -75,7 +74,7 @@ mod test {
     async fn test_component_index() -> Result<(), Error> {
         // TODO fix tests -- failing only in CQ
         let result = await!(get_local_actions()).unwrap_or_else(|e| {
-            eprintln!("Error! {:?}", e);
+            fx_log_err!("Error! {:?}", e);
             vec![]
         });
         #[allow(unused)]
@@ -86,7 +85,7 @@ mod test {
                 None => false,
             })
             .collect();
-        // assert_eq!(actions.len(), 2, "Expecting to find 2 actions in discovermgr test cmx file");
+        // assert_eq!(actions.len(), 3, "Expecting to find 3 actions in discovermgr test cmx file");
         Ok(())
     }
 }

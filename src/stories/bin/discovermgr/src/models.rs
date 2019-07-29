@@ -359,11 +359,12 @@ mod tests {
     fn test_from_assets() {
         let data: Vec<Action> =
             serde_json::from_str(include_str!("../test_data/test_actions.json")).unwrap();
-        assert_eq!(data.len(), 4);
+        assert_eq!(data.len(), 5);
         assert_eq!(data[0].name, "PLAY_MUSIC");
         assert_eq!(data[1].name, "SHOW_WEATHER");
         assert_eq!(data[2].name, "SHOW_DIRECTIONS");
         assert_eq!(data[3].name, "VIEW_COLLECTION");
+        assert_eq!(data[4].name, "ACTION_MAIN");
 
         let fulfillment = data[3].fuchsia_fulfillment.as_ref().unwrap();
         assert_eq!(

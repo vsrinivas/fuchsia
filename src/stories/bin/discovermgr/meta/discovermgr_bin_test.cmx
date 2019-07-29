@@ -5,6 +5,17 @@
             "binary": "collection_mod",
             "intent_filters": [
                 {
+                    "action": "ACTION_MAIN",
+                    "action_display": {
+                        "display_info": {
+                            "icon": "http://shortn/_xgVpQkE0qu",
+                            "subtitle": "A single action",
+                            "title": "Main action"
+                        }
+                    },
+                    "parameters": []
+                },
+                {
                     "action": "VIEW_COLLECTION",
                     "action_display": {
                         "display_info": {

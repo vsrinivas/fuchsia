@@ -7,6 +7,7 @@
 use {
     crate::{
         cloud_action_provider::get_cloud_actions,
+        local_action_provider::get_local_actions,
         mod_manager::ModManager,
         story_context_store::StoryContextStore,
         suggestion_providers::{ContextualSuggestionsProvider, PackageSuggestionsProvider},
@@ -78,10 +79,18 @@ async fn main() -> Result<(), Error> {
     let mut suggestions_manager = SuggestionsManager::new(mod_manager.clone());
     suggestions_manager.register_suggestions_provider(Box::new(PackageSuggestionsProvider::new()));
 
-    let actions = await!(get_cloud_actions()).unwrap_or_else(|e| {
-        fx_log_err!("Error fetching actions index: {}", e);
+    let mut actions = await!(get_cloud_actions()).unwrap_or_else(|e| {
+        fx_log_err!("Error fetching cloud actions index: {}", e);
         vec![]
     });
+    // If no cloud action, use local action.
+    // Note: can't await! in the closure above because async_block! isn't yet ported
+    if actions.is_empty() {
+        actions = await!(get_local_actions()).unwrap_or_else(|e| {
+            fx_log_err!("Error fetching local actions index: {}", e);
+            vec![]
+        });
+    }
     suggestions_manager
         .register_suggestions_provider(Box::new(ContextualSuggestionsProvider::new(actions)));
 
