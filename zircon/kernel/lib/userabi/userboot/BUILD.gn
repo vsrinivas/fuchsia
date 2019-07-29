@@ -8,6 +8,7 @@ import("$zx/public/gn/test/zbi_test.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("$zx/public/gn/zbi.gni")
 
 # userboot gets its own toolchain for its special build requirements.
 if (current_toolchain == default_toolchain) {
@@ -93,6 +94,12 @@ if (current_toolchain == default_toolchain) {
       "$zx/third_party/ulib/musl/src/string:minimal_str",
       "$zx/third_party/ulib/musl/src/string:stdmem",
     ]
+
+    if (zbi_compression_algorithm == "lz4f") {
+      defines += [ "ZBI_COMPRESSION_MAGIC=kLz4fMagic" ]
+    } else if (zbi_compression_algorithm == "zstd") {
+      defines += [ "ZBI_COMPRESSION_MAGIC=kZstdMagic" ]
+    }
   }
 
   # This generated header lists all the ABI symbols in the vDSO with their

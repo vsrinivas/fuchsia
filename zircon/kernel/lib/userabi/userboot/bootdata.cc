@@ -17,7 +17,7 @@ namespace {
 class EngineService {
  public:
   using Magic = HermeticDecompressorEngineService::Magic;
-  static constexpr Magic kLz4fMagic = HermeticDecompressorEngineService::kLz4fMagic;
+  static constexpr Magic kMagic = HermeticDecompressorEngineService::ZBI_COMPRESSION_MAGIC;
 
   EngineService(zx_handle_t job, zx_handle_t engine, zx_handle_t vdso)
       : job_(job), engine_(engine), vdso_(vdso) {}
@@ -25,7 +25,7 @@ class EngineService {
   auto job() const { return zx::unowned_job{*job_}; }
 
   zx_status_t GetEngine(Magic magic, zx::unowned_vmo* vmo) {
-    if (magic == kLz4fMagic) {
+    if (magic == kMagic) {
       *vmo = zx::unowned_vmo{engine_};
       return ZX_OK;
     }

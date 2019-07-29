@@ -4,6 +4,13 @@
 
 import("//build/config/fuchsia/zircon.gni")
 
+declare_args() {
+  # Compression setting for ZBI "storage" items.
+  # This can be either "lz4f" or "zstd", optionally followed by ".LEVEL"
+  # where `LEVEL` can be an integer or "max".
+  zbi_compression = "lz4f"
+}
+
 # Template for assembling a Zircon Boot Image file from various inputs.
 #
 # Parameters
@@ -99,6 +106,8 @@ template("zbi") {
 
     if (defined(invoker.compress) && !invoker.compress) {
       args += [ "--uncompressed" ]
+    } else {
+      args += [ "--compressed=$zbi_compression" ]
     }
 
     if (defined(invoker.inputs)) {

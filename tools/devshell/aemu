@@ -275,7 +275,7 @@ fi
 trap 'rm -Rf "${img_dir}" ; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_PID}"' EXIT
 
 KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
-"${ZIRCON_TOOLS_DIR}/zbi" -o "${KERNEL_ZBI}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
+fx-zbi -o "${KERNEL_ZBI}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
   --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
 
 if [[ -n "$IMAGE_FVM_RAW" ]]; then

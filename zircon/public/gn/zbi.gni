@@ -6,6 +6,28 @@ import("$zx/public/gn/host_tool_action.gni")
 import("$zx/public/gn/manifest.gni")
 import("$zx/public/gn/resource.gni")
 
+declare_args() {
+  # This can be either "lz4f" or "zstd", optionally followed by ".LEVEL"
+  # where `LEVEL` can be an integer or "max".  It can also be just "LEVEL"
+  # to to use the default algorithm with a non-default setting.
+  #
+  # The default level for each algorithm is tuned to balance compression
+  # speed with compression ratio.  Higher levels make image builds slower.
+  # So using the default during rapid development (quick builds, pretty
+  # good compression) and "max' for production builds (slow builds, best
+  # compression available) probably makes sense.
+  zbi_compression = "lz4f"
+}
+
+# The compression algorithm part of the $zbi_compression setting.
+zbi_compression_algorithm = get_path_info(zbi_compression, "name")
+if (get_path_info(zbi_compression, "extension") == "" &&
+    zbi_compression_algorithm != "lz4f" &&
+    zbi_compression_algorithm != "zstd") {
+  # This must match what $zx/tools/zbi/zbi.cc uses by default.
+  zbi_compression_algorithm = "lz4f"
+}
+
 # Define inputs to a dependent zbi() target.
 #
 # The target generates a manifest that collects any manifest_lines from its
@@ -173,7 +195,10 @@ template("zbi_input") {
 #   compress
 #     Optional: Whether to compress the BOOTFS and other `ZBI_TYPE_STORAGE`
 #     items in the output.  See the `--compressed` switch in `zbi --help`.
-#     Type: bool
+#     If this is a string rather than a bool, it's the argument for the
+#     `--compressed` switch to `zbi`.  A value of `true` is replaced with
+#     $zbi_compression.
+#     Type: bool or string
 #     Default: true
 #
 #   output_dir
@@ -300,6 +325,7 @@ template("zbi") {
     forward_variables_from(invoker,
                            [
                              "assert_no_deps",
+                             "compress",
                              "data_deps",
                              "visibility",
                              "testonly",
@@ -337,10 +363,13 @@ template("zbi") {
     # This comes last to affect the output despite any earlier
     # "-c" or "-u" from metadata.zbi_input_args meant to affect
     # a particular input (e.g. for "--type=ramdisk").
-    if (defined(invoker.compress) && !invoker.compress) {
+    if (!defined(compress) || compress == true) {
+      compress = zbi_compression
+    }
+    if (compress == false) {
       args += [ "--uncompressed" ]
     } else {
-      args += [ "--compressed" ]
+      args += [ "--compressed=$compress" ]
     }
 
     metadata = {

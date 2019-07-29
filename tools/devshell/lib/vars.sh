@@ -442,3 +442,7 @@ function fx-run-ninja {
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
     "$cmd" "${args[@]}"
 }
+
+function fx-zbi {
+  "${ZIRCON_TOOLS_DIR}/zbi" --compressed="$FUCHSIA_ZBI_COMPRESSION" "$@"
+}

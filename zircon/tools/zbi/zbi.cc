@@ -415,10 +415,10 @@ class Checksummer final {
 };
 
 template <typename Func, typename... Args>
-auto Lz4Call(Func f, Args... args) {
+auto Lz4fCall(Func f, Args... args) {
   auto result = f(args...);
   if (LZ4F_isError(result)) {
-    fprintf(stderr, "LZ4 failure: %s\n", LZ4F_getErrorName(result));
+    fprintf(stderr, "LZ4F failure: %s\n", LZ4F_getErrorName(result));
     exit(1);
   }
   return result;
@@ -436,7 +436,7 @@ auto ZstdCall(const char* what, Func f, Args... args) {
 
 class Compressor final {
   // Private forward declarations;
-  class Lz4;
+  class Lz4f;
   class Zstd;
 
  public:
@@ -444,14 +444,14 @@ class Compressor final {
 
   enum Algo {
     kNone,
-    kLz4,
+    kLz4f,
     kZstd,
     kInvalid,
   };
 
   struct Config {
     // Default for -c with no argument (or no switches at all).
-    using Default = Lz4;
+    using Default = Lz4f;
 
     Algo algo_ = Default::kAlgo;
     int level_ = Default::DefaultLevel();
@@ -479,21 +479,21 @@ class Compressor final {
         *this = {};
       } else if (!strcasecmp(arg, "none")) {
         *this = None();
-      } else if (!strcasecmp(arg, "lz4,max")) {
-        SetMax<Lz4>();
-      } else if (!strcasecmp(arg, "lz4")) {
-        Set<Lz4>();
-      } else if (!strcasecmp(arg, "lz4,max")) {
-        SetMax<Lz4>();
-      } else if (sscanf(arg, "%*1[lL]%*1[zZ]4,%i", &level) == 1) {
-        Set<Lz4>(level);
+      } else if (!strcasecmp(arg, "lz4f.max")) {
+        SetMax<Lz4f>();
+      } else if (!strcasecmp(arg, "lz4f")) {
+        Set<Lz4f>();
+      } else if (!strcasecmp(arg, "lz4f.max")) {
+        SetMax<Lz4f>();
+      } else if (sscanf(arg, "%*1[lL]%*1[zZ]4%*1[fF].%i", &level) == 1) {
+        Set<Lz4f>(level);
       } else if (!strcasecmp(arg, "zstd")) {
         Set<Zstd>();
-      } else if (!strcasecmp(arg, "zstd,max")) {
+      } else if (!strcasecmp(arg, "zstd.max")) {
         SetMax<Zstd>();
-      } else if (!strcasecmp(arg, "zstd,overclock")) {
+      } else if (!strcasecmp(arg, "zstd.overclock")) {
         Set<Zstd>(Zstd::OverclockLevel());
-      } else if (sscanf(arg, "%*1[Zz]%*1[Ss]%*1[Tt]%*1[Dd],%i", &level) == 1) {
+      } else if (sscanf(arg, "%*1[Zz]%*1[Ss]%*1[Tt]%*1[Dd].%i", &level) == 1) {
         Set<Zstd>(level);
       } else if (!strcasecmp(arg, "max")) {
         SetMax<Default>();
@@ -508,8 +508,8 @@ class Compressor final {
 
   explicit Compressor(const Config& config) : config_(config) {
     switch (config_.algo_) {
-      case kLz4:
-        algo_.emplace<Lz4>();
+      case kLz4f:
+        algo_.emplace<Lz4f>();
         break;
       case kZstd:
         algo_.emplace<Zstd>();
@@ -551,20 +551,20 @@ class Compressor final {
     };
   }
 
-  class Lz4 {
+  class Lz4f {
    public:
-    static constexpr Algo kAlgo = kLz4;
+    static constexpr Algo kAlgo = kLz4f;
 
-    Lz4() = default;
+    Lz4f() = default;
 
-    // LZ4 compression levels 1-3 are for "fast" compression, and 4-16 are
+    // LZ4F compression levels 1-3 are for "fast" compression, and 4-16 are
     // for higher compression.  The additional compression going from 4 to
     // 16 is not worth the extra time needed during compression.
     static constexpr int DefaultLevel() { return 4; }
 
     static constexpr int MaxLevel() { return 16; }
 
-    ~Lz4() { Lz4Call(LZ4F_freeCompressionContext, ctx_); }
+    ~Lz4f() { Lz4fCall(LZ4F_freeCompressionContext, ctx_); }
 
     template <typename T1, typename T2>
     void Init(T1 get_buffer, T2 put_buffer, int level, size_t uncompressed_size) {
@@ -574,27 +574,28 @@ class Compressor final {
       prefs_.frameInfo.blockMode = LZ4F_blockIndependent;
       prefs_.compressionLevel = level;
 
-      Lz4Call(LZ4F_createCompressionContext, &ctx_, LZ4F_VERSION);
+      Lz4fCall(LZ4F_createCompressionContext, &ctx_, LZ4F_VERSION);
 
       // This might start writing compression format headers before it
       // receives any data.
       auto buffer = get_buffer(kLz4FMaxHeaderFrameSize);
-      size_t wrote = Lz4Call(LZ4F_compressBegin, ctx_, buffer.data.get(), buffer.size, &prefs_);
+      size_t wrote = Lz4fCall(LZ4F_compressBegin, ctx_, buffer.data.get(), buffer.size, &prefs_);
       put_buffer(std::move(buffer), wrote);
     }
 
     template <typename T1, typename T2>
     void Update(T1 get_buffer, T2 put_buffer, const iovec& input) {
       auto buffer = get_buffer(LZ4F_compressBound(input.iov_len, &prefs_));
-      size_t wrote = Lz4Call(LZ4F_compressUpdate, ctx_, buffer.data.get(), buffer.size,
-                             input.iov_base, input.iov_len, &kCompressOpt);
+      size_t wrote = Lz4fCall(LZ4F_compressUpdate, ctx_, buffer.data.get(), buffer.size,
+                              input.iov_base, input.iov_len, &kCompressOpt);
       put_buffer(std::move(buffer), wrote);
     }
 
     template <typename T1, typename T2>
     void Finish(T1 get_buffer, T2 put_buffer) {
       auto buffer = get_buffer(LZ4F_compressBound(0, &prefs_));
-      size_t wrote = Lz4Call(LZ4F_compressEnd, ctx_, buffer.data.get(), buffer.size, &kCompressOpt);
+      size_t wrote =
+          Lz4fCall(LZ4F_compressEnd, ctx_, buffer.data.get(), buffer.size, &kCompressOpt);
       put_buffer(std::move(buffer), wrote);
     }
 
@@ -679,7 +680,7 @@ class Compressor final {
     ZSTD_CCtx* ctx_ = nullptr;
   };
 
-  using AlgoData = std::variant<Lz4, Zstd>;
+  using AlgoData = std::variant<Lz4f, Zstd>;
 
   Config config_;
   AlgoData algo_{};
@@ -764,10 +765,10 @@ struct Decompressor {
   uint32_t magic;
 };
 
-Decompressor::Function DecompressLz4, DecompressZstd;
+Decompressor::Function DecompressLz4f, DecompressZstd;
 
 constexpr Decompressor kDecompressors[] = {
-    {DecompressLz4, 0x184D2204},
+    {DecompressLz4f, 0x184D2204},
     {DecompressZstd, 0xFD2FB528},
 };
 
@@ -790,13 +791,13 @@ std::unique_ptr<std::byte[]> Decompress(const std::list<const iovec>& payload,
   exit(1);
 }
 
-std::unique_ptr<std::byte[]> DecompressLz4(const std::list<const iovec>& payload,
-                                           uint32_t decompressed_length) {
+std::unique_ptr<std::byte[]> DecompressLz4f(const std::list<const iovec>& payload,
+                                            uint32_t decompressed_length) {
   auto buffer = std::make_unique<std::byte[]>(decompressed_length);
 
   LZ4F_decompressionContext_t ctx;
-  Lz4Call(LZ4F_createDecompressionContext, &ctx, LZ4F_VERSION);
-  auto cleanup = fbl::MakeAutoCall([&]() { Lz4Call(LZ4F_freeDecompressionContext, ctx); });
+  Lz4fCall(LZ4F_createDecompressionContext, &ctx, LZ4F_VERSION);
+  auto cleanup = fbl::MakeAutoCall([&]() { Lz4fCall(LZ4F_freeDecompressionContext, ctx); });
 
   std::byte* dst = buffer.get();
   size_t dst_size = decompressed_length;
@@ -811,7 +812,7 @@ std::unique_ptr<std::byte[]> DecompressLz4(const std::list<const iovec>& payload
 
       size_t nwritten = dst_size, nread = src_size;
       static constexpr const LZ4F_decompressOptions_t kDecompressOpt{};
-      Lz4Call(LZ4F_decompress, ctx, dst, &nwritten, src, &nread, &kDecompressOpt);
+      Lz4fCall(LZ4F_decompress, ctx, dst, &nwritten, src, &nread, &kDecompressOpt);
 
       assert(nread <= src_size);
       src += nread;
@@ -2281,11 +2282,11 @@ Format control switches (last switch affects all output):\n\
     --compressed[=HOW], -c [HOW]   compress BOOTFS images (see below)\n\
     --uncompressed, -u             do not compress BOOTFS images\n\
 \n\
-HOW defaults to `lz4` and can be one of (case-insensitive):\n\
+HOW defaults to `lz4f` and can be one of (case-insensitive):\n\
  * `none` (same as `--uncompressed`)\n\
- * `LEVEL` (an integer) or `max` (default algorithm, currently `lz4`)\n\
- * `lz4` or `lz4,LEVEL` (an integer) or `lz4,max`\n\
- * `zstd` or `zstd,LEVEL` (an integer) or `zstd,max` or `zstd,overclock`\n\
+ * `LEVEL` (an integer) or `max` (default algorithm, currently `lz4f`)\n\
+ * `lz4f` or `lz4f.LEVEL` (an integer) or `lz4f.max`\n\
+ * `zstd` or `zstd.LEVEL` (an integer) or `zstd.max` or `zstd.overclock`\n\
 The meaning of LEVEL depends on the algorithm.  The default is chosen for\n\
 good compression ratios with fast compression time.  `max` is for the best\n\
 compression ratios but much slower compression time (e.g. release builds).\n\

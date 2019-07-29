@@ -5,6 +5,7 @@
 import("$zx/kernel/syscalls/abigen.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("$zx/public/gn/zbi.gni")
 
 library("userabi") {
   kernel = true
@@ -294,7 +295,7 @@ if (is_kernel) {
     visibility = [ ":*" ]
     name = "DECOMPRESS_ZBI"
     deps = [
-      "$zx/system/ulib/hermetic-decompressor:decompress-lz4f",
+      "$zx/system/ulib/hermetic-decompressor:decompress-$zbi_compression_algorithm",
     ]
 
     # It's hermetic, but it's allowed to have data and bss.
