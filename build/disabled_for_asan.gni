@@ -1,4 +1,7 @@
 disabled_for_asan = [
   # OV-5
   "/pkgfs/packages/overnet_tests/0/test/overnet_unittests",
+
+  # BT-2270
+  "/pkgfs/packages/bluetooth-tests/0/test/bt-integration-tests",
 ]
