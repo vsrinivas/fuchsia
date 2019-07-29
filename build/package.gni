@@ -456,6 +456,7 @@ template("package") {
                                "meta",
                                "package_name",
                                "resources",
+                               "rootjob_svc",
                                "rootresource_svc",
                                "system_deprecated_data",
                                "visibility",
@@ -589,6 +590,14 @@ template("package") {
             ]
           }
 
+          if (!defined(pkg.rootjob_svc)) {
+            extra_schemas += [
+              {
+                schema = "//build/cmx/block_rootjob_svc.json"
+                error_msg = "The 'fuchsia.boot.RootJob' service is guarded by an allowlist."
+              },
+            ]
+          }
           if (!defined(pkg.rootresource_svc)) {
             extra_schemas += [
               {
@@ -967,6 +976,9 @@ template("package") {
           deps += [
             "${pkg.system_deprecated_data}:system_deprecated_data_allowlist",
           ]
+        }
+        if (defined(pkg.rootjob_svc)) {
+          deps += [ "${pkg.rootjob_svc}:rootjob_svc_allowlist" ]
         }
         if (defined(pkg.rootresource_svc)) {
           deps += [ "${pkg.rootresource_svc}:rootresource_svc_allowlist" ]

@@ -91,6 +91,7 @@ TEST_F(HubTest, Services) {
     // Expected files are built-in services plus sysmgr services.
     std::vector<std::string> expected_files = {".",
                                                "fuchsia.boot.FactoryItems",
+                                               "fuchsia.boot.RootJob",
                                                "fuchsia.boot.RootResource",
                                                "fuchsia.device.NameProvider",
                                                "fuchsia.device.manager.Administrator",

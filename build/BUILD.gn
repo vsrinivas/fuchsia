@@ -152,3 +152,20 @@ group("rootresource_svc_allowlist") {
     "//src/virtualization/bin/vmm:vmm",
   ]
 }
+
+group("rootjob_svc_allowlist") {
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of packages that have components manifests that include
+  # the "fuchsia.boot.RootJob" service. This is a highly privileged service that vends
+  # out a very powerful capability. Do not add yourself to this unless this is the only
+  # way to accomplish your goal and you have talked to the security team about this.
+  visibility = [
+  ]
+}
