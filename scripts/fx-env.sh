@@ -2,10 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### NOTE!
+###
+### This is not a normal shell script that executes on its own.
+###
+### It's evaluated directly in a user's interactive shell using
+### the `.` or `source` shell built-in.
+###
+### Hence, this code must be careful not to pollute the user's shell
+### with variable or function symbols that users don't want.
+
 if [[ -n "${ZSH_VERSION}" ]]; then
-  source "$(cd "$(dirname "${(%):-%x}")/.." >/dev/null 2>&1 && pwd)"/tools/devshell/lib/vars.sh || return $?
+  FUCHSIA_DIR="$(cd "$(dirname "${(%):-%x}")/.." >/dev/null 2>&1 && pwd)"
 else
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"/tools/devshell/lib/vars.sh || return $?
+  FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
 fi
 
 # __patched_path <old-regex> <new-component>
