@@ -96,7 +96,7 @@ int Paver::StreamBuffer() {
 
   zx::channel client, server;
   auto status = zx::channel::create(0, &client, &server);
-  if (status) {
+  if (status != ZX_OK) {
     fprintf(stderr, "netsvc: unable to create channel\n");
     exit_code_.store(status);
     return 0;
@@ -107,10 +107,10 @@ int Paver::StreamBuffer() {
   loop.StartThread("payload-streamer");
 
   // Blocks untils paving is complete.
-  auto io_status = paver_svc_->WriteVolumes_Deprecated(std::move(client), &status);
-  status = io_status == ZX_OK ? status : io_status;
-  exit_code_.store(status);
+  auto res = paver_svc_->WriteVolumes(std::move(client));
+  status = res.status() == ZX_OK ? res.value().status : res.status();
 
+  exit_code_.store(status);
   return 0;
 }
 
@@ -159,27 +159,29 @@ int Paver::MonitorBuffer() {
       .size = buffer_mapper_.size(),
   };
 
-  zx_status_t io_status = ZX_ERR_INTERNAL;
   // Blocks untils paving is complete.
   switch (command_) {
-    case Command::kDataFile:
-      io_status = paver_svc_->WriteDataFile_Deprecated(fidl::StringView(strlen(path_), path_),
-                                                       std::move(buffer), &status);
+    case Command::kDataFile: {
+      auto res =
+          paver_svc_->WriteDataFile(fidl::StringView(strlen(path_), path_), std::move(buffer));
+      status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
-    case Command::kBootloader:
-      io_status = paver_svc_->WriteBootloader_Deprecated(std::move(buffer), &status);
+    }
+    case Command::kBootloader: {
+      auto res = paver_svc_->WriteBootloader(std::move(buffer));
+      status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
-    case Command::kAsset:
-      io_status =
-          paver_svc_->WriteAsset_Deprecated(configuration_, asset_, std::move(buffer), &status);
+    }
+    case Command::kAsset: {
+      auto res = paver_svc_->WriteAsset(configuration_, asset_, std::move(buffer));
+      status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
+    }
     default:
-      io_status = ZX_OK;
       result = TFTP_ERR_INTERNAL;
       status = ZX_ERR_INTERNAL;
       break;
   }
-  status = io_status == ZX_OK ? status : io_status;
   exit_code_.store(status);
 
   return 0;

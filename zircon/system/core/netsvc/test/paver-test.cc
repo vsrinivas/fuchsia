@@ -99,8 +99,8 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
       return;
     }
     ::llcpp::fuchsia::paver::PayloadStream::SyncClient stream(std::move(payload_stream));
-    auto io_status = stream.RegisterVmo_Deprecated(std::move(vmo), &status);
-    status = io_status == ZX_OK ? status : io_status;
+    auto result = stream.RegisterVmo(std::move(vmo));
+    status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
       completer.Reply(status);
       return;
@@ -109,18 +109,18 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
     status = [&]() {
       size_t data_transferred = 0;
       for (;;) {
-        ::llcpp::fuchsia::paver::ReadResult result;
-        auto io_status = stream.ReadData_Deprecated(&result);
-        if (io_status != ZX_OK) {
-          return io_status;
+        auto result = stream.ReadData();
+        if (!result.ok()) {
+          return result.status();
         }
-        switch (result.which()) {
+        const auto& response = result.value();
+        switch (response.result.which()) {
           case ::llcpp::fuchsia::paver::ReadResult::Tag::kErr:
-            return result.err();
+            return response.result.err();
           case ::llcpp::fuchsia::paver::ReadResult::Tag::kEof:
             return data_transferred == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
           case ::llcpp::fuchsia::paver::ReadResult::Tag::kInfo:
-            data_transferred += result.info().size;
+            data_transferred += response.result.info().size;
             continue;
           default:
             return ZX_ERR_INTERNAL;

@@ -54,41 +54,44 @@ fbl::unique_fd FindGpt() {
 
     zx::channel dev;
     zx_status_t status = fdio_get_service_handle(fd.release(), dev.reset_and_get_address());
-
-    uint8_t out_buffer
-        [fidl::MaxSizeInChannel<::llcpp::fuchsia::hardware::block::Block::GetInfoResponse>()] = {};
-    ::llcpp::fuchsia::hardware::block::BlockInfo* info;
-
-    auto decoded = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo_Deprecated(
-        zx::unowned_channel(dev.get()), fidl::BytePart::WrapEmpty(out_buffer), &status, &info);
-    if (decoded.status != ZX_OK || status != ZX_OK) {
+    if (status != ZX_OK) {
       continue;
     }
-    uint8_t out_buffer2[fidl::MaxSizeInChannel<
-        ::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse>()] = {};
-    fidl::StringView path_view;
-    auto decoded2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath_Deprecated(
-        zx::unowned_channel(dev.get()), fidl::BytePart::WrapEmpty(out_buffer2), &status,
-        &path_view);
-    if (decoded2.status != ZX_OK || status != ZX_OK) {
+
+    auto result =
+        ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(zx::unowned_channel(dev.get()));
+    if (!result.ok()) {
+      continue;
+    }
+    const auto& info_response = result.value();
+    if (info_response.status != ZX_OK) {
+      continue;
+    }
+    auto result2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+        zx::unowned_channel(dev.get()));
+    if (result2.status() != ZX_OK) {
+      continue;
+    }
+    const auto& path_response = result2.value();
+    if (path_response.status != ZX_OK) {
       continue;
     }
 
     path[PATH_MAX - 1] = '\0';
-    strncpy(path, path_view.data(), std::min<size_t>(PATH_MAX, path_view.size()));
+    strncpy(path, path_response.path.data(), std::min<size_t>(PATH_MAX, path_response.path.size()));
 
     // TODO(ZX-1344): This is a hack, but practically, will work for our
     // usage.
     //
     // The GPT which will contain an FVM should be the first non-removable
     // block device that isn't a partition itself.
-    if (!(info->flags & BLOCK_FLAG_REMOVABLE) && strstr(path, "part-") == nullptr) {
+    if (!(info_response.info->flags & BLOCK_FLAG_REMOVABLE) && strstr(path, "part-") == nullptr) {
       return fbl::unique_fd(open(path, O_RDWR));
     }
   }
 
   return fbl::unique_fd();
-}
+}  // namespace
 
 static bool IsChromebook() {
   fbl::unique_fd gpt_fd(FindGpt());
@@ -96,24 +99,21 @@ static bool IsChromebook() {
     return false;
   }
   fzl::UnownedFdioCaller caller(gpt_fd.get());
-  uint8_t out_buffer
-      [fidl::MaxSizeInChannel<::llcpp::fuchsia::hardware::block::Block::GetInfoResponse>()] = {};
-  ::llcpp::fuchsia::hardware::block::BlockInfo* block_info;
-
-  zx_status_t status;
-  auto decoded = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo_Deprecated(
-      zx::unowned_channel(caller.borrow_channel()), fidl::BytePart::WrapEmpty(out_buffer), &status,
-      &block_info);
-  if (decoded.status != ZX_OK) {
-    status = decoded.status;
+  auto result = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(caller.channel());
+  if (!result.ok()) {
+    fprintf(stderr, "netsvc: Could not acquire GPT block info: %s\n",
+            zx_status_get_string(result.status()));
+    return false;
   }
-  if (status != ZX_OK) {
-    fprintf(stderr, "netsvc: Could not acquire GPT block info: %s\n", zx_status_get_string(status));
+  const auto& response = result.value();
+  if (response.status != ZX_OK) {
+    fprintf(stderr, "netsvc: Could not acquire GPT block info: %s\n",
+            zx_status_get_string(response.status));
     return false;
   }
   fbl::unique_ptr<gpt::GptDevice> gpt;
-  status =
-      gpt::GptDevice::Create(gpt_fd.get(), block_info->block_size, block_info->block_count, &gpt);
+  zx_status_t status = gpt::GptDevice::Create(gpt_fd.get(), response.info->block_size,
+                                              response.info->block_count, &gpt);
   if (status != ZX_OK) {
     fprintf(stderr, "netsvc: Failed to get GPT info: %s\n", zx_status_get_string(status));
     return false;
@@ -132,17 +132,17 @@ bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length)
 
   char real_board_name[ZX_MAX_NAME_LEN] = {};
 
-  uint8_t out_buffer
-      [fidl::MaxSizeInChannel<::llcpp::fuchsia::sysinfo::Device::GetBoardNameResponse>()] = {};
-  fidl::StringView board_name;
-  zx_status_t status;
-  auto decoded = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName_Deprecated(
-      zx::unowned_channel(sysinfo), fidl::BytePart::WrapEmpty(out_buffer), &status, &board_name);
-  if (decoded.status != ZX_OK || status != ZX_OK) {
+  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(zx::unowned(sysinfo));
+  if (!result.ok()) {
+    return false;
+  }
+  const auto& response = result.value();
+  if (response.status != ZX_OK) {
     return false;
   }
 
-  strncpy(real_board_name, board_name.data(), std::min<size_t>(ZX_MAX_NAME_LEN, board_name.size()));
+  strncpy(real_board_name, response.name.data(),
+          std::min<size_t>(ZX_MAX_NAME_LEN, response.name.size()));
 
   // Special case x64 to check if chromebook.
 #if __x86_64__
