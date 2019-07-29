@@ -16,6 +16,7 @@
     - [Units](#units)
     - [World Space](#world-space)
     - [View Space](#view-space)
+  - [Views and Bounds](#views-and-bounds)
   - [Timing Model](#timing-model)
   - [Fences](#fences)
 - [Examples of using Scenic](#examples-of-using-scenic)
@@ -248,6 +249,12 @@ presenter and the handedness will match.
 The bounds of the root view are defined by a min and a max point as follows:
 
 ![Scenic Root View Bounds](meta/scenic_root_view_bounds.png)
+
+## Views and Bounds
+
+[View Bounds](view_bounds.md) shows how to set up your view bounds, how to debug
+them with wireframe rendering, and explains how view bounds interact with hit testing.
+
 
 ## Timing Model
 
