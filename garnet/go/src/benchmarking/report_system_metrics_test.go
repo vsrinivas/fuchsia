@@ -34,7 +34,7 @@ func TestReportCpuMetrics(t *testing.T) {
 								Name:  "cpu_usage",
 								Pid:   9234,
 								Tid:   5678,
-								Start: 3.000000000e+09,
+								Start: 3.000000000e+06,
 								Dur:   0,
 								Id:    0,
 								Args: map[string]interface{}{
@@ -50,7 +50,7 @@ func TestReportCpuMetrics(t *testing.T) {
 								Name:  "cpu_usage",
 								Pid:   9234,
 								Tid:   5678,
-								Start: 1.000000000e+09,
+								Start: 1.000000000e+06,
 								Dur:   0,
 								Id:    0,
 								Args: map[string]interface{}{
@@ -115,7 +115,7 @@ func TestReportMemoryMetrics(t *testing.T) {
 								Name:  "fixed",
 								Pid:   17783,
 								Tid:   17795,
-								Start: 1.000000000e+09,
+								Start: 1.000000000e+06,
 								Dur:   0,
 								Id:    0,
 								Args: map[string]interface{}{
@@ -132,7 +132,7 @@ func TestReportMemoryMetrics(t *testing.T) {
 								Name:  "allocated",
 								Pid:   17783,
 								Tid:   17795,
-								Start: 1.500000000e+09,
+								Start: 1.500000000e+06,
 								Dur:   0,
 								Id:    0,
 								Args: map[string]interface{}{
@@ -149,7 +149,7 @@ func TestReportMemoryMetrics(t *testing.T) {
 								Name:  "allocated",
 								Pid:   17783,
 								Tid:   17795,
-								Start: 1.900000000e+09,
+								Start: 1.900000000e+06,
 								Dur:   0,
 								Id:    0,
 								Args: map[string]interface{}{
@@ -166,7 +166,7 @@ func TestReportMemoryMetrics(t *testing.T) {
 								Name:  "free",
 								Pid:   17783,
 								Tid:   17795,
-								Start: 2.500000000e+09,
+								Start: 2.500000000e+06,
 								Dur:   0,
 								Id:    0,
 								Args: map[string]interface{}{
@@ -182,7 +182,7 @@ func TestReportMemoryMetrics(t *testing.T) {
 								Name:  "free",
 								Pid:   17783,
 								Tid:   17795,
-								Start: 1.800000000e+09,
+								Start: 1.800000000e+06,
 								Dur:   0,
 								Id:    0,
 								Args: map[string]interface{}{
@@ -230,7 +230,7 @@ func TestReportTemperatureMetrics(t *testing.T) {
 								Name:  "temperature",
 								Pid:   4567,
 								Tid:   1239,
-								Start: 14.000000000e+09,
+								Start: 14.000000000e+06,
 								Dur:   0,
 								Id:    0,
 								Args: map[string]interface{}{
@@ -245,7 +245,7 @@ func TestReportTemperatureMetrics(t *testing.T) {
 								Name:  "temperature",
 								Pid:   4567,
 								Tid:   1239,
-								Start: 3.000000000e+09,
+								Start: 3.000000000e+06,
 								Dur:   0,
 								Id:    0,
 								Args: map[string]interface{}{

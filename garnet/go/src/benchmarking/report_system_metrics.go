@@ -8,14 +8,15 @@ import (
 	"fmt"
 )
 
-const OneSecInNanoSeconds float64 = 1000000000
+const OneSecInMicroSeconds float64 = 1000000
 
 // Extract the list of average cpu percentage usages from the trace model
 // under system_metrics category, and write it into testResultsFile.
 func ReportCpuMetrics(model Model, testSuite string, testResultsFile *TestResultsFile) {
 	fmt.Printf("=== CPU ===\n")
-	if model.getTotalTraceDurationInNanoseconds() < 1.1*OneSecInNanoSeconds {
-		fmt.Printf("Trace duration is too short to provide CPU information.\n")
+	duration := model.getTotalTraceDurationInMicroseconds()
+	if duration < 1.1*OneSecInMicroSeconds {
+		fmt.Printf("Trace duration %.4f microseconds is too short to provide CPU information.\n", duration)
 		return
 	}
 	cpuPercentages := extractCounterValues(
@@ -33,8 +34,9 @@ func ReportCpuMetrics(model Model, testSuite string, testResultsFile *TestResult
 // from the trace model under memory_monitor category, and write it into testResultsFile.
 func ReportMemoryMetrics(model Model, testSuite string, testResultsFile *TestResultsFile) {
 	fmt.Printf("=== Memory ===\n")
-	if model.getTotalTraceDurationInNanoseconds() < 1.1*OneSecInNanoSeconds {
-		fmt.Printf("Trace duration is too short to provide Memory information.\n")
+	duration := model.getTotalTraceDurationInMicroseconds()
+	if duration < 1.1*OneSecInMicroSeconds {
+		fmt.Printf("Trace duration %.4f microseconds is too short to provide memory information.\n", duration)
 		return
 	}
 	allocatedMemoryValues := extractCounterValues(
@@ -72,8 +74,9 @@ func ReportMemoryMetrics(model Model, testSuite string, testResultsFile *TestRes
 // under system_metrics category, and write it into testResultsFile.
 func ReportTemperatureMetrics(model Model, testSuite string, testResultsFile *TestResultsFile) {
 	fmt.Printf("=== Temperature ===\n")
-	if model.getTotalTraceDurationInNanoseconds() < 10.1*OneSecInNanoSeconds {
-		fmt.Printf("Trace duration is too short to provide Temperature information.\n")
+	duration := model.getTotalTraceDurationInMicroseconds()
+	if duration < 10.1*OneSecInMicroSeconds {
+		fmt.Printf("Trace duration %.4f microseconds is too short to provide temperature information.\n", duration)
 		return
 	}
 	temperatureReadings := extractCounterValues(

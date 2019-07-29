@@ -293,7 +293,7 @@ func compareEvents(t *testing.T, description string, expectedEvents []*Event, ev
 	}
 }
 
-func TestGetTotalTraceDurationInNanoseconds(t *testing.T) {
+func TestGetTotalTraceDurationInMicroseconds(t *testing.T) {
 	model := Model{
 		Processes: []Process{
 			{Name: "", Pid: 9234, Threads: []Thread{
@@ -310,7 +310,7 @@ func TestGetTotalTraceDurationInNanoseconds(t *testing.T) {
 			}},
 		},
 	}
-	duration := model.getTotalTraceDurationInNanoseconds()
+	duration := model.getTotalTraceDurationInMicroseconds()
 	expectedDuration := 2.6000000e+07
 	if duration != expectedDuration {
 		t.Errorf("Total trace duration calculated (%f) and expected duration (%f) are different.",

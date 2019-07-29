@@ -177,7 +177,7 @@ type Model struct {
 // This is the time duration between the start of the first trace event
 // to the end of the last trace event.
 // If |m| contains 0 trace events, returns 0.0.
-func (m Model) getTotalTraceDurationInNanoseconds() float64 {
+func (m Model) getTotalTraceDurationInMicroseconds() float64 {
 	traceStartTime := math.MaxFloat64
 	traceEndTime := math.SmallestNonzeroFloat64
 	for _, process := range m.Processes {
