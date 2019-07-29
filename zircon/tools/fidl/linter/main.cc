@@ -2,14 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cmdline/status.h>
 #include <errno.h>
-#include <fidl/findings_json.h>
-#include <fidl/lexer.h>
-#include <fidl/linter.h>
-#include <fidl/parser.h>
-#include <fidl/source_manager.h>
-#include <fidl/tree_visitor.h>
 #include <stdio.h>
 
 #include <fstream>
@@ -17,6 +10,14 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <cmdline/status.h>
+#include <fidl/findings_json.h>
+#include <fidl/lexer.h>
+#include <fidl/linter.h>
+#include <fidl/parser.h>
+#include <fidl/source_manager.h>
+#include <fidl/tree_visitor.h>
 
 #include "command_line_options.h"
 

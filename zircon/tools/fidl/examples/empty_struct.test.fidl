@@ -10,6 +10,6 @@ struct Empty {
 [Layout = "Simple"]
 protocol EmptyProtocol {
     Send(Empty e);
-    -> Receive (Empty e);
+    -> Receive(Empty e);
     SendAndReceive(Empty e) -> (Empty e);
 };

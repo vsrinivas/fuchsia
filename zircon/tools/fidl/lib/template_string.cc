@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/template_string.h>
-
 #include <iostream>
 #include <regex>
 #include <sstream>
+
+#include <fidl/template_string.h>
 
 namespace fidl {
 

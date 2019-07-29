@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/linting_tree_callbacks.h>
-#include <fidl/utils.h>
-
 #include <fstream>
 #include <regex>
+
+#include <fidl/linting_tree_callbacks.h>
+#include <fidl/utils.h>
 
 namespace fidl {
 namespace linter {

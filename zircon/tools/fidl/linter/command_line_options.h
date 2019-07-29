@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
-
-#include <cmdline/status.h>
+#ifndef ZIRCON_TOOLS_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
+#define ZIRCON_TOOLS_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
 
 #include <string>
 #include <vector>
+
+#include <cmdline/status.h>
 
 namespace fidl {
 namespace linter {
@@ -32,4 +32,4 @@ std::string Usage(std::string argv0);
 }  // namespace linter
 }  // namespace fidl
 
-#endif  // ZIRCON_SYSTEM_HOST_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
+#endif  // ZIRCON_TOOLS_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_

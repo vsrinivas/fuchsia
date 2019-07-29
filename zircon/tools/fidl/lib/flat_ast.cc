@@ -2192,13 +2192,13 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       auto identifier_type = static_cast<const IdentifierType*>(type);
       const PrimitiveType* primitive_type;
       switch (identifier_type->type_decl->kind) {
-        case Decl::Kind::kEnum:{
+        case Decl::Kind::kEnum: {
           auto enum_decl = static_cast<const Enum*>(identifier_type->type_decl);
           assert(enum_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
           primitive_type = static_cast<const PrimitiveType*>(enum_decl->subtype_ctor->type);
           break;
         }
-        case Decl::Kind::kBits:{
+        case Decl::Kind::kBits: {
           auto bits_decl = static_cast<const Bits*>(identifier_type->type_decl);
           assert(bits_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
           primitive_type = static_cast<const PrimitiveType*>(bits_decl->subtype_ctor->type);
@@ -2213,7 +2213,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       break;
     }
     default: {
-          assert(false && "Compiler bug: identifier not of const-able type.");
+      assert(false && "Compiler bug: identifier not of const-able type.");
     }
   }
 

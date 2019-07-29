@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_UTILS_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_UTILS_H_
+#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_UTILS_H_
+#define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_UTILS_H_
 
 #include <errno.h>
-#include <fidl/error_reporter.h>
-#include <fidl/findings.h>
 
 #include <clocale>
 #include <set>
 #include <string>
+
+#include <fidl/error_reporter.h>
+#include <fidl/findings.h>
 
 namespace fidl {
 namespace utils {
@@ -160,4 +161,4 @@ bool OnlyWhitespaceChanged(const std::string& unformatted_input,
 }  // namespace utils
 }  // namespace fidl
 
-#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_UTILS_H_
+#endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_UTILS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TABLES_GENERATOR_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TABLES_GENERATOR_H_
+#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_TABLES_GENERATOR_H_
+#define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_TABLES_GENERATOR_H_
 
 #include <map>
 #include <memory>
@@ -81,4 +81,4 @@ class TablesGenerator {
 
 }  // namespace fidl
 
-#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TABLES_GENERATOR_H_
+#endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_TABLES_GENERATOR_H_

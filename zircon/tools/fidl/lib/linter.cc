@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/findings.h>
-#include <fidl/linter.h>
-#include <fidl/names.h>
-#include <fidl/raw_ast.h>
-#include <fidl/utils.h>
 #include <lib/fit/function.h>
 
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <set>
+
+#include <fidl/findings.h>
+#include <fidl/linter.h>
+#include <fidl/names.h>
+#include <fidl/raw_ast.h>
+#include <fidl/utils.h>
 
 namespace fidl {
 namespace linter {

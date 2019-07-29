@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_NAMES_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_NAMES_H_
+#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_NAMES_H_
+#define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_NAMES_H_
 
 #include <string>
 #include <string_view>
@@ -61,4 +61,4 @@ std::string NameCodedString(uint64_t max_size, types::Nullability nullability);
 
 }  // namespace fidl
 
-#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_NAMES_H_
+#endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_NAMES_H_

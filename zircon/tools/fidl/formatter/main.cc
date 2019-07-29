@@ -3,11 +3,6 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fidl/formatter.h>
-#include <fidl/lexer.h>
-#include <fidl/parser.h>
-#include <fidl/source_manager.h>
-#include <fidl/utils.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -16,6 +11,12 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <fidl/formatter.h>
+#include <fidl/lexer.h>
+#include <fidl/parser.h>
+#include <fidl/source_manager.h>
+#include <fidl/utils.h>
 
 namespace {
 

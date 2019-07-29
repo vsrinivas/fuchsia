@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_CHECK_DEF_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_CHECK_DEF_H_
+#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_CHECK_DEF_H_
+#define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_CHECK_DEF_H_
 
 ///////////////////////////////////////////////////////////////
 // Even though this file is namespaced to "fidl::lint", it
@@ -15,10 +15,10 @@
 // findings from other developer tools, such as fidlc.
 ///////////////////////////////////////////////////////////////
 
-#include <fidl/template_string.h>
-
 #include <iostream>
 #include <string>
+
+#include <fidl/template_string.h>
 
 namespace fidl {
 namespace linter {
@@ -52,4 +52,4 @@ class CheckDef {
 }  // namespace linter
 }  // namespace fidl
 
-#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_CHECK_DEF_H_
+#endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_CHECK_DEF_H_

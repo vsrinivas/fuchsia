@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
+#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_LINTER_H_
+#define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_LINTER_H_
+
+#include <array>
+#include <deque>
+#include <regex>
+#include <set>
 
 #include <fidl/check_def.h>
 #include <fidl/findings.h>
 #include <fidl/linting_tree_callbacks.h>
 #include <fidl/tree_visitor.h>
 #include <fidl/utils.h>
-
-#include <array>
-#include <deque>
-#include <regex>
-#include <set>
 
 namespace fidl {
 namespace linter {
@@ -287,4 +287,4 @@ class Linter {
 
 }  // namespace linter
 }  // namespace fidl
-#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
+#endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_LINTER_H_

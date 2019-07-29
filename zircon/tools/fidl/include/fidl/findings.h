@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_FINDINGS_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_FINDINGS_H_
+#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FINDINGS_H_
+#define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FINDINGS_H_
 
 ///////////////////////////////////////////////////////////////
 // Even though this file is namespaced to "fidl::lint", it
@@ -15,12 +15,12 @@
 // findings from other developer tools, such as fidlc.
 ///////////////////////////////////////////////////////////////
 
-#include <fidl/source_location.h>
-
 #include <list>
 #include <optional>
 #include <sstream>
 #include <string>
+
+#include <fidl/source_location.h>
 
 namespace fidl {
 
@@ -108,4 +108,4 @@ using Findings = std::list<Finding>;
 
 }  // namespace fidl
 
-#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_FINDINGS_H_
+#endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FINDINGS_H_
