@@ -49,7 +49,7 @@ find_cipd() {
   # If the Zircon checkout is part of a jiri checkout that includes
   # //buildtools, then find cipd there.  Otherwise, if cipd is in
   # the PATH, take it from there.
-  type -p "${ZIRCON_ROOT}/../buildtools/cipd" || type -p cipd
+  type -p "${ZIRCON_ROOT}/../.jiri_root/bin/cipd" || type -p cipd
 }
 
 run_cipd() {

@@ -49,7 +49,7 @@ function fx-update-path {
 
   export PATH="$(__patched_path "${FUCHSIA_DIR}/scripts/git" "${FUCHSIA_DIR}/scripts/git")"
 
-  local rust_dir="$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n "${BUILDTOOLS_RUST_DIR}/bin")"
+  local rust_dir="$(source "${FUCHSIA_DIR}/tools/devshell/lib/vars.sh" && echo -n "${PREBUILT_RUST_DIR}/bin")"
   export PATH="$(__patched_path "${rust_dir}" "${rust_dir}")"
 
   # XXX(raggi): these can get stale, so this really needs rework. Probably the

@@ -38,6 +38,6 @@ EOF
 $ ./out/default.zircon/tools/zbi -o out/default.zircon/x64.zbi out/default.zircon/x64.zbi \
     -T IMAGE_ARGS test_image_args.txt
 
-$ cd out && ../scripts/run-zircon-x86 -V -k -q $(pwd)/../buildtools/linux-x64/qemu/bin \
+$ cd out && ../scripts/run-zircon-x86 -V -k \
     -c userboot=bin/bootsvc -c bootsvc.next=bin/bootsvc-integration-test,testargument
 ```

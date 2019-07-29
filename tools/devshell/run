@@ -14,7 +14,6 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fvm.sh || exit $?
-source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 for arg in "$@"; do
   if [[ "$arg" = "-h" || "$arg" = "--help" ]]; then
@@ -24,7 +23,7 @@ for arg in "$@"; do
   fi
 done
 
-qemu_dir="${BUILDTOOLS_QEMU_DIR}/bin"
+qemu_dir="${PREBUILT_QEMU_DIR}/bin"
 
 args=(
   -a "${FUCHSIA_ARCH}"
