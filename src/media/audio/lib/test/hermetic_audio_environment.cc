@@ -7,6 +7,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -100,7 +101,7 @@ void HermeticAudioEnvironment::Start(async::Loop* loop) {
 
 HermeticAudioEnvironment::~HermeticAudioEnvironment() {
   if (loop_) {
-    loop_->Quit();
+    async::PostTask(loop_->dispatcher(), [loop = loop_] { loop->Quit(); });
     env_thread_.join();
   }
 }
