@@ -174,7 +174,7 @@ fi
   "--quit-agent-on-exit" \
   "-s" "${FUCHSIA_BUILD_DIR}" \
   "-s" "${ZIRCON_BUILDROOT}" \
-  "-s" "${PREBUILT_CLANG_DIR}/lib/debug" \
+  "-s" "${BUILDTOOLS_CLANG_DIR}/lib/debug" \
   "--symbol-cache" ~ \
   "--symbol-server" "gs://fuchsia-infra-debug-symbols" \
   $@

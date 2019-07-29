@@ -31,10 +31,10 @@ function run-ninja {
   done
   # Use a subshell because fx-cmd-locked locks until exit, not function return.
   if [ "$continue_on_error" = false ]; then
-    (fx-run-ninja "$PREBUILT_NINJA" "$@") || exit
+    (fx-run-ninja "${FUCHSIA_DIR}/buildtools/ninja" "$@") || exit
   else
     local status
-    (fx-run-ninja "$PREBUILT_NINJA" "$@")
+    (fx-run-ninja "${FUCHSIA_DIR}/buildtools/ninja" "$@")
     status=$?
     if [ "${status}" -ne 0 ]; then
       fx-warn "Build outputs may be inconsistent and may remain so; a clean build is recommended."

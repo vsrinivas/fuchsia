@@ -156,7 +156,7 @@ if [[ -z $ARCH ]]; then
     HELP
 fi
 
-# by default use the qemu binary located in the fuchsia //prebuilt
+# by default use the qemu binary located in the fuchsia buildtools
 # repo if we can find it, but allow -q to override it for people
 # who want to use their own.
 case "$(uname -s)" in

@@ -113,7 +113,7 @@ while [ $# -gt 0 ]; do
       >&2 echo "Looking up files for target ${ARG#--target=}..."
       declare -i status=0
       GN_OUTPUT=(
-         $(fx-gn desc "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)
+         $(fx-buildtool-run gn desc "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)
       ) || status=$?
       if (( ${status} != 0 )); then
         >&2 echo "${GN_OUTPUT[@]}"
@@ -156,11 +156,23 @@ get_all_files() {
 
 $GET_FILES
 
+declare BUILDTOOLS_ROOT="${FUCHSIA_DIR}"/buildtools
+declare HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
+
+[[ "${HOST_OS}" == "darwin" ]] && HOST_OS="mac"
+case $(uname -m) in
+  x86_64) HOST_ARCH="x64" ;;
+  aarch64) HOST_ARCH="arm64" ;;
+  *) fx-error "Unknown arch $(uname -m)" && exit 1 ;;
+esac
+
+declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
+
 # Specify both the clang-tidy and the clang-apply-replacements binaries to be
-# the ones in //prebuilt, so that they'll work properly on the tree.
-declare CLANG_TIDY="${PREBUILT_CLANG_DIR}/bin/clang-tidy"
-declare CLANG_APPLY_REPLACEMENTS="${PREBUILT_CLANG_DIR}/bin/clang-apply-replacements"
-declare RUN_CLANG_TIDY="${PREBUILT_CLANG_DIR}/share/clang/run-clang-tidy.py"
+# the ones in //buildtools, so that they'll work properly on the tree.
+declare CLANG_TIDY="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-tidy"
+declare CLANG_APPLY_REPLACEMENTS="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-apply-replacements"
+declare RUN_CLANG_TIDY="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/share/clang/run-clang-tidy.py"
 
 # Suppress the "name-repeats-*" checks for now. These produce a high number of
 # linter warnings, many of which are questionable. The algorithm will be refined.
@@ -179,11 +191,11 @@ declare FIDL_LINT_CMD=( "${FIDL_LINT}" )
 # TODO(fxb/TC-559): add command and args for Dart linter
 declare DART_LINT_CMD=() # "${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/bin/dart<cmd?> <options?>"
 # TODO(fxb/TC-542): add command and args for Go linter
-declare GO_LINT_CMD=() # "${PREBUILT_GO_DIR}/bin/go<cmd?> <options?>"
+declare GO_LINT_CMD=() # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/go<cmd?> <options?>"
 # TODO(fxb/TC-543): add command and args for JSON linter
 declare JSON_LINT_CMD=() # "${FUCHSIA_DIR}"/scripts/style/json-<cmd?> <options?>"
 # TODO(fxb/TC-544): add command and args for Rust linter
-declare RUST_LINT_CMD=() # "${PREBUILT_RUST_DIR}/bin/rust<cmd?> <options?>"
+declare RUST_LINT_CMD=() # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rust<cmd?> <options?>"
 
 declare CLANG_TIDY_FILES=()
 declare DART_LINT_FILES=()

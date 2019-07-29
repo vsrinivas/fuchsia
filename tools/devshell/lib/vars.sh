@@ -10,8 +10,9 @@ fi
 
 export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
 export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
-source "${devshell_lib_dir}/prebuilt.sh"
 unset devshell_lib_dir
+
+source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
   set -x
@@ -43,9 +44,10 @@ function fx-symbolize {
   if [[ $# -gt 0 ]]; then
     idstxt=(-ids-rel -ids "$1")
   fi
-  local symbolize="${PREBUILT_TOOLS_DIR}/symbolize/${HOST_PLATFORM}/symbolize"
-  local llvm_symbolizer="${PREBUILT_CLANG_DIR}/bin/llvm-symbolizer"
-  local toolchain_dir="${PREBUILT_CLANG_DIR}/lib/debug/.build-id"
+  local symbolize="${FUCHSIA_DIR}/prebuilt/tools/symbolize/${BUILDTOOLS_PLATFORM}/symbolize"
+  local clang_dir="${FUCHSIA_DIR}/prebuilt/third_party/clang/${BUILDTOOLS_PLATFORM}"
+  local llvm_symbolizer="${clang_dir}/bin/llvm-symbolizer"
+  local toolchain_dir="${clang_dir}/lib/debug/.build-id"
   local download_dir="${FUCHSIA_DIR}/prebuilt_build_ids"
   local out_dir="${FUCHSIA_BUILD_DIR}/.build-id"
   local zircon_dir="${ZIRCON_BUILDROOT}/.build-id"
@@ -56,15 +58,11 @@ function fx-symbolize {
     -build-id-dir "$out_dir" -build-id-dir "$zircon_dir"
 }
 
-function fx-gn {
-  "${PREBUILT_GN}" "$@"
-}
-
 function fx-gen {
     (
       set -ex
       cd "${FUCHSIA_DIR}"
-      fx-gn gen "${FUCHSIA_BUILD_DIR}"
+      "${FUCHSIA_DIR}/buildtools/gn" gen "${FUCHSIA_BUILD_DIR}"
     ) || return 1
 }
 
@@ -231,6 +229,26 @@ function fx-command-run {
   local -r command_path="$(fx-find-command ${command_name})"
 
   if [[ ${command_path} == "" ]]; then
+    fx-error "Unknown command ${command_name}"
+    exit 1
+  fi
+
+  shift
+  "${command_path}" "$@"
+}
+
+buildtools_whitelist=" gn ninja "
+
+function fx-buildtool-run {
+  local -r command_name="$1"
+  local -r command_path="${FUCHSIA_DIR}/buildtools/${command_name}"
+
+  if [[ ! "${buildtools_whitelist}" =~ .*[[:space:]]"${command_name}"[[:space:]].* ]]; then
+    fx-error "command ${command_name} not allowed"
+    exit 1
+  fi
+
+  if [[ ! -f "${command_path}" ]]; then
     fx-error "Unknown command ${command_name}"
     exit 1
   fi
