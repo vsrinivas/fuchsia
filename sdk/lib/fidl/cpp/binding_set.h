@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 
 #include <algorithm>
+#include <iostream>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -30,6 +31,8 @@ class BindingSet final {
  public:
   using Binding = ::fidl::Binding<Interface, ImplPtr>;
   using StorageType = std::vector<std::unique_ptr<Binding>>;
+  //TODO(FIDL-761) Use fit::function here instead of std::function.
+  using ErrorHandler = std::function<void(zx_status_t)>;
 
   using iterator = typename StorageType::iterator;
 
@@ -52,14 +55,23 @@ class BindingSet final {
   // binding generates an error will delete |impl| because |~ImplPtr| is
   // |~unique_ptr|, which deletes |impl|.
   void AddBinding(ImplPtr impl, InterfaceRequest<Interface> request,
-                  async_dispatcher_t* dispatcher = nullptr) {
+                  async_dispatcher_t* dispatcher = nullptr, ErrorHandler handler = nullptr) {
     bindings_.push_back(
         std::make_unique<Binding>(std::forward<ImplPtr>(impl), std::move(request), dispatcher));
     auto* binding = bindings_.back().get();
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
     binding->set_error_handler(
-        [binding, this](zx_status_t status) { this->RemoveOnError(binding); });
+        [binding, capture_handler = std::move(handler), this](zx_status_t status) {
+          // Subtle behavior: it is necessary to std::move into a local
+          // variable because the closure is deleted when RemoveOnError
+          // is called.
+          ErrorHandler handler(std::move(capture_handler));
+          this->RemoveOnError(binding);
+          if (handler) {
+            handler(status);
+          }
+        });
   }
 
   // Adds a binding to the set for the given implementation.
@@ -78,12 +90,13 @@ class BindingSet final {
   // |impl|. If |ImplPtr| is a |unique_ptr|, then running |~ImplPtr| when the
   // binding generates an error will delete |impl| because |~ImplPtr| is
   // |~unique_ptr|, which deletes |impl|.
-  InterfaceHandle<Interface> AddBinding(ImplPtr impl, async_dispatcher_t* dispatcher = nullptr) {
+  InterfaceHandle<Interface> AddBinding(ImplPtr impl, async_dispatcher_t* dispatcher = nullptr,
+                                        ErrorHandler handler = nullptr) {
     InterfaceHandle<Interface> handle;
     InterfaceRequest<Interface> request = handle.NewRequest();
     if (!request)
       return nullptr;
-    AddBinding(std::forward<ImplPtr>(impl), std::move(request), dispatcher);
+    AddBinding(std::forward<ImplPtr>(impl), std::move(request), dispatcher, std::move(handler));
     return handle;
   }
 
