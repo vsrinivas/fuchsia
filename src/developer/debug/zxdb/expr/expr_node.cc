@@ -267,9 +267,15 @@ void FunctionCallExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback c
 }
 
 void FunctionCallExprNode::Print(std::ostream& out, int indent) const {
-  out << IndentFor(indent) << "FUNCTIONCALL(" << name_.GetDebugName() << ")\n";
+  out << IndentFor(indent) << "FUNCTIONCALL\n";
+  call_->Print(out, indent + 1);
   for (const auto& arg : args_)
     arg->Print(out, indent + 1);
+}
+
+// static
+bool FunctionCallExprNode::IsValidCall(const fxl::RefPtr<ExprNode>& call) {
+  return call && (call->AsIdentifier() || call->AsMemberAccess());
 }
 
 void IdentifierExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {

@@ -348,28 +348,56 @@ TEST_F(ExprParserTest, Identifiers) {
 
 TEST_F(ExprParserTest, FunctionCall) {
   // Simple call with no args.
-  EXPECT_EQ("FUNCTIONCALL(\"Call\")\n", GetParseString("Call()"));
+  EXPECT_EQ(
+      "FUNCTIONCALL\n"
+      " IDENTIFIER(\"Call\")\n",
+      GetParseString("Call()"));
 
   // Scoped call with namespaces and templates.
-  EXPECT_EQ(R"(FUNCTIONCALL("ns"; ::"Foo",<"int">; ::"GetCurrent"))"
-            "\n",
-            GetParseString("ns::Foo<int>::GetCurrent()"));
+  EXPECT_EQ(
+      "FUNCTIONCALL\n"
+      " IDENTIFIER(\"ns\"; ::\"Foo\",<\"int\">; ::\"GetCurrent\")\n",
+      GetParseString("ns::Foo<int>::GetCurrent()"));
 
   // One arg.
   EXPECT_EQ(
-      "FUNCTIONCALL(\"Call\")\n"
+      "FUNCTIONCALL\n"
+      " IDENTIFIER(\"Call\")\n"
       " LITERAL(42)\n",
       GetParseString("Call(42)"));
 
   // Several complex args and a nested call.
   EXPECT_EQ(
-      "FUNCTIONCALL(\"Call\")\n"
+      "FUNCTIONCALL\n"
+      " IDENTIFIER(\"Call\")\n"
       " IDENTIFIER(\"a\")\n"
       " BINARY_OP(=)\n"
       "  IDENTIFIER(\"b\")\n"
       "  LITERAL(5)\n"
-      " FUNCTIONCALL(\"OtherCall\")\n",
+      " FUNCTIONCALL\n"
+      "  IDENTIFIER(\"OtherCall\")\n",
       GetParseString("Call(a, b = 5, OtherCall())"));
+
+  // Function call on an object with ".".
+  EXPECT_EQ(
+      "FUNCTIONCALL\n"
+      " ACCESSOR(.)\n"
+      "  ACCESSOR(.)\n"
+      "   IDENTIFIER(\"foo\")\n"
+      "   bar\n"
+      "  Baz\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("foo.bar.Baz(a)"));
+
+  // Function call on nested stuff with "->".
+  EXPECT_EQ(
+      "FUNCTIONCALL\n"
+      " ACCESSOR(->)\n"
+      "  BINARY_OP(+)\n"
+      "   IDENTIFIER(\"a\")\n"
+      "   IDENTIFIER(\"b\")\n"
+      "  Call\n",
+      GetParseString("(a + b)-> Call()"));
 
   // Unmatched "(" error.
   auto result = Parse("Call(a, ");
@@ -486,8 +514,10 @@ TEST_F(ExprParserTest, NamesWithSymbolLookup) {
   EXPECT_EQ("Template parameters not valid on this object type.", parser().err().msg());
 
   // Good type name.
-  EXPECT_EQ("FUNCTIONCALL(\"Namespace\"; ::\"Template\",<\"int\">; ::\"fn\")\n",
-            GetParseString("Namespace::Template<int>::fn()", &TestLookupName));
+  EXPECT_EQ(
+      "FUNCTIONCALL\n"
+      " IDENTIFIER(\"Namespace\"; ::\"Template\",<\"int\">; ::\"fn\")\n",
+      GetParseString("Namespace::Template<int>::fn()", &TestLookupName));
 }
 
 TEST_F(ExprParserTest, TrueFalse) {

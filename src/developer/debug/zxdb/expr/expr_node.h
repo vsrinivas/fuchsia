@@ -214,19 +214,25 @@ class FunctionCallExprNode : public ExprNode {
   void Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
-  const ParsedIdentifier& name() const { return name_; }
+  const fxl::RefPtr<ExprNode>& call() const { return call_; }
   const std::vector<fxl::RefPtr<ExprNode>>& args() const { return args_; }
+
+  // Returns true if the given ExprNode is valid for the "call" of a function.
+  static bool IsValidCall(const fxl::RefPtr<ExprNode>& call);
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(FunctionCallExprNode);
   FRIEND_MAKE_REF_COUNTED(FunctionCallExprNode);
 
   FunctionCallExprNode();
-  FunctionCallExprNode(ParsedIdentifier name, std::vector<fxl::RefPtr<ExprNode>> args)
-      : name_(std::move(name)), args_(std::move(args)) {}
+  FunctionCallExprNode(fxl::RefPtr<ExprNode> call, std::vector<fxl::RefPtr<ExprNode>> args)
+      : call_(std::move(call)), args_(std::move(args)) {}
   ~FunctionCallExprNode() override = default;
 
-  ParsedIdentifier name_;
+  // This will either be an IdentifierExprNode which gives the function name, or a
+  // MemberAccessExprNode which gives an object and the function name.
+  fxl::RefPtr<ExprNode> call_;
+
   std::vector<fxl::RefPtr<ExprNode>> args_;
 };
 

@@ -626,16 +626,12 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
 
 fxl::RefPtr<ExprNode> ExprParser::LeftParenInfix(fxl::RefPtr<ExprNode> left,
                                                  const ExprToken& token) {
-  // "(" as an infix is a function call. In this case, expect the thing on the left to be an
-  // identifier which is the name of the function.
-  const IdentifierExprNode* left_ident_node = left->AsIdentifier();
-  if (!left_ident_node) {
+  // "(" as an infix is a function call. In this case, the thing on the left identifies what to
+  // call (either a bare identifier or an object accessor).
+  if (!FunctionCallExprNode::IsValidCall(left)) {
     SetError(token, "Unexpected '('.");
     return nullptr;
   }
-  // Const cast is required because the type conversions only have const versions, although our
-  // object is not const.
-  ParsedIdentifier name = const_cast<IdentifierExprNode*>(left_ident_node)->TakeIdentifier();
 
   // Read the function parameters.
   std::vector<fxl::RefPtr<ExprNode>> args = ParseExpressionList(ExprTokenType::kRightParen);
@@ -645,7 +641,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenInfix(fxl::RefPtr<ExprNode> left,
   if (has_error())
     return nullptr;
 
-  return fxl::MakeRefCounted<FunctionCallExprNode>(std::move(name), std::move(args));
+  return fxl::MakeRefCounted<FunctionCallExprNode>(std::move(left), std::move(args));
 }
 
 fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
