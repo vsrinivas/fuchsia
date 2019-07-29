@@ -3,14 +3,17 @@
 // found in the LICENSE file.
 
 #include "driver_tests.h"
-#include <ddk/platform-defs.h>
-#include <fbl/unique_fd.h>
-#include <zxtest/zxtest.h>
 
 #include <fuchsia/device/test/c/fidl.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+
+#include <array>
+
+#include <ddk/platform-defs.h>
+#include <fbl/unique_fd.h>
+#include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;
 
@@ -57,12 +60,12 @@ TEST_F(PciDriverTests, TestRunner) {
 
   // The final path is made up of the FakeBusDriver, the bind point it creates, and
   // the final protocol test driver.
-  char proto_driver_path[64] = {};
-  snprintf(proto_driver_path, sizeof(proto_driver_path),
+  std::array<char, 64> proto_driver_path = {};
+  snprintf(proto_driver_path.data(), proto_driver_path.max_size(),
            "sys/platform/%02x:%02x:%01x/%s/%02x:%02x.%1x/%s", kDeviceEntry.vid, kDeviceEntry.pid,
            kDeviceEntry.did, kDeviceEntry.name, PCI_TEST_BUS_ID, PCI_TEST_DEV_ID, PCI_TEST_FUNC_ID,
            kProtocolTestDriverName);
-  st = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), proto_driver_path,
+  st = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), proto_driver_path.data(),
                                                      &protocol_fd_);
   ASSERT_OK(st);
   zx::channel ch;
