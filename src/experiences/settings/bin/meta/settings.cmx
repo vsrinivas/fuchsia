@@ -1,0 +1,22 @@
+{
+    "program": {
+        "data": "data/settings"
+    },
+    "sandbox": {
+        "features": [ "build-info" ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.modular.Clipboard",
+            "fuchsia.modular.ContextWriter",
+            "fuchsia.modular.ModuleContext",
+            "fuchsia.sys.Environment",
+            "fuchsia.timezone.Timezone",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.wlan.service.Wlan"
+        ]
+    }
+}

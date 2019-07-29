@@ -1,0 +1,15 @@
+{
+    "program": {
+        "data": "data/accessibility_settings"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fonts.Provider",
+            "fuchsia.modular.Clipboard",
+            "fuchsia.modular.ContextWriter",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}

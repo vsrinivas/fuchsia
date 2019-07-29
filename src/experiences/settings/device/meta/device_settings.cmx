@@ -1,0 +1,29 @@
+{
+    "program": {
+        "data": "data/device_settings"
+    },
+    "sandbox": {
+        "dev": [
+            "misc"
+        ],
+        "features": [
+            "build-info"
+        ],
+        "services": [
+            "fuchsia.device.manager.Administrator",
+            "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.modular.Clipboard",
+            "fuchsia.modular.ContextWriter",
+            "fuchsia.pkg.RepositoryManager",
+            "fuchsia.pkg.rewrite.Engine",
+            "fuchsia.recovery.FactoryReset",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.update.Manager"
+        ]
+    }
+}
