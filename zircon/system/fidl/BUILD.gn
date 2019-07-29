@@ -20,6 +20,7 @@ group("fidl") {
     "fuchsia-device-test",
     "fuchsia-device-vsock",
     "fuchsia-driver-test",
+    "fuchsia-exception",
     "fuchsia-fshost",
     "fuchsia-hardware-audio",
     "fuchsia-hardware-backlight",

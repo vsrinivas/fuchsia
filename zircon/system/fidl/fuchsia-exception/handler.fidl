@@ -1,0 +1,57 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+library fuchsia.exception;
+
+using zx;
+
+/// Protocol meant for clients interested in handling exceptions for a
+/// particular service.
+[Discoverable]
+protocol Handler {
+    /// This exception mirrors closely the information provided by exception
+    /// channels. The design is to have clients of this API behave as closely as
+    /// possible to native exception handlers that are listening to an exception
+    /// channel.
+    ///
+    /// `exception` is an exception handle, which controls the exception's
+    /// lifetime. See exception zircon docs for more information.
+    ///
+    /// `info` represents basic exception information as provided by the
+    /// exception channel.
+    OnException(handle<exception> exception, ExceptionInfo info) ->();
+};
+
+/// Basic exception information associated with a particular exception.
+/// Maps to `zx_exception_info_t`.
+// TODO(FIDL-431): Currently there is no good support for tables within the
+//                 llcpp bindings, which would make this API very cumbersome to
+//                 use. When better support lands, move this to a table.
+struct ExceptionInfo {
+  // Process ID or pid.
+  zx.koid process_koid;
+
+  // Thread ID or tid.
+  zx.koid thread_koid;
+
+  ExceptionType type;
+};
+
+/// What type of exception was triggered.
+/// Maps to the types defined in `zx_excp_type_t`.
+/// If zircon/syscalls/exception.h changes, this needs to be updates as well to
+/// reflect that.
+// TODO(FIDL-478): Once there is a way to better generate zx bindings, move this
+//                 definitions to a common library.
+enum ExceptionType : uint32 {
+  GENERAL = 0x8;
+  FATAL_PAGE_FAULT = 0x108;
+  UNDEFINED_INSTRUCTION = 0x208;
+  SW_BREAKPOINT = 0x308;
+  HW_BREAKPOINT = 0x408;
+  UNALIGNED_ACCESS = 0x508;
+  THREAD_STARTING = 0x8008;
+  THREAD_EXITING = 0x8108;
+  POLICY_ERROR = 0x8208;
+  PROCESS_STARTING = 0x8308;
+};
