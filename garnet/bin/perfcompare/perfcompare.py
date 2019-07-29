@@ -154,27 +154,17 @@ def ResultsFromDirs(filenames):
     return {name: Stats(values) for name, values in results_map.iteritems()}
 
 
-# This function accepts data in two possible formats:
-#
-#  #1 A directory (or tar file), in the format read by RawResultsFromDir(),
-#     containing perf test results from a single boot of Fuchsia.
-#
-#  #2 A directory representing perf test results from multiple boots of
-#     Fuchsia.  It contains a "by_boot" subdir, which contains directories
-#     (or tar files) of the format read by RawResultsFromDir().
-#
-# TODO(PT-202): Currently the fuchsia_perfcompare.py recipe invokes this
-# tool with data of format #1, but it will switch to using format #2.
+# This takes a directory representing perf test results from multiple boots
+# of Fuchsia.  It contains a "by_boot" subdir, which contains directories
+# (or tar files) of the format read by RawResultsFromDir().
 #
 # This returns a dict mapping test names to Stats objects.
 def ResultsFromDir(filename):
     assert os.path.exists(filename)
     by_boot_dir = os.path.join(filename, 'by_boot')
-    if os.path.exists(by_boot_dir):
-        filenames = [os.path.join(by_boot_dir, name)
-                     for name in sorted(os.listdir(by_boot_dir))]
-    else:
-        filenames = [filename]
+    assert os.path.exists(by_boot_dir), by_boot_dir
+    filenames = [os.path.join(by_boot_dir, name)
+                 for name in sorted(os.listdir(by_boot_dir))]
     return ResultsFromDirs(filenames)
 
 
