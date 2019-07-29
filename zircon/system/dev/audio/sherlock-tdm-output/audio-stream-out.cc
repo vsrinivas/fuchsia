@@ -136,11 +136,11 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   // Setup Stereo Left Justified:
   // -lrclk duty = 64 sclk (SetSclkDiv lrdiv=63 below).
   // -No delay from the time the lrclk signal changes state state to the first bit of data on the
-  // data lines  (ConfigTdmOutSlot bitoffset=4 below accomplishes this).
+  // data lines.
   // -3072MHz/64 = 48KHz.
 
-  // 4 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample, enable mix L+R on lane 1.
-  aml_audio_->ConfigTdmOutSlot(4, 1, 31, 15, (1 << 1));
+  // 5 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample, enable mix L+R on lane 1.
+  aml_audio_->ConfigTdmOutSlot(5, 1, 31, 15, (1 << 1));
 
   // Lane 0 L channel set to FRDDR slot 0.
   // Lane 0 R channel set to FRDDR slot 1.

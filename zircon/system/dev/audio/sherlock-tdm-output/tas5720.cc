@@ -72,6 +72,7 @@ zx_status_t Tas5720::Init(std::optional<uint8_t> slot) {
   WriteReg(kRegDigitalClipper2, 0xFF);                 // Disabled.
   WriteReg(kRegDigitalClipper1, 0xFC);                 // Disabled.
   ExitStandby();
+  SetGain(-20.f);                                      // Conservative default gain.
   uint8_t val = 0;
   ReadReg(kRegFaultCfgErrorStatus, &val);
   if (val != 0x00) {
