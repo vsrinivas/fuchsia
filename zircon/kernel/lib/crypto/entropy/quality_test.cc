@@ -67,7 +67,7 @@ static void SetupEntropyVmo(uint level) {
 
 // Run the entropy collector test.
 void EarlyBootTest() {
-  const char* src_name = cmdline_get("kernel.entropy-test.src");
+  const char* src_name = gCmdline.GetString("kernel.entropy-test.src");
   if (!src_name) {
     src_name = "";
   }
@@ -98,7 +98,7 @@ void EarlyBootTest() {
     return;
   }
 
-  entropy_len = cmdline_get_uint64("kernel.entropy-test.len", sizeof(entropy_buf));
+  entropy_len = gCmdline.GetUInt64("kernel.entropy-test.len", sizeof(entropy_buf));
   if (entropy_len > sizeof(entropy_buf)) {
     entropy_len = sizeof(entropy_buf);
     printf(

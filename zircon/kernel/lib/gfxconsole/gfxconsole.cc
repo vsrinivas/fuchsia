@@ -166,7 +166,7 @@ static void gfxconsole_print_callback(print_callback_t* cb, const char* str, siz
 static print_callback_t cb = {.entry = {}, .print = gfxconsole_print_callback, .context = NULL};
 
 static void gfxconsole_setup(gfx_surface* surface, gfx_surface* hw_surface) {
-  const char* fname = cmdline_get("gfxconsole.font");
+  const char* fname = gCmdline.GetString("gfxconsole.font");
   if (fname != NULL) {
     if (!strcmp(fname, "18x32")) {
       font = &gfx_font_18x32;

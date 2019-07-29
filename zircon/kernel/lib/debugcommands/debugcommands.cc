@@ -337,7 +337,7 @@ static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags) {
   if (argc == 1) {
     char cmdline_buf[DEBUG_CMDLINE_MAX];
     memset(cmdline_buf, 0, DEBUG_CMDLINE_MAX);
-    const char *cmdline = cmdline_get(NULL);
+    const char *cmdline = gCmdline.GetString(NULL);
     for (size_t i = 0; i < DEBUG_CMDLINE_MAX; i++) {
       if (cmdline[i] == '\0') {
         if (cmdline[i + 1] == '\0') {
@@ -351,7 +351,7 @@ static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags) {
     printf("cmdline: %s\n", cmdline_buf);
   } else {
     const char *key = argv[1].str;
-    const char *val = cmdline_get(key);
+    const char *val = gCmdline.GetString(key);
     if (!val) {
       printf("cmdline: %s not found\n", key);
     } else {

@@ -184,8 +184,8 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
 void ktrace_init(unsigned level) {
   ktrace_state_t* ks = &KTRACE_STATE;
 
-  uint32_t mb = cmdline_get_uint32("ktrace.bufsize", KTRACE_DEFAULT_BUFSIZE);
-  uint32_t grpmask = cmdline_get_uint32("ktrace.grpmask", KTRACE_DEFAULT_GRPMASK);
+  uint32_t mb = gCmdline.GetUInt32("ktrace.bufsize", KTRACE_DEFAULT_BUFSIZE);
+  uint32_t grpmask = gCmdline.GetUInt32("ktrace.grpmask", KTRACE_DEFAULT_GRPMASK);
 
   if (mb == 0) {
     dprintf(INFO, "ktrace: disabled\n");

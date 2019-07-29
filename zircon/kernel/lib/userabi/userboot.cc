@@ -40,7 +40,7 @@
 #include <lib/crypto/entropy/quality_test.h>
 #endif
 
-static_assert(userboot::kCmdlineMax == CMDLINE_MAX);
+static_assert(userboot::kCmdlineMax == Cmdline::kCmdlineMax);
 
 namespace {
 
@@ -228,7 +228,7 @@ void userboot_init(uint) {
   // We'll fill in the handles as we create things.
   MessagePacketPtr msg;
   zx_status_t status = MessagePacket::Create(
-      __kernel_cmdline, static_cast<uint32_t>(__kernel_cmdline_size), userboot::kHandleCount, &msg);
+      gCmdline.data(), static_cast<uint32_t>(gCmdline.size()), userboot::kHandleCount, &msg);
   ASSERT(status == ZX_OK);
   Handle** const handles = msg->mutable_handles();
   DEBUG_ASSERT(msg->num_handles() == userboot::kHandleCount);

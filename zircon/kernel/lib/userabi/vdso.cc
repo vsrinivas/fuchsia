@@ -229,7 +229,7 @@ const VDso* VDso::Create() {
 
   // If ticks_per_second has not been calibrated, it will return 0. In this
   // case, use soft_ticks instead.
-  if (per_second == 0 || cmdline_get_bool("vdso.soft_ticks", false)) {
+  if (per_second == 0 || gCmdline.GetBool("vdso.soft_ticks", false)) {
     // Make zx_ticks_per_second return nanoseconds per second.
     constants_window.data()->ticks_per_second = ZX_SEC(1);
 

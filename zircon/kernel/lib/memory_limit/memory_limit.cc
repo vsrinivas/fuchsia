@@ -69,13 +69,13 @@ static void print_reserve_state(void) {
 zx_status_t memory_limit_init() {
   if (!SystemMemoryLimit) {
     ReservedRegionCount = 0;
-    SystemMemoryLimit = cmdline_get_uint64("kernel.memory-limit-mb", 0u) * MB;
+    SystemMemoryLimit = gCmdline.GetUInt64("kernel.memory-limit-mb", 0u) * MB;
     if (!SystemMemoryLimit) {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
     // For now, always print debug information if a limit is imposed.
-    MemoryLimitDbg = cmdline_get_bool("kernel.memory-limit-dbg", true);
+    MemoryLimitDbg = gCmdline.GetBool("kernel.memory-limit-dbg", true);
     SystemMemoryRemaining = SystemMemoryLimit;
     return ZX_OK;
   }

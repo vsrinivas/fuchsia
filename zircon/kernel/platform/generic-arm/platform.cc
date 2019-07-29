@@ -297,7 +297,7 @@ static zbi_result_t process_zbi_item_early(zbi_header_t* item, void* payload, vo
       }
       char* contents = reinterpret_cast<char*>(payload);
       contents[item->length - 1] = '\0';
-      cmdline_append(contents);
+      gCmdline.Append(contents);
       break;
     }
     case ZBI_TYPE_MEM_CONFIG: {
@@ -487,10 +487,10 @@ void platform_early_init(void) {
   // Serial port should be active now
 
   // Read cmdline after processing zbi, which may contain cmdline data.
-  halt_on_panic = cmdline_get_bool("kernel.halt-on-panic", false);
+  halt_on_panic = gCmdline.GetBool("kernel.halt-on-panic", false);
 
   // Check if serial should be enabled
-  const char* serial_mode = cmdline_get("kernel.serial");
+  const char* serial_mode = gCmdline.GetString("kernel.serial");
   uart_disabled = (serial_mode != NULL && !strcmp(serial_mode, "none"));
 
   // add the ramdisk to the boot reserve memory list

@@ -808,7 +808,7 @@ static int cmd_test(int argc, const cmd_args* argv, uint32_t flags) {
 #endif
 
 static void kernel_shell_init(uint level) {
-  if (cmdline_get_bool("kernel.shell", false)) {
+  if (gCmdline.GetBool("kernel.shell", false)) {
     console_start();
   }
 }

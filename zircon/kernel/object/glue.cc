@@ -125,8 +125,8 @@ static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
   }
   low_mem_event = event.release();
 
-  if (cmdline_get_bool("kernel.oom.enable", true)) {
-    auto redline = cmdline_get_uint64("kernel.oom.redline-mb", 50) * MB;
+  if (gCmdline.GetBool("kernel.oom.enable", true)) {
+    auto redline = gCmdline.GetUInt64("kernel.oom.redline-mb", 50) * MB;
     zx_status_t status = pmm_init_reclamation(&redline, 1, MB, mem_avail_state_updated_cb);
     if (status != ZX_OK) {
       panic("failed to initialize pmm reclamation: %d\n", status);

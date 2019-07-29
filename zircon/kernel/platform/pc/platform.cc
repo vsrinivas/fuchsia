@@ -119,7 +119,7 @@ zbi_result_t process_zbi_item(zbi_header_t* hdr, void* payload, void* cookie) {
     case ZBI_TYPE_CMDLINE:
       if (hdr->length > 0) {
         ((char*)payload)[hdr->length - 1] = 0;
-        cmdline_append((char*)payload);
+        gCmdline.Append((char*)payload);
       }
       break;
     case ZBI_TYPE_EFI_MEMORY_MAP:
@@ -187,7 +187,7 @@ static void platform_save_bootloader_data(void) {
     process_zbi(bd, (uintptr_t)_zbi_base);
   }
 
-  halt_on_panic = cmdline_get_bool("kernel.halt-on-panic", false);
+  halt_on_panic = gCmdline.GetBool("kernel.halt-on-panic", false);
 }
 
 static void* ramdisk_base;
@@ -237,7 +237,7 @@ static void platform_early_display_init(void) {
     return;
   }
 
-  if (cmdline_get_bool("gfxconsole.early", false) == false) {
+  if (gCmdline.GetBool("gfxconsole.early", false) == false) {
     early_console_disabled = true;
     return;
   }
@@ -664,7 +664,7 @@ void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len)
   // corruption after boot.
   // Disabling PCI may cause devices to fail to enumerate after boot.
 #ifdef WITH_KERNEL_PCIE
-  if (cmdline_get_bool("kernel.mexec-pci-shutdown", true)) {
+  if (gCmdline.GetBool("kernel.mexec-pci-shutdown", true)) {
     PcieBusDriver::GetDriver()->DisableBus();
   }
 #endif
@@ -789,7 +789,7 @@ static void platform_init_smp(void) {
   fbl::Vector<uint32_t> apic_ids;
 
   // Filter out hyperthreads if we've been told not to init them
-  const bool use_ht = cmdline_get_bool("kernel.smp.ht", true);
+  const bool use_ht = gCmdline.GetBool("kernel.smp.ht", true);
 
   // We're implicitly running on the BSP
   const uint32_t bsp_apic_id = apic_local_id();
@@ -823,7 +823,7 @@ static void platform_init_smp(void) {
   }
 
   // Find the CPU count limit
-  uint32_t max_cpus = cmdline_get_uint32("kernel.smp.maxcpus", SMP_MAX_CPUS);
+  uint32_t max_cpus = gCmdline.GetUInt32("kernel.smp.maxcpus", SMP_MAX_CPUS);
   if (max_cpus > SMP_MAX_CPUS || max_cpus <= 0) {
     printf("invalid kernel.smp.maxcpus value, defaulting to %d\n", SMP_MAX_CPUS);
     max_cpus = SMP_MAX_CPUS;

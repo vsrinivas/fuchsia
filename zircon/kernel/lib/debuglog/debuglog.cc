@@ -79,7 +79,7 @@ void dlog_bypass_init_early(void) {
 // The compile switch (if enabled) overrides the kernel cmdline switch.
 void dlog_bypass_init(void) {
   if (dlog_bypass_ == false)
-    dlog_bypass_ = cmdline_get_bool("kernel.bypass-debuglog", false);
+    dlog_bypass_ = gCmdline.GetBool("kernel.bypass-debuglog", false);
 }
 
 bool dlog_bypass(void) { return dlog_bypass_; }

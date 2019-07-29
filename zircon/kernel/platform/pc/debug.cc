@@ -196,7 +196,7 @@ bool platform_serial_enabled() { return bootloader.uart.type != ZBI_UART_NONE; }
 void pc_init_debug_default_early() { bootloader.uart.type = ZBI_UART_NONE; }
 
 static void handle_serial_cmdline() {
-  const char* serial_mode = cmdline_get("kernel.serial");
+  const char* serial_mode = gCmdline.GetString("kernel.serial");
   if (serial_mode == NULL) {
     return;
   }
@@ -316,7 +316,7 @@ void pc_init_debug(void) {
     return;
   }
 
-  if ((uart_irq == 0) || cmdline_get_bool("kernel.debug_uart_poll", false) || dlog_bypass()) {
+  if ((uart_irq == 0) || gCmdline.GetBool("kernel.debug_uart_poll", false) || dlog_bypass()) {
     printf("debug-uart: polling enabled\n");
     platform_debug_start_uart_timer();
   } else {
