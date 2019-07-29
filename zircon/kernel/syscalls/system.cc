@@ -253,6 +253,8 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
 
   platform_mexec_prep(new_bootimage_addr, new_bootimage_len);
 
+  dlog_shutdown();
+
   arch_disable_ints();
 
   // WARNING
