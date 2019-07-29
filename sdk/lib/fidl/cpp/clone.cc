@@ -10,7 +10,7 @@ zx_status_t Clone(const StringPtr& value, StringPtr* result) {
   if (!value) {
     *result = StringPtr();
   } else {
-    result->reset(*value);
+    *result = value.value();
   }
   return ZX_OK;
 }

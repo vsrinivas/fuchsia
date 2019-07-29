@@ -56,5 +56,59 @@ TEST(VectorPtr, ResetMoveOnlyType) {
   EXPECT_EQ(3u, vector->size());
 }
 
+TEST(VectorPtr, Constructors) {
+  {
+    std::vector<int> numbers({1, 2, 3, 4});
+    VectorPtr<int> ptr(numbers);
+    EXPECT_EQ(numbers.size(), 4u);
+    EXPECT_EQ(ptr->size(), 4u);
+  }
+  {
+    std::vector<int> numbers({1, 2, 3, 4});
+    VectorPtr<int> ptr(std::move(numbers));
+    EXPECT_EQ(numbers.size(), 0u);
+    EXPECT_EQ(ptr->size(), 4u);
+  }
+
+  {
+    VectorPtr<int> ptr1({1, 2, 3, 4});
+    VectorPtr<int> ptr2(std::move(ptr1));
+
+    EXPECT_EQ(ptr1->size(), 0u);
+    EXPECT_EQ(ptr2->size(), 4u);
+  }
+}
+
+TEST(VectorPtr, Assignment) {
+  VectorPtr<int> ptr1({1, 2, 3, 4});
+  VectorPtr<int> ptr2;
+
+  ptr2 = std::move(ptr1);
+
+  EXPECT_EQ(ptr1->size(), 0u);
+  EXPECT_EQ(ptr2->size(), 4u);
+}
+
+TEST(VectorPtr, FitOptional) {
+  std::vector<int> numbers({1, 2, 3, 4});
+  VectorPtr<int> a(numbers);
+  EXPECT_TRUE(a.has_value());
+  EXPECT_TRUE(a);
+  EXPECT_FALSE(a->empty());
+  EXPECT_EQ(a->size(), 4u);
+  EXPECT_EQ(*a, std::vector<int>({1, 2, 3, 4}));
+  EXPECT_EQ(a.value(), std::vector<int>({1, 2, 3, 4}));
+  EXPECT_EQ(a.value_or(std::vector<int>({1, 2})), std::vector<int>({1, 2, 3, 4}));
+
+  numbers.push_back(5);
+  EXPECT_EQ(a->size(), 4u);
+  a.value().push_back(5);
+  EXPECT_EQ(a->size(), 5u);
+
+  a.reset();
+  EXPECT_FALSE(a.has_value());
+  EXPECT_EQ(a.value_or(std::vector<int>({1, 2})), std::vector<int>({1, 2}));
+}
+
 }  // namespace
 }  // namespace fidl

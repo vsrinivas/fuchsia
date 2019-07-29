@@ -65,7 +65,7 @@ TEST(StubController, NoResponse) {
 
   Encoder encoder(5u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    nullptr));
@@ -95,7 +95,7 @@ TEST(StubController, Response) {
     EXPECT_TRUE(response.needs_response());
     Encoder encoder(42u);
     StringPtr string("welcome!");
-    string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+    fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     EXPECT_EQ(ZX_OK,
               response.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage()));
     return ZX_OK;
@@ -105,7 +105,7 @@ TEST(StubController, Response) {
 
   Encoder encoder(5u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -148,7 +148,7 @@ TEST(StubController, ResponseAfterUnbind) {
     EXPECT_TRUE(response.needs_response());
     Encoder encoder(42u);
     StringPtr string("welcome!");
-    string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+    fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     EXPECT_EQ(ZX_ERR_BAD_STATE,
               response.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage()));
     return ZX_OK;
@@ -158,7 +158,7 @@ TEST(StubController, ResponseAfterUnbind) {
 
   Encoder encoder(5u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -200,7 +200,7 @@ TEST(StubController, ResponseAfterDestroy) {
     EXPECT_TRUE(response.needs_response());
     Encoder encoder(42u);
     StringPtr string("welcome!");
-    string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+    fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     EXPECT_EQ(ZX_ERR_BAD_STATE,
               response.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage()));
     return ZX_OK;
@@ -210,7 +210,7 @@ TEST(StubController, ResponseAfterDestroy) {
 
   Encoder encoder(5u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -264,7 +264,7 @@ TEST(StubController, BadResponse) {
 
   Encoder encoder(5u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();

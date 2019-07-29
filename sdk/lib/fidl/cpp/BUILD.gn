@@ -104,9 +104,9 @@ sdk_source_set("cpp_base") {
     "internal/logging.cc",
     "internal/logging.h",
     "object_coding.h",
-    "string.cc",
     "string.h",
     "traits.h",
+    "transition.h",
     "vector.h",
   ]
 

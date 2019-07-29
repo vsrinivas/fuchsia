@@ -76,5 +76,28 @@ TEST(StringPtr, Map) {
   EXPECT_EQ(3, map[null]);
 }
 
+TEST(StringPtr, FitOptional) {
+  StringPtr hello = "hello";
+  EXPECT_TRUE(hello.has_value());
+  EXPECT_TRUE(hello);
+  EXPECT_EQ(*hello, "hello");
+  EXPECT_EQ(hello->length(), 5u);
+  EXPECT_EQ(hello.value(), "hello");
+  EXPECT_EQ(hello.value_or("bye"), "hello");
+  EXPECT_TRUE(hello.has_value());
+  EXPECT_EQ(hello.value(), "hello");
+
+  hello.reset();
+  EXPECT_FALSE(hello.has_value());
+  EXPECT_FALSE(hello);
+  EXPECT_EQ(hello.value_or("bye"), "bye");
+
+  StringPtr greeting = "hi";
+  hello.swap(greeting);
+  EXPECT_TRUE(hello.has_value());
+  EXPECT_FALSE(greeting.has_value());
+  EXPECT_EQ(hello.value(), "hi");
+}
+
 }  // namespace
 }  // namespace fidl

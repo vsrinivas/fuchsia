@@ -46,7 +46,7 @@ TEST(ProxyController, Send) {
 
   Encoder encoder(5u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    nullptr));
@@ -72,7 +72,7 @@ TEST(ProxyController, Callback) {
 
   Encoder encoder(3u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int callback_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -137,7 +137,7 @@ TEST(ProxyController, BadSend) {
 
   encoder.Reset(35u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(ZX_ERR_ACCESS_DENIED, controller.Send(&unbounded_nonnullable_string_message_type,
@@ -234,7 +234,7 @@ TEST(ProxyController, Move) {
 
   Encoder encoder(3u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int callback_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -284,7 +284,7 @@ TEST(ProxyController, Reset) {
 
   Encoder encoder(3u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int callback_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -333,7 +333,7 @@ TEST(ProxyController, ReentrantDestructor) {
 
   Encoder encoder(3u);
   StringPtr string("hello!");
-  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int destructor_count = 0;
   auto handler = std::make_unique<DestructorMessageHandler>();
@@ -343,7 +343,7 @@ TEST(ProxyController, ReentrantDestructor) {
 
     Encoder encoder(3u);
     StringPtr string("world!");
-    string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+    fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     auto callback_handler = std::make_unique<CallbackMessageHandler>();
     callback_handler->callback = [](Message message) { return ZX_OK; };
     zx_status_t status = controller.Send(&unbounded_nonnullable_string_message_type,

@@ -107,7 +107,7 @@ struct CodingTraits<VectorPtr<T>> {
   static constexpr size_t encoded_size = sizeof(fidl_vector_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, VectorPtr<T>* value, size_t offset) {
-    if (value->is_null())
+    if (!value->has_value())
       return EncodeNullVector(encoder, offset);
     std::vector<T>& vector = **value;
     CodingTraits<::std::vector<T>>::Encode(encoder, &vector, offset);
@@ -121,7 +121,7 @@ struct CodingTraits<VectorPtr<T>> {
     }
     std::vector<T> vector;
     CodingTraits<std::vector<T>>::Decode(decoder, &vector, offset);
-    value->reset(std::move(vector));
+    (*value) = std::move(vector);
   }
 };
 

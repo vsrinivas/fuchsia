@@ -103,7 +103,7 @@ Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
     *result = VectorPtr<T>();
     return ZX_OK;
   }
-  result->reset(*value);
+  *result = *value;
   return ZX_OK;
 }
 
