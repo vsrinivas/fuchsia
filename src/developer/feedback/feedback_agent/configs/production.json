@@ -1,0 +1,16 @@
+{
+    "annotation_allowlist": [
+        "build.board",
+        "build.latest-commit-date",
+        "build.product",
+        "build.version",
+        "channel",
+        "device.board-name"
+    ],
+    "attachment_allowlist": [
+        "build.snapshot.xml",
+        "inspect.json",
+        "log.kernel.txt",
+        "log.system.txt"
+    ]
+}

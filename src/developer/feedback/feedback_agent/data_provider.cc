@@ -16,12 +16,14 @@
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/image_conversion.h"
 #include "src/developer/feedback/feedback_agent/scenic_ptr.h"
+#include "src/lib/files/file.h"
 
 namespace fuchsia {
 namespace feedback {
 namespace {
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
+const char kOverrideConfigPath[] = "/config/data/override_config.json";
 
 // Timeout for a single asynchronous piece of data, e.g., syslog collection.
 const zx::duration kDataTimeout = zx::sec(10);
@@ -34,11 +36,28 @@ std::unique_ptr<DataProviderImpl> DataProviderImpl::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services) {
   Config config;
 
-  const zx_status_t parse_status = ParseConfig(kDefaultConfigPath, &config);
-  if (parse_status != ZX_OK) {
-    FX_PLOGS(ERROR, parse_status) << "Failed to read default config file at " << kDefaultConfigPath;
-    FX_LOGS(FATAL) << "Failed to set up data provider";
-    return nullptr;
+  // We use the default config included in the package of this component if no override config was
+  // specified or if we failed to parse the override config.
+  bool use_default_config = true;
+
+  if (files::IsFile(kOverrideConfigPath)) {
+    use_default_config = false;
+    if (const zx_status_t status = ParseConfig(kOverrideConfigPath, &config); status != ZX_OK) {
+      // We failed to parse the override config: fall back to the default config.
+      use_default_config = true;
+      FX_PLOGS(ERROR, status) << "Failed to read override config file at " << kOverrideConfigPath
+                              << " - falling back to default config file";
+    }
+  }
+
+  // Either there was no override config or we failed to parse it.
+  if (use_default_config) {
+    if (const zx_status_t status = ParseConfig(kDefaultConfigPath, &config); status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to read default config file at " << kDefaultConfigPath;
+
+      FX_LOGS(FATAL) << "Failed to set up data provider";
+      return nullptr;
+    }
   }
 
   return std::make_unique<DataProviderImpl>(dispatcher, std::move(services), config);

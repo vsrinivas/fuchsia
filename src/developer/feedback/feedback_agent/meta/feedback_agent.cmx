@@ -8,6 +8,7 @@
         ],
         "features": [
             "build-info",
+            "config-data",
             "deprecated-shell",
             "deprecated-ambient-replace-as-executable"
         ],
