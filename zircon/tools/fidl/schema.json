@@ -933,6 +933,7 @@
                         "const",
                         "enum",
                         "interface",
+                        "service",
                         "struct",
                         "table",
                         "union",
