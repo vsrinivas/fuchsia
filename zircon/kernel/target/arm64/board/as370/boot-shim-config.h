@@ -29,7 +29,7 @@ static const zbi_mem_range_t mem_config[] = {
 
 static const dcfg_simple_t uart_driver = {
     .mmio_phys = 0xf7e80c00,
-    .irq = 56,
+    .irq = 88,
 };
 
 static const dcfg_arm_gicv2_driver_t gicv2_driver = {

@@ -25,44 +25,45 @@
 
 #define UART_RBR                    (0x0)   // RX Buffer Register (read-only)
 #define UART_THR                    (0x0)   // TX Buffer Register (write-only)
+#define UART_DLL                    (0x0)   // Divisor Latch Low (Only when LCR[7] = 1)
+#define UART_DLH                    (0x4)   // Divisor Latch High (Only when LCR[7] = 1)
 #define UART_IER                    (0x4)   // Interrupt Enable Register
 #define UART_IIR                    (0x8)   // Interrupt Identification Register (read-only)
 #define UART_FCR                    (0x8)   // FIFO Control Register (write-only)
 #define UART_LCR                    (0xc)   // Line Control Register
 #define UART_MCR                    (0x10)  // Modem Control Register
-#define UART_LSR                    (0x14)  // Line Status Register
-#define UART_MSR                    (0x18)  // Modem Status Register
+#define UART_LSR                    (0x14)  // Line Status Register (read-only)
+#define UART_MSR                    (0x18)  // Modem Status Register (read-only)
 #define UART_SCR                    (0x1c)  // Scratch Register
-#define UART_DLL                    (0x0)   // Divisor Latch LS (Only when LCR.DLAB = 1)
-#define UART_DLM                    (0x4)   // Divisor Latch MS (Only when LCR.DLAB = 1)
-#define UART_EFR                    (0x8)   // Enhanced Feature Register (Only when LCR = 0xbf)
-#define UART_XON1                   (0x10)  // XON1 Char Register (Only when LCR = 0xbf)
-#define UART_XON2                   (0x14)  // XON2 Char Register (Only when LCR = 0xbf)
-#define UART_XOFF1                  (0x18)  // XOFF1 Char Register (Only when LCR = 0xbf)
-#define UART_XOFF2                  (0x1c)  // XOFF2 Char Register (Only when LCR = 0xbf)
-#define UART_AUTOBAUD_EN            (0x20)  // Auto Baud Detect Enable Register
-#define UART_HIGHSPEED              (0x24)  // High Speed Mode Register
-#define UART_SAMPLE_COUNT           (0x28)  // Sample Counter Register
-#define UART_SAMPLE_POINT           (0x2c)  // Sample Point Register
-#define UART_AUTOBAUD_REG           (0x30)  // Auto Baud Monitor Register
-#define UART_RATE_FIX_AD            (0x34)  // Clock Rate Fix Register
-#define UART_AUTOBAUD_SAMPLE        (0x38)  // Auto Baud Sample Register
-#define UART_GUARD                  (0x3c)  // Guard Time Added Register
-#define UART_ESCAPE_DAT             (0x40)  // Escape Character Register
-#define UART_ESCAPE_EN              (0x44)  // Escape Enable Register
-#define UART_SLEEP_EN               (0x48)  // Sleep Enable Register
-#define UART_VFIFO_EN               (0x4c)  // DMA Enable Register
-#define UART_RXTRI_AD               (0x50)  // RX Trigger Address
+#define UART_LPDLL                  (0x20)  // Low Power Divisor Latch (Low) Register
+#define UART_LPDLH                  (0x24)  // Low Power Divisor Latch (High) Register
+#define UART_SRBR                   (0x30)  // Shadow Receive Buffer Register (read-only)
+#define UART_STHR                   (0x34)  // Shadow Transmit Holding Register
+#define UART_FAR                    (0x70)  // FIFO Access Register
+#define UART_TFR                    (0x74)  // Transmit FIFO Read Register (read-only)
+#define UART_RFW                    (0x78)  // Receive FIFO Write Register (write-only)
+#define UART_USR                    (0x7C)  // UART Status Register (read-only)
+#define UART_TFL                    (0x80)  // Transmit FIFO Level Register (read-only)
+#define UART_RFL                    (0x84)  // Receive FIFO Level Register (read-only)
+#define UART_SRR                    (0x88)  // Software Reser Register
+#define UART_SRTS                   (0x8C)  // Shadow Request to Send Register
+#define UART_SBCR                   (0x90)  // Shadow Break Control Register
+#define UART_SDMAM                  (0x94)  // Shadow DMA Mode Register
+#define UART_SFE                    (0x98)  // Shadow FIFO Enable Register
+#define UART_SRT                    (0x9C)  // Shadow RCVR Trigger Register
+#define UART_STET                   (0xA0)  // Shadow TX Empty Trigger Register
+#define UART_HTX                    (0xA4)  // Halt TX Register
+#define UART_DMASA                  (0xA8)  // DMA Software Acknowledge Register (write-only)
+#define UART_CPR                    (0xF4)  // Component Parameter Register (read-only)
+#define UART_UCV                    (0xF8)  // UART Component Version Register (read-only)
+#define UART_CTR                    (0xFC)  // Component Type Register
 
 // IER
 #define UART_IER_ERBFI              (1 << 0)
 #define UART_IER_ETBEI              (1 << 1)
 #define UART_IER_ELSI               (1 << 2)
 #define UART_IER_EDSSI              (1 << 3)
-#define UART_IER_XOFFI              (1 << 5)
-#define UART_IER_RTSI               (1 << 6)
-#define UART_IER_CTSI               (1 << 7)
-#define UART_IIR_NO_INT_PENDING     (0x01)
+#define UART_IER_PTIME              (1 << 5)
 
 // IIR
 #define UART_IIR_RLS                (0x06)  // Receiver Line Status
@@ -203,7 +204,6 @@ static void dw8250_dputs(const char* str, size_t len, bool block, bool map_NL) {
 }
 
 static void dw8250_uart_init(const void* driver_data, uint32_t length) {
-  return;
   // create circular buffer to hold received data
   cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
@@ -211,16 +211,30 @@ static void dw8250_uart_init(const void* driver_data, uint32_t length) {
     uart_tx_irq_enabled = false;
     return;
   }
-  zx_status_t status = register_int_handler(uart_irq, &dw8250_uart_irq, NULL);
-  DEBUG_ASSERT(status == ZX_OK);
 
+  zx_status_t status =
+      configure_interrupt(uart_irq, IRQ_TRIGGER_MODE_LEVEL, IRQ_POLARITY_ACTIVE_HIGH);
+  if (status != ZX_OK) {
+    printf("UART: configure_interrupt failed %d\n", status);
+    return;
+  }
+
+  status = register_int_handler(uart_irq, &dw8250_uart_irq, NULL);
+  if (status != ZX_OK) {
+    printf("UART: register_int_handler failed %d\n", status);
+    return;
+  }
   // enable interrupt
-  unmask_interrupt(uart_irq);
+  status = unmask_interrupt(uart_irq);
+  if (status != ZX_OK) {
+    printf("UART: unmask_interrupt failed %d\n", status);
+    return;
+  }
 
   UARTREG(UART_IER) |= UART_IER_ERBFI;  // Enable RX interrupt.
   initialized = true;
-
   // Start up tx driven output.
+  printf("UART: starting IRQ driven TX\n");
   uart_tx_irq_enabled = true;
 }
 
