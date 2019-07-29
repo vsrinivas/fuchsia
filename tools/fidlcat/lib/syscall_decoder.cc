@@ -338,13 +338,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* syscall) {
   } else {
     os_ << line_header_ << "  -> ";
   }
-  if (static_cast<zx_status_t>(syscall->syscall_return_value()) == ZX_OK) {
-    os_ << colors.green << "ZX_OK" << colors.reset;
-  } else {
-    os_ << colors.red;
-    ErrorName(static_cast<zx_status_t>(syscall->syscall_return_value()), os_);
-    os_ << colors.reset;
-  }
+  StatusName(colors, static_cast<zx_status_t>(syscall->syscall_return_value()), os_);
   // And the inline output arguments (if any).
   const char* separator = " (";
   for (const auto& output : syscall->syscall()->outputs()) {

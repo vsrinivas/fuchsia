@@ -5,6 +5,9 @@
 #ifndef TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_DISPATCHER_H_
 #define TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_DISPATCHER_H_
 
+#include <zircon/system/public/zircon/errors.h>
+#include <zircon/system/public/zircon/types.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
@@ -18,45 +21,66 @@
 #include <vector>
 
 #include <src/lib/fxl/logging.h>
-#include <zircon/system/public/zircon/errors.h>
-#include <zircon/system/public/zircon/types.h>
 
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "tools/fidlcat/lib/message_decoder.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
+#include "tools/fidlcat/lib/type_decoder.h"
 
 namespace fidlcat {
 
-class DisplayTime {
- public:
-  DisplayTime(const Colors& colors, zx_time_t time_ns) : colors_(colors), time_ns_(time_ns) {}
-  const Colors& colors() const { return colors_; }
-  zx_time_t time_ns() const { return time_ns_; }
+// Display a value on a stream.
+template <typename ValueType>
+void DisplayValue(const Colors& colors, SyscallType type, ValueType value, bool hexa,
+                  std::ostream& os) {
+  os << "unimplemented generic value " << static_cast<uint32_t>(type);
+}
 
- private:
-  const Colors& colors_;
-  const zx_time_t time_ns_;
-};
-
-inline std::ostream& operator<<(std::ostream& os, const DisplayTime& time) {
-  if (time.time_ns() == ZX_TIME_INFINITE) {
-    os << time.colors().blue << "ZX_TIME_INFINITE" << time.colors().reset;
-  } else if (time.time_ns() == ZX_TIME_INFINITE_PAST) {
-    os << time.colors().blue << "ZX_TIME_INFINITE_PAST" << time.colors().reset;
-  } else {
-    time_t value = time.time_ns() / 1'000'000'000L;
-    struct tm tm;
-    if (localtime_r(&value, &tm) == &tm) {
-      char buffer[100];
-      strftime(buffer, sizeof(buffer), "%c", &tm);
-      os << time.colors().blue << buffer << " and ";
-      snprintf(buffer, sizeof(buffer), "%09" PRId64, time.time_ns() % 1000000000L);
-      os << buffer << " ns" << time.colors().reset;
-    } else {
-      os << time.colors().red << "unknown time" << time.colors().reset;
-    }
+template <>
+inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_t value, bool hexa,
+                                  std::ostream& os) {
+  switch (type) {
+    case SyscallType::kTime:
+      os << DisplayTime(colors, value);
+      break;
+    default:
+      os << "unimplemented int64_t value " << static_cast<uint32_t>(type);
+      break;
   }
-  return os;
+}
+
+template <>
+inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint32_t value,
+                                   bool hexa, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint32:
+      os << colors.blue << value << colors.reset;
+      break;
+    case SyscallType::kHandle: {
+      zx_handle_info_t handle_info;
+      handle_info.handle = value;
+      handle_info.type = ZX_OBJ_TYPE_NONE;
+      handle_info.rights = 0;
+      DisplayHandle(colors, handle_info, os);
+      break;
+    }
+    default:
+      os << "unimplemented uint32_t value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
+inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint64_t value,
+                                   bool hexa, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kTime:
+      os << DisplayTime(colors, value);
+      break;
+    default:
+      os << "unimplemented uint64_t value " << static_cast<uint32_t>(type);
+      break;
+  }
 }
 
 // Base class (not templated) for system call arguments.
@@ -202,10 +226,6 @@ class Access {
   // Display the data on a stream (with name and type).
   void Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, std::string_view name,
                std::ostream& os) const;
-
-  // Display a value on a stream
-  void DisplayValue(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Type value,
-                    std::ostream& os) const;
 };
 
 // Access to a system call argument. There is a direct access to the value
@@ -638,69 +658,13 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 };
 
 template <typename Type>
-void Access<Type>::DisplayValue(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-                                Type value, std::ostream& os) const {
-  os << "unimplemented generic value " << static_cast<uint32_t>(GetSyscallType());
-}
-
-template <>
-inline void Access<uint32_t>::DisplayValue(SyscallDisplayDispatcher* dispatcher,
-                                           SyscallDecoder* decoder, uint32_t value,
-                                           std::ostream& os) const {
-  const Colors& colors = dispatcher->colors();
-  switch (GetSyscallType()) {
-    case SyscallType::kUint32:
-      os << colors.blue << value << colors.reset;
-      break;
-    case SyscallType::kHandle: {
-      zx_handle_info_t handle_info;
-      handle_info.handle = value;
-      handle_info.type = ZX_OBJ_TYPE_NONE;
-      handle_info.rights = 0;
-      DisplayHandle(colors, handle_info, os);
-      break;
-    }
-    default:
-      os << "unimplemented uint32_t value " << static_cast<uint32_t>(GetSyscallType());
-      break;
-  }
-}
-
-template <>
-inline void Access<int64_t>::DisplayValue(SyscallDisplayDispatcher* dispatcher,
-                                          SyscallDecoder* decoder, int64_t value,
-                                          std::ostream& os) const {
-  const Colors& colors = dispatcher->colors();
-  switch (GetSyscallType()) {
-    case SyscallType::kTime:
-      os << DisplayTime(colors, value);
-      break;
-    default:
-      os << "unimplemented int64_t value " << static_cast<uint32_t>(GetSyscallType());
-      break;
-  }
-}
-template <typename Type>
 void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
                            std::string_view name, std::ostream& os) const {
   const Colors& colors = dispatcher->colors();
-  switch (GetSyscallType()) {
-    case SyscallType::kUint32:
-      os << name << ":" << colors.green << "uint32" << colors.reset << ": ";
-      break;
-    case SyscallType::kHandle:
-      os << name << ":" << colors.green << "handle" << colors.reset << ": ";
-      break;
-    case SyscallType::kTime:
-      os << name << ":" << colors.green << "time" << colors.reset << ": ";
-      break;
-    default:
-      os << name << ":" << colors.green << "unimplemented type "
-         << static_cast<uint32_t>(GetSyscallType()) << colors.reset;
-      return;
-  }
+  os << name;
+  DisplayType(colors, GetSyscallType(), os);
   if (ValueValid(decoder)) {
-    DisplayValue(dispatcher, decoder, Value(decoder), os);
+    DisplayValue<Type>(colors, GetSyscallType(), Value(decoder), /*hexa=*/false, os);
   } else {
     os << colors.red << "(nullptr)" << colors.reset;
   }

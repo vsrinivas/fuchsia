@@ -5,6 +5,8 @@
 #ifndef TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_H_
 #define TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_H_
 
+#include <zircon/system/public/zircon/types.h>
+
 #include <cstdint>
 #include <memory>
 #include <ostream>
@@ -14,12 +16,11 @@
 #include <utility>
 #include <vector>
 
-#include <zircon/system/public/zircon/types.h>
-
 #include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
+#include "tools/fidlcat/lib/type_decoder.h"
 
 namespace fidlcat {
 
@@ -28,9 +29,6 @@ class Syscall;
 class SyscallDecoder;
 class SyscallDecoderDispatcher;
 class SyscallDisplayDispatcher;
-
-// Types for syscall arguments.
-enum class SyscallType { kUint8, kUint32, kHandle, kTime, kStruct };
 
 class SyscallDecoderError {
  public:

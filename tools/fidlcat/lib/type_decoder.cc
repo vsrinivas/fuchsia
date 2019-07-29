@@ -14,65 +14,6 @@
 
 namespace fidlcat {
 
-#define ErrorNameCase(name) \
-  case name:                \
-    os << #name;            \
-    return
-
-// TODO: (use zx_status_get_string when it will be available).
-void ErrorName(int64_t error_code, std::ostream& os) {
-  switch (error_code) {
-    ErrorNameCase(ZX_ERR_INTERNAL);
-    ErrorNameCase(ZX_ERR_NOT_SUPPORTED);
-    ErrorNameCase(ZX_ERR_NO_RESOURCES);
-    ErrorNameCase(ZX_ERR_NO_MEMORY);
-    ErrorNameCase(ZX_ERR_INTERNAL_INTR_RETRY);
-    ErrorNameCase(ZX_ERR_INVALID_ARGS);
-    ErrorNameCase(ZX_ERR_BAD_HANDLE);
-    ErrorNameCase(ZX_ERR_WRONG_TYPE);
-    ErrorNameCase(ZX_ERR_BAD_SYSCALL);
-    ErrorNameCase(ZX_ERR_OUT_OF_RANGE);
-    ErrorNameCase(ZX_ERR_BUFFER_TOO_SMALL);
-    ErrorNameCase(ZX_ERR_BAD_STATE);
-    ErrorNameCase(ZX_ERR_TIMED_OUT);
-    ErrorNameCase(ZX_ERR_SHOULD_WAIT);
-    ErrorNameCase(ZX_ERR_CANCELED);
-    ErrorNameCase(ZX_ERR_PEER_CLOSED);
-    ErrorNameCase(ZX_ERR_NOT_FOUND);
-    ErrorNameCase(ZX_ERR_ALREADY_EXISTS);
-    ErrorNameCase(ZX_ERR_ALREADY_BOUND);
-    ErrorNameCase(ZX_ERR_UNAVAILABLE);
-    ErrorNameCase(ZX_ERR_ACCESS_DENIED);
-    ErrorNameCase(ZX_ERR_IO);
-    ErrorNameCase(ZX_ERR_IO_REFUSED);
-    ErrorNameCase(ZX_ERR_IO_DATA_INTEGRITY);
-    ErrorNameCase(ZX_ERR_IO_DATA_LOSS);
-    ErrorNameCase(ZX_ERR_IO_NOT_PRESENT);
-    ErrorNameCase(ZX_ERR_IO_OVERRUN);
-    ErrorNameCase(ZX_ERR_IO_MISSED_DEADLINE);
-    ErrorNameCase(ZX_ERR_IO_INVALID);
-    ErrorNameCase(ZX_ERR_BAD_PATH);
-    ErrorNameCase(ZX_ERR_NOT_DIR);
-    ErrorNameCase(ZX_ERR_NOT_FILE);
-    ErrorNameCase(ZX_ERR_FILE_BIG);
-    ErrorNameCase(ZX_ERR_NO_SPACE);
-    ErrorNameCase(ZX_ERR_NOT_EMPTY);
-    ErrorNameCase(ZX_ERR_STOP);
-    ErrorNameCase(ZX_ERR_NEXT);
-    ErrorNameCase(ZX_ERR_ASYNC);
-    ErrorNameCase(ZX_ERR_PROTOCOL_NOT_SUPPORTED);
-    ErrorNameCase(ZX_ERR_ADDRESS_UNREACHABLE);
-    ErrorNameCase(ZX_ERR_ADDRESS_IN_USE);
-    ErrorNameCase(ZX_ERR_NOT_CONNECTED);
-    ErrorNameCase(ZX_ERR_CONNECTION_REFUSED);
-    ErrorNameCase(ZX_ERR_CONNECTION_RESET);
-    ErrorNameCase(ZX_ERR_CONNECTION_ABORTED);
-    default:
-      os << "errno=" << error_code;
-      return;
-  }
-}
-
 #define ObjTypeNameCase(name) \
   case name:                  \
     os << #name;              \
@@ -147,6 +88,76 @@ void RightsName(zx_rights_t rights, std::ostream& os) {
   RightsNameCase(ZX_RIGHT_SAME_RIGHTS);
 }
 
+#define StatusNameCase(name) \
+  case name:                 \
+    os << #name;             \
+    return
+
+// TODO: (use zx_status_get_string when it will be available).
+void StatusName(zx_status_t status, std::ostream& os) {
+  switch (status) {
+    StatusNameCase(ZX_OK);
+    StatusNameCase(ZX_ERR_INTERNAL);
+    StatusNameCase(ZX_ERR_NOT_SUPPORTED);
+    StatusNameCase(ZX_ERR_NO_RESOURCES);
+    StatusNameCase(ZX_ERR_NO_MEMORY);
+    StatusNameCase(ZX_ERR_INTERNAL_INTR_RETRY);
+    StatusNameCase(ZX_ERR_INVALID_ARGS);
+    StatusNameCase(ZX_ERR_BAD_HANDLE);
+    StatusNameCase(ZX_ERR_WRONG_TYPE);
+    StatusNameCase(ZX_ERR_BAD_SYSCALL);
+    StatusNameCase(ZX_ERR_OUT_OF_RANGE);
+    StatusNameCase(ZX_ERR_BUFFER_TOO_SMALL);
+    StatusNameCase(ZX_ERR_BAD_STATE);
+    StatusNameCase(ZX_ERR_TIMED_OUT);
+    StatusNameCase(ZX_ERR_SHOULD_WAIT);
+    StatusNameCase(ZX_ERR_CANCELED);
+    StatusNameCase(ZX_ERR_PEER_CLOSED);
+    StatusNameCase(ZX_ERR_NOT_FOUND);
+    StatusNameCase(ZX_ERR_ALREADY_EXISTS);
+    StatusNameCase(ZX_ERR_ALREADY_BOUND);
+    StatusNameCase(ZX_ERR_UNAVAILABLE);
+    StatusNameCase(ZX_ERR_ACCESS_DENIED);
+    StatusNameCase(ZX_ERR_IO);
+    StatusNameCase(ZX_ERR_IO_REFUSED);
+    StatusNameCase(ZX_ERR_IO_DATA_INTEGRITY);
+    StatusNameCase(ZX_ERR_IO_DATA_LOSS);
+    StatusNameCase(ZX_ERR_IO_NOT_PRESENT);
+    StatusNameCase(ZX_ERR_IO_OVERRUN);
+    StatusNameCase(ZX_ERR_IO_MISSED_DEADLINE);
+    StatusNameCase(ZX_ERR_IO_INVALID);
+    StatusNameCase(ZX_ERR_BAD_PATH);
+    StatusNameCase(ZX_ERR_NOT_DIR);
+    StatusNameCase(ZX_ERR_NOT_FILE);
+    StatusNameCase(ZX_ERR_FILE_BIG);
+    StatusNameCase(ZX_ERR_NO_SPACE);
+    StatusNameCase(ZX_ERR_NOT_EMPTY);
+    StatusNameCase(ZX_ERR_STOP);
+    StatusNameCase(ZX_ERR_NEXT);
+    StatusNameCase(ZX_ERR_ASYNC);
+    StatusNameCase(ZX_ERR_PROTOCOL_NOT_SUPPORTED);
+    StatusNameCase(ZX_ERR_ADDRESS_UNREACHABLE);
+    StatusNameCase(ZX_ERR_ADDRESS_IN_USE);
+    StatusNameCase(ZX_ERR_NOT_CONNECTED);
+    StatusNameCase(ZX_ERR_CONNECTION_REFUSED);
+    StatusNameCase(ZX_ERR_CONNECTION_RESET);
+    StatusNameCase(ZX_ERR_CONNECTION_ABORTED);
+    default:
+      os << "status=" << status;
+      return;
+  }
+}
+
+void StatusName(const Colors& colors, zx_status_t status, std::ostream& os) {
+  if (status == ZX_OK) {
+    os << colors.green;
+  } else {
+    os << colors.red;
+  }
+  StatusName(status, os);
+  os << colors.reset;
+}
+
 void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::ostream& os) {
   os << colors.red;
   if (handle.type != ZX_OBJ_TYPE_NONE) {
@@ -160,6 +171,27 @@ void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::os
     os << ')';
   }
   os << colors.reset;
+}
+
+void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint8:
+      os << ":" << colors.green << "uint8" << colors.reset << ": ";
+      break;
+    case SyscallType::kUint32:
+      os << ":" << colors.green << "uint32" << colors.reset << ": ";
+      break;
+    case SyscallType::kHandle:
+      os << ":" << colors.green << "handle" << colors.reset << ": ";
+      break;
+    case SyscallType::kTime:
+      os << ":" << colors.green << "time" << colors.reset << ": ";
+      break;
+    default:
+      os << ":" << colors.green << "unimplemented type " << static_cast<uint32_t>(type)
+         << colors.reset;
+      return;
+  }
 }
 
 }  // namespace fidlcat
