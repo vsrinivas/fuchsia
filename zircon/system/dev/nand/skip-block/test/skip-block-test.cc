@@ -208,18 +208,20 @@ class SkipBlockTest : public zxtest::Test {
     if (!client_) {
       client_.emplace(std::move(ddk().FidlClient()));
     }
-    zx_status_t status;
-    ASSERT_OK(client_->Write_Deprecated(std::move(op), &status, bad_block_grown));
-    ASSERT_EQ(status, expected);
+
+    auto result = client_->Write(std::move(op));
+    ASSERT_OK(result.status());
+    ASSERT_STATUS(result.value().status, expected);
+    *bad_block_grown = result.value().bad_block_grown;
   }
 
   void Read(nand::ReadWriteOperation op, zx_status_t expected = ZX_OK) {
     if (!client_) {
       client_.emplace(std::move(ddk().FidlClient()));
     }
-    zx_status_t status;
-    ASSERT_OK(client_->Read_Deprecated(std::move(op), &status));
-    ASSERT_EQ(status, expected);
+    auto result = client_->Read(std::move(op));
+    ASSERT_OK(result.status());
+    ASSERT_STATUS(result.value().status, expected);
   }
 
   zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
