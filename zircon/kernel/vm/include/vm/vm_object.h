@@ -17,6 +17,7 @@
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/name.h>
 #include <fbl/ref_counted.h>
@@ -298,6 +299,19 @@ class VmObject : public fbl::RefCounted<VmObject>,
   virtual ~VmObject();
   friend fbl::RefPtr<VmObject>;
 
+  // Types for an additional linked list over the VmObject for use when doing a RangeChangeUpdate.
+  using RangeChangeNodeState = fbl::SinglyLinkedListNodeState<VmObject*>;
+  struct RangeChangeListTraits {
+    static RangeChangeNodeState& node_state(VmObject& vmo) { return vmo.range_change_node_state_; }
+  };
+  using RangeChangeList = fbl::SinglyLinkedList<VmObject*, RangeChangeListTraits>;
+  // This is state that is used when doing a RangeChangeUpdate. To avoid unbounded stack growth we
+  // need to reserve the memory here so that we can have a flat iteration over a work list. These
+  // members should only be used by the RangeChangeUpdate code.
+  RangeChangeNodeState range_change_node_state_ TA_GUARDED(lock_);
+  uint64_t range_change_offset_ TA_GUARDED(lock_);
+  uint64_t range_change_len_ TA_GUARDED(lock_);
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 
   void AddToGlobalList();
@@ -306,12 +320,10 @@ class VmObject : public fbl::RefCounted<VmObject>,
   // inform all mappings and children that a range of this vmo's pages were added or removed.
   void RangeChangeUpdateLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
-  // above call but called from a parent
-  virtual void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len)
-      // Called under the parent's lock, which confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS {
-    RangeChangeUpdateLocked(offset, len);
-  }
+  // Given an initial list of VmObject's performs RangeChangeUpdate on it until the list is empty.
+  static void RangeChangeUpdateListLocked(RangeChangeList* list)
+      // Reaches into many children, which confuses the safety analysis.
+      TA_NO_THREAD_SAFETY_ANALYSIS;
 
   // magic value
   fbl::Canary<fbl::magic("VMO_")> canary_;

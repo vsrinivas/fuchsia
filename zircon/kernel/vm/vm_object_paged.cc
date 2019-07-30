@@ -1209,7 +1209,9 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
         DEBUG_ASSERT(cur->mapping_list_len_ == 0);
         VmObjectPaged& other = cur->stack_.dir_flag == StackDir::Left ? cur->right_child_locked()
                                                                       : cur->left_child_locked();
-        other.RangeChangeUpdateFromParentLocked(cur_offset, PAGE_SIZE);
+        RangeChangeList list;
+        other.RangeChangeUpdateFromParentLocked(cur_offset, PAGE_SIZE, &list);
+        RangeChangeUpdateListLocked(&list);
       } else {
         // In this case, cur is the last vmo being changed, so update its whole subtree.
         DEBUG_ASSERT(offset == cur_offset);
@@ -2419,7 +2421,8 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
   return ZX_OK;
 }
 
-void VmObjectPaged::RangeChangeUpdateFromParentLocked(const uint64_t offset, const uint64_t len) {
+void VmObjectPaged::RangeChangeUpdateFromParentLocked(const uint64_t offset, const uint64_t len,
+                                                      RangeChangeList* list) {
   canary_.Assert();
 
   LTRACEF("offset %#" PRIx64 " len %#" PRIx64 " p_offset %#" PRIx64 " size_ %#" PRIx64 "\n", offset,
@@ -2444,9 +2447,12 @@ void VmObjectPaged::RangeChangeUpdateFromParentLocked(const uint64_t offset, con
 
   LTRACEF("new offset %#" PRIx64 " new len %#" PRIx64 "\n", offset_new, len_new);
 
-  // pass it on
+  // pass it on. to prevent unbounded recursion we package up our desired offset and len and add
+  // ourselves to the list. UpdateRangeLocked will then get called on it later.
   // TODO: optimize by not passing on ranges that are completely covered by pages local to this vmo
-  RangeChangeUpdateLocked(offset_new, len_new);
+  range_change_offset_ = offset_new;
+  range_change_len_ = len_new;
+  list->push_front(this);
 }
 
 fbl::RefPtr<PageSource> VmObjectPaged::GetRootPageSourceLocked() const {

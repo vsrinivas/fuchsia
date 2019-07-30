@@ -248,23 +248,38 @@ uint32_t VmObject::num_user_children() const {
   return user_child_count_;
 }
 
+void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list) {
+  while (!list->is_empty()) {
+    VmObject* object = list->pop_front();
+
+    // offsets for vmos needn't be aligned, but vmars use aligned offsets
+    const uint64_t aligned_offset = ROUNDDOWN(object->range_change_offset_, PAGE_SIZE);
+    const uint64_t aligned_len =
+        ROUNDUP(object->range_change_offset_ + object->range_change_len_, PAGE_SIZE) -
+        aligned_offset;
+
+    // other mappings may have covered this offset into the vmo, so unmap those ranges
+    for (auto& m : object->mapping_list_) {
+      m.UnmapVmoRangeLocked(aligned_offset, aligned_len);
+    }
+
+    // inform all our children this as well, so they can inform their mappings
+    for (auto& child : object->children_list_) {
+      child.RangeChangeUpdateFromParentLocked(object->range_change_offset_,
+                                              object->range_change_len_, list);
+    }
+  }
+}
+
 void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
   DEBUG_ASSERT(lock_.lock().IsHeld());
 
-  // offsets for vmos needn't be aligned, but vmars use aligned offsets
-  const uint64_t aligned_offset = ROUNDDOWN(offset, PAGE_SIZE);
-  const uint64_t aligned_len = ROUNDUP(offset + len, PAGE_SIZE) - aligned_offset;
-
-  // other mappings may have covered this offset into the vmo, so unmap those ranges
-  for (auto& m : mapping_list_) {
-    m.UnmapVmoRangeLocked(aligned_offset, aligned_len);
-  }
-
-  // inform all our children this as well, so they can inform their mappings
-  for (auto& child : children_list_) {
-    child.RangeChangeUpdateFromParentLocked(offset, len);
-  }
+  RangeChangeList list;
+  this->range_change_offset_ = offset;
+  this->range_change_len_ = len;
+  list.push_front(this);
+  RangeChangeUpdateListLocked(&list);
 }
 
 zx_status_t VmObject::InvalidateCache(const uint64_t offset, const uint64_t len) {

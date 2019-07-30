@@ -137,7 +137,7 @@ class VmObjectPaged final : public VmObject {
       // This accesses both |this| and |hidden_parent|, which confuses analysis.
       TA_NO_THREAD_SAFETY_ANALYSIS;
 
-  void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len) override
+  void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len, RangeChangeList* list)
       // Called under the parent's lock, which confuses analysis.
       TA_NO_THREAD_SAFETY_ANALYSIS;
 
