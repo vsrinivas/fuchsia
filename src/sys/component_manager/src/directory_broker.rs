@@ -39,7 +39,10 @@ impl DirectoryBroker {
 
     pub fn from_directory_proxy(dir: DirectoryProxy) -> DirectoryBroker {
         Self::new(Box::new(
-            move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
+            move |flags: u32,
+                  mode: u32,
+                  relative_path: String,
+                  server_end: ServerEnd<NodeMarker>| {
                 // If we want to open the 'dir' directory directly, then call clone.
                 // Otherwise, pass long the remaining 'relative_path' to the component
                 // hosting the out directory to resolve.

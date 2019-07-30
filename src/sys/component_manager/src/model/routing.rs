@@ -69,6 +69,7 @@ pub async fn route_use_capability<'a>(
 /// directory (or componentmgr's namespace, if applicable)
 pub async fn route_expose_capability<'a>(
     model: &'a Model,
+    flags: u32,
     open_mode: u32,
     expose_decl: &'a ExposeDecl,
     abs_moniker: AbsoluteMoniker,
@@ -78,7 +79,6 @@ pub async fn route_expose_capability<'a>(
     let mut pos =
         WalkPosition { capability, last_child_moniker: None, moniker: Some(abs_moniker.clone()) };
     let source = await!(walk_expose_chain(model, &mut pos))?;
-    let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
     await!(open_capability_at_source(model, flags, open_mode, String::new(), source, server_chan))
 }
 
@@ -101,7 +101,7 @@ async fn open_capability_at_source<'a>(
                 await!(Model::bind_instance_open_outgoing(
                     &model,
                     realm,
-                    FLAGS,
+                    flags,
                     open_mode,
                     path,
                     server_chan
@@ -115,7 +115,7 @@ async fn open_capability_at_source<'a>(
         CapabilitySource::FrameworkCapability(use_, realm) => {
             await!(open_framework_capability(
                 model.clone(),
-                flags,
+                FLAGS,
                 open_mode,
                 relative_path,
                 realm,

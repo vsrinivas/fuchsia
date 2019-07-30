@@ -5,10 +5,7 @@
 use {
     crate::{
         framework::RealFrameworkServiceHost,
-        model::testing::{
-            mocks::*,
-            routing_test_helpers::*,
-        },
+        model::testing::{mocks::*, routing_test_helpers::*},
     },
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
@@ -63,8 +60,15 @@ async fn use_framework_service() {
 ///
 /// a: offers directory /data/foo from self as /data/bar
 /// a: offers service /svc/foo from self as /svc/bar
+/// a: offers service /svc/file from self as /svc/device
 /// b: uses directory /data/bar as /data/hippo
 /// b: uses service /svc/bar as /svc/hippo
+/// b: uses service /svc/device
+///
+/// The test related to `/svc/file` is used to verify that services that require
+/// extended flags, like `OPEN_FLAG_DESCRIBE`, work correctly. This often
+/// happens for fuchsia.hardware protocols that compose fuchsia.io protocols,
+/// and expect that `fdio_open` should operate correctly.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_parent() {
     let components = vec![
@@ -82,6 +86,12 @@ async fn use_from_parent() {
                         source: OfferServiceSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferServiceSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/file").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/device").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
                 ],
@@ -107,6 +117,11 @@ async fn use_from_parent() {
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }),
+                    UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/device").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/device").unwrap(),
+                    }),
                 ],
                 ..default_component_decl()
             },
@@ -122,6 +137,7 @@ async fn use_from_parent() {
         vec!["b"].into(),
         CheckUse::Service { path: default_service_capability(), should_succeed: true }
     ));
+    await!(test.check_open_file(vec!["b"].into(), "/svc/device".try_into().unwrap()))
 }
 
 ///   a

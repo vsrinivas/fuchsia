@@ -70,13 +70,14 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
 
 fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDecl) -> RoutingFn {
     Box::new(
-        move |_flags: u32, mode: u32, _relative_path: String, server_end: ServerEnd<NodeMarker>| {
+        move |flags: u32, mode: u32, _relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let model = model.clone();
             let abs_moniker = abs_moniker.clone();
             let expose = expose.clone();
             fasync::spawn(async move {
                 let res = await!(route_expose_capability(
                     &model,
+                    flags,
                     mode,
                     &expose,
                     abs_moniker.clone(),

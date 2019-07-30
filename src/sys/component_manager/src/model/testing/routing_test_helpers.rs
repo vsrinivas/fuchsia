@@ -15,12 +15,14 @@ use {
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileMarker, NodeMarker, CLONE_FLAG_SAME_RIGHTS,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryProxy, FileEvent, FileMarker, FileObject, FileProxy, NodeInfo,
+        NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
+        OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_vfs_pseudo_fs::{directory, directory::entry::DirectoryEntry, pseudo_directory},
+    fuchsia_vfs_pseudo_fs::{
+        directory, directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
+    },
     fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
@@ -329,6 +331,23 @@ impl RoutingTest {
         ));
     }
 
+    /// Checks that a use declaration of `path` at `moniker` can be opened with
+    /// Fuchsia file operations.
+    pub async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
+        let component_name = await!(Self::bind_instance(&self.model, &moniker));
+        let component_resolved_url = Self::resolved_url(&component_name);
+        await!(Self::check_namespace(
+            component_name,
+            self.namespaces.clone(),
+            self.components.clone()
+        ));
+        await!(capability_util::call_file_svc_from_namespace(
+            path,
+            component_resolved_url,
+            self.namespaces.clone(),
+        ));
+    }
+
     /// Host all capabilities in `decl` that come from `self`.
     fn host_capabilities(name: &str, decl: ComponentDecl, runner: &mut MockRunner, memfs: &Memfs) {
         // if this decl is offering/exposing something from `Self`, let's host it
@@ -506,6 +525,36 @@ mod capability_util {
                 }
             }
         }
+    }
+
+    /// Looks up `resolved_url` in the namespace, and attempts to use `path`.
+    /// Expects the service to work like a fuchsia.io service, and respond with
+    /// an OnOpen event when opened with OPEN_FLAG_DESCRIBE.
+    pub async fn call_file_svc_from_namespace(
+        path: CapabilityPath,
+        resolved_url: String,
+        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+    ) {
+        let dir_proxy = await!(get_dir_from_namespace(&path.dirname, resolved_url, namespaces));
+        let node_proxy = io_util::open_node(
+            &dir_proxy,
+            &Path::new(&path.basename),
+            OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+            // This should be MODE_TYPE_SERVICE, but we implement the underlying
+            // service as a file for convenience in testing.
+            MODE_TYPE_FILE,
+        )
+        .expect("failed to open file service");
+
+        let file_proxy = FileProxy::new(node_proxy.into_channel().unwrap());
+        let mut event_stream = file_proxy.take_event_stream();
+        let event = await!(event_stream.try_next()).unwrap();
+        let FileEvent::OnOpen_ { s, info } = event.expect("failed to received file event");
+        assert_eq!(s, zx::sys::ZX_OK);
+        assert_eq!(
+            *info.expect("failed to receive node info"),
+            NodeInfo::File(FileObject { event: None })
+        );
     }
 
     /// Attempts to read ${path}/hippo in `abs_moniker`'s exposed directory. The file should
@@ -698,6 +747,7 @@ impl OutDir {
                         .add_entry(
                             "svc",
                             pseudo_directory! {
+                                "file" => read_only(|| Ok(b"hippos".to_vec())),
                                 "foo" =>
                                     directory_broker::DirectoryBroker::new(Box::new(
                                             Self::echo_server_fn)),

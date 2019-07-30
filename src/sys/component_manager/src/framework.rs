@@ -3,12 +3,19 @@
 // found in the LICENSE file.
 
 use {
+    crate::model::*,
+    cm_fidl_validator,
+    cm_rust::FidlIntoNative,
     cm_rust::{CapabilityPath, UseDecl},
-    crate::model::*, cm_fidl_validator, cm_rust::FidlIntoNative, failure::Error,
-    fidl::endpoints::ServerEnd, fidl_fuchsia_io::DirectoryMarker, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync, futures::future::FutureObj, futures::prelude::*, log::*, std::cmp,
-    fuchsia_zircon as zx,
+    failure::Error,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::BoxFuture,
+    futures::future::FutureObj,
+    futures::prelude::*,
+    log::*,
+    std::cmp,
     std::sync::Arc,
 };
 
@@ -40,8 +47,12 @@ pub struct DefaultFrameworkCapability {
 }
 
 impl DefaultFrameworkCapability {
-    pub fn new(model: Model, framework_services: Arc<dyn FrameworkServiceHost>,
-               realm: Arc<Realm>, capability_path: CapabilityPath) -> Self {
+    pub fn new(
+        model: Model,
+        framework_services: Arc<dyn FrameworkServiceHost>,
+        realm: Arc<Realm>,
+        capability_path: CapabilityPath,
+    ) -> Self {
         DefaultFrameworkCapability { model, framework_services, realm, capability_path }
     }
 
@@ -414,12 +425,8 @@ mod tests {
                 let realm = realm.clone();
                 let model = model.clone();
                 fasync::spawn(async move {
-                    await!(framework_services.serve_realm_service(
-                        model.clone(),
-                        realm,
-                        stream
-                    ))
-                    .expect("failed serving realm service");
+                    await!(framework_services.serve_realm_service(model.clone(), realm, stream))
+                        .expect("failed serving realm service");
                 });
             }
             FrameworkServiceTest { hook, realm, realm_proxy }
@@ -678,10 +685,8 @@ mod tests {
 
         // Instance not found.
         {
-            let mut child_ref = fsys::ChildRef {
-                name: "b".to_string(),
-                collection: Some("coll".to_string()),
-            };
+            let mut child_ref =
+                fsys::ChildRef { name: "b".to_string(), collection: Some("coll".to_string()) };
             let err = await!(test.realm_proxy.destroy_child(&mut child_ref))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
@@ -794,10 +799,8 @@ mod tests {
         let _ = res.expect("failed to create child system").expect("failed to create child system");
 
         // Bind to child and use exposed service.
-        let mut child_ref = fsys::ChildRef {
-            name: "system".to_string(),
-            collection: Some("coll".to_string()),
-        };
+        let mut child_ref =
+            fsys::ChildRef { name: "system".to_string(), collection: Some("coll".to_string()) };
         let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let res = await!(test.realm_proxy.bind_child(&mut child_ref, server_end));
         let _ = res.expect("failed to bind to system").expect("failed to bind to system");
@@ -863,8 +866,7 @@ mod tests {
 
         // Instance cannot start.
         {
-            let mut child_ref =
-                fsys::ChildRef { name: "unrunnable".to_string(), collection: None };
+            let mut child_ref = fsys::ChildRef { name: "unrunnable".to_string(), collection: None };
             let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
             let err = await!(test.realm_proxy.bind_child(&mut child_ref, server_end))
                 .expect("fidl call failed")
@@ -950,14 +952,8 @@ mod tests {
         assert_eq!(
             children,
             vec![
-                fsys::ChildRef {
-                    name: "a".to_string(),
-                    collection: Some("coll".to_string())
-                },
-                fsys::ChildRef {
-                    name: "b".to_string(),
-                    collection: Some("coll".to_string())
-                },
+                fsys::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) },
+                fsys::ChildRef { name: "b".to_string(), collection: Some("coll".to_string()) },
             ]
         );
 
@@ -965,10 +961,7 @@ mod tests {
         let children = res.expect("failed to iterate over children");
         assert_eq!(
             children,
-            vec![fsys::ChildRef {
-                name: "c".to_string(),
-                collection: Some("coll".to_string())
-            },]
+            vec![fsys::ChildRef { name: "c".to_string(), collection: Some("coll".to_string()) },]
         );
 
         let res = await!(iterator_proxy.next());

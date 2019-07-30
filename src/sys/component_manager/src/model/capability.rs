@@ -107,14 +107,12 @@ impl RoutedCapability {
             (
                 RoutedCapability::Offer(OfferDecl::Directory(child_offer)),
                 OfferDecl::Directory(offer),
-            ) => {
-                Self::is_offer_service_or_dir_match(
-                    child_moniker,
-                    &child_offer.source_path,
-                    &offer.target,
-                    &offer.target_path,
-                )
-            }
+            ) => Self::is_offer_service_or_dir_match(
+                child_moniker,
+                &child_offer.source_path,
+                &offer.target,
+                &offer.target_path,
+            ),
             // Directory offered to me that matches a `storage` declaration which consumes it.
             (RoutedCapability::Storage(child_storage), OfferDecl::Directory(offer)) => {
                 Self::is_offer_service_or_dir_match(
@@ -136,17 +134,13 @@ impl RoutedCapability {
             (
                 RoutedCapability::Offer(OfferDecl::Storage(child_offer)),
                 OfferDecl::Storage(offer),
-            ) => {
-                Self::is_offer_storage_match(
-                    child_moniker,
-                    child_offer.type_(),
-                    offer.target(),
-                    offer.type_(),
-                )
-            }
-            _ => {
-                false
-            }
+            ) => Self::is_offer_storage_match(
+                child_moniker,
+                child_offer.type_(),
+                offer.target(),
+                offer.type_(),
+            ),
+            _ => false,
         })
     }
 
