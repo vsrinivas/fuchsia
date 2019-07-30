@@ -45,7 +45,7 @@ use log::trace;
 
 pub use crate::data_structures::{IdMapCollection, IdMapCollectionKey};
 pub use crate::device::{
-    get_ip_addr_subnet, initialize_device, receive_frame, remove_device, DeviceId,
+    get_ip_addr_subnets, initialize_device, receive_frame, remove_device, DeviceId,
     DeviceLayerEventDispatcher,
 };
 pub use crate::error::NetstackError;
@@ -447,30 +447,28 @@ pub trait EventDispatcher:
     fn rng(&mut self) -> &mut Self::Rng;
 }
 
-/// Get all IPv4 and IPv6 address/subnet configured on a device
-pub fn get_all_ip_addr_subnet<D: EventDispatcher>(
-    ctx: &Context<D>,
+/// Get all IPv4 and IPv6 address/subnet pairs configured on a device
+pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher>(
+    ctx: &'a Context<D>,
     device: DeviceId,
-) -> Vec<AddrSubnetEither> {
-    let mut addresses = vec![];
-    if let Some(addr_v4) = get_ip_addr_subnet::<_, Ipv4Addr>(ctx, device) {
-        addresses.push(AddrSubnetEither::V4(addr_v4));
-    }
-    if let Some(addr_v6) = get_ip_addr_subnet::<_, Ipv6Addr>(ctx, device) {
-        addresses.push(AddrSubnetEither::V6(addr_v6));
-    }
-    addresses
+) -> impl 'a + Iterator<Item = AddrSubnetEither> {
+    let addr_v4 = crate::device::get_ip_addr_subnets::<_, Ipv4Addr>(ctx.state(), device)
+        .map(|a| AddrSubnetEither::V4(a));
+    let addr_v6 = crate::device::get_ip_addr_subnets::<_, Ipv6Addr>(ctx.state(), device)
+        .map(|a| AddrSubnetEither::V6(a));
+
+    addr_v4.chain(addr_v6)
 }
 
 /// Set the IP address and subnet for a device.
-pub fn set_ip_addr_subnet<D: EventDispatcher>(
+pub fn add_ip_addr_subnet<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
 ) {
     map_addr_version!(
         addr_sub: AddrSubnetEither;
-        crate::device::set_ip_addr_subnet(ctx, device, addr_sub)
+        crate::device::add_ip_addr_subnet(ctx, device, addr_sub)
     );
 }
 

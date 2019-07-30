@@ -145,7 +145,9 @@ pub(crate) trait ArpContext<P: PType, H: HType>:
     /// An ID that identifies a particular device.
     type DeviceId: Copy + PartialEq;
 
-    /// Get the protocol address of this interface.
+    /// Get a protocol address of this interface.
+    ///
+    /// If `device_id` does not have any addresses associated with it, return `None`.
     fn get_protocol_addr(&self, device_id: Self::DeviceId) -> Option<P>;
 
     /// Get the hardware address of this interface.

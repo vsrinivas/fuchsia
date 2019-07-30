@@ -127,8 +127,8 @@ use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
 use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher};
 use netstack3_core::{
-    add_route, del_device_route, get_all_ip_addr_subnet, get_all_routes, handle_timeout,
-    initialize_device, receive_frame, remove_device, set_ip_addr_subnet, Context, DeviceId,
+    add_ip_addr_subnet, add_route, del_device_route, get_all_ip_addr_subnets, get_all_routes,
+    handle_timeout, initialize_device, receive_frame, remove_device, Context, DeviceId,
     DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpLayerEventDispatcher,
     NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
@@ -544,7 +544,7 @@ impl EventLoop {
             let is_active = device.is_active();
             let mut addresses = vec![];
             if let Some(core_id) = device.core_id() {
-                for addr in get_all_ip_addr_subnet(&self.ctx, core_id) {
+                for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
                     match addr.try_into_fidl() {
                         Ok(addr) => addresses.push(addr),
                         Err(e) => {
@@ -596,7 +596,7 @@ impl EventLoop {
         let is_active = device.is_active();
         let mut addresses = vec![];
         if let Some(core_id) = device.core_id() {
-            for addr in get_all_ip_addr_subnet(&self.ctx, core_id) {
+            for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
                 match addr.try_into_fidl() {
                     Ok(addr) => addresses.push(addr),
                     Err(e) => error!("failed to map interface address/subnet into FIDL: {:?}", e),
@@ -682,7 +682,7 @@ impl EventLoop {
                     // TODO(wesleyac): Check for address already existing.
                     // TODO(joshlf): Return an error if the address/subnet pair is invalid.
                     if let Ok(addr_sub) = addr.try_into_core() {
-                        set_ip_addr_subnet(&mut self.ctx, device_id, addr_sub);
+                        add_ip_addr_subnet(&mut self.ctx, device_id, addr_sub);
                     }
                     None
                 }

@@ -235,6 +235,63 @@ impl From<arp::ArpTimerId<usize, Ipv4Addr>> for DeviceLayerTimerId {
     }
 }
 
+/// The various states an IP address can be on an interface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AddressState {
+    /// The address is assigned to an interface and can be considered
+    /// bound to it (all packets destined to the address will be
+    /// accepted).
+    Assigned,
+
+    /// The address is considered unassigned to an interface for normal
+    /// operations, but has the intention of being assigned in the future
+    /// (e.g. once NDP's Duplicate Address Detection is completed).
+    Tentative,
+}
+
+impl AddressState {
+    /// Is this address assigned?
+    pub(crate) fn is_assigned(self) -> bool {
+        self == AddressState::Assigned
+    }
+
+    /// Is this address tentative?
+    pub(crate) fn is_tentative(self) -> bool {
+        self == AddressState::Tentative
+    }
+}
+
+/// Data associated with an IP addressess on an interface.
+pub struct AddressEntry<A: IpAddress> {
+    addr_sub: AddrSubnet<A>,
+    state: AddressState,
+}
+
+impl<A: IpAddress> AddressEntry<A> {
+    pub(crate) fn new(addr_sub: AddrSubnet<A>, state: AddressState) -> Self {
+        Self { addr_sub, state }
+    }
+
+    pub(crate) fn addr_sub(&self) -> &AddrSubnet<A> {
+        &self.addr_sub
+    }
+
+    pub(crate) fn state(&self) -> AddressState {
+        self.state
+    }
+
+    pub(crate) fn mark_permanent(&mut self) {
+        self.state = AddressState::Assigned;
+    }
+}
+
+/// Possible return values during an erroneous interface address change operation.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum AddressError {
+    AlreadyExists,
+    NotFound,
+}
+
 /// Handle a timer event firing in the device layer.
 pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: DeviceLayerTimerId) {
     match id {
@@ -409,49 +466,103 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
     }
 }
 
-/// Get the IP address and subnet associated with this device.
+/// Get a single IP address and subnet for a device.
 ///
 /// Note, tentative IP addresses (addresses which are not yet fully bound to a
-/// device) will not returned by `get_ip_addr_subnet`.
-pub fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
-    ctx: &Context<D>,
+/// device) will not be returned by `get_ip_addr`.
+pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
+    state: &StackState<D>,
     device: DeviceId,
 ) -> Option<AddrSubnet<A>> {
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_subnet(ctx, device.id),
+        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_subnet(state, device.id),
     }
 }
 
-/// Get the IP address and subnet associated with this device, including tentative
-/// address.
-pub fn get_ip_addr_subnet_with_tentative<D: EventDispatcher, A: IpAddress>(
-    ctx: &Context<D>,
+/// Get the IP addresses and associated subnets for a device.
+///
+/// Note, tentative IP addresses (addresses which are not yet fully bound to a
+/// device) will not be returned by `get_ip_addr_subnets`.
+///
+/// Returns an [`Iterator`] of `AddrSubnet<A>`.
+///
+/// See [`Tentative`] and [`AddrSubnet`] for more information.
+pub fn get_ip_addr_subnets<'a, D: EventDispatcher, A: IpAddress>(
+    state: &'a StackState<D>,
     device: DeviceId,
-) -> Option<Tentative<AddrSubnet<A>>> {
+) -> impl 'a + Iterator<Item = AddrSubnet<A>> {
+    match device.protocol {
+        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_subnets(state, device.id),
+    }
+}
+
+/// Get the IP addresses and associated subnets for a device, including tentative
+/// address.
+///
+/// Returns an [`Iterator`] of `Tentative<AddrSubnet<A>>`.
+///
+/// See [`Tentative`] and [`AddrSubnet`] for more information.
+pub fn get_ip_addr_subnets_with_tentative<'a, D: EventDispatcher, A: IpAddress>(
+    state: &'a StackState<D>,
+    device: DeviceId,
+) -> impl 'a + Iterator<Item = Tentative<AddrSubnet<A>>> {
     match device.protocol {
         DeviceProtocol::Ethernet => {
-            self::ethernet::get_ip_addr_subnet_with_tentative(ctx, device.id)
+            self::ethernet::get_ip_addr_subnets_with_tentative(state, device.id)
         }
     }
 }
 
-/// Set the IP address and subnet associated with this device.
+/// Get the state of an address on device.
+///
+/// Returns `None` if `addr` is not associated with `device`.
+pub fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
+    state: &StackState<D>,
+    device: DeviceId,
+    addr: &SpecifiedAddr<A>,
+) -> Option<AddressState> {
+    match device.protocol {
+        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_state(state, device.id, addr),
+    }
+}
+
+/// Adds an IP address and associated subnet to this device.
 ///
 /// # Panics
 ///
 /// Panics if `device` is not initialized.
-pub fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
+pub fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     addr_sub: AddrSubnet<A>,
-) {
+) -> Result<(), AddressError> {
     // `device` must be initialized.
     assert!(is_device_initialized(ctx.state(), device));
 
-    trace!("set_ip_addr_subnet: setting addr {:?} for device {:?}", addr_sub, device);
+    trace!("add_ip_addr_subnet: adding addr {:?} to device {:?}", addr_sub, device);
 
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::set_ip_addr_subnet(ctx, device.id, addr_sub),
+        DeviceProtocol::Ethernet => self::ethernet::add_ip_addr_subnet(ctx, device.id, addr_sub),
+    }
+}
+
+/// Removes an IP address and associated subnet to this device.
+///
+/// # Panics
+///
+/// Panics if `device` is not initialized.
+pub fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    addr: &SpecifiedAddr<A>,
+) -> Result<(), AddressError> {
+    // `device` must be initialized.
+    assert!(is_device_initialized(ctx.state(), device));
+
+    trace!("del_ip_addr: removing addr {:?} from device {:?}", addr, device);
+
+    match device.protocol {
+        DeviceProtocol::Ethernet => self::ethernet::del_ip_addr(ctx, device.id, addr),
     }
 }
 
@@ -542,7 +653,7 @@ pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(
 pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
     ctx: &Context<D>,
     device: DeviceId,
-) -> LinkLocalAddr<Ipv6Addr> {
+) -> Option<LinkLocalAddr<Ipv6Addr>> {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_ipv6_link_local_addr(ctx, device.id),
     }
@@ -554,13 +665,12 @@ pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
 /// Note, if the `addr` is not assigned to `device` but is considered tentative
 /// on another device, `is_addr_tentative_on_device` will return `false`.
 pub(crate) fn is_addr_tentative_on_device<D: EventDispatcher, A: IpAddress>(
-    ctx: &Context<D>,
+    state: &StackState<D>,
     addr: SpecifiedAddr<A>,
     device: DeviceId,
 ) -> bool {
-    get_ip_addr_subnet_with_tentative::<_, A>(ctx, device)
-        .map(|x| (x.inner().addr() == addr) && x.is_tentative())
-        .unwrap_or(false)
+    get_ip_addr_subnets_with_tentative::<_, A>(state, device)
+        .any(|x| (x.inner().addr() == addr) && x.is_tentative())
 }
 
 /// Get a reference to the common device state for a `device`.

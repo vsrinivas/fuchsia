@@ -13,8 +13,8 @@ use std::time::Duration;
 
 use failure::Fail;
 use log::{debug, error};
-use net_types::ip::{AddrSubnet, Ip, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddress, MulticastAddr, SpecifiedAddr, SpecifiedAddress};
+use net_types::ip::{Ip, Ipv6, Ipv6Addr};
+use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, SpecifiedAddress};
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
 use rand::Rng;
@@ -68,8 +68,8 @@ pub(crate) trait MldContext: IpDeviceIdContext
         MldFrameMetadata<<Self as IpDeviceIdContext>::DeviceId>,
     >
 {
-    /// Gets an IP address and subnet associated with this device.
-    fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv6Addr>>;
+    /// Gets the IPv6 link local address on `device`.
+    fn get_ipv6_link_local_addr(&self, device: Self::DeviceId) -> Option<LinkLocalAddr<Ipv6Addr>>;
 }
 
 /// A handler for incoming MLD packets.
@@ -391,19 +391,10 @@ fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
     // if a valid link-local address is not available for the device (e.g., one
     // has not been configured), the message is sent with the unspecified
     // address (::) as the IPv6 source address.
-    // NOTE: currently `get_ip_addr_subnet` is not returning the MAC generated link
-    // local address, so we're probably just always using UNSPECIFIED_ADDRESS.
-    let src_ip = ctx.get_ip_addr_subnet(device).map_or(
-        Ipv6::UNSPECIFIED_ADDRESS,
-        |x: AddrSubnet<Ipv6Addr>| {
-            let addr = x.addr();
-            if addr.is_linklocal() {
-                addr.into_addr()
-            } else {
-                Ipv6::UNSPECIFIED_ADDRESS
-            }
-        },
-    );
+
+    let src_ip =
+        ctx.get_ipv6_link_local_addr(device).map_or(Ipv6::UNSPECIFIED_ADDRESS, |x| x.get());
+
     let body = Mldv1MessageBuilder::<M>::new_with_max_resp_delay(group_addr, max_resp_delay)
         .into_serializer()
         .encapsulate(IcmpPacketBuilder::new(src_ip, dst_ip.get(), IcmpUnusedCode, msg))
@@ -443,9 +434,10 @@ mod tests {
     use std::time::Instant;
 
     use net_types::ethernet::Mac;
+    use net_types::ip::AddrSubnet;
 
     use super::*;
-    use crate::device::{set_ip_addr_subnet, DeviceId};
+    use crate::device::{add_ip_addr_subnet, DeviceId};
     use crate::ip::gmp::{Action, GmpAction, MemberState};
     use crate::ip::icmp::receive_icmpv6_packet;
     use crate::ip::IPV6_ALL_ROUTERS;
@@ -522,7 +514,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state.add_ethernet_device(MY_MAC, 1500);
         crate::device::initialize_device(&mut ctx, dev_id);
-        set_ip_addr_subnet(
+        add_ip_addr_subnet(
             &mut ctx,
             dev_id,
             AddrSubnet::new(MY_MAC.to_ipv6_link_local().get(), 128).unwrap(),
@@ -741,7 +733,7 @@ mod tests {
         assert!(testutil::trigger_next_timer(&mut ctx));
         for (_, frame) in ctx.dispatcher.frames_sent() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
-            ensure_slice_addr(&frame, 22, 38, Ipv6::UNSPECIFIED_ADDRESS);
+            ensure_slice_addr(&frame, 22, 38, MY_MAC.to_ipv6_link_local().get());
         }
     }
 
@@ -750,7 +742,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state.add_ethernet_device(MY_MAC, 1500);
         crate::device::initialize_device(&mut ctx, dev_id);
-        set_ip_addr_subnet(
+        add_ip_addr_subnet(
             &mut ctx,
             dev_id,
             AddrSubnet::new(
@@ -765,7 +757,7 @@ mod tests {
         assert!(testutil::trigger_next_timer(&mut ctx));
         for (_, frame) in ctx.dispatcher.frames_sent() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
-            ensure_slice_addr(&frame, 22, 38, Ipv6::UNSPECIFIED_ADDRESS);
+            ensure_slice_addr(&frame, 22, 38, MY_MAC.to_ipv6_link_local().get());
         }
     }
 }

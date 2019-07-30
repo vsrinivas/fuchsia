@@ -5,7 +5,9 @@
 //! The Ethernet protocol.
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::iter::FilterMap;
 use std::num::NonZeroU8;
+use std::slice::Iter;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
@@ -22,7 +24,8 @@ use crate::device::arp::{
 };
 use crate::device::ndp::{self, NdpState};
 use crate::device::{
-    is_device_initialized, DeviceId, DeviceLayerTimerId, FrameDestination, Tentative,
+    is_device_initialized, AddressEntry, AddressError, AddressState, DeviceId, DeviceLayerTimerId,
+    FrameDestination, Tentative,
 };
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
@@ -193,8 +196,8 @@ impl EthernetDeviceStateBuilder {
             mtu: self.mtu,
             hw_mtu: self.mtu,
             ipv6_hop_limit: ndp::HOP_LIMIT_DEFAULT,
-            ipv4_addr_sub: None,
-            ipv6_addr_sub: None,
+            ipv4_addr_sub: Vec::new(),
+            ipv6_addr_sub: Vec::new(),
             ipv4_multicast_groups: HashSet::new(),
             ipv6_multicast_groups,
             link_multicast_groups,
@@ -226,13 +229,13 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     //               state, move this to some IPv6-device state.
     ipv6_hop_limit: NonZeroU8,
 
-    /// Assigned IPv4 address.
-    ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
+    /// Assigned IPv4 addresses.
+    ipv4_addr_sub: Vec<AddressEntry<Ipv4Addr>>,
 
-    /// Assigned IPv6 address.
+    /// Assigned IPv6 addresses.
     ///
-    /// May be tentative (performing NDP's Duplicate Address Detection)
-    ipv6_addr_sub: Option<Tentative<AddrSubnet<Ipv6Addr>>>,
+    /// May be tentative (performing NDP's Duplicate Address Detection).
+    ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr>>,
 
     /// IPv4 multicast groups this device has joined.
     ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
@@ -482,73 +485,161 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
     get_device_state_mut(ctx.state_mut(), device_id).promiscuous_mode = enabled;
 }
 
-/// Get the IP address and subnet associated with this device.
+/// Get a single IP address for a device.
+///
+/// Note, tentative IP addresses (addresses which are not yet fully bound to a
+/// device) will not be returned by `get_ip_addr`.
 #[specialize_ip_address]
 pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
-    ctx: &Context<D>,
+    state: &StackState<D>,
     device_id: usize,
 ) -> Option<AddrSubnet<A>> {
+    get_ip_addr_subnets(state, device_id).nth(0)
+}
+
+/// Get the IP address and subnet pais associated with this device.
+///
+/// Note, tentative IP addresses (addresses which are not yet fully bound to a
+/// device) will not be returned by `get_ip_addr_subnets`.
+///
+/// Returns an [`Iterator`] of `AddrSubnet<A>`.
+///
+/// See [`Tentative`] and [`AddrSubnet`] for more information.
+#[specialize_ip_address]
+pub(crate) fn get_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
+    state: &StackState<D>,
+    device_id: usize,
+) -> FilterMap<Iter<AddressEntry<A>>, fn(&AddressEntry<A>) -> Option<AddrSubnet<A>>> {
+    let state = get_device_state(state, device_id);
+
     #[ipv4addr]
-    return get_device_state(ctx.state(), device_id).ipv4_addr_sub;
+    let addresses = &state.ipv4_addr_sub;
 
     #[ipv6addr]
-    return match get_device_state(ctx.state(), device_id).ipv6_addr_sub.clone() {
-        None => None,
-        Some(a) => a.try_into_permanent(),
-    };
+    let addresses = &state.ipv6_addr_sub;
+
+    addresses.iter().filter_map(
+        |a| {
+            if a.state().is_assigned() {
+                Some(*a.addr_sub())
+            } else {
+                None
+            }
+        },
+    )
 }
 
 /// Get the IP address and subnet associated with this device, including tentative
 /// addresses.
+///
+/// Returns an [`Iterator`] of `Tentative<AddrSubnet<A>>`.
+///
+/// See [`Tentative`] and [`AddrSubnet`] for more information.
 #[specialize_ip_address]
-pub(crate) fn get_ip_addr_subnet_with_tentative<D: EventDispatcher, A: IpAddress>(
-    ctx: &Context<D>,
+pub(crate) fn get_ip_addr_subnets_with_tentative<D: EventDispatcher, A: IpAddress>(
+    state: &StackState<D>,
     device_id: usize,
-) -> Option<Tentative<AddrSubnet<A>>> {
+) -> FilterMap<Iter<AddressEntry<A>>, fn(&AddressEntry<A>) -> Option<Tentative<AddrSubnet<A>>>> {
+    let state = get_device_state(state, device_id);
+
     #[ipv4addr]
-    return get_device_state(ctx.state(), device_id)
-        .ipv4_addr_sub
-        .map(|x| Tentative::new_permanent(x));
+    let addresses = &state.ipv4_addr_sub;
 
     #[ipv6addr]
-    return get_device_state(ctx.state(), device_id).ipv6_addr_sub;
+    let addresses = &state.ipv6_addr_sub;
+
+    addresses.iter().filter_map(|a| {
+        if a.state().is_assigned() {
+            Some(Tentative::new_permanent(*a.addr_sub()))
+        } else if a.state().is_tentative() {
+            Some(Tentative::new_tentative(*a.addr_sub()))
+        } else {
+            None
+        }
+    })
 }
 
-/// Get the IPv6 link-local address associated with this device.
+/// Get the state of an address on a device.
 ///
-/// The IPv6 link-local address returned is constructed from this device's MAC
-/// address.
-pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
-    ctx: &Context<D>,
+/// Returns `None` if `addr` is not associated with `device_id`.
+#[specialize_ip_address]
+pub fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
+    state: &StackState<D>,
     device_id: usize,
-) -> LinkLocalAddr<Ipv6Addr> {
-    // TODO(brunodalbo) the link local address is subject to the same collision
-    //  verifications as prefix global addresses, we should keep a state machine
-    //  about that check and cache the adopted address. For now, we just compose
-    //  the link-local from the ethernet MAC.
-    get_device_state(ctx.state(), device_id).mac.to_ipv6_link_local()
+    addr: &SpecifiedAddr<A>,
+) -> Option<AddressState> {
+    let state = get_device_state(state, device_id);
+
+    #[ipv4addr]
+    let addresses = &state.ipv4_addr_sub;
+
+    #[ipv6addr]
+    let addresses = &state.ipv6_addr_sub;
+
+    addresses.iter().find_map(|a| if a.addr_sub().addr() == *addr { Some(a.state()) } else { None })
 }
 
-/// Set the IP address and subnet associated with this device.
+/// Adds an IP address and associated subnet to this device.
 #[specialize_ip_address]
-pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
+pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: usize,
     addr_sub: AddrSubnet<A>,
-) {
+) -> Result<(), AddressError> {
+    let addr = addr_sub.addr();
+
+    if get_ip_addr_state(ctx.state(), device_id, &addr).is_some() {
+        return Err(AddressError::AlreadyExists);
+    }
+
     let state = get_device_state_mut(ctx.state_mut(), device_id);
 
     #[ipv4addr]
-    state.ipv4_addr_sub = Some(addr_sub);
+    state.ipv4_addr_sub.push(AddressEntry::new(addr_sub, AddressState::Assigned));
 
     #[ipv6addr]
     {
-        let old_addr = state.ipv6_addr_sub.take();
+        // First, join the solicited-node multicast group.
+        join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
 
-        if let Some(ref addr) = old_addr {
-            if addr.is_tentative() {
-                // Cancel current duplicate address detection for `addr` because we
-                // will assign a new address to the device.
+        let state = get_device_state_mut(ctx.state_mut(), device_id);
+        state.ipv6_addr_sub.push(AddressEntry::new(addr_sub, AddressState::Tentative));
+        ndp::start_duplicate_address_detection::<D, EthernetNdpDevice>(ctx, device_id, addr.get());
+    }
+
+    Ok(())
+}
+
+/// Removes an IP address and associated subnet from this device.
+#[specialize_ip_address]
+pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    addr: &SpecifiedAddr<A>,
+) -> Result<(), AddressError> {
+    #[ipv4addr]
+    {
+        let state = get_device_state_mut(ctx.state_mut(), device_id);
+
+        let original_size = state.ipv4_addr_sub.len();
+        state.ipv4_addr_sub.retain(|x| x.addr_sub().addr() != *addr);
+        let new_size = state.ipv4_addr_sub.len();
+
+        if new_size == original_size {
+            return Err(AddressError::NotFound);
+        }
+
+        assert_eq!(original_size - new_size, 1);
+
+        Ok(())
+    }
+
+    #[ipv6addr]
+    {
+        if let Some(state) = get_ip_addr_state(ctx.state(), device_id, addr) {
+            if state.is_tentative() {
+                // Cancel current duplicate address detection for `addr` as we are
+                // removing this IP.
                 //
                 // `cancel_duplicate_address_detection` may panic if we are not
                 // performing DAD on `addr`. However, we will only reach here
@@ -559,26 +650,43 @@ pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
                 ndp::cancel_duplicate_address_detection::<_, EthernetNdpDevice>(
                     ctx,
                     device_id,
-                    addr.inner().addr().into_addr(),
+                    addr.get(),
                 );
             }
-
-            // Leave the solicited-node multicast group for the previous address.
-            let addr = addr.inner().addr().to_solicited_node_address();
-            leave_ip_multicast(ctx, device_id, addr);
+        } else {
+            return Err(AddressError::NotFound);
         }
 
-        // First, join the solicited-node multicast group.
-        join_ip_multicast(ctx, device_id, addr_sub.addr().to_solicited_node_address());
+        let state = get_device_state_mut(ctx.state_mut(), device_id);
 
-        let device_state = get_device_state_mut(ctx.state_mut(), device_id);
-        device_state.ipv6_addr_sub = Some(Tentative::new_tentative(addr_sub));
-        ndp::start_duplicate_address_detection::<D, EthernetNdpDevice>(
-            ctx,
-            device_id,
-            addr_sub.addr().into_addr(),
-        );
+        let original_size = state.ipv6_addr_sub.len();
+        state.ipv6_addr_sub.retain(|x| x.addr_sub().addr() != *addr);
+        let new_size = state.ipv6_addr_sub.len();
+
+        // Since we just checked earlier if we had the address, we must have removed it
+        // now.
+        assert_eq!(original_size - new_size, 1);
+
+        // Leave the the solicited-node multicast group.
+        leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
+
+        Ok(())
     }
+}
+
+/// Get the IPv6 link-local address associated with this device.
+///
+/// The IPv6 link-local address returned is constructed from this device's MAC
+/// address.
+pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
+    ctx: &Context<D>,
+    device_id: usize,
+) -> Option<LinkLocalAddr<Ipv6Addr>> {
+    // TODO(brunodalbo) the link local address is subject to the same collision
+    //  verifications as prefix global addresses, we should keep a state machine
+    //  about that check and cache the adopted address. For now, we just compose
+    //  the link-local from the ethernet MAC.
+    Some(get_device_state(ctx.state(), device_id).mac.to_ipv6_link_local())
 }
 
 /// Add `device` to a multicast group `multicast_addr`.
@@ -833,9 +941,7 @@ impl<D: EventDispatcher> ArpContext<Ipv4Addr, Mac> for Context<D> {
     type DeviceId = usize;
 
     fn get_protocol_addr(&self, device_id: usize) -> Option<Ipv4Addr> {
-        get_device_state(self.state(), device_id)
-            .ipv4_addr_sub
-            .map(|addr_sub| addr_sub.into_addr().into_addr())
+        get_ip_addr_subnet::<_, Ipv4Addr>(self.state(), device_id).map(|a| a.addr().get())
     }
 
     fn get_hardware_addr(&self, device_id: usize) -> Mac {
@@ -889,14 +995,13 @@ impl ndp::NdpDevice for EthernetNdpDevice {
     fn get_ipv6_addr<D: EventDispatcher>(
         state: &StackState<D>,
         device_id: usize,
-    ) -> Option<Tentative<Ipv6Addr>> {
-        let state = get_device_state(state, device_id);
-        // TODO(brunodalbo) just returning either the configured or EUI
-        //  link_local address for now, we need a better structure to keep
-        //  a list of IPv6 addresses.
-        match state.ipv6_addr_sub {
-            Some(addr_sub) => Some(addr_sub.map(|a| a.into_addr().into_addr())),
-            None => Some(Tentative::new_permanent(state.mac.to_ipv6_link_local().get())),
+    ) -> Option<Ipv6Addr> {
+        // Return a non tentative global address, or the link-local address if no non-tentative
+        // global addressses are associated with `device_id`.
+
+        match get_ip_addr_subnet::<_, Ipv6Addr>(state, device_id) {
+            Some(addr_sub) => Some(addr_sub.addr().get()),
+            None => Some(get_device_state(state, device_id).mac.to_ipv6_link_local().get()),
         }
     }
 
@@ -904,26 +1009,18 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         state: &StackState<D>,
         device_id: usize,
         address: &Ipv6Addr,
-    ) -> ndp::AddressState {
-        let state = get_device_state(state, device_id);
+    ) -> Option<AddressState> {
+        let address = SpecifiedAddr::new(*address)?;
 
-        if let Some(addr) = state.ipv6_addr_sub {
-            if &addr.inner().addr().into_addr() == address {
-                if addr.is_tentative() {
-                    return ndp::AddressState::Tentative;
-                } else {
-                    return ndp::AddressState::Assigned;
-                }
-            }
-        }
-
-        if state.mac.to_ipv6_link_local().get() == *address {
+        if let Some(state) = get_ip_addr_state::<_, Ipv6Addr>(state, device_id, &address) {
+            Some(state)
+        } else if get_device_state(state, device_id).mac.to_ipv6_link_local().get() == *address {
             // TODO(ghanan): perform DAD on link local address instead of assuming
             //               it is safe to assign.
-            ndp::AddressState::Assigned;
+            Some(AddressState::Assigned)
+        } else {
+            None
         }
-
-        ndp::AddressState::Unassigned
     }
 
     fn send_ipv6_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
@@ -966,8 +1063,15 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         addr: Ipv6Addr,
     ) {
         let state = get_device_state_mut(ctx.state_mut(), device_id);
-        state.ipv6_addr_sub = None;
 
+        let original_size = state.ipv6_addr_sub.len();
+        state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
+        let new_size = state.ipv6_addr_sub.len();
+
+        // We must have removed the address.
+        assert_eq!(original_size - new_size, 1);
+
+        // Leave the the solicited-node multicast group.
         leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
 
         // TODO: we need to pick a different address depending on what flow we are using.
@@ -978,13 +1082,20 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         device_id: usize,
         addr: Ipv6Addr,
     ) {
-        let ipv6_addr_sub = &mut get_device_state_mut(state, device_id).ipv6_addr_sub;
-        match ipv6_addr_sub {
-            Some(ref mut tentative) => {
-                tentative.mark_permanent();
-                assert_eq!(tentative.inner().into_addr().into_addr(), addr);
-            }
-            _ => panic!("Attempted to resolve an unknown tentative address"),
+        trace!(
+            "ethernet::unique_address_determined: device_id = {:?}; addr = {:?}",
+            device_id,
+            addr
+        );
+
+        if let Some(entry) = get_device_state_mut(state, device_id)
+            .ipv6_addr_sub
+            .iter_mut()
+            .find(|a| a.addr_sub().addr().get() == addr)
+        {
+            entry.mark_permanent();
+        } else {
+            panic!("Attempted to resolve an unknown tentative address");
         }
     }
 
@@ -1490,5 +1601,172 @@ mod tests {
     #[test]
     fn test_promiscuous_mode_ipv6() {
         test_promiscuous_mode::<Ipv6>();
+    }
+
+    fn test_add_remove_ip_addresses<I: Ip>() {
+        let config = get_dummy_config::<I::Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        let ip1 = get_other_ip_address::<I::Addr>(1);
+        let ip2 = get_other_ip_address::<I::Addr>(2);
+        let ip3 = get_other_ip_address::<I::Addr>(3);
+
+        let prefix = I::Addr::BYTES * 8;
+        let as1 = AddrSubnet::new(ip1.get(), prefix).unwrap();
+        let as2 = AddrSubnet::new(ip2.get(), prefix).unwrap();
+
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+
+        // Add ip1 (ok)
+        crate::device::add_ip_addr_subnet(&mut ctx, device, as1).unwrap();
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_some());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+
+        // Add ip2 (ok)
+        crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap();
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_some());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+
+        // Del ip1 (ok)
+        crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+
+        // Del ip1 again (ip1 not found)
+        assert_eq!(
+            crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap_err(),
+            AddressError::NotFound
+        );
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+
+        // Add ip2 again (ip2 already exists)
+        assert_eq!(
+            crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap_err(),
+            AddressError::AlreadyExists
+        );
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+
+        // Add ip2 with different subnet (ip2 already exists)
+        assert_eq!(
+            crate::device::add_ip_addr_subnet(
+                &mut ctx,
+                device,
+                AddrSubnet::new(ip2.get(), prefix - 1).unwrap()
+            )
+            .unwrap_err(),
+            AddressError::AlreadyExists
+        );
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+    }
+
+    #[test]
+    fn test_add_remove_ipv4_addresses() {
+        test_add_remove_ip_addresses::<Ipv4>();
+    }
+
+    #[test]
+    fn test_add_remove_ipv6_addresses() {
+        test_add_remove_ip_addresses::<Ipv6>();
+    }
+
+    fn test_multiple_ip_addresses<I: Ip>() {
+        fn inner_test<A: IpAddress>(
+            ctx: &mut Context<DummyEventDispatcher>,
+            device: DeviceId,
+            src_ip: A,
+            dst_ip: A,
+            expected: usize,
+        ) {
+            let buf = Buf::new(Vec::new(), ..)
+                .encapsulate(<A::Version as IpExt>::PacketBuilder::new(
+                    src_ip,
+                    dst_ip,
+                    64,
+                    IpProto::Tcp,
+                ))
+                .serialize_vec_outer()
+                .ok()
+                .unwrap()
+                .into_inner();
+
+            receive_ip_packet::<_, _, A::Version>(ctx, device, FrameDestination::Unicast, buf);
+            assert_eq!(get_counter_val(ctx, "dispatch_receive_ip_packet"), expected);
+        }
+
+        let config = get_dummy_config::<I::Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        let ip1 = get_other_ip_address::<I::Addr>(1);
+        let ip2 = get_other_ip_address::<I::Addr>(2);
+        let from_ip = get_other_ip_address::<I::Addr>(3).get();
+
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
+
+        // Should not receive packets on any ip.
+        inner_test(&mut ctx, device, from_ip, ip1.get(), 0);
+        inner_test(&mut ctx, device, from_ip, ip2.get(), 0);
+
+        // Add ip1 to device.
+        crate::device::add_ip_addr_subnet(
+            &mut ctx,
+            device,
+            AddrSubnet::new(ip1.get(), I::Addr::BYTES * 8).unwrap(),
+        )
+        .unwrap();
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).unwrap().is_assigned());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
+
+        // Should receive packets on ip1 but not ip2
+        inner_test(&mut ctx, device, from_ip, ip1.get(), 1);
+        inner_test(&mut ctx, device, from_ip, ip2.get(), 1);
+
+        // Add ip2 to device.
+        crate::device::add_ip_addr_subnet(
+            &mut ctx,
+            device,
+            AddrSubnet::new(ip2.get(), I::Addr::BYTES * 8).unwrap(),
+        )
+        .unwrap();
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).unwrap().is_assigned());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).unwrap().is_assigned());
+
+        // Should receive packets on both ips
+        inner_test(&mut ctx, device, from_ip, ip1.get(), 2);
+        inner_test(&mut ctx, device, from_ip, ip2.get(), 3);
+
+        // Remove ip1
+        crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).unwrap().is_assigned());
+
+        // Should receive packets on ip2
+        inner_test(&mut ctx, device, from_ip, ip1.get(), 3);
+        inner_test(&mut ctx, device, from_ip, ip2.get(), 4);
+    }
+
+    #[test]
+    fn test_multiple_ipv4_addresses() {
+        test_multiple_ip_addresses::<Ipv4>();
+    }
+
+    #[test]
+    fn test_multiple_ipv6_addresses() {
+        test_multiple_ip_addresses::<Ipv6>();
     }
 }
