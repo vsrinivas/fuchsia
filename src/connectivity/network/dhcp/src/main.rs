@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     dhcp::{
@@ -79,7 +79,7 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
 ) -> Result<Void, Error> {
     let mut buf = vec![0u8; BUF_SZ];
     loop {
-        let (received, mut sender) = await!(sock.recv_from(&mut *buf))
+        let (received, mut sender) = sock.recv_from(&mut *buf).await
             .map_err(|_e| failure::err_msg("unable to receive buffer"))?;
         fx_log_info!("received message from: {:?}", sender);
         let msg = Message::from_buffer(&buf[0..received])
@@ -100,7 +100,7 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
         if sender.ip() == IpAddr::V4(Ipv4Addr::UNSPECIFIED) {
             sender.set_ip(IpAddr::V4(Ipv4Addr::BROADCAST));
         }
-        await!(sock.send_to(&response_buffer, sender)).context("unable to send response")?;
+        sock.send_to(&response_buffer, sender).await.context("unable to send response")?;
         fx_log_info!("response sent to: {:?}", sender);
     }
 }
