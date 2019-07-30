@@ -4,7 +4,7 @@
 
 use {
     failure::{self, format_err, ResultExt},
-    fidl_fuchsia_fonts as fonts,
+    fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
     lazy_static::lazy_static,
     regex::Regex,
     serde::de::{self, Deserialize, Deserializer, Error},
@@ -41,7 +41,7 @@ pub struct Family {
         default = "default_generic_family",
         deserialize_with = "deserialize_generic_family"
     )]
-    pub generic_family: Option<fonts::GenericFontFamily>,
+    pub generic_family: Option<GenericFontFamily>,
 }
 
 pub type LanguageSet = Vec<String>;
@@ -54,13 +54,13 @@ pub struct Font {
     pub index: u32,
 
     #[serde(default = "default_slant", deserialize_with = "deserialize_slant")]
-    pub slant: fonts::Slant,
+    pub slant: Slant,
 
     #[serde(default = "default_weight")]
     pub weight: u16,
 
     #[serde(default = "default_width", deserialize_with = "deserialize_width")]
-    pub width: fonts::Width,
+    pub width: Width,
 
     #[serde(
         alias = "language",
@@ -74,7 +74,7 @@ fn default_fallback() -> bool {
     false
 }
 
-fn default_generic_family() -> Option<fonts::GenericFontFamily> {
+fn default_generic_family() -> Option<GenericFontFamily> {
     None
 }
 
@@ -82,16 +82,16 @@ fn default_index() -> u32 {
     0
 }
 
-fn default_slant() -> fonts::Slant {
-    fonts::Slant::Upright
+fn default_slant() -> Slant {
+    Slant::Upright
 }
 
 fn default_weight() -> u16 {
-    fonts::WEIGHT_NORMAL
+    WEIGHT_NORMAL
 }
 
-fn default_width() -> fonts::Width {
-    fonts::Width::Normal
+fn default_width() -> Width {
+    Width::Normal
 }
 
 fn default_languages() -> LanguageSet {
@@ -102,13 +102,11 @@ lazy_static! {
     static ref SEPARATOR_REGEX: Regex = Regex::new(r"[_ ]").unwrap();
 }
 
-fn deserialize_generic_family<'d, D>(
-    deserializer: D,
-) -> Result<Option<fonts::GenericFontFamily>, D::Error>
+fn deserialize_generic_family<'d, D>(deserializer: D) -> Result<Option<GenericFontFamily>, D::Error>
 where
     D: Deserializer<'d>,
 {
-    use fonts::GenericFontFamily::*;
+    use GenericFontFamily::*;
 
     let s = String::deserialize(deserializer)?;
     let s: String = SEPARATOR_REGEX.replace_all(&s, "-").to_string();
@@ -126,11 +124,11 @@ where
     }
 }
 
-fn deserialize_slant<'d, D>(deserializer: D) -> Result<fonts::Slant, D::Error>
+fn deserialize_slant<'d, D>(deserializer: D) -> Result<Slant, D::Error>
 where
     D: Deserializer<'d>,
 {
-    use fonts::Slant::*;
+    use Slant::*;
 
     let s = String::deserialize(deserializer)?;
     match s.as_str() {
@@ -141,16 +139,16 @@ where
     }
 }
 
-fn deserialize_width<'d, D>(deserializer: D) -> Result<fonts::Width, D::Error>
+fn deserialize_width<'d, D>(deserializer: D) -> Result<Width, D::Error>
 where
     D: Deserializer<'d>,
 {
-    use fonts::Width::*;
+    use Width::*;
 
     let s = String::deserialize(deserializer)?;
 
     if let Ok(numeric) = s.parse::<u16>() {
-        match fonts::Width::from_primitive(numeric.into()) {
+        match Width::from_primitive(numeric.into()) {
             Some(value) => Ok(value),
             None => {
                 Err(D::Error::custom(format!("unknown value for width in manifest: {}", numeric)))

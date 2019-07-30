@@ -73,11 +73,17 @@ extern "C" {
     pub fn FT_Done_Library(library: FT_Library) -> FT_Error;
     pub fn FT_Add_Default_Modules(library: FT_Library);
     pub fn FT_New_Memory_Face(
-        library: FT_Library, file_base: *const c_uchar, file_size: c_long, face_index: c_long,
+        library: FT_Library,
+        file_base: *const c_uchar,
+        file_size: c_long,
+        face_index: c_long,
         aface: *mut FT_Face,
     ) -> FT_Error;
     pub fn FT_Open_Face(
-        library: FT_Library, args: *const FT_Open_Args, face_index: c_long, aface: *mut FT_Face,
+        library: FT_Library,
+        args: *const FT_Open_Args,
+        face_index: c_long,
+        aface: *mut FT_Face,
     ) -> FT_Error;
     pub fn FT_Done_Face(face: FT_Face) -> FT_Error;
     pub fn FT_Get_First_Char(face: FT_Face, agindex: *mut c_uint) -> c_ulong;
@@ -93,14 +99,13 @@ extern "C" fn ft_free(_memory: FT_Memory, block: *mut c_void) {
 }
 
 extern "C" fn ft_realloc(
-    _memory: FT_Memory, _cur_size: c_long, new_size: c_long, block: *mut c_void,
+    _memory: FT_Memory,
+    _cur_size: c_long,
+    new_size: c_long,
+    block: *mut c_void,
 ) -> *mut c_void {
     unsafe { libc::realloc(block, new_size as size_t) }
 }
 
-pub static FT_MEMORY: FT_MemoryRec = FT_MemoryRec {
-    user: 0,
-    alloc: ft_alloc,
-    free: ft_free,
-    realloc: ft_realloc,
-};
+pub static FT_MEMORY: FT_MemoryRec =
+    FT_MemoryRec { user: 0, alloc: ft_alloc, free: ft_free, realloc: ft_realloc };

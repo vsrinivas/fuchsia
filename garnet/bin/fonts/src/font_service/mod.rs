@@ -2,14 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod asset;
+mod family;
+mod font_info;
+mod freetype_ffi;
+mod manifest;
+mod typeface;
+
 use {
-    crate::{
-        cache::{Asset, AssetCache},
-        collection::{Typeface, TypefaceCollection},
-        font_info, manifest,
+    self::{
+        asset::Collection as AssetCollection,
+        family::{FamilyOrAlias, FontFamily},
+        font_info::FontInfoLoader,
+        manifest::FontsManifest,
+        typeface::{Collection as TypefaceCollection, Typeface, TypefaceInfoAndCharSet},
     },
     failure::{format_err, Error, ResultExt},
-    fdio,
     fidl::{
         self,
         encoding::{Decodable, OutOfLine},
@@ -17,19 +25,12 @@ use {
     },
     fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_fonts_ext::{FontFamilyInfoExt, RequestExt, TypefaceResponseExt},
-    fidl_fuchsia_intl as intl, fidl_fuchsia_mem as mem, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
     itertools::Itertools,
     log,
-    parking_lot::RwLock,
-    std::{
-        collections::BTreeMap,
-        fs::File,
-        iter,
-        path::{Path, PathBuf},
-        sync::Arc,
-    },
+    std::{collections::BTreeMap, iter, path::Path, sync::Arc},
     unicase::UniCase,
 };
 
@@ -41,160 +42,9 @@ macro_rules! query_field {
     };
 }
 
-/// Stores the relationship between [`Asset`] paths and IDs.
-/// Should be initialized by [`FontService`].
-///
-/// `path_to_id_map` and `id_to_path_map` form a bidirectional map, so this relation holds:
-/// ```
-/// assert_eq!(self.path_to_id_map.get(&path), Some(&id));
-/// assert_eq!(self.id_to_path_map.get(&id), Some(&path));
-/// ```
-struct AssetCollection {
-    /// Maps [`Asset`] path to ID.
-    path_to_id_map: BTreeMap<PathBuf, u32>,
-    /// Inverse of `path_to_id_map`.
-    id_to_path_map: BTreeMap<u32, PathBuf>,
-    /// Next ID to assign, autoincremented from 0.
-    next_id: u32,
-    cache: RwLock<AssetCache>,
-}
-
-/// Get `VMO` handle to the [`Asset`] at `path`.
-/// TODO(seancuff): Use a typed error instead.
-fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, Error> {
-    let file = File::open(path)?;
-    let vmo = fdio::get_vmo_copy_from_file(&file)?;
-    let size = file.metadata()?.len();
-    Ok(mem::Buffer { vmo, size })
-}
-
-const CACHE_SIZE_BYTES: u64 = 4_000_000;
-
-impl AssetCollection {
-    fn new() -> AssetCollection {
-        AssetCollection {
-            path_to_id_map: BTreeMap::new(),
-            id_to_path_map: BTreeMap::new(),
-            next_id: 0,
-            cache: RwLock::new(AssetCache::new(CACHE_SIZE_BYTES)),
-        }
-    }
-
-    /// Add the [`Asset`] found at `path` to the collection and return its ID.
-    /// If `path` is already in the collection, return the existing ID.
-    ///
-    /// TODO(seancuff): Switch to updating ID of existing entries. This would allow assets to be
-    /// updated without restarting the service (e.g. installing a newer version of a file). Clients
-    /// would need to check the ID of their currently-held asset against the response.
-    fn add_or_get_asset_id(&mut self, path: &Path) -> u32 {
-        if let Some(id) = self.path_to_id_map.get(&path.to_path_buf()) {
-            return *id;
-        }
-        let id = self.next_id;
-        self.id_to_path_map.insert(id, path.to_path_buf());
-        self.path_to_id_map.insert(path.to_path_buf(), id);
-        self.next_id += 1;
-        id
-    }
-
-    /// Get a `Buffer` holding the `Vmo` for the [`Asset`] corresponding to `id`, using the cache
-    /// if possible.
-    fn get_asset(&self, id: u32) -> Result<mem::Buffer, Error> {
-        if let Some(path) = self.id_to_path_map.get(&id) {
-            let mut cache_writer = self.cache.write();
-            let buf = match cache_writer.get(id) {
-                Some(cached) => cached.buffer,
-                None => {
-                    cache_writer
-                        .push(Asset {
-                            id,
-                            buffer: load_asset_to_vmo(path).with_context(|_| {
-                                format!("Failed to load {}", path.to_string_lossy())
-                            })?,
-                        })
-                        .buffer
-                }
-            };
-            return Ok(buf);
-        }
-        Err(format_err!("No asset found with id {}", id))
-    }
-}
-
-struct TypefaceInfoAndCharSet {
-    asset_id: u32,
-    font_index: u32,
-    family: fonts::FamilyName,
-    style: fonts::Style2,
-    languages: Vec<intl::LocaleId>,
-    generic_family: Option<fonts::GenericFontFamily>,
-    char_set: font_info::CharSet, // Will be used to implement filtering in a future change
-}
-
-impl TypefaceInfoAndCharSet {
-    fn from_typeface(typeface: &Typeface, canonical_family: String) -> TypefaceInfoAndCharSet {
-        TypefaceInfoAndCharSet {
-            asset_id: typeface.asset_id,
-            font_index: typeface.font_index,
-            family: fonts::FamilyName { name: canonical_family },
-            style: fonts::Style2 {
-                slant: Some(typeface.slant),
-                weight: Some(typeface.weight),
-                width: Some(typeface.width),
-            },
-            // Convert BTreeSet<String> to Vec<LocaleId>
-            languages: typeface
-                .languages
-                .iter()
-                .map(|lang| intl::LocaleId { id: lang.clone() })
-                .collect(),
-            generic_family: typeface.generic_family,
-            char_set: typeface.char_set.clone(),
-        }
-    }
-}
-
-impl From<TypefaceInfoAndCharSet> for fonts_exp::TypefaceInfo {
-    fn from(info: TypefaceInfoAndCharSet) -> fonts_exp::TypefaceInfo {
-        fonts_exp::TypefaceInfo {
-            asset_id: Some(info.asset_id),
-            font_index: Some(info.font_index),
-            family: Some(info.family),
-            style: Some(info.style),
-            languages: Some(info.languages),
-            generic_family: info.generic_family,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct FontFamily {
-    name: String,
-    faces: TypefaceCollection,
-    generic_family: Option<fonts::GenericFontFamily>,
-}
-
-impl FontFamily {
-    fn new(name: String, generic_family: Option<fonts::GenericFontFamily>) -> FontFamily {
-        FontFamily { name, faces: TypefaceCollection::new(), generic_family }
-    }
-
-    /// Get owned copies of the family's typefaces as `TypefaceInfo`
-    fn extract_faces<'a>(&'a self) -> impl Iterator<Item = TypefaceInfoAndCharSet> + 'a {
-        // Convert Vec<Arc<Typeface>> to Vec<TypefaceInfo>
-        self.faces
-            .faces
-            .iter()
-            // Copy most fields from `Typeface` and use the canonical family name
-            .map(move |face| TypefaceInfoAndCharSet::from_typeface(face, self.name.clone()))
-    }
-}
-
-#[derive(Debug)]
-enum FamilyOrAlias {
-    Family(FontFamily),
-    /// Represents an alias to a `Family` whose name is the associated [`UniCase`]`<`[`String`]`>`.
-    Alias(UniCase<String>),
+pub enum ProviderRequestStream {
+    Stable(fonts::ProviderRequestStream),
+    Experimental(fonts_exp::ProviderRequestStream),
 }
 
 pub struct FontService {
@@ -224,7 +74,7 @@ impl FontService {
 
     pub fn load_manifest(&mut self, manifest_path: &Path) -> Result<(), Error> {
         fx_vlog!(1, "Loading manifest {:?}", manifest_path);
-        let manifest = manifest::FontsManifest::load_from_file(&manifest_path)?;
+        let manifest = FontsManifest::load_from_file(&manifest_path)?;
         self.add_fonts_from_manifest(manifest).with_context(|_| {
             format!("Failed to load fonts from {}", manifest_path.to_string_lossy())
         })?;
@@ -232,11 +82,8 @@ impl FontService {
         Ok(())
     }
 
-    fn add_fonts_from_manifest(
-        &mut self,
-        mut manifest: manifest::FontsManifest,
-    ) -> Result<(), Error> {
-        let font_info_loader = font_info::FontInfoLoader::new()?;
+    fn add_fonts_from_manifest(&mut self, mut manifest: FontsManifest) -> Result<(), Error> {
+        let font_info_loader = FontInfoLoader::new()?;
 
         for mut family_manifest in manifest.families.drain(..) {
             if family_manifest.fonts.is_empty() {
@@ -597,26 +444,28 @@ impl FontService {
     async fn handle_font_provider_request(
         &self,
         request: fonts::ProviderRequest,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), Error> {
+        use fonts::ProviderRequest::*;
+
         match request {
             // TODO(I18N-12): Remove when all clients have migrated to GetTypeface
-            fonts::ProviderRequest::GetFont { request, responder } => {
+            GetFont { request, responder } => {
                 let request = request.into_typeface_request();
                 let mut response = self.match_request(request)?.into_font_response();
                 Ok(responder.send(response.as_mut().map(OutOfLine))?)
             }
             // TODO(I18N-12): Remove when all clients have migrated to GetFontFamilyInfo
-            fonts::ProviderRequest::GetFamilyInfo { family, responder } => {
+            GetFamilyInfo { family, responder } => {
                 let mut font_info =
                     self.get_family_info(fonts::FamilyName { name: family }).into_family_info();
                 Ok(responder.send(font_info.as_mut().map(OutOfLine))?)
             }
-            fonts::ProviderRequest::GetTypeface { request, responder } => {
+            GetTypeface { request, responder } => {
                 let response = self.match_request(request)?;
                 // TODO(kpozin): OutOfLine?
                 Ok(responder.send(response)?)
             }
-            fonts::ProviderRequest::GetFontFamilyInfo { family, responder } => {
+            GetFontFamilyInfo { family, responder } => {
                 let family_info = self.get_family_info(family);
                 // TODO(kpozin): OutOfLine?
                 Ok(responder.send(family_info)?)
@@ -628,16 +477,18 @@ impl FontService {
         &self,
         request: fonts_exp::ProviderRequest,
     ) -> Result<(), Error> {
+        use fonts_exp::ProviderRequest::*;
+
         match request {
-            fonts_exp::ProviderRequest::GetTypefaceById { id, responder } => {
+            GetTypefaceById { id, responder } => {
                 let mut response = self.get_typeface_by_id(id);
                 Ok(responder.send(&mut response)?)
             }
-            fonts_exp::ProviderRequest::GetTypefacesByFamily { family, responder } => {
+            GetTypefacesByFamily { family, responder } => {
                 let mut response = self.get_typefaces_by_family(family);
                 Ok(responder.send(&mut response)?)
             }
-            fonts_exp::ProviderRequest::ListTypefaces { request, iterator, responder } => {
+            ListTypefaces { request, iterator, responder } => {
                 let mut response = self.list_typefaces(request, iterator);
                 Ok(responder.send(&mut response)?)
             }
@@ -682,9 +533,4 @@ impl FontService {
         }
         Ok(())
     }
-}
-
-pub enum ProviderRequestStream {
-    Stable(fonts::ProviderRequestStream),
-    Experimental(fonts_exp::ProviderRequestStream),
 }

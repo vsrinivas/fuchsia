@@ -2,40 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
-use fidl_fuchsia_mem as mem;
-use fuchsia_zircon as zx;
-use fuchsia_zircon::HandleBased;
-use std::collections::VecDeque;
-
-#[derive(Debug)]
-pub struct Asset {
-    pub id: u32,
-    pub buffer: mem::Buffer,
-}
-
-impl Asset {
-    /// Creates a new [`Asset`] instance with the same `id` and cloned of `buffer`.
-    /// Returns [`Error`] if the `buffer` clone fails.
-    pub fn try_clone(&self) -> Result<Asset, Error> {
-        Ok(Asset { id: self.id, buffer: self.clone_buffer()? })
-    }
-
-    fn clone_buffer(&self) -> Result<mem::Buffer, Error> {
-        let vmo_rights = zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP;
-        let vmo = self
-            .buffer
-            .vmo
-            .duplicate_handle(vmo_rights)
-            .context("Failed to duplicate VMO handle.")?;
-        Ok(mem::Buffer { vmo, size: self.buffer.size })
-    }
-}
+use {super::asset::Asset, std::collections::VecDeque};
 
 /// An LRU cache for `Buffer`s, bounded by the total size of cached VMOs.
 ///
 /// `capacity` and `available` are [`u64`] instead of [`usize`] for parity with `mem::Buffer.size`.
-pub struct AssetCache {
+pub struct Cache {
     /// Maximum allowed sum of `self.buffers[..].size` in bytes.
     capacity: u64,
     /// Bytes available to be used.
@@ -43,9 +15,9 @@ pub struct AssetCache {
     cache: VecDeque<Asset>,
 }
 
-impl AssetCache {
-    pub fn new(capacity: u64) -> AssetCache {
-        AssetCache { capacity, available: capacity, cache: VecDeque::new() }
+impl Cache {
+    pub fn new(capacity: u64) -> Cache {
+        Cache { capacity, available: capacity, cache: VecDeque::new() }
     }
 
     /// Get the index of the [`Asset`] with ID `id`, if it is cached.
@@ -117,10 +89,10 @@ impl AssetCache {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, fidl_fuchsia_mem as mem, fuchsia_zircon as zx};
 
-    fn mock_cache() -> AssetCache {
-        AssetCache {
+    fn mock_cache() -> Cache {
+        Cache {
             capacity: 3000,
             available: 1000,
             cache: VecDeque::from(vec![mock_asset(1, 1024, 1000), mock_asset(2, 1024, 1000)]),
@@ -190,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_pop_empty() {
-        let mut cache = AssetCache::new(10);
+        let mut cache = Cache::new(10);
         cache.pop();
         assert_eq!(cache.available, 10);
     }

@@ -4,19 +4,16 @@
 
 #![feature(async_await, await_macro)]
 
-mod cache;
-mod collection;
-mod font_info;
 mod font_service;
-mod freetype_ffi;
-mod manifest;
 
-use self::font_service::{FontService, ProviderRequestStream};
-use failure::Error;
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use getopts;
-use std::path::PathBuf;
+use {
+    self::font_service::{FontService, ProviderRequestStream},
+    failure::Error,
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    getopts,
+    std::path::PathBuf,
+};
 
 #[macro_use]
 extern crate fuchsia_syslog as syslog;
