@@ -293,9 +293,10 @@ void thread_signal_policy_exception(void);
 void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t*);
 
-// set the mask of valid cpus to run the thread on. migrates the thread to satisfy
-// the new constraint
-void thread_set_cpu_affinity(thread_t* t, cpu_mask_t mask);
+// Get/set the mask of valid CPus that thread may run on. If a new mask
+// is set, the thread will be migrated to satisfy the new constraint.
+void thread_set_cpu_affinity(thread_t* t, cpu_mask_t mask) TA_EXCL(thread_lock);
+cpu_mask_t thread_get_cpu_affinity(thread_t* t) TA_EXCL(thread_lock);
 
 // migrates the current thread to the CPU identified by target_cpu
 void thread_migrate_to_cpu(cpu_num_t target_cpuid);

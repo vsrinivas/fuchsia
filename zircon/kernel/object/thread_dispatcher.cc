@@ -923,6 +923,13 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
     info->wait_exception_port_type = ExceptionPortTypeToUserspaceVal(ExceptionPort::Type::NONE);
   }
 
+  // Get CPU affinity.
+  //
+  // We assume that we can fit the entire mask in the first word of
+  // cpu_affinity_mask.
+  static_assert(SMP_MAX_CPUS <= sizeof(info->cpu_affinity_mask.mask[0]) * 8);
+  info->cpu_affinity_mask.mask[0] = thread_get_cpu_affinity(&thread_);
+
   return ZX_OK;
 }
 

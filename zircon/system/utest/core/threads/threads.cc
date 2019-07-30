@@ -171,6 +171,11 @@ class ThreadStarter {
     return zxr_thread_start(thread_, stack_, kStackSize, entry, arg) == ZX_OK;
   }
 
+  // Destroy a thread structure that is either created but unstarted or is
+  // known to belong to a thread that has been zx_task_kill'd and has not been
+  // joined.
+  bool DestroyThread() { return zxr_thread_destroy(thread_) == ZX_OK; }
+
  private:
   static constexpr size_t kStackSize = 256u << 10;
 
@@ -212,6 +217,15 @@ static bool wait_thread_blocked(zx_handle_t thread, uint32_t reason) {
     zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
   }
   return true;
+}
+
+static bool CpuMaskBitSet(const zx_cpu_set_t& set, uint32_t i) {
+  if (i >= ZX_CPU_SET_MAX_CPUS) {
+    return false;
+  }
+  uint32_t word = i / 32;
+  uint32_t bit = i % 32;
+  return ((set.mask[word] >> bit) & 1u) != 0;
 }
 
 static bool TestBasics() {
@@ -472,6 +486,42 @@ static bool TestGetLastScheduledCpu() {
   // Shut down and clean up.
   ASSERT_EQ(state.should_stop.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
+  ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
+
+  END_TEST;
+}
+
+static bool TestGetAffinity() {
+  BEGIN_TEST;
+
+  // Create a thread.
+  zxr_thread_t thread;
+  zx_handle_t thread_h;
+  ThreadStarter starter;
+  ASSERT_TRUE(starter.CreateThread(&thread, &thread_h));
+
+  // Fetch affinity mask.
+  zx_info_thread_t info;
+  ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr),
+            ZX_OK);
+
+  // We expect that a new thread should be runnable on at least 1 CPU.
+  int num_cpus = 0;
+  for (int i = 0; i < ZX_CPU_SET_MAX_CPUS; i++) {
+    if (CpuMaskBitSet(info.cpu_affinity_mask, i)) {
+      num_cpus++;
+    }
+  }
+  ASSERT_GT(num_cpus, 0);
+
+  // In the current system, we expect that a new thread will be runnable
+  // on a contiguous range of CPUs, from 0 to (N - 1).
+  for (int i = 0; i < ZX_CPU_SET_MAX_CPUS; i++) {
+    EXPECT_EQ(CpuMaskBitSet(info.cpu_affinity_mask, i), i < num_cpus);
+  }
+
+  // Shut down and clean up.
+  starter.DestroyThread();
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 
   END_TEST;
@@ -1710,6 +1760,7 @@ RUN_TEST(TestNonstartedThread)
 RUN_TEST(TestThreadKillsItself)
 RUN_TEST(TestInfoTaskStatsFails)
 RUN_TEST(TestGetLastScheduledCpu)
+RUN_TEST(TestGetAffinity)
 RUN_TEST(TestResumeSuspended)
 RUN_TEST(TestSuspendSleeping)
 RUN_TEST(TestSuspendChannelCall)

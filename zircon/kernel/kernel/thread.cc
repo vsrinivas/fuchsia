@@ -676,6 +676,12 @@ void thread_kill(thread_t* t) {
   }
 }
 
+cpu_mask_t thread_get_cpu_affinity(thread_t* t) {
+  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  return t->cpu_affinity;
+}
+
 // Sets the cpu affinity mask of a thread to the passed in mask and migrate
 // the thread if active.
 void thread_set_cpu_affinity(thread_t* t, cpu_mask_t affinity) {
