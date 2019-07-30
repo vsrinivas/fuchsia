@@ -20,7 +20,9 @@ class LinuxPlatformDevice : public PlatformDevice {
   // Don't close the handle because we don't own it.
   ~LinuxPlatformDevice() { handle_.release(); }
 
-  void* GetDeviceHandle() override { return reinterpret_cast<void*>(handle_.get()); }
+  int fd() { return handle_.get(); }
+
+  void* GetDeviceHandle() override { return reinterpret_cast<void*>(fd()); }
 
   std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
                                                       const char* name) const override {
@@ -46,6 +48,7 @@ class LinuxPlatformDevice : public PlatformDevice {
 
   enum class MagmaGetParamKey {
     kRegisterSize = 10,
+    kChipId = 11,
   };
 
   static bool MagmaGetParam(int device_fd, MagmaGetParamKey key, uint64_t* value_out);

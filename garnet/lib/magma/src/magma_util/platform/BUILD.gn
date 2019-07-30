@@ -175,7 +175,7 @@ source_set("device_header") {
     ":buffer_header",
     ":handle_header",
     ":mmio_header",
-    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util",
   ]
 
   sources = [

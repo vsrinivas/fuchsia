@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+source_set("src") {
+  include_dirs = [ "." ]
+
+  sources = [
+    "msd_qcom_device.cc",
+    "msd_qcom_device.h",
+  ]
+
+  if (is_linux) {
+    sources += [ "linux/msd_qcom_platform_device_linux.cc" ]
+  }
+
+  deps = [
+    "$magma_build_root/src/magma_util/platform:device",
+  ]
+}
