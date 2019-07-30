@@ -5,3 +5,4 @@
 import("x64.gni")
 
 add_qemu_to_build_archives = true
+board_name = "qemu-x64"
