@@ -177,14 +177,20 @@ impl DeviceLayerState {
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) enum DeviceLayerTimerId {
     /// A timer event in the ARP layer with a protocol type of IPv4
-    ArpIpv4(arp::ArpTimerId<Ipv4Addr>),
+    ArpIpv4(arp::ArpTimerId<usize, Ipv4Addr>),
     Ndp(ndp::NdpTimerId),
+}
+
+impl From<arp::ArpTimerId<usize, Ipv4Addr>> for DeviceLayerTimerId {
+    fn from(id: arp::ArpTimerId<usize, Ipv4Addr>) -> DeviceLayerTimerId {
+        DeviceLayerTimerId::ArpIpv4(id)
+    }
 }
 
 /// Handle a timer event firing in the device layer.
 pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: DeviceLayerTimerId) {
     match id {
-        DeviceLayerTimerId::ArpIpv4(inner_id) => arp::handle_timeout(ctx, inner_id),
+        DeviceLayerTimerId::ArpIpv4(inner_id) => arp::handle_timer(ctx, inner_id),
         DeviceLayerTimerId::Ndp(inner_id) => ndp::handle_timeout(ctx, inner_id),
     }
 }

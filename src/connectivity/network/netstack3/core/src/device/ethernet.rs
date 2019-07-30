@@ -13,12 +13,15 @@ use net_types::{BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
-use crate::device::arp::{self, ArpDevice, ArpHardwareType, ArpState};
+use crate::context::{FrameContext, StateContext, TimerContext};
+use crate::device::arp::{
+    self, ArpContext, ArpFrameMetadata, ArpHardwareType, ArpState, ArpTimerId,
+};
 use crate::device::ndp::{self, NdpState};
-use crate::device::{DeviceId, FrameDestination, Tentative};
+use crate::device::{DeviceId, DeviceLayerTimerId, FrameDestination, Tentative};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
-use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
+use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId};
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
@@ -132,7 +135,7 @@ pub(crate) struct EthernetDeviceState {
     ipv6_addr_sub: Option<Tentative<AddrSubnet<Ipv6Addr>>>,
     ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
     ipv6_multicast_groups: HashSet<MulticastAddr<Ipv6Addr>>,
-    ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
+    ipv4_arp: ArpState<Ipv4Addr, Mac>,
     ndp: ndp::NdpState<EthernetNdpDevice>,
     // pending_frames stores a list of serialized frames indexed by their
     // desintation IP addresses. The frames contain an entire EthernetFrame
@@ -214,8 +217,7 @@ pub(crate) fn send_ip_frame<
         None => {
             #[ipv4addr]
             {
-                arp::lookup::<_, _, EthernetArpDevice>(ctx, device_id, local_mac, local_addr)
-                    .ok_or(IpAddr::V4(local_addr))
+                arp::lookup(ctx, device_id, local_mac, local_addr).ok_or(IpAddr::V4(local_addr))
             }
             #[ipv6addr]
             {
@@ -295,9 +297,7 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
             };
             match types {
                 (ArpHardwareType::Ethernet, EtherType::Ipv4) => {
-                    crate::device::arp::receive_arp_packet::<_, D, Ipv4Addr, EthernetArpDevice>(
-                        ctx, device_id, src, dst, buffer,
-                    )
+                    crate::device::arp::receive_arp_packet(ctx, device_id, src, dst, buffer)
                 }
                 types => debug!("got ARP packet for unsupported types: {:?}", types),
             }
@@ -476,7 +476,7 @@ pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
     addr: Ipv4Addr,
     mac: Mac,
 ) {
-    crate::device::arp::insert_static::<D, Ipv4Addr, EthernetArpDevice>(ctx, device_id, addr, mac);
+    crate::device::arp::insert_static(ctx, device_id, addr, mac);
 }
 
 /// Insert an entry into this device's NDP table.
@@ -517,61 +517,66 @@ fn get_device_state<D: EventDispatcher>(
         .unwrap_or_else(|| panic!("no such Ethernet device: {}", device_id))
 }
 
-/// Dummy type used to implement ArpDevice.
-pub(super) struct EthernetArpDevice;
+impl<D: EventDispatcher> StateContext<usize, ArpState<Ipv4Addr, Mac>> for Context<D> {
+    fn get_state(&self, id: usize) -> &ArpState<Ipv4Addr, Mac> {
+        &get_device_state(self.state(), id).ipv4_arp
+    }
 
-impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
-    type HardwareAddr = Mac;
-    const BROADCAST: Mac = Mac::BROADCAST;
+    fn get_state_mut(&mut self, id: usize) -> &mut ArpState<Ipv4Addr, Mac> {
+        &mut get_device_state_mut(self.state_mut(), id).ipv4_arp
+    }
+}
 
-    fn send_arp_frame<B: BufferMut, D: BufferDispatcher<B>, S: Serializer<Buffer = B>>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        dst: Self::HardwareAddr,
+impl<D: EventDispatcher> TimerContext<ArpTimerId<usize, Ipv4Addr>> for Context<D> {
+    fn schedule_timer_instant(
+        &mut self,
+        time: D::Instant,
+        id: ArpTimerId<usize, Ipv4Addr>,
+    ) -> Option<D::Instant> {
+        self.dispatcher_mut()
+            .schedule_timeout_instant(time, TimerId::from(DeviceLayerTimerId::from(id)))
+    }
+
+    fn cancel_timer(&mut self, id: &ArpTimerId<usize, Ipv4Addr>) -> Option<D::Instant> {
+        self.dispatcher_mut().cancel_timeout(TimerId::from(DeviceLayerTimerId::from(id.clone())))
+    }
+}
+
+impl<B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, ArpFrameMetadata<usize, Mac>>
+    for Context<D>
+{
+    fn send_frame<S: Serializer<Buffer = B>>(
+        &mut self,
+        meta: ArpFrameMetadata<usize, Mac>,
         body: S,
     ) -> Result<(), S> {
-        let src = get_device_state(ctx.state_mut(), device_id).mac;
-        ctx.dispatcher_mut()
+        let src = get_device_state(self.state(), meta.device_id).mac;
+        self.dispatcher_mut()
             .send_frame(
-                DeviceId::new_ethernet(device_id),
-                body.encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp)),
+                DeviceId::new_ethernet(meta.device_id),
+                body.encapsulate(EthernetFrameBuilder::new(src, meta.dst_addr, EtherType::Arp)),
             )
             .map_err(Nested::into_inner)
     }
+}
 
-    fn get_arp_state<D: EventDispatcher>(
-        state: &mut StackState<D>,
-        device_id: usize,
-    ) -> &mut ArpState<Ipv4Addr, Self> {
-        &mut get_device_state_mut(state, device_id).ipv4_arp
+impl<D: EventDispatcher> ArpContext<Ipv4Addr, Mac> for Context<D> {
+    type DeviceId = usize;
+
+    fn get_protocol_addr(&self, device_id: usize) -> Option<Ipv4Addr> {
+        get_device_state(self.state(), device_id).ipv4_addr_sub.map(AddrSubnet::into_addr)
     }
 
-    fn get_protocol_addr<D: EventDispatcher>(
-        state: &StackState<D>,
-        device_id: usize,
-    ) -> Option<Ipv4Addr> {
-        get_device_state(state, device_id).ipv4_addr_sub.map(AddrSubnet::into_addr)
+    fn get_hardware_addr(&self, device_id: usize) -> Mac {
+        get_device_state(self.state(), device_id).mac
     }
 
-    fn get_hardware_addr<D: EventDispatcher>(state: &StackState<D>, device_id: usize) -> Mac {
-        get_device_state(state, device_id).mac
+    fn address_resolved(&mut self, device_id: usize, proto_addr: Ipv4Addr, hw_addr: Mac) {
+        mac_resolved(self, device_id, IpAddr::V4(proto_addr), hw_addr);
     }
 
-    fn address_resolved<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        proto_addr: Ipv4Addr,
-        hw_addr: Mac,
-    ) {
-        mac_resolved(ctx, device_id, IpAddr::V4(proto_addr), hw_addr);
-    }
-
-    fn address_resolution_failed<D: EventDispatcher>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        proto_addr: Ipv4Addr,
-    ) {
-        mac_resolution_failed(ctx, device_id, IpAddr::V4(proto_addr));
+    fn address_resolution_failed(&mut self, device_id: usize, proto_addr: Ipv4Addr) {
+        mac_resolution_failed(self, device_id, IpAddr::V4(proto_addr));
     }
 }
 

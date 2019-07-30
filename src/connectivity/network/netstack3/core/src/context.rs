@@ -171,6 +171,14 @@ pub(crate) trait CounterContext {
     fn increment_counter(&mut self, key: &'static str);
 }
 
+// Temporary blanket impl until we switch over entirely to the traits defined in
+// this module.
+impl<D: EventDispatcher> CounterContext for Context<D> {
+    fn increment_counter(&mut self, key: &'static str) {
+        increment_counter!(self, key);
+    }
+}
+
 /// Mock implementations of context traits.
 ///
 /// Each trait `Xxx` has a mock called `DummyXxx`. `DummyXxx` implements `Xxx`,

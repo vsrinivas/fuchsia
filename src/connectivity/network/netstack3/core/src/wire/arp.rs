@@ -8,6 +8,7 @@
 
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
+use std::hash::Hash;
 use std::mem;
 
 use net_types::ethernet::Mac;
@@ -150,7 +151,9 @@ impl<HwAddr: Copy, ProtoAddr: Copy> Body<HwAddr, ProtoAddr> {
 }
 
 /// A trait to represent a ARP hardware type.
-pub(crate) trait HType: FromBytes + AsBytes + Unaligned + Copy + Clone {
+pub(crate) trait HType: FromBytes + AsBytes + Unaligned + Copy + Clone + Hash + Eq {
+    const BROADCAST: Self;
+
     /// The hardware type.
     fn htype() -> ArpHardwareType;
     /// The in-memory size of an instance of the type.
@@ -158,7 +161,7 @@ pub(crate) trait HType: FromBytes + AsBytes + Unaligned + Copy + Clone {
 }
 
 /// A trait to represent a ARP protocol type.
-pub(crate) trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone {
+pub(crate) trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone + Hash + Eq {
     /// The protocol type.
     fn ptype() -> EtherType;
     /// The in-memory size of an instance of the type.
@@ -172,6 +175,8 @@ pub(crate) trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone {
 }
 
 impl HType for Mac {
+    const BROADCAST: Mac = Mac::BROADCAST;
+
     fn htype() -> ArpHardwareType {
         ArpHardwareType::Ethernet
     }

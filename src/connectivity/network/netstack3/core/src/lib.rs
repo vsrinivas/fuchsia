@@ -220,6 +220,12 @@ enum TimerIdInner {
     Nop(usize),
 }
 
+impl From<DeviceLayerTimerId> for TimerId {
+    fn from(id: DeviceLayerTimerId) -> TimerId {
+        TimerId(TimerIdInner::DeviceLayer(id))
+    }
+}
+
 /// Handle a generic timer event.
 pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
     trace!("handle_timeout: dispatching timerid: {:?}", id);
