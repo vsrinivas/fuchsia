@@ -19,28 +19,25 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
 case "$(uname -s)" in
-  Linux*) OS=linux-x64;;
-  Darwin*) OS=mac-x64;;
+  Linux*) ;;
+  Darwin*)
+    if ! [[ -x "$(command -v brew)" ]]; then
+      fx-error "'brew' binary not found"
+      fx-error "A homebrew <https://brew.sh> installation of opensslis required in order to update"
+      fx-error "Rust third party crates on the Mac."
+      exit 1
+    fi
+
+    declare -x LDFLAGS="-L$(brew --prefix)/opt/openssl/lib"
+    declare -x CPPFLAGS="-I$(brew --prefix)/opt/openssl/include";;
   *) fx-error "unrecognized OS"; exit 1;;
 esac
 
-declare -x PATH=$FUCHSIA_DIR/buildtools/$OS/cmake/bin:$PATH
+declare -x PATH=$PREBUILT_CMAKE_DIR/cmake/bin:$PATH
 
-if [[ "$OS" = "mac-x64" ]]; then
-  if ! [[ -x "$(command -v brew)" ]]; then
-    fx-error "'brew' binary not found"
-    fx-error "A homebrew <https://brew.sh> installation of opensslis required in order to update"
-    fx-error "Rust third party crates on the Mac."
-    exit 1
-  fi
+export RUSTC=$PREBUILT_RUST_DIR/bin/rustc
 
-  declare -x LDFLAGS="-L$(brew --prefix)/opt/openssl/lib"
-  declare -x CPPFLAGS="-I$(brew --prefix)/opt/openssl/include"
-fi
-
-export RUSTC=$FUCHSIA_DIR/buildtools/$OS/rust/bin/rustc
-
-(cd $FUCHSIA_DIR; $FUCHSIA_DIR/buildtools/$OS/rust/bin/cargo run \
+(cd $FUCHSIA_DIR; $PREBUILT_RUST_DIR/bin/cargo run \
   --target-dir $FUCHSIA_DIR/out/cargo_vendor_target \
   --manifest-path $FUCHSIA_DIR/third_party/rust-mirrors/cargo-vendor/Cargo.toml \
   -- vendor --sync $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
