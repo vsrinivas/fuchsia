@@ -118,6 +118,31 @@ impl<'entries> Simple<'entries> {
         self.add_boxed_entry(name, Box::new(entry))
     }
 
+    pub fn add_boxed_entry(
+        &mut self,
+        name: &str,
+        entry: Box<dyn DirectoryEntry + 'entries>,
+    ) -> Result<(), (Status, Box<DirectoryEntry + 'entries>)> {
+        assert_eq_size!(u64, usize);
+        if name.len() as u64 >= MAX_FILENAME {
+            return Err((Status::INVALID_ARGS, entry));
+        }
+
+        if self.entries.contains_key(name) {
+            return Err((Status::ALREADY_EXISTS, entry));
+        }
+
+        self.watchers.send_event(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, name).unwrap_or_else(|err| {
+            match err {
+                WatchersSendError::NameTooLong => {
+                    panic!("We just checked the length of the `name`.  There should be a bug.")
+                }
+            }
+        });
+        let _ = self.entries.insert(name.to_string(), entry);
+        Ok(())
+    }
+
     /// Attaches a new connection (`server_end`) to this object.  Any error are reported as
     /// `OnOpen` events on the `server_end` itself.
     fn add_connection(&mut self, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>) {
@@ -488,24 +513,7 @@ impl<'entries> Controllable<'entries> for Simple<'entries> {
         name: &str,
         entry: Box<DirectoryEntry + 'entries>,
     ) -> Result<(), (Status, Box<DirectoryEntry + 'entries>)> {
-        assert_eq_size!(u64, usize);
-        if name.len() as u64 >= MAX_FILENAME {
-            return Err((Status::INVALID_ARGS, entry));
-        }
-
-        if self.entries.contains_key(name) {
-            return Err((Status::ALREADY_EXISTS, entry));
-        }
-
-        self.watchers.send_event(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, name).unwrap_or_else(|err| {
-            match err {
-                WatchersSendError::NameTooLong => {
-                    panic!("We just checked the length of the `name`.  There should be a bug.")
-                }
-            }
-        });
-        let _ = self.entries.insert(name.to_string(), entry);
-        Ok(())
+        (self as &mut Simple).add_boxed_entry(name, entry)
     }
 
     /// Removes a child entry from this directory.  In case an entry with the matching name was
