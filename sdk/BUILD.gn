@@ -247,7 +247,7 @@ sdk("core") {
   ]
 }
 
-# This SDK provides FIDL protocols and C++ libraries for writing hermetic
+# The `modular_testing` SDK provides FIDL protocols and C++ libraries for writing hermetic
 # integration tests which use modular.
 #
 # This SDK has runtime dependencies on the following fuchsia packages:
@@ -264,5 +264,6 @@ sdk("modular_testing") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_sdk($fidl_toolchain)",
+    "//sdk/lib/modular/testing/cpp:cpp_sdk",
   ]
 }

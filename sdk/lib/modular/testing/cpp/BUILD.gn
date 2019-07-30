@@ -22,7 +22,7 @@ sdk_source_set("cpp") {
     "test_harness_launcher.h",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
