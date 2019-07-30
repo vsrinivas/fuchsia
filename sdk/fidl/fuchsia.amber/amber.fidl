@@ -210,6 +210,10 @@ protocol OpenedRepository {
     /// stores the package in BlobFS. This method provides a FetchResult that
     /// will send the ultimate results.
     GetUpdateComplete(string name, string? variant, string? merkle, request<FetchResult> result);
+
+    /// Finds the merkle hash for the package identified by 'name' which has the
+    /// provided variant. Does not install the package or fetch any blobs.
+    MerkleFor(string name, string? variant) -> (zx.status status, string message, string merkle, int64 size);
 };
 
 /// A protocol providing results for a OpenedRepository.GetUpdateComplete call.

@@ -140,6 +140,7 @@ impl MockAmber {
 
                 Ok(())
             }
+            _ => panic!("unexpected call to {:?}", req),
         }
     }
 }

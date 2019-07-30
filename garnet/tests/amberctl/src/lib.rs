@@ -308,6 +308,23 @@ async fn test_add_src() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_open_repo_merkle_for() {
+    let env = TestEnv::new();
+    let (repo_proxy, repo_server_end) = fidl::endpoints::create_proxy().expect("create proxy");
+    await!(env.proxies.amber.open_repository(make_test_repo_config().into(), repo_server_end))
+        .expect("open repo");
+
+    let (status_raw, message, _merkle, _size) =
+        await!(repo_proxy.merkle_for("example_pkg", None)).expect("merkle for");
+
+    assert_eq!(fuchsia_zircon::Status::from_raw(status_raw), fuchsia_zircon::Status::INTERNAL);
+    assert_eq!(
+        message,
+        "error finding merkle for package example_pkg/: tuf_source: error reading TUF targets: tuf: no root keys found in local meta store"
+    )
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_add_repo() {
     let env = TestEnv::new();
 

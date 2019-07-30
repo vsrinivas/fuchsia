@@ -134,6 +134,20 @@ func (h *repoHandler) GetUpdateComplete(name string, variant *string, merkle *st
 	return nil
 }
 
+func (h *repoHandler) MerkleFor(name string, variant *string) (status int32, message string, merkle string, size int64, fatalErr error) {
+	log.Printf("MerkleFor %s from %s", name, h.config.RepoUrl)
+	var variantStr string
+	if variant != nil {
+		variantStr = *variant
+	}
+
+	merkle, size, err := h.repo.MerkleFor(name, variantStr, "")
+	if err != nil {
+		return (int32)(zx.ErrInternal), err.Error(), "", 0, nil
+	}
+	return (int32)(zx.ErrOk), "", merkle, size, nil
+}
+
 func (h *repoHandler) Close() error {
 	go func() {
 		h.outstandingRequests.Wait()
