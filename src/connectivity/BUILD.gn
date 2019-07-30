@@ -30,6 +30,7 @@ group("tests") {
     "//src/connectivity/lib:tests",
     "//src/connectivity/network/http_client:tests",
     "//src/connectivity/network/mdns/service:mdns_tests",
+    "//src/connectivity/network/netdump:tests",
     "//src/connectivity/network/testing/netemul:tests",
     "//src/connectivity/overnet/examples:tests",
     "//src/connectivity/overnet/deprecated/lib:overnet_fuzzer_tests",

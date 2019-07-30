@@ -8,8 +8,8 @@
 // tests. Data is passed to the function in network byte order. The function
 // types match the signatures for the filter node constructors.
 
-#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_TEST_FILTER_TEST_H_
-#define ZIRCON_SYSTEM_UAPP_NETDUMP_TEST_FILTER_TEST_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_NETDUMP_TEST_FILTER_TEST_H_
+#define SRC_CONNECTIVITY_NETWORK_NETDUMP_TEST_FILTER_TEST_H_
 
 #include <zxtest/zxtest.h>
 
@@ -57,4 +57,4 @@ void CompositionTest(UnaryFn neg_fn, BinaryFn conj_fn, BinaryFn disj_fn);
 
 }  // namespace netdump::test
 
-#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_TEST_FILTER_TEST_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_NETDUMP_TEST_FILTER_TEST_H_

@@ -35,7 +35,9 @@ class TokensTester : public Tokenizer {
     EXPECT_FALSE(token == before);  // `literal` did not register new keyword.
     EXPECT_TRUE(token == after);    // `literal` did not overwrite keyword registration.
 
-    ASSERT_DEATH([this]() { keyword("KEYWORD", 'w'); });  // Redefining `tag` not allowed.
+    if (ZX_DEBUG_ASSERT_IMPLEMENTED) {
+      ASSERT_DEATH([this]() { keyword("KEYWORD", 'w'); });  // Redefining `tag` not allowed.
+    }
   }
 
   void SynonymTest() {

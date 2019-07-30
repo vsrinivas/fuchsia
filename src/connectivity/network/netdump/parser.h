@@ -15,8 +15,8 @@
 // Key to the public parser interface is the `FilterBuilder<T>` class, declared in its own file. Due
 // to template classes, the body of parser code is organized as a series of header files.
 
-#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_PARSER_H_
-#define ZIRCON_SYSTEM_UAPP_NETDUMP_PARSER_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_NETDUMP_PARSER_H_
+#define SRC_CONNECTIVITY_NETWORK_NETDUMP_PARSER_H_
 
 #include <ostream>
 #include <sstream>
@@ -123,4 +123,4 @@ void parser_syntax(std::ostream* output);
 
 }  // namespace netdump::parser
 
-#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_PARSER_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_NETDUMP_PARSER_H_

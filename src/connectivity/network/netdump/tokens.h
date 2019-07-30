@@ -30,8 +30,8 @@
 // `IPPROTO_TCP`. Besides choosing appropriate values for the `tag` metadata, the lexer should
 // otherwise not be involved in the semantic understanding of the tokens.
 
-#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_TOKENS_H_
-#define ZIRCON_SYSTEM_UAPP_NETDUMP_TOKENS_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_NETDUMP_TOKENS_H_
+#define SRC_CONNECTIVITY_NETWORK_NETDUMP_TOKENS_H_
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -261,4 +261,4 @@ class Tokenizer {
 
 }  // namespace netdump
 
-#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_TOKENS_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_NETDUMP_TOKENS_H_

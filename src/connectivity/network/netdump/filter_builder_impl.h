@@ -4,8 +4,8 @@
 
 // Concrete implementations of `FilterBuilder` required by the parser.
 
-#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_BUILDER_IMPL_H_
-#define ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_BUILDER_IMPL_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_BUILDER_IMPL_H_
+#define SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_BUILDER_IMPL_H_
 
 #include "filter.h"
 #include "parser.h"
@@ -86,4 +86,4 @@ class FilterTreeBuilder : public FilterBuilder<FilterPtr> {
 
 }  // namespace netdump::parser
 
-#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_BUILDER_IMPL_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_BUILDER_IMPL_H_

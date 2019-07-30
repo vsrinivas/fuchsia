@@ -289,9 +289,11 @@ void IPv6PortsTest(PortFn filter_fn) { PortsTest(6, std::move(filter_fn)); }
 
 void UnsupportedIpVersionAssertTest(VersionFn version_fn, IPLengthFn length_fn,
                                     ProtocolFn protocol_fn) {
-  ASSERT_DEATH([&version_fn]() { version_fn(3); });
-  ASSERT_DEATH([&length_fn]() { length_fn(5, 16, LengthComparator::LEQ); });
-  ASSERT_DEATH([&protocol_fn]() { protocol_fn(7, IPPROTO_TCP); });
+  if (ZX_DEBUG_ASSERT_IMPLEMENTED) {
+    ASSERT_DEATH([&version_fn]() { version_fn(3); });
+    ASSERT_DEATH([&length_fn]() { length_fn(5, 16, LengthComparator::LEQ); });
+    ASSERT_DEATH([&protocol_fn]() { protocol_fn(7, IPPROTO_TCP); });
+  }
 }
 
 #define NETDUMP_TRUE FilterPtr(new EthFilter(htons(0x1430)))

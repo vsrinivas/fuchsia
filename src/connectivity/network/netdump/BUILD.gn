@@ -1,0 +1,91 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("bin") {
+  output_name = "netdump"
+  sources = [
+    "filter.cc",
+    "netdump.cc",
+    "parser.cc",
+    "tokens.cc",
+  ]
+  deps = [
+    ":common",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c_client",
+    "//zircon/public/lib/pretty",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+  public_deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test("unit_tests") {
+  output_name = "netdump_unit_tests"
+  sources = [
+    "filter.cc",
+    "parser.cc",
+    "test/filter_builder_test.cc",
+    "test/filter_test.cc",
+    "test/parser_test.cc",
+    "test/tokens_test.cc",
+    "tokens.cc",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    ":common",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":netdump",
+    ":netdump_unit_tests",
+  ]
+}
+
+package("netdump") {
+  meta = [
+    {
+      path = rebase_path("meta/netdump.cmx")
+      dest = "netdump.cmx"
+    },
+  ]
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "netdump"
+      shell = true
+    },
+  ]
+}
+
+unittest_package("netdump_unit_tests") {
+  deps = [
+    ":unit_tests",
+  ]
+
+  tests = [
+    {
+      name = "netdump_unit_tests"
+      environments = basic_envs
+    },
+  ]
+}

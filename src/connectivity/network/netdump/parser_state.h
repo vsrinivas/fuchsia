@@ -5,8 +5,8 @@
 // This header defines internal structures used by the parser to help it manage state during
 // a parse.
 
-#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_PARSER_STATE_H_
-#define ZIRCON_SYSTEM_UAPP_NETDUMP_PARSER_STATE_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_NETDUMP_PARSER_STATE_H_
+#define SRC_CONNECTIVITY_NETWORK_NETDUMP_PARSER_STATE_H_
 
 #include <zircon/assert.h>
 
@@ -110,4 +110,4 @@ class Environment {
 
 }  // namespace netdump::parser
 
-#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_PARSER_STATE_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_NETDUMP_PARSER_STATE_H_

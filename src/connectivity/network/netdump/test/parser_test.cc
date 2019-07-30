@@ -152,7 +152,9 @@ TEST(NetdumpParserTest, EnvironmentEndDereferenceTest) {
   ++env;
 
   EXPECT_TRUE(env.at_end());
-  ASSERT_DEATH([&env]() { *env; });
+  if (ZX_DEBUG_ASSERT_IMPLEMENTED) {
+    ASSERT_DEATH([&env]() { *env; });
+  }
 }
 
 TEST(NetdumpParserTest, EnvironmentFullWalkTest) {

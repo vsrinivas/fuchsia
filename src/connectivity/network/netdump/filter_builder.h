@@ -9,8 +9,8 @@
 // expressive. During parse, the client must pass a concrete implementation of `FilterBuilder` to
 // the parser in order to construct filters.
 
-#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_BUILDER_H_
-#define ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_BUILDER_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_BUILDER_H_
+#define SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_BUILDER_H_
 
 #include <array>
 #include <type_traits>
@@ -81,4 +81,4 @@ class FilterBuilder {
 
 }  // namespace netdump::parser
 
-#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_BUILDER_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_BUILDER_H_

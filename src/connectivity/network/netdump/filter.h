@@ -15,8 +15,8 @@
 // A complete filter is one or more sub-filters joined together as nodes in a filter tree,
 // connected by logical negation, conjunction and/or disjunction operations.
 
-#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_H_
-#define ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_H_
+#define SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_H_
 
 #include <algorithm>
 #include <functional>
@@ -217,4 +217,4 @@ class DisjFilter : public FilterBase {
 
 }  // namespace netdump
 
-#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_H_

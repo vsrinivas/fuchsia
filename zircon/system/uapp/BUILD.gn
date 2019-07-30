@@ -59,7 +59,6 @@ group("uapp") {
     "namespace",
     "nand-loader",
     "nand-util",
-    "netdump",
     "ping",
     "psutils",
     "rng-trials",

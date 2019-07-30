@@ -4,8 +4,8 @@
 
 // This file implements the syntax logic for the packet filter language.
 
-#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_PARSER_INTERNAL_H_
-#define ZIRCON_SYSTEM_UAPP_NETDUMP_PARSER_INTERNAL_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_NETDUMP_PARSER_INTERNAL_H_
+#define SRC_CONNECTIVITY_NETWORK_NETDUMP_PARSER_INTERNAL_H_
 
 #include <arpa/inet.h>
 #include <zircon/assert.h>
@@ -509,4 +509,4 @@ class Syntax {
 
 }  // namespace netdump::parser
 
-#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_PARSER_INTERNAL_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_NETDUMP_PARSER_INTERNAL_H_

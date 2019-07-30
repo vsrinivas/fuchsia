@@ -4,8 +4,8 @@
 
 // Shared constants between different components of the packet filtering feature.
 
-#ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_CONSTANTS_H_
-#define ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_CONSTANTS_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_CONSTANTS_H_
+#define SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_CONSTANTS_H_
 
 #include <netinet/if_ether.h>
 #include <netinet/in.h>
@@ -50,4 +50,4 @@ constexpr size_t IP6_ADDR_LEN = sizeof(struct in6_addr);
 
 }  // namespace netdump
 
-#endif  // ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_CONSTANTS_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_CONSTANTS_H_
