@@ -30,7 +30,7 @@ enum CapabilitySource {
     /// point.
     Component(RoutedCapability, Arc<Realm>),
     /// This capability originates from component manager's namespace.
-    ComponentMgrNamespace(CapabilityPath),
+    ComponentManagerNamespace(CapabilityPath),
     /// This capability originates from component manager itself.
     FrameworkCapability(UseDecl, Arc<Realm>),
     /// This capability originates from a storage declaration in a component's decl.  `StorageDecl`
@@ -92,7 +92,7 @@ async fn open_capability_at_source<'a>(
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
     match source {
-        CapabilitySource::ComponentMgrNamespace(path) => {
+        CapabilitySource::ComponentManagerNamespace(path) => {
             io_util::connect_in_namespace(&path.to_string(), server_chan, FLAGS)
                 .map_err(|e| ModelError::capability_discovery_error(e))?;
         }
@@ -404,7 +404,7 @@ async fn walk_offer_chain<'a>(
         if pos.at_componentmgr_realm() {
             // We are at component manager's own realm, so pull the capability from its namespace.
             if let Some(path) = pos.capability.source_path() {
-                return Ok(Some(CapabilitySource::ComponentMgrNamespace(path.clone())));
+                return Ok(Some(CapabilitySource::ComponentManagerNamespace(path.clone())));
             } else {
                 return Err(ModelError::capability_discovery_error(format_err!(
                     "invalid capability type to come from component manager's namespace",
