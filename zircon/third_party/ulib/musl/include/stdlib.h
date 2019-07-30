@@ -117,7 +117,6 @@ int posix_openpt(int);
 int grantpt(int);
 int unlockpt(int);
 char* ptsname(int);
-char* l64a(long);
 long a64l(const char*);
 void setkey(const char*);
 double drand48(void);
