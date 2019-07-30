@@ -136,7 +136,7 @@ fn main() -> Result<(), Error> {
     let quiet = std::env::args().any(|arg| arg == "-q");
 
     let mut fs = ServiceFs::new_local()
-    fs.dir("public")
+    fs.dir("svc")
       .add_fidl_service(IncomingService::Echo);
 
     fs.take_and_serve_directory_handle()?;
@@ -163,7 +163,7 @@ as a result of one of the `?` lines, the error will be `Debug` printed and
 the program will return with a status code indicating failure.
 
 The `ServiceFs` represents a filesystem containing various services.
-Services exposed inside the `"public"` directory will be offered to other
+Services exposed inside the `"svc"` directory will be offered to other
 components. The `add_fidl_service` function can be used to offer a
 `\[Discoverable\]` FIDL service inside the file system.
 
