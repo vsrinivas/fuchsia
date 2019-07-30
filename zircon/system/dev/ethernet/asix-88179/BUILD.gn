@@ -4,7 +4,7 @@
 
 driver("asix-88179") {
   sources = [
-    "asix-88179.c",
+    "asix-88179.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
@@ -13,9 +13,11 @@ driver("asix-88179") {
     "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/usb",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/third_party/ulib/cksum",
   ]
 }

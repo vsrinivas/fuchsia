@@ -2,157 +2,176 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_ASIX_88179_ASIX_88179_H_
+#define ZIRCON_SYSTEM_DEV_ETHERNET_ASIX_88179_ASIX_88179_H_
 
-// clang-format off
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
-#define ASIX_VID 0x0B95
-#define AX88179_PID 0x1790
+#include <optional>
 
-#define AX88179_PHY_ID   0x03
+#include <ddk/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/ethernet.h>
+#include <fbl/auto_lock.h>
+#include <usb/request-cpp.h>
+#include <usb/usb-request.h>
+#include <usb/usb.h>
 
-// Vendor commands
-#define AX88179_REQ_MAC           0x01
-#define AX88179_REQ_PHY           0x02
-#define AX88179_REQ_WKUP          0x03
-#define AX88179_REQ_NVS           0x04
-#define AX88179_REQ_EFUSE         0x05
-#define AX88179_REQ_EFUSE_RELOAD  0x06
-#define AX88179_REQ_MFA           0x10
-#define AX88179_REQ_USB           0x81
-#define AX88179_REQ_WATCHDOG      0x91
+#include <queue>
+#include <thread>
 
-// MAC registers
-#define AX88179_MAC_
-#define AX88179_MAC_PLSR    0x02
-#define AX88179_MAC_GSR     0x03
-#define AX88179_MAC_SMSR    0x04
-#define AX88179_MAC_CSR     0x05
-#define AX88179_MAC_EAR     0x07
-#define AX88179_MAC_EDLR    0x08
-#define AX88179_MAC_EDHR    0x09
-#define AX88179_MAC_ECR     0x0a
-#define AX88179_MAC_RCR     0x0b
-#define AX88179_MAC_IPGCR   0x0d
-#define AX88179_MAC_NIDR    0x10
-#define AX88179_MAC_MFA     0x16
-#define AX88179_MAC_TR      0x1e
-#define AX88179_MAC_DSCR    0x20
-#define AX88179_MAC_MSR     0x22
-#define AX88179_MAC_MMSR    0x24
-#define AX88179_MAC_GPIOCR  0x25
-#define AX88179_MAC_EPPRCR  0x26
-#define AX88179_MAC_JLCR    0x29
-#define AX88179_MAC_VCR     0x2a
-#define AX88179_MAC_RQCR    0x2e
-#define AX88179_MAC_RQTLR   0x2f
-#define AX88179_MAC_RQTHR   0x30
-#define AX88179_MAC_RQSIZE  0x31
-#define AX88179_MAC_RQIFGR  0x32
-#define AX88179_MAC_CLKSR   0x33
-#define AX88179_MAC_CRCR    0x34
-#define AX88179_MAC_CTCR    0x35
-#define AX88179_MAC_CPCR    0x36
-#define AX88179_MAC_PWLHR   0x54
-#define AX88179_MAC_PWLLR   0x55
-#define AX88179_MAC_TXFBR   0x56
-#define AX88179_MAC_RXFBLR  0x57
-#define AX88179_MAC_RXFBHR  0x58
-#define AX88179_MAC_PINCR   0x70
-#define AX88179_MAC_LEDCR   0x73
+namespace eth {
 
-// PHY registers
-#define AX88179_PHY_BMCR    0x00
-#define AX88179_PHY_BMSR    0x01
-#define AX88179_PHY_PHYID1  0x02
-#define AX88179_PHY_PHYID2  0x03
-#define AX88179_PHY_ANAR    0x04
-#define AX88179_PHY_ANLPAR  0x05
-#define AX88179_PHY_ANER    0x06
-#define AX88179_PHY_ANNPTR  0x07
-#define AX88179_PHY_ANNPRR  0x08
-#define AX88179_PHY_GBCR    0x09
-#define AX88179_PHY_GBSR    0x0a
-#define AX88179_PHY_MACR    0x0d
-#define AX88179_PHY_MAADR   0x0e
-#define AX88179_PHY_GBESR   0x0f
-#define AX88179_PHY_PHYCR   0x10
-#define AX88179_PHY_PHYSR   0x11
-#define AX88179_PHY_INER    0x12
-#define AX88179_PHY_INSR    0x13
-#define AX88179_PHY_RXERC   0x18
-#define AX88179_PHY_PAGSEL  0x1f
-#define AX88179_PHY_ELEDIR1 0x05
-#define AX88179_PHY_ELEDIR2 0x06
-#define AX88179_PHY_EPAGSR  0x1e
-#define AX88179_PHY_LEDACR  0x1a
-#define AX88179_PHY_LEDCR   0x1c
+class Asix88179Ethernet;
 
-#define AX88179_PHY_MMD_PC1R    0x00
-#define AX88179_PHY_MMD_PS1R    0x01
-#define AX88179_PHY_MMD_EEECR   0x14
-#define AX88179_PHY_MMD_EEEWER  0x16
-#define AX88179_PHY_MMD_EEEAR   0x3c
-#define AX88179_PHY_MMD_EEELPAR 0x3d
+using DeviceType = ddk::Device<Asix88179Ethernet, ddk::Unbindable>;
 
-// USB registers
-#define AX88179_USB_EP2FIFO  0x5c
-#define AX88179_USB_EP3FIFO  0x8c
-#define AX88179_USB_U1U2CTL  0x310
+class Asix88179Ethernet : public DeviceType,
+                          public ddk::EthernetImplProtocol<Asix88179Ethernet, ddk::base_protocol> {
+ public:
+  Asix88179Ethernet(const Asix88179Ethernet&) = delete;
+  Asix88179Ethernet(Asix88179Ethernet&&) = delete;
+  Asix88179Ethernet& operator=(const Asix88179Ethernet&) = delete;
+  Asix88179Ethernet& operator=(Asix88179Ethernet&&) = delete;
 
-// Register bits  -- define as needed
-#define AX88179_PLSR_USB_FS  (1 << 0)
-#define AX88179_PLSR_USB_HS  (1 << 1)
-#define AX88179_PLSR_USB_SS  (1 << 2)
-#define AX88179_PLSR_USB_MASK (AX88179_PLSR_USB_FS|AX88179_PLSR_USB_HS|AX88179_PLSR_USB_SS)
+  explicit Asix88179Ethernet(zx_device_t* parent) : DeviceType(parent) {}
 
-#define AX88179_PLSR_EPHY_10   (1 << 4)
-#define AX88179_PLSR_EPHY_100  (1 << 5)
-#define AX88179_PLSR_EPHY_1000 (1 << 6)
-#define AX88179_PLSR_EPHY_MASK (AX88179_PLSR_EPHY_10|AX88179_PLSR_EPHY_100|AX88179_PLSR_EPHY_1000)
+  // DDK Hooks.
+  void DdkRelease();
+  void DdkUnbind();
 
-#define AX88179_PHYSR_SPEED  (3 << 14)
-#define AX88179_PHYSR_DUPLEX (1 << 13)
+  zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
+  void EthernetImplStop();
+  zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc);
+  zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf);
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+                                   size_t data_size);
+  void EthernetImplGetBti(zx::bti* bti) { bti->reset(); }
 
-// PROMISC = receive everything
-#define AX88179_RCR_PROMISC  (1 << 0)
-// AMALL = receive all multicast.
-#define AX88179_RCR_AMALL    (1 << 1)
-// AB = receive all broadcast.
-#define AX88179_RCR_AB       (1 << 3)
-// AM = use multicast filter (ignored if AMALL is set)
-#define AX88179_RCR_AM       (1 << 4)
-// AP = accept physical through multicast filter
-#define AX88179_RCR_AP       (1 << 5)
-// SO = start operation
-#define AX88179_RCR_SO       (1 << 7)
-// DROP_CRC_N 1 = don't drop CRC field (default 0)
-#define AX88179_RCR_DROP_CRCE_N (1 << 8)
-// IPE_N = enable IP alignment
-#define AX88179_RCR_IPE_N    (1 << 9)
+  static zx_status_t Bind(void* ctx, zx_device_t* device);
 
-// Headers
-#define AX88179_RX_DROPPKT   0x80000000
-#define AX88179_RX_MIIER     0x40000000
-#define AX88179_RX_CRCER     0x20000000
-#define AX88179_RX_PKTLEN    0x1fff0000
-#define AX88179_RX_BMC       0x00008000
-#define AX88179_RX_VLANPRI   0x00007000
-#define AX88179_RX_OK        0x00000800
-#define AX88179_RX_VLANIND   0x00000700
-#define AX88179_RX_COE       0x000000ff
+ private:
+  zx_status_t Initialize();
 
-//#define AX88179_RX_COE_???        0x80
-#define AX88179_RX_COE_L3_MASK      0x60
-#define AX88179_RX_COE_L3_IPV6      0x40
-#define AX88179_RX_COE_L3_IPV4      0x20
+  zx_status_t InitializeRegisters();
 
-#define AX88179_RX_COE_L4_MASK      0x1c
-#define AX88179_RX_COE_L4_ICMPv6    0x11
-#define AX88179_RX_COE_L4_TCP       0x10
-#define AX88179_RX_COE_L4_IGMP      0x0c
-#define AX88179_RX_COE_L4_ICMP      0x08
-#define AX88179_RX_COE_L4_UDP       0x04
+  template <typename T>
+  zx_status_t ReadMac(uint8_t register_address, T* data) TA_REQ(lock_);
 
-#define AX88179_RX_COE_L3_CKSUM_ERR 0x02
-#define AX88179_RX_COE_L4_CKSUM_ERR 0x01
+  template <typename T>
+  zx_status_t WriteMac(uint8_t register_address, const T& data) TA_REQ(lock_);
+
+  zx_status_t ReadPhy(uint8_t register_address, uint16_t* data) TA_REQ(lock_);
+
+  zx_status_t WritePhy(uint8_t register_address, uint16_t data) TA_REQ(lock_);
+
+  zx_status_t ConfigureBulkIn(uint8_t plsr) TA_REQ(lock_);
+
+  zx_status_t ConfigureMediumMode() TA_REQ(lock_);
+
+  zx_status_t Receive(usb::Request<>& request) TA_REQ(lock_);
+
+  zx_status_t RequestAppend(usb::Request<>& request, const ethernet_netbuf_t* netbuf);
+
+  void ReadComplete(usb_request_t* request);
+
+  void WriteComplete(usb_request_t* request);
+
+  void InterruptComplete(usb_request_t* usb_request);
+
+  void Shutdown();
+
+  zx_status_t TwiddleRcrBit(uint16_t bit, bool on) TA_REQ(lock_);
+
+  zx_status_t SetPromisc(bool on) TA_REQ(lock_);
+
+  zx_status_t SetMulticastPromisc(bool on) TA_REQ(lock_);
+
+  void SetFilterBit(const uint8_t* mac, uint8_t* filter) TA_REQ(lock_);
+
+  zx_status_t SetMulticastFilter(int32_t n_addresses, const uint8_t* address_bytes,
+                                 size_t address_size) TA_REQ(lock_);
+
+  template <uint8_t N>
+  void DumpRegister(const char* name, uint8_t register_address) TA_REQ(lock_);
+
+  void DumpRegs() TA_REQ(lock_);
+
+  int InterruptThread();
+
+  uint8_t mac_addr_[ETH_MAC_SIZE] TA_GUARDED(lock_) = {};
+
+  bool online_ TA_GUARDED(lock_) = false;
+
+  bool multicast_filter_overflow_ TA_GUARDED(lock_) = false;
+
+  // pool of free USB requests
+  usb::RequestPool<> free_read_pool_ TA_GUARDED(lock_);
+
+  std::optional<usb::Request<>> interrupt_request_ TA_GUARDED(lock_);
+
+  // callback interface to attached ethernet layer
+  ddk::EthernetIfcProtocolClient ifc_ TA_GUARDED(lock_);
+
+  bool running_ TA_GUARDED(lock_) = false;
+
+  fbl::Mutex lock_;
+
+  // List of requests that have pending data. Used to buffer data if a USB transaction is in
+  // flight. Additional data must be appended to the tail of the list, or if that's full, a
+  // request from free_write_reqs must be added to the list.
+  usb::RequestQueue<> pending_usb_transmit_queue_ TA_GUARDED(tx_lock_);
+
+  std::queue<ethernet_netbuf_t*> pending_netbuf_queue_ TA_GUARDED(tx_lock_);
+
+  fbl::Mutex tx_lock_;
+
+  usb::RequestPool<> free_write_pool_;
+
+  usb::UsbDevice usb_;
+
+  zx::duration rx_endpoint_delay_ = {};  // wait time between 2 recv requests
+  zx::duration tx_endpoint_delay_ = {};  // wait time between 2 transmit requests
+
+  uint8_t bulk_in_address_ = 0;
+  uint8_t bulk_out_address_ = 0;
+  uint8_t interrupt_address_ = 0;
+  uint8_t interface_number_ = 0;
+
+  size_t parent_req_size_ = 0;
+
+  thrd_t interrupt_thread_ = {};
+
+  sync_completion_t interrupt_completion_;
+
+  std::thread cancel_thread_;
+
+  usb_request_complete_t read_request_complete_ = {
+      .callback =
+          [](void* ctx, usb_request_t* request) {
+            reinterpret_cast<Asix88179Ethernet*>(ctx)->ReadComplete(request);
+          },
+      .ctx = this,
+  };
+
+  usb_request_complete_t write_request_complete_ = {
+      .callback =
+          [](void* ctx, usb_request_t* request) {
+            reinterpret_cast<Asix88179Ethernet*>(ctx)->WriteComplete(request);
+          },
+      .ctx = this,
+  };
+
+  usb_request_complete_t interrupt_request_complete_ = {
+      .callback =
+          [](void* ctx, usb_request_t* request) {
+            reinterpret_cast<Asix88179Ethernet*>(ctx)->InterruptComplete(request);
+          },
+      .ctx = this,
+  };
+};
+
+}  // namespace eth
+
+#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_ASIX_88179_ASIX_88179_H_
