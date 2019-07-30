@@ -434,10 +434,7 @@ impl Executor {
     where
         F: Future + Unpin,
     {
-        let res = self.poll_main_future(main_future);
-        if res.is_ready() {
-            return res;
-        }
+        self.wake_main_future();
         while let NextStep::NextPacket = self.next_step(/*fire_timers:*/ false) {
             // Will not fail, because NextPacket means there is a
             // packet ready to be processed.
@@ -1252,5 +1249,30 @@ mod tests {
 
         event.signal_handle(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
         assert!(run_until_done(&mut executor, &mut fut).is_ok());
+    }
+
+    // Using `run_until_stalled` does not modify the order of events
+    // compared to normal execution.
+    #[test]
+    fn run_until_stalled_preserves_order() {
+        let mut executor = Executor::new_with_fake_time().unwrap();
+        let spawned_fut_completed = Arc::new(AtomicBool::new(false));
+        let spawned_fut_completed_writer = spawned_fut_completed.clone();
+        let spawned_fut = Box::pin(async move {
+            await!(Timer::new(Time::after(5.seconds())));
+            spawned_fut_completed_writer.store(true, Ordering::SeqCst);
+        });
+        let main_fut = async {
+            await!(Timer::new(Time::after(10.seconds())));
+        };
+        pin_mut!(main_fut);
+        spawn(spawned_fut);
+        assert_eq!(executor.run_until_stalled(&mut main_fut), Poll::Pending);
+        executor.set_fake_time(Time::after(15.seconds()));
+        executor.wake_expired_timers();
+        // The timer in `spawned_fut` should fire first, then the
+        // timer in `main_fut`.
+        assert_eq!(executor.run_until_stalled(&mut main_fut), Poll::Ready(()));
+        assert_eq!(spawned_fut_completed.load(Ordering::SeqCst), true);
     }
 }
