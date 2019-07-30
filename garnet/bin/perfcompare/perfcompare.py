@@ -23,7 +23,7 @@ import scipy.stats
 #
 # Data is gathered from a 3-level sampling process:
 #
-#  1) Boot Fuchsia one or more times.  (Currently we only boot once.)
+#  1) Boot Fuchsia multiple times.
 #  2) For each boot, launch the perf test process one or more times.
 #  3) For each process launch, instantiate the performance test and
 #     run the body of the test some number of times.
@@ -31,20 +31,10 @@ import scipy.stats
 # This is intended to account for variation across boots and across process
 # launches.
 #
-# Currently we use t-test confidence intervals.  In future we could instead
-# use bootstrap confidence intervals.
-#
-#  * We apply the t-test confidence interval to the mean running times from
-#    each process instance (from level #3).  This means we treat the sample
-#    size as being the number of processes launches.  This is rather
-#    ad-hoc: it assumes that there is a lot of between-process variation
-#    and that we need to widen the confidence intervals to reflect that.
-#    Using bootstrapping with resampling across the 3 levels above should
-#    account for that variation without making ad-hoc assumptions.
-#
-#  * This assumes that the values we apply the t-test to are normally
-#    distributed, or approximately normally distributed.  Using
-#    bootstrapping instead would avoid this assumption.
+# Currently we use t-test confidence intervals.  This assumes that the
+# values we apply the t-test to are normally distributed, or approximately
+# normally distributed.  In future we could instead use bootstrap
+# confidence intervals, which would avoid that assumption.
 
 
 # ALPHA is a parameter for calculating confidence intervals.  It is
@@ -148,14 +138,15 @@ def RawResultsFromDir(filename):
 # Returns a dict mapping test names to Stats objects.
 def ResultsFromDirs(filenames):
     results_map = {}
-    # TODO(PT-202): Currently the processing we do here erases the
-    # distinction between cross-boot variation and cross-process variation,
-    # but we should distinguish between the two.
     for boot_results_path in filenames:
+        results_for_boot = {}
         for process_run_results in RawResultsFromDir(boot_results_path):
             for test_case in process_run_results:
                 new_value = Mean(test_case['values'])
-                results_map.setdefault(test_case['label'], []).append(new_value)
+                results_for_boot.setdefault(test_case['label'], []).append(
+                    new_value)
+        for label, values in results_for_boot.iteritems():
+            results_map.setdefault(label, []).append(Mean(values))
     return {name: Stats(values) for name, values in results_map.iteritems()}
 
 

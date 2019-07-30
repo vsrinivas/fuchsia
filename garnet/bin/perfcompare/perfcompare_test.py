@@ -207,13 +207,13 @@ class StatisticsTest(TempDirTestCase):
         self.CheckConfidenceInterval(self.GenerateData(), '1000 +/- 0')
         self.CheckConfidenceInterval(
             self.GenerateData(stddev_across_boots=100),
-            '1021 +/- 101')
+            '1021 +/- 451')
         self.CheckConfidenceInterval(
             self.GenerateData(stddev_across_processes=100),
-            '1012 +/- 68')
+            '1012 +/- 151')
         self.CheckConfidenceInterval(
             self.GenerateData(stddev_across_iters=100),
-            '980 +/- 27')
+            '980 +/- 73')
 
 
 class PerfCompareTest(TempDirTestCase):
