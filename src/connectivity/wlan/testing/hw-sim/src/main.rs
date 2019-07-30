@@ -33,6 +33,16 @@ fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
     config::create_wlantap_config(HW_MAC_ADDR, fidl_device::MacRole::Client)
 }
 
+fn create_wpa2_psk_rsne() -> wlan_common::ie::rsn::rsne::Rsne {
+    use wlan_common::ie::rsn::{akm, cipher, rsne};
+    let mut rsne = rsne::Rsne::new();
+    rsne.group_data_cipher_suite = Some(cipher::Cipher::new_dot11(cipher::CCMP_128));
+    rsne.pairwise_cipher_suites = vec![cipher::Cipher::new_dot11(cipher::CCMP_128)];
+    rsne.akm_suites = vec![akm::Akm::new_dot11(akm::PSK)];
+    rsne.rsn_capabilities = Some(rsne::RsnCapabilities(0));
+    rsne
+}
+
 struct State {
     current_channel: fidl_common::WlanChan,
     frame_buf: Vec<u8>,
@@ -58,6 +68,8 @@ fn send_beacon(
     channel: &fidl_common::WlanChan,
     bss_id: &[u8; 6],
     ssid: &[u8],
+    // TODO(eyw): replace with wlan-common::Protection once it is available.
+    use_wpa2_psk: bool,
     proxy: &wlantap::WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
@@ -76,12 +88,15 @@ fn send_beacon(
     frame_buf.append_value(&mac::BeaconHdr {
         timestamp: 0,
         beacon_interval: 100,
-        capabilities: mac::CapabilityInfo(0),
+        capabilities: mac::CapabilityInfo(0).with_privacy(use_wpa2_psk),
     })?;
 
     ie::write_ssid(frame_buf, ssid)?;
     ie::write_supported_rates(frame_buf, &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?;
     ie::write_dsss_param_set(frame_buf, &ie::DsssParamSet { current_chan: channel.primary })?;
+    if use_wpa2_psk {
+        create_wpa2_psk_rsne().write_into(frame_buf)?;
+    }
 
     proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel))?;
     Ok(())
@@ -242,6 +257,7 @@ async fn beacon_sender(state: Arc<Mutex<State>>, proxy: wlantap::WlantapPhyProxy
                 &state.current_channel,
                 &BSSID,
                 "fakenet".as_bytes(),
+                false, // use_wpa2_psk
                 &proxy,
             )
             .unwrap();
@@ -284,7 +300,8 @@ mod simulation_tests {
         ok = run_test("verify_ethernet", test_verify_ethernet) && ok;
         ok = run_test("set_country", test_set_country) && ok;
         ok = run_test("simulate_scan", test_simulate_scan) && ok;
-        ok = run_test("connecting_to_ap", test_connecting_to_ap) && ok;
+        ok = run_test("connect_to_open_network", test_connect_open) && ok;
+        ok = run_test("connect_to_wpa2_network", test_connect_wpa2) && ok;
         ok = run_test("ethernet_tx_rx", test_ethernet_tx_rx) && ok;
         ok = run_test("rate_selection", minstrel::test_rate_selection) && ok;
 
@@ -401,6 +418,7 @@ mod simulation_tests {
 
         let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
+        loop_until_iface_is_found(&mut exec);
 
         let proxy = helper.proxy();
         let scan_result = scan(&mut exec, &wlan_service, &proxy, &mut helper);
@@ -425,28 +443,6 @@ mod simulation_tests {
         ];
         expected_aps.sort();
         assert_eq!(&expected_aps, &aps[..]);
-    }
-
-    fn test_connecting_to_ap() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
-        let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
-        loop_until_iface_is_found(&mut exec);
-
-        let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
-            .expect("Failed to connect to wlan service");
-        let proxy = helper.proxy();
-
-        connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID_FOO, &BSS_FOO);
-
-        let status = status(&mut exec, &wlan_service);
-        assert_eq!(status.error.code, fidl_wlan_service::ErrCode::Ok);
-        assert_eq!(status.state, fidl_wlan_service::State::Associated);
-        let ap = status.current_ap.expect("expect to be associated to an AP");
-        assert_eq!(ap.bssid, BSS_FOO.to_vec());
-        assert_eq!(ap.ssid, String::from_utf8_lossy(SSID_FOO).to_string());
-        assert_eq!(ap.chan, CHANNEL);
-        assert!(ap.is_compatible);
-        assert!(!ap.is_secure);
     }
 
     pub fn loop_until_iface_is_found(exec: &mut fasync::Executor) {
@@ -477,48 +473,87 @@ mod simulation_tests {
         phy: &wlantap::WlantapPhyProxy,
         helper: &mut test_utils::TestHelper,
     ) -> fidl_wlan_service::ScanResult {
-        let mut wlanstack_retry = test_utils::RetryWithBackoff::new(5.seconds());
-        loop {
-            let scan_result = helper
-                .run(
-                    exec,
-                    10.seconds(),
-                    "receive a scan response",
-                    |event| match event {
-                        wlantap::WlantapPhyEvent::SetChannel { args } => {
-                            println!("set channel to {:?}", args.chan);
-                            if args.chan.primary == 1 {
-                                send_beacon(&mut vec![], &args.chan, &BSS_FOO, SSID_FOO, &phy)
-                                    .unwrap();
-                            } else if args.chan.primary == 6 {
-                                send_beacon(&mut vec![], &args.chan, &BSS_BAR, SSID_BAR, &phy)
-                                    .unwrap();
-                            } else if args.chan.primary == 11 {
-                                send_beacon(&mut vec![], &args.chan, &BSS_BAZ, SSID_BAZ, &phy)
-                                    .unwrap();
-                            }
+        helper
+            .run(
+                exec,
+                10.seconds(),
+                "receive a scan response",
+                |event| {
+                    if let wlantap::WlantapPhyEvent::SetChannel { args } = event {
+                        println!("set channel to {:?}", args.chan);
+                        let network = match args.chan.primary {
+                            1 => Some((&BSS_FOO, SSID_FOO)),
+                            6 => Some((&BSS_BAR, SSID_BAR)),
+                            11 => Some((&BSS_BAZ, SSID_BAZ)),
+                            _ => None,
+                        };
+                        if let Some((bssid, ssid)) = network {
+                            send_beacon(&mut vec![], &args.chan, bssid, ssid, false, &phy).unwrap();
                         }
-                        _ => {}
-                    },
-                    wlan_service.scan(&mut fidl_wlan_service::ScanRequest { timeout: 5 }),
-                )
-                .unwrap();
-            if scan_result.error.code == fidl_wlan_service::ErrCode::NotFound {
-                let slept = wlanstack_retry.sleep_unless_timed_out();
-                assert!(slept, "Wlanstack did not recognize the interface in time");
-            } else {
-                return scan_result;
-            }
+                    }
+                },
+                wlan_service.scan(&mut fidl_wlan_service::ScanRequest { timeout: 5 }),
+            )
+            .unwrap()
+    }
+
+    fn create_connect_config<S: ToString>(
+        ssid: &[u8],
+        passphrase: S,
+    ) -> fidl_wlan_service::ConnectConfig {
+        fidl_wlan_service::ConnectConfig {
+            ssid: String::from_utf8_lossy(ssid).to_string(),
+            pass_phrase: passphrase.to_string(),
+            scan_interval: 5,
+            bssid: "".to_string(), // BSSID is ignored by wlancfg
         }
     }
 
-    fn create_connect_config(ssid: &[u8], bssid: &[u8; 6]) -> fidl_wlan_service::ConnectConfig {
-        fidl_wlan_service::ConnectConfig {
-            ssid: String::from_utf8_lossy(ssid).to_string(),
-            pass_phrase: "".to_string(),
-            scan_interval: 5,
-            bssid: String::from_utf8_lossy(bssid).to_string(),
+    fn create_wpa2_psk_authenticator(
+        bssid: &[u8; 6],
+        ssid: &[u8],
+        passphrase: &str,
+    ) -> wlan_rsn::Authenticator {
+        use wlan_common::ie::rsn::cipher;
+        let nonce_rdr = wlan_rsn::nonce::NonceReader::new(bssid).expect("creating nonce reader");
+        let gtk_provider = wlan_rsn::GtkProvider::new(cipher::Cipher::new_dot11(cipher::CCMP_128))
+            .expect("creating gtk provider");
+        let psk = wlan_rsn::psk::compute(passphrase.as_bytes(), ssid).expect("computing PSK");
+        let s_rsne = wlan_rsn::ProtectionInfo::Rsne(create_wpa2_psk_rsne());
+        let a_rsne = wlan_rsn::ProtectionInfo::Rsne(create_wpa2_psk_rsne());
+        wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
+            nonce_rdr,
+            std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
+            psk,
+            HW_MAC_ADDR,
+            s_rsne,
+            *bssid,
+            a_rsne,
+        )
+        .expect("creating authenticator")
+    }
+
+    fn process_auth_update(
+        updates: &mut wlan_rsn::rsna::UpdateSink,
+        channel: &fidl_common::WlanChan,
+        bssid: &[u8; 6],
+        phy: &wlantap::WlantapPhyProxy,
+    ) -> Result<(), failure::Error> {
+        use wlan_rsn::rsna::SecAssocUpdate;
+        for update in updates {
+            if let SecAssocUpdate::TxEapolKeyFrame(frame) = update {
+                rx_wlan_data_frame(
+                    channel,
+                    &HW_MAC_ADDR,
+                    bssid,
+                    bssid,
+                    &frame[..],
+                    mac::ETHER_TYPE_EAPOL,
+                    phy,
+                )?
+            }
         }
+        Ok(())
     }
 
     pub fn connect(
@@ -528,8 +563,10 @@ mod simulation_tests {
         helper: &mut test_utils::TestHelper,
         ssid: &[u8],
         bssid: &[u8; 6],
+        passphrase: Option<&str>,
     ) {
-        let mut connect_config = create_connect_config(ssid, bssid);
+        let mut connect_config = create_connect_config(ssid, passphrase.unwrap_or(&""));
+        let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p));
         let connect_fut = wlan_service.connect(&mut connect_config);
         let error = helper
             .run(
@@ -537,7 +574,7 @@ mod simulation_tests {
                 10.seconds(),
                 &format!("connect to {}({:2x?})", String::from_utf8_lossy(ssid), bssid),
                 |event| {
-                    handle_connect_events(event, &phy, ssid, bssid);
+                    handle_connect_events(event, &phy, ssid, bssid, passphrase, &mut authenticator);
                 },
                 connect_fut,
             )
@@ -550,33 +587,127 @@ mod simulation_tests {
         phy: &wlantap::WlantapPhyProxy,
         ssid: &[u8],
         bssid: &[u8; 6],
+        passphrase: Option<&str>,
+        authenticator: &mut Option<wlan_rsn::Authenticator>,
     ) {
         match event {
             wlantap::WlantapPhyEvent::SetChannel { args } => {
                 println!("channel: {:?}", args.chan);
                 if args.chan.primary == CHANNEL.primary {
-                    send_beacon(&mut vec![], &args.chan, bssid, ssid, &phy).unwrap();
+                    send_beacon(&mut vec![], &args.chan, bssid, ssid, passphrase.is_some(), &phy)
+                        .unwrap();
                 }
             }
             wlantap::WlantapPhyEvent::Tx { args } => {
-                if let Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) =
-                    mac::MacFrame::parse(&args.packet.data[..], false)
-                {
-                    match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
-                        Some(mac::MgmtBody::Authentication { .. }) => {
-                            send_authentication(&mut vec![], &CHANNEL, bssid, &phy)
-                                .expect("Error sending fake authentication frame.");
+                match mac::MacFrame::parse(&args.packet.data[..], false) {
+                    Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
+                        match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
+                            Some(mac::MgmtBody::Authentication { .. }) => {
+                                send_authentication(&mut vec![], &CHANNEL, bssid, &phy)
+                                    .expect("Error sending fake authentication frame.");
+                            }
+                            Some(mac::MgmtBody::AssociationReq { .. }) => {
+                                send_association_response(&mut vec![], &CHANNEL, bssid, &phy)
+                                    .expect("Error sending fake association response frame.");
+                                if let Some(authenticator) = authenticator {
+                                    let mut updates = wlan_rsn::rsna::UpdateSink::default();
+                                    authenticator
+                                        .initiate(&mut updates)
+                                        .expect("initiating authenticator");
+                                    process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
+                                        .expect(
+                                            "processing authenticator updates after initiation",
+                                        );
+                                }
+                            }
+                            _ => {}
                         }
-                        Some(mac::MgmtBody::AssociationReq { .. }) => {
-                            send_association_response(&mut vec![], &CHANNEL, bssid, &phy)
-                                .expect("Error sending fake association response frame.");
-                        }
-                        _ => {}
                     }
+                    // EAPOL frames are transmitted as data frames with LLC protocol being EAPOL
+                    Some(mac::MacFrame::Data { .. }) => {
+                        let msdus =
+                            mac::MsduIterator::from_raw_data_frame(&args.packet.data[..], false)
+                                .expect("reading msdu from data frame");
+                        for mac::Msdu { llc_frame, .. } in msdus {
+                            assert_eq!(
+                                llc_frame.hdr.protocol_id.to_native(),
+                                mac::ETHER_TYPE_EAPOL
+                            );
+                            if let Some(authenticator) = authenticator {
+                                let mut updates = wlan_rsn::rsna::UpdateSink::default();
+                                let mic_size = authenticator.get_negotiated_protection().mic_size;
+                                let frame_rx =
+                                    eapol::KeyFrameRx::parse(mic_size as usize, llc_frame.body)
+                                        .expect("parsing EAPOL frame");
+                                authenticator
+                                    .on_eapol_frame(&mut updates, eapol::Frame::Key(frame_rx))
+                                    .expect("sending EAPOL frame to authenticator");
+                                process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
+                                    .expect("processing authenticator updates after EAPOL frame");
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
             _ => {}
         }
+    }
+
+    fn assert_associated_state(
+        status: fidl_wlan_service::WlanStatus,
+        bssid: &[u8; 6],
+        ssid: &[u8],
+        channel: &fidl_common::WlanChan,
+        is_secure: bool,
+    ) {
+        assert_eq!(status.error.code, fidl_wlan_service::ErrCode::Ok);
+        assert_eq!(status.state, fidl_wlan_service::State::Associated);
+        let ap = status.current_ap.expect("expect to be associated to an AP");
+        assert_eq!(ap.bssid, bssid.to_vec());
+        assert_eq!(ap.ssid, String::from_utf8_lossy(ssid).to_string());
+        assert_eq!(ap.chan, *channel);
+        assert!(ap.is_compatible);
+        assert_eq!(ap.is_secure, is_secure);
+    }
+
+    fn test_connect_open() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        loop_until_iface_is_found(&mut exec);
+
+        let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
+            .expect("Failed to connect to wlan service");
+        let proxy = helper.proxy();
+
+        connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID_FOO, &BSS_FOO, None);
+        let status = status(&mut exec, &wlan_service);
+        assert_associated_state(status, &BSS_FOO, SSID_FOO, &CHANNEL, false)
+    }
+
+    fn test_connect_wpa2() {
+        const BSS_WPA2: &[u8; 6] = b"wpa2ok";
+        const SSID_WPA2: &[u8] = b"wpa2ssid";
+        let mut exec = fasync::Executor::new().expect("Create executor");
+        let wlan_service =
+            connect_to_service::<fidl_wlan_service::WlanMarker>().expect("Connect to WLAN service");
+        let mut helper =
+            test_utils::TestHelper::begin_test(&mut exec, super::create_wlantap_config());
+        loop_until_iface_is_found(&mut exec);
+
+        let phy = helper.proxy();
+        connect(
+            &mut exec,
+            &wlan_service,
+            &phy,
+            &mut helper,
+            SSID_WPA2,
+            BSS_WPA2,
+            Some(&"wpa2good"),
+        );
+
+        let status = status(&mut exec, &wlan_service);
+        assert_associated_state(status, &BSS_WPA2, SSID_WPA2, &CHANNEL, true);
     }
 
     const BSS_ETHNET: [u8; 6] = [0x65, 0x74, 0x68, 0x6e, 0x65, 0x74];
@@ -592,7 +723,7 @@ mod simulation_tests {
             .expect("Failed to connect to wlan service");
 
         let proxy = helper.proxy();
-        connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID_ETHERNET, &BSS_ETHNET);
+        connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID_ETHERNET, &BSS_ETHNET, None);
 
         let mut client = exec
             .run_singlethreaded(create_eth_client(&HW_MAC_ADDR))
@@ -680,8 +811,16 @@ mod simulation_tests {
                         assert_eq!(llc_frame.hdr.protocol_id.to_native(), mac::ETHER_TYPE_IPV4);
                         actual.clear();
                         actual.extend_from_slice(llc_frame.body);
-                        rx_wlan_data_frame(&HW_MAC_ADDR, &BSS_ETHNET, &BSSID, &PAYLOAD, phy)
-                            .expect("sending wlan data frame");
+                        rx_wlan_data_frame(
+                            &CHANNEL,
+                            &HW_MAC_ADDR,
+                            &BSS_ETHNET,
+                            &BSSID,
+                            &PAYLOAD,
+                            mac::ETHER_TYPE_IPV4,
+                            phy,
+                        )
+                        .expect("sending wlan data frame");
                     }
                 }
             }
@@ -689,10 +828,12 @@ mod simulation_tests {
     }
 
     fn rx_wlan_data_frame(
+        channel: &fidl_common::WlanChan,
         addr1: &[u8; 6],
         addr2: &[u8; 6],
         addr3: &[u8; 6],
         payload: &[u8],
+        ether_type: u16,
         phy: &wlantap::WlantapPhyProxy,
     ) -> Result<(), failure::Error> {
         let buf: &mut Vec<u8> = &mut vec![];
@@ -716,10 +857,10 @@ mod simulation_tests {
             mac::OptionalDataHdrFields::none(),
         )?;
 
-        data_writer::write_snap_llc_hdr(buf, mac::ETHER_TYPE_IPV4)?;
+        data_writer::write_snap_llc_hdr(buf, ether_type)?;
         buf.append_bytes(payload)?;
 
-        phy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(&CHANNEL))?;
+        phy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel))?;
         Ok(())
     }
 

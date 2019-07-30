@@ -30,6 +30,8 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/lib/eapol",
+    "//src/connectivity/wlan/lib/rsn:wlan-rsn",
     "//src/connectivity/wlan/lib/wlan_dev",
     "//src/connectivity/wlan/testing/wlan-devmgr/fidl:devmgr-rustc",
     "//src/connectivity/wlan/testing/wlantap-client",

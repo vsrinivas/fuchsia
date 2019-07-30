@@ -32,7 +32,7 @@ pub fn test_rate_selection() {
     loop_until_iface_is_found(&mut exec);
 
     let phy = helper.proxy();
-    connect(&mut exec, &wlan_service, &phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL);
+    connect(&mut exec, &wlan_service, &phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL, None);
 
     let (sender, mut receiver) = mpsc::channel(1);
     let eth_and_beacon_sender_fut = eth_and_beacon_sender(&mut receiver, &phy);
@@ -198,7 +198,7 @@ async fn eth_and_beacon_sender<'a>(
         // Send a beacon before that to stay connected.
         if (intervals_since_last_beacon * DATA_FRAME_INTERVAL_NANOS).nanos() >= 8765.millis() {
             intervals_since_last_beacon = 0;
-            send_beacon(&mut vec![], &CHANNEL, &BSS_MINSTL, SSID_MINSTREL, &phy).unwrap();
+            send_beacon(&mut vec![], &CHANNEL, &BSS_MINSTL, SSID_MINSTREL, false, &phy).unwrap();
         }
         intervals_since_last_beacon += 1;
 
