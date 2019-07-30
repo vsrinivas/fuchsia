@@ -67,9 +67,10 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
   const char* argv[] = {"fakebinary", "--remote-pid", "3141", "--fidl-ir-path", param.c_str()};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
+  DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
@@ -98,9 +99,10 @@ TEST_F(CommandLineOptionsTest, BadOptionsTest) {
                         "3141",       "--fidl-ir-path", "@all_files.txt"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
+  DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
@@ -127,21 +129,33 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
                         connect.c_str(),
                         "--remote-pid",
                         remote_pid.c_str(),
+                        "--syscalls",
+                        "zx_handle_*",
+                        "--syscalls",
+                        "zx_channel_*",
+                        "--exclude-syscalls",
+                        "zx_handle_close",
                         "--verbose",
                         "error",
                         "leftover",
                         "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
+  DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(2U, params.size()) << "Expected 0 params, got (at least) " << params[0];
   ASSERT_EQ(connect, *options.connect);
   ASSERT_EQ(remote_pid, options.remote_pid[0]);
   ASSERT_EQ(symbol_path, options.symbol_paths[0]);
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_paths[0]);
+  ASSERT_EQ(2U, decode_options.syscall_filters.size());
+  ASSERT_EQ("zx_handle_*", decode_options.syscall_filters[0]);
+  ASSERT_EQ("zx_channel_*", decode_options.syscall_filters[1]);
+  ASSERT_EQ(1U, decode_options.exclude_syscall_filters.size());
+  ASSERT_EQ("zx_handle_close", decode_options.exclude_syscall_filters[0]);
   ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
   ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));
   ASSERT_TRUE(std::find(params.begin(), params.end(), "leftover") != params.end());
@@ -155,9 +169,10 @@ TEST_F(CommandLineOptionsTest, CantHavePidAndFilter) {
                         remote_pid.c_str(), "leftover",      "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
+  DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
   ASSERT_TRUE(!status.ok());
 }
 
@@ -171,9 +186,10 @@ TEST_F(CommandLineOptionsTest, NoActionMeansFailure) {
       "--connect",  connect.c_str(),  "leftover",           "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
+  DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
   ASSERT_TRUE(!status.ok());
 }
 
@@ -199,9 +215,10 @@ TEST_F(CommandLineOptionsTest, QuietTrumpsVerbose) {
                         "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
+  DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
   ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
   ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));
 }

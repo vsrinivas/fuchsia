@@ -441,9 +441,10 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   void TriggerSyscallBreakpoint(int syscall_index, uint64_t process_koid, uint64_t thread_koid);
   void TriggerCallerBreakpoint(uint64_t process_koid, uint64_t thread_koid);
 
- private:
+ protected:
   DataForSyscallTest data_;
   InterceptionRemoteAPI* mock_remote_api_;  // Owned by the session.
+  DecodeOptions decode_options_;
   DisplayOptions display_options_;
   std::stringstream result_;
 };
@@ -605,7 +606,8 @@ class SyscallCheck : public SyscallUse {
 
 class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
  public:
-  SyscallDecoderDispatcherTest(ProcessController* controller) : controller_(controller) {}
+  SyscallDecoderDispatcherTest(const DecodeOptions& decode_options, ProcessController* controller)
+      : SyscallDecoderDispatcher(decode_options), controller_(controller) {}
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
                                                 zxdb::Thread* thread, uint64_t thread_id,
@@ -625,9 +627,11 @@ class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
 
 class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
  public:
-  SyscallDisplayDispatcherTest(LibraryLoader* loader, const DisplayOptions& display_options,
-                               std::ostream& os, ProcessController* controller)
-      : SyscallDisplayDispatcher(loader, display_options, os), controller_(controller) {}
+  SyscallDisplayDispatcherTest(LibraryLoader* loader, const DecodeOptions& decode_options,
+                               const DisplayOptions& display_options, std::ostream& os,
+                               ProcessController* controller)
+      : SyscallDisplayDispatcher(loader, decode_options, display_options, os),
+        controller_(controller) {}
 
   ProcessController* controller() const { return controller_; }
 
@@ -723,7 +727,7 @@ void InterceptionWorkflowTest::PerformCheckTest(int syscall_index,
   ProcessController controller(this, session(), loop());
 
   PerformTest(syscall_index, std::move(syscall1), std::move(syscall2), &controller,
-              std::make_unique<SyscallDecoderDispatcherTest>(&controller),
+              std::make_unique<SyscallDecoderDispatcherTest>(decode_options_, &controller),
               /*interleaved_test=*/false);
 }
 
@@ -733,8 +737,8 @@ void InterceptionWorkflowTest::PerformDisplayTest(int syscall_index,
   ProcessController controller(this, session(), loop());
 
   PerformTest(syscall_index, std::move(syscall), nullptr, &controller,
-              std::make_unique<SyscallDisplayDispatcherTest>(nullptr, display_options_, result_,
-                                                             &controller),
+              std::make_unique<SyscallDisplayDispatcherTest>(
+                  nullptr, decode_options_, display_options_, result_, &controller),
               /*interleaved_test=*/false);
   std::string both_results = result_.str();
   // The second output starts with "test_2718"
@@ -780,8 +784,8 @@ void InterceptionWorkflowTest::PerformInterleavedDisplayTest(
   ProcessController controller(this, session(), loop());
 
   PerformTest(syscall_index, std::move(syscall), nullptr, &controller,
-              std::make_unique<SyscallDisplayDispatcherTest>(nullptr, display_options_, result_,
-                                                             &controller),
+              std::make_unique<SyscallDisplayDispatcherTest>(
+                  nullptr, decode_options_, display_options_, result_, &controller),
               /*interleaved_test=*/true);
   ASSERT_EQ(expected, result_.str());
 }

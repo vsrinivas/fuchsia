@@ -23,6 +23,8 @@
 #include <src/lib/fxl/logging.h>
 
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "tools/fidlcat/lib/decode_options.h"
+#include "tools/fidlcat/lib/display_options.h"
 #include "tools/fidlcat/lib/message_decoder.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 #include "tools/fidlcat/lib/type_decoder.h"
@@ -580,8 +582,13 @@ class Syscall {
 // SyscallDecoder object which will handle the decoding of one syscall.
 class SyscallDecoderDispatcher {
  public:
-  SyscallDecoderDispatcher() { Populate(); }
+  explicit SyscallDecoderDispatcher(const DecodeOptions& decode_options)
+      : decode_options_(decode_options) {
+    Populate();
+  }
   virtual ~SyscallDecoderDispatcher() = default;
+
+  const DecodeOptions& decode_options() const { return decode_options_; }
 
   const std::vector<std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
 
@@ -616,6 +623,9 @@ class SyscallDecoderDispatcher {
     return result;
   }
 
+  // Decoding options.
+  const DecodeOptions& decode_options_;
+
   // The definition of all the syscalls we can decode.
   std::vector<std::unique_ptr<Syscall>> syscalls_;
 
@@ -625,9 +635,11 @@ class SyscallDecoderDispatcher {
 
 class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
  public:
-  SyscallDisplayDispatcher(LibraryLoader* loader, const DisplayOptions& display_options,
-                           std::ostream& os)
-      : message_decoder_dispatcher_(loader, display_options), os_(os) {}
+  SyscallDisplayDispatcher(LibraryLoader* loader, const DecodeOptions& decode_options,
+                           const DisplayOptions& display_options, std::ostream& os)
+      : SyscallDecoderDispatcher(decode_options),
+        message_decoder_dispatcher_(loader, display_options),
+        os_(os) {}
 
   MessageDecoderDispatcher& message_decoder_dispatcher() { return message_decoder_dispatcher_; }
 

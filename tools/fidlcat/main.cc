@@ -110,9 +110,11 @@ void EnqueueStartup(InterceptionWorkflow& workflow, const CommandLineOptions& op
 
 int ConsoleMain(int argc, const char* argv[]) {
   CommandLineOptions options;
+  DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  cmdline::Status status = ParseCommandLine(argc, argv, &options, &display_options, &params);
+  cmdline::Status status =
+      ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
   if (status.has_error()) {
     fprintf(stderr, "%s\n", status.error_message().c_str());
     return 1;
@@ -142,8 +144,9 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   InterceptionWorkflow workflow;
-  workflow.Initialize(options.symbol_paths, std::make_unique<SyscallDisplayDispatcher>(
-                                                &loader, display_options, std::cout));
+  workflow.Initialize(options.symbol_paths,
+                      std::make_unique<SyscallDisplayDispatcher>(&loader, decode_options,
+                                                                 display_options, std::cout));
 
   EnqueueStartup(workflow, options, params);
 
