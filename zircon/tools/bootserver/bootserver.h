@@ -6,7 +6,7 @@
 
 void initialize_status(const char* name, size_t size);
 void update_status(size_t bytes_so_far);
-int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name);
+int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name, bool push);
 int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name);
 
 #define DEFAULT_TFTP_BLOCK_SZ 1428

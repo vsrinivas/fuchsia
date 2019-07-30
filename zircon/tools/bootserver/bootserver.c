@@ -176,7 +176,7 @@ static int xfer(struct sockaddr_in6* addr, const char* local_name, const char* r
     file_info_printed = false;
     if (use_tftp) {
         bool first = true;
-        while ((result = tftp_xfer(addr, local_name, remote_name)) == -EAGAIN) {
+        while ((result = tftp_xfer(addr, local_name, remote_name, true)) == -EAGAIN) {
             if (first) {
                 fprintf(stderr, "Target busy, waiting.");
                 first = false;
@@ -188,6 +188,37 @@ static int xfer(struct sockaddr_in6* addr, const char* local_name, const char* r
         }
     } else {
         result = netboot_xfer(addr, local_name, remote_name);
+    }
+    gettimeofday(&end_time, NULL);
+    if (end_time.tv_usec < start_time.tv_usec) {
+        end_time.tv_sec -= 1;
+        end_time.tv_usec += 1000000;
+    }
+    fprintf(stderr, "\n");
+    return result;
+}
+
+// Similar to xfer, but reads from remote to local.
+static int xfer2(struct sockaddr_in6* addr, const char* local_name, const char* remote_name) {
+    int result;
+    is_redirected = !isatty(fileno(stdout));
+    gettimeofday(&start_time, NULL);
+    file_info_printed = false;
+    if (use_tftp) {
+        bool first = true;
+        while ((result = tftp_xfer(addr, local_name, remote_name, false)) == -EAGAIN) {
+            if (first) {
+                fprintf(stderr, "Target busy, waiting.");
+                first = false;
+            } else {
+                fprintf(stderr, ".");
+            }
+            sleep(1);
+            gettimeofday(&start_time, NULL);
+        }
+    } else {
+        log("Skipping read operation. Only supported using tftp.");
+        result = 0;
     }
     gettimeofday(&end_time, NULL);
     if (end_time.tv_usec < start_time.tv_usec) {
@@ -299,6 +330,32 @@ int send_reboot_command(struct sockaddr_in6* ra) {
     return -1;
 }
 
+static int validate_board_name(const char* board_name, const char* board_info_file) {
+    chmod(board_info_file, S_IRWXU);
+    int fd = open(board_info_file, O_RDONLY);
+    if (fd < 0) {
+      log("Unable to read the board info file [%s]", board_info_file);
+      return -1;
+    }
+
+    board_info_t board_info = {};
+    if (read(fd, &board_info, sizeof(board_info)) < (ssize_t)sizeof(board_info)) {
+      log("Unable to read the board info file [%s]", board_info_file);
+      goto err;
+    }
+    if (strncmp(board_info.board_name, board_name, sizeof(board_info.board_name)) != 0) {
+      log("Expected target to be [%s], but found target is [%s]\n",
+          board_name, board_info.board_name);
+      log("Confirm that your `fx set` matches the target's board.");
+      goto err;
+    }
+
+    return 0;
+err:
+    close(fd);
+    return -1;
+}
+
 int main(int argc, char** argv) {
     bool fail_fast = false;
     struct in6_addr allowed_addr;
@@ -309,9 +366,9 @@ int main(int argc, char** argv) {
     char* nodename = NULL;
     int s = 1;
     size_t num_fvms = 0;
-    char board_name_template[] = "/tmp/board_name.XXXXXX";
+    char board_info_template[] = "/tmp/board_info.XXXXXX";
     const char* board_name = NULL;
-    const char* board_name_file = NULL;
+    const char* board_info_file = NULL;
     const char* bootloader_image = NULL;
     const char* zircona_image = NULL;
     const char* zirconb_image = NULL;
@@ -545,10 +602,6 @@ int main(int argc, char** argv) {
 
     if (board_name) {
         log("Board name set to [%s]", board_name);
-        board_name_file = mktemp(board_name_template);
-        int fd = open(board_name_file, O_WRONLY | O_CREAT);
-        write(fd, board_name, strlen(board_name));
-        close(fd);
     }
 
     memset(&addr, 0, sizeof(addr));
@@ -654,11 +707,11 @@ int main(int argc, char** argv) {
         status = 0;
         // This needs to be first as it validates that the other images are
         // correct.
-        if (status == 0 && board_name_file) {
-            status = xfer(&ra, board_name_file, NB_BOARD_NAME_FILENAME);
-            if (status != 0) {
-                log("Target seemed to have rejected the board name [%s]", board_name);
-                log("Confirm if your `fx set` matches the target's board.");
+        if (status == 0 && board_name) {
+            board_info_file = mktemp(board_info_template);
+            status = xfer2(&ra, board_info_file, NB_BOARD_INFO_FILENAME);
+            if (status == 0) {
+              status = validate_board_name(board_name, board_info_file);
             }
         }
         if (status == 0 && cmdline[0]) {
@@ -705,14 +758,17 @@ int main(int argc, char** argv) {
             } else {
                 send_reboot_command(&ra);
             }
+            if (once) {
+                close(s);
+                return 0;
+            }
+        } else if (fail_fast) {
+            close(s);
+            return -1;
         } else {
             log("Transfer ends incompletely.");
 			log("Wait for %u secs before retrying...\n\n", RETRY_DELAY_SEC);
 			sleep(RETRY_DELAY_SEC);
-        }
-        if ((status == 0 && once) || (status != 0 && fail_fast)) {
-            close(s);
-            return status == 0 ? 0 : -1;
         }
         drain(s);
     }

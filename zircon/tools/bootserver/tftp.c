@@ -64,6 +64,28 @@ err:
     return TFTP_ERR_IO;
 }
 
+tftp_status file_open_write(const char* filename, size_t len, void* cookie) {
+    xferdata* xd = cookie;
+    xd->fd = open(filename, O_WRONLY| O_CREAT);
+    if (xd->fd < 0) {
+        fprintf(stderr, "%s: error: Could not open file %s\n", appname, filename);
+        return TFTP_ERR_NOT_FOUND;
+    }
+    if (ftruncate(xd->fd, len) < 0) {
+        fprintf(stderr, "%s: error: Could not ftruncate %s\n", appname, filename);
+        goto err;
+    }
+    xd->datalen = len;
+    initialize_status(filename, xd->datalen);
+    return TFTP_NO_ERROR;
+err:
+    if (xd->fd >= 0) {
+        close(xd->fd);
+        xd->fd = -1;
+    }
+    return TFTP_ERR_IO;
+}
+
 tftp_status file_read(void* data, size_t* length, off_t offset, void* cookie) {
     xferdata* xd = cookie;
     if (xd->fd < 0) {
@@ -79,6 +101,18 @@ tftp_status file_read(void* data, size_t* length, off_t offset, void* cookie) {
         }
         *length = bytes_read;
     }
+
+    update_status(offset + *length);
+    return TFTP_NO_ERROR;
+}
+
+tftp_status file_write(const void* data, size_t* length, off_t offset, void* cookie) {
+    xferdata* xd = cookie;
+    ssize_t bytes_written = pwrite(xd->fd, data, *length, offset);
+    if (bytes_written < 0) {
+        return TFTP_ERR_IO;
+    }
+    *length = bytes_written;
 
     update_status(offset + *length);
     return TFTP_NO_ERROR;
@@ -205,7 +239,7 @@ err:
 #define INITIAL_CONNECTION_TIMEOUT 250
 #define TFTP_BUF_SZ 2048
 
-int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
+int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name, bool push) {
     int result = -1;
     xferdata xd;
     file_init(&xd);
@@ -240,7 +274,8 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
         goto done;
     }
 
-    tftp_file_interface file_ifc = {file_open_read, NULL, file_read, NULL, file_close};
+    tftp_file_interface file_ifc = {file_open_read, file_open_write, file_read, file_write,
+                                    file_close};
     tftp_session_set_file_interface(session, &file_ifc);
 
     if (transport_init(&ts, INITIAL_CONNECTION_TIMEOUT, addr) < 0) {
@@ -266,7 +301,12 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     opts.window_size = tftp_window_size;
 
     tftp_status status;
-    if ((status = tftp_push_file(session, &ts, &xd, fn, name, &opts)) < 0) {
+    if (push) {
+      status = tftp_push_file(session, &ts, &xd, fn, name, &opts);
+    } else {
+      status = tftp_pull_file(session, &ts, &xd, fn, name, &opts);
+    }
+    if (status < 0) {
         if (status == TFTP_ERR_SHOULD_WAIT) {
             result = -EAGAIN;
         } else {
