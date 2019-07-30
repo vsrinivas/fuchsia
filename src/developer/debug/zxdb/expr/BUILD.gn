@@ -61,6 +61,8 @@ static_library("expr") {
     "resolve_variant.h",
     "template_type_extractor.cc",
     "template_type_extractor.h",
+    "type_glob.cc",
+    "type_glob.h",
   ]
 
   public_deps = [
@@ -112,6 +114,7 @@ source_set("tests") {
     "resolve_ptr_ref_unittest.cc",
     "resolve_variant_unittest.cc",
     "template_type_extractor_unittest.cc",
+    "type_glob_unittest.cc",
   ]
 
   deps = [
