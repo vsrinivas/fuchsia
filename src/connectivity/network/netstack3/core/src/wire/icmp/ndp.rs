@@ -170,7 +170,7 @@ impl_icmp_message!(Ipv6, Redirect, Redirect, IcmpUnusedCode, Options<B>);
 
 pub(crate) mod options {
     use byteorder::{ByteOrder, NetworkEndian};
-    use net_types::ip::Ipv6Addr;
+    use net_types::ip::{AddrSubnet, Ipv6Addr};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use crate::wire::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
@@ -183,6 +183,29 @@ pub(crate) mod options {
     /// [RFC 4861 section 4.6.3]: https://tools.ietf.org/html/rfc4861#section-4.6.3
     const MTU_OPTION_LEN: usize = 6;
 
+    /// Number of bytes in a Prefix Information option, excluding the kind
+    /// and length bytes.
+    ///
+    /// See [RFC 4861 section 4.6.2] for more information.
+    ///
+    /// [RFC 4861 section 4.6.2]: https://tools.ietf.org/html/rfc4861#section-4.6.2
+    const PREFIX_INFORMATION_OPTION_LEN: usize = 30;
+
+    /// The on-link flag within the 4th byte in the prefix information buffer.
+    ///
+    /// See [RFC 4861 section 4.6.2] for more information.
+    ///
+    /// [RFC 4861 section 4.6.2]: https://tools.ietf.org/html/rfc4861#section-4.6.2
+    const ON_LINK_FLAG: u8 = 0x80;
+
+    /// The autonomous address configuration flag within the 4th byte in the
+    /// prefix information buffer
+    ///
+    /// See [RFC 4861 section 4.6.2] for more information.
+    ///
+    /// [RFC 4861 section 4.6.2]: https://tools.ietf.org/html/rfc4861#section-4.6.2
+    const AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG: u8 = 0x40;
+
     create_net_enum! {
         NdpOptionType,
         SourceLinkLayerAddress: SOURCE_LINK_LAYER_ADDRESS = 1,
@@ -192,7 +215,7 @@ pub(crate) mod options {
         Mtu: MTU = 5,
     }
 
-    #[derive(Debug, FromBytes, AsBytes, Unaligned)]
+    #[derive(Debug, FromBytes, AsBytes, Unaligned, PartialEq, Eq, Clone)]
     #[repr(C)]
     pub(crate) struct PrefixInformation {
         prefix_length: u8,
@@ -204,16 +227,84 @@ pub(crate) mod options {
     }
 
     impl PrefixInformation {
+        /// Create a new `PrefixInformation`.
+        pub(crate) fn new(
+            prefix_length: u8,
+            on_link_flag: bool,
+            autonomous_address_configuration_flag: bool,
+            valid_lifetime: u32,
+            preferred_lifetime: u32,
+            prefix: Ipv6Addr,
+        ) -> Self {
+            let mut flags_la = 0;
+
+            if on_link_flag {
+                flags_la |= ON_LINK_FLAG;
+            }
+
+            if autonomous_address_configuration_flag {
+                flags_la |= AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG;
+            }
+
+            Self {
+                prefix_length,
+                flags_la,
+                valid_lifetime: U32::new(valid_lifetime),
+                preferred_lifetime: U32::new(preferred_lifetime),
+                _reserved: [0; 4],
+                prefix,
+            }
+        }
+
+        /// The number of leading bits in the prefix that are valid.
+        pub(crate) fn prefix_length(&self) -> u8 {
+            self.prefix_length
+        }
+
+        /// Is this prefix on the link?
+        ///
+        /// Returns `true` if the prefix is on-link. `false` means that
+        /// no statement is made about on or off-link properties of the
+        /// prefix; nodes MUST NOT conclude that an address derived
+        /// from this prefix is off-link if `false`.
+        pub(crate) fn on_link_flag(&self) -> bool {
+            ((self.flags_la & ON_LINK_FLAG) != 0)
+        }
+
+        /// Can this prefix be used for stateless address configuration?
+        pub(crate) fn autonomous_address_configuration_flag(&self) -> bool {
+            ((self.flags_la & AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG) != 0)
+        }
+
+        /// Get the length of time in seconds (relative to the time the
+        /// packet is sent) that the prefix is valid for the purpose of
+        /// on-link determination.
+        ///
+        /// A value of all one bits (`std::u32::MAX`) represents infinity.
         pub(crate) fn valid_lifetime(&self) -> u32 {
             self.valid_lifetime.get()
         }
 
+        /// Get the length of time in seconds (relative to the time the
+        /// packet is sent) that addresses generated from the prefix via
+        /// stateless address autoconfiguration remains preferred.
+        ///
+        /// A value of all one bits (`std::u32::MAX`) represents infinity.
         pub(crate) fn preferred_lifetime(&self) -> u32 {
             self.preferred_lifetime.get()
         }
 
+        /// An IPv6 address or a prefix of an IPv6 address.
+        ///
+        /// The number of valid leading bits in this prefix is available
+        /// from [`PrefixInformation::prefix_length`];
         pub(crate) fn prefix(&self) -> &Ipv6Addr {
             &self.prefix
+        }
+
+        /// Get an [`AddrSubnet`] from this prefix.
+        pub(crate) fn addr_subnet(&self) -> Option<AddrSubnet<Ipv6Addr>> {
+            AddrSubnet::new(self.prefix, self.prefix_length)
         }
     }
 
@@ -288,7 +379,7 @@ pub(crate) mod options {
                 | NdpOption::TargetLinkLayerAddress(data)
                 | NdpOption::RedirectedHeader { original_packet: data } => data.len(),
                 NdpOption::MTU(mtu) => MTU_OPTION_LEN,
-                NdpOption::PrefixInformation(pfx_info) => pfx_info.bytes().len(),
+                NdpOption::PrefixInformation(pfx_info) => PREFIX_INFORMATION_OPTION_LEN,
             }
         }
 
@@ -344,6 +435,42 @@ mod tests {
             assert_eq!(*mtu, expected_mtu);
         } else {
             unreachable!("parsed option should have been an mtu option");
+        }
+    }
+
+    #[test]
+    fn parse_serialize_prefix_option() {
+        let mut bytes = [0; 30];
+        let expected_prefix_info = options::PrefixInformation::new(
+            120,
+            true,
+            false,
+            100,
+            100,
+            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
+        );
+        *LayoutVerified::<_, options::PrefixInformation>::new(&mut bytes[..]).unwrap() =
+            expected_prefix_info.clone();
+        let options = &[options::NdpOption::PrefixInformation(
+            LayoutVerified::<_, options::PrefixInformation>::new(&bytes[..]).unwrap(),
+        )];
+        let serialized = OptionsSerializer::<_>::new(options.iter())
+            .into_serializer()
+            .serialize_vec_outer()
+            .unwrap();
+        let mut expected = [0; 32];
+        expected[0] = 3;
+        expected[1] = 4;
+        (&mut expected[2..]).copy_from_slice(&bytes[..]);
+        assert_eq!(serialized.as_ref(), expected);
+
+        let parsed = Options::parse(&expected[..]).unwrap();
+        let parsed = parsed.iter().collect::<Vec<options::NdpOption>>();
+        assert_eq!(parsed.len(), 1);
+        if let options::NdpOption::PrefixInformation(prefix_info) = &parsed[0] {
+            assert_eq!(expected_prefix_info, **prefix_info);
+        } else {
+            unreachable!("parsed option should have been a prefix information option");
         }
     }
 

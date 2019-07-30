@@ -24,8 +24,9 @@ use std::num::NonZeroU8;
 use std::time::Duration;
 
 use log::{debug, error, trace};
-use net_types::ip::{IpAddress, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddr, MulticastAddress};
+
+use net_types::ip::{AddrSubnet, IpAddress, Ipv6, Ipv6Addr};
+use net_types::{LinkLocalAddr, LinkLocalAddress, MulticastAddress};
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
@@ -319,6 +320,9 @@ pub(crate) struct NdpState<D: NdpDevice> {
     /// List of default routers, indexed by their link-local address.
     default_routers: HashSet<LinkLocalAddr<Ipv6Addr>>,
 
+    /// List of on-link prefixes.
+    on_link_prefixes: HashSet<AddrSubnet<Ipv6Addr>>,
+
     /// Number of Neighbor Solicitation messages left to send before we can
     /// assume that an IPv6 address is not currently in use.
     dad_transmits_remaining: HashMap<Ipv6Addr, u8>,
@@ -375,6 +379,7 @@ impl<D: NdpDevice> NdpState<D> {
             neighbors: NeighborTable::default(),
             default_routers: HashSet::new(),
             dad_transmits_remaining: HashMap::new(),
+            on_link_prefixes: HashSet::new(),
 
             base_reachable_time: REACHABLE_TIME_DEFAULT,
             reachable_time: REACHABLE_TIME_DEFAULT,
@@ -424,6 +429,48 @@ impl<D: NdpDevice> NdpState<D> {
         // again rather than continue sending traffic to the (deleted) router.
 
         self.remove_default_router(&ip);
+    }
+
+    /// Do we already know about this prefix?
+    fn has_prefix(&self, addr_sub: &AddrSubnet<Ipv6Addr>) -> bool {
+        self.on_link_prefixes.contains(addr_sub)
+    }
+
+    /// Adds a new prefix to our list of on-link prefixes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the prefix already exists in our list of on-link
+    /// prefixes.
+    fn add_prefix(&mut self, addr_sub: AddrSubnet<Ipv6Addr>) {
+        assert!(self.on_link_prefixes.insert(addr_sub));
+    }
+
+    /// Removes a prefix from our list of on-link prefixes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the prefix doesn't exist in our list of on-link
+    /// prefixes.
+    fn remove_prefix(&mut self, addr_sub: &AddrSubnet<Ipv6Addr>) {
+        assert!(self.on_link_prefixes.remove(addr_sub));
+    }
+
+    /// Handle the invalidation of a prefix.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the prefix doesn't exist in our list of on-link
+    /// prefixes.
+    fn invalidate_prefix(&mut self, addr_sub: AddrSubnet<Ipv6Addr>) {
+        // As per RFC 4861 section 6.3.5:
+        // Whenever the invalidation timer expires for a Prefix List entry, that
+        // entry is discarded. No existing Destination Cache entries need be
+        // updated, however. Should a reachability problem arise with an
+        // existing Neighbor Cache entry, Neighbor Unreachability Detection will
+        // perform any needed recovery.
+
+        self.remove_prefix(&addr_sub);
     }
 
     //
@@ -505,6 +552,8 @@ pub(crate) enum InnerNdpTimerId {
     /// Timer to invalidate a router.
     /// `ip` is the identifying IP of the router.
     RouterInvalidation { ip: LinkLocalAddr<Ipv6Addr> },
+    /// Timer to invalidate a prefix.
+    PrefixInvalidation { addr_subnet: AddrSubnet<Ipv6Addr> },
     // TODO: The RFC suggests that we SHOULD make a random delay to
     // join the solicitation group. When we support MLD, we probably
     // want one for that.
@@ -550,6 +599,17 @@ impl NdpTimerId {
         NdpTimerId {
             device_id: ND::get_device_id(device_id),
             inner: InnerNdpTimerId::RouterInvalidation { ip },
+        }
+        .into()
+    }
+
+    pub(crate) fn new_prefix_invalidation_timer_id<ND: NdpDevice>(
+        device_id: usize,
+        addr_subnet: AddrSubnet<Ipv6Addr>,
+    ) -> TimerId {
+        NdpTimerId {
+            device_id: ND::get_device_id(device_id),
+            inner: InnerNdpTimerId::PrefixInvalidation { addr_subnet },
         }
         .into()
     }
@@ -651,6 +711,16 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
             // would have been set. Givem this, we know that `invalidate_default_router` will not
             // panic.
             ND::get_ndp_state(ctx.state_mut(), device_id).invalidate_default_router(ip)
+        }
+        InnerNdpTimerId::PrefixInvalidation { addr_subnet } => {
+            // Invalidate the prefix.
+            //
+            // The call to `invalidate_prefix` may panic if `addr_subnet` is not in the
+            // list of on-link prefixes. However, we will only reach here if we received
+            // an NDP Router Advertisement with the prefix option with the on-link flag
+            // set. Given this we know that `addr_subnet` must exist if this timer was
+            // fired so `invalidate_prefix` will not panic.
+            ND::get_ndp_state(ctx.state_mut(), device_id).invalidate_prefix(addr_subnet);
         }
     }
 }
@@ -1175,11 +1245,78 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                             trace!("receive_ndp_packet_inner: NDP RA: not setting link MTU (from {:?}) to {:?} as it is less than IPV6_MIN_MTU", src_ip, mtu);
                         }
                     }
-                    // TODO(ghanan): Actually handle the prefix option.
-                    NdpOption::PrefixInformation(_) => log_unimplemented!(
-                        (),
-                        "receive_ndp_packet_inner: NDP RA's prefix option is implemented"
-                    ),
+                    NdpOption::PrefixInformation(prefix_info) => {
+                        let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
+
+                        trace!("receive_ndp_packet_inner: prefix information option with prefix = {:?}", prefix_info);
+
+                        let addr_sub = match prefix_info.addr_subnet() {
+                            None => {
+                                trace!("receive_ndp_packet_inner: malformed prefix information, so ignoring");
+                                continue;
+                            }
+                            Some(a) => a,
+                        };
+
+                        if !prefix_info.on_link_flag() {
+                            // TODO(ghanan): Do something?
+                            return;
+                        }
+
+                        if prefix_info.prefix().is_linklocal() {
+                            // If the on-link flag is set and the prefix is the link-local prefix,
+                            // ignore the option, as per RFC 4861 section 6.3.4.
+                            trace!("receive_ndp_packet_inner: prefix is a link local, so ignoring");
+                            continue;
+                        }
+
+                        // Timer ID for this prefix's invalidation.
+                        let timer_id =
+                            NdpTimerId::new_prefix_invalidation_timer_id::<ND>(device_id, addr_sub);
+
+                        if prefix_info.valid_lifetime() == 0 {
+                            if ndp_state.has_prefix(&addr_sub) {
+                                trace!("receive_ndp_packet_inner: prefix is known and has valid lifetime = 0, so invaliding");
+
+                                // If the on-link flag is set, the valid lifetime is 0 and the
+                                // prefix is already present in our prefix list, timeout the prefix
+                                // immediately, as per RFC 4861 section 6.3.4.
+
+                                // Cancel the prefix invalidation timeout if it exists.
+                                ctx.dispatcher_mut().cancel_timeout(timer_id);
+
+                                let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
+                                ndp_state.invalidate_prefix(addr_sub);
+                            } else {
+                                // If the on-link flag is set, the valid lifetime is 0 and the
+                                // prefix is not present in our prefix list, ignore the option, as
+                                // per RFC 4861 section 6.3.4.
+                                trace!("receive_ndp_packet_inner: prefix is unknown and is has valid lifetime = 0, so ignoring");
+                            }
+
+                            continue;
+                        }
+
+                        if !ndp_state.has_prefix(&addr_sub) {
+                            // `add_prefix` may panic if the prefix already exists in
+                            // our prefix list, but we will only reach here if it doesn't
+                            // so we know `add_prefix` will not panic.
+                            ndp_state.add_prefix(addr_sub);
+                        }
+
+                        // Reset invalidation timer.
+                        if prefix_info.valid_lifetime() == std::u32::MAX {
+                            // A valid lifetime of all 1 bits (== `std::u32::MAX`) represents
+                            // infinity, as per RFC 4861 section 4.6.2. Given this, we do not need a
+                            // timer to mark the prefix as invalid.
+                            ctx.dispatcher_mut().cancel_timeout(timer_id);
+                        } else {
+                            ctx.dispatcher_mut().schedule_timeout(
+                                Duration::from_secs(prefix_info.valid_lifetime().into()),
+                                timer_id,
+                            );
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -1346,6 +1483,7 @@ mod tests {
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
     use packet::{Buf, Buffer, ParseBuffer};
+    use zerocopy::LayoutVerified;
 
     use crate::device::{
         ethernet::EthernetNdpDevice, get_ip_addr_subnet, get_mtu, is_in_ip_multicast,
@@ -1356,7 +1494,9 @@ mod tests {
         self, get_counter_val, get_dummy_config, set_logger_for_test, trigger_next_timer,
         DummyEventDispatcher, DummyEventDispatcherBuilder, DummyNetwork,
     };
-    use crate::wire::icmp::ndp::{OptionsSerializer, RouterAdvertisement, RouterSolicitation};
+    use crate::wire::icmp::ndp::{
+        options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
+    };
     use crate::wire::icmp::{IcmpEchoRequest, IcmpParseArgs, Icmpv6Packet};
     use crate::StackStateBuilder;
 
@@ -2170,5 +2310,137 @@ mod tests {
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(ndp_state.has_default_router(&src_ip));
         assert_eq!(get_mtu(ctx.state(), device), crate::ip::path_mtu::IPV6_MIN_MTU);
+    }
+
+    #[test]
+    fn test_receiving_router_advertisement_prefix_option() {
+        fn packet_buf(
+            src_ip: Ipv6Addr,
+            dst_ip: Ipv6Addr,
+            prefix: Ipv6Addr,
+            prefix_length: u8,
+            on_link_flag: bool,
+            autonomous_address_configuration_flag: bool,
+            valid_lifetime: u32,
+            preferred_lifetime: u32,
+        ) -> Buf<Vec<u8>> {
+            let mut bytes = [0; 30];
+            *LayoutVerified::<_, PrefixInformation>::new(&mut bytes[..]).unwrap() =
+                PrefixInformation::new(
+                    prefix_length,
+                    on_link_flag,
+                    autonomous_address_configuration_flag,
+                    valid_lifetime,
+                    preferred_lifetime,
+                    prefix,
+                );
+            let options = &[NdpOption::PrefixInformation(
+                LayoutVerified::<_, PrefixInformation>::new(&bytes[..]).unwrap(),
+            )];
+            OptionsSerializer::new(options.iter())
+                .into_serializer()
+                .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                    src_ip,
+                    dst_ip,
+                    IcmpUnusedCode,
+                    RouterAdvertisement::new(1, 2, 0, 4, 5),
+                ))
+                .serialize_vec_outer()
+                .unwrap()
+                .unwrap_b()
+        }
+
+        let config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = DeviceId::new_ethernet(0);
+        let device_id = device.id();
+        let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
+        let src_ip = src_mac.to_ipv6_link_local().get();
+        let prefix = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]);
+        let prefix_length = 120;
+        let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
+
+        //
+        // Receive a new RA with new prefix.
+        //
+
+        let mut icmpv6_packet_buf =
+            packet_buf(src_ip, config.local_ip, prefix, prefix_length, true, false, 100, 0);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, Some(device), src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        // Prefix should be in our list now.
+        assert!(ndp_state.has_prefix(&addr_subnet));
+        // Invalidation timeout should be set.
+        assert_eq!(ctx.dispatcher().timer_events().count(), 1);
+
+        //
+        // Receive a RA with same prefix but valid_lifetime = 0;
+        //
+
+        let mut icmpv6_packet_buf =
+            packet_buf(src_ip, config.local_ip, prefix, prefix_length, true, false, 0, 0);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, Some(device), src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        // Should remove the prefix from our list now.
+        assert!(!ndp_state.has_prefix(&addr_subnet));
+        // Invalidation timeout should be unset.
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        //
+        // Receive a new RA with new prefix (same as before but new since it isn't in our list
+        // right now).
+        //
+
+        let mut icmpv6_packet_buf =
+            packet_buf(src_ip, config.local_ip, prefix, prefix_length, true, false, 100, 0);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, Some(device), src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        // Prefix should be in our list now.
+        assert!(ndp_state.has_prefix(&addr_subnet));
+        // Invalidation timeout should be set.
+        assert_eq!(ctx.dispatcher().timer_events().count(), 1);
+
+        //
+        // Receive the exact same RA as before.
+        //
+
+        let mut icmpv6_packet_buf =
+            packet_buf(src_ip, config.local_ip, prefix, prefix_length, true, false, 100, 0);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, Some(device), src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 4);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        // Prefix should be in our list still.
+        assert!(ndp_state.has_prefix(&addr_subnet));
+        // Invalidation timeout should still be set.
+        assert_eq!(ctx.dispatcher().timer_events().count(), 1);
+
+        //
+        // Timeout the prefix.
+        //
+
+        assert!(trigger_next_timer(&mut ctx));
+
+        // Prefix should no longer be in our list.
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(!ndp_state.has_prefix(&addr_subnet));
+
+        // No more timers.
+        assert!(!trigger_next_timer(&mut ctx));
     }
 }
