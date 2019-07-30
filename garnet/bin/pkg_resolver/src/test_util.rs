@@ -76,7 +76,7 @@ impl MockAmber {
     fn spawn(self: Arc<Self>) -> AmberProxy {
         endpoints::spawn_local_stream_handler(move |req| {
             let a = self.clone();
-            async move { await!(a.process_amber_request(req)) }
+            async move { a.process_amber_request(req).await }
         })
         .expect("failed to spawn handler")
     }
@@ -103,7 +103,7 @@ impl MockAmber {
         fasync::spawn(async move {
             let mut stream = repo.into_stream().unwrap();
 
-            while let Some(req) = await!(stream.try_next()).unwrap() {
+            while let Some(req) = stream.try_next().await.unwrap() {
                 Self::process_repo_request(&opened_repo, req).expect("amber failed");
             }
         });

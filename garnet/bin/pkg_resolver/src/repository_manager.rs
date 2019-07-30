@@ -183,7 +183,7 @@ impl<A: AmberConnect> RepositoryManager<A> {
         // We'll actually do the connection in a separate async context. It will log any errors it
         // finds.
         fasync::spawn(async move {
-            let status = match await!(amber.open_repository(config.into(), repo_server_end)) {
+            let status = match amber.open_repository(config.into(), repo_server_end).await {
                 Ok(status) => status,
                 Err(err) => {
                     fx_log_err!("failed to open repository: {}", err);
@@ -226,7 +226,7 @@ async fn get_package(
         },
     )?;
 
-    match await!(result.take_event_stream().into_future()) {
+    match result.take_event_stream().into_future().await {
         (Some(Ok(FetchResultEvent::OnSuccess { merkle })), _) => match merkle.parse() {
             Ok(merkle) => Ok(merkle),
             Err(err) => {

@@ -32,7 +32,7 @@ impl RewriteService {
     }
 
     pub async fn handle_client(&mut self, mut stream: EngineRequestStream) -> Result<(), Error> {
-        while let Some(request) = await!(stream.try_next())? {
+        while let Some(request) = stream.try_next().await? {
             match request {
                 EngineRequest::List { iterator, control_handle: _control_handle } => {
                     let iterator = iterator.into_stream()?;
@@ -91,7 +91,7 @@ impl RewriteService {
 
         fasync::spawn(
             async move {
-                while let Some(request) = await!(stream.try_next())? {
+                while let Some(request) = stream.try_next().await? {
                     match request {
                         EditTransactionRequest::ListDynamic {
                             iterator,
@@ -138,7 +138,7 @@ impl RewriteService {
         fasync::spawn(
             async move {
                 let mut iter = rules.iter_mut();
-                while let Some(request) = await!(stream.try_next())? {
+                while let Some(request) = stream.try_next().await? {
                     let RuleIteratorRequest::Next { responder } = request;
 
                     responder.send(&mut iter.by_ref().take(LIST_CHUNK_SIZE))?;
@@ -180,7 +180,7 @@ mod tests {
     /// successfully returns the given [`fuchsia_zircon::Status`].
     macro_rules! assert_yields_status {
         ($expr:expr, $status:expr) => {
-            assert_eq!(Status::from_raw(await!($expr).unwrap()), $status);
+            assert_eq!(Status::from_raw($expr.await.unwrap()), $status);
         };
     }
 
@@ -192,13 +192,13 @@ mod tests {
     {
         let mut res = Vec::new();
         loop {
-            let more = await!(next()).unwrap();
+            let more = next().await.unwrap();
             if more.is_empty() {
                 break;
             }
             res.extend(more.into_iter().map(|item| item.try_into().unwrap()));
         }
-        assert!(await!(next()).unwrap().is_empty());
+        assert!(next().await.unwrap().is_empty());
         res
     }
 
@@ -245,7 +245,7 @@ mod tests {
 
         let mut expected = dynamic_rules;
         expected.extend(static_rules);
-        assert_eq!(await!(list_rules(state.clone())), expected);
+        assert_eq!(list_rules(state.clone()).await, expected);
     }
 
     #[fasync::run_until_stalled(test)]
@@ -265,7 +265,7 @@ mod tests {
                 .build(),
         ));
 
-        assert_eq!(await!(list_static_rules(state.clone())), static_rules);
+        assert_eq!(list_static_rules(state.clone()).await, static_rules);
     }
 
     #[fasync::run_until_stalled(test)]
@@ -305,20 +305,20 @@ mod tests {
         service.serve_edit_transaction(request_stream);
 
         // The transaction should list all dynamic rules.
-        assert_eq!(await!(transaction_list_dynamic_rules(&client)), dynamic_rules.clone());
+        assert_eq!(transaction_list_dynamic_rules(&client).await, dynamic_rules.clone());
 
         // Start a list call, but don't drain it yet.
         let pending_list = transaction_list_dynamic_rules(&client);
 
         // Remove all dynamic rules and ensure the transaction lists no rules.
         client.reset_all().unwrap();
-        assert_eq!(await!(transaction_list_dynamic_rules(&client)), vec![]);
+        assert_eq!(transaction_list_dynamic_rules(&client).await, vec![]);
 
         assert_yields_status!(client.commit(), Status::OK);
 
         // Ensure the list call from earlier lists the dynamic rules available at the time the
         // iterator was created.
-        assert_eq!(await!(pending_list), dynamic_rules);
+        assert_eq!(pending_list.await, dynamic_rules);
     }
 
     #[fasync::run_until_stalled(test)]
@@ -375,7 +375,7 @@ mod tests {
             Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
         let mut service = RewriteService::new(state.clone());
 
-        assert_eq!(await!(list_rules(state.clone())), vec![]);
+        assert_eq!(list_rules(state.clone()).await, vec![]);
 
         let edit_client = {
             let (client, request_stream) =
@@ -388,7 +388,7 @@ mod tests {
 
         assert_yields_status!(edit_client.add(&mut rule.clone().into()), Status::OK);
 
-        assert_eq!(await!(list_rules(state.clone())), vec![]);
+        assert_eq!(list_rules(state.clone()).await, vec![]);
 
         let long_list_call = {
             let (client, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
@@ -398,9 +398,9 @@ mod tests {
 
         assert_yields_status!(edit_client.commit(), Status::OK);
 
-        assert_eq!(await!(long_list_call.next()).unwrap(), vec![]);
+        assert_eq!(long_list_call.next().await.unwrap(), vec![]);
 
-        assert_eq!(await!(list_rules(state.clone())), vec![rule]);
+        assert_eq!(list_rules(state.clone()).await, vec![rule]);
     }
 
     #[fasync::run_until_stalled(test)]

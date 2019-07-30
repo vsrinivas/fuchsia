@@ -98,7 +98,7 @@ mod tests {
             let current_gen = gen.get();
             gen.set(current_gen + 1);
             fasync::spawn_local(async move {
-                while let Some(req) = await!(stream.try_next()).unwrap_or(None) {
+                while let Some(req) = stream.try_next().await.unwrap_or(None) {
                     if let ControlRequest::DoTest { input, responder } = req {
                         if input == 1 {
                             responder
@@ -115,13 +115,13 @@ mod tests {
         fasync::spawn_local(fs.collect());
 
         let proxy = c.connect().expect("can connect");
-        assert_eq!(await!(proxy.do_test(1)).expect("ping"), "gen 1",);
+        assert_eq!(proxy.do_test(1).await.expect("ping"), "gen 1",);
 
         let proxy = c.connect().expect("can connect");
-        assert_eq!(await!(proxy.do_test(1)).expect("ping"), "gen 1",);
+        assert_eq!(proxy.do_test(1).await.expect("ping"), "gen 1",);
 
-        await!(proxy.do_test(2)).expect_err("oops");
+        proxy.do_test(2).await.expect_err("oops");
         let proxy = c.connect().expect("can connect");
-        assert_eq!(await!(proxy.do_test(1)).expect("ping"), "gen 2",);
+        assert_eq!(proxy.do_test(1).await.expect("ping"), "gen 2",);
     }
 }

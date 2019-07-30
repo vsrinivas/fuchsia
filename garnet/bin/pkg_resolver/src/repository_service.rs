@@ -34,7 +34,7 @@ impl<A: AmberConnect> RepositoryService<A> {
         &mut self,
         mut stream: RepositoryManagerRequestStream,
     ) -> Result<(), failure::Error> {
-        while let Some(event) = await!(stream.try_next())? {
+        while let Some(event) = stream.try_next().await? {
             match event {
                 RepositoryManagerRequest::Add { repo, responder } => {
                     let status = self.serve_insert(repo);
@@ -121,7 +121,7 @@ impl<A: AmberConnect> RepositoryService<A> {
                 let mut iter = results.into_iter();
 
                 while let Some(RepositoryIteratorRequest::Next { responder }) =
-                    await!(stream.try_next())?
+                    stream.try_next().await?
                 {
                     responder.send(&mut iter.by_ref().take(LIST_CHUNK_SIZE))?;
                 }
@@ -155,7 +155,7 @@ mod tests {
 
         let mut results: Vec<RepositoryConfig> = Vec::new();
         loop {
-            let chunk = await!(list_iterator.next()).unwrap();
+            let chunk = list_iterator.next().await.unwrap();
             if chunk.len() == 0 {
                 break;
             }
@@ -176,7 +176,7 @@ mod tests {
             .build();
         let service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
-        let results = await!(list(&service));
+        let results = list(&service).await;
         assert_eq!(results, vec![]);
     }
 
@@ -200,7 +200,7 @@ mod tests {
         let service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
         // Fetch the list of results and make sure the results are what we expected.
-        let results = await!(list(&service));
+        let results = list(&service).await;
         assert_eq!(results, configs);
     }
 
@@ -230,7 +230,7 @@ mod tests {
         }
 
         // Fetch the list of results and make sure the results are what we expected.
-        let results = await!(list(&service));
+        let results = list(&service).await;
         assert_eq!(results, configs);
 
         // Remove all the configs and make sure nothing is left.
@@ -239,7 +239,7 @@ mod tests {
         }
 
         // We should now not receive anything.
-        let results = await!(list(&service));
+        let results = list(&service).await;
         assert_eq!(results, vec![]);
     }
 }

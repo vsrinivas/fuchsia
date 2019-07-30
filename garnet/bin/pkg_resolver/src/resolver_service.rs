@@ -29,7 +29,7 @@ pub async fn run_resolver_service<A>(
 where
     A: AmberConnect,
 {
-    while let Some(event) = await!(stream.try_next())? {
+    while let Some(event) = stream.try_next().await? {
         let PackageResolverRequest::Resolve {
             package_url,
             selectors,
@@ -38,15 +38,9 @@ where
             responder,
         } = event;
 
-        let status = await!(resolve(
-            &rewrites,
-            &repo_manager,
-            &cache,
-            package_url,
-            selectors,
-            update_policy,
-            dir
-        ));
+        let status =
+            resolve(&rewrites, &repo_manager, &cache, package_url, selectors, update_policy, dir)
+                .await;
 
         responder.send(Status::from(status).into_raw())?;
     }
@@ -88,7 +82,7 @@ where
         fx_log_warn!("resolve does not support selectors yet");
     }
 
-    let merkle = await!(repo_manager.read().get_package(&url))?;
+    let merkle = repo_manager.read().get_package(&url).await?;
 
     fx_log_info!(
         "resolved {} as {} with the selectors {:?} to {}",
@@ -98,7 +92,9 @@ where
         merkle
     );
 
-    await!(cache.open(&mut merkle.into(), &mut selectors.iter().map(|s| s.as_str()), dir_request))
+    cache
+        .open(&mut merkle.into(), &mut selectors.iter().map(|s| s.as_str()), dir_request)
+        .await
         .map_err(|err| {
             fx_log_err!("error opening {}: {:?}", merkle, err);
             Status::INTERNAL
@@ -135,7 +131,7 @@ mod tests {
         _url: &PkgUrl,
     ) -> Result<BlobId, Status> {
         use fidl_fuchsia_amber::FetchResultEvent;
-        match await!(result_proxy.take_event_stream().into_future()) {
+        match result_proxy.take_event_stream().into_future().await {
             (Some(Ok(FetchResultEvent::OnSuccess { merkle })), _) => match merkle.parse() {
                 Ok(merkle) => Ok(merkle),
                 Err(err) => {
@@ -192,7 +188,7 @@ mod tests {
             dir: &'a DirectoryProxy,
             want_files: &'a Vec<String>,
         ) {
-            let entries = await!(files_async::readdir(dir)).expect("could not read dir");
+            let entries = files_async::readdir(dir).await.expect("could not read dir");
             let mut files: Vec<_> = entries.into_iter().map(|f| f.name).collect();
             files.sort_unstable();
             assert_eq!(&files, want_files);
@@ -207,14 +203,16 @@ mod tests {
         ) {
             let amber = self.repo_manager.read().connect_to_amber().unwrap();
             let (repo, repo_server_end) = fidl::endpoints::create_proxy().unwrap();
-            let status = await!(amber.open_repository(
-                RepositoryConfigBuilder::new("fuchsia-pkg://fuchsia.com".parse().unwrap())
-                    .add_root_key(RepositoryKey::Ed25519(vec![1; 32]))
-                    .build()
-                    .into(),
-                repo_server_end,
-            ))
-            .unwrap();
+            let status = amber
+                .open_repository(
+                    RepositoryConfigBuilder::new("fuchsia-pkg://fuchsia.com".parse().unwrap())
+                        .add_root_key(RepositoryKey::Ed25519(vec![1; 32]))
+                        .build()
+                        .into(),
+                    repo_server_end,
+                )
+                .await
+                .unwrap();
             Status::ok(status).unwrap();
             let (result_proxy, result_server_end) = fidl::endpoints::create_proxy().unwrap();
             repo.get_update_complete(name, variant, merkle, result_server_end)
@@ -230,7 +228,7 @@ mod tests {
                 PkgUrl::new_package("fuchsia.com".to_string(), path, merkle.map(|s| s.to_string()))
                     .unwrap();
 
-            let res = await!(wait_for_update_to_complete(result_proxy, &url));
+            let res = wait_for_update_to_complete(result_proxy, &url).await;
             assert_eq!(res, expected_res);
         }
 
@@ -242,7 +240,7 @@ mod tests {
             let selectors = vec![];
             let update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
             let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let res = await!(resolve(
+            let res = resolve(
                 &self.rewrite_manager,
                 &self.repo_manager,
                 &self.cache_proxy,
@@ -250,10 +248,11 @@ mod tests {
                 selectors,
                 update_policy,
                 dir_server_end,
-            ));
+            )
+            .await;
             if res.is_ok() {
                 let expected_files = expected_res.as_ref().unwrap();
-                await!(self.check_dir_async(&dir, expected_files));
+                self.check_dir_async(&dir, expected_files).await;
             }
             assert_eq!(res, expected_res.map(|_s| ()), "unexpected result for {}", url);
         }
@@ -370,17 +369,17 @@ mod tests {
             .build();
 
         // Name
-        await!(test.check_amber_update("foo", None, None, Ok(gen_merkle('a'))));
+        test.check_amber_update("foo", None, None, Ok(gen_merkle('a'))).await;
 
         // Name and variant
-        await!(test.check_amber_update("bar", Some("stable"), None, Ok(gen_merkle('b'))));
+        test.check_amber_update("bar", Some("stable"), None, Ok(gen_merkle('b'))).await;
 
         // Name, variant, and merkle
         let merkle = gen_merkle('c');
-        await!(test.check_amber_update("baz", Some("stable"), Some(&merkle), Ok(gen_merkle('c'))));
+        test.check_amber_update("baz", Some("stable"), Some(&merkle), Ok(gen_merkle('c'))).await;
 
         // Nonexistent package
-        await!(test.check_amber_update("nonexistent", None, None, Err(Status::NOT_FOUND)));
+        test.check_amber_update("nonexistent", None, None, Err(Status::NOT_FOUND)).await;
 
         // no merkle('d') since we didn't ask to update "buz".
         test.check_dir(test.pkgfs.path(), &vec![gen_merkle('a'), gen_merkle('b'), gen_merkle('c')]);
@@ -396,15 +395,15 @@ mod tests {
             .build();
 
         // Package name
-        await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')]),));
+        test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')])).await;
 
         // Package name and variant
-        await!(test
-            .run_resolve("fuchsia-pkg://fuchsia.com/bar/stable", Ok(vec![gen_merkle_file('b')]),));
+        test.run_resolve("fuchsia-pkg://fuchsia.com/bar/stable", Ok(vec![gen_merkle_file('b')]))
+            .await;
 
         // Package name, variant, and merkle
         let url = format!("fuchsia-pkg://fuchsia.com/bar/stable?hash={}", gen_merkle('b'));
-        await!(test.run_resolve(&url, Ok(vec![gen_merkle_file('b')],)));
+        test.run_resolve(&url, Ok(vec![gen_merkle_file('b')])).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -425,18 +424,17 @@ mod tests {
             .build();
 
         // Missing package
-        await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo/beta", Err(Status::NOT_FOUND)));
+        test.run_resolve("fuchsia-pkg://fuchsia.com/foo/beta", Err(Status::NOT_FOUND)).await;
 
         // Unavailable package
-        await!(
-            test.run_resolve("fuchsia-pkg://fuchsia.com/unavailable/0", Err(Status::UNAVAILABLE))
-        );
+
+        test.run_resolve("fuchsia-pkg://fuchsia.com/unavailable/0", Err(Status::UNAVAILABLE)).await;
 
         // Bad package URL
-        await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo!", Err(Status::INVALID_ARGS)));
+        test.run_resolve("fuchsia-pkg://fuchsia.com/foo!", Err(Status::INVALID_ARGS)).await;
 
         // No package name
-        await!(test.run_resolve("fuchsia-pkg://fuchsia.com", Err(Status::INVALID_ARGS)));
+        test.run_resolve("fuchsia-pkg://fuchsia.com", Err(Status::INVALID_ARGS)).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -455,11 +453,11 @@ mod tests {
             .unwrap()])
             .build();
 
-        await!(test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
-        await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
-        await!(test.run_resolve("fuchsia-pkg://example.com/bar/stable", Err(Status::NOT_FOUND)));
-        await!(test
-            .run_resolve("fuchsia-pkg://fuchsia.com/bar/stable", Ok(vec![gen_merkle_file('b')]),));
+        test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')])).await;
+        test.run_resolve("fuchsia-pkg://fuchsia.com/foo/0", Ok(vec![gen_merkle_file('a')])).await;
+        test.run_resolve("fuchsia-pkg://example.com/bar/stable", Err(Status::NOT_FOUND)).await;
+        test.run_resolve("fuchsia-pkg://fuchsia.com/bar/stable", Ok(vec![gen_merkle_file('b')]))
+            .await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -475,15 +473,15 @@ mod tests {
             .build();
 
         // Package name
-        await!(test.run_resolve("fuchsia-pkg://example.com/foo", Ok(vec![gen_merkle_file('a')]),));
+        test.run_resolve("fuchsia-pkg://example.com/foo", Ok(vec![gen_merkle_file('a')])).await;
 
         // Package name and variant
-        await!(test
-            .run_resolve("fuchsia-pkg://example.com/bar/stable", Ok(vec![gen_merkle_file('b')]),));
+        test.run_resolve("fuchsia-pkg://example.com/bar/stable", Ok(vec![gen_merkle_file('b')]))
+            .await;
 
         // Package name, variant, and merkle
         let url = format!("fuchsia-pkg://example.com/bar/stable?hash={}", gen_merkle('b'));
-        await!(test.run_resolve(&url, Ok(vec![gen_merkle_file('b')],)));
+        test.run_resolve(&url, Ok(vec![gen_merkle_file('b')])).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -507,18 +505,17 @@ mod tests {
             .build();
 
         // Missing package
-        await!(test.run_resolve("fuchsia-pkg://example.com/foo/beta", Err(Status::NOT_FOUND)));
+        test.run_resolve("fuchsia-pkg://example.com/foo/beta", Err(Status::NOT_FOUND)).await;
 
         // Unavailable package
-        await!(
-            test.run_resolve("fuchsia-pkg://example.com/unavailable/0", Err(Status::UNAVAILABLE))
-        );
+
+        test.run_resolve("fuchsia-pkg://example.com/unavailable/0", Err(Status::UNAVAILABLE)).await;
 
         // Bad package URL
-        await!(test.run_resolve("fuchsia-pkg://example.com/foo!", Err(Status::INVALID_ARGS)));
+        test.run_resolve("fuchsia-pkg://example.com/foo!", Err(Status::INVALID_ARGS)).await;
 
         // No package name
-        await!(test.run_resolve("fuchsia-pkg://example.com", Err(Status::INVALID_ARGS)));
+        test.run_resolve("fuchsia-pkg://example.com", Err(Status::INVALID_ARGS)).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -540,12 +537,11 @@ mod tests {
             .unwrap()])
             .build();
 
-        await!(test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
-        await!(test.run_resolve("fuchsia-pkg://oem.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
-        await!(test.run_resolve("fuchsia-pkg://example.com/bar/stable", Err(Status::NOT_FOUND)));
-        await!(
-            test.run_resolve("fuchsia-pkg://oem.com/bar/stable", Ok(vec![gen_merkle_file('b')]),)
-        );
+        test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')])).await;
+        test.run_resolve("fuchsia-pkg://oem.com/foo/0", Ok(vec![gen_merkle_file('a')])).await;
+        test.run_resolve("fuchsia-pkg://example.com/bar/stable", Err(Status::NOT_FOUND)).await;
+
+        test.run_resolve("fuchsia-pkg://oem.com/bar/stable", Ok(vec![gen_merkle_file('b')])).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -558,7 +554,7 @@ mod tests {
             )
             .build();
 
-        await!(test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')])));
+        test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')])).await;
 
         dbg!();
 
@@ -577,7 +573,7 @@ mod tests {
                 .build(),
         );
 
-        await!(test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
+        test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')])).await;
 
         dbg!();
 
@@ -585,6 +581,6 @@ mod tests {
         // The next request should connect to our new amber, which contains the new package.
         test.repo_manager.write().insert(config);
 
-        await!(test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('b')])));
+        test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('b')])).await;
     }
 }

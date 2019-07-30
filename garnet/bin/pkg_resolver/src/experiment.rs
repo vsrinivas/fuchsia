@@ -51,7 +51,7 @@ pub(crate) async fn run_admin_service(
     experiment_state: Arc<RwLock<State>>,
     mut stream: PackageResolverAdminRequestStream,
 ) -> Result<(), Error> {
-    while let Some(event) = await!(stream.try_next())? {
+    while let Some(event) = stream.try_next().await? {
         let PackageResolverAdminRequest::SetExperimentState { experiment_id, state, responder } =
             event;
         experiment_state.write().set_state(experiment_id, state);

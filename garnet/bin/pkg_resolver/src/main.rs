@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -86,7 +86,7 @@ fn main() -> Result<(), Error> {
         fasync::spawn(
             async move {
                 let mut repo_service = RepositoryService::new(repo_manager);
-                await!(repo_service.run(stream))
+                repo_service.run(stream).await
             }
                 .unwrap_or_else(|e| fx_log_err!("error encountered: {:?}", e)),
         )
@@ -96,7 +96,7 @@ fn main() -> Result<(), Error> {
         let mut rewrite_service = RewriteService::new(rewrite_manager.clone());
 
         fasync::spawn(
-            async move { await!(rewrite_service.handle_client(stream)) }
+            async move { rewrite_service.handle_client(stream).await }
                 .unwrap_or_else(|e| fx_log_err!("while handling rewrite client {:?}", e)),
         )
     };
@@ -104,7 +104,8 @@ fn main() -> Result<(), Error> {
     let admin_cb = move |stream| {
         let experiment_state = experiment_state.clone();
         fasync::spawn(async move {
-            await!(experiment::run_admin_service(experiment_state, stream))
+            experiment::run_admin_service(experiment_state, stream)
+                .await
                 .unwrap_or_else(|e| fx_log_err!("while handling admin client {:?}", e))
         });
     };
