@@ -552,6 +552,21 @@ Variant scope parameters
 
 From //public/gn/toolchain/variants.gni:222
 
+### zbi_compression
+This can be either "lz4f" or "zstd", optionally followed by ".LEVEL"
+where `LEVEL` can be an integer or "max".  It can also be just "LEVEL"
+to to use the default algorithm with a non-default setting.
+
+The default level for each algorithm is tuned to balance compression
+speed with compression ratio.  Higher levels make image builds slower.
+So using the default during rapid development (quick builds, pretty
+good compression) and "max' for production builds (slow builds, best
+compression available) probably makes sense.
+
+**Current value (from the default):** `"lz4f"`
+
+From //public/gn/zbi.gni:19
+
 ### zx
 *This must never be set as a build argument*.
 
