@@ -17,6 +17,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "//src/developer/exception_broker/tests",
     "//src/developer/feedback:tests",
     "//src/developer/fuchsia-criterion:fuchsia-criterion-tests",
     "//src/developer/tracing:tests",

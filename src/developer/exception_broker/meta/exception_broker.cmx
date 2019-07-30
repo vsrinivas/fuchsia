@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/exception_broker"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.crash.Analyzer",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
