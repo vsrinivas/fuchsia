@@ -25,7 +25,8 @@ struct PdevBoardInfo {
     uint32 vid;
     /// Product ID for the board.
     uint32 pid;
-    /// Board name from the boot image platform ID record.
+    /// Board name from the boot image platform ID record,
+    /// (or from the BIOS on x86 platforms).
     string:32 board_name;
     /// Board specific revision number.
     uint32 board_revision;

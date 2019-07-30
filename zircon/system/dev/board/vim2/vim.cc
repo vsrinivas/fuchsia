@@ -47,7 +47,7 @@ const pbus_dev_t tee_dev = []() {
 zx_status_t Vim::Create(void* ctx, zx_device_t* parent) {
   pbus_protocol_t pbus;
   iommu_protocol_t iommu;
-  pbus_board_info_t info;
+  pbus_board_info_t info = {};
 
   auto status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
   if (status != ZX_OK) {

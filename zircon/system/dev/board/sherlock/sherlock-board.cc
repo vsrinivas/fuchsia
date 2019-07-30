@@ -24,7 +24,7 @@ zx_status_t Sherlock::BoardInit() {
   gpio_impl_.Read(T931_GPIO_HW_ID3, &id3);
   gpio_impl_.Read(T931_GPIO_HW_ID4, &id4);
 
-  pbus_board_info_t info;
+  pbus_board_info_t info = {};
   info.board_revision = id0 + (id1 << 1) + (id2 << 2) + (id3 << 3) + (id4 << 4);
   zxlogf(TRACE, "%s: PBusSetBoardInfo to %X\n", __func__, info.board_revision);
   zx_status_t status = pbus_.SetBoardInfo(&info);

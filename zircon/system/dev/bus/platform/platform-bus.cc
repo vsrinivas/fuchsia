@@ -144,6 +144,10 @@ zx_status_t PlatformBus::PBusGetBoardInfo(pdev_board_info_t* out_info) {
 }
 
 zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
+  if (info->board_name[0]) {
+    zxlogf(INFO, "PlatformBus: setting board name to \"%s\"\n", info->board_name);
+    strlcpy(board_info_.board_name, info->board_name, sizeof(board_info_.board_name));
+  }
   board_info_.board_revision = info->board_revision;
   return ZX_OK;
 }

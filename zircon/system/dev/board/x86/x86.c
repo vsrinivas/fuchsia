@@ -123,6 +123,11 @@ static zx_status_t x86_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
     }
 
+    // Inform platform bus of our board name.
+    pbus_board_info_t board_info = {};
+    strlcpy(board_info.board_name, board_name, sizeof(board_info.board_name));
+    pbus_set_board_info(&x86->pbus, &board_info);
+
     x86->sys_root = sys_root;
     x86->acpi_root = acpi_root;
     x86->parent = parent;

@@ -67,7 +67,7 @@ int Astro::Thread() {
   }
 
   // Once gpio is up and running, let's populate board revision
-  pbus_board_info_t info;
+  pbus_board_info_t info = {};
   info.board_revision = GetBoardRev();
   status = pbus_.SetBoardInfo(&info);
   if (status != ZX_OK) {
