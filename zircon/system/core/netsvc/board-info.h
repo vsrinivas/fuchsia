@@ -9,3 +9,7 @@
 #include <lib/zx/channel.h>
 
 bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length);
+
+bool ReadBoardInfo(const zx::channel& sysinfo, void* data, off_t offset, size_t* length);
+
+size_t BoardInfoSize();

@@ -11,7 +11,7 @@
 #include <lib/fdio/fdio.h>
 #include <zircon/boot/netboot.h>
 
-#include "board-name.h"
+#include "board-info.h"
 #include "netboot.h"
 
 namespace netsvc {
@@ -55,8 +55,15 @@ ssize_t FileApi::OpenRead(const char* filename) {
   filename_[PATH_MAX] = '\0';
   netboot_file_ = NULL;
   size_t file_size;
-  if (netcp_->Open(filename, O_RDONLY, &file_size) == 0) {
-    return static_cast<ssize_t>(file_size);
+
+  if (is_zedboot_ && !strcmp(filename_, NB_BOARD_INFO_FILENAME)) {
+    type_ = NetfileType::kBoardInfo;
+    return BoardInfoSize();
+  } else {
+    type_ = NetfileType::kNetCopy;
+    if (netcp_->Open(filename, O_RDONLY, &file_size) == 0) {
+      return static_cast<ssize_t>(file_size);
+    }
   }
   return TFTP_ERR_NOT_FOUND;
 }
@@ -84,7 +91,7 @@ tftp_status FileApi::OpenWrite(const char* filename, size_t size) {
     }
   } else if (is_zedboot_ && !strcmp(filename_, NB_BOARD_NAME_FILENAME)) {
     printf("netsvc: Running board name validation\n");
-    type_ = NetfileType::kBoardName;
+    type_ = NetfileType::kBoardInfo;
     return TFTP_NO_ERROR;
   } else if (is_zedboot_ && !strncmp(filename_, NB_IMAGE_PREFIX, NB_IMAGE_PREFIX_LEN())) {
     type_ = NetfileType::kPaver;
@@ -106,12 +113,23 @@ tftp_status FileApi::Read(void* data, size_t* length, off_t offset) {
   if (length == NULL) {
     return TFTP_ERR_INVALID_ARGS;
   }
-  ssize_t read_len = netcp_->Read(data, offset, *length);
-  if (read_len < 0) {
-    return TFTP_ERR_IO;
+
+  switch (type_) {
+    case NetfileType::kBoardInfo: {
+      return ReadBoardInfo(sysinfo_, data, offset, length) ? TFTP_NO_ERROR : TFTP_ERR_BAD_STATE;
+    }
+    case NetfileType::kNetCopy: {
+      ssize_t read_len = netcp_->Read(data, offset, *length);
+      if (read_len < 0) {
+        return TFTP_ERR_IO;
+      }
+      *length = static_cast<size_t>(read_len);
+      return TFTP_NO_ERROR;
+    }
+    default:
+      return ZX_ERR_BAD_STATE;
   }
-  *length = static_cast<size_t>(read_len);
-  return TFTP_NO_ERROR;
+  return TFTP_ERR_BAD_STATE;
 }
 
 tftp_status FileApi::Write(const void* data, size_t* length, off_t offset) {
@@ -131,7 +149,7 @@ tftp_status FileApi::Write(const void* data, size_t* length, off_t offset) {
     case NetfileType::kPaver:
       return paver_->Write(data, length, offset);
 
-    case NetfileType::kBoardName: {
+    case NetfileType::kBoardInfo: {
       tftp_status status = CheckBoardName(sysinfo_, reinterpret_cast<const char*>(data), *length)
                                ? TFTP_NO_ERROR
                                : TFTP_ERR_BAD_STATE;

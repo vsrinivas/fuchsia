@@ -64,7 +64,7 @@ class FileApi : public FileApiInterface {
     kNetCopy,    // A file in /data
     kNetboot,    // A bootfs file
     kPaver,      // A disk image which should be paved to disk
-    kBoardName,  // A file containing the board name.
+    kBoardInfo,  // A file containing the board name.
                  // Expected to return error if it doesn't match the current board name.
   };
 

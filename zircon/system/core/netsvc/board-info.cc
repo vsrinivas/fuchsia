@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "board-name.h"
+#include "board-info.h"
 #include "lib/fidl/cpp/message_part.h"
 #include "lib/fidl/llcpp/traits.h"
 #include "zircon/types.h"
@@ -23,6 +23,7 @@
 #include <gpt/gpt.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/fdio.h>
+#include <zircon/boot/netboot.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -121,17 +122,7 @@ static bool IsChromebook() {
   return is_cros(gpt.get());
 }
 
-}  // namespace
-
-bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length) {
-  if (!sysinfo) {
-    return false;
-  }
-
-  length = std::min(length, ZX_MAX_NAME_LEN);
-
-  char real_board_name[ZX_MAX_NAME_LEN] = {};
-
+zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
   auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(zx::unowned(sysinfo));
   if (!result.ok()) {
     return false;
@@ -153,5 +144,48 @@ bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length)
   }
 #endif
 
+  return ZX_OK;
+}
+
+}  // namespace
+
+bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length) {
+  if (!sysinfo) {
+    return false;
+  }
+
+  char real_board_name[ZX_MAX_NAME_LEN] = {};
+  if (GetBoardName(sysinfo, real_board_name) != ZX_OK) {
+    return false;
+  }
+
+  length = std::min(length, ZX_MAX_NAME_LEN);
+
   return strncmp(real_board_name, name, length) == 0;
 }
+
+bool ReadBoardInfo(const zx::channel& sysinfo, void* data, off_t offset, size_t* length) {
+  if (!sysinfo) {
+    return false;
+  }
+
+  if (*length < sizeof(board_info_t) || offset != 0) {
+    return false;
+  }
+
+  auto* board_info = static_cast<board_info_t*>(data);
+  memset(board_info, 0, sizeof(*board_info));
+
+  if (GetBoardName(sysinfo, board_info->board_name) != ZX_OK) {
+    return false;
+  }
+  // TODO(surajmalhotra): Implement board revision read.
+
+  // TODO(surajmalhotra): Implement mac address read.
+
+  *length = sizeof(board_info_t);
+  return true;
+}
+
+size_t BoardInfoSize() { return sizeof(board_info_t); }
+

@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <zircon/types.h>
+
 // clang-format off
 
 #define BOOTLOADER_VERSION "0.7.16"
@@ -79,6 +81,15 @@
 #define NB_SSHAUTH_FILENAME NB_IMAGE_PREFIX NB_SSHAUTH_HOST_FILENAME
 #define NB_BOARD_NAME_HOST_FILENAME "board_name"
 #define NB_BOARD_NAME_FILENAME NB_IMAGE_PREFIX NB_BOARD_NAME_HOST_FILENAME
+#define NB_BOARD_INFO_HOST_FILENAME "board_name"
+#define NB_BOARD_INFO_FILENAME NB_IMAGE_PREFIX NB_BOARD_INFO_HOST_FILENAME
+
+typedef struct board_info {
+  char board_name[ZX_MAX_NAME_LEN];
+  uint32_t board_revision;
+  uint8_t mac_address[8];
+} board_info_t;
+
 
 typedef struct nbmsg_t {
     uint32_t magic;

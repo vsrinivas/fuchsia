@@ -195,6 +195,23 @@ TEST_F(FileApiTest, WriteWrongBoardName) {
   file_api_.Close();
 }
 
+TEST_F(FileApiTest, ReadBoardInfo) {
+  fake_sysinfo_.set_board_name(kFakeData);
+  board_info_t board_info = {};
+  size_t len = sizeof(board_info);
+  ASSERT_EQ(file_api_.OpenRead(NB_BOARD_INFO_FILENAME), len);
+  ASSERT_EQ(file_api_.Read(&board_info, &len, 0), TFTP_NO_ERROR);
+  ASSERT_EQ(len, sizeof(board_info));
+#if __x86_64__
+  // We hardcode x64 to return "pc" no matter what sysinfo returns.
+  constexpr char kBoardName[] = "pc";
+  ASSERT_BYTES_EQ(board_info.board_name, kBoardName, sizeof(kBoardName));
+#else
+  ASSERT_BYTES_EQ(board_info.board_name, kFakeData, sizeof(kFakeData));
+#endif
+  file_api_.Close();
+}
+
 TEST_F(FileApiTest, WritePaver) {
   ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10), TFTP_NO_ERROR);
   size_t len = sizeof(kFakeData);

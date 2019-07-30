@@ -56,7 +56,7 @@ source_set("args") {
 
 source_set("netsvc_common") {
   sources = [
-    "board-name.cc",
+    "board-info.cc",
     "file-api.cc",
     "netboot.cc",
     "netcp.cc",
