@@ -12,7 +12,7 @@ group("fuzzer") {
 }
 
 fuzzers_package("example_fuzzers") {
-  targets = [ ":baz_fuzzer" ]
+  fuzzers = [ ":baz_fuzzer" ]
   fuzz_host = true
 }
 
