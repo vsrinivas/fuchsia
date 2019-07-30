@@ -26,38 +26,38 @@ protocol SemanticsManager {
 /// commit function must always be called at the end of a full update push to signal the end of an
 /// update.
 protocol SemanticTree {
-    // Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
-    // DeleteSemanticNodes.
+    /// Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
+    /// DeleteSemanticNodes.
     Commit();
 
-    // Sends new/updated nodes to the root to add to the cache on the next commit.
+    /// Sends new/updated nodes to the root to add to the cache on the next commit.
     UpdateSemanticNodes(vector<Node> nodes);
 
-    // Tells the root to remove nodes with node_ids from the semantic tree on the next commit.
+    /// Tells the root to remove nodes with node_ids from the semantic tree on the next commit.
     DeleteSemanticNodes(vector<uint32> node_ids);
 };
 
 /// Results of hit testing on a view's semantic tree which is implemented by
 /// Runtimes(like Flutter/Chrome) and sent to Accessibility.
 table Hit {
-    // Unique ID that represents the node in a particular UI.
-    // Zero is assumed to be the root node and the only entry point to the tree.
-    // node_id will not be filled when there is no hit.
+    /// Unique ID that represents a node in a particular UI.
+    /// Zero is assumed to be the root node and the only entry point to the tree.
+    /// node_id will not be filled when there is no hit.
     1: uint32 node_id;
 
-    // The ordered list of node id's which represent path from root node to
-    // the hit node.
+    /// The ordered list of node ids which represent a path from the root node to
+    /// the hit node.
     2: vector<uint32> path_from_root;
 };
 
 /// A semantic provider is the client-side interface that the manager can use to
 /// ask clients to perform accessibility actions.
 protocol SemanticActionListener {
-    // Asks the semantics provider to perform an accessibility action on the
-    // node with node id in the front-end.
+    /// Asks the semantics provider to perform an accessibility action on the
+    /// node with node id in the front-end.
     OnAccessibilityActionRequested(uint32 node_id, Action action) -> (bool handled);
 
-    // Asks the semantics provider to perform hit testing and return the result.
+    /// Asks the semantics provider to perform hit testing and return the result.
     [Transitional]
     HitTest(fuchsia.math.PointF local_point) -> (Hit result);
 };
