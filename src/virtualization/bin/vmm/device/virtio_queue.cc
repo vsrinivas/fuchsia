@@ -124,7 +124,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
       //  - After the device writes a descriptor index into the used ring:
       //    - If flags is 1, the device SHOULD NOT send an interrupt.
       //    - If flags is 0, the device MUST send an interrupt.
-      needs_interrupt = ring_.used->flags == 0;
+      needs_interrupt = ring_.avail->flags == 0;
     } else if (ring_.used_event) {
       // Otherwise, if the VIRTIO_F_EVENT_IDX feature bit is negotiated:
       //
