@@ -4,9 +4,10 @@
 
 #include "sensor.h"
 
-#include <ddk/debug.h>
 #include <lib/syslog/global.h>
 #include <zircon/types.h>
+
+#include <ddk/debug.h>
 
 #include "../mali-009/global_regs.h"
 #include "../mali-009/pingpong_regs.h"

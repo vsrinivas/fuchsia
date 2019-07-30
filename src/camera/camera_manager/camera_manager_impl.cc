@@ -4,12 +4,13 @@
 
 #include "src/camera/camera_manager/camera_manager_impl.h"
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 
 #include <string>
+
+#include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <fbl/unique_fd.h>
 
 namespace camera {
 

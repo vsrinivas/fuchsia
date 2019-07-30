@@ -5,8 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_ISP_MALI_009_GLOBAL_REGS_H_
 #define SRC_CAMERA_DRIVERS_ISP_MALI_009_GLOBAL_REGS_H_
 
-#include <hwreg/bitfields.h>
 #include <zircon/types.h>
+
+#include <hwreg/bitfields.h>
 
 namespace camera {
 

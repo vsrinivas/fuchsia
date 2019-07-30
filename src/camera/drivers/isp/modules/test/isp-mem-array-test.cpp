@@ -22,9 +22,7 @@ class IspMemArrayTest : public zxtest::Test {
   std::vector<uint32_t> expectations_;
 };
 
-void IspMemArrayTest::SetUp() {
-  expectations_.reserve(kArraySize);
-}
+void IspMemArrayTest::SetUp() { expectations_.reserve(kArraySize); }
 
 void IspMemArrayTest::TearDown() { expectations_.clear(); }
 
@@ -36,10 +34,9 @@ void IspMemArrayTest::SetExpectations() {
 
 TEST_F(IspMemArrayTest, IspMemArray32) {
   auto reg_array = std::make_unique<ddk_mock::MockMmioReg[]>(kArraySize);
-  mock_registers_ = std::make_unique<ddk_mock::MockMmioRegRegion>(
-      reg_array.get(), sizeof(uint32_t), kArraySize);
-  local_mmio_ =
-      std::make_unique<ddk::MmioView>(mock_registers_->GetMmioBuffer(), 0);
+  mock_registers_ =
+      std::make_unique<ddk_mock::MockMmioRegRegion>(reg_array.get(), sizeof(uint32_t), kArraySize);
+  local_mmio_ = std::make_unique<ddk::MmioView>(mock_registers_->GetMmioBuffer(), 0);
   std::shared_ptr<IspMemArray32> mem_array =
       std::make_shared<IspMemArray32>(*local_mmio_.get(), 0x00, kArraySize);
   for (uint32_t i = 0; i < kArraySize; ++i) {

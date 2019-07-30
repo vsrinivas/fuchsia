@@ -5,13 +5,14 @@
 #ifndef SRC_CAMERA_DRIVERS_USB_VIDEO_USB_VIDEO_H_
 #define SRC_CAMERA_DRIVERS_USB_VIDEO_USB_VIDEO_H_
 
-#include <ddk/device.h>
-#include <fbl/vector.h>
 #include <fuchsia/camera/cpp/fidl.h>
-#include <usb/usb.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/video.h>
+
+#include <ddk/device.h>
+#include <fbl/vector.h>
+#include <usb/usb.h>
 
 #include "src/camera/drivers/usb_video/uvc_format.h"
 

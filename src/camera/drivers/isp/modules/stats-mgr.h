@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_ptr.h>
+#ifndef SRC_CAMERA_DRIVERS_ISP_MODULES_STATS_MGR_H_
+#define SRC_CAMERA_DRIVERS_ISP_MODULES_STATS_MGR_H_
+
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 
 #include <atomic>
+
+#include <fbl/unique_ptr.h>
 
 #include "sensor.h"
 #ifndef _ALL_SOURCE
@@ -46,3 +50,5 @@ class StatsManager {
 };
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_ISP_MODULES_STATS_MGR_H_

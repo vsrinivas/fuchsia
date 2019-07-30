@@ -5,17 +5,18 @@
 #ifndef SRC_CAMERA_DRIVERS_USB_VIDEO_USB_VIDEO_STREAM_H_
 #define SRC_CAMERA_DRIVERS_USB_VIDEO_USB_VIDEO_STREAM_H_
 
+#include <fuchsia/hardware/camera/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/default.h>
+#include <lib/fzl/vmo-pool.h>
+#include <lib/zx/vmo.h>
+
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/camera/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/default.h>
-#include <lib/fzl/vmo-pool.h>
-#include <lib/zx/vmo.h>
 #include <usb/usb.h>
 
 #include "src/camera/drivers/usb_video/camera_control_impl.h"

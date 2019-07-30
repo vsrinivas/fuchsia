@@ -4,13 +4,14 @@
 
 #include "dma-format.h"
 
-#include <ddk/debug.h>
-#include <fbl/algorithm.h>
 #include <lib/syslog/global.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
 #include <zircon/limits.h>
+
+#include <ddk/debug.h>
+#include <fbl/algorithm.h>
 
 namespace camera {
 

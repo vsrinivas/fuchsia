@@ -4,11 +4,12 @@
 
 #include "arm-isp-test.h"
 
+#include <fuchsia/camera/test/c/fidl.h>
+#include <zircon/fidl.h>
+
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fuchsia/camera/test/c/fidl.h>
-#include <zircon/fidl.h>
 
 #include "arm-isp.h"
 

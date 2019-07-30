@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_H_
+#define SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_H_
+
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
 
@@ -122,3 +125,5 @@ class Imx227Device : public DeviceType,
   bool ValidateSensorID();
 };
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_H_

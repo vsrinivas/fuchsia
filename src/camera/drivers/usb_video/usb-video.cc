@@ -4,6 +4,9 @@
 
 #include "src/camera/drivers/usb_video/usb-video.h"
 
+#include <stdlib.h>
+#include <zircon/hw/usb/video.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -11,9 +14,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/usb.h>
 #include <fbl/vector.h>
-#include <stdlib.h>
 #include <usb/usb.h>
-#include <zircon/hw/usb/video.h>
 
 #include "src/camera/drivers/usb_video/usb-video-stream.h"
 #include "src/camera/drivers/usb_video/uvc_format.h"

@@ -5,14 +5,15 @@
 #ifndef SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA_DEVICE_H_
 #define SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA_DEVICE_H_
 
-#include <ddk/protocol/test.h>
-#include <ddktl/device-internal.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
 #include <fuchsia/camera/cpp/fidl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+
+#include <ddk/protocol/test.h>
+#include <ddktl/device-internal.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
 
 namespace virtual_camera {
 

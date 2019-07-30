@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/platform-defs.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/camera/test/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
@@ -13,6 +11,9 @@
 #include <lib/fdio/fdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#include <ddk/platform-defs.h>
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 namespace {

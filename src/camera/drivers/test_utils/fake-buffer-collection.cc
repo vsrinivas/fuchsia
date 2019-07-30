@@ -7,9 +7,10 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/vmo.h>
-#include <src/camera/drivers/isp/modules/dma-format.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#include <src/camera/drivers/isp/modules/dma-format.h>
 
 namespace camera {
 

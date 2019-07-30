@@ -4,11 +4,12 @@
 
 #include "src/camera/camera_manager/video_device_client.h"
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fzl/fdio.h>
+
+#include <fbl/unique_fd.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 

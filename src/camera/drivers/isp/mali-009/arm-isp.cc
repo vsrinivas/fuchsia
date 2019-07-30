@@ -4,6 +4,12 @@
 
 #include "arm-isp.h"
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <zircon/types.h>
+
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -11,11 +17,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <zircon/types.h>
-
-#include <memory>
 
 #include "arm-isp-regs.h"
 

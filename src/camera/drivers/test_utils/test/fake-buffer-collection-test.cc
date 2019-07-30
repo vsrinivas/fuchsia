@@ -4,12 +4,13 @@
 
 #include "../fake-buffer-collection.h"
 
-#include <ddk/debug.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/vmo.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#include <ddk/debug.h>
 #include <zxtest/zxtest.h>
 
 namespace camera {

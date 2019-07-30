@@ -5,8 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_USB_VIDEO_VIDEO_UTIL_H_
 #define SRC_CAMERA_DRIVERS_USB_VIDEO_VIDEO_UTIL_H_
 
-#include <usb/usb.h>
 #include <zircon/hw/usb/video.h>
+
+#include <usb/usb.h>
 
 __BEGIN_CDECLS
 

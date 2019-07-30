@@ -5,11 +5,12 @@
 #ifndef SRC_CAMERA_DRIVERS_ISP_MODULES_ISP_MEM_ARRAY_H_
 #define SRC_CAMERA_DRIVERS_ISP_MODULES_ISP_MEM_ARRAY_H_
 
+#include <lib/mmio/mmio.h>
+#include <zircon/types.h>
+
 #include <vector>
 
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
-#include <zircon/types.h>
 
 namespace camera {
 

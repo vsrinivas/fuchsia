@@ -4,14 +4,15 @@
 
 #include "src/camera/test/camera_client_test/camera_client_test.h"
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/fzl/fdio.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
 #include <iostream>
+
+#include <fbl/unique_fd.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 namespace camera {
 

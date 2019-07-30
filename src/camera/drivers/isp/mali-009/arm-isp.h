@@ -5,6 +5,15 @@
 #ifndef SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_H_
 #define SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_H_
 
+#include <fuchsia/hardware/camera/c/fidl.h>
+#include <lib/device-protocol/pdev.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/fidl-utils/bind.h>
+#include <lib/fit/function.h>
+#include <lib/zx/interrupt.h>
+
+#include <atomic>
+
 #include <ddk/metadata/camera.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
@@ -14,15 +23,7 @@
 #include <ddktl/protocol/isp.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/camera/c/fidl.h>
 #include <hw/reg.h>
-#include <lib/device-protocol/pdev.h>
-#include <lib/device-protocol/platform-device.h>
-#include <lib/fidl-utils/bind.h>
-#include <lib/fit/function.h>
-#include <lib/zx/interrupt.h>
-
-#include <atomic>
 
 #include "../modules/dma-mgr.h"
 #include "../modules/gamma-rgb-registers.h"

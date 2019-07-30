@@ -4,7 +4,6 @@
 
 #include "../dma-mgr.h"
 
-#include <ddk/debug.h>
 #include <fcntl.h>
 #include <fuchsia/camera/common/c/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
@@ -12,9 +11,11 @@
 #include <lib/syslog/global.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <zxtest/zxtest.h>
 
 #include <vector>
+
+#include <ddk/debug.h>
+#include <zxtest/zxtest.h>
 
 #include "lib/fit/function.h"
 #include "lib/mmio/mmio.h"

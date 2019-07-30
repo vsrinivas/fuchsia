@@ -4,18 +4,19 @@
 
 #include "src/camera/drivers/usb_video/usb-video-stream.h"
 
-#include <ddk/debug.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/zx/vmar.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <ddk/debug.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <usb/usb-request.h>
 
 #include "src/camera/drivers/usb_video/camera_control_impl.h"

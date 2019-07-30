@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CAMERA_DRIVERS_ISP_MODULES_SENSOR_H_
+#define SRC_CAMERA_DRIVERS_ISP_MODULES_SENSOR_H_
+
+#include <lib/mmio/mmio.h>
+
 #include <ddktl/protocol/camerasensor.h>
 #include <fbl/unique_ptr.h>
-#include <lib/mmio/mmio.h>
 
 namespace camera {
 
@@ -49,3 +53,5 @@ class Sensor {
 };
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_ISP_MODULES_SENSOR_H_

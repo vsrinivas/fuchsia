@@ -5,15 +5,16 @@
 #ifndef SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_TEST_H_
 #define SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_TEST_H_
 
-#include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
-#include <fbl/mutex.h>
 #include <fuchsia/camera/test/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
 #include <memory>
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
+#include <fbl/mutex.h>
 
 #include "global_regs.h"
 #include "pingpong_regs.h"

@@ -6,12 +6,13 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <stdint.h>
-#include <zxtest/zxtest.h>
 
 #include <climits>  // PAGE_SIZE
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+
+#include <zxtest/zxtest.h>
 
 namespace camera {
 

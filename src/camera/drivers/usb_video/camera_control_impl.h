@@ -5,11 +5,12 @@
 #ifndef SRC_CAMERA_DRIVERS_USB_VIDEO_CAMERA_CONTROL_IMPL_H_
 #define SRC_CAMERA_DRIVERS_USB_VIDEO_CAMERA_CONTROL_IMPL_H_
 
-#include <fbl/unique_ptr.h>
 #include <fuchsia/camera/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/zx/eventpair.h>
+
+#include <fbl/unique_ptr.h>
 
 namespace video {
 namespace usb {

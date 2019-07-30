@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_SEQ_H_
+#define SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_SEQ_H_
+
 // clang-format off
 
 namespace camera {
@@ -589,3 +592,5 @@ constexpr sensor_mode_t supported_modes[] = {
 };
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_SEQ_H_

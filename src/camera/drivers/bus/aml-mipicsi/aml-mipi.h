@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CAMERA_DRIVERS_BUS_AML_MIPICSI_AML_MIPI_H_
+#define SRC_CAMERA_DRIVERS_BUS_AML_MIPICSI_AML_MIPI_H_
+
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -110,3 +113,5 @@ class AmlMipiDevice : public DeviceType,
 };
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_BUS_AML_MIPICSI_AML_MIPI_H_

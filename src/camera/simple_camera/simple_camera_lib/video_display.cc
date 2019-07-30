@@ -5,6 +5,7 @@
 #include "src/camera/simple_camera/simple_camera_lib/video_display.h"
 
 #include <fcntl.h>
+
 #include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/log_level.h>
 #include <src/lib/fxl/logging.h>

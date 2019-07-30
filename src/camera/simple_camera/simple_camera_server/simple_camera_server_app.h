@@ -7,6 +7,7 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/simplecamera/cpp/fidl.h>
+
 #include <src/camera/simple_camera/simple_camera_lib/video_display.h>
 
 #include "lib/component/cpp/startup_context.h"

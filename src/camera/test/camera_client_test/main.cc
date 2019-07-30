@@ -5,9 +5,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/zx/eventpair.h>
-#include <src/lib/fxl/logging.h>
 
 #include <iostream>
+
+#include <src/lib/fxl/logging.h>
 
 #include "src/camera/test/camera_client_test/camera_client_test.h"
 

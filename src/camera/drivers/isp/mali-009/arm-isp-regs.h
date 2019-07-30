@@ -5,8 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_REGS_H_
 #define SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_REGS_H_
 
-#include <hwreg/bitfields.h>
 #include <zircon/types.h>
+
+#include <hwreg/bitfields.h>
 
 // Power domain.
 #define AO_RTI_GEN_PWR_SLEEP0 (0x3a << 2)
