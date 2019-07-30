@@ -83,7 +83,7 @@ pub enum Error {
     )]
     UnknownOrdinal {
         /// The unknown ordinal.
-        ordinal: u32,
+        ordinal: u64,
         /// The name of the service for which the message was intented.
         service_name: &'static str,
     },

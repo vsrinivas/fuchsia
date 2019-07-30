@@ -2342,10 +2342,8 @@ macro_rules! fidl_xunion {
 pub struct TransactionHeader {
     /// Transaction ID which identifies a request-response pair
     pub tx_id: u32,
-    /// Flags (always zero for now)
-    pub flags: u32,
     /// Ordinal which identifies the FIDL method
-    pub ordinal: u32,
+    pub ordinal: u64,
 }
 
 fidl_struct! {
@@ -2355,17 +2353,13 @@ fidl_struct! {
             ty: u32,
             offset: 0,
         },
-        flags {
-            ty: u32,
-            offset: 8, // Save 64 bits for id, even though it's only 32 bits
-        },
         ordinal {
-            ty: u32,
-            offset: 12,
+            ty: u64,
+            offset: 8, // Save 64 bits for id, even though it's only 32 bits
         },
     ],
     size: 16,
-    align: 0,
+    align: 8,
 }
 
 /// Transactional FIDL message
@@ -3406,7 +3400,7 @@ mod test {
 
     #[test]
     fn encode_decode_transaction_msg() {
-        let header = TransactionHeader { tx_id: 4, flags: 5, ordinal: 6 };
+        let header = TransactionHeader { tx_id: 4, ordinal: 6 };
         let body = "hello".to_string();
 
         let start = &mut TransactionMessage { header, body: &mut body.clone() };

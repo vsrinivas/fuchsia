@@ -218,7 +218,15 @@ Tab 3> fx run-test go_fidl_tests -- -test.v -test.run 'TestAllSuccessCases/.*xun
 
 ### Rust runtime
 
-**TBD**
+You first need to have Fuchsia running in an emulator. Here are the steps:
+
+```sh
+Tab 1> fx build && fx serve-updates
+
+Tab 2> fx run -kN
+
+Tab 3> fx run-test rust_fidl_tests
+```
 
 ### Dart runtime
 

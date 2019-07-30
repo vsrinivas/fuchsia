@@ -74,7 +74,8 @@ impl Watcher {
         // TODO(US-535): This API should return a future, rather than
         // making a synchronous call.
         let mut directory = fidl::client::sync::Client::new(channel);
-        let ordinal = 1522700084; // DirectoryWatch
+        // TODO(FIDL-524): Manually migrate.
+        let ordinal: u64 = 1522700084 << 32; // DirectoryWatch
         zx::Status::ok(
             directory
                 .send_query::<_, i32>(&mut (WATCH_MASK_ALL, 0, h1), ordinal, zx::Time::INFINITE)

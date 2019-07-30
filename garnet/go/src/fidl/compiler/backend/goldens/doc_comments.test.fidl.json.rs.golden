@@ -117,7 +117,7 @@ impl InterfaceSynchronousProxy {
 	///
 	/// method comment #3
 	pub fn method(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				1061382220,
+				0x3f43684c00000000,
 			)}
 }
 
@@ -176,7 +176,7 @@ impl InterfaceProxy {
 impl InterfaceProxyInterface for InterfaceProxy {
 	fn method(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 1061382220)
+		self.client.send(&mut (), 0x3f43684c00000000)
 	}
 	type OnEventResponseFut = fidl::client::QueryResponseFut<()>;}
 
@@ -209,7 +209,7 @@ impl futures::Stream for InterfaceEventStream {
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		futures::Poll::Ready(Some(match tx_header.ordinal {
-			325918733 | 325918733 => {
+			0x136d200d00000000 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
 				Ok((
@@ -349,7 +349,7 @@ impl futures::Stream for InterfaceRequestStream {
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {
-				1061382220 | 1061382220 => {
+				0x3f43684c00000000 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = InterfaceControlHandle {
@@ -404,8 +404,7 @@ impl InterfaceEncoder {
 	pub fn encode_method_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
-			ordinal: 1061382220,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x3f43684c00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -415,8 +414,7 @@ impl InterfaceEncoder {
 	pub fn encode_on_event_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
-			ordinal: 325918733,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x136d200d00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -444,8 +442,7 @@ impl InterfaceControlHandle {
 	pub fn send_on_event(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
-			flags: 0,
-			ordinal: 325918733,
+			ordinal: 0x136d200d00000000,
 		};
 
 		let mut response = ();

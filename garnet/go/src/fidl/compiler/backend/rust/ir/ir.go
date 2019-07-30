@@ -5,12 +5,13 @@
 package ir
 
 import (
-	"fidl/compiler/backend/common"
-	"fidl/compiler/backend/types"
 	"fmt"
 	"log"
 	"sort"
 	"strings"
+
+	"fidl/compiler/backend/common"
+	"fidl/compiler/backend/types"
 )
 
 type EncodedCompoundIdentifier = types.EncodedCompoundIdentifier
@@ -152,9 +153,7 @@ type Interface struct {
 
 type Method struct {
 	types.Attributes
-	Ordinal     uint64
-	GenOrdinal  uint64
-	OrdinalName string
+	Ordinals    types.Ordinals
 	Name        string
 	CamelName   string
 	HasRequest  bool
@@ -728,8 +727,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 
 		m := Method{
 			Attributes:  v.Attributes,
-			Ordinal:     v.Ordinal,
-			GenOrdinal:  v.GenOrdinal,
+			Ordinals:    types.NewOrdinals(v, "UNUSED", "UNUSED"),
 			Name:        name,
 			CamelName:   camelName,
 			HasRequest:  v.HasRequest,

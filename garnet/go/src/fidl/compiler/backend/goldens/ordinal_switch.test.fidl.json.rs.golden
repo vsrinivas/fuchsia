@@ -55,10 +55,10 @@ impl SwitchingOrdinalsSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn ordinal_five(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				2005164903,
+				0x7784636700000000,
 			)}
 	pub fn only_generated_ordinal(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				667506719,
+				0x27c9581f00000000,
 			)}
 }
 
@@ -119,11 +119,11 @@ impl SwitchingOrdinalsProxy {
 impl SwitchingOrdinalsProxyInterface for SwitchingOrdinalsProxy {
 	fn ordinal_five(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 2005164903)
+		self.client.send(&mut (), 0x7784636700000000)
 	}
 	fn only_generated_ordinal(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 667506719)
+		self.client.send(&mut (), 0x27c9581f00000000)
 	}
 	type EventOrdinalFifteenResponseFut = fidl::client::QueryResponseFut<()>;
 	type EventOnlyGeneratedOrdinalResponseFut = fidl::client::QueryResponseFut<()>;}
@@ -157,14 +157,14 @@ impl futures::Stream for SwitchingOrdinalsEventStream {
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		futures::Poll::Ready(Some(match tx_header.ordinal {
-			1467258273 | 1467258273 => {
+			0x577495a100000000 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					SwitchingOrdinalsEvent::EventOrdinalFifteen {}
 				))
 			}
-			2146190926 | 2146190926 => {
+			0x7fec464e00000000 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
 				Ok((
@@ -329,7 +329,7 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {
-				2005164903 | 2005164903 => {
+				0x7784636700000000 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = SwitchingOrdinalsControlHandle {
@@ -338,7 +338,7 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 
 					Ok(SwitchingOrdinalsRequest::OrdinalFive {control_handle,})
 				}
-				667506719 | 667506719 => {
+				0x27c9581f00000000 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = SwitchingOrdinalsControlHandle {
@@ -401,8 +401,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_ordinal_five_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
-			ordinal: 2005164903,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x7784636700000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -412,8 +411,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_only_generated_ordinal_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
-			ordinal: 667506719,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x27c9581f00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -423,8 +421,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_event_ordinal_fifteen_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
-			ordinal: 1467258273,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x577495a100000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -434,8 +431,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_event_only_generated_ordinal_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
-			ordinal: 2146190926,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x7fec464e00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -463,8 +459,7 @@ impl SwitchingOrdinalsControlHandle {
 	pub fn send_event_ordinal_fifteen(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
-			flags: 0,
-			ordinal: 1467258273,
+			ordinal: 0x577495a100000000,
 		};
 
 		let mut response = ();
@@ -484,8 +479,7 @@ impl SwitchingOrdinalsControlHandle {
 	pub fn send_event_only_generated_ordinal(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
-			flags: 0,
-			ordinal: 2146190926,
+			ordinal: 0x7fec464e00000000,
 		};
 
 		let mut response = ();

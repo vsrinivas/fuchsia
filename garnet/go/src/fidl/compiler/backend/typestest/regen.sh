@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 if [ ! -x "${FUCHSIA_BUILD_DIR}" ]; then
     echo "error: did you fx exec? missing \$FUCHSIA_BUILD_DIR" 1>&2

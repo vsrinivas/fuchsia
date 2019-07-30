@@ -5,6 +5,12 @@
 package templates
 
 const Interface = `
+{{- define "OrdinalMatchPattern" -}}
+  {{- range $index, $ordinal := . -}}
+    {{- if $index }} | {{ end -}}{{ $ordinal.Ordinal }}
+  {{- end -}}
+{{ end }}
+
 {{- define "InterfaceDeclaration" -}}
 {{- $interface := . }}
 
@@ -90,7 +96,7 @@ impl {{ $interface.Name }}SynchronousProxy {
 				{{- else -}}, {{ $request.Name }} {{- end -}}
 				{{- end -}}
 				),
-				{{ $method.Ordinal }},
+				{{ $method.Ordinals.Write.Ordinal }},
 				___deadline,
 			)
 		{{- else -}}
@@ -100,7 +106,7 @@ impl {{ $interface.Name }}SynchronousProxy {
 				{{- else -}}, {{ $request.Name }} {{- end -}}
 				{{- end -}}
 				),
-				{{ $method.Ordinal }},
+				{{ $method.Ordinals.Write.Ordinal }},
 			)
 		{{- end -}}
 	}
@@ -209,7 +215,7 @@ impl {{ $interface.Name}}ProxyInterface for {{ $interface.Name}}Proxy {
 		{{- if (eq $index 0) -}} {{ $request.Name }}
 		{{- else -}}, {{ $request.Name }} {{- end -}}
 		{{- end -}}
-	), {{ $method.Ordinal }})
+	), {{ $method.Ordinals.Write.Ordinal }})
 	}
 	{{- end -}}
 	{{- end -}}
@@ -246,7 +252,7 @@ impl futures::Stream for {{ $interface.Name }}EventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			{{- range $method := $interface.Methods }}
 			{{- if not $method.HasRequest }}
-			{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
+			{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
 				let mut out_tuple: (
 					{{- range $index, $param := $method.Response -}}
 					{{- if ne 0 $index -}}, {{- $param.Type -}}
@@ -434,7 +440,7 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				{{- range $method := $interface.Methods }}
 				{{- if $method.HasRequest }}
-				{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
+				{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
 					let mut req: (
 						{{- range $index, $param := $method.Request -}}
 							{{- if ne 0 $index -}}, {{- $param.Type -}}
@@ -574,8 +580,7 @@ impl {{ $interface.Name }}Encoder {
 			{{- else -}}
 			tx_id: 0,
 			{{- end -}}
-			flags: 0,
-			ordinal: {{ $method.Ordinal }},
+			ordinal: {{ $method.Ordinals.Write.Ordinal }},
 		};
 		let mut body = (
 			{{- range $index, $param := $method.Request -}}
@@ -604,8 +609,7 @@ impl {{ $interface.Name }}Encoder {
 			{{- else -}}
 			tx_id: 0,
 			{{- end -}}
-			flags: 0,
-			ordinal: {{ $method.Ordinal }},
+			ordinal: {{ $method.Ordinals.Write.Ordinal }},
 		};
 		let mut body = (
 			{{- range $index, $param := $method.Response -}}
@@ -647,8 +651,7 @@ impl {{ $interface.Name }}ControlHandle {
 	) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
-			flags: 0,
-			ordinal: {{ $method.Ordinal }},
+			ordinal: {{ $method.Ordinals.Write.Ordinal }},
 		};
 
 		let mut response = (
@@ -683,7 +686,7 @@ impl {{ $interface.Name }}ControlHandle {
 pub struct {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	control_handle: ::std::mem::ManuallyDrop<{{ $interface.Name }}ControlHandle>,
 	tx_id: u32,
-	ordinal: u32,
+	ordinal: u64,
 }
 
 impl ::std::ops::Drop for {{ $interface.Name }}{{ $method.CamelName }}Responder {
@@ -756,7 +759,6 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
-			flags: 0,
 			ordinal: self.ordinal,
 		};
 
