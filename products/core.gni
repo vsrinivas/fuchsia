@@ -62,7 +62,7 @@ base_package_labels += [
   "//src/developer/feedback/kernel_crash_checker:config",
   "//src/identity/bin:core",
   "//src/recovery/factory_reset",
-  "//src/sys/netclock",
+  "//src/sys/timekeeper",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 ]
 

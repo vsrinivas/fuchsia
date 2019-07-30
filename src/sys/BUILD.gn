@@ -8,7 +8,7 @@ group("sys") {
     "cmc",
     "component_manager",
     "component_test_runner",
-    "netclock",
+    "timekeeper",
   ]
 }
 
@@ -22,6 +22,6 @@ group("tests") {
     "dash:tests",
     "lib:tests",
     "locate:tests",
-    "netclock:tests",
+    "timekeeper:tests",
   ]
 }

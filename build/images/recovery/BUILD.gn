@@ -23,7 +23,7 @@ recovery_packages = [
   "//src/connectivity/wlan/wlancfg",
   "//src/connectivity/wlan/wlanstack",
   "//src/recovery/system",
-  "//src/sys/netclock",
+  "//src/sys/timekeeper",
   pkgfs_package_label,
 ]
 

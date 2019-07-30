@@ -17,16 +17,16 @@ fidl("fuchsia.time") {
   ]
 }
 
-package("netclock") {
+package("timekeeper") {
   meta = [
     {
       path = "meta/service.cmx"
-      dest = "netclock.cmx"
+      dest = "timekeeper.cmx"
     },
   ]
 
   public_deps = [
-    ":netclock_config",
+    ":timekeeper_config",
   ]
 
   deps = [
@@ -35,15 +35,15 @@ package("netclock") {
 
   binaries = [
     {
-      name = "netclock"
+      name = "timekeeper"
     },
   ]
 }
 
-config_data("netclock_config") {
+config_data("timekeeper_config") {
   for_pkg = "sysmgr"
   outputs = [
-    "netclock.config",
+    "timekeeper.config",
   ]
   sources = [
     "service.config",
@@ -51,7 +51,7 @@ config_data("netclock_config") {
 }
 
 rustc_binary("bin") {
-  name = "netclock"
+  name = "timekeeper"
   edition = "2018"
   with_unit_tests = true
 
@@ -74,14 +74,14 @@ rustc_binary("bin") {
   ]
 }
 
-test_package("netclock_bin_test") {
+test_package("timekeeper_bin_test") {
   public_deps = [
     ":bin_test",
   ]
 
   tests = [
     {
-      name = "netclock_bin_test"
+      name = "timekeeper_bin_test"
       environments = basic_envs
     },
   ]
@@ -90,13 +90,13 @@ test_package("netclock_bin_test") {
     {
       path = "test/y2k"
       dest = "y2k"
-    }
+    },
   ]
 }
 
 group("tests") {
   testonly = true
   public_deps = [
-    ":netclock_bin_test",
+    ":timekeeper_bin_test",
   ]
 }
