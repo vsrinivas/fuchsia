@@ -217,7 +217,7 @@ static int btprint_callback(void* vdata, uintptr_t pc, const char* filename, int
 static void btprint(FILE* f, DebugInfoCache* di_cache, uint32_t n, uintptr_t pc, uintptr_t sp,
                     bool use_new_format) {
   if (use_new_format) {
-    fprintf(f, "{{{bt:%u:%#" PRIxPTR "}}}\n", n, pc);
+    fprintf(f, "{{{bt:%u:%#" PRIxPTR ":sp %#" PRIxPTR "}}}\n", n, pc, sp);
     return;
   }
 
