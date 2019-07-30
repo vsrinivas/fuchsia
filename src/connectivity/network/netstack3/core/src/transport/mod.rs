@@ -61,17 +61,18 @@ pub(crate) mod udp;
 use std::collections::HashMap;
 use std::hash::Hash;
 
+use crate::data_structures::IdMap;
 use crate::transport::udp::UdpEventDispatcher;
 use crate::{Context, EventDispatcher};
 
 /// The state associated with the transport layer.
-pub(crate) struct TransportLayerState<D: EventDispatcher> {
+pub(crate) struct TransportLayerState {
     tcp: self::tcp::TcpState,
-    udp: self::udp::UdpState<D>,
+    udp: self::udp::UdpState,
 }
 
-impl<D: EventDispatcher> Default for TransportLayerState<D> {
-    fn default() -> TransportLayerState<D> {
+impl Default for TransportLayerState {
+    fn default() -> TransportLayerState {
         TransportLayerState {
             tcp: self::tcp::TcpState::default(),
             udp: self::udp::UdpState::default(),
@@ -98,33 +99,34 @@ pub trait TransportLayerEventDispatcher: UdpEventDispatcher {}
 
 /// A bidirectional map between listeners and addresses.
 ///
-/// A `ListenerAddrMap` maps a listener object (`L`) to zero or more address
-/// objects (`A`). It allows for constant-time address -> listener and listener
-/// -> address lookup, and insertion and deletion based on listener.
-struct ListenerAddrMap<L, A> {
-    listener_to_addrs: HashMap<L, Vec<A>>,
-    addr_to_listener: HashMap<A, L>,
+/// A `ListenerAddrMap` keeps addresses mapped by integer indexes, and allows
+/// for constant-time mapping in either direction (though address -> index
+/// mappings are via a hash map, and are thus slower).
+struct ListenerAddrMap<A> {
+    listener_to_addrs: IdMap<Vec<A>>,
+    addr_to_listener: HashMap<A, usize>,
 }
 
-impl<L: Eq + Hash + Clone, A: Eq + Hash + Clone> ListenerAddrMap<L, A> {
-    fn insert(&mut self, listener: L, addrs: Vec<A>) {
+impl<A: Eq + Hash + Clone> ListenerAddrMap<A> {
+    fn insert(&mut self, addrs: Vec<A>) -> usize {
+        let listener = self.listener_to_addrs.push(addrs.clone());
         for addr in &addrs {
-            self.addr_to_listener.insert(addr.clone(), listener.clone());
+            self.addr_to_listener.insert(addr.clone(), listener);
         }
-        self.listener_to_addrs.insert(listener, addrs);
+        listener
     }
 }
 
-impl<L: Eq + Hash, A: Eq + Hash> ListenerAddrMap<L, A> {
-    fn get_by_addr(&self, addr: &A) -> Option<&L> {
-        self.addr_to_listener.get(addr)
+impl<A: Eq + Hash> ListenerAddrMap<A> {
+    fn get_by_addr(&self, addr: &A) -> Option<usize> {
+        self.addr_to_listener.get(addr).cloned()
     }
 
-    fn get_by_listener(&self, listener: &L) -> Option<&Vec<A>> {
+    fn get_by_listener(&self, listener: usize) -> Option<&Vec<A>> {
         self.listener_to_addrs.get(listener)
     }
 
-    fn remove_by_listener(&mut self, listener: &L) -> Option<Vec<A>> {
+    fn remove_by_listener(&mut self, listener: usize) -> Option<Vec<A>> {
         let addrs = self.listener_to_addrs.remove(listener)?;
         for addr in &addrs {
             self.addr_to_listener.remove(addr).unwrap();
@@ -133,10 +135,10 @@ impl<L: Eq + Hash, A: Eq + Hash> ListenerAddrMap<L, A> {
     }
 }
 
-impl<L: Eq + Hash, A: Eq + Hash> Default for ListenerAddrMap<L, A> {
-    fn default() -> ListenerAddrMap<L, A> {
+impl<A: Eq + Hash> Default for ListenerAddrMap<A> {
+    fn default() -> ListenerAddrMap<A> {
         ListenerAddrMap {
-            listener_to_addrs: HashMap::default(),
+            listener_to_addrs: IdMap::default(),
             addr_to_listener: HashMap::default(),
         }
     }
@@ -144,42 +146,43 @@ impl<L: Eq + Hash, A: Eq + Hash> Default for ListenerAddrMap<L, A> {
 
 /// A bidirectional map between connections and addresses.
 ///
-/// A `ConnAddrMap` maps a connection object (`C`) to an address object (`A`).
-/// It allows for constant-time address -> connection and connection -> address
-/// lookup, and insertion and deletion based on connection.
+/// A `ConnAddrMap` keeps addresses mapped by integer indexes, and allows for
+/// constant-time mapping in either direction (though address -> index mappings
+/// are via a hash map, and thus slower).
 ///
 /// It differs from a `ListenerAddrMap` in that only a single address per
 /// connection is supported.
-pub(crate) struct ConnAddrMap<C, A> {
-    conn_to_addr: HashMap<C, A>,
-    addr_to_conn: HashMap<A, C>,
+pub(crate) struct ConnAddrMap<A> {
+    conn_to_addr: IdMap<A>,
+    addr_to_conn: HashMap<A, usize>,
 }
 
-impl<C: Eq + Hash + Clone, A: Eq + Hash + Clone> ConnAddrMap<C, A> {
-    pub(crate) fn insert(&mut self, conn: C, addr: A) {
-        self.addr_to_conn.insert(addr.clone(), conn.clone());
-        self.conn_to_addr.insert(conn, addr);
+impl<A: Eq + Hash + Clone> ConnAddrMap<A> {
+    pub(crate) fn insert(&mut self, addr: A) -> usize {
+        let conn = self.conn_to_addr.push(addr.clone());
+        self.addr_to_conn.insert(addr, conn.clone());
+        conn
     }
 }
 
-impl<C: Eq + Hash, A: Eq + Hash> ConnAddrMap<C, A> {
-    pub(crate) fn get_by_addr(&self, addr: &A) -> Option<&C> {
-        self.addr_to_conn.get(addr)
+impl<A: Eq + Hash> ConnAddrMap<A> {
+    pub(crate) fn get_by_addr(&self, addr: &A) -> Option<usize> {
+        self.addr_to_conn.get(addr).cloned()
     }
 
-    pub(crate) fn get_by_conn(&self, conn: &C) -> Option<&A> {
+    pub(crate) fn get_by_conn(&self, conn: usize) -> Option<&A> {
         self.conn_to_addr.get(conn)
     }
 
-    pub(crate) fn remove_by_conn(&mut self, conn: &C) -> Option<A> {
+    pub(crate) fn remove_by_conn(&mut self, conn: usize) -> Option<A> {
         let addr = self.conn_to_addr.remove(conn)?;
         self.addr_to_conn.remove(&addr).unwrap();
         Some(addr)
     }
 }
 
-impl<A: Eq + Hash, C: Eq + Hash> Default for ConnAddrMap<A, C> {
-    fn default() -> ConnAddrMap<A, C> {
-        ConnAddrMap { conn_to_addr: HashMap::default(), addr_to_conn: HashMap::default() }
+impl<A: Eq + Hash> Default for ConnAddrMap<A> {
+    fn default() -> ConnAddrMap<A> {
+        ConnAddrMap { conn_to_addr: IdMap::default(), addr_to_conn: HashMap::default() }
     }
 }

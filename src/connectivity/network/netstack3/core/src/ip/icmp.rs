@@ -4,7 +4,6 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
-use std::hash::Hash;
 use std::mem;
 
 use byteorder::{ByteOrder, NetworkEndian};
@@ -54,7 +53,7 @@ impl IcmpStateBuilder {
         self
     }
 
-    pub(crate) fn build<D: EventDispatcher>(self) -> IcmpState<D> {
+    pub(crate) fn build(self) -> IcmpState {
         IcmpState {
             v4: Icmpv4State {
                 conns: ConnAddrMap::default(),
@@ -66,18 +65,18 @@ impl IcmpStateBuilder {
 }
 
 /// The state associated with the ICMP layer.
-pub(crate) struct IcmpState<D: EventDispatcher> {
-    v4: Icmpv4State<D>,
-    v6: Icmpv6State<D>,
+pub(crate) struct IcmpState {
+    v4: Icmpv4State,
+    v6: Icmpv6State,
 }
 
-struct Icmpv4State<D: EventDispatcher> {
-    conns: ConnAddrMap<D::IcmpConn, IcmpAddr<Ipv4Addr>>,
+struct Icmpv4State {
+    conns: ConnAddrMap<IcmpAddr<Ipv4Addr>>,
     send_timestamp_reply: bool,
 }
 
-struct Icmpv6State<D: EventDispatcher> {
-    conns: ConnAddrMap<D::IcmpConn, IcmpAddr<Ipv6Addr>>,
+struct Icmpv6State {
+    conns: ConnAddrMap<IcmpAddr<Ipv6Addr>>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -89,24 +88,27 @@ struct IcmpAddr<A: IpAddress> {
     icmp_id: u16,
 }
 
+/// The ID identifying an ICMP connection.
+///
+/// When a new ICMP connection is added, it is given a unique `IcmpConnId`.
+/// These are opaque `usize`s which are intentionally allocated as densely as
+/// possible around 0, making it possible to store any associated data in a
+/// `Vec` indexed by the ID. `IcmpConnId` implements `Into<usize>`.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct IcmpConnId(usize);
+
+impl From<IcmpConnId> for usize {
+    fn from(id: IcmpConnId) -> usize {
+        id.0
+    }
+}
+
 /// An event dispatcher for the ICMP layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
 pub trait IcmpEventDispatcher {
-    /// A key identifying an ICMP connection.
-    ///
-    /// An `IcmpConn` is an opaque identifier which uniquely identifies a
-    /// particular ICMP connection. When registering a new connection, a new
-    /// `IcmpConn` must be provided. When the stack invokes methods on this
-    /// trait related to a connection, the corresponding `IcmpConn` will be
-    /// provided.
-    ///
-    /// ICMP connections are disambiguated using the ICMP "ID" field. When a new
-    /// connection is registered, a new ID is allocated to that connection.
-    type IcmpConn: Clone + Eq + Hash;
-
     /// Receive an ICMP echo reply.
-    fn receive_icmp_echo_reply(&mut self, conn: &Self::IcmpConn, seq_num: u16, data: &[u8]) {
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: &[u8]) {
         log_unimplemented!((), "IcmpEventDispatcher::receive_icmp_echo_reply: not implemented");
     }
 }
@@ -906,7 +908,11 @@ fn receive_icmp_echo_reply<D: EventDispatcher, I: Ip, B: ByteSlice>(
     if let Some(conn) = get_conns::<_, I::Addr>(state)
         .get_by_addr(&IcmpAddr { remote_addr: src_ip, icmp_id: msg.message().id() })
     {
-        dispatcher.receive_icmp_echo_reply(conn, msg.message().seq(), msg.body().bytes());
+        dispatcher.receive_icmp_echo_reply(
+            IcmpConnId(conn),
+            msg.message().seq(),
+            msg.body().bytes(),
+        );
     }
 }
 
@@ -919,13 +925,13 @@ fn receive_icmp_echo_reply<D: EventDispatcher, I: Ip, B: ByteSlice>(
 #[specialize_ip]
 pub fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
     ctx: &mut Context<D>,
-    conn: &D::IcmpConn,
+    conn: IcmpConnId,
     seq_num: u16,
     body: B,
 ) {
     let conns = get_conns::<_, I::Addr>(ctx.state_mut());
     let IcmpAddr { remote_addr, icmp_id } =
-        conns.get_by_conn(conn).expect("icmp::send_icmp_echo_request: no such conn").clone();
+        conns.get_by_conn(conn.0).expect("icmp::send_icmp_echo_request: no such conn").clone();
 
     let req = IcmpEchoRequest::new(icmp_id, seq_num);
 
@@ -947,18 +953,16 @@ pub fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
 /// Creates a new ICMP connection.
 ///
 /// Creates a new ICMP connection with the provided parameters `local_addr`,
-/// `remote_addr` and `icmp_id`. The `conn` identifier can be used to index
-/// the created connection if it succeeds.
+/// `remote_addr` and `icmp_id`, and returns its newly-allocated ID.
 ///
 /// If a connection with the conflicting parameters already exists, the call
 /// fails and returns an [`error::NetstackError`].
 pub fn new_icmp_connection<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
-    conn: D::IcmpConn,
     local_addr: A,
     remote_addr: A,
     icmp_id: u16,
-) -> Result<(), error::NetstackError> {
+) -> Result<IcmpConnId, error::NetstackError> {
     let conns = get_conns::<_, A>(ctx.state_mut());
     // TODO(brunodalbo) icmp connections are currently only bound to the remote
     //  address. Sockets api v2 will improve this.
@@ -966,14 +970,13 @@ pub fn new_icmp_connection<D: EventDispatcher, A: IpAddress>(
     if conns.get_by_addr(&addr).is_some() {
         return Err(error::NetstackError::Exists);
     }
-    conns.insert(conn, addr);
-    Ok(())
+    Ok(IcmpConnId(conns.insert(addr)))
 }
 
 #[specialize_ip_address]
 fn get_conns<D: EventDispatcher, A: IpAddress>(
     state: &mut StackState<D>,
-) -> &mut ConnAddrMap<D::IcmpConn, IcmpAddr<A>> {
+) -> &mut ConnAddrMap<IcmpAddr<A>> {
     #[ipv4addr]
     return &mut state.ip.icmp.v4.conns;
     #[ipv6addr]
@@ -1283,17 +1286,17 @@ mod tests {
         let mut net =
             crate::testutil::new_dummy_network_from_config("alice", "bob", config.clone());
 
-        let conn = 1;
         let icmp_id = 13;
 
-        new_icmp_connection(net.context("alice"), conn, config.local_ip, config.remote_ip, icmp_id)
-            .unwrap();
+        let conn =
+            new_icmp_connection(net.context("alice"), config.local_ip, config.remote_ip, icmp_id)
+                .unwrap();
 
         let echo_body = vec![1, 2, 3, 4];
 
         send_icmp_echo_request::<_, _, I>(
             net.context("alice"),
-            &conn,
+            conn,
             7,
             Buf::new(echo_body.clone(), ..),
         );

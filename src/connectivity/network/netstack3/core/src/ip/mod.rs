@@ -114,7 +114,7 @@ impl IpStateBuilder {
 pub(crate) struct IpLayerState<D: EventDispatcher> {
     v4: IpLayerStateInner<Ipv4, D>,
     v6: IpLayerStateInner<Ipv6, D>,
-    icmp: IcmpState<D>,
+    icmp: IcmpState,
     igmp: IdMap<IgmpInterface<D::Instant>>,
     mld: IdMap<MldInterface<D::Instant>>,
 }

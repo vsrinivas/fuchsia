@@ -124,7 +124,7 @@ impl StackStateBuilder {
 
 /// The state associated with the network stack.
 pub struct StackState<D: EventDispatcher> {
-    transport: TransportLayerState<D>,
+    transport: TransportLayerState,
     ip: IpLayerState<D>,
     device: DeviceLayerState,
     #[cfg(test)]

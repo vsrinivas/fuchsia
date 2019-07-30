@@ -23,7 +23,7 @@ use rand_xorshift::XorShiftRng;
 use crate::device::ethernet::EtherType;
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{IpParseResult, ParseError, ParseResult};
-use crate::ip::icmp::IcmpEventDispatcher;
+use crate::ip::icmp::{IcmpConnId, IcmpEventDispatcher};
 use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpProto, IPV6_MIN_MTU};
 use crate::transport::tcp::TcpOption;
 use crate::transport::udp::UdpEventDispatcher;
@@ -840,7 +840,7 @@ pub(crate) struct DummyEventDispatcher {
     timer_events: BinaryHeap<PendingTimer>,
     current_time: DummyInstant,
     rng: FakeCryptoRng<XorShiftRng>,
-    icmp_replies: HashMap<u64, Vec<(u16, Vec<u8>)>>,
+    icmp_replies: HashMap<IcmpConnId, Vec<(u16, Vec<u8>)>>,
 }
 
 impl Default for DummyEventDispatcher {
@@ -886,23 +886,18 @@ impl DummyEventDispatcher {
     }
 
     /// Takes all the received icmp replies for a given `conn`.
-    pub(crate) fn take_icmp_replies(&mut self, conn: u64) -> Vec<(u16, Vec<u8>)> {
+    pub(crate) fn take_icmp_replies(&mut self, conn: IcmpConnId) -> Vec<(u16, Vec<u8>)> {
         self.icmp_replies.remove(&conn).unwrap_or_else(Vec::default)
     }
 }
 
-impl UdpEventDispatcher for DummyEventDispatcher {
-    type UdpConn = ();
-    type UdpListener = ();
-}
+impl UdpEventDispatcher for DummyEventDispatcher {}
 
 impl TransportLayerEventDispatcher for DummyEventDispatcher {}
 
 impl IcmpEventDispatcher for DummyEventDispatcher {
-    type IcmpConn = u64;
-
-    fn receive_icmp_echo_reply(&mut self, conn: &Self::IcmpConn, seq_num: u16, data: &[u8]) {
-        let replies = self.icmp_replies.entry(*conn).or_insert_with(Vec::default);
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: &[u8]) {
+        let replies = self.icmp_replies.entry(conn).or_insert_with(Vec::default);
         replies.push((seq_num, data.to_owned()))
     }
 }

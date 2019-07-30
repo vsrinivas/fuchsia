@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 use crate::device::ethernet::EtherType;
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
-use crate::ip::icmp::IcmpEventDispatcher;
+use crate::ip::icmp::{IcmpConnId, IcmpEventDispatcher};
 use crate::ip::IpProto;
 use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4};
@@ -31,10 +31,7 @@ use crate::{EventDispatcher, IpLayerEventDispatcher, StackStateBuilder, TimerId}
 #[derive(Default)]
 struct BenchmarkEventDispatcher;
 
-impl UdpEventDispatcher for BenchmarkEventDispatcher {
-    type UdpConn = ();
-    type UdpListener = ();
-}
+impl UdpEventDispatcher for BenchmarkEventDispatcher {}
 
 impl TransportLayerEventDispatcher for BenchmarkEventDispatcher {}
 
@@ -50,9 +47,7 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
 }
 
 impl IcmpEventDispatcher for BenchmarkEventDispatcher {
-    type IcmpConn = ();
-
-    fn receive_icmp_echo_reply(&mut self, conn: &Self::IcmpConn, seq_num: u16, data: &[u8]) {
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: &[u8]) {
         unimplemented!()
     }
 }

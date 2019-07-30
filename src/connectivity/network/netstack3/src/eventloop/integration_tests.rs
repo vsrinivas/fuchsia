@@ -8,8 +8,9 @@ use fidl_fuchsia_netemul_network as net;
 use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
+use futures::{future, Future, FutureExt, StreamExt};
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr};
-use netstack3_core::icmp as core_icmp;
+use netstack3_core::icmp::{self as core_icmp, IcmpConnId};
 use packet::Buf;
 use pin_utils::pin_mut;
 use std::collections::HashMap;
@@ -19,7 +20,6 @@ use zx;
 
 use super::*;
 use crate::eventloop::util::{FidlCompatible, IntoFidlExt};
-use futures::{future, Future, FutureExt, StreamExt};
 
 /// log::Log implementation that uses stdout.
 ///
@@ -54,7 +54,7 @@ fn set_logger_for_test() {
 
 pub enum TestEvent {
     DeviceStatusChanged { id: u64, status: EthernetStatus },
-    IcmpEchoReply { conn: IcmpConnectionId, seq_num: u16, data: Vec<u8> },
+    IcmpEchoReply { conn: IcmpConnId, seq_num: u16, data: Vec<u8> },
 }
 
 #[derive(Default)]
@@ -511,14 +511,12 @@ async fn test_ping() {
     await!(t.get(0).wait_for_interface_online(1));
     await!(t.get(1).wait_for_interface_online(1));
 
-    const CONN_ID: IcmpConnectionId = 13;
     const ICMP_ID: u16 = 1;
 
     debug!("creating icmp connection");
     // create icmp connection on alice:
-    let () = core_icmp::new_icmp_connection::<_, Ipv4Addr>(
+    let conn_id = core_icmp::new_icmp_connection::<_, Ipv4Addr>(
         t.ctx(0),
-        CONN_ID,
         ALICE_IP.into(),
         BOB_IP.into(),
         ICMP_ID,
@@ -543,7 +541,7 @@ async fn test_ping() {
         // send ping request:
         core_icmp::send_icmp_echo_request::<_, _, Ipv4>(
             t.ctx(0),
-            &CONN_ID,
+            conn_id,
             seq,
             Buf::new(ping_bod.to_vec(), ..),
         );
@@ -552,7 +550,7 @@ async fn test_ping() {
         let (rsp_id, rsp_seq, rsp_bod) = await!(t.run_until(recv.next())).unwrap().unwrap();
         debug!("Received ping seq {}", rsp_seq);
         // validate seq and body:
-        assert_eq!(rsp_id, CONN_ID);
+        assert_eq!(rsp_id, conn_id);
         assert_eq!(rsp_seq, seq);
         assert_eq!(&rsp_bod, &ping_bod);
     }

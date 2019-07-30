@@ -121,14 +121,13 @@ use util::{
 
 use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices};
 
+use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher};
 use netstack3_core::{
-    add_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
-    icmp as core_icmp, receive_frame, set_ip_addr_subnet, Context, DeviceId,
-    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpLayerEventDispatcher,
-    NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
+    add_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout, receive_frame,
+    set_ip_addr_subnet, Context, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither,
+    EventDispatcher, IpLayerEventDispatcher, NetstackError, StackState, TimerId,
+    TransportLayerEventDispatcher, UdpEventDispatcher,
 };
-
-type IcmpConnectionId = u64;
 
 macro_rules! stack_fidl_error {
     ($err:tt) => {
@@ -179,7 +178,7 @@ impl EthernetSetupWorker {
                     self.dev,
                     vmo,
                     eth::DEFAULT_BUFFER_SIZE,
-                    "recovery-ns"
+                    "recovery-ns",
                 ))?;
                 let info = await!(eth_client.info())?;
                 await!(eth_client.start())?;
@@ -738,23 +737,14 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for EventLoopInner {
     }
 }
 
-impl UdpEventDispatcher for EventLoopInner {
-    type UdpConn = ();
-    type UdpListener = ();
-}
+impl UdpEventDispatcher for EventLoopInner {}
 
 impl TransportLayerEventDispatcher for EventLoopInner {}
 
-impl core_icmp::IcmpEventDispatcher for EventLoopInner {
-    type IcmpConn = IcmpConnectionId;
-
-    fn receive_icmp_echo_reply(&mut self, conn: &Self::IcmpConn, seq_num: u16, data: &[u8]) {
+impl IcmpEventDispatcher for EventLoopInner {
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: &[u8]) {
         #[cfg(test)]
-        self.send_test_event(TestEvent::IcmpEchoReply {
-            conn: *conn,
-            seq_num,
-            data: data.to_owned(),
-        });
+        self.send_test_event(TestEvent::IcmpEchoReply { conn, seq_num, data: data.to_owned() });
 
         // TODO(brunodalbo) implement actual handling of icmp echo replies
     }

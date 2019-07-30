@@ -7,8 +7,8 @@
 use {
     crate::eventloop::Event,
     failure::Error,
-    fidl_fuchsia_posix_socket::ProviderRequestStream,
     fidl_fuchsia_net_stack::StackRequestStream,
+    fidl_fuchsia_posix_socket::ProviderRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{channel::mpsc, FutureExt, SinkExt, StreamExt, TryStreamExt},
