@@ -67,12 +67,13 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   fuchsia::net::ConnectivityPtr connectivity =
       sys::ComponentContext::Create()->svc()->Connect<fuchsia::net::Connectivity>();
-  connectivity.events().OnNetworkReachable = [&crashlog_vmo](bool reachable) {
+  connectivity.events().OnNetworkReachable = [&crashlog_vmo, &loop](bool reachable) {
     if (!reachable) {
       return;
     }
     CrashAnalyzer crash_analyzer;
     crash_analyzer.ProcessCrashlog(std::move(crashlog_vmo).ToTransport());
+    loop.Quit();
   };
   loop.Run();
 
