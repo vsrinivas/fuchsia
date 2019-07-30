@@ -90,67 +90,67 @@ pub mod tests {
 
     /// Test that the implementation stores, retrieves, and clears String values correctly.
     pub async fn do_test_set_get_remove_string<S: Storage>(storage: &mut S) {
-        assert_eq!(None, await!(storage.get_string("some key")));
+        assert_eq!(None, storage.get_string("some key").await);
 
-        await!(storage.set_string("some key", "some value")).unwrap();
-        await!(storage.commit()).unwrap();
-        assert_eq!(Some("some value".to_string()), await!(storage.get_string("some key")));
+        storage.set_string("some key", "some value").await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(Some("some value".to_string()), storage.get_string("some key").await);
 
-        await!(storage.set_string("some key", "some other value")).unwrap();
-        await!(storage.commit()).unwrap();
-        assert_eq!(Some("some other value".to_string()), await!(storage.get_string("some key")));
+        storage.set_string("some key", "some other value").await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(Some("some other value".to_string()), storage.get_string("some key").await);
 
-        await!(storage.remove("some key")).unwrap();
-        await!(storage.commit()).unwrap();
-        assert_eq!(None, await!(storage.get_string("some key")));
+        storage.remove("some key").await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(None, storage.get_string("some key").await);
     }
 
     /// Test that the implementation stores, retrieves, and clears int values correctly.
     pub async fn do_test_set_get_remove_int<S: Storage>(storage: &mut S) {
-        assert_eq!(None, await!(storage.get_int("some int key")));
+        assert_eq!(None, storage.get_int("some int key").await);
 
-        await!(storage.set_int("some int key", 42)).unwrap();
-        await!(storage.commit()).unwrap();
-        assert_eq!(Some(42), await!(storage.get_int("some int key")));
+        storage.set_int("some int key", 42).await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(Some(42), storage.get_int("some int key").await);
 
-        await!(storage.set_int("some int key", 1)).unwrap();
-        await!(storage.commit()).unwrap();
-        assert_eq!(Some(1), await!(storage.get_int("some int key")));
+        storage.set_int("some int key", 1).await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(Some(1), storage.get_int("some int key").await);
 
-        await!(storage.remove("some int key")).unwrap();
-        await!(storage.commit()).unwrap();
-        assert_eq!(None, await!(storage.get_int("some int key")));
+        storage.remove("some int key").await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(None, storage.get_int("some int key").await);
     }
 
     /// Test that the implementation stores, retrieves, and clears bool values correctly.
     pub async fn do_test_set_get_remove_bool<S: Storage>(storage: &mut S) {
-        assert_eq!(None, await!(storage.get_bool("some bool key")));
+        assert_eq!(None, storage.get_bool("some bool key").await);
 
-        await!(storage.set_bool("some bool key", false)).unwrap();
-        await!(storage.commit()).unwrap();
-        assert_eq!(Some(false), await!(storage.get_bool("some bool key")));
+        storage.set_bool("some bool key", false).await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(Some(false), storage.get_bool("some bool key").await);
 
-        await!(storage.set_bool("some bool key", true)).unwrap();
-        await!(storage.commit()).unwrap();
-        assert_eq!(Some(true), await!(storage.get_bool("some bool key")));
+        storage.set_bool("some bool key", true).await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(Some(true), storage.get_bool("some bool key").await);
 
-        await!(storage.remove("some bool key")).unwrap();
-        await!(storage.commit()).unwrap();
-        assert_eq!(None, await!(storage.get_bool("some bool key")));
+        storage.remove("some bool key").await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(None, storage.get_bool("some bool key").await);
     }
 
     /// Test that the implementation returns None for a mismatch between value types
     pub async fn do_return_none_for_wrong_value_type<S: Storage>(storage: &mut S) {
-        await!(storage.set_int("some int key", 42)).unwrap();
-        assert_eq!(None, await!(storage.get_string("some int key")));
+        storage.set_int("some int key", 42).await.unwrap();
+        assert_eq!(None, storage.get_string("some int key").await);
     }
 
     /// Test that a remove of a non-existent key causes no errors
     pub async fn do_ensure_no_error_remove_nonexistent_key<S: Storage>(storage: &mut S) {
-        await!(storage.set_string("some key", "some value")).unwrap();
-        await!(storage.commit()).unwrap();
+        storage.set_string("some key", "some value").await.unwrap();
+        storage.commit().await.unwrap();
 
-        await!(storage.remove("some key")).unwrap();
-        await!(storage.remove("some key")).unwrap();
+        storage.remove("some key").await.unwrap();
+        storage.remove("some key").await.unwrap();
     }
 }

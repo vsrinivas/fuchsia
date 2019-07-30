@@ -166,7 +166,7 @@ impl App {
 
     /// Load data from |storage|, only overwrite existing fields if data exists.
     pub async fn load<'a>(&'a mut self, storage: &'a impl Storage) {
-        if let Some(app_json) = await!(storage.get_string(&self.id)) {
+        if let Some(app_json) = storage.get_string(&self.id).await {
             match serde_json::from_str::<PersistedApp>(&app_json) {
                 Ok(persisted_app) => {
                     // Do not overwrite existing fields in app if no data for this field is
@@ -200,7 +200,7 @@ impl App {
         let persisted_app = PersistedApp::from(self);
         match serde_json::to_string(&persisted_app) {
             Ok(json) => {
-                if let Err(e) = await!(storage.set_string(&self.id, &json)) {
+                if let Err(e) = storage.set_string(&self.id, &json).await {
                     error!("Unable to persist cohort id: {}", e);
                 }
             }
@@ -375,8 +375,8 @@ mod tests {
             }});
             let json = serde_json::to_string(&json).unwrap();
             let mut app = App::new("some_id", [1, 2], Cohort::new(""));
-            await!(storage.set_string(&app.id, &json)).unwrap();
-            await!(app.load(&storage));
+            storage.set_string(&app.id, &json).await.unwrap();
+            app.load(&storage).await;
 
             let cohort = Cohort {
                 id: Some("some_id".to_string()),
@@ -399,7 +399,7 @@ mod tests {
             };
             let mut app = App::new("some_id", [1, 2], cohort);
             app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
-            await!(app.load(&storage));
+            app.load(&storage).await;
 
             // existing data not overwritten
             let cohort = Cohort {
@@ -422,9 +422,9 @@ mod tests {
                 name: Some("some_name".to_string()),
             };
             let mut app = App::new("some_id", [1, 2], cohort);
-            await!(storage.set_string(&app.id, "not a json")).unwrap();
+            storage.set_string(&app.id, "not a json").await.unwrap();
             app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
-            await!(app.load(&storage));
+            app.load(&storage).await;
 
             // existing data not overwritten
             let cohort = Cohort {
@@ -456,9 +456,9 @@ mod tests {
                 name: Some("some_name".to_string()),
             };
             let mut app = App::new("some_id", [1, 2], cohort);
-            await!(storage.set_string(&app.id, &json)).unwrap();
+            storage.set_string(&app.id, &json).await.unwrap();
             app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
-            await!(app.load(&storage));
+            app.load(&storage).await;
 
             // existing data not overwritten
             let cohort = Cohort {
@@ -482,7 +482,7 @@ mod tests {
             };
             let mut app = App::new("some_id", [1, 2], cohort);
             app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
-            await!(app.persist(&mut storage));
+            app.persist(&mut storage).await;
 
             let expected = serde_json::json!({
             "cohort": {
@@ -493,7 +493,7 @@ mod tests {
             "user_counting": {
                 "ClientRegulatedByDate":123
             }});
-            let json = await!(storage.get_string(&app.id)).unwrap();
+            let json = storage.get_string(&app.id).await.unwrap();
             assert_eq!(expected, serde_json::Value::from_str(&json).unwrap());
             assert_eq!(false, storage.committed());
         });
@@ -506,14 +506,14 @@ mod tests {
             let cohort = Cohort { id: None, hint: None, name: None };
             let mut app = App::new("some_id", [1, 2], cohort);
             app.user_counting = UserCounting::ClientRegulatedByDate(None);
-            await!(app.persist(&mut storage));
+            app.persist(&mut storage).await;
 
             let expected = serde_json::json!({
             "cohort": {},
             "user_counting": {
                 "ClientRegulatedByDate":null
             }});
-            let json = await!(storage.get_string(&app.id)).unwrap();
+            let json = storage.get_string(&app.id).await.unwrap();
             assert_eq!(expected, serde_json::Value::from_str(&json).unwrap());
             assert_eq!(false, storage.committed());
         });

@@ -64,7 +64,7 @@ impl Stash {
     }
 
     async fn get_value<'a>(&'a self, key: &'a str) -> Option<Box<Value>> {
-        let result = await!(self.proxy.get_value(key));
+        let result = self.proxy.get_value(key).await;
         match result {
             Ok(opt_value) => opt_value,
             Err(e) => {
@@ -93,7 +93,7 @@ impl Storage for Stash {
 
     fn get_string<'a>(&'a self, key: &'a str) -> BoxFuture<'a, Option<String>> {
         async move {
-            if let Some(v) = await!(self.get_value(key)) {
+            if let Some(v) = self.get_value(key).await {
                 if let Value::Stringval(s) = *v {
                     return Some(s);
                 }
@@ -106,7 +106,7 @@ impl Storage for Stash {
 
     fn get_int<'a>(&'a self, key: &'a str) -> BoxFuture<'a, Option<i64>> {
         async move {
-            if let Some(v) = await!(self.get_value(key)) {
+            if let Some(v) = self.get_value(key).await {
                 if let Value::Intval(s) = *v {
                     return Some(s);
                 }
@@ -119,7 +119,7 @@ impl Storage for Stash {
 
     fn get_bool<'a>(&'a self, key: &'a str) -> BoxFuture<Option<bool>> {
         async move {
-            if let Some(v) = await!(self.get_value(key)) {
+            if let Some(v) = self.get_value(key).await {
                 if let Value::Boolval(s) = *v {
                     return Some(s);
                 }
@@ -174,40 +174,39 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_get_remove_string() {
-        let mut storage = await!(Stash::new("test_set_get_remove_string")).unwrap();
-        await!(do_test_set_get_remove_string(&mut storage));
+        let mut storage = Stash::new("test_set_get_remove_string").await.unwrap();
+        do_test_set_get_remove_string(&mut storage).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_get_remove_int() {
-        let mut storage = await!(Stash::new("test_set_get_remove_int")).unwrap();
-        await!(do_test_set_get_remove_int(&mut storage));
+        let mut storage = Stash::new("test_set_get_remove_int").await.unwrap();
+        do_test_set_get_remove_int(&mut storage).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_get_remove_bool() {
-        let mut storage = await!(Stash::new("test_set_get_remove_bool")).unwrap();
-        await!(do_test_set_get_remove_bool(&mut storage));
+        let mut storage = Stash::new("test_set_get_remove_bool").await.unwrap();
+        do_test_set_get_remove_bool(&mut storage).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_return_none_for_wrong_value_type() {
-        let mut storage = await!(Stash::new("test_return_none_for_wrong_value_type")).unwrap();
-        await!(do_return_none_for_wrong_value_type(&mut storage));
+        let mut storage = Stash::new("test_return_none_for_wrong_value_type").await.unwrap();
+        do_return_none_for_wrong_value_type(&mut storage).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_ensure_no_error_remove_nonexistent_key() {
-        let mut storage =
-            await!(Stash::new("test_ensure_no_error_remove_nonexistent_key")).unwrap();
-        await!(do_ensure_no_error_remove_nonexistent_key(&mut storage));
+        let mut storage = Stash::new("test_ensure_no_error_remove_nonexistent_key").await.unwrap();
+        do_ensure_no_error_remove_nonexistent_key(&mut storage).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_commit() {
         let (mut storage, mut stream) = Stash::new_mock();
-        await!(storage.commit()).unwrap();
-        match await!(stream.next()).unwrap() {
+        storage.commit().await.unwrap();
+        match stream.next().await.unwrap() {
             Ok(StoreAccessorRequest::Commit { .. }) => {} // expected
             request => panic!("Unexpected request: {:?}", request),
         }

@@ -84,8 +84,8 @@ mod mock {
         timer.expect(Duration::from_secs(6666));
 
         block_on(async {
-            await!(timer.wait(Duration::from_secs(5555)));
-            await!(timer.wait(Duration::from_secs(6666)));
+            timer.wait(Duration::from_secs(5555)).await;
+            timer.wait(Duration::from_secs(6666)).await;
         });
     }
 
@@ -101,7 +101,7 @@ mod mock {
             .spawn_local(async move {
                 let mut i = 1;
                 loop {
-                    await!(timer.wait(Duration::from_secs(i)));
+                    timer.wait(Duration::from_secs(i)).await;
                     i += 1;
                 }
             })

@@ -85,11 +85,11 @@ impl Installer for FuchsiaInstaller {
             let (monitor_proxy, server_end) = create_proxy::<MonitorMarker>()?;
             let monitor_options = MonitorOptions { should_notify: Some(true) };
             let attempt_id =
-                await!(self.proxy.start_update(&url, options, server_end, monitor_options))?;
+                self.proxy.start_update(&url, options, server_end, monitor_options).await?;
             info!("Update started with attempt id: {}", attempt_id);
 
             let mut stream = monitor_proxy.take_event_stream();
-            while let Some(event) = await!(stream.try_next())? {
+            while let Some(event) = stream.try_next().await? {
                 match event {
                     MonitorEvent::OnStateEnter { state } => {
                         // TODO: report progress to ProgressObserver
@@ -142,10 +142,10 @@ mod tests {
             install_source: InstallSource::OnDemand,
         };
         let installer_fut = async move {
-            await!(installer.perform_install(&plan, None)).unwrap();
+            installer.perform_install(&plan, None).await.unwrap();
         };
         let stream_fut = async move {
-            match await!(stream.next()).unwrap() {
+            match stream.next().await.unwrap() {
                 Ok(InstallerRequest::StartUpdate {
                     url,
                     options: Options { initiator },
@@ -163,7 +163,7 @@ mod tests {
                 request => panic!("Unexpected request: {:?}", request),
             }
         };
-        await!(future::join(installer_fut, stream_fut));
+        future::join(installer_fut, stream_fut).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -174,13 +174,13 @@ mod tests {
             install_source: InstallSource::OnDemand,
         };
         let installer_fut = async move {
-            match await!(installer.perform_install(&plan, None)) {
+            match installer.perform_install(&plan, None).await {
                 Err(FuchsiaInstallError::Installer) => {} // expected
                 result => panic!("Unexpected result: {:?}", result),
             }
         };
         let stream_fut = async move {
-            match await!(stream.next()).unwrap() {
+            match stream.next().await.unwrap() {
                 Ok(InstallerRequest::StartUpdate { monitor, responder, .. }) => {
                     responder.send("00000000-0000-0000-0000-000000000002").unwrap();
                     let (_stream, handle) = monitor.into_stream_and_control_handle().unwrap();
@@ -189,7 +189,7 @@ mod tests {
                 request => panic!("Unexpected request: {:?}", request),
             }
         };
-        await!(future::join(installer_fut, stream_fut));
+        future::join(installer_fut, stream_fut).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -200,20 +200,20 @@ mod tests {
             install_source: InstallSource::OnDemand,
         };
         let installer_fut = async move {
-            match await!(installer.perform_install(&plan, None)) {
+            match installer.perform_install(&plan, None).await {
                 Err(FuchsiaInstallError::FIDL(_)) => {} // expected
                 result => panic!("Unexpected result: {:?}", result),
             }
         };
         let stream_fut = async move {
-            match await!(stream.next()).unwrap() {
+            match stream.next().await.unwrap() {
                 Ok(InstallerRequest::StartUpdate { .. }) => {
                     // Don't send attempt id.
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
         };
-        await!(future::join(installer_fut, stream_fut));
+        future::join(installer_fut, stream_fut).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -224,13 +224,13 @@ mod tests {
             install_source: InstallSource::OnDemand,
         };
         let installer_fut = async move {
-            match await!(installer.perform_install(&plan, None)) {
+            match installer.perform_install(&plan, None).await {
                 Err(FuchsiaInstallError::Installer) => {} // expected
                 result => panic!("Unexpected result: {:?}", result),
             }
         };
         let stream_fut = async move {
-            match await!(stream.next()).unwrap() {
+            match stream.next().await.unwrap() {
                 Ok(InstallerRequest::StartUpdate { monitor, responder, .. }) => {
                     responder.send("00000000-0000-0000-0000-000000000003").unwrap();
                     let (_stream, handle) = monitor.into_stream_and_control_handle().unwrap();
@@ -240,6 +240,6 @@ mod tests {
                 request => panic!("Unexpected request: {:?}", request),
             }
         };
-        await!(future::join(installer_fut, stream_fut));
+        future::join(installer_fut, stream_fut).await;
     }
 }

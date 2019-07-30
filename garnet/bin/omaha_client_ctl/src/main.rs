@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl_fuchsia_omaha_client::OmahaClientConfigurationMarker;
@@ -26,7 +26,7 @@ fn print_state(state: State) {
 
 async fn monitor_state(monitor: MonitorProxy) -> Result<(), Error> {
     let mut stream = monitor.take_event_stream();
-    while let Some(event) = await!(stream.try_next())? {
+    while let Some(event) = stream.try_next().await? {
         match event {
             MonitorEvent::OnState { state } => {
                 print_state(state);
@@ -91,11 +91,11 @@ async fn main() -> Result<(), Error> {
 
             match cmd {
                 Command::GetChannel => {
-                    let channel = await!(omaha_client.get_channel())?;
+                    let channel = omaha_client.get_channel().await?;
                     println!("channel: {}", channel);
                 }
                 Command::SetChannel { channel, no_factory_reset } => {
-                    let status = await!(omaha_client.set_channel(&channel, !no_factory_reset))?;
+                    let status = omaha_client.set_channel(&channel, !no_factory_reset).await?;
                     zx::Status::ok(status)?;
                 }
                 _ => {}
@@ -108,7 +108,7 @@ async fn main() -> Result<(), Error> {
 
             match cmd {
                 Command::GetState => {
-                    let state = await!(omaha_client.get_state())?;
+                    let state = omaha_client.get_state().await?;
                     print_state(state);
                 }
                 Command::CheckNow { service_initiated, monitor } => {
@@ -122,11 +122,11 @@ async fn main() -> Result<(), Error> {
                     if monitor {
                         let (client_proxy, server_end) =
                             fidl::endpoints::create_proxy::<MonitorMarker>()?;
-                        let result = await!(omaha_client.check_now(options, Some(server_end)))?;
+                        let result = omaha_client.check_now(options, Some(server_end)).await?;
                         println!("Check started result: {:?}", result);
-                        await!(monitor_state(client_proxy))?;
+                        monitor_state(client_proxy).await?;
                     } else {
-                        let result = await!(omaha_client.check_now(options, None))?;
+                        let result = omaha_client.check_now(options, None).await?;
                         println!("Check started result: {:?}", result);
                     }
                 }
@@ -134,7 +134,7 @@ async fn main() -> Result<(), Error> {
                     let (client_proxy, server_end) =
                         fidl::endpoints::create_proxy::<MonitorMarker>()?;
                     omaha_client.add_monitor(server_end)?;
-                    await!(monitor_state(client_proxy))?;
+                    monitor_state(client_proxy).await?;
                 }
                 _ => {}
             }

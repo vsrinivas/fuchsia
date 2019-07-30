@@ -61,18 +61,18 @@ impl MockHttpRequest {
     }
 
     pub async fn assert_body(self, body: &[u8]) {
-        let chunks = await!(self.request.into_body().compat().try_concat()).unwrap();
+        let chunks = self.request.into_body().compat().try_concat().await.unwrap();
         assert_eq!(body, chunks.as_ref())
     }
 
     pub async fn assert_body_str(self, body: &str) {
-        let chunks = await!(self.request.into_body().compat().try_concat()).unwrap();
+        let chunks = self.request.into_body().compat().try_concat().await.unwrap();
         assert_eq!(body, String::from_utf8_lossy(chunks.as_ref()));
     }
 }
 
 async fn response_to_vec(response: Response<Body>) -> Vec<u8> {
-    await!(response.into_body().compat().try_concat()).unwrap().to_vec()
+    response.into_body().compat().try_concat().await.unwrap().to_vec()
 }
 
 #[test]
@@ -85,13 +85,13 @@ fn test_mock() {
     let req =
         Request::get(uri).header("X-Custom-Foo", "Bar").body(req_body.clone().into()).unwrap();
     block_on(async {
-        let response = await!(mock.request(req)).unwrap();
-        assert_eq!(res_body, await!(response_to_vec(response)));
+        let response = mock.request(req).await.unwrap();
+        assert_eq!(res_body, response_to_vec(response).await);
 
         mock.assert_method(&hyper::Method::GET);
         mock.assert_uri(uri);
         mock.assert_header("X-Custom-Foo", "Bar");
-        await!(mock.assert_body(req_body.as_slice()));
+        mock.assert_body(req_body.as_slice()).await;
     });
 }
 
@@ -100,10 +100,10 @@ fn test_missing_response() {
     let res_body = vec![1, 2, 3];
     let mut mock = MockHttpRequest::new(Response::new(res_body.clone().into()));
     block_on(async {
-        let response = await!(mock.request(Request::default())).unwrap();
-        assert_eq!(res_body, await!(response_to_vec(response)));
+        let response = mock.request(Request::default()).await.unwrap();
+        assert_eq!(res_body, response_to_vec(response).await);
 
-        let response2 = await!(mock.request(Request::default())).unwrap();
+        let response2 = mock.request(Request::default()).await.unwrap();
         assert_eq!(response2.status(), hyper::StatusCode::INTERNAL_SERVER_ERROR);
     });
 }
@@ -116,10 +116,10 @@ fn test_multiple_responses() {
     mock.add_response(Response::new(res_body2.clone().into()));
 
     block_on(async {
-        let response = await!(mock.request(Request::default())).unwrap();
-        assert_eq!(res_body, await!(response_to_vec(response)));
+        let response = mock.request(Request::default()).await.unwrap();
+        assert_eq!(res_body, response_to_vec(response).await);
 
-        let response2 = await!(mock.request(Request::default())).unwrap();
-        assert_eq!(res_body2, await!(response_to_vec(response2)));
+        let response2 = mock.request(Request::default()).await.unwrap();
+        assert_eq!(res_body2, response_to_vec(response2).await);
     });
 }

@@ -34,9 +34,11 @@ pub struct Context {
 impl Context {
     /// Load and initialize update check context from persistent storage.
     pub async fn load(storage: &impl Storage) -> Self {
-        let micros = await!(storage.get_int(LAST_UPDATE_TIME)).unwrap_or(0);
+        let micros = storage.get_int(LAST_UPDATE_TIME).await.unwrap_or(0);
         let last_update_time = i64_to_time(micros);
-        let server_dictated_poll_interval = await!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL))
+        let server_dictated_poll_interval = storage
+            .get_int(SERVER_DICTATED_POLL_INTERVAL)
+            .await
             .map(|micros| Duration::from_micros(micros as u64));
         Context {
             schedule: UpdateCheckSchedule {
@@ -53,17 +55,17 @@ impl Context {
     /// It will NOT call commit() on |storage|, caller is responsible to call commit().
     pub async fn persist<'a>(&'a self, storage: &'a mut impl Storage) {
         let micros = time_to_i64(self.schedule.last_update_time);
-        if let Err(e) = await!(storage.set_int(LAST_UPDATE_TIME, micros)) {
+        if let Err(e) = storage.set_int(LAST_UPDATE_TIME, micros).await {
             error!("Unable to persist {}: {}", LAST_UPDATE_TIME, e);
         }
 
         if let Some(interval) = &self.state.server_dictated_poll_interval {
             let interval = interval.as_micros() as i64;
-            if let Err(e) = await!(storage.set_int(SERVER_DICTATED_POLL_INTERVAL, interval)) {
+            if let Err(e) = storage.set_int(SERVER_DICTATED_POLL_INTERVAL, interval).await {
                 error!("Unable to persist {}: {}", SERVER_DICTATED_POLL_INTERVAL, e);
             }
         } else {
-            if let Err(e) = await!(storage.remove(SERVER_DICTATED_POLL_INTERVAL)) {
+            if let Err(e) = storage.remove(SERVER_DICTATED_POLL_INTERVAL).await {
                 error!("Unable to remove {}: {}", SERVER_DICTATED_POLL_INTERVAL, e);
             }
         }
@@ -133,11 +135,14 @@ mod tests {
         block_on(async {
             let mut storage = MemStorage::new();
             let last_update_time = i64_to_time(123456789);
-            await!(storage.set_int(LAST_UPDATE_TIME, time_to_i64(last_update_time))).unwrap();
+            storage.set_int(LAST_UPDATE_TIME, time_to_i64(last_update_time)).await.unwrap();
             let poll_interval = Duration::from_micros(56789);
-            await!(storage.set_int(SERVER_DICTATED_POLL_INTERVAL, poll_interval.as_micros()as i64)).unwrap();
+            storage
+                .set_int(SERVER_DICTATED_POLL_INTERVAL, poll_interval.as_micros() as i64)
+                .await
+                .unwrap();
 
-            let context = await!(Context::load(&storage));
+            let context = Context::load(&storage).await;
             assert_eq!(last_update_time, context.schedule.last_update_time);
             assert_eq!(Some(poll_interval), context.state.server_dictated_poll_interval);
         });
@@ -147,7 +152,7 @@ mod tests {
     fn test_load_context_empty_storage() {
         block_on(async {
             let storage = MemStorage::new();
-            let context = await!(Context::load(&storage));
+            let context = Context::load(&storage).await;
             assert_eq!(SystemTime::UNIX_EPOCH, context.schedule.last_update_time);
             assert_eq!(None, context.state.server_dictated_poll_interval);
         });
@@ -167,9 +172,9 @@ mod tests {
                 },
                 state: ProtocolState { server_dictated_poll_interval, ..ProtocolState::default() },
             };
-            await!(context.persist(&mut storage));
-            assert_eq!(Some(123456789), await!(storage.get_int(LAST_UPDATE_TIME)));
-            assert_eq!(Some(56789), await!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL)));
+            context.persist(&mut storage).await;
+            assert_eq!(Some(123456789), storage.get_int(LAST_UPDATE_TIME).await);
+            assert_eq!(Some(56789), storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await);
             assert_eq!(false, storage.committed());
         });
     }
@@ -179,7 +184,7 @@ mod tests {
         block_on(async {
             let mut storage = MemStorage::new();
             let last_update_time = i64_to_time(123456789);
-            await!(storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 987654)).unwrap();
+            storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 987654).await.unwrap();
 
             let context = Context {
                 schedule: UpdateCheckSchedule {
@@ -192,9 +197,9 @@ mod tests {
                     ..ProtocolState::default()
                 },
             };
-            await!(context.persist(&mut storage));
-            assert_eq!(Some(123456789), await!(storage.get_int(LAST_UPDATE_TIME)));
-            assert_eq!(None, await!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL)));
+            context.persist(&mut storage).await;
+            assert_eq!(Some(123456789), storage.get_int(LAST_UPDATE_TIME).await);
+            assert_eq!(None, storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await);
             assert_eq!(false, storage.committed());
         });
     }

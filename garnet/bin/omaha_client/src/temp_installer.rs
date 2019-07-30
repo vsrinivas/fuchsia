@@ -66,14 +66,15 @@ impl Installer for FuchsiaInstaller {
             InstallSource::OnDemand => "manual",
         };
         async move {
-            await!(AppBuilder::new("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx")
+            AppBuilder::new("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx")
                 .arg("-initiator")
                 .arg(initiator)
                 .arg("-update")
                 .arg(url)
-                .status(&self.launcher)?)?
-            .ok()
-            .map_err(FuchsiaInstallError::Installer)
+                .status(&self.launcher)?
+                .await?
+                .ok()
+                .map_err(FuchsiaInstallError::Installer)
         }
             .boxed()
     }
@@ -95,10 +96,10 @@ mod tests {
             install_source: InstallSource::OnDemand,
         };
         let installer_fut = async move {
-            await!(installer.perform_install(&plan, None)).unwrap();
+            installer.perform_install(&plan, None).await.unwrap();
         };
         let stream_fut = async move {
-            match await!(stream.next()).unwrap() {
+            match stream.next().await.unwrap() {
                 Ok(LauncherRequest::CreateComponent {
                     launch_info: LaunchInfo { url, arguments, .. },
                     controller: Some(controller),
@@ -120,7 +121,7 @@ mod tests {
                 request => panic!("Unexpected request: {:?}", request),
             }
         };
-        await!(future::join(installer_fut, stream_fut));
+        future::join(installer_fut, stream_fut).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -131,13 +132,13 @@ mod tests {
             install_source: InstallSource::OnDemand,
         };
         let installer_fut = async move {
-            match await!(installer.perform_install(&plan, None)) {
+            match installer.perform_install(&plan, None).await {
                 Err(FuchsiaInstallError::Installer(_)) => {} // expected
                 result => panic!("Unexpected result: {:?}", result),
             }
         };
         let stream_fut = async move {
-            match await!(stream.next()).unwrap() {
+            match stream.next().await.unwrap() {
                 Ok(LauncherRequest::CreateComponent { controller: Some(controller), .. }) => {
                     let (_stream, handle) = controller.into_stream_and_control_handle().unwrap();
                     handle.send_on_terminated(1, TerminationReason::Exited).unwrap();
@@ -145,7 +146,7 @@ mod tests {
                 request => panic!("Unexpected request: {:?}", request),
             }
         };
-        await!(future::join(installer_fut, stream_fut));
+        future::join(installer_fut, stream_fut).await;
     }
 
 }

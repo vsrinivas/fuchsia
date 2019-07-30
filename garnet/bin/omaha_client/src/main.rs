@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fuchsia_component::server::ServiceFs;
@@ -41,8 +41,8 @@ fn main() -> Result<(), Error> {
 
         let http = FuchsiaHyperHttpRequest::new();
         let installer = temp_installer::FuchsiaInstaller::new()?;
-        let stash = await!(storage::Stash::new("omaha-client"))?;
-        let mut state_machine = await!(StateMachine::new(
+        let stash = storage::Stash::new("omaha-client").await?;
+        let mut state_machine = StateMachine::new(
             policy::FuchsiaPolicyEngine,
             http,
             installer,
@@ -50,13 +50,14 @@ fn main() -> Result<(), Error> {
             timer::FuchsiaTimer,
             metrics_reporter,
             stash,
-        ));
-        await!(state_machine.add_apps(apps));
+        )
+        .await;
+        state_machine.add_apps(apps).await;
         let state_machine_ref = Rc::new(RefCell::new(state_machine));
         let fidl = fidl::FidlServer::new(state_machine_ref.clone());
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
-        await!(future::join3(StateMachine::start(state_machine_ref), fidl.start(fs), cobalt_fut));
+        future::join3(StateMachine::start(state_machine_ref), fidl.start(fs), cobalt_fut).await;
         Ok(())
     })
 }

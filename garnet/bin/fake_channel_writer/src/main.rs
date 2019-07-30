@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl_fuchsia_update::{
@@ -29,11 +29,11 @@ async fn main() -> Result<(), Error> {
     let mut current_slot = Slot::A;
     let mut current_data_blob: Option<Vec<u8>> = None;
     let mut target_channel = String::new();
-    while let Some(service) = await!(fs.next()) {
+    while let Some(service) = fs.next().await {
         match service {
             IncomingServices::ChannelWriter(mut stream) => {
                 while let Some(request) =
-                    await!(stream.try_next()).context("error receiving ChannelWriter request")?
+                    stream.try_next().await.context("error receiving ChannelWriter request")?
                 {
                     match request {
                         ChannelWriterRequest::GetChannelData { responder } => {
@@ -58,7 +58,7 @@ async fn main() -> Result<(), Error> {
             }
             IncomingServices::ChannelControl(mut stream) => {
                 while let Some(request) =
-                    await!(stream.try_next()).context("error receiving ChannelControl request")?
+                    stream.try_next().await.context("error receiving ChannelControl request")?
                 {
                     match request {
                         ChannelControlRequest::GetChannel { responder } => {

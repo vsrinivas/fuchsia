@@ -151,15 +151,15 @@ mod tests {
         block_on(async {
             let mut storage = MemStorage::new();
             assert_eq!(true, storage.committed());
-            await!(storage.set_bool("some bool key", false)).unwrap();
+            storage.set_bool("some bool key", false).await.unwrap();
             assert_eq!(false, storage.committed());
-            await!(storage.commit()).unwrap();
+            storage.commit().await.unwrap();
             assert_eq!(true, storage.committed());
-            await!(storage.set_string("some string key", "some string")).unwrap();
+            storage.set_string("some string key", "some string").await.unwrap();
             assert_eq!(false, storage.committed());
-            await!(storage.set_int("some int key", 42)).unwrap();
+            storage.set_int("some int key", 42).await.unwrap();
             assert_eq!(false, storage.committed());
-            await!(storage.commit()).unwrap();
+            storage.commit().await.unwrap();
             assert_eq!(true, storage.committed());
         });
     }

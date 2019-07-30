@@ -194,7 +194,7 @@ where
         metrics_reporter: MR,
         storage: ST,
     ) -> Self {
-        let context = await!(update_check::Context::load(&storage));
+        let context = update_check::Context::load(&storage).await;
         StateMachine {
             client_config: config.clone(),
             policy_engine,
@@ -214,7 +214,7 @@ where
     pub async fn add_apps(&mut self, mut apps: Vec<App>) {
         // Load persistent data from storage for each app.
         for app in &mut apps {
-            await!(app.load(&mut self.storage));
+            app.load(&mut self.storage).await;
         }
         self.apps.append(&mut apps);
     }
@@ -223,11 +223,10 @@ where
     /// that different fields of the same struct (even if it's not self) are separate variables and
     /// can be borrowed at the same time.
     async fn update_next_update_time(&mut self) {
-        self.context.schedule = await!(self.policy_engine.compute_next_update_time(
-            &self.apps,
-            &self.context.schedule,
-            &self.context.state,
-        ));
+        self.context.schedule = self
+            .policy_engine
+            .compute_next_update_time(&self.apps, &self.context.schedule, &self.context.state)
+            .await;
     }
 
     /// Start the StateMachine to do periodic update check in the background. The future this
@@ -236,7 +235,7 @@ where
         loop {
             {
                 let mut state_machine = state_machine_ref.borrow_mut();
-                await!(state_machine.update_next_update_time());
+                state_machine.update_next_update_time().await;
                 // Wait if |next_update_time| is in the future.
                 if let Ok(duration) =
                     state_machine.context.schedule.next_update_time.duration_since(clock::now())
@@ -249,20 +248,20 @@ where
                     // Don't borrow the state machine while waiting for the timer, because update
                     // check could be triggered through an API while we are waiting.
                     drop(state_machine);
-                    await!(fut);
+                    fut.await;
                 }
             }
 
             let options = CheckOptions { source: InstallSource::ScheduledTask };
             let mut state_machine = state_machine_ref.borrow_mut();
-            await!(state_machine.start_update_check(options));
+            state_machine.start_update_check(options).await;
         }
     }
 
     /// Perform update check and handle the result, including updating the update check context
     /// and cohort.
     pub async fn start_update_check(&mut self, options: CheckOptions) {
-        match await!(self.perform_update_check(options, self.context.clone())) {
+        match self.perform_update_check(options, self.context.clone()).await {
             Ok(result) => {
                 info!("Update check result: {:?}", result);
                 // Update check succeeded, update |last_update_time|.
@@ -326,7 +325,7 @@ where
             }
         }
 
-        await!(self.persist_data());
+        self.persist_data().await;
 
         if self.state != State::WaitingForReboot {
             self.set_state(State::Idle);
@@ -335,13 +334,13 @@ where
 
     /// Persist all necessary data to storage.
     async fn persist_data(&mut self) {
-        await!(self.context.persist(&mut self.storage));
+        self.context.persist(&mut self.storage).await;
 
         for app in &self.apps {
-            await!(app.persist(&mut self.storage));
+            app.persist(&mut self.storage).await;
         }
 
-        if let Err(e) = await!(self.storage.commit()) {
+        if let Err(e) = self.storage.commit().await {
             error!("Unable to commit persisted data: {}", e);
         }
     }
@@ -356,12 +355,10 @@ where
         // TODO: Move this check outside perform_update_check() so that FIDL server can know if
         // update check is throttled.
         info!("Checking to see if an update check is allowed at this time for {:?}", self.apps);
-        let decision = await!(self.policy_engine.update_check_allowed(
-            &self.apps,
-            &context.schedule,
-            &context.state,
-            &options,
-        ));
+        let decision = self
+            .policy_engine
+            .update_check_allowed(&self.apps, &context.schedule, &context.state, &options)
+            .await;
 
         info!("The update check decision is: {:?}", decision);
 
@@ -396,7 +393,7 @@ where
         }
 
         let update_check_start_time = Instant::now();
-        let (_parts, data) = match await!(Self::do_omaha_request(&mut self.http, request_builder)) {
+        let (_parts, data) = match Self::do_omaha_request(&mut self.http, request_builder).await {
             Ok(res) => res,
             Err(OmahaRequestError::Json(e)) => {
                 error!("Unable to construct request body! {:?}", e);
@@ -428,7 +425,7 @@ where
             Ok(res) => res,
             Err(err) => {
                 warn!("Unable to parse Omaha response: {:?}", err);
-                await!(self.report_error(&request_params, EventErrorCode::ParseResponse));
+                self.report_error(&request_params, EventErrorCode::ParseResponse).await;
                 return Err(UpdateCheckError::ResponseParser(err));
             }
         };
@@ -457,13 +454,13 @@ where
                 Ok(plan) => plan,
                 Err(e) => {
                     error!("Unable to construct install plan! {}", e);
-                    await!(self.report_error(&request_params, EventErrorCode::ConstructInstallPlan));
+                    self.report_error(&request_params, EventErrorCode::ConstructInstallPlan).await;
                     return Err(UpdateCheckError::InstallPlan(e.into()));
                 }
             };
 
             info!("Validating Install Plan with Policy");
-            let install_plan_decision = await!(self.policy_engine.update_can_start(&install_plan));
+            let install_plan_decision = self.policy_engine.update_can_start(&install_plan).await;
             match install_plan_decision {
                 UpdateDecision::Ok => {
                     info!("Proceeding with install plan.");
@@ -477,7 +474,7 @@ where
                         event_result: EventResult::UpdateDeferred,
                         ..Event::default()
                     };
-                    await!(self.report_omaha_event(&request_params, event));
+                    self.report_omaha_event(&request_params, event).await;
 
                     // TODO: Report progress status (Deferred)
                     return Ok(Self::make_response(
@@ -487,30 +484,30 @@ where
                 }
                 UpdateDecision::DeniedByPolicy => {
                     warn!("Install plan was denied by Policy, see Policy logs for reasoning");
-                    await!(self.report_error(&request_params, EventErrorCode::DeniedByPolicy));
+                    self.report_error(&request_params, EventErrorCode::DeniedByPolicy).await;
                     return Ok(Self::make_response(response, update_check::Action::DeniedByPolicy));
                 }
             }
 
             self.set_state(State::PerformingUpdate);
-            await!(self.report_success_event(&request_params, EventType::UpdateDownloadStarted));
+            self.report_success_event(&request_params, EventType::UpdateDownloadStarted).await;
 
-            let install_result = await!(self.installer.perform_install(&install_plan, None));
+            let install_result = self.installer.perform_install(&install_plan, None).await;
             if let Err(e) = install_result {
                 warn!("Installation failed: {}", e);
-                await!(self.report_error(&request_params, EventErrorCode::Installation));
+                self.report_error(&request_params, EventErrorCode::Installation).await;
                 return Ok(Self::make_response(
                     response,
                     update_check::Action::InstallPlanExecutionError,
                 ));
             }
 
-            await!(self.report_success_event(&request_params, EventType::UpdateDownloadFinished));
+            self.report_success_event(&request_params, EventType::UpdateDownloadFinished).await;
             self.set_state(State::FinalizingUpdate);
 
             // TODO: Verify downloaded update if needed.
 
-            await!(self.report_success_event(&request_params, EventType::UpdateComplete));
+            self.report_success_event(&request_params, EventType::UpdateComplete).await;
 
             self.set_state(State::WaitingForReboot);
             Ok(Self::make_response(response, update_check::Action::Updated))
@@ -530,7 +527,7 @@ where
             errorcode: Some(errorcode),
             ..Event::default()
         };
-        await!(self.report_omaha_event(&request_params, event));
+        self.report_omaha_event(&request_params, event).await;
     }
 
     /// Report a successful event to Omaha, for example download started, download finished, etc.
@@ -540,7 +537,7 @@ where
         event_type: EventType,
     ) {
         let event = Event { event_type, event_result: EventResult::Success, ..Event::default() };
-        await!(self.report_omaha_event(&request_params, event));
+        self.report_omaha_event(&request_params, event).await;
     }
 
     /// Report the given |event| to Omaha, errors occurred during reporting are logged but not
@@ -550,7 +547,7 @@ where
         for app in &self.apps {
             request_builder = request_builder.add_event(app, &event);
         }
-        if let Err(e) = await!(Self::do_omaha_request(&mut self.http, request_builder)) {
+        if let Err(e) = Self::do_omaha_request(&mut self.http, request_builder).await {
             warn!("Unable to report event to Omaha: {:?}", e);
         }
     }
@@ -568,7 +565,7 @@ where
         http: &'a mut HR,
         builder: RequestBuilder<'a>,
     ) -> Result<(Parts, Vec<u8>), OmahaRequestError> {
-        let (parts, body) = await!(Self::make_request(http, builder.build()?))?;
+        let (parts, body) = Self::make_request(http, builder.build()?).await?;
         if !parts.status.is_success() {
             // Convert HTTP failure responses into Errors.
             Err(OmahaRequestError::HttpStatus(parts.status))
@@ -589,13 +586,13 @@ where
         request: http::Request<hyper::Body>,
     ) -> Result<(Parts, Vec<u8>), hyper::Error> {
         info!("Making http request to: {}", request.uri());
-        let res = await!(http_client.request(request)).map_err(|err| {
+        let res = http_client.request(request).await.map_err(|err| {
             warn!("Unable to perform request: {}", err);
             err
         })?;
 
         let (parts, body) = res.into_parts();
-        let data = await!(body.compat().try_concat())?;
+        let data = body.compat().try_concat().await?;
 
         Ok((parts, data.to_vec()))
     }
@@ -676,7 +673,7 @@ impl
 {
     /// Create a new StateMachine with stub implementations.
     pub async fn new_stub(config: &Config) -> Self {
-        await!(Self::new(
+        Self::new(
             StubPolicyEngine,
             StubHttpRequest,
             StubInstaller::default(),
@@ -684,7 +681,8 @@ impl
             StubTimer,
             StubMetricsReporter,
             MemStorage::new(),
-        ))
+        )
+        .await
     }
 }
 
@@ -733,8 +731,8 @@ mod tests {
             state: ProtocolState::default(),
         };
 
-        await!(state_machine.add_apps(make_test_apps()));
-        await!(state_machine.perform_update_check(options, context))
+        state_machine.add_apps(make_test_apps()).await;
+        state_machine.perform_update_check(options, context).await
     }
 
     fn make_test_apps() -> Vec<App> {
@@ -748,12 +746,18 @@ mod tests {
     // Assert that the last request made to |http| is equal to the request built by
     // |request_builder|.
     async fn assert_request<'a>(http: MockHttpRequest, request_builder: RequestBuilder<'a>) {
-        let body = await!(request_builder.build().unwrap().into_body().compat().try_concat())
+        let body = request_builder
+            .build()
+            .unwrap()
+            .into_body()
+            .compat()
+            .try_concat()
+            .await
             .unwrap()
             .to_vec();
         // Compare string instead of Vec<u8> for easier debugging.
         let body_str = String::from_utf8_lossy(&body);
-        await!(http.assert_body_str(&body_str));
+        http.assert_body_str(&body_str).await;
     }
 
     #[test]
@@ -774,7 +778,7 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 http,
                 StubInstaller::default(),
@@ -782,8 +786,9 @@ mod tests {
                 StubTimer,
                 StubMetricsReporter,
                 MemStorage::new(),
-            ));
-            await!(do_update_check(&mut state_machine)).unwrap();
+            )
+            .await;
+            do_update_check(&mut state_machine).await.unwrap();
 
             info!("update check complete!");
         });
@@ -809,7 +814,7 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 http,
                 StubInstaller::default(),
@@ -817,8 +822,9 @@ mod tests {
                 StubTimer,
                 StubMetricsReporter,
                 MemStorage::new(),
-            ));
-            let response = await!(do_update_check(&mut state_machine)).unwrap();
+            )
+            .await;
+            let response = do_update_check(&mut state_machine).await.unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
             assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
             assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
@@ -832,7 +838,7 @@ mod tests {
             let config = config_generator();
             let http = MockHttpRequest::new(hyper::Response::new("invalid response".into()));
 
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 http,
                 StubInstaller::default(),
@@ -840,8 +846,9 @@ mod tests {
                 StubTimer,
                 StubMetricsReporter,
                 MemStorage::new(),
-            ));
-            match await!(do_update_check(&mut state_machine)) {
+            )
+            .await;
+            match do_update_check(&mut state_machine).await {
                 Err(UpdateCheckError::ResponseParser(_)) => {} // expected
                 result @ _ => {
                     panic!("Unexpected result from do_update_check: {:?}", result);
@@ -857,7 +864,7 @@ mod tests {
             };
             let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
-            await!(assert_request(state_machine.http, request_builder));
+            assert_request(state_machine.http, request_builder).await;
         });
     }
 
@@ -879,7 +886,7 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 http,
                 StubInstaller::default(),
@@ -887,8 +894,9 @@ mod tests {
                 StubTimer,
                 StubMetricsReporter,
                 MemStorage::new(),
-            ));
-            match await!(do_update_check(&mut state_machine)) {
+            )
+            .await;
+            match do_update_check(&mut state_machine).await {
                 Err(UpdateCheckError::InstallPlan(_)) => {} // expected
                 result @ _ => {
                     panic!("Unexpected result from do_update_check: {:?}", result);
@@ -904,7 +912,7 @@ mod tests {
             };
             let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
-            await!(assert_request(state_machine.http, request_builder));
+            assert_request(state_machine.http, request_builder).await;
         });
     }
 
@@ -926,7 +934,7 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 http,
                 StubInstaller { should_fail: true },
@@ -934,8 +942,9 @@ mod tests {
                 StubTimer,
                 StubMetricsReporter,
                 MemStorage::new(),
-            ));
-            let response = await!(do_update_check(&mut state_machine)).unwrap();
+            )
+            .await;
+            let response = do_update_check(&mut state_machine).await.unwrap();
             assert_eq!(Action::InstallPlanExecutionError, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
@@ -947,7 +956,7 @@ mod tests {
             };
             let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
-            await!(assert_request(state_machine.http, request_builder));
+            assert_request(state_machine.http, request_builder).await;
         });
     }
 
@@ -973,7 +982,7 @@ mod tests {
                 update_decision: UpdateDecision::DeferredByPolicy,
                 ..MockPolicyEngine::default()
             };
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 policy_engine,
                 http,
                 StubInstaller::default(),
@@ -981,8 +990,9 @@ mod tests {
                 StubTimer,
                 StubMetricsReporter,
                 MemStorage::new(),
-            ));
-            let response = await!(do_update_check(&mut state_machine)).unwrap();
+            )
+            .await;
+            let response = do_update_check(&mut state_machine).await.unwrap();
             assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
@@ -994,7 +1004,7 @@ mod tests {
             };
             let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
-            await!(assert_request(state_machine.http, request_builder));
+            assert_request(state_machine.http, request_builder).await;
         });
     }
 
@@ -1019,7 +1029,7 @@ mod tests {
                 update_decision: UpdateDecision::DeniedByPolicy,
                 ..MockPolicyEngine::default()
             };
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 policy_engine,
                 http,
                 StubInstaller::default(),
@@ -1027,8 +1037,9 @@ mod tests {
                 StubTimer,
                 StubMetricsReporter,
                 MemStorage::new(),
-            ));
-            let response = await!(do_update_check(&mut state_machine)).unwrap();
+            )
+            .await;
+            let response = do_update_check(&mut state_machine).await.unwrap();
             assert_eq!(Action::DeniedByPolicy, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
@@ -1040,7 +1051,7 @@ mod tests {
             };
             let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
-            await!(assert_request(state_machine.http, request_builder));
+            assert_request(state_machine.http, request_builder).await;
         });
     }
 
@@ -1074,7 +1085,7 @@ mod tests {
         let mut pool = LocalPool::new();
         pool.spawner()
             .spawn_local(async move {
-                await!(StateMachine::start(state_machine));
+                StateMachine::start(state_machine).await;
             })
             .unwrap();
         pool.run_until_stalled();
@@ -1130,7 +1141,7 @@ mod tests {
             let mut pool = LocalPool::new();
             pool.spawner()
                 .spawn_local(async move {
-                    await!(StateMachine::start(state_machine));
+                    StateMachine::start(state_machine).await;
                 })
                 .unwrap();
             pool.run_until_stalled();
@@ -1171,7 +1182,7 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 http,
                 StubInstaller::default(),
@@ -1179,8 +1190,9 @@ mod tests {
                 StubTimer,
                 StubMetricsReporter,
                 MemStorage::new(),
-            ));
-            let response = await!(do_update_check(&mut state_machine)).unwrap();
+            )
+            .await;
+            let response = do_update_check(&mut state_machine).await.unwrap();
 
             assert_eq!(
                 UserCounting::ClientRegulatedByDate(Some(1234567)),
@@ -1193,8 +1205,8 @@ mod tests {
     fn test_add_apps() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = await!(StateMachine::new_stub(&config));
-            await!(state_machine.add_apps(make_test_apps()));
+            let mut state_machine = StateMachine::new_stub(&config).await;
+            state_machine.add_apps(make_test_apps()).await;
             assert_eq!(state_machine.apps, make_test_apps());
         });
     }
@@ -1203,8 +1215,8 @@ mod tests {
     fn test_state_callback() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = await!(StateMachine::new_stub(&config));
-            await!(state_machine.add_apps(make_test_apps()));
+            let mut state_machine = StateMachine::new_stub(&config).await;
+            state_machine.add_apps(make_test_apps()).await;
             let actual_states = Vec::new();
             let actual_states = Rc::new(RefCell::new(actual_states));
             {
@@ -1214,7 +1226,7 @@ mod tests {
                     actual_states.push(state);
                 });
             }
-            await!(state_machine.start_update_check(CheckOptions::default()));
+            state_machine.start_update_check(CheckOptions::default()).await;
             drop(state_machine);
             let actual_states = actual_states.borrow();
             let expected_states =
@@ -1227,7 +1239,7 @@ mod tests {
     fn test_metrics_report_update_check_response_time() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 StubHttpRequest,
                 StubInstaller::default(),
@@ -1235,8 +1247,9 @@ mod tests {
                 StubTimer,
                 MockMetricsReporter::new(false),
                 MemStorage::new(),
-            ));
-            let _result = await!(do_update_check(&mut state_machine));
+            )
+            .await;
+            let _result = do_update_check(&mut state_machine).await;
 
             assert!(!state_machine.metrics_reporter.metrics.is_empty());
             match &state_machine.metrics_reporter.metrics[0] {
@@ -1250,7 +1263,7 @@ mod tests {
     fn test_metrics_report_update_check_failure_reason_omaha() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 StubHttpRequest,
                 StubInstaller::default(),
@@ -1258,9 +1271,10 @@ mod tests {
                 StubTimer,
                 MockMetricsReporter::new(false),
                 MemStorage::new(),
-            ));
-            await!(state_machine.add_apps(make_test_apps()));
-            await!(state_machine.start_update_check(CheckOptions::default()));
+            )
+            .await;
+            state_machine.add_apps(make_test_apps()).await;
+            state_machine.start_update_check(CheckOptions::default()).await;
 
             assert!(state_machine.metrics_reporter.metrics.len() > 1);
             assert_eq!(
@@ -1274,7 +1288,7 @@ mod tests {
     fn test_metrics_report_update_check_failure_reason_network() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = await!(StateMachine::new(
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 MockHttpRequest::empty(),
                 StubInstaller::default(),
@@ -1282,9 +1296,10 @@ mod tests {
                 StubTimer,
                 MockMetricsReporter::new(false),
                 MemStorage::new(),
-            ));
-            await!(state_machine.add_apps(make_test_apps()));
-            await!(state_machine.start_update_check(CheckOptions::default()));
+            )
+            .await;
+            state_machine.add_apps(make_test_apps()).await;
+            state_machine.start_update_check(CheckOptions::default()).await;
 
             assert!(!state_machine.metrics_reporter.metrics.is_empty());
             assert_eq!(
@@ -1298,11 +1313,11 @@ mod tests {
     fn test_persist_last_update_time() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = await!(StateMachine::new_stub(&config));
-            await!(state_machine.add_apps(make_test_apps()));
-            await!(state_machine.start_update_check(CheckOptions::default()));
+            let mut state_machine = StateMachine::new_stub(&config).await;
+            state_machine.add_apps(make_test_apps()).await;
+            state_machine.start_update_check(CheckOptions::default()).await;
 
-            await!(state_machine.storage.get_int(LAST_UPDATE_TIME)).unwrap();
+            state_machine.storage.get_int(LAST_UPDATE_TIME).await.unwrap();
             assert_eq!(true, state_machine.storage.committed());
         });
     }
@@ -1313,11 +1328,11 @@ mod tests {
             // TODO: update this test to have a mocked http response with server dictated poll
             // interval when out code support parsing it from the response.
             let config = config_generator();
-            let mut state_machine = await!(StateMachine::new_stub(&config));
-            await!(state_machine.add_apps(make_test_apps()));
-            await!(state_machine.start_update_check(CheckOptions::default()));
+            let mut state_machine = StateMachine::new_stub(&config).await;
+            state_machine.add_apps(make_test_apps()).await;
+            state_machine.start_update_check(CheckOptions::default()).await;
 
-            assert!(await!(state_machine.storage.get_int(SERVER_DICTATED_POLL_INTERVAL)).is_none());
+            assert!(state_machine.storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await.is_none());
             assert_eq!(true, state_machine.storage.committed());
         });
     }
@@ -1326,12 +1341,12 @@ mod tests {
     fn test_persist_app() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = await!(StateMachine::new_stub(&config));
+            let mut state_machine = StateMachine::new_stub(&config).await;
             let apps = make_test_apps();
-            await!(state_machine.add_apps(apps.clone()));
-            await!(state_machine.start_update_check(CheckOptions::default()));
+            state_machine.add_apps(apps.clone()).await;
+            state_machine.start_update_check(CheckOptions::default()).await;
 
-            await!(state_machine.storage.get_string(&apps[0].id)).unwrap();
+            state_machine.storage.get_string(&apps[0].id).await.unwrap();
             assert_eq!(true, state_machine.storage.committed());
         });
     }
@@ -1342,8 +1357,8 @@ mod tests {
             let config = config_generator();
             let mut storage = MemStorage::new();
             let last_update_time = clock::now() - Duration::from_secs(999);
-            await!(storage.set_int(LAST_UPDATE_TIME, time_to_i64(last_update_time))).unwrap();
-            let state_machine = await!(StateMachine::new(
+            storage.set_int(LAST_UPDATE_TIME, time_to_i64(last_update_time)).await.unwrap();
+            let state_machine = StateMachine::new(
                 StubPolicyEngine,
                 StubHttpRequest,
                 StubInstaller::default(),
@@ -1351,7 +1366,8 @@ mod tests {
                 StubTimer,
                 MockMetricsReporter::new(false),
                 storage,
-            ));
+            )
+            .await;
 
             assert_eq!(
                 time_to_i64(last_update_time),
@@ -1365,8 +1381,8 @@ mod tests {
         block_on(async {
             let config = config_generator();
             let mut storage = MemStorage::new();
-            await!(storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 56789)).unwrap();
-            let state_machine = await!(StateMachine::new(
+            storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 56789).await.unwrap();
+            let state_machine = StateMachine::new(
                 StubPolicyEngine,
                 StubHttpRequest,
                 StubInstaller::default(),
@@ -1374,7 +1390,8 @@ mod tests {
                 StubTimer,
                 MockMetricsReporter::new(false),
                 storage,
-            ));
+            )
+            .await;
 
             assert_eq!(
                 Some(Duration::from_micros(56789)),
@@ -1398,8 +1415,8 @@ mod tests {
                 user_counting: UserCounting::ClientRegulatedByDate(Some(22222)),
             };
             let json = serde_json::to_string(&persisted_app).unwrap();
-            await!(storage.set_string(&apps[0].id, &json)).unwrap();
-            let mut state_machine = await!(StateMachine::new(
+            storage.set_string(&apps[0].id, &json).await.unwrap();
+            let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 StubHttpRequest,
                 StubInstaller::default(),
@@ -1407,8 +1424,9 @@ mod tests {
                 StubTimer,
                 MockMetricsReporter::new(false),
                 storage,
-            ));
-            await!(state_machine.add_apps(apps));
+            )
+            .await;
+            state_machine.add_apps(apps).await;
 
             assert_eq!(persisted_app.cohort, state_machine.apps[0].cohort);
             assert_eq!(
