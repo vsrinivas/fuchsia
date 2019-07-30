@@ -18,26 +18,41 @@
 
 namespace {
 
-bool IsBoardName(const char* requested_board_name) {
+constexpr uint32_t kWrongBoard = 1;
+
+zx_status_t IsBoardName(const char* requested_board_name) {
   constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
   fbl::unique_fd sysinfo(open(kSysInfoPath, O_RDWR));
   if (!sysinfo) {
-    return false;
+    printf("Failed to open sysinfo\n");
+    return ZX_ERR_IO;
   }
   zx::channel channel;
-  if (fdio_get_service_handle(sysinfo.release(), channel.reset_and_get_address()) != ZX_OK) {
-    return false;
+  zx_status_t status = fdio_get_service_handle(sysinfo.release(), channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    printf("Failed to fdio_get_service_handle of sysinfo, status = %d\n", status);
+    return status;
   }
 
   char board_name[ZX_MAX_NAME_LEN];
-  zx_status_t status;
   size_t actual_size;
   zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
                                                                sizeof(board_name), &actual_size);
-  if (fidl_status != ZX_OK || status != ZX_OK) {
-    return false;
+  if (status != ZX_OK) {
+    printf("Failed to fuchsia_sysinfo_DeviceGetBoardName. status = %d\n", status);
+    return status;
   }
-  return strcmp(board_name, requested_board_name) == 0;
+  if (fidl_status != ZX_OK) {
+    printf("Failed to send fidl message. status = %d\n", fidl_status);
+    return fidl_status;
+  }
+  board_name[actual_size] = '\0';
+  if (actual_size != strlen(requested_board_name) ||
+      strncmp(board_name, requested_board_name, actual_size)) {
+    printf("Wrong Board.  Expected %s, board name: %s.\n", requested_board_name, board_name);
+    return kWrongBoard;
+  }
+  return ZX_OK;
 }
 
 // Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
@@ -50,11 +65,12 @@ class IspTest : public zxtest::Test {
 };
 
 void IspTest::SetUp() {
-  fbl::unique_fd devfs_root(open("/dev", O_RDWR));
+  // We have to open the directory directly, since RecursiveWaitForFile
+  // does allow waiting on folders from devmgr. (ZX-3249)
+  fbl::unique_fd devfs_root(open("/dev/class/isp-device-test", O_RDONLY));
   ASSERT_TRUE(devfs_root);
 
-  zx_status_t status =
-      devmgr_integration_test::RecursiveWaitForFile(devfs_root, "class/isp-device-test/000", &fd_);
+  zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(devfs_root, "000", &fd_);
   ASSERT_OK(status);
 
   status = fdio_get_service_handle(fd_.get(), &handle_);
@@ -67,17 +83,20 @@ TEST_F(IspTest, BasicConnectionTest) {
   zx_status_t status = fuchsia_camera_test_IspTesterRunTests(handle_, &out_status, &report);
   ASSERT_OK(status);
   ASSERT_OK(out_status);
-  EXPECT_EQ(1, report.test_count);
-  EXPECT_EQ(1, report.success_count);
+  EXPECT_EQ(report.success_count, report.test_count);
   EXPECT_EQ(0, report.failure_count);
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-  if (IsBoardName("sherlock")) {
+  zx_status_t status = IsBoardName("sherlock");
+  if (status == ZX_OK) {
+    printf("Sherlock detected, running tests.\n");
     return RUN_ALL_TESTS(argc, argv);
   }
-
-  return 0;
+  if (status == kWrongBoard) {
+    return 0;
+  }
+  return status;
 }
