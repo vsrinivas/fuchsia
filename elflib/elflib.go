@@ -70,6 +70,21 @@ func (b BinaryFileRef) Verify() error {
 	return newBuildIDError(fmt.Errorf("build ID `%s` could not be found", b.BuildID), b.Filepath)
 }
 
+// Check if file contains debug_info section.
+func (b BinaryFileRef) HasDebugInfo() (bool, error) {
+	elfFile, err := elf.Open(b.Filepath)
+	if err != nil {
+		return false, err
+	}
+	defer elfFile.Close()
+	for _, section := range elfFile.Sections {
+		if section != nil && section.Name == ".debug_info" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // rounds 'x' up to the next 'to' aligned value
 func alignTo(x, to uint32) uint32 {
 	return (x + to - 1) & -to
