@@ -33,6 +33,37 @@ class PrettyStringTest : public TestWithLoop {
         kStringAddress, std::vector<uint8_t>(std::begin(kStringData), std::end(kStringData)));
   }
 
+  // Calls the given getter, promotes the result to 64-bit and expects that it's equal to the given
+  // value.
+  void ExpectGetterReturns(const ExprValue& input, const std::string& getter_name,
+                           uint64_t expected) {
+    PrettyStdString pretty;
+
+    auto getter = pretty.GetGetter(getter_name);
+    ASSERT_TRUE(getter);
+
+    bool should_quit = false;
+    bool called = false;
+    getter(context(), input, [&called, &should_quit, expected](const Err& err, ExprValue v) {
+      called = true;
+
+      ASSERT_TRUE(err.ok()) << err.msg();
+
+      uint64_t actual = 0;
+      Err err2 = v.PromoteTo64(&actual);
+      ASSERT_TRUE(err2.ok());
+      EXPECT_EQ(expected, actual);
+
+      if (should_quit)
+        debug_ipc::MessageLoop::Current()->QuitNow();
+    });
+    if (!called) {
+      should_quit = true;
+      debug_ipc::MessageLoop::Current()->Run();
+    }
+    EXPECT_TRUE(called);
+  }
+
   fxl::RefPtr<MockEvalContext> context() { return context_; }
 
  private:
@@ -62,6 +93,11 @@ TEST_F(PrettyStringTest, StdStringShort) {
   EXPECT_TRUE(completed);
 
   EXPECT_EQ("\"abcdefghijklm\"", node.description());
+
+  ExpectGetterReturns(short_value, "size", 13);
+  ExpectGetterReturns(short_value, "length", 13);
+  ExpectGetterReturns(short_value, "capacity", 22);  // 24 bytes - size - null.
+  ExpectGetterReturns(short_value, "empty", 0);
 }
 
 // Tests a string with no bytes but a source location. This string data encodes the "long" format
@@ -99,6 +135,11 @@ TEST_F(PrettyStringTest, StdStringLong) {
 
   EXPECT_EQ("\"Now is the time for all good men to come to the aid of their country.\"",
             node.description());
+
+  ExpectGetterReturns(value, "size", kStringLen);
+  ExpectGetterReturns(value, "length", kStringLen);
+  ExpectGetterReturns(value, "capacity", 0x50);
+  ExpectGetterReturns(value, "empty", 0);
 }
 
 }  // namespace zxdb
