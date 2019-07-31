@@ -412,7 +412,7 @@ void ProcessDispatcher::FinishDeadTransition() {
   // clean up the handle table
   LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
 
-  fbl::DoublyLinkedList<Handle*, Handle::NodeListTraits> to_clean;
+  fbl::DoublyLinkedList<Handle*> to_clean;
   {
     Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_lock_};
     for (auto& handle : handles_) {

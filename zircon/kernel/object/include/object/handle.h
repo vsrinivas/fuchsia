@@ -10,10 +10,13 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <fbl/gparena.h>
+#include <fbl/arena.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/brwlock.h>
+#include <kernel/lockdep.h>
 #include <ktl/atomic.h>
 #include <ktl/move.h>
 
@@ -76,10 +79,8 @@ class HandleOwner {
   Handle* h_ = nullptr;
 };
 
-class HandleTableArena;
-
 // A Handle is how a specific process refers to a specific Dispatcher.
-class Handle final {
+class Handle final : public fbl::DoublyLinkedListable<Handle*> {
  public:
   // Returns the Dispatcher to which this instance points.
   const fbl::RefPtr<Dispatcher>& dispatcher() const { return dispatcher_; }
@@ -126,14 +127,6 @@ class Handle final {
   static HandleOwner Make(KernelHandle<Dispatcher> kernel_handle, zx_rights_t rights);
   static HandleOwner Dup(Handle* source, zx_rights_t rights);
 
-  // Use a manually declared linked list node state instead of inheriting so that the early
-  // memory of the class can be used by the members we want to preserve, and our NodeState can
-  // be placed later.
-  using NodeState = fbl::DoublyLinkedListNodeState<Handle*>;
-  struct NodeListTraits {
-    static NodeState& node_state(Handle& h) { return h.node_state_; }
-  };
-
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Handle);
 
@@ -149,14 +142,8 @@ class Handle final {
   // Handle should never be destroyed by anything other than Delete,
   // which uses TearDown to do the actual destruction.
   ~Handle() = default;
-  void TearDown();
+  void TearDown() TA_EXCL(ArenaLock::Get());
   void Delete();
-
-  // NOTE! This can return an invalid address.  It must be checked
-  // against the arena bounds before being cast to a Handle*.
-  static uintptr_t IndexToHandle(uint32_t index);
-
-  static uint32_t HandleToIndex(Handle* handle);
 
   // Only HandleOwner is allowed to call Delete.
   friend class HandleOwner;
@@ -169,28 +156,21 @@ class Handle final {
   const zx_rights_t rights_;
   const uint32_t base_value_;
 
-  // Up to here the members need to be preserved when handles are free'd to the arena. The
-  // PreserveSize is an 'approximation' of how large all the previous members are, but we make
-  // 'HandleTableArena' a friend so that it can statically validate that the chosen PreserveSize
-  // is correct. Any incorrect size will result in a compilation error!
-  static constexpr size_t PreserveSize = 24;
-  friend HandleTableArena;
+  // The handle arena's lock.
+  DECLARE_SINGLETON_BRWLOCK_PI(ArenaLock);
 
-  NodeState node_state_;
-};
+  // The handle arena.
+  static fbl::Arena TA_GUARDED(ArenaLock::Get()) arena_;
 
-class HandleTableArena {
- private:
-  // Validate that all the fields we need to preserve fit within the preservation window.
-  static_assert(offsetof(Handle, process_id_) + sizeof(Handle::process_id_) <=
-                Handle::PreserveSize);
-  static_assert(offsetof(Handle, base_value_) + sizeof(Handle::base_value_) <=
-                Handle::PreserveSize);
-  static_assert(offsetof(Handle, dispatcher_) + sizeof(Handle::dispatcher_) <=
-                Handle::PreserveSize);
-  static fbl::GPArena<Handle::PreserveSize, sizeof(Handle)> arena_;
-  // Give the Handle access to its arena.
-  friend Handle;
+  // NOTE! This can return an invalid address.  It must be checked
+  // against the arena bounds before being cast to a Handle*.
+  static uintptr_t IndexToHandle(uint32_t index) TA_NO_THREAD_SAFETY_ANALYSIS {
+    return reinterpret_cast<uintptr_t>(arena_.start()) + index * sizeof(Handle);
+  }
+
+  static uint32_t HandleToIndex(Handle* handle) TA_NO_THREAD_SAFETY_ANALYSIS {
+    return static_cast<uint32_t>(handle - reinterpret_cast<Handle*>(arena_.start()));
+  }
 };
 
 // This can't be defined directly in the HandleOwner class definition

@@ -362,7 +362,7 @@ class ProcessDispatcher final
 
   // our list of handles
   mutable DECLARE_BRWLOCK_PI(ProcessDispatcher) handle_table_lock_;  // protects |handles_|.
-  fbl::DoublyLinkedList<Handle*, Handle::NodeListTraits> handles_ TA_GUARDED(handle_table_lock_);
+  fbl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
 
   FutexContext futex_context_;
 

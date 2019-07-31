@@ -9,6 +9,8 @@
 #include <lib/counters.h>
 #include <pow2.h>
 
+#include <fbl/arena.h>
+#include <fbl/mutex.h>
 #include <object/dispatcher.h>
 
 namespace {
@@ -54,9 +56,11 @@ static_assert((kHandleReservedBitsMask | kHandleGenerationMask | kHandleIndexMas
 
 }  // namespace
 
-fbl::GPArena<Handle::PreserveSize, sizeof(Handle)> HandleTableArena::arena_;
+fbl::Arena Handle::arena_;
 
-void Handle::Init() { HandleTableArena::arena_.Init("handles", kMaxHandleCount); }
+void Handle::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
+  arena_.Init("handles", sizeof(Handle), kMaxHandleCount);
+}
 
 void Handle::set_process_id(zx_koid_t pid) {
   process_id_.store(pid, ktl::memory_order_relaxed);
@@ -66,13 +70,13 @@ void Handle::set_process_id(zx_koid_t pid) {
 // Returns a new |base_value| based on the value stored in the free
 // arena slot pointed to by |addr|. The new value will be different
 // from the last |base_value| used by this slot.
-uint32_t Handle::GetNewBaseValue(void* addr) {
+uint32_t Handle::GetNewBaseValue(void* addr) TA_REQ(ArenaLock::Get()) {
   // Get the index of this slot within the arena.
   uint32_t handle_index = HandleToIndex(reinterpret_cast<Handle*>(addr));
   DEBUG_ASSERT((handle_index & ~kHandleIndexMask) == 0);
 
   // Check the free memory for a stashed base_value.
-  uint32_t v = reinterpret_cast<Handle*>(addr)->base_value_;
+  uint32_t v = *reinterpret_cast<uint32_t*>(addr);
   uint32_t old_gen = 0;
   if (v != 0) {
     // This slot has been used before.
@@ -90,8 +94,9 @@ void* Handle::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher, const char* what,
                     uint32_t* base_value) {
   size_t outstanding_handles;
   {
-    void* addr = HandleTableArena::arena_.Alloc();
-    outstanding_handles = HandleTableArena::arena_.DiagnosticCount();
+    Guard<BrwLockPi, BrwLockPi::Writer> guard{ArenaLock::Get()};
+    void* addr = arena_.Alloc();
+    outstanding_handles = arena_.DiagnosticCount();
     if (likely(addr)) {
       if (outstanding_handles > kHighHandleCount) {
         // TODO: Avoid calling this for every handle after
@@ -159,8 +164,8 @@ Handle::Handle(Handle* rhs, zx_rights_t rights, uint32_t base_value)
 // Destroys, but does not free, the Handle, and fixes up its memory to protect
 // against stale pointers to it. Also stashes the Handle's base_value for reuse
 // the next time this slot is allocated.
-void Handle::TearDown() {
-  uint32_t __UNUSED old_base_value = base_value();
+void Handle::TearDown() TA_EXCL(ArenaLock::Get()) {
+  uint32_t old_base_value = base_value();
 
   // There may be stale pointers to this slot and they will look at process_id. We expect
   // process_id to already have been cleared by the process dispatcher before the handle got to
@@ -176,8 +181,9 @@ void Handle::TearDown() {
   // dispatcher_ ref, but call it for completeness.
   this->~Handle();
 
-  // Validate that destruction did not change the stored base value.
-  DEBUG_ASSERT(base_value() == old_base_value);
+  // Hold onto the base_value for the next user of this slot, stashing
+  // it at the beginning of the free slot.
+  *reinterpret_cast<uint32_t*>(this) = old_base_value;
 }
 
 void Handle::Delete() {
@@ -188,8 +194,12 @@ void Handle::Delete() {
 
   TearDown();
 
-  bool zero_handles = disp->decrement_handle_count();
-  HandleTableArena::arena_.Free(this);
+  bool zero_handles = false;
+  {
+    Guard<BrwLockPi, BrwLockPi::Writer> guard{ArenaLock::Get()};
+    zero_handles = disp->decrement_handle_count();
+    arena_.Free(this);
+  }
 
   if (zero_handles)
     disp->on_zero_handles();
@@ -199,28 +209,29 @@ void Handle::Delete() {
   kcounter_add(handle_count_live, -1);
 }
 
-Handle* Handle::FromU32(uint32_t value) {
+Handle* Handle::FromU32(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
   uintptr_t handle_addr = IndexToHandle(value & kHandleIndexMask);
-  if (unlikely(!HandleTableArena::arena_.Committed(reinterpret_cast<void*>(handle_addr))))
-    return nullptr;
+  {
+    Guard<BrwLockPi, BrwLockPi::Reader> guard{ArenaLock::Get()};
+    if (unlikely(!arena_.in_range(handle_addr)))
+      return nullptr;
+  }
   auto handle = reinterpret_cast<Handle*>(handle_addr);
   return likely(handle->base_value() == value) ? handle : nullptr;
 }
 
 uint32_t Handle::Count(const fbl::RefPtr<const Dispatcher>& dispatcher) {
+  // Handle::ArenaLock also guards Dispatcher::handle_count_.
+  Guard<BrwLockPi, BrwLockPi::Reader> guard{ArenaLock::Get()};
   return dispatcher->current_handle_count();
 }
 
 size_t Handle::diagnostics::OutstandingHandles() {
-  return HandleTableArena::arena_.DiagnosticCount();
+  Guard<BrwLockPi, BrwLockPi::Reader> guard{ArenaLock::Get()};
+  return arena_.DiagnosticCount();
 }
 
-void Handle::diagnostics::DumpTableInfo() { HandleTableArena::arena_.Dump(); }
-
-uintptr_t Handle::IndexToHandle(uint32_t index) {
-  return reinterpret_cast<uintptr_t>(HandleTableArena::arena_.Base()) + index * sizeof(Handle);
-}
-
-uint32_t Handle::HandleToIndex(Handle* handle) {
-  return static_cast<uint32_t>(handle - reinterpret_cast<Handle*>(HandleTableArena::arena_.Base()));
+void Handle::diagnostics::DumpTableInfo() {
+  Guard<BrwLockPi, BrwLockPi::Reader> guard{ArenaLock::Get()};
+  arena_.Dump();
 }
