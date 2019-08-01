@@ -30,6 +30,7 @@ executable("test") {
 
   sources = [
     "effects_loader_unittest.cc",
+    "effects_processor_unittest.cc",
   ]
 
   deps = [
