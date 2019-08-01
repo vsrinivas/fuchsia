@@ -680,7 +680,47 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
                                                 const frame_rate_t* rate, stream_type_t type,
                                                 const output_stream_callback_t* stream,
                                                 output_stream_protocol_t* out_s) {
-  return ZX_ERR_NOT_SUPPORTED;
+  // TODO(CAM-79): Set frame rate in sensor
+  auto frame_ready_callback = [stream](fuchsia_camera_common_FrameAvailableEvent event) {
+    // TODO(CAM-80): change the output_stream_callback_t so it uses all the
+    // frame available info
+    stream->frame_ready(stream->ctx, event.buffer_id);
+  };
+
+  // Set the control interface:
+  out_s->ctx = this;
+  switch (type) {
+    case STREAM_TYPE_FULL_RESOLUTION:
+      out_s->ops->start = [](void* ctx) {
+        return reinterpret_cast<ArmIspDevice*>(ctx)->StartStream(STREAM_TYPE_FULL_RESOLUTION);
+      };
+      out_s->ops->stop = [](void* ctx) {
+        return reinterpret_cast<ArmIspDevice*>(ctx)->StopStream(STREAM_TYPE_FULL_RESOLUTION);
+      };
+      out_s->ops->release_frame = [](void* ctx, uint32_t buffer_id) {
+        return reinterpret_cast<ArmIspDevice*>(ctx)->ReleaseFrame(buffer_id,
+                                                                  STREAM_TYPE_FULL_RESOLUTION);
+      };
+      return full_resolution_dma_->Configure(*buffer_collection, frame_ready_callback);
+    case STREAM_TYPE_DOWNSCALED:
+      out_s->ops->start = [](void* ctx) {
+        return reinterpret_cast<ArmIspDevice*>(ctx)->StartStream(STREAM_TYPE_DOWNSCALED);
+      };
+      out_s->ops->stop = [](void* ctx) {
+        return reinterpret_cast<ArmIspDevice*>(ctx)->StopStream(STREAM_TYPE_DOWNSCALED);
+      };
+      out_s->ops->release_frame = [](void* ctx, uint32_t buffer_id) {
+        return reinterpret_cast<ArmIspDevice*>(ctx)->ReleaseFrame(buffer_id,
+                                                                  STREAM_TYPE_DOWNSCALED);
+      };
+      return downscaled_dma_->Configure(*buffer_collection, frame_ready_callback);
+    case STREAM_TYPE_SCALAR:
+      return ZX_ERR_NOT_SUPPORTED;
+    case STREAM_TYPE_INVALID:
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_ERR_INVALID_ARGS;
 }
 
 ArmIspDevice::~ArmIspDevice() {

@@ -70,7 +70,15 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
   // ISP Tests:
   // Test the GetRegisters interface by writing to a register.
   // |report| is updated with the results of the tests this function performs.
-  void TestWriteRegister(fuchsia_camera_test_TestReport& report);
+  void TestWriteRegister(fuchsia_camera_test_TestReport* report);
+
+  // Test the IspCreateOutputStream by calling it.
+  // |report| is updated with the results of the tests this function performs.
+  void TestConnectStream(fuchsia_camera_test_TestReport* report);
+
+  // Test the callbacks passed to IspCreateOutputStream by calling them.
+  // |report| is updated with the results of the tests this function performs.
+  void TestCallbacks(fuchsia_camera_test_TestReport* report);
 
   // The ArmIspDevice is a parent of the ArmIspDeviceTester.  It will call
   // Disconnect() during its DdkUnbind() call, so that isp_ never references an
