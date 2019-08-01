@@ -12,6 +12,7 @@ static_library("common") {
     "address_ranges.h",
     "completion_callback.h",
     "err.h",
+    "err_or.h",
     "file_util.h",
     "host_util.h",
     "ref_ptr_to.h",
@@ -53,6 +54,7 @@ source_set("tests") {
     "adapters_unittest.cc",
     "address_ranges_unittest.cc",
     "completion_callback_unittest.cc",
+    "err_or_unittest.cc",
     "file_util_unittest.cc",
   ]
 
