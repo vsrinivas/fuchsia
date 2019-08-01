@@ -3,6 +3,4 @@
 
 // Simple program that throws an exception.
 
-int main() {
-  __builtin_trap();
-}
+int main() { __builtin_trap(); }

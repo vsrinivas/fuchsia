@@ -9,6 +9,10 @@ group("tests") {
 
   public_deps = [
     ":exception_broker_tests",
+
+    # Packages for the components that we are injecting in the integration tests.
+    "//garnet/bin/logger",
+    "//src/developer/exception_broker",
   ]
 }
 
@@ -16,6 +20,9 @@ test_package("exception_broker_tests") {
   tests = [
     {
       name = "exception_broker_unittest"
+    },
+    {
+      name = "exception_broker_integration_test"
     },
   ]
 
@@ -28,6 +35,7 @@ test_package("exception_broker_tests") {
 
   deps = [
     ":crasher",
+    ":exception_broker_integration_test",
     ":exception_broker_unittest",
   ]
 }
@@ -42,9 +50,9 @@ source_set("test_lib") {
   ]
 
   deps = [
+    "//garnet/public/lib/syslog/cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
-    "//garnet/public/lib/syslog/cpp",
   ]
 }
 
@@ -63,6 +71,22 @@ executable("exception_broker_unittest") {
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("exception_broker_integration_test") {
+  testonly = true
+
+  sources = [
+    "exception_broker_integration_test.cc",
+  ]
+
+  deps = [
+    ":test_lib",
+    "//src/developer/exception_broker:lib",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
   ]
 }
 

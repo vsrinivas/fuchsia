@@ -78,11 +78,9 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
                                 broker->connections_.erase(id);
                               });
 
-
   // Tell the caller that we're done.
   cb();
 }
 
 }  // namespace exception
 }  // namespace fuchsia
-

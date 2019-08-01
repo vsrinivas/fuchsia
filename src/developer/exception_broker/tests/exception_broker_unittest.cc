@@ -84,11 +84,10 @@ struct TestContext {
 };
 
 std::unique_ptr<TestContext> CreateTestContext() {
-  std::unique_ptr<TestContext> context(new TestContext{
-      .loop = async::Loop(&kAsyncLoopConfigAttachToThread),
-      .services = sys::testing::ServiceDirectoryProvider{},
-      .analyzer = std::make_unique<StubAnalyzer>()
-  });
+  std::unique_ptr<TestContext> context(
+      new TestContext{.loop = async::Loop(&kAsyncLoopConfigAttachToThread),
+                      .services = sys::testing::ServiceDirectoryProvider{},
+                      .analyzer = std::make_unique<StubAnalyzer>()});
 
   return context;
 }

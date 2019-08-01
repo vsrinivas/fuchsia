@@ -1,7 +1,14 @@
-#include <fuchsia/exception/cpp/fidl.h>
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+#ifndef SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_
+#define SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_
+
 #include <fuchsia/crash/cpp/fidl.h>
+#include <fuchsia/exception/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>
+
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace fuchsia {
@@ -41,3 +48,5 @@ class ExceptionBroker : public Handler {
 
 }  // namespace exception
 }  // namespace fuchsia
+
+#endif  // SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_

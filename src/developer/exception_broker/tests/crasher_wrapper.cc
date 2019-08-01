@@ -4,9 +4,8 @@
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 
 #include <lib/fdio/spawn.h>
-#include <zircon/status.h>
-
 #include <lib/syslog/cpp/logger.h>
+#include <zircon/status.h>
 
 namespace fuchsia {
 namespace exception {
@@ -39,8 +38,10 @@ bool SpawnCrasher(ProcessException* pe) {
   const char* argv[] = {"crasher", nullptr};
   constexpr char kCrasherPath[] = "/pkg/bin/exception_broker_crasher";
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  if (zx_status_t res = fdio_spawn_etc(pe->job.get(), FDIO_SPAWN_CLONE_ALL, kCrasherPath, argv, nullptr, 0,
-                           nullptr, pe->process.reset_and_get_address(), err_msg); res != ZX_OK) {
+  if (zx_status_t res =
+          fdio_spawn_etc(pe->job.get(), FDIO_SPAWN_CLONE_ALL, kCrasherPath, argv, nullptr, 0,
+                         nullptr, pe->process.reset_and_get_address(), err_msg);
+      res != ZX_OK) {
     FX_PLOGS(ERROR, res);
     return false;
   }
