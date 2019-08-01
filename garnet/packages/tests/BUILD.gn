@@ -583,6 +583,7 @@ group("netstack3") {
 group("fidl") {
   testonly = true
   public_deps = [
+    "//examples/fidl/echo_test/cpp",
     "//garnet/examples/fidl/echo_server_cpp:echo_server_cpp_tests",
     "//garnet/go/src/fidl:fidlgen_cpp_ir_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_cpp_overnet_internal_test($host_toolchain)",
@@ -599,6 +600,7 @@ group("fidl") {
     "//garnet/public/lib/fidl/rust/fidl:rust_fidl_tests",
     "//garnet/tests/fidl-changes",
     "//garnet/tests/fidl-dangerous-identifiers",
+    "//sdk/lib/fidl-service/cpp:fidl_service_tests",
     "//sdk/lib/fidl/cpp:fidl_cpp_host_conformance_test($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_cpp_host_unittests($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_tests",

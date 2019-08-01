@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/test/test_package.gni")
+
+sdk_source_set("cpp") {
+  category = "partner"
+
+  sdk_name = "fidl_service_cpp"
+
+  include_base = "//sdk"
+  sources = [
+    "member_connector.h",
+    "service.cc",
+    "service.h",
+    "service_directory.cc",
+    "service_directory.h",
+    "service_handler.h",
+    "service_watcher.cc",
+    "service_watcher.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/vfs/cpp",
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_configs = [ "//sdk/config" ]
+}
+
+executable("fidl_service_unittests") {
+  testonly = true
+
+  sources = [
+    "member_connector_test.cc",
+    "service_directory_test.cc",
+    "service_test.cc",
+    "service_watcher_test.cc",
+    "test_base.h",
+  ]
+
+  deps = [
+    ":cpp",
+    "//examples/fidl/gen",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/async-testing",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+test_package("fidl_service_tests") {
+  deps = [
+    ":fidl_service_unittests",
+  ]
+
+  tests = [
+    {
+      name = "fidl_service_unittests"
+      manifest = rebase_path("../meta/fidl_service_unittests.cmx")
+      environments = basic_envs
+    },
+  ]
+}

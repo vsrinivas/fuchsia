@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fidl_service_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/echo_client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.examples.MyService"
+        ]
+    }
+}

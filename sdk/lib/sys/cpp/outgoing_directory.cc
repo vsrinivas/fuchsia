@@ -8,6 +8,28 @@
 
 #include <utility>
 
+namespace {
+
+// Adds a new empty directory |name| to |dir| and returns pointer to new
+// directory. Will fail silently if directory with that name already exists.
+vfs::PseudoDir* AddNewEmptyDirectory(vfs::PseudoDir* dir, std::string name) {
+  auto subdir = std::make_unique<vfs::PseudoDir>();
+  auto ptr = subdir.get();
+  dir->AddEntry(std::move(name), std::move(subdir));
+  return ptr;
+}
+
+vfs::PseudoDir* GetOrCreateDirectory(vfs::PseudoDir* dir, std::string name) {
+  vfs::internal::Node* node;
+  zx_status_t status = dir->Lookup(name, &node);
+  if (status != ZX_OK) {
+    return AddNewEmptyDirectory(dir, std::move(name));
+  }
+  return static_cast<vfs::PseudoDir*>(node);
+}
+
+}  // namespace
+
 namespace sys {
 
 OutgoingDirectory::OutgoingDirectory()
@@ -28,24 +50,28 @@ zx_status_t OutgoingDirectory::ServeFromStartupInfo(async_dispatcher_t* dispatch
 }
 
 vfs::PseudoDir* OutgoingDirectory::GetOrCreateDirectory(const std::string& name) {
-  vfs::internal::Node* node;
-  zx_status_t status = root_->Lookup(name, &node);
-  if (status != ZX_OK) {
-    return AddNewEmptyDirectory(name);
-  }
-  return static_cast<vfs::PseudoDir*>(node);
-}
-
-vfs::PseudoDir* OutgoingDirectory::AddNewEmptyDirectory(std::string name) {
-  auto dir = std::make_unique<vfs::PseudoDir>();
-  auto ptr = dir.get();
-  root_->AddEntry(std::move(name), std::move(dir));
-  return ptr;
+  return ::GetOrCreateDirectory(root_.get(), name);
 }
 
 zx_status_t OutgoingDirectory::AddPublicService(std::unique_ptr<vfs::Service> service,
                                                 std::string service_name) const {
   return svc_->AddEntry(std::move(service_name), std::move(service));
+}
+
+zx_status_t OutgoingDirectory::AddNamedService(fidl::ServiceHandler handler, std::string service,
+                                               std::string instance) const {
+  auto dir = ::GetOrCreateDirectory(svc_, std::move(service));
+  return dir->AddEntry(std::move(instance), handler.TakeDirectory());
+}
+
+zx_status_t OutgoingDirectory::RemoveNamedService(const std::string& service,
+                                                  const std::string& instance) const {
+  vfs::internal::Node* node;
+  zx_status_t status = svc_->Lookup(instance, &node);
+  if (status != ZX_OK) {
+    return ZX_OK;
+  }
+  return static_cast<vfs::PseudoDir*>(node)->RemoveEntry(service);
 }
 
 }  // namespace sys
