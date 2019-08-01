@@ -65,6 +65,24 @@ function main {
     shift
   done
 
+  # A change to any of these might mean things are now done differently enough
+  # that ninja's automatic re-gen rule might not be triggered or might not work
+  # properly if it is triggered.  So preemptively force a re-gen if that seems
+  # like a plausible possibility.
+  local -r landmines=("$PREBUILT_GN"
+                      "$FUCHSIA_DIR/tools/devshell/build"
+                      "$FUCHSIA_DIR/tools/devshell/lib/vars.sh"
+                     )
+  local mine
+  for mine in "${landmines[@]}"; do
+    if [ "$mine" -nt "${ZIRCON_BUILDROOT}/build.ninja" -o \
+         "$mine" -nt "${FUCHSIA_BUILD_DIR}/build.ninja" ]; then
+      echo >&2 "Re-running gn gen first ($mine changed)"
+      fx-gen || return
+      break
+    fi
+  done
+
   if [ ! -d "$ZIRCON_BUILDROOT" ]; then
     echo >&2 "Re-running gn gen first (missing $ZIRCON_BUILDROOT)"
     fx-gen || return
