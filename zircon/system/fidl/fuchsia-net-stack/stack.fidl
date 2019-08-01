@@ -111,19 +111,6 @@ struct InterfaceStatusChange {
     InterfaceStatus status;
 };
 
-union InterfaceAddressDiff {
-    InterfaceAddress added;
-    InterfaceAddress removed;
-};
-
-struct InterfaceAddressChange {
-    /// The opaque identifier of the device that had its address change.
-    uint64 id;
-
-    /// The diff representing the address change.
-    InterfaceAddressDiff diff;
-};
-
 enum ErrorType {
     INTERNAL = 1;
     NOT_SUPPORTED = 2;
@@ -196,7 +183,4 @@ protocol Stack {
 
     /// A status change event is triggered whenever an interface's status changes.
     -> OnInterfaceStatusChange(InterfaceStatusChange info);
-
-    /// An address change event is triggered whenever an interface's addresses change.
-    -> OnInterfaceAddressChange(InterfaceAddressChange info);
 };

@@ -26,11 +26,8 @@ table Events {
     /// InterfaceStatus event is triggered whenever an interface's status is changed.
     1: fuchsia.net.stack.InterfaceStatus status;
 
-    /// InterfaceAddressDiff event is triggered whenever the interface's addresses are changed.
-    2: fuchsia.net.stack.InterfaceAddressDiff addressDiff;
-
     /// InterfaceNameUpdate event is triggered whenever an interface's name is changed.
-    3: InterfaceNameUpdate name;
+    2: InterfaceNameUpdate name;
 };
 
 union EthernetControllerRequest {
@@ -52,10 +49,6 @@ protocol BaseInterfaceController {
     /// If enabled, the interface acquires a dynamic IP address through DHCP server.
     /// If disabled, the interface uses the assigned static IP address.
     SetDHCPClientStatus(fuchsia.net.stack.AdministrativeStatus status) -> (zx.status status);
-
-    /// Add/Remove IP address for an interface.
-    /// Remove only if IP address is an exact match.
-    UpdateAddress(fuchsia.net.stack.InterfaceAddressDiff addressDiff) -> (zx.status status);
 
     /// Set a name for an interface.
     SetName(string name) -> (zx.status status);
