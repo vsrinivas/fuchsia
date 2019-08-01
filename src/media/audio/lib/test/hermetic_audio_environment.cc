@@ -63,7 +63,11 @@ void EnvironmentMain(HermeticAudioEnvironment* env) {
 
 }  // namespace
 
-HermeticAudioEnvironment::HermeticAudioEnvironment() : env_thread_(EnvironmentMain, this) {}
+HermeticAudioEnvironment::HermeticAudioEnvironment() {
+  // Create the thread here to ensure the rest of the class has fully initialized before starting
+  // the new thread, which takes a reference to |this|.
+  env_thread_ = std::thread(EnvironmentMain, this);
+}
 
 void HermeticAudioEnvironment::Start(async::Loop* loop) {
   FXL_CHECK(loop_ == nullptr);
