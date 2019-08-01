@@ -828,122 +828,99 @@ bool ThreadDispatcher::SuspendedOrInExceptionLocked() {
          InChannelExceptionLocked();
 }
 
-zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
-  canary_.Assert();
-
-  ThreadState state;
-  Blocked blocked_reason;
-  ExceptionPort::Type excp_port_type;
-  // We need to fetch all these values under lock, but once we have them
-  // we no longer need the lock.
-  {
-    Guard<fbl::Mutex> guard{get_lock()};
-    state = state_;
-    blocked_reason = blocked_reason_;
-    if (InChannelExceptionLocked()) {
-      excp_port_type = channel_exception_wait_type_;
-    } else {
-      if (InPortExceptionLocked() &&
-          // A port type of !NONE here indicates to the caller that the
-          // thread is waiting for an exception response. So don't return
-          // !NONE if the thread just woke up but hasn't reacquired
-          // |state_lock_|.
-          state_.exception() == ThreadState::Exception::UNPROCESSED) {
-        DEBUG_ASSERT(exception_wait_port_ != nullptr);
-        excp_port_type = exception_wait_port_->type();
-      } else {
-        // Either we're not in an exception, or we're in the window where
-        // event_wait_deadline has woken up but |state_lock_| has
-        // not been reacquired.
-        DEBUG_ASSERT(exception_wait_port_ == nullptr ||
-                     state_.exception() != ThreadState::Exception::UNPROCESSED);
-        excp_port_type = ExceptionPort::Type::NONE;
-      }
-    }
-  }
-
-  switch (state.lifecycle()) {
+static zx_thread_state_t ThreadLifecycleToState(ThreadState::Lifecycle lifecycle,
+                                                ThreadDispatcher::Blocked blocked_reason) {
+  switch (lifecycle) {
     case ThreadState::Lifecycle::INITIAL:
     case ThreadState::Lifecycle::INITIALIZED:
-      info->state = ZX_THREAD_STATE_NEW;
-      break;
+      return ZX_THREAD_STATE_NEW;
     case ThreadState::Lifecycle::RUNNING:
       // The thread may be "running" but be blocked in a syscall or
       // exception handler.
       switch (blocked_reason) {
-        case Blocked::NONE:
-          info->state = ZX_THREAD_STATE_RUNNING;
-          break;
-        case Blocked::EXCEPTION:
-          info->state = ZX_THREAD_STATE_BLOCKED_EXCEPTION;
-          break;
-        case Blocked::SLEEPING:
-          info->state = ZX_THREAD_STATE_BLOCKED_SLEEPING;
-          break;
-        case Blocked::FUTEX:
-          info->state = ZX_THREAD_STATE_BLOCKED_FUTEX;
-          break;
-        case Blocked::PORT:
-          info->state = ZX_THREAD_STATE_BLOCKED_PORT;
-          break;
-        case Blocked::CHANNEL:
-          info->state = ZX_THREAD_STATE_BLOCKED_CHANNEL;
-          break;
-        case Blocked::WAIT_ONE:
-          info->state = ZX_THREAD_STATE_BLOCKED_WAIT_ONE;
-          break;
-        case Blocked::WAIT_MANY:
-          info->state = ZX_THREAD_STATE_BLOCKED_WAIT_MANY;
-          break;
-        case Blocked::INTERRUPT:
-          info->state = ZX_THREAD_STATE_BLOCKED_INTERRUPT;
-          break;
-        case Blocked::PAGER:
-          info->state = ZX_THREAD_STATE_BLOCKED_PAGER;
-          break;
+        case ThreadDispatcher::Blocked::NONE:
+          return ZX_THREAD_STATE_RUNNING;
+        case ThreadDispatcher::Blocked::EXCEPTION:
+          return ZX_THREAD_STATE_BLOCKED_EXCEPTION;
+        case ThreadDispatcher::Blocked::SLEEPING:
+          return ZX_THREAD_STATE_BLOCKED_SLEEPING;
+        case ThreadDispatcher::Blocked::FUTEX:
+          return ZX_THREAD_STATE_BLOCKED_FUTEX;
+        case ThreadDispatcher::Blocked::PORT:
+          return ZX_THREAD_STATE_BLOCKED_PORT;
+        case ThreadDispatcher::Blocked::CHANNEL:
+          return ZX_THREAD_STATE_BLOCKED_CHANNEL;
+        case ThreadDispatcher::Blocked::WAIT_ONE:
+          return ZX_THREAD_STATE_BLOCKED_WAIT_ONE;
+        case ThreadDispatcher::Blocked::WAIT_MANY:
+          return ZX_THREAD_STATE_BLOCKED_WAIT_MANY;
+        case ThreadDispatcher::Blocked::INTERRUPT:
+          return ZX_THREAD_STATE_BLOCKED_INTERRUPT;
+        case ThreadDispatcher::Blocked::PAGER:
+          return ZX_THREAD_STATE_BLOCKED_PAGER;
         default:
           DEBUG_ASSERT_MSG(false, "unexpected blocked reason: %d",
                            static_cast<int>(blocked_reason));
-          break;
+          return ZX_THREAD_STATE_BLOCKED;
       }
-      break;
     case ThreadState::Lifecycle::SUSPENDED:
-      info->state = ZX_THREAD_STATE_SUSPENDED;
-      break;
+      return ZX_THREAD_STATE_SUSPENDED;
     case ThreadState::Lifecycle::DYING:
-      info->state = ZX_THREAD_STATE_DYING;
-      break;
+      return ZX_THREAD_STATE_DYING;
     case ThreadState::Lifecycle::DEAD:
-      info->state = ZX_THREAD_STATE_DEAD;
-      break;
+      return ZX_THREAD_STATE_DEAD;
     default:
-      DEBUG_ASSERT_MSG(false, "unexpected run state: %d", static_cast<int>(state.lifecycle()));
-      break;
+      DEBUG_ASSERT_MSG(false, "unexpected run state: %d", static_cast<int>(lifecycle));
+      return ZX_THREAD_RUNNING;
   }
+}
 
-  switch (excp_port_type) {
+static uint32_t ExceptionPortTypeToUserspaceVal(ExceptionPort::Type type) {
+  switch (type) {
     case ExceptionPort::Type::NONE:
-      info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_NONE;
-      break;
+      return ZX_EXCEPTION_PORT_TYPE_NONE;
     case ExceptionPort::Type::DEBUGGER:
-      info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_DEBUGGER;
-      break;
+      return ZX_EXCEPTION_PORT_TYPE_DEBUGGER;
     case ExceptionPort::Type::JOB_DEBUGGER:
-      info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER;
-      break;
+      return ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER;
     case ExceptionPort::Type::THREAD:
-      info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_THREAD;
-      break;
+      return ZX_EXCEPTION_PORT_TYPE_THREAD;
     case ExceptionPort::Type::PROCESS:
-      info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_PROCESS;
-      break;
+      return ZX_EXCEPTION_PORT_TYPE_PROCESS;
     case ExceptionPort::Type::JOB:
-      info->wait_exception_port_type = ZX_EXCEPTION_PORT_TYPE_JOB;
-      break;
+      return ZX_EXCEPTION_PORT_TYPE_JOB;
     default:
       DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d",
-                       static_cast<int>(excp_port_type));
-      break;
+                       static_cast<int>(type));
+      return ZX_EXCEPTION_PORT_TYPE_NONE;
+  }
+}
+
+zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
+  canary_.Assert();
+  Guard<fbl::Mutex> guard{get_lock()};
+
+  // Calculate thread state.
+  info->state = ThreadLifecycleToState(state_.lifecycle(), blocked_reason_);
+
+  // Calculate exception status.
+  if (InChannelExceptionLocked()) {
+    info->wait_exception_port_type = ExceptionPortTypeToUserspaceVal(channel_exception_wait_type_);
+  } else if (InPortExceptionLocked() &&
+             // A port type of !NONE here indicates to the caller that the
+             // thread is waiting for an exception response. So don't return
+             // !NONE if the thread just woke up but hasn't reacquired
+             // |state_lock_|.
+             state_.exception() == ThreadState::Exception::UNPROCESSED) {
+    DEBUG_ASSERT(exception_wait_port_ != nullptr);
+    info->wait_exception_port_type = ExceptionPortTypeToUserspaceVal(exception_wait_port_->type());
+  } else {
+    // Either we're not in an exception, or we're in the window where
+    // event_wait_deadline has woken up but |state_lock_| has
+    // not been reacquired.
+    DEBUG_ASSERT(exception_wait_port_ == nullptr ||
+                 state_.exception() != ThreadState::Exception::UNPROCESSED);
+    info->wait_exception_port_type = ExceptionPortTypeToUserspaceVal(ExceptionPort::Type::NONE);
   }
 
   return ZX_OK;
