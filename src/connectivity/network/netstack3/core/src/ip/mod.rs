@@ -27,7 +27,7 @@ use net_types::MulticastAddr;
 use packet::{Buf, BufferMut, Either, ParsablePacket, ParseMetadata, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
-use crate::context::FrameContext;
+use crate::context::{FrameContext, TimerContext};
 use crate::data_structures::IdMap;
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, IpParseError, NotFoundError};
@@ -36,14 +36,14 @@ use crate::ip::icmp::IcmpState;
 use crate::ip::igmp::{IgmpInterface, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
 use crate::ip::mld::{MldInterface, MldReportDelay};
-use crate::ip::path_mtu::{handle_pmtu_timeout, IpLayerPathMtuCache};
+use crate::ip::path_mtu::{handle_pmtu_timer, IpLayerPathMtuCache, PmtuTimerId};
 use crate::ip::reassembly::{
-    handle_reassembly_timeout, process_fragment, reassemble_packet, FragmentCacheKeyEither,
+    handle_reassembly_timer, process_fragment, reassemble_packet, FragmentCacheKey,
     FragmentProcessingState, IpLayerFragmentCache,
 };
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::wire::ipv4::{Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions};
-use crate::{BufferDispatcher, Context, EventDispatcher, TimerId, TimerIdInner};
+use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 use icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, should_send_icmpv4_error,
     should_send_icmpv6_error, IcmpEventDispatcher, IcmpStateBuilder,
@@ -217,8 +217,54 @@ impl<D: EventDispatcher> IpLayerState<D> {
 struct IpLayerStateInner<I: Ip, D: EventDispatcher> {
     forward: bool,
     table: ForwardingTable<I>,
-    fragment_cache: IpLayerFragmentCache<I, D>,
-    path_mtu: IpLayerPathMtuCache<I, D>,
+    fragment_cache: IpLayerFragmentCache<I>,
+    path_mtu: IpLayerPathMtuCache<I, D::Instant>,
+}
+
+#[specialize_ip]
+fn get_state_inner<I: Ip, D: EventDispatcher>(state: &StackState<D>) -> &IpLayerStateInner<I, D> {
+    #[ipv4]
+    return &state.ip.v4;
+    #[ipv6]
+    return &state.ip.v6;
+}
+
+#[specialize_ip]
+fn get_state_inner_mut<I: Ip, D: EventDispatcher>(
+    state: &mut StackState<D>,
+) -> &mut IpLayerStateInner<I, D> {
+    #[ipv4]
+    return &mut state.ip.v4;
+    #[ipv6]
+    return &mut state.ip.v6;
+}
+
+// These `AsRef` and `AsMut` impls provide us with an implementation of
+// `StateContext<(), IpLayerFragmentCache<I>>`.
+impl<I: Ip, D: EventDispatcher> AsRef<IpLayerFragmentCache<I>> for Context<D> {
+    fn as_ref(&self) -> &IpLayerFragmentCache<I> {
+        &get_state_inner(self.state()).fragment_cache
+    }
+}
+
+impl<I: Ip, D: EventDispatcher> AsMut<IpLayerFragmentCache<I>> for Context<D> {
+    fn as_mut(&mut self) -> &mut IpLayerFragmentCache<I> {
+        &mut get_state_inner_mut(self.state_mut()).fragment_cache
+    }
+}
+
+// These `AsRef` and `AsMut` impls provide us with an implementation of
+// `StateContext<(), IpLayerPathMtuCache<I, D::Instant>>`.
+impl<I: Ip, D: EventDispatcher> AsRef<IpLayerPathMtuCache<I, D::Instant>> for Context<D> {
+    fn as_ref(&self) -> &IpLayerPathMtuCache<I, D::Instant> {
+        &get_state_inner(self.state()).path_mtu
+    }
+}
+
+impl<I: Ip, D: EventDispatcher> AsMut<IpLayerPathMtuCache<I, D::Instant>> for Context<D> {
+    fn as_mut(&mut self) -> &mut IpLayerPathMtuCache<I, D::Instant> {
+        &mut get_state_inner_mut(self.state_mut()).path_mtu
+    }
 }
 
 /// An event dispatcher for the IP layer.
@@ -229,8 +275,10 @@ pub trait IpLayerEventDispatcher: IcmpEventDispatcher {}
 /// The identifier for timer events in the IP layer.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub(crate) enum IpLayerTimerId {
-    /// A timer event for reassembly timeouts.
-    ReassemblyTimeout(FragmentCacheKeyEither),
+    /// A timer event for IPv4 packet reassembly timeouts.
+    ReassemblyTimeoutv4(FragmentCacheKey<Ipv4Addr>),
+    /// A timer event for IPv6 packet reassembly timeouts.
+    ReassemblyTimeoutv6(FragmentCacheKey<Ipv6Addr>),
     PmtuTimeout(IpVersion),
     /// Timer for IGMP protocol
     IgmpTimer(IgmpTimerId),
@@ -238,22 +286,88 @@ pub(crate) enum IpLayerTimerId {
 }
 
 impl IpLayerTimerId {
-    fn new_reassembly_timeout_timer_id(key: FragmentCacheKeyEither) -> TimerId {
-        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::ReassemblyTimeout(key)))
+    #[specialize_ip_address]
+    fn new_reassembly_timeout_timer_id<A: IpAddress>(key: FragmentCacheKey<A>) -> TimerId {
+        #[ipv4addr]
+        let id = IpLayerTimerId::ReassemblyTimeoutv4(key);
+        #[ipv6addr]
+        let id = IpLayerTimerId::ReassemblyTimeoutv6(key);
+
+        TimerId(TimerIdInner::IpLayer(id))
     }
 
-    fn new_pmtu_timeout_timer_id(ip: IpVersion) -> TimerId {
-        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::PmtuTimeout(ip)))
+    fn new_pmtu_timeout_timer_id<I: Ip>() -> TimerId {
+        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::PmtuTimeout(I::VERSION)))
     }
 }
 
 /// Handle a timer event firing in the IP layer.
 pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLayerTimerId) {
     match id {
-        IpLayerTimerId::ReassemblyTimeout(key) => handle_reassembly_timeout(ctx, key),
-        IpLayerTimerId::PmtuTimeout(ip) => handle_pmtu_timeout(ctx, ip),
+        IpLayerTimerId::ReassemblyTimeoutv4(key) => handle_reassembly_timer::<Ipv4, _>(ctx, key),
+        IpLayerTimerId::ReassemblyTimeoutv6(key) => handle_reassembly_timer::<Ipv6, _>(ctx, key),
+        IpLayerTimerId::PmtuTimeout(IpVersion::V4) => handle_pmtu_timer::<Ipv4, _>(ctx),
+        IpLayerTimerId::PmtuTimeout(IpVersion::V6) => handle_pmtu_timer::<Ipv6, _>(ctx),
         IpLayerTimerId::IgmpTimer(timer) => crate::ip::igmp::handle_timeout(ctx, timer),
         IpLayerTimerId::MldTimer(timer) => crate::ip::mld::handle_timeout(ctx, timer),
+    }
+}
+
+impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Context<D> {
+    fn schedule_timer_instant(
+        &mut self,
+        time: Self::Instant,
+        key: FragmentCacheKey<A>,
+    ) -> Option<Self::Instant> {
+        self.dispatcher_mut()
+            .schedule_timeout_instant(time, IpLayerTimerId::new_reassembly_timeout_timer_id(key))
+    }
+
+    fn cancel_timer(&mut self, key: &FragmentCacheKey<A>) -> Option<Self::Instant> {
+        self.dispatcher_mut()
+            .cancel_timeout(IpLayerTimerId::new_reassembly_timeout_timer_id(key.clone()))
+    }
+
+    fn cancel_timers_with<F: FnMut(&FragmentCacheKey<A>) -> bool>(&mut self, f: F) {
+        #[specialize_ip_address]
+        fn cancel_timers_with_inner<
+            A: IpAddress,
+            D: EventDispatcher,
+            F: FnMut(&FragmentCacheKey<A>) -> bool,
+        >(
+            ctx: &mut Context<D>,
+            mut f: F,
+        ) {
+            ctx.dispatcher_mut().cancel_timeouts_with(|id| match id {
+                #[ipv4addr]
+                TimerId(TimerIdInner::IpLayer(IpLayerTimerId::ReassemblyTimeoutv4(key))) => f(key),
+                #[ipv6addr]
+                TimerId(TimerIdInner::IpLayer(IpLayerTimerId::ReassemblyTimeoutv6(key))) => f(key),
+                _ => false,
+            });
+        }
+
+        cancel_timers_with_inner(self, f);
+    }
+}
+
+impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Context<D> {
+    fn schedule_timer_instant(
+        &mut self,
+        time: Self::Instant,
+        _id: PmtuTimerId<I>,
+    ) -> Option<Self::Instant> {
+        self.dispatcher_mut()
+            .schedule_timeout_instant(time, IpLayerTimerId::new_pmtu_timeout_timer_id::<I>())
+    }
+
+    fn cancel_timer(&mut self, _id: &PmtuTimerId<I>) -> Option<Self::Instant> {
+        self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_pmtu_timeout_timer_id::<I>())
+    }
+
+    fn cancel_timers_with<F: FnMut(&PmtuTimerId<I>) -> bool>(&mut self, f: F) {
+        self.dispatcher_mut()
+            .cancel_timeouts_with(|id| id == &IpLayerTimerId::new_pmtu_timeout_timer_id::<I>());
     }
 }
 
@@ -413,7 +527,7 @@ macro_rules! drop_packet_and_undo_parse {
 /// reassembled, attempt to dispatch the packet.
 macro_rules! process_fragment {
     ($ctx:expr, $device:expr, $frame_dst:expr, $buffer:expr, $packet:expr, $ip:ident) => {{
-        match process_fragment::<&mut [u8], _, $ip>($ctx, $packet) {
+        match process_fragment::<$ip, _, &mut [u8]>($ctx, $packet) {
             // Handle the packet right away since reassembly is not needed.
             FragmentProcessingState::NotNeeded(packet) => {
                 trace!("receive_ip_packet: not fragmented");
@@ -438,7 +552,7 @@ macro_rules! process_fragment {
                 let mut buffer = Buf::new(vec![0; packet_len], ..);
 
                 // Attempt to reassemble the packet.
-                match reassemble_packet::<_, _, _, $ip>($ctx, &key, buffer.buffer_view_mut()) {
+                match reassemble_packet::<$ip, _, _, _>($ctx, &key, buffer.buffer_view_mut()) {
                     // Successfully reassembled the packet, handle it.
                     Ok(packet) => {
                         trace!("receive_ip_packet: fragmented, reassembled packet: {:?}", packet);
@@ -760,7 +874,7 @@ pub(crate) fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
     remote: A,
 ) -> Option<A> {
-    let route = lookup_route(&ctx.state().ip, remote)?;
+    let route = lookup_route(ctx, remote)?;
     crate::device::get_ip_addr_subnet(ctx, route.device).map(AddrSubnet::into_addr)
 }
 
@@ -887,94 +1001,59 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
 }
 
 // Should we forward this packet, and if so, to whom?
-#[specialize_ip_address]
 fn forward<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     dst_ip: A,
 ) -> Option<Destination<A::Version>> {
-    let ip_state = &ctx.state().ip;
-
-    #[ipv4addr]
-    let forward = ip_state.v4.forward;
-    #[ipv6addr]
-    let forward = ip_state.v6.forward;
-
-    if forward {
-        lookup_route(ip_state, dst_ip)
+    if get_state_inner::<A::Version, _>(ctx.state()).forward {
+        lookup_route(ctx, dst_ip)
     } else {
         None
     }
 }
 
 // Look up the route to a host.
-#[specialize_ip_address]
 pub(crate) fn lookup_route<A: IpAddress, D: EventDispatcher>(
-    state: &IpLayerState<D>,
+    ctx: &Context<D>,
     dst_ip: A,
 ) -> Option<Destination<A::Version>> {
-    #[ipv4addr]
-    return state.v4.table.lookup(dst_ip);
-    #[ipv6addr]
-    return state.v6.table.lookup(dst_ip);
+    get_state_inner(ctx.state()).table.lookup(dst_ip)
 }
 
 /// Add a route to the forwarding table, returning `Err` if the subnet
 /// is already in the table.
-#[specialize_ip_address]
 pub(crate) fn add_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     next_hop: A,
 ) -> Result<(), ExistsError> {
-    let state = &mut ctx.state_mut().ip;
-
-    #[ipv4addr]
-    return state.v4.table.add_route(subnet, next_hop);
-    #[ipv6addr]
-    return state.v6.table.add_route(subnet, next_hop);
+    get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.add_route(subnet, next_hop)
 }
 
 /// Add a device route to the forwarding table, returning `Err` if the
 /// subnet is already in the table.
-#[specialize_ip_address]
 pub(crate) fn add_device_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     device: DeviceId,
 ) -> Result<(), ExistsError> {
-    let state = &mut ctx.state_mut().ip;
-
-    #[ipv4addr]
-    return state.v4.table.add_device_route(subnet, device);
-    #[ipv6addr]
-    return state.v6.table.add_device_route(subnet, device);
+    get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.add_device_route(subnet, device)
 }
 
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
-#[specialize_ip_address]
 pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
 ) -> Result<(), NotFoundError> {
-    let state = &mut ctx.state_mut().ip;
-
-    #[ipv4addr]
-    return state.v4.table.del_route(subnet);
-    #[ipv6addr]
-    return state.v6.table.del_route(subnet);
+    get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.del_route(subnet)
 }
 
 /// Return the routes for the provided `IpAddress` type
-#[specialize_ip_address]
-pub(crate) fn iter_routes<D: EventDispatcher, I: IpAddress>(
+pub(crate) fn iter_routes<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
-) -> std::slice::Iter<Entry<I>> {
-    let state = &ctx.state().ip;
-    #[ipv4addr]
-    return state.v4.table.iter_routes();
-    #[ipv6addr]
-    return state.v6.table.iter_routes();
+) -> std::slice::Iter<Entry<A>> {
+    get_state_inner::<A::Version, _>(ctx.state()).table.iter_routes()
 }
 
 /// Is this one of our local addresses?
@@ -1059,7 +1138,7 @@ where
                 None,
             ),
         }
-    } else if let Some(dest) = lookup_route(&ctx.state().ip, dst_ip) {
+    } else if let Some(dest) = lookup_route(ctx, dst_ip) {
         // TODO(joshlf): Are we sure that a device route can never be set for a
         // device without an IP address? At the least, this is not currently
         // enforced anywhere, and is a DoS vector.
@@ -1215,8 +1294,7 @@ where
     // the original packet ingressed over? We'll probably want to consult BCP 38
     // (aka RFC 2827) and RFC 3704.
 
-    let ip_state = &mut ctx.state_mut().ip;
-    if let Some(route) = lookup_route(ip_state, src_ip) {
+    if let Some(route) = lookup_route(ctx, src_ip) {
         if let Some(local_ip) =
             crate::device::get_ip_addr_subnet(ctx, route.device).map(AddrSubnet::into_addr)
         {
@@ -1255,13 +1333,8 @@ where
 }
 
 /// Is `ctx` configured for a router?
-#[specialize_ip]
 pub(crate) fn is_router<D: EventDispatcher, I: Ip>(ctx: &Context<D>) -> bool {
-    #[ipv4]
-    return ctx.state.ip.v4.forward;
-
-    #[ipv6]
-    return ctx.state.ip.v6.forward;
+    get_state_inner::<I, _>(ctx.state()).forward
 }
 
 #[cfg(test)]
@@ -2455,7 +2528,7 @@ mod tests {
     ) -> Option<Destination<A::Version>> {
         let mut ctx =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
-        lookup_route(&ctx.state().ip, ip_address)
+        lookup_route(&ctx, ip_address)
     }
 
     #[test]

@@ -6,14 +6,15 @@
 //! cache support.
 
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::time::Duration;
 
 use log::trace;
-use net_types::ip::{Ip, IpAddress, IpVersion};
-use specialize_ip_macro::{specialize_ip, specialize_ip_address};
+use net_types::ip::{Ip, IpAddress};
+use specialize_ip_macro::specialize_ip;
 
-use crate::ip::IpLayerTimerId;
-use crate::{Context, EventDispatcher, Instant, TimerId};
+use crate::context::{InstantContext, StateContext, TimerContext};
+use crate::{Context, EventDispatcher, Instant};
 
 /// [RFC 791 section 3.2] requires that an IPv4 node be able to forward
 /// datagrams of up to 68 octets without further fragmentation. That is,
@@ -68,6 +69,24 @@ const PMTU_STALE_TIMEOUT: Duration = Duration::from_secs(10800);
 const PMTU_PLATEAUS: [u32; 12] =
     [65535, 32000, 17914, 8166, 4352, 2002, 1492, 1280, 1006, 508, 296, 68];
 
+/// The timer ID for the path MTU cache.
+pub(crate) struct PmtuTimerId<I: Ip>(PhantomData<I>);
+
+/// The execution context for the path MTU cache.
+pub(crate) trait PmtuContext<I: Ip>:
+    TimerContext<PmtuTimerId<I>>
+    + StateContext<(), IpLayerPathMtuCache<I, <Self as InstantContext>::Instant>>
+{
+}
+
+impl<
+        I: Ip,
+        C: TimerContext<PmtuTimerId<I>>
+            + StateContext<(), IpLayerPathMtuCache<I, <C as InstantContext>::Instant>>,
+    > PmtuContext<I> for C
+{
+}
+
 /// Get the minimum MTU size for a specific IP version, identified by `I`.
 #[specialize_ip]
 pub(crate) fn min_mtu<I: Ip>() -> u32 {
@@ -80,62 +99,34 @@ pub(crate) fn min_mtu<I: Ip>() -> u32 {
     ret
 }
 
-/// Handle a PMTU scheduled timeout.
-///
-/// See [`IpLayerPathMtuCache::handle_timeout`].
-pub(crate) fn handle_pmtu_timeout<D: EventDispatcher>(ctx: &mut Context<D>, ip: IpVersion) {
-    let (state, dispatcher) = ctx.state_and_dispatcher();
-
-    match ip {
-        IpVersion::V4 => state.ip.v4.path_mtu.handle_timeout(dispatcher),
-        IpVersion::V6 => state.ip.v6.path_mtu.handle_timeout(dispatcher),
-    }
-}
-
 /// Get the PMTU between `src_ip` and `dst_ip`.
 ///
 /// See [`IpLayerPathMtuCache::get_pmtu`].
-#[specialize_ip_address]
-pub(crate) fn get_pmtu<A: IpAddress, D: EventDispatcher>(
-    ctx: &Context<D>,
+pub(crate) fn get_pmtu<A: IpAddress, C: PmtuContext<A::Version>>(
+    ctx: &C,
     src_ip: A,
     dst_ip: A,
 ) -> Option<u32> {
-    #[ipv4addr]
-    let ret = ctx.state.ip.v4.path_mtu.get_pmtu(src_ip, dst_ip);
-
-    #[ipv6addr]
-    let ret = ctx.state.ip.v6.path_mtu.get_pmtu(src_ip, dst_ip);
-
-    ret
+    ctx.get_state(()).get_pmtu(src_ip, dst_ip)
 }
 
 /// Update the PMTU between `src_ip` and `dst_ip`.
 ///
-/// See [`IpLayerPathMtuCache::update_pmtu`].
-#[specialize_ip_address]
-pub(crate) fn update_pmtu<A: IpAddress, D: EventDispatcher>(
-    ctx: &mut Context<D>,
+/// See [`update_pmtu_inner`].
+pub(crate) fn update_pmtu<A: IpAddress, C: PmtuContext<A::Version>>(
+    ctx: &mut C,
     src_ip: A,
     dst_ip: A,
     new_mtu: u32,
 ) -> Result<Option<u32>, Option<u32>> {
-    let (state, dispatcher) = ctx.state_and_dispatcher();
-
-    #[ipv4addr]
-    let ret = state.ip.v4.path_mtu.update_pmtu(dispatcher, src_ip, dst_ip, new_mtu);
-
-    #[ipv6addr]
-    let ret = state.ip.v6.path_mtu.update_pmtu(dispatcher, src_ip, dst_ip, new_mtu);
-
+    let ret = update_pmtu_inner(ctx, src_ip, dst_ip, new_mtu);
     trace!(
-        "update_pmtu: Updating the PMTU between src {} and dest {} to {}; was {:?}",
+        "update_pmtu: Updated the PMTU between src {} and dest {} to {}; was {:?}",
         src_ip,
         dst_ip,
         new_mtu,
         ret
     );
-
     ret
 }
 
@@ -227,34 +218,33 @@ impl<A: IpAddress> PathMtuCacheKey<A> {
 
 /// Structure to keep track of the PMTU from a (local) source address to
 /// some destination address.
-type PathMtuCache<A, D> = HashMap<PathMtuCacheKey<A>, PathMtuCacheData<D>>;
+type PathMtuCache<A, I> = HashMap<PathMtuCacheKey<A>, PathMtuCacheData<I>>;
 
 /// IP layer PMTU cache data.
-pub(crate) struct PathMtuCacheData<D: EventDispatcher> {
+pub(crate) struct PathMtuCacheData<I> {
     pmtu: u32,
-    last_updated: D::Instant,
+    last_updated: I,
 }
 
-impl<D: EventDispatcher> PathMtuCacheData<D> {
+impl<I: Instant> PathMtuCacheData<I> {
     /// Construct a new `PathMtuCacheData`.
     ///
-    /// `last_updated` will be set to the current instant in time as known
-    /// by `dispatcher`.
-    fn new(dispatcher: &D, pmtu: u32) -> Self {
-        Self { pmtu, last_updated: dispatcher.now() }
+    /// `last_updated` will be set to `now`.
+    fn new(pmtu: u32, now: I) -> Self {
+        Self { pmtu, last_updated: now }
     }
 }
 
 /// IP Layer PMTU cache.
-pub(crate) struct IpLayerPathMtuCache<I: Ip, D: EventDispatcher> {
-    cache: PathMtuCache<I::Addr, D>,
-    next_timer_id: Option<TimerId>,
+pub(crate) struct IpLayerPathMtuCache<I: Ip, Instant> {
+    cache: PathMtuCache<I::Addr, Instant>,
+    timer_scheduled: bool,
 }
 
-impl<I: Ip, D: EventDispatcher> IpLayerPathMtuCache<I, D> {
+impl<I: Ip, Instant: Clone> IpLayerPathMtuCache<I, Instant> {
     /// Create a new `IpLayerPathMtuCache`.
     pub(crate) fn new() -> Self {
-        Self { cache: PathMtuCache::new(), next_timer_id: None }
+        Self { cache: PathMtuCache::new(), timer_scheduled: false }
     }
 
     /// Get the last updated [`Instant`] when the PMTU between `src_ip`
@@ -264,8 +254,8 @@ impl<I: Ip, D: EventDispatcher> IpLayerPathMtuCache<I, D> {
     /// `Some(x)` where `x` is the PMTU's last updated `Instant` in time.
     ///
     /// [`Instant`]: crate::Instant
-    pub(crate) fn get_last_updated(&self, src_ip: I::Addr, dst_ip: I::Addr) -> Option<D::Instant> {
-        self.cache.get(&PathMtuCacheKey::new(src_ip, dst_ip)).map(|x| x.last_updated)
+    pub(crate) fn get_last_updated(&self, src_ip: I::Addr, dst_ip: I::Addr) -> Option<Instant> {
+        self.cache.get(&PathMtuCacheKey::new(src_ip, dst_ip)).map(|x| x.last_updated.clone())
     }
 
     /// Get the PMTU between `src_ip` and `dst_ip`.
@@ -275,130 +265,123 @@ impl<I: Ip, D: EventDispatcher> IpLayerPathMtuCache<I, D> {
     pub(crate) fn get_pmtu(&self, src_ip: I::Addr, dst_ip: I::Addr) -> Option<u32> {
         self.cache.get(&PathMtuCacheKey::new(src_ip, dst_ip)).map(|x| x.pmtu)
     }
+}
 
-    /// Update the PMTU between `src_ip` and `dst_ip` if `new_mtu` does not violate
-    /// IP specific minimum MTU requirements.
-    ///
-    /// Returns `Err(x)` if the `new_mtu` is less than the minimum MTU for an IP
-    /// where the same `x` is returned in the success case (`Ok(x)`). `x` is the
-    /// PMTU known by this `IpLayerPathMtuCache` before being updated. `x` will be
-    /// `None` if no PMTU is known, else `Some(y)` where `y` is the last estimate
-    /// of the PMTU.
-    ///
-    /// If there is no PMTU maintenance task scheduled yet, `update_pmtu` will
-    /// schedule one to happen after a duration of `SCHEDULE_TIMEOUT` from the
-    /// current time instant known by `dispatcher`.
-    pub(crate) fn update_pmtu(
-        &mut self,
-        dispatcher: &mut D,
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
-        new_mtu: u32,
-    ) -> Result<Option<u32>, Option<u32>> {
-        // New MTU must not be smaller than the minimum MTU for an IP.
-        if new_mtu < min_mtu::<I>() {
-            return Err(self.get_pmtu(src_ip, dst_ip));
-        }
-
-        let key = PathMtuCacheKey::new(src_ip, dst_ip);
-        let ret = if let Some(data) = self.cache.get_mut(&key) {
-            let prev_pmtu = data.pmtu;
-            data.pmtu = new_mtu;
-            data.last_updated = dispatcher.now();
-            Ok(Some(prev_pmtu))
-        } else {
-            assert!(self.cache.insert(key, PathMtuCacheData::new(dispatcher, new_mtu)).is_none());
-            Ok(None)
-        };
-
-        // Make sure we have a scheduled task to handle PMTU maintenance.
-        // If we don't, create one.
-        if self.next_timer_id.is_none() {
-            // We are guaranteed that this call will not panic
-            // because a panic will only occur if there is already
-            // a PMTU maintenance task scheduled. We will only reach
-            // here if there is no maintenance task scheduled so
-            // we know the panic condition will not be triggered.
-            self.create_maintenance_timeout(dispatcher);
-        }
-
-        ret
+/// Update the PMTU between `src_ip` and `dst_ip` if `new_mtu` does not violate
+/// IP specific minimum MTU requirements.
+///
+/// Returns `Err(x)` if the `new_mtu` is less than the minimum MTU for an IP
+/// where the same `x` is returned in the success case (`Ok(x)`). `x` is the
+/// PMTU known by this `IpLayerPathMtuCache` before being updated. `x` will be
+/// `None` if no PMTU is known, else `Some(y)` where `y` is the last estimate of
+/// the PMTU.
+///
+/// If there is no PMTU maintenance task scheduled yet, `update_pmtu` will
+/// schedule one to happen after a duration of `SCHEDULE_TIMEOUT` from the
+/// current time instant known by `dispatcher`.
+fn update_pmtu_inner<I: Ip, C: PmtuContext<I>>(
+    ctx: &mut C,
+    src_ip: I::Addr,
+    dst_ip: I::Addr,
+    new_mtu: u32,
+) -> Result<Option<u32>, Option<u32>> {
+    // New MTU must not be smaller than the minimum MTU for an IP.
+    if new_mtu < min_mtu::<I>() {
+        return Err(ctx.get_state_mut(()).get_pmtu(src_ip, dst_ip));
     }
 
-    /// Do scheduled maintenance on PMTU data such as
-    /// resetting PMTU values of stale cached values to
-    /// restart the PMTU discovery process.
-    fn handle_timeout(&mut self, dispatcher: &mut D) {
-        // Make sure the timer id we have stored is valid.
-        assert_eq!(
-            self.next_timer_id.unwrap(),
-            IpLayerTimerId::new_pmtu_timeout_timer_id(I::VERSION)
-        );
+    let key = PathMtuCacheKey::new(src_ip, dst_ip);
+    let now = ctx.now();
+    let ret = if let Some(data) = ctx.get_state_mut(()).cache.get_mut(&key) {
+        let prev_pmtu = data.pmtu;
+        data.pmtu = new_mtu;
+        data.last_updated = now;
+        Ok(Some(prev_pmtu))
+    } else {
+        let val = PathMtuCacheData::new(new_mtu, ctx.now());
+        assert!(ctx.get_state_mut(()).cache.insert(key, val).is_none());
+        Ok(None)
+    };
 
-        // Reset the next timer id since we just started the timer
-        // that it ids.
-        self.next_timer_id = None;
+    // Make sure we have a scheduled task to handle PMTU maintenance. If we
+    // don't, create one.
+    if !ctx.get_state(()).timer_scheduled {
+        // We are guaranteed that this call will not panic because a panic will
+        // only occur if there is already a PMTU maintenance task scheduled. We
+        // will only reach here if there is no maintenance task scheduled so we
+        // know the panic condition will not be triggered.
+        create_maintenance_timer(ctx);
+    }
 
-        let curr_time = dispatcher.now();
+    ret
+}
 
-        // Remove all stale PMTU data to force restart the PMTU discovery
-        // process. This will be ok because the next time we try to send
-        // a packet to some node, we will update the PMTU with the first
-        // known potential PMTU (the first link's (connected to the node
-        // attempting PMTU discovery)) PMTU.
-        self.cache.retain(|k, v| {
-            // We know the call to `duration_since` will not panic because
-            // all the entries in the cache should have been updated before
-            // this timeout/PMTU maintenance task was run. Therefore, `curr_time`
-            // will be greater than `v.last_updated` for all `v`.
-            //
-            // TODO(ghanan): Add per-path options as per RFC 1981 section 5.3.
-            //               Specifically, some links/paths may not need to
-            //               have PMTU rediscovered as the PMTU will never
-            //               change.
-            //
-            // TODO(ghanan): Consider not simply deleting all stale PMTU data
-            //               as this may cause packets to be dropped every
-            //               time the data seems to get stale when really it
-            //               is still valid. Considering the use case, PMTU
-            //               value changes may be infrequent so it may be
-            //               enough to just use a long stale timeout.
-            (curr_time.duration_since(v.last_updated) < PMTU_STALE_TIMEOUT)
-        });
+/// Handle a scheduled PMTU timer firing.
+///
+/// This performs scheduled maintenance on PMTU data such as resetting PMTU
+/// values of stale cached values to restart the PMTU discovery process.
+pub(crate) fn handle_pmtu_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
+    let curr_time = ctx.now();
+    let mut cache = ctx.get_state_mut(());
 
-        // Only attempt to create the next maintenance task if we still
-        // have PMTU entries in this cache. If we don't, it would be a
-        // waste to schedule the timeout. We will let the next creation
-        // of a PMTU entry create the timeout.
+    // Make sure we expected this timer to fire.
+    assert!(cache.timer_scheduled);
+
+    // Now that this timer has fired, no others should currently be scheduled.
+    cache.timer_scheduled = false;
+
+    // Remove all stale PMTU data to force restart the PMTU discovery process.
+    // This will be ok because the next time we try to send a packet to some
+    // node, we will update the PMTU with the first known potential PMTU (the
+    // first link's (connected to the node attempting PMTU discovery)) PMTU.
+    cache.cache.retain(|k, v| {
+        // We know the call to `duration_since` will not panic because all the
+        // entries in the cache should have been updated before this timer/PMTU
+        // maintenance task was run. Therefore, `curr_time` will be greater than
+        // `v.last_updated` for all `v`.
         //
-        // See `IpLayerPathMtuCache::update_pmtu`.
-        if !self.cache.is_empty() {
-            // We are guaranteed that this call will not panic
-            // because a panic will only occur if there is already
-            // a PMTU maintenance task scheduled. We will only reach
-            // here after starting a maintenance task and clear the
-            // task's `TimerId` so the panic condition will not be
-            // triggered.
-            self.create_maintenance_timeout(dispatcher);
-        }
-    }
+        // TODO(ghanan): Add per-path options as per RFC 1981 section 5.3.
+        //               Specifically, some links/paths may not need to have
+        //               PMTU rediscovered as the PMTU will never change.
+        //
+        // TODO(ghanan): Consider not simply deleting all stale PMTU data as
+        //               this may cause packets to be dropped every time the
+        //               data seems to get stale when really it is still valid.
+        //               Considering the use case, PMTU value changes may be
+        //               infrequent so it may be enough to just use a long stale
+        //               timer.
+        (curr_time.duration_since(v.last_updated) < PMTU_STALE_TIMEOUT)
+    });
 
-    /// Create a PMTU maintenance task to occur after a duration of
-    /// `MAINTENANCE_PERIOD`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if there is already a maintenance task scheduled that
-    /// has not yet run.
-    fn create_maintenance_timeout(&mut self, dispatcher: &mut D) {
-        // Should not create a new job if we already have a maintenance job
-        // to be run.
-        assert_eq!(self.next_timer_id, None);
-
-        let timer_id = IpLayerTimerId::new_pmtu_timeout_timer_id(I::VERSION);
-        assert!(dispatcher.schedule_timeout(MAINTENANCE_PERIOD, timer_id).is_none());
-        self.next_timer_id = timer_id.into();
+    // Only attempt to create the next maintenance task if we still have PMTU
+    // entries in this cache. If we don't, it would be a waste to schedule the
+    // timer. We will let the next creation of a PMTU entry create the timer.
+    //
+    // See `IpLayerPathMtuCache::update_pmtu`.
+    if !cache.cache.is_empty() {
+        // We are guaranteed that this call will not panic because a panic will
+        // only occur if there is already a PMTU maintenance task scheduled. We
+        // will only reach here after starting a maintenance task and clear the
+        // task's `TimerId` so the panic condition will not be triggered.
+        create_maintenance_timer(ctx);
     }
+}
+
+/// Create a PMTU maintenance task to occur after a duration of
+/// `MAINTENANCE_PERIOD`.
+///
+/// # Panics
+///
+/// Panics if there is already a maintenance task scheduled that has not yet
+/// run.
+fn create_maintenance_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
+    let mut cache = ctx.get_state_mut(());
+    // Should not create a new job if we already have a maintenance job to be
+    // run.
+    assert!(!cache.timer_scheduled);
+
+    cache.timer_scheduled = true;
+    assert!(ctx.schedule_timer(MAINTENANCE_PERIOD, PmtuTimerId(PhantomData)).is_none());
 }
 
 #[cfg(test)]
@@ -406,6 +389,7 @@ mod tests {
     use super::*;
 
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use specialize_ip_macro::specialize_ip_address;
 
     use crate::testutil::{
         get_dummy_config, run_for, DummyEventDispatcher, DummyEventDispatcherBuilder,
@@ -707,7 +691,7 @@ mod tests {
         );
 
         // Advance time to 1hr + 1s.
-        // Should have triggered a timeout.
+        // Should have triggered a timer.
         assert_eq!(run_for(&mut ctx, duration * 1801), 1);
         // Make sure none of the cache data has been marked as
         // stale and removed.
@@ -728,7 +712,7 @@ mod tests {
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Advance time to 3hr + 1s.
-        // Should have triggered 2 timeouts.
+        // Should have triggered 2 timers.
         assert_eq!(run_for(&mut ctx, duration * 7200), 2);
         // Make sure only the earlier PMTU data got marked
         // as stale and removed.
@@ -744,7 +728,7 @@ mod tests {
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Advance time to 4hr + 1s.
-        // Should have triggered 1 timeouts.
+        // Should have triggered 1 timers.
         assert_eq!(run_for(&mut ctx, duration * 3600), 1);
         // Make sure both PMTU data got marked
         // as stale and removed.
