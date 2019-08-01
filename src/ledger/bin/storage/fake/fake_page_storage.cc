@@ -314,6 +314,10 @@ const std::map<ObjectDigest, ObjectReferencesAndPriority>& FakePageStorage::GetR
   return references_;
 }
 
+storage::ObjectIdentifierFactory* FakePageStorage::GetObjectIdentifierFactory() {
+  return &object_identifier_factory_;
+}
+
 ObjectDigest FakePageStorage::FakeDigest(fxl::StringView value) const {
   // Builds a fake ObjectDigest by computing the hash of |value|, and prefixes
   // it with 0xFACEFEED to intentionally make it longer than real object

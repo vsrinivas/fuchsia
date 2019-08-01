@@ -16,7 +16,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <trace/event.h>
 
 #include <algorithm>
 #include <iterator>
@@ -24,6 +23,8 @@
 #include <memory>
 #include <set>
 #include <utility>
+
+#include <trace/event.h>
 
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
@@ -35,6 +36,7 @@
 #include "src/ledger/bin/storage/impl/journal_impl.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
+#include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/split.h"
 #include "src/ledger/bin/storage/public/constants.h"
@@ -351,6 +353,7 @@ void PageStorageImpl::GetUnsyncedPieces(
 
 void PageStorageImpl::MarkPieceSynced(ObjectIdentifier object_identifier,
                                       fit::function<void(Status)> callback) {
+  FXL_DCHECK(IsTokenValid(object_identifier));
   coroutine_manager_.StartCoroutine(
       std::move(callback), [this, object_identifier = std::move(object_identifier)](
                                CoroutineHandler* handler, fit::function<void(Status)> callback) {
@@ -360,6 +363,7 @@ void PageStorageImpl::MarkPieceSynced(ObjectIdentifier object_identifier,
 
 void PageStorageImpl::IsPieceSynced(ObjectIdentifier object_identifier,
                                     fit::function<void(Status, bool)> callback) {
+  FXL_DCHECK(IsTokenValid(object_identifier));
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
@@ -465,6 +469,7 @@ void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
   FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
   FXL_DCHECK(GetObjectDigestInfo(object_identifier.object_digest()).object_type ==
              ObjectType::BLOB);
+  FXL_DCHECK(IsTokenValid(object_identifier));
   GetOrDownloadPiece(
       object_identifier, location,
       [this, location, object_identifier = std::move(object_identifier), offset, max_size,
@@ -516,6 +521,7 @@ void PageStorageImpl::GetObject(
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   auto traced_callback = TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_get_object");
   FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
+  FXL_DCHECK(IsTokenValid(object_identifier));
   GetOrDownloadPiece(
       object_identifier, location,
       [this, location, object_identifier = std::move(object_identifier),
@@ -561,6 +567,7 @@ void PageStorageImpl::GetObject(
 
 void PageStorageImpl::GetPiece(ObjectIdentifier object_identifier,
                                fit::function<void(Status, std::unique_ptr<const Piece>)> callback) {
+  FXL_DCHECK(IsTokenValid(object_identifier));
   ObjectDigestInfo digest_info = GetObjectDigestInfo(object_identifier.object_digest());
   if (digest_info.is_inlined()) {
     callback(Status::OK, std::make_unique<InlinePiece>(std::move(object_identifier)));
@@ -670,6 +677,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler, PageDb::Ba
     object_identifiers.pop_back();
     const ObjectIdentifier& object_identifier = *(it.first);
     FXL_DCHECK(!GetObjectDigestInfo(object_identifier.object_digest()).is_inlined());
+    FXL_DCHECK(IsTokenValid(object_identifier));
     Status status = batch->SetObjectStatus(handler, object_identifier, PageDbObjectStatus::LOCAL);
     if (status != Status::OK) {
       return status;
@@ -727,6 +735,7 @@ void PageStorageImpl::AddPiece(std::unique_ptr<const Piece> piece, ChangeSource 
 
 void PageStorageImpl::ObjectIsUntracked(ObjectIdentifier object_identifier,
                                         fit::function<void(Status, bool)> callback) {
+  FXL_DCHECK(IsTokenValid(object_identifier));
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
@@ -1019,6 +1028,10 @@ void PageStorageImpl::GetOrDownloadPiece(
   });
 }
 
+ObjectIdentifierFactory* PageStorageImpl::GetObjectIdentifierFactory() {
+  return &object_identifier_factory_;
+}
+
 LiveCommitTracker* PageStorageImpl::GetCommitTracker() { return &commit_tracker_; }
 
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
@@ -1088,6 +1101,7 @@ Status PageStorageImpl::SynchronousAddCommitFromLocal(CoroutineHandler* handler,
                                                       std::unique_ptr<const Commit> commit,
                                                       std::vector<ObjectIdentifier> new_objects) {
   FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest()));
+  FXL_DCHECK(IsTokenValid(commit->GetRootIdentifier()));
   std::vector<std::unique_ptr<const Commit>> commits;
   commits.reserve(1);
   commits.push_back(std::move(commit));
@@ -1459,4 +1473,10 @@ FXL_WARN_UNUSED_RESULT Status PageStorageImpl::SynchronousGetEmptyNodeIdentifier
   return Status::OK;
 }
 
+bool PageStorageImpl::IsTokenValid(const ObjectIdentifier& object_identifier) {
+  // TODO(LE-702): once all constructors have been migrated to use the factory, also validate that
+  // only inline object identifiers have a nullptr factory.
+  return object_identifier.factory() == nullptr ||
+         object_identifier.factory() == &object_identifier_factory_;
+}
 }  // namespace storage

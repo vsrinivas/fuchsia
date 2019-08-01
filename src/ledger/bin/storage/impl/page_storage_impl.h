@@ -18,6 +18,7 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/impl/commit_pruner.h"
 #include "src/ledger/bin/storage/impl/live_commit_tracker.h"
+#include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/page_db_impl.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
@@ -53,9 +54,11 @@ class PageStorageImpl : public PageStorage {
   void ObjectIsUntracked(ObjectIdentifier object_identifier,
                          fit::function<void(Status, bool)> callback);
 
+  void SetSyncDelegate(PageSyncDelegate* page_sync) override;
+
   // PageStorage:
   PageId GetId() override;
-  void SetSyncDelegate(PageSyncDelegate* page_sync) override;
+  ObjectIdentifierFactory* GetObjectIdentifierFactory() override;
   Status GetHeadCommits(std::vector<std::unique_ptr<const Commit>>* head_commits) override;
   void GetMergeCommitIds(CommitIdView parent1_id, CommitIdView parent2_id,
                          fit::function<void(Status, std::vector<CommitId>)> callback) override;
@@ -234,9 +237,14 @@ class PageStorageImpl : public PageStorage {
   FXL_WARN_UNUSED_RESULT Status SynchronousGetEmptyNodeIdentifier(
       coroutine::CoroutineHandler* handler, ObjectIdentifier** empty_node_id);
 
+  // Checks if a tracked object identifier is tracked by this PageStorage.
+  // Returns true for all untracked object identifiers.
+  bool IsTokenValid(const ObjectIdentifier& object_identifier);
+
   ledger::Environment* environment_;
   encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;
+  ObjectIdentifierFactoryImpl object_identifier_factory_;
   LiveCommitTracker commit_tracker_;
   CommitPruner commit_pruner_;
   std::unique_ptr<PageDb> db_;

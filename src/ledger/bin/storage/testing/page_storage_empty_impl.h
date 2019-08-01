@@ -25,6 +25,8 @@ class PageStorageEmptyImpl : public PageStorage {
   // PageStorage:
   PageId GetId() override;
 
+  ObjectIdentifierFactory* GetObjectIdentifierFactory() override;
+
   void SetSyncDelegate(PageSyncDelegate* page_sync) override;
 
   Status GetHeadCommits(std::vector<std::unique_ptr<const Commit>>* head_commits) override;

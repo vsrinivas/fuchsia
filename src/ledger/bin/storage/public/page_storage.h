@@ -49,6 +49,10 @@ class PageStorage : public PageSyncClient {
   // Returns the id of this page.
   virtual PageId GetId() = 0;
 
+  // Returns the ObjectIdentifierFactory associated with this page. |PageStorage| must outlive the
+  // returned pointer.
+  virtual ObjectIdentifierFactory* GetObjectIdentifierFactory() = 0;
+
   // Finds all head commits. It is guaranteed that valid pages have at least one
   // head commit, even if they are empty. The returned list is sorted according
   // to |Commit::TimestampOrdered|.

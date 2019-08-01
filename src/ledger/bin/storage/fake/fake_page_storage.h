@@ -16,6 +16,7 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -37,6 +38,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
 
   // PageStorage:
   PageId GetId() override;
+  ObjectIdentifierFactory* GetObjectIdentifierFactory() override;
   Status GetHeadCommits(std::vector<std::unique_ptr<const Commit>>* head_commits) override;
   void GetMergeCommitIds(CommitIdView parent1_id, CommitIdView parent2_id,
                          fit::function<void(Status, std::vector<CommitId>)> callback) override;
@@ -109,6 +111,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   std::set<CommitWatcher*> watchers_;
   std::vector<fit::closure> object_requests_;
   encryption::FakeEncryptionService encryption_service_;
+  FakeObjectIdentifierFactory object_identifier_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakePageStorage);
 };

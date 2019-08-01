@@ -15,6 +15,11 @@ PageId PageStorageEmptyImpl::GetId() {
   return "NOT_IMPLEMENTED";
 }
 
+ObjectIdentifierFactory* PageStorageEmptyImpl::GetObjectIdentifierFactory() {
+  FXL_NOTIMPLEMENTED();
+  return nullptr;
+}
+
 void PageStorageEmptyImpl::SetSyncDelegate(PageSyncDelegate* /*page_sync*/) {
   FXL_NOTIMPLEMENTED();
 }
