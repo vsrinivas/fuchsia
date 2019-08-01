@@ -31,11 +31,11 @@ template("prebuilt_test_manifest") {
   manifest = read_file(manifest_path, "json")
   test_targets = []
   foreach(test, manifest) {
-    target_name = "${invoker.package_name_prefix}-${test.package}"
+    package_target_name = "${invoker.package_name_prefix}-${test.package}"
     test_package = test.package
     component_name = test.component_name
 
-    prebuilt_test_package(target_name) {
+    prebuilt_test_package(package_target_name) {
       archive = "${invoker.archive_dir}/${test_package}.far"
       package = test_package
       tests = [
@@ -46,7 +46,7 @@ template("prebuilt_test_manifest") {
       ]
     }
 
-    test_targets += [ ":${target_name}" ]
+    test_targets += [ ":${package_target_name}" ]
   }
 
   group(target_name) {
