@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
@@ -354,10 +355,9 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
       opts.active_line = active_file_line.line();
   }
 
-  const std::string& build_dir = cmd.target()->session()->system().GetSymbols()->build_dir();
-
   OutputBuffer out;
-  err = FormatSourceFileContext(file_line.file(), build_dir, opts, &out);
+  err = FormatSourceFileContext(
+      file_line, cmd.target()->settings().GetList(ClientSettings::Target::kBuildDirs), opts, &out);
   if (err.has_error())
     return err;
 

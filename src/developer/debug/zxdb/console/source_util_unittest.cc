@@ -4,9 +4,48 @@
 
 #include "src/developer/debug/zxdb/console/source_util.h"
 
+#include <stdlib.h>
+
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/file_util.h"
+#include "src/developer/debug/zxdb/common/scoped_temp_file.h"
 
 namespace zxdb {
+
+TEST(SourceUtil, GetFileContents) {
+  // Make a temp file with known contents.
+  ScopedTempFile temp_file;
+  ASSERT_NE(-1, temp_file.fd());
+  const std::string expected = "contents";
+  write(temp_file.fd(), expected.data(), expected.size());
+
+  std::string file_part(ExtractLastFileComponent(temp_file.name()));
+
+  // Test with full input path.
+  std::string contents;
+  Err err = GetFileContents(temp_file.name(), "", {}, &contents);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(expected, contents);
+
+  // With just file part, should not be found.
+  err = GetFileContents(file_part, "", {}, &contents);
+  EXPECT_TRUE(err.has_error());
+
+  // With DWARF compilation dir of "/tmp" it should be found again.
+  err = GetFileContents(file_part, "/tmp", {}, &contents);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(expected, contents);
+
+  // With symbol search path it should be found.
+  err = GetFileContents(file_part, "", {"/tmp"}, &contents);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(expected, contents);
+
+  // Combination of preference and relative search path.
+  err = GetFileContents(file_part, "tmp", {"/"}, &contents);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(expected, contents);
+}
 
 TEST(SourceUtil, ExtractSourceLines) {
   std::string contents =

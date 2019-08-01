@@ -4,10 +4,10 @@
 
 #include "src/developer/debug/zxdb/console/console_main.h"
 
-#include <cmdline/args_parser.h>
-
 #include <cstdlib>
 #include <filesystem>
+
+#include <cmdline/args_parser.h>
 
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/logging.h"
@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/console/console_impl.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
+#include "src/developer/debug/zxdb/symbols/system_symbols.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -96,9 +97,8 @@ void ScheduleActions(zxdb::Session& session, zxdb::Console& console,
     InitConsole(console);
   };
 
-  // This will add the actions to the MessageLoop and oversee that all the
-  // actions run or the flow is interrupted if one of them fails.
-  // Actions run on a singleton ActionFlow instance.
+  // This will add the actions to the MessageLoop and oversee that all the actions run or the flow
+  // is interrupted if one of them fails. Actions run on a singleton ActionFlow instance.
   zxdb::ActionFlow& flow = zxdb::ActionFlow::Singleton();
   flow.ScheduleActions(std::move(actions), &session, &console, callback);
 }
@@ -126,9 +126,18 @@ void SetupCommandLineOptions(const CommandLineOptions& options, Session* session
                                          options.symbol_servers);
   }
 
-  // Adding it to the settings will trigger the loading of the symbols.
-  // Redundant adds are ignored.
+  // Adding it to the settings will trigger the loading of the symbols. Redundant adds are ignored.
   session->system().settings().SetList(ClientSettings::System::kSymbolPaths, std::move(paths));
+
+  // Build directories.
+  if (options.build_dirs.empty()) {
+    // Add the legacy build directory which is relative to the debugger binary.
+    // TODO(brettw) remove this when the environment consistently passes in build dirs.
+    session->system().settings().SetList(ClientSettings::Target::kBuildDirs,
+                                         {session->system().GetSymbols()->build_dir()});
+  } else {
+    session->system().settings().SetList(ClientSettings::Target::kBuildDirs, options.build_dirs);
+  }
 }
 
 }  // namespace
@@ -152,8 +161,8 @@ int ConsoleMain(int argc, const char* argv[]) {
   debug_ipc::MessageLoopPoll loop;
   loop.Init();
 
-  // This scope forces all the objects to be destroyed before the Cleanup()
-  // call which will mark the message loop as not-current.
+  // This scope forces all the objects to be destroyed before the Cleanup() call which will mark the
+  // message loop as not-current.
   {
     debug_ipc::BufferedFD buffer;
 

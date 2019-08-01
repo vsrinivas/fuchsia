@@ -25,8 +25,6 @@ class LineTableImpl : public LineTable {
  private:
   llvm::DWARFUnit* unit_;
 
-  const char* compilation_dir_;  // Pointer owned by the DWARFUnit.
-
   const llvm::DWARFDebugLine::LineTable* line_table_;
 };
 

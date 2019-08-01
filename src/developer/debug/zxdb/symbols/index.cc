@@ -473,8 +473,6 @@ void Index::IndexCompileUnitSourceFiles(llvm::DWARFContext* context, llvm::DWARF
     return;  // No line table for this unit.
   }
 
-  const char* compilation_dir = unit->getCompilationDir();
-
   // This table is the size of the file name table. Entries are set to 1 when we've added them to
   // the index already.
   std::vector<int> added_file;
@@ -495,8 +493,8 @@ void Index::IndexCompileUnitSourceFiles(llvm::DWARFContext* context, llvm::DWARF
     if (!added_file[file_index]) {
       added_file[file_index] = 1;
       if (line_table->getFileNameByIndex(
-              file_id, compilation_dir,
-              llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, file_name)) {
+              file_id, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+              file_name)) {
         // The files here can contain relative components like "/foo/bar/../baz". This is OK because
         // we want it to match other places in the symbol code that do a similar computation to get
         // a file name.

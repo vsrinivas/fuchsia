@@ -208,13 +208,12 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
   }
 
   // Resolve the file name.
-  const char* compilation_dir = unit->getCompilationDir();
   std::string file_name;
-  line_table->getFileNameByIndex(rows[first_row_index].File, compilation_dir,
+  line_table->getFileNameByIndex(rows[first_row_index].File, "",
                                  llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
                                  file_name);
 
-  LineDetails result(FileLine(file_name, rows[first_row_index].Line));
+  LineDetails result(FileLine(file_name, unit->getCompilationDir(), rows[first_row_index].Line));
 
   // Add entries for each row. The last row doesn't count because it should be
   // an end_sequence marker to provide the ending size of the previous entry.
@@ -376,11 +375,13 @@ Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_conte
   if (line_table) {
     llvm::DILineInfo line_info;
     if (line_table->getFileLineInfoForAddress(
-            relative_address, unit->getCompilationDir(),
-            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, line_info)) {
+            relative_address, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+            line_info)) {
       // Line info present.
-      return Location(absolute_address, FileLine(std::move(line_info.FileName), line_info.Line),
-                      line_info.Column, symbol_context, std::move(lazy_function));
+      return Location(
+          absolute_address,
+          FileLine(std::move(line_info.FileName), unit->getCompilationDir(), line_info.Line),
+          line_info.Column, symbol_context, std::move(lazy_function));
     }
   }
 

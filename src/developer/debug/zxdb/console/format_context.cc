@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
@@ -63,9 +64,10 @@ Err OutputSourceContext(Process* process, const Location& location,
     source_opts.dim_others = true;
 
     OutputBuffer out;
-    Err err = FormatSourceFileContext(location.file_line().file(),
-                                      process->session()->system().GetSymbols()->build_dir(),
-                                      source_opts, &out);
+    Err err = FormatSourceFileContext(
+        location.file_line(),
+        process->GetTarget()->settings().GetList(ClientSettings::Target::kBuildDirs), source_opts,
+        &out);
     if (err.has_error())
       return err;
 
@@ -119,16 +121,16 @@ Err OutputSourceContext(Process* process, const Location& location,
   return Err();
 }
 
-// This doesn't cache the file contents. We may want to add that for
-// performance, but we should be careful to always pick the latest version
-// since it can get updated.
-Err FormatSourceFileContext(const std::string& file_name, const std::string& build_dir,
+// This doesn't cache the file contents. We may want to add that for performance, but we should be
+// careful to always pick the latest version since it can get updated.
+Err FormatSourceFileContext(const FileLine& file_line,
+                            const std::vector<std::string>& build_dir_prefs,
                             const FormatSourceOpts& opts, OutputBuffer* out) {
   std::string contents;
-  Err err = GetFileContents(file_name, build_dir, &contents);
+  Err err = GetFileContents(file_line.file(), file_line.comp_dir(), build_dir_prefs, &contents);
   if (err.has_error())
     return err;
-  return FormatSourceContext(file_name, contents, opts, out);
+  return FormatSourceContext(file_line.file(), contents, opts, out);
 }
 
 Err FormatSourceContext(const std::string& file_name_for_errors, const std::string& file_contents,
@@ -298,7 +300,8 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
   return Err();
 }
 
-Err FormatBreakpointContext(const Location& location, const std::string& build_dir, bool enabled,
+Err FormatBreakpointContext(const Location& location,
+                            const std::vector<std::string>& build_dir_prefs, bool enabled,
                             OutputBuffer* out) {
   if (!location.has_symbols())
     return Err("No symbols for this location.");
@@ -311,7 +314,7 @@ Err FormatBreakpointContext(const Location& location, const std::string& build_d
   opts.last_line = line + kBreakpointContext;
   opts.highlight_line = line;
   opts.bp_lines[line] = enabled;
-  return FormatSourceFileContext(location.file_line().file(), build_dir, opts, out);
+  return FormatSourceFileContext(location.file_line(), build_dir_prefs, opts, out);
 }
 
 }  // namespace zxdb

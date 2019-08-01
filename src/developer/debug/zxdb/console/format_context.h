@@ -15,6 +15,7 @@
 namespace zxdb {
 
 class ArchInfo;
+class FileLine;
 class Location;
 class MemoryDump;
 class OutputBuffer;
@@ -71,12 +72,12 @@ struct FormatSourceOpts {
   std::map<int, bool> bp_lines;
 };
 
-// Formats the contents of the given local file name to the output. See
-// FormatSourceFileContext for error handling.
+// Formats the contents of the given local file name to the output. See FormatSourceFileContext for
+// error handling.
 //
-// The build_dir indicates the directory where relative file names will be
-// treated as relative to.
-Err FormatSourceFileContext(const std::string& file_name, const std::string& build_dir,
+// The build_dir indicates the directory where relative file names will be treated as relative to.
+Err FormatSourceFileContext(const FileLine& file_line,
+                            const std::vector<std::string>& build_dir_prefs,
                             const FormatSourceOpts& opts, OutputBuffer* out);
 
 // Formats the given source to the output.
@@ -106,19 +107,20 @@ struct FormatAsmOpts {
 Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const FormatAsmOpts& opts,
                      OutputBuffer* out);
 
-// Creates a source code context of the given location and puts it in the
-// output buffer. This does not write disassembly since that would require
-// asynchronously getting the memory which isn't as important for breakpoints.
+// Creates a source code context of the given location and puts it in the output buffer. This does
+// not write disassembly since that would require asynchronously getting the memory which isn't as
+// important for breakpoints.
 //
-// If there are no symbols or the file can't be found, returns the error and
-// doesn't write anything to the buffer.
+// If there are no symbols or the file can't be found, returns the error and doesn't write anything
+// to the buffer.
 //
-// Generally the location passed here should be the location of a resolved
-// BreakpointLocation since the breakpoint itself won't have a fully qualified
-// file name, and the breakpoint may move slightly when it's actually applied.
+// Generally the location passed here should be the location of a resolved BreakpointLocation since
+// the breakpoint itself won't have a fully qualified file name, and the breakpoint may move
+// slightly when it's actually applied.
 //
-// Build_dir is used to find relative files by FormatSourceFileContext().
-Err FormatBreakpointContext(const Location& location, const std::string& build_dur, bool enabled,
+// Build_dir_prefs is used to find relative files by FormatSourceFileContext().
+Err FormatBreakpointContext(const Location& location,
+                            const std::vector<std::string>& build_dir_prefs, bool enabled,
                             OutputBuffer* out);
 
 }  // namespace zxdb

@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -56,20 +57,23 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint, const E
   out.Append(FormatBreakpoint(&console->context(), breakpoint.get()));
   out.Append("\n");
 
-  // There is a question of what to show the breakpoint enabled state. The
-  // breakpoint has a main enabled bit and each location (it can apply to more
-  // than one address -- think templates and inlined functions) within that
-  // breakpoint has its own. But each location normally resolves to the same
-  // source code location so we can't practically show the individual
-  // location's enabled state separately.
+  // There is a question of what to show the breakpoint enabled state. The breakpoint has a main
+  // enabled bit and each location (it can apply to more than one address -- think templates and
+  // inlined functions) within that breakpoint has its own. But each location normally resolves to
+  // the same source code location so we can't practically show the individual location's enabled
+  // state separately.
   //
-  // For simplicity, just base it on the main enabled bit. Most people won't
-  // use location-specific enabling anyway.
+  // For simplicity, just base it on the main enabled bit. Most people won't use location-specific
+  // enabling anyway.
   //
-  // Ignore errors from printing the source, it doesn't matter that much.
-  FormatBreakpointContext(locs[0]->GetLocation(),
-                          breakpoint->session()->system().GetSymbols()->build_dir(),
-                          breakpoint->GetSettings().enabled, &out);
+  // Ignore errors from printing the source, it doesn't matter that much. Since breakpoints are
+  // in the global scope we have to use the global settings for the build dir. We could use the
+  // process build dir for process-specific breakpoints but both process-specific breakpoints and
+  // process-specific build settings are rare.
+  FormatBreakpointContext(
+      locs[0]->GetLocation(),
+      breakpoint->session()->system().settings().GetList(ClientSettings::Target::kBuildDirs),
+      breakpoint->GetSettings().enabled, &out);
   console->Output(out);
 }
 

@@ -108,15 +108,15 @@ void DwarfDieDecoder::AddCString(llvm::dwarf::Attribute attribute,
 void DwarfDieDecoder::AddLineTableFile(llvm::dwarf::Attribute attribute,
                                        llvm::Optional<std::string>* output) {
   const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit_);
-  const char* compilation_dir = unit_->getCompilationDir();
   if (line_table) {
-    attrs_.emplace_back(
-        attribute, [output, compilation_dir, line_table](const llvm::DWARFFormValue& form) {
-          output->emplace();
-          line_table->getFileNameByIndex(
-              form.getAsUnsignedConstant().getValue(), compilation_dir,
-              llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, output->getValue());
-        });
+    attrs_.emplace_back(attribute, [output, line_table](const llvm::DWARFFormValue& form) {
+      output->emplace();
+      // Pass "" for the compilation directory so it doesn't rebase the file name. Our output
+      // file names are always relative to the build (compilation) dir.
+      line_table->getFileNameByIndex(form.getAsUnsignedConstant().getValue(), "",
+                                     llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                                     output->getValue());
+    });
   }
 }
 
@@ -156,12 +156,13 @@ void DwarfDieDecoder::AddFile(llvm::dwarf::Attribute attribute,
       return;
 
     const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit_);
-    const char* compilation_dir = unit_->getCompilationDir();
 
+    // Pass "" for the compilation directory so it doesn't rebase the file name. Our output file
+    // names are always relative to the build (compilation) dir.
     std::string file_name;
     if (line_table->getFileNameByIndex(
-            *file_index, compilation_dir,
-            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, file_name))
+            *file_index, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+            file_name))
       *output = std::move(file_name);
   });
 }

@@ -19,6 +19,13 @@ Options
 
 )";
 
+const char kBuildDirsHelp[] = R"(  --build-dir=<path>
+  -b <path>
+      Adds the given directory to the list of build directories. These
+      directories are where source file names from the symbols are relative to.
+      There can be multiple ones which will be searched in order.
+      The populates the "build-dirs" setting (see "get build-dir").)";
+
 const char kConnectHelp[] = R"(  --connect=<host>:<port>
   -c <host>:<port>
       Attempts to connect to a debug_agent running on the given host/port.)";
@@ -85,6 +92,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
 
+  parser.AddSwitch("build-dirs", 'b', kBuildDirsHelp, &CommandLineOptions::build_dirs);
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
   parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);
   parser.AddSwitch("debug-mode", 'd', kDebugModeHelp, &CommandLineOptions::debug_mode);
