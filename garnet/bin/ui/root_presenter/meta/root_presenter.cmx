@@ -10,8 +10,11 @@
             "config-data"
         ],
         "services": [
+            "fuchsia.sys.Environment",
             "fuchsia.recovery.FactoryReset",
+            "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.policy.accessibility.PointerEventRegistry",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Manager"
         ]

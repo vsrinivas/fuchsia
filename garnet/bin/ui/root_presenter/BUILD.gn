@@ -4,6 +4,21 @@
 
 executable("root_presenter") {
   sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider-with-fdio",
+  ]
+
+  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+}
+
+source_set("lib") {
+  sources = [
     "app.cc",
     "app.h",
     "display_rotater.cc",
@@ -12,7 +27,6 @@ executable("root_presenter") {
     "display_size_switcher.h",
     "display_usage_switcher.cc",
     "display_usage_switcher.h",
-    "main.cc",
     "perspective_demo_mode.cc",
     "perspective_demo_mode.h",
     "presentation.cc",
@@ -20,6 +34,20 @@ executable("root_presenter") {
     "presentation.h",
     "presentation_switcher.cc",
     "presentation_switcher.h",
+  ]
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/ui/input",
+    "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.policy.accessibility",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.shortcut",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//src/ui/lib/glm_workaround",
   ]
 
   deps = [
@@ -43,15 +71,9 @@ executable("root_presenter") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
-    "//src/ui/lib/glm_workaround",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider-with-fdio",
   ]
-
-  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
 }
 
 source_set("key_util") {

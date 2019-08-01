@@ -5,7 +5,9 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_APP_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_APP_H_
 
+#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/shortcut/cpp/fidl.h>
@@ -15,12 +17,13 @@
 #include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/eventpair.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
 
 #include <limits>
 #include <memory>
 #include <vector>
+
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/factory_reset_manager.h"
@@ -36,6 +39,7 @@ namespace root_presenter {
 // and input routing is not fully supported (TODO).
 class App : public fuchsia::ui::policy::Presenter,
             public fuchsia::ui::input::InputDeviceRegistry,
+            public fuchsia::ui::input::accessibility::PointerEventRegistry,
             public ui_input::InputDeviceImpl::Listener {
  public:
   explicit App(const fxl::CommandLine& command_line);
@@ -45,6 +49,10 @@ class App : public fuchsia::ui::policy::Presenter,
   void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) override;
   void OnReport(ui_input::InputDeviceImpl* input_device,
                 fuchsia::ui::input::InputReport report) override;
+
+  // |fuchsia.ui.input.accessibility.PointerEventRegistry|
+  void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
+                    pointer_event_listener) override;
 
  private:
   // |Presenter|
@@ -75,6 +83,8 @@ class App : public fuchsia::ui::policy::Presenter,
   std::unique_ptr<component::StartupContext> startup_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
+  fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventRegistry>
+      a11y_pointer_event_bindings_;
   ui_input::InputReader input_reader_;
   std::unique_ptr<FactoryResetManager> fdr_manager_;
 
@@ -82,6 +92,10 @@ class App : public fuchsia::ui::policy::Presenter,
   std::unique_ptr<scenic::Session> session_;
 
   fuchsia::ui::shortcut::ManagerPtr shortcut_manager_;
+  // This is a privileged interface between Root Presenter and Scenic. It
+  // forwards the requests incoming from accessibility services to start
+  // listening for pointer events.
+  fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
 
   // Today, we have a global, singleton compositor, and it is managed solely by
   // a root presenter. Hence, a single resource ID is sufficient to identify it.

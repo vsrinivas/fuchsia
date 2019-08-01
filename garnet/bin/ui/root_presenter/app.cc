@@ -9,13 +9,14 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/logging.h>
-#include <trace/event.h>
 #include <zircon/status.h>
 
 #include <algorithm>
 #include <cstdlib>
 #include <string>
+
+#include <src/lib/fxl/logging.h>
+#include <trace/event.h>
 
 #include "src/lib/files/file.h"
 
@@ -31,6 +32,7 @@ App::App(const fxl::CommandLine& command_line)
 
   startup_context_->outgoing().AddPublicService(presenter_bindings_.GetHandler(this));
   startup_context_->outgoing().AddPublicService(input_receiver_bindings_.GetHandler(this));
+  startup_context_->outgoing().AddPublicService(a11y_pointer_event_bindings_.GetHandler(this));
 }
 
 App::~App() {}
@@ -287,4 +289,14 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
   }
 }
 
+void App::Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
+                       pointer_event_listener) {
+  if (!pointer_event_registry_) {
+    startup_context_->ConnectToEnvironmentService(pointer_event_registry_.NewRequest());
+  }
+  FXL_LOG(INFO) << "Connecting to pointer event registry.";
+  // Forward the listener to the registry we're connected to.
+  auto callback = [](bool) {};
+  pointer_event_registry_->Register(std::move(pointer_event_listener), std::move(callback));
+}
 }  // namespace root_presenter
