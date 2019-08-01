@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![cfg(test)]
 use {
     cobalt_sw_delivery_registry as metrics,
@@ -139,7 +139,10 @@ impl TestEnv {
             system_updater = system_updater.arg(format!("-update={}", update));
         }
 
-        let output = await!(system_updater.output(launcher).expect("system_updater to launch"))
+        let output = system_updater
+            .output(launcher)
+            .expect("system_updater to launch")
+            .await
             .expect("no errors while waiting for exit");
 
         assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
@@ -177,7 +180,7 @@ impl MockResolverService {
         self: Arc<Self>,
         mut stream: PackageResolverRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = await!(stream.try_next())? {
+        while let Some(event) = stream.try_next().await? {
             let fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
                 package_url,
                 selectors: _,
@@ -233,7 +236,7 @@ impl MockRebootService {
         self: Arc<Self>,
         mut stream: fidl_fuchsia_device_manager::AdministratorRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = await!(stream.try_next())? {
+        while let Some(event) = stream.try_next().await? {
             let fidl_fuchsia_device_manager::AdministratorRequest::Suspend { flags, responder } =
                 event;
             eprintln!("TEST: Got reboot request with flags {:?}", flags);
@@ -264,7 +267,7 @@ impl MockLogger {
         self: Arc<Self>,
         mut stream: fidl_fuchsia_cobalt::LoggerRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = await!(stream.try_next())? {
+        while let Some(event) = stream.try_next().await? {
             match event {
                 fidl_fuchsia_cobalt::LoggerRequest::LogCobaltEvent { event, responder } => {
                     self.cobalt_events.lock().push(event);
@@ -299,7 +302,7 @@ impl MockLoggerFactory {
             // Drop the stream, closing the channel.
             return Ok(());
         }
-        while let Some(event) = await!(stream.try_next())? {
+        while let Some(event) = stream.try_next().await? {
             match event {
                 fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectName {
                     project_name,
@@ -423,11 +426,12 @@ async fn test_system_update() {
         "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
     );
 
-    await!(env.run_system_updater(SystemUpdaterArgs {
+    env.run_system_updater(SystemUpdaterArgs {
         initiator: "manual",
         target: "m3rk13",
-        update: None
-    }))
+        update: None,
+    })
+    .await
     .expect("run system_updater");
 
     assert_eq!(*env.resolver.resolved_urls.lock(), vec![
@@ -463,11 +467,12 @@ async fn test_broken_logger() {
 
     *env.logger_factory.broken.lock() = true;
 
-    await!(env.run_system_updater(SystemUpdaterArgs {
+    env.run_system_updater(SystemUpdaterArgs {
         initiator: "manual",
         target: "m3rk13",
-        update: None
-    }))
+        update: None,
+    })
+    .await
     .expect("run system_updater");
 
     assert_eq!(*env.resolver.resolved_urls.lock(), vec![
@@ -492,11 +497,13 @@ async fn test_failing_package_fetch() {
 
     env.resolver.mock_package_result("fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296", Err(Status::NOT_FOUND));
 
-    let result = await!(env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None
-    }));
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+        })
+        .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
     assert_eq!(*env.resolver.resolved_urls.lock(), vec![
@@ -532,11 +539,12 @@ async fn test_working_image_write() {
         )
         .add_file("zbi", "fake_zbi");
 
-    await!(env.run_system_updater(SystemUpdaterArgs {
+    env.run_system_updater(SystemUpdaterArgs {
         initiator: "manual",
         target: "m3rk13",
-        update: None
-    }))
+        update: None,
+    })
+    .await
     .expect("success");
 
     let loggers = env.logger_factory.loggers.lock().clone();
@@ -570,11 +578,13 @@ async fn test_failing_image_write() {
     std::fs::write(env.fake_path.join("install-disk-image-should-fail"), "for sure")
         .expect("create fake/install-disk-image-should-fail");
 
-    let result = await!(env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None
-    }));
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+        })
+        .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
     let loggers = env.logger_factory.loggers.lock().clone();
@@ -603,11 +613,12 @@ async fn test_uses_custom_update_package() {
         "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
     );
 
-    await!(env.run_system_updater(SystemUpdaterArgs {
+    env.run_system_updater(SystemUpdaterArgs {
         initiator: "manual",
         target: "m3rk13",
         update: Some("fuchsia-pkg://fuchsia.com/another-update/4"),
-    }))
+    })
+    .await
     .expect("run system_updater");
 
     assert_eq!(*env.resolver.resolved_urls.lock(), vec![
@@ -622,11 +633,13 @@ async fn test_requires_update_package() {
 
     env.resolver.mock_package_result("fuchsia-pkg://fuchsia.com/update", Err(Status::NOT_FOUND));
 
-    let result = await!(env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-    }));
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+        })
+        .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
     assert_eq!(*env.resolver.resolved_urls.lock(), vec!["fuchsia-pkg://fuchsia.com/update"]);
@@ -641,11 +654,13 @@ async fn test_rejects_invalid_update_package_url() {
 
     env.resolver.mock_package_result(bogus_url, Err(Status::INVALID_ARGS));
 
-    let result = await!(env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: Some(bogus_url),
-    }));
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: Some(bogus_url),
+        })
+        .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
     assert_eq!(*env.resolver.resolved_urls.lock(), vec![bogus_url]);
