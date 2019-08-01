@@ -4,7 +4,7 @@
 
 driver("usb-audio") {
   sources = [
-    "midi.c",
+    "midi.cc",
     "usb-audio-control-interface.cc",
     "usb-audio-descriptors.cc",
     "usb-audio-device.cc",
@@ -13,8 +13,8 @@ driver("usb-audio") {
     "usb-audio-stream.cc",
     "usb-audio-units.cc",
     "usb-audio.cc",
-    "usb-midi-sink.c",
-    "usb-midi-source.c",
+    "usb-midi-sink.cc",
+    "usb-midi-source.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",
@@ -22,7 +22,7 @@ driver("usb-audio") {
     "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/usb",
     "$zx/system/fidl/fuchsia-hardware-audio:c",
-    "$zx/system/fidl/fuchsia-hardware-midi:c",
+    "$zx/system/fidl/fuchsia-hardware-midi:llcpp",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/ddk",
