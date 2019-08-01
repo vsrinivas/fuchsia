@@ -23,8 +23,9 @@ template <typename T>
 bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size, bool expect_to_pass = true,
                         bool float_tolerance = false);
 
-// Print values of a double-float array -- used during debugging, not test-runs
-void DisplayVals(const double* buf, uint32_t buf_size);
+// Print values of an array -- used during debugging, not test-runs
+template <typename T>
+void DisplayVals(const T* buf, uint32_t buf_size);
 
 // Write sinusoidal values into a given buffer & length, determined by equation
 // "buffer[idx] = magn * cosine(idx*freq/buf_size*2*M_PI + phase)".

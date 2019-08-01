@@ -614,6 +614,11 @@ static inline std::unique_ptr<Mixer> SelectLSM(const fuchsia::media::AudioStream
       return SelectLSM<DestChanCount, SrcSampleType, 1>(src_format, dest_format);
     case 2:
       return SelectLSM<DestChanCount, SrcSampleType, 2>(src_format, dest_format);
+    case 4:
+      if (dest_format.channels == 1 || dest_format.channels == 2) {
+        return SelectLSM<DestChanCount, SrcSampleType, 4>(src_format, dest_format);
+      }
+      return nullptr;
     default:
       return nullptr;
   }

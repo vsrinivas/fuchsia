@@ -108,8 +108,9 @@ bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size, bool expect_to_p
   return true;
 }
 
-// Display array of double values
-void DisplayVals(const double* buf, uint32_t buf_size) {
+// Display array of values
+template <typename T>
+void DisplayVals(const T* buf, uint32_t buf_size) {
   printf("\n    ********************************************************");
   printf("\n **************************************************************");
   printf("\n ***       Displaying raw array data for length %5d       ***", buf_size);
@@ -118,7 +119,13 @@ void DisplayVals(const double* buf, uint32_t buf_size) {
     if (idx % 8 == 0) {
       printf("\n [%d]  ", idx);
     }
-    printf("%.15lf    ", buf[idx]);
+    if constexpr (std::is_same_v<T, int32_t>) {
+      printf("0x%08x    ", buf[idx]);
+    } else if constexpr (std::is_same_v<T, float>) {
+      printf("%.8f    ", buf[idx]);
+    } else if constexpr (std::is_same_v<T, double>) {
+      printf("%.15lf    ", buf[idx]);
+    }
   }
   printf("\n **************************************************************");
   printf("\n    ********************************************************");
@@ -483,6 +490,10 @@ template bool CompareBufferToVal<int16_t>(const int16_t*, int16_t, uint32_t, boo
 template bool CompareBufferToVal<int32_t>(const int32_t*, int32_t, uint32_t, bool, bool);
 template bool CompareBufferToVal<float>(const float*, float, uint32_t, bool, bool);
 template bool CompareBufferToVal<double>(const double*, double, uint32_t, bool, bool);
+
+template void DisplayVals(const int32_t* buf, uint32_t buf_size);
+template void DisplayVals(const float* buf, uint32_t buf_size);
+template void DisplayVals(const double* buf, uint32_t buf_size);
 
 template void GenerateCosine<uint8_t>(uint8_t*, uint32_t, double, bool, double, double);
 template void GenerateCosine<int16_t>(int16_t*, uint32_t, double, bool, double, double);

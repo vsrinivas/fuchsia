@@ -114,9 +114,38 @@ template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
 class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
                 typename std::enable_if_t<(SrcChanCount == 2) && (DestChanCount == 1)>> {
  public:
+  // This simple 2:1 channel mapping assumes a "LR" stereo configuration for the source channels.
+  // Each dest frame's single value is essentially the average of the 2 source chans.
   static inline float Read(const SrcSampleType* src) {
     return 0.5f * (SampleNormalizer<SrcSampleType>::Read(src + 0) +
                    SampleNormalizer<SrcSampleType>::Read(src + 1));
+  }
+};
+
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
+class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
+                typename std::enable_if_t<(SrcChanCount == 4) && (DestChanCount == 1)>> {
+ public:
+  // This simple 4:1 channel mapping averages the incoming 4 source channels to determine the value
+  // for the lone destination channel.
+  static inline float Read(const SrcSampleType* src) {
+    return 0.25f * (SampleNormalizer<SrcSampleType>::Read(src + 0) +
+                    SampleNormalizer<SrcSampleType>::Read(src + 1) +
+                    SampleNormalizer<SrcSampleType>::Read(src + 2) +
+                    SampleNormalizer<SrcSampleType>::Read(src + 3));
+  }
+};
+
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
+class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
+                typename std::enable_if_t<(SrcChanCount == 4) && (DestChanCount == 2)>> {
+ public:
+  // This simple 4:2 channel mapping assumes a "LRLR" configuration for the 4 source channels (e.g.
+  // a "four corners" Quad config: FrontL|FrontR|BackL|BackR). Thus in each 4-chan source frame and
+  // 2-chan dest frame, we mix source chans 0+2 to dest chan 0, and source chans 1+3 to dest chan 1.
+  static inline float Read(const SrcSampleType* src) {
+    return 0.5f * (SampleNormalizer<SrcSampleType>::Read(src + 0) +
+                   SampleNormalizer<SrcSampleType>::Read(src + 2));
   }
 };
 
