@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
+#![recursion_limit = "4096"]
 
 mod app;
+mod pty;
 mod view_controller;
 
 use app::App;

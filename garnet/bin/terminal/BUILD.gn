@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/config/fuchsia/zircon_images.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
@@ -28,6 +29,7 @@ rustc_binary("bin") {
     "//garnet/bin/terminal/third_party/term-model",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-scenic",
@@ -40,9 +42,12 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//src/lib/cstr",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:libc",
     "//third_party/rust_crates:parking_lot",
+    "//zircon/public/fidl/fuchsia-hardware-pty:fuchsia-hardware-pty-rustc",
   ]
 }
 
@@ -68,10 +73,22 @@ config_data("tiles_with_terminal_config") {
   ]
 }
 
+zircon_extras_manifest("terminal_tests_zircon_deps.manifest") {
+  visibility = [ ":*" ]
+  manifest = "image"
+  patterns = [
+    "bin/sh",
+  ]
+}
+
 test_package("terminal_tests") {
   deps = [
     ":bin_test",
+    ":terminal_tests_zircon_deps.manifest",
   ]
+
+  extra = get_target_outputs(":terminal_tests_zircon_deps.manifest")
+
   tests = [
     {
       name = "terminal_bin_test"

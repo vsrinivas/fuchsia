@@ -35,7 +35,7 @@ impl App {
 
     pub fn spawn_view_provider_server(app: &AppPtr, stream: ViewProviderRequestStream) {
         let app = app.clone();
-        fasync::spawn(
+        fasync::spawn_local(
             stream
                 .try_for_each(move |req| {
                     let ViewProviderRequest::CreateView { token, .. } = req;

@@ -3,10 +3,19 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "misc/ptmx"
+        ],
+        "features": [
+            "shell-commands"
+        ],
+        "boot": [ "bin" ],
         "services": [
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.input.ImeService",
-            "fuchsia.sys.Environment"
+            "fuchsia.sys.Environment",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
         ]
     }
 }

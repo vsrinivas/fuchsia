@@ -1,5 +1,21 @@
 {
     "program": {
         "binary": "test/terminal_bin_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/ptmx"
+        ],
+        "features": [
+            "shell-commands"
+        ],
+        "boot": [ "bin" ],
+        "services": [
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.sys.Environment",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
+        ]
     }
 }
