@@ -80,29 +80,67 @@ template("zircon_library") {
     library_libs += [ "zircon" ]
   }
 
+  zx_lib_dirs = []
+  zx_libs = []
+  if (defined(invoker.libs)) {
+    # A prebuilt binary (either static .a or shared .so, doesn't matter)
+    # has nothing to do but bring in the config() for its `libs`.
+    type = "group"
+
+    # Rust targets use -L... -lfoo instead of explicit files.  So they
+    # need to collect the -L list via metadata, and directories on that
+    # list needs to hold exact names libfoo.so or libfoo.a for -lfoo.
+    foreach(file, invoker.libs) {
+      if (get_path_info(file, "extension") == "so" ||
+          get_path_info(file, "extension") == "a") {
+        zx_lib_dirs += [ rebase_path(get_path_info(file, "dir"),
+                                     "",
+                                     zircon_root_build_dir) ]
+        zx_libs += [ get_path_info(file, "name") ]
+      } else {
+        file = rebase_path(file, "", zircon_root_build_dir)
+        write_file("$target_gen_dir/lib$library.so", [ "INPUT($file)" ])
+        zx_lib_dirs += [ rebase_path(target_gen_dir) ]
+        zx_libs += [ library ]
+      }
+    }
+    if (defined(invoker.lib_dirs)) {
+      zx_lib_dirs += rebase_path(invoker.lib_dirs, "", zircon_root_build_dir)
+    }
+  } else {
+    # A source library is always built for static linking only.
+    # The invoker (i.e. the JSON) specifies `sources`.
+    type = "static_library"
+  }
+
   # A library() always an include/ directory dependents must use.
   # A prebuilt library() (`sdk != "source"`) has a library they must link in.
   config("$library.config") {
     include_dirs = include
     if (is_fuchsia) {
       libs = library_libs
+
+      # Rust targets ignore lib_dirs and libs and can't handle explicit
+      # files as link inputs.  Instead they require -Lnative=... and -l...
+      # switches as the only way to find non-Rust link inputs.
+      rustflags = []
+      foreach(dir, zx_lib_dirs) {
+        rustflags += [ "-Lnative=$dir" ]
+      }
+      foreach(lib, zx_libs) {
+        rustflags += [ "-l$lib" ]
+      }
     } else {
-      not_needed([ "library_libs" ])
+      not_needed([
+                   "library_libs",
+                   "zx_lib_dirs",
+                   "zx_libs",
+                 ])
     }
     if (defined(invoker.libs) && invoker.libs != []) {
       assert(is_fuchsia, "Prebuilt $library used for host")
       libs += rebase_path(invoker.libs, ".", zircon_root_build_dir)
     }
-  }
-
-  if (defined(invoker.libs)) {
-    # A prebuilt binary (either static .a or shared .so, doesn't matter)
-    # has nothing to do but bring in the config() for its `libs`.
-    type = "group"
-  } else {
-    # A source library is always built for static linking only.
-    # The invoker (i.e. the JSON) specifies `sources`.
-    type = "static_library"
   }
 
   target(type, library) {
@@ -128,30 +166,8 @@ template("zircon_library") {
     if (!is_fuchsia) {
       public_deps += [ "//zircon/system/public" ]
     }
-
-    if (defined(invoker.libs)) {
-      # Rust targets use -L... -lfoo instead of explicit files.  So they
-      # need to collect the -L list via metadata, and directories on that
-      # list needs to hold exact names libfoo.so or libfoo.a for -lfoo.
-      metadata = {
-        zircon_lib_dirs = []
-        foreach(file, invoker.libs) {
-          if (get_path_info(file, "extension") == "so" ||
-              get_path_info(file, "extension") == "a") {
-            zircon_lib_dirs += [ rebase_path(get_path_info(file, "dir"),
-                                             "",
-                                             zircon_root_build_dir) ]
-          } else {
-            file = rebase_path(file, "", zircon_root_build_dir)
-            write_file("$target_gen_dir/lib$library.so", [ "INPUT($file)" ])
-            zircon_lib_dirs += [ rebase_path(target_gen_dir) ]
-          }
-        }
-        if (defined(invoker.lib_dirs)) {
-          zircon_lib_dirs +=
-              rebase_path(invoker.lib_dirs, "", zircon_root_build_dir)
-        }
-      }
+    metadata = {
+      zircon_lib_dirs = zx_lib_dirs
     }
   }
 
