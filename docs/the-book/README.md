@@ -115,4 +115,4 @@ also provides core drivers and Fuchsia's libc implementation.
 [ui-overview]: ui/README.md
 [scenic]: ui/scenic.md
 [input-manager]: ui/input.md
-[flutter]: https://flutter.io/
+[flutter]: https://flutter.dev/
