@@ -10,6 +10,7 @@ use std::fs::File;
 use std::io::Read;
 use std::iter;
 use std::path::Path;
+use valico::json_schema;
 
 /// Read in and parse one or more manifest files. Returns an Err() if any file is not valid
 /// or Ok(()) if all files are valid.
@@ -33,7 +34,7 @@ pub fn validate<P: AsRef<Path>>(
 
 /// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
 pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
-    cm_json::validate_json(&value, CML_SCHEMA)?;
+    validate_json(&value, CML_SCHEMA)?;
     let document: cml::Document = serde_json::from_value(value)
         .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
     let mut ctx = ValidationContext {
@@ -66,12 +67,12 @@ fn validate_file<P: AsRef<Path>>(
     let v = match ext {
         Some("cmx") => {
             let v = cm_json::from_json_str(&buffer)?;
-            cm_json::validate_json(&v, CMX_SCHEMA)?;
+            validate_json(&v, CMX_SCHEMA)?;
             v
         }
         Some("cm") => {
             let v = cm_json::from_json_str(&buffer)?;
-            cm_json::validate_json(&v, CM_SCHEMA)?;
+            validate_json(&v, CM_SCHEMA)?;
             v
         }
         Some("cml") => {
@@ -87,13 +88,44 @@ fn validate_file<P: AsRef<Path>>(
     // Validate against any extra schemas provided.
     for extra_schema in extra_schemas {
         let schema = JsonSchema::new_from_file(&extra_schema.0.as_ref())?;
-        cm_json::validate_json(&v, &schema).map_err(|e| match (&e, &extra_schema.1) {
+        validate_json(&v, &schema).map_err(|e| match (&e, &extra_schema.1) {
             (Error::Validate { schema_name, err }, Some(extra_msg)) => Error::Validate {
                 schema_name: schema_name.clone(),
                 err: format!("{}\n{}", err, extra_msg),
             },
             _ => e,
         })?;
+    }
+    Ok(())
+}
+
+/// Validates a JSON document according to the given schema.
+pub fn validate_json(json: &Value, schema: &JsonSchema) -> Result<(), Error> {
+    // Parse the schema
+    let cmx_schema_json = serde_json::from_str(&schema.schema).map_err(|e| {
+        Error::internal(format!("Couldn't read schema '{}' as JSON: {}", schema.name, e))
+    })?;
+    let mut scope = json_schema::Scope::new();
+    let compiled_schema = scope.compile_and_return(cmx_schema_json, false).map_err(|e| {
+        Error::internal(format!("Couldn't parse schema '{}': {:?}", schema.name, e))
+    })?;
+
+    // Validate the json
+    let res = compiled_schema.validate(json);
+    if !res.is_strictly_valid() {
+        let mut err_msgs = Vec::new();
+        for e in &res.errors {
+            err_msgs.push(format!("{} at {}", e.get_title(), e.get_path()).into_boxed_str());
+        }
+        for u in &res.missing {
+            err_msgs.push(
+                format!("internal error: schema definition is missing URL {}", u).into_boxed_str(),
+            );
+        }
+        // The ordering in which valico emits these errors is unstable.
+        // Sort error messages so that the resulting message is predictable.
+        err_msgs.sort_unstable();
+        return Err(Error::validate_schema(&schema, err_msgs.join(", ")));
     }
     Ok(())
 }

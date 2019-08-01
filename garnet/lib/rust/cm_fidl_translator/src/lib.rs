@@ -14,10 +14,7 @@ use {
 /// used to express particular data structures.
 /// This function also applies cm_fidl_validator to the generated FIDL.
 pub fn translate(buffer: &str) -> Result<fsys::ComponentDecl, Error> {
-    let json = cm_json::from_json_str(&buffer)?;
-    cm_json::validate_json(&json, cm_json::CM_SCHEMA)?;
-    let document: cm::Document = serde_json::from_str(&buffer)
-        .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
+    let document: cm::Document = serde_json::from_str(&buffer)?;
     let decl = document.cm_into()?;
     cm_fidl_validator::validate(&decl).map_err(|e| Error::validate_fidl(e))?;
     Ok(decl)
@@ -94,8 +91,8 @@ impl CmInto<fsys::UseServiceDecl> for cm::UseService {
     fn cm_into(self) -> Result<fsys::UseServiceDecl, Error> {
         Ok(fsys::UseServiceDecl {
             source: Some(self.source.cm_into()?),
-            source_path: Some(self.source_path),
-            target_path: Some(self.target_path),
+            source_path: Some(self.source_path.into()),
+            target_path: Some(self.target_path.into()),
         })
     }
 }
@@ -104,8 +101,8 @@ impl CmInto<fsys::UseDirectoryDecl> for cm::UseDirectory {
     fn cm_into(self) -> Result<fsys::UseDirectoryDecl, Error> {
         Ok(fsys::UseDirectoryDecl {
             source: Some(self.source.cm_into()?),
-            source_path: Some(self.source_path),
-            target_path: Some(self.target_path),
+            source_path: Some(self.source_path.into()),
+            target_path: Some(self.target_path.into()),
         })
     }
 }
@@ -114,7 +111,7 @@ impl CmInto<fsys::UseStorageDecl> for cm::UseStorage {
     fn cm_into(self) -> Result<fsys::UseStorageDecl, Error> {
         Ok(fsys::UseStorageDecl {
             type_: Some(self.type_.cm_into()?),
-            target_path: self.target_path,
+            target_path: self.target_path.map(|path| path.into()),
         })
     }
 }
@@ -123,8 +120,8 @@ impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
     fn cm_into(self) -> Result<fsys::ExposeServiceDecl, Error> {
         Ok(fsys::ExposeServiceDecl {
             source: Some(self.source.cm_into()?),
-            source_path: Some(self.source_path),
-            target_path: Some(self.target_path),
+            source_path: Some(self.source_path.into()),
+            target_path: Some(self.target_path.into()),
         })
     }
 }
@@ -133,8 +130,8 @@ impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
     fn cm_into(self) -> Result<fsys::ExposeDirectoryDecl, Error> {
         Ok(fsys::ExposeDirectoryDecl {
             source: Some(self.source.cm_into()?),
-            source_path: Some(self.source_path),
-            target_path: Some(self.target_path),
+            source_path: Some(self.source_path.into()),
+            target_path: Some(self.target_path.into()),
         })
     }
 }
@@ -143,9 +140,9 @@ impl CmInto<fsys::OfferServiceDecl> for cm::OfferService {
     fn cm_into(self) -> Result<fsys::OfferServiceDecl, Error> {
         Ok(fsys::OfferServiceDecl {
             source: Some(self.source.cm_into()?),
-            source_path: Some(self.source_path),
+            source_path: Some(self.source_path.into()),
             target: Some(self.target.cm_into()?),
-            target_path: Some(self.target_path),
+            target_path: Some(self.target_path.into()),
         })
     }
 }
@@ -154,9 +151,9 @@ impl CmInto<fsys::OfferDirectoryDecl> for cm::OfferDirectory {
     fn cm_into(self) -> Result<fsys::OfferDirectoryDecl, Error> {
         Ok(fsys::OfferDirectoryDecl {
             source: Some(self.source.cm_into()?),
-            source_path: Some(self.source_path),
+            source_path: Some(self.source_path.into()),
             target: Some(self.target.cm_into()?),
-            target_path: Some(self.target_path),
+            target_path: Some(self.target_path.into()),
         })
     }
 }
@@ -184,9 +181,9 @@ impl CmInto<fsys::StorageType> for cm::StorageType {
 impl CmInto<fsys::ChildDecl> for cm::Child {
     fn cm_into(self) -> Result<fsys::ChildDecl, Error> {
         Ok(fsys::ChildDecl {
-            name: Some(self.name),
-            url: Some(self.url),
-            startup: Some(startup_from_str(&self.startup)?),
+            name: Some(self.name.into()),
+            url: Some(self.url.into()),
+            startup: Some(self.startup.cm_into()?),
         })
     }
 }
@@ -194,8 +191,8 @@ impl CmInto<fsys::ChildDecl> for cm::Child {
 impl CmInto<fsys::CollectionDecl> for cm::Collection {
     fn cm_into(self) -> Result<fsys::CollectionDecl, Error> {
         Ok(fsys::CollectionDecl {
-            name: Some(self.name),
-            durability: Some(durability_from_str(&self.durability)?),
+            name: Some(self.name.into()),
+            durability: Some(self.durability.cm_into()?),
         })
     }
 }
@@ -203,8 +200,8 @@ impl CmInto<fsys::CollectionDecl> for cm::Collection {
 impl CmInto<fsys::StorageDecl> for cm::Storage {
     fn cm_into(self) -> Result<fsys::StorageDecl, Error> {
         Ok(fsys::StorageDecl {
-            name: Some(self.name),
-            source_path: Some(self.source_path),
+            name: Some(self.name.into()),
+            source_path: Some(self.source_path.into()),
             source: Some(self.source.cm_into()?),
         })
     }
@@ -224,19 +221,19 @@ impl CmInto<fsys::SelfRef> for cm::SelfRef {
 
 impl CmInto<fsys::ChildRef> for cm::ChildRef {
     fn cm_into(self) -> Result<fsys::ChildRef, Error> {
-        Ok(fsys::ChildRef { name: self.name, collection: None })
+        Ok(fsys::ChildRef { name: self.name.into(), collection: None })
     }
 }
 
 impl CmInto<fsys::CollectionRef> for cm::CollectionRef {
     fn cm_into(self) -> Result<fsys::CollectionRef, Error> {
-        Ok(fsys::CollectionRef { name: self.name })
+        Ok(fsys::CollectionRef { name: self.name.into() })
     }
 }
 
 impl CmInto<fsys::StorageRef> for cm::StorageRef {
     fn cm_into(self) -> Result<fsys::StorageRef, Error> {
-        Ok(fsys::StorageRef { name: self.name })
+        Ok(fsys::StorageRef { name: self.name.into() })
     }
 }
 
@@ -255,6 +252,24 @@ impl CmInto<fsys::Ref> for cm::Ref {
             cm::Ref::Collection(c) => fsys::Ref::Collection(c.cm_into()?),
             cm::Ref::Storage(r) => fsys::Ref::Storage(r.cm_into()?),
             cm::Ref::Framework(f) => fsys::Ref::Framework(f.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::Durability> for cm::Durability {
+    fn cm_into(self) -> Result<fsys::Durability, Error> {
+        Ok(match self {
+            cm::Durability::Persistent => fsys::Durability::Persistent,
+            cm::Durability::Transient => fsys::Durability::Transient,
+        })
+    }
+}
+
+impl CmInto<fsys::StartupMode> for cm::StartupMode {
+    fn cm_into(self) -> Result<fsys::StartupMode, Error> {
+        Ok(match self {
+            cm::StartupMode::Lazy => fsys::StartupMode::Lazy,
+            cm::StartupMode::Eager => fsys::StartupMode::Eager,
         })
     }
 }
@@ -312,26 +327,9 @@ fn convert_value(v: Value) -> Result<Option<Box<fdata::Value>>, Error> {
     })
 }
 
-fn startup_from_str(value: &str) -> Result<fsys::StartupMode, Error> {
-    match value {
-        cm::LAZY => Ok(fsys::StartupMode::Lazy),
-        cm::EAGER => Ok(fsys::StartupMode::Eager),
-        _ => Err(Error::parse(format!("Unknown startup mode: {}", value))),
-    }
-}
-
-fn durability_from_str(value: &str) -> Result<fsys::Durability, Error> {
-    match value {
-        cm::PERSISTENT => Ok(fsys::Durability::Persistent),
-        cm::TRANSIENT => Ok(fsys::Durability::Transient),
-        _ => Err(Error::parse(format!("Unknown durability: {}", value))),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cm_json::CM_SCHEMA;
     use serde_json::json;
 
     fn translate_test(input: serde_json::value::Value, expected_output: fsys::ComponentDecl) {
@@ -379,10 +377,11 @@ mod tests {
             ]
         });
 
-        let expected_res: Result<fsys::ComponentDecl, Error> =
-            Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0"));
         let res = translate(&format!("{}", input));
-        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+        assert!(match res {
+            Err(Error::Parse(_)) => true,
+            _ => false,
+        });
     }
 
     test_translate! {

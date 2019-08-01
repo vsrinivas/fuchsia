@@ -12,7 +12,6 @@ use {
     std::io::{self, Read},
     std::path::Path,
     std::str::Utf8Error,
-    valico::json_schema,
 };
 
 pub mod cm;
@@ -67,12 +66,12 @@ impl Error {
         Error::InvalidArgs(err.into())
     }
 
-    pub fn parse(err: impl Into<String>) -> Self {
-        Error::Parse(err.into())
+    pub fn parse(err: impl fmt::Display) -> Self {
+        Error::Parse(err.to_string())
     }
 
-    pub fn validate(err: impl Into<String>) -> Self {
-        Error::Validate { schema_name: None, err: err.into() }
+    pub fn validate(err: impl fmt::Display) -> Self {
+        Error::Validate { schema_name: None, err: err.to_string() }
     }
 
     pub fn validate_schema(schema: &JsonSchema, err: impl Into<String>) -> Self {
@@ -120,35 +119,33 @@ impl From<Utf8Error> for Error {
     }
 }
 
-/// Validates a JSON document according to the given schema.
-pub fn validate_json(json: &Value, schema: &JsonSchema) -> Result<(), Error> {
-    // Parse the schema
-    let cmx_schema_json = serde_json::from_str(&schema.schema).map_err(|e| {
-        Error::internal(format!("Couldn't read schema '{}' as JSON: {}", schema.name, e))
-    })?;
-    let mut scope = json_schema::Scope::new();
-    let compiled_schema = scope.compile_and_return(cmx_schema_json, false).map_err(|e| {
-        Error::internal(format!("Couldn't parse schema '{}': {:?}", schema.name, e))
-    })?;
-
-    // Validate the json
-    let res = compiled_schema.validate(json);
-    if !res.is_strictly_valid() {
-        let mut err_msgs = Vec::new();
-        for e in &res.errors {
-            err_msgs.push(format!("{} at {}", e.get_title(), e.get_path()).into_boxed_str());
-        }
-        for u in &res.missing {
-            err_msgs.push(
-                format!("internal error: schema definition is missing URL {}", u).into_boxed_str(),
-            );
-        }
-        // The ordering in which valico emits these errors is unstable.
-        // Sort error messages so that the resulting message is predictable.
-        err_msgs.sort_unstable();
-        return Err(Error::validate_schema(&schema, err_msgs.join(", ")));
+impl From<cm::PathValidationError> for Error {
+    fn from(err: cm::PathValidationError) -> Self {
+        Error::validate(err)
     }
-    Ok(())
+}
+
+impl From<cm::NameValidationError> for Error {
+    fn from(err: cm::NameValidationError) -> Self {
+        Error::validate(err)
+    }
+}
+
+impl From<cm::UrlValidationError> for Error {
+    fn from(err: cm::UrlValidationError) -> Self {
+        Error::validate(err)
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        use serde_json::error::Category;
+        match err.classify() {
+            Category::Io | Category::Eof => Error::Io(err.into()),
+            Category::Syntax => Error::parse(err),
+            Category::Data => Error::validate(err),
+        }
+    }
 }
 
 pub fn from_json_str(json: &str) -> Result<Value, Error> {
@@ -161,4 +158,27 @@ pub fn from_json5_str(json5: &str) -> Result<Value, Error> {
     let v: Value = json5::from_str(json5)
         .map_err(|e| Error::parse(format!("Couldn't read input as JSON5: {}", e)))?;
     Ok(v)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_syntax_error_message() {
+        let result = serde_json::from_str::<cm::Name>("foo").map_err(Error::from);
+        assert!(match result {
+            Err(Error::Parse(_)) => true,
+            _ => false,
+        });
+    }
+
+    #[test]
+    fn test_validation_error_message() {
+        let result = serde_json::from_str::<cm::Name>("\"foo$\"").map_err(Error::from);
+        assert!(match result {
+            Err(Error::Validate { .. }) => true,
+            _ => false,
+        });
+    }
 }
