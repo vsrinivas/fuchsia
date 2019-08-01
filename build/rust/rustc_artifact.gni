@@ -122,7 +122,7 @@ template("rustc_third_party_artifact") {
                            ])
 
     outputs = [
-      "${target_out_dir}/${target_name}.json",
+      "${target_out_dir}/${info_target_name}.json",
     ]
     contents = {
       crate_name = crate_name
@@ -195,7 +195,7 @@ template("rustc_artifact") {
   if (rust_override_opt != "") {
     rust_opt_level = rust_override_opt
     if (defined(invoker.force_opt)) {
-      not_needed(invoker, ["force_opt"])
+      not_needed(invoker, [ "force_opt" ])
     }
   } else if (defined(invoker.force_opt)) {
     rust_opt_level = invoker.force_opt
@@ -211,7 +211,7 @@ template("rustc_artifact") {
     if (rust_override_lto != "") {
       with_lto = rust_override_lto
       if (defined(invoker.with_lto)) {
-        not_needed(invoker, ["with_lto"])
+        not_needed(invoker, [ "with_lto" ])
       }
     } else if (defined(invoker.with_lto)) {
       with_lto = invoker.with_lto
@@ -440,7 +440,7 @@ template("rustc_artifact") {
   ]
 
   if (host_os == "mac") {
-    rustc_target_args += ["--mac-host"]
+    rustc_target_args += [ "--mac-host" ]
   }
 
   if (defined(invoker.features)) {
@@ -711,20 +711,26 @@ template("rustc_artifact") {
   group_deps += [ ":${cargo_toml_target_name}" ]
   action(cargo_toml_target_name) {
     script = "//build/rust/write_cargo_toml.py"
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += [ third_party_build ]  # for deps data
-    if (defined(invoker.test_deps)) {
-      foreach(test_dep, invoker.test_deps) {
-        deps += invoker.test_deps
+    forward_variables_from(invoker, [ "testonly" ])
+
+    deps = [
+      third_party_build,
+    ]
+    if (defined(invoker.deps)) {
+      foreach(dep, invoker.deps) {
+        dep_info_name = get_label_info(dep, "label_no_toolchain") + "_info"
+        dep_info_name += "(" + get_label_info(dep, "toolchain") + ")"
+        deps += [ dep_info_name ]
       }
     }
+    if (defined(invoker.test_deps)) {
+      foreach(test_dep, invoker.test_deps) {
+        dep_info_name = get_label_info(test_dep, "label_no_toolchain") + "_info"
+        dep_info_name += "(" + get_label_info(test_dep, "toolchain") + ")"
+        deps += [ dep_info_name ]
+      }
+    }
+
     args = [
       "--out-dir",
       rebase_path(cargo_toml_dir),
