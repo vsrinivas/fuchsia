@@ -48,7 +48,5 @@ Future<String> analyzeAPI(String apiName, List<String> sources) async {
   }
 
   JsonEncoder encoder = JsonEncoder.withIndent('  ');
-  var result = encoder.convert(package);
-  print(result);
-  return result;
+  return encoder.convert(package);
 }
