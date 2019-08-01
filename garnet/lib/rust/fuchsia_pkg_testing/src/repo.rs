@@ -87,7 +87,7 @@ impl RepositoryBuilder {
             )?;
         }
 
-        await!(pm.output(&launcher()?)?)?.ok()?;
+        pm.output(&launcher()?)?.await?.ok()?;
 
         Ok(Repository { dir: repodir, encryption_key: self.encryption_key })
     }
@@ -223,7 +223,7 @@ impl Repository {
 
         let wait_pm_up = async {
             for i in 1.. {
-                match await!(repo.get("config.json")) {
+                match repo.get("config.json").await {
                     Ok(_) => {
                         println!("server up on attempt {}", i);
                         return Ok(());
@@ -232,7 +232,7 @@ impl Repository {
                         println!("request failed: {:?}", e);
                     }
                 }
-                await!(fuchsia_async::Timer::new(500.millis().after_now()));
+                fuchsia_async::Timer::new(500.millis().after_now()).await;
             }
             unreachable!();
         }
@@ -241,7 +241,7 @@ impl Repository {
             })
             .boxed();
 
-        match await!(future::select(wait_pm_up, wait_pm_down)) {
+        match future::select(wait_pm_up, wait_pm_down).await {
             future::Either::Left((res, _)) => {
                 res?;
             }
@@ -268,23 +268,27 @@ impl<'a> ServedRepository<'a> {
         let uri = format!("http://127.0.0.1:{}/{}", self.port, path.as_ref());
         let request = Request::get(uri).body(Body::empty()).map_err(|e| Error::from(e))?;
         let client = fuchsia_hyper::new_client();
-        let response = await!(client.request(request).compat())?;
+        let response = client.request(request).compat().await?;
 
         if response.status() != StatusCode::OK {
             bail!("unexpected status code: {:?}", response.status());
         }
 
-        let body = await!(response.into_body().compat().try_fold(Vec::new(), |mut vec, chunk| {
-            vec.extend_from_slice(&chunk);
-            future::ready(Ok(vec))
-        }))?;
+        let body = response
+            .into_body()
+            .compat()
+            .try_fold(Vec::new(), |mut vec, chunk| {
+                vec.extend_from_slice(&chunk);
+                future::ready(Ok(vec))
+            })
+            .await?;
 
         Ok(body)
     }
 
     /// Returns a sorted vector of all packages contained in this repository.
     pub async fn list_packages(&self) -> Result<Vec<PackageEntry>, Error> {
-        let targets_json = await!(self.get("targets.json"))?;
+        let targets_json = self.get("targets.json").await?;
         let mut packages =
             iter_packages(Cursor::new(targets_json))?.collect::<Result<Vec<_>, _>>()?;
         packages.sort_unstable();
@@ -299,28 +303,35 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_repo_builder() -> Result<(), Error> {
         let same_contents = "same contents";
-        let repo = await!(RepositoryBuilder::new()
-            .add_package(await!(PackageBuilder::new("rolldice")
-                .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())?
-                .add_resource_at(
-                    "meta/rolldice.cmx",
-                    r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes()
-                )?
-                .add_resource_at("data/duplicate_a", "same contents".as_bytes())?
-                .build())?)
-            .add_package(await!(PackageBuilder::new("fortune")
-                .add_resource_at(
-                    "bin/fortune",
-                    "#!/boot/bin/sh\necho ask again later\n".as_bytes()
-                )?
-                .add_resource_at(
-                    "meta/fortune.cmx",
-                    r#"{"program":{"binary":"bin/fortune"}}"#.as_bytes()
-                )?
-                .add_resource_at("data/duplicate_b", same_contents.as_bytes())?
-                .add_resource_at("data/duplicate_c", same_contents.as_bytes())?
-                .build())?)
-            .build())?;
+        let repo = RepositoryBuilder::new()
+            .add_package(
+                PackageBuilder::new("rolldice")
+                    .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())?
+                    .add_resource_at(
+                        "meta/rolldice.cmx",
+                        r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes(),
+                    )?
+                    .add_resource_at("data/duplicate_a", "same contents".as_bytes())?
+                    .build()
+                    .await?,
+            )
+            .add_package(
+                PackageBuilder::new("fortune")
+                    .add_resource_at(
+                        "bin/fortune",
+                        "#!/boot/bin/sh\necho ask again later\n".as_bytes(),
+                    )?
+                    .add_resource_at(
+                        "meta/fortune.cmx",
+                        r#"{"program":{"binary":"bin/fortune"}}"#.as_bytes(),
+                    )?
+                    .add_resource_at("data/duplicate_b", same_contents.as_bytes())?
+                    .add_resource_at("data/duplicate_c", same_contents.as_bytes())?
+                    .build()
+                    .await?,
+            )
+            .build()
+            .await?;
 
         let blobs = repo.iter_blobs()?.collect::<Result<Vec<_>, _>>()?;
         // 2 meta FARs, 2 binaries, and 1 duplicated resource
@@ -343,16 +354,20 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_repo_encryption() -> Result<(), Error> {
         let message = "Hello World!".as_bytes();
-        let repo = await!(RepositoryBuilder::new()
-            .add_package(await!(PackageBuilder::new("tiny")
-                .add_resource_at("data/message", message)?
-                .build())?)
+        let repo = RepositoryBuilder::new()
+            .add_package(
+                PackageBuilder::new("tiny")
+                    .add_resource_at("data/message", message)?
+                    .build()
+                    .await?,
+            )
             .set_encryption_key(BlobEncryptionKey([
                 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd,
                 0xee, 0xff, 0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44,
                 0x33, 0x22, 0x11, 0x00,
             ]))
-            .build())?;
+            .build()
+            .await?;
 
         // No blob in the repo should contain `message`.
         for blob in repo.iter_blobs()? {
@@ -365,10 +380,10 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_serve_empty() -> Result<(), Error> {
-        let repo = await!(RepositoryBuilder::new().build())?;
-        let served_repo = await!(repo.serve())?;
+        let repo = RepositoryBuilder::new().build().await?;
+        let served_repo = repo.serve().await?;
 
-        let packages = await!(served_repo.list_packages())?;
+        let packages = served_repo.list_packages().await?;
         assert_eq!(packages, vec![]);
 
         Ok(())
@@ -377,37 +392,44 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_serve_packages() -> Result<(), Error> {
         let same_contents = "same contents";
-        let repo = await!(RepositoryBuilder::new()
-            .add_package(await!(PackageBuilder::new("rolldice")
-                .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())?
-                .add_resource_at(
-                    "meta/rolldice.cmx",
-                    r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes()
-                )?
-                .add_resource_at("data/duplicate_a", "same contents".as_bytes())?
-                .build())?)
-            .add_package(await!(PackageBuilder::new("fortune")
-                .add_resource_at(
-                    "bin/fortune",
-                    "#!/boot/bin/sh\necho ask again later\n".as_bytes()
-                )?
-                .add_resource_at(
-                    "meta/fortune.cmx",
-                    r#"{"program":{"binary":"bin/fortune"}}"#.as_bytes()
-                )?
-                .add_resource_at("data/duplicate_b", same_contents.as_bytes())?
-                .add_resource_at("data/duplicate_c", same_contents.as_bytes())?
-                .build())?)
-            .build())?;
+        let repo = RepositoryBuilder::new()
+            .add_package(
+                PackageBuilder::new("rolldice")
+                    .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())?
+                    .add_resource_at(
+                        "meta/rolldice.cmx",
+                        r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes(),
+                    )?
+                    .add_resource_at("data/duplicate_a", "same contents".as_bytes())?
+                    .build()
+                    .await?,
+            )
+            .add_package(
+                PackageBuilder::new("fortune")
+                    .add_resource_at(
+                        "bin/fortune",
+                        "#!/boot/bin/sh\necho ask again later\n".as_bytes(),
+                    )?
+                    .add_resource_at(
+                        "meta/fortune.cmx",
+                        r#"{"program":{"binary":"bin/fortune"}}"#.as_bytes(),
+                    )?
+                    .add_resource_at("data/duplicate_b", same_contents.as_bytes())?
+                    .add_resource_at("data/duplicate_c", same_contents.as_bytes())?
+                    .build()
+                    .await?,
+            )
+            .build()
+            .await?;
 
-        let served_repository = await!(repo.serve())?;
+        let served_repository = repo.serve().await?;
 
         let local_packages = repo.list_packages()?;
 
-        let served_packages = await!(served_repository.list_packages())?;
+        let served_packages = served_repository.list_packages().await?;
         assert_eq!(local_packages, served_packages);
 
-        let config_json = String::from_utf8(await!(served_repository.get("config.json"))?)?;
+        let config_json = String::from_utf8(served_repository.get("config.json").await?)?;
         let config: Value = serde_json::from_str(config_json.as_str())?;
 
         let base_url = format!("http://127.0.0.1:{}", served_repository.port);

@@ -186,7 +186,7 @@ impl PackageBuilder {
                 File::open(packagedir.path()).context("open /packages")?,
             )?
             .output(&launcher()?)?;
-        await!(fut)?.ok()?;
+        fut.await?.ok()?;
 
         let meta_far_merkle =
             fs::read_to_string(packagedir.path().join("meta.far.merkle"))?.parse()?;
@@ -283,11 +283,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_basic() -> Result<(), Error> {
-        let pkg = await!(PackageBuilder::new("rolldice")
+        let pkg = PackageBuilder::new("rolldice")
             .dir("bin")
             .add_resource_at("rolldice", "asldkfjaslkdfjalskdjfalskdf".as_bytes())?
             .finish()
-            .build())?;
+            .build()
+            .await?;
 
         assert_eq!(
             pkg.meta_far_merkle,
@@ -300,15 +301,17 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dir_semantics() -> Result<(), Error> {
-        let with_dir = await!(PackageBuilder::new("data-file")
+        let with_dir = PackageBuilder::new("data-file")
             .dir("data")
             .add_resource_at("file", "contents".as_bytes())?
             .finish()
-            .build())?;
+            .build()
+            .await?;
 
-        let with_direct = await!(PackageBuilder::new("data-file")
+        let with_direct = PackageBuilder::new("data-file")
             .add_resource_at("data/file", "contents".as_bytes())?
-            .build())?;
+            .build()
+            .await?;
 
         assert_eq!(with_dir.meta_far_merkle_root(), with_direct.meta_far_merkle_root());
 
@@ -342,7 +345,7 @@ mod tests {
             pkg = pkg.add_resource_at(relative_path.to_str().unwrap(), f)?;
         }
 
-        let pkg = await!(pkg.build())?;
+        let pkg = pkg.build().await?;
 
         assert_eq!(pkg.meta_far_merkle, MerkleTree::from_reader(pkg.meta_far()?)?.root());
 

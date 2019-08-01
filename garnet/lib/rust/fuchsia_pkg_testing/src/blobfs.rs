@@ -105,7 +105,7 @@ impl TestBlobFs {
     }
 
     pub(crate) async fn stop(self) -> Result<(), Error> {
-        zx::Status::ok(await!(self.proxy.unmount()).context("sending blobfs unmount")?)
+        zx::Status::ok(self.proxy.unmount().await.context("sending blobfs unmount")?)
             .context("unmounting blobfs")?;
 
         self.process
@@ -173,7 +173,7 @@ mod tests {
             vec!["e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3".to_string()],
         );
 
-        await!(blobfs_server.stop())?;
+        blobfs_server.stop().await?;
 
         Ok(())
     }

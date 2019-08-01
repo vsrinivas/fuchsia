@@ -108,7 +108,7 @@ impl TestPkgFs {
     /// This also shuts down blobfs and deletes the backing ramdisk and dynamic index.
     pub async fn stop(self) -> Result<(), Error> {
         self.process.kill().context("killing pkgfs")?;
-        await!(self.blobfs.stop())
+        self.blobfs.stop().await
     }
 }
 
@@ -133,11 +133,12 @@ mod tests {
         let blobfs_root_dir = pkgfs.blobfs_root_dir()?;
         let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
-        let pkg = await!(PackageBuilder::new("example")
+        let pkg = PackageBuilder::new("example")
             .add_resource_at("a/b", "Hello world!\n".as_bytes())
             .expect("add resource")
-            .build())
-        .expect("build package");
+            .build()
+            .await
+            .expect("build package");
         assert_eq!(
             pkg.meta_far_merkle_root(),
             &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
@@ -215,7 +216,7 @@ mod tests {
 
         drop(d);
 
-        await!(pkgfs.stop())?;
+        pkgfs.stop().await?;
 
         Ok(())
     }
@@ -228,11 +229,12 @@ mod tests {
         let blobfs_root_dir = pkgfs.blobfs_root_dir()?;
         let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
-        let pkg = await!(PackageBuilder::new("example")
+        let pkg = PackageBuilder::new("example")
             .add_resource_at("a/b", "Hello world!\n".as_bytes())
             .expect("add resource")
-            .build())
-        .expect("build package");
+            .build()
+            .await
+            .expect("build package");
         assert_eq!(
             pkg.meta_far_merkle_root(),
             &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
@@ -303,7 +305,7 @@ mod tests {
 
         drop(d);
 
-        await!(pkgfs.stop())?;
+        pkgfs.stop().await?;
 
         Ok(())
     }

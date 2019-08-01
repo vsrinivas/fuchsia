@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![cfg(test)]
 use {
     failure::Error,
@@ -23,11 +23,12 @@ async fn test_pkgfs_short_write() -> Result<(), Error> {
     let blobfs_root_dir = pkgfs.blobfs_root_dir()?;
     let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
-    let pkg = await!(PackageBuilder::new("example")
+    let pkg = PackageBuilder::new("example")
         .add_resource_at("a/b", "Hello world!\n".as_bytes())
         .expect("add resource")
-        .build())
-    .expect("build package");
+        .build()
+        .await
+        .expect("build package");
     assert_eq!(
         pkg.meta_far_merkle_root(),
         &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
@@ -128,7 +129,7 @@ async fn test_pkgfs_short_write() -> Result<(), Error> {
 
     drop(d);
 
-    await!(pkgfs.stop())?;
+    pkgfs.stop().await?;
 
     Ok(())
 }
@@ -139,11 +140,12 @@ async fn test_pkgfs_restart_install() -> Result<(), Error> {
     let blobfs_root_dir = pkgfs.blobfs_root_dir()?;
     let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
-    let pkg = await!(PackageBuilder::new("example")
+    let pkg = PackageBuilder::new("example")
         .add_resource_at("a/b", "Hello world!\n".as_bytes())
         .expect("add resource")
-        .build())
-    .expect("build package");
+        .build()
+        .await
+        .expect("build package");
     assert_eq!(
         pkg.meta_far_merkle_root(),
         &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
@@ -322,7 +324,7 @@ async fn test_pkgfs_restart_install() -> Result<(), Error> {
 
     drop(d);
 
-    await!(pkgfs.stop())?;
+    pkgfs.stop().await?;
 
     Ok(())
 }
@@ -333,11 +335,12 @@ async fn test_pkgfs_restart_install_already_done() -> Result<(), Error> {
     let blobfs_root_dir = pkgfs.blobfs_root_dir()?;
     let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
-    let pkg = await!(PackageBuilder::new("example")
+    let pkg = PackageBuilder::new("example")
         .add_resource_at("a/b", "Hello world!\n".as_bytes())
         .expect("add resource")
-        .build())
-    .expect("build package");
+        .build()
+        .await
+        .expect("build package");
     assert_eq!(
         pkg.meta_far_merkle_root(),
         &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
@@ -475,7 +478,7 @@ async fn test_pkgfs_restart_install_already_done() -> Result<(), Error> {
 
     drop(d);
 
-    await!(pkgfs.stop())?;
+    pkgfs.stop().await?;
 
     Ok(())
 }
@@ -486,11 +489,12 @@ async fn test_pkgfs_restart_install_failed_meta_far() -> Result<(), Error> {
     let blobfs_root_dir = pkgfs.blobfs_root_dir()?;
     let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
-    let pkg = await!(PackageBuilder::new("example")
+    let pkg = PackageBuilder::new("example")
         .add_resource_at("a/b", "Hello world!\n".as_bytes())
         .expect("add resource")
-        .build())
-    .expect("build package");
+        .build()
+        .await
+        .expect("build package");
     assert_eq!(
         pkg.meta_far_merkle_root(),
         &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
@@ -552,7 +556,7 @@ async fn test_pkgfs_restart_install_failed_meta_far() -> Result<(), Error> {
 
     drop(d);
 
-    await!(pkgfs.stop())?;
+    pkgfs.stop().await?;
 
     Ok(())
 }
