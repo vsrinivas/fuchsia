@@ -42,12 +42,6 @@ group("fidl") {
     ":fidl.test.dangerous.table.names.camel",
     ":fidl.test.dangerous.table.names.lower",
     ":fidl.test.dangerous.table.names.upper",
-    ":fidl.test.dangerous.union.names.camel",
-    ":fidl.test.dangerous.union.names.lower",
-    ":fidl.test.dangerous.union.names.upper",
-    ":fidl.test.dangerous.union.types.camel",
-    ":fidl.test.dangerous.union.types.lower",
-    ":fidl.test.dangerous.union.types.upper",
     ":fidl.test.dangerous.using.camel",
     ":fidl.test.dangerous.using.lower",
     ":fidl.test.dangerous.using.upper",
@@ -80,18 +74,6 @@ fidl("fidl.test.dangerous.struct.types.lower") {
 fidl("fidl.test.dangerous.struct.names.lower") {
   sources = [
     "fidl.test.dangerous.struct.names.lower.test.fidl",
-  ]
-}
-
-fidl("fidl.test.dangerous.union.names.lower") {
-  sources = [
-    "fidl.test.dangerous.union.names.lower.test.fidl",
-  ]
-}
-
-fidl("fidl.test.dangerous.union.types.lower") {
-  sources = [
-    "fidl.test.dangerous.union.types.lower.test.fidl",
   ]
 }
 
@@ -173,18 +155,6 @@ fidl("fidl.test.dangerous.struct.names.upper") {
   ]
 }
 
-fidl("fidl.test.dangerous.union.names.upper") {
-  sources = [
-    "fidl.test.dangerous.union.names.upper.test.fidl",
-  ]
-}
-
-fidl("fidl.test.dangerous.union.types.upper") {
-  sources = [
-    "fidl.test.dangerous.union.types.upper.test.fidl",
-  ]
-}
-
 fidl("fidl.test.dangerous.table.names.upper") {
   sources = [
     "fidl.test.dangerous.table.names.upper.test.fidl",
@@ -260,18 +230,6 @@ fidl("fidl.test.dangerous.struct.types.camel") {
 fidl("fidl.test.dangerous.struct.names.camel") {
   sources = [
     "fidl.test.dangerous.struct.names.camel.test.fidl",
-  ]
-}
-
-fidl("fidl.test.dangerous.union.names.camel") {
-  sources = [
-    "fidl.test.dangerous.union.names.camel.test.fidl",
-  ]
-}
-
-fidl("fidl.test.dangerous.union.types.camel") {
-  sources = [
-    "fidl.test.dangerous.union.types.camel.test.fidl",
   ]
 }
 

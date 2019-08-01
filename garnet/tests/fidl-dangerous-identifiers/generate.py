@@ -106,33 +106,34 @@ def struct_names(f, idents):
     f.write('  uint32 %s;\n' % ident)
   f.write('};\n')
 
-
-@use
-def union_names(f, idents):
-  # unions with every dangerous name
-  f.write('using membertype = uint32;\n')
-  for ident in idents:
-    # TODO(FIDL-720): Having a declaration with same same name as what is
-    # aliased causes a cycle.
-    if ident == "uint32":
-      continue
-    f.write('union %s { membertype member; };\n' % ident)
-
-  # a union with every dangerous name as the field type
-  f.write('union DangerousMembers {\n')
-  for i, ident in enumerate(idents):
-    # dangerous field type
-    f.write('  %s f%d;\n' % (ident, i))
-  f.write('};\n')
-
-
-@use
-def union_types(f, idents):
-  # a union with every dangerous name as the field name
-  f.write('union DangerousMembers {\n')
-  for i, ident in enumerate(idents):
-    f.write('  uint32 %s;\n' % (ident))
-  f.write('};\n')
+# TODO(FIDL-759)
+# Temporarily disabled due to superlinear compiler time and peak memory usage.
+# @use
+# def union_names(f, idents):
+#   # unions with every dangerous name
+#   f.write('using membertype = uint32;\n')
+#   for ident in idents:
+#     # TODO(FIDL-720): Having a declaration with same same name as what is
+#     # aliased causes a cycle.
+#     if ident == "uint32":
+#       continue
+#     f.write('union %s { membertype member; };\n' % ident)
+#
+#   # a union with every dangerous name as the field type
+#   f.write('union DangerousMembers {\n')
+#   for i, ident in enumerate(idents):
+#     # dangerous field type
+#     f.write('  %s f%d;\n' % (ident, i))
+#   f.write('};\n')
+#
+#
+# @use
+# def union_types(f, idents):
+#   # a union with every dangerous name as the field name
+#   f.write('union DangerousMembers {\n')
+#   for i, ident in enumerate(idents):
+#     f.write('  uint32 %s;\n' % (ident))
+#   f.write('};\n')
 
 
 @use
