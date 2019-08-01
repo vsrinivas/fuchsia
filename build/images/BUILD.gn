@@ -897,7 +897,13 @@ declare_args() {
   always_zedboot = false
 }
 
+# All deps for the filesystem_sizes group.
 record_filesystem_sizes_deps = []
+
+# deps, inputs and args for the filesystem_sizes.json action.
+filesystem_sizes_deps = []
+filesystem_sizes_inputs = []
+filesystem_sizes_args = []
 
 if (!bootfs_only) {
   data_image_path = "$target_out_dir/data.blk"
@@ -1044,51 +1050,40 @@ if (!bootfs_only) {
     },
   ]
 
-  action("filesystem_sizes.json") {
-    testonly = true
-    script = "format_filesystem_sizes.py"
-    deps = [
-      ":blob.blk",
-      ":data.blk",
-      ":fvm.sparse.blk",
-    ]
-    output_name = "$root_build_dir/filesystem_sizes.json"
-    outputs = [
-      output_name,
-    ]
-    inputs = [
-      blob_image_path,
-      data_image_path,
-      fvm_sparse_blk_path,
-    ]
-    args = [
-      "--fvm-blk",
-      rebase_path(fvm_sparse_blk_path),
-      "--blob-blk",
-      rebase_path(blob_image_path),
-      "--data-blk",
-      rebase_path(data_image_path),
-      "--fvm-tool",
-      rebase_path("$zircon_tools_dir/fvm"),
-      "--blobfs-tool",
-      rebase_path("$zircon_tools_dir/blobfs"),
-      "--minfs-tool",
-      rebase_path("$zircon_tools_dir/minfs"),
-      "--max-fvm-contents-size",
-      max_fvm_size,
-      "--max-blob-contents-size",
-      max_blob_contents_size,
-      "--max-blob-image-size",
-      max_blob_image_size,
-      "--max-data-contents-size",
-      max_data_contents_size,
-      "--max-data-image-size",
-      max_data_image_size,
-      "--output",
-      rebase_path(output_name),
-    ]
-  }
-  record_filesystem_sizes_deps += [ ":filesystem_sizes.json" ]
+  filesystem_sizes_deps += [
+    ":blob.blk",
+    ":data.blk",
+    ":fvm.sparse.blk",
+  ]
+  filesystem_sizes_inputs += [
+    blob_image_path,
+    data_image_path,
+    fvm_sparse_blk_path,
+  ]
+  filesystem_sizes_args += [
+    "--fvm-blk",
+    rebase_path(fvm_sparse_blk_path),
+    "--blob-blk",
+    rebase_path(blob_image_path),
+    "--data-blk",
+    rebase_path(data_image_path),
+    "--fvm-tool",
+    rebase_path("$zircon_tools_dir/fvm"),
+    "--blobfs-tool",
+    rebase_path("$zircon_tools_dir/blobfs"),
+    "--minfs-tool",
+    rebase_path("$zircon_tools_dir/minfs"),
+    "--max-fvm-contents-size",
+    max_fvm_size,
+    "--max-blob-contents-size",
+    max_blob_contents_size,
+    "--max-blob-image-size",
+    max_blob_image_size,
+    "--max-data-contents-size",
+    max_data_contents_size,
+    "--max-data-image-size",
+    max_data_image_size,
+  ]
 
   # fvm.blob.sparse.blk creates a sprase FVM partition image containing the blob
   # partition produced by blob.blk.
@@ -1262,6 +1257,39 @@ if (target_cpu != "arm64" && !use_vboot) {
     ]
   }
 }
+
+action("filesystem_sizes.json") {
+  testonly = true
+  script = "format_filesystem_sizes.py"
+  deps = filesystem_sizes_deps + [
+           ":fuchsia",
+           "zedboot:zbi",
+         ]
+  output_name = "$root_build_dir/filesystem_sizes.json"
+  outputs = [
+    output_name,
+  ]
+  fuchsia_target_outputs = get_target_outputs(":fuchsia")
+
+  # Can't use get_target_outputs() because this defined in another file.
+  zedboot_zbi_file = "$root_out_dir/zedboot.zbi"
+  inputs =
+      filesystem_sizes_inputs + fuchsia_target_outputs + [ zedboot_zbi_file ]
+  args = filesystem_sizes_args + [
+           "--fuchsia-zbi",
+           rebase_path(fuchsia_target_outputs[0]),
+           "--zedboot-zbi",
+           rebase_path(zedboot_zbi_file),
+           "--max-fuchsia-zbi-size",
+           max_fuchsia_zbi_size,
+           "--max-zedboot-zbi-size",
+           max_zedboot_zbi_size,
+           "--output",
+           rebase_path(output_name),
+         ]
+}
+
+record_filesystem_sizes_deps += [ ":filesystem_sizes.json" ]
 
 # Pseudo-target to record information about the sizes of filesystems assembled
 # during the build for later analysis.

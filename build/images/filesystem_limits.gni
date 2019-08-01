@@ -26,4 +26,10 @@ declare_args() {
   # image_size refers to the total image size, including both contents and
   # metadata.
   max_data_image_size = "0"
+
+  # Maximum allowable size for fuchsia.zbi
+  max_fuchsia_zbi_size = "0"
+
+  # Maximum allowable size for zedboot.zbi
+  max_zedboot_zbi_size = "0"
 }
