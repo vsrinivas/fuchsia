@@ -26,8 +26,6 @@ source_set("lib") {
   sources = [
     "dockyard.cc",
     "dockyard_service_impl.cc",
-    "test_sample_generator.cc",
-    "test_sample_generator.h",
   ]
 
   public_deps = [
@@ -70,6 +68,8 @@ source_set("tests") {
 
   sources = [
     "dockyard_test.cc",
+    "test_sample_generator.cc",
+    "test_sample_generator.h",
   ]
 
   deps = [
