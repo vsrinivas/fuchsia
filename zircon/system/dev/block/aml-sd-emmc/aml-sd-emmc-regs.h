@@ -50,7 +50,7 @@ class AmlSdEmmcClock : public hwreg::RegisterBase<AmlSdEmmcClock, uint32_t> {
   static constexpr uint32_t kFClkDiv2MinFreq = 20000000;  // 20MHz
   static constexpr uint32_t kDefaultClkSrc = 0;           // 24MHz
   static constexpr uint32_t kDefaultClkDiv = 60;          // Defaults to 400KHz
-  static constexpr uint32_t kDefaultClkCorePhase = 2;
+  static constexpr uint32_t kDefaultClkRxPhase = 0;
   static constexpr uint32_t kMaxClkDiv = 63;
 
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcClock>(kAmlSdEmmcClockOffset); }

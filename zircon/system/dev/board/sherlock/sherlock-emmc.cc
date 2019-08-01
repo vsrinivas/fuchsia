@@ -47,6 +47,16 @@ static aml_sd_emmc_config_t config = {
     // As per AMlogic, on S912 chipset, HS400 mode can be operated at 125MHZ or low.
     .min_freq = 400000,
     .max_freq = 120000000,
+    .clock_phases =
+        {
+            .init = {.core_phase = 3, .tx_phase = 0},
+            .hs = {.core_phase = 1, .tx_phase = 0},
+            .legacy = {.core_phase = 0, .tx_phase = 2},
+            .ddr = {.core_phase = 2, .tx_phase = 0},
+            .hs2 = {.core_phase = 3, .tx_phase = 0},
+            .hs4 = {.core_phase = 0, .tx_phase = 0},
+            .sdr104 = {.core_phase = 2, .tx_phase = 0},
+        },
 };
 
 static const guid_map_t guid_map[] = {

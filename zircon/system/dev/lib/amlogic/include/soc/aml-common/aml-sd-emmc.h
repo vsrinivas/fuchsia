@@ -33,6 +33,13 @@ typedef struct {
   bool supports_dma;
   uint32_t min_freq;
   uint32_t max_freq;
+
+  struct {
+    struct {
+      uint8_t core_phase:2;
+      uint8_t tx_phase:2;
+    } init, hs, legacy, ddr, hs2, hs4, sdr104;
+  } clock_phases;
 } aml_sd_emmc_config_t;
 
 static const uint8_t aml_sd_emmc_tuning_blk_pattern_4bit[64] = {

@@ -17,13 +17,23 @@ namespace sdmmc {
 
 class AmlSdEmmcTest : public AmlSdEmmc {
  public:
-  AmlSdEmmcTest(mmio_buffer_t& mmio, mmio_pinned_buffer_t& pinned_mmio)
+  AmlSdEmmcTest(const mmio_buffer_t& mmio, const mmio_pinned_buffer_t& pinned_mmio)
       : AmlSdEmmc(fake_ddk::kFakeParent, zx::bti(ZX_HANDLE_INVALID), ddk::MmioBuffer(mmio),
                   ddk::MmioPinnedBuffer(pinned_mmio),
                   aml_sd_emmc_config_t{
                       .supports_dma = false,
                       .min_freq = 400000,
                       .max_freq = 120000000,
+                      .clock_phases =
+                          {
+                              .init = {.core_phase = 3, .tx_phase = 0},
+                              .hs = {.core_phase = 1, .tx_phase = 0},
+                              .legacy = {.core_phase = 1, .tx_phase = 2},
+                              .ddr = {.core_phase = 2, .tx_phase = 0},
+                              .hs2 = {.core_phase = 3, .tx_phase = 0},
+                              .hs4 = {.core_phase = 0, .tx_phase = 0},
+                              .sdr104 = {.core_phase = 2, .tx_phase = 0},
+                          },
                   },
                   zx::interrupt(ZX_HANDLE_INVALID), ddk::GpioProtocolClient()) {}
   zx_status_t TestDdkAdd() {
@@ -46,6 +56,27 @@ TEST(AmlSdEmmcTest, DdkLifecycle) {
   EXPECT_OK(dut.TestDdkAdd());
   dut.DdkUnbind();
   EXPECT_TRUE(ddk.Ok());
+}
+
+TEST(AmlSdEmmcTest, SetClockPhase) {
+  ddk_mock::MockMmioReg reg_array[kMmioRegCount];
+  ddk_mock::MockMmioRegRegion regs(reg_array, sizeof(uint32_t), kMmioRegCount);
+
+  mmio_buffer_t buff = regs.GetMmioBuffer();
+  mmio_pinned_buffer_t pinned_mmio = {
+      .mmio = &buff,
+      .pmt = ZX_HANDLE_INVALID,
+      .paddr = 0x100,
+  };
+
+  AmlSdEmmcTest dut(buff, pinned_mmio);
+
+  reg_array[0].ReadReturns(0).ExpectWrite((3 << 8) | (0 << 10)).ExpectWrite((1 << 8) | (2 << 10));
+
+  EXPECT_OK(dut.SdmmcSetTiming(SDMMC_TIMING_HS200));
+  EXPECT_OK(dut.SdmmcSetTiming(SDMMC_TIMING_LEGACY));
+
+  ASSERT_NO_FATAL_FAILURES(reg_array[0].VerifyAndClear());
 }
 
 }  // namespace sdmmc

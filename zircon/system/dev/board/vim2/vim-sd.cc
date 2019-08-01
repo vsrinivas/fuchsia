@@ -35,6 +35,16 @@ static aml_sd_emmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400000,
     .max_freq = 120000000,
+    .clock_phases =
+        {
+            .init = {.core_phase = 2, .tx_phase = 0},
+            .hs = {.core_phase = 2, .tx_phase = 0},
+            .legacy = {.core_phase = 2, .tx_phase = 0},
+            .ddr = {.core_phase = 2, .tx_phase = 0},
+            .hs2 = {.core_phase = 2, .tx_phase = 0},
+            .hs4 = {.core_phase = 2, .tx_phase = 0},
+            .sdr104 = {.core_phase = 2, .tx_phase = 0},
+        },
 };
 
 static const pbus_metadata_t sd_metadata[] = {
