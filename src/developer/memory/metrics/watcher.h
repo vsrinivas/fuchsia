@@ -5,10 +5,10 @@
 #ifndef SRC_DEVELOPER_MEMORY_METRICS_WATCHER_H_
 #define SRC_DEVELOPER_MEMORY_METRICS_WATCHER_H_
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
-#include "lib/async/cpp/task.h"
 #include "src/developer/memory/metrics/capture.h"
 
 namespace memory {

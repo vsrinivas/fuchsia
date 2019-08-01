@@ -17,15 +17,16 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <string.h>
-#include <trace/event.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <iostream>
+
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
+#include <trace/event.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/printer.h"

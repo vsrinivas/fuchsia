@@ -6,6 +6,8 @@
 
 #include <regex>
 
+#include <trace/event.h>
+
 namespace memory {
 
 const std::vector<const NameMatch> Summary::kNameMatches = {
@@ -17,6 +19,7 @@ const std::vector<const NameMatch> Summary::kNameMatches = {
 
 Summary::Summary(const Capture& capture, const std::vector<const NameMatch>& name_matches)
     : time_(capture.time()), kstats_(capture.kmem()) {
+  TRACE_DURATION("memory_metrics", "Summary::Summary");
   std::unordered_map<zx_koid_t, std::unordered_set<zx_koid_t>> vmo_to_processes;
   auto const& koid_to_vmo = capture.koid_to_vmo();
 
@@ -50,7 +53,6 @@ Summary::Summary(const Capture& capture, const std::vector<const NameMatch>& nam
     }
     process_summaries_.push_back(s);
   }
-
   for (auto& s : process_summaries_) {
     for (auto const& v : s.vmos_) {
       auto const& vmo = capture.vmo_for_koid(v);

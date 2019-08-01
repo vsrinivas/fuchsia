@@ -9,12 +9,14 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
-#include <src/lib/fxl/logging.h>
-#include <task-utils/walker.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 
 #include <memory>
+
+#include <src/lib/fxl/logging.h>
+#include <task-utils/walker.h>
+#include <trace/event.h>
 
 namespace memory {
 
@@ -56,6 +58,7 @@ class OSImpl : public OS, public TaskEnumerator {
 
   zx_status_t GetInfo(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                       size_t* actual, size_t* avail) override {
+    TRACE_DURATION("memory_metrics", "Capture:GetInfo");
     return zx_object_get_info(handle, topic, buffer, buffer_size, actual, avail);
   }
 
@@ -96,6 +99,7 @@ zx_status_t Capture::GetCapture(Capture& capture, const CaptureState& state, Cap
 
 zx_status_t Capture::GetCapture(Capture& capture, const CaptureState& state, CaptureLevel level,
                                 OS& os) {
+  TRACE_DURATION("memory_metrics", "Capture::GetCapture");
   capture.time_ = os.GetMonotonic();
   zx_status_t err = os.GetInfo(state.root, ZX_INFO_KMEM_STATS, &capture.kmem_,
                                sizeof(capture.kmem_), nullptr, nullptr);

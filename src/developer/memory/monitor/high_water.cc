@@ -5,13 +5,14 @@
 #include "src/developer/memory/monitor/high_water.h"
 
 #include <lib/async/dispatcher.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
 #include <fstream>
 
+#include <src/lib/files/file.h>
+#include <src/lib/fxl/logging.h>
+
 #include "src/developer/memory/metrics/printer.h"
-#include "src/lib/files/file.h"
 
 namespace monitor {
 

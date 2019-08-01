@@ -4,6 +4,8 @@
 
 #include "src/developer/memory/metrics/printer.h"
 
+#include <trace/event.h>
+
 namespace memory {
 
 std::string FormatSize(uint64_t bytes) {
@@ -33,6 +35,7 @@ std::string FormatSize(uint64_t bytes) {
 }
 
 void Printer::PrintCapture(const Capture& capture, CaptureLevel level, Sorted sorted) {
+  TRACE_DURATION("memory_metrics", "Printer::PrintCapture");
   auto const& kmem = capture.kmem();
   os_ << "K," << capture.time() << "," << kmem.total_bytes << "," << kmem.free_bytes << ","
       << kmem.wired_bytes << "," << kmem.total_heap_bytes << "," << kmem.free_heap_bytes << ","
@@ -91,6 +94,7 @@ void Printer::PrintCapture(const Capture& capture, CaptureLevel level, Sorted so
 }
 
 void Printer::PrintSummary(const Summary& summary, CaptureLevel level, Sorted sorted) {
+  TRACE_DURATION("memory_metrics", "Printer::PrintSummary");
   auto& kstats = summary.kstats();
   os_ << "Time: " << summary.time() << " VMO: " << FormatSize(kstats.vmo_bytes)
       << " Free: " << FormatSize(kstats.free_bytes) << "\n";
@@ -149,6 +153,7 @@ void Printer::PrintSummary(const Summary& summary, CaptureLevel level, Sorted so
 }
 
 void Printer::OutputSummary(const Summary& summary, Sorted sorted, zx_koid_t pid) {
+  TRACE_DURATION("memory_metrics", "Printer::OutputSummary");
   auto const& summaries = summary.process_summaries();
   std::vector<ProcessSummary> sorted_summaries;
   if (sorted == SORTED) {

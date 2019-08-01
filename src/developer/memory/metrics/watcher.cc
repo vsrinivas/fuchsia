@@ -4,11 +4,12 @@
 
 #include "src/developer/memory/metrics/watcher.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#include "lib/async/cpp/task.h"
-#include "lib/zx/time.h"
+#include <trace/event.h>
 
 namespace memory {
 
@@ -26,6 +27,7 @@ Watcher::Watcher(zx::duration poll_frequency, uint64_t high_water_threshold,
 }
 
 void Watcher::CaptureMemory() {
+  TRACE_DURATION("memory_metrics", "Watcher::CaptureMemory");
   Capture c;
   capture_cb_(c, KMEM);
   auto free_bytes = c.kmem().free_bytes;
