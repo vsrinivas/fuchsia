@@ -4,9 +4,19 @@
 
 import("//src/virtualization/packages/guest_package.gni")
 
+linux_image = "$target_out_dir/linux/Image"
+
+guest_prebuilt("kernel") {
+  source = "//prebuilt/virtualization/packages/linux_guest/images/${target_cpu}/Image"
+  output = linux_image
+}
+
 guest_package("biscotti_guest") {
+  deps = [
+    ":kernel",
+  ]
   cmdline = "console=hvc0 root=/dev/vda rw"
-  linux = "images/${target_cpu}/Image"
+  linux = "$linux_image"
 
   rootfs_name = "rootfs.img"
   resources = [

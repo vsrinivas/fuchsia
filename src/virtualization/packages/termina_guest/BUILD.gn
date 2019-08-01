@@ -7,9 +7,9 @@ import("//src/virtualization/packages/guest_package.gni")
 declare_args() {
   # The termina kernel image.
   #
-  # Defaults to the kernel image from CIPD, but can be overridden to use a
+  # Defaults to the common linux kernel image from CIPD, but can be overridden to use a
   # custom kernel for development purposes.
-  termina_kernel = "//prebuilt/virtualization/packages/termina_guest/images/${target_cpu}/vm_kernel"
+  termina_kernel = "//prebuilt/virtualization/packages/linux_guest/images/${target_cpu}/Image"
 
   # The termina disk image.
   #

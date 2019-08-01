@@ -39,7 +39,7 @@ esac
 
 $LINUX_GUEST_DIR/mklinux.sh \
     ${MKLINUX_BRANCH_ARGS} \
-    -d biscotti_defconfig \
+    -d machina_defconfig \
     -o "${BISCOTTI_GUEST_DIR}/images/${LINUX_ARCH}/Image" \
     ${MKLINUX_ARGS} \
     ${LINUX_ARCH}
