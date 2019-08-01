@@ -56,7 +56,7 @@ executable("audio_bin") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "test",
   ]
 }

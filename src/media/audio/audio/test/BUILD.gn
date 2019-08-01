@@ -8,9 +8,7 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
-    # For now, build the binary, not the package, so it isn't included in CQ.
-    ":audio_loopback_tests_bin",
-    # ":audio_loopback_tests",
+    ":audio_loopback_tests",
   ]
 }
 
