@@ -27,7 +27,7 @@ void main() {
     sl4fDriver.close();
   });
 
-  test('ermine session shell guest login', () async {
+  test('ermine session shell guest login & ask', () async {
     // TODO: note that 'user picker' screen is changing/going away
     // so here we use sessionctl to do guest login. Once final
     // OOBE UI is established for Ermine, this could be revisited
@@ -81,6 +81,12 @@ void main() {
     if (!browserActive) {
       fail('simple_browser is not active');
     }
+
+    // Logout for next test
+    await sl4fDriver.ssh.run('input keyevent 63');
+
+    // allow time for logout
+    await Future.delayed(Duration(seconds: 3));
 
     return;
   });

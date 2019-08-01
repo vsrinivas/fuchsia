@@ -73,6 +73,11 @@
       "modifier": 64,
       "chord": "Right Alt + s",
       "description": "Toggle status"
+    },
+    {
+      "hidUsage": 62,
+      "chord": "F5",
+      "description": "Toggle status"
     }
   ],
   "nextCluster": [
@@ -108,6 +113,11 @@
       "char": "o",
       "modifier": 64,
       "chord": "Right Alt + o",
+      "description": "Logout session"
+    },
+    {
+      "hidUsage": 63,
+      "chord": "F6",
       "description": "Logout session"
     }
   ]
