@@ -56,10 +56,19 @@ namespace sys {
 // ```
 class ComponentContext final {
  public:
-  // Creates a component context.
+  // Creates a component context that uses |svc| for incoming services. Callers
+  // can call |OutgoingDirectory::Serve()| if they wish to publish outgoing
+  // directory.
   //
   // This constructor is rarely used directly. Instead, most clients create a
   // component context using the |Create()| static method.
+  explicit ComponentContext(std::shared_ptr<ServiceDirectory> svc,
+                            async_dispatcher_t* dispatcher = nullptr);
+
+  // Creates a component context that uses |svc| for incoming services and
+  // serves outgoing requests over |directory_request|. Callers should be
+  // careful to publish outgoing service in |outgoing()| before |dispatcher|
+  // starts processing incoming requests for the outgoing services.
   ComponentContext(std::shared_ptr<ServiceDirectory> svc, zx::channel directory_request,
                    async_dispatcher_t* dispatcher = nullptr);
 

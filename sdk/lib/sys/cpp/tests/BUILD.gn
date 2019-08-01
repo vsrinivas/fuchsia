@@ -9,6 +9,7 @@ import("//build/testing/environments.gni")
 
 test("component_cpp_unittests") {
   sources = [
+    "component_context_unittest.cc",
     "echo_server.h",
     "file_descriptor_unittest.cc",
     "outgoing_directory_unittest.cc",

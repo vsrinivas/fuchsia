@@ -12,8 +12,12 @@
 namespace sys {
 
 ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
+                                   async_dispatcher_t* dispatcher)
+    : svc_(std::move(svc)), outgoing_(std::make_shared<OutgoingDirectory>()) {}
+
+ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
                                    zx::channel directory_request, async_dispatcher_t* dispatcher)
-    : svc_(std::move(svc)), outgoing_(std::make_shared<OutgoingDirectory>()) {
+    : ComponentContext(svc, dispatcher) {
   outgoing_->Serve(std::move(directory_request), dispatcher);
 }
 
