@@ -4,6 +4,9 @@
 
 #include "src/developer/debug/shared/buffered_zx_socket.h"
 
+#include <zircon/status.h>
+
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/logging.h"
@@ -29,9 +32,9 @@ zx_status_t BufferedZxSocket::Start() {
     return ZX_ERR_BAD_STATE;
 
   // Register for socket updates from the message loop.
-  MessageLoopTarget* loop = MessageLoopTarget::Current();
-  FXL_DCHECK(loop);
-  return loop->WatchSocket(MessageLoop::WatchMode::kReadWrite, socket_.get(), this, &watch_handle_);
+  // We assume the socket is writable and look for that event when we get evidence it's not.
+  return MessageLoopTarget::Current()->WatchSocket(MessageLoop::WatchMode::kRead, socket_.get(),
+                                                   this, &watch_handle_);
 }
 
 zx_status_t BufferedZxSocket::Stop() {
@@ -81,7 +84,14 @@ void BufferedZxSocket::OnSocketReadable(zx_handle_t) {
     callback_();
 }
 
-void BufferedZxSocket::OnSocketWritable(zx_handle_t) { stream_.SetWritable(); }
+void BufferedZxSocket::OnSocketWritable(zx_handle_t) {
+  // Now that the system told us it's ok to write, we go back to assuming it's always writable
+  // until proven otherwise.
+  watch_handle_ = {};
+  MessageLoopTarget::Current()->WatchSocket(MessageLoop::WatchMode::kRead, socket_.get(), this,
+                                            &watch_handle_);
+  stream_.SetWritable();
+}
 
 void BufferedZxSocket::OnSocketError(zx_handle_t) {
   if (error_callback_)
@@ -90,7 +100,21 @@ void BufferedZxSocket::OnSocketError(zx_handle_t) {
 
 size_t BufferedZxSocket::ConsumeStreamBufferData(const char* data, size_t len) {
   size_t written = 0;
-  socket_.write(0, data, len, &written);
+  zx_status_t status = socket_.write(0, data, len, &written);
+  if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
+    DEBUG_LOG(MessageLoop) << "Could not write to socket: " << zx_status_get_string(status);
+    if (error_callback_)
+      error_callback_();
+    return 0;
+  }
+
+  // If we couldn't write some of the message, means the socket is full and we want the system to
+  // tell us when it's ok to write again.
+  if (written < len) {
+    watch_handle_ = {};
+    MessageLoopTarget::Current()->WatchSocket(MessageLoop::WatchMode::kReadWrite, socket_.get(),
+                                              this, &watch_handle_);
+  }
   return written;
 }
 

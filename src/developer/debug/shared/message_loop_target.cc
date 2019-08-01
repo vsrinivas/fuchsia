@@ -180,7 +180,7 @@ zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode, zx_handle_t socket_ha
   if (mode == WatchMode::kWrite || mode == WatchMode::kReadWrite)
     signals |= ZX_SOCKET_WRITABLE;
 
-  zx_status_t status = AddSignalHandler(watch_id, socket_handle, ZX_SOCKET_WRITABLE, &info);
+  zx_status_t status = AddSignalHandler(watch_id, socket_handle, signals, &info);
   if (status != ZX_OK)
     return status;
 
@@ -257,6 +257,10 @@ zx_status_t MessageLoopTarget::WatchJobExceptions(WatchJobConfig config,
 
 bool MessageLoopTarget::CheckAndProcessPendingTasks() {
   std::lock_guard<std::mutex> guard(mutex_);
+
+  // We clear the event, otherwise it will trigger again and again
+  task_event_.signal(kTaskSignal, 0);
+
   // Do a C++ task.
   if (ProcessPendingTask()) {
     SetHasTasks();  // Enqueue another task signal.
