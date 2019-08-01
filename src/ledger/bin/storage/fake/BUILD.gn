@@ -28,6 +28,8 @@ source_set("lib") {
     "fake_journal_delegate.h",
     "fake_object.cc",
     "fake_object.h",
+    "fake_object_identifier_factory.cc",
+    "fake_object_identifier_factory.h",
     "fake_page_storage.cc",
     "fake_page_storage.h",
   ]
@@ -53,6 +55,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "fake_object_identifier_factory_unittest.cc",
     "fake_object_unittest.cc",
   ]
 
