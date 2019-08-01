@@ -76,6 +76,6 @@ the outside world: "lib".
 
 ###### Examples
 
-- `lib/app/cpp/startup_context.h`
-- `lib/fbl/array.h`
+- `lib/fit/function.h`
+- `lib/sys/cpp/component_context.h`
 - `lib/zx/event.h`
