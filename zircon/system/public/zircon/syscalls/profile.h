@@ -9,15 +9,6 @@
 
 __BEGIN_CDECLS
 
-#define ZX_PROFILE_INFO_SCHEDULER 1
-
-typedef struct zx_profile_scheduler {
-  int32_t priority;
-  uint32_t boost;
-  uint32_t deboost;
-  uint32_t quantum;
-} zx_profile_scheduler_t;
-
 #define ZX_PRIORITY_LOWEST 0
 #define ZX_PRIORITY_LOW 8
 #define ZX_PRIORITY_DEFAULT 16
@@ -28,12 +19,6 @@ typedef struct zx_profile_scheduler {
 #define ZX_PROFILE_INFO_FLAG_CPU_MASK (1 << 1)
 
 typedef struct zx_profile_info {
-  // TODO(ZX-3828): Once fields below are implemented, remove fields |type| and |scheduler|.
-  uint32_t type;  // one of ZX_PROFILE_INFO_
-  union {
-    zx_profile_scheduler_t scheduler;
-  };
-
   // A bitmask of ZX_PROFILE_INFO_FLAG_* values. Specifies which fields
   // below have been specified. Other fields are considered unset.
   uint32_t flags;

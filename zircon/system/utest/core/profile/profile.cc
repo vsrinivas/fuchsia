@@ -17,8 +17,8 @@ namespace {
 
 zx_profile_info_t MakeSchedulerProfileInfo(int32_t priority) {
   zx_profile_info_t info = {};
-  info.type = ZX_PROFILE_INFO_SCHEDULER;
-  info.scheduler.priority = priority;
+  info.flags = ZX_PROFILE_INFO_FLAG_PRIORITY;
+  info.priority = priority;
   return info;
 }
 
@@ -149,13 +149,13 @@ TEST(SchedulerProfileTest, SetThreadPriorityIsOk) {
   ASSERT_OK(result.load(), "%s", error.load());
 }
 
-TEST(ProfileTest, CreateProfileWithDefaultInitializedProfileInfoIsNotSupported) {
+TEST(ProfileTest, CreateProfileWithDefaultInitializedProfileInfoIsError) {
   zx::unowned_job root_job(zx::job::default_job());
   ASSERT_TRUE(root_job->is_valid());
   zx_profile_info_t profile_info = {};
   zx::profile profile;
 
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zx::profile::create(*root_job, 0u, &profile_info, &profile));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*root_job, 0u, &profile_info, &profile));
 }
 
 TEST(ProfileTest, CreateProfileWithNoProfileInfoIsInvalidArgs) {
@@ -182,20 +182,6 @@ TEST(ProfileTest, CreateProfileWithNullProfileIsInvalidArgs) {
 #pragma GCC diagnostic ignored "-Wnonnull"
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_profile_create(root_job->get(), 0u, &profile_info, nullptr));
 #pragma GCC diagnostic pop
-}
-
-TEST(ProfileTest, CreateProfileWithNonZeroFlags) {
-  zx::unowned_job root_job(zx::job::default_job());
-  ASSERT_TRUE(root_job->is_valid());
-  zx::job child_job;
-  ASSERT_OK(zx::job::create(*root_job, 0u, &child_job));
-
-  // Create a valid scheduling profile, but with a non-zero |flags| field.
-  zx_profile_info_t info = MakeSchedulerProfileInfo(ZX_PRIORITY_DEFAULT);
-  info.flags = 1;
-
-  zx::profile profile;
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zx::profile::create(*root_job, 0u, &info, &profile));
 }
 
 }  // namespace

@@ -19,17 +19,22 @@ KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create")
 KCOUNTER(dispatcher_profile_destroy_count, "dispatcher.profile.destroy")
 
 zx_status_t validate_profile(const zx_profile_info_t& info) {
-  // Ensure reserved fields have not been set.
-  if (info.flags != 0) {
+  uint32_t flags = info.flags;
+
+  // We currently support only the priority flag. (In particular, no
+  // flags set is unsupported, and more flags are unsupported.)
+  if (flags == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (flags != ZX_PROFILE_INFO_FLAG_PRIORITY) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Ensure that we are specifying scheduler fields; other values are
-  // unsupported.
-  if (info.type != ZX_PROFILE_INFO_SCHEDULER)
-    return ZX_ERR_NOT_SUPPORTED;
-  if ((info.scheduler.priority < LOWEST_PRIORITY) || (info.scheduler.priority > HIGHEST_PRIORITY))
+  // Ensure priority is valid.
+  if ((info.priority < LOWEST_PRIORITY) || (info.priority > HIGHEST_PRIORITY)) {
     return ZX_ERR_INVALID_ARGS;
+  }
+
   return ZX_OK;
 }
 
@@ -58,5 +63,8 @@ ProfileDispatcher::~ProfileDispatcher() { kcounter_add(dispatcher_profile_destro
 
 zx_status_t ProfileDispatcher::ApplyProfile(fbl::RefPtr<ThreadDispatcher> thread) {
   // At the moment, the only thing we support is the priority.
-  return thread->SetPriority(info_.scheduler.priority);
+  if ((info_.flags & ZX_PROFILE_INFO_FLAG_PRIORITY) != 0) {
+    return thread->SetPriority(info_.priority);
+  }
+  return ZX_OK;
 }

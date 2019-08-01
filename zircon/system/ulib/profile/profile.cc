@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/profile/profile.h>
-
-#include <algorithm>
 #include "zircon/syscalls/profile.h"
 
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/profile/profile.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/profile.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
+
+#include <algorithm>
 
 namespace {
 
@@ -21,11 +21,10 @@ zx_status_t GetProfileSimple(void* ctx, uint32_t priority, const char* name_data
                              fidl_txn_t* txn) {
   zx_handle_t root_job = static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(ctx));
 
-  // TODO(scottmg): More things here.
   zx_profile_info_t info = {};
-  info.type = ZX_PROFILE_INFO_SCHEDULER;
-  info.scheduler.priority =
-      std::min(std::max(static_cast<int32_t>(priority), ZX_PRIORITY_LOWEST), ZX_PRIORITY_HIGHEST);
+  info.flags = ZX_PROFILE_INFO_FLAG_PRIORITY;
+  info.priority =
+      std::min<uint32_t>(std::max<uint32_t>(priority, ZX_PRIORITY_LOWEST), ZX_PRIORITY_HIGHEST);
 
   zx::profile profile;
   zx_status_t status = zx_profile_create(root_job, 0u, &info, profile.reset_and_get_address());
