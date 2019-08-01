@@ -237,16 +237,6 @@ fn handle_packet(
     }
 }
 
-// type FusedServiceStream = Fuse<ServiceFs<ServiceObj<'static, SnoopRequestStream>>>;
-
-// /// Construct the Fused ServiceFs object to handle incoming service requests.
-// fn setup_service_fs() -> Result<FusedServiceStream, Error> {
-// // =======
-// // enum ServiceRequests {
-// //     Snoop(SnoopRequestStream),
-// // >>>>>>> 5b67240f7cd7... [bt][snoop] Export inspect objects
-// }
-
 struct SnoopConfig {
     log_size_bytes: usize,
     log_time: Duration,
