@@ -67,6 +67,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
   schema->AddList(ClientSettings::System::kSymbolServers, kSymbolServersDescription, {});
   schema->AddString(ClientSettings::System::kSymbolCache, kSymbolCacheDescription, "");
+  schema->AddList(ClientSettings::Target::kBuildDirs, ClientSettings::Target::kBuildDirsDescription,
+                  {});
 
   return schema;
 }

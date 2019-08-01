@@ -88,7 +88,7 @@ TEST(FormatSetting, List) {
       "nowhere\n"
       "\n"
       "See \"help set\" about using the set value for lists.\n"
-      "Set value: "
+      "To set, type: set setting-list2 "
       "/some/very/long/and/annoying/path/that/actually/leads/nowhere:/another/"
       "some/very/long/and/annoying/path/that/actually/leads/nowhere:/yet/"
       "another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n",

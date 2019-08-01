@@ -7,17 +7,19 @@
 
 namespace zxdb {
 
-// This header contains the definitions for all the settings used within the
-// client. They are within their own namespace to avoid collision.
-// Usage:
+// This header contains the definitions for all the settings used within the client. They are within
+// their own namespace to avoid collision. Usage:
 //
 //  system.GetString(settings::kSymbolPaths)
 
 class SettingSchema;
 
-// This is the global declaration of the setting names, so that we have a symbol
-// for each of them. The definition of these symbols are in the appropiate
-// context: (System for system, Target for target, etc.).
+// This is the global declaration of the setting names, so that we have a symbol for each of them.
+// The definition of these symbols are in the appropiate context: (System for system, Target for
+// target, etc.).
+//
+// Settings that appear at multiple levels should be declared (with their help message) at the
+// most specific level they're needed.
 struct ClientSettings {
   struct System {
     static const char* kDebugMode;
@@ -34,15 +36,16 @@ struct ClientSettings {
 
   struct Target {
     static const char* kStoreBacktraces;
+    static const char* kBuildDirs;
+    static const char* kBuildDirsDescription;  // Help for kBuildDirs.
   };
 
   struct Thread {};
 };
 
-// Schemas need to be initialized together because some schemas can add settings
-// to other schemas. If we made it completely lazy, when the first thread is
-// spun up, it could make new settings appear which is not what the user would
-// expect.
+// Schemas need to be initialized together because some schemas can add settings to other schemas.
+// If we made it completely lazy, when the first thread is spun up, it could make new settings
+// appear which is not what the user would expect.
 void InitializeSchemas();
 
 }  // namespace zxdb

@@ -7,6 +7,7 @@
 # itself.
 static_library("common") {
   public = [
+    "adapters.h",
     "address_range.h",
     "address_ranges.h",
     "completion_callback.h",
@@ -47,6 +48,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "adapters_unittest.cc",
     "address_ranges_unittest.cc",
     "completion_callback_unittest.cc",
     "file_util_unittest.cc",

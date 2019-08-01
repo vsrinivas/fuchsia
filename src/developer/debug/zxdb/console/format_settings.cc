@@ -22,15 +22,15 @@ namespace zxdb {
 
 namespace {
 
-std::string SettingValueToString(const SettingValue& value) {
+OutputBuffer SettingValueToString(const SettingValue& value) {
   switch (value.type) {
     case SettingType::kBoolean:
-      return value.get_bool() ? "true" : "false";
+      return value.get_bool() ? OutputBuffer("true") : OutputBuffer("false");
     case SettingType::kInteger:
       return fxl::StringPrintf("%d", value.get_int());
     case SettingType::kString: {
       auto string = value.get_string();
-      return string.empty() ? "<empty>" : string;
+      return string.empty() ? OutputBuffer(Syntax::kComment, "<empty>") : OutputBuffer(string);
     }
     case SettingType::kList:
       // Lists are formatted as a colon separated string.
@@ -38,7 +38,7 @@ std::string SettingValueToString(const SettingValue& value) {
       //    list = {"first", "second", "third"} -> "first:second:third"
       return fxl::JoinStrings(value.get_list(), ":");
     case SettingType::kNull:
-      return "<null>";
+      return OutputBuffer(Syntax::kComment, "<null>");
   }
 }
 
@@ -54,14 +54,14 @@ std::vector<std::string> ListToBullet(const std::vector<std::string>& list) {
 // |add_heading| refers whether it should show the setting name or just list the
 // values.
 void AddSettingToTable(const Setting& setting, std::vector<std::vector<OutputBuffer>>* rows,
-                       bool add_heading = true) {
+                       bool add_heading) {
   // TODO(donosoc): We need to check what level the setting comes from so we can
   //                highlight it in the listing.
   if (!setting.value.is_list()) {
     // Normal values as just entered as key-value pairs.
     auto& row = rows->emplace_back();
     if (add_heading)
-      row.emplace_back(setting.info.name);
+      row.emplace_back(Syntax::kVariable, setting.info.name);
     row.emplace_back(SettingValueToString(setting.value));
   } else {
     // List get special treatment so that we can show them as bullet lists.
@@ -72,15 +72,15 @@ void AddSettingToTable(const Setting& setting, std::vector<std::vector<OutputBuf
     if (bullet_list.empty()) {
       auto& row = rows->emplace_back();
       if (add_heading)
-        row.emplace_back(setting.info.name);
-      row.emplace_back("<empty>");
+        row.emplace_back(Syntax::kVariable, setting.info.name);
+      row.emplace_back(Syntax::kComment, "<empty>");
     } else {
       for (size_t i = 0; i < bullet_list.size(); i++) {
         auto& row = rows->emplace_back();
 
         if (add_heading) {
           // The first entry has the setting name.
-          auto title = i == 0 ? OutputBuffer(setting.info.name) : OutputBuffer();
+          auto title = i == 0 ? OutputBuffer(Syntax::kVariable, setting.info.name) : OutputBuffer();
           auto it = row.emplace_back(std::move(title));
         }
         row.emplace_back(std::move(bullet_list[i]));
@@ -96,17 +96,17 @@ OutputBuffer FormatSettingStore(const SettingStore& store) {
   for (auto [key, _] : store.schema()->settings()) {
     auto setting = store.GetSetting(key);
     FXL_DCHECK(!setting.value.is_null());
-    AddSettingToTable(setting, &rows);
+    AddSettingToTable(setting, &rows, true);
   }
 
   OutputBuffer table;
-  FormatTable(std::vector<ColSpec>(3), rows, &table);
+  FormatTable({ColSpec(Align::kLeft, 0, std::string(), 2), ColSpec()}, rows, &table);
   return table;
 }
 
 OutputBuffer FormatSetting(const Setting& setting) {
   OutputBuffer out;
-  out.Append(Syntax::kHeading, setting.info.name);
+  out.Append(Syntax::kVariable, setting.info.name);
   out.Append(OutputBuffer("\n"));
 
   out.Append(setting.info.description);
@@ -123,7 +123,9 @@ OutputBuffer FormatSetting(const Setting& setting) {
   if (setting.value.is_list()) {
     out.Append("\n");
     out.Append(Syntax::kComment, "See \"help set\" about using the set value for lists.\n");
-    out.Append(fxl::StringPrintf("Set value: %s", SettingValueToString(setting.value).c_str()));
+    out.Append(Syntax::kComment,
+               fxl::StringPrintf("To set, type: set %s ", setting.info.name.c_str()));
+    out.Append(SettingValueToString(setting.value));
     out.Append("\n");
   }
 
