@@ -39,37 +39,6 @@ protocol ChannelControl {
     GetTarget() -> (string:128 channel);
 };
 
-/// Read and write A/B channel data, the data is not authenticated or encrypted by this API.
-/// The format of the data is specific to the caller, and they should be authenticating the
-/// data themselves and parsing it with extreme care.
-[Discoverable]
-protocol ChannelWriter {
-    /// Get the data blob for the currently running slot.
-    ///
-    /// - response `slot` the currently running slot
-    /// - response `data_blob` the data blob (if it exists) for the current slot.
-    GetChannelData() -> (Slot slot, vector<uint8>? data_blob);
-
-    /// Set a new data blob for the given slot.
-    ///
-    /// + request `slot` the slot to set the data for (could be currently running, could be
-    ///     the ‘other’ slot on a two-slot device).
-    /// + request `data_blob` the data blob to write for the given slot.  Providing too
-    ///     large of a data blob will result in failure.
-    /// * error [`SetChannelDataError`].
-    SetChannelData(Slot slot, vector<uint8> data_blob) -> () error SetChannelDataError;
-};
-
-/// The list of valid update slots.
-enum Slot {
-    A = 1;
-    B = 2;
-};
-
-enum SetChannelDataError {
-    FAILED = 1;
-};
-
 [Discoverable]
 protocol Manager {
     /// Immediately check for an update.
