@@ -39,7 +39,6 @@ zx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width) {
   }
 
   outpd(kPciConfigAddr, (addr & ~0x3) | kPciCfgEnable);
-  ;
   uint32_t tmp_val = LE32(inpd(kPciConfigData));
   uint32_t width_mask = WidthMask(width);
 
@@ -89,7 +88,6 @@ zx_status_t PioCfgRead(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset, u
 
 zx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width) {
   return ZX_ERR_NOT_SUPPORTED;
-  ;
 }
 
 zx_status_t PioCfgWrite(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset, uint32_t val,

@@ -357,7 +357,6 @@ void pc_resume_debug(void) {
 static char* debug_platform_tx_FIFO_bytes(const char* str, size_t* len, bool* copied_CR,
                                           size_t* wrote_bytes, bool map_NL) {
   size_t i, copy_bytes;
-  ;
   char* s = (char*)str;
 
   copy_bytes = MIN(uart_fifo_depth, *len);

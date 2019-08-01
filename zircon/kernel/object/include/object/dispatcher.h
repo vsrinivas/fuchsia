@@ -111,7 +111,6 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
 
   uint32_t current_handle_count() const {
     return handle_count_.load(ktl::memory_order_seq_cst);
-    ;
   }
 
   using ObserverList = fbl::DoublyLinkedList<StateObserver*, StateObserver::ObserverListTraits>;
