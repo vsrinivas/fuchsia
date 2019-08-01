@@ -16,15 +16,19 @@
 #     - Type: list(label)
 #
 #   * data_keys
-#     - Required: See generated_file().  The metadata collected be all
+#     - Required: See generated_file().  The metadata collected must be all
 #       path strings relative to $root_build_dir.
 #     - Type: list(string)
 #
-#   deps
+#   * walk_keys
+#     - Optional: See generated_file().
+#     - Type: list(string)
+#
+#   * deps
 #     - Required: The $data_keys metadata is collected from these targets.
 #     - Type: list(label)
 #
-#   output_dir
+#   * output_dir
 #     - Optional: Directory to copy (actually hard-link) files into.
 #     - Type: path
 #     - Default: "$root_build_dir/$target_name"
@@ -41,8 +45,12 @@ template("copied_files_dir") {
       rspfile,
     ]
     output_conversion = "list lines"
-    data_keys = invoker.data_keys
-    forward_variables_from(invoker, [ "deps" ])
+    forward_variables_from(invoker,
+                           [
+                             "data_keys",
+                             "deps",
+                             "walk_keys",
+                           ])
   }
 
   action(main_target) {

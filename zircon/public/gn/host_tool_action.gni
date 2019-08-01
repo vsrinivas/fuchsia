@@ -112,6 +112,10 @@ template("_host_tool_action_target") {
     }
 
     metadata = {
+      # This can be used to prune metadata walks that want to treat
+      # any sort of action target as an opaque atom.
+      action_barrier = []
+
       # Never follow the deps to find link outputs from invoker.tool.
       # TODO: Maybe should still follow invoker.deps?
       link_barrier = []

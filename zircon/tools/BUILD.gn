@@ -16,6 +16,7 @@ foreach(host, standard_build_hosts) {
   copied_files_dir(_tools_target) {
     testonly = true
     data_keys = [ "tool_executables" ]
+    walk_keys = [ "action_barrier" ]
     deps = [
       ":$_tools_target.redirect",
     ]
