@@ -4,13 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/cmdline.h>
 #include <lib/userabi/vdso-constants.h>
 #include <lib/userabi/vdso.h>
 #include <platform.h>
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
-#include <kernel/cmdline.h>
 #include <object/handle.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>

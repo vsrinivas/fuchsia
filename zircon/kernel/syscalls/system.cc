@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
+#include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <mexec.h>
 #include <platform.h>
@@ -19,7 +20,6 @@
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <dev/interrupt.h>
-#include <kernel/cmdline.h>
 #include <kernel/mp.h>
 #include <kernel/range_check.h>
 #include <kernel/thread.h>

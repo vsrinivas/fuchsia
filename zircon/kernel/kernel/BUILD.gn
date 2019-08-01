@@ -7,7 +7,6 @@ import("$zx/kernel/params.gni")
 source_set("kernel") {
   sources = [
     "brwlock.cc",
-    "cmdline.cc",
     "deadline.cc",
     "debug.cc",
     "dpc.cc",
@@ -32,6 +31,7 @@ source_set("kernel") {
   deps = [
     ":tests",
     "$zx/kernel/dev/interrupt",
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/fbl",

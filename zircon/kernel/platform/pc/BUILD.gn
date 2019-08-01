@@ -25,6 +25,7 @@ library("pc") {
     "$zx/kernel/dev/pcie",
     "$zx/kernel/lib/acpi_tables",
     "$zx/kernel/lib/cbuf",
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/efi",
     "$zx/kernel/lib/fbl",

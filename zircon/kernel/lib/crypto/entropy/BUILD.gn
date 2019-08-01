@@ -12,6 +12,7 @@ source_set("entropy") {
   ]
   deps = [
     "$zx/kernel/dev/hw_rng",
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/crypto:headers",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/unittest",

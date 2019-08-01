@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/cmdline.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
@@ -14,7 +15,6 @@
 #include <zircon/types.h>
 
 #include <dev/hw_rng.h>
-#include <kernel/cmdline.h>
 #include <lk/init.h>
 #include <vm/vm_object_paged.h>
 

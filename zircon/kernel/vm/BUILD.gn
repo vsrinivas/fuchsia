@@ -28,6 +28,7 @@ library("vm") {
   deps = [
     # TODO: testonly
     ":tests",
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/fbl",

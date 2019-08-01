@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_CMDLINE_H_
-#define ZIRCON_KERNEL_INCLUDE_KERNEL_CMDLINE_H_
+#ifndef ZIRCON_KERNEL_LIB_CMDLINE_INCLUDE_LIB_CMDLINE_H_
+#define ZIRCON_KERNEL_LIB_CMDLINE_INCLUDE_LIB_CMDLINE_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -78,4 +78,4 @@ class Cmdline {
 
 extern Cmdline gCmdline;
 
-#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_CMDLINE_H_
+#endif  // ZIRCON_KERNEL_LIB_CMDLINE_INCLUDE_LIB_CMDLINE_H_

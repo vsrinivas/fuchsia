@@ -22,6 +22,7 @@ source_set("ktrace") {
   deps = [
     ":ktrace-info",
     "$zx/kernel/hypervisor",
+    "$zx/kernel/lib/cmdline",
     "$zx/system/ulib/zircon-internal",
   ]
   public_configs = [ ":config" ]

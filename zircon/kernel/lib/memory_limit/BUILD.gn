@@ -8,6 +8,7 @@ library("memory_limit") {
     "memory_limit.cc",
   ]
   deps = [
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/fbl",
     "$zx/system/ulib/pretty",
   ]

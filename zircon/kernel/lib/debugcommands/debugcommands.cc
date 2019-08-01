@@ -8,6 +8,7 @@
 #include <arch.h>
 #include <ctype.h>
 #include <debug.h>
+#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <list.h>
 #include <platform.h>
@@ -18,7 +19,6 @@
 #include <zircon/types.h>
 
 #include <arch/ops.h>
-#include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <platform/debug.h>
 #include <vm/pmm.h>

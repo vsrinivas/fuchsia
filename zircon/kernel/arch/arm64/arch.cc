@@ -9,6 +9,7 @@
 #include <bits.h>
 #include <debug.h>
 #include <inttypes.h>
+#include <lib/cmdline.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,6 @@
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <kernel/atomic.h>
-#include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <lk/init.h>
 #include <lk/main.h>

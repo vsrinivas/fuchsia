@@ -8,6 +8,7 @@
 #include <arch.h>
 #include <debug.h>
 #include <err.h>
+#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/debuglog.h>
 #include <lib/memory_limit.h>
@@ -32,7 +33,6 @@
 #include <dev/uart.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
-#include <kernel/cmdline.h>
 #include <kernel/dpc.h>
 #include <kernel/spinlock.h>
 #include <lk/init.h>

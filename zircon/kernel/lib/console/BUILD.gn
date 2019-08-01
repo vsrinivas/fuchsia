@@ -7,4 +7,7 @@ library("console") {
   sources = [
     "console.cc",
   ]
+  deps = [
+    "$zx/kernel/lib/cmdline",
+  ]
 }

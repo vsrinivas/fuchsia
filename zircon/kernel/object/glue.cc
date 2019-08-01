@@ -10,10 +10,10 @@
 // * Helper functions
 
 #include <inttypes.h>
+#include <lib/cmdline.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
-#include <kernel/cmdline.h>
 #include <lk/init.h>
 #include <object/diagnostics.h>
 #include <object/event_dispatcher.h>

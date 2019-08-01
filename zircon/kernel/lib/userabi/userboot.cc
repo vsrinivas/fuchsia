@@ -6,6 +6,7 @@
 
 #include <err.h>
 #include <inttypes.h>
+#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <lib/elf-psabi/sp.h>
@@ -23,7 +24,6 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <kernel/cmdline.h>
 #include <lk/init.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>

@@ -6,6 +6,7 @@
 
 #include <debug.h>
 #include <err.h>
+#include <lib/cmdline.h>
 #include <lib/ktrace.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -16,7 +17,6 @@
 #include <arch/user_copy.h>
 #include <fbl/alloc_checker.h>
 #include <hypervisor/ktrace.h>
-#include <kernel/cmdline.h>
 #include <lk/init.h>
 #include <object/thread_dispatcher.h>
 #include <vm/vm_aspace.h>

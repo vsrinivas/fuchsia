@@ -4,12 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "kernel/cmdline.h"
+#include "lib/cmdline.h"
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 
 Cmdline gCmdline;
 
@@ -18,7 +18,7 @@ void Cmdline::Append(const char* str) {
     return;
   }
 
-  // Save room for the last string's terminatorand an extra terminator.
+  // Save room for the last string's terminator and an extra terminator.
   const size_t limit = kCmdlineMax - 2;
   size_t i = length_;
   bool found_equal = false;
@@ -26,7 +26,7 @@ void Cmdline::Append(const char* str) {
     unsigned c = *str++;
     if (c == 0) {
       // Finish an in-progress argument.
-      if (data_[i - 1] != 0) {
+      if (i > 0 && data_[i - 1] != 0) {
         if (!found_equal) {
           data_[i++] = '=';
         }
@@ -68,12 +68,12 @@ void Cmdline::Append(const char* str) {
   }
 
   // If we finished the loop because we hit the limit, add a terminator if it's missing.
-  if (data_[i - 1] != 0) {
+  if (i > 0 && data_[i - 1] != 0) {
     data_[i++] = 0;
   }
 
   length_ = i;
-  DEBUG_ASSERT(length_ < kCmdlineMax);
+  ZX_DEBUG_ASSERT(length_ < kCmdlineMax);
 }
 
 const char* Cmdline::GetString(const char* key) const {

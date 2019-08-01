@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/cmdline.h>
 #include <lib/memory_limit.h>
 #include <platform.h>
 #include <stdio.h>
@@ -14,7 +15,6 @@
 #include <trace.h>
 
 #include <fbl/algorithm.h>
-#include <kernel/cmdline.h>
 #include <kernel/range_check.h>
 #include <pretty/sizes.h>
 #include <vm/bootreserve.h>

@@ -9,6 +9,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/cmdline.h>
 #include <lib/fixed_point.h>
 #include <platform.h>
 #include <pow2.h>
@@ -25,7 +26,6 @@
 #include <arch/x86/timer_freq.h>
 #include <dev/interrupt.h>
 #include <fbl/algorithm.h>
-#include <kernel/cmdline.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <ktl/limits.h>

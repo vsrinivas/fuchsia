@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/cmdline.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
 #include <lib/userabi/vdso.h>
@@ -20,7 +21,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <vm/fault.h>

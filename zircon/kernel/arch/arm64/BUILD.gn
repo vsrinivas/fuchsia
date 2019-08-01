@@ -91,6 +91,7 @@ if (current_toolchain == default_toolchain) {
     deps = [
       "$zx/kernel/dev/interrupt/arm_gic/common",
       "$zx/kernel/dev/iommu/dummy",
+      "$zx/kernel/lib/cmdline",
       "$zx/kernel/lib/console",
       "$zx/kernel/lib/counters",
       "$zx/kernel/lib/crashlog",

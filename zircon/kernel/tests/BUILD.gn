@@ -11,7 +11,6 @@ source_set("tests") {
     "brwlock_tests.cc",
     "cache_tests.cc",
     "clock_tests.cc",
-    "cmdline_tests.cc",
     "dpc_tests.cc",
     "fibo.cc",
     "lock_dep_tests.cc",

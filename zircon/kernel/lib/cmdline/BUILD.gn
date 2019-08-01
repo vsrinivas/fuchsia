@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("debuglog") {
-  kernel = true
-  sources = [
-    "debuglog.cc",
+library("cmdline") {
+  # For use only in the kernel and its own unit tests.
+  visibility = [
+    "$zx/kernel/*",
+    "$zx/system/utest/kernel-cmdline/*",
   ]
-  deps = [
-    "$zx/kernel/dev/udisplay:headers",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/crashlog",
-    "$zx/kernel/lib/version",
+  kernel = true
+  static = true
+  sources = [
+    "cmdline.cc",
   ]
 }

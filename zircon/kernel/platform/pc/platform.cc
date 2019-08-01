@@ -23,6 +23,7 @@
 #include <err.h>
 #include <lib/acpi_tables.h>
 #include <lib/cksum.h>
+#include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <lib/system-topology.h>
 #include <mexec.h>
@@ -37,7 +38,6 @@
 #include <dev/uart.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/vector.h>
-#include <kernel/cmdline.h>
 #include <libzbi/zbi-cpp.h>
 #include <lk/init.h>
 #include <platform/console.h>

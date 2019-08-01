@@ -16,6 +16,7 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <lib/cmdline.h>
 #include <lib/gfx.h>
 #include <lib/gfxconsole.h>
 #include <lib/io.h>
@@ -23,7 +24,6 @@
 #include <string.h>
 
 #include <dev/display.h>
-#include <kernel/cmdline.h>
 
 #define TEXT_COLOR 0xffffffff
 #define BACK_COLOR 0xff000000

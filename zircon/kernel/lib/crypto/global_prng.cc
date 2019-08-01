@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <err.h>
+#include <lib/cmdline.h>
 #include <lib/crypto/cryptolib.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
@@ -22,7 +23,6 @@
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
-#include <kernel/cmdline.h>
 #include <kernel/mutex.h>
 #include <lk/init.h>
 

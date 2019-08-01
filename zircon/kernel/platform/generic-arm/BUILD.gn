@@ -29,6 +29,7 @@ source_set("generic-arm") {
     "$zx/kernel/dev/uart/nxp-imx",
     "$zx/kernel/dev/uart/pl011",
     "$zx/kernel/lib/cbuf",
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/lockdep",

@@ -115,6 +115,7 @@ if (is_kernel) {
       ":dispatch",
       ":syscall-abi",
       "$zx/kernel/dev/udisplay",
+      "$zx/kernel/lib/cmdline",
       "$zx/kernel/lib/console",
       "$zx/kernel/lib/counters",
       "$zx/kernel/lib/crypto",

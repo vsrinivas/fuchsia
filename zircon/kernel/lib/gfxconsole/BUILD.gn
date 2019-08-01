@@ -8,6 +8,7 @@ library("gfxconsole") {
     "gfxconsole.cc",
   ]
   deps = [
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/gfx",
   ]
   public_deps = [

@@ -7,6 +7,7 @@ source_set("debugcommands") {
     "debugcommands.cc",
   ]
   deps = [
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
   ]
 }

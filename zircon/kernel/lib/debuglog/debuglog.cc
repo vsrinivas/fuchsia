@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <lib/cmdline.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/io.h>
@@ -15,7 +16,6 @@
 #include <zircon/types.h>
 
 #include <dev/udisplay.h>
-#include <kernel/cmdline.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>

@@ -9,6 +9,7 @@
 
 #include <bits.h>
 #include <lib/cbuf.h>
+#include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <platform.h>
 #include <reg.h>
@@ -23,7 +24,6 @@
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <dev/interrupt.h>
-#include <kernel/cmdline.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
