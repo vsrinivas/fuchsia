@@ -276,6 +276,17 @@ static bool TestDetach() {
   END_TEST;
 }
 
+static bool TestEmptyNameSucceeds() {
+  BEGIN_TEST;
+  zx_handle_t thread;
+  ASSERT_EQ(zx_thread_create(zx_process_self(), "", 0, 0, &thread), ZX_OK);
+  static char thread_name[ZX_MAX_NAME_LEN];
+  ASSERT_EQ(zx_object_get_property(thread, ZX_PROP_NAME, thread_name, ZX_MAX_NAME_LEN), ZX_OK);
+  ASSERT_EQ(strcmp(thread_name, ""), 0);
+  ASSERT_EQ(zx_handle_close(thread), ZX_OK);
+  END_TEST;
+}
+
 static bool TestLongNameSucceeds() {
   BEGIN_TEST;
   // Creating a thread with a super long name should succeed.
@@ -286,6 +297,11 @@ static bool TestLongNameSucceeds() {
 
   zxr_thread_t thread;
   ASSERT_EQ(zxr_thread_create(zx_process_self(), long_name, false, &thread), ZX_OK);
+  static char thread_name[ZX_MAX_NAME_LEN];
+  ASSERT_EQ(zx_object_get_property(zxr_thread_get_handle(&thread), ZX_PROP_NAME, thread_name,
+                                   ZX_MAX_NAME_LEN),
+            ZX_OK);
+  ASSERT_EQ(strncmp(thread_name, long_name, ZX_MAX_NAME_LEN - 1), 0);
   zxr_thread_destroy(&thread);
   END_TEST;
 }
@@ -1750,6 +1766,7 @@ BEGIN_TEST_CASE(threads_tests)
 RUN_TEST(TestBasics)
 RUN_TEST(TestInvalidRights)
 RUN_TEST(TestDetach)
+RUN_TEST(TestEmptyNameSucceeds)
 RUN_TEST(TestLongNameSucceeds)
 RUN_TEST(TestThreadStartOnInitialThread)
 RUN_TEST(TestThreadStartWithZeroInstructionPointer)

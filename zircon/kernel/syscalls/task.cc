@@ -48,7 +48,10 @@ constexpr size_t kPolicyBasicInlineCount = 8;
 // TODO(dbort): If anyone else needs this, move it into user_ptr.
 zx_status_t copy_user_string(const user_in_ptr<const char>& src, size_t src_len, char* buf,
                              size_t buf_len, fbl::StringPiece* sp) {
-  if (!src || src_len > buf_len) {
+  // Disallow 0 buf_len (since we are copying into it), but allow 0 src_len (to allow
+  // "", src_len doesn't include '\0'). With the check for buf_len, we won't underflow
+  // src_len below. Also, 0 src_len is valid input (for "" src strings).
+  if (!src || buf_len == 0 || src_len > buf_len) {
     return ZX_ERR_INVALID_ARGS;
   }
   zx_status_t result = src.copy_array_from_user(buf, src_len);

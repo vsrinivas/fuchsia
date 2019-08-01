@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <cassert>
-#include <climits>
+#include <lib/test-exceptions/exception-catcher.h>
+#include <lib/zx/job.h>
+#include <lib/zx/process.h>
 #include <threads.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -13,11 +13,11 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
-#include <lib/test-exceptions/exception-catcher.h>
-#include <lib/zx/job.h>
-#include <lib/zx/process.h>
-#include <mini-process/mini-process.h>
+#include <atomic>
+#include <cassert>
+#include <climits>
 
+#include <mini-process/mini-process.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -29,6 +29,40 @@ constexpr auto kThreadRegister = &zx_thread_state_general_regs_t::fs_base;
 #endif
 
 const zx_time_t kTimeoutNs = ZX_MSEC(250);
+
+bool long_name_succeeds() {
+  BEGIN_TEST;
+  // Creating a process with a super long name should succeed.
+  static const char long_name[] =
+      "0123456789012345678901234567890123456789"
+      "0123456789012345678901234567890123456789";
+  ASSERT_GT(strlen(long_name), (size_t)ZX_MAX_NAME_LEN - 1, "too short to truncate");
+
+  zx_handle_t proc;
+  zx_handle_t vmar;
+  ASSERT_EQ(zx_process_create(zx_job_default(), long_name, sizeof(long_name), 0, &proc, &vmar),
+            ZX_OK);
+  static char proc_name[ZX_MAX_NAME_LEN];
+  ASSERT_EQ(zx_object_get_property(proc, ZX_PROP_NAME, proc_name, ZX_MAX_NAME_LEN), ZX_OK);
+  ASSERT_EQ(strncmp(proc_name, long_name, ZX_MAX_NAME_LEN - 1), 0);
+  ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
+  ASSERT_EQ(zx_handle_close(proc), ZX_OK);
+  END_TEST;
+}
+
+bool empty_name_succeeds() {
+  BEGIN_TEST;
+  // Creating a process with "" name, 0 name_len should succeed.
+  zx_handle_t proc;
+  zx_handle_t vmar;
+  ASSERT_EQ(zx_process_create(zx_job_default(), "", 0, 0, &proc, &vmar), ZX_OK);
+  static char proc_name[ZX_MAX_NAME_LEN];
+  ASSERT_EQ(zx_object_get_property(proc, ZX_PROP_NAME, proc_name, ZX_MAX_NAME_LEN), ZX_OK);
+  ASSERT_EQ(strcmp(proc_name, ""), 0);
+  ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
+  ASSERT_EQ(zx_handle_close(proc), ZX_OK);
+  END_TEST;
+}
 
 bool mini_process_sanity() {
   BEGIN_TEST;
@@ -929,6 +963,8 @@ bool process_wait_async_cancel_self() {
 }  // namespace
 
 BEGIN_TEST_CASE(process_tests)
+RUN_TEST(long_name_succeeds);
+RUN_TEST(empty_name_succeeds);
 RUN_TEST(mini_process_sanity);
 RUN_TEST(process_start_fail);
 RUN_TEST(process_start_no_handle);
