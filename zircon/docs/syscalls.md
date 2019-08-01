@@ -71,6 +71,7 @@
 ## Events and Event Pairs
 + [event_create](syscalls/event_create.md) - create an event
 + [eventpair_create](syscalls/eventpair_create.md) - create a connected pair of events
++ [system_get_event](syscalls/system_get_event.md) - retrieve a handle to a system event
 
 ## Ports
 + [port_create](syscalls/port_create.md) - create a port
@@ -136,8 +137,10 @@
 + [vcpu_interrupt](syscalls/vcpu_interrupt.md) - raise an interrupt on a virtual cpu
 + [vcpu_read_state](syscalls/vcpu_read_state.md) - read state from a virtual cpu
 + [vcpu_write_state](syscalls/vcpu_write_state.md) - write state to a virtual cpu
++ [interrupt_bind_vcpu](syscalls/interrupt_bind_vcpu.md) - Bind an interrupt object to a VCPU
 
 ## Global system information
++ [system_get_dcache_line_size](syscalls/system_get_dcache_line_size.md)
 + [system_get_features](syscalls/system_get_features.md) - get hardware-specific features
 + [system_get_num_cpus](syscalls/system_get_num_cpus.md) - get number of CPUs
 + [system_get_physmem](syscalls/system_get_physmem.md) - get physical memory size
@@ -149,6 +152,7 @@
 + [debuglog_read](syscalls/debuglog_read.md) - read log entries from debuglog
 + [debug_read](syscalls/debug_read.md) - TODO(ZX-3106)
 + [debug_write](syscalls/debug_write.md) - TODO(ZX-3106)
++ [debug_send_command](syscalls/debug_send_command.md) - TODO(ZX-3106)
 
 ## Multi-function
 + [vmar_unmap_handle_close_thread_exit](syscalls/vmar_unmap_handle_close_thread_exit.md) - three-in-one
@@ -157,6 +161,7 @@
 ## System
 + [system_mexec](syscalls/system_mexec.md) - Soft reboot the system with a new kernel and bootimage
 + [system_mexec_payload_get](syscalls/system_mexec_payload_get.md) - Return a ZBI containing ZBI entries necessary to boot this system
++ [system_powerctl](syscalls/system_powerctl.md)
 
 ## DDK
 + [bti_create](syscalls/bti_create.md) - create a new bus transaction initiator
@@ -173,3 +178,42 @@
 + [pmt_unpin](syscalls/pmt_unpin.md) - unpin pages and revoke device access to them
 + [resource_create](syscalls/resource_create.md) - create a resource object
 + [smc_call](syscalls/smc_call.md) - Make an SMC call from user space
+
+## Display drivers
++ [framebuffer_get_info](syscalls/framebuffer_get_info.md)
++ [framebugger_set_range](syscalls/framebuffer_set_range.md)
+
+## Tracing
++ [ktrace_control](syscalls/ktrace_control.md)
++ [ktrace_read](syscalls/ktrace_read.md)
++ [ktrace_write](syscalls/ktrace_write.md)
++ [mtrace_control](syscalls/mtrace_control.md)
+
+## Others/Work in progress
++ [pc_firmware_tables](syscalls/pc_firmware_tables.md)
++ [pci_add_subtract_io_range](syscalls/pci_add_subtract_io_range.md)
++ [pci_cfg_pio_rw](syscalls/pci_cfg_pio_rw.md)
++ [pci_config_read](syscalls/pci_config_read.md)
++ [pci_config_write](syscalls/pci_config_write.md)
++ [pci_enable_bus_master](syscalls/pci_enable_bus_master.md)
++ [pci_get_bar](syscalls/pci_get_bar.md)
++ [pci_get_nth_device](syscalls/pci_get_nth_device.md)
++ [pci_init](syscalls/pci_init.md)
++ [pci_map_interrupt](syscalls/pci_map_interrupt.md)
++ [pci_query_irq_mode](syscalls/pci_query_irq_mode.md)
++ [pci_reset_device](syscalls/pci_reset_device.md)
++ [pci_set_irq_mode](syscalls/pci_set_irq_mode.md)
+
+
++ [syscall_test_0](syscalls/syscall_test_0.md)
++ [syscall_test_1](syscalls/syscall_test_1.md)
++ [syscall_test_2](syscalls/syscall_test_2.md)
++ [syscall_test_3](syscalls/syscall_test_3.md)
++ [syscall_test_4](syscalls/syscall_test_4.md)
++ [syscall_test_5](syscalls/syscall_test_5.md)
++ [syscall_test_6](syscalls/syscall_test_6.md)
++ [syscall_test_7](syscalls/syscall_test_7.md)
++ [syscall_test_8](syscalls/syscall_test_8.md)
++ [syscall_test_wrapper](syscalls/syscall_test_wrapper.md)
+
+

@@ -255,7 +255,6 @@ FBL provides:
 
 - utility code
   - [basic algorithms](../system/ulib/fbl/include/fbl/algorithm.h)
-  - [atomics](../system/ulib/fbl/include/fbl/atomic.h)
   - [alloc checking new](../system/ulib/fbl/include/fbl/alloc_checker.h)
 - allocators
   - [slab allocation](../system/ulib/fbl/include/fbl/slab_allocator.h)

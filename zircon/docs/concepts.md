@@ -38,8 +38,8 @@ library that the Zircon kernel provides to userspace, better known as the
 They are C ELF ABI functions of the form `zx_noun_verb()` or
 `zx_noun_verb_direct-object()`.
 
-The system calls are defined by [syscalls.abigen](../system/public/zircon/syscalls.abigen)
-and processed by the [abigen](../tools/abigen/) tool into include files and glue
+The system calls are defined by [syscalls.banjo](/zircon/system/public/zircon/syscalls.banjo).
+The output is processed by the [abigen](../tools/abigen/) tool into include files and glue
 code in libzircon and the kernel's libsyscalls.
 
 

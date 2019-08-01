@@ -51,7 +51,7 @@ for writing drivers in Fuchsia.  It allows authors to automatically supply the
 [ulib/ddk](/zircon/system/ulib/ddk) function pointers and callbacks by using templatized mix-ins.  In the
 case of zxcrypt, the [device](/zircon/system/dev/block/zxcrypt/device.h) is "Messageable",
 "IotxnQueueable", "GetSizable", "Unbindable", and implements the methods listed in DDKTL's
-[BlockProtocol](/zircon/system/ulib/ddktl/include/ddktl/protocol/block.h).
+[BlockProtocol](/zircon/system/banjo/ddk.protocol.block/block.banjo).
 
 There are two small pieces of functionality which cannot be written in DDKTL and C++:
 * The driver binding logic, written using the C preprocessor macros of DDK's
@@ -87,11 +87,10 @@ be semantically secure ([IND-CCA2][ind-cca2]) and incorporate the block offset a
 In order to keep the encryption and decryption of data transparent to original I/O requester, the
 workers must copy the data when transforming it.  The I/O request sent through the pipeline is not
 actually the original request, but instead a "shadow" request that encapsulates the original
-request.  These shadows requests are managed by the [Txn](/zircon/system/dev/block/zxcrypt/txn.h) class,
-and allocated from the [Ring](/zircon/system/dev/block/zxcrypt/ring.h) class. The Ring is an enormous,
-yet very sparse, [VMO](concepts.md#shared-memory-virtual-memory-objects-vmos-).
+request.
 
-As shadow requests are needed, they are allocated backed sequentially by pages in the VMO.  When the
+As shadow requests are needed, they are allocated backed sequentially by pages in the
+[VMO](concepts.md#shared-memory-virtual-memory-objects-vmos-).  When the
 worker needs to transform the data it either encrypts data from the original, encapsulated write
 request into the shadow request, or decrypts data from the shadow request into the original,
 encapsulated read request.  As soon as the original request can be handed back to the original
@@ -100,8 +99,7 @@ This ensures no more memory is used than is needed for outstanding I/O requests.
 
 ### Superblock Format
 The key material for encrypting and decrypting the data is referred to as the data key, and is
-stored in a reserved portion of the device called the
-[superblock](/zircon/system/ulib/zxcrypt/include/zxcrypt/superblock.h).  The presence of this superblock
+stored in a reserved portion of the device called the `superblock`. The presence of this superblock
 is critical; without it, it is impossible to recreate the data key and recover the data on the
 device.  As a result, the superblock is copied to multiple locations on the device for redundancy.
 These locations are not visible to zxcrypt block device consumers.  Whenever the zxcrypt driver
@@ -126,7 +124,7 @@ The superblock format is as follows, with each field described in turn:
 * [_HMAC_][hmac]: A keyed digest of the superblock up to this point (including the Reserved field).
 
 The wrap key, wrap [IV][iv], and HMAC key are all derived from a
-[KDF](/zircon/system/ulib/crypto/include/crypto/kdf.h).  This KDF is an [RFC 5869 HKDF][hkdf], which
+[KDF](/zircon/system/ulib/crypto/include/crypto/hkdf.h).  This KDF is an [RFC 5869 HKDF][hkdf], which
 combines the key provided, the "salt" of the instance GUID and a per-use label such as "wrap" or
 "hmac".  The KDF does __NOT__ try to do any rate-limiting.  The KDF mitigates the risk of key reuse,
 as a new random instance salt will lead to new derived keys.  The

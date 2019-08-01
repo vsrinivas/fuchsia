@@ -185,7 +185,7 @@ The interrupt thread should not perform any long-running tasks. For drivers
 that perform lengthy tasks, use a worker thread.
 
 You can signal an interrupt handle with
-[zx_interrupt_signal()](../syscalls/interrupt_signal.md) on slot
+[zx_interrupt_trigger()](../syscalls/interrupt_trigger.md) on slot
 **ZX_INTERRUPT_SLOT_USER** to return from `zx_interrupt_wait()`. This is
 necessary to shut down the interrupt thread during driver clean up.
 
@@ -280,8 +280,9 @@ newly created device.  This approach generally works better for mid-layer
 protocol drivers. It's possible to emulate real hardware with the same
 approach but it may not be as useful.
 
-The functions defined in
-[ddk/protocol/test.h](/zircon/system/ulib/ddk/include/ddk/protocol/test.h) are
+
+The bindings defined in
+[test.banjo](/zircon/system/banjo/ddk.protocol.test/test.banjo) are used
 for testing libraries that run as part of a driver. For an example, refer to
 [system/ulib/ddk/test](/zircon/system/ulib/ddk/test). The test harness for these
 tests is
@@ -299,7 +300,7 @@ instead. For example, the virtual console is implemented by the
 Privileged operations such as `zx_vmo_create_contiguous()` and
 [zx_interrupt_create](../syscalls/interrupt_create.md) require a root resource
 handle. This handle is not available to drivers other than the system driver
-([ACPI](/zircon/system/dev/bus/acpi) on x86 systems and
+([ACPI](/zircon/system/dev/board/x86) on x86 systems and
 [platform](/zircon/system/dev/bus/platform) on ARM systems). A device should
 request its parent to perform such operations for it. Contact the author
 of the parent driver if its protocol does not address this use case.

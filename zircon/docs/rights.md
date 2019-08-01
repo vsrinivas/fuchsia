@@ -26,7 +26,7 @@ default rights for each object type, which can be reduced via
 | **ZX_RIGHT_ENUMERATE**      | Allows enumerating child objects via [`zx_object_get_info()`] and [`zx_object_get_child()`] |
 | **ZX_RIGHT_DESTROY**        | Allows termination of task objects via [`zx_task_kill()`] |
 | **ZX_RIGHT_SET_POLICY**     | Allows policy modification via [`zx_job_set_policy()`] |
-| **ZX_RIGHT_GET_POLICY**     | Allows policy inspection via [`zx_job_get_policy()`]|
+| **ZX_RIGHT_GET_POLICY**     | Allows policy inspection |
 | **ZX_RIGHT_SIGNAL**         | Allows use of [`zx_object_signal()`] |
 | **ZX_RIGHT_SIGNAL_PEER**    | Allows use of [`zx_object_signal_peer()`] |
 | **ZX_RIGHT_WAIT**           | Allows use of [`zx_object_wait_one()`], [`zx_object_wait_many()`], and other waiting primitives |

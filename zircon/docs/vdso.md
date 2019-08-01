@@ -105,10 +105,10 @@ declarations that form the public [system call](syscalls.md) API, and some
 C++ and assembly code used in the implementation of the vDSO.  Both the
 public API and the private interface between the kernel and the vDSO code
 are specified by
-[`<zircon/syscalls.abigen>`](../system/public/zircon/syscalls.abigen),
-which is the input to `abigen`.
+[`syscalls.banjo`](/zircon/system/public/zircon/syscalls.banjo). The output
+of this is processed by `abigen`.
 
-The `syscall` entries in `syscalls.abigen` fall into the following groups,
+The `syscall` entries in `syscalls.banjo` fall into the following groups,
 distinguished by the presence of attributes after the system call name:
 
  * Entries with neither `vdsocall` nor `internal` are the simple cases
