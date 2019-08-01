@@ -17,3 +17,5 @@ toc:
   path: /fuchsia-src/the-book/ui/scenic_resource_lifecycle
 - title: "Units and metrics"
   path: /fuchsia-src/the-book/ui/units_and_metrics
+- title: "Views, bounds, and clipping"
+  path: /fuchsia-src/the-book/ui/view_bounds
