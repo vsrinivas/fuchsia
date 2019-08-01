@@ -63,7 +63,7 @@ impl QmiClient {
     /// Connect a data bearer to a qmi client.
     /// TODO(bwb): support multiple connections
     pub async fn set_data_connection(&self, conn: Connection) {
-        let mut data_conn = await!(self.data_conn.lock());
+        let mut data_conn = self.data_conn.lock().await;
         *data_conn = Some(conn);
     }
 
@@ -89,13 +89,13 @@ impl QmiClient {
             use qmi_protocol::CTL::{GetClientIdReq, GetClientIdResp};
             fx_log_info!("allocating a client ID for service: {}", svc_id.0);
             let resp: QmiResult<GetClientIdResp> =
-                await!(self.send_msg_actual(GetClientIdReq::new(svc_id.0)))?;
+                self.send_msg_actual(GetClientIdReq::new(svc_id.0)).await?;
             let client_id_resp = resp.unwrap(); // TODO from trait for QmiError to QmuxError
             let mut map = self.clients.write();
             assert_eq!(client_id_resp.svc_type, svc_id.0);
             map.insert(svc_id, ClientId(client_id_resp.client_id));
         }
-        Ok(await!(self.send_msg_actual(msg))?)
+        Ok(self.send_msg_actual(msg).await?)
     }
 
     fn get_client_id(&self, svc_id: SvcId) -> ClientId {
@@ -164,12 +164,12 @@ impl QmiClient {
             transport.write(bytes.as_ref(), &mut Vec::new()).map_err(QmuxError::ClientWrite)?
         }
 
-        let resp = await!(QmiResponse {
+        let resp = QmiResponse {
             client_id: client_id,
             svc_id: svc_id,
             tx_id: tx_id,
             transport: Some(self.inner.clone())
-        })?;
+        }.await?;
 
         let buf = std::io::Cursor::new(resp.bytes());
         let decoded = D::from_bytes(buf);
@@ -199,11 +199,11 @@ mod tests {
         // should stall without completing.
         let modem = Arc::new(Mutex::new(crate::QmiModem::new()));
         let sender = async {
-            let modem_lock = await!(modem.lock());
-            let client = await!(modem_lock.create_client());
+            let modem_lock = modem.lock().await;
+            let client = modem_lock.create_client().await;
             client
         };
-        await!(sender);
+        sender.await;
     }
 
     #[test]
@@ -223,15 +223,15 @@ mod tests {
             // hacky way of getting around two step client/lock requirements
             loop {
                 if let Some(modem_lock) = modem.try_lock() {
-                    let client = await!(modem_lock.create_client());
+                    let client = modem_lock.create_client().await;
                     // don't care about result, timeout
-                    let _: Result<WDA::SetDataFormatResp, QmiError> = await!(client
+                    let _: Result<WDA::SetDataFormatResp, QmiError> = client
                         .send_msg(WDA::SetDataFormatReq::new(None, Some(0x01)))
                         .map_err(|e| io::Error::new(
                             io::ErrorKind::Other,
                             &*format!("fidl error: {:?}", e)
                         ))
-                        .on_timeout(30.millis().after_now(), || Ok(Err(QmiError::Aborted))))
+                        .on_timeout(30.millis().after_now(), || Ok(Err(QmiError::Aborted))).await
                     .unwrap();
                 }
                 return;
@@ -239,12 +239,12 @@ mod tests {
         };
 
         let receiver = async {
-            await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
+            server.recv_msg(&mut buffer).await.expect("failed to recv msg");
             assert_eq!(EXPECTED, buffer.bytes());
         };
 
         let late_connect = async {
-            let mut modem_lock = await!(modem.lock());
+            let mut modem_lock = modem.lock().await;
             modem_lock.connect_transport(client_end.into());
         };
 
@@ -268,7 +268,7 @@ mod tests {
         let mut buffer = zx::MessageBuf::new();
 
         let receiver = async {
-            await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
+            server.recv_msg(&mut buffer).await.expect("failed to recv msg");
             assert_eq!(EXPECTED, buffer.bytes());
             let bytes =
                 &[1, 15, 0, 0, 0, 0, 1, 1, 34, 0, 12, 0, 0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 42, 6];
@@ -279,10 +279,10 @@ mod tests {
             .on_timeout(1000.millis().after_now(), || panic!("did not receiver message in time!"));
 
         let sender = async {
-            let modem_lock = await!(modem.lock());
-            let client = await!(modem_lock.create_client());
+            let modem_lock = modem.lock().await;
+            let client = modem_lock.create_client().await;
             let resp: QmiResult<CTL::GetClientIdResp> =
-                await!(client.send_msg_actual(CTL::GetClientIdReq::new(0x42))).unwrap();
+                client.send_msg_actual(CTL::GetClientIdReq::new(0x42)).await.unwrap();
             let msg = resp.unwrap();
             assert_eq!(msg.svc_type, 42);
             assert_eq!(msg.client_id, 6);

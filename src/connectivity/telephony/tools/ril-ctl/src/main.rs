@@ -12,7 +12,7 @@
 //! Ex: ril-ctl -d /dev/class/qmi-usb-transport/000
 //!
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     crate::commands::{Cmd, ReplControl},
@@ -92,7 +92,7 @@ async fn get_imei<'a>(
     _args: &'a [&'a str],
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
-    match await!(ril_modem.get_device_identity())? {
+    match ril_modem.get_device_identity().await? {
         Ok(imei) => Ok(imei),
         Err(_state) => Err(format_err!("error")),
     }
@@ -102,9 +102,9 @@ async fn connect<'a>(
     args: &'a [&'a str],
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<(NetworkSettings, NetworkConnectionProxy), Error> {
-    match await!(ril_modem.start_network(args[0]))? {
+    match ril_modem.start_network(args[0]).await? {
         Ok(iface) => {
-            let settings = await!(ril_modem.get_network_settings())?;
+            let settings = ril_modem.get_network_settings().await?;
             if let Ok(settings) = settings {
                 return Ok((settings, iface.into_proxy()?));
             }
@@ -118,7 +118,7 @@ async fn get_power<'a>(
     _args: &'a [&'a str],
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
-    match await!(ril_modem.radio_power_status())? {
+    match ril_modem.radio_power_status().await? {
         Ok(state) => match state {
             RadioPowerState::On => Ok(String::from("radio on")),
             RadioPowerState::Off => Ok(String::from("radio off")),
@@ -131,7 +131,7 @@ async fn get_signal<'a>(
     _args: &'a [&'a str],
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
-    match await!(ril_modem.get_signal_strength())? {
+    match ril_modem.get_signal_strength().await? {
         Ok(strength) => Ok(format!("{} dBm", strength)),
         Err(_e) => Err(format_err!("error")),
     }
@@ -152,7 +152,7 @@ async fn handle_cmd<'a>(
         let cmd = raw_cmd.parse();
         let res = match cmd {
             Ok(Cmd::Connect) => {
-                let (settings, iface) = await!(connect(args, &ril_modem))?;
+                let (settings, iface) = connect(args, &ril_modem).await?;
                 {
                     state.lock().net_conn = Some(iface);
                 }
@@ -164,13 +164,13 @@ async fn handle_cmd<'a>(
                     Some(ref file_ref) => {
                         // Set up the netstack.
                         // TODO not hardcode to iface 3
-                        await!(qmi::set_network_status(file_ref, true))?;
+                        qmi::set_network_status(file_ref, true).await?;
                         let netstack = connect_to_service::<StackMarker>()?;
                         let old_netstack = connect_to_service::<NetstackMarker>()?;
-                        await!(old_netstack.set_dhcp_client_status(3, false))?;
-                        await!(netstack.add_interface_address(3, &mut u32_to_netaddr(settings.ip_v4_addr, settings.ip_v4_subnet)?))?;
+                        old_netstack.set_dhcp_client_status(3, false).await?;
+                        netstack.add_interface_address(3, &mut u32_to_netaddr(settings.ip_v4_addr, settings.ip_v4_subnet)?).await?;
                         let ip = settings.ip_v4_addr;
-                        await!(netstack.add_forwarding_entry(&mut ForwardingEntry {
+                        netstack.add_forwarding_entry(&mut ForwardingEntry {
                             destination: ForwardingDestination::NextHop(IpAddress::Ipv4(Ipv4Address{
                                 addr: [
                                     ((settings.ip_v4_gateway >> 24) & 0xFF) as u8,
@@ -186,15 +186,15 @@ async fn handle_cmd<'a>(
                                         (ip & 0xFF) as u8]}),
                                 prefix_len: u32_to_cidr(settings.ip_v4_subnet)?
                             },
-                        }))?;
+                        }).await?;
                         Ok("connected".to_string())
                     }
                     None => Ok("set up connection on radio. Did not configure ethernet device, exclusive access required".to_string())
                 }
             }
-            Ok(Cmd::PowerStatus) => await!(get_power(args, &ril_modem)),
-            Ok(Cmd::SignalStrength) => await!(get_signal(args, &ril_modem)),
-            Ok(Cmd::Imei) => await!(get_imei(args, &ril_modem)),
+            Ok(Cmd::PowerStatus) => get_power(args, &ril_modem).await,
+            Ok(Cmd::SignalStrength) => get_signal(args, &ril_modem).await,
+            Ok(Cmd::Imei) => get_imei(args, &ril_modem).await,
             Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
             Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),
             Err(_) => Ok(format!("\"{}\" is not a valid command", raw_cmd)),
@@ -235,11 +235,11 @@ pub fn main() -> Result<(), Error> {
             Some(device) => {
                 eprintln!("Connecting with exclusive access to {}..", device.display());
                 let file = File::open(device)?;
-                let chan = await!(qmi::connect_transport_device(&file))?;
+                let chan = qmi::connect_transport_device(&file).await?;
                 app = launch(&launcher, RIL_URI.to_string(), None)
                     .context("Failed to launch ril-qmi service")?;
                 let ril_modem_setup = app.connect_to_service::<SetupMarker>()?;
-                let resp = await!(ril_modem_setup.connect_transport(chan))?;
+                let resp = ril_modem_setup.connect_transport(chan).await?;
                 let ril_modem = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
                 if resp.is_err() {
                     return Err(format_err!(
@@ -251,7 +251,7 @@ pub fn main() -> Result<(), Error> {
             None => {
                 eprintln!("Connecting through telephony service...");
                 telephony_svc = connect_to_service::<ManagerMarker>()?;
-                let resp = await!(telephony_svc.get_ril_handle(server))?;
+                let resp = telephony_svc.get_ril_handle(server).await?;
                 if !resp {
                     return Err(format_err!("Failed to get an active RIL"));
                 }

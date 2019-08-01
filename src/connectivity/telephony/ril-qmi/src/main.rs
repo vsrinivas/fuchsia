@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     crate::client::QmiClient,
@@ -91,7 +91,7 @@ impl QmiModem {
     }
 
     pub async fn create_client(&self) -> QmiClient {
-        let transport = await!(&self.inner);
+        let transport = (&self.inner).await;
         let client = QmiClient::new(transport);
         client
     }
@@ -101,7 +101,7 @@ impl QmiModem {
 /// For more specialized interactions with the modem, prefer to call `client.send_msg()` directly.
 macro_rules! qmi_query {
     ($responder:expr, $client:expr, $query:expr) => {{
-        let resp: Result<QmiResult<_>, QmuxError> = await!($client.send_msg($query));
+        let resp: Result<QmiResult<_>, QmuxError> = $client.send_msg($query).await;
         match resp {
             Ok(qmi_result) => {
                 match qmi_result {
@@ -126,12 +126,12 @@ impl FrilService {
     pub fn spawn(modem: QmiModemPtr, stream: RadioInterfaceLayerRequestStream) {
         let server = async move {
             let client = {
-                let modem_lock = await!(modem.lock());
-                Arc::new(await!(modem_lock.create_client()))
+                let modem_lock = modem.lock().await;
+                Arc::new(modem_lock.create_client().await)
             };
-            await!(stream
+            stream
                 .try_for_each(move |req| Self::handle_request(client.clone(), req))
-                .unwrap_or_else(|e| fx_log_err!("Error running {:?}", e)))
+                .unwrap_or_else(|e| fx_log_err!("Error running {:?}", e)).await
         };
         fasync::spawn(server);
     }
@@ -167,10 +167,10 @@ impl FrilService {
                 );
                 let (server_chan, client_chan) = zx::Channel::create().unwrap();
                 let server_end = ServerEnd::<NetworkConnectionMarker>::new(server_chan.into());
-                await!(client.set_data_connection(client::Connection {
+                client.set_data_connection(client::Connection {
                     pkt_handle: packet.packet_data_handle,
                     conn: server_end,
-                }));
+                }).await;
                 let client_end = ClientEnd::<NetworkConnectionMarker>::new(client_chan.into());
                 responder.send(&mut Ok(client_end))?
             }
@@ -208,9 +208,9 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(move |mut stream: SetupRequestStream| {
             let modem = modem_setup.clone();
             fasync::spawn(async move {
-                let res = await!(stream.next()).unwrap();
+                let res = stream.next().await.unwrap();
                 if let Ok(SetupRequest::ConnectTransport { channel, responder }) = res {
-                    let mut lock = await!(modem.lock());
+                    let mut lock = modem.lock().await;
                     let status = lock.connect_transport(channel);
                     fx_log_info!("Connecting the service to the transport driver: {}", status);
                     if status {
@@ -224,5 +224,5 @@ async fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    Ok(await!(fs.collect::<()>()))
+    Ok(fs.collect::<()>().await)
 }

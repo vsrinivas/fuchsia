@@ -4,7 +4,7 @@
 
 //! qmi-snoop is used for snooping Qmi messages sent/received by transport driver
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -40,10 +40,10 @@ pub fn main() -> Result<(), Error> {
         eprintln!("Connecting with exclusive access to {}..", device.display());
         let file: File = File::open(device)?;
         let snoop_endpoint_server_side: ServerEnd<QmiSnoopMarker> =
-            await!(qmi::connect_snoop_channel(&file))?;
+            qmi::connect_snoop_channel(&file).await?;
         let mut request_stream: QmiSnoopRequestStream = snoop_endpoint_server_side.into_stream()?;
         while let Ok(Some(QmiSnoopRequest::SendMessage { msg, control_handle: _ })) =
-            await!(request_stream.try_next())
+            request_stream.try_next().await
         {
             let qmi_message = match msg {
                 SnoopMessage::QmiMessage(m) => Some(m),
