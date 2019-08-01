@@ -13,6 +13,12 @@ protocol PeerManager {
     /// TODO (BT-305): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
     /// switches.
     GetControllerForTarget(string peer_id, request<Controller> client) -> () error zx.status;
+
+    /// Set the absolute volume handler for the peer specified at `peer_id` to handle absolute
+    /// volume commands and notifications received from the peer. Only one handler may be set with
+    /// a peer at at time. If a second handler is registered it will be dropped and an error will
+    /// be returned.
+    SetAbsoluteVolumeHandler(string peer_id, AbsoluteVolumeHandler handler) -> () error zx.status;
 };
 
 /// Change notifications that a controller client can register.
@@ -79,6 +85,25 @@ table Notification {
     9: bool device_connected;
 };
 
+/// Handler for absolute volume requests from a remote peer. See AVRCP v 1.6.2 section 6.13.2.
+/// Absolute volume is represented as a percentage using one byte with the most significant bit
+/// reserved. 0% is represented as 0x0 and 100% as 0x7f. Volume should scaled between the
+/// two values.
+protocol AbsoluteVolumeHandler {
+    /// Requests that the absolute volume of the player be changed.
+    /// `requested_volume` is the requested volume by the peer.
+    /// Returns the actual volume set locally by the handler.
+    SetVolume(uint8 requested_volume) -> (uint8 set_volume);
+
+    /// Returns latest volume of the handler to the AVRCP service. This function should return
+    /// immediately on the first call and if the volume has changed since the last call to this
+    /// function, otherwise it should only return when the volume has been changed.
+    OnVolumeChanged() -> (uint8 new_volume);
+
+    /// Returns the current volume immediately.
+    GetCurrentVolume() -> (uint8 volume);
+};
+
 /// Client wrapper for local controller (CT) -> remote target (TG) AVCTP connections between devices.
 /// A client is high level construct and does not represent a connection with a device.
 /// Connections are internally managed and may be shared by multiple clients.
@@ -92,11 +117,10 @@ protocol Controller {
     /// is supported.
     GetMediaAttributes() -> (MediaAttributes attributes) error ControllerError;
 
-    /// Sets the absolute volume on the device. Values can range from 0x00 to 0x7F
-    /// (with 100% volume being 0x7F). This is in addition to the relative volume change
-    /// commands that can be sent over AV\C. You will get a volume changed notification event
-    /// as part of successfully sending this.
-    SetAbsoluteVolume(uint8 volume) -> () error ControllerError;
+    /// Request the absolute volume on the peer be changed. Returns the actual volume set by the
+    /// peer. Values can range from 0x00 to 0x7F (with 100% volume being 0x7F). You may not get a
+    /// volume changed notification event from the remote peer as result of changing this.
+    SetAbsoluteVolume(uint8 requested_volume) -> (uint8 set_volume) error ControllerError;
 
     /// Inform target of the controller's battery level.
     InformBatteryStatus(BatteryStatus battery_status) -> () error ControllerError;
