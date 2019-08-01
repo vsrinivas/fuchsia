@@ -38,10 +38,8 @@ void CreateAndRegisterVmo(BlockDevice* device, size_t blocks, zx::vmo* vmo,
                           fuchsia_hardware_block_VmoID* vmoid) {
   fuchsia_hardware_block_BlockInfo info = {};
   ASSERT_OK(device->BlockGetInfo(&info));
-  zx::vmo dup;
   ASSERT_OK(zx::vmo::create(blocks * info.block_size, 0, vmo));
-  ASSERT_OK(vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  ASSERT_OK(device->BlockAttachVmo(std::move(dup), vmoid));
+  ASSERT_OK(device->BlockAttachVmo(*vmo, vmoid));
 }
 
 TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {

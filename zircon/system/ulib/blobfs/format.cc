@@ -118,14 +118,8 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
     return status;
   }
 
-  zx::vmo dup;
-  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   fuchsia_hardware_block_VmoID vmoid;
-  status = device->BlockAttachVmo(std::move(dup), &vmoid);
+  status = device->BlockAttachVmo(vmo, &vmoid);
   if (status != ZX_OK) {
     return status;
   }

@@ -125,15 +125,6 @@ groupid_t Bcache::BlockGroupID() {
 
 uint32_t Bcache::DeviceBlockSize() const { return info_.block_size; }
 
-zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* out) const {
-  zx::vmo xfer_vmo;
-  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return device_->BlockAttachVmo(std::move(xfer_vmo), out);
-}
-
 Bcache::Bcache(fbl::unique_fd fd, std::unique_ptr<block_client::BlockDevice> device,
                uint32_t max_blocks)
     : fd_(std::move(fd)), max_blocks_(max_blocks), device_(std::move(device)) {}

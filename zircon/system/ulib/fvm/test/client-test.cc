@@ -27,7 +27,7 @@ class MockDeviceBase : public BlockDevice {
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t BlockAttachVmo(zx::vmo vmo, fuchsia_hardware_block_VmoID* out_vmoid) final {
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* out_vmoid) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const final {

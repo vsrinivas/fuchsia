@@ -196,8 +196,8 @@ zx_status_t VnodeMinfs::InitIndirectVmo() {
   vmo_indirect_ = fzl::ResizeableVmoMapper::Create(
       kMinfsBlockSize * (kMinfsIndirect + kMinfsDoublyIndirect), "minfs-indirect");
 
-  zx_status_t status;
-  if ((status = fs_->bc_->AttachVmo(vmo_indirect_->vmo(), &vmoid_indirect_)) != ZX_OK) {
+  zx_status_t status = fs_->bc_->device()->BlockAttachVmo(vmo_indirect_->vmo(), &vmoid_indirect_);
+  if (status != ZX_OK) {
     vmo_indirect_ = nullptr;
     return status;
   }
@@ -241,7 +241,7 @@ zx_status_t VnodeMinfs::InitVmo(Transaction* transaction) {
 
   zx_object_set_property(vmo_.get(), ZX_PROP_NAME, "minfs-inode", 11);
 
-  if ((status = fs_->bc_->AttachVmo(vmo_, &vmoid_)) != ZX_OK) {
+  if ((status = fs_->bc_->device()->BlockAttachVmo(vmo_, &vmoid_)) != ZX_OK) {
     vmo_.reset();
     return status;
   }

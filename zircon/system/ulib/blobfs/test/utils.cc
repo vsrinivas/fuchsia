@@ -27,10 +27,8 @@ void DetachVmo(BlockDevice* device, vmoid_t id) {
 
 void AttachVmo(BlockDevice* device, zx::vmo* vmo, vmoid_t* out_id) {
   fuchsia_hardware_block_VmoID vmoid;
-  zx::vmo dup;
 
-  ASSERT_OK(vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  ASSERT_OK(device->BlockAttachVmo(std::move(dup), &vmoid));
+  ASSERT_OK(device->BlockAttachVmo(*vmo, &vmoid));
 
   *out_id = vmoid.id;
 }

@@ -64,13 +64,8 @@ zx_status_t SuperblockManager::Create(const Superblock* info, uint32_t max_block
     return status;
   }
 
-  zx::vmo xfer_vmo;
-  status = mapper.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
   fuchsia_hardware_block_VmoID info_vmoid;
-  if ((status = device->BlockAttachVmo(std::move(xfer_vmo), &info_vmoid)) != ZX_OK) {
+  if ((status = device->BlockAttachVmo(mapper.vmo(), &info_vmoid)) != ZX_OK) {
     return status;
   }
   memcpy(mapper.start(), info, sizeof(Superblock));

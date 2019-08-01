@@ -172,12 +172,10 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
   ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
 
   zx::vmo vmo;
-  zx::vmo dup;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-  ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
   fuchsia_hardware_block_VmoID vmoid;
-  ASSERT_OK(device->BlockAttachVmo(std::move(dup), &vmoid));
+  ASSERT_OK(device->BlockAttachVmo(vmo, &vmoid));
   ASSERT_EQ(kGoldenVmoid, vmoid.id);
 
   block_fifo_request_t request;

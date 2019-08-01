@@ -85,11 +85,16 @@ zx_status_t RemoteBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* ou
   return status;
 }
 
-zx_status_t RemoteBlockDevice::BlockAttachVmo(zx::vmo vmo,
+zx_status_t RemoteBlockDevice::BlockAttachVmo(const zx::vmo& vmo,
                                               fuchsia_hardware_block_VmoID* out_vmoid) {
-  zx_status_t status, io_status;
-  io_status =
-      fuchsia_hardware_block_BlockAttachVmo(device_.get(), vmo.release(), &status, out_vmoid);
+  zx::vmo xfer_vmo;
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx_status_t io_status =
+      fuchsia_hardware_block_BlockAttachVmo(device_.get(), xfer_vmo.release(), &status, out_vmoid);
   if (io_status != ZX_OK) {
     return io_status;
   }

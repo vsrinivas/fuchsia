@@ -33,7 +33,8 @@ class BlockDevice {
 
   // Block IPC.
   virtual zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;
-  virtual zx_status_t BlockAttachVmo(zx::vmo vmo, fuchsia_hardware_block_VmoID* out_vmoid) = 0;
+  virtual zx_status_t BlockAttachVmo(const zx::vmo& vmo,
+                                     fuchsia_hardware_block_VmoID* out_vmoid) = 0;
 
   // Volume IPC.
   //
@@ -63,7 +64,7 @@ class RemoteBlockDevice final : public BlockDevice {
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
-  zx_status_t BlockAttachVmo(zx::vmo vmo, fuchsia_hardware_block_VmoID* out_vmoid) final;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* out_vmoid) final;
   zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const final;
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
                                 fuchsia_hardware_block_volume_VsliceRange* out_ranges,

@@ -708,13 +708,8 @@ zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler, 
   }
   fs::ReadTxn read_transaction(transaction_handler);
 #ifdef __Fuchsia__
-  zx::vmo xfer_vmo;
-  status = bitmap.StorageUnsafe()->GetVmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
   fuchsia_hardware_block_VmoID map_vmoid;
-  status = device->BlockAttachVmo(std::move(xfer_vmo), &map_vmoid);
+  status = device->BlockAttachVmo(bitmap.StorageUnsafe()->GetVmo(), &map_vmoid);
   if (status != ZX_OK) {
     return status;
   }

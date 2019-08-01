@@ -306,14 +306,8 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
 }
 
 zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
-  zx::vmo xfer_vmo;
-  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   fuchsia_hardware_block_VmoID vmoid;
-  status = Device()->BlockAttachVmo(std::move(xfer_vmo), &vmoid);
+  zx_status_t status = Device()->BlockAttachVmo(vmo, &vmoid);
   if (status != ZX_OK) {
     return status;
   }

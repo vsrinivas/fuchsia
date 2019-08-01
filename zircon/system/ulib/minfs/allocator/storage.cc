@@ -22,12 +22,7 @@ PersistentStorage::PersistentStorage(block_client::BlockDevice* device, Superblo
       metadata_(std::move(metadata)) {}
 
 zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* vmoid) {
-  zx::vmo xfer_vmo;
-  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return device_->BlockAttachVmo(std::move(xfer_vmo), vmoid);
+  return device_->BlockAttachVmo(vmo, vmoid);
 }
 
 zx_status_t PersistentStorage::Extend(WriteTxn* write_transaction, WriteData data,

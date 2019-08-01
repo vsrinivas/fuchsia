@@ -35,13 +35,8 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
     return status;
   }
 
-  zx::vmo xfer_vmo;
-  status = mgr->inode_table_.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
   fuchsia_hardware_block_VmoID vmoid;
-  status = device->BlockAttachVmo(std::move(xfer_vmo), &vmoid);
+  status = device->BlockAttachVmo(mgr->inode_table_.vmo(), &vmoid);
   if (status != ZX_OK) {
     return status;
   }

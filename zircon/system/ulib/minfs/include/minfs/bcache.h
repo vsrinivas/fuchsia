@@ -78,8 +78,6 @@ class Bcache : public fs::TransactionHandler {
   uint32_t Maxblk() const { return max_blocks_; }
 
 #ifdef __Fuchsia__
-  zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* out) const;
-
   block_client::BlockDevice* device() { return device_.get(); }
   const block_client::BlockDevice* device() const { return device_.get(); }
 

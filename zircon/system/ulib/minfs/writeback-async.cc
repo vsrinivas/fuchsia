@@ -23,15 +23,16 @@ Buffer::~Buffer() {
 
 zx_status_t Buffer::Create(Bcache* bc, blk_t blocks, const char* label,
                            std::unique_ptr<Buffer>* out) {
-  zx_status_t status;
   fzl::OwnedVmoMapper mapper;
-  if ((status = mapper.CreateAndMap(blocks * kMinfsBlockSize, label)) != ZX_OK) {
+  zx_status_t status = mapper.CreateAndMap(blocks * kMinfsBlockSize, label);
+  if (status != ZX_OK) {
     return status;
   }
 
   std::unique_ptr<Buffer> buffer(new Buffer(bc, std::move(mapper)));
 
-  if ((status = buffer->bc_->AttachVmo(buffer->mapper_.vmo(), &buffer->vmoid_)) != ZX_OK) {
+  status = buffer->bc_->device()->BlockAttachVmo(buffer->mapper_.vmo(), &buffer->vmoid_);
+  if (status != ZX_OK) {
     fprintf(stderr, "Buffer: Failed to attach vmo\n");
     return status;
   }
