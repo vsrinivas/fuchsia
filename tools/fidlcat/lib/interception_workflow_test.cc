@@ -40,11 +40,19 @@ constexpr uint32_t kHandle = 0xcefa1db0;
 #define kChannelRead 2
 #define kChannelReadEtc 3
 #define kChannelCall 4
-std::pair<const char*, uint64_t> syscall_definitions[] = {{"zx_channel_create@plt", 0x100060},
-                                                          {"zx_channel_write@plt", 0x100070},
-                                                          {"zx_channel_read@plt", 0x100080},
-                                                          {"zx_channel_read_etc@plt", 0x100090},
-                                                          {"zx_channel_call@plt", 0x100100}};
+#define kClockGet 5
+#define kClockGetMonotonic 6
+#define kTicksGet 7
+#define kTicksPerSecond 8
+#define kClockAdjust 9
+#define kDeadlineAfter 10
+std::pair<const char*, uint64_t> syscall_definitions[] = {
+    {"zx_channel_create@plt", 0x100060},      {"zx_channel_write@plt", 0x100070},
+    {"zx_channel_read@plt", 0x100080},        {"zx_channel_read_etc@plt", 0x100090},
+    {"zx_channel_call@plt", 0x100100},        {"zx_clock_get@plt", 0x100110},
+    {"zx_clock_get_monotonic@plt", 0x100120}, {"zx_ticks_get@plt", 0x100130},
+    {"zx_ticks_per_second@plt", 0x100140},    {"zx_clock_adjust@plt", 0x100150},
+    {"zx_deadline_after@plt", 0x100160}};
 
 class SystemCallTest {
  public:
@@ -117,6 +125,46 @@ class SystemCallTest {
     value->inputs_.push_back(reinterpret_cast<uint64_t>(args));
     value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_bytes));
     value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_handles));
+    return value;
+  }
+
+  static std::unique_ptr<SystemCallTest> ZxClockGet(int64_t result, std::string_view result_name,
+                                                    zx_clock_t clock_id, zx_time_t* out) {
+    auto value = std::make_unique<SystemCallTest>("zx_clock_get", result, result_name);
+    value->inputs_.push_back(clock_id);
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(out));
+    return value;
+  }
+
+  static std::unique_ptr<SystemCallTest> ZxClockGetMonotonic(int64_t result,
+                                                             std::string_view result_name) {
+    return std::make_unique<SystemCallTest>("zx_clock_get_monotonic", result, result_name);
+  }
+
+  static std::unique_ptr<SystemCallTest> ZxTicksGet(int64_t result, std::string_view result_name) {
+    return std::make_unique<SystemCallTest>("zx_ticks_get", result, result_name);
+  }
+
+  static std::unique_ptr<SystemCallTest> ZxTicksPerSecond(int64_t result,
+                                                          std::string_view result_name) {
+    return std::make_unique<SystemCallTest>("zx_ticks_per_second", result, result_name);
+  }
+
+  static std::unique_ptr<SystemCallTest> ZxDeadlineAfter(int64_t result,
+                                                         std::string_view result_name,
+                                                         zx_time_t nanoseconds) {
+    auto value = std::make_unique<SystemCallTest>("zx_deadline_after", result, result_name);
+    value->inputs_.push_back(nanoseconds);
+    return value;
+  }
+
+  static std::unique_ptr<SystemCallTest> ZxClockAdjust(int64_t result, std::string_view result_name,
+                                                       zx_handle_t handle, zx_clock_t clock_id,
+                                                       int64_t offset) {
+    auto value = std::make_unique<SystemCallTest>("zx_clock_adjust", result, result_name);
+    value->inputs_.push_back(handle);
+    value->inputs_.push_back(clock_id);
+    value->inputs_.push_back(offset);
     return value;
   }
 
@@ -1251,5 +1299,139 @@ CALL_DISPLAY_TEST_WITH_PROCESS_INFO(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 00\x1B[31m"
     ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
+
+#define kClockGetTestValue 1564175607533042989L
+
+#define CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected)                                         \
+  zx_time_t date = kClockGetTestValue;                                                          \
+  PerformDisplayTest(kClockGet, SystemCallTest::ZxClockGet(errno, #errno, ZX_CLOCK_UTC, &date), \
+                     expected);
+
+#define CLOCK_GET_DISPLAY_TEST(name, errno, expected)                                            \
+  TEST_F(InterceptionWorkflowTestX64, name) { CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected); } \
+  TEST_F(InterceptionWorkflowTestArm, name) { CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected); }
+
+std::string ClockExpected(time_t time, const char* format) {
+  struct tm tm;
+  char buffer[300];
+  if (localtime_r(&time, &tm) == &tm) {
+    strftime(buffer, sizeof(buffer), format, &tm);
+  } else {
+    buffer[0] = 0;
+  }
+  return std::string(buffer);
+}
+
+CLOCK_GET_DISPLAY_TEST(
+    ZxClockGet, ZX_OK,
+    ClockExpected(kClockGetTestValue / kOneBillion,
+                  "\n"
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_clock_get("
+                  "clock_id:\x1B[32mclock\x1B[0m: \x1B[31mZX_CLOCK_UTC\x1B[0m)\n"
+                  "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mtime\x1B[0m:"
+                  " \x1B[34m%c and 533042989 ns\x1B[0m)\n")
+        .c_str());
+
+#define CLOCK_GET_MONOTONIC_DISPLAY_TEST_CONTENT(result, expected)                             \
+  PerformDisplayTest(kClockGetMonotonic, SystemCallTest::ZxClockGetMonotonic(result, #result), \
+                     expected);
+
+#define CLOCK_GET_MONOTONIC_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                   \
+    CLOCK_GET_MONOTONIC_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                             \
+  TEST_F(InterceptionWorkflowTestArm, name) {                   \
+    CLOCK_GET_MONOTONIC_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+#define kClockGetMonotonicTestValue 164056115697412L
+
+CLOCK_GET_MONOTONIC_DISPLAY_TEST(
+    ZxClockGetMonotonic, kClockGetMonotonicTestValue,
+    ClockExpected(kClockGetMonotonicTestValue / kOneBillion,
+                  "\n"
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_clock_get_monotonic()\n"
+                  "  -> \x1B[32mtime\x1B[0m: \x1B[34m%c and 115697412 ns\x1B[0m\n")
+        .c_str());
+
+#define TICKS_GET_DISPLAY_TEST_CONTENT(result, expected) \
+  PerformDisplayTest(kTicksGet, SystemCallTest::ZxTicksGet(result, #result), expected);
+
+#define TICKS_GET_DISPLAY_TEST(name, errno, expected)                                            \
+  TEST_F(InterceptionWorkflowTestX64, name) { TICKS_GET_DISPLAY_TEST_CONTENT(errno, expected); } \
+  TEST_F(InterceptionWorkflowTestArm, name) { TICKS_GET_DISPLAY_TEST_CONTENT(errno, expected); }
+
+TICKS_GET_DISPLAY_TEST(ZxTicksGet, 497475301988264,
+                       "\n"
+                       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_ticks_get()\n"
+                       "  -> \x1B[32mticks\x1B[0m: \x1B[34m497475301988264\x1B[0m\n");
+
+#define TICKS_PER_SECOND_DISPLAY_TEST_CONTENT(result, expected) \
+  PerformDisplayTest(kTicksPerSecond, SystemCallTest::ZxTicksPerSecond(result, #result), expected);
+
+#define TICKS_PER_SECOND_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                \
+    TICKS_PER_SECOND_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                          \
+  TEST_F(InterceptionWorkflowTestArm, name) {                \
+    TICKS_PER_SECOND_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+TICKS_PER_SECOND_DISPLAY_TEST(
+    ZxTicksPerSecond, 2992964000,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_ticks_per_second()\n"
+    "  -> \x1B[32mticks\x1B[0m: \x1B[34m2992964000\x1B[0m\n");
+
+#define DEADLINE_AFTER_DISPLAY_TEST_CONTENT(result, nanoseconds, expected) \
+  PerformDisplayTest(kDeadlineAfter,                                       \
+                     SystemCallTest::ZxDeadlineAfter(result, #result, nanoseconds), expected);
+
+#define DEADLINE_AFTER_DISPLAY_TEST(name, errno, nanoseconds, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                           \
+    DEADLINE_AFTER_DISPLAY_TEST_CONTENT(errno, nanoseconds, expected);  \
+  }                                                                     \
+  TEST_F(InterceptionWorkflowTestArm, name) {                           \
+    DEADLINE_AFTER_DISPLAY_TEST_CONTENT(errno, nanoseconds, expected);  \
+  }
+
+#define kDeadlineAfterTestValue 1564175607533042989L
+#define kDeadlineAfterTestDuration 1000
+
+DEADLINE_AFTER_DISPLAY_TEST(
+    ZxDeadlineAfter, kDeadlineAfterTestValue, kDeadlineAfterTestDuration,
+    ClockExpected(kDeadlineAfterTestValue / kOneBillion,
+                  "\n"
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_deadline_after("
+                  "nanoseconds:\x1B[32mduration\x1B[0m: \x1B[34m1000 nano seconds\x1B[0m)\n"
+                  "  -> \x1B[32mtime\x1B[0m: \x1B[34m%c and 533042989 ns\x1B[0m\n")
+        .c_str());
+
+DEADLINE_AFTER_DISPLAY_TEST(
+    ZxDeadlineAfterInfinite, ZX_TIME_INFINITE, ZX_TIME_INFINITE,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_deadline_after("
+    "nanoseconds:\x1B[32mduration\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "  -> \x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m\n");
+
+#define CLOCK_ADJUST_DISPLAY_TEST_CONTENT(result, expected)                                    \
+  zx_handle_t handle = 0x12345678;                                                             \
+  PerformDisplayTest(kClockAdjust,                                                             \
+                     SystemCallTest::ZxClockAdjust(result, #result, handle, ZX_CLOCK_UTC, 10), \
+                     expected);
+
+#define CLOCK_ADJUST_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {            \
+    CLOCK_ADJUST_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                      \
+  TEST_F(InterceptionWorkflowTestArm, name) { CLOCK_ADJUST_DISPLAY_TEST_CONTENT(errno, expected); }
+
+CLOCK_ADJUST_DISPLAY_TEST(ZxClockAdjust, ZX_OK,
+                          "\n"
+                          "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_clock_adjust("
+                          "handle:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
+                          "clock_id:\x1B[32mclock\x1B[0m: \x1B[31mZX_CLOCK_UTC\x1B[0m, "
+                          "offset:\x1B[32mint64\x1B[0m: \x1B[34m10\x1B[0m)\n"
+                          "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

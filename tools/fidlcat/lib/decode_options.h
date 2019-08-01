@@ -5,11 +5,13 @@
 #ifndef TOOLS_FIDLCAT_LIB_DECODE_OPTIONS_H_
 #define TOOLS_FIDLCAT_LIB_DECODE_OPTIONS_H_
 
+#include <regex>
+
 struct DecodeOptions {
   // If a syscall satisfies one of these filters, it can be displayed.
-  std::vector<std::string> syscall_filters;
+  std::vector<std::regex> syscall_filters;
   // But it is only displayed if it doesn't satifies any of these filters.
-  std::vector<std::string> exclude_syscall_filters;
+  std::vector<std::regex> exclude_syscall_filters;
 };
 
 #endif  // TOOLS_FIDLCAT_LIB_DECODE_OPTIONS_H_

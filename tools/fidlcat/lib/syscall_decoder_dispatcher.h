@@ -42,6 +42,12 @@ template <>
 inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_t value, bool hexa,
                                   std::ostream& os) {
   switch (type) {
+    case SyscallType::kInt64:
+      os << colors.blue << value << colors.reset;
+      break;
+    case SyscallType::kDuration:
+      os << DisplayDuration(colors, value);
+      break;
     case SyscallType::kTime:
       os << DisplayTime(colors, value);
       break;
@@ -57,6 +63,11 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
   switch (type) {
     case SyscallType::kUint32:
       os << colors.blue << value << colors.reset;
+      break;
+    case SyscallType::kClock:
+      os << colors.red;
+      ClockName(value, os);
+      os << colors.reset;
       break;
     case SyscallType::kHandle: {
       zx_handle_info_t handle_info;
@@ -485,23 +496,33 @@ class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t>
 // Defines a syscall we want to decode/display.
 class Syscall {
  public:
-  explicit Syscall(std::string_view name) : name_(name), breakpoint_name_(name_ + "@plt") {}
+  Syscall(std::string_view name, SyscallReturnType return_type)
+      : name_(name), return_type_(return_type), breakpoint_name_(name_ + "@plt") {}
 
   // Name of the syscall.
-  const std::string& name() const { return name_; }
+  [[nodiscard]] const std::string& name() const { return name_; }
+
+  // Type of the syscall returned value.
+  [[nodiscard]] SyscallReturnType return_type() const { return return_type_; }
 
   // Name of the breakpoint used to watch the syscall.
-  const std::string& breakpoint_name() const { return breakpoint_name_; }
+  [[nodiscard]] const std::string& breakpoint_name() const { return breakpoint_name_; }
 
   // All arguments for the syscall.
-  const std::vector<std::unique_ptr<SyscallArgumentBase>>& arguments() const { return arguments_; }
+  [[nodiscard]] const std::vector<std::unique_ptr<SyscallArgumentBase>>& arguments() const {
+    return arguments_;
+  }
 
   // All the data we want to display at the syscall entry.
-  const std::vector<std::unique_ptr<SyscallInputOutputBase>>& inputs() const { return inputs_; }
+  [[nodiscard]] const std::vector<std::unique_ptr<SyscallInputOutputBase>>& inputs() const {
+    return inputs_;
+  }
 
   // All the data we want to display at the syscall exit. These data are
   // conditionally displayed depending on the syscall error code.
-  const std::vector<std::unique_ptr<SyscallInputOutputBase>>& outputs() const { return outputs_; }
+  [[nodiscard]] const std::vector<std::unique_ptr<SyscallInputOutputBase>>& outputs() const {
+    return outputs_;
+  }
 
   // Adds an argument definition to the syscall.
   template <typename Type>
@@ -571,6 +592,7 @@ class Syscall {
 
  private:
   const std::string name_;
+  const SyscallReturnType return_type_;
   const std::string breakpoint_name_;
   std::vector<std::unique_ptr<SyscallArgumentBase>> arguments_;
   std::vector<std::unique_ptr<SyscallInputOutputBase>> inputs_;
@@ -616,8 +638,8 @@ class SyscallDecoderDispatcher {
   void Populate();
 
   // Add a syscall. Used by Populate.
-  Syscall* Add(std::string_view name) {
-    auto syscall = std::make_unique<Syscall>(name);
+  Syscall* Add(std::string_view name, SyscallReturnType return_type) {
+    auto syscall = std::make_unique<Syscall>(name, return_type);
     auto result = syscall.get();
     syscalls_.push_back(std::move(syscall));
     return result;

@@ -227,6 +227,13 @@ void SyscallDecoder::LoadInputs() {
 
 void SyscallDecoder::StepToReturnAddress() {
   use_->SyscallInputsDecoded(this);
+
+  if (syscall_->return_type() == SyscallReturnType::kVoid) {
+    // We don't expect the syscall to return and it doesn't have any output.
+    use_->SyscallOutputsDecoded(this);
+    return;
+  }
+
   zxdb::BreakpointSettings settings;
   settings.enabled = true;
   settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
@@ -338,7 +345,27 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* syscall) {
   } else {
     os_ << line_header_ << "  -> ";
   }
-  StatusName(colors, static_cast<zx_status_t>(syscall->syscall_return_value()), os_);
+  switch (syscall->syscall()->return_type()) {
+    case SyscallReturnType::kVoid:
+      break;
+    case SyscallReturnType::kStatus:
+      StatusName(colors, static_cast<zx_status_t>(syscall->syscall_return_value()), os_);
+      break;
+    case SyscallReturnType::kTicks:
+      os_ << colors.green << "ticks" << colors.reset << ": " << colors.blue
+          << static_cast<uint64_t>(syscall->syscall_return_value()) << colors.reset;
+      break;
+    case SyscallReturnType::kTime:
+      os_ << colors.green << "time" << colors.reset << ": "
+          << DisplayTime(colors, static_cast<zx_time_t>(syscall->syscall_return_value()));
+      break;
+    case SyscallReturnType::kUint32:
+      os_ << colors.blue << static_cast<uint32_t>(syscall->syscall_return_value()) << colors.reset;
+      break;
+    case SyscallReturnType::kUint64:
+      os_ << colors.blue << static_cast<uint64_t>(syscall->syscall_return_value()) << colors.reset;
+      break;
+  }
   // And the inline output arguments (if any).
   const char* separator = " (";
   for (const auto& output : syscall->syscall()->outputs()) {

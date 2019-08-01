@@ -14,6 +14,22 @@
 
 namespace fidlcat {
 
+#define ClockNameCase(name) \
+  case name:                \
+    os << #name;            \
+    return
+
+void ClockName(zx_clock_t clock, std::ostream& os) {
+  switch (clock) {
+    ClockNameCase(ZX_CLOCK_MONOTONIC);
+    ClockNameCase(ZX_CLOCK_UTC);
+    ClockNameCase(ZX_CLOCK_THREAD);
+    default:
+      os << clock;
+      return;
+  }
+}
+
 #define ObjTypeNameCase(name) \
   case name:                  \
     os << #name;              \
@@ -175,11 +191,20 @@ void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::os
 
 void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
   switch (type) {
+    case SyscallType::kInt64:
+      os << ":" << colors.green << "int64" << colors.reset << ": ";
+      break;
     case SyscallType::kUint8:
       os << ":" << colors.green << "uint8" << colors.reset << ": ";
       break;
     case SyscallType::kUint32:
       os << ":" << colors.green << "uint32" << colors.reset << ": ";
+      break;
+    case SyscallType::kClock:
+      os << ":" << colors.green << "clock" << colors.reset << ": ";
+      break;
+    case SyscallType::kDuration:
+      os << ":" << colors.green << "duration" << colors.reset << ": ";
       break;
     case SyscallType::kHandle:
       os << ":" << colors.green << "handle" << colors.reset << ": ";

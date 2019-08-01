@@ -10,6 +10,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <regex>
 #include <set>
 #include <string>
 #include <vector>
@@ -72,21 +73,17 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
 const char kSyscallFilterHelp[] = R"(  --syscalls
       A regular expression which selects the syscalls to decode and display.
       Can be passed multiple times.
-      Currently, the only regular expression implemented is a star at the end of
-      the filter.
-      By default, only zx_channel_* syscalls are displayed.
-      To display all the syscalls, use: --syscalls "*"
+      By default, only zx_channel_.* syscalls are displayed.
+      To display all the syscalls, use: --syscalls ".*"
       This option is under development (we are adding the syscalls).)";
 
 const char kExcludeSyscallFilterHelp[] = R"(  --exclude-syscalls
       A regular expression which selects the syscalls to not decode and display.
       Can be passed multiple times.
-      Currently, the only regular expression implemented is a star at the end of
-      the filter.
       To be displayed, a syscall must verify --syscalls and not verify
       --exclude-syscalls.
       To display all the syscalls but the zx_handle syscalls, use:
-        --syscalls "*" --exclude-syscalls "zx_handle_*")";
+        --syscalls ".*" --exclude-syscalls "zx_handle_.*")";
 
 const char kPrettyPrintHelp[] = R"(  --pretty-print
       Use a formated print instead of JSON.)";
@@ -204,11 +201,15 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   }
 
   if (options->syscall_filters.empty()) {
-    decode_options->syscall_filters.push_back("zx_channel_*");
-  } else if ((options->syscall_filters.size() != 1) || (options->syscall_filters[0] != "*")) {
-    decode_options->syscall_filters = std::move(options->syscall_filters);
+    decode_options->syscall_filters.push_back(std::regex("zx_channel_.*"));
+  } else if ((options->syscall_filters.size() != 1) || (options->syscall_filters[0] != ".*")) {
+    for (const auto& filter : options->syscall_filters) {
+      decode_options->syscall_filters.push_back(std::regex(filter));
+    }
   }
-  decode_options->exclude_syscall_filters = std::move(options->exclude_syscall_filters);
+  for (const auto& filter : options->exclude_syscall_filters) {
+    decode_options->exclude_syscall_filters.push_back(std::regex(filter));
+  }
 
   display_options->pretty_print = options->pretty_print;
   display_options->with_process_info = options->with_process_info;

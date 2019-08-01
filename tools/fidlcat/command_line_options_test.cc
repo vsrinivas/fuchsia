@@ -151,11 +151,16 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   ASSERT_EQ(remote_pid, options.remote_pid[0]);
   ASSERT_EQ(symbol_path, options.symbol_paths[0]);
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_paths[0]);
+
+  ASSERT_EQ(2U, options.syscall_filters.size());
+  ASSERT_EQ("zx_handle_*", options.syscall_filters[0]);
+  ASSERT_EQ("zx_channel_*", options.syscall_filters[1]);
   ASSERT_EQ(2U, decode_options.syscall_filters.size());
-  ASSERT_EQ("zx_handle_*", decode_options.syscall_filters[0]);
-  ASSERT_EQ("zx_channel_*", decode_options.syscall_filters[1]);
+
+  ASSERT_EQ(1U, options.exclude_syscall_filters.size());
+  ASSERT_EQ("zx_handle_close", options.exclude_syscall_filters[0]);
   ASSERT_EQ(1U, decode_options.exclude_syscall_filters.size());
-  ASSERT_EQ("zx_handle_close", decode_options.exclude_syscall_filters[0]);
+
   ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
   ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));
   ASSERT_TRUE(std::find(params.begin(), params.end(), "leftover") != params.end());
