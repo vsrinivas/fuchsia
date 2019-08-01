@@ -2,28 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cerrno>
 #include <fcntl.h>
-#include <string>
-#include <sys/stat.h>
-
 #include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <lib/bootfs/parser.h>
+#include <lib/fzl/fdio.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/hermetic-decompressor/hermetic-decompressor.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
+#include <sys/stat.h>
 #include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include <bootdata/decompress.h>
+#include <cerrno>
+#include <string>
+
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <lib/bootfs/parser.h>
-#include <lib/fzl/fdio.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/vmar.h>
-#include <lib/zx/vmo.h>
-
 #include <zbi-bootfs/zbi-bootfs.h>
 
 namespace zbi_bootfs {
@@ -98,16 +97,15 @@ zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* entry) {
         break;
       case ZBI_TYPE_STORAGE_BOOTFS: {
         if (hdr.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
-          const char* err_msg;
-
-          status = decompress_bootdata(zx_vmar_root_self(), zbi_vmo.get(), off,
-                                       hdr.length + sizeof(zbi_header_t),
-                                       bootfs_vmo.reset_and_get_address(), &err_msg);
+          status = zx::vmo::create(hdr.extra, 0, &bootfs_vmo);
+          if (status == ZX_OK) {
+            HermeticDecompressor decompress;
+            status = decompress(zbi_vmo, off + sizeof(hdr), hdr.length, bootfs_vmo, 0, hdr.extra);
+          }
           if (status != ZX_OK) {
-            fprintf(stderr, "Failed to decompress bootfs: %s\n", err_msg);
+            fprintf(stderr, "Failed to decompress bootfs: %s\n", zx_status_get_string(status));
             break;
           }
-
         } else {
           fprintf(stderr, "Processing an uncompressed ZBI image is not currently supported\n");
           return ZX_ERR_NOT_SUPPORTED;
