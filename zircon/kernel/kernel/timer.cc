@@ -200,7 +200,7 @@ void timer_set(timer_t* timer, const Deadline& deadline, timer_callback callback
           arg);
 
   DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
-  DEBUG_ASSERT(deadline.slack().mode() <= TIMER_SLACK_EARLY);
+  DEBUG_ASSERT(deadline.slack().mode() <= TIMER_SLACK_LATE);
   DEBUG_ASSERT(deadline.slack().amount() >= 0);
 
   if (list_in_list(&timer->node)) {

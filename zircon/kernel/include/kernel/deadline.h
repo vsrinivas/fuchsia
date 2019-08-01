@@ -9,9 +9,9 @@
 #include <zircon/types.h>
 
 enum slack_mode : uint32_t {
-  TIMER_SLACK_CENTER,  // slack is centered around deadline
-  TIMER_SLACK_LATE,    // slack interval is [deadline, deadline + slack)
-  TIMER_SLACK_EARLY,   // slack interval is (deadline - slack, deadline]
+  TIMER_SLACK_CENTER = ZX_TIMER_SLACK_CENTER,  // slack is centered around deadline
+  TIMER_SLACK_EARLY = ZX_TIMER_SLACK_EARLY,    // slack interval is (deadline - slack, deadline]
+  TIMER_SLACK_LATE = ZX_TIMER_SLACK_LATE,      // slack interval is [deadline, deadline + slack)
 };
 
 // TimerSlack specifies how much a timer or event is allowed to deviate from its deadline.
