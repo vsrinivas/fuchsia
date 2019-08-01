@@ -10,9 +10,6 @@
 
 #include "peridot/lib/convert/convert.h"
 
-using fuchsia::ledger::cloud::Commit;
-using fuchsia::ledger::cloud::Commits;
-
 namespace cloud_provider {
 
 bool operator==(const CommitPackEntry& lhs, const CommitPackEntry& rhs) {
@@ -22,49 +19,25 @@ bool operator==(const CommitPackEntry& lhs, const CommitPackEntry& rhs) {
 bool EncodeCommitPack(std::vector<CommitPackEntry> commits, CommitPack* commit_pack) {
   FXL_DCHECK(commit_pack);
 
-  Commits serialized_commits;
+  fuchsia::ledger::cloud::Commits serialized_commits;
   for (auto& commit : commits) {
-    serialized_commits.commits.push_back(std::move(
-        Commit().set_id(convert::ToArray(commit.id)).set_data(convert::ToArray(commit.data))));
+    serialized_commits.commits.push_back(std::move(fuchsia::ledger::cloud::Commit()
+                                                       .set_id(convert::ToArray(commit.id))
+                                                       .set_data(convert::ToArray(commit.data))));
   }
 
-  // Serialization of the SerializedCommits in a buffer. In this particular
-  // case, we do not rely on FIDL encoding being stable: the buffer is simply a
-  // way to extend the maximum message size, and we expect the buffer to be
-  // immediately deserialized.
-  // Caveats: see https://fuchsia-review.googlesource.com/c/fuchsia/+/262309
-  // TODO(ambre): rewrite this using a more-supported API when available.
-  fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-  // We need to preallocate the size of the structure in the encoder, the rest
-  // is allocated when the vector is encoded.
-  encoder.Alloc(sizeof(fuchsia_ledger_cloud_Commits));
-  fidl::Encode(&encoder, &serialized_commits, 0);
-  return fsl::VmoFromVector(encoder.TakeBytes(), &commit_pack->buffer);
+  return EncodeToBuffer(&serialized_commits, &commit_pack->buffer);
 }
 
 bool DecodeCommitPack(const CommitPack& commit_pack, std::vector<CommitPackEntry>* commits) {
   FXL_DCHECK(commits);
   commits->clear();
 
-  std::vector<uint8_t> data;
-  if (!fsl::VectorFromVmo(commit_pack.buffer, &data)) {
+  fuchsia::ledger::cloud::Commits result;
+  if (!DecodeFromBuffer(commit_pack.buffer, &result)) {
     return false;
   }
 
-  // Deserialization of the SerializedCommits. See the comment in
-  // EncodeCommitPack for details/caveats.
-  // TODO(ambre): rewrite this using a supported API when available.
-  fidl::Message message(fidl::BytePart(data.data(), data.size(), data.size()), fidl::HandlePart());
-  const char* error_msg;
-  zx_status_t status = message.Decode(Commits::FidlType, &error_msg);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Decoding invalid CommitPack: " << error_msg;
-    return false;
-  }
-
-  fidl::Decoder decoder(std::move(message));
-  Commits result;
-  Commits::Decode(&decoder, &result, 0);
   for (auto& commit : result.commits) {
     if (!commit.has_id() || !commit.has_data()) {
       return false;
