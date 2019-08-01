@@ -66,7 +66,21 @@ impl ProfileServerFacade {
 
     /// Initialize the ProfileServer proxy.
     pub async fn init_profile_server_proxy(&self) -> Result<(), Error> {
+        let tag = "ProfileServerFacade::init_profile_server_proxy";
         self.inner.write().profile_server_proxy = Some(self.create_profile_server_proxy()?);
+        let event_stream = match &self.inner.write().profile_server_proxy {
+            Some(p) => p.take_event_stream(),
+            None => fx_err_and_bail!(&with_line!(tag), "Failed to take event stream from proxy."),
+        };
+
+        let profile_server_future = ProfileServerFacade::monitor_profile_event_stream(event_stream);
+        let fut = async {
+            let result = await!(profile_server_future);
+            if let Err(_err) = result {
+                fx_log_err!("Failed to monitor profile server event stream.");
+            }
+        };
+        fasync::spawn(fut);
         Ok(())
     }
 
@@ -522,13 +536,6 @@ impl ProfileServerFacade {
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
 
-        let event_stream = match &self.inner.read().profile_server_proxy {
-            Some(p) => p.take_event_stream(),
-            None => fx_err_and_bail!(&with_line!(tag), "Failed to take event stream from proxy."),
-        };
-
-        let profile_server_future = ProfileServerFacade::monitor_profile_event_stream(event_stream);
-
         let add_service_future = async {
             let result = await!(add_service_future);
             if let Err(err) = result {
@@ -536,14 +543,6 @@ impl ProfileServerFacade {
             };
         };
         fasync::spawn(add_service_future);
-
-        let fut = async {
-            let result = await!(profile_server_future);
-            if let Err(_err) = result {
-                fx_log_err!("Failed to monitor profile server event stream.");
-            }
-        };
-        fasync::spawn(fut);
 
         Ok(())
     }
