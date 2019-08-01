@@ -44,7 +44,7 @@ TEST(Binding, Control) {
 
   std::vector<std::string> responses;
   ptr->Grob("world", [&responses](StringPtr value) {
-    EXPECT_FALSE(value.is_null());
+    EXPECT_TRUE(value.has_value());
     responses.push_back(std::move(*value));
   });
 

@@ -6,9 +6,9 @@
 #define LIB_FIDL_CPP_TRANSITION_H_
 
 // Define this to use fit::optional in StringPtr and VectorPtr definitions
-#undef FIDL_USE_FIT_OPTIONAL
+//#define FIDL_USE_FIT_OPTIONAL
 // Enable deprecation warnings for methods going away after the fit::optional transition
-#undef FIDL_FIT_OPTIONAL_DEPRECATION
+//#define FIDL_FIT_OPTIONAL_DEPRECATION
 
 // A macro for (optional) deprecation warnings
 #if defined(FIDL_FIT_OPTIONAL_DEPRECATION)

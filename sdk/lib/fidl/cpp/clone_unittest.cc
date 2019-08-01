@@ -44,5 +44,116 @@ TEST(Clone, Channel) {
 }
 #endif
 
+TEST(Clone, VectorPtrPrimitive) {
+  VectorPtr<int> intvec1({1, 2, 3, 4});
+  VectorPtr<int> intvec2;
+
+  EXPECT_TRUE(intvec1.has_value());
+  EXPECT_FALSE(intvec2.has_value());
+  EXPECT_EQ(ZX_OK, Clone(intvec1, &intvec2));
+  EXPECT_TRUE(intvec1.has_value());
+  EXPECT_TRUE(intvec2.has_value());
+  EXPECT_EQ(intvec1->size(), 4u);
+  EXPECT_EQ(intvec2->size(), 4u);
+  EXPECT_EQ(intvec2->at(0), 1);
+  EXPECT_EQ(intvec2->at(1), 2);
+  EXPECT_EQ(intvec2->at(2), 3);
+  EXPECT_EQ(intvec2->at(3), 4);
+
+  intvec1->push_back(5);
+  EXPECT_EQ(intvec1->size(), 5u);
+  EXPECT_EQ(intvec2->size(), 4u);
+
+  VectorPtr<int> intvec3;
+  EXPECT_TRUE(intvec2.has_value());
+  EXPECT_FALSE(intvec3.has_value());
+  EXPECT_EQ(ZX_OK, Clone(intvec3, &intvec2));
+  EXPECT_FALSE(intvec2.has_value());
+  EXPECT_FALSE(intvec3.has_value());
+
+  VectorPtr<int> empty;
+  empty.emplace();
+  EXPECT_TRUE(empty.has_value());
+  EXPECT_EQ(empty->size(), 0u);
+  auto cloned_empty = fidl::Clone(empty);
+  EXPECT_TRUE(cloned_empty.has_value());
+  EXPECT_EQ(cloned_empty->size(), 0u);
+}
+
+TEST(Clone, VectorPtrString) {
+  VectorPtr<std::string> strvec1({"satu", "dua", "tiga", "empat"});
+  VectorPtr<std::string> strvec2;
+  VectorPtr<std::string> strvec3;
+
+  EXPECT_TRUE(strvec1.has_value());
+  EXPECT_FALSE(strvec2.has_value());
+  EXPECT_EQ(ZX_OK, Clone(strvec1, &strvec2));
+  EXPECT_TRUE(strvec1.has_value());
+  EXPECT_TRUE(strvec2.has_value());
+  EXPECT_EQ(strvec1->size(), 4u);
+  EXPECT_EQ(strvec2->size(), 4u);
+  EXPECT_EQ(strvec2->at(0), "satu");
+  EXPECT_EQ(strvec2->at(1), "dua");
+  EXPECT_EQ(strvec2->at(2), "tiga");
+  EXPECT_EQ(strvec2->at(3), "empat");
+
+  strvec1->push_back("lima");
+  EXPECT_EQ(strvec1->size(), 5u);
+  EXPECT_EQ(strvec2->size(), 4u);
+
+  EXPECT_TRUE(strvec2.has_value());
+  EXPECT_FALSE(strvec3.has_value());
+  EXPECT_EQ(ZX_OK, Clone(strvec3, &strvec2));
+  EXPECT_FALSE(strvec2.has_value());
+  EXPECT_FALSE(strvec3.has_value());
+
+  VectorPtr<std::string> empty;
+  empty.emplace();
+  EXPECT_TRUE(empty.has_value());
+  EXPECT_EQ(empty->size(), 0u);
+  auto cloned_empty = fidl::Clone(empty);
+  EXPECT_TRUE(cloned_empty.has_value());
+  EXPECT_EQ(cloned_empty->size(), 0u);
+}
+
+// There's a different implementation for Clone<VectorPtr<T>> for strings and
+// primitives vs all other types.
+TEST(Clone, VectorPtrVector) {
+  VectorPtr<std::vector<int>> vecvec1({std::vector<int>(1, 1), std::vector<int>(2, 2),
+                                       std::vector<int>(3, 3), std::vector<int>(4, 4)});
+  VectorPtr<std::vector<int>> vecvec2;
+  VectorPtr<std::vector<int>> vecvec3;
+
+  EXPECT_TRUE(vecvec1.has_value());
+  EXPECT_FALSE(vecvec2.has_value());
+  EXPECT_EQ(ZX_OK, Clone(vecvec1, &vecvec2));
+  EXPECT_TRUE(vecvec1.has_value());
+  EXPECT_TRUE(vecvec2.has_value());
+  EXPECT_EQ(vecvec1->size(), 4u);
+  EXPECT_EQ(vecvec2->size(), 4u);
+  EXPECT_EQ(vecvec2->at(0).size(), 1u);
+  EXPECT_EQ(vecvec2->at(1).size(), 2u);
+  EXPECT_EQ(vecvec2->at(2).size(), 3u);
+  EXPECT_EQ(vecvec2->at(3).size(), 4u);
+
+  vecvec1->push_back(std::vector<int>(5, 5));
+  EXPECT_EQ(vecvec1->size(), 5u);
+  EXPECT_EQ(vecvec2->size(), 4u);
+
+  EXPECT_TRUE(vecvec2.has_value());
+  EXPECT_FALSE(vecvec3.has_value());
+  EXPECT_EQ(ZX_OK, Clone(vecvec3, &vecvec2));
+  EXPECT_FALSE(vecvec2.has_value());
+  EXPECT_FALSE(vecvec3.has_value());
+
+  VectorPtr<std::vector<int>> empty;
+  empty.emplace();
+  EXPECT_TRUE(empty.has_value());
+  EXPECT_EQ(empty->size(), 0u);
+  auto cloned_empty = fidl::Clone(empty);
+  EXPECT_TRUE(cloned_empty.has_value());
+  EXPECT_EQ(cloned_empty->size(), 0u);
+}
+
 }  // namespace
 }  // namespace fidl

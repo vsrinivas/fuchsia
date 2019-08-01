@@ -1,5 +1,5 @@
 {
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/clone.h": "cf63d7c048221fdfc8018b9871ee4e90",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/clone.h": "78c6e19f843046cceb9b1a31bd9125ab",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/coding_traits.h": "e87a263b084741c4905a0950bc3fb8ce",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/comparison.h": "8f9fa536c9fe20584afb70e4f81feb8c",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/decoder.h": "34b0c1f352301a2e375aa1a7c6d947e1",
@@ -8,6 +8,6 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "9ddd2535dcb92a775a6bb3525665d6e0",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "c337c571adf78d4be70eb604f7091416",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "c9727f4c4685d6b7664196b3fae50123",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "e9fa5b6f48aa84a03fa76a9511b9c554",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "697370100b799f925244af5608865135"
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "47b829c45f2debf32787e51fcc1d6dad",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "c78abc65376ff836e372dedd124ee1f5"
 }

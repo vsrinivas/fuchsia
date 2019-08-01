@@ -11,17 +11,17 @@ namespace {
 
 TEST(StringPtr, Control) {
   StringPtr string;
-  EXPECT_TRUE(string.is_null());
+  EXPECT_FALSE(string.has_value());
   EXPECT_FALSE(string);
   string->append("abc");
-  EXPECT_FALSE(string.is_null());
+  EXPECT_TRUE(string.has_value());
   EXPECT_TRUE(string);
 
-  string.reset("hello, world");
-  EXPECT_FALSE(string.is_null());
+  string = "hello, world";
+  EXPECT_TRUE(string.has_value());
   EXPECT_TRUE(string);
   EXPECT_EQ("hello, world", *string);
-  EXPECT_EQ("hello, world", string.get());
+  EXPECT_EQ("hello, world", string.value());
   EXPECT_EQ(12u, string->size());
 
   StringPtr other(std::move(string));
@@ -33,31 +33,31 @@ TEST(StringPtr, Control) {
   EXPECT_EQ(other, other2);
 
   other2.reset();
-  EXPECT_TRUE(other2.is_null());
+  EXPECT_FALSE(other2.has_value());
 
   other2.swap(other);
-  EXPECT_TRUE(other.is_null());
+  EXPECT_FALSE(other.has_value());
   EXPECT_EQ("hello, world", *other2);
   EXPECT_NE(other, other2);
 }
 
 TEST(StringPtr, Conversions) {
   StringPtr hello = "hello";
-  EXPECT_FALSE(hello.is_null());
+  EXPECT_TRUE(hello.has_value());
   EXPECT_EQ("hello", *hello);
 
-  StringPtr world("world", 5);
-  EXPECT_FALSE(world.is_null());
+  StringPtr world(std::string("world", 5));
+  EXPECT_TRUE(world.has_value());
   EXPECT_EQ("world", *world);
 
   StringPtr null = nullptr;
-  EXPECT_TRUE(null.is_null());
+  EXPECT_FALSE(null.has_value());
   EXPECT_EQ("", *null);
 
-  std::string helloStr = hello;
+  std::string helloStr = hello.value_or("");
   EXPECT_EQ("hello", helloStr);
 
-  std::string nullStr = null;
+  std::string nullStr = null.value_or("");
   EXPECT_EQ("", nullStr);
 }
 

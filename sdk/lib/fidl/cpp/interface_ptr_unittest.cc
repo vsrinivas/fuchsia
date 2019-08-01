@@ -71,7 +71,10 @@ TEST(InterfacePtr, Events) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> hrobs;
-  ptr.events().Hrob = [&hrobs](StringPtr value) { hrobs.push_back(value); };
+  ptr.events().Hrob = [&hrobs](StringPtr value) {
+    EXPECT_TRUE(value.has_value());
+    hrobs.push_back(value.value());
+  };
 
   binding.events().Hrob("one");
   EXPECT_TRUE(hrobs.empty());
@@ -114,7 +117,7 @@ TEST(InterfacePtr, MoveConstructWithOutstandingTransaction) {
   int reply_count = 0;
   ptr->Grob("one", [&reply_count](StringPtr value) {
     ++reply_count;
-    EXPECT_FALSE(value.is_null());
+    EXPECT_TRUE(value.has_value());
     EXPECT_EQ("one", *value);
   });
 
@@ -164,7 +167,7 @@ TEST(InterfacePtr, MoveAssignWithOutstandingTransaction) {
   int reply_count = 0;
   ptr->Grob("one", [&reply_count](StringPtr value) {
     ++reply_count;
-    EXPECT_FALSE(value.is_null());
+    EXPECT_TRUE(value.has_value());
     EXPECT_EQ("one", *value);
   });
 
@@ -205,7 +208,10 @@ TEST(InterfacePtr, MoveConstructWithEvents) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> hrobs;
-  ptr.events().Hrob = [&hrobs](StringPtr value) { hrobs.push_back(value); };
+  ptr.events().Hrob = [&hrobs](StringPtr value) {
+    EXPECT_TRUE(value.has_value());
+    hrobs.push_back(value.value());
+  };
 
   binding.events().Hrob("one");
   EXPECT_TRUE(hrobs.empty());
@@ -229,7 +235,10 @@ TEST(InterfacePtr, MoveAssignWithEvents) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> hrobs;
-  ptr.events().Hrob = [&hrobs](StringPtr value) { hrobs.push_back(value); };
+  ptr.events().Hrob = [&hrobs](StringPtr value) {
+    EXPECT_TRUE(value.has_value());
+    hrobs.push_back(value.value());
+  };
 
   binding.events().Hrob("one");
   EXPECT_TRUE(hrobs.empty());
@@ -253,7 +262,10 @@ TEST(InterfacePtr, MoveIntoMethodCapture) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> grobs;
-  ptr->Grob("one", [moved = std::move(ptr), &grobs](StringPtr s) { grobs.push_back(s); });
+  ptr->Grob("one", [moved = std::move(ptr), &grobs](StringPtr s) {
+    EXPECT_TRUE(s.has_value());
+    grobs.push_back(s.value());
+  });
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_TRUE(grobs.empty());
 
@@ -284,7 +296,7 @@ TEST(InterfacePtr, InterfaceCanHandleGeneratedOrdinal) {
   int reply_count = 0;
   ptr->Grob("one", [&reply_count](StringPtr value) {
     ++reply_count;
-    EXPECT_FALSE(value.is_null());
+    EXPECT_TRUE(value.has_value());
     EXPECT_EQ("response", *value);
   });
 

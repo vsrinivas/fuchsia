@@ -24,7 +24,10 @@ TEST(EventSender, Events) {
   auto request = ptr.NewRequest();
 
   std::vector<std::string> hrobs;
-  ptr.events().Hrob = [&hrobs](StringPtr value) { hrobs.push_back(value); };
+  ptr.events().Hrob = [&hrobs](StringPtr value) {
+    EXPECT_TRUE(value.has_value());
+    hrobs.push_back(value.value());
+  };
 
   auto background = std::thread([&request]() {
     // Notice that this thread does not have an async loop.

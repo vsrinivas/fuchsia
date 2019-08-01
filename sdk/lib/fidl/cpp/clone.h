@@ -99,8 +99,8 @@ inline zx_status_t Clone(const std::unique_ptr<T>& value, std::unique_ptr<T>* re
 template <typename T>
 inline typename std::enable_if<IsPrimitive<T>::value || IsStdString<T>::value, zx_status_t>::type
 Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
-  if (!value) {
-    *result = VectorPtr<T>();
+  if (!value.has_value()) {
+    result->reset();
     return ZX_OK;
   }
   *result = *value;
@@ -129,11 +129,12 @@ Clone(const ::std::vector<T>& value, ::std::vector<T>* result) {
 template <typename T>
 inline typename std::enable_if<!IsPrimitive<T>::value && !IsStdString<T>::value, zx_status_t>::type
 Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
-  if (!value) {
-    *result = VectorPtr<T>();
+  if (!value.has_value()) {
+    result->reset();
     return ZX_OK;
   }
-  result->resize(value->size());
+  result->emplace();
+  (*result)->resize(value->size());
   for (size_t i = 0; i < value->size(); ++i) {
     zx_status_t status = Clone(value->at(i), &(*result)->at(i));
     if (status != ZX_OK)

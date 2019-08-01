@@ -137,7 +137,7 @@ std::vector<fidl::VectorPtr<A>> BuildSortedVector(size_t size,
       if (!vector) {
         continue;
       }
-      fidl::VectorPtr<A> new_vector;
+      std::vector<A> new_vector;
       new_vector.push_back(generator(i));
       for (const auto& value : *vector) {
         new_vector.push_back(fidl::Clone(value));

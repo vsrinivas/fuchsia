@@ -37,12 +37,12 @@ class VectorPtr {
   ~VectorPtr() = default;
   VectorPtr(std::nullptr_t) : is_null_if_empty_(true) {}
   explicit VectorPtr(size_t size) : vec_(std::vector<T>(size)), is_null_if_empty_(false) {}
-  explicit VectorPtr(std::vector<T>&& vec) : vec_(std::move(vec)), is_null_if_empty_(false) {}
+  VectorPtr(std::vector<T>&& vec) : vec_(std::move(vec)), is_null_if_empty_(false) {}
 
   VectorPtr(VectorPtr&& other) = default;
   VectorPtr& operator=(VectorPtr&& other) = default;
 
-  // Copy construct and assignment from an std::vector<T>
+  // Copy construct and assignment from a const std::vector<T>&
   VectorPtr(const std::vector<T>& other) : vec_(other), is_null_if_empty_(false) {}
   VectorPtr& operator=(const std::vector<T>& other) {
     vec_ = other;
@@ -63,7 +63,7 @@ class VectorPtr {
   // Takes the std::vector from the VectorPtr.
   //
   // After this method returns, the VectorPtr is null.
-  FIDL_FIT_OPTIONAL_DEPRECATED("use swap()")
+  FIDL_FIT_OPTIONAL_DEPRECATED("use std::move(vecptr).value();vecptr.reset();")
   std::vector<T> take() {
     is_null_if_empty_ = true;
     return std::move(vec_);
