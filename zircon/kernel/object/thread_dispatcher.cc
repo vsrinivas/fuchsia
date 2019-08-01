@@ -1185,6 +1185,18 @@ zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
   return ZX_OK;
 }
 
+zx_status_t ThreadDispatcher::SetAffinity(cpu_mask_t mask) {
+  Guard<fbl::Mutex> guard{get_lock()};
+  if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
+      (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
+      (state_.lifecycle() == ThreadState::Lifecycle::DEAD)) {
+    return ZX_ERR_BAD_STATE;
+  }
+  // The mask was already validated by the Profile dispatcher.
+  thread_set_cpu_affinity(&thread_, mask);
+  return ZX_OK;
+}
+
 const char* ThreadLifecycleToString(ThreadState::Lifecycle lifecycle) {
   switch (lifecycle) {
     case ThreadState::Lifecycle::INITIAL:

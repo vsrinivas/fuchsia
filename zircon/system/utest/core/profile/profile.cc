@@ -2,24 +2,62 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <thread>
-
 #include <lib/zx/job.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/profile.h>
 #include <zircon/syscalls/types.h>
+
+#include <thread>
+
 #include <zxtest/zxtest.h>
+
+extern "C" zx_handle_t get_root_resource(void);
 
 namespace profile {
 namespace {
+
+zx::unowned_job GetRootJob() {
+  zx::unowned_job root_job(zx::job::default_job());
+  EXPECT_TRUE(root_job->is_valid());
+  return root_job;
+}
 
 zx_profile_info_t MakeSchedulerProfileInfo(int32_t priority) {
   zx_profile_info_t info = {};
   info.flags = ZX_PROFILE_INFO_FLAG_PRIORITY;
   info.priority = priority;
   return info;
+}
+
+zx_profile_info_t MakeCpuMaskProfile(uint32_t mask) {
+  zx_profile_info_t info = {};
+  info.flags = ZX_PROFILE_INFO_FLAG_CPU_MASK;
+  info.cpu_affinity_mask.mask[0] = mask;
+  return info;
+}
+
+size_t GetCpuCount() {
+  size_t actual, available;
+  zx::unowned_handle root_resource(get_root_resource());
+  zx_status_t status = root_resource->get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
+  ZX_ASSERT(status == ZX_OK);
+  return available;
+}
+
+uint32_t GetAffinityMask(const zx::thread& thread) {
+  zx_info_thread_t info;
+  zx_status_t status = thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+  ZX_ASSERT(status == ZX_OK);
+  return info.cpu_affinity_mask.mask[0];
+}
+
+uint32_t GetLastScheduledCpu(const zx::thread& thread) {
+  zx_info_thread_stats_t info;
+  zx_status_t status = thread.get_info(ZX_INFO_THREAD_STATS, &info, sizeof(info), nullptr, nullptr);
+  ZX_ASSERT(status == ZX_OK);
+  return info.last_scheduled_cpu;
 }
 
 // Tests in this file rely that the default job is the root job.
@@ -182,6 +220,61 @@ TEST(ProfileTest, CreateProfileWithNullProfileIsInvalidArgs) {
 #pragma GCC diagnostic ignored "-Wnonnull"
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_profile_create(root_job->get(), 0u, &profile_info, nullptr));
 #pragma GCC diagnostic pop
+}
+
+TEST(CpuMaskProfile, EmptyMask) {
+  zx_profile_info_t profile_info = MakeCpuMaskProfile(0);
+  zx::profile profile;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*GetRootJob(), 0u, &profile_info, &profile));
+}
+
+TEST(CpuMaskProfile, HighCpuMaskWordSet) {
+  // Set a valid CPU (0) and also a bit beyond the first word (CPU 480)
+  zx_profile_info_t profile_info = MakeCpuMaskProfile(1);
+  profile_info.cpu_affinity_mask.mask[(ZX_CPU_SET_MAX_CPUS / sizeof(uint32_t) / CHAR_BIT) - 1] = 1;
+
+  // Ensure we get an error.
+  zx::profile profile;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*GetRootJob(), 0u, &profile_info, &profile));
+}
+
+TEST(CpuMaskProfile, HighCpuSet) {
+  ASSERT_LT(GetCpuCount(), sizeof(uint32_t) * 8,
+            "Test assumes system running with less than 32 cores.");
+  zx_profile_info_t profile_info = MakeCpuMaskProfile(1u << (GetCpuCount() + 1));
+  zx::profile profile;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*GetRootJob(), 0u, &profile_info, &profile));
+}
+
+zx_status_t RunThreadWithProfile(const zx::profile& profile,
+                                 const std::function<zx_status_t()>& body) {
+  zx_status_t result;
+  std::thread worker([&body, &result, &profile]() {
+    result = zx::thread::self()->set_profile(profile, 0);
+    if (result != ZX_OK) {
+      return;
+    }
+    result = body();
+  });
+  worker.join();
+  return result;
+}
+
+TEST(CpuMaskProfile, ApplyProfile) {
+  const size_t num_cpus = GetCpuCount();
+  ASSERT_LT(num_cpus, sizeof(uint32_t) * 8, "Test assumes system running with less than 32 cores.");
+  for (size_t i = 0; i < num_cpus; i++) {
+    zx_profile_info_t profile_info = MakeCpuMaskProfile(1 << i);
+    zx::profile profile;
+    ASSERT_OK(zx::profile::create(*GetRootJob(), 0u, &profile_info, &profile));
+
+    // Ensure that the correct mask was applied.
+    ASSERT_OK(RunThreadWithProfile(profile, [i]() {
+      EXPECT_EQ(GetAffinityMask(*zx::thread::self()), (1 << i));
+      EXPECT_EQ(GetLastScheduledCpu(*zx::thread::self()), i);
+      return ZX_OK;
+    }));
+  }
 }
 
 }  // namespace
