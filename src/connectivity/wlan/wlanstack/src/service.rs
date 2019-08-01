@@ -53,7 +53,7 @@ pub async fn serve_device_requests(
     inspect_tree: Arc<inspect::WlanstackTree>,
     cobalt_sender: CobaltSender,
 ) -> Result<(), failure::Error> {
-    while let Some(req) = await!(req_stream.try_next()).context("error running DeviceService")? {
+    while let Some(req) = req_stream.try_next().await.context("error running DeviceService")? {
         // Note that errors from responder.send() are propagated intentionally.
         // If we fail to send a response, the only way to recover is to stop serving the
         // client and close the channel. Otherwise, the client would be left hanging
@@ -61,7 +61,7 @@ pub async fn serve_device_requests(
         match req {
             DeviceServiceRequest::ListPhys { responder } => responder.send(&mut list_phys(&phys)),
             DeviceServiceRequest::QueryPhy { req, responder } => {
-                let result = await!(query_phy(&phys, req.phy_id));
+                let result = query_phy(&phys, req.phy_id).await;
                 let (status, mut response) = into_status_and_opt(result);
                 responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
             }
@@ -74,7 +74,7 @@ pub async fn serve_device_requests(
                 responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
             }
             DeviceServiceRequest::CreateIface { req, responder } => {
-                match await!(create_iface(&iface_counter, &phys, req)) {
+                match create_iface(&iface_counter, &phys, req).await {
                     Ok(new_iface) => {
                         info!("iface #{} started ({:?})", new_iface.id, new_iface.phy_ownership);
                         let iface_id = new_iface.id;
@@ -111,7 +111,7 @@ pub async fn serve_device_requests(
                 }
             }
             DeviceServiceRequest::DestroyIface { req, responder } => {
-                let result = await!(destroy_iface(&phys, &ifaces, req.iface_id));
+                let result = destroy_iface(&phys, &ifaces, req.iface_id).await;
                 let status = into_status_and_opt(result).0;
                 responder.send(status.into_raw())
             }
@@ -128,7 +128,7 @@ pub async fn serve_device_requests(
                 responder.send(status.into_raw())
             }
             DeviceServiceRequest::GetIfaceStats { iface_id, responder } => {
-                match await!(get_iface_stats(&ifaces, iface_id)) {
+                match get_iface_stats(&ifaces, iface_id).await {
                     Ok(stats_ref) => {
                         let mut stats = stats_ref.lock();
                         responder.send(zx::sys::ZX_OK, Some(OutOfLine(&mut stats)))
@@ -137,11 +137,11 @@ pub async fn serve_device_requests(
                 }
             }
             DeviceServiceRequest::GetMinstrelList { iface_id, responder } => {
-                let (status, mut peers) = await!(list_minstrel_peers(&ifaces, iface_id));
+                let (status, mut peers) = list_minstrel_peers(&ifaces, iface_id).await;
                 responder.send(status.into_raw(), &mut peers)
             }
             DeviceServiceRequest::GetMinstrelStats { iface_id, peer_addr, responder } => {
-                let (status, mut peer) = await!(get_minstrel_stats(&ifaces, iface_id, peer_addr));
+                let (status, mut peer) = get_minstrel_stats(&ifaces, iface_id, peer_addr).await;
                 responder.send(status.into_raw(), peer.as_mut().map(|x| OutOfLine(x.as_mut())))
             }
             DeviceServiceRequest::WatchDevices { watcher, control_handle: _ } => {
@@ -151,7 +151,7 @@ pub async fn serve_device_requests(
                 Ok(())
             }
             DeviceServiceRequest::SetCountry { req, responder } => {
-                let status = await!(set_country(&phys, req));
+                let status = set_country(&phys, req).await;
                 responder.send(status.into_raw())
             }
         }?;
@@ -181,7 +181,7 @@ fn list_phys(phys: &PhyMap) -> fidl_svc::ListPhysResponse {
 async fn query_phy(phys: &PhyMap, id: u16) -> Result<fidl_svc::QueryPhyResponse, zx::Status> {
     info!("query_phy(id = {})", id);
     let phy = phys.get(&id).ok_or(zx::Status::NOT_FOUND)?;
-    let query_result = await!(phy.proxy.query()).map_err(move |e| {
+    let query_result = phy.proxy.query().await.map_err(move |e| {
         error!("query_phy(id = {}): error sending 'Query' request to phy: {}", id, e);
         zx::Status::INTERNAL
     })?;
@@ -222,7 +222,7 @@ async fn destroy_iface<'a>(
 
     let phy = phys.get(&phy_ownership.phy_id).ok_or(zx::Status::NOT_FOUND)?;
     let mut phy_req = fidl_wlan_dev::DestroyIfaceRequest { id: phy_ownership.phy_assigned_id };
-    let r = await!(phy.proxy.destroy_iface(&mut phy_req)).map_err(move |e| {
+    let r = phy.proxy.destroy_iface(&mut phy_req).await.map_err(move |e| {
         error!("Error sending 'DestroyIface' request to phy {:?}: {}", phy_ownership, e);
         zx::Status::INTERNAL
     })?;
@@ -263,7 +263,7 @@ async fn set_country(phys: &PhyMap, req: fidl_svc::SetCountryRequest) -> zx::Sta
     };
 
     let mut phy_req = fidl_wlan_dev::SetCountryRequest { alpha2: req.alpha2 };
-    match await!(phy.proxy.set_country(&mut phy_req)) {
+    match phy.proxy.set_country(&mut phy_req).await {
         Ok(status) => zx::Status::from_raw(status),
         Err(e) => {
             error!("Error sending SetCountry set_country request to phy #{}: {}", phy_id, e);
@@ -280,7 +280,7 @@ async fn create_iface<'a>(
     let phy_id = req.phy_id;
     let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
 
-    let phy_info = await!(phy.proxy.query())
+    let phy_info = phy.proxy.query().await
         .map_err(|e| {
             error!("error sending query request to phy #{}: {}", phy_id, e);
             zx::Status::INTERNAL
@@ -301,7 +301,7 @@ async fn create_iface<'a>(
     };
 
     let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role, sme_channel };
-    let r = await!(phy.proxy.create_iface(&mut phy_req)).map_err(move |e| {
+    let r = phy.proxy.create_iface(&mut phy_req).await.map_err(move |e| {
         error!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
         zx::Status::INTERNAL
     })?;
@@ -374,7 +374,7 @@ fn get_mesh_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::mesh::Endpo
 
 async fn get_iface_stats(ifaces: &IfaceMap, iface_id: u16) -> Result<StatsRef, zx::Status> {
     let iface = ifaces.get(&iface_id).ok_or(zx::Status::NOT_FOUND)?;
-    await!(iface.stats_sched.get_stats())
+    iface.stats_sched.get_stats().await
 }
 
 async fn list_minstrel_peers(
@@ -386,7 +386,7 @@ async fn list_minstrel_peers(
         Some(iface) => iface,
         None => return (zx::Status::NOT_FOUND, empty_peer_list),
     };
-    match await!(iface.mlme_query.get_minstrel_list()) {
+    match iface.mlme_query.get_minstrel_list().await {
         Ok(resp) => (zx::Status::OK, resp.peers),
         Err(_) => (zx::Status::INTERNAL, empty_peer_list),
     }
@@ -401,7 +401,7 @@ async fn get_minstrel_stats(
         Some(iface) => iface,
         None => return (zx::Status::NOT_FOUND, None),
     };
-    match await!(iface.mlme_query.get_minstrel_peer(mac_addr)) {
+    match iface.mlme_query.get_minstrel_peer(mac_addr).await {
         Ok(MinstrelStatsResponse { peer }) => (zx::Status::OK, peer),
         Err(_) => (zx::Status::INTERNAL, None),
     }

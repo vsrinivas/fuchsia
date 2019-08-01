@@ -37,7 +37,7 @@ pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender
 
     let mut last_reported_stats: HashMap<u16, StatsRef> = HashMap::new();
     let mut interval_stream = fasync::Interval::new(REPORT_PERIOD_MINUTES.minutes());
-    while let Some(_) = await!(interval_stream.next()) {
+    while let Some(_) = interval_stream.next().await {
         let mut futures = FuturesUnordered::new();
         for (id, iface) in ifaces_map.get_snapshot().iter() {
             let id = *id;
@@ -46,7 +46,7 @@ pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender
             futures.push(fut);
         }
 
-        while let Some((id, iface, stats_result)) = await!(futures.next()) {
+        while let Some((id, iface, stats_result)) = futures.next().await {
             match stats_result {
                 Ok(current_stats) => {
                     let last_stats_opt = last_reported_stats.get(&id);

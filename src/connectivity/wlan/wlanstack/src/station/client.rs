@@ -113,9 +113,9 @@ async fn serve_fidl_endpoint(sme: &Mutex<Sme>, endpoint: Endpoint) {
         }
     };
     const MAX_CONCURRENT_REQUESTS: usize = 1000;
-    let r = await!(stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
+    let r = stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
         handle_fidl_request(sme, request)
-    }));
+    }).await;
     if let Err(e) = r {
         error!("Error serving FIDL: {}", e);
         return;
@@ -127,9 +127,9 @@ async fn handle_fidl_request(
     request: fidl_sme::ClientSmeRequest,
 ) -> Result<(), fidl::Error> {
     match request {
-        ClientSmeRequest::Scan { req, txn, .. } => Ok(await!(scan(sme, txn, req.scan_type))
+        ClientSmeRequest::Scan { req, txn, .. } => Ok(scan(sme, txn, req.scan_type).await
             .unwrap_or_else(|e| error!("Error handling a scan transaction: {:?}", e))),
-        ClientSmeRequest::Connect { req, txn, .. } => Ok(await!(connect(sme, txn, req))
+        ClientSmeRequest::Connect { req, txn, .. } => Ok(connect(sme, txn, req).await
             .unwrap_or_else(|e| error!("Error handling a connect transaction: {:?}", e))),
         ClientSmeRequest::Disconnect { responder } => {
             disconnect(sme);
@@ -146,7 +146,7 @@ async fn scan(
 ) -> Result<(), failure::Error> {
     let handle = txn.into_stream()?.control_handle();
     let receiver = sme.lock().unwrap().on_scan_command(scan_type);
-    let result = await!(receiver).unwrap_or(Err(fidl_mlme::ScanResultCodes::InternalError));
+    let result = receiver.await.unwrap_or(Err(fidl_mlme::ScanResultCodes::InternalError));
     let send_result = send_scan_results(handle, result);
     filter_out_peer_closed(send_result)?;
     Ok(())
@@ -162,7 +162,7 @@ async fn connect(
         Some(txn) => Some(txn.into_stream()?.control_handle()),
     };
     let receiver = sme.lock().unwrap().on_connect_command(req);
-    let result = await!(receiver).ok();
+    let result = receiver.await.ok();
     let send_result = send_connect_result(handle, result);
     filter_out_peer_closed(send_result)?;
     Ok(())

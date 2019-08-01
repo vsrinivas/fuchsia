@@ -78,9 +78,9 @@ async fn serve_fidl_endpoint(sme: &Mutex<Sme>, endpoint: Endpoint) {
             return;
         }
     };
-    let r = await!(stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
+    let r = stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
         handle_fidl_request(sme, request)
-    }));
+    }).await;
     if let Err(e) = r {
         error!("Error serving a FIDL client of AP SME: {}", e);
     }
@@ -92,11 +92,11 @@ async fn handle_fidl_request(
 ) -> Result<(), ::fidl::Error> {
     match request {
         fidl_sme::ApSmeRequest::Start { config, responder } => {
-            let r = await!(start(sme, config));
+            let r = start(sme, config).await;
             responder.send(r)?;
         }
         fidl_sme::ApSmeRequest::Stop { responder } => {
-            await!(stop(sme));
+            stop(sme).await;
             responder.send()?;
         }
     }
@@ -111,7 +111,7 @@ async fn start(sme: &Mutex<Sme>, config: fidl_sme::ApConfig) -> fidl_sme::StartA
     };
 
     let receiver = sme.lock().unwrap().on_start_command(sme_config);
-    let r = await!(receiver).unwrap_or_else(|_| {
+    let r = receiver.await.unwrap_or_else(|_| {
         error!("Responder for AP Start command was dropped without sending a response");
         ap_sme::StartResult::InternalError
     });
@@ -135,7 +135,7 @@ fn convert_start_result_code(r: ap_sme::StartResult) -> fidl_sme::StartApResultC
 
 async fn stop(sme: &Mutex<Sme>) {
     let receiver = sme.lock().unwrap().on_stop_command();
-    await!(receiver).unwrap_or_else(|_| {
+    receiver.await.unwrap_or_else(|_| {
         error!("Responder for AP Stop command was dropped without sending a response");
     })
 }

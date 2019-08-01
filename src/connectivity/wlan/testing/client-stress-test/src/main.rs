@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 // Explicitly added due to conflict using custom_attribute and async_await above.
 #[macro_use]
@@ -77,7 +77,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
 
     let fut = async {
-        let wlan_iface_ids = await!(wlan_service_util::get_iface_list(&wlan_svc))
+        let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc).await
             .context("Failed to query wlan_service iface list")?;
 
         if wlan_iface_ids.is_empty() {
@@ -85,8 +85,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         };
 
         for iface in wlan_iface_ids {
-            let sme_proxy = await!(wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface))?;
-            match await!(sme_proxy.status()) {
+            let sme_proxy = wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface).await?;
+            match sme_proxy.status().await {
                 Ok(status) => status,
                 Err(_) => continue,
             };
@@ -103,7 +103,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             for i in 0..opt.repetitions {
                 if opt.scan_test_enabled {
                     let start = Instant::now();
-                    let result = await!(wlan_service_util::perform_scan(&wlaniface.sme_proxy));
+                    let result = wlan_service_util::perform_scan(&wlaniface.sme_proxy).await;
                     match result {
                         Ok(_ess_info) => {
                             total_scan_time_ms +=
@@ -117,11 +117,11 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 if opt.connect_test_enabled {
                     let start = Instant::now();
-                    let result = await!(wlan_service_util::connect_to_network(
+                    let result = wlan_service_util::connect_to_network(
                         &wlaniface.sme_proxy,
                         opt.target_ssid.as_bytes().to_vec(),
                         opt.target_pwd.as_bytes().to_vec()
-                    ));
+                    ).await;
                     match result {
                         Ok(true) => {
                             total_connect_time_ms +=
@@ -136,7 +136,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 if opt.disconnect_test_enabled {
                     let start = Instant::now();
                     let result =
-                        await!(wlan_service_util::disconnect_from_network(&wlaniface.sme_proxy));
+                        wlan_service_util::disconnect_from_network(&wlaniface.sme_proxy).await;
                     match result {
                         Ok(()) => {
                             total_disconnect_time_ms +=

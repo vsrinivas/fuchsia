@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 // Explicitly added due to conflict using custom_attribute and async_await above.
 #[macro_use]
@@ -62,7 +62,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     test_results.connect_to_wlan_service = true;
 
     let fut = async {
-        let wlan_iface_ids = await!(wlan_service_util::get_iface_list(&wlan_svc))
+        let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc).await
             .context("wlan-ap-smoke-test: failed to query wlanservice iface list")?;
         test_results.query_wlan_service_iface_list = true;
 
@@ -76,7 +76,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         // find MAC role supported by each interface
         for iface in wlan_iface_ids {
             let (status, response) =
-                await!(wlan_svc.query_iface(iface)).context("error querying iface")?;
+                wlan_svc.query_iface(iface).await.context("error querying iface")?;
 
             if status == zx::sys::ZX_OK {
                 let query_iface_response = match response {
@@ -85,9 +85,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 };
 
                 if query_iface_response.role == fidl_fuchsia_wlan_device::MacRole::Client {
-                    match await!(wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface)) {
+                    match wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface).await {
                         Ok(client_sme_proxy) => {
-                            match await!(client_sme_proxy.status()) {
+                            match client_sme_proxy.status().await {
                                 Ok(_status) => {
                                     let mut wlan_client_ifaces =
                                         WlanClientIface::new(client_sme_proxy);
@@ -109,7 +109,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 }
 
                 if query_iface_response.role == fidl_fuchsia_wlan_device::MacRole::Ap {
-                    match await!(wlan_ap_service_util::get_iface_ap_sme_proxy(&wlan_svc, iface)) {
+                    match wlan_ap_service_util::get_iface_ap_sme_proxy(&wlan_svc, iface).await {
                         Ok(ap_sme_proxy) => {
                             let mut wlan_ap_iface = WlanApIface::new(ap_sme_proxy);
                             wlan_ap_iface.ap_interface_status = true;
@@ -128,12 +128,12 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         // Go over all APs, create a network, have every client scan, connect and disconnect.
         // When done, stop the AP.
         for (ap_iface_id, wlan_ap_iface) in test_results.iface_ap_objects.iter_mut() {
-            let start_ap_result_code = await!(wlan_ap_service_util::start_ap(
+            let start_ap_result_code = wlan_ap_service_util::start_ap(
                 &wlan_ap_iface.sme_proxy,
                 target_ssid.to_vec(),
                 target_pwd.to_vec(),
                 target_channel
-            ));
+            ).await;
 
             match start_ap_result_code {
                 Ok(result_code) => match result_code {
@@ -164,7 +164,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 let mut wlan_client_results = WlanClientResultsPerAP::new();
 
                 let scan_results_return =
-                    await!(wlan_service_util::perform_scan(&wlan_client_iface.sme_proxy));
+                    wlan_service_util::perform_scan(&wlan_client_iface.sme_proxy).await;
 
                 let scan_results = match scan_results_return {
                     Ok(scan_results) => scan_results,
@@ -182,11 +182,11 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 // Connect to network, if found in scan results
                 if wlan_client_results.found_ap_in_scan == true {
-                    let connect_result = await!(wlan_service_util::connect_to_network(
+                    let connect_result = wlan_service_util::connect_to_network(
                         &wlan_client_iface.sme_proxy,
                         target_ssid.to_vec(),
                         target_pwd.to_vec()
-                    ));
+                    ).await;
 
                     match connect_result {
                         Ok(true) => {
@@ -198,9 +198,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 // If connected, disconnect
                 if wlan_client_results.connection_success == true {
-                    match await!(wlan_service_util::disconnect_from_network(
+                    match wlan_service_util::disconnect_from_network(
                         &wlan_client_iface.sme_proxy
-                    )) {
+                    ).await {
                         Err(_) => wlan_client_results.disconnect_success = false,
                         _ => wlan_client_results.disconnect_success = true,
                     };
@@ -225,7 +225,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             if wlan_ap_iface.ap_start_success == true {
                 // Stop AP
                 let stop_ap_result =
-                    await!(wlan_ap_service_util::stop_ap(&wlan_ap_iface.sme_proxy));
+                    wlan_ap_service_util::stop_ap(&wlan_ap_iface.sme_proxy).await;
 
                 if stop_ap_result.is_ok() {
                     wlan_ap_iface.ap_stop_success = true;

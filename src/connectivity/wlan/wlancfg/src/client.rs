@@ -141,10 +141,10 @@ fn handle_manual_request(
 
 async fn auto_connect(services: &Services) -> Result<Vec<u8>, failure::Error> {
     loop {
-        if let Some(ssid) = await!(attempt_auto_connect(services))? {
+        if let Some(ssid) = attempt_auto_connect(services).await? {
             return Ok(ssid);
         }
-        await!(fuchsia_async::Timer::new(AUTO_CONNECT_RETRY_SECONDS.seconds().after_now()));
+        fuchsia_async::Timer::new(AUTO_CONNECT_RETRY_SECONDS.seconds().after_now()).await;
     }
 }
 
@@ -155,7 +155,7 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, fa
     }
 
     let txn = start_scan_txn(&services.sme)?;
-    let results = await!(fetch_scan_results(txn))?;
+    let results = fetch_scan_results(txn).await?;
     let known_networks = results.into_iter().filter_map(|ess| {
         services
             .ess_store
@@ -163,7 +163,7 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, fa
             .map(|known_ess| (ess.best_bss.ssid, known_ess))
     });
     for (ssid, known_ess) in known_networks {
-        if await!(connect_to_known_network(&services.sme, ssid.clone(), known_ess))? {
+        if connect_to_known_network(&services.sme, ssid.clone(), known_ess).await? {
             return Ok(Some(ssid));
         }
     }
@@ -178,7 +178,7 @@ async fn connect_to_known_network(
     let ssid_str = String::from_utf8_lossy(&ssid).into_owned();
     println!("wlancfg: Auto-connecting to '{}'", ssid_str);
     let txn = start_connect_txn(sme, &ssid, &ess.password)?;
-    match await!(wait_until_connected(txn))? {
+    match wait_until_connected(txn).await? {
         fidl_sme::ConnectResultCode::Success => {
             println!("wlancfg: Auto-connected to '{}'", ssid_str);
             Ok(true)
@@ -261,11 +261,11 @@ async fn connected_state(
 
 async fn wait_for_disconnection(services: Services) -> Result<(), failure::Error> {
     loop {
-        let status = await!(services.sme.status())?;
+        let status = services.sme.status().await?;
         if status.connected_to.is_none() && status.connecting_to_ssid.is_empty() {
             return Ok(());
         }
-        await!(fuchsia_async::Timer::new(DISCONNECTION_MONITOR_SECONDS.seconds().after_now()));
+        fuchsia_async::Timer::new(DISCONNECTION_MONITOR_SECONDS.seconds().after_now()).await;
     }
 }
 
@@ -309,7 +309,7 @@ async fn disconnected_state(
 
     // Now that we are officially disconnected, wait for user requests
     loop {
-        let (req, req_stream) = await!(next_req);
+        let (req, req_stream) = next_req.await;
         next_req = match req {
             // If asked to disconnect, just reply immediately since we are already disconnected
             Some(ManualRequest::Disconnect(responder)) => {
@@ -368,7 +368,7 @@ async fn wait_until_connected(
     txn: fidl_sme::ConnectTransactionProxy,
 ) -> Result<fidl_sme::ConnectResultCode, failure::Error> {
     let mut stream = txn.take_event_stream();
-    while let Some(event) = await!(stream.try_next())? {
+    while let Some(event) = stream.try_next().await? {
         match event {
             fidl_sme::ConnectTransactionEvent::OnFinished { code } => return Ok(code),
         }
@@ -381,7 +381,7 @@ async fn fetch_scan_results(
 ) -> Result<Vec<fidl_sme::EssInfo>, failure::Error> {
     let mut stream = txn.take_event_stream();
     let mut all_aps = vec![];
-    while let Some(event) = await!(stream.next()) {
+    while let Some(event) = stream.next().await {
         match event? {
             fidl_sme::ScanTransactionEvent::OnResult { aps } => all_aps.extend(aps),
             fidl_sme::ScanTransactionEvent::OnFinished {} => return Ok(all_aps),

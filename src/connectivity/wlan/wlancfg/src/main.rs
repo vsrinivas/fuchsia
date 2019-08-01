@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "256"]
 
 mod client;
@@ -34,7 +34,7 @@ async fn serve_fidl(
         fasync::spawn(fut)
     });
     fs.take_and_serve_directory_handle()?;
-    let () = await!(fs.collect());
+    let () = fs.collect().await;
     Err(format_err!("FIDL server future exited unexpectedly"))
 }
 

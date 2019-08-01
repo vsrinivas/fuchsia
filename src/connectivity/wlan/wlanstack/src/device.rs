@@ -117,7 +117,7 @@ async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
     let id = new_phy.id;
     let event_stream = new_phy.proxy.take_event_stream();
     phys.insert(id, PhyDevice { proxy: new_phy.proxy, device: new_phy.device });
-    let r = await!(event_stream.map_ok(|_| ()).try_collect::<()>());
+    let r = event_stream.map_ok(|_| ()).try_collect::<()>().await;
     phys.remove(&id);
     if let Err(e) = r {
         error!("error reading from the FIDL channel of phy #{}: {}", id, e);
@@ -176,7 +176,7 @@ async fn query_and_serve_iface_deprecated(
     let event_stream = proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
 
-    let device_info = match await!(proxy.query_device_info()) {
+    let device_info = match proxy.query_device_info().await {
         Ok(x) => x,
         Err(e) => {
             error!("Failed to query new iface '{}': {}", device.path().display(), e);
@@ -219,7 +219,7 @@ async fn query_and_serve_iface_deprecated(
         },
     );
 
-    let r = await!(sme_fut);
+    let r = sme_fut.await;
     if let Err(e) = r {
         error!("Error serving station for iface #{}: {}", id, e);
     }
@@ -239,7 +239,7 @@ pub async fn query_and_serve_iface(
     let event_stream = mlme_proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
 
-    let device_info = await!(mlme_proxy.query_device_info())
+    let device_info = mlme_proxy.query_device_info().await
         .map_err(|e| format_err!("failed querying iface: {}", e))?;
     let (sme, sme_fut) = create_sme(
         cfg,
@@ -266,7 +266,7 @@ pub async fn query_and_serve_iface(
         },
     );
 
-    let result = await!(sme_fut).map_err(|e| format_err!("error while serving SME: {}", e));
+    let result = sme_fut.await.map_err(|e| format_err!("error while serving SME: {}", e));
     info!("iface removed: {:?}", id);
     ifaces.remove(&id);
     result

@@ -87,9 +87,9 @@ async fn serve_fidl_endpoint<'a>(proxy: &'a MlmeProxy, sme: &'a Mutex<Sme>, endp
             return;
         }
     };
-    let r = await!(stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
+    let r = stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
         handle_fidl_request(proxy, &sme, request)
-    }));
+    }).await;
     if let Err(e) = r {
         error!("Error serving a FIDL client of Mesh SME: {}", e);
     }
@@ -102,15 +102,15 @@ async fn handle_fidl_request<'a>(
 ) -> Result<(), ::fidl::Error> {
     match request {
         fidl_sme::MeshSmeRequest::Join { config, responder } => {
-            let code = await!(join_mesh(sme, config));
+            let code = join_mesh(sme, config).await;
             responder.send(code)
         }
         fidl_sme::MeshSmeRequest::Leave { responder } => {
-            let code = await!(leave_mesh(sme));
+            let code = leave_mesh(sme).await;
             responder.send(code)
         }
         fidl_sme::MeshSmeRequest::GetMeshPathTable { responder } => {
-            let (code, mut table) = await!(get_mesh_path_table(proxy, sme));
+            let (code, mut table) = get_mesh_path_table(proxy, sme).await;
             responder.send(code, &mut table)
         }
     }
@@ -121,7 +121,7 @@ async fn get_mesh_path_table<'a>(
     _sme: &'a Mutex<Sme>,
 ) -> (fidl_sme::GetMeshPathTableResultCode, fidl_mesh::MeshPathTable) {
     let mut dummy = fidl_mlme::GetMeshPathTableRequest { dummy: 0 };
-    let table = await!(proxy.get_mesh_path_table_req(&mut dummy));
+    let table = proxy.get_mesh_path_table_req(&mut dummy).await;
     match table {
         Ok(tbl) => (fidl_sme::GetMeshPathTableResultCode::Success, tbl),
         Err(err) => {
@@ -139,7 +139,7 @@ async fn join_mesh(sme: &Mutex<Sme>, config: fidl_sme::MeshConfig) -> fidl_sme::
         .lock()
         .unwrap()
         .on_join_command(mesh_sme::Config { mesh_id: config.mesh_id, channel: config.channel });
-    let r = await!(receiver).unwrap_or_else(|_| {
+    let r = receiver.await.unwrap_or_else(|_| {
         error!("Responder for Join Mesh command was dropped without sending a response");
         mesh_sme::JoinMeshResult::InternalError
     });
@@ -160,7 +160,7 @@ fn convert_join_mesh_result(result: mesh_sme::JoinMeshResult) -> fidl_sme::JoinM
 
 async fn leave_mesh(sme: &Mutex<Sme>) -> fidl_sme::LeaveMeshResultCode {
     let receiver = sme.lock().unwrap().on_leave_command();
-    let r = await!(receiver).unwrap_or_else(|_| {
+    let r = receiver.await.unwrap_or_else(|_| {
         error!("Responder for Leave Mesh command was dropped without sending a response");
         mesh_sme::LeaveMeshResult::InternalError
     });

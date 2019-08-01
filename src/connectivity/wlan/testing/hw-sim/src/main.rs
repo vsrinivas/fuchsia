@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "128"]
 
 use {
@@ -228,7 +228,7 @@ fn main() -> Result<(), failure::Error> {
 
 async fn event_listener(state: Arc<Mutex<State>>, proxy: wlantap::WlantapPhyProxy) {
     let mut events = proxy.take_event_stream();
-    while let Some(event) = await!(events.try_next()).unwrap() {
+    while let Some(event) = events.try_next().await.unwrap() {
         match event {
             wlantap::WlantapPhyEvent::SetChannel { args } => {
                 let mut state = state.lock().unwrap();
@@ -246,7 +246,7 @@ async fn event_listener(state: Arc<Mutex<State>>, proxy: wlantap::WlantapPhyProx
 
 async fn beacon_sender(state: Arc<Mutex<State>>, proxy: wlantap::WlantapPhyProxy) {
     let mut beacon_timer_stream = fasync::Interval::new(102_400_000.nanos());
-    while let Some(_) = await!(beacon_timer_stream.next()) {
+    while let Some(_) = beacon_timer_stream.next().await {
         let state = &mut *state.lock().unwrap();
         if state.current_channel.primary == 6 {
             if !state.is_associated {
@@ -387,9 +387,9 @@ mod simulation_tests {
         svc: &'a wlanstack_dev_svc::DeviceServiceProxy,
         req: &'a mut wlanstack_dev_svc::SetCountryRequest,
     ) -> Result<(), failure::Error> {
-        let status = await!(svc.set_country(req));
+        let status = svc.set_country(req).await;
         assert_eq!(status.unwrap(), fuchsia_zircon_sys::ZX_OK);
-        await!(receiver.next()).expect("error receiving set_country_helper mpsc message");
+        receiver.next().await.expect("error receiving set_country_helper mpsc message");
         Ok(())
     }
 
@@ -777,10 +777,10 @@ mod simulation_tests {
         let mut client_stream = client.get_stream();
         client.send(&buf);
         loop {
-            let event = await!(client_stream.next()).expect("receiving ethernet event")?;
+            let event = client_stream.next().await.expect("receiving ethernet event")?;
             match event {
                 ethernet::Event::StatusChanged => {
-                    await!(client.get_status()).expect("getting status");
+                    client.get_status().await.expect("getting status");
                 }
                 ethernet::Event::Receive(rx_buffer, flags) => {
                     ensure!(flags.intersects(ethernet::EthernetQueueFlags::RX_OK), "RX_OK not set");

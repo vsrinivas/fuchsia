@@ -76,7 +76,7 @@ mod tests {
         current: u32,
         stream: mpsc::UnboundedReceiver<u32>,
     ) -> Result<State<u32>, u32> {
-        let (number, stream) = await!(stream.into_future());
+        let (number, stream) = stream.into_future().await;
         match number {
             Some(number) => Ok(make_sum_state(current + number, stream)),
             None => Err(current),

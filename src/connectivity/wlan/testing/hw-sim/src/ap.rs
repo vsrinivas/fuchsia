@@ -164,7 +164,7 @@ pub mod tests {
     ) -> u16 {
         loop {
             assert_variant!(
-                await!(device_watch_stream.next()),
+                device_watch_stream.next().await,
                 Some(Ok(event)) => match event {
                     fidl_wlan_service::DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
                         return iface_id;
@@ -181,7 +181,7 @@ pub mod tests {
     ) -> fidl_sme::ApSmeProxy {
         let (proxy, remote) =
             fidl::endpoints::create_proxy().expect("fail to create fidl endpoints");
-        let status = await!(wlan_service.get_ap_sme(iface_id, remote)).expect("fail get_ap_sme");
+        let status = wlan_service.get_ap_sme(iface_id, remote).await.expect("fail get_ap_sme");
         if status != zx::sys::ZX_OK {
             panic!("fail getting ap sme; status: {}", status);
         }

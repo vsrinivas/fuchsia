@@ -29,7 +29,7 @@ pub async fn handle_event(
     println!("wlancfg got event: {:?}", evt);
     match evt {
         DeviceWatcherEvent::OnPhyAdded { phy_id } => {
-            if let Err(e) = await!(on_phy_added(listener, phy_id)) {
+            if let Err(e) = on_phy_added(listener, phy_id).await {
                 println!("wlancfg: error adding new phy {}: {}", phy_id, e);
             }
         }
@@ -37,7 +37,7 @@ pub async fn handle_event(
             println!("wlancfg: phy removed: {}", phy_id);
         }
         DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
-            if let Err(e) = await!(on_iface_added(listener, iface_id, ess_store)) {
+            if let Err(e) = on_iface_added(listener, iface_id, ess_store).await {
                 println!("wlancfg: error adding new iface {}: {}", iface_id, e);
             }
         }
@@ -50,7 +50,7 @@ pub async fn handle_event(
 
 async fn on_phy_added(listener: &Listener, phy_id: u16) -> Result<(), failure::Error> {
     println!("wlancfg: phy {} added", phy_id);
-    let info = await!(query_phy(listener, phy_id))?;
+    let info = query_phy(listener, phy_id).await?;
     let path = info.dev_path.unwrap_or("*".into());
     println!("wlancfg: received a PhyInfo from phy #{}: path is {}", phy_id, path);
     let roles_to_create =
@@ -64,7 +64,7 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) -> Result<(), failure::E
         futures.push(fut);
     }
 
-    while let Some((res, role)) = await!(futures.next()) {
+    while let Some((res, role)) = futures.next().await {
         if let Err(e) = res {
             println!(
                 "wlancfg: error creating iface for role {:?} and phy {}: {:?}",
@@ -77,7 +77,7 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) -> Result<(), failure::E
 
 async fn query_phy(listener: &Listener, phy_id: u16) -> Result<wlan::PhyInfo, failure::Error> {
     let req = &mut wlan_service::QueryPhyRequest { phy_id };
-    let (status, query_resp) = await!(listener.proxy.query_phy(req))
+    let (status, query_resp) = listener.proxy.query_phy(req).await
         .map_err(|e| format_err!("failed to send a query request: {:?}", e))?;
     if let Err(e) = zx::Status::ok(status) {
         bail!("query_phy returned an error: {:?}", e);
@@ -98,7 +98,7 @@ async fn on_iface_added(
     let (sme, remote) =
         create_proxy().map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
 
-    let status = await!(service.get_client_sme(iface_id, remote))
+    let status = service.get_client_sme(iface_id, remote).await
         .map_err(|e| format_err!("Failed to get client SME: {}", e))?;
 
     zx::Status::ok(status).map_err(|e| format_err!("GetClientSme returned an error: {}", e))?;

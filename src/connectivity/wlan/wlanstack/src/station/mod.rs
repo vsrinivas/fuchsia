@@ -131,11 +131,11 @@ async fn serve_stats<S>(
 where
     S: Stream<Item = StatsRequest> + Unpin,
 {
-    while let Some(req) = await!(stats_requests.next()) {
+    while let Some(req) = stats_requests.next().await {
         proxy
             .stats_query_req()
             .map_err(|e| format_err!("Failed to send a StatsReq to MLME: {}", e))?;
-        match await!(responses.next()) {
+        match responses.next().await {
             Some(response) => req.reply(response),
             None => bail!("Stream of stats responses has ended unexpectedly"),
         };
@@ -170,7 +170,7 @@ mod tests {
 
             let mut events = vec![];
             for _ in 0u32..4 {
-                let event = await!(timeout_stream.next()).expect("timer terminated prematurely");
+                let event = timeout_stream.next().await.expect("timer terminated prematurely");
                 events.push(event.event);
             }
             events

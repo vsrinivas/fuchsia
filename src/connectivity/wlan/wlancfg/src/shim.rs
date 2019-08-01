@@ -64,11 +64,11 @@ pub async fn serve_legacy(
     client: ClientRef,
     ess_store: Arc<KnownEssStore>,
 ) -> Result<(), fidl::Error> {
-    await!(requests.try_for_each_concurrent(MAX_CONCURRENT_WLAN_REQUESTS, |req| handle_request(
+    requests.try_for_each_concurrent(MAX_CONCURRENT_WLAN_REQUESTS, |req| handle_request(
         &client,
         req,
         Arc::clone(&ess_store)
-    )))
+    )).await
 }
 
 async fn handle_request(
@@ -78,19 +78,19 @@ async fn handle_request(
 ) -> Result<(), fidl::Error> {
     match req {
         legacy::WlanRequest::Scan { req, responder } => {
-            let mut r = await!(scan(client, req));
+            let mut r = scan(client, req).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::Connect { req, responder } => {
-            let mut r = await!(connect(&client, req));
+            let mut r = connect(&client, req).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::Disconnect { responder } => {
-            let mut r = await!(disconnect(client.clone()));
+            let mut r = disconnect(client.clone()).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::Status { responder } => {
-            let mut r = await!(status(&client));
+            let mut r = status(&client).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::StartBss { responder, .. } => {
@@ -102,7 +102,7 @@ async fn handle_request(
             responder.send(&mut not_supported())
         }
         legacy::WlanRequest::Stats { responder } => {
-            let mut r = await!(stats(client));
+            let mut r = stats(client).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::ClearSavedNetworks { responder } => {
@@ -115,7 +115,7 @@ async fn handle_request(
 }
 
 async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::ScanResult {
-    let r = await!(async move {
+    let r = async move {
         let client = client.get()?;
         let scan_txn = start_scan_txn(&client, legacy_req).map_err(|e| {
             eprintln!("Failed to start a scan transaction: {}", e);
@@ -126,7 +126,7 @@ async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::Sc
         let mut aps = vec![];
         let mut done = false;
 
-        while let Some(event) = await!(evt_stream.try_next()).map_err(|e| {
+        while let Some(event) = evt_stream.try_next().await.map_err(|e| {
             eprintln!("Error reading from scan transaction stream: {}", e);
             internal_error()
         })? {
@@ -152,7 +152,7 @@ async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::Sc
             .map(|ess| convert_bss_info(&ess.best_bss))
             .sorted_by(|a, b| a.ssid.cmp(&b.ssid))
             .collect())
-    });
+    }.await;
 
     match r {
         Ok(aps) => legacy::ScanResult { error: success(), aps: Some(aps) },
@@ -235,7 +235,7 @@ async fn disconnect(client: ClientRef) -> legacy::Error {
         eprintln!("Failed to enqueue a disconnect command: {}", e);
         return internal_error();
     }
-    match await!(receiver) {
+    match receiver.await {
         Ok(()) => success(),
         Err(_) => error_message("Request was canceled"),
     }

@@ -147,7 +147,7 @@ async fn notify_phy_watchers<P, I>(
     mut events: UnboundedReceiver<MapEvent<u16, P>>,
     inner: &Mutex<Inner<P, I>>,
 ) -> Result<Void, failure::Error> {
-    while let Some(e) = await!(events.next()) {
+    while let Some(e) = events.next().await {
         match e {
             MapEvent::KeyInserted(id) => {
                 inner.lock().notify_watchers(|w| w.sent_phy_snapshot, |h| h.send_on_phy_added(id))
@@ -169,7 +169,7 @@ async fn notify_iface_watchers<P, I>(
     mut events: UnboundedReceiver<MapEvent<u16, I>>,
     inner: &Mutex<Inner<P, I>>,
 ) -> Result<Void, failure::Error> {
-    while let Some(e) = await!(events.next()) {
+    while let Some(e) = events.next().await {
         match e {
             MapEvent::KeyInserted(id) => inner
                 .lock()
@@ -201,14 +201,14 @@ async fn reap_watchers<P, I>(
     watchers: UnboundedReceiver<ReaperTask>,
 ) -> Result<Void, failure::Error> {
     const REAP_CONCURRENT_LIMIT: usize = 10000;
-    await!(watchers.for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
+    watchers.for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
         // Wait for the other side to close the channel (or an error to occur)
         // and remove the watcher from the maps
         async move {
-            await!(w.watcher_channel.map(|_| ()).collect::<()>());
+            w.watcher_channel.map(|_| ()).collect::<()>().await;
             inner.lock().watchers.remove(&w.watcher_id);
         }
-    }));
+    }).await;
     Err(format_err!("stream of watcher channels has ended unexpectedly"))
 }
 

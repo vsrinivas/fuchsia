@@ -13,29 +13,29 @@ pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>
     let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
         fuchsia_async::Channel::from_channel(fdio::clone_channel(&eth_dir)?)?,
     );
-    let files = await!(readdir(&directory_proxy))?;
+    let files = readdir(&directory_proxy).await?;
     for file in files {
         let vmo = zx::Vmo::create(256 * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
 
         let path = Path::new(ETH_PATH).join(file.name);
         let dev = IsolatedDeviceEnv::open_file(path)?;
-        if let Ok(client) = await!(ethernet::Client::from_file(
+        if let Ok(client) = ethernet::Client::from_file(
             dev,
             vmo,
             ethernet::DEFAULT_BUFFER_SIZE,
             "wlan-hw-sim"
-        )) {
-            if let Ok(info) = await!(client.info()) {
+        ).await {
+            if let Ok(info) = client.info().await {
                 if &info.mac.octets == mac {
                     println!("ethernet client created: {:?}", client);
-                    await!(client.start()).expect("error starting ethernet device");
+                    client.start().await.expect("error starting ethernet device");
                     // must call get_status() after start() to clear zx::Signals::USER_0 otherwise
                     // there will be a stream of infinite StatusChanged events that blocks
                     // fasync::Interval
                     println!(
                         "info: {:?} status: {:?}",
-                        await!(client.info()).expect("calling client.info()"),
-                        await!(client.get_status()).expect("getting client status()")
+                        client.info().await.expect("calling client.info()"),
+                        client.get_status().await.expect("getting client status()")
                     );
                     return Ok(Some(client));
                 }

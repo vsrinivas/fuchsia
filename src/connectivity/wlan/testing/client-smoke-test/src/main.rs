@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 // Explicitly added due to conflict using custom_attribute and async_await above.
 #[macro_use]
@@ -68,7 +68,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     test_results.connect_to_netstack_service = true;
 
     let fut = async {
-        let wlan_iface_ids = await!(wlan_service_util::get_iface_list(&wlan_svc))
+        let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc).await
             .context("wlan-smoke-test: failed to query wlanservice iface list")?;
         test_results.query_wlan_service_iface_list = true;
 
@@ -80,8 +80,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         test_results.interface_status = true;
 
         for iface in wlan_iface_ids {
-            let sme_proxy = await!(wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface))?;
-            let status_response = match await!(sme_proxy.status()) {
+            let sme_proxy = wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface).await?;
+            let status_response = match sme_proxy.status().await {
                 Ok(status) => status,
                 Err(_) => {
                     test_results.interface_status = false;
@@ -97,7 +97,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         // now that we have interfaces...  let's try to use them!
         for (iface_id, wlan_iface) in test_results.iface_objects.iter_mut() {
             // first check if we can get scan results
-            let scan_result = await!(wlan_service_util::perform_scan(&wlan_iface.sme_proxy));
+            let scan_result = wlan_service_util::perform_scan(&wlan_iface.sme_proxy).await;
             match scan_result {
                 Ok(results) => {
                     wlan_iface.scan_success = true;
@@ -117,11 +117,11 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 &opt.target_ssid,
                 &wlan_iface.initial_status,
             ) {
-                let connect_result = await!(wlan_service_util::connect_to_network(
+                let connect_result = wlan_service_util::connect_to_network(
                     &wlan_iface.sme_proxy,
                     opt.target_ssid.as_bytes().to_vec(),
                     opt.target_pwd.as_bytes().to_vec()
-                ));
+                ).await;
 
                 match connect_result {
                     Ok(true) => {
@@ -140,7 +140,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             while dhcp_check_attempts < 3 && !wlan_iface.dhcp_success {
                 // check if there is a non-zero ip addr as a first check for dhcp success
                 let ip_addrs =
-                    match await!(get_ip_addrs_for_wlan_iface(&wlan_svc, &network_svc, *iface_id)) {
+                    match get_ip_addrs_for_wlan_iface(&wlan_svc, &network_svc, *iface_id).await {
                         Ok(result) => result,
                         Err(_) => continue,
                     };
@@ -155,7 +155,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
             // after testing, check if we need to disconnect
             if requires_disconnect {
-                match await!(wlan_service_util::disconnect_from_network(&wlan_iface.sme_proxy)) {
+                match wlan_service_util::disconnect_from_network(&wlan_iface.sme_proxy).await {
                     Err(_) => wlan_iface.disconnect_success = false,
                     _ => wlan_iface.disconnect_success = true,
                 };
@@ -189,7 +189,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         // NOTE: this is intended to loop over each wlan iface. For now,
         // make a single request to make sure that mechanism works and we have not broken
         // connectivity with connection changes
-        await!(fetch_and_discard_url(http_svc, url_request))?;
+        fetch_and_discard_url(http_svc, url_request).await?;
         test_results.base_data_transfer = true;
 
         Ok(())
@@ -305,7 +305,7 @@ async fn fetch_and_discard_url(
     http_service.create_url_loader(loader_server)?;
 
     let loader_proxy = http::UrlLoaderProxy::new(proxy);
-    let response = await!(loader_proxy.start(&mut url_request))?;
+    let response = loader_proxy.start(&mut url_request).await?;
 
     if let Some(e) = response.error {
         bail!("UrlLoaderProxy error - code:{} ({})", e.code, e.description.unwrap_or("".into()))
@@ -318,7 +318,7 @@ async fn fetch_and_discard_url(
 
     // discard the bytes
     let mut stdio_sink = AllowStdIo::new(::std::io::sink());
-    let bytes_received = await!(socket.copy_into(&mut stdio_sink))?;
+    let bytes_received = socket.copy_into(&mut stdio_sink).await?;
     fx_log_info!("Received {:?} bytes", bytes_received);
 
     Ok(())
@@ -335,7 +335,7 @@ async fn get_ip_addrs_for_wlan_iface<'a>(
     let mut iface_path = String::new();
 
     //first get info on the wlan iface
-    let response = await!(wlan_svc.list_ifaces())?;
+    let response = wlan_svc.list_ifaces().await?;
     for iface in response.ifaces {
         if wlan_iface_id == iface.iface_id {
             // trim off any leading '@'s
@@ -349,7 +349,7 @@ async fn get_ip_addrs_for_wlan_iface<'a>(
         bail!("Could not find the path for iface {}", wlan_iface_id);
     }
 
-    let mut net_iface_response = await!(network_svc.list_interfaces())?;
+    let mut net_iface_response = network_svc.list_interfaces().await?;
 
     let mut wlan_iface_ip_addrs = Vec::new();
 

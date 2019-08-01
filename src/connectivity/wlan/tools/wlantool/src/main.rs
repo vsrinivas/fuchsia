@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints;
@@ -44,22 +44,22 @@ fn main() -> Result<(), Error> {
 
     let fut = async {
         match opt {
-            Opt::Phy(cmd) => await!(do_phy(cmd, wlan_svc)),
-            Opt::Iface(cmd) => await!(do_iface(cmd, wlan_svc)),
+            Opt::Phy(cmd) => do_phy(cmd, wlan_svc).await,
+            Opt::Iface(cmd) => do_iface(cmd, wlan_svc).await,
             Opt::Client(opts::ClientCmd::Connect(cmd)) | Opt::Connect(cmd) => {
-                await!(do_client_connect(cmd, wlan_svc))
+                do_client_connect(cmd, wlan_svc).await
             }
             Opt::Client(opts::ClientCmd::Disconnect(cmd)) | Opt::Disconnect(cmd) => {
-                await!(do_client_disconnect(cmd, wlan_svc))
+                do_client_disconnect(cmd, wlan_svc).await
             }
             Opt::Client(opts::ClientCmd::Scan(cmd)) | Opt::Scan(cmd) => {
-                await!(do_client_scan(cmd, wlan_svc))
+                do_client_scan(cmd, wlan_svc).await
             }
             Opt::Client(opts::ClientCmd::Status(cmd)) | Opt::Status(cmd) => {
-                await!(do_client_status(cmd, wlan_svc))
+                do_client_status(cmd, wlan_svc).await
             }
-            Opt::Ap(cmd) => await!(do_ap(cmd, wlan_svc)),
-            Opt::Mesh(cmd) => await!(do_mesh(cmd, wlan_svc)),
+            Opt::Ap(cmd) => do_ap(cmd, wlan_svc).await,
+            Opt::Mesh(cmd) => do_mesh(cmd, wlan_svc).await,
         }
     };
     exec.run_singlethreaded(fut)
@@ -69,12 +69,12 @@ async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::PhyCmd::List => {
             // TODO(tkilbourn): add timeouts to prevent hanging commands
-            let response = await!(wlan_svc.list_phys()).context("error getting response")?;
+            let response = wlan_svc.list_phys().await.context("error getting response")?;
             println!("response: {:?}", response);
         }
         opts::PhyCmd::Query { phy_id } => {
             let mut req = wlan_service::QueryPhyRequest { phy_id };
-            let response = await!(wlan_svc.query_phy(&mut req)).context("error querying phy")?;
+            let response = wlan_svc.query_phy(&mut req).await.context("error querying phy")?;
             println!("response: {:?}", response);
         }
         opts::PhyCmd::SetCountry { phy_id, country } => {
@@ -86,7 +86,7 @@ async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             alpha2.copy_from_slice(country.as_bytes());
             let mut req = wlan_service::SetCountryRequest { phy_id, alpha2 };
             let response =
-                await!(wlan_svc.set_country(&mut req)).context("error setting country")?;
+                wlan_svc.set_country(&mut req).await.context("error setting country")?;
             println!("response: {:?}", zx::Status::from_raw(response));
         }
     }
@@ -103,33 +103,33 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let mut req = wlan_service::CreateIfaceRequest { phy_id, role: role.into() };
 
             let response =
-                await!(wlan_svc.create_iface(&mut req)).context("error getting response")?;
+                wlan_svc.create_iface(&mut req).await.context("error getting response")?;
             println!("response: {:?}", response);
         }
         opts::IfaceCmd::Delete { iface_id } => {
             let mut req = wlan_service::DestroyIfaceRequest { iface_id };
 
             let response =
-                await!(wlan_svc.destroy_iface(&mut req)).context("error destroying iface")?;
+                wlan_svc.destroy_iface(&mut req).await.context("error destroying iface")?;
             match zx::Status::ok(response) {
                 Ok(()) => println!("destroyed iface {:?}", iface_id),
                 Err(s) => println!("error destroying iface: {:?}", s),
             }
         }
         opts::IfaceCmd::List => {
-            let response = await!(wlan_svc.list_ifaces()).context("error getting response")?;
+            let response = wlan_svc.list_ifaces().await.context("error getting response")?;
             println!("response: {:?}", response);
         }
         opts::IfaceCmd::Query { iface_id } => {
             let response =
-                await!(wlan_svc.query_iface(iface_id)).context("error querying iface")?;
+                wlan_svc.query_iface(iface_id).await.context("error querying iface")?;
             println!("response: {:?}", response);
         }
         opts::IfaceCmd::Stats { iface_id } => {
-            let ids = await!(get_iface_ids(wlan_svc.clone(), iface_id))?;
+            let ids = get_iface_ids(wlan_svc.clone(), iface_id).await?;
 
             for iface_id in ids {
-                let (status, resp) = await!(wlan_svc.get_iface_stats(iface_id))
+                let (status, resp) = wlan_svc.get_iface_stats(iface_id).await
                     .context("error getting stats for iface")?;
                 match status {
                     zx::sys::ZX_OK => {
@@ -145,9 +145,9 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
         }
         opts::IfaceCmd::Minstrel(cmd) => match cmd {
             opts::MinstrelCmd::List { iface_id } => {
-                let ids = await!(get_iface_ids(wlan_svc.clone(), iface_id))?;
+                let ids = get_iface_ids(wlan_svc.clone(), iface_id).await?;
                 for id in ids {
-                    if let Ok(peers) = await!(list_minstrel_peers(wlan_svc.clone(), id)) {
+                    if let Ok(peers) = list_minstrel_peers(wlan_svc.clone(), id).await {
                         if peers.is_empty() {
                             continue;
                         }
@@ -163,10 +163,10 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
                     Some(s) => Some(s.parse()?),
                     None => None,
                 };
-                let ids = await!(get_iface_ids(wlan_svc.clone(), iface_id))?;
+                let ids = get_iface_ids(wlan_svc.clone(), iface_id).await?;
                 for id in ids {
                     if let Err(e) =
-                        await!(show_minstrel_peer_for_iface(wlan_svc.clone(), id, peer_addr))
+                        show_minstrel_peer_for_iface(wlan_svc.clone(), id, peer_addr).await
                     {
                         println!(
                             "querying peer(s) {} on iface {} returned an error: {}",
@@ -191,7 +191,7 @@ async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Re
             return Ok(());
         }
     };
-    let sme = await!(get_client_sme(wlan_svc, iface_id)).map_err(|e| {
+    let sme = get_client_sme(wlan_svc, iface_id).await.map_err(|e| {
         format_err!(
             "error accessing client SME for iface {}: {};\
              please ensure the selected iface supports client mode",
@@ -214,7 +214,7 @@ async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Re
         scan_type: scan_type.into(),
     };
     sme.connect(&mut req, Some(remote)).context("error sending connect request")?;
-    await!(handle_connect_transaction(local))
+    handle_connect_transaction(local).await
 }
 
 async fn do_client_disconnect(
@@ -222,24 +222,24 @@ async fn do_client_disconnect(
     wlan_svc: WlanSvc,
 ) -> Result<(), Error> {
     let opts::ClientDisconnectCmd { iface_id } = cmd;
-    let sme = await!(get_client_sme(wlan_svc, iface_id))?;
-    await!(sme.disconnect()).map_err(|e| format_err!("error sending disconnect request: {}", e))
+    let sme = get_client_sme(wlan_svc, iface_id).await?;
+    sme.disconnect().await.map_err(|e| format_err!("error sending disconnect request: {}", e))
 }
 
 async fn do_client_scan(cmd: opts::ClientScanCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     let opts::ClientScanCmd { iface_id, scan_type } = cmd;
-    let sme = await!(get_client_sme(wlan_svc, iface_id))?;
+    let sme = get_client_sme(wlan_svc, iface_id).await?;
     let (local, remote) = endpoints::create_proxy()?;
     let mut req =
         fidl_sme::ScanRequest { timeout: SCAN_REQUEST_TIMEOUT_SEC, scan_type: scan_type.into() };
     sme.scan(&mut req, remote).context("error sending scan request")?;
-    await!(handle_scan_transaction(local))
+    handle_scan_transaction(local).await
 }
 
 async fn do_client_status(cmd: opts::ClientStatusCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     let opts::ClientStatusCmd { iface_id } = cmd;
-    let sme = await!(get_client_sme(wlan_svc, iface_id))?;
-    let st = await!(sme.status())?;
+    let sme = get_client_sme(wlan_svc, iface_id).await?;
+    let st = sme.status().await?;
     match st.connected_to {
         Some(bss) => {
             println!(
@@ -259,7 +259,7 @@ async fn do_client_status(cmd: opts::ClientStatusCmd, wlan_svc: WlanSvc) -> Resu
 async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::ApCmd::Start { iface_id, ssid, password, channel } => {
-            let sme = await!(get_ap_sme(wlan_svc, iface_id)).map_err(|e| {
+            let sme = get_ap_sme(wlan_svc, iface_id).await.map_err(|e| {
                 format_err!(
                     "error accessing client SME for iface {}: {};\
                      please ensure the selected iface supports AP mode",
@@ -272,7 +272,7 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
                 password: password.map_or(vec![], |p| p.as_bytes().to_vec()),
                 radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, channel).to_fidl(),
             };
-            let r = await!(sme.start(&mut config))?;
+            let r = sme.start(&mut config).await?;
             match r {
                 fidl_sme::StartApResultCode::InvalidArguments => {
                     println!("{:?}: Channel {:?} is invalid", r, config.radio_cfg.primary_chan);
@@ -289,8 +289,8 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             }
         }
         opts::ApCmd::Stop { iface_id } => {
-            let sme = await!(get_ap_sme(wlan_svc, iface_id))?;
-            let r = await!(sme.stop());
+            let sme = get_ap_sme(wlan_svc, iface_id).await?;
+            let r = sme.stop().await;
             println!("{:?}", r);
         }
     }
@@ -300,7 +300,7 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::MeshCmd::Join { iface_id, mesh_id, channel } => {
-            let sme = await!(get_mesh_sme(wlan_svc, iface_id)).map_err(|e| {
+            let sme = get_mesh_sme(wlan_svc, iface_id).await.map_err(|e| {
                 format_err!(
                     "error accessing client SME for iface {}: {};\
                      please ensure the selected iface supports Mesh mode",
@@ -309,7 +309,7 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
                 )
             })?;
             let mut config = fidl_sme::MeshConfig { mesh_id: mesh_id.as_bytes().to_vec(), channel };
-            let r = await!(sme.join(&mut config))?;
+            let r = sme.join(&mut config).await?;
             match r {
                 fidl_sme::JoinMeshResultCode::InvalidArguments => {
                     println!("{:?}: Channel {:?} is invalid", r, config.channel);
@@ -326,13 +326,13 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             }
         }
         opts::MeshCmd::Leave { iface_id } => {
-            let sme = await!(get_mesh_sme(wlan_svc, iface_id))?;
-            let r = await!(sme.leave());
+            let sme = get_mesh_sme(wlan_svc, iface_id).await?;
+            let r = sme.leave().await;
             println!("{:?}", r);
         }
         opts::MeshCmd::Paths { iface_id } => {
-            let sme = await!(get_mesh_sme(wlan_svc, iface_id))?;
-            let (code, table) = await!(sme.get_mesh_path_table())?;
+            let sme = get_mesh_sme(wlan_svc, iface_id).await?;
+            let (code, table) = sme.get_mesh_path_table().await?;
             match code {
                 fidl_sme::GetMeshPathTableResultCode::Success => {
                     println!("{:?}", table);
@@ -399,7 +399,7 @@ impl FromStr for MacAddr {
 async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Result<(), Error> {
     let mut printed_header = false;
     let mut events = scan_txn.take_event_stream();
-    while let Some(evt) = await!(events.try_next())
+    while let Some(evt) = events.try_next().await
         .context("failed to fetch all results before the channel was closed")?
     {
         match evt {
@@ -471,7 +471,7 @@ async fn handle_connect_transaction(
     connect_txn: fidl_sme::ConnectTransactionProxy,
 ) -> Result<(), Error> {
     let mut events = connect_txn.take_event_stream();
-    while let Some(evt) = await!(events.try_next())
+    while let Some(evt) = events.try_next().await
         .context("failed to receive connect result before the channel was closed")?
     {
         match evt {
@@ -498,7 +498,7 @@ async fn get_client_sme(
     iface_id: u16,
 ) -> Result<fidl_sme::ClientSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
-    let status = await!(wlan_svc.get_client_sme(iface_id, remote))
+    let status = wlan_svc.get_client_sme(iface_id, remote).await
         .context("error sending GetClientSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(proxy)
@@ -510,7 +510,7 @@ async fn get_client_sme(
 async fn get_ap_sme(wlan_svc: WlanSvc, iface_id: u16) -> Result<fidl_sme::ApSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
     let status =
-        await!(wlan_svc.get_ap_sme(iface_id, remote)).context("error sending GetApSme request")?;
+        wlan_svc.get_ap_sme(iface_id, remote).await.context("error sending GetApSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(proxy)
     } else {
@@ -520,7 +520,7 @@ async fn get_ap_sme(wlan_svc: WlanSvc, iface_id: u16) -> Result<fidl_sme::ApSmeP
 
 async fn get_mesh_sme(wlan_svc: WlanSvc, iface_id: u16) -> Result<fidl_sme::MeshSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
-    let status = await!(wlan_svc.get_mesh_sme(iface_id, remote))
+    let status = wlan_svc.get_mesh_sme(iface_id, remote).await
         .context("error sending GetMeshSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(proxy)
@@ -533,14 +533,14 @@ async fn get_iface_ids(wlan_svc: WlanSvc, iface_id: Option<u16>) -> Result<Vec<u
     match iface_id {
         Some(id) => Ok(vec![id]),
         None => {
-            let response = await!(wlan_svc.list_ifaces()).context("error listing ifaces")?;
+            let response = wlan_svc.list_ifaces().await.context("error listing ifaces")?;
             Ok(response.ifaces.into_iter().map(|iface| iface.iface_id).collect())
         }
     }
 }
 
 async fn list_minstrel_peers(wlan_svc: WlanSvc, iface_id: u16) -> Result<Vec<MacAddr>, Error> {
-    let (status, resp) = await!(wlan_svc.get_minstrel_list(iface_id))
+    let (status, resp) = wlan_svc.get_minstrel_list(iface_id).await
         .context(format!("Error getting minstrel peer list iface {}", iface_id))?;
     if status == zx::sys::ZX_OK {
         Ok(resp
@@ -563,10 +563,10 @@ async fn show_minstrel_peer_for_iface(
     id: u16,
     peer_addr: Option<MacAddr>,
 ) -> Result<(), Error> {
-    let peer_addrs = await!(get_peer_addrs(wlan_svc.clone(), id, peer_addr))?;
+    let peer_addrs = get_peer_addrs(wlan_svc.clone(), id, peer_addr).await?;
     let mut first_peer = true;
     for mut peer_addr in peer_addrs {
-        let (status, resp) = await!(wlan_svc.get_minstrel_stats(id, &mut peer_addr.0))
+        let (status, resp) = wlan_svc.get_minstrel_stats(id, &mut peer_addr.0).await
             .context(format!("Error getting minstrel stats from peer {}", peer_addr))?;
         if status != zx::sys::ZX_OK {
             println!(
@@ -591,7 +591,7 @@ async fn get_peer_addrs(
 ) -> Result<Vec<MacAddr>, Error> {
     match peer_addr {
         Some(addr) => Ok(vec![addr]),
-        None => await!(list_minstrel_peers(wlan_svc, iface_id)),
+        None => list_minstrel_peers(wlan_svc, iface_id).await,
     }
 }
 

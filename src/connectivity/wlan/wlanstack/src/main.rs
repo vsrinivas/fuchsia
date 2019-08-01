@@ -4,7 +4,7 @@
 
 //! System service for wireless networking
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![deny(missing_docs)]
 #![recursion_limit = "256"]
 
@@ -102,13 +102,13 @@ async fn main() -> Result<(), Error> {
         serve_fidl(cfg, fs, phys, ifaces, watcher_service, inspect_tree, cobalt_sender);
     let services_server = try_join(serve_fidl_fut, watcher_fut);
 
-    await!(try_join5(
+    try_join5(
         services_server,
         phy_server,
         iface_server,
         cobalt_reporter.map(Ok),
         telemetry_server.map(Ok),
-    ))?;
+    ).await?;
     Ok(())
 }
 
@@ -136,7 +136,7 @@ async fn serve_fidl(
         let inspect_tree = inspect_tree.clone();
         async move {
             match s {
-                IncomingServices::Device(stream) => await!(service::serve_device_requests(
+                IncomingServices::Device(stream) => service::serve_device_requests(
                     service::IfaceCounter::new(),
                     cfg,
                     phys,
@@ -146,11 +146,11 @@ async fn serve_fidl(
                     inspect_tree,
                     cobalt_sender,
                 )
-                .unwrap_or_else(|e| println!("{:?}", e))),
+                .unwrap_or_else(|e| println!("{:?}", e)).await,
             }
         }
     });
-    await!(fdio_server);
+    fdio_server.await;
     Ok(())
 }
 

@@ -176,7 +176,7 @@ async fn eth_and_beacon_sender<'a>(
     receiver: &'a mut mpsc::Receiver<bool>,
     phy: &'a wlantap::WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
-    let mut client = await!(create_eth_client(&HW_MAC_ADDR))
+    let mut client = create_eth_client(&HW_MAC_ADDR).await
         .expect("cannot create ethernet client")
         .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
 
@@ -192,7 +192,7 @@ async fn eth_and_beacon_sender<'a>(
     let mut intervals_since_last_beacon: i64 = i64::max_value() / DATA_FRAME_INTERVAL_NANOS;
     let mut client_stream = client.get_stream();
     loop {
-        await!(timer_stream.next());
+        timer_stream.next().await;
 
         // auto-deauthentication timeout is 10.24 seconds.
         // Send a beacon before that to stay connected.
@@ -204,11 +204,11 @@ async fn eth_and_beacon_sender<'a>(
 
         client.send(&buf);
         if let Poll::Ready(Some(Ok(ethernet::Event::StatusChanged))) = poll!(client_stream.next()) {
-            println!("status changed to: {:?}", await!(client.get_status())?);
+            println!("status changed to: {:?}", client.get_status().await?);
             // There was an event waiting, ethernet frames have NOT been sent on the previous poll.
             let _ = poll!(client_stream.next());
         }
-        let converged = await!(receiver.next()).expect("error receiving channel message");
+        let converged = receiver.next().await.expect("error receiving channel message");
         if converged {
             break;
         }
