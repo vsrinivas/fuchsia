@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_BINDING_H_
+#define ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_BINDING_H_
+
 #define INTEL_VID 0x8086
 
 #define INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID \
@@ -18,3 +21,5 @@
   0x9D63  // Sunrise Point-LP Serial IO I2C Controller #3
 #define INTEL_SUNRISE_POINT_SERIALIO_I2C4_DID \
   0x9D64  // Sunrise Point-LP Serial IO I2C Controller #4
+
+#endif  // ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_BINDING_H_

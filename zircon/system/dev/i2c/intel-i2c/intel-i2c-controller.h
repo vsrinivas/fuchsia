@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
+#define ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 
-#include <ddk/mmio-buffer.h>
-#include <zircon/types.h>
 #include <stdint.h>
-#include <zircon/listnode.h>
 #include <threads.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
+
+#include <ddk/device.h>
+#include <ddk/mmio-buffer.h>
 
 typedef struct __attribute__((packed)) intel_serialio_i2c_regs {
   uint32_t ctl;
@@ -192,3 +195,5 @@ void intel_serialio_i2c_get_tx_fifo_threshold(intel_serialio_i2c_device_t* contr
                                               uint32_t* threshold);
 zx_status_t intel_serialio_i2c_set_tx_fifo_threshold(intel_serialio_i2c_device_t* controller,
                                                      uint32_t threshold);
+
+#endif  // ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
