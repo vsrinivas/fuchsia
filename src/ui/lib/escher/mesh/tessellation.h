@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_GEOMETRY_TESSELLATION_H_
-#define SRC_UI_LIB_ESCHER_GEOMETRY_TESSELLATION_H_
+#ifndef SRC_UI_LIB_ESCHER_MESH_TESSELLATION_H_
+#define SRC_UI_LIB_ESCHER_MESH_TESSELLATION_H_
 
 #include <vector>
 
 #include "src/ui/lib/escher/forward_declarations.h"
-#include "src/ui/lib/escher/geometry/indexed_triangle_mesh.h"
 #include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/mesh/indexed_triangle_mesh.h"
 
 namespace escher {
 
@@ -81,4 +81,4 @@ IndexedTriangleMesh3d<vec2> GetStandardTestMesh3d();
 
 }  // namespace escher
 
-#endif  // SRC_UI_LIB_ESCHER_GEOMETRY_TESSELLATION_H_
+#endif  // SRC_UI_LIB_ESCHER_MESH_TESSELLATION_H_

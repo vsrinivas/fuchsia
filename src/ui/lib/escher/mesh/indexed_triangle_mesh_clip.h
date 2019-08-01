@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_GEOMETRY_INDEXED_TRIANGLE_MESH_CLIP_H_
-#define SRC_UI_LIB_ESCHER_GEOMETRY_INDEXED_TRIANGLE_MESH_CLIP_H_
+#ifndef SRC_UI_LIB_ESCHER_MESH_INDEXED_TRIANGLE_MESH_CLIP_H_
+#define SRC_UI_LIB_ESCHER_MESH_INDEXED_TRIANGLE_MESH_CLIP_H_
 
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "src/ui/lib/escher/geometry/indexed_triangle_mesh.h"
 #include "src/ui/lib/escher/geometry/intersection.h"
 #include "src/ui/lib/escher/geometry/plane_ops.h"
 #include "src/ui/lib/escher/math/lerp.h"
+#include "src/ui/lib/escher/mesh/indexed_triangle_mesh.h"
 #include "src/ui/lib/escher/util/bitmap.h"
 #include "src/ui/lib/escher/util/pair_hasher.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
@@ -357,4 +357,4 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
 
 }  // namespace escher
 
-#endif  // SRC_UI_LIB_ESCHER_GEOMETRY_INDEXED_TRIANGLE_MESH_CLIP_H_
+#endif  // SRC_UI_LIB_ESCHER_MESH_INDEXED_TRIANGLE_MESH_CLIP_H_

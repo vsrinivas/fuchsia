@@ -12,3 +12,17 @@ source_set("check_vulkan_support") {
     "//src/ui/lib/escher:vulkan",
   ]
 }
+
+source_set("escher_geometry_utils") {
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+
+  sources = [
+    "align.h",
+    "alloca.h",
+    "bit_ops.h",
+    "bitmap.h",
+    "debug_print.h",
+  ]
+}

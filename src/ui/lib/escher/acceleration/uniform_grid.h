@@ -6,8 +6,8 @@
 #define SRC_UI_LIB_ESCHER_ACCELERATION_UNIFORM_GRID_H_
 
 #include "src/ui/lib/escher/forward_declarations.h"
-#include "src/ui/lib/escher/geometry/indexed_triangle_mesh.h"
 #include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/mesh/indexed_triangle_mesh.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/util/hash_map.h"
 

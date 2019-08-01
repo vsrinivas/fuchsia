@@ -7,7 +7,7 @@
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene1.h"
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene2.h"
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
-#include "src/ui/lib/escher/geometry/tessellation.h"
+#include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"
 #include "src/ui/lib/escher/scene/camera.h"

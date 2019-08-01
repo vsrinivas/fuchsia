@@ -4,7 +4,7 @@
 
 #include "src/ui/lib/escher/scene/shape.h"
 
-#include "src/ui/lib/escher/geometry/tessellation.h"
+#include "src/ui/lib/escher/mesh/tessellation.h"
 
 namespace escher {
 

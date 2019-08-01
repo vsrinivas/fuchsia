@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_GEOMETRY_INDEXED_TRIANGLE_MESH_H_
-#define SRC_UI_LIB_ESCHER_GEOMETRY_INDEXED_TRIANGLE_MESH_H_
+#ifndef SRC_UI_LIB_ESCHER_MESH_INDEXED_TRIANGLE_MESH_H_
+#define SRC_UI_LIB_ESCHER_MESH_INDEXED_TRIANGLE_MESH_H_
 
 #include <vector>
 
@@ -195,4 +195,4 @@ std::ostream& operator<<(std::ostream& str,
 
 }  // namespace escher
 
-#endif  // SRC_UI_LIB_ESCHER_GEOMETRY_INDEXED_TRIANGLE_MESH_H_
+#endif  // SRC_UI_LIB_ESCHER_MESH_INDEXED_TRIANGLE_MESH_H_

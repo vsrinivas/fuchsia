@@ -131,20 +131,6 @@ source_set("vulkan") {
   }
 }
 
-config("glm_config") {
-  include_dirs = [ "//third_party/glm" ]
-
-  defines = [
-    "GLM_ENABLE_EXPERIMENTAL",
-
-    # Use Vulkan NDC (normalized depth coordinates): [0..1] instead of [-1..1]
-    "GLM_FORCE_DEPTH_ZERO_TO_ONE",
-
-    # Disable SIMD code paths that seem unstable on Fuchsia.
-    "GLM_FORCE_PURE",
-  ]
-}
-
 config("thread_safety_warning") {
   cflags = [
     "-Wthread-safety",
@@ -180,7 +166,6 @@ source_set("escher") {
   ]
 
   deps = [
-    "//src/ui/lib/glm_workaround",
     "//third_party/glslang:glslang_default_resource_limits_sources",
     "//third_party/glslang:glslang_sources",
     "//third_party/shaderc:libshaderc",
@@ -193,6 +178,7 @@ source_set("escher") {
     ":vulkan",
     "//src/lib/fxl",
     "//src/ui/lib/escher/base:escher_base",
+    "//src/ui/lib/escher/geometry:escher_geometry",
     "//src/ui/lib/escher/types:escher_types",
   ]
 
@@ -212,24 +198,6 @@ source_set("escher") {
     "forward_declarations.h",
     "fs/hack_filesystem.cc",
     "fs/hack_filesystem.h",
-    "geometry/bounding_box.cc",
-    "geometry/bounding_box.h",
-    "geometry/indexed_triangle_mesh.h",
-    "geometry/indexed_triangle_mesh_clip.h",
-    "geometry/indexed_triangle_mesh_upload.h",
-    "geometry/intersection.cc",
-    "geometry/intersection.h",
-    "geometry/interval.cc",
-    "geometry/interval.h",
-    "geometry/plane_ops.h",
-    "geometry/quad.cc",
-    "geometry/quad.h",
-    "geometry/tessellation.cc",
-    "geometry/tessellation.h",
-    "geometry/transform.cc",
-    "geometry/transform.h",
-    "geometry/type_utils.h",
-    "geometry/types.h",
     "hmd/pose_buffer_latching_shader.cc",
     "hmd/pose_buffer_latching_shader.h",
     "impl/command_buffer.cc",
@@ -290,6 +258,11 @@ source_set("escher") {
     "math/lerp.h",
     "math/rotations.cc",
     "math/rotations.h",
+    "mesh/indexed_triangle_mesh.h",
+    "mesh/indexed_triangle_mesh_clip.h",
+    "mesh/indexed_triangle_mesh_upload.h",
+    "mesh/tessellation.cc",
+    "mesh/tessellation.h",
     "paper/paper_draw_call.h",
     "paper/paper_draw_call_factory.cc",
     "paper/paper_draw_call_factory.h",
@@ -512,10 +485,7 @@ source_set("escher") {
     ]
   }
 
-  public_configs = [
-    ":glm_config",
-    ":thread_safety_warning",
-  ]
+  public_configs = [ ":thread_safety_warning" ]
 }
 
 group("unittests") {

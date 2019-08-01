@@ -11,7 +11,7 @@
 #include "src/ui/lib/escher/debug/debug_font.h"
 #include "src/ui/lib/escher/debug/debug_rects.h"
 #include "src/ui/lib/escher/escher.h"
-#include "src/ui/lib/escher/geometry/tessellation.h"
+#include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_render_queue_context.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"

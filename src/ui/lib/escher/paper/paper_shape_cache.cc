@@ -8,9 +8,9 @@
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
-#include "src/ui/lib/escher/geometry/indexed_triangle_mesh_clip.h"
-#include "src/ui/lib/escher/geometry/indexed_triangle_mesh_upload.h"
-#include "src/ui/lib/escher/geometry/tessellation.h"
+#include "src/ui/lib/escher/mesh/indexed_triangle_mesh_clip.h"
+#include "src/ui/lib/escher/mesh/indexed_triangle_mesh_upload.h"
+#include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shape/mesh_spec.h"
 #include "src/ui/lib/escher/shape/rounded_rect.h"

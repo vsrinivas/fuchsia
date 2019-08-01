@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("glm_config") {
+  include_dirs = [ "//third_party/glm" ]
+
+  defines = [
+    "GLM_ENABLE_EXPERIMENTAL",
+
+    # Use Vulkan NDC (normalized depth coordinates): [0..1] instead of [-1..1]
+    "GLM_FORCE_DEPTH_ZERO_TO_ONE",
+
+    # Disable SIMD code paths that seem unstable on Fuchsia.
+    "GLM_FORCE_PURE",
+  ]
+}
+
+source_set("escher_geometry") {
+  public_deps = [
+    "//src/ui/lib/escher/util:escher_geometry_utils",
+    "//src/ui/lib/glm_workaround",
+  ]
+
+  sources = [
+    "bounding_box.cc",
+    "bounding_box.h",
+    "intersection.cc",
+    "intersection.h",
+    "interval.cc",
+    "interval.h",
+    "plane_ops.h",
+    "quad.cc",
+    "quad.h",
+    "transform.cc",
+    "transform.h",
+    "type_utils.h",
+    "types.h",
+  ]
+
+  public_configs = [ ":glm_config" ]
+}

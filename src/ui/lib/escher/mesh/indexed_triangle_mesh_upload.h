@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_ESCHER_GEOMETRY_INDEXED_TRIANGLE_MESH_UPLOAD_H_
-#define SRC_UI_LIB_ESCHER_GEOMETRY_INDEXED_TRIANGLE_MESH_UPLOAD_H_
+#ifndef SRC_UI_LIB_ESCHER_MESH_INDEXED_TRIANGLE_MESH_UPLOAD_H_
+#define SRC_UI_LIB_ESCHER_MESH_INDEXED_TRIANGLE_MESH_UPLOAD_H_
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
-#include "src/ui/lib/escher/geometry/indexed_triangle_mesh.h"
+#include "src/ui/lib/escher/mesh/indexed_triangle_mesh.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
@@ -73,4 +73,4 @@ MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
 
 }  // namespace escher
 
-#endif  // SRC_UI_LIB_ESCHER_GEOMETRY_INDEXED_TRIANGLE_MESH_UPLOAD_H_
+#endif  // SRC_UI_LIB_ESCHER_MESH_INDEXED_TRIANGLE_MESH_UPLOAD_H_

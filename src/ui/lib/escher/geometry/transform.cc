@@ -4,13 +4,9 @@
 
 #include "src/ui/lib/escher/geometry/transform.h"
 
-#include "src/ui/lib/escher/util/trace_macros.h"
-
 namespace escher {
 
 Transform::operator mat4() const {
-  TRACE_DURATION("gfx.debug", "escher::Transform::operator mat4");
-
   // This sequence of operations is equivalent to
   // [translation + anchor] * rotation * scale * [-anchor].
 

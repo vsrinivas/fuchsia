@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/lib/escher/geometry/tessellation.h"
+#include "src/ui/lib/escher/mesh/tessellation.h"
 
 #include <math.h>
 
