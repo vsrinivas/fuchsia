@@ -4,18 +4,14 @@
 
 use {
     fidl_fuchsia_sys2 as fsys,
-    lazy_static::lazy_static,
-    regex::Regex,
     std::collections::{HashMap, HashSet},
     std::error,
     std::fmt,
 };
 
-lazy_static! {
-    static ref PATH: Identifier = Identifier::new(r"^(/[^/]+)+$", 1024);
-    static ref NAME: Identifier = Identifier::new(r"^[0-9a-z_\-\.]+$", 100);
-    static ref URL: Identifier = Identifier::new(r"^[0-9a-z\+\-\.]+://.+$", 4096);
-}
+const MAX_PATH_LENGTH: usize = 1024;
+const MAX_NAME_LENGTH: usize = 100;
+const MAX_URL_LENGTH: usize = 4096;
 
 /// Enum type that can represent any error encountered durlng validation.
 #[derive(Debug)]
@@ -25,6 +21,7 @@ pub enum Error {
     ExtraneousField(String, String),
     DuplicateField(String, String, String),
     InvalidField(String, String),
+    InvalidCharacterInField(String, String, char),
     FieldTooLong(String, String),
     OfferTargetEqualsSource(String, String),
     InvalidChild(String, String, String),
@@ -55,6 +52,10 @@ impl Error {
 
     pub fn invalid_field(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
         Error::InvalidField(decl_type.into(), keyword.into())
+    }
+
+    pub fn invalid_character_in_field(decl_type: impl Into<String>, keyword: impl Into<String>, character: char) -> Self {
+        Error::InvalidCharacterInField(decl_type.into(), keyword.into(), character)
     }
 
     pub fn field_too_long(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
@@ -100,6 +101,9 @@ impl fmt::Display for Error {
             Error::ExtraneousField(d, k) => write!(f, "{} has extraneous {}", d, k),
             Error::DuplicateField(d, k, v) => write!(f, "\"{}\" is a duplicate {} {}", v, d, k),
             Error::InvalidField(d, k) => write!(f, "{} has invalid {}", d, k),
+            Error::InvalidCharacterInField(d, k, c) => {
+                write!(f, "{} has invalid {}, unexpected character '{}'", d, k, c)
+            }
             Error::FieldTooLong(d, k) => write!(f, "{}'s {} is too long", d, k),
             Error::OfferTargetEqualsSource(d, t) => {
                 write!(f, "\"{}\" target \"{}\" is same as source", d, t)
@@ -167,8 +171,8 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
 /// Validates an independent ChildDecl. Performs the same validation on it as `validate`.
 pub fn validate_child(child: &fsys::ChildDecl) -> Result<(), ErrorList> {
     let mut errors = vec![];
-    NAME.check(child.name.as_ref(), "ChildDecl", "name", &mut errors);
-    URL.check(child.url.as_ref(), "ChildDecl", "url", &mut errors);
+    check_name(child.name.as_ref(), "ChildDecl", "name", &mut errors);
+    check_url(child.url.as_ref(), "ChildDecl", "url", &mut errors);
     if child.startup.is_none() {
         errors.push(Error::missing_field("ChildDecl", "startup"));
     }
@@ -269,7 +273,7 @@ impl<'a> ValidationContext<'a> {
                     }
                 }
                 _ => {
-                    PATH.check(
+                    check_path(
                         u.target_path.as_ref(),
                         "UseStorageDecl",
                         "target_path",
@@ -300,8 +304,8 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "source"));
             }
         };
-        PATH.check(source_path, decl, "source_path", &mut self.errors);
-        PATH.check(target_path, decl, "target_path", &mut self.errors);
+        check_path(source_path, decl, "source_path", &mut self.errors);
+        check_path(target_path, decl, "target_path", &mut self.errors);
     }
 
     fn validate_child_decl(&mut self, child: &'a fsys::ChildDecl) {
@@ -318,7 +322,7 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_collection_decl(&mut self, collection: &'a fsys::CollectionDecl) {
         let name = collection.name.as_ref();
-        if NAME.check(name, "CollectionDecl", "name", &mut self.errors) {
+        if check_name(name, "CollectionDecl", "name", &mut self.errors) {
             let name: &str = name.unwrap();
             if !self.all_collections.insert(name) {
                 self.errors.push(Error::duplicate_field("CollectionDecl", "name", name));
@@ -330,7 +334,7 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_storage_decl(&mut self, storage: &'a fsys::StorageDecl) {
-        PATH.check(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
+        check_path(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
         let source_child_name = match storage.source.as_ref() {
             Some(fsys::Ref::Realm(_)) => None,
             Some(fsys::Ref::Self_(_)) => None,
@@ -347,7 +351,7 @@ impl<'a> ValidationContext<'a> {
                 None
             }
         };
-        if NAME.check(storage.name.as_ref(), "StorageDecl", "name", &mut self.errors) {
+        if check_name(storage.name.as_ref(), "StorageDecl", "name", &mut self.errors) {
             let name = storage.name.as_ref().unwrap();
             if self.all_storage_and_sources.insert(name, source_child_name).is_some() {
                 self.errors.push(Error::duplicate_field("StorageDecl", "name", name.as_str()));
@@ -357,7 +361,7 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_source_child(&mut self, child: &fsys::ChildRef, decl_type: &str) {
         let mut valid = true;
-        valid &= NAME.check(Some(&child.name), decl_type, "source.child.name", &mut self.errors);
+        valid &= check_name(Some(&child.name), decl_type, "source.child.name", &mut self.errors);
         valid &= if child.collection.is_some() {
             self.errors.push(Error::extraneous_field(decl_type, "source.child.collection"));
             false
@@ -373,7 +377,7 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_storage_source(&mut self, source: &fsys::StorageRef, decl_type: &str) {
-        if NAME.check(Some(&source.name), decl_type, "source.storage.name", &mut self.errors) {
+        if check_name(Some(&source.name), decl_type, "source.storage.name", &mut self.errors) {
             if !self.all_storage_and_sources.contains_key(&source.name as &str) {
                 self.errors.push(Error::invalid_storage(decl_type, "source", &source.name as &str));
             }
@@ -432,8 +436,8 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "source"));
             }
         }
-        PATH.check(source_path, decl, "source_path", &mut self.errors);
-        if PATH.check(target_path, decl, "target_path", &mut self.errors) {
+        check_path(source_path, decl, "source_path", &mut self.errors);
+        if check_path(target_path, decl, "target_path", &mut self.errors) {
             let target_path: &str = target_path.unwrap();
             if !prev_child_target_paths.insert(target_path) {
                 self.errors.push(Error::duplicate_field(decl, "target_path", target_path));
@@ -490,7 +494,7 @@ impl<'a> ValidationContext<'a> {
             Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
             None => self.errors.push(Error::missing_field(decl, "source")),
         }
-        PATH.check(source_path, decl, "source_path", &mut self.errors);
+        check_path(source_path, decl, "source_path", &mut self.errors);
         match target {
             Some(fsys::Ref::Child(c)) => {
                 self.validate_target_child(decl, c, source, target_path);
@@ -505,7 +509,7 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "target"));
             }
         }
-        PATH.check(target_path, decl, "target_path", &mut self.errors);
+        check_path(target_path, decl, "target_path", &mut self.errors);
     }
 
     fn validate_storage_offer_fields(
@@ -544,7 +548,7 @@ impl<'a> ValidationContext<'a> {
         target_path: Option<&'a String>,
     ) {
         let mut valid = true;
-        valid &= NAME.check(Some(&child.name), decl, "target.child.name", &mut self.errors);
+        valid &= check_name(Some(&child.name), decl, "target.child.name", &mut self.errors);
         valid &= if child.collection.is_some() {
             self.errors.push(Error::extraneous_field(decl, "target.child.collection"));
             false
@@ -580,7 +584,7 @@ impl<'a> ValidationContext<'a> {
         collection: &fsys::CollectionRef,
         target_path: Option<&'a String>,
     ) {
-        if !NAME.check(Some(&collection.name), decl, "target.collection.name", &mut self.errors) {
+        if !check_name(Some(&collection.name), decl, "target.collection.name", &mut self.errors) {
             return;
         }
         if let Some(target_path) = target_path {
@@ -609,7 +613,7 @@ impl<'a> ValidationContext<'a> {
     ) {
         match target {
             Some(fsys::Ref::Child(c)) => {
-                if !NAME.check(Some(&c.name), decl, "target.child.name", &mut self.errors) {
+                if !check_name(Some(&c.name), decl, "target.child.name", &mut self.errors) {
                     return;
                 }
                 if c.collection.is_some() {
@@ -627,7 +631,7 @@ impl<'a> ValidationContext<'a> {
                 }
             }
             Some(fsys::Ref::Collection(c)) => {
-                if !NAME.check(Some(&c.name), decl, "target.collection.name", &mut self.errors) {
+                if !check_name(Some(&c.name), decl, "target.collection.name", &mut self.errors) {
                     return;
                 }
                 let name: &str = &c.name;
@@ -641,45 +645,125 @@ impl<'a> ValidationContext<'a> {
     }
 }
 
-struct Identifier {
-    re: Regex,
+fn check_presence_and_length(
     max_len: usize,
+    prop: Option<&String>,
+    decl_type: &str,
+    keyword: &str,
+    errors: &mut Vec<Error>,
+) {
+    match prop {
+        Some(prop) if prop.len() == 0 => {
+            errors.push(Error::empty_field(decl_type, keyword))
+        }
+        Some(prop) if prop.len() > max_len => {
+            errors.push(Error::field_too_long(decl_type, keyword))
+        }
+        Some(_) => (),
+        None => errors.push(Error::missing_field(decl_type, keyword)),
+    }
 }
 
-impl Identifier {
-    fn new(regex: &str, max_len: usize) -> Identifier {
-        Identifier { re: Regex::new(regex).unwrap(), max_len }
+fn check_path(
+    prop: Option<&String>,
+    decl_type: &str,
+    keyword: &str,
+    errors: &mut Vec<Error>,
+) -> bool {
+    let start_err_len = errors.len();
+    check_presence_and_length(MAX_PATH_LENGTH, prop, decl_type, keyword, errors);
+    if let Some(path) = prop {
+        // Paths must be more than 1 character long
+        if path.len() < 2 {
+            errors.push(Error::invalid_field(decl_type, keyword));
+            return false;
+        }
+        // Paths must start with `/`
+        if !path.starts_with('/') {
+            errors.push(Error::invalid_field(decl_type, keyword));
+            return false;
+        }
+        // Paths cannot have two `/`s in a row
+        if path.contains("//") {
+            errors.push(Error::invalid_field(decl_type, keyword));
+            return false;
+        }
+        // Paths cannot end with `/`
+        if path.ends_with('/') {
+            errors.push(Error::invalid_field(decl_type, keyword));
+            return false;
+        }
     }
+    start_err_len == errors.len()
+}
 
-    fn check(
-        &self,
-        prop: Option<&String>,
-        decl_type: &str,
-        keyword: &str,
-        errors: &mut Vec<Error>,
-    ) -> bool {
-        let mut valid = true;
-        if prop.is_none() {
-            errors.push(Error::missing_field(decl_type, keyword));
-            valid = false;
-        } else {
-            if !self.re.is_match(prop.unwrap()) {
-                errors.push(Error::invalid_field(decl_type, keyword));
-                valid = false;
-            }
-            if prop.unwrap().len() > self.max_len {
-                errors.push(Error::field_too_long(decl_type, keyword));
-                valid = false;
+fn check_name(
+    prop: Option<&String>,
+    decl_type: &str,
+    keyword: &str,
+    errors: &mut Vec<Error>,
+) -> bool {
+    let start_err_len = errors.len();
+    check_presence_and_length(MAX_NAME_LENGTH, prop, decl_type, keyword, errors);
+    if let Some(name) = prop {
+        for b in name.bytes() {
+            match b as char {
+                '0'...'9' | 'a'...'z' | '_' | '-' | '.' => (),
+                c => {
+                    errors.push(Error::invalid_character_in_field(decl_type, keyword, c));
+                    return false;
+                }
             }
         }
-        valid
     }
+    start_err_len == errors.len()
+}
+
+fn check_url(
+    prop: Option<&String>,
+    decl_type: &str,
+    keyword: &str,
+    errors: &mut Vec<Error>,
+) -> bool {
+    let start_err_len = errors.len();
+    check_presence_and_length(MAX_URL_LENGTH, prop, decl_type, keyword, errors);
+    if let Some(url) = prop {
+        let mut chars_iter = url.chars();
+        while let Some(c) = chars_iter.next() {
+            match c {
+                '0'...'9' | 'a'...'z' | '+' | '-' | '.' => (),
+                ':' => {
+                    // Once a `:` character is found, it must be followed by two `/` characters and
+                    // then at least one more character. Note that these sequential calls to
+                    // `.next()` without checking the result won't panic because `Chars` implements
+                    // `FusedIterator`.
+                    match (chars_iter.next(), chars_iter.next(), chars_iter.next()) {
+                        (Some('/'), Some('/'), Some(_)) => return start_err_len == errors.len(),
+                        _ => {
+                            errors.push(Error::invalid_field(decl_type, keyword));
+                            return false;
+                        }
+                    }
+                }
+                c => {
+                    errors.push(Error::invalid_character_in_field(decl_type, keyword, c));
+                    return false;
+                }
+            }
+        }
+        // If we've reached here then the string terminated unexpectedly
+        errors.push(Error::invalid_field(decl_type, keyword));
+    }
+    start_err_len == errors.len()
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        proptest::prelude::*,
+        regex::Regex,
+        lazy_static::lazy_static,
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
             ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl, OfferDecl, OfferDirectoryDecl,
@@ -688,15 +772,79 @@ mod tests {
         },
     };
 
+    const PATH_REGEX_STR: &str = r"(/[^/]+)+";
+    const NAME_REGEX_STR: &str = r"[0-9a-z_\-\.]+";
+    const URL_REGEX_STR: &str = r"[0-9a-z\+\-\.]+://.+";
+
+    lazy_static! {
+        static ref PATH_REGEX: Regex = Regex::new(&("^".to_string() + PATH_REGEX_STR + "$")).unwrap();
+        static ref NAME_REGEX: Regex = Regex::new(&("^".to_string() + NAME_REGEX_STR + "$")).unwrap();
+        static ref URL_REGEX: Regex = Regex::new(&("^".to_string() + URL_REGEX_STR + "$")).unwrap();
+    }
+
+    proptest! {
+        #[test]
+        fn check_path_matches_regex(s in PATH_REGEX_STR) {
+            if s.len() < MAX_PATH_LENGTH {
+                let mut errors = vec![];
+                prop_assert!(check_path(Some(&s), "", "", &mut errors));
+                prop_assert!(errors.is_empty());
+            }
+        }
+        #[test]
+        fn check_name_matches_regex(s in NAME_REGEX_STR) {
+            if s.len() < MAX_NAME_LENGTH {
+                let mut errors = vec![];
+                prop_assert!(check_name(Some(&s), "", "", &mut errors));
+                prop_assert!(errors.is_empty());
+            }
+        }
+        #[test]
+        fn check_url_matches_regex(s in URL_REGEX_STR) {
+            if s.len() < MAX_URL_LENGTH {
+                let mut errors = vec![];
+                prop_assert!(check_url(Some(&s), "", "", &mut errors));
+                prop_assert!(errors.is_empty());
+            }
+        }
+        #[test]
+        fn check_path_fails_invalid_input(s in ".*") {
+            if !PATH_REGEX.is_match(&s) {
+                let mut errors = vec![];
+                prop_assert!(!check_path(Some(&s), "", "", &mut errors));
+                prop_assert!(!errors.is_empty());
+            }
+        }
+        #[test]
+        fn check_name_fails_invalid_input(s in ".*") {
+            if !NAME_REGEX.is_match(&s) {
+                let mut errors = vec![];
+                prop_assert!(!check_name(Some(&s), "", "", &mut errors));
+                prop_assert!(!errors.is_empty());
+            }
+        }
+        #[test]
+        fn check_url_fails_invalid_input(s in ".*") {
+            if !URL_REGEX.is_match(&s) {
+                let mut errors = vec![];
+                prop_assert!(!check_url(Some(&s), "", "", &mut errors));
+                prop_assert!(!errors.is_empty());
+            }
+        }
+    }
+
     fn validate_test(input: ComponentDecl, expected_res: Result<(), ErrorList>) {
         let res = validate(&input);
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     }
 
-    fn identifier_test(identifier: &Identifier, input: &str, expected_res: Result<(), ErrorList>) {
+    fn check_test<F>(check_fn: F, input: &str, expected_res: Result<(), ErrorList>)
+    where
+        F: FnOnce(Option<&String>, &str, &str, &mut Vec<Error>) -> bool,
+    {
         let mut errors = vec![];
         let res: Result<(), ErrorList> =
-            match identifier.check(Some(&input.to_string()), "FooDecl", "foo", &mut errors) {
+            match check_fn(Some(&input.to_string()), "FooDecl", "foo", &mut errors) {
                 true => Ok(()),
                 false => Err(ErrorList::new(errors)),
             };
@@ -764,11 +912,11 @@ mod tests {
         }
     }
 
-    macro_rules! test_identifier {
+    macro_rules! test_string_checks {
         (
             $(
                 $test_name:ident => {
-                    identifier = $identifier:expr,
+                    check_fn = $check_fn:expr,
                     input = $input:expr,
                     result = $result:expr,
                 },
@@ -777,75 +925,78 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    identifier_test($identifier, $input, $result);
+                    check_test($check_fn, $input, $result);
                 }
             )+
         }
     }
 
-    test_identifier! {
+    test_string_checks! {
         // path
         test_identifier_path_valid => {
-            identifier = &PATH,
+            check_fn = check_path,
             input = "/foo/bar",
             result = Ok(()),
         },
         test_identifier_path_invalid_empty => {
-            identifier = &PATH,
+            check_fn = check_path,
             input = "",
-            result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
+            result = Err(ErrorList::new(vec![
+                Error::empty_field("FooDecl", "foo"),
+                Error::invalid_field("FooDecl", "foo"),
+            ])),
         },
         test_identifier_path_invalid_root => {
-            identifier = &PATH,
+            check_fn = check_path,
             input = "/",
             result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
         },
         test_identifier_path_invalid_relative => {
-            identifier = &PATH,
+            check_fn = check_path,
             input = "foo/bar",
             result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
         },
         test_identifier_path_invalid_trailing => {
-            identifier = &PATH,
+            check_fn = check_path,
             input = "/foo/bar/",
             result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
         },
         test_identifier_path_too_long => {
-            identifier = &PATH,
+            check_fn = check_path,
             input = &format!("/{}", "a".repeat(1024)),
             result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
         },
 
         // name
         test_identifier_name_valid => {
-            identifier = &NAME,
+            check_fn = check_name,
             input = "abcdefghijklmnopqrstuvwxyz0123456789_-.",
             result = Ok(()),
         },
         test_identifier_name_invalid => {
-            identifier = &NAME,
+            check_fn = check_name,
             input = "^bad",
-            result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
+            result = Err(ErrorList::new(vec![Error::invalid_character_in_field("FooDecl", "foo", '^')])),
         },
         test_identifier_name_too_long => {
-            identifier = &NAME,
+            check_fn = check_name,
             input = &format!("{}", "a".repeat(101)),
             result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
         },
 
         // url
         test_identifier_url_valid => {
-            identifier = &URL,
+            check_fn = check_url,
             input = "my+awesome-scheme.2://abc123!@#$%.com",
             result = Ok(()),
         },
         test_identifier_url_invalid => {
-            identifier = &URL,
+            check_fn = check_url,
             input = "fuchsia-pkg://",
             result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
         },
         test_identifier_url_too_long => {
-            identifier = &URL,
+            check_fn = check_url,
             input = &format!("fuchsia-pkg://{}", "a".repeat(4083)),
             result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
         },
@@ -1034,10 +1185,10 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("ExposeServiceDecl", "source.child.name"),
+                Error::invalid_character_in_field("ExposeServiceDecl", "source.child.name", '^'),
                 Error::invalid_field("ExposeServiceDecl", "source_path"),
                 Error::invalid_field("ExposeServiceDecl", "target_path"),
-                Error::invalid_field("ExposeDirectoryDecl", "source.child.name"),
+                Error::invalid_character_in_field("ExposeDirectoryDecl", "source.child.name", '^'),
                 Error::invalid_field("ExposeDirectoryDecl", "source_path"),
                 Error::invalid_field("ExposeDirectoryDecl", "target_path"),
             ])),
@@ -1614,8 +1765,8 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("ChildDecl", "name"),
-                Error::invalid_field("ChildDecl", "url"),
+                Error::invalid_character_in_field("ChildDecl", "name", '^'),
+                Error::invalid_character_in_field("ChildDecl", "url", '&'),
             ])),
         },
         test_validate_children_long_identifiers => {
@@ -1659,7 +1810,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("CollectionDecl", "name"),
+                Error::invalid_character_in_field("CollectionDecl", "name", '^'),
             ])),
         },
         test_validate_collections_long_identifiers => {

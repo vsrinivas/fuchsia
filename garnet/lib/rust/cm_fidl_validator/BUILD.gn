@@ -10,8 +10,10 @@ rustc_library("cm_fidl_validator") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//third_party/rust_crates:json5",
+  ]
+  test_deps = [
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:regex",
   ]
 }
