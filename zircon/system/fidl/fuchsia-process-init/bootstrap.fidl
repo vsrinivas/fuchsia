@@ -1,0 +1,73 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.process.init;
+
+using fuchsia.ldsvc;
+using fuchsia.mem;
+using fuchsia.process;
+
+/// The protocol used to initialize processes.
+protocol Bootstrap {
+    /// Initialize the process with handles.
+    ///
+    /// Always the first message sent into the channel when starting a new
+    /// process. Must be sent exactly once.
+    Init(InterpreterInfo info);
+
+    /// Add the given handles to set of startup handles for the process.
+    ///
+    /// Must be called after `Init` and before `Start`. Can be called multiple
+    /// times.
+    AddHandles(vector<fuchsia.process.HandleInfo>:64 handles);
+
+    /// Add the given names to the namespace of the new process.
+    ///
+    /// Must be called after `Init` and before `Start`. Can be called multiple
+    /// times.
+    AddNames(vector<fuchsia.process.NameInfo>:64 names);
+
+    /// Start the process.
+    ///
+    ///  * argc: The number of arguments in `argv`.
+    ///  * environc: The number of variables in the `environ`.
+    ///
+    /// The command line arguments and environment variables for the process.
+    ///
+    /// Each byte sequence in `data` is terminated by a single 0x00 byte. The
+    /// first `argc` byte sequences in the payload are the command line
+    /// arguments. The next `environc` byte sequences are the environment
+    /// variables.
+    Start(uint32 argc, uint32 environc, fuchsia.mem.Data data);
+};
+
+/// Flags to modulate the behavior of the interpreter for a process.
+bits InterpreterFlags : uint64 {
+    DEBUG = 0x1;
+    TRACE = 0x2;
+};
+
+/// Information need by the interpreter to initialize a process.
+table InterpreterInfo {
+    /// Flags to modulate the behavior of the interpreter.
+    1: InterpreterFlags flags;
+
+    /// The process being started.
+    2: handle<process> process;
+
+    /// The root the root virtual memory address range for the process being started.
+    3: handle<vmar> root_vmar;
+
+    /// The initial thread for the process.
+    4: handle<thread> thread;
+
+    /// The executable to load into the process.
+    5: handle<vmo> executable;
+
+    /// The the root virtual memory address range into which the interpreter was loaded.
+    6: handle<vmar> loaded_vmar;
+
+    /// The shared library loader to use for the process.
+    7: fuchsia.ldsvc.Loader loader;
+};

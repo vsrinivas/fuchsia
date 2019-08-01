@@ -81,6 +81,7 @@ group("fidl") {
     "fuchsia-posix-socket",
     "fuchsia-power",
     "fuchsia-process",
+    "fuchsia-process-init",
     "fuchsia-scheduler",
     "fuchsia-storage-metrics",
     "fuchsia-sysinfo",
