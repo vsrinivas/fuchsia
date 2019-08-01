@@ -9,6 +9,11 @@ import("//build/testing/test_spec.gni")
 
 # Parameters: same as go_build, along with
 #
+#   gopackage [deprecated] / gopackages
+#     Required: exactly one of {gopackage, gopackages} must be specified.
+#     Type: list of strings.
+#     The go packages containing the tests to be run.
+#
 #   args
 #     Optional: additional arguments needed when invoking the test.
 #     Type: list of strings.
@@ -50,9 +55,7 @@ template("go_test") {
       testonly = true
       name = _main_target_name
       location = _output_path
-      command = [
-        rebase_path(_output_path, root_build_dir),
-      ]
+      command = [ rebase_path(_output_path, root_build_dir) ]
       timeout = "5m"
       if (defined(invoker.timeout)) {
         timeout = invoker.timeout
@@ -73,6 +76,13 @@ template("go_test") {
       }
       forward_variables_from(invoker, [ "environments" ])
     }
+  }
+
+  if (defined(invoker.gopackage)) {
+    # TODO(FIDL-766) Migrate from gopackage to gopackages in all callers.
+    assert(!defined(invoker.gopackages),
+           "gopackage and gopackages cannot both be defined")
+    gopackages = [ invoker.gopackage ]
   }
 
   go_build(_main_target_name) {

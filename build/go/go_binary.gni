@@ -8,6 +8,9 @@ import("//build/go/go_build.gni")
 #
 # Parameters
 #
+#   gopackage (required)
+#     The go package containing the main function.
+#
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
@@ -19,6 +22,9 @@ import("//build/go/go_build.gni")
 
 template("go_binary") {
   go_build(target_name) {
+    assert(defined(invoker.gopackage),
+           "gopackage must be defined for $target_name")
+    gopackages = [ invoker.gopackage ]
     forward_variables_from(invoker, "*")
   }
 }

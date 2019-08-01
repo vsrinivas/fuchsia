@@ -25,6 +25,9 @@ declare_args() {
 #
 # Parameters
 #
+#   gopackages (required)
+#     List of packages to build.
+#
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
@@ -45,8 +48,8 @@ declare_args() {
 #     Whether this target defines a test.
 #
 template("go_build") {
-  assert(defined(invoker.gopackage),
-         "gopackage must be defined for $target_name")
+  assert(defined(invoker.gopackages),
+         "gopackages must be defined for $target_name")
 
   main_target_name = target_name
 
@@ -217,10 +220,12 @@ template("go_build") {
       }
     }
 
-    args += [
-      "--package",
-      invoker.gopackage,
-    ]
+    foreach(gopackage, invoker.gopackages) {
+      args += [
+        "--package",
+        gopackage,
+      ]
+    }
   }
 
   # Allow host binaries to be published in SDKs.
