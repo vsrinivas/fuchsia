@@ -42,5 +42,6 @@ library("fake_ddk") {
 
     # <lib/fake_ddk/fidl-helper.h> has #include <lib/fidl-async/bind.h>.
     "$zx/system/ulib/fidl-async:headers",
+    "$zx/system/ulib/sync",
   ]
 }

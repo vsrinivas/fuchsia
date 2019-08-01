@@ -33,6 +33,10 @@ bool Bind::Ok() {
   return !zxtest::Runner::GetInstance()->CurrentTestHasFailures();
 }
 
+zx_status_t Bind::WaitUntilRemove() {
+  return sync_completion_wait_deadline(&remove_called_sync_, zx::time::infinite().get());
+}
+
 void Bind::ExpectMetadata(const void* data, size_t data_length) {
   metadata_ = data;
   metadata_length_ = data_length;
@@ -79,6 +83,7 @@ zx_status_t Bind::DeviceRemove(zx_device_t* device) {
     bad_device_ = true;
   }
   remove_called_ = true;
+  sync_completion_signal(&remove_called_sync_);
   return ZX_OK;
 }
 

@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/array.h>
+#include <lib/sync/completion.h>
 
 #include "fidl-helper.h"
 
@@ -49,6 +50,10 @@ class Bind {
   // provided data doesn't match the expectations, DeviceAddMetadata will fail
   // with ZX_ERR_BAD_STATE.
   void ExpectMetadata(const void* data, size_t data_length);
+
+  // Blocking wait until DdkRemove is called. Use this if you expect unbind/remove to
+  // be called in a different thread.
+  zx_status_t WaitUntilRemove();
 
   // Returns the number of times DeviceAddMetadata has been called and the
   // total length of all the data provided.
@@ -107,6 +112,7 @@ class Bind {
   bool bad_device_ = false;
   bool add_called_ = false;
   bool remove_called_ = false;
+  sync_completion_t remove_called_sync_;
   bool make_visible_called_ = false;
 
   int add_metadata_calls_ = 0;
