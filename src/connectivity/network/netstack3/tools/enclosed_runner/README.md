@@ -19,7 +19,7 @@ $ net if del 3
 * Now that we can use ethernet `001` for ourselves, we can start `enclosed_runner` giving it
 the path to the ethernet device and some fixed IP address:
 ```
-$ run fuchsia-pkg://fuchsia.com/netstack3_tools#meta/enclosed_runner.cmx -e /dev/class/ethernet/001 -i 192.168.3.55/24 &
+$ run fuchsia-pkg://fuchsia.com/netstack3_tools#meta/enclosed_runner.cmx -e /dev/class/ethernet/001 -i 192.168.4.54/24 &
 ```
 *Note the `&` at the end* of the command. `enclosed_runner` is using the
 `fuchsia.test` facet to make use of `run_test_component`'s environment creation.
@@ -34,12 +34,14 @@ with `&`.
 ```
 $ chrealm /hub/r/netstack3-env/<koid>
 ```
-where `<koid>` will change between different runs. The chrealm command to run will be printed when
-starting `enclosed_runner`.
-`chrealm` will drop you into a nested shell environment that is mapping the `svc` folder to the
-enclosed environment where
-`netstack3` is running. You can `CTRL+D` out of `chrealm` to go back to the `sys` realm when
-you're done.
+where `<koid>` will change between different runs. *Note* that if you're trying
+to `chrealm` from the QEMU console, the shell session may be one realm up and
+the path will actually be `/hub/r/sys/<id>/r/netstack3-env/<koid>`. This problem
+is easily avoided by invoking the command in an `fx shell` instead.
+
+`chrealm` will drop you into a nested shell environment that is mapping the
+`svc` folder to the enclosed environment where `netstack3` is running. You can
+`CTRL+D` out of `chrealm` to go back to the `sys` realm when you're done.
 
 * Because `enclosed_runner` will keep running in the background, you can kill it
   (and `netstack3` along with it) with `killall enclosed_runner.cmx`. And,

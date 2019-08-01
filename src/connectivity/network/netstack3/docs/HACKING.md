@@ -2,45 +2,69 @@
 
 This document describes how to run Netstack3, as well as a few possible dev
 workflows. The instructions are for how to set up QEMU, but are also applicable
-to real hardware. The instructions here are for running Netstack3 as a 
-*replacement* netstack. If you want to run Netstack3 alongside the default
-netstack, but bound to a specific interface, check the instructions in
-[enclosed_runner](../tools/enclosed_runner/README.md).
+to real hardware.
 
-## (Step 1) QEMU Setup
+## Running Alongside Default Netstack
+
+The following instructions here are for running Netstack3 alongside the default
+netstack on a separate interface. This is currently the recommended method of
+running Netstack3.
+
+### (Step 1) QEMU Setup
 
 First, set up two interfaces for QEMU to use (you only need to do this once per
 boot of host machine):
 
 ```
-sudo tunctl -u $USER -t qemu
-sudo tunctl -u $USER -t qemu-extra
+sudo ip tuntap add dev qemu mode tap user $USER
+sudo ip tuntap add dev qemu-extra mode tap user $USER
 sudo ifconfig qemu up
 sudo ifconfig qemu-extra up
 ```
 
-If you want your workstation to have an IPv4 address for the qemu and/or
-qemu-extra interfaces, assign that now:
+Assign an IPv4 address for the `qemu-extra` interface so that you can ping from
+it later:
 
 ```
-sudo ifconfig qemu 192.168.1.21 netmask 255.255.255.0 up
-sudo ifconfig qemu-extra 192.168.1.22 netmask 255.255.255.0 up
+sudo ifconfig qemu-extra 192.168.4.1 netmask 255.255.255.0 up
 ```
 
-When you want to run QEMU with two devices, use the following invocation of
-`fx run`:
+It's not necessary to set a static IPv4 address for the `qemu` interface if the
+following invocation of `fx run` is used (which runs dnsmasq and will assign an
+address of `192.168.3.1/24` to the interface):
 
 ```
-fx run -kN -- -netdev type=tap,ifname=qemu-extra,script=no,downscript=no,id=net1 -device e1000,netdev=net1,mac=52:54:00:63:5e:7b
+fx run -kN -u scripts/start-dhcp-server.sh -- \
+  -netdev type=tap,ifname=qemu-extra,script=no,downscript=no,id=net1 \
+  -device e1000,netdev=net1,mac=52:54:00:63:5e:7b
 ```
 
-## (Step 2) `sysmgr` Setup
+At this point you should be able to `fx shell` and ping the default netstack
+with the address assigned via DHCP (probably `192.168.3.53`).
 
-No matter how you want to run `netstack3`, you'll probably want to disable the
-Go `netstack` first, so as to avoid conflicts and confusion between the two
+### (Step 2) `enclosed_runner` Setup
+
+Follow the instructions in the [`enclosed_runner` documentation](
+../tools/enclosed_runner/README.md) to run Netstack3 on the second ethernet
+interface. Note that the instructions above assigned `192.168.4.1/24` to
+`qemu-extra` so the address assigned to Netstack3 through `enclosed_runner`
+should also be in this subnet. If you're successful, you should be able to ping
+the address assigned to Netstack3 (presumably `192.168.4.x`) from the host
+machine.
+
+## Running Netstack3 Only
+
+The following instructions are for running Netstack3 as a replacement for the
+default netstack.
+
+### (Step 1) `sysmgr` Setup
+
+To run Netstack3 as the replacement netstack, you'll probably want to disable
+the Go `netstack` first, so as to avoid conflicts and confusion between the two
 stacks.
 
-In [`garnet/bin/sysmgr/config/services.config`](../sysmgr/config/services.config):
+In [`garnet/bin/sysmgr/config/services.config`](
+../../../../../garnet/bin/sysmgr/config/services.config):
 
 * Replace `fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx` on the
   `fuchsia.net.stack.Stack` line with
@@ -71,7 +95,7 @@ which will have those packages be part of the base system.  Like this:
  --with-base //garnet/packages/prod:netcfg \
  --with-base //garnet/packages/prod:chrealm`
 
-## Running
+### (Step 2) Running
 
 Once you've done this setup, the netstack should be set up. You can run fuchsia
 however you normally would, then use `net` to set up the interface:
