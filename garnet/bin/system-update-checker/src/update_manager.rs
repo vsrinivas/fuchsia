@@ -6,9 +6,11 @@ use crate::apply::{apply_system_update, Initiator};
 use crate::channel::TargetChannelManager;
 use crate::check::{check_for_system_update, SystemUpdateStatus};
 use crate::connect::ServiceConnect;
+use crate::update_monitor::{State, StateChangeCallback, UpdateMonitor};
 use failure::{Error, ResultExt};
 use fidl_fuchsia_update::{CheckStartedResult, ManagerState};
 use fuchsia_async as fasync;
+use fuchsia_inspect as finspect;
 use fuchsia_merkle::Hash;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::future::BoxFuture;
@@ -16,10 +18,6 @@ use futures::lock::Mutex as AsyncMutex;
 use futures::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
-
-pub trait StateChangeCallback: Clone + Send + Sync + 'static {
-    fn on_state_change(&self, new_state: &State) -> Result<(), Error>;
-}
 
 /// Manages the lifecycle of an update attempt and notifies interested clients.
 //
@@ -51,26 +49,14 @@ where
     update_applier: A,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct State {
-    pub manager_state: ManagerState,
-    pub version_available: Option<String>,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        Self { manager_state: ManagerState::Idle, version_available: None }
-    }
-}
-
 impl<T, S> UpdateManager<T, RealUpdateChecker, RealUpdateApplier, S>
 where
     T: TargetChannelUpdater,
     S: StateChangeCallback,
 {
-    pub fn new(channel_updater: T) -> Self {
+    pub fn new(channel_updater: T, node: finspect::Node) -> Self {
         Self {
-            monitor: Arc::new(Mutex::new(UpdateMonitor::new())),
+            monitor: Arc::new(Mutex::new(UpdateMonitor::from_inspect_node(node))),
             updater: Arc::new(AsyncMutex::new(SystemInterface::new(
                 channel_updater,
                 RealUpdateChecker,
@@ -111,7 +97,7 @@ where
     ) -> CheckStartedResult {
         let mut monitor = self.monitor.lock();
         callback.map(|cb| monitor.add_temporary_callback(cb));
-        match monitor.state.manager_state {
+        match monitor.manager_state() {
             ManagerState::Idle => {
                 monitor.advance_manager_state(ManagerState::CheckingForUpdates);
                 let updater = Arc::clone(&self.updater);
@@ -133,7 +119,7 @@ where
 
     pub fn get_state(&self) -> State {
         let monitor = self.monitor.lock();
-        monitor.state.clone()
+        monitor.state()
     }
 
     pub fn add_permanent_callback(&self, callback: S) {
@@ -161,7 +147,7 @@ where
             monitor.lock().advance_manager_state(ManagerState::EncounteredError);
         }
         let mut monitor = monitor.lock();
-        match monitor.state.manager_state {
+        match monitor.manager_state() {
             ManagerState::WaitingForReboot => fx_log_err!(
                 "system-update-checker is in the WaitingForReboot state. \
                  This should not have happened, because the sytem-updater should \
@@ -199,15 +185,15 @@ where
                 fx_log_info!("new system_image available: {}", latest_system_image);
                 {
                     let mut monitor = monitor.lock();
-                    monitor.state.version_available = Some(latest_system_image.to_string());
+                    monitor.set_version_available(latest_system_image.to_string());
                     monitor.advance_manager_state(ManagerState::PerformingUpdate);
                 }
                 await!(self.update_applier.apply(
                     current_system_image,
                     latest_system_image,
-                    initiator
+                    initiator,
                 ))
-                .context("apply_system_update failed")?;
+                    .context("apply_system_update failed")?;
                 // On success, system-updater reboots the system before returning, so this code
                 // should never run. The only way to leave WaitingForReboot state is to restart
                 // the component
@@ -215,57 +201,6 @@ where
             }
         }
         Ok(())
-    }
-}
-
-struct UpdateMonitor<S>
-where
-    S: StateChangeCallback,
-{
-    permanent_callbacks: Vec<S>,
-    temporary_callbacks: Vec<S>,
-    state: State,
-}
-
-impl<S> UpdateMonitor<S>
-where
-    S: StateChangeCallback,
-{
-    fn new() -> Self {
-        UpdateMonitor {
-            permanent_callbacks: vec![],
-            temporary_callbacks: vec![],
-            state: Default::default(),
-        }
-    }
-
-    fn add_temporary_callback(&mut self, callback: S) {
-        if callback.on_state_change(&self.state).is_ok() {
-            self.temporary_callbacks.push(callback);
-        }
-    }
-
-    fn add_permanent_callback(&mut self, callback: S) {
-        if callback.on_state_change(&self.state).is_ok() {
-            self.permanent_callbacks.push(callback);
-        }
-    }
-
-    fn advance_manager_state(&mut self, next_manager_state: ManagerState) {
-        self.state.manager_state = next_manager_state;
-        if self.state.manager_state == ManagerState::Idle {
-            self.state.version_available = None;
-        }
-        self.send_on_state();
-        if self.state.manager_state == ManagerState::Idle {
-            self.temporary_callbacks.clear();
-        }
-    }
-
-    fn send_on_state(&mut self) {
-        let state = self.state.clone();
-        self.permanent_callbacks.retain(|cb| cb.on_state_change(&state).is_ok());
-        self.temporary_callbacks.retain(|cb| cb.on_state_change(&state).is_ok());
     }
 }
 
@@ -449,7 +384,7 @@ pub(crate) mod tests {
     #[derive(Clone)]
     pub struct UnreachableStateChangeCallback;
     impl StateChangeCallback for UnreachableStateChangeCallback {
-        fn on_state_change(&self, _new_state: &State) -> Result<(), Error> {
+        fn on_state_change(&self, _new_state: State) -> Result<(), Error> {
             unreachable!();
         }
     }
@@ -467,8 +402,8 @@ pub(crate) mod tests {
         }
     }
     impl StateChangeCallback for StateChangeCollector {
-        fn on_state_change(&self, new_state: &State) -> Result<(), Error> {
-            self.states.lock().push(new_state.clone());
+        fn on_state_change(&self, new_state: State) -> Result<(), Error> {
+            self.states.lock().push(new_state);
             Ok(())
         }
     }
@@ -484,10 +419,10 @@ pub(crate) mod tests {
         }
     }
     impl StateChangeCallback for FakeStateChangeCallback {
-        fn on_state_change(&self, new_state: &State) -> Result<(), Error> {
+        fn on_state_change(&self, new_state: State) -> Result<(), Error> {
             self.sender
                 .lock()
-                .try_send(new_state.clone())
+                .try_send(new_state)
                 .expect("FakeStateChangeCallback failed to send state");
             Ok(())
         }

@@ -4,9 +4,8 @@
 
 use crate::apply::Initiator;
 use crate::config::Config;
-use crate::update_manager::{
-    StateChangeCallback, TargetChannelUpdater, UpdateApplier, UpdateChecker, UpdateManager,
-};
+use crate::update_manager::{TargetChannelUpdater, UpdateApplier, UpdateChecker, UpdateManager};
+use crate::update_monitor::StateChangeCallback;
 use fidl_fuchsia_update::CheckStartedResult;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_info;

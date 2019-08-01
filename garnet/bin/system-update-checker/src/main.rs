@@ -11,8 +11,10 @@ mod config;
 mod connect;
 mod errors;
 mod info_handler;
+mod inspect;
 mod poller;
 mod update_manager;
+mod update_monitor;
 mod update_service;
 
 use crate::config::Config;
@@ -24,6 +26,7 @@ use fidl_fuchsia_update::{InfoRequestStream, ManagerRequestStream};
 use forced_fdr::perform_fdr_if_necessary;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_inspect as finspect;
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use futures::prelude::*;
 use std::sync::Arc;
@@ -39,6 +42,8 @@ async fn main() -> Result<(), Error> {
         fx_log_warn!("Ignoring custom update package url: {}", url);
     }
 
+    let inspector = finspect::Inspector::new();
+
     let mut target_channel_manager =
         channel::TargetChannelManager::new(connect::ServiceConnector, "/misc/ota");
     if let Err(e) = await!(target_channel_manager.update()) {
@@ -49,7 +54,10 @@ async fn main() -> Result<(), Error> {
         channel::CurrentChannelNotifier::new(connect::ServiceConnector, "/misc/ota");
     let channel_fut = channel_notifier.run();
 
-    let update_manager = Arc::new(RealUpdateManager::new(target_channel_manager));
+    let update_manager = Arc::new(RealUpdateManager::new(
+        target_channel_manager,
+        inspector.root().create_child("update-manager"),
+    ));
     let info_handler = InfoHandler::default();
 
     let mut fs = ServiceFs::new();
@@ -59,6 +67,9 @@ async fn main() -> Result<(), Error> {
             IncomingServices::Manager(stream, RealUpdateService::new(update_manager_clone.clone()))
         })
         .add_fidl_service(move |stream| IncomingServices::Info(stream, info_handler.clone()));
+
+    inspector.export(&mut fs);
+
     fs.take_and_serve_directory_handle().context("ServiceFs::take_and_serve_directory_handle")?;
     let fidl_fut = fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, |incoming_service| {
         handle_incoming_service(incoming_service)

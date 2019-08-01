@@ -6,9 +6,10 @@ use crate::apply::Initiator;
 use crate::channel::TargetChannelManager;
 use crate::connect::ServiceConnector;
 use crate::update_manager::{
-    RealUpdateApplier, RealUpdateChecker, State, StateChangeCallback, TargetChannelUpdater,
-    UpdateApplier, UpdateChecker, UpdateManager,
+    RealUpdateApplier, RealUpdateChecker, TargetChannelUpdater, UpdateApplier, UpdateChecker,
+    UpdateManager,
 };
+use crate::update_monitor::{State, StateChangeCallback};
 use failure::{bail, Error, ResultExt};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_update::{
@@ -143,8 +144,8 @@ fn extract_initiator(options: &fidl_fuchsia_update::Options) -> Result<Initiator
 }
 
 impl StateChangeCallback for MonitorControlHandle {
-    fn on_state_change(&self, new_state: &State) -> Result<(), Error> {
-        match new_state.clone() {
+    fn on_state_change(&self, new_state: State) -> Result<(), Error> {
+        match new_state {
             State { manager_state, version_available } => {
                 self.send_on_state(fidl_fuchsia_update::State {
                     state: Some(manager_state),
