@@ -11,6 +11,7 @@
 #include "flatbuffers/flatbuffers.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
+#include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
@@ -18,11 +19,12 @@
 
 namespace p2p_sync {
 namespace {
-storage::ObjectIdentifier ToObjectIdentifier(const ObjectId* fb_object_id) {
+storage::ObjectIdentifier ToObjectIdentifier(const ObjectId* fb_object_id,
+                                             storage::PageStorage* storage) {
   uint32_t key_index = fb_object_id->key_index();
   uint32_t deletion_scope_id = fb_object_id->deletion_scope_id();
-  return storage::ObjectIdentifier{key_index, deletion_scope_id,
-                                   storage::ObjectDigest(fb_object_id->digest())};
+  return storage->GetObjectIdentifierFactory()->MakeObjectIdentifier(
+      key_index, deletion_scope_id, storage::ObjectDigest(fb_object_id->digest()));
 }
 }  // namespace
 
@@ -282,7 +284,7 @@ void PageCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source
       const ObjectResponse* object_response =
           static_cast<const ObjectResponse*>(message->response());
       for (const Object* object : *(object_response->objects())) {
-        auto object_id = ToObjectIdentifier(object->id());
+        auto object_id = ToObjectIdentifier(object->id(), storage_);
         auto pending_request = pending_object_requests_.find(object_id);
         if (pending_request == pending_object_requests_.end()) {
           continue;
@@ -548,8 +550,7 @@ void PageCommunicatorImpl::ProcessObjectRequest(p2p_provider::P2PClientId source
     auto response_waiter =
         fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(ledger::Status::OK);
     for (const ObjectId* object_id : *request->object_ids()) {
-      storage::ObjectIdentifier identifier{object_id->key_index(), object_id->deletion_scope_id(),
-                                           storage::ObjectDigest(object_id->digest())};
+      storage::ObjectIdentifier identifier = ToObjectIdentifier(object_id, storage_);
       object_responses.emplace_back(identifier);
       auto& response = object_responses.back();
       storage_->GetPiece(identifier, [callback = response_waiter->NewCallback(), &response](

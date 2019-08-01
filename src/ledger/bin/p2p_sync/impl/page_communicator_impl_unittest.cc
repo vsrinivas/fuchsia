@@ -4,17 +4,17 @@
 
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 
-#include <algorithm>
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
@@ -26,6 +26,8 @@
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
@@ -37,10 +39,11 @@ namespace {
 p2p_provider::P2PClientId MakeP2PClientId(uint8_t id) { return p2p_provider::P2PClientId({id}); }
 
 // Creates a dummy object identifier.
-// |object_digest| need not be valid (wrt. internal storage constraints) as it
-// is only used as an opaque identifier for p2p.
+// |object_digest| does not need to be valid (wrt. internal storage constraints) as it is only used
+// as an opaque identifier for p2p. It does not need to be tracked either because we are using a
+// fake PageStorage that does not perform garbage collection.
 storage::ObjectIdentifier MakeObjectIdentifier(std::string object_digest) {
-  return storage::ObjectIdentifier(0, 0, storage::ObjectDigest(std::move(object_digest)));
+  return storage::ObjectIdentifier(0, 0, storage::ObjectDigest(std::move(object_digest)), nullptr);
 }
 
 class FakeCommit : public storage::CommitEmptyImpl {
@@ -155,6 +158,10 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
     callback(mark_synced_to_peer_status);
   }
 
+  storage::ObjectIdentifierFactory* GetObjectIdentifierFactory() override {
+    return &object_identifier_factory_;
+  }
+
   storage::CommitWatcher* watcher_ = nullptr;
   std::vector<std::pair<std::vector<storage::PageStorage::CommitIdAndBytes>,
                         fit::function<void(ledger::Status, std::vector<storage::CommitId>)>>>
@@ -167,6 +174,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   std::map<storage::ObjectIdentifier, std::string> objects_;
   std::set<storage::ObjectIdentifier> synced_objects_;
   std::map<storage::CommitId, FakeCommit, convert::StringViewComparator> commits_;
+  storage::fake::FakeObjectIdentifierFactory object_identifier_factory_;
 };
 
 class FakeDeviceMesh : public DeviceMesh {
