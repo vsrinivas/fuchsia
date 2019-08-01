@@ -17,15 +17,14 @@ pub async fn serve(
     pkgfs: DirectoryProxy,
     mut stream: PackageCacheRequestStream,
 ) -> Result<(), Error> {
-    while let Some(event) = await!(stream.try_next())? {
+    while let Some(event) = stream.try_next().await? {
         match event {
             PackageCacheRequest::Get { meta_far_blob, selectors, needed_blobs, dir, responder } => {
-                let status =
-                    await!(get(&pkgfs, meta_far_blob.into(), selectors, needed_blobs, dir));
+                let status = get(&pkgfs, meta_far_blob.into(), selectors, needed_blobs, dir).await;
                 responder.send(Status::from(status).into_raw())?;
             }
             PackageCacheRequest::Open { meta_far_blob_id, selectors, dir, responder } => {
-                let status = await!(open(&pkgfs, meta_far_blob_id.into(), selectors, dir));
+                let status = open(&pkgfs, meta_far_blob_id.into(), selectors, dir).await;
                 responder.send(Status::from(status).into_raw())?;
             }
         }
@@ -48,7 +47,7 @@ async fn get<'a>(
     fx_log_info!("fetching {:?} with the selectors {:?}", meta_far_blob, selectors);
 
     if let Some(dir_request) = dir_request {
-        await!(open(pkgfs, meta_far_blob.blob_id, selectors.clone(), dir_request))?;
+        open(pkgfs, meta_far_blob.blob_id, selectors.clone(), dir_request).await?;
 
         Ok(())
     } else {
