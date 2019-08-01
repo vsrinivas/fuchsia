@@ -59,7 +59,7 @@ class PmmNode {
   void Dump(bool is_panic) const TA_NO_THREAD_SAFETY_ANALYSIS;
 
   void DumpMemAvailState() const;
-  bool DebugSetMemAvailState(uint64_t idx);
+  uint64_t DebugNumPagesTillOomState() const;
 
 #if PMM_ENABLE_FREE_FILL
   void EnforceFill() TA_NO_THREAD_SAFETY_ANALYSIS;

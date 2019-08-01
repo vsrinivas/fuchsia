@@ -127,8 +127,8 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     printf("%s dump                 : dump pmm info \n", argv[0].str);
     if (!is_panic) {
       printf("%s free                 : periodically dump free mem count\n", argv[0].str);
-      printf("%s mem_avail_state info        : dump memstate info\n", argv[0].str);
-      printf("%s mem_avail_state set <index> : forcibly set the state (0 = oom)\n", argv[0].str);
+      printf("%s oom                  : leak memory until oom is triggered\n", argv[0].str);
+      printf("%s mem_avail_state info : dump memstate info\n", argv[0].str);
     }
     return ZX_ERR_INTERNAL;
   }
@@ -155,19 +155,24 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       timer_cancel(&timer);
       show_mem = false;
     }
+  } else if (!strcmp(argv[1].str, "oom")) {
+    uint64_t pages_till_oom;
+    // In case we are racing with someone freeing pages we will leak in a loop until we are sure
+    // we have hit the oom state.
+    while ((pages_till_oom = pmm_node.DebugNumPagesTillOomState()) > 0) {
+      list_node list = LIST_INITIAL_VALUE(list);
+      if (pmm_node.AllocPages(pages_till_oom, 0, &list) == ZX_OK) {
+        printf("Leaking %lu pages\n", pages_till_oom);
+      }
+      // Ignore any errors under the assumption we had a racy allocation and try again next time
+      // around the loop.
+    }
   } else if (!strcmp(argv[1].str, "mem_avail_state")) {
     if (argc < 3) {
       goto usage;
     }
     if (!strcmp(argv[2].str, "info")) {
       pmm_node.DumpMemAvailState();
-    } else if (!strcmp(argv[2].str, "set")) {
-      if (argc < 4) {
-        goto usage;
-      }
-      if (!pmm_node.DebugSetMemAvailState(argv[3].u)) {
-        printf("Setting debug mem_avail_state failed\n");
-      }
     } else {
       goto usage;
     }

@@ -47,7 +47,7 @@ func TestOOM(t *testing.T) {
 	i.WaitForLogMessage("vc: Successfully attached")
 
 	// Trigger a simulated OOM.
-	i.RunCommand("k pmm mem_avail_state set 0")
+	i.RunCommand("k pmm oom")
 
 	// Make sure the file system is notified and unmounts.
 	i.WaitForLogMessage("devcoordinator: Successfully waited for VFS exit completion")

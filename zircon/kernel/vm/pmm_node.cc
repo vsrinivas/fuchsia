@@ -601,16 +601,17 @@ void PmmNode::DumpMemAvailState() const {
   printf("free memory: %s\n", str);
 }
 
-bool PmmNode::DebugSetMemAvailState(uint64_t idx) {
+uint64_t PmmNode::DebugNumPagesTillOomState() const {
   Guard<fbl::Mutex> guard{&lock_};
-
-  if (idx > mem_avail_state_watermark_count_) {
-    printf("out of range mem_avail_state\n");
-    return false;
+  if (mem_avail_state_cur_index_ == 0) {
+    // Already in oom state
+    return 0;
   }
-
-  SetMemAvailStateLocked(static_cast<uint8_t>(idx));
-  return true;
+  // We need to either get free_pages below mem_avail_state_watermarks_[0] or, if we are in state 1,
+  // we also need to clear the debounce amount. For simplicity we just always allocate the debounce
+  // amount as well.
+  uint64_t trigger = mem_avail_state_watermarks_[0] - mem_avail_state_debounce_;
+  return (free_count_ - trigger);
 }
 
 static int pmm_node_request_loop(void* arg) {
