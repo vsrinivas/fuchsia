@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     crate::args::{Command, RepoCommand, RuleCommand, RuleConfigInputType},
@@ -52,15 +52,17 @@ fn main() -> Result<(), failure::Error> {
 
                 let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
 
-                let res = await!(resolver.resolve(
-                    &pkg_url,
-                    &mut selectors.iter().map(|s| s.as_str()),
-                    &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
-                    dir_server_end,
-                ))?;
+                let res = resolver
+                    .resolve(
+                        &pkg_url,
+                        &mut selectors.iter().map(|s| s.as_str()),
+                        &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
+                        dir_server_end,
+                    )
+                    .await?;
                 zx::Status::ok(res)?;
 
-                let entries = await!(files_async::readdir_recursive(dir))?;
+                let entries = files_async::readdir_recursive(dir).await?;
                 println!("package contents:");
                 for entry in entries {
                     println!("/{:?}", entry);
@@ -75,14 +77,16 @@ fn main() -> Result<(), failure::Error> {
 
                 let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
 
-                let res = await!(cache.open(
-                    &mut meta_far_blob_id.into(),
-                    &mut selectors.iter().map(|s| s.as_str()),
-                    dir_server_end,
-                ))?;
+                let res = cache
+                    .open(
+                        &mut meta_far_blob_id.into(),
+                        &mut selectors.iter().map(|s| s.as_str()),
+                        dir_server_end,
+                    )
+                    .await?;
                 zx::Status::ok(res)?;
 
-                let entries = await!(files_async::readdir_recursive(dir))?;
+                let entries = files_async::readdir_recursive(dir).await?;
                 println!("package contents:");
                 for entry in entries {
                     println!("/{:?}", entry);
@@ -98,21 +102,21 @@ fn main() -> Result<(), failure::Error> {
                     RepoCommand::Add { file } => {
                         let repo: RepositoryConfig = serde_json::from_reader(File::open(file)?)?;
 
-                        let res = await!(repo_manager.add(repo.into()))?;
+                        let res = repo_manager.add(repo.into()).await?;
                         zx::Status::ok(res)?;
 
                         Ok(())
                     }
 
                     RepoCommand::Remove { repo_url } => {
-                        let res = await!(repo_manager.remove(&repo_url))?;
+                        let res = repo_manager.remove(&repo_url).await?;
                         zx::Status::ok(res)?;
 
                         Ok(())
                     }
 
                     RepoCommand::List => {
-                        let repos = await!(fetch_repos(repo_manager))?;
+                        let repos = fetch_repos(repo_manager).await?;
 
                         let mut urls =
                             repos.into_iter().map(|r| r.repo_url().to_string()).collect::<Vec<_>>();
@@ -123,7 +127,7 @@ fn main() -> Result<(), failure::Error> {
                     }
 
                     RepoCommand::ListVerbose => {
-                        let repos = await!(fetch_repos(repo_manager))?;
+                        let repos = fetch_repos(repo_manager).await?;
 
                         let s = serde_json::to_string_pretty(&repos).expect("valid json");
                         println!("{}", s);
@@ -143,7 +147,7 @@ fn main() -> Result<(), failure::Error> {
 
                         let mut rules = Vec::new();
                         loop {
-                            let more = await!(iter.next())?;
+                            let more = iter.next().await?;
                             if more.is_empty() {
                                 break;
                             }
@@ -159,10 +163,13 @@ fn main() -> Result<(), failure::Error> {
                         }
                     }
                     RuleCommand::Clear => {
-                        await!(do_transaction(engine, |transaction| async move {
-                            transaction.reset_all()?;
-                            Ok(transaction)
-                        }))?;
+                        do_transaction(engine, |transaction| {
+                            async move {
+                                transaction.reset_all()?;
+                                Ok(transaction)
+                            }
+                        })
+                        .await?;
                     }
                     RuleCommand::Replace { input_type } => {
                         let RuleConfig::Version1(ref rules) = match input_type {
@@ -172,15 +179,18 @@ fn main() -> Result<(), failure::Error> {
                             RuleConfigInputType::Json { config } => config,
                         };
 
-                        await!(do_transaction(engine, |transaction| async move {
-                            transaction.reset_all()?;
-                            // add() inserts rules as highest priority, so iterate over our
-                            // prioritized list of rules so they end up in the right order.
-                            for rule in rules.iter().rev() {
-                                await!(transaction.add(&mut rule.clone().into()))?;
+                        do_transaction(engine, |transaction| {
+                            async move {
+                                transaction.reset_all()?;
+                                // add() inserts rules as highest priority, so iterate over our
+                                // prioritized list of rules so they end up in the right order.
+                                for rule in rules.iter().rev() {
+                                    transaction.add(&mut rule.clone().into()).await?;
+                                }
+                                Ok(transaction)
                             }
-                            Ok(transaction)
-                        }))?;
+                        })
+                        .await?;
                     }
                 }
 
@@ -223,9 +233,9 @@ where
         let (transaction, transaction_server_end) = fidl::endpoints::create_proxy()?;
         engine.start_edit_transaction(transaction_server_end)?;
 
-        let transaction = await!(cb(transaction))?;
+        let transaction = cb(transaction).await?;
 
-        let status = await!(transaction.commit())?;
+        let status = transaction.commit().await?;
 
         // Retry edit transaction on concurrent edit
         return match zx::Status::from_raw(status) {
@@ -248,7 +258,7 @@ async fn fetch_repos(
     let mut repos = vec![];
 
     loop {
-        let chunk = await!(iter.next())?;
+        let chunk = iter.next().await?;
         if chunk.is_empty() {
             break;
         }

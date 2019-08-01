@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![cfg(test)]
 use {
     failure::Error,
@@ -129,7 +129,10 @@ impl TestEnv {
                 .add_dir_to_namespace("/repo-configs".to_string(), repo_config_arg_dir)
                 .expect("pkgctl app");
 
-        let output = await!(pkgctl.output(launcher).expect("pkgctl to launch"))
+        let output = pkgctl
+            .output(launcher)
+            .expect("pkgctl to launch")
+            .await
             .expect("no errors while waiting for exit");
         assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
         output
@@ -172,7 +175,7 @@ impl MockRepositoryManagerService {
         self: Arc<Self>,
         mut stream: RepositoryManagerRequestStream,
     ) -> Result<(), Error> {
-        while let Some(req) = await!(stream.try_next())? {
+        while let Some(req) = stream.try_next().await? {
             match req {
                 RepositoryManagerRequest::Add { repo, responder } => {
                     self.captured_args.lock().push(CapturedRepositoryManagerRequest::Add {
@@ -207,7 +210,7 @@ impl MockRepositoryManagerService {
                     // forever after iteration is complete
                     let _: &FusedIterator<Item = _> = &repos;
                     while let Some(RepositoryIteratorRequest::Next { responder }) =
-                        await!(stream.try_next())?
+                        stream.try_next().await?
                     {
                         responder.send(&mut repos.by_ref().take(5)).expect("next send")
                     }
@@ -230,7 +233,7 @@ impl MockPackageResolverService {
         self: Arc<Self>,
         mut stream: PackageResolverRequestStream,
     ) -> Result<(), Error> {
-        while let Some(_req) = await!(stream.try_next())? {
+        while let Some(_req) = stream.try_next().await? {
             *self.call_count.lock() += 1;
         }
         Ok(())
@@ -249,7 +252,7 @@ impl MockPackageCacheService {
         self: Arc<Self>,
         mut stream: PackageCacheRequestStream,
     ) -> Result<(), Error> {
-        while let Some(_req) = await!(stream.try_next())? {
+        while let Some(_req) = stream.try_next().await? {
             *self.call_count.lock() += 1;
         }
         Ok(())
@@ -265,7 +268,7 @@ impl MockRewriteEngineService {
         Self { call_count: Mutex::new(0) }
     }
     async fn run_service(self: Arc<Self>, mut stream: EngineRequestStream) -> Result<(), Error> {
-        while let Some(_req) = await!(stream.try_next())? {
+        while let Some(_req) = stream.try_next().await? {
             *self.call_count.lock() += 1;
         }
         Ok(())
@@ -304,7 +307,7 @@ async fn test_repo() {
             .build(),
     );
 
-    let output = await!(env.run_pkgctl(vec!["repo"]));
+    let output = env.run_pkgctl(vec!["repo"]).await;
 
     assert_stdout(&output, "fuchsia-pkg://example.com\n");
     env.assert_only_repository_manager_called_with(vec![CapturedRepositoryManagerRequest::List]);
@@ -320,7 +323,7 @@ async fn test_repo_sorts_lines() {
         RepositoryConfigBuilder::new(RepoUrl::new("a.com".to_string()).expect("valid url")).build(),
     );
 
-    let output = await!(env.run_pkgctl(vec!["repo"]));
+    let output = env.run_pkgctl(vec!["repo"]).await;
 
     assert_stdout(&output, "fuchsia-pkg://a.com\nfuchsia-pkg://z.com\n");
 }
@@ -334,7 +337,7 @@ macro_rules! repo_verbose_tests {
                 let repo_config = make_test_repo_config();
                 env.add_repository(repo_config.clone());
 
-                let output = await!(env.run_pkgctl(vec!["repo", $flag]));
+                let output = env.run_pkgctl(vec!["repo", $flag]).await;
 
                 assert_no_errors(&output);
                 let round_trip_repo_configs: Vec<RepositoryConfig> =
@@ -355,7 +358,7 @@ repo_verbose_tests! {
 async fn test_repo_rm() {
     let env = TestEnv::new();
 
-    let output = await!(env.run_pkgctl(vec!["repo", "rm", "the-url"]));
+    let output = env.run_pkgctl(vec!["repo", "rm", "the-url"]).await;
 
     assert_stdout(&output, "");
     env.assert_only_repository_manager_called_with(vec![
@@ -367,7 +370,7 @@ async fn test_repo_rm() {
 async fn test_repo_remove() {
     let env = TestEnv::new();
 
-    let output = await!(env.run_pkgctl(vec!["repo", "remove", "--repo-url", "the-url"]));
+    let output = env.run_pkgctl(vec!["repo", "remove", "--repo-url", "the-url"]).await;
 
     assert_stdout(&output, "");
     env.assert_only_repository_manager_called_with(vec![
@@ -386,7 +389,7 @@ macro_rules! repo_add_tests {
                     File::create(env.repo_config_arg_path.join("the-config")).expect("create repo config file");
                 serde_json::to_writer(f, &repo_config).expect("write RepositoryConfig json");
 
-                let output = await!(env.run_pkgctl(vec!["repo", "add", $flag, "/repo-configs/the-config"]));
+                let output = env.run_pkgctl(vec!["repo", "add", $flag, "/repo-configs/the-config"]).await;
 
                 assert_stdout(&output, "");
                 env.assert_only_repository_manager_called_with(vec![CapturedRepositoryManagerRequest::Add {
