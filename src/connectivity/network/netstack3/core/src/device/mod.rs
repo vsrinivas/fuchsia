@@ -250,7 +250,7 @@ pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
 /// Note, tentative IP addresses (addresses which are not yet fully bound to a
 /// device) will not returned by `get_ip_addr_subnet`.
 pub fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
+    ctx: &Context<D>,
     device: DeviceId,
 ) -> Option<AddrSubnet<A>> {
     match device.protocol {

@@ -27,6 +27,7 @@ use net_types::MulticastAddr;
 use packet::{Buf, BufferMut, Either, ParsablePacket, ParseMetadata, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
+use crate::context::FrameContext;
 use crate::data_structures::IdMap;
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, IpParseError, NotFoundError};
@@ -59,6 +60,85 @@ const IPV4_ALL_ROUTERS: Ipv4Addr = Ipv4Addr::new([224, 0, 0, 2]);
 // The ipv6 multicast address for all routers.
 const IPV6_ALL_ROUTERS: Ipv6Addr =
     Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+
+/// The metadata for sending an IP packet from a particular source address.
+///
+/// `IpPacketFromArgs` is used as the metadata for the [`FrameContext`] bound
+/// required by [`BufferTransportIpContext`]. It allows sending an IP packet
+/// from a particular source address.
+pub struct IpPacketFromArgs<A: IpAddress> {
+    pub(crate) src_ip: A,
+    pub(crate) dst_ip: A,
+    pub(crate) proto: IpProto,
+}
+
+impl<A: IpAddress> IpPacketFromArgs<A> {
+    /// Constructs a new `IpPacketFromArgs`.
+    pub(crate) fn new(src_ip: A, dst_ip: A, proto: IpProto) -> IpPacketFromArgs<A> {
+        IpPacketFromArgs { src_ip, dst_ip, proto }
+    }
+}
+
+/// The execution context provided by the IP layer to transport layer protocols.
+pub trait TransportIpContext<I: Ip> {
+    /// Is this one of our local addresses?
+    ///
+    /// `is_local_addr` returns whether `addr` is the address associated with
+    /// one of our local interfaces.
+    fn is_local_addr(&self, addr: I::Addr) -> bool;
+
+    /// Get the local address of the interface that will be used to route to a
+    /// remote address.
+    ///
+    /// `local_address_for_remote` looks up the route to `remote`. If one is
+    /// found, it returns the IP address of the interface specified by the
+    /// route, or `None` if the interface has no IP address.
+    fn local_address_for_remote(&self, remote: I::Addr) -> Option<I::Addr>;
+}
+
+/// The execution context provided by the IP layer to transport layer protocols
+/// when a buffer is provided.
+///
+/// `BufferTransportIpContext` is like [`TransportIpContext`], except that it
+/// also requires that the context be capable of receiving frames in buffers of
+/// type `B`. This is used when a buffer of type `B` is provided to IP (in
+/// particular, in the [`FrameContext`] implementation), and allows any
+/// generated link-layer frames to reuse that buffer rather than needing to
+/// always allocate a new one.
+pub trait BufferTransportIpContext<I: Ip, B: BufferMut>:
+    TransportIpContext<I> + FrameContext<B, IpPacketFromArgs<I::Addr>>
+{
+}
+
+impl<
+        I: Ip,
+        B: BufferMut,
+        C: TransportIpContext<I> + FrameContext<B, IpPacketFromArgs<I::Addr>>,
+    > BufferTransportIpContext<I, B> for C
+{
+}
+
+impl<A: IpAddress, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacketFromArgs<A>>
+    for Context<D>
+{
+    fn send_frame<S: Serializer<Buffer = B>>(
+        &mut self,
+        meta: IpPacketFromArgs<A>,
+        body: S,
+    ) -> Result<(), S> {
+        send_ip_packet_from(self, meta.src_ip, meta.dst_ip, meta.proto, body)
+    }
+}
+
+impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Context<D> {
+    fn is_local_addr(&self, addr: I::Addr) -> bool {
+        is_local_addr(self, addr)
+    }
+
+    fn local_address_for_remote(&self, remote: I::Addr) -> Option<I::Addr> {
+        local_address_for_remote(self, remote)
+    }
+}
 
 /// A builder for IP layer state.
 pub struct IpStateBuilder {
@@ -677,7 +757,7 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
 /// it returns the IP address of the interface specified by the route, or `None`
 /// if the interface has no IP address.
 pub(crate) fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
+    ctx: &Context<D>,
     remote: A,
 ) -> Option<A> {
     let route = lookup_route(&ctx.state().ip, remote)?;
@@ -901,10 +981,7 @@ pub(crate) fn iter_routes<D: EventDispatcher, I: IpAddress>(
 ///
 /// `is_local_addr` returns whether `addr` is the address associated with one of
 /// our local interfaces.
-pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
-    addr: A,
-) -> bool {
+pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(ctx: &Context<D>, addr: A) -> bool {
     log_unimplemented!(false, "ip::is_local_addr: not implemented")
 }
 

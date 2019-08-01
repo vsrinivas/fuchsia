@@ -61,6 +61,8 @@ pub(crate) mod udp;
 use std::collections::HashMap;
 use std::hash::Hash;
 
+use net_types::ip::{Ipv4, Ipv6};
+
 use crate::data_structures::IdMap;
 use crate::transport::udp::UdpEventDispatcher;
 use crate::{Context, EventDispatcher};
@@ -68,14 +70,16 @@ use crate::{Context, EventDispatcher};
 /// The state associated with the transport layer.
 pub(crate) struct TransportLayerState {
     tcp: self::tcp::TcpState,
-    udp: self::udp::UdpState,
+    udpv4: self::udp::UdpState<Ipv4>,
+    udpv6: self::udp::UdpState<Ipv6>,
 }
 
 impl Default for TransportLayerState {
     fn default() -> TransportLayerState {
         TransportLayerState {
             tcp: self::tcp::TcpState::default(),
-            udp: self::udp::UdpState::default(),
+            udpv4: self::udp::UdpState::default(),
+            udpv6: self::udp::UdpState::default(),
         }
     }
 }

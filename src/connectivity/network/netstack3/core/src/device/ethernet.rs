@@ -315,7 +315,7 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
 /// Get the IP address and subnet associated with this device.
 #[specialize_ip_address]
 pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
+    ctx: &Context<D>,
     device_id: usize,
 ) -> Option<AddrSubnet<A>> {
     #[ipv4addr]

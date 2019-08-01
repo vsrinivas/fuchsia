@@ -123,7 +123,7 @@ pub(crate) trait TimerHandler<Ctx, Id> {
 /// `StateContext` stores instances of `State` keyed by `Id`, and provides
 /// getters for this state. If `Id` is `()`, then `StateContext` represents a
 /// single instance of `State`.
-pub(crate) trait StateContext<Id, State> {
+pub trait StateContext<Id, State> {
     /// Get the state immutably.
     fn get_state(&self, id: Id) -> &State;
 
@@ -142,7 +142,7 @@ impl<State, T: AsRef<State> + AsMut<State>> StateContext<(), State> for T {
 }
 
 /// A context for sending frames.
-pub(crate) trait FrameContext<B: BufferMut, Meta> {
+pub trait FrameContext<B: BufferMut, Meta> {
     // TODO(joshlf): Add an error type parameter or associated type once we need
     // different kinds of errors.
 
@@ -444,7 +444,7 @@ pub(crate) mod testutil {
     }
 
     /// A dummy [`FrameContext`].
-    pub(crate) struct DummyFrameContext<Meta> {
+    pub struct DummyFrameContext<Meta> {
         frames: Vec<(Meta, Vec<u8>)>,
     }
 
