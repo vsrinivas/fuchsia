@@ -221,6 +221,7 @@ sdk("core") {
     "//zircon/public/fidl/fuchsia-hardware-goldfish-pipe:fuchsia-hardware-goldfish-pipe_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-logger:fuchsia-logger_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem_sdk($fidl_toolchain)",
+    "//zircon/public/fidl/fuchsia-posix-socket:fuchsia-posix-socket_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-process:fuchsia-process_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider_sdk($fidl_toolchain)",
