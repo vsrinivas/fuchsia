@@ -706,7 +706,7 @@ mod tests {
     }
 
     #[test]
-    fn read_only_staatic_read() {
+    fn read_only_static_read() {
         run_server_client(OPEN_RIGHT_READABLE, read_only_static("Easy strings"), |proxy| {
             async move {
                 assert_read!(proxy, "Easy strings");
