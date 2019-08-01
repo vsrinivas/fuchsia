@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(turnage): Remove file after migrating clients to sessions2.
+
 use crate::{
     fidl_clones::*, log_error::log_error_discard_result, mpmc,
     state::active_session_queue::ActiveSessionQueue, state::session_list::SessionList, Ref, Result,
@@ -76,9 +78,9 @@ impl Session {
             }
             await!(session_list.lock()).deref_mut().remove(registration.koid);
             await!(active_session_queue.lock()).deref_mut().remove_session(&registration);
-            await!(
-                collection_event_sink.send((registration.clone(), SessionCollectionEvent::Removed))
-            );
+            collection_event_sink
+                .send((registration.clone(), SessionCollectionEvent::Removed))
+                .await;
             await!(cancel_signaller.send(()));
         });
         Ok(session)
@@ -198,7 +200,7 @@ impl Session {
                 let mut bitmap = await!(proxy.get_media_image_bitmap(
                     &url,
                     &mut minimum_size,
-                    &mut desired_size
+                    &mut desired_size,
                 ))?;
                 let response = bitmap.as_mut().map(|b| OutOfLine(b.deref_mut()));
                 responder.send(response)?

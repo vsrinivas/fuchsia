@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(turnage): Remove file after migrating clients to sessions2.
+
 use crate::{clone_session_id_handle, MAX_EVENTS_SENT_WITHOUT_ACK};
 use failure::{Error, ResultExt};
 use fidl::encoding::OutOfLine;
@@ -383,9 +385,9 @@ async fn service_routes_bitmaps() {
     let bitmap = await!(proxy.get_media_image_bitmap(
         &mut expected_url,
         &mut expected_minimum_size,
-        &mut expected_desired_size
+        &mut expected_desired_size,
     ))
-    .expect("receiving media image bitmap");
+        .expect("receiving media image bitmap");
     match (bitmap, expected_bitmap) {
         (Some(actual), expected) => {
             assert!(bitmaps_refer_to_same_memory(actual.as_ref(), &expected))
@@ -461,7 +463,7 @@ async fn service_reports_published_active_session() {
         SessionsChange {
             session: SessionEntry { session_id: Some(our_session_id), local: Some(true) },
             delta: SessionDelta::Added,
-        }
+        },
     ));
 }
 
@@ -483,7 +485,7 @@ async fn nonlocal_session_does_not_compete_for_active() {
         .expect("To update remote playback status");
     await!(test_service.expect_sessions_change(SessionsChange {
         session: SessionEntry { session_id: Some(remote_session_id), local: Some(false) },
-        delta: SessionDelta::Added
+        delta: SessionDelta::Added,
     }));
     test_service.notify_events_handled();
 
@@ -501,8 +503,8 @@ async fn nonlocal_session_does_not_compete_for_active() {
         Some(local_session_id.as_handle_ref().get_koid().expect("taking handle KOID")),
         SessionsChange {
             session: SessionEntry { session_id: Some(local_session_id), local: Some(true) },
-            delta: SessionDelta::Added
-        }
+            delta: SessionDelta::Added,
+        },
     ));
 }
 
@@ -529,7 +531,7 @@ async fn service_reports_changed_active_session() {
             SessionsChange {
                 session: SessionEntry { session_id: Some(session_id), local: Some(true) },
                 delta: SessionDelta::Added,
-            }
+            },
         ));
         test_service.notify_events_handled();
         keep_alive.push(test_session.control_handle);
@@ -550,11 +552,11 @@ async fn service_broadcasts_events() {
     await!(test_service.expect_sessions_change(SessionsChange {
         session: SessionEntry {
             session_id: Some(
-                clone_session_id_handle(&session_id).expect("duplicating session handle")
+                clone_session_id_handle(&session_id).expect("duplicating session handle"),
             ),
-            local: Some(true)
+            local: Some(true),
         },
-        delta: SessionDelta::Added
+        delta: SessionDelta::Added,
     }));
     test_service.notify_events_handled();
 
@@ -605,7 +607,7 @@ async fn service_broadcasts_events() {
 
     // Ensure we wait for the service to accept the session.
     await!(test_service.expect_active_session(Some(
-        session_id.as_handle_ref().get_koid().expect("taking handle KOID")
+        session_id.as_handle_ref().get_koid().expect("taking handle KOID"),
     )));
     test_service.notify_events_handled();
 
@@ -772,7 +774,7 @@ async fn service_stops_sending_sessions_change_events_to_inactive_clients() {
         if i < MAX_EVENTS_SENT_WITHOUT_ACK {
             await!(test_service.expect_sessions_change(SessionsChange {
                 session: entry,
-                delta: SessionDelta::Added
+                delta: SessionDelta::Added,
             }));
         }
     }
@@ -821,14 +823,14 @@ async fn service_stops_sending_active_session_change_events_to_inactive_clients(
         if i < MAX_EVENTS_SENT_WITHOUT_ACK - 1 {
             await!(test_service.expect_update_events(
                 Some(
-                    session_id.as_handle_ref().get_koid().expect("taking new active session koid")
+                    session_id.as_handle_ref().get_koid().expect("taking new active session koid"),
                 ),
-                SessionsChange { session: entry, delta: SessionDelta::Added }
+                SessionsChange { session: entry, delta: SessionDelta::Added },
             ));
         } else {
             await!(test_service.expect_sessions_change(SessionsChange {
                 session: entry,
-                delta: SessionDelta::Added
+                delta: SessionDelta::Added,
             }));
         }
         test_service.notify_sessions_change_handled();
@@ -866,16 +868,19 @@ async fn service_maintains_session_list() {
             clone_session_entry(&entry).expect(&format!("cloning test session entry {}.", i)),
         );
         test_sessions.push(test_session.control_handle);
-        await!(test_service
-            .expect_sessions_change(SessionsChange { session: entry, delta: SessionDelta::Added }));
+        test_service
+            .expect_sessions_change(SessionsChange { session: entry, delta: SessionDelta::Added })
+            .await;
         test_service.notify_events_handled();
-        await!(test_service.expect_session_list(
-            expected_sessions
-                .iter()
-                .map(|s| clone_session_entry(s))
-                .collect::<Result<Vec<SessionEntry>, _>>()
-                .expect("cloning expected sessions")
-        ));
+        test_service
+            .expect_session_list(
+                expected_sessions
+                    .iter()
+                    .map(|s| clone_session_entry(s))
+                    .collect::<Result<Vec<SessionEntry>, _>>()
+                    .expect("cloning expected sessions"),
+            )
+            .await;
     }
 
     // Remove sessions in an odd pattern and ensure the list remains accurate.
@@ -887,15 +892,17 @@ async fn service_maintains_session_list() {
         // We wait for the removal event first to ensure the server sees the disconnect.
         await!(test_service.expect_sessions_change(SessionsChange {
             session: entry,
-            delta: SessionDelta::Removed
+            delta: SessionDelta::Removed,
         }));
-        await!(test_service.expect_session_list(
-            expected_sessions
-                .iter()
-                .map(|s| clone_session_entry(s))
-                .collect::<Result<Vec<SessionEntry>, _>>()
-                .expect("cloning expected sessions")
-        ));
+        test_service
+            .expect_session_list(
+                expected_sessions
+                    .iter()
+                    .map(|s| clone_session_entry(s))
+                    .collect::<Result<Vec<SessionEntry>, _>>()
+                    .expect("cloning expected sessions"),
+            )
+            .await;
         test_service.notify_events_handled();
     }
 }

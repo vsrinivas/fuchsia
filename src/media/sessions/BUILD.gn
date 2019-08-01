@@ -17,26 +17,26 @@ group("sessions") {
 group("tests") {
   testonly = true
   deps = [
-    ":mediasession_tests"
+    ":mediasession_tests",
   ]
 }
 
 group("tools") {
   deps = [
-    ":mediasession_cli_tool"
+    ":mediasession_cli_tool",
   ]
 }
 
 group("configs") {
   deps = [
-    ":mediasession_config"
+    ":mediasession_config",
   ]
 }
 
 group("examples") {
   testonly = true
   deps = [
-    "examples"
+    "examples",
   ]
 }
 
@@ -47,13 +47,15 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.sessions:fuchsia.media.sessions-rustc",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
+    "//src/lib/fidl_table_validation",
     "//third_party/rust_crates:crossbeam",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

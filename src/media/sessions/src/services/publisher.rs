@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(turnage): Remove file after migrating clients to sessions2.
+
 use crate::{
     clone_session_id_handle, mpmc,
     proxies::session::{Session, SessionCollectionEvent, SessionRegistration},
@@ -76,9 +78,9 @@ impl Publisher {
                 self.active_session_sink.clone(),
             ))?,
         );
-        await!(self
-            .collection_event_sink
-            .send((registration.clone(), SessionCollectionEvent::Added)));
+        self.collection_event_sink
+            .send((registration.clone(), SessionCollectionEvent::Added))
+            .await;
         Ok(handle_for_client)
     }
 }

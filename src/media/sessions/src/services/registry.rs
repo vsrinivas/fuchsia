@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(turnage): Remove file after migrating clients to sessions2.
+
 mod subscriber;
 
 use self::subscriber::Subscriber;

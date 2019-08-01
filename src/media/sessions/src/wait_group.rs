@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(unused)]
-
 use futures::future::{self, AbortHandle, Abortable, Pending};
 
+#[derive(Debug)]
 enum Never {}
 
 /// A futures-aware wait group so one task can await the completion of many others.
+#[derive(Debug)]
 pub struct WaitGroup {
     members: Vec<Abortable<Pending<Never>>>,
 }

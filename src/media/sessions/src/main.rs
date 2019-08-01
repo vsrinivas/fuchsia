@@ -21,7 +21,7 @@ use failure::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
-use futures::{lock::Mutex, Future, StreamExt, TryFutureExt};
+use futures::{channel::mpsc, lock::Mutex, prelude::*};
 use std::rc::Rc;
 use zx::AsHandleRef;
 
@@ -69,11 +69,27 @@ async fn main() {
         collection_event_stream,
     );
 
+    let (player_sink, player_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
+    let publisher2 = self::services::publisher2::Publisher::new(player_sink);
+
+    let (request_sink, request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
+    let discovery = self::services::discovery::Discovery::new(player_stream);
+    spawn_log_error(discovery.serve(request_stream));
+
     let mut server = ServiceFs::new_local();
     server
         .dir("svc")
         .add_fidl_service(|request_stream| spawn_log_error(publisher.clone().serve(request_stream)))
-        .add_fidl_service(|request_stream| spawn_log_error(registry.clone().serve(request_stream)));
+        .add_fidl_service(|request_stream| spawn_log_error(registry.clone().serve(request_stream)))
+        .add_fidl_service(|request_stream| {
+            spawn_log_error(publisher2.clone().serve(request_stream))
+        })
+        .add_fidl_service(
+            |request_stream: fidl_fuchsia_media_sessions2::DiscoveryRequestStream| {
+                let request_sink = request_sink.clone().sink_map_err(Into::into);
+                spawn_log_error(request_stream.map_err(Into::into).forward(request_sink));
+            },
+        );
     server.take_and_serve_directory_handle().expect("To serve Media Session services");
 
     await!(server.collect::<()>());

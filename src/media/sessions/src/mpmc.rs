@@ -69,7 +69,6 @@ impl<T: Clone> Sender<T> {
         await!(self.inner.append(living_senders));
     }
 
-    #[allow(unused)]
     pub fn new_receiver(&self) -> Receiver<T> {
         let (sender, receiver) = mpsc::channel(self.buffer_size);
         self.inner.enqueue_sender(sender);
