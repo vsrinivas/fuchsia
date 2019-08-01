@@ -48,6 +48,7 @@ driver("sherlock") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

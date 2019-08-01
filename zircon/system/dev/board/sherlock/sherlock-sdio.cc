@@ -9,6 +9,7 @@
 #include <ddktl/protocol/gpioimpl.h>
 #include <fbl/algorithm.h>
 #include <hw/reg.h>
+#include <hwreg/bitfields.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/handle.h>
 #include <soc/aml-common/aml-sd-emmc.h>
@@ -23,6 +24,23 @@
 namespace sherlock {
 
 namespace {
+
+constexpr uint32_t kGpioBase = fbl::round_down<uint32_t, uint32_t>(T931_GPIO_BASE, PAGE_SIZE);
+constexpr uint32_t kGpioBaseOffset = T931_GPIO_BASE - kGpioBase;
+
+class PadDsReg2A : public hwreg::RegisterBase<PadDsReg2A, uint32_t> {
+ public:
+  static constexpr uint32_t kDriveStrengthMax = 3;
+
+  static auto Get() { return hwreg::RegisterAddr<PadDsReg2A>((0xd2 * 4) + kGpioBaseOffset); }
+
+  DEF_FIELD(1, 0, gpiox_0_select);
+  DEF_FIELD(3, 2, gpiox_1_select);
+  DEF_FIELD(5, 4, gpiox_2_select);
+  DEF_FIELD(7, 6, gpiox_3_select);
+  DEF_FIELD(9, 8, gpiox_4_select);
+  DEF_FIELD(11, 10, gpiox_5_select);
+};
 
 constexpr pbus_boot_metadata_t wifi_boot_metadata[] = {
     {
@@ -191,6 +209,26 @@ zx_status_t Sherlock::SdioInit() {
       ((status = gpio_impl_.SetAltFunction(T931_SDIO_CMD, T931_SDIO_CMD_FN)) != ZX_OK)) {
     return status;
   }
+
+  std::optional<ddk::MmioBuffer> buf;
+  zx::unowned_resource res(get_root_resource());
+  status = ddk::MmioBuffer::Create(kGpioBase, kGpioBaseOffset + T931_GPIO_LENGTH, *res,
+                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: ddk::MmioBuffer::Create() error: %d\n", __func__, status);
+    return status;
+  }
+
+  PadDsReg2A::Get()
+      .ReadFrom(&(*buf))
+      .set_gpiox_0_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_1_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_2_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_3_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_4_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_5_select(PadDsReg2A::kDriveStrengthMax)
+      .WriteTo(&(*buf));
 
   status = gpio_impl_.SetAltFunction(T931_WIFI_REG_ON, T931_WIFI_REG_ON_FN);
   if (status != ZX_OK) {
