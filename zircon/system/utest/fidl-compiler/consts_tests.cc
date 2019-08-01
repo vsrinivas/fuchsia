@@ -483,7 +483,6 @@ const uint32 c = MyBits.A;
   END_TEST;
 }
 
-
 bool GoodEnumTypedConstEnumMemberReference() {
   BEGIN_TEST;
 
@@ -508,6 +507,76 @@ bits MyBits : uint32 { A = 0x00000001; };
 const MyBits c = MyBits.A;
 )FIDL");
   ASSERT_TRUE(library.Compile());
+
+  END_TEST;
+}
+
+bool BadConstDifferentEnumMemberReference() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum MyEnum : int32 { VALUE = 1; };
+enum OtherEnum : int32 { VALUE = 5; };
+const MyEnum c = OtherEnum.VALUE;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "mismatched named type assignment");
+
+  END_TEST;
+}
+
+bool BadConstDifferentBitsMemberReference() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+bits MyBits : uint32 { VALUE = 0x00000001; };
+bits OtherBits : uint32 { VALUE = 0x00000004; };
+const MyBits c = OtherBits.VALUE;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "mismatched named type assignment");
+
+  END_TEST;
+}
+
+bool BadConstAssignPrimitiveToEnum() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum MyEnum : int32 { VALUE = 1; };
+const MyEnum c = 5;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "cannot be interpreted as type example/MyEnum");
+
+  END_TEST;
+}
+
+bool BadConstAssignPrimitiveToBits() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+bits MyBits : uint32 { VALUE = 0x00000001; };
+const MyBits c = 5;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "cannot be interpreted as type example/MyBits");
 
   END_TEST;
 }
@@ -556,5 +625,10 @@ RUN_TEST(GoodConstEnumMemberReference)
 RUN_TEST(GoodConstBitsMemberReference)
 RUN_TEST(GoodEnumTypedConstEnumMemberReference)
 RUN_TEST(GoodEnumTypedConstBitsMemberReference)
+
+RUN_TEST(BadConstDifferentEnumMemberReference)
+RUN_TEST(BadConstDifferentBitsMemberReference)
+RUN_TEST(BadConstAssignPrimitiveToEnum)
+RUN_TEST(BadConstAssignPrimitiveToBits)
 
 END_TEST_CASE(consts_tests)
