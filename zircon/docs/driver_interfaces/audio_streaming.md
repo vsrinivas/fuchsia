@@ -154,7 +154,7 @@ however, is to queue packets for your [channel(s)](../objects/channel.md)
 of channels have messages (either expected responses or asynchronous
 notifications) to be read.
 
-All messages either sent or received over stream an ring buffer channels are
+All messages either sent or received over stream and ring buffer channels are
 prefaced with an `audio_cmd_hdr_t` structure which contains a 32-bit
 transaction ID and an `audio_cmd_hdr_t` enumeration value indicating the
 specific command being requested by the application, the specific command being
