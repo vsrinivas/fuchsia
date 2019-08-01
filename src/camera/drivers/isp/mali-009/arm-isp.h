@@ -10,6 +10,7 @@
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fit/function.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
 
 #include <atomic>
@@ -174,6 +175,14 @@ class ArmIspDevice : public IspDeviceType,
   thrd_t irq_thread_;
   zx::bti bti_;
   std::atomic<bool> running_;
+
+  // Thread for processing work for each frame.
+  int FrameProcessingThread();
+  thrd_t frame_processing_thread_;
+  std::atomic<bool> running_frame_processing_;
+  // Some work upon a NewFrame signal is for dealing with previous frame data.
+  // We should stop using this variable when we handle other signals.
+  bool first_frame_ = true;
 
   ddk::CameraSensorProtocolClient camera_sensor_;
 
