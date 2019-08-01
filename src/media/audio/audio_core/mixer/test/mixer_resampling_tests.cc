@@ -458,6 +458,33 @@ void TestPositionModuloEarlyRolloverLinear(bool mute = false) {
   EXPECT_EQ(0u, info.src_pos_modulo);
 }
 
+// When setting the frac_src_pos to a value that is at the end (or within pos_filter_width) of the
+// source buffer, the sampler should not
+void TestLateSourceOffset(Resampler sampler_type) {
+  auto mixer =
+      SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100, sampler_type);
+
+  if (mixer->pos_filter_width() > 0) {
+    float source[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    int32_t frac_src_offset =
+        (fbl::count_of(source) << kPtsFractionalBits) - mixer->pos_filter_width();
+
+    float accum[4] = {0.0f};
+    uint32_t dest_offset = 0;
+
+    Bookkeeping info;
+    info.step_size = Mixer::FRAC_ONE;
+
+    mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
+               fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
+    EXPECT_EQ(0u, dest_offset);
+    EXPECT_EQ(accum[0], 0.0f);
+    EXPECT_EQ(static_cast<int32_t>((fbl::count_of(source) << kPtsFractionalBits) -
+                                   mixer->pos_filter_width()),
+              frac_src_offset);
+  }
+}
+
 // Verify PointSampler correctly incorporates src_pos_modulo (along with
 // rate_modulo and denominator) into position and interpolation results.
 TEST(Resampling, Position_Modulo_Point) { TestPositionModuloNoRollover(Resampler::SampleAndHold); }
@@ -696,6 +723,12 @@ TEST(Resampling, FilterWidth_Linear) {
 
   EXPECT_EQ(mixer->pos_filter_width(), Mixer::FRAC_ONE - 1);
   EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
+}
+
+TEST(Resampling, Point_LateSourcePosition) { TestLateSourceOffset(Resampler::SampleAndHold); }
+
+TEST(Resampling, Linear_LateSourcePosition) {
+  TestLateSourceOffset(Resampler::LinearInterpolation);
 }
 
 // Verify LinearSampler::Reset clears out any cached "previous edge" values.

@@ -423,11 +423,9 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
     dest_offset_64 = dest_to_src.Inverse().Scale(frac_source_for_first_packet_frame -
                                                  frac_source_pos_edge_first_mix_frame - 1) +
                      1;
+    FXL_DCHECK(dest_offset_64 > 0);
 
     frac_source_offset_64 += dest_to_src.Scale(dest_offset_64);
-  }
-
-  if (dest_offset_64) {
     AUD_LOG_OBJ(WARNING, audio_renderer.get()) << " skipped " << dest_offset_64 << " output frames";
   }
 
@@ -443,8 +441,10 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
   FXL_DCHECK(packet->frac_frame_len() <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
+  FXL_DCHECK(frac_source_offset + mixer.pos_filter_width() >= 0);
   bool consumed_source = false;
-  if (frac_source_offset < static_cast<int32_t>(packet->frac_frame_len())) {
+  if (frac_source_offset + static_cast<int32_t>(mixer.pos_filter_width()) <
+      static_cast<int32_t>(packet->frac_frame_len())) {
     // When calling Mix(), we communicate the resampling rate with three
     // parameters. We augment step_size with rate_modulo and denominator
     // arguments that capture the remaining rate component that cannot be
@@ -495,9 +495,10 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
     }
   } else {
     consumed_source = true;
-    FXL_LOG(ERROR) << "Skipping packet (frac_source_offset " << std::hex << frac_source_offset
-                   << " < frac_frame_len " << static_cast<int32_t>(packet->frac_frame_len())
-                   << "); didn't catch this in earlier check";
+    FXL_LOG(ERROR) << "Skipping packet -- frac_source_offset 0x" << std::hex << frac_source_offset
+                   << " exceeded final src frame's positive window 0x"
+                   << (static_cast<int32_t>(packet->frac_frame_len()) - Mixer::FRAC_ONE +
+                       mixer.pos_filter_width());
   }
 
   if (consumed_source) {

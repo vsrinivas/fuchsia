@@ -105,8 +105,9 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // Otherwise, all these src samples are in the past and irrelevant here.
   auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
   FXL_DCHECK(src_end >= 0);
-  FXL_DCHECK(src_off <= src_end) << std::hex << "src_off: 0x" << src_off << ", src_end: 0x"
-                                 << src_end;
+  FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
+      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
+      << ", frac_src_frames: 0x" << frac_src_frames;
 
   // Cache these locally, in the template specialization that uses them.
   // Only src_pos_modulo needs to be written back before returning.
@@ -373,8 +374,9 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
   // Otherwise, all these src samples are in the past and irrelevant here.
   auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
   FXL_DCHECK(src_end >= 0);
-  FXL_DCHECK(src_off <= src_end) << std::hex << "src_off: 0x" << src_off << ", src_end: 0x"
-                                 << src_end;
+  FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
+      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
+      << ", frac_src_frames: 0x" << frac_src_frames;
 
   // Cache these locally, in the template specialization that uses them.
   // Only src_pos_modulo must be written back before returning.
