@@ -111,10 +111,7 @@ impl<'a> StructField<'a> {
         let ty_without_wrapper;
         match kind {
             FieldKind::Switch => {
-                // `switch`es must be booleans
-                let is_bool = ty_is_bool(&field.ty);
-                if !is_bool {
-                    errors.err(field, "`#[argh(switch)]` fields must be of type `bool`");
+                if !ty_expect_switch(errors, &field.ty) {
                     return None
                 }
                 is_optional = true;
@@ -382,7 +379,7 @@ fn declare_local_storage_for_fields<'a>(fields: &'a [StructField<'a>]) -> impl I
                 quote! { let mut #field_name: #field_slot_type = None; }
             },
             FieldKind::Switch => {
-                quote! { let mut #field_name: bool = false; }
+                quote! { let mut #field_name: #field_slot_type = argh::Flag::default(); }
             },
         }
     })
@@ -461,16 +458,39 @@ fn append_missing_requirements<'a>(
     })
 }
 
-/// Whether or not a type is `bool`
-fn ty_is_bool(ty: &syn::Type) -> bool {
-    if let syn::Type::Path(path) = ty {
-        path.qself.is_none() &&
-        path.path.segments.len() == 1 &&
-        path.path.segments[0].ident == "bool"
-    } else {
-        false
+/// Require that a type can be a `switch`.
+/// Throws an error for all types except booleans and integers
+fn ty_expect_switch(errors: &Errors, ty: &syn::Type) -> bool {
+    fn ty_can_be_switch(ty: &syn::Type) -> bool {
+        if let syn::Type::Path(path) = ty {
+            if path.qself.is_some() { return false }
+            if path.path.segments.len() != 1 { return false }
+            let ident = &path.path.segments[0].ident;
+            [
+                "bool",
+                "u8",
+                "u16",
+                "u32",
+                "u64",
+                "u128",
+                "i8",
+                "i16",
+                "i32",
+                "i64",
+                "i128",
+            ].iter().any(|path| ident == path)
+        } else {
+            false
+        }
     }
+
+    let res = ty_can_be_switch(ty);
+    if !res {
+        errors.err(ty, "switches must be of type `bool` or integer type");
+    }
+    res
 }
+
 
 /// Returns `Some(T)` if a type is `wrapper_name<T>` for any `wrapper_name` in `wrapper_names`.
 fn ty_inner<'a>(wrapper_names: &[&str], ty: &'a syn::Type) -> Option<&'a syn::Type> {

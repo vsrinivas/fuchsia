@@ -264,11 +264,48 @@ impl<T> ParseValueSlot for ParseValueSlotTy<Vec<T>, T> {
     }
 }
 
+/// A type which can be the receiver of a `Flag`.
+pub trait Flag {
+    /// Creates a default instance of the flag value;
+    fn default() -> Self where Self: Sized;
+    /// Sets the flag. This function is called when the flag is provided.
+    fn set_flag(&mut self);
+}
+
+impl Flag for bool {
+    fn default() -> Self {
+        false
+    }
+    fn set_flag(&mut self) {
+        *self = true;
+    }
+}
+
+macro_rules! impl_flag_for_integers {
+    ($($ty:ty,)*) => {
+        $(
+            impl Flag for $ty {
+                fn default() -> Self {
+                    0
+                }
+                fn set_flag(&mut self) {
+                    *self = self.saturating_add(1);
+                }
+            }
+        )*
+    }
+}
+
+impl_flag_for_integers![
+    u8, u16, u32, u64, u128,
+    i8, i16, i32, i64, i128,
+];
+
 // `--` or `-` options, including a mutable reference to their value.
 #[doc(hidden)]
 pub enum CmdOption<'a> {
     // A flag which is set to `true` when provided.
-    Flag(&'a mut bool),
+    Flag(&'a mut dyn Flag),
     // A value which is parsed from the string following the `--` argument,
     // e.g. `--foo bar`.
     Value(&'a mut dyn ParseValueSlot),
@@ -343,7 +380,7 @@ pub fn parse_option(
     }
 
     match &mut output_table[pos] {
-        CmdOption::Flag(b) => **b = true,
+        CmdOption::Flag(b) => b.set_flag(),
         CmdOption::Value(pvs) => {
             let value = remaining_args[0];
             *remaining_args = &remaining_args[1..];

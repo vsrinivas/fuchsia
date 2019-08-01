@@ -269,9 +269,20 @@ mod fuchsia_commandline_tools_rubric {
 
     /// Repeating switches may be used to apply more emphasis.
     /// A common example is increasing verbosity by passing more `-v` switches.
-    /// TODO(cramertj): support numerically increasing switches
     #[test]
-    fn switches_repeating() {}
+    fn switches_repeating() {
+        #[derive(FromArgs, Debug)]
+        /// A type for testing repeating `-v`
+        struct CountVerbose {
+            #[argh(switch, short = 'v')]
+            /// increase the verbosity of the command.
+            verbose: i128,
+        }
+
+        let cv = CountVerbose::from_args(&["cmdname"], &["-v", "-v", "-v"])
+            .expect("Parsing verbose flags should succeed");
+        assert_eq!(cv.verbose, 3);
+    }
 
     // When a tool has many subcommands, it should also have a help subcommand
     // that displays help about the subcommands, e.g. `fx help build`.
