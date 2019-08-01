@@ -6,6 +6,7 @@ group("lib") {
   testonly = true
   deps = [
     ":tests",
+    "argh",
     "cobalt",
     "elflib",
     "fidl_table_validation",
@@ -24,6 +25,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "argh/argh_tests",
     "cobalt:tests",
     "containers/cpp:tests",
     "cstr:tests",

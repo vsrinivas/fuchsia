@@ -6,8 +6,9 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("argh_shared") {
   visibility = [
-    "//src/lib/argh/argh_derive",
-    "//src/lib/argh/argh",
+    ":*",
+    "//src/lib/argh:*",
+    "//src/lib/argh/argh_derive:*",
   ]
   if (current_os == host_os) {
     name = "argh_shared_for_host"
