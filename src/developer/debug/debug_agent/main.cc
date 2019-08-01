@@ -123,17 +123,19 @@ int main(int argc, const char* argv[]) {
 
     // The scope ensures the objects are destroyed before calling Cleanup on the MessageLoop.
     {
+      // The debug agent is independent of whether it's connected or not.
+      // DebugAgent::Disconnect is called by ~SocketConnection is called by ~SocketServer, so the
+      // debug agent must be destructed after the SocketServer.
+      debug_agent::DebugAgent debug_agent(services);
+
       debug_agent::SocketServer server;
       if (!server.Init(options.port)) {
         message_loop->Cleanup();
         return 1;
       }
 
-      // The debug agent is independent on whether it's connected or not.
       // The following loop will attempt to patch a stream to the debug agent in order to enable
       // communication.
-      debug_agent::DebugAgent debug_agent(services);
-
       while (true) {
         // Start a new thread that will listen on a socket from an incoming connection from a
         // client. In the meantime, the main thread will block waiting for something to be posted
