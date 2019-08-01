@@ -44,7 +44,9 @@ mod wire;
 use log::trace;
 
 pub use crate::data_structures::{IdMapCollection, IdMapCollectionKey};
-pub use crate::device::{get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher};
+pub use crate::device::{
+    get_ip_addr_subnet, initialize_device, receive_frame, DeviceId, DeviceLayerEventDispatcher,
+};
 pub use crate::error::NetstackError;
 pub use crate::ip::{
     icmp, EntryDest, EntryDestEither, EntryEither, IpLayerEventDispatcher, IpStateBuilder,
@@ -139,6 +141,15 @@ impl<D: EventDispatcher> Default for StackState<D> {
 
 impl<D: EventDispatcher> StackState<D> {
     /// Add a new ethernet device to the device layer.
+    ///
+    /// `add_ethernet_device` only makes the netstack aware of the device. The device still needs to
+    /// be initialized. A device MUST NOT be used until it has been initialized. The netstack
+    /// promises not to generate any outbound traffic on the device until [`initialize_device`] has
+    /// been called.
+    ///
+    /// See [`initialize_device`] for more information.
+    ///
+    /// [`initialize_device`]: crate::device::initialize_device
     pub fn add_ethernet_device(&mut self, mac: Mac, mtu: u32) -> DeviceId {
         self.device.add_ethernet_device(mac, mtu)
     }

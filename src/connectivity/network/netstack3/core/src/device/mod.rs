@@ -153,7 +153,7 @@ impl DeviceStateBuilder {
 
 /// The state associated with the device layer.
 pub(crate) struct DeviceLayerState {
-    ethernet: IdMap<EthernetDeviceState>,
+    ethernet: IdMap<DeviceState<EthernetDeviceState>>,
     default_ndp_configs: ndp::NdpConfigurations,
 }
 
@@ -166,13 +166,58 @@ impl DeviceLayerState {
     pub(crate) fn add_ethernet_device(&mut self, mac: Mac, mtu: u32) -> DeviceId {
         let mut builder = EthernetDeviceStateBuilder::new(mac, mtu);
         builder.set_ndp_configs(self.default_ndp_configs.clone());
-        let mut ethernet_state = builder.build();
+        let mut ethernet_state = DeviceState::new(builder.build());
         let id = self.ethernet.push(ethernet_state);
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
     }
 
     // TODO(rheacock, NET-2140): Add ability to remove inactive devices
+}
+
+/// Common state across devices.
+#[derive(Default)]
+pub(crate) struct CommonDeviceState {
+    /// Is the device initialized?
+    is_initialized: bool,
+}
+
+/// Device state.
+///
+/// `D` is the device-specific state.
+pub(crate) struct DeviceState<D> {
+    /// Device-independant state.
+    common: CommonDeviceState,
+
+    /// Device-specific state.
+    device: D,
+}
+
+impl<D> DeviceState<D> {
+    /// Create a new `DeviceState` with a device-specific state `device`.
+    pub(crate) fn new(device: D) -> Self {
+        Self { common: CommonDeviceState::default(), device }
+    }
+
+    /// Get a reference to the common (device-independant) state.
+    pub(crate) fn common(&self) -> &CommonDeviceState {
+        &self.common
+    }
+
+    /// Get a mutable reference to the common (device-independant) state.
+    pub(crate) fn common_mut(&mut self) -> &mut CommonDeviceState {
+        &mut self.common
+    }
+
+    /// Get a reference to the inner (device-specific) state.
+    pub(crate) fn device(&self) -> &D {
+        &self.device
+    }
+
+    /// Get a mutable reference to the inner (device-specific) state.
+    pub(crate) fn device_mut(&mut self) -> &mut D {
+        &mut self.device
+    }
 }
 
 /// The identifier for timer events in the device layer.
@@ -207,6 +252,10 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
     /// original serializer is returned in the `Err` variant. All other errors
     /// (for example, errors in allocating a buffer) are silently ignored and
     /// reported as success.
+    ///
+    /// Note, until `device` has been initialized, the netstack promises to not
+    /// send any outbound traffic to it. See [`initialize_device`] for more
+    /// information.
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
         device: DeviceId,
@@ -214,11 +263,47 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
     ) -> Result<(), S>;
 }
 
+/// Is `device` initialized?
+pub(crate) fn is_device_initialized<D: EventDispatcher>(
+    state: &StackState<D>,
+    device: DeviceId,
+) -> bool {
+    get_common_device_state(state, device).is_initialized
+}
+
+/// Initialize a device.
+///
+/// `initialize_device` MUST be called after adding the device to the netstack. A device MUST NOT
+/// be used until it has been initialized.
+///
+/// This initialize step is kept separated from the device creation/allocation step so that
+/// implementations have a chance to do some work (such as updating implementation specific IDs or
+/// state, configure the device or driver, etc.) before the device is actually initialized and used
+/// by this netstack.
+///
+/// See [`StackState::add_ethernet_device`] for information about adding ethernet devices.
+///
+/// # Panics
+///
+/// Panics if `device` is already initialized.
+pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId) {
+    let state = get_common_device_state_mut(ctx.state_mut(), device);
+
+    // `device` must not already be initialized.
+    assert!(!state.is_initialized);
+
+    state.is_initialized = true;
+}
+
 /// Send an IP packet in a device layer frame.
 ///
 /// `send_ip_frame` accepts a device ID, a local IP address, and a
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new device layer frame and sends it.
+///
+/// # Panics
+///
+/// Panics if `device` is not initialized.
 pub(crate) fn send_ip_frame<B: BufferMut, D: BufferDispatcher<B>, A, S>(
     ctx: &mut Context<D>,
     device: DeviceId,
@@ -229,17 +314,27 @@ where
     A: IpAddress,
     S: Serializer<Buffer = B>,
 {
+    // `device` must be initialized.
+    assert!(is_device_initialized(ctx.state(), device));
+
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::send_ip_frame(ctx, device.id, local_addr, body),
     }
 }
 
 /// Receive a device layer frame from the network.
+///
+/// # Panics
+///
+/// Panics if `device` is not initialized.
 pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     device: DeviceId,
     buffer: B,
 ) {
+    // `device` must be initialized.
+    assert!(is_device_initialized(ctx.state(), device));
+
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::receive_frame(ctx, device.id, buffer),
     }
@@ -261,7 +356,7 @@ pub fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 /// Get the IP address and subnet associated with this device, including tentative
 /// address.
 pub fn get_ip_addr_subnet_with_tentative<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
+    ctx: &Context<D>,
     device: DeviceId,
 ) -> Option<Tentative<AddrSubnet<A>>> {
     match device.protocol {
@@ -272,11 +367,18 @@ pub fn get_ip_addr_subnet_with_tentative<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Set the IP address and subnet associated with this device.
+///
+/// # Panics
+///
+/// Panics if `device` is not initialized.
 pub fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     addr_sub: AddrSubnet<A>,
 ) {
+    // `device` must be initialized.
+    assert!(is_device_initialized(ctx.state(), device));
+
     trace!("set_ip_addr_subnet: setting addr {:?} for device {:?}", addr_sub, device);
 
     match device.protocol {
@@ -288,11 +390,18 @@ pub fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 ///
 /// If `device` is already in the multicast group `multicast_addr`,
 /// `join_ip_multicast` does nothing.
+///
+/// # Panics
+///
+/// Panics if `device` is not initialized.
 pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
+    // `device` must be initialized.
+    assert!(is_device_initialized(ctx.state(), device));
+
     trace!("join_ip_multicast: device {:?} joining multicast {:?}", device, multicast_addr);
 
     match device.protocol {
@@ -306,11 +415,18 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
 ///
 /// If `device` is not in the multicast group `multicast_addr`,
 /// `leave_ip_multicast` does nothing.
+///
+/// # Panics
+///
+/// Panics if `device` is not initialized.
 pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
+    // `device` must be initialized.
+    assert!(is_device_initialized(ctx.state(), device));
+
     trace!("join_ip_multicast: device {:?} leaving multicast {:?}", device, multicast_addr);
 
     match device.protocol {
@@ -345,7 +461,7 @@ pub(crate) fn get_mtu<D: EventDispatcher>(state: &StackState<D>, device: DeviceI
 // a single function go get all the IP addresses associated with a device, which
 // would be cleaner and remove the need for this function.
 pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &Context<D>,
     device: DeviceId,
 ) -> LinkLocalAddr<Ipv6Addr> {
     match device.protocol {
@@ -359,13 +475,43 @@ pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
 /// Note, if the `addr` is not assigned to `device` but is considered tentative
 /// on another device, `is_addr_tentative_on_device` will return `false`.
 pub(crate) fn is_addr_tentative_on_device<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
+    ctx: &Context<D>,
     addr: A,
     device: DeviceId,
 ) -> bool {
     get_ip_addr_subnet_with_tentative::<_, A>(ctx, device)
         .map(|x| (x.inner().addr() == addr) && x.is_tentative())
         .unwrap_or(false)
+}
+
+/// Get a reference to the common device state for a `device`.
+fn get_common_device_state<D: EventDispatcher>(
+    state: &StackState<D>,
+    device: DeviceId,
+) -> &CommonDeviceState {
+    match device.protocol {
+        DeviceProtocol::Ethernet => state
+            .device
+            .ethernet
+            .get(device.id)
+            .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id))
+            .common(),
+    }
+}
+
+/// Get a mutable reference to the common device state for a `device`.
+fn get_common_device_state_mut<D: EventDispatcher>(
+    state: &mut StackState<D>,
+    device: DeviceId,
+) -> &mut CommonDeviceState {
+    match device.protocol {
+        DeviceProtocol::Ethernet => state
+            .device
+            .ethernet
+            .get_mut(device.id)
+            .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id))
+            .common_mut(),
+    }
 }
 
 /// An address that may be "tentative" in that it has not yet passed

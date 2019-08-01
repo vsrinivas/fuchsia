@@ -346,6 +346,7 @@ mod tests {
     use fidl_fuchsia_net_stack as fidl_net_stack;
     use net_types::ethernet::Mac;
     use net_types::ip::Subnet;
+    use netstack3_core::initialize_device;
     use std::convert::TryFrom;
 
     use super::*;
@@ -364,6 +365,7 @@ mod tests {
             let mut evt_loop = EventLoop::new_with_channels(snd, rcv);
             let core =
                 evt_loop.ctx.state_mut().add_ethernet_device(Mac::new([1, 2, 3, 4, 5, 6]), 1500);
+            initialize_device(&mut evt_loop.ctx, core);
             Self { binding: 1, core }
         }
     }

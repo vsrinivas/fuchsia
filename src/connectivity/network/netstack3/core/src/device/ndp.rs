@@ -195,6 +195,11 @@ pub(crate) trait NdpDevice: Sized {
     /// `send_ipv6_frame_to` accepts a device ID, a destination hardware
     /// address, and a `Serializer`. Implementers are expected simply to form
     /// a link-layer frame and encapsulate the provided IPv6 body.
+    ///
+    /// # Panics
+    ///
+    /// May panic if `device_id` is not intialized. See [`crate::device::initialize_device`]
+    /// for more information.
     fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
         ctx: &mut Context<D>,
         device_id: usize,
@@ -207,6 +212,11 @@ pub(crate) trait NdpDevice: Sized {
     /// `send_ipv6_frame` accepts a device ID, a next hop IP address, and a
     /// `Serializer`. Implementers must resolve the destination link-layer
     /// address from the provided `next_hop` IPv6 address.
+    ///
+    /// # Panics
+    ///
+    /// May panic if `device_id` is not intialized. See [`crate::device::initialize_device`]
+    /// for more information.
     fn send_ipv6_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
         ctx: &mut Context<D>,
         device_id: usize,
@@ -1543,6 +1553,7 @@ mod tests {
         set_logger_for_test();
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state_mut().device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, dev_id);
         // Now we have to manually assign the ip addresses, see `EthernetNdpDevice::get_ipv6_addr`
         set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip(), 128).unwrap());
 
@@ -1827,6 +1838,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
         let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, dev_id);
         set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip(), 128).unwrap());
         assert_eq!(
             EthernetNdpDevice::get_ipv6_addr(ctx.state(), dev_id.id()).unwrap(),
@@ -1843,6 +1855,7 @@ mod tests {
     fn test_dad_three_transmits_no_conflicts() {
         let mut ctx = Context::with_default_state(DummyEventDispatcher::default());
         let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, dev_id);
         EthernetNdpDevice::get_ndp_state(&mut ctx.state_mut(), dev_id.id())
             .set_dad_transmits(NonZeroU8::new(3));
         set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip(), 128).unwrap());
@@ -2265,6 +2278,8 @@ mod tests {
         let device_id = device.id();
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local();
+
+        crate::device::initialize_device(&mut ctx, device);
 
         //
         // Receive a new RA with a valid mtu option (but the new mtu should only be 5000

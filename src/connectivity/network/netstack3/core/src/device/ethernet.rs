@@ -18,7 +18,9 @@ use crate::device::arp::{
     self, ArpContext, ArpFrameMetadata, ArpHardwareType, ArpState, ArpTimerId,
 };
 use crate::device::ndp::{self, NdpState};
-use crate::device::{DeviceId, DeviceLayerTimerId, FrameDestination, Tentative};
+use crate::device::{
+    is_device_initialized, DeviceId, DeviceLayerTimerId, FrameDestination, Tentative,
+};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
@@ -332,7 +334,7 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 /// addresses.
 #[specialize_ip_address]
 pub(crate) fn get_ip_addr_subnet_with_tentative<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
+    ctx: &Context<D>,
     device_id: usize,
 ) -> Option<Tentative<AddrSubnet<A>>> {
     #[ipv4addr]
@@ -349,7 +351,7 @@ pub(crate) fn get_ip_addr_subnet_with_tentative<D: EventDispatcher, A: IpAddress
 /// The IPv6 link-local address returned is constructed from this device's MAC
 /// address.
 pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &Context<D>,
     device_id: usize,
 ) -> LinkLocalAddr<Ipv6Addr> {
     // TODO(brunodalbo) the link local address is subject to the same collision
@@ -366,12 +368,14 @@ pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     device_id: usize,
     addr_sub: AddrSubnet<A>,
 ) {
+    let state = get_device_state_mut(ctx.state_mut(), device_id);
+
     #[ipv4addr]
-    get_device_state_mut(ctx.state_mut(), device_id).ipv4_addr_sub = Some(addr_sub);
+    state.ipv4_addr_sub = Some(addr_sub);
 
     #[ipv6addr]
     {
-        let old_addr = get_device_state_mut(ctx.state_mut(), device_id).ipv6_addr_sub.take();
+        let old_addr = state.ipv6_addr_sub.take();
 
         if let Some(ref addr) = old_addr {
             if addr.is_tentative() {
@@ -419,11 +423,13 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
     device_id: usize,
     multicast_addr: MulticastAddr<A>,
 ) {
+    let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+
     #[ipv4addr]
-    get_device_state_mut(ctx.state_mut(), device_id).ipv4_multicast_groups.insert(multicast_addr);
+    device_state.ipv4_multicast_groups.insert(multicast_addr);
 
     #[ipv6addr]
-    get_device_state_mut(ctx.state_mut(), device_id).ipv6_multicast_groups.insert(multicast_addr);
+    device_state.ipv6_multicast_groups.insert(multicast_addr);
 }
 
 /// Remove `device` from a multicast group `multicast_addr`.
@@ -436,11 +442,13 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     device_id: usize,
     multicast_addr: MulticastAddr<A>,
 ) {
+    let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+
     #[ipv4addr]
-    get_device_state_mut(ctx.state_mut(), device_id).ipv4_multicast_groups.remove(&multicast_addr);
+    device_state.ipv4_multicast_groups.remove(&multicast_addr);
 
     #[ipv6addr]
-    get_device_state_mut(ctx.state_mut(), device_id).ipv6_multicast_groups.remove(&multicast_addr);
+    device_state.ipv6_multicast_groups.remove(&multicast_addr);
 }
 
 /// Is `device` in the IP multicast group `multicast_addr`?
@@ -501,6 +509,7 @@ fn get_device_state_mut<D: EventDispatcher>(
         .ethernet
         .get_mut(device_id)
         .unwrap_or_else(|| panic!("no such Ethernet device: {}", device_id))
+        .device_mut()
 }
 
 fn get_device_state<D: EventDispatcher>(
@@ -515,6 +524,7 @@ fn get_device_state<D: EventDispatcher>(
         .ethernet
         .get(device_id)
         .unwrap_or_else(|| panic!("no such Ethernet device: {}", device_id))
+        .device()
 }
 
 impl<D: EventDispatcher> StateContext<usize, ArpState<Ipv4Addr, Mac>> for Context<D> {
@@ -654,6 +664,9 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         dst: Mac,
         body: S,
     ) -> Result<(), S> {
+        // `device_id` must be initialized.
+        assert!(is_device_initialized(ctx.state(), Self::get_device_id(device_id)));
+
         let src = get_device_state(ctx.state(), device_id).mac;
         ctx.dispatcher_mut()
             .send_frame(
@@ -669,6 +682,9 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         next_hop: Ipv6Addr,
         body: S,
     ) -> Result<(), S> {
+        // `device_id` must be initialized.
+        assert!(is_device_initialized(ctx.state(), Self::get_device_id(device_id)));
+
         send_ip_frame(ctx, device_id, next_hop, body)
     }
 
@@ -809,9 +825,14 @@ fn mac_resolution_failed<D: EventDispatcher>(
 #[cfg(test)]
 mod tests {
     use packet::Buf;
+    use specialize_ip_macro::specialize_ip;
 
     use super::*;
-    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
+    use crate::testutil::{
+        get_counter_val, get_dummy_config, DummyEventDispatcher, DummyEventDispatcherBuilder,
+        DUMMY_CONFIG_V4,
+    };
+    use crate::wire::testdata::{dns_request_v4, dns_request_v6};
 
     #[test]
     fn test_mtu() {
@@ -853,5 +874,127 @@ mod tests {
         assert_eq!(0, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
         assert_eq!(1, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
         assert_eq!(2, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
+    }
+
+    #[specialize_ip]
+    fn test_receive_ip_frame<I: Ip>(initialize: bool) {
+        //
+        // Should only receive a frame if the device is initialized
+        //
+
+        let config = get_dummy_config::<I::Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+
+        #[ipv4]
+        let mut bytes = dns_request_v4::ETHERNET_FRAME.bytes.to_vec();
+
+        #[ipv6]
+        let mut bytes = dns_request_v6::ETHERNET_FRAME.bytes.to_vec();
+
+        let mac_bytes = config.local_mac.bytes();
+        bytes[0..6].copy_from_slice(&mac_bytes);
+
+        if initialize {
+            crate::device::initialize_device(&mut ctx, device);
+        }
+
+        // Will panic if we do not initialize.
+        crate::device::receive_frame(&mut ctx, device, Buf::new(bytes, ..));
+
+        // If we did not initialize, we would not reach here since
+        // `receive_frame` would have paniced.
+        assert_eq!(get_counter_val(&mut ctx, "receive_ip_packet"), 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn receive_frame_ipv4_uninitialized() {
+        test_receive_ip_frame::<Ipv4>(false);
+    }
+
+    #[test]
+    #[should_panic]
+    fn receive_frame_ipv6_uninitialized() {
+        test_receive_ip_frame::<Ipv6>(false);
+    }
+
+    #[test]
+    fn receive_frame_ipv4_initialized() {
+        test_receive_ip_frame::<Ipv4>(true);
+    }
+
+    #[test]
+    fn receive_frame_ipv6_initialized() {
+        test_receive_ip_frame::<Ipv6>(true);
+    }
+
+    #[specialize_ip]
+    fn test_send_ip_frame<I: Ip>(initialize: bool) {
+        //
+        // Should only send a frame if the device is initialized
+        //
+
+        let config = get_dummy_config::<I::Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+
+        #[ipv4]
+        let mut bytes = dns_request_v4::ETHERNET_FRAME.bytes.to_vec();
+
+        #[ipv6]
+        let mut bytes = dns_request_v6::ETHERNET_FRAME.bytes.to_vec();
+
+        let mac_bytes = config.local_mac.bytes();
+        bytes[6..12].copy_from_slice(&mac_bytes);
+
+        if initialize {
+            crate::device::initialize_device(&mut ctx, device);
+        }
+
+        // Will panic if we do not initialize.
+        crate::device::send_ip_frame(&mut ctx, device, config.remote_ip, Buf::new(bytes, ..));
+    }
+
+    #[test]
+    #[should_panic]
+    fn send_frame_ipv4_uninitialized() {
+        test_send_ip_frame::<Ipv4>(false);
+    }
+
+    #[test]
+    #[should_panic]
+    fn send_frame_ipv6_uninitialized() {
+        test_send_ip_frame::<Ipv6>(false);
+    }
+
+    #[test]
+    fn send_frame_ipv4_initialized() {
+        test_send_ip_frame::<Ipv4>(true);
+    }
+
+    #[test]
+    fn send_frame_ipv6_initialized() {
+        test_send_ip_frame::<Ipv6>(true);
+    }
+
+    #[test]
+    fn initialize_once() {
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device =
+            ctx.state_mut().add_ethernet_device(DUMMY_CONFIG_V4.local_mac, crate::ip::IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+    }
+
+    #[test]
+    #[should_panic]
+    fn initialize_multiple() {
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device =
+            ctx.state_mut().add_ethernet_device(DUMMY_CONFIG_V4.local_mac, crate::ip::IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        // Should panic since we are already initialized.
+        crate::device::initialize_device(&mut ctx, device);
     }
 }

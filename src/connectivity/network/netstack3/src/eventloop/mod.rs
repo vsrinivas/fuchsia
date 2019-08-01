@@ -123,10 +123,10 @@ use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
 use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher};
 use netstack3_core::{
-    add_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout, receive_frame,
-    set_ip_addr_subnet, Context, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither,
-    EventDispatcher, IpLayerEventDispatcher, NetstackError, StackState, TimerId,
-    TransportLayerEventDispatcher, UdpEventDispatcher,
+    add_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
+    initialize_device, receive_frame, set_ip_addr_subnet, Context, DeviceId,
+    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpLayerEventDispatcher,
+    NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
 macro_rules! stack_fidl_error {
@@ -300,6 +300,9 @@ impl EventLoop {
                     Some(id) => {
                         let eth_worker = EthernetWorker::new(id, client_stream);
                         eth_worker.spawn(self.ctx.dispatcher().event_send.clone());
+
+                        initialize_device(&mut self.ctx, eth_id);
+
                         setup.responder.send(None, id);
                     }
                     None => {

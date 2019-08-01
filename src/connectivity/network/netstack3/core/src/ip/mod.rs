@@ -601,6 +601,8 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
     frame_dst: FrameDestination,
     mut buffer: B,
 ) {
+    increment_counter!(ctx, "receive_ip_packet");
+
     trace!("receive_ip_packet({})", device);
 
     // Snapshot of `buffer`'s current state to revert to if parsing fails.

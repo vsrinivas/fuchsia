@@ -552,6 +552,7 @@ mod tests {
     fn setup_simple_test_environment() -> (Context<DummyEventDispatcher>, DeviceId) {
         let mut ctx = Context::with_default_state(DummyEventDispatcher::default());
         let dev_id = ctx.state.add_ethernet_device(Mac::new([1, 2, 3, 4, 5, 6]), 1500);
+        crate::device::initialize_device(&mut ctx, dev_id);
         set_ip_addr_subnet(&mut ctx, dev_id.id(), AddrSubnet::new(MY_ADDR, 24).unwrap());
         (ctx, dev_id)
     }

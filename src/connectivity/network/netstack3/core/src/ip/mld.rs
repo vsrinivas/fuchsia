@@ -457,6 +457,7 @@ mod tests {
     fn setup_simple_test_environment() -> (Context<DummyEventDispatcher>, DeviceId) {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state.add_ethernet_device(MY_MAC, 1500);
+        crate::device::initialize_device(&mut ctx, dev_id);
         set_ip_addr_subnet(
             &mut ctx,
             dev_id,
@@ -662,6 +663,7 @@ mod tests {
     fn test_mld_unspecified_src_no_addr() {
         let mut ctx = Context::with_default_state(DummyEventDispatcher::default());
         let dev_id = ctx.state.add_ethernet_device(MY_MAC, 1500);
+        crate::device::initialize_device(&mut ctx, dev_id);
         // The IP address of the device is intentionally unspecified.
         mld_join_group(&mut ctx, dev_id, MulticastAddr::new(GROUP_ADDR).unwrap());
         assert!(testutil::trigger_next_timer(&mut ctx));
@@ -675,6 +677,7 @@ mod tests {
     fn test_mld_unspecified_src_not_link_local() {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state.add_ethernet_device(MY_MAC, 1500);
+        crate::device::initialize_device(&mut ctx, dev_id);
         set_ip_addr_subnet(
             &mut ctx,
             dev_id,
