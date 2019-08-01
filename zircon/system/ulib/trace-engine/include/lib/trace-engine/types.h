@@ -15,7 +15,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/object.h>
@@ -200,10 +199,14 @@ static inline trace_thread_ref_t trace_make_indexed_thread_ref(trace_thread_inde
   return ref;
 }
 
-// The maximum length of a trace record in bytes.
-// This is constrained by the number of bits used to encode the length in
-// the record header.
-#define TRACE_ENCODED_RECORD_MAX_LENGTH ((size_t)32760u)
+// The maximum length of a trace record that is allowed inline in the
+// trace buffer. The limit is currently set to 256KB.
+#define TRACE_ENCODED_INLINE_LARGE_RECORD_MAX_SIZE ((size_t)(1ull << 18))
+
+typedef enum {
+  TRACE_BLOB_FORMAT_EVENT = 0,
+  TRACE_BLOB_FORMAT_ATTACHMENT = 1,
+} trace_blob_format_t;
 
 // Enumerates all known argument types.
 typedef enum {
@@ -352,6 +355,13 @@ enum class RecordType {
   kKernelObject = 7,
   kContextSwitch = 8,
   kLog = 9,
+
+  // The kLargeRecord uses a 32-bit size field.
+  kLargeRecord = 15,
+};
+
+enum class LargeRecordType {
+  kBlob = 0,
 };
 
 // MetadataType enumerates all known trace metadata types.

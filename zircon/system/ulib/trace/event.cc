@@ -148,6 +148,32 @@ void trace_internal_write_flow_end_event_record_and_release_context(
   trace_release_context(context);
 }
 
+void trace_internal_write_blob_event_record_and_release_context(
+    trace_context_t* context,
+    const trace_string_ref_t* category_ref,
+    const char* name_literal,
+    const void* blob, size_t blob_size,
+    trace_arg_t* args, size_t num_args) {
+    EventHelper helper(context, name_literal);
+    trace_internal_complete_args(context, args, num_args);
+    trace_context_write_blob_event_record(
+        context, helper.ticks, &helper.thread_ref, category_ref, &helper.name_ref,
+        blob, blob_size, args, num_args);
+    trace_release_context(context);
+}
+
+void trace_internal_write_blob_attachment_record_and_release_context(
+    trace_context_t* context,
+    const trace_string_ref_t* category_ref,
+    const char* name_literal,
+    const void* blob, size_t blob_size) {
+    trace_string_ref_t name_ref;
+    trace_context_register_string_literal(context, name_literal, &name_ref);
+    trace_context_write_blob_attachment_record(
+        context, category_ref, &name_ref, blob, blob_size);
+    trace_release_context(context);
+}
+
 void trace_internal_write_kernel_object_record_for_handle_and_release_context(
     trace_context_t* context, zx_handle_t handle, trace_arg_t* args, size_t num_args) {
   trace_internal_complete_args(context, args, num_args);

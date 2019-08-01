@@ -15,6 +15,8 @@
 
 #include <lib/trace-engine/instrumentation.h>
 #include <lib/trace/internal/event_args.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 __BEGIN_CDECLS
 
@@ -219,6 +221,28 @@ __BEGIN_CDECLS
         args);                                                                               \
   } while (0)
 
+#define TRACE_INTERNAL_BLOB_EVENT(category_literal, name_literal, blob, blob_size, args...) \
+  do {                                                                                      \
+    TRACE_INTERNAL_EVENT_RECORD(                                                            \
+        (category_literal),                                                                 \
+        trace_internal_write_blob_event_record_and_release_context(                         \
+            TRACE_INTERNAL_CONTEXT, &TRACE_INTERNAL_CATEGORY_REF, (name_literal), (blob),   \
+            (blob_size), TRACE_INTERNAL_ARGS, TRACE_INTERNAL_NUM_INTERNAL_ARGS),            \
+        args);                                                                              \
+  } while (0)
+
+#define TRACE_INTERNAL_BLOB_ATTACHMENT(category_literal, name_literal, blob, blob_size)           \
+  do {                                                                                            \
+    static trace_site_t TRACE_INTERNAL_SITE_STATE;                                                \
+    trace_string_ref_t TRACE_INTERNAL_CATEGORY_REF;                                               \
+    trace_context_t* TRACE_INTERNAL_CONTEXT = trace_acquire_context_for_category_cached(          \
+        (category_literal), &TRACE_INTERNAL_SITE_STATE, &TRACE_INTERNAL_CATEGORY_REF);            \
+    if (unlikely(TRACE_INTERNAL_CONTEXT)) {                                                       \
+      trace_internal_write_blob_attachment_record_and_release_context(                            \
+          TRACE_INTERNAL_CONTEXT, &TRACE_INTERNAL_CATEGORY_REF, (name_literal), blob, blob_size); \
+    }                                                                                             \
+  } while (0)
+
 #define TRACE_INTERNAL_KERNEL_OBJECT(handle, args...)                             \
   do {                                                                            \
     TRACE_INTERNAL_SIMPLE_RECORD(                                                 \
@@ -289,6 +313,14 @@ void trace_internal_write_flow_step_event_record_and_release_context(
 void trace_internal_write_flow_end_event_record_and_release_context(
     trace_context_t* context, const trace_string_ref_t* category_ref, const char* name_literal,
     trace_flow_id_t flow_id, trace_arg_t* args, size_t num_args);
+
+void trace_internal_write_blob_event_record_and_release_context(
+    trace_context_t* context, const trace_string_ref_t* category_ref, const char* name_literal,
+    const void* blob, size_t blob_size, trace_arg_t* args, size_t num_args);
+
+void trace_internal_write_blob_attachment_record_and_release_context(
+    trace_context_t* context, const trace_string_ref_t* category_ref, const char* name_literal,
+    const void* blob, size_t blob_size);
 
 void trace_internal_write_kernel_object_record_for_handle_and_release_context(
     trace_context_t* context, zx_handle_t handle, trace_arg_t* args, size_t num_args);

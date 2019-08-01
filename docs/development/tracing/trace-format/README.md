@@ -53,10 +53,12 @@ information:
 
 - **Record Type**: A 4-bit field which identifies the type of the record
   and the information it contains.  See [Record Types](#record-types).
-- **Record Size**: A 12-bit field which indicates the number of words
+- **Record Size**: Typically, a 12-bit field which indicates the number of words
   (multiples of 8 byte units) within the record _including the record
   header itself_.  The maximum possible size of a record is 4095 words
   (32760 bytes).  Very simple records may be just 1 word (8 bytes) long.
+  Large records use a 32-bit size field and therefore have a higher
+  maximum size.
 
 Records are always a multiple of 8 bytes in length and are stored with
 8 byte alignment.
@@ -230,6 +232,19 @@ _header word_
 - `[0 .. 3]`: record type
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 63]`: varies by record type (must be zero if unused)
+
+### Large Record Header
+
+Provides support for records larger than 32KB. Large records have a
+32 bit size field rather than the normal 12 bits.
+
+![drawing](largerecord.png)
+
+_header word_
+- `[0 ..  3]`: record type (15)
+- `[4 .. 35]`: record size (inclusive of this word) as a multiple of 8 bytes
+- `[36 .. 39]`: large record type
+- `[40 .. 63]`: varies by large record type (must be zero if unused)
 
 ### Metadata Record (record type = 0)
 
@@ -872,6 +887,115 @@ _log message stream_
 
 - UTF-8 string, padded with zeros to 8 byte alignment
 
+### Large Blob Record (record type = 15, large type = 0)
+
+Provides large binary blob data to be embedded within a trace. It
+uses the large record header.
+
+The large blob record supports a number of different formats. These
+formats can be used for varying the types of blob data and metadata
+included in the record.
+
+##### Format
+
+![drawing](largeblob.png)
+
+_header word_
+- `[0 ..  3]`: record type (15)
+- `[4 .. 35]`: record size (inclusive of this word) as a multiple of 8 bytes
+- `[36 .. 39]`: large record type (0)
+- `[40 .. 43]`: blob format type
+- `[44 .. 63]`: reserved, must be zero
+
+#### In Band Large Blob Record With Metadata (blob format = 0)
+
+This type contains the blob data and metadata within the record
+itself. The metadata includes a timestamp, thread/process
+information, and arguments, in addition to a category and name.
+
+The name should be sufficient to identify the type of data contained
+within the blob.
+
+##### Format
+
+![drawing](largeblob0.png)
+
+_header word_
+- `[0 ..  3]`: record type (15)
+- `[4 .. 35]`: record size (inclusive of this word) as a multiple of 8 bytes
+- `[36 .. 39]`: large record type (0)
+- `[40 .. 43]`: blob format type (0)
+- `[44 .. 63]`: reserved, must be zero
+
+_format header word_
+- `[0 .. 15]`: category (string ref)
+- `[16 .. 31]`: name (string ref)
+- `[32 .. 35]`: number of arguments
+- `[36 .. 43]`: thread (thread ref)
+- `[44 .. 63]`: reserved, must be zero
+
+_category stream_ (omitted unless string ref denotes inline string)
+- UTF-8 string, padded with zeros to 8 byte alignment
+
+_name stream_ (omitted unless string ref denotes inline string)
+- UTF-8 string, padded with zeros to 8 byte alignment
+
+_timestamp word_
+- `[0 .. 63]`: number of ticks
+
+_process id word_ (omitted unless thread ref denotes inline thread)
+- `[0 .. 63]`: process koid (kernel object id)
+
+_thread id word_ (omitted unless thread ref denotes inline thread)
+- `[0 .. 63]`: thread koid (kernel object id)
+
+_argument data_ (repeats for each argument)
+- (see below)
+
+_blob size word_
+- `[0 .. 63]`: blob payload size in bytes (excluding padding)
+
+_payload stream_ (variable size)
+- binary data, padded with zeros to 8 byte alignment
+
+#### In Band Large Blob Record No Metadata (blob format = 1)
+
+This type contains the blob data within the record itself,
+but does not include metadata. The record only contains
+a category and name.
+
+The name should be sufficient to identify the type of data contained
+within the blob.
+
+##### Format
+
+![drawing](largeblob1.png)
+
+_header word_
+- `[0 ..  3]`: record type (15)
+- `[4 .. 35]`: record size (inclusive of this word) as a multiple of 8 bytes
+- `[36 .. 39]`: large record type (0)
+- `[40 .. 43]`: blob format type (1)
+- `[44 .. 63]`: reserved, must be zero
+
+_format header word_
+- `[0 .. 15]`: category (string ref)
+- `[16 .. 31]`: name (string ref)
+- `[32 .. 63]`: reserved, must be zero
+
+_category stream_ (omitted unless string ref denotes inline string)
+- UTF-8 string, padded with zeros to 8 byte alignment
+
+_name stream_ (omitted unless string ref denotes inline string)
+- UTF-8 string, padded with zeros to 8 byte alignment
+
+_blob size word_
+- `[0 .. 63]`: blob payload size in bytes (excluding padding)
+
+_payload stream_ (variable size)
+- binary data, padded with zeros to 8 byte alignment
+
+
 ## Argument Types
 
 Arguments associate typed key/value data records.  They are used together
@@ -1106,5 +1230,5 @@ _argument value word_
 
 <!-- xrefs -->
 
-<!-- drawings are sourced from https://docs.google.com/document/d/1fb-59VqAU25hlNnQxFxj57aJGFBB8GRLC3-FjvN3ndY/edit# -->
+<!-- drawings are sourced from https://docs.google.com/document/d/19nQHHSc-TdZ1BPovkrUd5Uk5l5T3YuxTNuVl9zv0whU/edit -->
 

@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace-reader/records.h>
-
 #include <inttypes.h>
 #include <string.h>
 
+#include <utility>
+
 #include <fbl/string_buffer.h>
 #include <fbl/string_printf.h>
-
-#include <utility>
+#include <trace-reader/records.h>
 
 namespace trace {
 namespace {
@@ -434,6 +433,49 @@ fbl::String EventData::ToString() const {
   ZX_ASSERT(false);
 }
 
+void LargeRecordData::Destroy() {
+  switch (type_) {
+    case LargeRecordType::kBlob:
+      blob_.~Blob();
+      break;
+  }
+}
+
+void LargeRecordData::MoveFrom(trace::LargeRecordData&& other) {
+  switch (type_) {
+    case LargeRecordType::kBlob:
+      new (&blob_) Blob(std::move(other.blob_));
+      break;
+  }
+}
+
+fbl::String LargeRecordData::ToString() const {
+  switch (type_) {
+    case LargeRecordType::kBlob:
+      using std::get;
+      if (fit::holds_alternative<BlobEvent>(blob_)) {
+        const auto& data = get<BlobEvent>(blob_);
+        return fbl::StringPrintf(
+            "Blob(format: blob_event, category: \"%s\", name: \"%s\", "
+            "ts: %" PRIu64
+            ", pt: %s, %s, "
+            "size: %" PRIu64 ", preview: %s)",
+            data.category.c_str(), data.name.c_str(), data.timestamp,
+            data.process_thread.ToString().c_str(), FormatArgumentList(data.arguments).c_str(),
+            data.blob_size, PreviewBlobData<8, 8>(data.blob, data.blob_size).c_str());
+      } else if (fit::holds_alternative<BlobAttachment>(blob_)) {
+        const auto& data = get<BlobAttachment>(blob_);
+        return fbl::StringPrintf(
+            "Blob(format: blob_attachment, category: \"%s\", name: \"%s\", "
+            "size: %" PRIu64 ", preview: %s)",
+            data.category.c_str(), data.name.c_str(), data.blob_size,
+            PreviewBlobData<8, 8>(data.blob, data.blob_size).c_str());
+      }
+      break;
+  }
+  ZX_ASSERT(false);
+}
+
 void Record::Destroy() {
   switch (type_) {
     case RecordType::kMetadata:
@@ -462,6 +504,9 @@ void Record::Destroy() {
       break;
     case RecordType::kLog:
       log_.~Log();
+      break;
+    case RecordType::kLargeRecord:
+      large_.~Large();
       break;
   }
 }
@@ -496,6 +541,9 @@ void Record::MoveFrom(Record&& other) {
     case RecordType::kLog:
       new (&log_) Log(std::move(other.log_));
       break;
+    case RecordType::kLargeRecord:
+      new (&large_) Large(std::move(other.large_));
+      break;
   }
 }
 
@@ -520,8 +568,6 @@ fbl::String Record::ToString() const {
           FormatArgumentList(event_.arguments).c_str());
       break;
     case RecordType::kBlob:
-      // TODO(dje): Could print something like the first 16 bytes of the
-      // payload or some such.
       return fbl::StringPrintf("Blob(name: %s, size: %zu, preview: %s)", blob_.name.c_str(),
                                blob_.blob_size,
                                PreviewBlobData<8, 8>(blob_.blob, blob_.blob_size).c_str());
@@ -544,6 +590,8 @@ fbl::String Record::ToString() const {
     case RecordType::kLog:
       return fbl::StringPrintf("Log(ts: %" PRIu64 ", pt: %s, \"%s\")", log_.timestamp,
                                log_.process_thread.ToString().c_str(), log_.message.c_str());
+    case RecordType::kLargeRecord:
+      return fbl::StringPrintf("LargeRecord(%s)", large_.ToString().c_str());
   }
   ZX_ASSERT(false);
 }

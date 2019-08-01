@@ -975,6 +975,86 @@ EXPORT void trace_context_write_flow_end_event_record(
   }
 }
 
+trace::Payload trace_context_begin_write_large_blob_record(
+    trace_context_t* context,
+    trace_blob_format_t format,
+    size_t content_size) {
+    const size_t record_size = sizeof(trace::RecordHeader) + content_size;
+
+    trace::Payload payload(context, record_size);
+    if (payload) {
+        payload
+            .WriteUint64(
+                trace::LargeBlobFields::Type::Make(ToUnderlyingType(trace::RecordType::kLargeRecord)) |
+                trace::LargeBlobFields::RecordSize::Make(trace::BytesToWords(record_size)) |
+                trace::LargeBlobFields::LargeType::Make(ToUnderlyingType(trace::LargeRecordType::kBlob)) |
+                trace::LargeBlobFields::BlobFormat::Make(format));
+    }
+    return payload;
+}
+
+EXPORT void trace_context_write_blob_event_record(
+    trace_context_t* context,
+    trace_ticks_t event_time,
+    const trace_thread_ref_t* thread_ref,
+    const trace_string_ref_t* category_ref,
+    const trace_string_ref_t* name_ref,
+    const void* blob, size_t blob_size,
+    const trace_arg_t* args, size_t num_args) {
+    const size_t content_size = trace::WordsToBytes(1) +
+        trace::SizeOfEncodedStringRef(category_ref) +
+        trace::SizeOfEncodedStringRef(name_ref) +
+        trace::WordsToBytes(1) + // event time
+        trace::SizeOfEncodedThreadRef(thread_ref) +
+        trace::SizeOfEncodedArgs(args, num_args) +
+        trace::WordsToBytes(1) + // blob size
+        trace::Pad(blob_size);
+
+    trace::Payload payload = trace_context_begin_write_large_blob_record(
+        context, TRACE_BLOB_FORMAT_EVENT, content_size);
+    if (payload) {
+        payload
+            .WriteUint64(
+                trace::BlobFormatEventFields::CategoryStringRef::Make(category_ref->encoded_value) |
+                trace::BlobFormatEventFields::NameStringRef::Make(name_ref->encoded_value) |
+                trace::BlobFormatEventFields::ArgumentCount::Make(num_args) |
+                trace::BlobFormatEventFields::ThreadRef::Make(thread_ref->encoded_value))
+            .WriteStringRef(category_ref)
+            .WriteStringRef(name_ref)
+            .WriteUint64(event_time)
+            .WriteThreadRef(thread_ref)
+            .WriteArgs(args, num_args)
+            .WriteUint64(blob_size)
+            .WriteBytes(blob, blob_size);
+    }
+}
+
+EXPORT void trace_context_write_blob_attachment_record(
+    trace_context_t* context,
+    const trace_string_ref_t* category_ref,
+    const trace_string_ref_t* name_ref,
+    const void* blob, size_t blob_size) {
+    const size_t content_size =
+        trace::WordsToBytes(1) + // format header
+        trace::SizeOfEncodedStringRef(category_ref) +
+        trace::SizeOfEncodedStringRef(name_ref) +
+        trace::WordsToBytes(1) + // blob size
+        trace::Pad(blob_size);
+
+    trace::Payload payload = trace_context_begin_write_large_blob_record(
+        context, TRACE_BLOB_FORMAT_ATTACHMENT, content_size);
+    if (payload) {
+        payload
+            .WriteUint64(
+                trace::BlobFormatAttachmentFields::CategoryStringRef::Make(category_ref->encoded_value) |
+                trace::BlobFormatAttachmentFields::NameStringRef::Make(name_ref->encoded_value))
+            .WriteStringRef(category_ref)
+            .WriteStringRef(name_ref)
+            .WriteUint64(blob_size)
+            .WriteBytes(blob, blob_size);
+    }
+}
+
 // TODO(dje): Move data to header?
 EXPORT_NO_DDK void trace_context_write_initialization_record(trace_context_t* context,
                                                              zx_ticks_t ticks_per_second) {

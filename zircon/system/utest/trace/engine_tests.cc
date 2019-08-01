@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/event.h>
 #include <threads.h>
 
 #include <atomic>
@@ -11,7 +12,6 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-#include <lib/zx/event.h>
 #include <trace-engine/handler.h>
 #include <trace-test-utils/fixture.h>
 #include <trace-test-utils/squelch.h>
@@ -517,10 +517,13 @@ bool TestMaximumRecordLength() {
     EXPECT_NONNULL(trace_context_alloc_record(context.get(), 0));
     EXPECT_NONNULL(trace_context_alloc_record(context.get(), 8));
     EXPECT_NONNULL(trace_context_alloc_record(context.get(), 16));
-    EXPECT_NONNULL(trace_context_alloc_record(context.get(), TRACE_ENCODED_RECORD_MAX_LENGTH));
+    EXPECT_NONNULL(
+        trace_context_alloc_record(context.get(), TRACE_ENCODED_INLINE_LARGE_RECORD_MAX_SIZE));
 
-    EXPECT_NULL(trace_context_alloc_record(context.get(), TRACE_ENCODED_RECORD_MAX_LENGTH + 8));
-    EXPECT_NULL(trace_context_alloc_record(context.get(), TRACE_ENCODED_RECORD_MAX_LENGTH + 16));
+    EXPECT_NULL(
+        trace_context_alloc_record(context.get(), TRACE_ENCODED_INLINE_LARGE_RECORD_MAX_SIZE + 8));
+    EXPECT_NULL(
+        trace_context_alloc_record(context.get(), TRACE_ENCODED_INLINE_LARGE_RECORD_MAX_SIZE + 16));
   }
 
   END_TRACE_TEST;

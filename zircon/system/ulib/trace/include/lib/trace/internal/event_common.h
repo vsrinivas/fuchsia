@@ -324,6 +324,36 @@
 #define TRACE_FLOW_END(category_literal, name_literal, flow_id, args...) \
   TRACE_INTERNAL_FLOW_END((category_literal), (name_literal), (flow_id), args)
 
+// Writes a large blob record with the given blob data and metadata.
+// Here metadata includes timestamp, thread and process information, and arguments,
+// which is what most event records contain.
+//
+// Blobs which exceed |TRACE_ENCODED_RECORD_MAX_TOTAL_LENGTH| will be silently
+// ignored, as will blobs which cannot fit within the remaining space in the
+// trace buffer.
+//
+// |category_literal| and |name_literal| must be null-terminated static string constants.
+// |blob| is a pointer to the data.
+// |blob_size| is the size, in bytes, of the data.
+// |args| is the list of argument key/value pairs.
+#define TRACE_BLOB_EVENT(category_literal, name_literal, blob, blob_size, args...) \
+    TRACE_INTERNAL_BLOB_EVENT(category_literal, name_literal, blob, blob_size, args)
+
+// Writes a large blob record with the given blob data, with only a
+// category and name associated with the blob. This will not contain much
+// additional metadata. This means timestamp, thread and process information,
+// and arguments are not included with the record.
+//
+// Blobs which exceed |TRACE_ENCODED_RECORD_MAX_TOTAL_LENGTH| will be silently
+// ignored, as will blobs which cannot fit within the remaining space in the
+// trace buffer.
+//
+// |category_literal| and |name_literal| must be null-terminated static string constants.
+// |blob| is a pointer to the data.
+// |blob_size| is the size, in bytes, of the data.
+#define TRACE_BLOB_ATTACHMENT(category_literal, name_literal, blob, blob_size) \
+    TRACE_INTERNAL_BLOB_ATTACHMENT(category_literal, name_literal, blob, blob_size) \
+
 // Writes a description of a kernel object indicated by |handle|,
 // including its koid, name, and the supplied arguments.
 //
@@ -340,6 +370,8 @@
 //
 #define TRACE_KERNEL_OBJECT(handle, args...) TRACE_INTERNAL_KERNEL_OBJECT((handle), args)
 
+// WARNING! |TRACE_BLOB| is deprecated in favor of the |TRACE_BLOB_*| macros.
+//
 // Writes a blob of binary data to the trace buffer.
 //
 // |type| is the type of the blob, and must be one of the enums in type

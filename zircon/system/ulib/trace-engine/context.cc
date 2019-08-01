@@ -72,16 +72,15 @@
 // manage. The protocol allows for records to be dropped if buffers can't be
 // saved fast enough.
 
-#include "context_impl.h"
-
 #include <assert.h>
 #include <inttypes.h>
-
 #include <lib/trace-engine/fields.h>
 #include <lib/trace-engine/handler.h>
 
 #include <atomic>
 #include <mutex>
+
+#include "context_impl.h"
 
 namespace trace {
 namespace {
@@ -111,9 +110,9 @@ trace_context::~trace_context() = default;
 
 uint64_t* trace_context::AllocRecord(size_t num_bytes) {
   ZX_DEBUG_ASSERT((num_bytes & 7) == 0);
-  if (unlikely(num_bytes > TRACE_ENCODED_RECORD_MAX_LENGTH))
+  if (unlikely(num_bytes > TRACE_ENCODED_INLINE_LARGE_RECORD_MAX_SIZE))
     return nullptr;
-  static_assert(TRACE_ENCODED_RECORD_MAX_LENGTH < kMaxRollingBufferSize, "");
+  static_assert(TRACE_ENCODED_INLINE_LARGE_RECORD_MAX_SIZE < kMaxRollingBufferSize, "");
 
   // For the circular and streaming cases, try at most once for each buffer.
   // Note: Keep the normal case of one successful pass the fast path.

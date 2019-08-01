@@ -5,7 +5,9 @@
 #ifndef TRACE_READER_READER_H_
 #define TRACE_READER_READER_H_
 
-#include <trace-reader/records.h>
+#include <zircon/assert.h>
+
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
@@ -14,10 +16,7 @@
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
-
-#include <zircon/assert.h>
-
-#include <utility>
+#include <trace-reader/records.h>
 
 namespace trace {
 
@@ -81,6 +80,9 @@ class TraceReader {
   bool ReadContextSwitchRecord(Chunk& record, RecordHeader header);
   bool ReadLogRecord(Chunk& record, RecordHeader header);
   bool ReadArguments(Chunk& record, size_t count, fbl::Vector<Argument>* out_arguments);
+
+  bool ReadLargeRecord(Chunk& record, RecordHeader header);
+  bool ReadLargeBlob(Chunk& record, RecordHeader header);
 
   void SetCurrentProvider(ProviderId id);
   void RegisterProvider(ProviderId id, fbl::String name);

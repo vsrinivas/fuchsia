@@ -5,20 +5,21 @@
 #ifndef TRACE_READER_RECORDS_H_
 #define TRACE_READER_RECORDS_H_
 
-#include <new>
+#include <lib/fit/variant.h>
+#include <lib/trace-engine/types.h>
 #include <stdint.h>
-#include <utility>
-
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#include <new>
+#include <utility>
+
 #include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <lib/trace-engine/types.h>
 
 namespace trace {
 
@@ -428,6 +429,8 @@ class EventData final {
 
   EventData(EventData&& other) { MoveFrom(std::move(other)); }
 
+  ~EventData() { Destroy(); }
+
   EventData& operator=(EventData&& other) {
     Destroy();
     MoveFrom(std::move(other));
@@ -515,6 +518,69 @@ class EventData final {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(EventData);
 };
 
+// Large record specific data
+class LargeRecordData final {
+ public:
+  struct BlobEvent {
+    fbl::String category;
+    fbl::String name;
+    trace_ticks_t timestamp;
+    ProcessThread process_thread;
+    fbl::Vector<Argument> arguments;
+
+    const void* blob;
+    uint64_t blob_size;
+  };
+
+  struct BlobAttachment {
+    fbl::String category;
+    fbl::String name;
+
+    const void* blob;
+    uint64_t blob_size;
+  };
+
+  // Large blob record data.
+  // The blob data pointer is actually just a pointer into the trace
+  // reader's buffer. As such, the record consumer should not attempt
+  // to free it. The record consumer must finish processing the
+  // blob data within the callback, as the pointer may not be valid
+  // after the completion of that callback.
+  using Blob = fit::variant<BlobEvent, BlobAttachment>;
+
+  explicit LargeRecordData(Blob blob) : type_(LargeRecordType::kBlob), blob_(std::move(blob)) {}
+
+  const Blob& GetBlob() const {
+    ZX_DEBUG_ASSERT(type_ == LargeRecordType::kBlob);
+    return blob_;
+  }
+
+  LargeRecordData(LargeRecordData&& other) : type_(other.type_) { MoveFrom(std::move(other)); }
+
+  ~LargeRecordData() { Destroy(); }
+
+  LargeRecordData& operator=(LargeRecordData&& other) {
+    Destroy();
+    MoveFrom(std::move(other));
+    return *this;
+  }
+
+  LargeRecordType type() const { return type_; }
+
+  fbl::String ToString() const;
+
+ private:
+  void Destroy();
+  void MoveFrom(LargeRecordData&& other);
+
+  LargeRecordType type_;
+  union {
+    Blob blob_;
+  };
+
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(LargeRecordData);
+};
+
 // A decoded record.
 class Record final {
  public:
@@ -589,6 +655,9 @@ class Record final {
     fbl::String message;
   };
 
+  // Large record data.
+  using Large = LargeRecordData;
+
   explicit Record(Metadata record) : type_(RecordType::kMetadata), metadata_(std::move(record)) {}
 
   explicit Record(Initialization record)
@@ -617,6 +686,10 @@ class Record final {
   }
 
   explicit Record(Log record) : type_(RecordType::kLog) { new (&log_) Log(std::move(record)); }
+
+  explicit Record(Large record) : type_(RecordType::kLargeRecord) {
+    new (&large_) Large(std::move(record));
+  }
 
   Record(Record&& other) { MoveFrom(std::move(other)); }
 
@@ -673,6 +746,11 @@ class Record final {
     return log_;
   }
 
+  const Large& GetLargeRecord() const {
+    ZX_DEBUG_ASSERT(type_ == RecordType::kLargeRecord);
+    return large_;
+  }
+
   RecordType type() const { return type_; }
 
   fbl::String ToString() const;
@@ -692,6 +770,7 @@ class Record final {
     KernelObject kernel_object_;
     ContextSwitch context_switch_;
     Log log_;
+    Large large_;
   };
 
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Record);

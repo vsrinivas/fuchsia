@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace-reader/records.h>
-
 #include <stdint.h>
+
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
+#include <trace-reader/records.h>
 #include <zxtest/zxtest.h>
-
-#include <utility>
 
 namespace trace {
 namespace {
@@ -844,6 +843,82 @@ TEST(TraceRecords, Record) {
     EXPECT_TRUE(r.GetLog().message == "log message");
 
     EXPECT_STR_EQ("Log(ts: 123, pt: 4/5, \"log message\")", r.ToString().c_str());
+  }
+
+  // large blob
+
+  {
+    using std::get;
+    using Format = trace::LargeRecordData::BlobEvent;
+
+    const char blob[] = "abc";
+    const char preview[] = "<61 62 63 00>";
+
+    fbl::Vector<trace::Argument> args;
+    args.push_back(trace::Argument("arg1", trace::ArgumentValue::MakeInt32(11)));
+    args.push_back(trace::Argument("arg2", trace::ArgumentValue::MakeDouble(-3.14)));
+
+    trace::Record r(trace::Record::Large{Format{"category", "name", 123, trace::ProcessThread(4, 5),
+                                                std::move(args), blob, sizeof(blob)}});
+    EXPECT_EQ(trace::RecordType::kLargeRecord, r.type());
+    EXPECT_EQ(trace::LargeRecordType::kBlob, r.GetLargeRecord().type());
+    EXPECT_TRUE(fit::holds_alternative<Format>(r.GetLargeRecord().GetBlob()));
+    EXPECT_TRUE(get<Format>(r.GetLargeRecord().GetBlob()).category == "category");
+    EXPECT_TRUE(get<Format>(r.GetLargeRecord().GetBlob()).name == "name");
+    EXPECT_EQ(123, get<Format>(r.GetLargeRecord().GetBlob()).timestamp);
+    EXPECT_EQ(4, get<Format>(r.GetLargeRecord().GetBlob()).process_thread.process_koid());
+    EXPECT_EQ(5, get<Format>(r.GetLargeRecord().GetBlob()).process_thread.thread_koid());
+    EXPECT_EQ(2, get<Format>(r.GetLargeRecord().GetBlob()).arguments.size());
+    EXPECT_TRUE(get<Format>(r.GetLargeRecord().GetBlob()).arguments[0].name() == "arg1");
+    EXPECT_EQ(11, get<Format>(r.GetLargeRecord().GetBlob()).arguments[0].value().GetInt32());
+    EXPECT_TRUE(get<Format>(r.GetLargeRecord().GetBlob()).arguments[1].name() == "arg2");
+    EXPECT_EQ(-3.14, get<Format>(r.GetLargeRecord().GetBlob()).arguments[1].value().GetDouble());
+    EXPECT_EQ(sizeof(blob), get<Format>(r.GetLargeRecord().GetBlob()).blob_size);
+    EXPECT_STR_EQ(blob,
+                  reinterpret_cast<const char*>(get<Format>(r.GetLargeRecord().GetBlob()).blob));
+
+    trace::Record m(std::move(r));
+    EXPECT_EQ(trace::RecordType::kLargeRecord, m.type());
+    EXPECT_EQ(trace::LargeRecordType::kBlob, m.GetLargeRecord().type());
+    EXPECT_TRUE(fit::holds_alternative<Format>(m.GetLargeRecord().GetBlob()));
+    EXPECT_TRUE(get<Format>(m.GetLargeRecord().GetBlob()).category == "category");
+    EXPECT_TRUE(get<Format>(m.GetLargeRecord().GetBlob()).name == "name");
+    EXPECT_EQ(123, get<Format>(m.GetLargeRecord().GetBlob()).timestamp);
+    EXPECT_EQ(4, get<Format>(m.GetLargeRecord().GetBlob()).process_thread.process_koid());
+    EXPECT_EQ(5, get<Format>(m.GetLargeRecord().GetBlob()).process_thread.thread_koid());
+    EXPECT_EQ(2, get<Format>(m.GetLargeRecord().GetBlob()).arguments.size());
+    EXPECT_TRUE(get<Format>(m.GetLargeRecord().GetBlob()).arguments[0].name() == "arg1");
+    EXPECT_EQ(11, get<Format>(m.GetLargeRecord().GetBlob()).arguments[0].value().GetInt32());
+    EXPECT_TRUE(get<Format>(m.GetLargeRecord().GetBlob()).arguments[1].name() == "arg2");
+    EXPECT_EQ(-3.14, get<Format>(m.GetLargeRecord().GetBlob()).arguments[1].value().GetDouble());
+    EXPECT_EQ(sizeof(blob), get<Format>(m.GetLargeRecord().GetBlob()).blob_size);
+    EXPECT_STR_EQ(blob,
+                  reinterpret_cast<const char*>(get<Format>(m.GetLargeRecord().GetBlob()).blob));
+
+    r = std::move(m);
+    EXPECT_EQ(trace::RecordType::kLargeRecord, r.type());
+    EXPECT_EQ(trace::LargeRecordType::kBlob, r.GetLargeRecord().type());
+    EXPECT_TRUE(fit::holds_alternative<Format>(r.GetLargeRecord().GetBlob()));
+    EXPECT_TRUE(get<Format>(r.GetLargeRecord().GetBlob()).category == "category");
+    EXPECT_TRUE(get<Format>(r.GetLargeRecord().GetBlob()).name == "name");
+    EXPECT_EQ(123, get<Format>(r.GetLargeRecord().GetBlob()).timestamp);
+    EXPECT_EQ(4, get<Format>(r.GetLargeRecord().GetBlob()).process_thread.process_koid());
+    EXPECT_EQ(5, get<Format>(r.GetLargeRecord().GetBlob()).process_thread.thread_koid());
+    EXPECT_EQ(2, get<Format>(r.GetLargeRecord().GetBlob()).arguments.size());
+    EXPECT_TRUE(get<Format>(r.GetLargeRecord().GetBlob()).arguments[0].name() == "arg1");
+    EXPECT_EQ(11, get<Format>(r.GetLargeRecord().GetBlob()).arguments[0].value().GetInt32());
+    EXPECT_TRUE(get<Format>(r.GetLargeRecord().GetBlob()).arguments[1].name() == "arg2");
+    EXPECT_EQ(-3.14, get<Format>(r.GetLargeRecord().GetBlob()).arguments[1].value().GetDouble());
+    EXPECT_EQ(sizeof(blob), get<Format>(r.GetLargeRecord().GetBlob()).blob_size);
+    EXPECT_STR_EQ(blob,
+                  reinterpret_cast<const char*>(get<Format>(r.GetLargeRecord().GetBlob()).blob));
+
+    auto expected = fbl::StringPrintf(
+        "LargeRecord(Blob(format: blob_event, category: \"category\", name: \"name\", "
+        "ts: 123, pt: 4/5, {arg1: int32(11), arg2: double(-3.140000)}, "
+        "size: %zu, preview: %s))",
+        sizeof(blob), preview);
+    EXPECT_STR_EQ(expected.c_str(), r.ToString().c_str());
   }
 }
 

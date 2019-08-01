@@ -36,7 +36,14 @@ uint64_t GetBufferWordsWritten(const uint64_t* buffer, uint64_t size_in_words) {
   const uint64_t* end = start + size_in_words;
 
   while (current < end) {
-    auto length = trace::RecordFields::RecordSize::Get<uint16_t>(*current);
+    auto type = trace::RecordFields::Type::Get<trace::RecordType>(*current);
+    uint64_t length;
+    if (type != trace::RecordType::kLargeRecord) {
+      length = trace::RecordFields::RecordSize::Get<size_t>(*current);
+    } else {
+      length = trace::LargeBlobFields::RecordSize::Get<size_t>(*current);
+    }
+
     if (length == 0 || length > trace::RecordFields::kMaxRecordSizeBytes ||
         current + length >= end) {
       break;

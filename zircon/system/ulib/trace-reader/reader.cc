@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace-reader/reader.h>
-
 #include <inttypes.h>
+
+#include <utility>
 
 #include <fbl/string_printf.h>
 #include <trace-engine/fields.h>
-
-#include <utility>
+#include <trace-reader/reader.h>
 
 namespace trace {
 
@@ -25,18 +24,29 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
     if (!pending_header_ && !chunk.ReadUint64(&pending_header_))
       return true;  // need more data
 
-    auto size = RecordFields::RecordSize::Get<size_t>(pending_header_);
+    auto type = RecordFields::Type::Get<RecordType>(pending_header_);
+
+    size_t size;
+    if (type != RecordType::kLargeRecord) {
+      size = RecordFields::RecordSize::Get<size_t>(pending_header_);
+      ZX_DEBUG_ASSERT(size <= RecordFields::kMaxRecordSizeWords);
+      static_assert(RecordFields::kMaxRecordSizeBytes <=
+                    TRACE_ENCODED_INLINE_LARGE_RECORD_MAX_SIZE);
+    } else {
+      size = LargeBlobFields::RecordSize::Get<size_t>(pending_header_);
+      ZX_DEBUG_ASSERT(size <= BytesToWords(TRACE_ENCODED_INLINE_LARGE_RECORD_MAX_SIZE));
+    }
     if (size == 0) {
       ReportError("Unexpected record of size 0");
       return false;  // fatal error
     }
-    ZX_DEBUG_ASSERT(size <= RecordFields::kMaxRecordSizeWords);
 
+    // TODO(PT-211): Here we assume that the entire blob payload can
+    // fit into the read buffer.
     Chunk record;
     if (!chunk.ReadChunk(size - 1, &record))
       return true;  // need more data to decode record
 
-    auto type = RecordFields::Type::Get<RecordType>(pending_header_);
     switch (type) {
       case RecordType::kMetadata: {
         if (!ReadMetadataRecord(record, pending_header_)) {
@@ -90,6 +100,12 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
       case RecordType::kLog: {
         if (!ReadLogRecord(record, pending_header_)) {
           ReportError("Failed to read log record");
+        }
+        break;
+      }
+      case RecordType::kLargeRecord: {
+        if (!ReadLargeRecord(record, pending_header_)) {
+          ReportError("Failed to read large record");
         }
         break;
       }
@@ -412,6 +428,92 @@ bool TraceReader::ReadLogRecord(Chunk& record, RecordHeader header) {
       !record.ReadString(log_message_length, &log_message))
     return false;
   record_consumer_(Record(Record::Log{timestamp, process_thread, fbl::String(log_message)}));
+  return true;
+}
+
+bool TraceReader::ReadLargeRecord(trace::Chunk& record, trace::RecordHeader header) {
+  auto large_type = LargeRecordFields::LargeType::Get<LargeRecordType>(header);
+
+  switch (large_type) {
+    case LargeRecordType::kBlob:
+      return ReadLargeBlob(record, header);
+    default:
+      ReportError(
+          fbl::StringPrintf("Skipping unknown large record type %d", ToUnderlyingType(large_type)));
+  }
+  return true;
+}
+
+bool TraceReader::ReadLargeBlob(trace::Chunk& record, trace::RecordHeader header) {
+  auto format_type = LargeBlobFields::BlobFormat::Get<trace_blob_format_t>(header);
+
+  switch (format_type) {
+    case TRACE_BLOB_FORMAT_EVENT: {
+      uint64_t format_header;
+      if (!record.ReadUint64(&format_header))
+        return false;
+
+      using Format = BlobFormatEventFields;
+      auto category_ref = Format::CategoryStringRef::Get<trace_encoded_string_ref_t>(format_header);
+      auto name_ref = Format::NameStringRef::Get<trace_encoded_string_ref_t>(format_header);
+      auto argument_count = Format::ArgumentCount::Get<size_t>(format_header);
+      auto thread_ref = Format::ThreadRef::Get<trace_encoded_thread_ref_t>(format_header);
+
+      fbl::String category;
+      fbl::String name;
+      trace_ticks_t timestamp;
+      ProcessThread process_thread;
+      fbl::Vector<Argument> arguments;
+      uint64_t blob_size;
+      const void* blob;
+      if (!DecodeStringRef(record, category_ref, &category) ||
+          !DecodeStringRef(record, name_ref, &name) || !record.ReadUint64(&timestamp) ||
+          !DecodeThreadRef(record, thread_ref, &process_thread) ||
+          !ReadArguments(record, argument_count, &arguments) || !record.ReadUint64(&blob_size) ||
+          !record.ReadInPlace(trace::BytesToWords(trace::Pad(blob_size)), &blob))
+        return false;
+
+      record_consumer_(Record(Record::Large(LargeRecordData::Blob(LargeRecordData::BlobEvent{
+          std::move(category),
+          std::move(name),
+          timestamp,
+          process_thread,
+          std::move(arguments),
+          blob,
+          blob_size,
+      }))));
+      break;
+    }
+    case TRACE_BLOB_FORMAT_ATTACHMENT: {
+      uint64_t format_header;
+      if (!record.ReadUint64(&format_header))
+        return false;
+
+      using Format = BlobFormatAttachmentFields;
+      auto category_ref = Format::CategoryStringRef::Get<trace_encoded_string_ref_t>(format_header);
+      auto name_ref = Format::NameStringRef::Get<trace_encoded_string_ref_t>(format_header);
+
+      fbl::String category;
+      fbl::String name;
+      uint64_t blob_size;
+      const void* blob;
+      if (!DecodeStringRef(record, category_ref, &category) ||
+          !DecodeStringRef(record, name_ref, &name) || !record.ReadUint64(&blob_size) ||
+          !record.ReadInPlace(trace::BytesToWords(trace::Pad(blob_size)), &blob))
+        return false;
+
+      record_consumer_(Record(Record::Large(LargeRecordData::Blob(LargeRecordData::BlobAttachment{
+          std::move(category),
+          std::move(name),
+          blob,
+          blob_size,
+      }))));
+      break;
+    }
+    default:
+      ReportError(fbl::StringPrintf("Skipping unknown large blob record format %d",
+                                    ToUnderlyingType(format_type)));
+  }
   return true;
 }
 

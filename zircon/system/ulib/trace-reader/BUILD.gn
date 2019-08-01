@@ -24,9 +24,13 @@ library("trace-reader") {
 
     # <trace-reader/records.h> has #include <fbl/array.h>.
     "$zx/system/ulib/fbl:headers",
+
+    # <trace-reader/records.h> has #include <lib/fit/variant.h>.
+    "$zx/system/ulib/fit:headers",
   ]
   deps = [
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
   ]
 }
 
@@ -38,6 +42,7 @@ test("trace-reader-test") {
   ]
   deps = [
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/trace-engine:trace-engine-headers-for-reader",
     "$zx/system/ulib/trace-reader",
     "$zx/system/ulib/zxtest",

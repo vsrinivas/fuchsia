@@ -43,6 +43,7 @@ struct Field {
 
   template <typename U>
   static constexpr U Get(uint64_t word) {
+    static_assert(sizeof(U) * 8 >= end - begin + 1, "type must fit all the bits");
     return static_cast<U>((word >> begin) & kMask);
   }
 
@@ -74,11 +75,20 @@ struct StringArgumentFields : ArgumentFields {
 };
 
 struct RecordFields {
-  static constexpr size_t kMaxRecordSizeWords = 0xfff;
-  static constexpr size_t kMaxRecordSizeBytes = WordsToBytes(kMaxRecordSizeWords);
+  static constexpr uint64_t kMaxRecordSizeWords = 0xfff;
+  static constexpr uint64_t kMaxRecordSizeBytes = WordsToBytes(kMaxRecordSizeWords);
 
   using Type = Field<0, 3>;
   using RecordSize = Field<4, 15>;
+};
+
+struct LargeRecordFields {
+  static constexpr uint64_t kMaxRecordSizeWords = (1ull << 32) - 1;
+  static constexpr uint64_t kMaxRecordSizeBytes = WordsToBytes(kMaxRecordSizeWords);
+
+  using Type = Field<0, 3>;
+  using RecordSize = Field<4, 35>;
+  using LargeType = Field<36, 39>;
 };
 
 struct MetadataRecordFields : RecordFields {
@@ -153,6 +163,22 @@ struct LogRecordFields : RecordFields {
   static constexpr size_t kMaxMessageLength = 0x7fff;
   using LogMessageLength = Field<16, 30>;
   using ThreadRef = Field<32, 39>;
+};
+
+struct LargeBlobFields : LargeRecordFields {
+  using BlobFormat = Field<40, 43>;
+};
+
+struct BlobFormatAttachmentFields {
+  using CategoryStringRef = Field<0, 15>;
+  using NameStringRef = Field<16, 31>;
+};
+
+struct BlobFormatEventFields {
+  using CategoryStringRef = Field<0, 15>;
+  using NameStringRef = Field<16, 31>;
+  using ArgumentCount = Field<32, 35>;
+  using ThreadRef = Field<36, 43>;
 };
 
 }  // namespace trace
