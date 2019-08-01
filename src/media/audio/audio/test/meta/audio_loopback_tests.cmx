@@ -19,6 +19,7 @@
     "sandbox": {
         "services": [
             "fuchsia.media.Audio",
+            "fuchsia.media.AudioCore",
             "fuchsia.media.AudioDeviceEnumerator",
             "fuchsia.virtualaudio.Control",
             "fuchsia.virtualaudio.Output"

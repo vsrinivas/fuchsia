@@ -5,6 +5,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/clock.h>
 
 #include <fbl/algorithm.h>
@@ -19,21 +20,6 @@ namespace media::audio::test {
 //
 // Base Class for testing simple playback and capture with loopback.
 class AudioLoopbackTest : public media::audio::test::AudioTestBase {
- public:
-  static void SetAudioSync(fuchsia::media::AudioSyncPtr audio_sync) {
-    AudioLoopbackTest::audio_sync_ = std::move(audio_sync);
-  }
-
-  static void SetVirtualAudioControlSync(
-      fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync) {
-    AudioLoopbackTest::virtual_audio_control_sync_ = std::move(virtual_audio_control_sync);
-  }
-
-  static void SetVirtualAudioOutputSync(
-      fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync) {
-    AudioLoopbackTest::virtual_audio_output_sync_ = std::move(virtual_audio_output_sync);
-  }
-
  protected:
   static constexpr int32_t kSampleRate = 8000;
   static constexpr int kChannelCount = 1;
@@ -44,8 +30,15 @@ class AudioLoopbackTest : public media::audio::test::AudioTestBase {
                                               -0x234, -0x04b7, 0x0310,  0x0def,  -0x0101, -0x2020,
                                               0x1357, 0x1324,  0x0135,  0x0132};
 
+  static std::shared_ptr<sys::ServiceDirectory> service_directory_;
+
+  static void SetUpTestSuite();
+  static void TearDownTestSuite();
+
   void SetUp() override;
   void TearDown() override;
+
+  void SetUpVirtualAudioOutput();
 
   void SetUpRenderer(unsigned int index, int16_t data);
   void CleanUpRenderer(unsigned int index);
@@ -68,72 +61,113 @@ class AudioLoopbackTest : public media::audio::test::AudioTestBase {
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
   uint64_t virtual_audio_output_token_;
 
-  static fuchsia::media::AudioSyncPtr audio_sync_;
-  static fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
-  static fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync_;
+  fuchsia::media::AudioSyncPtr audio_sync_;
+  fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync_;
 };
 
-fuchsia::media::AudioSyncPtr AudioLoopbackTest::audio_sync_;
-fuchsia::virtualaudio::ControlSyncPtr AudioLoopbackTest::virtual_audio_control_sync_;
-fuchsia::virtualaudio::OutputSyncPtr AudioLoopbackTest::virtual_audio_output_sync_;
+// static
+std::shared_ptr<sys::ServiceDirectory> AudioLoopbackTest::service_directory_ = nullptr;
 
-// The AudioLoopbackEnvironment class allows us to make configuration changes
-// before any test case begins, and after all test cases complete.
-class AudioLoopbackEnvironment : public testing::Environment {
- public:
-  // Do any binary-wide or cross-test-suite setup, before any test suite runs.
-  // Note: if --gtest_repeat is used, this is called at start of EVERY repeat.
-  //
-  // Before any test cases in this program, synchronously connect to the service
-  // to ensure that the audio and audio_core components are present and loaded,
-  // and that at least one (virtual) audio output device is present.
-  //
-  // On assert-false during this SetUp method, no test cases run, and they may
-  // display as passed. However, the overall binary returns non-zero (fail).
-  void SetUp() override {
-    testing::Environment::SetUp();
-
-    async::Loop loop(&kAsyncLoopConfigAttachToThread);
-
-    // This is an unchanging input for the entire component; get it once here.
-    auto startup_context = sys::ComponentContext::Create();
-
-    // Only connect to services we can use synchronously once per suite.
-    fuchsia::media::AudioSyncPtr audio_sync;
-    startup_context->svc()->Connect(audio_sync.NewRequest());
-    ASSERT_TRUE(audio_sync.is_bound());
-    AudioLoopbackTest::SetAudioSync(std::move(audio_sync));
-
-    fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync;
-    startup_context->svc()->Connect(virtual_audio_control_sync.NewRequest());
-    ASSERT_TRUE(virtual_audio_control_sync.is_bound());
-    AudioLoopbackTest::SetVirtualAudioControlSync(std::move(virtual_audio_control_sync));
-
-    fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync;
-    startup_context->svc()->Connect(virtual_audio_output_sync.NewRequest());
-    ASSERT_TRUE(virtual_audio_output_sync.is_bound());
-    AudioLoopbackTest::SetVirtualAudioOutputSync(std::move(virtual_audio_output_sync));
-
-    AudioTestBase::SetStartupContext(std::move(startup_context));
+// static
+void AudioLoopbackTest::SetUpTestSuite() {
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  if (!service_directory_) {
+    service_directory_ = sys::ComponentContext::Create()->svc();
   }
+  ASSERT_NE(service_directory_, nullptr);
 
-  // Do any last cleanup, after all test suites in this binary have completed.
-  // Note: if --gtest_repeat is used, this is called at end of EVERY repeat.
-  //
-  // void TearDown() override {}
+  // Disable device settings files
+  fuchsia::media::AudioCoreSyncPtr audio_core_sync;
+  service_directory_->Connect(audio_core_sync.NewRequest());
+  ASSERT_EQ(ZX_OK, audio_core_sync->EnableDeviceSettings(false));
 
-  ///// If needed, this (overriding) function would also need to be public.
-  //
-  // Unlike TearDown, this is called once after all repetition has concluded.
-  //
-  //    ~AudioLoopbackEnvironment() override {}
-};
+  // Ensure that virtualaudio is enabled, before testing commences.
+  fuchsia::virtualaudio::ControlSyncPtr control_sync;
+  service_directory_->Connect(control_sync.NewRequest());
+  ASSERT_EQ(ZX_OK, control_sync->Enable());
+}
+
+// static
+void AudioLoopbackTest::TearDownTestSuite() {
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  ASSERT_NE(service_directory_, nullptr);
+
+  // Ensure that virtualaudio is disabled, by the time we leave.
+  fuchsia::virtualaudio::ControlSyncPtr control_sync;
+  service_directory_->Connect(control_sync.NewRequest());
+  ASSERT_EQ(ZX_OK, control_sync->Disable());
+
+  media::audio::test::AudioTestBase::TearDownTestSuite();
+}
 
 // AudioLoopbackTest implementation
 //
 void AudioLoopbackTest::SetUp() {
   AudioTestBase::SetUp();
+  ASSERT_NE(service_directory_, nullptr);
 
+  service_directory_->Connect(audio_dev_enum_.NewRequest());
+  ASSERT_TRUE(audio_dev_enum_.is_bound());
+  audio_dev_enum_.set_error_handler(ErrorHandler());
+
+  SetUpVirtualAudioOutput();
+
+  audio_dev_enum_.events().OnDeviceAdded =
+      CompletionCallback([](fuchsia::media::AudioDeviceInfo unused) {
+        ASSERT_TRUE(false) << "Audio device added while test was running";
+      });
+
+  audio_dev_enum_.events().OnDeviceRemoved = CompletionCallback([this](uint64_t token) {
+    ASSERT_FALSE(token == virtual_audio_output_token_)
+        << "Audio device removed while test was running";
+  });
+
+  audio_dev_enum_.events().OnDefaultDeviceChanged =
+      CompletionCallback([](uint64_t old_default_token, uint64_t new_default_token) {
+        ASSERT_TRUE(false) << "Default route changed while test was running.";
+      });
+
+  service_directory_->Connect(audio_sync_.NewRequest());
+  audio_sync_->SetSystemGain(0.0f);
+  audio_sync_->SetSystemMute(false);
+}
+
+void AudioLoopbackTest::TearDown() {
+  audio_capturer_.Unbind();
+  for (auto& renderer : audio_renderer_) {
+    renderer.Unbind();
+  }
+
+  bool removed = false;
+  audio_dev_enum_.events().OnDeviceRemoved =
+      CompletionCallback([&removed, want_token = virtual_audio_output_token_](uint64_t token) {
+        if (token == want_token) {
+          removed = true;
+        }
+      });
+  audio_dev_enum_.events().OnDeviceAdded = nullptr;
+  audio_dev_enum_.events().OnDefaultDeviceChanged = nullptr;
+
+  // Remove our virtual audio output device
+  if (virtual_audio_output_sync_.is_bound()) {
+    zx_status_t status = virtual_audio_output_sync_->Remove();
+    ASSERT_EQ(status, ZX_OK) << "Failed to remove virtual audio output";
+
+    virtual_audio_output_sync_.Unbind();
+  }
+
+  ExpectCondition([&removed]() { return removed; });
+
+  EXPECT_TRUE(audio_dev_enum_.is_bound());
+  EXPECT_TRUE(audio_sync_.is_bound());
+
+  AudioTestBase::TearDown();
+}
+
+// SetUpVirtualAudioOutput
+//
+// For loopback tests, setup the required audio output, using virtualaudio.
+void AudioLoopbackTest::SetUpVirtualAudioOutput() {
   std::string dev_uuid_read = "4a41494a4a41494a4a41494a4a41494a";
   std::array<uint8_t, 16> dev_uuid{0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a,
                                    0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a};
@@ -153,17 +187,6 @@ void AudioLoopbackTest::SetUp() {
     default_dev = new_default_token;
   };
 
-  audio_dev_enum_.set_error_handler(ErrorHandler());
-
-  startup_context_->svc()->Connect(audio_dev_enum_.NewRequest());
-  ASSERT_TRUE(audio_dev_enum_.is_bound());
-  // We need at least one active audio output, for loopback capture to work.
-  // So use this Control to enable virtualaudio and add a virtual audio
-  // output that will exist for the entirety of this binary's test cases. We
-  // will remove it and disable virtual_audio immediately afterward.
-  zx_status_t status = virtual_audio_control_sync_->Enable();
-  ASSERT_EQ(status, ZX_OK) << "Failed to enable virtualaudio";
-
   // Ensure that that our connection to the device enumerator has completed
   // enumerating the audio devices if any exist before we add ours.  This serves
   // as a synchronization point to make sure audio_core has our OnDeviceAdded
@@ -175,8 +198,11 @@ void AudioLoopbackTest::SetUp() {
       CompletionCallback([](std::vector<fuchsia::media::AudioDeviceInfo> devices) {}));
   ExpectCallback();
 
+  // Loopback capture requires an active audio output. Use virtualaudio to add a virtual output.
+  service_directory_->Connect(virtual_audio_output_sync_.NewRequest());
+
   // Create an output device using default settings, save it while tests run.
-  status = virtual_audio_output_sync_->SetUniqueId(dev_uuid);
+  auto status = virtual_audio_output_sync_->SetUniqueId(dev_uuid);
   ASSERT_EQ(status, ZX_OK) << "Failed to set virtual audio output uuid";
 
   status = virtual_audio_output_sync_->Add();
@@ -191,59 +217,6 @@ void AudioLoopbackTest::SetUp() {
   ASSERT_EQ(virtual_audio_output_token_, default_dev)
       << "Timed out waiting for audio_core to make the virtual audio output "
          "the default.";
-
-  audio_dev_enum_.events().OnDeviceAdded =
-      CompletionCallback([](fuchsia::media::AudioDeviceInfo unused) {
-        ASSERT_TRUE(false) << "Audio device added while test was running";
-      });
-
-  audio_dev_enum_.events().OnDeviceRemoved = CompletionCallback([this](uint64_t token) {
-    ASSERT_FALSE(token == virtual_audio_output_token_)
-        << "Audio device removed while test was running";
-  });
-
-  audio_dev_enum_.events().OnDefaultDeviceChanged =
-      CompletionCallback([](uint64_t old_default_token, uint64_t new_default_token) {
-        ASSERT_TRUE(false) << "Default route changed while test was running.";
-      });
-
-  audio_sync_->SetSystemGain(0.0f);
-  audio_sync_->SetSystemMute(false);
-}
-
-void AudioLoopbackTest::TearDown() {
-  bool removed = false;
-  audio_dev_enum_.events().OnDeviceRemoved =
-      CompletionCallback([&removed, want_token = virtual_audio_output_token_](uint64_t token) {
-        if (token == want_token) {
-          removed = true;
-        }
-      });
-  audio_dev_enum_.events().OnDeviceAdded = nullptr;
-  audio_dev_enum_.events().OnDefaultDeviceChanged = nullptr;
-
-  // Remove our virtual audio output device
-  if (virtual_audio_output_sync_.is_bound()) {
-    zx_status_t status = virtual_audio_output_sync_->Remove();
-    ASSERT_EQ(status, ZX_OK) << "Failed to remove virtual audio output";
-  }
-
-  ExpectCondition([&removed]() { return removed; });
-
-  // And ensure that virtualaudio is disabled, by the time we leave.
-  if (virtual_audio_control_sync_.is_bound()) {
-    zx_status_t status = virtual_audio_control_sync_->Disable();
-    ASSERT_EQ(status, ZX_OK) << "Failed to disable virtualaudio";
-  }
-
-  EXPECT_TRUE(audio_sync_.is_bound());
-
-  audio_capturer_.Unbind();
-  for (auto& renderer : audio_renderer_) {
-    renderer.Unbind();
-  }
-
-  AudioTestBase::TearDown();
 }
 
 // SetUpRenderer
@@ -379,9 +352,7 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
   auto play_at = zx::clock::get_monotonic().get();
-  for (auto renderer_num = 1u; renderer_num < num_renderers; ++renderer_num) {
-    audio_renderer_[renderer_num]->PlayNoReply(play_at, 0);
-  }
+
   // Only get the callback for one renderer -- arbitrarily, renderer 0.
   audio_renderer_[0]->Play(play_at, 0,
                            CompletionCallback([&ref_time_received, &media_time_received](
@@ -395,6 +366,11 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
   // time on the system.
   EXPECT_EQ(media_time_received, 0);
   EXPECT_GT(ref_time_received, 0);
+
+  // Start the other renderers at exactly the same [ref_time, media_time] correspondence.
+  for (auto renderer_num = 1u; renderer_num < num_renderers; ++renderer_num) {
+    audio_renderer_[renderer_num]->PlayNoReply(ref_time_received, media_time_received);
+  }
 
   // Add a callback for when we get our captured packet.
   fuchsia::media::StreamPacket captured;
@@ -444,14 +420,3 @@ TEST_F(AudioLoopbackTest, SingleStream) { TestLoopback(1); }
 TEST_F(AudioLoopbackTest, ManyStreams) { TestLoopback(16); }
 
 }  // namespace media::audio::test
-
-int main(int argc, char** argv) {
-  testing::InitGoogleTest(&argc, argv);
-
-  // gtest takes ownership of registered environments: *do not delete them*
-  testing::AddGlobalTestEnvironment(new media::audio::test::AudioLoopbackEnvironment);
-
-  int result = RUN_ALL_TESTS();
-
-  return result;
-}

@@ -10,21 +10,29 @@ group("test") {
   deps = [
     # For now, build the binary, not the package, so it isn't included in CQ.
     ":audio_loopback_tests_bin",
+    # ":audio_loopback_tests",
   ]
 }
 
-# test_package("audio_loopback_tests") {
-#   deps = [
-#     ":audio_loopback_tests_bin",
-#   ]
+test_package("audio_loopback_tests") {
+  deps = [
+    ":audio_loopback_tests_bin",
+  ]
 
-#   tests = [
-#     {
-#       name = "audio_loopback_tests"
-#       environments = basic_envs
-#     },
-#   ]
-# }
+  tests = [
+    {
+      name = "audio_loopback_tests"
+
+      # This test uses real-time streaming and must be run on real hardware (add new plats here).
+      environments = [
+        astro_env,
+        nuc_env,
+        sherlock_env,
+        vim2_env,
+      ]
+    },
+  ]
+}
 
 executable("audio_loopback_tests_bin") {
   testonly = true
@@ -40,6 +48,7 @@ executable("audio_loopback_tests_bin") {
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/test",
     "//zircon/public/lib/fzl",
   ]
