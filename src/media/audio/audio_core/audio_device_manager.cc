@@ -9,9 +9,10 @@
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_link.h"
-#include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/audio_plug_detector.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/driver_output.h"
+#include "src/media/audio/audio_core/logging.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 
@@ -748,6 +749,31 @@ void AudioDeviceManager::CommitDirtySettings() {
   // If we need to update in the future, schedule a commit task to do so.
   if (next != zx::time::infinite()) {
     commit_settings_task_.PostForTime(service_->dispatcher(), next);
+  }
+}
+
+void AudioDeviceManager::AddDeviceByChannel(::zx::channel device_channel, std::string device_name,
+                                            bool is_input) {
+  AUD_VLOG(TRACE) << " adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
+
+  // Hand the stream off to the proper type of class to manage.
+  fbl::RefPtr<AudioDevice> new_device;
+  if (is_input) {
+    new_device = AudioInput::Create(std::move(device_channel), this);
+  } else {
+    new_device = DriverOutput::Create(std::move(device_channel), this);
+  }
+
+  if (new_device == nullptr) {
+    FXL_LOG(ERROR) << "Failed to instantiate audio " << (is_input ? "input" : "output") << " for '"
+                   << device_name << "'";
+  }
+
+  REP(AddingDevice(device_name, *new_device));
+  zx_status_t status = AddDevice(std::move(new_device));
+
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "AddDevice failed";
   }
 }
 

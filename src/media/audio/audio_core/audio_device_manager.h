@@ -5,12 +5,13 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_DEVICE_MANAGER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_DEVICE_MANAGER_H_
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_ptr.h>
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_input.h"
@@ -126,6 +127,9 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
 
   void EnableDeviceSettings(bool enabled) { AudioDeviceSettings::EnableDeviceSettings(enabled); }
+
+  void AddDeviceByChannel(::zx::channel device_channel, std::string device_name,
+                          bool is_input) final;
 
  private:
   // KeyTraits we use to sort our AudioDeviceSettings set to ensure uniqueness.

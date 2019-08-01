@@ -10,6 +10,7 @@ group("test") {
   testonly = true
   deps = [
     ":audio_core_inspect_tests",
+    ":audio_device_service_tests",
     ":audio_device_tests",
     ":audio_fidl_tests",
     ":audio_pipeline_tests",
@@ -47,6 +48,41 @@ test("audio_core_inspect_tests_bin") {
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
     "//zircon/public/lib/dispatcher-pool",
+  ]
+}
+
+test_package("audio_device_service_tests") {
+  deps = [
+    ":audio_device_service_tests_bin",
+  ]
+
+  tests = [
+    {
+      name = "audio_device_service_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("audio_device_service_tests_bin") {
+  testonly = true
+  output_name = "audio_device_service_tests"
+
+  sources = [
+    "service/audio_device_service_test.cc",
+    "service/audio_device_service_test.h",
+    "service/message_transceiver.cc",
+    "service/message_transceiver.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr",
+    "//garnet/public/lib/fostr/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.virtualaudio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:test_settings",
+    "//src/media/audio/lib/test",
   ]
 }
 
@@ -144,10 +180,10 @@ executable("audio_pipeline_tests_bin") {
   output_name = "audio_pipeline_tests"
 
   sources = [
+    "//src/media/audio/audio_core/logging.h",
     "pipeline/audio_pipeline_main.cc",
     "pipeline/audio_pipeline_test.cc",
     "pipeline/audio_pipeline_test.h",
-    "//src/media/audio/audio_core/logging.h"
   ]
 
   deps = [

@@ -5,9 +5,6 @@
 #include "src/media/audio/audio_core/audio_plug_detector.h"
 
 #include <dirent.h>
-#include <fbl/auto_lock.h>
-#include <fbl/macros.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
@@ -18,6 +15,10 @@
 #include <zircon/compiler.h>
 #include <zircon/device/audio.h>
 #include <zircon/device/vfs.h>
+
+#include <fbl/auto_lock.h>
+#include <fbl/macros.h>
+#include <fbl/unique_fd.h>
 
 #include "src/lib/files/unique_fd.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
@@ -90,13 +91,12 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name, bool
   fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
     REP(FailedToOpenDevice(name, is_input, errno));
-    FXL_LOG(WARNING) << "AudioPlugDetector failed to open device node at \"" << name << "\". ("
-                     << strerror(errno) << " : " << errno << ")";
+    FXL_LOG(ERROR) << "AudioPlugDetector failed to open device node at \"" << name << "\". ("
+                   << strerror(errno) << " : " << errno << ")";
     return;
   }
 
-  // Obtain the FDIO device channel, then wrap it in a synchronous proxy and use
-  // it to get the stream channel.
+  // Obtain the FDIO device channel, wrap it in a sync proxy, use that to get the stream channel.
   zx_status_t res;
   zx::channel dev_channel;
   res = fdio_get_service_handle(dev_node.release(), dev_channel.reset_and_get_address());
@@ -118,21 +118,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name, bool
     return;
   }
 
-  // Hand the stream off to the proper type of class to manage.
-  fbl::RefPtr<AudioDevice> new_device;
-  if (is_input) {
-    new_device = AudioInput::Create(std::move(channel), manager_);
-  } else {
-    new_device = DriverOutput::Create(std::move(channel), manager_);
-  }
-
-  if (new_device == nullptr) {
-    FXL_LOG(WARNING) << "Failed to instantiate audio " << (is_input ? "input" : "output")
-                     << " for \"" << name << "\"";
-  } else {
-    REP(AddingDevice(name, *new_device));
-    manager_->AddDevice(std::move(new_device));
-  }
+  manager_->AddDeviceByChannel(std::move(channel), name, is_input);
 }
 
 }  // namespace media::audio
