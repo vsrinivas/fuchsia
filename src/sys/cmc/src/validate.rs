@@ -796,6 +796,20 @@ mod tests {
                         }
                     },
                     {
+                        "directory": {
+                            "source": {
+                                "framework": {}
+                            },
+                            "source_path": "/hub",
+                            "target": {
+                                "collection": {
+                                    "name": "modular"
+                                }
+                            },
+                            "target_path": "/hub"
+                        }
+                    },
+                    {
                         "storage": {
                             "type": "data",
                             "source": {
@@ -1504,6 +1518,13 @@ mod tests {
                         "from": "realm",
                         "to": [
                             { "dest": "#modular" },
+                        ]
+                    },
+                    {
+                        "directory": "/hub",
+                        "from": "framework",
+                        "to": [
+                            { "dest": "#modular", "as": "/hub" }
                         ]
                     },
                     {

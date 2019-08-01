@@ -291,6 +291,8 @@ where
     let ret = if from.starts_with("#") {
         let (_, child_name) = from.split_at(1);
         cm::Ref::Child(cm::ChildRef { name: cm::Name::new(child_name.to_string())? })
+    } else if from == "framework" {
+        cm::Ref::Framework(cm::FrameworkRef {})
     } else if from == "realm" {
         cm::Ref::Realm(cm::RealmRef {})
     } else if from == "self" {
@@ -603,6 +605,13 @@ mod tests {
                         ]
                     },
                     {
+                        "directory": "/hub",
+                        "from": "framework",
+                        "to": [
+                            { "dest": "#modular", "as": "/hub" }
+                        ]
+                    },
+                    {
                         "storage": "data",
                         "from": "#logger-storage",
                         "to": [
@@ -695,6 +704,20 @@ mod tests {
                     }
                 },
                 "target_path": "/data"
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "framework": {}
+                },
+                "source_path": "/hub",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "/hub"
             }
         },
         {

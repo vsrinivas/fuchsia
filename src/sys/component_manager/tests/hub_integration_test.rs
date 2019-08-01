@@ -165,5 +165,11 @@ async fn test() -> Result<(), Error> {
         await!(hub_test_hook.observe("/hub".to_string()))
     );
 
+    // Verify that hub_client's view is able to correctly read the names of the
+    // children of the parent echo_realm.
+    assert_eq!(
+        vec!["echo_server", "hub_client"],
+        await!(hub_test_hook.observe("/parent_hub/children".to_string()))
+        );
     Ok(())
 }

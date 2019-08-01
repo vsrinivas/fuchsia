@@ -13,6 +13,15 @@
                 },
             ],
         },
+        {
+          "directory": "/hub",
+          "from": "framework",
+          "to": [
+            {
+              "dest": "#hub_client",
+            },
+          ],
+        },
     ],
     // Two children: a server and client. "hub_client" has "eager" startup so it
     // will be started along with the realm.

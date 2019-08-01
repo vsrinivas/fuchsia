@@ -5,6 +5,9 @@
     },
     "use": [
         {
+          "directory": "/hub", "from": "realm", "as": "/parent_hub"
+        },
+        {
             "directory": "/hub/exec", "from": "framework", "as": "/hub"
         },
         {

@@ -490,6 +490,7 @@ impl<'a> ValidationContext<'a> {
         match source {
             Some(fsys::Ref::Realm(_)) => {}
             Some(fsys::Ref::Self_(_)) => {}
+            Some(fsys::Ref::Framework(_)) => {}
             Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
             Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
             None => self.errors.push(Error::missing_field(decl, "source")),

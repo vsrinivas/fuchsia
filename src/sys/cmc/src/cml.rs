@@ -10,7 +10,8 @@ use std::collections::HashMap;
 
 lazy_static! {
     pub static ref REFERENCE_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
-    pub static ref FROM_RE: Regex = Regex::new(r"^(realm|self|#[A-Za-z0-9\-_]+)$").unwrap();
+    pub static ref FROM_RE: Regex =
+        Regex::new(r"^(realm|framework|self|#[A-Za-z0-9\-_]+)$").unwrap();
 }
 pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";

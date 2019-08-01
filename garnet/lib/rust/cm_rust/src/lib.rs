@@ -402,6 +402,19 @@ impl TryFrom<&UseDecl> for FrameworkCapabilityDecl {
     }
 }
 
+impl TryFrom<&OfferDecl> for FrameworkCapabilityDecl {
+    type Error = Error;
+    fn try_from(decl: &OfferDecl) -> Result<Self, Self::Error> {
+        match decl {
+            OfferDecl::Directory(d) if d.source == OfferDirectorySource::Framework => {
+                Ok(FrameworkCapabilityDecl::Directory(d.source_path.clone()))
+            }
+            _ => {
+                return Err(Error::InvalidFrameworkCapability {});
+            }
+        }
+    }
+}
 impl fmt::Display for CapabilityPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if &self.dirname == "/" {
@@ -684,6 +697,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferServiceSource {
 pub enum OfferDirectorySource {
     Realm,
     Self_,
+    Framework,
     Child(String),
 }
 
@@ -692,6 +706,7 @@ impl FidlIntoNative<OfferDirectorySource> for Option<fsys::Ref> {
         match self.unwrap() {
             fsys::Ref::Realm(_) => OfferDirectorySource::Realm,
             fsys::Ref::Self_(_) => OfferDirectorySource::Self_,
+            fsys::Ref::Framework(_) => OfferDirectorySource::Framework,
             fsys::Ref::Child(c) => OfferDirectorySource::Child(c.name),
             _ => panic!("invalid OfferDirectorySource variant"),
         }
@@ -703,6 +718,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferDirectorySource {
         Some(match self {
             OfferDirectorySource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
             OfferDirectorySource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            OfferDirectorySource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
             OfferDirectorySource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
@@ -1227,6 +1243,7 @@ mod tests {
             input = vec![
                 Some(fsys::Ref::Realm(fsys::RealmRef {})),
                 Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                 Some(fsys::Ref::Child(fsys::ChildRef {
                     name: "foo".to_string(),
                     collection: None,
@@ -1236,6 +1253,7 @@ mod tests {
             result = vec![
                 OfferDirectorySource::Realm,
                 OfferDirectorySource::Self_,
+                OfferDirectorySource::Framework,
                 OfferDirectorySource::Child("foo".to_string()),
             ],
             result_type = OfferDirectorySource,

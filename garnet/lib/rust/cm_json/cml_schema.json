@@ -255,11 +255,12 @@
           },
           "from": {
             "title": "Offered capability source component",
-            "description": "The component which has the capability to offer. For services and directories either \"realm\", \"self\" or \"#$CHILD\", for storage either \"realm\" or \"$STORAGE_SECTION_NAME\".",
-            "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
+            "description": "The component which has the capability to offer. For services and directories either \"framework\", \"realm\", \"self\" or \"#$CHILD\", for storage either \"realm\" or \"$STORAGE_SECTION_NAME\".",
+            "pattern": "^(realm|framework|self|#[0-9a-z_\\-\\.]+)$",
             "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
             "examples": [
               "realm",
+              "framework",
               "self",
               "#scenic"
             ]

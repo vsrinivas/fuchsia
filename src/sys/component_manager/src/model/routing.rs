@@ -223,6 +223,13 @@ pub async fn route_and_open_storage_capability<'a>(
                     ))),
                 }
             }
+            _ => {
+                // TODO(fsamuel, geb): This bit suggests storage_decl.source should have a
+                // dedicated type, instead of reusing OfferDirectorySource.
+                return Err(ModelError::capability_discovery_error(format_err!(
+                    "Other directory sources not supported."
+                )));
+            }
         };
 
     // Bind with a local proxy, so we can create and open the relevant sub-directory for
@@ -323,7 +330,7 @@ async fn find_framework_capability<'a>(
 ) -> Result<Option<CapabilitySource>, ModelError> {
     if let Ok(capability_decl) = FrameworkCapabilityDecl::try_from(use_decl) {
         let realm = await!(model.look_up_realm(abs_moniker))?;
-        return Ok(Some(CapabilitySource::Framework(capability_decl, realm)))
+        return Ok(Some(CapabilitySource::Framework(capability_decl, realm)));
     }
     return Ok(None);
 }
@@ -416,6 +423,20 @@ async fn walk_offer_chain<'a>(
                 OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
             };
             match source {
+                OfferSource::Directory(OfferDirectorySource::Framework) => {
+                    let capability_decl =
+                        FrameworkCapabilityDecl::try_from(offer).map_err(|_| {
+                            ModelError::capability_discovery_error(format_err!(
+                                "no matching offers found for capability {:?} from component {}",
+                                pos.capability,
+                                pos.moniker(),
+                            ))
+                        })?;
+                    return Ok(Some(CapabilitySource::Framework(
+                        capability_decl,
+                        current_realm.clone(),
+                    )));
+                }
                 OfferSource::Service(OfferServiceSource::Realm)
                 | OfferSource::Directory(OfferDirectorySource::Realm)
                 | OfferSource::Storage(OfferStorageSource::Realm) => {
