@@ -336,10 +336,16 @@ pub(crate) mod tests {
     pub struct FakeUpdateChecker {
         result: Result<SystemUpdateStatus, crate::errors::ErrorKind>,
         call_count: Arc<AtomicU64>,
+        // Taking this mutex blocks update checker.
+        check_blocked: Arc<AsyncMutex<()>>,
     }
     impl FakeUpdateChecker {
         fn new(result: Result<SystemUpdateStatus, crate::errors::ErrorKind>) -> Self {
-            Self { result, call_count: Arc::new(AtomicU64::new(0)) }
+            Self {
+                result,
+                call_count: Arc::new(AtomicU64::new(0)),
+                check_blocked: Arc::new(AsyncMutex::new(())),
+            }
         }
         pub fn new_up_to_date() -> Self {
             Self::new(Ok(SystemUpdateStatus::UpToDate {
@@ -355,14 +361,22 @@ pub(crate) mod tests {
         pub fn new_error() -> Self {
             Self::new(Err(crate::errors::ErrorKind::ResolveUpdatePackage))
         }
+        pub fn block(&self) -> Option<futures::lock::MutexGuard<()>> {
+            self.check_blocked.try_lock()
+        }
         pub fn call_count(&self) -> u64 {
             self.call_count.load(Ordering::SeqCst)
         }
     }
     impl UpdateChecker for FakeUpdateChecker {
         fn check(&self) -> BoxFuture<Result<SystemUpdateStatus, crate::errors::Error>> {
+            let check_blocked = Arc::clone(&self.check_blocked);
+            let result = self.result.clone();
             self.call_count.fetch_add(1, Ordering::SeqCst);
-            future::ready(self.result.clone().map_err(|e| e.into())).boxed()
+            async move {
+                check_blocked.lock().await;
+                result.map_err(|e| e.into())
+            }.boxed()
         }
     }
 

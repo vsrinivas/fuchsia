@@ -130,6 +130,7 @@ mod tests {
         let mut executor = fasync::Executor::new_with_fake_time().unwrap();
 
         let checker = FakeUpdateChecker::new_up_to_date();
+        let update_blocked = checker.block().unwrap();
         let callback = StateChangeCollector::new();
         let manager = UpdateManager::from_checker_and_applier(
             FakeTargetChannelUpdater::new(),
@@ -148,10 +149,14 @@ mod tests {
 
         // User wins, and only 1 update check happens.
         assert_eq!(manager.try_start_update(Initiator::Manual, None), CheckStartedResult::Started);
+        // The automatic update is skipped because an update is already in progress.
         executor.set_fake_time(period.after_now());
         assert!(executor.wake_expired_timers());
-
         assert_eq!(Poll::Pending, executor.run_until_stalled(&mut cron));
+        // Let the user-initiated update check complete. The update does not run.
+        std::mem::drop(update_blocked);
+        assert_eq!(Poll::Pending, executor.run_until_stalled(&mut cron));
+
         assert_eq!(checker.call_count(), 1);
         assert_eq!(
             callback.take_states(),
