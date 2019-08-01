@@ -12,6 +12,15 @@ using fuchsia.mem;
 // Constant for unbounded vectors.
 const uint32 NO_LINT = 4294967295;
 
+/// Identifier for a commit, controlled by Ledger.
+using CommitIdentifier = bytes:128;
+
+/// Identifier for an object, controlled by Ledger.
+using ObjectIdentifier = bytes:128;
+
+/// Fingerprint, controlled by Ledger and used to watch for cloud erasure.
+using Fingerprint = bytes:32;
+
 /// Response status for cloud provider operations.
 enum Status : int32 {
     OK = 0;
@@ -47,10 +56,10 @@ protocol CloudProvider {
 protocol DeviceSet {
     /// Verifies that the device fingerprint in the cloud is still in the list of
     /// devices, ensuring that the cloud was not erased since the last sync.
-    CheckFingerprint(bytes fingerprint) -> (Status status);
+    CheckFingerprint(Fingerprint fingerprint) -> (Status status);
 
     /// Adds the device fingerprint to the list of devices in the cloud.
-    SetFingerprint(bytes fingerprint) -> (Status status);
+    SetFingerprint(Fingerprint fingerprint) -> (Status status);
 
     /// Watches the given `fingerprint` in the cloud so that `watcher` is notified
     /// when the fingerprint is erased.
@@ -66,7 +75,7 @@ protocol DeviceSet {
     ///
     /// If the returned status is not OK, the corresponding error call is also made
     /// on the watcher.
-    SetWatcher(bytes fingerprint, DeviceSetWatcher watcher)
+    SetWatcher(Fingerprint fingerprint, DeviceSetWatcher watcher)
         -> (Status status);
 
     /// Erases the entire registry of devices. This makes all devices detect that
@@ -103,7 +112,7 @@ struct PositionToken {
 /// A commit as seen by the cloud.
 table Commit {
     // A unique commit id.
-    1: bytes id;
+    1: CommitIdentifier id;
     // Opaque data stored by Ledger.
     2: bytes data;
 };
@@ -115,7 +124,7 @@ struct Commits {
 
 /// A list of references for serialization in ReferencePack.
 struct References {
-    vector<bytes:NO_LINT>:NO_LINT references;
+    vector<ObjectIdentifier>:NO_LINT references;
 };
 
 /// Contains a Buffer containing the FIDL serialization of References.
@@ -160,14 +169,14 @@ protocol PageCloud {
     /// Uploads the given object to the cloud under the given id.
     ///
     /// If the object already exists in the cloud this method returns OK.
-    AddObject(bytes id, fuchsia.mem.Buffer buffer, ReferencePack references)
+    AddObject(ObjectIdentifier id, fuchsia.mem.Buffer buffer, ReferencePack references)
         -> (Status status);
 
     /// Retrieves the object of the given id from the cloud.
     ///
     /// If the resulting `status` is `OK`, `buffer` will contain the object
     /// content. If the resulting `status` is not `OK`, `buffer` will be null.
-    GetObject(bytes id)
+    GetObject(ObjectIdentifier id)
         -> (Status status, fuchsia.mem.Buffer? buffer);
 
     /// Watches the cloud for push notifications.
@@ -201,7 +210,7 @@ protocol PageCloudWatcher {
     ///
     /// No subsequent calls are made until the client calls the callback of the
     /// previous one.
-    OnNewObject(bytes id, fuchsia.mem.Buffer buffer) -> ();
+    OnNewObject(ObjectIdentifier id, fuchsia.mem.Buffer buffer) -> ();
 
     /// Called when an error occurs.
     ///
