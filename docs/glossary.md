@@ -341,6 +341,8 @@ language agnostic and has bindings for many popular languages, including C, C++,
 Dart, Go, and Rust. This approach lets system components written in a variety of
 languages interact seamlessly.
 
+-   [FIDL](/docs/development/languages/fidl/)
+
 #### **Flutter**
 
 [Flutter](https://flutter.io/) is a functional-reactive user interface framework
@@ -641,7 +643,7 @@ There are three types of storage capabilities:
 Storage capability is a [components v2](#components-v2) concept.
 
 -   [Capability routing](#capability-routing)
--   [Storage capabilities](/docs/the-book/components/storage_capabilities.md)
+-   [Storage capabilities](/docs/the-book/components/capabilities/storage.md)
 
 #### **Story**
 

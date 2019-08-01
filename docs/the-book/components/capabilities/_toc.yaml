@@ -6,12 +6,8 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/the-book/components
-- title: "Component manifests"
-  path: /fuchsia-src/the-book/components/component_manifests
-- title: "Life of a service open"
-  path: /fuchsia-src/the-book/components/life_of_a_service_open
-- title: "ELF runner"
-  path: /fuchsia-src/the-book/components/elf_runner
-- title: "Capabilities"
   path: /fuchsia-src/the-book/components/capabilities
+- title: "Service capabilities"
+  path: /fuchsia-src/the-book/components/capabilities/service
+- title: "Storage capabilities"
+  path: /fuchsia-src/the-book/components/capabilities/storage
