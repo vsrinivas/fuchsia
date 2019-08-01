@@ -36,6 +36,7 @@ class DdkTransaction : public fidl::Transaction {
     };
 
     status_ = txn_->reply(txn_, &fidl_msg);
+    msg.ClearHandlesUnsafe();
   }
 
   void Close(zx_status_t close_status) final { status_ = close_status; }

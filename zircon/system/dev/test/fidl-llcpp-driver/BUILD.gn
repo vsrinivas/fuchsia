@@ -8,8 +8,7 @@ driver("fidl-llcpp-driver") {
   ]
 
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-serial:c",
-    "$zx/system/fidl/fuchsia-hardware-serial:llcpp",
+    "$zx/system/dev/test/fuchsia-hardware-test:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

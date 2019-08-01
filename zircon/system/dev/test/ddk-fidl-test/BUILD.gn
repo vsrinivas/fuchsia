@@ -7,9 +7,8 @@ test("ddk-fidl-test") {
     "test.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device-manager-test:c",
-    "$zx/system/fidl/fuchsia-hardware-serial:c",
-    "$zx/system/fidl/fuchsia-hardware-serial:llcpp",
+    "$zx/system/dev/test/fuchsia-hardware-test:c",
+    "$zx/system/dev/test/fuchsia-hardware-test:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",

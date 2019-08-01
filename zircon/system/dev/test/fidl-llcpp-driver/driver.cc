@@ -20,7 +20,7 @@ namespace fuchsia = ::llcpp::fuchsia;
 
 zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<DdkFidlDevice> serial_dev(new (&ac) DdkFidlDevice(dev));
+  fbl::unique_ptr<DdkFidlDevice> test_dev(new (&ac) DdkFidlDevice(dev));
 
   if (!ac.check()) {
     zxlogf(ERROR, "DdkFidlDevice::Create: no memory to allocate device!\n");
@@ -28,30 +28,31 @@ zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
   }
 
   zx_status_t status;
-  if ((status = serial_dev->Bind()) != ZX_OK) {
+  if ((status = test_dev->Bind()) != ZX_OK) {
     zxlogf(ERROR, "DdkFidlDevice::Create: Bind failed\n");
-    serial_dev.release()->DdkRelease();
+    test_dev.release()->DdkRelease();
     return status;
   }
 
   // devmgr is now in charge of the device.
-  __UNUSED auto* dummy = serial_dev.release();
+  __UNUSED auto* dummy = test_dev.release();
 
   return ZX_OK;
 }
 
 zx_status_t DdkFidlDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  fuchsia::hardware::serial::Device::Dispatch(this, msg, &transaction);
+  fuchsia::hardware::test::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
-void DdkFidlDevice::GetClass(GetClassCompleter::Sync completer) {
-  completer.Reply(fuchsia::hardware::serial::Class::CONSOLE);
+void DdkFidlDevice::GetChannel(GetChannelCompleter::Sync completer) {
+  zx::channel local;
+  zx::channel remote;
+  zx::channel::create(0, &local, &remote);
+  __UNUSED auto dummy = local.release();
+  completer.Reply(std::move(remote));
 }
-
-void DdkFidlDevice::SetConfig(fuchsia::hardware::serial::Config config,
-                              SetConfigCompleter::Sync completer) {}
 
 zx_status_t DdkFidlDevice::Bind() { return DdkAdd("ddk-fidl"); }
 

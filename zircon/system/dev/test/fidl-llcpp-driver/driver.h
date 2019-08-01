@@ -6,14 +6,13 @@
 #define ZIRCON_SYSTEM_DEV_FIDL_LLCPP_DRIVER_DRIVER_H_
 
 #include <ddk/driver.h>
-#include <ddktl/fidl.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
-#include <fuchsia/hardware/serial/llcpp/fidl.h>
+#include <fuchsia/hardware/test/llcpp/fidl.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
 namespace fidl {
@@ -22,7 +21,7 @@ class DdkFidlDevice;
 using DeviceType = ddk::Device<DdkFidlDevice, ddk::Messageable>;
 
 class DdkFidlDevice : public DeviceType,
-                      public ::llcpp::fuchsia::hardware::serial::Device::Interface {
+                      public ::llcpp::fuchsia::hardware::test::Device::Interface {
  public:
   explicit DdkFidlDevice(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -33,10 +32,7 @@ class DdkFidlDevice : public DeviceType,
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
-  // LLCPP Fidl protocols
-  void GetClass(GetClassCompleter::Sync completer) override;
-  void SetConfig(::llcpp::fuchsia::hardware::serial::Config config,
-                 SetConfigCompleter::Sync completer) override;
+  void GetChannel(GetChannelCompleter::Sync completer) override;
 };
 }  // namespace fidl
 
