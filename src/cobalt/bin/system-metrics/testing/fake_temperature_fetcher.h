@@ -14,7 +14,7 @@ namespace cobalt {
 class FakeTemperatureFetcher : public cobalt::TemperatureFetcher {
  public:
   FakeTemperatureFetcher();
-  cobalt::TemperatureFetchStatus FetchTemperature(uint32_t *temperature) override;
+  cobalt::TemperatureFetchStatus FetchTemperature(int32_t *temperature) override;
 };
 
 }  // namespace cobalt

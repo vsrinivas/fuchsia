@@ -4,6 +4,9 @@
 
 #include "aml-tsensor.h"
 #include "aml-tsensor-regs.h"
+
+#include <cmath>
+
 #include <ddk/debug.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
@@ -27,7 +30,7 @@ constexpr int32_t kCalA_ = 324;
 constexpr int32_t kCalB_ = 424;
 constexpr int32_t kCalC_ = 3159;
 constexpr int32_t kCalD_ = 9411;
-constexpr uint32_t kRebootTemp = 130000;
+constexpr float kRebootTempCelsius = 130.0f;
 
 }  // namespace
 
@@ -148,10 +151,14 @@ int AmlTSensor::TripPointIrqHandler() {
 
 zx_status_t AmlTSensor::InitTripPoints() {
   auto set_thresholds = [this](auto&& rise_threshold, auto&& fall_threshold, uint32_t i) {
-    auto rise_temperature_0 = TempToCode(thermal_config_.trip_point_info[i].up_temp, true);
-    auto rise_temperature_1 = TempToCode(thermal_config_.trip_point_info[i + 1].up_temp, true);
-    auto fall_temperature_0 = TempToCode(thermal_config_.trip_point_info[i].down_temp, false);
-    auto fall_temperature_1 = TempToCode(thermal_config_.trip_point_info[i + 1].down_temp, false);
+    auto rise_temperature_0 =
+        TempCelsiusToCode(thermal_config_.trip_point_info[i].up_temp_celsius, true);
+    auto rise_temperature_1 =
+        TempCelsiusToCode(thermal_config_.trip_point_info[i + 1].up_temp_celsius, true);
+    auto fall_temperature_0 =
+        TempCelsiusToCode(thermal_config_.trip_point_info[i].down_temp_celsius, false);
+    auto fall_temperature_1 =
+        TempCelsiusToCode(thermal_config_.trip_point_info[i + 1].down_temp_celsius, false);
 
     // Program the 2 rise temperature thresholds.
     rise_threshold.ReadFrom(&*pll_mmio_)
@@ -261,7 +268,8 @@ zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
 
 // Tsensor treats temperature as a mapped temperature code.
 // The temperature is converted differently depending on the calibration type.
-uint32_t AmlTSensor::TempToCode(uint32_t temp, bool trend) {
+uint32_t AmlTSensor::TempCelsiusToCode(float temp_c, bool trend) {
+  int32_t temp_decicelsius = static_cast<int32_t>(std::round(temp_c * 10.0f));
   int64_t sensor_code;
   uint32_t reg_code;
   uint32_t uefuse = trim_info_ & 0xffff;
@@ -272,11 +280,11 @@ uint32_t AmlTSensor::TempToCode(uint32_t temp, bool trend) {
   // u_readl = (T + 274.7) / 727.8 - u_efuse / (1 << 16)
   // Yout =  (u_readl / (5.05 - 4.05u_readl)) *(1 << 16)
   if (uefuse & 0x8000) {
-    sensor_code =
-        ((1 << 16) * (temp * 10 + kCalC_) / kCalD_ + (1 << 16) * (uefuse & 0x7fff) / (1 << 16));
+    sensor_code = ((1 << 16) * (temp_decicelsius + kCalC_) / kCalD_ +
+                   (1 << 16) * (uefuse & 0x7fff) / (1 << 16));
   } else {
-    sensor_code =
-        ((1 << 16) * (temp * 10 + kCalC_) / kCalD_ - (1 << 16) * (uefuse & 0x7fff) / (1 << 16));
+    sensor_code = ((1 << 16) * (temp_decicelsius + kCalC_) / kCalD_ -
+                   (1 << 16) * (uefuse & 0x7fff) / (1 << 16));
   }
 
   sensor_code = (sensor_code * 100 / (kCalB_ - kCalA_ * sensor_code / (1 << 16)));
@@ -290,7 +298,7 @@ uint32_t AmlTSensor::TempToCode(uint32_t temp, bool trend) {
 
 // Calculate a temperature value from a temperature code.
 // The unit of the temperature is degree Celsius.
-uint32_t AmlTSensor::CodeToTemp(uint32_t temp_code) {
+float AmlTSensor::CodeToTempCelsius(uint32_t temp_code) {
   uint32_t sensor_temp = temp_code;
   uint32_t uefuse = trim_info_ & 0xffff;
 
@@ -300,14 +308,14 @@ uint32_t AmlTSensor::CodeToTemp(uint32_t temp_code) {
   sensor_temp =
       ((sensor_temp * kCalB_) / 100 * (1 << 16) / (1 * (1 << 16) + kCalA_ * sensor_temp / 100));
   if (uefuse & 0x8000) {
-    sensor_temp = (1000 * ((sensor_temp - (uefuse & (0x7fff))) * kCalD_ / (1 << 16) - kCalC_) / 10);
+    sensor_temp = ((sensor_temp - (uefuse & (0x7fff))) * kCalD_ / (1 << 16) - kCalC_);
   } else {
-    sensor_temp = 1000 * ((sensor_temp + uefuse) * kCalD_ / (1 << 16) - kCalC_) / 10;
+    sensor_temp = ((sensor_temp + uefuse) * kCalD_ / (1 << 16) - kCalC_);
   }
-  return sensor_temp;
+  return static_cast<float>(sensor_temp) / 10.0f;
 }
 
-uint32_t AmlTSensor::ReadTemperature() {
+float AmlTSensor::ReadTemperatureCelsius() {
   int count = 0;
   unsigned int value_all = 0;
 
@@ -326,12 +334,12 @@ uint32_t AmlTSensor::ReadTemperature() {
   if (count == 0) {
     return 0;
   } else {
-    return CodeToTemp(value_all / count) / MCELSIUS;
+    return CodeToTempCelsius(value_all / count);
   }
 }
 
-void AmlTSensor::SetRebootTemperature(uint32_t temp) {
-  uint32_t reboot_val = TempToCode(kRebootTemp / MCELSIUS, true);
+void AmlTSensor::SetRebootTemperatureCelsius(uint32_t temp_c) {
+  uint32_t reboot_val = TempCelsiusToCode(kRebootTempCelsius, true);
   auto reboot_config = TsCfgReg2::Get().ReadFrom(&*pll_mmio_);
 
   reboot_config.set_hi_temp_enable(1)

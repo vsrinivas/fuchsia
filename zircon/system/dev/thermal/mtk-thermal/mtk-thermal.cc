@@ -4,6 +4,8 @@
 
 #include "mtk-thermal.h"
 
+#include <cmath>
+
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -25,8 +27,6 @@ constexpr uint32_t kAuxAdcChannel = 11;
 constexpr uint32_t kAuxAdcBits = 12;
 
 constexpr uint32_t kSensorCount = 3;
-
-constexpr uint32_t kKelvinOffset = 2732;  // Units: 0.1 degrees C
 
 constexpr uint32_t kSrcClkFreq = 66'000'000;
 constexpr uint32_t kSrcClkDivider = 256;
@@ -279,7 +279,7 @@ void MtkThermal::PmicWrite(uint16_t data, uint32_t addr) {
   PmicCmd::Get().FromValue(0).set_write(1).set_addr(addr).set_data(data).WriteTo(&pmic_mmio_);
 }
 
-uint32_t MtkThermal::RawToTemperature(uint32_t raw, uint32_t sensor) {
+float MtkThermal::RawToTemperature(uint32_t raw, uint32_t sensor) {
   int32_t vts = cal2_fuse_.get_vts3();
   if (sensor == 0) {
     vts = cal0_fuse_.get_vts0();
@@ -296,10 +296,10 @@ uint32_t MtkThermal::RawToTemperature(uint32_t raw, uint32_t sensor) {
 
   int32_t temp_c = ((RawWithGain(raw - cal1_fuse_.get_adc_offset(), gain) - vts_with_gain) * 5) / 6;
   temp_c = (temp_c * 100) / (165 + (cal1_fuse_.id() == 0 ? 0 : slope));
-  return cal0_fuse_.temp_offset() - temp_c + kKelvinOffset;
+  return static_cast<float>(cal0_fuse_.temp_offset() - temp_c) / 10.0f;
 }
 
-uint32_t MtkThermal::TemperatureToRaw(uint32_t temp, uint32_t sensor) {
+uint32_t MtkThermal::TemperatureToRaw(float temp, uint32_t sensor) {
   int32_t vts = cal2_fuse_.get_vts3();
   if (sensor == 0) {
     vts = cal0_fuse_.get_vts0();
@@ -313,12 +313,13 @@ uint32_t MtkThermal::TemperatureToRaw(uint32_t temp, uint32_t sensor) {
   int32_t vts_with_gain = RawWithGain(vts - cal1_fuse_.get_adc_offset(), gain);
   int32_t slope = cal0_fuse_.slope_sign() == 0 ? cal0_fuse_.slope() : -cal0_fuse_.slope();
 
-  int32_t temp_c = kKelvinOffset + cal0_fuse_.temp_offset() - temp;
+  int32_t temp_c = static_cast<int32_t>(cal0_fuse_.temp_offset()) -
+                   static_cast<int32_t>(std::round(temp * 10.0f));
   temp_c = (temp_c * (165 + (cal1_fuse_.id() == 0 ? 0 : slope))) / 100;
   return TempWithoutGain(((temp_c * 6) / 5) + vts_with_gain, gain) + cal1_fuse_.get_adc_offset();
 }
 
-uint32_t MtkThermal::GetRawHot(uint32_t temp) {
+uint32_t MtkThermal::GetRawHot(float temp) {
   // Find the ADC value corresponding to this temperature for each sensor. ADC values are
   // inversely proportional to temperature, so the maximum represents the lowest temperature
   // required to hit the trip point.
@@ -334,7 +335,7 @@ uint32_t MtkThermal::GetRawHot(uint32_t temp) {
   return raw_max;
 }
 
-uint32_t MtkThermal::GetRawCold(uint32_t temp) {
+uint32_t MtkThermal::GetRawCold(float temp) {
   uint32_t raw_min = UINT32_MAX;
   for (uint32_t i = 0; i < kSensorCount; i++) {
     uint32_t raw = TemperatureToRaw(temp, i);
@@ -346,7 +347,7 @@ uint32_t MtkThermal::GetRawCold(uint32_t temp) {
   return raw_min;
 }
 
-uint32_t MtkThermal::ReadTemperatureSensors() {
+float MtkThermal::ReadTemperatureSensors() {
   uint32_t sensor_values[kSensorCount];
   for (uint32_t i = 0; i < countof(sensor_values); i++) {
     auto msr = TempMsr::Get(i).ReadFrom(&mmio_);
@@ -357,9 +358,9 @@ uint32_t MtkThermal::ReadTemperatureSensors() {
     sensor_values[i] = msr.reading();
   }
 
-  uint32_t temp = 0;
-  for (uint32_t i = 0; i < countof(sensor_values); i++) {
-    uint32_t sensor_temp = RawToTemperature(sensor_values[i], i);
+  float temp = RawToTemperature(sensor_values[0], 0);
+  for (uint32_t i = 1; i < countof(sensor_values); i++) {
+    float sensor_temp = RawToTemperature(sensor_values[i], i);
     if (sensor_temp > temp) {
       temp = sensor_temp;
     }
@@ -438,8 +439,9 @@ zx_status_t MtkThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_d
   return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_OK, info);
 }
 
-zx_status_t MtkThermal::GetTemperature(fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetTemperature_reply(txn, ZX_OK, ReadTemperatureSensors());
+zx_status_t MtkThermal::GetTemperatureCelsius(fidl_txn_t* txn) {
+  return fuchsia_hardware_thermal_DeviceGetTemperatureCelsius_reply(txn, ZX_OK,
+                                                                    ReadTemperatureSensors());
 }
 
 zx_status_t MtkThermal::GetStateChangeEvent(fidl_txn_t* txn) {
@@ -453,8 +455,8 @@ zx_status_t MtkThermal::GetStateChangePort(fidl_txn_t* txn) {
   return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, status, dup.release());
 }
 
-zx_status_t MtkThermal::SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_ERR_NOT_SUPPORTED);
+zx_status_t MtkThermal::SetTripCelsius(uint32_t id, float temp, fidl_txn_t* txn) {
+  return fuchsia_hardware_thermal_DeviceSetTripCelsius_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t MtkThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
@@ -499,10 +501,10 @@ zx_status_t MtkThermal::SetTripPoint(size_t trip_pt) {
   uint32_t raw_cold = 0xfff;
 
   if (trip_pt > 0) {
-    raw_cold = GetRawCold(thermal_info_.trip_point_info[trip_pt - 1].down_temp);
+    raw_cold = GetRawCold(thermal_info_.trip_point_info[trip_pt - 1].down_temp_celsius);
   }
   if (trip_pt < thermal_info_.num_trip_points - 1) {
-    raw_hot = GetRawHot(thermal_info_.trip_point_info[trip_pt + 1].up_temp);
+    raw_hot = GetRawHot(thermal_info_.trip_point_info[trip_pt + 1].up_temp_celsius);
   }
 
   // Update the hot and cold interrupt thresholds for the new trip point.
@@ -519,16 +521,16 @@ int MtkThermal::Thread() {
   TempProtCtl::Get().ReadFrom(&mmio_).set_strategy(TempProtCtl::kStrategyMaximum).WriteTo(&mmio_);
   TempProtStage3::Get()
       .FromValue(0)
-      .set_threshold(GetRawHot(thermal_info_.critical_temp))
+      .set_threshold(GetRawHot(thermal_info_.critical_temp_celsius))
       .WriteTo(&mmio_);
 
-  uint32_t temp = ReadTemperatureSensors();
+  float temp = ReadTemperatureSensors();
   TempMsrCtl1::Get().ReadFrom(&mmio_).pause_real().WriteTo(&mmio_);
 
   // Set the initial trip point based on the current temperature.
   size_t trip_pt = 0;
   for (; trip_pt < thermal_info_.num_trip_points - 1; trip_pt++) {
-    if (temp < trip_pts[trip_pt + 1].up_temp) {
+    if (temp < trip_pts[trip_pt + 1].up_temp_celsius) {
       break;
     }
   }
@@ -578,13 +580,13 @@ int MtkThermal::Thread() {
     } else if (int_status.hot_0() || int_status.hot_1() || int_status.hot_2()) {
       // Skip to the appropriate trip point for the current temperature.
       for (; trip_pt < thermal_info_.num_trip_points - 1; trip_pt++) {
-        if (temp < trip_pts[trip_pt + 1].up_temp) {
+        if (temp < trip_pts[trip_pt + 1].up_temp_celsius) {
           break;
         }
       }
     } else if (int_status.cold_0() || int_status.cold_1() || int_status.cold_2()) {
       for (; trip_pt > 0; trip_pt--) {
-        if (temp > trip_pts[trip_pt - 1].down_temp) {
+        if (temp > trip_pts[trip_pt - 1].down_temp_celsius) {
           break;
         }
       }

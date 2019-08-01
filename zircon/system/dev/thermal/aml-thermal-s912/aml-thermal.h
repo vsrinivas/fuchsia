@@ -65,10 +65,10 @@ class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
   zx_status_t GetInfo(fidl_txn_t* txn);
   zx_status_t GetDeviceInfo(fidl_txn_t* txn);
   zx_status_t GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain, fidl_txn_t* txn);
-  zx_status_t GetTemperature(fidl_txn_t* txn);
+  zx_status_t GetTemperatureCelsius(fidl_txn_t* txn);
   zx_status_t GetStateChangeEvent(fidl_txn_t* txn);
   zx_status_t GetStateChangePort(fidl_txn_t* txn);
-  zx_status_t SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn);
+  zx_status_t SetTripCelsius(uint32_t id, float temp, fidl_txn_t* txn);
   zx_status_t GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
                                     fidl_txn_t* txn);
   zx_status_t SetDvfsOperatingPoint(uint16_t op_idx,
@@ -83,10 +83,11 @@ class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
       .GetInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetInfo>,
       .GetDeviceInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDeviceInfo>,
       .GetDvfsInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDvfsInfo>,
-      .GetTemperature = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetTemperature>,
+      .GetTemperatureCelsius =
+          fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetTemperatureCelsius>,
       .GetStateChangeEvent = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangeEvent>,
       .GetStateChangePort = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangePort>,
-      .SetTrip = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetTrip>,
+      .SetTripCelsius = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetTripCelsius>,
       .GetDvfsOperatingPoint =
           fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDvfsOperatingPoint>,
       .SetDvfsOperatingPoint =
@@ -115,7 +116,7 @@ class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
   thrd_t worker_ = {};
   fuchsia_hardware_thermal_ThermalDeviceInfo info_ = {};
   FanLevel fan_level_ = FAN_L0;
-  uint32_t temperature_ = 0;
+  float temperature_ = 0.0f;
   sync_completion quit_;
   uint32_t cur_bigcluster_opp_idx_ = 0;
   uint32_t cur_littlecluster_opp_idx_ = 0;

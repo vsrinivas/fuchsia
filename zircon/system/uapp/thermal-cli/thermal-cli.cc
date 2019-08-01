@@ -28,14 +28,14 @@ static zx_status_t read_argument_checked(const char* arg, uint32_t* out) {
 
 zx_status_t ThermalCli::PrintTemperature() {
   zx_status_t status, status2;
-  uint32_t temp;
-  status = fuchsia_hardware_thermal_DeviceGetTemperature(channel_.get(), &status2, &temp);
+  float temp = 0.0f;
+  status = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(channel_.get(), &status2, &temp);
   if (status != ZX_OK || status2 != ZX_OK) {
-    fprintf(stderr, "DeviceGetTemperature failed: %d %d\n", status, status2);
+    fprintf(stderr, "DeviceGetTemperatureCelsius failed: %d %d\n", status, status2);
     return status == ZX_OK ? status2 : status;
   }
 
-  printf("Temperature: %u\n", temp);
+  printf("Temperature: %0.03f\n", temp);
   return ZX_OK;
 }
 

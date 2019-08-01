@@ -10,7 +10,7 @@ namespace cobalt {
 
 FakeTemperatureFetcher::FakeTemperatureFetcher() {}
 
-TemperatureFetchStatus FakeTemperatureFetcher::FetchTemperature(uint32_t *temperature) {
+TemperatureFetchStatus FakeTemperatureFetcher::FetchTemperature(int32_t *temperature) {
   *temperature = 38;
   return TemperatureFetchStatus::SUCCEED;
 }
