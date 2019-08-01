@@ -6,7 +6,12 @@ import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-kernel") {
   sources = [
+    "kernel-counter.fidl",
     "kernel-debug.fidl",
     "kernel-mexec.fidl",
+  ]
+
+  public_deps = [
+    "$zx/system/fidl/fuchsia-mem",
   ]
 }

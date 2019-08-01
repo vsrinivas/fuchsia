@@ -32,6 +32,7 @@ source_set("lib") {
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-boot",
     "//zircon/public/fidl/fuchsia-device",
+    "//zircon/public/fidl/fuchsia-kernel",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/fidl/fuchsia-net-stack",
     "//zircon/public/fidl/fuchsia-posix-socket",

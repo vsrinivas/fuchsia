@@ -10,6 +10,7 @@ group("tools") {
     "//src/developer/debug/zxdb:zxdb_host",
     "//src/developer/feedback/bugreport",
     "//src/developer/feedback/bugreport:host_tool",
+    "//src/developer/kcounter_inspect",
     "//tools/fidlcat:fidlcat_host",
   ]
 }

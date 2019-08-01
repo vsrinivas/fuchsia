@@ -6,6 +6,7 @@
 #define ZIRCON_KERNEL_LIB_COUNTERS_INCLUDE_LIB_COUNTER_VMO_ABI_H_
 
 #include <inttypes.h>
+#include <stddef.h>
 
 // This file describes how the kernel exposes its internal counters to userland.
 // This is a PRIVATE UNSTABLE ABI that may change at any time!  The layouts used

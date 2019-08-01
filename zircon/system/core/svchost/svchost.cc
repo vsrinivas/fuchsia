@@ -10,6 +10,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/fshost/c/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/net/llcpp/fidl.h>
 #include <fuchsia/paver/c/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
@@ -144,6 +145,7 @@ static constexpr const char* fshost_services[] = {
 
 // Forward these Zircon services to miscsvc.
 static constexpr const char* miscsvc_services[] = {
+    fuchsia_kernel_Counter_Name,
     fuchsia_paver_Paver_Name,
     nullptr,
 };

@@ -28,6 +28,7 @@ std::vector<std::string> RootRealmServices() {
       fuchsia::device::NameProvider::Name_,
       fuchsia::device::manager::Administrator::Name_,
       fuchsia::device::manager::DebugDumper::Name_,
+      fuchsia::kernel::Counter::Name_,
       fuchsia::kernel::DebugBroker::Name_,
       fuchsia::paver::Paver::Name_,
       fuchsia::scheduler::ProfileProvider::Name_,

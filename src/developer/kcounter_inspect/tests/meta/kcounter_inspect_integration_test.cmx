@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.kernel.Counter"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/kcounter_inspect_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.kernel.Counter"
+        ]
+    }
+}

@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("kcounter") {
+  sources = [
+    "kcounter.cc",
+    "provider.cc",
+  ]
+  deps = [
+    "$zx/kernel/lib/counters",
+    "$zx/system/fidl/fuchsia-kernel:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/inspect",
+    "$zx/system/ulib/svc",
+    "$zx/system/ulib/syslog",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}

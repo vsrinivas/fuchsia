@@ -6,6 +6,7 @@ library("counters") {
   visibility = [
     "$zx/kernel/*",
     "$zx/system/uapp/kcounter/*",
+    "$zx/system/ulib/kcounter/*",
     "$zx/system/utest/kcounter/*",
   ]
   kernel = true

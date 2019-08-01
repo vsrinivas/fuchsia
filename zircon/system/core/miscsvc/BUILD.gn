@@ -10,6 +10,7 @@ executable("miscsvc") {
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/kcounter",
     "$zx/system/ulib/paver",
     "$zx/system/ulib/svc",
     "$zx/system/ulib/zircon",

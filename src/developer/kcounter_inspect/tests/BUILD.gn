@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+test_package("kcounter_inspect_tests") {
+  tests = [
+    {
+      name = "kcounter_inspect_unittest"
+      environments = basic_envs
+    },
+    {
+      name = "kcounter_inspect_integration_test"
+      environments = basic_envs
+    },
+  ]
+
+  deps = [
+    ":kcounter_inspect_integration_test",
+    ":kcounter_inspect_unittest",
+  ]
+}
+
+executable("kcounter_inspect_unittest") {
+  testonly = true
+
+  sources = [
+    "vmo_file_with_update_test.cc",
+  ]
+
+  deps = [
+    "../:lib",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl:fxl_logging",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-kernel",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("kcounter_inspect_integration_test") {
+  testonly = true
+
+  sources = [
+    "kcounter_inspect_integration_test.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/iquery:lib",
+    "//garnet/public/lib/async_promise",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-kernel",
+    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}

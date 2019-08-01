@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/kcounter_inspect_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
