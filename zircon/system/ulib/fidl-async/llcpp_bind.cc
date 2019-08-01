@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
+#include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 
@@ -15,7 +15,8 @@ namespace fidl {
 namespace internal {
 
 SimpleBinding::SimpleBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                             TypeErasedDispatchFn dispatch_fn)
+                             TypeErasedDispatchFn dispatch_fn,
+                             TypeErasedOnChannelClosedFn on_channel_closed_fn)
     : async_wait_t({
           .state = ASYNC_STATE_INIT,
           .handler = &MessageHandler,
@@ -25,9 +26,15 @@ SimpleBinding::SimpleBinding(async_dispatcher_t* dispatcher, zx::channel channel
       }),
       dispatcher_(dispatcher),
       interface_(impl),
-      dispatch_fn_(dispatch_fn) {}
+      dispatch_fn_(dispatch_fn),
+      on_channel_closed_fn_(std::move(on_channel_closed_fn)) {}
 
-SimpleBinding::~SimpleBinding() { zx_handle_close(async_wait_t::object); }
+SimpleBinding::~SimpleBinding() {
+  zx_handle_close(async_wait_t::object);
+  if (on_channel_closed_fn_) {
+    on_channel_closed_fn_(interface_);
+  }
+}
 
 void SimpleBinding::MessageHandler(async_dispatcher_t* dispatcher, async_wait_t* wait,
                                    zx_status_t status, const zx_packet_signal_t* signal) {
@@ -79,8 +86,10 @@ zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding) {
 }
 
 zx_status_t TypeErasedBind(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                           TypeErasedDispatchFn dispatch_fn) {
-  auto binding = std::make_unique<SimpleBinding>(dispatcher, std::move(channel), impl, dispatch_fn);
+                           TypeErasedDispatchFn dispatch_fn,
+                           TypeErasedOnChannelClosedFn on_channel_closed_fn) {
+  auto binding = std::make_unique<SimpleBinding>(dispatcher, std::move(channel), impl, dispatch_fn,
+                                                 std::move(on_channel_closed_fn));
   auto status = BeginWait(&binding);
   return status;
 }

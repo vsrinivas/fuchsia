@@ -20,7 +20,7 @@ TEST(ChannelTransactionTestCase, CloseAfterFailedReply) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   auto binding = std::make_unique<fidl::internal::SimpleBinding>(
-      loop.dispatcher(), std::move(remote), nullptr, std::move(dispatch));
+      loop.dispatcher(), std::move(remote), nullptr, std::move(dispatch), nullptr);
   fidl::internal::ChannelTransaction txn(1, std::move(binding));
 
   // Sending a reply with an empty message will cause it to try to error
