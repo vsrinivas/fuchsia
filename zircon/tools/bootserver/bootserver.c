@@ -708,6 +708,7 @@ int main(int argc, char** argv) {
         // This needs to be first as it validates that the other images are
         // correct.
         if (status == 0 && board_name) {
+            strcpy(board_info_template, "/tmp/board_info.XXXXXX");
             board_info_file = mktemp(board_info_template);
             status = xfer2(&ra, board_info_file, NB_BOARD_INFO_FILENAME);
             if (status == 0) {
