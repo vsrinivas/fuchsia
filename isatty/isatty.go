@@ -12,6 +12,7 @@ import (
 	"unsafe"
 )
 
+// IsTerminal returns whether the system is in a terminal.
 func IsTerminal() bool {
 	var termios syscall.Termios
 	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, os.Stdout.Fd(), ioctlTermios, uintptr(unsafe.Pointer(&termios)), 0, 0, 0)

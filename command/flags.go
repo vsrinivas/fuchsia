@@ -16,7 +16,7 @@ func (s *StringsFlag) Set(val string) error {
 	return nil
 }
 
-// Strings implements flag.Value.String.
+// String implements flag.Value.String.
 func (s *StringsFlag) String() string {
 	if s == nil {
 		return ""

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package color provides functions for printing in different colors.
 package color
 
 import (
@@ -11,6 +12,7 @@ import (
 	"go.fuchsia.dev/tools/isatty"
 )
 
+// Colorfn is a function type that takes a formatted string and returns it in a certain color.
 type Colorfn func(format string, a ...interface{}) string
 
 const (
@@ -18,6 +20,7 @@ const (
 	clear  = escape + "0m"
 )
 
+// ColorCode represents the int used for coloring formatted strings in a certain color.
 type ColorCode int
 
 // Foreground text colors
@@ -33,6 +36,8 @@ const (
 	DefaultFg
 )
 
+// Color provides an interface for a color or monochrome type that will be returned by NewColor()
+// based on whether coloring is enabled or not.
 type Color interface {
 	Black(format string, a ...interface{}) string
 	Red(format string, a ...interface{}) string
@@ -98,6 +103,7 @@ func (monochrome) Enabled() bool {
 	return false
 }
 
+// EnableColor represents whether or not to return colored strings.
 type EnableColor int
 
 const (
@@ -115,6 +121,8 @@ func isColorAvailable() bool {
 	return isatty.IsTerminal()
 }
 
+// NewColor returns a color or monochrome type depending on the value of enableColor.
+// A monochrome type will always return the string in the default color.
 func NewColor(enableColor EnableColor) Color {
 	ec := enableColor != ColorNever
 	if enableColor == ColorAuto {
@@ -127,6 +135,7 @@ func NewColor(enableColor EnableColor) Color {
 	}
 }
 
+// String returns the string value of the EnableColor type.
 func (ec *EnableColor) String() string {
 	switch *ec {
 	case ColorNever:
@@ -139,6 +148,7 @@ func (ec *EnableColor) String() string {
 	return ""
 }
 
+// Set sets the EnableColor type based on the string value.
 func (ec *EnableColor) Set(s string) error {
 	switch s {
 	case "never":

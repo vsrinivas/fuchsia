@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Package elflib provides methods for handling ELF files.
 package elflib
 
 import (
@@ -19,7 +20,7 @@ import (
 
 const NT_GNU_BUILD_ID uint32 = 3
 
-// The file suffix used by unstripped debug binaries.
+// DebugFileSuffix is the file suffix used by unstripped debug binaries.
 const DebugFileSuffix = ".debug"
 
 // BinaryFileRef represents a reference to an ELF file. The build id
@@ -30,6 +31,7 @@ type BinaryFileRef struct {
 	Filepath string
 }
 
+// NewBinaryFileRef returns a BinaryFileRef with the given build id and filepath.
 func NewBinaryFileRef(filepath, build string) BinaryFileRef {
 	return BinaryFileRef{BuildID: build, Filepath: filepath}
 }
@@ -70,7 +72,7 @@ func (b BinaryFileRef) Verify() error {
 	return newBuildIDError(fmt.Errorf("build ID `%s` could not be found", b.BuildID), b.Filepath)
 }
 
-// Check if file contains debug_info section.
+// HasDebugInfo checks if file contains debug_info section.
 func (b BinaryFileRef) HasDebugInfo() (bool, error) {
 	elfFile, err := elf.Open(b.Filepath)
 	if err != nil {
@@ -143,6 +145,7 @@ func getBuildIDs(filename string, endian binary.ByteOrder, data io.ReaderAt, siz
 	return out, err
 }
 
+// GetBuildIDs parses and returns all the build ids from file's section/program headers.
 func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 	elfFile, err := elf.NewFile(file)
 	if err != nil {
@@ -188,10 +191,7 @@ func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 	return out, nil
 }
 
-type DynamicTable struct {
-	SoName string
-}
-
+// GetSoName returns the soname of the ELF file.
 func GetSoName(filename string, file io.ReaderAt) (string, error) {
 	elfFile, err := elf.NewFile(file)
 	if err != nil {
@@ -210,6 +210,8 @@ func GetSoName(filename string, file io.ReaderAt) (string, error) {
 	return strings[0], nil
 }
 
+// ReadIDsFile reads a list of build ids and corresponding filenames from an ids file
+// and returns a list of BinaryFileRefs.
 func ReadIDsFile(file io.Reader) ([]BinaryFileRef, error) {
 	scanner := bufio.NewScanner(file)
 	out := []BinaryFileRef{}
@@ -234,8 +236,8 @@ func ReadIDsFile(file io.Reader) ([]BinaryFileRef, error) {
 // Input directory:
 //
 //   de/
-//     eadbeef.debug
-//     eadmeat.debug
+//     adbeef.debug
+//     admeat.debug
 //
 // Output BuildIDs:
 //

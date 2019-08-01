@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package cache provides methods for creating and using a cache.
 package cache
 
 import "container/list"
@@ -17,7 +18,7 @@ type Cache interface {
 	// Returns key's value from the cache.
 	Get(key Key) (interface{}, bool)
 
-	// Check if a key exsists in cache.
+	// Checks if a key exists in cache.
 	Contains(key Key) bool
 
 	// Removes a key from the cache.
@@ -26,7 +27,7 @@ type Cache interface {
 	// Returns the number of items in the cache.
 	Len() int
 
-	// Clear all cache entries.
+	// Clears all cache entries.
 	Clear()
 }
 
@@ -45,7 +46,7 @@ type entry struct {
 	value interface{}
 }
 
-// Adds a value to the cache and updates the "recently used"-ness of the key.
+// Add adds a value to the cache and updates the "recently used"-ness of the key.
 func (c *LRUCache) Add(key Key, value interface{}) interface{} {
 	if c.cache == nil {
 		c.cache = make(map[interface{}]*list.Element)
@@ -65,7 +66,7 @@ func (c *LRUCache) Add(key Key, value interface{}) interface{} {
 	return nil
 }
 
-// Returns key's value from the cache and updates the "recently used"-ness.
+// Get returns key's value from the cache and updates the "recently used"-ness.
 func (c *LRUCache) Get(key Key) (interface{}, bool) {
 	if c.cache == nil {
 		return nil, false
@@ -77,7 +78,7 @@ func (c *LRUCache) Get(key Key) (interface{}, bool) {
 	return nil, false
 }
 
-// Contains checks if a key exsists in cache without updating the recent-ness.
+// Contains checks if a key exists in cache without updating the recent-ness.
 func (c *LRUCache) Contains(key Key) bool {
 	if c.cache == nil {
 		return false
@@ -86,7 +87,7 @@ func (c *LRUCache) Contains(key Key) bool {
 	return ok
 }
 
-// Removes a key from the cache.
+// Remove removes a key from the cache.
 func (c *LRUCache) Remove(key Key) interface{} {
 	if c.cache == nil {
 		return nil
@@ -99,7 +100,7 @@ func (c *LRUCache) Remove(key Key) interface{} {
 	return nil
 }
 
-// Returns the number of items in the cache.
+// Len returns the number of items in the cache.
 func (c *LRUCache) Len() int {
 	if c.cache == nil {
 		return 0
@@ -107,7 +108,7 @@ func (c *LRUCache) Len() int {
 	return c.ll.Len()
 }
 
-// Clear all cache entries.
+// Clear clears all cache entries.
 func (c *LRUCache) Clear() {
 	c.ll = nil
 	c.cache = nil
