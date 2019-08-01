@@ -13,7 +13,6 @@
 #include <lib/fsl/syslogger/init.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>
-#include <trace-provider/provider.h>
 #include <zircon/boot/image.h>
 
 #include <chrono>
@@ -22,6 +21,8 @@
 #include <string>
 #include <thread>
 #include <utility>
+
+#include <trace-provider/provider.h>
 
 #include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/app/cobalt_app.h"
@@ -80,10 +81,11 @@ constexpr bool kStartEventAggregatorWorkerDefault(true);
 //
 // - devhost is the channel for development devices.
 // - fishfood-release is the main fishfood channel.
+// - teamfood-release is the main teamfood channel.
 // - qa-daily is a daily QA release.
 // - cobalt-test-lab mirrors fishfood-release.
-const std::vector<std::string> kDebugChannels({"devhost", "fishfood-release", "qa-daily",
-                                               "cobalt-test-lab"});
+const std::vector<std::string> kDebugChannels({"devhost", "fishfood-release", "teamfood-release",
+                                               "qa-daily", "cobalt-test-lab"});
 
 // ReadBoardName returns the board name of the currently running device.
 //
