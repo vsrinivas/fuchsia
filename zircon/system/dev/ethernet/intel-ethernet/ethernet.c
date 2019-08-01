@@ -124,13 +124,15 @@ static zx_status_t eth_start(void* ctx, const ethernet_ifc_protocol_t* ifc) {
     return status;
 }
 
-static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
+static void eth_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                         ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
     ethernet_device_t* edev = ctx;
     if (edev->state != ETH_RUNNING) {
-        return ZX_ERR_BAD_STATE;
+        completion_cb(cookie, ZX_ERR_BAD_STATE, netbuf);
     }
     // TODO: Add support for DMA directly from netbuf
-    return eth_tx(&edev->eth, netbuf->data_buffer, netbuf->data_size);
+    zx_status_t status = eth_tx(&edev->eth, netbuf->data_buffer, netbuf->data_size);
+    completion_cb(cookie, status, netbuf);
 }
 
 static zx_status_t eth_set_param(void *ctx, uint32_t param, int32_t value, const void* data,

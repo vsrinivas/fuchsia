@@ -560,7 +560,8 @@ typedef struct wlanif_impl_protocol_ops {
   zx_status_t (*set_multicast_promisc)(void* ctx, bool enable);
 
   // Data operations
-  zx_status_t (*data_queue_tx)(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf);
+  void (*data_queue_tx)(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                        ethernet_impl_queue_tx_callback completion_cb, void* cookie);
 
 } wlanif_impl_protocol_ops_t;
 

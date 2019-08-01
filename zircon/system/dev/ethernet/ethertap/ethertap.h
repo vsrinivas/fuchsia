@@ -43,7 +43,8 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
   void EthernetImplStop();
   zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc);
-  zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf);
+  void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                           ethernet_impl_queue_tx_callback completion_cb, void* cookie);
   zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
                                    size_t data_size);
   // No DMA capability, so return invalid handle for get_bti

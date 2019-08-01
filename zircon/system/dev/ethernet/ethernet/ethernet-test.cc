@@ -37,9 +37,10 @@ class FakeEthernetImplProtocol
     return ZX_OK;
   }
 
-  zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
+  void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                           ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
     queue_tx_called_ = true;
-    return ZX_OK;
+    completion_cb(cookie, ZX_OK, netbuf);
   }
 
   zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
@@ -52,6 +53,7 @@ class FakeEthernetImplProtocol
     }
     return ZX_OK;
   }
+
   void EthernetImplGetBti(zx::bti* bti) { bti->reset(); }
 
   bool TestInfo(fuchsia_hardware_ethernet_Info* info) {
@@ -71,7 +73,6 @@ class FakeEthernetImplProtocol
     // Use the provided client to test the ifc client.
     client_->Status(0);
     client_->Recv(nullptr, 0, 0);
-    client_->CompleteTx(nullptr, ZX_OK);
     return true;
   }
 

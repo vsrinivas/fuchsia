@@ -145,9 +145,10 @@ void wlanif_query(void* ctx, wlanif_query_info_t* info) {
   memcpy(info->bands[0].channels, channels, sizeof(channels));
 }
 
-zx_status_t wlanif_data_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
+void wlanif_data_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                          ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   printf("***** data_queue_tx\n");
-  return ZX_OK;
+  completion_cb(cookie, ZX_OK, netbuf);
 }
 
 wlanif_impl_protocol_ops_t wlanif_impl_ops = {

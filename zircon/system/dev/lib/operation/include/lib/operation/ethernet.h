@@ -149,4 +149,7 @@ using BorrowedOperationQueue =
     operation::BorrowedOperationQueue<BorrowedOperation<Storage>, OperationTraits, CallbackTraits,
                                       Storage>;
 
+template <typename Storage = void>
+using OperationPool = operation::OperationPool<Operation<Storage>, OperationTraits, Storage>;
+
 }  // namespace eth

@@ -269,7 +269,8 @@ static zx_status_t rndishost_start(void* ctx, const ethernet_ifc_protocol_t* ifc
     return status;
 }
 
-static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
+static void rndishost_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                               ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
     size_t length = netbuf->data_size;
     rndishost_t* eth = (rndishost_t*)ctx;
     const uint8_t* byte_data = netbuf->data_buffer;
@@ -321,7 +322,7 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethernet_netb
 
 done:
     mtx_unlock(&eth->mutex);
-    return status;
+    completion_cb(cookie, status, netbuf);
 }
 
 static void rndishost_unbind(void* ctx) {

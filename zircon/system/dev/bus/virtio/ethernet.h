@@ -38,7 +38,8 @@ class EthernetDevice : public Device {
   zx_status_t Query(uint32_t options, ethernet_info_t* info) TA_EXCL(state_lock_);
   void Stop() TA_EXCL(state_lock_);
   zx_status_t Start(const ethernet_ifc_protocol_t* ifc) TA_EXCL(state_lock_);
-  zx_status_t QueueTx(uint32_t options, ethernet_netbuf_t* netbuf) TA_EXCL(state_lock_);
+  void QueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+               ethernet_impl_queue_tx_callback completion_cb, void* cookie) TA_EXCL(state_lock_);
 
   const char* tag() const override { return "virtio-net"; }
 

@@ -91,8 +91,9 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
     .start = [](void* ctx, const ethernet_ifc_protocol_t* ifc) -> zx_status_t {
       return DEV(ctx)->EthernetImplStart(ifc);
     },
-    .queue_tx = [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) -> zx_status_t {
-      return DEV(ctx)->EthernetImplQueueTx(options, netbuf);
+    .queue_tx = [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                   ethernet_impl_queue_tx_callback completion_cb, void* cookie)  {
+      DEV(ctx)->EthernetImplQueueTx(options, netbuf, completion_cb, cookie);
     },
     .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data, size_t data_size)
         -> zx_status_t { return DEV(ctx)->EthernetImplSetParam(param, value, data, data_size); },
@@ -369,7 +370,7 @@ zx_status_t Device::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
     info->features |= ETHERNET_FEATURE_SYNTH;
   }
   info->mtu = 1500;
-  info->netbuf_size = sizeof(ethernet_netbuf_t);
+  info->netbuf_size = eth::BorrowedOperation<>::OperationSize(sizeof(ethernet_netbuf_t));
 
   return ZX_OK;
 }
@@ -398,11 +399,11 @@ void Device::EthernetImplStop() {
   while (!queued_packets.is_empty()) {
     auto packet = queued_packets.Dequeue();
     if (packet->peer() == Packet::Peer::kEthernet) {
-      auto netbuf = packet->ext_data();
-      ZX_DEBUG_ASSERT(netbuf != nullptr);
+      auto netbuf = std::move(packet->ext_data());
+      ZX_DEBUG_ASSERT(netbuf != std::nullopt);
       ZX_DEBUG_ASSERT(ethernet_proxy_ != nullptr);
-      if (netbuf != nullptr && ethernet_proxy_ != nullptr) {
-        ethernet_proxy_->CompleteTx(netbuf, ZX_ERR_CANCELED);
+      if (netbuf != std::nullopt) {
+        netbuf->Complete(ZX_ERR_CANCELED);
       }
       // Outgoing ethernet frames are dropped.
     } else {
@@ -413,21 +414,25 @@ void Device::EthernetImplStop() {
   ethernet_proxy_.reset();
 }
 
-zx_status_t Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
+void Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                                 ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
+  eth::BorrowedOperation<> op(netbuf, completion_cb, cookie, sizeof(ethernet_netbuf_t));
   // no debugfn() because it's too noisy
-  auto packet = PreparePacket(netbuf->data_buffer, netbuf->data_size, Packet::Peer::kEthernet);
+  auto packet = PreparePacket(op.operation()->data_buffer, op.operation()->data_size,
+                              Packet::Peer::kEthernet);
   if (packet == nullptr) {
     warnf("could not prepare Ethernet packet with len %zu\n", netbuf->data_size);
-    return ZX_ERR_NO_RESOURCES;
+    op.Complete(ZX_ERR_NO_RESOURCES);
+    return;
   }
-  packet->set_ext_data(netbuf, 0);
+  packet->set_ext_data(std::move(op), 0);
   zx_status_t status = QueuePacket(std::move(packet));
   if (status != ZX_OK) {
     warnf("could not queue Ethernet packet err=%s\n", zx_status_get_string(status));
     ZX_DEBUG_ASSERT(status != ZX_ERR_SHOULD_WAIT);
-    return status;
+    op.Complete(status);
+    return;
   }
-  return ZX_ERR_SHOULD_WAIT;
 }
 
 zx_status_t Device::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
@@ -780,7 +785,7 @@ void Device::MainLoop() {
             while (!queued_packets.is_empty()) {
               auto packet = queued_packets.Dequeue();
               ZX_DEBUG_ASSERT(packet != nullptr);
-              ethernet_netbuf_t* netbuf = nullptr;
+              std::optional<eth::BorrowedOperation<>> netbuf = std::nullopt;
               auto peer = packet->peer();
               if (peer == Packet::Peer::kEthernet) {
                 // ethernet driver somehow decided to send frame after itself is
@@ -789,12 +794,12 @@ void Device::MainLoop() {
                 if (ethernet_proxy_ == nullptr) {
                   continue;
                 }
-                netbuf = packet->ext_data();
-                ZX_ASSERT(netbuf != nullptr);
+                netbuf = std::move(packet->ext_data());
+                ZX_ASSERT(netbuf != std::nullopt);
               }
               zx_status_t status = dispatcher_->HandlePacket(std::move(packet));
               if (peer == Packet::Peer::kEthernet) {
-                ethernet_proxy_->CompleteTx(netbuf, status);
+                netbuf->Complete(status);
               }
             }
             break;

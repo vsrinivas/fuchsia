@@ -78,8 +78,14 @@ typedef struct {
 
 typedef struct txn_info {
   ethernet_netbuf_t netbuf;
+  ethernet_impl_queue_tx_callback completion_cb;
+  void* cookie;
   list_node_t node;
 } txn_info_t;
+
+static void complete_txn(txn_info_t* txn, zx_status_t status) {
+  txn->completion_cb(txn->cookie, status, &txn->netbuf);
+}
 
 static struct {
   usb_interface_descriptor_t comm_intf;
@@ -321,14 +327,20 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethernet_netbuf_t* netbuf) {
   return ZX_OK;
 }
 
-static zx_status_t cdc_ethernet_impl_queue_tx(void* cookie, uint32_t options,
-                                              ethernet_netbuf_t* netbuf) {
-  auto* cdc = static_cast<usb_cdc_t*>(cookie);
+static void cdc_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet_netbuf_t* netbuf,
+                                       ethernet_impl_queue_tx_callback completion_cb,
+                                       void* cookie) {
+  auto* cdc = static_cast<usb_cdc_t*>(context);
   size_t length = netbuf->data_size;
   zx_status_t status;
 
+  txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
+  txn->completion_cb = completion_cb;
+  txn->cookie = cookie;
+
   if (!cdc->online || length > ETH_MTU || length == 0 || cdc->unbound) {
-    return ZX_ERR_INVALID_ARGS;
+    complete_txn(txn, ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   zxlogf(LTRACE, "%s: sending %zu bytes\n", __func__, length);
@@ -346,7 +358,9 @@ static zx_status_t cdc_ethernet_impl_queue_tx(void* cookie, uint32_t options,
   }
 
   mtx_unlock(&cdc->tx_mutex);
-  return status;
+  if (status != ZX_ERR_SHOULD_WAIT) {
+    complete_txn(txn, status);
+  }
 }
 
 static zx_status_t cdc_ethernet_impl_set_param(void* cookie, uint32_t param, int32_t value,
@@ -499,9 +513,7 @@ static void cdc_tx_complete(void* ctx, usb_request_t* req) {
 
   if (additional_tx_queued) {
     mtx_lock(&cdc->ethernet_mutex);
-    if (cdc->ethernet_ifc.ops) {
-      ethernet_ifc_complete_tx(&cdc->ethernet_ifc, &txn->netbuf, send_status);
-    }
+    complete_txn(txn, send_status);
     mtx_unlock(&cdc->ethernet_mutex);
   }
 }
@@ -638,11 +650,9 @@ static void usb_cdc_unbind(void* ctx) {
   }
   {
     fbl::AutoLock l(&cdc->tx_mutex);
-    if (cdc->ethernet_ifc.ops) {
-      txn_info_t* txn;
-      while ((txn = list_remove_head_type(&cdc->tx_pending_infos, txn_info_t, node)) != NULL) {
-        ethernet_ifc_complete_tx(&cdc->ethernet_ifc, &txn->netbuf, ZX_ERR_PEER_CLOSED);
-      }
+    txn_info_t* txn;
+    while ((txn = list_remove_head_type(&cdc->tx_pending_infos, txn_info_t, node)) != NULL) {
+      complete_txn(txn, ZX_ERR_PEER_CLOSED);
     }
   }
   device_remove(cdc->zxdev);

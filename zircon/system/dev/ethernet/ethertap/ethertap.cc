@@ -11,6 +11,7 @@
 #include <fbl/auto_lock.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
+#include <lib/operation/ethernet.h>
 #include <pretty/hexdump.h>
 #include <stdio.h>
 #include <string.h>
@@ -144,7 +145,7 @@ zx_status_t TapDevice::EthernetImplQuery(uint32_t options, ethernet_info_t* info
   info->features = features_;
   info->mtu = mtu_;
   memcpy(info->mac, mac_, 6);
-  info->netbuf_size = sizeof(ethernet_netbuf_t);
+  info->netbuf_size = eth::BorrowedOperation<>::OperationSize(sizeof(ethernet_netbuf_t));
   return ZX_OK;
 }
 
@@ -166,16 +167,20 @@ zx_status_t TapDevice::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
   return ZX_OK;
 }
 
-zx_status_t TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
+void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                                    ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
+  eth::BorrowedOperation<> op(netbuf, completion_cb, cookie, sizeof(ethernet_netbuf_t));
   fbl::AutoLock lock(&lock_);
   if (dead_) {
-    return ZX_ERR_PEER_CLOSED;
+    op.Complete(ZX_ERR_PEER_CLOSED);
+    return;
   } else if (!online_) {
     ethertap_trace("dropping packet, device offline\n");
-    return ZX_ERR_UNAVAILABLE;
+    op.Complete(ZX_ERR_UNAVAILABLE);
+    return;
   }
 
-  size_t length = netbuf->data_size;
+  size_t length = op.operation()->data_size;
   ZX_DEBUG_ASSERT(length <= mtu_);
 
   FIDL_ALIGNDECL uint8_t temp_buff[sizeof(fuchsia_hardware_ethertap_TapDeviceOnFrameEvent) +
@@ -187,7 +192,7 @@ zx_status_t TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* 
   event->data.count = length;
   auto* data = builder.NewArray<uint8_t>(static_cast<uint32_t>(length));
   event->data.data = data;
-  memcpy(data, netbuf->data_buffer, length);
+  memcpy(data, op.operation()->data_buffer, length);
 
   const char* err = nullptr;
   fidl::Message msg(builder.Finalize(), fidl::HandlePart());
@@ -197,9 +202,8 @@ zx_status_t TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* 
   } else {
     if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
       ethertap_trace("sending %zu bytes\n", length);
-      hexdump8_ex(netbuf->data_buffer, length, 0);
+      hexdump8_ex(op.operation()->data_buffer, length, 0);
     }
-
     status = msg.Write(channel_.get(), 0);
 
     if (status != ZX_OK) {
@@ -207,7 +211,7 @@ zx_status_t TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* 
     }
   }
   // returning ZX_ERR_SHOULD_WAIT indicates that we will call complete_tx(), which we will not
-  return status == ZX_ERR_SHOULD_WAIT ? ZX_ERR_UNAVAILABLE : status;
+  op.Complete(status == ZX_ERR_SHOULD_WAIT ? ZX_ERR_UNAVAILABLE : status);
 }
 
 zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,

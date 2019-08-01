@@ -14,6 +14,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
 #include <fbl/auto_lock.h>
+#include <lib/operation/ethernet.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
@@ -44,7 +45,8 @@ class Asix88179Ethernet : public DeviceType,
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
   void EthernetImplStop();
   zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc);
-  zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf);
+  void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                           ethernet_impl_queue_tx_callback completion_cb, void* cookie);
   zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
                                    size_t data_size);
   void EthernetImplGetBti(zx::bti* bti) { bti->reset(); }
@@ -72,7 +74,7 @@ class Asix88179Ethernet : public DeviceType,
 
   zx_status_t Receive(usb::Request<>& request) TA_REQ(lock_);
 
-  zx_status_t RequestAppend(usb::Request<>& request, const ethernet_netbuf_t* netbuf);
+  zx_status_t RequestAppend(usb::Request<>& request, const eth::BorrowedOperation<>& netbuf);
 
   void ReadComplete(usb_request_t* request);
 
@@ -123,7 +125,7 @@ class Asix88179Ethernet : public DeviceType,
   // request from free_write_reqs must be added to the list.
   usb::RequestQueue<> pending_usb_transmit_queue_ TA_GUARDED(tx_lock_);
 
-  std::queue<ethernet_netbuf_t*> pending_netbuf_queue_ TA_GUARDED(tx_lock_);
+  eth::BorrowedOperationQueue<> pending_netbuf_queue_ TA_GUARDED(tx_lock_);
 
   fbl::Mutex tx_lock_;
 

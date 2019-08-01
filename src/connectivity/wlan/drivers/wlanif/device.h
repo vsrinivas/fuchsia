@@ -85,12 +85,12 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   zx_status_t EthStart(const ethernet_ifc_protocol_t* ifc);
   void EthStop();
   zx_status_t EthQuery(uint32_t options, ethernet_info_t* info);
-  zx_status_t EthQueueTx(uint32_t options, ethernet_netbuf_t* netbuf);
+  void EthQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                  ethernet_impl_queue_tx_callback completion_cb, void* cookie);
   zx_status_t EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size);
 
   // wlanif_impl_ifc (wlanif-impl -> ethernet_ifc_t)
   void EthRecv(void* data, size_t length, uint32_t flags);
-  void EthCompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status);
 
   zx_status_t Connect(zx::channel request);
 

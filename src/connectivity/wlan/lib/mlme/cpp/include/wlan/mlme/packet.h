@@ -15,6 +15,7 @@
 #include <fbl/slab_allocator.h>
 #include <fbl/span.h>
 #include <fbl/unique_ptr.h>
+#include <lib/operation/ethernet.h>
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/wlan.h>
@@ -256,13 +257,13 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
 
   wlan_tx_packet_t AsWlanTxPacket();
 
-  bool has_ext_data() const { return ext_data_ != nullptr; }
-  void set_ext_data(ethernet_netbuf_t* netbuf, uint16_t offset) {
+  bool has_ext_data() const { return ext_data_.has_value(); }
+  void set_ext_data(eth::BorrowedOperation<> netbuf, uint16_t offset) {
     ZX_DEBUG_ASSERT(!has_ext_data());
-    ext_data_ = netbuf;
+    ext_data_ = std::move(netbuf);
     ext_offset_ = offset;
   }
-  ethernet_netbuf_t* ext_data() const { return ext_data_; }
+  std::optional<eth::BorrowedOperation<>>& ext_data() { return ext_data_; }
   uint16_t ext_offset() const { return ext_offset_; }
 
  private:
@@ -270,7 +271,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
   size_t len_ = 0;
   size_t ctrl_len_ = 0;
   Peer peer_ = Peer::kUnknown;
-  ethernet_netbuf_t* ext_data_ = nullptr;
+  std::optional<eth::BorrowedOperation<>> ext_data_;
   uint16_t ext_offset_ = 0;
 };
 

@@ -4,40 +4,40 @@
 
 #pragma once
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
-
-#include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/ethernet.h>
-#include <fbl/auto_lock.h>
-#include <fbl/intrusive_double_list.h>
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/operation/ethernet.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/fifo.h>
-
-#include <fuchsia/hardware/ethernet/c/fidl.h>
-
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
+#include <optional>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/ethernet.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/ethernet.h>
+#include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/sync/completion.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
 
 namespace eth {
 
@@ -45,10 +45,15 @@ class EthDev0;
 class EthDev;
 
 struct TransmitInfo {
+  TransmitInfo() {}
+  TransmitInfo(fbl::RefPtr<EthDev> ethdev) : edev(std::move(ethdev)) {}
+
+  uint64_t fifo_cookie = 0;
   fbl::RefPtr<EthDev> edev;
-  uint64_t fifo_cookie;
-  list_node_t node;
 };
+
+using TransmitBuffer = eth::Operation<TransmitInfo>;
+using TransmitBufferPool = eth::OperationPool<TransmitInfo>;
 
 using EthDev0Type = ddk::Device<EthDev0, ddk::Openable, ddk::Unbindable>;
 
@@ -74,9 +79,6 @@ class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERN
  private:
   friend class EthDev;
 
-  // Buffer typecasting functions.
-  TransmitInfo* NetbufToTransmitInfo(ethernet_netbuf_t* netbuf);
-  ethernet_netbuf_t* TransmitInfoToNetbuf(TransmitInfo* tx_info);
   // Resend transmitted packets for loopback.
   void TransmitEcho(const void* data, size_t len);
   void DestroyAllEthDev();
@@ -189,8 +191,12 @@ class EthDev : public EthDevType,
   zx_status_t TestClearMulticastPromiscLocked() __TA_REQUIRES(edev0_->ethdev_lock_);
 
   int TransmitFifoWrite(eth_fifo_entry_t* entries, size_t count);
-  TransmitInfo* GetTransmitInfo();
-  void PutTransmitInfo(TransmitInfo* tx_info);
+
+  // Borrows a TX buffer from the pool. Logs and returns std::nullopt if none is available.
+  std::optional<TransmitBuffer> GetTransmitBuffer();
+  // Returns a TX buffer to the pool.
+  void PutTransmitBuffer(TransmitBuffer buffer);
+
   int Send(eth_fifo_entry_t* entries, size_t count);
   void StopAndKill();
 
@@ -234,12 +240,9 @@ class EthDev : public EthDevType,
   fbl::unique_ptr<zx_paddr_t[]> paddr_map_ = nullptr;
   zx::pmt pmt_;
 
-  // kFifoDepth entries, each |transmit_buffer_size_| large.
-  fbl::unique_ptr<uint8_t[]> all_transmit_buffers_ = nullptr;
-  size_t transmit_buffer_size_ = 0;
+  TransmitBufferPool free_transmit_buffers_;
 
-  fbl::Mutex lock_;                                             // Protects free_tx_bufs.
-  list_node_t free_transmit_buffers_ __TA_GUARDED(lock_) = {};  // TransmitInfo elements.
+  fbl::Mutex lock_;  // Protects free_tx_bufs.
   uint64_t open_count_ __TA_GUARDED(lock_) = 0;
 
   // fifo transmit thread.

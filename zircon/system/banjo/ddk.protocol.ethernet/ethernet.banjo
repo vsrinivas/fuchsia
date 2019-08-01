@@ -59,13 +59,6 @@ protocol EthernetIfc {
 
     Recv(vector<voidptr> data, uint32 flags) -> ();
 
-    /// complete_tx() is called to return ownership of a netbuf to the generic ethernet driver.
-    /// Return status indicates queue state:
-    ///   ZX_OK: Packet has been enqueued.
-    ///   Other: Packet could not be enqueued.
-    /// Upon a return of ZX_OK, the packet has been enqueued, but no information is returned as to
-    /// the completion state of the transmission itself.
-    CompleteTx(EthernetNetbuf? netbuf, zx.status status) -> ();
 };
 
 struct EthDevMetadata {
@@ -115,19 +108,21 @@ protocol EthernetImpl {
     /// Callbacks on ifc may be invoked from now until stop() is called
     Start(EthernetIfc ifc) -> (zx.status s);
 
-    /// Request transmission of the packet in netbuf. Return status indicates queue state:
-    ///   ZX_ERR_SHOULD_WAIT: Packet is being enqueued.
+    /// Request transmission of the packet in netbuf. The driver takes ownership of the netbuf and
+    /// must call the completion callback passed in to return it once the enqueue is complete.
+    /// The callback may be used to return the packet before transmission itself completes, and may
+    /// called from within the queue_tx() implementation itself.
+    ///
+    /// |QueueTx| may be called at any time after start() is called including from multiple threads
+    /// simultaneously.
+    ///
+    /// Return status indicates queue state:
     ///   ZX_OK: Packet has been enqueued.
     ///   Other: Packet could not be enqueued.
-    ///
-    /// In the SHOULD_WAIT case the driver takes ownership of the netbuf and must call complete_tx()
-    /// to return it once the enqueue is complete. complete_tx() may be used to return the packet
-    /// before transmission itself completes, but MUST NOT be called from within the queue_tx()
-    /// implementation.
-    ///
-    /// queue_tx() may be called at any time after start() is called including from multiple threads
-    /// simultaneously.
-    QueueTx(uint32 options, EthernetNetbuf? netbuf) -> (zx.status s);
+    /// Upon a return of ZX_OK, the packet has been enqueued, but no information is returned as to
+    /// the completion state of the transmission itself.
+    [Async]
+    QueueTx(uint32 options, EthernetNetbuf? netbuf) -> (zx.status status, EthernetNetbuf? netbuf);
 
     /// Request a settings change for the driver. Return status indicates disposition:
     ///   ZX_OK: Request has been handled.

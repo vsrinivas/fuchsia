@@ -11,6 +11,7 @@
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/ethernet/mac.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/operation/ethernet.h>
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -442,7 +443,7 @@ zx_status_t DWMacDevice::EthernetImplQuery(uint32_t options, ethernet_info_t* in
   info->features = ETHERNET_FEATURE_DMA;
   info->mtu = 1500;
   memcpy(info->mac, mac_, sizeof info->mac);
-  info->netbuf_size = sizeof(ethernet_netbuf_t);
+  info->netbuf_size = eth::BorrowedOperation<>::OperationSize(sizeof(ethernet_netbuf_t));
   return ZX_OK;
 }
 
@@ -562,24 +563,30 @@ void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
   }
 }
 
-zx_status_t DWMacDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
+void DWMacDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                                      ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
+  eth::BorrowedOperation<> op(netbuf, completion_cb, cookie, sizeof(ethernet_netbuf_t));
+
   {  // Check to make sure we are ready to accept packets
     fbl::AutoLock lock(&lock_);
     if (!online_) {
-      return ZX_ERR_UNAVAILABLE;
+      op.Complete(ZX_ERR_UNAVAILABLE);
+      return;
     }
   }
 
-  if (netbuf->data_size > kTxnBufSize) {
-    return ZX_ERR_INVALID_ARGS;
+  if (op.operation()->data_size > kTxnBufSize) {
+    op.Complete(ZX_ERR_INVALID_ARGS);
+    return;
   }
   if (tx_descriptors_[curr_tx_buf_].txrx_status & DESC_TXSTS_OWNBYDMA) {
     zxlogf(ERROR, "dwmac: TX buffer overrun@ %u\n", curr_tx_buf_);
-    return ZX_ERR_UNAVAILABLE;
+    op.Complete(ZX_ERR_UNAVAILABLE);
+    return;
   }
   uint8_t* temptr = &tx_buffer_[curr_tx_buf_ * kTxnBufSize];
 
-  memcpy(temptr, netbuf->data_buffer, netbuf->data_size);
+  memcpy(temptr, op.operation()->data_buffer, op.operation()->data_size);
   hw_mb();
 
   zx_cache_flush(temptr, netbuf->data_size, ZX_CACHE_FLUSH_DATA);
@@ -596,7 +603,7 @@ zx_status_t DWMacDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t
   hw_mb();
   mmio_->Write32(~0, DW_MAC_DMA_TXPOLLDEMAND);
   tx_counter_++;
-  return ZX_OK;
+  op.Complete(ZX_OK);
 }
 
 zx_status_t DWMacDevice::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,

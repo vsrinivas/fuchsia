@@ -242,11 +242,13 @@ static zx_status_t rtl8111_start(void* ctx, const ethernet_ifc_protocol_t* ifc) 
     return status;
 }
 
-static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
+static void rtl8111_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                             ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
     size_t length = netbuf->data_size;
     if (length > ETH_BUF_SIZE) {
         zxlogf(ERROR, "rtl8111: Unsupported packet length %zu\n", length);
-        return ZX_ERR_INVALID_ARGS;
+        completion_cb(cookie, ZX_ERR_INVALID_ARGS, netbuf);
+        return;
     }
     ethernet_device_t* edev = ctx;
 
@@ -277,7 +279,7 @@ static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethernet_netbuf
     edev->txd_idx = (edev->txd_idx + 1) % ETH_BUF_COUNT;
 
     mtx_unlock(&edev->tx_lock);
-    return ZX_OK;
+    completion_cb(cookie, ZX_OK, netbuf);
 }
 
 static zx_status_t rtl8111_set_promisc(ethernet_device_t* edev, bool on) {

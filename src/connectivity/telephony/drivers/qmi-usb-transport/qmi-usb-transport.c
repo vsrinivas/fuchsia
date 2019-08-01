@@ -41,8 +41,14 @@
 
 typedef struct txn_info {
   ethernet_netbuf_t netbuf;
+  ethernet_impl_queue_tx_callback completion_cb;
+  void* cookie;
   list_node_t node;
 } txn_info_t;
+
+static void complete_txn(txn_info_t* txn, zx_status_t status) {
+    txn->completion_cb(txn->cookie, status, &txn->netbuf);
+}
 
 // qmi usb transport device
 typedef struct qmi_ctx {
@@ -420,15 +426,21 @@ static void qmi_ethernet_impl_stop(void* cookie) {
   mtx_unlock(&ctx->ethernet_mutex);
 }
 
-static zx_status_t qmi_ethernet_impl_queue_tx(void* cookie, uint32_t options,
-                                       ethernet_netbuf_t* netbuf) {
-  qmi_ctx_t* ctx = cookie;
+static void qmi_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet_netbuf_t* netbuf,
+                                       ethernet_impl_queue_tx_callback completion_cb,
+                                       void* cookie) {
+  qmi_ctx_t* ctx = context;
   size_t length = netbuf->data_size;
   zx_status_t status;
 
+  txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
+  txn->completion_cb = completion_cb;
+  txn->cookie = cookie;
+
   // TODO mtu better
   if (length > 1024 || length == 0) {
-    return ZX_ERR_INVALID_ARGS;
+    complete_txn(txn, ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   mtx_lock(&ctx->tx_mutex);
@@ -438,13 +450,14 @@ static zx_status_t qmi_ethernet_impl_queue_tx(void* cookie, uint32_t options,
     status = send_locked(ctx, netbuf);
     if (status == ZX_ERR_SHOULD_WAIT) {
       // No buffers available, queue it up
-      txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
       list_add_tail(&ctx->tx_pending_infos, &txn->node);
     }
   }
 
   mtx_unlock(&ctx->tx_mutex);
-  return status;
+  if (status != ZX_ERR_SHOULD_WAIT) {
+    complete_txn(txn, status);
+  }
 }
 
 static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
@@ -757,8 +770,8 @@ static void usb_write_complete(void* context, usb_request_t* request) {
   mtx_unlock(&ctx->tx_mutex);
 
   mtx_lock(&ctx->ethernet_mutex);
-  if (additional_tx_queued && ctx->ethernet_ifc.ops) {
-    ethernet_ifc_complete_tx(&ctx->ethernet_ifc, &txn->netbuf, send_status);
+  if (additional_tx_queued) {
+    complete_txn(txn, send_status);
   }
   mtx_unlock(&ctx->ethernet_mutex);
 

@@ -329,30 +329,23 @@ void Asix88179Ethernet::WriteComplete(usb_request_t* usb_request) {
 
   // If there are pending netbuf packets, add as many as possible to the new request.
   request.request()->header.length = 0;
-  for (int count = 0; !pending_netbuf_queue_.empty(); count++) {
-    auto netbuf = pending_netbuf_queue_.front();
+  for (int count = 0; !pending_netbuf_queue_.is_empty(); count++) {
+    auto netbuf = pending_netbuf_queue_.pop().value();
 
     if ((RequestAppend(request, netbuf) == ZX_ERR_BUFFER_TOO_SMALL)) {
       if (count != 0) {
+        pending_netbuf_queue_.push_next(std::move(netbuf));
         break;
       } else {
-        size_t length = netbuf->data_size;
+        size_t length = netbuf.operation()->data_size;
         // netbuf is too large for a request buffer.
         zxlogf(ERROR, "ax88179: failed to append netbuf to empty request %zu\n", length);
-        pending_netbuf_queue_.pop();
-        { // Lock scope
-          fbl::AutoLock lock(&lock_);
-          ifc_.CompleteTx(netbuf, ZX_ERR_INTERNAL);
-        }
+        netbuf.Complete(ZX_ERR_INTERNAL);
         break;
       }
     }
 
-    pending_netbuf_queue_.pop();
-    { // Lock scope
-      fbl::AutoLock lock(&lock_);
-      ifc_.CompleteTx(netbuf, ZX_OK);
-    }
+    netbuf.Complete(ZX_OK);
   }
   if (request.request()->header.length > 0) {
     pending_usb_transmit_queue_.push(std::move(request));
@@ -406,33 +399,39 @@ void Asix88179Ethernet::InterruptComplete(usb_request_t* usb_request) {
 }
 
 zx_status_t Asix88179Ethernet::RequestAppend(usb::Request<>& request,
-                                             const ethernet_netbuf_t* netbuf) {
+                                             const eth::BorrowedOperation<>& netbuf) {
   zx_off_t offset = ALIGN(request.request()->header.length, 4);
 
   struct {
     uint16_t transmit_length;
     uint16_t unused[3];
   } header = {
-      .transmit_length = htole16(netbuf->data_size),
+      .transmit_length = htole16(netbuf.operation()->data_size),
       .unused = {},
   };
 
-  if ((offset + sizeof(header) + netbuf->data_size) > kUsbBufferSize) {
+  if ((offset + sizeof(header) + netbuf.operation()->data_size) > kUsbBufferSize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
   request.CopyTo(&header, sizeof(header), offset);
-  request.CopyTo(netbuf->data_buffer, netbuf->data_size, offset + sizeof(header));
-  request.request()->header.length = offset + sizeof(header) + netbuf->data_size;
+  request.CopyTo(netbuf.operation()->data_buffer, netbuf.operation()->data_size,
+                 offset + sizeof(header));
+  request.request()->header.length = offset + sizeof(header) + netbuf.operation()->data_size;
 
   return ZX_OK;
 }
 
-zx_status_t Asix88179Ethernet::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
-  size_t length = netbuf->data_size;
+void Asix88179Ethernet::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                                            ethernet_impl_queue_tx_callback completion_cb,
+                                            void* cookie) {
+  eth::BorrowedOperation<> op(netbuf, completion_cb, cookie, sizeof(ethernet_netbuf_t));
+
+  size_t length = op.operation()->data_size;
   if (length > (kMtu + kMaxEthernetHeaderSize)) {
     zxlogf(ERROR, "ax88179: unsupported packet length %zu\n", length);
-    return ZX_ERR_INVALID_ARGS;
+    op.Complete(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   zx::nanosleep(zx::deadline_after(tx_endpoint_delay_));
@@ -440,9 +439,9 @@ zx_status_t Asix88179Ethernet::EthernetImplQueueTx(uint32_t options, ethernet_ne
   fbl::AutoLock tx_lock(&tx_lock_);
   std::optional<usb::Request<>> request;
 
-  if (!pending_netbuf_queue_.empty()) {
-    pending_netbuf_queue_.push(netbuf);
-    return ZX_ERR_SHOULD_WAIT;
+  if (!pending_netbuf_queue_.is_empty()) {
+    pending_netbuf_queue_.push(std::move(op));
+    return;
   }
 
   if (pending_usb_transmit_queue_.is_empty()) {
@@ -450,30 +449,32 @@ zx_status_t Asix88179Ethernet::EthernetImplQueueTx(uint32_t options, ethernet_ne
     request = free_write_pool_.Get(usb::Request<>::RequestSize(parent_req_size_));
 
     if (!request) {
-      pending_netbuf_queue_.push(netbuf);
-      return ZX_ERR_SHOULD_WAIT;
+      pending_netbuf_queue_.push(std::move(op));
+      return;
     }
     request->request()->header.length = 0;
-    if (RequestAppend(*request, netbuf) != ZX_OK) {
+    if (RequestAppend(*request, op) != ZX_OK) {
       zxlogf(ERROR, "ax88179: append failed, length %zu\n", length);
-      return ZX_ERR_INTERNAL;
+      op.Complete(ZX_ERR_INTERNAL);
+      return;
     }
   } else {
     // If the pending queue is not empty try to append to the last queued request
     request = pending_usb_transmit_queue_.pop_last();
-    if (RequestAppend(*request, netbuf) == ZX_ERR_BUFFER_TOO_SMALL) {
+    if (RequestAppend(*request, op) == ZX_ERR_BUFFER_TOO_SMALL) {
       pending_usb_transmit_queue_.push(*std::move(request));
 
       // Our data won't fit - grab a new request
       request = free_write_pool_.Get(usb::Request<>::RequestSize(parent_req_size_));
       if (!request) {
-        pending_netbuf_queue_.push(netbuf);
-        return ZX_ERR_SHOULD_WAIT;
+        pending_netbuf_queue_.push(std::move(op));
+        return;
       }
       request->request()->header.length = 0;
-      if (RequestAppend(*request, netbuf) != ZX_OK) {
+      if (RequestAppend(*request, op) != ZX_OK) {
         zxlogf(ERROR, "ax88179: append failed, length %zu\n", length);
-        return ZX_ERR_INTERNAL;
+        op.Complete(ZX_ERR_INTERNAL);
+        return;
       }
     }
   }
@@ -481,13 +482,14 @@ zx_status_t Asix88179Ethernet::EthernetImplQueueTx(uint32_t options, ethernet_ne
   bool was_transmit_empty = pending_usb_transmit_queue_.is_empty();
   pending_usb_transmit_queue_.push(*std::move(request));
   if ((options & ETHERNET_TX_OPT_MORE) && (was_transmit_empty)) {
-    return ZX_OK;
+    op.Complete(ZX_OK);
+    return;
   }
 
   request = pending_usb_transmit_queue_.pop();
   usb_.RequestQueue(request->take(), &write_request_complete_);
 
-  return ZX_OK;
+  op.Complete(ZX_OK);
 }
 
 void Asix88179Ethernet::Shutdown() {
@@ -520,7 +522,7 @@ zx_status_t Asix88179Ethernet::EthernetImplQuery(uint32_t options, ethernet_info
   *info = {};
   info->mtu = kMtu;
   memcpy(info->mac, mac_addr_, sizeof(mac_addr_));
-  info->netbuf_size = sizeof(ethernet_info_t);
+  info->netbuf_size = eth::BorrowedOperation<>::OperationSize(sizeof(ethernet_netbuf_t));
 
   return ZX_OK;
 }

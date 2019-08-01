@@ -74,8 +74,14 @@ typedef struct {
 
 typedef struct txn_info {
     ethernet_netbuf_t netbuf;
+    ethernet_impl_queue_tx_callback completion_cb;
+    void* cookie;
     list_node_t node;
 } txn_info_t;
+
+static void complete_txn(txn_info_t* txn, zx_status_t status) {
+    txn->completion_cb(txn->cookie, status, &txn->netbuf);
+}
 
 static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request);
 static void ax88772b_write_complete(void* ctx, usb_request_t* request);
@@ -287,9 +293,7 @@ static void ax88772b_write_complete(void* ctx, usb_request_t* request) {
         // If we have any netbufs that are waiting to be sent, reuse the request we just got back
         txn_info_t* txn = list_remove_head_type(&eth->pending_netbufs, txn_info_t, node);
         zx_status_t send_result = ax88772b_send(eth, request, &txn->netbuf);
-        if (eth->ifc.ops) {
-            ethernet_ifc_complete_tx(&eth->ifc, &txn->netbuf, send_result);
-        }
+        complete_txn(txn, send_result);
     } else {
         zx_status_t status = usb_req_list_add_tail(&eth->free_write_reqs, request,
                                                    eth->parent_req_size);
@@ -368,18 +372,22 @@ static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request) {
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t ax88772b_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
+static void ax88772b_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                              ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
     ax88772b_t* eth = ctx;
+    txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
+    txn->completion_cb = completion_cb;
+    txn->cookie = cookie;
 
     if (eth->dead) {
-        return ZX_ERR_PEER_CLOSED;
+        complete_txn(txn, ZX_ERR_PEER_CLOSED);
+        return;
     }
 
     zx_status_t status = ZX_OK;
 
     mtx_lock(&eth->mutex);
 
-    txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
         list_add_tail(&eth->pending_netbufs, &txn->node);
@@ -393,7 +401,7 @@ static zx_status_t ax88772b_queue_tx(void* ctx, uint32_t options, ethernet_netbu
 
 out:
     mtx_unlock(&eth->mutex);
-    return status;
+    complete_txn(txn, status);
 }
 
 static void ax88772b_unbind(void* ctx) {

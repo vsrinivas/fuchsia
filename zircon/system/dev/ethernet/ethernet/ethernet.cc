@@ -3,23 +3,14 @@
 // found in the LICENSE file.
 
 #include "ethernet.h"
+
 #include <type_traits>
+#include "zircon/errors.h"
 
 namespace eth {
 
-TransmitInfo* EthDev0::NetbufToTransmitInfo(ethernet_netbuf_t* netbuf) {
-  // NOTE: Alignment is guaranteed by the static_asserts for alignment and padding of the
-  // TransmitInfo structure, combined with the value of transmit_buffer_size_.
-  return reinterpret_cast<TransmitInfo*>(reinterpret_cast<uintptr_t>(netbuf) + info_.netbuf_size);
-}
-
-ethernet_netbuf_t* EthDev0::TransmitInfoToNetbuf(TransmitInfo* transmit_info) {
-  return reinterpret_cast<ethernet_netbuf_t*>(reinterpret_cast<uintptr_t>(transmit_info) -
-                                              info_.netbuf_size);
-}
-
-zx_status_t EthDev::PromiscHelperLogicLocked(bool req_on, uint32_t state_bit, uint32_t param_id,
-                                             int32_t* requesters_count) {
+zx_status_t EthDev::PromiscHelperLogicLocked(bool req_on, uint32_t state_bit,
+                                             uint32_t param_id, int32_t* requesters_count) {
   if (state_bit == 0 || state_bit & (state_bit - 1)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -205,25 +196,20 @@ int EthDev::TransmitFifoWrite(eth_fifo_entry_t* entries, size_t count) {
   return 0;
 }
 
-// Borrows a TX buffer from the pool. Logs and returns nullptr if none is available.
-TransmitInfo* EthDev::GetTransmitInfo() {
-  fbl::AutoLock lock(&lock_);
-  TransmitInfo* transmit_info = list_remove_head_type(&free_transmit_buffers_, TransmitInfo, node);
-  if (transmit_info == nullptr) {
-    zxlogf(ERROR, "eth [%s]: transmit_info pool empty\n", name_);
+std::optional<TransmitBuffer> EthDev::GetTransmitBuffer() {
+  auto tx_buffer = free_transmit_buffers_.pop();
+  if (!tx_buffer) {
+    zxlogf(ERROR, "eth [%s]: transmit_buffer pool empty\n", name_);
+    return std::nullopt;
   }
-  new (transmit_info) TransmitInfo();
-  transmit_info->edev = fbl::RefPtr<EthDev>(this);
-  return transmit_info;
+  new (tx_buffer->private_storage()) TransmitInfo(fbl::RefPtr<EthDev>(this));
+  return tx_buffer;
 }
 
-// Returns a TX buffer to the pool.
-void EthDev::PutTransmitInfo(TransmitInfo* transmit_info) {
-  // Call the destructor on TransmitInfo since we are effectively "freeing" the
-  // TransmitInfo structure. This needs to be done manually, since it is an inline structure.
-  transmit_info->~TransmitInfo();
-  fbl::AutoLock lock(&lock_);
-  list_add_head(&free_transmit_buffers_, &transmit_info->node);
+void EthDev::PutTransmitBuffer(TransmitBuffer tx_buffer) {
+  // Manually reset edev so that we don't hang on to the refcount any longer.
+  tx_buffer.private_storage()->edev.reset();
+  free_transmit_buffers_.push(std::move(tx_buffer));
 }
 
 void EthDev0::SetStatus(uint32_t status) {
@@ -257,18 +243,18 @@ void EthDev0::CompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status) {
   if (!netbuf) {
     return;
   }
-  TransmitInfo* transmit_info = NetbufToTransmitInfo(netbuf);
-  auto edev = transmit_info->edev;
+  TransmitBuffer transmit_buffer(netbuf, info_.netbuf_size);
+  auto edev = transmit_buffer.private_storage()->edev;
   eth_fifo_entry_t entry = {
       .offset = static_cast<uint32_t>(reinterpret_cast<const char*>(netbuf->data_buffer) -
                                       reinterpret_cast<const char*>(edev->io_buffer_.start())),
       .length = static_cast<uint16_t>(netbuf->data_size),
       .flags = static_cast<uint16_t>(status == ZX_OK ? ETH_FIFO_TX_OK : 0),
-      .cookie = transmit_info->fifo_cookie};
+      .cookie = transmit_buffer.private_storage()->fifo_cookie};
 
-  // Now that we've copied all pertinent data from the netbuf, return it to the free list so
+  // Now that we've copied all pertinent data from the netbuf, return it to the free pool so
   // it is available immediately for the next request.
-  edev->PutTransmitInfo(transmit_info);
+  edev->PutTransmitBuffer(std::move(transmit_buffer));
 
   // Send the entry back to the client.
   edev->TransmitFifoWrite(&entry, 1);
@@ -280,10 +266,6 @@ ethernet_ifc_protocol_ops_t ethernet_ifc = {
                  uint32_t status) { reinterpret_cast<EthDev0*>(cookie)->SetStatus(status); },
     .recv = [](void* cookie, const void* data, size_t len,
                uint32_t flags) { reinterpret_cast<EthDev0*>(cookie)->Recv(data, len, flags); },
-    .complete_tx =
-        [](void* cookie, ethernet_netbuf_t* netbuf, zx_status_t status) {
-          reinterpret_cast<EthDev0*>(cookie)->CompleteTx(netbuf, status);
-        },
 };
 
 // The thread safety analysis cannot reason through the aliasing of
@@ -327,7 +309,7 @@ zx_status_t EthDev::TransmitListenLocked(bool yes) {
 
 // The array of entries is invalidated after the call.
 int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
-  TransmitInfo* transmit_info = nullptr;
+  std::optional<TransmitBuffer> transmit_buffer = std::nullopt;
   // The entries that we can't send back to the fifo immediately are filtered
   // out in-place using a classic algorithm a-la "std::remove_if".
   // Once the loop finishes, the first 'to_write' entries in the array
@@ -339,10 +321,9 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
       e->flags = ETH_FIFO_INVALID;
       entries[to_write++] = *e;
     } else {
-      zx_status_t status;
-      if (transmit_info == nullptr) {
-        transmit_info = GetTransmitInfo();
-        if (transmit_info == nullptr) {
+      if (!transmit_buffer) {
+        transmit_buffer = GetTransmitBuffer();
+        if (!transmit_buffer) {
           return -1;
         }
       }
@@ -350,34 +331,31 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
       if (opts) {
         zxlogf(SPEW, "setting OPT_MORE (%lu packets to go)\n", count);
       }
-      ethernet_netbuf_t* netbuf = edev0_->TransmitInfoToNetbuf(transmit_info);
-      netbuf->data_buffer = reinterpret_cast<char*>(io_buffer_.start()) + e->offset;
+      transmit_buffer->operation()->data_buffer =
+          reinterpret_cast<char*>(io_buffer_.start()) + e->offset;
       if (edev0_->info_.features & ETHERNET_FEATURE_DMA) {
-        netbuf->phys = paddr_map_[e->offset / PAGE_SIZE] + (e->offset & kPageMask);
+        transmit_buffer->operation()->phys =
+            paddr_map_[e->offset / PAGE_SIZE] + (e->offset & kPageMask);
       }
-      netbuf->data_size = e->length;
-      transmit_info->fifo_cookie = e->cookie;
-      status = edev0_->mac_.QueueTx(opts, netbuf);
+      transmit_buffer->operation()->data_size = e->length;
+      transmit_buffer->private_storage()->fifo_cookie = e->cookie;
+      edev0_->mac_.QueueTx(
+          opts, transmit_buffer->take(),
+          [](void* cookie, zx_status_t status, ethernet_netbuf_t* netbuf) {
+            reinterpret_cast<EthDev0*>(cookie)->CompleteTx(netbuf, status);
+          },
+          edev0_);
+      transmit_buffer.reset();
       if (state_ & kStateTransmissionLoopback) {
         edev0_->TransmitEcho(reinterpret_cast<char*>(io_buffer_.start()) + e->offset, e->length);
       }
-      if (status != ZX_ERR_SHOULD_WAIT) {
-        // Transmission completed. To avoid extra mutex locking/unlocking,
-        // we don't return the buffer to the pool immediately, but reuse
-        // it on the next iteration of the loop.
-        e->flags = status == ZX_OK ? ETH_FIFO_TX_OK : 0;
-        entries[to_write++] = *e;
-      } else {
-        // The ownership of the TX buffer is transferred to mac_.QueueTx().
-        // We can't reuse it, so clear the pointer.
-        transmit_info = nullptr;
-        ethernet_request_count_++;
-      }
+
+      ethernet_request_count_++;
     }
     count--;
   }
-  if (transmit_info) {
-    PutTransmitInfo(transmit_info);
+  if (transmit_buffer) {
+    PutTransmitBuffer(*std::move(transmit_buffer));
   }
   if (to_write) {
     TransmitFifoWrite(entries, to_write);
@@ -869,36 +847,20 @@ zx_status_t EthDev::DdkClose(uint32_t flags) {
 zx_status_t EthDev::AddDevice(zx_device_t** out) {
   zx_status_t status;
 
-  transmit_buffer_size_ =
-      ROUNDUP(sizeof(TransmitInfo) + edev0_->info_.netbuf_size, __STDCPP_DEFAULT_NEW_ALIGNMENT__);
-  // Ensure that we can meet alignment requirement of TransmitInfo in this allocation,
-  // and that sufficient padding exists between elements in the struct to guarantee safe
-  // accesses of this array.
-  static_assert(std::alignment_of_v<TransmitInfo> <= __STDCPP_DEFAULT_NEW_ALIGNMENT__);
-  static_assert(std::alignment_of_v<TransmitInfo> <= sizeof(ethernet_netbuf_t));
-  fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> all_transmit_buffers =
-      fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[kFifoDepth * transmit_buffer_size_]());
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  list_initialize(&free_transmit_buffers_);
   for (size_t ndx = 0; ndx < kFifoDepth; ndx++) {
-    ethernet_netbuf_t* netbuf =
-        (ethernet_netbuf_t*)((uintptr_t)all_transmit_buffers.get() + (transmit_buffer_size_ * ndx));
-    TransmitInfo* transmit_info = edev0_->NetbufToTransmitInfo(netbuf);
-    list_add_tail(&free_transmit_buffers_, &transmit_info->node);
+    auto buffer = TransmitBuffer::Alloc(edev0_->info_.netbuf_size);
+    if (!buffer) {
+      return ZX_ERR_NO_MEMORY;
+    }
+    free_transmit_buffers_.push(*std::move(buffer));
   }
 
   if ((status = DdkAdd("ethernet", DEVICE_ADD_INSTANCE, nullptr, 0, ZX_PROTOCOL_ETHERNET)) < 0) {
-    list_initialize(&free_transmit_buffers_);
     return status;
   }
   if (out) {
     *out = zxdev_;
   }
-  all_transmit_buffers_ = std::move(all_transmit_buffers);
 
   {
     fbl::AutoLock lock(&edev0_->ethdev_lock_);

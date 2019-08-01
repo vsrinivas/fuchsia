@@ -3569,10 +3569,11 @@ void brcmf_hook_stats_query_req(void* ctx) {
   ndev->if_callbacks->stats_query_resp(ndev->if_callback_cookie, &response);
 }
 
-zx_status_t brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
+void brcmf_hook_data_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                              ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   brcmf_netdev_start_xmit(ndev, netbuf);
-  return ZX_OK;
+  completion_cb(cookie, ZX_OK, netbuf);
 }
 
 zx_status_t brcmf_hook_set_multicast_promisc(void* ctx, bool enable) {

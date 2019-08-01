@@ -18,6 +18,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <lib/operation/ethernet.h>
 #include <pretty/hexdump.h>
 #include <virtio/net.h>
 #include <virtio/virtio.h>
@@ -102,9 +103,10 @@ zx_status_t virtio_net_start(void* ctx, const ethernet_ifc_protocol_t* ifc) {
   return eth->Start(ifc);
 }
 
-zx_status_t virtio_net_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) {
+void virtio_net_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                         ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
-  return eth->QueueTx(options, netbuf);
+  eth->QueueTx(options, netbuf, completion_cb, cookie);
 }
 
 static zx_status_t virtio_set_param(void* ctx, uint32_t param, int32_t value, const void* data,
@@ -383,7 +385,7 @@ zx_status_t EthernetDevice::Query(uint32_t options, ethernet_info_t* info) {
   if (info) {
     // TODO(aarongreen): Add info->features = GetFeatures();
     info->mtu = kVirtioMtu;
-    info->netbuf_size = sizeof(ethernet_netbuf_t);
+    info->netbuf_size = eth::BorrowedOperation<>::OperationSize(sizeof(ethernet_netbuf_t));
     memcpy(info->mac, config_.mac, sizeof(info->mac));
   }
   return ZX_OK;
@@ -409,14 +411,17 @@ zx_status_t EthernetDevice::Start(const ethernet_ifc_protocol_t* ifc) {
   return ZX_OK;
 }
 
-zx_status_t EthernetDevice::QueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
+void EthernetDevice::QueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                             ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   LTRACE_ENTRY;
-  const void* data = netbuf->data_buffer;
-  size_t length = netbuf->data_size;
+  eth::BorrowedOperation<> op(netbuf, completion_cb, cookie, sizeof(ethernet_netbuf_t));
+  const void* data = op.operation()->data_buffer;
+  size_t length = op.operation()->data_size;
   // First, validate the packet
   if (!data || length > kEthFrameSize) {
     zxlogf(ERROR, "dropping packet; invalid packet\n");
-    return ZX_ERR_INVALID_ARGS;
+    op.Complete(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   fbl::AutoLock lock(&tx_lock_);
@@ -440,7 +445,8 @@ zx_status_t EthernetDevice::QueueTx(uint32_t options, ethernet_netbuf_t* netbuf)
   }
   if (!desc) {
     zxlogf(ERROR, "dropping packet; out of descriptors\n");
-    return ZX_ERR_NO_RESOURCES;
+    op.Complete(ZX_ERR_NO_RESOURCES);
+    return;
   }
 
   // Add the data to be sent
@@ -480,7 +486,7 @@ zx_status_t EthernetDevice::QueueTx(uint32_t options, ethernet_netbuf_t* netbuf)
     tx_.Kick();
     unkicked_ = 0;
   }
-  return ZX_OK;
+  op.Complete(ZX_OK);
 }
 
 }  // namespace virtio

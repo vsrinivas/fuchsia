@@ -87,8 +87,6 @@ static wlanif_impl_ifc_t wlanif_impl_ifc_ops = {
     // Ethernet operations
     .data_recv = [](void* cookie, void* data, size_t length,
                     uint32_t flags) { DEV(cookie)->EthRecv(data, length, flags); },
-    .data_complete_tx = [](void* cookie, ethernet_netbuf_t* netbuf,
-                           zx_status_t status) { DEV(cookie)->EthCompleteTx(netbuf, status); },
 };
 
 static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
@@ -99,8 +97,9 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
     .start = [](void* ctx, const ethernet_ifc_protocol_t* ifc) -> zx_status_t {
       return DEV(ctx)->EthStart(ifc);
     },
-    .queue_tx = [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf) -> zx_status_t {
-      return DEV(ctx)->EthQueueTx(options, netbuf);
+    .queue_tx = [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+                   ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
+      return DEV(ctx)->EthQueueTx(options, netbuf, completion_cb, cookie);
     },
     .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data, size_t data_size)
         -> zx_status_t { return DEV(ctx)->EthSetParam(param, value, data, data_size); },
@@ -1026,11 +1025,12 @@ zx_status_t Device::EthQuery(uint32_t options, ethernet_info_t* info) {
   return ZX_OK;
 }
 
-zx_status_t Device::EthQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
+void Device::EthQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                        ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   if (wlanif_impl_.ops->data_queue_tx != nullptr) {
-    return wlanif_impl_.ops->data_queue_tx(wlanif_impl_.ctx, options, netbuf);
+    wlanif_impl_.ops->data_queue_tx(wlanif_impl_.ctx, options, netbuf, completion_cb, cookie);
   } else {
-    return ZX_ERR_NOT_SUPPORTED;
+    completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, netbuf);
   }
 }
 
@@ -1074,13 +1074,6 @@ void Device::EthRecv(void* data, size_t length, uint32_t flags) {
   std::lock_guard<std::mutex> lock(lock_);
   if (eth_started_) {
     ethernet_ifc_recv(&ethernet_ifc_, data, length, flags);
-  }
-}
-
-void Device::EthCompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status) {
-  std::lock_guard<std::mutex> lock(lock_);
-  if (eth_started_) {
-    ethernet_ifc_complete_tx(&ethernet_ifc_, netbuf, status);
   }
 }
 

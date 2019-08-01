@@ -34,19 +34,12 @@ class TestEthernetIfc : public ddk::Device<TestEthernetIfc>,
     recv_called_ = true;
   }
 
-  void EthernetIfcCompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status) {
-    complete_tx_this_ = get_this();
-    complete_tx_called_ = true;
-  }
-
   bool VerifyCalls() const {
     BEGIN_HELPER;
     EXPECT_EQ(this_, status_this_, "");
     EXPECT_EQ(this_, recv_this_, "");
-    EXPECT_EQ(this_, complete_tx_this_, "");
     EXPECT_TRUE(status_called_, "");
     EXPECT_TRUE(recv_called_, "");
-    EXPECT_TRUE(complete_tx_called_, "");
     END_HELPER;
   }
 
@@ -60,10 +53,8 @@ class TestEthernetIfc : public ddk::Device<TestEthernetIfc>,
   uintptr_t this_ = 0u;
   uintptr_t status_this_ = 0u;
   uintptr_t recv_this_ = 0u;
-  uintptr_t complete_tx_this_ = 0u;
   bool status_called_ = false;
   bool recv_called_ = false;
-  bool complete_tx_called_ = false;
 };
 
 class TestEthernetImplProtocol
@@ -104,10 +95,10 @@ class TestEthernetImplProtocol
     return ZX_OK;
   }
 
-  zx_status_t EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf) {
+  void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                           ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
     queue_tx_this_ = get_this();
     queue_tx_called_ = true;
-    return ZX_OK;
   }
 
   zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
@@ -139,7 +130,6 @@ class TestEthernetImplProtocol
     // Use the provided client to test the ifc client.
     client_->Status(0);
     client_->Recv(nullptr, 0, 0);
-    client_->CompleteTx(nullptr, ZX_OK);
     return true;
   }
 
@@ -167,7 +157,6 @@ static bool test_ethernet_ifc() {
   auto ifc = dev.ethernet_ifc();
   ethernet_ifc_status(&ifc, 0);
   ethernet_ifc_recv(&ifc, nullptr, 0, 0);
-  ethernet_ifc_complete_tx(&ifc, nullptr, ZX_OK);
 
   EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -183,7 +172,6 @@ static bool test_ethernet_ifc_client() {
 
   client.Status(0);
   client.Recv(nullptr, 0, 0);
-  client.CompleteTx(nullptr, ZX_OK);
 
   EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -209,7 +197,7 @@ static bool test_ethernet_impl_protocol() {
   ethernet_ifc_protocol_t ifc = {nullptr, nullptr};
   EXPECT_EQ(ZX_OK, ethernet_impl_start(&proto, ifc.ctx, ifc.ops), "");
   ethernet_netbuf_t netbuf = {};
-  EXPECT_EQ(ZX_OK, ethernet_impl_queue_tx(&proto, 0, &netbuf), "");
+  ethernet_impl_queue_tx(&proto, 0, &netbuf, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, ethernet_impl_set_param(&proto, 0, 0, nullptr, 0), "");
 
   EXPECT_TRUE(dev.VerifyCalls(), "");
@@ -225,8 +213,8 @@ static bool test_ethernet_impl_protocol_client() {
   TestEthernetImplProtocol protocol_dev;
 
   ethernet_impl_protocol_t proto;
-  auto status =
-      protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, reinterpret_cast<void*>(&proto));
+  auto status = protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHERNET_IMPL,
+                                            reinterpret_cast<void*>(&proto));
   EXPECT_EQ(ZX_OK, status, "");
   // The client device to wrap the ops + device that represent the parent
   // device.
@@ -239,7 +227,7 @@ static bool test_ethernet_impl_protocol_client() {
   client.Stop();
   EXPECT_EQ(ZX_OK, client.Start(ifc.ctx, ifc.ops), "");
   ethernet_netbuf_t netbuf = {};
-  EXPECT_EQ(ZX_OK, client.QueueTx(0, &netbuf), "");
+  client.QueueTx(0, &netbuf, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, client.SetParam(0, 0, nullptr, 0));
 
   EXPECT_TRUE(protocol_dev.VerifyCalls(), "");

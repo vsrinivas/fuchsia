@@ -21,6 +21,7 @@ driver("dwmac") {
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/operation",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
