@@ -3,10 +3,6 @@
 // found in the LICENSE file.
 
 //! Common utilities used by pseudo-file related tests.
-//!
-//! Most assertions are macros as they need to call async functions themselves.  As a typical test
-//! will have multiple assertions, it save a bit of typing to write `assert_something!(arg)`
-//! instead of `await!(assert_something(arg))`.
 
 use {
     crate::{common::AsyncFnOnce, directory::entry::DirectoryEntry},

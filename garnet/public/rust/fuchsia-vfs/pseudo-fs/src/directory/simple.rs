@@ -697,7 +697,7 @@ mod tests {
                     .expect("Failed to create connection endpoints");
 
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                await!(open_sender.send((flags, 0, Box::new(iter::empty()), server_end))).unwrap();
+                open_sender.send((flags, 0, Box::new(iter::empty()), server_end)).await.unwrap();
                 assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
                     assert_eq!(s, ZX_OK);
                     assert_eq!(info, Some(Box::new(NodeInfo::Directory(DirectoryObject))));
@@ -722,14 +722,14 @@ mod tests {
                     assert_close!(file);
                 }
 
-                await!(assert_read_file(&first_proxy));
+                assert_read_file(&first_proxy).await;
 
                 let second_proxy = clone_get_directory_proxy_assert_ok!(
                     &first_proxy,
                     OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE
                 );
 
-                await!(assert_read_file(&second_proxy));
+                assert_read_file(&second_proxy).await;
 
                 assert_close!(first_proxy);
                 assert_close!(second_proxy);
@@ -755,14 +755,14 @@ mod tests {
                     assert_close!(file);
                 }
 
-                await!(assert_read_file(&first_proxy));
+                assert_read_file(&first_proxy).await;
 
                 let second_proxy = clone_get_directory_proxy_assert_ok!(
                     &first_proxy,
                     CLONE_FLAG_SAME_RIGHTS | OPEN_FLAG_DESCRIBE
                 );
 
-                await!(assert_read_file(&second_proxy));
+                assert_read_file(&second_proxy).await;
 
                 assert_close!(first_proxy);
                 assert_close!(second_proxy);
@@ -786,7 +786,7 @@ mod tests {
                     assert_close!(file);
                 }
 
-                await!(assert_read_file(&root));
+                assert_read_file(&root).await;
 
                 clone_as_directory_assert_err!(
                     &root,
@@ -886,17 +886,17 @@ mod tests {
                     assert_close!(file);
                 }
 
-                await!(open_read_close(&root, "etc/fstab", "/dev/fs /"));
+                open_read_close(&root, "etc/fstab", "/dev/fs /").await;
 
                 {
                     let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                     let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
-                    await!(open_read_close(&ssh_dir, "sshd_config", "# Empty"));
+                    open_read_close(&ssh_dir, "sshd_config", "# Empty").await;
                 }
 
-                await!(open_read_close(&root, "etc/ssh/sshd_config", "# Empty"));
-                await!(open_read_close(&root, "uname", "Fuchsia"));
+                open_read_close(&root, "etc/ssh/sshd_config", "# Empty").await;
+                open_read_close(&root, "uname", "Fuchsia").await;
 
                 assert_close!(root);
             }
@@ -946,24 +946,26 @@ mod tests {
                     let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
                     let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
-                    await!(open_read_write_close(
+                    open_read_write_close(
                         &ssh_dir,
                         "sshd_config",
                         "# Empty",
                         "Port 22",
                         write_count,
-                        1
-                    ));
+                        1,
+                    )
+                    .await;
                 }
 
-                await!(open_read_write_close(
+                open_read_write_close(
                     &root,
                     "etc/ssh/sshd_config",
                     "# Empty",
                     "Port 23",
                     write_count,
-                    2
-                ));
+                    2,
+                )
+                .await;
 
                 assert_close!(root);
             }
@@ -1002,8 +1004,8 @@ mod tests {
                     assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
                 }
 
-                await!(open_write_close(&root, "Message 1", write_count, 1));
-                await!(open_write_close(&root, "Message 2", write_count, 2));
+                open_write_close(&root, "Message 1", write_count, 1).await;
+                open_write_close(&root, "Message 2", write_count, 2).await;
 
                 assert_close!(root);
             }

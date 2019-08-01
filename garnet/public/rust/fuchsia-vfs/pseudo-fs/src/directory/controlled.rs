@@ -174,7 +174,7 @@ impl<'entries> Controller<'entries> {
         // dependencies on self.
         let mut controlled = self.controlled.clone();
         async move {
-            await!(controlled.send(Command::Open { flags, mode, path, server_end })).map_err(
+            controlled.send(Command::Open { flags, mode, path, server_end }).await.map_err(
                 |send_err| {
                     check_send_err_is_disconnection("Controller::open", send_err);
                     OpenError::Terminated
@@ -222,7 +222,7 @@ impl<'entries> Controller<'entries> {
         let mut controlled = self.controlled.clone();
         let name = name.into();
         async move {
-            await!(controlled.send(Command::AddEntry { name, entry })).map_err(|send_err| {
+            controlled.send(Command::AddEntry { name, entry }).await.map_err(|send_err| {
                 check_send_err_is_disconnection("Controller::add_boxed_entry", send_err);
                 AddEntryError::Terminated
             })
@@ -273,13 +273,15 @@ impl<'entries> Controller<'entries> {
         let name = name.into();
         let (res_sender, res_receiver) = oneshot::channel();
         async move {
-            await!(controlled.send(Command::AddEntryAndRespond { name, entry, res_sender }))
+            controlled
+                .send(Command::AddEntryAndRespond { name, entry, res_sender })
+                .await
                 .map_err(|send_err| {
                     check_send_err_is_disconnection("Controller::add_boxed_entry_res", send_err);
                     AddEntryResError::Terminated
                 })?;
 
-            match await!(res_receiver) {
+            match res_receiver.await {
                 Ok(res) => res.map_err(AddEntryResError::AddFailed),
                 Err(oneshot::Canceled) => Err(AddEntryResError::Terminated),
             }
@@ -301,7 +303,7 @@ impl<'entries> Controller<'entries> {
         let mut controlled = self.controlled.clone();
         let name = name.into();
         async move {
-            await!(controlled.send(Command::RemoveEntry { name })).map_err(|send_err| {
+            controlled.send(Command::RemoveEntry { name }).await.map_err(|send_err| {
                 check_send_err_is_disconnection("Controller::remove_entry", send_err);
                 RemoveEntryError::Terminated
             })
@@ -327,14 +329,14 @@ impl<'entries> Controller<'entries> {
         let name = name.into();
         let (res_sender, res_receiver) = oneshot::channel();
         async move {
-            await!(controlled.send(Command::RemoveEntryAndRespond { name, res_sender })).map_err(
+            controlled.send(Command::RemoveEntryAndRespond { name, res_sender }).await.map_err(
                 |send_err| {
                     check_send_err_is_disconnection("Controller::remove_entry_res", send_err);
                     RemoveEntryResError::Terminated
                 },
             )?;
 
-            match await!(res_receiver) {
+            match res_receiver.await {
                 Ok(res) => res.map_err(RemoveEntryResError::RemoveFailed),
                 Err(oneshot::Canceled) => Err(RemoveEntryResError::Terminated),
             }
@@ -555,13 +557,10 @@ mod tests {
                 let (proxy, server_end) = create_proxy::<DirectoryMarker>()
                     .expect("Failed to create connection endpoints");
 
-                await!(controller.open(
-                    OPEN_RIGHT_READABLE,
-                    0,
-                    vec![],
-                    ServerEnd::new(server_end.into_channel())
-                ))
-                .unwrap();
+                controller
+                    .open(OPEN_RIGHT_READABLE, 0, vec![], ServerEnd::new(server_end.into_channel()))
+                    .await
+                    .unwrap();
                 assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
                 assert_close!(proxy);
             }
@@ -575,7 +574,7 @@ mod tests {
             async move {
                 {
                     let file = read_only(|| Ok(b"Content".to_vec()));
-                    await!(controller.add_entry("file", file)).unwrap();
+                    controller.add_entry("file", file).await.unwrap();
                 }
 
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -600,7 +599,7 @@ mod tests {
 
                 {
                     let fstab = read_only(|| Ok(b"/dev/fs /".to_vec()));
-                    await!(controller.add_entry("fstab", fstab)).unwrap();
+                    controller.add_entry("fstab", fstab).await.unwrap();
                 }
 
                 open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
@@ -626,13 +625,15 @@ mod tests {
                 let (proxy, server_end) = create_proxy::<DirectoryMarker>()
                     .expect("Failed to create connection endpoints");
 
-                await!(controller.open(
-                    OPEN_RIGHT_READABLE,
-                    0,
-                    vec![],
-                    ServerEnd::<NodeMarker>::new(server_end.into_channel())
-                ))
-                .unwrap();
+                controller
+                    .open(
+                        OPEN_RIGHT_READABLE,
+                        0,
+                        vec![],
+                        ServerEnd::<NodeMarker>::new(server_end.into_channel()),
+                    )
+                    .await
+                    .unwrap();
 
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 open_as_file_assert_content!(&proxy, flags, "ssh/sshd_config", "# Empty");
@@ -660,13 +661,15 @@ mod tests {
                 let (proxy, server_end) = create_proxy::<DirectoryMarker>()
                     .expect("Failed to create connection endpoints");
 
-                await!(controller.open(
-                    OPEN_RIGHT_READABLE,
-                    0,
-                    vec_string!["ssh"],
-                    ServerEnd::<NodeMarker>::new(server_end.into_channel())
-                ))
-                .unwrap();
+                controller
+                    .open(
+                        OPEN_RIGHT_READABLE,
+                        0,
+                        vec_string!["ssh"],
+                        ServerEnd::<NodeMarker>::new(server_end.into_channel()),
+                    )
+                    .await
+                    .unwrap();
 
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 open_as_file_assert_content!(&proxy, flags, "sshd_config", "# Empty");
@@ -694,13 +697,15 @@ mod tests {
                 let (proxy, server_end) =
                     create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
-                await!(controller.open(
-                    OPEN_RIGHT_READABLE,
-                    0,
-                    vec_string!["ssh", "sshd_config"],
-                    ServerEnd::<NodeMarker>::new(server_end.into_channel())
-                ))
-                .unwrap();
+                controller
+                    .open(
+                        OPEN_RIGHT_READABLE,
+                        0,
+                        vec_string!["ssh", "sshd_config"],
+                        ServerEnd::<NodeMarker>::new(server_end.into_channel()),
+                    )
+                    .await
+                    .unwrap();
 
                 assert_read!(&proxy, "# Empty");
                 assert_close!(proxy);
@@ -732,7 +737,7 @@ mod tests {
 
                 {
                     let fstab = read_only(|| Ok(b"/dev/fs /".to_vec()));
-                    await!(controller.add_entry("fstab", fstab)).unwrap();
+                    controller.add_entry("fstab", fstab).await.unwrap();
                 }
 
                 open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
@@ -761,7 +766,7 @@ mod tests {
                 open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
                 open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
-                let o_passwd = await!(controller.remove_entry_res("passwd")).unwrap();
+                let o_passwd = controller.remove_entry_res("passwd").await.unwrap();
                 match o_passwd {
                     None => panic!("remove_entry_res() did not find 'passwd'"),
                     Some(passwd) => {
@@ -795,11 +800,13 @@ mod tests {
                 open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
                 open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
 
-                let fstab = await!(controller.remove_entry_res("fstab"))
+                let fstab = controller
+                    .remove_entry_res("fstab")
+                    .await
                     .unwrap()
                     .expect("remove_entry_res() did not find 'fstab'");
 
-                await!(controller.add_boxed_entry("passwd", fstab)).unwrap();
+                controller.add_boxed_entry("passwd", fstab).await.unwrap();
 
                 open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
                 open_as_file_assert_content!(&root, flags, "etc/passwd", "/dev/fs /");
@@ -845,7 +852,7 @@ mod tests {
 
                 {
                     let fstab = read_only(|| Ok(b"/dev/fs /".to_vec()));
-                    await!(controller.add_entry("fstab", fstab)).unwrap();
+                    controller.add_entry("fstab", fstab).await.unwrap();
                 }
 
                 assert_watcher_one_message_watched_events!(watcher, { ADDED, "fstab" });
@@ -890,7 +897,7 @@ mod tests {
                 );
                 assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
 
-                let o_passwd = await!(controller.remove_entry_res("passwd")).unwrap();
+                let o_passwd = controller.remove_entry_res("passwd").await.unwrap();
                 match o_passwd {
                     None => panic!("remove_entry_res() did not find 'passwd'"),
                     Some(passwd) => {

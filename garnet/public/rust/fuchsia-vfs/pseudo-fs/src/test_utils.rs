@@ -22,7 +22,7 @@ use {
 };
 
 // All of the macros in this file could instead be async functions, but then I would have to say
-// `await!(assert_read(...))`, while with a macro it is `assert_read!(...)`.  As this is local to
+// `assert_read(...).await`, while with a macro it is `assert_read!(...)`.  As this is local to
 // the testing part of this module, it is probably OK to use macros to save some repetition.
 
 pub fn open_get_proxy<M>(proxy: &DirectoryProxy, flags: u32, mode: u32, path: &str) -> M::Proxy
@@ -86,7 +86,7 @@ macro_rules! assert_read {
     ($proxy:expr, $expected:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, content) = await!($proxy.read($expected.len() as u64)).expect("read failed");
+        let (status, content) = $proxy.read($expected.len() as u64).await.expect("read failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(content.as_slice(), $expected.as_bytes());
@@ -99,7 +99,7 @@ macro_rules! assert_read_err {
     ($proxy:expr, $expected_status:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, content) = await!($proxy.read(100)).expect("read failed");
+        let (status, content) = $proxy.read(100).await.expect("read failed");
 
         assert_eq!(Status::from_raw(status), $expected_status);
         assert_eq!(content.len(), 0);
@@ -112,7 +112,7 @@ macro_rules! assert_read_fidl_err {
     ($proxy:expr, $expected_error:pat) => {{
         use $crate::test_utils::reexport::*;
 
-        match await!($proxy.read(100)) {
+        match $proxy.read(100).await {
             Err($expected_error) => (),
             Err(error) => panic!("read() returned unexpected error: {:?}", error),
             Ok((status, content)) => {
@@ -129,7 +129,7 @@ macro_rules! assert_get_buffer {
         use $crate::test_utils::reexport::*;
 
         let (status, buffer) =
-            await!($proxy.get_buffer(OPEN_RIGHT_READABLE)).expect("get buffer failed");
+            $proxy.get_buffer(OPEN_RIGHT_READABLE).await.expect("get buffer failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert!(buffer.is_some());
@@ -147,7 +147,7 @@ macro_rules! assert_get_buffer_err {
     ($proxy:expr, $flags:expr, $expected_status: expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, buffer) = await!($proxy.get_buffer($flags)).expect("get buffer failed");
+        let (status, buffer) = $proxy.get_buffer($flags).await.expect("get buffer failed");
 
         assert_eq!(Status::from_raw(status), $expected_status);
         assert!(buffer.is_none());
@@ -161,7 +161,7 @@ macro_rules! assert_read_at {
         use $crate::test_utils::reexport::*;
 
         let (status, content) =
-            await!($proxy.read_at($expected.len() as u64, $offset)).expect("read failed");
+            $proxy.read_at($expected.len() as u64, $offset).await.expect("read failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(content.as_slice(), $expected.as_bytes());
@@ -174,7 +174,7 @@ macro_rules! assert_read_at_err {
     ($proxy:expr, $offset:expr, $expected_status:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, content) = await!($proxy.read_at(100, $offset)).expect("read failed");
+        let (status, content) = $proxy.read_at(100, $offset).await.expect("read failed");
 
         assert_eq!(Status::from_raw(status), $expected_status);
         assert_eq!(content.len(), 0);
@@ -188,7 +188,7 @@ macro_rules! assert_write {
         use $crate::test_utils::reexport::*;
 
         let (status, len_written) =
-            await!($proxy.write(&mut $content.bytes())).expect("write failed");
+            $proxy.write(&mut $content.bytes()).await.expect("write failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(len_written, $content.len() as u64);
@@ -202,7 +202,7 @@ macro_rules! assert_write_err {
         use $crate::test_utils::reexport::*;
 
         let (status, len_written) =
-            await!($proxy.write(&mut $content.bytes())).expect("write failed");
+            $proxy.write(&mut $content.bytes()).await.expect("write failed");
 
         assert_eq!(Status::from_raw(status), $expected_status);
         assert_eq!(len_written, 0);
@@ -213,7 +213,7 @@ macro_rules! assert_write_err {
 #[macro_export]
 macro_rules! assert_write_fidl_err {
     ($proxy:expr, $content:expr, $expected_error:pat) => {
-        match await!($proxy.write(&mut $content.bytes())) {
+        match $proxy.write(&mut $content.bytes()).await {
             Err($expected_error) => (),
             Err(error) => panic!("write() returned unexpected error: {:?}", error),
             Ok((status, actual)) => {
@@ -230,7 +230,7 @@ macro_rules! assert_write_at {
         use $crate::test_utils::reexport::*;
 
         let (status, len_written) =
-            await!($proxy.write_at(&mut $content.bytes(), $offset)).expect("write failed");
+            $proxy.write_at(&mut $content.bytes(), $offset).await.expect("write failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(len_written, $content.len() as u64);
@@ -244,7 +244,7 @@ macro_rules! assert_write_at_err {
         use $crate::test_utils::reexport::*;
 
         let (status, len_written) =
-            await!($proxy.write_at(&mut $content.bytes(), $offset)).expect("write failed");
+            $proxy.write_at(&mut $content.bytes(), $offset).await.expect("write failed");
 
         assert_eq!(Status::from_raw(status), $expected_status);
         assert_eq!(len_written, 0);
@@ -257,7 +257,7 @@ macro_rules! assert_seek {
     ($proxy:expr, $pos:expr, Start) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, actual) = await!($proxy.seek($pos, SeekOrigin::Start)).expect("seek failed");
+        let (status, actual) = $proxy.seek($pos, SeekOrigin::Start).await.expect("seek failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(actual, $pos);
@@ -265,7 +265,7 @@ macro_rules! assert_seek {
     ($proxy:expr, $pos:expr, $start:ident, $expected:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, actual) = await!($proxy.seek($pos, SeekOrigin::$start)).expect("seek failed");
+        let (status, actual) = $proxy.seek($pos, SeekOrigin::$start).await.expect("seek failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(actual, $expected);
@@ -278,7 +278,7 @@ macro_rules! assert_seek_err {
     ($proxy:expr, $pos:expr, $start:ident, $expected_status:expr, $actual_pos:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, actual) = await!($proxy.seek($pos, SeekOrigin::$start)).expect("seek failed");
+        let (status, actual) = $proxy.seek($pos, SeekOrigin::$start).await.expect("seek failed");
 
         assert_eq!(Status::from_raw(status), $expected_status);
         assert_eq!(actual, $actual_pos);
@@ -291,7 +291,7 @@ macro_rules! assert_truncate {
     ($proxy:expr, $length:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let status = await!($proxy.truncate($length)).expect("truncate failed");
+        let status = $proxy.truncate($length).await.expect("truncate failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
     }};
@@ -303,7 +303,7 @@ macro_rules! assert_truncate_err {
     ($proxy:expr, $length:expr, $expected_status:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let status = await!($proxy.truncate($length)).expect("truncate failed");
+        let status = $proxy.truncate($length).await.expect("truncate failed");
 
         assert_eq!(Status::from_raw(status), $expected_status);
     }};
@@ -315,7 +315,7 @@ macro_rules! assert_get_attr {
     ($proxy:expr, $expected:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, attrs) = await!($proxy.get_attr()).expect("get_attr failed");
+        let (status, attrs) = $proxy.get_attr().await.expect("get_attr failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(attrs, $expected);
@@ -326,7 +326,7 @@ macro_rules! assert_get_attr {
 #[macro_export]
 macro_rules! assert_describe {
     ($proxy:expr, $expected:expr) => {
-        let node_info = await!($proxy.describe()).expect("describe failed");
+        let node_info = $proxy.describe().await.expect("describe failed");
         assert_eq!(node_info, $expected);
     };
 }
@@ -337,7 +337,7 @@ macro_rules! assert_close {
     ($proxy:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let status = await!($proxy.close()).expect("close failed");
+        let status = $proxy.close().await.expect("close failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
     }};
@@ -349,7 +349,7 @@ macro_rules! assert_close_err {
     ($proxy:expr, $expected_status:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let status = await!($proxy.close()).expect("close failed");
+        let status = $proxy.close().await.expect("close failed");
 
         assert_eq!(Status::from_raw(status), $expected_status);
     }};
@@ -372,7 +372,7 @@ macro_rules! assert_event {
         use $crate::test_utils::reexport::*;
 
         let event_stream = $proxy.take_event_stream();
-        match await!(event_stream.into_future()) {
+        match event_stream.into_future().await {
             (Some(Ok($expected_pattern)), _) => $expected_assertion,
             (unexpected, _) => {
                 panic!("Unexpected event: {:?}", unexpected);
@@ -388,7 +388,7 @@ macro_rules! assert_no_event {
         use $crate::test_utils::reexport::*;
 
         let event_stream = $proxy.take_event_stream();
-        match await!(event_stream.into_future()) {
+        match event_stream.into_future().await {
             (None, _) => (),
             (unexpected, _) => {
                 panic!("Unexpected event: {:?}", unexpected);
@@ -562,8 +562,7 @@ macro_rules! assert_read_dirents {
     ($proxy:expr, $max_bytes:expr, $expected:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, entries) =
-            await!($proxy.read_dirents($max_bytes)).expect("read_dirents failed");
+        let (status, entries) = $proxy.read_dirents($max_bytes).await.expect("read_dirents failed");
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(entries, $expected);
@@ -576,8 +575,7 @@ macro_rules! assert_read_dirents_err {
     ($proxy:expr, $max_bytes:expr, $expected_status:expr) => {{
         use $crate::test_utils::reexport::*;
 
-        let (status, entries) =
-            await!($proxy.read_dirents($max_bytes)).expect("read_dirents failed");
+        let (status, entries) = $proxy.read_dirents($max_bytes).await.expect("read_dirents failed");
 
         assert_eq!(Status::from_raw(status), $expected_status);
         assert_eq!(entries.len(), 0);

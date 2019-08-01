@@ -614,8 +614,8 @@ mod tests {
                         .expect("Failed to create connection endpoints");
 
                     let flags = OPEN_RIGHT_READABLE;
-                    await!(open_sender.send((flags, 0, server_end))).unwrap();
-                    await!(check_event_recv).unwrap();
+                    open_sender.send((flags, 0, server_end)).await.unwrap();
+                    check_event_recv.await.unwrap();
                     assert_no_event!(proxy);
                     // NOTE: logic added after `assert_no_event!` will not currently be run. this test
                     // will need to be updated after ZX-3923 is completed.
@@ -639,7 +639,7 @@ mod tests {
                         .expect("Failed to create connection endpoints");
 
                     let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    await!(open_sender.send((flags, 0, server_end))).unwrap();
+                    open_sender.send((flags, 0, server_end)).await.unwrap();
                     assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                         assert_eq!(s, ZX_OK);
                         assert_eq!(
@@ -778,7 +778,7 @@ mod tests {
                     let (proxy, server_end) = create_proxy::<FileMarker>()
                         .expect("Failed to create connection endpoints");
 
-                    await!(open_sender.send((flags, 0, server_end))).unwrap();
+                    open_sender.send((flags, 0, server_end)).await.unwrap();
                     assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                         assert_eq!(Status::from_raw(s), Status::SHOULD_WAIT);
                         assert_eq!(info, None);
@@ -789,7 +789,7 @@ mod tests {
                     let (proxy, server_end) = create_proxy::<FileMarker>()
                         .expect("Failed to create connection endpoints");
 
-                    await!(open_sender.send((flags, 0, server_end))).unwrap();
+                    open_sender.send((flags, 0, server_end)).await.unwrap();
                     assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                         assert_eq!(s, ZX_OK);
                         assert_eq!(
@@ -926,7 +926,7 @@ mod tests {
                 async move {
                     assert_write!(proxy, "Updated content");
                     drop(proxy);
-                    await!(write_call_receiver).unwrap();
+                    write_call_receiver.await.unwrap();
                 }
             },
         );
@@ -1087,13 +1087,13 @@ mod tests {
             (
                 move |mut open_sender: mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>| {
                     async move {
-                        await!(start_receiver).unwrap();
+                        start_receiver.await.unwrap();
 
-                        await!(open_sender.send((OPEN_RIGHT_READABLE, 0, server_end))).unwrap();
+                        open_sender.send((OPEN_RIGHT_READABLE, 0, server_end)).await.unwrap();
 
                         assert_read!(proxy, expected_content);
 
-                        await!(read_and_close_receiver).unwrap();
+                        read_and_close_receiver.await.unwrap();
 
                         assert_seek!(proxy, 0, Start);
                         assert_read!(proxy, expected_content);
@@ -1127,7 +1127,7 @@ mod tests {
                     let client1 = get_client1(open_sender.clone());
                     let client2 = get_client2(open_sender.clone());
 
-                    await!(join(client1, client2));
+                    join(client1, client2).await;
                 }
             },
             |run_until_stalled_assert| {
@@ -1185,7 +1185,8 @@ mod tests {
                 let finish_future_receiver = finish_future_receiver.clone();
                 async move {
                     read_counter.fetch_add(1, Ordering::Relaxed);
-                    await!(finish_future_receiver)
+                    finish_future_receiver
+                        .await
                         .expect("finish_future_sender was not called before been dropped.");
                     read_counter.fetch_add(1, Ordering::Relaxed);
                     Ok(b"content".to_vec())
@@ -1243,7 +1244,8 @@ mod tests {
                 async move {
                     assert_eq!(*&content, b"content");
                     write_counter.fetch_add(1, Ordering::Relaxed);
-                    await!(finish_future_receiver)
+                    finish_future_receiver
+                        .await
                         .expect("finish_future_sender was not called before been dropped.");
                     write_counter.fetch_add(1, Ordering::Relaxed);
                     Ok(())

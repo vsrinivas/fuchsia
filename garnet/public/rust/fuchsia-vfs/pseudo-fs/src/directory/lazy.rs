@@ -1523,14 +1523,17 @@ mod tests {
                 let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
                 let watcher_client = assert_watch!(root, mask);
 
-                await!(watcher_sender.send(WatcherEvent::Added(vec!["two".to_string()])))
+                watcher_sender
+                    .send(WatcherEvent::Added(vec!["two".to_string()]))
+                    .await
                     .expect("watcher_sender.send() failed");
 
                 assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "two" });
 
-                await!(watcher_sender
-                    .send(WatcherEvent::Added(vec!["three".to_string(), "four".to_string()])))
-                .expect("watcher_sender.send() failed");
+                watcher_sender
+                    .send(WatcherEvent::Added(vec!["three".to_string(), "four".to_string()]))
+                    .await
+                    .expect("watcher_sender.send() failed");
 
                 assert_watcher_one_message_watched_events!(
                     watcher_client,
@@ -1562,14 +1565,17 @@ mod tests {
                 let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
                 let watcher_client = assert_watch!(root, mask);
 
-                await!(watcher_sender.send(WatcherEvent::Removed(vec!["two".to_string()])))
+                watcher_sender
+                    .send(WatcherEvent::Removed(vec!["two".to_string()]))
+                    .await
                     .expect("watcher_sender.send() failed");
 
                 assert_watcher_one_message_watched_events!(watcher_client, { REMOVED, "two" });
 
-                await!(watcher_sender
-                    .send(WatcherEvent::Removed(vec!["three".to_string(), "four".to_string()])))
-                .expect("watcher_sender.send() failed");
+                watcher_sender
+                    .send(WatcherEvent::Removed(vec!["three".to_string(), "four".to_string()]))
+                    .await
+                    .expect("watcher_sender.send() failed");
 
                 assert_watcher_one_message_watched_events!(
                     watcher_client,
@@ -1621,7 +1627,9 @@ mod tests {
                 let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
                 let watcher_client = assert_watch!(root, mask);
 
-                await!(watcher_sender.send(WatcherEvent::Added(vec!["four".to_string()])))
+                watcher_sender
+                    .send(WatcherEvent::Added(vec!["four".to_string()]))
+                    .await
                     .expect("watcher_sender.send() failed");
 
                 assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "four" });
@@ -1633,7 +1641,9 @@ mod tests {
                 // it and we should get a PEER_CLOSED error.
                 {
                     let mut buf = MessageBuf::new();
-                    let status = await!(watcher_client.recv_msg(&mut buf))
+                    let status = watcher_client
+                        .recv_msg(&mut buf)
+                        .await
                         .expect_err("Stream should have been closed");
                     assert_eq!(status, Status::PEER_CLOSED);
                 }
