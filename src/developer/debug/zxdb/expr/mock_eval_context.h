@@ -20,6 +20,7 @@ class MockEvalContext : public EvalContext {
   ~MockEvalContext();
 
   MockSymbolDataProvider* data_provider() { return data_provider_.get(); }
+  PrettyTypeManager& pretty_type_manager() { return pretty_type_manager_; }
 
   void set_language(ExprLanguage lang) { language_ = lang; }
 

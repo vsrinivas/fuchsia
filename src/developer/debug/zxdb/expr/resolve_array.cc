@@ -7,6 +7,8 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/pretty_type.h"
+#include "src/developer/debug/zxdb/expr/pretty_type_manager.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
@@ -91,6 +93,37 @@ void ResolvePointerArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue&
       });
 }
 
+// Backend for the single-item and async multiple item array resolution.
+//
+// Returns true if the callback was consumed. This means the item was an array or pointer that can
+// be handled (in which case the callback will have been either issued or will be pending). False
+// means that the item wasn't an array and the callback was not used.
+bool DoResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+                    size_t begin_index, size_t end_index,
+                    fit::callback<void(const Err&, std::vector<ExprValue>)> cb) {
+  if (!array.type()) {
+    cb(Err("No type information."), std::vector<ExprValue>());
+    return true;  // Invalid but the callback was issued.
+  }
+
+  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(array.type());
+  if (const ArrayType* array_type = concrete->AsArrayType()) {
+    std::vector<ExprValue> result;
+    Err err = ResolveStaticArray(array, array_type, begin_index, end_index, &result);
+    cb(err, result);
+    return true;
+  } else if (const ModifiedType* modified_type = concrete->AsModifiedType()) {
+    if (modified_type->tag() == DwarfTag::kPointerType) {
+      ResolvePointerArray(eval_context, array, modified_type, begin_index, end_index,
+                          std::move(cb));
+      return true;
+    }
+  }
+
+  // Not an array.
+  return false;
+}
+
 }  // namespace
 
 Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
@@ -107,24 +140,35 @@ Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, 
 
 void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
                   size_t end_index, fit::callback<void(const Err&, std::vector<ExprValue>)> cb) {
-  if (!array.type()) {
-    cb(Err("No type information."), std::vector<ExprValue>());
-    return;
-  }
+  if (!DoResolveArray(eval_context, array, begin_index, end_index, std::move(cb)))
+    cb(Err("Can't dereference a non-pointer or array type."), std::vector<ExprValue>());
+}
 
-  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(array.type());
-  if (const ArrayType* array_type = concrete->AsArrayType()) {
-    std::vector<ExprValue> result;
-    Err err = ResolveStaticArray(array, array_type, begin_index, end_index, &result);
-    cb(err, result);
-    return;
-  } else if (const ModifiedType* modified_type = concrete->AsModifiedType()) {
-    if (modified_type->tag() == DwarfTag::kPointerType) {
-      return ResolvePointerArray(eval_context, array, modified_type, begin_index, end_index,
-                                 std::move(cb));
-    }
+void ResolveArrayItem(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t index,
+                      fit::callback<void(const Err&, ExprValue)> cb) {
+  // This callback might possibly be bound to the regular array access function and we won't know
+  // if it was needed until the function returns. We want to try regular resolution first to avoid
+  // over-triggering pretty-printing if something is configured incorrectly. This case is not
+  // performance sensitive so this extra allocation doesn't matter much.
+  auto shared_cb = std::make_shared<fit::callback<void(const Err&, ExprValue)>>(std::move(cb));
+
+  // Try a regular access first.
+  if (DoResolveArray(eval_context, array, index, index + 1,
+                     [shared_cb](const Err& err, std::vector<ExprValue> result_vect) {
+                       if (err.has_error())
+                         (*shared_cb)(err, ExprValue());
+                       else if (result_vect.empty())  // Short read.
+                         (*shared_cb)(Err("Invalid array index."), ExprValue());
+                       else
+                         (*shared_cb)(Err(), std::move(result_vect[0]));
+                     }))
+    return;  // Handled by the regular array access.
+
+  // Check for pretty types that support array access, shared_cb is our responsibility.
+  if (const PrettyType* pretty = eval_context->GetPrettyTypeManager().GetForType(array.type())) {
+    if (auto array_access = pretty->GetArrayAccess())
+      return array_access(eval_context, array, index, std::move(*shared_cb));
   }
-  cb(Err("Can't dereference a non-pointer or array type."), std::vector<ExprValue>());
 }
 
 }  // namespace zxdb

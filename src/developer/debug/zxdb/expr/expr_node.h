@@ -140,9 +140,6 @@ class ArrayAccessExprNode : public ExprNode {
   static Err InnerValueToOffset(fxl::RefPtr<EvalContext> context, const ExprValue& inner,
                                 int64_t* offset);
 
-  static void DoAccess(fxl::RefPtr<EvalContext> context, ExprValue left, int64_t offset,
-                       EvalCallback cb);
-
   fxl::RefPtr<ExprNode> left_;
   fxl::RefPtr<ExprNode> inner_;
 };
@@ -225,9 +222,21 @@ class FunctionCallExprNode : public ExprNode {
   FRIEND_MAKE_REF_COUNTED(FunctionCallExprNode);
 
   FunctionCallExprNode();
-  FunctionCallExprNode(fxl::RefPtr<ExprNode> call, std::vector<fxl::RefPtr<ExprNode>> args)
+  explicit FunctionCallExprNode(fxl::RefPtr<ExprNode> call,
+                                std::vector<fxl::RefPtr<ExprNode>> args = {})
       : call_(std::move(call)), args_(std::move(args)) {}
   ~FunctionCallExprNode() override = default;
+
+  // Backend to evaluate a member function call on the given base object. For example,
+  // "object.fn_name()".
+  //
+  // This assumes no function parameters (it's currently used for the PrettyType getters only).
+  //
+  // The second version handle the "->" case where the object should be a pointer.
+  static void EvalMemberCall(fxl::RefPtr<EvalContext> context, const ExprValue& object,
+                             const std::string& fn_name, EvalCallback cb);
+  static void EvalMemberPtrCall(fxl::RefPtr<EvalContext> context, const ExprValue& object_ptr,
+                                const std::string& fn_name, EvalCallback cb);
 
   // This will either be an IdentifierExprNode which gives the function name, or a
   // MemberAccessExprNode which gives an object and the function name.

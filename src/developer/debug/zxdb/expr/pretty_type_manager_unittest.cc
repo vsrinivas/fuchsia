@@ -47,9 +47,13 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
   auto v2_namespace = fxl::MakeRefCounted<Namespace>("__2");
   v2_namespace->set_parent(std_namespace);
 
+  // The capacity is actually a compressed_pair.
+  auto cap_pair = MakeCollectionType(DwarfTag::kStructureType, "compresed_pair",
+                                     {{"__value_", int32_ptr_type}});
+
   auto vector_type = MakeCollectionType(
       DwarfTag::kClassType, "vector<int32_t, std::__2::allocator<int32_t> >",
-      {{"__begin_", int32_ptr_type}, {"__end_", int32_ptr_type}, {"__end_cap_", int32_ptr_type}});
+      {{"__begin_", int32_ptr_type}, {"__end_", int32_ptr_type}, {"__end_cap_", cap_pair}});
   vector_type->set_parent(v2_namespace);
 
   auto int32_param = fxl::MakeRefCounted<TemplateParameter>("T", int32_type, false);
@@ -59,7 +63,7 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
   ExprValue vec_value(vector_type, {
                                        0x00, 0x11, 0x22, 0, 0, 0, 0, 0,  // __begin_
                                        0x08, 0x11, 0x22, 0, 0, 0, 0, 0,  // __end_ = __begin_ + 8
-                                       0x08, 0x11, 0x22, 0, 0, 0, 0, 0,  // __end_cap_ = __end_
+                                       0x10, 0x11, 0x22, 0, 0, 0, 0, 0,  // __end_cap_ = __begin+16
                                    });
 
   PrettyTypeManager manager;
@@ -78,6 +82,42 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
   ASSERT_EQ(2u, node.children().size());
   EXPECT_EQ(1, node.children()[0]->value().GetAs<int32_t>());
   EXPECT_EQ(99, node.children()[1]->value().GetAs<int32_t>());
+
+  // Test array access for vector: vec_value[1] == 99
+  auto array_access = pretty_vector->GetArrayAccess();
+  ASSERT_TRUE(array_access);
+  called = false;
+  ExprValue result_value;
+  array_access(context, vec_value, 1, [&called, loop = &loop()](const Err& err, ExprValue value) {
+    called = true;
+    EXPECT_FALSE(err.has_error()) << err.msg();
+    EXPECT_EQ(99, value.GetAs<int32_t>());
+    loop->QuitNow();
+  });
+  EXPECT_FALSE(called);  // Should be async (requires memory fetch).
+  loop().Run();
+
+  // Test size and capacity getter.
+  auto size_getter = pretty_vector->GetGetter("size");
+  ASSERT_TRUE(size_getter);
+  called = false;
+  size_getter(context, vec_value, [&called](const Err& err, ExprValue value) {
+    called = true;
+    EXPECT_EQ(2, value.GetAs<int64_t>());
+  });
+  EXPECT_TRUE(called);  // Should by synchronous.
+
+  auto capacity_getter = pretty_vector->GetGetter("capacity");
+  ASSERT_TRUE(capacity_getter);
+  called = false;
+  capacity_getter(context, vec_value, [&called](const Err& err, ExprValue value) {
+    called = true;
+    EXPECT_EQ(4, value.GetAs<int64_t>());
+  });
+  EXPECT_TRUE(called);  // Should by synchronous.
+
+  // Invalid getter.
+  EXPECT_FALSE(pretty_vector->GetGetter("does_not_exist"));
 
   // Test vector<bool>. Currently this is unimplemented which generates some errors. The important
   // thing is that this doesn't match the normal vector printer. When vector<bool> is implemented

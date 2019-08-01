@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -79,6 +80,27 @@ Err UnionErrors(const std::vector<std::pair<Err, ExprValue>>& input) {
 
 }  // namespace
 
+PrettyType::PrettyType(std::initializer_list<std::pair<std::string, std::string>> getters) {
+  for (const auto& cur : getters)
+    AddGetterExpression(cur.first, cur.second);
+}
+
+void PrettyType::AddGetterExpression(const std::string& getter_name,
+                                     const std::string& expression) {
+  getters_[getter_name] = expression;
+}
+
+PrettyType::EvalFunction PrettyType::GetGetter(const std::string& getter_name) const {
+  auto found = getters_.find(getter_name);
+  if (found == getters_.end())
+    return EvalFunction();
+  return
+      [expression = found->second](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
+                                   fit::callback<void(const Err&, ExprValue)> cb) {
+        EvalExpressionOn(context, object_value, expression, std::move(cb));
+      };
+}
+
 void PrettyType::EvalExpressionOn(fxl::RefPtr<EvalContext> context, const ExprValue& object,
                                   const std::string& expression,
                                   fit::callback<void(const Err&, ExprValue result)> cb) {
@@ -137,6 +159,17 @@ void PrettyArray::Format(FormatNode* node, const FormatOptions& options,
                   });
 }
 
+PrettyArray::EvalArrayFunction PrettyArray::GetArrayAccess() const {
+  // Since the PrettyArray is accessed by its pointer, we can just use the array access operator
+  // combined with the pointer expression to produce an expression that references into the array.
+  return [expression = ptr_expr_](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
+                                  int64_t index, fit::callback<void(const Err&, ExprValue)> cb) {
+    EvalExpressionOn(context, object_value,
+                     fxl::StringPrintf("(%s)[%" PRId64 "]", expression.c_str(), index),
+                     std::move(cb));
+  };
+}
+
 void PrettyHeapString::Format(FormatNode* node, const FormatOptions& options,
                               fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   // Evaluate the expressions with this context to make the members in the current scope.
@@ -171,6 +204,15 @@ void PrettyHeapString::Format(FormatNode* node, const FormatOptions& options,
                     FormatCharPointerNode(weak_node.get(), addr, char_type.get(), len, options,
                                           context, std::move(cb));
                   });
+}
+
+PrettyHeapString::EvalArrayFunction PrettyHeapString::GetArrayAccess() const {
+  return [expression = ptr_expr_](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
+                                  int64_t index, fit::callback<void(const Err&, ExprValue)> cb) {
+    EvalExpressionOn(context, object_value,
+                     fxl::StringPrintf("(%s)[%" PRId64 "]", expression.c_str(), index),
+                     std::move(cb));
+  };
 }
 
 }  // namespace zxdb

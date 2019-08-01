@@ -36,6 +36,17 @@ PrettyTypeManager::PrettyTypeManager() {
 
 PrettyTypeManager::~PrettyTypeManager() = default;
 
+void PrettyTypeManager::Add(ExprLanguage lang, TypeGlob glob, std::unique_ptr<PrettyType> pretty) {
+  switch (lang) {
+    case ExprLanguage::kC:
+      cpp_.emplace_back(std::move(glob), std::move(pretty));
+      break;
+    case ExprLanguage::kRust:
+      rust_.emplace_back(std::move(glob), std::move(pretty));
+      break;
+  }
+}
+
 PrettyType* PrettyTypeManager::GetForType(const Type* type) const {
   if (!type)
     return nullptr;
@@ -83,8 +94,9 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
   cpp_.emplace_back(InternalGlob("std::__2::string"), std::make_unique<PrettyStdString>());
 
   // std::string_view
-  cpp_.emplace_back(InternalGlob("std::__2::basic_string_view<char, std::__2::char_traits<char> >"),
-                    std::make_unique<PrettyHeapString>("__data", "__size"));
+  cpp_.emplace_back(
+      InternalGlob("std::__2::basic_string_view<char, std::__2::char_traits<char> >"),
+      new PrettyHeapString("__data", "__size", {{"size", "__size"}, {"length", "__size"}}));
 
   // std::vector
   //
@@ -92,7 +104,9 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
   // preferentially match over the non-bool version (the longest match will be taken). This will
   // result in errors but it will be better than misleading results.
   cpp_.emplace_back(InternalGlob("std::__2::vector<*>"),
-                    std::make_unique<PrettyArray>("__begin_", "__end_ - __begin_"));
+                    new PrettyArray("__begin_", "__end_ - __begin_",
+                                    {{"size", "__end_ - __begin_"},
+                                     {"capacity", "__end_cap_.__value_ - __begin_"}}));
   cpp_.emplace_back(InternalGlob("std::__2::vector<bool, *>"),
                     std::make_unique<PrettyArray>("vector_bool_printer_not_implemented_yet",
                                                   "vector_bool_printer_not_implemented_yet"));

@@ -25,6 +25,9 @@ class PrettyTypeManager {
   PrettyTypeManager();
   ~PrettyTypeManager();
 
+  // Adds a PrettyType for the givene language/glob.
+  void Add(ExprLanguage lang, TypeGlob glob, std::unique_ptr<PrettyType> pretty);
+
   // Finds a PrettyType associated with the given type object. Returns a non-owning pointer if
   // found. Returns null if there is nothing registered for this type.
   //

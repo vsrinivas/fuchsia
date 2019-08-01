@@ -14,6 +14,8 @@
 #include "src/developer/debug/zxdb/expr/eval_operators.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
+#include "src/developer/debug/zxdb/expr/pretty_type.h"
+#include "src/developer/debug/zxdb/expr/pretty_type_manager.h"
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
@@ -150,7 +152,7 @@ void ArrayAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb
               if (offset_err.has_error()) {
                 cb(offset_err, ExprValue());
               } else {
-                DoAccess(std::move(context), std::move(left_value), offset, std::move(cb));
+                ResolveArrayItem(std::move(context), std::move(left_value), offset, std::move(cb));
               }
             }
           });
@@ -179,25 +181,6 @@ Err ArrayAccessExprNode::InnerValueToOffset(fxl::RefPtr<EvalContext> context,
   if (promote_err.has_error())
     return promote_err;
   return Err();
-}
-
-// static
-void ArrayAccessExprNode::DoAccess(fxl::RefPtr<EvalContext> context, ExprValue left, int64_t offset,
-                                   EvalCallback cb) {
-  ResolveArray(context, left, static_cast<size_t>(offset), static_cast<size_t>(offset) + 1,
-               [cb = std::move(cb)](const Err& err, std::vector<ExprValue> result) mutable {
-                 if (err.has_error()) {
-                   cb(err, ExprValue());
-                   return;
-                 }
-                 if (result.size() == 0) {
-                   // Short read, array not big enough.
-                   cb(Err("Array index out of range."), ExprValue());
-                   return;
-                 }
-                 FXL_DCHECK(result.size() == 1);
-                 cb(Err(), result[0]);
-               });
 }
 
 void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
@@ -263,7 +246,30 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void FunctionCallExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  cb(Err("Sorry, function calls are not supported."), ExprValue());
+  // Actually calling functions in the target is not supported.
+  const char kNotSupportedMsg[] =
+      "Arbitrary function calls are not supported. Only certain built-in getters will work.";
+  if (!args_.empty())
+    return cb(Err(kNotSupportedMsg), ExprValue());
+
+  if (const MemberAccessExprNode* access = call_->AsMemberAccess()) {
+    // Object member calls, check for getters provided by pretty-printers.
+    std::string fn_name = access->member().GetFullName();
+    access->left()->EvalFollowReferences(
+        context, [context, cb = std::move(cb), op = access->accessor(), fn_name](
+                     const Err& err, ExprValue value) mutable {
+          if (err.has_error())
+            return cb(err, ExprValue());
+
+          if (op.type() == ExprTokenType::kArrow)
+            EvalMemberPtrCall(context, value, fn_name, std::move(cb));
+          else  // Assume ".".
+            EvalMemberCall(context, value, fn_name, std::move(cb));
+        });
+    return;
+  }
+
+  cb(Err(kNotSupportedMsg), ExprValue());
 }
 
 void FunctionCallExprNode::Print(std::ostream& out, int indent) const {
@@ -276,6 +282,51 @@ void FunctionCallExprNode::Print(std::ostream& out, int indent) const {
 // static
 bool FunctionCallExprNode::IsValidCall(const fxl::RefPtr<ExprNode>& call) {
   return call && (call->AsIdentifier() || call->AsMemberAccess());
+}
+
+// static
+void FunctionCallExprNode::EvalMemberCall(fxl::RefPtr<EvalContext> context, const ExprValue& object,
+                                          const std::string& fn_name, EvalCallback cb) {
+  if (!object.type())
+    return cb(Err("No type information."), ExprValue());
+
+  if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(object.type())) {
+    // Have a PrettyType for the object type.
+    if (auto getter = pretty->GetGetter(fn_name)) {
+      return getter(context, object,
+                    [type_name = object.type()->GetFullName(), fn_name, cb = std::move(cb)](
+                        const Err& err, ExprValue value) mutable {
+                      // This lambda exists just to rewrite the error message so it's clear the
+                      // error is coming from the PrettyType and not the users's input. Otherwise
+                      // it can look quite confusing.
+                      if (err.has_error()) {
+                        cb(Err("When evaluating the internal pretty getter '%s()' on the type:\n  "
+                               "%s\nGot the error:\n  %s\nPlease file a bug.",
+                               fn_name.c_str(), type_name.c_str(), err.msg().c_str()),
+                           ExprValue());
+                      } else {
+                        cb(Err(), std::move(value));
+                      }
+                    });
+    }
+  }
+
+  cb(Err("No built-in getter '%s()' for the type\n  %s", fn_name.c_str(),
+         object.type()->GetFullName().c_str()),
+     ExprValue());
+}
+
+// static
+void FunctionCallExprNode::EvalMemberPtrCall(fxl::RefPtr<EvalContext> context,
+                                             const ExprValue& object_ptr,
+                                             const std::string& fn_name, EvalCallback cb) {
+  ResolvePointer(context, object_ptr,
+                 [context, fn_name, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
+                   if (err.has_error())
+                     cb(err, ExprValue());
+                   else
+                     EvalMemberCall(std::move(context), value, fn_name, std::move(cb));
+                 });
 }
 
 void IdentifierExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {

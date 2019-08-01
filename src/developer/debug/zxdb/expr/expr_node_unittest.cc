@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/mock_expr_node.h"
+#include "src/developer/debug/zxdb/expr/pretty_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -30,6 +31,20 @@ namespace zxdb {
 namespace {
 
 class ExprNodeTest : public TestWithLoop {};
+
+// A PrettyType with a getter that returns a constant value.
+class MockGetterPrettyType : public PrettyType {
+ public:
+  static const char kGetterName[];
+  static const int kGetterValue;
+
+  MockGetterPrettyType() : PrettyType({{kGetterName, "5"}}) {}
+
+  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
+              fit::deferred_callback cb) override {}
+};
+const char MockGetterPrettyType::kGetterName[] = "get5";
+const int MockGetterPrettyType::kGetterValue = 5;
 
 }  // namespace
 
@@ -470,6 +485,81 @@ TEST_F(ExprNodeTest, Cast) {
   // Should have converted to the Base2 value.
   EXPECT_FALSE(out_err.has_error()) << out_err.msg();
   EXPECT_EQ(d.base2_value, out_value);
+}
+
+// Tests integration with the PrettyType's getter mechanism. A PrettyType provides a getter function
+// that can evaluate a value on an object that looks like a function call.
+TEST_F(ExprNodeTest, PrettyTypeGetter) {
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
+
+  // Register the PrettyType that provides a getter.
+  const char kTypeName[] = "MyType";
+  TypeGlob glob;
+  ASSERT_FALSE(glob.Init(kTypeName).has_error());
+  context->pretty_type_manager().Add(ExprLanguage::kC, glob,
+                                     std::make_unique<MockGetterPrettyType>());
+
+  // Object on left side of the ".".
+  auto type = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, kTypeName);
+  type->set_byte_size(1);  // Make it not zero size.
+  ExprValue value(type, {});
+  auto content = fxl::MakeRefCounted<MockExprNode>(true, value);
+
+  // Evaluate "value.<kGetterName>`
+  auto dot_access = fxl::MakeRefCounted<MemberAccessExprNode>(
+      content, ExprToken(ExprTokenType::kDot, ".", 0),
+      ParsedIdentifier(MockGetterPrettyType::kGetterName));
+  auto dot_call = fxl::MakeRefCounted<FunctionCallExprNode>(dot_access);
+
+  // Evaluate, everything is synchronously available.
+  bool called = false;
+  dot_call->Eval(context, [&called](const Err& err, ExprValue value) {
+    called = true;
+    EXPECT_FALSE(err.has_error()) << err.msg();
+    EXPECT_EQ(MockGetterPrettyType::kGetterValue, value.GetAs<int32_t>());
+  });
+  EXPECT_TRUE(called);
+
+  // Now try one with a pointer.
+  auto type_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, type);
+  constexpr uint64_t kAddress = 0x110000;
+  ExprValue pointer_value(type_ptr, {0x00, 0x00, 0x11, 0, 0, 0, 0, 0});
+  auto pointer = fxl::MakeRefCounted<MockExprNode>(true, pointer_value);
+
+  // Data pointed to by the pointer (object is one byte, doesn't matter what value).
+  context->data_provider()->AddMemory(kAddress, {0x00});
+
+  auto arrow_access = fxl::MakeRefCounted<MemberAccessExprNode>(
+      pointer, ExprToken(ExprTokenType::kArrow, "->", 0),
+      ParsedIdentifier(MockGetterPrettyType::kGetterName));
+  auto arrow_call = fxl::MakeRefCounted<FunctionCallExprNode>(arrow_access);
+
+  // Evaluate, requires a loop because fetching the pointer data is async.
+  called = false;
+  arrow_call->Eval(context, [&called](const Err& err, ExprValue value) {
+    called = true;
+    EXPECT_FALSE(err.has_error()) << err.msg();
+    EXPECT_EQ(MockGetterPrettyType::kGetterValue, value.GetAs<int>());
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
+  EXPECT_FALSE(called);
+  loop().Run();
+  EXPECT_TRUE(called);
+
+  // Try an non-pointer with the "->" operator.
+  auto invalid_arrow_access = fxl::MakeRefCounted<MemberAccessExprNode>(
+      content, ExprToken(ExprTokenType::kArrow, "->", 0),
+      ParsedIdentifier(MockGetterPrettyType::kGetterName));
+  auto invalid_arrow_call = fxl::MakeRefCounted<FunctionCallExprNode>(invalid_arrow_access);
+
+  called = false;
+  invalid_arrow_call->Eval(context, [&called](const Err& err, ExprValue value) {
+    called = true;
+    EXPECT_TRUE(err.has_error());
+    EXPECT_EQ("Attempting to dereference 'MyType' which is not a pointer.", err.msg());
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
+  EXPECT_TRUE(called);  // This error is synchronous.
 }
 
 TEST_F(ExprNodeTest, Sizeof) {
