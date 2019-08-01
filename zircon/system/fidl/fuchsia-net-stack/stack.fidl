@@ -181,10 +181,16 @@ protocol Stack {
     DelForwardingEntry(fuchsia.net.Subnet subnet) -> (Error? err);
 
     /// Enable the packet filter on a specific interface.
-    EnablePacketFilter(uint64 id) -> (Error? err);
+    EnablePacketFilter(uint64 id) -> () error ErrorType;
 
     /// Disable the packet filter on a specific interface.
-    DisablePacketFilter(uint64 id) -> (Error? err);
+    DisablePacketFilter(uint64 id) -> () error ErrorType;
+
+    /// Enable IP Forwarding.
+    EnableIpForwarding() -> ();
+
+    /// Disable IP Forwarding.
+    DisableIpForwarding() -> ();
 
     // Events
 

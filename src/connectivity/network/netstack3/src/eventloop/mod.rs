@@ -449,6 +449,12 @@ impl EventLoop {
             StackRequest::DisablePacketFilter { id, responder } => {
                 // TODO(toshik)
             }
+            StackRequest::EnableIpForwarding { responder } => {
+                // TODO(toshik)
+            }
+            StackRequest::DisableIpForwarding { responder } => {
+                // TODO(toshik)
+            }
         }
     }
 

@@ -5,6 +5,7 @@
 package netstack
 
 import (
+	"fmt"
 	"syscall/zx/fidl"
 	"testing"
 
@@ -175,4 +176,98 @@ func TestFuchsiaNetStack(t *testing.T) {
 			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
 		}
 	})
+
+	t.Run("Enable and Disable PacketFilter", func(t *testing.T) {
+		ns := newNetstack(t)
+		eth := deviceForAddEth(ethernet.Info{}, t)
+		if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
+			t.Fatal(err)
+		}
+		ni := stackImpl{ns: ns}
+
+		{
+			result, err := ni.EnablePacketFilter(1)
+			AssertNoError(t, err)
+			if result.Which() != stack.StackEnablePacketFilterResultResponse {
+				t.Fatalf("got ni.EnablePacketFilter(1) = Err(%s), want = Response()", result.Err)
+			}
+			enabled, err := ni.isPacketFilterEnabled(1)
+			AssertNoError(t, err)
+			if !enabled {
+				t.Fatalf("got ni.isPacketFilterEnabled(1) = Response(%v), want = Response(t)", enabled)
+			}
+		}
+		{
+			result, err := ni.DisablePacketFilter(1)
+			AssertNoError(t, err)
+			if result.Which() != stack.StackDisablePacketFilterResultResponse {
+				t.Fatalf("got ni.DisablePacketFilter(1) = Err(%s), want = Response()", result.Err)
+			}
+			enabled, err := ni.isPacketFilterEnabled(1)
+			AssertNoError(t, err)
+			if enabled {
+				t.Fatalf("got ni.isPacketFilterEnabled(1) = Response(%v), want = Response(f)", enabled)
+			}
+		}
+		{
+			result, err := ni.EnablePacketFilter(1)
+			AssertNoError(t, err)
+			if result.Which() != stack.StackEnablePacketFilterResultResponse {
+				t.Fatalf("got ni.EnablePacketFilter(1) = Err(%s), want = Response()", result.Err)
+			}
+			enabled, err := ni.isPacketFilterEnabled(1)
+			AssertNoError(t, err)
+			if !enabled {
+				t.Fatalf("got ni.isPacketFilterEnabled(1) = Response(%v), want = Response(t)", enabled)
+			}
+		}
+	})
+
+	t.Run("Enable and Disable IP Forwarding", func(t *testing.T) {
+		ns := newNetstack(t)
+		eth := deviceForAddEth(ethernet.Info{}, t)
+		if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
+			t.Fatal(err)
+		}
+		ni := stackImpl{ns: ns}
+
+		err := ni.EnableIpForwarding()
+		AssertNoError(t, err)
+		enabled := ni.isIpForwardingEnabled()
+		if !enabled {
+			t.Fatalf("got ni.isIpForwardingEnabled() = %v, want = t", enabled)
+		}
+
+		err = ni.DisableIpForwarding()
+		AssertNoError(t, err)
+		enabled = ni.isIpForwardingEnabled()
+		AssertNoError(t, err)
+		if enabled {
+			t.Fatalf("got ni.isIpForwardingEnabled() = %v, want = false", enabled)
+		}
+
+		err = ni.EnableIpForwarding()
+		AssertNoError(t, err)
+		enabled = ni.isIpForwardingEnabled()
+		if !enabled {
+			t.Fatalf("got ni.isIpForwardingEnabled() = %v, want = t", enabled)
+		}
+	})
+}
+
+func (ni *stackImpl) isPacketFilterEnabled(id uint64) (bool, error) {
+	ni.ns.mu.Lock()
+	ifs, ok := ni.ns.mu.ifStates[tcpip.NICID(id)]
+	ni.ns.mu.Unlock()
+
+	if !ok {
+		return false, fmt.Errorf("ifStates %d not found", id)
+	}
+	return ifs.filterEndpoint.IsEnabled(), nil
+}
+
+func (ni *stackImpl) isIpForwardingEnabled() bool {
+	ni.ns.mu.Lock()
+	defer ni.ns.mu.Unlock()
+	return ni.ns.mu.stack.Forwarding()
 }

@@ -40,6 +40,10 @@ func (e *FilterEndpoint) Disable() {
 	atomic.StoreUint32(&e.enabled, 0)
 }
 
+func (e *FilterEndpoint) IsEnabled() bool {
+	return atomic.LoadUint32(&e.enabled) == 1
+}
+
 // DeliverNetworkPacket is called when a packet arrives at the lower endpoint.
 // It calls Run before dispatching the packet to the upper endpoint.
 func (e *FilterEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {

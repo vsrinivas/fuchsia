@@ -273,32 +273,6 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) *stack.Error {
 	return nil
 }
 
-func (ns *Netstack) enablePacketFilter(id uint64) *stack.Error {
-	ns.mu.Lock()
-	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
-	ns.mu.Unlock()
-
-	if !ok || ifs.filterEndpoint == nil {
-		return &stack.Error{Type: stack.ErrorTypeNotFound}
-	}
-
-	ifs.filterEndpoint.Enable()
-	return nil
-}
-
-func (ns *Netstack) disablePacketFilter(id uint64) *stack.Error {
-	ns.mu.Lock()
-	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
-	ns.mu.Unlock()
-
-	if !ok || ifs.filterEndpoint == nil {
-		return &stack.Error{Type: stack.ErrorTypeNotFound}
-	}
-
-	ifs.filterEndpoint.Enable()
-	return nil
-}
-
 func (ni *stackImpl) AddEthernetInterface(topologicalPath string, device ethernet.DeviceInterface) (*stack.Error, uint64, error) {
 	err, id := ni.ns.addInterface(topologicalPath, device)
 	return err, id, nil
@@ -368,10 +342,50 @@ func (ni *stackImpl) DelForwardingEntry(subnet net.Subnet) (*stack.Error, error)
 	return ni.ns.delForwardingEntry(subnet), nil
 }
 
-func (ni *stackImpl) EnablePacketFilter(id uint64) (*stack.Error, error) {
-	return ni.ns.enablePacketFilter(id), nil
+func (ni *stackImpl) EnablePacketFilter(id uint64) (stack.StackEnablePacketFilterResult, error) {
+	ni.ns.mu.Lock()
+	ifs, ok := ni.ns.mu.ifStates[tcpip.NICID(id)]
+	ni.ns.mu.Unlock()
+
+	var result stack.StackEnablePacketFilterResult
+	if !ok {
+		result.SetErr(stack.ErrorTypeNotFound)
+	} else if ifs.filterEndpoint == nil {
+		result.SetErr(stack.ErrorTypeNotSupported)
+	} else {
+		ifs.filterEndpoint.Enable()
+		result.SetResponse(stack.StackEnablePacketFilterResponse{})
+	}
+	return result, nil
 }
 
-func (ni *stackImpl) DisablePacketFilter(id uint64) (*stack.Error, error) {
-	return ni.ns.disablePacketFilter(id), nil
+func (ni *stackImpl) DisablePacketFilter(id uint64) (stack.StackDisablePacketFilterResult, error) {
+	ni.ns.mu.Lock()
+	ifs, ok := ni.ns.mu.ifStates[tcpip.NICID(id)]
+	ni.ns.mu.Unlock()
+
+	var result stack.StackDisablePacketFilterResult
+	if !ok {
+		result.SetErr(stack.ErrorTypeNotFound)
+	} else if ifs.filterEndpoint == nil {
+		result.SetErr(stack.ErrorTypeNotSupported)
+	} else {
+		ifs.filterEndpoint.Disable()
+		result.SetResponse(stack.StackDisablePacketFilterResponse{})
+	}
+	return result, nil
+}
+
+func (ni *stackImpl) EnableIpForwarding() error {
+	ni.ns.mu.Lock()
+	ni.ns.mu.stack.SetForwarding(true)
+	ni.ns.mu.Unlock()
+	return nil
+}
+
+func (ni *stackImpl) DisableIpForwarding() error {
+	ni.ns.mu.Lock()
+	ni.ns.mu.stack.SetForwarding(false)
+	ni.ns.mu.Unlock()
+	return nil
 }
