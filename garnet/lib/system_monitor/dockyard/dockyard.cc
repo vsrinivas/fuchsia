@@ -182,8 +182,8 @@ void Dockyard::AddSample(DockyardId dockyard_id, Sample sample) {
   latest_sample_time_ns_ = sample.time;
 
   // Track the overall lowest and highest values encountered.
-  sample_stream_low_high_.try_emplace(dockyard_id,
-                                      std::make_pair(SAMPLE_MAX_VALUE, 0ULL));
+  sample_stream_low_high_.emplace(dockyard_id,
+                                  std::make_pair(SAMPLE_MAX_VALUE, 0ULL));
   auto low_high = sample_stream_low_high_.find(dockyard_id);
   SampleValue lowest = low_high->second.first;
   SampleValue highest = low_high->second.second;
@@ -207,8 +207,8 @@ void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {
   SampleStream& sample_stream = sample_streams_.StreamRef(dockyard_id);
 
   // Track the overall lowest and highest values encountered.
-  sample_stream_low_high_.try_emplace(dockyard_id,
-                                      std::make_pair(SAMPLE_MAX_VALUE, 0ULL));
+  sample_stream_low_high_.emplace(dockyard_id,
+                                  std::make_pair(SAMPLE_MAX_VALUE, 0ULL));
   auto low_high = sample_stream_low_high_.find(dockyard_id);
   SampleValue lowest = low_high->second.first;
   SampleValue highest = low_high->second.second;
@@ -386,7 +386,7 @@ void Dockyard::Initialize() {
   }
 
   GT_LOG(INFO) << "Starting dockyard server";
-  protocol_buffer_service_ = std::make_unique<DockyardServiceImpl>();
+  protocol_buffer_service_ = make_unique<DockyardServiceImpl>();
 
   protocol_buffer_service_->SetDockyard(this);
 

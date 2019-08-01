@@ -4,6 +4,10 @@
 
 import("//third_party/protobuf/proto_library.gni")
 
+config("cc11only") {
+  cflags_cc = [ "-std=c++11" ]
+}
+
 source_set("headers") {
   sources = [
     "dockyard.h",
@@ -18,6 +22,7 @@ source_set("headers") {
 }
 
 source_set("lib") {
+  configs += [ ":cc11only" ]
   sources = [
     "dockyard.cc",
     "dockyard_service_impl.cc",

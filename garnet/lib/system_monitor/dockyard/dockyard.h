@@ -68,6 +68,14 @@ enum KoidType : SampleValue {
   THREAD = 102ULL,
 };
 
+// Helper function for C++ 11 (replace when C++ 14 is available). (Based on code
+// in Abseil).
+template <typename T, typename... Args>
+typename std::unique_ptr<T> make_unique(
+    Args&&... args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
 // A Sample.
 struct Sample {
   Sample(SampleTimeNs t, SampleValue v) : time(t), value(v) {}
@@ -257,7 +265,7 @@ class SampleStreamMap
   // Get a reference to the sample stream for the given |dockyard_id|.
   // The stream will be created if necessary.
   SampleStream& StreamRef(DockyardId dockyard_id) {
-    return *emplace(dockyard_id, std::make_unique<SampleStream>())
+    return *emplace(dockyard_id, make_unique<SampleStream>())
                 .first->second.get();
   }
 };
