@@ -23,10 +23,9 @@ Err ResolveVariant(fxl::RefPtr<EvalContext> context, const ExprValue& value,
   if (!discr_member)
     return Err("Missing discriminant for variant.");
 
-  ExprValue discr_value;
-  Err err = ResolveMember(context, value, discr_member, &discr_value);
-  if (err.has_error())
-    return err;
+  ErrOrValue discr_value = ResolveMember(context, value, discr_member);
+  if (discr_value.has_error())
+    return discr_value.err();
 
   // Expect the discriminant value to resolve to a <= 64-bit number.
   //
@@ -34,8 +33,7 @@ Err ResolveVariant(fxl::RefPtr<EvalContext> context, const ExprValue& value,
   // the Variant.discr_value() getter. If we need to support signed
   // discriminants this block will have to be updated.
   uint64_t discr = 0;
-  err = discr_value.PromoteTo64(&discr);
-  if (err.has_error())
+  if (Err err = discr_value.value().PromoteTo64(&discr); err.has_error())
     return err;
 
   // Check against all variants and also look for the default variant.

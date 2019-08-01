@@ -289,15 +289,15 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
       enum_name = member->GetAssignedName();
 
     // TODO(brettw) this will append a child unconditionally.
-    ExprValue member_value;
-    err = ResolveMember(eval_context, node->value(), member, &member_value);
-    if (err.has_error()) {
+    ErrOrValue member_value = ResolveMember(eval_context, node->value(), member);
+    if (member_value.has_error()) {
       // In the error case, still append a child so that the child can have
       // the error associated with it.
-      node->children().push_back(std::make_unique<FormatNode>(member->GetAssignedName(), err));
+      node->children().push_back(
+          std::make_unique<FormatNode>(member->GetAssignedName(), member_value.err()));
     } else {
       node->children().push_back(
-          std::make_unique<FormatNode>(member->GetAssignedName(), std::move(member_value)));
+          std::make_unique<FormatNode>(member->GetAssignedName(), std::move(member_value.value())));
     }
   }
 
@@ -316,20 +316,18 @@ void FormatRustTuple(FormatNode* node, const Collection* coll, FormatNode::Descr
     if (!member)
       continue;
 
-    ExprValue member_value;
-    Err err = ResolveMember(eval_context, node->value(), member, &member_value);
-
     // Convert the names to indices "__0" -> 0.
     auto name = member->GetAssignedName();
     if (name.size() > 2 && name[0] == '_' && name[1] == '_')
       name.erase(name.begin(), name.begin() + 2);
 
-    if (err.has_error()) {
+    ErrOrValue member_value = ResolveMember(eval_context, node->value(), member);
+    if (member_value.has_error()) {
       // In the error case, still append a child so that the child can have the error associated
       // with it.
-      node->children().push_back(std::make_unique<FormatNode>(name, err));
+      node->children().push_back(std::make_unique<FormatNode>(name, member_value.err()));
     } else {
-      node->children().push_back(std::make_unique<FormatNode>(name, member_value));
+      node->children().push_back(std::make_unique<FormatNode>(name, member_value.value()));
     }
   }
 
@@ -384,11 +382,12 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
     std::string from_name = from->GetFullName();
     std::unique_ptr<FormatNode> base_class_node;
 
-    ExprValue from_value;
-    if (Err err = ResolveInherited(node->value(), inherited, &from_value); err.has_error())
-      base_class_node = std::make_unique<FormatNode>(from_name, err);
+    ErrOrValue from_value = ResolveInherited(node->value(), inherited);
+    // TODO(brettw) make FormatNode take a ErrOrValue constructor.
+    if (from_value.has_error())
+      base_class_node = std::make_unique<FormatNode>(from_name, from_value.err());
     else
-      base_class_node = std::make_unique<FormatNode>(from_name, from_value);
+      base_class_node = std::make_unique<FormatNode>(from_name, from_value.value());
 
     base_class_node->set_child_kind(FormatNode::kBaseClass);
     node->children().push_back(std::move(base_class_node));
@@ -405,12 +404,11 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
 
     std::string member_name = member->GetAssignedName();
 
-    ExprValue member_value;
-    Err err = ResolveMember(eval_context, node->value(), member, &member_value);
-    if (err.has_error()) {
-      node->children().push_back(std::make_unique<FormatNode>(member_name, err));
+    ErrOrValue member_value = ResolveMember(eval_context, node->value(), member);
+    if (member_value.has_error()) {
+      node->children().push_back(std::make_unique<FormatNode>(member_name, member_value.err()));
     } else {
-      node->children().push_back(std::make_unique<FormatNode>(member_name, member_value));
+      node->children().push_back(std::make_unique<FormatNode>(member_name, member_value.value()));
     }
   }
 

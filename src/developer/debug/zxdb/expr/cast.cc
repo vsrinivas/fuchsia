@@ -457,7 +457,9 @@ Err ImplicitCast(EvalContext* eval_context, const ExprValue& source,
     // Ignore the dest_source. ResolveInherited is extracting data from inside
     // the source object which has a well-defined source location (unlike for
     // all other casts that change the data so there isn't so clear a source).
-    return ResolveInherited(source, dest_type, *found_offset, result);
+    ErrOrValue resolve_result = ResolveInherited(source, dest_type, *found_offset);
+    *result = resolve_result.take_value_or_empty();
+    return resolve_result.err_or_empty();
   }
 
   return Err("Can't cast from '%s' to '%s'.", source.type()->GetFullName().c_str(),

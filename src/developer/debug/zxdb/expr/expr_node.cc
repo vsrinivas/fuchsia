@@ -372,19 +372,17 @@ void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback c
                                            const Err& err, ExprValue base) mutable {
     if (!is_arrow) {
       // "." operator.
-      ExprValue result;
-      Err err = ResolveMember(context, base, member, &result);
-      cb(err, std::move(result));
+      ErrOrValue result = ResolveMember(context, base, member);
+      cb(result.err_or_empty(), std::move(result.take_value_or_empty()));
       return;
     }
 
     // Everything else should be a -> operator.
-    ResolveMemberByPointer(
-        context, base, member,
-        [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>, ExprValue result) mutable {
-          // Discard resolved symbol, we only need the value.
-          cb(err, std::move(result));
-        });
+    ResolveMemberByPointer(context, base, member,
+                           [cb = std::move(cb)](ErrOrValue result, fxl::RefPtr<Symbol>) mutable {
+                             // Discard resolved symbol, we only need the value.
+                             cb(result.err_or_empty(), std::move(result.take_value_or_empty()));
+                           });
   });
 }
 

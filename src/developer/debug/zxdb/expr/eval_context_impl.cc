@@ -272,33 +272,29 @@ void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
 
   // Object variable resolution: Get the value of of the |this| variable.
   FXL_DCHECK(found.kind() == FoundName::kMemberVariable);
-  GetVariableValue(
-      found.object_ptr_ref(),
-      [weak_this = weak_factory_.GetWeakPtr(), found, cb = std::move(cb)](
-          const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) mutable {
-        if (!weak_this)
-          return;  // Don't issue callbacks if we've been destroyed.
+  GetVariableValue(found.object_ptr_ref(),
+                   [weak_this = weak_factory_.GetWeakPtr(), found, cb = std::move(cb)](
+                       const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) mutable {
+                     if (!weak_this)
+                       return;  // Don't issue callbacks if we've been destroyed.
 
-        if (err.has_error()) {
-          // |this| not available, probably optimized out.
-          cb(err, symbol, ExprValue());
-          return;
-        }
+                     if (err.has_error()) {
+                       // |this| not available, probably optimized out.
+                       cb(err, symbol, ExprValue());
+                       return;
+                     }
 
-        // Got |this|, resolve |this-><DataMember>|.
-        ResolveMemberByPointer(
-            fxl::RefPtr<EvalContextImpl>(weak_this.get()), value, found.member(),
-            [weak_this, found, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
-              if (!weak_this)
-                return;  // Don't issue callbacks if we've been destroyed.
-              if (err.has_error()) {
-                cb(err, found.member().data_member_ref(), ExprValue());
-              } else {
-                // Found |this->name|.
-                cb(Err(), found.member().data_member_ref(), std::move(value));
-              }
-            });
-      });
+                     // Got |this|, resolve |this-><DataMember>|.
+                     ResolveMemberByPointer(
+                         fxl::RefPtr<EvalContextImpl>(weak_this.get()), value, found.member(),
+                         [weak_this, found, cb = std::move(cb)](ErrOrValue value) mutable {
+                           if (weak_this) {
+                             // Only issue callbacks if we're still alive.
+                             cb(value.err_or_empty(), found.member().data_member_ref(),
+                                std::move(value.take_value_or_empty()));
+                           }
+                         });
+                   });
 }
 
 void EvalContextImpl::OnDwarfEvalComplete(const Err& err,

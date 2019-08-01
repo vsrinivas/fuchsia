@@ -41,14 +41,14 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a, const Data
 }
 
 // Helper function that calls ResolveMember with an identifier with the containing value.
-Err ResolveMemberFromString(fxl::RefPtr<EvalContext> eval_context, const ExprValue& base,
-                            const std::string& name, ExprValue* out) {
+ErrOrValue ResolveMemberFromString(fxl::RefPtr<EvalContext> eval_context, const ExprValue& base,
+                                   const std::string& name) {
   ParsedIdentifier ident;
   Err err = ExprParser::ParseIdentifier(name, &ident);
   if (err.has_error())
     return err;
 
-  return ResolveMember(eval_context, base, ident, out);
+  return ResolveMember(eval_context, base, ident);
 }
 
 }  // namespace
@@ -70,32 +70,30 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
                  ExprValueSource(kBaseAddr));
 
   // Resolve A.
-  ExprValue out;
-  Err err = ResolveMember(eval_context, base, a_data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ("int32_t", out.type()->GetAssignedName());
-  EXPECT_EQ(4u, out.data().size());
-  EXPECT_EQ(1, out.GetAs<int32_t>());
-  EXPECT_EQ(kBaseAddr, out.source().address());
+  ErrOrValue out = ResolveMember(eval_context, base, a_data);
+  ASSERT_TRUE(out.ok()) << out.err().msg();
+  EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
+  EXPECT_EQ(4u, out.value().data().size());
+  EXPECT_EQ(1, out.value().GetAs<int32_t>());
+  EXPECT_EQ(kBaseAddr, out.value().source().address());
 
   // Resolve A by name.
-  ExprValue out_by_name;
-  err = ResolveMemberFromString(eval_context, base, "a", &out_by_name);
-  EXPECT_EQ(out, out_by_name);
+  ErrOrValue out_by_name = ResolveMemberFromString(eval_context, base, "a");
+  ASSERT_TRUE(out_by_name.ok());
+  EXPECT_EQ(out.value(), out_by_name.value());
 
   // Resolve B.
-  out = ExprValue();
-  err = ResolveMember(eval_context, base, b_data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ("int32_t", out.type()->GetAssignedName());
-  EXPECT_EQ(4u, out.data().size());
-  EXPECT_EQ(2, out.GetAs<int32_t>());
-  EXPECT_EQ(kBaseAddr + 4, out.source().address());
+  out = ResolveMember(eval_context, base, b_data);
+  ASSERT_TRUE(out.ok()) << out.err().msg();
+  EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
+  EXPECT_EQ(4u, out.value().data().size());
+  EXPECT_EQ(2, out.value().GetAs<int32_t>());
+  EXPECT_EQ(kBaseAddr + 4, out.value().source().address());
 
   // Resolve B by name.
-  out_by_name = ExprValue();
-  err = ResolveMemberFromString(eval_context, base, "b", &out_by_name);
-  EXPECT_EQ(out, out_by_name);
+  out_by_name = ResolveMemberFromString(eval_context, base, "b");
+  ASSERT_TRUE(out_by_name.ok());
+  EXPECT_EQ(out.value(), out_by_name.value());
 }
 
 // Tests that "a->b" can be resolved when the type of "a" is a forward definition. This requires
@@ -146,28 +144,24 @@ TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
 
   // Resolve by name on an object with the type referencing the forward declaration.
   bool called = false;
-  Err out_err;
-  ExprValue out_value;
-  ResolveMemberByPointer(
-      context, ptr_value, a_ident,
-      [&called, &out_err, &out_value](const Err& err, fxl::RefPtr<DataMember>, ExprValue value) {
-        called = true;
-        out_err = err;
-        out_value = value;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
+  ErrOrValue out((ExprValue()));
+  ResolveMemberByPointer(context, ptr_value, a_ident,
+                         [&called, &out](ErrOrValue value, fxl::RefPtr<DataMember>) {
+                           called = true;
+                           out = std::move(value);
+                           debug_ipc::MessageLoop::Current()->QuitNow();
+                         });
 
   // Requesting the memory for the pointer is async.
-  EXPECT_FALSE(out_err.has_error()) << err.msg();
   EXPECT_FALSE(called);
   loop().PostTask(FROM_HERE, [loop = &loop()]() { loop->QuitNow(); });
   loop().Run();
   EXPECT_TRUE(called);
-  EXPECT_FALSE(out_err.has_error()) << err.msg();
+  ASSERT_FALSE(out.has_error()) << err.msg();
 
   // Should have resolved to the int32.
-  ASSERT_EQ(int32_type.get(), out_value.type());
-  EXPECT_EQ(kIntValue, out_value.GetAs<int32_t>());
+  ASSERT_EQ(int32_type.get(), out.value().type());
+  EXPECT_EQ(kIntValue, out.value().GetAs<int32_t>());
 }
 
 TEST_F(ResolveCollectionTest, BadMemberArgs) {
@@ -178,19 +172,17 @@ TEST_F(ResolveCollectionTest, BadMemberArgs) {
   auto sc = GetTestClassType(&a_data, &b_data);
 
   // Test null base class pointer.
-  ExprValue out;
-  Err err = ResolveMember(eval_context, ExprValue(), a_data, &out);
-  EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Can't resolve data member on non-struct/class value.", err.msg());
+  ErrOrValue out = ResolveMember(eval_context, ExprValue(), a_data);
+  ASSERT_TRUE(out.has_error());
+  EXPECT_EQ("Can't resolve data member on non-struct/class value.", out.err().msg());
 
   constexpr uint64_t kBaseAddr = 0x11000;
   ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00}, ExprValueSource(kBaseAddr));
 
   // Null data member pointer.
-  out = ExprValue();
-  err = ResolveMember(eval_context, base, nullptr, &out);
-  EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Invalid data member for struct 'Foo'.", err.msg());
+  out = ResolveMember(eval_context, base, nullptr);
+  EXPECT_TRUE(out.has_error());
+  EXPECT_EQ("Invalid data member for struct 'Foo'.", out.err().msg());
 }
 
 TEST_F(ResolveCollectionTest, BadMemberAccess) {
@@ -204,10 +196,9 @@ TEST_F(ResolveCollectionTest, BadMemberAccess) {
   ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00}, ExprValueSource(kBaseAddr));
 
   // Lookup by name that doesn't exist.
-  ExprValue out;
-  Err err = ResolveMemberFromString(eval_context, base, "c", &out);
-  EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("No member 'c' in struct 'Foo'.", err.msg());
+  ErrOrValue out = ResolveMemberFromString(eval_context, base, "c");
+  ASSERT_TRUE(out.has_error());
+  EXPECT_EQ("No member 'c' in struct 'Foo'.", out.err().msg());
 
   // Lookup by a DataMember that references outside of the struct (in this case, by one byte).
   auto bad_member = fxl::MakeRefCounted<DataMember>();
@@ -215,10 +206,9 @@ TEST_F(ResolveCollectionTest, BadMemberAccess) {
   bad_member->set_type(MakeInt32Type());
   bad_member->set_member_location(5);
 
-  out = ExprValue();
-  err = ResolveMember(eval_context, base, bad_member.get(), &out);
-  EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Invalid data member for struct 'Foo'.", err.msg());
+  out = ResolveMember(eval_context, base, bad_member.get());
+  ASSERT_TRUE(out.has_error());
+  EXPECT_EQ("Invalid data member for struct 'Foo'.", out.err().msg());
 }
 
 // Tests foo.bar where bar is in a derived class of foo's type.
@@ -242,30 +232,27 @@ TEST_F(ResolveCollectionTest, DerivedClass) {
                   ExprValueSource(kBaseAddr));
 
   // Resolve B by name.
-  ExprValue out;
-  Err err = ResolveMemberFromString(eval_context, value, "b", &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ("int32_t", out.type()->GetAssignedName());
-  EXPECT_EQ(4u, out.data().size());
-  EXPECT_EQ(2, out.GetAs<int32_t>());
+  ErrOrValue out = ResolveMemberFromString(eval_context, value, "b");
+  ASSERT_TRUE(out.ok()) << out.err().msg();
+  EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
+  EXPECT_EQ(4u, out.value().data().size());
+  EXPECT_EQ(2, out.value().GetAs<int32_t>());
 
   // Offset of B in "derived".
-  EXPECT_EQ(kBaseAddr + base_offset + 4, out.source().address());
+  EXPECT_EQ(kBaseAddr + base_offset + 4, out.value().source().address());
 
   // Test extracting the base class from the derived one.
-  ExprValue base_value;
-  err = ResolveInherited(value, inherited.get(), &base_value);
-  EXPECT_FALSE(err.has_error());
+  ErrOrValue base_value = ResolveInherited(value, inherited.get());
+  ASSERT_TRUE(base_value.ok());
 
   ExprValue expected_base(base, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
                           ExprValueSource(kBaseAddr + base_offset));
-  EXPECT_EQ(expected_base, base_value);
+  EXPECT_EQ(expected_base, base_value.value());
 
   // Test the other variant of ResolveInherited.
-  base_value = ExprValue();
-  err = ResolveInherited(value, base, base_offset, &base_value);
-  EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(expected_base, base_value);
+  base_value = ResolveInherited(value, base, base_offset);
+  ASSERT_TRUE(base_value.ok());
+  EXPECT_EQ(expected_base, base_value.value());
 }
 
 }  // namespace zxdb

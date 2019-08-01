@@ -60,9 +60,8 @@ class PrettyEvalContext : public EvalContext {
 
 void PrettyEvalContext::GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) const {
   // First try to resolve all names on the object given.
-  ExprValue result;
-  if (!ResolveMember(impl_, value_, name, &result).has_error())
-    return cb(Err(), fxl::RefPtr<Symbol>(), std::move(result));
+  if (ErrOrValue result = ResolveMember(impl_, value_, name); result.ok())
+    return cb(result.err_or_empty(), fxl::RefPtr<Symbol>(), result.take_value_or_empty());
 
   // Fall back on regular name lookup.
   return impl_->GetNamedValue(name, std::move(cb));
@@ -116,11 +115,11 @@ Err PrettyType::ExtractMember(fxl::RefPtr<EvalContext> context, const ExprValue&
   ExprValue cur = value;
   for (const std::string& name : names) {
     ParsedIdentifier id(IdentifierQualification::kRelative, ParsedIdentifierComponent(name));
-    ExprValue expr_value;
-    if (Err err = ResolveMember(context, cur, id, &expr_value); err.has_error())
-      return err;
+    ErrOrValue result = ResolveMember(context, cur, id);
+    if (result.has_error())
+      return result.err();
 
-    cur = std::move(expr_value);
+    cur = std::move(result.take_value());
   }
   *extracted = std::move(cur);
   return Err();

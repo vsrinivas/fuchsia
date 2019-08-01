@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/expr/expr_value_source.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -144,6 +145,8 @@ float ExprValue::GetAs<float>() const;
 
 template <>
 double ExprValue::GetAs<double>() const;
+
+using ErrOrValue = ErrOr<ExprValue>;
 
 }  // namespace zxdb
 
