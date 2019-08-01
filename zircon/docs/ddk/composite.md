@@ -307,8 +307,8 @@ the other half in
 
 <!-- xrefs -->
 
-[component-proxy.cpp]: /zircon/system/core/devmgr/component/component-proxy.cpp
-[component.cpp]: /zircon/system/core/devmgr/component/component.cpp
+[component-proxy.cpp]: /zircon/system/core/devmgr/component/component-proxy.cc
+[component.cpp]: /zircon/system/core/devmgr/component/component.cc
 [component]: /zircon/system/core/devmgr/component/
 [composite.banjo]: /zircon/system/banjo/ddk.protocol.composite/composite.banjo
 [driver.h]: /zircon/system/ulib/ddk/include/ddk/driver.h

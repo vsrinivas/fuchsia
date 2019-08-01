@@ -70,7 +70,7 @@ After the platform devices are created, the platform bus initialization is compl
 
 ## Platform Device Protocol
 
-The [platform device protocol](../../system/ulib/ddk/include/ddk/protocol/platform-device.h)
+The [platform device protocol](/zircon/system/dev/lib/device-protocol-platform-device/include/lib/device-protocol/platform-device.h)
 (`ZX_PROTOCOL_PDEV`) is the main protocol provided by the platform bus to
 platform device drivers. This protocol provides access to resources like MMIO ranges, interrupts,
 BTIs, and SMC ranges to the platform device driver. Rather than requesting MMIOs and interrupts by
@@ -110,7 +110,7 @@ This allows platform device drivers to be more easily reused across different pl
 
 ## Platform Bus Protocol
 
-The [platform bus protocol](../../system/ulib/ddk/include/ddk/protocol/platform-bus.h)
+The [platform bus protocol](/zircon/system/dev/bus/platform/platform-bus.h)
 (`ZX_PROTOCOL_PBUS`) is used by board drivers and protocol implementation drivers
 to communicate with the platform bus driver. It is only available to drivers running in the
 platform bus's devhost (in particular, it is not accessible to platform device drivers).
@@ -121,7 +121,7 @@ to platform device drivers.
 
 ## Platform Proxy Protocol
 
-The [platform proxy protocol](../../system/ulib/ddk/include/ddk/protocol/platform-proxy.h)
+The [platform proxy protocol](/zircon/system/dev/bus/platform/platform-proxy.h)
 (`ZX_PROTOCOL_PLATFORM_PROXY`) is used by the proxy client drivers that proxy protocols to
 protocol implementation drivers. It provides support for the proxy client driver to register
 its protocol with the platform proxy driver and for proxying its protocol to the

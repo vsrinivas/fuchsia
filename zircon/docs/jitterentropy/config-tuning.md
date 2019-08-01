@@ -92,10 +92,10 @@ testing should be repeated a few times to reduce random variations.
 ## Determining the entropy\_per\_1000\_bytes statistic
 
 The `crypto::entropy::Collector` interface in
-[kernel/lib/crypto/include/lib/crypto/entropy/collector.h](../../kernel/lib/crypto/include/lib/crypto/entropy/collector.h)
+[kernel/lib/crypto/include/lib/crypto/entropy/collector.h](/zircon/kernel/lib/crypto/include/lib/crypto/entropy/collector.h)
 requires a parameter `entropy_per_1000_bytes` from its instantiations. The value relevant to
 jitterentropy is currently hard-coded in
-[kernel/lib/crypto/entropy/jitterentropy\_collector.cpp](../../kernel/lib/crypto/entropy/jitterentropy_collector.cpp).
+[kernel/lib/crypto/entropy/jitterentropy\_collector.cpp](/zircon/kernel/lib/crypto/entropy/jitterentropy_collector.cc).
 This value is meant to measure how much min-entropy is contained in each byte of data produced by
 jitterentropy (since the bytes aren't independent and uniformly distributed, this will be less than
 8 bits). The "per 1000 bytes" part simply makes it possible to specify fractional amounts of

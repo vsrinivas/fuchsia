@@ -55,6 +55,7 @@
 + [channel_read](syscalls/channel_read.md) - receive a message from a channel
 + [channel_read_etc](syscalls/channel_read_etc.md) - receive a message from a channel with handle information
 + [channel_write](syscalls/channel_write.md) - write a message to a channel
++ [channel_write_etc](syscalls/channel_write_etc.md) - _unimplemented_
 
 ## Sockets
 + [socket_create](syscalls/socket_create.md) - create a new socket
@@ -118,6 +119,7 @@
 + [ticks_get](syscalls/ticks_get.md) - read high-precision timer ticks
 + [ticks_per_second](syscalls/ticks_per_second.md) - read the number of high-precision timer ticks in a second
 + [deadline_after](syscalls/deadline_after.md) - Convert a time relative to now to an absolute deadline
++ [clock_adjust](syscalls/clock_adjust.md) - 
 
 ## Timers
 + [timer_create](syscalls/timer_create.md) - create a timer object
@@ -145,6 +147,8 @@
 + [debuglog_create](syscalls/debuglog_create.md) - create a kernel managed debuglog reader or writer
 + [debuglog_write](syscalls/debuglog_write.md) - write log entry to debuglog
 + [debuglog_read](syscalls/debuglog_read.md) - read log entries from debuglog
++ [debug_read](syscalls/debug_read.md) - TODO(ZX-3106)
++ [debug_write](syscalls/debug_write.md) - TODO(ZX-3106)
 
 ## Multi-function
 + [vmar_unmap_handle_close_thread_exit](syscalls/vmar_unmap_handle_close_thread_exit.md) - three-in-one

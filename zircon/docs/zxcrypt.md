@@ -11,7 +11,7 @@ bound, the zxcrypt device will publish another block device in the device tree t
 interact with normally.
 
 ## Usage
-zxcrypt contains both a [driver](../system/dev/block/zxcrypt) and [library](../system/ulib/zxcrypt)
+zxcrypt contains both a [driver](/zircon/system/dev/block/zxcrypt) and [library](/zircon/system/ulib/zxcrypt)
 Provided by libzxcrypt.so are four functions for managing zxcrypt devices.  Each takes one or more
 `zxcrypt_key_t` keys, which associates the key data, length, and slot in the case of multiple keys.
 * The __zxcrypt_format__ function takes an open block device, and writes the necessary encrypted
@@ -46,21 +46,21 @@ zx_status_t zxcrypt_shred(int fd, const zxcrypt_key_t* key);
 
 ## Technical Details
 ### DDKTL Driver
-zxcrypt is written as a DDKTL device driver.  [ulib/ddktl](../system/ulib/ddktl) is a C++ framework
+zxcrypt is written as a DDKTL device driver.  [ulib/ddktl](/zircon/system/ulib/ddktl) is a C++ framework
 for writing drivers in Fuchsia.  It allows authors to automatically supply the
-[ulib/ddk](../system/ulib/ddk) function pointers and callbacks by using templatized mix-ins.  In the
-case of zxcrypt, the [device](../system/dev/block/zxcrypt/device.h) is "Messageable",
+[ulib/ddk](/zircon/system/ulib/ddk) function pointers and callbacks by using templatized mix-ins.  In the
+case of zxcrypt, the [device](/zircon/system/dev/block/zxcrypt/device.h) is "Messageable",
 "IotxnQueueable", "GetSizable", "Unbindable", and implements the methods listed in DDKTL's
-[BlockProtocol](../system/ulib/ddktl/include/ddktl/protocol/block.h).
+[BlockProtocol](/zircon/system/ulib/ddktl/include/ddktl/protocol/block.h).
 
 There are two small pieces of functionality which cannot be written in DDKTL and C++:
 * The driver binding logic, written using the C preprocessor macros of DDK's
-  [binding.h](../system/public/zircon/driver/binding.h).
-* The completion routines of [ulib/sync](../system/ulib/sync), which are used for synchronous I/O
+  [binding.h](/zircon/system/public/zircon/driver/binding.h).
+* The completion routines of [ulib/sync](/zircon/system/ulib/sync), which are used for synchronous I/O
   and are incompatible with C++ atomics.
 
 ### Worker Threads
-The device starts [worker threads](../system/dev/block/zxcrypt/worker.h) that run for the duration
+The device starts [worker threads](/zircon/system/dev/block/zxcrypt/worker.h) that run for the duration
 of the device and create a pipeline for all I/O requests.  Each has a type of I/O it operates on, a
 queue of incoming requests I/O that it will wait on, and a data cipher.  When a request is received,
 if the opcode matches the one it is looking for, it will use its cipher to transform the data in the
@@ -79,7 +79,7 @@ DdkIotxnQueue -+
 The "encrypter" worker encrypts the data in every I/O write request before sending it to the
 underlying block device, and the "decrypter" worker decrypts the data in every I/O read response
 coming from the underlying block device.  The
-[cipher](../system/ulib/crypto/include/crypto/cipher.h) must have a key length of at least 16 bytes,
+[cipher](/zircon/system/ulib/crypto/include/crypto/cipher.h) must have a key length of at least 16 bytes,
 be semantically secure ([IND-CCA2][ind-cca2]) and incorporate the block offset as a
 "[tweak][tweak]".  Currently, [AES256-XTS][aes-xts] is in use.
 
@@ -87,8 +87,8 @@ be semantically secure ([IND-CCA2][ind-cca2]) and incorporate the block offset a
 In order to keep the encryption and decryption of data transparent to original I/O requester, the
 workers must copy the data when transforming it.  The I/O request sent through the pipeline is not
 actually the original request, but instead a "shadow" request that encapsulates the original
-request.  These shadows requests are managed by the [Txn](../system/dev/block/zxcrypt/txn.h) class,
-and allocated from the [Ring](../system/dev/block/zxcrypt/ring.h) class. The Ring is an enormous,
+request.  These shadows requests are managed by the [Txn](/zircon/system/dev/block/zxcrypt/txn.h) class,
+and allocated from the [Ring](/zircon/system/dev/block/zxcrypt/ring.h) class. The Ring is an enormous,
 yet very sparse, [VMO](concepts.md#shared-memory-virtual-memory-objects-vmos-).
 
 As shadow requests are needed, they are allocated backed sequentially by pages in the VMO.  When the
@@ -101,7 +101,7 @@ This ensures no more memory is used than is needed for outstanding I/O requests.
 ### Superblock Format
 The key material for encrypting and decrypting the data is referred to as the data key, and is
 stored in a reserved portion of the device called the
-[superblock](../system/ulib/zxcrypt/include/zxcrypt/superblock.h).  The presence of this superblock
+[superblock](/zircon/system/ulib/zxcrypt/include/zxcrypt/superblock.h).  The presence of this superblock
 is critical; without it, it is impossible to recreate the data key and recover the data on the
 device.  As a result, the superblock is copied to multiple locations on the device for redundancy.
 These locations are not visible to zxcrypt block device consumers.  Whenever the zxcrypt driver
@@ -118,7 +118,7 @@ The superblock format is as follows, with each field described in turn:
 ```
 
 * _Type [GUID][guid]_: Identifies this as a zxcrypt device. Compatible with
-  [GPT](../system/ulib/gpt/include/gpt/gpt.h).
+  [GPT](/zircon/system/ulib/gpt/include/gpt/gpt.h).
 * _Instance GUID_: Per-device identifier, used as the KDF salt as explained below.
 * _Version_: Used to indicate which cryptographic algorithms to use.
 * _Sealed Key_: The data key, encrypted by the wrap key as describer below.
@@ -126,11 +126,11 @@ The superblock format is as follows, with each field described in turn:
 * [_HMAC_][hmac]: A keyed digest of the superblock up to this point (including the Reserved field).
 
 The wrap key, wrap [IV][iv], and HMAC key are all derived from a
-[KDF](../system/ulib/crypto/include/crypto/kdf.h).  This KDF is an [RFC 5869 HKDF][hkdf], which
+[KDF](/zircon/system/ulib/crypto/include/crypto/kdf.h).  This KDF is an [RFC 5869 HKDF][hkdf], which
 combines the key provided, the "salt" of the instance GUID and a per-use label such as "wrap" or
 "hmac".  The KDF does __NOT__ try to do any rate-limiting.  The KDF mitigates the risk of key reuse,
 as a new random instance salt will lead to new derived keys.  The
-[HMAC](../system/ulib/crypto/include/crypto/hmac.h) prevents accidental or malicious modification to
+[HMAC](/zircon/system/ulib/crypto/include/crypto/hmac.h) prevents accidental or malicious modification to
 go undetected, without leaking any useful information about the zxcrypt key.
 
 _NOTE: The KDF does __NOT__ do any [key stretching][stretch].  It is assumed that an attacker can

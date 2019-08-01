@@ -2,7 +2,7 @@
 
 At this point in time, Zircon is under heavy, active development, and we're
 not seeking major changes or new features from new contributors, however, if
-you desire to [contribute](/docs/CONTRIBUTING.md), small bugfixes are welcome.
+you desire to [contribute](/CONTRIBUTING.md), small bugfixes are welcome.
 
 Here are some general guidelines for patches to Zircon.  This list is
 incomplete and will be expanded over time.

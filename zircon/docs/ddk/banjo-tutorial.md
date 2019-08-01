@@ -5,7 +5,7 @@ This document is part of the [Zircon Driver Development Kit](overview.md) docume
 [TOC]
 
 Banjo is a "transpiler" (like [FIDL's
-`fidlc`](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/README.md))
+`fidlc`](/docs/development/languages/fidl/README.md))
 &mdash; a program that converts an interface definition language (**IDL**) into target language
 specific files.
 
@@ -26,7 +26,7 @@ and the protocol user.
 # A simple example
 
 As a first step, let's take a look at a relatively simple Banjo specification.
-This is the file [`//zircon/system/banjo/ddk-protocol-i2c/i2c.banjo`](https://fuchsia.googlesource.com/zircon/+/master/system/banjo/ddk-protocol-i2c/i2c.banjo):
+This is the file [`//zircon/system/banjo/ddk.protocol.i2c/i2c.banjo`](/zircon/system/banjo/ddk.protocol.i2c/i2c.banjo):
 
 > Note that the line numbers in the code samples throughout this tutorial are not part of the files.
 
@@ -542,7 +542,7 @@ Finally, the `constexpr` expression provides a default initialization if require
 ### Using the mixin class
 
 The `I2cProtocol` class can be used as follows (from
-[`//zircon/system/dev/bus/platform/platform-proxy-device.h`](https://fuchsia.googlesource.com/zircon/+/master/system/dev/bus/platform/platform-proxy-device.h)):
+[`//zircon/system/dev/bus/platform/platform-proxy.h`](/zircon/system/dev/bus/platform/platform-proxy.h)):
 
 ```c++
 [01] class ProxyI2c : public ddk::I2cProtocol<ProxyI2c> {

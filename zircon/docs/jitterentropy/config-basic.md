@@ -49,7 +49,7 @@ to discuss the two configuration options listed above.
 
 The first of the code blocks used as a noise source is a CPU-intensive LFSR
 loop, implemented in
-[the `jent_lfsr_time` function](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d/third_party/lib/jitterentropy/jitterentropy-base.c#185).
+[the `jent_lfsr_time` function](/zircon/third_party/lib/jitterentropy/jitterentropy-base.c#185).
 The number of times the LFSR logic is repeated is controlled by the
 `kernel.jitterentropy.ll` cmdline ("`ll`" stands for "LFSR loops"). If `ll = 0`,
 a pseudorandom count is used, and otherwise the value of `ll` is used.
@@ -65,7 +65,7 @@ entropy estimates by a suspicious amount in some cases (see
 [the "Effects of processing the raw samples" section](#effects-of-processing-the-raw-samples)).
 
 The second noise source is a memory access loop, in
-[the `jent_memaccess` function](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d/third_party/lib/jitterentropy/jitterentropy-base.c#261).
+[the `jent_memaccess` function](/zircon/third_party/lib/jitterentropy/jitterentropy-base.c#261).
 The memory access loop is repeated according to the `kernel.jitterentropy.ml`
 cmdline ("`ml`" for "memory loops"), where again a value of 0 activates the
 pseudorandom loop count, and any non-zero value overrides the pseudorandom
@@ -76,7 +76,7 @@ wrote the current document are `bc = 1024` and `bs = 64`; up-to-date defaults
 should be documented in
 [the cmdline document](../kernel_cmdline.md). For comparison, the defaults in
 the jitterentropy source code are `bc = 64` and `bs = 32`,
-[defined here](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d/third_party/lib/jitterentropy/include/lib/jitterentropy/jitterentropy.h#79).
+[defined here](/zircon/third_party/lib/jitterentropy/include/lib/jitterentropy/jitterentropy.h#79).
 Per the comment above the `jent_memaccess` function, the total memory size
 should be larger than the L1 cache size of the target machine. Confusingly,
 `bc = 64` and `bs = 32` produce a memory size of 2048 bytes, which is much
@@ -88,7 +88,7 @@ memory, which is usually enough to overflow L1 data caches.
 
 Jitterentropy was originally designed so that the two noise generating functions
 run a pseudorandom number of times. Specifically,
-[the `jent_loop_shuffle` function](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d/third_party/lib/jitterentropy/jitterentropy-base.c#125)
+[the `jent_loop_shuffle` function](/zircon/third_party/lib/jitterentropy/jitterentropy-base.c#125)
 mixes together (1) the time read from the high-resolution clock and (2)
 jitterentropy's internal random state in order to decide how many times to run
 the noise sources.
@@ -110,16 +110,16 @@ ideally remove) the deviation of the random data from the uniform distribution,
 and reduce (ideally, remove) any intercorrelations between random bytes.
 
 The main function of interest for generating processed samples is
-[`jent_gen_entropy`](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d/third_party/lib/jitterentropy/jitterentropy-base.c#462),
+[`jent_gen_entropy`](/zircon/third_party/lib/jitterentropy/jitterentropy-base.c#462),
 which is called in a loop by
-[`jent_read_entropy`](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d/third_party/lib/jitterentropy/jitterentropy-base.c#544)
+[`jent_read_entropy`](/zircon/third_party/lib/jitterentropy/jitterentropy-base.c#544)
 to produce an arbitrarily large number of random bytes.
 In essence, `jent_gen_entropy` calls the noise functions in a loop 64 times.
 Each of the 64 invocations of `jent_lfsr_time` mixes the noisy time measurement
 into the jitterentropy random state.
 
 After these 64 iterations, the random state is optionally "stirred" in
-[`jent_stir_pool`](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d/third_party/lib/jitterentropy/jitterentropy-base.c#403)
+[`jent_stir_pool`](/zircon/third_party/lib/jitterentropy/jitterentropy-base.c#403)
 by XOR-ing with a "mixer" value, itself dependent on the jitterentropy random
 state. As noted in the source code, this operation cannot increase or decrease
 the entropy in the pool (since XOR is bijective), but it can potentially improve
@@ -149,8 +149,7 @@ The procedure for running entropy source quality tests is documented in
 [the entropy quality tests document](../entropy_quality_tests.md).
 
 These preliminary results were gathered on a Zircon debug build on Raspberry Pi
-3, built from commit
-[18358de5e90a012cb1e042efae83f5ea264d1502](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d)
+3, built from commit 18358de5e90a012cb1e042efae83f5ea264d1502 in the now-obsolete project: https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d
 "\[virtio]\[entropy] Basic virtio-rng driver". The following flags were set in
 my `local.mk` file when building:
 
@@ -178,9 +177,9 @@ kernel.jitterentropy.raw=$RAW
 #### Raw Data
 
 Following the logic in the jitterentropy source code (search for
-[`MAX_FOLD_LOOP_BIT`](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d/third_party/lib/jitterentropy/jitterentropy-base.c#191)
+[`MAX_FOLD_LOOP_BIT`](/zircon/third_party/lib/jitterentropy/jitterentropy-base.c#191)
 and
-[`MAX_ACC_LOOP_BIT`](https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d/third_party/lib/jitterentropy/jitterentropy-base.c#265))
+[`MAX_ACC_LOOP_BIT`](/zircon/third_party/lib/jitterentropy/jitterentropy-base.c#265))
 the pseudorandom loop counts vary within these ranges:
 
 ```

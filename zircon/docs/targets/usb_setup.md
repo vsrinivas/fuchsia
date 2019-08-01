@@ -37,7 +37,7 @@ properites, though this will only boot on EFI systems.
   directory of the FAT partition.
 + Optionally: Create a file called `cmdline` in the root fo the FAT
   partition. This file may contain any directives documented in 
-  [command line flags](kernel_cmdline.md).
+  [command line flags](/zircon/docs/kernel_cmdline.md).
 The created disk will by default boot from zircon.bin instead of the network.
 At the Gigaboot screen, press 'm' to boot zircon vs 'z' for zedboot, or set
 the default boot behavior with the `bootloader.default` flag in `cmdline`.
@@ -45,4 +45,4 @@ the default boot behavior with the `bootloader.default` flag in `cmdline`.
 See also:
 * [Setting up the Acer device](acer12.md)
 * [Setting up the NUC device](nuc.md)
-* [Command line flags](kernel_cmdline.md)
+* [Command line flags](/zircon/docs/kernel_cmdline.md)

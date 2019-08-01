@@ -81,16 +81,16 @@ appears as `/dev/sys/pci/00:02:00/intel-ethernet`.
 
 Devices may implement Protocols, which are C ABIs used by child devices
 to interact with parent devices in a device-specific manner. The
-[PCI Protocol](../../system/ulib/ddk/include/ddk/protocol/pci.h),
-[USB Protocol](../../system/ulib/ddk/include/ddk/protocol/usb.h),
-[Block Core Protocol](../../system/ulib/ddk/include/ddk/protocol/block.h), and
-[Ethermac Protocol](../../system/ulib/ddk/include/ddk/protocol/ethernet.h), are
+[PCI Protocol](/zircon/system/ulib/ddk/include/hw/pci.h),
+[USB Protocol](/zircon/system/public/zircon/hw/usb.h),
+[Block Core Protocol](/zircon/system/public/zircon/device/block.h), and
+[Ethermac Protocol](/zircon/system/ulib/ddk/include/ddk/protocol/ethernet.h), are
 examples of these.  Protocols are usually in-process interactions between
 devices in the same devhost, but in cases of driver isolation, they may take
 place via RPC to a "higher" devhost (via proxy).
 
 Devices may implement Interfaces, which are
-[FIDL](../../../docs/development/languages/fidl/README.md) RPC protocols
+[FIDL](/docs/development/languages/fidl/README.md) RPC protocols
 that clients (services, applications, etc) use.  The base device interface
 supports POSIX style open/close/read/write IO.  Interfaces are supported via
 the `message()` operation in the base device interface.
@@ -120,7 +120,7 @@ specific meaning to a class alias name.
 Device drivers are loaded into devhost processes when it is determined they are
 needed.  What determines if they are loaded or not is the Binding Program, which
 is a description of what device a driver can bind to.  The Binding Program is
-defined using macros in [`ddk/binding.h`](../../system/ulib/ddk/include/ddk/binding.h)
+defined using macros in [`ddk/binding.h`](/zircon/system/ulib/ddk/include/ddk/binding.h)
 
 An example Binding Program from the Intel Ethernet driver:
 
@@ -142,7 +142,7 @@ The ZIRCON_DRIVER_BEGIN and _END macros include the necessary compiler directive
 to put the binding program into an ELF NOTE section, allowing it to be inspected
 by the Device Coordinator without needing to fully load the driver into its process.
 The second parameter to the _BEGIN macro is a `zx_driver_ops_t` structure pointer (defined
-by `[ddk/driver.h](../../system/ulib/ddk/include/ddk/driver.h)` which defines the
+by `[ddk/driver.h](/zircon/system/ulib/ddk/include/ddk/driver.h)` which defines the
 init, bind, create, and release methods.
 
 `init()` is invoked when a driver is loaded into a Device Host process and allows for
@@ -169,7 +169,7 @@ Within a Device Host process, devices exist as a tree of `zx_device_t` structure
 which are opaque to the driver.  These are created with `device_add()` which the
 driver provides a `zx_protocol_device_t` structure to.  The methods defined by the
 function pointers in this structure are the "[device ops](device-ops.md)".  The
-various structures and functions are defined in [`device.h`](../../system/ulib/ddk/include/ddk/device.h)
+various structures and functions are defined in [`device.h`](/zircon/system/ulib/ddk/include/ddk/device.h)
 
 The `device_add()` function creates a new device, adding it as a child to the
 provided parent device.  That parent device **must** be either the device passed

@@ -60,6 +60,10 @@ This section covers Fuchsia development hardware targets.
  - [Acer Switch Alpha 12][acer_12]
  - [Intel NUC][intel_nuc] (also [this](hardware/developing_on_nuc.md))
  - [Pixelbook](hardware/pixelbook.md)
+ - [Toulouse][toulouse]
+ - [Khadas VIM2][khadas-vim]
+ - [iMX8M EVK][imx8mevk]
+ - [HiKey960 (96boards.org)][hikey960]
 
 ## Testing
 
@@ -95,5 +99,10 @@ This section covers Fuchsia-wide conventions and best practices.
 [acer_12]: /zircon/docs/targets/acer12.md "Acer 12"
 [intel_nuc]: /zircon/docs/targets/nuc.md "Intel NUC"
 [pixelbook]: hardware/pixelbook.md "Pixelbook"
+[toulouse]: /zircon/docs/targets/toulouse.md "Toulouse"
+[khadas-vim]: /zircon/docs/targets/khadas-vim.md "Khadas VIM2"
+[imx8mevk]: /zircon/docs/targets/imx8mevk.md "iMX8M EVK"
+[hikey960]: /zircon/docs/targets/hikey960.md "HiKey960 (96boards.org)"
+
 [fidl-style]: /docs/development/languages/fidl/style.md
 [fidl-api]: /docs/development/api/fidl.md

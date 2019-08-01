@@ -515,7 +515,7 @@ protocol Number {
 The first line, `library zircon.sample.number;` provides a name for the library that will
 be generated.
 
-Next, `[Layout="Simple"]` generates [simple C bindings](/docs/development/languages/fidl/languages/c.md#simple-bindings).
+Next, `[Layout="Simple"]` generates [simple C bindings](/docs/development/languages/fidl/tutorial/tutorial-c.md#simple-bindings).
 
 Finally, the `protocol` section defines all of the methods that are available.
 Each method has a name, and specifies inputs and outputs.

@@ -120,12 +120,12 @@ or you can use `k ut $TEST_NAME` to run a specific test.
 
 Many parts of the kernel provide diagnostics, whose output requires manual
 inspection. Some of these diagnostics are used to verify correctness
-(e.g. [`timer_diag`](/zircon/kernel/tests/timer_tests.cpp)), while others simply
+(e.g. [`timer_diag`](/zircon/kernel/tests/timer_tests.cc)), while others simply
 stress test a part of the system
-(e.g. [`timer_stress`](/zircon/kernel/tests/timer_tests.cpp)).
+(e.g. [`timer_stress`](/zircon/kernel/tests/timer_tests.cc)).
 
 To run a diagnostic, simply pass its name to the `k` command. For example, to
-run the kernel's [builtin benchmarks](/zircon/kernel/tests/benchmarks.cpp), run `k
+run the kernel's [builtin benchmarks](/zircon/kernel/tests/benchmarks.cc), run `k
 bench`. To find the full set of kernel diagnostics statically, search for
 `STATIC_COMMAND`. To enumerate them dynamically, run `k help`.
 

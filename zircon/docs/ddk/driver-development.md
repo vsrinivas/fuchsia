@@ -7,13 +7,13 @@ Device Hosts, Device Coordinator and the driver and device lifecycles.
 
 ## Directory structure
 
-Zircon drivers are found under [system/dev](../../system/dev).
+Zircon drivers are found under [system/dev](/zircon/system/dev).
 They are grouped based on the protocols they implement.
 The driver protocols are defined in
-[ddk/include/ddk/protodefs.h](../../system/ulib/ddk/include/ddk/protodefs.h).
-For example, a USB ethernet driver goes in [system/dev/ethernet](../../system/dev/ethernet)
-rather than [system/dev/usb](../../system/dev/usb) because it implements an ethernet protocol.
-However, drivers that implement the USB stack are in [system/dev/usb](../../system/dev/usb)
+[ddk/include/ddk/protodefs.h](/zircon/system/ulib/ddk/include/ddk/protodefs.h).
+For example, a USB ethernet driver goes in [system/dev/ethernet](/zircon/system/dev/ethernet)
+rather than [system/dev/usb](/zircon/system/dev/usb) because it implements an ethernet protocol.
+However, drivers that implement the USB stack are in [system/dev/usb](/zircon/system/dev/usb)
 because they implement USB protocols.
 
 In the driver's `rules.mk`, the `MODULE_TYPE` should
@@ -32,7 +32,7 @@ Drivers are loaded and bound to a device when the Device Coordinator
 successfully finds a matching driver for a device. A driver declares the
 devices it is compatible with via bindings.
 The following bind program
-declares the [AHCI driver](../../system/dev/block/ahci/ahci.c):
+declares the [AHCI driver](/zircon/system/dev/block/ahci/ahci.h):
 
 ```c
 ZIRCON_DRIVER_BEGIN(ahci, ahci_driver_ops, "zircon", "0.1", 4)
@@ -47,7 +47,7 @@ The AHCI driver has 4 directives in the bind program. `"zircon"` is the vendor
 id and `"0.1"` is the driver version. It binds with `ZX_PROTOCOL_PCI` devices
 with PCI class 1, subclass 6, interface 1.
 
-The [PCI driver](../../system/dev/bus/pci/kpci.c) publishes the matching
+The [PCI driver](/zircon/system/dev/bus/pci/kpci/kpci.c) publishes the matching
 device with the following properties:
 
 ```c
@@ -65,7 +65,7 @@ zx_device_prop_t device_props[] = {
 ```
 
 Binding variables and macros are defined in
-[zircon/driver/binding.h](../../system/public/zircon/driver/binding.h).
+[zircon/driver/binding.h](/zircon/system/public/zircon/driver/binding.h).
 If you are introducing a new device class, you may need to introduce new
 binding variables in that file.
 Binding variables are 32-bit values. If your
@@ -107,7 +107,7 @@ device lifecycle. If the driver is not able to publish a functional device in
 should publish an invisible device, and make this device visible when
 initialization is completed. See `DEVICE_ADD_INVISIBLE` and
 `device_make_visible()` in
-[zircon/ddk/driver.h](../../system/ulib/ddk/include/ddk/driver.h).
+[zircon/ddk/driver.h](/zircon/system/ulib/ddk/include/ddk/driver.h).
 
 There are generally four outcomes from `bind()`:
 
@@ -147,7 +147,7 @@ op. A device can only have one protocol id. The protocol id corresponds to the
 class the device is published under in devfs.
 
 Device protocol headers are found in
-[ddk/protocol/](../../system/ulib/ddk/include/ddk/protocol). Ops and any data
+[ddk/protocol/](/zircon/system/ulib/ddk/include/ddk/protocol). Ops and any data
 structures passed between drivers should be defined in this header.
 
 ## Driver operation
@@ -192,7 +192,7 @@ necessary to shut down the interrupt thread during driver clean up.
 ## FIDL Messages
 
 Messages for each device class are defined in the
-[FIDL](../../../docs/development/languages/fidl/README.md) language.
+[FIDL](/docs/development/languages/fidl/README.md) language.
 Each device implements zero or more FIDL protocols, multiplexed over a single
 channel per client.  The driver is given the opportunity to interpret FIDL
 messages via the `message()` hook.
@@ -217,7 +217,7 @@ it needs to call API on the parent device).
 
 `rxrpc()` is invoked on the top half when this channel is written to by the
 bottom half. There is no common wire protocol for this channel. For an
-example, refer to the [PCI driver](../../system/dev/bus/pci).
+example, refer to the [PCI driver](/zircon/system/dev/bus/pci).
 
 Note: This is a mechanism used by various bus devices and not something
 general drivers should have to worry about. (please ping swetland if you think
@@ -225,7 +225,7 @@ you need to use this)
 
 ## Logging
 
-[ddk/debug.h](../../system/ulib/ddk/include/ddk/debug.h) defines the
+[ddk/debug.h](/zircon/system/ulib/ddk/include/ddk/debug.h) defines the
 `zxlogf(<log_level>,...)` macro. The log messages are printed to the system
 debuglog over the network and on the serial port if available for the device.
 By default, `ERROR` and `INFO` are always printed. You can control the log
@@ -261,7 +261,7 @@ Test output should be in the form of `fuchsia.driver.test.Logger` FIDL messages.
 The driver-unit-test library contains a [helper class][] that integrates with
 zxtest and handles logging for you.
 
-[helper class]: ../../system/ulib/driver-unit-test/include/lib/driver-unit-test/logger.h
+[helper class]: /zircon/system/ulib/driver-unit-test/include/lib/driver-unit-test/logger.h
 
 
 ### Integration tests
@@ -281,11 +281,11 @@ protocol drivers. It's possible to emulate real hardware with the same
 approach but it may not be as useful.
 
 The functions defined in
-[ddk/protocol/test.h](../../system/ulib/ddk/include/ddk/protocol/test.h) are
+[ddk/protocol/test.h](/zircon/system/ulib/ddk/include/ddk/protocol/test.h) are
 for testing libraries that run as part of a driver. For an example, refer to
-[system/ulib/ddk/test](../../system/ulib/ddk/test). The test harness for these
+[system/ulib/ddk/test](/zircon/system/ulib/ddk/test). The test harness for these
 tests is
-[system/utest/driver-tests/main.c](../../system/utest/driver-tests/main.c)
+[system/utest/driver-test/main.cc](/zircon/system/utest/driver-test/main.cc)
 
 ## Driver rights
 
@@ -294,13 +294,13 @@ of rights than normal processes. Drivers are not allowed to access the
 filesystem, including devfs. That means a driver cannot interact with
 arbitrary devices. If your driver needs to do this, consider writing a service
 instead. For example, the virtual console is implemented by the
-[virtcon](../../system/core/virtcon) service.
+[virtcon](/zircon/system/core/virtcon) service.
 
 Privileged operations such as `zx_vmo_create_contiguous()` and
 [zx_interrupt_create](../syscalls/interrupt_create.md) require a root resource
 handle. This handle is not available to drivers other than the system driver
-([ACPI](../../system/dev/bus/acpi) on x86 systems and
-[platform](../../system/dev/bus/platform) on ARM systems). A device should
+([ACPI](/zircon/system/dev/bus/acpi) on x86 systems and
+[platform](/zircon/system/dev/bus/platform) on ARM systems). A device should
 request its parent to perform such operations for it. Contact the author
 of the parent driver if its protocol does not address this use case.
 

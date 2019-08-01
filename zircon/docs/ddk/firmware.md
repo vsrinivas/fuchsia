@@ -12,7 +12,7 @@ Ensure that CIPD is available. cipd must be either in PATH or
 `zircon/../buildtools/cipd`.
 
 The buildtools repository is available
-[here](https://fuchsia.googlesource.com/buildtools/).
+[here](/buildtools/).
 
 ## Create a Firmware Package
 
@@ -21,7 +21,7 @@ files:
 
 * One or more firmware files
 * A license file
-* [README.fuchsia](/docs/development/source_code/third_party-metadata.md)
+* [README.fuchsia](/docs/development/source_code/third-party-metadata.md)
 
 README.fuchsia must contain at least the following directives:
 
