@@ -7,7 +7,7 @@ use {
         framework::{FrameworkCapability, FrameworkServicesHook},
         model::*,
     },
-    cm_rust::{data, CapabilityPath, UseDecl},
+    cm_rust::{data, CapabilityPath, FrameworkCapabilityDecl},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{
@@ -47,7 +47,7 @@ pub trait Hook {
     fn on_route_framework_capability<'a>(
         &'a self,
         realm: Arc<Realm>,
-        use_decl: &'a UseDecl,
+        capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>>;
 }

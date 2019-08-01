@@ -370,6 +370,38 @@ impl TryFrom<&str> for CapabilityPath {
     }
 }
 
+// Describes the type of framework capability and its source path.
+pub enum FrameworkCapabilityDecl {
+    Service(CapabilityPath),
+    Directory(CapabilityPath),
+}
+
+impl FrameworkCapabilityDecl {
+    pub fn path(&self) -> &CapabilityPath {
+        match self {
+            FrameworkCapabilityDecl::Service(source_path) => &source_path,
+            FrameworkCapabilityDecl::Directory(source_path) => &source_path,
+        }
+    }
+}
+
+impl TryFrom<&UseDecl> for FrameworkCapabilityDecl {
+    type Error = Error;
+    fn try_from(decl: &UseDecl) -> Result<Self, Self::Error> {
+        match decl {
+            UseDecl::Service(s) if s.source == UseSource::Framework => {
+                Ok(FrameworkCapabilityDecl::Service(s.source_path.clone()))
+            }
+            UseDecl::Directory(d) if d.source == UseSource::Framework => {
+                Ok(FrameworkCapabilityDecl::Directory(d.source_path.clone()))
+            }
+            _ => {
+                return Err(Error::InvalidFrameworkCapability {});
+            }
+        }
+    }
+}
+
 impl fmt::Display for CapabilityPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if &self.dirname == "/" {
@@ -698,9 +730,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferStorageSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
             OfferStorageSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
-            OfferStorageSource::Storage(name) => {
-                fsys::Ref::Storage(fsys::StorageRef { name })
-            }
+            OfferStorageSource::Storage(name) => fsys::Ref::Storage(fsys::StorageRef { name }),
         })
     }
 }
@@ -776,6 +806,8 @@ pub enum Error {
     },
     #[fail(display = "Invalid capability path: {}", raw)]
     InvalidCapabilityPath { raw: String },
+    #[fail(display = "Invalid framework capability.")]
+    InvalidFrameworkCapability {},
 }
 
 #[cfg(test)]

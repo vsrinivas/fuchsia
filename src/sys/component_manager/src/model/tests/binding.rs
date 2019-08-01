@@ -231,7 +231,7 @@ async fn bind_instance_eager_children() {
 
     // Bind to the top component, and check that it and the eager components were started.
     {
-        let res = await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["a".into(),])));
+        let res = await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["a".into()])));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_urls = await!(urls_run.lock());

@@ -131,11 +131,11 @@ async fn use_from_parent() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
     await!(test.check_open_file(vec!["b"].into(), "/svc/device".try_into().unwrap()))
 }
@@ -228,11 +228,11 @@ async fn use_from_grandparent() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["b", "c"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
 }
 
@@ -332,11 +332,11 @@ async fn use_from_sibling_no_root() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["b", "c"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
 }
 
@@ -423,11 +423,11 @@ async fn use_from_sibling_root() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["c"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["c"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
 }
 
@@ -540,11 +540,11 @@ async fn use_from_niece() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["c"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["c"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
 }
 
@@ -746,19 +746,19 @@ async fn use_kitchen_sink() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "e"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["b", "e"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["c", "f"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["c", "f"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
 }
 
@@ -824,11 +824,11 @@ async fn use_from_component_manager_namespace() {
     test.install_hippo_dir();
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
 }
 
@@ -876,11 +876,11 @@ async fn use_not_offered() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     ));
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+        CheckUse::Service { path: default_service_capability(), should_succeed: false },
     ));
 }
 
@@ -952,11 +952,11 @@ async fn use_offer_source_not_exposed() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["c"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     ));
     await!(test.check_use(
         vec!["c"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+        CheckUse::Service { path: default_service_capability(), should_succeed: false },
     ));
 }
 
@@ -1033,11 +1033,11 @@ async fn use_offer_source_not_offered() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     ));
     await!(test.check_use(
         vec!["b", "c"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+        CheckUse::Service { path: default_service_capability(), should_succeed: false },
     ));
 }
 
@@ -1112,11 +1112,11 @@ async fn use_from_expose() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     ));
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+        CheckUse::Service { path: default_service_capability(), should_succeed: false },
     ));
 }
 
@@ -1180,11 +1180,11 @@ async fn offer_from_non_executable() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     ));
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+        CheckUse::Service { path: default_service_capability(), should_succeed: false },
     ));
 }
 
@@ -1287,7 +1287,7 @@ async fn use_in_collection() {
             name: "c".to_string(),
             url: "test:///c".to_string(),
             startup: fsys::StartupMode::Lazy,
-        }
+        },
     ));
     await!(test.create_dynamic_child(
         vec!["b"].into(),
@@ -1296,15 +1296,15 @@ async fn use_in_collection() {
             name: "d".to_string(),
             url: "test:///d".to_string(),
             startup: fsys::StartupMode::Lazy,
-        }
+        },
     ));
     await!(test.check_use(
         vec!["b", "coll:c"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     ));
     await!(test.check_use(
         vec!["b", "coll:d"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: true }
+        CheckUse::Service { path: default_service_capability(), should_succeed: true },
     ));
 }
 
@@ -1388,15 +1388,15 @@ async fn use_in_collection_not_offered() {
             name: "c".to_string(),
             url: "test:///c".to_string(),
             startup: fsys::StartupMode::Lazy,
-        }
+        },
     ));
     await!(test.check_use(
         vec!["b", "coll:c"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false }
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     ));
     await!(test.check_use(
         vec!["b", "coll:c"].into(),
-        CheckUse::Service { path: default_service_capability(), should_succeed: false }
+        CheckUse::Service { path: default_service_capability(), should_succeed: false },
     ));
 }
 

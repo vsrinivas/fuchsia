@@ -52,9 +52,9 @@ impl FuchsiaPkgResolver {
             &package_url,
             &mut selectors.iter().map(|s| *s),
             &mut update_policy,
-            ServerEnd::new(package_dir_s)
+            ServerEnd::new(package_dir_s),
         ))
-        .map_err(|e| ResolverError::component_not_available(component_url, e))?;
+            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let status = zx::Status::from_raw(status);
         if status != zx::Status::OK {
             return Err(ResolverError::component_not_available(

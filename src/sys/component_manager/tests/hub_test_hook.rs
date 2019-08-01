@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro)]
 
 use {
-    cm_rust::UseDecl,
+    cm_rust::FrameworkCapabilityDecl,
     component_manager_lib::{framework::FrameworkCapability, model::*},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -63,11 +63,13 @@ impl HubTestHook {
 
     pub async fn on_route_framework_capability_async<'a>(
         &'a self,
-        use_decl: &'a UseDecl,
+        capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
-        match (capability, use_decl) {
-            (None, UseDecl::Service(s)) if s.source_path == *HUB_REPORT_SERVICE => {
+        match (capability, capability_decl) {
+            (None, FrameworkCapabilityDecl::Service(source_path))
+                if *source_path == *HUB_REPORT_SERVICE =>
+            {
                 return Ok(Some(Box::new(HubTestCapability::new(self.observers.clone()))
                     as Box<dyn FrameworkCapability>))
             }
@@ -97,10 +99,10 @@ impl Hook for HubTestHook {
     fn on_route_framework_capability<'a>(
         &'a self,
         _realm: Arc<Realm>,
-        use_decl: &'a UseDecl,
+        capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_framework_capability_async(use_decl, capability))
+        Box::pin(self.on_route_framework_capability_async(capability_decl, capability))
     }
 }
 

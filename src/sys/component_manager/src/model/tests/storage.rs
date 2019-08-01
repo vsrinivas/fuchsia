@@ -60,7 +60,7 @@ async fn storage_and_dir_from_parent() {
         CheckUse::Storage {
             type_: fsys::StorageType::Cache,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into()])),
-        }
+        },
     ));
 }
 
@@ -109,7 +109,7 @@ async fn meta_storage_and_dir_from_parent() {
         CheckUse::Storage {
             type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into()])),
-        }
+        },
     ));
 }
 
@@ -178,7 +178,7 @@ async fn storage_from_parent_dir_from_grandparent() {
         CheckUse::Storage {
             type_: fsys::StorageType::Data,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into()])),
-        }
+        },
     ));
 }
 
@@ -245,7 +245,7 @@ async fn storage_and_dir_from_grandparent() {
         CheckUse::Storage {
             type_: fsys::StorageType::Data,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into(), "c".into()])),
-        }
+        },
     ));
 }
 
@@ -312,7 +312,7 @@ async fn meta_storage_and_dir_from_grandparent() {
         CheckUse::Storage {
             type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into(), "c".into()])),
-        }
+        },
     ));
 }
 
@@ -380,7 +380,7 @@ async fn storage_from_parent_dir_from_sibling() {
         CheckUse::Storage {
             type_: fsys::StorageType::Cache,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into()])),
-        }
+        },
     ));
 }
 
@@ -490,28 +490,28 @@ async fn storage_multiple_types() {
         CheckUse::Storage {
             type_: fsys::StorageType::Cache,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into()])),
-        }
+        },
     ));
     await!(test.check_use(
         vec!["c"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into()])),
-        }
+        },
     ));
     await!(test.check_use(
         vec!["c", "d"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Data,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into(), "d".into()])),
-        }
+        },
     ));
     await!(test.check_use(
         vec!["c", "d"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into(), "d".into()])),
-        }
+        },
     ));
 }
 
@@ -561,11 +561,11 @@ async fn use_the_wrong_type_of_storage() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None }
+        CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
     ));
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None }
+        CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None },
     ));
 }
 
@@ -607,7 +607,7 @@ async fn directories_are_not_storage() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None }
+        CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
     ));
 }
 
@@ -652,11 +652,11 @@ async fn use_storage_when_not_offered() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None }
+        CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None },
     ));
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None }
+        CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None },
     ));
 }
 
@@ -732,10 +732,10 @@ async fn dir_offered_from_nonexecutable() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b", "c"].into(),
-        CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None }
+        CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
     ));
     await!(test.check_use(
         vec!["b", "c"].into(),
-        CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None }
+        CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None },
     ));
 }

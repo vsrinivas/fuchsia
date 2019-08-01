@@ -3,19 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
-    cm_fidl_validator,
-    cm_rust::FidlIntoNative,
-    cm_rust::{CapabilityPath, UseDecl},
-    failure::Error,
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    crate::model::*, cm_fidl_validator,
+    cm_rust::{CapabilityPath, FidlIntoNative, FrameworkCapabilityDecl},
+    failure::Error, fidl::endpoints::ServerEnd, fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::BoxFuture,
-    futures::future::FutureObj,
-    futures::prelude::*,
-    log::*,
-    std::cmp,
+    futures::future::BoxFuture, futures::future::FutureObj, futures::prelude::*, log::*, std::cmp,
     std::sync::Arc,
 };
 
@@ -68,7 +60,7 @@ impl DefaultFrameworkCapability {
             self.model.clone(),
             self.realm.clone(),
             self.capability_path.clone(),
-            server_end
+            server_end,
         ))?;
         Ok(())
     }
@@ -100,7 +92,7 @@ impl FrameworkServicesHook {
     pub async fn on_route_framework_capability_async<'a>(
         &'a self,
         realm: Arc<Realm>,
-        use_decl: &'a UseDecl,
+        capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
         // If some other capability has already been installed, then there's nothing to
@@ -109,8 +101,8 @@ impl FrameworkServicesHook {
             return Ok(capability);
         }
 
-        let capability_path = match &use_decl {
-            UseDecl::Service(s) => (*s).source_path.clone(),
+        let capability_path = match &capability_decl {
+            FrameworkCapabilityDecl::Service(source_path) => source_path.clone(),
             _ => return Ok(capability),
         };
 
@@ -148,10 +140,10 @@ impl Hook for FrameworkServicesHook {
     fn on_route_framework_capability<'a>(
         &'a self,
         realm: Arc<Realm>,
-        use_decl: &'a UseDecl,
+        capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_framework_capability_async(realm, use_decl, capability))
+        Box::pin(self.on_route_framework_capability_async(realm, capability_decl, capability))
     }
 }
 
@@ -253,20 +245,20 @@ impl RealFrameworkServiceHost {
             await!(
                 model.bind_instance_open_exposed(child_realm.clone(), exposed_dir.into_channel())
             )
-            .map_err(|e| match e {
-                ModelError::ResolverError { err } => {
-                    debug!("failed to resolve child: {:?}", err);
-                    fsys::Error::InstanceCannotResolve
-                }
-                ModelError::RunnerError { err } => {
-                    debug!("failed to start child: {:?}", err);
-                    fsys::Error::InstanceCannotStart
-                }
-                e => {
-                    error!("bind_instance_open_exposed() failed: {}", e);
-                    fsys::Error::Internal
-                }
-            })?;
+                .map_err(|e| match e {
+                    ModelError::ResolverError { err } => {
+                        debug!("failed to resolve child: {:?}", err);
+                        fsys::Error::InstanceCannotResolve
+                    }
+                    ModelError::RunnerError { err } => {
+                        debug!("failed to start child: {:?}", err);
+                        fsys::Error::InstanceCannotStart
+                    }
+                    e => {
+                        error!("bind_instance_open_exposed() failed: {}", e);
+                        fsys::Error::Internal
+                    }
+                })?;
         } else {
             return Err(fsys::Error::InstanceNotFound);
         }

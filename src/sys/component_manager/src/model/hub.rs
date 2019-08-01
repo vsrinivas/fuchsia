@@ -12,7 +12,7 @@ use {
             error::ModelError,
         },
     },
-    cm_rust::{CapabilityPath, UseDecl},
+    cm_rust::{CapabilityPath, FrameworkCapabilityDecl},
     failure::format_err,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS},
@@ -76,7 +76,7 @@ impl HubCapability {
             open_mode,
             dir_path,
             ServerEnd::<NodeMarker>::new(server_end),
-            &self.abs_moniker
+            &self.abs_moniker,
         ))?;
 
         Ok(())
@@ -199,7 +199,7 @@ impl Hub {
                 await!(instances_map[&parent_moniker].children_directory.add_node(
                     &name,
                     controlled,
-                    &abs_moniker
+                    &abs_moniker,
                 ))?;
             }
         }
@@ -307,7 +307,7 @@ impl Hub {
         await!(Self::add_instance_to_parent_if_necessary(
             &abs_moniker,
             component_url,
-            &mut instances_map
+            &mut instances_map,
         ))?;
 
         let instance = instances_map
@@ -360,7 +360,7 @@ impl Hub {
             await!(Self::add_instance_to_parent_if_necessary(
                 &child_realm.abs_moniker,
                 child_realm.component_url.clone(),
-                &mut instances_map
+                &mut instances_map,
             ))?;
         }
 
@@ -370,7 +370,7 @@ impl Hub {
     async fn on_route_framework_capability_async<'a>(
         &'a self,
         realm: Arc<model::Realm>,
-        use_decl: &'a UseDecl,
+        capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
         // If there is already a capability for this capability then it's not a
@@ -380,8 +380,8 @@ impl Hub {
         }
 
         // If this capability is not a directory, then it's not a hub capability.
-        let capability_path = match use_decl {
-            UseDecl::Directory(d) => d.source_path.clone(),
+        let capability_path = match capability_decl {
+            FrameworkCapabilityDecl::Directory(source_path) => source_path.clone(),
             _ => return Ok(capability),
         };
         let mut dir_path = capability_path.split();
@@ -432,10 +432,10 @@ impl model::Hook for Hub {
     fn on_route_framework_capability<'a>(
         &'a self,
         realm: Arc<model::Realm>,
-        use_decl: &'a UseDecl,
+        capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_framework_capability_async(realm, use_decl, capability))
+        Box::pin(self.on_route_framework_capability_async(realm, capability_decl, capability))
     }
 }
 
@@ -613,15 +613,15 @@ mod tests {
                         ..default_component_decl()
                     },
                     host_fn: None,
-                    runtime_host_fn: None
+                    runtime_host_fn: None,
                 },
                 ComponentDescriptor {
                     name: "a".to_string(),
                     decl: ComponentDecl { children: vec![], ..default_component_decl() },
                     host_fn: None,
-                    runtime_host_fn: None
-                }
-            ]
+                    runtime_host_fn: None,
+                },
+            ],
         ));
 
         assert_eq!(root_component_url, await!(read_file(&hub_proxy, "self/url")));
@@ -648,8 +648,8 @@ mod tests {
                     ..default_component_decl()
                 },
                 host_fn: Some(foo_out_dir_fn()),
-                runtime_host_fn: None
-            }]
+                runtime_host_fn: None,
+            }],
         ));
 
         assert!(await!(dir_contains(&hub_proxy, "self/exec", "out")));
@@ -675,8 +675,8 @@ mod tests {
                     ..default_component_decl()
                 },
                 host_fn: None,
-                runtime_host_fn: Some(bleep_runtime_dir_fn())
-            }]
+                runtime_host_fn: Some(bleep_runtime_dir_fn()),
+            }],
         ));
 
         assert_eq!("blah", await!(read_file(&hub_proxy, "self/exec/runtime/bleep")));
@@ -699,13 +699,13 @@ mod tests {
                         source: UseSource::Framework,
                         source_path: CapabilityPath::try_from("/hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
-                    }),],
+                    })],
                     ..default_component_decl()
                 },
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-            vec![Arc::new(HubInjectionTestHook::new())]
+            vec![Arc::new(HubInjectionTestHook::new())],
         ));
 
         let in_dir = io_util::open_directory(
@@ -772,7 +772,7 @@ mod tests {
                 },
                 host_fn: None,
                 runtime_host_fn: None,
-            }]
+            }],
         ));
 
         let in_dir = io_util::open_directory(
@@ -825,7 +825,7 @@ mod tests {
                 },
                 host_fn: None,
                 runtime_host_fn: None,
-            }]
+            }],
         ));
 
         let expose_dir = io_util::open_directory(

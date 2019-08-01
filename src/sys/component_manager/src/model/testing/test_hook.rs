@@ -8,7 +8,7 @@ use {
         framework::FrameworkCapability,
         model::{addable_directory::AddableDirectory, *},
     },
-    cm_rust::{CapabilityPath, UseDecl},
+    cm_rust::{CapabilityPath, FrameworkCapabilityDecl},
     failure::format_err,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
@@ -195,7 +195,7 @@ impl Hook for TestHook {
     fn on_route_framework_capability<'a>(
         &'a self,
         _realm: Arc<Realm>,
-        _use_decl: &'a UseDecl,
+        _capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
         Box::pin(async move { Ok(capability) })
@@ -212,7 +212,7 @@ impl HubInjectionTestHook {
     pub async fn on_route_framework_capability_async<'a>(
         &'a self,
         realm: Arc<Realm>,
-        use_decl: &'a UseDecl,
+        capability_decl: &'a FrameworkCapabilityDecl,
         mut capability: Option<Box<dyn FrameworkCapability>>,
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
         // This Hook is about injecting itself between the Hub and the Model.
@@ -221,8 +221,8 @@ impl HubInjectionTestHook {
             return Ok(None);
         }
 
-        let capability_path = match use_decl {
-            UseDecl::Directory(d) => d.source_path.clone(),
+        let capability_path = match capability_decl {
+            FrameworkCapabilityDecl::Directory(source_path) => source_path.clone(),
             _ => return Ok(capability),
         };
         let mut dir_path = capability_path.split();
@@ -260,10 +260,10 @@ impl Hook for HubInjectionTestHook {
     fn on_route_framework_capability<'a>(
         &'a self,
         realm: Arc<Realm>,
-        use_decl: &'a UseDecl,
+        capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_framework_capability_async(realm, use_decl, capability))
+        Box::pin(self.on_route_framework_capability_async(realm, capability_decl, capability))
     }
 }
 

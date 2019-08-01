@@ -82,7 +82,7 @@ impl Realm {
             &meta_use,
             MODE_TYPE_DIRECTORY,
             self.abs_moniker.clone(),
-            server_chan
+            server_chan,
         ))?;
         let meta_dir = Some(Arc::new(DirectoryProxy::from_channel(
             fasync::Channel::from_channel(meta_client_chan).unwrap(),

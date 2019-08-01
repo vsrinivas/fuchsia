@@ -58,7 +58,7 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
                     relative_path,
                     &use_,
                     abs_moniker.clone(),
-                    server_end.into_channel()
+                    server_end.into_channel(),
                 ));
                 if let Err(e) = res {
                     error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);

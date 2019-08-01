@@ -194,7 +194,7 @@ impl IncomingNamespace {
                 String::new(),
                 &use_,
                 abs_moniker.clone(),
-                server_end.into_zx_channel()
+                server_end.into_zx_channel(),
             ));
             if let Err(e) = res {
                 error!("failed to route storage for component {}: {:?}", abs_moniker, e);
@@ -260,7 +260,7 @@ impl IncomingNamespace {
                         relative_path,
                         &use_,
                         abs_moniker.clone(),
-                        server_end.into_channel()
+                        server_end.into_channel(),
                     ));
                     if let Err(e) = res {
                         error!("failed to route service for component {}: {:?}", abs_moniker, e);
