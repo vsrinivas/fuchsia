@@ -13,10 +13,13 @@
 
 #include <kernel/atomic.h>
 #include <kernel/cpu.h>
+#include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <ktl/popcount.h>
+
+#include "zircon/time.h"
 
 namespace {
 
@@ -208,10 +211,74 @@ bool set_affinity_other_test() {
   END_TEST;
 }
 
+bool thread_last_cpu_new_thread() {
+  BEGIN_TEST;
+
+  // Create a worker, but don't start it.
+  thread_t* worker = thread_create(
+      "unstarted_thread", [](void * /*unused*/) -> int { return 0; }, nullptr, LOW_PRIORITY);
+
+  // Ensure we get INVALID_CPU as last cpu.
+  ASSERT_EQ(thread_last_cpu(worker), INVALID_CPU, "Last CPU on unstarted thread invalid.");
+
+  // Clean up the thread.
+  thread_resume(worker);
+  int unused_retcode;
+  ASSERT_EQ(thread_join(worker, &unused_retcode, ZX_TIME_INFINITE), ZX_OK,
+            "Failed to join thread.");
+
+  END_TEST;
+}
+
+bool thread_last_cpu_running_thread() {
+  BEGIN_TEST;
+
+  struct WorkerState {
+    volatile int should_stop = 0;
+  } state;
+
+  // Start a worker, which just spins.
+  auto worker_body = [](void* arg) -> int {
+    WorkerState& state = *reinterpret_cast<WorkerState*>(arg);
+    while (atomic_load(&state.should_stop) == 0) {
+      // Spin.
+    }
+    return 0;
+  };
+  thread_t* worker = thread_create("last_cpu_thread", worker_body, &state, LOW_PRIORITY);
+  thread_resume(worker);
+
+  // Migrate the worker task across different CPUs.
+  const cpu_mask_t online_cpus = mp_get_online_mask();
+  ASSERT_NE(online_cpus, 0u, "Expected at least one CPU to be online.");
+  for (cpu_num_t c = 0u; c <= highest_cpu_set(online_cpus); c++) {
+    // Skip offline CPUs.
+    if ((cpu_num_to_mask(c) & online_cpus) == 0) {
+      continue;
+    }
+
+    // Set affinity to the given core.
+    thread_set_cpu_affinity(worker, cpu_num_to_mask(c));
+
+    // Ensure it is reported at the correct CPU.
+    wait_for_cond([c, worker]() { return thread_last_cpu(worker) == c; });
+  }
+
+  // Clean up the thread.
+  atomic_store(&state.should_stop, 1);
+  int unused_retcode;
+  ASSERT_EQ(thread_join(worker, &unused_retcode, ZX_TIME_INFINITE), ZX_OK,
+            "Failed to join thread.");
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(thread_tests)
 UNITTEST("yield_deboost_test", yield_deboost_test)
 UNITTEST("set_affinity_self_test", set_affinity_self_test)
 UNITTEST("set_affinity_other_test", set_affinity_other_test)
+UNITTEST("thread_last_cpu_new_thread", thread_last_cpu_new_thread)
+UNITTEST("thread_last_cpu_running_thread", thread_last_cpu_running_thread)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests");

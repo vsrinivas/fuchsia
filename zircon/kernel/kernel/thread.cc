@@ -1005,6 +1005,15 @@ zx_duration_t thread_runtime(const thread_t* t) {
 }
 
 /**
+ * @brief Get the last CPU the given thread was run on, or INVALID_CPU if the
+ * thread has never run.
+ */
+cpu_num_t thread_last_cpu(const thread_t* t) {
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  return t->last_cpu;
+}
+
+/**
  * @brief Construct a thread t around the current running state
  *
  * This should be called once per CPU initialization.  It will create

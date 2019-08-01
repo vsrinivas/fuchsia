@@ -354,6 +354,9 @@ zx_status_t thread_sleep_interruptable(zx_time_t deadline);
 // return the number of nanoseconds a thread has been running for
 zx_duration_t thread_runtime(const thread_t* t);
 
+// last cpu the given thread was running on, or INVALID_CPU if it has never run
+cpu_num_t thread_last_cpu(const thread_t* t) TA_EXCL(thread_lock);
+
 // deliver a kill signal to a thread
 void thread_kill(thread_t* t);
 

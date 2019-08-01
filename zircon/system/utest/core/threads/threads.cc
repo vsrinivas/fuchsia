@@ -3,27 +3,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-#include <unistd.h>
-#include <atomic>
-
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/debug.h>
-#include <zircon/syscalls/exception.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/syscalls/port.h>
-
-#include <runtime/thread.h>
-#include <unittest/unittest.h>
-
 #include <lib/test-exceptions/exception-catcher.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vmo.h>
+#include <stddef.h>
+#include <unistd.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
+
+#include <atomic>
+
 #include <mini-process/mini-process.h>
+#include <runtime/thread.h>
+#include <unittest/unittest.h>
 
 #include "register-set.h"
 #include "thread-functions/thread-functions.h"
@@ -421,6 +421,59 @@ static bool TestInfoTaskStatsFails() {
   // If so, replace this with a real test; see example in process.cpp.
 
   ASSERT_EQ(zx_handle_close(thandle), ZX_OK);
+  END_TEST;
+}
+
+static bool TestGetLastScheduledCpu() {
+  BEGIN_TEST;
+
+  // State to synchronize with the worker thread.
+  struct WorkerState {
+    zx::event started;
+    zx::event should_stop;
+  } state;
+  ASSERT_EQ(zx::event::create(0, &state.started), ZX_OK);
+  ASSERT_EQ(zx::event::create(0, &state.should_stop), ZX_OK);
+
+  // Create a thread.
+  zxr_thread_t thread;
+  zx_handle_t thread_h;
+  ThreadStarter starter;
+  ASSERT_TRUE(starter.CreateThread(&thread, &thread_h));
+
+  // Ensure "last_cpu" is ZX_INFO_INVALID_CPU prior to the thread starting.
+  zx_info_thread_stats_t info;
+  ASSERT_EQ(
+      zx_object_get_info(thread_h, ZX_INFO_THREAD_STATS, &info, sizeof(info), nullptr, nullptr),
+      ZX_OK);
+  ASSERT_EQ(info.last_scheduled_cpu, ZX_INFO_INVALID_CPU);
+
+  // Start the thread.
+  auto thread_body = [](void* arg) __NO_SAFESTACK -> void {
+    auto* state = static_cast<WorkerState*>(arg);
+    state->started.signal(0, ZX_USER_SIGNAL_0);
+    state->should_stop.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), /*pending=*/nullptr);
+  };
+  ASSERT_TRUE(starter.StartThread(thread_body, &state));
+
+  // Wait for worker to start.
+  ASSERT_EQ(state.started.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), /*pending=*/nullptr),
+            ZX_OK);
+
+  // Ensure the last-reported thread is valid.
+  //
+  // TODO(ZX-3828): Use userspace affinity controls to set and verify the last running CPU is valid.
+  ASSERT_EQ(
+      zx_object_get_info(thread_h, ZX_INFO_THREAD_STATS, &info, sizeof(info), nullptr, nullptr),
+      ZX_OK);
+  ASSERT_NE(info.last_scheduled_cpu, ZX_INFO_INVALID_CPU);
+  ASSERT_LT(info.last_scheduled_cpu, ZX_CPU_SET_MAX_CPUS);
+
+  // Shut down and clean up.
+  ASSERT_EQ(state.should_stop.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
+  ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
+  ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
+
   END_TEST;
 }
 
@@ -1656,6 +1709,7 @@ RUN_TEST(TestKillWaitThread)
 RUN_TEST(TestNonstartedThread)
 RUN_TEST(TestThreadKillsItself)
 RUN_TEST(TestInfoTaskStatsFails)
+RUN_TEST(TestGetLastScheduledCpu)
 RUN_TEST(TestResumeSuspended)
 RUN_TEST(TestSuspendSleeping)
 RUN_TEST(TestSuspendChannelCall)
