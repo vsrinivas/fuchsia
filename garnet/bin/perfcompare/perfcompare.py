@@ -101,8 +101,9 @@ def IsResultsFilename(name):
     return name.endswith('.json') and name != 'summary.json'
 
 
-# Read the raw perf test results from a directory or a tar file.  Returns a
-# sequence (iterator) of JSON trees.
+# Read the raw perf test results from a directory or a tar file that
+# contains results from a single boot of Fuchsia.  Returns a sequence
+# (iterator) of JSON trees.
 #
 # Accepting tar files here is a convenience for when doing local testing of
 # the statistics.  The Swarming system used for the bots produces "out.tar"
@@ -135,6 +136,24 @@ def RawResultsFromDir(filename):
                 yield ReadJsonFile(os.path.join(filename, name))
 
 
+# Takes a list of filenames of perf test results, each representing the
+# results from one boot of Fuchsia, and each in the format accepted by
+# RawResultsFromDir().
+#
+# Returns a dict mapping test names to Stats objects.
+def ResultsFromDirs(filenames):
+    results_map = {}
+    # TODO(PT-202): Currently the processing we do here erases the
+    # distinction between cross-boot variation and cross-process variation,
+    # but we should distinguish between the two.
+    for boot_results_path in filenames:
+        for process_run_results in RawResultsFromDir(boot_results_path):
+            for test_case in process_run_results:
+                new_value = Mean(test_case['values'])
+                results_map.setdefault(test_case['label'], []).append(new_value)
+    return {name: Stats(values) for name, values in results_map.iteritems()}
+
+
 # This function accepts data in two possible formats:
 #
 #  #1 A directory (or tar file), in the format read by RawResultsFromDir(),
@@ -156,17 +175,7 @@ def ResultsFromDir(filename):
                      for name in sorted(os.listdir(by_boot_dir))]
     else:
         filenames = [filename]
-
-    results_map = {}
-    # TODO(PT-202): Currently the processing we do here erases the
-    # distinction between cross-boot variation and cross-process variation,
-    # but we should distinguish between the two.
-    for boot_results_path in filenames:
-        for process_run_results in RawResultsFromDir(boot_results_path):
-            for test_case in process_run_results:
-                new_value = Mean(test_case['values'])
-                results_map.setdefault(test_case['label'], []).append(new_value)
-    return {name: Stats(values) for name, values in results_map.iteritems()}
+    return ResultsFromDirs(filenames)
 
 
 def FormatTable(heading_row, rows, out_fh):
@@ -276,7 +285,14 @@ def MismatchRate(intervals):
 
 
 def ValidatePerfCompare(args, out_fh):
-    results_maps = [ResultsFromDir(filename) for filename in args.results_dirs]
+    boot_count = len(args.results_dirs)
+    group_size = args.group_size
+    group_count = boot_count / group_size
+
+    results_maps = [
+        ResultsFromDirs(
+            args.results_dirs[i * group_size : (i + 1) * group_size])
+        for i in xrange(group_count)]
 
     # Group by test name (label).
     by_test = {}
@@ -296,7 +312,10 @@ def ValidatePerfCompare(args, out_fh):
     mean_val = Mean(mismatch_rates)
     out_fh.write('Mean mismatch rate: %f\n' % mean_val)
     out_fh.write('Number of test cases: %d\n' % len(mismatch_rates))
-    out_fh.write('Number of result sets: %d\n' % len(results_maps))
+    out_fh.write('Number of result sets: %d groups of %d boots each'
+                 ' (ignoring %d leftover boots)\n'
+                 % (group_count, group_size,
+                    boot_count - group_size * group_count))
     out_fh.write('Expected number of test cases with mismatches: %f\n'
                  % (mean_val * len(mismatch_rates)))
 
@@ -336,6 +355,14 @@ def Main(argv, out_fh):
         ' statistics used by the perfcompare tool.  It can be used to check'
         ' the rate at which the tool will falsely indicate that performance'
         ' of a test case has regressed or improved.')
+    parser_validate_perfcompare.add_argument(
+        '-g', '--group_size', type=int, required=True,
+        help='Number of boots to put in each group.  To get realistic'
+        ' results that reflect how the perfcompare trybots would behave,'
+        ' this should match the boots_per_revision setting in the'
+        ' fuchsia_perfcompare.py recipe.  (Since that code is currently'
+        ' not part of the Fuchsia checkout, we cannot make the settings'
+        ' match automatically.)')
     parser_validate_perfcompare.add_argument('results_dirs', nargs='+')
     parser_validate_perfcompare.set_defaults(
         func=lambda args: ValidatePerfCompare(args, out_fh))

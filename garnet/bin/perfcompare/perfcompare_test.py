@@ -259,7 +259,8 @@ class PerfCompareTest(TempDirTestCase):
         results_dirs = ([self.ExampleDataDir(mean=100, stddev=10)] * 10 +
                         [self.ExampleDataDir(mean=200, stddev=10)] * 10)
         stdout = StringIO.StringIO()
-        perfcompare.Main(['validate_perfcompare'] + results_dirs, stdout)
+        perfcompare.Main(['validate_perfcompare', '--group_size=5']
+                         + results_dirs, stdout)
         output = stdout.getvalue()
         GOLDEN.AssertCaseEq('validate_perfcompare', output)
 

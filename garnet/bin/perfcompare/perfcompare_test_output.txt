@@ -138,10 +138,10 @@ SecondExample        removed           -              1975 +/- 78  -
 
 ### validate_perfcompare
 Rate of mismatches (non-intersections) of confidence intervals for each test:
-0.526316 ClockGetTimeExample
+0.666667 ClockGetTimeExample
 0.000000 SecondExample
 
-Mean mismatch rate: 0.263158
+Mean mismatch rate: 0.333333
 Number of test cases: 2
-Number of result sets: 20
-Expected number of test cases with mismatches: 0.526316
+Number of result sets: 4 groups of 5 boots each (ignoring 0 leftover boots)
+Expected number of test cases with mismatches: 0.666667
