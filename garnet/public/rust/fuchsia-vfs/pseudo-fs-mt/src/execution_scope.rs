@@ -289,7 +289,7 @@ mod tests {
                 scope.spawn(task).unwrap();
 
                 // Make sure our task hand a change to execute.
-                await!(receiver).unwrap();
+                receiver.await.unwrap();
 
                 assert_eq!(counters.drop_call(), 1);
                 assert_eq!(counters.poll_call(), 1);
@@ -309,13 +309,13 @@ mod tests {
 
                 scope.spawn(task).unwrap();
 
-                await!(poll_receiver).unwrap();
+                poll_receiver.await.unwrap();
 
                 processing_done_sender.send(()).unwrap();
 
                 scope.shutdown();
 
-                await!(drop_receiver).unwrap();
+                drop_receiver.await.unwrap();
 
                 // poll might be called one or two times, and it seems to be called differnet number of
                 // times depending on the run...  Not sure why is this happaning.  As this test is
@@ -338,7 +338,7 @@ mod tests {
                 scope
                     .spawn_with_shutdown(|_shutdown| {
                         async move {
-                            await!(processing_done_receiver).unwrap();
+                            processing_done_receiver.await.unwrap();
                             shutdown_complete_sender.send(()).unwrap();
                         }
                     })
@@ -346,7 +346,7 @@ mod tests {
 
                 processing_done_sender.send(()).unwrap();
 
-                await!(shutdown_complete_receiver).unwrap();
+                shutdown_complete_receiver.await.unwrap();
             }
         });
     }
@@ -388,16 +388,16 @@ mod tests {
                 assert_eq!(tick_count.load(Ordering::Relaxed), 0);
 
                 tick_sender.unbounded_send(()).unwrap();
-                await!(tick_confirmation_receiver.next()).unwrap();
+                tick_confirmation_receiver.next().await.unwrap();
                 assert_eq!(tick_count.load(Ordering::Relaxed), 1);
 
                 tick_sender.unbounded_send(()).unwrap();
-                await!(tick_confirmation_receiver.next()).unwrap();
+                tick_confirmation_receiver.next().await.unwrap();
                 assert_eq!(tick_count.load(Ordering::Relaxed), 2);
 
                 scope.shutdown();
 
-                await!(shutdown_complete_receiver).unwrap();
+                shutdown_complete_receiver.await.unwrap();
                 assert_eq!(tick_count.load(Ordering::Relaxed), 2);
             }
         });

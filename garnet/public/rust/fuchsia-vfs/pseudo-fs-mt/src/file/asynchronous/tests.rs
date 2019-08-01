@@ -94,7 +94,7 @@ fn read_only_read_no_status() {
         |proxy| {
             async move {
                 // Make sure `open()` call is complete, before we start checking.
-                await!(check_event_recv).unwrap();
+                check_event_recv.await.unwrap();
                 assert_no_event!(proxy);
                 // NOTE: logic added after `assert_no_event!` will not currently be run. this test will
                 // need to be updated after ZX-3923 is completed.
@@ -1145,7 +1145,7 @@ fn mock_directory_with_one_file_and_two_connections() {
         (
             move || {
                 async move {
-                    await!(start_receiver).unwrap();
+                    start_receiver.await.unwrap();
 
                     server.open(
                         scope,
@@ -1157,7 +1157,7 @@ fn mock_directory_with_one_file_and_two_connections() {
 
                     assert_read!(proxy, expected_content);
 
-                    await!(read_and_close_receiver).unwrap();
+                    read_and_close_receiver.await.unwrap();
 
                     assert_seek!(proxy, 0, Start);
                     assert_read!(proxy, expected_content);
@@ -1183,7 +1183,7 @@ fn mock_directory_with_one_file_and_two_connections() {
                 let client1 = get_client1();
                 let client2 = get_client2();
 
-                let _ = await!(join(client1, client2));
+                let _ = join(client1, client2).await;
             }
         },
         |run_until_stalled_assert| {
@@ -1237,7 +1237,8 @@ fn slow_init_buffer() {
                 let finish_future_receiver = finish_future_receiver.clone();
                 async move {
                     read_counter.fetch_add(1, Ordering::Relaxed);
-                    await!(finish_future_receiver)
+                    finish_future_receiver
+                        .await
                         .expect("finish_future_sender was not called before been dropped.");
                     read_counter.fetch_add(1, Ordering::Relaxed);
                     Ok(b"content".to_vec())
@@ -1302,7 +1303,8 @@ fn slow_update() {
                 async move {
                     assert_eq!(*&content, b"content");
                     write_counter.fetch_add(1, Ordering::Relaxed);
-                    await!(finish_future_receiver)
+                    finish_future_receiver
+                        .await
                         .expect("finish_future_sender was not called before been dropped.");
                     write_counter.fetch_add(1, Ordering::Relaxed);
                     Ok(())

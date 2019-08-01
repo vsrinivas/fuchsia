@@ -6,7 +6,7 @@
 //!
 //! Most assertions are macros as they need to call async functions themselves.  As a typical test
 //! will have multiple assertions, it save a bit of typing to write `assert_something!(arg)`
-//! instead of `await!(assert_something(arg))`.
+//! instead of `assert_something(arg).await`.
 
 #[doc(hidden)]
 pub mod reexport {
@@ -253,7 +253,7 @@ macro_rules! assert_rewind {
     ($proxy:expr) => {{
         use $crate::directory::test_utils::reexport::*;
 
-        let status = await!($proxy.rewind()).expect("rewind failed");
+        let status = $proxy.rewind().await.expect("rewind failed");
         assert_eq!(Status::from_raw(status), Status::OK);
     }};
 }
@@ -277,7 +277,7 @@ macro_rules! assert_watch {
         let (watcher_client, watcher_server) = zx::Channel::create().unwrap();
         let watcher_client = Channel::from_channel(watcher_client).unwrap();
 
-        let status = await!($proxy.watch($mask, 0, watcher_server)).expect("watch failed");
+        let status = $proxy.watch($mask, 0, watcher_server).await.expect("watch failed");
         assert_eq!(Status::from_raw(status), Status::OK);
 
         watcher_client
@@ -291,7 +291,7 @@ macro_rules! assert_watch_err {
 
         let (_watcher_client, watcher_server) = zx::Channel::create().unwrap();
 
-        let status = await!($proxy.watch($mask, 0, watcher_server)).expect("watch failed");
+        let status = $proxy.watch($mask, 0, watcher_server).await.expect("watch failed");
         assert_eq!(Status::from_raw(status), $expected_status);
     }};
 }
@@ -302,7 +302,7 @@ macro_rules! assert_watcher_one_message_watched_events {
         use $crate::directory::test_utils::reexport::*;
 
         let mut buf = MessageBuf::new();
-        await!($watcher.recv_msg(&mut buf)).unwrap();
+        $watcher.recv_msg(&mut buf).await.unwrap();
 
         let (bytes, handles) = buf.split();
         assert_eq!(

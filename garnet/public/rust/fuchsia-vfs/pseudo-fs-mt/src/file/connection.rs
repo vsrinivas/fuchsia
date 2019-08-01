@@ -179,7 +179,7 @@ impl FileConnection {
         } else {
             let res = match file.clone().init_buffer() {
                 AsyncInitBuffer::Immediate(res) => res,
-                AsyncInitBuffer::Future(fut) => await!(fut),
+                AsyncInitBuffer::Future(fut) => fut.await,
             };
 
             match res {
@@ -224,11 +224,11 @@ impl FileConnection {
             was_written,
         }
         .handle_requests();
-        await!(handle_requests);
+        handle_requests.await;
     }
 
     async fn handle_requests(mut self) {
-        while let Some(request_or_err) = await!(self.requests.next()) {
+        while let Some(request_or_err) = self.requests.next().await {
             match request_or_err {
                 Err(_) => {
                     // FIDL level error, such as invalid message format and alike.  Close the
@@ -236,7 +236,7 @@ impl FileConnection {
                     // TODO: Send an epitaph.
                     break;
                 }
-                Ok(request) => match await!(self.handle_request(request)) {
+                Ok(request) => match self.handle_request(request).await {
                     Ok(ConnectionState::Alive) => (),
                     Ok(ConnectionState::Closed) => break,
                     Err(_) => {
@@ -270,7 +270,7 @@ impl FileConnection {
             FileRequest::Close { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.  TODO We may want to send it in an epitaph.
-                let _ = await!(self.handle_close(|status| responder.send(status.into_raw())));
+                let _ = self.handle_close(|status| responder.send(status.into_raw())).await;
                 return Ok(ConnectionState::Closed);
             }
             FileRequest::Describe { responder } => {
@@ -574,7 +574,7 @@ impl FileConnection {
         let buffer = mem::replace(&mut self.buffer, vec![]);
         let res = match self.file.clone().update(buffer) {
             AsyncUpdate::Immediate(res) => res,
-            AsyncUpdate::Future(fut) => await!(fut),
+            AsyncUpdate::Future(fut) => fut.await,
         };
 
         let status = match res {

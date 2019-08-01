@@ -168,7 +168,7 @@ where
 
     #[must_use = "handle_requests() returns an async task that needs to be run"]
     async fn handle_requests(mut self) {
-        while let Some(request_or_err) = await!(self.requests.next()) {
+        while let Some(request_or_err) = self.requests.next().await {
             match request_or_err {
                 Err(_) => {
                     // FIDL level error, such as invalid message format and alike.  Close the
@@ -176,7 +176,7 @@ where
                     // TODO: Send an epitaph.
                     break;
                 }
-                Ok(request) => match await!(self.handle_request(request)) {
+                Ok(request) => match self.handle_request(request).await {
                     Ok(ConnectionState::Alive) => (),
                     Ok(ConnectionState::Closed) => break,
                     Err(_) => {
@@ -235,9 +235,10 @@ where
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             DirectoryRequest::ReadDirents { max_bytes, responder } => {
-                await!(self.handle_read_dirents(max_bytes, |status, entries| {
+                self.handle_read_dirents(max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)
-                }))?;
+                })
+                .await?;
             }
             DirectoryRequest::Rewind { responder } => {
                 self.seek = Default::default();
@@ -257,8 +258,8 @@ where
                     responder.send(ZX_ERR_INVALID_ARGS)?;
                 } else {
                     let channel = Channel::from_channel(watcher)?;
-                    await!(self
-                        .handle_watch(mask, channel, |status| responder.send(status.into_raw())))?;
+                    self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))
+                        .await?;
                 }
             }
         }

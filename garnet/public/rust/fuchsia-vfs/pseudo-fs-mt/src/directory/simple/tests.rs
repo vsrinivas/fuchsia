@@ -127,14 +127,14 @@ fn clone() {
                 assert_close!(file);
             }
 
-            await!(assert_read_file(&first_proxy));
+            assert_read_file(&first_proxy).await;
 
             let second_proxy = clone_get_directory_proxy_assert_ok!(
                 &first_proxy,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE
             );
 
-            await!(assert_read_file(&second_proxy));
+            assert_read_file(&second_proxy).await;
 
             assert_close!(first_proxy);
             assert_close!(second_proxy);
@@ -163,14 +163,14 @@ fn clone_inherit_access() {
                 assert_close!(file);
             }
 
-            await!(assert_read_file(&first_proxy));
+            assert_read_file(&first_proxy).await;
 
             let second_proxy = clone_get_directory_proxy_assert_ok!(
                 &first_proxy,
                 CLONE_FLAG_SAME_RIGHTS | OPEN_FLAG_DESCRIBE
             );
 
-            await!(assert_read_file(&second_proxy));
+            assert_read_file(&second_proxy).await;
 
             assert_close!(first_proxy);
             assert_close!(second_proxy);
@@ -197,7 +197,7 @@ fn clone_cannot_increase_access() {
                 assert_close!(file);
             }
 
-            await!(assert_read_file(&root));
+            assert_read_file(&root).await;
 
             clone_as_directory_assert_err!(
                 &root,
@@ -323,17 +323,17 @@ fn small_tree_traversal() {
                 assert_close!(file);
             }
 
-            await!(open_read_close(&root, "etc/fstab", "/dev/fs /"));
+            open_read_close(&root, "etc/fstab", "/dev/fs /").await;
 
             {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
-                await!(open_read_close(&ssh_dir, "sshd_config", "# Empty"));
+                open_read_close(&ssh_dir, "sshd_config", "# Empty").await;
             }
 
-            await!(open_read_close(&root, "etc/ssh/sshd_config", "# Empty"));
-            await!(open_read_close(&root, "uname", "Fuchsia"));
+            open_read_close(&root, "etc/ssh/sshd_config", "# Empty").await;
+            open_read_close(&root, "uname", "Fuchsia").await;
 
             assert_close!(root);
         }
@@ -416,24 +416,26 @@ fn open_writable_in_subdir() {
                 let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
                 let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
-                await!(open_read_write_close(
+                open_read_write_close(
                     &ssh_dir,
                     "sshd_config",
                     "# Empty",
                     "Port 22",
                     write_count.clone(),
-                    1
-                ));
+                    1,
+                )
+                .await;
             }
 
-            await!(open_read_write_close(
+            open_read_write_close(
                 &root,
                 "etc/ssh/sshd_config",
                 "# Empty",
                 "Port 23",
                 write_count.clone(),
-                2
-            ));
+                2,
+            )
+            .await;
 
             assert_close!(root);
         }
@@ -499,8 +501,8 @@ fn open_write_only() {
                 assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
             }
 
-            await!(open_write_close(&root, "Message 1", write_count.clone(), 1));
-            await!(open_write_close(&root, "Message 2", write_count.clone(), 2));
+            open_write_close(&root, "Message 1", write_count.clone(), 1).await;
+            open_write_close(&root, "Message 2", write_count.clone(), 2).await;
 
             assert_close!(root);
         }
@@ -1989,16 +1991,16 @@ fn watch_addition_with_two_scopes() {
 
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-            let root_proxy = await!(open_with_scope(root.clone(), scope1.clone()));
+            let root_proxy = open_with_scope(root.clone(), scope1.clone()).await;
 
             open_as_file_assert_err!(&root_proxy, flags, "etc/fstab", Status::NOT_FOUND);
             open_as_file_assert_content!(&root_proxy, flags, "etc/passwd", "[redacted]");
 
-            let etc1_proxy = await!(open_with_scope(etc.clone(), scope1.clone()));
+            let etc1_proxy = open_with_scope(etc.clone(), scope1.clone()).await;
             open_as_file_assert_err!(&etc1_proxy, flags, "fstab", Status::NOT_FOUND);
             open_as_file_assert_content!(&etc1_proxy, flags, "passwd", "[redacted]");
 
-            let etc2_proxy = await!(open_with_scope(etc.clone(), scope2.clone()));
+            let etc2_proxy = open_with_scope(etc.clone(), scope2.clone()).await;
             open_as_file_assert_err!(&etc2_proxy, flags, "fstab", Status::NOT_FOUND);
             open_as_file_assert_content!(&etc2_proxy, flags, "passwd", "[redacted]");
 
