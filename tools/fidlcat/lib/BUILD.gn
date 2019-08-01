@@ -61,24 +61,6 @@ if (current_toolchain == host_toolchain) {
       "//zircon/public/lib/fit",
     ]
   }
-
-  source_set("host_tests") {
-    testonly = true
-
-    sources = [
-      "interception_workflow_test.cc",
-    ]
-
-    deps = [
-      ":host_lib",
-      "//src/developer/debug/ipc:client",
-      "//src/developer/debug/zxdb/client:test_support",
-      "//third_party/googletest:gtest",
-      "//third_party/rapidjson",
-      "//zircon/public/lib/fidl_base",
-      "//zircon/system/public",
-    ]
-  }
 }
 
 source_set("tests") {

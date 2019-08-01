@@ -10,7 +10,7 @@
 struct DecodeOptions {
   // If a syscall satisfies one of these filters, it can be displayed.
   std::vector<std::regex> syscall_filters;
-  // But it is only displayed if it doesn't satifies any of these filters.
+  // But it is only displayed if it doesn't satisfy any of these filters.
   std::vector<std::regex> exclude_syscall_filters;
 };
 
