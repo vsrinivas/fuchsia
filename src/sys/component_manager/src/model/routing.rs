@@ -6,7 +6,8 @@ use {
     crate::model::*,
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeSource, FrameworkCapabilityDecl, OfferDecl,
-        OfferDirectorySource, OfferServiceSource, OfferStorageSource, StorageDecl, UseDecl,
+        OfferDirectorySource, OfferServiceSource, OfferStorageSource, StorageDecl,
+        StorageDirectorySource, UseDecl,
     },
     failure::format_err,
     fidl::endpoints::{create_proxy, ServerEnd},
@@ -191,8 +192,8 @@ pub async fn route_and_open_storage_capability<'a>(
     // Find the path and source of the directory consumed by the storage capability.
     let (source_path, dir_source_realm) =
         match storage_decl.source {
-            OfferDirectorySource::Self_ => (storage_decl.source_path, storage_decl_realm.clone()),
-            OfferDirectorySource::Realm => {
+            StorageDirectorySource::Self_ => (storage_decl.source_path, storage_decl_realm.clone()),
+            StorageDirectorySource::Realm => {
                 let capability = RoutedCapability::Storage(storage_decl);
                 let source = await!(find_offered_capability_source(
                     model,
@@ -208,7 +209,7 @@ pub async fn route_and_open_storage_capability<'a>(
                     ))),
                 }
             }
-            OfferDirectorySource::Child(ref name) => {
+            StorageDirectorySource::Child(ref name) => {
                 let moniker = Some(
                     storage_decl_realm.abs_moniker.child(ChildMoniker::new(name.to_string(), None)),
                 );
@@ -222,13 +223,6 @@ pub async fn route_and_open_storage_capability<'a>(
                         "storage capability backing directories must be provided by a component"
                     ))),
                 }
-            }
-            _ => {
-                // TODO(fsamuel, geb): This bit suggests storage_decl.source should have a
-                // dedicated type, instead of reusing OfferDirectorySource.
-                return Err(ModelError::capability_discovery_error(format_err!(
-                    "Other directory sources not supported."
-                )));
             }
         };
 

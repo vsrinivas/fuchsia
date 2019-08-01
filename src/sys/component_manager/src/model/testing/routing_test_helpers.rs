@@ -9,7 +9,7 @@ use {
     },
     cm_rust::{
         CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
-        OfferDirectorySource, OfferServiceSource, UseDecl, UseStorageDecl,
+        OfferDirectorySource, OfferServiceSource, StorageDirectorySource, UseDecl, UseStorageDecl,
     },
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
@@ -177,13 +177,13 @@ impl RoutingTest {
         await!(Self::check_namespace(
             component_name,
             self.namespaces.clone(),
-            self.components.clone()
+            self.components.clone(),
         ));
         await!(capability_util::call_create_child(
             component_resolved_url,
             self.namespaces.clone(),
             collection,
-            decl
+            decl,
         ));
     }
 
@@ -194,7 +194,7 @@ impl RoutingTest {
         await!(Self::check_namespace(
             component_name,
             self.namespaces.clone(),
-            self.components.clone()
+            self.components.clone(),
         ));
         match check {
             CheckUse::Service { path, should_succeed } => {
@@ -202,7 +202,7 @@ impl RoutingTest {
                     path,
                     component_resolved_url,
                     self.namespaces.clone(),
-                    should_succeed
+                    should_succeed,
                 ));
             }
             CheckUse::Directory { path, should_succeed } => {
@@ -210,7 +210,7 @@ impl RoutingTest {
                     path,
                     component_resolved_url,
                     self.namespaces.clone(),
-                    should_succeed
+                    should_succeed,
                 ))
             }
             CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation } => {
@@ -223,7 +223,7 @@ impl RoutingTest {
                     await!(capability_util::check_file_in_storage(
                         fsys::StorageType::Meta,
                         relative_moniker,
-                        &self.memfs
+                        &self.memfs,
                     ));
                 }
             }
@@ -238,7 +238,7 @@ impl RoutingTest {
                     await!(capability_util::check_file_in_storage(
                         type_,
                         relative_moniker,
-                        &self.memfs
+                        &self.memfs,
                     ));
                 }
             }
@@ -253,7 +253,7 @@ impl RoutingTest {
                     path,
                     &moniker,
                     &self.model,
-                    should_succeed
+                    should_succeed,
                 ));
             }
             CheckUse::Directory { path, should_succeed } => {
@@ -261,7 +261,7 @@ impl RoutingTest {
                     path,
                     &moniker,
                     &self.model,
-                    should_succeed
+                    should_succeed,
                 ));
             }
             CheckUse::Storage { .. } => {
@@ -321,7 +321,7 @@ impl RoutingTest {
         await!(Self::check_namespace(
             component_name,
             self.namespaces.clone(),
-            self.components.clone()
+            self.components.clone(),
         ));
         await!(capability_util::call_realm_svc(
             path,
@@ -339,7 +339,7 @@ impl RoutingTest {
         await!(Self::check_namespace(
             component_name,
             self.namespaces.clone(),
-            self.components.clone()
+            self.components.clone(),
         ));
         await!(capability_util::call_file_svc_from_namespace(
             path,
@@ -379,7 +379,7 @@ impl RoutingTest {
             // test where a storage capability is offered and used and there's no directory
             // capability in the manifest, so we must host the directory structure for this case in
             // addition to directory offers.
-            if storage.source == OfferDirectorySource::Self_ {
+            if storage.source == StorageDirectorySource::Self_ {
                 out_dir.get_or_insert(OutDir::new()).add_directory(memfs)
             }
         }

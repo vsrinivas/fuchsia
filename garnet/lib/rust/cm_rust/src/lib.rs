@@ -271,7 +271,7 @@ fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
                   {
                       name: String,
                       source_path: CapabilityPath,
-                      source: OfferDirectorySource,
+                      source: StorageDirectorySource,
                   });
 fidl_into_enum!(OfferDecl, OfferDecl, fsys::OfferDecl, fsys::OfferDecl,
                 {
@@ -687,6 +687,36 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferServiceSource {
             OfferServiceSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
             OfferServiceSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             OfferServiceSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum StorageDirectorySource {
+    Realm,
+    Self_,
+    Child(String),
+}
+
+impl FidlIntoNative<StorageDirectorySource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> StorageDirectorySource {
+        match self.unwrap() {
+            fsys::Ref::Realm(_) => StorageDirectorySource::Realm,
+            fsys::Ref::Self_(_) => StorageDirectorySource::Self_,
+            fsys::Ref::Child(c) => StorageDirectorySource::Child(c.name),
+            _ => panic!("invalid OfferDirectorySource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for StorageDirectorySource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            StorageDirectorySource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            StorageDirectorySource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            StorageDirectorySource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
         })
@@ -1160,7 +1190,7 @@ mod tests {
                         StorageDecl {
                             name: "memfs".to_string(),
                             source_path: "/memfs".try_into().unwrap(),
-                            source: OfferDirectorySource::Realm,
+                            source: StorageDirectorySource::Realm,
                         },
                     ],
                 }
@@ -1293,12 +1323,12 @@ mod tests {
                 StorageDecl {
                     name: "minfs".to_string(),
                     source_path: CapabilityPath::try_from("/minfs").unwrap(),
-                    source: OfferDirectorySource::Realm,
+                    source: StorageDirectorySource::Realm,
                 },
                 StorageDecl {
                     name: "minfs".to_string(),
                     source_path: CapabilityPath::try_from("/minfs").unwrap(),
-                    source: OfferDirectorySource::Child("foo".to_string()),
+                    source: StorageDirectorySource::Child("foo".to_string()),
                 },
             ],
             result_type = StorageDecl,

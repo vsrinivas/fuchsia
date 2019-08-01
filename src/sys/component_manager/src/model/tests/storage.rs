@@ -9,7 +9,8 @@ use {
     cm_rust::{
         self, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, OfferDecl,
         OfferDirectoryDecl, OfferDirectorySource, OfferStorage, OfferStorageDecl,
-        OfferStorageSource, OfferTarget, StorageDecl, UseDecl, UseStorageDecl,
+        OfferStorageSource, OfferTarget, StorageDecl, StorageDirectorySource, UseDecl,
+        UseStorageDecl,
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::TryInto,
@@ -40,7 +41,7 @@ async fn storage_and_dir_from_parent() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
-                    source: OfferDirectorySource::Self_,
+                    source: StorageDirectorySource::Self_,
                 }],
                 ..default_component_decl()
             },
@@ -89,7 +90,7 @@ async fn meta_storage_and_dir_from_parent() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
-                    source: OfferDirectorySource::Self_,
+                    source: StorageDirectorySource::Self_,
                 }],
                 ..default_component_decl()
             },
@@ -158,7 +159,7 @@ async fn storage_from_parent_dir_from_grandparent() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
-                    source: OfferDirectorySource::Realm,
+                    source: StorageDirectorySource::Realm,
                 }],
                 ..default_component_decl()
             },
@@ -210,7 +211,7 @@ async fn storage_and_dir_from_grandparent() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
-                    source: OfferDirectorySource::Self_,
+                    source: StorageDirectorySource::Self_,
                 }],
                 ..default_component_decl()
             },
@@ -277,7 +278,7 @@ async fn meta_storage_and_dir_from_grandparent() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
-                    source: OfferDirectorySource::Self_,
+                    source: StorageDirectorySource::Self_,
                 }],
                 ..default_component_decl()
             },
@@ -333,7 +334,7 @@ async fn storage_from_parent_dir_from_sibling() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: StorageDirectorySource::Child("b".to_string()),
                 }],
                 offers: vec![OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
@@ -405,7 +406,7 @@ async fn storage_multiple_types() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: StorageDirectorySource::Child("b".to_string()),
                 }],
                 offers: vec![
                     OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
@@ -541,7 +542,7 @@ async fn use_the_wrong_type_of_storage() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
-                    source: OfferDirectorySource::Self_,
+                    source: StorageDirectorySource::Self_,
                 }],
                 ..default_component_decl()
             },
@@ -632,7 +633,7 @@ async fn use_storage_when_not_offered() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
-                    source: OfferDirectorySource::Self_,
+                    source: StorageDirectorySource::Self_,
                 }],
                 ..default_component_decl()
             },
@@ -712,7 +713,7 @@ async fn dir_offered_from_nonexecutable() {
                 storage: vec![StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
-                    source: OfferDirectorySource::Realm,
+                    source: StorageDirectorySource::Realm,
                 }],
                 ..default_component_decl()
             },
