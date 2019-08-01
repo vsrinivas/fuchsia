@@ -78,7 +78,7 @@ where
 }
 
 /// See [`read_only()`].  Wraps the callback, allowing it to return a String instead of a Vec<u8>,
-/// but otherwise behaves identical to #read_only().
+/// but otherwise behaves identical to [`read_only()`].
 pub fn read_only_str<OnReadStr>(
     mut on_read: OnReadStr,
 ) -> PseudoFile<impl FnMut() -> Result<Vec<u8>, Status> + Send, fn(Vec<u8>) -> Result<(), Status>>
@@ -88,6 +88,19 @@ where
     PseudoFile::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
         DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
         Some(move || on_read().map(|content| content.into_bytes())),
+        0,
+        None,
+    )
+}
+
+/// See [`read_only()`].  Conveneient wrapper for [`read_only()`] that builds a file node out of a
+/// static string.
+pub fn read_only_static(
+    content: &'static str,
+) -> PseudoFile<impl FnMut() -> Result<Vec<u8>, Status> + Send, fn(Vec<u8>) -> Result<(), Status>> {
+    PseudoFile::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
+        DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
+        Some(move || Ok(content.into())),
         0,
         None,
     )
@@ -690,6 +703,16 @@ mod tests {
                 }
             },
         );
+    }
+
+    #[test]
+    fn read_only_staatic_read() {
+        run_server_client(OPEN_RIGHT_READABLE, read_only_static("Easy strings"), |proxy| {
+            async move {
+                assert_read!(proxy, "Easy strings");
+                assert_close!(proxy);
+            }
+        });
     }
 
     #[test]
