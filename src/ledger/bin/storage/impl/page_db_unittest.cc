@@ -67,6 +67,10 @@ class PageDbTest : public ledger::TestWithEnvironment {
     ASSERT_EQ(status, Status::OK);
   }
 
+  ObjectIdentifier RandomObjectIdentifier() {
+    return storage::RandomObjectIdentifier(environment_.random());
+  }
+
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
@@ -164,8 +168,7 @@ TEST_F(PageDbTest, Commits) {
     LiveCommitTracker tracker;
 
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        &tracker, environment_.clock(), RandomObjectIdentifier(environment_.random()),
-        std::move(parents));
+        &tracker, environment_.clock(), RandomObjectIdentifier(), std::move(parents));
 
     std::string storage_bytes;
     EXPECT_EQ(page_db_.GetCommitStorageBytes(handler, commit->GetId(), &storage_bytes),
@@ -187,8 +190,8 @@ TEST_F(PageDbTest, Commits) {
 
 TEST_F(PageDbTest, ObjectStorage) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    const ObjectIdentifier object_identifier = RandomObjectIdentifier(environment_.random());
-    const ObjectIdentifier child_identifier = RandomObjectIdentifier(environment_.random());
+    const ObjectIdentifier object_identifier = RandomObjectIdentifier();
+    const ObjectIdentifier child_identifier = RandomObjectIdentifier();
     const std::string content = RandomString(environment_.random(), 32 * 1024);
     std::unique_ptr<const Piece> piece;
     PageDbObjectStatus object_status;
@@ -229,8 +232,8 @@ TEST_F(PageDbTest, ObjectStorage) {
 
 TEST_F(PageDbTest, LazyAndEagerReferences) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    const auto object_identifier = RandomObjectIdentifier(environment_.random());
-    const ObjectIdentifier child_identifier = RandomObjectIdentifier(environment_.random());
+    const auto object_identifier = RandomObjectIdentifier();
+    const ObjectIdentifier child_identifier = RandomObjectIdentifier();
 
     ASSERT_EQ(page_db_.WriteObject(
                   handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
@@ -293,7 +296,7 @@ TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
 
 TEST_F(PageDbTest, UnsyncedPieces) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    auto object_identifier = RandomObjectIdentifier(environment_.random());
+    auto object_identifier = RandomObjectIdentifier();
     std::vector<ObjectIdentifier> object_identifiers;
     EXPECT_EQ(page_db_.GetUnsyncedPieces(handler, &object_identifiers), Status::OK);
     EXPECT_TRUE(object_identifiers.empty());
@@ -326,9 +329,9 @@ TEST_F(PageDbTest, Batch) {
     ASSERT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
     ASSERT_TRUE(batch);
 
-    auto object_identifier = RandomObjectIdentifier(environment_.random());
-    auto eager_identifier = RandomObjectIdentifier(environment_.random());
-    auto lazy_identifier = RandomObjectIdentifier(environment_.random());
+    auto object_identifier = RandomObjectIdentifier();
+    auto eager_identifier = RandomObjectIdentifier();
+    auto lazy_identifier = RandomObjectIdentifier();
     EXPECT_EQ(batch->WriteObject(
                   handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
                   PageDbObjectStatus::LOCAL,
@@ -375,7 +378,7 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
     PageDbObjectStatus next_statuses[] = {PageDbObjectStatus::LOCAL, PageDbObjectStatus::SYNCED};
     for (auto initial_status : initial_statuses) {
       for (auto next_status : next_statuses) {
-        auto object_identifier = RandomObjectIdentifier(environment_.random());
+        auto object_identifier = RandomObjectIdentifier();
         PageDbObjectStatus object_status;
         ASSERT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
         EXPECT_EQ(object_status, PageDbObjectStatus::UNKNOWN);
@@ -431,7 +434,7 @@ TEST_F(PageDbTest, PageIsOnline) {
 // This test reproduces the crash of LE-451. The crash is due to a subtle
 // ordering of coroutine execution that is exactly reproduced here.
 TEST_F(PageDbTest, LE_451_ReproductionTest) {
-  auto id = RandomObjectIdentifier(environment_.random());
+  auto id = RandomObjectIdentifier();
   RunInCoroutine([&](CoroutineHandler* handler) {
     EXPECT_EQ(page_db_.WriteObject(handler, DataChunkPiece(id, DataSource::DataChunk::Create("")),
                                    PageDbObjectStatus::LOCAL, {}),

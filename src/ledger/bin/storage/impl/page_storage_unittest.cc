@@ -3,12 +3,6 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
-
-#include <chrono>
-#include <memory>
-#include <queue>
-#include <set>
-
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -16,6 +10,11 @@
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/timekeeper/test_clock.h>
+
+#include <chrono>
+#include <memory>
+#include <queue>
+#include <set>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -305,6 +304,10 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     return commit;
   }
 
+  ObjectIdentifier RandomObjectIdentifier() {
+    return storage::RandomObjectIdentifier(environment_.random());
+  }
+
   std::unique_ptr<const Commit> TryCommitFromSync() {
     ObjectIdentifier root_identifier;
     EXPECT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
@@ -353,7 +356,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
       if (key.size() < min_key_size) {
         key.resize(min_key_size);
       }
-      journal->Put(key, RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+      journal->Put(key, RandomObjectIdentifier(), KeyPriority::EAGER);
     }
 
     journal->Delete("key_does_not_exist");
@@ -629,7 +632,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   EXPECT_FALSE(lookup_commit);
 
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
@@ -697,7 +700,7 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   std::unique_ptr<const Commit> base = GetFirstHead();
 
   std::unique_ptr<Journal> journal = storage_->StartCommit(base->Clone());
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit1;
   storage_->CommitJournal(std::move(journal),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
@@ -712,7 +715,7 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   EXPECT_EQ(status, Status::OK);
 
   journal = storage_->StartCommit(base->Clone());
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit2;
   storage_->CommitJournal(std::move(journal),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
@@ -728,7 +731,7 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
 
   // Make a merge commit. Merge commits only depend on their parents and
   // contents, so we can reproduce them.
-  storage::ObjectIdentifier merged_object_id = RandomObjectIdentifier(environment_.random());
+  storage::ObjectIdentifier merged_object_id = RandomObjectIdentifier();
   journal = storage_->StartMergeCommit(commit1->Clone(), commit2->Clone());
   journal->Put("key", merged_object_id, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_merged1;
@@ -902,7 +905,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
@@ -934,7 +937,7 @@ TEST_F(PageStorageTest, SyncCommits) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
@@ -967,7 +970,7 @@ TEST_F(PageStorageTest, HeadCommits) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
@@ -1117,7 +1120,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {
   // It is not an error if a journal is not committed or rolled back.
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
 }
 
 TEST_F(PageStorageTest, AddObjectFromLocal) {
@@ -1193,7 +1196,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
 TEST_F(PageStorageTest, AddLocalPiece) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     ObjectData data("Some data", InlineBehavior::PREVENT);
-    const ObjectIdentifier reference = RandomObjectIdentifier(environment_.random());
+    const ObjectIdentifier reference = RandomObjectIdentifier();
 
     bool called;
     Status status;
@@ -1219,7 +1222,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
 TEST_F(PageStorageTest, AddSyncPiece) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     ObjectData data("Some data", InlineBehavior::PREVENT);
-    const ObjectIdentifier reference = RandomObjectIdentifier(environment_.random());
+    const ObjectIdentifier reference = RandomObjectIdentifier();
 
     bool called;
     Status status;
@@ -1669,7 +1672,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
 
   ObjectData data(std::move(data_str), ObjectType::TREE_NODE, InlineBehavior::PREVENT);
   // An identifier to another tree node pointed at by the current one.
-  const ObjectIdentifier tree_reference = RandomObjectIdentifier(environment_.random());
+  const ObjectIdentifier tree_reference = RandomObjectIdentifier();
   ASSERT_EQ(GetObjectDigestInfo(data.object_identifier.object_digest()).object_type,
             ObjectType::TREE_NODE);
   ASSERT_EQ(GetObjectDigestInfo(data.object_identifier.object_digest()).piece_type,
@@ -1732,10 +1735,9 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
   std::vector<Entry> entries;
   std::map<size_t, ObjectIdentifier> children;
   for (size_t i = 0; i < 1000; ++i) {
-    entries.push_back(Entry{RandomString(environment_.random(), 50),
-                            RandomObjectIdentifier(environment_.random()),
+    entries.push_back(Entry{RandomString(environment_.random(), 50), RandomObjectIdentifier(),
                             i % 2 ? KeyPriority::EAGER : KeyPriority::LAZY});
-    children.emplace(i, RandomObjectIdentifier(environment_.random()));
+    children.emplace(i, RandomObjectIdentifier());
   }
   std::sort(entries.begin(), entries.end(),
             [](const Entry& e1, const Entry& e2) { return e1.key < e2.key; });
@@ -2145,7 +2147,7 @@ TEST_F(PageStorageTest, CommitFailNoWatchNotification) {
 
   // Create the commit.
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key1", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key1", RandomObjectIdentifier(), KeyPriority::EAGER);
 
   leveldb_->SetFailBatchExecuteAfter(1);
   std::unique_ptr<const Commit> commit = TryCommitJournal(std::move(journal), Status::IO_ERROR);
@@ -2305,7 +2307,7 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit1;
   storage_->CommitJournal(std::move(journal),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
@@ -2314,7 +2316,7 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
   EXPECT_EQ(status, Status::OK);
 
   journal = storage_->StartCommit(std::move(commit1));
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit2;
   storage_->CommitJournal(std::move(journal),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
@@ -2333,7 +2335,7 @@ TEST_F(PageStorageTest, NoOpCommit) {
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
 
   // Create a key, and delete it.
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   journal->Delete("key");
 
   // Commit the journal.
@@ -2511,13 +2513,13 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
 TEST_F(PageStorageTest, GetUnsyncedCommits) {
   std::unique_ptr<const Commit> root = GetFirstHead();
   std::unique_ptr<Journal> journal_a = storage_->StartCommit(root->Clone());
-  journal_a->Put("a", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal_a->Put("a", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_a = TryCommitJournal(std::move(journal_a), Status::OK);
   ASSERT_TRUE(commit_a);
   EXPECT_EQ(commit_a->GetGeneration(), 1u);
 
   std::unique_ptr<Journal> journal_b = storage_->StartCommit(root->Clone());
-  journal_b->Put("b", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal_b->Put("b", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_b = TryCommitJournal(std::move(journal_b), Status::OK);
   ASSERT_TRUE(commit_b);
   EXPECT_EQ(commit_b->GetGeneration(), 1u);
@@ -2531,7 +2533,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   EXPECT_EQ(commit_merge->GetGeneration(), 2u);
 
   std::unique_ptr<Journal> journal_c = storage_->StartCommit(std::move(root));
-  journal_c->Put("c", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal_c->Put("c", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_c = TryCommitJournal(std::move(journal_c), Status::OK);
   ASSERT_TRUE(commit_c);
   EXPECT_EQ(commit_c->GetGeneration(), 1u);
@@ -2630,7 +2632,7 @@ TEST_F(PageStorageTest, AddLocalCommitsInterrupted) {
   bool called;
   Status status;
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
-  journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
 
   // Destroy the PageStorageImpl object during the first async operation of
   // CommitJournal.
