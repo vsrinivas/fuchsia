@@ -9,10 +9,11 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
-#include <mutex>
 #include <string.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
+
+#include <mutex>
 
 #include "private-socket.h"
 
@@ -81,8 +82,9 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
     return ZX_ERR_UNAVAILABLE;
   }
   uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-  return fio::Directory::Call::Open_Deprecated(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
-                                               fidl::StringView(length, path), std::move(request));
+  return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
+                                    fidl::StringView(length, path), std::move(request))
+      .status();
 }
 
 zx_status_t fdio_service_connect_by_name(const char name[], zx::channel* out) {
@@ -138,7 +140,7 @@ __EXPORT
 zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
                          zx_handle_t raw_request) {
   zx::channel request(raw_request);
-  size_t length = 0u;
+  size_t length;
   zx_status_t status = fdio_validate_path(path, &length);
   if (status != ZX_OK) {
     return status;
@@ -148,8 +150,9 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return fio::Directory::Call::Open_Deprecated(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
-                                               fidl::StringView(length, path), std::move(request));
+  return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
+                                    fidl::StringView(length, path), std::move(request))
+      .status();
 }
 
 __EXPORT
@@ -158,14 +161,12 @@ zx_handle_t fdio_service_clone(zx_handle_t handle) {
     return ZX_HANDLE_INVALID;
   }
   zx::channel clone, request;
-  zx_status_t status = zx::channel::create(0, &clone, &request);
-  if (status != ZX_OK) {
+  if (zx::channel::create(0, &clone, &request) != ZX_OK) {
     return ZX_HANDLE_INVALID;
   }
   uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-  status =
-      fio::Node::Call::Clone_Deprecated(zx::unowned_channel(handle), flags, std::move(request));
-  if (status != ZX_OK) {
+  auto result = fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request));
+  if (result.status() != ZX_OK) {
     return ZX_HANDLE_INVALID;
   }
   return clone.release();
@@ -178,7 +179,7 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
     return ZX_ERR_INVALID_ARGS;
   }
   uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-  return fio::Node::Call::Clone_Deprecated(zx::unowned_channel(handle), flags, std::move(request));
+  return fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request)).status();
 }
 
 // Create an |fdio_t| from a |handle| and an |info|.
@@ -211,18 +212,19 @@ static zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, f
       io = fdio_remote_create(handle.release(), info.mutable_tty().event.release());
       break;
     case fio::NodeInfo::Tag::kVmofile: {
-      zx_status_t status;
-      uint64_t seek = 0u;
-      zx_status_t io_status = fio::File::Call::Seek_Deprecated(
-          zx::unowned_channel(handle.get()), 0, fio::SeekOrigin::START, &status, &seek);
-      if (io_status != ZX_OK) {
-        status = io_status;
+      auto result =
+          fio::File::Call::Seek(zx::unowned_channel(handle.get()), 0, fio::SeekOrigin::START);
+      zx_status_t status = result.status();
+      if (status != ZX_OK) {
+        return status;
       }
+      fio::File::SeekResponse* response = result.Unwrap();
+      status = response->s;
       if (status != ZX_OK) {
         return status;
       }
       io = fdio_vmofile_create(handle.release(), info.mutable_vmofile().vmo.release(),
-                               info.vmofile().offset, info.vmofile().length, seek);
+                               info.vmofile().offset, info.vmofile().length, response->offset);
       break;
     }
     case fio::NodeInfo::Tag::kPipe: {
@@ -232,14 +234,19 @@ static zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, f
     case fio::NodeInfo::Tag::kSocket: {
       // check the connection state.
       zx_signals_t observed;
-      zx_status_t status = info.socket().socket.wait_one(ZXSIO_SIGNAL_CONNECTED,
-                                                         zx::time::infinite_past(), &observed);
-      if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
-        return status;
+
+      switch (zx_status_t status = info.socket().socket.wait_one(
+                  ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed)) {
+        case ZX_OK:
+          __FALLTHROUGH;
+        case ZX_ERR_TIMED_OUT:
+          break;
+        default:
+          return status;
       }
 
-      status = fdio_socket_create(fsocket::Control::SyncClient(std::move(handle)),
-                                  std::move(info.mutable_socket().socket), &io);
+      zx_status_t status = fdio_socket_create(fsocket::Control::SyncClient(std::move(handle)),
+                                              std::move(info.mutable_socket().socket), &io);
       if (status != ZX_OK) {
         return status;
       }
@@ -268,12 +275,12 @@ static zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, f
 //
 // Always consumes |channel|.
 static zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io) {
-  fio::NodeInfo info;
-  zx_status_t status = fio::Node::Call::Describe_Deprecated(zx::unowned_channel(channel), &info);
+  auto response = fio::Node::Call::Describe(zx::unowned_channel(channel));
+  zx_status_t status = response.status();
   if (status != ZX_OK) {
     return status;
   }
-  return fdio_from_node_info(std::move(channel), std::move(info), out_io);
+  return fdio_from_node_info(std::move(channel), std::move(response.Unwrap()->info), out_io);
 }
 
 __EXPORT
@@ -281,8 +288,9 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
   zx_info_handle_basic_t info;
   zx_status_t status =
       zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   fdio_t* io = nullptr;
   switch (info.type) {
     case ZX_OBJ_TYPE_CHANNEL:
@@ -310,7 +318,7 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
 
 zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flags, uint32_t mode,
                                 fdio_t** out_io) {
-  size_t length = 0u;
+  size_t length;
   zx_status_t status = fdio_validate_path(path, &length);
   if (status != ZX_OK) {
     return status;
@@ -322,8 +330,9 @@ zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flag
     return status;
   }
 
-  status = fio::Directory::Call::Open_Deprecated(
-      zx::unowned_channel(dir), flags, mode, fidl::StringView(length, path), std::move(request));
+  status = fio::Directory::Call::Open(zx::unowned_channel(dir), flags, mode,
+                                      fidl::StringView(length, path), std::move(request))
+               .status();
   if (status != ZX_OK) {
     return status;
   }
@@ -343,12 +352,10 @@ zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flag
                   return ZX_OK;
                 },
             .unknown = [] { return ZX_ERR_IO; }});
-
-    if (status == ZX_ERR_PEER_CLOSED) {
+    if (status != ZX_OK) {
       return status;
-    } else if (status != ZX_OK) {
-      return ZX_ERR_IO;
-    } else if (on_open_status != ZX_OK) {
+    }
+    if (on_open_status != ZX_OK) {
       return on_open_status;
     }
     return fdio_from_node_info(std::move(handle), std::move(node_info), out_io);

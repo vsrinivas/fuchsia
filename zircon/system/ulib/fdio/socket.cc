@@ -271,20 +271,22 @@ static zx_status_t zxsio_close(fdio_t* io) {
 
 static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len,
                            void* out_buf, size_t out_len) {
-  uint8_t request_buffer[fidl::MaxSizeInChannel<fsocket::Control::IoctlPOSIXRequest>()];
-  uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::IoctlPOSIXResponse>()];
-  int16_t out_code;
-  fidl::VectorView<uint8_t> out;
-  fidl::DecodeResult result = fdio_get_zxio_socket(io)->socket.control.IoctlPOSIX_Deprecated(
-      fidl::BytePart::WrapEmpty(request_buffer), static_cast<uint16_t>(op),
+  // Explicitly allocating message buffers to avoid heap allocation.
+  fidl::Buffer<fsocket::Control::IoctlPOSIXRequest> request_buffer;
+  fidl::Buffer<fsocket::Control::IoctlPOSIXResponse> response_buffer;
+  auto result = fdio_get_zxio_socket(io)->socket.control.IoctlPOSIX(
+      request_buffer.view(), static_cast<int16_t>(op),
       fidl::VectorView(in_len, const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf))),
-      fidl::BytePart::WrapEmpty(response_buffer), &out_code, &out);
-  if (result.status != ZX_OK) {
-    return result.status;
+      response_buffer.view());
+  zx_status_t status = result.status();
+  if (status != ZX_OK) {
+    return status;
   }
-  if (out_code) {
+  fsocket::Control::IoctlPOSIXResponse* response = result.Unwrap();
+  if (uint16_t out_code = response->code) {
     return errno_to_fdio_status(out_code);
   }
+  auto out = response->out;
   if (out.count() > out_len) {
     return ZX_ERR_INVALID_ARGS;
   }

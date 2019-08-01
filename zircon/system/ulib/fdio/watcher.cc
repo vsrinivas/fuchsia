@@ -4,14 +4,13 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/channel.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -26,8 +25,8 @@ typedef struct fdio_watcher {
 } fdio_watcher_t;
 
 static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
-  zx::channel client, watcher;
-  zx_status_t status = zx::channel::create(0, &client, &watcher);
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
   if (status != ZX_OK) {
     return status;
   }
@@ -43,18 +42,22 @@ static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t io_status = fio::Directory::Call::Watch_Deprecated(
-      zx::unowned_channel(dir_channel), fio::WATCH_MASK_ALL, 0, std::move(watcher), &status);
+  auto result = fio::Directory::Call::Watch(zx::unowned_channel(dir_channel), fio::WATCH_MASK_ALL,
+                                            0, std::move(server));
   fdio_unsafe_release(io);
-  if (io_status != ZX_OK) {
-    return io_status;
-  } else if (status != ZX_OK) {
+  status = result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  fio::Directory::WatchResponse* response = result.Unwrap();
+  status = response->s;
+  if (status != ZX_OK) {
     return status;
   }
 
-  fdio_watcher_t* result = static_cast<fdio_watcher_t*>(malloc(sizeof(fdio_watcher_t)));
-  result->h = client.release();
-  *out = result;
+  auto watcher = static_cast<fdio_watcher_t*>(malloc(sizeof(fdio_watcher_t)));
+  watcher->h = client.release();
+  *out = watcher;
   return ZX_OK;
 }
 

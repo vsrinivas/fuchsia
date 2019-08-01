@@ -39,7 +39,7 @@ zx_status_t zxio_remote_close(zxio_t* io) {
   Remote rio(io);
   auto result = fio::Node::Call::Close(rio.control());
   rio.Release().reset();
-  return result.status() == ZX_OK ? result.Unwrap()->s : result.status();
+  return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_handle) {
@@ -67,7 +67,7 @@ zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
 zx_status_t zxio_remote_sync(zxio_t* io) {
   Remote rio(io);
   auto result = fio::Node::Call::Sync(rio.control());
-  return result.status() == ZX_OK ? result.Unwrap()->s : result.status();
+  return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
@@ -86,7 +86,7 @@ zx_status_t zxio_remote_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
 zx_status_t zxio_remote_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* attr) {
   Remote rio(io);
   auto result = fio::Node::Call::SetAttr(rio.control(), flags, *attr);
-  return result.status() == ZX_OK ? result.Unwrap()->s : result.status();
+  return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_read_once(const Remote& rio, uint8_t* buffer, size_t capacity,
@@ -288,7 +288,7 @@ zx_status_t zxio_remote_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start
 zx_status_t zxio_remote_truncate(zxio_t* io, size_t length) {
   Remote rio(io);
   auto result = fio::File::Call::Truncate(rio.control(), length);
-  return result.status() == ZX_OK ? result.Unwrap()->s : result.status();
+  return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_flags_get(zxio_t* io, uint32_t* out_flags) {
@@ -307,7 +307,7 @@ zx_status_t zxio_remote_flags_get(zxio_t* io, uint32_t* out_flags) {
 zx_status_t zxio_remote_flags_set(zxio_t* io, uint32_t flags) {
   Remote rio(io);
   auto result = fio::File::Call::SetFlags(rio.control(), flags);
-  return result.status() == ZX_OK ? result.Unwrap()->s : result.status();
+  return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
@@ -344,7 +344,7 @@ zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, co
 zx_status_t zxio_remote_unlink(zxio_t* io, const char* path) {
   Remote rio(io);
   auto result = fio::Directory::Call::Unlink(rio.control(), fidl::StringView(strlen(path), path));
-  return result.status() == ZX_OK ? result.Unwrap()->s : result.status();
+  return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_token_get(zxio_t* io, zx_handle_t* out_token) {
@@ -366,7 +366,7 @@ zx_status_t zxio_remote_rename(zxio_t* io, const char* src_path, zx_handle_t dst
   auto result = fio::Directory::Call::Rename(
       rio.control(), fidl::StringView(strlen(src_path), src_path), zx::handle(dst_token),
       fidl::StringView(strlen(dst_path), dst_path));
-  return result.status() == ZX_OK ? result.Unwrap()->s : result.status();
+  return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, zx_handle_t dst_token,
@@ -375,7 +375,7 @@ zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, zx_handle_t dst_t
   auto result = fio::Directory::Call::Link(
       rio.control(), fidl::StringView(strlen(src_path), src_path), zx::handle(dst_token),
       fidl::StringView(strlen(dst_path), dst_path));
-  return result.status() == ZX_OK ? result.Unwrap()->s : result.status();
+  return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_readdir(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
@@ -404,7 +404,7 @@ zx_status_t zxio_remote_readdir(zxio_t* io, void* buffer, size_t capacity, size_
 zx_status_t zxio_remote_rewind(zxio_t* io) {
   Remote rio(io);
   auto result = fio::Directory::Call::Rewind(rio.control());
-  return result.status() == ZX_OK ? result.Unwrap()->s : result.status();
+  return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {

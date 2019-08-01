@@ -5,15 +5,15 @@
 #ifndef LIB_FIDL_LLCPP_SYNC_CALL_H_
 #define LIB_FIDL_LLCPP_SYNC_CALL_H_
 
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
-#include <memory>
-
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/decoded_message.h>
 #include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/traits.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
 
 namespace fidl {
 namespace internal {
@@ -23,7 +23,7 @@ template <uint32_t kSize>
 struct AlignedBuffer {
   AlignedBuffer() {}
 
-  fidl::BytePart view() { return fidl::BytePart(&data[0], kSize); }
+  fidl::BytePart view() { return fidl::BytePart(data, kSize); }
 
  private:
   FIDL_ALIGNDECL uint8_t data[kSize];
