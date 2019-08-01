@@ -7,6 +7,7 @@ package netstack
 import (
 	"encoding/binary"
 	"fmt"
+	"net"
 	"reflect"
 	"runtime"
 	"strings"
@@ -737,11 +738,18 @@ func (ios *iostate) Connect(sockaddr []uint8) (int16, error) {
 		if err != nil {
 			panic(err)
 		}
-		remoteAddr, err := ios.ep.GetRemoteAddress()
-		if err != nil {
-			panic(err)
+
+		// NB: We can't just compare the length to zero because that would
+		// mishandle the IPv6-mapped IPv4 unspecified address.
+		if len(addr.Addr) == 0 || net.IP(addr.Addr).IsUnspecified() {
+			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=disconnected", ios, localAddr)
+		} else {
+			remoteAddr, err := ios.ep.GetRemoteAddress()
+			if err != nil {
+				panic(err)
+			}
+			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
 		}
-		syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
 	}
 
 	return 0, nil

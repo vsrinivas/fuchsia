@@ -1140,6 +1140,73 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
+TEST(NetDatagramTest, ConnectAnyV4) {
+  int fd;
+  ASSERT_GE(fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+  EXPECT_EQ(connect(fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+  ASSERT_EQ(close(fd), 0) << strerror(errno);
+}
+
+TEST(NetDatagramTest, ConnectAnyV6) {
+  int fd;
+  ASSERT_GE(fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
+
+  struct sockaddr_in6 addr = {};
+  addr.sin6_family = AF_INET6;
+  addr.sin6_addr = IN6ADDR_ANY_INIT;
+
+  EXPECT_EQ(connect(fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+  ASSERT_EQ(close(fd), 0) << strerror(errno);
+}
+
+TEST(NetDatagramTest, ConnectAnyV6MappedV4) {
+  int fd;
+  ASSERT_GE(fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
+
+  struct sockaddr_in6 addr = {};
+  addr.sin6_family = AF_INET6;
+  addr.sin6_addr = {{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0, 0, 0, 0}}};
+
+  EXPECT_EQ(connect(fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+  ASSERT_EQ(close(fd), 0) << strerror(errno);
+}
+
+TEST(NetDatagramTest, ConnectUnspecV4) {
+  int fd;
+  ASSERT_GE(fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_UNSPEC;
+
+  EXPECT_EQ(connect(fd, reinterpret_cast<const struct sockaddr*>(&addr),
+                    offsetof(sockaddr_in, sin_family) + sizeof(addr.sin_family)),
+            0)
+      << strerror(errno);
+  ASSERT_EQ(close(fd), 0) << strerror(errno);
+}
+
+TEST(NetDatagramTest, ConnectUnspecV6) {
+  int fd;
+  ASSERT_GE(fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
+
+  struct sockaddr_in6 addr = {};
+  addr.sin6_family = AF_UNSPEC;
+
+  EXPECT_EQ(connect(fd, reinterpret_cast<const struct sockaddr*>(&addr),
+                    offsetof(sockaddr_in6, sin6_family) + sizeof(addr.sin6_family)),
+            0)
+      << strerror(errno);
+  ASSERT_EQ(close(fd), 0) << strerror(errno);
+}
+
 // Note: we choose 100 because the max number of fds per process is limited to
 // 256.
 const int32_t kListeningSockets = 100;

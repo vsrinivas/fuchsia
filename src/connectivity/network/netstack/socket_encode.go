@@ -129,6 +129,7 @@ func (v *C.struct_sockaddr_storage) Unmarshal(data []byte) error {
 		if size := C.sizeof_struct_sockaddr_in6; n < size {
 			return fmt.Errorf("short %T: %d/%d", v, n, size)
 		}
+	case C.AF_UNSPEC:
 	default:
 		return fmt.Errorf("unknown sockaddr_storage.ss_family: %d", v.ss_family)
 	}
@@ -167,6 +168,8 @@ func (v *C.struct_sockaddr_storage) Decode() (tcpip.FullAddress, error) {
 			out.NIC = tcpip.NICID(v.sin6_scope_id)
 		}
 		return out, nil
+	case C.AF_UNSPEC:
+		return tcpip.FullAddress{}, nil
 	default:
 		return tcpip.FullAddress{}, fmt.Errorf("unknown sockaddr_storage.ss_family: %d", v.ss_family)
 	}
