@@ -11,9 +11,10 @@ CompleterBase& CompleterBase::operator=(CompleterBase&& other) noexcept {
     DropTransaction();
     transaction_ = other.transaction_;
     owned_ = other.owned_;
-    method_expects_reply_ = other.method_expects_reply_;
+    needs_to_reply_ = other.needs_to_reply_;
     other.transaction_ = nullptr;
     other.owned_ = false;
+    other.needs_to_reply_ = false;
   }
   return *this;
 }
@@ -27,12 +28,16 @@ void CompleterBase::Close(zx_status_t status) {
 CompleterBase::CompleterBase(CompleterBase&& other) noexcept
     : transaction_(other.transaction_),
       owned_(other.owned_),
-      method_expects_reply_(other.method_expects_reply_) {
+      needs_to_reply_(other.needs_to_reply_) {
   other.transaction_ = nullptr;
   other.owned_ = false;
+  other.needs_to_reply_ = false;
 }
 
-CompleterBase::~CompleterBase() { ZX_ASSERT(!method_expects_reply() || !pending()); }
+CompleterBase::~CompleterBase() {
+  ZX_ASSERT(!needs_to_reply_);
+  DropTransaction();
+}
 
 std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
   EnsureHasTransaction();
@@ -43,8 +48,9 @@ std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
 
 void CompleterBase::SendReply(Message msg) {
   EnsureHasTransaction();
+  ZX_ASSERT(needs_to_reply_);
   transaction_->Reply(std::move(msg));
-  DropTransaction();
+  needs_to_reply_ = false;
 }
 
 void CompleterBase::EnsureHasTransaction() { ZX_ASSERT(transaction_); }
@@ -55,6 +61,7 @@ void CompleterBase::DropTransaction() {
     delete transaction_;
   }
   transaction_ = nullptr;
+  needs_to_reply_ = false;
 }
 
 }  // namespace fidl

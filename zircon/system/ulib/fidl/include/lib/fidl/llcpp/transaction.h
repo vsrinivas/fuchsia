@@ -77,7 +77,7 @@ class Transaction {
   // |Complete| and |Close| are never called on a transaction that has lost its ownership.
   virtual std::unique_ptr<Transaction> TakeOwnership() = 0;
 
-  // Called exactly once for a two-way FIDL method, to reply to a two-way call.
+  // Called at most once for a two-way FIDL method, to reply to a two-way call.
   // Never called in case of a one-way call.
   // Implementation must fill in the correct transaction ID.
   virtual void Reply(fidl::Message message) = 0;
@@ -86,8 +86,10 @@ class Transaction {
   virtual void Close(zx_status_t epitaph) = 0;
 
   // A transaction will only be destroyed after one of three actions happens to it:
-  // replied, closed, or ownership taken from.
-  // An async transaction is destroyed immediately after the request has been replied or closed.
+  // the Completer containing it is destroyed, the transaction is closed, or ownership is taken from
+  // the transaction.
+  // An async transaction is destroyed immediately after the request has been closed or the
+  // Completer containing it is destroyed.
   // A synchronous transaction lives on the stack, and may provide status/errors to the binding
   // dispatch loop.
   // If the implementation paused message dispatching above, it may resume dispatching here.
@@ -107,18 +109,12 @@ class CompleterBase {
 
  protected:
   explicit CompleterBase(Transaction* transaction, bool owned, bool method_expects_reply)
-      : transaction_(transaction), owned_(owned), method_expects_reply_(method_expects_reply) {}
+      : transaction_(transaction), owned_(owned), needs_to_reply_(method_expects_reply) {}
 
   CompleterBase(CompleterBase&& other) noexcept;
   CompleterBase& operator=(CompleterBase&& other) noexcept;
 
   ~CompleterBase();
-
-  // Returns true if this instance holds a pending transaction.
-  bool pending() const { return transaction_; }
-
-  // Returns true if this instance backs a two-way FIDL method.
-  bool method_expects_reply() const { return method_expects_reply_; }
 
   // Encode and write |decoded_msg| as the reply.
   template <typename FidlType>
@@ -144,7 +140,7 @@ class CompleterBase {
 
   Transaction* transaction_;
   bool owned_;
-  bool method_expects_reply_;
+  bool needs_to_reply_;
 };
 
 // Completers of a FIDL method call.

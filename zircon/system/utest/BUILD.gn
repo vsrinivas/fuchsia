@@ -109,6 +109,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/driver-unit-test/test",
       "$zx/system/ulib/elf-search/test",
       "$zx/system/ulib/fbl/test",
+      "$zx/system/ulib/fidl-async/test:fidl-async-test",
       "$zx/system/ulib/fs/metrics/test:metrics",
       "$zx/system/ulib/fs/test",
       "$zx/system/ulib/fvm/test",

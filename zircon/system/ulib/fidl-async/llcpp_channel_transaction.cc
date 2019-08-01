@@ -34,8 +34,12 @@ void ChannelTransaction::Reply(fidl::Message msg) {
 }
 
 void ChannelTransaction::Close(zx_status_t epitaph) {
-  fidl_epitaph_write(binding_->channel()->get(), epitaph);
-  binding_.reset();
+  // We need to make sure binding_ is present, since it may have been released
+  // if Reply() called Close()
+  if (binding_) {
+    fidl_epitaph_write(binding_->channel()->get(), epitaph);
+    binding_.reset();
+  }
 }
 
 ChannelTransaction::~ChannelTransaction() {

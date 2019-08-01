@@ -11,13 +11,11 @@ by the C bindings right now, e.g. tables. `fidlc` is able to generate the coding
 tables, but cannot generate their binding APIs. In order to unit test the table code paths, we will
 generate and check in their coding tables `extra_messages.cc` from `extra_messages.test.fidl`.
 
-The command to generate `extra_messages.cc` from `extra_messages.test.fidl` is:
+The command to generate the contents of generated is:
 
 ```bash
-fx build zircon/tools
-$FUCHSIA_DIR/out/default.zircon/tools/fidlc \
-  --tables $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.cc \
-  --files $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.test.fidl
+fx build
+fx exec ./gen.sh
 ```
 
 The manual generation/checking-in should go away once we have a more flexible build process that

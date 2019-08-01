@@ -15,7 +15,7 @@
 #include <memory>
 #include <new>
 
-#include "fidl/extra_messages.h"
+#include "extra_messages.h"
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
 

@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fuzzer.gni")
+
+test("fidl-async-test") {
+  sources = [
+    "llcpp_channel_transaction_test.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl:fidl-llcpp",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/zxtest",
+  ]
+}

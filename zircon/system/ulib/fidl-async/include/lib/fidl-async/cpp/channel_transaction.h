@@ -35,13 +35,13 @@ class ChannelTransaction final : public Transaction {
   }
 
   ChannelTransaction& operator=(ChannelTransaction&& other) noexcept {
+    Transaction::operator=(std::move(other));
     if (this != &other) {
       MoveImpl(std::move(other));
     }
     return *this;
   }
 
- protected:
   void Reply(fidl::Message msg) final;
 
   void Close(zx_status_t epitaph) final;
