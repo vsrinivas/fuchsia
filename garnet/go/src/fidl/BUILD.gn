@@ -135,6 +135,14 @@ go_test("fidlgen_syzkaller_ir_test") {
   ]
 }
 
+go_test("fidlgen_common_test") {
+  gopackage = "fidl/compiler/backend/common"
+
+  deps = [
+    ":fidlgen_test_lib",
+  ]
+}
+
 go_test("fidlgen_types_test") {
   gopackage = "fidl/compiler/backend/types"
 
