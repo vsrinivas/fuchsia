@@ -11,6 +11,7 @@ use {
 /// Attributes applied to a field of a `#![derive(FromArgs)]` struct.
 #[derive(Default)]
 pub struct FieldAttrs {
+    pub default: Option<syn::LitStr>,
     pub description: Option<Description>,
     pub from_str_fn: Option<syn::Ident>,
     pub field_type: Option<FieldType>,
@@ -75,7 +76,11 @@ impl FieldAttrs {
                 };
 
                 let name = meta.name();
-                if name == "description" {
+                if name == "default" {
+                    if let Some(m) = errors.expect_meta_name_value(&meta) {
+                        this.parse_attr_default(errors, m);
+                    }
+                } else if name == "description" {
                     if let Some(m) = errors.expect_meta_name_value(&meta) {
                         parse_attr_description(errors, m, &mut this.description);
                     }
@@ -102,11 +107,18 @@ impl FieldAttrs {
                         &meta,
                         concat!(
                             "Invalid field-level `argh` attribute\n",
-                            "Expected one of: `description`, `from_str_fn`, `long`, ",
+                            "Expected one of: `default`, `description`, `from_str_fn`, `long`, ",
                             "`option`, `short`, `subcommand`, `switch`",
                         ),
                     );
                 }
+            }
+        }
+
+        if let (Some(default), Some(field_type)) = (&this.default, &this.field_type) {
+            match field_type.kind {
+                FieldKind::Option => {}
+                _ => errors.err(default, "`default` may only be specified on `#[argh(option)]` fields"),
             }
         }
 
@@ -119,6 +131,10 @@ impl FieldAttrs {
 
     fn parse_attr_from_str_fn(&mut self, errors: &Errors, m: &syn::MetaList) {
         parse_attr_fn_name(errors, m, "from_str_fn", &mut self.from_str_fn)
+    }
+
+    fn parse_attr_default(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
+        parse_attr_single_string(errors, m, "default", &mut self.default);
     }
 
     fn parse_attr_long(&mut self, errors: &Errors, m: &syn::MetaNameValue) {

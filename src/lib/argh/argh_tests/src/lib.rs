@@ -126,6 +126,39 @@ Options:
 "###);
 }
 
+#[test]
+fn default_number() {
+    #[derive(FromArgs)]
+    /// Short description
+    struct Cmd {
+        #[argh(option, default = "5")]
+        /// fooey
+        x: u8,
+    }
+
+    let cmd = Cmd::from_args(&["cmdname"], &[]).unwrap();
+    assert_eq!(cmd.x, 5);
+}
+
+#[test]
+fn default_function() {
+    const MSG: &str = "hey I just met you";
+    fn call_me_maybe() -> String {
+        MSG.to_string()
+    }
+
+    #[derive(FromArgs)]
+    /// Short description
+    struct Cmd {
+        #[argh(option, default = "call_me_maybe()")]
+        /// fooey
+        msg: String,
+    }
+
+    let cmd = Cmd::from_args(&["cmdname"], &[]).unwrap();
+    assert_eq!(cmd.msg, MSG);
+}
+
 fn assert_help_string<T: FromArgs>(help_str: &str) {
     match T::from_args(&["test_arg_0"], &["--help"]) {
         Ok(_) => panic!("help was parsed as args"),

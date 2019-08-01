@@ -22,6 +22,7 @@ use {
     },
     proc_macro2::{Span, TokenStream},
     quote::{ToTokens, quote, quote_spanned},
+    std::str::FromStr,
 };
 
 mod errors;
@@ -59,6 +60,24 @@ fn impl_from_args(input: &syn::DeriveInput) -> TokenStream {
     output_tokens
 }
 
+/// The kind of optionality a parameter has.
+enum Optionality {
+    None,
+    Defaulted(TokenStream),
+    Optional,
+}
+
+impl Optionality {
+    /// Whether or not this is `Optionality::None`
+    fn is_required(&self) -> bool {
+        if let Optionality::None = self {
+            true
+        } else {
+            false
+        }
+    }
+}
+
 /// A field of a `#![derive(FromArgs)]` struct with attributes and some other
 /// notable metadata appended.
 struct StructField<'a> {
@@ -80,8 +99,8 @@ struct StructField<'a> {
     // keyed and subcommand fields.
     ty_without_wrapper: &'a syn::Type,
     // Whether the field represents an optional value, such as an `Option` subcommand field
-    // or an `Option` or `Vec` keyed argument
-    is_optional: bool,
+    // or an `Option` or `Vec` keyed argument, or if it has a `default`.
+    optionality: Optionality,
     // The `--`-prefixed name of the option, if one exists.
     long_name: Option<String>,
 }
@@ -107,24 +126,51 @@ impl<'a> StructField<'a> {
         };
 
         // Parse out whether a field is optional (`Option` or `Vec`).
-        let is_optional;
+        let optionality;
         let ty_without_wrapper;
         match kind {
             FieldKind::Switch => {
                 if !ty_expect_switch(errors, &field.ty) {
                     return None
                 }
-                is_optional = true;
+                optionality = Optionality::Optional;
                 ty_without_wrapper = &field.ty;
             },
             FieldKind::Option => {
-                let inner = ty_inner(&["Option", "Vec"], &field.ty);
-                is_optional = inner.is_some();
-                ty_without_wrapper = inner.unwrap_or(&field.ty);
+                if let Some(default) = &attrs.default {
+                    let tokens = match TokenStream::from_str(&default.value()) {
+                        Ok(tokens) => tokens,
+                        Err(_) => {
+                            errors.err(&default, "Invalid tokens: unable to lex `default` value");
+                            return None
+                        }
+                    };
+                    // Set the span of the generated tokens to the string literal
+                    let tokens: TokenStream = tokens.into_iter()
+                        .map(|mut tree| {
+                            tree.set_span(default.span().clone());
+                            tree
+                        })
+                        .collect();
+                    optionality = Optionality::Defaulted(tokens);
+                    ty_without_wrapper = &field.ty;
+                } else {
+                    let inner = ty_inner(&["Option", "Vec"], &field.ty);
+                    optionality = if inner.is_some() {
+                        Optionality::Optional
+                    } else {
+                        Optionality::None
+                    };
+                    ty_without_wrapper = inner.unwrap_or(&field.ty);
+                }
             },
             FieldKind::SubCommand => {
                 let inner = ty_inner(&["Option"], &field.ty);
-                is_optional = inner.is_some();
+                optionality = if inner.is_some() {
+                    Optionality::Optional
+                } else {
+                    Optionality::None
+                };
                 ty_without_wrapper = inner.unwrap_or(&field.ty);
             }
         }
@@ -149,7 +195,7 @@ impl<'a> StructField<'a> {
             field,
             attrs,
             kind,
-            is_optional,
+            optionality,
             ty_without_wrapper,
             name,
             long_name,
@@ -350,10 +396,11 @@ fn declare_local_storage_for_fields<'a>(fields: &'a [StructField<'a>]) -> impl I
         let field_type = &field.ty_without_wrapper;
 
         // Wrap field types in `Option` if they aren't already `Option` or `Vec`-wrapped.
-        let field_slot_type = if field.is_optional {
-            (&field.field.ty).into_token_stream()
-        } else {
-            quote! { std::option::Option<#field_type> }
+        let field_slot_type = match field.optionality {
+            Optionality::Optional => (&field.field.ty).into_token_stream(),
+            Optionality::None | Optionality::Defaulted(_) => {
+                quote! { std::option::Option<#field_type> }
+            }
         };
 
         match field.kind {
@@ -389,19 +436,25 @@ fn declare_local_storage_for_fields<'a>(fields: &'a [StructField<'a>]) -> impl I
 fn unwrap_fields<'a>(fields: &'a [StructField<'a>]) -> impl Iterator<Item = TokenStream> + 'a {
     fields.iter().map(|field| {
         let field_name = field.name;
-        if field.is_optional {
-            match field.kind {
-                FieldKind::Option => quote! { #field_name: #field_name.slot },
-                FieldKind::Switch | FieldKind::SubCommand => {
-                    field_name.into_token_stream()
-                },
+        match field.kind {
+            FieldKind::Option => {
+                match &field.optionality {
+                    Optionality::None => quote! { #field_name: #field_name.slot.unwrap() },
+                    Optionality::Optional => quote! { #field_name: #field_name.slot },
+                    Optionality::Defaulted(tokens) => {
+                        quote! {
+                            #field_name: #field_name.slot.unwrap_or_else(|| #tokens)
+                        }
+                    }
+                }
             }
-        } else {
-            match field.kind {
-                FieldKind::Option => quote! { #field_name: #field_name.slot.unwrap() },
-                FieldKind::Switch | FieldKind::SubCommand => {
-                    quote! { #field_name: #field_name.unwrap() }
-                },
+            FieldKind::Switch => field_name.into_token_stream(),
+            FieldKind::SubCommand => {
+                match field.optionality {
+                    Optionality::None => quote! { #field_name: #field_name.unwrap() },
+                    Optionality::Optional => field_name.into_token_stream(),
+                    Optionality::Defaulted(_) => unreachable!(),
+                }
             }
         }
     })
@@ -432,7 +485,7 @@ fn append_missing_requirements<'a>(
     fields: &'a [StructField<'a>],
 ) -> impl Iterator<Item = TokenStream> + 'a {
     let mri = mri.clone();
-    fields.iter().filter(|f| !f.is_optional).map(move |field| {
+    fields.iter().filter(|f| f.optionality.is_required()).map(move |field| {
         let field_name = field.name;
         match field.kind {
             FieldKind::Switch => unreachable!("switches are always optional"),

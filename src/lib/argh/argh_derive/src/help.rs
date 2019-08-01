@@ -39,11 +39,11 @@ pub(crate) fn help(
     }
     if let Some(subcommand) = subcommand {
         format_lit.push(' ');
-        if subcommand.is_optional {
+        if !subcommand.optionality.is_required() {
             format_lit.push('[');
         }
         format_lit.push_str("<command>");
-        if subcommand.is_optional {
+        if !subcommand.optionality.is_required() {
             format_lit.push(']');
         }
         format_lit.push_str(" [<args>]");
@@ -131,7 +131,7 @@ fn lits_section(out: &mut String, heading: &str, lits: &[syn::LitStr]) {
 /// This function must only be called on options (things with `long_name.is_some()`)
 fn option_usage(out: &mut String, field: &StructField<'_>) {
     // bookend with `[` and `]` if optional
-    if field.is_optional {
+    if !field.optionality.is_required() {
         out.push('[');
     }
 
@@ -153,7 +153,7 @@ fn option_usage(out: &mut String, field: &StructField<'_>) {
         },
     }
 
-    if field.is_optional {
+    if !field.optionality.is_required() {
         out.push(']');
     }
 }

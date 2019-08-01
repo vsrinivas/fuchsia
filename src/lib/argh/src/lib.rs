@@ -60,7 +60,8 @@
 //!
 //! Options, like `height` and `pilot_nickname`, can be either required,
 //! optional, or repeating, depending on whether they are contained in an
-//! `Option` or a `Vec`.
+//! `Option` or a `Vec`. Default values can be provided using the
+//! `#[argh(default = "<your_code_here>")]` attribute.
 //!
 //! Custom option types can be deserialized so long as they implement the
 //! `FromArgValue` trait (automatically implemented for all `FromStr` types).
