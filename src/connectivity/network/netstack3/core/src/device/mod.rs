@@ -171,6 +171,8 @@ impl DeviceLayerState {
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
     }
+
+    // TODO(rheacock, NET-2140): Add ability to remove inactive devices
 }
 
 /// The identifier for timer events in the device layer.

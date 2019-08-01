@@ -69,17 +69,12 @@ impl<C: IdMapCollectionKey, I> Default for Devices<C, I> {
 /// Errors that may be returned by switching a device state.
 ///
 /// See [`Devices::activate_device`] and [`Devices::deactivate_device`].
-// TODO: remove when this starts to be used in eventloop.
-#[cfg(test)]
 #[derive(Debug, Eq, PartialEq)]
 pub enum ToggleError {
     /// No change to device's active or inactive state.
     NoChange,
     /// Informed device identifier not found.
     NotFound,
-    /// Issued when attempting to bring a device into the active state, but
-    /// the informed `core_id` is already in use by another active device.
-    AlreadyExists,
 }
 
 impl<C, I> Devices<C, I>
@@ -128,31 +123,35 @@ where
         id
     }
 
-    /// Activates a device with `id`, associating a `core_id` with it.
+    /// Activates a device with `id`, using the closure to associate a `core_id`
+    /// with it.
     ///
     /// Activates a device with `id` if all the conditions are true:
     /// - `id` exists.
-    /// - `core_id` is not already being tracked internally.
     /// - `id` is not already attached to a `core_id`.
     ///
     /// On success, returns a ref the updated [`DeviceInfo`] containing the
     /// provided `core_id`.
-    // TODO: remove when this starts to be used in eventloop.
-    #[cfg(test)]
-    pub fn activate_device(
+    ///
+    /// # Panics
+    ///
+    /// Panics if the returned core ID `C` exists and is tracked by this
+    /// `Devices` collection.
+    pub fn activate_device<F: FnOnce(&DeviceInfo<C, I>) -> C>(
         &mut self,
         id: BindingId,
-        core_id: C,
+        generate_core_id: F,
     ) -> Result<&DeviceInfo<C, I>, ToggleError> {
         if self.id_map.contains_key(&id) {
             return Err(ToggleError::NoChange);
-        } else if self.active_devices.get(&core_id).is_some() {
-            return Err(ToggleError::AlreadyExists);
         }
 
         match self.inactive_devices.remove(&id) {
             None => Err(ToggleError::NotFound),
             Some(mut info) => {
+                let core_id = generate_core_id(&info);
+                assert!(self.active_devices.get(&core_id).is_none());
+
                 assert!(info.core_id.is_none());
                 info.core_id = Some(core_id.clone());
 
@@ -173,8 +172,6 @@ where
     ///
     /// On success, returnes a ref to the updated [`DeviceInfo`] and the
     /// previously associated `core_id`.
-    // TODO: remove when this starts to be used in eventloop.
-    #[cfg(test)]
     pub fn deactivate_device(
         &mut self,
         id: BindingId,
@@ -266,6 +263,10 @@ where
 
     pub fn id(&self) -> BindingId {
         self.id
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.core_id.is_some()
     }
 }
 
@@ -392,16 +393,28 @@ mod tests {
         let core_b = MockDeviceId(2);
         let a = d.add_device(10);
         let b = d.add_active_device(core_b, 20).unwrap();
-        assert_eq!(d.activate_device(1000, core_a).unwrap_err(), ToggleError::NotFound);
-        assert_eq!(d.activate_device(b, core_b).unwrap_err(), ToggleError::NoChange);
-        assert_eq!(d.activate_device(a, core_b).unwrap_err(), ToggleError::AlreadyExists);
+        assert_eq!(d.activate_device(1000, |_| core_a).unwrap_err(), ToggleError::NotFound);
+        assert_eq!(d.activate_device(b, |_| core_b).unwrap_err(), ToggleError::NoChange);
 
-        let info = d.activate_device(a, core_a).expect("can activate device");
+        let info = d.activate_device(a, |_| core_a).expect("can activate device");
         assert_eq!(info.info, 10);
         assert_eq!(info.core_id.unwrap(), core_a);
 
         // both a and b should be active now:
         assert!(d.inactive_devices.is_empty());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_activate_duplicate_core_id() {
+        let mut devices = TestDevices::default();
+        let core_id = MockDeviceId(1);
+        // Add an active device with core_id
+        devices.add_active_device(core_id, 20).unwrap();
+
+        // Trying to activate another device with the same core_id should panic
+        let second_device = devices.add_device(10);
+        let _result = devices.activate_device(second_device, |_| core_id);
     }
 
     #[test]

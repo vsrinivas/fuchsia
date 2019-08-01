@@ -102,16 +102,18 @@ impl TestStack {
         let (snd, rcv) = mpsc::unbounded();
         self.set_event_listener(snd);
 
-        let mut rcv = rcv.filter_map(|e| future::ready(match e {
-            TestEvent::DeviceStatusChanged { id, status } => {
-                if if_id == id && status.contains(EthernetStatus::ONLINE) {
-                    Some(())
-                } else {
-                    None
+        let mut rcv = rcv.filter_map(|e| {
+            future::ready(match e {
+                TestEvent::DeviceStatusChanged { id, status } => {
+                    if if_id == id && status.contains(EthernetStatus::ONLINE) {
+                        Some(())
+                    } else {
+                        None
+                    }
                 }
-            }
-            _ => None,
-        }));
+                _ => None,
+            })
+        });
         pin_mut!(rcv);
         let () = await!(self.event_loop.run_until(rcv.next()))
             .expect("Wait for interface signal")
@@ -265,12 +267,12 @@ impl TestSetup {
             })
             .unzip();
         // let all stacks run concurrently:
-        let stacks_fut = futures::stream::iter(stacks).for_each_concurrent(
-            None,
-            |(mut rcv, stack)| async move {
-                await!(stack.event_loop.run_until(rcv.next())).expect("Stack loop run error");
-            },
-        );
+        let stacks_fut =
+            futures::stream::iter(stacks).for_each_concurrent(None, |(mut rcv, stack)| {
+                async move {
+                    await!(stack.event_loop.run_until(rcv.next())).expect("Stack loop run error");
+                }
+            });
         pin_mut!(stacks_fut);
 
         // run both futures, but the receiver must end first:
@@ -324,14 +326,16 @@ impl TestSetup {
         ep_names: impl Iterator<Item = String>,
     ) -> Result<(), Error> {
         let net_ctx = self.get_network_context()?;
-        let (status, handle) = await!(net_ctx.setup(
-            &mut vec![&mut net::NetworkSetup {
-                name: "test_net".to_owned(),
-                config: net::NetworkConfig::new_empty(),
-                endpoints: ep_names.map(|name| new_endpoint_setup(name)).collect(),
-            }]
-            .into_iter()
-        ))?;
+        let (status, handle) = net_ctx
+            .setup(
+                &mut vec![&mut net::NetworkSetup {
+                    name: "test_net".to_owned(),
+                    config: net::NetworkConfig::new_empty(),
+                    endpoints: ep_names.map(|name| new_endpoint_setup(name)).collect(),
+                }]
+                .into_iter(),
+            )
+            .await?;
 
         self.nets = Some(handle.ok_or_else(|| format_err!("Create network failed: {}", status))?);
         Ok(())
@@ -478,8 +482,8 @@ async fn configure_stack(
         subnet: addr.into_addr_subnet().1.into_fidl(),
         destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(if_id),
     }))
-    .squash_result()
-    .context("Add forwarding entry")?;
+        .squash_result()
+        .context("Add forwarding entry")?;
 
     Ok(if_id)
 }
@@ -493,19 +497,20 @@ async fn test_ping() {
     const ALICE_IP: [u8; 4] = [192, 168, 0, 1];
     const BOB_IP: [u8; 4] = [192, 168, 0, 2];
     // simple test to ping between two stacks:
-    let mut t = await!(TestSetupBuilder::new()
+    let mut t = TestSetupBuilder::new()
         .add_named_endpoint("bob")
         .add_named_endpoint("alice")
         .add_stack(
             StackSetupBuilder::new()
-                .add_named_endpoint("alice", Some(new_ipv4_addr_subnet(ALICE_IP, 24)))
+                .add_named_endpoint("alice", Some(new_ipv4_addr_subnet(ALICE_IP, 24))),
         )
         .add_stack(
             StackSetupBuilder::new()
-                .add_named_endpoint("bob", Some(new_ipv4_addr_subnet(BOB_IP, 24)))
+                .add_named_endpoint("bob", Some(new_ipv4_addr_subnet(BOB_IP, 24))),
         )
-        .build())
-    .expect("Test Setup succeeds");
+        .build()
+        .await
+        .expect("Test Setup succeeds");
 
     // wait for interfaces on both stacks to signal online correctly:
     await!(t.get(0).wait_for_interface_online(1));
@@ -529,10 +534,12 @@ async fn test_ping() {
 
     t.get(0).set_event_listener(sender);
 
-    let mut recv = recv.filter_map(|f| future::ready(match f {
-        TestEvent::IcmpEchoReply { conn, seq_num, data } => Some((conn, seq_num, data)),
-        _ => None,
-    }));
+    let mut recv = recv.filter_map(|f| {
+        future::ready(match f {
+            TestEvent::IcmpEchoReply { conn, seq_num, data } => Some((conn, seq_num, data)),
+            _ => None,
+        })
+    });
     pin_mut!(recv);
 
     // alice will ping bob 4 times:
@@ -587,13 +594,14 @@ async fn test_add_remove_interface() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_list_interfaces() {
-    let mut t = await!(TestSetupBuilder::new()
+    let mut t = TestSetupBuilder::new()
         .add_endpoint()
         .add_endpoint()
         .add_endpoint()
         .add_empty_stack()
-        .build())
-    .unwrap();
+        .build()
+        .await
+        .unwrap();
 
     let stack = t.get(0).connect_stack().unwrap();
     // check that we can list when no interfaces exist:
@@ -632,11 +640,12 @@ async fn test_list_interfaces() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_interface_info() {
-    let mut t = await!(TestSetupBuilder::new()
+    let mut t = TestSetupBuilder::new()
         .add_endpoint()
         .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
-        .build())
-    .unwrap();
+        .build()
+        .await
+        .unwrap();
     let ep_name = test_ep_name(1);
     let ep = await!(t.get_endpoint(&ep_name)).unwrap();
     // get the device info from the ethernet driver:
@@ -646,7 +655,9 @@ async fn test_get_interface_info() {
     let if_id = test_stack.get_endpoint_id(1);
 
     // get the interface info:
-    let if_info = await!(test_stack.run_future(stack.get_interface_info(if_id)))
+    let if_info = test_stack
+        .run_future(stack.get_interface_info(if_id))
+        .await
         .unwrap()
         .0
         .expect("Get interface info");
@@ -657,7 +668,9 @@ async fn test_get_interface_info() {
     //  it's implemented.
 
     // check that we get the correct error for a non-existing interface id:
-    let err = await!(test_stack.run_future(stack.get_interface_info(12345)))
+    let err = test_stack
+        .run_future(stack.get_interface_info(12345))
+        .await
         .unwrap()
         .1
         .expect("Get interface info fails");
@@ -665,14 +678,74 @@ async fn test_get_interface_info() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_disable_enable_interface() {
+    let mut t = TestSetupBuilder::new()
+        .add_endpoint()
+        .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
+        .build()
+        .await
+        .unwrap();
+    let ep_name = test_ep_name(1);
+    let ep = await!(t.get_endpoint(&ep_name)).unwrap();
+    let ep_info = await!(ep.into_proxy().unwrap().get_info()).unwrap();
+    let test_stack = t.get(0);
+    let stack = test_stack.connect_stack().unwrap();
+    let if_id = test_stack.get_endpoint_id(1);
+
+    // Get the interface info to confirm that it is enabled.
+    let if_info = await!(test_stack.run_future(stack.get_interface_info(if_id)))
+        .unwrap()
+        .0
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
+
+    // Disable the interface and test again.
+    let () = await!(test_stack.run_future(stack.disable_interface(if_id)))
+        .squash_result()
+        .expect("Disable interface succeeds");
+
+    let if_info = await!(test_stack.run_future(stack.get_interface_info(if_id)))
+        .unwrap()
+        .0
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
+    // TODO(rheacock) potentially test core state to ensure that the interface
+    // is removed here and replaced after re-enabling.
+
+    // Enable the interface and test again.
+    let () = await!(test_stack.run_future(stack.enable_interface(if_id)))
+        .squash_result()
+        .expect("Enable interface succeeds");
+
+    let if_info = await!(test_stack.run_future(stack.get_interface_info(if_id)))
+        .unwrap()
+        .0
+        .expect("Get interface info");
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
+
+    // Check that we get the correct error for a non-existing interface id.
+    assert_eq!(
+        await!(test_stack.run_future(stack.enable_interface(12345))).unwrap().unwrap().type_,
+        fidl_net_stack::ErrorType::NotFound
+    );
+
+    // Check that we get the correct error for a non-existing interface id.
+    assert_eq!(
+        await!(test_stack.run_future(stack.disable_interface(12345))).unwrap().unwrap().type_,
+        fidl_net_stack::ErrorType::NotFound
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_add_device_routes() {
     // create a stack and add a single endpoint to it so we have the interface
     // id:
-    let mut t = await!(TestSetupBuilder::new()
+    let mut t = TestSetupBuilder::new()
         .add_endpoint()
         .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
-        .build())
-    .unwrap();
+        .build()
+        .await
+        .unwrap();
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
     let if_id = test_stack.get_endpoint_id(1);
@@ -751,11 +824,13 @@ async fn test_add_device_routes() {
 async fn test_list_del_device_routes() {
     // create a stack and add a single endpoint to it so we have the interface
     // id:
-    let mut t = await!(TestSetupBuilder::new()
+    let mut t = TestSetupBuilder::new()
         .add_endpoint()
         .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
-        .build())
-    .unwrap();
+        .build()
+        .await
+        .unwrap();
+
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
     let if_id = test_stack.get_endpoint_id(1);
