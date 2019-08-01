@@ -13,7 +13,6 @@ rustc_test("netstack_fidl_integration_test") {
 
   deps = [
     "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",

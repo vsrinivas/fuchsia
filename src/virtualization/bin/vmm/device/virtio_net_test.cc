@@ -4,9 +4,10 @@
 
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <zircon/device/ethernet.h>
+
 #include <trace-provider/provider.h>
 #include <virtio/net.h>
-#include <zircon/device/ethernet.h>
 
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
@@ -32,7 +33,7 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::Netstack 
 
   void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
 
-  void GetAggregateStats(::fidl::InterfaceRequest<::fuchsia::io::Node> object) override {}
+  void GetAggregateStats(::fidl::InterfaceRequest<::fuchsia::io::Directory> object) override {}
 
   void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
 

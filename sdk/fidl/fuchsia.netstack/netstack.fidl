@@ -37,7 +37,6 @@ struct NetTrafficStats {
 struct NetInterfaceStats {
     /// Placeholder for all statistics regarding the network interface,
     /// including, but not limited to traffic itself.
-
     int64 up_since; // Unix epoch.
 
     NetTrafficStats rx;
@@ -148,7 +147,7 @@ protocol Netstack {
     GetStats(uint32 nicid) -> (NetInterfaceStats stats);
 
     /// Get stats for all NICs on the stack.
-    GetAggregateStats(request<fuchsia.io.Node> object);
+    GetAggregateStats(request<fuchsia.io.Directory> object);
 
     /// Sets the status (up or down) for the interface with the given nicid.
     SetInterfaceStatus(uint32 nicid, bool enabled);

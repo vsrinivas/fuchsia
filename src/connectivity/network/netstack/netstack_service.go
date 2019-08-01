@@ -370,7 +370,7 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, uint
 	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.nicid), nil
 }
 
-func (ni *netstackImpl) GetAggregateStats(request io.NodeInterfaceRequest) error {
+func (ni *netstackImpl) GetAggregateStats(request io.DirectoryInterfaceRequest) error {
 	b := fidl.Binding{
 		Stub:    &io.DirectoryStub{Impl: ni.getIO()},
 		Channel: request.Channel,

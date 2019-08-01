@@ -63,15 +63,10 @@ func netAddressToString(addr net.IpAddress) string {
 	return fidlconv.ToTCPIPAddress(addr).String()
 }
 
-func visit(node *io.NodeInterface, name string, indent int) error {
-	info, err := node.Describe()
-	if err != nil {
-		return errors.Wrapf(err, "fuchsia.io.Node.Describe(%s)", name)
-	}
-	switch info.Which() {
-	case io.NodeInfoFile:
-		file := io.FileInterface{Channel: node.Channel}
-		status, bytes, err := file.Read(math.MaxUint64)
+func visit(node io.Node, name string, indent int) error {
+	switch node := node.(type) {
+	case *io.FileInterface:
+		status, bytes, err := node.Read(math.MaxUint64)
 		if err != nil {
 			return errors.Wrapf(err, "fuchsia.io.File.Read(%s)", name)
 		}
@@ -82,9 +77,8 @@ func visit(node *io.NodeInterface, name string, indent int) error {
 			fmt.Print(" ")
 		}
 		fmt.Printf("%s: %d\n", name, binary.LittleEndian.Uint64(bytes))
-	case io.NodeInfoDirectory:
-		dir := io.DirectoryInterface{Channel: node.Channel}
-		status, dirents, err := dir.ReadDirents(math.MaxInt32)
+	case *io.DirectoryInterface:
+		status, dirents, err := node.ReadDirents(math.MaxInt32)
 		if err != nil {
 			return errors.Wrapf(err, "fuchsia.io.Directory.ReadDirents(%s)", name)
 		}
@@ -100,19 +94,32 @@ func visit(node *io.NodeInterface, name string, indent int) error {
 		}
 		fmt.Printf("%s:\n", name)
 		for _, name := range names {
-			req, node, err := io.NewNodeInterfaceRequest()
+			req, nodeInterface, err := io.NewNodeInterfaceRequest()
 			if err != nil {
 				return errors.Wrap(err, "fuchsia.io.NewNodeInterfaceRequest")
 			}
-			if err := dir.Open(0, 0, name, req); err != nil {
+			if err := node.Open(0, 0, name, req); err != nil {
 				return errors.Wrapf(err, "fuchsia.io.Directory.Open(%s)", name)
 			}
-			if err := visit(node, name, indent+2); err != nil {
+			if err := visit(nodeInterface, name, indent+2); err != nil {
 				return err
 			}
 		}
+	case *io.NodeInterface:
+		info, err := node.Describe()
+		if err != nil {
+			return errors.Wrapf(err, "fuchsia.io.Node.Describe(%s)", name)
+		}
+		switch info.Which() {
+		case io.NodeInfoFile:
+			return visit(&io.FileInterface{Channel: node.Channel}, name, indent)
+		case io.NodeInfoDirectory:
+			return visit(&io.DirectoryInterface{Channel: node.Channel}, name, indent)
+		default:
+			return errors.Errorf("unexpected node info: %+v", info)
+		}
 	default:
-		return errors.Errorf("unexpected node info: %+v", info)
+		return errors.Errorf("unexpected node type: %T", node)
 	}
 	return nil
 }
@@ -184,9 +191,9 @@ func main() {
 
 				return fmt.Errorf("no interface matched %s in %s", *chosenInterface, knownInterfaces)
 			} else {
-				req, stats, err := io.NewNodeInterfaceRequest()
+				req, stats, err := io.NewDirectoryInterfaceRequest()
 				if err != nil {
-					return errors.Wrap(err, "fuchsia.io.NewNodeInterfaceRequest")
+					return errors.Wrap(err, "fuchsia.io.NewDirectoryInterfaceRequest")
 				}
 				if err := netstack.GetAggregateStats(req); err != nil {
 					return errors.Wrap(err, "fuchsia.netstack.GetAggregateStats")

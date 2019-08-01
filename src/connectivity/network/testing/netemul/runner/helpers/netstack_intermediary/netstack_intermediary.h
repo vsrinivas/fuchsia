@@ -13,10 +13,11 @@
 #include <lib/fit/promise.h>
 #include <lib/fit/scope.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
 
 #include <mutex>
 #include <vector>
+
+#include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
 
 #include "src/lib/fxl/macros.h"
 
@@ -53,7 +54,7 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
 
   void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
 
-  void GetAggregateStats(::fidl::InterfaceRequest<::fuchsia::io::Node> object) override {}
+  void GetAggregateStats(::fidl::InterfaceRequest<::fuchsia::io::Directory> object) override {}
 
   void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
                               RemoveInterfaceAddressCallback callback) override {}
