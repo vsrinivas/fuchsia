@@ -321,8 +321,6 @@ func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransa
 
 // Add address to the given network interface.
 func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address net.IpAddress, prefixLen uint8) (netstack.NetErr, error) {
-	syslog.Infof("net address %+v", address)
-
 	nic := tcpip.NICID(nicid)
 	protocol, addr, neterr := ni.ns.validateInterfaceAddress(address, prefixLen)
 	if neterr.Status != netstack.StatusOk {

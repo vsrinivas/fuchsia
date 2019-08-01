@@ -1015,10 +1015,8 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   int recvfd;
   ASSERT_GE(recvfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
 
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
+  struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
   ASSERT_EQ(bind(recvfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
@@ -1027,12 +1025,7 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(recvfd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
-#if DEBUG
-  char addrstr[INET_ADDRSTRLEN];
-  printf("addr.sin_addr: %s\n", inet_ntop(AF_INET, &addr.sin_addr, addrstr, sizeof(addrstr)));
-  printf("addr.sin_port: %d\n", ntohs(addr.sin_port));
-  printf("addrlen: %d\n", addrlen);
-#endif
+  ASSERT_EQ(addrlen, sizeof(addr));
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -1058,11 +1051,14 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
       recvfrom(sendfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
       (ssize_t)strlen(msg))
       << strerror(errno);
-#if DEBUG
-  printf("peer.sin_addr[2]: %s\n", inet_ntop(AF_INET, &peer.sin_addr, addrstr, sizeof(addrstr)));
-  printf("peer.sin_port[2]: %d\n", ntohs(peer.sin_port));
-  printf("peerlen[2]: %d\n", peerlen);
-#endif
+  ASSERT_EQ(peerlen, sizeof(peer));
+
+  char addrbuf[INET_ADDRSTRLEN], peerbuf[INET_ADDRSTRLEN];
+  const char* addrstr = inet_ntop(addr.sin_family, &addr.sin_addr, addrbuf, sizeof(addrbuf));
+  ASSERT_NE(addrstr, nullptr);
+  const char* peerstr = inet_ntop(peer.sin_family, &peer.sin_addr, peerbuf, sizeof(peerbuf));
+  ASSERT_NE(peerstr, nullptr);
+  ASSERT_STREQ(peerstr, addrstr);
 
   ASSERT_EQ(0, close(sendfd));
 
@@ -1081,11 +1077,9 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   int recvfd;
   ASSERT_GE(recvfd = socket(AF_INET6, SOCK_DGRAM, 0), 0) << strerror(errno);
 
-  struct sockaddr_in6 addr;
-  memset(&addr, 0, sizeof(addr));
+  struct sockaddr_in6 addr = {};
   addr.sin6_family = AF_INET6;
-  addr.sin6_port = htons(0);
-  addr.sin6_addr = in6addr_loopback;
+  addr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
 
   ASSERT_EQ(bind(recvfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -1093,12 +1087,7 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(recvfd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
-#if DEBUG
-  char addrstr[INET_ADDRSTRLEN];
-  printf("addr.sin6_addr: %s\n", inet_ntop(AF_INET6, &addr.sin6_addr, addrstr, sizeof(addrstr)));
-  printf("addr.sin6_port: %d\n", ntohs(addr.sin6_port));
-  printf("addrlen: %d\n", addrlen);
-#endif
+  ASSERT_EQ(addrlen, sizeof(addr));
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -1124,11 +1113,14 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
       recvfrom(sendfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
       (ssize_t)strlen(msg))
       << strerror(errno);
-#if DEBUG
-  printf("peer.sin6_addr[2]: %s\n", inet_ntop(AF_INET6, &peer.sin6_addr, addrstr, sizeof(addrstr)));
-  printf("peer.sin6_port[2]: %d\n", ntohs(peer.sin6_port));
-  printf("peerlen[2]: %d\n", peerlen);
-#endif
+  ASSERT_EQ(peerlen, sizeof(peer));
+
+  char addrbuf[INET6_ADDRSTRLEN], peerbuf[INET6_ADDRSTRLEN];
+  const char* addrstr = inet_ntop(addr.sin6_family, &addr.sin6_addr, addrbuf, sizeof(addrbuf));
+  ASSERT_NE(addrstr, nullptr);
+  const char* peerstr = inet_ntop(peer.sin6_family, &peer.sin6_addr, peerbuf, sizeof(peerbuf));
+  ASSERT_NE(peerstr, nullptr);
+  ASSERT_STREQ(peerstr, addrstr);
 
   ASSERT_EQ(0, close(sendfd));
 
@@ -1215,9 +1207,8 @@ TEST(NetStreamTest, MultipleListeningSockets) {
   int listenfd[kListeningSockets];
   int connfd[kListeningSockets];
 
-  struct sockaddr_in addr;
+  struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   socklen_t addrlen = sizeof(addr);
 
@@ -1233,11 +1224,7 @@ TEST(NetStreamTest, MultipleListeningSockets) {
   for (int i = 0; i < kListeningSockets; i++) {
     ASSERT_EQ(getsockname(listenfd[i], reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
         << strerror(errno);
-#if DEBUG
-    char addrstr[INET_ADDRSTRLEN];
-    printf("[%d] %s:%d\n", i, inet_ntop(AF_INET, &addr.sin_addr, addrstr, sizeof(addrstr)),
-           ntohs(addr.sin_port));
-#endif
+    ASSERT_EQ(addrlen, sizeof(addr));
 
     ASSERT_GE(connfd[i] = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
 

@@ -7,8 +7,6 @@
 
 #include "gtest/gtest.h"
 
-#define DEBUG 0
-
 const int32_t kTimeout = 10000;  // 10 seconds
 
 void NotifySuccess(int ntfyfd);

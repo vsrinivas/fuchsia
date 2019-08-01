@@ -4,6 +4,8 @@
 
 #include "util.h"
 
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #include <poll.h>
 
 #include "gtest/gtest.h"
@@ -159,16 +161,22 @@ void DatagramReadWrite(int recvfd, int ntfyfd) {
                               reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
             0)
       << strerror(errno);
+  ASSERT_EQ(peerlen, sizeof(peer));
+
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
     return;
   }
-#if DEBUG
-  char addrstr[INET_ADDRSTRLEN];
-  printf("peer.sin_addr: %s\n", inet_ntop(AF_INET, &peer.sin_addr, addrstr, sizeof(addrstr)));
-  printf("peer.sin_port: %d\n", ntohs(peer.sin_port));
-  printf("peerlen: %d\n", peerlen);
-#endif
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  char addrbuf[INET_ADDRSTRLEN], peerbuf[INET_ADDRSTRLEN];
+  const char* addrstr = inet_ntop(addr.sin_family, &addr.sin_addr, addrbuf, sizeof(addrbuf));
+  ASSERT_NE(addrstr, nullptr);
+  const char* peerstr = inet_ntop(peer.sin_family, &peer.sin_addr, peerbuf, sizeof(peerbuf));
+  ASSERT_NE(peerstr, nullptr);
+  ASSERT_STREQ(peerstr, addrstr);
 
   EXPECT_GE(
       nbytes = sendto(recvfd, buf, nbytes, 0, reinterpret_cast<struct sockaddr*>(&peer), peerlen),
@@ -199,16 +207,21 @@ void DatagramReadWriteV6(int recvfd, int ntfyfd) {
                               reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
             0)
       << strerror(errno);
+  ASSERT_EQ(peerlen, sizeof(peer));
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
     return;
   }
-#if DEBUG
-  char addrstr[INET_ADDRSTRLEN];
-  printf("peer.sin6_addr: %s\n", inet_ntop(AF_INET6, &peer.sin6_addr, addrstr, sizeof(addrstr)));
-  printf("peer.sin6_port: %d\n", ntohs(peer.sin6_port));
-  printf("peerlen: %d\n", peerlen);
-#endif
+
+  struct sockaddr_in6 addr = {};
+  addr.sin6_family = AF_INET6;
+  addr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
+  char addrbuf[INET6_ADDRSTRLEN], peerbuf[INET6_ADDRSTRLEN];
+  const char* addrstr = inet_ntop(addr.sin6_family, &addr.sin6_addr, addrbuf, sizeof(addrbuf));
+  ASSERT_NE(addrstr, nullptr);
+  const char* peerstr = inet_ntop(peer.sin6_family, &peer.sin6_addr, peerbuf, sizeof(peerbuf));
+  ASSERT_NE(peerstr, nullptr);
+  ASSERT_STREQ(peerstr, addrstr);
 
   EXPECT_GE(
       nbytes = sendto(recvfd, buf, nbytes, 0, reinterpret_cast<struct sockaddr*>(&peer), peerlen),
