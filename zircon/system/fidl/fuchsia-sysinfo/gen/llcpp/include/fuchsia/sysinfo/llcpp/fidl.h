@@ -33,7 +33,6 @@ enum class InterruptControllerType : uint32_t {
 struct InterruptControllerInfo;
 
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetRootJobResponseTable;
-extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetRootResourceResponseTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
@@ -54,19 +53,6 @@ class Device final {
     static constexpr uint32_t MaxOutOfLine = 0;
   };
   using GetRootJobRequest = ::fidl::AnyZeroArgMessage;
-
-  struct GetRootResourceResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-    ::zx::resource resource;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetRootResourceResponseTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-  using GetRootResourceRequest = ::fidl::AnyZeroArgMessage;
 
   struct GetHypervisorResourceResponse final {
     FIDL_ALIGNDECL
@@ -127,20 +113,6 @@ class Device final {
       using Super::value;
     };
     template <typename ResponseType>
-    class GetRootResource_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      GetRootResource_Impl(zx::unowned_channel _client_end);
-      ~GetRootResource_Impl() = default;
-      GetRootResource_Impl(GetRootResource_Impl&& other) = default;
-      GetRootResource_Impl& operator=(GetRootResource_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-    };
-    template <typename ResponseType>
     class GetHypervisorResource_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -185,7 +157,6 @@ class Device final {
 
    public:
     using GetRootJob = GetRootJob_Impl<GetRootJobResponse>;
-    using GetRootResource = GetRootResource_Impl<GetRootResourceResponse>;
     using GetHypervisorResource = GetHypervisorResource_Impl<GetHypervisorResourceResponse>;
     using GetBoardName = GetBoardName_Impl<GetBoardNameResponse>;
     using GetInterruptControllerInfo = GetInterruptControllerInfo_Impl<GetInterruptControllerInfoResponse>;
@@ -204,20 +175,6 @@ class Device final {
       ~GetRootJob_Impl() = default;
       GetRootJob_Impl(GetRootJob_Impl&& other) = default;
       GetRootJob_Impl& operator=(GetRootJob_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-    };
-    template <typename ResponseType>
-    class GetRootResource_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      GetRootResource_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~GetRootResource_Impl() = default;
-      GetRootResource_Impl(GetRootResource_Impl&& other) = default;
-      GetRootResource_Impl& operator=(GetRootResource_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -269,7 +226,6 @@ class Device final {
 
    public:
     using GetRootJob = GetRootJob_Impl<GetRootJobResponse>;
-    using GetRootResource = GetRootResource_Impl<GetRootResourceResponse>;
     using GetHypervisorResource = GetHypervisorResource_Impl<GetHypervisorResourceResponse>;
     using GetBoardName = GetBoardName_Impl<GetBoardNameResponse>;
     using GetInterruptControllerInfo = GetInterruptControllerInfo_Impl<GetInterruptControllerInfoResponse>;
@@ -297,18 +253,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetRootJobResponse> GetRootJob_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job);
-
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::GetRootResource GetRootResource();
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetRootResource GetRootResource(::fidl::BytePart _response_buffer);
-
-    zx_status_t GetRootResource_Deprecated(int32_t* out_status, ::zx::resource* out_resource);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetHypervisorResource GetHypervisorResource();
@@ -366,18 +310,6 @@ class Device final {
     static ::fidl::DecodeResult<GetRootJobResponse> GetRootJob_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetRootResource GetRootResource(zx::unowned_channel _client_end);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetRootResource GetRootResource(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    static zx_status_t GetRootResource_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
-
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetHypervisorResource GetHypervisorResource(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -421,8 +353,6 @@ class Device final {
 
     static ::fidl::DecodeResult<GetRootJobResponse> GetRootJob(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     static ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -452,20 +382,6 @@ class Device final {
     using GetRootJobCompleter = ::fidl::Completer<GetRootJobCompleterBase>;
 
     virtual void GetRootJob(GetRootJobCompleter::Sync _completer) = 0;
-
-    class GetRootResourceCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status, ::zx::resource resource);
-      void Reply(::fidl::BytePart _buffer, int32_t status, ::zx::resource resource);
-      void Reply(::fidl::DecodedMessage<GetRootResourceResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using GetRootResourceCompleter = ::fidl::Completer<GetRootResourceCompleterBase>;
-
-    virtual void GetRootResource(GetRootResourceCompleter::Sync _completer) = 0;
 
     class GetHypervisorResourceCompleterBase : public _Base {
      public:
@@ -559,15 +475,6 @@ static_assert(sizeof(::llcpp::fuchsia::sysinfo::Device::GetRootJobResponse)
     == ::llcpp::fuchsia::sysinfo::Device::GetRootJobResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::sysinfo::Device::GetRootJobResponse, status) == 16);
 static_assert(offsetof(::llcpp::fuchsia::sysinfo::Device::GetRootJobResponse, job) == 20);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::sysinfo::Device::GetRootResourceResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::sysinfo::Device::GetRootResourceResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::sysinfo::Device::GetRootResourceResponse)
-    == ::llcpp::fuchsia::sysinfo::Device::GetRootResourceResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::sysinfo::Device::GetRootResourceResponse, status) == 16);
-static_assert(offsetof(::llcpp::fuchsia::sysinfo::Device::GetRootResourceResponse, resource) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::sysinfo::Device::GetHypervisorResourceResponse> : public std::true_type {};

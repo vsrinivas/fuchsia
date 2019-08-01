@@ -52,17 +52,6 @@ static zx_status_t fidl_get_root_job(void* ctx, fidl_txn_t* txn) {
     return fuchsia_sysinfo_DeviceGetRootJob_reply(txn, status, h);
 }
 
-static zx_status_t fidl_get_root_resource(void* ctx, fidl_txn_t* txn) {
-    // Please do not use get_root_resource() in new code. See ZX-1467.
-    zx_handle_t h = get_root_resource();
-    if (h == ZX_HANDLE_INVALID) {
-        return fuchsia_sysinfo_DeviceGetRootResource_reply(txn, ZX_ERR_NOT_SUPPORTED, h);
-    }
-
-    zx_status_t status = zx_handle_duplicate(h, ZX_RIGHT_TRANSFER, &h);
-    return fuchsia_sysinfo_DeviceGetRootResource_reply(txn, status, h);
-}
-
 static zx_status_t fidl_get_hypervisor_resource(void* ctx, fidl_txn_t* txn) {
     zx_handle_t h;
     const char name[] = "hypervisor";
@@ -112,7 +101,6 @@ static zx_status_t fidl_get_interrupt_controller_info(void* ctx, fidl_txn_t* txn
 
 static fuchsia_sysinfo_Device_ops_t fidl_ops = {
     .GetRootJob = fidl_get_root_job,
-    .GetRootResource = fidl_get_root_resource,
     .GetHypervisorResource = fidl_get_hypervisor_resource,
     .GetBoardName = fidl_get_board_name,
     .GetInterruptControllerInfo = fidl_get_interrupt_controller_info,

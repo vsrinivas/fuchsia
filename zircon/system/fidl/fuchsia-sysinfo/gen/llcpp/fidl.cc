@@ -14,9 +14,6 @@ namespace {
 constexpr uint64_t kDevice_GetRootJob_Ordinal = 0x650877d700000000lu;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetRootJobResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetRootResource_Ordinal = 0x8eb06ac00000000lu;
-extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetRootResourceResponseTable;
-[[maybe_unused]]
 constexpr uint64_t kDevice_GetHypervisorResource_Ordinal = 0x3868a16b00000000lu;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
 [[maybe_unused]]
@@ -147,131 +144,6 @@ zx_status_t Device::Call::GetRootJob_Deprecated(zx::unowned_channel _client_end,
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetRootJobResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Device::ResultOf::GetRootResource_Impl<Device::GetRootResourceResponse>::GetRootResource_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootResourceRequest>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, GetRootResourceRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRootResourceRequest));
-  ::fidl::DecodedMessage<GetRootResourceRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Device::InPlace::GetRootResource(std::move(_client_end), Super::response_buffer()));
-}
-
-Device::ResultOf::GetRootResource Device::SyncClient::GetRootResource() {
-  return ResultOf::GetRootResource(zx::unowned_channel(this->channel_));
-}
-
-Device::ResultOf::GetRootResource Device::Call::GetRootResource(zx::unowned_channel _client_end) {
-  return ResultOf::GetRootResource(std::move(_client_end));
-}
-
-template <>
-Device::UnownedResultOf::GetRootResource_Impl<Device::GetRootResourceResponse>::GetRootResource_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRootResourceRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, GetRootResourceRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(GetRootResourceRequest));
-  ::fidl::DecodedMessage<GetRootResourceRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Device::InPlace::GetRootResource(std::move(_client_end), std::move(_response_buffer)));
-}
-
-Device::UnownedResultOf::GetRootResource Device::SyncClient::GetRootResource(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetRootResource(zx::unowned_channel(this->channel_), std::move(_response_buffer));
-}
-
-Device::UnownedResultOf::GetRootResource Device::Call::GetRootResource(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetRootResource(std::move(_client_end), std::move(_response_buffer));
-}
-
-zx_status_t Device::SyncClient::GetRootResource_Deprecated(int32_t* out_status, ::zx::resource* out_resource) {
-  return Device::Call::GetRootResource_Deprecated(zx::unowned_channel(this->channel_), out_status, out_resource);
-}
-
-zx_status_t Device::Call::GetRootResource_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootResourceRequest>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<GetRootResourceRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDevice_GetRootResource_Ordinal;
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRootResourceRequest));
-  ::fidl::DecodedMessage<GetRootResourceRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetRootResourceResponse>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<GetRootResourceRequest, GetRootResourceResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_resource = std::move(_response.resource);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Device::GetRootResourceResponse> Device::SyncClient::GetRootResource_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
-  return Device::Call::GetRootResource_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_resource);
-}
-
-::fidl::DecodeResult<Device::GetRootResourceResponse> Device::Call::GetRootResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRootResourceRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  auto& _request = *reinterpret_cast<GetRootResourceRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDevice_GetRootResource_Ordinal;
-  _request_buffer.set_actual(sizeof(GetRootResourceRequest));
-  ::fidl::DecodedMessage<GetRootResourceRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetRootResourceResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<GetRootResourceRequest, GetRootResourceResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetRootResourceResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_resource = std::move(_response.resource);
-  return _decode_result;
-}
-
-::fidl::DecodeResult<Device::GetRootResourceResponse> Device::InPlace::GetRootResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(GetRootResourceRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<GetRootResourceRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetRootResource_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Device::GetRootResourceResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<GetRootResourceRequest, GetRootResourceResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Device::GetRootResourceResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -606,17 +478,6 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetRootJobCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetRootResource_Ordinal:
-    {
-      auto result = ::fidl::DecodeAs<GetRootResourceRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->GetRootResource(
-        Interface::GetRootResourceCompleter::Sync(txn));
-      return true;
-    }
     case kDevice_GetHypervisorResource_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetHypervisorResourceRequest>(msg);
@@ -693,37 +554,6 @@ void Device::Interface::GetRootJobCompleterBase::Reply(::fidl::BytePart _buffer,
 void Device::Interface::GetRootJobCompleterBase::Reply(::fidl::DecodedMessage<GetRootJobResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kDevice_GetRootJob_Ordinal;
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Device::Interface::GetRootResourceCompleterBase::Reply(int32_t status, ::zx::resource resource) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootResourceResponse>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetRootResourceResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetRootResource_Ordinal;
-  _response.status = std::move(status);
-  _response.resource = std::move(resource);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRootResourceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetRootResourceResponse>(std::move(_response_bytes)));
-}
-
-void Device::Interface::GetRootResourceCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::zx::resource resource) {
-  if (_buffer.capacity() < GetRootResourceResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<GetRootResourceResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetRootResource_Ordinal;
-  _response.status = std::move(status);
-  _response.resource = std::move(resource);
-  _buffer.set_actual(sizeof(GetRootResourceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetRootResourceResponse>(std::move(_buffer)));
-}
-
-void Device::Interface::GetRootResourceCompleterBase::Reply(::fidl::DecodedMessage<GetRootResourceResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetRootResource_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

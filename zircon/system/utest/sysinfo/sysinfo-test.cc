@@ -25,30 +25,6 @@ constexpr char kSysinfoPath[] = "/dev/misc/sysinfo";
 
 }  // namespace
 
-TEST(SysinfoTest, GetRootResource) {
-  // Get the resource handle from the driver.
-  fbl::unique_fd fd(open(kSysinfoPath, O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "Can't open sysinfo");
-
-  zx::channel channel;
-  ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
-            "Failed to get channel");
-
-  zx::handle root_resource;
-  zx_status_t status;
-  ASSERT_OK(fuchsia_sysinfo_DeviceGetRootResource(channel.get(), &status,
-                                                  root_resource.reset_and_get_address()),
-            "Failed to get root resource");
-  ASSERT_OK(status, "Failed to get root resource");
-
-  // Make sure it's a resource with the expected rights.
-  zx_info_handle_basic_t info;
-  ASSERT_OK(root_resource.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr),
-            "Can't get handle info");
-  EXPECT_EQ(info.type, ZX_OBJ_TYPE_RESOURCE, "Unexpected type");
-  EXPECT_EQ(info.rights, ZX_RIGHT_TRANSFER, "Unexpected rights");
-}
-
 TEST(SysinfoTest, GetBoardName) {
   // Get the resource handle from the driver.
   fbl::unique_fd fd(open(kSysinfoPath, O_RDWR));

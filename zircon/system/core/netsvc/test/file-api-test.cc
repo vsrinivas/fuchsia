@@ -76,10 +76,6 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::Device::Interface {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::job());
   }
 
-  void GetRootResource(GetRootResourceCompleter::Sync completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::resource());
-  }
-
   void GetHypervisorResource(GetHypervisorResourceCompleter::Sync completer) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::resource());
   }

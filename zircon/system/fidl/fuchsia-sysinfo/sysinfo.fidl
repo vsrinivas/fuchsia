@@ -24,9 +24,6 @@ protocol Device {
     // Return the root job handle.
     GetRootJob() -> (zx.status status, handle<job>? job);
 
-    // Return the root resource (with only ZX_RIGHT_ENUMERATE and ZX_RIGHT_TRANSFER).
-    GetRootResource() -> (zx.status status, handle<resource>? resource);
-
     // Return the hypervisor resource (with only ZX_RIGHT_TRANSFER).
     GetHypervisorResource() -> (zx.status status, handle<resource>? resource);
 
