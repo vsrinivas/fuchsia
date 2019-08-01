@@ -17,6 +17,7 @@ import (
 	"netstack/fidlconv"
 	"netstack/link"
 	"netstack/routes"
+	"netstack/util"
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/io"
@@ -71,40 +72,33 @@ func (ns *Netstack) getNetInterfaces2Locked() []netstack.NetInterface2 {
 }
 
 func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
-	addr, subnet, err := ifs.ns.mu.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)
-	mask := subnet.Mask()
+	addrWithPrefix, err := ifs.ns.mu.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)
 	// Upstream reuses ErrNoLinkAddress to indicate no address can be found for the requested NIC and
 	// network protocol.
 	if err == tcpip.ErrNoLinkAddress {
-		addr = zeroIpAddr
+		prefixLen := ipv4.NewProtocol().DefaultPrefixLen()
+		addrWithPrefix = tcpip.AddressWithPrefix{zeroIpAddr, prefixLen}
 	} else if err == tcpip.ErrUnknownNICID {
 		panic(fmt.Sprintf("stack.GetMainNICAddress(%d, ...): %s", ifs.nicid, err))
 	} else if err != nil {
 		return netstack.NetInterface2{}, fmt.Errorf("stack.GetMainNICAddress(_): %s", err)
 	}
 
-	if len(mask) == 0 {
-		mask = zeroIpMask
-	}
-
-	broadaddr := []byte(addr)
+	mask := util.CIDRMask(addrWithPrefix.PrefixLen, len(addrWithPrefix.Address)*8)
+	broadaddr := []byte(addrWithPrefix.Address)
 	for i := range broadaddr {
 		broadaddr[i] |= ^mask[i]
 	}
 
-	addresses, subnets := ifs.ns.getAddressesLocked(ifs.nicid)
-	ipv6addrs := make([]net.Subnet, 0, len(subnets))
+	addresses := ifs.ns.getAddressesLocked(ifs.nicid)
+	ipv6addrs := make([]net.Subnet, 0, len(addresses))
 
-	// TODO(stijlist): remove N^2 loop by refactoring upstream to a
-	// map[tcpip.Address][]tcpip.Subnet
-	for _, subnet := range subnets {
-		for _, address := range addresses {
-			if address.Protocol == ipv6.ProtocolNumber && subnet.Contains(address.Address) {
-				ipv6addrs = append(ipv6addrs, net.Subnet{
-					Addr:      fidlconv.ToNetIpAddress(address.Address),
-					PrefixLen: uint8(subnet.Prefix()),
-				})
-			}
+	for _, address := range addresses {
+		if address.Protocol == ipv6.ProtocolNumber {
+			ipv6addrs = append(ipv6addrs, net.Subnet{
+				Addr:      fidlconv.ToNetIpAddress(address.AddressWithPrefix.Address),
+				PrefixLen: uint8(address.AddressWithPrefix.PrefixLen),
+			})
 		}
 	}
 
@@ -122,7 +116,7 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 		Features:  ifs.features,
 		Metric:    uint32(ifs.mu.metric),
 		Name:      ifs.ns.nameLocked(ifs.nicid),
-		Addr:      fidlconv.ToNetIpAddress(addr),
+		Addr:      fidlconv.ToNetIpAddress(addrWithPrefix.Address),
 		Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(mask)),
 		Broadaddr: fidlconv.ToNetIpAddress(tcpip.Address(broadaddr)),
 		Hwaddr:    []uint8(ifs.endpoint.LinkAddress()[:]),

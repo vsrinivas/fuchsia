@@ -6,6 +6,7 @@ package netstack
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"syscall/zx"
 	"testing"
@@ -315,194 +316,160 @@ func newNetstack(t *testing.T) *Netstack {
 	return ns
 }
 
-func TestAddRemoveListInterfaceAddresses(t *testing.T) {
+func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcpip.AddressWithPrefix {
+	t.Helper()
+
+	interfaces, err := ni.ListInterfaces()
+	if err != nil {
+		t.Fatalf("ni.ListInterfaces() failed: %s", err)
+	}
+
+	info, found := stack.InterfaceInfo{}, false
+	for _, i := range interfaces {
+		if tcpip.NICID(i.Id) == nicid {
+			info = i
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("couldn't find NICID=%d in %+v", nicid, interfaces)
+	}
+
+	addrs := []tcpip.AddressWithPrefix{}
+	for _, a := range info.Properties.Addresses {
+		addrs = append(addrs, tcpip.AddressWithPrefix{
+			Address:   fidlconv.ToTCPIPAddress(a.IpAddress),
+			PrefixLen: int(a.PrefixLen),
+		})
+	}
+	return addrs
+}
+
+func compareInterfaceAddresses(t *testing.T, got, want []tcpip.AddressWithPrefix) {
+	t.Helper()
+	sort.Slice(got, func(i, j int) bool { return got[i].Address < got[j].Address })
+	sort.Slice(want, func(i, j int) bool { return want[i].Address < want[j].Address })
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("Interface addresses mismatch (-want +got):\n%s", diff)
+	}
+}
+
+// Test adding a list of both IPV4 and IPV6 addresses and then removing them
+// again one-by-one.
+func TestListInterfaceAddresses(t *testing.T) {
 	ns := newNetstack(t)
+	ni := &stackImpl{ns: ns}
+
 	d := deviceForAddEth(ethernet.Info{}, t)
 	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	checkDefaultAddress := func(t *testing.T) {
-		t.Helper()
-		var info netstack.NetInterface2
-		interfaces, found := ns.getNetInterfaces2Locked(), false
-		for _, ni := range interfaces {
-			if ni.Id == uint32(ifState.nicid) {
-				found = true
-				info = ni
-			}
-		}
-		if !found {
-			t.Fatalf("NIC %d not found in %+v", ifState.nicid, interfaces)
-		}
-		if got, want := info.Addr, fidlconv.ToNetIpAddress(zeroIpAddr); got != want {
-			t.Errorf("got Addr = %+v, want = %+v", got, want)
-		}
-		if got, want := info.Netmask, fidlconv.ToNetIpAddress(tcpip.Address(zeroIpMask)); got != want {
-			t.Errorf("got Netmask = %+v, want = %+v", got, want)
-		}
+	// The call to ns.addEth() added addresses to the stack. Make sure we include
+	// those in our want list.
+	wantAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
+
+	testAddresses := []tcpip.AddressWithPrefix{
+		{"\x01\x01\x01\x01", 32},
+		{"\x02\x02\x02\x02", 24},
+		{"\x03\x03\x03\x03", 16},
+		{"\x04\x04\x04\x04", 8},
+		{"\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01", 128},
+		{"\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02", 64},
+		{"\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03", 32},
+		{"\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04", 8},
 	}
 
-	t.Run("defaults", checkDefaultAddress)
+	t.Run("Add", func(t *testing.T) {
+		for _, addr := range testAddresses {
+			t.Run(fmt.Sprintf("%s/%d", addr.Address, addr.PrefixLen), func(t *testing.T) {
+				ifAddr := stack.InterfaceAddress{
+					IpAddress: fidlconv.ToNetIpAddress(addr.Address),
+					PrefixLen: uint8(addr.PrefixLen),
+				}
 
-	tests := []struct {
-		name                  string
-		protocol              tcpip.NetworkProtocolNumber
-		ip                    tcpip.Address
-		prefixesBySpecificity []uint8
-	}{
-		{ipv4.ProtocolName, ipv4.ProtocolNumber, tcpip.Address(strings.Repeat("\x01", header.IPv4AddressSize)), []uint8{32, 24, 16, 8}},
-		{ipv6.ProtocolName, ipv6.ProtocolNumber, tcpip.Address(strings.Repeat("\x01", header.IPv6AddressSize)), []uint8{128, 64, 32, 8}},
+				if stackErr, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr); stackErr != nil || err != nil {
+					t.Fatalf("ni.AddInterfaceAddress(nicid=%d, addr=%+v) failed: stackErr=%v, err=%v", uint64(ifState.nicid), ifAddr, stackErr, err)
+				}
+
+				wantAddrs = append(wantAddrs, addr)
+				gotAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
+
+				compareInterfaceAddresses(t, gotAddrs, wantAddrs)
+			})
+		}
+	})
+
+	t.Run("Remove", func(t *testing.T) {
+		for _, addr := range testAddresses {
+			t.Run(fmt.Sprintf("%s/%d", addr.Address, addr.PrefixLen), func(t *testing.T) {
+				ifAddr := stack.InterfaceAddress{
+					IpAddress: fidlconv.ToNetIpAddress(addr.Address),
+					PrefixLen: uint8(addr.PrefixLen),
+				}
+
+				if stackErr, err := ni.DelInterfaceAddress(uint64(ifState.nicid), ifAddr); stackErr != nil || err != nil {
+					t.Fatalf("ni.DelInterfaceAddress(nicid=%d, addr=%+v) failed: stackErr=%v, err=%v", uint64(ifState.nicid), ifAddr, stackErr, err)
+				}
+
+				// Remove address from list.
+				for i, a := range wantAddrs {
+					if a == addr {
+						wantAddrs = append(wantAddrs[:i], wantAddrs[i+1:]...)
+						break
+					}
+				}
+				gotAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
+				compareInterfaceAddresses(t, gotAddrs, wantAddrs)
+			})
+		}
+	})
+}
+
+// Test that adding an address with one prefix and then adding the same address
+// but with a different prefix will simply replace the first address.
+func TestAddAddressesThenChangePrefix(t *testing.T) {
+	ns := newNetstack(t)
+	ni := &stackImpl{ns: ns}
+	d := deviceForAddEth(ethernet.Info{}, t)
+	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			// Because prefixesBySpecificity is ordered from most to least constrained and we check that the
-			// most recently added prefix length lines up with the netmask we read, this test implicitly
-			// asserts that the least-constrained subnet is used to compute the netmask.
-			for _, prefixLenToAdd := range test.prefixesBySpecificity {
-				t.Run(fmt.Sprintf("prefixLenToAdd=%d", prefixLenToAdd), func(t *testing.T) {
-					addr := stack.InterfaceAddress{
-						IpAddress: fidlconv.ToNetIpAddress(test.ip),
-						PrefixLen: prefixLenToAdd,
-					}
 
-					if err := ns.addInterfaceAddr(uint64(ifState.nicid), addr); err != nil {
-						t.Fatalf("got ns.addInterfaceAddr(_) = %s want = nil", err)
-					}
+	// The call to ns.addEth() added addresses to the stack. Make sure we include
+	// those in our want list.
+	initialAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
 
-					t.Run(netstack.NetstackName, func(t *testing.T) {
-						interfaces := ns.getNetInterfaces2Locked()
-						info, found := netstack.NetInterface2{}, false
-						for _, i := range interfaces {
-							if tcpip.NICID(i.Id) == ifState.nicid {
-								info = i
-								found = true
-								break
-							}
-						}
-						if !found {
-							t.Fatalf("couldn't find NIC ID %d in %+v", ifState.nicid, interfaces)
-						}
-
-						switch test.protocol {
-						case ipv4.ProtocolNumber:
-							if got, want := info.Addr, addr.IpAddress; got != want {
-								t.Errorf("got Addr = %+v, want = %+v", got, want)
-							}
-							if got, want := info.Netmask, getNetmask(prefixLenToAdd, 8*header.IPv4AddressSize); got != want {
-								t.Errorf("got Netmask = %+v, want = %+v", got, want)
-							}
-						case ipv6.ProtocolNumber:
-							found := false
-							want := net.Subnet{
-								Addr:      addr.IpAddress,
-								PrefixLen: addr.PrefixLen,
-							}
-							for _, got := range info.Ipv6addrs {
-								if got == want {
-									found = true
-									break
-								}
-							}
-							if !found {
-								t.Errorf("could not find addr %+v in %+v", addr, info.Ipv6addrs)
-							}
-						default:
-							t.Fatalf("protocol number %d not covered", test.protocol)
-						}
-					})
-
-					t.Run(stack.StackName, func(t *testing.T) {
-						interfaces := ns.getNetInterfaces()
-						for _, i := range interfaces {
-							for _, a := range i.Properties.Addresses {
-								if a == addr {
-									return
-								}
-							}
-						}
-						t.Errorf("could not find addr %+v in %+v", addr, interfaces)
-					})
-				})
-			}
-
-			// From least to most specific, remove each interface address and assert that the
-			// next-most-specific interface address' prefix length is reflected in the netmask read.
-			for i := len(test.prefixesBySpecificity) - 1; i >= 0; i-- {
-				prefixLenToRemove := test.prefixesBySpecificity[i]
-				t.Run(fmt.Sprintf("prefixLenToRemove=%d", prefixLenToRemove), func(t *testing.T) {
-					addr := stack.InterfaceAddress{
-						IpAddress: fidlconv.ToNetIpAddress(test.ip),
-						PrefixLen: prefixLenToRemove,
-					}
-					if err := ns.removeInterfaceAddress(ifState.nicid, test.protocol, fidlconv.ToTCPIPAddress(addr.IpAddress), addr.PrefixLen); err != nil {
-						t.Fatalf("got ns.removeInterfaceAddress(_) = %s want = nil", err)
-					}
-
-					t.Run(stack.StackName, func(t *testing.T) {
-						interfaces := ns.getNetInterfaces()
-						for _, i := range interfaces {
-							for _, a := range i.Properties.Addresses {
-								if a == addr {
-									t.Errorf("unexpectedly found addr %+v in %+v", addr, interfaces)
-								}
-							}
-						}
-					})
-
-					t.Run(netstack.NetstackName, func(t *testing.T) {
-						var info netstack.NetInterface2
-						interfaces, found := ns.getNetInterfaces2Locked(), false
-						for _, ni := range interfaces {
-							if ni.Id == uint32(ifState.nicid) {
-								info = ni
-								found = true
-							}
-						}
-
-						if !found {
-							t.Fatalf("couldn't find NIC %d in %+v", ifState.nicid, interfaces)
-						}
-
-						switch test.protocol {
-						case ipv4.ProtocolNumber:
-							if i > 0 {
-								want := getNetmask(test.prefixesBySpecificity[i-1], 8*header.IPv4AddressSize)
-								if got := info.Netmask; got != want {
-									t.Errorf("got Netmask = %+v, want = %+v", got, want)
-								}
-							} else {
-								checkDefaultAddress(t)
-							}
-
-						case ipv6.ProtocolNumber:
-							if i > 0 {
-								prefixesRemaining := test.prefixesBySpecificity[:i-1]
-								for _, p := range prefixesRemaining {
-									want, found := net.Subnet{PrefixLen: p, Addr: addr.IpAddress}, false
-									removed := net.Subnet{PrefixLen: prefixLenToRemove, Addr: addr.IpAddress}
-									for _, got := range info.Ipv6addrs {
-										if got == want {
-											found = true
-										}
-										if got == removed {
-											t.Fatalf("got Ipv6addrs = %+v contained removed = %+v", got, removed)
-										}
-									}
-									if !found {
-										t.Errorf("got Ipv6addrs = %+v did not contain want = %+v", info.Ipv6addrs, want)
-									}
-								}
-							}
-						default:
-							t.Fatalf("protocol number %d not covered", test.protocol)
-						}
-					})
-				})
-			}
-		})
+	// Add address.
+	addr := tcpip.AddressWithPrefix{"\x01\x01\x01\x01", 8}
+	ifAddr := stack.InterfaceAddress{
+		IpAddress: fidlconv.ToNetIpAddress(addr.Address),
+		PrefixLen: uint8(addr.PrefixLen),
 	}
+
+	if stackErr, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr); stackErr != nil || err != nil {
+		t.Fatalf("ni.AddInterfaceAddress(nicid=%d, addr=%+v) failed: stackErr=%v, err=%v", uint64(ifState.nicid), ifAddr, stackErr, err)
+	}
+
+	wantAddrs := append(initialAddrs, addr)
+	gotAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
+	compareInterfaceAddresses(t, gotAddrs, wantAddrs)
+
+	// Add the same address with a different prefix.
+	addr.PrefixLen *= 2
+	ifAddr.PrefixLen *= 2
+
+	if stackErr, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr); stackErr != nil || err != nil {
+		t.Fatalf("ni.AddInterfaceAddress(nicid=%d, addr=%+v) failed: stackErr=%v, err=%v", uint64(ifState.nicid), ifAddr, stackErr, err)
+	}
+
+	wantAddrs = append(initialAddrs, addr)
+	gotAddrs = getInterfaceAddresses(t, ni, ifState.nicid)
+
+	compareInterfaceAddresses(t, gotAddrs, wantAddrs)
 }
 
 func TestAddRouteParameterValidation(t *testing.T) {
@@ -711,18 +678,19 @@ func TestDHCPAcquired(t *testing.T) {
 				t.Errorf("GetExtendedRouteTable() mismatch (-want +got):\n%s", diff)
 			}
 
+			oldAddrWithPrefix := tcpip.AddressWithPrefix{test.oldAddr, test.oldSubnet.Prefix()}
+			newAddrWithPrefix := tcpip.AddressWithPrefix{test.newAddr, test.newSubnet.Prefix()}
 			ns.mu.Lock()
 			infoMap := ns.mu.stack.NICInfo()
-			subnetMap := ns.mu.stack.NICSubnets()
 			ns.mu.Unlock()
 			if info, ok := infoMap[ifState.nicid]; ok {
 				found := false
 				for _, address := range info.ProtocolAddresses {
 					if address.Protocol == ipv4.ProtocolNumber {
-						switch address.Address {
-						case test.oldAddr:
+						switch address.AddressWithPrefix {
+						case oldAddrWithPrefix:
 							t.Errorf("expired address %s was not removed from NIC addresses %v", test.oldAddr, info.ProtocolAddresses)
-						case test.newAddr:
+						case newAddrWithPrefix:
 							found = true
 						}
 					}
@@ -733,29 +701,6 @@ func TestDHCPAcquired(t *testing.T) {
 				}
 			} else {
 				t.Errorf("NIC %d not found in %v", ifState.nicid, infoMap)
-			}
-			if subnets, ok := subnetMap[ifState.nicid]; ok {
-				found := false
-				for _, subnet := range subnets {
-					switch subnet {
-					case test.oldSubnet:
-						t.Errorf("expired subnet %s/%d was not removed from NIC subnets", test.oldSubnet.ID(), test.oldSubnet.Prefix())
-						for _, subnet := range subnets {
-							t.Logf("%s/%d", subnet.ID(), subnet.Prefix())
-						}
-					case test.newSubnet:
-						found = true
-					}
-				}
-
-				if !found {
-					t.Errorf("new subnet %s/%d was not added to NIC subnets", test.newSubnet.ID(), test.newSubnet.Prefix())
-					for _, subnet := range subnets {
-						t.Logf("%s/%d", subnet.ID(), subnet.Prefix())
-					}
-				}
-			} else {
-				t.Errorf("NIC %d not found in %v", ifState.nicid, subnetMap)
 			}
 		})
 	}

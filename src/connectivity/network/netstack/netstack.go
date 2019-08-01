@@ -275,34 +275,16 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 
 	ns.mu.Lock()
 	if err := func() error {
-		addresses, subnets := ns.getAddressesLocked(nic)
-		allOnes := int(prefixLen) == 8*len(addr)
-		hasAddr := containsAddress(addresses, protocol, addr)
-		hasSubnet := containsSubnet(subnets, addr, prefixLen)
-		if !hasAddr && !hasSubnet {
-			return fmt.Errorf("neither address nor subnet %s/%d exists on NIC ID %d", addr, prefixLen, nic)
-		}
-
-		if !allOnes {
-			if hasSubnet {
-				if err := ns.mu.stack.RemoveSubnet(nic, subnet); err == tcpip.ErrUnknownNICID {
-					panic(fmt.Sprintf("stack.RemoveSubnet(_): NIC [%d] not found", nic))
-				} else if err != nil {
-					return fmt.Errorf("error removing subnet %s/%d from NIC ID %d: %s", addr, prefixLen, nic, err)
-				}
-			} else {
-				return fmt.Errorf("no such subnet %s/%d for NIC ID %d", addr, prefixLen, nic)
-			}
+		if _, found := ns.findAddress(nic, protocol, addr); !found {
+			return fmt.Errorf("address %s doesn't exist on NIC ID %d", addr, nic)
 		}
 
 		ns.DelRouteLocked(route)
 
-		if allOnes && hasAddr {
-			if err := ns.mu.stack.RemoveAddress(nic, addr); err == tcpip.ErrUnknownNICID {
-				panic(fmt.Sprintf("stack.RemoveAddress(_): NIC [%d] not found", nic))
-			} else if err != nil {
-				return fmt.Errorf("error removing address %s from NIC ID %d: %s", addr, nic, err)
-			}
+		if err := ns.mu.stack.RemoveAddress(nic, addr); err == tcpip.ErrUnknownNICID {
+			panic(fmt.Sprintf("stack.RemoveAddress(_): NIC [%d] not found", nic))
+		} else if err != nil {
+			return fmt.Errorf("error removing address %s from NIC ID %d: %s", addr, nic, err)
 		}
 
 		return nil
@@ -335,22 +317,25 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkP
 
 	ns.mu.Lock()
 	if err := func() error {
-		addresses, subnets := ns.getAddressesLocked(nic)
-		hasAddr := containsAddress(addresses, protocol, addr)
-		hasSubnet := containsSubnet(subnets, addr, prefixLen)
-		if hasAddr && hasSubnet {
-			return fmt.Errorf("address/prefix combination %s/%d already exists on NIC ID %d", addr, prefixLen, nic)
-		}
-		if !hasAddr {
-			if err := ns.mu.stack.AddAddress(nic, protocol, addr); err != nil {
-				return fmt.Errorf("error adding address %s to NIC ID %d: %s", addr, nic, err)
+		if a, found := ns.findAddress(nic, protocol, addr); found {
+			if int(prefixLen) == a.AddressWithPrefix.PrefixLen {
+				return fmt.Errorf("address %s/%d already exists on NIC ID %d", addr, prefixLen, nic)
+			}
+			// Same address but different prefix. Remove the address and re-add it
+			// with the new prefix (below).
+			if err := ns.mu.stack.RemoveAddress(nic, addr); err != nil {
+				syslog.Infof("NIC %d: failed to remove address %s: %s", nic, addr, err)
 			}
 		}
 
-		if !hasSubnet {
-			if err := ns.mu.stack.AddSubnet(nic, protocol, subnet); err != nil {
-				return fmt.Errorf("error adding subnet %+v to NIC ID %d: %s", subnet, nic, err)
-			}
+		if err := ns.mu.stack.AddProtocolAddress(nic, tcpip.ProtocolAddress{
+			Protocol: protocol,
+			AddressWithPrefix: tcpip.AddressWithPrefix{
+				Address:   addr,
+				PrefixLen: int(prefixLen),
+			},
+		}); err != nil {
+			return fmt.Errorf("error adding address %s/%d to NIC ID %d: %s", addr, prefixLen, nic, err)
 		}
 
 		if err := ns.AddRouteLocked(route, metricNotSet, false); err != nil {
@@ -379,7 +364,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, oldSubnet, newS
 
 	name := ifs.ns.nameLocked(ifs.nicid)
 
-	if oldAddr != newAddr {
+	if oldAddr != newAddr || oldSubnet != newSubnet {
 		if len(oldAddr) != 0 {
 			if err := ifs.ns.mu.stack.RemoveAddress(ifs.nicid, oldAddr); err != nil {
 				syslog.Infof("NIC %s: failed to remove expired DHCP address %s: %s", name, oldAddr, err)
@@ -388,7 +373,13 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, oldSubnet, newS
 			}
 		}
 		if len(newAddr) != 0 {
-			if err := ifs.ns.mu.stack.AddAddressWithOptions(ifs.nicid, ipv4.ProtocolNumber, newAddr, stack.FirstPrimaryEndpoint); err != nil {
+			if err := ifs.ns.mu.stack.AddProtocolAddressWithOptions(ifs.nicid, tcpip.ProtocolAddress{
+				Protocol: ipv4.ProtocolNumber,
+				AddressWithPrefix: tcpip.AddressWithPrefix{
+					Address:   newAddr,
+					PrefixLen: newSubnet.Prefix(),
+				},
+			}, stack.FirstPrimaryEndpoint); err != nil {
 				syslog.Infof("NIC %s: failed to add DHCP acquired address %s: %s", name, newAddr, err)
 			} else {
 				syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, newAddr, config.LeaseLength)
@@ -397,27 +388,9 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, oldSubnet, newS
 			syslog.Errorf("NIC %s: DHCP could not acquire address", name)
 		}
 	}
-	if oldSubnet != newSubnet {
-		if oldSubnet != (tcpip.Subnet{}) {
-			if err := ifs.ns.mu.stack.RemoveSubnet(ifs.nicid, oldSubnet); err != nil {
-				syslog.Infof("NIC %s: failed to remove expired DHCP subnet %s/%d: %s", name, oldSubnet.ID(), oldSubnet.Prefix(), err)
-			} else {
-				syslog.Infof("NIC %s: removed expired DHCP subnet %s/%d", name, oldSubnet.ID(), oldSubnet.Prefix())
-			}
-		}
-		if newSubnet != (tcpip.Subnet{}) {
-			if err := ifs.ns.mu.stack.AddSubnet(ifs.nicid, ipv4.ProtocolNumber, newSubnet); err != nil {
-				syslog.Infof("NIC %s: failed to add DHCP acquired subnet %s/%d: %s", name, newSubnet.ID(), oldSubnet.Prefix(), err)
-			} else {
-				syslog.Infof("NIC %s: DHCP acquired subnet %s/%d for %s", name, newSubnet.ID(), newSubnet.Prefix(), config.LeaseLength)
-			}
-		} else {
-			syslog.Errorf("NIC %s: DHCP could not acquire subnet", name)
-		}
-	}
 	ifs.ns.mu.Unlock()
 
-	if len(newAddr) == 0 || newSubnet == (tcpip.Subnet{}) {
+	if len(newAddr) == 0 {
 		return
 	}
 
@@ -773,36 +746,23 @@ func (ns *Netstack) validateInterfaceAddress(address net.IpAddress, prefixLen ui
 	return protocol, addr, netstack.NetErr{Status: netstack.StatusOk}
 }
 
-func (ns *Netstack) getAddressesLocked(nic tcpip.NICID) ([]tcpip.ProtocolAddress, []tcpip.Subnet) {
+func (ns *Netstack) getAddressesLocked(nic tcpip.NICID) []tcpip.ProtocolAddress {
 	nicInfo := ns.mu.stack.NICInfo()
-	nicSubnets := ns.mu.stack.NICSubnets()
-
 	info, ok := nicInfo[nic]
 	if !ok {
 		panic(fmt.Sprintf("NIC [%d] not found in %+v", nic, nicInfo))
 	}
-	subnets, ok := nicSubnets[nic]
-	if !ok {
-		panic(fmt.Sprintf("NIC [%d] not found in %+v", nic, nicSubnets))
-	}
-
-	return info.ProtocolAddresses, subnets
+	return info.ProtocolAddresses
 }
 
-func containsAddress(addresses []tcpip.ProtocolAddress, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address) bool {
+// findAddress finds the given address in the addresses currently assigned to
+// the NIC. Note that no duplicate addresses exist on a NIC.
+func (ns *Netstack) findAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address) (tcpip.ProtocolAddress, bool) {
+	addresses := ns.getAddressesLocked(nic)
 	for _, a := range addresses {
-		if a.Protocol == protocol && a.Address == addr {
-			return true
+		if a.Protocol == protocol && a.AddressWithPrefix.Address == addr {
+			return a, true
 		}
 	}
-	return false
-}
-
-func containsSubnet(subnets []tcpip.Subnet, addr tcpip.Address, prefixLen uint8) bool {
-	for _, s := range subnets {
-		if s.ID() == util.ApplyMask(addr, util.CIDRMask(int(prefixLen), 8*len(addr))) && uint8(s.Prefix()) == prefixLen {
-			return true
-		}
-	}
-	return false
+	return tcpip.ProtocolAddress{}, false
 }
