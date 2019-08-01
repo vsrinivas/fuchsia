@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, Fail, ResultExt},
@@ -142,7 +142,9 @@ async fn do_connect<'a>(args: &'a [String], central: &'a CentralProxy) -> Result
 
     let (_, server_end) = fidl::endpoints::create_endpoints()?;
 
-    let status = await!(central.connect_peripheral(&args[0], server_end))
+    let status = central
+        .connect_peripheral(&args[0], server_end)
+        .await
         .context("failed to connect to peripheral")?;
 
     match status.error {
@@ -189,11 +191,11 @@ fn main() -> Result<(), Error> {
                     central.connect = connect;
                     fut
                 };
-                await!(fut)?
+                fut.await?
             }
             "connect" => {
                 let svc = state.read().get_svc().clone();
-                await!(do_connect(&args[2..], &svc))?
+                do_connect(&args[2..], &svc).await?
             }
             _ => {
                 println!("Invalid command: {}", command);
@@ -202,7 +204,7 @@ fn main() -> Result<(), Error> {
             }
         }
 
-        await!(listen_central_events(state));
+        listen_central_events(state).await;
         Ok(())
     };
 

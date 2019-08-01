@@ -63,7 +63,7 @@ impl HostDevice {
         let gatt_entry = self.gatt.remove(&id);
         async move {
             if let Some((central, _)) = gatt_entry {
-                from_fidl_status(await!(central.disconnect_peripheral(id.as_str())))
+                from_fidl_status(central.disconnect_peripheral(id.as_str()).await)
             } else {
                 Err(Error::not_found("Unknown Peripheral"))
             }
@@ -147,7 +147,7 @@ pub async fn handle_events<H: HostListener>(
 ) -> types::Result<()> {
     let mut stream = host.read().host.take_event_stream();
 
-    while let Some(event) = await!(stream.next()) {
+    while let Some(event) = stream.next().await {
         let host_ = host.clone();
         match event? {
             HostEvent::OnAdapterStateChanged { ref state } => {

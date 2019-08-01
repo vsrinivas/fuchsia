@@ -35,12 +35,15 @@ fn test_service_def() -> ServiceDefinition {
 
 async fn add_service(profile: &ProfileHarness) -> Result<(bt::Status, u64), failure::Error> {
     let mut service_def = test_service_def();
-    await!(profile.aux().add_service(&mut service_def, SecurityLevel::EncryptionOptional, false))
+    profile
+        .aux()
+        .add_service(&mut service_def, SecurityLevel::EncryptionOptional, false)
+        .await
         .map_err(Into::into)
 }
 
 pub async fn add_fake_profile(profile: ProfileHarness) -> Result<(), Error> {
-    let (status, _) = await!(add_service(&profile))?;
+    let (status, _) = add_service(&profile).await?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
     }
@@ -48,8 +51,8 @@ pub async fn add_fake_profile(profile: ProfileHarness) -> Result<(), Error> {
 }
 
 pub async fn same_psm_twice_fails(profile: ProfileHarness) -> Result<(), Error> {
-    await!(add_fake_profile(profile.clone()))?;
-    let err = await!(add_fake_profile(profile));
+    add_fake_profile(profile.clone()).await?;
+    let err = add_fake_profile(profile).await;
     if err.is_ok() {
         return Err(format_err!("Should not be able to add the same profile twice"));
     }
@@ -57,16 +60,16 @@ pub async fn same_psm_twice_fails(profile: ProfileHarness) -> Result<(), Error> 
 }
 
 pub async fn add_remove_profile(profile: ProfileHarness) -> Result<(), Error> {
-    let (status, service_id) = await!(add_service(&profile))?;
+    let (status, service_id) = add_service(&profile).await?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
     }
     profile.aux().remove_service(service_id)?;
-    await!(add_fake_profile(profile))
+    add_fake_profile(profile).await
 }
 
 pub async fn connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error> {
-    let (status, socket) = await!(profile.aux().connect_l2cap("unknown_peer", PSM_AVDTP as u16))?;
+    let (status, socket) = profile.aux().connect_l2cap("unknown_peer", PSM_AVDTP as u16).await?;
     // Should be an error
     if status.error.is_none() {
         return Err(format_err!("Expected an error from connecting to an unknown peer"));

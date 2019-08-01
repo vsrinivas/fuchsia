@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     fuchsia_async as fasync,
@@ -85,7 +85,7 @@ impl Peer {
     /// if the remote peer rejected the command.
     pub async fn discover(&self) -> Result<Vec<StreamInformation>> {
         let response: Result<DiscoverResponse> =
-            await!(self.send_command(SignalIdentifier::Discover, &[]));
+            self.send_command(SignalIdentifier::Discover, &[]).await;
         match response {
             Ok(response) => Ok(response.endpoints),
             Err(e) => Err(e),
@@ -105,7 +105,7 @@ impl Peer {
     ) -> Result<Vec<ServiceCapability>> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<GetCapabilitiesResponse> =
-            await!(self.send_command(SignalIdentifier::GetCapabilities, stream_params));
+            self.send_command(SignalIdentifier::GetCapabilities, stream_params).await;
         match response {
             Ok(response) => Ok(response.capabilities),
             Err(e) => Err(e),
@@ -124,7 +124,7 @@ impl Peer {
     ) -> Result<Vec<ServiceCapability>> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<GetCapabilitiesResponse> =
-            await!(self.send_command(SignalIdentifier::GetAllCapabilities, stream_params));
+            self.send_command(SignalIdentifier::GetAllCapabilities, stream_params).await;
         match response {
             Ok(response) => Ok(response.capabilities),
             Err(e) => Err(e),
@@ -154,7 +154,7 @@ impl Peer {
             idx += capability.encoded_len();
         }
         let response: Result<SimpleResponse> =
-            await!(self.send_command(SignalIdentifier::SetConfiguration, &params));
+            self.send_command(SignalIdentifier::SetConfiguration, &params).await;
         response.and(Ok(()))
     }
 
@@ -170,7 +170,7 @@ impl Peer {
     ) -> Result<Vec<ServiceCapability>> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<GetCapabilitiesResponse> =
-            await!(self.send_command(SignalIdentifier::GetConfiguration, stream_params));
+            self.send_command(SignalIdentifier::GetConfiguration, stream_params).await;
         match response {
             Ok(response) => Ok(response.capabilities),
             Err(e) => Err(e),
@@ -203,7 +203,7 @@ impl Peer {
             idx += capability.encoded_len();
         }
         let response: Result<SimpleResponse> =
-            await!(self.send_command(SignalIdentifier::Reconfigure, &params));
+            self.send_command(SignalIdentifier::Reconfigure, &params).await;
         response.and(Ok(()))
     }
 
@@ -214,7 +214,7 @@ impl Peer {
     pub async fn open<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<SimpleResponse> =
-            await!(self.send_command(SignalIdentifier::Open, stream_params));
+            self.send_command(SignalIdentifier::Open, stream_params).await;
         response.and(Ok(()))
     }
 
@@ -229,7 +229,7 @@ impl Peer {
             stream_params.push(stream_id.to_msg());
         }
         let response: Result<SimpleResponse> =
-            await!(self.send_command(SignalIdentifier::Start, &stream_params));
+            self.send_command(SignalIdentifier::Start, &stream_params).await;
         response.and(Ok(()))
     }
 
@@ -240,7 +240,7 @@ impl Peer {
     pub async fn close<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<SimpleResponse> =
-            await!(self.send_command(SignalIdentifier::Close, stream_params));
+            self.send_command(SignalIdentifier::Close, stream_params).await;
         response.and(Ok(()))
     }
 
@@ -255,7 +255,7 @@ impl Peer {
             stream_params.push(stream_id.to_msg());
         }
         let response: Result<SimpleResponse> =
-            await!(self.send_command(SignalIdentifier::Suspend, &stream_params));
+            self.send_command(SignalIdentifier::Suspend, &stream_params).await;
         response.and(Ok(()))
     }
 
@@ -266,7 +266,7 @@ impl Peer {
     pub async fn abort<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<SimpleResponse> =
-            await!(self.send_command(SignalIdentifier::Abort, stream_params));
+            self.send_command(SignalIdentifier::Abort, stream_params).await;
         response.and(Ok(()))
     }
 

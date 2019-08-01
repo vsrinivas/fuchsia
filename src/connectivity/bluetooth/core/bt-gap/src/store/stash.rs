@@ -148,8 +148,8 @@ impl Stash {
         accessor: StoreAccessorProxy,
         inspect: fuchsia_inspect::Node,
     ) -> Result<Stash, Error> {
-        let bonding_data = await!(Stash::load_bonds(&accessor, &inspect))?;
-        let host_data = await!(Stash::load_host_data(&accessor))?;
+        let bonding_data = Stash::load_bonds(&accessor, &inspect).await?;
+        let host_data = Stash::load_host_data(&accessor).await?;
         Ok(Stash { proxy: accessor, bonding_data, host_data, inspect })
     }
 
@@ -163,7 +163,7 @@ impl Stash {
 
         let mut bonding_map = HashMap::new();
         loop {
-            let next = await!(iter.get_next())?;
+            let next = iter.get_next().await?;
             if next.is_empty() {
                 break;
             }
@@ -195,7 +195,7 @@ impl Stash {
 
         let mut host_data_map = HashMap::new();
         loop {
-            let next = await!(iter.get_next())?;
+            let next = iter.get_next().await?;
             if next.is_empty() {
                 break;
             }
@@ -236,7 +236,7 @@ pub async fn init_stash(
     let (proxy, server_end) = create_proxy::<StoreAccessorMarker>()?;
     stash_svc.create_accessor(false, server_end)?;
 
-    await!(Stash::new(proxy, inspect))
+    Stash::new(proxy, inspect).await
 }
 
 // These tests access stash in a hermetic envionment and thus it's ok for state to leak between

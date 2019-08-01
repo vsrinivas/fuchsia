@@ -22,7 +22,7 @@
 //!
 //!   ```ignore
 //!   // Wait for the action to have completed one way or the other
-//!   let state = await!(state.when_satisfied(action_complete, timeout))?;
+//!   let state = state.when_satisfied(action_complete, timeout).await?;
 //!   // Then check that the action completed successfully
 //!   action_success.satisfied(state)
 //!   ```
@@ -116,7 +116,7 @@ pub trait ExpectableStateExt: ExpectableState + Sized {
     ///
     ///  ```ignore
     ///    // Wait for the action to have completed one way or the other
-    ///    let state = await!(state.when_satisfied(action_complete, timeout))?;
+    ///    let state = state.when_satisfied(action_complete, timeout).await?;
     ///  ```
     fn when_satisfied(
         &self,

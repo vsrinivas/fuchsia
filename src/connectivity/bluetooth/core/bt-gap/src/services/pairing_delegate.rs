@@ -20,7 +20,7 @@ async fn handler(
     match pd {
         Some(pd) => match event {
             OnPairingRequest { device, method, displayed_passkey, responder } => {
-                await!(handle_pairing_request(pd, device, method, displayed_passkey, responder))
+                handle_pairing_request(pd, device, method, displayed_passkey, responder).await
             }
             OnPairingComplete { device_id, status, control_handle: _ } => {
                 handle_pairing_complete(pd, device_id, status)
@@ -61,7 +61,7 @@ async fn handle_pairing_request(
     responder: PairingDelegateOnPairingRequestResponder,
 ) -> fidl::Result<()> {
     let passkey_ref = displayed_passkey.as_ref().map(|x| &**x);
-    let (status, passkey) = await!(pd.on_pairing_request(&mut device, method, passkey_ref))?;
+    let (status, passkey) = pd.on_pairing_request(&mut device, method, passkey_ref).await?;
     let _ = responder.send(status, passkey.as_ref().map(String::as_str));
     Ok(())
 }

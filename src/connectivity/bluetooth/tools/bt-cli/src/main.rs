@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{bail, Error, ResultExt},
@@ -37,14 +37,14 @@ static PROMPT: &str = "\x1b[34mbt>\x1b[0m ";
 static CLEAR_LINE: &str = "\x1b[2K";
 
 async fn get_active_adapter(control_svc: &ControlProxy) -> Result<String, Error> {
-    if let Some(adapter) = await!(control_svc.get_active_adapter_info())? {
+    if let Some(adapter) = control_svc.get_active_adapter_info().await? {
         return Ok(AdapterInfo::from(*adapter).to_string());
     }
     Ok(String::from("No Active Adapter"))
 }
 
 async fn get_adapters(control_svc: &ControlProxy) -> Result<String, Error> {
-    if let Some(adapters) = await!(control_svc.get_adapters())? {
+    if let Some(adapters) = control_svc.get_adapters().await? {
         let mut string = String::new();
         for adapter in adapters {
             let _ = writeln!(string, "{}", AdapterInfo::from(adapter));
@@ -63,7 +63,7 @@ async fn set_active_adapter<'a>(
     }
     println!("Setting active adapter");
     // `args[0]` is the identifier of the adapter to make active
-    let response = await!(control_svc.set_active_adapter(args[0]))?;
+    let response = control_svc.set_active_adapter(args[0]).await?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
     } else {
@@ -80,7 +80,7 @@ async fn set_adapter_name<'a>(
     }
     println!("Setting local name of the active adapter");
     // `args[0]` is the value to set as the name of the adapter
-    let response = await!(control_svc.set_name(args.get(0).map(|&name| name)))?;
+    let response = control_svc.set_name(args.get(0).map(|&name| name)).await?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
     } else {
@@ -104,7 +104,7 @@ async fn set_adapter_device_class<'a>(
         service: args.try_into()?,
     }
     .into();
-    let response = await!(control_svc.set_device_class(&mut cod))?;
+    let response = control_svc.set_device_class(&mut cod).await?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
     } else {
@@ -134,7 +134,7 @@ fn get_peer<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
 
 async fn set_discovery(discovery: bool, control_svc: &ControlProxy) -> Result<String, Error> {
     println!("{} Discovery!", if discovery { "Starting" } else { "Stopping" });
-    let response = await!(control_svc.request_discovery(discovery))?;
+    let response = control_svc.request_discovery(discovery).await?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
     } else {
@@ -174,7 +174,7 @@ async fn connect<'a>(
         Some(id) => id,
         None => return Ok(format!("Unable to connect: Unknown address {}", args[0])),
     };
-    let response = await!(control_svc.connect(&id))?;
+    let response = control_svc.connect(&id).await?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
     } else {
@@ -195,7 +195,7 @@ fn parse_disconnect<'a>(args: &'a [&'a str], state: &'a Mutex<State>) -> Result<
 }
 
 async fn handle_disconnect(id: String, control_svc: &ControlProxy) -> Result<String, Error> {
-    let response = await!(control_svc.disconnect(&id))?;
+    let response = control_svc.disconnect(&id).await?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
     } else {
@@ -209,7 +209,7 @@ async fn disconnect<'a>(
     control_svc: &'a ControlProxy,
 ) -> Result<String, Error> {
     match parse_disconnect(args, state) {
-        Ok(id) => await!(handle_disconnect(id, control_svc)),
+        Ok(id) => handle_disconnect(id, control_svc).await,
         Err(msg) => Ok(msg),
     }
 }
@@ -220,7 +220,7 @@ async fn set_discoverable(discoverable: bool, control_svc: &ControlProxy) -> Res
     } else {
         println!("Revoking discoverability..");
     }
-    let response = await!(control_svc.set_discoverable(discoverable))?;
+    let response = control_svc.set_discoverable(discoverable).await?;
     if response.error.is_some() {
         Ok(Status::from(response).to_string())
     } else {
@@ -231,7 +231,7 @@ async fn set_discoverable(discoverable: bool, control_svc: &ControlProxy) -> Res
 /// Listen on the control event channel for new events. Track state and print output where
 /// appropriate.
 async fn run_listeners(mut stream: ControlEventStream, state: &Mutex<State>) -> Result<(), Error> {
-    while let Some(evt) = await!(stream.try_next())? {
+    while let Some(evt) = stream.try_next().await? {
         print!("{}", CLEAR_LINE);
         match evt {
             ControlEvent::OnActiveAdapterChanged { adapter: Some(adapter) } => {
@@ -307,7 +307,7 @@ async fn parse_and_handle_cmd(
     line: String,
 ) -> Result<ReplControl, Error> {
     match parse_cmd(line) {
-        ParseResult::Valid((cmd, args)) => await!(handle_cmd(bt_svc, state, cmd, args)),
+        ParseResult::Valid((cmd, args)) => handle_cmd(bt_svc, state, cmd, args).await,
         ParseResult::Empty => Ok(ReplControl::Continue),
         ParseResult::Error(err) => {
             println!("{}", err);
@@ -348,19 +348,19 @@ async fn handle_cmd(
     let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     let args: &[&str] = &*args;
     let res = match cmd {
-        Cmd::Connect => await!(connect(args, &state, &bt_svc)),
-        Cmd::Disconnect => await!(disconnect(args, &state, &bt_svc)),
-        Cmd::StartDiscovery => await!(set_discovery(true, &bt_svc)),
-        Cmd::StopDiscovery => await!(set_discovery(false, &bt_svc)),
-        Cmd::Discoverable => await!(set_discoverable(true, &bt_svc)),
-        Cmd::NotDiscoverable => await!(set_discoverable(false, &bt_svc)),
+        Cmd::Connect => connect(args, &state, &bt_svc).await,
+        Cmd::Disconnect => disconnect(args, &state, &bt_svc).await,
+        Cmd::StartDiscovery => set_discovery(true, &bt_svc).await,
+        Cmd::StopDiscovery => set_discovery(false, &bt_svc).await,
+        Cmd::Discoverable => set_discoverable(true, &bt_svc).await,
+        Cmd::NotDiscoverable => set_discoverable(false, &bt_svc).await,
         Cmd::GetPeers => Ok(get_peers(&state)),
         Cmd::GetPeer => Ok(get_peer(args, &state)),
-        Cmd::GetAdapters => await!(get_adapters(&bt_svc)),
-        Cmd::SetActiveAdapter => await!(set_active_adapter(args, &bt_svc)),
-        Cmd::SetAdapterName => await!(set_adapter_name(args, &bt_svc)),
-        Cmd::SetAdapterDeviceClass => await!(set_adapter_device_class(args, &bt_svc)),
-        Cmd::ActiveAdapter => await!(get_active_adapter(&bt_svc)),
+        Cmd::GetAdapters => get_adapters(&bt_svc).await,
+        Cmd::SetActiveAdapter => set_active_adapter(args, &bt_svc).await,
+        Cmd::SetAdapterName => set_adapter_name(args, &bt_svc).await,
+        Cmd::SetAdapterDeviceClass => set_adapter_device_class(args, &bt_svc).await,
+        Cmd::ActiveAdapter => get_active_adapter(&bt_svc).await,
         Cmd::Help => Ok(Cmd::help_msg().to_string()),
         Cmd::Exit | Cmd::Quit => return Ok(ReplControl::Break),
     }?;
@@ -416,7 +416,7 @@ fn cmd_stream(
                 }
                 // wait until processing thread is finished evaluating the last command
                 // before running the next loop in the repl
-                await!(ack_receiver.next());
+                ack_receiver.next().await;
             }
         };
         exec.run_singlethreaded(fut)
@@ -430,13 +430,13 @@ async fn run_repl(bt_svc: ControlProxy, state: Arc<Mutex<State>>) -> Result<(), 
     // the main thread via async channels.
     let (mut commands, mut acks) = cmd_stream(state.clone());
 
-    while let Some(cmd) = await!(commands.next()) {
-        match await!(parse_and_handle_cmd(&bt_svc, state.clone(), cmd)) {
+    while let Some(cmd) = commands.next().await {
+        match parse_and_handle_cmd(&bt_svc, state.clone(), cmd).await {
             Ok(ReplControl::Continue) => {} // continue silently
             Ok(ReplControl::Break) => break,
             Err(e) => println!("Error handling command: {}", e),
         }
-        await!(acks.send(()))?;
+        acks.send(()).await?;
     }
     Ok(())
 }
@@ -449,7 +449,7 @@ fn main() -> Result<(), Error> {
     let evt_stream = bt_svc_thread.take_event_stream();
 
     let fut = async {
-        let devices = await!(bt_svc.get_known_remote_devices()).unwrap_or(vec![]);
+        let devices = bt_svc.get_known_remote_devices().await.unwrap_or(vec![]);
         let state = State::new(devices);
         let repl = run_repl(bt_svc, state.clone())
             .unwrap_or_else(|e| println!("REPL failed unexpectedly {:?}", e));

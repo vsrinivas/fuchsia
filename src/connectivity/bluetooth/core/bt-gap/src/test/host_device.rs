@@ -78,13 +78,14 @@ async fn host_device_set_local_name() -> Result<(), Error> {
     );
 
     let timeout = 5.seconds();
-    await!(run_test
+    run_test
         .map(|r| {
             r.0.map_err(types::Error::as_failure)
                 .and(r.1)
                 .and(r.2.map_err(types::Error::as_failure))
         })
-        .on_timeout(timeout.after_now(), move || Err(format_err!("Timed out"))))?;
+        .on_timeout(timeout.after_now(), move || Err(format_err!("Timed out")))
+        .await?;
 
     let host_name =
         host.read().get_info().state.as_ref().and_then(|s| s.local_name.as_ref().cloned());
@@ -97,7 +98,7 @@ where
     F: FnOnce(Arc<HostControlHandle>, HostRequest) -> Result<(), Error>,
 {
     let control_handle = Arc::new(stream.control_handle());
-    if let Some(event) = await!(stream.next()) {
+    if let Some(event) = stream.next().await {
         let event = event?;
         f(control_handle, event)
     } else {

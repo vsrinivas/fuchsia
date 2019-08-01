@@ -38,7 +38,7 @@ pub async fn start_gatt_loop<'a>(proxy: ClientProxy) -> Result<(), Error> {
     println!("  discovering services...");
     let list_services = client.read().proxy.list_services(None);
 
-    let (status, services) = await!(list_services).map_err(|e| {
+    let (status, services) = list_services.await.map_err(|e| {
         let err = BTError::new(&format!("failed to list services: {}", e));
         println!("{}", e);
         err
@@ -54,12 +54,12 @@ pub async fn start_gatt_loop<'a>(proxy: ClientProxy) -> Result<(), Error> {
     }
 
     let (mut commands, mut acks) = cmd_stream();
-    while let Some(cmd) = await!(commands.next()) {
-        await!(handle_cmd(cmd, &client)).map_err(|e| {
+    while let Some(cmd) = commands.next().await {
+        handle_cmd(cmd, &client).await.map_err(|e| {
             println!("Error: {}", e);
             e
         })?;
-        await!(acks.send(()))?;
+        acks.send(()).await?;
     }
 
     Ok(())
@@ -109,7 +109,7 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
                 }
                 // wait until processing thread is finished evaluating the last command
                 // before running the next loop in the repl
-                await!(ack_receiver.next());
+                ack_receiver.next().await;
             }
         };
         exec.run_singlethreaded(fut)
@@ -135,17 +135,17 @@ async fn handle_cmd(line: String, client: &GattClientPtr) -> Result<(), Error> {
             do_list(&args, client);
             Ok(())
         }
-        Some(Ok(Cmd::Connect)) => await!(do_connect(&args, client)),
-        Some(Ok(Cmd::ReadChr)) => await!(do_read_chr(&args, client)),
-        Some(Ok(Cmd::ReadLongChr)) => await!(do_read_long_chr(&args, client)),
-        Some(Ok(Cmd::WriteChr)) => await!(do_write_chr(args, client)),
-        Some(Ok(Cmd::WriteLongChr)) => await!(do_write_long_chr(&args, client)),
-        Some(Ok(Cmd::ReadDesc)) => await!(do_read_desc(&args, client)),
-        Some(Ok(Cmd::ReadLongDesc)) => await!(do_read_long_desc(&args, client)),
-        Some(Ok(Cmd::WriteDesc)) => await!(do_write_desc(args, client)),
-        Some(Ok(Cmd::WriteLongDesc)) => await!(do_write_long_desc(&args, client)),
-        Some(Ok(Cmd::EnableNotify)) => await!(do_enable_notify(&args, client)),
-        Some(Ok(Cmd::DisableNotify)) => await!(do_disable_notify(&args, client)),
+        Some(Ok(Cmd::Connect)) => do_connect(&args, client).await,
+        Some(Ok(Cmd::ReadChr)) => do_read_chr(&args, client).await,
+        Some(Ok(Cmd::ReadLongChr)) => do_read_long_chr(&args, client).await,
+        Some(Ok(Cmd::WriteChr)) => do_write_chr(args, client).await,
+        Some(Ok(Cmd::WriteLongChr)) => do_write_long_chr(&args, client).await,
+        Some(Ok(Cmd::ReadDesc)) => do_read_desc(&args, client).await,
+        Some(Ok(Cmd::ReadLongDesc)) => do_read_long_desc(&args, client).await,
+        Some(Ok(Cmd::WriteDesc)) => do_write_desc(args, client).await,
+        Some(Ok(Cmd::WriteLongDesc)) => do_write_long_desc(&args, client).await,
+        Some(Ok(Cmd::EnableNotify)) => do_enable_notify(&args, client).await,
+        Some(Ok(Cmd::DisableNotify)) => do_disable_notify(&args, client).await,
         Some(Err(e)) => {
             eprintln!("Unknown command: {:?}", e);
             Ok(())

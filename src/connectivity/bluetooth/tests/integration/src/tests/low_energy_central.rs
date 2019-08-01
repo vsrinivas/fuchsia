@@ -61,12 +61,13 @@ fn scan_timeout() -> Duration {
 }
 
 async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
-    let status = await!(central
+    let status = central
         .aux()
         .start_scan(None)
         .map_err(|e| e.context("FIDL error sending command").into())
-        .on_timeout(scan_timeout().after_now(), move || Err(err_msg("Timed out"))))
-    .context("Could not initialize scan")?;
+        .on_timeout(scan_timeout().after_now(), move || Err(err_msg("Timed out")))
+        .await
+        .context("Could not initialize scan")?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
     }
@@ -74,18 +75,20 @@ async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
 }
 
 pub async fn enable_scan(central: CentralHarness) -> Result<(), Error> {
-    await!(start_scan(&central))?;
-    let _ = await!(central.when_satisfied(
-        central_expectation::scan_enabled().and(central_expectation::device_found("Fake")),
-        scan_timeout()
-    ))?;
+    start_scan(&central).await?;
+    let _ = central
+        .when_satisfied(
+            central_expectation::scan_enabled().and(central_expectation::device_found("Fake")),
+            scan_timeout(),
+        )
+        .await?;
     Ok(())
 }
 
 pub async fn enable_and_disable_scan(central: CentralHarness) -> Result<(), Error> {
-    await!(start_scan(&central))?;
-    let _ = await!(central.when_satisfied(central_expectation::scan_enabled(), scan_timeout()))?;
+    start_scan(&central).await?;
+    let _ = central.when_satisfied(central_expectation::scan_enabled(), scan_timeout()).await?;
     let _ = central.aux().stop_scan()?;
-    let _ = await!(central.when_satisfied(central_expectation::scan_disabled(), scan_timeout()))?;
+    let _ = central.when_satisfied(central_expectation::scan_disabled(), scan_timeout()).await?;
     Ok(())
 }

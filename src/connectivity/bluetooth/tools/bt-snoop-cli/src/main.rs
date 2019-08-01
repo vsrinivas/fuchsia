@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     byteorder::{BigEndian, WriteBytesExt},
@@ -186,14 +186,14 @@ fn main_res() -> Result<(), Error> {
         let dev_str = device.as_ref().map(|d| d.as_str());
 
         // Send request to start receiving snoop packets
-        let status = await!(snoop_svc.start(follow, dev_str))?;
+        let status = snoop_svc.start(follow, dev_str).await?;
         if let Some(e) = status.error {
             return Err(BTError::from(*e).into());
         }
 
         // Receive snoop packet events and output them in the requested format.
         let mut pkt_count = 0;
-        while let Some(evt) = await!(evt_stream.try_next()).expect("failed to fetch event") {
+        while let Some(evt) = evt_stream.try_next().await.expect("failed to fetch event") {
             let SnoopEvent::OnPacket { host_device: _, mut packet } = evt;
             if let Some(size) = truncate {
                 packet.payload.truncate(size);

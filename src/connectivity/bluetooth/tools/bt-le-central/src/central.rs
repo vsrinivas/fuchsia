@@ -64,54 +64,56 @@ pub async fn listen_central_events(state: CentralStatePtr) {
     const MAX_CONCURRENT: usize = 1000;
     let evt_stream = state.read().get_svc().take_event_stream();
     let state = &state;
-    let for_each_fut = evt_stream.try_for_each_concurrent(MAX_CONCURRENT, move |evt| async move {
-        match evt {
-            CentralEvent::OnScanStateChanged { scanning } => {
-                eprintln!("  scan state changed: {}", scanning);
-                Ok(())
-            }
-            CentralEvent::OnDeviceDiscovered { device } => {
-                let device = RemoteDevice::from(device);
-                let id = device.identifier.clone();
-
-                eprintln!(" {}", device);
-
-                let mut central = state.write();
-                if central.decrement_scan_count() {
-                    // Continue scanning
-                    return Ok(());
-                }
-
-                // Stop scanning.
-                if let Err(e) = central.svc.stop_scan() {
-                    eprintln!("request to stop scan failed: {}", e);
-                    // TODO(armansito): kill the channel here instead
-                    exit(0);
+    let for_each_fut = evt_stream.try_for_each_concurrent(MAX_CONCURRENT, move |evt| {
+        async move {
+            match evt {
+                CentralEvent::OnScanStateChanged { scanning } => {
+                    eprintln!("  scan state changed: {}", scanning);
                     Ok(())
-                } else if central.connect && device.connectable {
-                    // Drop lock so it isn't held during await!
-                    drop(central);
-                    match await!(connect_peripheral(state, id)) {
-                        Ok(()) => Ok(()),
-                        Err(_) =>
-                        // TODO(armansito): kill the channel here instead
-                        {
-                            exit(0)
-                        }
+                }
+                CentralEvent::OnDeviceDiscovered { device } => {
+                    let device = RemoteDevice::from(device);
+                    let id = device.identifier.clone();
+
+                    eprintln!(" {}", device);
+
+                    let mut central = state.write();
+                    if central.decrement_scan_count() {
+                        // Continue scanning
+                        return Ok(());
                     }
-                } else {
+
+                    // Stop scanning.
+                    if let Err(e) = central.svc.stop_scan() {
+                        eprintln!("request to stop scan failed: {}", e);
+                        // TODO(armansito): kill the channel here instead
+                        exit(0);
+                        Ok(())
+                    } else if central.connect && device.connectable {
+                        // Drop lock so it isn't held during .await
+                        drop(central);
+                        match connect_peripheral(state, id).await {
+                            Ok(()) => Ok(()),
+                            Err(_) =>
+                            // TODO(armansito): kill the channel here instead
+                            {
+                                exit(0)
+                            }
+                        }
+                    } else {
+                        exit(0)
+                    }
+                }
+                CentralEvent::OnPeripheralDisconnected { identifier } => {
+                    eprintln!("  peer disconnected: {}", identifier);
+                    // TODO(armansito): Close the channel here instead
                     exit(0)
                 }
-            }
-            CentralEvent::OnPeripheralDisconnected { identifier } => {
-                eprintln!("  peer disconnected: {}", identifier);
-                // TODO(armansito): Close the channel here instead
-                exit(0)
             }
         }
     });
 
-    if let Err(e) = await!(for_each_fut) {
+    if let Err(e) = for_each_fut.await {
         eprintln!("failed to subscribe to BLE Central events: {:?}", e);
     }
 }
@@ -124,7 +126,8 @@ async fn connect_peripheral(state: &CentralStatePtr, mut id: String) -> Result<(
 
     let connect_peripheral_fut = state.read().svc.connect_peripheral(&mut id, server);
 
-    let status = await!(connect_peripheral_fut)
+    let status = connect_peripheral_fut
+        .await
         .map_err(|e| BTError::new(&format!("failed to initiate connect request: {}", e)))?;
 
     match status.error {
@@ -143,6 +146,6 @@ async fn connect_peripheral(state: &CentralStatePtr, mut id: String) -> Result<(
         }
     }
 
-    await!(start_gatt_loop(proxy))?;
+    start_gatt_loop(proxy).await?;
     Ok(())
 }

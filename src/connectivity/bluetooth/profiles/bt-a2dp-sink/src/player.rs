@@ -172,7 +172,7 @@ impl Player {
         // (1) audio is connected or
         // (2) there is a Problem.
         loop {
-            let x = await!(player_event_stream.next());
+            let x = player_event_stream.next().await;
             if x.is_none() {
                 // The player closed the event stream, something is wrong.
                 return Err(format_err!("MediaPlayer closed"));

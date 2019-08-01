@@ -35,8 +35,8 @@ pub async fn start_control_service(
     hd.add_event_listener(Arc::downgrade(&event_listener));
     let mut session = ControlSession::new();
 
-    while let Some(event) = await!(stream.next()) {
-        await!(handler(hd.clone(), &mut session, event?))?;
+    while let Some(event) = stream.next().await {
+        handler(hd.clone(), &mut session, event?).await?;
     }
     // event_listener will now be dropped, closing the listener
     Ok(())
@@ -49,12 +49,12 @@ async fn handler(
 ) -> fidl::Result<()> {
     match event {
         ControlRequest::Connect { device_id, responder } => {
-            let result = await!(hd.connect(device_id));
+            let result = hd.connect(device_id).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::SetDiscoverable { discoverable, responder } => {
             let mut resp = if discoverable {
-                match await!(hd.set_discoverable()) {
+                match hd.set_discoverable().await {
                     Ok(token) => {
                         session.discoverable_token = Some(token);
                         bt_fidl_status!()
@@ -72,11 +72,11 @@ async fn handler(
             Ok(())
         }
         ControlRequest::Forget { device_id, responder } => {
-            let result = await!(hd.forget(device_id));
+            let result = hd.forget(device_id).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::Disconnect { device_id, responder } => {
-            let result = await!(hd.disconnect(device_id));
+            let result = hd.disconnect(device_id).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::GetKnownRemoteDevices { responder } => {
@@ -104,7 +104,7 @@ async fn handler(
         }
         ControlRequest::GetAdapters { responder } => {
             let mut adapters: Vec<_> =
-                await!(hd.get_adapters()).into_iter().map(control::AdapterInfo::from).collect();
+                hd.get_adapters().await.into_iter().map(control::AdapterInfo::from).collect();
             responder.send(Some(&mut adapters.iter_mut()))
         }
         ControlRequest::SetActiveAdapter { identifier, responder } => {
@@ -117,7 +117,7 @@ async fn handler(
         }
         ControlRequest::RequestDiscovery { discovery, responder } => {
             let mut resp = if discovery {
-                match await!(hd.start_discovery()) {
+                match hd.start_discovery().await {
                     Ok(token) => {
                         session.discovery_token = Some(token);
                         bt_fidl_status!()
@@ -131,11 +131,11 @@ async fn handler(
             responder.send(&mut resp)
         }
         ControlRequest::SetName { name, responder } => {
-            let result = await!(hd.set_name(name));
+            let result = hd.set_name(name).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::SetDeviceClass { device_class, responder } => {
-            let result = await!(hd.set_device_class(device_class));
+            let result = hd.set_device_class(device_class).await;
             responder.send(&mut status_response(result))
         }
     }

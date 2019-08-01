@@ -210,8 +210,8 @@ impl StreamEndpoint {
             let close_signals = Signals::SOCKET_PEER_CLOSED;
             let close_wait = fasync::OnSignals::new(sock.as_ref(), close_signals);
 
-            match await!(close_wait.on_timeout(timeout, || { Err(Status::TIMED_OUT) })) {
-                Err(Status::TIMED_OUT) => return await!(self.abort(Some(peer))),
+            match close_wait.on_timeout(timeout, || Err(Status::TIMED_OUT)).await {
+                Err(Status::TIMED_OUT) => return self.abort(Some(peer)).await,
                 _ => (),
             };
         }
@@ -248,7 +248,7 @@ impl StreamEndpoint {
     pub async fn abort<'a>(&'a mut self, peer: Option<&'a Peer>) -> Result<()> {
         if let Some(peer) = peer {
             if let Some(seid) = &self.remote_id {
-                let _ = await!(peer.abort(&seid));
+                let _ = peer.abort(&seid).await;
                 self.state = StreamState::Aborting;
             }
         }

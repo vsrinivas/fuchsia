@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     base64,
@@ -206,13 +206,9 @@ async fn start_advertising<'a>(
     interval_ms: u32,
     anonymous: bool,
 ) -> Result<(), Error> {
-    let (status, adv_id) = await!(peripheral.start_advertising_deprecated(
-        adv,
-        None,
-        connectable,
-        interval_ms,
-        anonymous
-    ))?;
+    let (status, adv_id) = peripheral
+        .start_advertising_deprecated(adv, None, connectable, interval_ms, anonymous)
+        .await?;
     if let Some(err) = status.error {
         bail!("Failed to initiate advertisement: {:?}", err);
     }
@@ -268,17 +264,11 @@ fn main() -> Result<(), Error> {
     let mut events_stream = peripheral.take_event_stream();
 
     let main_fut = async move {
-        await!(start_advertising(
-            &peripheral,
-            &mut adv,
-            &service_names,
-            connectable,
-            interval,
-            anon
-        ))?;
+        start_advertising(&peripheral, &mut adv, &service_names, connectable, interval, anon)
+            .await?;
 
         // handle central connect and disconnect events
-        while let Some(evt) = await!(events_stream.try_next())? {
+        while let Some(evt) = events_stream.try_next().await? {
             use fidl_fuchsia_bluetooth_le::PeripheralEvent::*;
             match evt {
                 OnCentralConnected { advertisement_id, central } => {
@@ -290,14 +280,15 @@ fn main() -> Result<(), Error> {
                 OnCentralDisconnected { device_id } => {
                     eprintln!("Disconnected from {}", device_id);
                     // start advertising again once device is disconnected
-                    await!(start_advertising(
+                    start_advertising(
                         &peripheral,
                         &mut adv,
                         &service_names,
                         connectable,
                         interval,
-                        anon
-                    ))?;
+                        anon,
+                    )
+                    .await?;
                 }
                 // TODO(BT-812): Implement this event when supported.
                 OnPeerConnected { peer: _, connection: _ } => (),

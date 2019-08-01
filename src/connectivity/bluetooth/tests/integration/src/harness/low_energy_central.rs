@@ -24,7 +24,7 @@ where
     Fut: Future<Output = Result<(), Error>>,
 {
     // Don't drop the FakeHciDevice until the end of this function
-    let fake_host = await!(ActivatedFakeHost::new("bt-hci-integration-le-0"))?;
+    let fake_host = ActivatedFakeHost::new("bt-hci-integration-le-0").await?;
 
     let proxy = fuchsia_component::client::connect_to_service::<CentralMarker>()
         .context("Failed to connect to BLE Central service")?;
@@ -35,9 +35,9 @@ where
             .unwrap_or_else(|e| eprintln!("Error handling central events: {:?}", e)),
     );
 
-    let result = await!(test(state));
+    let result = test(state).await;
 
-    await!(fake_host.release())?;
+    fake_host.release().await?;
 
     result
 }
@@ -80,7 +80,7 @@ pub type CentralHarness = ExpectationHarness<CentralState, CentralProxy>;
 pub async fn handle_central_events(harness: CentralHarness) -> Result<(), Error> {
     let mut events = harness.aux().take_event_stream();
 
-    while let Some(e) = await!(events.try_next())? {
+    while let Some(e) = events.try_next().await? {
         match e {
             CentralEvent::OnDeviceDiscovered { device } => {
                 harness.write_state().remote_devices.push(device.into());

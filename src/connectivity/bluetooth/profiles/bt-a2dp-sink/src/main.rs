@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "256"]
 
 use {
@@ -163,7 +163,7 @@ impl Streams {
     async fn build() -> Result<Streams, Error> {
         let mut s = Streams::new();
         // TODO(BT-533): detect codecs, add streams for each codec
-        if let Ok(_player) = await!(player::Player::new(AUDIO_ENCODING_SBC.to_string())) {
+        if let Ok(_player) = player::Player::new(AUDIO_ENCODING_SBC.to_string()).await {
             let sbc_stream = avdtp::StreamEndpoint::new(
                 SBC_SEID,
                 avdtp::MediaType::Audio,
@@ -224,10 +224,10 @@ impl Streams {
 /// Discovers any remote streams and reports their information to the log.
 async fn discover_remote_streams(peer: Arc<avdtp::Peer>) {
     let mut cobalt = get_cobalt_logger();
-    let streams = await!(peer.discover()).expect("Failed to discover source streams");
+    let streams = peer.discover().await.expect("Failed to discover source streams");
     fx_log_info!("Discovered {} streams", streams.len());
     for info in streams {
-        match await!(peer.get_all_capabilities(info.id())) {
+        match peer.get_all_capabilities(info.id()).await {
             Ok(capabilities) => {
                 fx_log_info!("Stream {:?}", info);
                 for cap in capabilities {
@@ -304,7 +304,7 @@ impl RemotePeer {
     fn start_requests_task(&mut self, remotes: Arc<RwLock<RemotesMap>>, device_id: String) {
         let mut request_stream = self.peer.take_request_stream();
         fuchsia_async::spawn(async move {
-            while let Some(r) = await!(request_stream.next()) {
+            while let Some(r) = request_stream.next().await {
                 match r {
                     Err(e) => fx_log_info!("Request Error on {}: {:?}", device_id, e),
                     Ok(request) => {
@@ -314,7 +314,7 @@ impl RemotePeer {
                             peer = wremotes.remove(&device_id).expect("Can't get peer");
                         }
                         let fut = peer.handle_request(request);
-                        if let Err(e) = await!(fut) {
+                        if let Err(e) = fut.await {
                             fx_log_warn!("{} Error handling request: {:?}", device_id, e);
                         }
                         let replaced = remotes.write().insert(device_id.clone(), peer);
@@ -354,7 +354,7 @@ impl RemotePeer {
             avdtp::Request::Close { responder, stream_id } => {
                 match self.streams.get_endpoint(&stream_id) {
                     None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
-                    Some(stream) => await!(stream.release(responder, &self.peer)),
+                    Some(stream) => stream.release(responder, &self.peer).await,
                 }
             }
             avdtp::Request::SetConfiguration {
@@ -426,7 +426,7 @@ impl RemotePeer {
                     None => return Ok(()),
                     Some(stream) => stream,
                 };
-                await!(stream.abort(None))?;
+                stream.abort(None).await?;
                 self.opening = self.opening.take().filter(|id| id != &stream_id);
                 let _ = self.streams.get_mut(&stream_id).and_then(|x| x.stop());
                 responder.send()
@@ -444,7 +444,7 @@ async fn decode_media_stream(
     mut end_signal: Receiver<()>,
 ) -> () {
     let mut total_bytes = 0;
-    let mut player = match await!(player::Player::new(encoding.clone())) {
+    let mut player = match player::Player::new(encoding.clone()).await {
         Ok(v) => v,
         Err(e) => {
             fx_log_info!("Can't setup stream source for Media: {:?}", e);
@@ -493,7 +493,7 @@ async fn decode_media_stream(
                 if evt.is_none() {
                     fx_log_info!("Rebuilding Player: {:?}", evt);
                     // The player died somehow? Attempt to rebuild the player.
-                    player = match await!(player::Player::new(encoding.clone())) {
+                    player = match player::Player::new(encoding.clone()).await {
                         Ok(v) => v,
                         Err(e) => {
                             fx_log_info!("Can't rebuild player: {:?}", e);
@@ -521,7 +521,7 @@ async fn decode_media_stream(
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
 
-    let streams = await!(Streams::build())?;
+    let streams = Streams::build().await?;
 
     if streams.len() == 0 {
         return Err(format_err!("Can't play media - no codecs found or media player missing"));
@@ -531,11 +531,8 @@ async fn main() -> Result<(), Error> {
         .context("Failed to connect to Bluetooth profile service")?;
 
     let mut service_def = make_profile_service_definition();
-    let (status, service_id) = await!(profile_svc.add_service(
-        &mut service_def,
-        SecurityLevel::EncryptionOptional,
-        false
-    ))?;
+    let (status, service_id) =
+        profile_svc.add_service(&mut service_def, SecurityLevel::EncryptionOptional, false).await?;
 
     let attrs: Vec<u16> = vec![
         ATTR_PROTOCOL_DESCRIPTOR_LIST,
@@ -554,7 +551,7 @@ async fn main() -> Result<(), Error> {
     let remotes: Arc<RwLock<RemotesMap>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut evt_stream = profile_svc.take_event_stream();
-    while let Some(evt) = await!(evt_stream.next()) {
+    while let Some(evt) = evt_stream.next().await {
         match evt {
             Err(e) => return Err(e.into()),
             Ok(ProfileEvent::OnServiceFound { peer_id, profile, attributes }) => {

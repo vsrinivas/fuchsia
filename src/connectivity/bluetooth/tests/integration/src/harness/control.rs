@@ -60,7 +60,7 @@ pub type ControlHarness = ExpectationHarness<ControlState, ControlProxy>;
 pub async fn handle_control_events(harness: ControlHarness) -> Result<(), Error> {
     let mut events = harness.aux().take_event_stream();
 
-    while let Some(e) = await!(events.try_next())? {
+    while let Some(e) = events.try_next().await? {
         match e {
             ControlEvent::OnActiveAdapterChanged { adapter } => {
                 harness.write_state().active_host = adapter.map(|host| host.identifier);
@@ -90,7 +90,7 @@ pub async fn new_control_harness() -> Result<ControlHarness, Error> {
     let control_harness = ControlHarness::new(proxy);
 
     // Store existing hosts in our state, as we won't get notified about them
-    let hosts = await!(control_harness.aux().get_adapters())?;
+    let hosts = control_harness.aux().get_adapters().await?;
     if let Some(hosts) = hosts {
         for host in hosts {
             control_harness.write_state().hosts.insert(host.identifier.clone(), host);
@@ -113,9 +113,9 @@ where
     F: FnOnce(ControlHarness) -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
-    let control_harness = await!(new_control_harness())?;
+    let control_harness = new_control_harness().await?;
 
-    await!(test(control_harness))
+    test(control_harness).await
 }
 
 impl TestHarness for ControlHarness {
@@ -162,7 +162,7 @@ pub mod control_expectation {
 }
 
 /// An activated fake host.
-/// Must be released with `await!(host.release())` before drop.
+/// Must be released with `host.release().await` before drop.
 pub struct ActivatedFakeHost {
     control: ControlHarness,
     host: String,
@@ -179,20 +179,22 @@ pub async fn activate_fake_host(
     let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
 
-    let hci = await!(Emulator::create_and_publish(name))?;
+    let hci = Emulator::create_and_publish(name).await?;
 
-    let state = await!(control.when_satisfied(
-        Predicate::<ControlState>::new(
-            move |control| {
-                let added_fake_hosts = control.hosts.iter().filter(|(id, host)| {
-                    host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
-                });
-                added_fake_hosts.count() > 0
-            },
-            Some("Fake Host Added")
-        ),
-        control_timeout()
-    ))?;
+    let state = control
+        .when_satisfied(
+            Predicate::<ControlState>::new(
+                move |control| {
+                    let added_fake_hosts = control.hosts.iter().filter(|(id, host)| {
+                        host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
+                    });
+                    added_fake_hosts.count() > 0
+                },
+                Some("Fake Host Added"),
+            ),
+            control_timeout(),
+        )
+        .await?;
 
     let host = state
         .hosts
@@ -203,16 +205,17 @@ pub async fn activate_fake_host(
         .identifier
         .to_string(); // We can safely unwrap here as this is guarded by the previous expectation
 
-    await!(control.aux().set_active_adapter(&host))?;
-    await!(control
-        .when_satisfied(control_expectation::active_host_is(host.clone()), control_timeout()))?;
+    control.aux().set_active_adapter(&host).await?;
+    control
+        .when_satisfied(control_expectation::active_host_is(host.clone()), control_timeout())
+        .await?;
     Ok((host, hci))
 }
 
 impl ActivatedFakeHost {
     pub async fn new(name: &str) -> Result<ActivatedFakeHost, Error> {
-        let control = await!(new_control_harness())?;
-        let (host, hci) = await!(activate_fake_host(control.clone(), name))?;
+        let control = new_control_harness().await?;
+        let (host, hci) = activate_fake_host(control.clone(), name).await?;
         Ok(ActivatedFakeHost { control, host, hci: Some(hci) })
     }
 
@@ -220,10 +223,12 @@ impl ActivatedFakeHost {
         self.hci = None;
 
         // Wait for BT-GAP to unregister the associated fake host
-        await!(self.control.when_satisfied(
-            control_expectation::host_not_present(self.host.clone()),
-            control_timeout()
-        ))?;
+        self.control
+            .when_satisfied(
+                control_expectation::host_not_present(self.host.clone()),
+                control_timeout(),
+            )
+            .await?;
         Ok(())
     }
 }

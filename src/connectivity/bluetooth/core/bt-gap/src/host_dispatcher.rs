@@ -71,7 +71,7 @@ impl Drop for DiscoveryRequestToken {
     fn drop(&mut self) {
         fx_vlog!(1, "DiscoveryRequestToken dropped");
         if let Some(host) = self.adap.upgrade() {
-            // FIXME(nickpollard) this should be `await!`ed, but not while holding the lock
+            // FIXME(nickpollard) this should be `.await`ed, but not while holding the lock
             host.write().stop_discovery();
         }
     }
@@ -85,7 +85,7 @@ impl Drop for DiscoverableRequestToken {
     #[allow(unused_must_use)] // FIXME(nickpollard)
     fn drop(&mut self) {
         if let Some(host) = self.adap.upgrade() {
-            // FIXME(BT-643) this should be `await!`ed, but not while holding the lock
+            // FIXME(BT-643) this should be `.await`ed, but not while holding the lock
             let host = host.write();
             host.set_discoverable(false);
         }
@@ -332,22 +332,22 @@ impl HostDispatcher {
     }
 
     pub async fn when_hosts_found(&self) -> HostDispatcher {
-        await!(WhenHostsFound::new(self.clone()))
+        WhenHostsFound::new(self.clone()).await
     }
 
     pub async fn set_name(&mut self, name: Option<String>) -> types::Result<()> {
         self.state.write().name = name.unwrap_or(DEFAULT_NAME.to_string());
 
-        match await!(self.get_active_adapter()) {
-            Some(adapter) => await!(adapter.write().set_name(self.state.read().name.clone())),
+        match self.get_active_adapter().await {
+            Some(adapter) => adapter.write().set_name(self.state.read().name.clone()).await,
             None => Err(types::Error::no_host()),
         }
     }
 
     pub async fn set_device_class(&mut self, class: DeviceClass) -> types::Result<()> {
         let class_repr = class.debug();
-        let res = match await!(self.get_active_adapter()) {
-            Some(adapter) => await!(adapter.write().set_device_class(class)),
+        let res = match self.get_active_adapter().await {
+            Some(adapter) => adapter.write().set_device_class(class).await,
             None => Err(types::Error::no_host()),
         };
 
@@ -374,10 +374,10 @@ impl HostDispatcher {
             return Ok(Arc::clone(&token));
         }
 
-        match await!(self.get_active_adapter()) {
+        match self.get_active_adapter().await {
             Some(host) => {
                 let weak_host = Arc::downgrade(&host);
-                await!(host.write().start_discovery())?;
+                host.write().start_discovery().await?;
                 let token = Arc::new(DiscoveryRequestToken { adap: weak_host });
                 self.state.write().discovery = Some(Arc::downgrade(&token));
                 Ok(token)
@@ -393,10 +393,10 @@ impl HostDispatcher {
             return Ok(Arc::clone(&token));
         }
 
-        match await!(self.get_active_adapter()) {
+        match self.get_active_adapter().await {
             Some(host) => {
                 let weak_host = Arc::downgrade(&host);
-                await!(host.write().set_discoverable(true))?;
+                host.write().set_discoverable(true).await?;
                 let token = Arc::new(DiscoverableRequestToken { adap: weak_host });
                 self.state.write().discoverable = Some(Arc::downgrade(&token));
                 Ok(token)
@@ -408,7 +408,7 @@ impl HostDispatcher {
     pub async fn forget(&mut self, peer_id: String) -> types::Result<()> {
         // Try to delete from each adapter, even if it might not have the peer.
         // peers will be updated by the disconnection(s).
-        let adapters = await!(self.get_all_adapters());
+        let adapters = self.get_all_adapters().await;
         if adapters.is_empty() {
             return Err(types::Error::no_host());
         }
@@ -416,7 +416,7 @@ impl HostDispatcher {
         for adapter in adapters {
             let adapter_path = adapter.read().path.clone();
 
-            match await!(adapter.write().forget(peer_id.clone())) {
+            match adapter.write().forget(peer_id.clone()).await {
                 Ok(()) => adapters_removed += 1,
                 Err(types::Error::HostError(FidlError {
                     error_code: ErrorCode::NotFound, ..
@@ -440,35 +440,35 @@ impl HostDispatcher {
     }
 
     pub async fn connect(&mut self, peer_id: String) -> types::Result<()> {
-        let host = await!(self.get_active_adapter());
+        let host = self.get_active_adapter().await;
         match host {
-            Some(host) => await!(host.write().connect(peer_id)),
+            Some(host) => host.write().connect(peer_id).await,
             None => Err(types::Error::no_host()),
         }
     }
 
     // Attempt to disconnect peer with id `peer_id` from all transports
     pub async fn disconnect(&mut self, peer_id: String) -> types::Result<()> {
-        let host = await!(self.get_active_adapter());
+        let host = self.get_active_adapter().await;
         match host {
             Some(host) => {
                 // Suppress the error from `rm_gatt`, as the peer not having a GATT entry
                 // (i.e. not using LE) is not a failure condition
-                let _ = await!(host.write().rm_gatt(peer_id.clone()));
-                await!(host.write().disconnect(peer_id))
+                let _ = host.write().rm_gatt(peer_id.clone()).await;
+                host.write().disconnect(peer_id).await
             }
             None => Err(types::Error::no_host()),
         }
     }
 
     pub async fn get_active_adapter(&mut self) -> Option<Arc<RwLock<HostDevice>>> {
-        let adapter = await!(self.when_hosts_found());
+        let adapter = self.when_hosts_found().await;
         let mut wstate = adapter.state.write();
         wstate.get_active_host()
     }
 
     pub async fn get_all_adapters(&self) -> Vec<Arc<RwLock<HostDevice>>> {
-        let _ = await!(self.when_hosts_found());
+        let _ = self.when_hosts_found().await;
         self.state.read().host_devices.values().cloned().collect()
     }
 
@@ -478,7 +478,7 @@ impl HostDispatcher {
     }
 
     pub async fn request_host_service(mut self, chan: fasync::Channel, service: HostService) {
-        match await!(self.get_active_adapter()) {
+        match self.get_active_adapter().await {
             Some(host) => {
                 let host = host.read();
                 let host = host.get_host();
@@ -575,7 +575,7 @@ impl HostDispatcher {
         let host_dev = bt::util::open_rdwr(host_path)?;
         let device_topo = fdio::device_get_topo_path(&host_dev)?;
         fx_log_info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
-        let host_device = await!(init_host(host_path, node))?;
+        let host_device = init_host(host_path, node).await?;
 
         // TODO(armansito): Make sure that the bt-host device is left in a well-known state if any
         // of these operations fails.
@@ -591,14 +591,18 @@ impl HostDispatcher {
 
         let address = host_device.read().get_info().address.clone();
         assign_host_data(host_device.clone(), self.clone(), &address)?;
-        await!(try_restore_bonds(host_device.clone(), self.clone(), &address))
+        try_restore_bonds(host_device.clone(), self.clone(), &address)
+            .await
             .map_err(|e| e.as_failure())?;
 
         // Enable privacy by default.
         host_device.read().enable_privacy(true).map_err(|e| e.as_failure())?;
 
         // TODO(NET-1445): Only the active host should be made connectable and scanning in the background.
-        await!(host_device.read().set_connectable(true))
+        host_device
+            .read()
+            .set_connectable(true)
+            .await
             .map_err(|_| err_msg("failed to set connectable"))?;
         host_device
             .read()
@@ -733,7 +737,9 @@ async fn init_host(path: &Path, node: inspect::Node) -> Result<Arc<RwLock<HostDe
     let host = HostProxy::new(handle);
 
     // Obtain basic information and create and entry in the disptacher's map.
-    let adapter_info = await!(host.get_info())
+    let adapter_info = host
+        .get_info()
+        .await
         .map(|info| Inspectable::new(AdapterInfo::from(info), node))
         .map_err(|_| err_msg("failed to obtain bt-host information"))?;
     Ok(Arc::new(RwLock::new(HostDevice::new(path.to_path_buf(), host, adapter_info))))
@@ -753,7 +759,7 @@ async fn try_restore_bonds(
         Some(data) => data,
         None => return Ok(()),
     };
-    let res = await!(host_device.read().restore_bonds(data));
+    let res = host_device.read().restore_bonds(data).await;
     res.map_err(|e| {
         fx_log_err!("failed to restore bonding data for host: {:?}", e);
         e

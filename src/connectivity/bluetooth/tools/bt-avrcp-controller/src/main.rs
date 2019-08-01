@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -177,11 +177,11 @@ async fn handle_cmd<'a>(
     if let Some((raw_cmd, args)) = components.split_first() {
         let cmd = raw_cmd.parse();
         let res = match cmd {
-            Ok(Cmd::AvcCommand) => await!(send_passthrough(args, &controller)),
-            Ok(Cmd::GetMediaAttributes) => await!(get_media(args, &controller)),
-            Ok(Cmd::SendRawVendorCommand) => await!(send_raw_vendor(args, &test_controller)),
-            Ok(Cmd::SupportedEvents) => await!(get_events_supported(args, &test_controller)),
-            Ok(Cmd::IsConnected) => await!(is_connected(args, &test_controller)),
+            Ok(Cmd::AvcCommand) => send_passthrough(args, &controller).await,
+            Ok(Cmd::GetMediaAttributes) => get_media(args, &controller).await,
+            Ok(Cmd::SendRawVendorCommand) => send_raw_vendor(args, &test_controller).await,
+            Ok(Cmd::SupportedEvents) => get_events_supported(args, &test_controller).await,
+            Ok(Cmd::IsConnected) => is_connected(args, &test_controller).await,
             Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
             Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),
             Err(_) => Ok(format!("\"{}\" is not a valid command", raw_cmd)),
@@ -237,7 +237,7 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
                 }
                 // wait until processing thread is finished evaluating the last command
                 // before running the next loop in the repl
-                await!(ack_receiver.next());
+                ack_receiver.next().await;
             }
         };
         exec.run_singlethreaded(fut)
@@ -249,7 +249,7 @@ async fn controller_listener(
     controller: &ControllerProxy,
     mut stream: ControllerEventStream,
 ) -> Result<(), Error> {
-    while let Some(evt) = await!(stream.try_next())? {
+    while let Some(evt) = stream.try_next().await? {
         print!("{}", CLEAR_LINE);
         match evt {
             ControllerEvent::OnNotification { timestamp, notification } => {
@@ -278,8 +278,8 @@ async fn run_repl<'a>(
     // the main thread via async channels.
     let (mut commands, mut acks) = cmd_stream();
     loop {
-        if let Some(cmd) = await!(commands.next()) {
-            match await!(handle_cmd(controller, test_controller, cmd)) {
+        if let Some(cmd) = commands.next().await {
+            match handle_cmd(controller, test_controller, cmd).await {
                 Ok(ReplControl::Continue) => {}
                 Ok(ReplControl::Break) => {
                     println!("\n");
@@ -292,7 +292,7 @@ async fn run_repl<'a>(
         } else {
             break;
         }
-        await!(acks.send(()))?;
+        acks.send(()).await?;
     }
     Ok(())
 }
@@ -312,7 +312,7 @@ async fn main() -> Result<(), Error> {
     let (t_client, t_server) =
         create_endpoints::<ControllerExtMarker>().expect("Error creating Test Controller endpoint");
 
-    let _status = await!(test_avrcp_svc.get_controller_for_target(&device_id.as_str(), t_server))?;
+    let _status = test_avrcp_svc.get_controller_for_target(&device_id.as_str(), t_server).await?;
     eprintln!(
         "Test controller obtained to device \"{device}\" AVRCP remote target service",
         device = &device_id,
@@ -327,7 +327,7 @@ async fn main() -> Result<(), Error> {
     let (c_client, c_server) =
         create_endpoints::<ControllerMarker>().expect("Error creating Controller endpoint");
 
-    let _status = await!(avrcp_svc.get_controller_for_target(&device_id.as_str(), c_server))?;
+    let _status = avrcp_svc.get_controller_for_target(&device_id.as_str(), c_server).await?;
     eprintln!(
         "Controller obtained to device \"{device}\" AVRCP remote target service",
         device = &device_id,

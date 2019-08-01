@@ -34,19 +34,21 @@ pub async fn lifecycle_test(_: ()) -> Result<(), Error> {
         le_acl_buffer_settings: None,
     };
 
-    let emulator = await!(Emulator::create("bt-hci-integration-lifecycle"))?;
+    let emulator = Emulator::create("bt-hci-integration-lifecycle").await?;
     let hci_topo = PathBuf::from(fdio::device_get_topo_path(emulator.file())?);
 
     // Publish the bt-hci device and verify that a bt-host appears under its topology within a
     // reasonable timeout.
     let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout())?;
-    let _ = await!(emulator.publish(settings))?;
-    let bthost = await!(watcher.watch_new(&hci_topo, WatchFilter::AddedOnly))?;
+    let _ = emulator.publish(settings).await?;
+    let bthost = watcher.watch_new(&hci_topo, WatchFilter::AddedOnly).await?;
 
     // Open a host channel using a fidl call and check the device is responsive
     let handle = host::open_host_channel(bthost.file())?;
     let host = HostProxy::new(fasync::Channel::from_channel(handle.into())?);
-    let info = await!(host.get_info())
+    let info = host
+        .get_info()
+        .await
         .context("Is bt-gap running? If so, try stopping it and re-running these tests")?;
 
     // The bt-host should have been initialized with the address that we initially configured.
@@ -56,5 +58,5 @@ pub async fn lifecycle_test(_: ()) -> Result<(), Error> {
     drop(emulator);
 
     // Check that the bt-host device is also destroyed.
-    await!(watcher.watch_removed(bthost.path()))
+    watcher.watch_removed(bthost.path()).await
 }

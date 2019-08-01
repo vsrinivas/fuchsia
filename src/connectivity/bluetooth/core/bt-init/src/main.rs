@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -12,10 +12,13 @@ use {
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fidl_fuchsia_bluetooth_snoop::SnoopMarker,
-    fuchsia_component::{client, fuchsia_single_component_package_url, server},
     fuchsia_async as fasync,
+    fuchsia_component::{client, fuchsia_single_component_package_url, server},
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
-    futures::{future::{self, try_join}, FutureExt, StreamExt},
+    futures::{
+        future::{self, try_join},
+        FutureExt, StreamExt,
+    },
 };
 
 mod config;
@@ -51,11 +54,13 @@ fn main() -> Result<(), Error> {
         .add_service_at(ProfileMarker::NAME, |chan| Some((ProfileMarker::NAME, chan)))
         .add_service_at(Server_Marker::NAME, |chan| Some((Server_Marker::NAME, chan)));
     fs.take_and_serve_directory_handle()?;
-    let server = fs.for_each(move |(name, chan)| {
-        fx_log_info!("Passing {} Handle to bt-gap", name);
-        let _ = bt_gap.pass_to_named_service(name, chan);
-        future::ready(())
-    }).map(Ok);
+    let server = fs
+        .for_each(move |(name, chan)| {
+            fx_log_info!("Passing {} Handle to bt-gap", name);
+            let _ = bt_gap.pass_to_named_service(name, chan);
+            future::ready(())
+        })
+        .map(Ok);
 
     let io_config_fut = cfg.set_capabilities();
 

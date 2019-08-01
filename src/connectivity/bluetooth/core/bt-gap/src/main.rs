@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(await_macro, async_await)]
+#![feature(async_await)]
 
 // Macros used to serialize bonding data FIDL types for persistent storage.
 #[macro_use]
@@ -67,11 +67,11 @@ fn run() -> Result<(), Error> {
     let host_watcher = async {
         let stream = watch_hosts();
         pin_mut!(stream);
-        while let Some(msg) = await!(stream.try_next())? {
+        while let Some(msg) = stream.try_next().await? {
             let hd = watch_hd.clone();
             match msg {
                 AdapterAdded(device_path) => {
-                    let result = await!(hd.add_adapter(&device_path));
+                    let result = hd.add_adapter(&device_path).await;
                     if let Err(e) = &result {
                         fx_log_warn!("Error adding bt-host device '{:?}': {:?}", device_path, e);
                     }

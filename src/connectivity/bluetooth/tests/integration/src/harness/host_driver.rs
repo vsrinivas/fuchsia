@@ -58,10 +58,11 @@ pub fn expect_remote_device(
 
 // Returns a future that resolves when a peer matching `id` is not present on the host.
 pub async fn expect_no_peer(host: &HostDriverHarness, id: String) -> Result<(), Error> {
-    await!(host.when_satisfied(
-        Predicate::<HostState>::new(move |host| { host.peers.iter().all(|(i, _)| i != &id) }, None),
-        timeout_duration()
-    ))?;
+    host.when_satisfied(
+        Predicate::<HostState>::new(move |host| host.peers.iter().all(|(i, _)| i != &id), None),
+        timeout_duration(),
+    )
+    .await?;
     Ok(())
 }
 
@@ -90,14 +91,14 @@ impl Clone for HostState {
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
 async fn new_host_harness() -> Result<HostDriverHarness, Error> {
-    let emulator = await!(Emulator::create("bt-integration-test-host"))?;
-    let host_dev = await!(emulator.publish_and_wait_for_host(Emulator::default_settings()))?;
+    let emulator = Emulator::create("bt-integration-test-host").await?;
+    let host_dev = emulator.publish_and_wait_for_host(Emulator::default_settings()).await?;
 
     // Open a Host FIDL interface channel to the bt-host device.
     let fidl_handle = host::open_host_channel(&host_dev.file())?;
     let host_proxy = HostProxy::new(fasync::Channel::from_channel(fidl_handle.into())?);
 
-    let host_info = await!(host_proxy.get_info())?;
+    let host_info = host_proxy.get_info().await?;
     let host_path = host_dev.path().to_path_buf();
     let peers = HashMap::new();
 
@@ -112,31 +113,31 @@ pub async fn expect_host_peer(
     host: &HostDriverHarness,
     target: Predicate<RemoteDevice>,
 ) -> Result<HostState, Error> {
-    await!(host.when_satisfied(
+    host.when_satisfied(
         Predicate::<HostState>::new(
-            move |host| { host.peers.iter().any(|(_, p)| target.satisfied(p)) },
-            None
+            move |host| host.peers.iter().any(|(_, p)| target.satisfied(p)),
+            None,
         ),
-        timeout_duration()
-    ))
+        timeout_duration(),
+    )
+    .await
 }
 
 pub async fn expect_adapter_state(
     host: &HostDriverHarness,
     target: Predicate<AdapterState>,
 ) -> Result<HostState, Error> {
-    await!(host.when_satisfied(
+    host.when_satisfied(
         Predicate::<HostState>::new(
-            move |host| {
-                match &host.host_info.state {
-                    Some(state) => target.satisfied(state),
-                    None => false,
-                }
+            move |host| match &host.host_info.state {
+                Some(state) => target.satisfied(state),
+                None => false,
             },
             None,
         ),
-        timeout_duration()
-    ))
+        timeout_duration(),
+    )
+    .await
 }
 
 impl TestHarness for HostDriverHarness {
@@ -154,7 +155,7 @@ impl TestHarness for HostDriverHarness {
 async fn handle_host_events(harness: HostDriverHarness) -> Result<(), Error> {
     let mut events = harness.aux().0.take_event_stream();
 
-    while let Some(e) = await!(events.try_next())? {
+    while let Some(e) = events.try_next().await? {
         match e {
             HostEvent::OnAdapterStateChanged { state } => {
                 let host_info = &mut harness.write_state().host_info;
@@ -192,7 +193,7 @@ where
     F: FnOnce(HostDriverHarness) -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
-    let host_test = await!(new_host_harness())?;
+    let host_test = new_host_harness().await?;
 
     // Start processing events in a background task.
     fasync::spawn(
@@ -201,12 +202,12 @@ where
     );
 
     // Run the test and obtain the test result.
-    let result = await!(test_func(host_test.clone()));
+    let result = test_func(host_test.clone()).await;
 
     // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
     let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration())?;
     let host_path = &host_test.read().host_path;
     host_test.aux().1 = None;
-    await!(watcher.watch_removed(host_path))?;
+    watcher.watch_removed(host_path).await?;
     result
 }

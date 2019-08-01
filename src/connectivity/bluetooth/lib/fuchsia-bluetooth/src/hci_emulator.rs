@@ -52,22 +52,22 @@ impl Emulator {
     /// will be published; to do so it must be explicitly configured and created with a call to
     /// `publish()`
     pub async fn create(name: &str) -> Result<Emulator, Error> {
-        let dev = await!(TestDevice::create(name))?;
-        let emulator = await!(dev.bind())?;
+        let dev = TestDevice::create(name).await?;
+        let emulator = dev.bind().await?;
         Ok(Emulator { dev: dev, emulator: emulator })
     }
 
     /// Publish a bt-emulator and a bt-hci device using the default emulator settings.
     pub async fn create_and_publish(name: &str) -> Result<Emulator, Error> {
-        let fake_dev = await!(Emulator::create(name))?;
-        await!(fake_dev.publish(Self::default_settings()))?;
+        let fake_dev = Emulator::create(name).await?;
+        fake_dev.publish(Self::default_settings()).await?;
         Ok(fake_dev)
     }
 
     /// Sends a publish message to the emulator. This is a convenience method that internally
     /// handles the FIDL binding error.
     pub async fn publish(&self, settings: EmulatorSettings) -> Result<(), Error> {
-        let result = await!(self.emulator().publish(settings))?;
+        let result = self.emulator().publish(settings).await?;
         result.map_err(|e| format_err!("failed to publish bt-hci device: {:#?}", e))
     }
 
@@ -79,9 +79,9 @@ impl Emulator {
         settings: EmulatorSettings,
     ) -> Result<DeviceFile, Error> {
         let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, watch_timeout())?;
-        let _ = await!(self.publish(settings))?;
+        let _ = self.publish(settings).await?;
         let topo = PathBuf::from(fdio::device_get_topo_path(self.file())?);
-        await!(watcher.watch_new(&topo, WatchFilter::AddedOrExisting))
+        watcher.watch_new(&topo, WatchFilter::AddedOrExisting).await
     }
 
     /// Returns a reference to the underlying file.
@@ -118,11 +118,13 @@ impl TestDevice {
         )?);
 
         // Create a device with the requested name.
-        let (status, path) =
-            await!(root_device.create_device(name).map_err(Error::from).on_timeout(
-                10.seconds().after_now(),
-                || Err(format_err!("timed out waiting to create bt-hci-emulator device {}", name))
-            ))?;
+        let (status, path) = root_device
+            .create_device(name)
+            .map_err(Error::from)
+            .on_timeout(10.seconds().after_now(), || {
+                Err(format_err!("timed out waiting to create bt-hci-emulator device {}", name))
+            })
+            .await?;
         zx::Status::ok(status)?;
         let path = path.ok_or(format_err!("RootDevice.CreateDevice returned null path"))?;
 
@@ -142,18 +144,21 @@ impl TestDevice {
         let channel = fdio::clone_channel(&self.0)?;
         let controller = ControllerProxy::new(fasync::Channel::from_channel(channel)?);
 
-        let _ = await!(controller.bind(EMULATOR_DRIVER_PATH).map_err(Error::from).on_timeout(
-            10.seconds().after_now(),
-            || Err(format_err!(
-                "timed out waiting for emulator to bind bt-hci-fake device {:?}",
-                self.0
-            ))
-        ))?;
+        let _ = controller
+            .bind(EMULATOR_DRIVER_PATH)
+            .map_err(Error::from)
+            .on_timeout(10.seconds().after_now(), || {
+                Err(format_err!(
+                    "timed out waiting for emulator to bind bt-hci-fake device {:?}",
+                    self.0
+                ))
+            })
+            .await?;
 
         // Wait until a bt-emulator device gets published under our test device.
         let topo_path = PathBuf::from(fdio::device_get_topo_path(&self.0)?);
         let mut watcher = DeviceWatcher::new(EMULATOR_DEVICE_DIR, watch_timeout())?;
-        let emulator_dev = await!(watcher.watch_new(&topo_path, WatchFilter::AddedOrExisting))?;
+        let emulator_dev = watcher.watch_new(&topo_path, WatchFilter::AddedOrExisting).await?;
 
         // Connect to the bt-emulator device.
         let channel = fdio::clone_channel(emulator_dev.file())?;
@@ -199,7 +204,7 @@ mod tests {
 
         {
             let fake_dev =
-                await!(Emulator::create("publish-test-0")).expect("Failed to construct Emulator");
+                Emulator::create("publish-test-0").await.expect("Failed to construct Emulator");
             let topo_path = fdio::device_get_topo_path(&fake_dev.dev.0)
                 .expect("Failed to obtain topological path for Emulator");
             let topo_path = PathBuf::from(topo_path);
@@ -207,7 +212,9 @@ mod tests {
             // A bt-emulator device should already exist by now.
             emul_watcher = DeviceWatcher::new(EMULATOR_DEVICE_DIR, watch_timeout())
                 .expect("Failed to create bt-emulator device watcher");
-            emul_dev = await!(emul_watcher.watch_existing(&topo_path))
+            emul_dev = emul_watcher
+                .watch_existing(&topo_path)
+                .await
                 .expect("Expected bt-emulator device to have been published");
 
             // Send a publish message to the device. This call should succeed and result in a new
@@ -215,22 +222,33 @@ mod tests {
             // our expectation is based on the `ADD_FILE` event).
             hci_watcher = DeviceWatcher::new(HCI_DEVICE_DIR, watch_timeout())
                 .expect("Failed to create bt-hci device watcher");
-            let _ = await!(fake_dev.publish(default_settings()))
+            let _ = fake_dev
+                .publish(default_settings())
+                .await
                 .expect("Failed to send Publish message to emulator device");
-            hci_dev = await!(hci_watcher.watch_new(&topo_path, WatchFilter::AddedOnly))
+            hci_dev = hci_watcher
+                .watch_new(&topo_path, WatchFilter::AddedOnly)
+                .await
                 .expect("Expected a new bt-hci device");
 
             // Once a device is published, it should not be possible to publish again while the
             // HciEmulator channel is open.
-            let result = await!(fake_dev.emulator().publish(default_settings()))
+            let result = fake_dev
+                .emulator()
+                .publish(default_settings())
+                .await
                 .expect("Failed to send second Publish message to emulator device");
             assert_eq!(Err(EmulatorError::HciAlreadyPublished), result);
         }
 
         // Both devices should be destroyed when `fake_dev` gets dropped.
-        let _ = await!(hci_watcher.watch_removed(hci_dev.path()))
+        let _ = hci_watcher
+            .watch_removed(hci_dev.path())
+            .await
             .expect("Expected bt-hci device to get removed");
-        let _ = await!(emul_watcher.watch_removed(emul_dev.path()))
+        let _ = emul_watcher
+            .watch_removed(emul_dev.path())
+            .await
             .expect("Expected bt-emulator device to get removed");
     }
 }

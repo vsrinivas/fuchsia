@@ -19,7 +19,7 @@ where
     F: FnOnce(ProfileHarness) -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
-    let fake_host = await!(ActivatedFakeHost::new("bt-hci-integration-profile-0"))?;
+    let fake_host = ActivatedFakeHost::new("bt-hci-integration-profile-0").await?;
 
     let proxy = fuchsia_component::client::connect_to_service::<ProfileMarker>()
         .context("Failed to connect to Profile serivce")?;
@@ -31,9 +31,9 @@ where
             .unwrap_or_else(|e| eprintln!("Error handling profile events: {:?}", e)),
     );
 
-    let result = await!(test(state));
+    let result = test(state).await;
 
-    await!(fake_host.release())?;
+    fake_host.release().await?;
 
     result
 }
@@ -76,7 +76,7 @@ pub type ProfileHarness = ExpectationHarness<ProfileState, ProfileProxy>;
 pub async fn handle_profile_events(harness: ProfileHarness) -> Result<(), Error> {
     let mut events = harness.aux().take_event_stream();
 
-    while let Some(evt) = await!(events.next()) {
+    while let Some(evt) = events.next().await {
         match evt? {
             ProfileEvent::OnConnected { device_id, service_id, channel, protocol } => {
                 harness.write_state().connected_channels.push(ConnectedChannel {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{bail, Error, ResultExt},
@@ -93,7 +93,7 @@ async fn gatt_service_delegate(
     state: &BatteryState,
     mut stream: gatt::LocalServiceDelegateRequestStream,
 ) -> Result<(), Error> {
-    while let Some(request) = await!(stream.try_next()).context("error running service delegate")? {
+    while let Some(request) = stream.try_next().await.context("error running service delegate")? {
         use fidl_fuchsia_bluetooth_gatt::LocalServiceDelegateRequest::*;
         match request {
             OnCharacteristicConfiguration { peer_id, notify, indicate, .. } => {
@@ -128,7 +128,7 @@ async fn power_manager_watcher(
     mut stream: PowerManagerWatcherRequestStream,
 ) -> Result<(), Error> {
     while let Some(PowerManagerWatcherRequest::OnChangeBatteryStatus { battery_status, .. }) =
-        await!(stream.try_next()).context("error running power manager watcher")?
+        stream.try_next().await.context("error running power manager watcher")?
     {
         let level = battery_status.level.round() as u8;
         state.set_level(level)?;
@@ -189,11 +189,8 @@ fn main() -> Result<(), Error> {
 
     let main_fut = async move {
         // Publish the local gatt service delegate with the gatt service.
-        let status = await!(gatt_server.publish_service(
-            &mut service_info,
-            delegate_client,
-            service_server
-        ))?;
+        let status =
+            gatt_server.publish_service(&mut service_info, delegate_client, service_server).await?;
         if let Some(error) = status.error {
             bail!("Failed to publish battery service to gatt server: {:?}", error);
         }

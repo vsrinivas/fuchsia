@@ -27,21 +27,23 @@ pub async fn set_active_host(control: ControlHarness) -> Result<(), Error> {
     let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
 
-    let fake_hci_0 = await!(Emulator::create_and_publish("bt-hci-integration-control-0"))?;
-    let fake_hci_1 = await!(Emulator::create_and_publish("bt-hci-integration-control-1"))?;
+    let fake_hci_0 = Emulator::create_and_publish("bt-hci-integration-control-0").await?;
+    let fake_hci_1 = Emulator::create_and_publish("bt-hci-integration-control-1").await?;
 
-    let state = await!(control.when_satisfied(
-        Predicate::<ControlState>::new(
-            move |control| {
-                let added_fake_hosts = control.hosts.iter().filter(|(id, host)| {
-                    host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
-                });
-                added_fake_hosts.count() > 1
-            },
-            Some("Both Fake Hosts Added")
-        ),
-        control_timeout()
-    ))?;
+    let state = control
+        .when_satisfied(
+            Predicate::<ControlState>::new(
+                move |control| {
+                    let added_fake_hosts = control.hosts.iter().filter(|(id, host)| {
+                        host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
+                    });
+                    added_fake_hosts.count() > 1
+                },
+                Some("Both Fake Hosts Added"),
+            ),
+            control_timeout(),
+        )
+        .await?;
 
     let fake_hosts: Vec<String> = state
         .hosts
@@ -52,41 +54,45 @@ pub async fn set_active_host(control: ControlHarness) -> Result<(), Error> {
         .collect();
 
     for (id, _) in state.hosts {
-        await!(control.aux().set_active_adapter(&id))?;
-        await!(control.when_satisfied(control_expectation::active_host_is(id), control_timeout()))?;
+        control.aux().set_active_adapter(&id).await?;
+        control.when_satisfied(control_expectation::active_host_is(id), control_timeout()).await?;
     }
 
     drop(fake_hci_0);
     drop(fake_hci_1);
 
     for host in fake_hosts {
-        await!(
-            control.when_satisfied(control_expectation::host_not_present(host), control_timeout())
-        )?;
+        control
+            .when_satisfied(control_expectation::host_not_present(host), control_timeout())
+            .await?;
     }
 
     Ok(())
 }
 
 pub async fn disconnect(control: ControlHarness) -> Result<(), Error> {
-    let (_host, _hci) = await!(activate_fake_host(control.clone(), "bt-hci-integration"))?;
+    let (_host, _hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
 
-    await!(control.aux().request_discovery(true))?;
-    let state = await!(control.when_satisfied(
-        control_expectation::peer_exists(expectation::peer::address(FAKE_LE_DEVICE_ADDR)),
-        control_timeout()
-    ))?;
+    control.aux().request_discovery(true).await?;
+    let state = control
+        .when_satisfied(
+            control_expectation::peer_exists(expectation::peer::address(FAKE_LE_DEVICE_ADDR)),
+            control_timeout(),
+        )
+        .await?;
 
     // We can safely unwrap here as this is guarded by the previous expectation
     let peer = state.peers.iter().find(|(_, d)| &d.address == FAKE_LE_DEVICE_ADDR).unwrap().0;
 
-    await!(control.aux().connect(peer))?;
-    await!(
-        control.when_satisfied(control_expectation::peer_connected(peer, true), control_timeout())
-    )?;
-    await!(control.aux().disconnect(peer))?;
-    await!(
-        control.when_satisfied(control_expectation::peer_connected(peer, false), control_timeout())
-    )?;
+    control.aux().connect(peer).await?;
+
+    control
+        .when_satisfied(control_expectation::peer_connected(peer, true), control_timeout())
+        .await?;
+    control.aux().disconnect(peer).await?;
+
+    control
+        .when_satisfied(control_expectation::peer_connected(peer, false), control_timeout())
+        .await?;
     Ok(())
 }

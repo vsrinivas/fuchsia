@@ -34,5 +34,5 @@ async fn close_channel_when_client_dropped() -> Result<(), Error> {
 
     let timeout = 5.seconds();
     // As we have dropped the client, this should terminate successfully before the timeout
-    await!(serve_until_done.on_timeout(timeout.after_now(), move || Err(format_err!("Timed out"))))
+    serve_until_done.on_timeout(timeout.after_now(), move || Err(format_err!("Timed out"))).await
 }
