@@ -22,6 +22,7 @@
 #include <zircon/hw/gpt.h>
 
 #include "osboot.h"
+#include "bootbyte.h"
 
 #include <zircon/boot/netboot.h>
 
@@ -521,10 +522,33 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         valid_keys[key_idx++] = 'r';
     }
 
+    // query the boot byte from OS shutdown to select normal or recovery boot
+    // if byte is initialized, clears the byte so future start-ups don't loop on a failing value
+    unsigned char bootbyte = bootbyte_read();
+
+    // unpack reboot_count from boot_options
+    unsigned char reboot_count = (bootbyte & RTC_BOOT_COUNT_MASK) >> RTC_BOOT_COUNT_SHIFT;
+    bootbyte &= ~RTC_BOOT_COUNT_MASK;
+
+    if (reboot_count == 1)
+        bootbyte_clear(); // 1 = final attempt
+    else
+        bootbyte_decrement();
+
+    //
     // The first entry in valid_keys will be the default after the timeout.
+    // Check the bootbyte before checking bootloader.default
     // Use the value of bootloader.default to determine the first entry. If
     // bootloader.default is not set, use "network".
-    if (!memcmp(defboot, "local", 5)) {
+    //
+    if (bootbyte == RTC_BOOT_RECOVERY) {
+        swap_to_head('z', valid_keys, key_idx);
+    } else if(bootbyte == RTC_BOOT_NORMAL) {
+        swap_to_head('m', valid_keys, key_idx);
+    } else if(bootbyte == RTC_BOOT_BOOTLOADER) {
+        // swap_to_head('b', valid_keys, key_idx);
+        printf("ERROR: booting to bootloader is not supported!\n");
+    } else if (!memcmp(defboot, "local", 5)) {
         swap_to_head('m', valid_keys, key_idx);
     } else if (!memcmp(defboot, "zedboot", 7)) {
         swap_to_head('z', valid_keys, key_idx);
