@@ -101,7 +101,7 @@ pub(crate) trait TimerContext<Id>: InstantContext {
     ///
     /// If a timer with the given ID exists, it is canceled and the instant at
     /// which it was scheduled to fire is returned.
-    fn cancel_timer(&mut self, id: &Id) -> Option<Self::Instant>;
+    fn cancel_timer(&mut self, id: Id) -> Option<Self::Instant>;
 
     /// Cancel all timers which satisfy a predicate.
     ///
@@ -345,14 +345,12 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<Id: PartialEq> TimerContext<Id> for DummyTimerContext<Id> {
-        fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
-            let ret = self.cancel_timer(&id);
-            self.timers.push(InstantAndData::new(time, id));
-            ret
-        }
-
-        fn cancel_timer(&mut self, id: &Id) -> Option<DummyInstant> {
+    impl<Id: PartialEq> DummyTimerContext<Id> {
+        // Just like `TimerContext::cancel_timer`, but takes a reference to `Id`
+        // rather than a value. This allows us to implement
+        // `schedule_timer_instant`, which needs to retain ownership of the
+        // `Id`.
+        fn cancel_timer_inner(&mut self, id: &Id) -> Option<DummyInstant> {
             let mut r: Option<DummyInstant> = None;
             // NOTE(brunodalbo): Cancelling timers can be made a faster than
             // this if we keep two data structures and require that `Id: Hash`.
@@ -370,6 +368,18 @@ pub(crate) mod testutil {
                 .collect::<Vec<_>>()
                 .into();
             r
+        }
+    }
+
+    impl<Id: PartialEq> TimerContext<Id> for DummyTimerContext<Id> {
+        fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
+            let ret = self.cancel_timer_inner(&id);
+            self.timers.push(InstantAndData::new(time, id));
+            ret
+        }
+
+        fn cancel_timer(&mut self, id: Id) -> Option<DummyInstant> {
+            self.cancel_timer_inner(&id)
         }
 
         fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, mut f: F) {
@@ -434,7 +444,7 @@ pub(crate) mod testutil {
             self.as_mut().schedule_timer_instant(time, id)
         }
 
-        fn cancel_timer(&mut self, id: &Id) -> Option<DummyInstant> {
+        fn cancel_timer(&mut self, id: Id) -> Option<DummyInstant> {
             self.as_mut().cancel_timer(id)
         }
 
@@ -987,7 +997,7 @@ pub(crate) mod testutil {
             // If we schedule a timer but then cancel it, it shouldn't fire.
             ctx = Default::default();
             ctx.schedule_timer(ONE_SEC, 0);
-            assert_eq!(ctx.cancel_timer(&0), Some(ONE_SEC_INSTANT));
+            assert_eq!(ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
             assert!(!ctx.trigger_next_timer::<()>());
             assert_eq!(ctx.get_ref().as_slice(), []);
 
@@ -996,7 +1006,7 @@ pub(crate) mod testutil {
             ctx = Default::default();
             ctx.schedule_timer(Duration::from_secs(0), 0);
             ctx.schedule_timer(ONE_SEC, 0);
-            assert_eq!(ctx.cancel_timer(&0), Some(ONE_SEC_INSTANT));
+            assert_eq!(ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
 
             // If we schedule three timers and then run `trigger_timers_until`
             // with the appropriate value, only two of them should fire.
@@ -1013,14 +1023,14 @@ pub(crate) mod testutil {
             );
 
             // They should be canceled now.
-            assert!(ctx.cancel_timer(&0).is_none());
-            assert!(ctx.cancel_timer(&1).is_none());
+            assert!(ctx.cancel_timer(0).is_none());
+            assert!(ctx.cancel_timer(1).is_none());
 
             // The clock should have been updated.
             assert_eq!(ctx.now(), ONE_SEC_INSTANT);
 
             // The last timer should not have fired.
-            assert_eq!(ctx.cancel_timer(&2), Some(DummyInstant::from(Duration::from_secs(2))));
+            assert_eq!(ctx.cancel_timer(2), Some(DummyInstant::from(Duration::from_secs(2))));
         }
     }
 }

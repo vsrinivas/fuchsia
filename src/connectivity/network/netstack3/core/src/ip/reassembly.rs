@@ -367,7 +367,7 @@ where
             //               the RFC if we don't check for this case and just
             //               drop the packet.
             assert!(ctx.get_state_mut(()).cache.remove(&key).is_some());
-            assert!(ctx.cancel_timer(&key).is_some());
+            assert!(ctx.cancel_timer(key).is_some());
 
             return FragmentProcessingState::InvalidFragment;
         }
@@ -509,7 +509,7 @@ pub(crate) fn reassemble_packet<
 
     // Cancel the reassembly timer now that we know we have all the data
     // required for reassembly and are attempting to do so.
-    assert!(ctx.cancel_timer(key).is_some());
+    assert!(ctx.cancel_timer(*key).is_some());
 
     // Take the header and body fragments from the cache data and remove the
     // cache data associated with `key` since it will no longer be needed.

@@ -547,7 +547,7 @@ impl<D: EventDispatcher> TimerContext<ArpTimerId<usize, Ipv4Addr>> for Context<D
             .schedule_timeout_instant(time, TimerId::from(DeviceLayerTimerId::from(id)))
     }
 
-    fn cancel_timer(&mut self, id: &ArpTimerId<usize, Ipv4Addr>) -> Option<D::Instant> {
+    fn cancel_timer(&mut self, id: ArpTimerId<usize, Ipv4Addr>) -> Option<D::Instant> {
         self.dispatcher_mut().cancel_timeout(TimerId::from(DeviceLayerTimerId::from(id.clone())))
     }
 

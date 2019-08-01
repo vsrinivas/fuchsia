@@ -323,9 +323,8 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Con
             .schedule_timeout_instant(time, IpLayerTimerId::new_reassembly_timeout_timer_id(key))
     }
 
-    fn cancel_timer(&mut self, key: &FragmentCacheKey<A>) -> Option<Self::Instant> {
-        self.dispatcher_mut()
-            .cancel_timeout(IpLayerTimerId::new_reassembly_timeout_timer_id(key.clone()))
+    fn cancel_timer(&mut self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
+        self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_reassembly_timeout_timer_id(key))
     }
 
     fn cancel_timers_with<F: FnMut(&FragmentCacheKey<A>) -> bool>(&mut self, f: F) {
@@ -361,7 +360,7 @@ impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Context<D> {
             .schedule_timeout_instant(time, IpLayerTimerId::new_pmtu_timeout_timer_id::<I>())
     }
 
-    fn cancel_timer(&mut self, _id: &PmtuTimerId<I>) -> Option<Self::Instant> {
+    fn cancel_timer(&mut self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
         self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_pmtu_timeout_timer_id::<I>())
     }
 

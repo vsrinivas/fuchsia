@@ -266,7 +266,7 @@ impl<P: PType, H: HType, B: BufferMut, C: BufferArpContext<P, H, B>>
 
             // If we have an outstanding retry timer for this host, we should cancel
             // it since we now have the mapping in cache.
-            ctx.cancel_timer(&ArpTimerId::new_request_retry_timer_id(
+            ctx.cancel_timer(ArpTimerId::new_request_retry_timer_id(
                 device_id,
                 packet.sender_protocol_address(),
             ));
@@ -336,7 +336,7 @@ impl<P: PType, H: HType, B: BufferMut, C: BufferArpContext<P, H, B>>
             );
             // Since we just got the protocol -> hardware address mapping, we can
             // cancel a timer to resend a request.
-            ctx.cancel_timer(&ArpTimerId::new_request_retry_timer_id(
+            ctx.cancel_timer(ArpTimerId::new_request_retry_timer_id(
                 device_id,
                 packet.sender_protocol_address(),
             ));
@@ -380,8 +380,8 @@ pub(crate) fn insert_static<P: PType, H: HType, C: ArpContext<P, H>>(
     // Cancel any outstanding timers for this entry; if none exist, these will
     // be no-ops.
     let outstanding_request =
-        ctx.cancel_timer(&ArpTimerId::new_request_retry_timer_id(device_id, net)).is_some();
-    ctx.cancel_timer(&ArpTimerId::new_entry_expiration_timer_id(device_id, net));
+        ctx.cancel_timer(ArpTimerId::new_request_retry_timer_id(device_id, net)).is_some();
+    ctx.cancel_timer(ArpTimerId::new_entry_expiration_timer_id(device_id, net));
 
     // If there was an outstanding resolution request, notify the device layer
     // that it's been resolved.
@@ -474,7 +474,7 @@ fn send_arp_request<P: PType, H: HType, C: ArpContext<P, H>>(
             ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
             ctx.get_state_mut(device_id).table.set_waiting(lookup_addr, tries_remaining - 1);
         } else {
-            ctx.cancel_timer(&id);
+            ctx.cancel_timer(id);
             ctx.get_state_mut(device_id).table.remove(lookup_addr);
             ctx.address_resolution_failed(device_id, lookup_addr);
         }
@@ -890,7 +890,7 @@ mod tests {
         assert_eq!(ctx.frames().len(), 0);
         // We should not have set a retry timer.
         assert!(ctx
-            .cancel_timer(&ArpTimerId::new_request_retry_timer_id((), TEST_REMOTE_IPV4))
+            .cancel_timer(ArpTimerId::new_request_retry_timer_id((), TEST_REMOTE_IPV4))
             .is_none());
     }
 
