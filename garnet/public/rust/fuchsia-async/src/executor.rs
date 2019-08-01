@@ -6,9 +6,7 @@ use crate::atomic_future::AtomicFuture;
 use crossbeam::queue::SegQueue;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::future::{self, FutureObj, LocalFutureObj};
-use futures::task::{
-    ArcWake, waker_ref, AtomicWaker, Spawn, SpawnError,
-};
+use futures::task::{waker_ref, ArcWake, AtomicWaker, Spawn, SpawnError};
 use futures::{Future, FutureExt, Poll};
 use parking_lot::{Condvar, Mutex};
 use pin_utils::pin_mut;
@@ -203,9 +201,11 @@ pub(crate) fn need_signal(
 
     task.register(cx.waker());
     let mut clear_signals = signal;
-    if clear_closed { clear_signals |= OBJECT_PEER_CLOSED; }
+    if clear_closed {
+        clear_signals |= OBJECT_PEER_CLOSED;
+    }
     let old = zx::Signals::from_bits_truncate(
-        atomic_signals.fetch_and(!clear_signals.bits(), Ordering::SeqCst)
+        atomic_signals.fetch_and(!clear_signals.bits(), Ordering::SeqCst),
     );
     // We only need to schedule a new packet if one isn't already scheduled.
     // If the bits were already false, a packet was already scheduled.
@@ -213,8 +213,12 @@ pub(crate) fn need_signal(
     let was_closed = old.contains(OBJECT_PEER_CLOSED);
     if was_closed || was_signal {
         let mut signals_to_schedule = zx::Signals::empty();
-        if was_signal { signals_to_schedule |= signal; }
-        if clear_closed && was_closed { signals_to_schedule |= OBJECT_PEER_CLOSED };
+        if was_signal {
+            signals_to_schedule |= signal;
+        }
+        if clear_closed && was_closed {
+            signals_to_schedule |= OBJECT_PEER_CLOSED
+        };
         schedule_packet(handle, port, key, signals_to_schedule)?;
     }
     if was_closed && !clear_closed {
@@ -265,7 +269,9 @@ where
 
 impl<T: PacketReceiver> Deref for ReceiverRegistration<T> {
     type Target = T;
-    fn deref(&self) -> &Self::Target { self.receiver() }
+    fn deref(&self) -> &Self::Target {
+        self.receiver()
+    }
 }
 
 impl<T> Drop for ReceiverRegistration<T>
@@ -287,9 +293,7 @@ pub struct Executor {
 
 impl fmt::Debug for Executor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Executor")
-            .field("port", &self.inner.port)
-            .finish()
+        f.debug_struct("Executor").field("port", &self.inner.port).finish()
     }
 }
 
@@ -356,9 +360,7 @@ impl Executor {
 
     /// Return a handle to the executor.
     pub fn ehandle(&self) -> EHandle {
-        EHandle {
-            inner: self.inner.clone(),
-        }
+        EHandle { inner: self.inner.clone() }
     }
 
     fn singlethreaded_main_task_wake(&self) -> Waker {
@@ -389,9 +391,7 @@ impl Executor {
             }
 
             let packet = with_local_timer_heap(|timer_heap| {
-                let deadline = next_deadline(timer_heap)
-                    .map(|t| t.time)
-                    .unwrap_or(Time::INFINITE);
+                let deadline = next_deadline(timer_heap).map(|t| t.time).unwrap_or(Time::INFINITE);
                 // into_zx: we are using real time, so the time is a monotonic time.
                 match self.inner.port.wait(deadline.into_zx()) {
                     Ok(packet) => Some(packet),
@@ -683,9 +683,7 @@ impl Executor {
     }
 
     fn worker_lifecycle(inner: Arc<Inner>, timers: Option<TimerHeap>) {
-        let executor: EHandle = EHandle {
-            inner: inner.clone(),
-        };
+        let executor: EHandle = EHandle { inner: inner.clone() };
         executor.set_local(timers.unwrap_or(TimerHeap::new()));
         loop {
             if inner.done.load(Ordering::SeqCst) {
@@ -694,9 +692,7 @@ impl Executor {
             }
 
             let packet = with_local_timer_heap(|timer_heap| {
-                let deadline = next_deadline(timer_heap)
-                    .map(|t| t.time)
-                    .unwrap_or(Time::INFINITE);
+                let deadline = next_deadline(timer_heap).map(|t| t.time).unwrap_or(Time::INFINITE);
                 // into_zx: we are using real time, so the time is a monotonic time.
                 match inner.port.wait(deadline.into_zx()) {
                     Ok(packet) => Some(packet),
@@ -791,9 +787,7 @@ pub struct EHandle {
 
 impl fmt::Debug for EHandle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("EHandle")
-            .field("port", &self.inner.port)
-            .finish()
+        f.debug_struct("EHandle").field("port", &self.inner.port).finish()
     }
 }
 
@@ -824,9 +818,7 @@ impl EHandle {
         let inner = self.inner.clone();
         EXECUTOR.with(|e| {
             let mut e = e.borrow_mut();
-            assert!(
-                e.is_none(),
-                "Cannot create multiple Fuchsia Executors");
+            assert!(e.is_none(), "Cannot create multiple Fuchsia Executors");
             *e = Some((inner, timers));
         });
     }
@@ -848,11 +840,7 @@ impl EHandle {
     {
         let key = self.inner.receivers.lock().insert(receiver.clone()) as u64;
 
-        ReceiverRegistration {
-            ehandle: self.clone(),
-            key,
-            receiver,
-        }
+        ReceiverRegistration { ehandle: self.clone(), key, receiver }
     }
 
     fn deregister_receiver(&self, key: u64) {
@@ -862,22 +850,18 @@ impl EHandle {
             lock.remove(key);
         } else {
             // The executor is shutting down and already removed the entry.
-            assert!(
-                self.inner.done.load(Ordering::SeqCst),
-                "Missing receiver to deregister"
-            );
+            assert!(self.inner.done.load(Ordering::SeqCst), "Missing receiver to deregister");
         }
     }
 
     pub(crate) fn register_timer(
-        &self, time: Time, waker_and_bool: &Arc<(AtomicWaker, AtomicBool)>,
+        &self,
+        time: Time,
+        waker_and_bool: &Arc<(AtomicWaker, AtomicBool)>,
     ) {
         with_local_timer_heap(|timer_heap| {
             let waker_and_bool = Arc::downgrade(waker_and_bool);
-            timer_heap.push(TimeWaker {
-                time,
-                waker_and_bool,
-            })
+            timer_heap.push(TimeWaker { time, waker_and_bool })
         })
     }
 }
@@ -938,7 +922,7 @@ struct Inner {
     done: AtomicBool,
     threadiness: Threadiness,
     threads: Mutex<Vec<thread::JoinHandle<()>>>,
-    receivers: Mutex<Slab<Arc<PacketReceiver>>>,
+    receivers: Mutex<Slab<Arc<dyn PacketReceiver>>>,
     ready_tasks: SegQueue<Arc<Task>>,
     time: ExecutorTime,
 }
@@ -989,10 +973,7 @@ impl Inner {
     }
 
     fn spawn(arc_self: &Arc<Self>, future: FutureObj<'static, ()>) {
-        let task = Arc::new(Task {
-            future: AtomicFuture::new(future),
-            executor: arc_self.clone(),
-        });
+        let task = Arc::new(Task { future: AtomicFuture::new(future), executor: arc_self.clone() });
 
         arc_self.ready_tasks.push(task);
         arc_self.notify_task_ready();

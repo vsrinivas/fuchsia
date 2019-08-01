@@ -548,7 +548,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		t := c.compileType(*val.ElementType, borrowed)
 		var inner string
 		if borrowed {
-			inner = fmt.Sprintf("&mut ExactSizeIterator<Item = %s>", t.Decl)
+			inner = fmt.Sprintf("&mut dyn ExactSizeIterator<Item = %s>", t.Decl)
 		} else {
 			inner = fmt.Sprintf("Vec<%s>", t.Decl)
 		}

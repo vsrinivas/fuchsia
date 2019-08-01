@@ -5,10 +5,10 @@
 //! Encoding2 contains functions and traits for FIDL2 encoding and decoding.
 
 use {
+    crate::handle::{Handle, HandleBased, MessageBuf},
     crate::{Error, Result},
     byteorder::{ByteOrder, LittleEndian},
     std::{cell::RefCell, mem, ptr, str, u32, u64},
-    crate::handle::{Handle, HandleBased, MessageBuf}
 };
 
 thread_local!(static CODING_BUF: RefCell<MessageBuf> = RefCell::new(MessageBuf::new()));
@@ -216,16 +216,12 @@ impl<'a> Encoder<'a> {
     /// the encoding started.  See `Encoder::offset`.
     pub fn tail_padding<Target>(&mut self, target: &Target, start_pos: usize) -> Result<()>
     where
-        Target: Encodable
+        Target: Encodable,
     {
         self.tail_padding_inner(target.inline_size(), start_pos)
     }
 
-    fn tail_padding_inner(
-        &mut self,
-        target_inline_size: usize,
-        start_pos: usize,
-    ) -> Result<()> {
+    fn tail_padding_inner(&mut self, target_inline_size: usize, start_pos: usize) -> Result<()> {
         debug_assert!(start_pos <= self.offset);
         self.padding(target_inline_size - (self.offset - start_pos))
     }
@@ -887,7 +883,7 @@ impl Decodable for Option<String> {
     }
 }
 
-impl<'a, 'b: 'a, T: Encodable> Encodable for &'a mut ExactSizeIterator<Item = T> {
+impl<'a, 'b: 'a, T: Encodable> Encodable for &'a mut dyn ExactSizeIterator<Item = T> {
     fn inline_align(&self) -> usize {
         8
     }
@@ -951,7 +947,7 @@ impl<T: Decodable> Decodable for Vec<T> {
     }
 }
 
-impl<'a, 'b: 'a, T: Encodable> Encodable for Option<&'a mut ExactSizeIterator<Item = T>> {
+impl<'a, 'b: 'a, T: Encodable> Encodable for Option<&'a mut dyn ExactSizeIterator<Item = T>> {
     fn inline_align(&self) -> usize {
         8
     }
@@ -1375,10 +1371,10 @@ macro_rules! handle_based_codable {
 mod zx_encoding {
 
     use {
+        super::{split_off_front, Decodable, Decoder, Encodable, Encoder, Result},
         byteorder::{ByteOrder, LittleEndian},
         fuchsia_zircon as zx,
         std::mem,
-        super::{Encodable, Decodable, Encoder, Decoder, Result, split_off_front},
     };
 
     impl Encodable for zx::Status {
@@ -1506,13 +1502,8 @@ impl<T: AutonullContainer + Encodable> Encodable for Option<T> {
 
 // Presence indicators always include at least one non-zero byte,
 // while absence indicators should always be entirely zeros.
-fn check_for_presence(
-    decoder: &mut Decoder<'_>,
-    inline_size: usize,
-) -> Result<bool> {
-    Ok(decoder.peek_slice(inline_size)?
-        .iter()
-        .any(|byte| *byte != 0))
+fn check_for_presence(decoder: &mut Decoder<'_>, inline_size: usize) -> Result<bool> {
+    Ok(decoder.peek_slice(inline_size)?.iter().any(|byte| *byte != 0))
 }
 
 impl<T: AutonullContainer + Decodable> Decodable for Option<T> {
@@ -1726,7 +1717,10 @@ macro_rules! fidl_empty_struct {
 }
 
 /// Encode the provided value behind a FIDL "envelope".
-pub fn encode_in_envelope(val: &mut Option<&mut dyn Encodable>, encoder: &mut Encoder) -> Result<()> {
+pub fn encode_in_envelope(
+    val: &mut Option<&mut dyn Encodable>,
+    encoder: &mut Encoder,
+) -> Result<()> {
     // u32 num_bytes
     // u32 num_handles
     // 64-bit presence indicator
@@ -3459,8 +3453,7 @@ mod test {
             Error::ExtraBytes => {}
             e => panic!("expected ExtraBytes, found {:?}", e),
         }
-        match Decoder::decode_into(&[], &mut [Handle::invalid()], &mut output)
-            .expect_err("handles")
+        match Decoder::decode_into(&[], &mut [Handle::invalid()], &mut output).expect_err("handles")
         {
             Error::ExtraHandles => {}
             e => panic!("expected ExtraHandles, found {:?}", e),
@@ -3471,8 +3464,8 @@ mod test {
 #[cfg(target_os = "fuchsia")]
 #[cfg(test)]
 mod zx_test {
-    use super::*;
     use super::test::*;
+    use super::*;
     use crate::handle::AsHandleRef;
     //use std::{f32, f64, fmt, i64, u64};
     use fuchsia_zircon as zx;
