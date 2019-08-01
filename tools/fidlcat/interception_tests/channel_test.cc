@@ -7,11 +7,23 @@
 
 namespace fidlcat {
 
-#define CREATE_DISPLAY_TEST_CONTENT(errno, expected) \
-  zx_handle_t out0 = 0x12345678;                     \
-  zx_handle_t out1 = 0x87654321;                     \
-  PerformDisplayTest(kChannelCreate,                 \
-                     SystemCallTest::ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);
+// zx_channel_create tests.
+
+std::unique_ptr<SystemCallTest> ZxChannelCreate(int64_t result, std::string_view result_name,
+                                                uint32_t options, zx_handle_t* out0,
+                                                zx_handle_t* out1) {
+  auto value = std::make_unique<SystemCallTest>("zx_channel_create", result, result_name);
+  value->AddInput(options);
+  value->AddInput(reinterpret_cast<uint64_t>(out0));
+  value->AddInput(reinterpret_cast<uint64_t>(out1));
+  return value;
+}
+
+#define CREATE_DISPLAY_TEST_CONTENT(errno, expected)                                           \
+  zx_handle_t out0 = 0x12345678;                                                               \
+  zx_handle_t out1 = 0x87654321;                                                               \
+  PerformDisplayTest("zx_channel_create@plt", ZxChannelCreate(errno, #errno, 0, &out0, &out1), \
+                     expected);
 
 #define CREATE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CREATE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -28,8 +40,8 @@ CREATE_DISPLAY_TEST(
 #define CREATE_INTERLEAVED_DISPLAY_TEST_CONTENT(errno, expected) \
   zx_handle_t out0 = 0x12345678;                                 \
   zx_handle_t out1 = 0x87654321;                                 \
-  PerformInterleavedDisplayTest(                                 \
-      kChannelCreate, SystemCallTest::ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);
+  PerformInterleavedDisplayTest("zx_channel_create@plt",         \
+                                ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);
 
 #define CREATE_INTERLEAVED_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -56,14 +68,29 @@ CREATE_INTERLEAVED_DISPLAY_TEST(
     "out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
     "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n");
 
-#define WRITE_CHECK_TEST_CONTENT(errno)                                                           \
-  data().set_check_bytes();                                                                       \
-  data().set_check_handles();                                                                     \
-  PerformCheckTest(                                                                               \
-      kChannelWrite,                                                                              \
-      SystemCallTest::ZxChannelWrite(errno, #errno, kHandle, 0, data().bytes(),                   \
-                                     data().num_bytes(), data().handles(), data().num_handles()), \
-      nullptr)
+// zx_channel_write_tests.
+
+std::unique_ptr<SystemCallTest> ZxChannelWrite(int64_t result, std::string_view result_name,
+                                               zx_handle_t handle, uint32_t options,
+                                               const uint8_t* bytes, uint32_t num_bytes,
+                                               const zx_handle_t* handles, uint32_t num_handles) {
+  auto value = std::make_unique<SystemCallTest>("zx_channel_write", result, result_name);
+  value->AddInput(handle);
+  value->AddInput(options);
+  value->AddInput(reinterpret_cast<uint64_t>(bytes));
+  value->AddInput(num_bytes);
+  value->AddInput(reinterpret_cast<uint64_t>(handles));
+  value->AddInput(num_handles);
+  return value;
+}
+
+#define WRITE_CHECK_TEST_CONTENT(errno)                                                          \
+  data().set_check_bytes();                                                                      \
+  data().set_check_handles();                                                                    \
+  PerformCheckTest("zx_channel_write@plt",                                                       \
+                   ZxChannelWrite(errno, #errno, kHandle, 0, data().bytes(), data().num_bytes(), \
+                                  data().handles(), data().num_handles()),                       \
+                   nullptr)
 
 #define WRITE_CHECK_TEST(name, errno)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { WRITE_CHECK_TEST_CONTENT(errno); } \
@@ -71,14 +98,13 @@ CREATE_INTERLEAVED_DISPLAY_TEST(
 
 WRITE_CHECK_TEST(ZxChannelWriteCheck, ZX_OK);
 
-#define WRITE_DISPLAY_TEST_CONTENT(errno, expected)                                               \
-  data().set_check_bytes();                                                                       \
-  data().set_check_handles();                                                                     \
-  PerformDisplayTest(                                                                             \
-      kChannelWrite,                                                                              \
-      SystemCallTest::ZxChannelWrite(errno, #errno, kHandle, 0, data().bytes(),                   \
-                                     data().num_bytes(), data().handles(), data().num_handles()), \
-      expected)
+#define WRITE_DISPLAY_TEST_CONTENT(errno, expected)                                                \
+  data().set_check_bytes();                                                                        \
+  data().set_check_handles();                                                                      \
+  PerformDisplayTest("zx_channel_write@plt",                                                       \
+                     ZxChannelWrite(errno, #errno, kHandle, 0, data().bytes(), data().num_bytes(), \
+                                    data().handles(), data().num_handles()),                       \
+                     expected)
 
 #define WRITE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { WRITE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -108,21 +134,39 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                    "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n");
 
-#define READ_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected)                   \
-  if (check_bytes) {                                                                             \
-    data().set_check_bytes();                                                                    \
-  }                                                                                              \
-  if (check_handles) {                                                                           \
-    data().set_check_handles();                                                                  \
-  }                                                                                              \
-  uint32_t actual_bytes = data().num_bytes();                                                    \
-  uint32_t actual_handles = data().num_handles();                                                \
-  PerformDisplayTest(                                                                            \
-      kChannelRead,                                                                              \
-      SystemCallTest::ZxChannelRead(errno, #errno, kHandle, 0, data().bytes(), data().handles(), \
-                                    100, 64, check_bytes ? &actual_bytes : nullptr,              \
-                                    check_handles ? &actual_handles : nullptr),                  \
-      expected);
+// zx_channel_read tests.
+
+std::unique_ptr<SystemCallTest> ZxChannelRead(int64_t result, std::string_view result_name,
+                                              zx_handle_t handle, uint32_t options,
+                                              const uint8_t* bytes, const zx_handle_t* handles,
+                                              uint32_t num_bytes, uint32_t num_handles,
+                                              uint32_t* actual_bytes, uint32_t* actual_handles) {
+  auto value = std::make_unique<SystemCallTest>("zx_channel_read", result, result_name);
+  value->AddInput(handle);
+  value->AddInput(options);
+  value->AddInput(reinterpret_cast<uint64_t>(bytes));
+  value->AddInput(reinterpret_cast<uint64_t>(handles));
+  value->AddInput(num_bytes);
+  value->AddInput(num_handles);
+  value->AddInput(reinterpret_cast<uint64_t>(actual_bytes));
+  value->AddInput(reinterpret_cast<uint64_t>(actual_handles));
+  return value;
+}
+
+#define READ_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected)                  \
+  if (check_bytes) {                                                                            \
+    data().set_check_bytes();                                                                   \
+  }                                                                                             \
+  if (check_handles) {                                                                          \
+    data().set_check_handles();                                                                 \
+  }                                                                                             \
+  uint32_t actual_bytes = data().num_bytes();                                                   \
+  uint32_t actual_handles = data().num_handles();                                               \
+  PerformDisplayTest("zx_channel_read@plt",                                                     \
+                     ZxChannelRead(errno, #errno, kHandle, 0, data().bytes(), data().handles(), \
+                                   100, 64, check_bytes ? &actual_bytes : nullptr,              \
+                                   check_handles ? &actual_handles : nullptr),                  \
+                     expected);
 
 #define READ_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                \
@@ -189,6 +233,25 @@ READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
                   "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 00\x1B[31m"
                   ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
 
+// zx_channel_read_etc tests.
+std::unique_ptr<SystemCallTest> ZxChannelReadEtc(int64_t result, std::string_view result_name,
+                                                 zx_handle_t handle, uint32_t options,
+                                                 const uint8_t* bytes,
+                                                 const zx_handle_info_t* handles,
+                                                 uint32_t num_bytes, uint32_t num_handles,
+                                                 uint32_t* actual_bytes, uint32_t* actual_handles) {
+  auto value = std::make_unique<SystemCallTest>("zx_channel_read_etc", result, result_name);
+  value->AddInput(handle);
+  value->AddInput(options);
+  value->AddInput(reinterpret_cast<uint64_t>(bytes));
+  value->AddInput(reinterpret_cast<uint64_t>(handles));
+  value->AddInput(num_bytes);
+  value->AddInput(num_handles);
+  value->AddInput(reinterpret_cast<uint64_t>(actual_bytes));
+  value->AddInput(reinterpret_cast<uint64_t>(actual_handles));
+  return value;
+}
+
 #define READ_ETC_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected)                \
   if (check_bytes) {                                                                              \
     data().set_check_bytes();                                                                     \
@@ -198,12 +261,12 @@ READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
   }                                                                                               \
   uint32_t actual_bytes = data().num_bytes();                                                     \
   uint32_t actual_handles = data().num_handle_infos();                                            \
-  PerformDisplayTest(kChannelReadEtc,                                                             \
-                     SystemCallTest::ZxChannelReadEtc(errno, #errno, kHandle, 0, data().bytes(),  \
-                                                      data().handle_infos(), 100, 64,             \
-                                                      check_bytes ? &actual_bytes : nullptr,      \
-                                                      check_handles ? &actual_handles : nullptr), \
-                     expected);
+  PerformDisplayTest(                                                                             \
+      "zx_channel_read_etc@plt",                                                                  \
+      ZxChannelReadEtc(errno, #errno, kHandle, 0, data().bytes(), data().handle_infos(), 100, 64, \
+                       check_bytes ? &actual_bytes : nullptr,                                     \
+                       check_handles ? &actual_handles : nullptr),                                \
+      expected);
 
 #define READ_ETC_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                    \
@@ -271,36 +334,53 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoHandles, ZX_OK, true, false,
                       "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 00\x1B[31m"
                       ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
 
-#define CALL_CHECK_TEST_CONTENT(errno)                                                        \
-  data().set_check_bytes();                                                                   \
-  data().set_check_handles();                                                                 \
-  zx_channel_call_args_t args;                                                                \
-  args.wr_bytes = data().bytes();                                                             \
-  args.wr_handles = data().handles();                                                         \
-  args.rd_bytes = data().bytes();                                                             \
-  args.rd_handles = data().handles();                                                         \
-  args.wr_num_bytes = data().num_bytes();                                                     \
-  args.wr_num_handles = data().num_handles();                                                 \
-  args.rd_num_bytes = 100;                                                                    \
-  args.rd_num_handles = 64;                                                                   \
-  uint32_t actual_bytes = data().num_bytes();                                                 \
-  uint32_t actual_handles = data().num_handles();                                             \
-  zx_channel_call_args_t args2;                                                               \
-  args2.wr_bytes = data().bytes2();                                                           \
-  args2.wr_handles = data().handles2();                                                       \
-  args2.rd_bytes = data().bytes2();                                                           \
-  args2.rd_handles = data().handles2();                                                       \
-  args2.wr_num_bytes = data().num_bytes2();                                                   \
-  args2.wr_num_handles = data().num_handles2();                                               \
-  args2.rd_num_bytes = 100;                                                                   \
-  args2.rd_num_handles = 64;                                                                  \
-  uint32_t actual_bytes2 = data().num_bytes2();                                               \
-  uint32_t actual_handles2 = data().num_handles2();                                           \
-  PerformCheckTest(kChannelCall,                                                              \
-                   SystemCallTest::ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, \
-                                                 &args, &actual_bytes, &actual_handles),      \
-                   SystemCallTest::ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, \
-                                                 &args2, &actual_bytes2, &actual_handles2));
+// zx_channel_call tests.
+
+std::unique_ptr<SystemCallTest> ZxChannelCall(int64_t result, std::string_view result_name,
+                                              zx_handle_t handle, uint32_t options,
+                                              zx_time_t deadline,
+                                              const zx_channel_call_args_t* args,
+                                              uint32_t* actual_bytes, uint32_t* actual_handles) {
+  auto value = std::make_unique<SystemCallTest>("zx_channel_call", result, result_name);
+  value->AddInput(handle);
+  value->AddInput(options);
+  value->AddInput(deadline);
+  value->AddInput(reinterpret_cast<uint64_t>(args));
+  value->AddInput(reinterpret_cast<uint64_t>(actual_bytes));
+  value->AddInput(reinterpret_cast<uint64_t>(actual_handles));
+  return value;
+}
+
+#define CALL_CHECK_TEST_CONTENT(errno)                                                \
+  data().set_check_bytes();                                                           \
+  data().set_check_handles();                                                         \
+  zx_channel_call_args_t args;                                                        \
+  args.wr_bytes = data().bytes();                                                     \
+  args.wr_handles = data().handles();                                                 \
+  args.rd_bytes = data().bytes();                                                     \
+  args.rd_handles = data().handles();                                                 \
+  args.wr_num_bytes = data().num_bytes();                                             \
+  args.wr_num_handles = data().num_handles();                                         \
+  args.rd_num_bytes = 100;                                                            \
+  args.rd_num_handles = 64;                                                           \
+  uint32_t actual_bytes = data().num_bytes();                                         \
+  uint32_t actual_handles = data().num_handles();                                     \
+  zx_channel_call_args_t args2;                                                       \
+  args2.wr_bytes = data().bytes2();                                                   \
+  args2.wr_handles = data().handles2();                                               \
+  args2.rd_bytes = data().bytes2();                                                   \
+  args2.rd_handles = data().handles2();                                               \
+  args2.wr_num_bytes = data().num_bytes2();                                           \
+  args2.wr_num_handles = data().num_handles2();                                       \
+  args2.rd_num_bytes = 100;                                                           \
+  args2.rd_num_handles = 64;                                                          \
+  uint32_t actual_bytes2 = data().num_bytes2();                                       \
+  uint32_t actual_handles2 = data().num_handles2();                                   \
+  PerformCheckTest("zx_channel_call@plt",                                             \
+                   ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args,  \
+                                 &actual_bytes, &actual_handles),                     \
+                   ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args2, \
+                                 &actual_bytes2, &actual_handles2));
 
 #define CALL_CHECK_TEST(name, errno)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CALL_CHECK_TEST_CONTENT(errno); } \
@@ -308,28 +388,28 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoHandles, ZX_OK, true, false,
 
 CALL_CHECK_TEST(ZxChannelCallCheck, ZX_OK);
 
-#define CALL_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected)                   \
-  if (check_bytes) {                                                                             \
-    data().set_check_bytes();                                                                    \
-  }                                                                                              \
-  if (check_handles) {                                                                           \
-    data().set_check_handles();                                                                  \
-  }                                                                                              \
-  zx_channel_call_args_t args;                                                                   \
-  args.wr_bytes = data().bytes();                                                                \
-  args.wr_handles = data().handles();                                                            \
-  args.rd_bytes = data().bytes();                                                                \
-  args.rd_handles = data().handles();                                                            \
-  args.wr_num_bytes = data().num_bytes();                                                        \
-  args.wr_num_handles = data().num_handles();                                                    \
-  args.rd_num_bytes = 100;                                                                       \
-  args.rd_num_handles = 64;                                                                      \
-  uint32_t actual_bytes = data().num_bytes();                                                    \
-  uint32_t actual_handles = data().num_handles();                                                \
-  PerformDisplayTest(kChannelCall,                                                               \
-                     SystemCallTest::ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE,  \
-                                                   &args, check_bytes ? &actual_bytes : nullptr, \
-                                                   check_handles ? &actual_handles : nullptr),   \
+#define CALL_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected)         \
+  if (check_bytes) {                                                                   \
+    data().set_check_bytes();                                                          \
+  }                                                                                    \
+  if (check_handles) {                                                                 \
+    data().set_check_handles();                                                        \
+  }                                                                                    \
+  zx_channel_call_args_t args;                                                         \
+  args.wr_bytes = data().bytes();                                                      \
+  args.wr_handles = data().handles();                                                  \
+  args.rd_bytes = data().bytes();                                                      \
+  args.rd_handles = data().handles();                                                  \
+  args.wr_num_bytes = data().num_bytes();                                              \
+  args.wr_num_handles = data().num_handles();                                          \
+  args.rd_num_bytes = 100;                                                             \
+  args.rd_num_handles = 64;                                                            \
+  uint32_t actual_bytes = data().num_bytes();                                          \
+  uint32_t actual_handles = data().num_handles();                                      \
+  PerformDisplayTest("zx_channel_call@plt",                                            \
+                     ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args, \
+                                   check_bytes ? &actual_bytes : nullptr,              \
+                                   check_handles ? &actual_handles : nullptr),         \
                      expected);
 
 #define CALL_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \

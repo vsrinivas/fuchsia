@@ -26,18 +26,6 @@
 
 namespace fidlcat {
 
-#define kChannelCreate 0
-#define kChannelWrite 1
-#define kChannelRead 2
-#define kChannelReadEtc 3
-#define kChannelCall 4
-#define kClockGet 5
-#define kClockGetMonotonic 6
-#define kTicksGet 7
-#define kTicksPerSecond 8
-#define kClockAdjust 9
-#define kDeadlineAfter 10
-
 class ProcessController;
 class SyscallDecoderDispatcherTest;
 
@@ -51,118 +39,6 @@ constexpr uint32_t kHandle = 0xcefa1db0;
 
 class SystemCallTest {
  public:
-  static std::unique_ptr<SystemCallTest> ZxChannelCreate(int64_t result,
-                                                         std::string_view result_name,
-                                                         uint32_t options, zx_handle_t* out0,
-                                                         zx_handle_t* out1) {
-    auto value = std::make_unique<SystemCallTest>("zx_channel_create", result, result_name);
-    value->inputs_.push_back(options);
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(out0));
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(out1));
-    return value;
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxChannelWrite(
-      int64_t result, std::string_view result_name, zx_handle_t handle, uint32_t options,
-      const uint8_t* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles) {
-    auto value = std::make_unique<SystemCallTest>("zx_channel_write", result, result_name);
-    value->inputs_.push_back(handle);
-    value->inputs_.push_back(options);
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(bytes));
-    value->inputs_.push_back(num_bytes);
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(handles));
-    value->inputs_.push_back(num_handles);
-    return value;
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxChannelRead(
-      int64_t result, std::string_view result_name, zx_handle_t handle, uint32_t options,
-      const uint8_t* bytes, const zx_handle_t* handles, uint32_t num_bytes, uint32_t num_handles,
-      uint32_t* actual_bytes, uint32_t* actual_handles) {
-    auto value = std::make_unique<SystemCallTest>("zx_channel_read", result, result_name);
-    value->inputs_.push_back(handle);
-    value->inputs_.push_back(options);
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(bytes));
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(handles));
-    value->inputs_.push_back(num_bytes);
-    value->inputs_.push_back(num_handles);
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_bytes));
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_handles));
-    return value;
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxChannelReadEtc(
-      int64_t result, std::string_view result_name, zx_handle_t handle, uint32_t options,
-      const uint8_t* bytes, const zx_handle_info_t* handles, uint32_t num_bytes,
-      uint32_t num_handles, uint32_t* actual_bytes, uint32_t* actual_handles) {
-    auto value = std::make_unique<SystemCallTest>("zx_channel_read_etc", result, result_name);
-    value->inputs_.push_back(handle);
-    value->inputs_.push_back(options);
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(bytes));
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(handles));
-    value->inputs_.push_back(num_bytes);
-    value->inputs_.push_back(num_handles);
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_bytes));
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_handles));
-    return value;
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxChannelCall(int64_t result, std::string_view result_name,
-                                                       zx_handle_t handle, uint32_t options,
-                                                       zx_time_t deadline,
-                                                       const zx_channel_call_args_t* args,
-                                                       uint32_t* actual_bytes,
-                                                       uint32_t* actual_handles) {
-    auto value = std::make_unique<SystemCallTest>("zx_channel_call", result, result_name);
-    value->inputs_.push_back(handle);
-    value->inputs_.push_back(options);
-    value->inputs_.push_back(deadline);
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(args));
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_bytes));
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_handles));
-    return value;
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxClockGet(int64_t result, std::string_view result_name,
-                                                    zx_clock_t clock_id, zx_time_t* out) {
-    auto value = std::make_unique<SystemCallTest>("zx_clock_get", result, result_name);
-    value->inputs_.push_back(clock_id);
-    value->inputs_.push_back(reinterpret_cast<uint64_t>(out));
-    return value;
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxClockGetMonotonic(int64_t result,
-                                                             std::string_view result_name) {
-    return std::make_unique<SystemCallTest>("zx_clock_get_monotonic", result, result_name);
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxTicksGet(int64_t result, std::string_view result_name) {
-    return std::make_unique<SystemCallTest>("zx_ticks_get", result, result_name);
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxTicksPerSecond(int64_t result,
-                                                          std::string_view result_name) {
-    return std::make_unique<SystemCallTest>("zx_ticks_per_second", result, result_name);
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxDeadlineAfter(int64_t result,
-                                                         std::string_view result_name,
-                                                         zx_time_t nanoseconds) {
-    auto value = std::make_unique<SystemCallTest>("zx_deadline_after", result, result_name);
-    value->inputs_.push_back(nanoseconds);
-    return value;
-  }
-
-  static std::unique_ptr<SystemCallTest> ZxClockAdjust(int64_t result, std::string_view result_name,
-                                                       zx_handle_t handle, zx_clock_t clock_id,
-                                                       int64_t offset) {
-    auto value = std::make_unique<SystemCallTest>("zx_clock_adjust", result, result_name);
-    value->inputs_.push_back(handle);
-    value->inputs_.push_back(clock_id);
-    value->inputs_.push_back(offset);
-    return value;
-  }
-
   SystemCallTest(const char* name, int64_t result, std::string_view result_name)
       : name_(name), result_(result), result_name_(result_name) {}
 
@@ -170,6 +46,8 @@ class SystemCallTest {
   int64_t result() const { return result_; }
   const std::string& result_name() const { return result_name_; }
   const std::vector<uint64_t>& inputs() const { return inputs_; }
+
+  void AddInput(uint64_t input) { inputs_.push_back(input); }
 
  private:
   const std::string name_;
@@ -437,22 +315,22 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
   void set_with_process_info() { display_options_.with_process_info = true; }
 
-  void PerformCheckTest(int syscall_index, std::unique_ptr<SystemCallTest> syscall1,
+  void PerformCheckTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall1,
                         std::unique_ptr<SystemCallTest> syscall2);
 
-  void PerformDisplayTest(int syscall_index, std::unique_ptr<SystemCallTest> syscall,
+  void PerformDisplayTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall,
                           const char* expected);
 
-  void PerformInterleavedDisplayTest(int syscall_index, std::unique_ptr<SystemCallTest> syscall,
-                                     const char* expected);
+  void PerformInterleavedDisplayTest(const char* syscall_name,
+                                     std::unique_ptr<SystemCallTest> syscall, const char* expected);
 
-  void PerformTest(int syscall_index, std::unique_ptr<SystemCallTest> syscall1,
+  void PerformTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall1,
                    std::unique_ptr<SystemCallTest> syscall2, ProcessController* controller,
                    std::unique_ptr<SyscallDecoderDispatcher> dispatcher, bool interleaved_test);
 
-  void SimulateSyscall(int syscall_index, std::unique_ptr<SystemCallTest> syscall,
-                       ProcessController* controller, bool interleaved_test);
-  void TriggerSyscallBreakpoint(int syscall_index, uint64_t process_koid, uint64_t thread_koid);
+  void SimulateSyscall(std::unique_ptr<SystemCallTest> syscall, ProcessController* controller,
+                       bool interleaved_test);
+  void TriggerSyscallBreakpoint(uint64_t process_koid, uint64_t thread_koid);
   void TriggerCallerBreakpoint(uint64_t process_koid, uint64_t thread_koid);
 
  protected:
@@ -494,7 +372,8 @@ class ProcessController {
 
   void InjectProcesses(zxdb::Session& session);
 
-  void Initialize(zxdb::Session& session, std::unique_ptr<SyscallDecoderDispatcher> dispatcher);
+  void Initialize(zxdb::Session& session, std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
+                  const char* syscall_name);
   void Detach();
 
  private:

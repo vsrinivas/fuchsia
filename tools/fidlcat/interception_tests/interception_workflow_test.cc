@@ -8,13 +8,8 @@
 
 namespace fidlcat {
 
-std::pair<const char*, uint64_t> syscall_definitions[] = {
-    {"zx_channel_create@plt", 0x100060},      {"zx_channel_write@plt", 0x100070},
-    {"zx_channel_read@plt", 0x100080},        {"zx_channel_read_etc@plt", 0x100090},
-    {"zx_channel_call@plt", 0x100100},        {"zx_clock_get@plt", 0x100110},
-    {"zx_clock_get_monotonic@plt", 0x100120}, {"zx_ticks_get@plt", 0x100130},
-    {"zx_ticks_per_second@plt", 0x100140},    {"zx_clock_adjust@plt", 0x100150},
-    {"zx_deadline_after@plt", 0x100160}};
+// We only test one syscall at a time. We always use the same address for all the syscalls.
+constexpr uint64_t kSyscallAddress = 0x100060;
 
 static debug_ipc::RegisterID aarch64_regs[] = {
     debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
@@ -47,22 +42,22 @@ DataForSyscallTest::DataForSyscallTest(debug_ipc::Arch arch) : arch_(arch) {
   sp_ = stack_ + kMaxStackSizeInWords;
 }
 
-void InterceptionWorkflowTest::PerformCheckTest(int syscall_index,
+void InterceptionWorkflowTest::PerformCheckTest(const char* syscall_name,
                                                 std::unique_ptr<SystemCallTest> syscall1,
                                                 std::unique_ptr<SystemCallTest> syscall2) {
   ProcessController controller(this, session(), loop());
 
-  PerformTest(syscall_index, std::move(syscall1), std::move(syscall2), &controller,
+  PerformTest(syscall_name, std::move(syscall1), std::move(syscall2), &controller,
               std::make_unique<SyscallDecoderDispatcherTest>(decode_options_, &controller),
               /*interleaved_test=*/false);
 }
 
-void InterceptionWorkflowTest::PerformDisplayTest(int syscall_index,
+void InterceptionWorkflowTest::PerformDisplayTest(const char* syscall_name,
                                                   std::unique_ptr<SystemCallTest> syscall,
                                                   const char* expected) {
   ProcessController controller(this, session(), loop());
 
-  PerformTest(syscall_index, std::move(syscall), nullptr, &controller,
+  PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
                   nullptr, decode_options_, display_options_, result_, &controller),
               /*interleaved_test=*/false);
@@ -106,43 +101,42 @@ void InterceptionWorkflowTest::PerformDisplayTest(int syscall_index,
 }
 
 void InterceptionWorkflowTest::PerformInterleavedDisplayTest(
-    int syscall_index, std::unique_ptr<SystemCallTest> syscall, const char* expected) {
+    const char* syscall_name, std::unique_ptr<SystemCallTest> syscall, const char* expected) {
   ProcessController controller(this, session(), loop());
 
-  PerformTest(syscall_index, std::move(syscall), nullptr, &controller,
+  PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
                   nullptr, decode_options_, display_options_, result_, &controller),
               /*interleaved_test=*/true);
   ASSERT_EQ(expected, result_.str());
 }
 
-void InterceptionWorkflowTest::PerformTest(int syscall_index,
+void InterceptionWorkflowTest::PerformTest(const char* syscall_name,
                                            std::unique_ptr<SystemCallTest> syscall1,
                                            std::unique_ptr<SystemCallTest> syscall2,
                                            ProcessController* controller,
                                            std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
                                            bool interleaved_test) {
-  controller->Initialize(session(), std::move(dispatcher));
+  controller->Initialize(session(), std::move(dispatcher), syscall_name);
 
-  SimulateSyscall(syscall_index, std::move(syscall1), controller, interleaved_test);
+  SimulateSyscall(std::move(syscall1), controller, interleaved_test);
 
   debug_ipc::MessageLoop::Current()->Run();
 
   if (syscall2 != nullptr) {
     data_.set_use_alternate_data();
-    SimulateSyscall(syscall_index, std::move(syscall2), controller, interleaved_test);
+    SimulateSyscall(std::move(syscall2), controller, interleaved_test);
   }
 }
 
-void InterceptionWorkflowTest::SimulateSyscall(int syscall_index,
-                                               std::unique_ptr<SystemCallTest> syscall,
+void InterceptionWorkflowTest::SimulateSyscall(std::unique_ptr<SystemCallTest> syscall,
                                                ProcessController* controller,
                                                bool interleaved_test) {
   data_.set_syscall(std::move(syscall));
   if (interleaved_test) {
     for (uint64_t process_koid : controller->process_koids()) {
       data_.load_syscall_data();
-      TriggerSyscallBreakpoint(syscall_index, process_koid, controller->thread_koid(process_koid));
+      TriggerSyscallBreakpoint(process_koid, controller->thread_koid(process_koid));
     }
     for (uint64_t process_koid : controller->process_koids()) {
       TriggerCallerBreakpoint(process_koid, controller->thread_koid(process_koid));
@@ -151,13 +145,13 @@ void InterceptionWorkflowTest::SimulateSyscall(int syscall_index,
     for (uint64_t process_koid : controller->process_koids()) {
       data_.load_syscall_data();
       uint64_t thread_koid = controller->thread_koid(process_koid);
-      TriggerSyscallBreakpoint(syscall_index, process_koid, thread_koid);
+      TriggerSyscallBreakpoint(process_koid, thread_koid);
       TriggerCallerBreakpoint(process_koid, thread_koid);
     }
   }
 }
 
-void InterceptionWorkflowTest::TriggerSyscallBreakpoint(int syscall_index, uint64_t process_koid,
+void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
                                                         uint64_t thread_koid) {
   // Trigger breakpoint.
   debug_ipc::NotifyException notification;
@@ -166,11 +160,10 @@ void InterceptionWorkflowTest::TriggerSyscallBreakpoint(int syscall_index, uint6
   notification.thread.thread_koid = thread_koid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
-  debug_ipc::StackFrame frame(syscall_definitions[syscall_index].second,
-                              reinterpret_cast<uint64_t>(data_.sp()));
+  debug_ipc::StackFrame frame(kSyscallAddress, reinterpret_cast<uint64_t>(data_.sp()));
   data_.PopulateRegisters(process_koid, &frame.regs);
   notification.thread.frames.push_back(frame);
-  mock_remote_api().PopulateBreakpointIds(syscall_definitions[syscall_index].second, notification);
+  mock_remote_api().PopulateBreakpointIds(kSyscallAddress, notification);
   InjectException(notification);
   debug_ipc::MessageLoop::Current()->Run();
 }
@@ -231,7 +224,8 @@ void ProcessController::InjectProcesses(zxdb::Session& session) {
 }
 
 void ProcessController::Initialize(zxdb::Session& session,
-                                   std::unique_ptr<SyscallDecoderDispatcher> dispatcher) {
+                                   std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
+                                   const char* syscall_name) {
   std::vector<std::string> blank;
   workflow_.Initialize(blank, std::move(dispatcher));
 
@@ -267,11 +261,8 @@ void ProcessController::Initialize(zxdb::Session& session,
   // and zx_channel_read symbols)
   std::unique_ptr<zxdb::MockModuleSymbols> module =
       std::make_unique<zxdb::MockModuleSymbols>("zx.so");
-  for (size_t i = 0; i < sizeof(syscall_definitions) / sizeof(syscall_definitions[0]); ++i) {
-    module->AddSymbolLocations(
-        syscall_definitions[i].first,
-        {zxdb::Location(zxdb::Location::State::kSymbolized, syscall_definitions[i].second)});
-  }
+  module->AddSymbolLocations(syscall_name,
+                             {zxdb::Location(zxdb::Location::State::kSymbolized, kSyscallAddress)});
   fxl::RefPtr<zxdb::SystemSymbols::ModuleRef> module_ref =
       session.system().GetSymbols()->InjectModuleForTesting(DataForSyscallTest::kElfSymbolBuildID,
                                                             std::move(module));

@@ -18,11 +18,22 @@ std::string ClockExpected(time_t time, const char* format) {
   return std::string(buffer);
 }
 
-#define CLOCK_ADJUST_DISPLAY_TEST_CONTENT(result, expected)                                    \
-  zx_handle_t handle = 0x12345678;                                                             \
-  PerformDisplayTest(kClockAdjust,                                                             \
-                     SystemCallTest::ZxClockAdjust(result, #result, handle, ZX_CLOCK_UTC, 10), \
-                     expected);
+// zx_clock_adjust tests.
+
+std::unique_ptr<SystemCallTest> ZxClockAdjust(int64_t result, std::string_view result_name,
+                                              zx_handle_t handle, zx_clock_t clock_id,
+                                              int64_t offset) {
+  auto value = std::make_unique<SystemCallTest>("zx_clock_adjust", result, result_name);
+  value->AddInput(handle);
+  value->AddInput(clock_id);
+  value->AddInput(offset);
+  return value;
+}
+
+#define CLOCK_ADJUST_DISPLAY_TEST_CONTENT(result, expected) \
+  zx_handle_t handle = 0x12345678;                          \
+  PerformDisplayTest("zx_clock_adjust@plt",                 \
+                     ZxClockAdjust(result, #result, handle, ZX_CLOCK_UTC, 10), expected);
 
 #define CLOCK_ADJUST_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -38,12 +49,21 @@ CLOCK_ADJUST_DISPLAY_TEST(ZxClockAdjust, ZX_OK,
                           "offset:\x1B[32mint64\x1B[0m: \x1B[34m10\x1B[0m)\n"
                           "  -> \x1B[32mZX_OK\x1B[0m\n");
 
+// zx_clock_get tests.
+
 #define kClockGetTestValue 1564175607533042989L
 
-#define CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected)                                         \
-  zx_time_t date = kClockGetTestValue;                                                          \
-  PerformDisplayTest(kClockGet, SystemCallTest::ZxClockGet(errno, #errno, ZX_CLOCK_UTC, &date), \
-                     expected);
+std::unique_ptr<SystemCallTest> ZxClockGet(int64_t result, std::string_view result_name,
+                                           zx_clock_t clock_id, zx_time_t* out) {
+  auto value = std::make_unique<SystemCallTest>("zx_clock_get", result, result_name);
+  value->AddInput(clock_id);
+  value->AddInput(reinterpret_cast<uint64_t>(out));
+  return value;
+}
+
+#define CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected) \
+  zx_time_t date = 1564175607533042989;                 \
+  PerformDisplayTest("zx_clock_get@plt", ZxClockGet(errno, #errno, ZX_CLOCK_UTC, &date), expected);
 
 #define CLOCK_GET_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -59,9 +79,14 @@ CLOCK_GET_DISPLAY_TEST(
                   " \x1B[34m%c and 533042989 ns\x1B[0m)\n")
         .c_str());
 
-#define CLOCK_GET_MONOTONIC_DISPLAY_TEST_CONTENT(result, expected)                             \
-  PerformDisplayTest(kClockGetMonotonic, SystemCallTest::ZxClockGetMonotonic(result, #result), \
-                     expected);
+// zx_clock_get_monotonic tests.
+
+std::unique_ptr<SystemCallTest> ZxClockGetMonotonic(int64_t result, std::string_view result_name) {
+  return std::make_unique<SystemCallTest>("zx_clock_get_monotonic", result, result_name);
+}
+
+#define CLOCK_GET_MONOTONIC_DISPLAY_TEST_CONTENT(result, expected) \
+  PerformDisplayTest("zx_clock_get_monotonic@plt", ZxClockGetMonotonic(result, #result), expected);
 
 #define CLOCK_GET_MONOTONIC_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -81,9 +106,21 @@ CLOCK_GET_MONOTONIC_DISPLAY_TEST(
                   "  -> \x1B[32mtime\x1B[0m: \x1B[34m%c and 115697412 ns\x1B[0m\n")
         .c_str());
 
-#define DEADLINE_AFTER_DISPLAY_TEST_CONTENT(result, nanoseconds, expected) \
-  PerformDisplayTest(kDeadlineAfter,                                       \
-                     SystemCallTest::ZxDeadlineAfter(result, #result, nanoseconds), expected);
+// zx_deadline_after tests.
+
+#define kDeadlineAfterTestValue 1564175607533042989L
+#define kDeadlineAfterTestDuration 1000
+
+std::unique_ptr<SystemCallTest> ZxDeadlineAfter(int64_t result, std::string_view result_name,
+                                                zx_time_t nanoseconds) {
+  auto value = std::make_unique<SystemCallTest>("zx_deadline_after", result, result_name);
+  value->AddInput(nanoseconds);
+  return value;
+}
+
+#define DEADLINE_AFTER_DISPLAY_TEST_CONTENT(result, nanoseconds, expected)                   \
+  PerformDisplayTest("zx_deadline_after@plt", ZxDeadlineAfter(result, #result, nanoseconds), \
+                     expected);
 
 #define DEADLINE_AFTER_DISPLAY_TEST(name, errno, nanoseconds, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                           \
@@ -92,9 +129,6 @@ CLOCK_GET_MONOTONIC_DISPLAY_TEST(
   TEST_F(InterceptionWorkflowTestArm, name) {                           \
     DEADLINE_AFTER_DISPLAY_TEST_CONTENT(errno, nanoseconds, expected);  \
   }
-
-#define kDeadlineAfterTestValue 1564175607533042989L
-#define kDeadlineAfterTestDuration 1000
 
 DEADLINE_AFTER_DISPLAY_TEST(
     ZxDeadlineAfter, kDeadlineAfterTestValue, kDeadlineAfterTestDuration,
