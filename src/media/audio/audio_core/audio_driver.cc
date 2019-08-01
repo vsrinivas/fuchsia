@@ -17,8 +17,11 @@
 namespace media::audio {
 
 static constexpr zx_txid_t TXID = 1;
-static constexpr zx_duration_t kDefaultShortCmdTimeout = ZX_MSEC(250);
-static constexpr zx_duration_t kDefaultLongCmdTimeout = ZX_SEC(3);
+
+// Timeout values are chosen to be generous while still providing some guard-rails against hardware
+// errors. Correctly functioning hardware and drivers should never result in any timeouts.
+static constexpr zx_duration_t kDefaultShortCmdTimeout = ZX_SEC(1);
+static constexpr zx_duration_t kDefaultLongCmdTimeout = ZX_SEC(4);
 
 AudioDriver::AudioDriver(AudioDevice* owner) : owner_(owner) {
   FXL_DCHECK(owner_ != nullptr);
