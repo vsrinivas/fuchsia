@@ -134,19 +134,19 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
   fuchsia::media::AudioSampleFormat sample_format;
   double amplitude;
   std::string format;
-  if (std::is_same<SampleType, uint8_t>::value) {
+  if (std::is_same_v<SampleType, uint8_t>) {
     sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
     amplitude = std::numeric_limits<int8_t>::max();
     format = "Un8";
-  } else if (std::is_same<SampleType, int16_t>::value) {
+  } else if (std::is_same_v<SampleType, int16_t>) {
     sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
     amplitude = std::numeric_limits<int16_t>::max();
     format = "I16";
-  } else if (std::is_same<SampleType, int32_t>::value) {
+  } else if (std::is_same_v<SampleType, int32_t>) {
     sample_format = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
     amplitude = std::numeric_limits<int32_t>::max() & ~0x0FF;
     format = "I24";
-  } else if (std::is_same<SampleType, float>::value) {
+  } else if (std::is_same_v<SampleType, float>) {
     sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
     amplitude = 1.0;
     format = "F32";
@@ -327,16 +327,16 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
   std::string format;
   char range;
 
-  if (std::is_same<SampleType, uint8_t>::value) {
+  if (std::is_same_v<SampleType, uint8_t>) {
     sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
     format = "Un8";
-  } else if (std::is_same<SampleType, int16_t>::value) {
+  } else if (std::is_same_v<SampleType, int16_t>) {
     sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
     format = "I16";
-  } else if (std::is_same<SampleType, int32_t>::value) {
+  } else if (std::is_same_v<SampleType, int32_t>) {
     sample_format = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
     format = "I24";
-  } else if (std::is_same<SampleType, float>::value) {
+  } else if (std::is_same_v<SampleType, float>) {
     sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
     format = "F32";
   } else {

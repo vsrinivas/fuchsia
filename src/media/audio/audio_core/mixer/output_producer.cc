@@ -4,11 +4,11 @@
 
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 
-#include <fbl/algorithm.h>
-
 #include <cmath>
 #include <limits>
 #include <type_traits>
+
+#include <fbl/algorithm.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "src/lib/fxl/logging.h"
@@ -17,15 +17,13 @@
 namespace media::audio {
 
 // Converting audio between float and int is surprisingly controversial.
-// (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there.html etc. --
-// web-search "audio float int convert"). Our float32-based internal pipeline
-// can accommodate float and int Sources without data loss (where Source is a
-// client-submitted stream from AudioRenderer, or an input device), but for non-
-// float Destinations (output device, or AudioCapturer stream to a client) we
-// must clamp +1.0 values in DestConverter::Convert. When translating from float
-// to int16 for example, we can translate -1.0 perfectly to -32768 (negative
-// 0x8000), while +1.0 cannot become +32768 (positive 0x8000, exceeding int16's
-// max) so it is clamped to 32767 (0x7FFF).
+// (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there.html etc. -- web-search "audio
+// float int convert"). Our float32-based internal pipeline can accommodate float and int Sources
+// without data loss (where Source is a client-submitted stream from AudioRenderer, or an input
+// device), but for non-float Destinations (output device, or AudioCapturer stream to a client) we
+// must clamp +1.0 values in DestConverter::Convert. When translating from float to int16 for
+// example, we can translate -1.0 perfectly to -32768 (negative 0x8000), while +1.0 cannot become
+// +32768 (positive 0x8000, exceeding int16's max) so it is clamped to 32767 (0x7FFF).
 //
 // Having said all this, the "practically clipping" value of +1.0 is rare in WAV
 // files, and other sources should easily be able to reduce their input levels.
@@ -35,7 +33,7 @@ template <typename DType, typename Enable = void>
 class DestConverter;
 
 template <typename DType>
-class DestConverter<DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
+class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
     return fbl::clamp<int32_t>(round(sample * kFloatToInt8) + kOffsetInt8ToUint8,
@@ -45,7 +43,7 @@ class DestConverter<DType, typename std::enable_if<std::is_same<DType, uint8_t>:
 };
 
 template <typename DType>
-class DestConverter<DType, typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
+class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int16_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
     return fbl::clamp<int32_t>(round(sample * kFloatToInt16), std::numeric_limits<int16_t>::min(),
@@ -54,7 +52,7 @@ class DestConverter<DType, typename std::enable_if<std::is_same<DType, int16_t>:
 };
 
 template <typename DType>
-class DestConverter<DType, typename std::enable_if<std::is_same<DType, int32_t>::value>::type> {
+class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int32_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
     return fbl::clamp<int64_t>(round(sample * kFloatToInt24In32), kMinInt24In32, kMaxInt24In32);
@@ -62,7 +60,7 @@ class DestConverter<DType, typename std::enable_if<std::is_same<DType, int32_t>:
 };
 
 template <typename DType>
-class DestConverter<DType, typename std::enable_if<std::is_same<DType, float>::value>::type> {
+class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, float>>> {
  public:
   // This will emit +1.0 values, which are legal per WAV format custom.
   static inline constexpr DType Convert(float sample) { return fbl::clamp(sample, -1.0f, 1.0f); }
@@ -73,9 +71,9 @@ template <typename DType, typename Enable = void>
 class SilenceMaker;
 
 template <typename DType>
-class SilenceMaker<DType, typename std::enable_if<std::is_same<DType, int16_t>::value ||
-                                                  std::is_same<DType, int32_t>::value ||
-                                                  std::is_same<DType, float>::value>::type> {
+class SilenceMaker<DType, typename std::enable_if_t<std::is_same_v<DType, int16_t> ||
+                                                    std::is_same_v<DType, int32_t> ||
+                                                    std::is_same_v<DType, float>>> {
  public:
   static inline void Fill(void* dest, size_t samples) {
     // This works even if DType is float/double: per IEEE-754, all 0s == +0.0.
@@ -84,15 +82,14 @@ class SilenceMaker<DType, typename std::enable_if<std::is_same<DType, int16_t>::
 };
 
 template <typename DType>
-class SilenceMaker<DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
+class SilenceMaker<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_t>>> {
  public:
   static inline void Fill(void* dest, size_t samples) {
     memset(dest, kOffsetInt8ToUint8, samples * sizeof(DType));
   }
 };
 
-// A templated class which implements the ProduceOutput and FillWithSilence
-// methods of OutputProducer
+// Templated class that implements ProduceOutput and FillWithSilence methods for OutputProducer
 template <typename DType>
 class OutputProducerImpl : public OutputProducer {
  public:
@@ -124,8 +121,7 @@ OutputProducer::OutputProducer(const fuchsia::media::AudioStreamTypePtr& format,
   fidl::Clone(format, &format_);
 }
 
-// Selection routine which will instantiate a particular templatized version of
-// the output producer.
+// Selection routine which will instantiate a particular templatized version of the output producer.
 std::unique_ptr<OutputProducer> OutputProducer::Select(
     const fuchsia::media::AudioStreamTypePtr& format) {
   if (!format || format->channels == 0u) {

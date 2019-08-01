@@ -4,11 +4,12 @@
 
 #include "src/media/audio/tools/signal_generator/signal_generator.h"
 
-#include <fbl/algorithm.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <math.h>
 #include <zircon/syscalls.h>
+
+#include <fbl/algorithm.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -231,8 +232,7 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
     audio_core->EnableDeviceSettings(settings_enabled_);
   }
 
-  // The Audio interface is only needed to create AudioRenderer, set routing
-  // policy and set system gain/mute.
+  // Audio interface is needed to create AudioRenderer, set routing policy and set system gain/mute.
   fuchsia::media::AudioPtr audio;
   app_context->svc()->Connect(audio.NewRequest());
 
@@ -388,9 +388,8 @@ void MediaApp::GenerateAudioForPacket(const AudioPacket& audio_packet, uint64_t 
   }
 }
 
-// Write signal into the next section of our buffer. Track how many total
-// frames since playback started, to handle arbitrary frequencies of type
-// double.
+// Write signal into the next section of our buffer. Track how many total frames since playback
+// started, to handle arbitrary frequencies of type double.
 template <typename SampleType>
 void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
                                     uint64_t frames_since_start, OutputSignalType signal_type,
@@ -421,7 +420,7 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frame
     SampleType val = raw_val * amp_scalar;
 
     // If generating a 24-in-32 signal, clear the unused bottom 8 bits.
-    if (std::is_same<SampleType, int32_t>::value) {
+    if (std::is_same_v<SampleType, int32_t>) {
       val = static_cast<int32_t>(val) & 0xFFFFFF00;
     }
 
@@ -464,8 +463,7 @@ void MediaApp::OnSendPacketComplete() {
   }
 }
 
-// Unmap memory, quit message loop (FIDL interfaces auto-delete upon
-// ~MediaApp).
+// Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~MediaApp).
 void MediaApp::Shutdown() {
   if (wav_writer_is_initialized_) {
     if (!wav_writer_.Close()) {

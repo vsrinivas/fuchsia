@@ -237,17 +237,17 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   // than positive ones. To be linear without clipping, a full-scale signal
   // reaches the max (such as 0x7FFF) but not the min (such as -0x8000). Thus,
   // this magnitude is slightly less than the 1.0 we expect for float signals.
-  if (std::is_same<T, uint8_t>::value) {
+  if (std::is_same_v<T, uint8_t>) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
                         Resampler::SampleAndHold);
     amplitude = kFullScaleInt8InputAmplitude;
     expected_amplitude = kFullScaleInt8AccumAmplitude;
-  } else if (std::is_same<T, int16_t>::value) {
+  } else if (std::is_same_v<T, int16_t>) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                         Resampler::SampleAndHold);
     amplitude = kFullScaleInt16InputAmplitude;
     expected_amplitude = kFullScaleInt16AccumAmplitude;
-  } else if (std::is_same<T, int32_t>::value) {
+  } else if (std::is_same_v<T, int32_t>) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 48000, 1, 48000,
                         Resampler::SampleAndHold);
     amplitude = kFullScaleInt24In32InputAmplitude;

@@ -143,19 +143,19 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
   // intentional, as within uint8 we still use a maximum amplitude of 127 (it is just centered on
   // 128). For float, 7FFF equates to less than 1.0, so adjust by (32768/32767).
 
-  if (std::is_same<T, uint8_t>::value) {
+  if (std::is_same_v<T, uint8_t>) {
     output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
     expected_amplitude = kFullScaleInt8InputAmplitude;
     amplitude = kFullScaleInt8AccumAmplitude;
-  } else if (std::is_same<T, int16_t>::value) {
+  } else if (std::is_same_v<T, int16_t>) {
     output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1);
     expected_amplitude = kFullScaleInt16InputAmplitude;
     amplitude = kFullScaleInt16AccumAmplitude;
-  } else if (std::is_same<T, int32_t>::value) {
+  } else if (std::is_same_v<T, int32_t>) {
     output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
     expected_amplitude = kFullScaleInt24In32InputAmplitude;
     amplitude = kFullScaleInt24In32AccumAmplitude;
-  } else if (std::is_same<T, float>::value) {
+  } else if (std::is_same_v<T, float>) {
     output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
     expected_amplitude = kFullScaleFloatInputAmplitude;
     amplitude = kFullScaleFloatAccumAmplitude;

@@ -4,10 +4,10 @@
 
 #include "src/media/audio/audio_core/mixer/test/audio_analysis.h"
 
-#include <fbl/algorithm.h>
-
 #include <iomanip>
 #include <vector>
+
+#include <fbl/algorithm.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -41,9 +41,9 @@ template <typename T>
 bool CompareBuffers(const T* actual, const T* expect, uint32_t buf_size, bool expect_to_pass,
                     bool float_tolerance) {
   // uint8_t is interpreted as char. Cast into larger int for correct display.
-  constexpr bool is_uint8 = std::is_same<T, uint8_t>::value;
+  constexpr bool is_uint8 = std::is_same_v<T, uint8_t>;
 
-  float_tolerance = float_tolerance && (std::is_same<T, float>::value);
+  float_tolerance = float_tolerance && (std::is_same_v<T, float>);
 
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     if (actual[idx] != expect[idx]) {
@@ -80,9 +80,9 @@ template <typename T>
 bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size, bool expect_to_pass,
                         bool float_tolerance) {
   // uint8_t is interpreted as char. Cast into larger int for correct display.
-  constexpr bool is_uint8 = std::is_same<T, uint8_t>::value;
+  constexpr bool is_uint8 = std::is_same_v<T, uint8_t>;
 
-  float_tolerance = float_tolerance && (std::is_same<T, float>::value);
+  float_tolerance = float_tolerance && (std::is_same_v<T, float>);
 
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     if (buf[idx] != val) {
@@ -421,7 +421,7 @@ void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq, double* magn_s
     imags[idx] = 0.0;
 
     // In case of uint8 input data, bias from a zero of 0x80 to 0.0
-    if (std::is_same<T, uint8_t>::value) {
+    if (std::is_same_v<T, uint8_t>) {
       reals[idx] -= 128.0;
     }
   }
