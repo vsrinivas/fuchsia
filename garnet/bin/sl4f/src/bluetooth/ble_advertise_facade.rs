@@ -108,13 +108,8 @@ impl BleAdvertiseFacade {
         let periph = &self.inner.read().peripheral.clone();
         match &periph {
             Some(p) => {
-                let (status, adv_id) = await!(p.start_advertising_deprecated(
-                    &mut ad,
-                    None,
-                    connectable,
-                    intv,
-                    false
-                ))?;
+                let (status, adv_id) =
+                    p.start_advertising_deprecated(&mut ad, None, connectable, intv, false).await?;
                 match status.error {
                     None => {
                         fx_log_info!(tag: "start_adv", "Started advertising id: {:?}", adv_id);
@@ -141,7 +136,7 @@ impl BleAdvertiseFacade {
         let periph = &self.inner.read().peripheral.clone();
         match &periph {
             Some(p) => {
-                await!(p.stop_advertising_deprecated(&adv_id))?;
+                p.stop_advertising_deprecated(&adv_id).await?;
                 self.set_adv_id(None);
                 Ok(())
             }

@@ -16,7 +16,7 @@ pub async fn base_manager_method_to_fidl(
 ) -> Result<Value, Error> {
     match method_name.parse()? {
         BaseManagerMethod::RestartSession => {
-            let result = await!(facade.restart_session())?;
+            let result = facade.restart_session().await?;
             Ok(to_value(result)?)
         }
     }

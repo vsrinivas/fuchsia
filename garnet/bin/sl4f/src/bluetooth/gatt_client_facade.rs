@@ -73,7 +73,7 @@ impl GattClientFacade {
 
         match &self.inner.read().central {
             Some(c) => {
-                let status = await!(c.start_scan(filter.as_mut().map(OutOfLine)))?;
+                let status = c.start_scan(filter.as_mut().map(OutOfLine)).await?;
                 match status.error {
                     Some(e) => bail!("Failed to start scan: {}", BTError::from(*e)),
                     None => Ok(()),
@@ -117,7 +117,7 @@ impl GattClientFacade {
         };
 
         let (status, chrcs) =
-            await!(discover_characteristics).map_err(|_| BTError::new("Failed to send message"))?;
+            discover_characteristics.await.map_err(|_| BTError::new("Failed to send message"))?;
         if let Some(e) = status.error {
             let err_msg = format!("Failed to read characteristics: {}", BTError::from(*e));
             fx_err_and_bail!(&with_line!(tag), err_msg)
@@ -134,7 +134,7 @@ impl GattClientFacade {
         };
 
         let status =
-            await!(write_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+            write_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
@@ -160,8 +160,8 @@ impl GattClientFacade {
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
-        let status = await!(write_long_characteristic)
-            .map_err(|_| BTError::new("Failed to send message"))?;
+        let status =
+            write_long_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
@@ -196,7 +196,7 @@ impl GattClientFacade {
         };
 
         let (status, value) =
-            await!(read_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+            read_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
@@ -221,7 +221,7 @@ impl GattClientFacade {
         };
 
         let (status, value) =
-            await!(read_long_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+            read_long_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
@@ -240,7 +240,7 @@ impl GattClientFacade {
         };
 
         let (status, value) =
-            await!(read_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
+            read_descriptor.await.map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
@@ -264,7 +264,7 @@ impl GattClientFacade {
         };
 
         let (status, value) =
-            await!(read_long_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
+            read_long_descriptor.await.map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
@@ -283,8 +283,7 @@ impl GattClientFacade {
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
-        let status =
-            await!(write_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
+        let status = write_descriptor.await.map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
@@ -309,7 +308,7 @@ impl GattClientFacade {
         };
 
         let status =
-            await!(write_long_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
+            write_long_descriptor.await.map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
@@ -333,7 +332,7 @@ impl GattClientFacade {
         };
 
         let status =
-            await!(notify_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+            notify_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
@@ -351,7 +350,7 @@ impl GattClientFacade {
 
         match client_proxy {
             Some(c) => {
-                let (status, services) = await!(c.list_services(None))?;
+                let (status, services) = c.list_services(None).await?;
                 match status.error {
                     None => {
                         fx_log_info!(tag: &with_line!(tag), "Found services: {:?}", services);
@@ -510,7 +509,7 @@ impl GattClientFacade {
         let mut identifier = id.clone();
         match &self.inner.read().central {
             Some(c) => {
-                let status = await!(c.connect_peripheral(&mut identifier, server_end))?;
+                let status = c.connect_peripheral(&mut identifier, server_end).await?;
                 match status.error {
                     Some(e) => {
                         let err_msg =
@@ -530,7 +529,7 @@ impl GattClientFacade {
         let tag = "GattClientFacade::disconnect_peripheral";
         match &self.inner.read().central {
             Some(c) => {
-                let status = await!(c.disconnect_peripheral(&id))?;
+                let status = c.disconnect_peripheral(&id).await?;
                 match status.error {
                     None => {}
                     Some(e) => {

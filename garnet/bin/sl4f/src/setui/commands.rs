@@ -17,6 +17,6 @@ pub async fn setui_method_to_fidl(
     facade: Arc<SetUiFacade>,
 ) -> Result<Value, Error> {
     match method_name.parse()? {
-        SetUiMethod::Mutate => await!(facade.mutate(args)),
+        SetUiMethod::Mutate => facade.mutate(args).await,
     }
 }

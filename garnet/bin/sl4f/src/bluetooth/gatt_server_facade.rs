@@ -257,7 +257,7 @@ impl GattServerFacade {
         service_proxy: LocalServiceProxy,
     ) -> Result<(), Error> {
         use fidl_fuchsia_bluetooth_gatt::LocalServiceDelegateRequest::*;
-        await!(stream
+        stream
             .map_ok(move |request| match request {
                 OnCharacteristicConfiguration {
                     peer_id,
@@ -301,8 +301,9 @@ impl GattServerFacade {
                     );
                 }
             })
-            .try_collect::<()>())
-        .map_err(|e| e.into())
+            .try_collect::<()>()
+            .await
+            .map_err(|e| e.into())
     }
 
     /// Convert a number representing permissions into AttributePermissions.
@@ -589,11 +590,9 @@ impl GattServerFacade {
 
         match &self.inner.read().server_proxy {
             Some(server) => {
-                let status = await!(server.publish_service(
-                    &mut service_info,
-                    delegate_client,
-                    service_server
-                ))?;
+                let status = server
+                    .publish_service(&mut service_info, delegate_client, service_server)
+                    .await?;
                 match status.error {
                     None => fx_log_info!( tag: &[tag, &line!().to_string()].join(""),
                         "Successfully published GATT service with uuid {:?}",
@@ -610,7 +609,7 @@ impl GattServerFacade {
             service_proxy,
         );
         let fut = async {
-            let result = await!(monitor_delegate_fut);
+            let result = monitor_delegate_fut.await;
             if let Err(err) = result {
                 fx_log_err!(tag: "publish_service",
                     "Failed to create or monitor the gatt service delegate: {:?}", err);
@@ -709,7 +708,7 @@ impl GattServerFacade {
             self.inner.write().attribute_value_mapping.clear();
             let service_info = self.generate_service(service)?;
             let service_uuid = &service["uuid"];
-            await!(self.publish_service(service_info, service_uuid.to_string()))?;
+            self.publish_service(service_info, service_uuid.to_string()).await?;
         }
         Ok(())
     }

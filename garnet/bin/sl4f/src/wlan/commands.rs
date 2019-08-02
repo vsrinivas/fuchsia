@@ -20,7 +20,7 @@ pub async fn wlan_method_to_fidl(
     match method_name.as_ref() {
         "scan" => {
             fx_log_info!(tag: "WlanFacade", "performing wlan scan");
-            let results = await!(wlan_facade.scan())?;
+            let results = wlan_facade.scan().await?;
             fx_log_info!(tag: "WlanFacade", "received {:?} scan results", results.len());
             // return the scan results
             to_value(results).map_err(|e| format_err!("error handling scan results: {}", e))
@@ -51,17 +51,17 @@ pub async fn wlan_method_to_fidl(
             };
 
             fx_log_info!(tag: "WlanFacade", "performing wlan connect to SSID: {:?}", target_ssid);
-            let results = await!(wlan_facade.connect(target_ssid, target_pwd))?;
+            let results = wlan_facade.connect(target_ssid, target_pwd).await?;
             to_value(results).map_err(|e| format_err!("error handling connection result: {}", e))
         }
         "disconnect" => {
             fx_log_info!(tag: "WlanFacade", "performing wlan disconnect");
-            await!(wlan_facade.disconnect())?;
+            wlan_facade.disconnect().await?;
             to_value(true).map_err(|e| format_err!("error handling disconnect: {}", e))
         }
         "status" => {
             fx_log_info!(tag: "WlanFacade", "fetching connection status");
-            let result = await!(wlan_facade.status())?;
+            let result = wlan_facade.status().await?;
             to_value(result).map_err(|e| format_err!("error handling connection status: {}", e))
         }
         _ => return Err(format_err!("unsupported command!")),

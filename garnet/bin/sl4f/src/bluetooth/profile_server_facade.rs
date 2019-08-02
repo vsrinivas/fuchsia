@@ -75,7 +75,7 @@ impl ProfileServerFacade {
 
         let profile_server_future = ProfileServerFacade::monitor_profile_event_stream(event_stream);
         let fut = async {
-            let result = await!(profile_server_future);
+            let result = profile_server_future.await;
             if let Err(_err) = result {
                 fx_log_err!("Failed to monitor profile server event stream.");
             }
@@ -354,7 +354,7 @@ impl ProfileServerFacade {
     /// A function to monitor incoming events from the ProfileEventStream.
     pub async fn monitor_profile_event_stream(mut stream: ProfileEventStream) -> Result<(), Error> {
         let tag = "ProfileServerFacade::monitor_profile_event_stream";
-        while let Some(request) = await!(stream.next()) {
+        while let Some(request) = stream.next().await {
             match request {
                 Ok(r) => match r {
                     ProfileEvent::OnServiceFound { peer_id, profile, attributes } => {
@@ -537,7 +537,7 @@ impl ProfileServerFacade {
         };
 
         let add_service_future = async {
-            let result = await!(add_service_future);
+            let result = add_service_future.await;
             if let Err(err) = result {
                 fx_log_err!("Failed to add service with: {:?}", err);
             };

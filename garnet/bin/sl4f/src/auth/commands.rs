@@ -24,7 +24,7 @@ pub async fn auth_method_to_fidl(
         "InjectAuthToken" => {
             let request: InjectAuthTokenRequest = from_value(args)?;
             let result =
-                await!(facade.inject_auth_token(request.user_profile_info, request.credential,))?;
+                facade.inject_auth_token(request.user_profile_info, request.credential).await?;
             Ok(to_value(result)?)
         }
         _ => bail!("Invalid Auth Facade method: {:?}", method_name),

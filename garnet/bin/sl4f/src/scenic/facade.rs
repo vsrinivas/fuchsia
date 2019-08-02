@@ -32,7 +32,7 @@ impl ScenicFacade {
         let scenic =
             app::client::connect_to_service::<ScenicMarker>().expect("failed to connect to Scenic");
 
-        let (screenshot, success) = await!(scenic.take_screenshot())?;
+        let (screenshot, success) = scenic.take_screenshot().await?;
         if success {
             Ok(to_value(ScreenshotDataDef::new(screenshot))?)
         } else {

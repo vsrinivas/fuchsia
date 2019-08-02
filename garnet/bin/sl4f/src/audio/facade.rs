@@ -290,7 +290,7 @@ impl VirtualOutput {
         fasync::spawn(
             async move {
                 let mut worker = OutputWorker::default();
-                await!(worker.run(rx, va_output))?;
+                worker.run(rx, va_output).await?;
                 Ok::<(), Error>(())
             }
                 .unwrap_or_else(|e| eprintln!("Input injection thread failed: {:?}", e)),
@@ -517,11 +517,11 @@ impl InputWorker {
                             bail!("Got None InjectMsg Event, exiting worker");
                         },
                         Some(InjectMsg::Flush) => {
-                            let active = await!(active.lock());
+                            let active = active.lock().await;
                             self.flush();
                         }
                         Some(InjectMsg::Data { data }) => {
-                            let mut active = await!(active.lock());
+                            let mut active = active.lock().await;
                             self.set_data(data)?;
                             *(active) = true;
                         }
@@ -550,7 +550,7 @@ impl InputWorker {
                             }
                             last_notify = now;
 
-                            let mut active = await!(active.lock());
+                            let mut active = active.lock().await;
                             self.on_position_notify(ring_position, clock_time, *active)?;
                             if self.zeros_written >= self.work_space as usize {
                                 *(active) = false;
@@ -621,7 +621,7 @@ impl VirtualInput {
         fasync::spawn(
             async move {
                 let mut worker = InputWorker::default();
-                await!(worker.run(rx, va_input, active))?;
+                worker.run(rx, va_input, active).await?;
                 Ok::<(), Error>(())
             }
                 .unwrap_or_else(|e| eprintln!("Input injection thread failed: {:?}", e)),
@@ -703,11 +703,11 @@ pub struct AudioFacade {
 
 impl AudioFacade {
     async fn ensure_initialized(&self) -> Result<(), Error> {
-        let mut initialized = await!(self.initialized.lock());
+        let mut initialized = self.initialized.lock().await;
         if !*(initialized) {
             let controller = self.vad_control.read().controller.clone();
-            await!(controller.disable())?;
-            await!(controller.enable())?;
+            controller.disable().await?;
+            controller.enable().await?;
             self.audio_input.write().start_input()?;
             self.audio_output.write().start_output()?;
             *(initialized) = true;
@@ -733,9 +733,9 @@ impl AudioFacade {
     }
 
     pub async fn start_output_save(&self) -> Result<Value, Error> {
-        await!(self.ensure_initialized())?;
+        self.ensure_initialized().await?;
         let capturing = self.audio_output.read().capturing.clone();
-        let mut capturing = await!(capturing.lock());
+        let mut capturing = capturing.lock().await;
         if !*capturing {
             let mut write = self.audio_output.write();
             let sender = write
@@ -752,9 +752,9 @@ impl AudioFacade {
     }
 
     pub async fn stop_output_save(&self) -> Result<Value, Error> {
-        await!(self.ensure_initialized())?;
+        self.ensure_initialized().await?;
         let capturing = self.audio_output.read().capturing.clone();
-        let mut capturing = await!(capturing.lock());
+        let mut capturing = capturing.lock().await;
         if *capturing {
             let mut write = self.audio_output.write();
             write.extracted_data.clear();
@@ -767,7 +767,9 @@ impl AudioFacade {
             let (tx, mut rx) = mpsc::channel(512);
             sender.try_send(ExtractMsg::Stop { out_sender: tx })?;
 
-            let mut saved_audio = await!(rx.next())
+            let mut saved_audio = rx
+                .next()
+                .await
                 .ok_or_else(|| format_err!("StopOutputSave failed, could not retrieve data."))?;
 
             write.write_header(saved_audio.len() as u32)?;
@@ -781,9 +783,9 @@ impl AudioFacade {
     }
 
     pub async fn get_output_audio(&self) -> Result<Value, Error> {
-        await!(self.ensure_initialized())?;
+        self.ensure_initialized().await?;
         let capturing = self.audio_output.read().capturing.clone();
-        let capturing = await!(capturing.lock());
+        let capturing = capturing.lock().await;
         if !*capturing {
             Ok(to_value(base64::encode(&self.audio_output.read().extracted_data))?)
         } else {
@@ -792,7 +794,7 @@ impl AudioFacade {
     }
 
     pub async fn put_input_audio(&self, args: Value) -> Result<Value, Error> {
-        await!(self.ensure_initialized())?;
+        self.ensure_initialized().await?;
         let data = args.get("data").ok_or(format_err!("PutInputAudio failed, no data"))?;
         let data = data.as_str().ok_or(format_err!("PutInputAudio failed, data not string"))?;
 
@@ -804,7 +806,7 @@ impl AudioFacade {
         let byte_cnt = wave_data_vec.len();
         {
             let active = self.audio_input.read().active.clone();
-            let active = await!(active.lock());
+            let active = active.lock().await;
             if *active {
                 bail!("PutInputAudio failed, currently injecting audio.")
             }
@@ -825,13 +827,13 @@ impl AudioFacade {
     }
 
     pub async fn start_input_injection(&self, args: Value) -> Result<Value, Error> {
-        await!(self.ensure_initialized())?;
+        self.ensure_initialized().await?;
         {
             let sample_index = args["index"].as_u64().ok_or(format_err!("index not a number"))?;
             let sample_index = sample_index as usize;
 
             let active = self.audio_input.read().active.clone();
-            let active = await!(active.lock());
+            let active = active.lock().await;
             if *active {
                 bail!("StartInputInjection failed, already active.")
             } else if !self.audio_input.read().have_data {
@@ -843,10 +845,10 @@ impl AudioFacade {
     }
 
     pub async fn stop_input_injection(&self) -> Result<Value, Error> {
-        await!(self.ensure_initialized())?;
+        self.ensure_initialized().await?;
         {
             let active = self.audio_input.read().active.clone();
-            let active = await!(active.lock());
+            let active = active.lock().await;
             if !*active {
                 bail!("StopInputInjection failed, not active.")
             }

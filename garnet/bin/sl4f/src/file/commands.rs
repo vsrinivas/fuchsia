@@ -15,19 +15,19 @@ pub async fn file_method_to_fidl(
 ) -> Result<Value, Error> {
     match method_name.parse()? {
         FileMethod::DeleteFile => {
-            let result = await!(facade.delete_file(args))?;
+            let result = facade.delete_file(args).await?;
             Ok(to_value(result)?)
         }
         FileMethod::MakeDir => {
-            let result = await!(facade.make_dir(args))?;
+            let result = facade.make_dir(args).await?;
             Ok(to_value(result)?)
         }
         FileMethod::ReadFile => {
-            let result = await!(facade.read_file(args))?;
+            let result = facade.read_file(args).await?;
             Ok(to_value(result)?)
         }
         FileMethod::WriteFile => {
-            let result = await!(facade.write_file(args))?;
+            let result = facade.write_file(args).await?;
             Ok(to_value(result)?)
         }
     }

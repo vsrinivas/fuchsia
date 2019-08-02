@@ -14,6 +14,6 @@ pub async fn traceutil_method_to_fidl(
     facade: Arc<TraceutilFacade>,
 ) -> Result<Value, Error> {
     match method_name.parse()? {
-        TraceutilMethod::GetTraceFile => await!(facade.get_trace_file(args)),
+        TraceutilMethod::GetTraceFile => facade.get_trace_file(args).await,
     }
 }

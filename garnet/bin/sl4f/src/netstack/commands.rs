@@ -17,6 +17,6 @@ pub async fn netstack_method_to_fidl(
     facade: Arc<NetstackFacade>,
 ) -> Result<Value, Error> {
     match <NetstackMethod as std::str::FromStr>::from_str(&method_name)? {
-        NetstackMethod::ListInterfaces => await!(facade.list_interfaces()),
+        NetstackMethod::ListInterfaces => facade.list_interfaces().await,
     }
 }

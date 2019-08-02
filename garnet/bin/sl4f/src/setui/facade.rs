@@ -45,7 +45,7 @@ impl SetUiFacade {
                 setting_type = SettingType::Account;
             }
         }
-        match await!(self.setui_svc.mutate(setting_type, &mut mutation))?.return_code {
+        match self.setui_svc.mutate(setting_type, &mut mutation).await?.return_code {
             ReturnCode::Ok => Ok(to_value(SetUiResult::Success)?),
             ReturnCode::Failed => bail!("Update settings failed"),
             ReturnCode::Unsupported => bail!("Update settings unsupported"),

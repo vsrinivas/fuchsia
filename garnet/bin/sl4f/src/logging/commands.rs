@@ -19,7 +19,7 @@ pub async fn logging_method_to_fidl(
                 Some(m) => m.to_string(),
                 None => bail!("Expected a serde_json Value \'message\'."),
             };
-            let result = await!(facade.log_err(message))?;
+            let result = facade.log_err(message).await?;
             Ok(to_value(result)?)
         }
         LoggingMethod::LogInfo => {
@@ -27,7 +27,7 @@ pub async fn logging_method_to_fidl(
                 Some(m) => m.to_string(),
                 None => bail!("Expected a serde_json Value \'message\'."),
             };
-            let result = await!(facade.log_info(message))?;
+            let result = facade.log_info(message).await?;
             Ok(to_value(result)?)
         }
         LoggingMethod::LogWarn => {
@@ -35,7 +35,7 @@ pub async fn logging_method_to_fidl(
                 Some(m) => m.to_string(),
                 None => bail!("Expected a serde_json Value \'message\'."),
             };
-            let result = await!(facade.log_warn(message))?;
+            let result = facade.log_warn(message).await?;
             Ok(to_value(result)?)
         }
         _ => bail!("Invalid Logging Facade FIDL method: {:?}", method_name),

@@ -18,10 +18,10 @@ pub async fn scenic_method_to_fidl(
     facade: Arc<ScenicFacade>,
 ) -> Result<Value, Error> {
     match method_name.parse()? {
-        ScenicMethod::TakeScreenshot => await!(facade.take_screenshot()),
+        ScenicMethod::TakeScreenshot => facade.take_screenshot().await,
         ScenicMethod::PresentView => {
             let request: PresentViewRequest = serde_json::from_value(args)?;
-            Ok(to_value(await!(facade.present_view(request.url, request.config))?)?)
+            Ok(to_value(facade.present_view(request.url, request.config).await?)?)
         }
     }
 }

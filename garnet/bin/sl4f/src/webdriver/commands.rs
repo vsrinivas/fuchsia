@@ -17,11 +17,11 @@ pub async fn webdriver_method_to_fidl(
 ) -> Result<Value, Error> {
     match method_name.as_ref() {
         "EnableDevTools" => {
-            let result = await!(facade.enable_dev_tools())?;
+            let result = facade.enable_dev_tools().await?;
             Ok(to_value(result)?)
         }
         "GetDevToolsPorts" => {
-            let result = await!(facade.get_dev_tools_ports())?;
+            let result = facade.get_dev_tools_ports().await?;
             Ok(to_value(result)?)
         }
         _ => bail!("Invalid WebDriver facade method: {:?}", method_name),

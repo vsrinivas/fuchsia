@@ -96,7 +96,7 @@ impl BluetoothControlFacade {
         mut pin_sender: mpsc::Sender<String>,
     ) -> Result<(), Error> {
         let tag = "BluetoothControlFacade::monitor_pairing_delegate_request_stream";
-        while let Some(request) = await!(stream.next()) {
+        while let Some(request) = stream.next().await {
             match request {
                 Ok(r) => match r {
                     PairingDelegateRequest::OnPairingComplete {
@@ -139,9 +139,10 @@ impl BluetoothControlFacade {
                             PairingMethod::PasskeyDisplay => (consent, None),
                             PairingMethod::PasskeyEntry => {
                                 let timeout = 10.seconds();
-                                let pin = match await!(pin_receiver
+                                let pin = match pin_receiver
                                     .next()
-                                    .on_timeout(timeout.after_now(), || None))
+                                    .on_timeout(timeout.after_now(), || None)
+                                    .await
                                 {
                                     Some(p) => p,
                                     _ => {
@@ -207,7 +208,7 @@ impl BluetoothControlFacade {
         self.inner.write().client_pin_receiver = Some(receiever);
 
         let monitor_pairing_delegate_future = async {
-            let result = await!(pairing_delegate_result);
+            let result = pairing_delegate_result.await;
             if let Err(err) = result {
                 fx_log_err!(
                     tag: &with_line!("BluetoothControlFacade::accept_pairing"),
@@ -219,7 +220,7 @@ impl BluetoothControlFacade {
         fasync::spawn(monitor_pairing_delegate_future);
 
         let fut = async {
-            let result = await!(pairing_delegate_fut);
+            let result = pairing_delegate_fut.await;
             if let Err(err) = result {
                 fx_log_err!(
                     tag: &with_line!("BluetoothControlFacade::accept_pairing"),
@@ -283,7 +284,7 @@ impl BluetoothControlFacade {
         let tag = "BluetoothControlFacade::set_discoverable";
         match &self.inner.read().control_interface_proxy {
             Some(proxy) => {
-                let resp = await!(proxy.set_discoverable(discoverable))?;
+                let resp = proxy.set_discoverable(discoverable).await?;
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
@@ -311,7 +312,7 @@ impl BluetoothControlFacade {
         let tag = "BluetoothControlFacade::set_name";
         match &self.inner.read().control_interface_proxy {
             Some(proxy) => {
-                let resp = await!(proxy.set_name(Some(&name)))?;
+                let resp = proxy.set_name(Some(&name)).await?;
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
@@ -339,7 +340,7 @@ impl BluetoothControlFacade {
         let tag = "BluetoothControlFacade::request_discovery";
         match &self.inner.read().control_interface_proxy {
             Some(proxy) => {
-                let resp = await!(proxy.request_discovery(discovery))?;
+                let resp = proxy.request_discovery(discovery).await?;
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
@@ -367,7 +368,7 @@ impl BluetoothControlFacade {
         &self.inner.write().discovered_device_list.clear();
 
         let discovered_devices = match &self.inner.read().control_interface_proxy {
-            Some(proxy) => await!(proxy.get_known_remote_devices())?,
+            Some(proxy) => proxy.get_known_remote_devices().await?,
             None => {
                 fx_log_err!(
                     tag: &with_line!(tag),
@@ -390,7 +391,7 @@ impl BluetoothControlFacade {
         let tag = "BluetoothControlFacade::forget";
         match &self.inner.read().control_interface_proxy {
             Some(proxy) => {
-                let resp = await!(proxy.forget(&id))?;
+                let resp = proxy.forget(&id).await?;
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
@@ -418,7 +419,7 @@ impl BluetoothControlFacade {
         let tag = "BluetoothControlFacade::connect";
         match &self.inner.read().control_interface_proxy {
             Some(proxy) => {
-                let resp = await!(proxy.connect(&id))?;
+                let resp = proxy.connect(&id).await?;
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
@@ -446,7 +447,7 @@ impl BluetoothControlFacade {
         let tag = "BluetoothControlFacade::disconnect";
         match &self.inner.read().control_interface_proxy {
             Some(proxy) => {
-                let resp = await!(proxy.disconnect(&id))?;
+                let resp = proxy.disconnect(&id).await?;
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
@@ -470,7 +471,7 @@ impl BluetoothControlFacade {
     pub async fn get_active_adapter_address(&self) -> Result<String, Error> {
         let result = match &self.inner.read().control_interface_proxy {
             Some(proxy) => {
-                if let Some(adapter) = await!(proxy.get_active_adapter_info())? {
+                if let Some(adapter) = proxy.get_active_adapter_info().await? {
                     adapter.address
                 } else {
                     bail!("No Active Adapter")

@@ -43,7 +43,7 @@ impl WebdriverFacade {
     pub async fn enable_dev_tools(&self) -> Result<EnableDevToolsResult, Error> {
         let mut internal = self.internal.lock();
         if internal.is_none() {
-            let initialized_internal = await!(WebdriverFacadeInternal::new())?;
+            let initialized_internal = WebdriverFacadeInternal::new().await?;
             internal.replace(initialized_internal);
             Ok(EnableDevToolsResult::Success)
         } else {
@@ -79,8 +79,8 @@ impl WebdriverFacadeInternal {
     /// Create a new `WebdriverFacadeInternal`.  Can fail if connecting to the
     /// debug service fails.
     pub async fn new() -> Result<WebdriverFacadeInternal, Error> {
-        let context_provider = await!(Self::get_context_provider_proxy())?;
-        let port_update_receiver = await!(Self::get_port_event_receiver())?;
+        let context_provider = Self::get_context_provider_proxy().await?;
+        let port_update_receiver = Self::get_port_event_receiver().await?;
         Ok(WebdriverFacadeInternal {
             dev_tools_ports: HashSet::new(),
             port_update_receiver,
@@ -134,7 +134,7 @@ impl WebdriverFacadeInternal {
         let (navigation_proxy, navigation_server_end) =
             create_proxy::<NavigationControllerMarker>()?;
         frame_proxy.get_navigation_controller(navigation_server_end)?;
-        await!(navigation_proxy.get_visible_entry())?;
+        navigation_proxy.get_visible_entry().await?;
         Ok(context_provider)
     }
 
@@ -142,19 +142,19 @@ impl WebdriverFacadeInternal {
     /// receiving end.  Assumes Webdriver is already running.
     async fn get_port_event_receiver() -> Result<mpsc::UnboundedReceiver<PortUpdateMessage>, Error>
     {
-        let debug_proxy = await!(Self::get_debug_proxy())?;
+        let debug_proxy = Self::get_debug_proxy().await?;
         let (dev_tools_client, dev_tools_stream) =
             create_request_stream::<DevToolsListenerMarker>()?;
         let (port_update_sender, port_update_receiver) = mpsc::unbounded();
 
         Self::spawn_dev_tools_listener(dev_tools_stream, port_update_sender);
-        await!(debug_proxy.enable_dev_tools(dev_tools_client))?;
+        debug_proxy.enable_dev_tools(dev_tools_client).await?;
         Ok(port_update_receiver)
     }
 
     /// Get a client to the WebDriver Debug service published in the Hub.
     async fn get_debug_proxy() -> Result<DebugProxy, Error> {
-        let found_path = await!(Self::get_path_to_debug())?;
+        let found_path = Self::get_path_to_debug().await?;
         let (client, server) = zx::Channel::create()?;
         fdio::service_connect(found_path.as_ref(), server)?;
         Ok(DebugProxy::new(fasync::Channel::from_channel(client)?))
@@ -179,7 +179,9 @@ impl WebdriverFacadeInternal {
     ) {
         fasync::spawn(async move {
             let dev_tools_listener = DevToolsListener::new(port_update_sender);
-            await!(dev_tools_listener.handle_requests_from_stream(dev_tools_request_stream))
+            dev_tools_listener
+                .handle_requests_from_stream(dev_tools_request_stream)
+                .await
                 .unwrap_or_else(|_| print!("Error handling DevToolsListener channel!"));
         });
     }
@@ -213,7 +215,7 @@ impl DevToolsListener {
         &self,
         mut stream: DevToolsListenerRequestStream,
     ) -> Result<(), Error> {
-        while let Some(request) = await!(stream.try_next())? {
+        while let Some(request) = stream.try_next().await? {
             let DevToolsListenerRequest::OnContextDevToolsAvailable { listener, .. } = request;
             self.on_context_created(listener)?;
         }
@@ -230,7 +232,9 @@ impl DevToolsListener {
         let port_update_sender = mpsc::UnboundedSender::clone(&self.port_update_sender);
         fasync::spawn(async move {
             let mut per_context_listener = DevToolsPerContextListener::new(port_update_sender);
-            await!(per_context_listener.handle_requests_from_stream(listener_request_stream))
+            per_context_listener
+                .handle_requests_from_stream(listener_request_stream)
+                .await
                 .unwrap_or_else(|_| print!("Error handling DevToolsListener channel!"));
         });
         Ok(())
@@ -259,7 +263,7 @@ impl DevToolsPerContextListener {
     ) -> Result<(), Error> {
         let mut context_port = None;
 
-        while let Ok(Some(request)) = await!(stream.try_next()) {
+        while let Ok(Some(request)) = stream.try_next().await {
             let DevToolsPerContextListenerRequest::OnHttpPortOpen { port, .. } = request;
             context_port.replace(port);
             self.on_port_open(port)?;
