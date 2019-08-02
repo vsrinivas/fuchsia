@@ -7,7 +7,6 @@ library fuchsia.accessibility.semantics;
 using fuchsia.math;
 using fuchsia.ui.views;
 
-
 /// Maximum depth of the semantic tree.
 const uint64 MAX_TREE_DEPTH = 256;
 
@@ -28,9 +27,16 @@ const uint64 MAX_LABEL_SIZE = 16384;
 /// semantic tree for that view.
 [Discoverable]
 protocol SemanticsManager {
+    // TODO(MI4-2636): This should be removed after clients move to RegisterViewForSemantics.
+    [Transitional]
     RegisterView(fuchsia.ui.views.ViewRef view_ref,
                  SemanticActionListener listener,
                  request<SemanticTree> semantic_tree_request);
+
+    [Transitional]
+    RegisterViewForSemantics(fuchsia.ui.views.ViewRef view_ref,
+                             SemanticListener listener,
+                             request<SemanticTree> semantic_tree_request);
 };
 
 /// Interface to update the semantic tree for a particular view. Nodes can be added, updated or
@@ -65,7 +71,21 @@ table Hit {
 
 /// A semantic provider is the client-side interface that the manager can use to
 /// ask clients to perform accessibility actions.
+// TODO(MI4-2636): This should be removed after clients move to SemanticListener.
 protocol SemanticActionListener {
+    /// Asks the semantics provider to perform an accessibility action on the
+    /// node with node id in the front-end.
+    [Transitional]
+    OnAccessibilityActionRequested(uint32 node_id, Action action) -> (bool handled);
+
+    /// Asks the semantics provider to perform hit testing and return the result.
+    [Transitional]
+    HitTest(fuchsia.math.PointF local_point) -> (Hit result);
+};
+
+/// A semantic provider is the client-side interface that the manager can use to enable or disable
+/// semantic updates, and to ask clients to perform accessibility actions.
+protocol SemanticListener {
     /// Asks the semantics provider to perform an accessibility action on the
     /// node with node id in the front-end.
     OnAccessibilityActionRequested(uint32 node_id, Action action) -> (bool handled);
@@ -73,4 +93,10 @@ protocol SemanticActionListener {
     /// Asks the semantics provider to perform hit testing and return the result.
     [Transitional]
     HitTest(fuchsia.math.PointF local_point) -> (Hit result);
+
+    /// Callback telling the client whether or not to send updates to the semantic tree.
+    /// The semantics manager will clear all state when this is called with updates_enabled = false.
+    /// When called with updates_enabled = true, the client should sent the full state of the
+    /// current semantic tree.
+    OnSemanticsModeChanged(bool updates_enabled) -> ();
 };
