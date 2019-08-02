@@ -18,14 +18,14 @@ enum Role {
     UNKNOWN = 1;
 };
 
-/// An attribute is an essential property to describe an element. Unlike states,
-/// attributes define the nature of an element, and a change in one of them
-/// changes the nature of the element itself.
-/// Example: a button with a label attribute 'ok', could have its label changed
-/// to 'cancel', which would alter drastically this element.
+/// An attribute is an essential property to describe an element. Unlike states, attributes do not
+/// change over the life of an element.
+/// Example: A button with a label attribute 'ok' should never change to 'cancel', as this is not
+/// the same element.
 table Attributes {
-    /// The label for an element.
-    1: string label;
+    /// The label for an element. If longer than MAX_LABEL_SIZE the client is responsible for
+    /// truncating the label.
+    1: string:MAX_LABEL_SIZE label;
 };
 
 /// A state is a dynamic property of an element that may change in response to
@@ -52,20 +52,19 @@ table Node {
     /// Role of this element, e.g. button, checkbox, etc.
     2: Role role;
 
-    /// A list of states of this object, e.g. checked, editable, etc.
+    /// A table of states of this object, e.g. checked, editable, etc.
     3: States states;
 
-    /// A list of attributes of this node.
+    /// A table of attributes of this node.
     4: Attributes attributes;
 
-    /// List of actions that can be performed on this node.
-    5: vector<Action> actions;
+    /// A list of actions that can be performed on this node.
+    5: vector<Action>:100 actions;
 
-    /// The ordered list of children IDs  of this node.
-    /// It is assumed that runtimes supplying semantic tree information will not
-    /// create cycles inside the tree.
-    /// It is also assumed that each node can have only one parent.
-    6: vector<uint32> child_ids;
+    /// The list of child IDs of this node, in traversal order. Runtimes supplying semantic tree
+    /// information are responsible for ensuring the tree does not contain cycles. Each node may
+    /// have only one parent.
+    6: vector<uint32>:MAX_FAN_OUT child_ids;
 
     /// Local bounding box of this element.
     7: fuchsia.ui.gfx.BoundingBox location;

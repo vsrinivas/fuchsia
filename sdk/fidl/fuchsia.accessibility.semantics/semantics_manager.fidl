@@ -7,6 +7,19 @@ library fuchsia.accessibility.semantics;
 using fuchsia.math;
 using fuchsia.ui.views;
 
+
+/// Maximum depth of the semantic tree.
+const uint64 MAX_TREE_DEPTH = 256;
+
+/// Maximum number of children for a node in the semantic tree.
+const uint64 MAX_FAN_OUT = 256;
+
+/// Maximum number of semantic nodes that may be sent in a single update.
+const uint64 MAX_NODES_PER_UPDATE = 2048;
+
+/// Maximum size of a label string, in bytes.
+const uint64 MAX_LABEL_SIZE = 16384;
+
 /// An interface to manage connections with views for the purposes of gathering semantic information
 /// about their current UI state.
 ///
@@ -26,15 +39,16 @@ protocol SemanticsManager {
 /// commit function must always be called at the end of a full update push to signal the end of an
 /// update.
 protocol SemanticTree {
-    /// Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
-    /// DeleteSemanticNodes.
-    Commit();
 
     /// Sends new/updated nodes to the root to add to the cache on the next commit.
-    UpdateSemanticNodes(vector<Node> nodes);
+    UpdateSemanticNodes(vector<Node>:MAX_NODES_PER_UPDATE nodes);
 
     /// Tells the root to remove nodes with node_ids from the semantic tree on the next commit.
-    DeleteSemanticNodes(vector<uint32> node_ids);
+    DeleteSemanticNodes(vector<uint32>:MAX_NODES_PER_UPDATE node_ids);
+
+    /// Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
+    /// DeleteSemanticNodes. Commits are processed in the order in which they are sent.
+    Commit();
 };
 
 /// Results of hit testing on a view's semantic tree which is implemented by
@@ -45,9 +59,8 @@ table Hit {
     /// node_id will not be filled when there is no hit.
     1: uint32 node_id;
 
-    /// The ordered list of node ids which represent a path from the root node to
-    /// the hit node.
-    2: vector<uint32> path_from_root;
+    /// The ordered list of node ids which represent path from root node to the hit node.
+    2: vector<uint32>:MAX_TREE_DEPTH path_from_root;
 };
 
 /// A semantic provider is the client-side interface that the manager can use to
