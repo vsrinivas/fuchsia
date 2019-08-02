@@ -286,24 +286,34 @@ def generate_cpp(identifiers: List[str], libraries: List[str]) -> None:
   directory = os.path.join(DIR, 'cpp')
   os.makedirs(directory, exist_ok=True)
   # generate C++ test
-  with open(os.path.join(directory, 'test.cc'), 'w') as f:
-    f.write(generated('//'))
-    for library_name in libraries:
+  for library_name in libraries:
+    with open(os.path.join(directory, '%s_test.cc' % library_name), 'w') as f:
+      f.write(generated('//'))
       f.write('#include <%s/cpp/fidl.h>\n' % (library_name.replace('.', '/')))
-    f.write('\nint main() {\n  return 0;\n}\n')
+      f.write('\nint main() {\n  return 0;\n}\n')
 
   # generate BUILD.gn for C++ test
   build_file = os.path.join(directory, 'BUILD.gn')
   with open(build_file, 'w') as build_gn:
     build_gn.write(generated('#'))
-    build_gn.write("""source_set("cpp") {
-    output_name = "cpp_fidl_dangerous_identifiers_test"
-    sources = [ "test.cc" ]
-    deps = [
-""")
     for library_name in libraries:
+      build_gn.write("""source_set("%s_cpp") {
+    output_name = "cpp_fidl_dangerous_identifiers_test_%s"
+    sources = [ "%s_test.cc" ]
+    deps = [
+""" % (library_name, library_name, library_name))
       build_gn.write('    "%s",\n' % library_target(library_name))
-    build_gn.write('  ]\n}\n')
+      build_gn.write('  ]\n}\n')
+    build_gn.write("""group("cpp") {
+    deps = [""")
+    for library_name in libraries:
+        build_gn.write("""
+        ":%s_cpp",
+""" % (library_name))
+    build_gn.write("""
+    ]
+  }""")
+
   subprocess.check_output([GN, 'format', build_file])
 
 
