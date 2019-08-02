@@ -119,6 +119,83 @@ def GenerateTestData(mean, stddev):
     return [x * stddev + mean for x in TEST_VALUES]
 
 
+class StatisticsTest(TempDirTestCase):
+
+    # Generate some example perf test data, allowing variation at each
+    # level of the sampling process (per boot, per process, and per
+    # iteration within each process).  This follows a random effects model.
+    # Returns a list of lists of lists of values.
+    def GenerateData(self, mean=1000,
+                     stddev_across_boots=0,
+                     stddev_across_processes=0,
+                     stddev_across_iters=0):
+        it = iter(TEST_VALUES)
+
+        def GenerateValues(mean, stddev, count):
+            return [next(it) * stddev + mean for _ in xrange(count)]
+
+        # This reads 4**3 + 4**2 + 4 = 84 values from TEST_VALUES, so
+        # it does not exceed the number of values in TEST_VALUES.
+        return [[GenerateValues(mean_within_process, stddev_across_iters, 4)
+                 for mean_within_process in GenerateValues(
+                         mean_within_boot, stddev_across_processes, 4)]
+                for mean_within_boot in GenerateValues(
+                        mean, stddev_across_boots, 4)]
+
+    # Given data in the format returned by GenerateData(), writes this data
+    # to a temporary directory.
+    def DirOfData(self, data):
+        dir_path = self.MakeTempDir()
+        os.mkdir(os.path.join(dir_path, 'by_boot'))
+        for boot_idx, results_for_boot in enumerate(data):
+            boot_dir = os.path.join(dir_path, 'by_boot', 'boot%06d' % boot_idx)
+            os.mkdir(boot_dir)
+            for process_idx, run_values in enumerate(results_for_boot):
+                dest_file = os.path.join(
+                    boot_dir, 'example_process%06d.json' % process_idx)
+                WriteJsonFile(dest_file,
+                              [{'label': 'ExampleTest',
+                                'values': run_values}])
+        return dir_path
+
+    # Sanity-check that DirOfData() writes data in the correct format by
+    # reading back some simple test data.
+    def test_readback_of_data(self):
+        data = [[[1, 2], [3, 4]],
+                [[5, 6], [7, 8]]]
+        dir_path = self.DirOfData(data)
+        self.assertEquals(len(os.listdir(os.path.join(dir_path, 'by_boot'))), 2)
+        boot_data = list(perfcompare.RawResultsFromDir(
+            os.path.join(dir_path, 'by_boot', 'boot000000')))
+        self.assertEquals(boot_data,
+                          [[{'label': 'ExampleTest', 'values': [1, 2]}],
+                           [{'label': 'ExampleTest', 'values': [3, 4]}]])
+        boot_data = list(perfcompare.RawResultsFromDir(
+            os.path.join(dir_path, 'by_boot', 'boot000001')))
+        self.assertEquals(boot_data,
+                          [[{'label': 'ExampleTest', 'values': [5, 6]}],
+                           [{'label': 'ExampleTest', 'values': [7, 8]}]])
+
+    def CheckConfidenceInterval(self, data, interval_string):
+        dir_path = self.DirOfData(data)
+        stats = perfcompare.ResultsFromDir(dir_path)['ExampleTest']
+        self.assertEquals(stats.FormatConfidenceInterval(), interval_string)
+
+    # Test the CIs produced with variation at different levels of the
+    # multi-level sampling process.
+    def test_confidence_intervals(self):
+        self.CheckConfidenceInterval(self.GenerateData(), '1000 +/- 0')
+        self.CheckConfidenceInterval(
+            self.GenerateData(stddev_across_boots=100),
+            '1021 +/- 101')
+        self.CheckConfidenceInterval(
+            self.GenerateData(stddev_across_processes=100),
+            '1012 +/- 68')
+        self.CheckConfidenceInterval(
+            self.GenerateData(stddev_across_iters=100),
+            '980 +/- 27')
+
+
 class PerfCompareTest(TempDirTestCase):
 
     def WriteExampleDataDir(self, dir_path, mean=1000, stddev=100,
