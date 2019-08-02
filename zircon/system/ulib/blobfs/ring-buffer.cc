@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/status.h>
+
 #include <algorithm>
 #include <utility>
 
@@ -160,6 +162,8 @@ zx_status_t RingBufferReservation::CopyRequests(
 
     zx_status_t status = vmo->read(ptr, vmo_offset * kBlobfsBlockSize, buf_len * kBlobfsBlockSize);
     if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
+                     vmo_offset, zx_status_get_string(status));
       return status;
     }
 
@@ -184,6 +188,8 @@ zx_status_t RingBufferReservation::CopyRequests(
       ptr = Data(reservation_offset);
       status = vmo->read(ptr, vmo_offset * kBlobfsBlockSize, buf_len * kBlobfsBlockSize);
       if (status != ZX_OK) {
+        FS_TRACE_ERROR("blobfs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
+                       vmo_offset, zx_status_get_string(status));
         return status;
       }
 

@@ -29,6 +29,7 @@ test("blobfs-unit") {
     "journal-entry-view-test.cc",
     "journal-superblock-test.cc",
     "journal-test.cc",
+    "journal2-test.cc",
     "node-populator-test.cc",
     "node-reserver-test.cc",
     "replay-test.cc",

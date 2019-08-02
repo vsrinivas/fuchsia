@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/vmo-buffer.h>
+#include <zircon/assert.h>
+#include <zircon/status.h>
 
 #include <utility>
 
 #include <blobfs/format.h>
+#include <blobfs/vmo-buffer.h>
 #include <fs/trace.h>
-#include <zircon/status.h>
-#include <zircon/assert.h>
 
 namespace blobfs {
 
@@ -41,6 +41,7 @@ VmoBuffer::~VmoBuffer() {
 
 void VmoBuffer::Reset() {
   vmoid_registry_ = nullptr;
+  mapper_.Reset();
   vmoid_ = VMOID_INVALID;
   capacity_ = 0;
 }

@@ -5,10 +5,6 @@
 #ifndef BLOBFS_VMO_BUFFER_H_
 #define BLOBFS_VMO_BUFFER_H_
 
-#ifndef __Fuchsia__
-#error Fuchsia-only Header
-#endif
-
 #include <lib/fzl/owned-vmo-mapper.h>
 
 #include <utility>
@@ -25,6 +21,11 @@ namespace blobfs {
 class VmoBuffer final : public BlockBuffer {
  public:
   VmoBuffer() = default;
+  // Constructor for a pre-registered VMO.
+  //
+  // Prefer using |VmoBuffer.Initialize|.
+  VmoBuffer(VmoidRegistry* registry, fzl::OwnedVmoMapper mapper, vmoid_t vmoid, size_t capacity)
+      : vmoid_registry_(registry), mapper_(std::move(mapper)), vmoid_(vmoid), capacity_(capacity) {}
   VmoBuffer(const VmoBuffer&) = delete;
   VmoBuffer& operator=(const VmoBuffer&) = delete;
   VmoBuffer(VmoBuffer&& other);

@@ -44,7 +44,7 @@ zx_status_t EnqueuePaginated(std::unique_ptr<WritebackWork>* work,
                              TransactionManager* transaction_manager, Blob* vn, const zx::vmo& vmo,
                              uint64_t relative_block, uint64_t absolute_block, uint64_t nblocks);
 
-// Flushes |operations| to persistent storage using a transaction created by |transaction_manager|,
+// Flushes |operations| to persistent storage using a transaction created by |transaction_handler|,
 // sending through the disk-registered |vmoid| object.
 zx_status_t FlushWriteRequests(fs::TransactionHandler* transaction_handler,
                                const fbl::Vector<BufferedOperation>& operations);
