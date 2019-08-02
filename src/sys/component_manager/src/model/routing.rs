@@ -407,8 +407,8 @@ async fn walk_offer_chain<'a>(
         }
         let current_realm = await!(model.look_up_realm(&pos.moniker()))?;
         let realm_state = await!(current_realm.state.lock());
-        // This unwrap is safe because `look_up_realm` populates this field
-        let decl = realm_state.decl.as_ref().expect("missing offer decl");
+        // This get_decl() is safe because `look_up_realm` populates this field
+        let decl = realm_state.get_decl();
         let last_child_moniker = pos.last_child_moniker.as_ref().unwrap();
         if let Some(offer) = pos.capability.find_offer_source(decl, last_child_moniker) {
             let source = match offer {
@@ -498,9 +498,8 @@ async fn walk_expose_chain<'a>(
     loop {
         let current_realm = await!(model.look_up_realm(&pos.moniker()))?;
         let realm_state = await!(current_realm.state.lock());
-        // This unwrap is safe because look_up_realm populates this field
-        let decl = realm_state.decl.as_ref().expect("missing expose decl");
-
+        // This get_decl() is safe because look_up_realm populates this field
+        let decl = realm_state.get_decl();
         let first_expose = first_expose.take();
         let expose = match first_expose {
             Some(_) => first_expose.as_ref(),

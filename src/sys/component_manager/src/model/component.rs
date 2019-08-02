@@ -43,9 +43,13 @@ impl Realm {
     /// Resolves and populates the component declaration of this realm's Instance, if not already
     /// populated.
     pub async fn resolve_decl(&self) -> Result<(), ModelError> {
-        let mut state = await!(self.state.lock());
-        if state.decl.is_none() {
+        let not_resolved = {
+            let state = await!(self.state.lock());
+            state.decl.is_none()
+        };
+        if not_resolved {
             let component = await!(self.resolver_registry.resolve(&self.component_url))?;
+            let mut state = await!(self.state.lock());
             await!(state.populate_decl(component.decl, &self))?;
         }
         Ok(())
@@ -108,8 +112,7 @@ impl Realm {
         await!(self.resolve_decl())?;
         let child_realm = {
             let mut state = await!(self.state.lock());
-            let decl = state.decl.as_ref().unwrap();
-            let collection_decl = decl
+            let collection_decl = state.get_decl()
                 .find_collection(&collection_name)
                 .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?;
             match collection_decl.durability {
@@ -137,6 +140,7 @@ impl Realm {
         Ok(())
     }
 
+    /// Removes the dynamic child `child_moniker`.
     pub async fn remove_dynamic_child<'a>(
         &'a self,
         child_moniker: &'a ChildMoniker,
@@ -193,6 +197,19 @@ impl RealmState {
             self.decl = Some(decl);
         }
         Ok(())
+    }
+
+    /// Returns a reference to this realm's instance's component declaration, resolving it if
+    /// necessary.
+    /// REQUIRES: `populate_decl`() has been called
+    pub fn get_decl(&self) -> &ComponentDecl {
+        self.decl.as_ref().expect("declaration was never resolved")
+    }
+
+    /// Returns a reference to the list of child realms.
+    /// REQUIRES: `populate_decl`() has been called
+    pub fn get_child_realms(&self) -> &ChildRealmMap {
+        self.child_realms.as_ref().expect("declaration was never resolved")
     }
 
     /// Adds a new child of this realm for the given `ChildDecl`. Returns the child realm,

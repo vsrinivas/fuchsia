@@ -226,7 +226,7 @@ impl Hub {
         abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let execution = realm_state.execution.as_ref().unwrap();
-        let decl = realm_state.decl.as_ref().expect("ComponentDecl unavailable.");
+        let decl = realm_state.get_decl();
         let tree = model::DirTree::build_from_uses(
             routing_facade.route_use_fn_factory(),
             &abs_moniker,
@@ -252,7 +252,7 @@ impl Hub {
         routing_facade: &model::RoutingFacade,
         abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let decl = realm_state.decl.as_ref().expect("ComponentDecl unavailable.");
+        let decl = realm_state.get_decl();
         let tree = model::DirTree::build_from_exposes(
             routing_facade.route_expose_fn_factory(),
             &abs_moniker,
@@ -354,9 +354,7 @@ impl Hub {
             }
         }
 
-        for child_realm in
-            realm_state.child_realms.as_ref().expect("Unable to access child realms.").values()
-        {
+        for child_realm in realm_state.get_child_realms().values() {
             await!(Self::add_instance_to_parent_if_necessary(
                 &child_realm.abs_moniker,
                 child_realm.component_url.clone(),

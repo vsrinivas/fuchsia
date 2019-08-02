@@ -118,9 +118,7 @@ impl TestHook {
         _routing_facade: RoutingFacade,
     ) -> Result<(), ModelError> {
         await!(self.create_instance_if_necessary(realm.abs_moniker.clone()))?;
-        for child_realm in
-            realm_state.child_realms.as_ref().expect("Unable to access child realms.").values()
-        {
+        for child_realm in realm_state.get_child_realms().values() {
             await!(self.create_instance_if_necessary(child_realm.abs_moniker.clone()))?;
         }
         Ok(())

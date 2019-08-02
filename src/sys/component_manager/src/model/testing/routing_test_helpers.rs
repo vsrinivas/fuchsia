@@ -41,17 +41,17 @@ use {
 /// Return the child of the given realm.
 pub async fn get_child<'a>(realm: &'a Realm, moniker: &'a str) -> Arc<Realm> {
     let state = await!(realm.state.lock());
-    state.child_realms.as_ref().unwrap()[&moniker.into()].clone()
+    state.get_child_realms()[&moniker.into()].clone()
 }
 
 /// Return all monikers of the children of the given `realm`.
 pub async fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
-    await!(realm.state.lock()).child_realms.as_ref().unwrap().keys().cloned().collect()
+    await!(realm.state.lock()).get_child_realms().keys().cloned().collect()
 }
 
 /// Return the child realm of the given `realm` with moniker `child`.
 pub async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
-    await!(realm.state.lock()).child_realms.as_ref().unwrap()[&child.into()].clone()
+    await!(realm.state.lock()).get_child_realms()[&child.into()].clone()
 }
 
 /// Construct a capability path for the hippo service.

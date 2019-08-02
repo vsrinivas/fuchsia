@@ -225,7 +225,7 @@ impl Model {
             cur_realm = {
                 await!(cur_realm.resolve_decl())?;
                 let cur_state = await!(cur_realm.state.lock());
-                let child_realms = cur_state.child_realms.as_ref().unwrap();
+                let child_realms = cur_state.get_child_realms();
                 if !child_realms.contains_key(&moniker) {
                     return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
                 }
@@ -298,7 +298,7 @@ impl Model {
             // Execution does not exist yet, create it.
             let component = await!(realm.resolver_registry.resolve(&realm.component_url))?;
             await!(state.populate_decl(component.decl, &*realm))?;
-            let decl = state.decl.as_ref().expect("ComponentDecl unavailable.");
+            let decl = state.get_decl();
             let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, state)?;
             let execution = if decl.program.is_some() {
                 let (outgoing_dir_client, outgoing_dir_server) =

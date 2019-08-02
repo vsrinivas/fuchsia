@@ -3,11 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*, cm_fidl_validator,
+    crate::model::*,
+    cm_fidl_validator,
     cm_rust::{CapabilityPath, FidlIntoNative, FrameworkCapabilityDecl},
-    failure::Error, fidl::endpoints::ServerEnd, fidl_fuchsia_io::DirectoryMarker,
+    failure::Error,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::BoxFuture, futures::future::FutureObj, futures::prelude::*, log::*, std::cmp,
+    futures::future::BoxFuture,
+    futures::future::FutureObj,
+    futures::prelude::*,
+    log::*,
+    std::cmp,
     std::sync::Arc,
 };
 
@@ -240,11 +247,12 @@ impl RealFrameworkServiceHost {
                 fsys::Error::Internal
             }
         })?;
-        let realm_state = await!(realm.state.lock());
-        if let Some(child_realm) = realm_state.child_realms.as_ref().unwrap().get(&child_moniker) {
-            await!(
-                model.bind_instance_open_exposed(child_realm.clone(), exposed_dir.into_channel())
-            )
+        let child_realm = {
+            let realm_state = await!(realm.state.lock());
+            realm_state.get_child_realms().get(&child_moniker).map(|r| r.clone())
+        };
+        if let Some(child_realm) = child_realm {
+            await!(model.bind_instance_open_exposed(child_realm, exposed_dir.into_channel()))
                 .map_err(|e| match e {
                     ModelError::ResolverError { err } => {
                         debug!("failed to resolve child: {:?}", err);
@@ -293,7 +301,7 @@ impl RealFrameworkServiceHost {
             fsys::Error::Internal
         })?;
         let state = await!(realm.state.lock());
-        let decl = state.decl.as_ref().unwrap();
+        let decl = state.get_decl();
         let _ = decl
             .find_collection(&collection.name)
             .ok_or_else(|| fsys::Error::CollectionNotFound)?;
