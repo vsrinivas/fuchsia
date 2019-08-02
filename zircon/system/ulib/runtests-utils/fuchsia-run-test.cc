@@ -412,8 +412,17 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
   // Make sure that all job processes are dead before touching any data.
   auto_call_kill_job.call();
 
+  // Stop the loop.
+  loop.Quit();
+
+  // Wait for any unfinished work to be completed.
+  loop.JoinThreads();
+
+  // Run one more time until there are no unprocessed messages.
+  loop.ResetQuit();
+  loop.Run(zx::time(0));
+
   // Tear down the the VFS.
-  loop.Shutdown();
   vfs.reset();
 
   fbl::unique_fd data_sink_dir_fd{open(output_dir, O_RDONLY | O_DIRECTORY)};
