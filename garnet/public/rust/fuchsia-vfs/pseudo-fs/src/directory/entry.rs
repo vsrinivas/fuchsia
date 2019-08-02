@@ -124,3 +124,19 @@ pub trait DirectoryEntry: Future<Output = Void> + FusedFuture + Unpin + Send {
     /// This method is used to populate ReadDirents() output.
     fn entry_info(&self) -> EntryInfo;
 }
+
+impl<'entries> DirectoryEntry for Box<dyn DirectoryEntry + 'entries> {
+    fn open(
+        &mut self,
+        flags: u32,
+        mode: u32,
+        path: &mut Iterator<Item = &str>,
+        server_end: ServerEnd<NodeMarker>,
+    ) {
+        self.as_mut().open(flags, mode, path, server_end)
+    }
+
+    fn entry_info(&self) -> EntryInfo {
+        self.as_ref().entry_info()
+    }
+}
