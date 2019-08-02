@@ -213,8 +213,6 @@ class Sl4f {
   Future<void> dumpDiagnostics(String dumpName, {Dump dump}) async {
     final dumper = dump ?? Dump();
     if (dumper.hasDumpDirectory) {
-      // Lists the threads as seen by the kernel (including priority numbers).
-      await ssh.run('k thread list');
       await Future.wait(diagnostics.entries.map((diag) => _dumpDiagnostic(
           diag.value, '$dumpName-diagnostic-${diag.key}', dumper)));
     }
