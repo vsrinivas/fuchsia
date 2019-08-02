@@ -87,7 +87,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:17
+From //BUILD.gn:18
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/appmgr", "//garnet/bin/appmgr:appmgr_scheme_config", "//garnet/bin/device_settings:device_settings_manager", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/logger", "//garnet/bin/net-cli", "//garnet/bin/netcfg", "//garnet/bin/netcfg:config", "//garnet/bin/network_time_service", "//garnet/bin/pkg_cache", "//garnet/bin/pkg_resolver", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/system-update-checker", "//garnet/bin/system-update-checker:system-update-checker-config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/bin/timezone", "//garnet/go/src/amber", "//garnet/go/src/amber:amber_tools", "//garnet/go/src/amber:config", "//garnet/go/src/amber:pkgfs", "//garnet/lib/root_ssl_certificates", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/netdump", "//src/connectivity/network/netstack", "//src/connectivity/wlan:service", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/developer/feedback/kernel_crash_checker", "//src/developer/feedback/kernel_crash_checker:config", "//src/identity/bin:core", "//src/recovery/factory_reset", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
 
@@ -95,7 +95,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:17
+From //BUILD.gn:18
 
 ### blobfs_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
@@ -310,7 +310,7 @@ From //products/core.gni:70
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:25
+From //BUILD.gn:26
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -318,7 +318,7 @@ From //products/core.gni:70
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:25
+From //BUILD.gn:26
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -433,7 +433,7 @@ module_suggester is not AOT compiled in debug builds
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/dart/dart_component.gni#51)
+From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
 Allow for deduping the VM between standalone, flutter_runner and dart_runner.
@@ -492,7 +492,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -500,7 +500,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -550,7 +550,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/dart/dart_component.gni#41)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -779,13 +779,13 @@ package and deduplicated by blobfs.
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/dart/dart_component.gni#27)
+From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/dart/dart_component.gni#27)
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/dart/dart_component.gni#12)
 
 ### flutter_enable_skshaper
 Whether to use the Skia text shaper module
@@ -798,7 +798,7 @@ From //third_party/flutter/common/config.gni:22
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/dart/dart_component.gni#32)
 
 ### flutter_runtime_mode
 The runtime mode ("debug", "profile", or "release")
@@ -812,7 +812,7 @@ Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/dart/dart_component.gni#38)
+From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/dart/dart_component.gni#38)
 
 ### flutter_use_fontconfig
 
@@ -824,7 +824,7 @@ From //third_party/flutter/third_party/txt/BUILD.gn:18
 
 **Current value (from the default):** `["collection", "flutter", "meta", "typed_data", "vector_math"]`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/flutter_runner/prebuilt_framework.gni#8)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/flutter_runner/prebuilt_framework.gni#8)
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -1267,6 +1267,13 @@ metadata.
 
 From //build/images/filesystem_limits.gni:28
 
+### max_fuchsia_zbi_size
+Maximum allowable size for fuchsia.zbi
+
+**Current value (from the default):** `"0"`
+
+From //build/images/filesystem_limits.gni:31
+
 ### max_fvm_size
 Maximum allowable size for the FVM in a release mode build
 Zero means no limit
@@ -1282,6 +1289,13 @@ Should be a string value that only contains digits.
 **Current value (from the default):** `"0"`
 
 From //garnet/bin/log_listener/BUILD.gn:14
+
+### max_zedboot_zbi_size
+Maximum allowable size for zedboot.zbi
+
+**Current value (from the default):** `"0"`
+
+From //build/images/filesystem_limits.gni:34
 
 ### meta_package_labels
 A list of labels for meta packages to be included in the monolith.
@@ -1374,13 +1388,13 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/flutter_runner/prebuilt_framework.gni#7)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/flutter_runner/prebuilt_framework.gni#7)
 
 ### prebuilt_framework_path
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/458a5b734dead58ccde96119b0050084f5010e5f/runtime/flutter_runner/prebuilt_framework.gni#6)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/6aa16ee03da059a740e09784464b6465265ddb69/runtime/flutter_runner/prebuilt_framework.gni#6)
 
 ### prebuilt_libvulkan_arm_path
 
@@ -2232,7 +2246,7 @@ From //products/core.gni:72
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:33
+From //BUILD.gn:34
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
@@ -2240,7 +2254,7 @@ From //products/core.gni:72
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:33
+From //BUILD.gn:34
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
@@ -2452,7 +2466,7 @@ From //build/images/BUILD.gn:41
 
 ### zircon_args
 [Zircon GN build arguments](../../zircon/docs/gen/build_arguments.md).
-The default passes through GOMA settings and
+The default passes through GOMA/ccache settings and
 [`select_variant`](#select_variant) shorthand selectors.
 **Only set this if you want to wipe out all the defaults that
 propagate from Fuchsia GN to Zircon GN.**  The default value
@@ -2468,13 +2482,14 @@ silently clobber the default value shown here.
   enable_kernel_debugging_features = false
   enable_netsvc_debugging_features = false
   goma_dir = "/home/swarming/goma"
+  use_ccache = false
   use_goma = false
   variants = []
   zbi_compression = "lz4f"
 }
 ```
 
-From //BUILD.gn:84
+From //BUILD.gn:85
 
 ### zircon_asserts
 
@@ -2500,7 +2515,7 @@ Default is $target_cpu.
 
 **Current value (from the default):** `"arm64"`
 
-From //BUILD.gn:63
+From //BUILD.gn:64
 
 ### zircon_enable_kernel_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -2512,7 +2527,7 @@ From //products/core.gni:9
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:54
+From //BUILD.gn:55
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -2520,7 +2535,7 @@ From //products/core.gni:9
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:54
+From //BUILD.gn:55
 
 ### zircon_enable_netsvc_debugging_features
 
@@ -2530,7 +2545,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:55
+From //BUILD.gn:56
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -2538,7 +2553,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:55
+From //BUILD.gn:56
 
 ### zircon_extra_args
 [Zircon GN build arguments](../../zircon/docs/gen/build_arguments.md).
@@ -2555,14 +2570,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:46
+From //BUILD.gn:47
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:50
+From //BUILD.gn:51
 
 ### zircon_r_partition
 
@@ -2576,7 +2591,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:59
+From //BUILD.gn:60
 
 ### zvb_partition_name
 Partition name from where image will be verified

@@ -33,7 +33,7 @@ Symbolization tools and debuggers find symbolic information this way.
 
 **Current value (from the default):** `"/b/s/w/ir/k/out/build-zircon/.build-id"`
 
-From //public/gn/toolchain/c_toolchain.gni:17
+From //public/gn/toolchain/c_toolchain.gni:18
 
 ### clang_tool_dir
 Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
