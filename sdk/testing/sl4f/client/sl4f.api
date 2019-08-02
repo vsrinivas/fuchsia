@@ -1,0 +1,2528 @@
+{
+  "files": {
+    "audio.dart": {
+      "ClassDeclarationImpl": {
+        "Audio": {
+          "ConstructorDeclarationImpl": {
+            "Audio": {
+              "FieldFormalParameterImpl": {
+                "this._sl4f": {
+                  "name": "this._sl4f",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "dump": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "dump",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Dump"
+                }
+              },
+              "name": "Audio",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "getOutputAudio": {
+              "SimpleFormalParameterImpl": {
+                "dumpName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "dumpName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "getOutputAudio",
+              "returnType": "Future<AudioTrack>",
+              "type": "MethodDeclarationImpl"
+            },
+            "putInputAudio": {
+              "SimpleFormalParameterImpl": {
+                "file": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "file",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "File"
+                },
+                "index": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "index",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "putInputAudio",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "putPlayback": {
+              "SimpleFormalParameterImpl": {
+                "file": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "file",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "File"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "putPlayback",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "startInputInjection": {
+              "SimpleFormalParameterImpl": {
+                "index": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "index",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "startInputInjection",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "startOutputSave": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "startOutputSave",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "stopOutputSave": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "stopOutputSave",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Audio",
+          "type": "ClassDeclarationImpl"
+        },
+        "AudioTrack": {
+          "VariableDeclarationImpl": {
+            "audioData": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "audioData",
+              "type": "VariableDeclarationImpl",
+              "varType": "Uint8List"
+            },
+            "isSilence": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "isSilence",
+              "type": "VariableDeclarationImpl",
+              "varType": "bool"
+            }
+          },
+          "name": "AudioTrack",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "audio.dart",
+      "type": "file"
+    },
+    "device_log.dart": {
+      "ClassDeclarationImpl": {
+        "DeviceLog": {
+          "ConstructorDeclarationImpl": {
+            "DeviceLog": {
+              "FieldFormalParameterImpl": {
+                "this._sl4f": {
+                  "name": "this._sl4f",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "DeviceLog",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "error": {
+              "SimpleFormalParameterImpl": {
+                "message": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "message",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "error",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "info": {
+              "SimpleFormalParameterImpl": {
+                "message": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "message",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "info",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "warn": {
+              "SimpleFormalParameterImpl": {
+                "message": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "message",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "warn",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "DeviceLog",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "device_log.dart",
+      "type": "file"
+    },
+    "dump.dart": {
+      "ClassDeclarationImpl": {
+        "Dump": {
+          "ConstructorDeclarationImpl": {
+            "Dump": {
+              "SimpleFormalParameterImpl": {
+                "dumpDirectory": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "dumpDirectory",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "name": "Dump",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "createFile": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "suffix": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "suffix",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "createFile",
+              "returnType": "File",
+              "type": "MethodDeclarationImpl"
+            },
+            "hasDumpDirectory": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "hasDumpDirectory",
+              "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            },
+            "openForWrite": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "suffix": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "suffix",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "openForWrite",
+              "returnType": "IOSink",
+              "type": "MethodDeclarationImpl"
+            },
+            "writeAsBytes": {
+              "SimpleFormalParameterImpl": {
+                "bytes": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "bytes",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<int>"
+                },
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "suffix": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "suffix",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "writeAsBytes",
+              "returnType": "Future<File>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Dump",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "dump.dart",
+      "type": "file"
+    },
+    "exceptions.dart": {
+      "ClassDeclarationImpl": {
+        "JsonRpcException": {
+          "ConstructorDeclarationImpl": {
+            "JsonRpcException": {
+              "FieldFormalParameterImpl": {
+                "this.error": {
+                  "name": "this.error",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.request": {
+                  "name": "this.request",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "JsonRpcException",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "Exception": {
+              "name": "Exception",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "error": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "error",
+              "type": "VariableDeclarationImpl",
+              "varType": "dynamic"
+            },
+            "request": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "request",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            }
+          },
+          "name": "JsonRpcException",
+          "type": "ClassDeclarationImpl"
+        },
+        "Sl4fException": {
+          "ConstructorDeclarationImpl": {
+            "Sl4fException": {
+              "FieldFormalParameterImpl": {
+                "this.error": {
+                  "name": "this.error",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Sl4fException",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "Exception": {
+              "name": "Exception",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "error": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "error",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            }
+          },
+          "name": "Sl4fException",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "exceptions.dart",
+      "type": "file"
+    },
+    "input.dart": {
+      "ClassDeclarationImpl": {
+        "Input": {
+          "ConstructorDeclarationImpl": {
+            "Input": {
+              "FieldFormalParameterImpl": {
+                "this._screenRotation": {
+                  "name": "this._screenRotation",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "sl4f": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "sl4f",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Sl4f"
+                }
+              },
+              "name": "Input",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "swipe": {
+              "SimpleFormalParameterImpl": {
+                "duration": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "duration",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Duration"
+                },
+                "from": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "from",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Point<int>"
+                },
+                "screenRotation": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "screenRotation",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Rotation"
+                },
+                "to": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "to",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Point<int>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "swipe",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            },
+            "tap": {
+              "SimpleFormalParameterImpl": {
+                "coord": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "coord",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Point<int>"
+                },
+                "screenRotation": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "screenRotation",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Rotation"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "tap",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "ssh": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "ssh",
+              "type": "VariableDeclarationImpl",
+              "varType": "Ssh"
+            }
+          },
+          "name": "Input",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "EnumDeclarationImpl": {
+        "Rotation": {
+          "EnumConstantDeclarationImpl": {
+            "degrees0": {
+              "name": "degrees0",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "degrees180": {
+              "name": "degrees180",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "degrees270": {
+              "name": "degrees270",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "degrees90": {
+              "name": "degrees90",
+              "type": "EnumConstantDeclarationImpl"
+            }
+          },
+          "name": "Rotation",
+          "type": "EnumDeclarationImpl"
+        }
+      },
+      "name": "input.dart",
+      "type": "file"
+    },
+    "inspect.dart": {
+      "ClassDeclarationImpl": {
+        "Inspect": {
+          "ConstructorDeclarationImpl": {
+            "Inspect": {
+              "FieldFormalParameterImpl": {
+                "this.sleep": {
+                  "name": "this.sleep",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.ssh": {
+                  "name": "this.ssh",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Inspect",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "inspectComponentRoot": {
+              "SimpleFormalParameterImpl": {
+                "componentName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "componentName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "inspectComponentRoot",
+              "returnType": "Future<dynamic>",
+              "type": "MethodDeclarationImpl"
+            },
+            "inspectRecursively": {
+              "SimpleFormalParameterImpl": {
+                "hubEntries": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "hubEntries",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "inspectRecursively",
+              "returnType": "Future<dynamic>",
+              "type": "MethodDeclarationImpl"
+            },
+            "retrieveHubEntries": {
+              "SimpleFormalParameterImpl": {
+                "filter": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "filter",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "line": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "line",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "retrieveHubEntries",
+              "returnType": "Future<List<String>>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "sleep": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "sleep",
+              "type": "VariableDeclarationImpl",
+              "varType": "Future<dynamic> Function(Duration)"
+            },
+            "ssh": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "ssh",
+              "type": "VariableDeclarationImpl",
+              "varType": "Ssh"
+            }
+          },
+          "name": "Inspect",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "inspect.dart",
+      "type": "file"
+    },
+    "modular.dart": {
+      "ClassDeclarationImpl": {
+        "Modular": {
+          "ConstructorDeclarationImpl": {
+            "Modular": {
+              "FieldFormalParameterImpl": {
+                "this._sl4f": {
+                  "name": "this._sl4f",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Modular",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "restartSession": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "restartSession",
+              "returnType": "Future<String>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Modular",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "modular.dart",
+      "type": "file"
+    },
+    "performance.dart": {
+      "ClassDeclarationImpl": {
+        "Performance": {
+          "ConstructorDeclarationImpl": {
+            "Performance": {
+              "FieldFormalParameterImpl": {
+                "this._sl4f": {
+                  "name": "this._sl4f",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "dump": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "dump",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Dump"
+                }
+              },
+              "name": "Performance",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "convertResults": {
+              "SimpleFormalParameterImpl": {
+                "converterPath": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "converterPath",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "environment": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "environment",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Map<String, String>"
+                },
+                "result": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "result",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "File"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "convertResults",
+              "returnType": "Future<File>",
+              "type": "MethodDeclarationImpl"
+            },
+            "downloadTraceFile": {
+              "SimpleFormalParameterImpl": {
+                "binary": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "binary",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "compress": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "compress",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "traceName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "traceName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "downloadTraceFile",
+              "returnType": "Future<File>",
+              "type": "MethodDeclarationImpl"
+            },
+            "processTrace": {
+              "SimpleFormalParameterImpl": {
+                "appName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "appName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "converterPath": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "converterPath",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "processorPath": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "processorPath",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "testName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "testName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "trace": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "trace",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "File"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "processTrace",
+              "returnType": "Future<File>",
+              "type": "MethodDeclarationImpl"
+            },
+            "runProcess": {
+              "SimpleFormalParameterImpl": {
+                "args": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "args",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                },
+                "executablePath": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "executablePath",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "runProcess",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            },
+            "trace": {
+              "SimpleFormalParameterImpl": {
+                "binary": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "binary",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "bufferSize": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "bufferSize",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "categories": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "categories",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "compress": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "compress",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "duration": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "duration",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Duration"
+                },
+                "traceName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "traceName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "trace",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Performance",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "performance.dart",
+      "type": "file"
+    },
+    "scenic.dart": {
+      "ClassDeclarationImpl": {
+        "Scenic": {
+          "ConstructorDeclarationImpl": {
+            "Scenic": {
+              "FieldFormalParameterImpl": {
+                "this._sl4f": {
+                  "name": "this._sl4f",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "dump": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "dump",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Dump"
+                }
+              },
+              "name": "Scenic",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "takeScreenshot": {
+              "SimpleFormalParameterImpl": {
+                "dumpName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "dumpName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "takeScreenshot",
+              "returnType": "Future<Image>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Scenic",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "scenic.dart",
+      "type": "file"
+    },
+    "setui.dart": {
+      "ClassDeclarationImpl": {
+        "SetUi": {
+          "ConstructorDeclarationImpl": {
+            "SetUi": {
+              "FieldFormalParameterImpl": {
+                "this._sl4f": {
+                  "name": "this._sl4f",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "SetUi",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "mutateLoginOverride": {
+              "SimpleFormalParameterImpl": {
+                "override": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "override",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "LoginOverride"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "mutateLoginOverride",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "SetUi",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "EnumDeclarationImpl": {
+        "LoginOverride": {
+          "EnumConstantDeclarationImpl": {
+            "authProvider": {
+              "name": "authProvider",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "autologinGuest": {
+              "name": "autologinGuest",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "none": {
+              "name": "none",
+              "type": "EnumConstantDeclarationImpl"
+            }
+          },
+          "name": "LoginOverride",
+          "type": "EnumDeclarationImpl"
+        }
+      },
+      "name": "setui.dart",
+      "type": "file"
+    },
+    "sl4f.dart": {
+      "ExportDirectiveImpl": {
+        "src/audio.dart": {
+          "name": "src/audio.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/device_log.dart": {
+          "name": "src/device_log.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/dump.dart": {
+          "name": "src/dump.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/exceptions.dart": {
+          "name": "src/exceptions.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/input.dart": {
+          "name": "src/input.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/inspect.dart": {
+          "name": "src/inspect.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/modular.dart": {
+          "name": "src/modular.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/performance.dart": {
+          "name": "src/performance.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/scenic.dart": {
+          "name": "src/scenic.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/setui.dart": {
+          "name": "src/setui.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/sl4f_client.dart": {
+          "name": "src/sl4f_client.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/ssh.dart": {
+          "name": "src/ssh.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/storage.dart": {
+          "name": "src/storage.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/webdriver.dart": {
+          "name": "src/webdriver.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "sl4f.dart",
+      "type": "file"
+    },
+    "sl4f_client.dart": {
+      "ClassDeclarationImpl": {
+        "Sl4f": {
+          "ConstructorDeclarationImpl": {
+            "Sl4f": {
+              "FieldFormalParameterImpl": {
+                "this.ssh": {
+                  "name": "this.ssh",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.target": {
+                  "name": "this.target",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Sl4f",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Sl4f.fromEnvironment": {
+              "SimpleFormalParameterImpl": {
+                "environment": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "environment",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Map<String, String>"
+                }
+              },
+              "name": "Sl4f.fromEnvironment",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "dumpDiagnostics": {
+              "SimpleFormalParameterImpl": {
+                "diag": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "diag",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                },
+                "dump": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "dump",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Dump"
+                },
+                "dumpName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "dumpName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dumpDiagnostics",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "inspectComponentRoot": {
+              "SimpleFormalParameterImpl": {
+                "componentName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "componentName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "inspectComponentRoot",
+              "returnType": "Future<dynamic>",
+              "type": "MethodDeclarationImpl"
+            },
+            "inspectRecursively": {
+              "SimpleFormalParameterImpl": {
+                "hubEntries": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "hubEntries",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "inspectRecursively",
+              "returnType": "Future<dynamic>",
+              "type": "MethodDeclarationImpl"
+            },
+            "reboot": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "reboot",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "request": {
+              "SimpleFormalParameterImpl": {
+                "method": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "method",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "params": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "params",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "dynamic"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "request",
+              "returnType": "Future<dynamic>",
+              "type": "MethodDeclarationImpl"
+            },
+            "retrieveHubEntries": {
+              "SimpleFormalParameterImpl": {
+                "filter": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "filter",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "retrieveHubEntries",
+              "returnType": "Future<List<String>>",
+              "type": "MethodDeclarationImpl"
+            },
+            "startServer": {
+              "SimpleFormalParameterImpl": {
+                "delay": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "delay",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Duration"
+                },
+                "tries": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "tries",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "startServer",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "stopServer": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "stopServer",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "diagnostics": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "diagnostics",
+              "type": "VariableDeclarationImpl",
+              "varType": "null"
+            },
+            "ssh": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "ssh",
+              "type": "VariableDeclarationImpl",
+              "varType": "Ssh"
+            },
+            "target": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "target",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            }
+          },
+          "name": "Sl4f",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "sl4f_client.dart",
+      "type": "file"
+    },
+    "ssh.dart": {
+      "ClassDeclarationImpl": {
+        "Ssh": {
+          "ConstructorDeclarationImpl": {
+            "Ssh": {
+              "FieldFormalParameterImpl": {
+                "this.sshKeyPath": {
+                  "name": "this.sshKeyPath",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.target": {
+                  "name": "this.target",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Ssh",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Ssh.useAgent": {
+              "FieldFormalParameterImpl": {
+                "this.target": {
+                  "name": "this.target",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Ssh.useAgent",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "makeArgs": {
+              "SimpleFormalParameterImpl": {
+                "cmd": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "cmd",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "makeArgs",
+              "returnType": "List<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "run": {
+              "SimpleFormalParameterImpl": {
+                "cmd": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "cmd",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "stdin": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "stdin",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "run",
+              "returnType": "Future<ProcessResult>",
+              "type": "MethodDeclarationImpl"
+            },
+            "start": {
+              "SimpleFormalParameterImpl": {
+                "cmd": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "cmd",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ProcessStartMode"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "start",
+              "returnType": "Future<Process>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "sshKeyPath": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "sshKeyPath",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "target": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "target",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            }
+          },
+          "name": "Ssh",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "ssh.dart",
+      "type": "file"
+    },
+    "storage.dart": {
+      "ClassDeclarationImpl": {
+        "Storage": {
+          "ConstructorDeclarationImpl": {
+            "Storage": {
+              "FieldFormalParameterImpl": {
+                "this._sl4f": {
+                  "name": "this._sl4f",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "dump": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "dump",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Dump"
+                }
+              },
+              "name": "Storage",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "deleteFile": {
+              "SimpleFormalParameterImpl": {
+                "filename": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "filename",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "deleteFile",
+              "returnType": "Future<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "dumpFile": {
+              "SimpleFormalParameterImpl": {
+                "dumpName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "dumpName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "extension": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "extension",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "filename": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "filename",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dumpFile",
+              "returnType": "Future<File>",
+              "type": "MethodDeclarationImpl"
+            },
+            "makeDirectory": {
+              "SimpleFormalParameterImpl": {
+                "path": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "path",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "recurse": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "recurse",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "makeDirectory",
+              "returnType": "Future<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "putBytes": {
+              "SimpleFormalParameterImpl": {
+                "bytes": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "bytes",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<int>"
+                },
+                "filename": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "filename",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "putBytes",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "putFile": {
+              "SimpleFormalParameterImpl": {
+                "file": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "file",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "File"
+                },
+                "filename": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "filename",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "putFile",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "readFile": {
+              "SimpleFormalParameterImpl": {
+                "filename": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "filename",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "readFile",
+              "returnType": "Future<List<int>>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Storage",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "storage.dart",
+      "type": "file"
+    },
+    "webdriver.dart": {
+      "ClassDeclarationImpl": {
+        "ProcessHelper": {
+          "ConstructorDeclarationImpl": {
+            "ProcessHelper": {
+              "name": "ProcessHelper",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "start": {
+              "SimpleFormalParameterImpl": {
+                "args": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "args",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                },
+                "cmd": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "cmd",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "runInShell": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "runInShell",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "start",
+              "returnType": "Future<io.Process>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "ProcessHelper",
+          "type": "ClassDeclarationImpl"
+        },
+        "WebDriverConnector": {
+          "ConstructorDeclarationImpl": {
+            "WebDriverConnector": {
+              "SimpleFormalParameterImpl": {
+                "chromeDriverPath": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "chromeDriverPath",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "processHelper": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "processHelper",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ProcessHelper"
+                },
+                "sl4f": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "sl4f",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Sl4f"
+                },
+                "webDriverHelper": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "webDriverHelper",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "WebDriverHelper"
+                }
+              },
+              "name": "WebDriverConnector",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "initialize": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "initialize",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "tearDown": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "tearDown",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "webDriversForHost": {
+              "SimpleFormalParameterImpl": {
+                "host": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "host",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "session": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "session",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "webDriversForHost",
+              "returnType": "Future<List<WebDriver>>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "WebDriverConnector",
+          "type": "ClassDeclarationImpl"
+        },
+        "WebDriverHelper": {
+          "ConstructorDeclarationImpl": {
+            "WebDriverHelper": {
+              "name": "WebDriverHelper",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "createDriver": {
+              "SimpleFormalParameterImpl": {
+                "chromedriverPort": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "chromedriverPort",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "devToolsPort": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "devToolsPort",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "createDriver",
+              "returnType": "WebDriver",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "WebDriverHelper",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "webdriver.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/testing/sl4f/client:client_detect_action",
+  "type": "package"
+}
