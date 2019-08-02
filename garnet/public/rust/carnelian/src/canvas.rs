@@ -371,12 +371,13 @@ mod update_area_tests {
 
 /// Trait abstracting a target to which pixels can be written. Only used currently
 /// for testing.
-pub trait PixelSink {
+pub trait PixelSink: Clone + Send + Sync {
     /// Write an RGBA pixel at a byte offset within the sink.
     fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]);
 }
 
 /// Pixel sink targeting a shared buffer.
+#[derive(Clone)]
 pub struct MappingPixelSink {
     mapping: Arc<Mapping>,
 }
@@ -397,11 +398,12 @@ impl PixelSink for MappingPixelSink {
 /// Canvas is used to do simple graphics and text rendering into a
 /// SharedBuffer that can then be displayed using Scenic or
 /// Display Manager.
+#[allow(missing_docs)]
 pub struct Canvas<T: PixelSink> {
     // Assumes a pixel format of BGRA8 and a color space of sRGB.
-    pixel_sink: T,
+    pub pixel_sink: T,
     row_stride: u32,
-    col_stride: u32,
+    pub col_stride: u32,
     bounds: IntRect,
     current_clip: Option<IntRect>,
     update_area: UpdateArea,
@@ -712,6 +714,7 @@ mod tests {
         IntSize::new(800, 600)
     }
 
+    #[derive(Clone)]
     struct TestPixelSink {
         pub max_offset: usize,
         pub touched_offsets: HashSet<usize>,

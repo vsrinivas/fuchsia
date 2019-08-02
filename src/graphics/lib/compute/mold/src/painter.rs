@@ -19,7 +19,7 @@ pub enum PixelFormat {
 }
 
 pub trait ColorBuffer: Clone + Send + Sync {
-    fn pixel_format() -> PixelFormat;
+    fn pixel_format(&self) -> PixelFormat;
     unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize);
 
     unsafe fn write_color_at<C: Copy + Sized>(&mut self, offset: usize, src: &[C]) {
@@ -425,7 +425,7 @@ impl Painter {
     }
 
     unsafe fn write_row<B: ColorBuffer>(buffer: &mut B, index: usize, row: &[Color]) {
-        match B::pixel_format() {
+        match buffer.pixel_format() {
             PixelFormat::RGBA8888 => buffer.write_color_at(index, row),
             PixelFormat::BGRA8888 => {
                 let mut new_row = [ZERO; TILE_SIZE];

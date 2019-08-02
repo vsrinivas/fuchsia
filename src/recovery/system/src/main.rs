@@ -114,6 +114,7 @@ mod tests {
     use carnelian::{Canvas, FontFace, IntSize, PixelSink};
     use fuchsia_framebuffer::{Config, PixelFormat};
 
+    #[derive(Clone)]
     struct TestPixelSink {}
 
     impl PixelSink for TestPixelSink {

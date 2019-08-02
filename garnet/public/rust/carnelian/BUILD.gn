@@ -175,6 +175,25 @@ rustc_binary("drawing") {
   ]
 }
 
+rustc_binary("drawing_mold") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/drawing_mold.rs"
+  deps = [
+    "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-framebuffer",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/graphics/lib/compute/mold",
+    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:rusttype",
+  ]
+}
+
 package("spinning_square_rs") {
   deps = [
     ":spinning_square_example",
@@ -331,6 +350,26 @@ package("drawing_rs") {
     {
       path = rebase_path("meta/example.cmx")
       dest = "drawing_rs.cmx"
+    },
+  ]
+}
+
+package("drawing_mold_rs") {
+  deps = [
+    ":drawing_mold",
+  ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "drawing_mold"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "drawing_mold_rs.cmx"
     },
   ]
 }

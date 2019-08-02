@@ -203,7 +203,6 @@ impl Map {
                 let bounding_box = layer.raster.bounding_box();
                 self.for_each_tile(&bounding_box, |tile| {
                     tile.needs_render = true;
-                    tile.reset();
                 });
             }
         }
@@ -368,7 +367,7 @@ unsafe impl Send for BitMap {}
 unsafe impl Sync for BitMap {}
 
 impl ColorBuffer for BitMap {
-    fn pixel_format() -> PixelFormat {
+    fn pixel_format(&self) -> PixelFormat {
         PixelFormat::RGBA8888
     }
 
