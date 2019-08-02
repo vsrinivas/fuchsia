@@ -23,17 +23,20 @@
 
 #else  // #ifdef _KERNEL
 
-#include <stdio.h>   // for printf
-#include <stdlib.h>  // for abort
+// TODO(ZX-4798): (dustingreen or mcgrathr for context; dustingreen to fix,
+// mcgrathr probably as reviewer) These are no longer locally needed, so can be
+// removed in a separate CL that will need wide OWNERS approval since many files
+// are implicitly depending on these.
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <zircon/compiler.h>
 
-#define ZX_PANIC(fmt, ...)      \
-  do {                          \
-    printf(fmt, ##__VA_ARGS__); \
-    fflush(stdout);             \
-    abort();                    \
-  } while (0)
+__BEGIN_CDECLS
+void __zx_panic(const char* format, ...) __NO_RETURN __PRINTFLIKE(1, 2);
+__END_CDECLS
+
+#define ZX_PANIC(fmt, ...) __zx_panic((fmt), ##__VA_ARGS__)
 
 #define ZX_ASSERT(x)                                                      \
   do {                                                                    \

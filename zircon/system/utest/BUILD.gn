@@ -155,6 +155,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/zx/test",
       "$zx/system/ulib/zxio/test",
       "$zx/system/ulib/zxtest/test",
+      "$zx/system/ulib/zx-panic-libc/test",
       "abigen",
       "backtrace-request:backtrace-request-integration",
       "biotime",

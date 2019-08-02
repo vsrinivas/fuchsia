@@ -152,5 +152,6 @@ group("ulib") {
     "zxio",
     "zxs",
     "zxtest",
+    "zx-panic-libc",
   ]
 }

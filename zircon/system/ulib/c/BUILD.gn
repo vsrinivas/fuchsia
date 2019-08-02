@@ -15,8 +15,10 @@ library("c") {
 
   # The code comes from musl, where a source_set is defined.
   sources = []
+
   deps = [
     "$zx/third_party/ulib/musl",
+    "$zx/system/ulib/zx-panic-libc:as_source",
     "sanitizers",
     "setjmp",
     "zircon",

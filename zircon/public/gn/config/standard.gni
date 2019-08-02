@@ -102,6 +102,10 @@ standard_environments = [
     globals = {
       is_host = true
     }
+    # Ensure that host binaries have __zx_panic.
+    implicit_deps = [
+      "$zx/system/ulib/zx-panic-libc",
+    ]
     strip = true
   },
   {

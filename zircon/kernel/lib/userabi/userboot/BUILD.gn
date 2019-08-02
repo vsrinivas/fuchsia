@@ -75,6 +75,7 @@ if (current_toolchain == default_toolchain) {
       "start.cc",
       "userboot-elf.cc",
       "util.cc",
+      "zx_panic.cc",
     ]
     defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
     configs += [ "$zx/public/gn/config:rodso" ]

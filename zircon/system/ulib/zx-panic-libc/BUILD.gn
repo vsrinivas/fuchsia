@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("zx-panic-libc") {
+  sdk = "source"
+
+  host = true
+  static = true
+
+  sdk_headers = [ ]
+
+  sources = [
+    "zx_panic_libc.cc",
+  ]
+}
+
+source_set("as_source") {
+  visibility = [ "$zx/system/ulib/c:*" ]
+  sources = [
+    "zx_panic_libc.cc",
+  ]
+}
