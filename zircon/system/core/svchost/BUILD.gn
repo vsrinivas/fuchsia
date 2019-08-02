@@ -6,13 +6,15 @@ library("crashsvc") {
   sources = [
     "crashsvc.cc",
   ]
+
   deps = [
-    "$zx/system/fidl/fuchsia-crash:c",
+    "$zx/system/fidl/fuchsia-exception:llcpp",
     "$zx/system/ulib/backtrace-request:utils",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/inspector",
   ]
+
   public_deps = [
     "$zx/system/ulib/zx",
   ]
@@ -63,13 +65,11 @@ test("crashsvc-test") {
   deps = [
     ":crashsvc",
     "$zx/system/fidl/fuchsia-crash:c",
-    # TODO(DX-1784): This dependency is to enable llcpp bindings generation.
-    #                Not yet used by svchost.
     "$zx/system/fidl/fuchsia-exception:llcpp",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/mini-process",
     "$zx/system/ulib/zxtest",

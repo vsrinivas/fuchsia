@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <crashsvc/crashsvc.h>
-#include <fbl/unique_ptr.h>
-#include <fuchsia/crash/c/fidl.h>
-#include <inspector/inspector.h>
+#include <fuchsia/exception/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/backtrace-request/backtrace-request-utils.h>
 #include <lib/fdio/directory.h>
@@ -23,11 +20,15 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/threads.h>
 
+#include <crashsvc/crashsvc.h>
+#include <fbl/unique_ptr.h>
+#include <inspector/inspector.h>
+
 namespace {
 
 struct crash_ctx {
   zx::channel exception_channel;
-  zx::channel svc_request;
+  llcpp::fuchsia::exception::Handler::SyncClient exception_handler;
 };
 
 // Logs a general error unrelated to a particular exception.
@@ -70,7 +71,7 @@ bool ResumeIfBacktraceRequest(const zx::thread& thread, const zx::exception& exc
 }
 
 void HandOffException(zx::exception exception, const zx_exception_info_t& info,
-                      const zx::channel& svc_request) {
+                      llcpp::fuchsia::exception::Handler::SyncClient* exception_handler) {
   zx::process process;
   zx_status_t status = exception.get_process(&process);
   if (status != ZX_OK) {
@@ -85,7 +86,7 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
     return;
   }
 
-  // Dump the crash info to the logs whether we have a FIDL analyzer or not.
+  // Dump the crash info to the logs whether we have a FIDL handler or not.
   zx_thread_state_general_regs_t regs = {};
   inspector_print_debug_info(process.get(), thread.get(), &regs);
 
@@ -94,19 +95,20 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
     return;
   }
 
-  if (svc_request.is_valid()) {
-    // Use the full system analyzer FIDL service, presumably crashpad_analyzer.
-    fuchsia_crash_Analyzer_OnNativeException_Result analyzer_result;
-    status = fuchsia_crash_AnalyzerOnNativeException(svc_request.get(), process.release(),
-                                                     thread.release(), &analyzer_result);
-    if (status != ZX_OK) {
-      LogError("failed to pass exception to analyzer", info, status);
+  // Send over the exception to the handler.
+  // From this point on, crashsvc has no ownership over the exception and it's up to the handler to
+  // decide when and how to resume it.
+  if (exception_handler->channel().is_valid()) {
+    llcpp::fuchsia::exception::ExceptionInfo exception_info;
+    exception_info.process_koid = info.pid;
+    exception_info.thread_koid = info.tid;
+    exception_info.type = static_cast<llcpp::fuchsia::exception::ExceptionType>(info.type);
+
+    auto result = exception_handler->OnException(std::move(exception), exception_info);
+    if (result.status() != ZX_OK) {
+      LogError("failed to pass exception to handler", info, result.status());
     }
   }
-
-  // When |exception| goes out of scope it will close and cause the exception
-  // to be sent to the next handler. If we're the root job handler this will
-  // kill the process.
 }
 
 int crash_svc(void* arg) {
@@ -136,13 +138,13 @@ int crash_svc(void* arg) {
       continue;
     }
 
-    HandOffException(std::move(exception), info, ctx->svc_request);
+    HandOffException(std::move(exception), info, &ctx->exception_handler);
   }
 }
 
 }  // namespace
 
-zx_status_t start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc, thrd_t* thread) {
+zx_status_t start_crashsvc(zx::job root_job, zx_handle_t exception_handler_svc, thrd_t* thread) {
   zx::channel exception_channel;
   zx_status_t status = root_job.create_exception_channel(0, &exception_channel);
   if (status != ZX_OK) {
@@ -151,18 +153,19 @@ zx_status_t start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc, thrd_t* t
   }
 
   zx::channel ch0, ch1;
-  if (analyzer_svc != ZX_HANDLE_INVALID) {
+  if (exception_handler_svc != ZX_HANDLE_INVALID) {
     zx::channel::create(0u, &ch0, &ch1);
-    status = fdio_service_connect_at(analyzer_svc, fuchsia_crash_Analyzer_Name, ch0.release());
+    status = fdio_service_connect_at(exception_handler_svc,
+                                     llcpp::fuchsia::exception::Handler::Name, ch0.release());
     if (status != ZX_OK) {
-      LogError("unable to connect to analyzer service", status);
+      LogError("unable to connect to exception handler service", status);
       return status;
     }
   }
 
   auto ctx = new crash_ctx{
       std::move(exception_channel),
-      std::move(ch1),
+      llcpp::fuchsia::exception::Handler::SyncClient(std::move(ch1)),
   };
 
   status = thrd_status_to_zx_status(thrd_create_with_name(thread, crash_svc, ctx, "crash-svc"));

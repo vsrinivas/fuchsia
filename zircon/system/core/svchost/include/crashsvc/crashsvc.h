@@ -18,15 +18,15 @@
 // delegate the crash analysis to one of two services:
 //
 // - built-in : using system/ulib/inspector
-// - appmgr hosted: via FIDL interface call (fuchsia_crash_Analyzer).
+// - appmgr hosted: via FIDL interface call (fuchsia_exception_Handler).
 //
-// Which one depends if |analyzer_svc| is a valid channel handle, which
+// Which one depends if |exception_handler_svc| is a valid channel handle, which
 // svchost sets depending on "use_system".
 //
 // The crash service thread will exit when |root_job| is terminated.
 //
 // On success, returns ZX_OK and fills |thread| with the crash service thread.
 // The caller is responsible for either detaching or joining the thread.
-zx_status_t start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc, thrd_t* thread);
+zx_status_t start_crashsvc(zx::job root_job, zx_handle_t exception_handler_svc, thrd_t* thread);
 
 #endif  // ZIRCON_SYSTEM_CORE_SVCHOST_INCLUDE_CRASHSVC_CRASHSVC_H_

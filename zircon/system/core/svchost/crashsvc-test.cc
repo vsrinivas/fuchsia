@@ -2,26 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <crashsvc/crashsvc.h>
-#include <fs/pseudo-dir.h>
-#include <fs/service.h>
-#include <fs/synchronous-vfs.h>
 #include <fuchsia/crash/c/fidl.h>
+#include <fuchsia/exception/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fidl-async/bind.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
-#include <mini-process/mini-process.h>
 #include <threads.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
-#include <zxtest/zxtest.h>
 
 #include <memory>
+
+#include <crashsvc/crashsvc.h>
+#include <fs/pseudo-dir.h>
+#include <fs/service.h>
+#include <fs/synchronous-vfs.h>
+#include <mini-process/mini-process.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -80,7 +82,7 @@ void CreateAndBacktraceProcess(const zx::job& job, zx::process* process, zx::thr
   ASSERT_OK(mini_process_cmd(command_channel.get(), MINIP_CMD_BACKTRACE_REQUEST, nullptr));
 }
 
-TEST(crashsvc, ThreadCrashNoAnalyzer) {
+TEST(crashsvc, ThreadCrashNoExceptionHandler) {
   zx::job parent_job, job;
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
   ASSERT_OK(zx::job::create(parent_job, 0, &job));
@@ -107,7 +109,7 @@ TEST(crashsvc, ThreadCrashNoAnalyzer) {
   EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
 }
 
-TEST(crashsvc, ThreadBacktraceNoAnalyzer) {
+TEST(crashsvc, ThreadBacktraceNoExceptionHandler) {
   zx::job parent_job, job;
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
   ASSERT_OK(zx::job::create(parent_job, 0, &job));
@@ -131,108 +133,18 @@ TEST(crashsvc, ThreadBacktraceNoAnalyzer) {
   EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
 }
 
-// Returns the object's koid, or ZX_KOID_INVALID and marks test failure if
-// get_info() fails.
-template <typename T>
-zx_koid_t GetKoid(const zx::object<T>& object) {
-  zx_info_handle_basic_t info;
-  info.koid = ZX_KOID_INVALID;
-  EXPECT_OK(object.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
-  return info.koid;
-}
-
-// Provides FIDL stubs for fuchsia::crash::Analyzer.
-class CrashAnalyzerStub {
- public:
-  enum class Behavior {
-    kSuccess,  // Return ZX_OK.
-    kError     // Simulate analyzer failure by returning an error.
-  };
-
-  // Sets the behavior to use on the next OnNativeException() call. |process|
-  // and |thread| are the tasks we expect to be given from crashsvc.
-  void SetBehavior(Behavior behavior, const zx::process& process, const zx::thread& thread) {
-    behavior_ = behavior;
-    process_koid_ = GetKoid(process);
-    thread_koid_ = GetKoid(thread);
-    ASSERT_NE(process_koid_, ZX_KOID_INVALID);
-    ASSERT_NE(thread_koid_, ZX_KOID_INVALID);
-  }
-
-  // Creates a virtual file system serving this analyzer at the appropriate path.
-  void Serve(async_dispatcher_t* dispatcher, std::unique_ptr<fs::SynchronousVfs>* vfs,
-             zx::channel* client) {
-    auto directory = fbl::MakeRefCounted<fs::PseudoDir>();
-    auto node = fbl::MakeRefCounted<fs::Service>([dispatcher, this](zx::channel channel) {
-      auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_crash_Analyzer_dispatch);
-      return fidl_bind(dispatcher, channel.release(), dispatch, this, &CrashAnalyzerStub::kOps);
-    });
-    ASSERT_OK(directory->AddEntry(fuchsia_crash_Analyzer_Name, std::move(node)));
-
-    zx::channel server;
-    ASSERT_OK(zx::channel::create(0u, client, &server));
-
-    *vfs = std::make_unique<fs::SynchronousVfs>(dispatcher);
-    ASSERT_OK((*vfs)->ServeDirectory(std::move(directory), std::move(server)));
-  }
-
-  // Returns the number of times OnNativeException() has fired.
-  int on_native_exception_count() const { return on_native_exception_count_; }
-
- private:
-  static zx_status_t OnNativeExceptionWrapper(void* ctx, zx_handle_t process, zx_handle_t thread,
-                                              fidl_txn_t* txn) {
-    return reinterpret_cast<CrashAnalyzerStub*>(ctx)->OnNativeException(zx::process(process),
-                                                                        zx::thread(thread), txn);
-  }
-
-  zx_status_t OnNativeException(zx::process process, zx::thread thread, fidl_txn_t* txn) {
-    ++on_native_exception_count_;
-
-    // Make sure crashsvc passed us the correct task handles.
-    EXPECT_EQ(process_koid_, GetKoid(process));
-    EXPECT_EQ(thread_koid_, GetKoid(thread));
-
-    // Build a reply corresponding to our desired behavior.
-    fuchsia_crash_Analyzer_OnNativeException_Result result;
-    if (behavior_ == Behavior::kSuccess) {
-      result.tag = fuchsia_crash_Analyzer_OnNativeException_ResultTag_response;
-    } else {
-      result.tag = fuchsia_crash_Analyzer_OnNativeException_ResultTag_err;
-      result.err = ZX_ERR_BAD_STATE;
-    }
-
-    zx_status_t status = fuchsia_crash_AnalyzerOnNativeException_reply(txn, &result);
-    EXPECT_OK(status);
-    return status;
-  }
-
-  static constexpr fuchsia_crash_Analyzer_ops_t kOps = {
-      .OnNativeException = OnNativeExceptionWrapper,
-      .OnManagedRuntimeException = nullptr,
-      .OnKernelPanicCrashLog = nullptr};
-
-  Behavior behavior_;
-  zx_koid_t process_koid_ = ZX_KOID_INVALID;
-  zx_koid_t thread_koid_ = ZX_KOID_INVALID;
-  int on_native_exception_count_ = 0;
-};
-
-// Creates a new thread, crashes it, and processes the resulting Analyzer FIDL
+// Creates a new thread, crashes it, and processes the resulting ExceptionHandler FIDL
 // message from crashsvc according to |behavior|.
 //
 // |parent_job| is used to catch exceptions after they've been analyzed on |job|
 // so that they don't bubble up to the real crashsvc.
-void AnalyzeCrash(CrashAnalyzerStub* analyzer, async::Loop* loop, const zx::job& parent_job,
-                  const zx::job& job, CrashAnalyzerStub::Behavior behavior) {
+void AnalyzeCrash(async::Loop* loop, const zx::job& parent_job, const zx::job& job) {
   zx::channel exception_channel;
   ASSERT_OK(parent_job.create_exception_channel(0, &exception_channel));
 
   zx::process process;
   zx::thread thread;
   ASSERT_NO_FATAL_FAILURES(CreateAndCrashProcess(job, &process, &thread));
-
-  ASSERT_NO_FATAL_FAILURES(analyzer->SetBehavior(behavior, process, thread));
 
   // Run the loop until the exception filters up to our job handler.
   async::Wait wait(exception_channel.get(), ZX_CHANNEL_READABLE, [&loop](...) { loop->Quit(); });
@@ -246,101 +158,131 @@ void AnalyzeCrash(CrashAnalyzerStub* analyzer, async::Loop* loop, const zx::job&
   ASSERT_OK(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
 }
 
-TEST(crashsvc, ThreadCrashAnalyzerSuccess) {
+// Crashsvc will attemp to connect to a |fuchsia.exception.Handler| when it catches an exception.
+// We use this fake in order to verify that behaviour.
+class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::Interface {
+ public:
+  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
+    return fidl::Bind(dispatcher, std::move(request), this);
+  }
+
+  // fuchsia.exception.Handler
+  void OnException(::zx::exception exception, llcpp::fuchsia::exception::ExceptionInfo info,
+                   OnExceptionCompleter::Sync completer) override {
+    exception_count_++;
+    completer.Reply();
+  }
+
+  int exception_count() const { return exception_count_; }
+
+ private:
+  int exception_count_ = 0;
+};
+
+// Exposes the services through a virtual directory that crashsvc uses in order to connect to
+// services. We use this to inject a |StubExceptionHandler| for the |fuchsia.exception.Handler|
+// service.
+class FakeService {
+ public:
+  FakeService(async_dispatcher_t* dispatcher) : vfs_(dispatcher) {
+    auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+    root_dir->AddEntry(llcpp::fuchsia::exception::Handler::Name,
+                       fbl::MakeRefCounted<fs::Service>([this, dispatcher](zx::channel request) {
+                         return exception_handler_.Connect(dispatcher, std::move(request));
+                       }));
+
+    // We serve this directory.
+    zx::channel svc_remote;
+    ASSERT_OK(zx::channel::create(0, &svc_local_, &svc_remote));
+    vfs_.ServeDirectory(root_dir, std::move(svc_remote));
+  }
+
+  const StubExceptionHandler& exception_handler() const { return exception_handler_; }
+  const zx::channel& service_channel() const { return svc_local_; }
+
+ private:
+  fs::SynchronousVfs vfs_;
+  StubExceptionHandler exception_handler_;
+  zx::channel svc_local_;
+};
+
+// Creates a sub-job under the current one to be used as a realm for the processes that will be
+// spawned for tests.
+struct Jobs {
+  zx::job parent_job;  // The job of this test.
+  zx::job job;         // The job under which the process will be created.
+  zx::job job_copy;
+};
+
+void GetTestJobs(Jobs* jobs) {
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &jobs->parent_job));
+  ASSERT_OK(zx::job::create(jobs->parent_job, 0, &jobs->job));
+  ASSERT_OK(jobs->job.duplicate(ZX_RIGHT_SAME_RIGHTS, &jobs->job_copy));
+}
+
+TEST(crashsvc, ExceptionHandlerSuccess) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  std::unique_ptr<fs::SynchronousVfs> vfs;
-  zx::channel client;
-  CrashAnalyzerStub analyzer;
-  ASSERT_NO_FATAL_FAILURES(analyzer.Serve(loop.dispatcher(), &vfs, &client));
+  FakeService test_svc(loop.dispatcher());
 
-  zx::job parent_job, job, job_copy;
+  Jobs jobs;
+  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
+
+  // Start crashsvc.
   thrd_t cthread;
-  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
-  ASSERT_OK(zx::job::create(parent_job, 0, &job));
-  ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
-  ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
+  ASSERT_OK(start_crashsvc(std::move(jobs.job_copy), test_svc.service_channel().get(), &cthread));
 
-  ASSERT_NO_FATAL_FAILURES(
-      AnalyzeCrash(&analyzer, &loop, parent_job, job, CrashAnalyzerStub::Behavior::kSuccess));
-  EXPECT_EQ(1, analyzer.on_native_exception_count());
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  EXPECT_EQ(test_svc.exception_handler().exception_count(), 1);
 
-  ASSERT_OK(job.kill());
+  // Kill the test job so that the exception doesn't bubble outside of this test.
+  ASSERT_OK(jobs.job.kill());
   EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
 }
 
-TEST(crashsvc, ThreadCrashAnalyzerFailure) {
+TEST(crashsvc, MultipleThreadExceptionHandler) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  std::unique_ptr<fs::SynchronousVfs> vfs;
-  zx::channel client;
-  CrashAnalyzerStub analyzer;
-  ASSERT_NO_FATAL_FAILURES(analyzer.Serve(loop.dispatcher(), &vfs, &client));
+  FakeService test_svc(loop.dispatcher());
 
-  zx::job parent_job, job, job_copy;
+  Jobs jobs;
+  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
+
+  // Start crashsvc.
   thrd_t cthread;
-  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
-  ASSERT_OK(zx::job::create(parent_job, 0, &job));
-  ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
-  ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
+  ASSERT_OK(start_crashsvc(std::move(jobs.job_copy), test_svc.service_channel().get(), &cthread));
 
-  ASSERT_NO_FATAL_FAILURES(
-      AnalyzeCrash(&analyzer, &loop, parent_job, job, CrashAnalyzerStub::Behavior::kError));
-  EXPECT_EQ(1, analyzer.on_native_exception_count());
+  // Make sure crashsvc continues to loop no matter what the exception handler does.
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
+  EXPECT_EQ(test_svc.exception_handler().exception_count(), 4);
 
-  ASSERT_OK(job.kill());
+  // Kill the test job so that the exception doesn't bubble outside of this test.
+  ASSERT_OK(jobs.job.kill());
   EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
 }
 
-TEST(crashsvc, MultipleThreadCrashAnalyzer) {
+TEST(crashsvc, ThreadBacktraceExceptionHandler) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  std::unique_ptr<fs::SynchronousVfs> vfs;
-  zx::channel client;
-  CrashAnalyzerStub analyzer;
-  ASSERT_NO_FATAL_FAILURES(analyzer.Serve(loop.dispatcher(), &vfs, &client));
+  FakeService test_svc(loop.dispatcher());
 
-  zx::job parent_job, job, job_copy;
+  Jobs jobs;
+  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
+
+  // Start crashsvc.
   thrd_t cthread;
-  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
-  ASSERT_OK(zx::job::create(parent_job, 0, &job));
-  ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
-  ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
+  ASSERT_OK(start_crashsvc(std::move(jobs.job_copy), test_svc.service_channel().get(), &cthread));
 
-  // Make sure crashsvc continues to loop no matter what the analyzer does.
-  ASSERT_NO_FATAL_FAILURES(
-      AnalyzeCrash(&analyzer, &loop, parent_job, job, CrashAnalyzerStub::Behavior::kSuccess));
-  ASSERT_NO_FATAL_FAILURES(
-      AnalyzeCrash(&analyzer, &loop, parent_job, job, CrashAnalyzerStub::Behavior::kError));
-  ASSERT_NO_FATAL_FAILURES(
-      AnalyzeCrash(&analyzer, &loop, parent_job, job, CrashAnalyzerStub::Behavior::kSuccess));
-  ASSERT_NO_FATAL_FAILURES(
-      AnalyzeCrash(&analyzer, &loop, parent_job, job, CrashAnalyzerStub::Behavior::kError));
-  EXPECT_EQ(4, analyzer.on_native_exception_count());
-
-  ASSERT_OK(job.kill());
-  EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
-}
-
-TEST(crashsvc, ThreadBacktraceAnalyzer) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  std::unique_ptr<fs::SynchronousVfs> vfs;
-  zx::channel client;
-  CrashAnalyzerStub analyzer;
-  ASSERT_NO_FATAL_FAILURES(analyzer.Serve(loop.dispatcher(), &vfs, &client));
-
-  zx::job parent_job, job, job_copy;
-  thrd_t cthread;
-  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
-  ASSERT_OK(zx::job::create(parent_job, 0, &job));
-  ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
-  ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
-
+  // Creates a process that triggers the backtrace request.
   zx::process process;
   zx::thread thread;
-  ASSERT_NO_FATAL_FAILURES(CreateAndBacktraceProcess(job, &process, &thread));
+  ASSERT_NO_FATAL_FAILURES(CreateAndBacktraceProcess(jobs.job, &process, &thread));
 
-  // Thread backtrace requests shouldn't be sent out to the analyzer.
-  EXPECT_EQ(0, analyzer.on_native_exception_count());
+  // Thread backtrace requests shouldn't be sent out to the exception handler.
+  EXPECT_EQ(test_svc.exception_handler().exception_count(), 0);
 
-  ASSERT_OK(job.kill());
+  // Kill the test job so that the exception doesn't bubble outside of this test.
+  ASSERT_OK(jobs.job.kill());
   EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
 }
 

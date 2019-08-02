@@ -56,6 +56,7 @@ base_package_labels += [
   "//src/connectivity/network/netdump",
   "//src/connectivity/network/netstack",
   "//src/connectivity/wlan:service",
+  "//src/developer/exception_broker",
   "//src/developer/feedback/bugreport",
   "//src/developer/feedback/crashpad_agent",
   "//src/developer/feedback/feedback_agent",
