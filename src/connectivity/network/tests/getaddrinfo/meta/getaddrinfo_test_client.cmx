@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/getaddrinfo_test_client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.NameLookup"
+        ]
+    }
+}

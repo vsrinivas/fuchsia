@@ -2,6 +2,7 @@ __fdio_cleanpath
 __libc_extensions_fini
 __libc_extensions_init
 _fd_open_max
+_getaddrinfo_from_dns
 _mmap_file
 accept4
 access
@@ -68,7 +69,6 @@ fdio_wait_fd
 fdio_watch_directory
 fdio_zxio_create
 fdopendir
-freeaddrinfo
 fstat
 fstatat
 fstatfs
@@ -76,7 +76,6 @@ fstatvfs
 fsync
 ftruncate
 futimens
-getaddrinfo
 getcwd
 getpeername
 getsockname

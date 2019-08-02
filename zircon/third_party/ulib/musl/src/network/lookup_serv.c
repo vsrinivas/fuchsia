@@ -8,11 +8,25 @@
 #include <string.h>
 #include <sys/socket.h>
 
+static unsigned long lookup_port(const char* name, int proto) {
+    if (!strcmp(name, "echo")) { return 7; };
+    if (!strcmp(name, "ftp") && proto == IPPROTO_TCP) { return 21; };
+    if (!strcmp(name, "ssh") && proto == IPPROTO_TCP) { return 22; };
+    if (!strcmp(name, "telnet") && proto == IPPROTO_TCP) { return 23; };
+    if (!strcmp(name, "tftp") && proto == IPPROTO_UDP) { return 69; };
+    if (!strcmp(name, "http") && proto == IPPROTO_TCP) { return 80; };
+    if (!strcmp(name, "ntp")) { return 123; };
+    if (!strcmp(name, "imap") && proto == IPPROTO_TCP) { return 143; };
+    if (!strcmp(name, "irc")) { return 194; };
+    if (!strcmp(name, "ldap")) { return 389; };
+    if (!strcmp(name, "https") && proto == IPPROTO_TCP) { return 443; };
+    return 0;
+}
+
 int __lookup_serv(struct service buf[static MAXSERVS], const char* name, int proto, int socktype,
                   int flags) {
-    char line[128];
     int cnt = 0;
-    char *p, *z = (char *)"";
+    char *z = (char *)"";
     unsigned long port = 0;
 
     switch (socktype) {
@@ -70,57 +84,14 @@ int __lookup_serv(struct service buf[static MAXSERVS], const char* name, int pro
     if (flags & AI_NUMERICSERV)
         return EAI_SERVICE;
 
-    size_t l = strlen(name);
-
-    unsigned char _buf[1032];
-    FILE _f, *f = __fopen_rb_ca("/etc/services", &_f, _buf, sizeof _buf);
-    if (!f)
-        switch (errno) {
-        case ENOENT:
-        case ENOTDIR:
-        case EACCES:
-            return EAI_SERVICE;
-        default:
-            return EAI_SYSTEM;
-        }
-
-    while (fgets(line, sizeof line, f) && cnt < MAXSERVS) {
-        if ((p = strchr(line, '#')))
-            *p++ = '\n', *p = 0;
-
-        /* Find service name */
-        for (p = line; (p = strstr(p, name)); p++) {
-            if (p > line && !isspace(p[-1]))
-                continue;
-            if (p[l] && !isspace(p[l]))
-                continue;
-            break;
-        }
-        if (!p)
-            continue;
-
-        /* Skip past canonical name at beginning of line */
-        for (p = line; *p && !isspace(*p); p++)
-            ;
-
-        port = strtoul(p, &z, 10);
-        if (port > 65535 || z == p)
-            continue;
-        if (!strncmp(z, "/udp", 4)) {
-            if (proto == IPPROTO_TCP)
-                continue;
-            buf[cnt].port = port;
-            buf[cnt].socktype = SOCK_DGRAM;
-            buf[cnt++].proto = IPPROTO_UDP;
-        }
-        if (!strncmp(z, "/tcp", 4)) {
-            if (proto == IPPROTO_UDP)
-                continue;
-            buf[cnt].port = port;
-            buf[cnt].socktype = SOCK_STREAM;
-            buf[cnt++].proto = IPPROTO_TCP;
-        }
+    port = lookup_port(name, proto);
+    if (!port) {
+        return EAI_SERVICE;
     }
-    __fclose_ca(f);
+
+    buf[cnt].port = port;
+    buf[cnt].socktype = socktype;
+    buf[cnt++].proto = proto;
+
     return cnt > 0 ? cnt : EAI_SERVICE;
 }

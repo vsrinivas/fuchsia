@@ -115,14 +115,3 @@ static int stub_sockatmark(int fd) {
     return -1;
 }
 weak_alias(stub_sockatmark, sockatmark);
-
-static int stub_getaddrinfo(const char* restrict host, const char* restrict serv,
-                            const struct addrinfo* restrict hint, struct addrinfo** restrict res) {
-    errno = ENOSYS;
-    return EAI_SYSTEM;
-}
-weak_alias(stub_getaddrinfo, getaddrinfo);
-
-static void stub_freeaddrinfo(struct addrinfo* p) {
-}
-weak_alias(stub_freeaddrinfo, freeaddrinfo);

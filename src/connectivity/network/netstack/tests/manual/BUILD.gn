@@ -155,17 +155,3 @@ executable("gethostbyname_test") {
     "//zircon/public/lib/fdio",
   ]
 }
-
-executable("getaddrinfo_test") {
-  testonly = true
-
-  sources = [
-    "getaddrinfo_test.c",
-  ]
-
-  libs = [ "zircon" ]
-
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
-}

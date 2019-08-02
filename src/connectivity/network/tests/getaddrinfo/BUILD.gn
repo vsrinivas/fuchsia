@@ -1,0 +1,62 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+executable("getaddrinfo_test_client") {
+  testonly = true
+
+  sources = [
+    "getaddrinfo_test_client.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+rustc_test("getaddrinfo_test") {
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+  ]
+}
+
+# TODO move these tests into fdio, once rust is supported in the zircon build
+test_package("getaddrinfo_tests") {
+  deps = [
+    ":getaddrinfo_test",
+    ":getaddrinfo_test_client",
+  ]
+
+  binaries = [
+    {
+      name = "getaddrinfo_test_client"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/getaddrinfo_test_client.cmx")
+      dest = "getaddrinfo_test_client.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "getaddrinfo_test"
+    },
+  ]
+}

@@ -91,13 +91,13 @@ func TestOutput(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := exec.Command("/pkg/bin/ping", "-c", "1", "localhost").Run(); err != nil {
-			t.Fatal(err)
+		if out, err := exec.Command("/pkg/bin/ping", "-c", "1", "127.0.0.1").CombinedOutput(); err != nil {
+			t.Fatalf("%s: %s", out, err)
 		}
 
 		out, err := exec.Command("/pkg/bin/netstat", "-s").CombinedOutput()
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("%s: %s", out, err)
 		}
 		outStr := string(out)
 
