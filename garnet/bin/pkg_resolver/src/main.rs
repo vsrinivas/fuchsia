@@ -20,6 +20,7 @@ use {
 
 mod amber_connector;
 mod experiment;
+mod font_package_manager;
 mod repository_manager;
 mod repository_service;
 mod resolver_service;
@@ -30,6 +31,7 @@ mod rewrite_service;
 mod test_util;
 
 use crate::amber_connector::AmberConnector;
+use crate::font_package_manager::{FontPackageManager, FontPackageManagerBuilder};
 use crate::repository_manager::{RepositoryManager, RepositoryManagerBuilder};
 use crate::repository_service::RepositoryService;
 use crate::rewrite_manager::{RewriteManager, RewriteManagerBuilder};
@@ -42,6 +44,8 @@ const DYNAMIC_REPO_PATH: &str = "/data/repositories.json";
 
 const STATIC_RULES_PATH: &str = "/config/data/rewrites.json";
 const DYNAMIC_RULES_PATH: &str = "/data/rewrites.json";
+
+const STATIC_FONT_REGISTRY_PATH: &str = "/config/data/font_packages.json";
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg_resolver"]).expect("can't init logger");
@@ -61,12 +65,14 @@ fn main() -> Result<(), Error> {
     let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector)));
     let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node)));
     let experiment_state = Arc::new(RwLock::new(experiment::State::new(experiment_inspect_node)));
+    let font_package_manager = Arc::new(load_font_package_manager());
 
     let resolver_cb = {
         // Capture a clone of repo and rewrite manager's Arc so the new client callback has a copy
         // from which to make new clones.
         let repo_manager = repo_manager.clone();
         let rewrite_manager = rewrite_manager.clone();
+        let cache = cache.clone();
         move |stream| {
             fasync::spawn(
                 resolver_service::run_resolver_service(
@@ -76,6 +82,24 @@ fn main() -> Result<(), Error> {
                     stream,
                 )
                 .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
+            )
+        }
+    };
+
+    let font_resolver_fb = {
+        let repo_manager = repo_manager.clone();
+        let rewrite_manager = rewrite_manager.clone();
+        let cache = cache.clone();
+        move |stream| {
+            fasync::spawn(
+                resolver_service::run_font_resolver_service(
+                    font_package_manager.clone(),
+                    rewrite_manager.clone(),
+                    repo_manager.clone(),
+                    cache.clone(),
+                    stream,
+                )
+                .unwrap_or_else(|e| fx_log_err!("Failed to spawn font_resolver_service {:?}", e)),
             )
         }
     };
@@ -113,6 +137,7 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(resolver_cb)
+        .add_fidl_service(font_resolver_fb)
         .add_fidl_service(repo_cb)
         .add_fidl_service(rewrite_cb)
         .add_fidl_service(admin_cb);
@@ -161,6 +186,20 @@ fn load_rewrite_manager(node: inspect::Node) -> RewriteManager {
             if err.kind() != io::ErrorKind::NotFound {
                 fx_log_err!("unable to load static rewrite rules from disk: {}", err);
             }
+            builder
+        })
+        .build()
+}
+
+fn load_font_package_manager() -> FontPackageManager {
+    FontPackageManagerBuilder::new()
+        .add_registry_file(STATIC_FONT_REGISTRY_PATH)
+        .unwrap_or_else(|(builder, errs)| {
+            fx_log_err!(
+                "error(s) loading font package registry:{}",
+                errs.iter()
+                    .fold(String::new(), |acc, err| acc + "\n" + format!("{}", err).as_str())
+            );
             builder
         })
         .build()

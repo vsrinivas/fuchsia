@@ -4,16 +4,18 @@
 
 use {
     crate::amber_connector::AmberConnect,
+    crate::font_package_manager::FontPackageManager,
     crate::repository_manager::RepositoryManager,
     crate::rewrite_manager::RewriteManager,
     failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self, DirectoryMarker},
     fidl_fuchsia_pkg::{
-        PackageCacheProxy, PackageResolverRequest, PackageResolverRequestStream, UpdatePolicy,
+        FontResolverRequest, FontResolverRequestStream, PackageCacheProxy, PackageResolverRequest,
+        PackageResolverRequestStream, UpdatePolicy,
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::pkg_url::{ParseError, PkgUrl},
     fuchsia_zircon::Status,
     futures::prelude::*,
     parking_lot::RwLock,
@@ -64,10 +66,7 @@ async fn resolve<'a, A>(
 where
     A: AmberConnect,
 {
-    let url = PkgUrl::parse(&pkg_url).map_err(|err| {
-        fx_log_err!("failed to parse package url {:?}: {}", pkg_url, err);
-        Err(Status::INVALID_ARGS)
-    })?;
+    let url = PkgUrl::parse(&pkg_url).map_err(|err| handle_bad_package_url(err, &pkg_url))?;
     let url = rewrites.read().rewrite(url);
 
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
@@ -103,9 +102,78 @@ where
     Ok(())
 }
 
+/// Run a service that only resolves registered font packages.
+pub async fn run_font_resolver_service<A>(
+    font_package_manager: Arc<FontPackageManager>,
+    rewrites: Arc<RwLock<RewriteManager>>,
+    repo_manager: Arc<RwLock<RepositoryManager<A>>>,
+    cache: PackageCacheProxy,
+    mut stream: FontResolverRequestStream,
+) -> Result<(), Error>
+where
+    A: AmberConnect,
+{
+    while let Some(event) = stream.try_next().await? {
+        let FontResolverRequest::Resolve { package_url, directory_request, responder } = event;
+
+        let result = resolve_font(
+            &font_package_manager,
+            &rewrites,
+            &repo_manager,
+            &cache,
+            package_url,
+            directory_request,
+        )
+        .await;
+
+        responder.send(Status::from(result).into_raw())?;
+    }
+    Ok(())
+}
+
+/// Resolve a single font package.
+async fn resolve_font<'a, A>(
+    font_package_manager: &'a Arc<FontPackageManager>,
+    rewrites: &'a Arc<RwLock<RewriteManager>>,
+    repo_manager: &'a Arc<RwLock<RepositoryManager<A>>>,
+    cache: &'a PackageCacheProxy,
+    package_url: String,
+    directory_request: ServerEnd<DirectoryMarker>,
+) -> Result<(), Status>
+where
+    A: AmberConnect,
+{
+    match PkgUrl::parse(&package_url) {
+        Err(err) => handle_bad_package_url(err, &package_url),
+        Ok(parsed_package_url) => {
+            if !font_package_manager.is_font_package(&parsed_package_url) {
+                fx_log_err!("tried to resolve unknown font package: {}", package_url);
+                Err(Status::NOT_FOUND)
+            } else {
+                resolve(
+                    &rewrites,
+                    &repo_manager,
+                    &cache,
+                    package_url,
+                    vec![],
+                    UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
+                    directory_request,
+                )
+                .await
+            }
+        }
+    }
+}
+
+fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Result<(), Status> {
+    fx_log_err!("failed to parse package url {:?}: {}", pkg_url, parse_error);
+    Err(Status::INVALID_ARGS)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::font_package_manager::FontPackageManagerBuilder;
     use crate::repository_manager::RepositoryManagerBuilder;
     use crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder};
     use crate::test_util::{
@@ -161,6 +229,7 @@ mod tests {
         amber_connector: MockAmberConnector,
         rewrite_manager: Arc<RwLock<RewriteManager>>,
         repo_manager: Arc<RwLock<RepositoryManager<MockAmberConnector>>>,
+        font_package_manager: Arc<FontPackageManager>,
         cache_proxy: PackageCacheProxy,
         pkgfs: Arc<TempDir>,
     }
@@ -256,6 +325,28 @@ mod tests {
             }
             assert_eq!(res, expected_res.map(|_s| ()), "unexpected result for {}", url);
         }
+
+        async fn run_resolve_font<'a>(
+            &'a self,
+            url: &'a str,
+            expected_res: Result<Vec<String>, Status>,
+        ) {
+            let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let res = resolve_font(
+                &self.font_package_manager,
+                &self.rewrite_manager,
+                &self.repo_manager,
+                &self.cache_proxy,
+                url.to_string(),
+                dir_server_end,
+            )
+            .await;
+            if res.is_ok() {
+                let expected_files = expected_res.as_ref().unwrap();
+                self.check_dir_async(&dir, expected_files).await;
+            }
+            assert_eq!(res, expected_res.map(|_s| ()), "unexpected result for {}", url);
+        }
     }
 
     struct ResolveTestBuilder {
@@ -264,6 +355,7 @@ mod tests {
         static_repos: Vec<(String, RepositoryConfigs)>,
         static_rewrite_rules: Vec<Rule>,
         dynamic_rewrite_rules: Vec<Rule>,
+        font_package_urls: Vec<String>,
     }
 
     impl ResolveTestBuilder {
@@ -276,6 +368,7 @@ mod tests {
                 static_repos: vec![],
                 static_rewrite_rules: vec![],
                 dynamic_rewrite_rules: vec![],
+                font_package_urls: vec![],
             }
         }
 
@@ -300,6 +393,14 @@ mod tests {
 
         fn static_rewrite_rules<I: IntoIterator<Item = Rule>>(mut self, rules: I) -> Self {
             self.static_rewrite_rules.extend(rules);
+            self
+        }
+
+        fn font_package_urls<S: Into<String>, I: IntoIterator<Item = S>>(
+            mut self,
+            urls: I,
+        ) -> Self {
+            self.font_package_urls.extend(urls.into_iter().map(Into::into));
             self
         }
 
@@ -337,12 +438,19 @@ mod tests {
                     .unwrap()
                     .build();
 
+            let font_config_dir = create_dir(vec![("font_packages.json", self.font_package_urls)]);
+            let font_package_manager = FontPackageManagerBuilder::new()
+                .add_registry_file(font_config_dir.path().join("font_packages.json"))
+                .unwrap()
+                .build();
+
             ResolveTest {
                 _static_repo_dir: static_repo_dir,
                 _dynamic_repo_dir: dynamic_repo_dir,
                 amber_connector: amber_connector,
                 rewrite_manager: Arc::new(RwLock::new(rewrite_manager)),
                 repo_manager: Arc::new(RwLock::new(repo_manager)),
+                font_package_manager: Arc::new(font_package_manager),
                 pkgfs: self.pkgfs,
                 cache_proxy,
             }
@@ -582,5 +690,26 @@ mod tests {
         test.repo_manager.write().insert(config);
 
         test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('b')])).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_resolve_font_package() {
+        let test = ResolveTestBuilder::new()
+            .source_packages(vec![
+                Package::new("font1", "0", &gen_merkle('a'), PackageKind::Ok),
+                Package::new("font2", "0", &gen_merkle('b'), PackageKind::Ok),
+                Package::new("squares", "0", &gen_merkle('b'), PackageKind::Ok),
+            ])
+            .font_package_urls(vec![
+                "fuchsia-pkg://fuchsia.com/font1",
+                "fuchsia-pkg://fuchsia.com/font2",
+            ])
+            .build();
+
+        test.run_resolve_font("fuchsia-pkg://fuchsia.com/font1", Ok(vec![gen_merkle_file('a')]))
+            .await;
+        test.run_resolve_font("fuchsia-pkg://fuchsia.com/font2", Ok(vec![gen_merkle_file('b')]))
+            .await;
+        test.run_resolve_font("fuchsia-pkg://fuchsia.com/squares", Err(Status::NOT_FOUND)).await;
     }
 }
