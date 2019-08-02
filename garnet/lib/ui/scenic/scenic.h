@@ -38,6 +38,14 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
                   fit::closure quit_callback);
   ~Scenic();
 
+  // [fuchsia::ui::scenic::Scenic]
+  void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
+  // [fuchsia::ui::scenic::Scenic]
+  void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
+  // [fuchsia::ui::scenic::Scenic]
+  void GetDisplayOwnershipEvent(
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
+
   // Register a delegate class for implementing top-level Scenic operations (e.g., GetDisplayInfo).
   // This delegate must outlive the Scenic instance.
   void SetDelegate(TempScenicDelegate* delegate) {
@@ -85,12 +93,6 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // If a System is not initially initialized, this method will be called when
   // it is ready.
   void OnSystemInitialized(System* system);
-
-  void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
-  void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
-
-  void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
