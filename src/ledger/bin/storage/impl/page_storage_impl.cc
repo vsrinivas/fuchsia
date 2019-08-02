@@ -1475,8 +1475,7 @@ FXL_WARN_UNUSED_RESULT Status PageStorageImpl::SynchronousGetEmptyNodeIdentifier
 }
 
 bool PageStorageImpl::IsTokenValid(const ObjectIdentifier& object_identifier) {
-  // TODO(LE-702): once all constructors have been migrated to use the factory, also validate that
-  // only inline object identifiers have a nullptr factory.
+  // TODO(LE-702): once all constructors have been migrated to use the factory, remove former check.
   return object_identifier.factory() == nullptr ||
          object_identifier.factory() == &object_identifier_factory_;
 }

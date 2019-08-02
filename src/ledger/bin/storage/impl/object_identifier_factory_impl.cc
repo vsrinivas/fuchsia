@@ -94,10 +94,6 @@ int ObjectIdentifierFactoryImpl::size() const { return tokens_.size(); }
 ObjectIdentifier ObjectIdentifierFactoryImpl::MakeObjectIdentifier(uint32_t key_index,
                                                                    uint32_t deletion_scope_id,
                                                                    ObjectDigest object_digest) {
-  if (GetObjectDigestInfo(object_digest).is_inlined()) {
-    // Inlined objects do not need to be tracked.
-    return ObjectIdentifier(key_index, deletion_scope_id, std::move(object_digest), nullptr);
-  }
   auto token = GetToken(object_digest);
   return ObjectIdentifier(key_index, deletion_scope_id, std::move(object_digest), std::move(token));
 }

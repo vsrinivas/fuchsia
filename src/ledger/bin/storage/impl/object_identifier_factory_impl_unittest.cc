@@ -18,15 +18,9 @@ using ObjectIdentifierFactoryImplTest = ledger::TestWithEnvironment;
 TEST_F(ObjectIdentifierFactoryImplTest, CountsAndCleansUp) {
   const ObjectDigest digest = RandomObjectDigest(environment_.random());
   const ObjectDigest another_digest = RandomObjectDigest(environment_.random());
-  const ObjectDigest inline_digest = MakeObjectDigest("small", InlineBehavior::ALLOW);
 
   ObjectIdentifierFactoryImpl factory;
   EXPECT_EQ(factory.count(digest), 0);
-  EXPECT_EQ(factory.size(), 0);
-
-  // Digests for inline objects are not tracked.
-  auto identifier_0 = factory.MakeObjectIdentifier(0u, 0u, inline_digest);
-  EXPECT_EQ(factory.count(inline_digest), 0);
   EXPECT_EQ(factory.size(), 0);
 
   auto identifier_1 = factory.MakeObjectIdentifier(0u, 0u, digest);
