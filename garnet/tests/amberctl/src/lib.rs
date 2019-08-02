@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![cfg(test)]
 
 use {
@@ -64,7 +64,7 @@ impl MockUpdateManager {
         self: Arc<Self>,
         mut stream: fidl_fuchsia_update::ManagerRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = await!(stream.try_next())? {
+        while let Some(event) = stream.try_next().await? {
             match event {
                 fidl_fuchsia_update::ManagerRequest::CheckNow { options, monitor, responder } => {
                     eprintln!("TEST: Got update check request with options {:?}", options);
@@ -154,19 +154,19 @@ impl TestEnv {
 
     async fn _run_amberctl(&self, builder: AppBuilder) -> String {
         let fut = builder.output(self.env.launcher()).expect("amberctl to launch");
-        let output = await!(fut).expect("amberctl to run");
+        let output = fut.await.expect("amberctl to run");
         output.ok().expect("amberctl to succeed");
         String::from_utf8(output.stdout).unwrap()
     }
 
     async fn run_amberctl<'a>(&'a self, args: &'a [impl std::fmt::Debug + AsRef<str>]) -> String {
-        await!(self._run_amberctl(amberctl().args(args.into_iter().map(|s| s.as_ref()))))
+        self._run_amberctl(amberctl().args(args.into_iter().map(|s| s.as_ref()))).await
     }
 
     // Runs "amberctl list_srcs" and returns a vec of fuchsia-pkg URIs from the output
     async fn run_amberctl_list_srcs(&self) -> Vec<String> {
         let mut res = vec![];
-        let output = await!(self.run_amberctl(&["list_srcs"]));
+        let output = self.run_amberctl(&["list_srcs"]).await;
         for (pos, _) in output.match_indices("\"fuchsia-pkg") {
             let (_, suffix) = output.split_at(pos + 1);
             let url = suffix.split('"').next().unwrap();
@@ -176,7 +176,7 @@ impl TestEnv {
     }
 
     async fn run_amberctl_add_static_src(&self, name: &'static str) {
-        await!(self._run_amberctl(
+        self._run_amberctl(
             amberctl()
                 .add_dir_to_namespace(
                     "/configs".to_string(),
@@ -184,46 +184,49 @@ impl TestEnv {
                 )
                 .expect("static /configs to mount")
                 .arg("add_src")
-                .arg(format!("-f=/configs/{}", name))
-        ));
+                .arg(format!("-f=/configs/{}", name)),
+        )
+        .await;
     }
 
     async fn run_amberctl_add_src(&self, source: types::SourceConfig) {
         let mut config_file = tempfile::tempfile().expect("temp config file to create");
         serde_json::to_writer(&mut config_file, &source).expect("source config to serialize");
 
-        await!(self._run_amberctl(
+        self._run_amberctl(
             amberctl()
                 .add_dir_to_namespace("/configs/test.json".to_string(), config_file)
                 .expect("static /configs to mount")
                 .arg("add_src")
-                .arg("-f=/configs/test.json")
-        ));
+                .arg("-f=/configs/test.json"),
+        )
+        .await;
     }
 
     async fn run_amberctl_add_repo_config(&self, source: types::SourceConfig) {
         let mut config_file = tempfile::tempfile().expect("temp config file to create");
         serde_json::to_writer(&mut config_file, &source).expect("source config to serialize");
 
-        await!(self._run_amberctl(
+        self._run_amberctl(
             amberctl()
                 .add_dir_to_namespace("/configs/test.json".to_string(), config_file)
                 .expect("static /configs to mount")
                 .arg("add_repo_cfg")
-                .arg("-f=/configs/test.json")
-        ));
+                .arg("-f=/configs/test.json"),
+        )
+        .await;
     }
 
     async fn resolver_list_repos(&self) -> Vec<RepositoryConfig> {
         let (iterator, iterator_server_end) = fidl::endpoints::create_proxy().unwrap();
         self.proxies.repo_manager.list(iterator_server_end).unwrap();
-        await!(collect_iterator(|| iterator.next())).unwrap()
+        collect_iterator(|| iterator.next()).await.unwrap()
     }
 
     async fn rewrite_engine_list_rules(&self) -> Vec<Rule> {
         let (iterator, iterator_server_end) = fidl::endpoints::create_proxy().unwrap();
         self.proxies.rewrite_engine.list(iterator_server_end).unwrap();
-        await!(collect_iterator(|| iterator.next())).unwrap()
+        collect_iterator(|| iterator.next()).await.unwrap()
     }
 }
 
@@ -235,7 +238,7 @@ where
 {
     let mut res = Vec::new();
     loop {
-        let more = await!(next())?;
+        let more = next().await?;
         if more.is_empty() {
             break;
         }
@@ -287,22 +290,22 @@ fn make_test_repo_config() -> RepositoryConfig {
 async fn test_services_start_with_no_config() {
     let env = TestEnv::new();
 
-    assert_eq!(await!(env.run_amberctl_list_srcs()), Vec::<String>::new());
-    assert_eq!(await!(env.proxies.amber.do_test(42)).unwrap(), "Your number was 42\n");
-    assert_eq!(await!(env.resolver_list_repos()), vec![]);
-    assert_eq!(await!(env.rewrite_engine_list_rules()), vec![]);
+    assert_eq!(env.run_amberctl_list_srcs().await, Vec::<String>::new());
+    assert_eq!(env.proxies.amber.do_test(42).await.unwrap(), "Your number was 42\n");
+    assert_eq!(env.resolver_list_repos().await, vec![]);
+    assert_eq!(env.rewrite_engine_list_rules().await, vec![]);
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_add_src() {
     let env = TestEnv::new();
 
-    await!(env.run_amberctl_add_static_src("test.json"));
+    env.run_amberctl_add_static_src("test.json").await;
 
-    assert_eq!(await!(env.run_amberctl_list_srcs()), vec!["fuchsia-pkg://test"]);
-    assert_eq!(await!(env.resolver_list_repos()), vec![make_test_repo_config()]);
+    assert_eq!(env.run_amberctl_list_srcs().await, vec!["fuchsia-pkg://test"]);
+    assert_eq!(env.resolver_list_repos().await, vec![make_test_repo_config()]);
     assert_eq!(
-        await!(env.rewrite_engine_list_rules()),
+        env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]
     );
 }
@@ -311,11 +314,14 @@ async fn test_add_src() {
 async fn test_open_repo_merkle_for() {
     let env = TestEnv::new();
     let (repo_proxy, repo_server_end) = fidl::endpoints::create_proxy().expect("create proxy");
-    await!(env.proxies.amber.open_repository(make_test_repo_config().into(), repo_server_end))
+    env.proxies
+        .amber
+        .open_repository(make_test_repo_config().into(), repo_server_end)
+        .await
         .expect("open repo");
 
     let (status_raw, message, _merkle, _size) =
-        await!(repo_proxy.merkle_for("example_pkg", None)).expect("merkle for");
+        repo_proxy.merkle_for("example_pkg", None).await.expect("merkle for");
 
     assert_eq!(fuchsia_zircon::Status::from_raw(status_raw), fuchsia_zircon::Status::INTERNAL);
     assert_eq!(
@@ -338,10 +344,10 @@ async fn test_add_repo() {
         .add_mirror(MirrorConfigBuilder::new("http://127.0.0.1:8083"))
         .build();
 
-    await!(env.run_amberctl_add_repo_config(source));
+    env.run_amberctl_add_repo_config(source).await;
 
-    assert_eq!(await!(env.resolver_list_repos()), vec![repo]);
-    assert_eq!(await!(env.rewrite_engine_list_rules()), vec![]);
+    assert_eq!(env.resolver_list_repos().await, vec![repo]);
+    assert_eq!(env.rewrite_engine_list_rules().await, vec![]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -358,11 +364,11 @@ async fn test_add_src_with_ipv4_id() {
         .add_mirror(MirrorConfigBuilder::new("http://10.0.0.1:8083"))
         .build();
 
-    await!(env.run_amberctl_add_src(source));
+    env.run_amberctl_add_src(source).await;
 
-    assert_eq!(await!(env.resolver_list_repos()), vec![repo]);
+    assert_eq!(env.resolver_list_repos().await, vec![repo]);
     assert_eq!(
-        await!(env.rewrite_engine_list_rules()),
+        env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", "http___10_0_0_1_8083", "/", "/").unwrap()]
     );
 }
@@ -383,11 +389,11 @@ async fn test_add_src_with_ipv6_id() {
     .add_mirror(MirrorConfigBuilder::new("http://[fe80::1122:3344]:8083"))
     .build();
 
-    await!(env.run_amberctl_add_src(source));
+    env.run_amberctl_add_src(source).await;
 
-    assert_eq!(await!(env.resolver_list_repos()), vec![repo]);
+    assert_eq!(env.resolver_list_repos().await, vec![repo]);
     assert_eq!(
-        await!(env.rewrite_engine_list_rules()),
+        env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", "http____fe80__1122_3344__8083", "/", "/").unwrap()]
     );
 }
@@ -399,19 +405,19 @@ async fn test_add_src_disables_other_sources() {
     let configs = SourceConfigGenerator::new("testgen").take(3).collect::<Vec<_>>();
 
     for (config, _) in &configs {
-        await!(env.run_amberctl_add_src(config.clone().build().into()));
+        env.run_amberctl_add_src(config.clone().build().into()).await;
     }
 
-    await!(env.run_amberctl_add_static_src("test.json"));
+    env.run_amberctl_add_static_src("test.json").await;
 
     let mut repo_configs = vec![make_test_repo_config()];
     for (_, repo_config) in configs {
         repo_configs.push(repo_config.build());
     }
 
-    assert_eq!(await!(env.resolver_list_repos()), repo_configs);
+    assert_eq!(env.resolver_list_repos().await, repo_configs);
     assert_eq!(
-        await!(env.rewrite_engine_list_rules()),
+        env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]
     );
 }
@@ -421,7 +427,7 @@ async fn test_add_repo_retains_existing_state() {
     let env = TestEnv::new();
 
     // start with an existing source.
-    await!(env.run_amberctl_add_static_src("test.json"));
+    env.run_amberctl_add_static_src("test.json").await;
 
     // add a repo.
     let source = SourceConfigBuilder::new("devhost")
@@ -432,12 +438,12 @@ async fn test_add_repo_retains_existing_state() {
         .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
         .add_mirror(MirrorConfigBuilder::new("http://10.0.0.1:8083"))
         .build();
-    await!(env.run_amberctl_add_repo_config(source));
+    env.run_amberctl_add_repo_config(source).await;
 
     // ensure adding the repo didn't remove state configured when adding the source.
-    assert_eq!(await!(env.resolver_list_repos()), vec![repo, make_test_repo_config()]);
+    assert_eq!(env.resolver_list_repos().await, vec![repo, make_test_repo_config()]);
     assert_eq!(
-        await!(env.rewrite_engine_list_rules()),
+        env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]
     );
 }
@@ -458,23 +464,23 @@ async fn test_rm_src() {
         .add_root_key(ROOT_KEY_2)
         .build();
 
-    await!(env.run_amberctl_add_src(cfg_a.into()));
-    await!(env.run_amberctl_add_src(cfg_b.into()));
+    env.run_amberctl_add_src(cfg_a.into()).await;
+    env.run_amberctl_add_src(cfg_b.into()).await;
 
-    await!(env.run_amberctl(&["rm_src", "-n", "http://[fe80::1122:3344]:8083"]));
+    env.run_amberctl(&["rm_src", "-n", "http://[fe80::1122:3344]:8083"]).await;
     assert_eq!(
-        await!(env.resolver_list_repos()),
+        env.resolver_list_repos().await,
         vec![RepositoryConfigBuilder::new("fuchsia-pkg://b".parse().unwrap())
             .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_2).unwrap()))
             .add_mirror(MirrorConfigBuilder::new("http://example.com/b"))
             .build()]
     );
     // rm_src removes all rules, so no source remains enabled.
-    assert_eq!(await!(env.rewrite_engine_list_rules()), vec![]);
+    assert_eq!(env.rewrite_engine_list_rules().await, vec![]);
 
-    await!(env.run_amberctl(&["rm_src", "-n", "b"]));
-    assert_eq!(await!(env.resolver_list_repos()), vec![]);
-    assert_eq!(await!(env.rewrite_engine_list_rules()), vec![]);
+    env.run_amberctl(&["rm_src", "-n", "b"]).await;
+    assert_eq!(env.resolver_list_repos().await, vec![]);
+    assert_eq!(env.rewrite_engine_list_rules().await, vec![]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -492,17 +498,17 @@ async fn test_enable_src() {
         .add_mirror(MirrorConfigBuilder::new("http://example.com"))
         .build();
 
-    await!(env.run_amberctl_add_src(source.into()));
+    env.run_amberctl_add_src(source.into()).await;
 
-    assert_eq!(await!(env.resolver_list_repos()), vec![repo.clone()]);
+    assert_eq!(env.resolver_list_repos().await, vec![repo.clone()]);
     // Adding a disabled source does not add a rewrite rule for it.
-    assert_eq!(await!(env.rewrite_engine_list_rules()), vec![]);
+    assert_eq!(env.rewrite_engine_list_rules().await, vec![]);
 
-    await!(env.run_amberctl(&["enable_src", "-n", "test"]));
+    env.run_amberctl(&["enable_src", "-n", "test"]).await;
 
-    assert_eq!(await!(env.resolver_list_repos()), vec![repo]);
+    assert_eq!(env.resolver_list_repos().await, vec![repo]);
     assert_eq!(
-        await!(env.rewrite_engine_list_rules()),
+        env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]
     );
 }
@@ -515,33 +521,33 @@ async fn test_enable_src_disables_other_sources() {
     let mut gen = SourceConfigGenerator::new("test");
     let configs = gen.by_ref().take(3).collect::<Vec<_>>();
     for (config, _) in &configs {
-        await!(env.run_amberctl_add_src(config.clone().build().into()));
+        env.run_amberctl_add_src(config.clone().build().into()).await;
     }
 
     // add an initially disabled source
     let (config, repo) = gen.next().unwrap();
     let c = config.enabled(false).build();
     let id = c.id().to_owned();
-    await!(env.run_amberctl_add_src(c.into()));
+    env.run_amberctl_add_src(c.into()).await;
 
     // verify the previously added source is still the enabled one
     assert_eq!(
-        await!(env.rewrite_engine_list_rules()),
+        env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", "test02", "/", "/").unwrap()]
     );
 
     // enable the new source source and verify the repos and rules
     let args = ["enable_src", "-n", &id];
-    await!(env.run_amberctl(&args));
+    env.run_amberctl(&args).await;
 
     let mut repo_configs = vec![];
     for (_, repo_config) in configs {
         repo_configs.push(repo_config.build());
     }
     repo_configs.push(repo.build());
-    assert_eq!(await!(env.resolver_list_repos()), repo_configs);
+    assert_eq!(env.resolver_list_repos().await, repo_configs);
     assert_eq!(
-        await!(env.rewrite_engine_list_rules()),
+        env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", id, "/", "/").unwrap()]
     );
 }
@@ -550,27 +556,29 @@ async fn test_enable_src_disables_other_sources() {
 async fn test_disable_src_disables_all_sources() {
     let env = TestEnv::new();
 
-    await!(env.run_amberctl_add_src(
+    env.run_amberctl_add_src(
         SourceConfigBuilder::new("a")
             .repo_url("http://example.com/a")
             .rate_period(60)
             .add_root_key(ROOT_KEY_1)
             .build()
-            .into()
-    ));
-    await!(env.run_amberctl_add_src(
+            .into(),
+    )
+    .await;
+    env.run_amberctl_add_src(
         SourceConfigBuilder::new("b")
             .repo_url("http://example.com/b")
             .rate_period(60)
             .add_root_key(ROOT_KEY_2)
             .build()
-            .into()
-    ));
+            .into(),
+    )
+    .await;
 
-    await!(env.run_amberctl(&["disable_src"]));
+    env.run_amberctl(&["disable_src"]).await;
 
     assert_eq!(
-        await!(env.resolver_list_repos()),
+        env.resolver_list_repos().await,
         vec![
             RepositoryConfigBuilder::new("fuchsia-pkg://a".parse().unwrap())
                 .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
@@ -583,7 +591,7 @@ async fn test_disable_src_disables_all_sources() {
         ]
     );
     // disabling any source clears all rewrite rules.
-    assert_eq!(await!(env.rewrite_engine_list_rules()), vec![]);
+    assert_eq!(env.rewrite_engine_list_rules().await, vec![]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -607,7 +615,11 @@ async fn test_system_update() {
         .expect("nested environment to create successfully");
     fasync::spawn(fs.collect());
 
-    await!(amberctl().arg("system_update").output(env.launcher()).expect("amberctl to launch"))
+    amberctl()
+        .arg("system_update")
+        .output(env.launcher())
+        .expect("amberctl to launch")
+        .await
         .expect("amberctl to run")
         .ok()
         .expect("amberctl to succeed");
