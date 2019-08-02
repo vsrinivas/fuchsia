@@ -262,7 +262,7 @@ zx_status_t Astro::UsbInit() {
   usb_metadata[0].data_buffer = config;
 
   status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_components, countof(dwc2_components), 1);
-  delete config;
+  free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d\n", __func__, status);
     return status;
