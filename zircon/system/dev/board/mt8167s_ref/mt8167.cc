@@ -22,6 +22,15 @@
 
 namespace board_mt8167 {
 
+static pbus_dev_t rtc_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "rtc";
+  dev.vid = PDEV_VID_GENERIC;
+  dev.pid = PDEV_PID_GENERIC;
+  dev.did = PDEV_DID_RTC_FALLBACK;
+  return dev;
+}();
+
 zx_status_t Mt8167::Create(zx_device_t* parent) {
   pbus_protocol_t pbus;
 
@@ -116,6 +125,12 @@ int Mt8167::Thread() {
   }
   if (AudioInit() != ZX_OK) {
     zxlogf(ERROR, "AudioInit() failed\n");
+  }
+
+  zx_status_t status = pbus_.DeviceAdd(&rtc_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d\n", __func__, status);
+    return -1;
   }
 
   return 0;

@@ -204,7 +204,8 @@ TEST_F(DeviceEnumerationTest, CleoTest) {
       "touch/focaltouch HidDevice/hid-device-000",
       "thermal/mtk-thermal",
       "mt8167-i2c",
-      "mt8167s_gpu/mt8167s-gpu"
+      "mt8167s_gpu/mt8167s-gpu",
+      "sys/platform/00:00:f/fallback-rtc",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
@@ -298,6 +299,7 @@ TEST_F(DeviceEnumerationTest, Mt8167sRefTest) {
       "mt8167-buttons/hid-buttons",
       "sys/platform/0d:00:14/mt-usb/usb-peripheral/function-000/cdc-eth-function/ethernet",
       "sys/platform/0d:00:9/mtk-thermal",
+      "sys/platform/00:00:f/fallback-rtc",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
