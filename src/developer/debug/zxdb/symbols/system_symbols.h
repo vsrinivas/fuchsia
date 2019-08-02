@@ -65,9 +65,6 @@ class SystemSymbols {
   explicit SystemSymbols(DownloadHandler* download_handler);
   ~SystemSymbols();
 
-  // Returns the directory to which paths are relative.
-  const std::string& build_dir() const { return build_dir_; }
-
   BuildIDIndex& build_id_index() { return build_id_index_; }
 
   // Injects a ModuleSymbols object for the given build ID. Used for testing.
@@ -96,9 +93,6 @@ class SystemSymbols {
   // Notification from the ModuleRef that all references have been deleted and
   // the tracking information should be removed from the map.
   void WillDeleteModule(ModuleRef* module);
-
-  // The directory to which paths are relative.
-  std::string build_dir_;
 
   DownloadHandler* download_handler_;
 

@@ -129,15 +129,7 @@ void SetupCommandLineOptions(const CommandLineOptions& options, Session* session
   // Adding it to the settings will trigger the loading of the symbols. Redundant adds are ignored.
   session->system().settings().SetList(ClientSettings::System::kSymbolPaths, std::move(paths));
 
-  // Build directories.
-  if (options.build_dirs.empty()) {
-    // Add the legacy build directory which is relative to the debugger binary.
-    // TODO(brettw) remove this when the environment consistently passes in build dirs.
-    session->system().settings().SetList(ClientSettings::Target::kBuildDirs,
-                                         {session->system().GetSymbols()->build_dir()});
-  } else {
-    session->system().settings().SetList(ClientSettings::Target::kBuildDirs, options.build_dirs);
-  }
+  session->system().settings().SetList(ClientSettings::Target::kBuildDirs, options.build_dirs);
 }
 
 }  // namespace
