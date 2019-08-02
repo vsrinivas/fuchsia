@@ -176,8 +176,5 @@ toc:
   - title: "Avoiding a problem with the SYSRET"
     path: /fuchsia-src/zircon/sysret_problem
 
-- title: "Exporting images using DOT files"
-  path: /fuchsia-src/zircon/images/src/handle-creation
-
 - title: "QEMU"
   path: /fuchsia-src/zircon/qemu
