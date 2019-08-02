@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/metric_broker"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.metric_broker.Registry"
+        ]
+    }
+}
