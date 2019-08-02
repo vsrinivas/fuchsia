@@ -530,16 +530,12 @@ mod tests {
 
     #[test]
     fn get_buffer() {
-        run_server_client(
-            OPEN_RIGHT_READABLE,
-            read_only(|| Ok(b"Get buffer test".to_vec())),
-            |proxy| {
-                async move {
-                    assert_get_buffer!(proxy, "Get buffer test");
-                    assert_close!(proxy);
-                }
-            },
-        );
+        run_server_client(OPEN_RIGHT_READABLE, read_only_static("Get buffer test"), |proxy| {
+            async move {
+                assert_get_buffer!(proxy, "Get buffer test");
+                assert_close!(proxy);
+            }
+        });
     }
 
     #[test]
@@ -562,16 +558,12 @@ mod tests {
 
     #[test]
     fn get_buffer_writable_with_readonly_file() {
-        run_server_client(
-            OPEN_RIGHT_READABLE,
-            read_only(|| Ok(b"Get buffer test".to_vec())),
-            |proxy| {
-                async move {
-                    assert_get_buffer_err!(proxy, OPEN_RIGHT_WRITABLE, Status::ACCESS_DENIED);
-                    assert_close!(proxy);
-                }
-            },
-        );
+        run_server_client(OPEN_RIGHT_READABLE, read_only_static("Get buffer test"), |proxy| {
+            async move {
+                assert_get_buffer_err!(proxy, OPEN_RIGHT_WRITABLE, Status::ACCESS_DENIED);
+                assert_close!(proxy);
+            }
+        });
     }
 
     #[test]
@@ -647,7 +639,7 @@ mod tests {
 
         run_server_client_with_open_requests_channel_and_executor(
             exec,
-            read_only(|| Ok(b"Read only test".to_vec())),
+            read_only_static("Read only test"),
             |mut open_sender| {
                 async move {
                     let (proxy, server_end) = create_proxy::<FileMarker>()
@@ -671,7 +663,7 @@ mod tests {
     #[test]
     fn read_only_read_with_describe() {
         run_server_client_with_open_requests_channel(
-            read_only(|| Ok(b"Read only test".to_vec())),
+            read_only_static("Read only test"),
             |mut open_sender| {
                 async move {
                     let (proxy, server_end) = create_proxy::<FileMarker>()
@@ -1067,23 +1059,19 @@ mod tests {
 
     #[test]
     fn read_at_0() {
-        run_server_client(
-            OPEN_RIGHT_READABLE,
-            read_only(|| Ok(b"Whole file content".to_vec())),
-            |proxy| {
-                async move {
-                    assert_read_at!(proxy, 0, "Whole file content");
-                    assert_close!(proxy);
-                }
-            },
-        );
+        run_server_client(OPEN_RIGHT_READABLE, read_only_static("Whole file content"), |proxy| {
+            async move {
+                assert_read_at!(proxy, 0, "Whole file content");
+                assert_close!(proxy);
+            }
+        });
     }
 
     #[test]
     fn read_at_overlapping() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(|| Ok(b"Content of the file".to_vec())),
+            read_only_static("Content of the file"),
             //                0         1
             //                0123456789012345678
             |proxy| {
@@ -1100,7 +1088,7 @@ mod tests {
     fn read_mixed_with_read_at() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(|| Ok(b"Content of the file".to_vec())),
+            read_only_static("Content of the file"),
             //                0         1
             //                0123456789012345678
             |proxy| {
@@ -1211,7 +1199,7 @@ mod tests {
     fn seek_valid_positions() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(|| Ok(b"Long file content".to_vec())),
+            read_only_static("Long file content"),
             //                0         1
             //                01234567890123456
             |proxy| {
@@ -1272,7 +1260,7 @@ mod tests {
     fn seek_invalid_before_0() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(|| Ok(b"Seek position is unaffected".to_vec())),
+            read_only_static("Seek position is unaffected"),
             //                0         1         2
             //                012345678901234567890123456
             |proxy| {
@@ -1420,16 +1408,12 @@ mod tests {
 
     #[test]
     fn truncate_read_only_file() {
-        run_server_client(
-            OPEN_RIGHT_READABLE,
-            read_only(|| Ok(b"Read-only content".to_vec())),
-            |proxy| {
-                async move {
-                    assert_truncate_err!(proxy, 10, Status::ACCESS_DENIED);
-                    assert_close!(proxy);
-                }
-            },
-        );
+        run_server_client(OPEN_RIGHT_READABLE, read_only_static("Read-only content"), |proxy| {
+            async move {
+                assert_truncate_err!(proxy, 10, Status::ACCESS_DENIED);
+                assert_close!(proxy);
+            }
+        });
     }
 
     #[test]
@@ -1539,7 +1523,7 @@ mod tests {
 
     #[test]
     fn get_attr_read_only() {
-        run_server_client(OPEN_RIGHT_READABLE, read_only(|| Ok(b"Content".to_vec())), |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, read_only_static("Content"), |proxy| {
             async move {
                 assert_get_attr!(
                     proxy,

@@ -500,7 +500,7 @@ mod tests {
 
     use {
         crate::directory::{simple, test_utils::run_server_client},
-        crate::file::simple::read_only,
+        crate::file::simple::read_only_static,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryObject, FileMarker, NodeInfo, NodeMarker, DIRENT_TYPE_FILE,
@@ -573,7 +573,7 @@ mod tests {
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
             async move {
                 {
-                    let file = read_only(|| Ok(b"Content".to_vec()));
+                    let file = read_only_static("Content");
                     controller.add_entry("file", file).await.unwrap();
                 }
 
@@ -598,7 +598,7 @@ mod tests {
                 open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
 
                 {
-                    let fstab = read_only(|| Ok(b"/dev/fs /".to_vec()));
+                    let fstab = read_only_static("/dev/fs /");
                     controller.add_entry("fstab", fstab).await.unwrap();
                 }
 
@@ -615,7 +615,7 @@ mod tests {
             "etc" => controlled_pseudo_directory! {
                 controller ->
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
             },
         };
@@ -651,7 +651,7 @@ mod tests {
             "etc" => controlled_pseudo_directory! {
                 controller ->
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
             },
         };
@@ -687,7 +687,7 @@ mod tests {
             "etc" => controlled_pseudo_directory! {
                 controller ->
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
             },
         };
@@ -722,9 +722,9 @@ mod tests {
             "etc" => controlled_pseudo_directory! {
                 controller ->
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
-                "passwd" => read_only(|| Ok(b"[redacted]".to_vec())),
+                "passwd" => read_only_static("[redacted]"),
             },
         };
 
@@ -736,7 +736,7 @@ mod tests {
                 open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
                 {
-                    let fstab = read_only(|| Ok(b"/dev/fs /".to_vec()));
+                    let fstab = read_only_static("/dev/fs /");
                     controller.add_entry("fstab", fstab).await.unwrap();
                 }
 
@@ -754,8 +754,8 @@ mod tests {
         let root = pseudo_directory! {
             "etc" => controlled_pseudo_directory! {
                 controller ->
-                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
-                "passwd" => read_only(|| Ok(b"[redacted]".to_vec())),
+                "fstab" => read_only_static("/dev/fs /"),
+                "passwd" => read_only_static("[redacted]"),
             },
         };
 
@@ -789,7 +789,7 @@ mod tests {
         let root = pseudo_directory! {
             "etc" => controlled_pseudo_directory! {
                 controller ->
-                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "fstab" => read_only_static("/dev/fs /"),
             },
         };
 
@@ -823,9 +823,9 @@ mod tests {
             "etc" => controlled_pseudo_directory! {
                 controller ->
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
-                "passwd" => read_only(|| Ok(b"[redacted]".to_vec())),
+                "passwd" => read_only_static("[redacted]"),
             },
         };
 
@@ -851,7 +851,7 @@ mod tests {
                 assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
 
                 {
-                    let fstab = read_only(|| Ok(b"/dev/fs /".to_vec()));
+                    let fstab = read_only_static("/dev/fs /");
                     controller.add_entry("fstab", fstab).await.unwrap();
                 }
 
@@ -871,8 +871,8 @@ mod tests {
         let root = pseudo_directory! {
             "etc" => controlled_pseudo_directory! {
                 controller ->
-                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
-                "passwd" => read_only(|| Ok(b"[redacted]".to_vec())),
+                "fstab" => read_only_static("/dev/fs /"),
+                "passwd" => read_only_static("[redacted]"),
             },
         };
 

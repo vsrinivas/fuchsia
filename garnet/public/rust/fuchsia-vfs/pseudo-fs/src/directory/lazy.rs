@@ -911,7 +911,7 @@ mod tests {
             test_utils::{run_server_client, DirentsSameInodeBuilder},
             traversal_position::AlphabeticalTraversal,
         },
-        crate::file::simple::read_only,
+        crate::file::simple::{read_only, read_only_static},
         fidl_fuchsia_io::{
             DirectoryObject, NodeAttributes, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
             MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, WATCH_MASK_ADDED,
@@ -1149,12 +1149,12 @@ mod tests {
         let get_entry: &mut (dyn FnMut(&str) -> Result<Box<dyn DirectoryEntry>, Status> + Send) =
             &mut |name: &str| match name {
                 "etc" => Ok(Box::new(pseudo_directory! {
-                    "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                    "fstab" => read_only_static("/dev/fs /"),
                     "ssh" => pseudo_directory! {
-                        "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                        "sshd_config" => read_only_static("# Empty"),
                     },
                 })),
-                "files" => Ok(Box::new(read_only(|| Ok(b"Content".to_vec())))),
+                "files" => Ok(Box::new(read_only_static("Content"))),
                 _ => Err(Status::NOT_FOUND),
             };
 

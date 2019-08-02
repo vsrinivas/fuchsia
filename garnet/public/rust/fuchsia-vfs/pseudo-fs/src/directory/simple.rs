@@ -598,7 +598,7 @@ mod tests {
             run_server_client, run_server_client_with_open_requests_channel,
             DirentsSameInodeBuilder,
         },
-        crate::file::simple::{read_only, read_write, write_only},
+        crate::file::simple::{read_only_static, read_write, write_only},
         crate::test_utils::open_get_proxy,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::{
@@ -709,7 +709,7 @@ mod tests {
     #[test]
     fn clone() {
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| {
@@ -742,7 +742,7 @@ mod tests {
         use fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS;
 
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| {
@@ -773,7 +773,7 @@ mod tests {
     #[test]
     fn clone_cannot_increase_access() {
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -804,7 +804,7 @@ mod tests {
         use fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS;
 
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |proxy| {
@@ -829,7 +829,7 @@ mod tests {
     #[test]
     fn one_file_open_existing() {
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -848,7 +848,7 @@ mod tests {
     #[test]
     fn one_file_open_missing() {
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -865,12 +865,12 @@ mod tests {
     fn small_tree_traversal() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! {
-                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "fstab" => read_only_static("/dev/fs /"),
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
             },
-            "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
+            "uname" => read_only_static("Fuchsia"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1016,9 +1016,9 @@ mod tests {
     fn open_non_existing_path() {
         let root = pseudo_directory! {
             "dir" => pseudo_directory! {
-                "file1" => read_only(|| Ok(b"Content 1".to_vec())),
+                "file1" => read_only_static("Content 1"),
             },
-            "file2" => read_only(|| Ok(b"Content 2".to_vec())),
+            "file2" => read_only_static("Content 2"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1037,7 +1037,7 @@ mod tests {
     #[test]
     fn open_empty_path() {
         let root = pseudo_directory! {
-            "file_foo" => read_only(|| Ok(b"Content".to_vec())),
+            "file_foo" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1054,9 +1054,9 @@ mod tests {
     fn open_path_within_a_file() {
         let root = pseudo_directory! {
             "dir" => pseudo_directory! {
-                "file1" => read_only(|| Ok(b"Content 1".to_vec())),
+                "file1" => read_only_static("Content 1"),
             },
-            "file2" => read_only(|| Ok(b"Content 2".to_vec())),
+            "file2" => read_only_static("Content 2"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1074,9 +1074,9 @@ mod tests {
     fn open_file_as_directory() {
         let root = pseudo_directory! {
             "dir" => pseudo_directory! {
-                "file1" => read_only(|| Ok(b"Content 1".to_vec())),
+                "file1" => read_only_static("Content 1"),
             },
-            "file2" => read_only(|| Ok(b"Content 2".to_vec())),
+            "file2" => read_only_static("Content 2"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1138,7 +1138,7 @@ mod tests {
     #[test]
     fn trailing_slash_means_directory() {
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
             "dir" => pseudo_directory! {},
         };
 
@@ -1167,7 +1167,7 @@ mod tests {
     #[test]
     fn no_dots_in_open() {
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
             "dir" => pseudo_directory! {
                 "dir2" => pseudo_directory! {},
             },
@@ -1212,7 +1212,7 @@ mod tests {
     fn directories_restrict_nested_read_permissions() {
         let root = pseudo_directory! {
             "dir" => pseudo_directory! {
-                "file" => read_only(|| Ok(b"Content".to_vec())),
+                "file" => read_only_static("Content"),
             },
         };
 
@@ -1352,16 +1352,16 @@ mod tests {
     fn read_dirents_large_buffer() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! {
-                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
-                "passwd" => read_only(|| Ok(b"[redacted]".to_vec())),
-                "shells" => read_only(|| Ok(b"/bin/bash".to_vec())),
+                "fstab" => read_only_static("/dev/fs /"),
+                "passwd" => read_only_static("[redacted]"),
+                "shells" => read_only_static("/bin/bash"),
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
             },
-            "files" => read_only(|| Ok(b"Content".to_vec())),
-            "more" => read_only(|| Ok(b"Content".to_vec())),
-            "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
+            "files" => read_only_static("Content"),
+            "more" => read_only_static("Content"),
+            "uname" => read_only_static("Fuchsia"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1414,9 +1414,9 @@ mod tests {
     fn read_dirents_small_buffer() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! { },
-            "files" => read_only(|| Ok(b"Content".to_vec())),
-            "more" => read_only(|| Ok(b"Content".to_vec())),
-            "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
+            "files" => read_only_static("Content"),
+            "more" => read_only_static("Content"),
+            "uname" => read_only_static("Fuchsia"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1454,7 +1454,7 @@ mod tests {
     #[test]
     fn read_dirents_very_small_buffer() {
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1470,9 +1470,9 @@ mod tests {
     fn read_dirents_rewind() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! { },
-            "files" => read_only(|| Ok(b"Content".to_vec())),
-            "more" => read_only(|| Ok(b"Content".to_vec())),
-            "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
+            "files" => read_only_static("Content"),
+            "more" => read_only_static("Content"),
+            "uname" => read_only_static("Fuchsia"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1521,7 +1521,7 @@ mod tests {
     #[test]
     fn node_reference_ignores_read_access() {
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE, root, |root| {
@@ -1547,7 +1547,7 @@ mod tests {
     #[test]
     fn node_reference_ignores_write_access() {
         let root = pseudo_directory! {
-            "file" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_WRITABLE | OPEN_FLAG_NODE_REFERENCE, root, |root| {
@@ -1574,12 +1574,12 @@ mod tests {
     fn node_reference_allows_read_dirents() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! {
-                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "fstab" => read_only_static("/dev/fs /"),
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
             },
-            "files" => read_only(|| Ok(b"Content".to_vec())),
+            "files" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_FLAG_NODE_REFERENCE, root, |root| {
@@ -1645,12 +1645,12 @@ mod tests {
     fn watch_non_empty() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! {
-                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "fstab" => read_only_static("/dev/fs /"),
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
             },
-            "files" => read_only(|| Ok(b"Content".to_vec())),
+            "files" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1677,12 +1677,12 @@ mod tests {
     fn watch_two_watchers() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! {
-                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "fstab" => read_only_static("/dev/fs /"),
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
             },
-            "files" => read_only(|| Ok(b"Content".to_vec())),
+            "files" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
@@ -1720,12 +1720,12 @@ mod tests {
     fn watch_with_mask() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! {
-                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "fstab" => read_only_static("/dev/fs /"),
                 "ssh" => pseudo_directory! {
-                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    "sshd_config" => read_only_static("# Empty"),
                 },
             },
-            "files" => read_only(|| Ok(b"Content".to_vec())),
+            "files" => read_only_static("Content"),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, |root| {
