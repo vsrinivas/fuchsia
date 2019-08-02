@@ -28,7 +28,7 @@ pub enum Initiator {
 }
 
 impl std::fmt::Display for Initiator {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Initiator::Manual => write!(f, "manual"),
             Initiator::Automatic => write!(f, "automatic"),
@@ -74,7 +74,7 @@ trait ComponentRunner {
         &mut self,
         url: String,
         arguments: Option<Vec<String>>,
-    ) -> BoxFuture<Result<(), Error>>;
+    ) -> BoxFuture<'_, Result<(), Error>>;
 }
 
 struct RealComponentRunner {
@@ -86,7 +86,7 @@ impl ComponentRunner for RealComponentRunner {
         &mut self,
         url: String,
         arguments: Option<Vec<String>>,
-    ) -> BoxFuture<Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<(), Error>> {
         let app_res = launch(&self.launcher_proxy, url, arguments);
         async move {
             let mut app = app_res.context(ErrorKind::LaunchSystemUpdater)?;
@@ -204,7 +204,7 @@ mod test_apply_system_update_impl {
             &mut self,
             _url: String,
             _arguments: Option<Vec<String>>,
-        ) -> BoxFuture<Result<(), Error>> {
+        ) -> BoxFuture<'_, Result<(), Error>> {
             future::ok(()).boxed()
         }
     }
@@ -217,7 +217,7 @@ mod test_apply_system_update_impl {
             &mut self,
             _url: String,
             _arguments: Option<Vec<String>>,
-        ) -> BoxFuture<Result<(), Error>> {
+        ) -> BoxFuture<'_, Result<(), Error>> {
             self.was_called = true;
             future::ok(()).boxed()
         }
@@ -315,7 +315,7 @@ mod test_apply_system_update_impl {
                     &mut self,
                     url: String,
                     arguments: Option<Vec<String>>,
-                ) -> BoxFuture<Result<(), Error>> {
+                ) -> BoxFuture<'_, Result<(), Error>> {
                     self.captured_args.push(Args { url, arguments });
                     future::ok(()).boxed()
                 }

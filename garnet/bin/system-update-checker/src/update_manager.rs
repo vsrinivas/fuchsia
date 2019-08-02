@@ -204,24 +204,24 @@ where
 
 // For mocking
 pub trait UpdateChecker: Send + Sync + 'static {
-    fn check(&self) -> BoxFuture<Result<SystemUpdateStatus, crate::errors::Error>>;
+    fn check(&self) -> BoxFuture<'_, Result<SystemUpdateStatus, crate::errors::Error>>;
 }
 
 pub struct RealUpdateChecker;
 
 impl UpdateChecker for RealUpdateChecker {
-    fn check(&self) -> BoxFuture<Result<SystemUpdateStatus, crate::errors::Error>> {
+    fn check(&self) -> BoxFuture<'_, Result<SystemUpdateStatus, crate::errors::Error>> {
         check_for_system_update().boxed()
     }
 }
 
 // For mocking
 pub trait TargetChannelUpdater: Send + Sync + 'static {
-    fn update(&mut self) -> BoxFuture<()>;
+    fn update(&mut self) -> BoxFuture<'_, ()>;
 }
 
 impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<S> {
-    fn update(&mut self) -> BoxFuture<()> {
+    fn update(&mut self) -> BoxFuture<'_, ()> {
         TargetChannelManager::update(self)
             .unwrap_or_else(|e| fx_log_err!("while updating target channel: {:?}", e))
             .boxed()
@@ -235,7 +235,7 @@ pub trait UpdateApplier: Send + Sync + 'static {
         current_system_image: Hash,
         latest_system_image: Hash,
         initiator: Initiator,
-    ) -> BoxFuture<Result<(), crate::errors::Error>>;
+    ) -> BoxFuture<'_, Result<(), crate::errors::Error>>;
 }
 
 pub struct RealUpdateApplier;
@@ -246,7 +246,7 @@ impl UpdateApplier for RealUpdateApplier {
         current_system_image: Hash,
         latest_system_image: Hash,
         initiator: Initiator,
-    ) -> BoxFuture<Result<(), crate::errors::Error>> {
+    ) -> BoxFuture<'_, Result<(), crate::errors::Error>> {
         apply_system_update(current_system_image, latest_system_image, initiator).boxed()
     }
 }
@@ -294,7 +294,7 @@ pub(crate) mod tests {
         pub fn new_error() -> Self {
             Self::new(Err(crate::errors::ErrorKind::ResolveUpdatePackage))
         }
-        pub fn block(&self) -> Option<futures::lock::MutexGuard<()>> {
+        pub fn block(&self) -> Option<futures::lock::MutexGuard<'_, ()>> {
             self.check_blocked.try_lock()
         }
         pub fn call_count(&self) -> u64 {
@@ -302,7 +302,7 @@ pub(crate) mod tests {
         }
     }
     impl UpdateChecker for FakeUpdateChecker {
-        fn check(&self) -> BoxFuture<Result<SystemUpdateStatus, crate::errors::Error>> {
+        fn check(&self) -> BoxFuture<'_, Result<SystemUpdateStatus, crate::errors::Error>> {
             let check_blocked = Arc::clone(&self.check_blocked);
             let result = self.result.clone();
             self.call_count.fetch_add(1, Ordering::SeqCst);
@@ -327,7 +327,7 @@ pub(crate) mod tests {
         }
     }
     impl TargetChannelUpdater for FakeTargetChannelUpdater {
-        fn update(&mut self) -> BoxFuture<()> {
+        fn update(&mut self) -> BoxFuture<'_, ()> {
             let call_count = self.call_count.clone();
             async move {
                 call_count.fetch_add(1, Ordering::SeqCst);
@@ -344,7 +344,7 @@ pub(crate) mod tests {
             _current_system_image: Hash,
             _latest_system_image: Hash,
             _initiator: Initiator,
-        ) -> BoxFuture<Result<(), crate::errors::Error>> {
+        ) -> BoxFuture<'_, Result<(), crate::errors::Error>> {
             unreachable!();
         }
     }
@@ -374,7 +374,7 @@ pub(crate) mod tests {
             _current_system_image: Hash,
             _latest_system_image: Hash,
             _initiator: Initiator,
-        ) -> BoxFuture<Result<(), crate::errors::Error>> {
+        ) -> BoxFuture<'_, Result<(), crate::errors::Error>> {
             self.call_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             future::ready(self.result.clone().map_err(|e| e.into())).boxed()
         }
@@ -750,7 +750,7 @@ pub(crate) mod tests {
         }
     }
     impl UpdateChecker for BlockingUpdateChecker {
-        fn check(&self) -> BoxFuture<Result<SystemUpdateStatus, crate::errors::Error>> {
+        fn check(&self) -> BoxFuture<'_, Result<SystemUpdateStatus, crate::errors::Error>> {
             let blocker = self.blocker.clone();
             async move {
                 assert!(blocker.await.is_ok(), "blocking future cancelled");
