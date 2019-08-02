@@ -1928,7 +1928,7 @@ RUN_TEST(strings)
 RUN_TEST(arrays)
 RUN_TEST(arrays_with_handles)
 RUN_TEST(xunions)
-// RUN_TEST(xunions_with_handles) TODO(pascallouis)
+// RUN_TEST(xunions_with_handles) TODO(pascallouis): write it.
 RUN_TEST(protocols_and_request_of_protocols)
 RUN_TEST(external_definitions)
 RUN_TEST(recursive_request)
