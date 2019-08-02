@@ -56,8 +56,8 @@ impl ClientConfig {
             // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
             // compatiblity.
             Protection::Rsna => match bss.rsn.as_ref() {
-                Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]).to_full_result() {
-                    Ok(a_rsne) => is_rsn_compatible(&a_rsne),
+                Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]) {
+                    Ok((_, a_rsne)) => is_rsn_compatible(&a_rsne),
                     _ => false,
                 },
                 _ => false,

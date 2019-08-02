@@ -6,9 +6,8 @@ pub mod kde;
 
 use crate::Error;
 use failure::{self, ensure};
-use nom::IResult::{Done, Incomplete};
-use nom::{call, error_position, many0, named, take, try_parse};
-use nom::{IResult, Needed};
+use nom::IResult;
+use nom::{call, complete, many0, named, take, try_parse, Needed};
 use wlan_common::ie::rsn::rsne;
 
 #[derive(Debug, PartialEq)]
@@ -22,9 +21,9 @@ pub enum Element {
 
 fn peek_u8_at(input: &[u8], index: usize) -> IResult<&[u8], u8> {
     if input.len() <= index {
-        Incomplete(Needed::Size(index))
+        Err(nom::Err::Incomplete(Needed::Size(index + 1)))
     } else {
-        Done(input, input[index])
+        Ok((input, input[index]))
     }
 }
 
@@ -35,9 +34,9 @@ fn parse_ie(i0: &[u8]) -> IResult<&[u8], Element> {
     match id {
         rsne::ID => {
             let (_, rsne) = try_parse!(bytes, rsne::from_bytes);
-            Done(out, Element::Rsne(rsne))
+            Ok((out, Element::Rsne(rsne)))
         }
-        _ => Done(out, Element::UnsupportedIe(id, len)),
+        _ => Ok((out, Element::UnsupportedIe(id, len))),
     }
 }
 
@@ -49,7 +48,7 @@ fn parse_element(input: &[u8]) -> IResult<&[u8], Element> {
     }
 }
 
-named!(parse_elements<&[u8], Vec<Element>>, many0!(parse_element));
+named!(parse_elements<&[u8], Vec<Element>>, many0!(complete!(parse_element)));
 
 pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error> {
     // Key Data field must be at least 16 bytes long and its length a multiple of 8.
@@ -58,7 +57,12 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error>
         Error::InvaidKeyDataLength(key_data.len())
     );
 
-    parse_elements(key_data).to_full_result().map_err(|e| Error::InvalidKeyData(e).into())
+    match parse_elements(key_data) {
+        Ok((_, elements)) => Ok(elements),
+        Err(nom::Err::Error((_, kind))) => Err(Error::InvalidKeyData(kind).into()),
+        Err(nom::Err::Failure((_, kind))) => Err(Error::InvalidKeyData(kind).into()),
+        Err(nom::Err::Incomplete(_)) => Ok(vec![]),
+    }
 }
 
 #[cfg(test)]

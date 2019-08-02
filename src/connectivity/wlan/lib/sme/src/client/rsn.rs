@@ -95,8 +95,7 @@ pub fn get_rsna(
     };
 
     // Credentials supplied and BSS is protected.
-    let a_rsne = rsne::from_bytes(a_rsne_bytes)
-        .to_full_result()
+    let (_, a_rsne) = rsne::from_bytes(a_rsne_bytes)
         .map_err(|e| format_err!("invalid RSNE {:02x?}: {:?}", a_rsne_bytes, e))?;
     let s_rsne = derive_s_rsne(&a_rsne)?;
     let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;

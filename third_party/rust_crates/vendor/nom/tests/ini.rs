@@ -1,35 +1,39 @@
 #[macro_use]
 extern crate nom;
 
-use nom::{IResult, space, alphanumeric, multispace};
+use nom::{
+  IResult,
+  bytes::complete::take_while,
+  sequence::delimited,
+  combinator::map_res,
+  character::complete::{char, alphanumeric1 as alphanumeric, multispace0 as multispace, space0 as space}
+};
 
 use std::str;
 use std::collections::HashMap;
 
-named!(category<&str>, map_res!(
-    delimited!(
-      char!('['),
-      take_while!(call!(|c| c != ']' as u8)),
-      char!(']')
-    ),
-    str::from_utf8
-));
+fn category(i: &[u8]) -> IResult<&[u8], &str> {
+  map_res(delimited(char('['), take_while(|c| c != b']'), char(']')), str::from_utf8)(i)
+}
+
+fn complete_byte_slice_to_str<'a>(s: &'a[u8]) -> Result<&'a str, str::Utf8Error> {
+  str::from_utf8(s)
+}
 
 named!(key_value    <&[u8],(&str,&str)>,
   do_parse!(
-     key: map_res!(alphanumeric, str::from_utf8)
+     key: map_res!(alphanumeric, complete_byte_slice_to_str)
   >>      opt!(space)
   >>      char!('=')
   >>      opt!(space)
   >> val: map_res!(
-           take_while!(call!(|c| c != '\n' as u8 && c != ';' as u8)),
-           str::from_utf8
+           take_while!(call!(|c| c != b'\n' && c != b';')),
+           complete_byte_slice_to_str
          )
-  >>      opt!(pair!(char!(';'), take_while!(call!(|c| c != '\n' as u8))))
+  >>      opt!(pair!(char!(';'), take_while!(call!(|c| c != b'\n'))))
   >>      (key, val)
   )
 );
-
 
 named!(keys_and_values<&[u8], HashMap<&str, &str> >,
   map!(
@@ -37,7 +41,6 @@ named!(keys_and_values<&[u8], HashMap<&str, &str> >,
     |vec: Vec<_>| vec.into_iter().collect()
   )
 );
-
 
 named!(category_and_keys<&[u8],(&str,HashMap<&str,&str>)>,
   do_parse!(
@@ -77,11 +80,11 @@ key = value2"[..];
   let res = category(ini_file);
   println!("{:?}", res);
   match res {
-    IResult::Done(i, o) => println!("i: {:?} | o: {:?}", str::from_utf8(i), o),
-    _ => println!("error")
+    Ok((i, o)) => println!("i: {:?} | o: {:?}", str::from_utf8(i), o),
+    _ => println!("error"),
   }
 
-  assert_eq!(res, IResult::Done(ini_without_category, "category"));
+  assert_eq!(res, Ok((ini_without_category, "category")));
 }
 
 #[test]
@@ -94,13 +97,12 @@ key = value2"[..];
   let res = key_value(ini_file);
   println!("{:?}", res);
   match res {
-    IResult::Done(i, (o1, o2)) => println!("i: {:?} | o: ({:?},{:?})", str::from_utf8(i), o1, o2),
-    _ => println!("error")
+    Ok((i, (o1, o2))) => println!("i: {:?} | o: ({:?},{:?})", str::from_utf8(i), o1, o2),
+    _ => println!("error"),
   }
 
-  assert_eq!(res, IResult::Done(ini_without_key_value, ("parameter", "value")));
+  assert_eq!(res, Ok((ini_without_key_value, ("parameter", "value"))));
 }
-
 
 #[test]
 fn parse_key_value_with_space_test() {
@@ -112,11 +114,11 @@ key = value2"[..];
   let res = key_value(ini_file);
   println!("{:?}", res);
   match res {
-    IResult::Done(i, (o1, o2)) => println!("i: {:?} | o: ({:?},{:?})", str::from_utf8(i), o1, o2),
-    _ => println!("error")
+    Ok((i, (o1, o2))) => println!("i: {:?} | o: ({:?},{:?})", str::from_utf8(i), o1, o2),
+    _ => println!("error"),
   }
 
-  assert_eq!(res, IResult::Done(ini_without_key_value, ("parameter", "value")));
+  assert_eq!(res, Ok((ini_without_key_value, ("parameter", "value"))));
 }
 
 #[test]
@@ -129,11 +131,11 @@ key = value2"[..];
   let res = key_value(ini_file);
   println!("{:?}", res);
   match res {
-    IResult::Done(i, (o1, o2)) => println!("i: {:?} | o: ({:?},{:?})", str::from_utf8(i), o1, o2),
-    _ => println!("error")
+    Ok((i, (o1, o2))) => println!("i: {:?} | o: ({:?},{:?})", str::from_utf8(i), o1, o2),
+    _ => println!("error"),
   }
 
-  assert_eq!(res, IResult::Done(ini_without_key_value, ("parameter", "value")));
+  assert_eq!(res, Ok((ini_without_key_value, ("parameter", "value"))));
 }
 
 #[test]
@@ -149,14 +151,14 @@ key = value2
   let res = keys_and_values(ini_file);
   println!("{:?}", res);
   match res {
-    IResult::Done(i, ref o) => println!("i: {:?} | o: {:?}", str::from_utf8(i), o),
-    _ => println!("error")
+    Ok((i, ref o)) => println!("i: {:?} | o: {:?}", str::from_utf8(i), o),
+    _ => println!("error"),
   }
 
   let mut expected: HashMap<&str, &str> = HashMap::new();
   expected.insert("parameter", "value");
   expected.insert("key", "value2");
-  assert_eq!(res, IResult::Done(ini_without_key_value, expected));
+  assert_eq!(res, Ok((ini_without_key_value, expected)));
 }
 
 #[test]
@@ -174,14 +176,14 @@ key = value2
   let res = category_and_keys(ini_file);
   println!("{:?}", res);
   match res {
-    IResult::Done(i, ref o) => println!("i: {:?} | o: {:?}", str::from_utf8(i), o),
-    _ => println!("error")
+    Ok((i, ref o)) => println!("i: {:?} | o: {:?}", str::from_utf8(i), o),
+    _ => println!("error"),
   }
 
   let mut expected_h: HashMap<&str, &str> = HashMap::new();
   expected_h.insert("parameter", "value");
   expected_h.insert("key", "value2");
-  assert_eq!(res, IResult::Done(ini_after_parser, ("abcd", expected_h)));
+  assert_eq!(res, Ok((ini_after_parser, ("abcd", expected_h))));
 }
 
 #[test]
@@ -202,8 +204,8 @@ key4 = value4
   let res = categories(ini_file);
   //println!("{:?}", res);
   match res {
-    IResult::Done(i, ref o) => println!("i: {:?} | o: {:?}", str::from_utf8(i), o),
-    _ => println!("error")
+    Ok((i, ref o)) => println!("i: {:?} | o: {:?}", str::from_utf8(i), o),
+    _ => println!("error"),
   }
 
   let mut expected_1: HashMap<&str, &str> = HashMap::new();
@@ -213,7 +215,7 @@ key4 = value4
   expected_2.insert("parameter3", "value3");
   expected_2.insert("key4", "value4");
   let mut expected_h: HashMap<&str, HashMap<&str, &str>> = HashMap::new();
-  expected_h.insert("abcd",     expected_1);
+  expected_h.insert("abcd", expected_1);
   expected_h.insert("category", expected_2);
-  assert_eq!(res, IResult::Done(ini_after_parser, expected_h));
+  assert_eq!(res, Ok((ini_after_parser, expected_h)));
 }

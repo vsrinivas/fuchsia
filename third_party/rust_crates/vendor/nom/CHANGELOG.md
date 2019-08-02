@@ -2,7 +2,277 @@
 
 ## [Unreleased][unreleased]
 
+### Thanks
+
+### Added
+
+### Fixed
+
+## 5.0.0 - 2019-06-24
+
+This version comes with a complete rewrite of nom internals to use functions as a base
+for parsers, instead of macros. Macros have been updated to use functions under
+the hood, so that most existing parsers will work directly or require minimal changes.
+
+The `CompleteByteSlice` and `CompleteStr` input types were removed. To get different
+behaviour related to streaming or complete input, there are different versions of some
+parsers in different submodules, like `nom::character::streaming::alpha0` and
+`nom::character::complete::alpha0`.
+
+The `verbose-errors` feature is gone, now the error type is decided through a generic
+bound. To get equivalent behaviour to `verbose-errors`, check out `nom::error::VerboseError`
+
+### Thanks
+
+- @lowenheim helped in refactoring and error management
+- @Keruspe helped in refactoring and fixing tests
+- @pingiun, @Songbird0, @jeremystucki, @BeatButton, @NamsooCho, @Waelwindows, @rbtcollins, @MarkMcCaskey for a lot of help in rewriting the documentation and adding code examples
+- @GuillaumeGomez for documentation rewriting and checking
+- @iosmanthus for bug fixes
+- @lo48576 for error management fixes
+- @vaffeine for macros visibility fixes
+- @webholik and @Havvy for `escaped` and `escaped_transform` fixes
+- @proman21 for help on porting bits parsers
+
+### Added
+
+- the `VerboseError` type accumulates position info and error codes, and can generate a trace with span information
+- the `lexical-core` crate is now used by default (through the `lexical` compilation feature) to parse floats from text
+- documentation and code examples for all functions and macros
+
 ### Changed
+
+- nom now uses functions instead of macros to generate parsers
+- macros now use the functions under the hood
+- the minimal Rust version is now 1.31
+- the verify combinator's condition function now takes its argument by reference
+- `cond` will now return the error of the parser instead of None
+- `alpha*`, `digit*`, `hex_digit*`, `alphanumeric*` now recognize only ASCII characters
+
+### Removed
+
+- deprecated string parsers (with the `_s` suffix), the normal version can be used instead
+- `verbose-errors` is not needed anymore, now the error type can be decided when writing the parsers, and parsers provided by nom are generic over the error type
+- `AtEof`, `CompleteByteSlice` and `CompleteStr` are gone, instead some parsers are specialized to work on streaming or complete input, and provided in different modules
+- character parsers that were aliases to their `*1` version: eol, alpha, digit, hex_digit, oct_digit, alphanumeric, space, multispace
+- `count_fixed` macro
+- `whitespace::sp` can be replaced by `character::complete::multispace0`
+- method combinators are now in the nom-methods crate
+- `take_until_either`, `take_until_either1`, `take_until_either_and_consume` and `take_until_either_and_consume1`: they can be replaced with `is_not` (possibly combined with something else)
+- `take_until_and_consume`, `take_until_and_consume1`: they can be replaced with `take_until` combined with `take`
+- `sized_buffer` and `length_bytes!`: they can be replaced with the `length_data` function
+- `non_empty`, `begin` and `rest_s` function
+- `cond_reduce!`, `cond_with_error!`, `closure!`, `apply`, `map_res_err!`, `expr_opt!`, `expr_res!`
+- `alt_complete`, `separated_list_complete`, `separated_nonempty_list_complete`
+
+## 4.2.3 - 2019-03-23
+
+### Fixed
+
+- add missing `build.rs` file to the package
+- fix code comparison links in changelog
+
+## 4.2.2 - 2019-03-04
+
+### Fixed
+
+- regression in do_parse macro import for edition 2018
+
+## 4.2.1 - 2019-02-27
+
+### Fixed
+
+- macro expansion error in `do_parse` due to `compile_error` macro usage
+
+## 4.2.0 - 2019-01-29
+
+### Thanks
+
+- @JoshMcguigan for unit test fixes
+- @oza for documentation fixes
+- @wackywendell for better error conversion
+- @Zebradil for documentation fixes
+- @tsraom for new combinators
+- @hcpl for minimum Rust version tests
+- @KellerFuchs for removing some unsafe uses in float parsing
+
+### Changed
+
+- macro import in edition 2018 code should work without importing internal macros now
+- the regex parsers do not require the calling code to have imported the regex crate anymore
+- error conversions are more ergonomic
+- method combinators are now deprecated. They might be moved to a separate crate
+- nom now specifies Rust 1.24.1 as minimum version. This was already the case before, now it is made explicit
+
+### Added
+
+- `many0_count` abd `many1_count` to count applications of a parser instead of
+accumulating its results in a `Vec`
+
+### Fixed
+
+- overflow in the byte wrapper for bit level parsers
+- `f64` parsing does not use `transmute` anymore
+
+## 4.1.1 - 2018-10-14
+
+### Fixed
+
+- compilation issue in verbose-errors mode for `add_return_error`
+
+## 4.1.0 - 2018-10-06
+
+### Thanks
+
+- @xfix for fixing warnings, simplifying examples and performance fixes
+- @dvberkel for documentation fixes
+- @chifflier for fixinf warnings
+- @myrrlyn for dead code elimination
+- @petrochenkov for removing redundant test macros
+- @tbelaire for documentation fixes
+- @khernyo for fixing warnings
+- @linkmauve for documentation fixes
+- @ProgVal for documentation fixes, warning fixes and error management
+- @Nemo157 for compilation fixes
+- @RReverser for documentation fixes
+- @xpayn for fixing warnings
+- Blas Rodriguez Irizar for documentation fixes
+- @badboy for documentation fixes
+- @kyrias for compilation fixes
+- @kurnevsky for the `rest_len` parser
+- @hjr3 for new documentation examples
+- @fengalin for error management
+- @ithinuel for the pcap example project
+- @phaazon for documentation fixes
+- @juchiast for documentation fixes
+- @jrakow for the `u128` and `i128` parsers
+- @smarnach for documentation fixes
+- @derekdreery for `pub(crate)` support
+- @YaLTeR for `map_res_err!`
+
+### Added
+
+- `rest_len` parser, returns the length of the remaining input
+- `parse_to` has its own error code now
+- `u128` and `i128` parsers in big and little endian modes
+- support for `pub(crate)` syntax
+- `map_res_err!` combinator that appends the error of its argument function in verbose errors mode
+
+### Fixed
+
+- lots of unused imports warnings were removed
+- the `bytes` combinator was not compiling in some cases
+- the big and little endian combinators now work without external imports
+- CI is now faster and uses less cache
+- in `add_return_error`, the provided error code is now evaluated only once
+
+### Changed
+
+- `fold_many1` will now transmit a `Failure` instead of transforming it to an `Error`
+- `float` and `double` now work on all of nom's input types (`&[u8]`, `&str`, `CompleteByteSlice`, `CompleteStr` and any type that implements the required traits). `float_s` and `double_s` got the same modification, but are now deprecated
+- `CompleteByteSlice` and `CompleteStr` get a small optimization by inlining some functions
+
+
+## 4.0.0 - 2018-05-14
+
+### Thanks
+
+- @jsgf for the new `AtEof` trait
+- @tmccombs for fixes on `escaped*` combinators
+- @s3bk for fixes around non Copy input types and documentation help
+- @kamarkiewicz for fixes to no_std and CI
+- @bheisler for documentation and examples
+- @target-san for simplifying the `InputIter` trait for `&[u8]`
+- @willmurphyscode for documentation and examples
+- @Chaitanya1416 for typo fixes
+- @fflorent for `input_len()` usage fixes
+- @dbrgn for typo fixes
+- @iBelieve for no_std fixes
+- @kpp for warning fixes and clippy fixes
+- @keruspe for fixes on FindToken
+- @dtrebbien for fixes on take_until_and_consume1
+- @Henning-K for typo fixes
+- @vthriller for documentation fixes
+- @federicomenaquintero and @veprbl for their help fixing the float parsers
+- @vmchale for new named_args versions
+- @hywan for documentation fixes
+- @fbenkstein for typo fixes
+- @CAD97 for catching missing trait implementations
+- @goldenlentils for &str optimizations
+- @passy for typo fixes
+- @ayrat555 for typo fixes
+- @GuillaumeGomez for documentation fixes
+- @jrakow for documentation fixes and fiwes for `switch!`
+- @phlosioneer for dicumentation fixes
+- @creativcoder for typo fixes
+- @derekdreery for typo fixes
+- @lucasem for implementing `Deref` on `CompleteStr` and `CompleteByteSlice`
+- @lowenheim for `parse_to!` fixes
+- @myrrlyn for trait fixes around `CompleteStr` and `CompleteByteSlice`
+- @NotBad4U for fixing code coverage analysis
+- @murarth for code formatting
+- @glandium for fixing build in no_std
+- @csharad for regex compatibility with `CompleteStr`
+- @FauxFaux for implementing `AsRef<str>` on `CompleteStr`
+- @jaje for implementing `std::Error` on `nom:Err`
+- @fengalin for warning fixes
+- @@khernyo for doc formatting
+
+Special thanks to @corkami for the logo :)
+
+### Breaking changes
+
+- the `IResult` type now becomes a `Result` from the standard library
+- `Incomplete` now returns the additional data size needed, not the total data size needed
+- verbose-errors is now a superset of basic errors
+- all the errors now include  the related input slice
+- the arguments from `error_position` and other such macros were swapped to be more consistent with the rest of nom
+- automatic error conversion: to fix error type inference issues, a custom error type must now implement `std::convert::From<u32>`
+- the `not!` combinator returns unit `()`
+- FindToken's calling convention was swapped
+- the `take_*` combinators are now more coherent and stricter, see commit 484f6724ea3ccb for more information
+- `many0` and other related parsers will now return `Incomplete` if the reach the end of input without an error of the child parser. They will also return `Incomplete` on an empty input
+- the `sep!` combinator for whitespace only consumes whitespace in the prefix, while the `ws!` combinator takes care of consuming the remaining whitespace
+
+### Added
+
+- the `AtEof` trait for input type: indicate if we can get more input data later (related to streaming parsers and `Incomplete` handling)
+- the `escaped*` parsers now support the `&str`input type
+- the `Failure` error variant represents an unrecoverable error, for which `alt` and other combinators will not try other branches. This error means we got in the right part of the code (like, a prefix was checked correctly), but there was an error in the following parts
+- the `CompleteByteSlice` and `CompleteStr` input types consider there will be no more refill of the input. They fixed the `Incomplete` related issues when we have all of the data
+- the `exact!()` combinator will fail if we did not consume the whole input
+- the `take_while_m_n!` combinator will match a specified number of characters
+- `ErrorKind::TakeUntilAndConsume1`
+- the `recognize_float` parser will match a float number's characters, but will not transform to a `f32` or `f64`
+- `alpha` and other basic parsers are now much stricter about partial inputs. We also introduce the  `*0` and `*1` versions of those parsers
+- `named_args` can now specify the input type as well
+- `HexDisplay` is now implemented for `&str`
+- `alloc` feature
+- the `InputTakeAtposition` trait allows specialized implementations of parsers like `take_while!`
+
+### Removed
+
+- the producers and consumers were removed
+- the `error_code` and `error_node` macros are not used anymore
+
+### Fixed
+
+- `anychar!` now works correctly with multibyte characters
+- `take_until_and_consume1!` no longer results in "no method named \`find_substring\`" and "no method named \`slice\`" compilation errors
+- `take_until_and_consume1!` returns the correct Incomplete(Needed) amount
+- `no_std` compiles properly, and nom can work with `alloc` too
+- `parse_to!` now consumes its input
+
+### Changed
+
+- `alt` and other combinators will now clone the input if necessary. If the input is already `Copy` there is no performance impact
+- the `rest` parser now works on various input types
+- `InputIter::Item` for `&[u8]` is now a `u8` directly, not a reference
+- we now use the `compile_error` macro to return a compile time error if there was a syntax issue
+- the permutation combinator now supports optional child parsers
+- the float numbers parsers have been refactored to use one common implementation that is nearly 2 times faster than the previous one
+- the float number parsers now accept more variants
+
 
 ## 3.2.1 - 2017-10-27
 
@@ -81,7 +351,7 @@
 ### Thanks
 
 - Chris Pick for some `Incomplete` related refactors
-- @drbgn for documentation fixes
+- @dbrgn for documentation fixes
 - @valarauca for adding `be_u24`
 - @ithinuel for usability fixes
 - @evuez for README readability fixes and improvements to `IResult`
@@ -782,44 +1052,52 @@ Considering the number of changes since the last release, this version can conta
 
 ## Compare code
 
-* [unreleased]: https://github.com/Geal/nom/compare/3.2.1...HEAD
-* [3.2.1]: https://github.com/Geal/nom/compare/3.2.0...3.2.1
-* [3.2.0]: https://github.com/Geal/nom/compare/3.1.0...3.2.0
-* [3.1.0]: https://github.com/Geal/nom/compare/3.0.0...3.1.0
-* [3.0.0]: https://github.com/Geal/nom/compare/2.2.1...3.0.0
-* [2.2.1]: https://github.com/Geal/nom/compare/2.2.0...2.2.1
-* [2.2.0]: https://github.com/Geal/nom/compare/2.1.0...2.2.0
-* [2.1.0]: https://github.com/Geal/nom/compare/2.0.1...2.1.0
-* [2.0.1]: https://github.com/Geal/nom/compare/2.0.0...2.0.1
-* [2.0.0]: https://github.com/Geal/nom/compare/1.2.4...2.0.0
-* [1.2.4]: https://github.com/Geal/nom/compare/1.2.3...1.2.4
-* [1.2.3]: https://github.com/Geal/nom/compare/1.2.2...1.2.3
-* [1.2.2]: https://github.com/Geal/nom/compare/1.2.1...1.2.2
-* [1.2.1]: https://github.com/Geal/nom/compare/1.2.0...1.2.1
-* [1.2.0]: https://github.com/Geal/nom/compare/1.1.0...1.2.0
-* [1.1.0]: https://github.com/Geal/nom/compare/1.0.1...1.1.0
-* [1.0.1]: https://github.com/Geal/nom/compare/1.0.0...1.0.1
-* [1.0.0]: https://github.com/Geal/nom/compare/0.5.0...1.0.0
-* [0.5.0]: https://github.com/geal/nom/compare/0.4.0...0.5.0
-* [0.4.0]: https://github.com/geal/nom/compare/0.3.11...0.4.0
-* [0.3.11]: https://github.com/geal/nom/compare/0.3.10...0.3.11
-* [0.3.10]: https://github.com/geal/nom/compare/0.3.9...0.3.10
-* [0.3.9]: https://github.com/geal/nom/compare/0.3.8...0.3.9
-* [0.3.8]: https://github.com/Geal/nom/compare/0.3.7...0.3.8
-* [0.3.7]: https://github.com/Geal/nom/compare/0.3.6...0.3.7
-* [0.3.6]: https://github.com/Geal/nom/compare/0.3.5...0.3.6
-* [0.3.5]: https://github.com/Geal/nom/compare/0.3.4...0.3.5
-* [0.3.4]: https://github.com/Geal/nom/compare/0.3.3...0.3.4
-* [0.3.3]: https://github.com/Geal/nom/compare/0.3.2...0.3.3
-* [0.3.2]: https://github.com/Geal/nom/compare/0.3.1...0.3.2
-* [0.3.1]: https://github.com/Geal/nom/compare/0.3.0...0.3.1
-* [0.3.0]: https://github.com/Geal/nom/compare/0.2.2...0.3.0
-* [0.2.2]: https://github.com/Geal/nom/compare/0.2.1...0.2.2
-* [0.2.1]: https://github.com/Geal/nom/compare/0.2.0...0.2.1
-* [0.2.0]: https://github.com/Geal/nom/compare/0.1.6...0.2.0
-* [0.1.6]: https://github.com/Geal/nom/compare/0.1.5...0.1.6
-* [0.1.5]: https://github.com/Geal/nom/compare/0.1.4...0.1.5
-* [0.1.4]: https://github.com/Geal/nom/compare/0.1.3...0.1.4
-* [0.1.3]: https://github.com/Geal/nom/compare/0.1.2...0.1.3
-* [0.1.2]: https://github.com/Geal/nom/compare/0.1.1...0.1.2
-* [0.1.1]: https://github.com/Geal/nom/compare/0.1.0...0.1.1
+* [unreleased](https://github.com/Geal/nom/compare/5.0.0...HEAD)
+* [5.0.0](https://github.com/Geal/nom/compare/4.2.3...5.0.0)
+* [4.2.3](https://github.com/Geal/nom/compare/4.2.2...4.2.3)
+* [4.2.2](https://github.com/Geal/nom/compare/4.2.1...4.2.2)
+* [4.2.1](https://github.com/Geal/nom/compare/4.2.0...4.2.1)
+* [4.2.0](https://github.com/Geal/nom/compare/4.1.1...4.2.0)
+* [4.1.1](https://github.com/Geal/nom/compare/4.1.0...4.1.1)
+* [4.1.0](https://github.com/Geal/nom/compare/4.0.0...4.1.0)
+* [4.0.0](https://github.com/Geal/nom/compare/3.2.1...4.0.0)
+* [3.2.1](https://github.com/Geal/nom/compare/3.2.0...3.2.1)
+* [3.2.0](https://github.com/Geal/nom/compare/3.1.0...3.2.0)
+* [3.1.0](https://github.com/Geal/nom/compare/3.0.0...3.1.0)
+* [3.0.0](https://github.com/Geal/nom/compare/2.2.1...3.0.0)
+* [2.2.1](https://github.com/Geal/nom/compare/2.2.0...2.2.1)
+* [2.2.0](https://github.com/Geal/nom/compare/2.1.0...2.2.0)
+* [2.1.0](https://github.com/Geal/nom/compare/2.0.1...2.1.0)
+* [2.0.1](https://github.com/Geal/nom/compare/2.0.0...2.0.1)
+* [2.0.0](https://github.com/Geal/nom/compare/1.2.4...2.0.0)
+* [1.2.4](https://github.com/Geal/nom/compare/1.2.3...1.2.4)
+* [1.2.3](https://github.com/Geal/nom/compare/1.2.2...1.2.3)
+* [1.2.2](https://github.com/Geal/nom/compare/1.2.1...1.2.2)
+* [1.2.1](https://github.com/Geal/nom/compare/1.2.0...1.2.1)
+* [1.2.0](https://github.com/Geal/nom/compare/1.1.0...1.2.0)
+* [1.1.0](https://github.com/Geal/nom/compare/1.0.1...1.1.0)
+* [1.0.1](https://github.com/Geal/nom/compare/1.0.0...1.0.1)
+* [1.0.0](https://github.com/Geal/nom/compare/0.5.0...1.0.0)
+* [0.5.0](https://github.com/geal/nom/compare/0.4.0...0.5.0)
+* [0.4.0](https://github.com/geal/nom/compare/0.3.11...0.4.0)
+* [0.3.11](https://github.com/geal/nom/compare/0.3.10...0.3.11)
+* [0.3.10](https://github.com/geal/nom/compare/0.3.9...0.3.10)
+* [0.3.9](https://github.com/geal/nom/compare/0.3.8...0.3.9)
+* [0.3.8](https://github.com/Geal/nom/compare/0.3.7...0.3.8)
+* [0.3.7](https://github.com/Geal/nom/compare/0.3.6...0.3.7)
+* [0.3.6](https://github.com/Geal/nom/compare/0.3.5...0.3.6)
+* [0.3.5](https://github.com/Geal/nom/compare/0.3.4...0.3.5)
+* [0.3.4](https://github.com/Geal/nom/compare/0.3.3...0.3.4)
+* [0.3.3](https://github.com/Geal/nom/compare/0.3.2...0.3.3)
+* [0.3.2](https://github.com/Geal/nom/compare/0.3.1...0.3.2)
+* [0.3.1](https://github.com/Geal/nom/compare/0.3.0...0.3.1)
+* [0.3.0](https://github.com/Geal/nom/compare/0.2.2...0.3.0)
+* [0.2.2](https://github.com/Geal/nom/compare/0.2.1...0.2.2)
+* [0.2.1](https://github.com/Geal/nom/compare/0.2.0...0.2.1)
+* [0.2.0](https://github.com/Geal/nom/compare/0.1.6...0.2.0)
+* [0.1.6](https://github.com/Geal/nom/compare/0.1.5...0.1.6)
+* [0.1.5](https://github.com/Geal/nom/compare/0.1.4...0.1.5)
+* [0.1.4](https://github.com/Geal/nom/compare/0.1.3...0.1.4)
+* [0.1.3](https://github.com/Geal/nom/compare/0.1.2...0.1.3)
+* [0.1.2](https://github.com/Geal/nom/compare/0.1.1...0.1.2)
+* [0.1.1](https://github.com/Geal/nom/compare/0.1.0...0.1.1)

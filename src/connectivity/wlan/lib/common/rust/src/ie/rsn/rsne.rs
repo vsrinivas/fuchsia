@@ -7,10 +7,9 @@ use super::{akm, cipher, pmkid, suite_selector};
 use crate::appendable::{Appendable, BufferTooSmall};
 use crate::organization::Oui;
 use bytes::Bytes;
-use nom::{
-    call, cond, count, do_parse, eof, error_position, expr_res, named, named_attr, take, try_parse,
-};
-use nom::{le_u16, le_u8, IResult};
+use nom::combinator::{map, map_res};
+use nom::number::streaming::{le_u16, le_u8};
+use nom::{call, cond, count, do_parse, eof, named, named_attr, take, try_parse, IResult};
 use wlan_bitfield::bitfield;
 
 macro_rules! if_remaining (
@@ -155,14 +154,16 @@ where
 {
     let (i1, bytes) = try_parse!(input, take!(4));
     let oui = Oui::new([bytes[0], bytes[1], bytes[2]]);
-    return IResult::Done(i1, T::new(oui, bytes[3]));
+    return Ok((i1, T::new(oui, bytes[3])));
 }
 
 fn read_pmkid(input: &[u8]) -> IResult<&[u8], pmkid::Pmkid> {
-    let (i1, bytes) = try_parse!(input, take!(16));
-    let pmkid_data = Bytes::from(bytes);
-    let (i2, result) = try_parse!(i1, expr_res!(pmkid::new(pmkid_data)));
-    return IResult::Done(i2, result);
+    let f = |bytes| {
+        let pmkid_data = Bytes::from(bytes);
+        return pmkid::new(pmkid_data);
+    };
+
+    map_res(nom::bytes::streaming::take(16usize), f)(input)
 }
 
 named!(akm<&[u8], akm::Akm>, call!(read_suite_selector::<akm::Akm>));
@@ -183,7 +184,7 @@ named_attr!(
            pairwise_list: count!(cipher, pairwise_count.unwrap_or(0) as usize)  >>
            akm_count: if_remaining!(le_u16) >>
            akm_list: count!(akm, akm_count.unwrap_or(0) as usize)  >>
-           rsn_capabilities: if_remaining!(|x| { le_u16(x).map(RsnCapabilities) }) >>
+           rsn_capabilities: if_remaining!(map(le_u16, RsnCapabilities)) >>
            pmkid_count: if_remaining!(le_u16) >>
            pmkid_list: count!(read_pmkid, pmkid_count.unwrap_or(0) as usize)  >>
            group_mgmt_cipher_suite: if_remaining!(cipher) >>
@@ -233,7 +234,7 @@ mod tests {
         ];
         let mut buf = Vec::with_capacity(128);
         let result = from_bytes(&frame);
-        assert!(result.is_done());
+        assert!(result.is_ok());
         let rsne = result.unwrap().1;
         rsne.write_into(&mut buf).expect("failed writing RSNE");
         let rsne_len = buf.len();
@@ -252,7 +253,7 @@ mod tests {
         ];
         let mut buf = FixedSizedTestBuffer::new(32);
         let result = from_bytes(&frame);
-        assert!(result.is_done());
+        assert!(result.is_ok());
         let rsne = result.unwrap().1;
         rsne.write_into(&mut buf).expect_err("expected writing RSNE to fail");
         assert_eq!(buf.bytes_written(), 0);
@@ -276,7 +277,7 @@ mod tests {
             0x10, 0x11, 0x00, 0x0f, 0xac, 0x04, // group management cipher suite
         ];
         let result = from_bytes(&frame);
-        assert!(result.is_done());
+        assert!(result.is_ok());
         let rsne = result.unwrap().1;
 
         assert_eq!(rsne.version, 1);

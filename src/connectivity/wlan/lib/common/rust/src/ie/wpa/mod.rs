@@ -6,8 +6,8 @@ use super::rsn::{akm, cipher, suite_selector};
 
 use crate::appendable::{Appendable, BufferTooSmall};
 use crate::organization::Oui;
-use nom::{call, count, do_parse, eof, error_position, named, named_attr, take, try_parse};
-use nom::{le_u16, IResult};
+use nom::number::streaming::le_u16;
+use nom::{call, count, do_parse, eof, named, named_attr, take, try_parse, IResult};
 
 // The WPA1 IE is not fully specified by IEEE. This format was derived from pcap.
 // Note that this file only parses fields specific to WPA -- IE headers and MSFT-specific fields
@@ -80,7 +80,7 @@ where
 {
     let (i1, bytes) = try_parse!(input, take!(4));
     let oui = Oui::new([bytes[0], bytes[1], bytes[2]]);
-    return IResult::Done(i1, T::new(oui, bytes[3]));
+    return Ok((i1, T::new(oui, bytes[3])));
 }
 
 named!(parse_akm<&[u8], akm::Akm>, call!(read_suite_selector::<akm::Akm>));
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn test_write_into_roundtrip() {
         let wpa_frame = from_bytes(&DEFAULT_FRAME[..]);
-        assert!(wpa_frame.is_done());
+        assert!(wpa_frame.is_ok());
         let wpa_frame = wpa_frame.unwrap().1;
         let mut wpa_frame_bytes = vec![];
         wpa_frame.write_into(&mut wpa_frame_bytes).expect("failed to write frame");
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn test_parse_correct() {
         let wpa_frame = from_bytes(&DEFAULT_FRAME[..]);
-        assert!(wpa_frame.is_done());
+        assert!(wpa_frame.is_ok());
         let wpa_frame = wpa_frame.unwrap().1;
         assert_eq!(
             wpa_frame.multicast_cipher,
@@ -175,7 +175,7 @@ mod tests {
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02,
         ];
         let wpa_frame = from_bytes(&bad_frame[..]);
-        assert!(!wpa_frame.is_done());
+        assert!(!wpa_frame.is_ok());
     }
 
     #[test]
@@ -188,6 +188,6 @@ mod tests {
             0x00, 0x50
         ];
         let wpa_frame = from_bytes(&bad_frame[..]);
-        assert!(!wpa_frame.is_done());
+        assert!(!wpa_frame.is_ok());
     }
 }

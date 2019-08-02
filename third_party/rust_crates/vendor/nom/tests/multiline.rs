@@ -1,21 +1,36 @@
-#[macro_use]
 extern crate nom;
 
-use nom::{IResult,alphanumeric,eol};
+use nom::{
+  IResult,
+  multi::many0,
+  sequence::terminated,
+  character::complete::{alphanumeric1 as alphanumeric, line_ending as eol}
+};
 
-use std::str;
+pub fn end_of_line(input: &str) -> IResult<&str, &str> {
+  if input.is_empty() {
+    Ok((input, input))
+  } else {
+    eol(input)
+  }
+}
 
-named!(end_of_line, alt!(eof!() | eol));
-named!(read_line <&str>, map_res!(
-  terminated!(alphanumeric, end_of_line),
-  str::from_utf8
-));
-named!(read_lines <Vec<&str> >, many0!(read_line));
+pub fn read_line(input: &str) -> IResult<&str, &str> {
+  terminated(alphanumeric, end_of_line)(input)
+}
 
+pub fn read_lines(input: &str) -> IResult<&str, Vec<&str>> {
+  many0(read_line)(input)
+}
+
+#[cfg(feature = "alloc")]
 #[test]
 fn read_lines_test() {
-  let res = IResult::Done(&b""[..], vec!["Duck", "Dog", "Cow"]);
+  let res = Ok((
+    "",
+    vec!["Duck", "Dog", "Cow"],
+  ));
 
-  assert_eq!(read_lines(&b"Duck\nDog\nCow\n"[..]), res);
-  assert_eq!(read_lines(&b"Duck\nDog\nCow"[..]),   res);
+  assert_eq!(read_lines("Duck\nDog\nCow\n"), res);
+  assert_eq!(read_lines("Duck\nDog\nCow"), res);
 }

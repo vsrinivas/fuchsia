@@ -400,7 +400,7 @@ impl InfraBss {
         a_rsn: RsnCfg,
         client_addr: &MacAddr,
     ) -> Result<AssociationId, fidl_mlme::AssociateResultCodes> {
-        let s_rsne = rsne::from_bytes(s_rsne_bytes).to_full_result().map_err(|e| {
+        let (_, s_rsne) = rsne::from_bytes(s_rsne_bytes).map_err(|e| {
             warn!("failed to deserialize RSNE: {:?}", e);
             fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
         })?;

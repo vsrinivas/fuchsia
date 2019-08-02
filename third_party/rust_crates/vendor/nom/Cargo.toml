@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -11,40 +11,157 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "nom"
-version = "3.2.1"
+version = "5.0.0"
 authors = ["contact@geoffroycouprie.com"]
-include = ["CHANGELOG.md", "LICENSE", ".gitignore", ".travis.yml", "Cargo.toml", "src/*.rs", "tests/*.rs"]
+include = ["CHANGELOG.md", "LICENSE", ".gitignore", ".travis.yml", "Cargo.toml", "src/*.rs", "src/*/*.rs", "tests/*.rs", "build.rs"]
+autoexamples = false
 description = "A byte-oriented, zero-copy, parser combinators library"
-documentation = "http://rust.unhandledexpression.com/nom/"
+documentation = "https://docs.rs/nom"
 readme = "README.md"
 keywords = ["parser", "parser-combinators", "parsing", "streaming", "bit"]
 categories = ["parsing"]
 license = "MIT"
 repository = "https://github.com/Geal/nom"
+[package.metadata.docs.rs]
+all-features = true
+features = ["alloc", "std", "regexp", "regexp_macros", "lexical"]
+[profile.bench]
+lto = true
+codegen-units = 1
+debug = true
+
+[lib]
+bench = false
+
+[[example]]
+name = "json"
+required-features = ["alloc"]
+
+[[example]]
+name = "s_expression"
+required-features = ["alloc"]
+
+[[test]]
+name = "arithmetic"
+
+[[test]]
+name = "arithmetic_ast"
+required-features = ["alloc"]
+
+[[test]]
+name = "blockbuf-arithmetic"
+
+[[test]]
+name = "css"
+
+[[test]]
+name = "custom_errors"
+
+[[test]]
+name = "float"
+
+[[test]]
+name = "inference"
+
+[[test]]
+name = "ini"
+required-features = ["alloc"]
+
+[[test]]
+name = "ini_str"
+required-features = ["alloc"]
+
+[[test]]
+name = "issues"
+required-features = ["alloc", "regexp_macros"]
+
+[[test]]
+name = "json"
+
+[[test]]
+name = "mp4"
+
+[[test]]
+name = "multiline"
+required-features = ["alloc"]
+
+[[test]]
+name = "named_args"
+
+[[test]]
+name = "overflow"
+
+[[test]]
+name = "reborrow_fold"
+
+[[test]]
+name = "test1"
+
+[[bench]]
+name = "arithmetic"
+harness = false
+
+[[bench]]
+name = "http"
+harness = false
+
+[[bench]]
+name = "ini"
+harness = false
+
+[[bench]]
+name = "ini_complete"
+harness = false
+
+[[bench]]
+name = "ini_str"
+harness = false
+
+[[bench]]
+name = "json"
+harness = false
+[dependencies.lazy_static]
+version = "^1.0"
+optional = true
+
+[dependencies.lexical-core]
+version = "^0.4.0"
+optional = true
+
 [dependencies.memchr]
-version = "^1.0.1"
+version = "^2.0"
 default-features = false
 
-[dependencies.compiler_error]
-version = "0.1.1"
-optional = true
-
 [dependencies.regex]
-version = "^0.2"
+version = "^1.0"
 optional = true
+[dev-dependencies.criterion]
+version = "0.2"
 
-[dependencies.lazy_static]
-version = "^0.2.2"
-optional = true
+[dev-dependencies.doc-comment]
+version = "0.3"
+
+[dev-dependencies.jemallocator]
+version = "^0.1"
+[build-dependencies.version_check]
+version = "^0.1"
 
 [features]
-default = ["std", "stream"]
+alloc = []
+default = ["std", "lexical"]
+lexical = ["lexical-core"]
 regexp = ["regex"]
-verbose-errors = []
-stream = []
-nightly = ["compiler_error"]
 regexp_macros = ["regexp", "lazy_static"]
-std = ["memchr/use_std"]
+std = ["alloc", "memchr/use_std"]
+[badges.coveralls]
+branch = "master"
+repository = "Geal/nom"
+service = "github"
+
+[badges.maintenance]
+status = "actively-developed"
+
 [badges.travis-ci]
 repository = "Geal/nom"

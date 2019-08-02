@@ -194,7 +194,7 @@ pub fn parse_vht_operation<B: ByteSlice>(
 
 pub fn parse_wpa_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<wpa::WpaIe> {
     wpa::from_bytes(&raw_body[..])
-        .to_full_result()
+        .map(|(_, r)| r)
         .map_err(|_| FrameParseError::new("Failed to parse WPA IE"))
 }
 

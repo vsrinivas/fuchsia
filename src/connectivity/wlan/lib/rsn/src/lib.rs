@@ -229,7 +229,7 @@ pub enum Error {
     )]
     InvaidKeyDataLength(usize),
     #[fail(display = "invalid key data; error code: {:?}", _0)]
-    InvalidKeyData(nom::IError),
+    InvalidKeyData(nom::error::ErrorKind),
     #[fail(display = "unknown authentication method")]
     UnknownAuthenticationMethod,
     #[fail(display = "no AKM negotiated")]
