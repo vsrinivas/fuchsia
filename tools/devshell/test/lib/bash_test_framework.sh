@@ -1016,7 +1016,7 @@ btf::is_bt_temp_dir() {
   # As an additional safety measure, check the path name string length
   # in addition to checking for the marker file.
   local -r temp_dir_string_length=${#root_dir}
-  (( ${temp_dir_string_length} > 30 )) && \
+  (( ${temp_dir_string_length} > 10 )) && \
   [[ -f "${root_dir}/${_BTF_TEMP_DIR_MARKER}" ]]
 }
 
