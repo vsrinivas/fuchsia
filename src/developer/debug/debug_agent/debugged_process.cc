@@ -60,7 +60,8 @@ void LogRegisterBreakpoint(DebuggedProcess* process, Breakpoint* bp, uint64_t ad
     return;
 
   std::stringstream ss;
-  ss << LogPreamble(process) << "Setting breakpoint on 0x" << std::hex << address;
+  ss << LogPreamble(process) << "Setting breakpoint (" << bp->settings().name << ") on 0x"
+     << std::hex << address;
   if (bp->settings().one_shot)
     ss << " (one shot)";
 

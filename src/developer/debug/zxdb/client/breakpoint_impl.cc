@@ -253,6 +253,7 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
   debug_ipc::AddOrChangeBreakpointRequest request;
   request.breakpoint_type = settings_.type;
   request.breakpoint.id = backend_id_;
+  request.breakpoint.name = settings_.name;
   request.breakpoint.stop = SettingsStopToIpcStop(settings_.stop_mode);
   request.breakpoint.one_shot = settings_.one_shot;
 

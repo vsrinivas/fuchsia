@@ -30,6 +30,8 @@ bool Deserialize(MessageReader* reader, ProcessBreakpointSettings* settings) {
 bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
   if (!reader->ReadUint32(&settings->id))
     return false;
+  if (!reader->ReadString(&settings->name))
+    return false;
   if (!reader->ReadBool(&settings->one_shot))
     return false;
 

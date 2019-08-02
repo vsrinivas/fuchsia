@@ -380,6 +380,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   AddOrChangeBreakpointRequest initial;
   initial.breakpoint_type = BreakpointType::kHardware;
   initial.breakpoint.id = 8976;
+  initial.breakpoint.name = "Some name";
   initial.breakpoint.stop = debug_ipc::Stop::kProcess;
   initial.breakpoint.locations.resize(1);
 
@@ -394,6 +395,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
 
   EXPECT_EQ(initial.breakpoint_type, second.breakpoint_type);
   EXPECT_EQ(initial.breakpoint.id, second.breakpoint.id);
+  EXPECT_EQ(initial.breakpoint.name, second.breakpoint.name);
   EXPECT_EQ(initial.breakpoint.stop, second.breakpoint.stop);
   ASSERT_EQ(initial.breakpoint.locations.size(), second.breakpoint.locations.size());
 

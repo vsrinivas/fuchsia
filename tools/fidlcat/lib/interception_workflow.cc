@@ -372,6 +372,7 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Target* target) {
       if (put_breakpoint) {
         zxdb::BreakpointSettings settings;
         settings.enabled = true;
+        settings.name = syscall->name();
         settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
         settings.type = debug_ipc::BreakpointType::kSoftware;
         settings.location.symbol = zxdb::Identifier(syscall->breakpoint_name());

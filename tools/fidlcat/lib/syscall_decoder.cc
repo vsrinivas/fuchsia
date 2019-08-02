@@ -236,6 +236,7 @@ void SyscallDecoder::StepToReturnAddress() {
 
   zxdb::BreakpointSettings settings;
   settings.enabled = true;
+  settings.name = syscall_->name() + "-return";
   settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
   settings.type = debug_ipc::BreakpointType::kSoftware;
   settings.location.address = return_address_;

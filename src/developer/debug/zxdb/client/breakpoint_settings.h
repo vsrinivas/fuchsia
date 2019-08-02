@@ -41,6 +41,9 @@ struct BreakpointSettings {
   // What kind of breakpoint implementation to use.
   debug_ipc::BreakpointType type = debug_ipc::BreakpointType::kSoftware;
 
+  // Name that the creator of the breakpoint can set for easier debugging. Optional.
+  std::string name;
+
   // Enables (true) or disables (false) this breakpoint.
   bool enabled = true;
 

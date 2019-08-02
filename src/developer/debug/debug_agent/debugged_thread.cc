@@ -69,6 +69,17 @@ const char* ExceptionTypeToString(uint32_t type) {
   return "<unknown>";
 }
 
+void LogHitBreakpoint(const DebuggedThread* thread, ProcessBreakpoint* process_breakpoint,
+                      uint64_t address) {
+  std::stringstream ss;
+  ss << ThreadPreamble(thread) << "Hit SW breakpoint on 0x" << std::hex << address << " for: ";
+  for (Breakpoint* breakpoint : process_breakpoint->breakpoints()) {
+    ss << breakpoint->settings().name << ", ";
+  }
+
+  DEBUG_LOG(Thread) << ss.str();
+}
+
 }  // namespace
 
 DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_koid_t koid,
@@ -459,11 +470,12 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       arch::ArchProvider::Get().BreakpointInstructionForSoftwareExceptionAddress(
           *arch::ArchProvider::Get().IPInRegs(regs));
 
-  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit SW breakpoint on 0x" << std::hex
-                    << breakpoint_address;
 
   ProcessBreakpoint* found_bp = process_->FindProcessBreakpointForAddr(breakpoint_address);
   if (found_bp) {
+    if (debug_ipc::IsDebugModeActive())
+      LogHitBreakpoint(this, found_bp, breakpoint_address);
+
     FixSoftwareBreakpointAddress(found_bp, regs);
 
     // When hitting a breakpoint, we need to check if indeed this exception
@@ -514,6 +526,9 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
         return OnStop::kIgnore;
       }
     } else {
+      DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit non debugger SW breakpoint on 0x"
+                        << std::hex << breakpoint_address;
+
       // Not a breakpoint instruction. Probably the breakpoint instruction
       // used to be ours but its removal raced with the exception handler.
       // Resume from the instruction that used to be the breakpoint.

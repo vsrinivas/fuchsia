@@ -133,6 +133,7 @@ void Serialize(const ProcessBreakpointSettings& settings, MessageWriter* writer)
 
 void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   writer->WriteUint32(settings.id);
+  writer->WriteString(settings.name);
   writer->WriteBool(settings.one_shot);
   writer->WriteUint32(static_cast<uint32_t>(settings.stop));
   Serialize(settings.locations, writer);

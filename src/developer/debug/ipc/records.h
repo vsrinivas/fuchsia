@@ -206,6 +206,9 @@ struct BreakpointSettings {
   // processes or may match several addresses in a single process.
   uint32_t id = 0;
 
+  // Name used to recognize a breakpoint. Useful for debugging purposes. Optional.
+  std::string name;
+
   // When set, the breakpoint will automatically be removed as soon as it is
   // hit.
   bool one_shot = false;
