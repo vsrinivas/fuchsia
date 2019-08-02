@@ -347,33 +347,33 @@ void CollectPiecesInternal(ObjectIdentifier root, fxl::RefPtr<CollectPiecesState
     return;
   }
 
-  state->data_accessor(
-      root, [state, on_done = std::move(on_done)](Status status, fxl::StringView data) mutable {
-        if (!state->running) {
-          on_done();
-          return;
-        }
+  state->data_accessor(root, [state, factory = root.factory(), on_done = std::move(on_done)](
+                                 Status status, fxl::StringView data) mutable {
+    if (!state->running) {
+      on_done();
+      return;
+    }
 
-        if (status != Status::OK) {
-          FXL_LOG(WARNING) << "Unable to read object content.";
-          state->running = false;
-          on_done();
-          return;
-        }
+    if (status != Status::OK) {
+      FXL_LOG(WARNING) << "Unable to read object content.";
+      state->running = false;
+      on_done();
+      return;
+    }
 
-        auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
-        status = ForEachIndexChild(data, [&](ObjectIdentifier identifier) {
-          CollectPiecesInternal(std::move(identifier), state, waiter->NewCallback());
-          return Status::OK;
-        });
-        if (status != Status::OK) {
-          state->running = false;
-          on_done();
-          return;
-        }
+    auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
+    status = ForEachIndexChild(data, factory, [&](ObjectIdentifier identifier) {
+      CollectPiecesInternal(std::move(identifier), state, waiter->NewCallback());
+      return Status::OK;
+    });
+    if (status != Status::OK) {
+      state->running = false;
+      on_done();
+      return;
+    }
 
-        waiter->Finalize(std::move(on_done));
-      });
+    waiter->Finalize(std::move(on_done));
+  });
 }
 
 }  // namespace
@@ -390,7 +390,7 @@ void SplitDataSource(DataSource* source, ObjectType object_type,
   });
 }
 
-Status ForEachIndexChild(fxl::StringView index_content,
+Status ForEachIndexChild(fxl::StringView index_content, ObjectIdentifierFactory* factory,
                          fit::function<Status(ObjectIdentifier)> callback) {
   const FileIndex* file_index;
   Status status = FileIndexSerialization::ParseFileIndex(index_content, &file_index);
@@ -399,7 +399,7 @@ Status ForEachIndexChild(fxl::StringView index_content,
   }
 
   for (const auto* child : *file_index->children()) {
-    Status status = callback(ToObjectIdentifier(child->object_identifier()));
+    Status status = callback(ToObjectIdentifier(child->object_identifier(), factory));
     if (status != Status::OK) {
       return status;
     }

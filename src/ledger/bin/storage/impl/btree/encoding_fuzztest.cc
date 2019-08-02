@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
+#include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/public/types.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
@@ -16,7 +17,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     uint8_t res_level;
     std::vector<storage::Entry> res_entries;
     std::map<size_t, storage::ObjectIdentifier> res_children;
-    storage::btree::DecodeNode(bytes, &res_level, &res_entries, &res_children);
+    storage::ObjectIdentifierFactoryImpl factory;
+    storage::btree::DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children);
   }
   return 0;
 }

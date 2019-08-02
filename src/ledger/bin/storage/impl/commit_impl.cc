@@ -4,12 +4,13 @@
 
 #include "src/ledger/bin/storage/impl/commit_impl.h"
 
-#include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
 #include <sys/time.h>
 
 #include <algorithm>
 #include <utility>
+
+#include <flatbuffers/flatbuffers.h>
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
@@ -18,6 +19,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/impl/object_identifier_generated.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/build_config.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -104,8 +106,8 @@ CommitImpl::CommitImpl(Token /* token */, CommitId id, zx::time_utc timestamp, u
 
 CommitImpl::~CommitImpl() { tracker_->UnregisterCommit(this); }
 
-Status CommitImpl::FromStorageBytes(LiveCommitTracker* tracker, CommitId id,
-                                    std::string storage_bytes,
+Status CommitImpl::FromStorageBytes(ObjectIdentifierFactory* factory, LiveCommitTracker* tracker,
+                                    CommitId id, std::string storage_bytes,
                                     std::unique_ptr<const Commit>* commit) {
   FXL_DCHECK(id != kFirstPageCommitId);
 
@@ -117,7 +119,8 @@ Status CommitImpl::FromStorageBytes(LiveCommitTracker* tracker, CommitId id,
 
   const CommitStorage* commit_storage = GetCommitStorage(storage_ptr->bytes().data());
 
-  ObjectIdentifier root_node_identifier = ToObjectIdentifier(commit_storage->root_node_id());
+  ObjectIdentifier root_node_identifier =
+      ToObjectIdentifier(commit_storage->root_node_id(), factory);
   std::vector<CommitIdView> parent_ids;
 
   for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {
@@ -161,7 +164,8 @@ std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
   CommitId id = encryption::SHA256WithLengthHash(storage_bytes);
 
   std::unique_ptr<const Commit> commit;
-  Status status = FromStorageBytes(tracker, std::move(id), std::move(storage_bytes), &commit);
+  Status status = FromStorageBytes(root_node_identifier.factory(), tracker, std::move(id),
+                                   std::move(storage_bytes), &commit);
   FXL_DCHECK(status == Status::OK);
   return commit;
 }

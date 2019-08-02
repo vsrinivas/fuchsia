@@ -92,9 +92,10 @@ int64_t GetObjectPartLength(int64_t max_size, int64_t object_size, int64_t start
 PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
                                  encryption::EncryptionService* encryption_service,
                                  std::unique_ptr<Db> db, PageId page_id, CommitPruningPolicy policy)
-    : PageStorageImpl(environment, encryption_service,
-                      std::make_unique<PageDbImpl>(environment, std::move(db)), std::move(page_id),
-                      policy) {}
+    : PageStorageImpl(
+          environment, encryption_service,
+          std::make_unique<PageDbImpl>(environment, &object_identifier_factory_, std::move(db)),
+          std::move(page_id), policy) {}
 
 PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
                                  encryption::EncryptionService* encryption_service,
@@ -699,7 +700,8 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler, PageDb::Ba
 
       object_identifiers.reserve(object_identifiers.size() + file_index->children()->size());
       for (const auto* child : *file_index->children()) {
-        ObjectIdentifier new_object_identifier = ToObjectIdentifier(child->object_identifier());
+        ObjectIdentifier new_object_identifier =
+            ToObjectIdentifier(child->object_identifier(), &object_identifier_factory_);
         if (!GetObjectDigestInfo(new_object_identifier.object_digest()).is_inlined()) {
           if (!seen_identifiers.count(new_object_identifier)) {
             object_identifiers.push_back(std::move(new_object_identifier));
@@ -856,7 +858,8 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, fsl::Sized
       return;
     }
     int64_t child_position = current_position + sub_offset;
-    ObjectIdentifier child_identifier = ToObjectIdentifier(child->object_identifier());
+    ObjectIdentifier child_identifier =
+        ToObjectIdentifier(child->object_identifier(), &object_identifier_factory_);
     // Skip children before the part to copy.
     if (child_position + static_cast<int64_t>(child->size()) <= global_offset) {
       sub_offset += child->size();
@@ -1095,7 +1098,8 @@ Status PageStorageImpl::SynchronousGetCommit(CoroutineHandler* handler, CommitId
   if (s != Status::OK) {
     return s;
   }
-  return CommitImpl::FromStorageBytes(&commit_tracker_, commit_id, std::move(bytes), commit);
+  return CommitImpl::FromStorageBytes(&object_identifier_factory_, &commit_tracker_, commit_id,
+                                      std::move(bytes), commit);
 }
 
 Status PageStorageImpl::SynchronousAddCommitFromLocal(CoroutineHandler* handler,
@@ -1151,7 +1155,8 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
     }
 
     std::unique_ptr<const Commit> commit;
-    status = CommitImpl::FromStorageBytes(&commit_tracker_, id, std::move(storage_bytes), &commit);
+    status = CommitImpl::FromStorageBytes(&object_identifier_factory_, &commit_tracker_, id,
+                                          std::move(storage_bytes), &commit);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
       return status;

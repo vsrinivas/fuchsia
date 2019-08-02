@@ -49,9 +49,13 @@ void ExtractSortedCommitsIds(std::vector<std::pair<std::string, std::string>>* e
 
 }  // namespace
 
-PageDbImpl::PageDbImpl(ledger::Environment* environment, std::unique_ptr<Db> db)
-    : environment_(environment), db_(std::move(db)) {
+PageDbImpl::PageDbImpl(ledger::Environment* environment,
+                       ObjectIdentifierFactory* object_identifier_factory, std::unique_ptr<Db> db)
+    : environment_(environment),
+      object_identifier_factory_(object_identifier_factory),
+      db_(std::move(db)) {
   FXL_DCHECK(environment_);
+  FXL_DCHECK(object_identifier_factory_);
   FXL_DCHECK(db_);
 }
 
@@ -192,7 +196,8 @@ Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* handler,
   object_identifiers->clear();
   ObjectIdentifier object_identifier;
   for (auto& encoded_identifier : encoded_identifiers) {
-    if (!DecodeObjectIdentifier(encoded_identifier, &object_identifier)) {
+    if (!DecodeObjectIdentifier(encoded_identifier, object_identifier_factory_,
+                                &object_identifier)) {
       return Status::DATA_INTEGRITY_ERROR;
     }
     object_identifiers->emplace_back(std::move(object_identifier));

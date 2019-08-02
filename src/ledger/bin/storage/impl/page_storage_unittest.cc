@@ -1735,7 +1735,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
                                  {{object_identifier.object_digest(), KeyPriority::LAZY}});
     // Check piece references.
     ASSERT_EQ(ForEachIndexChild(
-                  piece->GetData(),
+                  piece->GetData(), storage_->GetObjectIdentifierFactory(),
                   [this, handler, object_identifier](ObjectIdentifier piece_identifier) {
                     if (GetObjectDigestInfo(piece_identifier.object_digest()).is_inlined()) {
                       // References to inline pieces are not stored on disk.

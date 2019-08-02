@@ -34,8 +34,9 @@ class CommitImplTest : public StorageTest {
 
   bool CheckCommitStorageBytes(const std::unique_ptr<const Commit>& commit) {
     std::unique_ptr<const Commit> copy;
-    Status status = CommitImpl::FromStorageBytes(&tracker_, commit->GetId(),
-                                                 commit->GetStorageBytes().ToString(), &copy);
+    Status status =
+        CommitImpl::FromStorageBytes(page_storage_.GetObjectIdentifierFactory(), &tracker_,
+                                     commit->GetId(), commit->GetStorageBytes().ToString(), &copy);
     EXPECT_EQ(status, Status::OK);
 
     return CheckCommitEquals(*commit, *copy);
@@ -82,8 +83,9 @@ TEST_F(CommitImplTest, CloneCommit) {
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       &tracker_, environment_.clock(), root_node_identifier, std::move(parents));
   std::unique_ptr<const Commit> copy;
-  Status status = CommitImpl::FromStorageBytes(&tracker_, commit->GetId(),
-                                               commit->GetStorageBytes().ToString(), &copy);
+  Status status =
+      CommitImpl::FromStorageBytes(page_storage_.GetObjectIdentifierFactory(), &tracker_,
+                                   commit->GetId(), commit->GetStorageBytes().ToString(), &copy);
   ASSERT_EQ(status, Status::OK);
   std::unique_ptr<const Commit> clone = commit->Clone();
   EXPECT_TRUE(CheckCommitEquals(*copy, *clone));

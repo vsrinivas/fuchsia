@@ -5,6 +5,7 @@
 #include "src/ledger/bin/storage/fake/fake_object.h"
 
 #include "gtest/gtest.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/strings/string_view.h"
@@ -14,8 +15,10 @@ namespace fake {
 namespace {
 
 TEST(FakeObjectTest, FakePiece) {
+  FakeObjectIdentifierFactory factory;
   const std::string content = "some content";
-  const ObjectIdentifier identifier(1u, 2u, ObjectDigest("some digest"));
+  const ObjectIdentifier identifier =
+      factory.MakeObjectIdentifier(1u, 2u, ObjectDigest("some digest"));
   const FakePiece piece(identifier, content);
 
   EXPECT_EQ(piece.GetData(), content);
@@ -26,8 +29,10 @@ TEST(FakeObjectTest, FakePiece) {
 }
 
 TEST(FakeObjectTest, FakeObject) {
+  FakeObjectIdentifierFactory factory;
   const std::string content = "some content";
-  const ObjectIdentifier identifier(1u, 2u, ObjectDigest("some digest"));
+  const ObjectIdentifier identifier =
+      factory.MakeObjectIdentifier(1u, 2u, ObjectDigest("some digest"));
   const FakeObject object(std::make_unique<FakePiece>(identifier, content));
 
   fxl::StringView data;

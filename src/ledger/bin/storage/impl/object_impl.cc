@@ -37,7 +37,8 @@ Status BasePiece::AppendReferences(ObjectReferencesAndPriority* references) cons
     return status;
   }
   for (const auto* child : *file_index->children()) {
-    ObjectDigest child_digest = ToObjectIdentifier(child->object_identifier()).object_digest();
+    ObjectDigest child_digest =
+        ToObjectIdentifier(child->object_identifier(), GetIdentifier().factory()).object_digest();
     // References must not contain inline pieces.
     if (GetObjectDigestInfo(child_digest).is_inlined()) {
       continue;

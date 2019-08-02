@@ -35,7 +35,8 @@ class CommitImpl : public Commit {
 
   // Factory method for creating a |CommitImpl| object given its storage
   // representation. If the format is incorrect, |nullptr| will be returned.
-  static Status FromStorageBytes(LiveCommitTracker* tracker, CommitId id, std::string storage_bytes,
+  static Status FromStorageBytes(ObjectIdentifierFactory* factory, LiveCommitTracker* tracker,
+                                 CommitId id, std::string storage_bytes,
                                  std::unique_ptr<const Commit>* commit);
 
   static std::unique_ptr<const Commit> FromContentAndParents(

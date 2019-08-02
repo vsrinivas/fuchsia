@@ -163,7 +163,8 @@ TEST_F(TreeNodeTest, Serialization) {
   uint8_t level;
   std::vector<Entry> parsed_entries;
   std::map<size_t, ObjectIdentifier> parsed_children;
-  EXPECT_TRUE(DecodeNode(data, &level, &parsed_entries, &parsed_children));
+  EXPECT_TRUE(DecodeNode(data, fake_storage_.GetObjectIdentifierFactory(), &level, &parsed_entries,
+                         &parsed_children));
   EXPECT_EQ(parsed_entries, entries);
   EXPECT_EQ(parsed_children, children);
 }

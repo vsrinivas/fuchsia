@@ -8,8 +8,10 @@
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node_generated.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
+#include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {
@@ -27,10 +29,11 @@ TEST(EncodingTest, EmptyData) {
 
   std::string bytes = EncodeNode(level, entries, children);
 
+  ObjectIdentifierFactoryImpl factory;
   uint8_t res_level;
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
+  EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
   EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
@@ -44,10 +47,11 @@ TEST(EncodingTest, SingleEntry) {
 
   std::string bytes = EncodeNode(level, entries, children);
 
+  ObjectIdentifierFactoryImpl factory;
   uint8_t res_level;
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
+  EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
   EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
@@ -67,10 +71,11 @@ TEST(EncodingTest, MoreEntries) {
 
   std::string bytes = EncodeNode(level, entries, children);
 
+  ObjectIdentifierFactoryImpl factory;
   uint8_t res_level;
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
+  EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
   EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
@@ -88,10 +93,11 @@ TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
 
   std::string bytes = EncodeNode(level, entries, children);
 
+  ObjectIdentifierFactoryImpl factory;
   uint8_t res_level;
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
+  EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
   EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
@@ -108,10 +114,11 @@ TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
 
   std::string bytes = EncodeNode(level, entries, children);
 
+  ObjectIdentifierFactoryImpl factory;
   uint8_t res_level;
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
+  EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
   EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
@@ -125,10 +132,11 @@ TEST(EncodingTest, ZeroByte) {
 
   std::string bytes = EncodeNode(level, entries, children);
 
+  ObjectIdentifierFactoryImpl factory;
   uint8_t res_level;
   std::vector<Entry> res_entries;
   std::map<size_t, ObjectIdentifier> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
+  EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
   EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);

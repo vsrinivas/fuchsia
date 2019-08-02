@@ -21,6 +21,7 @@
 #include "src/ledger/bin/storage/impl/commit_impl.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
+#include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/page_db_impl.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
@@ -53,7 +54,8 @@ class PageDbTest : public ledger::TestWithEnvironment {
         page_storage_(&environment_, &encryption_service_,
                       GetLevelDb(dispatcher(), base_path.SubPath("storage")), "page_id",
                       CommitPruningPolicy::NEVER),
-        page_db_(&environment_, GetLevelDb(dispatcher(), base_path.SubPath("page_db"))) {}
+        page_db_(&environment_, page_storage_.GetObjectIdentifierFactory(),
+                 GetLevelDb(dispatcher(), base_path.SubPath("page_db"))) {}
 
   ~PageDbTest() override {}
 

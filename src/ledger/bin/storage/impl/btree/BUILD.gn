@@ -109,6 +109,7 @@ fuzzer("encoding_fuzzer") {
   ]
   deps = [
     ":lib",
+    "//src/ledger/bin/storage/impl:object_identifier_lib",
     "//src/ledger/bin/storage/public",
   ]
 }

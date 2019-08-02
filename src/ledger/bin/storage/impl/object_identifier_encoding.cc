@@ -7,11 +7,14 @@
 #include <limits>
 
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {
-ObjectIdentifier ToObjectIdentifier(const ObjectIdentifierStorage* object_identifier_storage) {
-  return {object_identifier_storage->key_index(), object_identifier_storage->deletion_scope_id(),
-          ObjectDigest(object_identifier_storage->object_digest())};
+ObjectIdentifier ToObjectIdentifier(const ObjectIdentifierStorage* object_identifier_storage,
+                                    ObjectIdentifierFactory* object_identifier_factory) {
+  return object_identifier_factory->MakeObjectIdentifier(
+      object_identifier_storage->key_index(), object_identifier_storage->deletion_scope_id(),
+      ObjectDigest(object_identifier_storage->object_digest()));
 }
 
 flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
@@ -27,7 +30,8 @@ std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier) {
   return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
 }
 
-bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifier* object_identifier) {
+bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* factory,
+                            ObjectIdentifier* object_identifier) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
   if (!VerifyObjectIdentifierStorageBuffer(verifier)) {
     return false;
@@ -37,7 +41,7 @@ bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifier* object_ident
   if (!IsObjectIdentifierStorageValid(storage)) {
     return false;
   }
-  *object_identifier = ToObjectIdentifier(storage);
+  *object_identifier = ToObjectIdentifier(storage, factory);
   return true;
 }
 

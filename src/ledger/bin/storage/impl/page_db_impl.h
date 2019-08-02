@@ -24,7 +24,8 @@ class PageStorageImpl;
 // TRANSIENT objects.
 class PageDbImpl : public PageDb {
  public:
-  PageDbImpl(ledger::Environment* environment, std::unique_ptr<Db> db);
+  PageDbImpl(ledger::Environment* environment, ObjectIdentifierFactory* object_identifier_factory,
+             std::unique_ptr<Db> db);
   ~PageDbImpl() override;
 
   // PageDb:
@@ -87,6 +88,7 @@ class PageDbImpl : public PageDb {
 
  private:
   ledger::Environment* environment_;
+  ObjectIdentifierFactory* object_identifier_factory_;
   std::unique_ptr<Db> db_;
 };
 

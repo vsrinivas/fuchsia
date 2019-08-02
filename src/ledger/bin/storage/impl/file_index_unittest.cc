@@ -51,7 +51,8 @@ TEST_F(FileIndexSerializationTest, SerializationDeserialization) {
   const auto& children = *(file_index->children());
   for (size_t i = 0; i < elements.size(); ++i) {
     EXPECT_EQ(children[i]->size(), elements[i].size);
-    EXPECT_EQ(ToObjectIdentifier(children[i]->object_identifier()), elements[i].identifier);
+    EXPECT_EQ(ToObjectIdentifier(children[i]->object_identifier(), &factory),
+              elements[i].identifier);
   }
 }
 

@@ -7,6 +7,7 @@
 #include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {
 namespace {

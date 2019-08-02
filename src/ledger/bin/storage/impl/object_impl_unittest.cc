@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/storage/impl/object_impl.h"
 
-#include <memory>
-
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/syscalls.h>
+
+#include <memory>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -16,6 +16,7 @@
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/file_index.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -30,7 +31,9 @@ using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-ObjectIdentifier CreateObjectIdentifier(ObjectDigest digest) { return {1u, 2u, std::move(digest)}; }
+ObjectIdentifier CreateObjectIdentifier(ObjectIdentifierFactory* factory, ObjectDigest digest) {
+  return factory->MakeObjectIdentifier(1u, 2u, std::move(digest));
+}
 
 ::testing::AssertionResult CheckObjectValue(const Object& object, ObjectIdentifier identifier,
                                             fxl::StringView data) {
@@ -89,18 +92,20 @@ ObjectIdentifier CreateObjectIdentifier(ObjectDigest digest) { return {1u, 2u, s
 using ObjectImplTest = ledger::TestWithEnvironment;
 
 TEST_F(ObjectImplTest, InlinedPiece) {
+  ObjectIdentifierFactoryImpl factory;
   std::string data = RandomString(environment_.random(), 12);
-  ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   const InlinePiece piece(identifier);
   EXPECT_TRUE(CheckPieceValue(piece, identifier, data));
 }
 
 TEST_F(ObjectImplTest, DataChunkPiece) {
+  ObjectIdentifierFactoryImpl factory;
   std::string data = RandomString(environment_.random(), 12);
-  ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   const DataChunkPiece piece(identifier, DataSource::DataChunk::Create(data));
   EXPECT_TRUE(CheckPieceValue(piece, identifier, data));
@@ -121,9 +126,10 @@ TEST_F(ObjectImplTest, LevelDBPiece) {
   leveldb::WriteOptions write_options_;
   leveldb::ReadOptions read_options_;
 
+  ObjectIdentifierFactoryImpl factory;
   std::string data = RandomString(environment_.random(), 256);
-  ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   status = db_ptr->Put(write_options_, "", data);
   ASSERT_TRUE(status.ok());
@@ -140,25 +146,30 @@ TEST_F(ObjectImplTest, PieceReferences) {
   // Create various types of identifiers for the piece children. Small pieces
   // fit in chunks, while bigger ones are split and yield identifiers of index
   // pieces.
+  ObjectIdentifierFactoryImpl factory;
   constexpr size_t kInlineSize = kStorageHashSize;
-  const ObjectIdentifier inline_chunk = CreateObjectIdentifier(ComputeObjectDigest(
-      PieceType::CHUNK, ObjectType::BLOB, RandomString(environment_.random(), kInlineSize)));
+  const ObjectIdentifier inline_chunk = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                                    RandomString(environment_.random(), kInlineSize)));
   ASSERT_TRUE(GetObjectDigestInfo(inline_chunk.object_digest()).is_chunk());
   ASSERT_TRUE(GetObjectDigestInfo(inline_chunk.object_digest()).is_inlined());
 
-  const ObjectIdentifier inline_index = CreateObjectIdentifier(ComputeObjectDigest(
-      PieceType::INDEX, ObjectType::BLOB, RandomString(environment_.random(), kInlineSize)));
+  const ObjectIdentifier inline_index = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB,
+                                    RandomString(environment_.random(), kInlineSize)));
   ASSERT_FALSE(GetObjectDigestInfo(inline_index.object_digest()).is_chunk());
   ASSERT_TRUE(GetObjectDigestInfo(inline_index.object_digest()).is_inlined());
 
   constexpr size_t kNoInlineSize = kStorageHashSize + 1;
-  const ObjectIdentifier noinline_chunk = CreateObjectIdentifier(ComputeObjectDigest(
-      PieceType::CHUNK, ObjectType::BLOB, RandomString(environment_.random(), kNoInlineSize)));
+  const ObjectIdentifier noinline_chunk = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                                    RandomString(environment_.random(), kNoInlineSize)));
   ASSERT_TRUE(GetObjectDigestInfo(noinline_chunk.object_digest()).is_chunk());
   ASSERT_FALSE(GetObjectDigestInfo(noinline_chunk.object_digest()).is_inlined());
 
-  const ObjectIdentifier noinline_index = CreateObjectIdentifier(ComputeObjectDigest(
-      PieceType::INDEX, ObjectType::BLOB, RandomString(environment_.random(), kNoInlineSize)));
+  const ObjectIdentifier noinline_index = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB,
+                                    RandomString(environment_.random(), kNoInlineSize)));
   ASSERT_FALSE(GetObjectDigestInfo(noinline_index.object_digest()).is_chunk());
   ASSERT_FALSE(GetObjectDigestInfo(noinline_index.object_digest()).is_inlined());
 
@@ -170,8 +181,8 @@ TEST_F(ObjectImplTest, PieceReferences) {
                                           {inline_index, kNoInlineSize},
                                           {noinline_index, kNoInlineSize}},
                                          &data, &total_size);
-  const ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB, data->Get()));
+  const ObjectIdentifier identifier = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB, data->Get()));
   DataChunkPiece piece(identifier, std::move(data));
 
   // Check that inline children are not included in the references.
@@ -183,9 +194,10 @@ TEST_F(ObjectImplTest, PieceReferences) {
 }
 
 TEST_F(ObjectImplTest, ChunkObject) {
+  ObjectIdentifierFactoryImpl factory;
   std::string data = RandomString(environment_.random(), 12);
-  ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   ChunkObject object(std::make_unique<InlinePiece>(identifier));
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
@@ -194,9 +206,10 @@ TEST_F(ObjectImplTest, ChunkObject) {
 }
 
 TEST_F(ObjectImplTest, VmoObject) {
+  ObjectIdentifierFactoryImpl factory;
   std::string data = RandomString(environment_.random(), 256);
-  ObjectIdentifier identifier =
-      CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(data, &vmo));
@@ -207,22 +220,27 @@ TEST_F(ObjectImplTest, VmoObject) {
 
 TEST_F(ObjectImplTest, ObjectReferences) {
   // Create various types of identifiers for the object children and values.
+  ObjectIdentifierFactoryImpl factory;
   constexpr size_t kInlineSize = kStorageHashSize;
-  const ObjectIdentifier inline_blob = CreateObjectIdentifier(ComputeObjectDigest(
-      PieceType::CHUNK, ObjectType::BLOB, RandomString(environment_.random(), kInlineSize)));
+  const ObjectIdentifier inline_blob = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                                    RandomString(environment_.random(), kInlineSize)));
   ASSERT_TRUE(GetObjectDigestInfo(inline_blob.object_digest()).is_inlined());
 
-  const ObjectIdentifier inline_treenode = CreateObjectIdentifier(ComputeObjectDigest(
-      PieceType::CHUNK, ObjectType::TREE_NODE, RandomString(environment_.random(), kInlineSize)));
+  const ObjectIdentifier inline_treenode = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE,
+                                    RandomString(environment_.random(), kInlineSize)));
   ASSERT_TRUE(GetObjectDigestInfo(inline_treenode.object_digest()).is_inlined());
 
   constexpr size_t kNoInlineSize = kStorageHashSize + 1;
-  const ObjectIdentifier noinline_blob = CreateObjectIdentifier(ComputeObjectDigest(
-      PieceType::CHUNK, ObjectType::BLOB, RandomString(environment_.random(), kNoInlineSize)));
+  const ObjectIdentifier noinline_blob = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
+                                    RandomString(environment_.random(), kNoInlineSize)));
   ASSERT_FALSE(GetObjectDigestInfo(noinline_blob.object_digest()).is_inlined());
 
-  const ObjectIdentifier noinline_treenode = CreateObjectIdentifier(ComputeObjectDigest(
-      PieceType::CHUNK, ObjectType::TREE_NODE, RandomString(environment_.random(), kNoInlineSize)));
+  const ObjectIdentifier noinline_treenode = CreateObjectIdentifier(
+      &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE,
+                                    RandomString(environment_.random(), kNoInlineSize)));
   ASSERT_FALSE(GetObjectDigestInfo(noinline_treenode.object_digest()).is_inlined());
 
   // Create a TreeNode object.
@@ -238,7 +256,8 @@ TEST_F(ObjectImplTest, ObjectReferences) {
                                                  {1, noinline_treenode},
                                              });
   const ChunkObject tree_object(std::make_unique<DataChunkPiece>(
-      CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, data)),
+      CreateObjectIdentifier(&factory,
+                             ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, data)),
       DataSource::DataChunk::Create(data)));
 
   // Check that inline children are not included in the references.
@@ -252,7 +271,8 @@ TEST_F(ObjectImplTest, ObjectReferences) {
   // Create a blob object with the exact same data and check that it does not
   // return any reference.
   const ChunkObject blob_object(std::make_unique<DataChunkPiece>(
-      CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data)),
+      CreateObjectIdentifier(&factory,
+                             ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data)),
       DataSource::DataChunk::Create(data)));
   references.clear();
   ASSERT_EQ(blob_object.AppendReferences(&references), Status::OK);
@@ -260,7 +280,8 @@ TEST_F(ObjectImplTest, ObjectReferences) {
 
   // Create an invalid tree node object and check that we return an error.
   const ChunkObject invalid_object(std::make_unique<DataChunkPiece>(
-      CreateObjectIdentifier(ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, "")),
+      CreateObjectIdentifier(&factory,
+                             ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, "")),
       DataSource::DataChunk::Create("")));
   ASSERT_EQ(invalid_object.AppendReferences(&references), Status::DATA_INTEGRITY_ERROR);
 }
