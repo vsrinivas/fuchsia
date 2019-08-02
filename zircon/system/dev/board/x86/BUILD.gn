@@ -203,26 +203,3 @@ test("x86-board-test") {
     "$zx/system/ulib/zxtest",
   ]
 }
-
-test("x86-thermal-test") {
-  output_name = "x86-thermal-test"
-  test_group = "ddk"
-  sources = [
-    "acpi-dev/dev-thermal-test.c",
-  ]
-  configs += [ ":config" ]
-  deps = [
-    "$zx/system/banjo/ddk.protocol.acpi",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/fidl/fuchsia-hardware-thermal:c",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
-    "$zx/third_party/lib/acpica",
-  ]
-}
