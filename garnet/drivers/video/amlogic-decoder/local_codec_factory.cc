@@ -165,7 +165,7 @@ void LocalCodecFactory::Bind(zx::channel server_endpoint) {
 
   // All HW-accelerated local CodecFactory(s) must send OnCodecList()
   // immediately upon creation of the local CodecFactory.
-  fidl::VectorPtr<fuchsia::mediacodec::CodecDescription> codec_descriptions;
+  std::vector<fuchsia::mediacodec::CodecDescription> codec_descriptions;
   for (const CodecAdapterFactory& factory : kCodecFactories) {
     if (!factory.is_enabled) {
       continue;
