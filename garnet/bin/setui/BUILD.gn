@@ -28,6 +28,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.device.display:fuchsia.device.display-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.timezone:fuchsia.timezone-rustc",
@@ -56,7 +57,7 @@ package("setui_service") {
   ]
 }
 
-unittest_package("setui_service_tests") {
+test_package("setui_service_tests") {
   deps = [
     ":bin_test",
   ]
