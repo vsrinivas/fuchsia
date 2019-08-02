@@ -588,7 +588,6 @@ build_api_module("generated_sources") {
 #     Type: path relative to $root_build_dir
 #
 #   elf_build_id
-#     **TODO(mcgrathr): This is not actually produced yet.**
 #     Optional: Path to a file containing the lowercase ASCII hexadecimal
 #     representation of the ELF build ID in this binary.  This is omitted
 #     for OS environments that don't use ELF.  For an ELF binary that

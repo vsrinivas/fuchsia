@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/prebuilt.gni")
 import("ccache.gni")
 import("clang.gni")
 import("gcc.gni")
@@ -16,6 +17,11 @@ declare_args() {
   # Symbolization tools and debuggers find symbolic information this way.
   build_id_dir = "$root_build_dir/.build-id"
 }
+
+_buildidtool =
+    rebase_path("$prebuilt_dir/tools/buildidtool/$host_platform/buildidtool",
+                root_build_dir)
+_id_dir = rebase_path(build_id_dir, root_build_dir)
 
 # Define a toolchain for compiling C/C++ code.
 #
@@ -258,56 +264,41 @@ template("c_toolchain") {
     runtime_outputs = [ outfile ]
     outputs = runtime_outputs
 
-    # All others are ELF and so might have build IDs.
-    make_id_link = invoker.os != "mac" && invoker.os != "win"
-    if (make_id_link) {
-      id_dir = rebase_path(build_id_dir, root_build_dir)
-    }
-
     if (use_strip) {
       unstripped_outfile = "${outfile}.debug"
       outputs += [ unstripped_outfile ]
       strip_command = " && "
-      if (invoker.strip == true && !make_id_link) {
+      if (invoker.strip == true) {
         if (invoker.os == "mac") {
           # Only the host native tool works on macOS.
           strip_tool = "strip"
         } else {
           strip_tool = "$dir_prefix${tc.tool_prefix}strip"
         }
-        strip_command += "$strip_tool -o $outfile $unstripped_outfile"
+        strip_command += "$strip_tool -o \"$outfile\" \"$unstripped_outfile\""
       } else {
-        if (invoker.strip == true) {
-          strip_switch = "--strip-all"
-        } else {
-          strip_switch = invoker.strip
-        }
-        if (make_id_link && !use_gcc) {
-          # llvm-objcopy has built-in support for populating $id_dir.
-          strip_switch +=
-              " --build-id-link-dir=$id_dir" + " --build-id-link-output=" +
-              " --build-id-link-input=.debug"
-          make_id_link = false
-        }
-        strip_command += "$dir_prefix${tc.tool_prefix}objcopy ${strip_switch} $unstripped_outfile $outfile"
+        strip_command +=
+            "$dir_prefix${tc.tool_prefix}objcopy ${invoker.strip}" +
+            " \"$unstripped_outfile\" \"$outfile\""
       }
     } else {
       unstripped_outfile = outfile
       strip_command = ""
     }
 
-    if (make_id_link) {
-      readelf = "$dir_prefix${tc.tool_prefix}readelf"
-
-      # This works with bash, but ${var:n:m} syntax is not standard.  This is
-      # better than the definition below because it does everything except
-      # `readelf` directly in the shell with no other process launches.
-      # However, non-bash shells can't handle it.  It's left here to show how
-      # it can be done better when presuming bash is acceptable.
-      #strip_command += " && notes=\$(\"$readelf\" -n $unstripped_outfile) && id=\"\${notes##*Build ID: }\" && nl=\$(echo; echo '*') && id=\"\${id%%\$nl}\" && { test -z \"\$id\" || { mkdir -p \"$id_dir/\${id:0:2}\" && ln -f $unstripped_outfile \"$id_dir/\${id:0:2}/\${id:2}.debug\" && ln -f $outfile \"$id_dir/\${id:0:2}/\${id:2}\" ; } ; }"
-
-      # This works with any POSIX-compliant sh and sed.
-      strip_command += " && eval \$(\"$readelf\" -n $unstripped_outfile | sed -n 's/.*Build ID: \\(..\\)\\(.*\\)\$/id0=\\1 id1=\\2/p') && { test -z \"\$id0\" || { mkdir -p \"$id_dir/\$id0\" && ln -f $unstripped_outfile \"$id_dir/\$id0/\$id1.debug\" && ln -f $outfile \"$id_dir/\$id0/\$id1\" ; } ; }"
+    # All others are ELF and so might have build IDs.
+    if (invoker.os != "mac" && invoker.os != "win") {
+      # TODO(TC-606): Kludgey heuristic to match --build-id=none switch and
+      # guess that only then will the output not have a build ID note.
+      # buildidtool unavoidably fails if there is no build ID note, but
+      # some binaries specifically don't have one.  Remove the check once
+      # buildidtool is fixed to be more tolerant.
+      strip_command +=
+          " && case '{{ldflags}}' in *build-id=none*) ;; *)" +
+          " $_buildidtool -build-id-dir \"$_id_dir\"" +
+          " -stamp \"$outfile.build-id.stamp\"" +
+          " -entry \"=$outfile\" -entry \".debug=$unstripped_outfile\"" +
+          " ;; esac"
     }
 
     rspfile = "${outfile}.rsp"

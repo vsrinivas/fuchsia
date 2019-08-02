@@ -229,6 +229,10 @@ template("shared_library") {
             if (toolchain.link_output_suffix != "") {
               dist = rebase_path(output_file, root_build_dir)
             }
+            if (current_os != "mac" && current_os != "win") {
+              elf_build_id =
+                  rebase_path("$output_file.build-id.stamp", root_build_dir)
+            }
           },
         ]
 
@@ -1335,6 +1339,10 @@ template("_basic_executable") {
           if (toolchain.link_output_suffix != "") {
             dist = rebase_path(output_file, root_build_dir)
           }
+          if (current_os != "mac" && current_os != "win") {
+            elf_build_id =
+                rebase_path("$output_file.build-id.stamp", root_build_dir)
+          }
         },
       ]
     }
@@ -1647,6 +1655,10 @@ template("_loadable_module") {
           debug = rebase_path(link_output_file, root_build_dir)
           if (toolchain.link_output_suffix != "") {
             dist = rebase_path(output_file, root_build_dir)
+          }
+          if (current_os != "mac" && current_os != "win") {
+            elf_build_id =
+                rebase_path("$output_file.build-id.stamp", root_build_dir)
           }
         },
       ]
