@@ -17,8 +17,7 @@ namespace cobalt {
 class TemperatureFetcherImpl : public TemperatureFetcher {
  public:
   TemperatureFetcherImpl();
-  // Returns temperature in degrees Celsius and rounded to an integer from a float.
-  TemperatureFetchStatus FetchTemperature(int32_t *temperature) override;
+  TemperatureFetchStatus FetchTemperature(uint32_t *temperature) override;
 
  private:
   zx_status_t GetDeviceHandle();

@@ -50,14 +50,14 @@ static const pbus_bti_t thermal_btis[] = {
     },
 };
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
+constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(uint32_t temp_c,
                                                                     int32_t cpu_opp,
                                                                     int32_t gpu_opp) {
-  constexpr float kHysteresis = 2.0f;
+  constexpr uint32_t kHysteresis = 2;
 
   return {
-      .up_temp_celsius = temp_c + kHysteresis,
-      .down_temp_celsius = temp_c - kHysteresis,
+      .up_temp = temp_c + kHysteresis,
+      .down_temp = temp_c - kHysteresis,
       .fan_level = 0,
       .big_cluster_dvfs_opp = cpu_opp,
       .little_cluster_dvfs_opp = 0,
@@ -97,19 +97,19 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo astro_config = {
     .gpu_throttling = true,
     .num_trip_points = 7,
     .big_little = false,
-    .critical_temp_celsius = 102.0f,
+    .critical_temp = 102,
     .trip_point_info =
         {
             // The first trip point entry is the default state of the machine
             // and the driver does not use the specified temperature/hysterisis
             // to set any interrupt trip points.
-            TripPoint(0.0f, 10, 5),
-            TripPoint(75.0f, 9, 4),
-            TripPoint(80.0f, 8, 3),
-            TripPoint(85.0f, 7, 3),
-            TripPoint(90.0f, 6, 2),
-            TripPoint(95.0f, 5, 1),
-            TripPoint(100.0f, 4, 0),
+            TripPoint(0, 10, 5),
+            TripPoint(75, 9, 4),
+            TripPoint(80, 8, 3),
+            TripPoint(85, 7, 3),
+            TripPoint(90, 6, 2),
+            TripPoint(95, 5, 1),
+            TripPoint(100, 4, 0),
         },
     .opps = {},
 };

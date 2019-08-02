@@ -185,7 +185,7 @@ class SystemMetricsDaemon {
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;
   std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher_;
   std::vector<double> cpu_percentages_;
-  std::unordered_map<int32_t, uint64_t> temperature_map_;
+  std::unordered_map<uint32_t, uint64_t> temperature_map_;
   uint32_t temperature_map_size_ = 0;
 
  protected:

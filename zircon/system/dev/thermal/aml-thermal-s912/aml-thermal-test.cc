@@ -12,12 +12,11 @@
 
 namespace {
 
-bool FloatNear(float a, float b) { return std::abs(a - b) < 0.001f; }
-
 constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPointInfo(
-    float up_temp, float down_temp, int32_t big_cluster_dvfs_opp, int32_t little_cluster_dvfs_opp) {
-  return {.up_temp_celsius = up_temp,
-          .down_temp_celsius = down_temp,
+    uint32_t up_temp, uint32_t down_temp, int32_t big_cluster_dvfs_opp,
+    int32_t little_cluster_dvfs_opp) {
+  return {.up_temp = up_temp,
+          .down_temp = down_temp,
           .fan_level = 0,
           .big_cluster_dvfs_opp = big_cluster_dvfs_opp,
           .little_cluster_dvfs_opp = little_cluster_dvfs_opp,
@@ -281,17 +280,17 @@ TEST_F(AmlThermalTest, TripPointThread) {
       .gpu_throttling = true,
       .num_trip_points = 8,
       .big_little = true,
-      .critical_temp_celsius = 81.0f,
+      .critical_temp = 81,
       .trip_point_info =
           {
-              TripPointInfo(2.0f, 0.0f, 6, 4),
-              TripPointInfo(65.0f, 63.0f, 6, 4),
-              TripPointInfo(70.0f, 68.0f, 6, 4),
-              TripPointInfo(75.0f, 73.0f, 6, 4),
-              TripPointInfo(82.0f, 79.0f, 5, 4),
-              TripPointInfo(87.0f, 84.0f, 4, 4),
-              TripPointInfo(92.0f, 89.0f, 3, 3),
-              TripPointInfo(96.0f, 93.0f, 2, 2),
+              TripPointInfo(2, 0, 6, 4),
+              TripPointInfo(65, 63, 6, 4),
+              TripPointInfo(70, 68, 6, 4),
+              TripPointInfo(75, 73, 6, 4),
+              TripPointInfo(82, 79, 5, 4),
+              TripPointInfo(87, 84, 4, 4),
+              TripPointInfo(92, 89, 3, 3),
+              TripPointInfo(96, 93, 2, 2),
           },
       .opps = {},
   };
@@ -323,30 +322,30 @@ TEST_F(AmlThermalTest, TripPointThread) {
   scpi.ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, {})
       .ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
                          {})
-      .ExpectGetSensorValue(ZX_OK, 1234, 30.0f)  // Trip point 0
-      .ExpectGetSensorValue(ZX_OK, 1234, 75.0f)  // 0 -> 1
-      .ExpectGetSensorValue(ZX_OK, 1234, 75.0f)  // 1 -> 2
-      .ExpectGetSensorValue(ZX_OK, 1234, 75.0f)  // 2 -> 3
-      .ExpectGetSensorValue(ZX_OK, 1234, 67.0f)  // 3 -> 2
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 2 -> 3
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 3 -> 4
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 4 -> 5
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 5 -> 6
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 6 -> 7
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 7 -> critical
+      .ExpectGetSensorValue(ZX_OK, 1234, 30)  // Trip point 0
+      .ExpectGetSensorValue(ZX_OK, 1234, 75)  // 0 -> 1
+      .ExpectGetSensorValue(ZX_OK, 1234, 75)  // 1 -> 2
+      .ExpectGetSensorValue(ZX_OK, 1234, 75)  // 2 -> 3
+      .ExpectGetSensorValue(ZX_OK, 1234, 67)  // 3 -> 2
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)  // 2 -> 3
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)  // 3 -> 4
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)  // 4 -> 5
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)  // 5 -> 6
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)  // 6 -> 7
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)  // 7 -> critical
       .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, 0)
       .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, 0)
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)
-      .ExpectGetSensorValue(ZX_OK, 1234, 78.0f)  // 7 -> 6
-      .ExpectGetSensorValue(ZX_OK, 1234, 78.0f)  // 6 -> 5
-      .ExpectGetSensorValue(ZX_OK, 1234, 78.0f)  // 5 -> 4
-      .ExpectGetSensorValue(ZX_OK, 1234, 87.0f)  // 4 -> 5
-      .ExpectGetSensorValue(ZX_OK, 1234, 87.0f)
-      .ExpectGetSensorValue(ZX_OK, 1234, 87.0f)
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 5 -> 6
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 6 -> 7
-      .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 7 -> critical
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)
+      .ExpectGetSensorValue(ZX_OK, 1234, 78)  // 7 -> 6
+      .ExpectGetSensorValue(ZX_OK, 1234, 78)  // 6 -> 5
+      .ExpectGetSensorValue(ZX_OK, 1234, 78)  // 5 -> 4
+      .ExpectGetSensorValue(ZX_OK, 1234, 87)  // 4 -> 5
+      .ExpectGetSensorValue(ZX_OK, 1234, 87)
+      .ExpectGetSensorValue(ZX_OK, 1234, 87)
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)  // 5 -> 6
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)  // 6 -> 7
+      .ExpectGetSensorValue(ZX_OK, 1234, 96)  // 7 -> critical
       .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, 0)
       .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, 0);
 
@@ -408,12 +407,11 @@ TEST_F(AmlThermalTest, TripPointThread) {
   ASSERT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 7);
 
-  float temperature;
+  uint32_t temperature;
 
-  ASSERT_OK(
-      fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(client_.get(), &status, &temperature));
+  ASSERT_OK(fuchsia_hardware_thermal_DeviceGetTemperature(client_.get(), &status, &temperature));
   ASSERT_OK(status);
-  ASSERT_TRUE(FloatNear(temperature, 96.0f));
+  ASSERT_EQ(temperature, 96);
 
   dut.DdkUnbind();
   dut.JoinWorkerThread();

@@ -38,8 +38,8 @@ struct SystemStatus {
     /// operating point index for small cluster
     uint32 small_cluster_op_index;
 
-    /// current CPU temperature in degrees Celsius
-    float32 temperature;
+    /// current CPU temperature
+    uint32 temperature;
 
     /// current Fan Level
     uint32 fan_level;

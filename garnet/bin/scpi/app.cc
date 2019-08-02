@@ -156,8 +156,8 @@ void App::GetSystemStatus(GetSystemStatusCallback callback) {
   }
   info.small_cluster_op_index = op_idx;
 
-  status = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(thermal_handle_.get(), &status2,
-                                                                &info.temperature);
+  status = fuchsia_hardware_thermal_DeviceGetTemperature(thermal_handle_.get(), &status2,
+                                                         &info.temperature);
   if (status != ZX_OK || status2 != ZX_OK) {
     fprintf(stderr, "ERROR: Failed to get current temperature: %d %d\n", status, status2);
     callback(fuchsia::scpi::Status::ERR_TEMPERATURE, std::move(info));

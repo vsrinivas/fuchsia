@@ -122,7 +122,7 @@ void SystemMetricsDaemon::RepeatedlyLogMemoryUsage() {
 }
 
 void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
-  int32_t temperature;
+  uint32_t temperature;
   TemperatureFetchStatus status = temperature_fetcher_->FetchTemperature(&temperature);
   switch (status) {
     case TemperatureFetchStatus::NOT_SUPPORTED:
@@ -417,7 +417,7 @@ std::chrono::seconds SystemMetricsDaemon::LogTemperature() {
     InitializeLogger();
     return std::chrono::minutes(1);
   }
-  int32_t temperature;
+  uint32_t temperature;
   TemperatureFetchStatus status = temperature_fetcher_->FetchTemperature(&temperature);
   if (TemperatureFetchStatus::SUCCEED != status) {
     FX_LOGS(ERROR) << "Temperature fetch failed.";

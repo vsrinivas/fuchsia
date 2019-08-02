@@ -23,9 +23,7 @@ class ThermalCliTest : public zxtest::Test {
 
   zx::channel GetClient() { return std::move(client_); }
 
-  mock_function::MockFunction<zx_status_t>& MockGetTemperatureCelsius() {
-    return mock_GetTemperatureCelsius_;
-  }
+  mock_function::MockFunction<zx_status_t>& MockGetTemperature() { return mock_GetTemperature_; }
 
   mock_function::MockFunction<zx_status_t>& MockGetFanLevel() { return mock_GetFanLevel_; }
 
@@ -74,18 +72,16 @@ class ThermalCliTest : public zxtest::Test {
     return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_OK, &op_info);
   }
 
-  zx_status_t GetTemperatureCelsius(fidl_txn_t* txn) {
-    zx_status_t status = mock_GetTemperatureCelsius_.Call();
-    return fuchsia_hardware_thermal_DeviceGetTemperatureCelsius_reply(txn, status, 0);
+  zx_status_t GetTemperature(fidl_txn_t* txn) {
+    zx_status_t status = mock_GetTemperature_.Call();
+    return fuchsia_hardware_thermal_DeviceGetTemperature_reply(txn, status, 0);
   }
 
   zx_status_t GetStateChangeEvent(fidl_txn_t* txn) { return ZX_ERR_NOT_SUPPORTED; }
 
   zx_status_t GetStateChangePort(fidl_txn_t* txn) { return ZX_ERR_NOT_SUPPORTED; }
 
-  zx_status_t SetTripCelsius(uint32_t id, int32_t temp, fidl_txn_t* txn) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  zx_status_t SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn) { return ZX_ERR_NOT_SUPPORTED; }
 
   zx_status_t GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
                                     fidl_txn_t* txn) {
@@ -113,7 +109,7 @@ class ThermalCliTest : public zxtest::Test {
   async::Loop loop_;
   zx::channel client_;
 
-  mock_function::MockFunction<zx_status_t> mock_GetTemperatureCelsius_;
+  mock_function::MockFunction<zx_status_t> mock_GetTemperature_;
   mock_function::MockFunction<zx_status_t> mock_GetFanLevel_;
   mock_function::MockFunction<zx_status_t, uint32_t> mock_SetFanLevel_;
   mock_function::MockFunction<zx_status_t, fuchsia_hardware_thermal_PowerDomain> mock_GetDvfsInfo_;
@@ -126,10 +122,10 @@ class ThermalCliTest : public zxtest::Test {
       .GetInfo = Binder::BindMember<&ThermalCliTest::GetInfo>,
       .GetDeviceInfo = Binder::BindMember<&ThermalCliTest::GetDeviceInfo>,
       .GetDvfsInfo = Binder::BindMember<&ThermalCliTest::GetDvfsInfo>,
-      .GetTemperatureCelsius = Binder::BindMember<&ThermalCliTest::GetTemperatureCelsius>,
+      .GetTemperature = Binder::BindMember<&ThermalCliTest::GetTemperature>,
       .GetStateChangeEvent = Binder::BindMember<&ThermalCliTest::GetStateChangeEvent>,
       .GetStateChangePort = Binder::BindMember<&ThermalCliTest::GetStateChangePort>,
-      .SetTripCelsius = Binder::BindMember<&ThermalCliTest::SetTripCelsius>,
+      .SetTrip = Binder::BindMember<&ThermalCliTest::SetTrip>,
       .GetDvfsOperatingPoint = Binder::BindMember<&ThermalCliTest::GetDvfsOperatingPoint>,
       .SetDvfsOperatingPoint = Binder::BindMember<&ThermalCliTest::SetDvfsOperatingPoint>,
       .GetFanLevel = Binder::BindMember<&ThermalCliTest::GetFanLevel>,
@@ -140,17 +136,17 @@ class ThermalCliTest : public zxtest::Test {
 TEST_F(ThermalCliTest, Temperature) {
   ThermalCli thermal_cli(std::move(client_));
 
-  MockGetTemperatureCelsius().ExpectCall(ZX_OK);
+  MockGetTemperature().ExpectCall(ZX_OK);
   EXPECT_OK(thermal_cli.PrintTemperature());
-  MockGetTemperatureCelsius().VerifyAndClear();
+  MockGetTemperature().VerifyAndClear();
 }
 
 TEST_F(ThermalCliTest, TemperatureFails) {
   ThermalCli thermal_cli(std::move(client_));
 
-  MockGetTemperatureCelsius().ExpectCall(ZX_ERR_IO);
+  MockGetTemperature().ExpectCall(ZX_ERR_IO);
   EXPECT_EQ(thermal_cli.PrintTemperature(), ZX_ERR_IO);
-  MockGetTemperatureCelsius().VerifyAndClear();
+  MockGetTemperature().VerifyAndClear();
 }
 
 TEST_F(ThermalCliTest, GetFanLevel) {

@@ -67,7 +67,7 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
 
   virtual void PmicWrite(uint16_t data, uint32_t addr);
 
-  virtual float ReadTemperatureSensors();
+  virtual uint32_t ReadTemperatureSensors();
 
   virtual zx_status_t SetDvfsOpp(uint16_t op_idx);
 
@@ -86,10 +86,10 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
   zx_status_t GetInfo(fidl_txn_t* txn);
   zx_status_t GetDeviceInfo(fidl_txn_t* txn);
   zx_status_t GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain, fidl_txn_t* txn);
-  zx_status_t GetTemperatureCelsius(fidl_txn_t* txn);
+  zx_status_t GetTemperature(fidl_txn_t* txn);
   zx_status_t GetStateChangeEvent(fidl_txn_t* txn);
   zx_status_t GetStateChangePort(fidl_txn_t* txn);
-  zx_status_t SetTripCelsius(uint32_t id, float temp, fidl_txn_t* txn);
+  zx_status_t SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn);
   zx_status_t GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
                                     fidl_txn_t* txn);
   zx_status_t SetDvfsOperatingPoint(uint16_t op_idx,
@@ -102,11 +102,10 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
       .GetInfo = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetInfo>,
       .GetDeviceInfo = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetDeviceInfo>,
       .GetDvfsInfo = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetDvfsInfo>,
-      .GetTemperatureCelsius =
-          fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetTemperatureCelsius>,
+      .GetTemperature = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetTemperature>,
       .GetStateChangeEvent = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetStateChangeEvent>,
       .GetStateChangePort = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetStateChangePort>,
-      .SetTripCelsius = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::SetTripCelsius>,
+      .SetTrip = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::SetTrip>,
       .GetDvfsOperatingPoint =
           fidl::Binder<MtkThermal>::BindMember<&MtkThermal::GetDvfsOperatingPoint>,
       .SetDvfsOperatingPoint =
@@ -115,11 +114,11 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
       .SetFanLevel = fidl::Binder<MtkThermal>::BindMember<&MtkThermal::SetFanLevel>,
   };
 
-  float RawToTemperature(uint32_t raw, uint32_t sensor);
-  uint32_t TemperatureToRaw(float temp, uint32_t sensor);
+  uint32_t RawToTemperature(uint32_t raw, uint32_t sensor);
+  uint32_t TemperatureToRaw(uint32_t temp, uint32_t sensor);
 
-  uint32_t GetRawHot(float temp);
-  uint32_t GetRawCold(float temp);
+  uint32_t GetRawHot(uint32_t temp);
+  uint32_t GetRawCold(uint32_t temp);
 
   int Thread();
 

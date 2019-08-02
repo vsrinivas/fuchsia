@@ -21,8 +21,8 @@ class TemperatureFetcher {
  public:
   virtual ~TemperatureFetcher() = default;
 
-  // Temperature in degrees Celsius.
-  virtual TemperatureFetchStatus FetchTemperature(int32_t* temperature) = 0;
+  // Temperature in Celsius.
+  virtual TemperatureFetchStatus FetchTemperature(uint32_t* temperature) = 0;
 };
 
 }  // namespace cobalt

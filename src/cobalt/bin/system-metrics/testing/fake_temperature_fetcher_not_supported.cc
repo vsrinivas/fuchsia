@@ -10,7 +10,7 @@ namespace cobalt {
 
 FakeTemperatureFetcherNotSupported::FakeTemperatureFetcherNotSupported() {}
 
-TemperatureFetchStatus FakeTemperatureFetcherNotSupported::FetchTemperature(int32_t *temperature) {
+TemperatureFetchStatus FakeTemperatureFetcherNotSupported::FetchTemperature(uint32_t *temperature) {
   return TemperatureFetchStatus::NOT_SUPPORTED;
 }
 

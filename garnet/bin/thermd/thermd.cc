@@ -33,8 +33,8 @@ static uint32_t pl1_mw;  // current PL1 value
 #define PL1_MIN 2500
 #define PL1_MAX 7000
 
-// degrees Celsius below threshold before we adjust PL value
-static constexpr float COOL_TEMP_THRESHOLD = 5.0f;
+static constexpr uint32_t COOL_TEMP_THRESHOLD = 50;  // degrees in kelvins below threshold before
+                                                     // we adjust PL value
 
 static zx_status_t get_root_resource(zx_handle_t* root_resource) {
   zx::channel local, remote;
@@ -68,6 +68,18 @@ static zx_status_t set_pl1(uint32_t target) {
   pl1_mw = target;
   TRACE_COUNTER("thermal", "throttle", 0, "pl1", target);
   return ZX_OK;
+}
+
+static uint32_t to_celsius(uint32_t val) {
+  // input is 10th of a kelvin
+  return (val * 10 - 27315) / 100;
+}
+
+static uint32_t to_kelvin(uint32_t celsius) __attribute__((unused));
+
+static uint32_t to_kelvin(uint32_t celsius) {
+  // return in 10th of a kelvin
+  return (celsius * 100 + 27315) / 10;
 }
 
 static zx_status_t thermal_device_added(int dirfd, int event, const char* name, void* cookie) {
@@ -157,12 +169,12 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  float temp;
+  uint32_t temp;
   ssize_t rc = read(fd.get(), &temp, sizeof(temp));
   if (rc != sizeof(temp)) {
     return rc;
   }
-  TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
+  TRACE_COUNTER("thermal", "temp", 0, "ambient-c", to_celsius(temp));
 
   fzl::FdioCaller caller(std::move(fd));
 
@@ -174,8 +186,8 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  TRACE_COUNTER("thermal", "trip-point", 0, "passive-c", info.passive_temp_celsius, "critical-c",
-                info.critical_temp_celsius);
+  TRACE_COUNTER("thermal", "trip-point", 0, "passive-c", to_celsius(info.passive_temp),
+                "critical-c", to_celsius(info.critical_temp));
 
   zx_handle_t h = ZX_HANDLE_INVALID;
   st = fuchsia_hardware_thermal_DeviceGetStateChangeEvent(caller.borrow_channel(), &status2, &h);
@@ -190,8 +202,8 @@ int main(int argc, char** argv) {
   }
 
   // Set a trip point
-  st = fuchsia_hardware_thermal_DeviceSetTripCelsius(caller.borrow_channel(), 0,
-                                                     info.passive_temp_celsius, &status2);
+  st = fuchsia_hardware_thermal_DeviceSetTrip(caller.borrow_channel(), 0, info.passive_temp,
+                                              &status2);
   if (st != ZX_OK || status2 != ZX_OK) {
     fprintf(stderr, "ERROR: Failed to set trip point: %d %d\n", st, status2);
     return -1;
@@ -203,8 +215,9 @@ int main(int argc, char** argv) {
     fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st, status2);
     return -1;
   }
-  TRACE_COUNTER("thermal", "trip-point", 0, "passive-c", info.passive_temp_celsius, "critical-c",
-                info.critical_temp_celsius, "active0-c", info.active_trip[0]);
+  TRACE_COUNTER("thermal", "trip-point", 0, "passive-c", to_celsius(info.passive_temp),
+                "critical-c", to_celsius(info.critical_temp), "active0-c",
+                to_celsius(info.active_trip[0]));
 
   // set PL1 to 7 watts (EDP)
   set_pl1(PL1_MAX);
@@ -231,7 +244,7 @@ int main(int argc, char** argv) {
           return rc;
         }
       } else {
-        TRACE_COUNTER("thermal", "event", 0, "spurious", temp);
+        TRACE_COUNTER("thermal", "event", 0, "spurious", to_celsius(temp));
       }
     }
     if (st == ZX_ERR_TIMED_OUT) {
@@ -240,7 +253,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "ERROR: Failed to read temperature: %zd\n", rc);
         return rc;
       }
-      TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
+      TRACE_COUNTER("thermal", "temp", 0, "ambient-c", to_celsius(temp));
 
       // increase power limit if the temperature dropped enough
       if ((temp < info.active_trip[0] - COOL_TEMP_THRESHOLD) && (pl1_mw != PL1_MAX)) {

@@ -24,11 +24,16 @@ constexpr pbus_mmio_t thermal_mmios[] = {
 constexpr pbus_irq_t thermal_irqs[] = {
     {.irq = MT8167_IRQ_PTP_THERM, .mode = ZX_INTERRUPT_MODE_EDGE_HIGH}};
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c, int32_t opp) {
-  constexpr float kHysteresis = 2.0f;
+constexpr uint32_t CToKTenths(uint32_t temp_c) {
+  constexpr uint32_t kKelvinOffset = 2732;  // Units: 0.1 degrees C
+  return (temp_c * 10) + kKelvinOffset;
+}
 
-  return {.up_temp_celsius = temp_c + kHysteresis,
-          .down_temp_celsius = temp_c - kHysteresis,
+constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(uint32_t temp_c, int32_t opp) {
+  constexpr uint32_t kHysteresis = 2;
+
+  return {.up_temp = CToKTenths(temp_c + kHysteresis),
+          .down_temp = CToKTenths(temp_c - kHysteresis),
           .fan_level = 0,
           .big_cluster_dvfs_opp = opp,
           .little_cluster_dvfs_opp = 0,
@@ -42,14 +47,14 @@ constexpr fuchsia_hardware_thermal_ThermalDeviceInfo thermal_dev_info =
         .gpu_throttling = true,
         .num_trip_points = 5,
         .big_little = false,
-        .critical_temp_celsius = 120.0f,
+        .critical_temp = CToKTenths(120),
         .trip_point_info =
             {
-                TripPoint(55.0f, 4),
-                TripPoint(65.0f, 3),
-                TripPoint(75.0f, 2),
-                TripPoint(85.0f, 1),
-                TripPoint(95.0f, 0),
+                TripPoint(55, 4),
+                TripPoint(65, 3),
+                TripPoint(75, 2),
+                TripPoint(85, 1),
+                TripPoint(95, 0),
             },
         .opps = {[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
                      {// See section 3.6 (MTCMOS Domains) of the functional specification document.

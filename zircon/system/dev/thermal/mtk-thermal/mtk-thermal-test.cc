@@ -27,10 +27,15 @@ ddk_mock::MockMmioReg& GetMockReg(int index, ddk_mock::MockMmioRegRegion& regist
   return registers[T::Get(index).addr()];
 }
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp, int32_t opp) {
+constexpr uint32_t CToKTenths(uint32_t temp_c) {
+  constexpr uint32_t kKelvinOffset = 2732;  // Units: 0.1 degrees C
+  return (temp_c * 10) + kKelvinOffset;
+}
+
+constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(uint32_t temp, int32_t opp) {
   fuchsia_hardware_thermal_ThermalTemperatureInfo trip = {};
-  trip.up_temp_celsius = temp + 2.0f;
-  trip.down_temp_celsius = temp - 2.0f;
+  trip.up_temp = CToKTenths(temp + 2);
+  trip.down_temp = CToKTenths(temp - 2);
   trip.big_cluster_dvfs_opp = opp;
   return trip;
 }
@@ -102,7 +107,7 @@ class MtkThermalTest : public MtkThermal {
   mock_function::MockFunction<void, uint16_t, uint32_t>& mock_PmicWrite() {
     return mock_pmic_write_;
   }
-  mock_function::MockFunction<float>& mock_ReadTemperatureSensors() {
+  mock_function::MockFunction<uint32_t>& mock_ReadTemperatureSensors() {
     return mock_get_temperature_;
   }
   mock_function::MockFunction<zx_status_t, uint16_t>& mock_SetDvfsOpp() {
@@ -138,7 +143,7 @@ class MtkThermalTest : public MtkThermal {
     }
   }
 
-  float ReadTemperatureSensors() override {
+  uint32_t ReadTemperatureSensors() override {
     if (mock_get_temperature_.HasExpectations()) {
       return mock_get_temperature_.Call();
     } else {
@@ -222,7 +227,7 @@ class MtkThermalTest : public MtkThermal {
   ddk_mock::MockMmioRegRegion mock_infracfg_regs_;
 
   mock_function::MockFunction<void, uint16_t, uint32_t> mock_pmic_write_;
-  mock_function::MockFunction<float> mock_get_temperature_;
+  mock_function::MockFunction<uint32_t> mock_get_temperature_;
   mock_function::MockFunction<zx_status_t, uint16_t> mock_set_dvfs_opp_;
   mock_function::MockFunction<zx_status_t, size_t> mock_set_trip_point_;
 
@@ -234,10 +239,10 @@ class MtkThermalTest : public MtkThermal {
 TEST(ThermalTest, TripPoints) {
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
   thermal_info.num_trip_points = 3;
-  thermal_info.critical_temp_celsius = 50.0f;
-  thermal_info.trip_point_info[0] = TripPoint(20.0f, 2);
-  thermal_info.trip_point_info[1] = TripPoint(30.0f, 1);
-  thermal_info.trip_point_info[2] = TripPoint(40.0f, 0);
+  thermal_info.critical_temp = CToKTenths(50);
+  thermal_info.trip_point_info[0] = TripPoint(20, 2);
+  thermal_info.trip_point_info[1] = TripPoint(30, 1);
+  thermal_info.trip_point_info[2] = TripPoint(40, 0);
 
   fbl::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
@@ -247,22 +252,22 @@ TEST(ThermalTest, TripPoints) {
   uint32_t up_int = TempMonIntStatus::Get().FromValue(0).set_hot_0(1).reg_value();
   uint32_t down_int = TempMonIntStatus::Get().FromValue(0).set_cold_0(1).reg_value();
 
-  test->mock_ReadTemperatureSensors().ExpectCall(20.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(20));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 0);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(35.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(35));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 1);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(up_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(45.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(45));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 2);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(up_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(25.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(25));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 1);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(down_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(15.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(15));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 0);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(down_int);
 
@@ -276,10 +281,10 @@ TEST(ThermalTest, TripPoints) {
 TEST(ThermalTest, CriticalTemperature) {
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
   thermal_info.num_trip_points = 3;
-  thermal_info.critical_temp_celsius = 50.0f;
-  thermal_info.trip_point_info[0] = TripPoint(20.0f, 2);
-  thermal_info.trip_point_info[1] = TripPoint(30.0f, 1);
-  thermal_info.trip_point_info[2] = TripPoint(40.0f, 0);
+  thermal_info.critical_temp = CToKTenths(50);
+  thermal_info.trip_point_info[0] = TripPoint(20, 2);
+  thermal_info.trip_point_info[1] = TripPoint(30, 1);
+  thermal_info.trip_point_info[2] = TripPoint(40, 0);
 
   fbl::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
@@ -288,10 +293,10 @@ TEST(ThermalTest, CriticalTemperature) {
 
   uint32_t critical_int = TempMonIntStatus::Get().FromValue(0).set_stage_3(1).reg_value();
 
-  test->mock_ReadTemperatureSensors().ExpectCall(20.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(20));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 0);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(55.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(55));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 2);
   test->mock_SetDvfsOpp().ExpectCall(ZX_OK, 0);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(critical_int);
@@ -306,15 +311,15 @@ TEST(ThermalTest, CriticalTemperature) {
 TEST(ThermalTest, InitialTripPoint) {
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
   thermal_info.num_trip_points = 3;
-  thermal_info.critical_temp_celsius = 50.0f;
-  thermal_info.trip_point_info[0] = TripPoint(20.0f, 2);
-  thermal_info.trip_point_info[1] = TripPoint(30.0f, 1);
-  thermal_info.trip_point_info[2] = TripPoint(40.0f, 0);
+  thermal_info.critical_temp = CToKTenths(50);
+  thermal_info.trip_point_info[0] = TripPoint(20, 2);
+  thermal_info.trip_point_info[1] = TripPoint(30, 1);
+  thermal_info.trip_point_info[2] = TripPoint(40, 0);
 
   fbl::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
 
-  test->mock_ReadTemperatureSensors().ExpectCall(45.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(45));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 2);
 
   EXPECT_OK(test->StartThread());
@@ -326,12 +331,12 @@ TEST(ThermalTest, InitialTripPoint) {
 TEST(ThermalTest, TripPointJumpMultiple) {
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
   thermal_info.num_trip_points = 5;
-  thermal_info.critical_temp_celsius = 100.0f;
-  thermal_info.trip_point_info[0] = TripPoint(20.0f, 4);
-  thermal_info.trip_point_info[1] = TripPoint(30.0f, 3);
-  thermal_info.trip_point_info[2] = TripPoint(40.0f, 2);
-  thermal_info.trip_point_info[3] = TripPoint(50.0f, 1);
-  thermal_info.trip_point_info[4] = TripPoint(60.0f, 0);
+  thermal_info.critical_temp = CToKTenths(100);
+  thermal_info.trip_point_info[0] = TripPoint(20, 4);
+  thermal_info.trip_point_info[1] = TripPoint(30, 3);
+  thermal_info.trip_point_info[2] = TripPoint(40, 2);
+  thermal_info.trip_point_info[3] = TripPoint(50, 1);
+  thermal_info.trip_point_info[4] = TripPoint(60, 0);
 
   fbl::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
@@ -339,38 +344,38 @@ TEST(ThermalTest, TripPointJumpMultiple) {
   uint32_t up_int = TempMonIntStatus::Get().FromValue(0).set_hot_0(1).reg_value();
   uint32_t down_int = TempMonIntStatus::Get().FromValue(0).set_cold_0(1).reg_value();
 
-  test->mock_ReadTemperatureSensors().ExpectCall(20.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(20));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 0);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(45.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(45));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 2);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(up_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(65.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(65));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 4);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(up_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(15.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(15));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 0);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(down_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(55.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(55));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 3);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(up_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(25.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(25));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 1);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(down_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(65.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(65));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 4);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(up_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(35.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(35));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 2);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(down_int);
 
-  test->mock_ReadTemperatureSensors().ExpectCall(15.0f);
+  test->mock_ReadTemperatureSensors().ExpectCall(CToKTenths(15));
   test->mock_SetTripPoint().ExpectCall(ZX_OK, 0);
   GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(down_int);
 
@@ -384,9 +389,9 @@ TEST(ThermalTest, TripPointJumpMultiple) {
 TEST(ThermalTest, SetTripPoint) {
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
   thermal_info.num_trip_points = 3;
-  thermal_info.trip_point_info[0] = TripPoint(20.0f, 2);
-  thermal_info.trip_point_info[1] = TripPoint(30.0f, 1);
-  thermal_info.trip_point_info[2] = TripPoint(40.0f, 0);
+  thermal_info.trip_point_info[0] = TripPoint(20, 2);
+  thermal_info.trip_point_info[1] = TripPoint(30, 1);
+  thermal_info.trip_point_info[2] = TripPoint(40, 0);
 
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
