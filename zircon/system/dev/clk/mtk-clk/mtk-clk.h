@@ -21,6 +21,8 @@ class MtkClk : public DeviceType, public ddk::ClockImplProtocol<MtkClk, ddk::bas
 
   void DdkRelease() { delete this; }
 
+  zx_status_t Bind();
+
   zx_status_t ClockImplEnable(uint32_t index);
   zx_status_t ClockImplDisable(uint32_t index);
   zx_status_t ClockImplIsEnabled(uint32_t id, bool* out_enabled);

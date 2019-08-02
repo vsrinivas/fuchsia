@@ -183,6 +183,7 @@ class MtkPower : public MtkPowerType, public ddk::PowerImplProtocol<MtkPower, dd
  private:
   ddk::MmioBuffer pmic_mmio_;
 
+  zx_status_t Bind();
   zx_status_t Init();
   void WaitForIdle();
   void WaitForValidClear();

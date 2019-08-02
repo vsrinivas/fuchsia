@@ -47,13 +47,22 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
   // DO NOT ADD ANY MORE PROTOCOLS HERE.
   // SYSMEM is needed for the x86 board driver and GPIO_IMPL is needed for board driver pinmuxing.
   // IOMMU is for potential future use.
+  // CLOCK_IMPL and POWER_IMPL are needed by the mt8167s board driver.
   // Use of this mechanism for all other protocols has been deprecated.
+    case ZX_PROTOCOL_CLOCK_IMPL: {
+      clock_ = ddk::ClockImplProtocolClient(static_cast<const clock_impl_protocol_t*>(protocol));
+      break;
+    }
     case ZX_PROTOCOL_GPIO_IMPL: {
       gpio_ = ddk::GpioImplProtocolClient(static_cast<const gpio_impl_protocol_t*>(protocol));
       break;
     }
     case ZX_PROTOCOL_IOMMU: {
       iommu_ = ddk::IommuProtocolClient(static_cast<const iommu_protocol_t*>(protocol));
+      break;
+    }
+    case ZX_PROTOCOL_POWER_IMPL: {
+      power_ = ddk::PowerImplProtocolClient(static_cast<const power_impl_protocol_t*>(protocol));
       break;
     }
     case ZX_PROTOCOL_SYSMEM: {
@@ -218,6 +227,7 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
   // DO NOT ADD ANY MORE PROTOCOLS HERE.
   // SYSMEM is needed for the x86 board driver and GPIO_IMPL is needed for board driver pinmuxing.
   // IOMMU is for potential future use.
+  // CLOCK_IMPL and POWER_IMPL are needed by the mt8167s board driver.
   // Use of this mechanism for all other protocols has been deprecated.
     case ZX_PROTOCOL_PBUS: {
       auto proto = static_cast<pbus_protocol_t*>(out);
@@ -225,6 +235,12 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
       proto->ops = &pbus_protocol_ops_;
       return ZX_OK;
     }
+    case ZX_PROTOCOL_CLOCK_IMPL:
+      if (clock_) {
+        clock_->GetProto(static_cast<clock_impl_protocol_t*>(out));
+        return ZX_OK;
+      }
+      break;
     case ZX_PROTOCOL_GPIO_IMPL:
       if (gpio_) {
         gpio_->GetProto(static_cast<gpio_impl_protocol_t*>(out));
@@ -234,6 +250,12 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_SYSMEM:
       if (sysmem_) {
         sysmem_->GetProto(static_cast<sysmem_protocol_t*>(out));
+        return ZX_OK;
+      }
+      break;
+    case ZX_PROTOCOL_POWER_IMPL:
+      if (power_) {
+        power_->GetProto(static_cast<power_impl_protocol_t*>(out));
         return ZX_OK;
       }
       break;

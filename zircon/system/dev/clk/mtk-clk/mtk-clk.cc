@@ -6,6 +6,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -203,6 +204,29 @@ class FrequencyMeterControl : public hwreg::RegisterBase<FrequencyMeterControl, 
 
 }  // namespace
 
+zx_status_t MtkClk::Bind() {
+  zx_status_t status;
+  pbus_protocol_t pbus;
+  status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "MtkClk: failed to get ZX_PROTOCOL_PBUS, st = %d\n", status);
+    return status;
+  }
+
+  clock_impl_protocol_t clk_proto = {
+      .ops = &clock_impl_protocol_ops_,
+      .ctx = this,
+  };
+
+  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "MtkClk::Create: pbus_register_protocol failed, st = %d\n", status);
+    return status;
+  }
+
+  return DdkAdd("mtk-clk");
+}
+
 zx_status_t MtkClk::Create(zx_device_t* parent) {
   zx_status_t status;
 
@@ -226,8 +250,8 @@ zx_status_t MtkClk::Create(zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((status = device->DdkAdd("mtk-clk")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __FILE__, status);
+  if ((status = device->Bind()) != ZX_OK) {
+    zxlogf(ERROR, "%s: MtkClk bind failed: %d\n", __FILE__, status);
     return status;
   }
 

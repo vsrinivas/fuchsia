@@ -19,11 +19,13 @@ driver("platform-bus") {
     "platform-protocol-device.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.clockimpl",
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.iommu",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.powerimpl",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/fidl/fuchsia-sysinfo:c",
