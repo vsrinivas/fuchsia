@@ -50,10 +50,9 @@ enum class Resizability {
   NonResizable,
 };
 
-// Argument which specifies the type of COW clone.
+// Argument which specifies the type of clone.
 enum class CloneType {
-  Unidirectional,
-  Bidirectional,
+  CopyOnWrite,
   PrivatePagerCopy,
 };
 
@@ -181,9 +180,8 @@ class VmObject : public fbl::RefCounted<VmObject>,
 
   // create a copy-on-write clone vmo at the page-aligned offset and length
   // note: it's okay to start or extend past the size of the parent
-  virtual zx_status_t CreateCowClone(Resizability resizable, CloneType type, uint64_t offset,
-                                     uint64_t size, bool copy_name,
-                                     fbl::RefPtr<VmObject>* child_vmo) {
+  virtual zx_status_t CreateClone(Resizability resizable, CloneType type, uint64_t offset,
+                                  uint64_t size, bool copy_name, fbl::RefPtr<VmObject>* child_vmo) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
