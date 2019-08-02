@@ -62,7 +62,7 @@ impl ImeService {
         check_ime: &'a Arc<Mutex<ImeState>>,
         visible: bool,
     ) {
-        let mut state = await!(self.0.lock());
+        let mut state = self.0.lock().await;
         let active_ime_weak = match &state.active_ime {
             Some(val) => val,
             None => return,
@@ -89,7 +89,7 @@ impl ImeService {
             Err(_) => return,
         };
         let ime = LegacyIme::new(keyboard_type, action, initial_state, client_proxy, self.clone());
-        let mut state = await!(self.0.lock());
+        let mut state = self.0.lock().await;
         let editor_stream = match editor.into_stream() {
             Ok(v) => v,
             Err(e) => {
@@ -117,11 +117,11 @@ impl ImeService {
     }
 
     pub async fn show_keyboard(&self) {
-        await!(self.0.lock()).update_keyboard_visibility(true);
+        self.0.lock().await.update_keyboard_visibility(true);
     }
 
     pub async fn hide_keyboard(&self) {
-        await!(self.0.lock()).update_keyboard_visibility(false);
+        self.0.lock().await.update_keyboard_visibility(false);
     }
 
     /// This is called by the operating system when input from the physical keyboard comes in.
@@ -131,7 +131,7 @@ impl ImeService {
             uii::InputEvent::Keyboard(e) => clone_keyboard_event(e),
             _ => return,
         };
-        let mut state = await!(self.0.lock());
+        let mut state = self.0.lock().await;
         let ime = {
             let active_ime_weak = match state.active_ime {
                 Some(ref v) => v,
@@ -146,7 +146,7 @@ impl ImeService {
         // Send the legacy ime a keystroke event to forward to connected clients. Even if a v2 input
         // method is connected, this ensures legacy text fields are able to still see key events;
         // something not yet provided by the new `TextField` API.
-        await!(ime.forward_event(clone_keyboard_event(&keyboard_event)));
+        ime.forward_event(clone_keyboard_event(&keyboard_event)).await;
 
         // Send the key event to any listening `TextInputContext` clients. If at least one still
         // exists, we assume it handled it and converted it into an edit sent via its handle to the
@@ -160,7 +160,7 @@ impl ImeService {
         // we allow the internal input method inside of `LegacyIme` to convert this key event into
         // an edit.
         if state.text_input_context_clients.len() == 0 {
-            await!(ime.inject_input(keyboard_event));
+            ime.inject_input(keyboard_event).await;
         }
     }
 
@@ -168,7 +168,9 @@ impl ImeService {
         let mut self_clone = self.clone();
         fuchsia_async::spawn(
             async move {
-                while let Some(msg) = await!(stream.try_next())
+                while let Some(msg) = stream
+                    .try_next()
+                    .await
                     .context("error reading value from IME service request stream")?
                 {
                     match msg {
@@ -180,22 +182,24 @@ impl ImeService {
                             editor,
                             ..
                         } => {
-                            await!(self_clone.get_input_method_editor(
-                                keyboard_type,
-                                action,
-                                initial_state,
-                                client,
-                                editor,
-                            ));
+                            self_clone
+                                .get_input_method_editor(
+                                    keyboard_type,
+                                    action,
+                                    initial_state,
+                                    client,
+                                    editor,
+                                )
+                                .await;
                         }
                         uii::ImeServiceRequest::ShowKeyboard { .. } => {
-                            await!(self_clone.show_keyboard());
+                            self_clone.show_keyboard().await;
                         }
                         uii::ImeServiceRequest::HideKeyboard { .. } => {
-                            await!(self_clone.hide_keyboard());
+                            self_clone.hide_keyboard().await;
                         }
                         uii::ImeServiceRequest::InjectInput { event, .. } => {
-                            await!(self_clone.inject_input(event));
+                            self_clone.inject_input(event).await;
                         }
                         uii::ImeServiceRequest::DispatchKey { responder, .. } => {
                             responder.send(false).context("error responding to DispatchKey")?;
@@ -213,7 +217,7 @@ impl ImeService {
         fuchsia_async::spawn(
             async move {
                 let control_handle = stream.control_handle();
-                let mut state = await!(self_clone.0.lock());
+                let mut state = self_clone.0.lock().await;
                 if control_handle
                     .send_on_keyboard_visibility_changed(state.keyboard_visible)
                     .is_ok()
@@ -232,7 +236,7 @@ impl ImeService {
             async move {
                 let control_handle = stream.control_handle();
                 {
-                    let mut state = await!(self_clone.0.lock());
+                    let mut state = self_clone.0.lock().await;
 
                     if let Some(multiplexer) = &state.multiplexer {
                         if let Err(e) = bind_new_text_field(multiplexer, &control_handle) {
@@ -241,12 +245,12 @@ impl ImeService {
                     }
                     state.text_input_context_clients.push(control_handle)
                 }
-                while let Some(msg) = await!(stream.try_next())
+                while let Some(msg) = stream.try_next().await
                     .context("error reading value from text input context request stream")?
                 {
                     match msg {
                         txt::TextInputContextRequest::HideKeyboard { .. } => {
-                            await!(self_clone.hide_keyboard());
+                            self_clone.hide_keyboard().await;
                         }
                     }
                 }
@@ -281,7 +285,9 @@ mod test {
     async fn get_state_update(
         editor_stream: &mut uii::InputMethodEditorClientRequestStream,
     ) -> (uii::TextInputState, Option<uii::KeyboardEvent>) {
-        let msg = await!(editor_stream.try_next())
+        let msg = editor_stream
+            .try_next()
+            .await
             .expect("expected working event stream")
             .expect("ime should have sent message");
         if let uii::InputMethodEditorClientRequest::DidUpdateState { state, event, .. } = msg {
@@ -376,7 +382,9 @@ mod test {
                 let mut ev_stream = visibility_service.take_event_stream();
 
                 // expect initial update with current status
-                let msg = await!(ev_stream.try_next())
+                let msg = ev_stream
+                    .try_next()
+                    .await
                     .expect("expected working event stream")
                     .expect("visibility service should have sent message");
                 let uii::ImeVisibilityServiceEvent::OnKeyboardVisibilityChanged { visible } = msg;
@@ -384,7 +392,9 @@ mod test {
 
                 // expect asking for keyboard to reclose results in another message
                 ime_service.hide_keyboard().unwrap();
-                let msg = await!(ev_stream.try_next())
+                let msg = ev_stream
+                    .try_next()
+                    .await
                     .expect("expected working event stream")
                     .expect("visibility service should have sent message");
                 let uii::ImeVisibilityServiceEvent::OnKeyboardVisibilityChanged { visible } = msg;
@@ -392,7 +402,9 @@ mod test {
 
                 // expect asking for keyboard to to open in another message
                 ime_service.show_keyboard().unwrap();
-                let msg = await!(ev_stream.try_next())
+                let msg = ev_stream
+                    .try_next()
+                    .await
                     .expect("expected working event stream")
                     .expect("visibility service should have sent message");
                 let uii::ImeVisibilityServiceEvent::OnKeyboardVisibilityChanged { visible } = msg;
@@ -401,13 +413,17 @@ mod test {
                 // expect asking for keyboard to close/open from IME works
                 let (ime, _editor_stream) = bind_ime_for_test(&ime_service);
                 ime.hide().unwrap();
-                let msg = await!(ev_stream.try_next())
+                let msg = ev_stream
+                    .try_next()
+                    .await
                     .expect("expected working event stream")
                     .expect("visibility service should have sent message");
                 let uii::ImeVisibilityServiceEvent::OnKeyboardVisibilityChanged { visible } = msg;
                 assert_eq!(visible, false);
                 ime.show().unwrap();
-                let msg = await!(ev_stream.try_next())
+                let msg = ev_stream
+                    .try_next()
+                    .await
                     .expect("expected working event stream")
                     .expect("visibility service should have sent message");
                 let uii::ImeVisibilityServiceEvent::OnKeyboardVisibilityChanged { visible } = msg;
@@ -427,21 +443,21 @@ mod test {
                 simulate_keypress(&ime_service, 'a'.into(), 0);
 
                 // get first message with keypress event but no state update
-                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let (state, event) = get_state_update(&mut editor_stream).await;
                 let event = event.expect("expected event to be set");
                 assert_eq!(event.phase, uii::KeyboardEventPhase::Pressed);
                 assert_eq!(event.code_point, 97);
                 assert_eq!(state.text, "");
 
                 // get second message with state update
-                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let (state, event) = get_state_update(&mut editor_stream).await;
                 assert!(event.is_none());
                 assert_eq!(state.text, "a");
                 assert_eq!(state.selection.base, 1);
                 assert_eq!(state.selection.extent, 1);
 
                 // get third message with keyrelease event but no state update
-                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let (state, event) = get_state_update(&mut editor_stream).await;
                 let event = event.expect("expected event to be set");
                 assert_eq!(event.phase, uii::KeyboardEventPhase::Released);
                 assert_eq!(event.code_point, 97);
@@ -451,7 +467,7 @@ mod test {
                 simulate_keypress(&ime_service, 0, HID_USAGE_KEY_LEFT);
 
                 // get first message with keypress event but no state update
-                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let (state, event) = get_state_update(&mut editor_stream).await;
                 let event = event.expect("expected event to be set");
                 assert_eq!(event.phase, uii::KeyboardEventPhase::Pressed);
                 assert_eq!(event.code_point, 0);
@@ -459,14 +475,14 @@ mod test {
                 assert_eq!(state.text, "a");
 
                 // get second message with state update
-                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let (state, event) = get_state_update(&mut editor_stream).await;
                 assert!(event.is_none());
                 assert_eq!(state.text, "a");
                 assert_eq!(state.selection.base, 0);
                 assert_eq!(state.selection.extent, 0);
 
                 // get first message with keyrelease event but no state update
-                let (state, event) = await!(get_state_update(&mut editor_stream));
+                let (state, event) = get_state_update(&mut editor_stream).await;
                 let event = event.expect("expected event to be set");
                 assert_eq!(event.phase, uii::KeyboardEventPhase::Released);
                 assert_eq!(event.code_point, 0);
@@ -486,14 +502,16 @@ mod test {
                 simulate_keypress(&ime_service, 0, HID_USAGE_KEY_ENTER);
 
                 // get first message with keypress event
-                let (_state, event) = await!(get_state_update(&mut editor_stream));
+                let (_state, event) = get_state_update(&mut editor_stream).await;
                 let event = event.expect("expected event to be set");
                 assert_eq!(event.phase, uii::KeyboardEventPhase::Pressed);
                 assert_eq!(event.code_point, 0);
                 assert_eq!(event.hid_usage, HID_USAGE_KEY_ENTER);
 
                 // get second message with onaction event
-                let msg = await!(editor_stream.try_next())
+                let msg = editor_stream
+                    .try_next()
+                    .await
                     .expect("expected working event stream")
                     .expect("ime should have sent message");
                 if let uii::InputMethodEditorClientRequest::OnAction { action, .. } = msg {

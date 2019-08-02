@@ -39,14 +39,16 @@ impl TextFieldMultiplexer {
         let multiplexer2 = multiplexer.clone();
         fasync::spawn(
             async move {
-                while let Some(msg) = await!(event_stream.try_next())
+                while let Some(msg) = event_stream
+                    .try_next()
+                    .await
                     .context("error reading value from text field event stream")?
                 {
                     let txt::TextFieldEvent::OnUpdate { state: textfield_state } = msg;
                     match textfield_state.try_into() {
                         Ok(textfield_state) => {
                             let textfield_state: TextFieldState = textfield_state;
-                            let mut multiplex_state = await!(multiplexer2.inner.lock());
+                            let mut multiplex_state = multiplexer2.inner.lock().await;
                             multiplex_state.control_handles.retain(|handle| {
                                 handle.send_on_update(textfield_state.clone().into()).is_ok()
                             });
@@ -70,7 +72,7 @@ impl TextFieldMultiplexer {
         fasync::spawn(
             async move {
                 {
-                    let mut multiplex_state = await!(this.inner.lock());
+                    let mut multiplex_state = this.inner.lock().await;
                     let handle = stream.control_handle();
                     if let Some(textfield_state) = &multiplex_state.last_state {
                         // We already got at least one update, so send initial OnUpdate with current
@@ -86,10 +88,12 @@ impl TextFieldMultiplexer {
                 let mut edit_queue = Vec::new();
                 let mut transaction_revision: Option<u64> = None;
 
-                while let Some(req) = await!(stream.try_next())
+                while let Some(req) = stream
+                    .try_next()
+                    .await
                     .context("error reading value from text field request stream")?
                 {
-                    await!(this.handle_request(req, &mut edit_queue, &mut transaction_revision))?;
+                    this.handle_request(req, &mut edit_queue, &mut transaction_revision).await?;
                 }
                 Ok(())
             }
@@ -103,7 +107,7 @@ impl TextFieldMultiplexer {
         edit_queue: &'a mut Vec<txt::TextFieldRequest>,
         transaction_revision: &'a mut Option<u64>,
     ) -> Result<(), Error> {
-        let state = await!(self.inner.lock());
+        let state = self.inner.lock().await;
         match req {
             req @ txt::TextFieldRequest::Replace { .. }
             | req @ txt::TextFieldRequest::SetSelection { .. }
@@ -122,16 +126,16 @@ impl TextFieldMultiplexer {
                 responder,
             } => {
                 let (mut position, error) =
-                    await!(state.proxy.position_offset(&mut old_position, offset, revision))?;
+                    state.proxy.position_offset(&mut old_position, offset, revision).await?;
                 responder.send(&mut position, error)?;
             }
             txt::TextFieldRequest::Distance { mut range, revision, responder } => {
-                let (distance, error) = await!(state.proxy.distance(&mut range, revision))?;
+                let (distance, error) = state.proxy.distance(&mut range, revision).await?;
                 responder.send(distance, error)?;
             }
             txt::TextFieldRequest::Contents { mut range, revision, responder } => {
                 let (mut contents, mut point, error) =
-                    await!(state.proxy.contents(&mut range, revision))?;
+                    state.proxy.contents(&mut range, revision).await?;
                 responder.send(&mut contents, &mut point, error)?;
             }
             txt::TextFieldRequest::BeginEdit { revision, .. } => {
@@ -145,7 +149,7 @@ impl TextFieldMultiplexer {
                         forward_edit(edit, &state.proxy)?;
                     }
                     edit_queue.clear();
-                    let error = await!(state.proxy.commit_edit())?;
+                    let error = state.proxy.commit_edit().await?;
                     responder.send(error)?;
                 } else {
                     responder.send(txt::Error::BadRequest)?;
@@ -225,7 +229,9 @@ mod tests {
     }
 
     async fn get_stream_msg(stream: &mut txt::TextFieldRequestStream) -> txt::TextFieldRequest {
-        await!(stream.try_next())
+        stream
+            .try_next()
+            .await
             .expect("error reading value from stream")
             .expect("tried to read value from closed stream")
     }
@@ -234,7 +240,7 @@ mod tests {
         mut stream: &mut txt::TextFieldRequestStream,
         expected_revision: u64,
     ) {
-        match await!(get_stream_msg(&mut stream)) {
+        match get_stream_msg(&mut stream).await {
             txt::TextFieldRequest::BeginEdit { revision, .. } => {
                 assert_eq!(revision, expected_revision);
             }
@@ -243,7 +249,7 @@ mod tests {
     }
 
     async fn expect_replace(mut stream: &mut txt::TextFieldRequestStream, expected_id: u64) {
-        match await!(get_stream_msg(&mut stream)) {
+        match get_stream_msg(&mut stream).await {
             txt::TextFieldRequest::Replace { range, .. } => {
                 assert_eq!(range.start.id, expected_id);
             }
@@ -252,7 +258,7 @@ mod tests {
     }
 
     async fn expect_commit_edit(mut stream: &mut txt::TextFieldRequestStream) {
-        match await!(get_stream_msg(&mut stream)) {
+        match get_stream_msg(&mut stream).await {
             txt::TextFieldRequest::CommitEdit { responder, .. } => {
                 responder.send(txt::Error::Ok).expect("failed to send CommitEdit reply");
             }
@@ -261,7 +267,7 @@ mod tests {
     }
 
     async fn expect_position_offset(mut stream: &mut txt::TextFieldRequestStream) {
-        match await!(get_stream_msg(&mut stream)) {
+        match get_stream_msg(&mut stream).await {
             txt::TextFieldRequest::PositionOffset { mut old_position, responder, .. } => {
                 responder
                     .send(&mut old_position, txt::Error::Ok)
@@ -273,45 +279,47 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn forwards_content_requests_correctly() {
-        let (mut stream, proxy_a, proxy_b) = await!(setup());
+        let (mut stream, proxy_a, proxy_b) = setup().await;
 
         fasync::spawn(async move {
             loop {
-                await!(expect_position_offset(&mut stream));
+                expect_position_offset(&mut stream).await;
             }
         });
 
         let position_a = async move {
-            let (position, _err) =
-                await!(proxy_a.position_offset(&mut txt::Position { id: 123 }, 0, 0))
-                    .expect("failed to call PositionOffset");
+            let (position, _err) = proxy_a
+                .position_offset(&mut txt::Position { id: 123 }, 0, 0)
+                .await
+                .expect("failed to call PositionOffset");
             assert_eq!(position.id, 123);
         };
         let position_b = async move {
-            let (position, _err) =
-                await!(proxy_b.position_offset(&mut txt::Position { id: 321 }, 0, 0))
-                    .expect("failed to call PositionOffset");
+            let (position, _err) = proxy_b
+                .position_offset(&mut txt::Position { id: 321 }, 0, 0)
+                .await
+                .expect("failed to call PositionOffset");
             assert_eq!(position.id, 321);
         };
-        await!(join(position_a, position_b));
+        join(position_a, position_b).await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn queues_interleaving_edits_correctly() {
-        let (mut stream, proxy_a, proxy_b) = await!(setup());
+        let (mut stream, proxy_a, proxy_b) = setup().await;
 
         fasync::spawn(async move {
-            await!(expect_position_offset(&mut stream));
+            expect_position_offset(&mut stream).await;
 
-            await!(expect_begin_edit(&mut stream, 0));
-            await!(expect_replace(&mut stream, 1));
-            await!(expect_replace(&mut stream, 3));
-            await!(expect_commit_edit(&mut stream));
+            expect_begin_edit(&mut stream, 0).await;
+            expect_replace(&mut stream, 1).await;
+            expect_replace(&mut stream, 3).await;
+            expect_commit_edit(&mut stream).await;
 
-            await!(expect_begin_edit(&mut stream, 1));
-            await!(expect_replace(&mut stream, 2));
-            await!(expect_replace(&mut stream, 4));
-            await!(expect_commit_edit(&mut stream));
+            expect_begin_edit(&mut stream, 1).await;
+            expect_replace(&mut stream, 2).await;
+            expect_replace(&mut stream, 4).await;
+            expect_commit_edit(&mut stream).await;
         });
 
         fn make_range(i: u64) -> txt::Range {
@@ -325,23 +333,19 @@ mod tests {
         proxy_b.replace(&mut make_range(4), "").unwrap();
 
         // position offset should be delivered first, before any commits
-        let _ = await!(proxy_a.position_offset(&mut txt::Position { id: 123 }, 0, 0))
+        let _ = proxy_a
+            .position_offset(&mut txt::Position { id: 123 }, 0, 0)
+            .await
             .expect("failed to call PositionOffset");
         // commit should succeed
-        assert_eq!(
-            await!(proxy_a.commit_edit()).expect("failed to send CommitEdit"),
-            txt::Error::Ok
-        );
+        assert_eq!(proxy_a.commit_edit().await.expect("failed to send CommitEdit"), txt::Error::Ok);
         // but a second commit with no request should fail, and not even send something to the
         // TextField server
         assert_eq!(
-            await!(proxy_a.commit_edit()).expect("failed to send CommitEdit"),
+            proxy_a.commit_edit().await.expect("failed to send CommitEdit"),
             txt::Error::BadRequest
         );
         // and a third commit, this time on the other proxy, should succeed
-        assert_eq!(
-            await!(proxy_b.commit_edit()).expect("failed to send CommitEdit"),
-            txt::Error::Ok
-        );
+        assert_eq!(proxy_b.commit_edit().await.expect("failed to send CommitEdit"), txt::Error::Ok);
     }
 }

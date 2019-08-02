@@ -23,9 +23,9 @@ async fn test_external_text_field_implementation() {
         .connect_to_service::<txt_testing::TextFieldTestSuiteMarker>()
         .expect("Failed to connect to testing service");
     let mut passed = true;
-    let test_list = await!(tester.list_tests()).expect("Failed to get list of tests");
+    let test_list = tester.list_tests().await.expect("Failed to get list of tests");
     for test in test_list {
-        if let Err(e) = await!(run_test(&tester, test.id)) {
+        if let Err(e) = run_test(&tester, test.id).await {
             passed = false;
             eprintln!("[ FAIL ] {}\n{}", test.name, e);
         } else {
@@ -52,15 +52,19 @@ async fn run_test(
         fidl::endpoints::create_endpoints::<uii::InputMethodEditorMarker>()
             .expect("Failed to create endpoints");
     ime_service.bind_text_input_context(text_stream);
-    await!(ime_service.get_input_method_editor(
-        uii::KeyboardType::Text,
-        uii::InputMethodAction::Done,
-        crate::fidl_helpers::default_state(),
-        imec_client,
-        ime_server,
-    ));
+    ime_service
+        .get_input_method_editor(
+            uii::KeyboardType::Text,
+            uii::InputMethodAction::Done,
+            crate::fidl_helpers::default_state(),
+            imec_client,
+            ime_server,
+        )
+        .await;
     let mut stream = text_proxy.take_event_stream();
-    let msg = await!(stream.try_next())
+    let msg = stream
+        .try_next()
+        .await
         .expect("Failed to get event.")
         .expect("TextInputContext event stream unexpectedly closed.");
     let text_field = match msg {
@@ -68,7 +72,7 @@ async fn run_test(
         _ => panic!("Expected text_field to pass OnFocus event type"),
     };
     let (passed, msg) =
-        await!(tester.run_test(text_field, test_id)).expect("Call to text testing service failed");
+        tester.run_test(text_field, test_id).await.expect("Call to text testing service failed");
     if passed {
         Ok(())
     } else {

@@ -76,7 +76,7 @@ impl LegacyIme {
             async move {
                 let control_handle = stream.control_handle();
                 {
-                    let mut state = await!(self_clone.0.lock());
+                    let mut state = self_clone.0.lock().await;
                     let res = control_handle.send_on_update(state.as_text_field_state().into());
                     if let Err(e) = res {
                         fx_log_err!("{}", e);
@@ -84,10 +84,12 @@ impl LegacyIme {
                         state.input_method = Some(control_handle);
                     }
                 }
-                while let Some(msg) = await!(stream.try_next())
+                while let Some(msg) = stream
+                    .try_next()
+                    .await
                     .context("error reading value from text field request stream")?
                 {
-                    if let Err(e) = await!(self_clone.handle_text_field_msg(msg)) {
+                    if let Err(e) = self_clone.handle_text_field_msg(msg).await {
                         fx_log_err!("error when replying to TextFieldRequest: {}", e);
                     }
                 }
@@ -103,19 +105,25 @@ impl LegacyIme {
         let self_clone_2 = self.clone();
         fuchsia_async::spawn(
             async move {
-                while let Some(msg) = await!(stream.try_next())
+                while let Some(msg) = stream
+                    .try_next()
+                    .await
                     .context("error reading value from IME request stream")?
                 {
-                    await!(self_clone.handle_ime_message(msg));
+                    self_clone.handle_ime_message(msg).await;
                 }
                 Ok(())
             }
                 .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e))
-                .then(|()| async move {
-                    // this runs when IME stream closes
-                    // clone to ensure we only hold one lock at a time
-                    let ime_service = await!(self_clone_2.0.lock()).ime_service.clone();
-                    await!(ime_service.update_keyboard_visibility_from_ime(&self_clone_2.0, false));
+                .then(|()| {
+                    async move {
+                        // this runs when IME stream closes
+                        // clone to ensure we only hold one lock at a time
+                        let ime_service = self_clone_2.0.lock().await.ime_service.clone();
+                        ime_service
+                            .update_keyboard_visibility_from_ime(&self_clone_2.0, false)
+                            .await;
+                    }
                 }),
         );
     }
@@ -125,7 +133,7 @@ impl LegacyIme {
         &mut self,
         msg: txt::TextFieldRequest,
     ) -> Result<(), fidl::Error> {
-        let mut ime_state = await!(self.0.lock());
+        let mut ime_state = self.0.lock().await;
         match msg {
             txt::TextFieldRequest::PositionOffset { old_position, offset, revision, responder } => {
                 if revision != ime_state.revision {
@@ -246,28 +254,28 @@ impl LegacyIme {
     async fn handle_ime_message(&self, msg: uii::InputMethodEditorRequest) {
         match msg {
             ImeReq::SetKeyboardType { keyboard_type, .. } => {
-                let mut state = await!(self.0.lock());
+                let mut state = self.0.lock().await;
                 state.keyboard_type = keyboard_type;
             }
             ImeReq::SetState { state, .. } => {
-                await!(self.set_state(idx::text_state_codeunit_to_byte(state)));
+                self.set_state(idx::text_state_codeunit_to_byte(state)).await;
             }
             ImeReq::InjectInput { event, .. } => {
                 let keyboard_event = match event {
                     uii::InputEvent::Keyboard(e) => e,
                     _ => return,
                 };
-                await!(self.inject_input(keyboard_event));
+                self.inject_input(keyboard_event).await;
             }
             ImeReq::Show { .. } => {
                 // clone to ensure we only hold one lock at a time
-                let ime_service = await!(self.0.lock()).ime_service.clone();
-                await!(ime_service.show_keyboard());
+                let ime_service = self.0.lock().await.ime_service.clone();
+                ime_service.show_keyboard().await;
             }
             ImeReq::Hide { .. } => {
                 // clone to ensure we only hold one lock at a time
-                let ime_service = await!(self.0.lock()).ime_service.clone();
-                await!(ime_service.hide_keyboard());
+                let ime_service = self.0.lock().await.ime_service.clone();
+                ime_service.hide_keyboard().await;
             }
         }
     }
@@ -275,7 +283,7 @@ impl LegacyIme {
     /// Sets the internal state. Expects input_state to use codeunits; automatically
     /// converts to byte indices before storing.
     pub async fn set_state(&self, input_state: uii::TextInputState) {
-        let mut state = await!(self.0.lock());
+        let mut state = self.0.lock().await;
         state.text_state = idx::text_state_codeunit_to_byte(input_state);
         // the old C++ IME implementation didn't call did_update_state here, so this second argument is false.
         state.increment_revision(false);
@@ -285,7 +293,7 @@ impl LegacyIme {
     /// changes alongside a `KeyboardEvent`. Note that this state update will always have no changes
     /// — if you'd like to send a change, use `inject_input()`.
     pub async fn forward_event(&self, keyboard_event: uii::KeyboardEvent) {
-        let mut state = await!(self.0.lock());
+        let mut state = self.0.lock().await;
         state.forward_event(keyboard_event);
     }
 
@@ -295,7 +303,7 @@ impl LegacyIme {
     /// modifier keys implemented correctly. However, it does *not* send the actual key event to the
     /// client; for that, you should simultaneously call `forward_event()`.
     pub async fn inject_input(&self, keyboard_event: uii::KeyboardEvent) {
-        let mut state = await!(self.0.lock());
+        let mut state = self.0.lock().await;
 
         if keyboard_event.phase == uii::KeyboardEventPhase::Pressed
             || keyboard_event.phase == uii::KeyboardEventPhase::Repeat
