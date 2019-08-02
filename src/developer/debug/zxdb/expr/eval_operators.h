@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
@@ -21,12 +22,12 @@ class ExprValueSource;
 class Type;
 
 void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
-                        const ExprToken& op, const ExprValue& right_value,
-                        fit::callback<void(const Err& err, ExprValue value)> cb);
+                        const ExprToken& op, const ExprValue& right_value, EvalCallback cb);
 
 void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
-                        const ExprToken& op, const fxl::RefPtr<ExprNode>& right,
-                        fit::callback<void(const Err& err, ExprValue value)> cb);
+                        const ExprToken& op, const fxl::RefPtr<ExprNode>& right, EvalCallback cb);
+
+void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value, EvalCallback cb);
 
 }  // namespace zxdb
 

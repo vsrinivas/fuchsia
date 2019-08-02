@@ -40,62 +40,6 @@ bool BaseTypeCanBeArrayIndex(const BaseType* type) {
          bt == BaseType::kBaseTypeUnsignedChar;
 }
 
-void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value,
-                       ExprNode::EvalCallback cb) {
-  // This manually extracts the value rather than calling PromoteTo64() so that the result type is
-  // exactly the same as the input type.
-  //
-  // TODO(brettw) when we add more mathematical operations we'll want a more flexible system for
-  // getting the results out.
-  if (op_token.type() == ExprTokenType::kMinus) {
-    // Currently "-" is the only unary operator.  Since this is a debugger primarily for C-like
-    // languages, use the C rules for negating values: the result type is the same as the input, and
-    // negating an unsigned value gives the two's compliment (C++11 standard section 5.3.1).
-    switch (value.GetBaseType()) {
-      case BaseType::kBaseTypeSigned:
-        switch (value.data().size()) {
-          case sizeof(int8_t):
-            cb(Err(), ExprValue(-value.GetAs<int8_t>()));
-            return;
-          case sizeof(int16_t):
-            cb(Err(), ExprValue(-value.GetAs<int16_t>()));
-            return;
-          case sizeof(int32_t):
-            cb(Err(), ExprValue(-value.GetAs<int32_t>()));
-            return;
-          case sizeof(int64_t):
-            cb(Err(), ExprValue(-value.GetAs<int64_t>()));
-            return;
-        }
-        break;
-
-      case BaseType::kBaseTypeUnsigned:
-        switch (value.data().size()) {
-          case sizeof(uint8_t):
-            cb(Err(), ExprValue(-value.GetAs<uint8_t>()));
-            return;
-          case sizeof(uint16_t):
-            cb(Err(), ExprValue(-value.GetAs<uint16_t>()));
-            return;
-          case sizeof(uint32_t):
-            cb(Err(), ExprValue(-value.GetAs<uint32_t>()));
-            return;
-          case sizeof(uint64_t):
-            cb(Err(), ExprValue(-value.GetAs<uint64_t>()));
-            return;
-        }
-        break;
-
-      default:
-        FXL_NOTREACHED();
-    }
-    cb(Err("Negation for this value is not supported."), ExprValue());
-    return;
-  }
-  FXL_NOTREACHED();
-  cb(Err("Internal error evaluating unary operator."), ExprValue());
-}
-
 }  // namespace
 
 void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
@@ -190,7 +134,8 @@ void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void BinaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  EvalBinaryOperator(std::move(context), left_, op_, right_, std::move(cb));
+  EvalBinaryOperator(std::move(context), left_, op_, right_,
+                     ErrOrValue::FromPairCallback(std::move(cb)));
 }
 
 void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
@@ -459,7 +404,7 @@ void UnaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) co
         if (err.has_error())
           cb(err, std::move(value));
         else
-          EvalUnaryOperator(op, value, std::move(cb));
+          EvalUnaryOperator(op, value, ErrOrValue::FromPairCallback(std::move(cb)));
       });
 }
 

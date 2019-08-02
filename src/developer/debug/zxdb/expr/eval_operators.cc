@@ -40,8 +40,6 @@ namespace zxdb {
 
 namespace {
 
-using EvalCallback = fit::callback<void(const Err& err, ExprValue value)>;
-
 void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
                   const ExprValue& right_value, EvalCallback cb) {
   // Note: the calling code will have evaluated the value of the left node. Often this isn't
@@ -49,19 +47,17 @@ void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
   // things.
   const ExprValueSource& dest = left_value.source();
   if (dest.type() == ExprValueSource::Type::kTemporary) {
-    cb(Err("Can't assign to a temporary."), ExprValue());
+    cb(Err("Can't assign to a temporary."));
     return;
   }
 
   // The coerced value will be the result. It should have the "source" of the left-hand-side since
   // the location being assigned to doesn't change.
   ExprValue coerced;
-  Err err = CastExprValue(context.get(), CastType::kImplicit, right_value, left_value.type_ref(),
-                          &coerced, dest);
-  if (err.has_error()) {
-    cb(err, ExprValue());
-    return;
-  }
+  if (Err err = CastExprValue(context.get(), CastType::kImplicit, right_value,
+                              left_value.type_ref(), &coerced, dest);
+      err.has_error())
+    return cb(err);
 
   // Make a copy to avoid ambiguity of copying and moving the value below.
   std::vector<uint8_t> data = coerced.data();
@@ -71,9 +67,9 @@ void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
       dest.address(), std::move(data),
       [coerced = std::move(coerced), cb = std::move(cb)](const Err& err) mutable {
         if (err.has_error())
-          cb(err, ExprValue());
+          cb(err);
         else
-          cb(Err(), coerced);
+          cb(coerced);
       });
 }
 
@@ -212,8 +208,8 @@ Err GetOpRealm(fxl::RefPtr<EvalContext>& context, const OpValue& left, const OpV
 // Error checking could be generalized more in the "op" callback, but this is currently the only
 // error case and it keeps all of the op implementations simpler to do it this way.
 template <typename T>
-Err DoIntBinaryOp(const OpValue& left, const OpValue& right, bool check_for_zero_right,
-                  T (*op)(T, T), fxl::RefPtr<Type> result_type, ExprValue* result) {
+ErrOrValue DoIntBinaryOp(const OpValue& left, const OpValue& right, bool check_for_zero_right,
+                         T (*op)(T, T), fxl::RefPtr<Type> result_type) {
   T left_val;
   if (Err err = left.value->PromoteTo64(&left_val); err.has_error())
     return err;
@@ -236,8 +232,7 @@ Err DoIntBinaryOp(const OpValue& left, const OpValue& right, bool check_for_zero
   result_data.resize(result_type->byte_size());
   memcpy(&result_data[0], &result_val, result_type->byte_size());
 
-  *result = ExprValue(std::move(result_type), std::move(result_data));
-  return Err();
+  return ExprValue(std::move(result_type), std::move(result_data));
 }
 
 // Converts the given value to a double if possible when
@@ -257,9 +252,9 @@ Err OpValueToDouble(EvalContext* context, const OpValue& in, double* out) {
 }
 
 // Applies the given operator to two values that should be done in floating-point.
-Err DoFloatBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& left, const OpValue& right,
-                    double (*op)(double, double), fxl::RefPtr<Type> result_type,
-                    ExprValue* result) {
+ErrOrValue DoFloatBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& left,
+                           const OpValue& right, double (*op)(double, double),
+                           fxl::RefPtr<Type> result_type) {
   // The inputs could be various types like signed or unsigned integers or even bools. Use the
   // casting infrastructure to convert these when necessary.
   double left_double = 0.0;
@@ -288,8 +283,7 @@ Err DoFloatBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& left, const
     return Err("Invalid floating point operation.");
   }
 
-  *result = ExprValue(std::move(result_type), std::move(result_data));
-  return Err();
+  return ExprValue(std::move(result_type), std::move(result_data));
 }
 
 // Returns a language-appropriate 64-bit signed or unsigned (according to the realm) type. The
@@ -340,8 +334,8 @@ Err GetPointedToByteSize(fxl::RefPtr<EvalContext> context, const Type* type, uin
   return Err();
 }
 
-Err DoPointerOperation(fxl::RefPtr<EvalContext> context, const OpValue& left_value,
-                       const ExprToken& op, const OpValue& right_value, ExprValue* result) {
+ErrOrValue DoPointerOperation(fxl::RefPtr<EvalContext> context, const OpValue& left_value,
+                              const ExprToken& op, const OpValue& right_value) {
   // Adding or subtracting a pointer and an integer or and integer to a pointer advances the pointer
   // by the size of the pointed-to type.
   const OpValue* int_value = nullptr;
@@ -386,8 +380,7 @@ Err DoPointerOperation(fxl::RefPtr<EvalContext> context, const OpValue& left_val
 
     // Convert to the result. Use the type from the pointer on the value to keep things like C-V
     // qualifiers from the original.
-    *result = ExprValue(result_number, ptr_value->value->type_ref());
-    return Err();
+    return ExprValue(result_number, ptr_value->value->type_ref());
   }
 
   // The only other pointer operation to support is subtraction.
@@ -425,9 +418,8 @@ Err DoPointerOperation(fxl::RefPtr<EvalContext> context, const OpValue& left_val
   if (Err err = right_value.value->PromoteTo64(&right_number); err.has_error())
     return err;
 
-  *result = ExprValue(static_cast<uint64_t>((left_number - right_number) / left_pointed_to_size),
-                      Make64BitIntegerType(MathRealm::kSigned, left_value.concrete_type));
-  return Err();
+  return ExprValue(static_cast<uint64_t>((left_number - right_number) / left_pointed_to_size),
+                   Make64BitIntegerType(MathRealm::kSigned, left_value.concrete_type));
 }
 
 }  // namespace
@@ -441,77 +433,73 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_
   // Left info.
   OpValue left_op_value;
   if (Err err = FillOpValue(context.get(), left_value, &left_op_value); err.has_error())
-    return cb(err, ExprValue());
+    return cb(err);
 
   // Right info.
   OpValue right_op_value;
   if (Err err = FillOpValue(context.get(), right_value, &right_op_value); err.has_error())
-    return cb(err, ExprValue());
+    return cb(err);
 
   // Operation info.
   MathRealm realm;
   fxl::RefPtr<Type> larger_type;
   if (Err err = GetOpRealm(context, left_op_value, right_op_value, &realm, &larger_type);
       err.has_error())
-    return cb(err, ExprValue());
+    return cb(err);
 
   // Special-case pointer operations since they work differently.
-  if (realm == MathRealm::kPointer) {
-    ExprValue result;
-    Err err = DoPointerOperation(context, left_op_value, op, right_op_value, &result);
-    return cb(err, std::move(result));
-  }
+  if (realm == MathRealm::kPointer)
+    return cb(DoPointerOperation(context, left_op_value, op, right_op_value));
 
   // Implements the type expansion described at the top of this file.
   larger_type = ExpandTypeTo64(realm, larger_type);
 
 // Implements support for a given operator that only works for integer types.
-#define IMPLEMENT_INTEGER_BINARY_OP(c_op, is_divide)                                            \
-  switch (realm) {                                                                              \
-    case MathRealm::kSigned:                                                                    \
-      result_err = DoIntBinaryOp<int64_t>(                                                      \
-          left_op_value, right_op_value, is_divide,                                             \
-          [](int64_t left, int64_t right) { return left c_op right; }, larger_type, &result);   \
-      break;                                                                                    \
-    case MathRealm::kUnsigned:                                                                  \
-      result_err = DoIntBinaryOp<uint64_t>(                                                     \
-          left_op_value, right_op_value, is_divide,                                             \
-          [](uint64_t left, uint64_t right) { return left c_op right; }, larger_type, &result); \
-      break;                                                                                    \
-    case MathRealm::kFloat:                                                                     \
-      result_err = Err("Operator '%s' not defined for floating point.", op.value().c_str());    \
-      break;                                                                                    \
-    case MathRealm::kPointer:                                                                   \
-      FXL_NOTREACHED();                                                                         \
-      break;                                                                                    \
+#define IMPLEMENT_INTEGER_BINARY_OP(c_op, is_divide)                                     \
+  switch (realm) {                                                                       \
+    case MathRealm::kSigned:                                                             \
+      result = DoIntBinaryOp<int64_t>(                                                   \
+          left_op_value, right_op_value, is_divide,                                      \
+          [](int64_t left, int64_t right) { return left c_op right; }, larger_type);     \
+      break;                                                                             \
+    case MathRealm::kUnsigned:                                                           \
+      result = DoIntBinaryOp<uint64_t>(                                                  \
+          left_op_value, right_op_value, is_divide,                                      \
+          [](uint64_t left, uint64_t right) { return left c_op right; }, larger_type);   \
+      break;                                                                             \
+    case MathRealm::kFloat:                                                              \
+      result = Err("Operator '%s' not defined for floating point.", op.value().c_str()); \
+      break;                                                                             \
+    case MathRealm::kPointer:                                                            \
+      FXL_NOTREACHED();                                                                  \
+      break;                                                                             \
   }
 
 // Implements support for a given operator that only works for integer or floating point types.
 // Pointers should have been handled specially above.
-#define IMPLEMENT_BINARY_OP(c_op, is_divide)                                                    \
-  switch (realm) {                                                                              \
-    case MathRealm::kSigned:                                                                    \
-      result_err = DoIntBinaryOp<int64_t>(                                                      \
-          left_op_value, right_op_value, is_divide,                                             \
-          [](int64_t left, int64_t right) { return left c_op right; }, larger_type, &result);   \
-      break;                                                                                    \
-    case MathRealm::kUnsigned:                                                                  \
-      result_err = DoIntBinaryOp<uint64_t>(                                                     \
-          left_op_value, right_op_value, is_divide,                                             \
-          [](uint64_t left, uint64_t right) { return left c_op right; }, larger_type, &result); \
-      break;                                                                                    \
-    case MathRealm::kFloat:                                                                     \
-      result_err = DoFloatBinaryOp(                                                             \
-          context, left_op_value, right_op_value,                                               \
-          [](double left, double right) { return left c_op right; }, larger_type, &result);     \
-      break;                                                                                    \
-    case MathRealm::kPointer:                                                                   \
-      FXL_NOTREACHED();                                                                         \
-      break;                                                                                    \
+#define IMPLEMENT_BINARY_OP(c_op, is_divide)                                           \
+  switch (realm) {                                                                     \
+    case MathRealm::kSigned:                                                           \
+      result = DoIntBinaryOp<int64_t>(                                                 \
+          left_op_value, right_op_value, is_divide,                                    \
+          [](int64_t left, int64_t right) { return left c_op right; }, larger_type);   \
+      break;                                                                           \
+    case MathRealm::kUnsigned:                                                         \
+      result = DoIntBinaryOp<uint64_t>(                                                \
+          left_op_value, right_op_value, is_divide,                                    \
+          [](uint64_t left, uint64_t right) { return left c_op right; }, larger_type); \
+      break;                                                                           \
+    case MathRealm::kFloat:                                                            \
+      result = DoFloatBinaryOp(                                                        \
+          context, left_op_value, right_op_value,                                      \
+          [](double left, double right) { return left c_op right; }, larger_type);     \
+      break;                                                                           \
+    case MathRealm::kPointer:                                                          \
+      FXL_NOTREACHED();                                                                \
+      break;                                                                           \
   }
 
-  Err result_err;
-  ExprValue result;
+  ErrOrValue result((ExprValue()));
   switch (op.type()) {
     case ExprTokenType::kPlus:
       IMPLEMENT_BINARY_OP(+, false);
@@ -544,11 +532,11 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_
       // These all return a bool, need some infrastructure to support that. Fall through to
       // unsupported.
     default:
-      cb(Err("Unsupported binary operator '%s', sorry!", op.value().c_str()), ExprValue());
+      result = Err("Unsupported binary operator '%s', sorry!", op.value().c_str());
       break;
   }
 
-  cb(result_err, std::move(result));
+  cb(std::move(result));
 }
 
 void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
@@ -556,7 +544,7 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<Expr
   left->Eval(context, [context, op, right, cb = std::move(cb)](const Err& err,
                                                                ExprValue left_value) mutable {
     if (err.has_error()) {
-      cb(err, ExprValue());
+      cb(err);
       return;
     }
 
@@ -564,9 +552,69 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<Expr
     // if the "left" is true.
     right->Eval(context, [context, left_value = std::move(left_value), op, cb = std::move(cb)](
                              const Err& err, ExprValue right_value) mutable {
-      EvalBinaryOperator(std::move(context), left_value, op, right_value, std::move(cb));
+      if (err.has_error())
+        cb(err);
+      else
+        EvalBinaryOperator(std::move(context), left_value, op, right_value, std::move(cb));
     });
   });
+}
+
+void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value, EvalCallback cb) {
+  // This manually extracts the value rather than calling PromoteTo64() so that the result type is
+  // exactly the same as the input type.
+  //
+  // TODO(brettw) when we add more mathematical operations we'll want a more flexible system for
+  // getting the results out.
+  if (op_token.type() == ExprTokenType::kMinus) {
+    // Currently "-" is the only unary operator.  Since this is a debugger primarily for C-like
+    // languages, use the C rules for negating values: the result type is the same as the input, and
+    // negating an unsigned value gives the two's compliment (C++11 standard section 5.3.1).
+    switch (value.GetBaseType()) {
+      case BaseType::kBaseTypeSigned:
+        switch (value.data().size()) {
+          case sizeof(int8_t):
+            // TODO(brettw) these will have the wrong result type, it should have the same type as
+            // the input.
+            cb(ExprValue(-value.GetAs<int8_t>()));
+            return;
+          case sizeof(int16_t):
+            cb(ExprValue(-value.GetAs<int16_t>()));
+            return;
+          case sizeof(int32_t):
+            cb(ExprValue(-value.GetAs<int32_t>()));
+            return;
+          case sizeof(int64_t):
+            cb(ExprValue(-value.GetAs<int64_t>()));
+            return;
+        }
+        break;
+
+      case BaseType::kBaseTypeUnsigned:
+        switch (value.data().size()) {
+          case sizeof(uint8_t):
+            cb(ExprValue(-value.GetAs<uint8_t>()));
+            return;
+          case sizeof(uint16_t):
+            cb(ExprValue(-value.GetAs<uint16_t>()));
+            return;
+          case sizeof(uint32_t):
+            cb(ExprValue(-value.GetAs<uint32_t>()));
+            return;
+          case sizeof(uint64_t):
+            cb(ExprValue(-value.GetAs<uint64_t>()));
+            return;
+        }
+        break;
+
+      default:
+        FXL_NOTREACHED();
+    }
+    cb(Err("Negation for this value is not supported."));
+    return;
+  }
+  FXL_NOTREACHED();
+  cb(Err("Internal error evaluating unary operator."));
 }
 
 }  // namespace zxdb

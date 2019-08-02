@@ -24,18 +24,17 @@ class EvalOperators : public TestWithLoop {
 
   fxl::RefPtr<MockEvalContext>& eval_context() { return eval_context_; }
 
-  Err SyncEvalBinaryOperator(const ExprValue& left, ExprTokenType op, const ExprValue& right,
-                             ExprValue* result) {
+  ErrOrValue SyncEvalBinaryOperator(const ExprValue& left, ExprTokenType op,
+                                    const ExprValue& right) {
     ExprToken token(op, "", 0);
 
     bool needs_quit = false;
     bool called = false;
-    Err out_err;
+    ErrOrValue result((ExprValue()));
     EvalBinaryOperator(eval_context(), left, token, right,
-                       [&needs_quit, &called, &out_err, result](const Err& err, ExprValue value) {
+                       [&needs_quit, &called, &result](ErrOrValue value) {
                          called = true;
-                         out_err = err;
-                         *result = value;
+                         result = value;
                          if (needs_quit)
                            debug_ipc::MessageLoop::Current()->QuitNow();
                        });
@@ -44,14 +43,62 @@ class EvalOperators : public TestWithLoop {
       needs_quit = true;
       loop().Run();
     }
-    return out_err;
+    return result;
+  }
+
+  ErrOrValue SyncEvalUnaryOperator(ExprTokenType op, const ExprValue& right) {
+    ExprToken token(op, "", 0);
+
+    bool needs_quit = false;
+    bool called = false;
+    ErrOrValue result((ExprValue()));
+    EvalUnaryOperator(token, right, [&needs_quit, &called, &result](ErrOrValue value) {
+      called = true;
+      result = value;
+      if (needs_quit)
+        debug_ipc::MessageLoop::Current()->QuitNow();
+    });
+    if (!called) {
+      // Needs async completion.
+      needs_quit = true;
+      loop().Run();
+    }
+    return result;
+  }
+
+  template <typename T>
+  void DoUnaryMinusTest(T in) {
+    ExprValue original(in);
+
+    ErrOrValue out = SyncEvalUnaryOperator(ExprTokenType::kMinus, original);
+    ASSERT_TRUE(out.ok()) << out.err().msg();
+
+    // This checked that the type conversions have followed C rules. This is the expected value
+    // (int/unsigned unchanged, everything smaller than an int is promoted to an int, everything
+    // larger remains unchanged).
+    auto expected = -in;
+
+    // The type of the output should be the same as the input for unary '-'.
+    // TODO(brettw) the actual type pointer should be the same.
+    EXPECT_EQ(sizeof(expected), out.value().data().size());
+    if (std::is_unsigned<decltype(expected)>::value) {
+      EXPECT_EQ(BaseType::kBaseTypeUnsigned, out.value().GetBaseType());
+    } else {
+      EXPECT_EQ(BaseType::kBaseTypeSigned, out.value().GetBaseType());
+    }
+    EXPECT_EQ(expected, out.value().GetAs<decltype(expected)>());
+  }
+
+  template <typename T>
+  void DoUnaryMinusTypeTest() {
+    DoUnaryMinusTest<T>(0);
+    DoUnaryMinusTest<T>(std::numeric_limits<T>::max());
+    DoUnaryMinusTest<T>(std::numeric_limits<T>::lowest());
   }
 
  private:
   fxl::RefPtr<MockEvalContext> eval_context_;
 };
-
-void QuitNow() { debug_ipc::MessageLoop::Current()->QuitNow(); }
 
 }  // namespace
 
@@ -62,32 +109,15 @@ TEST_F(EvalOperators, Assignment) {
   // checks that the correct values are written and returned.
   constexpr uint64_t kAddress = 0x98723461923;
   ExprValue dest(int32_type, {0, 0, 0, 0}, ExprValueSource(kAddress));
-  auto dest_node = fxl::MakeRefCounted<MockExprNode>(false, dest);
-
-  ExprToken assign(ExprTokenType::kEquals, "=", 0);
 
   std::vector<uint8_t> data{0x12, 0x34, 0x56, 0x78};
   ExprValue source(int32_type, data, ExprValueSource());
-  auto source_node = fxl::MakeRefCounted<MockExprNode>(false, source);
 
-  bool called = false;
-  Err out_err;
-  ExprValue out_value;
-  EvalBinaryOperator(eval_context(), dest_node, assign, source_node,
-                     [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-                       called = true;
-                       out_err = err;
-                       out_value = value;
-                       QuitNow();
-                     });
-
-  EXPECT_FALSE(called);
-  loop().Run();
-  EXPECT_TRUE(called);
+  ErrOrValue out = SyncEvalBinaryOperator(dest, ExprTokenType::kEquals, source);
 
   // Written value returned.
-  EXPECT_FALSE(out_err.has_error());
-  EXPECT_EQ(source, out_value);
+  ASSERT_FALSE(out.has_error());
+  EXPECT_EQ(source, out.value());
 
   // Memory written to target.
   auto mem_writes = eval_context()->data_provider()->GetMemoryWrites();
@@ -98,127 +128,123 @@ TEST_F(EvalOperators, Assignment) {
 
 TEST_F(EvalOperators, IntArithmetic) {
   // Simple signed arithmatic of 32-bit types. We promote all math results to 64-bit.
-  ExprValue out;
-  Err err = SyncEvalBinaryOperator(ExprValue(static_cast<int32_t>(12)), ExprTokenType::kPlus,
-                                   ExprValue(static_cast<int32_t>(-1)), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(11, out.GetAs<int64_t>());
+  ErrOrValue out = SyncEvalBinaryOperator(ExprValue(static_cast<int32_t>(12)), ExprTokenType::kPlus,
+                                          ExprValue(static_cast<int32_t>(-1)));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(11, out.value().GetAs<int64_t>());
 
   // Type promotion to larger size. This uses a custom 64-bit int type so we can tell it's been
   // preserved. This is "127 + (-2)"
   auto weird_64 = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 8, "Weird64");
-  SyncEvalBinaryOperator(ExprValue(static_cast<int8_t>(0x7f)), ExprTokenType::kPlus,
-                         ExprValue(weird_64, {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
-                         &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(125, out.GetAs<int64_t>());
-  EXPECT_EQ(weird_64.get(), out.type());
+  out =
+      SyncEvalBinaryOperator(ExprValue(static_cast<int8_t>(0x7f)), ExprTokenType::kPlus,
+                             ExprValue(weird_64, {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(125, out.value().GetAs<int64_t>());
+  EXPECT_EQ(weird_64.get(), out.value().type());
 
   // Promotion to unsigned when sizes match.
   auto int32_type = MakeInt32Type();
   auto uint32_type = MakeUint32Type();
-  SyncEvalBinaryOperator(ExprValue(int32_type, {1, 0, 0, 0}), ExprTokenType::kPlus,
-                         ExprValue(uint32_type, {2, 0, 0, 0}), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(3, out.GetAs<int64_t>());
-  EXPECT_EQ(BaseType::kBaseTypeUnsigned, out.type()->AsBaseType()->base_type());
+  out = SyncEvalBinaryOperator(ExprValue(int32_type, {1, 0, 0, 0}), ExprTokenType::kPlus,
+                               ExprValue(uint32_type, {2, 0, 0, 0}));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(3, out.value().GetAs<int64_t>());
+  EXPECT_EQ(BaseType::kBaseTypeUnsigned, out.value().type()->AsBaseType()->base_type());
 
   // Signed subtraction.
-  err = SyncEvalBinaryOperator(ExprValue(static_cast<int8_t>(100)), ExprTokenType::kMinus,
-                               ExprValue(static_cast<int8_t>(-100)), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(200, out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(ExprValue(static_cast<int8_t>(100)), ExprTokenType::kMinus,
+                               ExprValue(static_cast<int8_t>(-100)));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(200, out.value().GetAs<int64_t>());
 
   // Overflow of input type with multiplication.
-  err = SyncEvalBinaryOperator(ExprValue(static_cast<int8_t>(100)), ExprTokenType::kStar,
-                               ExprValue(static_cast<int8_t>(100)), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(10000, out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(ExprValue(static_cast<int8_t>(100)), ExprTokenType::kStar,
+                               ExprValue(static_cast<int8_t>(100)));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(10000, out.value().GetAs<int64_t>());
 
   // Boundary condition, should promote to unsigned 64-bit and do the multiplication.
-  err = SyncEvalBinaryOperator(ExprValue(static_cast<uint32_t>(0xffffffff)), ExprTokenType::kStar,
-                               ExprValue(static_cast<uint32_t>(0xffffffff)), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(0xfffffffe00000001, out.GetAs<uint64_t>());
+  out = SyncEvalBinaryOperator(ExprValue(static_cast<uint32_t>(0xffffffff)), ExprTokenType::kStar,
+                               ExprValue(static_cast<uint32_t>(0xffffffff)));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0xfffffffe00000001, out.value().GetAs<uint64_t>());
 
   // Signed integer division.
-  err = SyncEvalBinaryOperator(ExprValue(100), ExprTokenType::kSlash, ExprValue(-12), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(-8, out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(ExprValue(100), ExprTokenType::kSlash, ExprValue(-12));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(-8, out.value().GetAs<int64_t>());
 
   // Unsigned integer division. "100 / (unsigned)-12" does give 0.
-  err = SyncEvalBinaryOperator(ExprValue(100), ExprTokenType::kSlash,
-                               ExprValue(static_cast<unsigned>(-12)), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(0, out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(ExprValue(100), ExprTokenType::kSlash,
+                               ExprValue(static_cast<unsigned>(-12)));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0, out.value().GetAs<int64_t>());
 
   // Modulo.
-  err = SyncEvalBinaryOperator(ExprValue(108), ExprTokenType::kPercent,
-                               ExprValue(static_cast<unsigned>(100)), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(8, out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(ExprValue(108), ExprTokenType::kPercent,
+                               ExprValue(static_cast<unsigned>(100)));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(8, out.value().GetAs<int64_t>());
 
   // Division by 0.
-  err = SyncEvalBinaryOperator(ExprValue(108), ExprTokenType::kSlash, ExprValue(0), &out);
-  EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Division by 0.", err.msg());
+  out = SyncEvalBinaryOperator(ExprValue(108), ExprTokenType::kSlash, ExprValue(0));
+  EXPECT_TRUE(out.has_error());
+  EXPECT_EQ("Division by 0.", out.err().msg());
 
   // Modulo by 0.
-  err = SyncEvalBinaryOperator(ExprValue(108), ExprTokenType::kPercent, ExprValue(0), &out);
-  EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Division by 0.", err.msg());
+  out = SyncEvalBinaryOperator(ExprValue(108), ExprTokenType::kPercent, ExprValue(0));
+  EXPECT_TRUE(out.has_error());
+  EXPECT_EQ("Division by 0.", out.err().msg());
 
   // Bitwise |
-  err =
-      SyncEvalBinaryOperator(ExprValue(0b0100), ExprTokenType::kBitwiseOr, ExprValue(0b1100), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(0b1100, out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(ExprValue(0b0100), ExprTokenType::kBitwiseOr, ExprValue(0b1100));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0b1100, out.value().GetAs<int64_t>());
 
   // Bitwise &
-  err =
-      SyncEvalBinaryOperator(ExprValue(0b0100), ExprTokenType::kAmpersand, ExprValue(0b1100), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(0b0100, out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(ExprValue(0b0100), ExprTokenType::kAmpersand, ExprValue(0b1100));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0b0100, out.value().GetAs<int64_t>());
 
   // ^
-  err = SyncEvalBinaryOperator(ExprValue(0b0100), ExprTokenType::kCaret, ExprValue(0b1100), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(0b1000, out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(ExprValue(0b0100), ExprTokenType::kCaret, ExprValue(0b1100));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0b1000, out.value().GetAs<int64_t>());
 }
 
 TEST_F(EvalOperators, FloatArithmetic) {
   // Double-precision division.
-  ExprValue out;
-  Err err = SyncEvalBinaryOperator(ExprValue(21.0), ExprTokenType::kSlash, ExprValue(10.0), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(21.0 / 10.0, out.GetAs<double>());
+  ErrOrValue out = SyncEvalBinaryOperator(ExprValue(21.0), ExprTokenType::kSlash, ExprValue(10.0));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(21.0 / 10.0, out.value().GetAs<double>());
 
   // Floating-point division.
-  err = SyncEvalBinaryOperator(ExprValue(21.0f), ExprTokenType::kSlash, ExprValue(10.0f), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(21.0f / 10.0f, out.GetAs<float>());
+  out = SyncEvalBinaryOperator(ExprValue(21.0f), ExprTokenType::kSlash, ExprValue(10.0f));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(21.0f / 10.0f, out.value().GetAs<float>());
 
   // Promotion from float to double.
-  err = SyncEvalBinaryOperator(ExprValue(21.0f), ExprTokenType::kSlash, ExprValue(10.0), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(21.0 / 10.0, out.GetAs<double>());
+  out = SyncEvalBinaryOperator(ExprValue(21.0f), ExprTokenType::kSlash, ExprValue(10.0));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(21.0 / 10.0, out.value().GetAs<double>());
 
   // Promotion from int to float.
-  err = SyncEvalBinaryOperator(ExprValue(21), ExprTokenType::kSlash, ExprValue(10.0f), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(21.0f / 10.0f, out.GetAs<float>());
+  out = SyncEvalBinaryOperator(ExprValue(21), ExprTokenType::kSlash, ExprValue(10.0f));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(21.0f / 10.0f, out.value().GetAs<float>());
 
   // Division by 0.
-  err = SyncEvalBinaryOperator(ExprValue(21.0), ExprTokenType::kSlash, ExprValue(0.0), &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(21.0 / 0.0, out.GetAs<double>());  // Should be "inf".
+  out = SyncEvalBinaryOperator(ExprValue(21.0), ExprTokenType::kSlash, ExprValue(0.0));
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(21.0 / 0.0, out.value().GetAs<double>());  // Should be "inf".
 
   // Modulo is an error.
-  err = SyncEvalBinaryOperator(ExprValue(21.0), ExprTokenType::kPercent, ExprValue(5), &out);
-  EXPECT_TRUE(err.has_error());
+  out = SyncEvalBinaryOperator(ExprValue(21.0), ExprTokenType::kPercent, ExprValue(5));
+  EXPECT_TRUE(out.has_error());
   // Note: empty '' is because the test infrastructure doesn't set up a "value" for the token is
   // passes in. In real life it will be '%'.
-  EXPECT_EQ("Operator '' not defined for floating point.", err.msg());
+  EXPECT_EQ("Operator '' not defined for floating point.", out.err().msg());
 }
 
 TEST_F(EvalOperators, PointerArithmetic) {
@@ -233,52 +259,52 @@ TEST_F(EvalOperators, PointerArithmetic) {
   ExprValue eight(8);
 
   // int32_ptr + 8.
-  ExprValue out;
-  Err err = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kPlus, eight, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(kPtrVal1 + (8 * sizeof(int32_t)), out.GetAs<uint64_t>());
+  ErrOrValue out = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kPlus, eight);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(kPtrVal1 + (8 * sizeof(int32_t)), out.value().GetAs<uint64_t>());
 
   // 8 + int32_ptr.
-  err = SyncEvalBinaryOperator(eight, ExprTokenType::kPlus, int32_ptr, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(kPtrVal1 + (8 * sizeof(int32_t)), out.GetAs<uint64_t>());
+  out = SyncEvalBinaryOperator(eight, ExprTokenType::kPlus, int32_ptr);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(kPtrVal1 + (8 * sizeof(int32_t)), out.value().GetAs<uint64_t>());
 
   // int32_ptr - 8.
-  err = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kMinus, eight, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(kPtrVal1 - (8 * sizeof(int32_t)), out.GetAs<uint64_t>());
+  out = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kMinus, eight);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(kPtrVal1 - (8 * sizeof(int32_t)), out.value().GetAs<uint64_t>());
 
   // 8 - int32_ptr -> Error.
-  err = SyncEvalBinaryOperator(eight, ExprTokenType::kMinus, int32_ptr, &out);
-  EXPECT_TRUE(err.has_error());
+  out = SyncEvalBinaryOperator(eight, ExprTokenType::kMinus, int32_ptr);
+  EXPECT_TRUE(out.has_error());
 
   // int32_ptr - int32_ptr2.
   constexpr uint64_t kPtrVal2 = 0x120000;
   ExprValue int32_ptr2(kPtrVal2, int32_ptr_type);
-  err = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kMinus, int32_ptr2, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  out = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kMinus, int32_ptr2);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
   int64_t ptr1_2_diff = static_cast<int64_t>((kPtrVal1 - kPtrVal2) / sizeof(int32_t));
-  EXPECT_EQ(ptr1_2_diff, out.GetAs<int64_t>());
+  EXPECT_EQ(ptr1_2_diff, out.value().GetAs<int64_t>());
 
   // int32_ptr2 - int32_ptr.
-  err = SyncEvalBinaryOperator(int32_ptr2, ExprTokenType::kMinus, int32_ptr, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(-ptr1_2_diff, out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(int32_ptr2, ExprTokenType::kMinus, int32_ptr);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(-ptr1_2_diff, out.value().GetAs<int64_t>());
 
   // int32_ptr * 8 -> Error.
-  err = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kStar, eight, &out);
-  EXPECT_TRUE(err.has_error());
+  out = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kStar, eight);
+  EXPECT_TRUE(out.has_error());
 
   // int32_ptr2 + int32_ptr -> error;
-  err = SyncEvalBinaryOperator(int32_ptr2, ExprTokenType::kPlus, int32_ptr, &out);
-  EXPECT_TRUE(err.has_error());
+  out = SyncEvalBinaryOperator(int32_ptr2, ExprTokenType::kPlus, int32_ptr);
+  EXPECT_TRUE(out.has_error());
 
   // int32_ptr - int64_ptr -> Error.
   constexpr uint64_t kPtrVal3 = 0x9900;
   ExprValue int64_ptr(kPtrVal3, int64_ptr_type);
-  err = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kMinus, int64_ptr, &out);
-  EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Can't subtract pointers of different types 'int32_t*' and 'int64_t*'.", err.msg());
+  out = SyncEvalBinaryOperator(int32_ptr, ExprTokenType::kMinus, int64_ptr);
+  ASSERT_TRUE(out.has_error());
+  EXPECT_EQ("Can't subtract pointers of different types 'int32_t*' and 'int64_t*'.",
+            out.err().msg());
 
   // Two pointers near overflow.
   constexpr uint64_t kLargePtr1 = 0xffffffffffffff00;
@@ -287,30 +313,50 @@ TEST_F(EvalOperators, PointerArithmetic) {
   ExprValue large_ptr2(kLargePtr2, int32_ptr_type);
 
   // large_ptr1 - large_ptr2.
-  err = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kMinus, large_ptr2, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ((-0x80) / static_cast<int>(sizeof(int32_t)), out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kMinus, large_ptr2);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ((-0x80) / static_cast<int>(sizeof(int32_t)), out.value().GetAs<int64_t>());
 
   // large_ptr2 - large_ptr1.
-  err = SyncEvalBinaryOperator(large_ptr2, ExprTokenType::kMinus, large_ptr1, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(0x80 / static_cast<int>(sizeof(int32_t)), out.GetAs<int64_t>());
+  out = SyncEvalBinaryOperator(large_ptr2, ExprTokenType::kMinus, large_ptr1);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0x80 / static_cast<int>(sizeof(int32_t)), out.value().GetAs<int64_t>());
 
   // large_ptr1 + 8.
-  err = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kPlus, eight, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(kLargePtr1 + (8 * sizeof(int32_t)), out.GetAs<uint64_t>());
+  out = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kPlus, eight);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(kLargePtr1 + (8 * sizeof(int32_t)), out.value().GetAs<uint64_t>());
 
   // Wraparound of 64-bit pointer addition. This threshold will force 0xffffffffffffff00 to wrap
   // when doing int32_t operations.
   ExprValue threshold(static_cast<int>(0x100 / sizeof(uint32_t)));
-  err = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kPlus, threshold, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(0u, out.GetAs<uint64_t>());
+  out = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kPlus, threshold);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0u, out.value().GetAs<uint64_t>());
 
   // Try | which should fail on pointers.
-  err = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kBitwiseOr, eight, &out);
-  EXPECT_TRUE(err.has_error());
+  out = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kBitwiseOr, eight);
+  ASSERT_TRUE(out.has_error());
+}
+
+TEST_F(EvalOperators, UnaryMinus) {
+  // Test the limits of all built-in types.
+  DoUnaryMinusTypeTest<int8_t>();
+  DoUnaryMinusTypeTest<uint8_t>();
+  DoUnaryMinusTypeTest<int16_t>();
+  DoUnaryMinusTypeTest<uint16_t>();
+  DoUnaryMinusTypeTest<int32_t>();
+  DoUnaryMinusTypeTest<uint32_t>();
+  DoUnaryMinusTypeTest<int64_t>();
+  DoUnaryMinusTypeTest<uint64_t>();
+
+  // Try an unsupported value (a 3-byte signed). This should throw an error and
+  // compute an empty value.
+  ExprValue original(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 3, "uint24_t"),
+                     {0, 0, 0});
+  ErrOrValue out = SyncEvalUnaryOperator(ExprTokenType::kMinus, original);
+  ASSERT_TRUE(out.err().has_error());
+  EXPECT_EQ("Negation for this value is not supported.", out.err().msg());
 }
 
 }  // namespace zxdb

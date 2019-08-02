@@ -8,6 +8,7 @@ static_library("expr") {
     "builtin_types.h",
     "cast.cc",
     "cast.h",
+    "eval_callback.h",
     "eval_context.h",
     "eval_context_impl.cc",
     "eval_context_impl.h",
