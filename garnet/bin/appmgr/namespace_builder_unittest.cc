@@ -116,166 +116,16 @@ TEST(NamespaceBuilder, Shell) {
     zx_handle_close(flat->handle[i]);
 }
 
-TEST(NamespaceBuilder, SystemDeprecatedData) {
+TEST(NamespaceBuilder, SystemData) {
   rapidjson::Document document;
   document.SetObject();
   rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
   rapidjson::Value system_array(rapidjson::kArrayType);
   system_array.PushBack("deprecated-data", allocator);
-  document.AddMember("system", system_array, allocator);
-  rapidjson::Value services_array(rapidjson::kArrayType);
-  document.AddMember("services", services_array, allocator);
-  SandboxMetadata sandbox;
-
-  json::JSONParser parser;
-  EXPECT_TRUE(sandbox.Parse(document, &parser));
-
-  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
-  builder.AddSandbox(sandbox, [] { return zx::channel(); });
-
-  fdio_flat_namespace_t* ns = builder.Build();
-  EXPECT_EQ(1u, ns->count);
-
-  std::vector<std::string> paths;
-  for (size_t i = 0; i < ns->count; ++i)
-    paths.push_back(ns->path[i]);
-
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data") != paths.end());
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/deprecated-data") == paths.end());
-
-  for (size_t i = 0; i < ns->count; ++i)
-    zx_handle_close(ns->handle[i]);
-}
-
-TEST(NamespaceBuilder, SystemDeprecatedDataAndData) {
-  rapidjson::Document document;
-  document.SetObject();
-  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-  rapidjson::Value system_array(rapidjson::kArrayType);
-  system_array.PushBack("deprecated-data", allocator);
-  system_array.PushBack("data", allocator);
-  document.AddMember("system", system_array, allocator);
-  rapidjson::Value services_array(rapidjson::kArrayType);
-  document.AddMember("services", services_array, allocator);
-  SandboxMetadata sandbox;
-
-  json::JSONParser parser;
-  EXPECT_TRUE(sandbox.Parse(document, &parser));
-
-  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
-  builder.AddSandbox(sandbox, [] { return zx::channel(); });
-
-  fdio_flat_namespace_t* ns = builder.Build();
-  EXPECT_EQ(1u, ns->count);
-
-  std::vector<std::string> paths;
-  for (size_t i = 0; i < ns->count; ++i)
-    paths.push_back(ns->path[i]);
-
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data") != paths.end());
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/deprecated-data") == paths.end());
-
-  for (size_t i = 0; i < ns->count; ++i)
-    zx_handle_close(ns->handle[i]);
-}
-
-TEST(NamespaceBuilder, SystemDeprecatedDataSubDir) {
-  rapidjson::Document document;
-  document.SetObject();
-  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-  rapidjson::Value system_array(rapidjson::kArrayType);
-  system_array.PushBack("deprecated-data/subdir", allocator);
-  document.AddMember("system", system_array, allocator);
-  rapidjson::Value services_array(rapidjson::kArrayType);
-  document.AddMember("services", services_array, allocator);
-  SandboxMetadata sandbox;
-
-  json::JSONParser parser;
-  EXPECT_TRUE(sandbox.Parse(document, &parser));
-
-  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
-  builder.AddSandbox(sandbox, [] { return zx::channel(); });
-
-  fdio_flat_namespace_t* ns = builder.Build();
-  EXPECT_EQ(1u, ns->count);
-
-  std::vector<std::string> paths;
-  for (size_t i = 0; i < ns->count; ++i)
-    paths.push_back(ns->path[i]);
-
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/subdir") != paths.end());
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/deprecated-data") == paths.end());
-
-  for (size_t i = 0; i < ns->count; ++i)
-    zx_handle_close(ns->handle[i]);
-}
-
-TEST(NamespaceBuilder, SystemDeprecatedTrailingSlash) {
-  rapidjson::Document document;
-  document.SetObject();
-  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-  rapidjson::Value system_array(rapidjson::kArrayType);
   system_array.PushBack("deprecated-data/", allocator);
-  document.AddMember("system", system_array, allocator);
-  rapidjson::Value services_array(rapidjson::kArrayType);
-  document.AddMember("services", services_array, allocator);
-  SandboxMetadata sandbox;
-
-  json::JSONParser parser;
-  EXPECT_TRUE(sandbox.Parse(document, &parser));
-
-  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
-  builder.AddSandbox(sandbox, [] { return zx::channel(); });
-
-  fdio_flat_namespace_t* ns = builder.Build();
-  EXPECT_EQ(1u, ns->count);
-
-  std::vector<std::string> paths;
-  for (size_t i = 0; i < ns->count; ++i)
-    paths.push_back(ns->path[i]);
-
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/") != paths.end());
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/deprecated-data") == paths.end());
-
-  for (size_t i = 0; i < ns->count; ++i)
-    zx_handle_close(ns->handle[i]);
-}
-
-TEST(NamespaceBuilder, SystemDataNotAllowed) {
-  rapidjson::Document document;
-  document.SetObject();
-  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-  rapidjson::Value system_array(rapidjson::kArrayType);
+  system_array.PushBack("deprecated-data/subdir", allocator);
   system_array.PushBack("data", allocator);
-  document.AddMember("system", system_array, allocator);
-  rapidjson::Value services_array(rapidjson::kArrayType);
-  document.AddMember("services", services_array, allocator);
-  SandboxMetadata sandbox;
-
-  json::JSONParser parser;
-  EXPECT_TRUE(sandbox.Parse(document, &parser));
-
-  NamespaceBuilder builder = NamespaceBuilder("test_namespace");
-  builder.AddSandbox(sandbox, [] { return zx::channel(); });
-
-  fdio_flat_namespace_t* ns = builder.Build();
-  EXPECT_EQ(0u, ns->count);
-
-  std::vector<std::string> paths;
-  for (size_t i = 0; i < ns->count; ++i)
-    paths.push_back(ns->path[i]);
-
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data") == paths.end());
-
-  for (size_t i = 0; i < ns->count; ++i)
-    zx_handle_close(ns->handle[i]);
-}
-
-TEST(NamespaceBuilder, SystemDataExtraPathNotAllowed) {
-  rapidjson::Document document;
-  document.SetObject();
-  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-  rapidjson::Value system_array(rapidjson::kArrayType);
+  system_array.PushBack("data/", allocator);
   system_array.PushBack("data/subdir", allocator);
   document.AddMember("system", system_array, allocator);
   rapidjson::Value services_array(rapidjson::kArrayType);
@@ -295,7 +145,8 @@ TEST(NamespaceBuilder, SystemDataExtraPathNotAllowed) {
   for (size_t i = 0; i < ns->count; ++i)
     paths.push_back(ns->path[i]);
 
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/subdir") == paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data") == paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/deprecated-data") == paths.end());
 
   for (size_t i = 0; i < ns->count; ++i)
     zx_handle_close(ns->handle[i]);

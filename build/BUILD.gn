@@ -122,9 +122,7 @@ group("system_deprecated_data_allowlist") {
   # the "deprecated-data" value in their "system" capability. Do not add to
   # this list. Instead, use the config_data() template to gather data from
   # other build entities that your component would like to use at run time.
-  visibility = [
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/system-deprecated-data:uses_system_deprecated_data",
-  ]
+  visibility = []
 }
 
 group("rootresource_svc_allowlist") {
@@ -166,6 +164,5 @@ group("rootjob_svc_allowlist") {
   # the "fuchsia.boot.RootJob" service. This is a highly privileged service that vends
   # out a very powerful capability. Do not add yourself to this unless this is the only
   # way to accomplish your goal and you have talked to the security team about this.
-  visibility = [
-  ]
+  visibility = []
 }

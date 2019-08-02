@@ -90,12 +90,12 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
     // to request a directory inside /system/data 'deprecated-data/some/path' is supplied
     if (path == kDeprecatedDataName ||
         path.find(fxl::Concatenate({kDeprecatedDataName, "/"})) == 0) {
-      PushDirectoryFromPath("/system/data" +
-                            path.substr(strlen(kDeprecatedDataName), std::string::npos));
+      FXL_LOG(ERROR) << "Request for 'deprecated-data' by " << ns_id
+                     << " ignored, this feature is no longer available";
     } else if (path == kBlockedDataName ||
                path.find(fxl::Concatenate({kBlockedDataName, "/"})) == 0) {
       FXL_LOG(ERROR) << "Request for 'data' in namespace '" << ns_id
-                     << "' ignored, try 'deprecated-data'";
+                     << "' ignored, this feature is no longer available";
     } else {
       PushDirectoryFromPath("/system/" + path);
     }
