@@ -18,7 +18,7 @@
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_view.h"
 
-namespace cloud_provider_firestore {
+namespace {
 void PrintUsage(const char* executable_name) {
   std::cerr << "Usage: "
             << executable_name
@@ -26,7 +26,9 @@ void PrintUsage(const char* executable_name) {
             << ledger::GetSyncParamsUsage();
 }
 
-}  // namespace cloud_provider_firestore
+constexpr fxl::StringView kGtestFilterSuffix = "-:PageCloudTest.Diff_*:PageCloudTest.DiffCompat_*";
+
+}  // namespace
 
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -36,17 +38,23 @@ int main(int argc, char** argv) {
   ledger::SyncParams sync_params;
   if (!ledger::ParseSyncParamsFromCommandLine(command_line, component_context.get(),
                                               &sync_params)) {
-    cloud_provider_firestore::PrintUsage(argv[0]);
+    PrintUsage(argv[0]);
     return -1;
   }
 
   const std::set<std::string> known_options = ledger::GetSyncParamFlags();
   std::vector<std::string> arguments;
+  std::string gtest_filter = "";
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0u) {
+      if (option.name == "gtest_filter") {
+        gtest_filter = option.value;
+        continue;
+      }
       arguments.push_back(fxl::Concatenate({"--", option.name, "=", option.value}));
     }
   }
+  arguments.push_back(fxl::Concatenate({"--gtest_filter=", gtest_filter, kGtestFilterSuffix}));
 
   rng::SystemRandom random;
 

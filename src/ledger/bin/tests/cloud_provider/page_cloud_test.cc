@@ -3,16 +3,30 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/uuid/uuid.h"
+
+using ::testing::AllOf;
+using ::testing::AnyOf;
+using ::testing::ElementsAre;
+using ::testing::Eq;
+using ::testing::IsEmpty;
+using ::testing::Property;
+
+#define TABLE_FIELD_MATCHES(type, field, predicate)            \
+  AllOf(Property("has_" #field, &type::has_##field, Eq(true)), \
+        Property(#field, &type::field, predicate))
 
 namespace cloud_provider {
 namespace {
@@ -81,6 +95,29 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
              << fidl::ToUnderlying(status);
     }
 
+    return ::testing::AssertionSuccess();
+  }
+
+  ::testing::AssertionResult GetAndDecodeDiff(PageCloudSyncPtr* page_cloud,
+                                              std::vector<uint8_t> commit_id,
+                                              std::vector<std::vector<uint8_t>> possible_bases,
+                                              Diff* diff) {
+    Status status;
+    std::unique_ptr<DiffPack> diff_pack;
+    if ((*page_cloud)->GetDiff(commit_id, std::move(possible_bases), &status, &diff_pack) !=
+        ZX_OK) {
+      return ::testing::AssertionFailure() << "Failed to retrieve the diff due to a channel error.";
+    }
+    if (status != Status::OK) {
+      return ::testing::AssertionFailure()
+             << "Failed to retrieve the diff, received status: " << fidl::ToUnderlying(status);
+    }
+    if (!diff_pack) {
+      return ::testing::AssertionFailure() << "Received an empty diff pack.";
+    }
+    if (!DecodeFromBuffer(diff_pack->buffer, diff)) {
+      return ::testing::AssertionFailure() << "Received invalid data in diff pack.";
+    }
     return ::testing::AssertionSuccess();
   }
 
@@ -376,6 +413,243 @@ TEST_F(PageCloudTest, WatchWithPositionTokenBatch) {
   }
   // The two commits must be delivered at the same time.
   EXPECT_TRUE(CheckThatCommitsContain(on_new_commits_commits_, "id3", "data3"));
+}
+
+TEST_F(PageCloudTest, Diff_GetDiffFromEmpty) {
+  PageCloudSyncPtr page_cloud;
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+
+  // Add one commit, with a diff from the empty commit.
+  Diff diff;
+  diff.mutable_base_state()->set_empty_page({});
+  diff.mutable_changes()->push_back(std::move(DiffEntry()
+                                                  .set_entry_id(convert::ToArray("entryA"))
+                                                  .set_operation(Operation::INSERTION)
+                                                  .set_data(convert::ToArray("entryA_data"))));
+
+  Commit commit;
+  *commit.mutable_id() = convert::ToArray("id0");
+  *commit.mutable_data() = convert::ToArray("data0");
+  *commit.mutable_diff() = std::move(diff);
+
+  std::vector<Commit> entries;
+  entries.push_back(std::move(commit));
+
+  CommitPack commit_pack;
+  Commits commits{std::move(entries)};
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  Status status = Status::INTERNAL_ERROR;
+  ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
+  EXPECT_EQ(status, Status::OK);
+
+  // The cloud can only give a diff from the empty page.
+  ASSERT_TRUE(GetAndDecodeDiff(&page_cloud, convert::ToArray("id0"), {}, &diff));
+  ASSERT_TRUE(diff.has_base_state());
+  EXPECT_TRUE(diff.base_state().is_empty_page());
+  ASSERT_TRUE(diff.has_changes());
+  ASSERT_EQ(diff.changes().size(), 1u);
+  EXPECT_THAT(diff.changes()[0],
+              AllOf(TABLE_FIELD_MATCHES(DiffEntry, entry_id, convert::ToArray("entryA")),
+                    TABLE_FIELD_MATCHES(DiffEntry, operation, Operation::INSERTION),
+                    TABLE_FIELD_MATCHES(DiffEntry, data, convert::ToArray("entryA_data"))));
+}
+
+TEST_F(PageCloudTest, Diff_GetMultipleDiff) {
+  PageCloudSyncPtr page_cloud;
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+
+  // Add one commit, with a diff from the empty commit.
+  Diff diff;
+  diff.mutable_base_state()->set_empty_page({});
+  diff.mutable_changes()->push_back(std::move(DiffEntry()
+                                                  .set_entry_id(convert::ToArray("entryA"))
+                                                  .set_operation(Operation::INSERTION)
+                                                  .set_data(convert::ToArray("entryA_data"))));
+  Commit commit;
+  *commit.mutable_id() = convert::ToArray("id0");
+  *commit.mutable_data() = convert::ToArray("data0");
+  *commit.mutable_diff() = std::move(diff);
+
+  std::vector<Commit> entries;
+  entries.push_back(std::move(commit));
+
+  // Add a second commit deleting the entry inserted in the last commit.
+  diff.mutable_base_state()->set_at_commit(convert::ToArray("id0"));
+  diff.mutable_changes()->push_back(std::move(DiffEntry()
+                                                  .set_entry_id(convert::ToArray("entryA"))
+                                                  .set_operation(Operation::DELETION)
+                                                  .set_data(convert::ToArray("entryA_data2"))));
+  commit = {};
+  *commit.mutable_id() = convert::ToArray("id1");
+  *commit.mutable_data() = convert::ToArray("data1");
+  *commit.mutable_diff() = std::move(diff);
+
+  entries.push_back(std::move(commit));
+
+  // Upload both commits.
+  CommitPack commit_pack;
+  Commits commits{std::move(entries)};
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  Status status = Status::INTERNAL_ERROR;
+  ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
+  EXPECT_EQ(status, Status::OK);
+
+  // Read the second commit. The cloud gives a diff from the empty page.
+  ASSERT_TRUE(GetAndDecodeDiff(&page_cloud, convert::ToArray("id1"), {}, &diff));
+  // The cloud can only give a diff from the empty page.
+  ASSERT_TRUE(diff.has_base_state());
+  EXPECT_TRUE(diff.base_state().is_empty_page());
+  // The diff is either empty, or the addition then the deletion.
+  ASSERT_TRUE(diff.has_changes());
+
+  auto entry_matcher = AllOf(TABLE_FIELD_MATCHES(DiffEntry, entry_id, convert::ToArray("entryA")),
+                             TABLE_FIELD_MATCHES(DiffEntry, data,
+                                                 AnyOf(convert::ToArray("entryA_data"),
+                                                       convert::ToArray("entryA_data2"))));
+  auto two_changes_matcher = ElementsAre(
+      AllOf(entry_matcher, TABLE_FIELD_MATCHES(DiffEntry, operation, Operation::INSERTION)),
+      AllOf(entry_matcher, TABLE_FIELD_MATCHES(DiffEntry, operation, Operation::DELETION)));
+  EXPECT_THAT(diff, TABLE_FIELD_MATCHES(Diff, changes, AnyOf(IsEmpty(), two_changes_matcher)));
+}
+
+TEST_F(PageCloudTest, DiffCompat_GetNoDiff) {
+  PageCloudSyncPtr page_cloud;
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+
+  // Add one commit without diff.
+  Commit commit;
+  *commit.mutable_id() = convert::ToArray("id0");
+  *commit.mutable_data() = convert::ToArray("data0");
+
+  std::vector<Commit> entries;
+  entries.push_back(std::move(commit));
+
+  CommitPack commit_pack;
+  Commits commits{std::move(entries)};
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  Status status = Status::INTERNAL_ERROR;
+  ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
+  EXPECT_EQ(status, Status::OK);
+
+  // Request a diff for `id0'.
+  Diff diff;
+  ASSERT_TRUE(GetAndDecodeDiff(&page_cloud, convert::ToArray("id0"), {}, &diff));
+  // The cloud can only give a diff from the commit itself.
+  ASSERT_TRUE(diff.has_base_state());
+  EXPECT_TRUE(diff.base_state().is_at_commit());
+  EXPECT_EQ(diff.base_state().at_commit(), convert::ToArray("id0"));
+  // The diff is empty.
+  ASSERT_TRUE(diff.has_changes());
+  EXPECT_EQ(diff.changes().size(), 0u);
+}
+
+TEST_F(PageCloudTest, DiffCompat_GetDiffFromNoDiff) {
+  PageCloudSyncPtr page_cloud;
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+
+  // Add one commit without diff.
+  Commit commit;
+  *commit.mutable_id() = convert::ToArray("id0");
+  *commit.mutable_data() = convert::ToArray("data0");
+
+  std::vector<Commit> entries;
+  entries.push_back(std::move(commit));
+
+  // Add one commit with diff based on this commit.
+  Diff diff;
+  diff.mutable_base_state()->set_at_commit(convert::ToArray("id0"));
+  diff.mutable_changes()->push_back(std::move(DiffEntry()
+                                                  .set_entry_id(convert::ToArray("entryA"))
+                                                  .set_operation(Operation::DELETION)
+                                                  .set_data(convert::ToArray("entryA_data"))));
+
+  commit = {};
+  *commit.mutable_id() = convert::ToArray("id1");
+  *commit.mutable_data() = convert::ToArray("data1");
+  *commit.mutable_diff() = std::move(diff);
+
+  entries.push_back(std::move(commit));
+
+  // Upload both commits.
+  CommitPack commit_pack;
+  Commits commits{std::move(entries)};
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  Status status = Status::INTERNAL_ERROR;
+  ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
+  EXPECT_EQ(status, Status::OK);
+
+  // Ask for a diff for `id1' with an empty base list.
+  ASSERT_TRUE(GetAndDecodeDiff(&page_cloud, convert::ToArray("id1"), {}, &diff));
+  // The cloud can only give a diff from `id0'.
+  ASSERT_TRUE(diff.has_base_state());
+  EXPECT_TRUE(diff.base_state().is_at_commit());
+  EXPECT_EQ(diff.base_state().at_commit(), convert::ToArray("id0"));
+  // The diff must contain only the deletion.
+  ASSERT_TRUE(diff.has_changes());
+  ASSERT_EQ(diff.changes().size(), 1u);
+  EXPECT_THAT(diff.changes()[0],
+              AllOf(TABLE_FIELD_MATCHES(DiffEntry, entry_id, convert::ToArray("entryA")),
+                    TABLE_FIELD_MATCHES(DiffEntry, operation, Operation::DELETION),
+                    TABLE_FIELD_MATCHES(DiffEntry, data, convert::ToArray("entryA_data"))));
+}
+
+TEST_F(PageCloudTest, Diff_GetDiffIntermediateCommit) {
+  PageCloudSyncPtr page_cloud;
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+
+  // Add one commit, with a diff from the empty commit.
+  Diff diff;
+  diff.mutable_base_state()->set_empty_page({});
+  diff.mutable_changes()->push_back(std::move(DiffEntry()
+                                                  .set_entry_id(convert::ToArray("entryA"))
+                                                  .set_operation(Operation::INSERTION)
+                                                  .set_data(convert::ToArray("entryA_data"))));
+  Commit commit;
+  *commit.mutable_id() = convert::ToArray("id0");
+  *commit.mutable_data() = convert::ToArray("data0");
+  *commit.mutable_diff() = std::move(diff);
+
+  std::vector<Commit> entries;
+  entries.push_back(std::move(commit));
+
+  // Add a second commit deleting the entry inserted in the last commit.
+  diff.mutable_base_state()->set_at_commit(convert::ToArray("id0"));
+  diff.mutable_changes()->push_back(std::move(DiffEntry()
+                                                  .set_entry_id(convert::ToArray("entryA"))
+                                                  .set_operation(Operation::DELETION)
+                                                  .set_data(convert::ToArray("entryA_data2"))));
+
+  commit = {};
+  *commit.mutable_id() = convert::ToArray("id1");
+  *commit.mutable_data() = convert::ToArray("data1");
+  *commit.mutable_diff() = std::move(diff);
+
+  entries.push_back(std::move(commit));
+
+  // Upload both commits.
+  CommitPack commit_pack;
+  Commits commits{std::move(entries)};
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  Status status = Status::INTERNAL_ERROR;
+  ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
+  EXPECT_EQ(status, Status::OK);
+
+  // Read the first commit.
+  ASSERT_TRUE(
+      GetAndDecodeDiff(&page_cloud, convert::ToArray("id0"), {convert::ToArray("id1")}, &diff));
+  // The cloud may either give a diff from the empty page or from `id1'.
+  ASSERT_TRUE(diff.has_base_state());
+  ASSERT_TRUE(diff.has_changes());
+  ASSERT_EQ(diff.changes().size(), 1u);
+  auto& change = diff.changes()[0];
+  EXPECT_THAT(change, AllOf(TABLE_FIELD_MATCHES(DiffEntry, entry_id, convert::ToArray("entryA")),
+                            TABLE_FIELD_MATCHES(DiffEntry, data,
+                                                AnyOf(convert::ToArray("entryA_data"),
+                                                      convert::ToArray("entryA_data2")))));
+  ASSERT_TRUE(change.has_operation());
+  EXPECT_TRUE((diff.base_state().is_empty_page() && change.operation() == Operation::INSERTION) ||
+              (diff.base_state().at_commit() == convert::ToArray("id1") &&
+               change.operation() == Operation::INSERTION));
 }
 
 }  // namespace

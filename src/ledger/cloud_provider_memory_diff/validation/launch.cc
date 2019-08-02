@@ -19,6 +19,8 @@ namespace {
 constexpr fxl::StringView kCloudProviderUrl =
     "fuchsia-pkg://fuchsia.com/cloud_provider_memory_diff#meta/"
     "cloud_provider_memory_diff.cmx";
+constexpr fxl::StringView kGtestFilter =
+    "--gtest_filter=-PageCloudTest.Diff_*:PageCloudTest.DiffCompat_*";
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -42,7 +44,7 @@ int main(int argc, char** argv) {
 
   int32_t return_code = -1;
   async::PostTask(loop.dispatcher(), [&launcher, &return_code, &loop] {
-    launcher.Run({}, [&return_code, &loop](int32_t result) {
+    launcher.Run({kGtestFilter.ToString()}, [&return_code, &loop](int32_t result) {
       return_code = result;
       loop.Quit();
     });

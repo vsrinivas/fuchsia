@@ -18,6 +18,7 @@ executable("cloud_provider") {
   deps = [
     "//garnet/public/lib/fsl",
     "//peridot/lib/convert",
+    "//src/ledger/bin/fidl/include",
     "//src/lib/uuid",
   ]
 
@@ -29,5 +30,6 @@ executable("cloud_provider") {
     "//src/ledger/lib/commit_pack",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
 }

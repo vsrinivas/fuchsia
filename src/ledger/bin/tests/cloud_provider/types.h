@@ -19,6 +19,7 @@ using DeviceSetPtr = fuchsia::ledger::cloud::DeviceSetPtr;
 using DeviceSetSyncPtr = fuchsia::ledger::cloud::DeviceSetSyncPtr;
 using DeviceSetWatcher = fuchsia::ledger::cloud::DeviceSetWatcher;
 using DeviceSetWatcherPtr = fuchsia::ledger::cloud::DeviceSetWatcherPtr;
+using DiffPack = fuchsia::ledger::cloud::DiffPack;
 using PageCloud = fuchsia::ledger::cloud::PageCloud;
 using PageCloudPtr = fuchsia::ledger::cloud::PageCloudPtr;
 using PageCloudSyncPtr = fuchsia::ledger::cloud::PageCloudSyncPtr;

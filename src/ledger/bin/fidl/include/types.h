@@ -15,10 +15,15 @@ namespace cloud_provider {
 using CloudProvider = fuchsia::ledger::cloud::CloudProvider;
 using CloudProviderPtr = fuchsia::ledger::cloud::CloudProviderPtr;
 using CommitPack = fuchsia::ledger::cloud::CommitPack;
+using Commit = fuchsia::ledger::cloud::Commit;
+using Commits = fuchsia::ledger::cloud::Commits;
 using DeviceSet = fuchsia::ledger::cloud::DeviceSet;
 using DeviceSetPtr = fuchsia::ledger::cloud::DeviceSetPtr;
 using DeviceSetWatcher = fuchsia::ledger::cloud::DeviceSetWatcher;
 using DeviceSetWatcherPtr = fuchsia::ledger::cloud::DeviceSetWatcherPtr;
+using Diff = fuchsia::ledger::cloud::Diff;
+using DiffEntry = fuchsia::ledger::cloud::DiffEntry;
+using Operation = fuchsia::ledger::cloud::Operation;
 using PageCloud = fuchsia::ledger::cloud::PageCloud;
 using PageCloudPtr = fuchsia::ledger::cloud::PageCloudPtr;
 using PageCloudWatcher = fuchsia::ledger::cloud::PageCloudWatcher;
