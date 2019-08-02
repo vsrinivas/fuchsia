@@ -148,43 +148,29 @@ mod tests {
         const STARTING_BRIGHTNESS: f32 = 0.5;
         const CHANGED_BRIGHTNESS: f32 = 0.8;
 
-        let mut fs = ServiceFs::new();
-        fs.add_fidl_service(Services::Manager);
-        let test_env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+        let (manager_proxy, mut manager_stream) = fidl::endpoints::create_proxy_and_stream::<
+            fidl_fuchsia_device_display::ManagerMarker,
+        >()
+        .unwrap();
 
-        fasync::spawn(fs.for_each_concurrent(None, move |connection| {
-            async move {
-                match connection {
-                    Services::Manager(mut manager_stream) => {
-                        let mut stored_brightness_value: f64 = STARTING_BRIGHTNESS.into();
-                        while let Some(req) = await!(manager_stream.try_next()).unwrap() {
-                            #[allow(unreachable_patterns)]
-                            match req {
-                                fidl_fuchsia_device_display::ManagerRequest::GetBrightness {
-                                    responder,
-                                } => {
-                                    responder.send(true, stored_brightness_value.into()).unwrap();
-                                }
-                                fidl_fuchsia_device_display::ManagerRequest::SetBrightness {
-                                    brightness,
-                                    responder,
-                                } => {
-                                    stored_brightness_value = brightness;
-                                    responder.send(true).unwrap();
-                                }
-                            }
-                        }
+        fasync::spawn(async move {
+            let mut stored_brightness_value: f64 = STARTING_BRIGHTNESS.into();
+            while let Some(req) = await!(manager_stream.try_next()).unwrap() {
+                #[allow(unreachable_patterns)]
+                match req {
+                    fidl_fuchsia_device_display::ManagerRequest::GetBrightness { responder } => {
+                        responder.send(true, stored_brightness_value.into()).unwrap();
                     }
-                    _ => {
-                        panic!("Unexpected service");
+                    fidl_fuchsia_device_display::ManagerRequest::SetBrightness {
+                        brightness,
+                        responder,
+                    } => {
+                        stored_brightness_value = brightness;
+                        responder.send(true).unwrap();
                     }
                 }
-
             }
-        }));
-
-        let brightness_service =
-            test_env.connect_to_service::<fidl_fuchsia_device_display::ManagerMarker>().unwrap();
+        });
 
         let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
 
@@ -200,45 +186,29 @@ mod tests {
             .unwrap()
             .register(
                 switchboard::base::SettingType::Display,
-                spawn_display_controller(brightness_service),
+                spawn_display_controller(manager_proxy),
             )
             .unwrap();
 
-        let mut fs = ServiceFs::new();
+        let (display_proxy, display_stream) =
+            fidl::endpoints::create_proxy_and_stream::<DisplayMarker>().unwrap();
 
-        fs.add_fidl_service(Services::Display);
+        fasync::spawn(async move {
+            spawn_display_fidl_handler(switchboard_handle.clone(), display_stream);
+        });
 
-        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-
-        fasync::spawn(fs.for_each_concurrent(None, move |connection| {
-            let switchboard_handle = switchboard_handle.clone();
-            async move {
-                match connection {
-                    Services::Display(display_stream) => {
-                        spawn_display_fidl_handler(switchboard_handle.clone(), display_stream);
-                    }
-                    _ => {
-                        panic!("Unexpected service");
-                    }
-                }
-
-            }
-        }));
-
-
-        let display_service = env.connect_to_service::<DisplayMarker>().unwrap();
         let settings =
-            await!(display_service.watch()).expect("watch completed").expect("watch successful");
+            await!(display_proxy.watch()).expect("watch completed").expect("watch successful");
 
         assert_eq!(settings.brightness_value, Some(STARTING_BRIGHTNESS));
 
         let mut display_settings = DisplaySettings::empty();
         display_settings.brightness_value = Some(CHANGED_BRIGHTNESS);
-        await!(display_service.set(display_settings))
+        await!(display_proxy.set(display_settings))
             .expect("set completed")
             .expect("set successful");
         let settings =
-            await!(display_service.watch()).expect("watch completed").expect("watch successful");
+            await!(display_proxy.watch()).expect("watch completed").expect("watch successful");
 
         assert_eq!(settings.brightness_value, Some(CHANGED_BRIGHTNESS));
 
