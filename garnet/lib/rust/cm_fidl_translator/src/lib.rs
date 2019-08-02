@@ -331,6 +331,7 @@ fn convert_value(v: Value) -> Result<Option<Box<fdata::Value>>, Error> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use test_util::assert_matches;
 
     fn translate_test(input: serde_json::value::Value, expected_output: fsys::ComponentDecl) {
         let component_decl = translate(&format!("{}", input)).expect("translation failed");
@@ -378,10 +379,7 @@ mod tests {
         });
 
         let res = translate(&format!("{}", input));
-        assert!(match res {
-            Err(Error::Parse(_)) => true,
-            _ => false,
-        });
+        assert_matches!(res, Err(Error::Parse(_)));
     }
 
     test_translate! {

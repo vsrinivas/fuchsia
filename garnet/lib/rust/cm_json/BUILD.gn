@@ -27,6 +27,8 @@ rustc_library("cm_json") {
   ]
 
   non_rust_deps = [ ":cm_schema_json" ]
+
+  test_deps = [ "//src/lib/test_util" ]
 }
 
 test_package("cm_json_tests") {

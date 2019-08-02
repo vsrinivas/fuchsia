@@ -163,22 +163,17 @@ pub fn from_json5_str(json5: &str) -> Result<Value, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_util::assert_matches;
 
     #[test]
     fn test_syntax_error_message() {
         let result = serde_json::from_str::<cm::Name>("foo").map_err(Error::from);
-        assert!(match result {
-            Err(Error::Parse(_)) => true,
-            _ => false,
-        });
+        assert_matches!(result, Err(Error::Parse(_)));
     }
 
     #[test]
     fn test_validation_error_message() {
         let result = serde_json::from_str::<cm::Name>("\"foo$\"").map_err(Error::from);
-        assert!(match result {
-            Err(Error::Validate { .. }) => true,
-            _ => false,
-        });
+        assert_matches!(result, Err(Error::Validate { .. }));
     }
 }
