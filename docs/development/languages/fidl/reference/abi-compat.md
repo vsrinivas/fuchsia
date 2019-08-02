@@ -294,6 +294,41 @@ xunion A {         xunion A {
 ![green checkmark](gc.png) **Transition Considerations**: YES
 * So long as `b` is not referenced any more.
 
+## vectors
+
+#### Changing the size
+
+```fidl
+vector<T>:N        vector<T>:M
+```
+
+![green checkmark](gc.png) **ABI Compatibility**: YES
+
+![green checkmark](gc.png) **Transition Considerations**:
+
+* If the maximum size of the vector is **growing** (i.e. `M > N`) then all
+  **consumers** _MUST_ be updated first.
+* If the maximum size of the vector is **shrinking** (i.e. `M < N`) then all
+  **producers** _MUST_ be updated first.
+
+#### Changing the element type
+
+```fidl
+vector<T>:N        vector<U>:N
+```
+
+In many cases, this is neither ABI compatible, nor transitionable. Specific
+cases can be discussed, but do not rely on this for evolvability of your
+protocols.
+
+![yellow warning](yw.png) **ABI Compatibility**: DEPENDS
+
+![yellow warning](yw.png) **Transition Considerations**: DEPENDS
+
+## strings
+
+_Similar to vectors._
+
 ## enums
 
 #### Reordering members
