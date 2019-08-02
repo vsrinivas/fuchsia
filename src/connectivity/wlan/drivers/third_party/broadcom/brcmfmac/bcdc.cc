@@ -222,7 +222,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
 
   ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxlen_out);
   if (ret != ZX_OK) {
-    BRCMF_DBG(TEMP, "Just got back from message cmplt, result %d", ret);
+    BRCMF_DBG(TEMP, "Just got back from message cmplt, result %d\n", ret);
     goto done;
   }
 

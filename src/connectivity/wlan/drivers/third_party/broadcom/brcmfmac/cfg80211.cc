@@ -2655,7 +2655,7 @@ static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t
                                   void* cookie) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
 
-  BRCMF_DBG(WLANIF, "Starting wlanif interface");
+  BRCMF_DBG(WLANIF, "Starting wlanif interface\n");
 
   ndev->if_callbacks = static_cast<decltype(ndev->if_callbacks)>(malloc(sizeof(*ifc)));
   memcpy(ndev->if_callbacks, ifc, sizeof(*ifc));
@@ -2669,7 +2669,7 @@ static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t
 static void brcmf_if_stop(void* ctx) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
 
-  BRCMF_DBG(WLANIF, "Stopping wlanif interface");
+  BRCMF_DBG(WLANIF, "Stopping wlanif interface\n");
 
   free(ndev->if_callbacks);
   ndev->if_callbacks = NULL;
@@ -2692,10 +2692,10 @@ void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
   ndev->scan_txn_id = req->txn_id;
   ndev->scan_busy = true;
 
-  BRCMF_DBG(SCAN, "About to scan! Txn ID %lu", ndev->scan_txn_id);
+  BRCMF_DBG(SCAN, "About to scan! Txn ID %lu\n", ndev->scan_txn_id);
   result = brcmf_cfg80211_scan(ndev, req);
   if (result != ZX_OK) {
-    BRCMF_DBG(SCAN, "Couldn't start scan: %d %s", result, zx_status_get_string(result));
+    BRCMF_DBG(SCAN, "Couldn't start scan: %d %s\n", result, zx_status_get_string(result));
     brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
     ndev->scan_busy = false;
   }
@@ -2856,7 +2856,7 @@ void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
             MAC_FMT_ARGS(req->peer_sta_address), req->rsne_len);
 
   if (req->rsne_len != 0) {
-    BRCMF_DBG(TEMP, " * * RSNE non-zero! %ld", req->rsne_len);
+    BRCMF_DBG(TEMP, " * * RSNE non-zero! %ld\n", req->rsne_len);
     BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES), req->rsne, req->rsne_len, "RSNE:\n");
   }
   if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
@@ -3504,7 +3504,7 @@ void brcmf_hook_stats_query_req(void* ctx) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   struct wireless_dev* wdev = ndev_to_wdev(ndev);
 
-  BRCMF_DBG(TRACE, "Enter");
+  BRCMF_DBG(TRACE, "Enter\n");
 
   wlanif_stats_query_response_t response = {};
   wlanif_mlme_stats_t mlme_stats = {};
@@ -3636,7 +3636,7 @@ zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_re
   struct wireless_dev* wdev = ndev_to_wdev(ndev);
   zx_status_t result;
 
-  BRCMF_DBG(TEMP, "brcmf_phy_create_iface called!");
+  BRCMF_DBG(TEMP, "brcmf_phy_create_iface called!\n");
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
@@ -3650,13 +3650,13 @@ zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_re
   struct brcmf_device* device = ifp->drvr->bus_if->dev;
   struct brcmf_bus* bus = device->bus;
 
-  BRCMF_DBG(TEMP, "About to add if_dev");
+  BRCMF_DBG(TEMP, "About to add if_dev\n");
   result = brcmf_bus_device_add(bus, device->phy_zxdev, &args, &device->if_zxdev);
   if (result != ZX_OK) {
     BRCMF_ERR("Failed to device_add: %s", zx_status_get_string(result));
     return result;
   }
-  BRCMF_DBG(TEMP, "device_add() succeeded. Added iface hooks.");
+  BRCMF_DBG(TEMP, "device_add() succeeded. Added iface hooks.\n");
 
   *out_iface_id = 42;
 
@@ -3730,7 +3730,7 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
   uint32_t event = e->event_code;
   uint32_t status = e->status;
 
-  // BRCMF_DBG(TEMP, "Enter, event %d, status %d, sme_state 0x%lx", event, status,
+  // BRCMF_DBG(TEMP, "Enter, event %d, status %d, sme_state 0x%lx\n", event, status,
   //          atomic_load(&vif->sme_state));
   if (vif->profile.use_fwsup == BRCMF_PROFILE_FWSUP_PSK && event == BRCMF_E_PSK_SUP &&
       status == BRCMF_E_STATUS_FWSUP_COMPLETED) {
@@ -3740,7 +3740,7 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
     BRCMF_DBG(CONN, "Processing set ssid\n");
     memcpy(vif->profile.bssid, e->addr, ETH_ALEN);
     if (vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_PSK) {
-      // BRCMF_DBG(TEMP, "Ret true");
+      // BRCMF_DBG(TEMP, "Ret true\n");
       return true;
     }
 
@@ -3751,10 +3751,10 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
       brcmf_test_bit_in_array(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state)) {
     brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
     brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state);
-    // BRCMF_DBG(TEMP, "Ret true");
+    // BRCMF_DBG(TEMP, "Ret true\n");
     return true;
   }
-  // BRCMF_DBG(TEMP, "Ret false");
+  // BRCMF_DBG(TEMP, "Ret false\n");
   return false;
 }
 
@@ -4008,7 +4008,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
   zx_status_t err = ZX_OK;
 
   BRCMF_DBG(TRACE, "Enter\n");
-  BRCMF_DBG(CONN, "Event code %d, status %d", e->event_code, e->status);
+  BRCMF_DBG(CONN, "Event code %d, status %d\n", e->event_code, e->status);
   if ((e->event_code == BRCMF_E_DEAUTH) || (e->event_code == BRCMF_E_DEAUTH_IND) ||
       (e->event_code == BRCMF_E_DISASSOC_IND) || ((e->event_code == BRCMF_E_LINK) && (!e->flags))) {
     brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
@@ -4346,9 +4346,9 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   int32_t power_mode;
   zx_status_t err = ZX_OK;
 
-  BRCMF_DBG(TEMP, "Enter");
+  BRCMF_DBG(TEMP, "Enter\n");
   if (cfg->dongle_up) {
-    BRCMF_DBG(TEMP, "Early done");
+    BRCMF_DBG(TEMP, "Early done\n");
     return err;
   }
 
@@ -4381,7 +4381,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
 
   cfg->dongle_up = true;
 default_conf_out:
-  BRCMF_DBG(TEMP, "Returning %d", err);
+  BRCMF_DBG(TEMP, "Returning %d\n", err);
 
   return err;
 }
@@ -4559,7 +4559,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
   int32_t fw_err = 0;
   int32_t io_type;
 
-  BRCMF_DBG(TEMP, "Enter");
+  BRCMF_DBG(TEMP, "Enter\n");
   if (!ndev) {
     BRCMF_ERR("ndev is invalid\n");
     return NULL;
@@ -4660,7 +4660,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     goto detach;
   }
 
-  BRCMF_DBG(TEMP, "Exit");
+  BRCMF_DBG(TEMP, "Exit\n");
   return cfg;
 
 detach:

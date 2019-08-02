@@ -834,7 +834,7 @@ static zx_status_t brcmf_sdio_clkctl(struct brcmf_sdio* bus, uint target, bool p
     return ZX_OK;
   }
   if (bus->ci->chip == BRCM_CC_4359_CHIP_ID && target == CLK_NONE) {
-    BRCMF_DBG(TEMP, "Returning because chip is 4359");
+    BRCMF_DBG(TEMP, "Returning because chip is 4359\n");
     return ZX_OK;
   }
 
@@ -2199,9 +2199,9 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
   if (bus->watchdog_tsk) {
     bus->watchdog_should_stop.store(true);
     sync_completion_signal(&bus->watchdog_wait);
-    BRCMF_DBG(TEMP, "Closing and joining SDIO watchdog task");
+    BRCMF_DBG(TEMP, "Closing and joining SDIO watchdog task\n");
     thread_result = pthread_join(bus->watchdog_tsk, NULL);
-    BRCMF_DBG(TEMP, "Result of thread join: %d", thread_result);
+    BRCMF_DBG(TEMP, "Result of thread join: %d\n", thread_result);
     bus->watchdog_tsk = 0;
   }
 
@@ -3203,7 +3203,7 @@ int brcmf_sdio_oob_irqhandler(void* cookie) {
   uint32_t intstatus;
 
   while ((status = zx_interrupt_wait(sdiodev->irq_handle, NULL)) == ZX_OK) {
-    THROTTLE(20, BRCMF_DBG(INTR, "OOB intr triggered"););
+    THROTTLE(20, BRCMF_DBG(INTR, "OOB intr triggered\n"););
     sdio_claim_host(sdiodev->func1);
     if (brcmf_sdio_intr_rstatus(sdiodev->bus)) {
       BRCMF_ERR("failed backplane access\n");
@@ -3213,10 +3213,10 @@ int brcmf_sdio_oob_irqhandler(void* cookie) {
     brcmf_sdio_event_handler(sdiodev->bus);
     sdio_release_host(sdiodev->func1);
     if (intstatus == 0) {
-      THROTTLE(20, BRCMF_DBG(TEMP, "Zero intstatus; pausing 5 msec"););
+      THROTTLE(20, BRCMF_DBG(TEMP, "Zero intstatus; pausing 5 msec\n"););
       zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     }
-    THROTTLE(20, BRCMF_DBG(INTR, "Done with OOB intr"););
+    THROTTLE(20, BRCMF_DBG(INTR, "Done with OOB intr\n"););
   }
 
   BRCMF_ERR("ISR exiting with status %s\n", zx_status_get_string(status));
@@ -3390,7 +3390,7 @@ static const struct brcmf_buscore_ops brcmf_sdio_buscore_ops = {
 #ifdef SDIO_PRINTER
 pthread_t sdio_thread;
 static void* sdio_printer(void* foo) {
-  BRCMF_DBG(TEMP, "SDIO printer started");
+  BRCMF_DBG(TEMP, "SDIO printer started\n");
   zx_nanosleep(zx_deadline_after(ZX_SEC(10000000)));
   psr();
   return NULL;
@@ -3414,7 +3414,7 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
 
   BRCMF_DBG(INFO, "brcmfmac: F1 signature read @0x18000000=0x%4x\n",
             brcmf_sdiod_func1_rl(sdiodev, SI_ENUM_BASE, NULL));
-  BRCMF_DBG(TEMP, "Survived signature read");
+  BRCMF_DBG(TEMP, "Survived signature read\n");
 
   /*
    * Force PLL off until brcmf_chip_attach()
@@ -3539,13 +3539,13 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     bus->pollrate = 1;
   }
 
-  BRCMF_DBG(TEMP, "Exit");
+  BRCMF_DBG(TEMP, "Exit\n");
   ZX_DEBUG_ASSERT(err == ZX_OK);
   return err;
 
 fail:
   sdio_release_host(sdiodev->func1);
-  BRCMF_DBG(TEMP, "* * FAIL");
+  BRCMF_DBG(TEMP, "* * FAIL\n");
   return err;
 }
 
@@ -3709,26 +3709,26 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
   }
 
   if (brcmf_chip_sr_capable(bus->ci)) {
-    BRCMF_DBG(TEMP, "About to sr_init() (after 100 msec pause)");
+    BRCMF_DBG(TEMP, "About to sr_init() (after 100 msec pause)\n");
     PAUSE;
     PAUSE;
     brcmf_sdio_sr_init(bus);
     PAUSE;
     PAUSE;
-    BRCMF_DBG(TEMP, "Did sr_init() (100 msec ago)");
+    BRCMF_DBG(TEMP, "Did sr_init() (100 msec ago)\n");
   } else {
     /* Restore previous clock setting */
     brcmf_sdiod_func1_wb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, saveclk, &err);
   }
 
   err = brcmf_sdio_readshared(bus, &sh);
-  BRCMF_DBG(TEMP, "Readshared returned %d", err);
+  BRCMF_DBG(TEMP, "Readshared returned %d\n", err);
 
 #if !defined(NDEBUG)
   bus->console_addr = sh.console_addr;
-  BRCMF_DBG(TEMP, "console_addr 0x%x", bus->console_addr);
+  BRCMF_DBG(TEMP, "console_addr 0x%x\n", bus->console_addr);
   brcmf_sdio_readconsole(bus);
-  BRCMF_DBG(TEMP, "Should have seen readconsole output");
+  BRCMF_DBG(TEMP, "Should have seen readconsole output\n");
 #endif  // !defined(NDEBUG)
 
   if (err == ZX_OK) {

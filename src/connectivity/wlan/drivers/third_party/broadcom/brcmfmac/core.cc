@@ -385,7 +385,7 @@ void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool 
   BRCMF_DBG(DATA, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
 
   if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
-    BRCMF_DBG(TEMP, "hdrpull returned nonzero");
+    BRCMF_DBG(TEMP, "hdrpull returned nonzero\n");
     return;
   }
 
@@ -480,7 +480,7 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev) {
   }
 
   /* Clear, carrier, set when connected or AP mode. */
-  BRCMF_DBG(TEMP, "* * Would have called netif_carrier_off(ndev);");
+  BRCMF_DBG(TEMP, "* * Would have called netif_carrier_off(ndev);\n");
   return ZX_OK;
 }
 
@@ -575,7 +575,7 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
     BRCMF_ERR("device_add failed: %s", zx_status_get_string(result));
     goto fail;
   }
-  BRCMF_DBG(TEMP, "device_add() succeeded. Added phy hooks.");
+  BRCMF_DBG(TEMP, "device_add() succeeded. Added phy hooks.\n");
 
   return ZX_OK;
 
@@ -729,7 +729,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
   }
   // This is probably unnecessary - just test/verify after taking it out please!
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-  BRCMF_DBG(TRACE, "Exit");
+  BRCMF_DBG(TRACE, "Exit\n");
   return ZX_OK;
 }
 
@@ -824,7 +824,7 @@ zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
   struct brcmf_if* p2p_ifp;
   zx_status_t err;
 
-  BRCMF_DBG(TRACE, "Enter");
+  BRCMF_DBG(TRACE, "Enter\n");
 
   /* add primary networking interface */
   // TODO(WLAN-740): Name uniqueness
@@ -983,7 +983,7 @@ void brcmf_free_net_device(struct net_device* dev) {
 }
 
 void brcmf_enable_tx(struct net_device* dev) {
-  BRCMF_DBG(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)");
+  BRCMF_DBG(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)\n");
 }
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {
   zx_status_t result;
@@ -1012,8 +1012,8 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
       if ((drvr->iflist[ifidx]) && (drvr->iflist[ifidx]->ndev)) {
         ndev = drvr->iflist[ifidx]->ndev;
         // TODO(cphoenix): Implement Fuchsia equivalent of...
-        // BRCMF_DBG(INFO, "This code called netif_wake_queue(ndev)");
-        // BRCMF_DBG(INFO, "  if netif_queue_stopped(ndev). Do the Fuchsia equivalent.");
+        // BRCMF_DBG(INFO, "This code called netif_wake_queue(ndev)\n");
+        // BRCMF_DBG(INFO, "  if netif_queue_stopped(ndev). Do the Fuchsia equivalent.\n");
       }
     }
   }
