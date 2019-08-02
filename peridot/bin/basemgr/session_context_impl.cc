@@ -5,13 +5,12 @@
 #include "peridot/bin/basemgr/session_context_impl.h"
 
 #include <fcntl.h>
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <lib/fsl/io/fd.h>
 
 #include <memory>
 #include <string>
 #include <utility>
-
-#include <lib/fidl/cpp/synchronous_interface_ptr.h>
-#include <lib/fsl/io/fd.h>
 
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"
@@ -41,8 +40,6 @@ SessionContextImpl::SessionContextImpl(
   // will lose existing user data, so the timing needs to be considered.
   // 0. Generate the path to map '/data' for the sessionmgr we are starting.
   std::string data_origin = std::string("/data/modular/USER_") + session_id;
-
-  FXL_LOG(INFO) << "SESSIONMGR DATA ORIGIN IS " << data_origin;
 
   // 1. Create a PseudoDir containing startup.config. This directory will be
   // injected into sessionmgr's namespace and sessionmgr will read its
