@@ -45,8 +45,8 @@ Options:
                         requests. May be informed multiple times.
    --add_namespace=[ns]: make the namespace 'ns' from this component available to the devmgr
                          under the same path.
-   --dev_vid_pid_did=[dev_vid:dev_pid:dev_did]: adding a device with hex dev_vid, dev_pid and
-                                                dev_did. May be informed multiple times.
+   --device_vid_pid_did=[dev_vid:dev_pid:dev_did]: adding a device with hex dev_vid, dev_pid
+                                                   and dev_did. May be informed multiple times.
    --help: displays this help page.
 
 Note: isolated_devmgr runs as a component, so all paths must be relative to the component's

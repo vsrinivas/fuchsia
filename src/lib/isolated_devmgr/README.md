@@ -46,8 +46,8 @@ The arguments passed to `isolated_devmgr` configure its behavior for your own us
 see all the supported arguments [here](./main.cc). The main arguments you typically will provide
 are `svc_name` and `load_driver`. `svc_name` configures the name of the `devfs` namespace that
 will be exposed to the component's directory request and `load_driver` (which can be expressed
-multiple times) lists drivers to load when it is launched. `dev_vid_pid_did` is optional argument
-which can be used to create a device.
+multiple times) lists drivers to load when it is launched. `device_vid_pid_did` is optional
+argument which can be used to create a device.
 
 ```json
 {
