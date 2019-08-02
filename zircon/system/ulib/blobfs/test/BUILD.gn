@@ -31,6 +31,7 @@ test("blobfs-unit") {
     "journal-test.cc",
     "node-populator-test.cc",
     "node-reserver-test.cc",
+    "replay-test.cc",
     "ring-buffer-test.cc",
     "unbuffered-operations-builder-test.cc",
     "utils.cc",

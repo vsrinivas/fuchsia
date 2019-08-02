@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BLOBFS_WRITEBACK_H_
+#define BLOBFS_WRITEBACK_H_
 
-#ifndef __Fuchsia__
-#error Fuchsia-only Header
-#endif
+#include <lib/zx/vmo.h>
 
 #include <utility>
 
-#include <blobfs/transaction-manager.h>
 #include <blobfs/operation.h>
+#include <blobfs/transaction-manager.h>
 #include <blobfs/unbuffered-operations-builder.h>
 #include <blobfs/writeback-work.h>
 #include <fbl/ref_ptr.h>
-#include <lib/zx/vmo.h>
 
 namespace blobfs {
 
@@ -48,7 +46,9 @@ zx_status_t EnqueuePaginated(std::unique_ptr<WritebackWork>* work,
 
 // Flushes |operations| to persistent storage using a transaction created by |transaction_manager|,
 // sending through the disk-registered |vmoid| object.
-zx_status_t FlushWriteRequests(TransactionManager* transaction_manager,
+zx_status_t FlushWriteRequests(fs::TransactionHandler* transaction_handler,
                                const fbl::Vector<BufferedOperation>& operations);
 
 }  // namespace blobfs
+
+#endif  // BLOBFS_WRITEBACK_H_

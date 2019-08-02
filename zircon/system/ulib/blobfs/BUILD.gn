@@ -65,6 +65,7 @@ library("blobfs") {
       "journal-entry.cc",
       "journal.cc",
       "journal/entry-view.cc",
+      "journal/replay.cc",
       "journal/superblock.cc",
       "metrics.cc",
       "mount.cc",

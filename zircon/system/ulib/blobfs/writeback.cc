@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/writeback.h>
-
 #include <utility>
 #include <vector>
+
+#include <blobfs/writeback.h>
 
 namespace blobfs {
 
@@ -40,21 +40,19 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work,
   return ZX_OK;
 }
 
-zx_status_t FlushWriteRequests(TransactionManager* transaction_manager,
+zx_status_t FlushWriteRequests(fs::TransactionHandler* transaction_handler,
                                const fbl::Vector<BufferedOperation>& operations) {
   if (operations.is_empty()) {
     return ZX_OK;
   }
 
-  fs::Ticker ticker(transaction_manager->Metrics().Collecting());
-
   // Update all the outgoing transactions to be in disk blocks.
   std::vector<block_fifo_request_t> blk_reqs;
   blk_reqs.resize(operations.size());
   const uint32_t kDiskBlocksPerBlobfsBlock =
-      transaction_manager->FsBlockSize() / transaction_manager->DeviceBlockSize();
+      transaction_handler->FsBlockSize() / transaction_handler->DeviceBlockSize();
   for (size_t i = 0; i < operations.size(); i++) {
-    blk_reqs[i].group = transaction_manager->BlockGroupID();
+    blk_reqs[i].group = transaction_handler->BlockGroupID();
     blk_reqs[i].vmoid = operations[i].vmoid;
     blk_reqs[i].opcode = BLOCKIO_WRITE;
     blk_reqs[i].vmo_offset = operations[i].op.vmo_offset * kDiskBlocksPerBlobfsBlock;
@@ -67,15 +65,7 @@ zx_status_t FlushWriteRequests(TransactionManager* transaction_manager,
   }
 
   // Actually send the operations to the underlying block device.
-  zx_status_t status = transaction_manager->Transaction(&blk_reqs[0], operations.size());
-
-  if (transaction_manager->Metrics().Collecting()) {
-    uint64_t sum = 0;
-    for (const auto& operation : operations) {
-      sum += operation.op.length * transaction_manager->FsBlockSize();
-    }
-    transaction_manager->Metrics().UpdateWriteback(sum, ticker.End());
-  }
+  zx_status_t status = transaction_handler->Transaction(&blk_reqs[0], operations.size());
 
   return status;
 }
