@@ -43,9 +43,9 @@ impl FileSystem for RealFileSystem {
     }
 }
 
-async fn check_for_system_update_impl<'a>(
-    file_system: &'a mut impl FileSystem,
-    package_resolver: &'a impl PackageResolverProxyInterface,
+async fn check_for_system_update_impl(
+    file_system: &mut impl FileSystem,
+    package_resolver: &impl PackageResolverProxyInterface,
 ) -> Result<SystemUpdateStatus, Error> {
     let current = current_system_image_merkle(file_system)?;
     let latest = latest_system_image_merkle(package_resolver).await?;
