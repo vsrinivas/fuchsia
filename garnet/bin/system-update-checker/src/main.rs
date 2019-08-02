@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 mod apply;
 mod channel;
@@ -46,7 +46,7 @@ async fn main() -> Result<(), Error> {
 
     let mut target_channel_manager =
         channel::TargetChannelManager::new(connect::ServiceConnector, "/misc/ota");
-    if let Err(e) = await!(target_channel_manager.update()) {
+    if let Err(e) = target_channel_manager.update().await {
         fx_log_err!("while updating the target channel: {}", e);
     }
 
@@ -78,7 +78,7 @@ async fn main() -> Result<(), Error> {
 
     let cron_fut = run_periodic_update_check(update_manager.clone(), &config);
 
-    await!(future::join4(channel_fut, fidl_fut, cron_fut, perform_fdr_if_necessary()));
+    future::join4(channel_fut, fidl_fut, cron_fut, perform_fdr_if_necessary()).await;
 
     Ok(())
 }
@@ -91,10 +91,10 @@ enum IncomingServices {
 async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(), Error> {
     match incoming_service {
         IncomingServices::Manager(request_stream, update_service) => {
-            await!(update_service.handle_request_stream(request_stream))
+            update_service.handle_request_stream(request_stream).await
         }
         IncomingServices::Info(request_stream, handler) => {
-            await!(handler.handle_request_stream(request_stream))
+            handler.handle_request_stream(request_stream).await
         }
     }
 }

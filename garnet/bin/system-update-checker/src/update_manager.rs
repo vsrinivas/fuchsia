@@ -108,8 +108,8 @@ where
                     // Lock the updater for the duration of the update attempt. Contention is not
                     // expected except in the case that a previous update attempt failed, has set
                     // manager_state back to Idle, but has not yet returned.
-                    let mut updater = await!(updater.lock());
-                    await!(updater.do_system_update_check_and_return_to_idle(monitor, initiator))
+                    let mut updater = updater.lock().await;
+                    updater.do_system_update_check_and_return_to_idle(monitor, initiator).await
                 });
                 CheckStartedResult::Started
             }
@@ -142,7 +142,7 @@ where
         monitor: Arc<Mutex<UpdateMonitor<S>>>,
         initiator: Initiator,
     ) {
-        if let Err(e) = await!(self.do_system_update_check(monitor.clone(), initiator)) {
+        if let Err(e) = self.do_system_update_check(monitor.clone(), initiator).await {
             fx_log_err!("update attempt failed: {:?}", e);
             monitor.lock().advance_manager_state(ManagerState::EncounteredError);
         }
@@ -172,9 +172,9 @@ where
             }
         );
 
-        await!(self.channel_updater.update());
+        self.channel_updater.update().await;
 
-        match await!(self.update_checker.check()).context("check_for_system_update failed")? {
+        match self.update_checker.check().await.context("check_for_system_update failed")? {
             SystemUpdateStatus::UpToDate { system_image } => {
                 fx_log_info!("current system_image merkle: {}", system_image);
                 fx_log_info!("system_image is already up-to-date");
@@ -188,11 +188,9 @@ where
                     monitor.set_version_available(latest_system_image.to_string());
                     monitor.advance_manager_state(ManagerState::PerformingUpdate);
                 }
-                await!(self.update_applier.apply(
-                    current_system_image,
-                    latest_system_image,
-                    initiator,
-                ))
+                self.update_applier
+                    .apply(current_system_image, latest_system_image, initiator)
+                    .await
                     .context("apply_system_update failed")?;
                 // On success, system-updater reboots the system before returning, so this code
                 // should never run. The only way to leave WaitingForReboot state is to restart
@@ -311,7 +309,8 @@ pub(crate) mod tests {
             async move {
                 check_blocked.lock().await;
                 result.map_err(|e| e.into())
-            }.boxed()
+            }
+                .boxed()
         }
     }
 
@@ -445,7 +444,7 @@ pub(crate) mod tests {
     async fn next_n_states(receiver: &mut Receiver<State>, n: usize) -> Vec<State> {
         let mut v = Vec::with_capacity(n);
         for _ in 0..n {
-            v.push(await!(receiver.next()).expect("next_n_states stream empty"));
+            v.push(receiver.next().await.expect("next_n_states stream empty"));
         }
         v
     }
@@ -458,7 +457,7 @@ pub(crate) mod tests {
         if seen_count == 0 {
             return;
         }
-        while let Some(new_state) = await!(receiver.next()) {
+        while let Some(new_state) = receiver.next().await {
             if new_state.manager_state == manager_state {
                 seen_count -= 1;
                 if seen_count == 0 {
@@ -520,13 +519,13 @@ pub(crate) mod tests {
 
         // Wait for first update attempt to complete, to guarantee that the second
         // try_start_update() call starts a new attempt (and generates more callback calls).
-        await!(wait_until_manager_state_n(&mut receiver0, ManagerState::Idle, 2));
+        wait_until_manager_state_n(&mut receiver0, ManagerState::Idle, 2).await;
 
         manager.try_start_update(Initiator::Manual, Some(callback1));
 
         // Wait for the second update attempt to complete, to guarantee the callbacks
         // have been called with more states.
-        await!(wait_until_manager_state_n(&mut receiver1, ManagerState::Idle, 2));
+        wait_until_manager_state_n(&mut receiver1, ManagerState::Idle, 2).await;
 
         // The first callback should have been dropped after the first attempt completed,
         // so it should still be empty.
@@ -545,7 +544,7 @@ pub(crate) mod tests {
         manager.try_start_update(Initiator::Manual, Some(callback));
 
         assert_eq!(
-            await!(receiver.collect::<Vec<State>>()),
+            receiver.collect::<Vec<State>>().await,
             vec![
                 ManagerState::Idle.into(),
                 ManagerState::CheckingForUpdates.into(),
@@ -566,7 +565,7 @@ pub(crate) mod tests {
         manager.try_start_update(Initiator::Manual, Some(callback));
 
         assert_eq!(
-            await!(receiver.collect::<Vec<State>>()),
+            receiver.collect::<Vec<State>>().await,
             vec![
                 ManagerState::Idle.into(),
                 ManagerState::CheckingForUpdates.into(),
@@ -589,7 +588,7 @@ pub(crate) mod tests {
         manager.try_start_update(Initiator::Manual, Some(callback));
 
         assert_eq!(
-            await!(next_n_states(&mut receiver, 4)),
+            next_n_states(&mut receiver, 4).await,
             vec![
                 ManagerState::Idle.into(),
                 ManagerState::CheckingForUpdates.into(),
@@ -612,7 +611,7 @@ pub(crate) mod tests {
         manager.try_start_update(Initiator::Manual, None);
 
         assert_eq!(
-            await!(next_n_states(&mut receiver, 5)),
+            next_n_states(&mut receiver, 5).await,
             vec![
                 ManagerState::Idle.into(),
                 ManagerState::CheckingForUpdates.into(),
@@ -638,7 +637,7 @@ pub(crate) mod tests {
         // waiting for Idle state guarantees second try_start_update call
         // starts a new attempt
         assert_eq!(
-            await!(next_n_states(&mut receiver, 5)),
+            next_n_states(&mut receiver, 5).await,
             vec![
                 ManagerState::Idle.into(),
                 ManagerState::CheckingForUpdates.into(),
@@ -651,7 +650,7 @@ pub(crate) mod tests {
         manager.try_start_update(Initiator::Manual, None);
 
         assert_eq!(
-            await!(next_n_states(&mut receiver, 4)),
+            next_n_states(&mut receiver, 4).await,
             vec![
                 ManagerState::CheckingForUpdates.into(),
                 ManagerState::PerformingUpdate.into(),
@@ -672,7 +671,7 @@ pub(crate) mod tests {
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
         manager.try_start_update(Initiator::Manual, Some(callback));
-        await!(receiver.collect::<Vec<State>>());
+        receiver.collect::<Vec<State>>().await;
 
         assert_eq!(channel_updater.call_count(), 1);
     }
@@ -688,7 +687,7 @@ pub(crate) mod tests {
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
         manager.try_start_update(Initiator::Manual, Some(callback));
-        await!(receiver.collect::<Vec<State>>());
+        receiver.collect::<Vec<State>>().await;
 
         assert_eq!(update_applier.call_count(), 1);
     }
@@ -704,7 +703,7 @@ pub(crate) mod tests {
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
         manager.try_start_update(Initiator::Manual, Some(callback));
-        await!(receiver.collect::<Vec<State>>());
+        receiver.collect::<Vec<State>>().await;
 
         assert_eq!(update_applier.call_count(), 0);
     }
@@ -719,7 +718,7 @@ pub(crate) mod tests {
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
         manager.try_start_update(Initiator::Manual, Some(callback));
-        await!(receiver.collect::<Vec<State>>());
+        receiver.collect::<Vec<State>>().await;
 
         assert_eq!(manager.get_state(), Default::default());
     }
@@ -734,7 +733,7 @@ pub(crate) mod tests {
         let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
         manager.try_start_update(Initiator::Manual, Some(callback));
-        await!(receiver.collect::<Vec<State>>());
+        receiver.collect::<Vec<State>>().await;
 
         assert_eq!(manager.get_state(), Default::default());
     }
@@ -754,7 +753,7 @@ pub(crate) mod tests {
         fn check(&self) -> BoxFuture<Result<SystemUpdateStatus, crate::errors::Error>> {
             let blocker = self.blocker.clone();
             async move {
-                assert!(await!(blocker).is_ok(), "blocking future cancelled");
+                assert!(blocker.await.is_ok(), "blocking future cancelled");
                 Ok(SystemUpdateStatus::UpdateAvailable {
                     current_system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
                     latest_system_image: LATEST_SYSTEM_IMAGE.parse().expect("valid merkle"),
@@ -794,7 +793,7 @@ pub(crate) mod tests {
         // and the blocking_update_checker keeps it there
         let res1 = manager.try_start_update(Initiator::Manual, None);
         assert_matches!(sender.send(()), Ok(()));
-        await!(receiver.collect::<Vec<State>>());
+        receiver.collect::<Vec<State>>().await;
 
         assert_eq!(res0, CheckStartedResult::Started);
         assert_eq!(res1, CheckStartedResult::InProgress);

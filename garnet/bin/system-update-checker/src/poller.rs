@@ -30,7 +30,7 @@ where
             None => return,
         };
 
-        while let Some(()) = await!(timer.next()) {
+        while let Some(()) = timer.next().await {
             match manager.try_start_update(Initiator::Automatic, None) {
                 CheckStartedResult::Started => {}
                 CheckStartedResult::Throttled => {

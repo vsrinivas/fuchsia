@@ -23,7 +23,7 @@ pub async fn check_for_system_update() -> Result<SystemUpdateStatus, Error> {
     let mut file_system = RealFileSystem;
     let package_resolver =
         connect_to_service::<PackageResolverMarker>().context(ErrorKind::ConnectPackageResolver)?;
-    await!(check_for_system_update_impl(&mut file_system, &package_resolver))
+    check_for_system_update_impl(&mut file_system, &package_resolver).await
 }
 
 // For mocking
@@ -48,7 +48,7 @@ async fn check_for_system_update_impl<'a>(
     package_resolver: &'a impl PackageResolverProxyInterface,
 ) -> Result<SystemUpdateStatus, Error> {
     let current = current_system_image_merkle(file_system)?;
-    let latest = await!(latest_system_image_merkle(package_resolver))?;
+    let latest = latest_system_image_merkle(package_resolver).await?;
     if current == latest {
         Ok(SystemUpdateStatus::UpToDate { system_image: current })
     } else {
@@ -72,13 +72,15 @@ async fn latest_system_image_merkle(
 ) -> Result<Hash, Error> {
     let (dir_proxy, dir_server_end) =
         fidl::endpoints::create_proxy().context(ErrorKind::CreateUpdatePackageDirectoryProxy)?;
-    let status = await!(package_resolver.resolve(
-        &UPDATE_PACKAGE_URL,
-        &mut vec![].into_iter(),
-        &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-        dir_server_end
-    ))
-    .context(ErrorKind::ResolveUpdatePackageFidl)?;
+    let status = package_resolver
+        .resolve(
+            &UPDATE_PACKAGE_URL,
+            &mut vec![].into_iter(),
+            &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
+            dir_server_end,
+        )
+        .await
+        .context(ErrorKind::ResolveUpdatePackageFidl)?;
     zx::Status::ok(status).context(ErrorKind::ResolveUpdatePackage)?;
 
     let (file_end, file_server_end) = fidl::endpoints::create_endpoints()
@@ -215,7 +217,7 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem { contents: hashmap![] };
         let package_resolver = PackageResolverProxyTempDir::new_with_empty_dir();
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ReadSystemMeta));
     }
@@ -229,7 +231,7 @@ mod test_check_for_system_update_impl {
         };
         let package_resolver = PackageResolverProxyTempDir::new_with_empty_dir();
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ParseSystemMeta));
     }
@@ -253,7 +255,7 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyFidlError;
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ResolveUpdatePackageFidl));
     }
@@ -277,7 +279,7 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyZxError;
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ResolveUpdatePackage));
     }
@@ -301,7 +303,7 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyDirectoryCloser;
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::OpenUpdatePackagePackages));
     }
@@ -311,7 +313,7 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyTempDir::new_with_empty_dir();
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::CreatePackagesFd));
     }
@@ -321,7 +323,7 @@ mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyTempDir::new_with_empty_packages_file();
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(
             result.map_err(|e| e.kind()),
@@ -335,7 +337,7 @@ mod test_check_for_system_update_impl {
         let package_resolver =
             PackageResolverProxyTempDir::new_with_latest_system_image_merkle("bad-merkle");
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(
             result.map_err(|e| e.kind()),
@@ -353,7 +355,7 @@ mod test_check_for_system_update_impl {
             ACTIVE_SYSTEM_IMAGE_MERKLE,
         );
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(
             result,
@@ -371,7 +373,7 @@ mod test_check_for_system_update_impl {
             NEW_SYSTEM_IMAGE_MERKLE,
         );
 
-        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+        let result = check_for_system_update_impl(&mut file_system, &package_resolver).await;
 
         assert_matches!(
             result,

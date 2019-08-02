@@ -36,17 +36,17 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
 
     pub async fn run(self) {
         loop {
-            let cobalt = await!(self.connect());
+            let cobalt = self.connect().await;
 
             fx_log_info!("calling cobalt.SetChannel(\"{}\")", self.current_channel);
 
-            match await!(cobalt.set_channel(&self.current_channel)) {
+            match cobalt.set_channel(&self.current_channel).await {
                 Ok(CobaltStatus::Ok) => {
                     break;
                 }
                 Ok(CobaltStatus::EventTooBig) => {
                     fx_log_warn!("cobalt.SetChannel returned Status.EVENT_TOO_BIG, retrying");
-                    await!(self.sleep());
+                    self.sleep().await;
                 }
                 Ok(status) => {
                     // Not much we can do about the other status codes but log.
@@ -56,7 +56,7 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
                 Err(err) => {
                     // channel broken, so log the error and reconnect.
                     fx_log_warn!("cobalt.SetChannel returned error: {}, retrying", err);
-                    await!(self.sleep());
+                    self.sleep().await;
                 }
             }
         }
@@ -70,7 +70,7 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
                 }
                 Err(err) => {
                     fx_log_err!("error connecting to cobalt: {}", err);
-                    await!(self.sleep())
+                    self.sleep().await
                 }
             }
         }
@@ -78,7 +78,7 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
 
     async fn sleep(&self) {
         let delay = fasync::Time::after(Duration::from_secs(5).into());
-        await!(fasync::Timer::new(delay));
+        fasync::Timer::new(delay).await;
     }
 }
 
@@ -98,7 +98,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
     }
 
     pub async fn update(&mut self) -> Result<(), failure::Error> {
-        let target_channel = await!(self.lookup_target_channel())?;
+        let target_channel = self.lookup_target_channel().await?;
         if self.target_channel.as_ref().map_or(false, |c| c == &target_channel) {
             return Ok(());
         }
@@ -110,10 +110,11 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
 
     async fn lookup_target_channel(&self) -> Result<String, failure::Error> {
         let rewrite_engine = self.service_connector.connect_to_service::<EngineMarker>()?;
-        let rewritten: PkgUrl =
-            await!(rewrite_engine.test_apply("fuchsia-pkg://fuchsia.com/update/0"))?
-                .map_err(|s| zx::Status::from_raw(s))?
-                .parse()?;
+        let rewritten: PkgUrl = rewrite_engine
+            .test_apply("fuchsia-pkg://fuchsia.com/update/0")
+            .await?
+            .map_err(|s| zx::Status::from_raw(s))?
+            .parse()?;
         let channel = host_to_channel(rewritten.host());
 
         Ok(channel.to_owned())
@@ -284,7 +285,7 @@ mod tests {
             let chan = chan.clone();
 
             fasync::spawn_local(async move {
-                while let Some(req) = await!(stream.try_next()).unwrap_or(None) {
+                while let Some(req) = stream.try_next().await.unwrap_or(None) {
                     match req {
                         SystemDataUpdaterRequest::SetChannel { current_channel, responder } => {
                             *chan.lock() = Some(current_channel);
@@ -300,7 +301,7 @@ mod tests {
 
         fasync::spawn_local(fs.collect());
 
-        await!(c.run());
+        c.run().await;
 
         assert_eq!(channel.lock().as_ref().map(|s| s.as_str()), Some("stable"));
     }
@@ -378,7 +379,7 @@ mod tests {
 
                         let state = self.state.clone();
                         fasync::spawn_local(async move {
-                            while let Some(req) = await!(stream.try_next()).unwrap() {
+                            while let Some(req) = stream.try_next().await.unwrap() {
                                 match req {
                                     SystemDataUpdaterRequest::SetChannel {
                                         current_channel: _current_channel,
@@ -400,7 +401,7 @@ mod tests {
 
                         let state = self.state.clone();
                         fasync::spawn_local(async move {
-                            while let Some(req) = await!(stream.try_next()).unwrap() {
+                            while let Some(req) = stream.try_next().await.unwrap() {
                                 match req {
                                     SystemDataUpdaterRequest::SetChannel {
                                         current_channel,
@@ -478,17 +479,17 @@ mod tests {
 
         // First write of the file with the correct data.
         assert_matches!(read_channel(&target_channel_path), Err(_));
-        await!(channel_manager.update()).expect("channel update to succeed");
+        channel_manager.update().await.expect("channel update to succeed");
         assert_eq!(read_channel(&target_channel_path).unwrap(), "devhost");
 
         // If the file changes while the service is running, an update doesn't know to replace it.
         write_channel(&target_channel_path, "unique").unwrap();
-        await!(channel_manager.update()).expect("channel update to succeed");
+        channel_manager.update().await.expect("channel update to succeed");
         assert_eq!(read_channel(&target_channel_path).unwrap(), "unique");
 
         // If the update package changes, however, the file will be updated.
         connector.set("fuchsia-pkg://hello.world.fuchsia.com/update/0");
-        await!(channel_manager.update()).expect("channel update to succeed");
+        channel_manager.update().await.expect("channel update to succeed");
         assert_eq!(read_channel(&target_channel_path).unwrap(), "world");
     }
 
@@ -503,7 +504,7 @@ mod tests {
         let mut channel_manager = TargetChannelManager::new(connector, dir.path());
 
         assert!(read_channel(&target_channel_path).is_err());
-        await!(channel_manager.update()).expect("channel update to succeed");
+        channel_manager.update().await.expect("channel update to succeed");
         assert_eq!(read_channel(&target_channel_path).unwrap(), "b");
     }
 
@@ -529,7 +530,7 @@ mod tests {
 
             let target = self.target.lock().clone();
             fasync::spawn_local(async move {
-                while let Some(req) = await!(stream.try_next()).unwrap() {
+                while let Some(req) = stream.try_next().await.unwrap() {
                     match req {
                         EngineRequest::TestApply { url, responder } => {
                             assert_eq!(url, "fuchsia-pkg://fuchsia.com/update/0");

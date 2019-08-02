@@ -29,7 +29,7 @@ impl InfoHandler {
         mut stream: InfoRequestStream,
     ) -> Result<(), Error> {
         while let Some(request) =
-            await!(stream.try_next()).context("extracting request from stream")?
+            stream.try_next().await.context("extracting request from stream")?
         {
             match request {
                 InfoRequest::GetChannel { responder } => {
@@ -82,9 +82,7 @@ mod tests {
         let info_handler = InfoHandler { misc_info_dir: info_dir.path().into() };
         let (proxy, stream) =
             create_proxy_and_stream::<InfoMarker>().expect("create_proxy_and_stream");
-        fasync::spawn(
-            async move { await!(info_handler.handle_request_stream(stream).map(|_| ())) },
-        );
+        fasync::spawn(async move { info_handler.handle_request_stream(stream).map(|_| ()).await });
         proxy
     }
 
@@ -98,7 +96,7 @@ mod tests {
         .expect("write current_channel.json");
         let proxy = spawn_info_handler(&tempdir);
 
-        let res = await!(proxy.get_channel());
+        let res = proxy.get_channel().await;
 
         assert_eq!(res.map_err(|e| e.to_string()), Ok("example".into()));
     }
@@ -108,7 +106,7 @@ mod tests {
         let tempdir = TempDir::new().expect("create tempdir");
         let proxy = spawn_info_handler(&tempdir);
 
-        let res = await!(proxy.get_channel());
+        let res = proxy.get_channel().await;
 
         assert_eq!(res.map_err(|e| e.to_string()), Ok("".into()));
     }
@@ -119,7 +117,7 @@ mod tests {
         let proxy = spawn_info_handler(&tempdir);
         fs::write(tempdir.path().join("current_channel.json"), r#"{"version":"1","content":{}}"#)
             .expect("write current_channel.json");
-        let res = await!(proxy.get_channel());
+        let res = proxy.get_channel().await;
 
         assert_eq!(res.map_err(|e| e.to_string()), Ok("".into()));
     }

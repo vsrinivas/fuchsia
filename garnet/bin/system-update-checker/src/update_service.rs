@@ -67,7 +67,7 @@ where
         mut request_stream: ManagerRequestStream,
     ) -> Result<(), Error> {
         while let Some(event) =
-            await!(request_stream.try_next()).context("error extracting request from stream")?
+            request_stream.try_next().await.context("error extracting request from stream")?
         {
             match event {
                 ManagerRequest::CheckNow { options, monitor, responder } => {
@@ -207,16 +207,17 @@ mod tests {
         let (proxy, stream) =
             create_proxy_and_stream::<ManagerMarker>().expect("create_proxy_and_stream");
         fasync::spawn(
-            async move { await!(update_service.handle_request_stream(stream).map(|_| ())) },
+            async move { update_service.handle_request_stream(stream).map(|_| ()).await },
         );
         (proxy, update_service_clone)
     }
 
     async fn collect_all_on_state_events(monitor: MonitorProxy) -> Vec<fidl_fuchsia_update::State> {
-        await!(monitor
+        monitor
             .take_event_stream()
             .map(|r| r.ok().unwrap().into_on_state().unwrap())
-            .collect())
+            .collect()
+            .await
     }
 
     async fn next_n_on_state_events(
@@ -225,7 +226,7 @@ mod tests {
     ) -> (MonitorEventStream, Vec<fidl_fuchsia_update::State>) {
         let mut v = Vec::with_capacity(n);
         for _ in 0..n {
-            v.push(await!(event_stream.next()).unwrap().ok().unwrap().into_on_state().unwrap());
+            v.push(event_stream.next().await.unwrap().ok().unwrap().into_on_state().unwrap());
         }
         (event_stream, v)
     }
@@ -240,10 +241,10 @@ mod tests {
         .0;
         let (monitor, monitor_server_end) = fidl::endpoints::create_proxy().expect("create_proxy");
 
-        assert!(await!(proxy.check_now(options_user(), Some(monitor_server_end))).is_ok());
+        assert!(proxy.check_now(options_user(), Some(monitor_server_end)).await.is_ok());
 
         assert_eq!(
-            await!(collect_all_on_state_events(monitor)),
+            collect_all_on_state_events(monitor).await,
             vec![
                 state_from_manager_state(ManagerState::Idle),
                 state_from_manager_state(ManagerState::CheckingForUpdates),
@@ -265,9 +266,9 @@ mod tests {
         let (monitor, monitor_server_end) = fidl::endpoints::create_proxy().expect("create_proxy");
 
         assert!(proxy.add_monitor(monitor_server_end).is_ok());
-        assert!(await!(proxy.check_now(options_user(), None)).is_ok());
+        assert!(proxy.check_now(options_user(), None).await.is_ok());
 
-        let events = await!(next_n_on_state_events(monitor.take_event_stream(), 5)).1;
+        let events = next_n_on_state_events(monitor.take_event_stream(), 5).await.1;
         assert_eq!(
             events,
             vec![
@@ -290,7 +291,7 @@ mod tests {
         .0;
 
         assert_eq!(
-            await!(proxy.get_state()).expect("get_state"),
+            proxy.get_state().await.expect("get_state"),
             state_from_manager_state(ManagerState::Idle)
         );
     }
@@ -305,7 +306,7 @@ mod tests {
 
         let (proxy1, stream1) =
             create_proxy_and_stream::<ManagerMarker>().expect("create_proxy_and_stream");
-        fasync::spawn(async move { await!(service.handle_request_stream(stream1).map(|_| ())) });
+        fasync::spawn(async move { service.handle_request_stream(stream1).map(|_| ()).await });
 
         let (monitor0, monitor_server_end0) =
             fidl::endpoints::create_proxy().expect("create_proxy");
@@ -313,9 +314,9 @@ mod tests {
             fidl::endpoints::create_proxy().expect("create_proxy");
 
         assert!(proxy0.add_monitor(monitor_server_end0).is_ok());
-        assert!(await!(proxy1.check_now(options_user(), Some(monitor_server_end1))).is_ok());
+        assert!(proxy1.check_now(options_user(), Some(monitor_server_end1)).await.is_ok());
 
-        let events = await!(next_n_on_state_events(monitor0.take_event_stream(), 5)).1;
+        let events = next_n_on_state_events(monitor0.take_event_stream(), 5).await.1;
         assert_eq!(
             events,
             vec![
@@ -328,7 +329,7 @@ mod tests {
         );
 
         assert_eq!(
-            await!(collect_all_on_state_events(monitor1)),
+            collect_all_on_state_events(monitor1).await,
             vec![
                 state_from_manager_state(ManagerState::Idle),
                 state_from_manager_state(ManagerState::CheckingForUpdates),
@@ -354,26 +355,26 @@ mod tests {
         let (monitor1, monitor_server_end1) =
             fidl::endpoints::create_proxy().expect("create_proxy");
 
-        assert!(await!(proxy0.check_now(options_user(), Some(monitor_server_end0))).is_ok());
+        assert!(proxy0.check_now(options_user(), Some(monitor_server_end0)).await.is_ok());
 
-        let events = await!(next_n_on_state_events(monitor0.take_event_stream(), 1)).1;
+        let events = next_n_on_state_events(monitor0.take_event_stream(), 1).await.1;
         assert_eq!(events, vec![state_from_manager_state(ManagerState::Idle),]);
         drop(proxy0);
         drop(monitor0);
 
         let (proxy1, stream1) =
             create_proxy_and_stream::<ManagerMarker>().expect("create_proxy_and_stream");
-        fasync::spawn(async move { await!(service.handle_request_stream(stream1).map(|_| ())) });
+        fasync::spawn(async move { service.handle_request_stream(stream1).map(|_| ()).await });
 
         assert_matches!(
-            await!(proxy1.check_now(options_user(), Some(monitor_server_end1))),
+            proxy1.check_now(options_user(), Some(monitor_server_end1)).await,
             Ok(CheckStartedResult::InProgress)
         );
 
         assert_matches!(unblocker.send(()), Ok(()));
 
         assert_eq!(
-            await!(collect_all_on_state_events(monitor1)),
+            collect_all_on_state_events(monitor1).await,
             vec![
                 state_from_manager_state(ManagerState::CheckingForUpdates),
                 state_from_manager_state(ManagerState::PerformingUpdate),

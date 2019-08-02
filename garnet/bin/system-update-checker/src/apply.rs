@@ -44,14 +44,15 @@ pub async fn apply_system_update(
 ) -> Result<(), Error> {
     let launcher = connect_to_service::<LauncherMarker>().context(ErrorKind::ConnectToLauncher)?;
     let mut component_runner = RealComponentRunner { launcher_proxy: launcher };
-    await!(apply_system_update_impl(
+    apply_system_update_impl(
         current_system_image,
         latest_system_image,
         &RealServiceConnector,
         &mut component_runner,
         initiator,
         &RealTimeSource,
-    ))
+    )
+    .await
 }
 
 // For mocking
@@ -89,7 +90,7 @@ impl ComponentRunner for RealComponentRunner {
         let app_res = launch(&self.launcher_proxy, url, arguments);
         async move {
             let mut app = app_res.context(ErrorKind::LaunchSystemUpdater)?;
-            let exit_status = await!(app.wait()).context(ErrorKind::WaitForSystemUpdater)?;
+            let exit_status = app.wait().await.context(ErrorKind::WaitForSystemUpdater)?;
             exit_status.ok().context(ErrorKind::SystemUpdaterFailed)?;
             Ok(())
         }
@@ -118,19 +119,21 @@ async fn apply_system_update_impl<'a>(
     initiator: Initiator,
     time_source: &'a impl TimeSource,
 ) -> Result<(), Error> {
-    if let Err(err) = await!(pkgfs_gc(service_connector)) {
+    if let Err(err) = pkgfs_gc(service_connector).await {
         fx_log_err!("failed to garbage collect pkgfs, will still attempt system update: {}", err);
     }
     fx_log_info!("starting system_updater");
-    await!(component_runner.run_until_exit(
-        SYSTEM_UPDATER_RESOURCE_URL.to_string(),
-        Some(vec![
-            format!("-initiator={}", initiator),
-            format!("-start={}", time_source.get_nanos()),
-            format!("-source={}", current_system_image),
-            format!("-target={}", latest_system_image)
-        ])
-    ))?;
+    component_runner
+        .run_until_exit(
+            SYSTEM_UPDATER_RESOURCE_URL.to_string(),
+            Some(vec![
+                format!("-initiator={}", initiator),
+                format!("-start={}", time_source.get_nanos()),
+                format!("-source={}", current_system_image),
+                format!("-target={}", latest_system_image),
+            ]),
+        )
+        .await?;
     Err(ErrorKind::SystemUpdaterFinished)?
 }
 
@@ -145,7 +148,7 @@ async fn pkgfs_gc(service_connector: &impl ServiceConnector) -> Result<(), Error
     let dir_proxy = fidl_fuchsia_io::DirectoryProxy::new(
         fasync::Channel::from_channel(dir_end.into_channel()).context(ErrorKind::PkgfsGc)?,
     );
-    let status = await!(dir_proxy.unlink("garbage")).context(ErrorKind::PkgfsGc)?;
+    let status = dir_proxy.unlink("garbage").await.context(ErrorKind::PkgfsGc)?;
     zx::Status::ok(status).context(ErrorKind::PkgfsGc)?;
     Ok(())
 }
@@ -236,14 +239,15 @@ mod test_apply_system_update_impl {
         let time_source = FakeTimeSource { now: 0 };
         assert!(service_connector.has_garbage_file());
 
-        let result = await!(apply_system_update_impl(
+        let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &service_connector,
             &mut component_runner,
             Initiator::Manual,
             &time_source,
-        ));
+        )
+        .await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
         assert!(!service_connector.has_garbage_file());
@@ -255,14 +259,15 @@ mod test_apply_system_update_impl {
         let mut component_runner = WasCalledComponentRunner { was_called: false };
         let time_source = FakeTimeSource { now: 0 };
 
-        let result = await!(apply_system_update_impl(
+        let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &service_connector,
             &mut component_runner,
             Initiator::Manual,
             &time_source,
-        ));
+        )
+        .await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
         assert!(component_runner.was_called);
@@ -274,14 +279,15 @@ mod test_apply_system_update_impl {
         let mut component_runner = WasCalledComponentRunner { was_called: false };
         let time_source = FakeTimeSource { now: 0 };
 
-        let result = await!(apply_system_update_impl(
+        let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &service_connector,
             &mut component_runner,
             Initiator::Manual,
             &time_source,
-        ));
+        )
+        .await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
         assert!(component_runner.was_called);
@@ -378,7 +384,7 @@ mod test_real_service_connector {
         );
 
         assert!(file_path.exists());
-        let status = await!(dir_proxy.unlink(file_name)).expect("unlink the file fidl");
+        let status = dir_proxy.unlink(file_name).await.expect("unlink the file fidl");
         zx::Status::ok(status).expect("unlink the file");
         assert!(!file_path.exists());
     }
@@ -399,9 +405,9 @@ mod test_real_service_connector {
             fasync::Channel::from_channel(dir_end.into_channel()).expect("create async channel"),
         );
 
-        let read_dirents_res =
-            await!(dir_proxy
-                .read_dirents(1000 /*size shouldn't matter, as this should immediately fail*/));
+        let read_dirents_res = dir_proxy
+            .read_dirents(1000 /*size shouldn't matter, as this should immediately fail*/)
+            .await;
 
         assert_matches!(
             read_dirents_res,
@@ -422,10 +428,12 @@ mod test_real_component_runner {
     async fn test_run_a_component_that_exits_0() {
         let launcher_proxy = connect_to_service::<LauncherMarker>().expect("connect to launcher");
         let mut runner = RealComponentRunner { launcher_proxy };
-        let run_res = await!(runner.run_until_exit(
-            TEST_SHELL_COMMAND_RESOURCE_URL.to_string(),
-            Some(vec!["!".to_string()])
-        ));
+        let run_res = runner
+            .run_until_exit(
+                TEST_SHELL_COMMAND_RESOURCE_URL.to_string(),
+                Some(vec!["!".to_string()]),
+            )
+            .await;
         assert!(run_res.is_ok(), "{:?}", run_res.err().unwrap());
     }
 
@@ -433,9 +441,8 @@ mod test_real_component_runner {
     async fn test_run_a_component_that_exits_1() {
         let launcher_proxy = connect_to_service::<LauncherMarker>().expect("connect to launcher");
         let mut runner = RealComponentRunner { launcher_proxy };
-        let run_res = await!(
-            runner.run_until_exit(TEST_SHELL_COMMAND_RESOURCE_URL.to_string(), Some(vec![]))
-        );
+        let run_res =
+            runner.run_until_exit(TEST_SHELL_COMMAND_RESOURCE_URL.to_string(), Some(vec![])).await;
         assert_eq!(run_res.err().expect("run should fail").kind(), ErrorKind::SystemUpdaterFailed);
     }
 }
