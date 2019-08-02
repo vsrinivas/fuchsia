@@ -1130,6 +1130,60 @@ object, but the server can use the `ZX_CHANNEL_PEER_CLOSED` signal on the
 protocol to trigger destruction of the object.  In the future, the protocol
 could potentially be extended with methods for controlling the created object.
 
+### Controlling settings-like data
+
+Often, servers will expose settings which the client can modify. Prefer using a
+`table` to represent such settings. For instance, the `fuchsia.accessibility`
+library defines:
+
+```fidl
+table Settings {
+    1: bool magnification_enabled;
+    2: float32 magnification_zoom_factor;
+    3: bool screen_reader_enabled;
+    4: bool color_inversion_enabled;
+    5: ColorCorrection color_correction;
+    6: array<float32>:9 color_adjustment_matrix;
+}
+```
+(Comments are omitted for readability.)
+
+There are various ways to provide clients the ability to change these settings.
+
+The **partial update** approach exposes an `Update` method taking a partial
+settings value, and changes fields _only_ if they are present in the partial
+value.
+
+```fidl
+protocol TheManagerOfSomeSorts {
+    /// Description how the update modifies the behavior.
+    ///
+    /// Only fields present in the settings value will be changed.
+    Update(Settings settings) -> ...;
+};
+```
+
+The **replace** approach exposes a `Replace` method taking a complete
+settings value, and changes the settings to the newly provided one.
+
+```fidl
+protocol TheManagerOfSomeSorts {
+    /// Description how the override modifies the behavior.
+    ///
+    /// This replaces the setting.
+    Replace(Settings settings) -> ...;
+};
+```
+
+Things to avoid:
+
+ * Avoid using the verb `Set` or `Override` for either the partial update or
+   the replace approach since what semantics are offered will be ambiguous.
+
+ * Avoid individual methods to update settings' fields such as
+   `SetMagnificationEnabled`. Such individal methods are more burdensome to
+   maintain, and callers rarely want to update a single value.
+
 ## Antipatterns
 
 This section describes several antipatterns: design patterns that often provide
