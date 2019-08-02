@@ -18,6 +18,9 @@ using CommitIdentifier = bytes:128;
 /// Identifier for an object, controlled by Ledger.
 using ObjectIdentifier = bytes:128;
 
+/// Identifier for an entry, controlled by Ledger.
+using EntryIdentifier = bytes:64;
+
 /// Fingerprint, controlled by Ledger and used to watch for cloud erasure.
 using Fingerprint = bytes:32;
 
@@ -31,6 +34,7 @@ enum Status : int32 {
     NOT_FOUND = 5;
     PARSE_ERROR = 6;
     SERVER_ERROR = 7;
+    NOT_SUPPORTED = 8;
     UNKNOWN_ERROR = -1;
 };
 
@@ -111,10 +115,78 @@ struct PositionToken {
 
 /// A commit as seen by the cloud.
 table Commit {
-    // A unique commit id.
+    /// A unique commit identifier, chosen by Ledger. Required.
+    ///
+    /// Two commits uploaded with the same identifier are to be considered
+    /// identical: they will have the same parents if present, and the cloud may
+    /// return the data and the diff from any of the uploads.
     1: CommitIdentifier id;
-    // Opaque data stored by Ledger.
+    /// Opaque data stored by Ledger. Required.
     2: bytes data;
+    /// A diff describing the content of the page at this commit. Optional.
+    ///
+    /// Ledger will not send a diff for all commits: it may omit the diff when it
+    /// determines the content of the commit will not be used by any other Ledger
+    /// instance. During the transition to diffs, diff-unaware Ledgers will also
+    /// omit the diff.
+    /// The cloud provider should not include diffs in the commits it sends to
+    /// Ledger.
+    // TODO(LE-823): update once the transition to diffs is complete.
+    3: Diff diff;
+};
+
+/// Specification of a page state used as base for a diff.
+union PageState {
+    /// The state is the empty page.
+    EmptyPage empty_page;
+    /// The state is the content of a page at the commit with the given
+    /// identifier.
+    CommitIdentifier at_commit;
+};
+
+struct EmptyPage {
+};
+
+/// A diff from a base state to a commit.
+///
+/// Diffs are sequences of insertions and deletions. Updates are encoded as a
+/// deletion followed by an insertion. The cloud can match insertions and
+/// deletions by an entry identifier chosen by Ledger (because of encryption,
+/// the data will not match between insertions and deletions).
+table Diff {
+    /// Page state used as a reference point for the diff.
+    ///
+    /// Ledger only uses as base state a commit that is already known to the
+    /// cloud, or the empty page.
+    1: PageState base_state;
+    /// List of changes from the base state to the commit.
+    ///
+    /// The changes are to be applied in order.
+    2: vector<DiffEntry>:NO_LINT changes;
+};
+
+/// An entry in a Diff.
+table DiffEntry {
+    /// Identifier of the entry. Required.
+    1: EntryIdentifier entry_id;
+    /// Insertion or deletion. Required.
+    2: Operation operation;
+    /// Data representing the content of the entry.
+    ///
+    /// Required in diffs sent from Ledger. The cloud provider may omit this
+    /// information if the operation is a deletion. If an entry id was inserted/
+    /// deleted multiple times, the cloud provider can send any of the values.
+    3: bytes:512 data;
+    /// An optional reference to an object, given by its identifier.
+    ///
+    /// Sent by Ledger when the value of the entry is not inlined in the `data`
+    /// field. The cloud provider may always omit this field in diffs.
+    4: ObjectIdentifier reference;
+};
+
+enum Operation : uint8 {
+    INSERTION = 1;
+    DELETION = 2;
 };
 
 /// A list of commits for serialization in CommitPack.
@@ -125,6 +197,11 @@ struct Commits {
 /// A list of references for serialization in ReferencePack.
 struct References {
     vector<ObjectIdentifier>:NO_LINT references;
+};
+
+/// Contains a Buffer containing the FIDL serialization of Diff.
+struct DiffPack {
+    fuchsia.mem.Buffer buffer;
 };
 
 /// Contains a Buffer containing the FIDL serialization of References.
@@ -191,6 +268,18 @@ protocol PageCloud {
     /// all commits are delivered.
     SetWatcher(PositionToken? min_position_token, PageCloudWatcher watcher)
         -> (Status status);
+
+    /// Fetches a diff for the commit with the given |commit_id|.
+    ///
+    /// The base of the diff is either the empty page or a commit in
+    /// `possible_bases`. The bases may be unknown to the cloud if they have
+    /// been pruned from the cloud, but not from the Ledger. During the
+    /// migration to diffs, the cloud provider may also choose as a base any
+    /// commit that has been uploaded without diff. In that case, the tree at
+    /// this commit should be downloaded using GetObject.
+    // TODO(LE-823): update once the transition to diffs is complete.
+    GetDiff(CommitIdentifier commit_id, vector<CommitIdentifier>:32 possible_bases)
+        -> (Status status, DiffPack? diff);
 };
 
 /// Watcher for push notifications from cloud sync of a single page.
@@ -200,7 +289,7 @@ protocol PageCloudWatcher {
     /// The method takes the list of new `commits` along with the `position_token`
     /// of the most recent of them.
     ///
-    /// No subsequent calls are made until the client calls the callback of the
+    /// No subsequent calls are made until Ledger calls the callback of the
     /// previous one.
     OnNewCommits(CommitPack commits, PositionToken position_token) -> ();
 
@@ -208,13 +297,13 @@ protocol PageCloudWatcher {
     ///
     /// The method takes the `id` and the content of the new object.
     ///
-    /// No subsequent calls are made until the client calls the callback of the
+    /// No subsequent calls are made until Ledger calls the callback of the
     /// previous one.
     OnNewObject(ObjectIdentifier id, fuchsia.mem.Buffer buffer) -> ();
 
     /// Called when an error occurs.
     ///
-    /// No further calls are made on the watcher after this is called. The client
+    /// No further calls are made on the watcher after this is called. Ledger
     /// can then re-establish the watcher by calling SetWatcher() again.
     ///
     /// The status is one of:

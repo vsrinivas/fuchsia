@@ -292,6 +292,9 @@ impl PageSession {
                     responder.send(Status::Ok)
                 }
             },
+            PageCloudRequest::GetDiff { responder, .. } => {
+                responder.send(Status::NotSupported, None)
+            }
         }
     }
 
@@ -312,6 +315,9 @@ impl PageSession {
                 // Ledger seems to require that we do not send an error here, but on the watcher instead.
                 responder.send(Status::Ok)?;
                 watcher.into_proxy()?.on_error(Status::NetworkError)
+            }
+            PageCloudRequest::GetDiff { responder, .. } => {
+                responder.send(Status::NotSupported, None)
             }
         }
     }

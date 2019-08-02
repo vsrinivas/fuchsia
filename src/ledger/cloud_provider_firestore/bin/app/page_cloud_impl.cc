@@ -294,6 +294,12 @@ void PageCloudImpl::SetWatcher(std::unique_ptr<cloud_provider::PositionToken> mi
   });
 }
 
+void PageCloudImpl::GetDiff(std::vector<uint8_t> commit_id,
+                            std::vector<std::vector<uint8_t>> possible_bases,
+                            GetDiffCallback callback) {
+  callback(cloud_provider::Status::NOT_SUPPORTED, {});
+}
+
 void PageCloudImpl::OnConnected() {
   auto request = google::firestore::v1beta1::ListenRequest();
   request.set_database(firestore_service_->GetDatabasePath());

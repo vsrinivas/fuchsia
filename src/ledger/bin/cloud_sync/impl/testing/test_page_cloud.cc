@@ -128,4 +128,10 @@ void TestPageCloud::SetWatcher(std::unique_ptr<cloud_provider::PositionToken> mi
   callback(status_to_return);
 }
 
+void TestPageCloud::GetDiff(std::vector<uint8_t> commit_id,
+                            std::vector<std::vector<uint8_t>> possible_bases,
+                            GetDiffCallback callback) {
+  callback(cloud_provider::Status::NOT_SUPPORTED, {});
+}
+
 }  // namespace cloud_sync

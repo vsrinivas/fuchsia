@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use failure::Error;
+use fidl::encoding::Decodable;
 use fidl_fuchsia_ledger_cloud::{self as cloud, Status};
 use fuchsia_zircon::Vmo;
 use std::convert::{TryFrom, TryInto};
@@ -100,7 +101,11 @@ impl TryFrom<cloud::Commit> for Commit {
 
 impl From<&Commit> for cloud::Commit {
     fn from(commit: &Commit) -> cloud::Commit {
-        cloud::Commit { id: Some(commit.id.0.clone()), data: Some(commit.data.clone()) }
+        cloud::Commit {
+            id: Some(commit.id.0.clone()),
+            data: Some(commit.data.clone()),
+            ..cloud::Commit::new_empty()
+        }
     }
 }
 

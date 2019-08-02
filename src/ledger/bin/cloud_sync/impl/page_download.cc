@@ -32,6 +32,7 @@ bool IsPermanentError(cloud_provider::Status status) {
     case cloud_provider::Status::NOT_FOUND:
     case cloud_provider::Status::PARSE_ERROR:
     case cloud_provider::Status::SERVER_ERROR:
+    case cloud_provider::Status::NOT_SUPPORTED:
     case cloud_provider::Status::UNKNOWN_ERROR:
       return true;
   }

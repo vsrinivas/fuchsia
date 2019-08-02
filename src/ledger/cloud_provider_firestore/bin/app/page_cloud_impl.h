@@ -47,6 +47,8 @@ class PageCloudImpl : public cloud_provider::PageCloud, public ListenCallClient 
   void SetWatcher(std::unique_ptr<cloud_provider::PositionToken> min_position_token,
                   fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
                   SetWatcherCallback callback) override;
+  void GetDiff(std::vector<uint8_t> commit_id, std::vector<std::vector<uint8_t>> possible_bases,
+               GetDiffCallback callback) override;
 
   // ListenCallClient:
   void OnConnected() override;
