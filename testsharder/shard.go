@@ -15,7 +15,7 @@ type Shard struct {
 	// Name is the identifier for the shard.
 	Name string `json:"name"`
 
-	// Tests is the set of test to be executed in this shard.
+	// Tests is the set of tests to be executed in this shard.
 	Tests []Test `json:"tests"`
 
 	// Env is a generalized notion of the execution environment for the shard.

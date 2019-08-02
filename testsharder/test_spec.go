@@ -61,7 +61,7 @@ type Test struct {
 	DepsFile string `json:"deps_file,omitempty"`
 
 	// Deps is the list of paths to the test's runtime dependencies within the build
-	// directory. It is read out of DepFile.
+	// directory. It is read out of DepsFile.
 	Deps []string `json:"deps,omitempty"`
 }
 

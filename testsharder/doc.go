@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Package testsharder creates shards based on tests and specified environments.
+//
 // Test authors in the Fuchsia source will specify `environments`in GN within
 // the packages they define their tests. These specifications will be printed
 // to disk in JSON-form during a build.

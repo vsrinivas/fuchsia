@@ -49,7 +49,7 @@ func (env Environment) Name() string {
 	return strings.Join(tokens, "-")
 }
 
-// DimensionSet encapsulate the Swarming dimensions a test wishes to target.
+// DimensionSet encapsulates the Swarming dimensions a test wishes to target.
 type DimensionSet struct {
 	// DeviceType represents the class of device the test should run on.
 	// This is a required field.
@@ -68,7 +68,7 @@ type DimensionSet struct {
 	Pool string `json:"pool,omitempty"`
 }
 
-// ResolvesTo gives a partial ordering on DimensionSets in which one resolves to
+// resolvesTo gives a partial ordering on DimensionSets in which one resolves to
 // another if the former's dimensions are given the latter.
 func (dims DimensionSet) resolvesTo(other DimensionSet) bool {
 	if dims.DeviceType != "" && dims.DeviceType != other.DeviceType {
