@@ -187,7 +187,7 @@
           },
           "from": {
             "title": "Exposed capability source component",
-            "pattern": "^(self|#[0-9a-z_\\-\\.]+)$",
+            "pattern": "^(self|framework|#[0-9a-z_\\-\\.]+)$",
             "description": "The component which has the capability to expose. Either \"self\" or \"#$CHILD\".",
             "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
             "examples": [

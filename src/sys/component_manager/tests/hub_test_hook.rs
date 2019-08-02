@@ -20,12 +20,12 @@ lazy_static! {
 }
 
 fn get_or_insert_channel<'a>(
-    map: &'a mut HashMap<String, DirectoryListingChannel>,
+    map: &'a mut HashMap<String, HubReportChannel>,
     path: String,
-) -> &'a mut DirectoryListingChannel {
+) -> &'a mut HubReportChannel {
     map.entry(path.clone()).or_insert({
         let (sender, receiver) = mpsc::channel(0);
-        DirectoryListingChannel { receiver: Some(receiver), sender: Some(sender) }
+        HubReportChannel { receiver: Some(receiver), sender: Some(sender) }
     })
 }
 
@@ -33,7 +33,7 @@ fn get_or_insert_channel<'a>(
 // HubTestCapability every time a connection is requested to connect to the
 // 'fuchsia.sys.HubReport' framework capability.
 pub struct HubTestHook {
-    observers: Arc<Mutex<HashMap<String, DirectoryListingChannel>>>,
+    observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
 }
 
 impl HubTestHook {
@@ -44,21 +44,22 @@ impl HubTestHook {
     // Given a directory path, blocks the current task until a component
     // connects to the HubReport framework service and responds with a listing
     // of entries within that directory.
-    pub async fn observe(&self, path: String) -> Vec<String> {
+    pub async fn observe(&self, path: &str) -> HubReportEvent {
         let mut receiver = {
             let mut observers = await!(self.observers.lock());
             // Avoid holding onto to the observers lock while waiting for a
             // message to avoid deadlock.
-            let channel = get_or_insert_channel(&mut observers, path.clone());
+            let channel = get_or_insert_channel(&mut observers, path.to_string());
             channel.receiver.take().unwrap()
         };
-        let listing = await!(receiver.next()).expect("Missing DirectoryListing");
+        let event = await!(receiver.next()).expect("Missing HubReportEvent");
         // Transfer ownership back to the observers HashMap after the listing has
         // been received.
         let mut observers = await!(self.observers.lock());
-        let channel = get_or_insert_channel(&mut observers, path);
+        let channel = get_or_insert_channel(&mut observers, path.to_string());
         channel.receiver = Some(receiver);
-        return listing.entries;
+
+        return event;
     }
 
     pub async fn on_route_framework_capability_async<'a>(
@@ -106,25 +107,27 @@ impl Hook for HubTestHook {
     }
 }
 
-pub struct DirectoryListing {
-    pub entries: Vec<String>,
+#[derive(Debug, Eq, PartialEq)]
+pub enum HubReportEvent {
+    DirectoryListing(Vec<String>),
+    FileContent(String),
 }
 
 // A futures channel between the task where the integration test is running
 // and the task where the HubReport protocol is being serviced.
-pub struct DirectoryListingChannel {
-    pub receiver: Option<mpsc::Receiver<DirectoryListing>>,
-    pub sender: Option<mpsc::Sender<DirectoryListing>>,
+pub struct HubReportChannel {
+    pub receiver: Option<mpsc::Receiver<HubReportEvent>>,
+    pub sender: Option<mpsc::Sender<HubReportEvent>>,
 }
 
 // Corresponds to a connection to the framework service: HubReport.
 pub struct HubTestCapability {
     // Path to directory listing.
-    observers: Arc<Mutex<HashMap<String, DirectoryListingChannel>>>,
+    observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
 }
 
 impl HubTestCapability {
-    pub fn new(observers: Arc<Mutex<HashMap<String, DirectoryListingChannel>>>) -> Self {
+    pub fn new(observers: Arc<Mutex<HashMap<String, HubReportChannel>>>) -> Self {
         HubTestCapability { observers }
     }
 
@@ -135,8 +138,14 @@ impl HubTestCapability {
         let observers = self.observers.clone();
         fasync::spawn(async move {
             while let Some(Ok(request)) = await!(stream.next()) {
-                let fhub::HubReportRequest::ListDirectory { path, entries, control_handle: _ } =
-                    request;
+                let (path, event) = match request {
+                    fhub::HubReportRequest::ListDirectory { path, entries, .. } => {
+                        (path, HubReportEvent::DirectoryListing(entries))
+                    }
+                    fhub::HubReportRequest::ReportFileContent { path, content, .. } => {
+                        (path, HubReportEvent::FileContent(content))
+                    }
+                };
                 let mut sender = {
                     // Avoid holding onto to the observers lock while sending a
                     // message to avoid deadlock.
@@ -144,7 +153,7 @@ impl HubTestCapability {
                     let channel = get_or_insert_channel(&mut observers, path.clone());
                     channel.sender.take().unwrap()
                 };
-                await!(sender.send(DirectoryListing { entries })).expect("Unable to send");
+                await!(sender.send(event)).expect("Unable to send HubEvent.");
                 // Transfer ownership back to the observers HashMap after the listing has
                 // been sent.
                 let mut observers = await!(observers.lock());

@@ -527,6 +527,17 @@ async fn walk_expose_chain<'a>(
                         Some(pos.moniker().child(ChildMoniker::new(child_name.to_string(), None)));
                     continue;
                 }
+                ExposeSource::Framework => {
+                    let capability_decl =
+                        FrameworkCapabilityDecl::try_from(expose).map_err(|_| {
+                            ModelError::capability_discovery_error(format_err!(
+                                "no matching offers found for capability {:?} from component {}",
+                                pos.capability,
+                                pos.moniker(),
+                            ))
+                        })?;
+                    return Ok(CapabilitySource::Framework(capability_decl, current_realm.clone()));
+                }
             }
         } else {
             // We didn't find any matching exposes! Oh no!

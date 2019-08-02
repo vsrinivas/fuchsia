@@ -415,6 +415,21 @@ impl TryFrom<&OfferDecl> for FrameworkCapabilityDecl {
         }
     }
 }
+
+impl TryFrom<&ExposeDecl> for FrameworkCapabilityDecl {
+    type Error = Error;
+    fn try_from(decl: &ExposeDecl) -> Result<Self, Self::Error> {
+        match decl {
+            ExposeDecl::Directory(d) if d.source == ExposeSource::Framework => {
+                Ok(FrameworkCapabilityDecl::Directory(d.source_path.clone()))
+            }
+            _ => {
+                return Err(Error::InvalidFrameworkCapability {});
+            }
+        }
+    }
+}
+
 impl fmt::Display for CapabilityPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if &self.dirname == "/" {
@@ -640,6 +655,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for UseSource {
 pub enum ExposeSource {
     Self_,
     Child(String),
+    Framework,
 }
 
 impl FidlIntoNative<ExposeSource> for Option<fsys::Ref> {
@@ -647,6 +663,7 @@ impl FidlIntoNative<ExposeSource> for Option<fsys::Ref> {
         match self.unwrap() {
             fsys::Ref::Self_(_) => ExposeSource::Self_,
             fsys::Ref::Child(c) => ExposeSource::Child(c.name),
+            fsys::Ref::Framework(_) => ExposeSource::Framework,
             _ => panic!("invalid ExposeSource variant"),
         }
     }
@@ -659,6 +676,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ExposeSource {
             ExposeSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
+            ExposeSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
         })
     }
 }
@@ -1244,11 +1262,13 @@ mod tests {
                     name: "foo".to_string(),
                     collection: None,
                 })),
+                Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
             ],
             input_type = Option<fsys::Ref>,
             result = vec![
                 ExposeSource::Self_,
                 ExposeSource::Child("foo".to_string()),
+                ExposeSource::Framework,
             ],
             result_type = ExposeSource,
         },

@@ -18,4 +18,8 @@ fidl("fuchsia.test.hub") {
   sources = [
     "fuchsia.test.hub.fidl",
   ]
+
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-io",
+  ]
 }

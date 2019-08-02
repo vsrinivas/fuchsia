@@ -5,10 +5,13 @@
     },
     "use": [
         {
-          "directory": "/hub", "from": "realm", "as": "/parent_hub"
+           "directory": "/hub", "from": "realm", "as": "/parent_hub"
         },
         {
             "directory": "/hub/exec", "from": "framework", "as": "/hub"
+        },
+        {
+            "directory": "/sibling_hub", "from": "realm",
         },
         {
             "service": "/svc/fidl.examples.routing.echo.Echo",

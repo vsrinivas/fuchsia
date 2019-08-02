@@ -54,7 +54,11 @@ impl Error {
         Error::InvalidField(decl_type.into(), keyword.into())
     }
 
-    pub fn invalid_character_in_field(decl_type: impl Into<String>, keyword: impl Into<String>, character: char) -> Self {
+    pub fn invalid_character_in_field(
+        decl_type: impl Into<String>,
+        keyword: impl Into<String>,
+        character: char,
+    ) -> Self {
         Error::InvalidCharacterInField(decl_type.into(), keyword.into(), character)
     }
 
@@ -425,6 +429,7 @@ impl<'a> ValidationContext<'a> {
         match source {
             Some(r) => match r {
                 fsys::Ref::Self_(_) => {}
+                fsys::Ref::Framework(_) => {}
                 fsys::Ref::Child(child) => {
                     self.validate_source_child(child, decl);
                 }
@@ -654,9 +659,7 @@ fn check_presence_and_length(
     errors: &mut Vec<Error>,
 ) {
     match prop {
-        Some(prop) if prop.len() == 0 => {
-            errors.push(Error::empty_field(decl_type, keyword))
-        }
+        Some(prop) if prop.len() == 0 => errors.push(Error::empty_field(decl_type, keyword)),
         Some(prop) if prop.len() > max_len => {
             errors.push(Error::field_too_long(decl_type, keyword))
         }
@@ -762,15 +765,15 @@ fn check_url(
 mod tests {
     use {
         super::*,
-        proptest::prelude::*,
-        regex::Regex,
-        lazy_static::lazy_static,
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
             ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl, OfferDecl, OfferDirectoryDecl,
             OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, SelfRef, StartupMode, StorageDecl,
             StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseServiceDecl, UseStorageDecl,
         },
+        lazy_static::lazy_static,
+        proptest::prelude::*,
+        regex::Regex,
     };
 
     const PATH_REGEX_STR: &str = r"(/[^/]+)+";
@@ -778,8 +781,10 @@ mod tests {
     const URL_REGEX_STR: &str = r"[0-9a-z\+\-\.]+://.+";
 
     lazy_static! {
-        static ref PATH_REGEX: Regex = Regex::new(&("^".to_string() + PATH_REGEX_STR + "$")).unwrap();
-        static ref NAME_REGEX: Regex = Regex::new(&("^".to_string() + NAME_REGEX_STR + "$")).unwrap();
+        static ref PATH_REGEX: Regex =
+            Regex::new(&("^".to_string() + PATH_REGEX_STR + "$")).unwrap();
+        static ref NAME_REGEX: Regex =
+            Regex::new(&("^".to_string() + NAME_REGEX_STR + "$")).unwrap();
         static ref URL_REGEX: Regex = Regex::new(&("^".to_string() + URL_REGEX_STR + "$")).unwrap();
     }
 

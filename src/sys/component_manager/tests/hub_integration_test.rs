@@ -24,6 +24,7 @@ use {
     },
     fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
     fuchsia_zircon as zx,
+    hub_test_hook::*,
     std::{iter, path::PathBuf, sync::Arc, vec::Vec},
 };
 
@@ -38,6 +39,14 @@ async fn connect_to_echo_service(hub_proxy: &DirectoryProxy, echo_service_path: 
     let echo_proxy = fecho::EchoProxy::new(node_proxy.into_channel().unwrap());
     let res = await!(echo_proxy.echo_string(Some("hippos")));
     assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()));
+}
+
+fn hub_directory_listing(listing: Vec<&str>) -> HubReportEvent {
+    HubReportEvent::DirectoryListing(listing.iter().map(|s| s.to_string()).collect())
+}
+
+fn file_content(content: &str) -> HubReportEvent {
+    HubReportEvent::FileContent(content.to_string())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -60,7 +69,7 @@ async fn test() -> Result<(), Error> {
     );
     let mut hooks: model::Hooks = Vec::new();
     let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
-    let hub_test_hook = Arc::new(hub_test_hook::HubTestHook::new());
+    let hub_test_hook = Arc::new(HubTestHook::new());
     hooks.push(hub.clone());
     hooks.push(hub_test_hook.clone());
 
@@ -161,15 +170,22 @@ async fn test() -> Result<(), Error> {
     // Verify that hub_client's view of the hub matches the view reachable from
     // the global hub.
     assert_eq!(
-        vec!["expose", "in", "out", "resolved_url", "runtime"],
-        await!(hub_test_hook.observe("/hub".to_string()))
+        hub_directory_listing(vec!["expose", "in", "out", "resolved_url", "runtime"]),
+        await!(hub_test_hook.observe("/hub"))
     );
 
     // Verify that hub_client's view is able to correctly read the names of the
     // children of the parent echo_realm.
     assert_eq!(
-        vec!["echo_server", "hub_client"],
-        await!(hub_test_hook.observe("/parent_hub/children".to_string()))
-        );
+        hub_directory_listing(vec!["echo_server", "hub_client"]),
+        await!(hub_test_hook.observe("/parent_hub/children"))
+    );
+
+    // Verify that hub_client is able to see its sibling's hub correctly.
+    assert_eq!(
+        file_content("fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm"),
+        await!(hub_test_hook.observe("/sibling_hub/exec/resolved_url"))
+    );
+
     Ok(())
 }

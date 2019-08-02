@@ -14,13 +14,23 @@
             ],
         },
         {
-          "directory": "/hub",
-          "from": "framework",
-          "to": [
-            {
-              "dest": "#hub_client",
-            },
-          ],
+            "directory": "/hub",
+            "from": "framework",
+            "to": [
+              {
+                "dest": "#hub_client",
+              },
+            ],
+        },
+        {
+            "directory": "/hub",
+            "from": "#echo_server",
+            "to": [
+              {
+                "dest": "#hub_client",
+                "as": "/sibling_hub",
+              },
+            ],
         },
     ],
     // Two children: a server and client. "hub_client" has "eager" startup so it

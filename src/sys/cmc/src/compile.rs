@@ -272,6 +272,8 @@ where
     let ret = if from.starts_with("#") {
         let (_, child_name) = from.split_at(1);
         cm::Ref::Child(cm::ChildRef { name: cm::Name::new(child_name.to_string())? })
+    } else if from == "framework" {
+        cm::Ref::Framework(cm::FrameworkRef {})
     } else if from == "self" {
         cm::Ref::Self_(cm::SelfRef {})
     } else {
@@ -543,7 +545,8 @@ mod tests {
                       "from": "#logger",
                       "as": "/svc/fuchsia.logger.Log"
                     },
-                    { "directory": "/volumes/blobfs", "from": "self" }
+                    { "directory": "/volumes/blobfs", "from": "self" },
+                    { "directory": "/hub", "from": "framework" }
                 ],
                 "children": [
                     {
@@ -572,6 +575,15 @@ mod tests {
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs"
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "framework": {}
+                },
+                "source_path": "/hub",
+                "target_path": "/hub"
             }
         }
     ],

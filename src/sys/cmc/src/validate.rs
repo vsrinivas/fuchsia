@@ -641,6 +641,15 @@ mod tests {
                             },
                             "target_path": "/data/kitten_assets"
                         }
+                    },
+                    {
+                        "directory": {
+                            "source_path": "/hub",
+                            "source": {
+                                "framework": {}
+                            },
+                            "target_path": "/child_hub"
+                        }
                     }
                 ]
             }),
@@ -1423,7 +1432,8 @@ mod tests {
                         "from": "#logger",
                         "as": "/svc/logger"
                     },
-                    { "directory": "/volumes/blobfs", "from": "self" }
+                    { "directory": "/volumes/blobfs", "from": "self" },
+                    { "directory": "/hub", "from": "framework" }
                 ],
                 "children": [
                     {
