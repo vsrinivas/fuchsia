@@ -12,6 +12,7 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <set>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -71,8 +72,7 @@ enum KoidType : SampleValue {
 // Helper function for C++ 11 (replace when C++ 14 is available). (Based on code
 // in Abseil).
 template <typename T, typename... Args>
-typename std::unique_ptr<T> make_unique(
-    Args&&... args) {
+typename std::unique_ptr<T> make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
@@ -149,6 +149,30 @@ struct DiscardSamplesResponse {
 
   friend std::ostream& operator<<(std::ostream& os,
                                   const DiscardSamplesResponse& response);
+};
+
+// To ignore samples, i.e. prevent them from being tracked, create a
+// IgnoreSamplesRequest that will match the beginning and ending of the stream
+// paths to ignore.
+// See: IgnoreSamplesRequest.
+struct IgnoreSamplesRequest {
+  IgnoreSamplesRequest() = default;
+
+  // For matching against a IgnoreSamplesRequest::request_id.
+  RequestId request_id;
+
+  std::string prefix;
+  std::string suffix;
+};
+
+// An |IgnoreSamplesResponse| is a reply for an individual
+// |IgnoreSamplesRequest|.
+// See: IgnoreSamplesRequest.
+struct IgnoreSamplesResponse {
+  IgnoreSamplesResponse() = default;
+
+  // For matching against a IgnoreSamplesRequest::request_id.
+  uint64_t request_id;
 };
 
 // A stream set is a portion of a sample stream. This request allows for
@@ -274,6 +298,10 @@ class SampleStreamMap
 typedef std::map<DockyardId, std::string> DockyardIdToPathMap;
 typedef std::map<std::string, DockyardId> DockyardPathToIdMap;
 
+// Called when a request to ignore samples is complete.
+typedef std::function<void(const IgnoreSamplesResponse& message)>
+    IgnoreSamplesCallback;
+
 // Called when a connection is made between the Dockyard and Harvester on a
 // Fuchsia device.
 typedef std::function<void(const std::string& device_name)>
@@ -380,6 +408,11 @@ class Dockyard {
   // Do not free or reuse |request| until response callback is called.
   void GetStreamSets(StreamSetsRequest* request);
 
+  // Ignore subsequent samples per |request|. Note that existing (prior) samples
+  // are not removed/discarded. To remove samples see: DiscardSamples().
+  void IgnoreSamples(const IgnoreSamplesRequest& request,
+                     IgnoreSamplesCallback callback);
+
   // Called by server when a connection is made.
   void OnConnection();
 
@@ -453,24 +486,25 @@ class Dockyard {
   std::vector<StreamSetsRequest*> pending_get_requests_;
   std::vector<DiscardSamplesRequest*> pending_discard_requests_;
 
+  std::vector<std::pair<IgnoreSamplesRequest, IgnoreSamplesCallback>>
+      pending_ignore_samples_owned_;
+
   // Storage of sample data.
   SampleStreamMap sample_streams_;
   std::map<DockyardId, std::pair<SampleValue, SampleValue>>
       sample_stream_low_high_;
 
+  // Track the ignore requests that have been made so that future paths that
+  // match the ignore list can be added to the ignore_dockyard_ids_.
+  std::set<std::pair<std::string, std::string>> ignore_streams_;
+  // Ignore list derived from |ignore_streams_|. This is an optimization over
+  // checking each update against the ignore_streams_. Doing a set lookup is
+  // much less expensive.
+  std::set<DockyardId> ignore_dockyard_ids_;
+
   // Dockyard path <--> ID look up.
   DockyardPathToIdMap dockyard_path_to_id_;
   DockyardIdToPathMap dockyard_id_to_path_;
-
-  // Processes the requests entered by DiscardSamples().
-  void ProcessDiscardSamples(const DiscardSamplesRequest& discard,
-                             DiscardSamplesResponse* response);
-
-  // Listen for incoming samples.
-  void Initialize();
-
-  // Listen for Harvester connections from the Fuchsia device.
-  void RunGrpcServer();
 
   // Each of these Compute*() methods aggregate samples in different ways.
   // There's no single 'true' way to represent aggregated data, so the choice
@@ -500,8 +534,26 @@ class Dockyard {
                        const StreamSetsRequest& request,
                        std::vector<SampleValue>* samples) const;
 
-  // Non-locking implementation of GetDockyardId().
-  DockyardId GetDockyardIdImpl(const std::string& dockyard_path);
+  void ComputeLowestHighestForRequest(const StreamSetsRequest& request,
+                                      StreamSetsResponse* response) const;
+
+  // A private version of GetDockyardId that expects that a |mutex_| lock has
+  // already been acquired.
+  DockyardId GetDockyardIdLocked(const std::string& dockyard_path);
+
+  // Ignore all further stream set data received that matches the patterns.
+  // Existing samples are not removed by this call. This call expects that a
+  // lock on |mutex_| has already been acquired.
+  void IgnoreSamplesLocked(const std::string& starting,
+                           const std::string& ending);
+
+  // Listen for incoming samples.
+  void Initialize();
+
+  // A private version of MatchPaths that expects that a lock has already been
+  // acquired.
+  DockyardPathToIdMap MatchPathsLocked(const std::string& starting,
+                                       const std::string& ending) const;
 
   // Rework the response so that all values are in the range 0 to one million.
   // This represents a 0.0 to 1.0 value, scaled up.
@@ -510,15 +562,23 @@ class Dockyard {
                          const StreamSetsRequest& request,
                          std::vector<SampleValue>* samples) const;
 
-  void ComputeLowestHighestForRequest(const StreamSetsRequest& request,
-                                      StreamSetsResponse* response) const;
-
   // The average of the lowest and highest value in the stream.
   SampleValue OverallAverageForStream(DockyardId dockyard_id) const;
+
+  // Processes the requests entered by DiscardSamples().
+  void ProcessDiscardSamples(const DiscardSamplesRequest& discard,
+                             DiscardSamplesResponse* response);
+
+  // Process a request to ignore samples.
+  void ProcessIgnoreSamples(const IgnoreSamplesRequest& request,
+                            IgnoreSamplesResponse* response);
 
   // Gather the overall lowest and highest values encountered.
   void ProcessSingleRequest(const StreamSetsRequest& request,
                             StreamSetsResponse* response) const;
+
+  // Listen for Harvester connections from the Fuchsia device.
+  void RunGrpcServer();
 
   friend class ::SystemMonitorDockyardHostTest;
   friend class ::dockyard::SystemMonitorDockyardTest;

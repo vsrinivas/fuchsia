@@ -754,6 +754,80 @@ TEST_F(SystemMonitorDockyardTest, DefaultValues) {
   EXPECT_EQ(0u, request.dockyard_ids.size());
 }
 
+TEST_F(SystemMonitorDockyardTest, IgnoreSamples) {
+  {
+    constexpr uint64_t SAMPLE_COUNT = 40;
+    RandomSampleGenerator gen;
+    gen.dockyard_id = dockyard_.GetDockyardId("fake0:345:iTest");
+    gen.seed = 1234;
+    gen.time_style = RandomSampleGenerator::TIME_STYLE_LINEAR;
+    gen.start = 100;
+    gen.finish = 500;
+    gen.value_style = RandomSampleGenerator::VALUE_STYLE_SINE_WAVE;
+    gen.value_min = 10;
+    gen.value_max = 100;
+    gen.sample_count = SAMPLE_COUNT;
+    GenerateRandomSamples(gen, &dockyard_);
+  }
+
+  // Discard some samples.
+  IgnoreSamplesRequest ignore;
+  ignore.prefix = "fake0:";
+  ignore.suffix = ":iTest";
+  dockyard_.IgnoreSamples(
+      ignore, [ignore](const dockyard::IgnoreSamplesResponse& response) {
+        EXPECT_EQ(ignore.request_id(), response.request_id);
+      });
+  dockyard_.ProcessRequests();
+
+  {
+    constexpr uint64_t SAMPLE_COUNT = 40;
+    RandomSampleGenerator gen;
+    gen.dockyard_id = dockyard_.GetDockyardId("fake0:345:iTest");
+    gen.seed = 1234;
+    gen.time_style = RandomSampleGenerator::TIME_STYLE_LINEAR;
+    gen.start = 500;
+    gen.finish = 700;
+    gen.value_style = RandomSampleGenerator::VALUE_STYLE_SINE_WAVE;
+    gen.value_min = 10;
+    gen.value_max = 100;
+    gen.sample_count = SAMPLE_COUNT;
+    GenerateRandomSamples(gen, &dockyard_);
+  }
+
+  // Add pending request that straddles the time when those samples were not
+  // ignored and then some time when they were ignored.
+  StreamSetsRequest request;
+  request.start_time_ns = 400;
+  request.end_time_ns = 600;
+  request.sample_count = 12;
+  request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0:345:iTest"));
+  dockyard_.GetStreamSets(&request);
+  dockyard_.ProcessRequests();
+
+  // Check results.
+  EXPECT_EQ(request.request_id(), response_.request_id);
+  EXPECT_EQ(10ULL, response_.lowest_value);
+  EXPECT_EQ(100ULL, response_.highest_value);
+  ASSERT_EQ(1UL, response_.data_sets.size());
+  // Check the samples themselves. The samples that arrived prior to the
+  // request to ignore some samples will still be there. Samples that arrived
+  // (i.e. were generated) after the request to ignore them are ignored.
+  EXPECT_EQ(41u, response_.data_sets[0][0]);
+  EXPECT_EQ(58u, response_.data_sets[0][1]);
+  EXPECT_EQ(72u, response_.data_sets[0][2]);
+  EXPECT_EQ(83u, response_.data_sets[0][3]);
+  EXPECT_EQ(94u, response_.data_sets[0][4]);
+  EXPECT_EQ(99u, response_.data_sets[0][5]);
+  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][6]);
+  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][7]);
+  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][8]);
+  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][9]);
+  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][10]);
+  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][11]);
+}
+
 TEST_F(SystemMonitorDockyardTest, Discard) {
   constexpr uint64_t SAMPLE_COUNT = 40;
   RandomSampleGenerator gen;
