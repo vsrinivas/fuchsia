@@ -1,0 +1,23 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Collect Ninja trace information for analysis in chrome://tracing
+
+## Usage: fx ninjatrace2json
+##
+## Use this after a build to write "ninjatrace.json" files in the build
+## directories (separately for Zircon and Fuchsia build directories).
+## Then use the chrome://tracing view to load that file into your browser.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+for dir in "$ZIRCON_BUILDROOT" "$FUCHSIA_BUILD_DIR"; do
+  "$PREBUILT_TOOLS_DIR/ninjatrace/$HOST_PLATFORM/ninjatrace" \
+    -filename "$dir/.ninja_log" -trace-json "$dir/ninjatrace.json"
+  echo "Now visit chrome://tracing and load $dir/ninjatrace.json"
+done
