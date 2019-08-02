@@ -34,14 +34,20 @@ pub struct Handles {
   pub fifo_handle: fidl::Fifo,
   pub guest_handle: fidl::Guest,
   pub interrupt_handle: fidl::Interrupt,
+  pub iommu_handle: fidl::Iommu,
   pub job_handle: fidl::Job,
+  pub pager_handle: fidl::Pager,
+  pub pcidevice_handle: fidl::PciDevice,
+  pub pmt_handle: fidl::Pmt,
+  pub port_handle: fidl::Port,
   pub process_handle: fidl::Process,
   pub profile_handle: fidl::Profile,
-  pub port_handle: fidl::Port,
   pub resource_handle: fidl::Resource,
   pub socket_handle: fidl::Socket,
+  pub suspendtoken_handle: fidl::SuspendToken,
   pub thread_handle: fidl::Thread,
   pub timer_handle: fidl::Timer,
+  pub vcpu_handle: fidl::Vcpu,
   pub vmar_handle: fidl::Vmar,
   pub vmo_handle: fidl::Vmo,
 }
@@ -89,47 +95,71 @@ fidl_struct! {
       ty: fidl::Interrupt,
       offset: 36,
     },
-    job_handle {
-      ty: fidl::Job,
+    iommu_handle {
+      ty: fidl::Iommu,
       offset: 40,
     },
-    process_handle {
-      ty: fidl::Process,
+    job_handle {
+      ty: fidl::Job,
       offset: 44,
     },
-    profile_handle {
-      ty: fidl::Profile,
+    pager_handle {
+      ty: fidl::Pager,
       offset: 48,
+    },
+    pcidevice_handle {
+      ty: fidl::PciDevice,
+      offset: 52,
+    },
+    pmt_handle {
+      ty: fidl::Pmt,
+      offset: 56,
     },
     port_handle {
       ty: fidl::Port,
-      offset: 52,
+      offset: 60,
+    },
+    process_handle {
+      ty: fidl::Process,
+      offset: 64,
+    },
+    profile_handle {
+      ty: fidl::Profile,
+      offset: 68,
     },
     resource_handle {
       ty: fidl::Resource,
-      offset: 56,
+      offset: 72,
     },
     socket_handle {
       ty: fidl::Socket,
-      offset: 60,
+      offset: 76,
+    },
+    suspendtoken_handle {
+      ty: fidl::SuspendToken,
+      offset: 80,
     },
     thread_handle {
       ty: fidl::Thread,
-      offset: 64,
+      offset: 84,
     },
     timer_handle {
       ty: fidl::Timer,
-      offset: 68,
+      offset: 88,
+    },
+    vcpu_handle {
+      ty: fidl::Vcpu,
+      offset: 92,
     },
     vmar_handle {
       ty: fidl::Vmar,
-      offset: 72,
+      offset: 96,
     },
     vmo_handle {
       ty: fidl::Vmo,
-      offset: 76,
+      offset: 100,
     },
   ],
-  size: 80,
+  size: 104,
   align: 4,
 }

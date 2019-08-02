@@ -34,21 +34,33 @@ class Handles final {
   
   ::zx::interrupt interrupt_handle{};
   
+  ::zx::iommu iommu_handle{};
+  
   ::zx::job job_handle{};
+  
+  ::zx::pager pager_handle{};
+  
+  ::zx::pcidevice pcidevice_handle{};
+  
+  ::zx::pmt pmt_handle{};
+  
+  ::zx::port port_handle{};
   
   ::zx::process process_handle{};
   
   ::zx::profile profile_handle{};
   
-  ::zx::port port_handle{};
-  
   ::zx::resource resource_handle{};
   
   ::zx::socket socket_handle{};
   
+  ::zx::suspendtoken suspendtoken_handle{};
+  
   ::zx::thread thread_handle{};
   
   ::zx::timer timer_handle{};
+  
+  ::zx::vcpu vcpu_handle{};
   
   ::zx::vmar vmar_handle{};
   
@@ -73,7 +85,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::Handles>
-    : public EncodableCodingTraits<::test::name::Handles, 80> {};
+    : public EncodableCodingTraits<::test::name::Handles, 104> {};
 
 inline zx_status_t Clone(const ::test::name::Handles& value,
                          ::test::name::Handles* result) {
@@ -113,7 +125,22 @@ struct Equality<::test::name::Handles> {
     if (!::fidl::Equals(_lhs.interrupt_handle, _rhs.interrupt_handle)) {
       return false;
     }
+    if (!::fidl::Equals(_lhs.iommu_handle, _rhs.iommu_handle)) {
+      return false;
+    }
     if (!::fidl::Equals(_lhs.job_handle, _rhs.job_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.pager_handle, _rhs.pager_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.pcidevice_handle, _rhs.pcidevice_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.pmt_handle, _rhs.pmt_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.port_handle, _rhs.port_handle)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.process_handle, _rhs.process_handle)) {
@@ -122,19 +149,22 @@ struct Equality<::test::name::Handles> {
     if (!::fidl::Equals(_lhs.profile_handle, _rhs.profile_handle)) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.port_handle, _rhs.port_handle)) {
-      return false;
-    }
     if (!::fidl::Equals(_lhs.resource_handle, _rhs.resource_handle)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.socket_handle, _rhs.socket_handle)) {
       return false;
     }
+    if (!::fidl::Equals(_lhs.suspendtoken_handle, _rhs.suspendtoken_handle)) {
+      return false;
+    }
     if (!::fidl::Equals(_lhs.thread_handle, _rhs.thread_handle)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.timer_handle, _rhs.timer_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.vcpu_handle, _rhs.vcpu_handle)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.vmar_handle, _rhs.vmar_handle)) {

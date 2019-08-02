@@ -15,14 +15,20 @@ test_name_HandlesInLine {
        fifo_handle flags[fidl_handle_presence, int32]
        guest_handle flags[fidl_handle_presence, int32]
        interrupt_handle flags[fidl_handle_presence, int32]
+       iommu_handle flags[fidl_handle_presence, int32]
        job_handle flags[fidl_handle_presence, int32]
+       pager_handle flags[fidl_handle_presence, int32]
+       pcidevice_handle flags[fidl_handle_presence, int32]
+       pmt_handle flags[fidl_handle_presence, int32]
+       port_handle flags[fidl_handle_presence, int32]
        process_handle flags[fidl_handle_presence, int32]
        profile_handle flags[fidl_handle_presence, int32]
-       port_handle flags[fidl_handle_presence, int32]
        resource_handle flags[fidl_handle_presence, int32]
        socket_handle flags[fidl_handle_presence, int32]
+       suspendtoken_handle flags[fidl_handle_presence, int32]
        thread_handle flags[fidl_handle_presence, int32]
        timer_handle flags[fidl_handle_presence, int32]
+       vcpu_handle flags[fidl_handle_presence, int32]
        vmar_handle flags[fidl_handle_presence, int32]
        vmo_handle flags[fidl_handle_presence, int32]
 } [packed]
@@ -40,14 +46,20 @@ test_name_HandlesHandles {
        fifo_handle zx_fifo
        guest_handle zx_guest
        interrupt_handle zx_interrupt
+       iommu_handle zx_iommu
        job_handle zx_job
+       pager_handle zx_pager
+       pcidevice_handle zx_pcidevice
+       pmt_handle zx_pmt
+       port_handle zx_port
        process_handle zx_process
        profile_handle zx_profile
-       port_handle zx_port
        resource_handle zx_resource
        socket_handle zx_socket
+       suspendtoken_handle zx_suspendtokenn
        thread_handle zx_thread
        timer_handle zx_timer
+       vcpu_handle zx_vcpu
        vmar_handle zx_vmar
        vmo_handle zx_vmo
 } [packed]

@@ -200,14 +200,14 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "job",
+            "subtype": "iommu",
             "nullable": false
           },
-          "name": "job_handle",
+          "name": "iommu_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
             "line": 15,
-            "column": 17
+            "column": 19
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -218,14 +218,14 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "process",
+            "subtype": "job",
             "nullable": false
           },
-          "name": "process_handle",
+          "name": "job_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
             "line": 16,
-            "column": 21
+            "column": 17
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -236,19 +236,55 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "profile",
+            "subtype": "pager",
             "nullable": false
           },
-          "name": "profile_handle",
+          "name": "pager_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
             "line": 17,
-            "column": 21
+            "column": 19
           },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 48,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "pcidevice",
+            "nullable": false
+          },
+          "name": "pcidevice_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 18,
+            "column": 23
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 52,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "pmt",
+            "nullable": false
+          },
+          "name": "pmt_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 19,
+            "column": 17
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 56,
           "max_handles": 1
         },
         {
@@ -260,13 +296,49 @@
           "name": "port_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
-            "line": 18,
+            "line": 20,
             "column": 18
           },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
-          "offset": 52,
+          "offset": 60,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "process",
+            "nullable": false
+          },
+          "name": "process_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 21,
+            "column": 21
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 64,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "profile",
+            "nullable": false
+          },
+          "name": "profile_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 22,
+            "column": 21
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 68,
           "max_handles": 1
         },
         {
@@ -278,13 +350,13 @@
           "name": "resource_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
-            "line": 19,
+            "line": 23,
             "column": 22
           },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
-          "offset": 56,
+          "offset": 72,
           "max_handles": 1
         },
         {
@@ -296,13 +368,31 @@
           "name": "socket_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
-            "line": 20,
+            "line": 24,
             "column": 20
           },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
-          "offset": 60,
+          "offset": 76,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "suspendtoken",
+            "nullable": false
+          },
+          "name": "suspendtoken_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 25,
+            "column": 26
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 80,
           "max_handles": 1
         },
         {
@@ -314,13 +404,13 @@
           "name": "thread_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
-            "line": 21,
+            "line": 26,
             "column": 20
           },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
-          "offset": 64,
+          "offset": 84,
           "max_handles": 1
         },
         {
@@ -332,13 +422,31 @@
           "name": "timer_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
-            "line": 22,
+            "line": 27,
             "column": 19
           },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
-          "offset": 68,
+          "offset": 88,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "vcpu",
+            "nullable": false
+          },
+          "name": "vcpu_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 28,
+            "column": 18
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 92,
           "max_handles": 1
         },
         {
@@ -350,13 +458,13 @@
           "name": "vmar_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
-            "line": 23,
+            "line": 29,
             "column": 18
           },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
-          "offset": 72,
+          "offset": 96,
           "max_handles": 1
         },
         {
@@ -368,20 +476,20 @@
           "name": "vmo_handle",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
-            "line": 24,
+            "line": 30,
             "column": 17
           },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
-          "offset": 76,
+          "offset": 100,
           "max_handles": 1
         }
       ],
-      "size": 80,
+      "size": 104,
       "max_out_of_line": 0,
       "alignment": 4,
-      "max_handles": 20,
+      "max_handles": 26,
       "has_padding": false
     }
   ],

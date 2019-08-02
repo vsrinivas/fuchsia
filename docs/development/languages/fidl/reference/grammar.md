@@ -2,8 +2,8 @@
 
 ## Modified BNF rules
 
-This is the grammar for FIDL source files. The grammar is expressed in
-a modified BNF format.
+This is the grammar for FIDL source files. The grammar is expressed in a
+modified BNF format.
 
 A nonterminal symbol matches a sequence of other symbols, delimited by
 commas.
@@ -134,9 +134,9 @@ type-constructor = compound-identifier ( "<" type-constructor ">" ) , (  type-co
 handle-type = "handle" , ( "<" , handle-subtype , ">" ) , ( "?" ) ;
 
 handle-subtype = "bti" | "channel" | "debuglog" | "event" | "eventpair" | "exception"
-               | "fifo" | "guest" | "interrupt" | "job" | "port" | "process"
-               | "profile" | "resource" | "socket" | "thread" | "timer"
-               | "vmar" | "vmo" ;
+               | "fifo" | "guest" | "interrupt" | "iommu" | "job" | "pager" | "pcidevice"
+               | "pmt" | "port" | "process" | "profile" | "resource" | "socket" | "suspendtoken"
+               | "thread" | "timer" | "vcpu" | "vmar" | "vmo" ;
 
 type-constraint = ":" , constant ;
 

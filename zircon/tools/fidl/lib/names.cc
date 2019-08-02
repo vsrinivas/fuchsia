@@ -117,44 +117,56 @@ std::string NameHandleSubtype(types::HandleSubtype subtype) {
   switch (subtype) {
     case types::HandleSubtype::kHandle:
       return "handle";
-    case types::HandleSubtype::kException:
-      return "exception";
-    case types::HandleSubtype::kProcess:
-      return "process";
-    case types::HandleSubtype::kThread:
-      return "thread";
-    case types::HandleSubtype::kVmo:
-      return "vmo";
+    case types::HandleSubtype::kBti:
+      return "bti";
     case types::HandleSubtype::kChannel:
       return "channel";
     case types::HandleSubtype::kEvent:
       return "event";
-    case types::HandleSubtype::kPort:
-      return "port";
-    case types::HandleSubtype::kInterrupt:
-      return "interrupt";
-    case types::HandleSubtype::kLog:
-      return "debuglog";
-    case types::HandleSubtype::kSocket:
-      return "socket";
-    case types::HandleSubtype::kResource:
-      return "resource";
     case types::HandleSubtype::kEventpair:
       return "eventpair";
-    case types::HandleSubtype::kJob:
-      return "job";
-    case types::HandleSubtype::kVmar:
-      return "vmar";
+    case types::HandleSubtype::kException:
+      return "exception";
     case types::HandleSubtype::kFifo:
       return "fifo";
     case types::HandleSubtype::kGuest:
       return "guest";
-    case types::HandleSubtype::kTimer:
-      return "timer";
-    case types::HandleSubtype::kBti:
-      return "bti";
+    case types::HandleSubtype::kInterrupt:
+      return "interrupt";
+    case types::HandleSubtype::kIommu:
+      return "iommu";
+    case types::HandleSubtype::kJob:
+      return "job";
+    case types::HandleSubtype::kLog:
+      return "debuglog";
+    case types::HandleSubtype::kPager:
+      return "pager";
+    case types::HandleSubtype::kPciDevice:
+      return "pcidevice";
+    case types::HandleSubtype::kPmt:
+      return "pmt";
+    case types::HandleSubtype::kPort:
+      return "port";
+    case types::HandleSubtype::kProcess:
+      return "process";
     case types::HandleSubtype::kProfile:
       return "profile";
+    case types::HandleSubtype::kResource:
+      return "resource";
+    case types::HandleSubtype::kSocket:
+      return "socket";
+    case types::HandleSubtype::kSuspendToken:
+      return "suspendtoken";
+    case types::HandleSubtype::kThread:
+      return "thread";
+    case types::HandleSubtype::kTimer:
+      return "timer";
+    case types::HandleSubtype::kVcpu:
+      return "vcpu";
+    case types::HandleSubtype::kVmar:
+      return "vmar";
+    case types::HandleSubtype::kVmo:
+      return "vmo";
   }
 }
 
@@ -233,44 +245,56 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
   switch (subtype) {
     case types::HandleSubtype::kHandle:
       return "ZX_OBJ_TYPE_NONE";
-    case types::HandleSubtype::kException:
-      return "ZX_OBJ_TYPE_EXCEPTION";
-    case types::HandleSubtype::kProcess:
-      return "ZX_OBJ_TYPE_PROCESS";
-    case types::HandleSubtype::kThread:
-      return "ZX_OBJ_TYPE_THREAD";
-    case types::HandleSubtype::kVmo:
-      return "ZX_OBJ_TYPE_VMO";
+    case types::HandleSubtype::kBti:
+      return "ZX_OBJ_TYPE_BTI";
     case types::HandleSubtype::kChannel:
       return "ZX_OBJ_TYPE_CHANNEL";
     case types::HandleSubtype::kEvent:
       return "ZX_OBJ_TYPE_EVENT";
-    case types::HandleSubtype::kPort:
-      return "ZX_OBJ_TYPE_PORT";
-    case types::HandleSubtype::kInterrupt:
-      return "ZX_OBJ_TYPE_INTERRUPT";
-    case types::HandleSubtype::kLog:
-      return "ZX_OBJ_TYPE_LOG";
-    case types::HandleSubtype::kSocket:
-      return "ZX_OBJ_TYPE_SOCKET";
-    case types::HandleSubtype::kResource:
-      return "ZX_OBJ_TYPE_RESOURCE";
     case types::HandleSubtype::kEventpair:
       return "ZX_OBJ_TYPE_EVENTPAIR";
-    case types::HandleSubtype::kJob:
-      return "ZX_OBJ_TYPE_JOB";
-    case types::HandleSubtype::kVmar:
-      return "ZX_OBJ_TYPE_VMAR";
+    case types::HandleSubtype::kException:
+      return "ZX_OBJ_TYPE_EXCEPTION";
     case types::HandleSubtype::kFifo:
       return "ZX_OBJ_TYPE_FIFO";
     case types::HandleSubtype::kGuest:
       return "ZX_OBJ_TYPE_GUEST";
-    case types::HandleSubtype::kTimer:
-      return "ZX_OBJ_TYPE_TIMER";
-    case types::HandleSubtype::kBti:
-      return "ZX_OBJ_TYPE_BTI";
+    case types::HandleSubtype::kInterrupt:
+      return "ZX_OBJ_TYPE_INTERRUPT";
+    case types::HandleSubtype::kIommu:
+      return "ZX_OBJ_TYPE_IOMMU";
+    case types::HandleSubtype::kJob:
+      return "ZX_OBJ_TYPE_JOB";
+    case types::HandleSubtype::kLog:
+      return "ZX_OBJ_TYPE_LOG";
+    case types::HandleSubtype::kPager:
+      return "ZX_OBJ_TYPE_PAGER";
+    case types::HandleSubtype::kPciDevice:
+      return "ZX_OBJ_TYPE_PCI_DEVICE";
+    case types::HandleSubtype::kPmt:
+      return "ZX_OBJ_TYPE_PMT";
+    case types::HandleSubtype::kPort:
+      return "ZX_OBJ_TYPE_PORT";
+    case types::HandleSubtype::kProcess:
+      return "ZX_OBJ_TYPE_PROCESS";
     case types::HandleSubtype::kProfile:
       return "ZX_OBJ_TYPE_PROFILE";
+    case types::HandleSubtype::kResource:
+      return "ZX_OBJ_TYPE_RESOURCE";
+    case types::HandleSubtype::kSocket:
+      return "ZX_OBJ_TYPE_SOCKET";
+    case types::HandleSubtype::kSuspendToken:
+      return "ZX_OBJ_TYPE_SUSPEND_TOKEN";
+    case types::HandleSubtype::kThread:
+      return "ZX_OBJ_TYPE_THREAD";
+    case types::HandleSubtype::kTimer:
+      return "ZX_OBJ_TYPE_TIMER";
+    case types::HandleSubtype::kVcpu:
+      return "ZX_OBJ_TYPE_VCPU";
+    case types::HandleSubtype::kVmar:
+      return "ZX_OBJ_TYPE_VMAR";
+    case types::HandleSubtype::kVmo:
+      return "ZX_OBJ_TYPE_VMO";
   }
 }
 

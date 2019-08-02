@@ -13,7 +13,7 @@ import (
 
 
 type Handles struct {
-	_ struct{} `fidl2:"s,80,4"`
+	_ struct{} `fidl2:"s,104,4"`
 	PlainHandle _zx.Handle`fidl2:"0"`
 	BtiHandle _zx.Handle`fidl2:"0"`
 	ChannelHandle _zx.Channel`fidl2:"0"`
@@ -24,14 +24,20 @@ type Handles struct {
 	FifoHandle _zx.Handle`fidl2:"0"`
 	GuestHandle _zx.Handle`fidl2:"0"`
 	InterruptHandle _zx.Handle`fidl2:"0"`
+	IommuHandle _zx.Handle`fidl2:"0"`
 	JobHandle _zx.Handle`fidl2:"0"`
+	PagerHandle _zx.Handle`fidl2:"0"`
+	PcideviceHandle _zx.Handle`fidl2:"0"`
+	PmtHandle _zx.Handle`fidl2:"0"`
+	PortHandle _zx.Port`fidl2:"0"`
 	ProcessHandle _zx.Handle`fidl2:"0"`
 	ProfileHandle _zx.Handle`fidl2:"0"`
-	PortHandle _zx.Port`fidl2:"0"`
 	ResourceHandle _zx.Handle`fidl2:"0"`
 	SocketHandle _zx.Socket`fidl2:"0"`
+	SuspendtokenHandle _zx.Handle`fidl2:"0"`
 	ThreadHandle _zx.Handle`fidl2:"0"`
 	TimerHandle _zx.Handle`fidl2:"0"`
+	VcpuHandle _zx.Handle`fidl2:"0"`
 	VmarHandle _zx.VMAR`fidl2:"0"`
 	VmoHandle _zx.VMO`fidl2:"0"`
 }
