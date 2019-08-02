@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <grpc++/grpc++.h>
 #include <grpc/support/log.h>
 #include <gtest/gtest.h>
 #include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/lib/guest_interaction/server/server_operation_state.h"
 #include "test_lib.h"
+
+#include <grpc++/grpc++.h>
 
 // Server Get State Machine Test Cases
 //
@@ -670,5 +671,298 @@ TEST_F(AsyncEndToEndTest, ServerPutMultipleFragments) {
   client_cq_->Next(&tag, &cq_status);
   op_status = put_response.status();
   ASSERT_EQ(op_status, OperationStatus::OK);
+  ASSERT_TRUE(grpc_status.ok());
+}
+
+// Server Exec State Machine Test Cases
+// 1. Server fails to create subprocess.
+// 2. Exec Read fails to write to subprocess stdin.
+// 3. Exec Read finishes when client is done writing to stdin.
+// 4. Exec Read finishes when child process has exited.
+// 5. Exec Write sends stdin/stderr to client until subprocess exits.
+
+TEST_F(AsyncEndToEndTest, Server_Exec_ForkFail) {
+  ResetStub();
+  // Accounting bits for managing CompletionQueue state.
+  void* tag;
+  bool cq_status;
+
+  // The server's call to Exec should fail.
+  ExecCallData<FakePlatform>* server_call_data =
+      new ExecCallData<FakePlatform>(service_.get(), server_cq_.get());
+  server_call_data->platform_interface_.SetExecReturn(-1);
+
+  // Client creates a new stub.
+  std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
+  std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
+
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+
+  // Queue up a read to be populated eventually when the server finishes.  Use
+  // the address of the exec response so we can enforce that the read operation
+  // has been performed later in the test.
+  ExecResponse exec_response;
+  cli_rw->Read(&exec_response, &exec_response);
+
+  // Server should get the new stub request and issue a read.
+  server_call_data->platform_interface_.SetParseCommandReturn({"echo", "hello"});
+  server_cq_->Next(&tag, &cq_status);
+  server_call_data->Proceed(cq_status);
+
+  // Client should be notified that its stub has been created.
+  client_cq_->Next(&tag, &cq_status);
+
+  ExecRequest exec_request;
+  exec_request.clear_argv();
+  exec_request.clear_env_vars();
+  exec_request.clear_std_in();
+  cli_rw->Write(exec_request, nullptr);
+
+  // Server should get the write first
+  server_cq_->Next(&tag, &cq_status);
+  server_call_data->Proceed(cq_status);
+
+  // Flush the write operation completion notification.
+  client_cq_->Next(&tag, &cq_status);
+
+  // Ensure that the client queue has a new entry and that it is the response
+  // to the read request.
+  client_cq_->Next(&tag, &cq_status);
+  ASSERT_EQ(tag, &exec_response);
+
+  // The client calls Finish to get final status.
+  grpc::Status grpc_status;
+  cli_rw->Finish(&grpc_status, nullptr);
+
+  client_cq_->Next(&tag, &cq_status);
+
+  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_EQ(exec_response.status(), OperationStatus::SERVER_EXEC_FORK_FAILURE);
+}
+
+TEST_F(AsyncEndToEndTest, Server_ExecRead_StdinEof) {
+  ResetStub();
+  // Accounting bits for managing CompletionQueue state.
+  void* tag;
+  bool cq_status;
+
+  // Exec service boilerplate.
+  std::shared_ptr<grpc::ServerContext> srv_ctx = std::make_shared<grpc::ServerContext>();
+  std::shared_ptr<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>> srv_rw =
+      std::make_shared<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>>(srv_ctx.get());
+
+  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(), this);
+
+  // Client creates a new stub.
+  std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
+  std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
+
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+
+  // The read side of the server exec routine should see that the subprocess
+  // is still alive, but should fail to write to its stdin and then delete
+  // itself.
+  server_cq_->Next(&tag, &cq_status);
+
+  ExecReadCallData<FakePlatform>* server_call_data =
+      new ExecReadCallData<FakePlatform>(srv_ctx, srv_rw, 0, 0);
+  server_call_data->platform_interface_.SetKillPidReturn(0);
+  server_call_data->platform_interface_.SetWriteFileReturn(-1);
+
+  // Client sends something to subprocess stdin.
+  client_cq_->Next(&tag, &cq_status);
+
+  ExecRequest exec_request;
+  exec_request.clear_argv();
+  exec_request.clear_env_vars();
+  exec_request.clear_std_in();
+
+  cli_rw->Write(exec_request, nullptr);
+  client_cq_->Next(&tag, &cq_status);
+
+  // The server will get the request, attempt to write to the subprocess stdin,
+  // fail, and delete itself.  The only indication of the failure will be that
+  // the reference count to the ServerAsyncReaderWriter decrements.
+  uint32_t initial_use_count = srv_rw.use_count();
+  server_cq_->Next(&tag, &cq_status);
+  server_call_data->Proceed(cq_status);
+  uint32_t final_use_count = srv_rw.use_count();
+
+  ASSERT_LT(final_use_count, initial_use_count);
+}
+
+TEST_F(AsyncEndToEndTest, Server_ExecRead_ClientDone) {
+  ResetStub();
+  // Accounting bits for managing CompletionQueue state.
+  void* tag;
+  bool cq_status;
+
+  // Exec service boilerplate.
+  std::shared_ptr<grpc::ServerContext> srv_ctx = std::make_shared<grpc::ServerContext>();
+  std::shared_ptr<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>> srv_rw =
+      std::make_shared<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>>(srv_ctx.get());
+
+  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(), this);
+
+  // Client creates a new stub.
+  std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
+  std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
+
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+
+  // The read side of the server exec routine should see that the subprocess
+  // is still alive and succeed in writing to it.
+  server_cq_->Next(&tag, &cq_status);
+
+  ExecReadCallData<FakePlatform>* server_call_data =
+      new ExecReadCallData<FakePlatform>(srv_ctx, srv_rw, 0, 0);
+  server_call_data->platform_interface_.SetKillPidReturn(0);
+  server_call_data->platform_interface_.SetWriteFileReturn(1);
+
+  // Client sends something to subprocess stdin.
+  client_cq_->Next(&tag, &cq_status);
+
+  ExecRequest exec_request;
+  exec_request.clear_argv();
+  exec_request.clear_env_vars();
+  exec_request.clear_std_in();
+
+  cli_rw->Write(exec_request, nullptr);
+
+  // Server writes it into the subprocess.
+  server_cq_->Next(&tag, &cq_status);
+  server_call_data->Proceed(cq_status);
+
+  // Client indicates that it is done writing.
+  client_cq_->Next(&tag, &cq_status);
+  cli_rw->WritesDone(nullptr);
+
+  // The server will get a false status from the completion queue and delete
+  // itself.  The only indication of the failure will be that the reference
+  // count to the ServerAsyncReaderWriter decrements.
+  uint32_t initial_use_count = srv_rw.use_count();
+
+  server_cq_->Next(&tag, &cq_status);
+  ASSERT_FALSE(cq_status);
+  server_call_data->Proceed(cq_status);
+
+  uint32_t final_use_count = srv_rw.use_count();
+
+  ASSERT_LT(final_use_count, initial_use_count);
+}
+
+TEST_F(AsyncEndToEndTest, Server_ExecRead_SubprocessExits) {
+  ResetStub();
+  // Accounting bits for managing CompletionQueue state.
+  void* tag;
+  bool cq_status;
+
+  // Exec service boilerplate.
+  std::shared_ptr<grpc::ServerContext> srv_ctx = std::make_shared<grpc::ServerContext>();
+  std::shared_ptr<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>> srv_rw =
+      std::make_shared<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>>(srv_ctx.get());
+
+  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(), this);
+
+  // Client creates a new stub.
+  std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
+  std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
+
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+
+  // The read side of the server exec routine should see that the subprocess
+  // has exited.
+  server_cq_->Next(&tag, &cq_status);
+
+  ExecReadCallData<FakePlatform>* server_call_data =
+      new ExecReadCallData<FakePlatform>(srv_ctx, srv_rw, 0, 0);
+  server_call_data->platform_interface_.SetKillPidReturn(-1);
+
+  // Client sends something to subprocess stdin.
+  client_cq_->Next(&tag, &cq_status);
+
+  ExecRequest exec_request;
+  exec_request.clear_argv();
+  exec_request.clear_env_vars();
+  exec_request.clear_std_in();
+
+  cli_rw->Write(exec_request, nullptr);
+
+  // The server will get the request, realize the subprocess has exited, and
+  // delete itself.  The only indication of the failure will be that the
+  // reference count to the ServerAsyncReaderWriter decrements.
+  uint32_t initial_use_count = srv_rw.use_count();
+  server_cq_->Next(&tag, &cq_status);
+  server_call_data->Proceed(cq_status);
+  uint32_t final_use_count = srv_rw.use_count();
+
+  ASSERT_LT(final_use_count, initial_use_count);
+
+  // Issue a finish on behalf of the server.
+  srv_rw->Finish(grpc::Status::OK, nullptr);
+  server_cq_->Next(&tag, &cq_status);
+
+  // Cleanup the client reader-writer.
+  client_cq_->Next(&tag, &cq_status);
+  cli_rw->WritesDone(nullptr);
+
+  client_cq_->Next(&tag, &cq_status);
+  grpc::Status grpc_status;
+  cli_rw->Finish(&grpc_status, nullptr);
+
+  client_cq_->Next(&tag, &cq_status);
+  ASSERT_TRUE(grpc_status.ok());
+}
+
+TEST_F(AsyncEndToEndTest, Server_ExecWrite_WriteUntilChildExits) {
+  ResetStub();
+  // Accounting bits for managing CompletionQueue state.
+  void* tag;
+  bool cq_status;
+
+  // Exec service boilerplate.
+  std::shared_ptr<grpc::ServerContext> srv_ctx = std::make_shared<grpc::ServerContext>();
+  std::shared_ptr<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>> srv_rw =
+      std::make_shared<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>>(srv_ctx.get());
+
+  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(), this);
+
+  // Client creates a new stub.
+  std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
+  std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
+
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+
+  // The write side of the server exec routine will poll the child pid and see
+  // that it has exited.
+  server_cq_->Next(&tag, &cq_status);
+
+  ExecWriteCallData<FakePlatform>* server_call_data =
+      new ExecWriteCallData<FakePlatform>(srv_ctx, srv_rw, 0, 0, 0);
+
+  // Client reads from the server.
+  client_cq_->Next(&tag, &cq_status);
+
+  ExecResponse exec_response;
+  cli_rw->Read(&exec_response, nullptr);
+
+  // The server will finish and delete itself.
+  server_cq_->Next(&tag, &cq_status);
+  server_call_data->Proceed(cq_status);
+
+  // The client will get the initial server write and issue another read.
+  client_cq_->Next(&tag, &cq_status);
+  cli_rw->Read(&exec_response, nullptr);
+
+  // The client should see that the server has finished and request the finish
+  // status.
+  client_cq_->Next(&tag, &cq_status);
+  ASSERT_FALSE(cq_status);
+
+  grpc::Status grpc_status;
+
+  cli_rw->Finish(&grpc_status, nullptr);
+  client_cq_->Next(&tag, &cq_status);
+
   ASSERT_TRUE(grpc_status.ok());
 }

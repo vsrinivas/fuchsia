@@ -7,6 +7,7 @@ syntax = "proto3";
 service GuestInteractionService {
   rpc Get(GetRequest) returns (stream GetResponse);
   rpc Put(stream PutRequest) returns (PutResponse);
+  rpc Exec(stream ExecRequest) returns (stream ExecResponse);
 }
 
 enum OperationStatus {
@@ -22,6 +23,9 @@ enum OperationStatus {
   SERVER_CREATE_FILE_FAILURE = 7;
   SERVER_FILE_READ_FAILURE = 8;
   SERVER_FILE_WRITE_FAILURE = 9;
+
+  SERVER_EXEC_COMMAND_PARSE_FAILURE = 10;
+  SERVER_EXEC_FORK_FAILURE = 11;
 }
 
 message GetRequest {
@@ -40,4 +44,29 @@ message PutRequest {
 
 message PutResponse {
   OperationStatus status = 1;
+}
+
+// ExecEnv encapsulates shell envirnoment variable key-value pairs to be
+// injected when exec-ing a user's command.
+message ExecEnv {
+  string key = 1;
+  string value = 2;
+}
+
+// ExecRequest mirrors the arguments to execve.  The caller provides the path
+// to the binary to be exec-ed along with arguments to be provided to the
+// command and environment variables to be injected into the shell.
+//
+// The caller can continually stream stdin input to the forked child process.
+message ExecRequest {
+  string argv = 1;
+  repeated ExecEnv env_vars = 2;
+  bytes std_in = 3;
+}
+
+message ExecResponse {
+  bytes std_out = 1;
+  bytes std_err = 2;
+  int32 ret_code = 3;
+  OperationStatus status = 4;
 }

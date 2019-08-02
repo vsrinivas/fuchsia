@@ -46,6 +46,7 @@ source_set("platform_interface_posix") {
     "platform_interface/posix_platform.cc",
   ]
   deps = [
+    ":common",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_full",
   ]
@@ -84,6 +85,7 @@ source_set("test_lib") {
   ]
   deps = [
     ":proto",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//third_party/grpc:grpc++",
   ]
@@ -100,6 +102,7 @@ executable("client_operation_test") {
     ":test_lib",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/virtualization/lib/grpc:grpc",
     "//third_party/googletest:gtest_main",
     "//third_party/grpc:grpc++",
   ]

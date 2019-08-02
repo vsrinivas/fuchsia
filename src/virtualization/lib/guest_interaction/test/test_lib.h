@@ -7,16 +7,18 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <grpc++/grpc++.h>
-#include <grpc/support/log.h>
 #include <netinet/in.h>
-#include <src/lib/fxl/logging.h>
 #include <sys/socket.h>
 
 #include <iostream>
 #include <thread>
 
+#include <grpc/support/log.h>
+#include <src/lib/fxl/logging.h>
+
 #include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"
+
+#include <grpc++/grpc++.h>
 
 // Adapted from gRPC's async_end2end_test.cc
 class TestScenario {
@@ -65,6 +67,7 @@ class AsyncEndToEndTest : public testing::TestWithParam<TestScenario> {
     // client's CompletionQueue needs to be cleaned up manually.
     void* ignored_tag;
     bool ignored_ok;
+
     client_cq_->Shutdown();
     while (client_cq_->Next(&ignored_tag, &ignored_ok))
       ;

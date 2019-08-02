@@ -5,14 +5,18 @@
 #ifndef SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_OPERATION_STATE_H_
 #define SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_OPERATION_STATE_H_
 
-#include <grpc++/grpc++.h>
-#include <grpc/support/log.h>
 #include <zircon/system/ulib/fit/include/lib/fit/function.h>
+
+#include <grpc/support/log.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/lib/guest_interaction/common.h"
 #include "src/virtualization/lib/guest_interaction/platform_interface/platform_interface.h"
 #include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"
 
+#include <grpc++/grpc++.h>
+
+using ExecCallback = fit::function<void(OperationStatus status, int ret_code)>;
 using TransferCallback = fit::function<void(OperationStatus status)>;
 
 // Manages the transfer of a file from the guest VM to the Fuchsia host.
@@ -30,7 +34,7 @@ class GetCallData final : public CallData {
         fd_(fd),
         exit_status_(OperationStatus::OK) {}
 
-  void Proceed(bool ok);
+  void Proceed(bool ok) override;
 
   grpc::ClientContext ctx_;
   std::unique_ptr<grpc::ClientAsyncReaderInterface<GetResponse>> reader_;
@@ -120,7 +124,7 @@ class PutCallData final : public CallData {
         exit_status_(OperationStatus::OK),
         fd_(fd) {}
 
-  void Proceed(bool ok);
+  void Proceed(bool ok) override;
 
   grpc::ClientContext ctx_;
   std::unique_ptr<grpc::ClientAsyncWriterInterface<PutRequest>> writer_;
@@ -202,6 +206,243 @@ void PutCallData<T>::Finish() {
   }
   callback_(exit_status_);
   delete this;
+}
+
+// Pump incoming stdin into the child process managed by the guest service.
+template <class T>
+class ExecWriteCallData final : public CallData {
+ public:
+  ExecWriteCallData(
+      const std::string& command, const std::vector<ExecEnv>& env, int32_t std_in,
+      const std::shared_ptr<grpc::ClientContext>& ctx,
+      const std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>>& rw);
+
+  void Proceed(bool ok) override;
+
+  T platform_interface_;
+
+ private:
+  void Finish();
+
+  int32_t stdin_;
+  std::shared_ptr<grpc::ClientContext> ctx_;
+  std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>> writer_;
+
+  enum CallStatus { WRITING, FINISH };
+  CallStatus status_;
+};
+
+template <class T>
+class ExecReadCallData final : public CallData {
+ public:
+  ExecReadCallData(
+      int32_t std_out, int32_t std_err, const std::shared_ptr<grpc::ClientContext>& ctx,
+      const std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>>& rw,
+      ExecCallback callback);
+
+  void Proceed(bool ok) override;
+
+  T platform_interface_;
+
+ private:
+  void Finish();
+
+  int32_t stdout_;
+  int32_t stderr_;
+  std::shared_ptr<grpc::ClientContext> ctx_;
+  std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>> reader_;
+  ExecCallback callback_;
+  int32_t ret_val_;
+
+  ExecResponse response_;
+  OperationStatus operation_status_;
+
+  enum CallStatus { READ, FINISH };
+  CallStatus status_;
+
+  grpc::Status grpc_stream_status_;
+};
+
+template <class T>
+class ExecCallData final : public CallData {
+ public:
+  ExecCallData(const std::string& command, const std::map<std::string, std::string>& env_vars,
+               int32_t std_in, int32_t std_out, int32_t std_err, ExecCallback callback);
+
+  void Proceed(bool ok) override;
+
+  std::shared_ptr<grpc::ClientContext> ctx_;
+  std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>> rw_;
+  T platform_interface_;
+
+ private:
+  std::vector<ExecEnv> EnvMapToVector(const std::map<std::string, std::string>& env_vars);
+
+  int32_t stdin_;
+  int32_t stdout_;
+  int32_t stderr_;
+  ExecCallback callback_;
+  std::string command_;
+  std::vector<ExecEnv> env_;
+};
+
+template <class T>
+ExecWriteCallData<T>::ExecWriteCallData(
+    const std::string& command, const std::vector<ExecEnv>& env, int32_t std_in,
+    const std::shared_ptr<grpc::ClientContext>& ctx,
+    const std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>>& rw)
+    : stdin_(std_in), ctx_(ctx), writer_(rw), status_(WRITING) {
+  // Send over the initial command request to get the child process
+  // running.  stdin will be pumped once the first write request finishes.
+  ExecRequest exec_request;
+
+  exec_request.set_argv(command);
+
+  for (const ExecEnv& key_val : env) {
+    ExecEnv* new_env = exec_request.add_env_vars();
+    *new_env = key_val;
+  }
+
+  exec_request.clear_std_in();
+
+  writer_->Write(exec_request, this);
+}
+
+template <class T>
+void ExecWriteCallData<T>::Proceed(bool ok) {
+  if (!ok) {
+    // gRPC has shut down the connection.
+    Finish();
+    return;
+  }
+  if (status_ != WRITING) {
+    GPR_ASSERT(status_ == FINISH);
+    Finish();
+    return;
+  }
+
+  char read_buf[CHUNK_SIZE];
+  int32_t read_status = platform_interface_.ReadFile(stdin_, read_buf, CHUNK_SIZE);
+  if (read_status == -EAGAIN || read_status == -EWOULDBLOCK) {
+    // Reading would have caused blocking, so send back an empty message.
+    ExecRequest exec_request;
+    exec_request.clear_argv();
+    exec_request.clear_env_vars();
+    exec_request.clear_std_in();
+    writer_->Write(exec_request, this);
+  } else if (read_status <= 0) {
+    // Reading failed in an unexpected way.  Notify client and finish.
+    writer_->WritesDone(this);
+    status_ = FINISH;
+  } else {
+    std::string new_stdin(read_buf, read_status);
+
+    ExecRequest exec_request;
+    exec_request.clear_argv();
+    exec_request.clear_env_vars();
+    exec_request.set_std_in(new_stdin);
+
+    writer_->Write(exec_request, this);
+  }
+}
+
+template <class T>
+void ExecWriteCallData<T>::Finish() {
+  platform_interface_.CloseFile(stdin_);
+  delete this;
+}
+
+template <class T>
+ExecReadCallData<T>::ExecReadCallData(
+    int32_t std_out, int32_t std_err, const std::shared_ptr<grpc::ClientContext>& ctx,
+    const std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>>& rw,
+    ExecCallback callback)
+    : stdout_(std_out),
+      stderr_(std_err),
+      ctx_(ctx),
+      reader_(rw),
+      callback_(std::move(callback)),
+      ret_val_(0),
+      status_(READ) {
+  reader_->Read(&response_, this);
+}
+
+template <class T>
+void ExecReadCallData<T>::Proceed(bool ok) {
+  if (!ok) {
+    reader_->Finish(&grpc_stream_status_, this);
+    status_ = FINISH;
+    return;
+  }
+  if (status_ != READ) {
+    GPR_ASSERT(status_ == FINISH);
+    if (!grpc_stream_status_.ok() && operation_status_ == OperationStatus::OK) {
+      operation_status_ = OperationStatus::GRPC_FAILURE;
+    }
+    callback_(operation_status_, ret_val_);
+    Finish();
+    return;
+  }
+
+  // Record the statuses at every report.  The last responses will be
+  // passed as arguments to the supplied callback.
+  ret_val_ = response_.ret_code();
+  operation_status_ = response_.status();
+
+  std::string new_stdout = response_.std_out();
+  std::string new_stderr = response_.std_err();
+
+  platform_interface_.WriteFile(stdout_, new_stdout.c_str(), new_stdout.size());
+  platform_interface_.WriteFile(stderr_, new_stderr.c_str(), new_stdout.size());
+
+  reader_->Read(&response_, this);
+}
+
+template <class T>
+void ExecReadCallData<T>::Finish() {
+  platform_interface_.CloseFile(stdout_);
+  platform_interface_.CloseFile(stderr_);
+  delete this;
+}
+
+template <class T>
+ExecCallData<T>::ExecCallData(const std::string& command,
+                              const std::map<std::string, std::string>& env_vars, int32_t std_in,
+                              int32_t std_out, int32_t std_err, ExecCallback callback)
+    : ctx_(std::make_shared<grpc::ClientContext>()),
+      stdin_(std_in),
+      stdout_(std_out),
+      stderr_(std_err),
+      callback_(std::move(callback)),
+      command_(std::move(command)),
+      env_(std::move(EnvMapToVector(env_vars))) {}
+
+template <class T>
+void ExecCallData<T>::Proceed(bool ok) {
+  if (!ok) {
+    platform_interface_.CloseFile(stdin_);
+    platform_interface_.CloseFile(stdout_);
+    platform_interface_.CloseFile(stderr_);
+    callback_(OperationStatus::GRPC_FAILURE, 0);
+  } else {
+    new ExecWriteCallData<T>(command_, env_, stdin_, ctx_, rw_);
+    new ExecReadCallData<T>(stdout_, stderr_, ctx_, rw_, std::move(callback_));
+  }
+  delete this;
+}
+
+template <class T>
+std::vector<ExecEnv> ExecCallData<T>::EnvMapToVector(
+    const std::map<std::string, std::string>& env_vars) {
+  std::vector<ExecEnv> env;
+
+  for (auto const& [key, value] : env_vars) {
+    ExecEnv& env_var = env.emplace_back();
+    env_var.set_key(key);
+    env_var.set_value(value);
+  }
+
+  return env;
 }
 
 #endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_OPERATION_STATE_H_
