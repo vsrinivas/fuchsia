@@ -6,7 +6,8 @@
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.logger.LogSink"
         ]
     }
 }
