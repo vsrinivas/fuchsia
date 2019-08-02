@@ -111,6 +111,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   zx_status_t status =
       get_channel_koids(buffer_collection_token, &token_client_koid, &token_server_koid);
   if (status != ZX_OK) {
+    LogError("Failed to get channel koids");
     // ~buffer_collection_token
     // ~buffer_collection_request
     return;
@@ -118,6 +119,9 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
 
   BufferCollectionToken* token = parent_device->FindTokenByServerChannelKoid(token_server_koid);
   if (!token) {
+    // The most likely scenario for why the token was not found is that Sync() was not called on
+    // either the BufferCollectionToken or the BufferCollection.
+    LogError("Could not find token by server channel koid");
     // ~buffer_collection_token
     // ~buffer_collection_request
     return;
