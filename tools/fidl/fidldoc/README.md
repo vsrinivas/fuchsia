@@ -1,4 +1,4 @@
-Fidldoc is a command-line tool that generates HTML reference pages based on FIDL JSON IR.
+Fidldoc is a command-line tool that generates reference pages based on FIDL JSON IR.
 
 # Build
 1. Include fidldoc in your build, e.g. `fx set core.x64 --with //tools/fidl/fidldoc`
@@ -20,6 +20,15 @@ Example:
 ./out/default/host_x64/fidldoc -v \
     ./out/x64/fidling/gen/zircon/public/fidl/fuchsia-mem/fuchsia-mem.fidl.json \
     -c ./out/default/host_x64/fidldoc.config.json
+```
+
+The `all_fidl_json.txt` file provides a list of file locations to all of the FIDL JSON IR files that
+are part of the Fuchsia build. You can use this file to generate all of the reference docs.
+The snippet below shows an example of how to do it:
+
+```
+FIDL_PATHS=$(cat ./out/default/all_fidl_json.txt | sed -e 's/^/.\/out\/default\//')
+./out/default/host_x64/fidldoc -v $(echo $FIDL_PATHS)
 ```
 
 You can optionally pass a `--tag` flag to specify a source definition.
