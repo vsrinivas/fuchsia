@@ -108,7 +108,7 @@
       "properties": {
         "uri": {
           "type": "string",
-          "pattern": "w+:(/?/?)[^s]+"
+          "pattern": "^[a-z|-]+://.+"
         },
         "args": {
           "type": "array",

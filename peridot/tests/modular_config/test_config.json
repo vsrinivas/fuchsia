@@ -27,6 +27,16 @@
     "session_agents": [
       "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
     ],
+    "component_args": [
+      {
+        "uri": "fuchsia-pkg://fuchsia.com/component#meta/component.cmx",
+        "args": [ "--arg1", "--arg2=true" ]
+      },
+      {
+        "uri": "cast://a12345/",
+        "args": [ "--arg" ]
+      }
+    ],
     "agent_service_index": [
       {
         "service_name": "chromium.cast.ApplicationConfigManager",
