@@ -79,9 +79,10 @@ class Session : public SettingStoreObserver {
   const std::string connected_host() const { return connected_host_; }
   uint16_t connected_port() const { return connected_port_; }
 
-  // Connects to a remote system. Calling when there is already a connection
-  // will issue the callback with an error.
-  void Connect(const std::string& host, uint16_t port, fit::callback<void(const Err&)> callback);
+  // Call with an empty host and 0 port to reconnect to the last attempted
+  // connection destination. If there is no previous destination, this will be
+  // issue an error.
+  void Connect(const std::string& host, uint16_t port, fit::callback<void(const Err&)> cb);
 
   // Disconnects from the remote system. Calling when there is no connection
   // connection will issue the callback with an error.
@@ -254,6 +255,15 @@ class Session : public SettingStoreObserver {
 
   debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
   std::unique_ptr<ArchInfo> arch_info_;
+
+  // The last host:port that a connection was made to. Will be empty/0 if there
+  // has never been a connection or if using an internal connection.
+  //
+  // Note: if we support more types in the future, there should probably be a
+  // ConnectionDest struct that contains all the different parameters so this
+  // can be passed to Connect() and stored here.
+  std::string last_host_;
+  uint64_t last_port_ = 0;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 };

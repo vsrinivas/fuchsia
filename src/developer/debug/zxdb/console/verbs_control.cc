@@ -185,10 +185,10 @@ Err DoQuitAgent(ConsoleContext* context, const Command& cmd) {
 
 const char kConnectShortHelp[] = R"(connect: Connect to a remote system for debugging.)";
 const char kConnectHelp[] =
-    R"(connect <remote_address>
+    R"(connect [ <remote_address> ]
 
-  Connects to a debug_agent at the given address/port. Both IP address and port
-  are required.
+  Connects to a debug_agent at the given address/port. With no arguments,
+  attempts to reconnect to the previously used remote address.
 
   See also "disconnect".
 
@@ -214,9 +214,8 @@ Err DoConnect(ConsoleContext* context, const Command& cmd, CommandCallback callb
   std::string host;
   uint16_t port = 0;
 
-  if (cmd.args().size() == 0) {
-    return Err(ErrType::kInput, "Need host and port to connect to.");
-  } else if (cmd.args().size() == 1) {
+  // 0 args means pass empty string and 0 port to try to reconnect.
+  if (cmd.args().size() == 1) {
     Err err = ParseHostPort(cmd.args()[0], &host, &port);
     if (err.has_error())
       return err;
@@ -224,7 +223,7 @@ Err DoConnect(ConsoleContext* context, const Command& cmd, CommandCallback callb
     Err err = ParseHostPort(cmd.args()[0], cmd.args()[1], &host, &port);
     if (err.has_error())
       return err;
-  } else {
+  } else if (cmd.args().size() > 2) {
     return Err(ErrType::kInput, "Too many arguments.");
   }
 

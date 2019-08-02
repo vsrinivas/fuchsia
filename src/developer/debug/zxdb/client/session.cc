@@ -365,16 +365,26 @@ bool Session::ConnectCanProceed(fit::callback<void(const Err&)>& callback, bool 
 
 bool Session::IsConnected() const { return stream_ != nullptr; }
 
-void Session::Connect(const std::string& host, uint16_t port,
-                      fit::callback<void(const Err&)> callback) {
-  if (!ConnectCanProceed(callback, false)) {
+void Session::Connect(const std::string& host, uint16_t port, fit::callback<void(const Err&)> cb) {
+  if (!ConnectCanProceed(cb, false))
+    return;
+
+  if (host.empty() && last_host_.empty()) {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+      cb(Err("No previous destination to reconnect to."));
+    });
     return;
   }
 
   connected_host_ = host;
   connected_port_ = port;
-  pending_connection_ = fxl::MakeRefCounted<PendingConnection>(host, port);
-  pending_connection_->Initiate(weak_factory_.GetWeakPtr(), std::move(callback));
+  if (!host.empty() && port != 0) {
+    last_host_ = host;
+    last_port_ = port;
+  }
+
+  pending_connection_ = fxl::MakeRefCounted<PendingConnection>(last_host_, last_port_);
+  pending_connection_->Initiate(weak_factory_.GetWeakPtr(), std::move(cb));
 }
 
 Err Session::SetArch(debug_ipc::Arch arch) {
