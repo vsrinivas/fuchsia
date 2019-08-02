@@ -2,13 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
+zstd = "$zx/../third_party/zstd"
+
 config("zstd-config") {
   visibility = [ ":*" ]
 
   include_dirs = [
-    "include/zstd",
-    "lib/common",
-    "lib/dictBuilder",
+    "$zstd/lib",
+    "$zstd/lib/common",
+    "$zstd/lib/compress",
+    "$zstd/lib/dictBuilder",
   ]
 
   configs = [ "$zx/public/gn/config:visibility_hidden" ]
@@ -16,6 +20,7 @@ config("zstd-config") {
     "ZDICTLIB_VISIBILITY=",
     "ZSTDERRORLIB_VISIBILITY=",
     "ZSTDLIB_VISIBILITY=",
+    "XXH_NAMESPACE=ZSTD_",
   ]
 
   if (is_host) {
@@ -26,50 +31,49 @@ config("zstd-config") {
 library("zstd") {
   host = true
   sources = [
-    "lib/common/debug.c",
-    "lib/common/entropy_common.c",
-    "lib/common/error_private.c",
-    "lib/common/fse_decompress.c",
-    "lib/common/pool.c",
-    "lib/common/threading.c",
-    "lib/common/xxhash.c",
-    "lib/common/zstd_common.c",
-    "lib/compress/fse_compress.c",
-    "lib/compress/hist.c",
-    "lib/compress/huf_compress.c",
-    "lib/compress/zstd_compress.c",
-    "lib/compress/zstd_double_fast.c",
-    "lib/compress/zstd_fast.c",
-    "lib/compress/zstd_lazy.c",
-    "lib/compress/zstd_ldm.c",
-    "lib/compress/zstd_opt.c",
-    "lib/compress/zstdmt_compress.c",
-    "lib/decompress/huf_decompress.c",
-    "lib/decompress/zstd_ddict.c",
-    "lib/decompress/zstd_decompress.c",
-    "lib/decompress/zstd_decompress_block.c",
-    "lib/dictBuilder/cover.c",
-    "lib/dictBuilder/divsufsort.c",
-    "lib/dictBuilder/fastcover.c",
-    "lib/dictBuilder/zdict.c",
+    "$zstd/lib/common/debug.c",
+    "$zstd/lib/common/entropy_common.c",
+    "$zstd/lib/common/error_private.c",
+    "$zstd/lib/common/fse_decompress.c",
+    "$zstd/lib/common/pool.c",
+    "$zstd/lib/common/threading.c",
+    "$zstd/lib/common/xxhash.c",
+    "$zstd/lib/common/zstd_common.c",
+    "$zstd/lib/compress/fse_compress.c",
+    "$zstd/lib/compress/hist.c",
+    "$zstd/lib/compress/huf_compress.c",
+    "$zstd/lib/compress/zstd_compress.c",
+    "$zstd/lib/compress/zstd_double_fast.c",
+    "$zstd/lib/compress/zstd_fast.c",
+    "$zstd/lib/compress/zstd_lazy.c",
+    "$zstd/lib/compress/zstd_ldm.c",
+    "$zstd/lib/compress/zstd_opt.c",
+    "$zstd/lib/compress/zstdmt_compress.c",
+    "$zstd/lib/decompress/huf_decompress.c",
+    "$zstd/lib/decompress/zstd_ddict.c",
+    "$zstd/lib/decompress/zstd_decompress.c",
+    "$zstd/lib/decompress/zstd_decompress_block.c",
+    "$zstd/lib/dictBuilder/cover.c",
+    "$zstd/lib/dictBuilder/divsufsort.c",
+    "$zstd/lib/dictBuilder/fastcover.c",
+    "$zstd/lib/dictBuilder/zdict.c",
   ]
   configs += [ ":zstd-config" ]
 }
 
-executable("zstdcli") {
+host_tool("zstdcli") {
   output_name = "zstd"
   sources = [
-    "programs/benchfn.c",
-    "programs/benchzstd.c",
-    "programs/datagen.c",
-    "programs/dibio.c",
-    "programs/fileio.c",
-    "programs/util.c",
-    "programs/zstdcli.c",
+    "$zstd/programs/benchfn.c",
+    "$zstd/programs/benchzstd.c",
+    "$zstd/programs/datagen.c",
+    "$zstd/programs/dibio.c",
+    "$zstd/programs/fileio.c",
+    "$zstd/programs/util.c",
+    "$zstd/programs/zstdcli.c",
   ]
   deps = [
     ":zstd",
-    "$zx/system/ulib/fdio",
   ]
   configs += [ ":zstd-config" ]
 }

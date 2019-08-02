@@ -1,7 +1,0 @@
-Source: https://github.com/facebook/zstd
-Git Commit: 2a6aa6be5f2f76593036d5a41aa27ae43c56b1dd
-License: BSD
-
-Modifications:
- - Deleted unused build and source files.
- - Renamed "lib/zstd.h" to "include/zstd/zstd.h".
