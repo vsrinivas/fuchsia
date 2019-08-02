@@ -59,9 +59,9 @@ template("go_build") {
   }
   output_path = "${root_out_dir}/${output_name}"
 
-  define_sdk_target =
-      defined(invoker.sdk_category) && invoker.sdk_category != "excluded" &&
-      !is_fuchsia && (!defined(invoker.test) || !invoker.test)
+  is_test = defined(invoker.test) && invoker.test
+  define_sdk_target = defined(invoker.sdk_category) &&
+                      invoker.sdk_category != "excluded" && !is_test
 
   # Strip target binaries and binaries that are included in the SDK.
   use_strip = is_fuchsia || define_sdk_target
@@ -205,7 +205,7 @@ template("go_build") {
       ".build-id",
     ]
 
-    if (defined(invoker.test) && invoker.test) {
+    if (is_test) {
       testonly = true
       args += [ "--is-test=true" ]
     }
@@ -225,6 +225,22 @@ template("go_build") {
         "--package",
         gopackage,
       ]
+    }
+
+    metadata = {
+      tool_paths = []
+
+      # Record metadata for the //:tool_paths build API for all non-test,
+      # host binaries.
+      if (current_toolchain == host_toolchain && !is_test) {
+        tool_paths = [
+          {
+            name = output_name
+            path = rebase_path(output_path, root_build_dir)
+            label = get_label_info(":$main_target_name", "label_with_toolchain")
+          },
+        ]
+      }
     }
   }
 

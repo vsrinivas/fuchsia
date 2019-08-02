@@ -182,7 +182,7 @@ group("recovery_image") {
   ]
 }
 
-# TODO(joshuaseaton|mcgrathr): Make this a formal build_api_module.
+# TODO(joshuaseaton|mcgrathr): Make this a formal build_api_module().
 #
 # Aggregates metadata about all tests within the build graph to create a
 # top-level manifest.
@@ -193,6 +193,38 @@ generated_file("tests") {
   data_keys = [ "test_spec" ]
   output_conversion = "json"
   deps = [
+    "//build/images:packages",
+    "//sdk",
+  ]
+}
+
+group("tool_paths.zircon") {
+  visibility = [ ":tool_paths" ]
+  zircon_entries = read_file("$zircon_root_build_dir/tool_paths.json", "json")
+  metadata = {
+    tool_paths = []
+    foreach(tool, zircon_entries) {
+      tool_paths += [
+        {
+          forward_variables_from(tool, "*")
+          path = rebase_path(path, root_build_dir, zircon_root_build_dir)
+        },
+      ]
+    }
+  }
+}
+
+# Aggregates metadata about the paths of tools within the build graph.
+# See documentation at //zircon:tool_paths for a similar file with
+# identical schema.
+generated_file("tool_paths") {
+  outputs = [
+    "$root_build_dir/tool_paths.json",
+  ]
+  data_keys = [ "tool_paths" ]
+  output_conversion = "json"
+  deps = [
+    ":tool_paths.zircon",
     "//build/images:packages",
     "//sdk",
   ]
