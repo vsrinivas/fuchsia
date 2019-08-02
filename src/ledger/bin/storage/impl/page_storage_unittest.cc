@@ -277,6 +277,13 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     EXPECT_EQ(storage_->GetId(), id);
   }
 
+  // After |ResetStorage|, |identifier| may point to an expired factory.
+  // Reallocates a fresh identifier tracked by the current storage's factory.
+  void RetrackIdentifier(ObjectIdentifier* identifier) {
+    *identifier = storage_->GetObjectIdentifierFactory()->MakeObjectIdentifier(
+        identifier->key_index(), identifier->deletion_scope_id(), identifier->object_digest());
+  }
+
  protected:
   PageStorage* GetStorage() { return storage_.get(); }
 
@@ -863,6 +870,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     // Reset and clear the storage.
     ResetStorage();
     storage_->SetSyncDelegate(&sync);
+    RetrackIdentifier(&root_identifier);
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
@@ -2228,6 +2236,9 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     // Reset and clear the storage.
     ResetStorage();
     storage_->SetSyncDelegate(&sync);
+    for (auto& identifier : object_identifiers) {
+      RetrackIdentifier(&identifier);
+    }
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
@@ -2379,6 +2390,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   ObjectData value_1 = MakeObject("data1", InlineBehavior::ALLOW);
   ObjectData value_2 = MakeObject("data2", InlineBehavior::ALLOW);
   ObjectData value_3 = MakeObject("data3", InlineBehavior::ALLOW);
+  ObjectIdentifier value_3_id = value_3.object_identifier;
 
   std::unique_ptr<Journal> journal1 = storage_->StartCommit(base_commit->Clone());
   journal1->Put("key", value_1.object_identifier, KeyPriority::EAGER);
@@ -2403,7 +2415,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // Create a merge.
   std::unique_ptr<Journal> journal3 =
       storage_->StartMergeCommit(commit1->Clone(), commit2->Clone());
-  journal3->Put("key", value_3.object_identifier, KeyPriority::EAGER);
+  journal3->Put("key", value_3_id, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit3;
   storage_->CommitJournal(std::move(journal3),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit3));
@@ -2434,6 +2446,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   commit2.reset();
   commit3.reset();
   ResetStorage();
+  RetrackIdentifier(&value_3_id);
 
   FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);
@@ -2479,7 +2492,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   Status commits_from_local_status;
   std::unique_ptr<Journal> journal =
       storage_->StartMergeCommit(std::move(heads[0]), std::move(heads[1]));
-  journal->Put("key", value_3.object_identifier, KeyPriority::EAGER);
+  journal->Put("key", value_3_id, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(
       std::move(journal),
