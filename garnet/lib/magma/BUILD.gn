@@ -17,8 +17,8 @@ package("magma-tools") {
   ]
   meta = [
     {
-      path = rebase_path("meta/magma-tools.cmx")
-      dest = "magma-tools.cmx"
+      path = rebase_path("meta/magma-info.cmx")
+      dest = "magma-info.cmx"
     },
   ]
 }
