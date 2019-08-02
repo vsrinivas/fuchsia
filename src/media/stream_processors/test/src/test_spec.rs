@@ -15,7 +15,7 @@ const FIRST_FORMAT_DETAILS_VERSION_ORDINAL: u64 = 1;
 pub trait StreamProcessorFactory {
     fn connect_to_stream_processor(
         &self,
-        stream: &ElementaryStream,
+        stream: &dyn ElementaryStream,
         format_details_version_ordinal: u64,
     ) -> BoxFuture<Result<StreamProcessorProxy>>;
 }
@@ -25,7 +25,7 @@ pub trait StreamProcessorFactory {
 pub struct TestSpec {
     pub cases: Vec<TestCase>,
     pub relation: CaseRelation,
-    pub stream_processor_factory: Rc<StreamProcessorFactory>,
+    pub stream_processor_factory: Rc<dyn StreamProcessorFactory>,
 }
 
 /// A case relation describes the temporal relationship between two test cases.
@@ -60,7 +60,7 @@ impl TestSpec {
 }
 
 async fn run_cases_serially(
-    stream_processor_factory: &StreamProcessorFactory,
+    stream_processor_factory: &dyn StreamProcessorFactory,
     cases: Vec<TestCase>,
 ) -> Result<()> {
     let stream_processor =
@@ -85,7 +85,7 @@ async fn run_cases_serially(
 }
 
 async fn run_cases_concurrently(
-    stream_processor_factory: &StreamProcessorFactory,
+    stream_processor_factory: &dyn StreamProcessorFactory,
     cases: Vec<TestCase>,
 ) -> Result<()> {
     let mut unordered = FuturesUnordered::new();

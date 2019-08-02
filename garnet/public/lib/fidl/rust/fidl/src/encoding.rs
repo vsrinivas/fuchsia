@@ -1781,8 +1781,8 @@ macro_rules! fidl_table {
             fn inline_size(&self) -> usize { 16 }
 
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
-                let members: &mut [(u64, Option<&mut $crate::encoding::Encodable>)] = &mut [$(
-                    ($ordinal, self.$member_name.as_mut().map(|x| x as &mut $crate::encoding::Encodable)),
+                let members: &mut [(u64, Option<&mut dyn $crate::encoding::Encodable>)] = &mut [$(
+                    ($ordinal, self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable)),
                 )*];
 
                 // Cut off the `None` elements at the tail of the table

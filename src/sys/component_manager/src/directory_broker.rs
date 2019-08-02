@@ -11,7 +11,7 @@ use {
     void::Void,
 };
 
-pub type RoutingFn = Box<FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send>;
+pub type RoutingFn = Box<dyn FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send>;
 
 // TODO(ZX-3606): move this into the pseudo dir fs crate.
 /// DirectoryBroker exists to hold a slot in a fuchsia_vfs_pseudo_fs directory and proxy open
@@ -64,7 +64,7 @@ impl DirectoryEntry for DirectoryBroker {
         &mut self,
         flags: u32,
         mode: u32,
-        path: &mut Iterator<Item = &str>,
+        path: &mut dyn Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     ) {
         let relative_path = path.collect::<Vec<&str>>().join("/");

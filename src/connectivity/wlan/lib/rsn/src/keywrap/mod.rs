@@ -13,10 +13,10 @@ pub trait Algorithm {
     fn unwrap(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error>;
 }
 
-pub fn keywrap_algorithm(akm: &Akm) -> Option<Box<Algorithm>> {
+pub fn keywrap_algorithm(akm: &Akm) -> Option<Box<dyn Algorithm>> {
     // IEEE 802.11-2016, 12.7.3, Table 12-8
     match akm.suite_type {
-        1...13 => Some(Box::new(NistAes)),
+        1..=13 => Some(Box::new(NistAes)),
         _ => None,
     }
 }

@@ -142,7 +142,7 @@ impl<'a> TryFrom<Frame<'a>> for Nv12Frame<'a> {
     }
 }
 
-fn packet_display_data<'a>(src: &'a OutputPacket) -> Result<Box<Iterator<Item = u8> + 'a>, Error> {
+fn packet_display_data<'a>(src: &'a OutputPacket) -> Result<Box<dyn Iterator<Item = u8> + 'a>, Error> {
     let format = src
         .format
         .format_details

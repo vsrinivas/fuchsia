@@ -19,7 +19,7 @@ use {
     },
 };
 
-pub type IoPacketType = Box<IoPacket + Send + Sync>;
+pub type IoPacketType = Box<dyn IoPacket + Send + Sync>;
 
 /// This struct maintains monotonically increasing clock time. Though these fields
 /// are u128, when writing to disk we write u64 nanos which is sufficient to track
@@ -125,7 +125,7 @@ pub trait IoPacket: IoPacketClone {
     fn set_error(&mut self, error: Error);
 
     /// Verify the completed IO packet
-    fn verify(&mut self, verify_io: &IoPacket) -> bool;
+    fn verify(&mut self, verify_io: &dyn IoPacket) -> bool;
 
     /// Returns pointer to mutable buffer
     fn buffer_mut(&mut self) -> &mut Vec<u8>;

@@ -72,7 +72,7 @@ where
     state: State,
 
     /// Called whenever the state is changed.
-    state_callback: Option<Box<StateCallback>>,
+    state_callback: Option<Box<dyn StateCallback>>,
 
     /// The list of apps used for update check.
     apps: Vec<App>,
@@ -93,7 +93,7 @@ pub enum State {
 pub trait StateCallback: FnMut(State) + 'static {}
 impl<T: FnMut(State) + 'static> StateCallback for T {}
 
-impl fmt::Debug for StateCallback {
+impl fmt::Debug for dyn StateCallback {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "StateCallback")
     }

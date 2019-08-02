@@ -66,7 +66,7 @@ impl Installer for StubInstaller {
     fn perform_install(
         &mut self,
         _install_plan: &StubPlan,
-        _observer: Option<&ProgressObserver>,
+        _observer: Option<&dyn ProgressObserver>,
     ) -> BoxFuture<Result<(), StubInstallErrors>> {
         if self.should_fail {
             future::ready(Err(StubInstallErrors::Failed)).boxed()

@@ -19,7 +19,7 @@ pub struct DecoderFactory;
 impl StreamProcessorFactory for DecoderFactory {
     fn connect_to_stream_processor(
         &self,
-        stream: &ElementaryStream,
+        stream: &dyn ElementaryStream,
         format_details_version_ordinal: u64,
     ) -> BoxFuture<Result<StreamProcessorProxy>> {
         let get_decoder = || {

@@ -49,7 +49,7 @@ pub struct Simple {
 }
 
 struct Inner {
-    entries: BTreeMap<String, Arc<DirectoryEntry>>,
+    entries: BTreeMap<String, Arc<dyn DirectoryEntry>>,
 
     watchers: Watchers,
 }
@@ -72,7 +72,7 @@ impl Simple {
     pub fn add_entry<Name>(
         self: Arc<Self>,
         name: Name,
-        entry: Arc<DirectoryEntry>,
+        entry: Arc<dyn DirectoryEntry>,
     ) -> Result<(), Status>
     where
         Name: Into<String>,
@@ -104,7 +104,7 @@ impl Simple {
     pub fn remove_entry<Name>(
         self: Arc<Self>,
         name: Name,
-    ) -> Result<Option<Arc<DirectoryEntry>>, Status>
+    ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>
     where
         Name: Into<String>,
     {

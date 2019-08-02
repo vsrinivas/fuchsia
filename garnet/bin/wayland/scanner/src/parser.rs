@@ -113,7 +113,7 @@ impl error::Error for ParseError {
         &self.msg
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         None
     }
 }

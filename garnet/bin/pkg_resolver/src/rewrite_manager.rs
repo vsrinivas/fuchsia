@@ -325,7 +325,7 @@ pub(crate) mod tests {
 
     pub(crate) fn make_temp_file<CB, E>(writer: CB) -> tempfile::TempPath
     where
-        CB: FnOnce(&mut io::Write) -> Result<(), E>,
+        CB: FnOnce(&mut dyn io::Write) -> Result<(), E>,
         E: Into<Error>,
     {
         let mut f = tempfile::NamedTempFile::new().unwrap();

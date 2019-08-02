@@ -27,7 +27,7 @@ pub trait SearchSuggestionsProvider: Send + Sync {
 /// and executing them when requested.
 pub struct SuggestionsManager {
     suggestions: HashMap<String, Suggestion>,
-    providers: Vec<Box<SearchSuggestionsProvider>>,
+    providers: Vec<Box<dyn SearchSuggestionsProvider>>,
     mod_manager: Arc<Mutex<ModManager>>,
 }
 
@@ -37,7 +37,7 @@ impl SuggestionsManager {
     }
 
     /// Registers a suggestion provider.
-    pub fn register_suggestions_provider(&mut self, provider: Box<SearchSuggestionsProvider>) {
+    pub fn register_suggestions_provider(&mut self, provider: Box<dyn SearchSuggestionsProvider>) {
         self.providers.push(provider);
     }
 

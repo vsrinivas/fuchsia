@@ -250,7 +250,7 @@ fn pick_operation_type(args: &GeneratorArgs) -> Vec<OperationType> {
 
 /// Based on the input args this returns a generator that can generate requested
 /// IO load.For now we only allow sequential io.
-fn pick_generator_type(args: &GeneratorArgs, target_id: u64) -> Box<Generator> {
+fn pick_generator_type(args: &GeneratorArgs, target_id: u64) -> Box<dyn Generator> {
     if !args.sequential {
         panic!("Only sequential io generator is implemented at the moment");
     }

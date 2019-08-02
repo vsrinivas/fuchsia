@@ -36,7 +36,7 @@ pub fn ecb_encryptor<X: PaddingProcessor + Send + 'static>(
     key_size: KeySize,
     key: &[u8],
     padding: X,
-) -> Box<Encryptor> {
+) -> Box<dyn Encryptor> {
     match key_size {
         KeySize::KeySize128 => {
             let aes_enc = aessafe::AesSafe128Encryptor::new(key);
@@ -60,7 +60,7 @@ pub fn ecb_decryptor<X: PaddingProcessor + Send + 'static>(
     key_size: KeySize,
     key: &[u8],
     padding: X,
-) -> Box<Decryptor> {
+) -> Box<dyn Decryptor> {
     match key_size {
         KeySize::KeySize128 => {
             let aes_dec = aessafe::AesSafe128Decryptor::new(key);

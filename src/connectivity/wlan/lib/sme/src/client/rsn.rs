@@ -17,7 +17,7 @@ use crate::{client::state::Protection, DeviceInfo};
 #[derive(Debug)]
 pub struct Rsna {
     pub negotiated_protection: NegotiatedProtection,
-    pub supplicant: Box<Supplicant>,
+    pub supplicant: Box<dyn Supplicant>,
 }
 
 impl PartialEq for Rsna {

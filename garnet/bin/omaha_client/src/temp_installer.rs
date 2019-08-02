@@ -58,7 +58,7 @@ impl Installer for FuchsiaInstaller {
     fn perform_install(
         &mut self,
         install_plan: &FuchsiaInstallPlan,
-        _observer: Option<&ProgressObserver>,
+        _observer: Option<&dyn ProgressObserver>,
     ) -> BoxFuture<Result<()>> {
         let url = install_plan.url.to_string();
         let initiator = match install_plan.install_source {

@@ -438,7 +438,7 @@ impl InfraBss {
     fn add_client(
         &mut self,
         addr: MacAddr,
-        auth: Option<Box<Authenticator>>,
+        auth: Option<Box<dyn Authenticator>>,
     ) -> Result<AssociationId, fidl_mlme::AssociateResultCodes> {
         self.client_map.add_client(addr, auth).map_err(|e| {
             warn!("unable to add user to client map: {}", e);

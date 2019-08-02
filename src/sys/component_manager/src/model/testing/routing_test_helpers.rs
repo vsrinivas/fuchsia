@@ -735,7 +735,7 @@ impl OutDir {
         self.memfs_proxy = Some(Arc::new(memfs.clone_root_handle()));
     }
     /// Returns a function that will host this outgoing directory on the given ServerEnd.
-    pub fn host_fn(&self) -> Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
+    pub fn host_fn(&self) -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
         let host_service = self.host_service;
         let memfs_proxy = self.memfs_proxy.clone();
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {

@@ -84,7 +84,7 @@ pub fn run_server_client_with_executor<GetClientRes>(
     exec: Executor,
     server: impl DirectoryEntry,
     get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
-    executor: impl FnOnce(&mut FnMut(bool) -> ()),
+    executor: impl FnOnce(&mut dyn FnMut(bool) -> ()),
 ) where
     GetClientRes: Future<Output = ()>,
 {
@@ -169,7 +169,7 @@ fn run_server_client_with_mode_and_executor_dyn<'a>(
 
 /// Holds arguments for a [`DirectoryEntry::open()`] call.
 pub type OpenRequestArgs<'path> =
-    (u32, u32, Box<Iterator<Item = &'path str>>, ServerEnd<DirectoryMarker>);
+    (u32, u32, Box<dyn Iterator<Item = &'path str>>, ServerEnd<DirectoryMarker>);
 
 /// The sender end of a channel to proxy open requests.
 pub type OpenRequestSender<'path> = mpsc::Sender<OpenRequestArgs<'path>>;

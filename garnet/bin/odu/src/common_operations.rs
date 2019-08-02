@@ -31,7 +31,7 @@ pub fn create_target(
     name: String,
     offset: Range<u64>,
     start: Instant,
-) -> Arc<Box<Target + Send + Sync>> {
+) -> Arc<Box<dyn Target + Send + Sync>> {
     match target_type {
         AvailableTargets::FileTarget => FileBlockingTarget::new(name, id, offset, start),
     }

@@ -80,7 +80,7 @@ impl Watchers {
     // method itself.
     pub fn add<Name>(
         &mut self,
-        names: &mut Iterator<Item = Name>,
+        names: &mut dyn Iterator<Item = Name>,
         mask: u32,
         channel: Channel,
     ) -> Result<(), WatchersAddError>
@@ -321,7 +321,7 @@ impl WatcherConnection {
     fn send_events<Name>(
         &self,
         event: u8,
-        names: &mut Iterator<Item = Name>,
+        names: &mut dyn Iterator<Item = Name>,
     ) -> Result<(), ConnectionSendError>
     where
         Name: AsRef<str>,
@@ -359,7 +359,7 @@ impl WatcherConnection {
         &self,
         mask: u32,
         event: u8,
-        names: &mut Iterator<Item = Name>,
+        names: &mut dyn Iterator<Item = Name>,
     ) -> Result<(), ConnectionSendError>
     where
         Name: AsRef<str>,
@@ -376,7 +376,7 @@ impl WatcherConnection {
     /// [`send_event_check_mask`] above, but with a predefined mask and event type.
     fn send_events_existing<Name>(
         &self,
-        names: &mut Iterator<Item = Name>,
+        names: &mut dyn Iterator<Item = Name>,
     ) -> Result<(), ConnectionSendError>
     where
         Name: AsRef<str>,

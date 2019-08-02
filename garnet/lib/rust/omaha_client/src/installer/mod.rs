@@ -40,7 +40,7 @@ pub trait Installer {
     fn perform_install(
         &mut self,
         install_plan: &Self::InstallPlan,
-        observer: Option<&ProgressObserver>,
+        observer: Option<&dyn ProgressObserver>,
     ) -> BoxFuture<Result<(), Self::Error>>;
 }
 

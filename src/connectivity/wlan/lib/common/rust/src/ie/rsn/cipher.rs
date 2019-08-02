@@ -85,8 +85,8 @@ impl Cipher {
 
         // IEEE 802.11-2016, 9.4.2.25.2, Table 9-132
         match self.suite_type {
-            1...5 | 8...10 => Some(true),
-            0 | 6 | 11...13 => Some(false),
+            1..=5 | 8..=10 => Some(true),
+            0 | 6 | 11..=13 => Some(false),
             _ => None,
         }
     }
@@ -96,8 +96,8 @@ impl Cipher {
 
         // IEEE 802.11-2016, 9.4.2.25.2, Table 9-132
         match self.suite_type {
-            0 | 2...4 | 8...10 => Some(true),
-            1 | 5 | 6 | 11...13 => Some(false),
+            0 | 2..=4 | 8..=10 => Some(true),
+            1 | 5 | 6 | 11..=13 => Some(false),
             _ => None,
         }
     }
@@ -107,8 +107,8 @@ impl Cipher {
 
         // IEEE 802.11-2016, 9.4.2.25.2, Table 9-132
         match self.suite_type {
-            6 | 11...13 => Some(true),
-            0 | 1...5 | 8...10 => Some(false),
+            6 | 11..=13 => Some(true),
+            0 | 1..=5 | 8..=10 => Some(false),
             _ => None,
         }
     }

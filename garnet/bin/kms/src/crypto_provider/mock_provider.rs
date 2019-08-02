@@ -43,7 +43,7 @@ impl CryptoProvider for MockProvider {
         &self,
         key_algorithm: AsymmetricKeyAlgorithm,
         key_name: &str,
-    ) -> Result<Box<AsymmetricProviderKey>, CryptoProviderError> {
+    ) -> Result<Box<dyn AsymmetricProviderKey>, CryptoProviderError> {
         *self.key_name.lock().unwrap() = Some(key_name.to_string());
         let result: &Result<Vec<u8>, CryptoProviderError> = &self.result.lock().unwrap();
         match result {
@@ -60,7 +60,7 @@ impl CryptoProvider for MockProvider {
         key_data: &[u8],
         key_algorithm: AsymmetricKeyAlgorithm,
         key_name: &str,
-    ) -> Result<Box<AsymmetricProviderKey>, CryptoProviderError> {
+    ) -> Result<Box<dyn AsymmetricProviderKey>, CryptoProviderError> {
         *self.key_name.lock().unwrap() = Some(key_name.to_string());
         *self.key_data.lock().unwrap() = Some(key_data.to_vec());
         let result: &Result<Vec<u8>, CryptoProviderError> = &self.result.lock().unwrap();
@@ -78,7 +78,7 @@ impl CryptoProvider for MockProvider {
         &self,
         key_data: &[u8],
         key_algorithm: AsymmetricKeyAlgorithm,
-    ) -> Result<Box<AsymmetricProviderKey>, CryptoProviderError> {
+    ) -> Result<Box<dyn AsymmetricProviderKey>, CryptoProviderError> {
         *self.key_data.lock().unwrap() = Some(key_data.to_vec());
         let result: &Result<Vec<u8>, CryptoProviderError> = &self.result.lock().unwrap();
         match result {
@@ -94,7 +94,7 @@ impl CryptoProvider for MockProvider {
     fn generate_sealing_key(
         &self,
         key_name: &str,
-    ) -> Result<Box<SealingProviderKey>, CryptoProviderError> {
+    ) -> Result<Box<dyn SealingProviderKey>, CryptoProviderError> {
         *self.key_name.lock().unwrap() = Some(key_name.to_string());
         let result: &Result<Vec<u8>, CryptoProviderError> = &self.result.lock().unwrap();
         match result {
@@ -109,7 +109,7 @@ impl CryptoProvider for MockProvider {
     fn parse_sealing_key(
         &self,
         key_data: &[u8],
-    ) -> Result<Box<SealingProviderKey>, CryptoProviderError> {
+    ) -> Result<Box<dyn SealingProviderKey>, CryptoProviderError> {
         *self.key_data.lock().unwrap() = Some(key_data.to_vec());
         let result: &Result<Vec<u8>, CryptoProviderError> = &self.result.lock().unwrap();
         match result {

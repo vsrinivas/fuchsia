@@ -66,7 +66,7 @@ pub fn run_server_client_with_executor<GetClientRes>(
     exec: Executor,
     server: impl DirectoryEntry,
     get_client: impl FnOnce(FileProxy) -> GetClientRes,
-    executor: impl FnOnce(&mut FnMut(bool) -> ()),
+    executor: impl FnOnce(&mut dyn FnMut(bool) -> ()),
 ) where
     GetClientRes: Future<Output = ()>,
 {
@@ -198,7 +198,7 @@ pub fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
     exec: Executor,
     server: impl DirectoryEntry,
     get_client: impl FnOnce(OpenRequestSender) -> GetClientRes,
-    executor: impl FnOnce(&mut FnMut(bool)),
+    executor: impl FnOnce(&mut dyn FnMut(bool)),
 ) where
     GetClientRes: Future<Output = ()>,
 {

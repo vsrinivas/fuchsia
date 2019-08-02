@@ -309,7 +309,7 @@ impl FontService {
         &'a self,
         flags: fonts_exp::ListTypefacesFlags,
         request: &fonts_exp::ListTypefacesRequest,
-    ) -> Box<Iterator<Item = &FontFamily> + 'a> {
+    ) -> Box<dyn Iterator<Item = &FontFamily> + 'a> {
         match request.family.as_ref() {
             Some(fonts::FamilyName { name }) => {
                 if flags.contains(fonts_exp::ListTypefacesFlags::MatchFamilyNameSubstring) {

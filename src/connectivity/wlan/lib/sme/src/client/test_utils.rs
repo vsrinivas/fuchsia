@@ -176,7 +176,7 @@ pub fn mock_supplicant() -> (MockSupplicant, MockSupplicantController) {
     (supplicant, mock)
 }
 
-type Cb = Fn() + Send + 'static;
+type Cb = dyn Fn() + Send + 'static;
 
 pub struct MockSupplicant {
     started: Arc<AtomicBool>,

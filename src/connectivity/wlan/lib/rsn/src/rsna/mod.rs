@@ -406,7 +406,7 @@ pub fn derive_key_descriptor_version(
         },
         // Interestingly, IEEE 802.11 does not specify any pairwise- or group cipher
         // requirements for these AKMs.
-        3...6 => 3,
+        3..=6 => 3,
         _ => 0,
     }
 }

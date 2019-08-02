@@ -18,8 +18,8 @@ pub trait Controllable<'entries>: DirectoryEntry {
     fn add_boxed_entry(
         &mut self,
         name: &str,
-        entry: Box<DirectoryEntry + 'entries>,
-    ) -> Result<(), (Status, Box<DirectoryEntry + 'entries>)>;
+        entry: Box<dyn DirectoryEntry + 'entries>,
+    ) -> Result<(), (Status, Box<dyn DirectoryEntry + 'entries>)>;
 
     /// Removes a child entry from this directory.  In case an entry with the matching name was
     /// found, it will be returned to the caller.
@@ -30,5 +30,5 @@ pub trait Controllable<'entries>: DirectoryEntry {
     fn remove_entry(
         &mut self,
         name: &str,
-    ) -> Result<Option<Box<DirectoryEntry + 'entries>>, Status>;
+    ) -> Result<Option<Box<dyn DirectoryEntry + 'entries>>, Status>;
 }

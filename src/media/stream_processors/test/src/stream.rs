@@ -45,7 +45,7 @@ pub struct Stream<'a> {
     pub output_buffer_set: Option<BufferSet>,
     pub current_output_format: Option<Rc<ValidStreamOutputFormat>>,
     pub stream_processor: &'a mut StreamProcessorProxy,
-    pub stream: &'a ElementaryStream,
+    pub stream: &'a dyn ElementaryStream,
     pub options: StreamOptions,
     pub output: Vec<Output>,
 }

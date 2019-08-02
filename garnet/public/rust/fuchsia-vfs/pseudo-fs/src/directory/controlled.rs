@@ -55,7 +55,7 @@ pub enum AddEntryResError<'entries> {
     /// Controlled directory has been destroyed.
     Terminated,
     /// [`Controlled::add_boxed_entry`] has returned an error.
-    AddFailed((Status, Box<DirectoryEntry + 'entries>)),
+    AddFailed((Status, Box<dyn DirectoryEntry + 'entries>)),
 }
 
 impl<'entries> fmt::Debug for AddEntryResError<'entries> {
@@ -88,8 +88,8 @@ pub enum RemoveEntryResError {
     RemoveFailed(Status),
 }
 
-type AddEntryResponse<'entries> = Result<(), (Status, Box<DirectoryEntry + 'entries>)>;
-type RemoveEntryResponse<'entries> = Result<Option<Box<DirectoryEntry + 'entries>>, Status>;
+type AddEntryResponse<'entries> = Result<(), (Status, Box<dyn DirectoryEntry + 'entries>)>;
+type RemoveEntryResponse<'entries> = Result<Option<Box<dyn DirectoryEntry + 'entries>>, Status>;
 
 enum Command<'entries> {
     Open {
@@ -100,11 +100,11 @@ enum Command<'entries> {
     },
     AddEntry {
         name: String,
-        entry: Box<DirectoryEntry + 'entries>,
+        entry: Box<dyn DirectoryEntry + 'entries>,
     },
     AddEntryAndRespond {
         name: String,
-        entry: Box<DirectoryEntry + 'entries>,
+        entry: Box<dyn DirectoryEntry + 'entries>,
         res_sender: oneshot::Sender<AddEntryResponse<'entries>>,
     },
     RemoveEntry {
@@ -212,7 +212,7 @@ impl<'entries> Controller<'entries> {
     pub fn add_boxed_entry<Name>(
         &self,
         name: Name,
-        entry: Box<DirectoryEntry + 'entries>,
+        entry: Box<dyn DirectoryEntry + 'entries>,
     ) -> impl Future<Output = Result<(), AddEntryError>> + 'entries
     where
         Name: Into<String>,
@@ -262,7 +262,7 @@ impl<'entries> Controller<'entries> {
     pub fn add_boxed_entry_res<Name>(
         &self,
         name: Name,
-        entry: Box<DirectoryEntry + 'entries>,
+        entry: Box<dyn DirectoryEntry + 'entries>,
     ) -> impl Future<Output = Result<(), AddEntryResError<'entries>>> + 'entries
     where
         Name: Into<String>,
@@ -318,7 +318,7 @@ impl<'entries> Controller<'entries> {
     pub fn remove_entry_res<Name>(
         &self,
         name: Name,
-    ) -> impl Future<Output = Result<Option<Box<DirectoryEntry + 'entries>>, RemoveEntryResError>>
+    ) -> impl Future<Output = Result<Option<Box<dyn DirectoryEntry + 'entries>>, RemoveEntryResError>>
                  + 'entries
     where
         Name: Into<String>,
@@ -353,7 +353,7 @@ pub struct Controlled<'entries> {
     controller: mpsc::Receiver<Command<'entries>>,
 
     /// Wrapped entry.
-    controllable: Box<Controllable<'entries> + 'entries>,
+    controllable: Box<dyn Controllable<'entries> + 'entries>,
 }
 
 /// Given a directory that can be controlled, create a "controller" for it.  Controller allows
@@ -384,7 +384,7 @@ impl<'entries> Controlled<'entries> {
         &mut self,
         name: &str,
         entry: DE,
-    ) -> Result<(), (Status, Box<DirectoryEntry + 'entries>)>
+    ) -> Result<(), (Status, Box<dyn DirectoryEntry + 'entries>)>
     where
         DE: DirectoryEntry + 'entries,
     {
@@ -400,7 +400,7 @@ impl<'entries> Controlled<'entries> {
     pub fn remove_entry(
         &mut self,
         name: &str,
-    ) -> Result<Option<Box<DirectoryEntry + 'entries>>, Status> {
+    ) -> Result<Option<Box<dyn DirectoryEntry + 'entries>>, Status> {
         self.controllable.remove_entry(name)
     }
 
@@ -447,7 +447,7 @@ impl<'entries> DirectoryEntry for Controlled<'entries> {
         &mut self,
         flags: u32,
         mode: u32,
-        path: &mut Iterator<Item = &str>,
+        path: &mut dyn Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     ) {
         self.controllable.open(flags, mode, path, server_end);

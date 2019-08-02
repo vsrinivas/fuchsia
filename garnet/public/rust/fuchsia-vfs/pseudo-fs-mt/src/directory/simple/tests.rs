@@ -1978,7 +1978,7 @@ fn watch_addition_with_two_scopes() {
     run_client(exec, || {
         async move {
             async fn open_with_scope(
-                server: Arc<DirectoryEntry>,
+                server: Arc<dyn DirectoryEntry>,
                 scope: ExecutionScope,
             ) -> DirectoryProxy {
                 let (proxy, server_end) = create_proxy::<DirectoryMarker>()

@@ -1198,7 +1198,7 @@ fn parse_color(attrs: &[i64], i: &mut usize) -> Option<Color> {
                 *i += 2;
                 let idx = attrs[*i];
                 match idx {
-                    0...255 => Some(Color::Indexed(idx as u8)),
+                    0..=255 => Some(Color::Indexed(idx as u8)),
                     _ => {
                         warn!("Invalid color index: {}", idx);
                         None

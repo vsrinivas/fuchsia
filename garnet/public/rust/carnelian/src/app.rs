@@ -232,7 +232,7 @@ impl App {
 
     /// Starts an application based on Carnelian. The `assistant` parameter will
     /// be used to create new views when asked to do so by the Fuchsia view system.
-    pub fn run(assistant: Box<AppAssistant>) -> Result<(), Error> {
+    pub fn run(assistant: Box<dyn AppAssistant>) -> Result<(), Error> {
         let executor = fasync::Executor::new().context("Error creating executor")?;
         Self::run_with_executor(assistant, executor)
     }
@@ -280,7 +280,7 @@ impl App {
     /// be used to create a single new view for testing. The test will run until the
     /// first update call, or until a five second timeout. The Result returned is the
     /// result of the test, an Ok(()) result means the test passed.
-    pub fn test(assistant: Box<AppAssistant>) -> Result<(), Error> {
+    pub fn test(assistant: Box<dyn AppAssistant>) -> Result<(), Error> {
         let mut executor = fasync::Executor::new().context("Error creating executor")?;
         let presenter = connect_to_service::<PresenterMarker>()?;
         let (create_view_sender, create_view_receiver) = oneshot::channel::<Result<(), Error>>();

@@ -79,7 +79,7 @@ where
     /// use.
     scope: ExecutionScope,
 
-    directory: Arc<DirectoryEntryContainer<TraversalPosition>>,
+    directory: Arc<dyn DirectoryEntryContainer<TraversalPosition>>,
 
     requests: DirectoryRequestStream,
 
@@ -118,7 +118,7 @@ where
     /// an error, sends an appropriate `OnOpen` event (if requested) and returns `None`.
     pub fn create_connection(
         scope: ExecutionScope,
-        directory: Arc<DirectoryEntryContainer<TraversalPosition>>,
+        directory: Arc<dyn DirectoryEntryContainer<TraversalPosition>>,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
@@ -332,7 +332,7 @@ where
         responder: R,
     ) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
     {
         let res = {
             let directory = self.directory.clone();

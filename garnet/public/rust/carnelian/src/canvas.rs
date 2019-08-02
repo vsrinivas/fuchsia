@@ -251,7 +251,7 @@ mod update_area_tests {
     use itertools::assert_equal;
 
     struct UpdateAreaExpectedIter {
-        expected: Box<Iterator<Item = (IntCoord, Range<IntCoord>)>>,
+        expected: Box<dyn Iterator<Item = (IntCoord, Range<IntCoord>)>>,
     }
 
     impl UpdateAreaExpectedIter {

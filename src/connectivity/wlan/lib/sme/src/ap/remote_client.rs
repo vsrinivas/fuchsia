@@ -27,12 +27,12 @@ use crate::{
 pub struct RemoteClient {
     pub addr: MacAddr,
     pub aid: AssociationId,
-    pub authenticator: Option<Box<Authenticator>>,
+    pub authenticator: Option<Box<dyn Authenticator>>,
     key_exchange_timeout: Option<EventId>,
 }
 
 impl RemoteClient {
-    fn new(addr: MacAddr, aid: AssociationId, authenticator: Option<Box<Authenticator>>) -> Self {
+    fn new(addr: MacAddr, aid: AssociationId, authenticator: Option<Box<dyn Authenticator>>) -> Self {
         RemoteClient { addr, aid, authenticator, key_exchange_timeout: None }
     }
 
@@ -177,7 +177,7 @@ impl Map {
     pub fn add_client(
         &mut self,
         addr: MacAddr,
-        authenticator: Option<Box<Authenticator>>,
+        authenticator: Option<Box<dyn Authenticator>>,
     ) -> Result<AssociationId, failure::Error> {
         ensure!(self.get_client(&addr).is_none(), "client already exists in map");
 

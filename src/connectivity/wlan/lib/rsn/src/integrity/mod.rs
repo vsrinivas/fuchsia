@@ -13,12 +13,12 @@ pub trait Algorithm {
     fn compute(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error>;
 }
 
-pub fn integrity_algorithm(akm: &Akm) -> Option<Box<Algorithm>> {
+pub fn integrity_algorithm(akm: &Akm) -> Option<Box<dyn Algorithm>> {
     // IEEE 802.11-2016, 12.7.3, Table 12-8
     match akm.suite_type {
         1 | 2 => Some(Box::new(HmacSha1::new())),
         // TODO(hahnr): Add remaining integrity algorithms.
-        3...13 => None,
+        3..=13 => None,
         _ => None,
     }
 }

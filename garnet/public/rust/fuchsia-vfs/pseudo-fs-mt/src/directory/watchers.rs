@@ -26,7 +26,7 @@ impl Watchers {
     pub fn add<TraversalPosition>(
         &mut self,
         scope: ExecutionScope,
-        directory: Arc<DirectoryEntryContainer<TraversalPosition>>,
+        directory: Arc<dyn DirectoryEntryContainer<TraversalPosition>>,
         names: Vec<String>,
         mask: u32,
         channel: Channel,

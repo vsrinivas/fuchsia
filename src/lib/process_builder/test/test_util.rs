@@ -45,7 +45,7 @@ async fn run_util_server(mut stream: UtilRequestStream) -> Result<(), Error> {
     Ok(())
 }
 
-fn visit(dir: &std::path::Path, cb: &mut FnMut(&fs::DirEntry)) -> Result<(), Error> {
+fn visit(dir: &std::path::Path, cb: &mut dyn FnMut(&fs::DirEntry)) -> Result<(), Error> {
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;

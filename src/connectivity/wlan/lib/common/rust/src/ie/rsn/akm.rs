@@ -70,7 +70,7 @@ impl Akm {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1...11 => Some(16),
+            1..=11 => Some(16),
             12 | 13 => Some(24),
             _ => None,
         }
@@ -81,7 +81,7 @@ impl Akm {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1...11 => Some(16),
+            1..=11 => Some(16),
             12 | 13 => Some(24),
             _ => None,
         }
@@ -92,7 +92,7 @@ impl Akm {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1...11 => Some(16),
+            1..=11 => Some(16),
             12 | 13 => Some(32),
             _ => None,
         }
@@ -103,7 +103,7 @@ impl Akm {
 
         // IEEE 802.11-2016, 12.7.1.3
         match self.suite_type {
-            1...11 | 13 => Some(32),
+            1..=11 | 13 => Some(32),
             12 => Some(48),
             _ => None,
         }
@@ -115,7 +115,7 @@ impl Akm {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1...11 => Some(128),
+            1..=11 => Some(128),
             12 | 13 => Some(192),
             _ => None,
         }
@@ -127,7 +127,7 @@ impl Akm {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1...11 => Some(128),
+            1..=11 => Some(128),
             12 | 13 => Some(256),
             _ => None,
         }
@@ -139,7 +139,7 @@ impl Akm {
 
         // IEEE 802.11-2016, 12.7.1.3
         match self.suite_type {
-            1...11 | 13 => Some(256),
+            1..=11 | 13 => Some(256),
             12 => Some(384),
             _ => None,
         }

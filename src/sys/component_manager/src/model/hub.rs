@@ -469,7 +469,7 @@ mod tests {
     };
 
     /// Hosts an out directory with a 'foo' file.
-    fn foo_out_dir_fn() -> Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
+    fn foo_out_dir_fn() -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
             let mut out_dir = directory::simple::empty();
             // Add a 'foo' file.
@@ -502,7 +502,7 @@ mod tests {
     }
 
     /// Hosts a runtime directory with a 'bleep' file.
-    fn bleep_runtime_dir_fn() -> Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
+    fn bleep_runtime_dir_fn() -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
             let mut pseudo_dir = directory::simple::empty();
             // Add a 'bleep' file.
@@ -523,7 +523,7 @@ mod tests {
         })
     }
 
-    type DirectoryCallback = Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>;
+    type DirectoryCallback = Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>;
 
     struct ComponentDescriptor {
         pub name: String,

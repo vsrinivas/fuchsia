@@ -117,7 +117,7 @@ pub trait DirectoryEntry: Future<Output = Void> + FusedFuture + Unpin + Send {
         &mut self,
         flags: u32,
         mode: u32,
-        path: &mut Iterator<Item = &str>,
+        path: &mut dyn Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     );
 

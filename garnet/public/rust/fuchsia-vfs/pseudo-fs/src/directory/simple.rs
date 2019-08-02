@@ -72,7 +72,7 @@ pub struct Simple<'entries> {
     /// part.
     protection_attributes: u32,
 
-    entries: BTreeMap<String, Box<DirectoryEntry + 'entries>>,
+    entries: BTreeMap<String, Box<dyn DirectoryEntry + 'entries>>,
 
     connections: FuturesUnordered<StreamFuture<SimpleDirectoryConnection>>,
 
@@ -111,7 +111,7 @@ impl<'entries> Simple<'entries> {
         &mut self,
         name: &str,
         entry: DE,
-    ) -> Result<(), (Status, Box<DirectoryEntry + 'entries>)>
+    ) -> Result<(), (Status, Box<dyn DirectoryEntry + 'entries>)>
     where
         DE: DirectoryEntry + 'entries,
     {
@@ -122,7 +122,7 @@ impl<'entries> Simple<'entries> {
         &mut self,
         name: &str,
         entry: Box<dyn DirectoryEntry + 'entries>,
-    ) -> Result<(), (Status, Box<DirectoryEntry + 'entries>)> {
+    ) -> Result<(), (Status, Box<dyn DirectoryEntry + 'entries>)> {
         assert_eq_size!(u64, usize);
         if name.len() as u64 >= MAX_FILENAME {
             return Err((Status::INVALID_ARGS, entry));
@@ -318,7 +318,7 @@ impl<'entries> Simple<'entries> {
         responder: R,
     ) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
     {
         let mut buf = Vec::new();
         let mut fit_one = false;
@@ -453,7 +453,7 @@ impl<'entries> DirectoryEntry for Simple<'entries> {
         &mut self,
         flags: u32,
         mode: u32,
-        path: &mut Iterator<Item = &str>,
+        path: &mut dyn Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     ) {
         let name = match path.next() {
@@ -511,8 +511,8 @@ impl<'entries> Controllable<'entries> for Simple<'entries> {
     fn add_boxed_entry(
         &mut self,
         name: &str,
-        entry: Box<DirectoryEntry + 'entries>,
-    ) -> Result<(), (Status, Box<DirectoryEntry + 'entries>)> {
+        entry: Box<dyn DirectoryEntry + 'entries>,
+    ) -> Result<(), (Status, Box<dyn DirectoryEntry + 'entries>)> {
         (self as &mut Simple).add_boxed_entry(name, entry)
     }
 
@@ -525,7 +525,7 @@ impl<'entries> Controllable<'entries> for Simple<'entries> {
     fn remove_entry(
         &mut self,
         name: &str,
-    ) -> Result<Option<Box<DirectoryEntry + 'entries>>, Status> {
+    ) -> Result<Option<Box<dyn DirectoryEntry + 'entries>>, Status> {
         assert_eq_size!(u64, usize);
         if name.len() as u64 >= MAX_FILENAME {
             return Err(Status::INVALID_ARGS);

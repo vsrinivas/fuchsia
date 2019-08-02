@@ -97,10 +97,10 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
 {
     lazy_attr_with_watchers(
         DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES,
@@ -124,10 +124,10 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
 {
     lazy_attr_with_watchers(
@@ -152,10 +152,10 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
 {
     lazy_attr_with_watchers(
         protection_attributes,
@@ -185,10 +185,10 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
 {
     Lazy {
@@ -296,10 +296,10 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
 {
     /// MODE_PROTECTION_MASK attributes returned by this directory through io.fidl:Node::GetAttr.
@@ -327,7 +327,7 @@ where
     get_entry: GetEntry,
 
     /// Entries that have active connections to them.
-    live_entries: Vec<Box<DirectoryEntry + 'entries>>,
+    live_entries: Vec<Box<dyn DirectoryEntry + 'entries>>,
 
     connections: FuturesUnordered<StreamFuture<DirectoryConnection<TraversalPosition>>>,
 
@@ -362,10 +362,10 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
 {
     fn add_connection(&mut self, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>) {
@@ -533,7 +533,7 @@ where
         responder: R,
     ) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
     {
         let mut buf = Vec::new();
         let mut fit_one = false;
@@ -759,17 +759,17 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
 {
     fn open(
         &mut self,
         flags: u32,
         mode: u32,
-        path: &mut Iterator<Item = &str>,
+        path: &mut dyn Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     ) {
         let name = match path.next() {
@@ -830,10 +830,10 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
 {
 }
@@ -844,10 +844,10 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
 {
     type Output = Void;
@@ -874,10 +874,10 @@ where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
             TraversalPosition,
-            &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
         ) -> (TraversalPosition, Result<(), Status>)
         + Send,
-    GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
+    GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
 {
     fn is_terminated(&self) -> bool {
@@ -950,7 +950,7 @@ mod tests {
         mut entries: Vec<(u8, &'static str)>,
     ) -> impl FnMut(
         AlphabeticalTraversal,
-        &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
     ) -> (AlphabeticalTraversal, Result<(), Status>) {
         use AlphabeticalTraversal::{Dot, End, Name, Start};
 
@@ -966,7 +966,7 @@ mod tests {
 
         let dot_entry_info = EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY);
 
-        move |p, sink: &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>| {
+        move |p, sink: &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>| {
             let mut i = match entries.binary_search_by(|(candidate_pos, _)| candidate_pos.cmp(&p)) {
                 Ok(i) => i + 1,
                 Err(i) => i,
@@ -1115,7 +1115,7 @@ mod tests {
         // Explicit type here is necessary, as rustc seems to be missing the point that
         // `PseudoFile` returned by the `read_only` call implements `DirectoryEntry`.  Yet with an
         // explicit type everything works.  It would be nice to understand why is this happening.
-        let get_entry: &mut (FnMut(&str) -> Result<Box<DirectoryEntry>, Status> + Send) =
+        let get_entry: &mut (dyn FnMut(&str) -> Result<Box<dyn DirectoryEntry>, Status> + Send) =
             &mut |name: &str| {
                 let name = name.to_string();
                 Ok(Box::new(read_only(move || {
@@ -1146,7 +1146,7 @@ mod tests {
         // Explicit type here is necessary, as rustc seems to be missing the point that
         // `PseudoFile` returned by the `read_only` call implements `DirectoryEntry`.  Yet with an
         // explicit type everything works.  It would be nice to understand why is this happening.
-        let get_entry: &mut (FnMut(&str) -> Result<Box<DirectoryEntry>, Status> + Send) =
+        let get_entry: &mut (dyn FnMut(&str) -> Result<Box<dyn DirectoryEntry>, Status> + Send) =
             &mut |name: &str| match name {
                 "etc" => Ok(Box::new(pseudo_directory! {
                     "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
@@ -1219,7 +1219,7 @@ mod tests {
                 Two,
             };
             let mut stage = Stage::One;
-            move |p, sink: &mut FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>| {
+            move |p, sink: &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>| {
                 match stage {
                     Stage::One => {
                         let (p, res) = listing1(p, sink);
@@ -1280,7 +1280,7 @@ mod tests {
         // Explicit type here is necessary, as rustc seems to be missing the point that
         // `PseudoFile` returned by the `read_only` call implements `DirectoryEntry`.  Yet with an
         // explicit type everything works.  It would be nice to understand why is this happening.
-        let get_entry: &mut (FnMut(&str) -> Result<Box<DirectoryEntry>, Status> + Send) = {
+        let get_entry: &mut (dyn FnMut(&str) -> Result<Box<dyn DirectoryEntry>, Status> + Send) = {
             let mut count = 0;
 
             &mut move |name: &str| match name {

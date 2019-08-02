@@ -17,7 +17,7 @@ use crate::{CharCollection, MultiCharRange};
 macro_rules! impl_for_range_inclusive_int_type {
     ($($t:ty),*) => {$(
         impl MultiCharRange for RangeInclusive<$t> {
-            fn iter_ranges(&self) -> Box<Iterator<Item=CharRange>> {
+            fn iter_ranges(&self) -> Box<dyn Iterator<Item=CharRange>> {
                 Box::new(iter::once(to_char_range!(self)))
             }
 
@@ -38,7 +38,7 @@ macro_rules! to_char_range {
 }
 
 impl MultiCharRange for char {
-    fn iter_ranges(&self) -> Box<Iterator<Item = CharRange>> {
+    fn iter_ranges(&self) -> Box<dyn Iterator<Item = CharRange>> {
         Box::new(std::iter::once(CharRange::closed(*self, *self)))
     }
 
@@ -48,7 +48,7 @@ impl MultiCharRange for char {
 }
 
 impl MultiCharRange for CharRange {
-    fn iter_ranges(&self) -> Box<Iterator<Item = CharRange>> {
+    fn iter_ranges(&self) -> Box<dyn Iterator<Item = CharRange>> {
         Box::new(iter::once(self.clone()))
     }
 
@@ -58,7 +58,7 @@ impl MultiCharRange for CharRange {
 }
 
 impl MultiCharRange for RangeInclusive<char> {
-    fn iter_ranges(&self) -> Box<Iterator<Item = CharRange>> {
+    fn iter_ranges(&self) -> Box<dyn Iterator<Item = CharRange>> {
         Box::new(iter::once(CharRange::closed(*self.start(), *self.end())))
     }
 
@@ -70,7 +70,7 @@ impl MultiCharRange for RangeInclusive<char> {
 impl_for_range_inclusive_int_type!(u8, i8, u32, i32);
 
 impl MultiCharRange for UnicodeBlockId {
-    fn iter_ranges(&self) -> Box<Iterator<Item = CharRange>> {
+    fn iter_ranges(&self) -> Box<dyn Iterator<Item = CharRange>> {
         self.block().iter_ranges()
     }
 
@@ -80,7 +80,7 @@ impl MultiCharRange for UnicodeBlockId {
 }
 
 impl MultiCharRange for Block {
-    fn iter_ranges<'a>(&'a self) -> Box<Iterator<Item = CharRange> + 'a> {
+    fn iter_ranges<'a>(&'a self) -> Box<dyn Iterator<Item = CharRange> + 'a> {
         Box::new(self.range.iter_ranges())
     }
 

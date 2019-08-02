@@ -41,7 +41,7 @@ use {
 /// [`run_client()`], and [`run_client_with_executor()`].
 pub fn run_server_client<GetClientRes>(
     flags: u32,
-    server: Arc<DirectoryEntry>,
+    server: Arc<dyn DirectoryEntry>,
     get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
 ) where
     GetClientRes: Future<Output = ()>,
@@ -71,7 +71,7 @@ where
 pub fn run_server_client_with_mode<GetClientRes>(
     flags: u32,
     mode: u32,
-    server: Arc<DirectoryEntry>,
+    server: Arc<dyn DirectoryEntry>,
     get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
 ) where
     GetClientRes: Future<Output = ()>,
@@ -95,9 +95,9 @@ pub fn run_server_client_with_mode<GetClientRes>(
 pub fn run_server_client_with_executor<GetClientRes>(
     flags: u32,
     exec: Executor,
-    server: Arc<DirectoryEntry>,
+    server: Arc<dyn DirectoryEntry>,
     get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
-    coordinator: impl FnOnce(&mut FnMut(bool) -> ()),
+    coordinator: impl FnOnce(&mut dyn FnMut(bool) -> ()),
 ) where
     GetClientRes: Future<Output = ()>,
 {
@@ -110,9 +110,9 @@ pub fn run_server_client_with_mode_and_executor<GetClientRes>(
     flags: u32,
     mode: u32,
     exec: Executor,
-    server: Arc<DirectoryEntry>,
+    server: Arc<dyn DirectoryEntry>,
     get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
-    coordinator: impl FnOnce(&mut FnMut(bool) -> ()),
+    coordinator: impl FnOnce(&mut dyn FnMut(bool) -> ()),
 ) where
     GetClientRes: Future<Output = ()>,
 {
@@ -132,9 +132,9 @@ pub fn run_server_client_with_mode_and_executor_dyn<'a>(
     flags: u32,
     mode: u32,
     mut exec: Executor,
-    server: Arc<DirectoryEntry>,
+    server: Arc<dyn DirectoryEntry>,
     get_client: Box<dyn FnOnce(DirectoryProxy) -> Pin<Box<dyn Future<Output = ()> + 'a>> + 'a>,
-    coordinator: Box<dyn FnOnce(&mut FnMut(bool) -> ()) + 'a>,
+    coordinator: Box<dyn FnOnce(&mut dyn FnMut(bool) -> ()) + 'a>,
 ) {
     let (client_proxy, server_end) =
         create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
@@ -172,7 +172,7 @@ pub fn run_server_client_with_mode_and_executor_dyn<'a>(
 pub fn run_client_with_executor<GetClientRes>(
     exec: Executor,
     get_client: impl FnOnce() -> GetClientRes,
-    coordinator: impl FnOnce(&mut FnMut(bool) -> ()),
+    coordinator: impl FnOnce(&mut dyn FnMut(bool) -> ()),
 ) where
     GetClientRes: Future<Output = ()>,
 {
@@ -182,7 +182,7 @@ pub fn run_client_with_executor<GetClientRes>(
 pub fn run_client_with_executor_dyn<'a>(
     mut exec: Executor,
     get_client: Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + 'a>> + 'a>,
-    coordinator: Box<dyn FnOnce(&mut FnMut(bool) -> ()) + 'a>,
+    coordinator: Box<dyn FnOnce(&mut dyn FnMut(bool) -> ()) + 'a>,
 ) {
     let mut client = get_client();
 

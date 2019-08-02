@@ -5,7 +5,7 @@
 use std::any::Any;
 
 /// Message type
-pub type Message = Box<Any>;
+pub type Message = Box<dyn Any>;
 
 /// Make a message
 pub fn make_message<A: Any>(message_contents: A) -> Message {

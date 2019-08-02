@@ -43,7 +43,7 @@ pub struct TokenManager<T: AuthProviderSupplier> {
     /// A cache of proxies for previously used connections to AuthProviders.
     auth_providers: Mutex<HashMap<String, Arc<AuthProviderProxy>>>,
     /// A persistent store of long term credentials.
-    token_store: Mutex<Box<AuthDb + Send + Sync>>,
+    token_store: Mutex<Box<dyn AuthDb + Send + Sync>>,
     /// An in-memory cache of recently used tokens.
     token_cache: Mutex<TokenCache>,
     /// Collection of tasks that are using this instance.

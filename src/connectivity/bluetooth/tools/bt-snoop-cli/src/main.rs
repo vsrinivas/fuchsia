@@ -166,9 +166,9 @@ fn main_res() -> Result<(), Error> {
     let mut out = match output {
         Some(ref s) => {
             let path = Path::new(s);
-            Box::new(File::create(&path).unwrap()) as Box<io::Write>
+            Box::new(File::create(&path).unwrap()) as Box<dyn io::Write>
         }
-        None => Box::new(io::stdout()) as Box<io::Write>,
+        None => Box::new(io::stdout()) as Box<dyn io::Write>,
     };
 
     // create and run the main future

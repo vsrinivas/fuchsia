@@ -18,12 +18,12 @@ use {
 #[derive(Clone)]
 pub struct SequentialSender {
     /// The sender which is used to send futures for execution.
-    sender: UnboundedSender<Pin<Box<Future<Output = ()>>>>,
+    sender: UnboundedSender<Pin<Box<dyn Future<Output = ()>>>>,
 }
 
 /// The result type for a call to `SequentialSender.send`. The `TrySendError` will contain the
 /// future which failed to be sent on error.
-pub type SendResult = Result<(), TrySendError<Pin<Box<Future<Output = ()>>>>>;
+pub type SendResult = Result<(), TrySendError<Pin<Box<dyn Future<Output = ()>>>>>;
 
 impl SequentialSender {
     /// Creates a new `SequentialSender` and a `Future` which drives the execution of sent futures.

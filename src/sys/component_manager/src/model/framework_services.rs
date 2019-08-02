@@ -57,7 +57,7 @@ impl FrameworkServiceError {
     }
 }
 
-impl FrameworkServiceHost {
+impl dyn FrameworkServiceHost {
     /// Serve the framework_services service denoted by `path` over `server_chan`.
     pub async fn serve<'a>(
         framework_services: Arc<dyn FrameworkServiceHost>,

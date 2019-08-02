@@ -130,7 +130,7 @@ async fn get_network_time_backstop(
     config.root_store.add_server_trust_anchors(&webpki_roots_fuchsia::TLS_SERVER_ROOTS);
     config
         .dangerous()
-        .set_certificate_verifier(Arc::clone(&verifier) as Arc<rustls::ServerCertVerifier>);
+        .set_certificate_verifier(Arc::clone(&verifier) as Arc<dyn rustls::ServerCertVerifier>);
 
     let client = fuchsia_hyper::new_https_client_dangerous(config);
 

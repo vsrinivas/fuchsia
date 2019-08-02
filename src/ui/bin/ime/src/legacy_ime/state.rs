@@ -25,7 +25,7 @@ pub struct ImeState {
     pub text_state: uii::TextInputState,
 
     /// A handle to call methods on the text field.
-    pub client: Box<uii::InputMethodEditorClientProxyInterface>,
+    pub client: Box<dyn uii::InputMethodEditorClientProxyInterface>,
 
     pub keyboard_type: uii::KeyboardType,
 

@@ -260,7 +260,7 @@ mod tests {
         check_login_override(&adapter, override_update);
     }
 
-    fn check_login_override(adapter: &Adapter, expected_override: Option<LoginOverride>) {
+    fn check_login_override(adapter: &dyn Adapter, expected_override: Option<LoginOverride>) {
         let (sender, mut receiver) = channel();
 
         // Ensure initial account settings returned.

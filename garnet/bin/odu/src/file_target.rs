@@ -121,7 +121,7 @@ impl IoPacket for FileIoPacket {
         self.target.clone().generate_verify_io(self)
     }
 
-    fn verify(&mut self, verify_packet: &IoPacket) -> bool {
+    fn verify(&mut self, verify_packet: &dyn IoPacket) -> bool {
         self.target.clone().verify(self, verify_packet)
     }
 
@@ -183,7 +183,7 @@ impl FileBlockingTarget {
     }
 
     // pwrite the buffer in IoPacket at io_offset_range.
-    fn write(&self, io_packet: &mut IoPacket) {
+    fn write(&self, io_packet: &mut dyn IoPacket) {
         let offset_range = io_packet.io_offset_range().clone();
 
         if offset_range.start < self.offset_range.start || offset_range.end > self.offset_range.end
@@ -201,12 +201,12 @@ impl FileBlockingTarget {
         }
     }
 
-    fn open(&self, io_packet: &mut IoPacket) {
+    fn open(&self, io_packet: &mut dyn IoPacket) {
         error!("open not yet supported {}", io_packet.sequence_number());
         process::abort();
     }
 
-    fn exit(&self, io_packet: &mut IoPacket) {
+    fn exit(&self, io_packet: &mut dyn IoPacket) {
         debug!("Nothing to do for exit path {}", io_packet.sequence_number());
     }
 }
@@ -247,7 +247,7 @@ impl Target for FileBlockingTarget {
         &TargetOps { write: true, open: false }
     }
 
-    fn do_io(&self, io_packet: &mut IoPacket) {
+    fn do_io(&self, io_packet: &mut dyn IoPacket) {
         match io_packet.operation_type() {
             OperationType::Write => self.write(io_packet),
             OperationType::Open => self.open(io_packet),
@@ -259,7 +259,7 @@ impl Target for FileBlockingTarget {
         };
     }
 
-    fn is_complete(&self, io_packet: &IoPacket) -> bool {
+    fn is_complete(&self, io_packet: &dyn IoPacket) -> bool {
         match io_packet.operation_type() {
             OperationType::Write | OperationType::Open | OperationType::Exit => true,
             _ => {
@@ -269,7 +269,7 @@ impl Target for FileBlockingTarget {
         }
     }
 
-    fn verify_needs_io(&self, io_packet: &IoPacket) -> bool {
+    fn verify_needs_io(&self, io_packet: &dyn IoPacket) -> bool {
         match io_packet.operation_type() {
             OperationType::Write | OperationType::Open | OperationType::Exit => false,
             _ => {
@@ -279,7 +279,7 @@ impl Target for FileBlockingTarget {
         }
     }
 
-    fn generate_verify_io(&self, io_packet: &mut IoPacket) {
+    fn generate_verify_io(&self, io_packet: &mut dyn IoPacket) {
         match io_packet.operation_type() {
             _ => {
                 error!("generate_verify_io for unsupported operation");
@@ -288,7 +288,7 @@ impl Target for FileBlockingTarget {
         };
     }
 
-    fn verify(&self, io_packet: &mut IoPacket, _verify_packet: &IoPacket) -> bool {
+    fn verify(&self, io_packet: &mut dyn IoPacket, _verify_packet: &dyn IoPacket) -> bool {
         match io_packet.operation_type() {
             OperationType::Write | OperationType::Exit => true,
             _ => {

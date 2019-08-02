@@ -49,7 +49,7 @@ pub trait CacheKey: Any + Send + Sync {
     fn subkey(&self) -> &str;
 }
 
-impl Hash for CacheKey {
+impl Hash for dyn CacheKey {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.auth_provider_type().hash(state);
         self.user_profile_id().hash(state);
@@ -58,8 +58,8 @@ impl Hash for CacheKey {
     }
 }
 
-impl PartialEq for CacheKey {
-    fn eq(&self, other: &(CacheKey + 'static)) -> bool {
+impl PartialEq for dyn CacheKey {
+    fn eq(&self, other: &(dyn CacheKey + 'static)) -> bool {
         self.auth_provider_type() == other.auth_provider_type()
             && self.user_profile_id() == other.user_profile_id()
             && self.subkey() == other.subkey()
@@ -67,7 +67,7 @@ impl PartialEq for CacheKey {
     }
 }
 
-impl Eq for CacheKey {}
+impl Eq for dyn CacheKey {}
 
 /// Trait that specifies the concrete token type a token key can put or
 /// retrieve from the cache.
@@ -88,14 +88,14 @@ pub trait CacheToken: Any + Send + Sync {
 /// An entry in the `TokenCache` expiry queue.
 struct ExpiryQueueEntry {
     /// Cache entry this entry tracks.
-    cache_key: Arc<CacheKey>,
+    cache_key: Arc<dyn CacheKey>,
     /// Time at which the referenced token expires.
     expiry_time: SystemTime,
 }
 
 impl ExpiryQueueEntry {
     /// Construct a new `ExpiryQueueEntry`.
-    fn new(cache_key: Arc<CacheKey>, expiry_time: SystemTime) -> ExpiryQueueEntry {
+    fn new(cache_key: Arc<dyn CacheKey>, expiry_time: SystemTime) -> ExpiryQueueEntry {
         ExpiryQueueEntry { cache_key: cache_key, expiry_time: expiry_time }
     }
 }
@@ -129,27 +129,27 @@ impl Eq for ExpiryQueueEntry {}
 /// objects are added (https://github.com/rust-lang/rfcs/issues/2035)
 struct TokenReference {
     /// token stored as `CacheToken` trait object
-    cache_token: Arc<CacheToken>,
+    cache_token: Arc<dyn CacheToken>,
     /// token stored as `Any` trait object
-    any: Arc<Any + Send + Sync>,
+    any: Arc<dyn Any + Send + Sync>,
 }
 
 impl TokenReference {
     /// Create a new `TokenReference`
     fn new<T: CacheToken>(token: Arc<T>) -> TokenReference {
         TokenReference {
-            cache_token: Arc::clone(&token) as Arc<CacheToken>,
-            any: token as Arc<Any + Send + Sync>,
+            cache_token: Arc::clone(&token) as Arc<dyn CacheToken>,
+            any: token as Arc<dyn Any + Send + Sync>,
         }
     }
 
     /// Borrow as a `CacheToken` trait object.
-    fn as_cache_token(&self) -> &Arc<CacheToken> {
+    fn as_cache_token(&self) -> &Arc<dyn CacheToken> {
         &self.cache_token
     }
 
     /// Borrow as an `Any` trait object.
-    fn as_any(&self) -> &Arc<Any + Send + Sync> {
+    fn as_any(&self) -> &Arc<dyn Any + Send + Sync> {
         &self.any
     }
 }
@@ -158,7 +158,7 @@ impl TokenReference {
 /// expiry time and are removed when this time is reached.
 pub struct TokenCache {
     /// A mapping holding cached tokens of arbitrary types.
-    token_map: HashMap<Arc<CacheKey>, TokenReference>,
+    token_map: HashMap<Arc<dyn CacheKey>, TokenReference>,
     /// A priority queue used to evict expired tokens.
     expiry_queue: BinaryHeap<ExpiryQueueEntry>,
     /// Maximum number of tokens the cache will hold.
@@ -207,7 +207,7 @@ impl TokenCache {
         self.validate_time_progression();
         self.evict_expired();
 
-        let uncast_token = self.token_map.get(key as &CacheKey)?.as_any();
+        let uncast_token = self.token_map.get(key as &dyn CacheKey)?.as_any();
         if let Ok(downcast_token) = Arc::clone(uncast_token).downcast::<V>() {
             Some(downcast_token)
         } else {
@@ -224,12 +224,12 @@ impl TokenCache {
     {
         self.validate_time_progression();
         self.evict_expired();
-        if self.token_map.len() == self.capacity && !self.token_map.contains_key(&key as &CacheKey)
+        if self.token_map.len() == self.capacity && !self.token_map.contains_key(&key as &dyn CacheKey)
         {
             self.evict_random();
         }
 
-        let arc_key = Arc::new(key) as Arc<CacheKey>;
+        let arc_key = Arc::new(key) as Arc<dyn CacheKey>;
         self.expiry_queue.push(ExpiryQueueEntry::new(Arc::clone(&arc_key), *token.expiry_time()));
         self.token_map.insert(arc_key, TokenReference::new(token));
 

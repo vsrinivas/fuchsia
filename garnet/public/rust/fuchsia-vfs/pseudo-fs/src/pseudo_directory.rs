@@ -12,7 +12,7 @@ use {crate::directory::entry::DirectoryEntry, fuchsia_zircon::Status};
 pub fn unwrap_add_entry_span<'entry>(
     entry: &str,
     location: &str,
-    res: Result<(), (Status, Box<DirectoryEntry + 'entry>)>,
+    res: Result<(), (Status, Box<dyn DirectoryEntry + 'entry>)>,
 ) {
     if res.is_ok() {
         return;

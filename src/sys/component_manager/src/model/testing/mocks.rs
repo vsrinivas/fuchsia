@@ -138,8 +138,8 @@ impl Resolver for MockResolver {
 pub struct MockRunner {
     pub urls_run: Arc<Mutex<Vec<String>>>,
     pub namespaces: Namespaces,
-    pub host_fns: HashMap<String, Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
-    pub runtime_host_fns: HashMap<String, Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
+    pub host_fns: HashMap<String, Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
+    pub runtime_host_fns: HashMap<String, Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
     failing_urls: HashSet<String>,
 }
 

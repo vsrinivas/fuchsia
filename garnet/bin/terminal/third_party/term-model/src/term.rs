@@ -282,9 +282,9 @@ impl<'a> RenderableCellsIter<'a> {
                     cell.flags & Flags::DIM_BOLD,
                     idx,
                 ) {
-                    (true, cell::Flags::BOLD, 0...7) => idx as usize + 8,
-                    (false, cell::Flags::DIM, 8...15) => idx as usize - 8,
-                    (false, cell::Flags::DIM, 0...7) => idx as usize + 260,
+                    (true, cell::Flags::BOLD, 0..=7) => idx as usize + 8,
+                    (false, cell::Flags::DIM, 8..=15) => idx as usize - 8,
+                    (false, cell::Flags::DIM, 0..=7) => idx as usize + 260,
                     _ => idx as usize,
                 };
 

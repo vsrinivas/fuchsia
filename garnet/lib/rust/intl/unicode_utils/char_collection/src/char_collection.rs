@@ -12,7 +12,7 @@ use unic_char_range::{chars, CharIter, CharRange};
 /// [CharRanges](unic_char_range::CharRange).
 pub trait MultiCharRange {
     /// Iterate over the discrete [CharRange]s in the collection in ascending order.
-    fn iter_ranges<'a>(&'a self) -> Box<Iterator<Item = CharRange> + 'a>;
+    fn iter_ranges<'a>(&'a self) -> Box<dyn Iterator<Item = CharRange> + 'a>;
     /// The number of ranges in the collection.
     fn range_count(&self) -> usize;
 }
@@ -328,7 +328,7 @@ impl CharCollection {
 }
 
 impl MultiCharRange for CharCollection {
-    fn iter_ranges<'a>(&'a self) -> Box<Iterator<Item = CharRange> + 'a> {
+    fn iter_ranges<'a>(&'a self) -> Box<dyn Iterator<Item = CharRange> + 'a> {
         Box::new(self.ranges.iter().map(|range| range.clone()))
     }
 

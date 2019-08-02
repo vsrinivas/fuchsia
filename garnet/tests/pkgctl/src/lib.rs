@@ -208,7 +208,7 @@ impl MockRepositoryManagerService {
                     let mut repos = self.repos.lock().clone().into_iter().map(|r| r.into());
                     // repos must be fused b/c the Next() fidl method should return an empty vector
                     // forever after iteration is complete
-                    let _: &FusedIterator<Item = _> = &repos;
+                    let _: &dyn FusedIterator<Item = _> = &repos;
                     while let Some(RepositoryIteratorRequest::Next { responder }) =
                         stream.try_next().await?
                     {

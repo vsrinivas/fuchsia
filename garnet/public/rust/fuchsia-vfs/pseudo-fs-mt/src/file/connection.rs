@@ -70,7 +70,7 @@ pub struct FileConnection {
     scope: ExecutionScope,
 
     /// File this connection is associated with.
-    file: Arc<FileWithPerConnectionBuffer>,
+    file: Arc<dyn FileWithPerConnectionBuffer>,
 
     /// Wraps a FIDL connection, providing messages coming from the client.
     requests: FileRequestStream,
@@ -129,7 +129,7 @@ impl FileConnection {
     /// connection initialization.
     pub fn create_connection(
         scope: ExecutionScope,
-        file: Arc<FileWithPerConnectionBuffer>,
+        file: Arc<dyn FileWithPerConnectionBuffer>,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
@@ -156,7 +156,7 @@ impl FileConnection {
 
     async fn create_connection_task(
         scope: ExecutionScope,
-        file: Arc<FileWithPerConnectionBuffer>,
+        file: Arc<dyn FileWithPerConnectionBuffer>,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
@@ -377,7 +377,7 @@ impl FileConnection {
     /// error directly.
     fn handle_read<R>(&mut self, count: u64, responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
     {
         let actual = self.handle_read_at(self.seek, count, responder)?;
         self.seek += actual;
@@ -396,7 +396,7 @@ impl FileConnection {
         responder: R,
     ) -> Result<u64, fidl::Error>
     where
-        R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_RIGHT_READABLE == 0 {
             responder(Status::ACCESS_DENIED, &mut iter::empty())?;

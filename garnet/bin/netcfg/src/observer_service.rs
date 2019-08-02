@@ -57,7 +57,7 @@ pub async fn serve_fidl_requests(
                             .as_mut()
                             .map(|x| x.iter_mut())
                             .as_mut()
-                            .map(|x| x as &mut ExactSizeIterator<Item = &mut InterfaceInfo>),
+                            .map(|x| x as &mut dyn ExactSizeIterator<Item = &mut InterfaceInfo>),
                         status,
                     )
                 }

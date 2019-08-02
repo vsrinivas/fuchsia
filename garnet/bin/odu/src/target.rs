@@ -51,7 +51,7 @@ impl AvailableTargets {
     }
 }
 
-pub type TargetType = Arc<Box<Target + Send + Sync>>;
+pub type TargetType = Arc<Box<dyn Target + Send + Sync>>;
 
 /// Targets is the object on which IO operations can be performed. Target traits
 /// help to create IoPackets, which operate on the. For example files,
@@ -110,19 +110,19 @@ pub trait Target {
         Self: Sized;
 
     /// issues an IO
-    fn do_io(&self, io_packet: &mut IoPacket);
+    fn do_io(&self, io_packet: &mut dyn IoPacket);
 
     /// Returns true if the issued IO is complete.
-    fn is_complete(&self, io_packet: &IoPacket) -> bool;
+    fn is_complete(&self, io_packet: &dyn IoPacket) -> bool;
 
     /// Returns true if verify needs an IO
-    fn verify_needs_io(&self, io_packet: &IoPacket) -> bool;
+    fn verify_needs_io(&self, io_packet: &dyn IoPacket) -> bool;
 
     /// Generates parameters for verify IO packet.
-    fn generate_verify_io(&self, io_packet: &mut IoPacket);
+    fn generate_verify_io(&self, io_packet: &mut dyn IoPacket);
 
     /// Verifies "success" of an IO. Returns true if IO was successful.
-    fn verify(&self, io_packet: &mut IoPacket, verify_packet: &IoPacket) -> bool;
+    fn verify(&self, io_packet: &mut dyn IoPacket, verify_packet: &dyn IoPacket) -> bool;
 
     fn start_instant(&self) -> Instant;
 }
