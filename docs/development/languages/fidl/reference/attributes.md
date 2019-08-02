@@ -202,6 +202,8 @@ Provide a comma-separated list of values, selected from:
   communicate between peers.
   Each end of the transport implements both client and server parts of the
   protocol, and no handles can be transferred.
+* `Syscall` &mdash; transport used to specify that the protocol is used to
+  define Zircon syscalls, rather than typical IPC.
 
 The default is `Channel` if none specified.
 If you do specify a value or values, then only those values are used (e.g.,

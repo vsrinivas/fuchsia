@@ -1058,6 +1058,7 @@ bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute& at
       "Channel",
       "OvernetEmbedded",
       "OvernetInternal",
+      "Syscall",
   };
   for (auto transport : transports) {
     if (kValidTransports->count(transport) == 0) {
