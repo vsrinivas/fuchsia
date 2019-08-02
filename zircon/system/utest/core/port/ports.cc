@@ -499,8 +499,38 @@ TEST(PortTest, Timestamp) {
   EXPECT_EQ(0u, packet[0].signal.timestamp);
 }
 
-constexpr uint32_t kStressCount = 20000;
-constexpr uint32_t kSleeps[] = {0, 10, 2, 0, 15, 0};
+// Queue a packet while another thread is closing the port.  See that queuing thread observes
+// ZX_ERR_BAD_HANDLE.  This test is inherently racy.
+TEST(PortTest, CloseQueueRace) {
+  zx::port port;
+  ASSERT_OK(zx::port::create(0, &port));
+
+  auto queue_loop = [](zx_handle_t handle, std::atomic<uint64_t>* count, zx_status_t* result) {
+    constexpr zx_port_packet_t kPacket = {1ull, ZX_PKT_TYPE_USER, 0, {{}}};
+    zx_status_t status = ZX_OK;
+    while (status == ZX_OK || status == ZX_ERR_SHOULD_WAIT || status == ZX_ERR_NO_MEMORY) {
+      status = zx_port_queue(handle, &kPacket);
+      count->fetch_add(1);
+    }
+    *result = status;
+  };
+
+  std::atomic<uint64_t> count = 0;
+  zx_status_t status = ZX_ERR_INTERNAL;
+  std::thread queue_thread(queue_loop, port.get(), &count, &status);
+
+  // Wait for |queue_thread| to complete at least one loop iteration.
+  while (count.load() == 0) {
+    zx::nanosleep(zx::time(0));
+  }
+
+  // Close the port out from under it.
+  port.reset();
+
+  // See that it gets ZX_ERR_BAD_HANDLE.
+  queue_thread.join();
+  ASSERT_STATUS(ZX_ERR_BAD_HANDLE, status);
+}
 
 TEST(PortStressTest, WaitSignalCancel) {
   // This tests a race that existed between the port observer
@@ -510,6 +540,7 @@ TEST(PortStressTest, WaitSignalCancel) {
   //
   // When running on real hardware or KVM-accelerated emulation
   // a good number to set for kStressCount is 50000000.
+  constexpr uint32_t kStressCount = 20000;
 
   auto CancelStressWaiter = [](zx::port* port, zx::event* event, zx_status_t* return_status) {
     const auto key = 919u;
@@ -545,6 +576,7 @@ TEST(PortStressTest, WaitSignalCancel) {
         return;
       }
 
+      constexpr uint32_t kSleeps[] = {0, 10, 2, 0, 15, 0};
       auto duration = kSleeps[count++ % fbl::count_of(kSleeps)];
       if (duration > 0) {
         zx::nanosleep(zx::deadline_after(zx::nsec(duration)));

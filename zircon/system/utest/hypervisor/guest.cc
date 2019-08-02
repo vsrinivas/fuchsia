@@ -541,6 +541,32 @@ static bool guest_set_trap_with_bell_and_max_user() {
   END_TEST;
 }
 
+// See that zx::vcpu::resume returns ZX_ERR_BAD_STATE if the port has been closed.
+static bool guest_set_trap_close_port() {
+  BEGIN_TEST;
+
+  zx::port port;
+  ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+  test_t test;
+  ASSERT_TRUE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+  if (!test.supported) {
+    // The hypervisor isn't supported, so don't run the test.
+    return true;
+  }
+
+  ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
+
+  port.reset();
+
+  zx_port_packet_t packet = {};
+  ASSERT_EQ(test.vcpu.resume(&packet), ZX_ERR_BAD_STATE);
+
+  ASSERT_TRUE(resume_and_clean_exit(&test));
+
+  END_TEST;
+}
+
 #ifdef __aarch64__
 
 static bool vcpu_wfi() {
@@ -971,6 +997,7 @@ RUN_TEST(guest_set_trap_with_bell)
 RUN_TEST(guest_set_trap_with_bell_drop)
 RUN_TEST(guest_set_trap_with_bell_and_user)
 RUN_TEST(guest_set_trap_with_bell_and_max_user)
+RUN_TEST(guest_set_trap_close_port)
 #if __aarch64__
 RUN_TEST(vcpu_wfi)
 RUN_TEST(vcpu_wfi_pending_interrupt)

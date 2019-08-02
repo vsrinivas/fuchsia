@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/ktrace.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
 
@@ -70,6 +71,10 @@ zx_status_t Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* invali
   zx_status_t status = port_->Queue(port_packet, ZX_SIGNAL_NONE, 0);
   if (status != ZX_OK) {
     port_allocator_.Free(port_packet);
+    if (status == ZX_ERR_BAD_HANDLE) {
+      // If the last handle to the port has been closed, then we're in a bad state.
+      status = ZX_ERR_BAD_STATE;
+    }
   }
   return status;
 }

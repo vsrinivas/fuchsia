@@ -123,7 +123,7 @@ void PagerSource::QueueMessageLocked(page_request_t* request) {
 
   packet_.packet = packet;
 
-  // We can treat ZX_ERR_BAD_STATE as if the packet was queued
+  // We can treat ZX_ERR_BAD_HANDLE as if the packet was queued
   // but the pager service never responds.
   // TODO: Bypass the port's max queued packet count to prevent ZX_ERR_SHOULD_WAIT
   ASSERT(port_->Queue(&packet_, ZX_SIGNAL_NONE, 0) != ZX_ERR_SHOULD_WAIT);

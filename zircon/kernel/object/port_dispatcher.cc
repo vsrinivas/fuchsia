@@ -153,9 +153,13 @@ StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t c
     // Getting the current time can be somewhat expensive.
     packet_.packet.signal.timestamp = current_time();
   }
-  // Queue cannot fail because the packet is not allocated in the packet arena,
-  // and does not count against the per-port limit.
-  port_->Queue(&packet_, new_state, count);
+  // The packet is not allocated in the packet arena and does not count against the per-port limit
+  // so |Queue| cannot fail due to the packet count.  However, the last handle to the port may have
+  // been closed so it can still fail with ZX_ERR_BAD_HANDLE.  Just ignore ZX_ERR_BAD_HANDLE because
+  // there is nothing to be done.
+  const zx_status_t status = port_->Queue(&packet_, new_state, count);
+  DEBUG_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_BAD_HANDLE, "status %d\n", status);
+
   return kNeedRemoval;
 }
 
@@ -294,7 +298,7 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
   AutoReschedDisable resched_disable;  // Must come before the lock guard.
   Guard<fbl::Mutex> guard{get_lock()};
   if (zero_handles_)
-    return ZX_ERR_BAD_STATE;
+    return ZX_ERR_BAD_HANDLE;
 
   if (IsDefaultAllocatedEphemeral(*port_packet) &&
       num_ephemeral_packets_ > kMaxAllocatedPacketCountPerPort) {
