@@ -244,9 +244,9 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
       // when the first item is potentially ready.
       return;
     }
-    FXL_DCHECK(front->driver_codec_list);
+    FXL_DCHECK(front->driver_codec_list.has_value());
 
-    for (auto& codec_description : front->driver_codec_list.get()) {
+    for (auto& codec_description : front->driver_codec_list.value()) {
       FXL_LOG(INFO) << "registering - codec_type: "
                     << fidl::ToUnderlying(codec_description.codec_type)
                     << " mime_type: " << codec_description.mime_type

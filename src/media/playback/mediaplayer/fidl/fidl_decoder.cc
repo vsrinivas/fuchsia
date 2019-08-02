@@ -186,8 +186,8 @@ void FidlDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
     if (update_oob_bytes_ && packet->size() >= 4) {
       FXL_DCHECK(packet->payload());
 
-      input_format_details_.set_oob_bytes(fidl::VectorPtr<uint8_t>(
-          MakeOobBytesFromAdtsHeader(static_cast<const uint8_t*>(packet->payload()))));
+      input_format_details_.set_oob_bytes(
+          MakeOobBytesFromAdtsHeader(static_cast<const uint8_t*>(packet->payload())));
 
       outboard_decoder_->QueueInputFormatDetails(stream_lifetime_ordinal_,
                                                  fidl::Clone(input_format_details_));

@@ -43,7 +43,7 @@ AudioRendererImpl::AudioRendererImpl(
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
-  fidl::VectorPtr<fuchsia::media::AudioRenderUsage> allowed_usages;
+  std::vector<fuchsia::media::AudioRenderUsage> allowed_usages;
   allowed_usages.push_back(fuchsia::media::AudioRenderUsage::MEDIA);
   allowed_usages.push_back(fuchsia::media::AudioRenderUsage::BACKGROUND);
   allowed_usages.push_back(fuchsia::media::AudioRenderUsage::COMMUNICATION);

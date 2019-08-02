@@ -313,7 +313,7 @@ void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
     }
   }
 
-  cbk(fidl::VectorPtr<fuchsia::media::AudioDeviceInfo>(std::move(ret)));
+  cbk(std::move(ret));
 }
 
 void AudioDeviceManager::GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) {

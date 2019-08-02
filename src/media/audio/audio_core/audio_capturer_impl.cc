@@ -46,7 +46,7 @@ AudioCapturerImpl::AudioCapturerImpl(
       mute_(false) {
   REP(AddingCapturer(*this));
 
-  fidl::VectorPtr<fuchsia::media::AudioCaptureUsage> allowed_usages;
+  std::vector<fuchsia::media::AudioCaptureUsage> allowed_usages;
   allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::FOREGROUND);
   allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::BACKGROUND);
   allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::COMMUNICATION);

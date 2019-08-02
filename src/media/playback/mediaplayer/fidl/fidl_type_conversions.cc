@@ -307,8 +307,8 @@ TypeConverter<fidl::VectorPtr<uint8_t>, const media_player::Bytes*>::Convert(
     return nullptr;
   }
 
-  fidl::VectorPtr<uint8_t> array = fidl::VectorPtr<uint8_t>::New(input->size());
-  std::memcpy(array->data(), input->data(), input->size());
+  std::vector<uint8_t> array(input->size());
+  std::memcpy(array.data(), input->data(), input->size());
 
   return array;
 }
@@ -316,7 +316,7 @@ TypeConverter<fidl::VectorPtr<uint8_t>, const media_player::Bytes*>::Convert(
 std::unique_ptr<media_player::Bytes>
 TypeConverter<std::unique_ptr<media_player::Bytes>, fidl::VectorPtr<uint8_t>>::Convert(
     const fidl::VectorPtr<uint8_t>& input) {
-  if (input.is_null()) {
+  if (!input.has_value()) {
     return nullptr;
   }
 
@@ -357,7 +357,7 @@ TypeConverter<fuchsia::media::FormatDetailsPtr, media_player::StreamType>::Conve
   result->set_format_details_version_ordinal(0);
   result->set_mime_type(mime_type);
   if (input.encoding_parameters()) {
-    result->set_oob_bytes(fidl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters()));
+    result->set_oob_bytes(fidl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters()).value());
   }
 
   return result;

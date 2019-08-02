@@ -23,7 +23,7 @@ template <typename Interface>
 void ConnectToIsolate(fidl::InterfaceRequest<Interface> request, fuchsia::sys::Launcher* launcher) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kIsolateUrl;
-  launch_info.arguments.push_back(kIsolateArgument);
+  launch_info.arguments.emplace({kIsolateArgument});
   component::Services services;
   launch_info.directory_request = services.NewRequest();
 

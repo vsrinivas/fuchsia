@@ -207,7 +207,7 @@ void HttpReader::LoadAndReadFromSocket() {
     http::HttpHeader header;
     header.name = kRangeHeaderName;
     header.value = value.str();
-    request.headers.push_back(std::move(header));
+    request.headers.emplace({std::move(header)});
   }
 
   url_loader_->Start(std::move(request), [this](http::URLResponse response) {
