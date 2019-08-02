@@ -89,8 +89,9 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
   }
 
   result.launch_info.url = url;
+  result.launch_info.arguments.emplace();
   for (int i = 2; i < argc; i++) {
-    result.launch_info.arguments.push_back(argv[i]);
+    result.launch_info.arguments->push_back(argv[i]);
   }
   return result;
 }

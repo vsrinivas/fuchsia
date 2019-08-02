@@ -36,9 +36,10 @@ TEST(RunTest, ParseArgs) {
     auto result = ParseArgs(env_services, 4, argv);
     EXPECT_FALSE(result.error);
     EXPECT_EQ(component_url, result.launch_info.url);
+    ASSERT_TRUE(result.launch_info.arguments.has_value());
     EXPECT_EQ(2u, result.launch_info.arguments->size());
-    EXPECT_EQ(argv[2], result.launch_info.arguments.get()[0]);
-    EXPECT_EQ(argv[3], result.launch_info.arguments.get()[1]);
+    EXPECT_EQ(argv[2], result.launch_info.arguments->at(0));
+    EXPECT_EQ(argv[3], result.launch_info.arguments->at(1));
   }
 
   {

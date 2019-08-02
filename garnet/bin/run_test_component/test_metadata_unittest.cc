@@ -217,8 +217,7 @@ TEST_F(TestMetadataTest, ValidServices) {
   EXPECT_EQ(services[0].first, "1");
   EXPECT_TRUE(fidl::Equals(services[0].second, LaunchInfo{.url = "url1"}));
   LaunchInfo launch_info{.url = "url2"};
-  launch_info.arguments.push_back("--a=b");
-  launch_info.arguments.push_back("c");
+  launch_info.arguments.emplace({"--a=b", "c"});
   EXPECT_EQ(services[1].first, "2");
   EXPECT_TRUE(fidl::Equals(services[1].second, launch_info));
   EXPECT_EQ(services[2].first, "3");
