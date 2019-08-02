@@ -27,9 +27,9 @@ use crate::{
 use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::{
-        FileMarker, NodeAttributes, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
+        FileEvent, FileMarker, FileObject, NodeAttributes, NodeInfo, INO_UNKNOWN, MODE_TYPE_FILE,
+        OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_async::Executor,
     fuchsia_zircon::{sys::ZX_OK, Status},

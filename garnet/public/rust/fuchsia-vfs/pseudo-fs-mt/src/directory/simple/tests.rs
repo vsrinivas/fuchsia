@@ -29,14 +29,14 @@ use crate::{
 use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryProxy, FileMarker, NodeAttributes, NodeInfo,
-        DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-        OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
-        WATCH_MASK_REMOVED,
+        DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker,
+        NodeAttributes, NodeInfo, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED,
+        WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
     },
     fuchsia_async::Executor,
-    fuchsia_zircon::sys::ZX_OK,
+    fuchsia_zircon::{sys::ZX_OK, Status},
     futures::future,
     libc::{S_IRUSR, S_IWUSR},
     std::sync::{

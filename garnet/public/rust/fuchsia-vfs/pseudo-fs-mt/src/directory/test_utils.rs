@@ -251,7 +251,7 @@ impl DirentsSameInodeBuilder {
 #[macro_export]
 macro_rules! assert_rewind {
     ($proxy:expr) => {{
-        use $crate::directory::test_utils::reexport::*;
+        use $crate::directory::test_utils::reexport::Status;
 
         let status = $proxy.rewind().await.expect("rewind failed");
         assert_eq!(Status::from_raw(status), Status::OK);
@@ -272,7 +272,7 @@ macro_rules! open_as_file_assert_content {
 #[macro_export]
 macro_rules! assert_watch {
     ($proxy:expr, $mask:expr) => {{
-        use $crate::directory::test_utils::reexport::*;
+        use $crate::directory::test_utils::reexport::{zx, Channel, Status};
 
         let (watcher_client, watcher_server) = zx::Channel::create().unwrap();
         let watcher_client = Channel::from_channel(watcher_client).unwrap();
@@ -287,7 +287,7 @@ macro_rules! assert_watch {
 #[macro_export]
 macro_rules! assert_watch_err {
     ($proxy:expr, $mask:expr, $expected_status:expr) => {{
-        use $crate::directory::test_utils::reexport::*;
+        use $crate::directory::test_utils::reexport::{zx, Status};
 
         let (_watcher_client, watcher_server) = zx::Channel::create().unwrap();
 
@@ -299,7 +299,9 @@ macro_rules! assert_watch_err {
 #[macro_export]
 macro_rules! assert_watcher_one_message_watched_events {
     ($watcher:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
-        use $crate::directory::test_utils::reexport::*;
+        #[allow(unused)]
+        use $crate::directory::test_utils::reexport::{MessageBuf, WATCH_EVENT_EXISTING,
+            WATCH_EVENT_IDLE, WATCH_EVENT_ADDED, WATCH_EVENT_REMOVED};
 
         let mut buf = MessageBuf::new();
         $watcher.recv_msg(&mut buf).await.unwrap();
