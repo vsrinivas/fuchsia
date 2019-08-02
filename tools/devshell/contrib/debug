@@ -162,10 +162,13 @@ if [[ ! -z "${core}" ]]; then
 elif [[ ! -z "${no_agent}" ]]; then
   echo "Not starting a debug agent."
 else
-  launch_debug_agent
-
-  target=$(get-fuchsia-device-addr)
-  connect_ops="--connect [${target}]:${port}"
+  if launch_debug_agent; then
+    target=$(get-fuchsia-device-addr)
+    connect_ops="--connect [${target}]:${port}"
+  else
+    fx-error "Could not launch debug agent. Exiting."
+    exit 1
+  fi
 fi
 
 # We start the client with the flag that tells it to quit the agent when zxdb quits.
