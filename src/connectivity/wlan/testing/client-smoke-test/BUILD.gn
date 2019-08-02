@@ -4,9 +4,12 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "wlan_smoke_test"
+  with_unit_tests = true
   edition = "2018"
 
   deps = [
@@ -45,4 +48,17 @@ package("wlan-smoke-test") {
   ]
 
   binary = "wlan_smoke_test"
+}
+
+test_package("wlan-smoke-test-tests") {
+  deps = [
+    ":bin_test",
+  ]
+  tests = [
+    {
+      name = "wlan_smoke_test_bin_test"
+      dest = "wlan-smoke-test-bin-test"
+      environments = basic_envs
+    },
+  ]
 }

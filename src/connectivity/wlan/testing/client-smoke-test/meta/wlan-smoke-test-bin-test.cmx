@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/wlan-smoke-test-bin-test"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

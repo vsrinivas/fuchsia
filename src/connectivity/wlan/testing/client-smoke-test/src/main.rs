@@ -10,22 +10,23 @@ extern crate serde_derive;
 
 mod opts;
 
-use crate::opts::Opt;
-use connectivity_testing::wlan_service_util;
-use failure::{bail, Error, ResultExt};
-use fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy};
-use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
-use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
-use fidl_fuchsia_wlan_sme as fidl_sme;
-use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
-use fuchsia_syslog::{self as syslog, fx_log_info};
-use fuchsia_zircon as zx;
-use futures::io::{AllowStdIo, AsyncReadExt};
-use std::collections::HashMap;
-use std::process;
-use std::{thread, time};
-use structopt::StructOpt;
+use {
+    crate::opts::Opt,
+    connectivity_testing::wlan_service_util,
+    failure::{bail, Error, ResultExt},
+    fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy},
+    fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy},
+    fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
+    fuchsia_syslog::{self as syslog, fx_log_info},
+    fuchsia_zircon as zx,
+    futures::io::{AllowStdIo, AsyncReadExt},
+    std::collections::HashMap,
+    std::process,
+    std::{thread, time},
+    structopt::StructOpt,
+};
 
 #[allow(dead_code)]
 type WlanService = DeviceServiceProxy;
@@ -68,7 +69,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     test_results.connect_to_netstack_service = true;
 
     let fut = async {
-        let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc).await
+        let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc)
+            .await
             .context("wlan-smoke-test: failed to query wlanservice iface list")?;
         test_results.query_wlan_service_iface_list = true;
 
@@ -120,8 +122,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 let connect_result = wlan_service_util::connect_to_network(
                     &wlan_iface.sme_proxy,
                     opt.target_ssid.as_bytes().to_vec(),
-                    opt.target_pwd.as_bytes().to_vec()
-                ).await;
+                    opt.target_pwd.as_bytes().to_vec(),
+                )
+                .await;
 
                 match connect_result {
                     Ok(true) => {
@@ -144,7 +147,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         Ok(result) => result,
                         Err(_) => continue,
                     };
-                if check_dhcp_complete(ip_addrs) {
+                if check_dhcp_complete(&ip_addrs) {
                     wlan_iface.dhcp_success = true;
                 } else {
                     // dhcp takes some time...  loop again to give it a chance
@@ -372,7 +375,7 @@ async fn get_ip_addrs_for_wlan_iface<'a>(
     Ok(wlan_iface_ip_addrs)
 }
 
-fn check_dhcp_complete(ip_addrs: Vec<netstack::InterfaceAddress>) -> bool {
+fn check_dhcp_complete(ip_addrs: &[netstack::InterfaceAddress]) -> bool {
     for ip_addr in ip_addrs {
         // for now, assume a valid address if we see anything that isn't a 0
         fx_log_info!("checking validity of ip address: {:?}", ip_addr.ip_address);
@@ -394,4 +397,203 @@ fn check_dhcp_complete(ip_addrs: Vec<netstack::InterfaceAddress>) -> bool {
         };
     }
     return false;
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, fidl_fuchsia_net::IpAddress::Ipv4 as IPv4,
+        fidl_fuchsia_net::IpAddress::Ipv6 as IPv6, fidl_fuchsia_net::Ipv4Address as IPv4_address,
+        fidl_fuchsia_net::Ipv6Address as IPv6_address,
+    };
+
+    // helper values for tests
+    static TEST_IPV4_ADDR: [u8; 4] = [1; 4];
+    static TEST_IPV4_ALL_ZEROS: [u8; 4] = [0; 4];
+    static TEST_IPV6_ADDR: [u8; 16] = [0x1; 16];
+    static TEST_IPV6_ALL_ZEROS: [u8; 16] = [0; 16];
+
+    /// Test to verify a valid ipv4 addr is assigned to an interface.  In the current
+    /// implementation, only empty vectors or all zeros are considered to be invalid or unset.
+    #[test]
+    fn test_single_ipv4_addr_valid() {
+        let ipv4_addr = netstack::InterfaceAddress {
+            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ADDR }),
+            prefix_len: 0,
+        };
+        assert!(check_dhcp_complete(&[ipv4_addr]));
+    }
+
+    /// Test to verify a valid ipv6 addr is assigned to an interface.  In the current
+    /// implementation, only empty vectors or all zeros are considered to be invalid or unset.
+    #[test]
+    fn test_single_ipv6_addr_pass_dhcp_check() {
+        let ipv6_addr = netstack::InterfaceAddress {
+            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ADDR }),
+            prefix_len: 0,
+        };
+        assert!(check_dhcp_complete(&[ipv6_addr]));
+    }
+
+    /// IPv4 addresses that are all zeros are considered invalid and should return false when
+    /// chacked.
+    #[test]
+    fn test_single_ipv4_addr_all_zeros_fail_dhcp_check() {
+        let ipv4_addr = netstack::InterfaceAddress {
+            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ALL_ZEROS }),
+            prefix_len: 0,
+        };
+        assert_eq!(check_dhcp_complete(&[ipv4_addr]), false);
+    }
+
+    /// IPv6 addresses that are all zeros are considered invalid and should return false when
+    /// checked.
+    #[test]
+    fn test_single_ipv6_addr_all_zeros_fail_dhcp_check() {
+        let ipv6_addr = netstack::InterfaceAddress {
+            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ALL_ZEROS }),
+            prefix_len: 0,
+        };
+        assert_eq!(check_dhcp_complete(&[ipv6_addr]), false);
+    }
+
+    /// Verify that having an assigned IPv4 address with an unset IPv6 address still returns true.
+    #[test]
+    fn test_valid_ipv4_with_unset_ipv6_pass_dhcp_check() {
+        let ipv4_addr = netstack::InterfaceAddress {
+            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ADDR }),
+            prefix_len: 0,
+        };
+        let ipv6_addr = netstack::InterfaceAddress {
+            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ALL_ZEROS }),
+            prefix_len: 0,
+        };
+        assert!(check_dhcp_complete(&[ipv4_addr, ipv6_addr]));
+    }
+
+    /// Verify that having an assigned IPv6 address with an unset IPv4 address still returns true.
+    #[test]
+    fn test_valid_ipv6_with_unset_ipv4_pass_dhcp_check() {
+        let ipv4_addr = netstack::InterfaceAddress {
+            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ALL_ZEROS }),
+            prefix_len: 0,
+        };
+        let ipv6_addr = netstack::InterfaceAddress {
+            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ADDR }),
+            prefix_len: 0,
+        };
+        assert!(check_dhcp_complete(&[ipv4_addr, ipv6_addr]));
+    }
+
+    /// Verify that having assigned IPv4 and IPv6 addresses returns true for DHCP check.
+    #[test]
+    fn test_unset_ipv4_with_unset_ipv6_fail_dhcp_check() {
+        let ipv4_addr = netstack::InterfaceAddress {
+            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ALL_ZEROS }),
+            prefix_len: 0,
+        };
+        let ipv6_addr = netstack::InterfaceAddress {
+            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ALL_ZEROS }),
+            prefix_len: 0,
+        };
+        assert_eq!(check_dhcp_complete(&[ipv4_addr, ipv6_addr]), false);
+    }
+
+    /// Verify that having unset IPv4 and IPv6 addresses returns false and fails the DHCP check.
+    #[test]
+    fn test_unset_ipv6_and_unset_ipv4_fail_dhcp_check() {
+        let ipv4_addr = netstack::InterfaceAddress {
+            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ALL_ZEROS }),
+            prefix_len: 0,
+        };
+        let ipv6_addr = netstack::InterfaceAddress {
+            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ALL_ZEROS }),
+            prefix_len: 0,
+        };
+        assert_eq!(check_dhcp_complete(&[ipv4_addr, ipv6_addr]), false);
+    }
+
+    /// Verify that the DHCP check fails when the provided interface address vector is empty.
+    #[test]
+    fn test_empty_interface_addresses_fail_dhcp_check() {
+        assert_eq!(check_dhcp_complete(&[]), false);
+    }
+
+    /// Test to verify a connection will be triggered for an SSID that is not already connected.
+    /// This is called with stay connected true and a different target SSID.
+    #[test]
+    fn test_target_network_needs_connection_targets_different_network() {
+        let stay_connected = true;
+        let target_ssid = "target_ssid";
+        let current_ssid = "current_ssid";
+        let connected_to_bss_info = create_bssinfo_using_ssid(Some(current_ssid));
+
+        let current_status = fidl_sme::ClientStatusResponse {
+            connected_to: connected_to_bss_info,
+            connecting_to_ssid: vec![],
+        };
+
+        assert!(is_connect_to_target_network_needed(
+            stay_connected,
+            target_ssid.as_bytes().to_vec(),
+            &current_status
+        ));
+    }
+
+    /// Test to verify a connection will be triggered for an SSID that is already connected.  This
+    /// test is called with the target network already connected and stay_connected false.
+    #[test]
+    fn test_target_network_needs_connection_stay_connected_false() {
+        let stay_connected = false;
+        let target_ssid = "target_ssid";
+        let connected_to_bss_info = create_bssinfo_using_ssid(Some(target_ssid));
+
+        let current_status = fidl_sme::ClientStatusResponse {
+            connected_to: connected_to_bss_info,
+            connecting_to_ssid: vec![],
+        };
+
+        assert!(is_connect_to_target_network_needed(
+            stay_connected,
+            target_ssid.as_bytes().to_vec(),
+            &current_status
+        ));
+    }
+
+    /// Test to verify a connection will not be triggered for an SSID that is already connected.
+    /// This is called with stay connected true with the target network already connected.
+    #[test]
+    fn test_target_network_does_not_need_connection() {
+        let stay_connected = true;
+        let target_ssid = "target_ssid";
+        let connected_to_bss_info = create_bssinfo_using_ssid(Some(target_ssid));
+
+        let current_status = fidl_sme::ClientStatusResponse {
+            connected_to: connected_to_bss_info,
+            connecting_to_ssid: vec![],
+        };
+
+        assert_eq!(
+            is_connect_to_target_network_needed(
+                stay_connected,
+                target_ssid.as_bytes().to_vec(),
+                &current_status
+            ),
+            false
+        );
+    }
+
+    fn create_bssinfo_using_ssid<S: ToString>(ssid: Option<S>) -> Option<Box<fidl_sme::BssInfo>> {
+        ssid.map(|s| {
+            let bss_info: fidl_sme::BssInfo = fidl_sme::BssInfo {
+                bssid: [0, 1, 2, 3, 4, 5],
+                ssid: s.to_string().as_bytes().to_vec(),
+                rx_dbm: -30,
+                channel: 1,
+                protected: true,
+                compatible: true,
+            };
+            Box::new(bss_info)
+        })
+    }
 }

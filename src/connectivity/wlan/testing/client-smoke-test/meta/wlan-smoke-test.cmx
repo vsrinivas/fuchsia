@@ -5,6 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.net.Connectivity",
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.net.stack.Stack",
             "fuchsia.wlan.device.service.DeviceService"
