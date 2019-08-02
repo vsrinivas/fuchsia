@@ -212,6 +212,54 @@ func TestParseFailsToDecodeCase(t *testing.T) {
 	})
 }
 
+func TestParseFailsExtraKind(t *testing.T) {
+	parsingToCheck{
+		t: t,
+		fn: func(p *Parser) (interface{}, error) {
+			var all ir.All
+			if err := p.parseSection(&all); err != nil {
+				return nil, err
+			} else if len(all.Success) != 1 {
+				return nil, fmt.Errorf("did not parse success section")
+			}
+			return all.Success[0], nil
+		},
+	}.checkFailure(map[string]string{
+		`
+		success("OneStringOfMaxLengthFive-empty") {
+			type = Type
+			value = OneStringOfMaxLengthFive {
+				first: "four",
+			}
+			bytes = {
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			}
+		}`: "'type' does not apply",
+	})
+}
+
+func TestParseFailsMissingKind(t *testing.T) {
+	parsingToCheck{
+		t: t,
+		fn: func(p *Parser) (interface{}, error) {
+			var all ir.All
+			if err := p.parseSection(&all); err != nil {
+				return nil, err
+			} else if len(all.Success) != 1 {
+				return nil, fmt.Errorf("did not parse success section")
+			}
+			return all.Success[0], nil
+		},
+	}.checkFailure(map[string]string{
+		`
+		success("OneStringOfMaxLengthFive-empty") {
+			value = OneStringOfMaxLengthFive {
+				first: "four",
+			}
+		}`: "missing required parameter 'bytes'"})
+}
+
 type parsingToCheck struct {
 	t  *testing.T
 	fn func(*Parser) (interface{}, error)
@@ -224,12 +272,29 @@ func (c parsingToCheck) checkSuccess(cases map[string]interface{}) {
 			actual, err := c.fn(p)
 			if err != nil {
 				t.Fatal(err)
+				return
 			}
 
 			t.Logf("expected: %T %v", expected, expected)
 			t.Logf("actual: %T %v", actual, actual)
 			if diff := cmp.Diff(expected, actual); diff != "" {
-				t.Fatalf("expected != actual (-want +got)\n%s", diff)
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
+
+func (c parsingToCheck) checkFailure(cases map[string]string) {
+	for input, errorSubstr := range cases {
+		c.t.Run(input, func(t *testing.T) {
+			p := NewParser("", strings.NewReader(input))
+			_, err := c.fn(p)
+			if err == nil {
+				t.Errorf("expected error: %s", errorSubstr)
+				return
+			}
+			if !strings.Contains(err.Error(), errorSubstr) {
+				t.Errorf("expected error containing %s, instead got %s", errorSubstr, err.Error())
 			}
 		})
 	}

@@ -143,13 +143,13 @@ type body struct {
 }
 
 type sectionMetadata struct {
-	kinds  []bodyElement
+	kinds  map[bodyElement]bool
 	setter func(name string, body body, all *ir.All)
 }
 
 var sections = map[string]sectionMetadata{
 	"success": {
-		kinds: []bodyElement{isValue, isBytes},
+		kinds: map[bodyElement]bool{isValue: true, isBytes: true},
 		setter: func(name string, body body, all *ir.All) {
 			var result ir.Success
 			result.Name = name
@@ -159,7 +159,7 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"fails_to_encode": {
-		kinds: []bodyElement{isValue, isErr},
+		kinds: map[bodyElement]bool{isValue: true, isErr: true},
 		setter: func(name string, body body, all *ir.All) {
 			var result ir.FailsToEncode
 			result.Name = name
@@ -169,7 +169,7 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"fails_to_decode": {
-		kinds: []bodyElement{isType, isBytes, isErr},
+		kinds: map[bodyElement]bool{isType: true, isBytes: true, isErr: true},
 		setter: func(name string, body body, all *ir.All) {
 			var result ir.FailsToDecode
 			result.Name = name
@@ -224,23 +224,29 @@ func (p *Parser) parsePreamble() (sectionMetadata, string, error) {
 	return section, name, nil
 }
 
-func (p *Parser) parseBody(kinds []bodyElement) (body, error) {
+func (p *Parser) parseBody(requiredKinds map[bodyElement]bool) (body, error) {
 	var (
 		result      body
-		allElements = make(map[bodyElement]bool)
+		parsedKinds = make(map[bodyElement]bool)
 	)
 	bodyTok, ok := p.consumeToken(tLacco)
 	if !ok {
 		return result, p.failExpectedToken(tLacco, bodyTok)
 	}
 	for !p.peekToken(tRacco) {
-		if err := p.parseSingleBodyElement(&result, allElements); err != nil {
+		if err := p.parseSingleBodyElement(&result, parsedKinds); err != nil {
 			return result, err
 		}
 	}
-	for _, kind := range kinds {
-		if !allElements[kind] {
-			return result, p.newParseError(bodyTok, "missing %s", kind)
+
+	for requiredKind := range requiredKinds {
+		if !parsedKinds[requiredKind] {
+			return result, p.newParseError(bodyTok, "missing required parameter '%s'", requiredKind)
+		}
+	}
+	for parsedKind := range parsedKinds {
+		if !requiredKinds[parsedKind] {
+			return result, p.newParseError(bodyTok, "parameter '%s' does not apply to element", parsedKind)
 		}
 	}
 	if tok, ok := p.consumeToken(tRacco); !ok {
