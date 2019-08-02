@@ -58,8 +58,8 @@ fn shortcut_detection() -> Result<(), Error> {
         let scenic = connect_to_service::<ui_scenic::ScenicMarker>().expect("connect to Scenic");
         await!(scenic.get_display_info()).expect("get_display_info");
 
-        await!(input_synthesis::key_event_command(0x04, Duration::from_millis(0)))
-            .expect("key_event_command injects input");
+        await!(input_synthesis::keyboard_event_command(0x04, Duration::from_millis(0)))
+            .expect("keyboard_event_command injects input");
 
         // Wait for shortcut listener callback to be activated.
         match await!(listener_stream.next()) {

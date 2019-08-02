@@ -40,7 +40,6 @@ declare_args() {
 
 test_package("scenic_tests") {
   deps = [
-    "input/tests",
     "input_reader/tests",
     "presentation_mode/tests",
     "root_presenter/tests",
@@ -86,10 +85,6 @@ test_package("scenic_tests") {
     },
     {
       name = "input_unittests"
-      environments = basic_envs
-    },
-    {
-      name = "input_tool_unittests"
       environments = basic_envs
     },
     {

@@ -1,34 +1,17 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("input") {
-  sources = [
-    "main.cc",
-  ]
+import("//build/rust/rustc_binary.gni")
 
+rustc_binary("input") {
+  name = "input"
+  version = "0.1.0"
+  edition = "2018"
   deps = [
-    ":inverse_keymap",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/input/cpp",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/hid",
-    "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider-with-fdio",
-  ]
-}
-
-source_set("inverse_keymap") {
-  sources = [
-    "inverse_keymap.cc",
-    "inverse_keymap.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.input",
-    "//zircon/public/lib/hid",
+    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/ui/input-synthesis",
+    "//third_party/rust_crates:structopt",
   ]
 }
