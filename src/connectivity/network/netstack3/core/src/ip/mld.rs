@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Multicast Listener Discovery
+//! Multicast Listener Discovery (MLD).
 //!
-//! Multicast Listener Discovery (MLD) is derived from version 2 of IPv4's
-//! Internet Group Management Protocol, IGMPv2. One important difference
-//! to note is that MLD uses ICMPv6 (IP Protocol 58) message types,
-//! rather than IGMP (IP Protocol 2) message types.
+//! MLD is derived from version 2 of IPv4's Internet Group Management Protocol,
+//! IGMPv2. One important difference to note is that MLD uses ICMPv6 (IP
+//! Protocol 58) message types, rather than IGMP (IP Protocol 2) message types.
 
 use std::collections::HashMap;
-use std::result::Result;
+use std::fmt::Display;
 use std::time::Duration;
 
 use failure::Fail;
@@ -18,13 +17,17 @@ use log::{debug, error};
 use net_types::ip::AddrSubnet;
 use net_types::{LinkLocalAddress, MulticastAddr};
 use packet::serialize::Serializer;
-use packet::InnerPacketBuilder;
+use packet::{EmptyBuf, InnerPacketBuilder};
 use rand::Rng;
+use rand_xorshift::XorShiftRng;
 use zerocopy::ByteSlice;
 
+use crate::context::{
+    FrameContext, InstantContext, RngContext, RngContextExt, StateContext, TimerContext,
+};
 use crate::ip::gmp::{Action, Actions, GmpAction, GmpStateMachine, ProtocolSpecific};
 use crate::ip::types::IpProto;
-use crate::ip::{Ip, IpAddress, IpLayerTimerId, Ipv6, Ipv6Addr};
+use crate::ip::{Ip, IpAddress, Ipv6, Ipv6Addr};
 use crate::wire::icmp::mld::{
     IcmpMldv1MessageType, Mldv1Body, Mldv1MessageBuilder, MulticastListenerDone,
     MulticastListenerReport,
@@ -32,20 +35,50 @@ use crate::wire::icmp::mld::{
 use crate::wire::icmp::{IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
 use crate::Instant;
-use crate::{Context, DeviceId, EventDispatcher};
-use crate::{TimerId, TimerIdInner};
+
+/// Metadata for sending an MLD packet in an IP packet.
+///
+/// `MldFrameMetadata` is used by [`MldContext`]'s [`FrameContext`] bound. When
+/// [`FrameContext::send_frame`] is called with an `MldFrameMetadata`, the body
+/// contains an MLD packet in an IP packet. It is encapsulated in a link-layer
+/// frame, and sent to the link-layer address corresponding to the given local
+/// IP address.
+pub(crate) struct MldFrameMetadata<D> {
+    pub(crate) device: D,
+    pub(crate) local_ip: Ipv6Addr,
+}
+
+impl<D> MldFrameMetadata<D> {
+    fn new(device: D, local_ip: Ipv6Addr) -> MldFrameMetadata<D> {
+        MldFrameMetadata { device, local_ip }
+    }
+}
+
+/// The execution context for the Multicast Listener Discovery (MLD) protocol.
+pub(crate) trait MldContext:
+    TimerContext<MldReportDelay<<Self as MldContext>::DeviceId>>
+    + RngContext
+    + StateContext<<Self as MldContext>::DeviceId, MldInterface<<Self as InstantContext>::Instant>>
+    + FrameContext<EmptyBuf, MldFrameMetadata<<Self as MldContext>::DeviceId>>
+{
+    /// An ID that identifies a particular device.
+    type DeviceId: Copy + Display;
+
+    /// Gets an IP address and subnet associated with this device.
+    fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv6Addr>>;
+}
 
 /// Receive an MLD message in an ICMPv6 packet.
-pub(crate) fn receive_mld_packet<D: EventDispatcher, B: ByteSlice>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
+pub(crate) fn receive_mld_packet<C: MldContext, B: ByteSlice>(
+    ctx: &mut C,
+    device: C::DeviceId,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
     packet: Icmpv6Packet<B>,
 ) {
     if let Err(e) = match packet {
         Icmpv6Packet::MulticastListenerQuery(msg) => {
-            let now = ctx.dispatcher().now();
+            let now = ctx.now();
             let max_response_delay: Duration = msg.body().max_response_delay();
             handle_mld_message(ctx, device, msg.body(), |rng, state| {
                 state.query_received(rng, max_response_delay, now)
@@ -66,26 +99,28 @@ pub(crate) fn receive_mld_packet<D: EventDispatcher, B: ByteSlice>(
     }
 }
 
-fn handle_mld_message<B, D, F>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
+fn handle_mld_message<C: MldContext, B: ByteSlice, F>(
+    ctx: &mut C,
+    device: C::DeviceId,
     body: &Mldv1Body<B>,
     handler: F,
 ) -> MldResult<()>
 where
-    B: ByteSlice,
-    D: EventDispatcher,
-    F: Fn(&mut D::Rng, &mut MldGroupState<D::Instant>) -> Actions<MldProtocolSpecific>,
+    F: Fn(&mut XorShiftRng, &mut MldGroupState<C::Instant>) -> Actions<MldProtocolSpecific>,
 {
-    let (state, dispatcher) = ctx.state_and_dispatcher();
+    // TODO(joshlf): Once we figure out how to access the RNG and the state at
+    // the same time, get rid of this hack. For the time being, this is probably
+    // fine because, while the `XorShiftRng` isn't cryptographically secure, its
+    // seed is, which means that, at worst, an attacker will be able to
+    // correlate events generated during this one function call.
+    let mut rng = ctx.new_xorshift_rng();
     let group_addr = body.group_addr;
     if group_addr.is_unspecified() {
-        let addr_and_actions = state
-            .ip
-            .get_mld_state_mut(device.id())
+        let addr_and_actions = ctx
+            .get_state_mut(device)
             .groups
             .iter_mut()
-            .map(|(addr, state)| (addr.clone(), handler(dispatcher.rng(), state)))
+            .map(|(addr, state)| (addr.clone(), handler(&mut rng, state)))
             .collect::<Vec<_>>();
         // `addr` must be a multicast address, otherwise it will not have
         // an associated state in the first place
@@ -94,8 +129,8 @@ where
         }
         Ok(())
     } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions = match state.ip.get_mld_state_mut(device.id()).groups.get_mut(&group_addr) {
-            Some(state) => handler(dispatcher.rng(), state),
+        let actions = match ctx.get_state_mut(device).groups.get_mut(&group_addr) {
+            Some(state) => handler(&mut rng, state),
             None => return Err(MldError::NotAMember { addr: group_addr.get() }),
         };
         run_actions(ctx, device, actions, group_addr);
@@ -218,15 +253,19 @@ impl<I: Instant> MldInterface<I> {
 }
 
 /// Make our host join a multicast group.
-pub(crate) fn mld_join_group<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
+pub(crate) fn mld_join_group<C: MldContext>(
+    ctx: &mut C,
+    device: C::DeviceId,
     group_addr: MulticastAddr<Ipv6Addr>,
 ) {
-    let (state, dispatcher) = ctx.state_and_dispatcher();
-    let now = dispatcher.now();
-    let actions =
-        state.ip.get_mld_state_mut(device.id()).join_group(dispatcher.rng(), group_addr, now);
+    // TODO(joshlf): Once we figure out how to access the RNG and the state at
+    // the same time, get rid of this hack. For the time being, this is probably
+    // fine because, while the `XorShiftRng` isn't cryptographically secure, its
+    // seed is, which means that, at worst, an attacker will be able to
+    // correlate events generated during this one function call.
+    let mut rng = ctx.new_xorshift_rng();
+    let now = ctx.now();
+    let actions = ctx.get_state_mut(device).join_group(&mut rng, group_addr, now);
     // actions will be `Nothing` if the the host is not in the `NonMember` state.
     run_actions(ctx, device, actions, group_addr);
 }
@@ -235,43 +274,35 @@ pub(crate) fn mld_join_group<D: EventDispatcher>(
 ///
 /// If our host is not already a member of the given address, this will result
 /// in the `IgmpError::NotAMember` error.
-pub(crate) fn mld_leave_group<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
+pub(crate) fn mld_leave_group<C: MldContext>(
+    ctx: &mut C,
+    device: C::DeviceId,
     group_addr: MulticastAddr<Ipv6Addr>,
 ) -> MldResult<()> {
-    let actions = ctx.state_mut().ip.get_mld_state_mut(device.id()).leave_group(group_addr)?;
+    let actions = ctx.get_state_mut(device).leave_group(group_addr)?;
     run_actions(ctx, device, actions, group_addr);
     Ok(())
 }
 
 /// The timer to delay the MLD report.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
-pub(crate) struct MldReportDelay {
-    device: DeviceId,
+pub(crate) struct MldReportDelay<D> {
+    device: D,
     group_addr: MulticastAddr<Ipv6Addr>,
 }
 
-impl MldReportDelay {
-    fn new(device: DeviceId, group_addr: MulticastAddr<Ipv6Addr>) -> TimerId {
+impl<D> MldReportDelay<D> {
+    fn new(device: D, group_addr: MulticastAddr<Ipv6Addr>) -> MldReportDelay<D> {
         MldReportDelay { device, group_addr }.into()
     }
 }
 
-impl From<MldReportDelay> for TimerId {
-    fn from(id: MldReportDelay) -> Self {
-        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::MldTimer(id)))
-    }
-}
-
-fn run_actions<D>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
+fn run_actions<C: MldContext>(
+    ctx: &mut C,
+    device: C::DeviceId,
     actions: Actions<MldProtocolSpecific>,
     group_addr: MulticastAddr<Ipv6Addr>,
-) where
-    D: EventDispatcher,
-{
+) {
     for action in actions {
         if let Err(err) = run_action(ctx, device, action, group_addr) {
             error!("Error performing action on {} on device {}: {}", group_addr, device, err);
@@ -280,22 +311,22 @@ fn run_actions<D>(
 }
 
 /// Interpret the actions generated by the state machine.
-fn run_action<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
+fn run_action<C: MldContext>(
+    ctx: &mut C,
+    device: C::DeviceId,
     action: Action<MldProtocolSpecific>,
     group_addr: MulticastAddr<Ipv6Addr>,
 ) -> MldResult<()> {
     match action {
         Action::Generic(GmpAction::ScheduleReportTimer(delay)) => {
-            ctx.dispatcher.schedule_timeout(delay, MldReportDelay::new(device, group_addr));
+            ctx.schedule_timer(delay, MldReportDelay::new(device, group_addr));
             Ok(())
         }
         Action::Generic(GmpAction::StopReportTimer) => {
-            ctx.dispatcher.cancel_timeout(MldReportDelay::new(device, group_addr));
+            ctx.cancel_timer(MldReportDelay::new(device, group_addr));
             Ok(())
         }
-        Action::Generic(GmpAction::SendLeave) => send_mld_packet::<&[u8], _, _>(
+        Action::Generic(GmpAction::SendLeave) => send_mld_packet::<_, &[u8], _>(
             ctx,
             device,
             MulticastAddr::new(crate::ip::IPV6_ALL_ROUTERS).unwrap(),
@@ -303,7 +334,7 @@ fn run_action<D: EventDispatcher>(
             group_addr,
             (),
         ),
-        Action::Generic(GmpAction::SendReport(_)) => send_mld_packet::<&[u8], _, _>(
+        Action::Generic(GmpAction::SendReport(_)) => send_mld_packet::<_, &[u8], _>(
             ctx,
             device,
             group_addr,
@@ -312,8 +343,8 @@ fn run_action<D: EventDispatcher>(
             (),
         ),
         Action::Specific(ImmediateIdleState) => {
-            ctx.dispatcher.cancel_timeout(MldReportDelay::new(device, group_addr));
-            ctx.state_mut().ip.get_mld_state_mut(device.id()).report_timer_expired(group_addr)
+            ctx.cancel_timer(MldReportDelay::new(device, group_addr));
+            ctx.get_state_mut(device).report_timer_expired(group_addr)
         }
     }
 }
@@ -322,9 +353,9 @@ fn run_action<D: EventDispatcher>(
 ///
 /// The MLD packet being sent should have its `hop_limit` to be 1 and
 /// a `RouterAlert` option in its Hop-by-Hop Options extensions header.
-fn send_mld_packet<B: ByteSlice, D: EventDispatcher, M: IcmpMldv1MessageType<B>>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
+fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
+    ctx: &mut C,
+    device: C::DeviceId,
     dst_ip: MulticastAddr<Ipv6Addr>,
     msg: M,
     group_addr: M::GroupAddr,
@@ -336,7 +367,7 @@ fn send_mld_packet<B: ByteSlice, D: EventDispatcher, M: IcmpMldv1MessageType<B>>
     // address (::) as the IPv6 source address.
     // NOTE: currently `get_ip_addr_subnet` is not returning the MAC generated link
     // local address, so we're probably just always using UNSPECIFIED_ADDRESS.
-    let src_ip = crate::device::get_ip_addr_subnet(ctx, device).map_or(
+    let src_ip = ctx.get_ip_addr_subnet(device).map_or(
         Ipv6::UNSPECIFIED_ADDRESS,
         |x: AddrSubnet<Ipv6Addr>| {
             let addr = x.addr();
@@ -352,13 +383,13 @@ fn send_mld_packet<B: ByteSlice, D: EventDispatcher, M: IcmpMldv1MessageType<B>>
         .encapsulate(IcmpPacketBuilder::new(src_ip, dst_ip.get(), IcmpUnusedCode, msg))
         .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip.get(), 1, IpProto::Icmpv6));
     // TODO: set a Hop-by-hop Router Alert option.
-    crate::device::send_ip_frame(ctx, device, dst_ip.get(), body)
+    ctx.send_frame(MldFrameMetadata::new(device, dst_ip.get()), body)
         .map_err(|_| MldError::SendFailure { addr: group_addr.into() })
 }
 
-pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, timer: MldReportDelay) {
+pub(crate) fn handle_timeout<C: MldContext>(ctx: &mut C, timer: MldReportDelay<C::DeviceId>) {
     let MldReportDelay { device, group_addr } = timer;
-    send_mld_packet::<&[u8], _, _>(
+    send_mld_packet::<_, &[u8], _>(
         ctx,
         device,
         group_addr,
@@ -366,23 +397,20 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, timer: Ml
         group_addr,
         (),
     );
-    if let Err(e) =
-        ctx.state_mut().ip.get_mld_state_mut(device.id()).report_timer_expired(group_addr)
-    {
+    if let Err(e) = ctx.get_state_mut(device).report_timer_expired(group_addr) {
         error!("MLD timer fired, but an error has occurred: {}", e);
     }
 }
 
 #[cfg(test)]
 mod tests {
-
     use std::convert::TryInto;
     use std::time::Instant;
 
     use net_types::ethernet::Mac;
 
     use super::*;
-    use crate::device::set_ip_addr_subnet;
+    use crate::device::{set_ip_addr_subnet, DeviceId};
     use crate::ip::gmp::{Action, GmpAction, MemberState};
     use crate::ip::icmp::receive_icmp_packet;
     use crate::ip::IPV6_ALL_ROUTERS;
@@ -390,6 +418,7 @@ mod tests {
     use crate::testutil::new_rng;
     use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder};
     use crate::wire::icmp::mld::MulticastListenerQuery;
+    use crate::{Context, EventDispatcher};
 
     #[test]
     fn test_mld_immediate_report() {

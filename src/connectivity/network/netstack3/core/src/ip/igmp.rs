@@ -123,13 +123,13 @@ where
         &IgmpMessage<B, M>,
     ) -> Actions<Igmpv2ProtocolSpecific>,
 {
-    let group_addr = msg.group_addr();
     // TODO(joshlf): Once we figure out how to access the RNG and the state at
     // the same time, get rid of this hack. For the time being, this is probably
     // fine because, while the `XorShiftRng` isn't cryptographically secure, its
     // seed is, which means that, at worst, an attacker will be able to
     // correlate events generated during this one function call.
     let mut rng = ctx.new_xorshift_rng();
+    let group_addr = msg.group_addr();
     if group_addr.is_unspecified() {
         let mut addr_and_actions = ctx
             .get_state_mut(device)
