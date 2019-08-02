@@ -66,6 +66,18 @@ TEST(FakeObjectIdentifierFactoryImpl, LiveIsCorrect) {
   EXPECT_FALSE(factory.IsLive(another_digest));
 }
 
+TEST(FakeObjectIdentifierFactoryImpl, IdentifierReturnsCorrectFactory) {
+  ObjectIdentifier identifier;
+
+  {
+    FakeObjectIdentifierFactory factory;
+    identifier = factory.MakeObjectIdentifier(0u, 0u, ObjectDigest(""));
+    EXPECT_EQ(identifier.factory(), &factory);
+  }
+  // Factory expired.
+  EXPECT_EQ(identifier.factory(), nullptr);
+}
+
 }  // namespace
 }  // namespace fake
 }  // namespace storage

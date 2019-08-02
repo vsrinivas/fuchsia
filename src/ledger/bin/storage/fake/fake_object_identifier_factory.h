@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace storage {
 namespace fake {
@@ -36,6 +37,8 @@ class FakeObjectIdentifierFactory : public ObjectIdentifierFactory {
   // Token for each digest. Entries are never cleaned up, the count stays to at least 1 because the
   // map retains a reference.
   std::map<ObjectDigest, std::shared_ptr<ObjectIdentifier::Token>> tokens_;
+
+  fxl::WeakPtrFactory<FakeObjectIdentifierFactory> weak_factory_;
 };
 
 }  // namespace fake

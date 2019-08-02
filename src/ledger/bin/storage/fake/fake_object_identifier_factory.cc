@@ -6,18 +6,22 @@
 
 #include <utility>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
+
 namespace storage {
 namespace fake {
 
 class FakeObjectIdentifierFactory::TokenImpl : public ObjectIdentifier::Token {
  public:
+  TokenImpl(fxl::WeakPtr<FakeObjectIdentifierFactory> factory) : factory_(factory) {}
   ~TokenImpl() override = default;
-  // This is not really correct (we should return a pointer to the factory) but will not matter in
-  // practice for tests.
-  ObjectIdentifierFactory* factory() const override { return nullptr; }
+  ObjectIdentifierFactory* factory() const override { return factory_.get(); }
+
+ private:
+  fxl::WeakPtr<FakeObjectIdentifierFactory> factory_;
 };
 
-FakeObjectIdentifierFactory::FakeObjectIdentifierFactory() = default;
+FakeObjectIdentifierFactory::FakeObjectIdentifierFactory() : weak_factory_(this) {}
 
 FakeObjectIdentifierFactory::~FakeObjectIdentifierFactory() = default;
 
@@ -34,7 +38,8 @@ bool FakeObjectIdentifierFactory::IsLive(const ObjectDigest& digest) const {
 ObjectIdentifier FakeObjectIdentifierFactory::MakeObjectIdentifier(uint32_t key_index,
                                                                    uint32_t deletion_scope_id,
                                                                    ObjectDigest object_digest) {
-  auto [it, inserted] = tokens_.emplace(object_digest, std::make_shared<TokenImpl>());
+  auto [it, inserted] =
+      tokens_.emplace(object_digest, std::make_shared<TokenImpl>(weak_factory_.GetWeakPtr()));
   return ObjectIdentifier(key_index, deletion_scope_id, std::move(object_digest), it->second);
 }
 
