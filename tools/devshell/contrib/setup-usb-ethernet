@@ -14,6 +14,7 @@ if [[ $(uname) != "Linux" ]]; then
   exit 1
 fi
 
+echo "Adding the following udev rules:"
 cat << EOF | sudo tee /etc/udev/rules.d/70-zircon-ethernet.rules
 # Rule for CDC Ethernet-only configuration
 SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="a020", NAME="zircon%b"
