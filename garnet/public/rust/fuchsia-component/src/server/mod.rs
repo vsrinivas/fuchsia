@@ -478,6 +478,18 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         dir(self, ROOT_NODE, path.into())
     }
 
+    /// Get a reference to the root directory as a `ServiceFsDir`.
+    ///
+    /// This can be useful when writing code which hosts some set of services on
+    /// a directory and wants to be agnostic to whether that directory
+    /// is the root `ServiceFs` or a subdirectory.
+    ///
+    /// Such a function can take an `&mut ServiceFsDir<...>` as an argument,
+    /// allowing callers to provide either a subdirectory or `fs.root_dir()`.
+    pub fn root_dir<'a>(&'a mut self) -> ServiceFsDir<'a, ServiceObjTy> {
+        ServiceFsDir { position: ROOT_NODE, fs: self }
+    }
+
     /// Adds a new remote directory served over the given DirectoryProxy.
     ///
     /// The name must not contain any '/' characters.

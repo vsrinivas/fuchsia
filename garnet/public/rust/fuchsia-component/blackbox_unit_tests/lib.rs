@@ -11,10 +11,11 @@ use {
     failure::Error,
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{
-        DirectoryMarker, FileMarker, FileProxy, NodeInfo, NodeMarker, SeekOrigin, Service,
+        DirectoryMarker, DirectoryProxy,
+        FileMarker, FileProxy, NodeInfo, NodeMarker, SeekOrigin, Service,
     },
     fuchsia_async::run_until_stalled,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{future::try_join, FutureExt, StreamExt},
     std::future::Future,
@@ -25,14 +26,77 @@ async fn complete_with_no_clients() {
     await!(ServiceFs::new().collect())
 }
 
+fn fs_with_connection<'a, T: 'a>() -> (ServiceFs<ServiceObj<'a, T>>, DirectoryProxy) {
+    let mut fs = ServiceFs::new();
+    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()
+        .expect("Unable to create directory proxy");
+    fs.serve_connection(dir_server_end.into_channel())
+        .expect("unable to serve main dir proxy");
+    (fs, dir_proxy)
+}
+
+#[run_until_stalled(test)]
+async fn serve_on_root_and_subdir() -> Result<(), Error> {
+    const SERVICE_NAME: &str = "foo";
+
+    // Example of serving a dummy service that just throws away
+    // the channel on an arbitrary directory.
+    fn serve_on_dir(dir: &mut ServiceFsDir<'_, ServiceObj<()>>) {
+        dir.add_service_at(SERVICE_NAME, |_chan| Some(()));
+    }
+
+    fn assert_peer_closed(chan: zx::Channel) {
+        let err = chan.read_raw(&mut vec![], &mut vec![])
+            .expect("unexpected too small buffer")
+            .expect_err("should've been a PEER_CLOSED error");
+        assert_eq!(err, zx::Status::PEER_CLOSED);
+    }
+
+    async fn assert_has_service_child(
+        fs: &mut ServiceFs<ServiceObj<'_, ()>>,
+        dir_proxy: &DirectoryProxy,
+    ) {
+        let flags = 0;
+        let mode = fidl_fuchsia_io::MODE_TYPE_SERVICE;
+        let (server_end, client_end) = zx::Channel::create().expect("create channel");
+        dir_proxy.open(flags, mode, SERVICE_NAME, server_end.into()).expect("open");
+        fs.next().await.expect("expected one service to have been started");
+        assert_peer_closed(client_end);
+    }
+
+    let (mut fs, dir_proxy) = fs_with_connection();
+
+    // serve at both the root directory and a child dir /fooey
+    serve_on_dir(&mut fs.root_dir());
+    serve_on_dir(&mut fs.dir("fooey"));
+
+    // attempt to connect to the root service
+    assert_has_service_child(&mut fs, &dir_proxy).await;
+
+    // attempt to connect to the /fooey dir
+    let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
+    let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
+    let (subdir_proxy, server_end) = create_proxy::<DirectoryMarker>()?;
+    dir_proxy.open(flags, mode, "fooey", server_end.into_channel().into())?;
+
+    // attempt to connect ot the service under /fooey
+    assert_has_service_child(&mut fs, &subdir_proxy).await;
+
+    // drop the connections and ensure the fs has no outstanding
+    // clients or service connections
+    drop(dir_proxy);
+    drop(subdir_proxy);
+    assert!(fs.next().await.is_none());
+
+    Ok(())
+}
+
 #[run_until_stalled(test)]
 async fn open_service_node_reference() -> Result<(), Error> {
     const PATH: &str = "service_name";
 
-    let mut fs = ServiceFs::new();
+    let (mut fs, dir_proxy) = fs_with_connection();
     fs.add_service_at(PATH, |_chan| Some(()));
-    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
-    fs.serve_connection(dir_server_end.into_channel())?;
     let serve_fut = fs.collect().map(Ok);
 
     let open_reference_fut = async {
@@ -62,10 +126,8 @@ async fn open_service_node_reference() -> Result<(), Error> {
 async fn clone_service_dir() -> Result<(), Error> {
     const PATH: &str = "service_name";
 
-    let mut fs = ServiceFs::new();
+    let (mut fs, dir_proxy) = fs_with_connection();
     fs.add_service_at(PATH, |_chan| Some(()));
-    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
-    fs.serve_connection(dir_server_end.into_channel())?;
     let serve_fut = fs.collect().map(Ok);
 
     let open_reference_fut = async {
@@ -183,7 +245,8 @@ fn set_up_and_connect_to_vmo_file(
         data_i = data_i.wrapping_add(1);
         data_i
     });
-    let mut fs = ServiceFs::new();
+
+    let (mut fs, dir_proxy) = fs_with_connection();
 
     let vmo = zx::Vmo::create(VMO_SIZE)?;
     vmo.write(&*data, 0)?;
@@ -194,9 +257,6 @@ fn set_up_and_connect_to_vmo_file(
         VMO_FILE_OFFSET as u64,
         VMO_FILE_LENGTH as u64,
     );
-
-    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
-    fs.serve_connection(dir_server_end.into_channel())?;
 
     // Open a connection to the file within the directory
     let (file_proxy, file_server_end) = create_proxy::<FileMarker>()?;
