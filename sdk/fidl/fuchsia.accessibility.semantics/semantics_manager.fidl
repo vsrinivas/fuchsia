@@ -24,7 +24,8 @@ const uint64 MAX_LABEL_SIZE = 16384;
 ///
 /// The manager allows clients to register as a semantic provider for their view(s). In return the
 /// semantics manager supplies an interface to update, commit and delete information from the
-/// semantic tree for that view.
+/// semantic tree for that view. If the semantic manager encounters an error, it will close the
+/// channel, delete any associated data and rely on the client to re-register.
 [Discoverable]
 protocol SemanticsManager {
     // TODO(MI4-2636): This should be removed after clients move to RegisterViewForSemantics.
@@ -44,6 +45,16 @@ protocol SemanticsManager {
 /// for breaking up changes into multiple update and delete calls that conform to these limits. The
 /// commit function must always be called at the end of a full update push to signal the end of an
 /// update.
+///
+/// The client may make several calls to UpdateSemanticNodes(...) or DeleteSemanticNodes(...)
+/// before calling CommitUpdates(), and must wait for the semantics manager to reply to the
+/// CommitUpdates() method to know whether an update has been processed. This allows the client to
+/// break up a set of changes (e.g. a re-computed semantic tree) to the semantic tree into
+/// FIDL-compatible chunks, but commit them all at once.
+///
+/// If the semantics manager ever receives inconsistent state from the client, such as an
+/// invalid tree or unrecognized parent node id, the server will close the channel. The client is
+/// responsible for reconnecting and re-sending its state from scratch.
 protocol SemanticTree {
 
     /// Sends new/updated nodes to the root to add to the cache on the next commit.
@@ -54,7 +65,16 @@ protocol SemanticTree {
 
     /// Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
     /// DeleteSemanticNodes. Commits are processed in the order in which they are sent.
+    /// TODO(MI4-2636): This should be removed after clients move to CommitUpdates().
+    [Transitional]
     Commit();
+
+    /// Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
+    /// DeleteSemanticNodes. Updates are processed in the order in which they are received. If the
+    /// committed updates result in an ill-formed tree (for example a missing root node or a cycle)
+    /// the semantic manager will close the channel.
+    [Transitional]
+    CommitUpdates() -> ();
 };
 
 /// Results of hit testing on a view's semantic tree which is implemented by
