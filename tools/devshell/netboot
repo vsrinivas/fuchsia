@@ -17,6 +17,14 @@ if [[ -n "$name" ]]; then
   name_args+=("-n" "${name}")
 fi
 
+netboot_script="${FUCHSIA_BUILD_DIR}/netboot.sh"
+
+if [[ ! -x "${netboot_script}" ]]; then
+  fx-error "netboot script does not exist or is not executable: ${netboot_script}"
+  fx-error "Hint: try using \"--netboot\" in the \"fx set\" command."
+  exit 1
+fi
+
 tmpdir="${FUCHSIA_BUILD_DIR}.netboot.tmp"
 mkdir "${tmpdir}"
 trap 'rm -rf "${tmpdir}"' EXIT
@@ -24,7 +32,7 @@ trap 'rm -rf "${tmpdir}"' EXIT
 # The script uses the ${IMAGE_NETBOOT_ZBI} relative path, relative to its own
 # location.  So copy the script into a temporary location next to the location
 # where we'll write the temporary copy of ${IMAGE_NETBOOT_ZBI}.
-cp "${FUCHSIA_BUILD_DIR}/netboot.sh" "${tmpdir}"
+cp "${netboot_script}" "${tmpdir}"
 
 # Make a temporary image that adds in the .ssh/authorized_keys file.
 fx-zbi \
