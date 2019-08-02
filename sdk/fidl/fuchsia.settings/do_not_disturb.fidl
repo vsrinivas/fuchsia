@@ -1,0 +1,47 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+/// Modify or watch do-not-disturb (DND) mode. While DND is active, distractions
+/// created by the device are reduced or eliminated. E.g. bootup is silent,
+/// incoming calls could be rejected or silent, and notifications could be
+/// paused, silent, or hidden. High-priority disruptions like alarms can be
+/// allowed.
+[Discoverable]
+protocol DoNotDisturb {
+    /// Gets the current [`DoNotDisturbSettings`]. Returns immediately on first
+    /// call; subsequent calls return when the values change.
+    Watch() -> (DoNotDisturbSettings settings);
+
+    /// Sets [`DoNotDisturbSettings`] settings. Any field not explicitly set in
+    /// the table performs a no-op, and will not make any changes.
+    Set(DoNotDisturbSettings settings) -> ();
+};
+
+/// Settings related to do-not-disturb (DND) mode.
+table DoNotDisturbSettings {
+    /// If true, the device is in do-not-disturb (DND) mode. Change this value
+    /// if you're directly responding to a user-initiated event.
+    ///
+    /// Note that the device could still be in DND mode even if this is set to
+    /// `false`, as [`night_mode_initiated_do_not_disturb`] might be `true`. To
+    /// actually disable DND mode, set both fields to `false`.
+    ///
+    /// To know whether DND is enabled, you need to do a boolean OR of both
+    /// fields.
+    1: bool user_initiated_do_not_disturb;
+
+    /// If true, the device is in do-not-disturb (DND) mode. Change this value
+    /// if you're trying to enable or disable DND based on a nightly schedule.
+    ///
+    /// Note that the device could still be in DND mode even if this is set to
+    /// `false`, as [`user_initiated_do_not_disturb`] might be `true`. Do not
+    /// set that field to `false` unless you're directly responding to a
+    /// user-initiated event.
+    ///
+    /// To know whether DND is enabled, you need to do a boolean OR of both
+    /// fields.
+    2: bool night_mode_initiated_do_not_disturb;
+};
