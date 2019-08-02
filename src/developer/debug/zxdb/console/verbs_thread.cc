@@ -49,6 +49,7 @@ constexpr int kForceNumberUnsigned = 6;
 constexpr int kForceNumberHex = 7;
 constexpr int kMaxArraySize = 8;
 constexpr int kRawOutput = 9;
+constexpr int kForceUpdate = 10;
 
 // If the system has at least one running process, returns true. If not, returns false and sets the
 // err.
@@ -168,6 +169,11 @@ const char kBacktraceHelp[] =
 
 Arguments
 
+  -f
+  --force
+      Force updates the stack, replacing and recomputing all addresses even if
+      the debugger thinks nothing has changed.
+
   -t
   --types
       Include all type information for function parameters.
@@ -184,6 +190,9 @@ Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
 
   if (!cmd.thread())
     return Err("There is no thread to have frames.");
+
+  if (cmd.HasSwitch(kForceUpdate))
+    cmd.thread()->GetStack().ClearFrames();
 
   // TODO(brettw) this should share formatting options and parsing with the printing commands.
   bool show_params = cmd.HasSwitch(kForceAllTypes);
@@ -1332,9 +1341,10 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
       SwitchRecord(kMaxArraySize, true, "max-array"),
       SwitchRecord(kRawOutput, false, "raw", 'r')};
 
+  // backtrace
   VerbRecord backtrace(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp, kBacktraceHelp,
                        CommandGroup::kQuery);
-  backtrace.switches = {force_types};
+  backtrace.switches = {force_types, SwitchRecord(kForceUpdate, false, "force", 'f')};
   (*verbs)[Verb::kBacktrace] = std::move(backtrace);
 
   (*verbs)[Verb::kContinue] =

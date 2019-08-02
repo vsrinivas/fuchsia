@@ -41,6 +41,7 @@ namespace {
 
 constexpr int kForceTypes = 1;
 constexpr int kVerboseSwitch = 2;
+constexpr int kForceUpdate = 3;
 
 // Frames ------------------------------------------------------------------------------------------
 
@@ -62,6 +63,11 @@ const char kFrameHelp[] =
   regardless of which is the active one.
 
 Options
+
+  -f
+  --force
+      When listing frames, force updates the stack, replacing and recomputing
+      all addresses even if the debugger thinks nothing has changed.
 
   -t
   --types
@@ -101,6 +107,8 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
   if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
     // Just "frame", this lists available frames.
+    if (cmd.HasSwitch(kForceUpdate))
+      cmd.thread()->GetStack().ClearFrames();
     Console::get()->Output(
         FormatFrameList(cmd.thread(), cmd.HasSwitch(kForceTypes), cmd.HasSwitch(kVerboseSwitch)));
     return true;
@@ -827,6 +835,7 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
 const std::vector<SwitchRecord>& GetNounSwitches() {
   static std::vector<SwitchRecord> switches;
   if (switches.empty()) {
+    switches.emplace_back(kForceUpdate, false, "force", 'f');
     switches.emplace_back(kForceTypes, false, "types", 't');
     switches.emplace_back(kVerboseSwitch, false, "verbose", 'v');
   }
