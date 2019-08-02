@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
@@ -63,12 +63,12 @@ async fn registry_server(
 
     // The lifetime of the shortcuts is determined by the lifetime of the connection,
     // so once this registry goes out of scope, it's removed from RegistryStore.
-    let registry = await!(store.lock()).add_new_registry();
+    let registry = store.lock().await.add_new_registry();
 
     // TODO: clean up empty Weak refs for registries from the store
 
-    while let Some(req) = await!(stream.try_next()).context("error running registry server")? {
-        let mut registry = await!(registry.lock());
+    while let Some(req) = stream.try_next().await.context("error running registry server")? {
+        let mut registry = registry.lock().await;
 
         match req {
             ui_shortcut::RegistryRequest::SetView { view_ref, listener, .. } => {
@@ -91,13 +91,13 @@ async fn manager_server(
 ) -> Result<(), Error> {
     fx_log_info!("new manager connection");
 
-    while let Some(req) = await!(stream.try_next()).context("error running manager server")? {
-        let mut store = await!(store.lock());
+    while let Some(req) = stream.try_next().await.context("error running manager server")? {
+        let mut store = store.lock().await;
 
         match req {
             ui_shortcut::ManagerRequest::HandleKeyEvent { event, responder } => {
                 // TODO: error handling
-                let was_handled = await!(store.handle_key_event(event))?;
+                let was_handled = store.handle_key_event(event).await?;
                 responder.send(was_handled).context("error sending response")?;
             }
         }
@@ -172,7 +172,7 @@ mod test {
             };
 
             let was_handled =
-                await!(manager.handle_key_event(event)).expect("handle_key_event false");
+                manager.handle_key_event(event).await.expect("handle_key_event false");
 
             assert_eq!(false, was_handled);
 
@@ -186,7 +186,7 @@ mod test {
             let was_handled = manager.handle_key_event(event);
 
             // React to one shortcut activation message from the listener stream.
-            if let Some(Ok(req)) = await!(listener_stream.next()) {
+            if let Some(Ok(req)) = listener_stream.next().await {
                 match req {
                     ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. } => {
                         assert_eq!(id, TEST_SHORTCUT_ID);
@@ -197,7 +197,7 @@ mod test {
                 panic!("Error from listener_stream.next()");
             }
 
-            let was_handled = await!(was_handled).expect("handle_key_event true");
+            let was_handled = was_handled.await.expect("handle_key_event true");
             // Expect key event to be handled.
             assert_eq!(true, was_handled);
         };

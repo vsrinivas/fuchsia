@@ -37,13 +37,13 @@ async fn handle(
     key: Option<ui_input::Key>,
     modifiers: Option<ui_input::Modifiers>,
 ) -> Result<bool, Error> {
-    let registry = await!(registry.lock());
+    let registry = registry.lock().await;
     let shortcut = registry.shortcuts.iter().find(|s| s.key == key && s.modifiers == modifiers);
     match (&registry.subscriber, shortcut) {
         (Some(Subscriber { ref listener, .. }), Some(shortcut)) => {
             // TODO: timeout if the listener hangs
             let id = shortcut.id.unwrap_or(DEFAULT_SHORTCUT_ID);
-            await!(listener.on_shortcut(id)).map_err(Into::into)
+            listener.on_shortcut(id).await.map_err(Into::into)
         }
         _ => Ok(false),
     }
@@ -75,16 +75,19 @@ impl RegistryStore {
             // arguments are not currently supported
             let key = event.key;
             let modifiers = event.modifiers;
-            move |was_handled, registry| async move {
-                let handled =
-                    await!(handle(registry, key, modifiers)).unwrap_or_else(|e: failure::Error| {
-                        fx_log_err!("shortcut handle error: {:?}", e);
-                        false
-                    });
-                handled || was_handled
+            move |was_handled, registry| {
+                async move {
+                    let handled = handle(registry, key, modifiers).await.unwrap_or_else(
+                        |e: failure::Error| {
+                            fx_log_err!("shortcut handle error: {:?}", e);
+                            false
+                        },
+                    );
+                    handled || was_handled
+                }
             }
         });
 
-        Ok(await!(was_handled))
+        Ok(was_handled.await)
     }
 }
