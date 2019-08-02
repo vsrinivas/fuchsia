@@ -41,12 +41,12 @@ int main(int argc, char** argv) {
 
 namespace {
 
-constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
-constexpr char kFactoryItemsPath[] = "/bootsvc/" fuchsia_boot_FactoryItems_Name;
-constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
-constexpr char kLogPath[] = "/bootsvc/" fuchsia_boot_Log_Name;
-constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
-constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
+constexpr char kArgumentsPath[] = "/svc/" fuchsia_boot_Arguments_Name;
+constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
+constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
+constexpr char kLogPath[] = "/svc/" fuchsia_boot_Log_Name;
+constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
+constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 
 // Make sure the loader works
 bool TestLoader() {
@@ -60,7 +60,7 @@ bool TestLoader() {
   END_TEST;
 }
 
-// Make sure that bootsvc gave us a namespace with only /boot and /bootsvc.
+// Make sure that bootsvc gave us a namespace with only /boot and /svc.
 bool TestNamespace() {
   BEGIN_TEST;
 
@@ -74,7 +74,7 @@ bool TestNamespace() {
 
   ASSERT_EQ(ns->count, 2);
   EXPECT_STR_EQ(ns->path[0], "/boot");
-  EXPECT_STR_EQ(ns->path[1], "/bootsvc");
+  EXPECT_STR_EQ(ns->path[1], "/svc");
 
   free(ns);
   END_TEST;
@@ -159,35 +159,21 @@ bool TestFactoryItems() {
   status = fuchsia_boot_FactoryItemsGet(local_factory_items.get(), 0,
                                         payload.reset_and_get_address(), &length);
   ASSERT_EQ(ZX_OK, status);
+  // Expect a valid payload.
+  ASSERT_TRUE(payload.is_valid());
 
-  // If we have a valid payload, verify that a second call vends nothing.
-  if (payload.is_valid()) {
-    status = fuchsia_boot_FactoryItemsGet(local_factory_items.get(), 0,
-                                          payload.reset_and_get_address(), &length);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_FALSE(payload.is_valid());
-    ASSERT_EQ(0, length);
-  }
+  // Verify that a second call vends nothing.
+  status = fuchsia_boot_FactoryItemsGet(local_factory_items.get(), 0,
+                                        payload.reset_and_get_address(), &length);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_FALSE(payload.is_valid());
+  ASSERT_EQ(0, length);
 
   END_TEST;
 }
 
 // Make sure that bootsvc parsed and passed boot args from ZBI_ITEM_IMAGE_ARGS
 // correctly.
-//
-// As documented in TESTING, this test relies on these tests being run by using
-// following steps:
-// 1. prepare a file with bootargs
-// cat > test_image_args.txt <<EOF
-// testkey=testvalue
-// EOF
-// 2. add ZBI_ITEM_IMAGE_ARGS item to existing ZBI container
-// ./out/default.zircon/tools/zbi -o out/default.zircon/x64.zbi
-//         out/default.zircon/x64.zbi -T IMAGE_ARGS test_image_args.txt
-//
-// 3. Run bootsvc-integration-test
-//
-// TODO (dmitryya@) use zbi_test() to automate this.
 bool TestBootArgsFromImage() {
   BEGIN_TEST;
 
@@ -245,7 +231,8 @@ bool TestBootItems() {
     // If we see a ZBI_TYPE_CRASHLOG item, then the kernel should have
     // translated it into a VMO file, and bootsvc should have put it at the
     // path below.
-    if (type == ZBI_TYPE_CRASHLOG && payload.is_valid()) {
+    if (type == ZBI_TYPE_CRASHLOG) {
+      ASSERT_TRUE(payload.is_valid());
       fbl::String path = fbl::StringPrintf("/boot/%s", bootsvc::kLastPanicFilePath);
       fbl::unique_fd fd(open(path.data(), O_RDONLY));
       ASSERT_TRUE(fd.is_valid());
