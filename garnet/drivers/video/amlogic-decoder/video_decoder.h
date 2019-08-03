@@ -61,21 +61,31 @@ class CanvasEntry {
 class CodecPacket;
 class VideoDecoder {
  public:
+  using IsCurrentOutputBufferCollectionUsable =
+      fit::function<bool(
+        uint32_t frame_count,
+        uint32_t coded_width,
+        uint32_t coded_height,
+        uint32_t stride,
+        uint32_t display_width,
+        uint32_t display_height)>;
+  using InitializeFramesHandler =
+      fit::function<zx_status_t(::zx::bti,
+                                uint32_t,  // frame_count
+                                uint32_t,  // width
+                                uint32_t,  // height
+                                uint32_t,  // stride
+                                uint32_t,  // display_width
+                                uint32_t,  // display_height
+                                bool,      // has_sar
+                                uint32_t,  // sar_width
+                                uint32_t   // sar_height
+                                )>;
   // In actual operation, the FrameReadyNotifier must not keep a reference on
   // the frame shared_ptr<>, as that would interfere with muting calls to
   // ReturnFrame().  See comment on Vp9Decoder::Frame::frame field.
   using FrameReadyNotifier = fit::function<void(std::shared_ptr<VideoFrame>)>;
-  using InitializeFramesHandler = fit::function<zx_status_t(::zx::bti,
-                                                            uint32_t,  // frame_count
-                                                            uint32_t,  // width
-                                                            uint32_t,  // height
-                                                            uint32_t,  // stride
-                                                            uint32_t,  // display_width
-                                                            uint32_t,  // display_height
-                                                            bool,      // has_sar
-                                                            uint32_t,  // sar_width
-                                                            uint32_t   // sar_height
-                                                            )>;
+  using EosHandler = fit::closure;
   using CheckOutputReady = fit::function<bool()>;
   class Owner {
    public:
@@ -109,8 +119,15 @@ class VideoDecoder {
   virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
   virtual __WARN_UNUSED_RESULT zx_status_t InitializeHardware() { return ZX_ERR_NOT_SUPPORTED; }
   virtual void HandleInterrupt() = 0;
-  virtual void SetFrameReadyNotifier(FrameReadyNotifier notifier) = 0;
+  virtual void SetIsCurrentOutputBufferCollectionUsable(
+      IsCurrentOutputBufferCollectionUsable is_current_output_buffer_collection_usable) {
+    ZX_ASSERT_MSG(false, "not yet implemented");
+  }
   virtual void SetInitializeFramesHandler(InitializeFramesHandler handler) {
+    ZX_ASSERT_MSG(false, "not yet implemented");
+  }
+  virtual void SetFrameReadyNotifier(FrameReadyNotifier notifier) = 0;
+  virtual void SetEosHandler(EosHandler eos_handler) {
     ZX_ASSERT_MSG(false, "not yet implemented");
   }
   virtual void SetErrorHandler(fit::closure error_handler) {

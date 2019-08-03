@@ -63,9 +63,30 @@ source_set("codec_client") {
   ]
 
   deps = [
+    "//garnet/lib/media/test:one_shot_event",
     "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("one_shot_event") {
+  testonly = true
+
+  sources = [
+    "one_shot_event.cc",
+  ]
+
+  include_dirs = [ "include" ]
+
+  public_configs = [ ":media_test_include_config" ]
+
+  public = [
+    "include/lib/media/test/one_shot_event.h",
+  ]
+
+  deps = [
+    "//zircon/public/lib/zx",
   ]
 }

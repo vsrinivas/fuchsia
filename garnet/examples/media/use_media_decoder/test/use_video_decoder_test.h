@@ -4,6 +4,23 @@
 
 #include "../use_video_decoder.h"
 
-int use_video_decoder_test(const char* input_file_path, int frame_count,
-                           UseVideoDecoderFunction use_video_decoder,
-                           const std::map<uint32_t, const char*>& golden_sha256s);
+#include "../in_stream_peeker.h"
+
+#include "lib/component/cpp/startup_context.h"
+
+// For tests that just want to decode an input file with a known number of
+// frames.
+int use_video_decoder_test(
+    std::string input_file_path, int expected_frame_count,
+    UseVideoDecoderFunction use_video_decoder,
+    std::string golden_sha256);
+
+// For tests that want to provide their own InStreamPeeker and EmitFrame.
+bool decode_video_stream_test(
+    async::Loop* fidl_loop,
+    thrd_t fidl_thread,
+    component::StartupContext* startup_context,
+    InStreamPeeker* in_stream_peeker,
+    UseVideoDecoderFunction use_video_decoder,
+    uint64_t min_output_buffer_size,
+    EmitFrame emit_frame);

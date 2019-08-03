@@ -41,7 +41,7 @@ namespace fit {
 //
 // The consumption capability has a single owner represented by |fit::consumer|.
 // Its owner may exercise the capability to consume the task's result (as a
-/// promise), it may transfer the capability by moving it to another consumer
+// promise), it may transfer the capability by moving it to another consumer
 // instance, or it may cause the asynchronous task to be "canceled" by
 // discarding the capability, implying that the task's result can never be
 // consumed.  When this occurs, the associated completer's

@@ -3047,10 +3047,11 @@ void CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(bool output_re_confi
         output_re_config_required);
   // For now, the core codec thread is the only thread this gets called from.
   ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread());
+
   // For a OMX_EventPortSettingsChanged that doesn't demand output buffer
   // re-config before more output data, this translates to an ordered emit
   // of a no-action-required OnOutputConstraints() that just updates to the new
-  // format, without demanding output buffer re-config.  HDR info can be
+  // format, without demanding output buffer re-config.  HDR info could be
   // conveyed this way, ordered with respect to output frames.
   if (!output_re_config_required) {
     std::unique_lock<std::mutex> lock(lock_);

@@ -45,8 +45,8 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx
   for (uint32_t i = 0; i < regions_.size();) {
     fbl::unique_ptr<Region>& region = regions_[i];
     zx_info_handle_count_t count;
-    zx_status_t status =
-        region->vmo.get_info(ZX_INFO_HANDLE_COUNT, &count, sizeof(count), nullptr, nullptr);
+    zx_status_t status = region->vmo.get_info(ZX_INFO_HANDLE_COUNT, &count, sizeof(count),
+                                              nullptr, nullptr);
     ZX_ASSERT(status == ZX_OK);
     zx_info_vmo_t vmo_info;
     status = region->vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
@@ -68,9 +68,8 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx
 
   // TODO: Use a fragmentation-reducing allocator (such as best fit).
   zx_status_t status = region_allocator_.GetRegion(size, ZX_PAGE_SIZE, region->region);
-
   if (status != ZX_OK) {
-    DRIVER_INFO("GetRegion failed (out of space?)\n");
+    DRIVER_INFO("GetRegion failed (out of space?) - size: %zu status: %d\n", size, status);
     DumpPoolStats();
     return status;
   }
@@ -131,6 +130,8 @@ void ContiguousPooledSystemRamMemoryAllocator::DumpPoolStats() {
         return true;
       });
 
-  DRIVER_ERROR("Contiguous pool unused total: %ld bytes, max free size %ld bytes\n", unused_size,
-               max_free_size);
+  DRIVER_ERROR("Contiguous pool unused total: %ld bytes, max free size %ld bytes "
+               "AllocatedRegionCount(): %zu AvailableRegionCount(): %zu\n",
+               unused_size, max_free_size,
+               region_allocator_.AllocatedRegionCount(), region_allocator_.AvailableRegionCount());
 }

@@ -333,7 +333,7 @@ template("pm_build_package") {
 #       name (required)
 #         [string] Name of the test.
 #
-#       dest (optional)
+#       dest (optional, default: name)
 #         [path] Location the binary will be placed within `test/`.
 #
 #       disabled (optional)
@@ -748,7 +748,8 @@ template("package") {
                  ])
 
       if (!is_disabled) {
-        test_spec_name = "${dest}_test_spec"
+        test_spec_name = "${pkg.package_name}_${dest}_test_spec"
+
         pkg.deps += [ ":$test_spec_name" ]
 
         test_spec(test_spec_name) {

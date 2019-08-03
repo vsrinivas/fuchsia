@@ -6,6 +6,10 @@ import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/testing/environments.gni")
 
+declare_args() {
+  build_all_vp9_file_decoder_conformance_tests = false
+}
+
 # We have a separate package for each example to clarify the dependencies of
 # each example.
 
@@ -32,40 +36,7 @@ package("use_media_decoder") {
 }
 
 #
-# Tests that run on CQ
-#
-
-package("use_aac_decoder_test") {
-  testonly = true
-
-  deps = [
-    "//garnet/examples/media/use_media_decoder:use_aac_decoder_test",
-  ]
-
-  tests = [
-    {
-      name = "use_aac_decoder_test"
-      environments = basic_envs
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("use_media_decoder/test/test_audio.adts")
-      dest = "media_test_data/test_audio.adts"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("use_media_decoder/meta/use_aac_decoder_test.cmx")
-      dest = "use_aac_decoder_test.cmx"
-    },
-  ]
-}
-
-#
-# Tests that don't run on CQ yet.
+# Tests that run on CQ.
 #
 
 package("use_h264_decoder_test") {
@@ -100,6 +71,39 @@ package("use_h264_decoder_test") {
       path = rebase_path(
               "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
       dest = "bear.h264"
+    },
+  ]
+}
+
+#
+# Tests that don't run on CQ yet.
+#
+
+package("use_aac_decoder_test") {
+  testonly = true
+
+  deps = [
+    "//garnet/examples/media/use_media_decoder:use_aac_decoder_test",
+  ]
+
+  tests = [
+    {
+      name = "use_aac_decoder_test"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("use_media_decoder/test/test_audio.adts")
+      dest = "media_test_data/test_audio.adts"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/use_aac_decoder_test.cmx")
+      dest = "use_aac_decoder_test.cmx"
     },
   ]
 }
@@ -143,4 +147,146 @@ package("use_vp9_decoder_test") {
       dest = "bear-vp9.ivf"
     },
   ]
+}
+
+template("vp9_file_decoder_conformance_test") {
+  package(target_name) {
+    testonly = true
+
+    deps = [
+      "//garnet/examples/media/use_media_decoder:vp9_decoder_conformance_test",
+    ]
+
+    meta = [
+      {
+        path = rebase_path(
+                "use_media_decoder/meta/vp9_decoder_conformance_test.cmx")
+        dest = "vp9_decoder_conformance_test.cmx"
+      },
+    ]
+
+    tests = [
+      {
+        # Soon, this should pass when run on VIM2 or astro, and fail otherwise.
+        #
+        # TODO(dustingreen): This package is not yet included in tests, but
+        # should be soon.
+        name = "vp9_decoder_conformance_test"
+
+        environments = [
+          vim2_env,
+          astro_env,
+        ]
+      },
+    ]
+
+    resources = [
+      {
+        path = rebase_path(invoker.ivf_file)
+        dest = "vp9.ivf"
+      },
+      {
+        path = rebase_path(invoker.md5_file)
+        dest = "vp9.md5"
+      },
+    ]
+  }
+}
+
+# Running this binary, the --http=<url> command-line parameter needs to be
+# passed, and the binary won't verify the MD5.  Instead it'll stream the URL
+# data in, parse it as ivf, decode it, compute MD5, and output the MD5.
+package("vp9_decoder_conformance_http") {
+  testonly = true
+
+  deps = [
+    "//garnet/examples/media/use_media_decoder:vp9_decoder_conformance_test",
+  ]
+
+  meta = [
+    {
+      path =
+          rebase_path("use_media_decoder/meta/vp9_decoder_conformance_http.cmx")
+      dest = "vp9_decoder_conformance_http.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "vp9_decoder_conformance_http"
+
+      # We share the binary for now, but this could change.
+      source = "$root_out_dir/vp9_decoder_conformance_test"
+    },
+  ]
+}
+
+# Put the below group of vp9 conformance tests last in the file.  Otherwise,
+# with the above __http package last in this file, the build complains about
+# duplicate packages, at least when fx set with these:
+# --args=build_all_vp9_file_decoder_conformance_tests=true \
+# --with //garnet/examples/media:vp9_decoder_conformance_tests \
+# --with //garnet/examples/media:vp9_decoder_conformance_test__http
+
+_vp9_file_conformance_tests_group_deps = []
+
+# This target makes sure the vp9_decoder_conformance_test executable builds and
+# can verify an md5 hash of decompressed frames.
+package_name = "vp9_decoder_conformance_test__bear-vp9"
+vp9_file_decoder_conformance_test(package_name) {
+  ivf_file =
+      "../../test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf"
+  md5_file = "use_media_decoder/test/bear-vp9.i420.md5"
+}
+_vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
+
+# build_all_vp9_file_decoder_conformance_tests is currently false by default.
+# These tests currently require a directory of converted VP9 test streams which
+# is not yet hosted on CIPD.
+#
+# The self-contained variants of these tests rely on having enough flash space
+# for the whole input file, and running more than one large test per pave will
+# tend to fail due to insufficient flash space (at the moment).  Still, for
+# debugging it's useful to be able to run this way, especially since re-building
+# the code doesn't require re-copying the input file blob whose hash hasn't
+# changed - and building tests this way avoids relying on a local http server.
+#
+# For automated testing, we instead use vp9_decoder_conformance_test__http
+# (single target), which will fetch a .ivf file from a local http server and
+# output it's MD5 hash to stdout.  That target is driven by e2e test script
+# running off-target that scrapts stdout for the MD5 and deteremines e2e test
+# success/failure in the e2e test script, not on the target.
+if (build_all_vp9_file_decoder_conformance_tests) {
+  testcases = read_file(
+          "../../test_data/media/third_party/webm_vp9_conformance_streams/test_cases_all.list",
+          "trim list lines")
+  foreach(testcase, testcases) {
+    # remove prefix
+    testcase = string_replace(testcase, "processed/", "")
+
+    # remove suffix
+    testcase_partial_path = string_replace(testcase, ".webm.ivf", "")
+
+    # don't have any "/" in the name
+    testcase = string_replace(testcase_partial_path, "/", "__")
+
+    # shorten profile string
+    testcase = string_replace(testcase, "Profile_0_8bit", "0")
+    testcase = string_replace(testcase, "Profile_2_10bit", "2")
+
+    # Downcase the only uppercase letters that actually exist; uppercase isn't
+    # allowed in package names.
+    testcase = string_replace(testcase, "X", "x")
+    package_name = "vp9_decoder_conformance_test__file__" + testcase
+    vp9_file_decoder_conformance_test(package_name) {
+      ivf_file = "../../test_data/media/third_party/webm_vp9_conformance_streams/processed/" + testcase_partial_path + ".webm.ivf"
+      md5_file = "../../test_data/media/third_party/webm_vp9_conformance_streams/decompressed_md5/" + testcase_partial_path + ".md5"
+    }
+    _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
+  }
+}
+
+group("vp9_decoder_conformance_tests") {
+  testonly = true
+  deps = _vp9_file_conformance_tests_group_deps
 }

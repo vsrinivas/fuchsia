@@ -56,7 +56,7 @@ namespace {
 // We push this through the decoder as our "EndOfStream" marker, and detect it
 // at the output (for now) by its unusual 42x52 resolution during
 // InitializeStream() _and_ the fact that we've queued this marker.  To force
-// this frame to be handled by the decoder we queue kFlushThroughBytes of 0
+// this frame to be handled by the decoder we queue kFlushThroughBytes of 0s
 // after this data.
 //
 // TODO(dustingreen): We don't currently detect the EndOfStream via its stream
@@ -180,9 +180,10 @@ void CodecAdapterH264::CoreCodecStartStream() {
     // invalidate call here instead of two with no downsides.
     //
     // TODO(dustingreen): Skip this when the buffer isn't map-able.
-    io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->height);
+    io_buffer_cache_flush_invalidate(&frame->buffer, 0,
+                                     frame->stride * frame->coded_height);
     io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
-                                     frame->stride * frame->height / 2);
+                                     frame->stride * frame->coded_height / 2);
 
     const CodecBuffer* buffer = frame->codec_buffer;
     ZX_DEBUG_ASSERT(buffer);
@@ -204,7 +205,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
     packet->SetBuffer(buffer);
 
     packet->SetStartOffset(0);
-    uint64_t total_size_bytes = frame->stride * frame->height * 3 / 2;
+    uint64_t total_size_bytes = frame->stride * frame->coded_height * 3 / 2;
     packet->SetValidLengthBytes(total_size_bytes);
 
     if (frame->has_pts) {
@@ -597,19 +598,22 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
     // the current stream being somewhere in these bounds, these have nothing to
     // do with the current stream in particular.
     image_constraints.min_coded_width = 16;
-    image_constraints.max_coded_width = 3840;
+    image_constraints.max_coded_width = 4096;
     image_constraints.min_coded_height = 16;
-    // This intentionally isn't the height of a 4k frame.  See
-    // max_coded_width_times_coded_height.  We intentionally constrain the max
-    // dimension in width or height to the width of a 4k frame.  While the HW
-    // might be able to go bigger than that as long as the other dimension is
-    // smaller to compensate, we don't really need to enable any larger than
-    // 4k's width in either dimension, so we don't.
-    image_constraints.max_coded_height = 3840;
+    // This intentionally isn't the _height_ of a 4096x2176 frame, it's
+    // intentionally the _width_ of a 4096x2176 frame assigned to
+    // max_coded_height.
+    //
+    // See max_coded_width_times_coded_height.  We intentionally constrain the
+    // max dimension in width or height to the width of a 4096x2176 frame.
+    // While the HW might be able to go bigger than that as long as the other
+    // dimension is smaller to compensate, we don't really need to enable any
+    // larger than 4096x2176's width in either dimension, so we don't.
+    image_constraints.max_coded_height = 4096;
     image_constraints.min_bytes_per_row = 16;
     // no hard-coded max stride, at least for now
     image_constraints.max_bytes_per_row = 0xFFFFFFFF;
-    image_constraints.max_coded_width_times_coded_height = 3840 * 2160;
+    image_constraints.max_coded_width_times_coded_height = 4096 * 2176;
     image_constraints.layers = 1;
     image_constraints.coded_width_divisor = 16;
     image_constraints.coded_height_divisor = 16;

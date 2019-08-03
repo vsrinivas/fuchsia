@@ -7,8 +7,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include <fbl/auto_lock.h>
 #include <fstream>
 #include <iostream>
+#include <lib/async/dispatcher.h>
+#include <lib/media/test/one_shot_event.h>
+
 #include <memory>
 
 void Exit(const char* format, ...) {
@@ -76,7 +80,21 @@ void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
   }
 }
 
-void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx, const fuchsia::media::PcmFormat& pcm) {
+// Fence through any lambdas previously posted with PostSerial().
+void FencePostSerial(async_dispatcher_t* dispatcher) {
+  // If this gets stuck, make sure this isn't being called on the dispatcher's
+  // own thread, and consider asserting in the caller that this isn't getting
+  // called on the dispatcher's thread.
+  OneShotEvent one_shot;
+  PostSerial(dispatcher, [&one_shot]{
+    one_shot.Signal();
+  });
+  // Wait indefinitely.
+  one_shot.Wait();
+}
+
+void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
+                                   const fuchsia::media::PcmFormat& pcm) {
   uint32_t pcm_mode_le = htole32(pcm.pcm_mode);
   if (!SHA256_Update(sha256_ctx, &pcm_mode_le, sizeof(pcm_mode_le))) {
     assert(false);

@@ -72,12 +72,15 @@ class Vp9Decoder : public VideoDecoder {
   __WARN_UNUSED_RESULT zx_status_t Initialize() override;
   __WARN_UNUSED_RESULT zx_status_t InitializeHardware() override;
   void HandleInterrupt() override;
+  void SetIsCurrentOutputBufferCollectionUsable(
+      IsCurrentOutputBufferCollectionUsable is_current_output_buffer_collection_usable) override;
+  void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
   // In actual operation, the FrameReadyNotifier must not keep a reference on
   // the frame shared_ptr<>, as that would interfere with muting calls to
   // ReturnFrame().  See comment on Vp9Decoder::Frame::frame field.
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
+  void SetEosHandler(EosHandler eos_handler) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
-  void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
   void SetErrorHandler(fit::closure error_handler) override;
   void SetCheckOutputReady(CheckOutputReady check_output_ready) override;
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
@@ -100,10 +103,7 @@ class Vp9Decoder : public VideoDecoder {
 
   __WARN_UNUSED_RESULT bool swapped_out() const { return state_ == DecoderState::kSwappedOut; }
 
-  void SetPausedAtEndOfStream() {
-    ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
-    state_ = DecoderState::kPausedAtEndOfStream;
-  }
+  void SetPausedAtEndOfStream();
 
  private:
   friend class Vp9UnitTest;
@@ -226,13 +226,13 @@ class Vp9Decoder : public VideoDecoder {
   zx_status_t AllocateFrames();
   void InitializeHardwarePictureList();
   void InitializeParser();
-  bool FindNewFrameBuffer(HardwareRenderParams* params);
+  bool FindNewFrameBuffer(HardwareRenderParams* params, bool params_checked_previously);
   void InitLoopFilter();
   void UpdateLoopFilter(HardwareRenderParams* params);
   void ProcessCompletedFrames();
   void ShowExistingFrame(HardwareRenderParams* params);
-  void PrepareNewFrame();
-  void ConfigureFrameOutput(uint32_t width, uint32_t height, bool bit_depth_8);
+  void PrepareNewFrame(bool params_checked_previously);
+  void ConfigureFrameOutput(bool bit_depth_8);
   void ConfigureMcrcc();
   void UpdateLoopFilterThresholds();
   void ConfigureMotionPrediction();
@@ -248,8 +248,10 @@ class Vp9Decoder : public VideoDecoder {
   FrameDataProvider* frame_data_provider_ = nullptr;
 
   WorkingBuffers working_buffers_;
-  FrameReadyNotifier notifier_;
+  IsCurrentOutputBufferCollectionUsable is_current_output_buffer_collection_usable_;
   InitializeFramesHandler initialize_frames_handler_;
+  FrameReadyNotifier notifier_;
+  EosHandler eos_handler_;
   CheckOutputReady check_output_ready_;
   fit::closure error_handler_;
   DecoderState state_ = DecoderState::kSwappedOut;

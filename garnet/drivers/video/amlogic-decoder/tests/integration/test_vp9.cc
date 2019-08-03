@@ -402,7 +402,8 @@ class TestVP9 {
           [&video, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d\n", frame_count);
-            DLOG("Width: %d, height: %d\n", frame->width, frame->height);
+            DLOG("coded_width: %d, coded_height: %d\n",
+                 frame->coded_width, frame->coded_height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame.get(), "/tmp/bearmulti1.yuv");
 #endif

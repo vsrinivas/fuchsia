@@ -69,6 +69,9 @@ void MirrorBgra(uint32_t* out_ptr, const uint32_t* in_ptr, uint32_t width, uint3
 // proper signal processing for the UV up-scale, but it _may_ be faster.
 //
 // This function isn't really optimized in any serious sense so far.
+//
+// This function skips the right-most or bottom-most pixels if the width or
+// height is odd.
 void ConvertNv12ToBgra(uint8_t* out_ptr, const uint8_t* in_ptr, uint32_t width, uint32_t height,
                        uint32_t in_stride) {
   const uint8_t* y_base = in_ptr;
@@ -81,7 +84,7 @@ void ConvertNv12ToBgra(uint8_t* out_ptr, const uint8_t* in_ptr, uint32_t width, 
   //
   // Writing two lines at a time might turn out to be counterproductive,
   // possibly depending on CPU write buffering details.
-  for (uint32_t y = 0; y < height; y += 2) {
+  for (uint32_t y = 0; y + 1 < height; y += 2) {
     const uint8_t* y1_sample_iter = y_base + y * in_stride;
     const uint8_t* y2_sample_iter = y_base + (y + 1) * in_stride;
     const uint8_t* uv_sample_iter = uv_base + y / 2 * in_stride;
@@ -90,7 +93,7 @@ void ConvertNv12ToBgra(uint8_t* out_ptr, const uint8_t* in_ptr, uint32_t width, 
 
     // Minimizing this inner loop matters more than per-2-lines stuff above, of
     // course.
-    for (uint32_t x = 0; x < width; x += 2) {
+    for (uint32_t x = 0; x + 1 < width; x += 2) {
       uint8_t u = *uv_sample_iter;
       uint8_t v = *(uv_sample_iter + 1);
 
@@ -115,6 +118,8 @@ void ConvertNv12ToBgra(uint8_t* out_ptr, const uint8_t* in_ptr, uint32_t width, 
   }
 }
 
+// This function skips the right-most or bottom-most pixels if the width or
+// height is odd.
 void ConvertYv12ToBgra(uint8_t* out_ptr, const uint8_t* in_ptr, uint32_t width, uint32_t height,
                        uint32_t in_stride) {
   // Y plane, then V plane, then U plane.  The V and U planes will use
@@ -124,7 +129,7 @@ void ConvertYv12ToBgra(uint8_t* out_ptr, const uint8_t* in_ptr, uint32_t width, 
   const uint8_t* u_base = in_ptr + height * in_stride + height / 2 * in_stride / 2;
   const uint8_t* v_base = in_ptr + height * in_stride;
 
-  for (uint32_t y = 0; y < height; y += 2) {
+  for (uint32_t y = 0; y + 1 < height; y += 2) {
     const uint8_t* y1_sample_iter = y_base + y * in_stride;
     const uint8_t* y2_sample_iter = y_base + (y + 1) * in_stride;
     const uint8_t* u_sample_iter = u_base + y / 2 * in_stride / 2;
@@ -132,7 +137,7 @@ void ConvertYv12ToBgra(uint8_t* out_ptr, const uint8_t* in_ptr, uint32_t width, 
     uint8_t* bgra1_sample_iter = out_ptr + y * width * sizeof(uint32_t);
     uint8_t* bgra2_sample_iter = out_ptr + (y + 1) * width * sizeof(uint32_t);
 
-    for (uint32_t x = 0; x < width; x += 2) {
+    for (uint32_t x = 0; x + 1 < width; x += 2) {
       uint8_t u = *u_sample_iter;
       uint8_t v = *v_sample_iter;
 
