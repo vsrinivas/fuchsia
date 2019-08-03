@@ -1,0 +1,94 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+BT_FILE_DEPS=(
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+)
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+
+# Replace fx-gen with a stub.
+unset -f fx-gen
+
+fx-gen() {
+  return 0
+}
+
+TEST_environment() {
+  # This variable should be empty.
+  BT_EXPECT_EMPTY "${devshell_lib_dir}"
+}
+
+TEST_fx-warn() {
+  BT_ASSERT_FUNCTION_EXISTS fx-warn
+
+  # Capture stderr.
+  local result
+  result=$( fx-warn some warning 2>&1 )
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${result}" "some warning"
+}
+
+TEST_fx-error() {
+  BT_ASSERT_FUNCTION_EXISTS fx-error
+
+  # Capture stderr.
+  local result
+  result=$( fx-error some error 2>&1 )
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${result}" "some error"
+}
+
+TEST_fx-build-dir-write() {
+  BT_ASSERT_FUNCTION_EXISTS fx-build-dir-write
+
+  local -r BUILD_DIR="build"
+  fx-build-dir-write "${BUILD_DIR}"
+
+  local -r EXPECTED_FILE="${FUCHSIA_DIR}/.fx-build-dir"
+  BT_EXPECT_FILE_CONTAINS "${EXPECTED_FILE}" "${BUILD_DIR}"
+}
+
+TEST_fx-build-dir-if-present() {
+  BT_ASSERT_FUNCTION_EXISTS fx-build-dir-if-present
+
+  FUCHSIA_BUILD_DIR=""
+  local -r CONFIG_FILE="${FUCHSIA_DIR}/.config"
+  local -r BUILD_DIR_PATH="out"
+  echo "FUCHSIA_BUILD_DIR=${BUILD_DIR_PATH}" > "${CONFIG_FILE}"
+
+  BT_EXPECT fx-build-dir-if-present
+
+  # Expect an absolute path.
+  BT_EXPECT_EQ "${FUCHSIA_BUILD_DIR}" "${FUCHSIA_DIR}/${BUILD_DIR_PATH}"
+
+  local -r FX_BUILD_DIR_FILE_PATH="${FUCHSIA_DIR}/.fx-build-dir"
+  BT_EXPECT_FILE_CONTAINS "${FX_BUILD_DIR_FILE_PATH}" "${BUILD_DIR_PATH}"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${CONFIG_FILE}"
+}
+
+TEST_fx-build-config-load() {
+  BT_ASSERT_FUNCTION_EXISTS fx-build-config-load
+
+  FUCHSIA_BUILD_DIR="out"
+  local -r EXPECT_BUILD_DIR="${FUCHSIA_DIR}/${FUCHSIA_BUILD_DIR}"
+  mkdir "${EXPECT_BUILD_DIR}"
+  local -r FX_CONFIG_FILE_PATH="${EXPECT_BUILD_DIR}/fx.config"
+
+  # Confirm testvar is not set before setting up the config file.
+  BT_EXPECT_EQ "${testvar}" ""
+  local -r TESTVAR_VALUE="my_value"
+  echo "testvar=${TESTVAR_VALUE}" > "${FX_CONFIG_FILE_PATH}"
+
+  BT_EXPECT fx-build-config-load
+
+  # fx-build-config-load ensures FUCHSIA_BUILD_DIR is an absolute path.
+  BT_EXPECT_EQ "${FUCHSIA_BUILD_DIR}" "${EXPECT_BUILD_DIR}"
+
+  # fx-build-config-load should have loaded testvar from fx.config.
+  BT_EXPECT_EQ "${testvar}" "${TESTVAR_VALUE}" \
+    "testvar has unexpected value (${testvar})"
+}
+
+BT_RUN_TESTS "$@"
