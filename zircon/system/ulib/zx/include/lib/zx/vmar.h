@@ -45,7 +45,7 @@ class vmar final : public object<vmar> {
 
   zx_status_t destroy() const { return zx_vmar_destroy(get()); }
 
-  zx_status_t allocate(size_t offset, size_t size, uint32_t options, vmar* child,\
+  zx_status_t allocate(size_t offset, size_t size, uint32_t flags, vmar* child,
                        uintptr_t* child_addr) const;
 
   static inline unowned<vmar> root_self() { return unowned<vmar>(zx_vmar_root_self()); }

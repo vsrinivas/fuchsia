@@ -130,15 +130,14 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // those sends which are already on the loop thread, vs. what we're doing
   // which only needs anything extra for sends we queue from threads that aren't
   // the loop thread.
-  async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
   // This example will give the loop it's own thread, so that the main thread
   // can be used to sequence overall control of the Codec instance using a
   // thread instead of chaining together a bunch of async activity (which would
   // be more complicated to understand and serve little purpose in an example
   // program like this).
-  thrd_t fidl_thread;
-  ZX_ASSERT(ZX_OK == fidl_loop.StartThread("use_aac_decoder_loop", &fidl_thread));
+  loop.StartThread("use_aac_decoder_loop");
   // From this point forward, because the loop is already running, this example
   // needs to be careful to be ready for all potential FIDL channel messages and
   // errors before attaching the channel to the loop.  The loop will continue
@@ -220,7 +219,7 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // loop is already running, and we want the error handler to be set up by
   // CodecClient in advance of the channel potentially being closed.
   VLOGF("before CodecClient::CodecClient()...\n");
-  CodecClient codec_client(&fidl_loop, fidl_thread, std::move(sysmem));
+  CodecClient codec_client(&loop, std::move(sysmem));
   async::PostTask(
       main_loop->dispatcher(), [&codec_factory, create_params = std::move(create_params),
                                 codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
@@ -568,9 +567,9 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // runs on the loop.  This way, unexpected channel failure is the only case to
   // worry about.
   VLOGF("before loop.Quit()\n");
-  fidl_loop.Quit();
+  loop.Quit();
   VLOGF("before loop.JoinThreads()...\n");
-  fidl_loop.JoinThreads();
+  loop.JoinThreads();
   VLOGF("after loop.JoinThreads()\n");
 
   // Close the channel explicitly (just so we can more easily print messages
@@ -584,7 +583,7 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // codec_client.Stop() it would cause the channel bindings to fail because
   // async waits are failed as cancelled during Shutdown().
   VLOGF("before loop.Shutdown()...\n");
-  fidl_loop.Shutdown();
+  loop.Shutdown();
   VLOGF("after loop.Shutdown()\n");
 
   // The FIDL loop isn't running any more and the channels are closed.  There

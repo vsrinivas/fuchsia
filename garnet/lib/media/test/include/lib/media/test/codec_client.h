@@ -42,17 +42,13 @@ class CodecClient {
   // we want to be very sure that we'll be posting to the correct loop to send
   // messages using that loop's single thread, as ProxyController doesn't have
   // a lock_ in it.
-  CodecClient(async::Loop* loop, thrd_t loop_thread, fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem);
+  CodecClient(async::Loop* loop, fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem);
   ~CodecClient();
 
   // Separate from Start() because we don't wan this class to handle the Codec
   // creation, so the caller needs a server endpoint to send off to a Codec
   // server (via the CodecFactory).
   fidl::InterfaceRequest<fuchsia::media::StreamProcessor> GetTheRequestOnce();
-
-  // Can optionally be called before Start(), to set the min buffer size that'll
-  // be requested via sysmem.
-  void SetMinOutputBufferSize(uint64_t min_output_buffer_size);
 
   // Get the Codec into a state where it's ready to process input data.
   void Start();
@@ -116,7 +112,7 @@ class CodecClient {
  private:
   friend class CodecStream;
 
-  void PostToFidlThread(fit::closure to_run, bool enforce_no_re_posting = true);
+  void PostToFidlThread(fit::closure to_run);
 
   void CallSyncAndWaitForResponse();
 
@@ -176,10 +172,7 @@ class CodecClient {
   std::mutex lock_;
   async::Loop* loop_ = nullptr;               // must override
   async_dispatcher_t* dispatcher_ = nullptr;  // must override
-  thrd_t loop_thread_{};
-  bool is_start_called_ = false;
   fuchsia::media::StreamProcessorPtr codec_;
-  uint64_t min_output_buffer_size_ = 0;
   // This only temporarily holds the Codec request that was created during the
   // constructor.  If the caller asks for this more than once, the subsequent
   // requests give back a !is_valid() request.
@@ -295,11 +288,6 @@ class CodecClient {
   }
   bool output_pending_ = false;
   std::condition_variable output_pending_condition_;
-
-  CodecClient(const CodecClient&) = delete;
-  CodecClient(CodecClient&&) = delete;
-  CodecClient& operator=(const CodecClient&) = delete;
-  CodecClient& operator=(CodecClient&&) = delete;
 };
 
 #endif  // GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_CLIENT_H_

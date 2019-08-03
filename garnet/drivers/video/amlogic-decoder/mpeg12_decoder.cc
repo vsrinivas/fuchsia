@@ -156,19 +156,11 @@ void Mpeg12Decoder::HandleInterrupt() {
   DLOG("Received buffer index: %d info: %x, offset: %x, width: %d, height: %d\n", index,
        info.reg_value(), offset.reg_value(), width, height);
 
-  uint32_t coded_width = std::min(width, kMaxWidth);
-  uint32_t coded_height = std::min(height, kMaxHeight);
-
   auto& frame = video_frames_[index].frame;
-
-  frame->hw_width = coded_width;
-  frame->coded_width = coded_width;
-  frame->display_width = coded_width;
-
-  frame->hw_height = coded_height;
-  frame->coded_height = coded_height;
-  frame->display_height = coded_height;
-
+  frame->width = std::min(width, kMaxWidth);
+  frame->display_width = width;
+  frame->height = std::min(height, kMaxHeight);
+  frame->display_height = height;
   if (notifier_)
     notifier_(frame);
 

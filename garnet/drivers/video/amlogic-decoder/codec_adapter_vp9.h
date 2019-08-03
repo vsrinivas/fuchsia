@@ -67,16 +67,11 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   void QueueInputItem(CodecInputItem input_item);
   CodecInputItem DequeueInputItem();
   void ProcessInput();
-  bool IsCurrentOutputBufferCollectionUsable(
-      uint32_t frame_count, uint32_t coded_width, uint32_t coded_height, uint32_t stride,
-      uint32_t display_width, uint32_t display_height);
-  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count,
-                                      uint32_t width, uint32_t height,
-                                      uint32_t stride, uint32_t display_width,
-                                      uint32_t display_height, bool has_sar,
-                                      uint32_t sar_width, uint32_t sar_height);
+  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count, uint32_t width,
+                                      uint32_t height, uint32_t stride, uint32_t display_width,
+                                      uint32_t display_height, bool has_sar, uint32_t sar_width,
+                                      uint32_t sar_height);
 
-  void OnCoreCodecEos();
   void OnCoreCodecFailStream();
   CodecPacket* GetFreePacket();
 
@@ -101,25 +96,19 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   // Skip any further processing in ProcessInput().
   bool is_cancelling_input_processing_ = false;
 
-  std::optional<fuchsia::sysmem::BufferCollectionInfo_2> output_buffer_collection_info_;
-
   std::vector<const CodecBuffer*> all_output_buffers_;
   std::vector<CodecPacket*> all_output_packets_;
   std::vector<uint32_t> free_output_packets_;
 
-  // >= output_buffer_collection_info_.buffer_count
   uint32_t packet_count_total_ = 0;
-  // These don't actually change, for VP9, since the SAR is at webm layer and
-  // the VP9 decoder never actually sees SAR.
-  bool has_sar_ = false;
-  uint32_t sar_width_ = 0;
-  uint32_t sar_height_ = 0;
-  // These change on the fly as frames are decoded:
-  uint32_t coded_width_ = 0;
-  uint32_t coded_height_ = 0;
+  uint32_t width_ = 0;
+  uint32_t height_ = 0;
   uint32_t stride_ = 0;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
+  bool has_sar_ = false;
+  uint32_t sar_width_ = 0;
+  uint32_t sar_height_ = 0;
 
   // Output frames get a PTS based on looking up the output frame's input stream
   // offset via the PtsManager.  For that to work we have to feed the input PTSs

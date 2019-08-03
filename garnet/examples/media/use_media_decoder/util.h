@@ -40,9 +40,6 @@ std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size);
 // guarantee order.
 void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
 
-// Fence through any lambdas previously posted with PostSerial().
-void FencePostSerial(async_dispatcher_t* dispatcher);
-
 template <typename T>
 void UpdateSha256(SHA256_CTX* ctx, T field) {
   T field_le;

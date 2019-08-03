@@ -122,9 +122,8 @@ std::vector<FrameEncoder::EncodedFrame> FrameEncoder::EncodeFrames(
   startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToThread);
-  thrd_t fidl_loop_thread;
-  ZX_ASSERT(ZX_OK == fidl_loop.StartThread("FrameEncoder_fidl", &fidl_loop_thread));
-  auto client = std::make_unique<CodecClient>(&fidl_loop, fidl_loop_thread, std::move(sysmem));
+  auto client = std::make_unique<CodecClient>(&fidl_loop, std::move(sysmem));
+  fidl_loop.StartThread("FrameEncoder_fidl");
 
   ConnectToCodec(client->GetTheRequestOnce(), format, startup_context);
 
@@ -133,18 +132,15 @@ std::vector<FrameEncoder::EncodedFrame> FrameEncoder::EncodeFrames(
 
   client->Start();
   auto consumer_thread = std::make_unique<std::thread>(
-      [&encoded_frames, expect_access_units, client = client.get()] {
+      [&fidl_loop, &encoded_frames, expect_access_units, client = client.get()] {
         FXL_VLOG(3) << "Starting to receive frames from codec...";
-        encoded_frames =
-            take_encoded_frames_from_codec(client, expect_access_units);
-        // consumer_thread is done
+        encoded_frames = take_encoded_frames_from_codec(client, expect_access_units);
+        async::PostTask(fidl_loop.dispatcher(), [&fidl_loop] { fidl_loop.Quit(); });
       });
 
   feed_raw_frames_into_codec(payload, client.get());
   consumer_thread->join();
+  fidl_loop.JoinThreads();
 
   return encoded_frames;
-  // The order of these two matters:
-  // ~client
-  // ~fidl_loop
 }

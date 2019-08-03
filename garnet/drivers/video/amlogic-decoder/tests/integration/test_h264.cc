@@ -84,8 +84,7 @@ class TestH264 {
           [&video, &frame_count, &first_wait_valid,
            &second_wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count,
-                 frame->coded_width, frame->coded_height);
+            DLOG("Got frame %d width: %d height: %d\n", frame_count, frame->width, frame->height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
@@ -154,8 +153,7 @@ class TestH264 {
             ++frame_count;
             EXPECT_EQ(320u, frame->display_width);
             EXPECT_EQ(180u, frame->display_height);
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count,
-                 frame->coded_width, frame->coded_height);
+            DLOG("Got frame %d width: %d height: %d\n", frame_count, frame->width, frame->height);
             constexpr uint32_t kFirstVideoFrameCount = 26;
             if (frame_count == kFirstVideoFrameCount)
               wait_valid.set_value();
@@ -223,8 +221,7 @@ class TestH264 {
           [&video, &frame_count, &first_wait_valid,
            &received_pts_set](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count,
-                 frame->coded_width, frame->coded_height);
+            DLOG("Got frame %d width: %d height: %d\n", frame_count, frame->width, frame->height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif

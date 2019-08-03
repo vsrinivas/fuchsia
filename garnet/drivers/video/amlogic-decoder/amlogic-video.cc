@@ -555,10 +555,8 @@ void AmlogicVideo::SwapOutCurrentInstance() {
 
 void AmlogicVideo::TryToReschedule() {
   DLOG("AmlogicVideo::TryToReschedule\n");
-  if (swapped_out_instances_.size() == 0) {
-    DLOG("Nothing swapped out; returning\n");
+  if (swapped_out_instances_.size() == 0)
     return;
-  }
 
   if (current_instance_ && !current_instance_->decoder()->CanBeSwappedOut()) {
     DLOG("Current instance can't be swapped out\n");

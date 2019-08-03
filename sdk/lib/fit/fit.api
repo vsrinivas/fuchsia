@@ -1,6 +1,6 @@
 {
   "pkg/fit/include/lib/fit/barrier.h": "04e854c5ead0407f5fa2fa965cccd941",
-  "pkg/fit/include/lib/fit/bridge.h": "26b7fe26a23f4d4d920bc2316a95224f",
+  "pkg/fit/include/lib/fit/bridge.h": "db4ca5ff49c7d2ce9e97c23d4092c9b3",
   "pkg/fit/include/lib/fit/bridge_internal.h": "b278e9dd4fd88c8c84611d9ce64893dd",
   "pkg/fit/include/lib/fit/constructors_internal.h": "8bfa14d14273b96823adfd2ae9f002bd",
   "pkg/fit/include/lib/fit/defer.h": "c1a745ecee5796cabac92e8c1176e9ee",

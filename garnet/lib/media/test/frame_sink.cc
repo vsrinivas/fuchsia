@@ -91,16 +91,15 @@ void FrameSink::PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_off
   }
 }
 
-void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(
-    fit::closure on_frames_returned) {
-  // We make a blank frame and send that in to be displayed 3 seconds after
-  // the last real frame, to give us a chance to see the last frame of a short
-  // .h264 file.  The blank frame is necessary to get Scenic to release the last
-  // real frame, and this seems cleaner than any other option I can think of at
-  // the moment, like relying on any particular Scenic frame release behavior if
+void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_frames_returned) {
+  // We make a blank frame and send that in to be displayed 5 seconds after the
+  // last real frame, to give us a chance to see the last frame of a short .h264
+  // file.  The blank frame is necessary to get Scenic to release the last real
+  // frame, and this seems cleaner than any other option I can think of at the
+  // moment, like relying on any particular Scenic frame release behavior if
   // RemoveImage() is called on a frame that's still (maybe) on-screen, etc.
 
-  constexpr double kDelayBeforeBlankFrameSeconds = 3.0;
+  constexpr double kDelayBeforeBlankFrameSeconds = 5.0;
 
   // If this fourcc were to change, some of the other code to compute size,
   // dimensions, and generate the frame data would need to change too.

@@ -37,8 +37,5 @@ group("end_to_end_deps") {
 
     # Needed to query inspect.
     "//garnet/packages/prod:iquery",
-
-    # Needed for VP9 decode conformance testing.
-    "//garnet/examples/media:vp9_decoder_conformance_http",
   ]
 }
