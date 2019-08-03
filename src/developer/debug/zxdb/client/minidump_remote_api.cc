@@ -676,12 +676,21 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
 
   Session* session = session_;
   debug_ipc::NotifyModules mod_notification;
+  debug_ipc::NotifyException exception_notification;
 
   mod_notification.process_koid = minidump_->ProcessID();
   mod_notification.modules = GetModules();
 
+  if (auto exception = minidump_->Exception()) {
+    // TODO(sadmac): Break out the code interpretation stuff from the debug agent and use it here.
+    exception_notification.type = debug_ipc::NotifyException::Type::kGeneral;
+    exception_notification.thread.process_koid = minidump_->ProcessID();
+    exception_notification.thread.thread_koid = exception->ThreadID();
+    exception_notification.thread.state = debug_ipc::ThreadRecord::State::kCoreDump;
+  }
+
   fit::callback<void(const Err&, debug_ipc::AttachReply)> new_cb =
-      [cb = std::move(cb), notifications, mod_notification, session](
+      [cb = std::move(cb), notifications, mod_notification, exception_notification, session](
           const Err& e, debug_ipc::AttachReply a) mutable {
         cb(e, a);
 
@@ -690,6 +699,10 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
         }
 
         session->DispatchNotifyModules(mod_notification);
+
+        if (exception_notification.type != debug_ipc::NotifyException::Type::kNone) {
+          session->DispatchNotifyException(exception_notification);
+        }
       };
 
   Succeed(std::move(new_cb), reply);
