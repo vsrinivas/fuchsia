@@ -228,6 +228,20 @@ TEST(SdmmcTest, SetTiming) {
   mock_regs.VerifyAll();
 }
 
+TEST(SdmmcTest, SetTimingNoSdioUhs) {
+  ddk_mock::MockMmioReg reg_array[kRegisterCount];
+  ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
+  MtkSdmmcTest sdmmc(mock_regs, true);
+
+  GetMockReg<MsdcCfg>(mock_regs).ReadReturns(MsdcCfg().set_card_ck_stable(1).reg_value());
+
+  EXPECT_NOT_OK(sdmmc.SdmmcSetTiming(SDMMC_TIMING_DDR50));
+  EXPECT_NOT_OK(sdmmc.SdmmcSetTiming(SDMMC_TIMING_SDR104));
+  EXPECT_NOT_OK(sdmmc.SdmmcSetTiming(SDMMC_TIMING_SDR50));
+  EXPECT_OK(sdmmc.SdmmcSetTiming(SDMMC_TIMING_HS));
+  EXPECT_OK(sdmmc.SdmmcSetTiming(SDMMC_TIMING_LEGACY));
+}
+
 TEST(SdmmcTest, Request) {
   ddk_mock::MockMmioReg reg_array[kRegisterCount];
   ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);

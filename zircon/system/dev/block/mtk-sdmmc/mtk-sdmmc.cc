@@ -334,14 +334,27 @@ zx_status_t MtkSdmmc::SdmmcSetTiming(sdmmc_timing_t timing) {
 
   MsdcCfg::Get().ReadFrom(&mmio_).set_ck_pwr_down(0).WriteTo(&mmio_);
 
+  // TODO(ZX-4823): Attempting to enable UHS mode causes persistent timeout errors. Figure out why
+  //                and re-enable UHS.
+
   switch (timing) {
     case SDMMC_TIMING_DDR50:
+      if (config_.is_sdio) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      __FALLTHROUGH;
     case SDMMC_TIMING_HSDDR:
       ck_mode = MsdcCfg::kCardCkModeDdr;
       break;
     case SDMMC_TIMING_HS400:
       ck_mode = MsdcCfg::kCardCkModeHs400;
       break;
+    case SDMMC_TIMING_SDR104:
+    case SDMMC_TIMING_SDR50:
+      if (config_.is_sdio) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      __FALLTHROUGH;
     default:
       ck_mode = MsdcCfg::kCardCkModeDiv;
       break;
