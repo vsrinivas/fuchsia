@@ -56,3 +56,39 @@ To see the list of variants available and learn more about how to define
 new ones, see the
 [`known_variants`](/docs/gen/build_arguments.md#known_variants)
 build argument.
+
+## Troubleshooting note
+
+If you are trying to use the ASan variant, you may encounter an error that looks
+like this:
+
+```sh
+launcher: error: Launch: elf_load: handle_interp failed
+dlsvc: could not open 'asan/ld.so.1'
+```
+
+Fuchsia is structured around packages and components. Each component contains
+all of the shared libraries it needs to run. This helps Fuchsia avoid library
+versioning issues that plague other operating systems. It also means that, if
+you want to run a binary from within a component, you must provide the
+appropriate shared library loader for that binary.
+
+There are a set of command line programs located in the `/boot/` directory of
+Fuchsia installs that are not contained in packages, but in the boot filesystem.
+These programs do not have their own shared library loader, and will use
+whatever shared libraries the component executing them provides. This normally
+works, as programs like `sh` and `ls` have very minimal, very common
+dependencies. However, there's no guarantee that the component's package will
+have sufficient or compatible shared libraries for the command line program's
+needs. ASan-enabled packages usually do not contain the right launcher for these
+programs, so most ASan-enabled components cannot run executables out of
+`/boot`. If an ASan-enabled component tries to do so, it gets the error above.
+
+Fortunately, it turns out that the fix involves doing what all packages should
+do anyway, which is to declare their dependencies explicitly. If your package
+depends on a binary, it should declare it as a dependency, and then use that
+declared dependency instead of the one in the `/boot` directory. In the case of
+our build system, the `zircon_extras_manifest` rule defined in
+`//build/config/fuchsia/zircon_images.gni` will allow you to depend on any of
+the binaries found in the `/boot` directory. They will be installed in
+`/pkg/bin/`, and you should execute them from there.
