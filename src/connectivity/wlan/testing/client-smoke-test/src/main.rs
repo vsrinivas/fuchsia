@@ -12,16 +12,15 @@ mod opts;
 
 use {
     crate::opts::Opt,
+    connectivity_testing::http_service_util::{self, IndividualDownload},
     connectivity_testing::wlan_service_util,
     failure::{bail, Error, ResultExt},
-    fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy},
+    fidl_fuchsia_net_oldhttp::HttpServiceMarker,
     fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy},
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    fuchsia_syslog::{self as syslog, fx_log_info},
-    fuchsia_zircon as zx,
-    futures::io::{AllowStdIo, AsyncReadExt},
+    fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
     std::collections::HashMap,
     std::process,
     std::{thread, time},
@@ -30,6 +29,9 @@ use {
 
 #[allow(dead_code)]
 type WlanService = DeviceServiceProxy;
+
+// Until we have the URL as an optional parameter for the test, use this.
+static URL_STRING: &'static str = "http://ovh.net/files/1Mb.dat";
 
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["wlan-smoke-test"]).expect("should not fail");
@@ -62,7 +64,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
     test_results.connect_to_wlan_service = true;
 
-    let http_svc = connect_to_service::<http::HttpServiceMarker>()?;
+    let http_svc = connect_to_service::<HttpServiceMarker>()?;
     test_results.connect_to_http_service = true;
 
     let network_svc = connect_to_service::<StackMarker>()?;
@@ -156,6 +158,17 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 }
             }
 
+            // if we got an ip addr, go ahead and check a download
+            if wlan_iface.dhcp_success {
+                // TODO(NET-1095): add ping check to verify connectivity
+
+                let url_request = http_service_util::create_url_request(URL_STRING.to_string());
+                let download_result =
+                    http_service_util::fetch_and_discard_url(&http_svc, url_request).await;
+
+                wlan_iface.data_transfer = check_data_transfer(download_result);
+            }
+
             // after testing, check if we need to disconnect
             if requires_disconnect {
                 match wlan_service_util::disconnect_from_network(&wlan_iface.sme_proxy).await {
@@ -179,21 +192,18 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             } else {
                 test_pass = false;
             }
-
-            // TODO(NET-1095): add ping check to verify connectivity
-
-            // TODO(NET-1095): add http get to verify data when we can specify this interface
         }
 
-        // create url (TODO(NET-1095): add command line option)
-        let url_string = "http://ovh.net/files/1Mb.dat";
-        let url_request = create_url_request(url_string);
-
-        // NOTE: this is intended to loop over each wlan iface. For now,
-        // make a single request to make sure that mechanism works and we have not broken
-        // connectivity with connection changes
-        fetch_and_discard_url(http_svc, url_request).await?;
-        test_results.base_data_transfer = true;
+        // Now test a download over the underlying connection - may be ethernet or an
+        // existing wlan connection.
+        // TODO(WLAN-1271): The test will currently report failure if there is not an
+        // operational base connection available.  This should be switched to a conditional
+        // check based on the result of a reachability check after the wlan interfaces
+        // are tested.
+        let url_request = http_service_util::create_url_request(URL_STRING.to_string());
+        let download_result =
+            http_service_util::fetch_and_discard_url(&http_svc, url_request).await;
+        test_results.base_data_transfer = check_data_transfer(download_result);
 
         Ok(())
     };
@@ -283,48 +293,26 @@ fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(
     }
 }
 
-fn create_url_request<T: Into<String>>(url_string: T) -> http::UrlRequest {
-    http::UrlRequest {
-        url: url_string.into(),
-        method: String::from("GET"),
-        headers: None,
-        body: None,
-        response_body_buffer_size: 0,
-        auto_follow_redirects: true,
-        cache_mode: http::CacheMode::Default,
-        response_body_mode: http::ResponseBodyMode::Stream,
+fn check_data_transfer(result: Result<IndividualDownload, Error>) -> bool {
+    match result.as_ref() {
+        Ok(result) if result.bytes > 0 => {
+            fx_log_info!(
+                "Received {:?} bytes in {:?} ns (goodput_mbps = {:?})",
+                result.bytes,
+                result.nanos,
+                result.goodput_mbps
+            );
+            true
+        }
+        Ok(_) => {
+            fx_log_warn!("Received 0 bytes for download check");
+            false
+        }
+        Err(e) => {
+            fx_log_warn!("Error in download check: {:?}", e.to_string());
+            false
+        }
     }
-}
-
-async fn fetch_and_discard_url(
-    http_service: HttpServiceProxy,
-    mut url_request: http::UrlRequest,
-) -> Result<(), Error> {
-    // Create a UrlLoader instance
-    let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
-    let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
-
-    let loader_server = fidl::endpoints::ServerEnd::<http::UrlLoaderMarker>::new(s);
-    http_service.create_url_loader(loader_server)?;
-
-    let loader_proxy = http::UrlLoaderProxy::new(proxy);
-    let response = loader_proxy.start(&mut url_request).await?;
-
-    if let Some(e) = response.error {
-        bail!("UrlLoaderProxy error - code:{} ({})", e.code, e.description.unwrap_or("".into()))
-    }
-
-    let socket = match response.body.map(|x| *x) {
-        Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
-        _ => return Err(Error::from(zx::Status::BAD_STATE)),
-    };
-
-    // discard the bytes
-    let mut stdio_sink = AllowStdIo::new(::std::io::sink());
-    let bytes_received = socket.copy_into(&mut stdio_sink).await?;
-    fx_log_info!("Received {:?} bytes", bytes_received);
-
-    Ok(())
 }
 
 async fn get_ip_addrs_for_wlan_iface<'a>(
@@ -595,5 +583,32 @@ mod tests {
             };
             Box::new(bss_info)
         })
+    }
+
+    /// Test verifying that a populated IndividualDownload result correctly returns success for the
+    /// download check.
+    #[test]
+    fn test_successful_download_with_bytes_passes_download_check() {
+        let individual_download =
+            IndividualDownload { goodput_mbps: 1.11, bytes: 125000, nanos: 900641959 };
+
+        assert!(check_data_transfer(Ok(individual_download)));
+    }
+
+    /// Test verifying that a populated but zero byte IndividualDownload result fails the
+    /// download check.
+    #[test]
+    fn test_successful_download_with_zero_bytes_fails_download_check() {
+        let individual_download =
+            IndividualDownload { goodput_mbps: 1.11, bytes: 0, nanos: 900641959 };
+
+        assert_eq!(check_data_transfer(Ok(individual_download)), false);
+    }
+
+    /// Test verifying that an error returned for the download fails the download check.
+    #[test]
+    fn test_error_download_fails_download_check() {
+        let error = Err(failure::format_err!("this is a failure"));
+        assert_eq!(check_data_transfer(error), false);
     }
 }
