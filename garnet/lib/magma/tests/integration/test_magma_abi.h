@@ -7,6 +7,6 @@
 
 #include <stdbool.h>
 
-bool test_magma_abi_from_c(void);
+bool test_magma_abi_from_c(const char* device_name);
 
 #endif  // TEST_MAGMA_ABI_H

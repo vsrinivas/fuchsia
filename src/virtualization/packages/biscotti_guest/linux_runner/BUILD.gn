@@ -106,6 +106,7 @@ action("extras") {
 
   deps = [
     ":icd_manifest",
+    "//garnet/lib/magma/tests/integration:magma_abi_conformance_tests(//build/toolchain:linux_x64)",
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(//build/toolchain:linux_x64)",
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(//build/toolchain:linux_x64)",
     "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
@@ -118,6 +119,7 @@ action("extras") {
     rebase_path("${lib_path}/libvulkan.so"),  # Vulkan Loader
     rebase_path("${exe_path}/virtmagma_unit_tests_linux"),
     rebase_path("${exe_path}/virtmagma_vulkan_unit_tests"),
+    rebase_path("${exe_path}/magma_abi_conformance_tests"),
   ]
 
   outputs = [

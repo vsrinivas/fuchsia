@@ -8,12 +8,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/vmar.h>
-#include <src/lib/fxl/logging.h>
 #include <sys/stat.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
 #include <unistd.h>
 #include <zircon/status.h>
+
+#include <src/lib/fxl/logging.h>
+#include <trace-provider/provider.h>
+#include <trace/event.h>
 
 #include "garnet/lib/magma/src/magma_util/macros.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
@@ -187,6 +188,25 @@ zx_status_t VirtioMagma::Handle_export(const virtio_magma_export_ctrl_t* request
   }
   response->buffer_handle_out = vfd_id;
   return ZX_OK;
+}
+
+zx_status_t VirtioMagma::Handle_execute_command_buffer_with_resources(
+    const virtio_magma_execute_command_buffer_with_resources_ctrl_t* request,
+    virtio_magma_execute_command_buffer_with_resources_resp_t* response) {
+  // Command buffer payload comes immediately after the request
+  auto command_buffer = reinterpret_cast<magma_system_command_buffer*>(
+      const_cast<virtio_magma_execute_command_buffer_with_resources_ctrl_t*>(request) + 1);
+  auto exec_resources = reinterpret_cast<magma_system_exec_resource*>(command_buffer + 1);
+  auto semaphore_ids = reinterpret_cast<uint64_t*>(exec_resources + command_buffer->num_resources);
+
+  virtio_magma_execute_command_buffer_with_resources_ctrl_t request_dupe;
+  memcpy(&request_dupe, request, sizeof(request_dupe));
+
+  request_dupe.command_buffer = reinterpret_cast<uintptr_t>(command_buffer);
+  request_dupe.resources = reinterpret_cast<uintptr_t>(exec_resources);
+  request_dupe.semaphore_ids = reinterpret_cast<uintptr_t>(semaphore_ids);
+
+  return VirtioMagmaGeneric::Handle_execute_command_buffer_with_resources(&request_dupe, response);
 }
 
 int main(int argc, char** argv) {

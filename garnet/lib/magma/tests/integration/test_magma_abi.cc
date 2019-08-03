@@ -8,14 +8,16 @@
 #include <array>
 #include <thread>
 
+#if defined(__Fuchsia__)
 #include "fuchsia/sysmem/cpp/fidl.h"
+#include "magma_sysmem.h"
+#endif
+
 #include "gtest/gtest.h"
 #include "magma.h"
 #include "magma_common_defs.h"
-#include "magma_sysmem.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "platform_buffer.h"
 
 extern "C" {
 #include "test_magma_abi.h"
@@ -23,8 +25,21 @@ extern "C" {
 
 class TestConnection {
  public:
+  static constexpr const char* kDeviceNameFuchsia = "/dev/class/gpu/000";
+  static constexpr const char* kDeviceNameVirt = "/dev/magma0";
+
+#if defined(__Fuchsia__)
+  static const char* device_name() { return kDeviceNameFuchsia; }
+#elif defined(__linux__)
+  static const char* device_name() { return kDeviceNameVirt; }
+#else
+#error Unimplemented
+#endif
+
+  static bool is_virtmagma() { return device_name() == kDeviceNameVirt; }
+
   TestConnection() {
-    fd_ = open("/dev/class/gpu/000", O_RDONLY);
+    fd_ = open(device_name(), O_RDONLY);
     DASSERT(fd_ >= 0);
     magma_create_connection(fd(), &connection_);
   }
@@ -49,6 +64,9 @@ class TestConnection {
   void Connection() { ASSERT_NE(connection_, nullptr); }
 
   void Context() {
+    if (is_virtmagma())
+      GTEST_SKIP();
+
     ASSERT_NE(connection_, nullptr);
 
     uint32_t context_id[2];
@@ -95,11 +113,11 @@ class TestConnection {
   void Buffer() {
     ASSERT_NE(connection_, nullptr);
 
-    uint64_t size = PAGE_SIZE;
+    uint64_t size = magma::page_size();
     uint64_t actual_size;
     uint64_t id;
 
-    EXPECT_EQ(magma_create_buffer(connection_, size, &actual_size, &id), 0);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &id));
     EXPECT_GE(size, actual_size);
     EXPECT_NE(id, 0u);
 
@@ -109,14 +127,15 @@ class TestConnection {
   void BufferMap() {
     ASSERT_NE(connection_, nullptr);
 
-    uint64_t size = PAGE_SIZE;
+    uint64_t size = magma::page_size();
     uint64_t actual_size;
     uint64_t id;
 
-    EXPECT_EQ(magma_create_buffer(connection_, size, &actual_size, &id), 0);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &id));
     EXPECT_NE(id, 0u);
 
-    magma_map_buffer_gpu(connection_, id, 1024, 0, size / PAGE_SIZE, MAGMA_GPU_MAP_FLAG_READ);
+    magma_map_buffer_gpu(connection_, id, 1024, 0, size / magma::page_size(),
+                         MAGMA_GPU_MAP_FLAG_READ);
     magma_unmap_buffer_gpu(connection_, id, 2048);
     magma_commit_buffer(connection_, id, 100, 100);
 
@@ -126,17 +145,20 @@ class TestConnection {
   void BufferExport(uint32_t* handle_out, uint64_t* id_out) {
     ASSERT_NE(connection_, nullptr);
 
-    uint64_t size = PAGE_SIZE;
+    uint64_t size = magma::page_size();
     magma_buffer_t buffer;
 
-    EXPECT_EQ(magma_create_buffer(connection_, size, &size, &buffer), 0);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &size, &buffer));
 
     *id_out = magma_get_buffer_id(buffer);
 
-    EXPECT_EQ(magma_export(connection_, buffer, handle_out), 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_export(connection_, buffer, handle_out));
   }
 
   void BufferRelease() {
+    if (is_virtmagma())
+      GTEST_SKIP();
+
     uint64_t id;
     uint32_t handle;
     BufferExport(&handle, &id);
@@ -147,11 +169,14 @@ class TestConnection {
     ASSERT_NE(connection_, nullptr);
 
     magma_buffer_t buffer;
-    EXPECT_EQ(magma_import(connection_, handle, &buffer), 0);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_import(connection_, handle, &buffer));
     EXPECT_EQ(magma_get_buffer_id(buffer), id);
   }
 
   static void BufferImportExport(TestConnection* test1, TestConnection* test2) {
+    if (is_virtmagma())
+      GTEST_SKIP();
+
     uint32_t handle;
     uint64_t id;
     test1->BufferExport(&handle, &id);
@@ -159,17 +184,20 @@ class TestConnection {
   }
 
   void Semaphore(uint32_t count) {
+    if (is_virtmagma())
+      GTEST_SKIP();
+
     ASSERT_NE(connection_, nullptr);
 
     std::vector<magma_semaphore_t> semaphore(count);
     for (uint32_t i = 0; i < count; i++) {
-      EXPECT_EQ(MAGMA_STATUS_OK, magma_create_semaphore(connection_, &semaphore[i]));
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_create_semaphore(connection_, &semaphore[i]));
       EXPECT_NE(0u, magma_get_semaphore_id(semaphore[i]));
     }
 
     auto thread = std::thread([semaphore, wait_all = true] {
-      EXPECT_EQ(MAGMA_STATUS_OK,
-                magma_wait_semaphores(semaphore.data(), semaphore.size(), UINT64_MAX, wait_all));
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_wait_semaphores(semaphore.data(), semaphore.size(),
+                                                       magma::ms_to_signed_ns(5000), wait_all));
       for (uint32_t i = 0; i < semaphore.size(); i++) {
         magma_reset_semaphore(semaphore[i]);
       }
@@ -184,8 +212,8 @@ class TestConnection {
     thread.join();
 
     thread = std::thread([semaphore, wait_all = false] {
-      EXPECT_EQ(MAGMA_STATUS_OK,
-                magma_wait_semaphores(semaphore.data(), semaphore.size(), UINT64_MAX, wait_all));
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_wait_semaphores(semaphore.data(), semaphore.size(),
+                                                       magma::ms_to_signed_ns(5000), wait_all));
       for (uint32_t i = 0; i < semaphore.size(); i++) {
         magma_reset_semaphore(semaphore[i]);
       }
@@ -206,7 +234,7 @@ class TestConnection {
     ASSERT_NE(connection_, nullptr);
     magma_semaphore_t semaphore;
 
-    EXPECT_EQ(magma_create_semaphore(connection_, &semaphore), MAGMA_STATUS_OK);
+    ASSERT_EQ(magma_create_semaphore(connection_, &semaphore), MAGMA_STATUS_OK);
     *id_out = magma_get_semaphore_id(semaphore);
     EXPECT_EQ(magma_export_semaphore(connection_, semaphore, handle_out), MAGMA_STATUS_OK);
   }
@@ -215,11 +243,14 @@ class TestConnection {
     ASSERT_NE(connection_, nullptr);
     magma_semaphore_t semaphore;
 
-    EXPECT_EQ(magma_import_semaphore(connection_, handle, &semaphore), MAGMA_STATUS_OK);
+    ASSERT_EQ(magma_import_semaphore(connection_, handle, &semaphore), MAGMA_STATUS_OK);
     EXPECT_EQ(magma_get_semaphore_id(semaphore), id);
   }
 
   static void SemaphoreImportExport(TestConnection* test1, TestConnection* test2) {
+    if (is_virtmagma())
+      GTEST_SKIP();
+
     uint32_t handle;
     uint64_t id;
     test1->SemaphoreExport(&handle, &id);
@@ -240,6 +271,9 @@ class TestConnection {
   }
 
   void ImageFormat() {
+#if !defined(__Fuchsia__)
+    GTEST_SKIP();
+#else
     fuchsia::sysmem::SingleBufferSettings buffer_settings;
     buffer_settings.has_image_format_constraints = true;
     buffer_settings.image_format_constraints.pixel_format.type =
@@ -276,9 +310,13 @@ class TestConnection {
                                              encoded_bytes.data(), real_size + 1, &description));
     EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_buffer_format_description(
                                              encoded_bytes.data(), real_size - 1, &description));
+#endif
   }
 
   void Sysmem(bool use_format_modifier) {
+#if !defined(__Fuchsia__)
+    GTEST_SKIP();
+#else
     magma_sysmem_connection_t connection;
     EXPECT_EQ(MAGMA_STATUS_OK, magma_sysmem_connection_create(&connection));
 
@@ -353,6 +391,7 @@ class TestConnection {
     magma_buffer_collection_release(connection, collection);
     magma_buffer_constraints_release(connection, constraints);
     magma_sysmem_connection_release(connection);
+#endif
   }
 
   void QueryReturnsBuffer() {
@@ -495,7 +534,7 @@ TEST(MagmaAbi, QueryReturnsBuffer) {
   test.QueryReturnsBuffer();
 }
 
-TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c()); }
+TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c(TestConnection::device_name())); }
 
 TEST(MagmaAbi, SubmitCommandBuffer) { TestConnectionWithContext().SubmitCommandBuffer(5); }
 
@@ -504,6 +543,9 @@ TEST(MagmaAbi, ExecuteCommandBufferWithResources) {
 }
 
 TEST(MagmaAbiPerf, SubmitCommandBuffer) {
+  if (TestConnection::is_virtmagma())
+    GTEST_SKIP();
+
   TestConnectionWithContext test;
 
   auto start = std::chrono::steady_clock::now();
@@ -519,6 +561,9 @@ TEST(MagmaAbiPerf, SubmitCommandBuffer) {
 }
 
 TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
+  if (TestConnection::is_virtmagma())
+    GTEST_SKIP();
+
   TestConnectionWithContext test;
 
   auto start = std::chrono::steady_clock::now();

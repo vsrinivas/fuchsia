@@ -8,6 +8,7 @@ package("unit_tests") {
   testonly = true
   deps = [
     ":virtmagma_unit_tests_linux(//build/toolchain:linux_x64)",
+    "//garnet/lib/magma/tests/integration:magma_abi_conformance_tests(//build/toolchain:linux_x64)",
   ]
 
   resources = [
@@ -15,6 +16,11 @@ package("unit_tests") {
       path =
           rebase_path("${root_build_dir}/linux_x64/virtmagma_unit_tests_linux")
       dest = "virtmagma_unit_tests_linux"
+    },
+    {
+      path =
+          rebase_path("${root_build_dir}/linux_x64/magma_abi_conformance_tests")
+      dest = "magma_abi_conformance_tests"
     },
   ]
 }

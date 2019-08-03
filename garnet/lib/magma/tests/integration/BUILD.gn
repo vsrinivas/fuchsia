@@ -22,10 +22,18 @@ executable("magma_abi_conformance_tests") {
 
   deps = [
     "$magma_build_root/include:magma_abi",
-    "$magma_build_root/src/libmagma",
-    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-sysmem",
   ]
+
+  if (is_fuchsia) {
+    deps += [
+      "$magma_build_root/src/libmagma",
+      "//zircon/public/fidl/fuchsia-sysmem",
+    ]
+  }
+  if (is_linux) {
+    deps += [ "$magma_build_root/src/libmagma_linux" ]
+  }
 }

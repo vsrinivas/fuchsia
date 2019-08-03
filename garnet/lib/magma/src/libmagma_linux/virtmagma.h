@@ -37,6 +37,15 @@ struct virtmagma_ioctl_args_magma_command {
   __u64 response_size;
 };
 
+struct virtmagma_command_buffer {
+  __u64 command_buffer_size;
+  __u64 command_buffer;
+  __u64 resource_size;
+  __u64 resources;
+  __u64 semaphore_size;
+  __u64 semaphores;
+};
+
 #define VIRTMAGMA_IOCTL_HANDSHAKE VIRTMAGMA_IOWR(0x00, struct virtmagma_ioctl_args_handshake)
 #define VIRTMAGMA_IOCTL_GET_MMFD VIRTMAGMA_IOWR(0x01, struct virtmagma_ioctl_args_get_mmfd)
 #define VIRTMAGMA_IOCTL_MAGMA_COMMAND \

@@ -102,3 +102,37 @@ magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32
   magma_status_t result_return = static_cast<decltype(result_return)>(response.result_return);
   return result_return;
 }
+
+void magma_execute_command_buffer_with_resources(magma_connection_t connection, uint32_t context_id,
+                                                 struct magma_system_command_buffer* command_buffer,
+                                                 struct magma_system_exec_resource* resources,
+                                                 uint64_t* semaphore_ids) {
+  virtmagma_command_buffer virt_command_buffer;
+  virt_command_buffer.command_buffer_size = sizeof(magma_system_command_buffer);
+  virt_command_buffer.command_buffer =
+      reinterpret_cast<decltype(virt_command_buffer.command_buffer)>(command_buffer);
+  virt_command_buffer.resource_size =
+      sizeof(magma_system_exec_resource) * command_buffer->num_resources;
+  virt_command_buffer.resources =
+      reinterpret_cast<decltype(virt_command_buffer.resources)>(resources);
+  virt_command_buffer.semaphore_size = sizeof(uint64_t) * (command_buffer->wait_semaphore_count +
+                                                           command_buffer->signal_semaphore_count);
+  virt_command_buffer.semaphores =
+      reinterpret_cast<decltype(virt_command_buffer.resources)>(semaphore_ids);
+
+  virtio_magma_execute_command_buffer_with_resources_ctrl request{};
+  virtio_magma_execute_command_buffer_with_resources_resp response{};
+  request.hdr.type = VIRTIO_MAGMA_CMD_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES;
+
+  auto connection_wrapped = virtmagma_connection_t::Get(connection);
+  request.connection = reinterpret_cast<decltype(request.connection)>(connection_wrapped->Object());
+
+  request.context_id = context_id;
+  request.command_buffer = reinterpret_cast<decltype(request.command_buffer)>(&virt_command_buffer);
+
+  int32_t file_descriptor = connection_wrapped->Parent().first;
+
+  bool success = virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
+                                        sizeof(response));
+  assert(success);
+}
