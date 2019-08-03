@@ -16,6 +16,17 @@ namespace zxdb {
 
 namespace {
 
+std::optional<std::string> ProbeOneBuildIdFile(const std::filesystem::path& path,
+                                               DebugSymbolFileType file_type) {
+  if (auto elf = elflib::ElfLib::Create(path)) {
+    if (file_type == DebugSymbolFileType::kDebugInfo && elf->ProbeHasDebugInfo())
+      return path;
+    if (file_type == DebugSymbolFileType::kBinary && elf->ProbeHasProgramBits())
+      return path;
+  }
+  return std::nullopt;
+}
+
 std::optional<std::string> FindInRepoFolder(const std::string& build_id,
                                             const std::filesystem::path& path,
                                             DebugSymbolFileType file_type) {
@@ -27,20 +38,14 @@ std::optional<std::string> FindInRepoFolder(const std::string& build_id,
   auto tail = build_id.substr(2);
   auto name = tail;
 
-  for (int i = 0; i < 2; i++) {
-    auto direct = path / prefix / name;
-
-    if (auto elf = elflib::ElfLib::Create(direct)) {
-      if (file_type == DebugSymbolFileType::kDebugInfo && elf->ProbeHasDebugInfo())
-        return direct;
-      if (file_type == DebugSymbolFileType::kBinary && elf->ProbeHasProgramBits())
-        return direct;
-    }
-
-    name += ".debug";
-  }
-
-  return std::nullopt;
+  // There are potentially two files, one with just the build ID, one with a ".debug" suffix. The
+  // ".debug" suffix one is supposed to contain either just the DWARF symbols, or the full
+  // unstripped binary. The plain one is supposed to be either a stripped or unstripped binary.
+  //
+  // Since we're looking for DWARF information, look in the ".debug" one first.
+  if (auto found = ProbeOneBuildIdFile(path / prefix / (name + ".debug"), file_type))
+    return found;
+  return ProbeOneBuildIdFile(path / prefix / name, file_type);
 }
 
 }  // namespace

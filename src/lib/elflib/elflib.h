@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_ELFLIB_ELFLIB_H_
 #define SRC_LIB_ELFLIB_ELFLIB_H_
 
-#include <fbl/macros.h>
 #include <stdio.h>
 
 #include <map>
@@ -13,6 +12,8 @@
 #include <optional>
 #include <utility>
 #include <vector>
+
+#include <fbl/macros.h>
 
 #include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 
@@ -86,6 +87,13 @@ class ElfLib {
 
   // Attempt to discern whether this file has debug symbols (otherwise it is
   // presumably stripped).
+  //
+  // There are different types of debug information and a file could contain an
+  // arbitrary subset of it. This function specifically probes for a
+  // ".debug_info" section which contains the main DWARF symbol information. But
+  // a file could lack this but still contain certain names or unwind
+  // information. If you need to tell if a file has this other information, a
+  // different probe function should be added for the specific thing you need.
   bool ProbeHasDebugInfo();
 
   // Attempt to discern whether this file has the actual program contents. It

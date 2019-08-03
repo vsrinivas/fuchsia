@@ -982,7 +982,7 @@ bool ElfLib::ProbeHasDebugInfo() {
   LoadSectionNames();
 
   for (const auto& [name, _] : section_names_) {
-    if (name.substr(0, 6) == ".debug") {
+    if (name == ".debug_info") {
       return true;
     }
   }
