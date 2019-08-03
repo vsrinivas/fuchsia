@@ -8,8 +8,8 @@
 #include <lib/media/audio/cpp/types.h>
 #include <lib/zx/clock.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
+#include "src/media/audio/audio_core/logging.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/utils.h"
 
@@ -804,9 +804,68 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   Shutdown();
 }
 
+// Temporary function to debug an unexplainable "end_fence_frames<0" condition in MixToIntermediate.
+void DumpRbSnapshot(const AudioDriver::RingBufferSnapshot& rb_snap) {
+  AUD_LOG_OBJ(ERROR, const_cast<AudioDriver::RingBufferSnapshot*>(&rb_snap))
+      << " (RBSnapshot) position_to_end_fence_frames " << rb_snap.position_to_end_fence_frames
+      << ", end_fence_to_start_fence_frames " << rb_snap.end_fence_to_start_fence_frames
+      << ", gen_id " << rb_snap.gen_id;
+
+  auto cm2rb = const_cast<media::TimelineFunction*>(&rb_snap.clock_mono_to_ring_pos_bytes);
+  AUD_LOG_OBJ(ERROR, cm2rb) << " (TLFunction) clock_mono_to_ring_pos_bytes sub/ref deltas "
+                            << cm2rb->subject_delta() << "/" << cm2rb->reference_delta()
+                            << ", sub/ref times " << cm2rb->subject_time() << "/"
+                            << cm2rb->reference_time();
+
+  auto rb = rb_snap.ring_buffer;
+  AUD_LOG_OBJ(ERROR, rb_snap.ring_buffer.get())
+      << " (DriverRBuf) size " << rb->size() << ", frames " << rb->frames() << ", frame_size "
+      << rb->frame_size() << ", start " << static_cast<void*>(rb->virt());
+}
+
+// Temporary function to debug an unexplainable "end_fence_frames<0" condition in MixToIntermediate.
+void DumpBookkeeping(const Bookkeeping& info) {
+  AUD_LOG_OBJ(ERROR, const_cast<Bookkeeping*>(&info))
+      << " (Bookkeeping) mixer 0x" << info.mixer.get() << ", gain 0x" << &info.gain
+      << ", step_size 0x" << std::hex << info.step_size << ", rate_modulo/denom " << std::dec
+      << info.rate_modulo << "/" << info.denominator << ", src_pos_modulo " << info.src_pos_modulo;
+
+  auto d2src = const_cast<media::TimelineFunction*>(&info.dest_frames_to_frac_source_frames);
+  AUD_LOG_OBJ(ERROR, d2src) << " (TLFunction) dest_frames_to_frac_source_frames sub/ref deltas "
+                            << d2src->subject_delta() << "/" << d2src->reference_delta()
+                            << ", sub/ref times " << d2src->subject_time() << "/"
+                            << d2src->reference_time() << ", dest_trans_gen_id "
+                            << info.dest_trans_gen_id;
+
+  auto cm2src = const_cast<media::TimelineFunction*>(&info.clock_mono_to_frac_source_frames);
+  AUD_LOG_OBJ(ERROR, cm2src) << " (TLFunction) clock_mono_to_frac_source_frames sub/ref deltas "
+                             << cm2src->subject_delta() << "/" << cm2src->reference_delta()
+                             << ", sub/ref times " << cm2src->subject_time() << "/"
+                             << cm2src->reference_time() << ", source_trans_gen_id "
+                             << info.source_trans_gen_id;
+}
+
+struct RbRegion {
+  uint32_t srb_pos;   // start ring buffer pos
+  uint32_t len;       // region length in frames
+  int64_t sfrac_pts;  // start fractional frame pts
+};
+
+// For debugging purposes, display info on (at most) 2 regions of the ring buffer.
+void DumpRbRegions(const RbRegion* regions) {
+  for (auto i = 0; i < 2; ++i) {
+    if (regions[i].len) {
+      AUD_VLOG(TRACE) << " [" << i << "] srb_pos 0x" << std::hex << regions[i].srb_pos << ", len 0x"
+                      << regions[i].len << ", sfrac_pts 0x" << regions[i].sfrac_pts << " ("
+                      << std::dec << (regions[i].sfrac_pts >> kPtsFractionalBits) << " frames)";
+    } else {
+      AUD_VLOG(TRACE) << " [" << i << "] len 0x0";
+    }
+  }
+}
+
 bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
-  // Take a snapshot of our source link references; skip the packet based
-  // sources, we don't know how to sample from them yet.
+  // Snapshot our source link references, but skip packet sources (we can't sample from them yet).
   FXL_DCHECK(source_link_refs_.size() == 0);
 
   ForEachSourceLink([src_link_refs = &source_link_refs_](auto& link) {
@@ -850,10 +909,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     FXL_DCHECK(link->GetSource() != nullptr);
     auto& device = static_cast<AudioDevice&>(*link->GetSource());
 
-    // Right now, the only way for a device to not have a driver is if it was
-    // the throttle output. Linking a capturer to the throttle output would be a
-    // mistake. For now if we detect this, log a warning, signal error and shut
-    // down. Once MTWN-52 is resolved, we can come back here and remove this.
+    // TODO(MTWN-52): Right now, the only device without a driver is the throttle output. Sourcing a
+    // capturer from the throttle output would be a mistake. For now if we detect this, log a
+    // warning, signal error and shut down. Once this is resolved, come back and remove this.
     const auto& driver = device.driver();
     if (driver == nullptr) {
       FXL_LOG(ERROR) << "AudioCapturer appears to be linked to throttle output!  "
@@ -868,6 +926,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // If this gain scale is at or below our mute threshold, skip this source,
     // as it will not contribute to this mix pass.
     if (info.gain.IsSilent()) {
+      AUD_LOG_OBJ(INFO, &link) << " skipping this capture source -- it is mute";
       continue;
     }
 
@@ -878,6 +937,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // ring buffer position transformation, then there is nothing to do (at the
     // moment). Just skip this source and move on to the next one.
     if ((rb_snap.ring_buffer == nullptr) || (!rb_snap.clock_mono_to_ring_pos_bytes.invertible())) {
+      AUD_LOG_OBJ(INFO, &link) << " skipping this capture source -- it isn't ready";
       continue;
     }
 
@@ -885,19 +945,16 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     FXL_DCHECK(info.mixer != nullptr);
     UpdateTransformation(&info, rb_snap);
 
-    // TODO(johngro) : Much of the code after this is very similar to the logic
-    // used to sample from packet sources (we basically model it as either 1 or
-    // 2 packets, depending on which regions of the ring buffer are available to
-    // be read from). In the future, we should come back here and re-factor
-    // this in such a way that we can sample from either packets or
-    // ring-buffers, and so we can share the common logic with the output mixer
-    // logic as well.
+    // Based on current timestamp, determine which ring buffer portions can be safely read. This
+    // safe area will be contiguous, although it may be split by the ring boundary. Determine the
+    // starting PTS of these region(s), expressed in fractional source frames.
     //
-    // Based on what time it is now, figure out what the safe portions of the
-    // ring buffer are to read from. Because it is a ring buffer, we may end up
-    // with either one contiguous region of frames, or two contiguous regions
-    // (split across the ring boundary). Figure out the starting PTSs of these
-    // regions (expressed in fractional start frames) in the process.
+    // TODO(MTWN-408): This mix job handling is similar to sections in AudioOutput that sample from
+    // packet sources. Here we basically model the available ring buffer space as either 1 or 2
+    // packets, depending on which regions can be safely read. Re-factor so both AudioCapturer and
+    // AudioOutput can sample from packets and ring-buffers, sharing common logic across input mix
+    // pump (AudioCapturer) and output mix pump (AudioOutput).
+    //
     const auto& rb = rb_snap.ring_buffer;
     auto now = zx::clock::get_monotonic().get();
 
@@ -905,15 +962,19 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
         (info.clock_mono_to_frac_source_frames.Apply(now)) >> kPtsFractionalBits;
 
     int64_t start_fence_frames = end_fence_frames - rb_snap.end_fence_to_start_fence_frames;
+
+    if (end_fence_frames < 0) {
+      DumpRbSnapshot(rb_snap);
+      DumpBookkeeping(info);
+
+      AUD_LOG(DFATAL) << " start_fence_frames: 0x" << std::hex << start_fence_frames
+                      << ", end_fence_frames: 0x" << end_fence_frames << ", gap " << std::dec
+                      << (end_fence_frames - start_fence_frames);
+    }
     start_fence_frames = std::max<int64_t>(start_fence_frames, 0);
-    FXL_DCHECK(end_fence_frames >= 0);
     FXL_DCHECK(end_fence_frames - start_fence_frames < rb->frames());
 
-    struct {
-      uint32_t srb_pos;   // start ring buffer pos
-      uint32_t len;       // region length in frames
-      int64_t sfrac_pts;  // start fractional frame pts
-    } regions[2];
+    RbRegion regions[2];
 
     auto start_frames_mod = static_cast<uint32_t>(start_fence_frames % rb->frames());
     auto end_frames_mod = static_cast<uint32_t>(end_fence_frames % rb->frames());
@@ -935,6 +996,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       regions[1].len = end_frames_mod;
       regions[1].sfrac_pts = regions[0].sfrac_pts + (regions[0].len << kPtsFractionalBits);
     }
+
+    DumpRbRegions(regions);
 
     uint32_t frames_left = mix_frames;
     float* buf = mix_buf_.get();
