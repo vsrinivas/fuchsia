@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/global.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/session.h>
-#include <stdio.h>
 #include <zircon/assert.h>
 
 namespace scenic {
@@ -120,9 +120,7 @@ void Session::Rebind() {
 }
 
 void Session::OnScenicError(std::string error) {
-  // TODO(SCN-903): replace fprintf with SDK-approved logging mechanism.  Also
-  // remove "#include <stdio.h>".
-  fprintf(stderr, "Session error: %s", error.c_str());
+  FX_LOGF(ERROR, nullptr, "Scenic Session in client: %s", error.c_str());
 }
 
 void Session::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
