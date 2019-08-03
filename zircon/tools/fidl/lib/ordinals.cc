@@ -69,11 +69,17 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::string_view& full_name,
   SHA256(reinterpret_cast<const uint8_t*>(full_name.data()), full_name.size(), digest);
   // The following dance ensures that we treat the bytes as a little-endian
   // int64 regardless of host byte order.
+  // clang-format off
   uint64_t ordinal =
-      static_cast<uint64_t>(digest[0]) | static_cast<uint64_t>(digest[1]) << 8 |
-      static_cast<uint64_t>(digest[2]) << 16 | static_cast<uint64_t>(digest[3]) << 24 |
-      static_cast<uint64_t>(digest[4]) << 32 | static_cast<uint64_t>(digest[5]) << 40 |
-      static_cast<uint64_t>(digest[6]) << 48 | static_cast<uint64_t>(digest[7]) << 56;
+      static_cast<uint64_t>(digest[0]) |
+      static_cast<uint64_t>(digest[1]) << 8 |
+      static_cast<uint64_t>(digest[2]) << 16 |
+      static_cast<uint64_t>(digest[3]) << 24 |
+      static_cast<uint64_t>(digest[4]) << 32 |
+      static_cast<uint64_t>(digest[5]) << 40 |
+      static_cast<uint64_t>(digest[6]) << 48 |
+      static_cast<uint64_t>(digest[7]) << 56;
+  // clang-format on
 
   ordinal &= 0x7fffffffffffffff;
   return raw::Ordinal64(source_element, ordinal);
