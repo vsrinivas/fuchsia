@@ -1,0 +1,64 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "brightness_manager"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:num-traits",
+    "//zircon/public/fidl/fuchsia-hardware-backlight:fuchsia-hardware-backlight-rustc",
+    "//zircon/public/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
+  ]
+}
+
+package("brightness_manager") {
+  deps = [
+    ":bin",
+  ]
+  binaries = [
+    {
+      name = "brightness_manager"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/brightness_manager.cmx")
+      dest = "brightness_manager.cmx"
+    },
+  ]
+}
+
+test_package("brightness_manager_tests") {
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "brightness_manager_bin_test"
+      dest = "brightness_manager_test"
+      environments = basic_envs
+    },
+  ]
+}

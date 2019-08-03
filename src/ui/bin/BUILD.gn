@@ -4,6 +4,7 @@
 
 group("bin") {
   deps = [
+    "brightness_manager",
     "ime:ime_service",
     "shortcut",
   ]
@@ -13,6 +14,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "brightness_manager:brightness_manager_tests",
     "ime:tests",
     "shortcut:tests",
   ]

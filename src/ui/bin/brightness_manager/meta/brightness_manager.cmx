@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/brightness_manager"
+    },
+    "sandbox": {
+        "dev": [
+            "class/backlight",
+            "class/input"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

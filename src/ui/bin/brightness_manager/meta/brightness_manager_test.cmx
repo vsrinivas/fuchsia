@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/brightness_manager_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
