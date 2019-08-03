@@ -23,7 +23,6 @@ fidl("fuchsia.sys2") {
     "decls/storage_decl.fidl",
     "decls/use_decl.fidl",
     "error.fidl",
-    "lifecycle_handler.fidl",
     "moniker.fidl",
     "realm.fidl",
     "runtime/component.fidl",
