@@ -42,7 +42,7 @@ enum FrameError : int32 {
     /// caller.
     INVALID_ORIGIN = 3;
 
-    /// The required `data` property is missing from a WebMessage
+    /// The required `data` property is missing from a WebMessage.
     NO_DATA_IN_MESSAGE = 4;
 };
 
