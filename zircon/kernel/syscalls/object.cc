@@ -26,6 +26,7 @@
 #include <object/resource_dispatcher.h>
 #include <object/socket_dispatcher.h>
 #include <object/thread_dispatcher.h>
+#include <object/timer_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <vm/pmm.h>
@@ -628,6 +629,18 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       zx_info_job info = {};
       job->GetInfo(&info);
+
+      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+    }
+
+    case ZX_INFO_TIMER: {
+      fbl::RefPtr<TimerDispatcher> timer;
+      auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &timer);
+      if (error != ZX_OK)
+        return error;
+
+      zx_info_timer info = {};
+      timer->GetInfo(&info);
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
     }

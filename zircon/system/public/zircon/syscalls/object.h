@@ -37,6 +37,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_SOCKET                  ((zx_object_info_topic_t) 22u) // zx_info_socket_t[1]
 #define ZX_INFO_VMO                     ((zx_object_info_topic_t) 23u) // zx_info_vmo_t[1]
 #define ZX_INFO_JOB                     ((zx_object_info_topic_t) 24u) // zx_info_job_t[1]
+#define ZX_INFO_TIMER                   ((zx_object_info_topic_t) 25u) // zx_info_timer_t[1]
 
 typedef uint32_t zx_obj_props_t;
 #define ZX_OBJ_PROP_NONE                ((zx_obj_props_t) 0u)
@@ -119,6 +120,26 @@ typedef struct zx_info_job {
     bool debugger_attached;
 } zx_info_job_t;
 
+typedef struct zx_info_timer {
+    // The options passed to zx_timer_create().
+    uint32_t options;
+
+    // The deadline with respect to ZX_CLOCK_MONOTONIC at which the timer will
+    // fire next.
+    //
+    // This value will be zero if the timer is not set to fire.
+    zx_time_t deadline;
+
+    // Specifies a range from deadline - slack to deadline + slack during which
+    // the timer is allowed to fire. The system uses this parameter as a hint to
+    // coalesce nearby timers.
+    //
+    // The precise coalescing behavior is controlled by the options parameter
+    // specified when the timer was created.
+    //
+    // This value will be zero if the timer is not set to fire.
+    zx_duration_t slack;
+} zx_info_timer_t;
 
 typedef uint32_t zx_thread_state_t;
 

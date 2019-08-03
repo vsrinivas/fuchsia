@@ -13,6 +13,14 @@
 
 namespace {
 
+void CheckInfo(const zx::timer& timer, uint32_t options, zx_time_t deadline, zx_duration_t slack) {
+  zx_info_timer_t info = {};
+  ASSERT_OK(timer.get_info(ZX_INFO_TIMER, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(info.options, options);
+  EXPECT_EQ(info.deadline, deadline);
+  EXPECT_EQ(info.slack, slack);
+}
+
 TEST(TimersTest, DeadlineAfter) {
   auto then = zx_clock_get_monotonic();
   // The day we manage to boot and run this test in less than 1uS we need to fix this.
@@ -32,11 +40,14 @@ TEST(TimersTest, DeadlineAfter) {
 TEST(TimersTest, SetNegativeDeadline) {
   zx::timer timer;
   ASSERT_OK(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer));
+  CheckInfo(timer, 0, 0, 0);
   zx::duration slack;
   ASSERT_OK(timer.set(zx::time(-1), slack));
+  CheckInfo(timer, 0, 0, slack.get());
   zx_signals_t pending;
   ASSERT_OK(timer.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending));
   ASSERT_EQ(pending, ZX_TIMER_SIGNALED);
+  CheckInfo(timer, 0, 0, 0);
 }
 
 TEST(TimersTest, SetNegativeDeadlineMax) {
@@ -44,15 +55,18 @@ TEST(TimersTest, SetNegativeDeadlineMax) {
   ASSERT_OK(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer));
   zx::duration slack;
   ASSERT_OK(timer.set(zx::time(ZX_TIME_INFINITE_PAST), slack));
+  CheckInfo(timer, 0, 0, slack.get());
   zx_signals_t pending;
   ASSERT_OK(timer.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending));
   ASSERT_EQ(pending, ZX_TIMER_SIGNALED);
+  CheckInfo(timer, 0, 0, 0);
 }
 
 TEST(TimersTest, SetNegativeSlack) {
   zx::timer timer;
   ASSERT_OK(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer));
   ASSERT_EQ(timer.set(zx::time(), zx::duration(-1)), ZX_ERR_OUT_OF_RANGE);
+  CheckInfo(timer, 0, 0, 0);
 }
 
 TEST(TimersTest, Basic) {
@@ -71,6 +85,7 @@ TEST(TimersTest, Basic) {
 
     EXPECT_OK(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending));
     EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
+    CheckInfo(timer, 0, 0, 0);
   }
 }
 
@@ -84,9 +99,11 @@ TEST(TimersTest, Restart) {
     const auto deadline_wait = zx::deadline_after(zx::msec(1));
     // Setting a timer already running is equivalent to a cancel + set.
     ASSERT_OK(timer.set(deadline_timer, zx::nsec(0)));
+    CheckInfo(timer, 0, deadline_timer.get(), 0);
 
     EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending), ZX_ERR_TIMED_OUT);
     EXPECT_EQ(pending, 0u);
+    CheckInfo(timer, 0, deadline_timer.get(), 0);
   }
 }
 
@@ -163,10 +180,12 @@ void CheckCoalescing(uint32_t mode) {
 
   ASSERT_OK(timer_1.set(deadline_1, zx::nsec(0)));
   ASSERT_OK(timer_2.set(deadline_2, zx::msec(110)));
+  CheckInfo(timer_2, 0, deadline_2.get(), ZX_MSEC(110));
 
   zx_signals_t pending;
   EXPECT_OK(timer_2.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending));
   EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
+  CheckInfo(timer_2, 0, 0, 0);
 
   auto duration = zx_clock_get_monotonic() - start;
 

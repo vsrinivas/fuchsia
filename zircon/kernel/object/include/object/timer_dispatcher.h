@@ -34,12 +34,14 @@ class TimerDispatcher final : public SoloDispatcher<TimerDispatcher, ZX_DEFAULT_
   // Timer callback.
   void OnTimerFired();
 
+  void GetInfo(zx_info_timer_t* info) const;
+
  private:
-  explicit TimerDispatcher(slack_mode slack_mode);
+  explicit TimerDispatcher(uint32_t options);
   void SetTimerLocked(bool cancel_first) TA_REQ(get_lock());
   bool CancelTimerLocked() TA_REQ(get_lock());
 
-  const slack_mode slack_mode_;
+  const uint32_t options_;
   dpc_t timer_dpc_;
   zx_time_t deadline_ TA_GUARDED(get_lock());
   zx_duration_t slack_amount_ TA_GUARDED(get_lock());

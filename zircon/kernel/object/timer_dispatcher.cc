@@ -34,24 +34,17 @@ zx_status_t TimerDispatcher::Create(uint32_t options, KernelHandle<TimerDispatch
   if (options > ZX_TIMER_SLACK_LATE)
     return ZX_ERR_INVALID_ARGS;
 
-  slack_mode slack_mode;
-
   switch (options) {
     case ZX_TIMER_SLACK_CENTER:
-      slack_mode = TIMER_SLACK_CENTER;
-      break;
     case ZX_TIMER_SLACK_EARLY:
-      slack_mode = TIMER_SLACK_EARLY;
-      break;
     case ZX_TIMER_SLACK_LATE:
-      slack_mode = TIMER_SLACK_LATE;
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
   };
 
   fbl::AllocChecker ac;
-  KernelHandle new_handle(fbl::AdoptRef(new (&ac) TimerDispatcher(slack_mode)));
+  KernelHandle new_handle(fbl::AdoptRef(new (&ac) TimerDispatcher(options)));
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
@@ -60,8 +53,8 @@ zx_status_t TimerDispatcher::Create(uint32_t options, KernelHandle<TimerDispatch
   return ZX_OK;
 }
 
-TimerDispatcher::TimerDispatcher(slack_mode slack_mode)
-    : slack_mode_(slack_mode),
+TimerDispatcher::TimerDispatcher(uint32_t options)
+    : options_(options),
       timer_dpc_({LIST_INITIAL_CLEARED_VALUE, &dpc_callback, this}),
       deadline_(0u),
       slack_amount_(0u),
@@ -72,6 +65,7 @@ TimerDispatcher::TimerDispatcher(slack_mode slack_mode)
 
 TimerDispatcher::~TimerDispatcher() {
   DEBUG_ASSERT(deadline_ == 0u);
+  DEBUG_ASSERT(slack_amount_ == 0u);
   kcounter_add(dispatcher_timer_destroy_count, 1);
 }
 
@@ -133,7 +127,24 @@ zx_status_t TimerDispatcher::Cancel() {
 void TimerDispatcher::SetTimerLocked(bool cancel_first) {
   if (cancel_first)
     timer_cancel(&timer_);
-  const TimerSlack slack{slack_amount_, slack_mode_};
+
+  slack_mode slack_mode = TIMER_SLACK_CENTER;
+
+  switch (options_) {
+    case ZX_TIMER_SLACK_CENTER:
+      slack_mode = TIMER_SLACK_CENTER;
+      break;
+    case ZX_TIMER_SLACK_EARLY:
+      slack_mode = TIMER_SLACK_EARLY;
+      break;
+    case ZX_TIMER_SLACK_LATE:
+      slack_mode = TIMER_SLACK_LATE;
+      break;
+    default:
+      panic("Unknown options: %x", options_);
+  };
+
+  const TimerSlack slack{slack_amount_, slack_mode};
   const Deadline slackDeadline(deadline_, slack);
   timer_set(&timer_, slackDeadline, &timer_irq_callback, &timer_dpc_);
 }
@@ -190,6 +201,7 @@ void TimerDispatcher::OnTimerFired() {
       // The timer is firing.
       UpdateStateLocked(0u, ZX_TIMER_SIGNALED);
       deadline_ = 0u;
+      slack_amount_ = 0u;
     }
   }
 
@@ -198,4 +210,13 @@ void TimerDispatcher::OnTimerFired() {
   // ourselves.
   if (Release())
     delete this;
+}
+
+void TimerDispatcher::GetInfo(zx_info_timer_t* info) const {
+  canary_.Assert();
+
+  Guard<fbl::Mutex> guard{get_lock()};
+  info->options = options_;
+  info->deadline = deadline_;
+  info->slack = slack_amount_;
 }
