@@ -30,6 +30,34 @@ struct monostate final {
   constexpr bool operator>=(const monostate& other) const { return true; }
 };
 
+namespace internal {
+
+// Helper type to avoid recursive instantiations of the full variant type.
+template <typename...>
+struct variant_list {};
+
+// Gets the number of alternatives in a variant_list as a compile-time constant.
+template <typename T>
+struct variant_list_size;
+
+template <typename... Ts>
+struct variant_list_size<variant_list<Ts...>> : std::integral_constant<size_t, sizeof...(Ts)> {};
+
+// Helper to get the type of a variant_list alternative with the given index.
+template <size_t Index, typename VariantList>
+struct variant_alternative;
+
+template <size_t Index, typename T0, typename... Ts>
+struct variant_alternative<Index, variant_list<T0, Ts...>>
+    : variant_alternative<Index - 1, variant_list<Ts...>> {};
+
+template <typename T0, typename... Ts>
+struct variant_alternative<0, variant_list<T0, Ts...>> {
+  using type = T0;
+};
+
+}  // namespace internal
+
 // Forward declaration.
 template <typename... Ts>
 class variant;
@@ -38,14 +66,9 @@ class variant;
 template <size_t Index, typename Variant>
 struct variant_alternative;
 
-template <size_t Index, typename T0, typename... Ts>
-struct variant_alternative<Index, variant<T0, Ts...>>
-    : variant_alternative<Index - 1, variant<Ts...>> {};
-
-template <typename T0, typename... Ts>
-struct variant_alternative<0, variant<T0, Ts...>> {
-  using type = T0;
-};
+template <size_t Index, typename... Ts>
+struct variant_alternative<Index, variant<Ts...>>
+    : ::fit::internal::variant_alternative<Index, ::fit::internal::variant_list<Ts...>> {};
 
 template <size_t index, typename Variant>
 using variant_alternative_t = typename variant_alternative<index, Variant>::type;
@@ -147,8 +170,8 @@ struct check_valid_option<Index, T, Ti, true,
 // Mixes in instantiations of check_valid_option for each element in
 // fit::variant<Ts...>, creating a set of check(Ti) functions that might match
 // T following the conversion rules.
-template <typename T, typename Variant,
-          typename = std::make_index_sequence<variant_size_v<Variant>>>
+template <typename T, typename VariantList,
+          typename = std::make_index_sequence<variant_list_size<VariantList>::value>>
 struct find_valid_option {
   // Non-static so that find_valid_option<...>::check is always a valid name
   // in the using clause of the recursive case, but doesn't participate in the
@@ -159,31 +182,31 @@ struct find_valid_option {
 // Recursive case. This would be simpler with C++17 pack expansion in using
 // directives, but this must function in C++14.
 template <typename T, typename Ti, size_t Index, typename... Ts, size_t... Is>
-struct find_valid_option<T, variant<Ti, Ts...>, std::index_sequence<Index, Is...>>
+struct find_valid_option<T, variant_list<Ti, Ts...>, std::index_sequence<Index, Is...>>
     : check_valid_option<Index, T, Ti>,
-      find_valid_option<T, variant<Ts...>, std::index_sequence<Is...>> {
+      find_valid_option<T, variant_list<Ts...>, std::index_sequence<Is...>> {
   // Introduce the base class definitions of check() into this scope. The
   // static check(Ti) methods participate in overload resolution in the
   // valid_option_index trait, while the non-static check() methods are
   // ignored.
   using check_valid_option<Index, T, Ti>::check;
-  using find_valid_option<T, variant<Ts...>, std::index_sequence<Is...>>::check;
+  using find_valid_option<T, variant_list<Ts...>, std::index_sequence<Is...>>::check;
 };
 
 // Evaluates to the index of the valid target type Ti selected from
 // fit::variant<Ts...>. The type expression is well formed IFF a single valid
 // target type is available that converts from T.
-template <typename T, typename Variant>
-using valid_option_index = decltype(find_valid_option<T, Variant>::check(std::declval<T>()));
+template <typename T, typename VariantList>
+using valid_option_index = decltype(find_valid_option<T, VariantList>::check(std::declval<T>()));
 
 // Evaluates to the index of the valid target Ti that converts from T or the
 // reserved empty index when no uniquely suitable option is available.
 template <typename T, typename Variant, typename = void>
 struct selected_index : std::integral_constant<size_t, ::fit::internal::empty_index> {};
 
-template <typename T, typename Variant>
-struct selected_index<T, Variant, void_t<valid_option_index<T, Variant>>>
-    : valid_option_index<T, Variant> {};
+template <typename T, typename... Ts>
+struct selected_index<T, variant<Ts...>, void_t<valid_option_index<T, variant_list<Ts...>>>>
+    : valid_option_index<T, variant_list<Ts...>> {};
 
 }  // namespace internal
 
