@@ -7,6 +7,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
+#include <hwreg/bitfields.h>
 #include <lib/mmio/mmio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
@@ -17,6 +18,27 @@
 #include "astro-gpios.h"
 
 namespace astro {
+
+namespace {
+
+constexpr uint32_t kGpioBase = fbl::round_down<uint32_t, uint32_t>(S905D2_GPIO_BASE, PAGE_SIZE);
+constexpr uint32_t kGpioBaseOffset = S905D2_GPIO_BASE - kGpioBase;
+
+class PadDsReg2A : public hwreg::RegisterBase<PadDsReg2A, uint32_t> {
+ public:
+  static constexpr uint32_t kDriveStrengthMax = 3;
+
+  static auto Get() { return hwreg::RegisterAddr<PadDsReg2A>((0xd2 * 4) + kGpioBaseOffset); }
+
+  DEF_FIELD(1, 0, gpiox_0_select);
+  DEF_FIELD(3, 2, gpiox_1_select);
+  DEF_FIELD(5, 4, gpiox_2_select);
+  DEF_FIELD(7, 6, gpiox_3_select);
+  DEF_FIELD(9, 8, gpiox_4_select);
+  DEF_FIELD(11, 10, gpiox_5_select);
+};
+
+}  // namespace
 
 static const pbus_boot_metadata_t wifi_boot_metadata[] = {
     {
@@ -56,8 +78,8 @@ static const pbus_bti_t sd_emmc_btis[] = {
 
 static aml_sd_emmc_config_t config = {
     .supports_dma = true,
-    .min_freq = 400000,
-    .max_freq = 50000000,
+    .min_freq = 400'000,
+    .max_freq = 208'000'000,
     .clock_phases =
         {
             .init = {.core_phase = 3, .tx_phase = 0},
@@ -177,11 +199,10 @@ zx_status_t Astro::SdEmmcConfigurePortB() {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   zx::unowned_resource resource(get_root_resource());
 
-  const uint64_t aligned_gpio_base = ROUNDDOWN(S905D2_GPIO_BASE, PAGE_SIZE);
   size_t aligned_size =
-      ROUNDUP((S905D2_GPIO_BASE - aligned_gpio_base) + S905D2_GPIO_LENGTH, PAGE_SIZE);
+      ROUNDUP((S905D2_GPIO_BASE - kGpioBase) + S905D2_GPIO_LENGTH, PAGE_SIZE);
 
-  status = ddk::MmioBuffer::Create(aligned_gpio_base, aligned_size, *resource,
+  status = ddk::MmioBuffer::Create(kGpioBase, aligned_size, *resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_base);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Create(gpio) error: %d\n", __func__, status);
@@ -189,21 +210,29 @@ zx_status_t Astro::SdEmmcConfigurePortB() {
 
   // TODO(ravoorir): Figure out if we need gpio protocol ops to modify these
   // gpio registers.
-  const uint32_t actual_base_offset = S905D2_GPIO_BASE - aligned_gpio_base;
   uint32_t preg_pad_gpio5_val =
-      gpio_base->Read32(actual_base_offset + (S905D2_PREG_PAD_GPIO5_O << 2)) |
+      gpio_base->Read32(kGpioBaseOffset + (S905D2_PREG_PAD_GPIO5_O << 2)) |
       AML_SDIO_PORTB_GPIO_REG_5_VAL;
-  gpio_base->Write32(preg_pad_gpio5_val, actual_base_offset + (S905D2_PREG_PAD_GPIO5_O << 2));
+  gpio_base->Write32(preg_pad_gpio5_val, kGpioBaseOffset + (S905D2_PREG_PAD_GPIO5_O << 2));
 
   uint32_t periphs_pin_mux2_val =
-      gpio_base->Read32(actual_base_offset + (S905D2_PERIPHS_PIN_MUX_2 << 2)) |
+      gpio_base->Read32(kGpioBaseOffset + (S905D2_PERIPHS_PIN_MUX_2 << 2)) |
       AML_SDIO_PORTB_PERIPHS_PINMUX2_VAL;
-  gpio_base->Write32(periphs_pin_mux2_val, actual_base_offset + (S905D2_PERIPHS_PIN_MUX_2 << 2));
+  gpio_base->Write32(periphs_pin_mux2_val, kGpioBaseOffset + (S905D2_PERIPHS_PIN_MUX_2 << 2));
 
-  uint32_t gpio2_en_n_val =
-      gpio_base->Read32(actual_base_offset + (S905D2_PREG_PAD_GPIO2_EN_N << 2)) &
-      AML_SDIO_PORTB_PERIPHS_GPIO2_EN;
-  gpio_base->Write32(gpio2_en_n_val, actual_base_offset + (S905D2_PREG_PAD_GPIO2_EN_N << 2));
+  uint32_t gpio2_en_n_val = gpio_base->Read32(kGpioBaseOffset + (S905D2_PREG_PAD_GPIO2_EN_N << 2)) &
+                            AML_SDIO_PORTB_PERIPHS_GPIO2_EN;
+  gpio_base->Write32(gpio2_en_n_val, kGpioBaseOffset + (S905D2_PREG_PAD_GPIO2_EN_N << 2));
+
+  PadDsReg2A::Get()
+      .ReadFrom(&(*gpio_base))
+      .set_gpiox_0_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_1_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_2_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_3_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_4_select(PadDsReg2A::kDriveStrengthMax)
+      .set_gpiox_5_select(PadDsReg2A::kDriveStrengthMax)
+      .WriteTo(&(*gpio_base));
 
   // Configure clock settings
   std::optional<ddk::MmioBuffer> hiu_base;

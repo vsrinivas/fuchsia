@@ -139,17 +139,16 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
     hw_info_.num_funcs++;
   }
 
-  // TODO(ravoorir):Re-enable ultra high speed when wifi stack is more stable.
-  // if ((st = TrySwitchUhs()) != ZX_OK) {
-  //     zxlogf(ERROR, "sdmmc_probe_sdio: Switching to high speed failed, retcode = %d\n", st);
-  if ((st = TrySwitchHs()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc_probe_sdio: Switching to high speed failed, retcode = %d\n", st);
-    if ((st = SwitchFreq(SDIO_DEFAULT_FREQ)) != ZX_OK) {
-      zxlogf(ERROR, "sdmmc_probe_sdio: Switch freq retcode = %d\n", st);
-      return st;
+  if ((st = TrySwitchUhs()) != ZX_OK) {
+    zxlogf(ERROR, "sdmmc_probe_sdio: Switching to ultra high speed failed, retcode = %d\n", st);
+    if ((st = TrySwitchHs()) != ZX_OK) {
+      zxlogf(ERROR, "sdmmc_probe_sdio: Switching to high speed failed, retcode = %d\n", st);
+      if ((st = SwitchFreq(SDIO_DEFAULT_FREQ)) != ZX_OK) {
+        zxlogf(ERROR, "sdmmc_probe_sdio: Switch freq retcode = %d\n", st);
+        return st;
+      }
     }
   }
-  // }
 
   SdioUpdateBlockSizeLocked(0, 0, true);
   // 0 is the common function. Already initialized
