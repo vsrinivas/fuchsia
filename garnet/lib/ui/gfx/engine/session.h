@@ -30,7 +30,6 @@ namespace gfx {
 using PresentCallback = fuchsia::ui::scenic::Session::PresentCallback;
 
 class CommandContext;
-class Engine;
 class Resource;
 
 // gfx::Session is the internal endpoint of the scenic::Session channel.
