@@ -28,6 +28,20 @@ source_set("fshost-registry") {
   ]
 }
 
+source_set("metrics") {
+  sources = [
+    "metrics.cc",
+    "metrics.h",
+  ]
+  public_deps = [
+    "$zx/system/ulib/cobalt-client:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
+  ]
+}
+
 source_set("block-watcher") {
   sources = [
     "block-device.cc",
@@ -89,6 +103,20 @@ test("fshost-test") {
   ]
   deps = [
     ":fshost-registry",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("fshost-metrics-test") {
+  test_group = "ddk"
+  sources = [
+    "metrics-test.cc",
+  ]
+  deps = [
+    ":metrics",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
     "$zx/system/ulib/zxtest",
   ]
 }
