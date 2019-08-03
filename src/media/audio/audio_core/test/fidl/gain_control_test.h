@@ -14,7 +14,7 @@ namespace media::audio::test {
 // GainControlTestBase
 //
 // This set of tests verifies asynchronous usage of GainControl.
-class GainControlTestBase : public AudioCoreTestBase {
+class GainControlTestBase : public HermeticAudioCoreTest {
  protected:
   void TearDown() final;
 

@@ -5,7 +5,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "src/media/audio/lib/test/audio_test_base.h"
+#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
 
@@ -19,41 +19,26 @@ namespace media::audio::test {
 //
 // In short, further testing of the sync interfaces (over and above any testing
 // done on the async interfaces) should not be needed.
-class AudioRendererSyncTest : public AudioTestBase {
+class AudioRendererSyncTest : public HermeticAudioTest {
  protected:
-  // "Regional" per-test-suite set-up. Called before first test in this suite.
-  static void SetUpTestSuite() {
-    AudioTestBase::SetUpTestSuite();
-
-    startup_context_->svc()->Connect(audio_core_sync_.NewRequest());
-  }
-
-  // Per-test-suite tear-down. Called after the last test in this suite.
-  static void TearDownTestSuite() { audio_core_sync_.Unbind(); }
-
   void SetUp() override;
   void TearDown() override;
 
-  //
-  // Declare singleton resource shared by all test cases.
-  static fuchsia::media::AudioCoreSyncPtr audio_core_sync_;
-
-  // One of these is created anew, for each test case.
+  fuchsia::media::AudioCoreSyncPtr audio_core_sync_;
   fuchsia::media::AudioRendererSyncPtr audio_renderer_sync_;
 };
 
-fuchsia::media::AudioCoreSyncPtr AudioRendererSyncTest::audio_core_sync_ = nullptr;
-
 void AudioRendererSyncTest::SetUp() {
-  AudioTestBase::SetUp();
+  HermeticAudioTest::SetUp();
 
+  environment()->ConnectToService(audio_core_sync_.NewRequest());
   ASSERT_EQ(ZX_OK, audio_core_sync_->CreateAudioRenderer(audio_renderer_sync_.NewRequest()));
 }
 
 void AudioRendererSyncTest::TearDown() {
   audio_renderer_sync_.Unbind();
 
-  AudioTestBase::TearDown();
+  HermeticAudioTest::TearDown();
 }
 
 //

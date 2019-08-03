@@ -5,7 +5,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "src/media/audio/lib/test/audio_test_base.h"
+#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
 
@@ -18,7 +18,7 @@ namespace media::audio::test {
 // In short, further testing of the sync interfaces (over and above any testing
 // done on the async interfaces) should not be needed.
 //
-class AudioSyncTest : public AudioTestBase {
+class AudioSyncTest : public HermeticAudioTest {
  protected:
   void SetUp() override;
   void TearDown() override;
@@ -29,10 +29,8 @@ class AudioSyncTest : public AudioTestBase {
 };
 
 void AudioSyncTest::SetUp() {
-  AudioTestBase::SetUp();
-
-  startup_context_->svc()->Connect(audio_core_sync_.NewRequest());
-  ASSERT_TRUE(audio_core_sync_.is_bound()) << "Unable to bind to AudioCoreSync interface";
+  HermeticAudioTest::SetUp();
+  environment()->ConnectToService(audio_core_sync_.NewRequest());
 }
 
 void AudioSyncTest::TearDown() {
@@ -46,7 +44,7 @@ void AudioSyncTest::TearDown() {
     audio_core_sync_.Unbind();
   }
 
-  AudioTestBase::TearDown();
+  HermeticAudioTest::TearDown();
 }
 
 //

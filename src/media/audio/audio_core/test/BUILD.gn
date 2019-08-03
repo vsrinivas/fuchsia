@@ -139,7 +139,6 @@ executable("audio_fidl_tests_bin") {
 
   sources = [
     "fidl/audio_capturer_test.cc",
-    "fidl/audio_fidl_main.cc",
     "fidl/audio_renderer_sync_test.cc",
     "fidl/audio_renderer_test.cc",
     "fidl/audio_sync_test.cc",
@@ -150,6 +149,7 @@ executable("audio_fidl_tests_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.media",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/lib/test",
   ]

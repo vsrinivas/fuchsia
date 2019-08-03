@@ -13,7 +13,7 @@ namespace media::audio::test {
 //
 // AudioTest
 //
-class AudioTest : public AudioCoreTestBase {
+class AudioTest : public HermeticAudioCoreTest {
  protected:
   void TearDown() override;
 
@@ -24,7 +24,7 @@ class AudioTest : public AudioCoreTestBase {
 //
 // SystemGainMuteTest class
 //
-class SystemGainMuteTest : public AudioCoreTestBase {
+class SystemGainMuteTest : public HermeticAudioCoreTest {
  protected:
   void SetUp() override;
   void TearDown() override;
@@ -49,7 +49,7 @@ void AudioTest::TearDown() {
   audio_renderer_.Unbind();
   audio_capturer_.Unbind();
 
-  AudioCoreTestBase::TearDown();
+  HermeticAudioCoreTest::TearDown();
 }
 
 //
@@ -58,7 +58,7 @@ void AudioTest::TearDown() {
 // Register for notification of SystemGainMute changes; receive initial values
 // and set the system to a known baseline for gain/mute testing.
 void SystemGainMuteTest::SetUp() {
-  AudioCoreTestBase::SetUp();
+  HermeticAudioCoreTest::SetUp();
 
   audio_core_.events().SystemGainMuteChanged =
       CompletionCallback([this](float gain_db, bool muted) {
@@ -90,7 +90,7 @@ void SystemGainMuteTest::TearDown() {
     audio_core_.events().SystemGainMuteChanged = nullptr;
   }
 
-  AudioCoreTestBase::TearDown();
+  HermeticAudioCoreTest::TearDown();
 }
 
 // Put system into a known state (unity-gain unmuted), only changing if needed.
@@ -144,7 +144,7 @@ TEST_F(AudioTest, CreateAudioRenderer) {
   audio_core_->CreateAudioRenderer(audio_renderer_sync.NewRequest());
 
   fuchsia::media::AudioCorePtr audio_core_2;
-  startup_context_->svc()->Connect(audio_core_2.NewRequest());
+  environment()->ConnectToService(audio_core_2.NewRequest());
   audio_core_2.set_error_handler(ErrorHandler());
 
   fuchsia::media::AudioRendererPtr audio_renderer_2;
@@ -185,7 +185,7 @@ TEST_F(AudioTest, CreateAudioCapturer) {
   audio_core_->CreateAudioCapturer(false, audio_capturer_sync.NewRequest());
 
   fuchsia::media::AudioCorePtr audio_core_2;
-  startup_context_->svc()->Connect(audio_core_2.NewRequest());
+  environment()->ConnectToService(audio_core_2.NewRequest());
   audio_core_2.set_error_handler(ErrorHandler());
 
   fuchsia::media::AudioCapturerPtr audio_capturer_2;

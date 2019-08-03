@@ -28,7 +28,7 @@ void GainControlTestBase::TearDown() {
   audio_renderer_2_.Unbind();
   audio_capturer_2_.Unbind();
 
-  AudioCoreTestBase::TearDown();
+  HermeticAudioCoreTest::TearDown();
 }
 
 void GainControlTestBase::SetUpRenderer() {
@@ -109,7 +109,7 @@ void GainControlTestBase::SetUpGainControl2OnCapturer2() {
 
 // For tests that cause a GainControl to disconnect, set these expectations.
 void GainControlTestBase::SetNegativeExpectations() {
-  AudioCoreTestBase::SetNegativeExpectations();
+  HermeticAudioCoreTest::SetNegativeExpectations();
 
   null_api_expected_ = true;
   null_gain_control_expected_ = true;
@@ -137,12 +137,12 @@ void GainControlTestBase::ExpectGainCallback(float gain_db, bool mute) {
 // GainControl binding. Treat any regular gain callback received as error.
 void GainControlTestBase::ExpectDisconnect() {
   // Need to wait for both renderer/capturer AND gain_control to disconnect.
-  AudioCoreTestBase::ExpectDisconnect();
+  HermeticAudioCoreTest::ExpectDisconnect();
 
   if (gain_control_.is_bound() || !ApiIsNull()) {
     // Reset our error detector before listening again.
     error_occurred_ = false;
-    AudioCoreTestBase::ExpectDisconnect();
+    HermeticAudioCoreTest::ExpectDisconnect();
   }
 
   EXPECT_TRUE(ApiIsNull());
@@ -352,16 +352,16 @@ void SiblingGainControlsTest::ExpectDisconnect() {
   // Wait Renderer/Capturer and BOTH GainControls to disconnect. Because
   // multiple disconnect callbacks could arrive between our polling interval, we
   // wait a maximum of three times, checking between them for completion.
-  AudioCoreTestBase::ExpectDisconnect();
+  HermeticAudioCoreTest::ExpectDisconnect();
   if (!ApiIsNull() || gain_control_.is_bound() || gain_control_2_.is_bound()) {
     // Reset our error detector before listening again.
     error_occurred_ = false;
-    AudioCoreTestBase::ExpectDisconnect();
+    HermeticAudioCoreTest::ExpectDisconnect();
   }
   if (!ApiIsNull() || gain_control_.is_bound() || gain_control_2_.is_bound()) {
     // Reset our error detector before listening again.
     error_occurred_ = false;
-    AudioCoreTestBase::ExpectDisconnect();
+    HermeticAudioCoreTest::ExpectDisconnect();
   }
 
   EXPECT_TRUE(error_occurred_2_);
