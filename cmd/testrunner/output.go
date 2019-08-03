@@ -10,9 +10,9 @@ import (
 	"io"
 	"os"
 
-	"fuchsia.googlesource.com/tools/cmd/testrunner/outputs"
-	"fuchsia.googlesource.com/tools/runtests"
-	"fuchsia.googlesource.com/tools/testrunner"
+	"go.fuchsia.dev/tools/cmd/testrunner/outputs"
+	"go.fuchsia.dev/tools/runtests"
+	"go.fuchsia.dev/tools/testrunner"
 )
 
 // Output manages the test runner's output drivers. Upon completion, if tar output is

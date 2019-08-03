@@ -13,7 +13,7 @@ import (
 	"sort"
 	"testing"
 
-	"fuchsia.googlesource.com/tools/build"
+	"go.fuchsia.dev/tools/build"
 )
 
 var qemuPlatform = DimensionSet{

@@ -15,11 +15,11 @@ import (
 	"os"
 	"sync"
 
-	"fuchsia.googlesource.com/tools/artifacts"
 	"github.com/google/subcommands"
 	"go.chromium.org/luci/auth"
 	"go.chromium.org/luci/auth/client/authcli"
 	"go.chromium.org/luci/hardcoded/chromeinfra"
+	"go.fuchsia.dev/tools/artifacts"
 )
 
 const (

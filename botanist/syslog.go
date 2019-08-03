@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"fuchsia.googlesource.com/tools/runner"
+	"go.fuchsia.dev/tools/runner"
 )
 
 // The program on fuchsia used to stream system logs through a shell, not to be confused

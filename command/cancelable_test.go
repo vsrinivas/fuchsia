@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/tools/command"
 	"github.com/google/subcommands"
+	"go.fuchsia.dev/tools/command"
 )
 
 func TestCancelableExecute(t *testing.T) {

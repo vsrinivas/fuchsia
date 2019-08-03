@@ -14,8 +14,8 @@ import (
 	"net"
 	"time"
 
-	"fuchsia.googlesource.com/tools/netutil"
-	"fuchsia.googlesource.com/tools/retry"
+	"go.fuchsia.dev/tools/netutil"
+	"go.fuchsia.dev/tools/retry"
 
 	"golang.org/x/crypto/ssh"
 )

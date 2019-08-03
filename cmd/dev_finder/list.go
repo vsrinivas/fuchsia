@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/subcommands"
 
-	"fuchsia.googlesource.com/tools/mdns"
+	"go.fuchsia.dev/tools/mdns"
 )
 
 const (

@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"fuchsia.googlesource.com/tools/gcs"
 	"go.chromium.org/luci/auth"
+	"go.fuchsia.dev/tools/gcs"
 )
 
 // Client provides access to the artifacts produced by Fuchsia CI tasks.

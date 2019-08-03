@@ -20,9 +20,9 @@ import (
 	"log"
 	"os"
 
-	"fuchsia.googlesource.com/tools/buildbucket"
 	"go.chromium.org/luci/auth/client/authcli"
 	"go.chromium.org/luci/hardcoded/chromeinfra"
+	"go.fuchsia.dev/tools/buildbucket"
 	"google.golang.org/genproto/protobuf/field_mask"
 
 	buildbucketpb "go.chromium.org/luci/buildbucket/proto"

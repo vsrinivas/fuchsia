@@ -10,9 +10,9 @@ import (
 	"io"
 	"path"
 
-	"fuchsia.googlesource.com/tools/tarutil"
-	"fuchsia.googlesource.com/tools/runtests"
-	"fuchsia.googlesource.com/tools/testrunner"
+	"go.fuchsia.dev/tools/runtests"
+	"go.fuchsia.dev/tools/tarutil"
+	"go.fuchsia.dev/tools/testrunner"
 )
 
 // TarOutput records test stdout and stderr streams in a TAR archive.

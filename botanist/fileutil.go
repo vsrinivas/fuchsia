@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"net"
 
-	"fuchsia.googlesource.com/tools/tftp"
+	"go.fuchsia.dev/tools/tftp"
 )
 
 // FetchAndArchiveFile fetches a remote file via TFTP from a given node, and

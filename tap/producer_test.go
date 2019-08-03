@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"fuchsia.googlesource.com/tools/tap"
+	"go.fuchsia.dev/tools/tap"
 	"gopkg.in/yaml.v2"
 )
 

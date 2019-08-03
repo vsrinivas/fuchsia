@@ -10,9 +10,9 @@ import (
 	"net"
 	"time"
 
-	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/mdns"
-	"fuchsia.googlesource.com/tools/retry"
+	"go.fuchsia.dev/tools/logger"
+	"go.fuchsia.dev/tools/mdns"
+	"go.fuchsia.dev/tools/retry"
 )
 
 // Interval at which ResolveIP will wait for a response to a question packet.

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/tools/resultstore/mocks"
 	"github.com/golang/mock/gomock"
+	"go.fuchsia.dev/tools/resultstore/mocks"
 	api "google.golang.org/genproto/googleapis/devtools/resultstore/v2"
 	"google.golang.org/genproto/protobuf/field_mask"
 )

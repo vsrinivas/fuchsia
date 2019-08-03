@@ -14,8 +14,8 @@ import (
 	"os/exec"
 	"time"
 
-	"fuchsia.googlesource.com/tools/botanist/target"
-	"fuchsia.googlesource.com/tools/netboot"
+	"go.fuchsia.dev/tools/botanist/target"
+	"go.fuchsia.dev/tools/netboot"
 )
 
 const usage = `usage: health_checker [options]
@@ -94,7 +94,7 @@ func init() {
 
 	// First set the flags ...
 	flag.StringVar(&configFile, "config", "/etc/botanist/config.json",
-		"The path of the json config file that contains the nodename of the device. Format is defined in https://fuchsia.googlesource.com/tools/+/master/botanist/common.go")
+		"The path of the json config file that contains the nodename of the device. Format is defined in https://go.fuchsia.dev/tools/+/master/botanist/common.go")
 	flag.DurationVar(&timeout, "timeout", 10*time.Second,
 		"The timeout for checking each device. The format should be a value acceptable to time.ParseDuration.")
 	flag.BoolVar(&rebootIfUnhealthy, "reboot", false, "If true, attempt to reboot the device if unhealthy.")

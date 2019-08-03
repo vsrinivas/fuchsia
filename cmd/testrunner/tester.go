@@ -10,10 +10,10 @@ import (
 	"io"
 	"path"
 
-	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/runner"
-	"fuchsia.googlesource.com/tools/sshutil"
-	"fuchsia.googlesource.com/tools/testsharder"
+	"go.fuchsia.dev/tools/logger"
+	"go.fuchsia.dev/tools/runner"
+	"go.fuchsia.dev/tools/sshutil"
+	"go.fuchsia.dev/tools/testsharder"
 	"golang.org/x/crypto/ssh"
 )
 

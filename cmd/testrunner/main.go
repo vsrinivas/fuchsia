@@ -15,9 +15,9 @@ import (
 	"os"
 	"time"
 
-	"fuchsia.googlesource.com/tools/runtests"
-	"fuchsia.googlesource.com/tools/testrunner"
-	"fuchsia.googlesource.com/tools/testsharder"
+	"go.fuchsia.dev/tools/runtests"
+	"go.fuchsia.dev/tools/testrunner"
+	"go.fuchsia.dev/tools/testsharder"
 )
 
 const (

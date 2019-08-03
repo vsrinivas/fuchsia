@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"fuchsia.googlesource.com/tools/buildbucket"
+	"go.fuchsia.dev/tools/buildbucket"
 	"google.golang.org/genproto/protobuf/field_mask"
 	"google.golang.org/grpc"
 

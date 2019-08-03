@@ -19,8 +19,8 @@ import (
 	"regexp"
 	"time"
 
-	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/serial"
+	"go.fuchsia.dev/tools/logger"
+	"go.fuchsia.dev/tools/serial"
 )
 
 const (

@@ -14,8 +14,8 @@ import (
 	"runtime"
 	"strings"
 
-	"fuchsia.googlesource.com/tools/bloaty"
-	"fuchsia.googlesource.com/tools/logger"
+	"go.fuchsia.dev/tools/bloaty"
+	"go.fuchsia.dev/tools/logger"
 )
 
 type Format int

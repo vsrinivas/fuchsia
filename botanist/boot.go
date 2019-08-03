@@ -16,10 +16,10 @@ import (
 	"sort"
 	"time"
 
-	"fuchsia.googlesource.com/tools/build"
-	"fuchsia.googlesource.com/tools/netboot"
-	"fuchsia.googlesource.com/tools/retry"
-	"fuchsia.googlesource.com/tools/tftp"
+	"go.fuchsia.dev/tools/build"
+	"go.fuchsia.dev/tools/netboot"
+	"go.fuchsia.dev/tools/retry"
+	"go.fuchsia.dev/tools/tftp"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -62,7 +62,7 @@ var bootserverArgToName = map[string]string{
 
 // Maps netsvc name to the index at which the corresponding file should be transferred if
 // present. The indices correspond to the ordering given in
-// https://fuchsia.googlesource.com/zircon/+/master/system/host/bootserver/bootserver.c
+// https://go.fuchsia.dev/zircon/+/master/system/host/bootserver/bootserver.c
 var transferOrder = map[string]int{
 	cmdlineNetsvcName:        1,
 	fvmNetsvcName:            2,

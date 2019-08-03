@@ -10,7 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"fuchsia.googlesource.com/tools/elflib"
+	"go.fuchsia.dev/tools/elflib"
 )
 
 func hexEqual(a []byte, b string) bool {

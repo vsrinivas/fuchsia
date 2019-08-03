@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"fuchsia.googlesource.com/tools/breakpad"
-	"fuchsia.googlesource.com/tools/elflib"
+	"go.fuchsia.dev/tools/breakpad"
+	"go.fuchsia.dev/tools/elflib"
 )
 
 // The default module name for modules that don't have a soname, e.g., executables and

@@ -14,13 +14,13 @@ import (
 	"os"
 	"time"
 
-	"fuchsia.googlesource.com/tools/botanist"
-	"fuchsia.googlesource.com/tools/botanist/target"
-	"fuchsia.googlesource.com/tools/build"
-	"fuchsia.googlesource.com/tools/command"
-	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/runner"
-	"fuchsia.googlesource.com/tools/sshutil"
+	"go.fuchsia.dev/tools/botanist"
+	"go.fuchsia.dev/tools/botanist/target"
+	"go.fuchsia.dev/tools/build"
+	"go.fuchsia.dev/tools/command"
+	"go.fuchsia.dev/tools/logger"
+	"go.fuchsia.dev/tools/runner"
+	"go.fuchsia.dev/tools/sshutil"
 
 	"github.com/google/subcommands"
 )
@@ -200,8 +200,8 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 
 	opts := target.Options{
-		Netboot:  r.netboot,
-		SSHKey:   r.sshKey,
+		Netboot: r.netboot,
+		SSHKey:  r.sshKey,
 	}
 
 	data, err := ioutil.ReadFile(r.configFile)

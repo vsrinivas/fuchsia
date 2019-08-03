@@ -7,7 +7,7 @@ package symbolize
 import (
 	"fmt"
 
-	"fuchsia.googlesource.com/tools/elflib"
+	"go.fuchsia.dev/tools/elflib"
 )
 
 type mockSource []elflib.BinaryFileRef

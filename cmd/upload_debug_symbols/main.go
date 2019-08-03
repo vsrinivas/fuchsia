@@ -20,9 +20,9 @@ import (
 	"sync"
 
 	"cloud.google.com/go/storage"
-	"fuchsia.googlesource.com/tools/elflib"
 	"go.chromium.org/luci/auth/client/authcli"
 	"go.chromium.org/luci/hardcoded/chromeinfra"
+	"go.fuchsia.dev/tools/elflib"
 )
 
 const (

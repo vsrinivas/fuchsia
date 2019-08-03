@@ -17,14 +17,14 @@ import (
 	"strings"
 	"time"
 
-	"fuchsia.googlesource.com/tools/botanist/target"
-	"fuchsia.googlesource.com/tools/build"
-	"fuchsia.googlesource.com/tools/command"
-	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/netutil"
-	"fuchsia.googlesource.com/tools/runner"
-	"fuchsia.googlesource.com/tools/runtests"
-	"fuchsia.googlesource.com/tools/tarutil"
+	"go.fuchsia.dev/tools/botanist/target"
+	"go.fuchsia.dev/tools/build"
+	"go.fuchsia.dev/tools/command"
+	"go.fuchsia.dev/tools/logger"
+	"go.fuchsia.dev/tools/netutil"
+	"go.fuchsia.dev/tools/runner"
+	"go.fuchsia.dev/tools/runtests"
+	"go.fuchsia.dev/tools/tarutil"
 
 	"github.com/google/subcommands"
 )

@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"fuchsia.googlesource.com/tools/logger"
+	"go.fuchsia.dev/tools/logger"
 )
 
 // TODO (jakehehrlich): LineSource is now a part of the public interface. This is needed to

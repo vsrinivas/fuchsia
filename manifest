@@ -2,7 +2,7 @@
 <manifest>
   <projects>
     <project name="tools"
-             path="go/src/fuchsia.googlesource.com/tools"
+             path="go/src/go.fuchsia.dev/tools"
              remote="https://fuchsia.googlesource.com/tools"
              gerrithost="https://fuchsia-review.googlesource.com"/>
   </projects>

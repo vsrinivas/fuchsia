@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"fuchsia.googlesource.com/tools/mdns"
+	"go.fuchsia.dev/tools/mdns"
 )
 
 type mDNSResponse struct {

@@ -11,8 +11,8 @@ import (
 	"net/url"
 	"strings"
 
-	"fuchsia.googlesource.com/tools/digest"
 	"github.com/google/uuid"
+	"go.fuchsia.dev/tools/digest"
 )
 
 const (

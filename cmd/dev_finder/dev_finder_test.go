@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"fuchsia.googlesource.com/tools/mdns"
+	"go.fuchsia.dev/tools/mdns"
 )
 
 // fakeMDNS is a fake implementation of MDNS for testing.

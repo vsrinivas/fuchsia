@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 
-	"fuchsia.googlesource.com/tools/ninjalog"
+	"go.fuchsia.dev/tools/ninjalog"
 )
 
 var (

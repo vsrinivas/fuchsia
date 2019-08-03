@@ -15,8 +15,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/tools/elflib"
-	"fuchsia.googlesource.com/tools/symbolize"
+	"go.fuchsia.dev/tools/elflib"
+	"go.fuchsia.dev/tools/symbolize"
 )
 
 var (

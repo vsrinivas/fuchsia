@@ -10,8 +10,8 @@ import (
 	"log"
 	"os"
 
-	"fuchsia.googlesource.com/tools/command"
-	"fuchsia.googlesource.com/tools/testsharder"
+	"go.fuchsia.dev/tools/command"
+	"go.fuchsia.dev/tools/testsharder"
 )
 
 var (
@@ -39,7 +39,7 @@ func usage() {
 
 Shards tests produced by a build.
 For more information on the modes in which the testsharder may be run, see
-See https://fuchsia.googlesource.com/tools/+/master/testsharder/mode.go.
+See https://go.fuchsia.dev/tools/+/master/testsharder/mode.go.
 `)
 }
 

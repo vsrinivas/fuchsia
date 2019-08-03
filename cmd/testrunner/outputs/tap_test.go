@@ -7,26 +7,26 @@ package outputs_test
 import (
 	"bytes"
 	"strings"
-	"time"
 	"testing"
+	"time"
 
-	"fuchsia.googlesource.com/tools/cmd/testrunner/outputs"
-	"fuchsia.googlesource.com/tools/runtests"
-	"fuchsia.googlesource.com/tools/testrunner"
+	"go.fuchsia.dev/tools/cmd/testrunner/outputs"
+	"go.fuchsia.dev/tools/runtests"
+	"go.fuchsia.dev/tools/testrunner"
 )
 
 func TestTapOutput(t *testing.T) {
 	s := time.Unix(0, 0)
 	inputs := []testrunner.TestResult{{
-		Name:   "test_a",
-		Result: runtests.TestSuccess,
+		Name:      "test_a",
+		Result:    runtests.TestSuccess,
 		StartTime: s,
-		EndTime: s.Add(time.Second * 2),
+		EndTime:   s.Add(time.Second * 2),
 	}, {
-		Name:   "test_b",
-		Result: runtests.TestFailure,
+		Name:      "test_b",
+		Result:    runtests.TestFailure,
 		StartTime: s.Add(time.Minute * 1),
-		EndTime: s.Add(time.Minute * 2),
+		EndTime:   s.Add(time.Minute * 2),
 	}}
 
 	var buf bytes.Buffer

@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fuchsia.googlesource.com/tools/gndoc"
+	"go.fuchsia.dev/tools/gndoc"
 )
 
 type stringsFlag []string

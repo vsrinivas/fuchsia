@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"fuchsia.googlesource.com/tools/elflib"
+	"go.fuchsia.dev/tools/elflib"
 )
 
 // idsSource is a BinaryFileSource parsed from ids.txt

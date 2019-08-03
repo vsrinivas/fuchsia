@@ -9,11 +9,11 @@ import (
 	"flag"
 	"fmt"
 
-	"fuchsia.googlesource.com/tools/botanist/target"
-	"fuchsia.googlesource.com/tools/build"
-	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/secrets"
 	"github.com/google/subcommands"
+	"go.fuchsia.dev/tools/botanist/target"
+	"go.fuchsia.dev/tools/build"
+	"go.fuchsia.dev/tools/logger"
+	"go.fuchsia.dev/tools/secrets"
 )
 
 // QEMUBinPrefix is the prefix of the QEMU binary name, which is of the form

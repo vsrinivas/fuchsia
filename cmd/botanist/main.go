@@ -11,9 +11,9 @@ import (
 
 	"github.com/google/subcommands"
 
-	"fuchsia.googlesource.com/tools/color"
-	"fuchsia.googlesource.com/tools/command"
-	"fuchsia.googlesource.com/tools/logger"
+	"go.fuchsia.dev/tools/color"
+	"go.fuchsia.dev/tools/command"
+	"go.fuchsia.dev/tools/logger"
 )
 
 var (

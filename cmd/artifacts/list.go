@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"log"
 
-	"fuchsia.googlesource.com/tools/artifacts"
-	"fuchsia.googlesource.com/tools/buildbucket"
 	"github.com/google/subcommands"
 	"go.chromium.org/luci/auth/client/authcli"
 	"go.chromium.org/luci/hardcoded/chromeinfra"
+	"go.fuchsia.dev/tools/artifacts"
+	"go.fuchsia.dev/tools/buildbucket"
 )
 
 type ListCommand struct {

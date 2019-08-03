@@ -10,9 +10,9 @@ import (
 	"io"
 	"testing"
 
-	"fuchsia.googlesource.com/tools/cmd/testrunner/outputs"
-	"fuchsia.googlesource.com/tools/runtests"
-	"fuchsia.googlesource.com/tools/testrunner"
+	"go.fuchsia.dev/tools/cmd/testrunner/outputs"
+	"go.fuchsia.dev/tools/runtests"
+	"go.fuchsia.dev/tools/testrunner"
 )
 
 func TestTarOutput(t *testing.T) {

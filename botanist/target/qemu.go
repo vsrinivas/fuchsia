@@ -15,8 +15,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/tools/build"
-	"fuchsia.googlesource.com/tools/qemu"
+	"go.fuchsia.dev/tools/build"
+	"go.fuchsia.dev/tools/qemu"
 )
 
 const (
