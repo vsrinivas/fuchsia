@@ -16,6 +16,8 @@ group("sdk") {
   public_deps = [
     ":core",
     ":ddk",
+    ":e2e_testing",
+    ":modular_testing",
     ":zircon_sysroot",
   ]
 }
