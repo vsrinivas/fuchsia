@@ -46,13 +46,13 @@ function fx-symbolize {
   local symbolize="${PREBUILT_TOOLS_DIR}/symbolize/${HOST_PLATFORM}/symbolize"
   local llvm_symbolizer="${PREBUILT_CLANG_DIR}/bin/llvm-symbolizer"
   local toolchain_dir="${PREBUILT_CLANG_DIR}/lib/debug/.build-id"
-  local download_dir="${FUCHSIA_DIR}/prebuilt_build_ids"
+  local prebuilt_build_ids_dir="${FUCHSIA_BUILD_DIR}/gen/build/gn/prebuilt_build_ids"
   local out_dir="${FUCHSIA_BUILD_DIR}/.build-id"
   local zircon_dir="${ZIRCON_BUILDROOT}/.build-id"
   set -x
   "$symbolize" -llvm-symbolizer "$llvm_symbolizer" \
     "${idstxt[@]}" \
-    -build-id-dir "$download_dir" -build-id-dir "$toolchain_dir" \
+    -build-id-dir "$prebuilt_build_ids_dir" -build-id-dir "$toolchain_dir" \
     -build-id-dir "$out_dir" -build-id-dir "$zircon_dir"
 }
 
