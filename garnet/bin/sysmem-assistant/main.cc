@@ -2,28 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <tee-client-api/tee_client_api.h>
 #include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/time.h>
 
 #include <memory>
+
+#include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
+#include <src/lib/fxl/logging.h>
+#include <tee-client-api/tee_client_api.h>
 
 // Randomly-generated UUID for the TA.
 constexpr TEEC_UUID kSecmemUuid = {
@@ -94,6 +95,7 @@ zx_status_t SecmemSession::Init() {
   TEEC_Result result = TEEC_InitializeContext(NULL, context_.get());
   if (result != TEEC_SUCCESS) {
     context_.reset();
+    FXL_LOG(ERROR) << "TEEC_InitializeContext failed " << result;
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -102,6 +104,8 @@ zx_status_t SecmemSession::Init() {
                             NULL, &return_origin);
   if (result != TEEC_SUCCESS) {
     session_.reset();
+    FXL_LOG(ERROR) << "TEEC_OpenSession failed with result " << result << " origin "
+                   << return_origin << ". Maybe bootloader the version is incorrect.";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -231,8 +235,9 @@ int main(int argc, const char* const* argv) {
   // Only wait after checking whether there should really be protected memory
   // allocated; otherwise this process will exit early before this call.
   auto session = std::make_unique<SecmemSession>();
-  if (session->Init() != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to initialize secmem session";
+  status = session->Init();
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to initialize secmem session, status " << status;
     return -1;
   }
   int command_result =
