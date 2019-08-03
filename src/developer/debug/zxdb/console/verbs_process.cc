@@ -412,6 +412,9 @@ Err DoAttachFilter(ConsoleContext* context, const Command& cmd,
   filter->SetPattern(cmd.args()[0]);
 
   Console::get()->Output("Waiting for process matching \"" + cmd.args()[0] + "\"");
+  if (callback) {
+    callback(Err());
+  }
   return Err();
 }
 

@@ -80,7 +80,8 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint, const E
 // Backend for setting attributes on a breakpoint from both creation and
 // editing. The given breakpoint is specified if this is an edit, or is null
 // if this is a creation.
-Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd, Breakpoint* breakpoint) {
+Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd, Breakpoint* breakpoint,
+                           CommandCallback callback) {
   // Get existing settings (or defaults for new one).
   BreakpointSettings settings;
   if (breakpoint)
@@ -185,8 +186,12 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd, Breakpoi
     breakpoint = context->session()->system().CreateNewBreakpoint();
     context->SetActiveBreakpoint(breakpoint);
   }
-  breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr()](const Err& err) {
+  breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr(),
+                                     callback = std::move(callback)](const Err& err) {
     CreateOrEditBreakpointComplete(std::move(breakpoint), err);
+    if (callback) {
+      callback(err);
+    }
   });
 
   return Err();
@@ -321,11 +326,11 @@ Examples
       Break at line 23 of the file referenced by the current frame and use a
       hardware breakpoint.
 )";
-Err DoBreak(ConsoleContext* context, const Command& cmd) {
+Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame, Noun::kBreakpoint});
   if (err.has_error())
     return err;
-  return CreateOrEditBreakpoint(context, cmd, nullptr);
+  return CreateOrEditBreakpoint(context, cmd, nullptr, callback);
 }
 
 // hardware-breakpoint ---------------------------------------------------------
@@ -452,7 +457,7 @@ Examples
       Modifies breakpoint 7 to only break in process 1, thread 6 at the
       given address.
 )";
-Err DoEdit(ConsoleContext* context, const Command& cmd) {
+Err DoEdit(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   if (!cmd.HasNoun(Noun::kBreakpoint)) {
     // Edit requires an explicit "breakpoint" context so that in the future we
     // can apply edit to other nouns. I'm thinking any noun that can be created
@@ -468,7 +473,7 @@ Err DoEdit(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  return CreateOrEditBreakpoint(context, cmd, cmd.breakpoint());
+  return CreateOrEditBreakpoint(context, cmd, cmd.breakpoint(), callback);
 }
 
 }  // namespace

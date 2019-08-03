@@ -62,7 +62,7 @@ TEST_F(ActionsTest, ScriptFile) {
   // We expect 3 calls
   console->errors_to_run = {Err(), Err(), Err()};
   // Setup the mock contents
-  std::vector<std::string> mock_commands = {"help", "connect 192.168.0.1 2345",
+  std::vector<std::string> mock_commands = {"help", "connect 192.168.0.1 2345", "break main",
                                             "run /path/to/binary"};
   std::stringstream ss;
   ss << mock_commands[0] << "\n" << mock_commands[1] << "\n" << mock_commands[2];
