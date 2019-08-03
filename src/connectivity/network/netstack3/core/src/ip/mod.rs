@@ -141,6 +141,7 @@ impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Context<D> {
 }
 
 /// A builder for IP layer state.
+#[derive(Clone)]
 pub struct IpStateBuilder {
     forward_v4: bool,
     forward_v6: bool,

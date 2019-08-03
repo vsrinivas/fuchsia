@@ -289,7 +289,7 @@ impl EventLoop {
         trace!("Handling Event: {:?}", evt);
         match evt {
             Some(Event::EthSetupEvent(setup)) => {
-                let (mut state, mut disp) = self.ctx.state_and_dispatcher();
+                let (state, disp) = self.ctx.state_and_dispatcher();
                 let client_stream = setup.client.get_stream();
                 let eth_id =
                     state.add_ethernet_device(Mac::new(setup.info.mac.octets), setup.info.mtu);

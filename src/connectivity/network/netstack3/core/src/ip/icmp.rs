@@ -31,6 +31,7 @@ use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
 use zerocopy::ByteSlice;
 
 /// A builder for ICMP state.
+#[derive(Clone)]
 pub struct IcmpStateBuilder {
     icmpv4_send_timestamp_reply: bool,
 }

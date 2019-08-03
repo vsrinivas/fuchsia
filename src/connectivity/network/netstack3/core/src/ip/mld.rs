@@ -661,7 +661,7 @@ mod tests {
 
     #[test]
     fn test_mld_unspecified_src_no_addr() {
-        let mut ctx = Context::with_default_state(DummyEventDispatcher::default());
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state.add_ethernet_device(MY_MAC, 1500);
         crate::device::initialize_device(&mut ctx, dev_id);
         // The IP address of the device is intentionally unspecified.

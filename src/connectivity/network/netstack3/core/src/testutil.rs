@@ -672,9 +672,10 @@ impl DummyEventDispatcherBuilder {
     pub(crate) fn build<D: EventDispatcher + Default>(self) -> Context<D> {
         let mut stack_builder = StackStateBuilder::default();
 
-        // Most tests do not need NDP's DAD so disable it here.
+        // Most tests do not need NDP's DAD or router solicitation so disable it here.
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
+        ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
 
         self.build_with(stack_builder, D::default())
@@ -699,7 +700,7 @@ impl DummyEventDispatcherBuilder {
         let mut idx_to_device_id =
             HashMap::<_, _, std::collections::hash_map::RandomState>::default();
         for (idx, (mac, ip_subnet)) in devices.into_iter().enumerate() {
-            let id = ctx.state_mut().add_ethernet_device(mac, IPV6_MIN_MTU);
+            let id = ctx.state.add_ethernet_device(mac, IPV6_MIN_MTU);
             idx_to_device_id.insert(idx, id);
             crate::device::initialize_device(&mut ctx, id);
             match ip_subnet {

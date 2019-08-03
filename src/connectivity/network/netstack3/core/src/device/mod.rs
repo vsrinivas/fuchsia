@@ -12,7 +12,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, IpAddress, Ipv4Addr, Ipv6Addr};
+use net_types::ip::{AddrSubnet, IpAddress, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr};
 use packet::{BufferMut, Serializer};
 
@@ -124,6 +124,7 @@ impl FrameDestination {
 }
 
 /// Builder for a [`DeviceLayerState`].
+#[derive(Clone)]
 pub struct DeviceStateBuilder {
     /// Default values for NDP's configurations for new interfaces.
     ///
@@ -273,6 +274,9 @@ pub(crate) fn is_device_initialized<D: EventDispatcher>(
 
 /// Initialize a device.
 ///
+/// `initialize_device` will start soliciting IPv6 routers on the link if `device` is configured to
+/// be a host.
+///
 /// `initialize_device` MUST be called after adding the device to the netstack. A device MUST NOT
 /// be used until it has been initialized.
 ///
@@ -293,6 +297,19 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
     assert!(!state.is_initialized);
 
     state.is_initialized = true;
+
+    // RFC 4861 section 6.3.7, it implies only a host sends router
+    // solicitation messages, so if this node is a router, do nothing.
+    if crate::ip::is_router::<_, Ipv6>(ctx) {
+        trace!("intialize_device: node is a router so not starting router solicitations");
+        return;
+    }
+
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            ndp::start_soliciting_routers::<_, ethernet::EthernetNdpDevice>(ctx, device.id)
+        }
+    }
 }
 
 /// Send an IP packet in a device layer frame.

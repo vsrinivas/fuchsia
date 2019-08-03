@@ -277,6 +277,7 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
     let frame = if let Ok(frame) = buffer.parse::<EthernetFrame<_>>() {
         frame
     } else {
+        trace!("ethernet::receive_frame: failed to parse frame");
         // TODO(joshlf): Do something else?
         return;
     };

@@ -29,7 +29,7 @@ pub(crate) type OptionsSerializer<'a, I> = crate::wire::records::options::Option
 >;
 
 /// An NDP Router Solicitation.
-#[derive(Copy, Clone, Default, Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Copy, Clone, Default, Debug, FromBytes, AsBytes, Unaligned, PartialEq, Eq)]
 #[repr(C)]
 pub(crate) struct RouterSolicitation {
     _reserved: [u8; 4],
@@ -38,7 +38,7 @@ pub(crate) struct RouterSolicitation {
 impl_icmp_message!(Ipv6, RouterSolicitation, RouterSolicitation, IcmpUnusedCode, Options<B>);
 
 /// An NDP Router Advertisement.
-#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned, PartialEq, Eq)]
 #[repr(C)]
 pub(crate) struct RouterAdvertisement {
     current_hop_limit: u8,
@@ -85,7 +85,7 @@ impl RouterAdvertisement {
 }
 
 /// An NDP Neighbor Solicitation.
-#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned, PartialEq, Eq)]
 #[repr(C)]
 pub(crate) struct NeighborSolicitation {
     _reserved: [u8; 4],
@@ -108,7 +108,7 @@ impl NeighborSolicitation {
 }
 
 /// An NDP Neighbor Advertisement.
-#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned, PartialEq, Eq)]
 #[repr(C)]
 pub(crate) struct NeighborAdvertisement {
     flags_rso: u8,
@@ -158,7 +158,7 @@ impl NeighborAdvertisement {
 }
 
 /// An ICMPv6 Redirect Message.
-#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned, PartialEq, Eq)]
 #[repr(C)]
 pub(crate) struct Redirect {
     _reserved: [u8; 4],

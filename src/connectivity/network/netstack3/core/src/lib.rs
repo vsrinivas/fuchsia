@@ -95,7 +95,7 @@ macro_rules! map_addr_version {
 }
 
 /// A builder for [`StackState`].
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct StackStateBuilder {
     ip: IpStateBuilder,
     device: DeviceStateBuilder,
@@ -133,12 +133,6 @@ pub struct StackState<D: EventDispatcher> {
     test_counters: testutil::TestCounters,
 }
 
-impl<D: EventDispatcher> Default for StackState<D> {
-    fn default() -> StackState<D> {
-        StackStateBuilder::default().build()
-    }
-}
-
 impl<D: EventDispatcher> StackState<D> {
     /// Add a new ethernet device to the device layer.
     ///
@@ -152,6 +146,12 @@ impl<D: EventDispatcher> StackState<D> {
     /// [`initialize_device`]: crate::device::initialize_device
     pub fn add_ethernet_device(&mut self, mac: Mac, mtu: u32) -> DeviceId {
         self.device.add_ethernet_device(mac, mtu)
+    }
+}
+
+impl<D: EventDispatcher> Default for StackState<D> {
+    fn default() -> StackState<D> {
+        StackStateBuilder::default().build()
     }
 }
 
