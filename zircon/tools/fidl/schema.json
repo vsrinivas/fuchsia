@@ -1391,7 +1391,7 @@
             "description": "Definition of ordinal",
             "type": "integer",
             "minimum": 1,
-            "maximum": 4294967295
+            "maximum": 9223372036854775807
         },
         "count": {
             "description": "Definition of count",

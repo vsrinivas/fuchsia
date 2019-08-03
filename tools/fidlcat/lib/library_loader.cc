@@ -206,9 +206,10 @@ void Table::DecodeTypes() {
 InterfaceMethod::InterfaceMethod(const Interface& interface, const rapidjson::Value& value)
     : enclosing_interface_(interface),
       value_(value),
-      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
-      // TODO(FIDL-524): Remove post-migration.
-      old_ordinal_(std::strtoll(value["generated_ordinal"].GetString(), nullptr, 10) << 32),
+      // TODO(FIDL-524): Step 3, i.e. ord << 32, gen is << 32 by fidlc (but not
+      // in bindings).
+      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10) << 32),
+      old_ordinal_(std::strtoll(value["generated_ordinal"].GetString(), nullptr, 10)),
       is_composed_(value["is_composed"].GetBool()),
       name_(value["name"].GetString()) {
   if (value_["has_request"].GetBool()) {

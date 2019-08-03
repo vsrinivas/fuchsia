@@ -49,7 +49,7 @@
       "methods": [
         {
           "ordinal": 1061382220,
-          "generated_ordinal": 1061382220,
+          "generated_ordinal": 4558601923455877120,
           "name": "Method",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
@@ -72,7 +72,7 @@
         },
         {
           "ordinal": 325918733,
-          "generated_ordinal": 325918733,
+          "generated_ordinal": 1399810299388755968,
           "name": "OnEvent",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",

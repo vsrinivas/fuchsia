@@ -187,7 +187,7 @@ protocol EmptyProtocol {
       "methods": [
         {
           "ordinal": 285845058,
-          "generated_ordinal": 285845058,
+          "generated_ordinal": 1227695175833223168,
           "name": "Send",
           "location": {
             "filename": "json.fidl",
@@ -223,7 +223,7 @@ protocol EmptyProtocol {
         },
         {
           "ordinal": 388770671,
-          "generated_ordinal": 388770671,
+          "generated_ordinal": 1669757317588975616,
           "name": "Receive",
           "location": {
             "filename": "json.fidl",
@@ -259,7 +259,7 @@ protocol EmptyProtocol {
         },
         {
           "ordinal": 2071775804,
-          "generated_ordinal": 2071775804,
+          "generated_ordinal": 8898209322824105984,
           "name": "SendAndReceive",
           "location": {
             "filename": "json.fidl",
@@ -929,7 +929,7 @@ protocol sub {
       "methods": [
         {
           "ordinal": 790020540,
-          "generated_ordinal": 790020540,
+          "generated_ordinal": 3393112382468259840,
           "name": "foo",
           "location": {
             "filename": "json.fidl",
@@ -996,7 +996,7 @@ protocol sub {
       "methods": [
         {
           "ordinal": 790020540,
-          "generated_ordinal": 790020540,
+          "generated_ordinal": 3393112382468259840,
           "name": "foo",
           "location": {
             "filename": "json.fidl",
@@ -1116,7 +1116,7 @@ protocol Child {
       "methods": [
         {
           "ordinal": 1722375644,
-          "generated_ordinal": 1722375644,
+          "generated_ordinal": 7397547062406938624,
           "name": "First",
           "location": {
             "filename": "json.fidl",
@@ -1162,7 +1162,7 @@ protocol Child {
       "methods": [
         {
           "ordinal": 1722375644,
-          "generated_ordinal": 1722375644,
+          "generated_ordinal": 7397547062406938624,
           "name": "First",
           "location": {
             "filename": "json.fidl",
@@ -1198,7 +1198,7 @@ protocol Child {
         },
         {
           "ordinal": 19139766,
-          "generated_ordinal": 19139766,
+          "generated_ordinal": 82204669023092736,
           "name": "Second",
           "location": {
             "filename": "json.fidl",
@@ -1285,7 +1285,7 @@ protocol Example {
       "methods": [
         {
           "ordinal": 1369693400,
-          "generated_ordinal": 1369693400,
+          "generated_ordinal": 5882788358547046400,
           "name": "foo",
           "location": {
             "filename": "json.fidl",
@@ -2567,7 +2567,7 @@ protocol Top {
       "methods": [
         {
           "ordinal": 961142572,
-          "generated_ordinal": 961142572,
+          "generated_ordinal": 4128075913533325312,
           "name": "GetFoo",
           "location": {
             "filename": "bottom.fidl",
@@ -2702,7 +2702,7 @@ protocol Top {
       "methods": [
         {
           "ordinal": 187925920,
-          "generated_ordinal": 187925920,
+          "generated_ordinal": 807135680470712320,
           "name": "GetFoo",
           "location": {
             "filename": "middle.fidl",
@@ -2977,7 +2977,7 @@ xunion ExampleXUnion {
       "methods": [
         {
           "ordinal": 1123904027,
-          "generated_ordinal": 1123904027,
+          "generated_ordinal": 4827131039807700992,
           "name": "Method",
           "location": {
             "filename": "example.fidl",

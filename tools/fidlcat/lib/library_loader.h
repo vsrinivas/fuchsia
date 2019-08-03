@@ -324,18 +324,24 @@ class Interface {
       std::map<Ordinal64, std::unique_ptr<std::vector<const InterfaceMethod*>>>& index) {
     for (size_t i = 0; i < interface_methods_.size(); i++) {
       const InterfaceMethod* method = interface_methods_[i].get();
+      // TODO(FIDL-524): At various steps of the migration, the ordinals may be
+      // the same value. Avoid creating duplicate entries.
+      bool ords_are_same = method->ordinal() == method->old_ordinal();
       if (index[method->ordinal()] == nullptr) {
         index[method->ordinal()] = std::make_unique<std::vector<const InterfaceMethod*>>();
-        index[method->old_ordinal()] = std::make_unique<std::vector<const InterfaceMethod*>>();
+        if (!ords_are_same)
+          index[method->old_ordinal()] = std::make_unique<std::vector<const InterfaceMethod*>>();
       }
       // Ensure composed methods come after non-composed methods.  The fidlcat
       // libraries pick the first one they find.
       if (method->is_composed()) {
         index[method->ordinal()]->push_back(method);
-        index[method->old_ordinal()]->push_back(method);
+        if (!ords_are_same)
+          index[method->old_ordinal()]->push_back(method);
       } else {
         index[method->ordinal()]->insert(index[method->ordinal()]->begin(), method);
-        index[method->old_ordinal()]->insert(index[method->old_ordinal()]->begin(), method);
+        if (!ords_are_same)
+          index[method->old_ordinal()]->insert(index[method->old_ordinal()]->begin(), method);
       }
     }
   }
