@@ -967,9 +967,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       DumpRbSnapshot(rb_snap);
       DumpBookkeeping(info);
 
-      AUD_LOG(DFATAL) << " start_fence_frames: 0x" << std::hex << start_fence_frames
-                      << ", end_fence_frames: 0x" << end_fence_frames << ", gap " << std::dec
-                      << (end_fence_frames - start_fence_frames);
+      AUD_LOG(FATAL) << " start_fence_frames: 0x" << std::hex << start_fence_frames
+                     << ", end_fence_frames: 0x" << end_fence_frames << ", gap " << std::dec
+                     << (end_fence_frames - start_fence_frames);
     }
     start_fence_frames = std::max<int64_t>(start_fence_frames, 0);
     FXL_DCHECK(end_fence_frames - start_fence_frames < rb->frames());
