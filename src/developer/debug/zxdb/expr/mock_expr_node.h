@@ -22,11 +22,11 @@ class MockExprNode : public ExprNode {
   FRIEND_REF_COUNTED_THREAD_SAFE(MockExprNode);
   FRIEND_MAKE_REF_COUNTED(MockExprNode);
 
-  MockExprNode(bool is_synchronous, ExprValue value);
+  MockExprNode(bool is_synchronous, ErrOrValue value);
   ~MockExprNode() override;
 
   bool is_synchronous_;
-  ExprValue value_;
+  ErrOrValue value_;
 };
 
 }  // namespace zxdb

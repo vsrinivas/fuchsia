@@ -461,7 +461,7 @@ TEST_F(ExprParserTest, Templates) {
   // Duplicate template spec.
   result = Parse("Foo<Bar><Baz>");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
+  EXPECT_EQ("Expected expression after '>'.", parser().err().msg());
 
   // Empty value.
   result = Parse("Foo<1,,2>");
@@ -486,6 +486,40 @@ TEST_F(ExprParserTest, BinaryOp) {
       "    IDENTIFIER(\"a\")\n"
       "    LITERAL(1)\n",
       GetParseString("a = 23 + j * (a + 1)"));
+}
+
+TEST_F(ExprParserTest, Comparison) {
+  EXPECT_EQ(
+      "BINARY_OP(!=)\n"
+      " IDENTIFIER(\"a\",<\"int\">; ::\"foo\")\n"
+      " LITERAL(0)\n",
+      GetParseString("a<int>::foo != 0"));
+
+  EXPECT_EQ(
+      "BINARY_OP(&&)\n"
+      " BINARY_OP(<)\n"
+      "  LITERAL(1)\n"
+      "  LITERAL(2)\n"
+      " BINARY_OP(>)\n"
+      "  IDENTIFIER(\"a\")\n"
+      "  LITERAL(4)\n",
+      GetParseString("1 < 2 && a > 4"));
+
+  EXPECT_EQ(
+      "BINARY_OP(||)\n"
+      " BINARY_OP(<=)\n"
+      "  LITERAL(1)\n"
+      "  LITERAL(2)\n"
+      " BINARY_OP(>=)\n"
+      "  IDENTIFIER(\"a\")\n"
+      "  LITERAL(4)\n",
+      GetParseString("1 <= 2 || a >= 4"));
+
+  EXPECT_EQ(
+      "BINARY_OP(<=>)\n"
+      " IDENTIFIER(\"a\")\n"
+      " LITERAL(4)\n",
+      GetParseString("a <=> 4"));
 }
 
 // Tests parsing identifier names that require lookups from the symbol system.

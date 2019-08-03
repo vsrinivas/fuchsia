@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/eval_operators.h"
 
+#include <type_traits>
+
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
@@ -70,6 +72,11 @@ void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
         else
           cb(coerced);
       });
+}
+
+// This is used as the return type for comparison operations.
+fxl::RefPtr<BaseType> MakeBoolType() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool");
 }
 
 // The "math realm" is the type of operation being done, since operators in these different spaces
@@ -206,9 +213,9 @@ Err GetOpRealm(fxl::RefPtr<EvalContext>& context, const OpValue& left, const OpV
 // The flag "check_for_zero_right" will issue a divide-by-zero error if the right-hand-side is zero.
 // Error checking could be generalized more in the "op" callback, but this is currently the only
 // error case and it keeps all of the op implementations simpler to do it this way.
-template <typename T>
+template <typename T, typename ResultT>
 ErrOrValue DoIntBinaryOp(const OpValue& left, const OpValue& right, bool check_for_zero_right,
-                         T (*op)(T, T), fxl::RefPtr<Type> result_type) {
+                         ResultT (*op)(T, T), fxl::RefPtr<Type> result_type) {
   T left_val;
   if (Err err = left.value->PromoteTo64(&left_val); err.has_error())
     return err;
@@ -221,10 +228,10 @@ ErrOrValue DoIntBinaryOp(const OpValue& left, const OpValue& right, bool check_f
       return Err("Division by 0.");
   }
 
-  T result_val = op(left_val, right_val);
+  ResultT result_val = op(left_val, right_val);
 
   // Never expect to generate larger output than our internal result.
-  FXL_DCHECK(result_type->byte_size() <= sizeof(T));
+  FXL_DCHECK(result_type->byte_size() <= sizeof(ResultT));
 
   // Convert to a base type of the correct size.
   std::vector<uint8_t> result_data;
@@ -249,9 +256,12 @@ Err OpValueToDouble(EvalContext* context, const OpValue& in, double* out) {
   return casted.value().PromoteToDouble(out);
 }
 
-// Applies the given operator to two values that should be done in floating-point.
+// Applies the given operator to two values that should be done in floating-point. The templated
+// result type should be either a double (for math) or bool (for comparison). In the boolean case,
+// the result_typee may be null since this will be the autmoatically created one.
+template <typename ResultT>
 ErrOrValue DoFloatBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& left,
-                           const OpValue& right, double (*op)(double, double),
+                           const OpValue& right, ResultT (*op)(double, double),
                            fxl::RefPtr<Type> result_type) {
   // The inputs could be various types like signed or unsigned integers or even bools. Use the
   // casting infrastructure to convert these when necessary.
@@ -263,25 +273,19 @@ ErrOrValue DoFloatBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& left
     return err;
 
   // The actual operation.
-  double result_double = op(left_double, right_double);
+  ResultT result_val = op(left_double, right_double);
 
   // Convert to raw bytes.
   std::vector<uint8_t> result_data;
-  if (result_type->byte_size() == sizeof(double)) {
-    // Result wants a double.
-    result_data.resize(sizeof(double));
-    memcpy(&result_data[0], &result_double, sizeof(double));
-  } else if (result_type->byte_size() == sizeof(float)) {
-    // Convert down to 32-bit.
-    float result_float = static_cast<float>(result_double);
-    result_data.resize(sizeof(float));
-    memcpy(&result_data[0], &result_float, sizeof(float));
-  } else {
-    // No other floating-point sizes are supported.
-    return Err("Invalid floating point operation.");
-  }
+  if (std::is_same<ResultT, bool>::value)  // Result wants a boolean.
+    return ExprValue(result_val);
+  if (result_type->byte_size() == sizeof(double))  // Result wants a double.
+    return ExprValue(result_val, std::move(result_type));
+  if (result_type->byte_size() == sizeof(float))  // Convert down to 32-bit float.
+    return ExprValue(static_cast<float>(result_val), std::move(result_type));
 
-  return ExprValue(std::move(result_type), std::move(result_data));
+  // No other floating-point sizes are supported.
+  return Err("Invalid floating point operation.");
 }
 
 // Returns a language-appropriate 64-bit signed or unsigned (according to the realm) type. The
@@ -420,6 +424,31 @@ ErrOrValue DoPointerOperation(fxl::RefPtr<EvalContext> context, const OpValue& l
                    Make64BitIntegerType(MathRealm::kSigned, left_value.concrete_type));
 }
 
+ErrOrValue DoLogicalBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& left_value,
+                             const ExprToken& op, const OpValue& right_value) {
+  // In general the left will have already been converted to a bool and checks to implement
+  // short-ciruiting for these operators. But reevaluate anyway which is useful for tests.
+  ErrOrValue left_as_bool =
+      CastExprValue(context.get(), CastType::kImplicit, *left_value.value, MakeBoolType());
+  if (left_as_bool.has_error())
+    return left_as_bool;
+
+  ErrOrValue right_as_bool =
+      CastExprValue(context.get(), CastType::kImplicit, *right_value.value, MakeBoolType());
+  if (right_as_bool.has_error())
+    return right_as_bool;
+
+  if (op.type() == ExprTokenType::kDoubleAnd) {
+    return ExprValue(left_as_bool.value().GetAs<uint8_t>() &&
+                     right_as_bool.value().GetAs<uint8_t>());
+  }
+  if (op.type() == ExprTokenType::kLogicalOr) {
+    return ExprValue(left_as_bool.value().GetAs<uint8_t>() ||
+                     right_as_bool.value().GetAs<uint8_t>());
+  }
+  return Err("Internal error.");
+}
+
 }  // namespace
 
 void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
@@ -459,12 +488,12 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_
 #define IMPLEMENT_INTEGER_BINARY_OP(c_op, is_divide)                                     \
   switch (realm) {                                                                       \
     case MathRealm::kSigned:                                                             \
-      result = DoIntBinaryOp<int64_t>(                                                   \
+      result = DoIntBinaryOp<int64_t, int64_t>(                                          \
           left_op_value, right_op_value, is_divide,                                      \
           [](int64_t left, int64_t right) { return left c_op right; }, larger_type);     \
       break;                                                                             \
     case MathRealm::kUnsigned:                                                           \
-      result = DoIntBinaryOp<uint64_t>(                                                  \
+      result = DoIntBinaryOp<uint64_t, uint64_t>(                                        \
           left_op_value, right_op_value, is_divide,                                      \
           [](uint64_t left, uint64_t right) { return left c_op right; }, larger_type);   \
       break;                                                                             \
@@ -481,23 +510,46 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_
 #define IMPLEMENT_BINARY_OP(c_op, is_divide)                                           \
   switch (realm) {                                                                     \
     case MathRealm::kSigned:                                                           \
-      result = DoIntBinaryOp<int64_t>(                                                 \
+      result = DoIntBinaryOp<int64_t, int64_t>(                                        \
           left_op_value, right_op_value, is_divide,                                    \
           [](int64_t left, int64_t right) { return left c_op right; }, larger_type);   \
       break;                                                                           \
     case MathRealm::kUnsigned:                                                         \
-      result = DoIntBinaryOp<uint64_t>(                                                \
+      result = DoIntBinaryOp<uint64_t, uint64_t>(                                      \
           left_op_value, right_op_value, is_divide,                                    \
           [](uint64_t left, uint64_t right) { return left c_op right; }, larger_type); \
       break;                                                                           \
     case MathRealm::kFloat:                                                            \
-      result = DoFloatBinaryOp(                                                        \
+      result = DoFloatBinaryOp<double>(                                                \
           context, left_op_value, right_op_value,                                      \
           [](double left, double right) { return left c_op right; }, larger_type);     \
       break;                                                                           \
     case MathRealm::kPointer:                                                          \
       FXL_NOTREACHED();                                                                \
       break;                                                                           \
+  }
+
+// Implements support for a given comparison operator.
+#define IMPLEMENT_COMPARISON_BINARY_OP(c_op)                                              \
+  switch (realm) {                                                                        \
+    case MathRealm::kSigned:                                                              \
+      result = DoIntBinaryOp<int64_t, bool>(                                              \
+          left_op_value, right_op_value, false,                                           \
+          [](int64_t left, int64_t right) { return left c_op right; }, MakeBoolType());   \
+      break;                                                                              \
+    case MathRealm::kUnsigned:                                                            \
+      result = DoIntBinaryOp<uint64_t, bool>(                                             \
+          left_op_value, right_op_value, false,                                           \
+          [](uint64_t left, uint64_t right) { return left c_op right; }, MakeBoolType()); \
+      break;                                                                              \
+    case MathRealm::kFloat:                                                               \
+      result = DoFloatBinaryOp<bool>(                                                     \
+          context, left_op_value, right_op_value,                                         \
+          [](double left, double right) { return left c_op right; }, nullptr);            \
+      break;                                                                              \
+    case MathRealm::kPointer:                                                             \
+      FXL_NOTREACHED();                                                                   \
+      break;                                                                              \
   }
 
   ErrOrValue result((ExprValue()));
@@ -527,11 +579,36 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_
       IMPLEMENT_INTEGER_BINARY_OP(^, false);
       break;
 
-    case ExprTokenType::kDoubleAnd:
-    case ExprTokenType::kLogicalOr:  // Note: implement short-circuiting in the ExprNode!
     case ExprTokenType::kEquality:
-      // These all return a bool, need some infrastructure to support that. Fall through to
-      // unsupported.
+      IMPLEMENT_COMPARISON_BINARY_OP(==);
+      break;
+    case ExprTokenType::kInequality:
+      IMPLEMENT_COMPARISON_BINARY_OP(!=);
+      break;
+    case ExprTokenType::kLessEqual:
+      IMPLEMENT_COMPARISON_BINARY_OP(<=);
+      break;
+    case ExprTokenType::kGreaterEqual:
+      IMPLEMENT_COMPARISON_BINARY_OP(>=);
+      break;
+    case ExprTokenType::kLess:
+      IMPLEMENT_COMPARISON_BINARY_OP(<);
+      break;
+    case ExprTokenType::kGreater:
+      IMPLEMENT_COMPARISON_BINARY_OP(>);
+      break;
+
+    case ExprTokenType::kSpaceship:
+      // The three-way comparison isn't useful in a debugger, and isn't really implementable anyway
+      // because it returns some kind of special std constant that we would rather not count on.
+      result = Err("Sorry, no UFOs allowed here.");
+      break;
+
+    case ExprTokenType::kDoubleAnd:
+    case ExprTokenType::kLogicalOr:
+      result = DoLogicalBinaryOp(context, left_op_value, op, right_op_value);
+      break;
+
     default:
       result = Err("Unsupported binary operator '%s', sorry!", op.value().c_str());
       break;
@@ -549,8 +626,28 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<Expr
       return;
     }
 
-    // Note: if we implement ||, need to special-case here so evaluation short-circuits
-    // if the "left" is true.
+    if (op.type() == ExprTokenType::kLogicalOr || op.type() == ExprTokenType::kDoubleAnd) {
+      // Short-circuit for || and &&.
+      ErrOrValue left_as_bool =
+          CastExprValue(context.get(), CastType::kImplicit, left_value, MakeBoolType());
+      if (left_as_bool.has_error())
+        return cb(left_as_bool.err());
+
+      if (left_as_bool.value().GetAs<uint8_t>()) {
+        if (op.type() == ExprTokenType::kLogicalOr)
+          return cb(left_as_bool);  // Computation complete, skip evaluating the right side.
+
+        // Fall through to evaluating the right side given the left already casted to a bool.
+        left_value = left_as_bool.value();
+      } else {
+        if (op.type() == ExprTokenType::kDoubleAnd)
+          return cb(left_as_bool);  // Computation complete, skip evaluating the right side.
+
+        // Fall through to evaluating the right side given the left already casted to a bool.
+        left_value = left_as_bool.value();
+      }
+    }
+
     right->Eval(context, [context, left_value = std::move(left_value), op, cb = std::move(cb)](
                              const Err& err, ExprValue right_value) mutable {
       if (err.has_error())

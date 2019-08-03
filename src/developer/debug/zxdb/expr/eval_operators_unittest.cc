@@ -392,4 +392,112 @@ TEST_F(EvalOperators, UnaryBang) {
   EXPECT_EQ("Invalid non-numeric type 'Struct' for operator.", out.err().msg());
 }
 
+TEST_F(EvalOperators, Comparison) {
+  // (int8_t)1 == (int)1
+  ExprValue char_one(static_cast<int8_t>(1));
+  EXPECT_EQ(1u, char_one.data().size());  // Validate construction.
+  ExprValue int_one(static_cast<int32_t>(1));
+  ErrOrValue out = SyncEvalBinaryOperator(char_one, ExprTokenType::kEquality, int_one);
+  ASSERT_TRUE(out.ok());
+  ASSERT_EQ(1u, out.value().data().size());
+  EXPECT_EQ(1, out.value().GetAs<uint8_t>());
+  EXPECT_EQ("bool", out.value().type()->GetFullName());
+
+  // (int)1 != (int8_t)1
+  out = SyncEvalBinaryOperator(char_one, ExprTokenType::kInequality, int_one);
+  EXPECT_FALSE(out.value().GetAs<uint8_t>());
+
+  // 1.0 <= 1
+  ExprValue double_one(1.0);
+  out = SyncEvalBinaryOperator(double_one, ExprTokenType::kLessEqual, int_one);
+  EXPECT_TRUE(out.value().GetAs<uint8_t>());
+
+  // 1.0 < 1
+  out = SyncEvalBinaryOperator(double_one, ExprTokenType::kLess, int_one);
+  EXPECT_FALSE(out.value().GetAs<uint8_t>());
+
+  // 0 > 1.0
+  ExprValue int_zero(0);
+  out = SyncEvalBinaryOperator(int_zero, ExprTokenType::kGreater, double_one);
+  EXPECT_FALSE(out.value().GetAs<uint8_t>());
+
+  // 0 >= 1.0
+  out = SyncEvalBinaryOperator(int_zero, ExprTokenType::kGreaterEqual, double_one);
+  EXPECT_FALSE(out.value().GetAs<uint8_t>());
+
+  // 1 >= 1.0
+  out = SyncEvalBinaryOperator(int_one, ExprTokenType::kGreaterEqual, double_one);
+  EXPECT_TRUE(out.value().GetAs<uint8_t>());
+
+  // true > 0
+  ExprValue true_value(true);
+  out = SyncEvalBinaryOperator(true_value, ExprTokenType::kGreater, int_zero);
+  EXPECT_TRUE(out.value().GetAs<uint8_t>());
+
+  // 0 <=> 1 is recognised but an error.
+  out = SyncEvalBinaryOperator(int_zero, ExprTokenType::kSpaceship, int_one);
+  ASSERT_FALSE(out.ok());
+}
+
+TEST_F(EvalOperators, Logical) {
+  // (int8_t)1 || (int)1
+  ExprValue char_one(static_cast<int8_t>(1));
+  ExprValue int_one(static_cast<int32_t>(1));
+  ErrOrValue out = SyncEvalBinaryOperator(char_one, ExprTokenType::kLogicalOr, int_one);
+  ASSERT_TRUE(out.ok());
+  ASSERT_EQ(1u, out.value().data().size());
+  EXPECT_EQ(1, out.value().GetAs<uint8_t>());
+  EXPECT_EQ("bool", out.value().type()->GetFullName());
+
+  // 1 || 0
+  ExprValue int_zero(0);
+  out = SyncEvalBinaryOperator(int_one, ExprTokenType::kLogicalOr, int_zero);
+  EXPECT_EQ(1, out.value().GetAs<uint8_t>());
+
+  // 0 || 0
+  out = SyncEvalBinaryOperator(int_zero, ExprTokenType::kLogicalOr, int_zero);
+  EXPECT_EQ(0, out.value().GetAs<uint8_t>());
+
+  // 1 && 1
+  out = SyncEvalBinaryOperator(int_one, ExprTokenType::kDoubleAnd, int_one);
+  EXPECT_EQ(1, out.value().GetAs<uint8_t>());
+
+  // 0 && 1
+  out = SyncEvalBinaryOperator(int_zero, ExprTokenType::kDoubleAnd, int_one);
+  EXPECT_EQ(0, out.value().GetAs<uint8_t>());
+}
+
+// Tests that && and || don't evaluate the right-hand side if not necessary.
+TEST_F(EvalOperators, LogicalShortCircuit) {
+  // 1 || <error>
+  auto or_node = fxl::MakeRefCounted<BinaryOpExprNode>(
+      fxl::MakeRefCounted<MockExprNode>(true, ExprValue(1)),
+      ExprToken(ExprTokenType::kLogicalOr, "||", 0),
+      fxl::MakeRefCounted<MockExprNode>(true, Err("Should not eval.")));
+
+  // Should evalutate to true and not error.
+  bool called = false;
+  or_node->Eval(eval_context(), [&called](const Err& e, ExprValue v) {
+    called = true;
+    EXPECT_FALSE(e.has_error());
+    EXPECT_EQ(1, v.GetAs<uint8_t>());
+  });
+  EXPECT_TRUE(called);  // Should eval synchronously.
+
+  // 0 && <error>
+  auto and_node = fxl::MakeRefCounted<BinaryOpExprNode>(
+      fxl::MakeRefCounted<MockExprNode>(true, ExprValue(0)),
+      ExprToken(ExprTokenType::kDoubleAnd, "&&", 0),
+      fxl::MakeRefCounted<MockExprNode>(true, Err("Should not eval.")));
+
+  // Should evalutate to true and not error.
+  called = false;
+  and_node->Eval(eval_context(), [&called](const Err& e, ExprValue v) {
+    called = true;
+    EXPECT_FALSE(e.has_error());
+    EXPECT_EQ(0, v.GetAs<uint8_t>());
+  });
+  EXPECT_TRUE(called);  // Should eval synchronously.
+}
+
 }  // namespace zxdb
