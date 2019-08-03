@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #[macro_use]
 mod common;
 mod crypto_provider;
@@ -33,7 +33,7 @@ fn main() -> Result<(), Error> {
 fn spawn(mut stream: KeyManagerRequestStream, key_manager: Arc<KeyManager>) {
     fasync::spawn(
         async move {
-            while let Some(r) = await!(stream.try_next())? {
+            while let Some(r) = stream.try_next().await? {
                 key_manager.handle_request(r)?;
             }
             Ok(())

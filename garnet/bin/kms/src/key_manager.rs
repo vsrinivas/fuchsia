@@ -192,7 +192,7 @@ impl KeyManager {
         fasync::spawn_local(
             // Spawn async job to handle requests.
             async move {
-                while let Some(r) = await!(request_stream.try_next())? {
+                while let Some(r) = request_stream.try_next().await? {
                     key_to_bind
                         .lock()
                         .unwrap()
