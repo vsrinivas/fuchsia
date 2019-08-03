@@ -147,6 +147,10 @@ func getEntriesInfo() ([]entryInfo, error) {
 		if err != nil {
 			return nil, fmt.Errorf("reading build ID from %s: %v", entry.file, err)
 		}
+		// Ignore entries where the binary doesn't have a build ID.
+		if len(buildIDs) == 0 {
+			continue
+		}
 		if len(buildIDs) != 1 {
 			return nil, fmt.Errorf("unexpected number of build IDs in %s. Expected 1 but found %v", entry.file, buildIDs)
 		}
@@ -176,6 +180,10 @@ func main() {
 	infos, err := getEntriesInfo()
 	if err != nil {
 		l.Fatalf("Parsing entries: %v", err)
+	}
+	if len(infos) != 0 {
+		// It could occur that we have ignored all files and need to return.
+		return
 	}
 	buildID := infos[0].ref.BuildID
 	for _, info := range infos {
