@@ -25,11 +25,11 @@ TEST_F(ServiceTest, OpenServiceAt) {
   ASSERT_TRUE(service);
 
   auto named_service = OpenNamedServiceAt(directory, "fuchsia.examples.MyService", "my_instance");
-  ASSERT_TRUE(named_service.is_valid());
+  ASSERT_TRUE(named_service);
 
   auto explicit_service =
       OpenNamedServiceAt(directory, "/svc/fuchsia.examples.MyService", "my_instance");
-  ASSERT_FALSE(explicit_service.is_valid());
+  ASSERT_FALSE(explicit_service);
 }
 
 TEST_F(ServiceTest, OpenServiceIn) {
@@ -40,11 +40,11 @@ TEST_F(ServiceTest, OpenServiceIn) {
   ASSERT_TRUE(service);
 
   auto named_service = OpenNamedServiceIn(ns(), "fuchsia.examples.MyService", "my_instance");
-  ASSERT_TRUE(named_service.is_valid());
+  ASSERT_TRUE(named_service);
 
   auto explicit_service =
       OpenNamedServiceIn(ns(), "/svc/fuchsia.examples.MyService", "my_instance");
-  ASSERT_TRUE(explicit_service.is_valid());
+  ASSERT_TRUE(explicit_service);
 }
 
 }  // namespace

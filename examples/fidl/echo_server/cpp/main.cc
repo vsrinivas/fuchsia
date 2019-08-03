@@ -23,17 +23,18 @@ class EchoImpl : public fidl::examples::echo::Echo {
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
-  fuchsia::examples::MyService::Handler handler;
+  fidl::ServiceHandler handler;
+  fuchsia::examples::MyService::Handler my_service(&handler);
 
   // Example of serving a member "foo" of a service instance.
   EchoImpl foo_impl("foo: ");
   fidl::BindingSet<fidl::examples::echo::Echo> foo_bindings;
-  handler.add_foo(foo_bindings.GetHandler(&foo_impl));
+  my_service.add_foo(foo_bindings.GetHandler(&foo_impl));
 
   // Example of serving a member "bar" of a service instance.
   EchoImpl bar_impl("bar: ");
   fidl::BindingSet<fidl::examples::echo::Echo> bar_bindings;
-  handler.add_bar(bar_bindings.GetHandler(&bar_impl));
+  my_service.add_bar(bar_bindings.GetHandler(&bar_impl));
 
   // Example of serving an instance of "MyService".
   context->outgoing()->AddService<fuchsia::examples::MyService>(std::move(handler));

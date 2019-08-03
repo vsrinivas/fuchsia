@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-testing/test_loop.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 
@@ -16,15 +17,15 @@ class EchoImpl : public fidl::examples::echo::Echo {
   void EchoString(fidl::StringPtr value, EchoStringCallback callback) override { callback(value); }
 };
 
-TEST(MemberConnectorTest, ConnectAndInvoke) {
+TEST(ServiceHandlerTest, ConnectAndInvoke) {
   async::TestLoop loop;
 
   // Setup server.
-  fuchsia::examples::MyService::Handler default_handler;
+  fidl::ServiceHandler default_handler;
+  fuchsia::examples::MyService::Handler my_service(&default_handler);
   EchoImpl foo_impl;
   fidl::BindingSet<fidl::examples::echo::Echo> foo_bindings;
-  zx_status_t status =
-      default_handler.add_foo(foo_bindings.GetHandler(&foo_impl, loop.dispatcher()));
+  zx_status_t status = my_service.add_foo(foo_bindings.GetHandler(&foo_impl, loop.dispatcher()));
   ASSERT_EQ(ZX_OK, status);
 
   sys::OutgoingDirectory outgoing;

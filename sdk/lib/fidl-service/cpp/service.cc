@@ -8,9 +8,27 @@
 
 namespace fidl {
 
+namespace {
+
+// An implementation of a ServiceConnector based on fuchsia.io.Directory.
+class DirectoryServiceConnector final : public ServiceConnector {
+ public:
+  explicit DirectoryServiceConnector(InterfaceHandle<fuchsia::io::Directory> dir)
+      : dir_(std::move(dir)) {}
+
+  zx_status_t Connect(const std::string& path, zx::channel channel) const override {
+    return fdio_service_connect_at(dir_.channel().get(), path.data(), channel.release());
+  }
+
+ private:
+  InterfaceHandle<fuchsia::io::Directory> dir_;
+};
+
+}  // namespace
+
 const char kDefaultInstance[] = "default";
 
-InterfaceHandle<fuchsia::io::Directory> OpenNamedServiceAt(
+std::unique_ptr<ServiceConnector> OpenNamedServiceAt(
     const InterfaceHandle<fuchsia::io::Directory>& handle, const std::string& service_path,
     const std::string& instance) {
   if (service_path.compare(0, 1, "/") == 0) {
@@ -24,12 +42,11 @@ InterfaceHandle<fuchsia::io::Directory> OpenNamedServiceAt(
   if (status != ZX_OK) {
     return nullptr;
   }
-  return dir;
+  return std::make_unique<DirectoryServiceConnector>(std::move(dir));
 }
 
-InterfaceHandle<fuchsia::io::Directory> OpenNamedServiceIn(fdio_ns_t* ns,
-                                                           const std::string& service_path,
-                                                           const std::string& instance) {
+std::unique_ptr<ServiceConnector> OpenNamedServiceIn(fdio_ns_t* ns, const std::string& service_path,
+                                                     const std::string& instance) {
   std::string path;
   if (service_path.compare(0, 1, "/") != 0) {
     path = "/svc/";
@@ -42,11 +59,11 @@ InterfaceHandle<fuchsia::io::Directory> OpenNamedServiceIn(fdio_ns_t* ns,
   if (status != ZX_OK) {
     return nullptr;
   }
-  return dir;
+  return std::make_unique<DirectoryServiceConnector>(std::move(dir));
 }
 
-InterfaceHandle<fuchsia::io::Directory> OpenNamedService(const std::string& service_path,
-                                                         const std::string& instance) {
+std::unique_ptr<ServiceConnector> OpenNamedService(const std::string& service_path,
+                                                   const std::string& instance) {
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_get_installed(&ns);
   if (status != ZX_OK) {

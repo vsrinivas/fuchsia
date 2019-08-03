@@ -1,7 +1,6 @@
 {
-  "pkg/fidl_service_cpp/include/lib/fidl-service/cpp/member_connector.h": "828bf8459b13c91c47c2777b0af4058a",
-  "pkg/fidl_service_cpp/include/lib/fidl-service/cpp/service.h": "0e2046ea889a919d7563512b77beba7c",
+  "pkg/fidl_service_cpp/include/lib/fidl-service/cpp/service.h": "a8fea1b49a26d80a580dd5f1b669800d",
   "pkg/fidl_service_cpp/include/lib/fidl-service/cpp/service_directory.h": "9284d6d76712f8fcd550e26aa86c6338",
-  "pkg/fidl_service_cpp/include/lib/fidl-service/cpp/service_handler.h": "1e34171d9e447857d9766a1410051745",
+  "pkg/fidl_service_cpp/include/lib/fidl-service/cpp/service_handler.h": "b3fd92fc9bb038913da38d7cdce4989d",
   "pkg/fidl_service_cpp/include/lib/fidl-service/cpp/service_watcher.h": "8ad361f2e99731e324ff7b1f29ef5ca0"
 }

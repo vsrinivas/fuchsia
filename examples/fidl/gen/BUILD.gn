@@ -9,6 +9,5 @@ source_set("gen") {
 
   public_deps = [
     "//garnet/examples/fidl/services:echo",
-    "//sdk/lib/fidl-service/cpp",
   ]
 }

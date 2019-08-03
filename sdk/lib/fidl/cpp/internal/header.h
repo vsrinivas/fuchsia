@@ -51,6 +51,8 @@
 #include "lib/fidl/cpp/internal/stub_controller.h"
 #include "lib/fidl/cpp/internal/synchronous_proxy.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
+#include "lib/fidl/cpp/member_connector.h"
+#include "lib/fidl/cpp/service_handler_base.h"
 #endif
 
 #include "lib/fidl/cpp/comparison.h"

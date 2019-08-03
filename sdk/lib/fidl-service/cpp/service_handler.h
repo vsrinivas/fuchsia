@@ -6,23 +6,18 @@
 #define LIB_FIDL_SERVICE_CPP_SERVICE_HANDLER_H_
 
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fidl/cpp/service_handler_base.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 
 namespace fidl {
 
 // A handler for an instance of a service.
-class ServiceHandler {
+class ServiceHandler : public ServiceHandlerBase {
  public:
-  // Add a member of |name| to the instance, which is handled by |handler|.
-  template <typename Protocol>
-  zx_status_t AddMember(std::string name, fidl::InterfaceRequestHandler<Protocol> handler) {
-    return AddMember(std::move(name), std::make_unique<vfs::Service>(std::move(handler)));
-  }
-
-  // Add a member of |name| to the instance, which is handled by |node|.
-  zx_status_t AddMember(std::string name, std::unique_ptr<vfs::Service> node) {
-    return dir_->AddEntry(std::move(name), std::move(node));
+  // Add a |member| to the instance, which will is handled by |handler|.
+  zx_status_t AddMember(std::string member, MemberHandler handler) const override {
+    return dir_->AddEntry(std::move(member), std::make_unique<vfs::Service>(std::move(handler)));
   }
 
   // Take the underlying pseudo-directory from the service handler.

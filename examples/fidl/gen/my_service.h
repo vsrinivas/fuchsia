@@ -5,9 +5,7 @@
 #ifndef EXAMPLES_FIDL_GEN_MY_SERVICE_H_
 #define EXAMPLES_FIDL_GEN_MY_SERVICE_H_
 
-#include <fuchsia/io/cpp/fidl.h>
-#include <lib/fidl-service/cpp/member_connector.h>
-#include <lib/fidl-service/cpp/service_handler.h>
+#include <lib/fidl/cpp/internal/header.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
 
@@ -20,34 +18,41 @@ namespace examples {
 
 class MyService final {
  public:
-  struct Handler;
+  class Handler;
 
   static constexpr char Name[] = "fuchsia.examples.MyService";
 
-  explicit MyService(fidl::InterfaceHandle<fuchsia::io::Directory> dir) : dir_(std::move(dir)) {}
+  explicit MyService(std::unique_ptr<fidl::ServiceConnector> service)
+      : service_(std::move(service)) {}
 
-  explicit operator bool() const { return dir_.is_valid(); }
+  explicit operator bool() const { return !!service_; }
 
   fidl::MemberConnector<fidl::examples::echo::Echo> foo() const {
-    return fidl::MemberConnector<fidl::examples::echo::Echo>(dir_, "foo");
+    return fidl::MemberConnector<fidl::examples::echo::Echo>(service_.get(), "foo");
   }
 
   fidl::MemberConnector<fidl::examples::echo::Echo> bar() const {
-    return fidl::MemberConnector<fidl::examples::echo::Echo>(dir_, "bar");
+    return fidl::MemberConnector<fidl::examples::echo::Echo>(service_.get(), "bar");
   }
 
  private:
-  fidl::InterfaceHandle<fuchsia::io::Directory> dir_;
+  std::unique_ptr<fidl::ServiceConnector> service_;
 };
 
-struct MyService::Handler final : public fidl::ServiceHandler {
+class MyService::Handler final {
+ public:
+  explicit Handler(fidl::ServiceHandlerBase* service) : service_(service) {}
+
   zx_status_t add_foo(fidl::InterfaceRequestHandler<fidl::examples::echo::Echo> handler) {
-    return AddMember("foo", std::move(handler));
+    return service_->AddMember("foo", std::move(handler));
   }
 
   zx_status_t add_bar(fidl::InterfaceRequestHandler<fidl::examples::echo::Echo> handler) {
-    return AddMember("bar", std::move(handler));
+    return service_->AddMember("bar", std::move(handler));
   }
+
+ private:
+  fidl::ServiceHandlerBase* const service_;
 };
 
 }  // namespace examples

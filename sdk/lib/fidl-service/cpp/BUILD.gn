@@ -12,7 +12,6 @@ sdk_source_set("cpp") {
 
   include_base = "//sdk"
   sources = [
-    "member_connector.h",
     "service.cc",
     "service.h",
     "service_directory.cc",
@@ -38,8 +37,8 @@ executable("fidl_service_unittests") {
   testonly = true
 
   sources = [
-    "member_connector_test.cc",
     "service_directory_test.cc",
+    "service_handler_test.cc",
     "service_test.cc",
     "service_watcher_test.cc",
     "test_base.h",

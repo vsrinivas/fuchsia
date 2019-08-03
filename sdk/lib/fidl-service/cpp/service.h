@@ -7,6 +7,7 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fidl/cpp/service_connector.h>
 
 namespace fidl {
 
@@ -21,7 +22,7 @@ extern const char kDefaultInstance[];
 // If |instance| is not provided, the default instance is opened.
 //
 // Returns a `fuchsia::io::Directory`, representing an instance of the service.
-InterfaceHandle<fuchsia::io::Directory> OpenNamedServiceAt(
+std::unique_ptr<ServiceConnector> OpenNamedServiceAt(
     const InterfaceHandle<fuchsia::io::Directory>& handle, const std::string& service_path,
     const std::string& instance = kDefaultInstance);
 
@@ -52,7 +53,7 @@ Service OpenServiceAt(const InterfaceHandle<fuchsia::io::Directory>& handle,
 // |ns| must not be null.
 //
 // Returns a `fuchsia::io::Directory`, representing an instance of the service.
-InterfaceHandle<fuchsia::io::Directory> OpenNamedServiceIn(
+std::unique_ptr<ServiceConnector> OpenNamedServiceIn(
     fdio_ns_t* ns, const std::string& service_path, const std::string& instance = kDefaultInstance);
 
 // Opens a named |instance| of a |Service|, within a namespace provided by
@@ -83,8 +84,8 @@ Service OpenServiceIn(fdio_ns_t* ns, const std::string& instance = kDefaultInsta
 // See `fdio_ns_get_installed()`.
 //
 // Returns a `fuchsia::io::Directory`, representing an instance of the service.
-InterfaceHandle<fuchsia::io::Directory> OpenNamedService(
-    const std::string& service_path, const std::string& instance = kDefaultInstance);
+std::unique_ptr<ServiceConnector> OpenNamedService(const std::string& service_path,
+                                                   const std::string& instance = kDefaultInstance);
 
 // Opens a named |instance| of a |Service|, within the default namespace.
 //
