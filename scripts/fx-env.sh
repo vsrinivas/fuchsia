@@ -13,9 +13,9 @@
 ### with variable or function symbols that users don't want.
 
 if [[ -n "${ZSH_VERSION}" ]]; then
-  FUCHSIA_DIR="$(cd "$(dirname "${(%):-%x}")/.." >/dev/null 2>&1 && pwd)"
+  export FUCHSIA_DIR="$(cd "$(dirname "${(%):-%x}")/.." >/dev/null 2>&1 && pwd)"
 else
-  FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
+  export FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
 fi
 
 # __patched_path <old-regex> <new-component>
