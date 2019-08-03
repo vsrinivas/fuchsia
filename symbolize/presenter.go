@@ -7,6 +7,7 @@ package symbolize
 import (
 	"fmt"
 	"io"
+	"sort"
 	"unicode"
 )
 
@@ -92,23 +93,94 @@ func (b *BacktracePresenter) Process(line OutputLine, out chan<- OutputLine) {
 	b.next.Process(line, out)
 }
 
-// FilterContextElements filters out lines that only contain contextual
-// elements and colors.
-type FilterContextElements struct {
+func printLine(line LogLine, fmtStr string, args ...interface{}) OutputLine {
+	node := Text{text: fmt.Sprintf(fmtStr, args...)}
+	return OutputLine{LogLine: line, line: []Node{&node}}
 }
 
-func (f *FilterContextElements) Process(line OutputLine, out chan<- OutputLine) {
+// Because apparently this is the world we live in, I have to write my own
+// min/max function.
+func min(x, y uint64) uint64 {
+	if x < y {
+		return x
+	}
+	return y
+}
+
+type dsoInfo struct {
+	id    uint64
+	name  string
+	build string
+	addr  *uint64
+}
+
+type ContextPresenter map[LineSource]map[uint64]dsoInfo
+
+func (c ContextPresenter) Process(line OutputLine, out chan<- OutputLine) {
+	if _, ok := c[line.source]; !ok {
+		c[line.source] = make(map[uint64]dsoInfo)
+	}
+	info := c[line.source]
+	blank := true
+	skip := false
 	for _, token := range line.line {
 		switch t := token.(type) {
-		case *ColorCode, *ResetElement, *ModuleElement, *MappingElement:
-			continue
-		case *Text:
-			if isSpace(t.text) {
-				continue
+		case *ResetElement:
+			skip = true
+			delete(c, line.source)
+			break
+		case *ModuleElement:
+			skip = true
+			if _, ok := info[t.mod.Id]; !ok {
+				info[t.mod.Id] = dsoInfo{id: t.mod.Id, name: t.mod.Name, build: t.mod.Build}
+			}
+			break
+		case *MappingElement:
+			skip = true
+			dInfo, ok := info[t.seg.Mod]
+			if !ok {
+				// We might be missing the module because a non-context element was interleaved.
+				// It could also be missing but that isn't this function's job to point out.
+				out <- printLine(line.LogLine, " [[[ELF seg #%#x %#x]]]", t.seg.Mod, t.seg.Vaddr-t.seg.ModRelAddr)
+				break
+			}
+			if dInfo.addr == nil {
+				dInfo.addr = &t.seg.Vaddr
+			} else {
+				newAddr := min(*dInfo.addr, t.seg.Vaddr-t.seg.ModRelAddr)
+				dInfo.addr = &newAddr
+			}
+			info[t.seg.Mod] = dInfo
+			break
+		default:
+			// Save this token for output later
+			if t, ok := token.(*Text); !ok || !isSpace(t.text) {
+				blank = false
 			}
 		}
+	}
+	if !skip || !blank {
+		// Output all contextual information we've thus far consumed.
+		sortedInfo := []dsoInfo{}
+		for _, dInfo := range info {
+			sortedInfo = append(sortedInfo, dInfo)
+		}
+		sort.Slice(sortedInfo, func(i, j int) bool {
+			return sortedInfo[i].id < sortedInfo[j].id
+		})
+		// TODO(TC-615): We'd really like something more like the following:
+		// [[[ELF module #0 "libc.so" BuildID=1234abcdef 0x12345000(r)-0x12356000(rx)-0x12378000(rw)-0x12389000]]]
+		// but this requires a fair bit more work to track.
+		for _, dInfo := range sortedInfo {
+			if dInfo.addr != nil {
+				out <- printLine(line.LogLine, " [[[ELF module #%#x \"%s\" BuildID=%s %#x]]]", dInfo.id, dInfo.name, dInfo.build, *dInfo.addr)
+			} else {
+				out <- printLine(line.LogLine, " [[[ELF module #%#x \"%s\" BuildID=%s]]]", dInfo.id, dInfo.name, dInfo.build)
+			}
+		}
+		// Now so that we don't print this information out again, forget it all.
+		delete(c, line.source)
 		out <- line
-		return
 	}
 }
 

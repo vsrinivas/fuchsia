@@ -120,7 +120,7 @@ func main() {
 	outputLines := demuxer.Start(ctx, inputLines)
 	trash := symbolize.ComposePostProcessors(ctx, outputLines,
 		tap,
-		&symbolize.FilterContextElements{},
+		&symbolize.ContextPresenter{},
 		&symbolize.OptimizeColor{},
 		symbolize.NewBacktracePresenter(os.Stdout, presenter))
 	symbolize.Consume(trash)

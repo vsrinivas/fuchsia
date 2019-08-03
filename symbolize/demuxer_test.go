@@ -57,7 +57,7 @@ func TestDumpfile(t *testing.T) {
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
 	buf := new(bytes.Buffer)
-	Consume(ComposePostProcessors(ctx, out, tap, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
+	Consume(ComposePostProcessors(ctx, out, tap, &ContextPresenter{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
 
 	expectedSrc := Process(1234)
 	expectedMod := Module{
@@ -74,7 +74,8 @@ func TestDumpfile(t *testing.T) {
 	}
 	expectedSink := "llvm-cov"
 	expectedName := "test"
-	expected := "[123.456] 01234.05678> {{{dumpfile:llvm-cov:test}}}\n"
+	expected := "[123.456] 01234.05678> [[[ELF module #0x1 \"libc.so\" BuildID=4fcb712aa6387724a9f465a32cd8c14b 0x12345000]]]\n" +
+		"[123.456] 01234.05678> {{{dumpfile:llvm-cov:test}}}\n"
 
 	actual := buf.String()
 	if actual != expected {
@@ -111,7 +112,7 @@ func TestSyslog(t *testing.T) {
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
 	buf := new(bytes.Buffer)
-	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
+	Consume(ComposePostProcessors(ctx, out, &ContextPresenter{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
 	expected := "[00123.456000][1234][5678][klog] INFO: Blarg\n"
 	actual := buf.String()
 	if actual != expected {
@@ -131,7 +132,7 @@ func TestColor(t *testing.T) {
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
 	buf := new(bytes.Buffer)
-	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
+	Consume(ComposePostProcessors(ctx, out, &ContextPresenter{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
 	expected := "[0.000] 01234.05678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\033[0m\n" +
 		"[0.000] 01234.05678> This is just normal and has no trailing ANSI code\n" +
 		"[0.000] 01234.05678> \033[31m\033[1m this line tests adjacent state changes\033[0m\n" +
@@ -186,9 +187,10 @@ func ExampleDummyProcess() {
 	// start the demuxer which will cause filters to send output lines to 'out'
 	out := demuxer.Start(ctx, in)
 
-	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(os.Stdout, false)))
+	Consume(ComposePostProcessors(ctx, out, &ContextPresenter{}, &OptimizeColor{}, NewBasicPresenter(os.Stdout, false)))
 
 	//Output:
+	//[[[ELF module #0x1 "libc.so" BuildID=4fcb712aa6387724a9f465a32cd8c14b 0x12345000]]]
 	//atan2 at atan2.c:33
 	//blarg
 	//[0.000] 00000.00000> This should be on it's own line
@@ -225,11 +227,15 @@ func ExampleDemux() {
 	// start the demuxer which will cause filters to send output lines to 'out'
 	out := demuxer.Start(ctx, in)
 
-	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(os.Stdout, false)))
+	Consume(ComposePostProcessors(ctx, out, &ContextPresenter{}, &OptimizeColor{}, NewBasicPresenter(os.Stdout, false)))
 
 	//Output:
+	//[131.200] 01234.05678> [[[ELF module #0x1 "libc.so" BuildID=4fcb712aa6387724a9f465a32cd8c14b]]]
 	//[131.200] 01234.05678> keep {{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
+	//[131.301] 01234.05678> [[[ELF module #0x2 "libcrypto.so" BuildID=b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1]]]
 	//[131.301] 01234.05678> {{{module:b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1:libcrypto.so:2}}} keep
+	//[131.402] 01234.05678> [[[ELF seg #0x1 0x12345000]]]
+	//[131.503] 01234.05678> [[[ELF seg #0x2 0x233d6000]]]
 	//[131.604] 01234.05678> Error at atan2 at atan2.c:49
 }
 
@@ -241,7 +247,7 @@ func TestMsgSimpleBacktrace(t *testing.T) {
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
 	buf := new(bytes.Buffer)
-	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{},
+	Consume(ComposePostProcessors(ctx, out, &ContextPresenter{},
 		NewBacktracePresenter(buf, NewBasicPresenter(buf, false))))
 	expected := "    #0    0x00000000deadbeef in <>+0xdeadbeef this is a message\n"
 	actual := buf.String()
@@ -273,10 +279,11 @@ func ExampleMsgBacktrace() {
 	out := demuxer.Start(ctx, in)
 
 	Consume(ComposePostProcessors(ctx, out,
-		&FilterContextElements{},
+		&ContextPresenter{},
 		NewBacktracePresenter(os.Stdout, NewBasicPresenter(os.Stdout, false))))
 
 	//Output:
+	//[[[ELF module #0x1 "libc.so" BuildID=4fcb712aa6387724a9f465a32cd8c14b 0x12345000]]]
 	//     #0    0x0000000012388680 in pow pow.c:23 <libc.so>+0x43680 sp 0xdeadbaaf bp 0xdeadbeef
 }
 
@@ -307,10 +314,11 @@ func ExampleNoHeaderBacktrace() {
 	out := demuxer.Start(ctx, in)
 
 	Consume(ComposePostProcessors(ctx, out,
-		&FilterContextElements{},
+		&ContextPresenter{},
 		NewBacktracePresenter(os.Stdout, NewBasicPresenter(os.Stdout, false))))
 
 	//Output:
+	//[[[ELF module #0x1 "libc.so" BuildID=4fcb712aa6387724a9f465a32cd8c14b 0x12345000]]]
 	//Backtrace:
 	//     #0    0x0000000012388680 in pow pow.c:23 <libc.so>+0x43680
 	//     #1.1  0x00000000123879c0 in __DOUBLE_FLOAT math.h:51 <libc.so>+0x429c0
@@ -355,10 +363,13 @@ func ExampleNewBacktracePresenter() {
 	out := demuxer.Start(ctx, in)
 
 	Consume(ComposePostProcessors(ctx, out,
-		&FilterContextElements{},
+		&ContextPresenter{},
 		NewBacktracePresenter(os.Stdout, NewBasicPresenter(os.Stdout, false))))
 
 	//Output:
+	//[131.604] 01234.05678> [[[ELF module #0x1 "libc.so" BuildID=4fcb712aa6387724a9f465a32cd8c14b 0x12345000]]]
+	//[131.604] 01234.05678> [[[ELF module #0x3 "libmissing.no" BuildID=deadbeef 0x34567000]]]
+	//[131.604] 01234.05678> [[[ELF module #0x9 "libcrypto.so" BuildID=12ef5c50b3ed3599c07c02d4509311be 0x23456000]]]
 	//[131.604] 01234.05678> Backtrace:
 	//[131.604] 01234.05678>    #0    0x0000000012388680 in pow pow.c:23 <libc.so>+0x43680
 	//[131.604] 01234.05678>    #1    0x0000000023457000 in mod_exp rsa.c:101 <libcrypto.so>+0x81000
@@ -394,9 +405,10 @@ func ExampleBadAddr() {
 	// start the demuxer which will cause filters to send output lines to 'out'
 	out := demuxer.Start(ctx, in)
 
-	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(os.Stdout, true)))
+	Consume(ComposePostProcessors(ctx, out, &ContextPresenter{}, &OptimizeColor{}, NewBasicPresenter(os.Stdout, true)))
 
 	//Output:
+	//[131.604] 01234.05678> [[[ELF module #0x1 "libc.so" BuildID=4fcb712aa6387724a9f465a32cd8c14b 0x12345000]]]
 	//[131.604] 01234.05678> <libc.so>+0x429ff
 	//[131.605] 01234.05678> atan2 at <libc.so>+0x429c0
 	//[131.606] 01234.05678> pow.c:67
