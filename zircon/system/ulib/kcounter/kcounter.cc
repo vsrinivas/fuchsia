@@ -5,12 +5,10 @@
 #include "kcounter.h"
 
 #include <errno.h>
-#include <fbl/string.h>
-#include <fbl/string_piece.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/fdio/io.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,6 +18,10 @@
 
 #include <utility>
 #include <vector>
+
+#include <fbl/string.h>
+#include <fbl/string_piece.h>
+#include <fbl/unique_fd.h>
 
 namespace {
 
@@ -266,7 +268,7 @@ zx_status_t VmoToInspectMapper::GetInspectVMO(zx::vmo* vmo) {
   ZX_ASSERT(result.is_ok());
 
   const zx::vmo* inspector_vmo = result.value();
-  
+
   uint64_t size;
   ZX_ASSERT(inspector_vmo->get_size(&size) == ZX_OK);
 
