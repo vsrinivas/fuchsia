@@ -4,8 +4,6 @@
 
 #include "garnet/lib/ui/gfx/resources/nodes/opacity_node.h"
 
-#include <utility>
-
 namespace scenic_impl {
 namespace gfx {
 
@@ -13,10 +11,7 @@ const ResourceTypeInfo OpacityNode::kTypeInfo = {ResourceType::kNode | ResourceT
                                                  "OpacityNode"};
 
 OpacityNode::OpacityNode(Session* session, ResourceId node_id)
-    : Node(session, node_id, OpacityNode::kTypeInfo) {
-  FXL_LOG(WARNING) << "Opacity support is limited. Z sorting and shadows may "
-                      "not behave correctly.";
-}
+    : Node(session, node_id, OpacityNode::kTypeInfo) {}
 
 void OpacityNode::SetOpacity(float opacity) {
   FXL_DCHECK(0 <= opacity && opacity <= 1);
