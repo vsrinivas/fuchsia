@@ -38,6 +38,10 @@
 
 #define LOCAL_TRACE 0
 
+#ifndef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
+#error "missing -mcx16"
+#endif
+
 /* save a pointer to the bootdata, if present */
 void* _zbi_base;
 

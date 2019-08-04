@@ -136,6 +136,9 @@ config("compiler") {
       # for things like -fsanitize=shadow-call-stack.  In the kernel,
       # it's reserved so we can use it to point at the per-CPU structure.
       compiler_flags += [ "-ffixed-x18" ]
+    } else if (current_cpu == "x64") {
+      # Let the compiler generate the cmpxchg16b instruction.
+      compiler_flags += [ "-mcx16" ]
     }
   }
 
