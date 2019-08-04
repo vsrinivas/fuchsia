@@ -51,6 +51,7 @@ namespace {{ . }} {
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionDeclaration" . }}{{- end }}
 {{- end }}
@@ -67,6 +68,7 @@ namespace fidl {
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
+{{- if Eq .Kind Kinds.Table }}{{ template "TableTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionTraits" . }}{{- end }}
 {{- end }}

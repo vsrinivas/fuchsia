@@ -20,7 +20,7 @@ namespace test {
 namespace name {
 
 struct Union;
-using Table = ::fidl::VectorView<fidl_envelope_t>;
+struct Table;
 struct Struct;
 class Interface;
 
@@ -100,6 +100,70 @@ struct Union {
   union {
     int32_t Field_;
   };
+};
+
+extern "C" const fidl_type_t test_name_TableTable;
+
+// table comment #1
+//
+// table comment #3
+struct Table final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns if any table field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  // table field comment #1
+  //
+  // table field comment #3
+  const int32_t& Field() const {
+    ZX_ASSERT(has_Field());
+    return *reinterpret_cast<const int32_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  int32_t& Field() {
+    ZX_ASSERT(has_Field());
+    return *reinterpret_cast<int32_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_Field() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  Table() = default;
+  ~Table() = default;
+  Table(Table&& other) noexcept = default;
+  Table& operator=(Table&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &test_name_TableTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 24;
+
+ private:
+  Table(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+};
+
+class Table::Builder {
+ public:
+  Table view() { return Table(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  // table field comment #1
+  //
+  // table field comment #3
+  Builder&& set_Field(int32_t* elem);
+
+ private:
+  Builder() = default;
+  friend Builder Table::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
 };
 
 
@@ -305,6 +369,10 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::test::name::Union> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::Union>);
+
+template <>
+struct IsFidlType<::llcpp::test::name::Table> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::Table>);
 
 template <>
 struct IsFidlType<::llcpp::test::name::Struct> : public std::true_type {};

@@ -996,6 +996,8 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 		Members:        nil,
 		Size:           val.Size,
 		BiggestOrdinal: 0,
+		MaxHandles:     val.MaxHandles,
+		MaxOutOfLine:   val.MaxOutOfLine,
 	}
 
 	for _, v := range val.Members {

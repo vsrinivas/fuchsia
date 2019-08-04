@@ -5,18 +5,18 @@
 library fidl.llcpp.types.test;
 
 struct CopyableStruct {
-  int32 x;
+    int32 x;
 };
 
 struct MoveOnlyStruct {
-  handle? h;
+    handle? h;
 };
 
 /// Verifies that user code can manipulate these union payloads.
 union TestUnion {
-  int32 primitive;
-  CopyableStruct copyable;
-  MoveOnlyStruct move_only;
+    int32 primitive;
+    CopyableStruct copyable;
+    MoveOnlyStruct move_only;
 };
 
 /// Verifies that user code can manipulate these bits.
@@ -29,6 +29,13 @@ bits SampleBits : uint8 {
     E = 8;
 };
 
+/// Verifies that user code can build and access tables.
+table SampleTable {
+    1: uint8 x;
+    2: uint8 y;
+    3: vector<CopyableStruct> vector_of_struct;
+};
+
 protocol TestInterface {
-  TestMethod(TestUnion u) -> (TestUnion u);
+    TestMethod(TestUnion u) -> (TestUnion u);
 };

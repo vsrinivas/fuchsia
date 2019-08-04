@@ -49,9 +49,6 @@ class RewriteTransaction : public fidl::Transaction {
     ZX_ASSERT(txid_ != 0);
     ZX_ASSERT(indicator_msg.bytes().actual() >=
               sizeof(test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse));
-    auto indicator_response =
-        reinterpret_cast<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse*>(
-            indicator_msg.bytes().data());
 
     char real_msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES] = {};
     zx_handle_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
@@ -62,52 +59,116 @@ class RewriteTransaction : public fidl::Transaction {
         .num_bytes = 0u,
         .num_handles = 0u,
     };
-    // Manually craft the actual response which has an unknown ordinal
-    constexpr uint32_t kBadOrdinal = 0x8badf00d;
-    static_assert(kBadOrdinal !=
-                  static_cast<uint32_t>(test::FlexibleXUnion::Tag::kWantMoreThan30Bytes));
-    static_assert(kBadOrdinal !=
-                  static_cast<uint32_t>(test::FlexibleXUnion::Tag::kWantMoreThan4Handles));
-    auto real_response =
-        reinterpret_cast<fidl_xunion_t*>(&real_msg_bytes[sizeof(fidl_message_header_t)]);
-    real_response->tag = kBadOrdinal;
-    real_response->padding = 0;
-    switch (indicator_response->xu.which()) {
-      case test::FlexibleXUnion::Tag::kWantMoreThan30Bytes: {
+
+    // Determine if |indicator_msg| has a xunion or a table, by inspecting the first few bytes.
+    auto maybe_vector = reinterpret_cast<fidl_vector_t*>(indicator_msg.bytes().data() +
+                                                         sizeof(fidl_message_header_t));
+    if ((maybe_vector->count == 1 || maybe_vector->count == 2) &&
+        reinterpret_cast<uintptr_t>(maybe_vector->data) == FIDL_ALLOC_PRESENT) {
+      // Table
+      // Manually craft the actual response which has an unknown ordinal
+      auto real_response =
+          reinterpret_cast<fidl_table_t*>(&real_msg_bytes[sizeof(fidl_message_header_t)]);
+      real_response->envelopes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+
+      if (maybe_vector->count == 1) {
+        // The |want_more_than_30_bytes_at_ordinal_3| field was set.
         // Create a message with more bytes than expected
         constexpr uint32_t kUnknownBytes = 5000;
         constexpr uint32_t kUnknownHandles = 0;
-        real_response->envelope = fidl_envelope_t{
-          .num_bytes = kUnknownBytes,
-          .num_handles = kUnknownHandles,
-          .presence = FIDL_ALLOC_PRESENT,
+        real_response->envelopes.count = 3;
+        const auto envelope_header_offset =
+            sizeof(fidl_message_header_t) + sizeof(fidl_table_t) + sizeof(fidl_envelope_t) * 2;
+        const auto envelope_payload_offset = envelope_header_offset + sizeof(fidl_envelope_t);
+        auto envelope = reinterpret_cast<fidl_envelope_t*>(&real_msg_bytes[envelope_header_offset]);
+        *envelope = fidl_envelope_t{
+            .num_bytes = kUnknownBytes,
+            .num_handles = kUnknownHandles,
+            .presence = FIDL_ALLOC_PRESENT,
         };
-        real_msg.num_bytes = sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + kUnknownBytes;
+        real_msg.num_bytes = envelope_payload_offset + kUnknownBytes;
         real_msg.num_handles = kUnknownHandles;
-        memset(&real_msg_bytes[sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t)], 0xAA,
-               kUnknownBytes);
-        break;
-      }
-      case test::FlexibleXUnion::Tag::kWantMoreThan4Handles: {
+        memset(&real_msg_bytes[envelope_payload_offset], 0xAA, kUnknownBytes);
+      } else {
+        // The |want_more_than_4_handles_at_ordinal_4| field was set.
         // Create a message with more handles than expected
         constexpr uint32_t kUnknownBytes = 16;
         constexpr uint32_t kUnknownHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
         for (uint32_t i = 0; i < kUnknownHandles; i++) {
           ZX_ASSERT(zx_event_create(0, &real_msg_handles[i]) == ZX_OK);
         }
-        real_response->envelope = fidl_envelope_t{
-          .num_bytes = kUnknownBytes,
-          .num_handles = kUnknownHandles,
-          .presence = FIDL_ALLOC_PRESENT,
+        real_response->envelopes.count = 4;
+        const auto envelope_header_offset =
+            sizeof(fidl_message_header_t) + sizeof(fidl_table_t) + sizeof(fidl_envelope_t) * 3;
+        const auto envelope_payload_offset = envelope_header_offset + sizeof(fidl_envelope_t);
+        auto envelope = reinterpret_cast<fidl_envelope_t*>(&real_msg_bytes[envelope_header_offset]);
+        *envelope = fidl_envelope_t{
+            .num_bytes = kUnknownBytes,
+            .num_handles = kUnknownHandles,
+            .presence = FIDL_ALLOC_PRESENT,
         };
-        real_msg.num_bytes = sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + kUnknownBytes;
+        real_msg.num_bytes = envelope_payload_offset + kUnknownBytes;
         real_msg.num_handles = kUnknownHandles;
-        memset(&real_msg_bytes[sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t)], 0xBB,
-               kUnknownBytes);
-        break;
+        memset(&real_msg_bytes[envelope_payload_offset], 0xBB, kUnknownBytes);
       }
-      case test::FlexibleXUnion::Tag::kUnknown:
-        ZX_ASSERT_MSG(false, "Cannot reach here");
+    } else {
+      // XUnion
+      auto indicator_xunion = reinterpret_cast<fidl_xunion_t*>(indicator_msg.bytes().data() +
+                                                               sizeof(fidl_message_header_t));
+      ZX_ASSERT(indicator_xunion->padding == 0);
+      // Manually craft the actual response which has an unknown ordinal
+      constexpr uint32_t kBadOrdinal = 0x8badf00d;
+      static_assert(kBadOrdinal !=
+                    static_cast<uint32_t>(test::FlexibleXUnion::Tag::kWantMoreThan30Bytes));
+      static_assert(kBadOrdinal !=
+                    static_cast<uint32_t>(test::FlexibleXUnion::Tag::kWantMoreThan4Handles));
+      auto real_response =
+          reinterpret_cast<fidl_xunion_t*>(&real_msg_bytes[sizeof(fidl_message_header_t)]);
+      real_response->tag = kBadOrdinal;
+      real_response->padding = 0;
+
+      auto indicator_response =
+          reinterpret_cast<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse*>(
+              indicator_msg.bytes().data());
+      switch (indicator_response->xu.which()) {
+        case test::FlexibleXUnion::Tag::kWantMoreThan30Bytes: {
+          // Create a message with more bytes than expected
+          constexpr uint32_t kUnknownBytes = 5000;
+          constexpr uint32_t kUnknownHandles = 0;
+          real_response->envelope = fidl_envelope_t{
+            .num_bytes = kUnknownBytes,
+            .num_handles = kUnknownHandles,
+            .presence = FIDL_ALLOC_PRESENT,
+          };
+          real_msg.num_bytes =
+              sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + kUnknownBytes;
+          real_msg.num_handles = kUnknownHandles;
+          memset(&real_msg_bytes[sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t)], 0xAA,
+                 kUnknownBytes);
+          break;
+        }
+        case test::FlexibleXUnion::Tag::kWantMoreThan4Handles: {
+          // Create a message with more handles than expected
+          constexpr uint32_t kUnknownBytes = 16;
+          constexpr uint32_t kUnknownHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
+          for (uint32_t i = 0; i < kUnknownHandles; i++) {
+            ZX_ASSERT(zx_event_create(0, &real_msg_handles[i]) == ZX_OK);
+          }
+          real_response->envelope = fidl_envelope_t{
+            .num_bytes = kUnknownBytes,
+            .num_handles = kUnknownHandles,
+            .presence = FIDL_ALLOC_PRESENT,
+          };
+          real_msg.num_bytes =
+              sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + kUnknownBytes;
+          real_msg.num_handles = kUnknownHandles;
+          memset(&real_msg_bytes[sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t)], 0xBB,
+                 kUnknownBytes);
+          break;
+        }
+        case test::FlexibleXUnion::Tag::kUnknown:
+          ZX_ASSERT_MSG(false, "Cannot reach here");
+      }
     }
     zx_status_t status = channel_->write(0, real_msg.bytes, real_msg.num_bytes,
                                          real_msg.handles, real_msg.num_handles);
@@ -136,6 +197,20 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
     fidl::Array<zx::handle, 4> array = {};
     xunion.set_want_more_than_4_handles(&array);
     completer.Reply(xunion);
+  }
+
+  void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesCompleter::Sync completer) override {
+    fidl::Array<uint8_t, 30> array = {};
+    auto table_builder = test::FlexibleTable::Build()
+        .set_want_more_than_30_bytes_at_ordinal_3(&array);
+    completer.Reply(table_builder.view());
+  }
+
+  void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesCompleter::Sync completer) override {
+    fidl::Array<zx::handle, 4> array = {};
+    auto table_builder = test::FlexibleTable::Build()
+        .set_want_more_than_4_handles_at_ordinal_4(&array);
+    completer.Reply(table_builder.view());
   }
 
   Server(async_dispatcher_t* dispatcher, zx::channel channel)
@@ -253,4 +328,34 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreHandles) {
   EXPECT_EQ(result.error(), nullptr) << result.error();
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
   ASSERT_EQ(result.value().xu.which(), test::FlexibleXUnion::Tag::kUnknown);
+}
+
+static_assert(fidl::internal::ClampedMessageSize<
+                  test::ReceiveFlexibleEnvelope::GetUnknownTableMoreBytesResponse,
+                  fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_BYTES,
+              "Cannot assume any limit on byte size apart from the channel limit");
+
+TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreBytes) {
+  auto client = TakeClient();
+  auto result = client.GetUnknownTableMoreBytes();
+  EXPECT_TRUE(result.ok());
+  EXPECT_EQ(result.error(), nullptr) << result.error();
+  ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
+  EXPECT_FALSE(result.value().t.has_want_more_than_30_bytes_at_ordinal_3());
+  EXPECT_FALSE(result.value().t.has_want_more_than_4_handles_at_ordinal_4());
+}
+
+static_assert(fidl::internal::ClampedHandleCount<
+                  test::ReceiveFlexibleEnvelope::GetUnknownTableMoreHandlesResponse,
+                  fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_HANDLES,
+              "Cannot assume any limit on handle count apart from the channel limit");
+
+TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreHandles) {
+  auto client = TakeClient();
+  auto result = client.GetUnknownTableMoreHandles();
+  EXPECT_TRUE(result.ok());
+  EXPECT_EQ(result.error(), nullptr) << result.error();
+  ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
+  EXPECT_FALSE(result.value().t.has_want_more_than_30_bytes_at_ordinal_3());
+  EXPECT_FALSE(result.value().t.has_want_more_than_4_handles_at_ordinal_4());
 }

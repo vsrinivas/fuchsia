@@ -18,15 +18,279 @@ namespace llcpp {
 namespace test {
 namespace name {
 
-using SimpleTable = ::fidl::VectorView<fidl_envelope_t>;
-using OlderSimpleTable = ::fidl::VectorView<fidl_envelope_t>;
-using NewerSimpleTable = ::fidl::VectorView<fidl_envelope_t>;
-using EmptyTable = ::fidl::VectorView<fidl_envelope_t>;
+struct SimpleTable;
+struct OlderSimpleTable;
+struct NewerSimpleTable;
+struct EmptyTable;
+
+extern "C" const fidl_type_t test_name_SimpleTableTable;
+
+struct SimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns if any table field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_x() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(5 - 1).data);
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(5 - 1).data);
+  }
+  bool has_y() const {
+    return EnvelopesView::count() >= 5 && EnvelopesView::at(5 - 1).data != nullptr;
+  }
+
+  SimpleTable() = default;
+  ~SimpleTable() = default;
+  SimpleTable(SimpleTable&& other) noexcept = default;
+  SimpleTable& operator=(SimpleTable&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &test_name_SimpleTableTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 48;
+
+ private:
+  SimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+};
+
+class SimpleTable::Builder {
+ public:
+  SimpleTable view() { return SimpleTable(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_x(int64_t* elem);
+
+  Builder&& set_y(int64_t* elem);
+
+ private:
+  Builder() = default;
+  friend Builder SimpleTable::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 5> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t test_name_OlderSimpleTableTable;
+
+struct OlderSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns if any table field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_x() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  OlderSimpleTable() = default;
+  ~OlderSimpleTable() = default;
+  OlderSimpleTable(OlderSimpleTable&& other) noexcept = default;
+  OlderSimpleTable& operator=(OlderSimpleTable&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &test_name_OlderSimpleTableTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 24;
+
+ private:
+  OlderSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+};
+
+class OlderSimpleTable::Builder {
+ public:
+  OlderSimpleTable view() { return OlderSimpleTable(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_x(int64_t* elem);
+
+ private:
+  Builder() = default;
+  friend Builder OlderSimpleTable::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t test_name_NewerSimpleTableTable;
+
+struct NewerSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns if any table field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_x() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(5 - 1).data);
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(5 - 1).data);
+  }
+  bool has_y() const {
+    return EnvelopesView::count() >= 5 && EnvelopesView::at(5 - 1).data != nullptr;
+  }
+
+  const int64_t& z() const {
+    ZX_ASSERT(has_z());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(6 - 1).data);
+  }
+  int64_t& z() {
+    ZX_ASSERT(has_z());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(6 - 1).data);
+  }
+  bool has_z() const {
+    return EnvelopesView::count() >= 6 && EnvelopesView::at(6 - 1).data != nullptr;
+  }
+
+  NewerSimpleTable() = default;
+  ~NewerSimpleTable() = default;
+  NewerSimpleTable(NewerSimpleTable&& other) noexcept = default;
+  NewerSimpleTable& operator=(NewerSimpleTable&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &test_name_NewerSimpleTableTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 72;
+
+ private:
+  NewerSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+};
+
+class NewerSimpleTable::Builder {
+ public:
+  NewerSimpleTable view() { return NewerSimpleTable(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_x(int64_t* elem);
+
+  Builder&& set_y(int64_t* elem);
+
+  Builder&& set_z(int64_t* elem);
+
+ private:
+  Builder() = default;
+  friend Builder NewerSimpleTable::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 6> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t test_name_EmptyTableTable;
+
+struct EmptyTable final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns if any table field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  EmptyTable() = default;
+  ~EmptyTable() = default;
+  EmptyTable(EmptyTable&& other) noexcept = default;
+  EmptyTable& operator=(EmptyTable&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &test_name_EmptyTableTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  EmptyTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+};
+
+class EmptyTable::Builder {
+ public:
+  EmptyTable view() { return EmptyTable(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+ private:
+  Builder() = default;
+  friend Builder EmptyTable::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 0> envelopes_ = {};
+};
 
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::test::name::SimpleTable> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::SimpleTable>);
+
+template <>
+struct IsFidlType<::llcpp::test::name::OlderSimpleTable> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::OlderSimpleTable>);
+
+template <>
+struct IsFidlType<::llcpp::test::name::NewerSimpleTable> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::NewerSimpleTable>);
+
+template <>
+struct IsFidlType<::llcpp::test::name::EmptyTable> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::EmptyTable>);
 
 }  // namespace fidl

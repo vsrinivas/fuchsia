@@ -9,6 +9,13 @@ xunion FlexibleXUnion {
     array<handle?>:4 want_more_than_4_handles;
 };
 
+/// Only one of the fields will be set by the server. This allows
+/// the transaction to infer which field is present. See flexible_test.cc.
+table FlexibleTable {
+    1: array<uint8>:30 want_more_than_30_bytes_at_ordinal_3;
+    2: array<handle?>:4 want_more_than_4_handles_at_ordinal_4;
+};
+
 /// The server will be implemented manually to purposefully return xunion/tables
 /// with an unknown ordinal.
 protocol ReceiveFlexibleEnvelope {
@@ -21,8 +28,14 @@ protocol ReceiveFlexibleEnvelope {
     /// count.
     GetUnknownXUnionMoreHandles() -> (FlexibleXUnion xu);
 
-    // TODO(yifeit): Test tables with unknown ordinals, once LLCPP supports
-    // tables.
+    /// Receive a table with an unknown ordinal (suppose coming from a newer
+    /// server) which contains more bytes than the current max message size.
+    GetUnknownTableMoreBytes() -> (FlexibleTable t);
+
+    /// Receive a table with an unknown ordinal (suppose coming from a newer
+    /// server) which contains more handles than the current max message handle
+    /// count.
+    GetUnknownTableMoreHandles() -> (FlexibleTable t);
 };
 
 strict xunion StrictBoundedXUnion {
@@ -32,6 +45,8 @@ strict xunion StrictBoundedXUnion {
 strict xunion StrictUnboundedXUnion {
     vector<uint8> v;
 };
+
+// TODO(yifeit): Test strict tables once they are supported in fidlc.
 
 /// Test that the response to GetBoundedXUnion could be allocated on the stack,
 /// while that to GetUnboundedXUnion is allocated on the heap, through

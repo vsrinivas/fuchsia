@@ -51,6 +51,19 @@ int32_t& ::llcpp::test::name::Union::mutable_Field() {
 }
 
 
+::llcpp::test::name::Table::Builder Table::Build() {
+  return Table::Builder();
+}
+
+auto ::llcpp::test::name::Table::Builder::set_Field(int32_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
 namespace {
 
 [[maybe_unused]]

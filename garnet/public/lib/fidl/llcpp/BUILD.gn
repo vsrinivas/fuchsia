@@ -57,6 +57,7 @@ executable("fidl_llcpp_types_test_bin") {
   sources = [
     "bits_test.cc",
     "flexible_test.cc",
+    "table_test.cc",
     "union_test.cc",
   ]
 
