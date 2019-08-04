@@ -45,12 +45,7 @@ class variant(
         return assume
 
     def soname_target(self, soname):
-        excluded = [self.runtime] + ([] if self.has_libcxx else LIBCXX_SONAMES)
-        target = 'lib/'
-        if soname not in excluded:
-            target += self.libprefix
-        target += soname
-        return target
+        return 'lib/' + self.libprefix + soname
 
 
 def make_variant(name, info):
