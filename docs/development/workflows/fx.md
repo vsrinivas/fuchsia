@@ -123,7 +123,7 @@ for example include some optional but common peripheral drivers in the
 cache set. The board configuration may also include some board-specific
 development tools (more commonly host tools, rather than target packages) for
 interacting with the board in "universe". The product configurations make
-choices to add more or less software to the base, cace or universe
+choices to add more or less software to the base, cache or universe
 package sets based on the definition and feature set of the product they
 represent. A speaker product, for example, adds many audio-media-related
 packages to the base. A workstation product adds a wide range of GUI,
@@ -367,7 +367,7 @@ $ fx -i run-test rolldice-tests
 
 The above command will execute the rolldice tests every time a change is made
 to the source code in the tree. The `-i` flag to `fx` causes `fx` to repeat
-the rest of it's command every time the source code in the tree is changed.
+the rest of its command every time the source code in the tree is changed.
 As the `fx run-test` command first performs a build, then executes a test on
 a target, this combination provides a convenient auto-test loop, great for
 high focus workflows like test driven development.
