@@ -13,4 +13,4 @@ int getentropy(void* buffer, size_t length) __attribute__((__warn_unused_result_
 }
 #endif
 
-#endif // SYSROOT_SYS_RANDOM_H_
+#endif  // SYSROOT_SYS_RANDOM_H_

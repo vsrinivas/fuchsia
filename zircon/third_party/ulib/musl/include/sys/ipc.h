@@ -41,4 +41,4 @@ key_t ftok(const char*, int);
 }
 #endif
 
-#endif // SYSROOT_SYS_IPC_H_
+#endif  // SYSROOT_SYS_IPC_H_

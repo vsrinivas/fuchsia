@@ -57,4 +57,4 @@ wctype_t wctype(const char*);
 }
 #endif
 
-#endif // SYSROOT_WCTYPE_H_
+#endif  // SYSROOT_WCTYPE_H_

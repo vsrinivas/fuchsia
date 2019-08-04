@@ -11,7 +11,7 @@ extern "C" {
 #include <bits/alltypes.h>
 
 typedef struct {
-    intmax_t quot, rem;
+  intmax_t quot, rem;
 } imaxdiv_t;
 
 intmax_t imaxabs(intmax_t);
@@ -353,4 +353,4 @@ uintmax_t wcstoumax(const wchar_t* __restrict, wchar_t** __restrict, int);
 }
 #endif
 
-#endif // SYSROOT_INTTYPES_H_
+#endif  // SYSROOT_INTTYPES_H_

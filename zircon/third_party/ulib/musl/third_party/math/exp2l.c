@@ -28,9 +28,7 @@
 #include "libm.h"
 
 #if LDBL_MANT_DIG == 53 && LDBL_MAX_EXP == 1024
-long double exp2l(long double x) {
-    return exp2(x);
-}
+long double exp2l(long double x) { return exp2(x); }
 #elif LDBL_MANT_DIG == 64 && LDBL_MAX_EXP == 16384
 #define TBLBITS 7
 #define TBLSIZE (1 << TBLBITS)
@@ -320,57 +318,57 @@ static const double tbl[TBLSIZE * 2] = {
  *   a pair of double precision values.
  */
 long double exp2l(long double x) {
-    union ldshape u = {x};
-    int e = u.i.se & 0x7fff;
-    long double r, z;
-    uint32_t i0;
-    union {
-        uint32_t u;
-        int32_t i;
-    } k;
+  union ldshape u = {x};
+  int e = u.i.se & 0x7fff;
+  long double r, z;
+  uint32_t i0;
+  union {
+    uint32_t u;
+    int32_t i;
+  } k;
 
-    /* Filter out exceptional cases. */
-    if (e >= 0x3fff + 13) {                             /* |x| >= 8192 or x is NaN */
-        if (u.i.se >= 0x3fff + 14 && u.i.se >> 15 == 0) /* overflow */
-            return x * 0x1p16383L;
-        if (e == 0x7fff) /* -inf or -nan */
-            return -1 / x;
-        if (x < -16382) {
-            if (x <= -16446 || x - 0x1p63 + 0x1p63 != x) /* underflow */
-                FORCE_EVAL((float)(-0x1p-149 / x));
-            if (x <= -16446)
-                return 0;
-        }
-    } else if (e < 0x3fff - 64) {
-        return 1 + x;
+  /* Filter out exceptional cases. */
+  if (e >= 0x3fff + 13) {                           /* |x| >= 8192 or x is NaN */
+    if (u.i.se >= 0x3fff + 14 && u.i.se >> 15 == 0) /* overflow */
+      return x * 0x1p16383L;
+    if (e == 0x7fff) /* -inf or -nan */
+      return -1 / x;
+    if (x < -16382) {
+      if (x <= -16446 || x - 0x1p63 + 0x1p63 != x) /* underflow */
+        FORCE_EVAL((float)(-0x1p-149 / x));
+      if (x <= -16446)
+        return 0;
     }
+  } else if (e < 0x3fff - 64) {
+    return 1 + x;
+  }
 
-    /*
-     * Reduce x, computing z, i0, and k. The low bits of x + redux
-     * contain the 16-bit integer part of the exponent (k) followed by
-     * TBLBITS fractional bits (i0). We use bit tricks to extract these
-     * as integers, then set z to the remainder.
-     *
-     * Example: Suppose x is 0xabc.123456p0 and TBLBITS is 8.
-     * Then the low-order word of x + redux is 0x000abc12,
-     * We split this into k = 0xabc and i0 = 0x12 (adjusted to
-     * index into the table), then we compute z = 0x0.003456p0.
-     */
-    u.f = x + redux;
-    i0 = u.i.m + TBLSIZE / 2;
-    k.u = i0 / TBLSIZE * TBLSIZE;
-    k.i /= TBLSIZE;
-    i0 %= TBLSIZE;
-    u.f -= redux;
-    z = x - u.f;
+  /*
+   * Reduce x, computing z, i0, and k. The low bits of x + redux
+   * contain the 16-bit integer part of the exponent (k) followed by
+   * TBLBITS fractional bits (i0). We use bit tricks to extract these
+   * as integers, then set z to the remainder.
+   *
+   * Example: Suppose x is 0xabc.123456p0 and TBLBITS is 8.
+   * Then the low-order word of x + redux is 0x000abc12,
+   * We split this into k = 0xabc and i0 = 0x12 (adjusted to
+   * index into the table), then we compute z = 0x0.003456p0.
+   */
+  u.f = x + redux;
+  i0 = u.i.m + TBLSIZE / 2;
+  k.u = i0 / TBLSIZE * TBLSIZE;
+  k.i /= TBLSIZE;
+  i0 %= TBLSIZE;
+  u.f -= redux;
+  z = x - u.f;
 
-    /* Compute r = exp2l(y) = exp2lt[i0] * p(z). */
-    long double t_hi = tbl[2 * i0];
-    long double t_lo = tbl[2 * i0 + 1];
-    /* XXX This gives > 1 ulp errors outside of FE_TONEAREST mode */
-    r = t_lo + (t_hi + t_lo) * z * (P1 + z * (P2 + z * (P3 + z * (P4 + z * (P5 + z * P6))))) + t_hi;
+  /* Compute r = exp2l(y) = exp2lt[i0] * p(z). */
+  long double t_hi = tbl[2 * i0];
+  long double t_lo = tbl[2 * i0 + 1];
+  /* XXX This gives > 1 ulp errors outside of FE_TONEAREST mode */
+  r = t_lo + (t_hi + t_lo) * z * (P1 + z * (P2 + z * (P3 + z * (P4 + z * (P5 + z * P6))))) + t_hi;
 
-    return scalbnl(r, k.i);
+  return scalbnl(r, k.i);
 }
 #elif LDBL_MANT_DIG == 113 && LDBL_MAX_EXP == 16384
 #define TBLBITS 7
@@ -455,28 +453,28 @@ static const long double tbl[TBLSIZE] = {
 };
 
 static const float eps[TBLSIZE] = {
-    -0x1.5c50p-101, -0x1.5d00p-106, 0x1.8e90p-102, -0x1.5340p-103, 0x1.1bd0p-102, -0x1.4600p-105,
-    -0x1.7a40p-104, 0x1.d590p-102, -0x1.d590p-101, 0x1.b100p-103, -0x1.0d80p-105, 0x1.6b00p-103,
-    -0x1.9f00p-105, 0x1.c400p-103, 0x1.e120p-103, -0x1.c100p-104, -0x1.9d20p-103, 0x1.a800p-108,
-    0x1.4c00p-106, -0x1.9500p-106, 0x1.6900p-105, -0x1.29d0p-100, 0x1.4c60p-103, 0x1.13a0p-102,
-    -0x1.5b60p-103, -0x1.1c40p-103, 0x1.db80p-102, 0x1.91a0p-102, 0x1.dc00p-105, 0x1.44c0p-104,
-    0x1.9710p-102, 0x1.8760p-103, -0x1.a720p-103, 0x1.ed20p-103, -0x1.49c0p-102, -0x1.e000p-111,
-    0x1.86a0p-103, 0x1.2b40p-103, -0x1.b400p-108, 0x1.1280p-99, -0x1.02d8p-102, -0x1.e3d0p-103,
+    -0x1.5c50p-101, -0x1.5d00p-106, 0x1.8e90p-102,  -0x1.5340p-103, 0x1.1bd0p-102,  -0x1.4600p-105,
+    -0x1.7a40p-104, 0x1.d590p-102,  -0x1.d590p-101, 0x1.b100p-103,  -0x1.0d80p-105, 0x1.6b00p-103,
+    -0x1.9f00p-105, 0x1.c400p-103,  0x1.e120p-103,  -0x1.c100p-104, -0x1.9d20p-103, 0x1.a800p-108,
+    0x1.4c00p-106,  -0x1.9500p-106, 0x1.6900p-105,  -0x1.29d0p-100, 0x1.4c60p-103,  0x1.13a0p-102,
+    -0x1.5b60p-103, -0x1.1c40p-103, 0x1.db80p-102,  0x1.91a0p-102,  0x1.dc00p-105,  0x1.44c0p-104,
+    0x1.9710p-102,  0x1.8760p-103,  -0x1.a720p-103, 0x1.ed20p-103,  -0x1.49c0p-102, -0x1.e000p-111,
+    0x1.86a0p-103,  0x1.2b40p-103,  -0x1.b400p-108, 0x1.1280p-99,   -0x1.02d8p-102, -0x1.e3d0p-103,
     -0x1.b080p-105, -0x1.f100p-107, -0x1.16c0p-105, -0x1.1190p-103, -0x1.a7d2p-100, 0x1.3450p-103,
-    -0x1.67c0p-105, 0x1.4b80p-104, -0x1.c4e0p-103, 0x1.6000p-108, -0x1.3f60p-105, 0x1.93f0p-104,
-    0x1.5fe0p-105, 0x1.6f80p-107, -0x1.7600p-106, 0x1.21e0p-106, -0x1.3a40p-106, -0x1.40c0p-104,
-    -0x1.9860p-105, -0x1.5d40p-108, -0x1.1d70p-106, 0x1.2760p-105, 0x0.0000p+0, 0x1.21e2p-104,
-    -0x1.9520p-108, -0x1.5720p-106, -0x1.4810p-106, -0x1.be00p-109, 0x1.0080p-105, -0x1.5780p-108,
-    -0x1.d460p-105, -0x1.6140p-105, 0x1.4630p-104, 0x1.ad50p-103, 0x1.82e0p-105, 0x1.1d3cp-101,
-    0x1.6100p-107, 0x1.ec30p-104, 0x1.f200p-108, 0x1.0b40p-103, 0x1.3660p-102, 0x1.d9d0p-103,
-    -0x1.02d0p-102, 0x1.b070p-103, 0x1.b9c0p-104, -0x1.01c0p-103, -0x1.dfe0p-103, 0x1.1b60p-104,
-    -0x1.ae94p-101, -0x1.3340p-104, 0x1.b3d8p-102, -0x1.6e40p-105, -0x1.3670p-103, 0x1.c140p-104,
-    0x1.1840p-101, 0x1.1ab0p-102, -0x1.a400p-104, 0x1.1f00p-104, -0x1.7180p-103, 0x1.4ce0p-102,
-    0x1.9200p-107, -0x1.54c0p-103, 0x1.1b80p-105, -0x1.1828p-101, 0x1.5720p-102, -0x1.a060p-100,
-    0x1.9160p-102, 0x1.a280p-104, 0x1.3400p-107, 0x1.2b20p-102, 0x1.7800p-108, 0x1.cfd0p-101,
-    0x1.2ef0p-102, -0x1.2760p-99, 0x1.b380p-104, 0x1.0048p-101, -0x1.60b0p-102, 0x1.a1ccp-100,
-    -0x1.a640p-104, -0x1.08a0p-101, 0x1.7e60p-102, 0x1.22c0p-103, -0x1.7200p-106, 0x1.f0f0p-102,
-    0x1.eb4ep-99, 0x1.c6e0p-103,
+    -0x1.67c0p-105, 0x1.4b80p-104,  -0x1.c4e0p-103, 0x1.6000p-108,  -0x1.3f60p-105, 0x1.93f0p-104,
+    0x1.5fe0p-105,  0x1.6f80p-107,  -0x1.7600p-106, 0x1.21e0p-106,  -0x1.3a40p-106, -0x1.40c0p-104,
+    -0x1.9860p-105, -0x1.5d40p-108, -0x1.1d70p-106, 0x1.2760p-105,  0x0.0000p+0,    0x1.21e2p-104,
+    -0x1.9520p-108, -0x1.5720p-106, -0x1.4810p-106, -0x1.be00p-109, 0x1.0080p-105,  -0x1.5780p-108,
+    -0x1.d460p-105, -0x1.6140p-105, 0x1.4630p-104,  0x1.ad50p-103,  0x1.82e0p-105,  0x1.1d3cp-101,
+    0x1.6100p-107,  0x1.ec30p-104,  0x1.f200p-108,  0x1.0b40p-103,  0x1.3660p-102,  0x1.d9d0p-103,
+    -0x1.02d0p-102, 0x1.b070p-103,  0x1.b9c0p-104,  -0x1.01c0p-103, -0x1.dfe0p-103, 0x1.1b60p-104,
+    -0x1.ae94p-101, -0x1.3340p-104, 0x1.b3d8p-102,  -0x1.6e40p-105, -0x1.3670p-103, 0x1.c140p-104,
+    0x1.1840p-101,  0x1.1ab0p-102,  -0x1.a400p-104, 0x1.1f00p-104,  -0x1.7180p-103, 0x1.4ce0p-102,
+    0x1.9200p-107,  -0x1.54c0p-103, 0x1.1b80p-105,  -0x1.1828p-101, 0x1.5720p-102,  -0x1.a060p-100,
+    0x1.9160p-102,  0x1.a280p-104,  0x1.3400p-107,  0x1.2b20p-102,  0x1.7800p-108,  0x1.cfd0p-101,
+    0x1.2ef0p-102,  -0x1.2760p-99,  0x1.b380p-104,  0x1.0048p-101,  -0x1.60b0p-102, 0x1.a1ccp-100,
+    -0x1.a640p-104, -0x1.08a0p-101, 0x1.7e60p-102,  0x1.22c0p-103,  -0x1.7200p-106, 0x1.f0f0p-102,
+    0x1.eb4ep-99,   0x1.c6e0p-103,
 };
 
 /*
@@ -510,60 +508,60 @@ static const float eps[TBLSIZE] = {
  *	for the IEEE Floating Point Standard.  TOMS 17(1), 26-46 (1991).
  */
 long double exp2l(long double x) {
-    union ldshape u = {x};
-    int e = u.i.se & 0x7fff;
-    long double r, z, t;
-    uint32_t i0;
-    union {
-        uint32_t u;
-        int32_t i;
-    } k;
+  union ldshape u = {x};
+  int e = u.i.se & 0x7fff;
+  long double r, z, t;
+  uint32_t i0;
+  union {
+    uint32_t u;
+    int32_t i;
+  } k;
 
-    /* Filter out exceptional cases. */
-    if (e >= 0x3fff + 14) {                             /* |x| >= 16384 or x is NaN */
-        if (u.i.se >= 0x3fff + 15 && u.i.se >> 15 == 0) /* overflow */
-            return x * 0x1p16383L;
-        if (e == 0x7fff) /* -inf or -nan */
-            return -1 / x;
-        if (x < -16382) {
-            if (x <= -16495 || x - 0x1p112 + 0x1p112 != x) /* underflow */
-                FORCE_EVAL((float)(-0x1p-149 / x));
-            if (x <= -16446)
-                return 0;
-        }
-    } else if (e < 0x3fff - 114) {
-        return 1 + x;
+  /* Filter out exceptional cases. */
+  if (e >= 0x3fff + 14) {                           /* |x| >= 16384 or x is NaN */
+    if (u.i.se >= 0x3fff + 15 && u.i.se >> 15 == 0) /* overflow */
+      return x * 0x1p16383L;
+    if (e == 0x7fff) /* -inf or -nan */
+      return -1 / x;
+    if (x < -16382) {
+      if (x <= -16495 || x - 0x1p112 + 0x1p112 != x) /* underflow */
+        FORCE_EVAL((float)(-0x1p-149 / x));
+      if (x <= -16446)
+        return 0;
     }
+  } else if (e < 0x3fff - 114) {
+    return 1 + x;
+  }
 
-    /*
-     * Reduce x, computing z, i0, and k. The low bits of x + redux
-     * contain the 16-bit integer part of the exponent (k) followed by
-     * TBLBITS fractional bits (i0). We use bit tricks to extract these
-     * as integers, then set z to the remainder.
-     *
-     * Example: Suppose x is 0xabc.123456p0 and TBLBITS is 8.
-     * Then the low-order word of x + redux is 0x000abc12,
-     * We split this into k = 0xabc and i0 = 0x12 (adjusted to
-     * index into the table), then we compute z = 0x0.003456p0.
-     */
-    u.f = x + redux;
-    i0 = u.i2.lo + TBLSIZE / 2;
-    k.u = i0 / TBLSIZE * TBLSIZE;
-    k.i /= TBLSIZE;
-    i0 %= TBLSIZE;
-    u.f -= redux;
-    z = x - u.f;
+  /*
+   * Reduce x, computing z, i0, and k. The low bits of x + redux
+   * contain the 16-bit integer part of the exponent (k) followed by
+   * TBLBITS fractional bits (i0). We use bit tricks to extract these
+   * as integers, then set z to the remainder.
+   *
+   * Example: Suppose x is 0xabc.123456p0 and TBLBITS is 8.
+   * Then the low-order word of x + redux is 0x000abc12,
+   * We split this into k = 0xabc and i0 = 0x12 (adjusted to
+   * index into the table), then we compute z = 0x0.003456p0.
+   */
+  u.f = x + redux;
+  i0 = u.i2.lo + TBLSIZE / 2;
+  k.u = i0 / TBLSIZE * TBLSIZE;
+  k.i /= TBLSIZE;
+  i0 %= TBLSIZE;
+  u.f -= redux;
+  z = x - u.f;
 
-    /* Compute r = exp2(y) = exp2t[i0] * p(z - eps[i]). */
-    t = tbl[i0];
-    z -= eps[i0];
-    r = t +
-        t * z *
-            (P1 +
-             z * (P2 +
-                  z * (P3 +
-                       z * (P4 + z * (P5 + z * (P6 + z * (P7 + z * (P8 + z * (P9 + z * P10)))))))));
+  /* Compute r = exp2(y) = exp2t[i0] * p(z - eps[i]). */
+  t = tbl[i0];
+  z -= eps[i0];
+  r = t +
+      t * z *
+          (P1 +
+           z * (P2 +
+                z * (P3 +
+                     z * (P4 + z * (P5 + z * (P6 + z * (P7 + z * (P8 + z * (P9 + z * P10)))))))));
 
-    return scalbnl(r, k.i);
+  return scalbnl(r, k.i);
 }
 #endif

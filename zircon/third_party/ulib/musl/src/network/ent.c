@@ -2,9 +2,7 @@
 
 void sethostent(int x) {}
 
-void* gethostent(void) {
-    return 0;
-}
+void* gethostent(void) { return 0; }
 
 void endhostent(void) {}
 

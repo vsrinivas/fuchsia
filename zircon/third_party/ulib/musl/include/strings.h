@@ -35,4 +35,4 @@ int strncasecmp_l(const char*, const char*, size_t, locale_t);
 }
 #endif
 
-#endif // SYSROOT_STRINGS_H_
+#endif  // SYSROOT_STRINGS_H_

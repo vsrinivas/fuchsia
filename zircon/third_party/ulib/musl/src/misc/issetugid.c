@@ -1,5 +1,3 @@
 #include <unistd.h>
 
-int issetugid(void) {
-    return 0;
-}
+int issetugid(void) { return 0; }

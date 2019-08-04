@@ -15,53 +15,54 @@
 #define WCTYPE_XDIGIT 12
 
 int iswctype(wint_t wc, wctype_t type) {
-    switch (type) {
+  switch (type) {
     case WCTYPE_ALNUM:
-        return iswalnum(wc);
+      return iswalnum(wc);
     case WCTYPE_ALPHA:
-        return iswalpha(wc);
+      return iswalpha(wc);
     case WCTYPE_BLANK:
-        return iswblank(wc);
+      return iswblank(wc);
     case WCTYPE_CNTRL:
-        return iswcntrl(wc);
+      return iswcntrl(wc);
     case WCTYPE_DIGIT:
-        return iswdigit(wc);
+      return iswdigit(wc);
     case WCTYPE_GRAPH:
-        return iswgraph(wc);
+      return iswgraph(wc);
     case WCTYPE_LOWER:
-        return iswlower(wc);
+      return iswlower(wc);
     case WCTYPE_PRINT:
-        return iswprint(wc);
+      return iswprint(wc);
     case WCTYPE_PUNCT:
-        return iswpunct(wc);
+      return iswpunct(wc);
     case WCTYPE_SPACE:
-        return iswspace(wc);
+      return iswspace(wc);
     case WCTYPE_UPPER:
-        return iswupper(wc);
+      return iswupper(wc);
     case WCTYPE_XDIGIT:
-        return iswxdigit(wc);
-    }
-    return 0;
+      return iswxdigit(wc);
+  }
+  return 0;
 }
 
 wctype_t wctype(const char* s) {
-    int i;
-    const char* p;
-    /* order must match! */
-    static const char names[] = "alnum\0"
-                                "alpha\0"
-                                "blank\0"
-                                "cntrl\0"
-                                "digit\0"
-                                "graph\0"
-                                "lower\0"
-                                "print\0"
-                                "punct\0"
-                                "space\0"
-                                "upper\0"
-                                "xdigit";
-    for (i = 1, p = names; *p; i++, p += 6)
-        if (*s == *p && !strcmp(s, p))
-            return i;
-    return 0;
+  int i;
+  const char* p;
+  /* order must match! */
+  static const char names[] =
+      "alnum\0"
+      "alpha\0"
+      "blank\0"
+      "cntrl\0"
+      "digit\0"
+      "graph\0"
+      "lower\0"
+      "print\0"
+      "punct\0"
+      "space\0"
+      "upper\0"
+      "xdigit";
+  for (i = 1, p = names; *p; i++, p += 6)
+    if (*s == *p && !strcmp(s, p))
+      return i;
+  return 0;
 }

@@ -8,33 +8,33 @@
 char* __strchrnul(const char*, int);
 
 char* __shm_mapname(const char* name, char* buf) {
-    char* p;
-    while (*name == '/')
-        name++;
-    if (*(p = __strchrnul(name, '/')) || p == name ||
-        (p - name <= 2 && name[0] == '.' && p[-1] == '.')) {
-        errno = EINVAL;
-        return 0;
-    }
-    if (p - name > NAME_MAX) {
-        errno = ENAMETOOLONG;
-        return 0;
-    }
-    memcpy(buf, "/dev/shm/", 9);
-    memcpy(buf + 9, name, p - name + 1);
-    return buf;
+  char* p;
+  while (*name == '/')
+    name++;
+  if (*(p = __strchrnul(name, '/')) || p == name ||
+      (p - name <= 2 && name[0] == '.' && p[-1] == '.')) {
+    errno = EINVAL;
+    return 0;
+  }
+  if (p - name > NAME_MAX) {
+    errno = ENAMETOOLONG;
+    return 0;
+  }
+  memcpy(buf, "/dev/shm/", 9);
+  memcpy(buf + 9, name, p - name + 1);
+  return buf;
 }
 
 int shm_open(const char* name, int flag, mode_t mode) {
-    char buf[NAME_MAX + 10];
-    if (!(name = __shm_mapname(name, buf)))
-        return -1;
-    return open(name, flag | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK, mode);
+  char buf[NAME_MAX + 10];
+  if (!(name = __shm_mapname(name, buf)))
+    return -1;
+  return open(name, flag | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK, mode);
 }
 
 int shm_unlink(const char* name) {
-    char buf[NAME_MAX + 10];
-    if (!(name = __shm_mapname(name, buf)))
-        return -1;
-    return unlink(name);
+  char buf[NAME_MAX + 10];
+  if (!(name = __shm_mapname(name, buf)))
+    return -1;
+  return unlink(name);
 }

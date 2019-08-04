@@ -5,8 +5,9 @@
 extern "C" {
 #endif
 
-#include <bits/null.h>
 #include <features.h>
+
+#include <bits/null.h>
 
 #define __NEED_size_t
 #define __NEED_time_t
@@ -28,17 +29,17 @@ extern "C" {
 #endif
 
 struct tm {
-    int tm_sec;
-    int tm_min;
-    int tm_hour;
-    int tm_mday;
-    int tm_mon;
-    int tm_year;
-    int tm_wday;
-    int tm_yday;
-    int tm_isdst;
-    long __tm_gmtoff;
-    const char* __tm_zone;
+  int tm_sec;
+  int tm_min;
+  int tm_hour;
+  int tm_mday;
+  int tm_mon;
+  int tm_year;
+  int tm_wday;
+  int tm_yday;
+  int tm_isdst;
+  long __tm_gmtoff;
+  const char* __tm_zone;
 };
 
 clock_t clock(void);
@@ -67,8 +68,8 @@ char* ctime_r(const time_t*, char*);
 void tzset(void);
 
 struct itimerspec {
-    struct timespec it_interval;
-    struct timespec it_value;
+  struct timespec it_interval;
+  struct timespec it_value;
 };
 
 #define CLOCK_REALTIME 0
@@ -120,4 +121,4 @@ time_t timegm(struct tm*);
 }
 #endif
 
-#endif // SYSROOT_TIME_H_
+#endif  // SYSROOT_TIME_H_

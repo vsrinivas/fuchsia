@@ -10,16 +10,12 @@ extern "C" {
 #define __NEED_size_t
 #include <bits/alltypes.h>
 
-typedef enum { FIND,
-               ENTER } ACTION;
-typedef enum { preorder,
-               postorder,
-               endorder,
-               leaf } VISIT;
+typedef enum { FIND, ENTER } ACTION;
+typedef enum { preorder, postorder, endorder, leaf } VISIT;
 
 typedef struct entry {
-    char* key;
-    void* data;
+  char* key;
+  void* data;
 } ENTRY;
 
 int hcreate(size_t);
@@ -28,9 +24,9 @@ ENTRY* hsearch(ENTRY, ACTION);
 
 #ifdef _GNU_SOURCE
 struct hsearch_data {
-    struct __tab* __tab;
-    unsigned int __unused1;
-    unsigned int __unused2;
+  struct __tab* __tab;
+  unsigned int __unused1;
+  unsigned int __unused2;
 };
 
 int hcreate_r(size_t, struct hsearch_data*);
@@ -51,8 +47,8 @@ void twalk(const void*, void (*)(const void*, VISIT, int));
 
 #ifdef _GNU_SOURCE
 struct qelem {
-    struct qelem *q_forw, *q_back;
-    char q_data[1];
+  struct qelem *q_forw, *q_back;
+  char q_data[1];
 };
 
 void tdestroy(void*, void (*)(void*));
@@ -62,4 +58,4 @@ void tdestroy(void*, void (*)(void*));
 }
 #endif
 
-#endif // SYSROOT_SEARCH_H_
+#endif  // SYSROOT_SEARCH_H_

@@ -22,4 +22,4 @@ int eventfd_write(int, eventfd_t);
 }
 #endif
 
-#endif // SYSROOT_SYS_EVENTFD_H_
+#endif  // SYSROOT_SYS_EVENTFD_H_

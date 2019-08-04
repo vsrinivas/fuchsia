@@ -4,6 +4,6 @@
 #include "libc.h"
 
 int clearenv() {
-    __environ[0] = 0;
-    return 0;
+  __environ[0] = 0;
+  return 0;
 }

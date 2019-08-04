@@ -12,4 +12,4 @@
 #define __need_NULL
 #include <stddef.h>
 
-#endif // SYSROOT_BITS_NULL_H_
+#endif  // SYSROOT_BITS_NULL_H_

@@ -43,7 +43,7 @@ static const double T9 = 0.021869488536312216,          /*  0x1664f4882cc1c2.0p-
     T31 = -0.0000032609076735050182,                    /* -0x1b5abef3ba4b59.0p-71 */
     T33 = 0.0000023261313142559411;                     /*  0x13835436c0c87f.0p-71 */
 #define RPOLY(w) \
-    (T5 + w * (T9 + w * (T13 + w * (T17 + w * (T21 + w * (T25 + w * (T29 + w * T33)))))))
+  (T5 + w * (T9 + w * (T13 + w * (T17 + w * (T21 + w * (T25 + w * (T29 + w * T33)))))))
 #define VPOLY(w) (T7 + w * (T11 + w * (T15 + w * (T19 + w * (T23 + w * (T27 + w * T31))))))
 #elif LDBL_MANT_DIG == 113
 /*
@@ -84,73 +84,73 @@ static const double T39 = 0.000000028443389121318352, /*  0x1e8a7592977938.0p-78
     T51 = -0.0000000022006995706097711,               /* -0x12e763b8845268.0p-81 */
     T53 = 0.0000000015468200913196612,                /*  0x1a92fc98c29554.0p-82 */
     T55 = -0.00000000061311613386849674,              /* -0x151106cbc779a9.0p-83 */
-    T57 = 1.4912469681508012e-10; /*  0x147edbdba6f43a.0p-85 */
-#define RPOLY(w)                                             \
-    (T5 +                                                    \
-     w * (T9 +                                               \
-          w * (T13 +                                         \
-               w * (T17 +                                    \
-                    w * (T21 +                               \
-                         w * (T25 +                          \
-                              w * (T29 +                     \
-                                   w * (T33 +                \
-                                        w * (T37 +           \
-                                             w * (T41 +      \
-                                                  w * (T45 + \
-                                                       w * (T49 + w * (T53 + w * T57)))))))))))))
-#define VPOLY(w)                                   \
-    (T7 +                                          \
-     w * (T11 +                                    \
-          w * (T15 +                               \
-               w * (T19 +                          \
-                    w * (T23 +                     \
-                         w * (T27 +                \
-                              w * (T31 +           \
-                                   w * (T35 +      \
-                                        w * (T39 + \
-                                             w * (T43 + w * (T47 + w * (T51 + w * T55))))))))))))
+    T57 = 1.4912469681508012e-10;                     /*  0x147edbdba6f43a.0p-85 */
+#define RPOLY(w)                                           \
+  (T5 +                                                    \
+   w * (T9 +                                               \
+        w * (T13 +                                         \
+             w * (T17 +                                    \
+                  w * (T21 +                               \
+                       w * (T25 +                          \
+                            w * (T29 +                     \
+                                 w * (T33 +                \
+                                      w * (T37 +           \
+                                           w * (T41 +      \
+                                                w * (T45 + \
+                                                     w * (T49 + w * (T53 + w * T57)))))))))))))
+#define VPOLY(w)                                 \
+  (T7 +                                          \
+   w * (T11 +                                    \
+        w * (T15 +                               \
+             w * (T19 +                          \
+                  w * (T23 +                     \
+                       w * (T27 +                \
+                            w * (T31 +           \
+                                 w * (T35 +      \
+                                      w * (T39 + \
+                                           w * (T43 + w * (T47 + w * (T51 + w * T55))))))))))))
 #endif
 
 long double __tanl(long double x, long double y, int odd) {
-    long double z, r, v, w, s, a, t;
-    int big, sign;
+  long double z, r, v, w, s, a, t;
+  int big, sign;
 
-    big = fabsl(x) >= 0.67434;
-    if (big) {
-        sign = 0;
-        if (x < 0) {
-            sign = 1;
-            x = -x;
-            y = -y;
-        }
-        x = (pio4 - x) + (pio4lo - y);
-        y = 0.0;
+  big = fabsl(x) >= 0.67434;
+  if (big) {
+    sign = 0;
+    if (x < 0) {
+      sign = 1;
+      x = -x;
+      y = -y;
     }
-    z = x * x;
-    w = z * z;
-    r = RPOLY(w);
-    v = z * VPOLY(w);
-    s = z * x;
-    r = y + z * (s * (r + v) + y) + T3 * s;
-    w = x + r;
-    if (big) {
-        s = 1 - 2 * odd;
-        v = s - 2.0 * (x + (r - w * w / (w + s)));
-        return sign ? -v : v;
-    }
-    if (!odd)
-        return w;
-    /*
-     * if allow error up to 2 ulp, simply return
-     * -1.0 / (x+r) here
-     */
-    /* compute -1.0 / (x+r) accurately */
-    z = w;
-    z = z + 0x1p32 - 0x1p32;
-    v = r - (z - x);  /* z+v = r+x */
-    t = a = -1.0 / w; /* a = -1.0/w */
-    t = t + 0x1p32 - 0x1p32;
-    s = 1.0 + t * z;
-    return t + a * (s + t * v);
+    x = (pio4 - x) + (pio4lo - y);
+    y = 0.0;
+  }
+  z = x * x;
+  w = z * z;
+  r = RPOLY(w);
+  v = z * VPOLY(w);
+  s = z * x;
+  r = y + z * (s * (r + v) + y) + T3 * s;
+  w = x + r;
+  if (big) {
+    s = 1 - 2 * odd;
+    v = s - 2.0 * (x + (r - w * w / (w + s)));
+    return sign ? -v : v;
+  }
+  if (!odd)
+    return w;
+  /*
+   * if allow error up to 2 ulp, simply return
+   * -1.0 / (x+r) here
+   */
+  /* compute -1.0 / (x+r) accurately */
+  z = w;
+  z = z + 0x1p32 - 0x1p32;
+  v = r - (z - x);  /* z+v = r+x */
+  t = a = -1.0 / w; /* a = -1.0/w */
+  t = t + 0x1p32 - 0x1p32;
+  s = 1.0 + t * z;
+  return t + a * (s + t * v);
 }
 #endif

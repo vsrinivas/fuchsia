@@ -1,8 +1,7 @@
+#include <errno.h>
 #include <signal.h>
 
-#include <errno.h>
-
 int raise(int sig) {
-    errno = ENOSYS;
-    return -1;
+  errno = ENOSYS;
+  return -1;
 }

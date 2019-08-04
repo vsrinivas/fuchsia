@@ -25,4 +25,4 @@
 #define _PATH_VARRUN "/var/run/"
 #define _PATH_VARTMP "/var/tmp/"
 
-#endif // SYSROOT_PATHS_H_
+#endif  // SYSROOT_PATHS_H_

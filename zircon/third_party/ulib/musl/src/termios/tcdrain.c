@@ -1,9 +1,8 @@
+#include <errno.h>
 #include <termios.h>
 
-#include <errno.h>
-
 int tcdrain(int fd) {
-    // TODO(kulakowski) terminal handling.
-    errno = ENOSYS;
-    return -1;
+  // TODO(kulakowski) terminal handling.
+  errno = ENOSYS;
+  return -1;
 }

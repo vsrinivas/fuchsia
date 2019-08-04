@@ -23,16 +23,16 @@ struct sched_param;
 #define POSIX_SPAWN_SETSCHEDULER 32
 
 typedef struct {
-    int __flags;
-    pid_t __pgrp;
-    sigset_t __def, __mask;
-    int __prio, __pol, __pad[16];
+  int __flags;
+  pid_t __pgrp;
+  sigset_t __def, __mask;
+  int __prio, __pol, __pad[16];
 } posix_spawnattr_t;
 
 typedef struct {
-    int __pad0[2];
-    void* __actions;
-    int __pad[16];
+  int __pad0[2];
+  void* __actions;
+  int __pad[16];
 } posix_spawn_file_actions_t;
 
 int posix_spawn(pid_t* __restrict, const char* __restrict, const posix_spawn_file_actions_t*,
@@ -76,4 +76,4 @@ int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t*, int, int);
 }
 #endif
 
-#endif // SYSROOT_SPAWN_H_
+#endif  // SYSROOT_SPAWN_H_

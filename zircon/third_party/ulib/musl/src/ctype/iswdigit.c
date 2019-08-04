@@ -2,6 +2,4 @@
 
 #undef iswdigit
 
-int iswdigit(wint_t wc) {
-    return (unsigned)wc - '0' < 10;
-}
+int iswdigit(wint_t wc) { return (unsigned)wc - '0' < 10; }

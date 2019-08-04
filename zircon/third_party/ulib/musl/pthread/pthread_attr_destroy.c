@@ -1,5 +1,3 @@
 #include "threads_impl.h"
 
-int pthread_attr_destroy(pthread_attr_t* a) {
-    return 0;
-}
+int pthread_attr_destroy(pthread_attr_t* a) { return 0; }

@@ -1,4 +1,3 @@
-#include "libc.h"
 #include <errno.h>
 #include <grp.h>
 #include <limits.h>
@@ -6,6 +5,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "libc.h"
 
 int __getpwent_a(FILE* f, struct passwd* pw, char** line, size_t* size, struct passwd** res);
 int __getpw_a(const char* name, uid_t uid, struct passwd* pw, char** buf, size_t* size,

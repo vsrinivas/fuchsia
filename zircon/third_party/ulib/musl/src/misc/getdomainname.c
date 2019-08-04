@@ -5,12 +5,12 @@
 #include <unistd.h>
 
 int getdomainname(char* name, size_t len) {
-    struct utsname temp;
-    uname(&temp);
-    if (!len || strlen(temp.domainname) >= len) {
-        errno = EINVAL;
-        return -1;
-    }
-    strcpy(name, temp.domainname);
-    return 0;
+  struct utsname temp;
+  uname(&temp);
+  if (!len || strlen(temp.domainname) >= len) {
+    errno = EINVAL;
+    return -1;
+  }
+  strcpy(name, temp.domainname);
+  return 0;
 }

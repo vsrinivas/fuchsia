@@ -75,62 +75,61 @@ typedef uint32_t tcp_seq;
 struct tcphdr {
 #ifdef _GNU_SOURCE
 #ifdef __GNUC__
-    __extension__
+  __extension__
 #endif
-        union {
-        struct {
-
-            uint16_t source;
-            uint16_t dest;
-            uint32_t seq;
-            uint32_t ack_seq;
+      union {
+    struct {
+      uint16_t source;
+      uint16_t dest;
+      uint32_t seq;
+      uint32_t ack_seq;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-            uint16_t res1 : 4;
-            uint16_t doff : 4;
-            uint16_t fin : 1;
-            uint16_t syn : 1;
-            uint16_t rst : 1;
-            uint16_t psh : 1;
-            uint16_t ack : 1;
-            uint16_t urg : 1;
-            uint16_t res2 : 2;
+      uint16_t res1 : 4;
+      uint16_t doff : 4;
+      uint16_t fin : 1;
+      uint16_t syn : 1;
+      uint16_t rst : 1;
+      uint16_t psh : 1;
+      uint16_t ack : 1;
+      uint16_t urg : 1;
+      uint16_t res2 : 2;
 #else
-            uint16_t doff : 4;
-            uint16_t res1 : 4;
-            uint16_t res2 : 2;
-            uint16_t urg : 1;
-            uint16_t ack : 1;
-            uint16_t psh : 1;
-            uint16_t rst : 1;
-            uint16_t syn : 1;
-            uint16_t fin : 1;
+      uint16_t doff : 4;
+      uint16_t res1 : 4;
+      uint16_t res2 : 2;
+      uint16_t urg : 1;
+      uint16_t ack : 1;
+      uint16_t psh : 1;
+      uint16_t rst : 1;
+      uint16_t syn : 1;
+      uint16_t fin : 1;
 #endif
-            uint16_t window;
-            uint16_t check;
-            uint16_t urg_ptr;
-        };
-        struct {
+      uint16_t window;
+      uint16_t check;
+      uint16_t urg_ptr;
+    };
+    struct {
 #endif
 
-            uint16_t th_sport;
-            uint16_t th_dport;
-            uint32_t th_seq;
-            uint32_t th_ack;
+      uint16_t th_sport;
+      uint16_t th_dport;
+      uint32_t th_seq;
+      uint32_t th_ack;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-            uint8_t th_x2 : 4;
-            uint8_t th_off : 4;
+      uint8_t th_x2 : 4;
+      uint8_t th_off : 4;
 #else
-    uint8_t th_off : 4;
-    uint8_t th_x2 : 4;
+  uint8_t th_off : 4;
+  uint8_t th_x2 : 4;
 #endif
-            uint8_t th_flags;
-            uint16_t th_win;
-            uint16_t th_sum;
-            uint16_t th_urp;
+      uint8_t th_flags;
+      uint16_t th_win;
+      uint16_t th_sum;
+      uint16_t th_urp;
 
 #ifdef _GNU_SOURCE
-        };
     };
+  };
 #endif
 };
 #endif
@@ -148,55 +147,55 @@ struct tcphdr {
 #define TCP_CA_Loss 4
 
 struct tcp_info {
-    uint8_t tcpi_state;
-    uint8_t tcpi_ca_state;
-    uint8_t tcpi_retransmits;
-    uint8_t tcpi_probes;
-    uint8_t tcpi_backoff;
-    uint8_t tcpi_options;
-    uint8_t tcpi_snd_wscale : 4, tcpi_rcv_wscale : 4;
-    uint32_t tcpi_rto;
-    uint32_t tcpi_ato;
-    uint32_t tcpi_snd_mss;
-    uint32_t tcpi_rcv_mss;
-    uint32_t tcpi_unacked;
-    uint32_t tcpi_sacked;
-    uint32_t tcpi_lost;
-    uint32_t tcpi_retrans;
-    uint32_t tcpi_fackets;
-    uint32_t tcpi_last_data_sent;
-    uint32_t tcpi_last_ack_sent;
-    uint32_t tcpi_last_data_recv;
-    uint32_t tcpi_last_ack_recv;
-    uint32_t tcpi_pmtu;
-    uint32_t tcpi_rcv_ssthresh;
-    uint32_t tcpi_rtt;
-    uint32_t tcpi_rttvar;
-    uint32_t tcpi_snd_ssthresh;
-    uint32_t tcpi_snd_cwnd;
-    uint32_t tcpi_advmss;
-    uint32_t tcpi_reordering;
-    uint32_t tcpi_rcv_rtt;
-    uint32_t tcpi_rcv_space;
-    uint32_t tcpi_total_retrans;
-    uint64_t tcpi_pacing_rate;
-    uint64_t tcpi_max_pacing_rate;
-    uint64_t tcpi_bytes_acked;
-    uint64_t tcpi_bytes_received;
-    uint32_t tcpi_segs_out;
-    uint32_t tcpi_segs_in;
+  uint8_t tcpi_state;
+  uint8_t tcpi_ca_state;
+  uint8_t tcpi_retransmits;
+  uint8_t tcpi_probes;
+  uint8_t tcpi_backoff;
+  uint8_t tcpi_options;
+  uint8_t tcpi_snd_wscale : 4, tcpi_rcv_wscale : 4;
+  uint32_t tcpi_rto;
+  uint32_t tcpi_ato;
+  uint32_t tcpi_snd_mss;
+  uint32_t tcpi_rcv_mss;
+  uint32_t tcpi_unacked;
+  uint32_t tcpi_sacked;
+  uint32_t tcpi_lost;
+  uint32_t tcpi_retrans;
+  uint32_t tcpi_fackets;
+  uint32_t tcpi_last_data_sent;
+  uint32_t tcpi_last_ack_sent;
+  uint32_t tcpi_last_data_recv;
+  uint32_t tcpi_last_ack_recv;
+  uint32_t tcpi_pmtu;
+  uint32_t tcpi_rcv_ssthresh;
+  uint32_t tcpi_rtt;
+  uint32_t tcpi_rttvar;
+  uint32_t tcpi_snd_ssthresh;
+  uint32_t tcpi_snd_cwnd;
+  uint32_t tcpi_advmss;
+  uint32_t tcpi_reordering;
+  uint32_t tcpi_rcv_rtt;
+  uint32_t tcpi_rcv_space;
+  uint32_t tcpi_total_retrans;
+  uint64_t tcpi_pacing_rate;
+  uint64_t tcpi_max_pacing_rate;
+  uint64_t tcpi_bytes_acked;
+  uint64_t tcpi_bytes_received;
+  uint32_t tcpi_segs_out;
+  uint32_t tcpi_segs_in;
 };
 
 #define TCP_MD5SIG_MAXKEYLEN 80
 
 struct tcp_md5sig {
-    struct sockaddr_storage tcpm_addr;
-    uint16_t __tcpm_pad1;
-    uint16_t tcpm_keylen;
-    uint32_t __tcpm_pad2;
-    uint8_t tcpm_key[TCP_MD5SIG_MAXKEYLEN];
+  struct sockaddr_storage tcpm_addr;
+  uint16_t __tcpm_pad1;
+  uint16_t tcpm_keylen;
+  uint32_t __tcpm_pad2;
+  uint8_t tcpm_key[TCP_MD5SIG_MAXKEYLEN];
 };
 
 #endif
 
-#endif // SYSROOT_NETINET_TCP_H_
+#endif  // SYSROOT_NETINET_TCP_H_

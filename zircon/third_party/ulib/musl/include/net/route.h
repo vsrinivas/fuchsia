@@ -11,36 +11,36 @@ extern "C" {
 #include <sys/types.h>
 
 struct rtentry {
-    unsigned long int rt_pad1;
-    struct sockaddr rt_dst;
-    struct sockaddr rt_gateway;
-    struct sockaddr rt_genmask;
-    unsigned short int rt_flags;
-    short int rt_pad2;
-    unsigned long int rt_pad3;
-    unsigned char rt_tos;
-    unsigned char rt_class;
-    short int rt_pad4[sizeof(long) / 2 - 1];
-    short int rt_metric;
-    char* rt_dev;
-    unsigned long int rt_mtu;
-    unsigned long int rt_window;
-    unsigned short int rt_irtt;
+  unsigned long int rt_pad1;
+  struct sockaddr rt_dst;
+  struct sockaddr rt_gateway;
+  struct sockaddr rt_genmask;
+  unsigned short int rt_flags;
+  short int rt_pad2;
+  unsigned long int rt_pad3;
+  unsigned char rt_tos;
+  unsigned char rt_class;
+  short int rt_pad4[sizeof(long) / 2 - 1];
+  short int rt_metric;
+  char* rt_dev;
+  unsigned long int rt_mtu;
+  unsigned long int rt_window;
+  unsigned short int rt_irtt;
 };
 
 #define rt_mss rt_mtu
 
 struct in6_rtmsg {
-    struct in6_addr rtmsg_dst;
-    struct in6_addr rtmsg_src;
-    struct in6_addr rtmsg_gateway;
-    uint32_t rtmsg_type;
-    uint16_t rtmsg_dst_len;
-    uint16_t rtmsg_src_len;
-    uint32_t rtmsg_metric;
-    unsigned long int rtmsg_info;
-    uint32_t rtmsg_flags;
-    int rtmsg_ifindex;
+  struct in6_addr rtmsg_dst;
+  struct in6_addr rtmsg_src;
+  struct in6_addr rtmsg_gateway;
+  uint32_t rtmsg_type;
+  uint16_t rtmsg_dst_len;
+  uint16_t rtmsg_src_len;
+  uint32_t rtmsg_metric;
+  unsigned long int rtmsg_info;
+  uint32_t rtmsg_flags;
+  int rtmsg_ifindex;
 };
 
 #define RTF_UP 0x0001
@@ -116,4 +116,4 @@ struct in6_rtmsg {
 }
 #endif
 
-#endif // SYSROOT_NET_ROUTE_H_
+#endif  // SYSROOT_NET_ROUTE_H_

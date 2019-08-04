@@ -1,5 +1,3 @@
 #include <resolv.h>
 
-int res_init() {
-    return 0;
-}
+int res_init() { return 0; }

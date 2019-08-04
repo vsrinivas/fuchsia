@@ -21,4 +21,4 @@ int iconv_close(iconv_t);
 }
 #endif
 
-#endif // SYSROOT_ICONV_H_
+#endif  // SYSROOT_ICONV_H_

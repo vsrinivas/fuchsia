@@ -44,4 +44,4 @@ int fmtmsg(long, const char*, int, const char*, const char*, const char*);
 }
 #endif
 
-#endif // SYSROOT_FMTMSG_H_
+#endif  // SYSROOT_FMTMSG_H_

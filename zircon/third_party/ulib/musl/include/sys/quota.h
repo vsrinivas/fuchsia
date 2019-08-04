@@ -58,15 +58,15 @@ extern "C" {
 #define QIF_ALL (QIF_LIMITS | QIF_USAGE | QIF_TIMES)
 
 struct dqblk {
-    uint64_t dqb_bhardlimit;
-    uint64_t dqb_bsoftlimit;
-    uint64_t dqb_curspace;
-    uint64_t dqb_ihardlimit;
-    uint64_t dqb_isoftlimit;
-    uint64_t dqb_curinodes;
-    uint64_t dqb_btime;
-    uint64_t dqb_itime;
-    uint32_t dqb_valid;
+  uint64_t dqb_bhardlimit;
+  uint64_t dqb_bsoftlimit;
+  uint64_t dqb_curspace;
+  uint64_t dqb_ihardlimit;
+  uint64_t dqb_isoftlimit;
+  uint64_t dqb_curinodes;
+  uint64_t dqb_btime;
+  uint64_t dqb_itime;
+  uint32_t dqb_valid;
 };
 
 #define dq_bhardlimit dq_dqb.dqb_bhardlimit
@@ -87,10 +87,10 @@ struct dqblk {
 #define IIF_ALL (IIF_BGRACE | IIF_IGRACE | IIF_FLAGS)
 
 struct dqinfo {
-    uint64_t dqi_bgrace;
-    uint64_t dqi_igrace;
-    uint32_t dqi_flags;
-    uint32_t dqi_valid;
+  uint64_t dqi_bgrace;
+  uint64_t dqi_igrace;
+  uint32_t dqi_flags;
+  uint32_t dqi_valid;
 };
 
 int quotactl(int, const char*, int, char*);
@@ -99,4 +99,4 @@ int quotactl(int, const char*, int, char*);
 }
 #endif
 
-#endif // SYSROOT_SYS_QUOTA_H_
+#endif  // SYSROOT_SYS_QUOTA_H_

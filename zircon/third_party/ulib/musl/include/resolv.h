@@ -24,41 +24,41 @@ extern "C" {
 
 /* unused; purely for broken apps */
 typedef struct __res_state {
-    int retrans;
-    int retry;
-    unsigned long options;
-    int nscount;
-    struct sockaddr_in nsaddr_list[MAXNS];
+  int retrans;
+  int retry;
+  unsigned long options;
+  int nscount;
+  struct sockaddr_in nsaddr_list[MAXNS];
 #define nsaddr nsaddr_list[0]
-    unsigned short id;
-    char* dnsrch[MAXDNSRCH + 1];
-    char defdname[256];
-    unsigned long pfcode;
-    unsigned ndots : 4;
-    unsigned nsort : 4;
-    unsigned ipv6_unavail : 1;
-    unsigned unused : 23;
+  unsigned short id;
+  char* dnsrch[MAXDNSRCH + 1];
+  char defdname[256];
+  unsigned long pfcode;
+  unsigned ndots : 4;
+  unsigned nsort : 4;
+  unsigned ipv6_unavail : 1;
+  unsigned unused : 23;
+  struct {
+    struct in_addr addr;
+    uint32_t mask;
+  } sort_list[MAXRESOLVSORT];
+  void* qhook;
+  void* rhook;
+  int res_h_errno;
+  int _vcsock;
+  unsigned _flags;
+  union {
+    char pad[52];
     struct {
-        struct in_addr addr;
-        uint32_t mask;
-    } sort_list[MAXRESOLVSORT];
-    void* qhook;
-    void* rhook;
-    int res_h_errno;
-    int _vcsock;
-    unsigned _flags;
-    union {
-        char pad[52];
-        struct {
-            uint16_t nscount;
-            uint16_t nsmap[MAXNS];
-            int nssocks[MAXNS];
-            uint16_t nscount6;
-            uint16_t nsinit;
-            struct sockaddr_in6* nsaddrs[MAXNS];
-            unsigned int _initstamp[2];
-        } _ext;
-    } _u;
+      uint16_t nscount;
+      uint16_t nsmap[MAXNS];
+      int nssocks[MAXNS];
+      uint16_t nscount6;
+      uint16_t nsinit;
+      struct sockaddr_in6* nsaddrs[MAXNS];
+      unsigned int _initstamp[2];
+    } _ext;
+  } _u;
 } * res_state;
 
 #define __RES 19991006
@@ -68,9 +68,9 @@ typedef struct __res_state {
 #endif
 
 struct res_sym {
-    int number;
-    char* name;
-    char* humanname;
+  int number;
+  char* name;
+  char* humanname;
 };
 
 #define RES_F_VC 0x00000001
@@ -140,4 +140,4 @@ int dn_skipname(const unsigned char*, const unsigned char*);
 }
 #endif
 
-#endif // SYSROOT_RESOLV_H_
+#endif  // SYSROOT_RESOLV_H_

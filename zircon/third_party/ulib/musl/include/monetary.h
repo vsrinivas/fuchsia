@@ -20,4 +20,4 @@ ssize_t strfmon_l(char* __restrict, size_t, locale_t, const char* __restrict, ..
 }
 #endif
 
-#endif // SYSROOT_MONETARY_H_
+#endif  // SYSROOT_MONETARY_H_

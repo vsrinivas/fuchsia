@@ -1,8 +1,7 @@
+#include <errno.h>
 #include <sys/sem.h>
 
-#include <errno.h>
-
 int semctl(int id, int num, int cmd, ...) {
-    errno = ENOSYS;
-    return -1;
+  errno = ENOSYS;
+  return -1;
 }

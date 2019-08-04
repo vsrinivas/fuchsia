@@ -82,51 +82,51 @@ extern "C" {
 #define MOREDATA 2
 
 struct bandinfo {
-    unsigned char bi_pri;
-    int bi_flag;
+  unsigned char bi_pri;
+  int bi_flag;
 };
 
 struct strbuf {
-    int maxlen;
-    int len;
-    char* buf;
+  int maxlen;
+  int len;
+  char* buf;
 };
 
 struct strpeek {
-    struct strbuf ctlbuf;
-    struct strbuf databuf;
-    unsigned flags;
+  struct strbuf ctlbuf;
+  struct strbuf databuf;
+  unsigned flags;
 };
 
 struct strfdinsert {
-    struct strbuf ctlbuf;
-    struct strbuf databuf;
-    unsigned flags;
-    int fildes;
-    int offset;
+  struct strbuf ctlbuf;
+  struct strbuf databuf;
+  unsigned flags;
+  int fildes;
+  int offset;
 };
 
 struct strioctl {
-    int ic_cmd;
-    int ic_timout;
-    int ic_len;
-    char* ic_dp;
+  int ic_cmd;
+  int ic_timout;
+  int ic_len;
+  char* ic_dp;
 };
 
 struct strrecvfd {
-    int fd;
-    int uid;
-    int gid;
-    char __fill[8];
+  int fd;
+  int uid;
+  int gid;
+  char __fill[8];
 };
 
 struct str_mlist {
-    char l_name[FMNAMESZ + 1];
+  char l_name[FMNAMESZ + 1];
 };
 
 struct str_list {
-    int sl_nmods;
-    struct str_mlist* sl_modlist;
+  int sl_nmods;
+  struct str_mlist* sl_modlist;
 };
 
 int isastream(int);
@@ -136,4 +136,4 @@ int ioctl(int, int, ...);
 }
 #endif
 
-#endif // SYSROOT_STROPTS_H_
+#endif  // SYSROOT_STROPTS_H_

@@ -12,4 +12,4 @@ char* basename(char*);
 }
 #endif
 
-#endif // SYSROOT_LIBGEN_H_
+#endif  // SYSROOT_LIBGEN_H_

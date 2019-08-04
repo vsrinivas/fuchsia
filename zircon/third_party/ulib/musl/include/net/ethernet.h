@@ -10,13 +10,13 @@ extern "C" {
 #include <sys/types.h>
 
 struct ether_addr {
-    uint8_t ether_addr_octet[ETH_ALEN];
+  uint8_t ether_addr_octet[ETH_ALEN];
 };
 
 struct ether_header {
-    uint8_t ether_dhost[ETH_ALEN];
-    uint8_t ether_shost[ETH_ALEN];
-    uint16_t ether_type;
+  uint8_t ether_dhost[ETH_ALEN];
+  uint8_t ether_shost[ETH_ALEN];
+  uint16_t ether_type;
 };
 
 #define ETHERTYPE_PUP 0x0200
@@ -50,4 +50,4 @@ struct ether_header {
 }
 #endif
 
-#endif // SYSROOT_NET_ETHERNET_H_
+#endif  // SYSROOT_NET_ETHERNET_H_

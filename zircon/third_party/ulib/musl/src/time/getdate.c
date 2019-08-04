@@ -6,37 +6,37 @@
 int getdate_err;
 
 struct tm* getdate(const char* s) {
-    static struct tm tmbuf;
-    struct tm* ret = 0;
-    char* datemsk = getenv("DATEMSK");
-    FILE* f = 0;
-    char fmt[100], *p;
+  static struct tm tmbuf;
+  struct tm* ret = 0;
+  char* datemsk = getenv("DATEMSK");
+  FILE* f = 0;
+  char fmt[100], *p;
 
-    if (!datemsk) {
-        getdate_err = 1;
-        goto out;
+  if (!datemsk) {
+    getdate_err = 1;
+    goto out;
+  }
+
+  f = fopen(datemsk, "rbe");
+  if (!f) {
+    if (errno == ENOMEM)
+      getdate_err = 6;
+    else
+      getdate_err = 2;
+    goto out;
+  }
+
+  while (fgets(fmt, sizeof fmt, f)) {
+    p = strptime(s, fmt, &tmbuf);
+    if (p && !*p) {
+      ret = &tmbuf;
+      goto out;
     }
+  }
 
-    f = fopen(datemsk, "rbe");
-    if (!f) {
-        if (errno == ENOMEM)
-            getdate_err = 6;
-        else
-            getdate_err = 2;
-        goto out;
-    }
-
-    while (fgets(fmt, sizeof fmt, f)) {
-        p = strptime(s, fmt, &tmbuf);
-        if (p && !*p) {
-            ret = &tmbuf;
-            goto out;
-        }
-    }
-
-    getdate_err = 7;
+  getdate_err = 7;
 out:
-    if (f)
-        fclose(f);
-    return ret;
+  if (f)
+    fclose(f);
+  return ret;
 }

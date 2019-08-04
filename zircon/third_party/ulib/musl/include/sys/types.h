@@ -73,4 +73,4 @@ typedef unsigned long long u_quad_t;
 }
 #endif
 
-#endif // SYSROOT_SYS_TYPES_H_
+#endif  // SYSROOT_SYS_TYPES_H_

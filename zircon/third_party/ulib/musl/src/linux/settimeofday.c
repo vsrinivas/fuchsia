@@ -3,6 +3,6 @@
 #include <sys/time.h>
 
 int settimeofday(const struct timeval* tv, const struct timezone* tz) {
-    errno = ENOSYS;
-    return -1;
+  errno = ENOSYS;
+  return -1;
 }

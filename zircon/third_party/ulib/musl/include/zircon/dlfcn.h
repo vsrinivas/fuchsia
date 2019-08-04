@@ -32,4 +32,4 @@ zx_status_t dl_clone_loader_service(zx_handle_t* out);
 
 __END_CDECLS
 
-#endif // SYSROOT_ZIRCON_DLFCN_H_
+#endif  // SYSROOT_ZIRCON_DLFCN_H_

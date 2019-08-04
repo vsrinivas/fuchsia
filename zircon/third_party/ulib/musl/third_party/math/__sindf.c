@@ -23,12 +23,12 @@ static const double S1 = -0x15555554cbac77.0p-55, /* -0.166666666416265235595 */
     S4 = 0x16cd878c3b46a7.0p-71;                  /*  0.0000027183114939898219064 */
 
 float __sindf(double x) {
-    double_t r, s, w, z;
+  double_t r, s, w, z;
 
-    /* Try to optimize for parallel evaluation as in __tandf.c. */
-    z = x * x;
-    w = z * z;
-    r = S3 + z * S4;
-    s = z * x;
-    return (x + s * (S1 + z * S2)) + s * w * r;
+  /* Try to optimize for parallel evaluation as in __tandf.c. */
+  z = x * x;
+  w = z * z;
+  r = S3 + z * S4;
+  s = z * x;
+  return (x + s * (S1 + z * S2)) + s * w * r;
 }

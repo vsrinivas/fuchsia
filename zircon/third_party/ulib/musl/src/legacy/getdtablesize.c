@@ -3,6 +3,6 @@
 #include <unistd.h>
 
 int getdtablesize(void) {
-    int max = sysconf(_SC_OPEN_MAX);
-    return max < INT_MAX ? max : INT_MAX;
+  int max = sysconf(_SC_OPEN_MAX);
+  return max < INT_MAX ? max : INT_MAX;
 }

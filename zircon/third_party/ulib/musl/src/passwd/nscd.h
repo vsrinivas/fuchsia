@@ -1,7 +1,8 @@
 #pragma once
 
-#include "libc.h"
 #include <stdint.h>
+
+#include "libc.h"
 
 #define __NEED_FILE
 #define __NEED_size_t

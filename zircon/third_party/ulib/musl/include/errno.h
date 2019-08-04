@@ -20,4 +20,4 @@ extern char *program_invocation_short_name, *program_invocation_name;
 }
 #endif
 
-#endif // SYSROOT_ERRNO_H_
+#endif  // SYSROOT_ERRNO_H_

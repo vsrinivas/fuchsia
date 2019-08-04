@@ -2,6 +2,6 @@
 #include <sys/mman.h>
 
 int munlockall(void) {
-    errno = ENOSYS;
-    return -1;
+  errno = ENOSYS;
+  return -1;
 }

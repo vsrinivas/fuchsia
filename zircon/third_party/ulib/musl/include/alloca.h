@@ -18,4 +18,4 @@ void* alloca(size_t);
 }
 #endif
 
-#endif // SYSROOT_ALLOCA_H_
+#endif  // SYSROOT_ALLOCA_H_

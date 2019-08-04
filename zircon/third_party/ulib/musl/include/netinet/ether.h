@@ -19,4 +19,4 @@ int ether_hostton(const char*, struct ether_addr*);
 }
 #endif
 
-#endif // SYSROOT_NETINET_ETHER_H_
+#endif  // SYSROOT_NETINET_ETHER_H_

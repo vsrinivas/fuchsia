@@ -16,10 +16,10 @@ extern "C" {
 #endif
 
 struct udphdr {
-    uint16_t uh_sport;
-    uint16_t uh_dport;
-    uint16_t uh_ulen;
-    uint16_t uh_sum;
+  uint16_t uh_sport;
+  uint16_t uh_dport;
+  uint16_t uh_ulen;
+  uint16_t uh_sum;
 };
 
 #define UDP_CORK 1
@@ -35,4 +35,4 @@ struct udphdr {
 }
 #endif
 
-#endif // SYSROOT_NETINET_UDP_H_
+#endif  // SYSROOT_NETINET_UDP_H_

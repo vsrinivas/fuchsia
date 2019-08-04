@@ -6,5 +6,5 @@
 #include <sys/socket.h>
 
 struct hostent* gethostbyname(const char* name) {
-    return gethostbyname2(name, AF_INET);
+  return gethostbyname2(name, AF_INET);
 }

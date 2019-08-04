@@ -32,4 +32,4 @@
 #define _Noreturn
 #endif
 
-#endif // SYSROOT_FEATURES_H_
+#endif  // SYSROOT_FEATURES_H_

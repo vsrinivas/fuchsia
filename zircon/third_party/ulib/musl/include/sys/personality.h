@@ -44,4 +44,4 @@ int personality(unsigned long);
 }
 #endif
 
-#endif // SYSROOT_SYS_PERSONALITY_H_
+#endif  // SYSROOT_SYS_PERSONALITY_H_

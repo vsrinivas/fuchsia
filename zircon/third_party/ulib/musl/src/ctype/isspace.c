@@ -1,6 +1,4 @@
 #include <ctype.h>
 #undef isspace
 
-int isspace(int c) {
-    return c == ' ' || (unsigned)c - '\t' < 5;
-}
+int isspace(int c) { return c == ' ' || (unsigned)c - '\t' < 5; }

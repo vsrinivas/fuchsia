@@ -1,4 +1,3 @@
 #include <pthread.h>
 
-void pthread_testcancel(void) {
-}
+void pthread_testcancel(void) {}

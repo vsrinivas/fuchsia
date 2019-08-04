@@ -3,6 +3,6 @@
 #include <unistd.h>
 
 int setdomainname(const char* name, size_t len) {
-    errno = ENOSYS;
-    return -1;
+  errno = ENOSYS;
+  return -1;
 }

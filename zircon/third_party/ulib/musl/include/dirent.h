@@ -18,11 +18,11 @@ extern "C" {
 typedef struct __dirstream DIR;
 
 struct dirent {
-    ino_t d_ino;
-    off_t d_off;
-    unsigned short d_reclen;
-    unsigned char d_type;
-    char d_name[256];
+  ino_t d_ino;
+  off_t d_off;
+  unsigned short d_reclen;
+  unsigned char d_type;
+  char d_name[256];
 };
 
 #define d_fileno d_ino
@@ -64,4 +64,4 @@ int versionsort(const struct dirent**, const struct dirent**);
 }
 #endif
 
-#endif // SYSROOT_DIRENT_H_
+#endif  // SYSROOT_DIRENT_H_

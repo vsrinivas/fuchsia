@@ -39,9 +39,9 @@ __typeof(memset) __unsanitized_memset;
 //     [shadow_base,    shadow_limit)   Shadow memory, preallocated.
 //     [0,              shadow_base)    Shadow gap, cannot be allocated.
 typedef struct saniziter_shadow_bounds {
-    uintptr_t shadow_base;
-    uintptr_t shadow_limit;
-    uintptr_t memory_limit;
+  uintptr_t shadow_base;
+  uintptr_t shadow_limit;
+  uintptr_t memory_limit;
 } sanitizer_shadow_bounds_t;
 
 // Returns the shadow bounds for the current process.
@@ -51,8 +51,7 @@ sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void);
 // threshold is used as a hint to determine when to switch to a more efficient
 // mechanism when zero-filling large shadow regions. This assumes that both
 // |base| and |size| are aligned to the shadow multiple.
-void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value,
-                             size_t threshold);
+void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, size_t threshold);
 
 // Write logging information from the sanitizer runtime.  The buffer
 // is expected to be printable text with '\n' ending each line.
@@ -88,16 +87,14 @@ void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo);
 // after this call returns.  On success, this yields a read-only VMO
 // handle from which the contents associated with that name can be
 // read; the caller is responsible for closing this handle.
-zx_status_t __sanitizer_get_configuration(const char* config_name,
-                                          zx_handle_t* out_vmo);
+zx_status_t __sanitizer_get_configuration(const char* config_name, zx_handle_t* out_vmo);
 
 // Changes protection of the code in the range of len bytes starting
 // from addr. The writable argument specifies whether the code should
 // be made writable or not. This function is only valid on ranges within
 // the caller's own code segment.
 // TODO(phosek) removes this when the proper debugging interface exists.
-zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len,
-                                               bool writable);
+zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len, bool writable);
 
 // The "hook" interfaces are functions that the sanitizer runtime library
 // can define and libc will call.  There are default definitions in libc
@@ -114,17 +111,16 @@ zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len,
 // the initial thread has switched to its real thread stack.  Since not
 // even all of libc's own constructors have run yet, this should not call
 // into libc or other library code.
-__EXPORT void __sanitizer_startup_hook(int argc, char** argv, char** envp,
-                                       void* stack_base, size_t stack_size);
+__EXPORT void __sanitizer_startup_hook(int argc, char** argv, char** envp, void* stack_base,
+                                       size_t stack_size);
 
 // This is called when a new thread has been created but is not yet
 // running.  Its C11 thrd_t value has been determined and its stack has
 // been allocated.  All that remains is to actually start the thread
 // running (which can fail only in catastrophic bug situations).  Its
 // return value will be passed to __sanitizer_thread_create_hook, below.
-__EXPORT void* __sanitizer_before_thread_create_hook(
-    thrd_t thread, bool detached, const char* name,
-    void* stack_base, size_t stack_size);
+__EXPORT void* __sanitizer_before_thread_create_hook(thrd_t thread, bool detached, const char* name,
+                                                     void* stack_base, size_t stack_size);
 
 // This is called after a new thread has been created or creation has
 // failed at the final stage; __sanitizer_before_thread_create_hook has
@@ -136,8 +132,7 @@ __EXPORT void* __sanitizer_before_thread_create_hook(
 // <threads.h> thrd_* value), thread creation has failed and the thread
 // details reported to __sanitizer_before_thread_create_hook will be
 // freed without the thread ever starting.
-__EXPORT void __sanitizer_thread_create_hook(
-    void* hook, thrd_t thread, int error);
+__EXPORT void __sanitizer_thread_create_hook(void* hook, thrd_t thread, int error);
 
 // This is called in each new thread as it starts up.  The argument is
 // the same one returned by __sanitizer_before_thread_create_hook and
@@ -151,4 +146,4 @@ __EXPORT void __sanitizer_thread_exit_hook(void* hook, thrd_t self);
 
 __END_CDECLS
 
-#endif // SYSROOT_ZIRCON_SANITIZER_H_
+#endif  // SYSROOT_ZIRCON_SANITIZER_H_

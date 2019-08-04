@@ -17,4 +17,4 @@ int setfsgid(gid_t);
 }
 #endif
 
-#endif // SYSROOT_SYS_FSUID_H_
+#endif  // SYSROOT_SYS_FSUID_H_

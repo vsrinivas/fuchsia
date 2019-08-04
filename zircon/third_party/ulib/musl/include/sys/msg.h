@@ -29,8 +29,8 @@ typedef unsigned long msglen_t;
 #define MSG_INFO 12
 
 struct msginfo {
-    int msgpool, msgmap, msgmax, msgmnb, msgmni, msgssz, msgtql;
-    unsigned short msgseg;
+  int msgpool, msgmap, msgmax, msgmnb, msgmni, msgssz, msgtql;
+  unsigned short msgseg;
 };
 
 int msgctl(int, int, struct msqid_ds*);
@@ -40,8 +40,8 @@ int msgsnd(int, const void*, size_t, int);
 
 #if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 struct msgbuf {
-    long mtype;
-    char mtext[1];
+  long mtype;
+  char mtext[1];
 };
 #endif
 
@@ -49,4 +49,4 @@ struct msgbuf {
 }
 #endif
 
-#endif // SYSROOT_SYS_MSG_H_
+#endif  // SYSROOT_SYS_MSG_H_

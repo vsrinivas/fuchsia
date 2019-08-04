@@ -50,9 +50,7 @@
 #include "libm.h"
 
 #if LDBL_MANT_DIG == 53 && LDBL_MAX_EXP == 1024
-long double expm1l(long double x) {
-    return expm1(x);
-}
+long double expm1l(long double x) { return expm1(x); }
 #elif LDBL_MANT_DIG == 64 && LDBL_MAX_EXP == 16384
 
 /* exp(x) - 1 = x + 0.5 x^2 + x^3 P(x)/Q(x)
@@ -77,42 +75,40 @@ static const long double P0 = -1.586135578666346600772998894928250240826E4L,
     maxarg = 1.1356523406294143949492E4L;
 
 long double expm1l(long double x) {
-    long double px, qx, xx;
-    int k;
+  long double px, qx, xx;
+  int k;
 
-    if (isnan(x))
-        return x;
-    if (x > maxarg)
-        return x * 0x1p16383L; /* overflow, unless x==inf */
-    if (x == 0.0)
-        return x;
-    if (x < minarg)
-        return -1.0;
-
-    xx = C1 + C2;
-    /* Express x = ln 2 (k + remainder), remainder not exceeding 1/2. */
-    px = floorl(0.5 + x / xx);
-    k = px;
-    /* remainder times ln 2 */
-    x -= px * C1;
-    x -= px * C2;
-
-    /* Approximate exp(remainder ln 2).*/
-    px = ((((P4 * x + P3) * x + P2) * x + P1) * x + P0) * x;
-    qx = ((((x + Q4) * x + Q3) * x + Q2) * x + Q1) * x + Q0;
-    xx = x * x;
-    qx = x + (0.5 * xx + xx * px / qx);
-
-    /* exp(x) = exp(k ln 2) exp(remainder ln 2) = 2^k exp(remainder ln 2).
-     We have qx = exp(remainder ln 2) - 1, so
-     exp(x) - 1  =  2^k (qx + 1) - 1  =  2^k qx + 2^k - 1.  */
-    px = scalbnl(1.0, k);
-    x = px * qx + (px - 1.0);
+  if (isnan(x))
     return x;
+  if (x > maxarg)
+    return x * 0x1p16383L; /* overflow, unless x==inf */
+  if (x == 0.0)
+    return x;
+  if (x < minarg)
+    return -1.0;
+
+  xx = C1 + C2;
+  /* Express x = ln 2 (k + remainder), remainder not exceeding 1/2. */
+  px = floorl(0.5 + x / xx);
+  k = px;
+  /* remainder times ln 2 */
+  x -= px * C1;
+  x -= px * C2;
+
+  /* Approximate exp(remainder ln 2).*/
+  px = ((((P4 * x + P3) * x + P2) * x + P1) * x + P0) * x;
+  qx = ((((x + Q4) * x + Q3) * x + Q2) * x + Q1) * x + Q0;
+  xx = x * x;
+  qx = x + (0.5 * xx + xx * px / qx);
+
+  /* exp(x) = exp(k ln 2) exp(remainder ln 2) = 2^k exp(remainder ln 2).
+   We have qx = exp(remainder ln 2) - 1, so
+   exp(x) - 1  =  2^k (qx + 1) - 1  =  2^k qx + 2^k - 1.  */
+  px = scalbnl(1.0, k);
+  x = px * qx + (px - 1.0);
+  return x;
 }
 #elif LDBL_MANT_DIG == 113 && LDBL_MAX_EXP == 16384
 // TODO: broken implementation to make things compile
-long double expm1l(long double x) {
-    return expm1(x);
-}
+long double expm1l(long double x) { return expm1(x); }
 #endif

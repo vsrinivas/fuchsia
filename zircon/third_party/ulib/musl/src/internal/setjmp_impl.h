@@ -39,7 +39,7 @@
 #include <stdint.h>
 
 extern struct setjmp_manglers {
-    uintptr_t mangle[JB_MANGLE_COUNT];
+  uintptr_t mangle[JB_MANGLE_COUNT];
 } __setjmp_manglers __attribute__((visibility("hidden")));
 
 #endif

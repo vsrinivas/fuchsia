@@ -14,14 +14,14 @@ extern "C" {
 #endif
 
 struct addrinfo {
-    int ai_flags;
-    int ai_family;
-    int ai_socktype;
-    int ai_protocol;
-    socklen_t ai_addrlen;
-    struct sockaddr* ai_addr;
-    char* ai_canonname;
-    struct addrinfo* ai_next;
+  int ai_flags;
+  int ai_family;
+  int ai_socktype;
+  int ai_protocol;
+  socklen_t ai_addrlen;
+  struct sockaddr* ai_addr;
+  char* ai_canonname;
+  struct addrinfo* ai_next;
 };
 
 #define IPPORT_RESERVED 1024
@@ -62,32 +62,32 @@ const char* gai_strerror(int);
 /* Legacy functions follow (marked OBsolete in SUS) */
 
 struct netent {
-    char* n_name;
-    char** n_aliases;
-    int n_addrtype;
-    uint32_t n_net;
+  char* n_name;
+  char** n_aliases;
+  int n_addrtype;
+  uint32_t n_net;
 };
 
 struct hostent {
-    char* h_name;
-    char** h_aliases;
-    int h_addrtype;
-    int h_length;
-    char** h_addr_list;
+  char* h_name;
+  char** h_aliases;
+  int h_addrtype;
+  int h_length;
+  char** h_addr_list;
 };
 #define h_addr h_addr_list[0]
 
 struct servent {
-    char* s_name;
-    char** s_aliases;
-    int s_port;
-    char* s_proto;
+  char* s_name;
+  char** s_aliases;
+  int s_port;
+  char* s_proto;
 };
 
 struct protoent {
-    char* p_name;
-    char** p_aliases;
-    int p_proto;
+  char* p_name;
+  char** p_aliases;
+  int p_proto;
 };
 
 void sethostent(int);
@@ -152,4 +152,4 @@ int getservbyname_r(const char*, const char*, struct servent*, char*, size_t, st
 }
 #endif
 
-#endif // SYSROOT_NETDB_H_
+#endif  // SYSROOT_NETDB_H_

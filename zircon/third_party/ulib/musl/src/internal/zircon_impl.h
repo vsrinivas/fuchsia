@@ -1,8 +1,9 @@
 #pragma once
 
-#include "libc.h"
 #include <zircon/process.h>
 #include <zircon/types.h>
+
+#include "libc.h"
 
 extern zx_handle_t __zircon_process_self ATTR_LIBC_VISIBILITY;
 extern zx_handle_t __zircon_vmar_root_self ATTR_LIBC_VISIBILITY;

@@ -22,11 +22,11 @@ extern "C" {
 #define ARPOP_NAK 10
 
 struct arphdr {
-    uint16_t ar_hrd;
-    uint16_t ar_pro;
-    uint8_t ar_hln;
-    uint8_t ar_pln;
-    uint16_t ar_op;
+  uint16_t ar_hrd;
+  uint16_t ar_pro;
+  uint8_t ar_hln;
+  uint8_t ar_pln;
+  uint16_t ar_op;
 };
 
 #define ARPHRD_NETROM 0
@@ -97,18 +97,18 @@ struct arphdr {
 #define ARPHRD_NONE 0xFFFE
 
 struct arpreq {
-    struct sockaddr arp_pa;
-    struct sockaddr arp_ha;
-    int arp_flags;
-    struct sockaddr arp_netmask;
-    char arp_dev[16];
+  struct sockaddr arp_pa;
+  struct sockaddr arp_ha;
+  int arp_flags;
+  struct sockaddr arp_netmask;
+  char arp_dev[16];
 };
 
 struct arpreq_old {
-    struct sockaddr arp_pa;
-    struct sockaddr arp_ha;
-    int arp_flags;
-    struct sockaddr arp_netmask;
+  struct sockaddr arp_pa;
+  struct sockaddr arp_ha;
+  int arp_flags;
+  struct sockaddr arp_netmask;
 };
 
 #define ATF_COM 0x02
@@ -124,16 +124,16 @@ struct arpreq_old {
 #define ARPD_FLUSH 0x03
 
 struct arpd_request {
-    unsigned short req;
-    uint32_t ip;
-    unsigned long dev;
-    unsigned long stamp;
-    unsigned long updated;
-    unsigned char ha[MAX_ADDR_LEN];
+  unsigned short req;
+  uint32_t ip;
+  unsigned long dev;
+  unsigned long stamp;
+  unsigned long updated;
+  unsigned char ha[MAX_ADDR_LEN];
 };
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // SYSROOT_NET_IF_ARP_H_
+#endif  // SYSROOT_NET_IF_ARP_H_

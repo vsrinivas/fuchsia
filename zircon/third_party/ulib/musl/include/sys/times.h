@@ -9,10 +9,10 @@ extern "C" {
 #include <bits/alltypes.h>
 
 struct tms {
-    clock_t tms_utime;
-    clock_t tms_stime;
-    clock_t tms_cutime;
-    clock_t tms_cstime;
+  clock_t tms_utime;
+  clock_t tms_stime;
+  clock_t tms_cutime;
+  clock_t tms_cstime;
 };
 
 clock_t times(struct tms*);
@@ -21,4 +21,4 @@ clock_t times(struct tms*);
 }
 #endif
 
-#endif // SYSROOT_SYS_TIMES_H_
+#endif  // SYSROOT_SYS_TIMES_H_

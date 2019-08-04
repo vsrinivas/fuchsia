@@ -2,9 +2,9 @@
 #include <netinet/in.h>
 
 uint32_t htonl(uint32_t n) {
-    union {
-        int i;
-        char c;
-    } u = {1};
-    return u.c ? bswap_32(n) : n;
+  union {
+    int i;
+    char c;
+  } u = {1};
+  return u.c ? bswap_32(n) : n;
 }

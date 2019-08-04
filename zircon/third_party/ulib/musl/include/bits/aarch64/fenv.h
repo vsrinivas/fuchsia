@@ -12,8 +12,8 @@
 typedef unsigned int fexcept_t;
 
 typedef struct {
-    unsigned int __fpcr;
-    unsigned int __fpsr;
+  unsigned int __fpcr;
+  unsigned int __fpsr;
 } fenv_t;
 
 #define FE_DFL_ENV ((const fenv_t*)-1)

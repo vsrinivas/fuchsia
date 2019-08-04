@@ -20,7 +20,6 @@ extern "C" {
 #define __NEED_struct_timespec
 
 #include <bits/alltypes.h>
-
 #include <bits/stat.h>
 
 #define st_atime st_atim.tv_sec
@@ -100,4 +99,4 @@ int lchmod(const char*, mode_t);
 }
 #endif
 
-#endif // SYSROOT_SYS_STAT_H_
+#endif  // SYSROOT_SYS_STAT_H_

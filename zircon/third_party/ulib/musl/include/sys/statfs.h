@@ -6,11 +6,10 @@ extern "C" {
 #endif
 
 #include <features.h>
-
 #include <sys/statvfs.h>
 
 typedef struct __fsid_t {
-    int __val[2];
+  int __val[2];
 } fsid_t;
 
 #include <bits/statfs.h>
@@ -22,4 +21,4 @@ int fstatfs(int, struct statfs*);
 }
 #endif
 
-#endif // SYSROOT_SYS_STATFS_H_
+#endif  // SYSROOT_SYS_STATFS_H_

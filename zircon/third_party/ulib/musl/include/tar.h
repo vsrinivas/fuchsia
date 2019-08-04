@@ -30,4 +30,4 @@
 #define TVERSION "00"
 #define TVERSLEN 2
 
-#endif // SYSROOT_TAR_H_
+#endif  // SYSROOT_TAR_H_

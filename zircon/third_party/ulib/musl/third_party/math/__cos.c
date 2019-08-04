@@ -58,12 +58,12 @@ static const double C1 = 4.16666666666666019037e-02, /* 0x3FA55555, 0x5555554C *
     C6 = -1.13596475577881948265e-11;                /* 0xBDA8FAE9, 0xBE8838D4 */
 
 double __cos(double x, double y) {
-    double_t hz, z, r, w;
+  double_t hz, z, r, w;
 
-    z = x * x;
-    w = z * z;
-    r = z * (C1 + z * (C2 + z * C3)) + w * w * (C4 + z * (C5 + z * C6));
-    hz = 0.5 * z;
-    w = 1.0 - hz;
-    return w + (((1.0 - w) - hz) + (z * r - x * y));
+  z = x * x;
+  w = z * z;
+  r = z * (C1 + z * (C2 + z * C3)) + w * w * (C4 + z * (C5 + z * C6));
+  hz = 0.5 * z;
+  w = 1.0 - hz;
+  return w + (((1.0 - w) - hz) + (z * r - x * y));
 }

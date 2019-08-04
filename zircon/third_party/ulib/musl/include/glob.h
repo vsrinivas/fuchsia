@@ -12,11 +12,11 @@ extern "C" {
 #include <bits/alltypes.h>
 
 typedef struct {
-    size_t gl_pathc;
-    char** gl_pathv;
-    size_t gl_offs;
-    int __dummy1;
-    void* __dummy2[5];
+  size_t gl_pathc;
+  char** gl_pathv;
+  size_t gl_offs;
+  int __dummy1;
+  void* __dummy2[5];
 } glob_t;
 
 int glob(const char* __restrict, int, int (*)(const char*, int), glob_t* __restrict);
@@ -40,4 +40,4 @@ void globfree(glob_t*);
 }
 #endif
 
-#endif // SYSROOT_GLOB_H_
+#endif  // SYSROOT_GLOB_H_

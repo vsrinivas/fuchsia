@@ -25,4 +25,4 @@ int feupdateenv(const fenv_t*);
 }
 #endif
 
-#endif // SYSROOT_FENV_H_
+#endif  // SYSROOT_FENV_H_

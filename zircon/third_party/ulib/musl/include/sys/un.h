@@ -15,8 +15,8 @@ extern "C" {
 #include <bits/alltypes.h>
 
 struct sockaddr_un {
-    sa_family_t sun_family;
-    char sun_path[108];
+  sa_family_t sun_family;
+  char sun_path[108];
 };
 
 #if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
@@ -28,4 +28,4 @@ size_t strlen(const char*);
 }
 #endif
 
-#endif // SYSROOT_SYS_UN_H_
+#endif  // SYSROOT_SYS_UN_H_

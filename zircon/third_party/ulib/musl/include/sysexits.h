@@ -20,4 +20,4 @@
 #define EX_CONFIG 78
 #define EX__MAX 78
 
-#endif // SYSROOT_SYSEXITS_H_
+#endif  // SYSROOT_SYSEXITS_H_

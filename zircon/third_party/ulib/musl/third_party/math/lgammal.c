@@ -92,9 +92,7 @@
 #if LDBL_MANT_DIG == 53 && LDBL_MAX_EXP == 1024
 double __lgamma_r(double x, int* sg);
 
-long double __lgammal_r(long double x, int* sg) {
-    return __lgamma_r(x, sg);
-}
+long double __lgammal_r(long double x, int* sg) { return __lgamma_r(x, sg); }
 #elif LDBL_MANT_DIG == 64 && LDBL_MAX_EXP == 16384
 static const long double
     pi = 3.14159265358979323846264L,
@@ -193,160 +191,156 @@ static const long double
 
 /* sin(pi*x) assuming x > 2^-1000, if sin(pi*x)==0 the sign is arbitrary */
 static long double sin_pi(long double x) {
-    int n;
+  int n;
 
-    /* spurious inexact if odd int */
-    x *= 0.5;
-    x = 2.0 * (x - floorl(x)); /* x mod 2.0 */
+  /* spurious inexact if odd int */
+  x *= 0.5;
+  x = 2.0 * (x - floorl(x)); /* x mod 2.0 */
 
-    n = (int)(x * 4.0);
-    n = (n + 1) / 2;
-    x -= n * 0.5f;
-    x *= pi;
+  n = (int)(x * 4.0);
+  n = (n + 1) / 2;
+  x -= n * 0.5f;
+  x *= pi;
 
-    switch (n) {
+  switch (n) {
     default: /* case 4: */
     case 0:
-        return __sinl(x, 0.0, 0);
+      return __sinl(x, 0.0, 0);
     case 1:
-        return __cosl(x, 0.0);
+      return __cosl(x, 0.0);
     case 2:
-        return __sinl(-x, 0.0, 0);
+      return __sinl(-x, 0.0, 0);
     case 3:
-        return -__cosl(x, 0.0);
-    }
+      return -__cosl(x, 0.0);
+  }
 }
 
 long double __lgammal_r(long double x, int* sg) {
-    long double t, y, z, nadj = 0.0, p, p1, p2, q, r, w;
-    union ldshape u = {x};
-    uint32_t ix = (u.i.se & 0x7fffU) << 16 | u.i.m >> 48;
-    int sign = u.i.se >> 15;
-    int i;
+  long double t, y, z, nadj = 0.0, p, p1, p2, q, r, w;
+  union ldshape u = {x};
+  uint32_t ix = (u.i.se & 0x7fffU) << 16 | u.i.m >> 48;
+  int sign = u.i.se >> 15;
+  int i;
 
-    *sg = 1;
+  *sg = 1;
 
-    /* purge off +-inf, NaN, +-0, tiny and negative arguments */
-    if (ix >= 0x7fff0000)
-        return x * x;
-    if (ix < 0x3fc08000) { /* |x|<2**-63, return -log(|x|) */
-        if (sign) {
-            *sg = -1;
-            x = -x;
-        }
-        return -logl(x);
-    }
+  /* purge off +-inf, NaN, +-0, tiny and negative arguments */
+  if (ix >= 0x7fff0000)
+    return x * x;
+  if (ix < 0x3fc08000) { /* |x|<2**-63, return -log(|x|) */
     if (sign) {
-        x = -x;
-        t = sin_pi(x);
-        if (t == 0.0)
-            return 1.0 / (x - x); /* -integer */
-        if (t > 0.0)
-            *sg = -1;
-        else
-            t = -t;
-        nadj = logl(pi / (t * x));
+      *sg = -1;
+      x = -x;
     }
+    return -logl(x);
+  }
+  if (sign) {
+    x = -x;
+    t = sin_pi(x);
+    if (t == 0.0)
+      return 1.0 / (x - x); /* -integer */
+    if (t > 0.0)
+      *sg = -1;
+    else
+      t = -t;
+    nadj = logl(pi / (t * x));
+  }
 
-    /* purge off 1 and 2 (so the sign is ok with downward rounding) */
-    if ((ix == 0x3fff8000 || ix == 0x40008000) && u.i.m == 0) {
-        r = 0;
-    } else if (ix < 0x40008000) { /* x < 2.0 */
-        if (ix <= 0x3ffee666) {   /* 8.99993896484375e-1 */
-            /* lgamma(x) = lgamma(x+1) - log(x) */
-            r = -logl(x);
-            if (ix >= 0x3ffebb4a) { /* 7.31597900390625e-1 */
-                y = x - 1.0;
-                i = 0;
-            } else if (ix >= 0x3ffced33) { /* 2.31639862060546875e-1 */
-                y = x - (tc - 1.0);
-                i = 1;
-            } else { /* x < 0.23 */
-                y = x;
-                i = 2;
-            }
-        } else {
-            r = 0.0;
-            if (ix >= 0x3fffdda6) { /* 1.73162841796875 */
-                /* [1.7316,2] */
-                y = x - 2.0;
-                i = 0;
-            } else if (ix >= 0x3fff9da6) { /* 1.23162841796875 */
-                /* [1.23,1.73] */
-                y = x - tc;
-                i = 1;
-            } else {
-                /* [0.9, 1.23] */
-                y = x - 1.0;
-                i = 2;
-            }
-        }
-        switch (i) {
-        case 0:
-            p1 = a0 + y * (a1 + y * (a2 + y * (a3 + y * (a4 + y * a5))));
-            p2 = b0 + y * (b1 + y * (b2 + y * (b3 + y * (b4 + y))));
-            r += 0.5 * y + y * p1 / p2;
-            break;
-        case 1:
-            p1 = g0 + y * (g1 + y * (g2 + y * (g3 + y * (g4 + y * (g5 + y * g6)))));
-            p2 = h0 + y * (h1 + y * (h2 + y * (h3 + y * (h4 + y * (h5 + y)))));
-            p = tt + y * p1 / p2;
-            r += (tf + p);
-            break;
-        case 2:
-            p1 = y * (u0 + y * (u1 + y * (u2 + y * (u3 + y * (u4 + y * (u5 + y * u6))))));
-            p2 = v0 + y * (v1 + y * (v2 + y * (v3 + y * (v4 + y * (v5 + y)))));
-            r += (-0.5 * y + p1 / p2);
-        }
-    } else if (ix < 0x40028000) { /* 8.0 */
-        /* x < 8.0 */
-        i = (int)x;
-        y = x - (double)i;
-        p = y * (s0 + y * (s1 + y * (s2 + y * (s3 + y * (s4 + y * (s5 + y * s6))))));
-        q = r0 + y * (r1 + y * (r2 + y * (r3 + y * (r4 + y * (r5 + y * (r6 + y))))));
-        r = 0.5 * y + p / q;
-        z = 1.0;
-        /* lgamma(1+s) = log(s) + lgamma(s) */
-        switch (i) {
-        case 7:
-            z *= (y + 6.0); /* FALLTHRU */
-        case 6:
-            z *= (y + 5.0); /* FALLTHRU */
-        case 5:
-            z *= (y + 4.0); /* FALLTHRU */
-        case 4:
-            z *= (y + 3.0); /* FALLTHRU */
-        case 3:
-            z *= (y + 2.0); /* FALLTHRU */
-            r += logl(z);
-            break;
-        }
-    } else if (ix < 0x40418000) { /* 2^66 */
-        /* 8.0 <= x < 2**66 */
-        t = logl(x);
-        z = 1.0 / x;
-        y = z * z;
-        w = w0 + z * (w1 + y * (w2 + y * (w3 + y * (w4 + y * (w5 + y * (w6 + y * w7))))));
-        r = (x - 0.5) * (t - 1.0) + w;
-    } else /* 2**66 <= x <= inf */
-        r = x * (logl(x) - 1.0);
-    if (sign)
-        r = nadj - r;
-    return r;
+  /* purge off 1 and 2 (so the sign is ok with downward rounding) */
+  if ((ix == 0x3fff8000 || ix == 0x40008000) && u.i.m == 0) {
+    r = 0;
+  } else if (ix < 0x40008000) { /* x < 2.0 */
+    if (ix <= 0x3ffee666) {     /* 8.99993896484375e-1 */
+      /* lgamma(x) = lgamma(x+1) - log(x) */
+      r = -logl(x);
+      if (ix >= 0x3ffebb4a) { /* 7.31597900390625e-1 */
+        y = x - 1.0;
+        i = 0;
+      } else if (ix >= 0x3ffced33) { /* 2.31639862060546875e-1 */
+        y = x - (tc - 1.0);
+        i = 1;
+      } else { /* x < 0.23 */
+        y = x;
+        i = 2;
+      }
+    } else {
+      r = 0.0;
+      if (ix >= 0x3fffdda6) { /* 1.73162841796875 */
+        /* [1.7316,2] */
+        y = x - 2.0;
+        i = 0;
+      } else if (ix >= 0x3fff9da6) { /* 1.23162841796875 */
+        /* [1.23,1.73] */
+        y = x - tc;
+        i = 1;
+      } else {
+        /* [0.9, 1.23] */
+        y = x - 1.0;
+        i = 2;
+      }
+    }
+    switch (i) {
+      case 0:
+        p1 = a0 + y * (a1 + y * (a2 + y * (a3 + y * (a4 + y * a5))));
+        p2 = b0 + y * (b1 + y * (b2 + y * (b3 + y * (b4 + y))));
+        r += 0.5 * y + y * p1 / p2;
+        break;
+      case 1:
+        p1 = g0 + y * (g1 + y * (g2 + y * (g3 + y * (g4 + y * (g5 + y * g6)))));
+        p2 = h0 + y * (h1 + y * (h2 + y * (h3 + y * (h4 + y * (h5 + y)))));
+        p = tt + y * p1 / p2;
+        r += (tf + p);
+        break;
+      case 2:
+        p1 = y * (u0 + y * (u1 + y * (u2 + y * (u3 + y * (u4 + y * (u5 + y * u6))))));
+        p2 = v0 + y * (v1 + y * (v2 + y * (v3 + y * (v4 + y * (v5 + y)))));
+        r += (-0.5 * y + p1 / p2);
+    }
+  } else if (ix < 0x40028000) { /* 8.0 */
+    /* x < 8.0 */
+    i = (int)x;
+    y = x - (double)i;
+    p = y * (s0 + y * (s1 + y * (s2 + y * (s3 + y * (s4 + y * (s5 + y * s6))))));
+    q = r0 + y * (r1 + y * (r2 + y * (r3 + y * (r4 + y * (r5 + y * (r6 + y))))));
+    r = 0.5 * y + p / q;
+    z = 1.0;
+    /* lgamma(1+s) = log(s) + lgamma(s) */
+    switch (i) {
+      case 7:
+        z *= (y + 6.0); /* FALLTHRU */
+      case 6:
+        z *= (y + 5.0); /* FALLTHRU */
+      case 5:
+        z *= (y + 4.0); /* FALLTHRU */
+      case 4:
+        z *= (y + 3.0); /* FALLTHRU */
+      case 3:
+        z *= (y + 2.0); /* FALLTHRU */
+        r += logl(z);
+        break;
+    }
+  } else if (ix < 0x40418000) { /* 2^66 */
+    /* 8.0 <= x < 2**66 */
+    t = logl(x);
+    z = 1.0 / x;
+    y = z * z;
+    w = w0 + z * (w1 + y * (w2 + y * (w3 + y * (w4 + y * (w5 + y * (w6 + y * w7))))));
+    r = (x - 0.5) * (t - 1.0) + w;
+  } else /* 2**66 <= x <= inf */
+    r = x * (logl(x) - 1.0);
+  if (sign)
+    r = nadj - r;
+  return r;
 }
 #elif LDBL_MANT_DIG == 113 && LDBL_MAX_EXP == 16384
 // TODO: broken implementation to make things compile
 double __lgamma_r(double x, int* sg);
 
-long double __lgammal_r(long double x, int* sg) {
-    return __lgamma_r(x, sg);
-}
+long double __lgammal_r(long double x, int* sg) { return __lgamma_r(x, sg); }
 #endif
 
 extern int __signgam;
 
-long double lgammal(long double x) {
-    return __lgammal_r(x, &__signgam);
-}
+long double lgammal(long double x) { return __lgammal_r(x, &__signgam); }
 
 weak_alias(__lgammal_r, lgammal_r);

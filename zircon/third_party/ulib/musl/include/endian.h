@@ -22,16 +22,14 @@
 
 #include <stdint.h>
 
-static __inline uint16_t __bswap16(uint16_t __x) {
-    return (uint16_t)(__x << 8 | __x >> 8);
-}
+static __inline uint16_t __bswap16(uint16_t __x) { return (uint16_t)(__x << 8 | __x >> 8); }
 
 static __inline uint32_t __bswap32(uint32_t __x) {
-    return (uint32_t)(__x >> 24 | ((__x >> 8) & 0xff00) | ((__x << 8) & 0xff0000) | __x << 24);
+  return (uint32_t)(__x >> 24 | ((__x >> 8) & 0xff00) | ((__x << 8) & 0xff0000) | __x << 24);
 }
 
 static __inline uint64_t __bswap64(uint64_t __x) {
-    return ((uint64_t)__bswap32((uint32_t)__x)) << 32 | (uint64_t)__bswap32((uint32_t)(__x >> 32));
+  return ((uint64_t)__bswap32((uint32_t)__x)) << 32 | (uint64_t)__bswap32((uint32_t)(__x >> 32));
 }
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -76,4 +74,4 @@ static __inline uint64_t __bswap64(uint64_t __x) {
 
 #endif
 
-#endif // SYSROOT_ENDIAN_H_
+#endif  // SYSROOT_ENDIAN_H_

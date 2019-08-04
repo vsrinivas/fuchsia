@@ -1,5 +1,3 @@
 #include <strings.h>
 
-int ffsl(long i) {
-    return __builtin_ffsl(i);
-}
+int ffsl(long i) { return __builtin_ffsl(i); }

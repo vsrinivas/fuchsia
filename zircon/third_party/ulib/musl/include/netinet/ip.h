@@ -10,53 +10,53 @@ extern "C" {
 #include <stdint.h>
 
 struct timestamp {
-    uint8_t len;
-    uint8_t ptr;
+  uint8_t len;
+  uint8_t ptr;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-    unsigned int flags : 4;
-    unsigned int overflow : 4;
+  unsigned int flags : 4;
+  unsigned int overflow : 4;
 #else
-    unsigned int overflow : 4;
-    unsigned int flags : 4;
+  unsigned int overflow : 4;
+  unsigned int flags : 4;
 #endif
-    uint32_t data[9];
+  uint32_t data[9];
 };
 
 struct iphdr {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-    unsigned int ihl : 4;
-    unsigned int version : 4;
+  unsigned int ihl : 4;
+  unsigned int version : 4;
 #else
-    unsigned int version : 4;
-    unsigned int ihl : 4;
+  unsigned int version : 4;
+  unsigned int ihl : 4;
 #endif
-    uint8_t tos;
-    uint16_t tot_len;
-    uint16_t id;
-    uint16_t frag_off;
-    uint8_t ttl;
-    uint8_t protocol;
-    uint16_t check;
-    uint32_t saddr;
-    uint32_t daddr;
+  uint8_t tos;
+  uint16_t tot_len;
+  uint16_t id;
+  uint16_t frag_off;
+  uint8_t ttl;
+  uint8_t protocol;
+  uint16_t check;
+  uint32_t saddr;
+  uint32_t daddr;
 };
 
 struct ip {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-    unsigned int ip_hl : 4;
-    unsigned int ip_v : 4;
+  unsigned int ip_hl : 4;
+  unsigned int ip_v : 4;
 #else
-    unsigned int ip_v : 4;
-    unsigned int ip_hl : 4;
+  unsigned int ip_v : 4;
+  unsigned int ip_hl : 4;
 #endif
-    uint8_t ip_tos;
-    uint16_t ip_len;
-    uint16_t ip_id;
-    uint16_t ip_off;
-    uint8_t ip_ttl;
-    uint8_t ip_p;
-    uint16_t ip_sum;
-    struct in_addr ip_src, ip_dst;
+  uint8_t ip_tos;
+  uint16_t ip_len;
+  uint16_t ip_id;
+  uint16_t ip_off;
+  uint8_t ip_ttl;
+  uint8_t ip_p;
+  uint16_t ip_sum;
+  struct in_addr ip_src, ip_dst;
 };
 
 #define IP_RF 0x8000
@@ -65,17 +65,17 @@ struct ip {
 #define IP_OFFMASK 0x1fff
 
 struct ip_timestamp {
-    uint8_t ipt_code;
-    uint8_t ipt_len;
-    uint8_t ipt_ptr;
+  uint8_t ipt_code;
+  uint8_t ipt_len;
+  uint8_t ipt_ptr;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-    unsigned int ipt_flg : 4;
-    unsigned int ipt_oflw : 4;
+  unsigned int ipt_flg : 4;
+  unsigned int ipt_oflw : 4;
 #else
-    unsigned int ipt_oflw : 4;
-    unsigned int ipt_flg : 4;
+  unsigned int ipt_oflw : 4;
+  unsigned int ipt_flg : 4;
 #endif
-    uint32_t data[9];
+  uint32_t data[9];
 };
 
 #define IPVERSION 4
@@ -195,4 +195,4 @@ struct ip_timestamp {
 }
 #endif
 
-#endif // SYSROOT_NETINET_IP_H_
+#endif  // SYSROOT_NETINET_IP_H_

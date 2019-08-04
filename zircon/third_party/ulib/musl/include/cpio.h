@@ -26,4 +26,4 @@
 #define C_ISCTG 0110000
 #define C_ISREG 0100000
 
-#endif // SYSROOT_CPIO_H_
+#endif  // SYSROOT_CPIO_H_

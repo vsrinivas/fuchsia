@@ -70,4 +70,4 @@ int umount2(const char*, int);
 }
 #endif
 
-#endif // SYSROOT_SYS_MOUNT_H_
+#endif  // SYSROOT_SYS_MOUNT_H_

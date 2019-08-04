@@ -3,5 +3,5 @@
 #include <stdio.h>
 
 void herror(const char* msg) {
-    fprintf(stderr, "%s%s%s", msg ? msg : "", msg ? ": " : "", hstrerror(h_errno));
+  fprintf(stderr, "%s%s%s", msg ? msg : "", msg ? ": " : "", hstrerror(h_errno));
 }

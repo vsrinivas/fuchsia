@@ -23,4 +23,4 @@ int timerfd_gettime(int, struct itimerspec*);
 }
 #endif
 
-#endif // SYSROOT_SYS_TIMERFD_H_
+#endif  // SYSROOT_SYS_TIMERFD_H_

@@ -11,51 +11,51 @@ typedef unsigned long greg_t;
 typedef unsigned long gregset_t[34];
 
 typedef struct {
-    long double vregs[32];
-    unsigned int fpsr;
-    unsigned int fpcr;
+  long double vregs[32];
+  unsigned int fpsr;
+  unsigned int fpcr;
 } fpregset_t;
 typedef struct sigcontext {
-    unsigned long fault_address;
-    unsigned long regs[31];
-    unsigned long sp, pc, pstate;
-    long double __reserved[256];
+  unsigned long fault_address;
+  unsigned long regs[31];
+  unsigned long sp, pc, pstate;
+  long double __reserved[256];
 } mcontext_t;
 
 #define FPSIMD_MAGIC 0x46508001
 #define ESR_MAGIC 0x45535201
 struct _aarch64_ctx {
-    unsigned int magic;
-    unsigned int size;
+  unsigned int magic;
+  unsigned int size;
 };
 struct fpsimd_context {
-    struct _aarch64_ctx head;
-    unsigned int fpsr;
-    unsigned int fpcr;
-    long double vregs[32];
+  struct _aarch64_ctx head;
+  unsigned int fpsr;
+  unsigned int fpcr;
+  long double vregs[32];
 };
 struct esr_context {
-    struct _aarch64_ctx head;
-    unsigned long esr;
+  struct _aarch64_ctx head;
+  unsigned long esr;
 };
 #else
 typedef struct {
-    long double __regs[18 + 256];
+  long double __regs[18 + 256];
 } mcontext_t;
 #endif
 
 struct sigaltstack {
-    void* ss_sp;
-    int ss_flags;
-    size_t ss_size;
+  void* ss_sp;
+  int ss_flags;
+  size_t ss_size;
 };
 
 typedef struct __ucontext {
-    unsigned long uc_flags;
-    struct ucontext* uc_link;
-    stack_t uc_stack;
-    sigset_t uc_sigmask;
-    mcontext_t uc_mcontext;
+  unsigned long uc_flags;
+  struct ucontext* uc_link;
+  stack_t uc_stack;
+  sigset_t uc_sigmask;
+  mcontext_t uc_mcontext;
 } ucontext_t;
 
 #define SA_NOCLDSTOP 1

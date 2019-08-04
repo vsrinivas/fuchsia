@@ -36,4 +36,4 @@
 
 #define BITSPERBYTE CHAR_BIT
 
-#endif // SYSROOT_VALUES_H_
+#endif  // SYSROOT_VALUES_H_

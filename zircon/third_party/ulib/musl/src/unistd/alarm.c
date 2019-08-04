@@ -1,5 +1,3 @@
 #include <unistd.h>
 
-unsigned alarm(unsigned seconds) {
-    return 0;
-}
+unsigned alarm(unsigned seconds) { return 0; }

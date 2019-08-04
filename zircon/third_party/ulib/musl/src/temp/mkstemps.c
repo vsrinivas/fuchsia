@@ -3,6 +3,4 @@
 
 int __mkostemps(char*, int, int);
 
-int mkstemps(char* template, int len) {
-    return __mkostemps(template, len, 0);
-}
+int mkstemps(char* template, int len) { return __mkostemps(template, len, 0); }

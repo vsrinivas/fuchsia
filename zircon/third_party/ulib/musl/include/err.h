@@ -22,4 +22,4 @@ _Noreturn void verrx(int, const char*, va_list);
 }
 #endif
 
-#endif // SYSROOT_ERR_H_
+#endif  // SYSROOT_ERR_H_

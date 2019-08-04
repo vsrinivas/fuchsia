@@ -20,11 +20,11 @@ extern "C" {
 #include <bits/alltypes.h>
 
 struct flock {
-    short l_type;
-    short l_whence;
-    off_t l_start;
-    off_t l_len;
-    pid_t l_pid;
+  short l_type;
+  short l_whence;
+  off_t l_start;
+  off_t l_len;
+  pid_t l_pid;
 };
 
 int creat(const char*, mode_t);
@@ -195,8 +195,8 @@ int lockf(int, int, off_t);
 #define F_OWNER_PGRP 2
 #define F_OWNER_GID 2
 struct f_owner_ex {
-    int type;
-    pid_t pid;
+  int type;
+  pid_t pid;
 };
 #define FALLOC_FL_KEEP_SIZE 1
 #define FALLOC_FL_PUNCH_HOLE 2
@@ -221,4 +221,4 @@ ssize_t tee(int, int, size_t, unsigned);
 }
 #endif
 
-#endif // SYSROOT_FCNTL_H_
+#endif  // SYSROOT_FCNTL_H_

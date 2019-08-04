@@ -20,4 +20,4 @@ int flock(int, int);
 }
 #endif
 
-#endif // SYSROOT_SYS_FILE_H_
+#endif  // SYSROOT_SYS_FILE_H_

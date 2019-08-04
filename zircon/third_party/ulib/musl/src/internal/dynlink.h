@@ -18,21 +18,21 @@ typedef Elf64_Sym Sym;
 /* These enum constants provide unmatchable default values for
  * any relocation type the arch does not use. */
 enum {
-    REL_NONE = 0,
-    REL_SYMBOLIC = -100,
-    REL_GOT,
-    REL_PLT,
-    REL_RELATIVE,
-    REL_OFFSET,
-    REL_OFFSET32,
-    REL_COPY,
-    REL_DTPMOD,
-    REL_DTPOFF,
-    REL_TPOFF,
-    REL_TPOFF_NEG,
-    REL_TLSDESC,
-    REL_FUNCDESC,
-    REL_FUNCDESC_VAL,
+  REL_NONE = 0,
+  REL_SYMBOLIC = -100,
+  REL_GOT,
+  REL_PLT,
+  REL_RELATIVE,
+  REL_OFFSET,
+  REL_OFFSET32,
+  REL_COPY,
+  REL_DTPMOD,
+  REL_DTPOFF,
+  REL_TPOFF,
+  REL_TPOFF_NEG,
+  REL_TLSDESC,
+  REL_FUNCDESC,
+  REL_FUNCDESC_VAL,
 };
 
 #include "reloc.h"
@@ -49,11 +49,11 @@ enum {
 // of the call stack.
 #ifndef DL_START_RETURN
 typedef struct {
-    void* arg;
-    void* entry;
+  void* arg;
+  void* entry;
 } dl_start_return_t;
 #define DL_START_RETURN(entry, arg) \
-    (dl_start_return_t) { (arg), (entry) }
+  (dl_start_return_t) { (arg), (entry) }
 #endif
 
 dl_start_return_t _dl_start(void* start_arg, void* vdso) ATTR_LIBC_VISIBILITY;
@@ -67,4 +67,4 @@ extern const ElfW(Ehdr) __ehdr_start[] ATTR_LIBC_VISIBILITY;
 extern ElfW(Dyn) _DYNAMIC[] ATTR_LIBC_VISIBILITY;
 
 void _dl_log_unlogged(void) ATTR_LIBC_VISIBILITY;
-void _dl_log_write(const char *buffer, size_t len) ATTR_LIBC_VISIBILITY;
+void _dl_log_write(const char* buffer, size_t len) ATTR_LIBC_VISIBILITY;

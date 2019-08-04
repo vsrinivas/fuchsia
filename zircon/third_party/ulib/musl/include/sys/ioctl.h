@@ -13,4 +13,4 @@ int ioctl(int, int, ...);
 }
 #endif
 
-#endif // SYSROOT_SYS_IOCTL_H_
+#endif  // SYSROOT_SYS_IOCTL_H_

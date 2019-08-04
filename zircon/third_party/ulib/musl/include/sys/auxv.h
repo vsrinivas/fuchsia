@@ -13,4 +13,4 @@ unsigned long getauxval(unsigned long);
 }
 #endif
 
-#endif // SYSROOT_SYS_AUXV_H_
+#endif  // SYSROOT_SYS_AUXV_H_

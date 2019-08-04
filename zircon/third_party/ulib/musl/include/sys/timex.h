@@ -7,26 +7,26 @@ extern "C" {
 
 #define __NEED_clockid_t
 
-#include <bits/alltypes.h>
-
 #include <sys/time.h>
 
+#include <bits/alltypes.h>
+
 struct ntptimeval {
-    struct timeval time;
-    long maxerror, esterror;
+  struct timeval time;
+  long maxerror, esterror;
 };
 
 struct timex {
-    unsigned modes;
-    long offset, freq, maxerror, esterror;
-    int status;
-    long constant, precision, tolerance;
-    struct timeval time;
-    long tick, ppsfreq, jitter;
-    int shift;
-    long stabil, jitcnt, calcnt, errcnt, stbcnt;
-    int tai;
-    int __padding[11];
+  unsigned modes;
+  long offset, freq, maxerror, esterror;
+  int status;
+  long constant, precision, tolerance;
+  struct timeval time;
+  long tick, ppsfreq, jitter;
+  int shift;
+  long stabil, jitcnt, calcnt, errcnt, stbcnt;
+  int tai;
+  int __padding[11];
 };
 
 #define ADJ_OFFSET 0x0001
@@ -75,9 +75,9 @@ struct timex {
 #define STA_MODE 0x4000
 #define STA_CLK 0x8000
 
-#define STA_RONLY                                                                             \
-    (STA_PPSSIGNAL | STA_PPSJITTER | STA_PPSWANDER | STA_PPSERROR | STA_CLOCKERR | STA_NANO | \
-     STA_MODE | STA_CLK)
+#define STA_RONLY                                                                           \
+  (STA_PPSSIGNAL | STA_PPSJITTER | STA_PPSWANDER | STA_PPSERROR | STA_CLOCKERR | STA_NANO | \
+   STA_MODE | STA_CLK)
 
 #define TIME_OK 0
 #define TIME_INS 1
@@ -96,4 +96,4 @@ int clock_adjtime(clockid_t, struct timex*);
 }
 #endif
 
-#endif // SYSROOT_SYS_TIMEX_H_
+#endif  // SYSROOT_SYS_TIMEX_H_

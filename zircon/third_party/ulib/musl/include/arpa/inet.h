@@ -33,4 +33,4 @@ in_addr_t inet_netof(struct in_addr);
 }
 #endif
 
-#endif // SYSROOT_ARPA_INET_H_
+#endif  // SYSROOT_ARPA_INET_H_

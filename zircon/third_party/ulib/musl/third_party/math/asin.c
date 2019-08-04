@@ -56,48 +56,48 @@ static const double pio2_hi = 1.57079632679489655800e+00, /* 0x3FF921FB, 0x54442
     qS4 = 7.70381505559019352791e-02;  /* 0x3FB3B8C5, 0xB12E9282 */
 
 static double R(double z) {
-    double_t p, q;
-    p = z * (pS0 + z * (pS1 + z * (pS2 + z * (pS3 + z * (pS4 + z * pS5)))));
-    q = 1.0 + z * (qS1 + z * (qS2 + z * (qS3 + z * qS4)));
-    return p / q;
+  double_t p, q;
+  p = z * (pS0 + z * (pS1 + z * (pS2 + z * (pS3 + z * (pS4 + z * pS5)))));
+  q = 1.0 + z * (qS1 + z * (qS2 + z * (qS3 + z * qS4)));
+  return p / q;
 }
 
 double asin(double x) {
-    double z, r, s;
-    uint32_t hx, ix;
+  double z, r, s;
+  uint32_t hx, ix;
 
-    GET_HIGH_WORD(hx, x);
-    ix = hx & 0x7fffffff;
-    /* |x| >= 1 or nan */
-    if (ix >= 0x3ff00000) {
-        uint32_t lx;
-        GET_LOW_WORD(lx, x);
-        if (((ix - 0x3ff00000) | lx) == 0) /* asin(1) = +-pi/2 with inexact */
-            return x * pio2_hi + 0x1p-120f;
-        return 0 / (x - x);
-    }
-    /* |x| < 0.5 */
-    if (ix < 0x3fe00000) {
-        /* if 0x1p-1022 <= |x| < 0x1p-26, avoid raising underflow */
-        if (ix < 0x3e500000 && ix >= 0x00100000)
-            return x;
-        return x + x * R(x * x);
-    }
-    /* 1 > |x| >= 0.5 */
-    z = (1 - fabs(x)) * 0.5;
-    s = sqrt(z);
-    r = R(z);
-    if (ix >= 0x3fef3333) { /* if |x| > 0.975 */
-        x = pio2_hi - (2 * (s + s * r) - pio2_lo);
-    } else {
-        double f, c;
-        /* f+c = sqrt(z) */
-        f = s;
-        SET_LOW_WORD(f, 0);
-        c = (z - f * f) / (s + f);
-        x = 0.5 * pio2_hi - (2 * s * r - (pio2_lo - 2 * c) - (0.5 * pio2_hi - 2 * f));
-    }
-    if (hx >> 31)
-        return -x;
-    return x;
+  GET_HIGH_WORD(hx, x);
+  ix = hx & 0x7fffffff;
+  /* |x| >= 1 or nan */
+  if (ix >= 0x3ff00000) {
+    uint32_t lx;
+    GET_LOW_WORD(lx, x);
+    if (((ix - 0x3ff00000) | lx) == 0) /* asin(1) = +-pi/2 with inexact */
+      return x * pio2_hi + 0x1p-120f;
+    return 0 / (x - x);
+  }
+  /* |x| < 0.5 */
+  if (ix < 0x3fe00000) {
+    /* if 0x1p-1022 <= |x| < 0x1p-26, avoid raising underflow */
+    if (ix < 0x3e500000 && ix >= 0x00100000)
+      return x;
+    return x + x * R(x * x);
+  }
+  /* 1 > |x| >= 0.5 */
+  z = (1 - fabs(x)) * 0.5;
+  s = sqrt(z);
+  r = R(z);
+  if (ix >= 0x3fef3333) { /* if |x| > 0.975 */
+    x = pio2_hi - (2 * (s + s * r) - pio2_lo);
+  } else {
+    double f, c;
+    /* f+c = sqrt(z) */
+    f = s;
+    SET_LOW_WORD(f, 0);
+    c = (z - f * f) / (s + f);
+    x = 0.5 * pio2_hi - (2 * s * r - (pio2_lo - 2 * c) - (0.5 * pio2_hi - 2 * f));
+  }
+  if (hx >> 31)
+    return -x;
+  return x;
 }

@@ -102,12 +102,12 @@ float crealf(float complex);
 long double creall(long double complex);
 
 #ifndef __cplusplus
-#define __CIMAG(x, t)     \
-    (+(union {            \
-          _Complex t __z; \
-          t __xy[2];      \
-      }){(_Complex t)(x)} \
-          .__xy[1])
+#define __CIMAG(x, t)   \
+  (+(union {            \
+      _Complex t __z;   \
+      t __xy[2];        \
+    }){(_Complex t)(x)} \
+        .__xy[1])
 
 #define creal(x) ((double)(x))
 #define crealf(x) ((float)(x))
@@ -135,4 +135,4 @@ long double creall(long double complex);
 }
 #endif
 
-#endif // SYSROOT_COMPLEX_H_
+#endif  // SYSROOT_COMPLEX_H_

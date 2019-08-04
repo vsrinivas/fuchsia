@@ -89,4 +89,4 @@ char* nl_langinfo_l(nl_item, locale_t);
 }
 #endif
 
-#endif // SYSROOT_LANGINFO_H_
+#endif  // SYSROOT_LANGINFO_H_

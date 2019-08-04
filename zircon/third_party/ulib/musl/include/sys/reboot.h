@@ -19,4 +19,4 @@ int reboot(int);
 }
 #endif
 
-#endif // SYSROOT_SYS_REBOOT_H_
+#endif  // SYSROOT_SYS_REBOOT_H_

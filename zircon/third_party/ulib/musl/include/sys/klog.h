@@ -11,4 +11,4 @@ int klogctl(int, char*, int);
 }
 #endif
 
-#endif // SYSROOT_SYS_KLOG_H_
+#endif  // SYSROOT_SYS_KLOG_H_

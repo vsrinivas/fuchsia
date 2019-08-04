@@ -45,8 +45,8 @@ extern "C" {
 #define L_tmpnam 20
 
 typedef union _G_fpos64_t {
-    char __opaque[16];
-    double __align;
+  char __opaque[16];
+  double __align;
 } fpos_t;
 
 extern FILE* const stdin;
@@ -182,4 +182,4 @@ int fputs_unlocked(const char*, FILE*);
 }
 #endif
 
-#endif // SYSROOT_STDIO_H_
+#endif  // SYSROOT_STDIO_H_

@@ -26,27 +26,27 @@ extern "C" {
 #define NS_DEFAULTPORT 53
 
 typedef enum __ns_sect {
-    ns_s_qd = 0,
-    ns_s_zn = 0,
-    ns_s_an = 1,
-    ns_s_pr = 1,
-    ns_s_ns = 2,
-    ns_s_ud = 2,
-    ns_s_ar = 3,
-    ns_s_max = 4
+  ns_s_qd = 0,
+  ns_s_zn = 0,
+  ns_s_an = 1,
+  ns_s_pr = 1,
+  ns_s_ns = 2,
+  ns_s_ud = 2,
+  ns_s_ar = 3,
+  ns_s_max = 4
 } ns_sect;
 
 typedef struct __ns_msg {
-    const unsigned char *_msg, *_eom;
-    uint16_t _id, _flags, _counts[ns_s_max];
-    const unsigned char* _sections[ns_s_max];
-    ns_sect _sect;
-    int _rrnum;
-    const unsigned char* _msg_ptr;
+  const unsigned char *_msg, *_eom;
+  uint16_t _id, _flags, _counts[ns_s_max];
+  const unsigned char* _sections[ns_s_max];
+  ns_sect _sect;
+  int _rrnum;
+  const unsigned char* _msg_ptr;
 } ns_msg;
 
 struct _ns_flagdata {
-    int mask, shift;
+  int mask, shift;
 };
 extern const struct _ns_flagdata _ns_flagdata[];
 
@@ -56,15 +56,15 @@ extern const struct _ns_flagdata _ns_flagdata[];
 #define ns_msg_size(handle) ((handle)._eom - (handle)._msg)
 #define ns_msg_count(handle, section) ((handle)._counts[section] + 0)
 #define ns_msg_getflag(handle, flag) \
-    (((handle)._flags & _ns_flagdata[flag].mask) >> _ns_flagdata[flag].shift)
+  (((handle)._flags & _ns_flagdata[flag].mask) >> _ns_flagdata[flag].shift)
 
 typedef struct __ns_rr {
-    char name[NS_MAXDNAME];
-    uint16_t type;
-    uint16_t rr_class;
-    uint32_t ttl;
-    uint16_t rdlength;
-    const unsigned char* rdata;
+  char name[NS_MAXDNAME];
+  uint16_t type;
+  uint16_t rr_class;
+  uint32_t ttl;
+  uint16_t rdlength;
+  const unsigned char* rdata;
 } ns_rr;
 
 #define ns_rr_name(rr) (((rr).name[0] != '\0') ? (rr).name : ".")
@@ -75,66 +75,66 @@ typedef struct __ns_rr {
 #define ns_rr_rdata(rr) ((rr).rdata + 0)
 
 typedef enum __ns_flag {
-    ns_f_qr,
-    ns_f_opcode,
-    ns_f_aa,
-    ns_f_tc,
-    ns_f_rd,
-    ns_f_ra,
-    ns_f_z,
-    ns_f_ad,
-    ns_f_cd,
-    ns_f_rcode,
-    ns_f_max
+  ns_f_qr,
+  ns_f_opcode,
+  ns_f_aa,
+  ns_f_tc,
+  ns_f_rd,
+  ns_f_ra,
+  ns_f_z,
+  ns_f_ad,
+  ns_f_cd,
+  ns_f_rcode,
+  ns_f_max
 } ns_flag;
 
 typedef enum __ns_opcode {
-    ns_o_query = 0,
-    ns_o_iquery = 1,
-    ns_o_status = 2,
-    ns_o_notify = 4,
-    ns_o_update = 5,
-    ns_o_max = 6
+  ns_o_query = 0,
+  ns_o_iquery = 1,
+  ns_o_status = 2,
+  ns_o_notify = 4,
+  ns_o_update = 5,
+  ns_o_max = 6
 } ns_opcode;
 
 typedef enum __ns_rcode {
-    ns_r_noerror = 0,
-    ns_r_formerr = 1,
-    ns_r_servfail = 2,
-    ns_r_nxdomain = 3,
-    ns_r_notimpl = 4,
-    ns_r_refused = 5,
-    ns_r_yxdomain = 6,
-    ns_r_yxrrset = 7,
-    ns_r_nxrrset = 8,
-    ns_r_notauth = 9,
-    ns_r_notzone = 10,
-    ns_r_max = 11,
-    ns_r_badvers = 16,
-    ns_r_badsig = 16,
-    ns_r_badkey = 17,
-    ns_r_badtime = 18
+  ns_r_noerror = 0,
+  ns_r_formerr = 1,
+  ns_r_servfail = 2,
+  ns_r_nxdomain = 3,
+  ns_r_notimpl = 4,
+  ns_r_refused = 5,
+  ns_r_yxdomain = 6,
+  ns_r_yxrrset = 7,
+  ns_r_nxrrset = 8,
+  ns_r_notauth = 9,
+  ns_r_notzone = 10,
+  ns_r_max = 11,
+  ns_r_badvers = 16,
+  ns_r_badsig = 16,
+  ns_r_badkey = 17,
+  ns_r_badtime = 18
 } ns_rcode;
 
 typedef enum __ns_update_operation {
-    ns_uop_delete = 0,
-    ns_uop_add = 1,
-    ns_uop_max = 2
+  ns_uop_delete = 0,
+  ns_uop_add = 1,
+  ns_uop_max = 2
 } ns_update_operation;
 
 struct ns_tsig_key {
-    char name[NS_MAXDNAME], alg[NS_MAXDNAME];
-    unsigned char* data;
-    int len;
+  char name[NS_MAXDNAME], alg[NS_MAXDNAME];
+  unsigned char* data;
+  int len;
 };
 typedef struct ns_tsig_key ns_tsig_key;
 
 struct ns_tcp_tsig_state {
-    int counter;
-    struct dst_key* key;
-    void* ctx;
-    unsigned char sig[NS_PACKETSZ];
-    int siglen;
+  int counter;
+  struct dst_key* key;
+  void* ctx;
+  unsigned char sig[NS_PACKETSZ];
+  int siglen;
 };
 typedef struct ns_tcp_tsig_state ns_tcp_tsig_state;
 
@@ -147,58 +147,58 @@ typedef struct ns_tcp_tsig_state ns_tcp_tsig_state;
 #define NS_TSIG_ERROR_FORMERR -12
 
 typedef enum __ns_type {
-    ns_t_invalid = 0,
-    ns_t_a = 1,
-    ns_t_ns = 2,
-    ns_t_md = 3,
-    ns_t_mf = 4,
-    ns_t_cname = 5,
-    ns_t_soa = 6,
-    ns_t_mb = 7,
-    ns_t_mg = 8,
-    ns_t_mr = 9,
-    ns_t_null = 10,
-    ns_t_wks = 11,
-    ns_t_ptr = 12,
-    ns_t_hinfo = 13,
-    ns_t_minfo = 14,
-    ns_t_mx = 15,
-    ns_t_txt = 16,
-    ns_t_rp = 17,
-    ns_t_afsdb = 18,
-    ns_t_x25 = 19,
-    ns_t_isdn = 20,
-    ns_t_rt = 21,
-    ns_t_nsap = 22,
-    ns_t_nsap_ptr = 23,
-    ns_t_sig = 24,
-    ns_t_key = 25,
-    ns_t_px = 26,
-    ns_t_gpos = 27,
-    ns_t_aaaa = 28,
-    ns_t_loc = 29,
-    ns_t_nxt = 30,
-    ns_t_eid = 31,
-    ns_t_nimloc = 32,
-    ns_t_srv = 33,
-    ns_t_atma = 34,
-    ns_t_naptr = 35,
-    ns_t_kx = 36,
-    ns_t_cert = 37,
-    ns_t_a6 = 38,
-    ns_t_dname = 39,
-    ns_t_sink = 40,
-    ns_t_opt = 41,
-    ns_t_apl = 42,
-    ns_t_tkey = 249,
-    ns_t_tsig = 250,
-    ns_t_ixfr = 251,
-    ns_t_axfr = 252,
-    ns_t_mailb = 253,
-    ns_t_maila = 254,
-    ns_t_any = 255,
-    ns_t_zxfr = 256,
-    ns_t_max = 65536
+  ns_t_invalid = 0,
+  ns_t_a = 1,
+  ns_t_ns = 2,
+  ns_t_md = 3,
+  ns_t_mf = 4,
+  ns_t_cname = 5,
+  ns_t_soa = 6,
+  ns_t_mb = 7,
+  ns_t_mg = 8,
+  ns_t_mr = 9,
+  ns_t_null = 10,
+  ns_t_wks = 11,
+  ns_t_ptr = 12,
+  ns_t_hinfo = 13,
+  ns_t_minfo = 14,
+  ns_t_mx = 15,
+  ns_t_txt = 16,
+  ns_t_rp = 17,
+  ns_t_afsdb = 18,
+  ns_t_x25 = 19,
+  ns_t_isdn = 20,
+  ns_t_rt = 21,
+  ns_t_nsap = 22,
+  ns_t_nsap_ptr = 23,
+  ns_t_sig = 24,
+  ns_t_key = 25,
+  ns_t_px = 26,
+  ns_t_gpos = 27,
+  ns_t_aaaa = 28,
+  ns_t_loc = 29,
+  ns_t_nxt = 30,
+  ns_t_eid = 31,
+  ns_t_nimloc = 32,
+  ns_t_srv = 33,
+  ns_t_atma = 34,
+  ns_t_naptr = 35,
+  ns_t_kx = 36,
+  ns_t_cert = 37,
+  ns_t_a6 = 38,
+  ns_t_dname = 39,
+  ns_t_sink = 40,
+  ns_t_opt = 41,
+  ns_t_apl = 42,
+  ns_t_tkey = 249,
+  ns_t_tsig = 250,
+  ns_t_ixfr = 251,
+  ns_t_axfr = 252,
+  ns_t_mailb = 253,
+  ns_t_maila = 254,
+  ns_t_any = 255,
+  ns_t_zxfr = 256,
+  ns_t_max = 65536
 } ns_type;
 
 #define ns_t_qt_p(t) (ns_t_xfr_p(t) || (t) == ns_t_any || (t) == ns_t_mailb || (t) == ns_t_maila)
@@ -208,29 +208,29 @@ typedef enum __ns_type {
 #define ns_t_xfr_p(t) ((t) == ns_t_axfr || (t) == ns_t_ixfr || (t) == ns_t_zxfr)
 
 typedef enum __ns_class {
-    ns_c_invalid = 0,
-    ns_c_in = 1,
-    ns_c_2 = 2,
-    ns_c_chaos = 3,
-    ns_c_hs = 4,
-    ns_c_none = 254,
-    ns_c_any = 255,
-    ns_c_max = 65536
+  ns_c_invalid = 0,
+  ns_c_in = 1,
+  ns_c_2 = 2,
+  ns_c_chaos = 3,
+  ns_c_hs = 4,
+  ns_c_none = 254,
+  ns_c_any = 255,
+  ns_c_max = 65536
 } ns_class;
 
 typedef enum __ns_key_types {
-    ns_kt_rsa = 1,
-    ns_kt_dh = 2,
-    ns_kt_dsa = 3,
-    ns_kt_private = 254
+  ns_kt_rsa = 1,
+  ns_kt_dh = 2,
+  ns_kt_dsa = 3,
+  ns_kt_private = 254
 } ns_key_types;
 
 typedef enum __ns_cert_types {
-    cert_t_pkix = 1,
-    cert_t_spki = 2,
-    cert_t_pgp = 3,
-    cert_t_url = 253,
-    cert_t_oid = 254
+  cert_t_pkix = 1,
+  cert_t_spki = 2,
+  cert_t_pgp = 3,
+  cert_t_url = 253,
+  cert_t_oid = 254
 } ns_cert_types;
 
 #define NS_KEY_TYPEMASK 0xC000
@@ -254,9 +254,9 @@ typedef enum __ns_cert_types {
 #define NS_KEY_RESERVED10 0x0020
 #define NS_KEY_RESERVED11 0x0010
 #define NS_KEY_SIGNATORYMASK 0x000F
-#define NS_KEY_RESERVED_BITMASK                                                  \
-    (NS_KEY_RESERVED2 | NS_KEY_RESERVED4 | NS_KEY_RESERVED5 | NS_KEY_RESERVED8 | \
-     NS_KEY_RESERVED9 | NS_KEY_RESERVED10 | NS_KEY_RESERVED11)
+#define NS_KEY_RESERVED_BITMASK                                                                   \
+  (NS_KEY_RESERVED2 | NS_KEY_RESERVED4 | NS_KEY_RESERVED5 | NS_KEY_RESERVED8 | NS_KEY_RESERVED9 | \
+   NS_KEY_RESERVED10 | NS_KEY_RESERVED11)
 #define NS_KEY_RESERVED_BITMASK2 0xFFFF
 #define NS_ALG_MD5RSA 1
 #define NS_ALG_DH 2
@@ -318,34 +318,34 @@ int ns_name_uncompress(const unsigned char*, const unsigned char*, const unsigne
 #define __BIND 19950621
 
 typedef struct {
-    unsigned id : 16;
+  unsigned id : 16;
 #if __BYTE_ORDER == __BIG_ENDIAN
-    unsigned qr : 1;
-    unsigned opcode : 4;
-    unsigned aa : 1;
-    unsigned tc : 1;
-    unsigned rd : 1;
-    unsigned ra : 1;
-    unsigned unused : 1;
-    unsigned ad : 1;
-    unsigned cd : 1;
-    unsigned rcode : 4;
+  unsigned qr : 1;
+  unsigned opcode : 4;
+  unsigned aa : 1;
+  unsigned tc : 1;
+  unsigned rd : 1;
+  unsigned ra : 1;
+  unsigned unused : 1;
+  unsigned ad : 1;
+  unsigned cd : 1;
+  unsigned rcode : 4;
 #else
-    unsigned rd : 1;
-    unsigned tc : 1;
-    unsigned aa : 1;
-    unsigned opcode : 4;
-    unsigned qr : 1;
-    unsigned rcode : 4;
-    unsigned cd : 1;
-    unsigned ad : 1;
-    unsigned unused : 1;
-    unsigned ra : 1;
+  unsigned rd : 1;
+  unsigned tc : 1;
+  unsigned aa : 1;
+  unsigned opcode : 4;
+  unsigned qr : 1;
+  unsigned rcode : 4;
+  unsigned cd : 1;
+  unsigned ad : 1;
+  unsigned unused : 1;
+  unsigned ra : 1;
 #endif
-    unsigned qdcount : 16;
-    unsigned ancount : 16;
-    unsigned nscount : 16;
-    unsigned arcount : 16;
+  unsigned qdcount : 16;
+  unsigned ancount : 16;
+  unsigned nscount : 16;
+  unsigned arcount : 16;
 } HEADER;
 
 #define PACKETSZ NS_PACKETSZ
@@ -448,4 +448,4 @@ typedef struct {
 }
 #endif
 
-#endif // SYSROOT_ARPA_NAMESER_H_
+#endif  // SYSROOT_ARPA_NAMESER_H_

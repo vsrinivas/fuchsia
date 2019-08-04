@@ -17,4 +17,4 @@ int swapoff(const char*);
 }
 #endif
 
-#endif // SYSROOT_SYS_SWAP_H_
+#endif  // SYSROOT_SYS_SWAP_H_

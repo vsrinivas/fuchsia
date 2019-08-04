@@ -3,6 +3,6 @@
 #include <unistd.h>
 
 int acct(const char* filename) {
-    errno = ENOSYS;
-    return -1;
+  errno = ENOSYS;
+  return -1;
 }

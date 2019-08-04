@@ -4,7 +4,7 @@
 #include <sys/timex.h>
 
 int adjtime(const struct timeval* in, struct timeval* out) {
-    // TODO(kulakowski) implement adjtime(x)
-    errno = ENOSYS;
-    return -1;
+  // TODO(kulakowski) implement adjtime(x)
+  errno = ENOSYS;
+  return -1;
 }

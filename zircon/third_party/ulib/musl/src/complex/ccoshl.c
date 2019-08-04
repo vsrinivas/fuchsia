@@ -1,6 +1,4 @@
 #include "libm.h"
 
 // FIXME
-long double complex ccoshl(long double complex z) {
-    return ccosh(z);
-}
+long double complex ccoshl(long double complex z) { return ccosh(z); }

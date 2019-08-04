@@ -10,9 +10,9 @@ extern "C" {
 #define __NEED_sem_t
 #define __NEED_time_t
 #define __NEED_struct_timespec
-#include <bits/alltypes.h>
-
 #include <fcntl.h>
+
+#include <bits/alltypes.h>
 
 #define SEM_FAILED ((sem_t*)0)
 
@@ -31,4 +31,4 @@ int sem_wait(sem_t*);
 }
 #endif
 
-#endif // SYSROOT_SEMAPHORE_H_
+#endif  // SYSROOT_SEMAPHORE_H_

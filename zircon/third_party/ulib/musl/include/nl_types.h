@@ -19,4 +19,4 @@ int catclose(nl_catd);
 }
 #endif
 
-#endif // SYSROOT_NL_TYPES_H_
+#endif  // SYSROOT_NL_TYPES_H_

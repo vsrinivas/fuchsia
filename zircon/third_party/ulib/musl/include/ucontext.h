@@ -6,7 +6,6 @@ extern "C" {
 #endif
 
 #include <features.h>
-
 #include <signal.h>
 
 #if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
@@ -24,4 +23,4 @@ int swapcontext(struct __ucontext*, const struct __ucontext*);
 }
 #endif
 
-#endif // SYSROOT_UCONTEXT_H_
+#endif  // SYSROOT_UCONTEXT_H_

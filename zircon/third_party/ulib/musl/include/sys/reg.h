@@ -6,4 +6,4 @@
 
 #include <bits/reg.h>
 
-#endif // SYSROOT_SYS_REG_H_
+#endif  // SYSROOT_SYS_REG_H_

@@ -18,11 +18,11 @@ extern "C" {
 #include <bits/alltypes.h>
 
 struct sched_param {
-    int sched_priority;
-    int sched_ss_low_priority;
-    struct timespec sched_ss_repl_period;
-    struct timespec sched_ss_init_budget;
-    int sched_ss_max_repl;
+  int sched_priority;
+  int sched_ss_low_priority;
+  struct timespec sched_ss_repl_period;
+  struct timespec sched_ss_init_budget;
+  int sched_ss_max_repl;
 };
 
 int sched_get_priority_max(int);
@@ -49,7 +49,7 @@ void* calloc(size_t, size_t);
 void free(void*);
 
 typedef struct cpu_set_t {
-    unsigned long __bits[128 / sizeof(long)];
+  unsigned long __bits[128 / sizeof(long)];
 } cpu_set_t;
 int __sched_cpucount(size_t, const cpu_set_t*);
 int sched_getcpu(void);
@@ -57,21 +57,21 @@ int sched_getaffinity(pid_t, size_t, cpu_set_t*);
 int sched_setaffinity(pid_t, size_t, const cpu_set_t*);
 
 #define __CPU_op_S(i, size, set, op) \
-    ((i) / 8U >= (size)              \
-         ? 0                         \
-         : ((set)->__bits[(i) / 8 / sizeof(long)] op(1UL << ((i) % (8 * sizeof(long))))))
+  ((i) / 8U >= (size)                \
+       ? 0                           \
+       : ((set)->__bits[(i) / 8 / sizeof(long)] op(1UL << ((i) % (8 * sizeof(long))))))
 
 #define CPU_SET_S(i, size, set) __CPU_op_S(i, size, set, |=)
 #define CPU_CLR_S(i, size, set) __CPU_op_S(i, size, set, &= ~)
 #define CPU_ISSET_S(i, size, set) __CPU_op_S(i, size, set, &)
 
-#define __CPU_op_func_S(func, op)                                                             \
-    static __inline void __CPU_##func##_S(size_t __size, cpu_set_t* __dest,                   \
-                                          const cpu_set_t* __src1, const cpu_set_t* __src2) { \
-        size_t __i;                                                                           \
-        for (__i = 0; __i < __size / sizeof(long); __i++)                                     \
-            __dest->__bits[__i] = __src1->__bits[__i] op __src2->__bits[__i];                 \
-    }
+#define __CPU_op_func_S(func, op)                                                                  \
+  static __inline void __CPU_##func##_S(size_t __size, cpu_set_t* __dest, const cpu_set_t* __src1, \
+                                        const cpu_set_t* __src2) {                                 \
+    size_t __i;                                                                                    \
+    for (__i = 0; __i < __size / sizeof(long); __i++)                                              \
+      __dest->__bits[__i] = __src1->__bits[__i] op __src2->__bits[__i];                            \
+  }
 
 __CPU_op_func_S(AND, &) __CPU_op_func_S(OR, |) __CPU_op_func_S(XOR, ^)
 
@@ -83,9 +83,9 @@ __CPU_op_func_S(AND, &) __CPU_op_func_S(OR, |) __CPU_op_func_S(XOR, ^)
 #define CPU_ZERO_S(size, set) memset(set, 0, size)
 #define CPU_EQUAL_S(size, set1, set2) (!memcmp(set1, set2, size))
 
-#define CPU_ALLOC_SIZE(n)                       \
-    (sizeof(long) * ((n) / (8 * sizeof(long)) + \
-                     ((n) % (8 * sizeof(long)) + 8 * sizeof(long) - 1) / (8 * sizeof(long))))
+#define CPU_ALLOC_SIZE(n)                     \
+  (sizeof(long) * ((n) / (8 * sizeof(long)) + \
+                   ((n) % (8 * sizeof(long)) + 8 * sizeof(long) - 1) / (8 * sizeof(long))))
 #define CPU_ALLOC(n) ((cpu_set_t*)calloc(1, CPU_ALLOC_SIZE(n)))
 #define CPU_FREE(set) free(set)
 
@@ -107,4 +107,4 @@ __CPU_op_func_S(AND, &) __CPU_op_func_S(OR, |) __CPU_op_func_S(XOR, ^)
 }
 #endif
 
-#endif // SYSROOT_SCHED_H_
+#endif  // SYSROOT_SCHED_H_

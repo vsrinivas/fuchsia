@@ -5,8 +5,9 @@
 extern "C" {
 #endif
 
-#include <bits/null.h>
 #include <features.h>
+
+#include <bits/null.h>
 
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
@@ -434,4 +435,4 @@ int eaccess(const char*, int);
 }
 #endif
 
-#endif // SYSROOT_UNISTD_H_
+#endif  // SYSROOT_UNISTD_H_

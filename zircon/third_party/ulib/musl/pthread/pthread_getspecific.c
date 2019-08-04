@@ -1,9 +1,10 @@
-#include "threads_impl.h"
 #include <threads.h>
 
+#include "threads_impl.h"
+
 static void* __pthread_getspecific(pthread_key_t k) {
-    struct pthread* self = __pthread_self();
-    return self->tsd[k];
+  struct pthread* self = __pthread_self();
+  return self->tsd[k];
 }
 
 weak_alias(__pthread_getspecific, pthread_getspecific);

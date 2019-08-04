@@ -43,4 +43,4 @@ int cfsetspeed(struct termios*, speed_t);
 }
 #endif
 
-#endif // SYSROOT_TERMIOS_H_
+#endif  // SYSROOT_TERMIOS_H_

@@ -5,8 +5,8 @@
 #include <sys/types.h>
 
 struct mtop {
-    short mt_op;
-    int mt_count;
+  short mt_op;
+  int mt_count;
 };
 
 #define _IOT_mtop _IOT(_IOTS(short), 1, _IOTS(int), 1, 0, 0)
@@ -48,13 +48,13 @@ struct mtop {
 #define MTMKPART 34
 
 struct mtget {
-    long mt_type;
-    long mt_resid;
-    long mt_dsreg;
-    long mt_gstat;
-    long mt_erreg;
-    int mt_fileno;
-    int mt_blkno;
+  long mt_type;
+  long mt_resid;
+  long mt_dsreg;
+  long mt_gstat;
+  long mt_erreg;
+  int mt_fileno;
+  int mt_blkno;
 };
 
 #define MT_ISUNKNOWN 0x01
@@ -79,53 +79,51 @@ struct mtget {
 #define MT_ISFTAPE_FLAG 0x800000
 
 struct mt_tape_info {
-    long t_type;
-    char* t_name;
+  long t_type;
+  char* t_name;
 };
 
 #define MT_TAPE_INFO                                                                              \
-    {                                                                                             \
-        {MT_ISUNKNOWN, "Unknown type of tape device"},                                            \
-            {MT_ISQIC02, "Generic QIC-02 tape streamer"}, {MT_ISWT5150, "Wangtek 5150, QIC-150"}, \
-            {MT_ISARCHIVE_5945L2, "Archive 5945L-2"}, {MT_ISCMSJ500, "CMS Jumbo 500"},            \
-            {MT_ISTDC3610, "Tandberg TDC 3610, QIC-24"},                                          \
-            {MT_ISARCHIVE_VP60I, "Archive VP60i, QIC-02"},                                        \
-            {MT_ISARCHIVE_2150L, "Archive Viper 2150L"},                                          \
-            {MT_ISARCHIVE_2060L, "Archive Viper 2060L"},                                          \
-            {MT_ISARCHIVESC499, "Archive SC-499 QIC-36 controller"},                              \
-            {MT_ISQIC02_ALL_FEATURES, "Generic QIC-02 tape, all features"},                       \
-            {MT_ISWT5099EEN24, "Wangtek 5099-een24, 60MB"},                                       \
-            {MT_ISTEAC_MT2ST, "Teac MT-2ST 155mb data cassette drive"},                           \
-            {MT_ISEVEREX_FT40A, "Everex FT40A, QIC-40"}, {MT_ISSCSI1, "Generic SCSI-1 tape"},     \
-            {MT_ISSCSI2, "Generic SCSI-2 tape"}, {                                                \
-            0, 0                                                                                  \
-        }                                                                                         \
-    }
+  {                                                                                               \
+    {MT_ISUNKNOWN, "Unknown type of tape device"}, {MT_ISQIC02, "Generic QIC-02 tape streamer"},  \
+        {MT_ISWT5150, "Wangtek 5150, QIC-150"}, {MT_ISARCHIVE_5945L2, "Archive 5945L-2"},         \
+        {MT_ISCMSJ500, "CMS Jumbo 500"}, {MT_ISTDC3610, "Tandberg TDC 3610, QIC-24"},             \
+        {MT_ISARCHIVE_VP60I, "Archive VP60i, QIC-02"},                                            \
+        {MT_ISARCHIVE_2150L, "Archive Viper 2150L"}, {MT_ISARCHIVE_2060L, "Archive Viper 2060L"}, \
+        {MT_ISARCHIVESC499, "Archive SC-499 QIC-36 controller"},                                  \
+        {MT_ISQIC02_ALL_FEATURES, "Generic QIC-02 tape, all features"},                           \
+        {MT_ISWT5099EEN24, "Wangtek 5099-een24, 60MB"},                                           \
+        {MT_ISTEAC_MT2ST, "Teac MT-2ST 155mb data cassette drive"},                               \
+        {MT_ISEVEREX_FT40A, "Everex FT40A, QIC-40"}, {MT_ISSCSI1, "Generic SCSI-1 tape"},         \
+        {MT_ISSCSI2, "Generic SCSI-2 tape"}, {                                                    \
+      0, 0                                                                                        \
+    }                                                                                             \
+  }
 
 struct mtpos {
-    long mt_blkno;
+  long mt_blkno;
 };
 
 struct mtconfiginfo {
-    long mt_type;
-    long ifc_type;
-    unsigned short irqnr;
-    unsigned short dmanr;
-    unsigned short port;
-    unsigned long debug;
-    unsigned have_dens : 1;
-    unsigned have_bsf : 1;
-    unsigned have_fsr : 1;
-    unsigned have_bsr : 1;
-    unsigned have_eod : 1;
-    unsigned have_seek : 1;
-    unsigned have_tell : 1;
-    unsigned have_ras1 : 1;
-    unsigned have_ras2 : 1;
-    unsigned have_ras3 : 1;
-    unsigned have_qfa : 1;
-    unsigned pad1 : 5;
-    char reserved[10];
+  long mt_type;
+  long ifc_type;
+  unsigned short irqnr;
+  unsigned short dmanr;
+  unsigned short port;
+  unsigned long debug;
+  unsigned have_dens : 1;
+  unsigned have_bsf : 1;
+  unsigned have_fsr : 1;
+  unsigned have_bsr : 1;
+  unsigned have_eod : 1;
+  unsigned have_seek : 1;
+  unsigned have_tell : 1;
+  unsigned have_ras1 : 1;
+  unsigned have_ras2 : 1;
+  unsigned have_ras3 : 1;
+  unsigned have_qfa : 1;
+  unsigned pad1 : 5;
+  char reserved[10];
 };
 
 #define MTIOCTOP _IOW('m', 1, struct mtop)
@@ -182,4 +180,4 @@ struct mtconfiginfo {
 #define DEFTAPE "/dev/tape"
 #endif
 
-#endif // SYSROOT_SYS_MTIO_H_
+#endif  // SYSROOT_SYS_MTIO_H_

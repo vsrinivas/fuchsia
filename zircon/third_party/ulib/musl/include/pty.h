@@ -14,4 +14,4 @@ int openpty(int*, int*, char*, const struct termios*, const struct winsize*);
 }
 #endif
 
-#endif // SYSROOT_PTY_H_
+#endif  // SYSROOT_PTY_H_

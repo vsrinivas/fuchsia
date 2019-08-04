@@ -51,9 +51,7 @@
 #include "libm.h"
 
 #if LDBL_MANT_DIG == 53 && LDBL_MAX_EXP == 1024
-long double tgammal(long double x) {
-    return tgamma(x);
-}
+long double tgammal(long double x) { return tgamma(x); }
 #elif LDBL_MANT_DIG == 64 && LDBL_MAX_EXP == 16384
 /*
 tgamma(x+2) = tgamma(x+2) P(x)/Q(x)
@@ -110,9 +108,9 @@ Peak error =  9.44e-21
 Relative error spread =  8.8e-4
 */
 static const long double STIR[9] = {
-    7.147391378143610789273E-4L, -2.363848809501759061727E-5L, -5.950237554056330156018E-4L,
-    6.989332260623193171870E-5L, 7.840334842744753003862E-4L, -2.294719747873185405699E-4L,
-    -2.681327161876304418288E-3L, 3.472222222230075327854E-3L, 8.333333333333331800504E-2L,
+    7.147391378143610789273E-4L,  -2.363848809501759061727E-5L, -5.950237554056330156018E-4L,
+    6.989332260623193171870E-5L,  7.840334842744753003862E-4L,  -2.294719747873185405699E-4L,
+    -2.681327161876304418288E-3L, 3.472222222230075327854E-3L,  8.333333333333331800504E-2L,
 };
 
 #define MAXSTIR 1024.0L
@@ -136,9 +134,9 @@ static const long double S[9] = {
  * Relative error spread =  2.5e-24
  */
 static const long double SN[9] = {
-    1.133374167243894382010E-3L, 7.220837261893170325704E-3L, 9.621911155035976733706E-3L,
+    1.133374167243894382010E-3L,  7.220837261893170325704E-3L,  9.621911155035976733706E-3L,
     -4.219773343731191721664E-2L, -1.665386113944413519335E-1L, -4.200263503402112910504E-2L,
-    6.558780715202536547116E-1L, 5.772156649015328608727E-1L, -1.000000000000000000000E0L,
+    6.558780715202536547116E-1L,  5.772156649015328608727E-1L,  -1.000000000000000000000E0L,
 };
 
 static const long double PIL = 3.1415926535897932384626L;
@@ -146,106 +144,104 @@ static const long double PIL = 3.1415926535897932384626L;
 /* Gamma function computed by Stirling's formula.
  */
 static long double stirf(long double x) {
-    long double y, w, v;
+  long double y, w, v;
 
-    w = 1.0 / x;
-    /* For large x, use rational coefficients from the analytical expansion.  */
-    if (x > 1024.0)
-        w = (((((6.97281375836585777429E-5L * w + 7.84039221720066627474E-4L) * w -
-                2.29472093621399176955E-4L) *
-                   w -
-               2.68132716049382716049E-3L) *
-                  w +
-              3.47222222222222222222E-3L) *
-                 w +
-             8.33333333333333333333E-2L) *
-                w +
-            1.0;
-    else
-        w = 1.0 + w * __polevll(w, STIR, 8);
-    y = expl(x);
-    if (x > MAXSTIR) { /* Avoid overflow in pow() */
-        v = powl(x, 0.5L * x - 0.25L);
-        y = v * (v / y);
-    } else {
-        y = powl(x, x - 0.5L) / y;
-    }
-    y = SQTPI * y * w;
-    return y;
+  w = 1.0 / x;
+  /* For large x, use rational coefficients from the analytical expansion.  */
+  if (x > 1024.0)
+    w = (((((6.97281375836585777429E-5L * w + 7.84039221720066627474E-4L) * w -
+            2.29472093621399176955E-4L) *
+               w -
+           2.68132716049382716049E-3L) *
+              w +
+          3.47222222222222222222E-3L) *
+             w +
+         8.33333333333333333333E-2L) *
+            w +
+        1.0;
+  else
+    w = 1.0 + w * __polevll(w, STIR, 8);
+  y = expl(x);
+  if (x > MAXSTIR) { /* Avoid overflow in pow() */
+    v = powl(x, 0.5L * x - 0.25L);
+    y = v * (v / y);
+  } else {
+    y = powl(x, x - 0.5L) / y;
+  }
+  y = SQTPI * y * w;
+  return y;
 }
 
 long double tgammal(long double x) {
-    long double p, q, z;
+  long double p, q, z;
 
-    if (!isfinite(x))
-        return x + INFINITY;
+  if (!isfinite(x))
+    return x + INFINITY;
 
-    q = fabsl(x);
-    if (q > 13.0) {
-        if (x < 0.0) {
-            p = floorl(q);
-            z = q - p;
-            if (z == 0)
-                return 0 / z;
-            if (q > MAXGAML) {
-                z = 0;
-            } else {
-                if (z > 0.5) {
-                    p += 1.0;
-                    z = q - p;
-                }
-                z = q * sinl(PIL * z);
-                z = fabsl(z) * stirf(q);
-                z = PIL / z;
-            }
-            if (0.5 * p == floorl(q * 0.5))
-                z = -z;
-        } else if (x > MAXGAML) {
-            z = x * 0x1p16383L;
-        } else {
-            z = stirf(x);
+  q = fabsl(x);
+  if (q > 13.0) {
+    if (x < 0.0) {
+      p = floorl(q);
+      z = q - p;
+      if (z == 0)
+        return 0 / z;
+      if (q > MAXGAML) {
+        z = 0;
+      } else {
+        if (z > 0.5) {
+          p += 1.0;
+          z = q - p;
         }
-        return z;
+        z = q * sinl(PIL * z);
+        z = fabsl(z) * stirf(q);
+        z = PIL / z;
+      }
+      if (0.5 * p == floorl(q * 0.5))
+        z = -z;
+    } else if (x > MAXGAML) {
+      z = x * 0x1p16383L;
+    } else {
+      z = stirf(x);
     }
+    return z;
+  }
 
-    z = 1.0;
-    while (x >= 3.0) {
-        x -= 1.0;
-        z *= x;
-    }
-    while (x < -0.03125L) {
-        z /= x;
-        x += 1.0;
-    }
-    if (x <= 0.03125L)
-        goto small;
-    while (x < 2.0) {
-        z /= x;
-        x += 1.0;
-    }
-    if (x == 2.0)
-        return z;
-
-    x -= 2.0;
-    p = __polevll(x, P, 7);
-    q = __polevll(x, Q, 8);
-    z = z * p / q;
+  z = 1.0;
+  while (x >= 3.0) {
+    x -= 1.0;
+    z *= x;
+  }
+  while (x < -0.03125L) {
+    z /= x;
+    x += 1.0;
+  }
+  if (x <= 0.03125L)
+    goto small;
+  while (x < 2.0) {
+    z /= x;
+    x += 1.0;
+  }
+  if (x == 2.0)
     return z;
 
+  x -= 2.0;
+  p = __polevll(x, P, 7);
+  q = __polevll(x, Q, 8);
+  z = z * p / q;
+  return z;
+
 small:
-    /* z==1 if x was originally +-0 */
-    if (x == 0 && z != 1)
-        return x / x;
-    if (x < 0.0) {
-        x = -x;
-        q = z / (x * __polevll(x, SN, 8));
-    } else
-        q = z / (x * __polevll(x, S, 8));
-    return q;
+  /* z==1 if x was originally +-0 */
+  if (x == 0 && z != 1)
+    return x / x;
+  if (x < 0.0) {
+    x = -x;
+    q = z / (x * __polevll(x, SN, 8));
+  } else
+    q = z / (x * __polevll(x, S, 8));
+  return q;
 }
 #elif LDBL_MANT_DIG == 113 && LDBL_MAX_EXP == 16384
 // TODO: broken implementation to make things compile
-long double tgammal(long double x) {
-    return tgamma(x);
-}
+long double tgammal(long double x) { return tgamma(x); }
 #endif

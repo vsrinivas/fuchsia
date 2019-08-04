@@ -25,7 +25,7 @@ static const long double toint = 1.5 / LDBL_EPSILON;
 #if LDBL_MANT_DIG == 64
 /* u ~< 0x1p25*pi/2 */
 #define SMALL(u) \
-    (((u.i.se & 0x7fffU) << 16 | u.i.m >> 48) < ((0x3fff + 25) << 16 | 0x921f >> 1 | 0x8000))
+  (((u.i.se & 0x7fffU) << 16 | u.i.m >> 48) < ((0x3fff + 25) << 16 | 0x921f >> 1 | 0x8000))
 #define QUOBITS(x) ((uint32_t)(int32_t)x & 0x7fffffff)
 #define ROUND1 22
 #define ROUND2 61
@@ -73,74 +73,74 @@ static const long double
 #endif
 
 int __rem_pio2l(long double x, long double* y) {
-    union ldshape u, uz;
-    long double z, w, t, r, fn;
-    double tx[NX], ty[NY];
-    int ex, ey, n, i;
+  union ldshape u, uz;
+  long double z, w, t, r, fn;
+  double tx[NX], ty[NY];
+  int ex, ey, n, i;
 
-    u.f = x;
-    ex = u.i.se & 0x7fff;
-    if (SMALL(u)) {
-        /* rint(x/(pi/2)), Assume round-to-nearest. */
-        fn = x * invpio2 + toint - toint;
-        n = QUOBITS(fn);
-        r = x - fn * pio2_1;
-        w = fn * pio2_1t; /* 1st round good to 102/180 bits (ld80/ld128) */
+  u.f = x;
+  ex = u.i.se & 0x7fff;
+  if (SMALL(u)) {
+    /* rint(x/(pi/2)), Assume round-to-nearest. */
+    fn = x * invpio2 + toint - toint;
+    n = QUOBITS(fn);
+    r = x - fn * pio2_1;
+    w = fn * pio2_1t; /* 1st round good to 102/180 bits (ld80/ld128) */
+    y[0] = r - w;
+    u.f = y[0];
+    ey = u.i.se & 0x7fff;
+    if (ex - ey > ROUND1) { /* 2nd iteration needed, good to 141/248 (ld80/ld128) */
+      t = r;
+      w = fn * pio2_2;
+      r = t - w;
+      w = fn * pio2_2t - ((t - r) - w);
+      y[0] = r - w;
+      u.f = y[0];
+      ey = u.i.se & 0x7fff;
+      if (ex - ey > ROUND2) { /* 3rd iteration, good to 180/316 bits */
+        t = r;                /* will cover all possible cases (not verified for ld128) */
+        w = fn * pio2_3;
+        r = t - w;
+        w = fn * pio2_3t - ((t - r) - w);
         y[0] = r - w;
-        u.f = y[0];
-        ey = u.i.se & 0x7fff;
-        if (ex - ey > ROUND1) { /* 2nd iteration needed, good to 141/248 (ld80/ld128) */
-            t = r;
-            w = fn * pio2_2;
-            r = t - w;
-            w = fn * pio2_2t - ((t - r) - w);
-            y[0] = r - w;
-            u.f = y[0];
-            ey = u.i.se & 0x7fff;
-            if (ex - ey > ROUND2) { /* 3rd iteration, good to 180/316 bits */
-                t = r;              /* will cover all possible cases (not verified for ld128) */
-                w = fn * pio2_3;
-                r = t - w;
-                w = fn * pio2_3t - ((t - r) - w);
-                y[0] = r - w;
-            }
-        }
-        y[1] = (r - y[0]) - w;
-        return n;
+      }
     }
-    /*
-     * all other (large) arguments
-     */
-    if (ex == 0x7fff) { /* x is inf or NaN */
-        y[0] = y[1] = x - x;
-        return 0;
-    }
-    /* set z = scalbn(|x|,-ilogb(x)+23) */
-    uz.f = x;
-    uz.i.se = 0x3fff + 23;
-    z = uz.f;
-    for (i = 0; i < NX - 1; i++) {
-        tx[i] = (double)(int32_t)z;
-        z = (z - tx[i]) * 0x1p24;
-    }
-    tx[i] = z;
-    while (tx[i] == 0)
-        i--;
-    n = __rem_pio2_large(tx, ty, ex - 0x3fff - 23, i + 1, NY);
-    w = ty[1];
-    if (NY == 3)
-        w += ty[2];
-    r = ty[0] + w;
-    /* TODO: for ld128 this does not follow the recommendation of the
-    comments of __rem_pio2_large which seem wrong if |ty[0]| > |ty[1]+ty[2]| */
-    w -= r - ty[0];
-    if (u.i.se >> 15) {
-        y[0] = -r;
-        y[1] = -w;
-        return -n;
-    }
-    y[0] = r;
-    y[1] = w;
+    y[1] = (r - y[0]) - w;
     return n;
+  }
+  /*
+   * all other (large) arguments
+   */
+  if (ex == 0x7fff) { /* x is inf or NaN */
+    y[0] = y[1] = x - x;
+    return 0;
+  }
+  /* set z = scalbn(|x|,-ilogb(x)+23) */
+  uz.f = x;
+  uz.i.se = 0x3fff + 23;
+  z = uz.f;
+  for (i = 0; i < NX - 1; i++) {
+    tx[i] = (double)(int32_t)z;
+    z = (z - tx[i]) * 0x1p24;
+  }
+  tx[i] = z;
+  while (tx[i] == 0)
+    i--;
+  n = __rem_pio2_large(tx, ty, ex - 0x3fff - 23, i + 1, NY);
+  w = ty[1];
+  if (NY == 3)
+    w += ty[2];
+  r = ty[0] + w;
+  /* TODO: for ld128 this does not follow the recommendation of the
+  comments of __rem_pio2_large which seem wrong if |ty[0]| > |ty[1]+ty[2]| */
+  w -= r - ty[0];
+  if (u.i.se >> 15) {
+    y[0] = -r;
+    y[1] = -w;
+    return -n;
+  }
+  y[0] = r;
+  y[1] = w;
+  return n;
 }
 #endif

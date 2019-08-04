@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -15,22 +14,22 @@ __BEGIN_CDECLS
 struct __locale_map;
 
 struct __locale_struct {
-    const struct __locale_map* volatile cat[6];
+  const struct __locale_map* volatile cat[6];
 };
 
 struct tls_module {
-    struct tls_module* next;
-    void* image;
-    size_t len, size, align, offset;
+  struct tls_module* next;
+  void* image;
+  size_t len, size, align, offset;
 };
 
 struct __libc {
-    atomic_int thread_count;
-    struct tls_module* tls_head;
-    size_t tls_size, tls_align, tls_cnt;
-    size_t stack_size;
-    size_t page_size;
-    struct __locale_struct global_locale;
+  atomic_int thread_count;
+  struct tls_module* tls_head;
+  size_t tls_size, tls_align, tls_cnt;
+  size_t stack_size;
+  size_t page_size;
+  struct __locale_struct global_locale;
 };
 
 #ifdef __PIC__
@@ -70,21 +69,15 @@ void __tls_run_dtors(void) ATTR_LIBC_VISIBILITY;
 // |handle_info| contains the PA_HND value associated with the
 //     corresponding element of |handles|, or zero if the handle has already
 //     been claimed.
-void __libc_startup_handles_init(uint32_t nhandles,
-                                 zx_handle_t handles[],
+void __libc_startup_handles_init(uint32_t nhandles, zx_handle_t handles[],
                                  uint32_t handle_info[]) ATTR_LIBC_VISIBILITY;
 
-_Noreturn void __libc_start_main(zx_handle_t,
-                                 int (*main)(int, char**, char**));
-
+_Noreturn void __libc_start_main(zx_handle_t, int (*main)(int, char**, char**));
 
 // Hook for extension libraries to init. Extensions must zero out
 // handle[i] and handle_info[i] for any handles they claim.
-void __libc_extensions_init(uint32_t handle_count,
-                            zx_handle_t handle[],
-                            uint32_t handle_info[],
-                            uint32_t name_count,
-                            char** names) __attribute__((weak));
+void __libc_extensions_init(uint32_t handle_count, zx_handle_t handle[], uint32_t handle_info[],
+                            uint32_t name_count, char** names) __attribute__((weak));
 
 // Hook for extension libraries to clean up. This is run after exit
 // and quick_exit handlers.

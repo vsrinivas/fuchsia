@@ -5,8 +5,9 @@
 extern "C" {
 #endif
 
-#include <bits/null.h>
 #include <features.h>
+
+#include <bits/null.h>
 
 #define __NEED_size_t
 
@@ -86,4 +87,4 @@ char* basename(char*);
 }
 #endif
 
-#endif // SYSROOT_STRING_H_
+#endif  // SYSROOT_STRING_H_

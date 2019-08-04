@@ -2,6 +2,6 @@
 #include <sys/mman.h>
 
 int munlock(const void* addr, size_t len) {
-    errno = ENOSYS;
-    return -1;
+  errno = ENOSYS;
+  return -1;
 }

@@ -31,4 +31,4 @@ ssize_t pwritev(int, const struct iovec*, int, off_t);
 }
 #endif
 
-#endif // SYSROOT_SYS_UIO_H_
+#endif  // SYSROOT_SYS_UIO_H_

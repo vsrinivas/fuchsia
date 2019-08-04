@@ -25,26 +25,26 @@ typedef void (*tss_dtor_t)(void*);
 #define TSS_DTOR_ITERATIONS 4
 
 enum {
-    thrd_success = 0,
-    thrd_busy = 1,
-    thrd_error = 2,
-    thrd_nomem = 3,
-    thrd_timedout = 4,
+  thrd_success = 0,
+  thrd_busy = 1,
+  thrd_error = 2,
+  thrd_nomem = 3,
+  thrd_timedout = 4,
 };
 
 // These are bitfield values; initialize with e.g. (mtx_plain|mtx_timed).
 // mtx_recursive is not implemented.
 enum {
-    mtx_plain = 0,
-    mtx_recursive = 1,
-    mtx_timed = 2,
+  mtx_plain = 0,
+  mtx_recursive = 1,
+  mtx_timed = 2,
 };
 
 #ifdef _ALL_SOURCE
 #define MTX_INIT \
-    {}
+  {}
 #define CND_INIT \
-    {}
+  {}
 #endif
 
 #define ONCE_FLAG_INIT 0
@@ -105,4 +105,4 @@ void* tss_get(tss_t);
 }
 #endif
 
-#endif // SYSROOT_THREADS_H_
+#endif  // SYSROOT_THREADS_H_

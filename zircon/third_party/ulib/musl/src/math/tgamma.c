@@ -28,30 +28,30 @@ static const double pi = 3.141592653589793238462643383279502884;
 
 /* sin(pi x) with x > 0x1p-100, if sin(pi*x)==0 the sign is arbitrary */
 static double sinpi(double x) {
-    int n;
+  int n;
 
-    /* argument reduction: x = |x| mod 2 */
-    /* spurious inexact when x is odd int */
-    x = x * 0.5;
-    x = 2 * (x - floor(x));
+  /* argument reduction: x = |x| mod 2 */
+  /* spurious inexact when x is odd int */
+  x = x * 0.5;
+  x = 2 * (x - floor(x));
 
-    /* reduce x into [-.25,.25] */
-    n = 4 * x;
-    n = (n + 1) / 2;
-    x -= n * 0.5;
+  /* reduce x into [-.25,.25] */
+  n = 4 * x;
+  n = (n + 1) / 2;
+  x -= n * 0.5;
 
-    x *= pi;
-    switch (n) {
+  x *= pi;
+  switch (n) {
     default: /* case 4 */
     case 0:
-        return __sin(x, 0, 0);
+      return __sin(x, 0, 0);
     case 1:
-        return __cos(x, 0);
+      return __cos(x, 0);
     case 2:
-        return __sin(-x, 0, 0);
+      return __sin(-x, 0, 0);
     case 3:
-        return -__cos(x, 0);
-    }
+      return -__cos(x, 0);
+  }
 }
 
 #define N 12
@@ -73,8 +73,8 @@ static const double Snum[N + 1] = {
     2.5066282746310002701649081771338373386264310793408,
 };
 static const double Sden[N + 1] = {
-    0, 39916800, 120543840, 150917976, 105258076, 45995730, 13339535,
-    2637558, 357423, 32670, 1925, 66, 1,
+    0,       39916800, 120543840, 150917976, 105258076, 45995730, 13339535,
+    2637558, 357423,   32670,     1925,      66,        1,
 };
 /* n! for small integer n */
 static const double fact[] = {
@@ -105,86 +105,86 @@ static const double fact[] = {
 
 /* S(x) rational function for positive x */
 static double S(double x) {
-    double_t num = 0, den = 0;
-    int i;
+  double_t num = 0, den = 0;
+  int i;
 
-    /* to avoid overflow handle large x differently */
-    if (x < 8)
-        for (i = N; i >= 0; i--) {
-            num = num * x + Snum[i];
-            den = den * x + Sden[i];
-        }
-    else
-        for (i = 0; i <= N; i++) {
-            num = num / x + Snum[i];
-            den = den / x + Sden[i];
-        }
-    return num / den;
+  /* to avoid overflow handle large x differently */
+  if (x < 8)
+    for (i = N; i >= 0; i--) {
+      num = num * x + Snum[i];
+      den = den * x + Sden[i];
+    }
+  else
+    for (i = 0; i <= N; i++) {
+      num = num / x + Snum[i];
+      den = den / x + Sden[i];
+    }
+  return num / den;
 }
 
 double tgamma(double x) {
-    union {
-        double f;
-        uint64_t i;
-    } u = {x};
-    double absx, y;
-    double_t dy, z, r;
-    uint32_t ix = u.i >> 32 & 0x7fffffff;
-    int sign = u.i >> 63;
+  union {
+    double f;
+    uint64_t i;
+  } u = {x};
+  double absx, y;
+  double_t dy, z, r;
+  uint32_t ix = u.i >> 32 & 0x7fffffff;
+  int sign = u.i >> 63;
 
-    /* special cases */
-    if (ix >= 0x7ff00000) /* tgamma(nan)=nan, tgamma(inf)=inf, tgamma(-inf)=nan with invalid */
-        return x + INFINITY;
-    if (ix < (0x3ff - 54) << 20) /* |x| < 2^-54: tgamma(x) ~ 1/x, +-0 raises div-by-zero */
-        return 1 / x;
+  /* special cases */
+  if (ix >= 0x7ff00000) /* tgamma(nan)=nan, tgamma(inf)=inf, tgamma(-inf)=nan with invalid */
+    return x + INFINITY;
+  if (ix < (0x3ff - 54) << 20) /* |x| < 2^-54: tgamma(x) ~ 1/x, +-0 raises div-by-zero */
+    return 1 / x;
 
-    /* integer arguments */
-    /* raise inexact when non-integer */
-    if (x == floor(x)) {
-        if (sign)
-            return 0 / 0.0;
-        if (x <= sizeof fact / sizeof *fact)
-            return fact[(int)x - 1];
+  /* integer arguments */
+  /* raise inexact when non-integer */
+  if (x == floor(x)) {
+    if (sign)
+      return 0 / 0.0;
+    if (x <= sizeof fact / sizeof *fact)
+      return fact[(int)x - 1];
+  }
+
+  /* x >= 172: tgamma(x)=inf with overflow */
+  /* x =< -184: tgamma(x)=+-0 with underflow */
+  if (ix >= 0x40670000) { /* |x| >= 184 */
+    if (sign) {
+      FORCE_EVAL((float)(0x1p-126 / x));
+      if (floor(x) * 0.5 == floor(x * 0.5))
+        return 0;
+      return -0.0;
     }
+    x *= 0x1p1023;
+    return x;
+  }
 
-    /* x >= 172: tgamma(x)=inf with overflow */
-    /* x =< -184: tgamma(x)=+-0 with underflow */
-    if (ix >= 0x40670000) { /* |x| >= 184 */
-        if (sign) {
-            FORCE_EVAL((float)(0x1p-126 / x));
-            if (floor(x) * 0.5 == floor(x * 0.5))
-                return 0;
-            return -0.0;
-        }
-        x *= 0x1p1023;
-        return x;
-    }
+  absx = sign ? -x : x;
 
-    absx = sign ? -x : x;
+  /* handle the error of x + g - 0.5 */
+  y = absx + gmhalf;
+  if (absx > gmhalf) {
+    dy = y - absx;
+    dy -= gmhalf;
+  } else {
+    dy = y - gmhalf;
+    dy -= absx;
+  }
 
-    /* handle the error of x + g - 0.5 */
-    y = absx + gmhalf;
-    if (absx > gmhalf) {
-        dy = y - absx;
-        dy -= gmhalf;
-    } else {
-        dy = y - gmhalf;
-        dy -= absx;
-    }
-
-    z = absx - 0.5;
-    r = S(absx) * exp(-y);
-    if (x < 0) {
-        /* reflection formula for negative x */
-        /* sinpi(absx) is not 0, integers are already handled */
-        r = -pi / (sinpi(absx) * absx * r);
-        dy = -dy;
-        z = -z;
-    }
-    r += dy * (gmhalf + 0.5) * r / y;
-    z = pow(y, 0.5 * z);
-    y = r * z * z;
-    return y;
+  z = absx - 0.5;
+  r = S(absx) * exp(-y);
+  if (x < 0) {
+    /* reflection formula for negative x */
+    /* sinpi(absx) is not 0, integers are already handled */
+    r = -pi / (sinpi(absx) * absx * r);
+    dy = -dy;
+    z = -z;
+  }
+  r += dy * (gmhalf + 0.5) * r / y;
+  z = pow(y, 0.5 * z);
+  y = r * z * z;
+  return y;
 }
 
 #if 0

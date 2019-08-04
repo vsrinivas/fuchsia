@@ -21,4 +21,4 @@ int fnmatch(const char*, const char*, int);
 }
 #endif
 
-#endif // SYSROOT_FNMATCH_H_
+#endif  // SYSROOT_FNMATCH_H_

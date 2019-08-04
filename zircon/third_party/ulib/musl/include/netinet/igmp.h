@@ -5,10 +5,10 @@
 #include <stdint.h>
 
 struct igmp {
-    uint8_t igmp_type;
-    uint8_t igmp_code;
-    uint16_t igmp_cksum;
-    struct in_addr igmp_group;
+  uint8_t igmp_type;
+  uint8_t igmp_code;
+  uint16_t igmp_cksum;
+  struct in_addr igmp_group;
 };
 
 #define IGMP_MINLEN 8
@@ -42,4 +42,4 @@ struct igmp {
 #define IGMP_HOST_NEW_MEMBERSHIP_REPORT IGMP_V2_MEMBERSHIP_REPORT
 #define IGMP_HOST_LEAVE_MESSAGE IGMP_V2_LEAVE_GROUP
 
-#endif // SYSROOT_NETINET_IGMP_H_
+#endif  // SYSROOT_NETINET_IGMP_H_

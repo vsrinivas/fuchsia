@@ -49,50 +49,50 @@ static const double pio2_hi = 1.57079632679489655800e+00, /* 0x3FF921FB, 0x54442
     qS4 = 7.70381505559019352791e-02;                     /* 0x3FB3B8C5, 0xB12E9282 */
 
 static double R(double z) {
-    double_t p, q;
-    p = z * (pS0 + z * (pS1 + z * (pS2 + z * (pS3 + z * (pS4 + z * pS5)))));
-    q = 1.0 + z * (qS1 + z * (qS2 + z * (qS3 + z * qS4)));
-    return p / q;
+  double_t p, q;
+  p = z * (pS0 + z * (pS1 + z * (pS2 + z * (pS3 + z * (pS4 + z * pS5)))));
+  q = 1.0 + z * (qS1 + z * (qS2 + z * (qS3 + z * qS4)));
+  return p / q;
 }
 
 double acos(double x) {
-    double z, w, s, c, df;
-    uint32_t hx, ix;
+  double z, w, s, c, df;
+  uint32_t hx, ix;
 
-    GET_HIGH_WORD(hx, x);
-    ix = hx & 0x7fffffff;
-    /* |x| >= 1 or nan */
-    if (ix >= 0x3ff00000) {
-        uint32_t lx;
+  GET_HIGH_WORD(hx, x);
+  ix = hx & 0x7fffffff;
+  /* |x| >= 1 or nan */
+  if (ix >= 0x3ff00000) {
+    uint32_t lx;
 
-        GET_LOW_WORD(lx, x);
-        if (((ix - 0x3ff00000) | lx) == 0) {
-            /* acos(1)=0, acos(-1)=pi */
-            if (hx >> 31)
-                return 2 * pio2_hi + 0x1p-120f;
-            return 0;
-        }
-        return 0 / (x - x);
+    GET_LOW_WORD(lx, x);
+    if (((ix - 0x3ff00000) | lx) == 0) {
+      /* acos(1)=0, acos(-1)=pi */
+      if (hx >> 31)
+        return 2 * pio2_hi + 0x1p-120f;
+      return 0;
     }
-    /* |x| < 0.5 */
-    if (ix < 0x3fe00000) {
-        if (ix <= 0x3c600000) /* |x| < 2**-57 */
-            return pio2_hi + 0x1p-120f;
-        return pio2_hi - (x - (pio2_lo - x * R(x * x)));
-    }
-    /* x < -0.5 */
-    if (hx >> 31) {
-        z = (1.0 + x) * 0.5;
-        s = sqrt(z);
-        w = R(z) * s - pio2_lo;
-        return 2 * (pio2_hi - (s + w));
-    }
-    /* x > 0.5 */
-    z = (1.0 - x) * 0.5;
+    return 0 / (x - x);
+  }
+  /* |x| < 0.5 */
+  if (ix < 0x3fe00000) {
+    if (ix <= 0x3c600000) /* |x| < 2**-57 */
+      return pio2_hi + 0x1p-120f;
+    return pio2_hi - (x - (pio2_lo - x * R(x * x)));
+  }
+  /* x < -0.5 */
+  if (hx >> 31) {
+    z = (1.0 + x) * 0.5;
     s = sqrt(z);
-    df = s;
-    SET_LOW_WORD(df, 0);
-    c = (z - df * df) / (s + df);
-    w = R(z) * s + c;
-    return 2 * (df + w);
+    w = R(z) * s - pio2_lo;
+    return 2 * (pio2_hi - (s + w));
+  }
+  /* x > 0.5 */
+  z = (1.0 - x) * 0.5;
+  s = sqrt(z);
+  df = s;
+  SET_LOW_WORD(df, 0);
+  c = (z - df * df) / (s + df);
+  w = R(z) * s + c;
+  return 2 * (df + w);
 }

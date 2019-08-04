@@ -23,11 +23,11 @@ static const double C0 = -0x1ffffffd0c5e81.0p-54, /* -0.499999997251031003120 */
     C3 = 0x199342e0ee5069.0p-68;                  /*  0.0000243904487962774090654 */
 
 float __cosdf(double x) {
-    double_t r, w, z;
+  double_t r, w, z;
 
-    /* Try to optimize for parallel evaluation as in __tandf.c. */
-    z = x * x;
-    w = z * z;
-    r = C2 + z * C3;
-    return ((1.0 + z * C0) + w * C1) + (w * z) * r;
+  /* Try to optimize for parallel evaluation as in __tandf.c. */
+  z = x * x;
+  w = z * z;
+  r = C2 + z * C3;
+  return ((1.0 + z * C0) + w * C1) + (w * z) * r;
 }

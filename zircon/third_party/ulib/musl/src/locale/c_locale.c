@@ -1,5 +1,6 @@
-#include "locale_impl.h"
 #include <stdint.h>
+
+#include "locale_impl.h"
 
 static const uint32_t empty_mo[] = {0x950412de, 0, -1, -1, -1};
 

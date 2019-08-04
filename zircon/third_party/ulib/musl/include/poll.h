@@ -29,9 +29,9 @@ extern "C" {
 typedef unsigned long nfds_t;
 
 struct pollfd {
-    int fd;
-    short events;
-    short revents;
+  int fd;
+  short events;
+  short revents;
 };
 
 int poll(struct pollfd*, nfds_t, int);
@@ -48,4 +48,4 @@ int ppoll(struct pollfd*, nfds_t, const struct timespec*, const sigset_t*);
 }
 #endif
 
-#endif // SYSROOT_POLL_H_
+#endif  // SYSROOT_POLL_H_

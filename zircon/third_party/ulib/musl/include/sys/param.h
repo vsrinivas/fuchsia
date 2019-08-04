@@ -31,4 +31,4 @@
 #include <endian.h>
 #include <limits.h>
 
-#endif // SYSROOT_SYS_PARAM_H_
+#endif  // SYSROOT_SYS_PARAM_H_

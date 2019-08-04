@@ -5,11 +5,11 @@
 #define NETLINK_ROUTE 0
 
 struct nlmsghdr {
-    uint32_t nlmsg_len;
-    uint16_t nlmsg_type;
-    uint16_t nlmsg_flags;
-    uint32_t nlmsg_seq;
-    uint32_t nlmsg_pid;
+  uint32_t nlmsg_len;
+  uint16_t nlmsg_type;
+  uint16_t nlmsg_flags;
+  uint32_t nlmsg_seq;
+  uint32_t nlmsg_pid;
 };
 
 #define NLM_F_REQUEST 1
@@ -34,21 +34,21 @@ struct nlmsghdr {
 #define RTM_GETADDR 22
 
 struct rtattr {
-    unsigned short rta_len;
-    unsigned short rta_type;
+  unsigned short rta_len;
+  unsigned short rta_type;
 };
 
 struct rtgenmsg {
-    unsigned char rtgen_family;
+  unsigned char rtgen_family;
 };
 
 struct ifinfomsg {
-    unsigned char ifi_family;
-    unsigned char __ifi_pad;
-    unsigned short ifi_type;
-    int ifi_index;
-    unsigned ifi_flags;
-    unsigned ifi_change;
+  unsigned char ifi_family;
+  unsigned char __ifi_pad;
+  unsigned short ifi_type;
+  int ifi_index;
+  unsigned ifi_flags;
+  unsigned ifi_change;
 };
 
 /* linux/if_link.h */
@@ -61,11 +61,11 @@ struct ifinfomsg {
 /* linux/if_addr.h */
 
 struct ifaddrmsg {
-    uint8_t ifa_family;
-    uint8_t ifa_prefixlen;
-    uint8_t ifa_flags;
-    uint8_t ifa_scope;
-    uint32_t ifa_index;
+  uint8_t ifa_family;
+  uint8_t ifa_prefixlen;
+  uint8_t ifa_flags;
+  uint8_t ifa_scope;
+  uint32_t ifa_index;
 };
 
 #define IFA_ADDRESS 1

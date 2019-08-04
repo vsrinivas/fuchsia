@@ -10,8 +10,8 @@ extern "C" {
 #include <bits/alltypes.h>
 
 struct utimbuf {
-    time_t actime;
-    time_t modtime;
+  time_t actime;
+  time_t modtime;
 };
 
 int utime(const char*, const struct utimbuf*);
@@ -20,4 +20,4 @@ int utime(const char*, const struct utimbuf*);
 }
 #endif
 
-#endif // SYSROOT_UTIME_H_
+#endif  // SYSROOT_UTIME_H_

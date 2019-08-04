@@ -62,38 +62,38 @@ static const double invsqrtpi = 5.64189583547756279280e-01, /* 0x3FE20DD7, 0x504
     tpi = 6.36619772367581382433e-01;                       /* 0x3FE45F30, 0x6DC9C883 */
 
 static double common(uint32_t ix, double x, int y1, int sign) {
-    double z, s, c, ss, cc;
+  double z, s, c, ss, cc;
 
-    /*
-     * j1(x) = sqrt(2/(pi*x))*(p1(x)*cos(x-3pi/4)-q1(x)*sin(x-3pi/4))
-     * y1(x) = sqrt(2/(pi*x))*(p1(x)*sin(x-3pi/4)+q1(x)*cos(x-3pi/4))
-     *
-     * sin(x-3pi/4) = -(sin(x) + cos(x))/sqrt(2)
-     * cos(x-3pi/4) = (sin(x) - cos(x))/sqrt(2)
-     * sin(x) +- cos(x) = -cos(2x)/(sin(x) -+ cos(x))
-     */
-    s = sin(x);
-    if (y1)
-        s = -s;
-    c = cos(x);
-    cc = s - c;
-    if (ix < 0x7fe00000) {
-        /* avoid overflow in 2*x */
-        ss = -s - c;
-        z = cos(2 * x);
-        if (s * c > 0)
-            cc = z / ss;
-        else
-            ss = z / cc;
-        if (ix < 0x48000000) {
-            if (y1)
-                ss = -ss;
-            cc = pone(x) * cc - qone(x) * ss;
-        }
+  /*
+   * j1(x) = sqrt(2/(pi*x))*(p1(x)*cos(x-3pi/4)-q1(x)*sin(x-3pi/4))
+   * y1(x) = sqrt(2/(pi*x))*(p1(x)*sin(x-3pi/4)+q1(x)*cos(x-3pi/4))
+   *
+   * sin(x-3pi/4) = -(sin(x) + cos(x))/sqrt(2)
+   * cos(x-3pi/4) = (sin(x) - cos(x))/sqrt(2)
+   * sin(x) +- cos(x) = -cos(2x)/(sin(x) -+ cos(x))
+   */
+  s = sin(x);
+  if (y1)
+    s = -s;
+  c = cos(x);
+  cc = s - c;
+  if (ix < 0x7fe00000) {
+    /* avoid overflow in 2*x */
+    ss = -s - c;
+    z = cos(2 * x);
+    if (s * c > 0)
+      cc = z / ss;
+    else
+      ss = z / cc;
+    if (ix < 0x48000000) {
+      if (y1)
+        ss = -ss;
+      cc = pone(x) * cc - qone(x) * ss;
     }
-    if (sign)
-        cc = -cc;
-    return invsqrtpi * cc / sqrt(x);
+  }
+  if (sign)
+    cc = -cc;
+  return invsqrtpi * cc / sqrt(x);
 }
 
 /* R0/S0 on [0,2] */
@@ -108,26 +108,26 @@ static const double r00 = -6.25000000000000000000e-02, /* 0xBFB00000, 0x00000000
     s05 = 1.23542274426137913908e-11;                  /* 0x3DAB2ACF, 0xCFB97ED8 */
 
 double j1(double x) {
-    double z, r, s;
-    uint32_t ix;
-    int sign;
+  double z, r, s;
+  uint32_t ix;
+  int sign;
 
-    GET_HIGH_WORD(ix, x);
-    sign = ix >> 31;
-    ix &= 0x7fffffff;
-    if (ix >= 0x7ff00000)
-        return 1 / (x * x);
-    if (ix >= 0x40000000) /* |x| >= 2 */
-        return common(ix, fabs(x), 0, sign);
-    if (ix >= 0x38000000) { /* |x| >= 2**-127 */
-        z = x * x;
-        r = z * (r00 + z * (r01 + z * (r02 + z * r03)));
-        s = 1 + z * (s01 + z * (s02 + z * (s03 + z * (s04 + z * s05))));
-        z = r / s;
-    } else
-        /* avoid underflow, raise inexact if x!=0 */
-        z = x;
-    return (0.5 + z) * x;
+  GET_HIGH_WORD(ix, x);
+  sign = ix >> 31;
+  ix &= 0x7fffffff;
+  if (ix >= 0x7ff00000)
+    return 1 / (x * x);
+  if (ix >= 0x40000000) /* |x| >= 2 */
+    return common(ix, fabs(x), 0, sign);
+  if (ix >= 0x38000000) { /* |x| >= 2**-127 */
+    z = x * x;
+    r = z * (r00 + z * (r01 + z * (r02 + z * r03)));
+    s = 1 + z * (s01 + z * (s02 + z * (s03 + z * (s04 + z * s05))));
+    z = r / s;
+  } else
+    /* avoid underflow, raise inexact if x!=0 */
+    z = x;
+  return (0.5 + z) * x;
 }
 
 static const double U0[5] = {
@@ -146,26 +146,26 @@ static const double V0[5] = {
 };
 
 double y1(double x) {
-    double z, u, v;
-    uint32_t ix, lx;
+  double z, u, v;
+  uint32_t ix, lx;
 
-    EXTRACT_WORDS(ix, lx, x);
-    /* y1(nan)=nan, y1(<0)=nan, y1(0)=-inf, y1(inf)=0 */
-    if ((ix << 1 | lx) == 0)
-        return -1 / 0.0;
-    if (ix >> 31)
-        return 0 / 0.0;
-    if (ix >= 0x7ff00000)
-        return 1 / x;
+  EXTRACT_WORDS(ix, lx, x);
+  /* y1(nan)=nan, y1(<0)=nan, y1(0)=-inf, y1(inf)=0 */
+  if ((ix << 1 | lx) == 0)
+    return -1 / 0.0;
+  if (ix >> 31)
+    return 0 / 0.0;
+  if (ix >= 0x7ff00000)
+    return 1 / x;
 
-    if (ix >= 0x40000000) /* x >= 2 */
-        return common(ix, x, 1, 0);
-    if (ix < 0x3c900000) /* x < 2**-54 */
-        return -tpi / x;
-    z = x * x;
-    u = U0[0] + z * (U0[1] + z * (U0[2] + z * (U0[3] + z * U0[4])));
-    v = 1 + z * (V0[0] + z * (V0[1] + z * (V0[2] + z * (V0[3] + z * V0[4]))));
-    return x * (u / v) + tpi * (j1(x) * log(x) - 1 / x);
+  if (ix >= 0x40000000) /* x >= 2 */
+    return common(ix, x, 1, 0);
+  if (ix < 0x3c900000) /* x < 2**-54 */
+    return -tpi / x;
+  z = x * x;
+  u = U0[0] + z * (U0[1] + z * (U0[2] + z * (U0[3] + z * U0[4])));
+  v = 1 + z * (V0[0] + z * (V0[1] + z * (V0[2] + z * (V0[3] + z * V0[4]))));
+  return x * (u / v) + tpi * (j1(x) * log(x) - 1 / x);
 }
 
 /* For x >= 8, the asymptotic expansions of pone is
@@ -246,29 +246,29 @@ static const double ps2[5] = {
 };
 
 static double pone(double x) {
-    const double *p, *q;
-    double_t z, r, s;
-    uint32_t ix;
+  const double *p, *q;
+  double_t z, r, s;
+  uint32_t ix;
 
-    GET_HIGH_WORD(ix, x);
-    ix &= 0x7fffffff;
-    if (ix >= 0x40200000) {
-        p = pr8;
-        q = ps8;
-    } else if (ix >= 0x40122E8B) {
-        p = pr5;
-        q = ps5;
-    } else if (ix >= 0x4006DB6D) {
-        p = pr3;
-        q = ps3;
-    } else /*ix >= 0x40000000*/ {
-        p = pr2;
-        q = ps2;
-    }
-    z = 1.0 / (x * x);
-    r = p[0] + z * (p[1] + z * (p[2] + z * (p[3] + z * (p[4] + z * p[5]))));
-    s = 1.0 + z * (q[0] + z * (q[1] + z * (q[2] + z * (q[3] + z * q[4]))));
-    return 1.0 + r / s;
+  GET_HIGH_WORD(ix, x);
+  ix &= 0x7fffffff;
+  if (ix >= 0x40200000) {
+    p = pr8;
+    q = ps8;
+  } else if (ix >= 0x40122E8B) {
+    p = pr5;
+    q = ps5;
+  } else if (ix >= 0x4006DB6D) {
+    p = pr3;
+    q = ps3;
+  } else /*ix >= 0x40000000*/ {
+    p = pr2;
+    q = ps2;
+  }
+  z = 1.0 / (x * x);
+  r = p[0] + z * (p[1] + z * (p[2] + z * (p[3] + z * (p[4] + z * p[5]))));
+  s = 1.0 + z * (q[0] + z * (q[1] + z * (q[2] + z * (q[3] + z * q[4]))));
+  return 1.0 + r / s;
 }
 
 /* For x >= 8, the asymptotic expansions of qone is
@@ -353,27 +353,27 @@ static const double qs2[6] = {
 };
 
 static double qone(double x) {
-    const double *p, *q;
-    double_t s, r, z;
-    uint32_t ix;
+  const double *p, *q;
+  double_t s, r, z;
+  uint32_t ix;
 
-    GET_HIGH_WORD(ix, x);
-    ix &= 0x7fffffff;
-    if (ix >= 0x40200000) {
-        p = qr8;
-        q = qs8;
-    } else if (ix >= 0x40122E8B) {
-        p = qr5;
-        q = qs5;
-    } else if (ix >= 0x4006DB6D) {
-        p = qr3;
-        q = qs3;
-    } else /*ix >= 0x40000000*/ {
-        p = qr2;
-        q = qs2;
-    }
-    z = 1.0 / (x * x);
-    r = p[0] + z * (p[1] + z * (p[2] + z * (p[3] + z * (p[4] + z * p[5]))));
-    s = 1.0 + z * (q[0] + z * (q[1] + z * (q[2] + z * (q[3] + z * (q[4] + z * q[5])))));
-    return (.375 + r / s) / x;
+  GET_HIGH_WORD(ix, x);
+  ix &= 0x7fffffff;
+  if (ix >= 0x40200000) {
+    p = qr8;
+    q = qs8;
+  } else if (ix >= 0x40122E8B) {
+    p = qr5;
+    q = qs5;
+  } else if (ix >= 0x4006DB6D) {
+    p = qr3;
+    q = qs3;
+  } else /*ix >= 0x40000000*/ {
+    p = qr2;
+    q = qs2;
+  }
+  z = 1.0 / (x * x);
+  r = p[0] + z * (p[1] + z * (p[2] + z * (p[3] + z * (p[4] + z * p[5]))));
+  s = 1.0 + z * (q[0] + z * (q[1] + z * (q[2] + z * (q[3] + z * (q[4] + z * q[5])))));
+  return (.375 + r / s) / x;
 }

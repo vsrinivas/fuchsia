@@ -174,93 +174,92 @@ static const double erx = 8.45062911510467529297e-01, /* 0x3FEB0AC1, 0x60000000 
     sb7 = -2.24409524465858183362e+01;                /* 0xC03670E2, 0x42712D62 */
 
 static double erfc1(double x) {
-    double_t s, P, Q;
+  double_t s, P, Q;
 
-    s = fabs(x) - 1;
-    P = pa0 + s * (pa1 + s * (pa2 + s * (pa3 + s * (pa4 + s * (pa5 + s * pa6)))));
-    Q = 1 + s * (qa1 + s * (qa2 + s * (qa3 + s * (qa4 + s * (qa5 + s * qa6)))));
-    return 1 - erx - P / Q;
+  s = fabs(x) - 1;
+  P = pa0 + s * (pa1 + s * (pa2 + s * (pa3 + s * (pa4 + s * (pa5 + s * pa6)))));
+  Q = 1 + s * (qa1 + s * (qa2 + s * (qa3 + s * (qa4 + s * (qa5 + s * qa6)))));
+  return 1 - erx - P / Q;
 }
 
 static double erfc2(uint32_t ix, double x) {
-    double_t s, R, S;
-    double z;
+  double_t s, R, S;
+  double z;
 
-    if (ix < 0x3ff40000) /* |x| < 1.25 */
-        return erfc1(x);
+  if (ix < 0x3ff40000) /* |x| < 1.25 */
+    return erfc1(x);
 
-    x = fabs(x);
-    s = 1 / (x * x);
-    if (ix < 0x4006db6d) { /* |x| < 1/.35 ~ 2.85714 */
-        R = ra0 + s * (ra1 + s * (ra2 + s * (ra3 + s * (ra4 + s * (ra5 + s * (ra6 + s * ra7))))));
-        S = 1.0 +
-            s * (sa1 +
-                 s * (sa2 + s * (sa3 + s * (sa4 + s * (sa5 + s * (sa6 + s * (sa7 + s * sa8)))))));
-    } else { /* |x| > 1/.35 */
-        R = rb0 + s * (rb1 + s * (rb2 + s * (rb3 + s * (rb4 + s * (rb5 + s * rb6)))));
-        S = 1.0 + s * (sb1 + s * (sb2 + s * (sb3 + s * (sb4 + s * (sb5 + s * (sb6 + s * sb7))))));
-    }
-    z = x;
-    SET_LOW_WORD(z, 0);
-    return exp(-z * z - 0.5625) * exp((z - x) * (z + x) + R / S) / x;
+  x = fabs(x);
+  s = 1 / (x * x);
+  if (ix < 0x4006db6d) { /* |x| < 1/.35 ~ 2.85714 */
+    R = ra0 + s * (ra1 + s * (ra2 + s * (ra3 + s * (ra4 + s * (ra5 + s * (ra6 + s * ra7))))));
+    S = 1.0 +
+        s * (sa1 + s * (sa2 + s * (sa3 + s * (sa4 + s * (sa5 + s * (sa6 + s * (sa7 + s * sa8)))))));
+  } else { /* |x| > 1/.35 */
+    R = rb0 + s * (rb1 + s * (rb2 + s * (rb3 + s * (rb4 + s * (rb5 + s * rb6)))));
+    S = 1.0 + s * (sb1 + s * (sb2 + s * (sb3 + s * (sb4 + s * (sb5 + s * (sb6 + s * sb7))))));
+  }
+  z = x;
+  SET_LOW_WORD(z, 0);
+  return exp(-z * z - 0.5625) * exp((z - x) * (z + x) + R / S) / x;
 }
 
 double erf(double x) {
-    double r, s, z, y;
-    uint32_t ix;
-    int sign;
+  double r, s, z, y;
+  uint32_t ix;
+  int sign;
 
-    GET_HIGH_WORD(ix, x);
-    sign = ix >> 31;
-    ix &= 0x7fffffff;
-    if (ix >= 0x7ff00000) {
-        /* erf(nan)=nan, erf(+-inf)=+-1 */
-        return 1 - 2 * sign + 1 / x;
+  GET_HIGH_WORD(ix, x);
+  sign = ix >> 31;
+  ix &= 0x7fffffff;
+  if (ix >= 0x7ff00000) {
+    /* erf(nan)=nan, erf(+-inf)=+-1 */
+    return 1 - 2 * sign + 1 / x;
+  }
+  if (ix < 0x3feb0000) {   /* |x| < 0.84375 */
+    if (ix < 0x3e300000) { /* |x| < 2**-28 */
+      /* avoid underflow */
+      return 0.125 * (8 * x + efx8 * x);
     }
-    if (ix < 0x3feb0000) {     /* |x| < 0.84375 */
-        if (ix < 0x3e300000) { /* |x| < 2**-28 */
-            /* avoid underflow */
-            return 0.125 * (8 * x + efx8 * x);
-        }
-        z = x * x;
-        r = pp0 + z * (pp1 + z * (pp2 + z * (pp3 + z * pp4)));
-        s = 1.0 + z * (qq1 + z * (qq2 + z * (qq3 + z * (qq4 + z * qq5))));
-        y = r / s;
-        return x + x * y;
-    }
-    if (ix < 0x40180000) /* 0.84375 <= |x| < 6 */
-        y = 1 - erfc2(ix, x);
-    else
-        y = 1 - 0x1p-1022;
-    return sign ? -y : y;
+    z = x * x;
+    r = pp0 + z * (pp1 + z * (pp2 + z * (pp3 + z * pp4)));
+    s = 1.0 + z * (qq1 + z * (qq2 + z * (qq3 + z * (qq4 + z * qq5))));
+    y = r / s;
+    return x + x * y;
+  }
+  if (ix < 0x40180000) /* 0.84375 <= |x| < 6 */
+    y = 1 - erfc2(ix, x);
+  else
+    y = 1 - 0x1p-1022;
+  return sign ? -y : y;
 }
 
 double erfc(double x) {
-    double r, s, z, y;
-    uint32_t ix;
-    int sign;
+  double r, s, z, y;
+  uint32_t ix;
+  int sign;
 
-    GET_HIGH_WORD(ix, x);
-    sign = ix >> 31;
-    ix &= 0x7fffffff;
-    if (ix >= 0x7ff00000) {
-        /* erfc(nan)=nan, erfc(+-inf)=0,2 */
-        return 2 * sign + 1 / x;
+  GET_HIGH_WORD(ix, x);
+  sign = ix >> 31;
+  ix &= 0x7fffffff;
+  if (ix >= 0x7ff00000) {
+    /* erfc(nan)=nan, erfc(+-inf)=0,2 */
+    return 2 * sign + 1 / x;
+  }
+  if (ix < 0x3feb0000) { /* |x| < 0.84375 */
+    if (ix < 0x3c700000) /* |x| < 2**-56 */
+      return 1.0 - x;
+    z = x * x;
+    r = pp0 + z * (pp1 + z * (pp2 + z * (pp3 + z * pp4)));
+    s = 1.0 + z * (qq1 + z * (qq2 + z * (qq3 + z * (qq4 + z * qq5))));
+    y = r / s;
+    if (sign || ix < 0x3fd00000) { /* x < 1/4 */
+      return 1.0 - (x + x * y);
     }
-    if (ix < 0x3feb0000) {   /* |x| < 0.84375 */
-        if (ix < 0x3c700000) /* |x| < 2**-56 */
-            return 1.0 - x;
-        z = x * x;
-        r = pp0 + z * (pp1 + z * (pp2 + z * (pp3 + z * pp4)));
-        s = 1.0 + z * (qq1 + z * (qq2 + z * (qq3 + z * (qq4 + z * qq5))));
-        y = r / s;
-        if (sign || ix < 0x3fd00000) { /* x < 1/4 */
-            return 1.0 - (x + x * y);
-        }
-        return 0.5 - (x - 0.5 + x * y);
-    }
-    if (ix < 0x403c0000) { /* 0.84375 <= |x| < 28 */
-        return sign ? 2 - erfc2(ix, x) : erfc2(ix, x);
-    }
-    return sign ? 2 - 0x1p-1022 : 0x1p-1022 * 0x1p-1022;
+    return 0.5 - (x - 0.5 + x * y);
+  }
+  if (ix < 0x403c0000) { /* 0.84375 <= |x| < 28 */
+    return sign ? 2 - erfc2(ix, x) : erfc2(ix, x);
+  }
+  return sign ? 2 - 0x1p-1022 : 0x1p-1022 * 0x1p-1022;
 }

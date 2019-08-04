@@ -26,10 +26,10 @@ extern "C" {
 #define __NEED_pthread_once_t
 #define __NEED_size_t
 
-#include <bits/alltypes.h>
-
 #include <sched.h>
 #include <time.h>
+
+#include <bits/alltypes.h>
 
 #define PTHREAD_CREATE_JOINABLE 0
 #define PTHREAD_CREATE_DETACHED 1
@@ -55,11 +55,11 @@ extern "C" {
 #define PTHREAD_PROCESS_PRIVATE 0
 
 #define PTHREAD_MUTEX_INITIALIZER \
-    {}
+  {}
 #define PTHREAD_RWLOCK_INITIALIZER \
-    {}
+  {}
 #define PTHREAD_COND_INITIALIZER \
-    {}
+  {}
 #define PTHREAD_ONCE_INIT 0
 
 #define PTHREAD_CANCEL_ENABLE 0
@@ -148,8 +148,9 @@ int pthread_attr_setstacksize(pthread_attr_t*, size_t);
 int pthread_attr_getdetachstate(const pthread_attr_t*, int*);
 int pthread_attr_setdetachstate(pthread_attr_t*, int);
 int pthread_attr_getstack(const pthread_attr_t* __restrict, void** __restrict, size_t* __restrict);
-int pthread_attr_setstack(pthread_attr_t*, void*, size_t)
-    __attribute__((__deprecated__("pthread_attr_setstack is not available in Fuchsia; perhaps pthread_attr_setstacksize and/or pthread_attr_setguardsize is sufficient for your needs?")));
+int pthread_attr_setstack(pthread_attr_t*, void*, size_t) __attribute__((__deprecated__(
+    "pthread_attr_setstack is not available in Fuchsia; perhaps pthread_attr_setstacksize and/or "
+    "pthread_attr_setguardsize is sufficient for your needs?")));
 int pthread_attr_getschedparam(const pthread_attr_t* __restrict, struct sched_param* __restrict);
 int pthread_attr_setschedparam(pthread_attr_t* __restrict, const struct sched_param* __restrict);
 
@@ -196,4 +197,4 @@ int pthread_getattr_np(pthread_t, pthread_attr_t*);
 }
 #endif
 
-#endif // SYSROOT_PTHREAD_H_
+#endif  // SYSROOT_PTHREAD_H_

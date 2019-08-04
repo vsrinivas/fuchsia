@@ -12,10 +12,10 @@
 __BEGIN_CDECLS
 
 struct address {
-    int family;
-    unsigned scopeid;
-    uint8_t addr[16];
-    int sortkey;
+  int family;
+  unsigned scopeid;
+  uint8_t addr[16];
+  int sortkey;
 };
 
 /* The limit of 48 results is a non-sharp bound on the number of addresses
@@ -26,8 +26,9 @@ struct address {
 // This function is used by musl to perform an actual DNS lookup - it takes
 // a name and address family, sends a DNS query, and fills out the addresses
 // and canonical name with the response.
-int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const char* name, int family);
+int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const char* name,
+                          int family);
 
 __END_CDECLS
 
-#endif // SYSROOT_ZIRCON_LOOKUP_H_
+#endif  // SYSROOT_ZIRCON_LOOKUP_H_

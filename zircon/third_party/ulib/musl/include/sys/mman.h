@@ -99,4 +99,4 @@ int shm_unlink(const char*);
 }
 #endif
 
-#endif // SYSROOT_SYS_MMAN_H_
+#endif  // SYSROOT_SYS_MMAN_H_

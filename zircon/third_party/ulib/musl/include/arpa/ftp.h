@@ -34,4 +34,4 @@ char* typenames[] = {"0", "ASCII", "EBCDIC", "Image", "Local"};
 char* formnames[] = {"0", "Nonprint", "Telnet", "Carriage-control"};
 #endif
 
-#endif // SYSROOT_ARPA_FTP_H_
+#endif  // SYSROOT_ARPA_FTP_H_

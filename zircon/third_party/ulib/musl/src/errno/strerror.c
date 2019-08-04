@@ -1,6 +1,7 @@
-#include "libc.h"
 #include <errno.h>
 #include <string.h>
+
+#include "libc.h"
 
 #define E(a, b) ((unsigned char)a),
 static const unsigned char errid[] = {
@@ -14,12 +15,12 @@ static const char errmsg[] =
     ;
 
 char* strerror(int e) {
-    const char* s;
-    int i;
-    for (i = 0; errid[i] && errid[i] != e; i++)
-        ;
-    for (s = errmsg; i; s++, i--)
-        for (; *s; s++)
-            ;
-    return (char*)s;
+  const char* s;
+  int i;
+  for (i = 0; errid[i] && errid[i] != e; i++)
+    ;
+  for (s = errmsg; i; s++, i--)
+    for (; *s; s++)
+      ;
+  return (char*)s;
 }

@@ -1,9 +1,10 @@
-#include "ipc.h"
-#include <stdint.h>
 #include <errno.h>
+#include <stdint.h>
 #include <sys/shm.h>
 
+#include "ipc.h"
+
 int shmget(key_t key, size_t size, int flag) {
-    errno = ENOSYS;
-    return -1;
+  errno = ENOSYS;
+  return -1;
 }

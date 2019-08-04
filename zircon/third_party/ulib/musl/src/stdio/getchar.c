@@ -1,5 +1,3 @@
 #include <stdio.h>
 
-int getchar(void) {
-    return fgetc(stdin);
-}
+int getchar(void) { return fgetc(stdin); }

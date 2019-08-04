@@ -1,4 +1,5 @@
 #include "__invtrigl.h"
+
 #include <float.h>
 
 #if LDBL_MANT_DIG == 64 && LDBL_MAX_EXP == 16384
@@ -15,10 +16,10 @@ const long double pio2_lo = -2.50827880633416601173e-20L;
 /* used in asinl() and acosl() */
 /* R(x^2) is a rational approximation of (asin(x)-x)/x^3 with Remez algorithm */
 long double __invtrigl_R(long double z) {
-    long double p, q;
-    p = z * (pS0 + z * (pS1 + z * (pS2 + z * (pS3 + z * (pS4 + z * (pS5 + z * pS6))))));
-    q = 1.0 + z * (qS1 + z * (qS2 + z * (qS3 + z * (qS4 + z * qS5))));
-    return p / q;
+  long double p, q;
+  p = z * (pS0 + z * (pS1 + z * (pS2 + z * (pS3 + z * (pS4 + z * (pS5 + z * pS6))))));
+  q = 1.0 + z * (qS1 + z * (qS2 + z * (qS3 + z * (qS4 + z * qS5))));
+  return p / q;
 }
 #elif LDBL_MANT_DIG == 113 && LDBL_MAX_EXP == 16384
 static const long double pS0 = 1.66666666666666666666666666666700314e-01L,
@@ -39,22 +40,23 @@ static const long double pS0 = 1.66666666666666666666666666666700314e-01L,
                          qS6 = 8.27830318881232209752469022352928864e-01L,
                          qS7 = -1.18768052702942805423330715206348004e-01L,
                          qS8 = 8.32600764660522313269101537926539470e-03L,
-                         qS9 = -1.99407384882605586705979504567947007e-04L*/;
+                         qS9 = -1.99407384882605586705979504567947007e-04L*/
+    ;
 
 const long double pio2_hi = 1.57079632679489661923132169163975140L;
 const long double pio2_lo = 4.33590506506189051239852201302167613e-35L;
 
 long double __invtrigl_R(long double z) {
-    long double p, q;
-    p = z * (pS0 +
-             z * (pS1 +
-                  z * (pS2 +
-                       z * (pS3 +
-                            z * (pS4 + z * (pS5 + z * (pS6 + z * (pS7 + z * (pS8 + z * pS9)))))))));
-    q = 1.0 +
-        z * (qS1 +
-             z * (qS2 +
-                  z * (qS3 + z * (qS4 + z * (qS5 + z * (pS6 + z * (pS7 + z * (pS8 + z * pS9))))))));
-    return p / q;
+  long double p, q;
+  p = z *
+      (pS0 +
+       z * (pS1 +
+            z * (pS2 +
+                 z * (pS3 + z * (pS4 + z * (pS5 + z * (pS6 + z * (pS7 + z * (pS8 + z * pS9)))))))));
+  q = 1.0 +
+      z * (qS1 +
+           z * (qS2 +
+                z * (qS3 + z * (qS4 + z * (qS5 + z * (pS6 + z * (pS7 + z * (pS8 + z * pS9))))))));
+  return p / q;
 }
 #endif

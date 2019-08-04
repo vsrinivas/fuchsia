@@ -2,6 +2,6 @@
 #include <stdio.h>
 
 int getw(FILE* f) {
-    int x;
-    return fread(&x, sizeof x, 1, f) ? x : EOF;
+  int x;
+  return fread(&x, sizeof x, 1, f) ? x : EOF;
 }

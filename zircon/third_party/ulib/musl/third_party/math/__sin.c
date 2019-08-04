@@ -49,14 +49,14 @@ static const double S1 = -1.66666666666666324348e-01, /* 0xBFC55555, 0x55555549 
     S6 = 1.58969099521155010221e-10;                  /* 0x3DE5D93A, 0x5ACFD57C */
 
 double __sin(double x, double y, int iy) {
-    double_t z, r, v, w;
+  double_t z, r, v, w;
 
-    z = x * x;
-    w = z * z;
-    r = S2 + z * (S3 + z * S4) + z * w * (S5 + z * S6);
-    v = z * x;
-    if (iy == 0)
-        return x + v * (S1 + z * r);
-    else
-        return x - ((z * (0.5 * y - v * r) - y) - v * S1);
+  z = x * x;
+  w = z * z;
+  r = S2 + z * (S3 + z * S4) + z * w * (S5 + z * S6);
+  v = z * x;
+  if (iy == 0)
+    return x + v * (S1 + z * r);
+  else
+    return x - ((z * (0.5 * y - v * r) - y) - v * S1);
 }

@@ -10,20 +10,20 @@ extern "C" {
 #endif
 
 struct icmphdr {
-    uint8_t type;
-    uint8_t code;
-    uint16_t checksum;
-    union {
-        struct {
-            uint16_t id;
-            uint16_t sequence;
-        } echo;
-        uint32_t gateway;
-        struct {
-            uint16_t __unused;
-            uint16_t mtu;
-        } frag;
-    } un;
+  uint8_t type;
+  uint8_t code;
+  uint16_t checksum;
+  union {
+    struct {
+      uint16_t id;
+      uint16_t sequence;
+    } echo;
+    uint32_t gateway;
+    struct {
+      uint16_t __unused;
+      uint16_t mtu;
+    } frag;
+  } un;
 };
 
 #define ICMP_ECHOREPLY 0
@@ -68,47 +68,47 @@ struct icmphdr {
 #define ICMP_EXC_FRAGTIME 1
 
 struct icmp_ra_addr {
-    uint32_t ira_addr;
-    uint32_t ira_preference;
+  uint32_t ira_addr;
+  uint32_t ira_preference;
 };
 
 struct icmp {
-    uint8_t icmp_type;
-    uint8_t icmp_code;
-    uint16_t icmp_cksum;
-    union {
-        uint8_t ih_pptr;
-        struct in_addr ih_gwaddr;
-        struct ih_idseq {
-            uint16_t icd_id;
-            uint16_t icd_seq;
-        } ih_idseq;
-        uint32_t ih_void;
+  uint8_t icmp_type;
+  uint8_t icmp_code;
+  uint16_t icmp_cksum;
+  union {
+    uint8_t ih_pptr;
+    struct in_addr ih_gwaddr;
+    struct ih_idseq {
+      uint16_t icd_id;
+      uint16_t icd_seq;
+    } ih_idseq;
+    uint32_t ih_void;
 
-        struct ih_pmtu {
-            uint16_t ipm_void;
-            uint16_t ipm_nextmtu;
-        } ih_pmtu;
+    struct ih_pmtu {
+      uint16_t ipm_void;
+      uint16_t ipm_nextmtu;
+    } ih_pmtu;
 
-        struct ih_rtradv {
-            uint8_t irt_num_addrs;
-            uint8_t irt_wpa;
-            uint16_t irt_lifetime;
-        } ih_rtradv;
-    } icmp_hun;
-    union {
-        struct {
-            uint32_t its_otime;
-            uint32_t its_rtime;
-            uint32_t its_ttime;
-        } id_ts;
-        struct {
-            struct ip idi_ip;
-        } id_ip;
-        struct icmp_ra_addr id_radv;
-        uint32_t id_mask;
-        uint8_t id_data[1];
-    } icmp_dun;
+    struct ih_rtradv {
+      uint8_t irt_num_addrs;
+      uint8_t irt_wpa;
+      uint16_t irt_lifetime;
+    } ih_rtradv;
+  } icmp_hun;
+  union {
+    struct {
+      uint32_t its_otime;
+      uint32_t its_rtime;
+      uint32_t its_ttime;
+    } id_ts;
+    struct {
+      struct ip idi_ip;
+    } id_ip;
+    struct icmp_ra_addr id_radv;
+    uint32_t id_mask;
+    uint8_t id_data[1];
+  } icmp_dun;
 };
 
 #define icmp_pptr icmp_hun.ih_pptr
@@ -176,14 +176,14 @@ struct icmp {
 
 #define ICMP_PARAMPROB_OPTABSENT 1
 
-#define ICMP_INFOTYPE(type)                                                                 \
-    ((type) == ICMP_ECHOREPLY || (type) == ICMP_ECHO || (type) == ICMP_ROUTERADVERT ||      \
-     (type) == ICMP_ROUTERSOLICIT || (type) == ICMP_TSTAMP || (type) == ICMP_TSTAMPREPLY || \
-     (type) == ICMP_IREQ || (type) == ICMP_IREQREPLY || (type) == ICMP_MASKREQ ||           \
-     (type) == ICMP_MASKREPLY)
+#define ICMP_INFOTYPE(type)                                                               \
+  ((type) == ICMP_ECHOREPLY || (type) == ICMP_ECHO || (type) == ICMP_ROUTERADVERT ||      \
+   (type) == ICMP_ROUTERSOLICIT || (type) == ICMP_TSTAMP || (type) == ICMP_TSTAMPREPLY || \
+   (type) == ICMP_IREQ || (type) == ICMP_IREQREPLY || (type) == ICMP_MASKREQ ||           \
+   (type) == ICMP_MASKREPLY)
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // SYSROOT_NETINET_IP_ICMP_H_
+#endif  // SYSROOT_NETINET_IP_ICMP_H_

@@ -1,3 +1,1 @@
-long gethostid(void) {
-    return 0;
-}
+long gethostid(void) { return 0; }

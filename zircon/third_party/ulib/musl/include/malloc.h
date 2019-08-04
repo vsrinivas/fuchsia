@@ -22,4 +22,4 @@ size_t malloc_usable_size(void*);
 }
 #endif
 
-#endif // SYSROOT_MALLOC_H_
+#endif  // SYSROOT_MALLOC_H_
