@@ -5,8 +5,8 @@
 #include <dirent.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl-service/cpp/service_directory.h>
 #include <lib/fit/defer.h>
+#include <lib/sys/service/cpp/service_directory.h>
 
 #include <vector>
 

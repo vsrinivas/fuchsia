@@ -6,9 +6,9 @@
 #define LIB_SYS_CPP_OUTGOING_DIRECTORY_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fidl-service/cpp/service.h>
-#include <lib/fidl-service/cpp/service_handler.h>
 #include <lib/fit/function.h>
+#include <lib/sys/service/cpp/service.h>
+#include <lib/sys/service/cpp/service_handler.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 

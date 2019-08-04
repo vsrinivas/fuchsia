@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_SERVICE_CPP_SERVICE_H_
-#define LIB_FIDL_SERVICE_CPP_SERVICE_H_
+#ifndef LIB_SYS_SERVICE_CPP_SERVICE_H_
+#define LIB_SYS_SERVICE_CPP_SERVICE_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/namespace.h>
@@ -104,4 +104,4 @@ Service OpenService(const std::string& instance = kDefaultInstance) {
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_SERVICE_CPP_SERVICE_H_
+#endif  // LIB_SYS_SERVICE_CPP_SERVICE_H_

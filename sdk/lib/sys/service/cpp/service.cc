@@ -4,7 +4,7 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fidl-service/cpp/service.h>
+#include <lib/sys/service/cpp/service.h>
 
 namespace fidl {
 

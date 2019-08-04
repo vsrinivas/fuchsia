@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_SERVICE_CPP_SERVICE_HANDLER_H_
-#define LIB_FIDL_SERVICE_CPP_SERVICE_HANDLER_H_
+#ifndef LIB_SYS_SERVICE_CPP_SERVICE_HANDLER_H_
+#define LIB_SYS_SERVICE_CPP_SERVICE_HANDLER_H_
 
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/service_handler_base.h>
@@ -31,4 +31,4 @@ class ServiceHandler : public ServiceHandlerBase {
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_SERVICE_CPP_SERVICE_HANDLER_H_
+#endif  // LIB_SYS_SERVICE_CPP_SERVICE_HANDLER_H_

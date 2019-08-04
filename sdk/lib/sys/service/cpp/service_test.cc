@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl-service/cpp/service.h>
-#include <lib/fidl-service/cpp/test_base.h>
+#include <lib/sys/service/cpp/service.h>
+#include <lib/sys/service/cpp/test_base.h>
 
 #include <examples/fidl/gen/my_service.h>
 

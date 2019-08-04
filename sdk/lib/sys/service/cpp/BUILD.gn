@@ -8,7 +8,7 @@ import("//build/test/test_package.gni")
 sdk_source_set("cpp") {
   category = "partner"
 
-  sdk_name = "fidl_service_cpp"
+  sdk_name = "sys_service_cpp"
 
   include_base = "//sdk"
   sources = [
@@ -33,7 +33,7 @@ sdk_source_set("cpp") {
   public_configs = [ "//sdk/config" ]
 }
 
-executable("fidl_service_unittests") {
+executable("sys_service_unittests") {
   testonly = true
 
   sources = [
@@ -55,15 +55,15 @@ executable("fidl_service_unittests") {
   ]
 }
 
-test_package("fidl_service_tests") {
+test_package("sys_service_tests") {
   deps = [
-    ":fidl_service_unittests",
+    ":sys_service_unittests",
   ]
 
   tests = [
     {
-      name = "fidl_service_unittests"
-      manifest = rebase_path("../meta/fidl_service_unittests.cmx")
+      name = "sys_service_unittests"
+      manifest = rebase_path("../meta/sys_service_unittests.cmx")
       environments = basic_envs
     },
   ]

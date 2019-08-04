@@ -4,8 +4,8 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl-service/cpp/service_directory.h>
-#include <lib/fidl-service/cpp/service_watcher.h>
+#include <lib/sys/service/cpp/service_directory.h>
+#include <lib/sys/service/cpp/service_watcher.h>
 
 namespace fidl {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_SERVICE_CPP_TEST_BASE_H_
-#define LIB_FIDL_SERVICE_CPP_TEST_BASE_H_
+#ifndef LIB_SYS_SERVICE_CPP_TEST_BASE_H_
+#define LIB_SYS_SERVICE_CPP_TEST_BASE_H_
 
 #include <fcntl.h>
 #include <lib/fdio/namespace.h>
@@ -57,4 +57,4 @@ class TestBase : public ::testing::Test {
 }  // namespace testing
 }  // namespace fidl
 
-#endif  // LIB_FIDL_SERVICE_CPP_TEST_BASE_H_
+#endif  // LIB_SYS_SERVICE_CPP_TEST_BASE_H_

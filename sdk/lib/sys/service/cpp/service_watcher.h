@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_SERVICE_CPP_SERVICE_WATCHER_H_
-#define LIB_FIDL_SERVICE_CPP_SERVICE_WATCHER_H_
+#ifndef LIB_SYS_SERVICE_CPP_SERVICE_WATCHER_H_
+#define LIB_SYS_SERVICE_CPP_SERVICE_WATCHER_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
@@ -50,4 +50,4 @@ class ServiceWatcher final {
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_SERVICE_CPP_SERVICE_WATCHER_H_
+#endif  // LIB_SYS_SERVICE_CPP_SERVICE_WATCHER_H_

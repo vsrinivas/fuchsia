@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/async-testing/test_loop.h>
-#include <lib/fidl-service/cpp/service_directory.h>
-#include <lib/fidl-service/cpp/service_watcher.h>
-#include <lib/fidl-service/cpp/test_base.h>
+#include <lib/sys/service/cpp/service_directory.h>
+#include <lib/sys/service/cpp/service_watcher.h>
+#include <lib/sys/service/cpp/test_base.h>
 #include <zircon/types.h>
 
 #include <examples/fidl/gen/my_service.h>
