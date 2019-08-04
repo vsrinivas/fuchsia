@@ -4,6 +4,7 @@
 
 import("$zx/public/gn/build_api_module.gni")
 import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/copied_files_dir.gni")
 import("$zx/public/gn/prebuilt.gni")
 import("$zx/public/gn/test/zbi_test.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
@@ -11,86 +12,390 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
 
 declare_args() {
-  # Whether to include all the Zircon tests in the main standalone ZBI.
-  # TODO(mcgrathr): This will be replaced by a more sophisticated plan for
-  # what images to build rather than a single "everything" image that needs
-  # to be pared down.
-  tests_in_image = true
-
   # Defines the `//:default` target: what `ninja` with no arguments does.
-  default_deps = [
-    ":build-tests",
-    ":ids",
+  # TODO(BLD-353): This must be set by the controlling Fuchsia GN build.
+  default_deps = false
+}
+
+assert(default_deps != false,
+       "TODO(BLD-353): Zircon build must be driven by Fuchsia build")
+
+###
+### Build API modules.
+###
+
+# This is the top-level build API module that just lists all the others.
+# Each element of the list is the simple name of the API module; the
+# module's contents are found at "$root_build_dir/$target_name.json".
+#
+# TODO(BLD-353): Note this does not include build_api_module() uses meant
+# just for legacy build integration.  We don't consider those to be actual
+# build API modules; using build_api_module() is just a convenience for
+# creating them.  Importantly, they are not part of the API contract with
+# consumers of the overall build.  They're purely implementation details of
+# the temporary Frankenbuild arrangement.
+#
+# Type: list(string)
+build_api_module("api") {
+  testonly = true
+  data_keys = [ "build_api_modules" ]
+  deps = [
+    ":binaries",
+    ":buildargs",
+    ":generated_sources",
     ":images",
-    "tools",
+    ":packages",
+    ":tool_paths",
   ]
 }
 
-if (current_toolchain == default_toolchain) {
-  # Make ninja aliases for e.g. bootloader that gets all bootloader-$cpu.
-  top_level_redirects = [
-    "bootloader",
-    "kernel",
-  ]
-  foreach(name, top_level_redirects) {
-    group(name) {
-      deps = []
-      foreach(cpu, standard_fuchsia_cpus) {
-        deps += [ ":$name-$cpu" ]
-      }
-    }
+# This just regurgitates the build arguments specified to `gn gen`.  This is
+# the exact JSON representation of the settings in "$root_build_dir/args.gn".
+# It does not include build arguments left to their default values.  So to
+# reproduce the settings of this build, one could put in `args.gn`:
+# ```
+#   forward_variables_from(read_file("buildargs.json", "json"), "*")
+# ```
+# Type: scope
+build_api_module("buildargs") {
+  # The file does not exist at all if `gn gen` is run with no `--args`.  But
+  # read_file() can't handle an optional file and there's no direct way to test
+  # for file existence from GN.
+  contents = exec_script("/bin/sh",
+                         [
+                           "-c",
+                           "test ! -e args.gn || cat args.gn",
+                         ],
+                         "scope")
+}
 
-    foreach(cpu, standard_fuchsia_cpus) {
-      environment_redirect("$name-$cpu") {
-        environment_label = "$zx/public/gn/toolchain:user"
-        cpu = cpu
-        direct = true
-        deps = [
-          name,
-        ]
-      }
+# This describes all the binaries linked by the build.
+#
+# This enumerates each linked binary (executable, shared library, or
+# loadable/"plug-in" module).  This includes host tools, kernels, boot
+# loaders, drivers, as well as normal executables.  It does not yet include
+# any non-native binary formats.  This is meant to reach the entire
+# dependency graph of all binaries that the build would ever produce.  Not
+# every binary described is necessary actually produced by any given Ninja
+# run.  Either the $debug or the $dist file for any individual binary can
+# be passed to Ninja as a specific target argument to ensure it's built and
+# up to date before making use of that binary.  Like all build_api_module()
+# targets, the top-level "binaries" target serves as a Ninja target to
+# request that every binary described be built.
+#
+# Type: list(scope)
+#
+#   cpu
+#     Required: CPU architecture the binary is for, e.g. "arm64" or "x64".
+#     Type: string
+#
+#   os
+#     Required: OS the binary is for, e.g. "fuchsia", "linux", or "mac".
+#     Type: string
+#
+#   environment
+#     Required: The ${toolchain.environment} name of what specific
+#     execution this was built for, e.g. "user", "host", "guest".  The
+#     tuple of ($cpu, $os, $environment) should indicate what hardware and
+#     software environment this binary is compatible with.
+#     Type: string
+#
+#   label
+#     Required: The GN label of the binary target.
+#     Type: label_with_toolchain
+#
+#   type
+#     Required: The type of binary.
+#     Type: "executable" or "shared_library" or "loadable_module"
+#
+#   debug
+#     Required: Path to where the unstripped or separate debug file is
+#     found, relative to $root_build_dir.  If $dist is omitted, this
+#     is also the file that is used at runtime.
+#     Type: path relative to $root_build_dir
+#
+#   dist
+#     Optional: Path to where the stripped binary for deployment/execution is
+#     found, relative to $root_build_dir.  This binary may be required for
+#     some debugging tasks if $debug is a separate debug file rather than
+#     an unstripped file.  It should exactly match the binary that will be
+#     seen on devices or run directly on hosts.
+#     Type: path relative to $root_build_dir
+#
+#   elf_build_id
+#     Optional: Path to a file containing the lowercase ASCII hexadecimal
+#     representation of the ELF build ID in this binary.  This is omitted
+#     for OS environments that don't use ELF.  For an ELF binary that
+#     doesn't have a build ID note, this key will be present but point to
+#     an empty file.
+#     Type: path relative to $root_build_dir
+#
+build_api_module("binaries") {
+  testonly = true
+  deps = [ ":everything" ] + default_deps
+  data_keys = [ "binaries" ]
+}
+
+# This describes all the generated source files in the build.
+#
+# The intent is that telling Ninja to build all these individual files
+# will be the minimal work sufficient for source code analysis of all
+# the files described in the compilation database to be viable.
+#
+# Type: list(path relative to $root_build_dir)
+#
+build_api_module("generated_sources") {
+  testonly = true
+  deps = [
+    ":everything",
+  ]
+  data_keys = [ "generated_sources" ]
+}
+
+# This describes all the "image" files the build can produce.
+#
+# Consumers of the build should look here for the images to be built.
+# The $cpu, $name, and $type fields identify the purpose of each image.
+# Consumers are expected to ignore extra images they have no use for or
+# whose fields they don't understand.
+#
+# The $path field indicates where the file is found in the build
+# directory.  The presence of an image in the list means that the build
+# *can* produce it, not that the build *will* produce it.  Hence,
+# consumers should use $path as an explicit argument to Ninja to ensure
+# that each needed image gets built.
+#
+# Type: list(scope)
+#
+#   cpu
+#     Required: CPU architecture the image is for, e.g. "arm64" or "x64".
+#     Type: string
+#
+#   name
+#     Required: The primary way that this image is known to consumers.
+#     Note that the name need not be unique within the images list.
+#     The tuple of ($name, $type, $cpu) should be unique.
+#     Type: string
+#
+#   label
+#     Required: The GN label of the image target.
+#     Type: label_with_toolchain
+#
+#   path
+#     Required: Path to where the file is found, relative to $root_build_dir.
+#     This is also the argument to Ninja that ensures this image will be built.
+#     Type: path relative to $root_build_dir
+#
+#   testonly
+#     Optional: This image includes test code/data not meant for production.
+#     Type: bool
+#     Default: false
+#
+#   tags
+#     Optional: Tags associated with the image.  Certain tags may indicate
+#     to the build API consumer what should be done with the image.
+#     Type: list(string)
+#
+#   type
+#     Required: Type of file, e.g. "zbi".  This often corresponds to the
+#     extension used on the image file name, but not always.  For many
+#     miscellaneous formats, this is just "bin" and the consumer is
+#     expected to understand what the particular format is for particular
+#     $name, $cpu combinations.  Other types include:
+#      * "zbi": the ZBI (<zircon/boot/image.h>) format
+#      * "efi": an EFI executable that an EFI boot loader can load
+#      * "kernel": some other format loaded by a boot loader or emulator
+#      * "blk": contents to be written to a storage device or partition
+#     Type: string
+#
+build_api_module("images") {
+  testonly = true
+  data_keys = [ "images" ]
+  deps = [
+    ":everything",
+  ]
+}
+
+# Packages defined in the build.
+#
+# Type: list(scope)
+#
+#   * name
+#     - Required: Name of the package.
+#     - Type: string
+#
+#   * label
+#     - Required: GN label of the package() target.
+#     - Type: label_with_toolchain
+#
+#   * cpu, os
+#     - Required: $current_cpu and $current_os values, respectively, for
+#       which this package is intended.
+#     - Type: string
+#
+#   * manifest
+#     - Required: Manifest file of the package's sandbox filesystem contents.
+#     - Type: path relative to $root_build_dir
+#
+#   * tags
+#     - Optional: List of tags to associate with the package.
+#     - Type: list(string)
+#
+#   * testonly
+#     - Optional: True if this package should never be in a production build.
+#     - Type: bool
+#     - Default: false
+#
+build_api_module("packages") {
+  testonly = true
+  data_keys = [ "packages" ]
+  deps = [
+    ":everything",
+  ]
+}
+
+# Tools provided by the build or as prebuilts, to be used outside the build.
+#
+# Type: list(scope)
+#
+#   * name
+#     - Required: Name of a host tool.
+#     - Type: string
+#
+#   * label
+#     - Required: GN label associated with the tool.
+#     - Type: label_with_toolchain
+#
+#   * path
+#     - Required: Path to the tool's executable for the build host.
+#     - Type: path relative to $root_build_dir
+#
+build_api_module("tool_paths") {
+  testonly = true
+  deps = [
+    ":tool_paths.metadata",
+    "$zx/public/gn/toolchain:llvm-tools",
+    "tools",
+  ]
+  data_keys = [ "tool_paths" ]
+}
+
+group("tool_paths.metadata") {
+  visibility = [ ":tool_paths" ]
+  _eponymous_3p_tools = [
+    "gn",
+    "ninja",
+  ]
+  metadata = {
+    tool_paths = []
+    foreach(tool, _eponymous_3p_tools) {
+      tool_paths += [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = tool
+          path = rebase_path(
+                  "$prebuilt_dir/third_party/$tool/$host_platform/$tool",
+                  root_build_dir)
+        },
+      ]
     }
   }
+}
 
-  # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
-  # GN build.
-  host_tests_rspfile = "$target_gen_dir/host_tests.rsp"
-  generated_file("host_tests.rsp") {
+###
+### Top-level targets.
+###
+
+# This collects all the top-level targets that should contribute to the
+# "everything" target, which is the root of build_api_module() metadata walks.
+_everything_deps = []
+
+# Just building this constitutes a useful test that the build system and
+# compiler configurations work as intended.  It may also entail building a
+# lot of stuff that is not actually useful to build and/or cannot be tested
+# easily (or at all).
+group("build-tests") {
+  testonly = true
+  deps = [
+    "$zx/public/gn/toolchain:noop-test",
+  ]
+}
+_everything_deps += [ ":build-tests" ]
+
+# Build the host tools intended for developer use.  Install the tools for
+# the running host platform in the "$root_build_dir/tools/" directory.
+# Cross-built tools can be installed in "$root_build_dir/tools-$os-$cpu".
+_tools_targets = [ "tools" ]
+foreach(host, standard_build_hosts) {
+  _tools_targets += [ "tools-${host.os}-${host.cpu}" ]
+  environment_redirect("tools-${host.os}-${host.cpu}.redirect") {
+    visibility = [ ":*" ]
     testonly = true
-    visibility = [ ":legacy-host_tests" ]
-    outputs = [
-      host_tests_rspfile,
+    environment_label = "$zx/public/gn/toolchain:host"
+    cpu = host.cpu
+    os = host.os
+    direct = true
+    deps = [
+      "$zx/tools",
     ]
+  }
+}
+
+group("tools.redirect") {
+  visibility = [ ":*" ]
+  testonly = true
+  public_deps = [
+    ":tools-${host_os}-${host_cpu}",
+  ]
+}
+
+group("tools.all") {
+  testonly = true
+  deps = []
+  foreach(tools_target, _tools_targets) {
+    deps += [ ":$tools_target" ]
+  }
+}
+
+foreach(tools_target, _tools_targets) {
+  _everything_deps += [ ":$tools_target" ]
+  copied_files_dir(tools_target) {
+    testonly = true
+    data_keys = [ "tool_executables" ]
+    deps = [
+      ":$tools_target.redirect",
+    ]
+  }
+}
+
+# This is used in the top-level build_api_module() deps to reach "everything".
+# Note that "all" is a magical target name to Ninja, hence this name instead.
+group("everything") {
+  testonly = true
+  deps = _everything_deps
+}
+
+# This is the default target that Ninja builds when given no target arguments.
+group("default") {
+  testonly = true
+  deps = default_deps
+}
+
+###
+### TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
+### GN build.
+###
+
+if (current_toolchain == default_toolchain) {
+  copied_files_dir("legacy-host_tests") {
+    testonly = true
+    output_dir = "$root_build_dir/host_tests"
+    data_keys = [ "link_output" ]
+    walk_keys = [ "link_barrier" ]
     deps = [
       "system/utest:host",
     ]
-    output_conversion = "list lines"
-    data_keys = [ "link_output" ]
-    walk_keys = [ "link_barrier" ]
   }
-
-  action("legacy-host_tests") {
-    testonly = true
-    deps = [
-      ":host_tests.rsp",
-    ]
-    script = "$zx/scripts/copy-files"
-    depfile = "$target_out_dir/$target_name.d"
-    outputs = [
-      depfile,
-    ]
-    sources = [
-      host_tests_rspfile,
-    ]
-    args = [
-      "host_tests",
-      rebase_path(depfile, root_build_dir),
-      rebase_path(host_tests_rspfile, root_build_dir),
-    ]
-  }
-
-  # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
-  # GN build.
 
   build_api_module("legacy_dirs") {
     testonly = true
@@ -117,7 +422,6 @@ if (current_toolchain == default_toolchain) {
     group("legacy-$cpu") {
       testonly = true
       deps = [
-        ":ids-$cpu",
         ":legacy-aux-$cpu",
         ":legacy-host_tests",
         ":legacy-image-$cpu",
@@ -157,44 +461,8 @@ if (current_toolchain == default_toolchain) {
   }
 }
 
-group("default") {
-  testonly = true
-  deps = default_deps
-}
-
-group("all-cpu") {
-  testonly = true
-  deps = []
-  foreach(cpu, standard_fuchsia_cpus) {
-    deps += [ ":$cpu" ]
-  }
-}
-
-group("build-tests") {
-  testonly = true
-  deps = [
-    "$zx/public/gn/toolchain:noop-test",
-  ]
-}
-
 foreach(cpu, standard_fuchsia_cpus) {
   if (current_toolchain == default_toolchain) {
-    zbi(cpu) {
-      output_dir = root_build_dir
-      testonly = true
-      cpu = cpu
-      deps = [
-        ":everything-$cpu",
-      ]
-
-      # Since this is the top-level target people tend to use by hand
-      # instead of default when they want only one architecture at a time,
-      # give them tools as well since that's what they expect.
-      data_deps = [
-        "tools",
-      ]
-    }
-
     zbi("legacy-image-$cpu") {
       output_dir = root_build_dir
       testonly = true
@@ -271,25 +539,6 @@ foreach(cpu, standard_fuchsia_cpus) {
     ]
   }
 
-  environment_redirect("everything-$cpu") {
-    visibility = [ ":*" ]
-    testonly = true
-    environment_label = "$zx/public/gn/toolchain:user"
-    cpu = cpu
-    direct = true
-    deps = [
-      "$zx/bootloader",
-      "$zx/kernel",
-      "$zx/system/core",
-      "$zx/system/dev",
-      "$zx/system/uapp",
-      "$zx/third_party/uapp",
-    ]
-    if (tests_in_image) {
-      deps += [ "$zx/system/utest" ]
-    }
-  }
-
   environment_redirect("all-ulib-$cpu") {
     testonly = true
     cpu = cpu
@@ -359,109 +608,6 @@ if (toolchain.environment == "user") {
   }
 }
 
-# This is the top-level build API module that just lists all the others.
-# Each element of the list is the simple name of the API module; the
-# module's contents are found at "$root_build_dir/$target_name.json".
-# Type: list(string)
-build_api_module("api") {
-  testonly = true
-  data_keys = [ "build_api_modules" ]
-  deps = [
-    ":binaries",
-    ":buildargs",
-    ":generated_sources",
-    ":images",
-    ":packages",
-    ":tool_paths",
-  ]
-}
-
-# This just regurgitates the build arguments specified to `gn gen`.  This is
-# the exact JSON representation of the settings in "$root_build_dir/args.gn".
-# It does not include build arguments left to their default values.  So to
-# reproduce the settings of this build, one could put in `args.gn`:
-# ```
-#   forward_variables_from(read_file("buildargs.json", "json"), "*")
-# ```
-# Type: scope
-build_api_module("buildargs") {
-  # The file does not exist at all if `gn gen` is run with no `--args`.  But
-  # read_file() can't handle an optional file and there's no direct way to test
-  # for file existence from GN.
-  contents = exec_script("/bin/sh",
-                         [
-                           "-c",
-                           "test ! -e args.gn || cat args.gn",
-                         ],
-                         "scope")
-}
-
-# This describes all the "image" files the build can produce.
-#
-# Consumers of the build should look here for the images to be built.
-# The $cpu, $name, and $type fields identify the purpose of each image.
-# Consumers are expected to ignore extra images they have no use for or
-# whose fields they don't understand.
-#
-# The $path field indicates where the file is found in the build
-# directory.  The presence of an image in the list means that the build
-# *can* produce it, not that the build *will* produce it.  Hence,
-# consumers should use $path as an explicit argument to Ninja to ensure
-# that each needed image gets built.
-#
-# Type: list(scope)
-#
-#   cpu
-#     Required: CPU architecture the image is for, e.g. "arm64" or "x64".
-#     Type: string
-#
-#   name
-#     Required: The primary way that this image is known to consumers.
-#     Note that the name need not be unique within the images list.
-#     The tuple of ($name, $type, $cpu) should be unique.
-#     Type: string
-#
-#   label
-#     Required: The GN label of the image target.
-#     Type: label_with_toolchain
-#
-#   path
-#     Required: Path to where the file is found, relative to $root_build_dir.
-#     This is also the argument to Ninja that ensures this image will be built.
-#     Type: path relative to $root_build_dir
-#
-#   testonly
-#     Optional: This image includes test code/data not meant for production.
-#     Type: bool
-#     Default: false
-#
-#   tags
-#     Optional: Tags associated with the image.  Certain tags may indicate
-#     to the build API consumer what should be done with the image.
-#     Type: list(string)
-#
-#   type
-#     Required: Type of file, e.g. "zbi".  This often corresponds to the
-#     extension used on the image file name, but not always.  For many
-#     miscellaneous formats, this is just "bin" and the consumer is
-#     expected to understand what the particular format is for particular
-#     $name, $cpu combinations.  Other types include:
-#      * "zbi": the ZBI (<zircon/boot/image.h>) format
-#      * "efi": an EFI executable that an EFI boot loader can load
-#      * "kernel": some other format loaded by a boot loader or emulator
-#      * "blk": contents to be written to a storage device or partition
-#     Type: string
-#
-build_api_module("images") {
-  testonly = true
-  data_keys = [ "images" ]
-  deps = [
-    ":all-cpu",
-  ]
-}
-
-# TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
-# GN build.
 build_api_module("legacy_images") {
   testonly = true
   data_keys = [ "images" ]
@@ -478,130 +624,6 @@ build_api_module("legacy_images") {
 # directly embedded inside test metadata.
 build_api_module("zbi_test_success_string") {
   contents = zbi_test_success_string
-}
-
-# Packages defined in the build.
-#
-# Type: list(scope)
-#
-#   * name
-#     - Required: Name of the package.
-#     - Type: string
-#
-#   * label
-#     - Required: GN label of the package() target.
-#     - Type: label_with_toolchain
-#
-#   * cpu, os
-#     - Required: $current_cpu and $current_os values, respectively, for
-#       which this package is intended.
-#     - Type: string
-#
-#   * manifest
-#     - Required: Manifest file of the package's sandbox filesystem contents.
-#     - Type: path relative to $root_build_dir
-#
-#   * tags
-#     - Optional: List of tags to associate with the package.
-#     - Type: list(string)
-#
-#   * testonly
-#     - Optional: True is this package should never be in a production build.
-#     - Type: bool
-#     - Default: false
-#
-build_api_module("packages") {
-  testonly = true
-  data_keys = [ "packages" ]
-  deps = [
-    ":all-cpu",
-  ]
-}
-
-# This describes all the generated source files in the build.
-#
-# The intent is that telling Ninja to build all these individual files
-# will be the minimal work sufficient for source code analysis of all
-# the files described in the compilation database to be viable.
-#
-# Type: list(path relative to $root_build_dir)
-#
-build_api_module("generated_sources") {
-  testonly = true
-  deps = [
-    ":default",
-  ]
-  data_keys = [ "generated_sources" ]
-}
-
-# This describes all the binaries linked by the build.
-#
-# This enumerates each linked binary (executable, shared library, or
-# loadable/"plug-in" module).  This includes host tools, kernels, boot
-# loaders, drivers, as well as normal executables.  It does not yet include
-# any non-native binary formats.  This is meant to reach the entire
-# dependency graph of all binaries that the build would ever produce.  Not
-# every binary described is necessary actually produced by any given Ninja
-# run.  Either the $debug or the $dist file for any individual binary can
-# be passed to Ninja as a specific target argument to ensure it's built and
-# up to date before making use of that binary.  Like all build_api_module()
-# targets, the top-level "binaries" target serves as a Ninja target to
-# request that every binary described be built.
-#
-# Type: list(scope)
-#
-#   cpu
-#     Required: CPU architecture the binary is for, e.g. "arm64" or "x64".
-#     Type: string
-#
-#   os
-#     Required: OS the binary is for, e.g. "fuchsia", "linux", or "mac".
-#     Type: string
-#
-#   environment
-#     Required: The ${toolchain.environment} name of what specific
-#     execution this was built for, e.g. "user", "host", "guest".  The
-#     tuple of ($cpu, $os, $environment) should indicate what hardware and
-#     software environment this binary is compatible with.
-#     Type: string
-#
-#   label
-#     Required: The GN label of the binary target.
-#     Type: label_with_toolchain
-#
-#   type
-#     Required: The type of binary.
-#     Type: "executable" or "shared_library" or "loadable_module"
-#
-#   debug
-#     Required: Path to where the unstripped or separate debug file is
-#     found, relative to $root_build_dir.  If $dist is omitted, this
-#     is also the file that is used at runtime.
-#     Type: path relative to $root_build_dir
-#
-#   dist
-#     Optional: Path to where the stripped binary for deployment/execution is
-#     found, relative to $root_build_dir.  This binary may be required for
-#     some debugging tasks if $debug is a separate debug file rather than
-#     an unstripped file.  It should exactly match the binary that will be
-#     seen on devices or run directly on hosts.
-#     Type: path relative to $root_build_dir
-#
-#   elf_build_id
-#     Optional: Path to a file containing the lowercase ASCII hexadecimal
-#     representation of the ELF build ID in this binary.  This is omitted
-#     for OS environments that don't use ELF.  For an ELF binary that
-#     doesn't have a build ID note, this key will be present but point to
-#     an empty file.
-#     Type: path relative to $root_build_dir
-#
-build_api_module("binaries") {
-  testonly = true
-  deps = [
-    # TODO(mcgrathr): Need a //:everything distinct from default.
-    ":default",
-  ]
-  data_keys = [ "binaries" ]
 }
 
 # This describes pre-generated FIDL bindings that are required by the build.
@@ -634,101 +656,5 @@ build_api_module("binaries") {
 build_api_module("fidl_gen") {
   testonly = true
   data_keys = [ "fidl_gen" ]
-  deps = [
-    ":all-cpu",
-  ]
-}
-
-# TODO(TC-303): ids.txt is deprecated and will be removed.
-if (current_toolchain == default_toolchain) {
-  action("ids") {
-    testonly = true
-    outputs = [
-      "$root_build_dir/ids.txt",
-    ]
-    deps = []
-    sources = []
-    foreach(cpu, standard_fuchsia_cpus) {
-      deps += [ ":ids-$cpu" ]
-      sources += [ "$root_build_dir/ids-$cpu.txt" ]
-    }
-    script = "/usr/bin/sort"
-    args = [
-             "-u",
-             "-o",
-           ] + rebase_path(outputs + sources, root_build_dir)
-  }
-
-  foreach(cpu, standard_fuchsia_cpus) {
-    environment_redirect("ids-$cpu") {
-      testonly = true
-      cpu = cpu
-      environment_label = "$zx/public/gn/toolchain:user"
-      deps = [
-        ":$target_name",
-      ]
-    }
-  }
-} else if (toolchain.environment == "user") {
-  toolchain_utils_action("ids-$current_cpu") {
-    testonly = true
-    deps = [
-      ":elf-$current_cpu.list",
-    ]
-    outputs = [
-      "$root_build_dir/ids-$current_cpu.txt",
-    ]
-    sources = [
-      "$root_build_dir/elf-$current_cpu.list",
-    ]
-    depfile = "${outputs[0]}.d"
-    script = "$zx/scripts/gen-ids-file"
-    utils = [ "readelf" ]
-    args = rebase_path(outputs + [ depfile ] + sources, root_build_dir)
-  }
-
-  generated_file("elf-$current_cpu.list") {
-    testonly = true
-    visibility = [ ":ids-$current_cpu" ]
-    outputs = [
-      "$root_build_dir/elf-$current_cpu.list",
-    ]
-    deps = [
-      ":$current_cpu($default_toolchain)",
-      "tools($default_toolchain)",
-    ]
-    data_keys = [ "elf_link_output" ]
-  }
-}
-
-build_api_module("tool_paths") {
-  testonly = true
-  deps = [
-    ":tool_paths.metadata",
-    "$zx/public/gn/toolchain:llvm-tools",
-    "tools",
-  ]
-  data_keys = [ "tool_paths" ]
-}
-
-group("tool_paths.metadata") {
-  visibility = [ ":tool_paths" ]
-  _eponymous_3p_tools = [
-    "gn",
-    "ninja",
-  ]
-  metadata = {
-    tool_paths = []
-    foreach(tool, _eponymous_3p_tools) {
-      tool_paths += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = tool
-          path = rebase_path(
-                  "$prebuilt_dir/third_party/$tool/$host_platform/$tool",
-                  root_build_dir)
-        },
-      ]
-    }
-  }
+  deps = default_deps
 }

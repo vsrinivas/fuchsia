@@ -198,7 +198,6 @@ template("shared_library") {
         binaries = []
         link_barrier = []
         link_output = []
-        elf_link_output = []
 
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
@@ -213,9 +212,6 @@ template("shared_library") {
         # outputs that should be checked for a build ID if collecting an
         # exhaustive list via metadata.
         link_output += [ rebase_path(link_output_file, root_build_dir) ]
-        if (current_os != "mac" && current_os != "win") {
-          elf_link_output += [ rebase_path(link_output_file, root_build_dir) ]
-        }
 
         # For build_api_module("binaries") in $zx/BUILD.gn.
         binaries += [
@@ -1308,7 +1304,6 @@ template("_basic_executable") {
       binaries = []
       link_barrier = []
       link_output = []
-      elf_link_output = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
@@ -1323,9 +1318,6 @@ template("_basic_executable") {
       # outputs that should be checked for a build ID if collecting an
       # exhaustive list via metadata.
       link_output += [ rebase_path(link_output_file, root_build_dir) ]
-      if (current_os != "mac" && current_os != "win") {
-        elf_link_output += [ rebase_path(link_output_file, root_build_dir) ]
-      }
 
       # For build_api_module("binaries") in $zx/BUILD.gn.
       binaries += [
@@ -1625,7 +1617,6 @@ template("_loadable_module") {
       binaries = []
       link_barrier = []
       link_output = []
-      elf_link_output = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
@@ -1640,9 +1631,6 @@ template("_loadable_module") {
       # outputs that should be checked for a build ID if collecting an
       # exhaustive list via metadata.
       link_output += [ rebase_path(link_output_file, root_build_dir) ]
-      if (current_os != "mac" && current_os != "win") {
-        elf_link_output += [ rebase_path(link_output_file, root_build_dir) ]
-      }
 
       # For build_api_module("binaries") in $zx/BUILD.gn.
       binaries += [
