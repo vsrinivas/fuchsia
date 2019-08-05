@@ -27,8 +27,6 @@ class HermeticAudioEnvironment {
 
   void Start(async::Loop* loop);
 
-  bool EnsureStart(TestFixture* fixture);
-
   template <typename Interface>
   void ConnectToService(fidl::InterfaceRequest<Interface> request,
                         const std::string& service_name = Interface::Name_) {
@@ -52,7 +50,6 @@ class HermeticAudioEnvironment {
   std::mutex mutex_;
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> hermetic_environment_;
-  bool started_ = false;
   std::thread env_thread_;
   async::Loop* loop_ = nullptr;
 };

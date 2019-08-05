@@ -17,9 +17,4 @@ void HermeticAudioTest::SetUpTestSuite() {
 
 void HermeticAudioTest::TearDownTestSuite() { HermeticAudioTest::environment_ = nullptr; }
 
-void HermeticAudioTest::SetUp() {
-  TestFixture::SetUp();
-  ASSERT_TRUE(environment()->EnsureStart(this));
-}
-
 }  // namespace media::audio::test

@@ -67,6 +67,32 @@ HermeticAudioEnvironment::HermeticAudioEnvironment() {
   // Create the thread here to ensure the rest of the class has fully initialized before starting
   // the new thread, which takes a reference to |this|.
   env_thread_ = std::thread(EnvironmentMain, this);
+
+  // Wait for the worker thread to start and finish some initialization.
+  std::unique_lock<std::mutex> lock(mutex_);
+  while (!hermetic_environment_ || !hermetic_environment_->is_running()) {
+    cv_.wait(lock);
+  }
+
+  // IsolatedDevmgr will not serve any messages on the directory until /dev/test/virtual_audio
+  // is ready. Run a simple Describe operation to ensure the devmgr is ready for traffic.
+  //
+  // Note we specifically use the |TextFixture| overrides of the virtual methods. This is needed
+  // because some test fixtures override these methods and include some asserts that will not
+  // be valid when this is run.
+  fuchsia::io::DirectorySyncPtr devfs_dir;
+  ConnectToService(devfs_dir.NewRequest(), kIsolatedDevmgrServiceName);
+  fuchsia::io::NodeInfo info;
+  zx_status_t status = devfs_dir->Describe(&info);
+  FXL_CHECK(status == ZX_OK);
+
+  // For test runs with many iterations where many virtual devices are created, device settings
+  // files may accumulate and cause the DUT to run out of disk space. We disable write-back of
+  // device settings to prevent this from happening.
+  fuchsia::media::AudioCoreSyncPtr audio_core;
+  ConnectToService(audio_core.NewRequest());
+  status = audio_core->EnableDeviceSettings(false);
+  FXL_CHECK(status == ZX_OK);
 }
 
 void HermeticAudioEnvironment::Start(async::Loop* loop) {
@@ -108,43 +134,6 @@ HermeticAudioEnvironment::~HermeticAudioEnvironment() {
     async::PostTask(loop_->dispatcher(), [loop = loop_] { loop->Quit(); });
     env_thread_.join();
   }
-}
-
-bool HermeticAudioEnvironment::EnsureStart(TestFixture* fixture) {
-  if (started_) {
-    return true;
-  }
-
-  std::unique_lock<std::mutex> lock(mutex_);
-  while (!hermetic_environment_ || !hermetic_environment_->is_running()) {
-    cv_.wait(lock);
-  }
-
-  // IsolatedDevmgr will not serve any messages on the directory until /dev/test/virtual_audio
-  // is ready. Run a simple Describe operation to ensure the devmgr is ready for traffic.
-  //
-  // Note we specifically use the |TextFixture| overrides of the virtual methods. This is needed
-  // because some test fixtures override these methods and include some asserts that will not
-  // be valid when this is run.
-  auto devfs_dir = ConnectToService<fuchsia::io::Directory>(kIsolatedDevmgrServiceName);
-  devfs_dir.set_error_handler(fixture->TestFixture::ErrorHandler());
-  devfs_dir->Describe(
-      fixture->TestFixture::CompletionCallback([](const fuchsia::io::NodeInfo&) {}));
-  fixture->TestFixture::ExpectCallback();
-  if (fixture->error_occurred()) {
-    return false;
-  }
-  devfs_dir.Unbind();
-
-  // For test runs with many iterations where many virtual devices are created, device settings
-  // files may accumulate and cause the DUT to run out of disk space. We disable write-back of
-  // device settings to prevent this from happening.
-  fuchsia::media::AudioCorePtr audio_core;
-  ConnectToService(audio_core.NewRequest());
-  audio_core->EnableDeviceSettings(false);
-
-  started_ = true;
-  return true;
 }
 
 }  // namespace media::audio::test
