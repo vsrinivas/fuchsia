@@ -454,7 +454,7 @@ fails_to_encode("StringExceedsLimit") {
 	value = Length2StringWrapper {
 		length_2_string: "abc", // exceeeds the string length
 	}
-	err = FIDL_STRING_TOO_LONG
+	err = STRING_TOO_LONG
 }
 
 fails_to_decode("NonEmptyStringWithNullPtrBody") {
@@ -463,5 +463,5 @@ fails_to_decode("NonEmptyStringWithNullPtrBody") {
 		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
 	}
-	err = FIDL_NON_NULLABLE_TYPE_WITH_NULL_VALUE
+	err = NON_EMPTY_STRING_WITH_NULL_BODY
 }

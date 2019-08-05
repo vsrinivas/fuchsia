@@ -160,7 +160,7 @@ func TestParseFailsToEncodeCase(t *testing.T) {
 			value = OneStringOfMaxLengthFive {
 				the_string: "bonjour", // 6 characters
 			}
-			err = FIDL_STRING_TOO_LONG
+			err = STRING_TOO_LONG
 		}`: ir.FailsToEncode{
 			Name: "OneStringOfMaxLengthFive-too-long",
 			Value: ir.Object{
@@ -172,7 +172,7 @@ func TestParseFailsToEncodeCase(t *testing.T) {
 					},
 				},
 			},
-			Err: "FIDL_STRING_TOO_LONG",
+			Err: "STRING_TOO_LONG",
 		},
 	})
 }
@@ -198,7 +198,7 @@ func TestParseFailsToDecodeCase(t *testing.T) {
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 				// one character missing
 			}
-			err = FIDL_STRING_TOO_LONG
+			err = STRING_TOO_LONG
 		}`: ir.FailsToDecode{
 			Name: "OneStringOfMaxLengthFive-wrong-length",
 			Type: "TypeName",
@@ -207,7 +207,7 @@ func TestParseFailsToDecodeCase(t *testing.T) {
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 				// one character missing
 			},
-			Err: "FIDL_STRING_TOO_LONG",
+			Err: "STRING_TOO_LONG",
 		},
 	})
 }
@@ -258,6 +258,21 @@ func TestParseFailsMissingKind(t *testing.T) {
 				first: "four",
 			}
 		}`: "missing required parameter 'bytes'"})
+}
+
+func TestParseFailsUnknownErrorCode(t *testing.T) {
+	input := `
+	fails_to_encode("OneStringOfMaxLengthFive-too-long") {
+		value = OneStringOfMaxLengthFive {
+			the_string: "bonjour",
+		}
+		err = UNKNOWN_ERROR_CODE
+	}`
+	p := NewParser("", strings.NewReader(input))
+	var all ir.All
+	if err := p.parseSection(&all); err == nil || !strings.Contains(err.Error(), "unknown error code") {
+		t.Errorf("expected 'unknown error code' error, but got %v", err)
+	}
 }
 
 type parsingToCheck struct {

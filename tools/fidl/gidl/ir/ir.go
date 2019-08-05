@@ -20,14 +20,14 @@ type Success struct {
 type FailsToEncode struct {
 	Name  string
 	Value interface{}
-	Err   string
+	Err   ErrorCode
 }
 
 type FailsToDecode struct {
 	Name  string
 	Type  string
 	Bytes []byte
-	Err   string
+	Err   ErrorCode
 }
 
 // Value represents any acceptable value used to represent a FIDL value.
@@ -49,4 +49,17 @@ type Field struct {
 type Object struct {
 	Name   string
 	Fields []Field
+}
+
+type ErrorCode string
+
+const (
+	_                           ErrorCode = ""
+	StringTooLong                         = "STRING_TOO_LONG"
+	NullEmptyStringWithNullBody           = "NON_EMPTY_STRING_WITH_NULL_BODY"
+)
+
+var AllErrorCodes = map[ErrorCode]bool{
+	StringTooLong:               true,
+	NullEmptyStringWithNullBody: true,
 }

@@ -90,7 +90,10 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	if err != nil {
 		return err
 	}
-	decodeFailureCases := decodeFailureCases(gidl.FailsToDecode)
+	decodeFailureCases, err := decodeFailureCases(gidl.FailsToDecode)
+	if err != nil {
+		return err
+	}
 	return tmpl.Execute(wr, tmplInput{
 		SuccessCases:       successCases,
 		EncodeFailureCases: encodeFailureCases,
@@ -98,7 +101,8 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	})
 }
 
-func successCases(gidlSuccesses []gidlir.Success, fidl fidlir.Root) (successCases []successCase, err error) {
+func successCases(gidlSuccesses []gidlir.Success, fidl fidlir.Root) ([]successCase, error) {
+	var successCases []successCase
 	for _, success := range gidlSuccesses {
 		decl, err := gidlmixer.ExtractDeclaration(success.Value, fidl)
 		if err != nil {
@@ -112,36 +116,46 @@ func successCases(gidlSuccesses []gidlir.Success, fidl fidlir.Root) (successCase
 			Bytes:     bytesBuilder(success.Bytes),
 		})
 	}
-	return
+	return successCases, nil
 }
 
-func encodeFailureCases(gidlEncodeFailures []gidlir.FailsToEncode, fidl fidlir.Root) (encodeFailureCases []encodeFailureCase, err error) {
+func encodeFailureCases(gidlEncodeFailures []gidlir.FailsToEncode, fidl fidlir.Root) ([]encodeFailureCase, error) {
+	var encodeFailureCases []encodeFailureCase
 	for _, encodeFailure := range gidlEncodeFailures {
 		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
 		valueStr := visit(encodeFailure.Value, decl)
+		errorCode, err := dartErrorCode(encodeFailure.Err)
+		if err != nil {
+			return nil, err
+		}
 		encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 			Name:      singleQuote(encodeFailure.Name),
 			Value:     valueStr,
 			ValueType: typeName(decl.(*gidlmixer.StructDecl)),
-			ErrorCode: dartErrorCode(encodeFailure.Err),
+			ErrorCode: errorCode,
 		})
 	}
-	return
+	return encodeFailureCases, nil
 }
 
-func decodeFailureCases(gidlDecodeFailures []gidlir.FailsToDecode) (decodeFailureCases []decodeFailureCase) {
+func decodeFailureCases(gidlDecodeFailures []gidlir.FailsToDecode) ([]decodeFailureCase, error) {
+	var decodeFailureCases []decodeFailureCase
 	for _, decodeFailure := range gidlDecodeFailures {
+		errorCode, err := dartErrorCode(decodeFailure.Err)
+		if err != nil {
+			return nil, err
+		}
 		decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 			Name:      singleQuote(decodeFailure.Name),
 			ValueType: dartTypeName(decodeFailure.Type),
 			Bytes:     bytesBuilder(decodeFailure.Bytes),
-			ErrorCode: dartErrorCode(decodeFailure.Err),
+			ErrorCode: errorCode,
 		})
 	}
-	return
+	return decodeFailureCases, nil
 }
 
 func typeName(decl *gidlmixer.StructDecl) string {
@@ -152,10 +166,6 @@ func typeName(decl *gidlmixer.StructDecl) string {
 
 func dartTypeName(inputType string) string {
 	return fmt.Sprintf("k%s_Type", inputType)
-}
-
-func dartErrorCode(code string) string {
-	return fmt.Sprintf("fidl.FidlErrorCode.%s", snakeCaseToLowerCamelCase(code))
 }
 
 func bytesBuilder(bytes []byte) string {
@@ -238,4 +248,16 @@ func singleQuote(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `'`, `\'`)
 	return fmt.Sprintf("'%s'", s)
+}
+
+var dartErrorCodeNames = map[gidlir.ErrorCode]string{
+	gidlir.StringTooLong:               "fidlStringTooLong",
+	gidlir.NullEmptyStringWithNullBody: "fidlNonNullableTypeWithNullValue",
+}
+
+func dartErrorCode(code gidlir.ErrorCode) (string, error) {
+	if str, ok := dartErrorCodeNames[code]; ok {
+		return fmt.Sprintf("fidl.FidlErrorCode.%s", str), nil
+	}
+	return "", fmt.Errorf("no dart error string defined for error code %s", code)
 }

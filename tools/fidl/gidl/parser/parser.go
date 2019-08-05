@@ -139,7 +139,7 @@ type body struct {
 	Type  string
 	Value ir.Value
 	Bytes []byte
-	Err   string
+	Err   ir.ErrorCode
 }
 
 type sectionMetadata struct {
@@ -151,31 +151,34 @@ var sections = map[string]sectionMetadata{
 	"success": {
 		kinds: map[bodyElement]bool{isValue: true, isBytes: true},
 		setter: func(name string, body body, all *ir.All) {
-			var result ir.Success
-			result.Name = name
-			result.Value = body.Value
-			result.Bytes = body.Bytes
+			result := ir.Success{
+				Name:  name,
+				Value: body.Value,
+				Bytes: body.Bytes,
+			}
 			all.Success = append(all.Success, result)
 		},
 	},
 	"fails_to_encode": {
 		kinds: map[bodyElement]bool{isValue: true, isErr: true},
 		setter: func(name string, body body, all *ir.All) {
-			var result ir.FailsToEncode
-			result.Name = name
-			result.Value = body.Value
-			result.Err = body.Err
+			result := ir.FailsToEncode{
+				Name:  name,
+				Value: body.Value,
+				Err:   body.Err,
+			}
 			all.FailsToEncode = append(all.FailsToEncode, result)
 		},
 	},
 	"fails_to_decode": {
 		kinds: map[bodyElement]bool{isType: true, isBytes: true, isErr: true},
 		setter: func(name string, body body, all *ir.All) {
-			var result ir.FailsToDecode
-			result.Name = name
-			result.Type = body.Type
-			result.Bytes = body.Bytes
-			result.Err = body.Err
+			result := ir.FailsToDecode{
+				Name:  name,
+				Type:  body.Type,
+				Bytes: body.Bytes,
+				Err:   body.Err,
+			}
 			all.FailsToDecode = append(all.FailsToDecode, result)
 		},
 	},
@@ -287,11 +290,11 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		result.Bytes = bytes
 		kind = isBytes
 	case "err":
-		tok, ok := p.consumeToken(tText)
-		if !ok {
-			return p.failExpectedToken(tText, tok)
+		errorCode, err := p.parseErrorCode()
+		if err != nil {
+			return err
 		}
-		result.Err = tok.value
+		result.Err = errorCode
 		kind = isErr
 	default:
 		return p.newParseError(tok, "must be type, value, bytes, or err")
@@ -382,6 +385,18 @@ func (p *Parser) parseObject(name string) (interface{}, error) {
 		return nil, p.failExpectedToken(tRacco, tok)
 	}
 	return obj, nil
+}
+
+func (p *Parser) parseErrorCode() (ir.ErrorCode, error) {
+	tok, ok := p.consumeToken(tText)
+	if !ok {
+		return "", p.failExpectedToken(tText, tok)
+	}
+	code := ir.ErrorCode(tok.value)
+	if _, ok := ir.AllErrorCodes[code]; !ok {
+		return "", p.newParseError(tok, "unknown error code")
+	}
+	return code, nil
 }
 
 // TODO(pascallouis): parseSlice() expects that the opening [ has already been
