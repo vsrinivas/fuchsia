@@ -9,6 +9,8 @@ use {
     crate::default_store::DefaultStore,
     crate::display::spawn_display_controller,
     crate::display::spawn_display_fidl_handler,
+    crate::intl::intl_controller::IntlController,
+    crate::intl::intl_fidl_handler::IntlFidlHandler,
     crate::json_codec::JsonCodec,
     crate::mutation::*,
     crate::registry::base::Registry,
@@ -16,7 +18,7 @@ use {
     crate::setting_adapter::{MutationHandler, SettingAdapter},
     crate::switchboard::base::SettingAction,
     crate::switchboard::switchboard_impl::SwitchboardImpl,
-    failure::Error,
+    failure::{Error, ResultExt},
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::*,
     fuchsia_async as fasync,
@@ -34,6 +36,7 @@ mod common;
 mod default_store;
 mod display;
 mod fidl_clone;
+mod intl;
 mod json_codec;
 mod mutation;
 mod registry;
@@ -51,7 +54,10 @@ fn main() -> Result<(), Error> {
     let brightness_service =
         connect_to_service::<fidl_fuchsia_device_display::ManagerMarker>().unwrap();
 
-    let mut fs = create_fidl_service(brightness_service);
+    let timezone_service = connect_to_service::<fidl_fuchsia_timezone::TimezoneMarker>()
+        .context("Failed to connect to timezone service")?;
+
+    let mut fs = create_fidl_service(brightness_service, timezone_service);
 
     fs.take_and_serve_directory_handle()?;
     let () = executor.run_singlethreaded(fs.collect());
@@ -60,6 +66,7 @@ fn main() -> Result<(), Error> {
 
 fn create_fidl_service<'a>(
     brightness_service: fidl_fuchsia_device_display::ManagerProxy,
+    time_zone_service: fidl_fuchsia_timezone::TimezoneProxy,
 ) -> ServiceFs<ServiceObj<'a, ()>> {
     let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
 
@@ -76,6 +83,15 @@ fn create_fidl_service<'a>(
         .register(
             switchboard::base::SettingType::Display,
             spawn_display_controller(brightness_service),
+        )
+        .unwrap();
+
+    registry_handle
+        .write()
+        .unwrap()
+        .register(
+            switchboard::base::SettingType::Intl,
+            IntlController::spawn(time_zone_service).unwrap(),
         )
         .unwrap();
 
@@ -122,12 +138,21 @@ fn create_fidl_service<'a>(
         });
     });
 
-    fs.dir("svc").add_fidl_service(move |stream: DisplayRequestStream| {
-        spawn_display_fidl_handler(switchboard_handle.clone(), stream);
-    });
+    {
+        let switchboard_handle_clone = switchboard_handle.clone();
+        fs.dir("svc").add_fidl_service(move |stream: DisplayRequestStream| {
+            spawn_display_fidl_handler(switchboard_handle_clone.clone(), stream);
+        });
+    }
+    {
+        let switchboard_handle_clone = switchboard_handle.clone();
+        fs.dir("svc").add_fidl_service(move |stream: IntlRequestStream| {
+            IntlFidlHandler::spawn(switchboard_handle_clone.clone(), stream);
+        });
+    }
+
     fs
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -139,6 +164,8 @@ mod tests {
     enum Services {
         Manager(fidl_fuchsia_device_display::ManagerRequestStream),
         Display(DisplayRequestStream),
+        Timezone(fidl_fuchsia_timezone::TimezoneRequestStream),
+        Intl(IntlRequestStream),
     }
 
     /// Tests that the FIDL calls result in appropriate commands sent to the switchboard
@@ -211,6 +238,93 @@ mod tests {
             await!(display_proxy.watch()).expect("watch completed").expect("watch successful");
 
         assert_eq!(settings.brightness_value, Some(CHANGED_BRIGHTNESS));
+    }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_intl() {
+        const INITIAL_TIME_ZONE: &str = "PDT";
+
+        let (timezone_proxy, mut timezone_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_timezone::TimezoneMarker>()
+                .unwrap();
+
+        fasync::spawn(async move {
+            let mut stored_timezone = INITIAL_TIME_ZONE.to_string();
+            while let Some(req) = await!(timezone_stream.try_next()).unwrap() {
+                #[allow(unreachable_patterns)]
+                match req {
+                    fidl_fuchsia_timezone::TimezoneRequest::GetTimezoneId { responder } => {
+                        responder.send(&stored_timezone).unwrap();
+                    }
+                    fidl_fuchsia_timezone::TimezoneRequest::SetTimezone {
+                        timezone_id,
+                        responder,
+                    } => {
+                        stored_timezone = timezone_id;
+                        responder.send(true).unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        });
+
+        let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
+
+        // Creates switchboard, handed to interface implementations to send messages
+        // to handlers.
+        let (switchboard_handle, event_tx) = SwitchboardImpl::create(action_tx);
+
+        // Creates registry, used to register handlers for setting types.
+        let registry_handle = RegistryImpl::create(event_tx, action_rx);
+
+        registry_handle
+            .write()
+            .unwrap()
+            .register(
+                switchboard::base::SettingType::Intl,
+                IntlController::spawn(timezone_proxy).unwrap(),
+            )
+            .unwrap();
+
+        let mut fs = ServiceFs::new();
+
+        fs.add_fidl_service(Services::Intl);
+
+        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+
+        fasync::spawn(fs.for_each_concurrent(None, move |connection| {
+            let switchboard_handle = switchboard_handle.clone();
+            async move {
+                match connection {
+                    Services::Intl(stream) => {
+                        IntlFidlHandler::spawn(switchboard_handle.clone(), stream);
+                    }
+                    _ => {
+                        panic!("Unexpected service");
+                    }
+                }
+            }
+        }));
+
+        let intl_service = env.connect_to_service::<IntlMarker>().unwrap();
+        let settings =
+            await!(intl_service.watch()).expect("watch completed").expect("watch successful");
+
+        if let Some(time_zone_id) = settings.time_zone_id {
+            assert_eq!(time_zone_id.id, INITIAL_TIME_ZONE);
+        }
+
+        let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+        let updated_timezone = "PDT";
+
+        intl_settings.time_zone_id =
+            Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
+        await!(intl_service.set(intl_settings)).expect("set completed").expect("set successful");
+        let settings =
+            await!(intl_service.watch()).expect("watch completed").expect("watch successful");
+        assert_eq!(
+            settings.time_zone_id,
+            Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() })
+        );
     }
 }

@@ -44,7 +44,6 @@ pub fn spawn_display_controller(
                                 .unwrap();
                         }
                         _ => panic!("Unexpected command to brightness"),
-
                     }
                 }
             }

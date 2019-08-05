@@ -114,8 +114,7 @@ impl RegistryImpl {
         if size == 0 && listening {
             // FIXME: use `Vec::remove_item` upon stabilization
             let listener_to_remove =
-                self.active_listeners.iter().enumerate()
-                    .find(|(_i, elem)| **elem == setting_type);
+                self.active_listeners.iter().enumerate().find(|(_i, elem)| **elem == setting_type);
             if let Some((i, _elem)) = listener_to_remove {
                 self.active_listeners.remove(i);
             }

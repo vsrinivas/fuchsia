@@ -1,4 +1,3 @@
-
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -49,11 +48,9 @@ pub fn spawn_display_fidl_handler(
                             Ok(_) => responder.send(&mut Ok(())).unwrap(),
                             Err(_err) => responder.send(&mut Err(Error::Unsupported)).unwrap(),
                         }
-
                     } else {
                         responder.send(&mut Err(Error::Unsupported)).unwrap();
                     }
-
                 }
                 DisplayRequest::Watch { responder } => {
                     // TODO(ejia): support hanging get
