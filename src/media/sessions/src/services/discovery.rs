@@ -120,7 +120,10 @@ impl Discovery {
                                 player_updates.push(player.player.poll(id));
                             }
                         }
-                        Err(_) => {
+                        Err(e) => {
+                            fuchsia_syslog::fx_log_info!(
+                                tag: "mediasession",
+                                "Disconnecting player: {:#?}", e);
                             if let Some(mut player) = await!(self.players.lock()).remove(&id) {
                                 await!(player.player.disconnect_proxied_clients());
                             }

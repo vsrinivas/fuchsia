@@ -53,36 +53,45 @@ fn spawn_log_error(fut: impl Future<Output = Result<()>> + 'static) {
 async fn main() {
     let session_list = Ref::default();
     let active_session_queue = Ref::default();
-    let (active_session_sink, active_session_stream) = mpmc::channel(CHANNEL_BUFFER_SIZE);
-    let (collection_event_sink, collection_event_stream) = mpmc::channel(CHANNEL_BUFFER_SIZE);
+    let active_session_sink = mpmc::Sender::default();
+    let collection_event_sink = mpmc::Sender::default();
 
     let publisher = Publisher::new(
         session_list.clone(),
         active_session_queue.clone(),
-        active_session_sink,
-        collection_event_sink,
+        collection_event_sink.clone(),
+        active_session_sink.clone(),
     );
-    let registry = Registry::new(
-        session_list.clone(),
-        active_session_queue.clone(),
-        active_session_stream,
-        collection_event_stream,
-    );
+    let registry = || {
+        Registry::new(
+            session_list.clone(),
+            active_session_queue.clone(),
+            collection_event_sink.new_receiver(),
+            active_session_sink.new_receiver(),
+        )
+    };
 
     let (player_sink, player_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
-    let publisher2 = self::services::publisher2::Publisher::new(player_sink);
-
     let (request_sink, request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
     let discovery = self::services::discovery::Discovery::new(player_stream);
     spawn_log_error(discovery.serve(request_stream));
+
+    spawn_log_error(proxies::migration::migrator(
+        session_list.clone(),
+        collection_event_sink.new_receiver(),
+        player_sink.clone(),
+    ));
 
     let mut server = ServiceFs::new_local();
     server
         .dir("svc")
         .add_fidl_service(|request_stream| spawn_log_error(publisher.clone().serve(request_stream)))
-        .add_fidl_service(|request_stream| spawn_log_error(registry.clone().serve(request_stream)))
+        .add_fidl_service(|request_stream| spawn_log_error(registry().serve(request_stream)))
         .add_fidl_service(|request_stream| {
-            spawn_log_error(publisher2.clone().serve(request_stream))
+            spawn_log_error(
+                self::services::publisher2::Publisher::new(player_sink.clone())
+                    .serve(request_stream),
+            )
         })
         .add_fidl_service(
             |request_stream: fidl_fuchsia_media_sessions2::DiscoveryRequestStream| {
