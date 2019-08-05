@@ -31,11 +31,13 @@ class VirtioNetZirconGuest : public ZirconEnclosedGuest {
  public:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--virtio-gpu=false");
-    launch_info->args.push_back("--virtio-net=true");
-    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
-    // Disable netsvc to avoid spamming the net device with logs.
-    launch_info->args.push_back("--cmdline-add=netsvc.disable=true");
+    launch_info->args = {
+        "--virtio-gpu=false",
+        "--virtio-net=true",
+        "--cmdline-add=kernel.serial=none",
+        // Disable netsvc to avoid spamming the net device with logs.
+        "--cmdline-add=netsvc.disable=true",
+    };
     return ZX_OK;
   }
 };
@@ -44,8 +46,10 @@ class VirtioNetDebianGuest : public DebianEnclosedGuest {
  public:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kDebianGuestUrl;
-    launch_info->args.push_back("--virtio-gpu=false");
-    launch_info->args.push_back("--virtio-net=true");
+    launch_info->args = {
+        "--virtio-gpu=false",
+        "--virtio-net=true",
+    };
     return ZX_OK;
   }
 };

@@ -21,11 +21,9 @@ void ManagerImpl::Create(fidl::StringPtr label,
 }
 
 void ManagerImpl::List(ListCallback callback) {
-  fidl::VectorPtr<fuchsia::virtualization::EnvironmentInfo> env_infos =
-      fidl::VectorPtr<fuchsia::virtualization::EnvironmentInfo>::New(0);
+  std::vector<fuchsia::virtualization::EnvironmentInfo> env_infos;
   for (const auto& env : environments_) {
-    fidl::VectorPtr<fuchsia::virtualization::InstanceInfo> instance_infos =
-        fidl::VectorPtr<fuchsia::virtualization::InstanceInfo>::New(0);
+    std::vector<fuchsia::virtualization::InstanceInfo> instance_infos;
     fuchsia::virtualization::EnvironmentInfo env_info;
     env_info.id = env.first;
     env_info.label = env.second->label();

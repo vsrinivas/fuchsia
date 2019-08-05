@@ -90,7 +90,7 @@ static fidl::VectorPtr<fuchsia::virtualization::BlockDevice> GetBlockDevices(
   TRACE_DURATION("linux_runner", "GetBlockDevices");
   auto file_handle = GetOrCreateStatefulPartition(stateful_image_size);
   FXL_CHECK(file_handle) << "Failed to open stateful file";
-  fidl::VectorPtr<fuchsia::virtualization::BlockDevice> devices;
+  std::vector<fuchsia::virtualization::BlockDevice> devices;
 #ifdef USE_VOLATILE_BLOCK
   auto stateful_block_mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
 #else
@@ -191,7 +191,7 @@ void Guest::StartGuest() {
 
   fuchsia::virtualization::LaunchInfo launch_info;
   launch_info.url = kLinuxGuestPackage;
-  launch_info.args.push_back("--virtio-gpu=false");
+  launch_info.args.emplace({"--virtio-gpu=false"});
   launch_info.block_devices = GetBlockDevices(config_.stateful_image_size);
   launch_info.wayland_device = fuchsia::virtualization::WaylandDevice::New();
   launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();

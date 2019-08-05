@@ -34,7 +34,7 @@ static fidl::VectorPtr<fuchsia::virtualization::BlockDevice> block_device(
   zx_status_t status = fdio_get_service_handle(fd, &handle);
   FXL_CHECK(status == ZX_OK) << "Failed to get temporary file handle";
 
-  fidl::VectorPtr<fuchsia::virtualization::BlockDevice> block_devices;
+  std::vector<fuchsia::virtualization::BlockDevice> block_devices;
   block_devices.push_back({
       "test_device",
       mode,

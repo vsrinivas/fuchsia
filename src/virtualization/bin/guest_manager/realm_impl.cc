@@ -44,7 +44,7 @@ void RealmImpl::LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
   info.arguments = std::move(launch_info.args);
   info.directory_request = services.NewRequest();
   info.flat_namespace = std::move(launch_info.flat_namespace);
-  std::string label = launch_info.label ? launch_info.label.get() : launch_info.url;
+  std::string label = launch_info.label.has_value() ? launch_info.label.value() : launch_info.url;
   auto guest_services = std::make_unique<GuestServices>(std::move(launch_info));
   info.additional_services = guest_services->ServeDirectory();
   launcher_->CreateComponent(std::move(info), component_controller.NewRequest());
@@ -86,9 +86,8 @@ void RealmImpl::GetHostVsockEndpoint(
   host_vsock_endpoint_.AddBinding(std::move(request));
 }
 
-fidl::VectorPtr<fuchsia::virtualization::InstanceInfo> RealmImpl::ListGuests() {
-  fidl::VectorPtr<fuchsia::virtualization::InstanceInfo> infos =
-      fidl::VectorPtr<fuchsia::virtualization::InstanceInfo>::New(0);
+std::vector<fuchsia::virtualization::InstanceInfo> RealmImpl::ListGuests() {
+  std::vector<fuchsia::virtualization::InstanceInfo> infos;
   for (const auto& it : guests_) {
     infos.push_back(fuchsia::virtualization::InstanceInfo{
         .cid = it.first,

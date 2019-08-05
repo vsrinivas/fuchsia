@@ -20,8 +20,9 @@ void handle_launch(int argc, const char* argv[], async::Loop* loop,
   // Launch guest.
   fuchsia::virtualization::LaunchInfo launch_info;
   launch_info.url = fxl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", argv[0], argv[0]);
+  launch_info.args.emplace();
   for (int i = 0; i < argc - 1; ++i) {
-    launch_info.args.push_back(argv[i + 1]);
+    launch_info.args->push_back(argv[i + 1]);
   }
   fuchsia::virtualization::GuestPtr guest;
   realm->LaunchInstance(std::move(launch_info), guest.NewRequest(), [](...) {});

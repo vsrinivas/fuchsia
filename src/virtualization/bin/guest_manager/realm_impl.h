@@ -36,7 +36,7 @@ class RealmImpl : public fuchsia::virtualization::Realm {
   void set_unbound_handler(fit::function<void()> handler);
 
   void AddBinding(fidl::InterfaceRequest<Realm> request);
-  fidl::VectorPtr<fuchsia::virtualization::InstanceInfo> ListGuests();
+  std::vector<fuchsia::virtualization::InstanceInfo> ListGuests();
 
  private:
   // |fuchsia::virtualization::Realm|
