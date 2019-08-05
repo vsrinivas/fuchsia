@@ -30,7 +30,7 @@ const char kFakeEchoUrl[] =
 class TestWithEnvironmentExampleTest : public TestWithEnvironment {
  protected:
   std::unique_ptr<EnclosingEnvironment> enclosing_environment_;
-  fidl::StringPtr answer_ = "Goodbye World!";
+  std::string answer_ = "Goodbye World!";
 };
 
 // Demonstrates use adding fake service to EnclosingEnvironment.
@@ -60,7 +60,7 @@ TEST_F(TestWithEnvironmentExampleTest, AddFakeEchoAsServiceComponent) {
   std::unique_ptr<EnvironmentServices> services = CreateServices();
   LaunchInfo launch_info;
   launch_info.url = kFakeEchoUrl;
-  launch_info.arguments.push_back(answer_);
+  launch_info.arguments.emplace({answer_});
   services->AddServiceWithLaunchInfo(std::move(launch_info), Echo::Name_);
   enclosing_environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
 

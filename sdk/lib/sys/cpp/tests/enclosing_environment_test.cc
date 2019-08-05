@@ -110,7 +110,7 @@ TEST_F(EnclosingEnvTest, RespawnService) {
   auto svc = CreateServices();
   LaunchInfo linfo;
   linfo.url = kHelperProc;
-  linfo.arguments.reset({"--echo", "--kill=die"});
+  linfo.arguments.emplace({"--echo", "--kill=die"});
   svc->AddServiceWithLaunchInfo(std::move(linfo), echo::Echo::Name_);
   auto env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
   WaitForEnclosingEnvToStart(env.get());
@@ -153,7 +153,7 @@ TEST_F(EnclosingEnvTest, EnclosingEnvOnASeperateThread) {
 
   LaunchInfo linfo;
   linfo.url = kHelperProc;
-  linfo.arguments.reset({"--echo", "--kill=die"});
+  linfo.arguments.emplace({"--echo", "--kill=die"});
   svc->AddServiceWithLaunchInfo(std::move(linfo), echo::Echo::Name_);
   env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
   WaitForEnclosingEnvToStart(env.get());
@@ -175,7 +175,7 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
       [&call_counter]() {
         LaunchInfo linfo;
         linfo.url = kHelperProc;
-        linfo.arguments.reset({"--echo", "--kill=die"});
+        linfo.arguments.emplace({"--echo", "--kill=die"});
         call_counter++;
         return linfo;
       },
@@ -227,7 +227,7 @@ TEST_F(EnclosingEnvTest, OutErrPassing) {
       [&cout_reader, &cerr_reader]() {
         LaunchInfo linfo;
         linfo.url = kHelperProc;
-        linfo.arguments.reset({"--echo", "--cout=potato", "--cerr=tomato"});
+        linfo.arguments.emplace({"--echo", "--cout=potato", "--cerr=tomato"});
 
         linfo.out = FileDescriptor::New();
         linfo.out->type0 = PA_FD;

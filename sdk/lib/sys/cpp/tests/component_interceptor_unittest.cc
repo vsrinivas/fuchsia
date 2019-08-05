@@ -158,7 +158,7 @@ TEST_F(ComponentInterceptorTest, ExtraCmx) {
                                            std::unique_ptr<sys::testing::InterceptedComponent> c) {
                                          intercepted_url = true;
                                          for (const auto& metadata :
-                                              startup_info.program_metadata.get()) {
+                                              startup_info.program_metadata.value_or({})) {
                                            program_metadata[metadata.key] = metadata.value;
                                          }
                                        }));

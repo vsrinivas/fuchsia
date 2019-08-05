@@ -153,7 +153,7 @@ class EnvironmentServices {
   void set_enclosing_env(EnclosingEnvironment* e) { enclosing_env_ = e; }
 
   vfs::PseudoDir svc_;
-  fidl::VectorPtr<std::string> svc_names_;
+  std::vector<std::string> svc_names_;
   std::shared_ptr<sys::ServiceDirectory> parent_svc_;
   // Pointer to containing environment. Not owned.
   EnclosingEnvironment* enclosing_env_ = nullptr;
@@ -231,7 +231,7 @@ class EnclosingEnvironment {
       const std::string& label, std::shared_ptr<vfs::Service> loader_service);
 
   // Connects to service provided by this environment.
-  void ConnectToService(fidl::StringPtr service_name, zx::channel channel) {
+  void ConnectToService(std::string service_name, zx::channel channel) {
     service_provider_->Connect(service_name, std::move(channel));
   }
 

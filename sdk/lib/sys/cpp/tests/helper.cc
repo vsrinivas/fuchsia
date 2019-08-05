@@ -33,7 +33,7 @@ Arguments:
 class EchoServer : public fidl::examples::echo::Echo {
  public:
   void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
-    std::string intercept = value;
+    std::string intercept = value.value_or("");
     callback(std::move(value));
     if (listener_) {
       listener_(std::move(intercept));
