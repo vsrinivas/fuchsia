@@ -514,12 +514,12 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
 
       if (!process_->dl_debug_addr() && process_->RegisterDebugState()) {
         DEBUG_LOG(Thread) << ThreadPreamble(this) << "Found ld.so breakpoint. Sending modules.";
-        // This breakpoint was the explicit breakpoint ld.so executes to
-        // notify us that the loader is ready. Send the current module list
-        // and silently keep this thread stopped. The client will explicitly
-        // resume this thread when it's ready to continue (it will need to
-        // load symbols for the modules and may need to set breakpoints based
-        // on them).
+        // This breakpoint was the explicit breakpoint ld.so executes to notify us that the loader
+        // is ready (see DebuggerProcess::RegisterDebugState).
+        //
+        // Send the current module list and silently keep this thread stopped. The client will
+        // explicitly resume this thread when it's ready to continue (it will need to load symbols
+        // for the modules and may need to set breakpoints based on them).
         std::vector<uint64_t> paused_threads;
         paused_threads.push_back(koid());
         process_->SendModuleNotification(std::move(paused_threads));

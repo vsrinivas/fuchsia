@@ -79,10 +79,7 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateI
       koid_(create_info.koid),
       process_(std::move(create_info.handle)),
       name_(std::move(create_info.name)) {
-  // set this property so we can know about module loads.
-  const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
-  zx_object_set_property(process_.get(), ZX_PROP_PROCESS_DEBUG_ADDR, &kMagicValue,
-                         sizeof(kMagicValue));
+  RegisterDebugState();
 
   // If create_info out or err are not valid, calling Init on the
   // BufferedZxSocket will fail and leave it in an invalid state. This is
@@ -281,14 +278,39 @@ void DebuggedProcess::FillThreadRecords(std::vector<debug_ipc::ThreadRecord>* th
 }
 
 bool DebuggedProcess::RegisterDebugState() {
+  // HOW REGISTRATION WITH THE LOADER WORKS.
+  //
+  // Upon process initialization and before executing the normal program code, ld.so sets the
+  // ZX_PROP_PROCESS_DEBUG_ADDR property on its own process to the address of a known struct defined
+  // in <link.h> containing the state of the loader. Debuggers can come along later, get the address
+  // from this property, and inspect the state of the dynamic loader for this process (get the
+  // loaded libraries, set breakpoints for loads, etc.).
+  //
+  // When launching a process in a debugger, the debugger needs to know when this property has been
+  // set or there will be a race to know when it's valid. To resolve this, the debuggers sets a
+  // known magic value to the property before startup. The loader checks for this value when setting
+  // the property, and if it had the magic value, issues a hardcoded software breakpoint. The
+  // debugger catches this breakpoint exception, reads the now-valid address from the property, and
+  // continues initialization.
+  //
+  // It's also possible that the property has been properly set up prior to starting the process.
+  // In Posix this can happen with a fork() where the entire process is duplicated, including the
+  // loader state and all dynamically loaded libraries. In Zircon this can happen if the creator
+  // of the process maps a valid loader state when it creates the process (possibly it's trying
+  // to emulate fork, or it could be injecting libraries itself for some reason). So we also need
+  // to handle the rare case that the propery is set before startup.
   if (dl_debug_addr_)
     return true;  // Previously set.
 
   uintptr_t debug_addr = 0;
-  if (process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr)) != ZX_OK)
-    return false;  // Can't read value.
-
-  if (!debug_addr || debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET)
+  if (process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr)) != ZX_OK ||
+      debug_addr == 0) {
+    // Register for sets on the debug addr by setting the magic value.
+    const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
+    process_.set_property(ZX_PROP_PROCESS_DEBUG_ADDR, &kMagicValue, sizeof(kMagicValue));
+    return false;
+  }
+  if (debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET)
     return false;  // Still not set.
 
   dl_debug_addr_ = debug_addr;
@@ -296,6 +318,19 @@ bool DebuggedProcess::RegisterDebugState() {
   // TODO(brettw) register breakpoint for dynamic loads. This current code
   // only notifies for the initial set of binaries loaded by the process.
   return true;
+}
+
+void DebuggedProcess::SuspendAndSendModulesIfKnown() {
+  if (dl_debug_addr_) {
+    // This process' modules can be known. Send them.
+    //
+    // Suspend all threads while the module list is being sent. The client will resume the threads
+    // once it's loaded symbols and processed breakpoints (this may take a while and we'd like to
+    // get any breakpoints as early as possible).
+    std::vector<uint64_t> paused_thread_koids;
+    SuspendAll(false, &paused_thread_koids);
+    SendModuleNotification(std::move(paused_thread_koids));
+  }
 }
 
 void DebuggedProcess::SendModuleNotification(std::vector<uint64_t> paused_thread_koids) {

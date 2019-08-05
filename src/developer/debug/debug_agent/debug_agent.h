@@ -122,7 +122,7 @@ class DebugAgent : public RemoteAPI,
   zx_status_t AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
   DebuggedJob* GetDebuggedJob(zx_koid_t koid);
 
-  zx_status_t AddDebuggedProcess(DebuggedProcessCreateInfo&&);
+  zx_status_t AddDebuggedProcess(DebuggedProcessCreateInfo&&, DebuggedProcess** added);
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
 
   DebuggedThread* GetDebuggedThread(zx_koid_t process_koid, zx_koid_t thread_koid);

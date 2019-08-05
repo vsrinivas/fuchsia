@@ -103,8 +103,14 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   // returns true would need to be followed up with a SendModuleNotification.
   bool RegisterDebugState();
 
-  // Sends the currently loaded modules to the client with the given list
-  // of paused threads.
+  // If the process can know its modules, suspend all thread and send the module list.
+  //
+  // This is used in the case where we attach to an existing process or a new forked process and the
+  // debug address is known. The client expects the threads to be suspended so it can resolve
+  // breakpoints and resume them.
+  void SuspendAndSendModulesIfKnown();
+
+  // Sends the currently loaded modules to the client with the given list of paused threads.
   void SendModuleNotification(std::vector<uint64_t> paused_thread_koids);
 
   // Looks for breakpoints at the given address. Null if no breakpoints are
