@@ -148,7 +148,7 @@ TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
   ASSERT_EQ(msgs[0].body()->listen_interval, 100);
   ASSERT_TRUE(std::equal(msgs[0].body()->ssid->begin(), msgs[0].body()->ssid->end(),
                          std::begin(ssid), std::end(ssid)));
-  ASSERT_TRUE(msgs[0].body()->rsn.is_null());
+  ASSERT_FALSE(msgs[0].body()->rsn.has_value());
 }
 
 }  // namespace

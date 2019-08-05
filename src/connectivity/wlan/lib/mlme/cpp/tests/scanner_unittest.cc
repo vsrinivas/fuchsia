@@ -122,8 +122,7 @@ wlan_mlme::ScanRequest FakeScanRequest() {
   wlan_mlme::ScanRequest req{};
   req.txn_id = 123;
   req.scan_type = wlan_mlme::ScanTypes::PASSIVE;
-  req.channel_list.resize(0);
-  req.channel_list->push_back(1);
+  req.channel_list.emplace({1});
   req.max_channel_time = 1u;
   req.ssid.resize(0);
   std::memcpy(req.bssid.data(), kBssid1, 6);
@@ -157,7 +156,7 @@ TEST_F(ScannerTest, Start_InvalidChannelTimes) {
 
 TEST_F(ScannerTest, Start_NoChannels) {
   auto req = FakeScanRequest();
-  req.channel_list.resize(0);
+  req.channel_list.emplace();
 
   EXPECT_EQ(11u, mock_dev_.GetChannelNumber());
 
@@ -187,7 +186,10 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
   auto req = FakeScanRequest();
   req.min_channel_time = 1;
   req.max_channel_time = 10;
-  req.channel_list.push_back(2);
+
+  ASSERT_TRUE(req.channel_list.has_value());
+  EXPECT_EQ(req.channel_list->size(), 1u);
+  req.channel_list->push_back(2);
 
   EXPECT_EQ(11u, mock_dev_.GetChannelNumber());
 

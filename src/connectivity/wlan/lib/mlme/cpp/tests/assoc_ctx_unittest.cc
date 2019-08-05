@@ -43,8 +43,8 @@ constexpr auto SR_b = SupportedRate::basic;
 // preserved.
 
 void TestOnce(const TestVector& tv) {
-  auto basic = ::fidl::VectorPtr(tv.ap_basic_rate_set);
-  auto op = ::fidl::VectorPtr(tv.ap_op_rate_set);
+  auto basic = ::std::vector(tv.ap_basic_rate_set);
+  auto op = ::std::vector(tv.ap_op_rate_set);
 
   auto got_rates = BuildAssocReqSuppRates(basic, op, tv.client_rates);
 

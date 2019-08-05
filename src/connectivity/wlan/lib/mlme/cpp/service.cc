@@ -92,7 +92,7 @@ zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& 
   wlan_mlme::AssociateIndication ind;
   peer_sta.CopyTo(ind.peer_sta_address.data());
   ind.listen_interval = listen_interval;
-  ind.ssid.resize(0);
+  ind.ssid.emplace();
   ind.ssid->assign(ssid.begin(), ssid.end());
   if (rsn_body) {
     ind.rsn->reserve(2 + rsn_body->size());

@@ -83,7 +83,7 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsn, wlan_channel_t chan) {
   bss_desc.cap = cap;
 
   if (rsn) {
-    bss_desc.rsn.reset(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
+    bss_desc.rsn.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
   } else {
     bss_desc.rsn.reset();
   }
@@ -111,7 +111,7 @@ MlmeMsg<wlan_mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time) {
   std::memcpy(req->bssid.data(), kBroadcastBssid, sizeof(kBroadcastBssid));
   req->ssid = {0};
   req->scan_type = wlan_mlme::ScanTypes::PASSIVE;
-  req->channel_list.reset({11});
+  req->channel_list.emplace({11});
   req->max_channel_time = max_channel_time;
 
   return {std::move(*req), fuchsia_wlan_mlme_MLMEStartScanOrdinal};
@@ -127,7 +127,7 @@ MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
   req->channel = kBssChannel.primary;
   req->mesh_id.resize(0);
   if (protected_ap) {
-    req->rsne.reset(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
+    req->rsne.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
   }
 
   return {std::move(*req), fuchsia_wlan_mlme_MLMEStartReqOrdinal};
@@ -186,7 +186,7 @@ MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsn) {
   auto req = wlan_mlme::AssociateRequest::New();
   std::memcpy(req->peer_sta_address.data(), bssid.byte, common::kMacAddrLen);
   if (rsn) {
-    req->rsn.reset(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
+    req->rsn.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
   } else {
     req->rsn.reset();
   }

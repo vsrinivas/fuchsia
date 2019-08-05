@@ -122,13 +122,14 @@ static void DoParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_chann
         break;
       case element_id::kCountry:
         if (auto c = common::ParseCountry(raw_body)) {
-          bss_desc->country.resize(0);
+          bss_desc->country.emplace();
           bss_desc->country->assign(c->country.data, c->country.data + Country::kCountryLen);
           // TODO(porce): Handle Subband Triplet Sequence field.
         }
         break;
       case element_id::kRsn: {
-        bss_desc->rsn.resize(sizeof(ElementHeader));
+        bss_desc->rsn.emplace();
+        bss_desc->rsn->resize(sizeof(ElementHeader));
         auto header = reinterpret_cast<ElementHeader*>(bss_desc->rsn->data());
         header->id = static_cast<uint8_t>(element_id::kRsn);
         header->len = raw_body.size();

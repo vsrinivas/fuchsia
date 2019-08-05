@@ -149,7 +149,7 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
   ConvertRateSets(wlanif_desc, fidl_desc);
 
   // rsne
-  CopyRSNE(fidl_desc.rsn, wlanif_desc->rsne, &wlanif_desc->rsne_len);
+  CopyRSNE(fidl_desc.rsn.value_or({}), wlanif_desc->rsne, &wlanif_desc->rsne_len);
 
   // chan
   ConvertWlanChan(&wlanif_desc->chan, fidl_desc.chan);

@@ -518,7 +518,7 @@ uint32_t InfraBss::NextSns1(const common::MacAddr& addr) {
   return mlme_sequence_manager_next_sns1(seq_mgr_.get(), &addr.byte);
 }
 
-bool InfraBss::IsRsn() const { return !start_req_.rsne.is_null(); }
+bool InfraBss::IsRsn() const { return start_req_.rsne.has_value(); }
 
 HtConfig InfraBss::Ht() const {
   // TODO(NET-567): Reflect hardware capabilities and association negotiation

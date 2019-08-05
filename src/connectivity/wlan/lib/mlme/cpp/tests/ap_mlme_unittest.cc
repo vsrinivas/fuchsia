@@ -136,7 +136,7 @@ struct Context {
     if (rsn) {
       EXPECT_EQ(std::memcmp(msg.body()->rsn->data(), kRsne, sizeof(kRsne)), 0);
     } else {
-      EXPECT_TRUE(msg.body()->rsn.is_null());
+      EXPECT_FALSE(msg.body()->rsn.has_value());
     }
   }
 

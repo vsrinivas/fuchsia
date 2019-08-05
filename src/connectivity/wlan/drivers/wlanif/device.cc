@@ -396,7 +396,7 @@ void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
 
 void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
   std::lock_guard<std::mutex> lock(lock_);
-  protected_bss_ = !req.rsn.is_null();
+  protected_bss_ = req.rsn.has_value();
 
   wlanif_assoc_req_t impl_req = {};
 
@@ -405,7 +405,7 @@ void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
 
   // rsne
   if (protected_bss_) {
-    CopyRSNE(req.rsn, impl_req.rsne, &impl_req.rsne_len);
+    CopyRSNE(req.rsn.value(), impl_req.rsne, &impl_req.rsne_len);
   } else {
     impl_req.rsne_len = 0;
   }
@@ -477,7 +477,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
   impl_req.channel = req.channel;
 
   // rsne
-  CopyRSNE(req.rsne, impl_req.rsne, &impl_req.rsne_len);
+  CopyRSNE(req.rsne.value_or({}), impl_req.rsne, &impl_req.rsne_len);
 
   wlanif_impl_.ops->start_req(wlanif_impl_.ctx, &impl_req);
 }

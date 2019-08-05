@@ -498,7 +498,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
   }
 
   // Open port if user connected to an open network.
-  if (join_ctx_->bss()->rsn.is_null()) {
+  if (!join_ctx_->bss()->rsn.has_value()) {
     debugjoin("802.1X controlled port is now open\n");
     controlled_port_ = eapol::PortState::kOpen;
     device_->SetStatus(ETHERNET_STATUS_ONLINE);
@@ -697,7 +697,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
   }
 
   bool needs_protection =
-      !join_ctx_->bss()->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
+      join_ctx_->bss()->rsn.has_value() && controlled_port_ == eapol::PortState::kOpen;
   auto eth_hdr = eth_frame.hdr();
   auto payload = eth_frame.body_data();
   mlme_out_buf_t out_buf;
@@ -873,7 +873,7 @@ zx_status_t Station::SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
   }
 
   bool needs_protection =
-      !join_ctx_->bss()->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
+      join_ctx_->bss()->rsn.has_value() && controlled_port_ == eapol::PortState::kOpen;
   mlme_out_buf_t out_buf;
   auto status =
       mlme_write_data_frame(rust_buffer_provider, seq_mgr_.get(), &join_ctx_->bssid().byte,
