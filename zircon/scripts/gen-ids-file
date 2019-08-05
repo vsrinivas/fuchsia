@@ -1,0 +1,32 @@
+#!/bin/bash
+#
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+readonly READELF="$1"
+readonly OUTFILE="$2"
+readonly DEPFILE="$3"
+readonly LISTFILE="$4"
+
+FILES=()
+
+gen_id_line() {
+  FILES+=("$1")
+  LC_ALL=C "$READELF" -n "$1" | sed -n '/Build ID:/{s/.*: //;s@$@ '"$1"'@p;}'
+}
+
+gen_id_lines_from_list() {
+  local file
+  while read file; do
+    gen_id_line "$file"
+  done
+}
+
+trap 'rm -f "$OUTFILE"' ERR HUP INT TERM
+
+gen_id_lines_from_list < "$LISTFILE" > "$OUTFILE"
+
+echo "$OUTFILE: ${FILES[*]}" > "$DEPFILE"

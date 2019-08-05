@@ -60,7 +60,8 @@ declare_args() {
   zircon_tracelog = ""
 
   # Compliation database filter. Gets passed to --export_compile_commands=<filter>.
-  zircon_compdb_filter = "legacy-$target_cpu"
+  # Default is $target_cpu.
+  zircon_compdb_filter = target_cpu
 }
 
 zircon_variants = []
