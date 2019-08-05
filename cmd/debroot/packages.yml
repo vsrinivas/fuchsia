@@ -1,14 +1,17 @@
 dists:
   - jessie
   - jessie-updates
+architectures:
+  - amd64
+  - arm64
+  - armhf
+  - i386
 components:
   - main
 keyring: debian-archive-keyring.gpg
 packages:
   - package: libc6
   - package: libc6-dev
-  - package: libgcc-4.9-dev
-  - package: libgcc1
   - package: libgl1-mesa-dev
   - package: libgl1-mesa-glx
   - package: libglapi-mesa
@@ -16,6 +19,8 @@ packages:
   - package: libx11-dev
   - package: libxcursor1
   - package: libxcursor-dev
+  - package: libxi6
+  - package: libxi-dev
   - package: libxrandr2
   - package: libxrandr-dev
   - package: libxrender1

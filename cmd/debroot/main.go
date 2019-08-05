@@ -38,7 +38,9 @@ import (
 //   gpg --output ./debian-archive-stretch-stable.gpg --export $KEYS
 
 const (
-	aptRepo = "http://http.us.debian.org/debian"
+	// http://http.us.debian.org/debian no longer contains arm64 packages
+	// for jessie so we instead use the last snapshot that still has them.
+	aptRepo = "https://snapshot.debian.org/archive/debian/20190324T093412Z"
 )
 
 type stringsValue []string
@@ -53,15 +55,16 @@ func (i *stringsValue) Set(value string) error {
 }
 
 type Config struct {
-	Dists      []string  `yaml:"dists"`
-	Components []string  `yaml:"components"`
-	Keyring    string    `yaml:"keyring"`
-	Packages   []Package `yaml:"packages"`
+	Dists         []string  `yaml:"dists"`
+	Components    []string  `yaml:"components"`
+	Keyring       string    `yaml:"keyring"`
+	Architectures []string  `yaml:"architectures"`
+	Packages      []Package `yaml:"packages"`
 }
 
 type Package struct {
-	Name string   `yaml:"package"`
-	Arch []string `yaml:"arch,omitempty"`
+	Name          string   `yaml:"package"`
+	Architectures []string `yaml:"architectures,omitempty"`
 }
 
 type Lockfile struct {
@@ -77,12 +80,6 @@ type Lock struct {
 	Hash     string `yaml:"hash"`
 }
 
-type Arch struct {
-	Name     string `yaml:"name"`
-	Filename string `yaml:"filename"`
-	Hash     string `yaml:"hash"`
-}
-
 type Locks []Lock
 
 func (l Locks) Len() int {
@@ -94,6 +91,9 @@ func (l Locks) Swap(i, j int) {
 }
 
 func (l Locks) Less(i, j int) bool {
+	if l[i].Name == l[j].Name {
+		return l[i].Filename < l[j].Filename
+	}
 	return l[i].Name < l[j].Name
 }
 
@@ -129,8 +129,8 @@ func parsePackages(r io.Reader) ([]Descriptor, error) {
 	return descriptors, nil
 }
 
-func downloadPackageList(config *Config, arch string, depends bool) ([]Lock, error) {
-	pkgs := map[string]Descriptor{}
+func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
+	descriptors := map[string]map[string]Descriptor{}
 
 	file, err := os.Open(config.Keyring)
 	if err != nil {
@@ -155,6 +155,19 @@ func downloadPackageList(config *Config, arch string, depends bool) ([]Lock, err
 		if err != nil {
 			return nil, err
 		}
+		var lines []string
+		sha256section := false
+		for _, l := range strings.Split(string(b), "\n") {
+			if sha256section {
+				if strings.HasPrefix(l, " ") {
+					lines = append(lines, l[1:])
+				} else {
+					sha256section = false
+				}
+			} else if strings.HasPrefix(l, "SHA256:") {
+				sha256section = true
+			}
+		}
 
 		u, err = url.Parse(aptRepo)
 		u.Path = path.Join(u.Path, "dists", dist, "Release.gpg")
@@ -169,102 +182,152 @@ func downloadPackageList(config *Config, arch string, depends bool) ([]Lock, err
 			return nil, err
 		}
 
-		for _, c := range config.Components {
-			u, err := url.Parse(aptRepo)
-			u.Path = path.Join(u.Path, "dists", dist, c, "binary-"+arch, "Packages.gz")
-			r, err := http.Get(u.String())
-			if err != nil {
-				return nil, err
-			}
-			defer r.Body.Close()
-
-			buf, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				return nil, err
-			}
-
-			f := path.Join(c, "binary-"+arch, "Packages.gz")
-			l := regexp.MustCompile(`([0-9a-z]{64})\s+\d+\s+` + f)
-			m := l.FindStringSubmatch(string(b))
-
-			sum := sha256.Sum256(buf)
-			if m[1] != hex.EncodeToString(sum[:]) {
-				return nil, fmt.Errorf("%s: checksum doesn't match", f)
-			}
-
-			g, err := gzip.NewReader(bytes.NewReader(buf))
-			if err != nil {
-				return nil, err
-			}
-
-			ps, err := parsePackages(g)
-			if err != nil {
-				return nil, err
-			}
-
-			// We only want development libraries, filter out everything else.
-			for _, p := range ps {
-				// Use sections as a coarse grained filter.
-				var section bool
-				switch p["Section"] {
-				case "libs", "libdevel", "devel", "x11":
-					section = true
+		for _, a := range config.Architectures {
+			for _, c := range config.Components {
+				u, err := url.Parse(aptRepo)
+				u.Path = path.Join(u.Path, "dists", dist, c, "binary-"+a, "Packages.gz")
+				r, err := http.Get(u.String())
+				if err != nil {
+					return nil, err
 				}
-				// Use tags as a more fine-grained filter.
-				var tag bool
-				for _, n := range strings.Split(p["Tag"], ", ") {
-					t := strings.Split(strings.TrimSpace(n), " ")[0]
-					switch t {
-					case "devel::library", "x11::library", "role::devel-lib", "role::shared-lib":
-						tag = true
+				defer r.Body.Close()
+
+				buf, err := ioutil.ReadAll(r.Body)
+				if err != nil {
+					return nil, err
+				}
+
+				var checksum string
+				f := path.Join(c, "binary-"+a, "Packages.gz")
+				for _, l := range lines {
+					if strings.HasSuffix(l, f) {
+						checksum = strings.Fields(l)[0]
+						break
 					}
 				}
-				// Skip everything that doesn't match.
-				if section && tag {
-					pkgs[p["Package"]] = p
+				if checksum == "" {
+					return nil, fmt.Errorf("%s: checksum missing", f)
+				}
+
+				sum := sha256.Sum256(buf)
+				if checksum != hex.EncodeToString(sum[:]) {
+					return nil, fmt.Errorf("%s: checksum doesn't match", f)
+				}
+
+				g, err := gzip.NewReader(bytes.NewReader(buf))
+				if err != nil {
+					return nil, err
+				}
+
+				ps, err := parsePackages(g)
+				if err != nil {
+					return nil, err
+				}
+
+				// We only want development libraries, filter out everything else.
+				for _, p := range ps {
+					// Use sections as a coarse grained filter.
+					var section bool
+					switch p["Section"] {
+					case "libs", "libdevel", "devel", "x11":
+						section = true
+					}
+					// Use tags as a more fine-grained filter.
+					var tag bool
+					for _, n := range strings.Split(p["Tag"], ", ") {
+						t := strings.Split(strings.TrimSpace(n), " ")[0]
+						switch t {
+						case "devel::library", "x11::library", "role::devel-lib", "role::shared-lib":
+							tag = true
+						}
+					}
+					// Skip everything that doesn't match.
+					if section && tag {
+						n := p["Package"]
+						if _, ok := descriptors[n]; !ok {
+							descriptors[n] = map[string]Descriptor{}
+						}
+						descriptors[n][a] = p
+					}
 				}
 			}
 		}
 	}
 
-	var queue []string
+	type dependency struct {
+		name         string
+		architecture string
+	}
+
+	// Place the initial set of packages into queue.
+	var queue []dependency
 	for _, p := range config.Packages {
-		if pkg, ok := pkgs[p.Name]; ok {
-			queue = append(queue, pkg["Package"])
+		if len(p.Architectures) > 0 {
+			for _, a := range p.Architectures {
+				queue = append(queue, dependency{
+					name:         p.Name,
+					architecture: a,
+				})
+			}
 		} else {
-			for _, a := range p.Arch {
-				if a == arch {
-					fmt.Printf("Package %s not found\n", p.Name)
-				}
+			for _, a := range config.Architectures {
+				queue = append(queue, dependency{
+					name:         p.Name,
+					architecture: a,
+				})
 			}
 		}
 	}
 
-	locks := map[string]Lock{}
+	// Process all dependencies until we drain the queue.
+	locks := map[string]map[string]Lock{}
 	for len(queue) > 0 {
 		p := queue[0]
 		queue = queue[1:]
-		if _, ok := locks[p]; ok {
-			continue
+		if lock, ok := locks[p.name]; ok {
+			if _, ok := lock[p.architecture]; ok {
+				continue
+			}
 		}
-		if pkg, ok := pkgs[p]; ok {
-			locks[p] = Lock{
-				Name:     pkg["Package"],
-				Version:  pkg["Version"],
-				Filename: pkg["Filename"],
-				Hash:     pkg["SHA256"],
+		if ds, ok := descriptors[p.name]; ok {
+			if _, ok := locks[p.name]; !ok {
+				locks[p.name] = map[string]Lock{}
 			}
-			if depends {
-				for _, n := range strings.Split(pkg["Depends"], ", ") {
-					d := strings.Split(strings.TrimSpace(n), " ")[0]
-					queue = append(queue, d)
+			if pkg, ok := ds[p.architecture]; ok {
+				locks[p.name][p.architecture] = Lock{
+					Name:     pkg["Package"],
+					Version:  pkg["Version"],
+					Filename: pkg["Filename"],
+					Hash:     pkg["SHA256"],
 				}
+				if depends {
+					for _, n := range strings.Split(pkg["Depends"], ", ") {
+						d := strings.Split(strings.TrimSpace(n), " ")[0]
+						queue = append(queue, dependency{
+							name:         d,
+							architecture: p.architecture,
+						})
+					}
+				}
+			} else {
+				return nil, fmt.Errorf("package %q not found for architecture %q", p.name, p.architecture)
 			}
+		} else {
+			return nil, fmt.Errorf("package %q not found", p.name)
 		}
 	}
 
+	// Eliminate all duplicates.
+	hashes := map[string]Lock{}
+	for _, l := range locks {
+		for _, p := range l {
+			hashes[p.Hash] = p
+		}
+	}
+
+	// Flatten into a list.
 	var list []Lock
-	for _, p := range locks {
+	for _, p := range hashes {
 		list = append(list, p)
 	}
 
@@ -542,7 +605,6 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 }
 
 type updateCmd struct {
-	arch     string
 	config   string
 	lockfile string
 	depends  bool
@@ -551,13 +613,12 @@ type updateCmd struct {
 func (*updateCmd) Name() string     { return "update" }
 func (*updateCmd) Synopsis() string { return "Update the lock file." }
 func (*updateCmd) Usage() string {
-	return `update [-arch] [-packages] [-list]:
+	return `update [-config] [-lock] [-depends]:
 	Update the lock file to include specific package versions.
 `
 }
 
 func (c *updateCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.arch, "arch", "amd64", "Target architecture")
 	f.StringVar(&c.config, "config", "packages.yml", "Package configuration")
 	f.StringVar(&c.lockfile, "lock", "packages.lock", "Lockfile filename")
 	f.BoolVar(&c.depends, "depends", false, "Transitively include dependencies")
@@ -580,7 +641,7 @@ func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitUsageError
 	}
 
-	list, err := downloadPackageList(config, c.arch, c.depends)
+	list, err := downloadPackageList(config, c.depends)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to download package list: %v\n", err)
 		return subcommands.ExitFailure
@@ -590,13 +651,13 @@ func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	hash := sha256.New()
 	hash.Write(d)
 
-	pkgs := Lockfile{
+	lockfile := Lockfile{
 		Updated:  time.Now(),
 		Hash:     fmt.Sprintf("%x", hash.Sum(nil)),
 		Packages: list,
 	}
 
-	l, err := yaml.Marshal(&pkgs)
+	l, err := yaml.Marshal(&lockfile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to marshal lockfile: %v\n", err)
 		return subcommands.ExitFailure
@@ -611,7 +672,6 @@ func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 }
 
 type installCmd struct {
-	arch      string
 	outDir    string
 	debsCache string
 }
