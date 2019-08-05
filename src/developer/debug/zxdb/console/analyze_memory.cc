@@ -342,7 +342,7 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
 
 void AnalyzeMemory(
     const AnalyzeMemoryOptions& opts,
-    std::function<void(const Err& err, OutputBuffer analysis, uint64_t next_addr)> cb) {
+    fit::callback<void(const Err& err, OutputBuffer analysis, uint64_t next_addr)> cb) {
   auto analysis = fxl::MakeRefCounted<zxdb::internal::MemoryAnalysis>(opts, std::move(cb));
   analysis->Schedule(opts);
 }

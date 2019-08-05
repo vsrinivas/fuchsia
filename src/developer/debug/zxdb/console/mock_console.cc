@@ -72,7 +72,7 @@ Console::Result MockConsole::ProcessInputLine(const std::string& line, CommandCa
     return Console::Result::kContinue;
   }
 
-  err = DispatchCommand(&context_, cmd, callback);
+  err = DispatchCommand(&context_, cmd, std::move(callback));
 
   if (cmd.thread() && cmd.verb() != Verb::kNone) {
     // Show the right source/disassembly for the next listing.

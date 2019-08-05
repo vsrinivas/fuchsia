@@ -21,7 +21,8 @@ using Option = fxl::CommandLine::Option;
 // Action ----------------------------------------------------------------------
 
 Action::Action() = default;
-Action::Action(std::string name, Action::ActionFunction action) : name_(name), action_(action) {}
+Action::Action(std::string name, Action::ActionFunction action)
+    : name_(name), action_(std::move(action)) {}
 
 Action::Action(Action&&) = default;
 Action& Action::operator=(Action&& other) {

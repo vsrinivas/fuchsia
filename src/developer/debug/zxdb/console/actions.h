@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <cstdint>
-#include <functional>
 #include <limits>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/lib/fxl/command_line.h"
@@ -23,8 +23,8 @@ class Session;
 // See PostActionCallback below for details.
 class Action {
  public:
-  // The functor to be called for each action
-  using ActionFunction = std::function<void(const Action&, const Session&, Console*)>;
+  // The functor to be called for each action.
+  using ActionFunction = fit::function<void(const Action&, const Session&, Console*)>;
 
   Action();
   explicit Action(std::string name, ActionFunction action);
@@ -50,7 +50,7 @@ class ActionFlow {
  public:
   // The callback that will be called on complete or error of a particular
   // action.
-  using Callback = std::function<void(Err)>;
+  using Callback = fit::callback<void(Err)>;
 
   // This singleton is the one that should be used for running Actions outside
   // of a testing environment. It will hook up the correct callback.

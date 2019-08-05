@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command_group.h"
 #include "src/developer/debug/zxdb/console/switch_record.h"
@@ -93,20 +94,21 @@ enum class Verb {
 
 struct VerbRecord {
   // Type for the callback that runs a command.
-  using CommandExecutor = std::function<Err(ConsoleContext*, const Command&)>;
+  using CommandExecutor = fit::function<Err(ConsoleContext*, const Command&)>;
 
   // Executor that is able to receive a callback that it can then pass on.
   using CommandExecutorWithCallback =
-      std::function<Err(ConsoleContext*, const Command&, std::function<void(Err)>)>;
+      fit::function<Err(ConsoleContext*, const Command&, fit::callback<void(Err)>)>;
 
   // Type for the callback to complete the command's arguments. The command
   // will be filled out as far as is possible for the current parse, and the
   // completions should be filled with suggestions for the next token, each of
   // which should begin with the given prefix.
-  using CommandCompleter = std::function<void(const Command& command, const std::string& prefix,
+  using CommandCompleter = fit::function<void(const Command& command, const std::string& prefix,
                                               std::vector<std::string>* completions)>;
 
   VerbRecord();
+  VerbRecord(VerbRecord&&) = default;
 
   // The help will be referenced by pointer. It is expected to be a static
   // string.
@@ -123,6 +125,8 @@ struct VerbRecord {
              std::initializer_list<std::string> aliases, const char* short_help, const char* help,
              CommandGroup group, SourceAffinity source_affinity = SourceAffinity::kNone);
   ~VerbRecord();
+
+  VerbRecord& operator=(VerbRecord&&) = default;
 
   CommandExecutor exec = nullptr;
   CommandExecutorWithCallback exec_cb = nullptr;

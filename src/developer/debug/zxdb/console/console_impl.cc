@@ -86,13 +86,13 @@ void PreserveStdoutTermios() {}
 ConsoleImpl::ConsoleImpl(Session* session) : Console(session), line_input_("[zxdb] ") {
   // Set the line input completion callback that can know about our context.
   // OK to bind |this| since we own the line_input object.
-  auto fill_command_context = [this](Command* cmd) {
+  FillCommandContextCallback fill_command_context([this](Command* cmd) {
     context_.FillOutCommand(cmd);  // Ignore errors, this is for autocomplete.
-  };
-  line_input_.set_completion_callback(
-      [fill_command_context](const std::string& prefix) -> std::vector<std::string> {
-        return GetCommandCompletions(prefix, fill_command_context);
-      });
+  });
+  line_input_.set_completion_callback([fill_command_context = std::move(fill_command_context)](
+                                          const std::string& prefix) -> std::vector<std::string> {
+    return GetCommandCompletions(prefix, fill_command_context);
+  });
 
   // Set stdin to async mode or OnStdinReadable will block.
   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
@@ -203,7 +203,7 @@ Console::Result ConsoleImpl::DispatchInputLine(const std::string& line, CommandC
     } else {
       err = context_.FillOutCommand(&cmd);
       if (!err.has_error()) {
-        err = DispatchCommand(&context_, cmd, callback);
+        err = DispatchCommand(&context_, cmd, std::move(callback));
 
         if (cmd.thread() && cmd.verb() != Verb::kNone) {
           // Show the right source/disassembly for the next listing.
@@ -223,7 +223,7 @@ Console::Result ConsoleImpl::DispatchInputLine(const std::string& line, CommandC
 }
 
 Console::Result ConsoleImpl::ProcessInputLine(const std::string& line, CommandCallback callback) {
-  Result result = DispatchInputLine(line, callback);
+  Result result = DispatchInputLine(line, std::move(callback));
   if (result == Result::kQuit)
     debug_ipc::MessageLoop::Current()->QuitNow();
   return result;

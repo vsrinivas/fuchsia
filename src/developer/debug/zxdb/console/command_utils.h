@@ -145,7 +145,7 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd);
 // The |verb| string is used to format error messages showing command examples.
 Err EvalCommandExpression(const Command& cmd, const char* verb,
                           fxl::RefPtr<EvalContext> eval_context, bool follow_references,
-                          std::function<void(const Err& err, ExprValue value)> cb);
+                          fit::callback<void(const Err& err, ExprValue value)> cb);
 
 // Like EvalCommandExpression but attempts to convert the result to an address.
 // This is used for commands that want to support expressions to compute
@@ -158,7 +158,7 @@ Err EvalCommandExpression(const Command& cmd, const char* verb,
 // If the command doesn't evaluate to an address, the Err will be set.
 Err EvalCommandAddressExpression(
     const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
-    std::function<void(const Err& err, uint64_t address, std::optional<uint32_t> size)> cb);
+    fit::callback<void(const Err& err, uint64_t address, std::optional<uint32_t> size)> cb);
 
 }  // namespace zxdb
 

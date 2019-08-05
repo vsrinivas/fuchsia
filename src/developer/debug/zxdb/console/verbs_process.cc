@@ -62,8 +62,7 @@ Err AssertRunnableJobContext(JobContext* job_context) {
   return Err();
 }
 
-// Callback for "attach", "detach". The verb affects the
-// message printed to the screen.
+// Callback for "attach", "detach". The verb affects the message printed to the screen.
 void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
                         bool display_message_on_success, const Err& err,
                         CommandCallback callback = nullptr) {
@@ -90,11 +89,11 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
   }
 }
 
-// Callback for "run", "attach", "detach" and "stop". The verb affects the
-// message printed to the screen.
+// Callback for "run", "attach", "detach" and "stop". The verb affects the message printed to the
+// screen.
 //
-// The optional callback parameter will be issued with the error for calling
-// code to identify the error.
+// The optional callback parameter will be issued with the error for calling code to identify the
+// error.
 void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on_success,
                             const Err& err, CommandCallback callback = nullptr) {
   if (display_message_on_success || err.has_error()) {
@@ -118,7 +117,7 @@ void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on
     callback(err);
 }
 
-// run -------------------------------------------------------------------------
+// run ---------------------------------------------------------------------------------------------
 
 constexpr int kRunComponentSwitch = 1;
 
@@ -216,8 +215,7 @@ void LaunchComponent(const Command& cmd) {
     }
 
     if (reply.status != debug_ipc::kZxOk) {
-      // TODO(donosoc): This should interpret the component termination reason
-      //                values.
+      // TODO(donosoc): This should interpret the component termination reason values.
       Console::get()->Output(Err("Could not start component %s: %s", reply.process_name.c_str(),
                                  debug_ipc::ZxStatusToString(reply.status)));
       return;
@@ -260,11 +258,12 @@ Err DoRun(ConsoleContext* context, const Command& cmd, CommandCallback callback 
       cmd.target()->SetArgs(cmd.args());
     }
 
-    cmd.target()->Launch([callback](fxl::WeakPtr<Target> target, const Err& err) {
-      // The ConsoleContext displays messages for new processes, so don't
-      // display messages when successfully starting.
-      ProcessCommandCallback(target, false, err, callback);
-    });
+    cmd.target()->Launch(
+        [callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err) mutable {
+          // The ConsoleContext displays messages for new processes, so don't display messages when
+          // successfully starting.
+          ProcessCommandCallback(target, false, err, std::move(callback));
+        });
   } else {
     LaunchComponent(cmd);
   }
@@ -272,7 +271,7 @@ Err DoRun(ConsoleContext* context, const Command& cmd, CommandCallback callback 
   return Err();
 }
 
-// kill ----------------------------------------------------------------------
+// kill --------------------------------------------------------------------------------------------
 
 const char kKillShortHelp[] = "kill / k: terminate a process";
 const char kKillHelp[] =
@@ -300,15 +299,16 @@ Err DoKill(ConsoleContext* context, const Command& cmd, CommandCallback callback
   if (!cmd.args().empty())
     return Err("The 'kill' command doesn't take any parameters.");
 
-  cmd.target()->Kill([callback](fxl::WeakPtr<Target> target, const Err& err) {
-    // The ConsoleContext displays messages for stopped processes, so don't
-    // display messages when successfully killing.
-    ProcessCommandCallback(target, false, err, callback);
-  });
+  cmd.target()->Kill(
+      [callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err) mutable {
+        // The ConsoleContext displays messages for stopped processes, so don't display messages
+        // when successfully killing.
+        ProcessCommandCallback(target, false, err, std::move(callback));
+      });
   return Err();
 }
 
-// attach ----------------------------------------------------------------------
+// attach ------------------------------------------------------------------------------------------
 
 constexpr int kAttachComponentRootSwitch = 1;
 constexpr int kAttachSystemRootSwitch = 2;
@@ -430,7 +430,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd, CommandCallback callba
       return err;
 
     if (cmd.HasNoun(Noun::kFilter)) {
-      return DoAttachFilter(context, cmd, callback);
+      return DoAttachFilter(context, cmd, std::move(callback));
     }
 
     // Attach a job.
@@ -438,8 +438,9 @@ Err DoAttach(ConsoleContext* context, const Command& cmd, CommandCallback callba
     if (err.has_error())
       return err;
 
-    auto cb = [callback](fxl::WeakPtr<JobContext> job_context, const Err& err) {
-      JobCommandCallback("attach", job_context, true, err, callback);
+    auto cb = [callback = std::move(callback)](fxl::WeakPtr<JobContext> job_context,
+                                               const Err& err) mutable {
+      JobCommandCallback("attach", job_context, true, err, std::move(callback));
     };
 
     if (cmd.HasSwitch(kAttachComponentRootSwitch) && cmd.HasSwitch(kAttachSystemRootSwitch))
@@ -458,7 +459,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd, CommandCallback callba
       uint64_t koid = 0;
       err = ReadUint64Arg(cmd, 0, "job koid", &koid);
       if (err.has_error())
-        return DoAttachFilter(context, cmd, callback);
+        return DoAttachFilter(context, cmd, std::move(callback));
       cmd.job_context()->Attach(koid, std::move(cb));
     }
   } else {
@@ -466,7 +467,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd, CommandCallback callba
       Err err = cmd.ValidateNouns({Noun::kFilter});
       if (err.has_error())
         return err;
-      return DoAttachFilter(context, cmd, callback);
+      return DoAttachFilter(context, cmd, std::move(callback));
     }
     // Attach a process.
     err = AssertRunnableTarget(cmd.target());
@@ -478,19 +479,20 @@ Err DoAttach(ConsoleContext* context, const Command& cmd, CommandCallback callba
     err = ReadUint64Arg(cmd, 0, "process koid", &koid);
     if (err.has_error()) {
       if (!cmd.HasNoun(Noun::kProcess)) {
-        return DoAttachFilter(context, cmd, callback);
+        return DoAttachFilter(context, cmd, std::move(callback));
       }
       return err;
     }
 
-    cmd.target()->Attach(koid, [callback](fxl::WeakPtr<Target> target, const Err& err) {
-      ProcessCommandCallback(target, true, err, callback);
+    cmd.target()->Attach(koid, [callback = std::move(callback)](fxl::WeakPtr<Target> target,
+                                                                const Err& err) mutable {
+      ProcessCommandCallback(target, true, err, std::move(callback));
     });
   }
   return Err();
 }
 
-// detach ----------------------------------------------------------------------
+// detach ------------------------------------------------------------------------------------------
 
 const char kDetachShortHelp[] = "detach: Detach from a process/job.";
 const char kDetachHelp[] =
@@ -528,23 +530,24 @@ Err DoDetach(ConsoleContext* context, const Command& cmd, CommandCallback callba
     return Err(ErrType::kInput, "\"detach\" takes no parameters.");
 
   if (cmd.HasNoun(Noun::kJob)) {
-    cmd.job_context()->Detach([callback](fxl::WeakPtr<JobContext> job_context, const Err& err) {
-      JobCommandCallback("detach", job_context, true, err, callback);
+    cmd.job_context()->Detach([callback = std::move(callback)](fxl::WeakPtr<JobContext> job_context,
+                                                               const Err& err) mutable {
+      JobCommandCallback("detach", job_context, true, err, std::move(callback));
     });
   } else {
-    // Only print something when there was an error detaching. The console
-    // context will watch for Process destruction and print messages for each
-    // one in the success case.
-    cmd.target()->Detach([callback](fxl::WeakPtr<Target> target, const Err& err) {
-      // The ConsoleContext displays messages for stopped processes, so
-      // don't display messages when successfully detaching.
-      ProcessCommandCallback(target, false, err, callback);
-    });
+    // Only print something when there was an error detaching. The console context will watch for
+    // Process destruction and print messages for each one in the success case.
+    cmd.target()->Detach(
+        [callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err) mutable {
+          // The ConsoleContext displays messages for stopped processes, so don't display messages
+          // when successfully detaching.
+          ProcessCommandCallback(target, false, err, std::move(callback));
+        });
   }
   return Err();
 }
 
-// libs ------------------------------------------------------------------------
+// libs --------------------------------------------------------------------------------------------
 
 const char kLibsShortHelp[] = "libs: Show loaded libraries for a process.";
 const char kLibsHelp[] =
@@ -599,7 +602,7 @@ Err DoLibs(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// libs ------------------------------------------------------------------------
+// libs --------------------------------------------------------------------------------------------
 
 std::string PrintRegionSize(uint64_t size) {
   const uint64_t kOneK = 1024u;
@@ -692,7 +695,7 @@ Err DoAspace(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// stdout/stderr ---------------------------------------------------------------
+// stdout/stderr -----------------------------------------------------------------------------------
 
 const char kStdoutShortHelp[] = "stdout: Show process output.";
 const char kStderrShortHelp[] = "stderr: Show process error output.";
@@ -758,7 +761,7 @@ Err DoStderr(ConsoleContext* context, const Command& cmd) {
   return DoStdio(Verb::kStderr, cmd, context);
 }
 
-// PastBacktrace ---------------------------------------------------------------
+// PastBacktrace -----------------------------------------------------------------------------------
 
 const char kPastBacktraceShortHelp[] = "past-backtrace: [EXPERIMENTAL] Show a cached backtrace.";
 const char kPastBacktraceHelp[] =
@@ -769,9 +772,8 @@ const char kPastBacktraceHelp[] =
   Shows a backtrace that zxdb cached during the process execution.
 )";
 
-// TODO(donosoc): This is a quick formatter to test the backtrace printing
-//                feature. Must be replaced with the same backtracing format
-//                as the rest of the console.
+// TODO(donosoc): This is a quick formatter to test the backtrace printing feature. Must be replaced
+//                with the same backtracing format as the rest of the console.
 OutputBuffer TemporaryOutputBacktrace(const Backtrace& backtrace) {
   std::vector<std::vector<OutputBuffer>> rows;
   rows.reserve(backtrace.frames.size());

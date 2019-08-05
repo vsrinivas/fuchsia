@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/nouns.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
@@ -120,7 +121,7 @@ class Command {
 // Command dispatch ------------------------------------------------------------
 
 // Type for a callback that a CommandExecutor will receive
-using CommandCallback = std::function<void(Err)>;
+using CommandCallback = fit::callback<void(Err)>;
 
 // Runs the given command.
 Err DispatchCommand(ConsoleContext* context, const Command& cmd,

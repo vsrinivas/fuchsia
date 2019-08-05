@@ -12,7 +12,7 @@ VerbRecord::VerbRecord() = default;
 VerbRecord::VerbRecord(CommandExecutor exec, std::initializer_list<std::string> aliases,
                        const char* short_help, const char* help, CommandGroup command_group,
                        SourceAffinity source_affinity)
-    : exec(exec),
+    : exec(std::move(exec)),
       aliases(aliases),
       short_help(short_help),
       help(help),
@@ -21,7 +21,7 @@ VerbRecord::VerbRecord(CommandExecutor exec, std::initializer_list<std::string> 
 VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb,
                        std::initializer_list<std::string> aliases, const char* short_help,
                        const char* help, CommandGroup command_group, SourceAffinity source_affinity)
-    : exec_cb(exec_cb),
+    : exec_cb(std::move(exec_cb)),
       aliases(aliases),
       short_help(short_help),
       help(help),
@@ -30,23 +30,23 @@ VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb,
 VerbRecord::VerbRecord(CommandExecutor exec, CommandCompleter complete,
                        std::initializer_list<std::string> aliases, const char* short_help,
                        const char* help, CommandGroup command_group, SourceAffinity source_affinity)
-    : exec(exec),
+    : exec(std::move(exec)),
       aliases(aliases),
       short_help(short_help),
       help(help),
       command_group(command_group),
       source_affinity(source_affinity),
-      complete(complete) {}
+      complete(std::move(complete)) {}
 VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb, CommandCompleter complete,
                        std::initializer_list<std::string> aliases, const char* short_help,
                        const char* help, CommandGroup command_group, SourceAffinity source_affinity)
-    : exec_cb(exec_cb),
+    : exec_cb(std::move(exec_cb)),
       aliases(aliases),
       short_help(short_help),
       help(help),
       command_group(command_group),
       source_affinity(source_affinity),
-      complete(complete) {}
+      complete(std::move(complete)) {}
 VerbRecord::~VerbRecord() = default;
 
 const std::map<Verb, VerbRecord>& GetVerbs() {

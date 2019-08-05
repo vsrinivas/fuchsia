@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_ASYNC_OUTPUT_BUFFER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_ASYNC_OUTPUT_BUFFER_H_
 
-#include <functional>
 #include <variant>
 
 #include "lib/fit/function.h"

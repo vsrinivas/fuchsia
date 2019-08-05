@@ -23,7 +23,7 @@ namespace zxdb {
 
 namespace {
 
-// help ------------------------------------------------------------------------
+// help --------------------------------------------------------------------------------------------
 
 const char kHelpShortHelp[] = R"(help / h: Help.)";
 const char kHelpHelp[] =
@@ -74,8 +74,8 @@ std::string FormatGroupHelp(const char* heading, std::vector<std::string>* items
 std::string GetReference() {
   std::string help = kHelpIntro;
 
-  // Group all verbs by their CommandGroup. Add nouns to this since people
-  // will expect, for example, "breakpoint" to be in the breakpoints section.
+  // Group all verbs by their CommandGroup. Add nouns to this since people will expect, for example,
+  // "breakpoint" to be in the breakpoints section.
   std::map<CommandGroup, std::vector<std::string>> groups;
 
   // Get the separate noun reference and add to the groups.
@@ -147,7 +147,7 @@ Err DoHelp(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// quit ------------------------------------------------------------------------
+// quit --------------------------------------------------------------------------------------------
 
 const char kQuitShortHelp[] = R"(quit / q / exit: Quits the debugger.)";
 const char kQuitHelp[] =
@@ -156,12 +156,11 @@ const char kQuitHelp[] =
   Quits the debugger.)";
 
 Err DoQuit(ConsoleContext* context, const Command& cmd) {
-  // This command is special-cased by the main loop so it shouldn't get
-  // executed.
+  // This command is special-cased by the main loop so it shouldn't get executed.
   return Err();
 }
 
-// quit-agent ------------------------------------------------------------------
+// quit-agent --------------------------------------------------------------------------------------
 
 const char kQuitAgentShortHelp[] = R"(quit-agent: Quits the debug agent.)";
 const char kQuitAgentHelp[] =
@@ -181,7 +180,7 @@ Err DoQuitAgent(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// connect ---------------------------------------------------------------------
+// connect -----------------------------------------------------------------------------------------
 
 const char kConnectShortHelp[] = R"(connect: Connect to a remote system for debugging.)";
 const char kConnectHelp[] =
@@ -227,35 +226,36 @@ Err DoConnect(ConsoleContext* context, const Command& cmd, CommandCallback callb
     return Err(ErrType::kInput, "Too many arguments.");
   }
 
-  context->session()->Connect(host, port, [callback, cmd](const Err& err) {
-    if (err.has_error()) {
-      // Don't display error message if they canceled the connection.
-      if (err.type() != ErrType::kCanceled)
-        Console::get()->Output(err);
-    } else {
-      OutputBuffer msg;
-      msg.Append("Connected successfully.\n");
+  context->session()->Connect(
+      host, port, [callback = std::move(callback), cmd](const Err& err) mutable {
+        if (err.has_error()) {
+          // Don't display error message if they canceled the connection.
+          if (err.type() != ErrType::kCanceled)
+            Console::get()->Output(err);
+        } else {
+          OutputBuffer msg;
+          msg.Append("Connected successfully.\n");
 
-      // Assume if there's a callback this is not being run interactively.
-      // Otherwise, show the usage tip.
-      if (!callback) {
-        msg.Append(Syntax::kWarning, "👉 ");
-        msg.Append(Syntax::kComment,
-                   "Normally you will \"run <program path>\" or \"attach "
-                   "<process koid>\".");
-      }
-      Console::get()->Output(msg);
-    }
+          // Assume if there's a callback this is not being run interactively. Otherwise, show the
+          // usage tip.
+          if (!callback) {
+            msg.Append(Syntax::kWarning, "👉 ");
+            msg.Append(Syntax::kComment,
+                       "Normally you will \"run <program path>\" or \"attach "
+                       "<process koid>\".");
+          }
+          Console::get()->Output(msg);
+        }
 
-    if (callback)
-      callback(err);
-  });
+        if (callback)
+          callback(err);
+      });
   Console::get()->Output("Connecting (use \"disconnect\" to cancel)...\n");
 
   return Err();
 }
 
-// opendump --------------------------------------------------------------------
+// opendump ----------------------------------------------------------------------------------------
 
 const char kOpenDumpShortHelp[] = R"(opendump: Open a dump file for debugging.)";
 const char kOpenDumpHelp[] =
@@ -281,7 +281,7 @@ Err DoOpenDump(ConsoleContext* context, const Command& cmd, CommandCallback call
     return Err(ErrType::kInput, "Too many arguments.");
   }
 
-  context->session()->OpenMinidump(path, [callback](const Err& err) {
+  context->session()->OpenMinidump(path, [callback = std::move(callback)](const Err& err) mutable {
     if (err.has_error()) {
       Console::get()->Output(err);
     } else {
@@ -358,7 +358,7 @@ void DoCompleteOpenDump(const Command& cmd, const std::string& prefix,
   }
 }
 
-// disconnect ------------------------------------------------------------------
+// disconnect --------------------------------------------------------------------------------------
 
 const char kDisconnectShortHelp[] = R"(disconnect: Disconnect from the remote system.)";
 const char kDisconnectHelp[] =
@@ -374,7 +374,7 @@ Err DoDisconnect(ConsoleContext* context, const Command& cmd, CommandCallback ca
   if (!cmd.args().empty())
     return Err(ErrType::kInput, "\"disconnect\" takes no arguments.");
 
-  context->session()->Disconnect([callback](const Err& err) {
+  context->session()->Disconnect([callback = std::move(callback)](const Err& err) mutable {
     if (err.has_error())
       Console::get()->Output(err);
     else
@@ -388,7 +388,7 @@ Err DoDisconnect(ConsoleContext* context, const Command& cmd, CommandCallback ca
   return Err();
 }
 
-// cls -------------------------------------------------------------------------
+// cls ---------------------------------------------------------------------------------------------
 
 const char kClsShortHelp[] = "cls: clear screen.";
 const char kClsHelp[] =
@@ -410,7 +410,7 @@ Err DoCls(ConsoleContext* context, const Command& cmd, CommandCallback callback 
   return Err();
 }
 
-// status ----------------------------------------------------------------------
+// status ------------------------------------------------------------------------------------------
 
 const char kStatusShortHelp[] = "status: Show debugger status.";
 const char kStatusHelp[] = R"(status: Show debugger status.

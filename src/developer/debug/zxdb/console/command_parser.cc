@@ -566,7 +566,7 @@ Err ParseCommand(const std::string& input, Command* output) {
 std::vector<std::string> GetCommandCompletions(const std::string& input,
                                                const FillCommandContextCallback& fill_context) {
   Command temp;
-  Parser parser(&temp, fill_context);
+  Parser parser(&temp, std::move(fill_context));
 
   std::vector<std::string> result;
   parser.Complete(input, &result);

@@ -6,9 +6,10 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_LINE_INPUT_H_
 
 #include <deque>
-#include <functional>
 #include <string>
 #include <vector>
+
+#include "lib/fit/function.h"
 
 #if !defined(__Fuchsia__)
 struct termios;
@@ -55,7 +56,7 @@ struct SpecialCharacters {
 class LineInputBase {
  public:
   // Given some typing, returns a prioritized list of completions.
-  using CompletionCallback = std::function<std::vector<std::string>(const std::string&)>;
+  using CompletionCallback = fit::function<std::vector<std::string>(const std::string&)>;
 
   explicit LineInputBase(const std::string& prompt);
   virtual ~LineInputBase();
@@ -66,7 +67,7 @@ class LineInputBase {
 
   // The completion callback provides suggestions for tab completion. When
   // unset, tab completion will be disabled.
-  void set_completion_callback(CompletionCallback cc) { completion_callback_ = cc; }
+  void set_completion_callback(CompletionCallback cc) { completion_callback_ = std::move(cc); }
 
   // Returns the current line text.
   const std::string& line() const { return history_[history_index_]; }
