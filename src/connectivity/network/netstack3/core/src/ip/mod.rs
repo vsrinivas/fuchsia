@@ -24,16 +24,16 @@ use std::mem;
 use log::{debug, trace};
 use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use net_types::MulticastAddr;
-use packet::{Buf, BufferMut, Either, ParsablePacket, ParseMetadata, Serializer};
+use packet::{Buf, BufferMut, Either, EmptyBuf, ParsablePacket, ParseMetadata, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
-use crate::context::{FrameContext, TimerContext};
+use crate::context::{FrameContext, StateContext, TimerContext};
 use crate::data_structures::IdMap;
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::IcmpState;
-use crate::ip::igmp::{IgmpInterface, IgmpTimerId};
+use crate::ip::igmp::{IgmpContext, IgmpInterface, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
 use crate::ip::mld::{MldInterface, MldReportDelay};
 use crate::ip::path_mtu::{handle_pmtu_timer, IpLayerPathMtuCache, PmtuTimerId};
@@ -201,7 +201,12 @@ pub(crate) struct IpLayerState<D: EventDispatcher> {
 }
 
 impl<D: EventDispatcher> IpLayerState<D> {
-    /// Get the IGMP state associated with the device.
+    /// Get the IGMP state associated with the device immutably.
+    pub(crate) fn get_igmp_state(&self, device_id: usize) -> &IgmpInterface<D::Instant> {
+        self.igmp.get(device_id).unwrap()
+    }
+
+    /// Get the IGMP state associated with the device mutably.
     pub(crate) fn get_igmp_state_mut(
         &mut self,
         device_id: usize,
@@ -238,6 +243,16 @@ fn get_state_inner_mut<I: Ip, D: EventDispatcher>(
     return &mut state.ip.v4;
     #[ipv6]
     return &mut state.ip.v6;
+}
+
+impl<D: EventDispatcher> StateContext<DeviceId, IgmpInterface<D::Instant>> for Context<D> {
+    fn get_state(&self, device: DeviceId) -> &IgmpInterface<D::Instant> {
+        self.state().ip.get_igmp_state(device.id())
+    }
+
+    fn get_state_mut(&mut self, device: DeviceId) -> &mut IgmpInterface<D::Instant> {
+        self.state_mut().ip.get_igmp_state_mut(device.id())
+    }
 }
 
 // These `AsRef` and `AsMut` impls provide us with an implementation of
@@ -282,11 +297,15 @@ pub(crate) enum IpLayerTimerId {
     ReassemblyTimeoutv6(FragmentCacheKey<Ipv6Addr>),
     PmtuTimeout(IpVersion),
     /// Timer for IGMP protocol
-    IgmpTimer(IgmpTimerId),
+    IgmpTimer(IgmpTimerId<DeviceId>),
     MldTimer(MldReportDelay),
 }
 
 impl IpLayerTimerId {
+    fn new_igmp_timer_id(id: IgmpTimerId<DeviceId>) -> TimerId {
+        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::IgmpTimer(id)))
+    }
+
     #[specialize_ip_address]
     fn new_reassembly_timeout_timer_id<A: IpAddress>(key: FragmentCacheKey<A>) -> TimerId {
         #[ipv4addr]
@@ -311,6 +330,27 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLay
         IpLayerTimerId::PmtuTimeout(IpVersion::V6) => handle_pmtu_timer::<Ipv6, _>(ctx),
         IpLayerTimerId::IgmpTimer(timer) => crate::ip::igmp::handle_timeout(ctx, timer),
         IpLayerTimerId::MldTimer(timer) => crate::ip::mld::handle_timeout(ctx, timer),
+    }
+}
+
+impl<D: EventDispatcher> TimerContext<IgmpTimerId<DeviceId>> for Context<D> {
+    fn schedule_timer_instant(
+        &mut self,
+        time: Self::Instant,
+        id: IgmpTimerId<DeviceId>,
+    ) -> Option<Self::Instant> {
+        self.dispatcher_mut().schedule_timeout_instant(time, IpLayerTimerId::new_igmp_timer_id(id))
+    }
+
+    fn cancel_timer(&mut self, id: IgmpTimerId<DeviceId>) -> Option<Self::Instant> {
+        self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_igmp_timer_id(id))
+    }
+
+    fn cancel_timers_with<F: FnMut(&IgmpTimerId<DeviceId>) -> bool>(&mut self, mut f: F) {
+        self.dispatcher_mut().cancel_timeouts_with(|id| match id {
+            TimerId(TimerIdInner::IpLayer(IpLayerTimerId::IgmpTimer(id))) => f(id),
+            _ => false,
+        })
     }
 }
 
@@ -1238,10 +1278,28 @@ where
     }
 }
 
-/// Send an IGMP packet
+impl<D: EventDispatcher> FrameContext<EmptyBuf, IgmpPacketMetadata<DeviceId>> for Context<D> {
+    fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
+        &mut self,
+        meta: IgmpPacketMetadata<DeviceId>,
+        body: S,
+    ) -> Result<(), S> {
+        send_igmp_packet(self, meta.device, meta.src_ip, meta.dst_ip, body)
+    }
+}
+
+impl<D: EventDispatcher> IgmpContext for Context<D> {
+    type DeviceId = DeviceId;
+
+    fn get_ip_addr_subnet(&self, device: DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
+        crate::device::get_ip_addr_subnet(self, device)
+    }
+}
+
+/// Send an IGMP packet.
 ///
 /// IGMP packet must have a TTL of 1 and have RouterAlert set.
-pub(crate) fn send_igmp_packet<B: BufferMut, D: BufferDispatcher<B>, S>(
+fn send_igmp_packet<B: BufferMut, D: BufferDispatcher<B>, S>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: Ipv4Addr,

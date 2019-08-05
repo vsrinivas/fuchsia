@@ -39,7 +39,10 @@
 
 use core::time::Duration;
 
+use byteorder::{ByteOrder, NativeEndian};
 use packet::{BufferMut, Serializer};
+use rand::{CryptoRng, Rng, RngCore, SeedableRng};
+use rand_xorshift::XorShiftRng;
 
 use crate::{Context, EventDispatcher, Instant};
 
@@ -116,6 +119,65 @@ pub(crate) trait TimerContext<Id>: InstantContext {
 pub(crate) trait TimerHandler<Ctx, Id> {
     /// Handle a timer firing.
     fn handle_timer(ctx: &mut Ctx, id: Id);
+}
+
+// NOTE:
+// - Code in this crate is required to only obtain random values through an
+//   `RngContext`. This allows a deterministic RNG to be provided when useful
+//   (for example, in tests).
+// - The CSPRNG requirement exists so that random values produced within the
+//   network stack are not predictable by outside observers. This helps prevent
+//   certain kinds of fingerprinting and denial of service attacks.
+
+/// A context that provides a random number generator.
+pub(crate) trait RngContext {
+    // TODO(joshlf): If the CSPRNG requirement becomes a performance problem,
+    // introduce a second, non-cryptographically secure, RNG.
+
+    /// The random number generator (RNG) provided by this `RngContext`.
+    ///
+    /// The provided RNG must be cryptographically secure, and users may rely on
+    /// that property for their correctness and security.
+    type Rng: RngCore + CryptoRng;
+
+    /// Get the random number generator (RNG).
+    fn rng(&mut self) -> &mut Self::Rng;
+}
+
+pub(crate) trait RngContextExt: RngContext {
+    /// Seed a new `XorShiftRng` from this [`RngContext`]'s RNG.
+    ///
+    /// This is a hack until we figure out a strategy for splitting context
+    /// objects. Currently, since most context methods take a `&mut self`
+    /// argument, lifetimes which don't need to conflict in principle - such as
+    /// the lifetime of an RNG from [`RngContext`] and a state from
+    /// [`StateContext`] - do conflict, and thus cannot overlap. Until we figure
+    /// out an approach to deal with that problem, this exists as a workaround.
+    fn new_xorshift_rng(&mut self) -> XorShiftRng {
+        let mut seed: u64 = self.rng().gen();
+        if seed == 0 {
+            // XorShiftRng can't take 0 seeds
+            seed = 1;
+        }
+        let mut bytes = [0; 16];
+        NativeEndian::write_u32(&mut bytes[0..4], seed as u32);
+        NativeEndian::write_u32(&mut bytes[4..8], (seed >> 32) as u32);
+        NativeEndian::write_u32(&mut bytes[8..12], seed as u32);
+        NativeEndian::write_u32(&mut bytes[12..16], (seed >> 32) as u32);
+        XorShiftRng::from_seed(bytes)
+    }
+}
+
+impl<C: RngContext> RngContextExt for C {}
+
+// Temporary blanket impl until we switch over entirely to the traits defined in
+// this module.
+impl<D: EventDispatcher> RngContext for Context<D> {
+    type Rng = D::Rng;
+
+    fn rng(&mut self) -> &mut D::Rng {
+        self.dispatcher_mut().rng()
+    }
 }
 
 /// A context that provides access to state.
