@@ -6,6 +6,7 @@
 #define SRC_LEDGER_BIN_APP_PAGE_CONNECTION_NOTIFIER_H_
 
 #include <lib/fit/function.h>
+
 #include <trace/event.h>
 
 #include "src/ledger/bin/app/page_usage_listener.h"
@@ -55,10 +56,6 @@ class PageConnectionNotifier {
   const storage::PageId page_id_;
   PageUsageListener* page_usage_listener_;
 
-  // Stores whether the page was opened by an external request but did not yet
-  // send a corresponding OnPageUnused. The OnPageUnused notification is sent as
-  // soon as all internal and external requests to the page are done.
-  bool must_notify_on_page_unused_ = false;
   // Stores whether the page is currently opened by an external request.
   bool has_external_requests_ = false;
   // Stores the number of active internal requests.

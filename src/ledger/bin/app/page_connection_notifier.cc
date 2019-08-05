@@ -25,25 +25,39 @@ void PageConnectionNotifier::RegisterExternalRequest() {
   if (has_external_requests_) {
     return;
   }
-  must_notify_on_page_unused_ = true;
   has_external_requests_ = true;
-  page_usage_listener_->OnPageOpened(ledger_name_, page_id_);
+  page_usage_listener_->OnExternallyUsed(ledger_name_, page_id_);
 }
 
 void PageConnectionNotifier::UnregisterExternalRequests() {
   if (has_external_requests_) {
-    page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
+    auto weak_this = weak_factory_.GetWeakPtr();
+    // This might delete the PageConnectionNotifier object.
+    page_usage_listener_->OnExternallyUnused(ledger_name_, page_id_);
+    if (!weak_this) {
+      return;
+    }
     has_external_requests_ = false;
     CheckEmpty();
   }
 }
 
 ExpiringToken PageConnectionNotifier::NewInternalRequestToken() {
+  if (internal_request_count_ == 0) {
+    page_usage_listener_->OnInternallyUsed(ledger_name_, page_id_);
+  }
   ++internal_request_count_;
   return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
     FXL_DCHECK(internal_request_count_ > 0);
     --internal_request_count_;
-    CheckEmpty();
+    if (internal_request_count_ == 0) {
+      auto weak_this = weak_factory_.GetWeakPtr();
+      // This might delete the PageConnectionNotifier object.
+      page_usage_listener_->OnInternallyUnused(ledger_name_, page_id_);
+      if (weak_this) {
+        CheckEmpty();
+      }
+    }
   }));
 }
 
@@ -56,20 +70,7 @@ bool PageConnectionNotifier::IsEmpty() {
 }
 
 void PageConnectionNotifier::CheckEmpty() {
-  if (!IsEmpty()) {
-    return;
-  }
-
-  if (must_notify_on_page_unused_) {
-    // We need to keep the object alive while |OnPageUnused| runs.
-    auto token = NewInternalRequestToken();
-    must_notify_on_page_unused_ = false;
-    page_usage_listener_->OnPageUnused(ledger_name_, page_id_);
-    // If the page is empty at this point, destructing |token| will call
-    // |CheckEmpty()| again.
-    return;
-  }
-  if (on_empty_callback_) {
+  if (IsEmpty() && on_empty_callback_) {
     on_empty_callback_();
   }
 }

@@ -21,8 +21,12 @@ class FakeDiskCleanupManager : public DiskCleanupManager, public PageUsageListen
   FakeDiskCleanupManager() = default;
   ~FakeDiskCleanupManager() override = default;
 
-  void set_on_OnPageUnused(fit::closure on_OnPageUnused_callback) {
-    on_OnPageUnused_callback_ = std::move(on_OnPageUnused_callback);
+  void set_on_OnExternallyUnused(fit::closure on_OnExternallyUnused_callback) {
+    on_OnExternallyUnused_callback_ = std::move(on_OnExternallyUnused_callback);
+  }
+
+  void set_on_OnInternallyUnused(fit::closure on_OnInternallyUnused_callback) {
+    on_OnInternallyUnused_callback_ = std::move(on_OnInternallyUnused_callback);
   }
 
   void set_on_empty(fit::closure on_empty_callback) override {}
@@ -33,25 +37,45 @@ class FakeDiskCleanupManager : public DiskCleanupManager, public PageUsageListen
     // Do not call the callback directly.
     cleanup_callback = std::move(callback);
   }
-  void OnPageOpened(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
-    ++page_opened_count;
+
+  void OnExternallyUsed(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
+    ++externally_used_count;
   }
 
-  void OnPageClosed(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
-    ++page_closed_count;
-  }
-
-  void OnPageUnused(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
-    ++page_unused_count;
-    if (on_OnPageUnused_callback_) {
-      on_OnPageUnused_callback_();
+  void OnExternallyUnused(fxl::StringView /*ledger_name*/,
+                          storage::PageIdView /*page_id*/) override {
+    ++externally_unused_count;
+    if (on_OnExternallyUnused_callback_) {
+      on_OnExternallyUnused_callback_();
     }
   }
 
-  int page_opened_count = 0;
-  int page_closed_count = 0;
-  int page_unused_count = 0;
-  fit::closure on_OnPageUnused_callback_;
+  void OnInternallyUsed(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
+    ++internally_used_count;
+  }
+
+  void OnInternallyUnused(fxl::StringView /*ledger_name*/,
+                          storage::PageIdView /*page_id*/) override {
+    ++internally_unused_count;
+    if (on_OnInternallyUnused_callback_) {
+      on_OnInternallyUnused_callback_();
+    }
+  }
+
+  // Resets all the counters in this fake. Can be useful when checking a number of steps in a test.
+  void ResetCounters() {
+    externally_used_count = 0;
+    externally_unused_count = 0;
+    internally_used_count = 0;
+    internally_unused_count = 0;
+  }
+
+  int externally_used_count = 0;
+  int externally_unused_count = 0;
+  int internally_used_count = 0;
+  int internally_unused_count = 0;
+  fit::closure on_OnExternallyUnused_callback_;
+  fit::closure on_OnInternallyUnused_callback_;
   fit::function<void(Status)> cleanup_callback;
 
  private:

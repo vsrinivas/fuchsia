@@ -4,12 +4,6 @@
 
 #include "src/ledger/bin/app/page_manager.h"
 
-#include <cstdint>
-#include <memory>
-#include <set>
-#include <utility>
-#include <vector>
-
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -19,6 +13,12 @@
 #include <lib/inspect_deprecated/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
+
+#include <cstdint>
+#include <memory>
+#include <set>
+#include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
@@ -592,7 +592,7 @@ TEST_F(PageManagerTest, CallGetPageTwice) {
   EXPECT_EQ(storage_->get_page_calls[0], convert::ToString(page_id_.id));
 }
 
-TEST_F(PageManagerTest, OnPageOpenedClosedCalls) {
+TEST_F(PageManagerTest, OnExternallyUsedUnusedCalls) {
   PagePtr page1;
   bool get_page_callback_called1;
   Status get_page_status1;
@@ -600,57 +600,68 @@ TEST_F(PageManagerTest, OnPageOpenedClosedCalls) {
   bool get_page_callback_called2;
   Status get_page_status2;
 
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 0);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Open a page and check that OnPageOpened was called once.
+  // Open a page and check that OnExternallyUsed was called once.
   page_manager_->GetPage(
       LedgerImpl::Delegate::PageState::NAMED, page1.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called1), &get_page_status1));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called1);
   EXPECT_EQ(get_page_status1, Status::OK);
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  // GetPage may or may not have triggered internal requests. If it did, the page must now be
+  // internally unused, i.e. have the same number of OnInternallyUsed/Unused calls.
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count,
+            disk_cleanup_manager_->internally_unused_count);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Open the page again and check that there is no new call to OnPageOpened.
+  // Open the page again and check that there is no new call to OnExternallyUsed.
   page_manager_->GetPage(
       LedgerImpl::Delegate::PageState::NAMED, page2.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called2), &get_page_status2));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called2);
   EXPECT_EQ(get_page_status2, Status::OK);
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 0);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Close one of the two connections and check that there is still no call to
-  // OnPageClosed.
+  // Close one of the two connections and check that there is still no call to OnExternallyUnused.
   page1.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 0);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Close the second connection and check that OnPageClosed was called once.
+  // Close the second connection and check that OnExternallyUnused was called once.
   page2.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 0);
 }
 
-TEST_F(PageManagerTest, OnPageOpenedClosedCallInternalRequest) {
+TEST_F(PageManagerTest, OnInternallyUsedUnusedCalls) {
   PagePtr page;
 
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 0);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Make an internal request by calling PageIsClosedAndSynced. No calls to page
-  // opened/closed should be made.
+  // Make an internal request by calling PageIsClosedAndSynced.
   bool called;
   Status storage_status;
   PagePredicateResult page_state;
@@ -660,12 +671,15 @@ TEST_F(PageManagerTest, OnPageOpenedClosedCallInternalRequest) {
   EXPECT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
   EXPECT_EQ(page_state, PagePredicateResult::NO);
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  // GetPage may or may not have triggered internal requests. If it did, the page must now be
+  // internally unused, i.e. have the same number of OnInternallyUsed/Unused calls.
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count,
+            disk_cleanup_manager_->internally_unused_count);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Open the same page with an external request and check that OnPageOpened
-  // was called once.
+  // Open the same page with an external request and check that OnExternallyUsed was called once.
   bool get_page_callback_called;
   Status get_page_status;
   page_manager_->GetPage(
@@ -674,18 +688,20 @@ TEST_F(PageManagerTest, OnPageOpenedClosedCallInternalRequest) {
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count,
+            disk_cleanup_manager_->internally_unused_count);
 }
 
-TEST_F(PageManagerTest, OnPageOpenedClosedUnused) {
+TEST_F(PageManagerTest, OnPageInternallyExternallyUsedUnused) {
   PagePtr page;
   storage::PageIdView storage_page_id = convert::ExtendedStringView(page_id_.id);
 
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 0);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 0);
 
   // Open and close the page through an external request.
   bool get_page_callback_called;
@@ -700,12 +716,15 @@ TEST_F(PageManagerTest, OnPageOpenedClosedUnused) {
   storage_->set_page_storage_synced(storage_page_id, true);
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 1);
+  // GetPage may or may not have triggered internal requests. If it did, the page must now be
+  // internally unused, i.e. have the same number of OnInternallyUsed/Unused calls.
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count,
+            disk_cleanup_manager_->internally_unused_count);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Start an internal request but don't let it terminate. Nothing should have
-  // changed in the notifications received.
+  // Start an internal request but don't let it terminate.
   PagePredicateResult is_synced;
   bool page_is_synced_called = false;
   storage_->DelayIsSyncedCallback(storage_page_id, true);
@@ -714,38 +733,42 @@ TEST_F(PageManagerTest, OnPageOpenedClosedUnused) {
       callback::SetWhenCalled(&page_is_synced_called), &storage_status, &is_synced));
   RunLoopUntilIdle();
   EXPECT_FALSE(page_is_synced_called);
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 0);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Open the same page with an external request and check that OnPageOpened
-  // was called once.
+  // Open the same page with an external request and check that OnExternallyUsed was called once.
   page_manager_->GetPage(
       LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 2);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 1);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 0);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Close the page. We should get the page closed notification, but not the
-  // unused one: the internal request is still running.
+  // Close the page. We should get the externally unused notification.
   page.Unbind();
   RunLoopUntilIdle();
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 2);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 2);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 1);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 0);
+  disk_cleanup_manager_->ResetCounters();
 
-  // Terminate the internal request. We should now see the unused page
-  // notification.
+  // Terminate the internal request. We should now see the internally unused notification.
   storage_->CallIsSyncedCallback(storage_page_id);
   RunLoopUntilIdle();
 
-  EXPECT_EQ(disk_cleanup_manager_->page_opened_count, 2);
-  EXPECT_EQ(disk_cleanup_manager_->page_closed_count, 2);
-  EXPECT_EQ(disk_cleanup_manager_->page_unused_count, 2);
+  EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->externally_unused_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_used_count, 0);
+  EXPECT_EQ(disk_cleanup_manager_->internally_unused_count, 1);
 }
 
 TEST_F(PageManagerTest, DeletePageStorageWhenPageOpenFails) {

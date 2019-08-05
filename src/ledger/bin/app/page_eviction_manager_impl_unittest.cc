@@ -329,8 +329,8 @@ TEST_F(PageEvictionManagerTest, IsEmpty) {
   EXPECT_TRUE(page_eviction_manager_.IsEmpty());
   EXPECT_FALSE(on_empty_called);
 
-  // PageEvictionManagerImpl should be empty if there is no pending operation
-  // on: OnPageOpened, OnPageClosed, or TryEvictPages.
+  // PageEvictionManagerImpl should be empty if there is no pending operation on: MarkPageOpened,
+  // MarkPageClosed, or TryEvictPages.
   on_empty_called = false;
   page_eviction_manager_.MarkPageOpened(ledger_name, page);
   EXPECT_FALSE(page_eviction_manager_.IsEmpty());

@@ -30,30 +30,62 @@ void DiskCleanupManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
   page_eviction_manager_.TryEvictPages(policy_.get(), std::move(callback));
 }
 
-void DiskCleanupManagerImpl::OnPageOpened(fxl::StringView ledger_name,
-                                          storage::PageIdView page_id) {
+void DiskCleanupManagerImpl::OnExternallyUsed(fxl::StringView ledger_name,
+                                              storage::PageIdView page_id) {
+  PageState& page_state = pages_state_[{ledger_name.ToString(), page_id.ToString()}];
+  page_state.has_external_connections = true;
+  page_state.is_eviction_candidate = true;
   page_eviction_manager_.MarkPageOpened(ledger_name, page_id);
 }
 
-void DiskCleanupManagerImpl::OnPageClosed(fxl::StringView ledger_name,
-                                          storage::PageIdView page_id) {
+void DiskCleanupManagerImpl::OnExternallyUnused(fxl::StringView ledger_name,
+                                                storage::PageIdView page_id) {
+  auto it = pages_state_.find({ledger_name.ToString(), page_id.ToString()});
+  FXL_DCHECK(it != pages_state_.end());
+  it->second.has_external_connections = false;
+  HandlePageIfUnused(it, ledger_name, page_id);
+
   page_eviction_manager_.MarkPageClosed(ledger_name, page_id);
 }
 
-void DiskCleanupManagerImpl::OnPageUnused(fxl::StringView ledger_name,
-                                          storage::PageIdView page_id) {
-  page_eviction_manager_.TryEvictPage(
-      ledger_name, page_id, PageEvictionCondition::IF_EMPTY,
-      [ledger_name = ledger_name.ToString(), page_id = page_id.ToString()](Status status,
-                                                                           PageWasEvicted) {
-        FXL_DCHECK(status != Status::INTERRUPTED);
-        if (status != Status::OK) {
-          FXL_LOG(ERROR) << "Failed to check if page is empty and/or evict it. "
-                            "Status: "
-                         << fidl::ToUnderlying(status) << ". Ledger name: " << ledger_name
-                         << ". Page ID: " << convert::ToHex(page_id);
-        }
-      });
+void DiskCleanupManagerImpl::OnInternallyUsed(fxl::StringView ledger_name,
+                                              storage::PageIdView page_id) {
+  pages_state_[{ledger_name.ToString(), page_id.ToString()}].has_internal_connections = true;
+}
+
+void DiskCleanupManagerImpl::OnInternallyUnused(fxl::StringView ledger_name,
+                                                storage::PageIdView page_id) {
+  auto it = pages_state_.find({ledger_name.ToString(), page_id.ToString()});
+  FXL_DCHECK(it != pages_state_.end());
+  it->second.has_internal_connections = false;
+  HandlePageIfUnused(it, ledger_name, page_id);
+}
+
+void DiskCleanupManagerImpl::HandlePageIfUnused(
+    std::map<std::pair<std::string, storage::PageId>, PageState>::iterator it,
+    fxl::StringView ledger_name, storage::PageIdView page_id) {
+  PageState page_state = it->second;
+  if (page_state.has_internal_connections || page_state.has_external_connections) {
+    return;
+  }
+  // The page is now closed, we can remove the entry.
+  pages_state_.erase(it);
+  if (page_state.is_eviction_candidate) {
+    // An update to a Page might have occurred from an external connection only (internal ones do
+    // not edit commits). If there was an external connetion while the page was open (internally or
+    // externally), we might be able to evict the page if it is cleared.
+    page_eviction_manager_.TryEvictPage(
+        ledger_name, page_id, PageEvictionCondition::IF_EMPTY,
+        [ledger_name = ledger_name.ToString(), page_id = page_id.ToString()](Status status,
+                                                                             PageWasEvicted) {
+          FXL_DCHECK(status != Status::INTERRUPTED);
+          if (status != Status::OK) {
+            FXL_LOG(ERROR) << "Failed to check if page is empty and/or evict it. Status: "
+                           << fidl::ToUnderlying(status) << ". Ledger name: " << ledger_name
+                           << ". Page ID: " << convert::ToHex(page_id);
+          }
+        });
+  }
 }
 
 }  // namespace ledger

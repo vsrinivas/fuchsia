@@ -34,11 +34,31 @@ class DiskCleanupManagerImpl : public DiskCleanupManager, public PageUsageListen
   void TryCleanUp(fit::function<void(Status)> callback) override;
 
   // PageUsageListener:
-  void OnPageOpened(fxl::StringView ledger_name, storage::PageIdView page_id) override;
-  void OnPageClosed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
-  void OnPageUnused(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void OnExternallyUsed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void OnExternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void OnInternallyUsed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void OnInternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) override;
 
  private:
+  // The state of a page while it is being used by at least one internal or external connection.
+  struct PageState {
+    bool has_internal_connections = false;
+    bool has_external_connections = false;
+
+    // Initially false. Becomes true if an external connection has been opened for this page. Never
+    // changes back to false.
+    bool is_eviction_candidate = false;
+  };
+
+  // If there are no active internal or external connections to the page, tries to evict it if is
+  // potentially empty, and updates the pages state map by removing that entry.
+  void HandlePageIfUnused(std::map<std::pair<std::string, storage::PageId>, PageState>::iterator it,
+                          fxl::StringView ledger_name, storage::PageIdView page_id);
+
+  // Holds information about the state of pages that are currently open by internal or external
+  // connections. Entries are removed if there are no active connections.
+  std::map<std::pair<std::string, storage::PageId>, PageState> pages_state_;
+
   PageEvictionManagerImpl page_eviction_manager_;
   std::unique_ptr<PageEvictionPolicy> policy_;
 
