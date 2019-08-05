@@ -1,0 +1,44 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Process {
+    /// Exits the currently running process.
+    [Noreturn]
+    Exit(int64 retcode);
+
+    // TODO(ZX-2967): job with ZX_RIGHT_WRITE is also accepted.
+    /// Create a new process.
+    [In0="handle<job>:rights=MANAGE_PROCESS",
+     Out1="handle<process>:acquire",
+     Out2="handle<vmar>:acquire"]
+    Create(handle<job> job, string name, uint32 options) ->
+        (status status, handle<process> proc_handle, handle<vmar> vmar_handle);
+
+    /// Start execution on a process.
+    [In0="handle<process>:rights=WRITE",
+     In1="handle<process>:rights=WRITE",
+     In4="handle:release_always:rights=TRANSFER"]
+    Start(handle<process> handle, handle<thread> thread,
+          vaddr entry, vaddr stack,
+          handle arg1, uintptr arg2) ->
+        (status status);
+
+    /// Read from the given process's address space.
+    [In0="handle<process>:rights=READ,WRITE",
+     In2="mutable<vector<byte>>"]
+    ReadMemory(handle<process> handle, vaddr vaddr, vector<byte> buffer) ->
+        (status status, usize actual);
+
+    /// Write into the given process's address space.
+    [In0="handle<process>:rights=WRITE"]
+    WriteMemory(handle<process> handle, vaddr vaddr, vector<byte> buffer) ->
+        (status status, usize actual);
+};

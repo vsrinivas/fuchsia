@@ -1,0 +1,29 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Ktrace {
+    // TODO(scottmg): This is another one where it's:
+    //   (handle, data, offset, data_size)
+    // rather than:
+    //   (handle, data, data_size, offset).
+    [In0="handle<resource>:kind=ROOT",
+     In1="mutable<vector<byte>>"]
+    Read(handle<resource> handle, vector<byte> data, uint32 offset) ->
+        (status status, usize actual);
+
+    // TODO(scottmg): syscalls.banjo had the length of |ptr| being |action|?
+    [In0="handle<resource>:kind=ROOT",
+     In3="mutable<byte>"]
+    Control(handle<resource> handle, uint32 action, uint32 options, byte ptr) -> (status status);
+
+    [In0="handle<resource>:kind=ROOT"]
+    Write(handle<resource> handle, uint32 id, uint32 arg0, uint32 arg1) -> (status status);
+};

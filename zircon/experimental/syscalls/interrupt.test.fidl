@@ -1,0 +1,46 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Interrupt {
+    /// Create an interrupt object.
+    [In0="handle<resource>:kind=IRQ"]
+    Create(handle<resource> src_obj, uint32 src_num, uint32 options) ->
+        (status status, handle<interrupt> out_handle);
+
+    /// Bind an interrupt object to a port.
+    [In0="handle<interrupt>:rights=READ",
+     In1="handle<port>:rights=WRITE"]
+    Bind(handle<interrupt> handle, handle<port> port_handle, uint64 key, uint32 options) ->
+        (status status);
+
+    /// Wait for an interrupt.
+    [Blocking,
+     In0="handle<interrupt>:rights=WAIT",
+     Out1="optional<time> time"]
+    Wait(handle<interrupt> handle) -> (status status, time out_timestamp);
+
+    // TODO(ZX-2967): No DESTROY rights here.
+    /// Destroys an interrupt object.
+    Destroy(handle<interrupt> handle) -> (status status);
+
+    /// Acknowledge an interrupt and re-arm it.
+    [In0="handle<interrupt>:rights=WRITE"]
+    Ack(handle<interrupt> handle) -> (status status);
+
+    /// Triggers a virtual interrupt object.
+    [In0="handle<interrupt>:rights=SIGNAL"]
+    Trigger(handle<interrupt> handle, uint32 options, time timestamp) -> (status status);
+
+    /// Bind an interrupt object to a VCPU.
+    [In0="handle<interrupt>:rights=READ",
+     In1="handle<vcpu>:rights=WRITE"]
+    BindVcpu(handle<interrupt> handle, handle<vcpu> vcpu, uint32 options) -> (status status);
+};

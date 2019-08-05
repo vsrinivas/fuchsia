@@ -1,0 +1,69 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+struct SystemPowerctlArg {
+    // TODO(scottmg): More unnamed unions.
+    //union {
+        //struct {
+            //uint8_t target_s_state; // Value between 1 and 5 indicating which S-state
+            //uint8_t sleep_type_a;   // Value from ACPI VM (SLP_TYPa)
+            //uint8_t sleep_type_b;   // Value from ACPI VM (SLP_TYPb)
+        //} acpi_transition_s_state;
+        //struct {
+            //uint32_t power_limit; // PL1 value in milliwatts
+            //uint32_t time_window; // PL1 time window in microseconds
+            //uint8_t clamp;        // PL1 clamping enable
+            //uint8_t enable;       // PL1 enable
+        //} x86_power_limit;
+    //};
+};
+
+[Transport="Syscall"]
+protocol System {
+    [Vdsocall, Const]
+    GetDcacheLineSize() -> (uint32 size);
+
+    /// Get number of logical processors on the system.
+    [Vdsocall, Const]
+    GetNumCpus() -> (uint32 count);
+
+    /// Get version string for system.
+    [Vdsocall,
+     In0="mutable<string>"]
+    GetVersion(string version) -> (status status);
+
+    /// Get amount of physical memory on the system.
+    [Vdsocall]
+    GetPhysmem() -> (uint64 physmem);
+
+    // TODO(scottmg): "features" has a features attribute. I'm not sure if/how it's used.
+    /// Get supported hardware capabilities.
+    [Vdsocall]
+    GetFeatures(uint32 kind) -> (status status, uint32 features);
+
+    /// Retrieve a handle to a system event.
+    GetEvent(handle<job> root_job, uint32 kind) -> (status status, handle<event> event);
+
+    /// Soft reboot the system with a new kernel and bootimage.
+    [In0="handle<resource>:kind=ROOT",
+     In1="handle<vmo>:rights=READ",
+     In2="handle<vmo>:rights=READ"]
+    Mexec(handle<resource> resource, handle<vmo> kernel_vmo, handle<vmo> bootimage_vmo) ->
+        (status status);
+
+    /// Return a ZBI containing ZBI entries necessary to boot this system.
+    [In0="handle<resource>:kind=ROOT",
+     In1="mutable<vector<byte>>"]
+    MexecPayloadGet(handle<resource> resource, vector<byte> buffer) -> (status status);
+
+    [In0="handle<resource>:kind=ROOT",
+     In2="box<SystemPowerctlArg>"]
+    Powerctl(handle<resource> resource, uint32 cmd, SystemPowerctlArg arg) -> (status status);
+};

@@ -1,0 +1,20 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Exception {
+    /// Create a handle for the exception's thread.
+    [Out1="handle<thread>:acquire"]
+    GetThread(handle<exception> handle) -> (status status, handle<thread> out);
+
+    /// Create a handle for the exception's process.
+    [Out1="handle<process>:acquire"]
+    GetProcess(handle<exception> handle) -> (status status, handle<process> out);
+};

@@ -1,0 +1,48 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+enum ProfileInfoType {
+    ZX_PROFILE_INFO_SCHEDULER = 1;
+};
+
+union ProfileScheduler {
+    int32 priority;
+    uint32 boost;
+    uint32 deboost;
+    uint32 quantum;
+};
+
+const int32 ZX_PRIORITY_LOWEST = 0;
+const int32 ZX_PRIORITY_LOW = 8;
+const int32 ZX_PRIORITY_DEFAULT = 16;
+const int32 ZX_PRIORITY_HIGH = 24;
+const int32 ZX_PRIORITY_HIGHEST = 31;
+
+union ProfileInfoData {
+    ProfileScheduler scheduler;
+};
+
+struct ProfileInfo {
+    ProfileInfoType type;
+    // TODO(scottmg): This needs to be presented as an unnamed union in C, and
+    // ProfileInfoData doesn't really need a name. Not sure if the semantics of
+    // fidl unions make sense here.
+    ProfileInfoData unnamed;
+};
+
+[Transport="Syscall"]
+protocol Profile {
+    /// Create a scheduler profile.
+    [In0="handle<job>:rights=MANAGE_PROCESS",
+     In2="box<ProfileInfo>",
+     Out1="handle<profile>:acquire"]
+    Create(handle<job> root_job, uint32 options, ProfileInfo profile) ->
+        (status status, handle<profile> out);
+};

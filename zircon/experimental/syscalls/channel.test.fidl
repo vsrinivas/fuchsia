@@ -1,0 +1,110 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+using ObjType = uint32;
+
+// TODO(scottmg): ZX_OBJ_TYPE_xyz here.
+
+using HandleOp = uint32;
+
+// TODO(scottmg): ZX_HANDLE_OP_xyz here.
+
+struct HandleInfo {
+    handle handle;
+    ObjType type;
+    rights rights;
+    uint32 unused;
+};
+
+struct ChannelCallArgs {
+    vector<byte> wr_bytes;
+    vector<handle> wr_handles;
+    // TODO(scottmg): mutable<vector<byte>>
+    vector<byte> rd_bytes;
+    // TODO(scottmg): mutable<vector<handle>>
+    vector<handle> rd_handles;
+};
+
+struct HandleDisposition {
+    HandleOp operation;
+    handle handle;
+    ObjType type;
+    rights rights;
+    status result;
+};
+
+[Transport="Syscall"]
+protocol Channel {
+    /// Create a channel.
+    [Out1="handle:acquire",
+     Out2="handle:acquire"]
+    Create(uint32 options) -> (status status, handle out0, handle out1);
+
+    /// Read a message from a channel.
+    [In0="handle:rights=READ",
+     In2="mutable<vector<byte>>",
+     In3="mutable<vector<handle>>",
+     Out1="optional<uint32>",
+     Out2="optional<uint32>"]
+    Read(handle<channel> handle,
+         uint32 options,
+         vector<byte> bytes,
+         vector<handle> handles) ->
+        (status status, uint32 actual_bytes, uint32 actual_handles);
+
+    /// Read a message from a channel.
+    [In0="handle:rights=READ",
+     In2="mutable<vector<byte>>",
+     In3="mutable<vector<HandleInfo>>",
+     Out1="optional<uint32>",
+     Out2="optional<uint32>"]
+    ReadEtc(handle<channel> handle,
+            uint32 options,
+            vector<byte> bytes,
+            vector<HandleInfo> handles) ->
+        (status status, uint32 actual_bytes, uint32 actual_handles);
+
+    /// Write a message to a channel.
+    [In0="handle:rights=WRITE"]
+    // TODO(scottmg): "Every entry of |handles| must have ZX_RIGHT_TRANSFER."
+    Write(handle<channel> handle, uint32 options, vector<byte> bytes, vector<handle> handles) ->
+        (status status);
+
+    /// Write a message to a channel.
+    [In0="handle:rights=WRITE",
+     In3="mutable<vector<HandleDisposition>>"]
+    // TODO(scottmg): "Every entry of |handles| must have ZX_RIGHT_TRANSFER."
+    WriteEtc(handle<channel> handle,
+             uint32 options,
+             vector<byte> bytes,
+             vector<HandleDisposition> handles) ->
+        (status status);
+
+    [Internal,
+     In0="handle:rights=READ,WRITE",
+     In3="mutable<ChannelCallArgs>"]
+    // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
+    CallNoretry(handle<channel> handle, uint32 options, time deadline, ChannelCallArgs args) ->
+        (status status, uint32 actual_bytes, uint32 actual_handles);
+
+    [Internal,
+     In1="mutable<ChannelCallArgs>"]
+    CallFinish(time deadline, ChannelCallArgs args) ->
+        (status status, uint32 actual_bytes, uint32 actual_handles);
+
+    /// Send a message to a channel and await a reply.
+    [Blocking,
+     Vdsocall,
+     In0="handle<channel>:rights=READ,WRITE",
+     In3="mutable<ChannelCallArgs>"]
+    // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
+    Call(handle handle, uint32 options, time deadline, ChannelCallArgs args) ->
+        (status status, uint32 actual_bytes, uint32 actual_handles);
+};

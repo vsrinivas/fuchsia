@@ -1,0 +1,36 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Thread {
+    /// Terminate the current running thread.
+    [Noreturn]
+    Exit();
+
+    /// Create a thread.
+    [In0="handle<process>:rights=MANAGE_THREAD",
+     Out1="handle<thread>:acquire"]
+    Create(handle<process> process, string name, uint32 options) ->
+        (status status, handle<thread> out);
+
+    /// Start execution on a thread.
+    [In0="handle<thread>:rights=MANAGE_THREAD"]
+    Start(handle<thread> handle, vaddr thread_entry, vaddr stack, uintptr arg1, uintptr arg2) ->
+        (status status);
+
+    /// Read one aspect of thread state.
+    [In0="handle<thread>:rights=READ",
+     In2="mutable<vector<byte>>"]
+    ReadState(handle<thread> handle, uint32 kind, vector<byte> buffer) -> (status status);
+
+    /// Write one aspect of thread state.
+    [In0="handle<thread>:rights=WRITE"]
+    WriteState(handle<thread> handle, uint32 kind, vector<byte> buffer) -> (status status);
+};

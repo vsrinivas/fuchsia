@@ -1,0 +1,33 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Bti {
+    /// Create a new bus transaction initiator.
+    [Out1="handle<bti>:acquire"]
+    Create(handle<iommu> iommu, uint32 options, uint64 bti_id) -> (status status, handle<bti> out);
+
+    /// Pin pages and grant devices access to them.
+    [In0="handle<bti>:rights=MAP",
+     In2="handle<vmo>:rights=MAP",
+     In5="mutable<vector<paddr>>",
+     Out1="handle<pmt>:acquire"]
+    Pin(handle<bti> handle,
+        uint32 options,
+        handle<vmo> vmo,
+        uint64 offset,
+        uint64 size,
+        vector<paddr> addrs) ->
+        (status status, handle<pmt> pmt);
+
+    /// Releases all quarantined PMTs.
+    [In0="handle<bti>:rights=WRITE"]
+    ReleaseQuarantine(handle<bti> handle) -> (status status);
+};

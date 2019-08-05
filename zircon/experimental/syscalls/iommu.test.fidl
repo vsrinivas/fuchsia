@@ -1,0 +1,18 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Iommu {
+    /// Create a new IOMMU object in the kernel.
+    [In0="handle<resource>:kind=ROOT",
+     Out1="handle<iommu>:acquire"]
+    Create(handle<resource> resource, uint32 type, vector<byte> desc) ->
+        (status status, handle<iommu> out);
+};

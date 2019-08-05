@@ -1,0 +1,34 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Socket {
+    /// Create a socket.
+    [Out1="handle:acquire",
+     Out2="handle:acquire"]
+    Create(uint32 options) -> (status status, handle out0, handle out1);
+
+    /// Write data to a socket.
+    [In0="handle<socket>:rights=WRITE",
+     Out1="optional<usize>"]
+    Write(handle<socket> handle, uint32 options, vector<byte> buffer) ->
+        (status status, usize actual);
+
+    /// Read data from a socket.
+    [In0="handle<socket>:rights=READ",
+     In2="mutable<vector<byte>>",
+     Out1="optional<usize>"]
+    Read(handle<socket> handle, uint32 options, vector<byte> buffer) ->
+        (status status, usize actual);
+
+    /// Prevent reading or writing.
+    [In0="handle<socket>:rights=WRITE"]
+    Shutdown(handle<socket> handle, uint32 options) -> (status status);
+};

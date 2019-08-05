@@ -1,0 +1,47 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Task {
+    // TODO(scottmg): Need something like handle<task> in this file to mean {job, process, thread}.
+    // Or otherwise some way to express multiple options for constraints on In0 in this protocol.
+
+    // TODO(ZX-2967): No rights required on either?
+    /// Bind to, or unbind from, the exception port corresponding to a given job, process, or thread.
+    BindExceptionPort(handle handle, handle<port> port, uint64 key, uint32 options) ->
+        (status status);
+
+    /// Suspend the given task. Currently only thread or process handles may be suspended.
+    [In0="handle:rights=WRITE",
+     Out1="handle:acquire"]
+    Suspend(handle handle) -> (status status, handle token);
+
+    /// Suspend the given task. Currently only thread or process handles may be suspended.
+    [In0="handle:rights=WRITE",
+     Out1="handle:acquire"]
+    SuspendToken(handle handle) -> (status status, handle token);
+
+    /// Resume the given task after an exception has been reported.
+
+    // TODO(ZX-2967): No rights required on either?
+    ResumeFromException(handle<thread> handle, handle<port> port, uint32 options) ->
+        (status status);
+
+    /// Create an exception channel for a given job, process, or thread.
+    [In0="handle:rights=DUPLICATE,INSPECT,MANAGE_THREAD,TRANSFER",
+     Out1="handle<channel>:acquire"]
+    // TODO(scottmg): Express "If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must
+    // have ZX_RIGHT_ENUMERATE."
+    CreateExceptionChannel(handle handle, uint32 options) -> (status status, handle<channel> out);
+
+    /// Kill the provided task (job, process, or thread).
+    [In0="handle:rights=DESTROY"]
+    Kill(handle handle) -> (status status);
+};

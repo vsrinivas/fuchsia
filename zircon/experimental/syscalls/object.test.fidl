@@ -1,0 +1,70 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+// TODO(scottmg): Apply rights spec from WaitMany on |items| to |handle| here,
+// somehow.
+struct WaitItem {
+    handle handle;
+    signals waitfor;
+    signals pending;
+};
+
+[Transport="Syscall"]
+protocol Object {
+    /// Wait for signals on an object.
+    [Blocking,
+     In0="handle:rights=WAIT",
+     Out1="optional<signals>"]
+    WaitOne(handle handle, signals signals, time deadline) -> (status status, signals observed);
+
+    /// Wait for signals on multiple objects.
+    [Blocking,
+     In0="mutable<vector<WaitItem:rights=WAIT>>"]
+    WaitMany(vector<WaitItem> items, time deadline) -> (status status);
+
+    /// Subscribe for signals on an object.
+    [In0="handle:rights=WAIT",
+     In1="handle<port>:rights=WRITE"]
+    WaitAsync(handle handle, handle<port> port, uint64 key, signals signals, uint32 options) ->
+        (status status);
+
+    /// Signal an object.
+    [In0="handle:rights=SIGNAL"]
+    Signal(handle handle, uint32 clear_mask, uint32 set_mask) -> (status status);
+
+    /// Signal an object's peer.
+    [In0="handle:rights=SIGNAL_PEER"]
+    SignalPeer(handle handle, uint32 clear_mask, uint32 set_mask) -> (status status);
+
+    /// Ask for various properties of various kernel objects.
+    [In0="handle:rights=GET_PROPERTY",
+     In2="mutable<vector<byte>>"]
+    GetProperty(handle handle, uint32 property, vector<byte> value) -> (status status);
+
+    /// Set various properties of various kernel objects.
+    [In0="handle:rights=SET_PROPERTY"]
+    SetProperty(handle handle, uint32 property, vector<byte> value) -> (status status);
+
+    /// Query information about an object.
+    [In2="mutable<vector<buffer>>",
+     Out1="optional<usize>",
+     Out2="optional<usize>"]
+    GetInfo(handle handle, uint32 topic, vector<byte> buffer) ->
+        (status status, usize actual, usize avail);
+
+    /// Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
+    [In0="handle:rights=ENUMERATE"]
+    GetChild(handle handle, uint64 koid, rights rights) -> (status status, handle out);
+
+    /// Apply a scheduling profile to a thread.
+    [In0="handle<thread>:rights=MANAGE_THREAD",
+     In1="handle<profile>:rights=APPLY_PROFILE"]
+    SetProfile(handle<thread> handle, handle<profile> profile, uint32 options) -> (status status);
+};

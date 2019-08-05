@@ -1,0 +1,17 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Pmt {
+    // TODO(ZX-2967): handle ZX_OBJ_TYPE_PMT; No rights required?
+    /// Unpin pages and revoke device access to them.
+    [In0="handle<pmt>:release_always"]
+    Unpin(handle<pmt> handle) -> (status status);
+};

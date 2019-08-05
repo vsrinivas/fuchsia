@@ -1,0 +1,51 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+// TODO(scottmg): These syscalls don't match the general naming convention of
+// zx_something_name(), they're just zx_name(), so NoProtocolPrefix tells the
+// generator to exclude putting "Misc" in the name.
+[Transport="Syscall",
+ NoProtocolPrefix]
+protocol Misc {
+    /// High resolution sleep.
+    [Blocking]
+    Nanosleep(time deadline) -> (status status);
+
+    /// Read the number of high-precision timer ticks since boot.
+    [Vdsocall]
+    TicksGet() -> (ticks ticks);
+
+    /// Read the number of high-precision timer ticks in a second.
+    [Vdsocall,
+     Const]
+    TicksPerSecond() -> (ticks ticks);
+
+    /// Convert a time relative to now to an absolute deadline.
+    [Vdsocall]
+    DeadlineAfter(duration nanoseconds) -> (time time);
+
+    /// Unmap memory, close handle, exit.
+    [Vdsocall,
+     In3="handle:release"]
+    VmarUnmapHandleCloseThreadExit(handle<vmar> vmar_handle,
+                                   vaddr vaddr, usize usize,
+                                   handle close_handle) ->
+        (status status);
+
+    /// Write to futex, wake futex, close handle, exit.
+    [Vdsocall,
+     Noreturn,
+     In0="box<Futex>",
+     In3="handle:release"]
+    FutexWakeHandleCloseThreadExit(Futex value_ptr,
+                                   uint32 wake_count,
+                                   int32 new_value,
+                                   handle close_handle);
+};

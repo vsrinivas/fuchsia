@@ -1,0 +1,62 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+// TODO(scottmg): This is approximately right, but will need to match the
+// current definition of zx_futex_t (atomic_int in some #if branches).
+// This is called FutexData rather than simply Futex, because aliases and
+// protocol share a namespace, and the protocol needs to be named Futex to make
+// the syscall name be correct.
+using FutexData = int32;
+
+// TODO(scottmg): The futex is unusual in that by virtue of being an int,
+// sometimes it's passed by pointer, and sometimes by value. box<FutexData> in
+// modifications is necessary for these to make sense.
+
+[Transport="Syscall"]
+protocol Futex {
+    /// Wait on a futex.
+    [Blocking,
+     In0="box<FutexData>"]
+    Wait(FutexData value_ptr, FutexData current_value, handle new_futex_owner, time deadline) ->
+        (status status);
+
+    /// Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
+    [In0="box<FutexData>"]
+    Wake(FutexData value_ptr, uint32 wake_count) -> (status status);
+
+    /// Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
+    [In0="box<FutexData>",
+     In3="box<FutexData>"]
+    Requeue(FutexData value_ptr,
+            uint32 wake_count,
+            FutexData current_value,
+            FutexData requeue_ptr,
+            uint32 requeue_count,
+            handle new_requeue_owner) ->
+        (status status);
+
+    /// Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
+    [In0="box<FutexData>"]
+    WakeSingleOwner(FutexData value_ptr) -> (status status);
+
+    /// Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
+    [In0="box<FutexData>",
+     In2="box<FutexData>"]
+    RequeueSingleOwner(FutexData value_ptr,
+                       FutexData current_value,
+                       FutexData requeue_ptr,
+                       uint32 requeue_count,
+                       handle new_requeue_owner) ->
+        (status status);
+
+    /// Fetch the koid current owner of a futex, if any.
+    [In0="box<FutexData>"]
+    GetOwner(FutexData value_ptr) -> (status status, koid koid);
+};

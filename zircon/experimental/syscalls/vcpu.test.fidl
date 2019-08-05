@@ -1,0 +1,36 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Vcpu {
+    /// Create a VCPU.
+    [In0="handle<guest>:rights=MANAGE_PROCESS",
+     Out1="handle<vcpu>:acquire"]
+    Create(handle<guest> guest, uint32 options, vaddr entry) -> (status status, handle<vcpu> out);
+
+    // See port.fidl for definition of PortPacket.
+    /// Resume execution of a VCPU.
+    [Blocking,
+     In0="handle<vcpu>:rights=EXECUTE"]
+    Resume(handle<vcpu> handle) -> (status status, PortPacket packet);
+
+    /// Raise an interrupt on a VCPU.
+    [In0="handle<vcpu>:rights=SIGNAL"]
+    Interrupt(handle<vcpu> handle, uint32 vector) -> (status status);
+
+    /// Read the state of a VCPU.
+    [In0="handle<vcpu>:rights=READ",
+     In2="mutable<vector<byte>>"]
+    ReadState(handle<vcpu> handle, uint32 kind, vector<byte> buffer) -> (status status);
+
+    /// Write the state of a VCPU.
+    [In0="handle<vcpu>:rights=WRITE"]
+    WriteState(handle<vcpu> handle, uint32 kind, vector<byte> buffer) -> (status status);
+};

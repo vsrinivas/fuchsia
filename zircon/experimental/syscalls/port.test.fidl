@@ -1,0 +1,151 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+// port_packet_t::type ZX_PKT_TYPE_USER.
+union PacketUser {
+    array<uint64>:4 u64;
+    array<uint32>:8 u32;
+    array<uint16>:16 u16;
+    array<int8>:32 c8;
+};
+
+// port_packet_t::type ZX_PKT_TYPE_SIGNAL_ONE and ZX_PKT_TYPE_SIGNAL_REP.
+struct PacketSignal {
+    signals trigger;
+    signals observed;
+    uint64 count;
+    uint64 reserved0;
+    uint64 reserved1;
+};
+
+struct PacketException {
+    uint64 pid;
+    uint64 tid;
+    uint64 reserved0;
+    uint64 reserved1;
+};
+
+struct PacketGuestBell {
+    gpaddr addr;
+    uint64 reserved0;
+    uint64 reserved1;
+    uint64 reserved2;
+};
+
+// TODO(scottmg): Arch-specific definition.
+struct PacketGuestMem {
+    gpaddr addr;
+//#if __aarch64__
+    //uint8_t access_size;
+    //bool sign_extend;
+    //uint8_t xt;
+    //bool read;
+    //uint64_t data;
+    //uint64_t reserved;
+//#elif __x86_64__
+//// NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
+//#define X86_MAX_INST_LEN 15u
+    //uint8_t inst_len;
+    //uint8_t inst_buf[X86_MAX_INST_LEN];
+    //// This is the default operand size as determined by the CS and EFER register (Volume 3,
+    //// Section 5.2.1). If operating in 64-bit mode then near branches and all instructions, except
+    //// far branches, that implicitly reference the RSP will actually have a default operand size of
+    //// 64-bits (Volume 2, Section 2.2.1.7), and not the 32-bits that will be given here.
+    //uint8_t default_operand_size;
+    //uint8_t reserved[7];
+//#endif
+};
+
+struct PacketGuestIo {
+    uint16 port;
+    uint8 access_size;
+    bool input;
+    // TODO(scottmg): Unnamed union.
+    //union {
+        //uint8_t u8;
+        //uint16_t u16;
+        //uint32_t u32;
+        //uint8_t data[4];
+    //};
+    uint64 reserved0;
+    uint64 reserved1;
+    uint64 reserved2;
+};
+
+struct PacketGuestVcpu {
+    // TODO(scottmg): Unnamed union.
+    //union {
+        //struct {
+            //uint64_t mask;
+            //uint8_t vector;
+        //} interrupt;
+        //struct {
+            //uint64_t id;
+            //zx_gpaddr_t entry;
+        //} startup;
+    //};
+    uint8 type;
+    uint64 reserved;
+};
+
+struct PacketInterrupt {
+    time timestamp;
+    uint64 reserved0;
+    uint64 reserved1;
+    uint64 reserved2;
+};
+
+struct PacketPageRequest {
+    uint16 command;
+    uint16 flags;
+    uint32 reserved0;
+    uint64 offset;
+    uint64 length;
+    uint64 reserved1;
+};
+
+struct PortPacket {
+    uint64 key;
+    uint32 type;
+    status status;
+    // TODO(scottmg): Unnamed union.
+    // union {
+        PacketUser user;
+        PacketSignal signal;
+        PacketException exception;
+        PacketGuestBell guest_bell;
+        PacketGuestMem guest_mem;
+        PacketGuestIo guest_io;
+        PacketGuestVcpu guest_vcpu;
+        PacketInterrupt interrupt;
+        PacketPageRequest page_request;
+    // };
+};
+
+[Transport="Syscall"]
+protocol Port {
+    /// Create an IO port.
+    [Out1="handle<port>:acquire"]
+    Create(uint32 options) -> (status status, handle<port> out);
+
+    /// Queue a packet to a port.
+    [In0="handle<port>:rights=WRITE",
+     In1="box<PortPacket>"]
+    Queue(handle<port> handle, PortPacket packet) -> (status status);
+
+    /// Wait for a packet arrival in a port.
+    [Blocking,
+     In0="handle<port>:rights=READ"]
+    Wait(handle<port> handle, time deadline) -> (status status, PortPacket packet);
+
+    /// Cancels async port notifications on an object.
+    [In0="handle<port>:rights=WRITE"]
+    Cancel(handle<port> handle, handle source, uint64 key) -> (status status);
+};

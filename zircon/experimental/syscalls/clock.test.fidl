@@ -1,0 +1,27 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+enum ClockKind : uint32 {
+    MONOTONIC = 0;
+    UTC = 1;
+    THREAD = 2;
+};
+
+[Transport="Syscall"]
+protocol Clock {
+    /// Acquire the current time.
+    Get(ClockKind clock_id) -> (status status, time out);
+
+    /// Acquire the current monotonic time.
+    GetMonotonic() -> (time time);
+
+    [In0="handle<resource>:kind=ROOT"]
+    Adjust(handle<resource> handle, ClockKind clock_id, int64 offset) -> (status status);
+};

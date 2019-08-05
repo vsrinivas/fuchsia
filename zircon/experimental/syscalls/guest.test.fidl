@@ -1,0 +1,30 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Guest {
+    /// Create a guest.
+    [In0="handle<resource>:kind=HYPERVISOR",
+     Out1="handle<guest>:acquire",
+     Out2="handle<vmar>:acquire"]
+    Create(handle<resource> resource, uint32 options) ->
+        (status status, handle<guest> guest_handle, handle<vmar> vmar_handle);
+
+    /// Sets a trap within a guest.
+    [In0="handle<guest>:rights=WRITE",
+     In4="handle<port>:rights=WRITE"]
+    SetTrap(handle<guest> handle,
+            uint32 kind,
+            vaddr addr,
+            usize size,
+            handle<port> port_handle,
+            uint64 key) ->
+        (status status);
+};

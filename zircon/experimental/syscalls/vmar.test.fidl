@@ -1,0 +1,39 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+using VmOption = uint32;
+
+// TODO(scottmg): bits for ZX_VM_xyz flags, and const for ZX_VM_ALIGN_xyz.
+
+[Transport="Syscall"]
+protocol Vmar {
+    /// Allocate a new subregion.
+    [Out1="handle<vmar>:acquire"]
+    Allocate(handle<vmar> parent_vmar, VmOption options, uint64 offset, uint64 size) ->
+        (status status, handle<vmar> child_vmar, vaddr child_addr);
+
+    // TODO(ZX-2967): handle No rights required?
+    /// Destroy a virtual memory address region.
+    Destroy(handle<vmar> handle) -> (status status);
+
+    // TODO(ZX-2399): TODO handle and vmo and options must all match, and options can't specify them.
+    /// Add a memory mapping.
+    Map(handle<vmar> handle, VmOption options, uint64 vmar_offset,
+        handle<vmo> vmo, uint64 vmo_offset,
+        uint64 len) ->
+        (status status, vaddr mapped_addr);
+
+    // TODO(ZX-2967): handle No rights required?
+    /// Unmap virtual memory pages.
+    Unmap(handle<vmo> handle, vaddr addr, uint64 len) -> (status status);
+
+    /// Set protection of virtual memory pages.
+    Protect(handle<vmo> handle, VmOption options, vaddr addr, uint64 len) -> (status status);
+};

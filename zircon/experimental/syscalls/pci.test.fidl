@@ -1,0 +1,125 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+// TODO(cja): This makes some assumptions that anything in an arch's PIO region
+// is going to be defined as a base address and size. This will need to be
+// updated to a per-platform structure in the event that doesn't pan out
+// in the future.
+struct PciBar {
+    uint32 id;
+    uint32 type;
+    usize size;
+    // TODO(scottmg): Unnamed union.
+    //union {
+    //    uintptr_t addr;
+    //    zx_handle_t handle;
+    //};
+};
+
+// Defines and structures related to zx_pci_*()
+// Info returned to dev manager for PCIe devices when probing.
+struct PcieDeviceInfo {
+    uint16 vendor_id;
+    uint16 device_id;
+
+    uint8 base_class;
+    uint8 sub_class;
+    uint8 program_interface;
+    uint8 revision_id;
+
+    uint8 bus_id;
+    uint8 dev_id;
+    uint8 func_id;
+};
+
+// TODO(scottmg): Lots of constants here.
+
+// TODO(scottmg): This one is hard.
+struct PciInitArg {
+    // TODO(scottmg): [][][] array.
+    // zx_pci_irq_swizzle_lut_t dev_pin_to_global_irq;
+
+    uint32 num_irqs;
+    //struct {
+        //uint32_t global_irq;
+        //bool level_triggered;
+        //bool active_high;
+    //} irqs[ZX_PCI_MAX_IRQS];
+
+    uint32 addr_window_count;
+    // TODO(scottmg): struct-hack sized.
+    //struct {
+        //uint64_t base;
+        //size_t size;
+        //uint8_t bus_start;
+        //uint8_t bus_end;
+        //uint8_t cfg_space_type;
+        //bool has_ecam;
+    //} addr_windows[];
+};
+
+[Transport="Syscall"]
+protocol Pci {
+    [In0="handle<resource>:kind=ROOT",
+     Out2="handle<pcidevice>:acquire"]
+    GetNthDevice(handle<resource> handle, uint32 index) ->
+        (status status, PcieDeviceInfo out_info, handle out_handle);
+
+    [In0="handle<pcidevice>:rights=WRITE"]
+    EnableBusMaster(handle<pcidevice> handle, bool enable) -> (status status);
+
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE."]
+    ResetDevice(handle<pcidevice> handle) -> (status status);
+
+    [In0="handle<pcidevice>:rights=READ,WRITE"]
+    ConfigRead(handle<pcidevice> handle, uint16 offset, usize width) ->
+        (status status, uint32 out_val);
+
+    [In0=",andle<pcidevice>:rights=READ,WRITE"]
+    ConfigWrite(handle<pcidevice> handle, uint16 offset, usize width, uint32 val) ->
+        (status status);
+
+    [In0="handle<resource>:kind=ROOT",
+     In5="mutable<int32>"]
+    CfgPioRw(handle<resource> handle,
+             uint8 bus,
+             uint8 dev,
+             uint8 func,
+             uint8 offset,
+             uint32 val,
+             usize width,
+             bool write) ->
+        (status status);
+
+    // TODO(scottmg): type of out_handle?
+    [In0="handle<pcidevice>:rights=READ,WRITE",
+     Out2="handle:acquire"]
+    GetBar(handle<pcidevice> handle, uint32 bar_num) ->
+        (status status, PciBar out_bar, handle out_handle);
+
+    [In0="handle<pcidevice>:rights=READ",
+     Out1="handle:acquire"]
+    MapInterrupt(handle<pcidevice> handle, int32 which_irq) -> (status status, handle out_handle);
+
+    [In0="handle<pcidevice>:rights=READ"]
+    QueryIrqMode(handle<pcidevice> handle, uint32 mode) -> (status status, uint32 out_max_irqs);
+
+    [In0="handle<pcidevice>:rights=WRITE"]
+    SetIrqMode(handle<pcidevice> handle, uint32 mode, uint32 requested_irq_count) ->
+        (status status);
+
+    // TODO(scottmg): vector size is uint32, not size_t.
+    [In0="handle<resource>:kind=ROOT"]
+    Init(handle<resource> handle, vector<PciInitArg> init_buf) -> (status status);
+
+    [In0="handle<resource>:kind=ROOT"]
+    AddSubtractIoRange(handle<resource> handle, bool mmio, uint64 base, uint64 len, bool add) ->
+        (status status);
+};

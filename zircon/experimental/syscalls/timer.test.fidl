@@ -1,0 +1,24 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Timer {
+    /// Create a timer.
+    [Out1="handle<timer>:acquire"]
+    Create(uint32 options, ClockKind clock) -> (status status, handle<timer> out);
+
+    /// Start a timer.
+    [In0="handle<timer>:rights=WRITE"]
+    Set(handle<timer> handle, time deadline, duration slack) -> (status status);
+
+    /// Cancel a timer.
+    [In0="handle<timer>:rights=WRITE"]
+    Cancel(handle<timer> handle) -> (status status);
+};

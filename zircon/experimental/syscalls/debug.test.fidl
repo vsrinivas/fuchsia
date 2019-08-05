@@ -1,0 +1,23 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Debug {
+    // TODO(scottmg): Size of buffer being buffer_size is odd, but that's what
+    // abigen says. Maybe it's special cased to dereference? (Maybe INOUT?)
+    [In0="handle<resource>:kind=ROOT",
+     In1="mutable<vector<byte>>"]
+    Read(handle<resource> handle, vector<byte> buffer) -> (status status);
+
+    Write(vector<byte> buffer) -> (status status);
+
+    [In0="handle<resource>:kind=ROOT"]
+    SendCommand(handle<resource> resource, vector<byte> buffer) -> (status status);
+};

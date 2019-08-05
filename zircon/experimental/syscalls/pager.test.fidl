@@ -1,0 +1,35 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Pager {
+    /// Create a new pager object.
+    [Out1="handle<pager>:acquire"]
+    Create(uint32 options) -> (status status, handle<pager> out);
+
+    /// Create a pager owned vmo.
+    [In2="handle<port>:rights=WRITE",
+     Out1="handle<vmo>:acquire"]
+    CreateVmo(handle<pager> pager, uint32 options, handle<port> port, uint64 key, uint64 size) ->
+        (status status, handle<vmo> out);
+
+    /// Detaches a vmo from a pager.
+    DetachVmo(handle<pager> pager, handle<vmo> vmo) -> (status status);
+
+    /// Supply pages into a pager owned vmo.
+    [In4="handle<vmo>:rights=READ,WRITE"]
+    SupplyPages(handle<pager> pager,
+                handle<vmo> pager_vmo,
+                uint64 offset,
+                uint64 length,
+                handle<vmo> aux_vmo,
+                uint64 aux_offset) ->
+        (status status);
+};

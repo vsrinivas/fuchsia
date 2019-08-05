@@ -1,0 +1,40 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+// TODO(scottmg): ARM_SMC_xyz.
+
+struct SmcParameters {
+    uint32 func_id;
+    uint64 arg1;
+    uint64 arg2;
+    uint64 arg3;
+    uint64 arg4;
+    uint64 arg5;
+    uint64 arg6;
+    uint16 client_id;
+    uint16 secure_os_id;
+};
+
+struct SmcResult {
+    uint64 arg0;
+    uint64 arg1;
+    uint64 arg2;
+    uint64 arg3;
+    uint64 arg6; // at least one implementation uses it as a way to return session_id.
+};
+
+[Transport="Syscall"]
+protocol Smc {
+    // TODO(ZX-2967): handle No rights required?
+    // TODO(scottmg): No handle type?
+    /// Make Secure Monitor Call (SMC) from user space.
+    [In1="box<SmcParameters>"]
+    Call(handle handle, SmcParameters parameters) -> (status status, SmcResult out_smc_result);
+};

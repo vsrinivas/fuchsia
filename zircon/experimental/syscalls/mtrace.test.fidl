@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// !!! THIS FILE IS NOT YET USED !!!
+// See //zircon/system/public/zircon/syscalls.banjo.
+// !!! THIS FILE IS NOT YET USED !!!
+
+library zz;
+
+[Transport="Syscall"]
+protocol Mtrace {
+    [In0="handle<resource>:kind=ROOT",
+     In4="mutable<vector<byte>>"]
+    Control(handle<resource> handle,
+            uint32 kind,
+            uint32 action,
+            uint32 options,
+            vector<byte> ptr) ->
+        (status status);
+};
