@@ -23,6 +23,7 @@
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/fidl_helpers/bound_interface_set.h"
+#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/p2p_sync/public/user_communicator_factory.h"
@@ -90,11 +91,12 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
         async::TestLoop* loop, async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
         rng::Random* random,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request,
-        std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory)
+        std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
+        inspect_deprecated::Node repositories_node)
         : environment_(BuildEnvironment(loop, dispatcher, io_dispatcher,
                                         component_context_provider_.context(), random)),
           factory_impl_(&environment_, std::move(user_communicator_factory),
-                        inspect_deprecated::Node("unused_in_test_inspect_node")),
+                        std::move(repositories_node)),
           binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 
@@ -136,13 +138,15 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider),
       weak_ptr_factory_(this) {
-  async::PostTask(loop_->dispatcher(),
-                  [this, loop_controller, random, request = std::move(repository_factory_request),
-                   user_communicator_factory = std::move(user_communicator_factory)]() mutable {
-                    factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-                        &loop_controller->test_loop(), loop_->dispatcher(), io_loop_->dispatcher(),
-                        random, std::move(request), std::move(user_communicator_factory));
-                  });
+  async::PostTask(
+      loop_->dispatcher(),
+      [this, loop_controller, random, request = std::move(repository_factory_request),
+       user_communicator_factory = std::move(user_communicator_factory)]() mutable {
+        factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
+            &loop_controller->test_loop(), loop_->dispatcher(), io_loop_->dispatcher(), random,
+            std::move(request), std::move(user_communicator_factory),
+            GetAttachmentNode()->CreateChild(kRepositoriesInspectPathComponent.ToString()));
+      });
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {

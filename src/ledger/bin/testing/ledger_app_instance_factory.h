@@ -7,6 +7,8 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/inspect_deprecated/hierarchy.h>
+#include <lib/inspect_deprecated/inspect.h>
 
 #include <functional>
 #include <memory>
@@ -54,11 +56,25 @@ class LedgerAppInstanceFactory {
     PagePtr GetTestPage();
     // Returns a connection to the given page on the default Ledger object.
     PagePtr GetPage(const PageIdPtr& page_id);
+    // Populates |hierarchy| with the results of an inspection of the Ledger app under test.
+    bool Inspect(LoopController* loop_controller, inspect_deprecated::ObjectHierarchy* hierarchy);
+
+   protected:
+    // Returns the just-under-top-level |inspect_deprecated::Node| "attachment node" associated with
+    // this application instance.
+    inspect_deprecated::Node* GetAttachmentNode();
 
    private:
     virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;
     virtual std::string GetUserId() = 0;
 
+    // TODO(nathaniel): Because we use the ChildrenManager API, we need to do our reads using FIDL,
+    // and because we want to use inspect::ReadFromFidl for our reads, we need to have these two
+    // objects (one parent, one child, both part of the test, and with the system under test
+    // attaching to the child) rather than just one. Even though this is test code this is still a
+    // layer of indirection that should be eliminable in Inspect's upcoming "VMO-World".
+    inspect_deprecated::Node top_level_node_;
+    inspect_deprecated::Node attachment_node_;
     LoopController* loop_controller_;
     std::vector<uint8_t> test_ledger_name_;
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;

@@ -10,6 +10,7 @@ executable("integration") {
   testonly = true
 
   sources = [
+    "inspect_tests.cc",
     "integration_test_tests.cc",
     "ledger_app_instance_factory_integration.cc",
     "merging_tests.cc",

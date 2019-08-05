@@ -20,6 +20,8 @@ source_set("lib") {
   testonly = true
 
   sources = [
+    "blocking_callback_waiter.cc",
+    "blocking_callback_waiter.h",
     "data_generator.cc",
     "data_generator.h",
     "fake_disk_cleanup_manager.h",
@@ -31,6 +33,11 @@ source_set("lib") {
     "ledger_matcher.h",
     "ledger_memory_usage.cc",
     "ledger_memory_usage.h",
+    "loop_controller.h",
+    "loop_controller_real_loop.cc",
+    "loop_controller_real_loop.h",
+    "loop_controller_test_loop.cc",
+    "loop_controller_test_loop.h",
     "page_data_generator.cc",
     "page_data_generator.h",
     "quit_on_error.cc",
@@ -47,6 +54,7 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/inspect_deprecated",
+    "//garnet/public/lib/inspect_deprecated/testing:testing",
     "//garnet/public/lib/rapidjson_utils",
     "//garnet/public/lib/timekeeper:testing",
     "//peridot/lib/convert",
@@ -59,6 +67,7 @@ source_set("lib") {
     "//src/ledger/bin/app:lib",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl/include",
+    "//src/ledger/bin/inspect:inspect",
     "//src/ledger/bin/public",
     "//src/ledger/bin/storage/public:public",
     "//src/ledger/lib/firebase_auth/testing:service_account",
@@ -94,15 +103,8 @@ source_set("ledger_instance_factory") {
   testonly = true
 
   sources = [
-    "blocking_callback_waiter.cc",
-    "blocking_callback_waiter.h",
     "ledger_app_instance_factory.cc",
     "ledger_app_instance_factory.h",
-    "loop_controller.h",
-    "loop_controller_real_loop.cc",
-    "loop_controller_real_loop.h",
-    "loop_controller_test_loop.cc",
-    "loop_controller_test_loop.h",
   ]
 
   public_deps = [
