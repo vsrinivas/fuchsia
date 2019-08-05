@@ -37,7 +37,6 @@ struct async_wait {
   zx_signals_t trigger;
 
   // Wait options, see zx_object_wait_async().
-  // Not yet functional, will replace async_begin_wait_with_options() soon.
   uint32_t options;
 };
 
@@ -56,6 +55,9 @@ struct async_wait {
 // This operation is thread-safe.
 zx_status_t async_begin_wait(async_dispatcher_t* dispatcher, async_wait_t* wait);
 
+// DEPRECATED: use the |options| field with async_begin_wait() instead, this
+// function will be removed shortly.
+//
 // Begins asynchronously waiting for an object to receive one or more signals
 // specified in |wait|.  Invokes the handler when the wait completes.
 // This wait will also capture the timestamp when the trigger signaled, which can

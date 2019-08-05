@@ -390,14 +390,14 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
 
   record->render_finished_event = std::move(render_finished_event);
   record->render_finished_wait = std::make_unique<async::Wait>(
-      record->render_finished_event.get(), escher::kFenceSignalled,
+      record->render_finished_event.get(), escher::kFenceSignalled, ZX_WAIT_ASYNC_TIMESTAMP,
       [this, index = next_frame_index_](async_dispatcher_t* dispatcher, async::Wait* wait,
                                         zx_status_t status, const zx_packet_signal_t* signal) {
         OnFrameRendered(index, signal->timestamp);
       });
 
   // TODO(SCN-244): What to do if rendering fails?
-  record->render_finished_wait->Begin(async_get_default_dispatcher(), ZX_WAIT_ASYNC_TIMESTAMP);
+  record->render_finished_wait->Begin(async_get_default_dispatcher());
 
   return record;
 }

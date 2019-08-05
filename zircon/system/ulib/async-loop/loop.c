@@ -485,11 +485,6 @@ zx_time_t async_loop_now(async_dispatcher_t* dispatcher) {
 }
 
 static zx_status_t async_loop_begin_wait(async_dispatcher_t* async, async_wait_t* wait) {
-  return async_loop_begin_wait_with_options(async, wait, 0u);
-}
-
-static zx_status_t async_loop_begin_wait_with_options(async_dispatcher_t* async, async_wait_t* wait,
-                                                      uint32_t wait_options) {
     async_loop_t* loop = (async_loop_t*)async;
     ZX_DEBUG_ASSERT(loop);
     ZX_DEBUG_ASSERT(wait);
@@ -499,8 +494,8 @@ static zx_status_t async_loop_begin_wait_with_options(async_dispatcher_t* async,
 
     mtx_lock(&loop->lock);
 
-    zx_status_t status = zx_object_wait_async(
-        wait->object, loop->port, (uintptr_t)wait, wait->trigger, wait_options);
+    zx_status_t status = zx_object_wait_async(wait->object, loop->port, (uintptr_t)wait,
+                                              wait->trigger, wait->options);
     if (status == ZX_OK) {
         list_add_head(&loop->wait_list, wait_to_node(wait));
     } else {
@@ -510,6 +505,12 @@ static zx_status_t async_loop_begin_wait_with_options(async_dispatcher_t* async,
 
     mtx_unlock(&loop->lock);
     return status;
+}
+
+static zx_status_t async_loop_begin_wait_with_options(async_dispatcher_t* async, async_wait_t* wait,
+                                                      uint32_t wait_options) {
+  wait->options = wait_options;
+  return async_loop_begin_wait(async, wait);
 }
 
 static zx_status_t async_loop_cancel_wait(async_dispatcher_t* async, async_wait_t* wait) {

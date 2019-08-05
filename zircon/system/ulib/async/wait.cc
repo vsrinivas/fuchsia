@@ -10,8 +10,9 @@
 
 namespace async {
 
-WaitBase::WaitBase(zx_handle_t object, zx_signals_t trigger, async_wait_handler_t* handler)
-    : wait_{{ASYNC_STATE_INIT}, handler, object, trigger, 0} {}
+WaitBase::WaitBase(zx_handle_t object, zx_signals_t trigger, uint32_t options,
+                   async_wait_handler_t* handler)
+    : wait_{{ASYNC_STATE_INIT}, handler, object, trigger, options} {}
 
 WaitBase::~WaitBase() {
   if (dispatcher_) {
@@ -21,12 +22,12 @@ WaitBase::~WaitBase() {
   }
 }
 
-zx_status_t WaitBase::Begin(async_dispatcher_t* dispatcher, uint32_t options) {
+zx_status_t WaitBase::Begin(async_dispatcher_t* dispatcher) {
   if (dispatcher_)
     return ZX_ERR_ALREADY_EXISTS;
 
   dispatcher_ = dispatcher;
-  zx_status_t status = async_begin_wait_with_options(dispatcher, &wait_, options);
+  zx_status_t status = async_begin_wait(dispatcher, &wait_);
   if (status != ZX_OK) {
     dispatcher_ = nullptr;
   }
@@ -50,8 +51,8 @@ zx_status_t WaitBase::Cancel() {
   return status;
 }
 
-Wait::Wait(zx_handle_t object, zx_signals_t trigger, Handler handler)
-    : WaitBase(object, trigger, &Wait::CallHandler), handler_(std::move(handler)) {}
+Wait::Wait(zx_handle_t object, zx_signals_t trigger, uint32_t options, Handler handler)
+    : WaitBase(object, trigger, options, &Wait::CallHandler), handler_(std::move(handler)) {}
 
 Wait::~Wait() = default;
 

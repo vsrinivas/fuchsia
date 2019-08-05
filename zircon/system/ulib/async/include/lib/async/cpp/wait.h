@@ -28,7 +28,8 @@ namespace async {
 // Please do not create subclasses of WaitBase outside of this library.
 class WaitBase {
  protected:
-  explicit WaitBase(zx_handle_t object, zx_signals_t trigger, async_wait_handler_t* handler);
+  explicit WaitBase(zx_handle_t object, zx_signals_t trigger, uint32_t options,
+                    async_wait_handler_t* handler);
   ~WaitBase();
 
   WaitBase(const WaitBase&) = delete;
@@ -41,9 +42,13 @@ class WaitBase {
   zx_handle_t object() const { return wait_.object; }
   void set_object(zx_handle_t object) { wait_.object = object; }
 
-  // Gets or set of signals to wait for.
+  // Gets or sets the signals to wait for.
   zx_signals_t trigger() const { return wait_.trigger; }
   void set_trigger(zx_signals_t trigger) { wait_.trigger = trigger; }
+
+  // Gets or sets the options to wait with. See zx_object_wait_async().
+  uint32_t options() const { return wait_.options; }
+  void set_options(uint32_t options) { wait_.options = options; }
 
   // Returns true if the wait has begun and not yet completed or been canceled.
   bool is_pending() const { return dispatcher_ != nullptr; }
@@ -55,16 +60,11 @@ class WaitBase {
   // When the dispatcher is shutting down (being destroyed), the handlers of
   // all remaining waits will be invoked with a status of |ZX_ERR_CANCELED|.
   //
-  // For the |options| argument, see documentation for zx_object_wait_async().
-  // For example, passing ZX_WAIT_ASYNC_TIMESTAMP will cause the system to capture
-  // a timestamp when the wait triggered. The timestamp can be read by the handler
-  // from the signal (i.e. signal->timestamp).
-  //
   // Returns |ZX_OK| if the wait was successfully begun.
   // Returns |ZX_ERR_ACCESS_DENIED| if the object does not have |ZX_RIGHT_WAIT|.
   // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
   // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-  zx_status_t Begin(async_dispatcher_t* dispatcher, uint32_t options = 0u);
+  zx_status_t Begin(async_dispatcher_t* dispatcher);
 
   // Cancels the wait.
   //
@@ -105,8 +105,15 @@ class Wait final : public WaitBase {
   using Handler = fit::function<void(async_dispatcher_t* dispatcher, async::Wait* wait,
                                      zx_status_t status, const zx_packet_signal_t* signal)>;
 
+  // Creates a Wait with options == 0.
   explicit Wait(zx_handle_t object = ZX_HANDLE_INVALID, zx_signals_t trigger = ZX_SIGNAL_NONE,
+                Handler handler = nullptr)
+      : Wait(object, trigger, 0, std::move(handler)) {}
+
+  // Creates a Wait with the provided |options|.
+  explicit Wait(zx_handle_t object, zx_signals_t trigger, uint32_t options,
                 Handler handler = nullptr);
+
   ~Wait();
 
   void set_handler(Handler handler) { handler_ = std::move(handler); }
@@ -132,9 +139,15 @@ template <class Class, void (Class::*method)(async_dispatcher_t* dispatcher, asy
                                              zx_status_t status, const zx_packet_signal_t* signal)>
 class WaitMethod final : public WaitBase {
  public:
+  // Creates a WaitMethod with options == 0.
   explicit WaitMethod(Class* instance, zx_handle_t object = ZX_HANDLE_INVALID,
                       zx_signals_t trigger = ZX_SIGNAL_NONE)
-      : WaitBase(object, trigger, &WaitMethod::CallHandler), instance_(instance) {}
+      : WaitMethod(instance, object, trigger, 0) {}
+
+  // Creates a WaitMethod with the provided |options|.
+  explicit WaitMethod(Class* instance, zx_handle_t object, zx_signals_t trigger, uint32_t options)
+      : WaitBase(object, trigger, options, &WaitMethod::CallHandler), instance_(instance) {}
+
   ~WaitMethod() = default;
 
  private:

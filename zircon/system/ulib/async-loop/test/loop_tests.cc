@@ -69,15 +69,6 @@ class TestWait : public async_wait_t {
   zx_packet_signal_t last_signal_storage_;
 };
 
-class TestWaitWithTimestamp : public TestWait {
- public:
-  TestWaitWithTimestamp(zx_handle_t object, zx_signals_t trigger) : TestWait(object, trigger) {}
-
-  zx_status_t Begin(async_dispatcher_t* dispatcher) override {
-    return async_begin_wait_with_options(dispatcher, this, ZX_WAIT_ASYNC_TIMESTAMP);
-  }
-};
-
 class CascadeWait : public TestWait {
  public:
   CascadeWait(zx_handle_t object, zx_signals_t trigger, zx_signals_t signals_to_clear,
@@ -613,7 +604,7 @@ bool wait_timestamp_test() {
     zx::event event2;
     EXPECT_EQ(ZX_OK, zx::event::create(0u, &event2), "create event 2");
 
-    TestWaitWithTimestamp wait2(event2.get(), ZX_USER_SIGNAL_1);
+    TestWait wait2(event2.get(), ZX_USER_SIGNAL_1, ZX_WAIT_ASYNC_TIMESTAMP);
     EXPECT_EQ(ZX_OK, wait2.Begin(loop.dispatcher()), "wait with capture timestamp option");
 
     EXPECT_EQ(nullptr, wait2.last_signal);
@@ -625,32 +616,6 @@ bool wait_timestamp_test() {
     EXPECT_NE(0u, wait2.last_signal->timestamp);
     EXPECT_TRUE(before <= zx::time(wait2.last_signal->timestamp));
     EXPECT_TRUE(after >= zx::time(wait2.last_signal->timestamp));
-  }
-
-  END_TEST;
-}
-
-// async_wait_t.options should be ignored right now.
-// TODO(ZX-4740): remove this test once we've implemented the options field.
-bool wait_options_noop_test() {
-  BEGIN_TEST;
-
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-
-  {
-    zx::event event;
-    EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
-
-    TestWait wait(event.get(), ZX_USER_SIGNAL_1, ZX_WAIT_ASYNC_TIMESTAMP);
-    EXPECT_EQ(nullptr, wait.last_signal);
-    EXPECT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
-    EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_1));
-    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
-    EXPECT_NE(nullptr, wait.last_signal);
-
-    // If the options were taken into effect, using ZX_WAIT_ASYNC_TIMESTAMP
-    // above would have resulted in a non-zero value here.
-    EXPECT_EQ(0u, wait.last_signal->timestamp);
   }
 
   END_TEST;
@@ -685,11 +650,10 @@ bool wait_timestamp_integration_test() {
 
     zx_packet_signal_t last_signal = {};
     async::Wait wait2(
-        event2.get(), ZX_USER_SIGNAL_1,
+        event2.get(), ZX_USER_SIGNAL_1, ZX_WAIT_ASYNC_TIMESTAMP,
         [&last_signal](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) { last_signal = *signal; });
-    EXPECT_EQ(ZX_OK, wait2.Begin(loop.dispatcher(), ZX_WAIT_ASYNC_TIMESTAMP),
-              "wait with capture timestamp option");
+    EXPECT_EQ(ZX_OK, wait2.Begin(loop.dispatcher()), "wait with capture timestamp option");
 
     EXPECT_EQ(0u, last_signal.timestamp);
     zx::time before = zx::clock::get_monotonic();
@@ -1472,7 +1436,6 @@ RUN_TEST(quit_test)
 RUN_TEST(time_test)
 RUN_TEST(wait_test)
 RUN_TEST(wait_timestamp_test)
-RUN_TEST(wait_options_noop_test)
 RUN_TEST(wait_timestamp_integration_test)
 RUN_TEST(wait_unwaitable_handle_test)
 RUN_TEST(wait_shutdown_test)
