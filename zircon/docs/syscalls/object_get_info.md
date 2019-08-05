@@ -429,6 +429,35 @@ typedef struct zx_info_socket {
 } zx_info_socket_t;
 ```
 
+### ZX_INFO_TIMER
+
+*handle* type: **Timer**
+
+*buffer* type: `zx_info_timer_t[1]`
+
+```
+typedef struct zx_info_timer {
+    // The options passed to zx_timer_create().
+    uint32_t options;
+
+    // The deadline with respect to ZX_CLOCK_MONOTONIC at which the timer will
+    // fire next.
+    //
+    // This value will be zero if the timer is not set to fire.
+    zx_time_t deadline;
+
+    // Specifies a range from deadline - slack to deadline + slack during which
+    // the timer is allowed to fire. The system uses this parameter as a hint to
+    // coalesce nearby timers.
+    //
+    // The precise coalescing behavior is controlled by the options parameter
+    // specified when the timer was created.
+    //
+    // This value will be zero if the timer is not set to fire.
+    zx_duration_t slack;
+} zx_info_timer_t;
+```
+
 ### ZX_INFO_JOB_CHILDREN
 
 *handle* type: **Job**
@@ -743,6 +772,8 @@ If *topic* is **ZX_INFO_BTI**, *handle* must be of type **ZX_OBJ_TYPE_BTI** and 
 If *topic* is **ZX_INFO_PROCESS_HANDLE_STATS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
 If *topic* is **ZX_INFO_SOCKET**, *handle* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_INSPECT**.
+
+If *topic* is **ZX_INFO_TIMER**, *handle* must be of type **ZX_OBJ_TYPE_TIMER** and have **ZX_RIGHT_INSPECT**.
 
 ## RETURN VALUE
 
