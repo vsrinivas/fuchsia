@@ -70,9 +70,12 @@ class IntlWisdomTest : public TestWithEnvironment {
         .url = kIntlWisdomClientPackage,
         .out = sys::CloneFileDescriptor(fileno(out_file_)),
         .err = sys::CloneFileDescriptor(STDERR_FILENO),
+        .arguments =
+            std::vector<std::string>({
+                "--timestamp=2018-11-01T12:34:56Z",
+                "--timezone=America/Los_Angeles",
+            }),
     };
-    launch_info.arguments.push_back("--timestamp=2018-11-01T12:34:56Z");
-    launch_info.arguments.push_back("--timezone=America/Los_Angeles");
 
     ComponentControllerPtr controller;
     CreateComponentInCurrentEnvironment(std::move(launch_info), controller.NewRequest());

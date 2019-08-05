@@ -63,7 +63,7 @@ ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {
 
   const std::string time_zone_key = GetShortTimeZoneKey(time_zone);
 
-  fidl::VectorPtr<LocaleId> locales;
+  std::vector<LocaleId> locales;
   {
     LocaleId locale_id;
     locale_id.id = "fr-FR-u-ca-hebrew-fw-tuesday-nu-traditio-tz-" + time_zone_key;
@@ -86,7 +86,7 @@ ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {
   }
   intl_profile->set_locales(std::move(locales));
 
-  fidl::VectorPtr<CalendarId> calendars;
+  std::vector<CalendarId> calendars;
   {
     CalendarId calendar_id;
     calendar_id.id = "und-u-ca-hebrew";
@@ -104,7 +104,7 @@ ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {
   }
   intl_profile->set_calendars(std::move(calendars));
 
-  fidl::VectorPtr<TimeZoneId> time_zones;
+  std::vector<TimeZoneId> time_zones;
   {
     UnicodeString id_unic;
     // This is the IANA Time Zone ID, e.g. "America/New_York".
