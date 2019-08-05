@@ -6,6 +6,8 @@
 
 #include <fcntl.h>
 
+#include <src/lib/fxl/strings/substitute.h>
+
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/modular_config/modular_config_constants.h"
 #include "peridot/lib/modular_config/modular_config_xdr.h"
@@ -19,7 +21,6 @@ std::string GetSectionAsString(const rapidjson::Document& doc, const std::string
   auto config_json = doc.FindMember(section_name);
   if (config_json == doc.MemberEnd()) {
     // |section_name| was not found
-    FXL_LOG(ERROR) << section_name << " section was not found";
     return "{}";
   }
 
@@ -108,6 +109,23 @@ fuchsia::modular::session::SessionmgrConfig ModularConfigReader::GetDefaultSessi
   fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
   XdrRead("{}", &sessionmgr_config, XdrSessionmgrConfig);
   return sessionmgr_config;
+}
+
+// static
+std::string ModularConfigReader::GetConfigAsString(
+    fuchsia::modular::session::BasemgrConfig* basemgr_config,
+    fuchsia::modular::session::SessionmgrConfig* sessionmgr_config) {
+  std::string basemgr_json;
+  std::string sessionmgr_json;
+  XdrWrite(&basemgr_json, basemgr_config, XdrBasemgrConfig);
+  XdrWrite(&sessionmgr_json, sessionmgr_config, XdrSessionmgrConfig);
+
+  return fxl::Substitute(R"({
+      "$0": $1,
+      "$2": $3
+    })",
+                         modular_config::kBasemgrConfigName, basemgr_json,
+                         modular_config::kSessionmgrConfigName, sessionmgr_json);
 }
 
 }  // namespace modular

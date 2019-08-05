@@ -7,6 +7,7 @@
 
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+
 #include <src/lib/files/unique_fd.h>
 
 #include "lib/json/json_parser.h"
@@ -49,6 +50,11 @@ class ModularConfigReader {
 
   // Returns a SessionmgrConfig with all default values
   fuchsia::modular::session::SessionmgrConfig GetDefaultSessionmgrConfig() const;
+
+  // Returns the given configuration as a JSON formatted string.
+  static std::string GetConfigAsString(
+      fuchsia::modular::session::BasemgrConfig* basemgr_config,
+      fuchsia::modular::session::SessionmgrConfig* sessionmgr_config);
 
  private:
   fuchsia::modular::session::SessionmgrConfig sessionmgr_config_;
