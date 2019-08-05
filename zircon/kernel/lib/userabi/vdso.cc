@@ -193,14 +193,15 @@ class VDsoCodeWindow {
 const VDso* VDso::instance_ = NULL;
 
 // Private constructor, can only be called by Create (below).
-VDso::VDso() : RoDso("vdso/full", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {}
+VDso::VDso(KernelHandle<VmObjectDispatcher>* vmo_kernel_handle)
+    : RoDso("vdso/full", vdso_image, VDSO_CODE_END, VDSO_CODE_START, vmo_kernel_handle) {}
 
 // This is called exactly once, at boot time.
-const VDso* VDso::Create() {
+const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
   ASSERT(!instance_);
 
   fbl::AllocChecker ac;
-  VDso* vdso = new (&ac) VDso();
+  VDso* vdso = new (&ac) VDso(&vmo_kernel_handles[0]);
   ASSERT(ac.check());
 
   // Map a window into the VMO to write the vdso_constants struct.
@@ -238,9 +239,10 @@ const VDso* VDso::Create() {
     REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, soft_ticks_get);
   }
 
+  DEBUG_ASSERT(!(vdso->vmo_rights() & ZX_RIGHT_WRITE));
   for (size_t v = static_cast<size_t>(Variant::FULL) + 1; v < static_cast<size_t>(Variant::COUNT);
        ++v)
-    vdso->CreateVariant(static_cast<Variant>(v));
+    vdso->CreateVariant(static_cast<Variant>(v), &vmo_kernel_handles[v]);
 
   instance_ = vdso;
   return instance_;
@@ -248,14 +250,6 @@ const VDso* VDso::Create() {
 
 uintptr_t VDso::base_address(const fbl::RefPtr<VmMapping>& code_mapping) {
   return code_mapping ? code_mapping->base() - VDSO_CODE_START : 0;
-}
-
-void VDso::GetVariants(Handle** vmos) const {
-  DEBUG_ASSERT(!(vmo_rights() & ZX_RIGHT_WRITE));
-  vmos[0] = RoDso::vmo_handle().release();
-  for (size_t i = 1; i < static_cast<size_t>(Variant::COUNT); ++i) {
-    vmos[i] = Handle::Make(variant_vmo_[i - 1], vmo_rights()).release();
-  }
 }
 
 // Each vDSO variant VMO is made via a COW clone of the main/default vDSO
@@ -269,7 +263,7 @@ void VDso::GetVariants(Handle** vmos) const {
 // instructions, so a process using the variant can never get into syscall
 // entry with that PC value and hence can never pass the vDSO enforcement
 // test.
-void VDso::CreateVariant(Variant variant) {
+void VDso::CreateVariant(Variant variant, KernelHandle<VmObjectDispatcher>* vmo_kernel_handle) {
   DEBUG_ASSERT(variant > Variant::FULL);
   DEBUG_ASSERT(variant < Variant::COUNT);
   DEBUG_ASSERT(!variant_vmo_[variant_index(variant)]);
@@ -299,13 +293,12 @@ void VDso::CreateVariant(Variant variant) {
       PANIC("VDso::CreateVariant called with bad variant");
   }
 
-  fbl::RefPtr<Dispatcher> dispatcher;
   zx_rights_t rights;
-  status = VmObjectDispatcher::Create(ktl::move(new_vmo), &dispatcher, &rights);
+  status = VmObjectDispatcher::Create(ktl::move(new_vmo), vmo_kernel_handle, &rights);
   ASSERT(status == ZX_OK);
 
-  status = dispatcher->set_name(name, strlen(name));
+  status = vmo_kernel_handle->dispatcher()->set_name(name, strlen(name));
   ASSERT(status == ZX_OK);
 
-  variant_vmo_[variant_index(variant)] = DownCastDispatcher<VmObjectDispatcher>(&dispatcher);
+  variant_vmo_[variant_index(variant)] = vmo_kernel_handle->dispatcher();
 }

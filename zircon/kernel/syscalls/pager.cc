@@ -68,14 +68,14 @@ zx_status_t sys_pager_create_vmo(zx_handle_t pager, uint32_t options, zx_handle_
     return status;
   }
 
-  fbl::RefPtr<Dispatcher> dispatcher;
+  KernelHandle<VmObjectDispatcher> kernel_handle;
   zx_rights_t rights;
-  status = VmObjectDispatcher::Create(vmo, pager_dispatcher->get_koid(), &dispatcher, &rights);
+  status = VmObjectDispatcher::Create(vmo, pager_dispatcher->get_koid(), &kernel_handle, &rights);
   if (status != ZX_OK) {
     return status;
   }
 
-  return out->make(ktl::move(dispatcher), rights);
+  return out->make(ktl::move(kernel_handle), rights);
 }
 
 // zx_status_t zx_pager_detach_vmo

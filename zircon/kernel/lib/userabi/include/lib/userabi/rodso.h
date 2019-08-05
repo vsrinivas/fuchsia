@@ -14,16 +14,19 @@
 class EmbeddedVmo {
  public:
   EmbeddedVmo() = delete;
-  EmbeddedVmo(const char* name, const void* image, size_t size);
+
+  // The EmbeddedVmo will retain a RefPtr to the created VmObjectDispatcher,
+  // but ownership of the wrapping handle is given to the caller.
+  EmbeddedVmo(const char* name, const void* image, size_t size,
+              KernelHandle<VmObjectDispatcher>* vmo_kernel_handle);
 
   const auto& vmo() const { return vmo_; }
-  HandleOwner vmo_handle() const;
 
   size_t size() const { return size_; }
 
- protected:
   zx_rights_t vmo_rights() const { return vmo_rights_; }
 
+ protected:
   zx_status_t MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar, bool code, size_t vmar_offset,
                          size_t start_offset, size_t end_offset) const;
 
@@ -44,8 +47,9 @@ class RoDso : public EmbeddedVmo {
   zx_status_t Map(fbl::RefPtr<VmAddressRegionDispatcher> vmar, size_t offset) const;
 
  protected:
-  RoDso(const char* name, const void* image, size_t size, uintptr_t code_start)
-      : EmbeddedVmo(name, image, size), code_start_(code_start) {
+  RoDso(const char* name, const void* image, size_t size, uintptr_t code_start,
+        KernelHandle<VmObjectDispatcher>* vmo_kernel_handle)
+      : EmbeddedVmo(name, image, size, vmo_kernel_handle), code_start_(code_start) {
     DEBUG_ASSERT(code_start > 0);
     DEBUG_ASSERT(code_start < size);
     DEBUG_ASSERT(IS_PAGE_ALIGNED(code_start));

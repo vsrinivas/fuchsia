@@ -14,6 +14,7 @@
 
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 #include <vm/vm_object.h>
 
 class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DEFAULT_VMO_RIGHTS>,
@@ -21,13 +22,13 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
  public:
   static zx_status_t parse_create_syscall_flags(uint32_t flags, uint32_t* out_flags);
 
-  static zx_status_t Create(fbl::RefPtr<VmObject> vmo, fbl::RefPtr<Dispatcher>* dispatcher,
+  static zx_status_t Create(fbl::RefPtr<VmObject> vmo, KernelHandle<VmObjectDispatcher>* handle,
                             zx_rights_t* rights) {
-    return Create(std::move(vmo), ZX_KOID_INVALID, dispatcher, rights);
+    return Create(std::move(vmo), ZX_KOID_INVALID, handle, rights);
   }
 
   static zx_status_t Create(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid,
-                            fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights);
+                            KernelHandle<VmObjectDispatcher>* handle, zx_rights_t* rights);
   ~VmObjectDispatcher() final;
 
   // VmObjectChildObserver implementation.

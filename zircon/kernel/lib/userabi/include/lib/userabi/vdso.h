@@ -17,7 +17,13 @@ class VmMapping;
 class VDso : public RoDso {
  public:
   // This is called only once, at boot time.
-  static const VDso* Create();
+  //
+  // The created VDso will retain RefPtrs to the created VmObjectDispatchers,
+  // but ownership of the wrapping handles are given to the caller.
+  //
+  // The RoDso VMO is created in vmo_kernel_handles[0], with the VDso variants
+  // following.
+  static const VDso* Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles);
 
   static bool vmo_is_vdso(const fbl::RefPtr<VmObject>& vmo) {
     return likely(instance_) && instance_->vmo_is_vdso_impl(vmo);
@@ -39,14 +45,11 @@ class VDso : public RoDso {
   // for entering the kernel with <syscall-name>'s syscall number.
   struct ValidSyscallPC;
 
-  // Fill in the VMO handles for all the variants.
-  void GetVariants(Handle** vmos) const;
-
  private:
   using Variant = userboot::VdsoVariant;
 
-  VDso();
-  void CreateVariant(Variant);
+  VDso(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles);
+  void CreateVariant(Variant, KernelHandle<VmObjectDispatcher>* vmo_kernel_handle);
 
   bool vmo_is_vdso_impl(const fbl::RefPtr<VmObject>& vmo_ref) const {
     if (vmo_ref == vmo()->vmo())

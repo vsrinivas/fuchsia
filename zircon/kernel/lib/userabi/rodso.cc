@@ -15,10 +15,10 @@
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
 
-EmbeddedVmo::EmbeddedVmo(const char* name, const void* image, size_t size)
+EmbeddedVmo::EmbeddedVmo(const char* name, const void* image, size_t size,
+                         KernelHandle<VmObjectDispatcher>* vmo_kernel_handle)
     : name_(name), size_(size) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
-  fbl::RefPtr<Dispatcher> dispatcher;
 
   // create vmo out of ro data mapped in kernel space
   fbl::RefPtr<VmObject> vmo;
@@ -26,17 +26,15 @@ EmbeddedVmo::EmbeddedVmo(const char* name, const void* image, size_t size)
   ASSERT(status == ZX_OK);
 
   // build and point a dispatcher at it
-  status = VmObjectDispatcher::Create(ktl::move(vmo), &dispatcher, &vmo_rights_);
+  status = VmObjectDispatcher::Create(ktl::move(vmo), vmo_kernel_handle, &vmo_rights_);
   ASSERT(status == ZX_OK);
 
-  status = dispatcher->set_name(name, strlen(name));
+  status = vmo_kernel_handle->dispatcher()->set_name(name, strlen(name));
   ASSERT(status == ZX_OK);
-  vmo_ = DownCastDispatcher<VmObjectDispatcher>(&dispatcher);
+  vmo_ = vmo_kernel_handle->dispatcher();
   vmo_rights_ &= ~ZX_RIGHT_WRITE;
   vmo_rights_ |= ZX_RIGHT_EXECUTE;
 }
-
-HandleOwner EmbeddedVmo::vmo_handle() const { return Handle::Make(vmo_, vmo_rights_); }
 
 // Map one segment from our VM object.
 zx_status_t EmbeddedVmo::MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar, bool code,

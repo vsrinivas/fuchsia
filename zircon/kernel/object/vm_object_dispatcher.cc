@@ -40,15 +40,16 @@ zx_status_t VmObjectDispatcher::parse_create_syscall_flags(uint32_t flags, uint3
 }
 
 zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid,
-                                       fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
+                                       KernelHandle<VmObjectDispatcher>* handle,
+                                       zx_rights_t* rights) {
   fbl::AllocChecker ac;
-  auto disp = new (&ac) VmObjectDispatcher(ktl::move(vmo), pager_koid);
+  KernelHandle new_handle(fbl::AdoptRef(new (&ac) VmObjectDispatcher(ktl::move(vmo), pager_koid)));
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
-  disp->vmo()->set_user_id(disp->get_koid());
+  new_handle.dispatcher()->vmo()->set_user_id(new_handle.dispatcher()->get_koid());
   *rights = default_rights();
-  *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+  *handle = ktl::move(new_handle);
   return ZX_OK;
 }
 

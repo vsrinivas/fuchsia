@@ -64,8 +64,10 @@ KCOUNTER(init_time, "init.userboot.time.msec")
 
 class UserbootImage : private RoDso {
  public:
-  explicit UserbootImage(const VDso* vdso)
-      : RoDso("userboot", userboot_image, USERBOOT_CODE_END, USERBOOT_CODE_START), vdso_(vdso) {}
+  UserbootImage(const VDso* vdso, KernelHandle<VmObjectDispatcher>* vmo_kernel_handle)
+      : RoDso("userboot", userboot_image, USERBOOT_CODE_END, USERBOOT_CODE_START,
+              vmo_kernel_handle),
+        vdso_(vdso) {}
 
   // The whole userboot image consists of the userboot rodso image
   // immediately followed by the vDSO image.  This returns the size
@@ -114,15 +116,15 @@ zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
   if (!vmo)
     return ZX_ERR_NO_MEMORY;
   zx_rights_t rights;
-  fbl::RefPtr<Dispatcher> dispatcher;
-  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), &dispatcher, &rights);
+  KernelHandle<VmObjectDispatcher> vmo_kernel_handle;
+  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), &vmo_kernel_handle, &rights);
   if (result == ZX_OK) {
     if (disp_ptr)
-      *disp_ptr = fbl::RefPtr<VmObjectDispatcher>::Downcast(dispatcher);
+      *disp_ptr = vmo_kernel_handle.dispatcher();
     if (readonly)
       rights &= ~ZX_RIGHT_WRITE;
     if (ptr)
-      *ptr = Handle::Make(ktl::move(dispatcher), rights).release();
+      *ptr = Handle::Make(ktl::move(vmo_kernel_handle), rights).release();
   }
   return result;
 }
@@ -166,9 +168,11 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out) {
 
 void bootstrap_vmos(Handle** handles) {
   {
+    KernelHandle<VmObjectDispatcher> vmo_kernel_handle;
     EmbeddedVmo decompress_zbi("lib/hermetic/decompress-zbi.so", decompress_zbi_image,
-                               DECOMPRESS_ZBI_DATA_END);
-    handles[kUserbootDecompressor] = decompress_zbi.vmo_handle().release();
+                               DECOMPRESS_ZBI_DATA_END, &vmo_kernel_handle);
+    handles[kUserbootDecompressor] =
+        Handle::Make(ktl::move(vmo_kernel_handle), decompress_zbi.vmo_rights()).release();
   }
 
   size_t rsize;
@@ -258,8 +262,15 @@ void userboot_init(uint) {
   ASSERT(handles[userboot::kRootJob]);
 
   // It also gets many VMOs for VDSOs and other things.
-  const VDso* vdso = VDso::Create();
-  vdso->GetVariants(&handles[kFirstVdso]);
+  constexpr int kVariants = static_cast<int>(userboot::VdsoVariant::COUNT);
+  KernelHandle<VmObjectDispatcher> vdso_kernel_handles[kVariants];
+  const VDso* vdso = VDso::Create(vdso_kernel_handles);
+  for (int i = 0; i < kVariants; ++i) {
+    handles[kFirstVdso + i] =
+        Handle::Make(ktl::move(vdso_kernel_handles[i]), vdso->vmo_rights()).release();
+    ASSERT(handles[kFirstVdso + i]);
+  }
+  DEBUG_ASSERT(handles[kFirstVdso]->dispatcher() == vdso->vmo());
   bootstrap_vmos(handles);
 
   // Make the channel that will hold the message.
@@ -278,7 +289,8 @@ void userboot_init(uint) {
   process->AddHandle(ktl::move(user_handle_owner));
 
   // Map in the userboot image along with the vDSO.
-  UserbootImage userboot(vdso);
+  KernelHandle<VmObjectDispatcher> userboot_vmo_kernel_handle;
+  UserbootImage userboot(vdso, &userboot_vmo_kernel_handle);
   uintptr_t vdso_base = 0;
   uintptr_t entry = 0;
   status = userboot.Map(vmar, &vdso_base, &entry);

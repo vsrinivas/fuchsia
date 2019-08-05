@@ -86,15 +86,15 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
   }
 
   // create a Vm Object dispatcher
-  fbl::RefPtr<Dispatcher> dispatcher;
+  KernelHandle<VmObjectDispatcher> kernel_handle;
   zx_rights_t rights;
-  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), &dispatcher, &rights);
+  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), &kernel_handle, &rights);
   if (result != ZX_OK) {
     return result;
   }
 
   // create a handle and attach the dispatcher to it
-  return out->make(ktl::move(dispatcher), rights);
+  return out->make(ktl::move(kernel_handle), rights);
 }
 
 // zx_status_t zx_vmo_create_physical
@@ -125,15 +125,15 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, zx_paddr_t paddr, size_t 
   }
 
   // create a Vm Object dispatcher
-  fbl::RefPtr<Dispatcher> dispatcher;
+  KernelHandle<VmObjectDispatcher> kernel_handle;
   zx_rights_t rights;
-  result = VmObjectDispatcher::Create(ktl::move(vmo), &dispatcher, &rights);
+  result = VmObjectDispatcher::Create(ktl::move(vmo), &kernel_handle, &rights);
   if (result != ZX_OK) {
     return result;
   }
 
   // create a handle and attach the dispatcher to it
-  return out->make(ktl::move(dispatcher), rights);
+  return out->make(ktl::move(kernel_handle), rights);
 }
 
 // zx_status_t zx_framebuffer_get_info

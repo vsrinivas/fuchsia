@@ -613,7 +613,7 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num,
 
   // MMIO based bars are passed back using a VMO. If we end up creating one here
   // without errors then later a handle will be passed back to the caller.
-  fbl::RefPtr<Dispatcher> dispatcher;
+  KernelHandle<VmObjectDispatcher> kernel_handle;
   fbl::RefPtr<VmObject> vmo;
   zx_rights_t rights;
   if (info->is_mmio) {
@@ -634,7 +634,7 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num,
 
     // Now that the vmo has been created for the bar, create a handle to
     // the appropriate dispatcher for the caller
-    status = VmObjectDispatcher::Create(vmo, &dispatcher, &rights);
+    status = VmObjectDispatcher::Create(vmo, &kernel_handle, &rights);
     if (status != ZX_OK) {
       return status;
     }
@@ -654,7 +654,7 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num,
   }
 
   if (vmo) {
-    return out_handle->make(ktl::move(dispatcher), rights);
+    return out_handle->make(ktl::move(kernel_handle), rights);
   }
 
   return ZX_OK;
