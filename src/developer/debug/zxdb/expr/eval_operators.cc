@@ -53,19 +53,18 @@ void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
 
   // The coerced value will be the result. It should have the "source" of the left-hand-side since
   // the location being assigned to doesn't change.
-  ExprValue coerced;
-  if (Err err = CastExprValue(context.get(), CastType::kImplicit, right_value,
-                              left_value.type_ref(), &coerced, dest);
-      err.has_error())
-    return cb(err);
+  ErrOrValue coerced =
+      CastExprValue(context.get(), CastType::kImplicit, right_value, left_value.type_ref());
+  if (coerced.has_error())
+    return cb(std::move(coerced));
 
   // Make a copy to avoid ambiguity of copying and moving the value below.
-  std::vector<uint8_t> data = coerced.data();
+  std::vector<uint8_t> data = coerced.value().data();
 
   // Update the memory with the new data. The result of the expression is the coerced value.
   context->GetDataProvider()->WriteMemory(
       dest.address(), std::move(data),
-      [coerced = std::move(coerced), cb = std::move(cb)](const Err& err) mutable {
+      [coerced = coerced.take_value(), cb = std::move(cb)](const Err& err) mutable {
         if (err.has_error())
           cb(err);
         else
@@ -242,13 +241,12 @@ Err OpValueToDouble(EvalContext* context, const OpValue& in, double* out) {
 
   // Needs casting to a float.
   auto double_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
-  ExprValue casted;
-  if (Err err =
-          CastExprValue(context, CastType::kImplicit, *in.value, std::move(double_type), &casted);
-      err.has_error())
-    return err;
+  ErrOrValue casted =
+      CastExprValue(context, CastType::kImplicit, *in.value, std::move(double_type));
+  if (casted.has_error())
+    return casted.err();
 
-  return casted.PromoteToDouble(out);
+  return casted.value().PromoteToDouble(out);
 }
 
 // Applies the given operator to two values that should be done in floating-point.

@@ -13,31 +13,41 @@ namespace zxdb {
 
 ExprValue::ExprValue() = default;
 
-ExprValue::ExprValue(bool value)
-    : ExprValue(BaseType::kBaseTypeBoolean, "bool", &value, sizeof(bool)) {}
-ExprValue::ExprValue(int8_t value)
-    : ExprValue(BaseType::kBaseTypeSigned, "int8_t", &value, sizeof(int8_t)) {}
-ExprValue::ExprValue(uint8_t value)
-    : ExprValue(BaseType::kBaseTypeUnsigned, "uint8_t", &value, sizeof(uint8_t)) {}
-ExprValue::ExprValue(int16_t value)
-    : ExprValue(BaseType::kBaseTypeSigned, "int16_t", &value, sizeof(int16_t)) {}
-ExprValue::ExprValue(uint16_t value)
-    : ExprValue(BaseType::kBaseTypeUnsigned, "uint16_t", &value, sizeof(uint16_t)) {}
-ExprValue::ExprValue(int32_t value)
-    : ExprValue(BaseType::kBaseTypeSigned, "int32_t", &value, sizeof(int32_t)) {}
-ExprValue::ExprValue(uint32_t value)
-    : ExprValue(BaseType::kBaseTypeUnsigned, "uint32_t", &value, sizeof(uint32_t)) {}
-ExprValue::ExprValue(int64_t value)
-    : ExprValue(BaseType::kBaseTypeSigned, "int64_t", &value, sizeof(int64_t)) {}
-ExprValue::ExprValue(uint64_t value)
-    : ExprValue(BaseType::kBaseTypeUnsigned, "uint64_t", &value, sizeof(uint64_t)) {}
-ExprValue::ExprValue(float value)
-    : ExprValue(BaseType::kBaseTypeFloat, "float", &value, sizeof(float)) {}
-ExprValue::ExprValue(double value)
-    : ExprValue(BaseType::kBaseTypeFloat, "double", &value, sizeof(double)) {}
+ExprValue::ExprValue(bool value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeBoolean, "bool", &value, sizeof(bool)) {}
+ExprValue::ExprValue(int8_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeSigned, "int8_t", &value, sizeof(int8_t)) {}
+ExprValue::ExprValue(uint8_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeUnsigned, "uint8_t", &value, sizeof(uint8_t)) {}
+ExprValue::ExprValue(int16_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeSigned, "int16_t", &value, sizeof(int16_t)) {}
+ExprValue::ExprValue(uint16_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeUnsigned, "uint16_t", &value,
+                sizeof(uint16_t)) {}
+ExprValue::ExprValue(int32_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeSigned, "int32_t", &value, sizeof(int32_t)) {}
+ExprValue::ExprValue(uint32_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeUnsigned, "uint32_t", &value,
+                sizeof(uint32_t)) {}
+ExprValue::ExprValue(int64_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeSigned, "int64_t", &value, sizeof(int64_t)) {}
+ExprValue::ExprValue(uint64_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeUnsigned, "uint64_t", &value,
+                sizeof(uint64_t)) {}
+ExprValue::ExprValue(float value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeFloat, "float", &value, sizeof(float)) {}
+ExprValue::ExprValue(double value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : ExprValue(std::move(type), BaseType::kBaseTypeFloat, "double", &value, sizeof(double)) {}
 
-ExprValue::ExprValue(int base_type, const char* type_name, void* data, uint32_t data_size)
-    : type_(fxl::MakeRefCounted<BaseType>(base_type, data_size, type_name)) {
+ExprValue::ExprValue(fxl::RefPtr<Type> optional_type, int base_type, const char* type_name,
+                     void* data, uint32_t data_size)
+    : type_(optional_type ? std::move(optional_type)
+                          : fxl::RefPtr<Type>(
+                                fxl::MakeRefCounted<BaseType>(base_type, data_size, type_name))) {
+  // The type that we made or were given should match the size of the input data. But also allow
+  // 0-sized types since the input type may not be concrete.
+  FXL_DCHECK(type_->byte_size() == data_size || type_->byte_size() == 0);
+
   data_.resize(data_size);
   memcpy(&data_[0], data, data_size);
 }
@@ -45,15 +55,6 @@ ExprValue::ExprValue(int base_type, const char* type_name, void* data, uint32_t 
 ExprValue::ExprValue(fxl::RefPtr<Type> type, std::vector<uint8_t> data,
                      const ExprValueSource& source)
     : type_(std::move(type)), source_(source), data_(data) {}
-
-ExprValue::ExprValue(uint64_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
-    : type_(std::move(type)), source_(source) {
-  // Allow 0-sized types since the input type may not be concrete.
-  FXL_DCHECK(type_->byte_size() == sizeof(uint64_t) || type_->byte_size() == 0);
-
-  data_.resize(sizeof(uint64_t));
-  memcpy(&data_[0], &value, sizeof(uint64_t));
-}
 
 ExprValue::~ExprValue() = default;
 

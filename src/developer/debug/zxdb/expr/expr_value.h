@@ -20,38 +20,44 @@ class Err;
 class EvalContext;
 class Type;
 
-// Holds a value for an expression. This could be the value of a variable in
-// memory (e.g. the value of "a" when you type "print a"), or it could be
-// a temporary that the debugger has computed as part of an expression.
+// Holds a value for an expression. This could be the value of a variable in memory (e.g. the value
+// of "a" when you type "print a"), or it could be a temporary that the debugger has computed as
+// part of an expression.
 class ExprValue {
  public:
   ExprValue();
 
-  // Constructs a value from the corresponding C++ value. A Type will be
-  // created to represent the value.
-  explicit ExprValue(bool value);
-  explicit ExprValue(int8_t value);
-  explicit ExprValue(uint8_t value);
-  explicit ExprValue(int16_t value);
-  explicit ExprValue(uint16_t value);
-  explicit ExprValue(int32_t value);
-  explicit ExprValue(uint32_t value);
-  explicit ExprValue(int64_t value);
-  explicit ExprValue(uint64_t value);
-  explicit ExprValue(float value);
-  explicit ExprValue(double value);
+  // Constructs a value from the corresponding C++ value of the given size.
+  //
+  // If the type is null, a type matching the corresponding C++ parameter name ("int32_t", etc.)
+  // will be created to represent the value (this is useful for tests).
+  explicit ExprValue(bool value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(int8_t value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(uint8_t value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(int16_t value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(uint16_t value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(int32_t value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(uint32_t value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(int64_t value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(uint64_t value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(float value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
+  explicit ExprValue(double value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
+                     const ExprValueSource& source = ExprValueSource());
 
   // Full constructor. This takes the type and stores it assuming the type
   // is good. Prefer the other version when possible unless you're sure the
   // type is not a declaration.
   ExprValue(fxl::RefPtr<Type> symbol_type, std::vector<uint8_t> data,
-            const ExprValueSource& source = ExprValueSource());
-
-  // Makes a 64-bit value of the given type. Since we often deal with 64-bit pointers and such
-  // this is a common operation. The symbol type should be 64-bit. The value and type are different
-  // here to prevent ambiguity when implicity constructing the vector in the previous constructor
-  // with {}.
-  ExprValue(uint64_t value, fxl::RefPtr<Type> symbol_type,
             const ExprValueSource& source = ExprValueSource());
 
   ~ExprValue();
@@ -104,9 +110,10 @@ class ExprValue {
   Err PromoteToDouble(double* output) const;
 
  private:
-  // Internal constructor for the primitive types that constructs an on-the-fly
-  // type definition for the built-in type.
-  ExprValue(int base_type, const char* type_name, void* data, uint32_t data_size);
+  // Internal constructor for the primitive types. It uses the given |type| if given, otherwise they
+  // construct an on-the-fly type definition for the built-in type with the given parameters.
+  ExprValue(fxl::RefPtr<Type> optional_type, int base_type, const char* type_name, void* data,
+            uint32_t data_size);
 
   // Application-defined type from the symbols.
   fxl::RefPtr<Type> type_;

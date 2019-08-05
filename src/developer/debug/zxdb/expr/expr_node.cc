@@ -151,12 +151,11 @@ void CastExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const
     if (err.has_error()) {
       cb(err, value);
     } else {
-      ExprValue cast_result;
-      Err cast_err = CastExprValue(context.get(), cast_type, value, to_type, &cast_result);
-      if (cast_err.has_error())
-        cb(cast_err, ExprValue());
+      ErrOrValue result = CastExprValue(context.get(), cast_type, value, to_type);
+      if (result.has_error())
+        cb(result.err(), ExprValue());
       else
-        cb(Err(), std::move(cast_result));
+        cb(Err(), result.take_value());
     }
   };
 
