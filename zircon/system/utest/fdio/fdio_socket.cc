@@ -11,6 +11,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -27,9 +28,7 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseCompleter::Sync completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
+  void Close(CloseCompleter::Sync completer) override { return completer.Reply(ZX_OK); }
 
   void Describe(DescribeCompleter::Sync completer) override {
     llcpp::fuchsia::io::Socket socket;
@@ -129,12 +128,13 @@ TEST(SocketTest, CloseZXSocketOnTransfer) {
   }
 
   zx_signals_t observed;
-  ASSERT_OK(server_socket.wait_one(ZX_SOCKET_WRITABLE, zx::time::infinite_past(), &observed));
+  EXPECT_OK(server_socket.wait_one(ZX_SOCKET_WRITABLE, zx::time::infinite_past(), &observed));
 
   zx_handle_t handle;
-  ASSERT_OK(fdio_fd_transfer(fd, &handle));
+  EXPECT_OK(fdio_fd_transfer(fd, &handle));
 
-  ASSERT_OK(server_socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed));
+  EXPECT_OK(server_socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed));
+  EXPECT_OK(zx_handle_close(handle));
 }
 
 // Verify scenario, where multi-segment recvmsg is requested, but the socket has
@@ -162,8 +162,8 @@ TEST(SocketTest, RecvmsgNonblockBoundary) {
   // Write 4 bytes of data to socket.
   size_t actual;
   const uint32_t data_out = 0x12345678;
-  EXPECT_OK(server_socket.write(0, &data_out, sizeof(data_out), &actual), "Socket write failed");
-  EXPECT_EQ(sizeof(data_out), actual, "Socket write length mismatch");
+  EXPECT_OK(server_socket.write(0, &data_out, sizeof(data_out), &actual));
+  EXPECT_EQ(actual, sizeof(data_out));
 
   uint32_t data_in1, data_in2;
   // Fail at compilation stage if anyone changes types.
@@ -177,19 +177,13 @@ TEST(SocketTest, RecvmsgNonblockBoundary) {
   iov[1].iov_base = &data_in2;
   iov[1].iov_len = sizeof(data_in2);
 
-  struct msghdr msg;
-  msg.msg_name = NULL;
-  msg.msg_namelen = 0;
+  struct msghdr msg = {};
   msg.msg_iov = iov;
   msg.msg_iovlen = sizeof(iov) / sizeof(*iov);
-  msg.msg_control = NULL;
-  msg.msg_controllen = 0;
-  msg.msg_flags = 0;
 
-  actual = recvmsg(fd, &msg, 0);
-  EXPECT_EQ(4u, actual);
+  EXPECT_EQ(recvmsg(fd, &msg, 0), sizeof(data_out));
 
-  close(fd);
+  EXPECT_EQ(close(fd), 0, "%s", strerror(errno));
 }
 
 // Verify scenario, where multi-segment sendmsg is requested, but the socket has
@@ -223,36 +217,29 @@ TEST(SocketTest, SendmsgNonblockBoundary) {
   iov[1].iov_base = memchunk.get();
   iov[1].iov_len = memlength;
 
-  struct msghdr msg;
-  msg.msg_name = NULL;
-  msg.msg_namelen = 0;
+  struct msghdr msg = {};
   msg.msg_iov = iov;
   msg.msg_iovlen = sizeof(iov) / sizeof(*iov);
-  msg.msg_control = NULL;
-  msg.msg_controllen = 0;
-  msg.msg_flags = 0;
 
   // 1. Keep sending data until socket can take no more.
   for (;;) {
     ssize_t count = sendmsg(fd, &msg, 0);
     if (count < 0) {
-      if (errno == EAGAIN) {
-        break;
-      }
+      EXPECT_EQ(errno, EAGAIN, "%s", strerror(errno));
+      break;
     }
-    ASSERT_GE(count, 0);
+    EXPECT_GE(count, 0);
   }
 
   // 2. Consume one segment of the data
-  size_t actual = 0;
-  zx_status_t status = server_socket.read(0, memchunk.get(), memlength, &actual);
+  size_t actual;
+  EXPECT_OK(server_socket.read(0, memchunk.get(), memlength, &actual));
   EXPECT_EQ(memlength, actual);
-  EXPECT_OK(status);
 
   // 3. Push again 2 packets of <memlength> bytes, observe only one sent.
   EXPECT_EQ((ssize_t)memlength, sendmsg(fd, &msg, 0));
 
-  close(fd);
+  EXPECT_EQ(close(fd), 0, "%s", strerror(errno));
 }
 
 }  // namespace
