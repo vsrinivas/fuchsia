@@ -6,7 +6,7 @@
             },
             "system-services": [
                 "fuchsia.posix.socket.Provider",
-                "fuchsia.net.SocketProvider",
+                "fuchsia.net.NameLookup",
                 "fuchsia.netstack.Netstack",
                 "fuchsia.net.stack.Stack"
             ]
