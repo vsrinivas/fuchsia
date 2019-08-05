@@ -171,6 +171,14 @@ bool operator==(const EntryChange& lhs, const EntryChange& rhs);
 bool operator!=(const EntryChange& lhs, const EntryChange& rhs);
 std::ostream& operator<<(std::ostream& os, const EntryChange& e);
 
+// A change between 2 commit contents. |base| contains the previous contents for the same key and
+// |target| the updated ones. In case of insertion |base| is null. Similarly, |target| is null in
+// case of deletion.
+struct TwoWayChange {
+  std::unique_ptr<Entry> base;
+  std::unique_ptr<Entry> target;
+};
+
 // A change between 3 commit contents.
 struct ThreeWayChange {
   std::unique_ptr<Entry> base;

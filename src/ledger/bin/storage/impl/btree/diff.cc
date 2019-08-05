@@ -474,7 +474,7 @@ class ThreeWayIterator {
 
 Status ForEachDiffInternal(SynchronousStorage* storage, ObjectIdentifier left_node_identifier,
                            ObjectIdentifier right_node_identifier, std::string min_key,
-                           fit::function<bool(EntryChange)> on_next) {
+                           fit::function<bool(TwoWayChange)> on_next) {
   FXL_DCHECK(storage::IsDigestValid(left_node_identifier.object_digest()));
   FXL_DCHECK(storage::IsDigestValid(right_node_identifier.object_digest()));
 
@@ -484,10 +484,7 @@ Status ForEachDiffInternal(SynchronousStorage* storage, ObjectIdentifier left_no
 
   auto wrapped_next = [on_next = std::move(on_next)](std::unique_ptr<Entry> base,
                                                      std::unique_ptr<Entry> other) {
-    if (other) {
-      return on_next({std::move(*other), false});
-    }
-    return on_next({std::move(*base), true});
+    return on_next(TwoWayChange{std::move(base), std::move(other)});
   };
 
   IteratorPair iterators(storage, std::move(wrapped_next));
@@ -536,6 +533,22 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service, PageStorage* pa
                  ObjectIdentifier base_root_identifier, ObjectIdentifier other_root_identifier,
                  std::string min_key, fit::function<bool(EntryChange)> on_next,
                  fit::function<void(Status)> on_done) {
+  auto wrapped_next = [on_next = std::move(on_next)](TwoWayChange change) {
+    if (change.target) {
+      return on_next({std::move(*change.target), false});
+    }
+    return on_next({std::move(*change.base), true});
+  };
+  ForEachTwoWayDiff(coroutine_service, page_storage, std::move(base_root_identifier),
+              std::move(other_root_identifier), std::move(min_key), std::move(wrapped_next),
+              std::move(on_done));
+}
+
+void ForEachTwoWayDiff(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
+                       ObjectIdentifier base_root_identifier,
+                       ObjectIdentifier other_root_identifier, std::string min_key,
+                       fit::function<bool(TwoWayChange)> on_next,
+                       fit::function<void(Status)> on_done) {
   FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest()));
   FXL_DCHECK(storage::IsDigestValid(other_root_identifier.object_digest()));
   coroutine_service->StartCoroutine(
