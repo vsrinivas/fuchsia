@@ -97,10 +97,10 @@ zx_status_t RootMockDevice::CreateFromTestRoot(
   test_root.Bind(test_root_controller.Unbind().TakeChannel());
 
   const char* kDevPrefix = "/dev/";
-  if (devpath.get().find(kDevPrefix) != 0) {
+  if (!devpath.has_value() || devpath.value().find(kDevPrefix) != 0) {
     return ZX_ERR_BAD_STATE;
   }
-  std::string relative_devpath(devpath.get(), strlen(kDevPrefix));
+  std::string relative_devpath(devpath.value(), strlen(kDevPrefix));
   relative_devpath += "/mock";
   fbl::unique_fd fd(openat(devmgr.devfs_root().get(), relative_devpath.c_str(), O_RDWR));
   if (!fd.is_valid()) {
