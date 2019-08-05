@@ -36,6 +36,7 @@ mod mod_manager;
 mod models;
 mod module_output;
 mod story_context_store;
+mod story_graph;
 mod story_name_index;
 mod suggestion_providers;
 mod suggestions_manager;
