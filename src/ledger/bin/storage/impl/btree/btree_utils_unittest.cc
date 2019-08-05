@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <stdio.h>
-
-#include <algorithm>
-
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
+#include <stdio.h>
+
+#include <algorithm>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/environment/environment.h"
@@ -209,7 +208,8 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
     EXPECT_EQ(entries[i], golden_entries[i].entry);
   }
 
-  Entry new_entry = {"key071", MakeObjectIdentifier("object_digest_071"), KeyPriority::EAGER};
+  Entry new_entry = {"key071", MakeObjectIdentifier("object_digest_071"), KeyPriority::EAGER,
+                     EntryId()};
   std::vector<EntryChange> new_change{EntryChange{new_entry, false}};
   // Insert key "071" between keys "07" and "08".
   golden_entries.insert(golden_entries.begin() + 8, new_change[0]);

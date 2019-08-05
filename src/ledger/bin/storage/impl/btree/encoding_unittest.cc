@@ -41,7 +41,8 @@ TEST(EncodingTest, EmptyData) {
 
 TEST(EncodingTest, SingleEntry) {
   uint8_t level = 1u;
-  std::vector<Entry> entries = {{"key", MakeObjectIdentifier("object_digest"), KeyPriority::EAGER}};
+  std::vector<Entry> entries = {
+      {"key", MakeObjectIdentifier("object_digest"), KeyPriority::EAGER, EntryId()}};
   std::map<size_t, ObjectIdentifier> children = {{0u, MakeObjectIdentifier("child_1")},
                                                  {1u, MakeObjectIdentifier("child_2")}};
 
@@ -59,10 +60,11 @@ TEST(EncodingTest, SingleEntry) {
 
 TEST(EncodingTest, MoreEntries) {
   uint8_t level = 5;
-  std::vector<Entry> entries = {{"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
-                                {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
-                                {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
-                                {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
+  std::vector<Entry> entries = {
+      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER, EntryId()},
+      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY, EntryId()},
+      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER, EntryId()},
+      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY, EntryId()}};
   std::map<size_t, ObjectIdentifier> children = {{0, MakeObjectIdentifier("child_1")},
                                                  {1, MakeObjectIdentifier("child_2")},
                                                  {2, MakeObjectIdentifier("child_3")},
@@ -83,10 +85,11 @@ TEST(EncodingTest, MoreEntries) {
 
 TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
   uint8_t level = 5;
-  std::vector<Entry> entries = {{"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
-                                {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
-                                {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
-                                {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
+  std::vector<Entry> entries = {
+      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER, EntryId()},
+      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY, EntryId()},
+      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER, EntryId()},
+      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY, EntryId()}};
   std::map<size_t, ObjectIdentifier> children = {{0, MakeObjectIdentifier("child_1")},
                                                  {2, MakeObjectIdentifier("child_2")},
                                                  {4, MakeObjectIdentifier("child_3")}};
@@ -105,10 +108,11 @@ TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
 
 TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
   uint8_t level = 5;
-  std::vector<Entry> entries = {{"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
-                                {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
-                                {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
-                                {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
+  std::vector<Entry> entries = {
+      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER, EntryId()},
+      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY, EntryId()},
+      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER, EntryId()},
+      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY, EntryId()}};
   std::map<size_t, ObjectIdentifier> children = {{1, MakeObjectIdentifier("child_1")},
                                                  {3, MakeObjectIdentifier("child_2")}};
 
@@ -126,7 +130,8 @@ TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
 
 TEST(EncodingTest, ZeroByte) {
   uint8_t level = 13;
-  std::vector<Entry> entries = {{"k\0ey"_s, MakeObjectIdentifier("\0a\0\0"_s), KeyPriority::EAGER}};
+  std::vector<Entry> entries = {
+      {"k\0ey"_s, MakeObjectIdentifier("\0a\0\0"_s), KeyPriority::EAGER, EntryId()}};
   std::map<size_t, ObjectIdentifier> children = {{0u, MakeObjectIdentifier("ch\0ld_1"_s)},
                                                  {1u, MakeObjectIdentifier("child_\0"_s)}};
 

@@ -20,6 +20,7 @@ using PageId = std::string;
 using PageIdView = convert::ExtendedStringView;
 using CommitId = std::string;
 using CommitIdView = convert::ExtendedStringView;
+using EntryId = std::string;
 
 // The type of object.
 // Ledger stores user created content on BTrees, where the nodes (TREE_NODE
@@ -153,6 +154,7 @@ struct Entry {
   std::string key;
   ObjectIdentifier object_identifier;
   KeyPriority priority;
+  EntryId entry_id;
 };
 
 bool operator==(const Entry& lhs, const Entry& rhs);

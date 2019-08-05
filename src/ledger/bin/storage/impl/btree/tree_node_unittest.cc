@@ -198,21 +198,24 @@ TEST_F(TreeNodeTest, References) {
   const std::vector<Entry> entries = {
       // A single node pointing to the same value with both eager and lazy
       // links.
-      Entry{"key00", object0_id, KeyPriority::LAZY}, Entry{"key01", object1_id, KeyPriority::EAGER},
-      Entry{"key02", object0_id, KeyPriority::EAGER},
+      Entry{"key00", object0_id, KeyPriority::LAZY, EntryId()},
+      Entry{"key01", object1_id, KeyPriority::EAGER, EntryId()},
+      Entry{"key02", object0_id, KeyPriority::EAGER, EntryId()},
 
-      Entry{"key03", object1_id, KeyPriority::LAZY},
+      Entry{"key03", object1_id, KeyPriority::LAZY, EntryId()},
 
       // Two lazy references for the same object.
-      Entry{"key04", object0_id, KeyPriority::LAZY}, Entry{"key05", object1_id, KeyPriority::EAGER},
-      Entry{"key06", object0_id, KeyPriority::LAZY},
+      Entry{"key04", object0_id, KeyPriority::LAZY, EntryId()},
+      Entry{"key05", object1_id, KeyPriority::EAGER, EntryId()},
+      Entry{"key06", object0_id, KeyPriority::LAZY, EntryId()},
 
-      Entry{"key07", object1_id, KeyPriority::EAGER},
+      Entry{"key07", object1_id, KeyPriority::EAGER, EntryId()},
 
       // Two eager references for the same object, and an inlined object.
-      Entry{"key08", object0_id, KeyPriority::EAGER}, Entry{"key09", object1_id, KeyPriority::LAZY},
-      Entry{"key10", object0_id, KeyPriority::EAGER},
-      Entry{"key11", inlined_object_id, KeyPriority::EAGER}};
+      Entry{"key08", object0_id, KeyPriority::EAGER, EntryId()},
+      Entry{"key09", object1_id, KeyPriority::LAZY, EntryId()},
+      Entry{"key10", object0_id, KeyPriority::EAGER, EntryId()},
+      Entry{"key11", inlined_object_id, KeyPriority::EAGER, EntryId()}};
 
   std::unique_ptr<const TreeNode> root, child0, child1, child2;
   ASSERT_TRUE(CreateNodeFromEntries({entries[0], entries[1], entries[2]}, {}, &child0));

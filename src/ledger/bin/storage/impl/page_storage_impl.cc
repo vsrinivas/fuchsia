@@ -645,6 +645,12 @@ void PageStorageImpl::GetEntryFromCommit(const Commit& commit, std::string key,
                       std::move(key), std::move(on_next), std::move(on_done));
 }
 
+void PageStorageImpl::GetDiffForCloud(
+    const Commit& /*target_commit*/,
+    fit::function<void(Status, CommitIdView, std::vector<EntryChange>)> callback) {
+  callback(Status::NOT_IMPLEMENTED, "", {});
+}
+
 void PageStorageImpl::GetCommitContentsDiff(const Commit& base_commit, const Commit& other_commit,
                                             std::string min_key,
                                             fit::function<bool(EntryChange)> on_next_diff,

@@ -104,6 +104,10 @@ class PageStorageEmptyImpl : public PageStorage {
   void GetEntryFromCommit(const Commit& commit, std::string key,
                           fit::function<void(Status, Entry)> callback) override;
 
+  void GetDiffForCloud(
+      const Commit& target_commit,
+      fit::function<void(Status, CommitIdView, std::vector<EntryChange>)> callback) override;
+
   void GetCommitContentsDiff(const Commit& base_commit, const Commit& other_commit,
                              std::string min_key, fit::function<bool(EntryChange)> on_next_diff,
                              fit::function<void(Status)> on_done) override;

@@ -134,11 +134,13 @@ ObjectIdentifier RandomObjectIdentifier(rng::Random* random, ObjectIdentifierFac
 
 EntryChange NewEntryChange(std::string key, std::string object_digest, KeyPriority priority) {
   return EntryChange{
-      Entry{std::move(key), MakeObjectIdentifier(std::move(object_digest)), priority}, false};
+      Entry{std::move(key), MakeObjectIdentifier(std::move(object_digest)), priority, EntryId()},
+      false};
 }
 
 EntryChange NewRemoveEntryChange(std::string key) {
-  return EntryChange{Entry{std::move(key), MakeObjectIdentifier(""), KeyPriority::EAGER}, true};
+  return EntryChange{Entry{std::move(key), MakeObjectIdentifier(""), KeyPriority::EAGER, EntryId()},
+                     true};
 }
 
 StorageTest::StorageTest() {}
@@ -193,8 +195,8 @@ StorageTest::~StorageTest() {}
     if (!assertion_result) {
       return assertion_result;
     }
-    result.push_back(
-        Entry{fxl::StringPrintf("key%02" PRIuMAX, i), object->GetIdentifier(), KeyPriority::EAGER});
+    result.push_back(Entry{fxl::StringPrintf("key%02" PRIuMAX, i), object->GetIdentifier(),
+                           KeyPriority::EAGER, EntryId()});
   }
   entries->swap(result);
   return ::testing::AssertionSuccess();

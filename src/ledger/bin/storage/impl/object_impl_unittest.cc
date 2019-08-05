@@ -244,17 +244,18 @@ TEST_F(ObjectImplTest, ObjectReferences) {
   ASSERT_FALSE(GetObjectDigestInfo(noinline_treenode.object_digest()).is_inlined());
 
   // Create a TreeNode object.
-  const std::string data = btree::EncodeNode(/*level=*/0,
-                                             {
-                                                 Entry{"key01", inline_blob, KeyPriority::EAGER},
-                                                 Entry{"key02", noinline_blob, KeyPriority::EAGER},
-                                                 Entry{"key03", inline_blob, KeyPriority::LAZY},
-                                                 Entry{"key04", noinline_blob, KeyPriority::LAZY},
-                                             },
-                                             {
-                                                 {0, inline_treenode},
-                                                 {1, noinline_treenode},
-                                             });
+  const std::string data =
+      btree::EncodeNode(/*level=*/0,
+                        {
+                            Entry{"key01", inline_blob, KeyPriority::EAGER, EntryId()},
+                            Entry{"key02", noinline_blob, KeyPriority::EAGER, EntryId()},
+                            Entry{"key03", inline_blob, KeyPriority::LAZY, EntryId()},
+                            Entry{"key04", noinline_blob, KeyPriority::LAZY, EntryId()},
+                        },
+                        {
+                            {0, inline_treenode},
+                            {1, noinline_treenode},
+                        });
   const ChunkObject tree_object(std::make_unique<DataChunkPiece>(
       CreateObjectIdentifier(&factory,
                              ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, data)),

@@ -183,6 +183,13 @@ void PageStorageEmptyImpl::GetEntryFromCommit(const Commit& /*commit*/, std::str
   callback(Status::NOT_IMPLEMENTED, Entry());
 }
 
+void PageStorageEmptyImpl::GetDiffForCloud(
+    const Commit& /*target_commit*/,
+    fit::function<void(Status, CommitIdView, std::vector<EntryChange>)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, "", {});
+}
+
 void PageStorageEmptyImpl::GetCommitContentsDiff(const Commit& /*base_commit*/,
                                                  const Commit& /*other_commit*/,
                                                  std::string /*min_key*/,

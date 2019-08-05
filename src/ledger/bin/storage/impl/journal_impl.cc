@@ -102,7 +102,7 @@ void JournalImpl::Put(convert::ExtendedStringView key, ObjectIdentifier object_i
                       KeyPriority priority) {
   FXL_DCHECK(!committed_);
   EntryChange change;
-  change.entry = {key.ToString(), std::move(object_identifier), priority};
+  change.entry = {key.ToString(), std::move(object_identifier), priority, EntryId()};
   change.deleted = false;
   journal_entries_[key.ToString()] = std::move(change);
 }
@@ -110,7 +110,7 @@ void JournalImpl::Put(convert::ExtendedStringView key, ObjectIdentifier object_i
 void JournalImpl::Delete(convert::ExtendedStringView key) {
   FXL_DCHECK(!committed_);
   EntryChange change;
-  change.entry = {key.ToString(), ObjectIdentifier(), KeyPriority::EAGER};
+  change.entry = {key.ToString(), ObjectIdentifier(), KeyPriority::EAGER, EntryId()};
   change.deleted = true;
   journal_entries_[key.ToString()] = std::move(change);
 }

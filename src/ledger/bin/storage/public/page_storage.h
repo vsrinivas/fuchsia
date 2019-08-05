@@ -218,20 +218,30 @@ class PageStorage : public PageSyncClient {
   virtual void GetEntryFromCommit(const Commit& commit, std::string key,
                                   fit::function<void(Status, Entry)> on_done) = 0;
 
-  // Iterates over the difference between the contents of two commits and calls
-  // |on_next_diff| on found changed entries. Returning false from
-  // |on_next_diff| will immediately stop the iteration. |on_done| is called
-  // once, upon successfull completion, i.e. when there are no more differences
+  // Diff used for the cloud provider.
+
+  // Computes the diff between the |target_commit| and another commit, available locally. |callback|
+  // is called with the status of the operation, the id of the commit used as the base of the diff
+  // and the vector of all changes. Note that updating an entry will add two values in the vector of
+  // changes: one deleting the previous entry and one adding the next one.
+  virtual void GetDiffForCloud(
+      const Commit& target_commit,
+      fit::function<void(Status, CommitIdView, std::vector<EntryChange>)> callback) = 0;
+
+  // Diffs for Merging and other client-facing usages.
+
+  // Iterates over the difference between the contents of two commits and calls |on_next_diff| on
+  // found changed entries. Returning false from |on_next_diff| will immediately stop the iteration.
+  // |on_done| is called once, upon successfull completion, i.e. when there are no more differences
   // or iteration was interrupted, or if an error occurs.
   virtual void GetCommitContentsDiff(const Commit& base_commit, const Commit& other_commit,
                                      std::string min_key,
                                      fit::function<bool(EntryChange)> on_next_diff,
                                      fit::function<void(Status)> on_done) = 0;
 
-  // Computes the 3-way diff between a base commit and two other commits. Calls
-  // |on_next_diff| on found changed entries. Returning false from
-  // |on_next_diff| will immediately stop the iteration. |on_done| is called
-  // once, upon successfull completion, i.e. when there are no more differences
+  // Computes the 3-way diff between a base commit and two other commits. Calls |on_next_diff| on
+  // found changed entries. Returning false from |on_next_diff| will immediately stop the iteration.
+  // |on_done| is called once, upon successfull completion, i.e. when there are no more differences
   // or iteration was interrupted, or if an error occurs.
   virtual void GetThreeWayContentsDiff(const Commit& base_commit, const Commit& left_commit,
                                        const Commit& right_commit, std::string min_key,

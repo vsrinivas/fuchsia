@@ -49,7 +49,7 @@ Entry ToEntry(const EntryStorage* entry_storage, ObjectIdentifierFactory* factor
   FXL_DCHECK(IsTreeNodeEntryValid(entry_storage));
   return Entry{convert::ToString(entry_storage->key()),
                ToObjectIdentifier(entry_storage->object_id(), factory),
-               ToKeyPriority(entry_storage->priority())};
+               ToKeyPriority(entry_storage->priority()), EntryId()};
 }
 }  // namespace
 

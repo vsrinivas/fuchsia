@@ -845,8 +845,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     ObjectData lazy_value = MakeObject("Some data", InlineBehavior::PREVENT);
     ObjectData eager_value = MakeObject("More data", InlineBehavior::PREVENT);
     std::vector<Entry> entries = {
-        Entry{"key0", lazy_value.object_identifier, KeyPriority::LAZY},
-        Entry{"key1", eager_value.object_identifier, KeyPriority::EAGER},
+        Entry{"key0", lazy_value.object_identifier, KeyPriority::LAZY, EntryId()},
+        Entry{"key1", eager_value.object_identifier, KeyPriority::EAGER, EntryId()},
     };
     std::unique_ptr<const btree::TreeNode> node;
     ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
@@ -1016,7 +1016,7 @@ TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
   for (size_t i = 0; i < timestamps.size(); ++i) {
     ObjectData value = MakeObject("value" + std::to_string(i), InlineBehavior::ALLOW);
     std::vector<Entry> entries = {
-        Entry{"key" + std::to_string(i), value.object_identifier, KeyPriority::EAGER}};
+        Entry{"key" + std::to_string(i), value.object_identifier, KeyPriority::EAGER, EntryId()}};
     std::unique_ptr<const btree::TreeNode> node;
     ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
     object_identifiers[i] = node->GetIdentifier();
@@ -1756,7 +1756,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
   std::map<size_t, ObjectIdentifier> children;
   for (size_t i = 0; i < 1000; ++i) {
     entries.push_back(Entry{RandomString(environment_.random(), 50), RandomObjectIdentifier(),
-                            i % 2 ? KeyPriority::EAGER : KeyPriority::LAZY});
+                            i % 2 ? KeyPriority::EAGER : KeyPriority::LAZY, EntryId()});
     children.emplace(i, RandomObjectIdentifier());
   }
   std::sort(entries.begin(), entries.end(),
@@ -2221,7 +2221,7 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     for (size_t i = 0; i < object_identifiers.size(); ++i) {
       ObjectData value = MakeObject("value" + std::to_string(i), InlineBehavior::PREVENT);
       std::vector<Entry> entries = {
-          Entry{"key" + std::to_string(i), value.object_identifier, KeyPriority::EAGER}};
+          Entry{"key" + std::to_string(i), value.object_identifier, KeyPriority::EAGER, EntryId()}};
       std::unique_ptr<const btree::TreeNode> node;
       ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
       object_identifiers[i] = node->GetIdentifier();
