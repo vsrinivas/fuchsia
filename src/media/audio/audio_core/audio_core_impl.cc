@@ -26,12 +26,15 @@ constexpr zx_vm_option_t kAudioRendererVmarFlags =
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
-AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_context)
+AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_context,
+                             CommandLineOptions options)
     : device_manager_(this),
       ctx_(std::move(startup_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
   FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
+
+  AudioDeviceSettings::EnableDeviceSettings(options.enable_device_settings_writeback);
 
   Logging::Init();
 
@@ -206,7 +209,7 @@ void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy po
 
 void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
   AUD_VLOG(TRACE) << " (enabled: " << enabled << ")";
-  device_manager_.EnableDeviceSettings(enabled);
+  AudioDeviceSettings::EnableDeviceSettings(enabled);
 }
 
 void AudioCoreImpl::DoPacketCleanup() {

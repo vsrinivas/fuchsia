@@ -103,6 +103,8 @@ source_set("audio_core_lib") {
     "audio_renderer_format_info.h",
     "audio_renderer_impl.cc",
     "audio_renderer_impl.h",
+    "command_line_options.cc",
+    "command_line_options.h",
     "driver_output.cc",
     "driver_output.h",
     "driver_ring_buffer.cc",
@@ -170,6 +172,7 @@ executable("unittest_bin") {
 
   sources = [
     "audio_link_packet_source_unittest.cc",
+    "command_line_options_unittest.cc",
   ]
 
   deps = [

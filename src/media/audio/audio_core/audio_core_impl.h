@@ -19,6 +19,7 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_packet_ref.h"
+#include "src/media/audio/audio_core/command_line_options.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
 #include "src/media/audio/audio_core/pending_flush_token.h"
 
@@ -30,7 +31,7 @@ namespace media::audio {
 
 class AudioCoreImpl : public fuchsia::media::AudioCore {
  public:
-  AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_context);
+  AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_context, CommandLineOptions options);
   ~AudioCoreImpl() override;
 
   // Audio implementation.

@@ -19,13 +19,15 @@ namespace {
 constexpr const char kIsolatedDevmgrServiceName[] = "fuchsia.media.AudioTestDevmgr";
 
 fit::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
-    const char* url, std::shared_ptr<sys::ServiceDirectory> services) {
-  return [url, services = std::move(services)] {
+    const char* url, std::vector<std::string> args,
+    std::shared_ptr<sys::ServiceDirectory> services) {
+  return [url, args = std::move(args), services = std::move(services)] {
     zx::channel devfs = services->Connect<fuchsia::io::Directory>(kIsolatedDevmgrServiceName)
                             .Unbind()
                             .TakeChannel();
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
+    launch_info.arguments.reset(args);
     launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
     launch_info.flat_namespace->paths.push_back("/dev");
     launch_info.flat_namespace->directories.push_back(std::move(devfs));
@@ -36,13 +38,14 @@ fit::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
 fit::function<fuchsia::sys::LaunchInfo()> AudioCoreLaunchInfo(
     std::shared_ptr<sys::ServiceDirectory> services) {
   return LaunchInfoWithIsolatedDevmgrForUrl(
-      "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core_nodevfs.cmx", services);
+      "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core_nodevfs.cmx",
+      {"--disable-device-settings-writeback"}, services);
 }
 
 fit::function<fuchsia::sys::LaunchInfo()> VirtualAudioLaunchInfo(
     std::shared_ptr<sys::ServiceDirectory> services) {
   return LaunchInfoWithIsolatedDevmgrForUrl(
-      "fuchsia-pkg://fuchsia.com/virtual_audio_service#meta/virtual_audio_service_nodevfs.cmx",
+      "fuchsia-pkg://fuchsia.com/virtual_audio_service#meta/virtual_audio_service_nodevfs.cmx", {},
       services);
 }
 
@@ -84,14 +87,6 @@ HermeticAudioEnvironment::HermeticAudioEnvironment() {
   ConnectToService(devfs_dir.NewRequest(), kIsolatedDevmgrServiceName);
   fuchsia::io::NodeInfo info;
   zx_status_t status = devfs_dir->Describe(&info);
-  FXL_CHECK(status == ZX_OK);
-
-  // For test runs with many iterations where many virtual devices are created, device settings
-  // files may accumulate and cause the DUT to run out of disk space. We disable write-back of
-  // device settings to prevent this from happening.
-  fuchsia::media::AudioCoreSyncPtr audio_core;
-  ConnectToService(audio_core.NewRequest());
-  status = audio_core->EnableDeviceSettings(false);
   FXL_CHECK(status == ZX_OK);
 }
 
