@@ -211,7 +211,7 @@ enum iwl_ucode_tlv_flag {
 #endif
 };
 
-typedef unsigned int __bitwise iwl_ucode_tlv_api_t;
+typedef unsigned int iwl_ucode_tlv_api_t;
 
 /**
  * enum iwl_ucode_tlv_api - ucode api
@@ -273,7 +273,7 @@ enum iwl_ucode_tlv_api {
 #endif
 };
 
-typedef unsigned int __bitwise iwl_ucode_tlv_capa_t;
+typedef unsigned int iwl_ucode_tlv_capa_t;
 
 /**
  * enum iwl_ucode_tlv_capa - ucode capabilities

@@ -101,20 +101,20 @@ zx_status_t iwl_mvm_init(void) {
 #if 0   // NEEDS_PORTING
     ret = iwl_mvm_rate_control_register();
     if (ret) {
-        pr_err("Unable to register rate control algorithm: %d\n", ret);
+        zxlogf(ERROR, "Unable to register rate control algorithm: %d\n", ret);
         return ret;
     }
 #endif  // NEEDS_PORTING
 
   ret = iwl_opmode_register("iwlmvm", &iwl_mvm_ops);
   if (ret) {
-    pr_err("Unable to register MVM op_mode: %d\n", ret);
+    zxlogf(ERROR, "Unable to register MVM op_mode: %d\n", ret);
   }
 
   return ret;
 }
 
-void __exit iwl_mvm_exit(void) {
+void iwl_mvm_exit(void) {
   iwl_opmode_deregister("iwlmvm");
 #if 0   // NEEDS_PORTING
     iwl_mvm_rate_control_unregister();
@@ -839,7 +839,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
       trans_cfg.rx_buf_size = IWL_AMSDU_12K;
       break;
     default:
-      pr_err("%s: Unsupported amsdu_size: %d\n", KBUILD_MODNAME, iwlwifi_mod_params.amsdu_size);
+      zxlogf(ERROR, "%s: Unsupported amsdu_size: %d\n", KBUILD_MODNAME, iwlwifi_mod_params.amsdu_size);
       trans_cfg.rx_buf_size = rb_size_default;
   }
 
@@ -968,7 +968,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
   err = iwl_mvm_fm_register(mvm);
   if (err) {
-    pr_err("Unable to register with Frequency Manager: %d\n", err);
+    zxlogf(ERROR, "Unable to register with Frequency Manager: %d\n", err);
   }
 #endif
 

@@ -65,12 +65,8 @@ typedef char* acpi_string;
 #define lockdep_assert_held(x) \
   do {                         \
   } while (0)
-#define pr_err(fmt, args...) zxlogf(ERROR, fmt, args)
 #define __aligned(x) __attribute__((aligned(x)))
-#define __bitwise
-#define __exit
 #define __force
-#define __init
 #define __must_check __attribute__((warn_unused_result))
 #define __packed __PACKED
 #define __rcu                         // NEEDS_PORTING
