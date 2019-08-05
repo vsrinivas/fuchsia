@@ -12,6 +12,7 @@
 #include <poll.h>
 #include <time.h>
 
+#include <future>
 #include <thread>
 
 #include "gtest/gtest.h"
@@ -832,41 +833,43 @@ TEST(NetStreamTest, GetTcpInfo) {
 }
 
 TEST(NetStreamTest, Shutdown) {
-  int acptfd;
-  ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  int listener;
+  EXPECT_GE(listener = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
 
-  struct sockaddr_in addr;
+  struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+  EXPECT_EQ(bind(listener, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+  EXPECT_EQ(getsockname(listener, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+  EXPECT_EQ(addrlen, sizeof(addr));
+  EXPECT_EQ(listen(listener, 1), 0) << strerror(errno);
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
+  int outbound;
+  EXPECT_GE(outbound = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  // Wrap connect() in a future to enable a timeout.
+  std::future<void> fut = std::async(std::launch::async, [outbound, addr]() {
+    EXPECT_EQ(connect(outbound, (struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+  });
 
-  ASSERT_EQ(listen(acptfd, 10), 0) << strerror(errno);
+  int inbound;
+  EXPECT_GE(inbound = accept(listener, NULL, NULL), 0) << strerror(errno);
 
-  short events = POLLRDHUP;
-  short revents;
-  std::thread thrd(PollSignal, &addr, events, &revents, ntfyfd[1]);
+  // Wait for connect() to finish.
+  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
 
-  int connfd;
-  ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
+  EXPECT_EQ(shutdown(inbound, SHUT_WR), 0) << strerror(errno);
 
-  ASSERT_EQ(shutdown(connfd, SHUT_WR), 0) << strerror(errno);
+  struct pollfd fds = {};
+  fds.fd = outbound;
+  fds.events = POLLRDHUP;
+  EXPECT_EQ(poll(&fds, 1, kTimeout), 1) << strerror(errno);
+  EXPECT_EQ(fds.revents, POLLRDHUP);
 
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
-
-  EXPECT_EQ(POLLRDHUP, revents);
-  ASSERT_EQ(0, close(connfd));
-
-  EXPECT_EQ(0, close(acptfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(listener), 0) << strerror(errno);
+  EXPECT_EQ(close(outbound), 0) << strerror(errno);
+  EXPECT_EQ(close(inbound), 0) << strerror(errno);
 }
 
 TEST(NetDatagramTest, DatagramSendto) {

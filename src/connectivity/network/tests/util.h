@@ -15,7 +15,6 @@ bool WaitSuccess(int ntfyfd, int timeout);
 void StreamAcceptRead(int acptfd, std::string* out, int ntfyfd);
 void StreamConnectRead(struct sockaddr_in* addr, std::string* out, int ntfyfd);
 void StreamAcceptWrite(int acptfd, const char* msg, int ntfyfd);
-void PollSignal(struct sockaddr_in* addr, short events, short* revents, int ntfyfd);
 void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr, socklen_t* addrlen,
                   int ntfyfd, int timeout);
 void DatagramReadWrite(int recvfd, int ntfyfd);

@@ -5,8 +5,8 @@
 #include "util.h"
 
 #include <arpa/inet.h>
-#include <sys/socket.h>
 #include <poll.h>
+#include <sys/socket.h>
 
 #include "gtest/gtest.h"
 
@@ -92,32 +92,6 @@ void StreamAcceptWrite(int acptfd, const char* msg, int ntfyfd) {
   ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
 
   EXPECT_EQ(close(connfd), 0) << strerror(errno);
-  NotifySuccess(ntfyfd);
-}
-
-void PollSignal(struct sockaddr_in* addr, short events, short* revents, int ntfyfd) {
-  int connfd = socket(AF_INET, SOCK_STREAM, 0);
-  ASSERT_GE(connfd, 0);
-
-  int ret;
-  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr)), 0)
-      << strerror(errno);
-  if (ret != 0) {
-    NotifyFail(ntfyfd);
-    return;
-  }
-
-  struct pollfd fds = {connfd, events, 0};
-
-  int n;
-  EXPECT_GT(n = poll(&fds, 1, kTimeout), 0) << strerror(errno);
-  if (n <= 0) {
-    NotifyFail(ntfyfd);
-    return;
-  }
-
-  EXPECT_EQ(close(connfd), 0) << strerror(errno);
-  *revents = fds.revents;
   NotifySuccess(ntfyfd);
 }
 
